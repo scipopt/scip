@@ -4236,8 +4236,6 @@ void resetStats(
    reopt->reopttree->ninfnodes = 0;
    reopt->reopttree->nprunednodes = 0;
    reopt->reopttree->ncutoffreoptnodes = 0;
-   // why is there a return here?
-   return;
 }
 
 /** check the stored bound changes of all child nodes for redundancy and infeasibility
@@ -5370,8 +5368,8 @@ SCIP_RETCODE SCIPreoptAddRun(
 
    return SCIP_OKAY;
 }
-// there seems to be "solutions" missing in the comment after checked
-/** get the number of checked during the reoptimization process */
+
+/** get the number of checked solution during the reoptimization process */
 int SCIPreoptGetNCheckedSols(
    SCIP_REOPT*           reopt               /**< reoptimization data structure */
    )
@@ -5380,9 +5378,9 @@ int SCIPreoptGetNCheckedSols(
 
    return reopt->ncheckedsols;
 }
-// this method should be called Add, not Set; also there seems to be "solutions" missing in the comment after checked
-/** update the number of checked during the reoptimization process */
-void SCIPreoptSetNCheckedSols(
+
+/** update the number of checked solutions during the reoptimization process */
+void SCIPreoptAddNCheckedSols(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    int                   ncheckedsols        /**< number of updated solutions */
    )
@@ -5391,8 +5389,8 @@ void SCIPreoptSetNCheckedSols(
 
    reopt->ncheckedsols += ncheckedsols;
 }
-// there seems to be "solutions" missing in the comment after checked
-/** get the number of checked during the reoptimization process */
+
+/** get the number of checked solutions during the reoptimization process */
 int SCIPreoptGetNImprovingSols(
    SCIP_REOPT*           reopt               /**< reoptimization data structure */
    )
@@ -5401,9 +5399,9 @@ int SCIPreoptGetNImprovingSols(
 
    return reopt->nimprovingsols;
 }
-// there seems to be "solutions" missing in the comment after checked
-/** update the number of checked during the reoptimization process */
-void SCIPreoptSetNImprovingSols(
+
+/** update the number of checked solutions during the reoptimization process */
+void SCIPreoptAddNImprovingSols(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    int                   nimprovingsols      /**< number of improving solutions */
    )
@@ -5413,7 +5411,7 @@ void SCIPreoptSetNImprovingSols(
    reopt->nimprovingsols += nimprovingsols;
 }
 
-/** returns number of solution of a given run */
+/** returns number of solutions stored in the solution tree of a given run */
 int SCIPreoptGetNSolsRun(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    int                   run                 /**< number of the run (1,2,..) */
@@ -5827,44 +5825,6 @@ SCIP_REOPTTYPE SCIPreoptnodeGetType(
 
    return (SCIP_REOPTTYPE)reoptnode->reopttype;
 }
-// there is the define SCIP_DISABLED_CODE that should be used
-#if UNUSEDCODE
-/** create the constraint which splits the node stored at ID id on the basis of
- *  the stored dual information.
- */
-void SCIPreoptnodeGetSplitCons(
-   SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
-   SCIP_VAR**            vars,               /**< array to store the variables of the constraint */
-   SCIP_Real*            vals,               /**< array to store the coefficients of the variables */
-   REOPT_CONSTYPE*       constype,           /**< type of the constraint */
-   int                   conssize,           /**< size of the arrays */
-   int*                  nvars               /**< pointer to store the size of the constraints */
-   )
-{
-   int v;
-
-   assert(reoptnode != NULL);
-   assert(vars != NULL);
-   assert(vals != NULL);
-   assert(nvars != NULL);
-
-   (*nvars) = reoptnode->dualredscur == NULL ? 0 : reoptnode->dualredscur->nvars;
-
-   if( *nvars == 0 || *nvars > conssize )
-      return;
-
-   assert(reoptnode->dualredscur->constype == REOPT_CONSTYPE_DUALREDS);
-
-   /* copy the variable information */
-   for( v = 0; v < *nvars; v++ )
-   {
-      vars[v] = reoptnode->dualredscur->vars[v];
-      vals[v] = reoptnode->dualredscur->vals[v];
-   }
-
-   *constype = reoptnode->dualredscur->constype;
-}
-#endif
 
 /** returns all added constraints at ID id */
 void SCIPreoptnodeGetConss(
@@ -5901,7 +5861,7 @@ void SCIPreoptnodeGetConss(
       boundtypes[c] = reoptnode->conss[c]->boundtypes;
       nvars[c] = reoptnode->conss[c]->nvars;
    }
-   // this return is not needed
+
    return;
 }
 
@@ -5912,7 +5872,7 @@ void SCIPreoptnodeSetParentID(
    )
 {
    assert(reoptnode != NULL);
-   assert(parentid <= 536870912); /* id can be at least 2^29 */ // at most?
+   assert(parentid <= 536870912); /* id can be at most 2^29 */
 
    reoptnode->parentID = parentid;
 }
@@ -6251,7 +6211,7 @@ SCIP_RETCODE SCIPreoptAddDualBndchg(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_NODE*            node,               /**< node of the search tree */
-   SCIP_VAR*             var,                /**< variables */ // variable? (without 's')
+   SCIP_VAR*             var,                /**< variable */
    SCIP_Real             newval,             /**< new bound */
    SCIP_Real             oldval              /**< old bound */
    )
@@ -6414,7 +6374,7 @@ SCIP_RETCODE SCIPreoptGetLeaves(
    SCIP_NODE*            node,               /**< node of the search tree */
    unsigned int*         leaves,             /**< array to the the ids */
    int                   leavessize,         /**< size of leaves array */
-   int*                  nleaves             /**< pointer to store the number of leav node */
+   int*                  nleaves             /**< pointer to store the number of leave node */
    )
 {
    unsigned int id;
@@ -6424,6 +6384,7 @@ SCIP_RETCODE SCIPreoptGetLeaves(
    assert(leavessize > 0 && leaves != NULL);
    assert((*nleaves) >= 0);
 
+   /* if the given node is we start from the root */
    if( node == NULL )
       id = 0;
    else
@@ -6441,7 +6402,8 @@ SCIP_RETCODE SCIPreoptGetLeaves(
 
    for( i = 0; i < leavessize; i++ )
       leaves[i] = 0;
-   // comments
+
+   /* we traverse through all child nodes of the given node an collect all leave nodes of the subtrees induced by them */
    for( i = 0; i < reopt->reopttree->reoptnodes[id]->nchilds; i++ )
    {
       unsigned int childid;
@@ -6451,11 +6413,13 @@ SCIP_RETCODE SCIPreoptGetLeaves(
       childid = reopt->reopttree->reoptnodes[id]->childids[i];
       assert(childid < reopt->reopttree->reoptnodessize);
 
+      /* the node is already a leave */
       if( reopt->reopttree->reoptnodes[childid]->nchilds == 0 )
       {
          leaves[(*nleaves)] = reopt->reopttree->reoptnodes[id]->childids[i];
          ++(*nleaves);
       }
+      /* go into the tree induced by the current child node */
       else
       {
          int nleaves2 = 0;
@@ -6553,7 +6517,7 @@ SCIP_RETCODE SCIPreoptMergeVarHistory(
    bestrun = reopt->run-2;
    bestsim = reopt->simtolastobj;
 
-   /* find the run with the most simlar objectve */
+   /* find the run with the most similar objective */
    for( r = reopt->run-3; r >= 0 && reopt->objhaschanged && set->reopt_usepscost; r-- )
    {
       SCIP_Real sim;
@@ -6586,7 +6550,7 @@ SCIP_RETCODE SCIPreoptMergeVarHistory(
       for( d = 0; d <= 1; d++ )
       {
          if( set->reopt_usepscost && !SCIPsetIsZero(set, reopt->varhistory[bestrun][idx]->pscostcount[d])
-            && SCIPsetIsGT(set, bestsim, 0.985) ) // where does the 0.985 come from? perhaps add a comment
+            && SCIPsetIsGT(set, bestsim, 0.985) ) /* 0.985 is a magic number determined in some experiments */
          {
             transvar->history->pscostcount[d] = 1.0;
             transvar->history->pscostweightedmean[d] = reopt->varhistory[bestrun][idx]->pscostweightedmean[d];
@@ -7207,10 +7171,12 @@ void SCIPreoptnodeGetPath(
 
    (*nbndchgs) = reoptnode->nvars;
    (*nbndchgsafterdual) = reoptnode->nafterdualvars;
-   // some comments could help
+
+   /* return if the size of the given array is not large enough */
    if( varssize == 0 || varssize < *nbndchgs + *nbndchgsafterdual )
       return;
 
+   /* add all bound changes made by branching (including dual reductions) */
    for( v = 0; v < *nbndchgs; v++ )
    {
       vars[v] = reoptnode->vars[v];
@@ -7218,6 +7184,7 @@ void SCIPreoptnodeGetPath(
       boundtypes[v] = reoptnode->varboundtypes[v];
    }
 
+   /* add all bound changes made applied after a dual reduction */
    for( ; v < *nbndchgs + *nbndchgsafterdual; v++ )
    {
       vars[v] = reoptnode->afterdualvars[v-(*nbndchgs)];
@@ -7225,6 +7192,7 @@ void SCIPreoptnodeGetPath(
       boundtypes[v] = reoptnode->afterdualvarboundtypes[v-(*nbndchgs)];
    }
 
+   /* go along the root path within the reoptimization tree */
    if( reoptnode->parentID != 0 )
    {
       SCIP_REOPTNODE* parent;

@@ -112,25 +112,25 @@ int SCIPreoptGetNCheckedSols(
 
 /** update the number of checked solutions during the reoptimization process */
 extern
-void SCIPreoptSetNCheckedSols(
+void SCIPreoptAddNCheckedSols(
    SCIP_REOPT*           reopt,              /**< reoptimization data */
    int                   ncheckedsols        /**< number of updated solutions */
    );
 
-/** get the number of checked during the reoptimization process */
+/** get the number of checked solutions during the reoptimization process */
 extern
 int SCIPreoptGetNImprovingSols(
    SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
-/** update the number of checked during the reoptimization process */
+/** update the number of checked solutions during the reoptimization process */
 extern
-void SCIPreoptSetNImprovingSols(
+void SCIPreoptAddNImprovingSols(
    SCIP_REOPT*           reopt,              /**< reoptimization data */
    int                   nimprovingsols      /**< number of improving solutions */
    );
 
-/** returns number of solution */
+/** returns number of solutions stored in the solution tree of a given run */
 extern
 int SCIPreoptGetNSolsRun(
    SCIP_REOPT*           reopt,              /**< reoptimization data */
