@@ -500,16 +500,21 @@ SCIP_RETCODE resolvePropagation(
       assert(boundtype == SCIP_BOUNDTYPE_LOWER);
       assert(!SCIPisInfinity(scip, -consdata->lhs));
 
-      if( usebdwidening )
+      /* we cannot apply bound widening for binary variables, because within a varbound constraint the relaxed bound
+       * will never be sufficient
+       */
+      if( usebdwidening && !SCIPvarIsBinary(var) )
       {
          SCIP_Real relaxedbd;
 
-         /* For integer variables, we can reduce the inferbound by 1 - 2eps, because this will be adjusted
-          * to the bound we need; however, if inferbound has a large value, adding 2*eps might be lost
-          * due to fixed precision floating point arithmetics, so we explicitly check this here.
+         /* For integer variables, we can reduce the inferbound by 1 - z * eps, because this will be adjusted
+          * to the bound we need; however, we need to choose z large enough to prevent numerical troubles due to
+          * too small and too large vbdcoef values.
+          * If inferbound has a large value, adding z*eps might be lost due to fixed precision floating point
+          * arithmetics, so we explicitly check this here.
           */
-         if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip))
-            relaxedbd = (consdata->lhs - (inferbd - 1.0 + 2*SCIPfeastol(scip))) / vbdcoef;
+         if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
+            relaxedbd = (consdata->lhs - (inferbd - 1.0 + MAX(2.0, REALABS(vbdcoef))*SCIPfeastol(scip))) / vbdcoef;
          else
             relaxedbd = (consdata->lhs - inferbd) / vbdcoef;
 
@@ -545,7 +550,10 @@ SCIP_RETCODE resolvePropagation(
       assert(SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
       assert(!SCIPisInfinity(scip, -consdata->lhs));
 
-      if( usebdwidening )
+      /* we cannot apply bound widening for binary variables, because within a varbound constraint the relaxed bound
+       * will never be sufficient
+       */
+      if( usebdwidening && !SCIPvarIsBinary(var) )
       {
          SCIP_Real relaxedub;
 
@@ -554,14 +562,32 @@ SCIP_RETCODE resolvePropagation(
           */
          if( vbdcoef > 0.0 )
          {
-            relaxedub = consdata->lhs - (inferbd - 1.0 + 2*SCIPfeastol(scip)) * vbdcoef;
+            /* For integer variables, we can reduce the inferbound by 1-z*eps, because this will be adjusted
+             * to the bound we need; however, we need to choose z large enough to prevent numerical troubles due to
+             * too small and too large vbdcoef values.
+             * If inferbound has a large value, adding z*eps might be lost due to fixed precision floating point
+             * arithmetics, so we explicitly check this here.
+             */
+            if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
+               relaxedub = consdata->lhs - (inferbd - 1.0 + MAX(2.0, REALABS(vbdcoef))*SCIPfeastol(scip)) * vbdcoef;
+            else
+               relaxedub = consdata->lhs - inferbd * vbdcoef;
 
             /* check the computed relaxed upper bound is a proper reason for the inference bound which has to be explained */
             assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, vbdvar, (consdata->lhs - relaxedub) / vbdcoef)));
          }
          else
          {
-            relaxedub = consdata->lhs - (inferbd + 1.0 - 2*SCIPfeastol(scip)) * vbdcoef;
+            /* For integer variables, we can reduce the inferbound by 1-z*eps, because this will be adjusted
+             * to the bound we need; however, we need to choose z large enough to prevent numerical troubles due to
+             * too small and too large vbdcoef values.
+             * If inferbound has a large value, adding z*eps might be lost due to fixed precision floating point
+             * arithmetics, so we explicitly check this here.
+             */
+            if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
+               relaxedub = consdata->lhs - (inferbd + 1.0 - MAX(2.0, REALABS(vbdcoef))*SCIPfeastol(scip)) * vbdcoef;
+            else
+               relaxedub = consdata->lhs - inferbd * vbdcoef;
 
             /* check the computed relaxed upper bound is a proper reason for the inference bound which has to be explained */
             assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, vbdvar, (consdata->lhs - relaxedub) / vbdcoef)));
@@ -587,12 +613,21 @@ SCIP_RETCODE resolvePropagation(
       assert(boundtype == SCIP_BOUNDTYPE_UPPER);
       assert(!SCIPisInfinity(scip, consdata->rhs));
 
-      if( usebdwidening )
+      /* we cannot apply bound widening for binary variables, because within a varbound constraint the relaxed bound
+       * will never be sufficient
+       */
+      if( usebdwidening && !SCIPvarIsBinary(var) )
       {
          SCIP_Real relaxedbd;
 
-         if( SCIPvarIsIntegral(var) )
-            relaxedbd = (consdata->rhs - (inferbd + 1.0 - 2*SCIPfeastol(scip))) / vbdcoef;
+         /* For integer variables, we can reduce the inferbound by 1-z*eps, because this will be adjusted
+          * to the bound we need; however, we need to choose z large enough to prevent numerical troubles due to
+          * too small and too large vbdcoef values.
+          * If inferbound has a large value, adding z*eps might be lost due to fixed precision floating point
+          * arithmetics, so we explicitly check this here.
+          */
+         if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
+            relaxedbd = (consdata->rhs - (inferbd + 1.0 - MAX(2.0, REALABS(vbdcoef))*SCIPfeastol(scip))) / vbdcoef;
          else
             relaxedbd = (consdata->rhs - inferbd) / vbdcoef;
 
@@ -628,7 +663,10 @@ SCIP_RETCODE resolvePropagation(
       assert(SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
       assert(!SCIPisInfinity(scip, consdata->rhs));
 
-      if( usebdwidening )
+      /* we cannot apply bound widening for binary variables, because within a varbound constraint the relaxed bound
+       * will never be sufficient
+       */
+      if( usebdwidening && !SCIPvarIsBinary(var) )
       {
          SCIP_Real relaxedlb;
 
@@ -637,20 +675,38 @@ SCIP_RETCODE resolvePropagation(
           */
          if( vbdcoef > 0.0 )
          {
-            relaxedlb = consdata->rhs - (inferbd + 1.0 - 2*SCIPfeastol(scip)) * vbdcoef;
+            /* For integer variables, we can reduce the inferbound by 1-z*eps, because this will be adjusted
+             * to the bound we need; however, we need to choose z large enough to prevent numerical troubles due to
+             * too small and too large vbdcoef values.
+             * If inferbound has a large value, adding z*eps might be lost due to fixed precision floating point
+             * arithmetics, so we explicitly check this here.
+             */
+            if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
+               relaxedlb = consdata->rhs - (inferbd + 1.0 - MAX(2.0, REALABS(vbdcoef))*SCIPfeastol(scip)) * vbdcoef;
+            else
+               relaxedlb = consdata->rhs - inferbd * vbdcoef;
 
             /* check the computed relaxed lower bound is a proper reason for the inference bound which has to be explained */
             assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, vbdvar, (consdata->rhs - relaxedlb) / vbdcoef)));
          }
          else
          {
-            relaxedlb = consdata->rhs - (inferbd - 1.0 + 2*SCIPfeastol(scip)) * vbdcoef;
+            /* For integer variables, we can reduce the inferbound by 1-z*eps, because this will be adjusted
+             * to the bound we need; however, we need to choose z large enough to prevent numerical troubles due to
+             * too small and too large vbdcoef values.
+             * If inferbound has a large value, adding z*eps might be lost due to fixed precision floating point
+             * arithmetics, so we explicitly check this here.
+             */
+            if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
+               relaxedlb = consdata->rhs - (inferbd - 1.0 + MAX(2.0, REALABS(vbdcoef))*SCIPfeastol(scip)) * vbdcoef;
+            else
+               relaxedlb = consdata->rhs - inferbd * vbdcoef;
 
             /* check the computed relaxed lower bound is a proper reason for the inference bound which has to be explained */
             assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, vbdvar, (consdata->rhs - relaxedlb) / vbdcoef)));
          }
 
-         /* inccrease the compute relaxed lower bound by an epsilon; that ensure that we get the actual inference bound due
+         /* increase the compute relaxed lower bound by an epsilon; that ensure that we get the actual inference bound due
           * to the integral condition of the variable bound variable
           */
          relaxedlb += SCIPfeastol(scip);
