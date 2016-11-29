@@ -3493,6 +3493,10 @@ SCIP_RETCODE reformulate(
 
       assert(conss[c] != NULL);  /*lint !e613*/
 
+      /* skip constraints that are to be deleted */
+      if( SCIPconsIsDeleted(conss[c]) )
+         continue;
+
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 

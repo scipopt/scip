@@ -3056,12 +3056,12 @@ int getNodeNumberBinvar(
 
 /** computes connected components of the clique graph */
 SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
-   SCIP_CLIQUETABLE*    cliquetable,        /**< clique table data structure */
-   SCIP_SET*            set,                /**< global SCIP settings */
-   SCIP_VAR**           vars,               /**< array of problem variables, sorted by variable type */
-   int                  nbinvars,           /**< number of binary variables */
-   int                  nintvars,           /**< number of integer variables */
-   int                  nimplvars           /**< number of implicit integer variables */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< array of problem variables, sorted by variable type */
+   int                   nbinvars,           /**< number of binary variables */
+   int                   nintvars,           /**< number of integer variables */
+   int                   nimplvars           /**< number of implicit integer variables */
    )
 {
    SCIP_DIGRAPH* digraph;

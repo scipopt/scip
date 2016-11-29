@@ -130,34 +130,27 @@ LPIINSTMSG	+=	" -> \"libcplex.*.a\" is the path to the CPLEX library, e.g., \"<C
 LPIINSTMSG	+=	" -> \"libcplex.*.so\" is the path to the CPLEX library, e.g., \"<CPLEX-path>/bin/x86-64_linux/libcplex1263.so\""
 endif
 
+# XPRESS is only available as shared library
 LPSOPTIONS	+=	xprs
 ifeq ($(LPS),xprs)
 FLAGS		+=	-I$(LIBDIR)/include/xprsinc
 LPILIBOBJ	=	lpi/lpi_xprs.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/include/xprsinc
-ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libxpress.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
-else
-SOFTLINKS	+=	$(LIBDIR)/static/libxpress.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
-endif
 LPIINSTMSG	=	"  -> \"xprsinc\" is the path to the XPRESS \"include\" directory, e.g., \"<XPRESS-path>/include\".\n"
-LPIINSTMSG	+=	" -> \"libpress.*\" is the path to the XPRESS library, e.g., \"<XPRESS-path>/lib/libxpress.a\""
+LPIINSTMSG	+=	" -> \"libpress.*\" is the path to the XPRESS library, e.g., \"<XPRESS-path>/lib/libxpress.so\""
 endif
 
+# mosek only supports shared libraries
 LPSOPTIONS	+=	msk
 ifeq ($(LPS),msk)
 FLAGS		+=	-I$(LIBDIR)/include/mskinc
 LPILIBOBJ	=	lpi/lpi_msk.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/include/mskinc
-ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
 SOFTLINKS	+=	$(LIBDIR)/shared/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
-else
-SOFTLINKS	+=	$(LIBDIR)/static/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
-SOFTLINKS	+=	$(LIBDIR)/static/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
-endif
 LPIINSTMSG	=	"  -> \"mskinc\" is the path to the Mosek \"include\" directory, e.g., \"<Mosek-path>/include\".\n"
 LPIINSTMSG	+=	" -> \"libmosek.*\" is the path to the Mosek library, e.g., \"<Mosek-path>/lib/libmosek.a\".\n"
 LPIINSTMSG	+=	" -> \"libiomp5.*\" is the path to the libiomp5, e.g., \"<Mosek-path>/lib/libiomp5.a\""
@@ -226,10 +219,10 @@ endif
 LPSOPTIONS	+=	clp
 ifeq ($(LPS),clp)
 LINKER		=	CPP
-FLAGS		+=	-I$(LIBDIR)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)/include/coin
+FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)/include/coin
 LPILIBOBJ	=	lpi/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
-SOFTLINKS	+=	$(LIBDIR)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
+SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
 LPIINSTMSG	=	"  -> \"clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)\" is the path to the Clp installation directory, i.e., \"<Clp-path>/include/coin/ClpModel.hpp\" should exist.\n"
 endif
 
@@ -743,7 +736,7 @@ ALLSRC		+=	$(MAINSRC)
 DLLFILENAME	=	lib$(MAINNAME).$(BASE).$(LPS).dll
 
 LINKSMARKERFILE	=	$(LIBDIR)/$(LIBTYPE)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(GAMS)
-LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
+LASTSETTINGS	=	$(LIBDIR)/make.lastsettings
 
 #-----------------------------------------------------------------------------
 # Rules
@@ -1337,7 +1330,7 @@ $(LINKSMARKERFILE):
 		@$(MAKE) links
 
 .PHONY: links
-links:		| $(LIBDIR)/static $(LIBDIR)/shared $(DIRECTORIES) echosoftlinks $(SOFTLINKS)
+links:		| $(LIBDIR)/static $(LIBDIR)/shared $(LIBDIR)/include $(DIRECTORIES) echosoftlinks $(SOFTLINKS)
 		@rm -f $(LINKSMARKERFILE)
 		@echo "this is only a marker" > $(LINKSMARKERFILE)
 

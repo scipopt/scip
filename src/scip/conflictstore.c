@@ -289,7 +289,7 @@ SCIP_RETCODE delPosConflict(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    int                   pos,                /**< position to remove */
    SCIP_Bool             deleteconflict      /**< should the conflict be deleted? */
-)
+   )
 {
    SCIP_CONS* conflict;
    int lastpos;
@@ -344,7 +344,7 @@ SCIP_RETCODE delPosDualray(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    int                   pos,                /**< position to remove */
    SCIP_Bool             deleteconflict      /**< should the dual ray be deleted? */
-)
+   )
 {
    SCIP_CONS* dualray;
    int lastpos;

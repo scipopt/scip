@@ -18815,7 +18815,7 @@ int SCIPgetNNodesLeft(
  */
 EXTERN
 SCIP_Longint SCIPgetNFeasibleLeaves(
-   SCIP*                scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** gets number of infeasible leaf nodes processed
@@ -18838,7 +18838,7 @@ SCIP_Longint SCIPgetNFeasibleLeaves(
  */
 EXTERN
 SCIP_Longint SCIPgetNInfeasibleLeaves(
-   SCIP*                scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** gets number of processed leaf nodes that hit LP objective limit
@@ -18861,7 +18861,7 @@ SCIP_Longint SCIPgetNInfeasibleLeaves(
  */
 EXTERN
 SCIP_Longint SCIPgetNObjlimLeaves(
-   SCIP*                scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** gets number of times a selected node was from a cut off subtree
