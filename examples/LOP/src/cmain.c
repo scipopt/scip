@@ -56,7 +56,7 @@ SCIP_Bool readArguments(
    )
 {
    int i;
-   char usage[256];
+   char usage[SCIP_MAXSTRLEN];
 #ifndef NDEBUG
    int status;
 
@@ -70,10 +70,10 @@ SCIP_Bool readArguments(
    assert( dispfreq != NULL );
 
    /* init usage text */
-   status = snprintf(usage, 255, "usage: %s <LOP file> [-s <setting file>] [-t <time limit>] [-m <mem limit>] [-n <node limit>] [-d <display frequency>]", argv[0]);
-   assert( 0 <= status && status < 256 );
+   status = snprintf(usage, SCIP_MAXSTRLEN, "usage: %s <LOP file> [-s <setting file>] [-t <time limit>] [-m <mem limit>] [-n <node limit>] [-d <display frequency>]", argv[0]);
+   assert( 0 <= status && status < SCIP_MAXSTRLEN );
 #else
-   (void) snprintf(usage, 255, "usage: %s <LOP file> [-s <setting file>] [-t <time limit>] [-m <mem limit>] [-n <node limit>] [-d <display frequency>]", argv[0]);
+   (void) snprintf(usage, SCIP_MAXSTRLEN, "usage: %s <LOP file> [-s <setting file>] [-t <time limit>] [-m <mem limit>] [-n <node limit>] [-d <display frequency>]", argv[0]);
 #endif
 
    /* init arguments */

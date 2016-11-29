@@ -1167,7 +1167,7 @@ SCIP_RETCODE solveSubMIP(
    SCIP_CALL( SCIPcreate(&subscip) );
 
    /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPgetNVars(scip)) );
 
    *success = FALSE;
 
@@ -1246,11 +1246,11 @@ SCIP_RETCODE solveSubMIP(
    }
    if( !SCIPisParamFixed(subscip, "conflict/useinflp") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useinflp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/usesb") )
    {
@@ -1823,7 +1823,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
          assert(ncovervars >= 0);
 
          /* create hash map */
-         SCIP_CALL( SCIPhashmapCreate(&varincover, SCIPblkmem(scip), SCIPcalcHashtableSize(2 * ncovervars)) );
+         SCIP_CALL( SCIPhashmapCreate(&varincover, SCIPblkmem(scip), ncovervars) );
 
          /* process variables in the cover */
          for( c = 0; c < ncovervars; c++ )

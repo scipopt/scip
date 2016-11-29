@@ -22,7 +22,7 @@ do
         # check if the header for the LP solver are available,
         # or we are in the special case "none"
         # in the case "qso", the include directory is called qsinc
-        if [ -e lib/$LPS"inc" ] || [ "$LPS" == "none" ] || [ "$LPS" == "spx2" -a -e lib/spxinc ] || [ "$LPS" == "qso" -a -e lib/qsinc ] || [ "$LPS" == "clp" -a -e lib/clp.*.opt ]
+        if [ -e lib/include/$LPS"inc" ] || [ "$LPS" == "none" ] || [ "$LPS" == "spx2" -a -e lib/include/spxinc ] || [ "$LPS" == "qso" -a -e lib/include/qsinc ] || [ "$LPS" == "clp" -a -e lib/clp.*.opt ]
         then
              make LPS=$LPS OPT=$OPT lpidepend
         fi
@@ -32,7 +32,7 @@ do
     # dependencies of nlpi libraries
     for EXPRINT in ${EXPRINTS[@]}
     do
-        if test "$EXPRINT" == "none" -o "$EXPRINT" == "cppad" -o -e lib/$EXPRINT -o -e lib/$EXPRINT"inc"
+        if test "$EXPRINT" == "none" -o "$EXPRINT" == "cppad" -o -e lib/include/$EXPRINT -o -e lib/include/$EXPRINT"inc"
         then
             make OPT=$OPT LPS=none EXPRINT=$EXPRINT IPOPT=false nlpidepend
 

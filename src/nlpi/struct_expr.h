@@ -109,6 +109,7 @@ struct SCIP_ExprData_User
    SCIP_DECL_USEREXPRESTIMATE ((*estimate)); /**< under-/over-estimator function */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)); /**< expression data copy function, or NULL if nothing to copy */
    SCIP_DECL_USEREXPRFREEDATA ((*freedata)); /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRPRINT ((*print));        /**< expression print function, or NULL for default string "user()" */
 };
 
 /** a node in an expression graph */

@@ -24,7 +24,6 @@
 #define __SCIP_OBJMESSAGEHDLR_H__
 
 #include "scip/scip.h"
-#include "objscip/objcloneable.h"
 
 namespace scip
 {
@@ -54,6 +53,21 @@ public:
    /** destructor */
    virtual ~ObjMessagehdlr()
    {
+   }
+
+   /** error message print method of message handler
+    *
+    *  @note This function can be activated by calling SCIPsetStaticErrorPrintingMessagehdlr().
+    *
+    *  @see SCIP_DECL_ERRORPRINTING(x) in @ref type_message.h
+    */
+   virtual void scip_error(
+      SCIP_MESSAGEHDLR*  messagehdlr,        /**< the message handler itself */
+      FILE*              file,               /**< file stream to print into (NULL for stderr) */
+      const char*        msg                 /**< string to output into the file (or NULL to flush) */
+      )
+   { /*lint --e{715}*/
+
    }
 
    /** warning message print method of message handler
@@ -108,6 +122,12 @@ SCIP_RETCODE SCIPcreateObjMessagehdlr(
 /** returns the message handler object for the given message handler */
 EXTERN
 scip::ObjMessagehdlr* SCIPgetObjMessagehdlr(
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   );
+
+/** set static error output function to the corresponding function of message handler */
+EXTERN
+void SCIPsetStaticErrorPrintingMessagehdlr(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 

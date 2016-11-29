@@ -19,7 +19,7 @@
  * @author Stefan Heinz
  * @author Michael Winkler
  *
- * This constraint handler deals with AND-constraint. These are constraint of the form:
+ * This constraint handler deals with AND-constraints. These are constraint of the form:
  *
  * \f[
  *    r = x_1 \wedge x_2 \wedge \dots  \wedge x_n
@@ -73,7 +73,7 @@
 #define DEFAULT_UPGRRESULTANT      TRUE /**< should all binary resultant variables be upgraded to implicit binary variables */
 #define DEFAULT_DUALPRESOLVING     TRUE /**< should dual presolving be performed? */
 
-#define HASHSIZE_ANDCONS         131101 /**< minimal size of hash table in and constraint tables */
+#define HASHSIZE_ANDCONS            500 /**< minimal size of hash table in and constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
@@ -151,7 +151,7 @@ typedef enum Proprule PROPRULE;
 static
 SCIP_RETCODE lockRounding(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< AND-constraint */
+   SCIP_CONS*            cons,               /**< constraint data */
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
@@ -165,7 +165,7 @@ SCIP_RETCODE lockRounding(
 static
 SCIP_RETCODE unlockRounding(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons,               /**< AND-constraint */
+   SCIP_CONS*            cons,               /**< constraint data */
    SCIP_VAR*             var                 /**< variable of constraint entry */
    )
 {
@@ -1169,7 +1169,8 @@ SCIP_RETCODE analyzeConflictOne(
    assert(SCIPvarGetUbLocal(consdata->vars[falsepos]) < 0.5);
 
    /* initialize conflict analysis, and add resultant and single operand variable to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
    SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
    SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[falsepos]) );
 
@@ -1200,7 +1201,8 @@ SCIP_RETCODE analyzeConflictZero(
    assert(SCIPvarGetUbLocal(consdata->resvar) < 0.5);
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
    SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->resvar) );
    for( v = 0; v < consdata->nvars; ++v )
    {
@@ -3270,7 +3272,6 @@ static
 SCIP_DECL_HASHKEYVAL(hashKeyValAndcons)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
-   unsigned int hashval;
    int minidx;
    int mididx;
    int maxidx;
@@ -3285,9 +3286,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValAndcons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + maxidx; /*lint !e701*/
-
-   return hashval;
+   return SCIPhashTwo(SCIPcombineTwoInt(consdata->nvars, minidx),
+                      SCIPcombineTwoInt(mididx, maxidx));
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
@@ -3313,7 +3313,7 @@ SCIP_RETCODE detectRedundantConstraints(
    assert(ndelconss != NULL);
 
    /* create a hash table for the constraint set */
-   hashtablesize = SCIPcalcHashtableSize(10*nconss);
+   hashtablesize = nconss;
    hashtablesize = MAX(hashtablesize, HASHSIZE_ANDCONS);
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashGetKeyAndcons, hashKeyEqAndcons, hashKeyValAndcons, (void*) scip) );
@@ -3406,6 +3406,74 @@ SCIP_RETCODE detectRedundantConstraints(
  TERMINATE:
    /* free hash table */
    SCIPhashtableFree(&hashtable);
+
+   return SCIP_OKAY;
+}
+
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool separated;
+   SCIP_Bool violated;
+   SCIP_Bool cutoff;
+   int i;
+
+   separated = FALSE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   /* method is called only for integral solutions, because the enforcing priority is negative */
+   for( i = 0; i < nconss; i++ )
+   {
+      SCIP_CALL( checkCons(scip, conss[i], sol, FALSE, FALSE, &violated) );
+      if( violated )
+      {
+         if( conshdlrdata->enforcecuts )
+         {
+            SCIP_Bool consseparated;
+
+            SCIP_CALL( separateCons(scip, conss[i], sol, &consseparated, &cutoff) );
+            if ( cutoff )
+            {
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
+            separated = separated || consseparated;
+
+            /* following assert is wrong in the case some variables were not in relaxation (dynamic columns),
+            *
+            * e.g. the resultant, which has a negative objective value, is in the relaxation solution on its upper bound
+            * (variables with status loose are in an relaxation solution on it's best bound), but already creating a
+            * row, and thereby creating the column, changes the solution value (variable than has status column, and the
+            * initialization sets the relaxation solution value) to 0.0, and this already could lead to no violation of
+            * the rows, which then are not seperated into the lp
+            */
+#if 0
+            assert(consseparated); /* because the solution is integral, the separation always finds a cut */
+#endif
+         }
+         else
+         {
+            *result = SCIP_INFEASIBLE;
+            return SCIP_OKAY;
+         }
+      }
+   }
+
+   if( separated )
+      *result = SCIP_SEPARATED;
+   else
+      *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
 }
@@ -3907,8 +3975,6 @@ SCIP_DECL_CONSINITPRE(consInitpreAnd)
 
 #ifdef GMLGATEPRINTING
 
-#define HASHTABLESIZE_FACTOR 5
-
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 static
 SCIP_DECL_CONSEXITPRE(consExitpreAnd)
@@ -3959,7 +4025,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    }
 
    /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&hashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&hashmap, SCIPblkmem(scip), nvars) );
 
    /* write starting of gml file */
    SCIPgmlWriteOpening(gmlfile, TRUE);
@@ -4199,63 +4265,19 @@ SCIP_DECL_CONSSEPASOL(consSepasolAnd)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpAnd)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool separated;
-   SCIP_Bool violated;
-   SCIP_Bool cutoff;
-   int i;
-
-   separated = FALSE;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   /* method is called only for integral solutions, because the enforcing priority is negative */
-   for( i = 0; i < nconss; i++ )
-   {
-      SCIP_CALL( checkCons(scip, conss[i], NULL, FALSE, FALSE, &violated) );
-      if( violated )
-      {
-         if( conshdlrdata->enforcecuts )
-         {
-            SCIP_Bool consseparated;
-
-            SCIP_CALL( separateCons(scip, conss[i], NULL, &consseparated, &cutoff) );
-            if ( cutoff )
-            {
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-            separated = separated || consseparated;
-
-            /* following assert is wrong in the case some variables were not in LP (dynamic columns),
-            *
-            * e.g. the resultant, which has a negative objective value, is in the lp solution on its upper bound
-            * (variables with status loose are in an lp solution on it's best bound), but already creating a row, and
-            * thereby creating the column, changes the solution value (variable than has status column, and the
-            * initialization sets the lp solution value) to 0.0, and this already could lead to no violation of the
-            * rows, which then are not seperated into the lp
-            */
-#if 0
-            assert(consseparated); /* because the solution is integral, the separation always finds a cut */
-#endif
-         }
-         else
-         {
-            *result = SCIP_INFEASIBLE;
-            return SCIP_OKAY;
-         }
-      }
-   }
-
-   if( separated )
-      *result = SCIP_SEPARATED;
-   else
-      *result = SCIP_FEASIBLE;
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, NULL, result) );
 
    return SCIP_OKAY;
 }
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxAnd)
+{  /*lint --e{715}*/
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, sol, result) );
+
+   return SCIP_OKAY;
+}
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
@@ -4874,6 +4896,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpAnd, consSepasolAnd, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransAnd) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxAnd) );
 
    /* add AND-constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -4941,7 +4964,7 @@ SCIP_RETCODE SCIPcreateConsAnd(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -5118,7 +5141,7 @@ SCIP_VAR* SCIPgetResultantAnd(
    return consdata->resvar;
 }
 
-/** return if the variables of the AND-constraint are sorted due to their indices */
+/** return if the variables of the AND-constraint are sorted with respect to their indices */
 SCIP_Bool SCIPisAndConsSorted(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
@@ -5142,7 +5165,7 @@ SCIP_Bool SCIPisAndConsSorted(
    return consdata->sorted;
 }
 
-/** sort the variables of the AND-constraint due to their indices */
+/** sort the variables of the AND-constraint with respect to their indices */
 SCIP_RETCODE SCIPsortAndCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
