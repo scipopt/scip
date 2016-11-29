@@ -45,7 +45,7 @@
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_FINAL  /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_PROP_TIMING     SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler*/
 
-#define DEFAULT_MAXDEPTH              0      /**< maximum depth of a node to run components detection (-1: disable component detection during solving) */
+#define DEFAULT_MAXDEPTH             -1      /**< maximum depth of a node to run components detection (-1: disable component detection during solving) */
 #define DEFAULT_MAXINTVARS          500      /**< maximum number of integer (or binary) variables to solve a subproblem directly in presolving (-1: no solving) */
 #define DEFAULT_MINSIZE              50      /**< minimum absolute size (in terms of variables) to solve a component individually during branch-and-bound */
 #define DEFAULT_MINRELSIZE          0.1      /**< minimum relative size (in terms of variables) to solve a component individually during branch-and-bound */
@@ -2040,6 +2040,11 @@ SCIP_DECL_CONSPROP(consPropComponents)
 
    *result = SCIP_DIDNOTRUN;
 
+   /* do not try to detect independent components if the depth is too high */
+   if( SCIPgetDepth(scip) + conshdlrdata->subscipdepth > conshdlrdata->maxdepth
+      && SCIPconshdlrGetNActiveConss(conshdlr) == 0 )
+      return SCIP_OKAY;
+
    /* don't run in probing or in repropagation */
    if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
       return SCIP_OKAY;
@@ -2085,10 +2090,6 @@ SCIP_DECL_CONSPROP(consPropComponents)
       int ncompsmaxsize;
 
       assert(SCIPconshdlrGetNActiveConss(conshdlr) == 0);
-
-      /* do not try to detect independent components if the depth is too high */
-      if( SCIPgetDepth(scip) + conshdlrdata->subscipdepth > conshdlrdata->maxdepth )
-         return SCIP_OKAY;
 
       /* allocate memory for sorted components */
       SCIP_CALL( SCIPallocBufferArray(scip, &sortedvars, SCIPgetNVars(scip)) );
