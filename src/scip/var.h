@@ -1645,7 +1645,7 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
    SCIP_Bool             removefromvar       /**< should the implications and variable bounds be removed from the var itself? */
    );
 
-/** sets the variable clique component index, or -1 if index should be reset */
+/** sets the index of the connected component of the clique graph that the variable belongs to, or -1 if not computed */
 extern
 void SCIPvarSetCliqueComponentIdx(
    SCIP_VAR*             var,                /**< problem variable */

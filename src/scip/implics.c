@@ -3016,7 +3016,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 
 /** helper function that returns the graph node index for a variable during connected component detection */
 static
-int getNodeNumberBinvar(
+int getNodeIndexBinvar(
    SCIP_VAR*             binvar,             /**< binary (or implicit binary) variable */
    int                   nbinvars,           /**< number of binary variables */
    int                   nintvars,           /**< number of integer variables */
@@ -3054,7 +3054,13 @@ int getNodeNumberBinvar(
    return nodeindex;
 }
 
-/** computes connected components of the clique graph */
+/** computes connected components of the clique graph
+ *
+ *  use depth-first search similarly to the components presolver/constraint handler, representing a clique as a
+ *  path to reduce memory usage, but leaving the connected components the same
+ *
+ *  an update becomes necessary if a clique gets added with variables from different components
+ */
 SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -3124,6 +3130,12 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
          sizes[v - nintvars] = 0;
    }
 
+
+   /* we need to consider implicit integer variables for which SCIPvarIsBinary() returns TRUE.
+    * These may be scattered across the nimplvars many implicit integer variables.
+    * For simplicity, we add all implicit integer variables as nodes to the digraph, and subtract
+    * the amount of nonbinary implicit integer variables afterwards.
+    */
    SCIP_CALL( SCIPdigraphCreate(&digraph, nbinvars + nimplvars) );
    SCIP_CALL( SCIPdigraphSetSizes(digraph, sizes) );
 
@@ -3136,25 +3148,27 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
       SCIP_VAR** cliquevars;
       int nclqvars;
       int cv;
+      int lastactiveindex = -1;
 
       clique = cliques[c];
       cliquevars = SCIPcliqueGetVars(clique);
       nclqvars = SCIPcliqueGetNVars(clique);
       assert(nclqvars > 0);
 
-      /* add a variable and its predecessor in this clique as an arc to the digraph */
-      for( cv = 1; cv < nclqvars; ++cv )
+      /* add a variable and its last active predecessor in this clique as an arc to the digraph */
+      for( cv = 0; cv < nclqvars; ++cv )
       {
-         int startnode;
-         int endnode;
+         int nodeindex = getNodeIndexBinvar(cliquevars[cv], nbinvars, nintvars, nimplvars);
 
-         startnode = getNodeNumberBinvar(cliquevars[cv], nbinvars, nintvars, nimplvars);
-         endnode = getNodeNumberBinvar(cliquevars[cv - 1], nbinvars, nintvars, nimplvars);
-
-         /* add an arc to the digraph if both variables have an active representative */
-         if( startnode >= 0 && endnode >= 0 )
+         if( nodeindex >= 0 )
          {
-            SCIP_CALL( SCIPdigraphAddArc(digraph, startnode, endnode, NULL) );
+            /* add an arc to the digraph between this node and the previous active variable from this clique */
+            if( lastactiveindex >= 0 )
+            {
+               SCIP_CALL( SCIPdigraphAddArc(digraph, nodeindex, lastactiveindex, NULL) );
+            }
+            /* store this node index as active index for the next arc */
+            lastactiveindex = nodeindex;
          }
       }
    }

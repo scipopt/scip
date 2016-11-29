@@ -9060,9 +9060,9 @@ SCIP_RETCODE SCIPaddClique(
 /** calculates a partition of the given set of binary variables into cliques; takes into account independent clique components
  *
  *  The algorithm performs the following steps:
- *  - recomputes connected clique components, if necessary
- *  - computes a clique partition for every connected clique component greedily.
- *  - relabels the resulting cliques such that the resulting partition obeys the variable order
+ *  - recomputes connected components of the clique table, if necessary
+ *  - computes a clique partition for every connected component greedily.
+ *  - relabels the resulting clique partition such that it satisfies the description below
  *
  *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
  *  were assigned to the same clique;

@@ -14213,7 +14213,6 @@ SCIP_RETCODE presolve(
    int presolstart = 0;
    int propstart = 0;
    int consstart = 0;
-   int ncliquecomponents;
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -14346,7 +14345,7 @@ SCIP_RETCODE presolve(
       stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
    }
 
-   /* update clique components if necessary */
+   /* update clique components (for statistic output printed below) */
    if( SCIPcliquetableNeedsComponentUpdate(scip->cliquetable) )
    {
       SCIP_VAR** vars;
@@ -14359,7 +14358,6 @@ SCIP_RETCODE presolve(
       SCIP_CALL( SCIPcliquetableComputeCliqueComponents(scip->cliquetable, scip->set, vars, nbinvars, nintvars, nimplvars) );
    }
    assert(!SCIPcliquetableNeedsComponentUpdate(scip->cliquetable));
-   ncliquecomponents = SCIPcliquetableGetNCliqueComponents(scip->cliquetable);
 
    if( *infeasible || *unbounded )
    {
@@ -14434,9 +14432,8 @@ SCIP_RETCODE presolve(
       scip->stat->npresolchgbds, scip->stat->npresoladdholes, scip->stat->npresolchgsides, scip->stat->npresolchgcoefs);
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       " %d implications, %d cliques\n", scip->stat->nimplications, SCIPcliquetableGetNCliques(scip->cliquetable));
-
-   SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-         "Clique table has %d connected components (bin+impl bin vars)\n", ncliquecomponents);
+   SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "clique table has %d connected components\n", SCIPcliquetableGetNCliqueComponents(scip->cliquetable));
 
    /* remember number of constraints */
    SCIPprobMarkNConss(scip->transprob);
@@ -23075,15 +23072,9 @@ SCIP_RETCODE SCIPaddClique(
    return SCIP_OKAY;
 }
 
-/** creates a variable order consistent labeling of the given labels
+/** relabels the given labels in-place in an increasing fashion: the first seen label is 0, the next label 1, etc...
  *
- *  order consistent means that
- *  a) the label at the first position in the array is 0
- *  b) for every possible label \in {0, ..., nlabels - 1} there is an index j with label_j = i
- *  c) that for two indices i <= j, it holds that
- *     label_i > label_j if and only if there is a k < i such that label_k == label_j
- *
- *  every label equal to -1 is treated as a previously unseen, unique label and gets a new ordered label.
+ *  @note every label equal to -1 is treated as a previously unseen, unique label and gets a new ordered label.
  */
 static
 SCIP_RETCODE relabelOrderConsistent(
@@ -23371,9 +23362,9 @@ SCIP_RETCODE calcCliquePartitionGreedy(
 /** calculates a partition of the given set of binary variables into cliques; takes into account independent clique components
  *
  *  The algorithm performs the following steps:
- *  - recomputes connected clique components, if necessary
- *  - computes a clique partition for every connected clique component greedily.
- *  - relabels the resulting cliques such that the resulting partition obeys the variable order
+ *  - recomputes connected components of the clique table, if necessary
+ *  - computes a clique partition for every connected component greedily.
+ *  - relabels the resulting clique partition such that it satisfies the description below
  *
  *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
  *  were assigned to the same clique;
