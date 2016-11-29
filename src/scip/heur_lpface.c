@@ -33,7 +33,7 @@
 #define HEUR_DESC             "LNS heuristic that searches the optimal LP face inside a sub-MIP"
 #define HEUR_DISPCHAR         '_'
 #define HEUR_PRIORITY         -1104000
-#define HEUR_FREQ             -1
+#define HEUR_FREQ             15
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
@@ -41,8 +41,8 @@
 
 #define DEFAULT_MAXNODES      5000LL         /**< maximum number of nodes to regard in the subproblem                   */
 #define DEFAULT_MINNODES      50LL           /**< minimum number of nodes to regard in the subproblem                   */
-#define DEFAULT_MINFIXINGRATE 0.3            /**< required percentage of fixed integer variables in sub-MIP to run         */
-#define DEFAULT_NODESOFS      1500LL         /**< number of nodes added to the contingent of the total nodes            */
+#define DEFAULT_MINFIXINGRATE 0.1            /**< required percentage of fixed integer variables in sub-MIP to run         */
+#define DEFAULT_NODESOFS      200LL          /**< number of nodes added to the contingent of the total nodes            */
 #define DEFAULT_NODESQUOT     0.1            /**< subproblem nodes in relation to nodes of the original problem         */
 #define DEFAULT_LPLIMFAC      2.0            /**< factor by which the limit on the number of LP depends on the node limit */
 #define DEFAULT_USELPROWS     TRUE           /**< should subproblem be created out of the rows in the LP rows,
@@ -155,8 +155,10 @@ SCIP_RETCODE fixVariables(
       lbglobal = SCIPvarGetLbGlobal(var);
       ubglobal = SCIPvarGetUbGlobal(var);
 
-      /* fix the variable to its solution value if variable is nonbasic (i.e., at one of its bounds) with nonzero reduced costs */
-      if( ! SCIPisZero(scip, redcost) )
+      /* fix the variable to its solution value if variable is nonbasic (i.e., at one of its bounds)
+       *  with nonzero reduced costs
+       */
+      if( ! SCIPisDualfeasZero(scip, redcost) )
       {
          /* fix variable based on reduced cost information, respecting global bounds */
          if( (redcost > 0 && SCIPisFeasEQ(scip, solval, lbglobal)) ||
@@ -164,8 +166,8 @@ SCIP_RETCODE fixVariables(
          {
             SCIPdebugMsg(scip, "Fixing variable <%s> (obj: %g), local bounds [%.1g, %.1g], redcost %9.5g, LP sol val %9.5g\n",
                   SCIPvarGetName(var), SCIPvarGetObj(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), redcost, solval);
-            assert(!SCIPisInfinity(scip, solval));
-            assert(!SCIPisInfinity(scip, -solval));
+            assert(! SCIPisInfinity(scip, solval));
+            assert(! SCIPisInfinity(scip, -solval));
             SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], solval) );
             SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], solval) );
             if( SCIPvarIsIntegral(var) )
@@ -182,7 +184,8 @@ SCIP_RETCODE fixVariables(
     * subproblem creation and abort immediately */
    *success = (fixingcounter < nvars && fixingrate >= heurdata->minfixingrate);
 
-   SCIPdebugMsg(scip, " LP face heuristic fixed %senough variables (%d out of %d)\n", *success ? "": "not ", fixingcounter, nvars);
+   SCIPdebugMsg(scip, " LP face heuristic fixed %senough variables (%d out of %d)\n",
+      *success ? "": "not ", fixingcounter, nvars);
 
    return SCIP_OKAY;
 }
@@ -251,7 +254,7 @@ SCIP_RETCODE createRows(
       rowsolactivity = SCIPgetRowActivity(scip, rows[i]);
 
       /* transform into equation if the row is sharp and has a nonzero dual solution */
-      if( dualbasisequations && !SCIPisFeasZero(scip, dualsol) )
+      if( dualbasisequations && ! SCIPisDualfeasZero(scip, dualsol) )
       {
          if( dualsol > 0.0 && SCIPisFeasEQ(scip, rowsolactivity, lhs) )
             rhs = lhs;
@@ -272,7 +275,7 @@ SCIP_RETCODE createRows(
    return SCIP_OKAY;
 }
 
-/** creates a subproblem for subscip by fixing a number of variables */
+/** creates the LP face subproblem by fixing nonbasic variables with nonzero reduced costs */
 static
 SCIP_RETCODE setupSubproblem(
    SCIP*                 scip,               /**< original SCIP data structure */
@@ -284,15 +287,18 @@ SCIP_RETCODE setupSubproblem(
 {
    SCIP_VAR** vars = SCIPgetVars(scip);
    int nvars = SCIPgetNVars(scip);
-   SCIP_Real upperbound;
+   SCIP_Real lowerbound;
    SCIP_CONS* origobjcons;
    int i;
 #ifndef NDEBUG
    int nobjvars = 0;
 #endif
 
-   /* set up the variables of the subproblem */
+   /* fix variables in subproblem with nonzero reduced costs */
    SCIP_CALL( fixVariables(scip, subscip, subvars, heurdata, success) );
+
+   if( ! (*success) )
+      return SCIP_OKAY;
 
    /* we copy the rows of the LP, if enough variables could be fixed and we work on the MIP
       relaxation of the problem */
@@ -301,10 +307,10 @@ SCIP_RETCODE setupSubproblem(
       SCIP_CALL( createRows(scip, subscip, subvars, heurdata->dualbasisequations) );
    }
 
-   /* add the lower bound as a constraint to the problem */
-   upperbound = SCIPgetLowerbound(scip);
+   /* add an equation that the objective function must be equal to the lower bound */
+   lowerbound = SCIPgetLowerbound(scip);
 
-   SCIP_CALL( SCIPcreateConsLinear(subscip, &origobjcons, "objbound_of_origscip", 0, NULL, NULL, upperbound, upperbound,
+   SCIP_CALL( SCIPcreateConsLinear(subscip, &origobjcons, "objbound_of_origscip", 0, NULL, NULL, lowerbound, lowerbound,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
    for( i = 0; i < nvars; ++i)
    {
@@ -367,7 +373,8 @@ SCIP_RETCODE createNewSol(
 #ifdef SCIP_DEBUG
    printreason = TRUE;
    completely = TRUE;
-   SCIPdebugMsg(scip, "trying to transfer LP face solution with solution value %16.9g to main problem\n", SCIPretransformObj(scip, SCIPgetSolTransObj(scip, newsol)));
+   SCIPdebugMsg(scip, "trying to transfer LP face solution with solution value %16.9g to main problem\n",
+      SCIPretransformObj(scip, SCIPgetSolTransObj(scip, newsol)));
 #endif
    /* try to add new solution to scip and free it immediately */
    *success = FALSE;
@@ -399,28 +406,29 @@ static
 SCIP_Longint calcNodeLimit(
    SCIP*                 scip,               /**< (original) SCIP data structure */
    SCIP_HEUR*            heur,               /**< LP face heuristic */
-   SCIP_HEURDATA*        heurdata            /**< heuristic data */
+   SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
    )
 {
    SCIP_Longint nodelimit;
+
    /* calculate the maximal number of branching nodes until heuristic is aborted */
    nodelimit = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
-
-   /* reward Lpface if it succeeded often */
-   nodelimit = (SCIP_Longint)
-            (nodelimit * (1.0 + 2.0*(SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur)+1.0)));
 
    /* count the setup costs for the sub-MIP as 100 nodes */
    nodelimit -= 100 * SCIPheurGetNCalls(heur);
 
+   /* add the offset */
    nodelimit += heurdata->nodesofs;
 
-   /* determine the node limit for the current process */
-   if( !heurdata->keepsubscip )
-   {
-      nodelimit -= heurdata->usednodes;
-      nodelimit = MIN(nodelimit, heurdata->maxnodes);
-   }
+   /* subtract previously used nodes */
+   nodelimit -= heurdata->usednodes;
+
+   /* do not use more than the maximum number of allowed nodes in one run */
+   nodelimit = MIN(nodelimit, heurdata->maxnodes);
+
+   /* if the subscip has been kept from a previous run, add the number of already processed nodes */
+   if( heurdata->subscipdata->subscip != NULL )
+      nodelimit += SCIPgetNNodes(heurdata->subscipdata->subscip);
 
    return nodelimit;
 }
@@ -441,12 +449,13 @@ SCIP_RETCODE setSubscipLimits(
 
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
 
+   if( ! SCIPisInfinity(scip, timelimit) )
+      timelimit -= SCIPgetSolvingTime(scip);
+
    /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(scip, memorylimit) )
+   if( ! SCIPisInfinity(scip, memorylimit) )
    {
       memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
@@ -458,10 +467,13 @@ SCIP_RETCODE setSubscipLimits(
       *success = FALSE;
       return SCIP_OKAY;
    }
+
    /* calculate node limit for the subproblem */
    nodelimit = calcNodeLimit(scip, heur, heurdata);
 
-   /* we should have aborted the sub-SCIP procedure earlier if no additional nodes are allowed with the current parameter settings */
+   /* we should have aborted the sub-SCIP procedure earlier if no additional nodes are allowed
+    * with the current parameter settings
+    */
    assert(nodelimit > SCIPgetNNodes(subscip));
 
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit) );
@@ -486,8 +498,8 @@ SCIP_RETCODE setSubscipParameters(
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
-#ifdef SCIP_DEBUG
    /* for debugging lpface, enable MIP output */
+#ifdef SCIP_DEBUG
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1) );
 #endif
@@ -505,13 +517,13 @@ SCIP_RETCODE setSubscipParameters(
    SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
    /* use restart depth first node selection */
-   if( SCIPfindNodesel(subscip, "restartdfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/restartdfs/stdpriority") )
+   if( SCIPfindNodesel(subscip, "restartdfs") != NULL && ! SCIPisParamFixed(subscip, "nodeselection/restartdfs/stdpriority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/restartdfs/stdpriority", INT_MAX/4) );
    }
 
    /* use inference branching */
-   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
+   if( SCIPfindBranchrule(subscip, "inference") != NULL && ! SCIPisParamFixed(subscip, "branching/inference/priority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
@@ -522,10 +534,78 @@ SCIP_RETCODE setSubscipParameters(
     * instances); however, the solution status of the sub-SCIP might get corrupted by this; hence no deductions shall be
     * made for the original SCIP
     */
-   if( SCIPfindConshdlr(subscip, "quadratic") != NULL && !SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
+   if( SCIPfindConshdlr(subscip, "quadratic") != NULL && ! SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** reset the sub-SCIP data to its default values */
+static
+void subscipdataReset(
+   SUBSCIPDATA*          subscipdata         /**< data structure of the sub-problem */
+   )
+{
+   subscipdata->subscip = NULL;
+   subscipdata->subvars = NULL;
+   subscipdata->nsubvars = 0;
+   subscipdata->objbound = SCIP_INVALID;
+}
+
+/** free the stored sub-SCIP information */
+static
+SCIP_RETCODE subscipdataFreeSubscip(
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SUBSCIPDATA*          subscipdata         /**< data structure of the sub-problem */
+   )
+{
+   assert(subscipdata != NULL);
+
+   /* free the subscipdata's scip */
+   if( subscipdata->subscip != NULL )
+   {
+      SCIP_CALL( SCIPfree(&subscipdata->subscip) );
+   }
+
+   subscipdata->subscip = NULL;
+
+   /* free the subscip variables */
+   if( subscipdata->subvars != NULL )
+   {
+      assert(subscipdata->nsubvars > 0);
+      SCIPfreeBlockMemoryArray(scip, &subscipdata->subvars, subscipdata->nsubvars);
+   }
+   subscipdataReset(subscipdata);
+
+   return SCIP_OKAY;
+}
+
+/** store the sub-SCIP to the data structure */
+static
+SCIP_RETCODE subscipdataCopySubscip(
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SUBSCIPDATA*          subscipdata,        /**< data structure of the sub-problem */
+   SCIP*                 subscip,            /**< sub scip data structure to keep */
+   SCIP_VAR**            subvars,            /**< sub scip variable array in the order of the main SCIP variables */
+   int                   nvars               /**< number of sub SCIP variables */
+   )
+{
+   assert(scip != NULL);
+   assert(subscipdata != NULL);
+   assert(subscip != NULL);
+   assert(subvars != NULL);
+   assert(nvars == SCIPgetNVars(scip));
+
+   assert(subscipdata->subscip == NULL);
+   assert(subscipdata->subvars == NULL);
+
+   subscipdata->subscip = subscip;
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &subscipdata->subvars, subvars, nvars) );
+   subscipdata->nsubvars = nvars;
+
+   subscipdata->objbound = SCIPgetNodeLowerbound(scip, SCIPgetCurrentNode(scip));
 
    return SCIP_OKAY;
 }
@@ -586,8 +666,8 @@ SCIP_RETCODE changeSubvariableObjective(
          /* use current LP fractionality as objective */
       case 'f':
          lpsolval = SCIPvarGetLPSol(var);
-         upfrac = SCIPfloor(scip, lpsolval + 1.0) - lpsolval;
-         downfrac = lpsolval - SCIPceil(scip, lpsolval - 1.0);
+         downfrac = SCIPfrac(scip, lpsolval);
+         upfrac = 1.0 - downfrac;
 
          objcoeff = downfrac - upfrac;
          break;
@@ -601,7 +681,8 @@ SCIP_RETCODE changeSubvariableObjective(
 
       /* use average inferences */
       case 'i':
-         objcoeff = SCIPgetVarAvgInferences(scip, var, SCIP_BRANCHDIR_DOWNWARDS) - SCIPgetVarAvgInferences(scip, var, SCIP_BRANCHDIR_UPWARDS);
+         objcoeff = SCIPgetVarAvgInferences(scip, var, SCIP_BRANCHDIR_DOWNWARDS)
+            - SCIPgetVarAvgInferences(scip, var, SCIP_BRANCHDIR_UPWARDS);
          break;
 
       /* use original objective function */
@@ -620,9 +701,9 @@ SCIP_RETCODE changeSubvariableObjective(
 
 /* ---------------- Callback methods of event handler ---------------- */
 
-/* exec the event handler
+/** execution callback of the event handler for Lpface sub-SCIP
  *
- * we interrupt the solution process
+ * we interrupt the solution process if we hit the LP iteration limit per node
  */
 static
 SCIP_DECL_EVENTEXEC(eventExecLpface)
@@ -712,73 +793,6 @@ SCIP_DECL_HEURINIT(heurInitLpface)
    return SCIP_OKAY;
 }
 
-/** initialize the subscip data to its default values */
-static
-void subscipdataReset(
-   SUBSCIPDATA*          subscipdata         /**< data structure of the sub-problem */
-   )
-{
-   subscipdata->subscip = NULL;
-   subscipdata->subvars = NULL;
-   subscipdata->nsubvars = 0;
-   subscipdata->objbound = SCIP_INVALID;
-}
-
-/** reset subscip data */
-static
-SCIP_RETCODE subscipdataFreeSubscip(
-   SCIP*                 scip,               /**< original SCIP data structure */
-   SUBSCIPDATA*          subscipdata         /**< data structure of the sub-problem */
-   )
-{
-   assert(subscipdata != NULL);
-
-   /* free the subscipdata's scip */
-   if( subscipdata->subscip != NULL )
-   {
-      SCIP_CALL( SCIPfree(&subscipdata->subscip) );
-   }
-
-   subscipdata->subscip = NULL;
-
-   /* free the subscip variables */
-   if( subscipdata->subvars != NULL )
-   {
-      assert(subscipdata->nsubvars > 0);
-      SCIPfreeBlockMemoryArray(scip, &subscipdata->subvars, subscipdata->nsubvars);
-   }
-   subscipdataReset(subscipdata);
-
-   return SCIP_OKAY;
-}
-
-static
-SCIP_RETCODE subscipdataCopySubscip(
-   SCIP*                 scip,               /**< original SCIP data structure */
-   SUBSCIPDATA*          subscipdata,        /**< data structure of the sub-problem */
-   SCIP*                 subscip,            /**< sub scip data structure to keep */
-   SCIP_VAR**            subvars,            /**< sub scip variable array in the order of the main SCIP variables */
-   int                   nvars               /**< number of sub SCIP variables */
-   )
-{
-   assert(scip != NULL);
-   assert(subscipdata != NULL);
-   assert(subscip != NULL);
-   assert(subvars != NULL);
-   assert(nvars == SCIPgetNVars(scip));
-
-   assert(subscipdata->subscip == NULL);
-   assert(subscipdata->subvars == NULL);
-
-   subscipdata->subscip = subscip;
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &subscipdata->subvars, subvars, nvars) );
-   subscipdata->nsubvars = nvars;
-
-   subscipdata->objbound = SCIPgetNodeLowerbound(scip, SCIPgetCurrentNode(scip));
-
-   return SCIP_OKAY;
-}
-
 /** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_HEURINITSOL(heurInitsolLpface)
@@ -796,6 +810,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolLpface)
    heurdata->lastlpobjinfeas = -SCIPinfinity(scip);
 
    assert(heurdata->subscipdata == NULL);
+
    /* variable order might have changed since the last run, reinitialize sub-SCIP data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata->subscipdata) );
    subscipdataReset(heurdata->subscipdata);
@@ -830,6 +845,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolLpface)
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_STATISTIC
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
 SCIP_DECL_HEUREXIT(heurExitLpface)
@@ -844,11 +860,14 @@ SCIP_DECL_HEUREXIT(heurExitLpface)
    assert(heurdata != NULL);
 
    SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-         "LP Face heuristic stats: Status: %d Nodes: %d LP iters: %d Fixed: %d Presolving time: %.2f\n",
-         heurdata->submipstatus, heurdata->usednodes, heurdata->submipnlpiters, heurdata->nvarsfixed, heurdata->submippresoltime);
+      "LP Face heuristic stats: Status: %d Nodes: %d LP iters: %d Fixed: %d Presolving time: %.2f\n",
+      heurdata->submipstatus, heurdata->usednodes, heurdata->submipnlpiters, heurdata->nvarsfixed, heurdata->submippresoltime);
 
    return SCIP_OKAY;
 }
+#else
+#define heurExitLpface NULL
+#endif
 
 /** execution method of primal heuristic */
 static
@@ -906,7 +925,9 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    if( SCIPgetDepth(scip) < heurdata->minpathlen - 1 )
       return SCIP_OKAY;
 
-   /* do not run if the current focus node already has a lower bound higher than the LP value at the node, maybe due to strong branching */
+   /* do not run if the current focus node already has a lower bound higher than the LP value at the node,
+    * for example, due to strong branching
+    */
    if( SCIPisGT(scip, focusnodelb, SCIPgetLPObjval(scip)) )
       return SCIP_OKAY;
 
@@ -919,7 +940,8 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       return SCIP_OKAY;
 
    /* make the reasoning stronger if the objective value must be integral */
-   if( SCIPisObjIntegral(scip) && (!SCIPisIntegral(scip, focusnodelb) || SCIPisLT(scip, focusnodelb, heurdata->lastlpobjinfeas + 1.0)) )
+   if( SCIPisObjIntegral(scip)
+         && (! SCIPisIntegral(scip, focusnodelb) || SCIPisLT(scip, focusnodelb, heurdata->lastlpobjinfeas + 1.0)) )
       return SCIP_OKAY;
 
    rootlb = SCIPgetLowerboundRoot(scip);
@@ -1034,7 +1056,7 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
          (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_lpfacesub", SCIPgetProbName(scip));
 
          /* create the subproblem */
-         SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPcreateProbBasic(subscip, probname) );
 
          /* copy all variables */
          SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE) );
@@ -1099,10 +1121,12 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       SCIP_CALL( setSubscipParameters(scip, subscip, heurdata) );
    }
 
-   /* determine node, memory, and time limits for the sub-SCIP. Both node and time limit change with every call to the heuristic */
+   /* determine node, memory, and time limits for the sub-SCIP. Both node and time limit change with every call to
+    * the heuristic
+    */
    SCIP_CALL( setSubscipLimits(scip, subscip, heur, heurdata, &success) );
 
-   /* if did not succeed to set the limits of the subscip to let it run, we won't keep it any longer */
+   /* if we did not succeed to set the limits of the subscip to let it run, we won't keep it any longer */
    if( !success )
    {
       keepthisscip = FALSE;
@@ -1140,7 +1164,8 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
 #ifndef NDEBUG
       SCIP_CALL( retcode );
 #endif
-      SCIPwarningMessage(scip, "Error while solving subproblem in Lpface heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+      SCIPwarningMessage(scip, "Error while solving subproblem in Lpface heuristic; sub-SCIP terminated with code <%d>\n",
+         retcode);
    }
 
    /* print solving statistics of subproblem if we are in SCIP's debug mode */
@@ -1182,8 +1207,8 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
          *result = SCIP_FOUNDSOL;
       }
 
-      /* if solution is not better than incumbent or could not be added to problem => run is counted as a failure */
-      if( !success || solindex != SCIPsolGetIndex(SCIPgetBestSol(scip)) )
+      /* if solution could not be added to problem => run is counted as a failure */
+      if( ! success || solindex != SCIPsolGetIndex(SCIPgetBestSol(scip)) )
          updateFailureStatistic(scip, heurdata);
    }
    else
