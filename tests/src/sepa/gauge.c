@@ -17,7 +17,6 @@
  * @brief  unit test for sepa_gauge methods
  */
 
-// TODO: add test that checks correct computation of interior point
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/scip.h"
@@ -279,6 +278,10 @@ void evaluation_setup(void)
 static
 void teardown(void)
 {
+   /* if no IPOPT available, don't run test */
+   if( nlpi == NULL )
+      return;
+
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    if( nlrow1 != NULL )
@@ -312,14 +315,14 @@ void evaluate_gauge(CONVEXSIDE* convexsides)
    int nlrowsidx[2] = {0, 1};
    int nnlrowsidx = 2;
 
+   /* if no IPOPT available, don't run test */
+   if( nlpi == NULL )
+      return;
+
    /* create the nl rows */
    createNlRow1(convexsides[0]);
    createNlRow2(convexsides[1]);
    SCIP_NLROW* nlrows[2] = {nlrow1, nlrow2};
-
-   /* if no IPOPT available, don't run test */
-   if( nlpi == NULL )
-      return;
 
    /** first point active only on nlrow1 **/
    /* set interior point */
@@ -579,6 +582,7 @@ Test(interior_point, compute_interior_point)
    /* if no IPOPT available, don't run test */
    if( nlpi == NULL )
       return;
+
    SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
 

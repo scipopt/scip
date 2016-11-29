@@ -1864,7 +1864,9 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
+#if (CPX_VERSION < 12070000)
    int retcode;
+#endif
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -1879,6 +1881,8 @@ SCIP_RETCODE SCIPlpiGetRows(
       SCIP_CALL( ensureSidechgMem(lpi, lastrow - firstrow + 1) );
       CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, lpi->senarray, firstrow, lastrow) );
       CHECK_ZERO( lpi->messagehdlr, CPXgetrhs(lpi->cpxenv, lpi->cpxlp, lpi->rhsarray, firstrow, lastrow) );
+
+#if (CPX_VERSION < 12070000)
       retcode = CPXgetrngval(lpi->cpxenv, lpi->cpxlp, lpi->rngarray, firstrow, lastrow);
       if( retcode != CPXERR_NO_RNGVAL ) /* ignore "No range values" error */
       {
@@ -1886,6 +1890,9 @@ SCIP_RETCODE SCIPlpiGetRows(
       }
       else
          BMSclearMemoryArray(lpi->rngarray, lastrow-firstrow+1);
+#else
+      CHECK_ZERO( lpi->messagehdlr, CPXgetrngval(lpi->cpxenv, lpi->cpxlp, lpi->rngarray, firstrow, lastrow) );
+#endif
 
       /* convert sen/rhs/range into lhs/rhs tuples */
       reconvertSides(lpi, lastrow - firstrow + 1, lhs, rhs);
@@ -2058,7 +2065,9 @@ SCIP_RETCODE SCIPlpiGetSides(
    SCIP_Real*            rhss                /**< array to store right hand side values, or NULL */
    )
 {
+#if (CPX_VERSION < 12070000)
    int retval;
+#endif
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -2071,6 +2080,8 @@ SCIP_RETCODE SCIPlpiGetSides(
    SCIP_CALL( ensureSidechgMem(lpi, lastrow - firstrow + 1) );
    CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, lpi->senarray, firstrow, lastrow) );
    CHECK_ZERO( lpi->messagehdlr, CPXgetrhs(lpi->cpxenv, lpi->cpxlp, lpi->rhsarray, firstrow, lastrow) );
+
+#if (CPX_VERSION < 12070000)
    retval = CPXgetrngval(lpi->cpxenv, lpi->cpxlp, lpi->rngarray, firstrow, lastrow);
    if( retval != CPXERR_NO_RNGVAL ) /* ignore "No range values" error */
    {
@@ -2078,6 +2089,9 @@ SCIP_RETCODE SCIPlpiGetSides(
    }
    else
       BMSclearMemoryArray(lpi->rngarray, lastrow-firstrow+1);
+#else
+   CHECK_ZERO( lpi->messagehdlr, CPXgetrngval(lpi->cpxenv, lpi->cpxlp, lpi->rngarray, firstrow, lastrow) );
+#endif
 
    /* convert sen/rhs/range into lhs/rhs tuples */
    reconvertSides(lpi, lastrow - firstrow + 1, lhss, rhss);
