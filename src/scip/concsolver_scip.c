@@ -329,10 +329,8 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
       for( i = 0; i < nparams; ++i )
       {
          const char* paramname;
-         int len;
 
          paramname = SCIPparamGetName(params[i]);
-         len = strlen(paramname);
 
          if( strncmp(paramname, "limits/", 7) == 0 ||
              strncmp(paramname, "numerics/", 9) == 0 ||
