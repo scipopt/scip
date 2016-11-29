@@ -1082,14 +1082,14 @@ SCIP_Real calcBdchgScore(
 
    if( proofcoef > 0.0 )
    {
-      if( col != NULL )
+      if( col != NULL && SCIPcolGetNNonz(col) > 0 )
          score += set->conf_uplockscorefac * (SCIP_Real)(SCIPvarGetNLocksUp(var))/(SCIP_Real)(SCIPcolGetNNonz(col));
       else
          score += set->conf_uplockscorefac * SCIPvarGetNLocksUp(var);
    }
    else
    {
-      if( col != NULL )
+      if( col != NULL && SCIPcolGetNNonz(col) > 0 )
          score += set->conf_downlockscorefac * (SCIP_Real)(SCIPvarGetNLocksDown(var))/(SCIP_Real)(SCIPcolGetNNonz(col));
       else
          score += set->conf_downlockscorefac * SCIPvarGetNLocksDown(var);
