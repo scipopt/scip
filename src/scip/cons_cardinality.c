@@ -125,11 +125,11 @@ SCIP_RETCODE catchVarEventCardinality(
    SCIP_EVENTDATA**      eventdata           /**< pointer to store event data for bound change events */
    )
 {
-   assert( eventhdlr != NULL );
-   assert( consdata != NULL );
-   assert( var != NULL );
-   assert( indvar != NULL );
-   assert( eventdata != NULL );
+   assert(eventhdlr != NULL);
+   assert(consdata != NULL);
+   assert(var != NULL);
+   assert(indvar != NULL);
+   assert(eventdata != NULL);
 
    /* create event data of indicator variable */
    SCIP_CALL( SCIPallocBlockMemory(scip, eventdata) );
@@ -159,11 +159,11 @@ SCIP_RETCODE dropVarEventCardinality(
    SCIP_EVENTDATA**      eventdata           /**< pointer of event data for bound change events */
    )
 {
-   assert( eventhdlr != NULL );
-   assert( consdata != NULL );
-   assert( var != NULL );
-   assert( indvar != NULL );
-   assert( eventdata != NULL );
+   assert(eventhdlr != NULL);
+   assert(consdata != NULL);
+   assert(var != NULL);
+   assert(indvar != NULL);
+   assert(eventdata != NULL);
 
    /* drop bound change events of each variable */
    SCIP_CALL( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, *eventdata, -1) );
@@ -191,21 +191,21 @@ SCIP_RETCODE fixVariableZeroNode(
 {
    /* if variable cannot be nonzero */
    *infeasible = FALSE;
-   if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
+   if( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
    {
       *infeasible = TRUE;
       return SCIP_OKAY;
    }
 
    /* if variable is multi-aggregated */
-   if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
    {
       SCIP_CONS* cons;
       SCIP_Real val;
 
       val = 1.0;
 
-      if ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
+      if( !SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) || !SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
       {
          SCIPdebugMessage("creating constraint to force multi-aggregated variable <%s> to 0.\n", SCIPvarGetName(var));
          /* we have to insert a local constraint var = 0 */
@@ -217,9 +217,9 @@ SCIP_RETCODE fixVariableZeroNode(
    }
    else
    {
-      if ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
+      if( !SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
          SCIP_CALL( SCIPchgVarLbNode(scip, node, var, 0.0) );
-      if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
+      if( !SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
          SCIP_CALL( SCIPchgVarUbNode(scip, node, var, 0.0) );
    }
 
@@ -244,21 +244,21 @@ SCIP_RETCODE fixVariableZero(
    SCIP_Bool*            tightened           /**< if fixing was performed */
    )
 {
-   assert( scip != NULL );
-   assert( var != NULL );
-   assert( infeasible != NULL );
-   assert( tightened != NULL );
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(infeasible != NULL);
+   assert(tightened != NULL);
 
    *infeasible = FALSE;
    *tightened = FALSE;
 
-   if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
    {
       SCIP_Real aggrconst;
 
       /* if constant is 0 */
       aggrconst = SCIPvarGetMultaggrConstant(var);
-      if ( SCIPisZero(scip, aggrconst) )
+      if( SCIPisZero(scip, aggrconst) )
       {
          SCIP_VAR** aggrvars;
          SCIP_Real* aggrvals;
@@ -272,9 +272,9 @@ SCIP_RETCODE fixVariableZero(
          naggrvars = SCIPvarGetMultaggrNVars(var);
          aggrvars = SCIPvarGetMultaggrVars(var);
          aggrvals = SCIPvarGetMultaggrScalars(var);
-         for (i = 0; i < naggrvars; ++i)
+         for( i = 0; i < naggrvars; ++i )
          {
-            if ( (SCIPisPositive(scip, aggrvals[i]) && SCIPisNegative(scip, SCIPvarGetLbLocal(aggrvars[i]))) ||
+            if( (SCIPisPositive(scip, aggrvals[i]) && SCIPisNegative(scip, SCIPvarGetLbLocal(aggrvars[i]))) ||
                  (SCIPisNegative(scip, aggrvals[i]) && SCIPisPositive(scip, SCIPvarGetUbLocal(aggrvars[i]))) )
             {
                allnonnegative = FALSE;
@@ -282,14 +282,14 @@ SCIP_RETCODE fixVariableZero(
             }
          }
 
-         if ( allnonnegative )
+         if( allnonnegative )
          {
             /* all variables are nonnegative -> fix variables */
-            for (i = 0; i < naggrvars; ++i)
+            for( i = 0; i < naggrvars; ++i )
             {
                SCIP_Bool fixed;
                SCIP_CALL( SCIPfixVar(scip, aggrvars[i], 0.0, infeasible, &fixed) );
-               if ( *infeasible )
+               if( *infeasible )
                   return SCIP_OKAY;
                *tightened = *tightened || fixed;
             }
@@ -314,9 +314,9 @@ SCIP_RETCODE lockVariableCardinality(
    SCIP_VAR*             indvar              /**< indicator variable */
    )
 {
-   assert( scip != NULL );
-   assert( cons != NULL );
-   assert( var != NULL );
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(var != NULL);
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
    SCIP_CALL( SCIPlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
@@ -335,9 +335,9 @@ SCIP_RETCODE unlockVariableCardinality(
    SCIP_VAR*             indvar              /**< indicator variable */
    )
 {
-   assert( scip != NULL );
-   assert( cons != NULL );
-   assert( var != NULL );
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(var != NULL);
 
    /* rounding down == bad if lb < 0, rounding up == bad if ub > 0 */
    SCIP_CALL( SCIPunlockVarCons(scip, var, cons, SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)), SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var))) );
@@ -356,10 +356,10 @@ SCIP_RETCODE consdataEnsurevarsSizeCardinality(
    SCIP_Bool             reserveWeights      /**< whether the weights array is handled */
    )
 {
-   assert( consdata != NULL );
-   assert( consdata->nvars <= consdata->maxvars );
+   assert(consdata != NULL);
+   assert(consdata->nvars <= consdata->maxvars);
 
-   if ( num > consdata->maxvars )
+   if( num > consdata->maxvars )
    {
       int newsize;
 
@@ -369,11 +369,11 @@ SCIP_RETCODE consdataEnsurevarsSizeCardinality(
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->eventdatas, consdata->maxvars, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->eventdatascurrent, 4*consdata->maxvars, 4*newsize) );/*lint !e647*/
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->eventvarscurrent, 4*consdata->maxvars, 4*newsize) );/*lint !e647*/
-      if ( reserveWeights )
+      if( reserveWeights )
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->weights, consdata->maxvars, newsize) );
       consdata->maxvars = newsize;
    }
-   assert( num <= consdata->maxvars );
+   assert(num <= consdata->maxvars);
 
    return SCIP_OKAY;
 }
@@ -393,22 +393,22 @@ SCIP_RETCODE handleNewVariableCardinality(
    SCIP_EVENTDATA**      eventdata           /**< pointer to store event data for bound change events */
    )
 {
-   assert( scip != NULL );
-   assert( cons != NULL );
-   assert( consdata != NULL );
-   assert( conshdlrdata != NULL );
-   assert( var != NULL );
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(consdata != NULL);
+   assert(conshdlrdata != NULL);
+   assert(var != NULL);
 
    /* if we are in transformed problem, catch the variable's events */
-   if ( transformed )
+   if( transformed )
    {
       /* catch bound change events of variable */
       SCIP_CALL( catchVarEventCardinality(scip, conshdlrdata->eventhdlr, consdata, var, indvar, pos, eventdata) );
-      assert( eventdata != NULL );
+      assert(eventdata != NULL );
 
       /* if the variable is fixed to nonzero */
-      assert( consdata->ntreatnonzeros >= 0 );
-      if ( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(indvar), 1.0) )
+      assert(consdata->ntreatnonzeros >= 0 );
+      if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(indvar), 1.0) )
          ++consdata->ntreatnonzeros;
    }
 
@@ -419,13 +419,13 @@ SCIP_RETCODE handleNewVariableCardinality(
    SCIP_CALL( lockVariableCardinality(scip, cons, var, indvar) );
 
    /* add the new coefficient to the upper bound LP row, if necessary */
-   if ( consdata->rowub != NULL && ! SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) && ! SCIPisZero(scip, SCIPvarGetUbGlobal(var)) )
+   if( consdata->rowub != NULL && !SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) && !SCIPisZero(scip, SCIPvarGetUbGlobal(var)) )
    {
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rowub, var, 1.0/SCIPvarGetUbGlobal(var)) );
    }
 
    /* add the new coefficient to the lower bound LP row, if necessary */
-   if ( consdata->rowlb != NULL && ! SCIPisInfinity(scip, SCIPvarGetLbGlobal(var)) && ! SCIPisZero(scip, SCIPvarGetLbGlobal(var)) )
+   if( consdata->rowlb != NULL && !SCIPisInfinity(scip, SCIPvarGetLbGlobal(var)) && !SCIPisZero(scip, SCIPvarGetLbGlobal(var)) )
    {
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rowlb, var, 1.0/SCIPvarGetLbGlobal(var)) );
    }
@@ -451,39 +451,39 @@ SCIP_RETCODE addVarCardinality(
    int pos;
    int j;
 
-   assert( var != NULL );
-   assert( cons != NULL );
-   assert( conshdlrdata != NULL );
+   assert(var != NULL);
+   assert(cons != NULL);
+   assert(conshdlrdata != NULL);
 
    consdata = SCIPconsGetData(cons);
-   assert( consdata != NULL );
+   assert(consdata != NULL );
 
-   if ( consdata->weights == NULL && consdata->maxvars > 0 )
+   if( consdata->weights == NULL && consdata->maxvars > 0 )
    {
       SCIPerrorMessage("cannot add variable to cardinality constraint <%s> that does not contain weights.\n", SCIPconsGetName(cons));
       return SCIP_INVALIDCALL;
    }
 
    /* check indicator variable */
-   if ( indvar == NULL )
+   if( indvar == NULL )
    {
-      if ( conshdlrdata->varhash == NULL )
+      if( conshdlrdata->varhash == NULL )
       {
-	 /* set up hash map */
-	 SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), 10 * SCIPgetNTotalVars(scip)) );
+         /* set up hash map */
+         SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), 10 * SCIPgetNTotalVars(scip)) );
       }
 
       /* check whether an indicator variable already exists for implied variable */
-      if ( SCIPhashmapExists(conshdlrdata->varhash, var) )
+      if( SCIPhashmapExists(conshdlrdata->varhash, var) )
       {
-         assert( (SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var) != NULL );
+         assert((SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var) != NULL);
          indvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var);
-         assert( indvar != NULL );
+         assert(indvar != NULL);
       }
       else
       {
          /* if implied variable is binary, then it is also not necessary to create an indicator variable */
-         if ( SCIPvarIsBinary(var) )
+         if( SCIPvarIsBinary(var) )
             indvar = var;
          else
          {
@@ -498,12 +498,12 @@ SCIP_RETCODE addVarCardinality(
 
             SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
          }
-         assert( indvar != NULL );
+         assert(indvar != NULL);
 
          /* insert implied variable to hash map */
          SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varhash, var, (void*) (size_t) indvar) );/*lint !e571*/
-         assert( indvar == (SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var) );
-         assert( SCIPhashmapExists(conshdlrdata->varhash, var) );
+         assert(indvar == (SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var));
+         assert(SCIPhashmapExists(conshdlrdata->varhash, var));
       }
    }
 
@@ -511,46 +511,46 @@ SCIP_RETCODE addVarCardinality(
    transformed = SCIPconsIsTransformed(cons);
 
    /* always use transformed variables in transformed constraints */
-   if ( transformed )
+   if( transformed )
    {
       SCIP_CALL( SCIPgetTransformedVar(scip, var, &var) );
       SCIP_CALL( SCIPgetTransformedVar(scip, indvar, &indvar) );
    }
-   assert( var != NULL );
-   assert( indvar != NULL );
-   assert( transformed == SCIPvarIsTransformed(var) );
-   assert( transformed == SCIPvarIsTransformed(indvar) );
+   assert(var != NULL);
+   assert(indvar != NULL);
+   assert(transformed == SCIPvarIsTransformed(var));
+   assert(transformed == SCIPvarIsTransformed(indvar));
 
    /* ensure that the new information can be storend in the constraint data */
    SCIP_CALL( consdataEnsurevarsSizeCardinality(scip, consdata, consdata->nvars + 1, TRUE) );
-   assert( consdata->weights != NULL );
-   assert( consdata->maxvars >= consdata->nvars+1 );
+   assert(consdata->weights != NULL);
+   assert(consdata->maxvars >= consdata->nvars+1);
 
    /* find variable position */
-   for (pos = 0; pos < consdata->nvars; ++pos)
+   for( pos = 0; pos < consdata->nvars; ++pos )
    {
-      if ( consdata->weights[pos] > weight )
+      if( consdata->weights[pos] > weight )
          break;
    }
-   assert( 0 <= pos && pos <= consdata->nvars );
+   assert(0 <= pos && pos <= consdata->nvars);
 
    /* move other variables, if necessary */
-   for (j = consdata->nvars; j > pos; --j)
+   for( j = consdata->nvars; j > pos; --j )
    {
       consdata->vars[j] = consdata->vars[j-1];
       consdata->indvars[j] = consdata->indvars[j-1];
       consdata->eventdatas[j] = consdata->eventdatas[j-1];
       consdata->weights[j] = consdata->weights[j-1];
 
-      if ( consdata->eventdatas[j] != NULL )
+      if( consdata->eventdatas[j] != NULL )
       {
-	 consdata->eventdatas[j]->pos = j;
+         consdata->eventdatas[j]->pos = j;
       }
    }
 
    /* handle the new variable */
    SCIP_CALL( handleNewVariableCardinality(scip, cons, consdata, conshdlrdata, var, indvar, pos, transformed, &eventdata) );
-   assert( ! transformed || eventdata != NULL );
+   assert(! transformed || eventdata != NULL);
 
    /* insert variable */
    consdata->vars[pos] = var;
@@ -577,33 +577,33 @@ SCIP_RETCODE appendVarCardinality(
    SCIP_CONSDATA* consdata;
    SCIP_Bool transformed;
 
-   assert( var != NULL );
-   assert( cons != NULL );
-   assert( conshdlrdata != NULL );
+   assert(var != NULL);
+   assert(cons != NULL);
+   assert(conshdlrdata != NULL);
 
    consdata = SCIPconsGetData(cons);
-   assert( consdata != NULL );
+   assert(consdata != NULL);
 
    /* check indicator variable */
-   if ( indvar == NULL )
+   if( indvar == NULL )
    {
-      if ( conshdlrdata->varhash == NULL )
+      if( conshdlrdata->varhash == NULL )
       {
-	 /* set up hash map */
-	 SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), 10 * SCIPgetNTotalVars(scip)) );
+         /* set up hash map */
+         SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), 10 * SCIPgetNTotalVars(scip)) );
       }
 
       /* check whether an indicator variable already exists for implied variable */
-      if ( SCIPhashmapExists(conshdlrdata->varhash, var) )
+      if( SCIPhashmapExists(conshdlrdata->varhash, var) )
       {
-         assert( (SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var) != NULL );
+         assert((SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var) != NULL);
          indvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var);
-         assert( indvar != NULL );
+         assert(indvar != NULL);
       }
       else
       {
          /* if implied variable is binary, then it is also not necessary to create an indicator variable */
-         if ( SCIPvarIsBinary(var) )
+         if( SCIPvarIsBinary(var) )
             indvar = var;
          else
          {
@@ -618,12 +618,12 @@ SCIP_RETCODE appendVarCardinality(
 
             SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
          }
-         assert( indvar != NULL );
+         assert(indvar != NULL);
 
          /* insert implied variable to hash map */
          SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varhash, var, (void*) (size_t) indvar) );/*lint !e571*/
-         assert( indvar == (SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var) );
-         assert( SCIPhashmapExists(conshdlrdata->varhash, var) );
+         assert(indvar == (SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var));
+         assert(SCIPhashmapExists(conshdlrdata->varhash, var));
       }
    }
 
@@ -631,33 +631,33 @@ SCIP_RETCODE appendVarCardinality(
    transformed = SCIPconsIsTransformed(cons);
 
    /* always use transformed variables in transformed constraints */
-   if ( transformed )
+   if( transformed )
    {
       SCIP_CALL( SCIPgetTransformedVar(scip, var, &var) );
       SCIP_CALL( SCIPgetTransformedVar(scip, indvar, &indvar) );
    }
-   assert( var != NULL );
-   assert( indvar != NULL );
-   assert( transformed == SCIPvarIsTransformed(var) );
-   assert( transformed == SCIPvarIsTransformed(indvar) );
+   assert(var != NULL);
+   assert(indvar != NULL);
+   assert(transformed == SCIPvarIsTransformed(var));
+   assert(transformed == SCIPvarIsTransformed(indvar));
 
    /* ensure that the new information can be stored in the constraint data */
    SCIP_CALL( consdataEnsurevarsSizeCardinality(scip, consdata, consdata->nvars + 1, FALSE) );
 
    /* handle the new variable */
    SCIP_CALL( handleNewVariableCardinality(scip, cons, consdata, conshdlrdata, var, indvar, consdata->nvars, transformed, &eventdata) );
-   assert( ! transformed || eventdata != NULL );
+   assert(!transformed || eventdata != NULL);
 
    /* insert variable */
    consdata->vars[consdata->nvars] = var;
    consdata->indvars[consdata->nvars] = indvar;
    consdata->eventdatas[consdata->nvars] = eventdata;
 
-   if ( consdata->weights != NULL && consdata->nvars > 0 )
+   if( consdata->weights != NULL && consdata->nvars > 0 )
       consdata->weights[consdata->nvars] = consdata->weights[consdata->nvars-1] + 1.0;
    ++consdata->nvars;
 
-   assert( consdata->weights != NULL || consdata->nvars > 0 );
+   assert(consdata->weights != NULL || consdata->nvars > 0);
 
    return SCIP_OKAY;
 }
@@ -675,7 +675,7 @@ SCIP_RETCODE deleteVarCardinality(
 { /*lint --e{679}*/
    int j;
 
-   assert( 0 <= pos && pos < consdata->nvars );
+   assert(0 <= pos && pos < consdata->nvars);
 
    /* remove lock of variable */
    SCIP_CALL( unlockVariableCardinality(scip, cons, consdata->vars[pos], consdata->indvars[pos]) );
@@ -684,16 +684,16 @@ SCIP_RETCODE deleteVarCardinality(
    SCIP_CALL( dropVarEventCardinality(scip, eventhdlr, consdata, consdata->vars[pos], consdata->indvars[pos], &consdata->eventdatas[pos]) );
 
    /* update number of variables that may be treated as nonzero */
-   if ( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->indvars[pos]), 1.0) )
+   if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->indvars[pos]), 1.0) )
       --(consdata->ntreatnonzeros);
 
    /* delete variable - need to copy since order is important */
-   for (j = pos; j < consdata->nvars-1; ++j)
+   for( j = pos; j < consdata->nvars-1; ++j )
    {
       consdata->vars[j] = consdata->vars[j+1];
       consdata->indvars[j] = consdata->indvars[j+1];
       consdata->eventdatas[j] = consdata->eventdatas[j+1];
-      if ( consdata->weights != NULL )
+      if( consdata->weights != NULL )
          consdata->weights[j] = consdata->weights[j+1];
 
       consdata->eventdatas[j]->pos = j;
@@ -721,23 +721,23 @@ SCIP_RETCODE polishPrimalSolution(
    int c;
 
    /* check each constraint */
-   for (c = 0; c < nconss; ++c)
+   for( c = 0; c < nconss; ++c )
    {
       SCIP_CONS* cons;
       int j;
 
       cons = conss[c];
-      assert( cons != NULL );
+      assert(cons != NULL);
       consdata = SCIPconsGetData(cons);
-      assert( consdata != NULL );
+      assert(consdata != NULL);
 
       nvars = consdata->nvars;
       vars = consdata->vars;
       indvars = consdata->indvars;
 
-      for (j = 0; j < nvars; ++j)
+      for( j = 0; j < nvars; ++j )
       {
-         if ( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, vars[j])) )
+         if( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, vars[j])) )
          {
             SCIP_CALL( SCIPsetSolVal(scip, primsol, indvars[j], 0.0) );
          }
@@ -764,9 +764,9 @@ SCIP_RETCODE consdataUnmarkEventdataVars(
 
    eventdatas = consdata->eventdatas;
    nvars = consdata->nvars;
-   assert( eventdatas != NULL);
+   assert(eventdatas != NULL);
 
-   for (j = 0; j < nvars; ++j)
+   for( j = 0; j < nvars; ++j )
    {
       SCIP_EVENTDATA* eventdata;
 
@@ -811,15 +811,15 @@ SCIP_RETCODE presolRoundCardinality(
    SCIP_Bool fixed;
    int j;
 
-   assert( scip != NULL );
-   assert( cons != NULL );
-   assert( consdata != NULL );
-   assert( eventhdlr != NULL );
-   assert( cutoff != NULL );
-   assert( success != NULL );
-   assert( ndelconss != NULL );
-   assert( nfixedvars != NULL );
-   assert( nremovedvars != NULL );
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(consdata != NULL);
+   assert(eventhdlr != NULL);
+   assert(cutoff != NULL);
+   assert(success != NULL);
+   assert(ndelconss != NULL);
+   assert(nfixedvars != NULL);
+   assert(nremovedvars != NULL);
 
    *cutoff = FALSE;
    *success = FALSE;
@@ -860,14 +860,14 @@ SCIP_RETCODE presolRoundCardinality(
       SCIP_CALL( SCIPgetProbvarSum(scip, &var, &scalar, &constant) );
 
       /* if constant is zero and we get a different variable, substitute variable */
-      if ( SCIPisZero(scip, constant) && ! SCIPisZero(scip, scalar) && var != vars[j] )
+      if( SCIPisZero(scip, constant) && !SCIPisZero(scip, scalar) && var != vars[j] )
       {
          SCIPdebugMessage("substituted variable <%s> by <%s>.\n", SCIPvarGetName(vars[j]), SCIPvarGetName(var));
 
          /* we reuse the same indicator variable for the new variable */
          SCIP_CALL( dropVarEventCardinality(scip, eventhdlr, consdata, consdata->vars[j], consdata->indvars[j], &consdata->eventdatas[j]) );
          SCIP_CALL( catchVarEventCardinality(scip, eventhdlr, consdata, var, consdata->indvars[j], j, &consdata->eventdatas[j]) );
-         assert( consdata->eventdatas[j] != NULL );
+         assert(consdata->eventdatas[j] != NULL);
 
          /* change the rounding locks */
          SCIP_CALL( unlockVariableCardinality(scip, cons, consdata->vars[j], consdata->indvars[j]) );
@@ -878,12 +878,12 @@ SCIP_RETCODE presolRoundCardinality(
 
          vars[j] = var;
       }
-      assert( var == vars[j] );
+      assert(var == vars[j]);
 
       /* check whether the variable appears again later */
-      for (l = j+1; l < consdata->nvars; ++l)
+      for( l = j+1; l < consdata->nvars; ++l )
       {
-         if ( var == vars[l] || oldvar == vars[l] )
+         if( var == vars[l] || oldvar == vars[l] )
          {
             SCIPdebugMessage("variable <%s> appears twice in constraint <%s>.\n", SCIPvarGetName(vars[j]), SCIPconsGetName(cons));
             return SCIP_INVALIDDATA;
@@ -896,19 +896,19 @@ SCIP_RETCODE presolRoundCardinality(
       ub = SCIPvarGetUbLocal(var);
 
       /* if the variable is fixed to nonzero */
-      if ( SCIPisFeasPositive(scip, lb) || SCIPisFeasNegative(scip, ub) )
+      if( SCIPisFeasPositive(scip, lb) || SCIPisFeasNegative(scip, ub) )
       {
-         assert( SCIPvarIsBinary(indvar) );
+         assert(SCIPvarIsBinary(indvar));
 
          /* fix (binary) indicator variable to 1.0 (the cardinality constraint will then be modified below) */
          SCIP_CALL( SCIPfixVar(scip, indvar, 1.0, &infeasible, &fixed) );
-         if ( infeasible )
+         if( infeasible )
          {
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
 
-         if ( fixed )
+         if( fixed )
          {
             SCIPdebugMessage("fixed binary variable <%s> to 1.0.\n", SCIPvarGetName(indvar));
             ++(*nfixedvars);
@@ -916,14 +916,14 @@ SCIP_RETCODE presolRoundCardinality(
       }
 
       /* if the variable is fixed to 0 */
-      if ( SCIPisFeasZero(scip, lb) && SCIPisFeasZero(scip, ub) )
+      if( SCIPisFeasZero(scip, lb) && SCIPisFeasZero(scip, ub) )
       {
-         assert( SCIPvarIsBinary(indvar) );
+         assert(SCIPvarIsBinary(indvar));
 
          /* fix (binary) indicator variable to 0.0, if possible (the cardinality constraint will then be modified below)
           * note that an infeasibility implies no cut off */
          SCIP_CALL( SCIPfixVar(scip, indvar, 0.0, &infeasible, &fixed) );
-         if ( fixed )
+         if( fixed )
          {
             SCIPdebugMessage("fixed binary variable <%s> to 0.0.\n", SCIPvarGetName(indvar));
             ++(*nfixedvars);
@@ -936,9 +936,9 @@ SCIP_RETCODE presolRoundCardinality(
       indub = SCIPvarGetUbLocal(indvar);
 
       /* if the variable may be treated as nonzero */
-      if ( SCIPisFeasEQ(scip, indlb, 1.0) )
+      if( SCIPisFeasEQ(scip, indlb, 1.0) )
       {
-         assert( indub == 1.0 );
+         assert(indub == 1.0);
 
          /* modify row and delete variable */
          SCIP_CALL( deleteVarCardinality(scip, cons, consdata, eventhdlr, j) );
@@ -947,18 +947,18 @@ SCIP_RETCODE presolRoundCardinality(
          ++(*nremovedvars);
       }
       /* if the indicator variable is fixed to 0 */
-      else if ( SCIPisFeasEQ(scip, indub, 0.0) )
+      else if( SCIPisFeasEQ(scip, indub, 0.0) )
       {
-         assert( indlb == 0.0 );
+         assert(indlb == 0.0);
 
          /* fix variable to 0.0 */
          SCIP_CALL( SCIPfixVar(scip, var, 0.0, &infeasible, &fixed) );
-         if ( infeasible )
+         if( infeasible )
          {
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
-         if ( fixed )
+         if( fixed )
          {
             SCIPdebugMessage("fixed variable <%s> to 0.0.\n", SCIPvarGetName(var));
             ++(*nfixedvars);
@@ -972,7 +972,7 @@ SCIP_RETCODE presolRoundCardinality(
       else
       {
          /* check whether all variables are binary */
-         if ( ! SCIPvarIsBinary(var) )
+         if( !SCIPvarIsBinary(var) )
             allvarsbinary = FALSE;
 
          ++j;
@@ -981,7 +981,7 @@ SCIP_RETCODE presolRoundCardinality(
 
 
    /* if the cardinality value is smaller than 0, then the problem is infeasible */
-   if ( consdata->cardval < 0 )
+   if( consdata->cardval < 0 )
    {
       SCIPdebugMessage("The problem is infeasible: more variables have bounds that keep them from being 0 than allowed.\n");
 
@@ -989,18 +989,18 @@ SCIP_RETCODE presolRoundCardinality(
       return SCIP_OKAY;
    }
    /* else if the cardinality value is 0 */
-   else if ( consdata->cardval == 0 )
+   else if( consdata->cardval == 0 )
    {
       /* fix all variables of the constraint to 0 */
-      for (j = 0; j < consdata->nvars; ++j)
+      for( j = 0; j < consdata->nvars; ++j )
       {
          SCIP_CALL( SCIPfixVar(scip, consdata->vars[j], 0.0, &infeasible, &fixed) );
-         if ( infeasible )
+         if( infeasible )
          {
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
-         if ( fixed )
+         if( fixed )
          {
             SCIPdebugMessage("fixed variable <%s> to 0.0.\n", SCIPvarGetName(consdata->vars[j]));
             ++(*nfixedvars);
@@ -1009,12 +1009,12 @@ SCIP_RETCODE presolRoundCardinality(
    }
 
    /* if the cardinality constraint is redudant */
-   if ( consdata->nvars <= consdata->cardval )
+   if( consdata->nvars <= consdata->cardval )
    {
       SCIPdebugMessage("Deleting cardinality constraint <%s> with <%d> variables and cardinality value <%d>.\n", SCIPconsGetName(cons), consdata->nvars, consdata->cardval);
 
       /* delete constraint */
-      assert( ! SCIPconsIsModifiable(cons) );
+      assert(!SCIPconsIsModifiable(cons));
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
       *success = TRUE;
@@ -1023,13 +1023,13 @@ SCIP_RETCODE presolRoundCardinality(
    else
    {
       /* if all variables are binary create a knapsack constraint */
-      if ( allvarsbinary )
+      if( allvarsbinary )
       {
          SCIP_CONS* knapsackcons;
          SCIP_Longint* vals;
 
          SCIP_CALL( SCIPallocBufferArray(scip, &vals, consdata->nvars) );
-         for (j = 0; j < consdata->nvars; ++j)
+         for( j = 0; j < consdata->nvars; ++j )
             vals[j] = 1;
 
          /* create, add, and release the knapsack constraint */
@@ -1044,7 +1044,7 @@ SCIP_RETCODE presolRoundCardinality(
          SCIPdebugMessage("Upgrading cardinality constraint <%s> to knapsack constraint.\n", SCIPconsGetName(cons));
 
          /* remove the cardinality constraint globally */
-         assert( ! SCIPconsIsModifiable(cons) );
+         assert(!SCIPconsIsModifiable(cons));
          SCIP_CALL( SCIPdelCons(scip, cons) );
          ++(*nupgdconss);
          *success = TRUE;
@@ -1065,16 +1065,16 @@ SCIP_RETCODE propCardinality(
    int*                  ngen                /**< number of domain changes */
    )
 {
-   assert( scip != NULL );
-   assert( cons != NULL );
-   assert( consdata != NULL );
-   assert( cutoff != NULL );
-   assert( ngen != NULL );
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(consdata != NULL);
+   assert(cutoff != NULL);
+   assert(ngen != NULL);
 
    *cutoff = FALSE;
 
    /* if more variables may be treated as nonzero than allowed */
-   if ( consdata->ntreatnonzeros > consdata->cardval )
+   if( consdata->ntreatnonzeros > consdata->cardval )
    {
       SCIPdebugMessage("the node is infeasible, more than %d variables are fixed to be nonzero.\n", consdata->cardval);
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -1084,7 +1084,7 @@ SCIP_RETCODE propCardinality(
    }
 
    /* if number of nonzeros is saturated */
-   if ( consdata->ntreatnonzeros == consdata->cardval )
+   if( consdata->ntreatnonzeros == consdata->cardval )
    {
       SCIP_VAR** vars;
       SCIP_VAR** indvars;
@@ -1098,15 +1098,15 @@ SCIP_RETCODE propCardinality(
       nvars = consdata->nvars;
       vars = consdata->vars;
       indvars = consdata->indvars;
-      assert( vars != NULL );
-      assert( indvars != NULL );
+      assert(vars != NULL);
+      assert(indvars != NULL);
 
       /* fix free variables to zero */
       allVarFixed = TRUE;
-      for (j = 0; j < nvars; ++j)
+      for( j = 0; j < nvars; ++j )
       {
          /* if variable is implied to be treated as nonzero */
-         if ( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(indvars[j]), 1.0) )
+         if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(indvars[j]), 1.0) )
             ++cnt;
          /* else fix variable to zero if not done already */
          else
@@ -1116,10 +1116,10 @@ SCIP_RETCODE propCardinality(
             var = vars[j];
 
             /* fix variable */
-            if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
+            if( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
             {
                SCIP_CALL( fixVariableZero(scip, var, &infeasible, &tightened) );
-               if ( infeasible )
+               if( infeasible )
                {
                   SCIPdebugMessage("the node is infeasible, more than %d variables are fixed to be nonzero.\n", consdata->cardval);
                   SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -1128,7 +1128,7 @@ SCIP_RETCODE propCardinality(
                   return SCIP_OKAY;
                }
 
-               if ( tightened )
+               if( tightened )
                {
                   SCIPdebugMessage("fixed variable <%s> to 0, since constraint <%s> with cardinality value %d is saturated.\n",
                      SCIPvarGetName(var), SCIPconsGetName(cons), consdata->cardval);
@@ -1139,18 +1139,18 @@ SCIP_RETCODE propCardinality(
             }
          }
       }
-      assert( cnt == consdata->ntreatnonzeros );
+      assert(cnt == consdata->ntreatnonzeros);
 
       /* reset constraint age counter */
-      if ( *ngen > 0 )
+      if( *ngen > 0 )
       {
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
       }
 
       /* delete constraint locally */
-      if ( allVarFixed )
+      if( allVarFixed )
       {
-         assert( ! SCIPconsIsModifiable(cons) );
+         assert(!SCIPconsIsModifiable(cons));
          SCIP_CALL( SCIPdelConsLocal(scip, cons) );
 
          return SCIP_OKAY;
@@ -1158,7 +1158,7 @@ SCIP_RETCODE propCardinality(
    }
 
    /* if relevant bound change events happened */
-   if ( consdata->neventdatascurrent > 0 )
+   if( consdata->neventdatascurrent > 0 )
    {
       SCIP_EVENTDATA** eventdatas;
       SCIP_VAR** eventvars;
@@ -1168,9 +1168,9 @@ SCIP_RETCODE propCardinality(
       neventdatas = consdata->neventdatascurrent;
       eventvars = consdata->eventvarscurrent;
       eventdatas = consdata->eventdatascurrent;
-      assert( eventdatas != NULL && eventvars != NULL );
+      assert(eventdatas != NULL && eventvars != NULL);
 
-      for (j = 0; j < neventdatas; ++j)
+      for( j = 0; j < neventdatas; ++j )
       {
          SCIP_EVENTDATA* eventdata;
          SCIP_Bool infeasible;
@@ -1179,29 +1179,29 @@ SCIP_RETCODE propCardinality(
 
          eventdata = eventdatas[j];
          var = eventvars[j];
-         assert( var != NULL && eventdata != NULL );
-         assert( eventdata->var != NULL );
-         assert( eventdata->indvar != NULL );
-         assert( var == eventdata->var || var == eventdata->indvar );
-         assert( SCIPvarIsBinary(eventdata->indvar) );
+         assert(var != NULL && eventdata != NULL);
+         assert(eventdata->var != NULL);
+         assert(eventdata->indvar != NULL);
+         assert(var == eventdata->var || var == eventdata->indvar);
+         assert(SCIPvarIsBinary(eventdata->indvar));
 
          /* if variable is an indicator variable */
-         if ( eventdata->indvar == var )
+         if( eventdata->indvar == var )
          {
-            assert( eventdata->indvarmarked );
+            assert(eventdata->indvarmarked);
 
             /* if variable is fixed to zero */
-            if ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
+            if( SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
             {
                SCIP_VAR* implvar;
 
                implvar = eventdata->var;
 
                /* fix implied variable to zero if not done already */
-               if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(implvar)) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(implvar)) )
+               if( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(implvar)) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(implvar)) )
                {
                   SCIP_CALL( fixVariableZero(scip, implvar, &infeasible, &tightened) );
-                  if ( infeasible )
+                  if( infeasible )
                   {
                      SCIPdebugMessage("the node is infeasible, indicator variable %s is fixed to zero although implied variable %s is nonzero.\n",
                         SCIPvarGetName(var), SCIPvarGetName(implvar));
@@ -1211,7 +1211,7 @@ SCIP_RETCODE propCardinality(
                      return SCIP_OKAY;
                   }
 
-                  if ( tightened )
+                  if( tightened )
                   {
                      SCIPdebugMessage("fixed variable <%s> to 0, since indicator variable %s is 0.\n", SCIPvarGetName(implvar), SCIPvarGetName(var));
                      ++(*ngen);
@@ -1223,22 +1223,22 @@ SCIP_RETCODE propCardinality(
          /* else if variable is an implied variable */
          else
          {
-            assert( eventdata->var == var );
-            assert( eventdata->varmarked );
+            assert(eventdata->var == var);
+            assert(eventdata->varmarked);
 
             /* if variable is is nonzero */
-            if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
+            if( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
             {
                SCIP_VAR* indvar;
 
                indvar = eventdata->indvar;
-               assert( SCIPvarIsBinary(indvar) );
+               assert(SCIPvarIsBinary(indvar));
 
                /* fix indicator variable to 1.0 if not done already */
-               if ( ! SCIPisFeasEQ(scip, SCIPvarGetLbLocal(indvar), 1.0) )
+               if( !SCIPisFeasEQ(scip, SCIPvarGetLbLocal(indvar), 1.0) )
                {
                   /* if fixing is infeasible */
-                  if ( SCIPvarGetUbLocal(indvar) != 1.0 )
+                  if( SCIPvarGetUbLocal(indvar) != 1.0 )
                   {
                      SCIPdebugMessage("the node is infeasible, implied variable %s is fixed to nonzero although indicator variable %s is 0.\n",
                         SCIPvarGetName(var), SCIPvarGetName(indvar));
@@ -1281,9 +1281,9 @@ SCIP_RETCODE branchUnbalancedCardinality(
    SCIP_NODE* node2;
 
    /* constraint is infeasible: */
-   assert( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, vars[branchpos])) );
-   assert( SCIPisFeasZero(scip, SCIPvarGetLbLocal(indvars[branchpos])) );
-   assert( SCIPisFeasEQ(scip, SCIPvarGetUbLocal(indvars[branchpos]), 1.0) );
+   assert(!SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, vars[branchpos])));
+   assert(SCIPisFeasZero(scip, SCIPvarGetLbLocal(indvars[branchpos])));
+   assert(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(indvars[branchpos]), 1.0));
 
 
    /* create branches */
@@ -1297,14 +1297,14 @@ SCIP_RETCODE branchUnbalancedCardinality(
 
    /* fix branching variable to zero */
    SCIP_CALL( fixVariableZeroNode(scip, vars[branchpos], node1, &infeasible) );
-   assert( ! infeasible );
+   assert(! infeasible);
 
 
    /* create node 2 */
 
    /* if the new number of nonzero variables is equal to the number of allowed nonzero variables; i.e. cardinality constraint is saturated */
-   assert( branchnnonzero + 1 <= cardval );
-   if ( branchnnonzero + 1 == cardval )
+   assert(branchnnonzero + 1 <= cardval);
+   if( branchnnonzero + 1 == cardval )
    {
       SCIP_Real nodeselest;
       SCIP_Real objest;
@@ -1315,11 +1315,11 @@ SCIP_RETCODE branchUnbalancedCardinality(
       nodeselest = 0.0;
       objest = 0.0;
       cnt = 0;
-      for (j = 0; j < nvars; ++j)
+      for( j = 0; j < nvars; ++j )
       {
          /* we only consider variables in constraint that are not the branching variable and are not fixed to nonzero */
-         if ( j != branchpos && SCIPvarGetLbLocal(indvars[j]) != 1.0 && ! SCIPisFeasPositive(scip, SCIPvarGetLbLocal(vars[j]))
-            && ! SCIPisFeasNegative(scip, SCIPvarGetUbLocal(vars[j]))
+         if( j != branchpos && SCIPvarGetLbLocal(indvars[j]) != 1.0 && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(vars[j]))
+            && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(vars[j]))
             )
          {
             nodeselest += SCIPcalcNodeselPriority(scip, vars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
@@ -1327,11 +1327,11 @@ SCIP_RETCODE branchUnbalancedCardinality(
             ++cnt;
          }
       }
-      assert( cnt == nvars - (1 + branchnnonzero) );
-      assert( cnt > 0 );
+      assert(cnt == nvars - (1 + branchnnonzero));
+      assert(cnt > 0);
 
       /* take the average of the individual estimates */
-      objest = objest/((SCIP_Real) cnt);
+      objest = objest/((SCIP_Real)cnt);
 
       /* create node 2 */
       SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
@@ -1340,15 +1340,15 @@ SCIP_RETCODE branchUnbalancedCardinality(
       SCIP_CALL( SCIPchgVarLbNode(scip, node2, indvars[branchpos], 1.0) );
 
       /* fix variables to zero since cardinality constraint is now saturated */
-      for (j = 0; j < nvars; ++j)
+      for( j = 0; j < nvars; ++j )
       {
          /* we only consider variables in constraint that are not the branching variable and are not fixed to nonzero */
-         if ( j != branchpos && SCIPvarGetLbLocal(indvars[j]) != 1.0 && ! SCIPisFeasPositive(scip, SCIPvarGetLbLocal(vars[j]))
-            && ! SCIPisFeasNegative(scip, SCIPvarGetUbLocal(vars[j]))
+         if( j != branchpos && SCIPvarGetLbLocal(indvars[j]) != 1.0 && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(vars[j]))
+            && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(vars[j]))
             )
          {
             SCIP_CALL( fixVariableZeroNode(scip, vars[j], node2, &infeasible) );
-            assert( ! infeasible );
+            assert(!infeasible);
          }
       }
    }
@@ -1413,25 +1413,25 @@ SCIP_RETCODE branchBalancedCardinality(
    SCIP_CALL( SCIPallocBufferArray(scip, &branchindvars, nbuffer) );
 
    /* compute weight */
-   for (j = 0; j < nvars; ++j)
+   for( j = 0; j < nvars; ++j )
    {
       SCIP_VAR* var;
 
       var = vars[j];
 
-      /* if (binary) indicator variable is not fixed to 1.0 */
-      if ( SCIPvarGetLbLocal(indvars[j]) != 1.0 && ! SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) && ! SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
+      /* if(binary) indicator variable is not fixed to 1.0 */
+      if( SCIPvarGetLbLocal(indvars[j]) != 1.0 && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
       {
          /* if implied variable is not already fixed to zero */
-         if ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
+         if( !SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) || !SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
          {
             SCIP_Real val = REALABS(SCIPgetSolVal(scip, sol, var));
-            weight1 += val * (SCIP_Real) (j-(nnonzero+nzero));
+            weight1 += val * (SCIP_Real)(j-(nnonzero+nzero));
             weight2 += val;
             branchindvars[nbranchvars] = indvars[j];
             branchvars[nbranchvars++] = var;
 
-            if ( ! SCIPisFeasZero(scip, val) )
+            if( !SCIPisFeasZero(scip, val) )
                ++cnt;
          }
          else
@@ -1440,66 +1440,66 @@ SCIP_RETCODE branchBalancedCardinality(
       else
          ++nnonzero;
    }
-   assert( nnonzero == branchnnonzero );
-   assert( nbranchvars <= nvars - branchnnonzero);
+   assert(nnonzero == branchnnonzero);
+   assert(nbranchvars <= nvars - branchnnonzero);
 
-   assert( cnt >= cardval-nnonzero );
-   assert( ! SCIPisFeasZero(scip, weight2) );
+   assert(cnt >= cardval-nnonzero);
+   assert(!SCIPisFeasZero(scip, weight2));
    w = weight1/weight2;  /*lint !e414*/
 
-   ind = (int) SCIPfloor(scip, w);
-   assert( 0 <= ind && ind < nbranchvars-1 );
+   ind = (int)SCIPfloor(scip, w);
+   assert(0 <= ind && ind < nbranchvars-1);
 
    /* compute LP sums */
-   for (j = 0; j <= ind; ++j)
+   for( j = 0; j <= ind; ++j )
    {
       SCIP_Real val;
 
       val = SCIPgetSolVal(scip, sol, branchvars[j]);
 
-      if ( SCIPisFeasPositive(scip, val) )
+      if( SCIPisFeasPositive(scip, val) )
       {
-         assert( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(branchvars[j])) );
+         assert(SCIPisFeasPositive(scip, SCIPvarGetUbLocal(branchvars[j])));
          sum1 += val/SCIPvarGetUbLocal(branchvars[j]);
       }
-      else if ( SCIPisFeasNegative(scip, val) )
+      else if( SCIPisFeasNegative(scip, val) )
       {
-         assert( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(branchvars[j])) );
+         assert(SCIPisFeasNegative(scip, SCIPvarGetLbLocal(branchvars[j])));
          sum1 += val/SCIPvarGetLbLocal(branchvars[j]);
       }
    }
-   for (j = ind+1; j < nbranchvars; ++j)
+   for( j = ind+1; j < nbranchvars; ++j )
    {
       SCIP_Real val;
 
       val = SCIPgetSolVal(scip, sol, branchvars[j]);
 
-      if ( SCIPisFeasPositive(scip, val) )
+      if( SCIPisFeasPositive(scip, val) )
       {
-         assert( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(branchvars[j])) );
+         assert(SCIPisFeasPositive(scip, SCIPvarGetUbLocal(branchvars[j])));
          sum2 += val/SCIPvarGetUbLocal(branchvars[j]);
       }
-      else if ( SCIPisFeasNegative(scip, val) )
+      else if( SCIPisFeasNegative(scip, val) )
       {
-         assert( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(branchvars[j])) );
+         assert(SCIPisFeasNegative(scip, SCIPvarGetLbLocal(branchvars[j])));
          sum2 += val/SCIPvarGetLbLocal(branchvars[j]);
       }
    }
 
    /* compute cardinality values of branching constraints */
    newcardval = cardval - nnonzero;
-   splitval1 = sum1 + (SCIP_Real) newcardval - sum2 - 1.0;/*lint !e834*/
+   splitval1 = sum1 + (SCIP_Real)newcardval - sum2 - 1.0;/*lint !e834*/
    splitval1 = SCIPfloor(scip, splitval1/2);
    splitval1 = MAX(splitval1, 0);
-   assert( (int) splitval1 >= 0 );
-   assert( (int) splitval1 <= MIN(newcardval-1, ind) );
-   splitval2 = (SCIP_Real) (newcardval-1);
+   assert((int)splitval1 >= 0);
+   assert((int)splitval1 <= MIN(newcardval-1, ind));
+   splitval2 = (SCIP_Real)(newcardval-1);
    splitval2 -= splitval1;
 
 
    /* the lower or upper LP row of each branching constraint should cut off the current LP solution
     * if this is not the case, then use unbalanced branching */
-   if ( ! SCIPisFeasLT(scip, (SCIP_Real) splitval1 + BALBRANCHCUTOFFVALUE, sum1) || ! SCIPisFeasLT(scip, (SCIP_Real) splitval2 + BALBRANCHCUTOFFVALUE, sum2) )
+   if( !SCIPisFeasLT(scip, (SCIP_Real)splitval1 + BALBRANCHCUTOFFVALUE, sum1) || !SCIPisFeasLT(scip, (SCIP_Real)splitval2 + BALBRANCHCUTOFFVALUE, sum2) )
    {
       SCIP_CALL( branchUnbalancedCardinality(scip, sol, branchcons, vars, indvars, nvars, cardval, branchnnonzero, branchpos) );
    }
@@ -1513,7 +1513,7 @@ SCIP_RETCODE branchBalancedCardinality(
 
       SCIPdebugMessage("apply balanced branching on constraint <%s>.\n", SCIPconsGetName(branchcons));
 
-      if ( SCIPisFeasZero(scip, splitval1) )
+      if( SCIPisFeasZero(scip, splitval1) )
       {
          SCIP_Bool infeasible;
          SCIP_Real nodeselest;
@@ -1523,7 +1523,7 @@ SCIP_RETCODE branchBalancedCardinality(
          objest = 0.0;
 
          /* calculate node selection and objective estimate for node */
-         for (j = 0; j <= ind; ++j)
+         for( j = 0; j <= ind; ++j )
          {
             nodeselest += SCIPcalcNodeselPriority(scip, branchvars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
             objest += SCIPcalcChildEstimate(scip, branchvars[j], 0.0);
@@ -1535,10 +1535,10 @@ SCIP_RETCODE branchBalancedCardinality(
          /* create node 1 */
          SCIP_CALL( SCIPcreateChild(scip, &node1, nodeselest, objest) );
 
-         for (j = 0; j <= ind; ++j)
+         for( j = 0; j <= ind; ++j )
          {
             SCIP_CALL( fixVariableZeroNode(scip, branchvars[j], node1, &infeasible) );
-            assert( ! infeasible );
+            assert(!infeasible);
          }
       }
       else
@@ -1548,7 +1548,7 @@ SCIP_RETCODE branchBalancedCardinality(
 
          /* create branching constraint for node 1 */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "brleft_#%d", SCIPgetNNodes(scip));
-         SCIP_CALL( SCIPcreateConsCardinality(scip, &cons1, name, ind+1, branchvars, (int) splitval1, branchindvars, NULL,
+         SCIP_CALL( SCIPcreateConsCardinality(scip, &cons1, name, ind+1, branchvars, (int)splitval1, branchindvars, NULL,
                FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE) );
 
          /* add constraint to node */
@@ -1559,7 +1559,7 @@ SCIP_RETCODE branchBalancedCardinality(
       }
 
 
-      if ( SCIPisFeasZero(scip, splitval2) )
+      if( SCIPisFeasZero(scip, splitval2) )
       {
          SCIP_Bool infeasible;
          SCIP_Real nodeselest;
@@ -1569,23 +1569,23 @@ SCIP_RETCODE branchBalancedCardinality(
          objest = 0.0;
 
          /* calculate node selection and objective estimate for node */
-         for (j = ind+1; j < nbranchvars; ++j)
+         for( j = ind+1; j < nbranchvars; ++j )
          {
             nodeselest += SCIPcalcNodeselPriority(scip, branchvars[j], SCIP_BRANCHDIR_DOWNWARDS, 0.0);
             objest += SCIPcalcChildEstimate(scip, branchvars[j], 0.0);
          }
-	 assert( nbranchvars - (ind + 1) > 0 );
+         assert(nbranchvars - (ind + 1) > 0);
 
          /* take the average of the individual estimates */
-         objest = objest/((SCIP_Real) (nbranchvars - (ind + 1)));/*lint !e414*/
+         objest = objest/((SCIP_Real)(nbranchvars - (ind + 1)));/*lint !e414*/
 
          /* create node 1 */
          SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
 
-         for (j = ind+1; j < nbranchvars; ++j)
+         for( j = ind+1; j < nbranchvars; ++j )
          {
             SCIP_CALL( fixVariableZeroNode(scip, branchvars[j], node2, &infeasible) );
-            assert( ! infeasible );
+            assert(!infeasible);
          }
       }
       else
@@ -1595,16 +1595,16 @@ SCIP_RETCODE branchBalancedCardinality(
 
          /* shift the second half of variables */
          cnt = 0;
-         for (j = ind+1; j < nbranchvars; ++j)
+         for( j = ind+1; j < nbranchvars; ++j )
          {
             branchvars[cnt] = branchvars[j];
             branchindvars[cnt++] = branchindvars[j];
          }
-         assert( cnt == nbranchvars - (ind + 1));
+         assert(cnt == nbranchvars - (ind + 1));
 
          /* create branching constraint for node 2 */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "brright_#%d", SCIPgetNNodes(scip));
-         SCIP_CALL( SCIPcreateConsCardinality(scip, &cons2, name, cnt, branchvars, (int) splitval2, branchindvars, NULL,
+         SCIP_CALL( SCIPcreateConsCardinality(scip, &cons2, name, cnt, branchvars, (int)splitval2, branchindvars, NULL,
                FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE) );
 
          /* add constraint to node */
@@ -1684,10 +1684,10 @@ SCIP_RETCODE enforceCardinality(
    int branchpos;
    int c;
 
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( conss != NULL );
-   assert( result != NULL );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL);
+   assert(result != NULL);
 
    maxweight = -SCIP_REAL_MAX;
    branchcons = NULL;
@@ -1699,10 +1699,10 @@ SCIP_RETCODE enforceCardinality(
 
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
+   assert(conshdlrdata != NULL);
 
    /* search for a constraint with largest violation; from this constraint, we select the variable with largest LP value */
-   for (c = 0; c < nconss; ++c)
+   for( c = 0; c < nconss; ++c )
    {
       SCIP_CONS* cons;
       SCIP_Bool cutoff;
@@ -1717,9 +1717,9 @@ SCIP_RETCODE enforceCardinality(
       int j;
 
       cons = conss[c];
-      assert( cons != NULL );
+      assert(cons != NULL);
       consdata = SCIPconsGetData(cons);
-      assert( consdata != NULL );
+      assert(consdata != NULL);
 
       ngen = 0;
       cnt = 0;
@@ -1731,74 +1731,74 @@ SCIP_RETCODE enforceCardinality(
       cardval = consdata->cardval;
 
       /* do nothing if there are not enough variables - this is usually eliminated by preprocessing */
-      if ( nvars < 2 )
+      if( nvars < 2 )
          continue;
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
       SCIP_CALL( propCardinality(scip, cons, consdata, &cutoff, &ngen) );
 
       SCIPdebugMessage("propagating <%s> in enforcing (cutoff: %u, domain reductions: %d).\n", SCIPconsGetName(cons), cutoff, ngen);
-      if ( cutoff )
+      if( cutoff )
       {
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
-      if ( ngen > 0 )
+      if( ngen > 0 )
       {
          *result = SCIP_REDUCEDDOM;
          return SCIP_OKAY;
       }
-      assert( ngen == 0 );
+      assert(ngen == 0);
 
       /* check constraint */
       weight = 0.0;
       maxval = -SCIPinfinity(scip);
 
-      for (j = 0; j < nvars; ++j)
+      for( j = 0; j < nvars; ++j )
       {
          SCIP_VAR* var;
 
          /* check whether indicator variable is zero, but variable in cardinality constraint is not fixed to zero;
           * if the variable is not multiaggregated this case should already be handled in propagation */
-         if ( SCIPvarGetUbLocal(indvars[j]) == 0.0 && ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(vars[j])) || ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(vars[j])) ) )
+         if( SCIPvarGetUbLocal(indvars[j]) == 0.0 && ( !SCIPisFeasZero(scip, SCIPvarGetLbLocal(vars[j])) || !SCIPisFeasZero(scip, SCIPvarGetUbLocal(vars[j])) ) )
          {
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
          }
 
-         assert( SCIPvarGetStatus(indvars[j]) != SCIP_VARSTATUS_MULTAGGR );
+         assert(SCIPvarGetStatus(indvars[j]) != SCIP_VARSTATUS_MULTAGGR);
 
          var = vars[j];
 
          /* variable is not fixed to nonzero */
-         if ( SCIPvarGetLbLocal(indvars[j]) != 1.0 && ! SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) && ! SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
+         if( SCIPvarGetLbLocal(indvars[j]) != 1.0 && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
          {
             SCIP_Real val;
 
             val = SCIPgetSolVal(scip, sol, var);
-            if ( SCIPisFeasPositive(scip, val))
+            if( SCIPisFeasPositive(scip, val))
                allneg = FALSE;
-            else if ( SCIPisFeasNegative(scip, val))
+            else if( SCIPisFeasNegative(scip, val))
                allpos = FALSE;
             val = REALABS(val);
 
-            if ( ! SCIPisFeasZero(scip, val) )
+            if( !SCIPisFeasZero(scip, val) )
             {
                /* determine maximum nonzero-variable solution value */
-               if ( SCIPisFeasGT(scip, val, maxval) )
+               if( SCIPisFeasGT(scip, val, maxval) )
                {
                   pos = j;
                   maxval = val;
                }
 
-               if ( conshdlrdata->branchnonzeros )
+               if( conshdlrdata->branchnonzeros )
                   weight += 1.0;
                else
                {
-                  if ( conshdlrdata->branchweight )
+                  if( conshdlrdata->branchweight )
                   {
                      /* choose maximum nonzero-variable weight */
-                     if ( consdata->weights[j] > weight )
+                     if( consdata->weights[j] > weight )
                         weight = consdata->weights[j];
                   }
                   else
@@ -1814,7 +1814,7 @@ SCIP_RETCODE enforceCardinality(
       weight += nnonzero;
 
       /* if we detected a cut off */
-      if ( nnonzero > cardval )
+      if( nnonzero > cardval )
       {
          SCIPdebugMessage("Detected cut off: constraint <%s> has %d many variables that can be treated as nonzero, although only %d many are feasible.\n",
             SCIPconsGetName(cons), nnonzero, cardval);
@@ -1822,22 +1822,22 @@ SCIP_RETCODE enforceCardinality(
          return SCIP_OKAY;
       }
       /* else if domain can be reduced (since node 2 created in branchUnbalancedCardinality() would be infeasible) */
-      else if ( cnt > 0 && nnonzero + 1 > cardval )
+      else if( cnt > 0 && nnonzero + 1 > cardval )
       {
          SCIP_Bool infeasible;
          int v;
 
-         for (v = 0; v < nvars; ++v)
+         for( v = 0; v < nvars; ++v )
          {
             SCIP_VAR* var;
 
             var = vars[v];
 
             /* variable is not fixed to nonzero */
-            if ( ! SCIPisFeasEQ(scip, SCIPvarGetLbLocal(indvars[v]), 1.0) && ! SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) && ! SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
+            if( !SCIPisFeasEQ(scip, SCIPvarGetLbLocal(indvars[v]), 1.0) && !SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) && !SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
             {
                SCIP_CALL( fixVariableZeroNode(scip, var, SCIPgetCurrentNode(scip), &infeasible) );
-               assert( ! infeasible );
+               assert(!infeasible);
                SCIPdebugMessage("detected domain reduction in enforcing: fixed variable <%s> to zero.\n", SCIPvarGetName(var));
             }
          }
@@ -1847,7 +1847,7 @@ SCIP_RETCODE enforceCardinality(
       }
 
       /* if constraint is violated */
-      if ( cnt > cardval - nnonzero && weight > maxweight )
+      if( cnt > cardval - nnonzero && weight > maxweight )
       {
          maxweight = weight;
          branchcons = cons;
@@ -1859,7 +1859,7 @@ SCIP_RETCODE enforceCardinality(
    }
 
    /* if all constraints are feasible */
-   if ( branchcons == NULL )
+   if( branchcons == NULL )
    {
       SCIP_SOL* primsol;
       SCIP_Bool success;
@@ -1873,11 +1873,11 @@ SCIP_RETCODE enforceCardinality(
       SCIPdebugMessage("All cardinality constraints are feasible.\n");
       return SCIP_OKAY;
    }
-   assert( branchnnonzero >= 0 );
-   assert( branchpos >= 0 );
+   assert(branchnnonzero >= 0);
+   assert(branchpos >= 0);
 
    /* if we should leave branching decision to branching rules */
-   if ( ! conshdlrdata->branchcard )
+   if( ! conshdlrdata->branchcard )
    {
       *result = SCIP_INFEASIBLE;
       return SCIP_OKAY;
@@ -1886,20 +1886,20 @@ SCIP_RETCODE enforceCardinality(
 
    /* get data for branching or domain reduction */
    consdata = SCIPconsGetData(branchcons);
-   assert( consdata != NULL );
+   assert(consdata != NULL);
    nvars = consdata->nvars;
    vars = consdata->vars;
    indvars = consdata->indvars;
    cardval = consdata->cardval;
 
    /* we only use balanced branching if either the lower or the upper bound row of the branching constraint is known to be tight or violated */
-   if ( conshdlrdata->branchbalanced && ! SCIPisFeasNegative(scip, maxweight) && ( branchallneg || branchallpos ) && (conshdlrdata->branchbalanceddepth == -1 || SCIPgetDepth(scip) <= conshdlrdata->branchbalanceddepth) )
+   if( conshdlrdata->branchbalanced && !SCIPisFeasNegative(scip, maxweight) && ( branchallneg || branchallpos ) && (conshdlrdata->branchbalanceddepth == -1 || SCIPgetDepth(scip) <= conshdlrdata->branchbalanceddepth) )
    {
          branchbalanced = TRUE;
    }
 
    /* apply branching rule */
-   if ( branchbalanced )
+   if( branchbalanced )
    {
       SCIP_CALL( branchBalancedCardinality(scip, sol, branchcons, vars, indvars, nvars, cardval, branchnnonzero, branchpos) );
    }
@@ -1951,96 +1951,96 @@ SCIP_RETCODE generateRowCardinality(
    int cnt;
    int j;
 
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( cons != NULL );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
-   assert( consdata != NULL );
-   assert( consdata->vars != NULL );
-   assert( consdata->indvars != NULL );
+   assert(consdata != NULL);
+   assert(consdata->vars != NULL);
+   assert(consdata->indvars != NULL);
 
    nvars = consdata->nvars;
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
 
    /* take care of upper bounds */
-   if ( rowub != NULL )
+   if( rowub != NULL )
    {
       int cardval;
 
       cnt = 0;
       cardval = consdata->cardval;
-      for (j = 0; j < nvars; ++j)
+      for( j = 0; j < nvars; ++j )
       {
-         if ( local )
+         if( local )
             val = SCIPvarGetLbLocal(consdata->vars[j]);
          else
             val = SCIPvarGetUbGlobal(consdata->vars[j]);
 
          /* if a variable may be treated as nonzero, then update cardinality value */
-         if ( SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(consdata->indvars[j]), 1.0) )
+         if( SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(consdata->indvars[j]), 1.0) )
          {
             --cardval;
             continue;
          }
 
-         if ( ! SCIPisInfinity(scip, val) && ! SCIPisZero(scip, val) && ! SCIPisNegative(scip, val) )
+         if( !SCIPisInfinity(scip, val) && !SCIPisZero(scip, val) && !SCIPisNegative(scip, val) )
          {
-            assert( consdata->vars[j] != NULL );
+            assert(consdata->vars[j] != NULL);
             vars[cnt] = consdata->vars[j];
             vals[cnt++] = 1.0/val;
          }
       }
-      assert( cardval >= 0 );
+      assert(cardval >= 0);
 
       /* if cut is meaningful */
-      if ( cnt > cardval )
+      if( cnt > cardval )
       {
          /* create upper bound inequality if at least two of the bounds are finite and nonzero */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cardub#%s", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real) cardval, local, TRUE, FALSE) );
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowub, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real)cardval, local, TRUE, FALSE) );
          SCIP_CALL( SCIPaddVarsToRow(scip, *rowub, cnt, vars, vals) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowub, NULL) ) );
       }
    }
 
    /* take care of lower bounds */
-   if ( rowlb != NULL )
+   if( rowlb != NULL )
    {
       int cardval;
 
       cnt = 0;
       cardval = consdata->cardval;
-      for (j = 0; j < nvars; ++j)
+      for( j = 0; j < nvars; ++j )
       {
-         if ( local )
+         if( local )
             val = SCIPvarGetLbLocal(consdata->vars[j]);
          else
             val = SCIPvarGetLbGlobal(consdata->vars[j]);
 
          /* if a variable may be treated as nonzero, then update cardinality value */
-         if ( SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(consdata->indvars[j]), 1.0) )
+         if( SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(consdata->indvars[j]), 1.0) )
          {
             --cardval;
             continue;
          }
 
-         if ( ! SCIPisInfinity(scip, -val) && ! SCIPisZero(scip, val) && ! SCIPisPositive(scip, val) )
+         if( !SCIPisInfinity(scip, -val) && !SCIPisZero(scip, val) && !SCIPisPositive(scip, val) )
          {
-            assert( consdata->vars[j] != NULL );
+            assert(consdata->vars[j] != NULL);
             vars[cnt] = consdata->vars[j];
             vals[cnt++] = 1.0/val;
          }
       }
-      assert( cardval >= 0 );
+      assert(cardval >= 0);
 
       /* if cut is meaningful */
-      if ( cnt > cardval )
+      if( cnt > cardval )
       {
          /* create lower bound inequality if at least two of the bounds are finite and nonzero */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "cardlb#%s", SCIPconsGetName(cons));
-         SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real) cardval, local, TRUE, FALSE) );
+         SCIP_CALL( SCIPcreateEmptyRowCons(scip, rowlb, conshdlr, name, -SCIPinfinity(scip), (SCIP_Real)cardval, local, TRUE, FALSE) );
          SCIP_CALL( SCIPaddVarsToRow(scip, *rowlb, nvars, vars, vals) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, *rowlb, NULL) ) );
       }
@@ -2069,37 +2069,37 @@ SCIP_RETCODE initsepaBoundInequalityFromCardinality(
    int cnt = 0;
    int c;
 
-   assert( scip != NULL );
-   assert( conss != NULL );
+   assert(scip != NULL);
+   assert(conss != NULL);
 
    *cutoff = FALSE;
 
-   for (c = nconss-1; c >= 0; --c)
+   for( c = nconss-1; c >= 0; --c )
    {
       SCIP_CONSDATA* consdata;
       SCIP_ROW* rowub = NULL;
       SCIP_ROW* rowlb = NULL;
       SCIP_Bool release = FALSE;
 
-      assert( conss != NULL );
-      assert( conss[c] != NULL );
+      assert(conss != NULL);
+      assert(conss[c] != NULL);
       consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL );
+      assert(consdata != NULL);
 
-      if ( solvedinitlp )
+      if( solvedinitlp )
          SCIPdebugMessage("Separating inequalities for cardinality constraint <%s>.\n", SCIPconsGetName(conss[c]) );
       else
          SCIPdebugMessage("Checking for initial rows for cardinality constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
       /* generate rows associated to cardinality constraint; the rows are stored in the constraint data if they are globally valid */
-      if ( SCIPconsIsLocal(conss[c]) )
+      if( SCIPconsIsLocal(conss[c]) )
       {
          SCIP_CALL( generateRowCardinality(scip, conshdlr, conss[c], TRUE, &rowlb, &rowub) );
          release = TRUE;
       }
       else
       {
-         if ( consdata->rowub == NULL || consdata->rowlb == NULL )
+         if( consdata->rowub == NULL || consdata->rowlb == NULL )
          {
             SCIP_CALL( generateRowCardinality(scip, conshdlr, conss[c], FALSE, (consdata->rowlb == NULL) ? &consdata->rowlb : NULL, (consdata->rowub == NULL) ? &consdata->rowub : NULL) );/*lint !e826*/
          }
@@ -2108,28 +2108,28 @@ SCIP_RETCODE initsepaBoundInequalityFromCardinality(
       }
 
       /* put corresponding rows into LP */
-      if ( rowub != NULL && ! SCIProwIsInLP(rowub) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, rowub) ) )
+      if( rowub != NULL && !SCIProwIsInLP(rowub) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, rowub) ) )
       {
-         assert( SCIPisInfinity(scip, -SCIProwGetLhs(rowub)) && SCIPisLE(scip, SCIProwGetRhs(rowub), (SCIP_Real) consdata->cardval) );
+         assert(SCIPisInfinity(scip, -SCIProwGetLhs(rowub)) && SCIPisLE(scip, SCIProwGetRhs(rowub), (SCIP_Real)consdata->cardval));
 
          SCIP_CALL( SCIPaddCut(scip, NULL, rowub, FALSE, cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowub, NULL) ) );
 
-         if ( solvedinitlp )
+         if( solvedinitlp )
          {
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          }
          ++cnt;
       }
 
-      if ( ! (*cutoff) && rowlb != NULL && ! SCIProwIsInLP(rowlb) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, rowlb) ) )
+      if( ! (*cutoff) && rowlb != NULL && !SCIProwIsInLP(rowlb) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, rowlb) ) )
       {
-         assert( SCIPisInfinity(scip, -SCIProwGetLhs(rowlb)) && SCIPisLE(scip, SCIProwGetRhs(rowlb), (SCIP_Real) consdata->cardval) );
+         assert(SCIPisInfinity(scip, -SCIProwGetLhs(rowlb)) && SCIPisLE(scip, SCIProwGetRhs(rowlb), (SCIP_Real)consdata->cardval));
 
          SCIP_CALL( SCIPaddCut(scip, NULL, rowlb, FALSE, cutoff) );
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowlb, NULL) ) );
 
-         if ( solvedinitlp )
+         if( solvedinitlp )
          {
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
          }
@@ -2137,24 +2137,24 @@ SCIP_RETCODE initsepaBoundInequalityFromCardinality(
       }
 
 
-      if ( release )
+      if( release )
       {
-         if ( rowlb != NULL )
-	 {
+         if( rowlb != NULL )
+         {
             SCIP_CALL( SCIPreleaseRow(scip, &rowlb) );
-	 }
-         if ( rowub != NULL )
-	 {
-	    SCIP_CALL( SCIPreleaseRow(scip, &rowub) );
-	 }
+         }
+         if( rowub != NULL )
+         {
+            SCIP_CALL( SCIPreleaseRow(scip, &rowub) );
+         }
       }
 
-      if ( *cutoff )
+      if( *cutoff )
          break;
    }
 
    /* store number of generated cuts */
-   if ( ngen != NULL )
+   if( ngen != NULL )
       *ngen = cnt;
 
    return SCIP_OKAY;
@@ -2175,14 +2175,14 @@ SCIP_RETCODE separateCardinality(
    SCIP_Bool cutoff;
    int ngen = 0;
 
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( conss != NULL );
-   assert( result != NULL );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL);
+   assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
 
-   if ( nconss == 0 )
+   if( nconss == 0 )
       return SCIP_OKAY;
 
    /* only separate cuts if we are not close to terminating */
@@ -2193,14 +2193,14 @@ SCIP_RETCODE separateCardinality(
 
    /* separate bound inequalities from cardinality constraints */
    SCIP_CALL( initsepaBoundInequalityFromCardinality(scip, conshdlr, conss, nconss, sol, TRUE, &ngen, &cutoff) );
-   if ( cutoff )
+   if( cutoff )
    {
       *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
 
    /* evaluate results */
-   if ( ngen > 0 )
+   if( ngen > 0 )
       *result = SCIP_SEPARATED;
    SCIPdebugMessage("Separated %d bound inequalities.\n", ngen);
 
@@ -2214,9 +2214,9 @@ SCIP_RETCODE separateCardinality(
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyCardinality)
 {  /*lint --e{715}*/
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrCardinality(scip) );
@@ -2233,15 +2233,15 @@ SCIP_DECL_CONSFREE(consFreeCardinality)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
 
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
    /* free hash map */
-   if ( conshdlrdata->varhash != NULL )
+   if( conshdlrdata->varhash != NULL )
    {
       SCIPhashmapFree(&conshdlrdata->varhash);
    }
@@ -2259,38 +2259,38 @@ SCIP_DECL_CONSEXITSOL(consExitsolCardinality)
    SCIP_CONSHDLRDATA* conshdlrdata;
    int c;
 
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
    /* check each constraint */
-   for (c = 0; c < nconss; ++c)
+   for( c = 0; c < nconss; ++c )
    {
       SCIP_CONSDATA* consdata;
 
-      assert( conss != NULL );
-      assert( conss[c] != NULL );
+      assert(conss != NULL);
+      assert(conss[c] != NULL);
       consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL );
+      assert(consdata != NULL);
 
       SCIPdebugMessage("Exiting cardinality constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
       /* free rows */
-      if ( consdata->rowub != NULL )
+      if( consdata->rowub != NULL )
       {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->rowub) );
       }
-      if ( consdata->rowlb != NULL )
+      if( consdata->rowlb != NULL )
       {
          SCIP_CALL( SCIPreleaseRow(scip, &consdata->rowlb) );
       }
    }
 
    /* free hash map */
-   if ( conshdlrdata->varhash != NULL )
+   if( conshdlrdata->varhash != NULL )
    {
       SCIPhashmapFree(&conshdlrdata->varhash);
    }
@@ -2303,33 +2303,33 @@ SCIP_DECL_CONSEXITSOL(consExitsolCardinality)
 static
 SCIP_DECL_CONSDELETE(consDeleteCardinality)
 { /*lint --e{737, 647}*/
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( cons != NULL );
-   assert( consdata != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(consdata != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
    SCIPdebugMessage("Deleting cardinality constraint <%s>.\n", SCIPconsGetName(cons) );
 
    /* drop events on transformed variables */
-   if ( SCIPconsIsTransformed(cons) )
+   if( SCIPconsIsTransformed(cons) )
    {
       SCIP_CONSHDLRDATA* conshdlrdata;
       int j;
 
       /* get constraint handler data */
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert( conshdlrdata != NULL );
-      assert( conshdlrdata->eventhdlr != NULL );
+      assert(conshdlrdata != NULL);
+      assert(conshdlrdata->eventhdlr != NULL);
 
-      for (j = 0; j < (*consdata)->nvars; ++j)
+      for( j = 0; j < (*consdata)->nvars; ++j )
       {
          SCIP_CALL( dropVarEventCardinality(scip, conshdlrdata->eventhdlr, *consdata, (*consdata)->vars[j], (*consdata)->indvars[j], &(*consdata)->eventdatas[j]) );
-         assert( (*consdata)->eventdatas[j] == NULL );
+         assert((*consdata)->eventdatas[j] == NULL);
       }
    }
 
-   if ( (*consdata)->weights != NULL )
+   if( (*consdata)->weights != NULL )
    {
       SCIPfreeBlockMemoryArray(scip, &(*consdata)->weights, (*consdata)->maxvars);
    }
@@ -2340,16 +2340,16 @@ SCIP_DECL_CONSDELETE(consDeleteCardinality)
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->maxvars);
 
    /* free rows */
-   if ( (*consdata)->rowub != NULL )
+   if( (*consdata)->rowub != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->rowub) );
    }
-   if ( (*consdata)->rowlb != NULL )
+   if( (*consdata)->rowlb != NULL )
    {
       SCIP_CALL( SCIPreleaseRow(scip, &(*consdata)->rowlb) );
    }
-   assert( (*consdata)->rowub == NULL );
-   assert( (*consdata)->rowlb == NULL );
+   assert((*consdata)->rowub == NULL);
+   assert((*consdata)->rowlb == NULL);
 
    SCIPfreeBlockMemory(scip, consdata);
 
@@ -2367,24 +2367,24 @@ SCIP_DECL_CONSTRANS(consTransCardinality)
    char s[SCIP_MAXSTRLEN];
    int j;
 
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( sourcecons != NULL );
-   assert( targetcons != NULL );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(sourcecons != NULL);
+   assert(targetcons != NULL);
 
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
-   assert( conshdlrdata->eventhdlr != NULL );
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->eventhdlr != NULL);
 
    SCIPdebugMessage("Transforming cardinality constraint: <%s>.\n", SCIPconsGetName(sourcecons) );
 
    /* get data of original constraint */
    sourcedata = SCIPconsGetData(sourcecons);
-   assert( sourcedata != NULL );
-   assert( sourcedata->nvars > 0 );
-   assert( sourcedata->nvars <= sourcedata->maxvars );
+   assert(sourcedata != NULL);
+   assert(sourcedata->nvars > 0);
+   assert(sourcedata->nvars <= sourcedata->maxvars);
 
    /* create constraint data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
@@ -2405,22 +2405,22 @@ SCIP_DECL_CONSTRANS(consTransCardinality)
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->eventvarscurrent, 4*consdata->nvars) );/*lint !e647*/
 
    /* if weights were used */
-   if ( sourcedata->weights != NULL )
+   if( sourcedata->weights != NULL )
    {
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->weights, sourcedata->weights, consdata->nvars) );
    }
    else
       consdata->weights = NULL;
 
-   for (j = 0; j < sourcedata->nvars; ++j)
+   for( j = 0; j < sourcedata->nvars; ++j )
    {
-      assert( sourcedata->vars[j] != 0 );
-      assert( sourcedata->indvars[j] != 0 );
+      assert(sourcedata->vars[j] != 0);
+      assert(sourcedata->indvars[j] != 0);
       SCIP_CALL( SCIPgetTransformedVar(scip, sourcedata->vars[j], &(consdata->vars[j])) );
       SCIP_CALL( SCIPgetTransformedVar(scip, sourcedata->indvars[j], &(consdata->indvars[j])) );
 
       /* if variable is fixed to be nonzero */
-      if ( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->indvars[j]), 1.0) )
+      if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->indvars[j]), 1.0) )
          ++(consdata->ntreatnonzeros);
    }
 
@@ -2434,17 +2434,17 @@ SCIP_DECL_CONSTRANS(consTransCardinality)
          SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
 
    consdata->cons = *targetcons;
-   assert( consdata->cons != NULL );
+   assert(consdata->cons != NULL);
 
    /* catch bound change events on variable */
-   for (j = 0; j < consdata->nvars; ++j)
+   for( j = 0; j < consdata->nvars; ++j )
    {
       SCIP_CALL( catchVarEventCardinality(scip, conshdlrdata->eventhdlr, consdata, consdata->vars[j], consdata->indvars[j], j, &consdata->eventdatas[j]) );
-      assert( consdata->eventdatas[j] != NULL );
+      assert(consdata->eventdatas[j] != NULL);
    }
 
 #ifdef SCIP_DEBUG
-   if ( SCIPisGT(scip, (SCIP_Real) consdata->ntreatnonzeros, consdata->cardval) )
+   if( SCIPisGT(scip, (SCIP_Real)consdata->ntreatnonzeros, consdata->cardval) )
    {
       SCIPdebugMessage("constraint <%s> has %d variables fixed to be nonzero, allthough the constraint allows only %d nonzero variables\n",
          SCIPconsGetName(*targetcons), consdata->ntreatnonzeros, consdata->cardval);
@@ -2466,10 +2466,10 @@ SCIP_DECL_CONSPRESOL(consPresolCardinality)
    SCIP_EVENTHDLR* eventhdlr;
    int c;
 
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( result != NULL );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
 
    SCIPdebugMessage("Presolving cardinality constraints.\n");
 
@@ -2483,41 +2483,41 @@ SCIP_DECL_CONSPRESOL(consPresolCardinality)
    if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 )
    {
       /* get constraint handler data */
-      assert( SCIPconshdlrGetData(conshdlr) != NULL );
+      assert(SCIPconshdlrGetData(conshdlr) != NULL);
       eventhdlr = SCIPconshdlrGetData(conshdlr)->eventhdlr;
-      assert( eventhdlr != NULL );
+      assert(eventhdlr != NULL);
 
       *result = SCIP_DIDNOTFIND;
 
       /* check each constraint */
-      for (c = 0; c < nconss; ++c)
+      for( c = 0; c < nconss; ++c )
       {
          SCIP_CONSDATA* consdata;
          SCIP_CONS* cons;
          SCIP_Bool cutoff;
          SCIP_Bool success;
 
-         assert( conss != NULL );
-         assert( conss[c] != NULL );
+         assert(conss != NULL);
+         assert(conss[c] != NULL);
          cons = conss[c];
          consdata = SCIPconsGetData(cons);
 
-         assert( consdata != NULL );
-         assert( consdata->nvars >= 0 );
-         assert( consdata->nvars <= consdata->maxvars );
-         assert( ! SCIPconsIsModifiable(cons) );
+         assert(consdata != NULL);
+         assert(consdata->nvars >= 0);
+         assert(consdata->nvars <= consdata->maxvars);
+         assert(!SCIPconsIsModifiable(cons));
 
          /* perform one presolving round */
          SCIP_CALL( presolRoundCardinality(scip, cons, consdata, eventhdlr, &cutoff, &success, ndelconss, nupgdconss, nfixedvars, &nremovedvars) );
 
-         if ( cutoff )
+         if( cutoff )
          {
             SCIPdebugMessage("presolving detected cutoff.\n");
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
          }
 
-         if ( success )
+         if( success )
             *result = SCIP_SUCCESS;
       }
    }
@@ -2536,12 +2536,12 @@ SCIP_DECL_CONSINITLP(consInitlpCardinality)
 {
    SCIP_Bool cutoff;
 
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
 
    /* checking for initial rows for cardinality constraints */
    SCIP_CALL( initsepaBoundInequalityFromCardinality(scip, conshdlr, conss, nconss, NULL, FALSE, NULL, &cutoff) );
-   assert( ! cutoff );
+   assert(!cutoff);
 
    return SCIP_OKAY;
 }
@@ -2551,10 +2551,10 @@ SCIP_DECL_CONSINITLP(consInitlpCardinality)
 static
 SCIP_DECL_CONSSEPALP(consSepalpCardinality)
 {  /*lint --e{715}*/
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( conss != NULL );
-   assert( result != NULL );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL);
+   assert(result != NULL);
 
    SCIP_CALL( separateCardinality(scip, conshdlr, NULL, nconss, conss, result) );
 
@@ -2566,10 +2566,10 @@ SCIP_DECL_CONSSEPALP(consSepalpCardinality)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolCardinality)
 {  /*lint --e{715}*/
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( conss != NULL );
-   assert( result != NULL );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL);
+   assert(result != NULL);
 
    SCIP_CALL( separateCardinality(scip, conshdlr, sol, nconss, conss, result) );
 
@@ -2581,11 +2581,11 @@ SCIP_DECL_CONSSEPASOL(consSepasolCardinality)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpCardinality)
 {  /*lint --e{715}*/
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( result != NULL );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
 
    SCIP_CALL( enforceCardinality(scip, conshdlr, NULL, nconss, conss, result) );
 
@@ -2597,11 +2597,11 @@ SCIP_DECL_CONSENFOLP(consEnfolpCardinality)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsCardinality)
 {  /*lint --e{715}*/
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( result != NULL );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
 
    SCIP_CALL( enforceCardinality(scip, conshdlr, NULL, nconss, conss, result) );
 
@@ -2618,14 +2618,14 @@ SCIP_DECL_CONSCHECK(consCheckCardinality)
 {  /*lint --e{715}*/
    int c;
 
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( result != NULL );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
 
    /* check each constraint */
-   for (c = 0; c < nconss; ++c)
+   for( c = 0; c < nconss; ++c )
    {
       SCIP_CONSDATA* consdata;
       int cardval;
@@ -2633,37 +2633,37 @@ SCIP_DECL_CONSCHECK(consCheckCardinality)
       int cnt;
 
       cnt = 0;
-      assert( conss[c] != NULL );
+      assert(conss[c] != NULL);
       consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL );
+      assert(consdata != NULL);
       cardval = consdata->cardval;
       SCIPdebugMessage("Checking cardinality constraint <%s>.\n", SCIPconsGetName(conss[c]));
 
       /* check all variables */
-      for (j = 0; j < consdata->nvars; ++j)
+      for( j = 0; j < consdata->nvars; ++j )
       {
          /* if variable is nonzero */
-         if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->vars[j])) )
+         if( !SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->vars[j])) )
          {
             ++cnt;
 
             /* if more variables than allowed are nonzero */
-            if ( cnt > cardval )
+            if( cnt > cardval )
             {
                SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
                *result = SCIP_INFEASIBLE;
 
-               if ( printreason )
+               if( printreason )
                {
                   int l;
 
                   SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
                   SCIPinfoMessage(scip, NULL, ";\nviolation: ");
 
-                  for (l = 0; l < consdata->nvars; ++l)
+                  for( l = 0; l < consdata->nvars; ++l )
                   {
                      /* if variable is nonzero */
-                     if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->vars[l])) )
+                     if( !SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->vars[l])) )
                      {
                         SCIPinfoMessage(scip, NULL, "<%s> = %.15g ",
                            SCIPvarGetName(consdata->vars[l]), SCIPgetSolVal(scip, sol, consdata->vars[l]));
@@ -2689,39 +2689,39 @@ SCIP_DECL_CONSPROP(consPropCardinality)
    int ngen = 0;
    int c;
 
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( conss != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
-   assert( result != NULL );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 
-   assert( SCIPisTransformed(scip) );
+   assert(SCIPisTransformed(scip));
 
    /* check each constraint */
-   for (c = 0; c < nconss; ++c)
+   for( c = 0; c < nconss; ++c )
    {
       SCIP_CONS* cons;
       SCIP_CONSDATA* consdata;
       SCIP_Bool cutoff;
 
       *result = SCIP_DIDNOTFIND;
-      assert( conss[c] != NULL );
+      assert(conss[c] != NULL);
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
-      assert( consdata != NULL );
+      assert(consdata != NULL);
       SCIPdebugMessage("Propagating cardinality constraint <%s>.\n", SCIPconsGetName(cons) );
 
       *result = SCIP_DIDNOTFIND;
       SCIP_CALL( propCardinality(scip, cons, consdata, &cutoff, &ngen) );
-      if ( cutoff )
+      if( cutoff )
       {
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
    }
    SCIPdebugMessage("Propagated %d domains.\n", ngen);
-   if ( ngen > 0 )
+   if( ngen > 0 )
       *result = SCIP_REDUCEDDOM;
 
    return SCIP_OKAY;
@@ -2749,21 +2749,21 @@ SCIP_DECL_CONSLOCK(consLockCardinality)
    SCIP_VAR** indvars;
    int j;
 
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    consdata = SCIPconsGetData(cons);
-   assert( consdata != NULL );
+   assert(consdata != NULL);
 
    SCIPdebugMessage("Locking constraint <%s>.\n", SCIPconsGetName(cons));
 
    vars = consdata->vars;
    indvars = consdata->indvars;
    nvars = consdata->nvars;
-   assert( vars != NULL );
+   assert(vars != NULL);
 
-   for (j = 0; j < nvars; ++j)
+   for( j = 0; j < nvars; ++j )
    {
       SCIP_VAR* var;
       SCIP_VAR* indvar;
@@ -2771,13 +2771,13 @@ SCIP_DECL_CONSLOCK(consLockCardinality)
       indvar = indvars[j];
 
       /* if lower bound is negative, rounding down may violate constraint */
-      if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )
+      if( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) )
       {
          SCIP_CALL( SCIPaddVarLocks(scip, var, nlockspos, nlocksneg) );
       }
 
       /* additionally: if upper bound is positive, rounding up may violate constraint */
-      if ( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
+      if( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
       {
          SCIP_CALL( SCIPaddVarLocks(scip, var, nlocksneg, nlockspos) );
       }
@@ -2797,21 +2797,21 @@ SCIP_DECL_CONSPRINT(consPrintCardinality)
    SCIP_CONSDATA* consdata;
    int j;
 
-   assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( cons != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
    consdata = SCIPconsGetData(cons);
-   assert( consdata != NULL );
+   assert(consdata != NULL);
 
    SCIPinfoMessage(scip, file, "card( ");
-   for (j = 0; j < consdata->nvars; ++j)
+   for( j = 0; j < consdata->nvars; ++j )
    {
-      if ( j > 0 )
+      if( j > 0 )
          SCIPinfoMessage(scip, file, ", ");
       SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[j], FALSE) );
-      if ( consdata->weights == NULL )
+      if( consdata->weights == NULL )
          SCIPinfoMessage(scip, file, " (%d)", j+1);
       else
          SCIPinfoMessage(scip, file, " (%3.2f)", consdata->weights[j]);
@@ -2837,15 +2837,15 @@ SCIP_DECL_CONSCOPY(consCopyCardinality)
    int nvars;
    int v;
 
-   assert( scip != NULL );
-   assert( sourcescip != NULL );
-   assert( sourcecons != NULL );
-   assert( SCIPisTransformed(sourcescip) );
-   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) == 0 );
+   assert(scip != NULL);
+   assert(sourcescip != NULL);
+   assert(sourcecons != NULL);
+   assert(SCIPisTransformed(sourcescip));
+   assert(strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(sourcecons)), CONSHDLR_NAME) == 0);
 
    *valid = TRUE;
 
-   if ( name != NULL )
+   if( name != NULL )
       consname = name;
    else
       consname = SCIPconsGetName(sourcecons);
@@ -2853,20 +2853,20 @@ SCIP_DECL_CONSCOPY(consCopyCardinality)
    SCIPdebugMessage("Copying cardinality constraint <%s> ...\n", consname);
 
    sourceconsdata = SCIPconsGetData(sourcecons);
-   assert( sourceconsdata != NULL );
+   assert(sourceconsdata != NULL);
 
    /* get variables and weights of the source constraint */
    nvars = sourceconsdata->nvars;
 
-   if ( nvars == 0 )
+   if( nvars == 0 )
       return SCIP_OKAY;
 
    sourcevars = sourceconsdata->vars;
-   assert( sourcevars != NULL );
+   assert(sourcevars != NULL);
    sourceindvars = sourceconsdata->indvars;
-   assert( sourceindvars != NULL );
+   assert(sourceindvars != NULL);
    sourceweights = sourceconsdata->weights;
-   assert( sourceweights != NULL );
+   assert(sourceweights != NULL);
 
    /* duplicate variable array */
    SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetvars, nvars) );
@@ -2876,11 +2876,11 @@ SCIP_DECL_CONSCOPY(consCopyCardinality)
    /* get copied variables in target SCIP */
    for( v = 0; v < nvars && *valid; ++v )
    {
-      assert( sourcevars[v] != NULL );
-      assert( sourceindvars[v] != NULL );
+      assert(sourcevars[v] != NULL);
+      assert(sourceindvars[v] != NULL);
 
       SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[v], &(targetvars[v]), varmap, consmap, global, valid) );
-      if ( *valid )
+      if( *valid )
       {
          SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourceindvars[v], &(targetindvars[v]), varmap, consmap, global, valid) );
       }
@@ -2957,102 +2957,102 @@ SCIP_DECL_EVENTEXEC(eventExecCardinality)
    SCIP_Real newbound;
    SCIP_VAR* var;
 
-   assert( eventhdlr != NULL );
-   assert( eventdata != NULL );
-   assert( strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0 );
-   assert( event != NULL );
+   assert(eventhdlr != NULL);
+   assert(eventdata != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+   assert(event != NULL);
 
    consdata = eventdata->consdata;
-   assert( consdata != NULL );
-   assert( 0 <= consdata->ntreatnonzeros && consdata->ntreatnonzeros <= consdata->nvars );
-   assert( consdata->eventdatascurrent != NULL );
-   assert( consdata->eventvarscurrent != NULL );
+   assert(consdata != NULL);
+   assert(0 <= consdata->ntreatnonzeros && consdata->ntreatnonzeros <= consdata->nvars);
+   assert(consdata->eventdatascurrent != NULL);
+   assert(consdata->eventvarscurrent != NULL);
 
    var = SCIPeventGetVar(event);
-   assert( var != NULL );
+   assert(var != NULL);
    oldbound = SCIPeventGetOldbound(event);
    newbound = SCIPeventGetNewbound(event);
    eventtype = SCIPeventGetType(event);
 
 #ifdef SCIP_DEBUG
-   if ( ( eventdata->varmarked && var == eventdata->var) || ( eventdata->indvarmarked && var == eventdata->indvar)  )
+   if( ( eventdata->varmarked && var == eventdata->var) || ( eventdata->indvarmarked && var == eventdata->indvar)  )
    {
       int i;
 
-      for (i = 0; i < consdata->neventdatascurrent; ++i)
+      for( i = 0; i < consdata->neventdatascurrent; ++i )
       {
-         if ( var == consdata->eventvarscurrent[i] )
+         if( var == consdata->eventvarscurrent[i] )
          {
             break;
          }
       }
-      assert ( i < consdata->neventdatascurrent );
+      assert(i < consdata->neventdatascurrent);
    }
 #endif
 
    /* if variable is an indicator variable */
-   if ( var == eventdata->indvar )
+   if( var == eventdata->indvar )
    {
-      assert( SCIPvarIsBinary(var) );
-      assert( consdata->cons != NULL );
+      assert(SCIPvarIsBinary(var));
+      assert(consdata->cons != NULL);
 
-      if ( eventtype == SCIP_EVENTTYPE_LBTIGHTENED || eventtype == SCIP_EVENTTYPE_LBRELAXED )
+      if( eventtype == SCIP_EVENTTYPE_LBTIGHTENED || eventtype == SCIP_EVENTTYPE_LBRELAXED )
       {
-         if ( eventtype == SCIP_EVENTTYPE_LBTIGHTENED )
+         if( eventtype == SCIP_EVENTTYPE_LBTIGHTENED )
             ++(consdata->ntreatnonzeros);
-         else if ( eventtype == SCIP_EVENTTYPE_LBRELAXED )
+         else if( eventtype == SCIP_EVENTTYPE_LBRELAXED )
             --(consdata->ntreatnonzeros);
 
-         assert( 0 <= consdata->ntreatnonzeros && consdata->ntreatnonzeros <= consdata->nvars );
+         assert(0 <= consdata->ntreatnonzeros && consdata->ntreatnonzeros <= consdata->nvars);
       }
-      else if ( eventtype == SCIP_EVENTTYPE_UBTIGHTENED && ! eventdata->indvarmarked )
+      else if( eventtype == SCIP_EVENTTYPE_UBTIGHTENED && ! eventdata->indvarmarked )
       {
-         assert( oldbound == 1.0 && newbound == 0.0 );
+         assert(oldbound == 1.0 && newbound == 0.0 );
 
          /* save event data for propagation */
          consdata->eventdatascurrent[consdata->neventdatascurrent] = eventdata;
          consdata->eventvarscurrent[consdata->neventdatascurrent] = var;
          ++consdata->neventdatascurrent;
          eventdata->indvarmarked = TRUE;
-         assert( consdata->neventdatascurrent <= 4 * consdata->maxvars );
-         assert( var == eventdata->indvar );
+         assert(consdata->neventdatascurrent <= 4 * consdata->maxvars);
+         assert(var == eventdata->indvar );
       }
    }
 
    /* if variable is an implied variable,
     * notice that the case consdata->var = consdata->indvar is possible */
-   if ( var == eventdata->var && ! eventdata->varmarked )
+   if( var == eventdata->var && ! eventdata->varmarked )
    {
-      if ( eventtype == SCIP_EVENTTYPE_LBTIGHTENED )
+      if( eventtype == SCIP_EVENTTYPE_LBTIGHTENED )
       {
          /* if variable is now fixed to be nonzero */
-         if ( ! SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
+         if( !SCIPisFeasPositive(scip, oldbound) && SCIPisFeasPositive(scip, newbound) )
          {
             /* save event data for propagation */
             consdata->eventdatascurrent[consdata->neventdatascurrent] = eventdata;
             consdata->eventvarscurrent[consdata->neventdatascurrent] = var;
             ++consdata->neventdatascurrent;
             eventdata->varmarked = TRUE;
-            assert( consdata->neventdatascurrent <= 4 * consdata->maxvars );
-            assert( var == eventdata->var );
+            assert(consdata->neventdatascurrent <= 4 * consdata->maxvars );
+            assert(var == eventdata->var );
          }
       }
-      else if ( eventtype == SCIP_EVENTTYPE_UBTIGHTENED )
+      else if( eventtype == SCIP_EVENTTYPE_UBTIGHTENED )
       {
          /* if variable is now fixed to be nonzero */
-         if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
+         if( !SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
          {
             /* save event data for propagation */
             consdata->eventdatascurrent[consdata->neventdatascurrent] = eventdata;
             consdata->eventvarscurrent[consdata->neventdatascurrent] = var;
             ++consdata->neventdatascurrent;
             eventdata->varmarked = TRUE;
-            assert( consdata->neventdatascurrent <= 4 * consdata->maxvars );
-            assert( var == eventdata->var );
+            assert(consdata->neventdatascurrent <= 4 * consdata->maxvars );
+            assert(var == eventdata->var);
          }
       }
    }
-   assert( 0 <= consdata->ntreatnonzeros && consdata->ntreatnonzeros <= consdata->nvars );
+   assert(0 <= consdata->ntreatnonzeros && consdata->ntreatnonzeros <= consdata->nvars);
 
    SCIPdebugMessage("event exec cons <%s>: changed bound of variable <%s> from %f to %f (ntreatnonzeros: %d).\n", SCIPconsGetName(consdata->cons), SCIPvarGetName(SCIPeventGetVar(event)),
       oldbound, newbound, consdata->ntreatnonzeros);
@@ -3079,7 +3079,7 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
 
    /* create event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &conshdlrdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecCardinality, NULL) );
-   if ( conshdlrdata->eventhdlr == NULL )
+   if( conshdlrdata->eventhdlr == NULL )
    {
       SCIPerrorMessage("event handler for cardinality constraints not found.\n");
       return SCIP_PLUGINNOTFOUND;
@@ -3129,7 +3129,7 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
          &conshdlrdata->branchbalanceddepth, TRUE, DEFAULT_BRANCHBALANCEDDEPTH, -1, INT_MAX, NULL, NULL) );
 
    /* check parameters */
-   if ( conshdlrdata->branchbalanced && SCIPconshdlrGetSepaFreq(conshdlr) != 1 )
+   if( conshdlrdata->branchbalanced && SCIPconshdlrGetSepaFreq(conshdlr) != 1 )
    {
        SCIPerrorMessage("balanced branching is only possible if separation frequency of constraint handler is 1.\n");
        return SCIP_PARAMETERWRONGVAL;
@@ -3190,7 +3190,7 @@ SCIP_RETCODE SCIPcreateConsCardinality(
 
    /* find the cardinality constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-   if ( conshdlr == NULL )
+   if( conshdlr == NULL )
    {
       SCIPerrorMessage("<%s> constraint handler not found\n", CONSHDLR_NAME);
       return SCIP_PLUGINNOTFOUND;
@@ -3198,7 +3198,7 @@ SCIP_RETCODE SCIPcreateConsCardinality(
 
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
+   assert(conshdlrdata != NULL);
 
    /* are we in the transformed problem? */
    transformed = SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED;
@@ -3220,42 +3220,42 @@ SCIP_RETCODE SCIPcreateConsCardinality(
    consdata->ntreatnonzeros = transformed ? 0 : -1;
    consdata->weights = NULL;
 
-   if ( nvars > 0 )
+   if( nvars > 0 )
    {
       /* duplicate memory for implied variables */
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->vars, vars, nvars) );
 
       /* create indicator variables if not present */
-      if ( indvars != NULL )
+      if( indvars != NULL )
       {
          SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &consdata->indvars, indvars, nvars) );
       }
       else
       {
-         if ( conshdlrdata->varhash == NULL )
+         if( conshdlrdata->varhash == NULL )
          {
             /* set up hash map */
             SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), 10 * SCIPgetNTotalVars(scip)) );
          }
 
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->indvars, nvars) );
-         for (v = 0; v < nvars; ++v)
+         for( v = 0; v < nvars; ++v )
          {
             SCIP_VAR* implvar;
 
             implvar = vars[v];
-            assert( implvar != NULL );
+            assert(implvar != NULL);
 
             /* check whether an indicator variable already exists for implied variable */
-            if ( SCIPhashmapExists(conshdlrdata->varhash, implvar) )
+            if( SCIPhashmapExists(conshdlrdata->varhash, implvar) )
             {
-               assert( (SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, implvar) != NULL );
+               assert((SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, implvar) != NULL);
                consdata->indvars[v] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, implvar);
             }
             else
             {
                /* if implied variable is binary, then it is not necessary to create an indicator variable */
-               if ( SCIPvarIsBinary(implvar) )
+               if( SCIPvarIsBinary(implvar) )
                   consdata->indvars[v] = implvar;
                else
                {
@@ -3272,8 +3272,8 @@ SCIP_RETCODE SCIPcreateConsCardinality(
 
                /* insert implied variable to hash map */
                SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varhash, implvar, (void*) (size_t) consdata->indvars[v]) );/*lint !e571*/
-               assert( consdata->indvars[v] == (SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, implvar) );
-               assert( SCIPhashmapExists(conshdlrdata->varhash, implvar) );
+               assert(consdata->indvars[v] == (SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, implvar));
+               assert(SCIPhashmapExists(conshdlrdata->varhash, implvar));
             }
          }
       }
@@ -3284,7 +3284,7 @@ SCIP_RETCODE SCIPcreateConsCardinality(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->eventdatas, nvars) );
 
       /* check weights */
-      if ( weights != NULL )
+      if( weights != NULL )
       {
          int* dummy;
 
@@ -3293,7 +3293,7 @@ SCIP_RETCODE SCIPcreateConsCardinality(
 
          /* create dummy array to make code compatible with SCIP 3.2.0 (the function SCIPsortRealPtrPtr() is not available) */
          SCIP_CALL( SCIPallocBufferArray(scip, &dummy, nvars) );
-         for (v = 0; v < nvars; ++v)
+         for( v = 0; v < nvars; ++v )
             dummy[v] = 0;
 
          /* sort variables - ascending order */
@@ -3304,7 +3304,7 @@ SCIP_RETCODE SCIPcreateConsCardinality(
    }
    else
    {
-      assert( weights == NULL );
+      assert(weights == NULL);
    }
 
    /* create cardinality constraint */
@@ -3312,25 +3312,25 @@ SCIP_RETCODE SCIPcreateConsCardinality(
          local, modifiable, dynamic, removable, stickingatnode) );
 
    consdata->cons = *cons;
-   assert( consdata->cons != NULL );
+   assert(consdata->cons != NULL);
 
    /* replace original variables by transformed variables in transformed constraint, add locks, and catch events */
-   for (v = nvars - 1; v >= 0; --v)
+   for( v = nvars - 1; v >= 0; --v )
    {
       /* always use transformed variables in transformed constraints */
-      if ( transformed )
+      if( transformed )
       {
          SCIP_CALL( SCIPgetTransformedVar(scip, consdata->vars[v], &(consdata->vars[v])) );
          SCIP_CALL( SCIPgetTransformedVar(scip, consdata->indvars[v], &(consdata->indvars[v])) );
       }
-      assert( consdata->vars[v] != NULL );
-      assert( consdata->indvars[v] != NULL );
-      assert( transformed == SCIPvarIsTransformed(consdata->vars[v]) );
-      assert( transformed == SCIPvarIsTransformed(consdata->indvars[v]) );
+      assert(consdata->vars[v] != NULL);
+      assert(consdata->indvars[v] != NULL);
+      assert(transformed == SCIPvarIsTransformed(consdata->vars[v]));
+      assert(transformed == SCIPvarIsTransformed(consdata->indvars[v]));
 
       /* handle the new variable */
       SCIP_CALL( handleNewVariableCardinality(scip, *cons, consdata, conshdlrdata, consdata->vars[v], consdata->indvars[v], v, transformed, &consdata->eventdatas[v]) );
-      assert( ! transformed || consdata->eventdatas[v] != NULL );
+      assert(! transformed || consdata->eventdatas[v] != NULL);
    }
 
    return SCIP_OKAY;
@@ -3371,17 +3371,17 @@ SCIP_RETCODE  SCIPchgCardvalCardinality(
 {
    SCIP_CONSDATA* consdata;
 
-   assert( scip != NULL );
-   assert( cons != NULL );
+   assert(scip != NULL);
+   assert(cons != NULL);
 
-   if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a cardinality constraint.\n");
       return SCIP_INVALIDDATA;
    }
 
    consdata = SCIPconsGetData(cons);
-   assert( consdata != NULL );
+   assert(consdata != NULL);
 
    SCIPdebugMessage("modify right hand side of cardinality constraint from <%i> to <%i>\n", consdata->cardval, cardval);
 
@@ -3405,22 +3405,22 @@ SCIP_RETCODE SCIPaddVarCardinality(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
 
-   assert( scip != NULL );
-   assert( var != NULL );
-   assert( cons != NULL );
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(cons != NULL);
 
    SCIPdebugMessage("adding variable <%s> to constraint <%s> with weight %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), weight);
 
    conshdlr = SCIPconsGetHdlr(cons);
-   assert( conshdlr != NULL );
-   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
+   assert(conshdlr != NULL);
+   if( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a cardinality constraint.\n");
       return SCIP_INVALIDDATA;
    }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
+   assert(conshdlrdata != NULL);
 
    SCIP_CALL( addVarCardinality(scip, cons, conshdlrdata, var, indvar, weight) );
 
@@ -3440,22 +3440,22 @@ SCIP_RETCODE SCIPappendVarCardinality(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
 
-   assert( scip != NULL );
-   assert( var != NULL );
-   assert( cons != NULL );
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(cons != NULL);
 
    SCIPdebugMessage("appending variable <%s> to constraint <%s>\n", SCIPvarGetName(var), SCIPconsGetName(cons));
 
    conshdlr = SCIPconsGetHdlr(cons);
-   assert( conshdlr != NULL );
-   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
+   assert(conshdlr != NULL);
+   if( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a cardinality constraint.\n");
       return SCIP_INVALIDDATA;
    }
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
+   assert(conshdlrdata != NULL);
 
    SCIP_CALL( appendVarCardinality(scip, cons, conshdlrdata, var, indvar) );
 
@@ -3471,10 +3471,10 @@ int SCIPgetNVarsCardinality(
 {
    SCIP_CONSDATA* consdata;
 
-   assert( scip != NULL );
-   assert( cons != NULL );
+   assert(scip != NULL);
+   assert(cons != NULL);
 
-   if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a cardinality constraint.\n");
       SCIPABORT();
@@ -3482,7 +3482,7 @@ int SCIPgetNVarsCardinality(
    }
 
    consdata = SCIPconsGetData(cons);
-   assert( consdata != NULL );
+   assert(consdata != NULL);
 
    return consdata->nvars;
 }
@@ -3496,10 +3496,10 @@ SCIP_VAR** SCIPgetVarsCardinality(
 {
    SCIP_CONSDATA* consdata;
 
-   assert( scip != NULL );
-   assert( cons != NULL );
+   assert(scip != NULL);
+   assert(cons != NULL);
 
-   if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a cardinality constraint.\n");
       SCIPABORT();
@@ -3507,7 +3507,7 @@ SCIP_VAR** SCIPgetVarsCardinality(
    }
 
    consdata = SCIPconsGetData(cons);
-   assert( consdata != NULL );
+   assert(consdata != NULL);
 
    return consdata->vars;
 }
@@ -3521,17 +3521,17 @@ int SCIPgetCardvalCardinality(
 {
    SCIP_CONSDATA* consdata;
 
-   assert( scip != NULL );
-   assert( cons != NULL );
+   assert(scip != NULL);
+   assert(cons != NULL);
 
-   if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a cardinality constraint.\n");
       return -1;  /*lint !e527*/
    }
 
    consdata = SCIPconsGetData(cons);
-   assert( consdata != NULL );
+   assert(consdata != NULL);
 
    return consdata->cardval;
 }
@@ -3545,10 +3545,10 @@ SCIP_Real* SCIPgetWeightsCardinality(
 {
    SCIP_CONSDATA* consdata;
 
-   assert( scip != NULL );
-   assert( cons != NULL );
+   assert(scip != NULL);
+   assert(cons != NULL);
 
-   if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a cardinality constraint.\n");
       SCIPABORT();
@@ -3556,7 +3556,7 @@ SCIP_Real* SCIPgetWeightsCardinality(
    }
 
    consdata = SCIPconsGetData(cons);
-   assert( consdata != NULL );
+   assert(consdata != NULL);
 
    return consdata->weights;
 }
