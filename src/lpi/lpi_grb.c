@@ -3326,7 +3326,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
 
    CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_FARKASDUAL, 0, nrows, dualfarkas) );
 
-   return SCIP_LPERROR;
+   return SCIP_OKAY;
 }
 
 /** gets the number of LP iterations of the last solve call */
