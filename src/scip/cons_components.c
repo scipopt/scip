@@ -2229,6 +2229,10 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
    if( !SCIPisPresolveFinished(scip) )
       return SCIP_OKAY;
 
+   /* the components constraint handler does kind of dual reductions */
+   if( !SCIPallowDualReds(scip) || !SCIPallowObjProp(scip) )
+      return SCIP_OKAY;
+
    /* check for a reached timelimit */
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
