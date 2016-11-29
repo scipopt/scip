@@ -14857,7 +14857,7 @@ SCIP_RETCODE freeReoptSolve(
    }
    else
    {
-      /* even if statistics are not completely reset, a partial reset of the primal-dual intgeral is necessary */
+      /* even if statistics are not completely reset, a partial reset of the primal-dual integral is necessary */
       SCIPstatResetPrimalDualIntegral(scip->stat, scip->set, TRUE);
    }
 
@@ -15013,7 +15013,7 @@ SCIP_RETCODE freeTransform(
    }
    else
    {
-      /* even if statistics are not completely reset, a partial reset of the primal-dual intgeral is necessary */
+      /* even if statistics are not completely reset, a partial reset of the primal-dual integral is necessary */
       SCIPstatResetPrimalDualIntegral(scip->stat, scip->set, TRUE);
    }
 
