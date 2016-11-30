@@ -13,33 +13,37 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**
- * @brief .mop file format reader
- * @author Sebastian Schenker, Timo Strunk
+ * @brief PolySCIP types
+ * @author Sebastian Schenker
  *
- * Adaption of SCIP MPS reader towards MOP format with multiple objectives.
- * The input file has to follow some simple conventions
- * - It has to contain a problem in 
- * <a href="http://en.wikipedia.org/wiki/MPS_%28format%29">MPS</a> format
- * - The file extension must be <code>.mop</code>
- * - Every row marked <code>N</code> is treated as an objective
+ * Types used for PolySCIP solver.
  */
 
-#ifndef POLYSCIP_SRC_READER_MOP_H_INCLUDED
-#define POLYSCIP_SRC_READER_MOP_H_INCLUDED
+#ifndef POLYSCIP_SRC_POLYSCIP_TYPES_H_INCLUDED
+#define POLYSCIP_SRC_POLYSCIP_TYPES_H_INCLUDED
 
-#include "objscip/objscip.h"
+#include <string>
+#include <iostream>
+#include <ostream>
+#include <utility>
+#include <vector>
+#include "scip/def.h"
 
-class ReaderMOP : public scip::ObjReader {
-public:
-    ReaderMOP(SCIP *scip)
-            : scip::ObjReader(scip, "MOP Reader", "file reader for MOP file", "mop") { };
+namespace polyscip {
 
-    virtual ~ReaderMOP() { };
+    /**< Type for computed values */
+    using ValueType = SCIP_Real;
+    /**< Type for points, rays in outcome space */
+    using OutcomeType = std::vector<ValueType>;
+    /**< Type for solutions in feasible space */
+    using SolType = std::vector< std::pair<std::string, ValueType> >;
+    /**< Type for weights vectors*/
+    using WeightType = std::vector<ValueType>;
+    /**< A result comprises of a solution/ray in feasible space and corresponding
+     * non-dominated outcome in outcome space */
+    using Result = std::pair<SolType, OutcomeType>;
+    /**< Container for results */
+    using ResultContainer = std::vector<Result>;
+}
 
-    virtual SCIP_DECL_READERFREE(scip_free);
-
-    virtual SCIP_DECL_READERREAD(scip_read);
-
-};
-
-#endif //POLYSCIP_SRC_READER_MOP_H_INCLUDED
+#endif //POLYSCIP_SRC_POLYSCIP_TYPES_H_INCLUDED
