@@ -3461,11 +3461,22 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   assert(lpi != NULL);
-   assert(lpi->grbmodel != NULL);
-   assert(lpi->solstat >= 0);
+   int algo;
+   int res;
 
-   return (lpi->solstat == GRB_UNBOUNDED);
+   assert( lpi != NULL );
+   assert( lpi->grbmodel != NULL );
+   assert( lpi->grbenv != NULL );
+   assert( lpi->solstat >= 0 );
+
+   res = GRBgetintparam(lpi->grbenv, GRB_INT_PAR_METHOD, &algo);
+   if ( res != 0 )
+   {
+      SCIPABORT();
+      return FALSE; /*lint !e527*/
+   }
+
+   return (lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL);
 }
 
 /** returns TRUE iff LP is proven to be primal unbounded */
@@ -3473,22 +3484,22 @@ SCIP_Bool SCIPlpiIsPrimalUnbounded(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   SCIP_Bool primalfeasible;
-   SCIP_RETCODE retcode;
+   int algo;
+   int res;
 
-   assert(lpi != NULL);
-   assert(lpi->grbmodel != NULL);
-   assert(lpi->solstat >= 0);
+   assert( lpi != NULL );
+   assert( lpi->grbmodel != NULL );
+   assert( lpi->grbenv != NULL );
+   assert( lpi->solstat >= 0 );
 
-   SCIPdebugMessage("checking for primal unboundedness\n");
+   res = GRBgetintparam(lpi->grbenv, GRB_INT_PAR_METHOD, &algo);
+   if ( res != 0 )
+   {
+      SCIPABORT();
+      return FALSE; /*lint !e527*/
+   }
 
-   primalfeasible = FALSE; /* to fix compiler warning */
-   retcode = SCIPlpiGetSolFeasibility(lpi, &primalfeasible, NULL);
-   if ( retcode != SCIP_OKAY )
-      return FALSE;
-
-   /* Probably GRB_UNBOUNDED means that the problem has an unbounded ray, but not necessarily that a feasible primal solution exists. */
-   return (primalfeasible && (lpi->solstat == GRB_UNBOUNDED || lpi->solstat == GRB_INF_OR_UNBD));
+   return (lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL);
 }
 
 /** returns TRUE iff LP is proven to be primal infeasible */
@@ -3542,7 +3553,7 @@ SCIP_Bool SCIPlpiExistsDualRay(
    assert(lpi->grbmodel != NULL);
    assert(lpi->solstat >= 0);
 
-   return (lpi->solstat == GRB_INFEASIBLE);  /* ????????? */
+   return (lpi->solstat == GRB_INFEASIBLE);
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point),
