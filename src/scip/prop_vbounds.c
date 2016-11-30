@@ -857,7 +857,8 @@ SCIP_RETCODE dfs(
                   dfsstack[stacksize] = idx;
                   stacknextedge[stacksize - 1] = -j - 2;
 
-                  SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1, visited[idx] == ACTIVE, infeasible) );
+                  SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1,
+                        visited[idx] == ACTIVE, infeasible) );
 
                   if( *infeasible )
                      break;
@@ -932,7 +933,8 @@ SCIP_RETCODE dfs(
                if( propdata->usecliques && !propdata->sortcliques && implids[i] < 0 )
                   continue;
 
-               idx = (impltypes[i] == SCIP_BOUNDTYPE_LOWER ? varGetLbIndex(propdata, implvars[i]) : varGetUbIndex(propdata, implvars[i]));
+               idx = (impltypes[i] == SCIP_BOUNDTYPE_LOWER ?
+                  varGetLbIndex(propdata, implvars[i]) : varGetUbIndex(propdata, implvars[i]));
 
                if( idx >= 0 && (visited[idx] == ACTIVE || visited[getOtherBoundIndex(idx)] == ACTIVE)
                   && !SCIPisFeasGE(scip, SCIPvarGetLbGlobal(implvars[i]), SCIPvarGetUbGlobal(implvars[i])) )
@@ -942,7 +944,8 @@ SCIP_RETCODE dfs(
                   dfsstack[stacksize] = idx;
                   stacknextedge[stacksize - 1] = i + 1;
 
-                  SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1, visited[idx] == ACTIVE, infeasible) );
+                  SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1,
+                        visited[idx] == ACTIVE, infeasible) );
 
                   if( *infeasible )
                      break;
@@ -1003,7 +1006,8 @@ SCIP_RETCODE dfs(
                dfsstack[stacksize] = idx;
                stacknextedge[stacksize - 1] = nimpls + i + 1;
 
-               SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1, visited[idx] == ACTIVE, infeasible) );
+               SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1,
+                     visited[idx] == ACTIVE, infeasible) );
 
                if( *infeasible )
                   break;
@@ -1279,7 +1283,8 @@ SCIP_RETCODE resolvePropagation(
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    SCIP_VAR*             var,                /**< variable to be reported */
    SCIP_BOUNDTYPE        boundtype,          /**< bound to be reported */
-   SCIP_BDCHGIDX*        bdchgidx            /**< the index of the bound change, representing the point of time where the change took place, or NULL for the current local bounds */
+   SCIP_BDCHGIDX*        bdchgidx            /**< the index of the bound change, representing the point of time where
+                                              *   the change took place, or NULL for the current local bounds */
    )
 {
    assert(propdata != NULL);
@@ -1313,7 +1318,8 @@ SCIP_RETCODE relaxVbdvar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable for which the upper bound should be relaxed */
    SCIP_BOUNDTYPE        boundtype,          /**< boundtype used for the variable bound variable */
-   SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where the change took place, or NULL for the current local bounds */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< the index of the bound change, representing the point of time where
+                                              *   the change took place, or NULL for the current local bounds */
    SCIP_Real             relaxedbd           /**< relaxed bound */
    )
 {
@@ -1366,7 +1372,8 @@ SCIP_RETCODE analyzeConflictLowerbound(
    SCIP_BOUNDTYPE        boundtype,          /**< bound which is the reason for the lower bound change */
    SCIP_Real             coef,               /**< inference variable bound coefficient used */
    SCIP_Real             constant,           /**< inference variable bound constant used */
-   SCIP_Bool             canwide             /**< can bound widening be used (for vbounds) or not (for inplications or cliques) */
+   SCIP_Bool             canwide             /**< can bound widening be used (for vbounds) or not
+                                              *   (for implications or cliques) */
    )
 {
    assert(scip != NULL);
