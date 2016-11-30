@@ -233,6 +233,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    SCIP_ROW* row;
    unsigned int keyval;
    uint64_t maxabsval;
+   uint64_t minabsval;
    SCIP_Real maxval;  
    SCIP_SET* set;
 
@@ -242,16 +243,16 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
 
    maxval = SCIProwGetMaxval(row, set);
    assert(row->nummaxval > 0);
+   assert(row->numminval > 0);
    assert(row->validminmaxidx);
 
-   if( maxval > (SCIP_Real)(uint64_t)-1 )
-      maxabsval = 0;
-   else if( maxval < 1.0 )
-      maxabsval = (uint64_t) (8192*maxval);
-   else
-      maxabsval = (uint64_t) (256*maxval);
+   maxabsval = (uint64_t) (256*maxval);
+   minabsval = (uint64_t) (1024*row->minval);
 
-   keyval = SCIPhashTwo(SCIPcombineThreeInt(row->maxidx, row->len, row->minidx), maxabsval);
+   keyval = SCIPhashFour(SCIPcombineTwoInt(row->maxidx, row->minidx),
+                         SCIPcombineThreeInt(row->len, row->numminval, row->nummaxval),
+                         maxabsval,
+                         minabsval);
 
    return keyval;
 }
