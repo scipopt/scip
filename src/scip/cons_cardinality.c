@@ -24,10 +24,12 @@
  * with integer right-hand side \f$b\f$. Here, \f$|\mbox{supp}(x)|\f$ denotes the number of nonzero entries of the
  * vector \f$x\f$.
  *
- * Cardinality constraints generalize special ordered set of type one (SOS1) constraints in which \f$b = 1\f$.
+ * Note that cardinality constraints generalize special ordered set of type one (SOS1) constraints in which \f$b = 1\f$.
+ *
+ * The implementation of this constraint handler is based on@n
+ * "On the Structure of Linear Programs with Overlapping Cardinality Constraints"@n
+ * T. Fischer and M. E. Pfetsch, Tech. rep., 2016
  */
-
-/* author bzfhende: TODO please add more information or a reference */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -59,15 +61,14 @@
 
 /* branching rules */
 #define DEFAULT_BRANCHBALANCED    FALSE /**< whether to use balanced instead of unbalanced branching */
-#define DEFAULT_BRANCHBALANCEDDEPTH  20 /**< only use balanced branching for predefined depth (-1: no limit) */
+#define DEFAULT_BALANCEDDEPTH        20 /**< only use balanced branching for predefined depth (-1: no limit) */
+#define DEFAULT_BALANCEDCUTOFF      2.0 /**< only use balanced branching if its efficacy (cut off value) w.r.t. the
+                                          *   current LP solution is greater than than a given value */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "cardinality"
 #define EVENTHDLR_DESC         "bound change event handler for cardinality constraints"
 
-/* defines */
-/* author bzfhende: TODO missing comment. Wouldn't this be a nice parameter, too? */
-#define BALBRANCHCUTOFFVALUE        2.0
 
 /** constraint data for cardinality constraints */
 struct SCIP_ConsData
@@ -76,7 +77,8 @@ struct SCIP_ConsData
    int                   cardval;            /**< number of variables that the constraint allows to be nonzero */
    int                   nvars;              /**< number of variables in the constraint */
    int                   maxvars;            /**< maximal number of variables (= size of storage) */
-   int                   ntreatnonzeros;     /**< number of variables in constraint that may be treated as nonzero */
+   int                   ntreatnonzeros;     /**< number of variables in constraint that are either known to be nonzero
+                                              *   (because zero is not in variable domain) or may be treated as nonzero */
    SCIP_EVENTDATA**      eventdatascurrent;  /**< event datas for current bound change events */
    SCIP_VAR**            eventvarscurrent;   /**< event variables for current bound change events */
    int                   neventdatascurrent; /**< number of current bound change events */
@@ -93,12 +95,10 @@ struct SCIP_ConsData
 struct SCIP_ConshdlrData
 {
    SCIP_HASHMAP*         varhash;            /**< hash map from implied variable to (binary) indicator variable */
-   SCIP_Bool             branchcard;         /**< Branch on cardinality condition in enforcing? */
-   SCIP_Bool             branchnonzeros;     /**< Branch on cardinality cons. with largest number of nonzeros? */
-   SCIP_Bool             branchweight;       /**< Branch on cardinality cons. with highest nonzero-variable weight
-                                              *   for branching - needs branchnonzeros to be false */
    SCIP_Bool             branchbalanced;     /**< whether to use balanced instead of unbalanced branching */
-   int                   branchbalanceddepth;/**< only use balanced branching for predefined depth (-1: no limit) */
+   int                   balanceddepth;      /**< only use balanced branching for predefined depth (-1: no limit) */
+   SCIP_Real             balancedcutoff;     /**< only use balanced branching if its efficacy (cut off value) w.r.t. the
+                                              *   current LP solution is greater than than a given value */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
 };
 
@@ -205,7 +205,7 @@ SCIP_RETCODE fixVariableZeroNode(
 
       if( !SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) || !SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
       {
-         SCIPdebugMessage("creating constraint to force multi-aggregated variable <%s> to 0.\n", SCIPvarGetName(var));
+         SCIPdebugMsg(scip, "creating constraint to force multi-aggregated variable <%s> to 0.\n", SCIPvarGetName(var));
 
          /* we have to insert a local constraint var = 0 */
          SCIP_CALL( SCIPcreateConsLinear(scip, &cons, "branch", 1, &var, &val, 0.0, 0.0, TRUE, TRUE, TRUE, TRUE, TRUE,
@@ -216,18 +216,12 @@ SCIP_RETCODE fixVariableZeroNode(
    }
    else
    {
-<<<<<<< HEAD
-      if( !SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
-         SCIP_CALL( SCIPchgVarLbNode(scip, node, var, 0.0) );
-      if( !SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
-=======
       if ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
       {
          SCIP_CALL( SCIPchgVarLbNode(scip, node, var, 0.0) );
       }
       if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
       {
->>>>>>> ae054aebf22e9a811ca6a530b7d9bc141dcbbb83
          SCIP_CALL( SCIPchgVarUbNode(scip, node, var, 0.0) );
       }
    }
@@ -280,11 +274,7 @@ SCIP_RETCODE fixVariableZero(
          naggrvars = SCIPvarGetMultaggrNVars(var);
          aggrvars = SCIPvarGetMultaggrVars(var);
          aggrvals = SCIPvarGetMultaggrScalars(var);
-<<<<<<< HEAD
          for( i = 0; i < naggrvars; ++i )
-=======
-         for ( i = 0; i < naggrvars; ++i )
->>>>>>> ae054aebf22e9a811ca6a530b7d9bc141dcbbb83
          {
             if( (SCIPisPositive(scip, aggrvals[i]) && SCIPisNegative(scip, SCIPvarGetLbLocal(aggrvars[i]))) ||
                  (SCIPisNegative(scip, aggrvals[i]) && SCIPisPositive(scip, SCIPvarGetUbLocal(aggrvars[i]))) )
@@ -364,7 +354,7 @@ SCIP_RETCODE consdataEnsurevarsSizeCardinality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    int                   num,                /**< minimum number of entries to store */
-   SCIP_Bool             reserveWeights      /**< whether the weights array is handled */
+   SCIP_Bool             reserveweights      /**< whether the weights array is handled */
    )
 {
    assert(consdata != NULL);
@@ -380,12 +370,9 @@ SCIP_RETCODE consdataEnsurevarsSizeCardinality(
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->eventdatas, consdata->maxvars, newsize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->eventdatascurrent, 4*consdata->maxvars, 4*newsize) );/*lint !e647*/
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->eventvarscurrent, 4*consdata->maxvars, 4*newsize) );/*lint !e647*/
-<<<<<<< HEAD
-      if( reserveWeights )
-=======
-      if ( reserveWeights )
+
+      if ( reserveweights )
       {
->>>>>>> ae054aebf22e9a811ca6a530b7d9bc141dcbbb83
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &consdata->weights, consdata->maxvars, newsize) );
       }
       consdata->maxvars = newsize;
@@ -395,8 +382,15 @@ SCIP_RETCODE consdataEnsurevarsSizeCardinality(
    return SCIP_OKAY;
 }
 
-/* author bzfhende: TODO why the word 'handle'? Can you be more specific what this method does, at least in the description? */
-/** handle new variable */
+/** handle new variable that was added to the constraint
+ *
+ *  We perform the following steps:
+ *
+ *  - catch bound change events of variable.
+ *  - update rounding locks of variable.
+ *  - don't allow multiaggregation of variable, since this cannot be handled by branching in the current implementation
+ *  - update lower and upper bound row, i.e., the linear representations of the cardinality constraints
+ */
 static
 SCIP_RETCODE handleNewVariableCardinality(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -430,7 +424,7 @@ SCIP_RETCODE handleNewVariableCardinality(
          ++consdata->ntreatnonzeros;
    }
 
-      /* branching on multiaggregated variables does not seem to work well, so avoid it */
+   /* branching on multiaggregated variables does not seem to work well, so avoid it */
    SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, indvar) );
 
    /* install the rounding locks for the new variable */
@@ -466,7 +460,6 @@ SCIP_RETCODE addVarCardinality(
    SCIP_CONSDATA* consdata;
    SCIP_Bool transformed;
    int pos;
-   int j;
 
    assert(var != NULL);
    assert(cons != NULL);
@@ -488,20 +481,14 @@ SCIP_RETCODE addVarCardinality(
       if( conshdlrdata->varhash == NULL )
       {
          /* set up hash map */
-<<<<<<< HEAD
-=======
-         /* author bzfhende: TODO IMHO you can remove the factor 10 because of the recent hash map changes. It is also sufficient
-          * to use the maximum number of variables that this constraint handler should hold (SCIPgetNTotalVars is fine, too)
-          */
->>>>>>> ae054aebf22e9a811ca6a530b7d9bc141dcbbb83
-         SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), 10 * SCIPgetNTotalVars(scip)) );
+         SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), SCIPgetNTotalVars(scip)) );
       }
 
       /* check whether an indicator variable already exists for implied variable */
       if( SCIPhashmapExists(conshdlrdata->varhash, var) )
       {
-         assert((SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var) != NULL);
-         indvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var);
+         assert((SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->varhash, var) != NULL);
+         indvar = (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->varhash, var);
          assert(indvar != NULL);
       }
       else
@@ -525,8 +512,8 @@ SCIP_RETCODE addVarCardinality(
          assert(indvar != NULL);
 
          /* insert implied variable to hash map */
-         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varhash, var, (void*) (size_t) indvar) );/*lint !e571*/
-         assert(indvar == (SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var));
+         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varhash, var, (void*) indvar) );/*lint !e571*/
+         assert(indvar == (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->varhash, var));
          assert(SCIPhashmapExists(conshdlrdata->varhash, var));
       }
    }
@@ -550,34 +537,25 @@ SCIP_RETCODE addVarCardinality(
    assert(consdata->weights != NULL);
    assert(consdata->maxvars >= consdata->nvars+1);
 
-   /* find variable position */
-<<<<<<< HEAD
-   for( pos = 0; pos < consdata->nvars; ++pos )
-=======
-   /* author bzfhende: TODO here you are guaranteed to always touch all array elements. Please merge this and the next loop
-    * so that you only have to touch the items that must be shifted to the right
-    */
-   for ( pos = 0; pos < consdata->nvars; ++pos )
->>>>>>> ae054aebf22e9a811ca6a530b7d9bc141dcbbb83
+   /* move other variables, if necessary */
+   for( pos = consdata->nvars; pos >= 1; --pos )
    {
-      if( consdata->weights[pos] > weight )
+      if( consdata->weights[pos-1] > weight )
+      {
+         consdata->vars[pos] = consdata->vars[pos-1];
+         consdata->indvars[pos] = consdata->indvars[pos-1];
+         consdata->eventdatas[pos] = consdata->eventdatas[pos-1];
+         consdata->weights[pos] = consdata->weights[pos-1];
+
+         if( consdata->eventdatas[pos] != NULL )
+         {
+            consdata->eventdatas[pos]->pos = pos;
+         }
+      }
+      else
          break;
    }
    assert(0 <= pos && pos <= consdata->nvars);
-
-   /* move other variables, if necessary */
-   for( j = consdata->nvars; j > pos; --j )
-   {
-      consdata->vars[j] = consdata->vars[j-1];
-      consdata->indvars[j] = consdata->indvars[j-1];
-      consdata->eventdatas[j] = consdata->eventdatas[j-1];
-      consdata->weights[j] = consdata->weights[j-1];
-
-      if( consdata->eventdatas[j] != NULL )
-      {
-         consdata->eventdatas[j]->pos = j;
-      }
-   }
 
    /* handle the new variable */
    SCIP_CALL( handleNewVariableCardinality(scip, cons, consdata, conshdlrdata, var, indvar, pos, transformed, &eventdata) );
@@ -620,14 +598,14 @@ SCIP_RETCODE appendVarCardinality(
       if( conshdlrdata->varhash == NULL )
       {
          /* set up hash map */
-         SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), 10 * SCIPgetNTotalVars(scip)) );
+         SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), SCIPgetNTotalVars(scip)) );
       }
 
       /* check whether an indicator variable already exists for implied variable */
       if( SCIPhashmapExists(conshdlrdata->varhash, var) )
       {
-         assert((SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var) != NULL);
-         indvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var);
+         assert((SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->varhash, var) != NULL);
+         indvar = (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->varhash, var);
          assert(indvar != NULL);
       }
       else
@@ -651,8 +629,8 @@ SCIP_RETCODE appendVarCardinality(
          assert(indvar != NULL);
 
          /* insert implied variable to hash map */
-         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varhash, var, (void*) (size_t) indvar) );/*lint !e571*/
-         assert(indvar == (SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, var));
+         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varhash, var, (void*) indvar) );/*lint !e571*/
+         assert(indvar == (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->varhash, var));
          assert(SCIPhashmapExists(conshdlrdata->varhash, var));
       }
    }
@@ -850,7 +828,7 @@ SCIP_RETCODE presolRoundCardinality(
    *cutoff = FALSE;
    *success = FALSE;
 
-   SCIPdebugMessage("Presolving cardinality constraint <%s>.\n", SCIPconsGetName(cons) );
+   SCIPdebugMsg(scip, "Presolving cardinality constraint <%s>.\n", SCIPconsGetName(cons) );
 
    /* reset number of events stored for propagation, since presolving already performs a complete propagation of all variables */
    consdata->neventdatascurrent = 0;
@@ -888,7 +866,7 @@ SCIP_RETCODE presolRoundCardinality(
       /* if constant is zero and we get a different variable, substitute variable */
       if( SCIPisZero(scip, constant) && !SCIPisZero(scip, scalar) && var != vars[j] )
       {
-         SCIPdebugMessage("substituted variable <%s> by <%s>.\n", SCIPvarGetName(vars[j]), SCIPvarGetName(var));
+         SCIPdebugMsg(scip, "substituted variable <%s> by <%s>.\n", SCIPvarGetName(vars[j]), SCIPvarGetName(var));
 
          /* we reuse the same indicator variable for the new variable */
          SCIP_CALL( dropVarEventCardinality(scip, eventhdlr, consdata, consdata->vars[j], consdata->indvars[j], &consdata->eventdatas[j]) );
@@ -911,7 +889,7 @@ SCIP_RETCODE presolRoundCardinality(
       {
          if( var == vars[l] || oldvar == vars[l] )
          {
-            SCIPdebugMessage("variable <%s> appears twice in constraint <%s>.\n", SCIPvarGetName(vars[j]), SCIPconsGetName(cons));
+            SCIPdebugMsg(scip, "variable <%s> appears twice in constraint <%s>.\n", SCIPvarGetName(vars[j]), SCIPconsGetName(cons));
             return SCIP_INVALIDDATA;
          }
       }
@@ -935,7 +913,7 @@ SCIP_RETCODE presolRoundCardinality(
 
          if( fixed )
          {
-            SCIPdebugMessage("fixed binary variable <%s> to 1.0.\n", SCIPvarGetName(indvar));
+            SCIPdebugMsg(scip, "fixed binary variable <%s> to 1.0.\n", SCIPvarGetName(indvar));
             ++(*nfixedvars);
          }
       }
@@ -950,7 +928,7 @@ SCIP_RETCODE presolRoundCardinality(
          SCIP_CALL( SCIPfixVar(scip, indvar, 0.0, &infeasible, &fixed) );
          if( fixed )
          {
-            SCIPdebugMessage("fixed binary variable <%s> to 0.0.\n", SCIPvarGetName(indvar));
+            SCIPdebugMsg(scip, "fixed binary variable <%s> to 0.0.\n", SCIPvarGetName(indvar));
             ++(*nfixedvars);
          }
       }
@@ -966,7 +944,7 @@ SCIP_RETCODE presolRoundCardinality(
 
          /* modify row and delete variable */
          SCIP_CALL( deleteVarCardinality(scip, cons, consdata, eventhdlr, j) );
-         SCIPdebugMessage("deleting variable <%s> from constraint <%s>, since it may be treated as nonzero.\n",
+         SCIPdebugMsg(scip, "deleting variable <%s> from constraint <%s>, since it may be treated as nonzero.\n",
             SCIPvarGetName(var), SCIPconsGetName(cons));
          --(consdata->cardval);
          ++(*nremovedvars);
@@ -985,13 +963,13 @@ SCIP_RETCODE presolRoundCardinality(
          }
          if( fixed )
          {
-            SCIPdebugMessage("fixed variable <%s> to 0.0.\n", SCIPvarGetName(var));
+            SCIPdebugMsg(scip, "fixed variable <%s> to 0.0.\n", SCIPvarGetName(var));
             ++(*nfixedvars);
          }
 
          /* delete variable */
          SCIP_CALL( deleteVarCardinality(scip, cons, consdata, eventhdlr, j) );
-         SCIPdebugMessage("deleting variable <%s> from constraint <%s>, since it is fixed to 0.\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+         SCIPdebugMsg(scip, "deleting variable <%s> from constraint <%s>, since it is fixed to 0.\n", SCIPvarGetName(var), SCIPconsGetName(cons));
          ++(*nremovedvars);
       }
       else
@@ -1007,7 +985,7 @@ SCIP_RETCODE presolRoundCardinality(
    /* if the cardinality value is smaller than 0, then the problem is infeasible */
    if( consdata->cardval < 0 )
    {
-      SCIPdebugMessage("The problem is infeasible: more variables have bounds that keep them from being 0 than allowed.\n");
+      SCIPdebugMsg(scip, "The problem is infeasible: more variables have bounds that keep them from being 0 than allowed.\n");
 
       *cutoff = TRUE;
       return SCIP_OKAY;
@@ -1026,21 +1004,16 @@ SCIP_RETCODE presolRoundCardinality(
          }
          if( fixed )
          {
-            SCIPdebugMessage("fixed variable <%s> to 0.0.\n", SCIPvarGetName(consdata->vars[j]));
+            SCIPdebugMsg(scip, "fixed variable <%s> to 0.0.\n", SCIPvarGetName(consdata->vars[j]));
             ++(*nfixedvars);
          }
       }
    }
 
-<<<<<<< HEAD
-   /* if the cardinality constraint is redudant */
-   if( consdata->nvars <= consdata->cardval )
-=======
    /* if the cardinality constraint is redundant */
-   if ( consdata->nvars <= consdata->cardval )
->>>>>>> ae054aebf22e9a811ca6a530b7d9bc141dcbbb83
+   if( consdata->nvars <= consdata->cardval )
    {
-      SCIPdebugMessage("Deleting cardinality constraint <%s> with <%d> variables and cardinality value <%d>.\n",
+      SCIPdebugMsg(scip, "Deleting cardinality constraint <%s> with <%d> variables and cardinality value <%d>.\n",
          SCIPconsGetName(cons), consdata->nvars, consdata->cardval);
 
       /* delete constraint */
@@ -1071,7 +1044,7 @@ SCIP_RETCODE presolRoundCardinality(
 
          SCIPfreeBufferArray(scip, &vals);
 
-         SCIPdebugMessage("Upgrading cardinality constraint <%s> to knapsack constraint.\n", SCIPconsGetName(cons));
+         SCIPdebugMsg(scip, "Upgrading cardinality constraint <%s> to knapsack constraint.\n", SCIPconsGetName(cons));
 
          /* remove the cardinality constraint globally */
          assert(!SCIPconsIsModifiable(cons));
@@ -1105,7 +1078,7 @@ SCIP_RETCODE propCardinality(
    /* if more variables may be treated as nonzero than allowed */
    if( consdata->ntreatnonzeros > consdata->cardval )
    {
-      SCIPdebugMessage("the node is infeasible, more than %d variables are fixed to be nonzero.\n", consdata->cardval);
+      SCIPdebugMsg(scip, "the node is infeasible, more than %d variables are fixed to be nonzero.\n", consdata->cardval);
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       *cutoff = TRUE;
 
@@ -1150,7 +1123,7 @@ SCIP_RETCODE propCardinality(
                SCIP_CALL( fixVariableZero(scip, var, &infeasible, &tightened) );
                if( infeasible )
                {
-                  SCIPdebugMessage("the node is infeasible, more than %d variables are fixed to be nonzero.\n", consdata->cardval);
+                  SCIPdebugMsg(scip, "the node is infeasible, more than %d variables are fixed to be nonzero.\n", consdata->cardval);
                   SCIP_CALL( SCIPresetConsAge(scip, cons) );
                   *cutoff = TRUE;
 
@@ -1159,7 +1132,7 @@ SCIP_RETCODE propCardinality(
 
                if( tightened )
                {
-                  SCIPdebugMessage("fixed variable <%s> to 0, since constraint <%s> with cardinality value %d is saturated.\n",
+                  SCIPdebugMsg(scip, "fixed variable <%s> to 0, since constraint <%s> with cardinality value %d is saturated.\n",
                      SCIPvarGetName(var), SCIPconsGetName(cons), consdata->cardval);
                   ++(*ngen);
                }
@@ -1227,21 +1200,14 @@ SCIP_RETCODE propCardinality(
                implvar = eventdata->var;
 
                /* fix implied variable to zero if not done already */
-<<<<<<< HEAD
-               if( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(implvar)) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(implvar)) )
-               {
-                  SCIP_CALL( fixVariableZero(scip, implvar, &infeasible, &tightened) );
-                  if( infeasible )
-=======
-               if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(implvar)) ||
+               if( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(implvar)) ||
                      SCIPisFeasPositive(scip, SCIPvarGetUbLocal(implvar)) )
                {
                   SCIP_CALL( fixVariableZero(scip, implvar, &infeasible, &tightened) );
 
-                  if ( infeasible )
->>>>>>> ae054aebf22e9a811ca6a530b7d9bc141dcbbb83
+                  if( infeasible )
                   {
-                     SCIPdebugMessage("the node is infeasible, indicator variable %s is fixed to zero although implied "
+                     SCIPdebugMsg(scip, "the node is infeasible, indicator variable %s is fixed to zero although implied "
                         "variable %s is nonzero.\n", SCIPvarGetName(var), SCIPvarGetName(implvar));
                      SCIP_CALL( SCIPresetConsAge(scip, cons) );
                      *cutoff = TRUE;
@@ -1251,7 +1217,7 @@ SCIP_RETCODE propCardinality(
 
                   if( tightened )
                   {
-                     SCIPdebugMessage("fixed variable <%s> to 0, since indicator variable %s is 0.\n",
+                     SCIPdebugMsg(scip, "fixed variable <%s> to 0, since indicator variable %s is 0.\n",
                         SCIPvarGetName(implvar), SCIPvarGetName(var));
                      ++(*ngen);
                   }
@@ -1279,7 +1245,7 @@ SCIP_RETCODE propCardinality(
                   /* if fixing is infeasible */
                   if( SCIPvarGetUbLocal(indvar) != 1.0 )
                   {
-                     SCIPdebugMessage("the node is infeasible, implied variable %s is fixed to nonzero "
+                     SCIPdebugMsg(scip, "the node is infeasible, implied variable %s is fixed to nonzero "
                         "although indicator variable %s is 0.\n", SCIPvarGetName(var), SCIPvarGetName(indvar));
                      SCIP_CALL( SCIPresetConsAge(scip, cons) );
                      *cutoff = TRUE;
@@ -1287,7 +1253,7 @@ SCIP_RETCODE propCardinality(
                      return SCIP_OKAY;
                   }
                   SCIP_CALL( SCIPchgVarLb(scip, indvar, 1.0) );
-                  SCIPdebugMessage("fixed variable <%s> to 1.0, since implied variable %s is nonzero.\n",
+                  SCIPdebugMsg(scip, "fixed variable <%s> to 1.0, since implied variable %s is nonzero.\n",
                      SCIPvarGetName(indvar), SCIPvarGetName(var));
                   ++(*ngen);
                }
@@ -1319,14 +1285,13 @@ SCIP_RETCODE branchUnbalancedCardinality(
    SCIP_NODE* node1;
    SCIP_NODE* node2;
 
-   /* author bzfhende: TODO this comment looks odd */
-   /* constraint is infeasible: */
+   /* check whether the variable selected for branching has a nonzero LP solution */
    assert(!SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, vars[branchpos])));
    assert(SCIPisFeasZero(scip, SCIPvarGetLbLocal(indvars[branchpos])));
    assert(SCIPisFeasEQ(scip, SCIPvarGetUbLocal(indvars[branchpos]), 1.0));
 
    /* create branches */
-   SCIPdebugMessage("apply unbalanced branching on variable <%s> of constraint <%s>.\n", SCIPvarGetName(indvars[branchpos]),
+   SCIPdebugMsg(scip, "apply unbalanced branching on variable <%s> of constraint <%s>.\n", SCIPvarGetName(indvars[branchpos]),
       SCIPconsGetName(branchcons));
 
    /* create node 1 */
@@ -1370,11 +1335,7 @@ SCIP_RETCODE branchUnbalancedCardinality(
       assert(cnt > 0);
 
       /* take the average of the individual estimates */
-<<<<<<< HEAD
-      objest = objest/((SCIP_Real)cnt);
-=======
       objest = objest / (SCIP_Real) cnt;
->>>>>>> ae054aebf22e9a811ca6a530b7d9bc141dcbbb83
 
       /* create node 2 */
       SCIP_CALL( SCIPcreateChild(scip, &node2, nodeselest, objest) );
@@ -1418,7 +1379,8 @@ SCIP_RETCODE branchBalancedCardinality(
    int                   nvars,              /**< number of variables of constraint */
    int                   cardval,            /**< cardinality value of constraint */
    int                   branchnnonzero,     /**< number of variables that are fixed to be nonzero */
-   int                   branchpos           /**< position in array 'vars' */
+   int                   branchpos,          /**< position in array 'vars' */
+   SCIP_Real             balancedcutoff     /**< cut off value for deciding whether to apply balanced branching */
    )
 {
    SCIP_VAR** branchvars;
@@ -1468,11 +1430,8 @@ SCIP_RETCODE branchBalancedCardinality(
          if( !SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) || !SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
          {
             SCIP_Real val = REALABS(SCIPgetSolVal(scip, sol, var));
-<<<<<<< HEAD
-            weight1 += val * (SCIP_Real)(j-(nnonzero+nzero));
-=======
+
             weight1 += val * (SCIP_Real) (j - (nnonzero + nzero));
->>>>>>> ae054aebf22e9a811ca6a530b7d9bc141dcbbb83
             weight2 += val;
             branchindvars[nbranchvars] = indvars[j];
             branchvars[nbranchvars++] = var;
@@ -1505,23 +1464,13 @@ SCIP_RETCODE branchBalancedCardinality(
 
       if( SCIPisFeasPositive(scip, val) )
       {
-<<<<<<< HEAD
          assert(SCIPisFeasPositive(scip, SCIPvarGetUbLocal(branchvars[j])));
-         sum1 += val/SCIPvarGetUbLocal(branchvars[j]);
-=======
-         assert( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(branchvars[j])) );
          sum1 += val / SCIPvarGetUbLocal(branchvars[j]);
->>>>>>> ae054aebf22e9a811ca6a530b7d9bc141dcbbb83
       }
       else if( SCIPisFeasNegative(scip, val) )
       {
-<<<<<<< HEAD
          assert(SCIPisFeasNegative(scip, SCIPvarGetLbLocal(branchvars[j])));
-         sum1 += val/SCIPvarGetLbLocal(branchvars[j]);
-=======
-         assert( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(branchvars[j])) );
          sum1 += val / SCIPvarGetLbLocal(branchvars[j]);
->>>>>>> ae054aebf22e9a811ca6a530b7d9bc141dcbbb83
       }
    }
    for( j = ind+1; j < nbranchvars; ++j )
@@ -1554,12 +1503,8 @@ SCIP_RETCODE branchBalancedCardinality(
 
    /* the lower or upper LP row of each branching constraint should cut off the current LP solution
     * if this is not the case, then use unbalanced branching */
-<<<<<<< HEAD
-   if( !SCIPisFeasLT(scip, (SCIP_Real)splitval1 + BALBRANCHCUTOFFVALUE, sum1) || !SCIPisFeasLT(scip, (SCIP_Real)splitval2 + BALBRANCHCUTOFFVALUE, sum2) )
-=======
-   if ( ! SCIPisFeasLT(scip, (SCIP_Real) splitval1 + BALBRANCHCUTOFFVALUE, sum1) ||
-         ! SCIPisFeasLT(scip, (SCIP_Real) splitval2 + BALBRANCHCUTOFFVALUE, sum2) )
->>>>>>> ae054aebf22e9a811ca6a530b7d9bc141dcbbb83
+   if ( !SCIPisFeasLT(scip, (SCIP_Real) splitval1 + balancedcutoff, sum1) ||
+         !SCIPisFeasLT(scip, (SCIP_Real) splitval2 + balancedcutoff, sum2) )
    {
       SCIP_CALL( branchUnbalancedCardinality(scip, sol, branchcons, vars, indvars, nvars, cardval, branchnnonzero, branchpos) );
    }
@@ -1571,7 +1516,7 @@ SCIP_RETCODE branchBalancedCardinality(
       SCIP_CONS* cons1;
       SCIP_CONS* cons2;
 
-      SCIPdebugMessage("apply balanced branching on constraint <%s>.\n", SCIPconsGetName(branchcons));
+      SCIPdebugMsg(scip, "apply balanced branching on constraint <%s>.\n", SCIPconsGetName(branchcons));
 
       if( SCIPisFeasZero(scip, splitval1) )
       {
@@ -1618,12 +1563,7 @@ SCIP_RETCODE branchBalancedCardinality(
          SCIP_CALL( SCIPreleaseCons(scip, &cons1) );
       }
 
-<<<<<<< HEAD
-
       if( SCIPisFeasZero(scip, splitval2) )
-=======
-      if ( SCIPisFeasZero(scip, splitval2) )
->>>>>>> ae054aebf22e9a811ca6a530b7d9bc141dcbbb83
       {
          SCIP_Bool infeasible;
          SCIP_Real nodeselest;
@@ -1706,20 +1646,7 @@ SCIP_RETCODE branchBalancedCardinality(
  *  \f]
  *  where \f$d_1, \ldots, d_n\f$ are the elements of the set @p D.
  *
- *  Depending on the parameters (@c branchnonzeros, @c branchweight) there are three ways to choose
- *  the branching constraint.
- *
- *  <TABLE>
- *  <TR><TD>@c branchnonzeros</TD><TD>@c branchweight</TD><TD>constraint chosen</TD></TR>
- *  <TR><TD>@c true          </TD><TD> ?             </TD><TD>largest number of nonzeros</TD></TR>
- *  <TR><TD>@c false         </TD><TD> @c true       </TD><TD>maximal weight corresponding to nonzero variable</TD></TR>
- *  <TR><TD>@c false         </TD><TD> @c true       </TD><TD>largest sum of variable values</TD></TR>
- *  </TABLE>
- *
- *  @c branchnonzeros = @c false, @c branchweight = @c true allows the user to specify an order for
- *  the branching importance of the constraints (setting the weights accordingly).
- *
- *  Constraint branching can also be turned off using parameter @c branchcard.
+ * The branching constraint is chosen by the largest sum of variable values.
  */
 static
 SCIP_RETCODE enforceCardinality(
@@ -1757,7 +1684,7 @@ SCIP_RETCODE enforceCardinality(
    branchnnonzero = -1;
    branchpos = -1;
 
-   SCIPdebugMessage("Enforcing cardinality constraints <%s>.\n", SCIPconshdlrGetName(conshdlr) );
+   SCIPdebugMsg(scip, "Enforcing cardinality constraints <%s>.\n", SCIPconshdlrGetName(conshdlr) );
    *result = SCIP_FEASIBLE;
 
    /* get constraint handler data */
@@ -1800,7 +1727,7 @@ SCIP_RETCODE enforceCardinality(
       /* first perform propagation (it might happen that standard propagation is turned off) */
       SCIP_CALL( propCardinality(scip, cons, consdata, &cutoff, &ngen) );
 
-      SCIPdebugMessage("propagating <%s> in enforcing (cutoff: %u, domain reductions: %d).\n", SCIPconsGetName(cons), cutoff, ngen);
+      SCIPdebugMsg(scip, "propagating <%s> in enforcing (cutoff: %u, domain reductions: %d).\n", SCIPconsGetName(cons), cutoff, ngen);
       if( cutoff )
       {
          *result = SCIP_CUTOFF;
@@ -1854,19 +1781,7 @@ SCIP_RETCODE enforceCardinality(
                   maxval = val;
                }
 
-               if( conshdlrdata->branchnonzeros )
-                  weight += 1.0;
-               else
-               {
-                  if( conshdlrdata->branchweight )
-                  {
-                     /* choose maximum nonzero-variable weight */
-                     if( consdata->weights[j] > weight )
-                        weight = consdata->weights[j];
-                  }
-                  else
-                     weight += val;
-               }
+               weight += val;
                ++cnt;
             }
          }
@@ -1879,7 +1794,7 @@ SCIP_RETCODE enforceCardinality(
       /* if we detected a cut off */
       if( nnonzero > cardval )
       {
-         SCIPdebugMessage("Detected cut off: constraint <%s> has %d many variables that can be treated as nonzero, although only %d many are feasible.\n",
+         SCIPdebugMsg(scip, "Detected cut off: constraint <%s> has %d many variables that can be treated as nonzero, although only %d many are feasible.\n",
             SCIPconsGetName(cons), nnonzero, cardval);
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
@@ -1901,7 +1816,7 @@ SCIP_RETCODE enforceCardinality(
             {
                SCIP_CALL( fixVariableZeroNode(scip, var, SCIPgetCurrentNode(scip), &infeasible) );
                assert(!infeasible);
-               SCIPdebugMessage("detected domain reduction in enforcing: fixed variable <%s> to zero.\n", SCIPvarGetName(var));
+               SCIPdebugMsg(scip, "detected domain reduction in enforcing: fixed variable <%s> to zero.\n", SCIPvarGetName(var));
             }
          }
 
@@ -1933,18 +1848,11 @@ SCIP_RETCODE enforceCardinality(
       SCIP_CALL( SCIPtrySol(scip, primsol, FALSE, TRUE, FALSE, TRUE, FALSE, &success) );
       SCIP_CALL( SCIPfreeSol(scip, &primsol) );
 
-      SCIPdebugMessage("All cardinality constraints are feasible.\n");
+      SCIPdebugMsg(scip, "All cardinality constraints are feasible.\n");
       return SCIP_OKAY;
    }
    assert(branchnnonzero >= 0);
    assert(branchpos >= 0);
-
-   /* if we should leave branching decision to branching rules */
-   if( ! conshdlrdata->branchcard )
-   {
-      *result = SCIP_INFEASIBLE;
-      return SCIP_OKAY;
-   }
 
    /* get data for branching or domain reduction */
    consdata = SCIPconsGetData(branchcons);
@@ -1955,7 +1863,7 @@ SCIP_RETCODE enforceCardinality(
    cardval = consdata->cardval;
 
    /* we only use balanced branching if either the lower or the upper bound row of the branching constraint is known to be tight or violated */
-   if( conshdlrdata->branchbalanced && !SCIPisFeasNegative(scip, maxweight) && ( branchallneg || branchallpos ) && (conshdlrdata->branchbalanceddepth == -1 || SCIPgetDepth(scip) <= conshdlrdata->branchbalanceddepth) )
+   if( conshdlrdata->branchbalanced && !SCIPisFeasNegative(scip, maxweight) && ( branchallneg || branchallpos ) && (conshdlrdata->balanceddepth == -1 || SCIPgetDepth(scip) <= conshdlrdata->balanceddepth) )
    {
          branchbalanced = TRUE;
    }
@@ -1963,7 +1871,8 @@ SCIP_RETCODE enforceCardinality(
    /* apply branching rule */
    if( branchbalanced )
    {
-      SCIP_CALL( branchBalancedCardinality(scip, sol, branchcons, vars, indvars, nvars, cardval, branchnnonzero, branchpos) );
+      SCIP_CALL( branchBalancedCardinality(scip, sol, branchcons, vars, indvars, nvars, cardval, branchnnonzero, branchpos,
+           conshdlrdata->balancedcutoff) );
    }
    else
    {
@@ -2147,9 +2056,9 @@ SCIP_RETCODE initsepaBoundInequalityFromCardinality(
       assert(consdata != NULL);
 
       if( solvedinitlp )
-         SCIPdebugMessage("Separating inequalities for cardinality constraint <%s>.\n", SCIPconsGetName(conss[c]) );
+         SCIPdebugMsg(scip, "Separating inequalities for cardinality constraint <%s>.\n", SCIPconsGetName(conss[c]) );
       else
-         SCIPdebugMessage("Checking for initial rows for cardinality constraint <%s>.\n", SCIPconsGetName(conss[c]) );
+         SCIPdebugMsg(scip, "Checking for initial rows for cardinality constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
       /* generate rows associated to cardinality constraint; the rows are stored in the constraint data if they are globally valid */
       if( SCIPconsIsLocal(conss[c]) )
@@ -2196,12 +2105,7 @@ SCIP_RETCODE initsepaBoundInequalityFromCardinality(
          ++cnt;
       }
 
-<<<<<<< HEAD
-
       if( release )
-=======
-      if ( release )
->>>>>>> ae054aebf22e9a811ca6a530b7d9bc141dcbbb83
       {
          if( rowlb != NULL )
          {
@@ -2265,7 +2169,7 @@ SCIP_RETCODE separateCardinality(
    /* evaluate results */
    if( ngen > 0 )
       *result = SCIP_SEPARATED;
-   SCIPdebugMessage("Separated %d bound inequalities.\n", ngen);
+   SCIPdebugMsg(scip, "Separated %d bound inequalities.\n", ngen);
 
    return SCIP_OKAY;
 }
@@ -2336,7 +2240,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolCardinality)
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      SCIPdebugMessage("Exiting cardinality constraint <%s>.\n", SCIPconsGetName(conss[c]) );
+      SCIPdebugMsg(scip, "Exiting cardinality constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
       /* free rows */
       if( consdata->rowub != NULL )
@@ -2368,7 +2272,7 @@ SCIP_DECL_CONSDELETE(consDeleteCardinality)
    assert(consdata != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
-   SCIPdebugMessage("Deleting cardinality constraint <%s>.\n", SCIPconsGetName(cons) );
+   SCIPdebugMsg(scip, "Deleting cardinality constraint <%s>.\n", SCIPconsGetName(cons) );
 
    /* drop events on transformed variables */
    if( SCIPconsIsTransformed(cons) )
@@ -2436,7 +2340,7 @@ SCIP_DECL_CONSTRANS(consTransCardinality)
    assert(conshdlrdata != NULL);
    assert(conshdlrdata->eventhdlr != NULL);
 
-   SCIPdebugMessage("Transforming cardinality constraint: <%s>.\n", SCIPconsGetName(sourcecons) );
+   SCIPdebugMsg(scip, "Transforming cardinality constraint: <%s>.\n", SCIPconsGetName(sourcecons) );
 
    /* get data of original constraint */
    sourcedata = SCIPconsGetData(sourcecons);
@@ -2504,7 +2408,7 @@ SCIP_DECL_CONSTRANS(consTransCardinality)
 #ifdef SCIP_DEBUG
    if( SCIPisGT(scip, (SCIP_Real)consdata->ntreatnonzeros, consdata->cardval) )
    {
-      SCIPdebugMessage("constraint <%s> has %d variables fixed to be nonzero, allthough the constraint allows only %d nonzero variables\n",
+      SCIPdebugMsg(scip, "constraint <%s> has %d variables fixed to be nonzero, allthough the constraint allows only %d nonzero variables\n",
          SCIPconsGetName(*targetcons), consdata->ntreatnonzeros, consdata->cardval);
    }
 #endif
@@ -2528,7 +2432,7 @@ SCIP_DECL_CONSPRESOL(consPresolCardinality)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
 
-   SCIPdebugMessage("Presolving cardinality constraints.\n");
+   SCIPdebugMsg(scip, "Presolving cardinality constraints.\n");
 
    *result = SCIP_DIDNOTRUN;
    oldnfixedvars = *nfixedvars;
@@ -2569,7 +2473,7 @@ SCIP_DECL_CONSPRESOL(consPresolCardinality)
 
          if( cutoff )
          {
-            SCIPdebugMessage("presolving detected cutoff.\n");
+            SCIPdebugMsg(scip, "presolving detected cutoff.\n");
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
          }
@@ -2580,7 +2484,7 @@ SCIP_DECL_CONSPRESOL(consPresolCardinality)
    }
    (*nchgcoefs) += nremovedvars;
 
-   SCIPdebugMessage("presolving fixed %d variables, removed %d variables, deleted %d constraints, and upgraded %d constraints.\n",
+   SCIPdebugMsg(scip, "presolving fixed %d variables, removed %d variables, deleted %d constraints, and upgraded %d constraints.\n",
       *nfixedvars - oldnfixedvars, nremovedvars, *ndelconss - oldndelconss, *nupgdconss - oldnupgdconss);
 
    return SCIP_OKAY;
@@ -2688,7 +2592,7 @@ SCIP_DECL_CONSCHECK(consCheckCardinality)
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
       cardval = consdata->cardval;
-      SCIPdebugMessage("Checking cardinality constraint <%s>.\n", SCIPconsGetName(conss[c]));
+      SCIPdebugMsg(scip, "Checking cardinality constraint <%s>.\n", SCIPconsGetName(conss[c]));
 
       /* check all variables */
       for( j = 0; j < consdata->nvars; ++j )
@@ -2760,7 +2664,7 @@ SCIP_DECL_CONSPROP(consPropCardinality)
       cons = conss[c];
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
-      SCIPdebugMessage("Propagating cardinality constraint <%s>.\n", SCIPconsGetName(cons) );
+      SCIPdebugMsg(scip, "Propagating cardinality constraint <%s>.\n", SCIPconsGetName(cons) );
 
       *result = SCIP_DIDNOTFIND;
       SCIP_CALL( propCardinality(scip, cons, consdata, &cutoff, &ngen) );
@@ -2770,7 +2674,7 @@ SCIP_DECL_CONSPROP(consPropCardinality)
          return SCIP_OKAY;
       }
    }
-   SCIPdebugMessage("Propagated %d domains.\n", ngen);
+   SCIPdebugMsg(scip, "Propagated %d domains.\n", ngen);
    if( ngen > 0 )
       *result = SCIP_REDUCEDDOM;
 
@@ -2805,7 +2709,7 @@ SCIP_DECL_CONSLOCK(consLockCardinality)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPdebugMessage("Locking constraint <%s>.\n", SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "Locking constraint <%s>.\n", SCIPconsGetName(cons));
 
    vars = consdata->vars;
    indvars = consdata->indvars;
@@ -2897,7 +2801,7 @@ SCIP_DECL_CONSCOPY(consCopyCardinality)
    else
       consname = SCIPconsGetName(sourcecons);
 
-   SCIPdebugMessage("Copying cardinality constraint <%s> ...\n", consname);
+   SCIPdebugMsg(scip, "Copying cardinality constraint <%s> ...\n", consname);
 
    sourceconsdata = SCIPconsGetData(sourcecons);
    assert(sourceconsdata != NULL);
@@ -3098,7 +3002,7 @@ SCIP_DECL_EVENTEXEC(eventExecCardinality)
    }
    assert(0 <= consdata->ntreatnonzeros && consdata->ntreatnonzeros <= consdata->nvars);
 
-   SCIPdebugMessage("event exec cons <%s>: changed bound of variable <%s> from %f to %f (ntreatnonzeros: %d).\n", SCIPconsGetName(consdata->cons), SCIPvarGetName(SCIPeventGetVar(event)),
+   SCIPdebugMsg(scip, "event exec cons <%s>: changed bound of variable <%s> from %f to %f (ntreatnonzeros: %d).\n", SCIPconsGetName(consdata->cons), SCIPvarGetName(SCIPeventGetVar(event)),
       oldbound, newbound, consdata->ntreatnonzeros);
 
    return SCIP_OKAY;
@@ -3116,7 +3020,6 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
 
    /* create constraint handler data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
-   conshdlrdata->branchcard = TRUE;
    conshdlrdata->eventhdlr = NULL;
    conshdlrdata->varhash = NULL;
 
@@ -3150,30 +3053,30 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransCardinality) );
 
    /* add cardinality constraint handler parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/branchcard",
-         "Use cardinality branching in enforcing (otherwise leave decision to branching rules)?",
-         &conshdlrdata->branchcard, FALSE, TRUE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/branchnonzeros",
-         "Branch on cardinality constraint with largest number of nonzeros?",
-         &conshdlrdata->branchnonzeros, FALSE, FALSE, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/branchweight",
-         "Branch on cardinality cons. with highest nonzero-variable weight for branching (needs branchnonzeros = false)?",
-         &conshdlrdata->branchweight, FALSE, FALSE, NULL, NULL) );
-
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/branchbalanced",
          "whether to use balanced instead of unbalanced branching",
          &conshdlrdata->branchbalanced, TRUE, DEFAULT_BRANCHBALANCED, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/branchabalanceddepth",
          "only use balanced branching for predefined depth (-1: no limit)",
-         &conshdlrdata->branchbalanceddepth, TRUE, DEFAULT_BRANCHBALANCEDDEPTH, -1, INT_MAX, NULL, NULL) );
+         &conshdlrdata->balanceddepth, TRUE, DEFAULT_BALANCEDDEPTH, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/balancedcutoff",
+         "only use balanced branching if its efficacy (cut off value) w.r.t. the \
+          current LP solution is greater than than a given value",
+         &conshdlrdata->balancedcutoff, TRUE, DEFAULT_BALANCEDCUTOFF, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    /* check parameters */
    if( conshdlrdata->branchbalanced && SCIPconshdlrGetSepaFreq(conshdlr) != 1 )
    {
        SCIPerrorMessage("balanced branching is only possible if separation frequency of constraint handler is 1.\n");
+       return SCIP_PARAMETERWRONGVAL;
+    }
+
+   /* check parameters */
+   if( ! SCIPisPositive(scip, conshdlrdata->balancedcutoff) )
+   {
+       SCIPerrorMessage("the parameter balancedcutoff has to be positive.\n");
        return SCIP_PARAMETERWRONGVAL;
     }
 
@@ -3276,7 +3179,7 @@ SCIP_RETCODE SCIPcreateConsCardinality(
          if( conshdlrdata->varhash == NULL )
          {
             /* set up hash map */
-            SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), 10 * SCIPgetNTotalVars(scip)) );
+            SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), SCIPgetNTotalVars(scip)) );
          }
 
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->indvars, nvars) );
@@ -3290,8 +3193,8 @@ SCIP_RETCODE SCIPcreateConsCardinality(
             /* check whether an indicator variable already exists for implied variable */
             if( SCIPhashmapExists(conshdlrdata->varhash, implvar) )
             {
-               assert((SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, implvar) != NULL);
-               consdata->indvars[v] = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, implvar);
+               assert((SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->varhash, implvar) != NULL);
+               consdata->indvars[v] = (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->varhash, implvar);
             }
             else
             {
@@ -3312,8 +3215,8 @@ SCIP_RETCODE SCIPcreateConsCardinality(
                }
 
                /* insert implied variable to hash map */
-               SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varhash, implvar, (void*) (size_t) consdata->indvars[v]) );/*lint !e571*/
-               assert(consdata->indvars[v] == (SCIP_VAR*) (size_t) SCIPhashmapGetImage(conshdlrdata->varhash, implvar));
+               SCIP_CALL( SCIPhashmapInsert(conshdlrdata->varhash, implvar, (void*) consdata->indvars[v]) );/*lint !e571*/
+               assert(consdata->indvars[v] == (SCIP_VAR*) SCIPhashmapGetImage(conshdlrdata->varhash, implvar));
                assert(SCIPhashmapExists(conshdlrdata->varhash, implvar));
             }
          }
@@ -3422,7 +3325,7 @@ SCIP_RETCODE  SCIPchgCardvalCardinality(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   SCIPdebugMessage("modify right hand side of cardinality constraint from <%i> to <%i>\n", consdata->cardval, cardval);
+   SCIPdebugMsg(scip, "modify right hand side of cardinality constraint from <%i> to <%i>\n", consdata->cardval, cardval);
 
    /* create constraint data */
    consdata->cardval = cardval;
@@ -3447,7 +3350,7 @@ SCIP_RETCODE SCIPaddVarCardinality(
    assert(var != NULL);
    assert(cons != NULL);
 
-   SCIPdebugMessage("adding variable <%s> to constraint <%s> with weight %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), weight);
+   SCIPdebugMsg(scip, "adding variable <%s> to constraint <%s> with weight %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), weight);
 
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
@@ -3481,7 +3384,7 @@ SCIP_RETCODE SCIPappendVarCardinality(
    assert(var != NULL);
    assert(cons != NULL);
 
-   SCIPdebugMessage("appending variable <%s> to constraint <%s>\n", SCIPvarGetName(var), SCIPconsGetName(cons));
+   SCIPdebugMsg(scip, "appending variable <%s> to constraint <%s>\n", SCIPvarGetName(var), SCIPconsGetName(cons));
 
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
