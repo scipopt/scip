@@ -5969,7 +5969,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
 
    reopt->lastseennode = SCIPnodeGetNumber(node);
 
-   SCIPsetDebugMsg(set, "catch event %x for node %lld (type:%d)\n", eventtype, SCIPnodeGetNumber(node), SCIPnodeGetType(node));
+   SCIPsetDebugMsg(set, "catch event %"SCIP_EVENTTYPE_FORMAT" for node %lld (type:%d)\n", eventtype, SCIPnodeGetNumber(node), SCIPnodeGetType(node));
 
    /* case 1: the current node is the root node
     * we can skip if the root is (in)feasible or branched w/o bound

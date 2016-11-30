@@ -189,6 +189,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
    SCIP_CALL( SCIPincludeDispDefault(scip) );
    SCIP_CALL( SCIPincludeEventHdlrSofttimelimit(scip) );
+   SCIP_CALL( SCIPincludeConcurrentScipSolvers(scip) );
 
    /* include NLPI's, if available */
    SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
