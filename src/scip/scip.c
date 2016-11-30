@@ -4057,6 +4057,36 @@ SCIP_RETCODE SCIPcopyOrigConsCompression(
    return SCIP_OKAY;
 }
 
+/** return updated time limit for a sub-SCIP */
+static
+SCIP_RETCODE getCopyTimelimit(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP_Real*            timelimit           /**< pointer to store sub-SCIP time limit */
+   )
+{
+   SCIP_CALL( SCIPgetRealParam(sourcescip, "limits/time", timelimit) );
+   if( !SCIPisInfinity(sourcescip, *timelimit) )
+      (*timelimit) -= SCIPgetSolvingTime(sourcescip);
+
+   return SCIP_OKAY;
+}
+
+/** return updated memory limit for a sub-SCIP */
+static
+SCIP_RETCODE getCopyMemlimit(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP_Real*            memorylimit         /**< pointer to store sub-SCIP memory limit */
+   )
+{
+   SCIP_CALL( SCIPgetRealParam(sourcescip, "limits/memory", memorylimit) );
+
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
+   if( !SCIPisInfinity(sourcescip, *memorylimit) )
+      (*memorylimit) -= (SCIPgetMemUsed(sourcescip) + SCIPgetMemExternEstim(sourcescip))/1048576.0;
+
+   return SCIP_OKAY;
+}
+
 /** checks if there is enough time and memory left for copying the sourcescip into a sub-SCIP and solve the sub-SCIP
  *
  *  This is the case if the time and memory limit that would be passed to the sub-SCIP are larger than 0.0
@@ -4083,21 +4113,9 @@ SCIP_RETCODE SCIPcheckCopyLimits(
    SCIP_Real timelimit;
    SCIP_Real memorylimit;
 
-   SCIP_CALL( SCIPgetRealParam(sourcescip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(sourcescip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(sourcescip);
-   SCIP_CALL( SCIPgetRealParam(sourcescip, "limits/memory", &memorylimit) );
+   SCIP_CALL( getCopyTimelimit(sourcescip, &timelimit) );
+   SCIP_CALL( getCopyMemlimit(sourcescip, &memorylimit) );
 
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(sourcescip, memorylimit) )
-   {
-      memorylimit -= SCIPgetMemUsed(sourcescip)/1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(sourcescip)/1048576.0;
-   }
-
-   /* the copy can be successful, if some time is left and enough memory to create a copy of SCIP, including external
-    * memory usage
-    */
    *success = timelimit > 0.0 && memorylimit > 2.0 * SCIPgetMemExternEstim(sourcescip) / 1048576.0;
 
    return SCIP_OKAY;
@@ -4130,17 +4148,8 @@ SCIP_RETCODE SCIPcopyLimits(
    SCIP_Real timelimit;
    SCIP_Real memorylimit;
 
-   SCIP_CALL( SCIPgetRealParam(sourcescip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(sourcescip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(sourcescip);
-   SCIP_CALL( SCIPgetRealParam(sourcescip, "limits/memory", &memorylimit) );
-
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(sourcescip, memorylimit) )
-   {
-      memorylimit -= SCIPgetMemUsed(sourcescip)/1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(sourcescip)/1048576.0;
-   }
+   SCIP_CALL( getCopyTimelimit(sourcescip, &timelimit) );
+   SCIP_CALL( getCopyMemlimit(sourcescip, &memorylimit) );
 
    /* set time and memory limit to the adjusted values */
    SCIP_CALL( SCIPsetRealParam(targetscip, "limits/time", timelimit) );
@@ -4153,7 +4162,7 @@ SCIP_RETCODE SCIPcopyLimits(
    SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/nodes", -1) );
    SCIP_CALL( SCIPsetIntParam(targetscip, "limits/restarts", -1) );
    SCIP_CALL( SCIPsetIntParam(targetscip, "limits/solutions", -1) );
-   SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/stallnodes", -1) );;
+   SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/stallnodes", -1) );
    SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1) );
 
    /* the soft time limit event handler might not be included so we need to check if the parameter exists */
