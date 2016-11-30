@@ -223,7 +223,7 @@ tags:
 depend:		$(SCIPDIR)
 		@- rm -f $(UNITTESTSDEP)
 		$(foreach src, $(UNITTESTSSRC), \
-			$(SHELL) -ec '$(DCC) -I. $(FLAGS) $(DFLAGS) $(src) \
+			$(SHELL) -ec '$(DCC)  $(FLAGS) $(src) \
 			$(DFLAGS) $(call src2obj, $(src))' >> $(UNITTESTSDEP);)
 
 

@@ -37,6 +37,12 @@
 #define PRODUCT_PRECEDENCE  50000
 #define PRODUCT_HASHKEY     SCIPcalcFibHash(54949.0)
 
+#define ADJUSTFACETTOL             1e-6 /**< adjust resulting facets in checkRikun() up to a violation of this value */
+#define USEDUALSIMPLEX             TRUE /**< use dual or primal simplex algorithm? */
+
+/** first values for 2^n */
+static const int poweroftwo[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
+
 /** ensures that a block memory array has at least a given size
  *
  *  if cursize is 0, then *array1 can be NULL
@@ -66,9 +72,15 @@
 
 struct SCIP_ConsExpr_ExprData
 {
-   SCIP_Real  coefficient;  /**< coefficient */
+   SCIP_Real             coefficient;        /**< coefficient */
 
-   SCIP_ROW*  row;          /**< row created during initLP() */
+   SCIP_ROW*             row;                /**< row created during initLP() */
+};
+
+struct SCIP_ConsExpr_ExprHdlrData
+{
+   SCIP_LPI*             multilinearseparationlp; /**< lp to separate product expressions */
+   int                   lpsize;             /**< number of rows - 1 of multilinearseparationlp */
 };
 
 /** node for linked list of expressions */
@@ -220,6 +232,406 @@ SCIP_RETCODE freeExprlist(
    }
    assert(current == NULL);
    *exprlist = NULL;
+
+   return SCIP_OKAY;
+}
+
+/** builds LP used to compute facets of the convex envelope of multilinear functionsi, see separatePointProduct */
+/* FIXME how does \ref works? */
+static
+SCIP_RETCODE buildMultilinearSeparationLP(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   lpsize,             /**< size of the LP */
+   SCIP_LPI**            lp                  /**< pointer to store created LP */
+   )
+{
+   SCIP_Real* obj;
+   SCIP_Real* lb;
+   SCIP_Real* ub;
+   SCIP_Real* val;
+   int* beg;
+   int* ind;
+   int nnonz;
+   int ncols;
+   int nrows;
+   int i;
+   int k;
+
+   assert(scip != NULL);
+   assert(lp != NULL);
+
+   SCIPdebugMsg(scip, "Building LP for computing facets of convex envelope of multilinear terms\n");
+
+   /* create lpi to store the LP */
+   SCIP_CALL( SCIPlpiCreate(lp, SCIPgetMessagehdlr(scip), "edge concave LP", SCIP_OBJSEN_MINIMIZE) );
+
+   nrows = lpsize + 1;
+   ncols = poweroftwo[nrows - 1];
+   nnonz = (ncols * (nrows + 1)) / 2;
+   k = 0;
+
+   /* allocate necessary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &obj, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lb, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ub, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &beg, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &val, nnonz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ind, nnonz) );
+
+   /* calculate nonzero entries in the LP; set obj, lb, and ub to zero */
+   for( i = 0; i < ncols; ++i )
+   {
+      int row;
+      int a;
+
+      obj[i] = 0.0;
+      lb[i] = 0.0;
+      ub[i] = 0.0;
+
+      SCIPdebugMsg(scip, "col %i starts at position %d\n", i, k);
+      beg[i] = k;
+      row = 0;
+
+      /* iterate through the bit representation of i */
+      a = 1;
+      while( a <= i )
+      {
+         if( (a & i) != 0 )
+         {
+            val[k] = 1.0;
+            ind[k] = row;
+
+            SCIPdebugMsg(scip, " val[%d][%d] = 1 (position  %d)\n", row, i, k);
+
+            ++k;
+         }
+
+         a <<= 1; /*lint !e701*/
+         ++row;
+         assert(poweroftwo[row] == a);
+      }
+
+      /* put 1 as a coefficient for sum_{i} \lambda_i = 1 row (last row) */
+      val[k] = 1.0;
+      ind[k] = nrows - 1;
+      ++k;
+      SCIPdebugMsg(scip, " val[%d][%d] = 1 (position  %d)\n", nrows - 1, i, k);
+   }
+   assert(k == nnonz);
+
+   /* add all columns to the LP interface; CPLEX needs the row to exist before adding columns, so we create the rows with
+    * dummy sides; note that the assert is not needed once somebody fixes the LPI
+    * FIXME: was the LPI fixed???
+    */
+   assert(nrows <= ncols);
+   SCIP_CALL( SCIPlpiAddRows(*lp, nrows, obj, obj, NULL, 0, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPlpiAddCols(*lp, ncols, obj, lb, ub, NULL, nnonz, beg, ind, val) );
+
+   /* free allocated memory */
+   SCIPfreeBufferArray(scip, &ind);
+   SCIPfreeBufferArray(scip, &val);
+   SCIPfreeBufferArray(scip, &beg);
+   SCIPfreeBufferArray(scip, &ub);
+   SCIPfreeBufferArray(scip, &lb);
+   SCIPfreeBufferArray(scip, &obj);
+
+   return SCIP_OKAY;
+}
+
+/** evaluates multilinear function at corner of the domain \f$ [lb,ub] \f$ encoded by binary expansion of \f$ k \f$ */
+static
+SCIP_Real evalCorner(
+   SCIP_VAR**            vars,               /**< vars in multilinear function */
+   int                   nvars,              /**< number of variables in multilinear function */
+   SCIP_Real             constant,           /**< constant of multilinear function */
+   int                   k                   /**< k-th corner */
+   )
+{
+   SCIP_Real val;
+   int i;
+
+   assert(k >= 0 && k < poweroftwo[nvars]);
+
+   val = constant;
+   for( i = 0; i < nvars; ++i )
+      val *= ((poweroftwo[i]) & k) == 0 ? SCIPvarGetLbLocal(vars[i]) : SCIPvarGetUbLocal(vars[i]);
+
+   return val;
+}
+
+#ifdef RIKUN
+/** checks if a facet is really an underestimate for all corners of the domain [l,u]; because of numerics it can happen
+ * that a facet violates a corner of the domain; to make the facet valid we subtract the maximum violation from the
+ * constant part of the facet; its a good excersise to write a comment describing the gray code...
+ */
+static
+SCIP_Bool checkRikun(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ECAGGR*          ecaggr,             /**< edge-concave aggregation data */
+   SCIP_Real*            fvals,              /**< array containing all corner values of the aggregation */
+   SCIP_Real*            facet               /**< current facet candidate (of dimension ecaggr->nvars + 1) */
+   )
+{
+   SCIP_Real maxviolation;
+   SCIP_Real val;
+   unsigned int i;
+   unsigned int ncorners;
+   unsigned int prev;
+
+   assert(scip != NULL);
+   assert(ecaggr != NULL);
+   assert(fvals != NULL);
+   assert(facet != NULL);
+
+   ncorners = (unsigned int) poweroftwo[ecaggr->nvars];
+   maxviolation = 0.0;
+
+   /* check for the origin */
+   val = facet[ecaggr->nvars];
+   for( i = 0; i < (unsigned int) ecaggr->nvars; ++i )
+      val += facet[i] * SCIPvarGetLbLocal(ecaggr->vars[i]);
+
+   /* update  maximum violation */
+   maxviolation = MAX(val - fvals[0], maxviolation);
+   assert(SCIPisFeasEQ(scip, maxviolation, 0.0));
+
+   prev = 0;
+   for( i = 1; i < ncorners; ++i )
+   {
+      unsigned int gray;
+      unsigned int diff;
+      unsigned int pos;
+
+      gray = i ^ (i >> 1);
+      diff = gray ^ prev;
+
+      /* compute position of unique 1 of diff */
+      pos = 0;
+      while( (diff >>= 1) != 0 )
+         ++pos;
+
+      if( gray > prev )
+         val += facet[pos] * (SCIPvarGetUbLocal(ecaggr->vars[pos]) - SCIPvarGetLbLocal(ecaggr->vars[pos]));
+      else
+         val -= facet[pos] * (SCIPvarGetUbLocal(ecaggr->vars[pos]) - SCIPvarGetLbLocal(ecaggr->vars[pos]));
+
+
+      /* update  maximum violation */
+      maxviolation = MAX(val - fvals[gray], maxviolation);
+      assert(SCIPisFeasEQ(scip, maxviolation, 0.0));
+
+      prev = gray;
+   }
+
+   SCIPdebugMsg(scip, "maximum violation of facet: %2.8e\n", maxviolation);
+
+   /* there seem to be numerical problems if the violation is too large; in this case we reject the facet */
+   if( maxviolation > ADJUSTFACETTOL )
+      return FALSE;
+
+   /* adjust constant part of the facet */
+   facet[ecaggr->nvars] -= maxviolation;
+
+   return TRUE;
+}
+#endif
+
+/** computes a facet of convex/concave envelope of \f$ w = c \Pi_i x_i \f$ that tries to separate \f$ (w^*, x^*) \f$,
+ * see separatePointProduct
+ */
+static
+SCIP_RETCODE computeFacet(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LPI*             lp,                 /**< lp used to compute facet */
+   SCIP_SOL*             sol,                /**< solution representing \f$ (w^*, x^*) \f$ */
+   SCIP_VAR**            vars,               /**< variables representing \f$ x_i \f$ */
+   int                   nvars,              /**< number of variables */
+   SCIP_VAR*             auxvar,             /**< variable representing \f$ w \f$ */
+   SCIP_Real             coefficient,        /**< coefficient representing \f$ c \f$ */
+   SCIP_Bool             overestimate,       /**< whether to compute facet of concave (TRUE) or convex (FALSE) envelope */
+   SCIP_Real*            violation,          /**< buffer to store the violation between facet and sol */
+   SCIP_Real*            facet               /**< buffer to store the facet; facet[nvars] holds facet's constant */
+   )
+{
+   SCIP_Real* fvals;
+   SCIP_Real* aux; /* used for settings sides and getting the dual solution */
+   SCIP_Real* lb;
+   SCIP_Real* ub;
+   SCIP_Real perturbation;
+   int* inds;
+   int ncorners;
+   int ncols;
+   int nrows;
+   int i;
+
+   /* get number of cols and rows of separation lp */
+   SCIP_CALL( SCIPlpiGetNCols(lp, &ncols) );
+   SCIP_CALL( SCIPlpiGetNRows(lp, &nrows) );
+
+   /* allocate necessary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &fvals, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &aux, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &inds, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lb, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ub, ncols) );
+
+   /*
+    * 1. compute f(v^i) for each corner v^i of [l,u]
+    * 2. set up the described LP on the transformed space
+    */
+
+   /* get numbre of corners: 2^nvars */
+   ncorners = poweroftwo[nvars];
+
+   for( i = 0; i < ncols; ++i )
+   {
+      fvals[i] = i < ncorners ? evalCorner(vars, nvars, coefficient, i) : 0.0;
+      inds[i] = i;
+
+      /* update bounds; variables that are not in the LP are get fixed to 0 */
+      lb[i] = 0.0;
+      ub[i] = i < ncorners ? 1.0 : 0.0;
+      SCIPdebugMsg(scip, "bounds of LP col %d = [%e, %e]; obj = %e\n", i, lb[i], ub[i], fvals[i]);
+   }
+
+   /* compute T^-1(x^*), i.e. T^-1(x^*)_i = (x^*_i - lb_i)/(ub_i - lb_i) */
+   perturbation = 0.001;
+   for( i = 0; i < nrows; ++i )
+   {
+      if( i < nvars )
+      {
+         assert(vars[i] != NULL);
+
+         aux[i] = (SCIPgetSolVal(scip, sol, vars[i]) - SCIPvarGetLbLocal(vars[i])) /
+            (SCIPvarGetUbLocal(vars[i]) - SCIPvarGetLbLocal(vars[i]));
+
+         /* perturb point to hopefuly obtain a facet of the convex envelope */
+         aux[i] += aux[i] > perturbation ? -perturbation : perturbation;
+         perturbation /= 1.2;
+         assert(0.0 < aux[i] && aux[i] < 1.0);
+      }
+      else
+      {
+         /* constraints between nvars and nrows - 2 should be 0 == 0; last row corresponds to sum_{j} \lambda_j = 1 */
+         aux[i] = (i == nrows - 1) ? 1.0 : 0.0;
+      }
+
+      SCIPdebugMsg(scip, "LP row %d in [%e, %e]\n", i, aux[i], aux[i]);
+   }
+
+   /* update LP */
+   SCIP_CALL( SCIPlpiChgObj(lp, ncols, inds, fvals) );
+   SCIP_CALL( SCIPlpiChgBounds(lp, ncols, inds, lb, ub) );
+   SCIP_CALL( SCIPlpiChgSides(lp, nrows, inds, aux, aux) );
+   SCIP_CALL( SCIPlpiChgObjsen(lp, overestimate ? SCIP_OBJSEN_MAXIMIZE : SCIP_OBJSEN_MINIMIZE) );
+   SCIP_CALL( SCIPlpiWriteLP(lp, "lp.lp") );
+
+   /* free memory used to update the LP */
+   SCIPfreeBufferArray(scip, &ub);
+   SCIPfreeBufferArray(scip, &lb);
+   SCIPfreeBufferArray(scip, &inds);
+
+   /*
+    * 3. solve the LP and store the resulting facet for the transformed space
+    */
+   if( USEDUALSIMPLEX ) /*lint !e774 !e506*/
+   {
+      SCIP_CALL( SCIPlpiSolveDual(lp) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPlpiSolvePrimal(lp) );
+   }
+   /* @todo: check solution status */
+
+   /* get dual solution (facet of convex envelope); again, we have to be careful since the LP can have more rows and
+    * columns than needed, in particular, \bar \beta is the last dual multiplier
+    */
+   SCIP_CALL( SCIPlpiGetSol(lp, NULL, NULL, aux, NULL, NULL) );
+
+   for( i = 0; i < nvars; ++i )
+   {
+      facet[i] = aux[i];
+   }
+   /* last dual multiplier is the constant */
+   facet[nvars] = aux[nrows - 1];
+
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMsg(scip, "facet for the transformed problem: ");
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIPdebugMsgPrint(scip, "%3.4e * %s + ", facet[i], SCIPvarGetName(vars[i]));
+   }
+   SCIPdebugMsgPrint(scip, "%3.4e\n", facet[nvars]);
+#endif
+
+   /*
+    *  4. transform the facet to original space and compute violation at x^*, i.e., \alpha x + \beta - w when
+    *  underestimating, w - \alpha x - \beta when overestimating
+    */
+
+   SCIPdebugMsg(scip, "facet in orig. space: ");
+
+   *violation = 0.0;
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_Real varlb;
+      SCIP_Real varub;
+
+      varlb = SCIPvarGetLbLocal(vars[i]);
+      varub = SCIPvarGetUbLocal(vars[i]);
+      assert(!SCIPisEQ(scip, varlb, varub));
+
+      /* \alpha_i := \bar \alpha_i / (ub_i - lb_i) */
+      facet[i] = facet[i] / (varub - varlb);
+
+      /* \beta = \bar \beta - \sum_i \alpha_i * lb_i */
+      facet[nvars] -= facet[i] * varlb;
+
+      /* evaluate */
+      *violation += facet[i] * SCIPgetSolVal(scip, sol, vars[i]);
+
+      SCIPdebugMsgPrint(scip, "%3.4e * %s + ", facet[i], SCIPvarGetName(vars[i]));
+   }
+   SCIPdebugMsgPrint(scip, "%3.4e\n", facet[nvars]);
+
+   /* add \beta to the violation: at this point in the code, violation = g(x^*) */
+   *violation += facet[nvars];
+
+   /* compute actual violation */
+   if( overestimate )
+   {
+      *violation = SCIPgetSolVal(scip, sol, auxvar) - *violation;
+   }
+   else
+   {
+      *violation = *violation - SCIPgetSolVal(scip, sol, auxvar);
+   }
+
+   /* if cut doesn't separate x^* (i.e. violation <= 0) there is no point in going on, since we only weaking the cut */
+   if( SCIPisLE(scip, *violation, 0.0) )
+   {
+      /* free memory and return */
+      SCIPfreeBufferArray(scip, &aux);
+      SCIPfreeBufferArray(scip, &fvals);
+
+      return SCIP_OKAY;
+   }
+
+   /*
+    *  5. adjust and check facet with the algorithm of Rikun et al.
+    */
+
+   //if( checkRikun(scip, ecaggr, fvals, facet) )
+   //{
+   //   SCIPdebugMsg(scip, "facet pass the check of Rikun et al.\n");
+   //   *success = TRUE;
+   //}
+
+   /* free allocated memory */
+   SCIPfreeBufferArray(scip, &aux);
+   SCIPfreeBufferArray(scip, &fvals);
 
    return SCIP_OKAY;
 }
@@ -683,6 +1095,31 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrProduct)
    return SCIP_OKAY;
 }
 
+/** expression handler free callback */
+static
+SCIP_DECL_CONSEXPR_EXPRFREEHDLR(freehdlrProduct)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(consexprhdlr != NULL);
+   assert(exprhdlr != NULL);
+   assert(exprhdlrdata != NULL);
+   assert(*exprhdlrdata != NULL);
+
+   /* free lp to separate product expressions */
+   if( (*exprhdlrdata)->lpsize > 0 )
+   {
+      SCIP_CALL( SCIPlpiFree(&((*exprhdlrdata)->multilinearseparationlp)) );
+      (*exprhdlrdata)->lpsize = 0;
+   }
+   assert((*exprhdlrdata)->lpsize == 0);
+   assert((*exprhdlrdata)->multilinearseparationlp == NULL);
+
+   SCIPfreeBlockMemory(scip, exprhdlrdata);
+   assert(*exprhdlrdata == NULL);
+
+   return SCIP_OKAY;
+}
+
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataProduct)
 {  /*lint --e{715}*/
@@ -900,7 +1337,97 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
    return SCIP_OKAY;
 }
 
-/** helper function to separate a given point; needed for proper unittest */
+/** separates a multilinear constraint of the form \f$ f(x) := a \Pi_{i = 1}^n x_i = w \f$ where \f$ x_i \f$ are the
+ * auxiliary variables of the children and \f$ w \f$ is the auxiliary variable of expr. If \f$ f(x^*) > w^* \f$, then we
+ * look for an affine underestimator of \f$ f(x) \f$ which separates \f$ (x^*, w^*) \f$ from the feasible region, i.e.
+ * \f$ g(x) := \alpha^T x + \beta \le f(x) = w \f$ for all \f$ x \f$ in the domain, such that \f$ \alpha x^* > w^* \f$.
+ *
+ * Since \f$ f(x) \f$ is componentwise linear, its convex envelope is piecewise linear and its value can be computed by
+ * finding the largest affine underestimator. Furthermore, it implies that \f$ g \f$ is an underestimator if and only if
+ * \f$ g(v^i) \leq f(v^i), \forall i \f$, where \f$ \{ v^i \}_{i = 1}^{2^n} \subseteq \mathbb R^n \f$ are the vertices
+ * of the domain of \f$ x \f$, \f$ [\ell,u] \f$. Hence, we can compute a linear underestimator by solving the following
+ * LP (we don't necessarily get a facet of the convex envelope, see Technical detail below):
+ *
+ * \f[
+ *              \max \, \alpha^T x^* + \beta
+ * \f]
+ * \f[
+ *     s.t. \; \sum_i \alpha^T v^i + \beta \le f(v^i), \, \forall i = 1, \ldots, 2^n
+ * \f]
+ *
+ * In principle, one would need to update the LP whenever the domain changes. However, \f$ [\ell,u] = T([0, 1]^n) \f$,
+ * where \f$ T \f$ is an affine linear invertible transformation given by \f$ T(y)_i = (u_i - \ell_i) y_i + \ell_i \f$.
+ * Working with the change of variables \f$ x = T(y) \f$ allows us to keep the constraints of the LP, even it the domain
+ * changes. Indeed, after the change of variables, the problem is: find an affine underestimator \f$ g \f$ such that \f$
+ * g(T(y)) \le f(T(y)) \f$, for all \f$ y \in [0, 1]^n \f$. Now \f$ f(T(y)) \f$ is componentwise affine, but still
+ * satisfies that \f$ g \f$ is a valid underestimator if and only if \f$ g(T(u)) \leq f(T(u)), \forall u \in \{0, 1\}^n
+ * \f$. So we now look for \f$ \bar g(y) := g(T(y)) = g(((u_i - \ell_i) y_i + \ell_i)_i) = \bar \alpha^T y + \bar \beta
+ * \f$, where \f$ \bar \alpha_i = (u_i - \ell_i) \alpha_i \f$ and \f$ \bar \beta = \sum_i \alpha_i \ell_i + \beta \f$. So
+ * we find \f$ \bar g \f$ by solving the LP:
+ *
+ * \f[
+ *              \max \, \bar \alpha^T T^{-1}(x^*) + \bar \beta
+ * \f]
+ * \f[
+ *     s.t. \; \sum_i \bar \alpha^T u + \bar \beta \le f(T(u)), \, \forall u \in \{0, 1\}^n
+ * \f]
+ *
+ * and recover \f$ g \f$ by solving \f$ \bar \alpha_i = (u_i - \ell_i) \alpha_i, \bar \beta = \sum_i \alpha_i \ell_i +
+ * \beta \f$. Notice that \f$ f(T(u^i)) = f(v^i) \f$ so the right hand side doesn't change after the change of variables
+ *
+ * Furthermore, the LP has more constraints than variables, so we solve its dual:
+ *
+ * \f[
+ *              \min \, \sum_i \lambda_i f(v^i)
+ * \f]
+ * \f[
+ *     s.t. \; \sum_i \lambda_i u^i = T^{-1}(x^*)
+ * \f]
+ * \f[
+ *             \sum_i \lambda_i = 1
+ * \f]
+ * \f[
+ *             \forall i, \, \lambda_i \geq 0
+ * \f]
+ *
+ * In case we violate the constraint in the other direction, i.e., \f$ f(x^*) < w^* \f$, we do exactly the same, but
+ * looking for an overestimator instead of an underestimator. This means, for the dual, that we have to maximize instead
+ * of minimize.
+ *
+ * #### Technical and implementation details
+ * -# The special case \f$ n = 2 \f$ is handle separately
+ * -# \f$ U \f$ has exponentially many variables, so we only apply this separator for \f$ n \leq 10 \f$
+ * -# We store a unique LP containing \f$ U = [u^1 | u^2 | \cdots | u^{2^n}] \f$, and \f$ U \f$ is build in such a way
+ * that its submatrices consisting of the first \f$ k \f$ rows and first \f$ 2^k \f$ columns contains all the vectors in
+ * \f$ \{0, 1\}^k \f$. This way, the same matrix can be used to separate a multilinear constraint with only \f$ k \f$
+ * variables just by fixing \f$ \lambda_i = 0, i > 2^k \f$ to 0. The \f$ n + 1 \f$-th row is the row representing the
+ * constraint \f$ \sum_i \lambda_i = 1 \f$, where \f$ n \f$ is the minimum between 10 and the maximum number of products
+ * among all product expressions.
+ * -# If the bounds are not finite, there is no underestimator. Also, \f$ T^{-1}(x^*) \f$ must be in the domain,
+ * otherwise the dual is infeasible
+ * -# In every iteration we set _all_ \f$ 2^n \f$ bounds and objective values. The reason is that different products
+ * have different number of children, so we might need to fix/unfix more variables
+ * -# If \f$ x^* \f$ is in the boundary of the domain, then the LP has infinitely many solutions, some of which might
+ * have very bad numerical properties. For this reason, we perturb \f$ x^* \f$ to be in the interior of the region.
+ * Furthermore, for some interior points, there might also be infinitely many solutions (e.g. for \f$ x y \f$ in \f$
+ * [0,1]^2 \f$ any point \f$ (x^*, y^*) \f$ such that \f$ y^* = 1 - x^* \f$ has infinitely many solutions). For this
+ * reason, we perturb any given \f$ x^* \f$. The idea is to try to get a facet of the convex/concave envelope. This only
+ * happens when the solution has \f$ n + 1 \f$ non zero \f$ \lambda \f$'s (i.e. the primal has a unique solution)
+ * -# We need to compute \f$ f(v^i) \f$ for every vertex of \f$ [\ell,u] \f$. A vertex is encoded by a number between 0
+ * and \f$ 2^n - 1 \f$, via its binary representation (0 bit is lower bound, 1 bit is upper bound), so we can compute
+ * all these values by iterating between 0 and \f$ 2^n - 1 \f$.
+ * @note This could be accelerated: Since \f$ f(v^i) = 0 \f$, whenever a component of the vertex is 0, we can sort the
+ * variables so that the first \f$ p \f$ have a 0.0 bound. This way, if \f$ i_0 \f$ is the first vertex such that \f$
+ * f(v^{i_0}) = 0 \f$, then we can loop increasing by \f$ 2^p \f$ in every iteration.
+ *
+ * @todo the solution is a facet if all variables of the primal have positive reduced costs (i.e. the solution is
+ * unique). In the dual, this means that there are \f$ n + 1 \f$ variables with positive value. Can we use this or some
+ * other information to handle any of both cases (point in the boundary or point in the intersection of polytopes
+ * defining different pieces of the convex envelope)? In the case where the point is in the boundary, can we use that
+ * information to maybe solve another to find a facet? How do the polytopes defining the pieces where the convex
+ * envelope is linear looks like, i.e, given a point in the interior of a facet of the domain, does the midpoint of the
+ * segment joining \f$ x^* \f$ with the center of the domain, always belongs to the interior of one of those polytopes?
+ */
 static
 SCIP_RETCODE separatePointProduct(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -993,15 +1520,15 @@ SCIP_RETCODE separatePointProduct(
       assert(SCIPisLE(scip, refpointy, SCIPvarGetUbLocal(y)) && SCIPisGE(scip, refpointy, SCIPvarGetLbLocal(y)));
 
       SCIPaddBilinMcCormick(scip, exprdata->coefficient, SCIPvarGetLbLocal(x), SCIPvarGetUbLocal(x), refpointx,
-         SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y), refpointy, overestimate, &lincoefx, &lincoefy, &linconstant,
-         &success);
+            SCIPvarGetLbLocal(y), SCIPvarGetUbLocal(y), refpointy, overestimate, &lincoefx, &lincoefy, &linconstant,
+            &success);
 
       /* @todo allow lhs/rhs of +/- infinity? */
       if( success && !SCIPisInfinity(scip, REALABS(linconstant)) )
       {
          /* McCormicks are only valid locally */
          SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "mccormick", 0, NULL, NULL, -SCIPinfinity(scip),
-               SCIPinfinity(scip), TRUE, FALSE, FALSE) );
+                  SCIPinfinity(scip), TRUE, FALSE, FALSE) );
 
          SCIP_CALL( SCIPaddVarToRow(scip, *cut, x, lincoefx) );
          SCIP_CALL( SCIPaddVarToRow(scip, *cut, y, lincoefy) );
@@ -1016,15 +1543,81 @@ SCIP_RETCODE separatePointProduct(
             SCIP_CALL( SCIPchgRowRhs(scip, *cut, -linconstant) );
          }
       }
+
+      return SCIP_OKAY;
    }
    else
    {
-      /* @todo can not be handled so far */
+      /* general case */
+      SCIP_CONSEXPR_EXPRHDLRDATA* exprhdlrdata;
+      SCIP_Real* facet;
+      SCIP_VAR** vars;
+      int nvars;
+      int i;
+
+      exprhdlrdata = SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlrProduct(conshdlr));
+
+      /* if LP is not constructed, build it now */
+      if( exprhdlrdata->lpsize == 0 )
+      {
+         assert(exprhdlrdata->multilinearseparationlp == NULL);
+
+         /* find out size of LP */
+         /* FIXME: here I want to loop over all product expressions to find the one that has the maximum number of children */
+         exprhdlrdata->lpsize = 10;
+
+         SCIP_CALL( buildMultilinearSeparationLP(scip, exprhdlrdata->lpsize, &(exprhdlrdata->multilinearseparationlp))
+               );
+      }
+      assert(exprhdlrdata->multilinearseparationlp != NULL);
+      assert(exprhdlrdata->lpsize > 0);
+
+      /* prepare data to compute the facet */
+      nvars = SCIPgetConsExprExprNChildren(expr);
+
+      /* allocate necessary memory */
+      SCIP_CALL( SCIPallocBufferArray(scip, &facet, nvars + 1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+
+      /* store variables */
+      for( i = 0; i < nvars; ++i )
+         vars[i] = SCIPgetConsExprExprLinearizationVar(SCIPgetConsExprExprChildren(expr)[i]);
+
+      /* compute facet */
+      SCIP_CALL( computeFacet(scip, exprhdlrdata->multilinearseparationlp, sol, vars, nvars, auxvar,
+               exprdata->coefficient, overestimate, &violation, facet) );
+
+      if( SCIPisLE(scip, violation, 0.0) )
+      {
+         /* free memory and return */
+         SCIPfreeBufferArray(scip, &vars);
+         SCIPfreeBufferArray(scip, &facet);
+
+         return SCIP_OKAY;
+      }
+
+      /* build cut; multilinear cuts are only valid locally */
+      SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "multilinear", 0, NULL, NULL, -SCIPinfinity(scip),
+               SCIPinfinity(scip), TRUE, FALSE, FALSE) );
+
+      SCIP_CALL( SCIPaddVarsToRow(scip, *cut, nvars, vars, facet) );
+      SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
+
+      if( overestimate )
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, *cut, -facet[nvars]) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, *cut, -facet[nvars]) );
+      }
+
+      SCIPfreeBufferArray(scip, &vars);
+      SCIPfreeBufferArray(scip, &facet);
    }
 
    return SCIP_OKAY;
 }
-
 
 /** expression separation callback */
 static
@@ -1134,13 +1727,20 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    )
 {
+   SCIP_CONSEXPR_EXPRHDLRDATA* exprhdlrdata;
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "prod",
-         "product of children with exponents (actually a signomial)", PRODUCT_PRECEDENCE, evalProduct, NULL) );
+   /* allocate expression handler data */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &exprhdlrdata) );
+
+   /* initialize all data in exprhdlrdata to 0/NULL */
+   BMSclearMemory(exprhdlrdata);
+
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "prod", "product of children",
+            PRODUCT_PRECEDENCE, evalProduct, exprhdlrdata) );
    assert(exprhdlr != NULL);
 
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrProduct, NULL) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrProduct, freehdlrProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataProduct, freedataProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrSimplify(scip, consexprhdlr, exprhdlr, simplifyProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCompare(scip, consexprhdlr, exprhdlr, compareProduct) );
