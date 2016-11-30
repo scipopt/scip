@@ -74,6 +74,7 @@ struct SCIP_Stat
    SCIP_Longint          ninfeasleaves;      /**< number of infeasible leaf nodes processed */
    SCIP_Longint          ntotalnodes;        /**< total number of nodes processed in all runs (including focus node) */
    SCIP_Longint          ntotalinternalnodes;/**< total number of nodes processed in all runs where a branching was performed */
+   SCIP_Longint          ntotalnodesmerged;  /**< total number of nodes added ot the statistics of the main SCIP so far (see SCIPmergeStatistics) */
    SCIP_Longint          ncreatednodes;      /**< total number of nodes created */
    SCIP_Longint          ncreatednodesrun;   /**< number of nodes created in current run */
    SCIP_Longint          nactivatednodes;    /**< number of times, a node got activated in current run */
