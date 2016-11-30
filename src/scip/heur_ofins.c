@@ -392,15 +392,12 @@ SCIP_RETCODE applyOfins(
    case SCIP_STATUS_INFORUNBD:
    case SCIP_STATUS_UNBOUNDED:
    {
-      SCIP_SOL* subprimalray;
       int nsubvars;
 
       nsubvars = SCIPgetNOrigVars(subscip);
 
-      /* get the primal ray of the subscip */
-      SCIP_CALL( SCIPgetPrimalRay(subscip, &subprimalray) );
-
-      if( subprimalray != NULL )
+      /* transfer the primal ray from the sub-SCIP to the main SCIP */
+      if( SCIPhasPrimalRay(subscip) )
       {
          SCIP_SOL* primalray;
 
@@ -410,7 +407,7 @@ SCIP_RETCODE applyOfins(
          for( i = 0; i < nsubvars; i++ )
          {
             SCIP_CALL( SCIPsetSolVal(scip, primalray, vars[SCIPvarGetProbindex(subvars[i])],
-                  SCIPgetSolVal(subscip, subprimalray, subvars[i])) );
+                  SCIPgetPrimalRayVal(subscip, subvars[i])) );
          }
 
          SCIPdebug( SCIP_CALL( SCIPprintRay(scip, primalray, 0, FALSE) ); );
@@ -418,8 +415,6 @@ SCIP_RETCODE applyOfins(
          /* update the primal ray of the source scip */
          SCIP_CALL( SCIPupdatePrimalRay(scip, primalray) );
          SCIP_CALL( SCIPfreeSol(scip, &primalray) );
-
-         SCIP_CALL( SCIPfreeSol(subscip, &subprimalray) );
 
          *result = SCIP_UNBOUNDED;
       }
