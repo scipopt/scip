@@ -530,10 +530,31 @@ SCIP_RETCODE extractCycle(
       if( stacknextedge[j] <= 0 )
       {
          SCIP_Bool nextlower = isIndexLowerbound(dfsstack[j+1]);
-         /* @todo since the coefficient and constant only depend on the type of bounds of the two nodes (see
-          * below), we could skip searching for the variable in the clique
+
+         /* there are four cases:
+          * a) lb(x) -> ub(y)   ==>   clique(x,y,...)    ==>   y <= 1 - x
+          * b) lb(x) -> lb(y)   ==>   clique(x,~y,...)   ==>   y >= x
+          * c) ub(x) -> ub(y)   ==>   clique(~x,y,...)   ==>   y <= x
+          * d) ub(x) -> lb(y)   ==>   clique(~x,~y,...)  ==>   y >= 1 - x
+          *
+          * in cases b) and c), coef=1.0 and constant=0.0; these are the cases where both nodes represent
+          * the same type of bound
+          * in cases a) and d), coef=-1.0 and constant=1.0; both nodes represent different types of bounds
+          *
+          * we do not need to change the overall coef and constant in cases b) and c), but for the others
           */
-         SCIP_VAR* nextvar = vars[getVarIndex(dfsstack[j+1])];
+         if( currlower != nextlower )
+         {
+            coef = -coef;
+            constant = -constant + 1.0;
+         }
+
+         /* since the coefficient and constant only depend on the type of bounds of the two nodes (see below), we do not
+          * need to search for the variable in the clique; however, if debug output is enabled, we want to print the
+          * clique, if more debugging is enabled, we explicitly check that the variable and bound we expect are in the
+          * clique
+          */
+#if defined(SCIP_DEBUG) || defined(SCIP_MORE_DEBUG)
          int ntmpcliques = SCIPvarGetNCliques(currvar, currlower);
          SCIP_CLIQUE** tmpcliques = SCIPvarGetCliques(currvar, currlower);
          SCIP_VAR** cliquevars;
@@ -558,7 +579,6 @@ SCIP_RETCODE extractCycle(
          cliquevars = SCIPcliqueGetVars(tmpcliques[k]);
          cliquevals = SCIPcliqueGetValues(tmpcliques[k]);
          ncliquevars = SCIPcliqueGetNVars(tmpcliques[k]);
-
 #ifdef SCIP_DEBUG
          SCIPdebugMsg(scip, "clique: ");
          for( v = 0; v < ncliquevars; ++v )
@@ -567,42 +587,23 @@ SCIP_RETCODE extractCycle(
          }
          SCIPdebugMsg(scip, "(equation:%d)\n", SCIPcliqueIsEquation(tmpcliques[k]));
 #endif
+#ifdef SCIP_MORE_DEBUG
          for( v = 0; v < ncliquevars; ++v )
          {
-            if( cliquevars[v] != nextvar )
-               continue;
-
-            if( cliquevals[v] == !nextlower )
+            if( cliquevars[v] == vars[getVarIndex(dfsstack[j+1])] && cliquevals[v] == !nextlower )
                break;
          }
          assert(v < ncliquevars);
-
-         /* there are four cases:
-          * a) lb(x) -> ub(y)   ==>   clique(x,y,...)    ==>   y <= 1 - x
-          * b) lb(x) -> lb(y)   ==>   clique(x,~y,...)   ==>   y >= x
-          * c) ub(x) -> ub(y)   ==>   clique(~x,y,...)   ==>   y <= x
-          * d) ub(x) -> lb(y)   ==>   clique(~x,~y,...)  ==>   y >= 1 - x
-          *
-          * in cases b) and c), coef=1.0 and constant=0.0; these are the cases where both nodes represent
-          * the same type of bound
-          * in cases a) and d), coef=-1.0 and constant=1.0; both nodes represent different types of bounds
-          *
-          * we do not need to change the overall coef and constant in cases b) and c), but for the others
-          */
-         if( currlower != nextlower )
-         {
-            coef = -coef;
-            constant = -constant + 1.0;
-         }
+#endif
 
          SCIPdebugMsg(scip, "%s(%s) -- (*%g + %g)[clique(<%s%s>,<%s%s>,...)] --> %s(%s)\n",
             indexGetBoundString(dfsstack[j]), SCIPvarGetName(currvar),
             (currlower != nextlower ? -1.0 : 1.0),
             (currlower != nextlower ? 1.0 : 0.0),
             (currlower ? "" : "~"), SCIPvarGetName(currvar),
-            (nextlower ? "~" : ""), SCIPvarGetName(nextvar),
+            (nextlower ? "~" : ""), SCIPvarGetName(vars[getVarIndex(dfsstack[j+1])]),
             indexGetBoundString(dfsstack[j+1]), SCIPvarGetName(currvar));
-
+#endif
       }
       else if( stacknextedge[j] <= ntmpimpls )
       {
