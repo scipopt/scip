@@ -303,8 +303,8 @@ SCIP_RETCODE constructCompression(
             while( covered[next_id % nleaveids] && (next_id % nleaveids) != current_id )
             {
                /* go to the next node if the intersection is empty */
-               if( (signature0[current_id] | signature0[next_id % nleaveids]) != signature0[current_id]
-                || (signature1[current_id] | signature1[next_id % nleaveids]) != signature1[current_id] )
+               if( (signature0[current_id] & signature0[next_id % nleaveids]) == 0
+                  && (signature1[current_id] & signature1[next_id % nleaveids]) == 0 )
                   next_id++;
                else
                   break;
@@ -320,8 +320,6 @@ SCIP_RETCODE constructCompression(
 
             ncommon_vars = 0;
 
-            /* @todo : ensure that the number of common variables is at least mincomvars */
-
             /* calculate the intersection */
             for( v = 0; v < nvars[next_id]; v++ )
             {
@@ -332,6 +330,7 @@ SCIP_RETCODE constructCompression(
                }
             }
 
+            /* the number of common variables should be at least mincomvars */
             if( ncommon_vars < comprdata->mincomvars )
                goto EMPTY;
 

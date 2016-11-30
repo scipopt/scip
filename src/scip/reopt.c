@@ -5369,7 +5369,7 @@ SCIP_RETCODE SCIPreoptAddRun(
    return SCIP_OKAY;
 }
 
-/** get the number of checked solution during the reoptimization process */
+/** get the number of checked solutions during the reoptimization process */
 int SCIPreoptGetNCheckedSols(
    SCIP_REOPT*           reopt               /**< reoptimization data structure */
    )
@@ -5861,8 +5861,6 @@ void SCIPreoptnodeGetConss(
       boundtypes[c] = reoptnode->conss[c]->boundtypes;
       nvars[c] = reoptnode->conss[c]->nvars;
    }
-
-   return;
 }
 
 /** set the parent id */
@@ -5872,7 +5870,7 @@ void SCIPreoptnodeSetParentID(
    )
 {
    assert(reoptnode != NULL);
-   assert(parentid <= 536870912); /* id can be at most 2^29 */
+   assert(parentid <= 536870911); /* id can be at most 2^29 - 1 */
 
    reoptnode->parentID = parentid;
 }
