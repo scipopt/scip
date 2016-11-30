@@ -12,6 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 /**@file   heur_repair.c
  * @brief  repair primal heuristic
  * @author Gregor Hendel
@@ -515,6 +516,10 @@ SCIP_RETCODE applyRepair(
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_repairsub", SCIPgetProbName(scip));
 
    SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+
+   /* author bzfhende: TODO try to only allocate a sub-SCIP solution if slack variables are used. Otherwise, it will be infeasible
+    * and need not be added
+    */
    SCIP_CALL( SCIPcreateSol(subscip, &subsol, heur) );
 
    /* Gets all original variables */
@@ -892,10 +897,7 @@ SCIP_RETCODE applyRepair(
 #endif
       SCIPwarningMessage(scip, "Error while presolving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n", retcode);
 
-      /* free */
-      SCIPfreeBufferArray(scip, &subvars);
-      SCIP_CALL( SCIPfree(&subscip) );
-      return SCIP_OKAY;
+      goto FREESCIP;
    }
    /* solve the subproblem */
    retcode = SCIPsolve(subscip);
@@ -973,7 +975,7 @@ TERMINATE:
    {
       SCIP_CALL( SCIPfree(&subscip) );
    }
-   SCIPdebugMsg(scip,"repair finished\n");
+   SCIPdebugMsg(scip, "repair finished\n");
    return SCIP_OKAY;
 }
 
@@ -1184,7 +1186,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    heurdata = SCIPheurGetData(heur);
    SCIPdebugMsg(scip, "%s\n", heurdata->filename);
 
-   /* if repair allready run, stop*/
+   /* if repair already run, stop*/
    if( 0 < SCIPheurGetNCalls(heur) && !(heurdata->usevarfix || heurdata->useslackvars) )
    {
       *result = SCIP_DIDNOTFIND;
