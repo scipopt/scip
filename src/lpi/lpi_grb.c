@@ -1658,10 +1658,14 @@ SCIP_RETCODE SCIPlpiAddRows(
    }
    else if ( lpi->nrngrows > 0 )
    {
+      int r;
+
       /* extend existing rngrowmap array */
       assert(lpi->rngrowmap != NULL);
       assert(lpi->rngrows != NULL);
       SCIP_CALL( ensureRngrowmapMem(lpi, oldnrows+nrows) );
+      for (r = oldnrows; r < oldnrows+nrows; r++)
+         lpi->rngrowmap[r] = -1;
    }
 
    checkRangeInfo(lpi);
