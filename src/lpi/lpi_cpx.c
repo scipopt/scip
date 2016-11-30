@@ -1833,7 +1833,9 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
+#if CPX_VERSION < 12070000
    int retcode;
+#endif
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -2031,7 +2033,9 @@ SCIP_RETCODE SCIPlpiGetSides(
    SCIP_Real*            rhss                /**< array to store right hand side values, or NULL */
    )
 {
+#if CPX_VERSION < 12070000
    int retval;
+#endif
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
