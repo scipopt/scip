@@ -963,7 +963,10 @@ SCIP_RETCODE reconvertSides(
             int row = firstrow+i;
             rhs[i] = lpi->rhsarray[i];
             if ( lpi->rngrowmap != NULL && lpi->rngrowmap[row] >= 0 )
+            {
+               assert(lpi->rngrowmap[row] < lpi->nrngrows);
                rhs[i] += lpi->rngvals[lpi->rngrowmap[row]];
+            }
          }
          break;
 
@@ -1607,7 +1610,7 @@ SCIP_RETCODE SCIPlpiAddRows(
       /* extend existing rngrowmap array */
       assert(lpi->rngrowmap != NULL);
       assert(lpi->rngrows != NULL);
-      SCIP_CALL( ensureRngrowmapMem(lpi, nrows) );
+      SCIP_CALL( ensureRngrowmapMem(lpi, oldnrows+nrows) );
    }
 
    return SCIP_OKAY;
@@ -1675,9 +1678,9 @@ SCIP_RETCODE SCIPlpiDelRows(
       /* move remaining ranged rows to the front */
       for (; i < lpi->nrngrows; i++)
       {
-         int row = lpi->rngrows[i];
-         lpi->rngrowmap[row] = nrngrows;
-         lpi->rngrows[nrngrows] = row;
+         int oldrow = lpi->rngrows[i];
+         lpi->rngrowmap[oldrow] = nrngrows; /* store at old place for now */
+         lpi->rngrows[nrngrows] = oldrow - ndelrows;
          lpi->rngvals[nrngrows] = lpi->rngvals[i];
          nrngrows++;
       }
@@ -1697,7 +1700,10 @@ SCIP_RETCODE SCIPlpiDelRows(
       /* move rngrowmap entries */
       SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
       for (i = firstrow; i < nrows; i++)
+      {
          lpi->rngrowmap[i] = lpi->rngrowmap[i+ndelrows];
+         assert(-1 <= lpi->rngrowmap[i] && lpi->rngrowmap[i] < lpi->nrngrows);
+      }
    }
 
    return SCIP_OKAY;
@@ -1757,15 +1763,15 @@ SCIP_RETCODE SCIPlpiDelRowset(
 
       for (i = 0; i < lpi->nrngrows; i++)
       {
-         int row = lpi->rngrows[i];
-         if ( dstat[row] >= 0 )
+         int oldrow = lpi->rngrows[i];
+         int newrow = dstat[oldrow];
+         if ( newrow >= 0 )
          {
-            lpi->rngrowmap[row] = nrngrows;
-            lpi->rngrows[nrngrows] = dstat[row];
+            lpi->rngrowmap[oldrow] = nrngrows; /* store at old place for now */
+            lpi->rngrows[nrngrows] = newrow;
+            lpi->rngvals[nrngrows] = lpi->rngvals[i];
             nrngrows++;
          }
-         else
-            lpi->rngrowmap[row] = -1;
       }
 
       if ( nrngrows < lpi->nrngrows && lpi->rngvarsadded )
@@ -1780,11 +1786,16 @@ SCIP_RETCODE SCIPlpiDelRowset(
 
       lpi->nrngrows = nrngrows;
 
+      /* move rngrowmap entries */
       for (i = 0; i < nrows; i++)
       {
-         assert(dstat[i] <= i);
-         if ( dstat[i] >= 0 )
-            lpi->rngrowmap[dstat[i]] = lpi->rngrowmap[i];
+         int newrow = dstat[i];
+         assert(newrow <= i);
+         if ( newrow >= 0 )
+         {
+            lpi->rngrowmap[newrow] = lpi->rngrowmap[i];
+            assert(-1 <= lpi->rngrowmap[newrow] && lpi->rngrowmap[newrow] < lpi->nrngrows);
+         }
       }
    }
 
@@ -1798,6 +1809,7 @@ void clearRangeInfo(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   assert(!lpi->rngvarsadded);
    BMSfreeMemoryArrayNull(&lpi->rngrowmap);
    BMSfreeMemoryArrayNull(&lpi->rngrows);
    BMSfreeMemoryArrayNull(&lpi->rngvals);
@@ -1919,6 +1931,8 @@ SCIP_RETCODE SCIPlpiChgSides(
       {
          int row = ind[i];
          int rngrowidx = lpi->rngrowmap[row];
+
+         assert(-1 <= rngrowidx && rngrowidx < lpi->nrngrows);
 
          if ( lpi->senarray[i] == GRB_EQUAL && lpi->rngarray[i] > 0.0 )
          {
@@ -2375,6 +2389,7 @@ SCIP_RETCODE SCIPlpiGetRows(
          /* remove non-zeros for range variables from rows */
          for (i = firstrow; i <= lastrow; i++)
          {
+            assert(-1 <= lpi->rngrowmap[i] && lpi->rngrowmap[i] < lpi->nrngrows);
             if ( lpi->rngrowmap[i] >= 0 )
                break;
          }
@@ -2388,6 +2403,7 @@ SCIP_RETCODE SCIPlpiGetRows(
             {
                int thebeg = beg[i];
                int theend = (i < lastrow ? beg[i+1] : *nnonz);
+               assert(-1 <= lpi->rngrowmap[i] && lpi->rngrowmap[i] < lpi->nrngrows);
                if ( lpi->rngrowmap[i] >= 0 )
                   theend--;
                memmove(&ind[newnz], &ind[thebeg], (theend - thebeg) * sizeof(*ind));
@@ -3696,6 +3712,7 @@ SCIP_RETCODE SCIPlpiGetSol(
             {
                /* get solution value of range variable */
                SCIP_Real solval;
+               assert(lpi->rngrowmap[i] < lpi->nrngrows);
                CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_X, ncols + lpi->rngrowmap[i], &solval) );
                activity[i] = lpi->rhsarray[i] + solval;
             }
@@ -3848,6 +3865,7 @@ SCIP_RETCODE SCIPlpiGetBase(
          {
             /* get range row basis status from corresponding range variable */
             int j = ncols + lpi->rngrowmap[i];
+            assert(lpi->rngrowmap[i] < lpi->nrngrows);
             CHECK_ZERO( lpi->messagehdlr, GRBgetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, &stat) );
          }
 
@@ -3944,6 +3962,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       if ( lpi->rngrowmap != NULL && lpi->rngrowmap[i] >= 0 )
       {
          /* set basis status of corresponding range variable; ranged row is always non-basic */
+         assert(lpi->rngrowmap[i] < lpi->nrngrows);
          CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_CBASIS, i, GRB_NONBASIC_LOWER) );
          attr = GRB_INT_ATTR_VBASIS;
          idx = ncols + lpi->rngrowmap[i];
@@ -4052,6 +4071,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
          assert(rngrow < lpi->nrngrows);
          assert(lpi->rngrowmap != NULL);
          assert(lpi->rngrows != NULL);
+         assert(lpi->rngrowmap[lpi->rngrows[rngrow]] == rngrow);
          bind[i] = -1 - lpi->rngrows[rngrow];
       }
       else
