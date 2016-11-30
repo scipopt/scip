@@ -10676,7 +10676,7 @@ SCIP_RETCODE SCIPsetProbName(
 SCIP_RETCODE SCIPchgReoptObjective(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_OBJSENSE         objsense,           /**< new objective function */
-   SCIP_VAR**            vars,               /**< problem variables */
+   SCIP_VAR**            vars,               /**< original problem variables */
    SCIP_Real*            coefs,              /**< objective coefficients */
    int                   nvars               /**< variables in vars array */
    )
@@ -10692,7 +10692,17 @@ SCIP_RETCODE SCIPchgReoptObjective(
    assert(nvars == 0 || coefs != NULL);
 
    origvars = scip->origprob->vars;
-   norigvars = scip->origprob->nobjvars;
+   norigvars = scip->origprob->nvars;
+
+#if SCIP_MORE_DEBUG
+   SCIPdebugMsg(scip, "objective function need to be set:\n");
+   for( i = 0; i < nvars; i++ )
+   {
+      if( !SCIPisZero(scip, coefs[i]) )
+         SCIPdebugMsg(scip, "%s%g <%s> ", SCIPisPositive(scip, coefs[i]) ? "+" : "", coefs[i], SCIPvarGetName(vars[i]));
+   }
+   SCIPdebugMsg(scip, "\n");
+#endif
 
    /* set all coefficients to 0, this is necessary because variables that are not given are assumed to have a
     * zero objective coefficient
@@ -10716,24 +10726,36 @@ SCIP_RETCODE SCIPchgReoptObjective(
    scip->origprob->objisintegral = FALSE;
 
 #ifndef NDEBUG
-   for( i = 0; i < scip->transprob->nvars; i++ )
-      assert(SCIPvarGetObj(scip->transprob->vars[i]) == 0.0);
+   if( scip->set->stage == SCIP_STAGE_PRESOLVED )
+   {
+      for( i = 0; i < scip->transprob->nvars; i++ )
+         assert(SCIPvarGetObj(scip->transprob->vars[i]) == 0.0);
+   }
 #endif
 
    /* set new objective values */
    for( i = 0; i < nvars; ++i )
    {
-      SCIP_VAR* origvar = vars[i];
-
-      if( !SCIPvarIsOriginal(origvar) )
+      if( !SCIPvarIsOriginal(vars[i]) )
       {
-         SCIP_Real constant = 0.0;
-         SCIP_Real scalar = 1.0;
-
-         SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+         SCIPerrorMessage("Cannot handle variable <%s> (status: %d) in SCIPchgReoptObjective().\n",
+               SCIPvarGetName(vars[i]), SCIPvarGetStatus(vars[i]));
+         return SCIP_INVALIDDATA;
       }
-      SCIP_CALL( SCIPaddVarObj(scip, origvar, objscalar * coefs[i]) );
+
+      SCIP_CALL( SCIPaddVarObj(scip, vars[i], objscalar * coefs[i]) );
    }
+
+#if SCIP_MORE_DEBUG
+   SCIPdebugMsg(scip, "new objective function:\n");
+   for( i = 0; i < norigvars; i++ )
+   {
+      SCIP_Real objval = SCIPvarGetObj(origvars[i]);
+      if( !SCIPisZero(scip, objval) )
+         SCIPdebugMsg(scip, "%s%g <%s> ", SCIPisPositive(scip, objval) ? "+" : "", objval, SCIPvarGetName(origvars[i]));
+   }
+   SCIPdebugMsg(scip, "\n");
+#endif
 
    return SCIP_OKAY;
 }
@@ -14624,8 +14646,8 @@ SCIP_RETCODE presolve(
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "presolved problem has %s%" SCIP_LONGINT_FORMAT " active (%g%%) nonzeros and %s%" SCIP_LONGINT_FORMAT " (%g%%) check nonzeros\n",
-            approxactivenonzeros ? "more than " : "", nactivenonzeros, nactivenonzeros/maxnonzeros * 100,
-            approxchecknonzeros ? "more than " : "", nchecknonzeros, nchecknonzeros/maxnonzeros * 100);
+            approxactivenonzeros ? "more than " : "", nactivenonzeros, maxnonzeros == 0 ? 0 : nactivenonzeros/maxnonzeros * 100,
+            approxchecknonzeros ? "more than " : "", nchecknonzeros, maxnonzeros == 0 ? 0 : nchecknonzeros/maxnonzeros * 100);
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
       }
    }
