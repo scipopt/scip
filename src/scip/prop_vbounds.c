@@ -533,7 +533,14 @@ SCIP_RETCODE extractCycle(
       if( stacknextedge[j] <= 0 )
       {
          SCIP_Bool nextlower = isIndexLowerbound(dfsstack[j+1]);
-
+#if defined(SCIP_DEBUG) || defined(SCIP_MORE_DEBUG)
+         SCIP_CLIQUE** tmpcliques = SCIPvarGetCliques(currvar, currlower);
+         SCIP_VAR** cliquevars;
+         SCIP_Bool* cliquevals;
+         int ntmpcliques = SCIPvarGetNCliques(currvar, currlower);
+         int ncliquevars;
+         int v;
+#endif
          /* there are four cases:
           * a) lb(x) -> ub(y)   ==>   clique(x,y,...)    ==>   y <= 1 - x
           * b) lb(x) -> lb(y)   ==>   clique(x,~y,...)   ==>   y >= x
@@ -558,13 +565,6 @@ SCIP_RETCODE extractCycle(
           * clique
           */
 #if defined(SCIP_DEBUG) || defined(SCIP_MORE_DEBUG)
-         int ntmpcliques = SCIPvarGetNCliques(currvar, currlower);
-         SCIP_CLIQUE** tmpcliques = SCIPvarGetCliques(currvar, currlower);
-         SCIP_VAR** cliquevars;
-         SCIP_Bool* cliquevals;
-         int ncliquevars;
-         int v;
-
          if( stacknextedge[j] == 0 )
          {
             k = ntmpcliques - 1;
