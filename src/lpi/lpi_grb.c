@@ -1618,6 +1618,19 @@ SCIP_RETCODE SCIPlpiDelColset(
    CHECK_ZERO( lpi->messagehdlr, GRBdelvars(lpi->grbmodel, num, which) );
    CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
+   /* update dstat */
+   num = 0;
+   for( j = 0; j < ncols; ++j )
+   {
+      if( dstat[j] )
+      {
+         dstat[j] = -1;
+         ++num;
+      }
+      else
+         dstat[j] = j - num;
+   }
+
    BMSfreeMemoryArray( &which );
 
    return SCIP_OKAY;
