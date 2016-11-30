@@ -1,4 +1,4 @@
-$(LIBOBJDIR)/lpi/lpi_xprs.o: src/lpi/lpi_xprs.c lib/xprsinc/xprs.h src/scip/bitencode.h \
+$(LIBOBJDIR)/lpi/lpi_xprs.o: src/lpi/lpi_xprs.c lib/include/xprsinc/xprs.h src/scip/bitencode.h \
  src/lpi/lpi.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/blockmemshell/memory.h src/lpi/type_lpi.h

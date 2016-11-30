@@ -197,6 +197,30 @@ SCIP_Real SCIPeventGetRowNewSideVal(
    SCIP_EVENT*           event               /**< event */
    );
 
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPeventGetType(event)                   ((event)->eventtype)
+#define SCIPeventGetOldobj(event)                 ((event)->data.eventobjchg.oldobj)
+#define SCIPeventGetNewobj(event)                 ((event)->data.eventobjchg.newobj)
+#define SCIPeventGetOldbound(event)               ((event)->data.eventbdchg.oldbound)
+#define SCIPeventGetNewbound(event)               ((event)->data.eventbdchg.newbound)
+#define SCIPeventGetNode(event)                   ((event)->data.node)
+#define SCIPeventGetSol(event)                    ((event)->data.sol)
+#define SCIPeventGetRowCol(event)                 ((event)->data.eventrowcoefchanged.col)
+#define SCIPeventGetRowOldCoefVal(event)          ((event)->data.eventrowcoefchanged.oldval)
+#define SCIPeventGetRowNewCoefVal(event)          ((event)->data.eventrowcoefchanged.newval)
+#define SCIPeventGetRowOldConstVal(event)         ((event)->data.eventrowconstchanged.oldval)
+#define SCIPeventGetRowNewConstVal(event)         ((event)->data.eventrowconstchanged.newval)
+#define SCIPeventGetRowSide(event)                ((event)->data.eventrowsidechanged.side)
+#define SCIPeventGetRowOldSideVal(event)          ((event)->data.eventrowsidechanged.oldval)
+#define SCIPeventGetRowNewSideVal(event)          ((event)->data.eventrowsidechanged.newval)
+
+#endif
+
 #ifdef __cplusplus
 }
 #endif

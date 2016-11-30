@@ -43,7 +43,9 @@ date                                >> $ERRFILE
 echo -----------------------------  >> $OUTFILE
 date +"@03 %s"                      >> $OUTFILE
 
-$EXECNAME                < $TMPFILE 2>>$ERRFILE | tee -a $OUTFILE
+#if we use a debugger command, we need to replace the errfile place holder by the actual err-file for logging
+EXECNAME=${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}
+bash -c "$EXECNAME                < $TMPFILE 2>>$ERRFILE"  | tee -a $OUTFILE
 retcode=${PIPESTATUS[0]}
 if test $retcode != 0
 then

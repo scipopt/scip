@@ -97,7 +97,6 @@ struct SCIP_ConsData
 
    unsigned int          mayincreasez:1;     /**< whether z can be increased without harming other constraints */
    unsigned int          maydecreasez:1;     /**< whether z can be decreased without harming other constraints */
-   SCIP_Bool             ispropagated;       /**< whether bound tightenings on z have been propagated */
    int                   eventfilterpos;     /**< position of z var events in SCIP event filter */
 
    SCIP_EXPRGRAPHNODE*   exprgraphnode;      /**< node in expression graph corresponding to bivariate function */
@@ -130,8 +129,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             ispropagated;       /**< whether the bounds on the variables in the expression graph have been propagated */
    SCIP*                 scip;               /**< SCIP data structure, needed in expression graph callbacks */
 
-   SCIP_NODE*            lastenfolpnode;     /**< the node for which enforcement was called the last time (and some constraint was violated) */
-   int                   nenfolprounds;      /**< counter on number of enforcement rounds for the current node */
+   SCIP_NODE*            lastenfonode;       /**< the node for which enforcement was called the last time (and some constraint was violated) */
+   int                   nenforounds;        /**< counter on number of enforcement rounds for the current node */
 };
 
 
@@ -149,13 +148,18 @@ struct SCIP_ConshdlrData
 static
 SCIP_DECL_EVENTEXEC(processLinearVarEvent)
 {
+   SCIP_CONS* cons;
+
    assert(scip != NULL);
    assert(event != NULL);
    assert(eventdata != NULL);
    assert(eventhdlr != NULL);
    assert(SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDTIGHTENED);
 
-   *((SCIP_Bool*)eventdata) = FALSE;
+   cons = (SCIP_CONS*) eventdata;
+   assert(cons != NULL);
+
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }
@@ -206,9 +210,9 @@ SCIP_RETCODE catchLinearVarEvents(
          eventtype |= SCIP_EVENTTYPE_LBTIGHTENED;
    }
 
-   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->z, eventtype, conshdlrdata->linvareventhdlr, (SCIP_EVENTDATA*)&consdata->ispropagated, &consdata->eventfilterpos) );
+   SCIP_CALL( SCIPcatchVarEvent(scip, consdata->z, eventtype, conshdlrdata->linvareventhdlr, (SCIP_EVENTDATA*)cons, &consdata->eventfilterpos) );
 
-   consdata->ispropagated = FALSE;
+   SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }
@@ -258,7 +262,7 @@ SCIP_RETCODE dropLinearVarEvents(
          eventtype |= SCIP_EVENTTYPE_LBTIGHTENED;
    }
 
-   SCIP_CALL( SCIPdropVarEvent(scip, consdata->z, eventtype, conshdlrdata->linvareventhdlr, (SCIP_EVENTDATA*)&consdata->ispropagated, consdata->eventfilterpos) );
+   SCIP_CALL( SCIPdropVarEvent(scip, consdata->z, eventtype, conshdlrdata->linvareventhdlr, (SCIP_EVENTDATA*)cons, consdata->eventfilterpos) );
    consdata->eventfilterpos = -1;
 
    return SCIP_OKAY;
@@ -4947,12 +4951,13 @@ SCIP_RETCODE registerBranchingVariables(
    return SCIP_OKAY;
 }
 
-/** registers a nonlinear variable from a violated constraint as branching candidate that has a large absolute value in the LP relaxation */
+/** registers a nonlinear variable from a violated constraint as branching candidate that has a large absolute value in the relaxation */
 static
-SCIP_RETCODE registerLargeLPValueVariableForBranching(
+SCIP_RETCODE registerLargeRelaxValueVariableForBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
    SCIP_VAR**            brvar               /**< buffer to store branching variable */
    )
 {
@@ -4985,7 +4990,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
          /* do not propose fixed variables */
          if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
             continue;
-         val = SCIPgetSolVal(scip, NULL, var);
+         val = SCIPgetSolVal(scip, sol, var);
          if( REALABS(val) > brvarval )
          {
             brvarval = REALABS(val);
@@ -5332,7 +5337,6 @@ SCIP_RETCODE propagateBounds(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA* consdata;
    SCIP_RESULT propresult;
    SCIP_Bool   redundant;
    SCIP_Bool   domainerror;
@@ -5370,9 +5374,7 @@ SCIP_RETCODE propagateBounds(
       {
          assert(conss[c] != NULL);  /*lint !e613*/
 
-         consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
-         assert(consdata != NULL);
-         if( !consdata->ispropagated )
+         if( SCIPconsIsMarkedPropagate(conss[c]) )
             break;
       }
       if( c == nconss )
@@ -5412,9 +5414,6 @@ SCIP_RETCODE propagateBounds(
          if( !SCIPconsIsEnabled(conss[c]) || SCIPconsIsDeleted(conss[c]) )
             continue;
 
-         consdata = SCIPconsGetData(conss[c]);
-         assert(consdata != NULL);
-
          SCIP_CALL( propagateBoundsCons(scip, conshdlr, conss[c], &propresult, nchgbds, &redundant) );
          if( propresult != SCIP_DIDNOTFIND && propresult != SCIP_DIDNOTRUN )
          {
@@ -5428,7 +5427,7 @@ SCIP_RETCODE propagateBounds(
             ++*ndelconss;
          }
 
-         consdata->ispropagated = TRUE;
+         SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[c]) );
       }
       if( *result == SCIP_CUTOFF )
          break;
@@ -5981,6 +5980,179 @@ SCIP_RETCODE createConsFromMonomial(
    return SCIP_OKAY;
 }
 
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA*     consdata;
+   SCIP_CONS*         maxviolcons;
+   SCIP_Real          maxviol;
+   SCIP_RESULT        propresult;
+   SCIP_RESULT        separateresult;
+   int                dummy;
+   int                nnotify;
+   SCIP_Real          sepaefficacy;
+   SCIP_Real          minefficacy;
+   SCIP_Real          leastpossibleefficacy;
+
+   assert(scip     != NULL);
+   assert(conshdlr != NULL);
+   assert(conss    != NULL || nconss == 0);
+   assert(result   != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, sol, &maxviolcons) );
+   if( maxviolcons == NULL )
+   {
+      *result = SCIP_FEASIBLE;
+      return SCIP_OKAY;
+   }
+
+   *result = SCIP_INFEASIBLE;
+
+   /* if we are above the 100'th enforcement round for this node, something is strange (maybe the relaxation does not
+    * think that the cuts we add are violated, or we do ECP on a high-dimensional convex function) in this case, check
+    * if some limit is hit or SCIP should stop for some other reason and terminate enforcement by creating a dummy node
+    * (in optimized more, returning SCIP_INFEASIBLE in *result would be sufficient, but in debug mode this would give an
+    * assert in scip.c) the reason to wait for 100 rounds is to avoid calls to SCIPisStopped in normal runs, which may
+    * be expensive we only increment nenforounds until 101 to avoid an overflow
+    */
+   if( conshdlrdata->lastenfonode == SCIPgetCurrentNode(scip) )
+   {
+      if( conshdlrdata->nenforounds > 100 )
+      {
+         if( SCIPisStopped(scip) )
+         {
+            SCIP_NODE* child;
+
+            SCIP_CALL( SCIPcreateChild(scip, &child, 1.0, SCIPnodeGetEstimate(SCIPgetCurrentNode(scip))) );
+            *result = SCIP_BRANCHED;
+
+            return SCIP_OKAY;
+         }
+      }
+      else
+         ++conshdlrdata->nenforounds;
+   }
+   else
+   {
+      conshdlrdata->lastenfonode = SCIPgetCurrentNode(scip);
+      conshdlrdata->nenforounds = 0;
+   }
+
+   consdata = SCIPconsGetData(maxviolcons);
+   assert(consdata != NULL);
+   maxviol = consdata->lhsviol + consdata->rhsviol;
+   assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
+
+   SCIPdebugMsg(scip, "enforcement with max violation %g in cons <%s> for %s solution\n", maxviol, SCIPconsGetName(maxviolcons),
+         sol == NULL ? "LP" : "relaxation");
+
+   /* run domain propagation */
+   dummy = 0;
+   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, &propresult, &dummy, &dummy) );
+   if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
+   {
+      *result = propresult;
+      return SCIP_OKAY;
+   }
+
+   /* we would like a cut that is efficient enough that it is not redundant in the LP (>feastol) however, if the maximal
+    * violation is very small, also the best cut efficacy cannot be large thus, in the latter case, we are also happy if
+    * the efficacy is at least, say, 75% of the maximal violation but in any case we need an efficacy that is at least
+    * feastol
+    */
+   minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfo);  /*lint !e666*/
+   minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, minefficacy, TRUE, &separateresult,
+         &sepaefficacy) );
+   if( separateresult == SCIP_SEPARATED || separateresult == SCIP_CUTOFF )
+   {
+      SCIPdebugMessage("separation succeeded (bestefficacy = %g, minefficacy = %g, cutoff = %d)\n", sepaefficacy,
+         minefficacy, separateresult == SCIP_CUTOFF);
+      *result = separateresult;
+      return SCIP_OKAY;
+   }
+
+   /* we are not feasible, the whole node is not infeasible, and we cannot find a good cut
+    * -> collect variables for branching
+    */
+
+   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy,
+      minefficacy, maxviol);
+
+   /* find branching candidates */
+   SCIP_CALL( registerBranchingVariables(scip, conss, nconss, &nnotify) );
+
+   /* if sepastore can decrease feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
+   leastpossibleefficacy = SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip);
+   if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
+   {
+      /* fallback 1: we also have no branching candidates, so try to find a weak cut */
+      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, leastpossibleefficacy, TRUE,
+            &separateresult, &sepaefficacy) );
+      if( separateresult == SCIP_SEPARATED || separateresult == SCIP_CUTOFF )
+      {
+         *result = separateresult;
+         return SCIP_OKAY;
+      }
+   }
+
+   if( nnotify == 0 && !solinfeasible )
+   {
+      /* fallback 2: separation probably failed because of numerical difficulties with a convex constraint;
+       * if noone declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching
+       */
+      SCIP_VAR* brvar = NULL;
+      SCIP_CALL( registerLargeRelaxValueVariableForBranching(scip, conss, nconss, sol, &brvar) );
+      if( brvar == NULL )
+      {
+         /* fallback 3: all nonlinear variables in all violated constraints seem to be fixed -> treat as linear
+          * constraint in one variable
+          */
+         SCIP_Bool reduceddom;
+         SCIP_Bool infeasible;
+
+         SCIP_CALL( enforceViolatedFixedNonlinear(scip, conss, nconss, &reduceddom, &infeasible) );
+         /* if the linear constraints are actually feasible, then adding them and returning SCIP_CONSADDED confuses SCIP
+          * when it enforces the new constraints again and nothing resolves the infeasiblity that we declare here thus,
+          * we only add them if considered violated, and otherwise claim the solution is feasible (but print a warning)
+          */
+         if ( infeasible )
+            *result = SCIP_CUTOFF;
+         else if ( reduceddom )
+            *result = SCIP_REDUCEDDOM;
+         else
+         {
+            *result = SCIP_FEASIBLE;
+            SCIPwarningMessage(scip, "could not enforce feasibility by separating or branching; declaring solution with viol %g as feasible\n", maxviol);
+         }
+         return SCIP_OKAY;
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "Could not find any usual branching variable candidate. Proposed variable <%s> with LP value %g for branching.\n",
+            SCIPvarGetName(brvar), SCIPgetSolVal(scip, sol, brvar));
+         nnotify = 1;
+      }
+   }
+
+   assert(*result == SCIP_INFEASIBLE && (solinfeasible || nnotify > 0));
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of constraint handler
  */
@@ -6083,6 +6255,9 @@ SCIP_DECL_CONSINITPRE(consInitpreBivariate)
       /* reset may{in,de}creasez to FALSE in case some values are still set from a previous solve round */
       consdata->mayincreasez = FALSE;
       consdata->maydecreasez = FALSE;
+
+      /* mark the constraint to be propagated */
+      SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );
    }
 
    return SCIP_OKAY;
@@ -6209,7 +6384,8 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
          SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[c]), 0.0,
                consdata->z != NULL ? 1 : 0, consdata->z != NULL ? &consdata->z : NULL, &consdata->zcoef,
                0, NULL, 0, NULL,
-               consdata->f, consdata->lhs, consdata->rhs) );  /*lint !e826 !e613*/
+               consdata->f, consdata->lhs, consdata->rhs,
+               consdata->convextype == SCIP_BIVAR_ALLCONVEX ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_UNKNOWN) );  /*lint !e826 !e613*/
 
          SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
          SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
@@ -6262,8 +6438,8 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
    }
 
    /* reset counter */
-   conshdlrdata->lastenfolpnode = NULL;
-   conshdlrdata->nenfolprounds = 0;
+   conshdlrdata->lastenfonode = NULL;
+   conshdlrdata->nenforounds = 0;
 
    return SCIP_OKAY;
 }
@@ -6648,154 +6824,17 @@ SCIP_DECL_CONSSEPASOL(consSepasolBivariate)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpBivariate)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSDATA*     consdata;
-   SCIP_CONS*         maxviolcons;
-   SCIP_Real          maxviol;
-   SCIP_RESULT        propresult;
-   SCIP_RESULT        separateresult;
-   int                dummy;
-   int                nnotify;
-   SCIP_Real          sepaefficacy;
-   SCIP_Real          minefficacy;
-   SCIP_Real          leastpossibleefficacy;
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, solinfeasible, result) );
 
-   assert(scip     != NULL);
-   assert(conshdlr != NULL);
-   assert(conss    != NULL || nconss == 0);
-   assert(result   != NULL);
+   return SCIP_OKAY;
+}
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxBivariate)
+{  /*lint --e{715}*/
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, solinfeasible, result) );
 
-   SCIP_CALL( computeViolations(scip, conshdlr, conss, nconss, NULL, &maxviolcons) );
-   if( maxviolcons == NULL )
-   {
-      *result = SCIP_FEASIBLE;
-      return SCIP_OKAY;
-   }
-
-   *result = SCIP_INFEASIBLE;
-
-   /* if we are above the 100'th enforcement round for this node, something is strange
-    * (maybe the LP does not think that the cuts we add are violated, or we do ECP on a high-dimensional convex function)
-    * in this case, check if some limit is hit or SCIP should stop for some other reason and terminate enforcement by creating a dummy node
-    * (in optimized more, returning SCIP_INFEASIBLE in *result would be sufficient, but in debug mode this would give an assert in scip.c)
-    * the reason to wait for 100 rounds is to avoid calls to SCIPisStopped in normal runs, which may be expensive
-    * we only increment nenfolprounds until 101 to avoid an overflow
-    */
-   if( conshdlrdata->lastenfolpnode == SCIPgetCurrentNode(scip) )
-   {
-      if( conshdlrdata->nenfolprounds > 100 )
-      {
-         if( SCIPisStopped(scip) )
-         {
-            SCIP_NODE* child;
-
-            SCIP_CALL( SCIPcreateChild(scip, &child, 1.0, SCIPnodeGetEstimate(SCIPgetCurrentNode(scip))) );
-            *result = SCIP_BRANCHED;
-
-            return SCIP_OKAY;
-         }
-      }
-      else
-         ++conshdlrdata->nenfolprounds;
-   }
-   else
-   {
-      conshdlrdata->lastenfolpnode = SCIPgetCurrentNode(scip);
-      conshdlrdata->nenfolprounds = 0;
-   }
-
-   consdata = SCIPconsGetData(maxviolcons);
-   assert(consdata != NULL);
-   maxviol = consdata->lhsviol + consdata->rhsviol;
-   assert(SCIPisGT(scip, maxviol, SCIPfeastol(scip)));
-
-   SCIPdebugMsg(scip, "enfolp with max violation %g in cons <%s>\n", maxviol, SCIPconsGetName(maxviolcons));
-
-   /* run domain propagation */
-   dummy = 0;
-   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, &propresult, &dummy, &dummy) );
-   if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
-   {
-      *result = propresult;
-      return SCIP_OKAY;
-   }
-
-   /* we would like a cut that is efficient enough that it is not redundant in the LP (>feastol)
-    * however, if the maximal violation is very small, also the best cut efficacy cannot be large
-    * thus, in the latter case, we are also happy if the efficacy is at least, say, 75% of the maximal violation
-    * but in any case we need an efficacy that is at least feastol
-    */
-   minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfo);  /*lint !e666*/
-   minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, minefficacy, TRUE, &separateresult, &sepaefficacy) );
-   if( separateresult == SCIP_SEPARATED || separateresult == SCIP_CUTOFF )
-   {
-      SCIPdebugMsg(scip, "separation succeeded (bestefficacy = %g, minefficacy = %g, cutoff = %d)\n", sepaefficacy, minefficacy, separateresult == SCIP_CUTOFF);
-      *result = separateresult;
-      return SCIP_OKAY;
-   }
-
-   /* we are not feasible, the whole node is not infeasible, and we cannot find a good cut
-    * -> collect variables for branching
-    */
-
-   SCIPdebugMsg(scip, "separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy, maxviol);
-
-   /* find branching candidates */
-   SCIP_CALL( registerBranchingVariables(scip, conss, nconss, &nnotify) );
-
-   /* if sepastore can decrease LP feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
-   leastpossibleefficacy = SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip);
-   if( nnotify == 0 && !solinfeasible && minefficacy > leastpossibleefficacy )
-   {
-      /* fallback 1: we also have no branching candidates, so try to find a weak cut */
-      SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, leastpossibleefficacy, TRUE, &separateresult, &sepaefficacy) );
-      if( separateresult == SCIP_SEPARATED || separateresult == SCIP_CUTOFF )
-      {
-         *result = separateresult;
-         return SCIP_OKAY;
-      }
-   }
-
-   if( nnotify == 0 && !solinfeasible )
-   {
-      /* fallback 2: separation probably failed because of numerical difficulties with a convex constraint;
-       * if noone declared solution infeasible yet and we had not even found a weak cut, try to resolve by branching
-       */
-      SCIP_VAR* brvar = NULL;
-      SCIP_CALL( registerLargeLPValueVariableForBranching(scip, conss, nconss, &brvar) );
-      if( brvar == NULL )
-      {
-         /* fallback 3: all nonlinear variables in all violated constraints seem to be fixed -> treat as linear constraint in one variable */
-         SCIP_Bool reduceddom;
-         SCIP_Bool infeasible;
-
-         SCIP_CALL( enforceViolatedFixedNonlinear(scip, conss, nconss, &reduceddom, &infeasible) );
-         /* if the linear constraints are actually feasible, then adding them and returning SCIP_CONSADDED confuses SCIP when it enforces the new constraints again and nothing resolves the infeasiblity that we declare here
-          * thus, we only add them if considered violated, and otherwise claim the solution is feasible (but print a warning)
-          */
-         if ( infeasible )
-            *result = SCIP_CUTOFF;
-         else if ( reduceddom )
-            *result = SCIP_REDUCEDDOM;
-         else
-         {
-            *result = SCIP_FEASIBLE;
-            SCIPwarningMessage(scip, "could not enforce feasibility by separating or branching; declaring solution with viol %g as feasible\n", maxviol);
-         }
-         return SCIP_OKAY;
-      }
-      else
-      {
-         SCIPdebugMsg(scip, "Could not find any usual branching variable candidate. Proposed variable <%s> with LP value %g for branching.\n", SCIPvarGetName(brvar), SCIPgetSolVal(scip, NULL, brvar));
-         nnotify = 1;
-      }
-   }
-
-   assert(*result == SCIP_INFEASIBLE && (solinfeasible || nnotify > 0));
    return SCIP_OKAY;
 }
 
@@ -7887,6 +7926,7 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpBivariate, consSepasolBivariate, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransBivariate) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxBivariate) );
 
    /* include the quadratic constraint upgrade in the quadratic constraint handler */
    SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, quadconsUpgdBivariate, QUADCONSUPGD_PRIORITY, FALSE, CONSHDLR_NAME) );

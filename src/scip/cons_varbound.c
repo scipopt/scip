@@ -97,7 +97,6 @@ struct SCIP_ConsData
    SCIP_VAR*             var;                /**< variable x that has variable bound */
    SCIP_VAR*             vbdvar;             /**< binary, integer or implicit integer bounding variable y */
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
-   unsigned int          propagated:1;       /**< is the variable bound constraint already propagated? */
    unsigned int          presolved:1;        /**< is the variable bound constraint already presolved? */
    unsigned int          varboundsadded:1;   /**< are the globally valid variable bounds added? */
    unsigned int          changed:1;          /**< was constraint changed since last aggregation round in preprocessing? */
@@ -296,7 +295,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->lhs = lhs;
    (*consdata)->rhs = rhs;
    (*consdata)->row = NULL;
-   (*consdata)->propagated = FALSE;
    (*consdata)->presolved = FALSE;
    (*consdata)->varboundsadded = FALSE;
    (*consdata)->changed = TRUE;
@@ -687,7 +685,7 @@ SCIP_RETCODE analyzeConflict(
       return SCIP_OKAY;
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
    /* add the bound which got violated */
    if( boundtype == SCIP_BOUNDTYPE_LOWER )
@@ -1037,9 +1035,10 @@ SCIP_RETCODE chgLhs(
    /* if left hand side got tighter, we want to do additional presolving on this constraint */
    if( SCIPisLT(scip, consdata->lhs, lhs) )
    {
-      consdata->propagated = FALSE;
       consdata->varboundsadded = FALSE;
       consdata->tightened = FALSE;
+
+      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
    }
 
    consdata->presolved = FALSE;
@@ -1119,9 +1118,10 @@ SCIP_RETCODE chgRhs(
    /* if right hand side got tighter, we want to do additional presolving on this constraint */
    if( SCIPisGT(scip, consdata->rhs, rhs) )
    {
-      consdata->propagated = FALSE;
       consdata->varboundsadded = FALSE;
       consdata->tightened = FALSE;
+
+      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
    }
 
    consdata->presolved = FALSE;
@@ -1171,10 +1171,6 @@ SCIP_RETCODE propagateCons(
    {
       SCIP_CALL( SCIPincConsAge(scip, cons) );
    }
-
-   /* check, if constraint is already propagated */
-   if( consdata->propagated )
-      return SCIP_OKAY;
 
    /* get current bounds of variables */
    xlb = SCIPvarGetLbLocal(consdata->var);
@@ -1460,12 +1456,53 @@ SCIP_RETCODE propagateCons(
          SCIPvarGetName(consdata->vbdvar), SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar));
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
 
+      /* this did not seem to help but should be tested again, there might also still be a bug in there */
+#ifdef SCIP_DISABLED_CODE
+      /* local duality fixing of variables in the constraint */
+      if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->vbdvar)) && SCIPvarGetNLocksDown(consdata->vbdvar) == 1
+         && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->vbdvar))
+         && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar))
+         && ((consdata->vbdcoef > 0.0 && !SCIPisInfinity(scip, -consdata->lhs))
+            || (consdata->vbdcoef < 0.0 && !SCIPisInfinity(scip, consdata->rhs))) )
+      {
+         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->vbdvar),
+            SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar), SCIPvarGetLbLocal(consdata->vbdvar));
+         SCIP_CALL( SCIPchgVarUb(scip, consdata->vbdvar, SCIPvarGetLbLocal(consdata->vbdvar)) );
+      }
+      else if( !SCIPisPositive(scip, SCIPvarGetObj(consdata->vbdvar)) && SCIPvarGetNLocksUp(consdata->vbdvar) == 1
+         && !SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->vbdvar))
+         && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar))
+         && ((consdata->vbdcoef < 0.0 && !SCIPisInfinity(scip, -consdata->lhs))
+            || (consdata->vbdcoef > 0.0 && !SCIPisInfinity(scip, consdata->rhs))) )
+      {
+         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->vbdvar),
+            SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar));
+         SCIP_CALL( SCIPchgVarLb(scip, consdata->vbdvar, SCIPvarGetUbLocal(consdata->vbdvar)) );
+      }
+      if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->var)) && SCIPvarGetNLocksDown(consdata->var) == 1
+         && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->var))
+         && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var))
+         && !SCIPisInfinity(scip, -consdata->lhs) )
+      {
+         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->var),
+            SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var), SCIPvarGetLbLocal(consdata->var));
+         SCIP_CALL( SCIPchgVarUb(scip, consdata->var, SCIPvarGetLbLocal(consdata->var)) );
+      }
+      else if( !SCIPisPositive(scip, SCIPvarGetObj(consdata->var)) && SCIPvarGetNLocksUp(consdata->var) == 1
+         && !SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->var))
+         && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var))
+         && !SCIPisInfinity(scip, consdata->rhs) )
+      {
+         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->var),
+            SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var));
+         SCIP_CALL( SCIPchgVarLb(scip, consdata->var, SCIPvarGetUbLocal(consdata->var)) );
+      }
+#endif
       if( ndelconss != NULL )
          (*ndelconss)++;
    }
 
-   /* mark the constraint propagated */
-   consdata->propagated = TRUE;
+   SCIP_CALL( SCIPunmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }
@@ -2124,7 +2161,8 @@ SCIP_RETCODE preprocessConstraintPairs(
                rhs = MIN(consdata1->rhs, rhs);
                coef = rhs - MIN(consdata1->rhs - consdata1->vbdcoef, consdata0->rhs - coef);
             }
-	    consdata0->propagated = FALSE;
+
+            SCIP_CALL( SCIPmarkConsPropagate(scip, cons0) );
          }
          else if( SCIPisPositive(scip, coef) == SCIPisPositive(scip, consdata1->vbdcoef)
             && ((!SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, -consdata1->lhs))
@@ -2354,11 +2392,12 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* mark to add new varbound information */
             consdata0->varboundsadded = FALSE;
 	    consdata0->tightened = FALSE;
-	    consdata0->propagated = FALSE;
 	    consdata0->presolved = FALSE;
 	    consdata0->changed = FALSE;
 
 	    consdata0->vbdcoef = coef;
+
+            SCIP_CALL( SCIPmarkConsPropagate(scip, cons0) );
          }
 
          /* update lhs and rhs of cons0 */
@@ -3424,7 +3463,7 @@ SCIP_RETCODE upgradeConss(
             continue;
       }
 
-      if( !consdata->propagated )
+      if( SCIPconsIsMarkedPropagate(cons) )
       {
          /* propagate constraint */
          SCIP_CALL( propagateCons(scip, cons, conshdlrdata->usebdwidening, cutoff, nchgbds, nchgsides, ndelconss) );
@@ -3872,6 +3911,46 @@ SCIP_DECL_CONSENFOLP(consEnfolpVarbound)
 }
 
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxVarbound)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int i;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   *result = SCIP_FEASIBLE;
+
+   for( i = 0; i < nconss; i++ )
+   {
+      if( !checkCons(scip, conss[i], sol, FALSE) )
+      {
+         assert((*result) == SCIP_INFEASIBLE || (*result) == SCIP_FEASIBLE);
+         (*result) = SCIP_INFEASIBLE;
+
+         SCIP_CALL( SCIPresetConsAge(scip, conss[i]) );
+
+         SCIP_CALL( separateCons(scip, conss[i], conshdlrdata->usebdwidening, sol, result) );
+         assert((*result) != SCIP_FEASIBLE);
+
+         if( (*result) != SCIP_INFEASIBLE )
+            break;
+      }
+      else
+      {
+         /* increase age of constraint */
+         SCIP_CALL( SCIPincConsAge(scip, conss[i]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsVarbound)
@@ -3960,11 +4039,12 @@ SCIP_DECL_CONSPROP(consPropVarbound)
    cutoff = FALSE;
    nchgbds = 0;
 
+   SCIPdebugMsg(scip, "propagating %d variable bound constraints\n", nmarkedconss);
+
    /* process constraints marked for propagation */
    for( i = 0; i < nmarkedconss && !cutoff; i++ )
    {
       SCIP_CALL( propagateCons(scip, conss[i], conshdlrdata->usebdwidening, &cutoff, &nchgbds, &nchgsides, NULL) );
-      SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[i]) );
    }
 
    if( cutoff )
@@ -4031,9 +4111,6 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       if( consdata->presolved )
          continue;
       consdata->presolved = TRUE;
-
-      /* make sure that the constraint is propagated */
-      consdata->propagated = FALSE;
 
       /* incorporate fixings and aggregations in constraint */
       SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, &cutoff, nchgbds, ndelconss, naddconss) );
@@ -4446,7 +4523,6 @@ SCIP_DECL_EVENTEXEC(eventExecVarbound)
    {
       assert((SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0);
 
-      consdata->propagated = FALSE;
       consdata->presolved = FALSE;
       consdata->tightened = FALSE;
 
@@ -4504,6 +4580,7 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpVarbound, consSepasolVarbound, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransVarbound) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxVarbound) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )
    {
@@ -4556,7 +4633,7 @@ SCIP_RETCODE SCIPcreateConsVarbound(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
