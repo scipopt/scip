@@ -26,6 +26,7 @@ features:
 - the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
   as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
   though the solutions required an addition NLP solve
+- new constraint handler for cardinality constraints
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
@@ -40,6 +41,11 @@ parameters:
 - setting a value for a fixed parameter will no longer return with an error, if the new value equals the one to which the parameter is fixed
 - parameters "misc/permutationseed", "misc/permuteconss", and "misc/permutevars" changed to "randomization/permutationseed",
   "randomization/permuteconss", and "randomization/permutevars"
+- new parameter constraints/cardinality/branchbalanced to decide whether to use a balanced branching scheme in the enforcing of cardinality
+  constraints
+- new parameter constraints/cardinality/balanceddepth to set the maximal depth until balanced branching is turned off
+- new parameter constraints/cardinality/balancedcutoff to determine that balanced branching is only used if the branching cut off value
+  w.r.t. the current LP solution is greater than a given value
 
 performance improvements:
 - knapsack approximation algorithms use linear-time weighted median selection instead of sorting
@@ -82,6 +88,15 @@ interface:
 - methods SCIPrandomPermute{Int}Array() substitutes SCIPpermuteRandom{Int}Array() (marked to be depricated)
 - method SCIPrandomGetSubset() substitutes SCIPgetRandomSubset() (marked to be depricated)
 - SCIPapplyHeurSubNlp() can now return the solution found by the sub-NLP heuristic
+- new function SCIPcreateConsCardinality() to create a cardinality constraint
+- new function SCIPcreateConsBasicCardinality() to create a basic cardinality constraint
+- new function SCIPchgCardvalCardinality() to changes cardinality value of cardinality constraint (i.e., right hand side of cardinality constraint)
+- new function SCIPaddVarCardinality() to add a variable to a cardinality constraint
+- new function SCIPappendVarCardinality() to append a variable to a cardinality constraint
+- new function SCIPgetNVarsCardinality() to get the number of variables in a cardinality constraint
+- new function SCIPgetVarsCardinality() to get the array of variables in a cardinality constraint
+- new function SCIPgetCardvalCardinality() to get the cardinality value of a cardinality constraint (i.e., right hand side of cardinality constraint)
+- new function SCIPgetWeightsCardinality() to get the array of weights of a cardinality constraint
 
 fixed bugs:
 
