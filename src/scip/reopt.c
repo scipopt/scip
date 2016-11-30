@@ -8007,8 +8007,6 @@ SCIP_RETCODE SCIPreoptAddCons(
    SCIP_CONS*            cons                /**< constraint to add */
    )
 {
-   int i;
-
    assert(reopt != NULL);
    assert(set != NULL);
    assert(blkmem != NULL);
