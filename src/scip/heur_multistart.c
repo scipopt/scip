@@ -48,6 +48,7 @@
 #define DEFAULT_NLPMINIMPR    0.00           /**< default factor by which heuristic should at least improve the incumbent */
 #define DEFAULT_GRADLIMIT     5e+6           /**< default limit for gradient computations for all improvePoint() calls */
 #define DEFAULT_MAXNCLUSTER   3              /**< default maximum number of considered clusters per heuristic call */
+#define DEFAULT_ONLYNLPS      TRUE           /**< should the heuristic run only on continuous problems? */
 
 #define MINFEAS               -1e+4          /**< minimum feasibility for a point; used for filtering and improving
                                               *   feasibility */
@@ -78,6 +79,7 @@ struct SCIP_HeurData
    SCIP_Real             nlpminimpr;         /**< factor by which heuristic should at least improve the incumbent */
    SCIP_Real             gradlimit;          /**< limit for gradient computations for all improvePoint() calls (0 for no limit) */
    int                   maxncluster;        /**< maximum number of considered clusters per heuristic call */
+   SCIP_Bool             onlynlps;           /**< should the heuristic run only on continuous problems? */
 };
 
 
@@ -955,7 +957,6 @@ SCIP_DECL_HEURFREE(heurFreeMultistart)
    return SCIP_OKAY;
 }
 
-
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
 SCIP_DECL_HEURINIT(heurInitMultistart)
@@ -975,7 +976,6 @@ SCIP_DECL_HEURINIT(heurInitMultistart)
 
    return SCIP_OKAY;
 }
-
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
@@ -1011,13 +1011,16 @@ SCIP_DECL_HEUREXEC(heurExecMultistart)
    if( !SCIPisNLPConstructed(scip) || heurdata->heursubnlp == NULL )
       return SCIP_OKAY;
 
+   /* check whether the heuristic should be applied for a problem containing integer variables */
+   if( heurdata->onlynlps && (SCIPgetNBinVars(scip) > 0 || SCIPgetNIntVars(scip) > 0) )
+      return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
 
    SCIP_CALL( applyHeur(scip, heur, heurdata, result) );
 
    return SCIP_OKAY;
 }
-
 
 /*
  * primal heuristic specific interface methods
@@ -1084,6 +1087,10 @@ SCIP_RETCODE SCIPincludeHeurMultistart(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxncluster",
          "maximum number of considered clusters per heuristic call",
          &heurdata->maxncluster, FALSE, DEFAULT_MAXNCLUSTER, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/onlynlps",
+         "should the heuristic run only on continuous problems?",
+         &heurdata->onlynlps, FALSE, DEFAULT_ONLYNLPS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
