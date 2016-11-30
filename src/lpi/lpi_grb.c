@@ -54,13 +54,13 @@ static unsigned char warnedbeta = 0;
 
 #define GRB_INFBOUND 1e+20
 
-#define CHECK_ZERO(messagehdlr, x) { int _restat_;                      \
+#define CHECK_ZERO(messagehdlr, x) do { int _restat_;                   \
       if( (_restat_ = (x)) != 0 )                                       \
       {                                                                 \
          SCIPmessagePrintWarning((messagehdlr), "Gurobi error %d: %s\n", _restat_, GRBgeterrormsg(grbenv)); \
          return SCIP_LPERROR;                                           \
       }                                                                 \
-   }
+   } while(0)
 
 #if GRB_VERSION_MAJOR == 6 && GRB_VERSION_MINOR == 0 && GRB_VERSION_TECHNICAL < 2
 struct _GRBsvec
@@ -1021,6 +1021,47 @@ SCIP_RETCODE restoreLPData(
    return SCIP_OKAY;
 }
 
+#ifndef NDEBUG
+/** verifies in debug mode that ranged row information is consistent */
+static
+void checkRangeInfo(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+  assert(lpi->rngrowssize >= lpi->nrngrows);
+
+   if ( lpi->nrngrows > 0 )
+   {
+      int nrngrows = 0;
+      int nrows;
+      int i;
+
+      assert(lpi->rngrowmap != NULL);
+      assert(lpi->rngrows != NULL);
+      assert(lpi->rngvals != NULL);
+
+      SCIP_CALL_ABORT( SCIPlpiGetNRows(lpi, &nrows) );
+
+      assert(lpi->rngrowmapsize >= nrows);
+
+      for (i = 0; i < nrows; i++)
+      {
+         int rngrow = lpi->rngrowmap[i];
+         assert(-1 <= rngrow && rngrow < lpi->nrngrows);
+         if ( rngrow >= 0 )
+         {
+            assert(lpi->rngrows[rngrow] == i);
+            assert(lpi->rngvals[rngrow] > 0.0);
+            nrngrows++;
+         }
+      }
+      assert(lpi->nrngrows == nrngrows);
+   }
+}
+#else
+#define checkRangeInfo(lpi) /**/
+#endif
+
 /** adds range variables to Gurobi LP */
 static
 SCIP_RETCODE addRangeVars(
@@ -1272,6 +1313,8 @@ SCIP_RETCODE SCIPlpiCreate(
       SCIPmessagePrintWarning(messagehdlr, "The Gurobi LPI is a beta version only - use with care.\n");
    }
 
+   checkRangeInfo(*lpi);
+
    return SCIP_OKAY;
 }
 
@@ -1404,6 +1447,8 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    }
 #endif
 
+   checkRangeInfo(lpi);
+
    return SCIP_OKAY;
 }
 
@@ -1456,6 +1501,8 @@ SCIP_RETCODE SCIPlpiAddCols(
       (SCIP_Real*)obj, (SCIP_Real*)lb, (SCIP_Real*)ub, NULL, colnames) );
    CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
+   checkRangeInfo(lpi);
+
    return SCIP_OKAY;
 }
 
@@ -1494,6 +1541,8 @@ SCIP_RETCODE SCIPlpiDelCols(
    CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
 
    BMSfreeMemoryArray( &which );
+
+   checkRangeInfo(lpi);
 
    return SCIP_OKAY;
 }
@@ -1547,6 +1596,8 @@ SCIP_RETCODE SCIPlpiDelColset(
    }
 
    BMSfreeMemoryArray( &which );
+
+   checkRangeInfo(lpi);
 
    return SCIP_OKAY;
 }
@@ -1612,6 +1663,8 @@ SCIP_RETCODE SCIPlpiAddRows(
       assert(lpi->rngrows != NULL);
       SCIP_CALL( ensureRngrowmapMem(lpi, oldnrows+nrows) );
    }
+
+   checkRangeInfo(lpi);
 
    return SCIP_OKAY;
 }
@@ -1705,6 +1758,8 @@ SCIP_RETCODE SCIPlpiDelRows(
          assert(-1 <= lpi->rngrowmap[i] && lpi->rngrowmap[i] < lpi->nrngrows);
       }
    }
+
+   checkRangeInfo(lpi);
 
    return SCIP_OKAY;
 }
@@ -1801,6 +1856,8 @@ SCIP_RETCODE SCIPlpiDelRowset(
 
    BMSfreeMemoryArray( &which );
 
+   checkRangeInfo(lpi);
+
    return SCIP_OKAY;
 }
 
@@ -1837,6 +1894,8 @@ SCIP_RETCODE SCIPlpiClear(
 
    /* clear ranged row info */
    clearRangeInfo(lpi);
+
+   checkRangeInfo(lpi);
 
    return SCIP_OKAY;
 }
@@ -1880,6 +1939,8 @@ SCIP_RETCODE SCIPlpiChgBounds(
    CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrlist(lpi->grbmodel, GRB_DBL_ATTR_UB, ncols, (int*)ind, (SCIP_Real*)ub) );
 
    CHECK_ZERO( lpi->messagehdlr, GRBupdatemodel(lpi->grbmodel) );
+
+   checkRangeInfo(lpi);
 
    return SCIP_OKAY;
 }
@@ -2010,6 +2071,8 @@ SCIP_RETCODE SCIPlpiChgSides(
       }
    }
 
+   checkRangeInfo(lpi);
+
    return SCIP_OKAY;
 }
 
@@ -2128,6 +2191,8 @@ SCIP_RETCODE SCIPlpiScaleRow(
       SCIP_CALL( SCIPlpiChgSides(lpi, 1, &row, &rhs, &lhs) );
    }
 
+   checkRangeInfo(lpi);
+
    return SCIP_OKAY;
 }
 
@@ -2192,6 +2257,8 @@ SCIP_RETCODE SCIPlpiScaleCol(
    {
       SCIP_CALL( SCIPlpiChgBounds(lpi, 1, &col, &ub, &lb) );
    }
+
+   checkRangeInfo(lpi);
 
    return SCIP_OKAY;
 }
@@ -2704,6 +2771,8 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
       }
    }
 
+   checkRangeInfo(lpi);
+
    return SCIP_OKAY;
 }
 
@@ -2815,6 +2884,8 @@ SCIP_RETCODE SCIPlpiSolveDual(
          SCIPerrorMessage("Gurobi dual simplex returned GRB_INF_OR_UNBD after presolving was turned off\n");
       }
    }
+
+   checkRangeInfo(lpi);
 
    return SCIP_OKAY;
 }
@@ -2936,6 +3007,9 @@ SCIP_RETCODE SCIPlpiSolveBarrier(
          SCIPerrorMessage("Gurobi dual simplex returned GRB_INF_OR_UNBD after presolving was turned off\n");
       }
    }
+
+   checkRangeInfo(lpi);
+
    return SCIP_OKAY;
 }
 
@@ -3160,6 +3234,8 @@ SCIP_RETCODE SCIPlpiStrongbranchFrac(
    /* pass call on to lpiStrongbranch() */
    SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
 
+   checkRangeInfo(lpi);
+
    return SCIP_OKAY;
 }
 
@@ -3197,6 +3273,9 @@ SCIP_RETCODE SCIPlpiStrongbranchesFrac(
       /* pass call on to lpiStrongbranch() */
       SCIP_CALL( lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
    }
+
+   checkRangeInfo(lpi);
+
    return SCIP_OKAY;
 }
 
@@ -3217,6 +3296,8 @@ SCIP_RETCODE SCIPlpiStrongbranchInt(
 {
    /* pass call on to lpiStrongbranch() */
    SCIP_CALL( lpiStrongbranch(lpi, col, psol, itlim, down, up, downvalid, upvalid, iter) );
+
+   checkRangeInfo(lpi);
 
    return SCIP_OKAY;
 }
@@ -3256,6 +3337,9 @@ SCIP_RETCODE SCIPlpiStrongbranchesInt(
       /* pass call on to lpiStrongbranch() */
       SCIP_CALL( lpiStrongbranch(lpi, cols[j], psols[j], itlim, &(down[j]), &(up[j]), &(downvalid[j]), &(upvalid[j]), iter) );
    }
+
+   checkRangeInfo(lpi);
+
    return SCIP_OKAY;
 }
 /**@} */
