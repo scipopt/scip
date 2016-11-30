@@ -5670,7 +5670,7 @@ SCIP_SOL* SCIPreoptGetBestSolRun(
    return reopt->prevbestsols[run-1];
 }
 
-/** reset solving specific paramters */
+/** reset solving specific parameters */
 SCIP_RETCODE SCIPreoptReset(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -5765,7 +5765,7 @@ int SCIPreoptGetNNodes(
 
 /** returns the number of bound changes stored in the reopttree at ID id */
 int SCIPreoptnodeGetNVars(
-   SCIP_REOPTNODE*       reoptnode           /**< node of the roepttree */
+   SCIP_REOPTNODE*       reoptnode           /**< node of the reopttree */
    )
 {
    assert(reoptnode != NULL);
@@ -5798,7 +5798,7 @@ int SCIPreoptnodeGetNDualBoundChgs(
 
 /** returns the number of child nodes of @p reoptnode */
 int SCIPreoptnodeGetNChildren(
-   SCIP_REOPTNODE*       reoptnode           /**< node of the reoptimizzation tree */
+   SCIP_REOPTNODE*       reoptnode           /**< node of the reoptimization tree */
    )
 {
    assert(reoptnode != NULL);

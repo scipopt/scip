@@ -10544,6 +10544,66 @@ SCIP_RETCODE SCIPsetProbName(
    return SCIPprobSetName(scip->origprob, name);
 }
 
+/** changes the objective function
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *
+ *  @note This method should be only used to change the objective function during two reoptimization runs and is only
+ *        recommended to an experienced user.
+ *
+ *  @note All variables not given in \p vars array are assumed to have an objective coefficient of zero.
+ */
+SCIP_RETCODE SCIPchgObjectiveFunction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_OBJSENSE         objsense,           /**< new objective function */
+   SCIP_VAR**            vars,               /**< problem variables */
+   SCIP_Real*            coefs,              /**< objective coefficients */
+   int                   nvars               /**< variables in vars array */
+   )
+{
+   SCIP_VAR** origvars;
+   SCIP_Real objscalar;
+   int norigvars;
+   int i;
+
+   SCIP_CALL( checkStage(scip, "SCIPchgObjectiveFunction", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || coefs != NULL);
+
+   origvars = scip->origprob->vars;
+   norigvars = scip->origprob->nobjvars;
+
+   /* set all coefficients to 0, this is necessary because variables that are not given are assumed to have a
+    * zero objective coefficient
+    */
+   for( i = 0; i < norigvars; i++ )
+   {
+      SCIP_CALL( SCIPchgVarObj(scip, origvars[i], 0.0) );
+   }
+
+   /* since we are not allowed to change the objective sense in SCIP_STAGE_PPRESOLVED, we multiply all coefficients
+    * with -1.0 if the objective sense needs to be changed
+    */
+   if( scip->origprob->objsense != objsense )
+      objscalar = -1.0;
+   else
+      objscalar = 1.0;
+
+   /* set new objective values */
+   for( i = 0; i < nvars; ++i )
+   {
+      SCIP_CALL( SCIPaddVarObj(scip, vars[i], objscalar * coefs[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** returns objective sense of original problem
  *
  *  @return objective sense of original problem

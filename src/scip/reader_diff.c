@@ -876,33 +876,14 @@ SCIP_RETCODE readObjective(
    SCIP_Real* coefs;
    int ncoefs;
    SCIP_Bool newsection;
-   SCIP_Real scalar = 1.0;
 
    assert(lpinput != NULL);
 
-   if( lpinput->objsense != SCIPgetObjsense(scip) )
-      scalar = -1.0;
-
    /* read the objective coefficients */
    SCIP_CALL( readCoefficients(scip, lpinput, TRUE, name, &vars, &coefs, &ncoefs, &newsection) );
-   if( !hasError(lpinput) )
-   {
-      int i;
-      SCIP_VAR** oldvars;
 
-      /* set all linear coefficients to 0 */
-      oldvars = SCIPgetOrigVars(scip);
-      for( i = 0; i < SCIPgetNOrigVars(scip); i++ )
-      {
-         SCIP_CALL( SCIPchgVarObj(scip, oldvars[i], 0.0) );
-      }
-
-      /* set the linear objective values */
-      for( i = 0; i < ncoefs; ++i )
-      {
-         SCIP_CALL( SCIPaddVarObj(scip, vars[i], scalar * coefs[i]) );
-      }
-   }
+   /* change the objective function */
+   SCIP_CALL( SCIPchgObjectiveFunction(scip, lpinput->objsense, vars, coefs, ncoefs) );
 
    /* free memory */
    SCIPfreeMemoryArrayNull(scip, &vars);
