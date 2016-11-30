@@ -739,14 +739,14 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       if( nstallnodes < heurdata->minnodes )
       {
          SCIPdebugMsg(scip, "skipping " HEUR_NAME ": nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
-         return SCIP_OKAY;
+         goto TERMINATE;
       }
 
       /* check whether there is enough time and memory left */
       SCIP_CALL( SCIPcheckCopyLimits(scip, &valid) );
 
       if( !valid )
-         return SCIP_OKAY;
+         goto TERMINATE;
 
       /* get all variables */
       SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
