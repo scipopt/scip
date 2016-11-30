@@ -527,6 +527,9 @@ SCIP_RETCODE extractCycle(
       /* if we do not use implications, we assume the number of implications to be 0 (as we did before) */
       ntmpimpls = (propdata->useimplics ? SCIPvarGetNImpls(currvar, currlower) : 0);
 
+      /* stacknextedge[j] <= 0 --> the last outgoing edge traversed during dfs starting from node dfsstack[j] was given
+       * by a clique
+       */
       if( stacknextedge[j] <= 0 )
       {
          SCIP_Bool nextlower = isIndexLowerbound(dfsstack[j+1]);
@@ -605,6 +608,10 @@ SCIP_RETCODE extractCycle(
             indexGetBoundString(dfsstack[j+1]), SCIPvarGetName(currvar));
 #endif
       }
+      /* stacknextedge[j] > 0 --> the last outgoing edge traversed during dfs starting from node dfsstack[j] was given
+       * by an implication or vbound. Implications are looked at first, so if stacknextedge[j] <= ntmpimpls, it comes
+       * from an implication
+       */
       else if( stacknextedge[j] <= ntmpimpls )
       {
 #ifndef NDEBUG
