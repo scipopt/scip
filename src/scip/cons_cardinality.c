@@ -2549,6 +2549,21 @@ SCIP_DECL_CONSENFOLP(consEnfolpCardinality)
    return SCIP_OKAY;
 }
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxCardinality)
+{  /*lint --e{715}*/
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( conss != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert( result != NULL );
+
+   SCIP_CALL( enforceCardinality(scip, conshdlr, sol, nconss, conss, result) );
+
+   return SCIP_OKAY;
+}
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsCardinality)
@@ -3051,6 +3066,7 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
    /*SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropCardinality) ); @todo: implement repropagation */
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpCardinality, consSepasolCardinality, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransCardinality) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxCardinality) );
 
    /* add cardinality constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/branchbalanced",
