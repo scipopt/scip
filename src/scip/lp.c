@@ -3163,7 +3163,8 @@ SCIP_RETCODE SCIPcolCreate(
    (*col)->flushedobj = 0.0;
    (*col)->flushedlb = 0.0;
    (*col)->flushedub = 0.0;
-   (*col)->index = stat->ncolidx++;
+   (*col)->index = stat->ncolidx;
+   SCIPstatIncrement(stat, set, ncolidx);
    (*col)->size = len;
    (*col)->len = len;
    (*col)->nlprows = 0;
@@ -4085,12 +4086,12 @@ void SCIPcolSetStrongbranchData(
    col->sbdownvalid = sbdownvalid;
    col->sbupvalid = sbupvalid;
 
-   stat->nstrongbranchs++;
-   stat->nsblpiterations += iter;
+   SCIPstatIncrement(stat, set, nstrongbranchs);
+   SCIPstatAdd(stat, set, nsblpiterations, iter);
    if( stat->nnodes == 1 )
    {
-      stat->nrootstrongbranchs++;
-      stat->nrootsblpiterations += iter;
+      SCIPstatIncrement(stat, set, nrootstrongbranchs);
+      SCIPstatAdd(stat, set, nrootsblpiterations, iter);
    }
 }
 
@@ -4260,12 +4261,12 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
                if( iter/2 >= itlim )
                   iter = 2*itlim;
             }
-            stat->nstrongbranchs++;
-            stat->nsblpiterations += iter;
+            SCIPstatIncrement(stat, set, nstrongbranchs);
+            SCIPstatAdd(stat, set, nsblpiterations, iter);
             if( stat->nnodes == 1 )
             {
-               stat->nrootstrongbranchs++;
-               stat->nrootsblpiterations += iter;
+               SCIPstatIncrement(stat, set, nrootstrongbranchs);
+               SCIPstatAdd(stat, set, nrootsblpiterations, iter);
             }
          }
 
@@ -4497,12 +4498,12 @@ SCIP_RETCODE SCIPcolGetStrongbranches(
          if( iter/2 >= itlim )
             iter = 2*itlim;
       }
-      stat->nstrongbranchs += ncols;
-      stat->nsblpiterations += iter;
+      SCIPstatAdd(stat, set, nstrongbranchs, ncols);
+      SCIPstatAdd(stat, set, nsblpiterations, iter);
       if( stat->nnodes == 1 )
       {
-         stat->nrootstrongbranchs += ncols;
-         stat->nrootsblpiterations += iter;
+         SCIPstatAdd(stat, set, nrootstrongbranchs, ncols);
+         SCIPstatAdd(stat, set, nrootsblpiterations, iter);
       }
    }
 
@@ -5008,7 +5009,8 @@ SCIP_RETCODE SCIProwCreate(
    (*row)->maxactivity = SCIP_INVALID;
    (*row)->origin = origin;
    (*row)->eventfilter = NULL;
-   (*row)->index = stat->nrowidx++;
+   (*row)->index = stat->nrowidx;
+   SCIPstatIncrement(stat, set, nrowidx);
    (*row)->size = len;
    (*row)->len = len;
    (*row)->nlpcols = 0;
@@ -7551,7 +7553,7 @@ SCIP_RETCODE SCIProwCatchEvent(
    assert((eventtype & ~SCIP_EVENTTYPE_ROWCHANGED) == 0);
    assert((eventtype &  SCIP_EVENTTYPE_ROWCHANGED) != 0);
 
-   SCIPsetDebugMsg(set, "catch event of type 0x%x of row <%s> with handler %p and data %p\n",
+   SCIPsetDebugMsg(set, "catch event of type 0x%"SCIP_EVENTTYPE_FORMAT" of row <%s> with handler %p and data %p\n",
       eventtype, row->name, (void*)eventhdlr, (void*)eventdata);
 
    SCIP_CALL( SCIPeventfilterAdd(row->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );
@@ -9900,46 +9902,46 @@ SCIP_RETCODE lpPrimalSimplex(
    }
 
    /* count number of iterations */
-   stat->lpcount++;
+   SCIPstatIncrement(stat, set, lpcount);
    SCIP_CALL( SCIPlpGetIterations(lp, &iterations) );
    if( iterations > 0 ) /* don't count the resolves after removing unused columns/rows */
    {
       if( !lp->strongbranchprobing )
       {
-         stat->nlps++;
-         stat->nlpiterations += iterations;
+         SCIPstatIncrement(stat, set, nlps);
+         SCIPstatAdd( stat, set, nlpiterations, iterations );
       }
       if( resolve && !lp->lpifromscratch && stat->nlps > 1 )
       {
-         stat->nprimalresolvelps++;
-         stat->nprimalresolvelpiterations += iterations;
+         SCIPstatIncrement(stat, set, nprimalresolvelps );
+         SCIPstatAdd(stat, set, nprimalresolvelpiterations, iterations);
       }
       if( lp->diving || lp->probing )
       {
          if( lp->strongbranchprobing )
          {
-            stat->nsbdivinglps++;
-            stat->nsbdivinglpiterations += iterations;
+            SCIPstatIncrement(stat, set, nsbdivinglps);
+            SCIPstatAdd(stat, set, nsbdivinglpiterations, iterations);
          }
          else
          {
-            stat->lastdivenode = stat->nnodes;
-            stat->ndivinglps++;
-            stat->ndivinglpiterations += iterations;
+            SCIPstatUpdate(stat, set, lastdivenode, stat->nnodes);
+            SCIPstatIncrement(stat, set, ndivinglps);
+            SCIPstatAdd(stat, set, ndivinglpiterations, iterations);
          }
       }
       else
       {
-         stat->nprimallps++;
-         stat->nprimallpiterations += iterations;
+         SCIPstatIncrement(stat, set, nprimallps);
+         SCIPstatAdd(stat, set, nprimallpiterations, iterations);
       }
    }
    else
    {
       if ( ! lp->diving && ! lp->probing )
       {
-         stat->nprimalzeroitlps++;
-         stat->primalzeroittime += timedelta;
+         SCIPstatIncrement(stat, set, nprimalzeroitlps);
+         SCIPstatAdd(stat, set, primalzeroittime, timedelta);
       }
 
       if ( keepsol && !(*lperror) )
@@ -10041,46 +10043,46 @@ SCIP_RETCODE lpDualSimplex(
    }
 
    /* count number of iterations */
-   stat->lpcount++;
+   SCIPstatIncrement(stat, set, lpcount);
    SCIP_CALL( SCIPlpGetIterations(lp, &iterations) );
    if( iterations > 0 ) /* don't count the resolves after removing unused columns/rows */
    {
       if( !lp->strongbranchprobing )
       {
-         stat->nlps++;
-         stat->nlpiterations += iterations;
+         SCIPstatIncrement(stat, set, nlps);
+         SCIPstatAdd(stat, set, nlpiterations, iterations);
       }
       if( resolve && !lp->lpifromscratch && stat->nlps > 1  )
       {
-         stat->ndualresolvelps++;
-         stat->ndualresolvelpiterations += iterations;
+         SCIPstatIncrement(stat, set, ndualresolvelps);
+         SCIPstatAdd(stat, set, ndualresolvelpiterations, iterations);
       }
       if( lp->diving || lp->probing )
       {
          if( lp->strongbranchprobing )
          {
-            stat->nsbdivinglps++;
-            stat->nsbdivinglpiterations += iterations;
+            SCIPstatIncrement(stat, set, nsbdivinglps);
+            SCIPstatAdd(stat, set, nsbdivinglpiterations, iterations);
          }
          else
          {
-            stat->lastdivenode = stat->nnodes;
-            stat->ndivinglps++;
-            stat->ndivinglpiterations += iterations;
+            SCIPstatUpdate(stat, set, lastdivenode, stat->nnodes);
+            SCIPstatIncrement(stat, set, ndivinglps);
+            SCIPstatAdd(stat, set, ndivinglpiterations, iterations);
          }
       }
       else
       {
-         stat->nduallps++;
-         stat->nduallpiterations += iterations;
+         SCIPstatIncrement(stat, set, nduallps);
+         SCIPstatAdd(stat, set, nduallpiterations, iterations);
       }
    }
    else
    {
       if ( ! lp->diving && ! lp->probing )
       {
-         stat->ndualzeroitlps++;
-         stat->dualzeroittime += timedelta;
+         SCIPstatIncrement(stat, set, ndualzeroitlps);
+         SCIPstatAdd(stat, set, dualzeroittime, timedelta);
       }
 
       if( keepsol && !(*lperror) )
@@ -10206,44 +10208,44 @@ SCIP_RETCODE lpLexDualSimplex(
    }
 
    /* count number of iterations */
-   stat->lpcount++;
+   SCIPstatIncrement(stat, set, lpcount);
    if( iterations > 0 ) /* don't count the resolves after removing unused columns/rows */
    {
       if( lp->strongbranchprobing )
       {
-         stat->nlpiterations += iterations;
+         SCIPstatAdd(stat, set, nlpiterations, iterations);
       }
       if( resolve && !lp->lpifromscratch && stat->nlps > 1  )
       {
-         stat->ndualresolvelps++;
-         stat->ndualresolvelpiterations += iterations;
+         SCIPstatIncrement(stat, set, ndualresolvelps);
+         SCIPstatAdd(stat, set, ndualresolvelpiterations, iterations);
       }
       if( lp->diving || lp->probing )
       {
          if( lp->strongbranchprobing )
          {
-            stat->nsbdivinglps++;
-            stat->nsbdivinglpiterations += iterations;
+            SCIPstatIncrement(stat, set, nsbdivinglps);
+            SCIPstatAdd(stat, set, nsbdivinglpiterations, iterations);
          }
          else
          {
-            stat->lastdivenode = stat->nnodes;
-            stat->ndivinglps++;
-            stat->ndivinglpiterations += iterations;
+            SCIPstatUpdate(stat, set, lastdivenode, stat->nnodes);
+            SCIPstatIncrement(stat, set, ndivinglps);
+            SCIPstatAdd(stat, set, ndivinglpiterations, iterations);
          }
       }
       else
       {
-         stat->nduallps++;
-         stat->nduallpiterations += iterations;
+         SCIPstatIncrement(stat, set, nduallps);
+         SCIPstatAdd(stat, set, nduallpiterations, iterations);
       }
    }
    else
    {
       if ( ! lp->diving && ! lp->probing )
       {
-         stat->ndualzeroitlps++;
-         stat->dualzeroittime += timedelta;
+         SCIPstatIncrement(stat, set, ndualzeroitlps);
+         SCIPstatAdd(stat, set, dualzeroittime, timedelta);
       }
    }
    lexIterations = 0;
@@ -10657,18 +10659,18 @@ SCIP_RETCODE lpLexDualSimplex(
 
       /* count number of iterations */
       if( totalIterations == 0 && lexIterations > 0 && !lp->strongbranchprobing )
-         stat->nlps++;
+         SCIPstatIncrement(stat, set, nlps);
 
       if( lexIterations > 0 ) /* don't count the resolves after removing unused columns/rows */
       {
-         stat->nlpiterations += lexIterations;
+         SCIPstatAdd(stat, set, nlpiterations, lexIterations);
          if( resolve && !lp->lpifromscratch && stat->nlps > 1  )
          {
-            stat->nlexdualresolvelps++;
-            stat->nlexdualresolvelpiterations += lexIterations;
+            SCIPstatIncrement(stat, set, nlexdualresolvelps);
+            SCIPstatAdd(stat, set, nlexdualresolvelpiterations, lexIterations);
          }
-         stat->nlexduallps++;
-         stat->nlexduallpiterations += lexIterations;
+         SCIPstatIncrement(stat, set, nlexduallps);
+         SCIPstatAdd(stat, set, nlexduallpiterations, lexIterations);
 
          totalIterations += lexIterations;
       }
@@ -10714,7 +10716,7 @@ SCIP_RETCODE lpLexDualSimplex(
    lp->solisbasic = TRUE;
 
    if( totalIterations > 0 && !lp->strongbranchprobing )
-      stat->nlps++;
+      SCIPstatIncrement(stat, set, nlps);
    else
    {
       if( keepsol && !(*lperror) )
@@ -10814,41 +10816,41 @@ SCIP_RETCODE lpBarrier(
    }
 
    /* count number of iterations */
-   stat->lpcount++;
+   SCIPstatIncrement(stat, set, lpcount);
    SCIP_CALL( SCIPlpGetIterations(lp, &iterations) );
    if( iterations > 0 ) /* don't count the resolves after removing unused columns/rows */
    {
       if( !lp->strongbranchprobing )
       {
-         stat->nlps++;
-         stat->nlpiterations += iterations;
+         SCIPstatIncrement(stat, set, nlps);
+         SCIPstatAdd(stat, set, nlpiterations, iterations);
       }
       if( lp->diving || lp->probing )
       {
          if( lp->strongbranchprobing )
          {
-            stat->nsbdivinglps++;
-            stat->nsbdivinglpiterations += iterations;
+            SCIPstatIncrement(stat, set, nsbdivinglps);
+            SCIPstatAdd(stat, set, nsbdivinglpiterations, iterations);
          }
          else
          {
-            stat->lastdivenode = stat->nnodes;
-            stat->ndivinglps++;
-            stat->ndivinglpiterations += iterations;
+            SCIPstatUpdate(stat, set, lastdivenode, stat->nnodes);
+            SCIPstatIncrement(stat, set, ndivinglps);
+            SCIPstatAdd(stat, set, ndivinglpiterations, iterations);
          }
       }
       else
       {
-         stat->nbarrierlps++;
-         stat->nbarrierlpiterations += iterations;
+         SCIPstatIncrement(stat, set, nbarrierlps);
+         SCIPstatAdd(stat, set, nbarrierlpiterations, iterations);
       }
    }
    else
    {
       if ( ! lp->diving && ! lp->probing )
       {
-         stat->nbarrierzeroitlps++;
-         stat->barrierzeroittime += timedelta;
+         SCIPstatIncrement(stat, set, nbarrierzeroitlps);
+         SCIPstatAdd(stat, set, barrierzeroittime, timedelta);
       }
 
       if( keepsol && !(*lperror) )
@@ -15168,7 +15170,7 @@ SCIP_RETCODE SCIPlpEndDive(
       }
 
       /* increment lp counter to ensure that we do not use solution values from the last solved diving lp */
-      stat->lpcount++;
+      SCIPstatIncrement(stat, set, lpcount);
 
       /* restore LP solution values in lp data, columns and rows */
       if( lp->storedsolvals->lpissolved &&

@@ -35,7 +35,11 @@
 #include "scip/type_clock.h"
 #include "scip/type_visual.h"
 #include "scip/type_history.h"
+#include "scip/type_var.h"
 #include "scip/type_lp.h"
+#include "scip/type_heur.h"
+#include "scip/type_relax.h"
+#include "scip/type_misc.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -129,6 +133,7 @@ struct SCIP_Stat
    SCIP_Real             lastupperbound;     /**< last upper bound (in transformed space) for integral evaluation */
    SCIP_Real             rootlpbestestimate; /**< best-estimate for final root LP solution that changes with every pseudo-cost update */
    SCIP_Real             referencebound;     /**< objective bound for reference purposes */
+   SCIP_Real             detertimecnt;       /**< internal counter for deterministic time */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           solvingtimeoverall; /**< total time used for solving (including presolving) during reoptimization */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
@@ -157,6 +162,7 @@ struct SCIP_Stat
    SCIP_STATUS           status;             /**< SCIP solving status */
    SCIP_BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
    SCIP_LPSOLSTAT        lastsblpsolstats[2];/**< last LP solving statuses for variable strong branching */
+   SCIP_Longint          nnz;                /**< number of nonzeros in presolved problem */
    SCIP_Longint          lpcount;            /**< internal counter, where all lp calls are counted; this includes the restored lps after diving and probing */
    SCIP_Longint          relaxcount;         /**< internal counter, where all relax calls are counted */
    SCIP_Longint          nlps;               /**< total number of LPs solved with at least 1 iteration */

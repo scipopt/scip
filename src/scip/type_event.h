@@ -31,6 +31,7 @@
 #include "scip/def.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
+#include <inttypes.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -88,6 +89,9 @@ extern "C" {
 #define SCIP_EVENTTYPE_ROWCONSTCHANGED 0x40000000u/**< the constant of a row has been changed (row specific event) */
 #define SCIP_EVENTTYPE_ROWSIDECHANGED 0x80000000u /**< a side of a row has been changed (row specific event) */
 
+/* sync event */
+#define SCIP_EVENTTYPE_SYNC          0x100000000u /**< synchronization event */
+
 /* event masks for variable events */
 #define SCIP_EVENTTYPE_GBDCHANGED     (SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED)
 #define SCIP_EVENTTYPE_LBCHANGED      (SCIP_EVENTTYPE_LBTIGHTENED | SCIP_EVENTTYPE_LBRELAXED)
@@ -120,8 +124,8 @@ extern "C" {
 #define SCIP_EVENTTYPE_ROWCHANGED     (SCIP_EVENTTYPE_ROWCOEFCHANGED | SCIP_EVENTTYPE_ROWCONSTCHANGED | SCIP_EVENTTYPE_ROWSIDECHANGED)
 #define SCIP_EVENTTYPE_ROWEVENT       (SCIP_EVENTTYPE_ROWADDEDSEPA | SCIP_EVENTTYPE_ROWDELETEDSEPA | SCIP_EVENTTYPE_ROWADDEDLP | SCIP_EVENTTYPE_ROWDELETEDLP | SCIP_EVENTTYPE_ROWCHANGED)
 
-typedef unsigned int SCIP_EVENTTYPE;         /**< type of event (bit field) */
-
+typedef uint64_t SCIP_EVENTTYPE;         /**< type of event (bit field) */
+#define SCIP_EVENTTYPE_FORMAT PRIx64
 
 typedef struct SCIP_Eventhdlr SCIP_EVENTHDLR;     /**< event handler for a specific events */
 typedef struct SCIP_EventhdlrData SCIP_EVENTHDLRDATA; /**< event handler data */

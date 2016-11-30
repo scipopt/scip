@@ -1863,11 +1863,11 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
       }
    }
 
-   stat->nboundchgs++;
+   SCIPstatIncrement(stat, set, nboundchgs);
 
    /* if we are in probing mode we have to additionally count the bound changes for the probing statistic */
    if( tree->probingroot != NULL )
-      stat->nprobboundchgs++;
+      SCIPstatIncrement(stat, set, nprobboundchgs);
 
    /* if the node is the root node: change local and global bound immediately */
    if( SCIPnodeGetDepth(node) <= tree->effectiverootdepth )

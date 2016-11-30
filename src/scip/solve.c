@@ -56,6 +56,8 @@
 #include "scip/prop.h"
 #include "scip/pub_misc.h"
 #include "scip/debug.h"
+#include "scip/concurrent.h"
+#include "scip/syncstore.h"
 
 
 #define MAXNLPERRORS  10                /**< maximal number of LP error loops in a single node */
@@ -76,7 +78,7 @@ SCIP_Bool SCIPsolveIsStopped(
    assert(stat != NULL);
 
    /* increase the number of calls to this method */
-   ++stat->nisstoppedcalls;
+   SCIPstatIncrement(stat, set, nisstoppedcalls);
 
    /* in case lowerbound >= upperbound, we do not want to terminate with SCIP_STATUS_GAPLIMIT but with the ordinary
     * SCIP_STATUS_OPTIMAL/INFEASIBLE/...
@@ -138,7 +140,7 @@ SCIP_Bool SCIPsolveIsStopped(
       else
          --stat->nclockskipsleft;
    }
-   if( SCIPgetMemTotal(set->scip) >= set->limit_memory*1048576.0 - stat->externmemestim )
+   if( SCIPgetConcurrentMemTotal(set->scip) >= set->limit_memory*1048576.0 - stat->externmemestim * (1 + SCIPgetNConcurrentSolvers(set->scip)) )
       stat->status = SCIP_STATUS_MEMLIMIT;
    else if( SCIPgetNLimSolsFound(set->scip) > 0
       && (SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap)
@@ -161,9 +163,9 @@ SCIP_Bool SCIPsolveIsStopped(
     * in the case of checknodelimits == FALSE, we do not want to report here that the solve will be stopped due to a nodelimit.
     */
    if( !checknodelimits )
-      return (stat->status != SCIP_STATUS_UNKNOWN && stat->status != SCIP_STATUS_NODELIMIT && stat->status != SCIP_STATUS_TOTALNODELIMIT && stat->status != SCIP_STATUS_STALLNODELIMIT);
+      return SCIPsyncstoreSolveIsStopped(SCIPgetSyncstore(set->scip)) || (stat->status != SCIP_STATUS_UNKNOWN && stat->status != SCIP_STATUS_NODELIMIT && stat->status != SCIP_STATUS_TOTALNODELIMIT && stat->status != SCIP_STATUS_STALLNODELIMIT);
    else
-      return (stat->status != SCIP_STATUS_UNKNOWN);
+      return SCIPsyncstoreSolveIsStopped(SCIPgetSyncstore(set->scip)) || (stat->status != SCIP_STATUS_UNKNOWN);
 }
 
 /** calls primal heuristics */
