@@ -14317,6 +14317,8 @@ SCIP_RETCODE presolve(
    assert(unbounded != NULL);
    assert(infeasible != NULL);
 
+   *unbounded = FALSE;
+
    /* switch status to unknown */
    scip->stat->status = SCIP_STATUS_UNKNOWN;
 
