@@ -37,6 +37,7 @@
 #include "scip/mem.h"
 #include "scip/var.h"
 #include "scip/history.h"
+#include "scip/concsolver.h"
 
 
 
@@ -95,6 +96,7 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->collectvarhistory = TRUE;
    (*stat)->performpresol = FALSE;
    (*stat)->subscipdepth = 0;
+   (*stat)->detertimecnt = 0.0;
    (*stat)->nreoptruns = 0;
 
    SCIPstatReset(*stat, set, transprob, origprob);
@@ -257,6 +259,7 @@ void SCIPstatReset(
    stat->nvaridx = stat->marked_nvaridx;
    stat->ncolidx = stat->marked_ncolidx;
    stat->nrowidx = stat->marked_nrowidx;
+   stat->nnz = 0;
    stat->lpcount = 0;
    stat->relaxcount = 0;
    stat->nlps = 0;

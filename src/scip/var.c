@@ -7195,7 +7195,7 @@ SCIP_RETCODE varProcessChgLbLocal(
     * once update the statistic
     */
    if( stat != NULL )
-      stat->domchgcount++;
+      SCIPstatIncrement(stat, set, domchgcount);
 
    if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM )
    {
@@ -7357,7 +7357,7 @@ SCIP_RETCODE varProcessChgUbLocal(
     * once update the statistic
     */
    if( stat != NULL )
-      stat->domchgcount++;
+      SCIPstatIncrement(stat, set, domchgcount);
 
    if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM )
    {
@@ -8664,15 +8664,14 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
       else
       {
          assert(set->stage == SCIP_STAGE_PROBLEM);
-
-         stat->domchgcount++;
+         SCIPstatIncrement(stat, set, domchgcount);
          SCIP_CALL( varProcessAddHoleLocal(var, blkmem, set, stat, eventqueue, left, right, added) );
       }
       break;
 
    case SCIP_VARSTATUS_COLUMN:
    case SCIP_VARSTATUS_LOOSE:
-      stat->domchgcount++;
+      SCIPstatIncrement(stat, set, domchgcount);
       SCIP_CALL( varProcessAddHoleLocal(var, blkmem, set, stat, eventqueue, left, right, added) );
       break;
 
@@ -9586,7 +9585,7 @@ SCIP_RETCODE SCIPvarAddVlb(
          assert(vlbcoef != 0.0);
 
          minvlb = -SCIPsetInfinity(set);
-         maxvlb = -SCIPsetInfinity(set);
+         maxvlb = SCIPsetInfinity(set);
 
          xlb = SCIPvarGetLbGlobal(var);
          xub = SCIPvarGetUbGlobal(var);
@@ -9755,7 +9754,7 @@ SCIP_RETCODE SCIPvarAddVlb(
              * b < 0: x >= (minvlb - maxvlb) * z + maxvlb
              */
 
-            assert(!SCIPsetIsInfinity(set, -maxvlb) && !SCIPsetIsInfinity(set, -minvlb));
+            assert(!SCIPsetIsInfinity(set, maxvlb) && !SCIPsetIsInfinity(set, -minvlb));
 
             if( vlbcoef >= 0.0 )
             {
@@ -9958,7 +9957,7 @@ SCIP_RETCODE SCIPvarAddVub(
          assert(SCIPvarGetStatus(vubvar) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(vubvar) == SCIP_VARSTATUS_COLUMN);
          assert(vubcoef != 0.0);
 
-         minvub = SCIPsetInfinity(set);
+         minvub = -SCIPsetInfinity(set);
          maxvub = SCIPsetInfinity(set);
 
          xlb = SCIPvarGetLbGlobal(var);
@@ -10119,7 +10118,7 @@ SCIP_RETCODE SCIPvarAddVub(
              * b < 0: x <= (minvub - maxvub) * z + maxvub
              */
 
-            assert(!SCIPsetIsInfinity(set, maxvub) && !SCIPsetIsInfinity(set, minvub));
+            assert(!SCIPsetIsInfinity(set, maxvub) && !SCIPsetIsInfinity(set, -minvub));
 
             if( vubcoef >= 0.0 )
             {
@@ -17654,7 +17653,7 @@ SCIP_RETCODE SCIPvarCatchEvent(
    assert((eventtype & SCIP_EVENTTYPE_VARCHANGED) != 0);
    assert(SCIPvarIsTransformed(var));
 
-   SCIPsetDebugMsg(set, "catch event of type 0x%x of variable <%s> with handler %p and data %p\n",
+   SCIPsetDebugMsg(set, "catch event of type 0x%"SCIP_EVENTTYPE_FORMAT" of variable <%s> with handler %p and data %p\n",
       eventtype, var->name, (void*)eventhdlr, (void*)eventdata);
 
    SCIP_CALL( SCIPeventfilterAdd(var->eventfilter, blkmem, set, eventtype, eventhdlr, eventdata, filterpos) );

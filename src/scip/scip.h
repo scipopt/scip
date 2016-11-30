@@ -64,6 +64,8 @@
 #include "scip/type_sepa.h"
 #include "scip/type_prop.h"
 #include "nlpi/type_nlpi.h"
+#include "scip/type_concsolver.h"
+#include "scip/type_syncstore.h"
 
 /* include public interfaces, s.t. the user only needs to include scip.h */
 #include "scip/pub_branch.h"
@@ -380,7 +382,6 @@ EXTERN
 SCIP_Bool SCIPisStopped(
    SCIP*                 scip                /**< SCIP data structure */
    );
-
 
 /**@} */
 
@@ -3819,6 +3820,51 @@ SCIP_RETCODE SCIPsetPropPresolPriority(
    );
 
 
+/** creates a concurrent solver type and includes it in SCIP.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPincludeConcsolverType(
+   SCIP*                               scip,                       /**< SCIP data structure */
+   const char*                         name,                       /**< name of concurrent_solver */
+   SCIP_Real                           prefpriodefault,            /**< the default preferred priority of this concurrent solver type */
+   SCIP_DECL_CONCSOLVERCREATEINST      ((*concsolvercreateinst)),  /**< data copy method of concurrent solver */
+   SCIP_DECL_CONCSOLVERDESTROYINST     ((*concsolverdestroyinst)), /**< data copy method of concurrent solver */
+   SCIP_DECL_CONCSOLVERINITSEEDS       ((*concsolverinitseeds)),   /**< initialize random seeds of concurrent solver */
+   SCIP_DECL_CONCSOLVEREXEC            ((*concsolverexec)),        /**< execution method of concurrent solver */
+   SCIP_DECL_CONCSOLVERCOPYSOLVINGDATA ((*concsolvercopysolvdata)),/**< method to copy solving data */
+   SCIP_DECL_CONCSOLVERSTOP            ((*concsolverstop)),        /**< terminate solving in concurrent solver */
+   SCIP_DECL_CONCSOLVERSYNCWRITE       ((*concsolversyncwrite)),   /**< synchronization method of concurrent solver */
+   SCIP_DECL_CONCSOLVERSYNCREAD        ((*concsolversyncread)),    /**< synchronization method of concurrent solver */
+   SCIP_DECL_CONCSOLVERTYPEFREEDATA    ((*concsolvertypefreedata)),/**< method to free data of concurrent solver type */
+   SCIP_CONCSOLVERTYPEDATA*            data                        /**< the concurent solver type's data */
+   );
+
+/** returns the concurrent solver type with the given name, or NULL if not existing */
+EXTERN
+SCIP_CONCSOLVERTYPE* SCIPfindConcsolverType(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of concurrent_solver */
+   );
+
+/** returns the array of included concurrent solver types */
+EXTERN
+SCIP_CONCSOLVERTYPE** SCIPgetConcsolverTypes(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the number of included concurrent solver types */
+EXTERN
+int SCIPgetNConcsolverTypes(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** creates a primal heuristic and includes it in SCIP.
  *
  *  @note method has all heuristic callbacks as arguments and is thus changed every time a new
@@ -4567,6 +4613,13 @@ int SCIPgetNDisps(
 EXTERN
 SCIP_RETCODE SCIPautoselectDisps(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** changes the display column mode */
+EXTERN
+void SCIPchgDispMode(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_DISPMODE         mode                /**< the display column mode */
    );
 
 /** includes an NLPI in SCIP */
@@ -6597,6 +6650,33 @@ SCIP_RETCODE SCIPpresolve(
  */
 EXTERN
 SCIP_RETCODE SCIPsolve(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** transforms, presolves, and solves problem using additional solvers which emphasize on
+ * finding solutions.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @post After calling this method \SCIP reaches one of the following stages depending on if and when the solution
+ *        process was interrupted:
+ *        - \ref SCIP_STAGE_PRESOLVING if the solution process was interrupted during presolving
+ *        - \ref SCIP_STAGE_SOLVING if the solution process was interrupted during the tree search
+ *        - \ref SCIP_STAGE_SOLVED if the solving process was not interrupted
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPsolveParallel(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -18304,6 +18384,94 @@ void SCIPsetFocusnodeLP(
 
 
 /*
+ * parallel interface methods
+ */
+
+/**@name Parallel Interface Methods */
+/**@{ */
+
+/** Constructs the parallel interface to execute processes concurrently.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPconstructSyncstore(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** releases the current synchronization store
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPfreeSyncstore(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** Gets the synchronization store.
+ *
+ *  @return the \ref SCIP_SPI* parallel interface pointer to submit jobs for concurrent processing.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_SYNCSTORE* SCIPgetSyncstore(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@} */
+
+
+
+/*
  * reoptimization methods
  */
 
@@ -20091,6 +20259,20 @@ SCIP_Real SCIPgetAvgCutoffScore(
  */
 EXTERN
 SCIP_Real SCIPgetAvgCutoffScoreCurrentRun(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets deterministic time number of LPs solved so far
+ *
+ *  @return the total number of LPs solved so far
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_Real SCIPgetDeterministicTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

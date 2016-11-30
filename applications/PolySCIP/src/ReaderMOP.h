@@ -12,38 +12,34 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   ReaderMOP.h
- * @brief  mop reader
+/**
+ * @brief .mop file format reader
  * @author Sebastian Schenker, Timo Strunk
  *
- * The mop-reader adapts the mps-reader of SCIP by the functionality to read multiple objectives.
- *
+ * Adaption of SCIP MPS reader towards MOP format with multiple objectives.
  * The input file has to follow some simple conventions
  * - It has to contain a problem in 
  * <a href="http://en.wikipedia.org/wiki/MPS_%28format%29">MPS</a> format
  * - The file extension must be <code>.mop</code>
  * - Every row marked <code>N</code> is treated as an objective
- *
  */
 
-#ifndef _GUARD_READER_MOP_H_
-#define _GUARD_READER_MOP_H_
+#ifndef POLYSCIP_SRC_READER_MOP_H_INCLUDED
+#define POLYSCIP_SRC_READER_MOP_H_INCLUDED
 
 #include "objscip/objscip.h"
 
 class ReaderMOP : public scip::ObjReader {
- public:
+public:
+    ReaderMOP(SCIP *scip)
+            : scip::ObjReader(scip, "MOP Reader", "file reader for MOP file", "mop") { };
 
- ReaderMOP(SCIP* scip)
-   : scip::ObjReader(scip, "MOP Reader", "file reader for MOP file", "mop")
-    {}  
-  
-  virtual ~ReaderMOP() {}
-  
-  virtual SCIP_DECL_READERFREE(scip_free);
-  
-  virtual SCIP_DECL_READERREAD(scip_read);
+    virtual ~ReaderMOP() { };
+
+    virtual SCIP_DECL_READERFREE(scip_free);
+
+    virtual SCIP_DECL_READERREAD(scip_read);
 
 };
 
-#endif
+#endif //POLYSCIP_SRC_READER_MOP_H_INCLUDED

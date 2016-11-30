@@ -32,6 +32,7 @@
 #include "scip/type_stat.h"
 #include "scip/type_mem.h"
 #include "scip/pub_message.h"
+#include "scip/concurrent.h"
 
 #include "scip/struct_stat.h"
 
@@ -189,6 +190,94 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
    SCIP_VAR*             var,                /**< variable with changed pseudo costs */
    SCIP_Real             oldrootpscostscore  /**< old minimum pseudo cost score of variable */
    );
+
+#ifdef TPI_NONE
+/* no TPI included so just update the stats */
+
+#define SCIPstatUpdate(stat, set, field, val) do { \
+  (stat)->field = (val); \
+  } while(0)
+
+#define SCIPstatIncrement(stat, set, field) do { \
+   ++(stat)->field; \
+   } while(0)
+
+#define SCIPstatAdd(stat, set, field, val) do { \
+   (stat)->field += (val); \
+   } while(0)
+
+#else
+/* TPI not none, so increment deterministic time for relevant stats */
+
+#define SCIPupdateDeterministicTimeCount(stat, set, val) do { \
+        (stat)->detertimecnt += (val); \
+        if( (stat)->detertimecnt > 10000.0 ) { \
+            SCIPincrementConcurrentTime( (set)->scip, (stat)->detertimecnt * 1e-6 ); \
+            (stat)->detertimecnt = 0.0; \
+        }\
+    } while(0) \
+
+#define SCIPstatUpdate(stat, set, field, val) do { \
+   switch( offsetof(SCIP_STAT, field) ) \
+   { \
+      default: \
+         break; \
+      case offsetof(SCIP_STAT, nprimalresolvelpiterations): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.00328285264101 * ((val) - (stat)->field) * (stat)->nnz ); \
+         break; \
+      case offsetof(SCIP_STAT, ndualresolvelpiterations): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.00531625104146 * ((val) - (stat)->field) * (stat)->nnz ); \
+         break; \
+      case offsetof(SCIP_STAT, nprobboundchgs): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.000738719124051 * ((val) - (stat)->field) * (stat)->nnz ); \
+         break; \
+      case offsetof(SCIP_STAT, nisstoppedcalls): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.0011123144764 * ((val) - (stat)->field) * (stat)->nnz ); \
+   } \
+   (stat)->field = (val); \
+   } while(0)
+
+
+#define SCIPstatIncrement(stat, set, field) do { \
+   switch( offsetof(SCIP_STAT, field) ) \
+   { \
+      default: \
+         break; \
+      case offsetof(SCIP_STAT, nprimalresolvelpiterations): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.00328285264101 * (stat)->nnz ); \
+         break; \
+      case offsetof(SCIP_STAT, ndualresolvelpiterations): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.00531625104146 * (stat)->nnz ); \
+         break; \
+      case offsetof(SCIP_STAT, nprobboundchgs): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.000738719124051 * (stat)->nnz ); \
+         break; \
+      case offsetof(SCIP_STAT, nisstoppedcalls): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.0011123144764 * (stat)->nnz ); \
+   } \
+   ++(stat)->field; \
+   } while(0)
+
+#define SCIPstatAdd(stat, set, field, val) do { \
+   switch( offsetof(SCIP_STAT, field) ) \
+   { \
+      default: \
+         break; \
+      case offsetof(SCIP_STAT, nprimalresolvelpiterations): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.00328285264101 * (val) * (stat)->nnz); \
+         break; \
+      case offsetof(SCIP_STAT, ndualresolvelpiterations): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.00531625104146 * (val) * (stat)->nnz); \
+         break; \
+      case offsetof(SCIP_STAT, nprobboundchgs): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.000738719124051 * (val) * (stat)->nnz ); \
+         break; \
+      case offsetof(SCIP_STAT, nisstoppedcalls): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.0011123144764 * (val) * (stat)->nnz ); \
+   } \
+   (stat)->field += (val); \
+   } while(0)
+#endif
 
 
 /* if we have a C99 compiler */
