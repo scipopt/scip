@@ -6684,7 +6684,8 @@ SCIP_RETCODE SCIPreoptApplyCompression(
       /* set the new node
        * 1. copy all variables, bounds, and boundtypes
        * 2. copy all constraints
-       * 3. set the parent relation */
+       * 3. set the parent relation
+       */
       if( representatives[r]->nvars > 0 )
       {
          int v;

@@ -14213,7 +14213,7 @@ SCIP_RETCODE presolveRound(
 
          /* call primal heuristics */
          SCIP_CALL( SCIPprimalHeuristics(scip->set, scip->stat, scip->transprob, scip->primal, NULL, NULL, NULL,
-               SCIP_HEURTIMING_DURINGPRESOLLOOP, FALSE, &foundsol) );
+               SCIP_HEURTIMING_DURINGPRESOLLOOP, FALSE, &foundsol, unbounded) );
 
          /* output a message, if a solution was found */
          if( foundsol )
@@ -14344,7 +14344,7 @@ SCIP_RETCODE presolve(
 
       /* call primal heuristics */
       SCIP_CALL( SCIPprimalHeuristics(scip->set, scip->stat, scip->transprob, scip->primal, NULL, NULL, NULL,
-            SCIP_HEURTIMING_BEFOREPRESOL, FALSE, &foundsol) );
+            SCIP_HEURTIMING_BEFOREPRESOL, FALSE, &foundsol, unbounded) );
 
       /* output a message, if a solution was found */
       if( foundsol )
@@ -14365,9 +14365,10 @@ SCIP_RETCODE presolve(
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "presolving:\n");
 
    *infeasible = FALSE;
-   *unbounded = SCIPgetNSols(scip) > 0 && SCIPisInfinity(scip, -SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip)));
+   *unbounded = (*unbounded) || (SCIPgetNSols(scip) > 0 && SCIPisInfinity(scip, -SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip))));
 
-   finished = (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds >= scip->set->presol_maxrounds) || (*unbounded) || (scip->set->reopt_enable && scip->stat->nreoptruns >= 1);
+   finished = (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds >= scip->set->presol_maxrounds)
+         || (*unbounded) || (scip->set->reopt_enable && scip->stat->nreoptruns >= 1);
    stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
 
    /* perform presolving rounds */

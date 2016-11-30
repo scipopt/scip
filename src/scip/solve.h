@@ -136,7 +136,8 @@ SCIP_RETCODE SCIPprimalHeuristics(
                                               *   (only needed when calling after node heuristics) */
    SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
    SCIP_Bool             nodeinfeasible,     /**< was the current node already detected to be infeasible? */
-   SCIP_Bool*            foundsol            /**< pointer to store whether a solution has been found */
+   SCIP_Bool*            foundsol,           /**< pointer to store whether a solution has been found */
+   SCIP_Bool*            unbounded           /**< pointer to store whether an unbounded ray was found in the LP */
    );
 
 /** applies one round of separation on the given primal solution or on the LP solution */

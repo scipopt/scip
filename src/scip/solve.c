@@ -178,7 +178,8 @@ SCIP_RETCODE SCIPprimalHeuristics(
                                               *   (only needed when calling after node heuristics) */
    SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
    SCIP_Bool             nodeinfeasible,     /**< was the current node already detected to be infeasible? */
-   SCIP_Bool*            foundsol            /**< pointer to store whether a solution has been found */
+   SCIP_Bool*            foundsol,           /**< pointer to store whether a solution has been found */
+   SCIP_Bool*            unbounded           /**< pointer to store whether an unbounded ray was found in the LP */
    )
 {  /*lint --e{715}*/
 
@@ -325,7 +326,7 @@ SCIP_RETCODE SCIPprimalHeuristics(
       /* check if the problem is proven to be unbounded, currently this happens only in reoptimization */
       if( result == SCIP_UNBOUNDED )
       {
-         stat->status = SCIP_STATUS_UNBOUNDED;
+         *unbounded = TRUE;
          break;
       }
 
@@ -1888,6 +1889,7 @@ SCIP_RETCODE SCIPpriceLoop(
    int npricerounds;
    SCIP_Bool mustprice;
    SCIP_Bool cutoff;
+   SCIP_Bool unbounded;
 
    assert(transprob != NULL);
    assert(lp != NULL);
@@ -1944,7 +1946,7 @@ SCIP_RETCODE SCIPpriceLoop(
 
       /* call primal heuristics which are callable during pricing */
       SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_DURINGPRICINGLOOP,
-            FALSE, &foundsol) );
+            FALSE, &foundsol, &unbounded) );
 
       /* price problem variables */
       SCIPsetDebugMsg(set, "problem variable pricing\n");
@@ -2219,7 +2221,7 @@ SCIP_RETCODE priceAndCutLoop(
    stalllpobjval = SCIP_REAL_MIN;
    stallnfracs = INT_MAX;
    lp->installing = FALSE;
-   while( !(*cutoff) && !(*lperror) && (mustprice || mustsepa || delayedsepa) )
+   while( !(*cutoff) && !(*unbounded) && !(*lperror) && (mustprice || mustsepa || delayedsepa) )
    {
       SCIPsetDebugMsg(set, "-------- node solving loop --------\n");
       assert(lp->flushed);
@@ -2288,7 +2290,7 @@ SCIP_RETCODE priceAndCutLoop(
                         branchcand, eventqueue, eventfilter, cliquetable, FALSE, FALSE, cutoff) );
                }
 
-               if( !(*cutoff) )
+               if( !(*cutoff) && !(*unbounded) )
                {
                   /* if we found something, solve LP again */
                   if( !lp->flushed )
@@ -2343,19 +2345,19 @@ SCIP_RETCODE priceAndCutLoop(
          }
 
          /* call primal heuristics that are applicable during node LP solving loop */
-         if( !*cutoff && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+         if( !*cutoff && !(*unbounded) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
          {
             SCIP_Bool foundsol;
 
             SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_DURINGLPLOOP,
-                  FALSE, &foundsol) );
+                  FALSE, &foundsol, unbounded) );
             assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
             *lperror = *lperror || lp->resolvelperror;
          }
       }
-      assert(lp->flushed || *cutoff);
-      assert(lp->solved || *lperror || *cutoff);
+      assert(lp->flushed || *cutoff || *unbounded);
+      assert(lp->solved || *lperror || *cutoff || *unbounded);
 
       /* check, if we exceeded the separation round limit */
       mustsepa = mustsepa
@@ -2369,11 +2371,11 @@ SCIP_RETCODE priceAndCutLoop(
 
       if( mustsepa )
       {
-         /* if the LP is infeasible, exceeded the objective limit or a global performance limit was reached,
+         /* if the LP is infeasible, unbounded, exceeded the objective limit or a global performance limit was reached,
           * we don't need to separate cuts
           * (the global limits are only checked at the root node in order to not query system time too often)
           */
-         if( !separate || (*cutoff)
+         if( !separate || (*cutoff) || (*unbounded)
              || (SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_UNBOUNDEDRAY)
              || SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound)
              || (root && SCIPsolveIsStopped(set, stat, FALSE)) )
@@ -2666,7 +2668,7 @@ SCIP_RETCODE priceAndCutLoop(
 
    SCIPsetDebugMsg(set, " -> final lower bound: %g (LP status: %d, LP obj: %g)\n",
       SCIPnodeGetLowerbound(focusnode), SCIPlpGetSolstat(lp),
-      *cutoff ? SCIPsetInfinity(set) : *lperror ? -SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set, transprob));
+      (*cutoff || *unbounded) ? SCIPsetInfinity(set) : *lperror ? -SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set, transprob));
 
    return SCIP_OKAY;
 }
@@ -3652,7 +3654,7 @@ SCIP_RETCODE propAndSolve(
    {
       /* if the heuristics find a new incumbent solution, propagate again */
       SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, *heurtiming,
-            FALSE, propagateagain) );
+            FALSE, propagateagain, unbounded) );
       assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
       *heurtiming = SCIP_HEURTIMING_AFTERPROPLOOP;
@@ -4070,13 +4072,13 @@ SCIP_RETCODE solveNode(
          if( actdepth == 0 && !(*afternodeheur) )
          {
             SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL,
-                  SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE, *cutoff, &foundsol) );
+                  SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE, *cutoff, &foundsol, unbounded) );
             *afternodeheur = TRUE; /* the AFTERNODE heuristics should not be called again after the node */
          }
          else if( lpsolved || SCIPrelaxationGetBestRelaxSolObj(relaxation) != -SCIPsetInfinity(set) )
          {
             SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_AFTERLPLOOP,
-                  *cutoff, &foundsol) );
+                  *cutoff, &foundsol, unbounded) );
          }
          assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
@@ -4984,16 +4986,8 @@ SCIP_RETCODE SCIPsolveCIP(
          if( !afternodeheur && (!cutoff || nnodes > 0) && !stopped )
          {
             SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, nextnode, SCIP_HEURTIMING_AFTERNODE,
-                  cutoff, &foundsol) );
+                  cutoff, &foundsol, &unbounded) );
             assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
-
-            /* check if the problem is proven to be unbounded, currently this only happens during reoptimization */
-            if( stat->status == SCIP_STATUS_UNBOUNDED )
-            {
-               assert(tree->focusnode == tree->root);
-               unbounded = TRUE;
-               cutoff = TRUE;
-            }
 
             stopped = SCIPsolveIsStopped(set, stat, FALSE);
          }
@@ -5119,9 +5113,6 @@ SCIP_RETCODE SCIPsolveCIP(
    {
       /* no restart necessary */
       *restart = FALSE;
-
-      /* maybe we have found a solution that is unbounded */
-      unbounded = (unbounded || (primal->nsols > 0 && SCIPsetIsInfinity(set, -SCIPsolGetObj(primal->sols[0], set, transprob, origprob))));
 
       /* set the solution status */
       if( unbounded )
