@@ -471,9 +471,9 @@ SCIP_RETCODE extractCycle(
    SCIP_PROPDATA*        propdata,           /**< propagator data */
    int*                  dfsstack,           /**< array of size number of nodes to store the stack;
                                               *   only needed for performance reasons */
-   int*                  stacknextedge,      /**< array of size number of nodes to store the number of adjacent nodes
-                                              *   already visited for each node on the stack; only needed for
-                                              *   performance reasons */
+   int*                  stacknextedge,      /**< array storing the next edge to be visited in dfs for all nodes on the
+                                              *   stack/in the current path; negative numbers represent a clique,
+                                              *   positive numbers an implication (smaller numbers) or a variable bound */
    int                   stacksize,          /**< current stack size */
    SCIP_Bool             samebound,          /**< does the cycle contain the same bound twice or both bounds of the same variable? */
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
@@ -757,8 +757,8 @@ SCIP_RETCODE dfs(
    int*                  visited,            /**< array to store for each node, whether it was already visited */
    int*                  dfsstack,           /**< array of size number of nodes to store the stack;
                                               *   only needed for performance reasons */
-   int*                  stacknextedge,      /**< array of size number of nodes to store the number of adjacent nodes
-                                              *   already visited for each node on the stack; only needed for
+   int*                  stacknextedge,      /**< array of size number of nodes to store the next edge to be visited in
+                                              *   dfs for all nodes on the stack/in the current path; only needed for
                                               *   performance reasons */
    int*                  dfsnodes,           /**< array of nodes that can be reached starting at startnode, in reverse
                                               *   dfs order */
@@ -856,6 +856,9 @@ SCIP_RETCODE dfs(
                else
                   idx = varGetLbIndex(propdata, cliquevars[i]);
 
+               /* we reached a variable that was already visited on the active path, so we have a cycle in the variable
+                * bound graph and try to extract valid bound changes from it or detect infeasibility
+                */
                if( idx >= 0 && (visited[idx] == ACTIVE || visited[getOtherBoundIndex(idx)] == ACTIVE)
                   && !SCIPisFeasGE(scip, SCIPvarGetLbGlobal(cliquevars[i]), SCIPvarGetUbGlobal(cliquevars[i])) )
                {
@@ -943,6 +946,9 @@ SCIP_RETCODE dfs(
                idx = (impltypes[i] == SCIP_BOUNDTYPE_LOWER ?
                   varGetLbIndex(propdata, implvars[i]) : varGetUbIndex(propdata, implvars[i]));
 
+               /* we reached a variable that was already visited on the active path, so we have a cycle in the variable
+                * bound graph and try to extract valid bound changes from it or detect infeasibility
+                */
                if( idx >= 0 && (visited[idx] == ACTIVE || visited[getOtherBoundIndex(idx)] == ACTIVE)
                   && !SCIPisFeasGE(scip, SCIPvarGetLbGlobal(implvars[i]), SCIPvarGetUbGlobal(implvars[i])) )
                {
@@ -1013,6 +1019,9 @@ SCIP_RETCODE dfs(
                dfsstack[stacksize] = idx;
                stacknextedge[stacksize - 1] = nimpls + i + 1;
 
+               /* we reached a variable that was already visited on the active path, so we have a cycle in the variable
+                * bound graph and try to extract valid bound changes from it or detect infeasibility
+                */
                SCIP_CALL( extractCycle(scip, propdata, dfsstack, stacknextedge, stacksize + 1,
                      visited[idx] == ACTIVE, infeasible) );
 
