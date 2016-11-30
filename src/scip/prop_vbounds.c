@@ -686,6 +686,17 @@ SCIP_RETCODE extractCycle(
 
    islower = isIndexLowerbound(cycleidx);
 
+   /* we have a relation x <=/>= coef * x + constant now
+    * (the relation depends on islower, i.e., whether the last node in the cycle is a lower or upper bound)
+    * case 1) coef is 1.0 --> x cancels out and we have a statement 0 <=/>= constant.
+    *         if we have a >= relation and constant is positive, we have a contradiction 0 >= constant
+    *         if we have a <= relation and constant is negative, we have a contradiction 0 <= constant
+    * case 2) coef != 1.0 --> we have a relation x - coef * x <=/>= constant
+    *                                      <=> (1 - coef) * x <=/>= constant
+    *         if coef < 1.0 this gives us x >= constant / (1 - coef) (if islower=TRUE)
+    *                                  or x <= constant / (1 - coef) (if islower=FALSE)
+    *         if coef > 1.0, the relation signs need to be switched.
+    */
    if( SCIPisEQ(scip, coef, 1.0) )
    {
       if( islower && SCIPisFeasPositive(scip, constant) )
