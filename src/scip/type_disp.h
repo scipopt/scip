@@ -49,6 +49,15 @@ enum SCIP_DispStatus
 };
 typedef enum SCIP_DispStatus SCIP_DISPSTATUS;
 
+/** display activation status of display column */
+enum SCIP_DispMode
+{
+   SCIP_DISPMODE_DEFAULT    = 0x00000001u,        /**< display column is displayed only in sequential mode */
+   SCIP_DISPMODE_CONCURRENT = 0x00000002u,        /**< display column is displayed only in concurrent mode */
+   SCIP_DISPMODE_ALL        = 0x00000003u         /**< display column is displayed in concurrent and sequential mode*/
+};
+typedef enum SCIP_DispMode SCIP_DISPMODE;
+
 typedef struct SCIP_Disp SCIP_DISP;               /**< display column data structure */
 typedef struct SCIP_DispData SCIP_DISPDATA;       /**< display column specific data */
 

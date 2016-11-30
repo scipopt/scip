@@ -42,6 +42,7 @@
 #include "scip/disp.h"
 #include "scip/dialog.h"
 #include "scip/heur.h"
+#include "scip/concsolver.h"
 #include "scip/compr.h"
 #include "scip/nodesel.h"
 #include "scip/presol.h"
@@ -387,6 +388,31 @@
 #define SCIP_DEFAULT_SEPA_FEASTOLFAC      -1.00 /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
 #define SCIP_DEFAULT_SEPA_MINACTIVITYQUOT   0.8 /**< minimum cut activity quotient to convert cuts into constraints
                                                  *   during a restart (0.0: all cuts are converted) */
+
+/* Parallel */
+#define SCIP_DEFAULT_PARALLEL_MODE               1     /**< the mode for the parallel implementation. Either 0: opportunistic or
+                                                        *   1: deterministic */
+#define SCIP_DEFAULT_PARALLEL_MINNTHREADS        1     /**< the minimum number of threads used in parallel code */
+#define SCIP_DEFAULT_PARALLEL_MAXNTHREADS        8     /**< the maximum number of threads used in parallel code */
+
+/* Concurrent solvers */
+#define SCIP_DEFAULT_CONCURRENT_CHANGESEEDS     TRUE /**< should the concurrent solvers use different random seeds? */
+#define SCIP_DEFAULT_CONCURRENT_CHANGECHILDSEL  TRUE /**< should the concurrent solvers use different child selection rules? */
+#define SCIP_DEFAULT_CONCURRENT_COMMVARBNDS     TRUE /**< should the concurrent solvers communicate variable bounds? */
+#define SCIP_DEFAULT_CONCURRENT_PRESOLVEBEFORE  TRUE /**< should the problem be presolved before it is copied to the concurrent solvers? */
+#define SCIP_DEFAULT_CONCURRENT_INITSEED     5131912 /**< the seed used to initialize the random seeds for the concurrent solvers */
+#define SCIP_DEFAULT_CONCURRENT_FREQINIT         0.5 /**< initial frequency of synchronization with other threads
+                                                      *   (fraction of time required for solving the root LP) */
+#define SCIP_DEFAULT_CONCURRENT_FREQMAX         20.0 /**< maximal frequency of synchronization with other threads
+                                                      *   (fraction of time required for solving the root LP) */
+#define SCIP_DEFAULT_CONCURRENT_FREQFACTOR       1.5 /**< factor by which the frequency of synchronization is changed */
+#define SCIP_DEFAULT_CONCURRENT_TARGETPROGRESS 0.005 /**< when adapting the synchronization frequency this value is the targeted
+                                                       *   relative difference by which the absolute gap decreases per synchronization */
+#define SCIP_DEFAULT_CONCURRENT_MAXNSOLS           1 /**< maximum number of solutions that will be shared in a single synchronization */
+#define SCIP_DEFAULT_CONCURRENT_MAXNSYNCDELAY      3 /**< maximum number of synchronizations before reading is enforced regardless of delay */
+#define SCIP_DEFAULT_CONCURRENT_MINSYNCDELAY     2.0 /**< minimum delay before synchronization data is read */
+#define SCIP_DEFAULT_CONCURRENT_NBESTSOLS          1 /**< how many of the N best solutions should be considered for synchronization */
+#define SCIP_DEFAULT_CONCURRENT_PARAMSETPREFIX    "" /**< path prefix for parameter setting files of concurrent solvers */
 
 
 /* Timing */
@@ -1060,6 +1086,13 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->propssorted = FALSE;
    (*set)->propspresolsorted = FALSE;
    (*set)->propsnamesorted = FALSE;
+   (*set)->concsolvertypes = NULL;
+   (*set)->nconcsolvertypes = 0;
+   (*set)->concsolvertypessize = 0;
+   (*set)->concsolvers = NULL;
+   (*set)->nconcsolvers = 0;
+   (*set)->concsolverssize = 0;
+   (*set)->concurrent_paramsetprefix = NULL;
    (*set)->heurs = NULL;
    (*set)->nheurs = 0;
    (*set)->heurssize = 0;
@@ -2234,6 +2267,95 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->sepa_feastolfac, TRUE, SCIP_DEFAULT_SEPA_FEASTOLFAC, -1.0, 1.0,
          NULL, NULL) );
 
+   /* parallel parameters */
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "parallel/mode",
+         "parallel optimisation mode, 0: opportunistic or 1: deterministic.",
+         &(*set)->parallel_spimode, FALSE, SCIP_DEFAULT_PARALLEL_MODE, 0, 1,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "parallel/minnthreads",
+         "the minimum number of threads used during parallel solve",
+         &(*set)->parallel_minnthreads, FALSE, SCIP_DEFAULT_PARALLEL_MINNTHREADS, 0, 64,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "parallel/maxnthreads",
+         "the maximum number of threads used during parallel solve",
+         &(*set)->parallel_maxnthreads, FALSE, SCIP_DEFAULT_PARALLEL_MAXNTHREADS, 0, 64,
+         NULL, NULL) );
+
+   /* concurrent solver parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "concurrent/changeseeds",
+         "set different random seeds in each concurrent solver?",
+         &(*set)->concurrent_changeseeds, FALSE, SCIP_DEFAULT_CONCURRENT_CHANGESEEDS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "concurrent/changechildsel",
+         "use different child selection rules in each concurrent solver?",
+         &(*set)->concurrent_changechildsel, FALSE, SCIP_DEFAULT_CONCURRENT_CHANGECHILDSEL,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "concurrent/commvarbnds",
+         "should the concurrent solvers communicate global variable bound changes?",
+         &(*set)->concurrent_commvarbnds, FALSE, SCIP_DEFAULT_CONCURRENT_COMMVARBNDS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "concurrent/presolvebefore",
+         "should the problem be presolved before it is copied to the concurrent solvers?",
+         &(*set)->concurrent_presolvebefore, FALSE, SCIP_DEFAULT_CONCURRENT_PRESOLVEBEFORE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "concurrent/initseed",
+         "maximum number of solutions that will be shared in a one synchronization",
+         &(*set)->concurrent_initseed, FALSE, SCIP_DEFAULT_CONCURRENT_INITSEED, 0, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "concurrent/sync/freqinit",
+         "initial frequency of synchronization with other threads",
+         &(*set)->concurrent_freqinit, FALSE, SCIP_DEFAULT_CONCURRENT_FREQINIT, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+      SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "concurrent/sync/freqmax",
+         "maximal frequency of synchronization with other threads",
+         &(*set)->concurrent_freqmax, FALSE, SCIP_DEFAULT_CONCURRENT_FREQMAX, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "concurrent/sync/freqfactor",
+         "factor by which the frequency of synchronization is changed",
+         &(*set)->concurrent_freqfactor, FALSE, SCIP_DEFAULT_CONCURRENT_FREQFACTOR, 1.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "concurrent/sync/targetprogress",
+         "when adapting the synchronization frequency this value is the targeted relative difference by which the absolute gap decreases per synchronization",
+         &(*set)->concurrent_targetprogress, FALSE, SCIP_DEFAULT_CONCURRENT_TARGETPROGRESS, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "concurrent/sync/maxnsols",
+         "maximum number of solutions that will be shared in a single synchronization",
+         &(*set)->concurrent_maxnsols, FALSE, SCIP_DEFAULT_CONCURRENT_MAXNSOLS, 0, 1000,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "concurrent/sync/maxnsyncdelay",
+         "maximum number of synchronizations before reading is enforced regardless of delay",
+         &(*set)->concurrent_maxnsyncdelay, TRUE, SCIP_DEFAULT_CONCURRENT_MAXNSYNCDELAY, 0, 100,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "concurrent/sync/minsyncdelay",
+         "minimum delay before synchronization data is read",
+         &(*set)->concurrent_minsyncdelay, FALSE, SCIP_DEFAULT_CONCURRENT_MINSYNCDELAY, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "concurrent/sync/nbestsols",
+         "how many of the N best solutions should be considered for synchronization?",
+         &(*set)->concurrent_nbestsols, FALSE, SCIP_DEFAULT_CONCURRENT_NBESTSOLS, 0, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
+         "concurrent/paramsetprefix",
+         "path prefix for parameter setting files of concurrent solvers",
+         &(*set)->concurrent_paramsetprefix, FALSE, SCIP_DEFAULT_CONCURRENT_PARAMSETPREFIX,
+         NULL, NULL) );
+
    /* timing parameters */
    assert(sizeof(int) == sizeof(SCIP_CLOCKTYPE));
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -2454,6 +2576,21 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPnlpiFree(&(*set)->nlpis[i]) );
    }
    BMSfreeMemoryArrayNull(&(*set)->nlpis);
+
+   /* free concsolvers */
+   for( i = 0; i < (*set)->nconcsolvers; ++i )
+   {
+      SCIP_CALL( SCIPconcsolverDestroyInstance(*set, &(*set)->concsolvers[i]) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->concsolvers);
+
+   /* free concsolvers types */
+   for( i = 0; i < (*set)->nconcsolvertypes; ++i )
+   {
+      SCIPconcsolverTypeFree(&(*set)->concsolvertypes[i]);
+   }
+   BMSfreeMemoryArrayNull(&(*set)->concsolvertypes);
+
 
    /* free information on external codes */
    for( i = 0; i < (*set)->nextcodes; ++i )
@@ -3839,6 +3976,72 @@ void SCIPsetSortPropsName(
       set->propspresolsorted = FALSE;
       set->propsnamesorted = TRUE;
    }
+}
+
+/** inserts concurrent solver type into the concurrent solver type list */
+SCIP_RETCODE SCIPsetIncludeConcsolverType(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONCSOLVERTYPE*  concsolvertype      /**< concurrent solver type */
+   )
+{
+   assert(set != NULL);
+   assert(concsolvertype != NULL);
+
+   if( set->nconcsolvertypes >= set->concsolvertypessize )
+   {
+      set->concsolvertypessize = SCIPsetCalcMemGrowSize(set, set->nconcsolvertypes + 1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->concsolvertypes, set->concsolvertypessize) );
+   }
+   assert(set->nconcsolvertypes < set->concsolvertypessize);
+
+   set->concsolvertypes[set->nconcsolvertypes] = concsolvertype;
+   set->nconcsolvertypes++;
+
+   return SCIP_OKAY;
+}
+
+/** returns the concurrent solver type with the given name, or NULL if not existing */
+SCIP_CONCSOLVERTYPE* SCIPsetFindConcsolverType(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of concurrent solver type */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->nconcsolvertypes; ++i )
+   {
+      if( strcmp(SCIPconcsolverTypeGetName(set->concsolvertypes[i]), name) == 0 )
+         return set->concsolvertypes[i];
+   }
+
+   return NULL;
+}
+
+/** inserts concurrent solver into the concurrent solver list */
+SCIP_RETCODE SCIPsetIncludeConcsolver(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
+   )
+{
+   assert(set != NULL);
+   assert(concsolver != NULL);
+
+   if( set->nconcsolvers >= set->concsolverssize )
+   {
+      set->concsolverssize = SCIPsetCalcMemGrowSize(set, set->nconcsolvers + 1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->concsolvers, set->concsolverssize) );
+   }
+   assert(set->nconcsolvers < set->concsolverssize);
+
+   set->concsolvers[set->nconcsolvers] = concsolver;
+   assert(set->nconcsolvers == SCIPconcsolverGetIdx(concsolver));
+
+   set->nconcsolvers++;
+
+   return SCIP_OKAY;
 }
 
 /** inserts primal heuristic in primal heuristic list */
