@@ -380,8 +380,6 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
 
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem             */
-   SCIP_Real timelimit;                      /* time limit for RENS subproblem                  */
-   SCIP_Real memorylimit;                    /* memory limit for RENS subproblem                */
    SCIP_Real allfixingrate;                  /* percentage of all variables fixed               */
    SCIP_Real intfixingrate;                  /* percentage of integer variables fixed           */
 
@@ -433,22 +431,9 @@ SCIP_RETCODE SCIPapplyRens(
    assert(heurdata != NULL);
 
    /* check whether there is enough time and memory left */
-   timelimit = 0.0;
-   memorylimit = 0.0;
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) && !heurdata->extratime )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
 
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(scip, memorylimit) )
-   {
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-   }
-
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
+   if( !success )
       goto TERMINATE;
 
    *result = SCIP_DIDNOTFIND;
@@ -500,12 +485,11 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 
    /* set limits for the subproblem */
+   SCIP_CALL( SCIPcopyLimits(scip, subscip) );
    heurdata->nodelimit = maxnodes;
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", maxnodes) );
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->bestsollimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );

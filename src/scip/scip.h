@@ -1582,6 +1582,56 @@ SCIP_RETCODE SCIPcopyOrigConsCompression(
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    );
 
+/** checks if there is enough time and memory left for copying the sourcescip into a sub-SCIP and solve the sub-SCIP
+ *
+ *  This is the case if the time and memory limit that would be passed to the sub-SCIP are larger than 0.0
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcheckCopyLimits(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP_Bool*            success             /**< pointer to store whether there is time and memory left to copy the
+                                              *   problem and run the sub-SCIP */
+   );
+
+/** copies limits from source SCIP to target SCIP
+ *
+ *  @note time and memory limit are reduced by the amount already spent in the source SCIP before installing the limit
+ *        in the target SCIP
+ *  @note all other limits are disabled and need to be enabled afterwards, if needed
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyLimits(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip          /**< target SCIP data structure */
+   );
+
+
 /**@} */
 
 /*
