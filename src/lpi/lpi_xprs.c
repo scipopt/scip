@@ -2575,10 +2575,10 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    assert(lpi->solstat >= 0);
    assert(dualfarkas != NULL);
 
+   /**@note The Farkas proof might be numerically questionable which is indicated by "hasRay" use SCIPlpiHasDualRay() to
+    *       check that!
+    */
    CHECK_ZERO( lpi->messagehdlr, XPRSgetdualray(lpi->xprslp, dualfarkas, &hasRay) );
-
-   if( !hasRay )
-      return SCIP_LPERROR;
 
    return SCIP_OKAY;
 }
