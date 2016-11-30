@@ -4151,6 +4151,12 @@ SCIP_RETCODE SCIPcopyLimits(
    SCIP_CALL( getCopyTimelimit(sourcescip, &timelimit) );
    SCIP_CALL( getCopyMemlimit(sourcescip, &memorylimit) );
 
+   /* avoid negative limits */
+   if( timelimit < 0.0 )
+      timelimit = 0.0;
+   if( memorylimit < 0.0 )
+      memorylimit = 0.0;
+
    /* set time and memory limit to the adjusted values */
    SCIP_CALL( SCIPsetRealParam(targetscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(targetscip, "limits/memory", memorylimit) );
