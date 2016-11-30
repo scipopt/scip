@@ -883,7 +883,7 @@ SCIP_RETCODE readObjective(
    SCIP_CALL( readCoefficients(scip, lpinput, TRUE, name, &vars, &coefs, &ncoefs, &newsection) );
 
    /* change the objective function */
-   SCIP_CALL( SCIPchgObjectiveFunction(scip, lpinput->objsense, vars, coefs, ncoefs) );
+   SCIP_CALL( SCIPchgReoptObjective(scip, lpinput->objsense, vars, coefs, ncoefs) );
 
    /* free memory */
    SCIPfreeMemoryArrayNull(scip, &vars);

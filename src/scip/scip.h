@@ -5127,7 +5127,7 @@ SCIP_RETCODE SCIPsetProbName(
  *  @note All variables not given in \p vars array are assumed to have an objective coefficient of zero.
  */
 EXTERN
-SCIP_RETCODE SCIPchgObjectiveFunction(
+SCIP_RETCODE SCIPchgReoptObjective(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_OBJSENSE         objsense,           /**< new objective function */
    SCIP_VAR**            vars,               /**< problem variables */

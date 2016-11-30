@@ -10544,7 +10544,7 @@ SCIP_RETCODE SCIPsetProbName(
    return SCIPprobSetName(scip->origprob, name);
 }
 
-/** changes the objective function
+/** changes the objective function of the original problem.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -10558,7 +10558,7 @@ SCIP_RETCODE SCIPsetProbName(
  *
  *  @note All variables not given in \p vars array are assumed to have an objective coefficient of zero.
  */
-SCIP_RETCODE SCIPchgObjectiveFunction(
+SCIP_RETCODE SCIPchgReoptObjective(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_OBJSENSE         objsense,           /**< new objective function */
    SCIP_VAR**            vars,               /**< problem variables */
@@ -10571,7 +10571,7 @@ SCIP_RETCODE SCIPchgObjectiveFunction(
    int norigvars;
    int i;
 
-   SCIP_CALL( checkStage(scip, "SCIPchgObjectiveFunction", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPchgReoptObjective", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    assert(nvars == 0 || vars != NULL);
    assert(nvars == 0 || coefs != NULL);
@@ -10595,10 +10595,29 @@ SCIP_RETCODE SCIPchgObjectiveFunction(
    else
       objscalar = 1.0;
 
+   /* reset objective data */
+   scip->origprob->objscale = 1.0;
+   scip->origprob->objoffset = 0.0;
+   scip->origprob->objisintegral = FALSE;
+
+#ifndef NDEBUG
+   for( i = 0; i < scip->transprob->nvars; i++ )
+      assert(SCIPvarGetObj(scip->transprob->vars[i]) == 0.0);
+#endif
+
    /* set new objective values */
    for( i = 0; i < nvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarObj(scip, vars[i], objscalar * coefs[i]) );
+      SCIP_VAR* origvar = vars[i];
+
+      if( !SCIPvarIsOriginal(origvar) )
+      {
+         SCIP_Real constant = 0.0;
+         SCIP_Real scalar = 1.0;
+
+         SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+      }
+      SCIP_CALL( SCIPaddVarObj(scip, origvar, objscalar * coefs[i]) );
    }
 
    return SCIP_OKAY;
@@ -14924,7 +14943,6 @@ SCIP_RETCODE freeReoptSolve(
    /* reset objective limit */
    SCIP_CALL( SCIPsetObjlimit(scip, SCIP_INVALID) );
 
-   scip->transprob->objoffset = 0.0;
    scip->transprob->objscale = 1.0;
    scip->transprob->objisintegral = FALSE;
 
