@@ -836,7 +836,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 #ifdef SCIP_DEBUG
       /* for debugging locks heuristic, enable MIP output */
       SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", -1) );
 #endif
 
       /* if there is already a solution, add an objective cutoff */

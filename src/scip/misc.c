@@ -1341,9 +1341,11 @@ static int primetable[] = {
 };
 static const int primetablesize = sizeof(primetable)/sizeof(int);
 
-/**< simple and fast 2-universal hash function using multiply and shift */
+/** simple and fast 2-universal hash function using multiply and shift */
 static
-uint32_t hashvalue(uint64_t input)
+uint32_t hashvalue(
+   uint64_t              input               /**< key value */
+   )
 {
    return ( (uint32_t) ((0xaba59e95109ce4edull * input)>>32) ) | 1u;
 }
@@ -2602,7 +2604,7 @@ SCIP_RETCODE hashmapInsert(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
-   assert(origin != NULL);
+   assert(hashval != 0);
 
    pos = hashval>>(hashmap->shift);
    elemdistance = 0;
@@ -2679,6 +2681,7 @@ SCIP_Bool hashmapLookup(
 
    /* get the hash value */
    hashval = hashvalue((size_t)origin);
+   assert(hashval != 0);
 
    *pos = hashval>>(hashmap->shift);
    elemdistance = 0;
@@ -6621,19 +6624,23 @@ SCIP_RETCODE ensureSuccessorsSize(
    assert(idx >= 0);
    assert(idx < digraph->nnodes);
    assert(newsize > 0);
+   assert(digraph->successorssize[idx] == 0 || digraph->successors[idx] != NULL);
+   assert(digraph->successorssize[idx] == 0 || digraph->arcdata[idx] != NULL);
 
    /* check whether array is big enough, and realloc, if needed */
    if( newsize > digraph->successorssize[idx] )
    {
-      if( digraph->successorssize[idx] == 0 )
+      if( digraph->successors[idx] == NULL )
       {
+         assert(digraph->arcdata[idx] == NULL);
          digraph->successorssize[idx] = STARTSUCCESSORSSIZE;
          SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
          SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }
       else
       {
-         digraph->successorssize[idx] = 2 * digraph->successorssize[idx];
+         assert(digraph->arcdata[idx] != NULL);
+         digraph->successorssize[idx] = MAX(newsize, 2 * digraph->successorssize[idx]);
          SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
          SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }

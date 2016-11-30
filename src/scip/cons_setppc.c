@@ -2421,6 +2421,7 @@ SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< set partitioning / packing / covering constraint to be separated */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
+   SCIP_Bool             lpfeas,             /**< is the given solution feasible for the current LP ? */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
    SCIP_Bool*            separated,          /**< pointer to store TRUE, if a cut was found */
    SCIP_Bool*            reduceddom          /**< pointer to store TRUE, if a domain reduction was found */
@@ -2446,13 +2447,13 @@ SCIP_RETCODE separateCons(
    assert(0 <= consdata->nfixedones && consdata->nfixedones <= consdata->nvars);
 
    /* skip constraints already in the LP */
-   if( sol == NULL && consdata->row != NULL && SCIProwIsInLP(consdata->row) )
+   if( lpfeas && consdata->row != NULL && SCIProwIsInLP(consdata->row) )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "separating constraint <%s>\n", SCIPconsGetName(cons));
 
    /* check constraint for violation only looking at the fixed variables, apply further fixings if possible */
-   if( sol == NULL )
+   if( lpfeas )
    {
       int nfixedvars = 0;
 
@@ -2471,12 +2472,12 @@ SCIP_RETCODE separateCons(
       assert(!addcut);
 
       /* variable's fixings didn't give us any information -> we have to check the constraint */
-      if( sol == NULL && consdata->row != NULL )
+      if( lpfeas && consdata->row != NULL )
       {
          SCIP_Real feasibility;
 
          assert(!SCIProwIsInLP(consdata->row));
-         feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
+         feasibility = SCIPgetRowSolFeasibility(scip, consdata->row, sol);
          addcut = SCIPisFeasNegative(scip, feasibility);
       }
       else
@@ -6753,6 +6754,72 @@ SCIP_RETCODE performVarDeletions(
    return SCIP_OKAY;
 }
 
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_Bool cutoff;
+   SCIP_Bool separated;
+   SCIP_Bool reduceddom;
+   int c;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(nconss == 0 || conss != NULL);
+   assert(result != NULL);
+
+   SCIPdebugMsg(scip, "Enforcing %d set partitioning / packing / covering constraints for %s solution\n", nconss,
+         sol == NULL ? "LP" : "relaxation");
+
+   *result = SCIP_FEASIBLE;
+
+   cutoff = FALSE;
+   separated = FALSE;
+   reduceddom = FALSE;
+
+   /* check all useful set partitioning / packing / covering constraints for feasibility */
+   for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
+   {
+      SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, &cutoff, &separated, &reduceddom) );
+   }
+
+   /* check all obsolete set partitioning / packing / covering constraints for feasibility */
+   for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
+   {
+      SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, &cutoff, &separated, &reduceddom) );
+   }
+   
+#ifdef VARUSES
+#ifdef BRANCHLP
+   /* @todo also branch on relaxation solution */
+   if( (sol == NULL) && !cutoff && !separated && !reduceddom )
+   {
+      /* if solution is not integral, choose a variable set to branch on */
+      SCIP_CALL( branchLP(scip, conshdlr, result) );
+      if( *result != SCIP_FEASIBLE )
+         return SCIP_OKAY;
+   }
+#endif
+#endif
+
+   /* return the correct result */
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( separated )
+      *result = SCIP_SEPARATED;
+   else if( reduceddom )
+      *result = SCIP_REDUCEDDOM;
+
+   return SCIP_OKAY;
+}
 
 /*
  * upgrading of linear constraints
@@ -7343,7 +7410,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSetppc)
    /* check all useful set partitioning / packing / covering constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, &cutoff, &separated, &reduceddom) );
+      SCIP_CALL( separateCons(scip, conss[c], NULL, TRUE, &cutoff, &separated, &reduceddom) );
    }
 
    /* combine set partitioning / packing / covering constraints to get more cuts */
@@ -7386,7 +7453,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSetppc)
    /* check all useful set partitioning / packing / covering constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], sol, &cutoff, &separated, &reduceddom) );
+      SCIP_CALL( separateCons(scip, conss[c], sol, FALSE, &cutoff, &separated, &reduceddom) );
    }
 
    /* combine set partitioning / packing / covering constraints to get more cuts */
@@ -7717,55 +7784,17 @@ SCIP_RETCODE branchPseudo(
 static
 SCIP_DECL_CONSENFOLP(consEnfolpSetppc)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff;
-   SCIP_Bool separated;
-   SCIP_Bool reduceddom;
-   int c;
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(nconss == 0 || conss != NULL);
-   assert(result != NULL);
+   return SCIP_OKAY;
+}
 
-   SCIPdebugMsg(scip, "LP enforcing %d set partitioning / packing / covering constraints\n", nconss);
 
-   *result = SCIP_FEASIBLE;
-
-   cutoff = FALSE;
-   separated = FALSE;
-   reduceddom = FALSE;
-
-   /* check all useful set partitioning / packing / covering constraints for feasibility */
-   for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
-   {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, &cutoff, &separated, &reduceddom) );
-   }
-
-   /* check all obsolete set partitioning / packing / covering constraints for feasibility */
-   for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
-   {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, &cutoff, &separated, &reduceddom) );
-   }
-
-#ifdef VARUSES
-#ifdef BRANCHLP
-   if( !cutoff && !separated && !reduceddom )
-   {
-      /* if solution is not integral, choose a variable set to branch on */
-      SCIP_CALL( branchLP(scip, conshdlr, result) );
-      if( *result != SCIP_FEASIBLE )
-         return SCIP_OKAY;
-   }
-#endif
-#endif
-
-   /* return the correct result */
-   if( cutoff )
-      *result = SCIP_CUTOFF;
-   else if( separated )
-      *result = SCIP_SEPARATED;
-   else if( reduceddom )
-      *result = SCIP_REDUCEDDOM;
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxSetppc)
+{  /*lint --e{715}*/
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -8895,6 +8924,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSetppc, consSepasolSetppc, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSetppc) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSetppc) );
 
    conshdlrdata->conshdlrlinear = SCIPfindConshdlr(scip,"linear");
 
@@ -8969,7 +8999,7 @@ SCIP_RETCODE SCIPcreateConsSetpart(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -9027,7 +9057,7 @@ SCIP_RETCODE SCIPcreateConsSetpack(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -9086,7 +9116,7 @@ SCIP_RETCODE SCIPcreateConsSetcover(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */

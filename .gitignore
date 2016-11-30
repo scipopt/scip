@@ -39,6 +39,7 @@ lint/size-options.lnt
 
 localhooks/
 src/scip/githash.c
+src/scip/buildflags.c
 settings/
 unittests/check/results
 unittests/check/locks
@@ -50,3 +51,5 @@ interfaces/python/include/
 interfaces/python/tests/check
 interfaces/python/pyscipopt/*.c
 interfaces/gams/gams
+examples/*/doc/html
+applications/*/doc/html
