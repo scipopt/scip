@@ -935,13 +935,15 @@ SCIP_RETCODE convertSides(
 
 /** converts Gurobi's sen/rhs pairs into SCIP's lhs/rhs pairs */
 static
-SCIP_RETCODE reconvertBothSides(
+SCIP_RETCODE reconvertSides(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int                   nrows,              /**< number of rows */
-   SCIP_Real*            lhs,                /**< buffer to store the left hand side vector */
-   SCIP_Real*            rhs                 /**< buffer to store the right hand side vector */
+   int                   firstrow,           /**< first row to get sides for */
+   int                   lastrow,            /**< last row to get sides for */
+   SCIP_Real*            lhs,                /**< buffer to store the left hand side vector, or NULL */
+   SCIP_Real*            rhs                 /**< buffer to store the right hand side vector, or NULL */
    )
 {
+   int nrows = lastrow-firstrow+1;
    int i;
 
    assert(lpi != NULL);
@@ -954,8 +956,15 @@ SCIP_RETCODE reconvertBothSides(
       switch( lpi->senarray[i] )
       {
       case GRB_EQUAL:
-         lhs[i] = lpi->rhsarray[i];
-         rhs[i] = lpi->rhsarray[i] + lpi->rngarray[i];
+         if ( lhs != NULL )
+            lhs[i] = lpi->rhsarray[i];
+         if ( rhs != NULL )
+         {
+            int row = firstrow+i;
+            rhs[i] = lpi->rhsarray[i];
+            if ( lpi->rngrowmap != NULL && lpi->rngrowmap[row] >= 0 )
+               rhs[i] += lpi->rngvals[lpi->rngrowmap[row]];
+         }
          break;
 
       case GRB_LESS_EQUAL:
@@ -974,108 +983,6 @@ SCIP_RETCODE reconvertBothSides(
          return SCIP_LPERROR; /*lint !e527*/
       }
       assert(lhs[i] <= rhs[i]);
-   }
-   return SCIP_OKAY;
-}
-
-/** converts Gurobi's sen/rhs pairs into SCIP's lhs/rhs pairs, only storing the left hand side */
-static
-SCIP_RETCODE reconvertLhs(
-   SCIP_LPI*             lpi,                /**< LP interface structure */
-   int                   nrows,              /**< number of rows */
-   SCIP_Real*            lhs                 /**< buffer to store the left hand side vector */
-   )
-{
-   int i;
-
-   assert(lpi != NULL);
-   assert(nrows >= 0);
-   assert(lhs != NULL);
-
-   for (i = 0; i < nrows; ++i)
-   {
-      switch( lpi->senarray[i] )
-      {
-      case GRB_EQUAL:
-         lhs[i] = lpi->rhsarray[i];
-         break;
-
-      case GRB_LESS_EQUAL:
-         lhs[i] = -SCIP_DEFAULT_INFINITY;
-         break;
-
-      case GRB_GREATER_EQUAL:
-         lhs[i] = lpi->rhsarray[i];
-         break;
-
-      default:
-         SCIPerrorMessage("invalid row sense\n");
-         SCIPABORT();
-         return SCIP_LPERROR; /*lint !e527*/
-      }
-   }
-   return SCIP_OKAY;
-}
-
-/** converts Gurobi's sen/rhs pairs into SCIP's lhs/rhs pairs, only storing the right hand side */
-static
-SCIP_RETCODE reconvertRhs(
-   SCIP_LPI*             lpi,                /**< LP interface structure */
-   int                   nrows,              /**< number of rows */
-   SCIP_Real*            rhs                 /**< buffer to store the right hand side vector */
-   )
-{
-   int i;
-
-   assert(lpi != NULL);
-   assert(nrows >= 0);
-   assert(rhs != NULL);
-
-   for (i = 0; i < nrows; ++i)
-   {
-      switch( lpi->senarray[i] )
-      {
-      case GRB_EQUAL:
-         rhs[i] = lpi->rhsarray[i] + lpi->rngarray[i];
-         break;
-
-      case GRB_LESS_EQUAL:
-         rhs[i] = lpi->rhsarray[i];
-         break;
-
-      case GRB_GREATER_EQUAL:
-         rhs[i] = SCIP_DEFAULT_INFINITY;
-         break;
-
-      default:
-         SCIPerrorMessage("invalid row sense\n");
-         SCIPABORT();
-         return SCIP_LPERROR; /*lint !e527*/
-      }
-   }
-   return SCIP_OKAY;
-}
-
-/** converts Gurobi's sen/rhs pairs into SCIP's lhs/rhs pairs */
-static
-SCIP_RETCODE reconvertSides(
-   SCIP_LPI*             lpi,                /**< LP interface structure */
-   int                   nrows,              /**< number of rows */
-   SCIP_Real*            lhs,                /**< buffer to store the left hand side vector, or NULL */
-   SCIP_Real*            rhs                 /**< buffer to store the right hand side vector, or NULL */
-   )
-{
-   if( lhs != NULL && rhs != NULL )
-   {
-      SCIP_CALL( reconvertBothSides(lpi, nrows, lhs, rhs) );
-   }
-   else if( lhs != NULL )
-   {
-      SCIP_CALL( reconvertLhs(lpi, nrows, lhs) );
-   }
-   else if( rhs != NULL )
-   {
-      SCIP_CALL( reconvertRhs(lpi, nrows, rhs) );
    }
    return SCIP_OKAY;
 }
@@ -2446,7 +2353,7 @@ SCIP_RETCODE SCIPlpiGetRows(
       CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, firstrow, lastrow-firstrow+1, lpi->senarray) );
 
       /* convert sen and rhs into lhs/rhs tuples */
-      SCIP_CALL( reconvertSides(lpi, lastrow - firstrow + 1, lhs, rhs) );
+      SCIP_CALL( reconvertSides(lpi, firstrow, lastrow, lhs, rhs) );
    }
 
    if( nnonz != NULL )
@@ -2631,7 +2538,7 @@ SCIP_RETCODE SCIPlpiGetSides(
    CHECK_ZERO( lpi->messagehdlr, GRBgetcharattrarray(lpi->grbmodel, GRB_CHAR_ATTR_SENSE, firstrow, lastrow-firstrow+1, lpi->senarray) );
 
    /* convert sen and rhs into lhs/rhs tuples */
-   SCIP_CALL( reconvertSides(lpi, lastrow - firstrow + 1, lhss, rhss) );
+   SCIP_CALL( reconvertSides(lpi, firstrow, lastrow, lhss, rhss) );
 
    return SCIP_OKAY;
 }
