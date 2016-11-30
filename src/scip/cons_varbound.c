@@ -500,10 +500,7 @@ SCIP_RETCODE resolvePropagation(
       assert(boundtype == SCIP_BOUNDTYPE_LOWER);
       assert(!SCIPisInfinity(scip, -consdata->lhs));
 
-      /* we cannot apply bound widening for binary variables, because within a varbound constraint the relaxed bound
-       * will never be sufficient
-       */
-      if( usebdwidening && !SCIPvarIsBinary(var) )
+      if( usebdwidening )
       {
          SCIP_Real relaxedbd;
 
@@ -523,10 +520,18 @@ SCIP_RETCODE resolvePropagation(
 
          if( vbdcoef > 0.0 )
          {
+            /* decrease the compute relaxed upper bound by an epsilon; that ensure that we get the actual inference bound due
+             * to the integral condition of the variable bound variable
+             */
+            relaxedbd -= SCIPfeastol(scip);
             SCIP_CALL( SCIPaddConflictRelaxedUb(scip, vbdvar, bdchgidx, relaxedbd) );
          }
          else
          {
+            /* increase the compute relaxed upper bound by an epsilon; that ensure that we get the actual inference bound due
+             * to the integral condition of the variable bound variable
+             */
+            relaxedbd += SCIPfeastol(scip);
             SCIP_CALL( SCIPaddConflictRelaxedLb(scip, vbdvar, bdchgidx, relaxedbd) );
          }
       }
@@ -550,10 +555,7 @@ SCIP_RETCODE resolvePropagation(
       assert(SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
       assert(!SCIPisInfinity(scip, -consdata->lhs));
 
-      /* we cannot apply bound widening for binary variables, because within a varbound constraint the relaxed bound
-       * will never be sufficient
-       */
-      if( usebdwidening && !SCIPvarIsBinary(var) )
+      if( usebdwidening )
       {
          SCIP_Real relaxedub;
 
@@ -613,10 +615,7 @@ SCIP_RETCODE resolvePropagation(
       assert(boundtype == SCIP_BOUNDTYPE_UPPER);
       assert(!SCIPisInfinity(scip, consdata->rhs));
 
-      /* we cannot apply bound widening for binary variables, because within a varbound constraint the relaxed bound
-       * will never be sufficient
-       */
-      if( usebdwidening && !SCIPvarIsBinary(var) )
+      if( usebdwidening )
       {
          SCIP_Real relaxedbd;
 
@@ -636,10 +635,18 @@ SCIP_RETCODE resolvePropagation(
 
          if( vbdcoef > 0.0 )
          {
+            /* increase the compute relaxed upper bound by an epsilon; that ensure that we get the actual inference bound due
+             * to the integral condition of the variable bound variable
+             */
+            relaxedbd += SCIPfeastol(scip);
             SCIP_CALL( SCIPaddConflictRelaxedLb(scip, vbdvar, bdchgidx, relaxedbd) );
          }
          else
          {
+            /* decrease the compute relaxed upper bound by an epsilon; that ensure that we get the actual inference bound due
+             * to the integral condition of the variable bound variable
+             */
+            relaxedbd -= SCIPfeastol(scip);
             SCIP_CALL( SCIPaddConflictRelaxedUb(scip, vbdvar, bdchgidx, relaxedbd) );
          }
       }
@@ -663,10 +670,7 @@ SCIP_RETCODE resolvePropagation(
       assert(SCIPvarGetType(vbdvar) != SCIP_VARTYPE_CONTINUOUS);
       assert(!SCIPisInfinity(scip, consdata->rhs));
 
-      /* we cannot apply bound widening for binary variables, because within a varbound constraint the relaxed bound
-       * will never be sufficient
-       */
-      if( usebdwidening && !SCIPvarIsBinary(var) )
+      if( usebdwidening )
       {
          SCIP_Real relaxedlb;
 
