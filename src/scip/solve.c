@@ -2876,8 +2876,7 @@ SCIP_RETCODE solveNodeLP(
             {
                assert(reopt != NULL);
                SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, tree->focusnode, SCIP_EVENTTYPE_NODEFEASIBLE, lp,
-                     SCIPlpGetSolstat(lp), tree->root == tree->focusnode, TRUE,
-                     SCIPsetIsInfinity(set, tree->focusnode->lowerbound) ? tree->focusnode->prevlowerbound : tree->focusnode->lowerbound,
+                     SCIPlpGetSolstat(lp), tree->root == tree->focusnode, TRUE, tree->focusnode->lowerbound,
                      tree->effectiverootdepth) );
             }
          }
@@ -4875,8 +4874,7 @@ SCIP_RETCODE SCIPsolveCIP(
                   assert(reopt != NULL);
                   SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, focusnode, SCIP_EVENTTYPE_NODEFEASIBLE, lp,
                         SCIPlpGetSolstat(lp), tree->root == focusnode, tree->focusnode == focusnode,
-                        SCIPsetIsInfinity(set, focusnode->lowerbound) ? focusnode->prevlowerbound : focusnode->lowerbound,
-                        tree->effectiverootdepth) );
+                        focusnode->lowerbound, tree->effectiverootdepth) );
                }
             }
          }
@@ -4906,8 +4904,7 @@ SCIP_RETCODE SCIPsolveCIP(
                   assert(reopt != NULL);
                   SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, focusnode, SCIP_EVENTTYPE_NODEINFEASIBLE, lp,
                         SCIPlpGetSolstat(lp), tree->root == focusnode, tree->focusnode == focusnode,
-                        SCIPsetIsInfinity(set, focusnode->lowerbound) ? focusnode->prevlowerbound : focusnode->lowerbound,
-                        tree->effectiverootdepth) );
+                        focusnode->lowerbound, tree->effectiverootdepth) );
                }
 
                /* increase the cutoff counter of the branching variable */
@@ -4929,8 +4926,7 @@ SCIP_RETCODE SCIPsolveCIP(
                   assert(reopt != NULL);
                   SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, focusnode, SCIP_EVENTTYPE_NODEBRANCHED, lp,
                         SCIPlpGetSolstat(lp), tree->root == focusnode, tree->focusnode == focusnode,
-                        SCIPsetIsInfinity(set, focusnode->lowerbound) ? focusnode->prevlowerbound : focusnode->lowerbound,
-                        tree->effectiverootdepth) );
+                        focusnode->lowerbound, tree->effectiverootdepth) );
                }
             }
             SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
@@ -5015,8 +5011,7 @@ SCIP_RETCODE SCIPsolveCIP(
          {
             assert(reopt != NULL);
             SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, focusnode, SCIP_EVENTTYPE_NODEFEASIBLE, lp,
-                  SCIPlpGetSolstat(lp), tree->root == focusnode, tree->focusnode == focusnode,
-                  SCIPsetIsInfinity(set, focusnode->lowerbound) ? focusnode->prevlowerbound : focusnode->lowerbound,
+                  SCIPlpGetSolstat(lp), tree->root == focusnode, tree->focusnode == focusnode, focusnode->lowerbound,
                   tree->effectiverootdepth) );
          }
       }
@@ -5100,8 +5095,7 @@ SCIP_RETCODE SCIPsolveCIP(
       {
          assert(reopt != NULL);
          SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, tree->focusnode, SCIP_EVENTTYPE_NODEINFEASIBLE, lp,
-               SCIPlpGetSolstat(lp), tree->root == focusnode, tree->focusnode == focusnode,
-               SCIPsetIsInfinity(set, tree->focusnode->lowerbound) ? tree->focusnode->prevlowerbound : tree->focusnode->lowerbound,
+               SCIPlpGetSolstat(lp), tree->root == focusnode, tree->focusnode == focusnode, tree->focusnode->lowerbound,
                tree->effectiverootdepth) );
       }
 

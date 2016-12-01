@@ -783,7 +783,6 @@ SCIP_RETCODE nodeAssignParent(
    {
       assert(parent->lowerbound <= parent->estimate);
       node->lowerbound = parent->lowerbound;
-      node->prevlowerbound = parent->lowerbound;
       node->estimate = parent->estimate;
       node->depth = parent->depth+1; /*lint !e732*/
       if( parent->depth >= SCIP_MAXTREEDEPTH-1 )
@@ -938,7 +937,6 @@ SCIP_RETCODE nodeCreate(
    (*node)->domchg = NULL;
    (*node)->number = 0;
    (*node)->lowerbound = -SCIPsetInfinity(set);
-   (*node)->prevlowerbound = -SCIPsetInfinity(set);
    (*node)->estimate = -SCIPsetInfinity(set);
    (*node)->reoptid = 0;
    (*node)->reopttype = (unsigned int) SCIP_REOPTTYPE_NONE;
@@ -1133,8 +1131,13 @@ SCIP_RETCODE SCIPnodeCutoff(
    assert(stat != NULL);
    assert(tree != NULL);
 
-   if( !SCIPsetIsInfinity(set, node->lowerbound) )
-      node->prevlowerbound = node->lowerbound;
+   if( set->reopt_enable )
+   {
+      assert(reopt != NULL);
+      /* check if the node should be stored for reoptimization */
+      SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
+            tree->root == node, tree->focusnode == node, node->lowerbound, tree->effectiverootdepth) );
+   }
 
    node->cutoff = TRUE;
    node->lowerbound = SCIPsetInfinity(set);
@@ -1144,14 +1147,6 @@ SCIP_RETCODE SCIPnodeCutoff(
 
    SCIPvisualCutoffNode(stat->visual, set, stat, node, TRUE);
 
-   if( set->reopt_enable )
-   {
-      assert(reopt != NULL);
-      /* check if the node should be stored for reoptimization */
-      SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
-            tree->root == node, tree->focusnode == node,
-            SCIPsetIsInfinity(set, node->lowerbound) ? node->prevlowerbound : node->lowerbound, tree->effectiverootdepth) );
-   }
 
    SCIPsetDebugMsg(set, "cutting off %s node #%" SCIP_LONGINT_FORMAT " at depth %d (cutoffdepth: %d)\n",
       node->active ? "active" : "inactive", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->cutoffdepth);
@@ -2268,8 +2263,6 @@ void SCIPnodeUpdateLowerbound(
       SCIP_Real oldbound;
 
       oldbound = node->lowerbound;
-      if( !SCIPsetIsInfinity(set, node->lowerbound) )
-         node->prevlowerbound = node->lowerbound;
       node->lowerbound = newbound;
       node->estimate = MAX(node->estimate, newbound);
       if( node->depth == 0 )
@@ -3585,9 +3578,7 @@ SCIP_RETCODE nodeToLeaf(
          assert(reopt != NULL);
          /* check if the node should be stored for reoptimization */
          SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, *node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
-               tree->root == *node, tree->focusnode == *node,
-               SCIPsetIsInfinity(set, (*node)->lowerbound) ? (*node)->prevlowerbound : (*node)->lowerbound,
-               tree->effectiverootdepth) );
+               tree->root == *node, tree->focusnode == *node, (*node)->lowerbound, tree->effectiverootdepth) );
       }
 
       /* delete node due to bound cut off */
@@ -4248,9 +4239,7 @@ SCIP_RETCODE SCIPnodeFocus(
          assert(reopt != NULL);
          /* check if the node should be stored for reoptimization */
          SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, *node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
-               tree->root == (*node), tree->focusnode == (*node),
-               SCIPsetIsInfinity(set, (*node)->lowerbound) ? (*node)->prevlowerbound : (*node)->lowerbound,
-               tree->effectiverootdepth) );
+               tree->root == (*node), tree->focusnode == (*node), (*node)->lowerbound, tree->effectiverootdepth) );
       }
 
       SCIP_CALL( SCIPnodeFree(node, blkmem, set, stat, eventqueue, tree, lp) );
@@ -5026,9 +5015,7 @@ SCIP_RETCODE SCIPtreeCutoff(
             assert(reopt != NULL);
             /* check if the node should be stored for reoptimization */
             SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
-                  tree->root == node, tree->focusnode == node,
-                  SCIPsetIsInfinity(set, node->lowerbound) ? node->prevlowerbound : node->lowerbound,
-                  tree->effectiverootdepth) );
+                  tree->root == node, tree->focusnode == node, node->lowerbound, tree->effectiverootdepth) );
          }
 
          SCIPvisualCutoffNode(stat->visual, set, stat, node, FALSE);
@@ -5051,9 +5038,7 @@ SCIP_RETCODE SCIPtreeCutoff(
             assert(reopt != NULL);
             /* check if the node should be stored for reoptimization */
             SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
-                  tree->root == node, tree->focusnode == node,
-                  SCIPsetIsInfinity(set, node->lowerbound) ? node->prevlowerbound : node->lowerbound,
-                  tree->effectiverootdepth) );
+                  tree->root == node, tree->focusnode == node, node->lowerbound, tree->effectiverootdepth) );
          }
 
          SCIPvisualCutoffNode(stat->visual, set, stat, node, FALSE);

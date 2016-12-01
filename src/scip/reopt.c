@@ -2663,7 +2663,7 @@ SCIP_RETCODE addNode(
       }
 
       /* update the lowerbound if the new lower bound is finite */
-      if( !SCIPsetIsEQ(set, REALABS(lowerbound), SCIPsetInfinity(set)) )
+      if( !SCIPsetIsInfinity(set, REALABS(lowerbound)) )
          reopt->reopttree->reoptnodes[id]->lowerbound = lowerbound;
       SCIPsetDebugMsg(set, " -> reopttype: %u, lowerbound: %g\n", reopttype, reopt->reopttree->reoptnodes[id]->lowerbound);
 
@@ -2797,7 +2797,7 @@ SCIP_RETCODE addNode(
          SCIP_CALL( SCIPreoptResetDualBndchgs(reopt, node, blkmem) );
 
          /* update the lowerbound */
-         if( !SCIPsetIsEQ(set, REALABS(lowerbound), SCIPsetInfinity(set)) )
+         if( !SCIPsetIsInfinity(set, REALABS(lowerbound)) )
             reopt->reopttree->reoptnodes[id]->lowerbound = lowerbound;
 
          goto TRANSIT;
@@ -2815,7 +2815,7 @@ SCIP_RETCODE addNode(
          }
 
          /* update the lowerbound */
-         if( !SCIPsetIsEQ(set, REALABS(lowerbound), SCIPsetInfinity(set)) )
+         if( !SCIPsetIsInfinity(set, REALABS(lowerbound)) )
             reopt->reopttree->reoptnodes[id]->lowerbound = lowerbound;
 
          SCIPsetDebugMsg(set, "update node %d at ID %d:\n", 1, 0);
@@ -2848,7 +2848,7 @@ SCIP_RETCODE addNode(
             SCIP_CALL( SCIPreoptResetDualBndchgs(reopt, node, blkmem) );
 
          /* update the lowerbound */
-         if( ! SCIPsetIsEQ(set, REALABS(lowerbound), SCIPsetInfinity(set)) )
+         if( !SCIPsetIsInfinity(set, REALABS(lowerbound)) )
             reopt->reopttree->reoptnodes[id]->lowerbound = lowerbound;
 
          SCIPsetDebugMsg(set, "update node %d at ID %d:\n", 1, 0);
@@ -2881,7 +2881,7 @@ SCIP_RETCODE addNode(
             SCIP_CALL( SCIPreoptResetDualBndchgs(reopt, node, blkmem) );
 
          /* update the lowerbound if it was not set */
-         if( ! SCIPsetIsEQ(set, REALABS(lowerbound), SCIPsetInfinity(set)) )
+         if( !SCIPsetIsInfinity(set, REALABS(lowerbound)) )
             reopt->reopttree->reoptnodes[id]->lowerbound = lowerbound;
 
          SCIPsetDebugMsg(set, "update node %d at ID %d:\n", 1, 0);
@@ -3003,7 +3003,7 @@ SCIP_RETCODE addNode(
       }
 
       /* update the lowerbound if it was not set */
-      if( ! SCIPsetIsEQ(set, REALABS(lowerbound), SCIPsetInfinity(set)) )
+      if( !SCIPsetIsInfinity(set, REALABS(lowerbound)) )
          reopt->reopttree->reoptnodes[id]->lowerbound = lowerbound;
 
       /* set ID */
