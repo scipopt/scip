@@ -74,7 +74,7 @@
 #define SCIP_DEFAULT_BRANCH_FIRSTSBCHILD    'a' /**< child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, 'h'istory-based, or 'a'utomatic */
 #define SCIP_DEFAULT_BRANCH_CHECKSBSOL     TRUE /**< should LP solutions during strong branching with propagation be checked for feasibility? */
 #define SCIP_DEFAULT_BRANCH_ROUNDSBSOL     TRUE /**< should LP solutions during strong branching with propagation be rounded? (only when checksbsol=TRUE) */
-
+#define SCIP_DEFAULT_BRANCH_SUMADJUSTSCORE FALSE /**< score adjustment near zero by \b adding epsilon (TRUE) or using maximum (FALSE) */
 
 /* Tree Compression */
 
@@ -1135,6 +1135,11 @@ SCIP_RETCODE SCIPsetCreate(
          "branching/roundsbsol",
          "should LP solutions during strong branching with propagation be rounded? (only when checksbsol=TRUE)",
          &(*set)->branch_roundsbsol, TRUE, SCIP_DEFAULT_BRANCH_ROUNDSBSOL,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "branching/sumadjustscore",
+         "score adjustment near zero by \b adding epsilon (TRUE) or using maximum (FALSE)",
+         &(*set)->branch_sumadjustscore, FALSE, SCIP_DEFAULT_BRANCH_SUMADJUSTSCORE,
          NULL, NULL) );
 
    /* tree compression parameters */
