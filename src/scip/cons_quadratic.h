@@ -457,6 +457,20 @@ SCIP_Real SCIPgetRhsQuadratic(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** get index of a variable in linvars that may be decreased without making any other constraint infeasible, or -1 if none */
+EXTERN
+int SCIPgetLinvarMayDecreaseQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** get index of a variable in linvars that may be increased without making any other constraint infeasible, or -1 if none */
+EXTERN
+int SCIPgetLinvarMayIncreaseQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** Check the quadratic function of a quadratic constraint for its semi-definiteness, if not done yet.
  */
 EXTERN

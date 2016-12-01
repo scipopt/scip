@@ -129,7 +129,12 @@ static
 SCIP_DECL_ERRORPRINTING(errorPrintingDefault)
 {  /*lint --e{715}*/
    if ( msg != NULL )
-      fputs(msg, stderr);
+   {
+      if ( file != NULL )
+         fputs(msg, file);
+      else
+         fputs(msg, stderr);
+   }
    fflush(stderr);
 }
 
@@ -139,14 +144,15 @@ static SCIP_DECL_ERRORPRINTING((*staticErrorPrinting)) = errorPrintingDefault;
 /** static variable which holds a data pointer for the error prinint callback */
 static void* staticErrorPrintingData = NULL;
 
-/** prints error message with the current message handler, or buffers the message if no newline exists */
+/** prints error message with the current static message handler */
 static
 void messagePrintError(
+   FILE*                 file,               /**< file stream to print error, or NULL for stderr */
    const char*           msg                 /**< message to print; NULL to flush the output buffer */
    )
 {
    if( staticErrorPrinting != NULL )
-      staticErrorPrinting(msg, staticErrorPrintingData);
+      staticErrorPrinting(staticErrorPrintingData, file, msg);
 }
 
 /** prints warning message with the current message handler, or buffers the message if no newline exists */
@@ -768,7 +774,7 @@ void SCIPmessagePrintErrorHeader(
    /* safe string printing - do not use SCIPsnprintf() since message.c should be independent */
    (void) snprintf(msg, SCIP_MAXSTRLEN, "[%s:%d] ERROR: ", sourcefile, sourceline);
    msg[SCIP_MAXSTRLEN-1] = '\0';
-   messagePrintError(msg);
+   messagePrintError(NULL, msg);
 }
 
 /** prints a error message, acting like the printf() command */
@@ -819,12 +825,12 @@ void SCIPmessageVPrintError(
 #endif
       assert(m == n);
       va_end(aq);
-      messagePrintError(bigmsg);
+      messagePrintError(NULL, bigmsg);
       BMSfreeMemory(&bigmsg);
       return;
    }
 
-   messagePrintError(msg);
+   messagePrintError(NULL, msg);
    va_end(aq);
 }
 

@@ -62,7 +62,7 @@
 
 #define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
 
-#define HASHSIZE_SETPPCCONS      131101 /**< minimal size of hash table in setppc constraint tables */
+#define HASHSIZE_SETPPCCONS         500 /**< minimal size of hash table in setppc constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
@@ -142,7 +142,7 @@ struct SCIP_ConsData
    unsigned int          changed:1;          /**< was constraint changed since last redundancy round in preprocessing? */
    unsigned int          varsdeleted:1;      /**< were variables deleted after last cleanup? */
    unsigned int          merged:1;           /**< are the constraint's equal/negated variables already merged? */
-   unsigned int          propagated:1;       /**< does this constraint need to be propagated? */
+   unsigned int          presolpropagated:1; /**< was the constraint already propagated in presolving w.r.t. the current domains? */
    unsigned int          existmultaggr:1;    /**< does this constraint contain aggregations */
 };
 
@@ -648,7 +648,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->changed = TRUE;
    (*consdata)->varsdeleted = FALSE;
    (*consdata)->merged = FALSE;
-   (*consdata)->propagated = FALSE;
+   (*consdata)->presolpropagated = FALSE;
 
    return SCIP_OKAY;
 }
@@ -922,20 +922,26 @@ SCIP_RETCODE catchEvent(
    if( SCIPisEQ(scip, SCIPvarGetUbLocal(var), 0.0) )
    {
       consdata->nfixedzeros++;
-      consdata->propagated = FALSE;
 
-      if( SCIPconsIsActive(cons) && consdata->nfixedzeros >= consdata->nvars - 1 )
+      /* during presolving, we may fix the last unfixed variable or do an aggregation if there are two unfixed variables */
+      if( SCIPconsIsActive(cons) && ((SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE) && (consdata->nfixedzeros >= consdata->nvars - 2)) )
       {
-         SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+         consdata->presolpropagated = FALSE;
+
+         /* during solving, we only propagate again if there is only one unfixed variable left */
+         if( consdata->nfixedzeros >= consdata->nvars - 1 )
+         {
+            SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+         }
       }
    }
    else if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), 1.0) )
    {
       consdata->nfixedones++;
-      consdata->propagated = FALSE;
 
       if( SCIPconsIsActive(cons) )
       {
+         consdata->presolpropagated = FALSE;
          SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
       }
    }
@@ -1145,6 +1151,12 @@ SCIP_RETCODE delCoefPos(
 
       /* drop bound change events of variable */
       SCIP_CALL( dropEvent(scip, cons, conshdlrdata->eventhdlr, pos) );
+
+      /* the last variable of the constraint was deleted; mark it for propagation (so that it can be deleted) */
+      if( consdata->nvars == 1 )
+      {
+         consdata->presolpropagated = FALSE;
+      }
    }
 
    /* delete coefficient from the LP row */
@@ -1799,10 +1811,7 @@ SCIP_RETCODE applyFixings(
                                  SCIPfreeBufferArray(scip, &consvals);
                                  SCIPfreeBufferArray(scip, &consvars);
 
-                                 /* all multi-aggregations should be resolved */
-                                 consdata->existmultaggr = FALSE;
-
-                                 return SCIP_OKAY;
+                                 goto TERMINATE;
                               }
 
                               if( fixed )
@@ -1821,10 +1830,7 @@ SCIP_RETCODE applyFixings(
                   SCIPfreeBufferArray(scip, &consvals);
                   SCIPfreeBufferArray(scip, &consvars);
 
-                  /* all multi-aggregations should be resolved */
-                  consdata->existmultaggr = FALSE;
-
-                  return SCIP_OKAY;
+                  goto TERMINATE;
                }
             }
 
@@ -1929,10 +1935,7 @@ SCIP_RETCODE applyFixings(
                   ++(*naddconss);
                }
 
-               /* all multi-aggregations should be resolved */
-               consdata->existmultaggr = FALSE;
-
-               return SCIP_OKAY;
+               goto TERMINATE;
             }
             /* we need to degrade this setppc constraint to a linear constraint*/
             else
@@ -1971,6 +1974,7 @@ SCIP_RETCODE applyFixings(
       }
    }
 
+ TERMINATE:
    /* all multi-aggregations should be resolved */
    consdata->existmultaggr = FALSE;
 
@@ -1999,7 +2003,8 @@ SCIP_RETCODE analyzeConflictZero(
       || consdata->setppctype == SCIP_SETPPCTYPE_COVERING); /*lint !e641*/
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
    for( v = 0; v < consdata->nvars; ++v )
    {
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
@@ -2034,7 +2039,8 @@ SCIP_RETCODE analyzeConflictOne(
       || consdata->setppctype == SCIP_SETPPCTYPE_PACKING); /*lint !e641*/
 
    /* initialize conflict analysis, and add the two variables assigned to one to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
    n = 0;
    for( v = 0; v < consdata->nvars && n < 2; ++v )
    {
@@ -2611,7 +2617,6 @@ static
 SCIP_DECL_HASHKEYVAL(hashKeyValSetppccons)
 {
    SCIP_CONSDATA* consdata;
-   unsigned int hashval;
    int minidx;
    int mididx;
    int maxidx;
@@ -2634,9 +2639,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValSetppccons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + (unsigned int)maxidx; /*lint !e701*/
-
-   return hashval;
+   return SCIPhashTwo(SCIPcombineTwoInt(consdata->nvars, minidx),
+                      SCIPcombineTwoInt(mididx, maxidx));
 }
 
 /** add extra clique-constraints resulting from a given cliquepartition to SCIP */
@@ -3115,10 +3119,10 @@ SCIP_RETCODE presolvePropagateCons(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->propagated )
+   if( consdata->presolpropagated )
       return SCIP_OKAY;
 
-   consdata->propagated = TRUE;
+   consdata->presolpropagated = TRUE;
 
    vars = consdata->vars;
    nvars = consdata->nvars;
@@ -4905,7 +4909,7 @@ SCIP_RETCODE preprocessCliques(
    susefulvars = 2 * nvars; /* two times because of negated vars, maybe due to deleted variables we need to increase this */
 
    /* a hashmap from varindex to postion in varconsidxs array, because above is still too small */
-   SCIP_CALL( SCIPhashmapCreate(&vartoindex, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&vartoindex, SCIPblkmem(scip), nvars) );
 
    /* get temporary memory for the aggregation storage, to memorize aggregations which will be performed later, otherwise we would destroy our local data structures */
    saggregations = nvars;
@@ -5538,7 +5542,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
       return SCIP_OKAY;
 
    /* a hashmap from var to index when found in a set-partitioning constraint */
-   SCIP_CALL( SCIPhashmapCreate(&vartoindex, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nposvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&vartoindex, SCIPblkmem(scip), nposvars) );
 
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &chgtype, nconss) );
@@ -6241,7 +6245,7 @@ SCIP_RETCODE detectRedundantConstraints(
    assert(conss != NULL);
 
    /* create a hash table for the constraint set */
-   hashtablesize = SCIPcalcHashtableSize(10*nconss);
+   hashtablesize = nconss;
    hashtablesize = MAX(hashtablesize, HASHSIZE_SETPPCCONS);
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashGetKeySetppccons, hashKeyEqSetppccons, hashKeyValSetppccons, (void*) scip) );
@@ -7903,7 +7907,7 @@ SCIP_DECL_CONSPROP(consPropSetppc)
    cutoff = FALSE;
    inpresolve = (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE);
 
-   /* propagate all useful set partitioning / packing / covering constraints */
+   /* propagate all marked set partitioning / packing / covering constraints */
    for( c = nmarkedconss - 1; c >= 0 && !cutoff; --c )
    {
       assert(SCIPconsGetData(conss[c]) != NULL);
@@ -7930,7 +7934,9 @@ SCIP_DECL_CONSPROP(consPropSetppc)
       assert(inpresolve || ! SCIPconsGetData(conss[c])->existmultaggr);
 
       SCIP_CALL( processFixings(scip, conss[c], &cutoff, &nfixedvars, &addcut, &mustcheck) );
-   }
+
+      SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[c]) );
+}
 
    /* return the correct result */
    if( cutoff )
@@ -8640,14 +8646,12 @@ SCIP_DECL_EVENTEXEC(eventExecSetppc)
    {
    case SCIP_EVENTTYPE_LBTIGHTENED:
       consdata->nfixedones++;
-      consdata->propagated = FALSE;
       break;
    case SCIP_EVENTTYPE_LBRELAXED:
       consdata->nfixedones--;
       break;
    case SCIP_EVENTTYPE_UBTIGHTENED:
       consdata->nfixedzeros++;
-      consdata->propagated = FALSE;
       break;
    case SCIP_EVENTTYPE_UBRELAXED:
       consdata->nfixedzeros--;
@@ -8685,9 +8689,17 @@ SCIP_DECL_EVENTEXEC(eventExecSetppc)
    assert(0 <= consdata->nfixedzeros && consdata->nfixedzeros <= consdata->nvars);
    assert(0 <= consdata->nfixedones && consdata->nfixedones <= consdata->nvars);
 
-   if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) && (consdata->nfixedones >= 1 || consdata->nfixedzeros >= consdata->nvars - 1) )
+   if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
    {
-      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+      if( consdata->nfixedones >= 1 || consdata->nfixedzeros >= consdata->nvars - 1 )
+      {
+         consdata->presolpropagated = FALSE;
+         SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+      }
+      else if( (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE) && (consdata->nfixedzeros >= consdata->nvars - 2) )
+      {
+         consdata->presolpropagated = FALSE;
+      }
    }
 
    /*debugMsg(scip, " -> constraint has %d zero-fixed and %d one-fixed of %d variables\n",
@@ -8760,7 +8772,6 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%" SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsSetpack(scip, &cons, consname, 2, twovars,
             FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
-      SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
 
       /* if the constraint gets globally added, we also add the clique information */
       if( !SCIPconsIsLocal(cons) )
@@ -8777,7 +8788,9 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
             SCIPdebugMsg(scip, "new clique of conflict constraint %s led to infeasibility\n", consname);
          }
       }
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+      /* add conflict to SCIP */
+      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
 
       *result = SCIP_CONSADDED;
 

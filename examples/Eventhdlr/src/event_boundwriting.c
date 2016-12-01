@@ -332,7 +332,7 @@ SCIP_RETCODE writeBounds(
             SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
             /* create the variable mapping hash map */
-            SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+            SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
             submipdb = SCIP_INVALID;
             valid = FALSE;
