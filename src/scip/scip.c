@@ -13739,13 +13739,14 @@ SCIP_RETCODE SCIPtransformProb(
 
    if( scip->set->disp_verblevel == SCIP_VERBLEVEL_FULL )
    {
-      SCIP_Real maxnonzeros = ((SCIP_Real)SCIPgetNConss(scip)) * SCIPgetNVars(scip);
+      SCIP_Real maxnonzeros;
       SCIP_Longint nchecknonzeros;
       SCIP_Longint nactivenonzeros;
       SCIP_Bool approxchecknonzeros;
       SCIP_Bool approxactivenonzeros;
 
       /* determine number of non-zeros */
+      maxnonzeros = MAX(((SCIP_Real)SCIPgetNConss(scip)) * SCIPgetNVars(scip), 1.0);
       SCIP_CALL( calcNonZeros(scip, &nchecknonzeros, &nactivenonzeros, &approxchecknonzeros, &approxactivenonzeros) );
 
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
@@ -14617,10 +14618,16 @@ SCIP_RETCODE presolve(
    /* deinitialize presolving */
    if( finished && (!stopped || *unbounded || *infeasible) )
    {
+      SCIP_Real maxnonzeros;
+      SCIP_Longint nchecknonzeros;
+      SCIP_Longint nactivenonzeros;
+      SCIP_Bool approxchecknonzeros;
+      SCIP_Bool approxactivenonzeros;
+
       SCIP_CALL( exitPresolve(scip, *unbounded || *infeasible, infeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
-      /* resorted variables if we are not already done */
+      /* resort variables if we are not already done */
       if( !(*infeasible) && !(*unbounded) )
       {
          /* (Re)Sort the variables, which appear in the four categories (binary, integer, implicit, continuous) after
@@ -14632,24 +14639,17 @@ SCIP_RETCODE presolve(
          SCIPprobResortVars(scip->transprob);
       }
 
-      {
-         SCIP_Real maxnonzeros = ((SCIP_Real)SCIPgetNConss(scip)) * SCIPgetNVars(scip);
-         SCIP_Longint nchecknonzeros;
-         SCIP_Longint nactivenonzeros;
-         SCIP_Bool approxchecknonzeros;
-         SCIP_Bool approxactivenonzeros;
+      /* determine number of non-zeros */
+      maxnonzeros = MAX(((SCIP_Real)SCIPgetNConss(scip)) * SCIPgetNVars(scip), 1.0);
+      SCIP_CALL( calcNonZeros(scip, &nchecknonzeros, &nactivenonzeros, &approxchecknonzeros, &approxactivenonzeros) );
+      scip->stat->nnz = nactivenonzeros;
 
-         /* determine number of non-zeros */
-         SCIP_CALL( calcNonZeros(scip, &nchecknonzeros, &nactivenonzeros, &approxchecknonzeros, &approxactivenonzeros) );
-         scip->stat->nnz = nactivenonzeros;
-
-         SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
-         SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "presolved problem has %s%" SCIP_LONGINT_FORMAT " active (%g%%) nonzeros and %s%" SCIP_LONGINT_FORMAT " (%g%%) check nonzeros\n",
-            approxactivenonzeros ? "more than " : "", nactivenonzeros, maxnonzeros == 0 ? 0 : nactivenonzeros/maxnonzeros * 100,
-            approxchecknonzeros ? "more than " : "", nchecknonzeros, maxnonzeros == 0 ? 0 : nchecknonzeros/maxnonzeros * 100);
-         SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
-      }
+      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
+      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "presolved problem has %s%" SCIP_LONGINT_FORMAT " active (%g%%) nonzeros and %s%" SCIP_LONGINT_FORMAT " (%g%%) check nonzeros\n",
+         approxactivenonzeros ? "more than " : "", nactivenonzeros, nactivenonzeros/maxnonzeros * 100,
+         approxchecknonzeros ? "more than " : "", nchecknonzeros, nchecknonzeros/maxnonzeros * 100);
+      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
    }
    assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
    assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
