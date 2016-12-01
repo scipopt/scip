@@ -273,7 +273,11 @@ public:
 #endif
       m_sense = sense();
       setSense(SPxLP::MINIMIZE);
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION == 4)
       setBasisSolver(&m_slu); /*lint !e1506*/
+#else
+      setSolver(&m_slu); /*lint !e1506*/
+#endif
       setTester(&m_ratio); /*lint !e1506*/
       setPricer(&m_price_steep); /*lint !e1506*/
       /* no starter */

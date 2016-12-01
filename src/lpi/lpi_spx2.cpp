@@ -433,7 +433,11 @@ public:
 
       try
       {
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION == 4)
          (void) optimize();
+#else
+         (void) solve();
+#endif
       }
       catch(const SPxException& x)
       {
@@ -2157,8 +2161,11 @@ SCIP_RETCODE SCIPlpiGetCoef(
    assert(0 <= row && row < lpi->spx->numRowsReal());
    assert(val != NULL);
 
-   // todo implement coefReal that handles unscaling if necessary
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION == 4)
+   *val = lpi->spx->coefReal(row, col);
+#else
    *val = lpi->spx->colVectorRealInternal(col)[row];
+#endif
 
    return SCIP_OKAY;
 }
@@ -2381,7 +2388,11 @@ SCIP_RETCODE lpiStrongbranch(
 #ifdef WITH_LPSCHECK
          spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
-         status = spx->optimize();
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION == 4)
+         status =  spx->optimize();
+#else
+         status = spx->solve();
+#endif
          SCIPdebugMessage(" --> Terminate with status %d\n", status);
          switch( status )
          {
@@ -2460,6 +2471,12 @@ SCIP_RETCODE lpiStrongbranch(
 #ifdef WITH_LPSCHECK
             spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION == 4)
+            status = spx->optimize();
+#else
+            status = spx->solve();
+#endif
+
             status = spx->optimize();
             SCIPdebugMessage(" --> Terminate with status %d\n", status);
             switch( status )
