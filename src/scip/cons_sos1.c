@@ -2709,6 +2709,11 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          origrhs = SCIPgetRhsLinear(scip, linearconss[c]);
          origlhs = SCIPgetLhsLinear(scip, linearconss[c]);
 
+         if ( noriglinvars < 1 )
+            continue;
+         assert( origlinvars != NULL );
+         assert( origlinvals != NULL );
+
          /* copy variables and coefficients of linear constraint */
          SCIP_CALL( SCIPduplicateBufferArray(scip, &trafolinvars, origlinvars, noriglinvars) );
          SCIP_CALL( SCIPduplicateBufferArray(scip, &trafolinvals, origlinvals, noriglinvars) );

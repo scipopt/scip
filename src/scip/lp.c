@@ -9831,6 +9831,16 @@ SCIP_RETCODE SCIPlpFreeNorms(
    return SCIP_OKAY;
 }
 
+/** return the current cutoff bound of the lp */
+SCIP_Real SCIPlpGetCutoffbound(
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+
+   return lp->cutoffbound;
+}
+
 /** sets the upper objective limit of the LP solver */
 SCIP_RETCODE SCIPlpSetCutoffbound(
    SCIP_LP*              lp,                 /**< current LP data */

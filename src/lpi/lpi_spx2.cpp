@@ -626,9 +626,9 @@ public:
       {
          getBasis(_rowStat, _colStat);
       }
+#ifndef NDEBUG
       catch(const SPxException& x)
       {
-#ifndef NDEBUG
          std::string s = x.what();
          SCIPmessagePrintWarning(_messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
 
@@ -637,8 +637,11 @@ public:
           * not OPTIMAL anymore.
           */
          assert(status() != SPxSolver::OPTIMAL);
-#endif
       }
+#else
+      catch(const SPxException&)
+      { }
+#endif
    }
 
    /** restore basis */
@@ -651,11 +654,14 @@ public:
       {
          setBasis(_rowStat, _colStat);
       }
+#ifndef NDEBUG
       catch(const SPxException& x)
       {
-#ifndef NDEBUG
          std::string s = x.what();
          SCIPmessagePrintWarning(_messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#else
+      catch(const SPxException&)
+      {
 #endif
          /* since it is not clear if the status in SoPlex are set correctly
           * we want to make sure that if an error is thrown the status is
@@ -2153,11 +2159,14 @@ SCIP_RETCODE spxSolve(
       {
          lpi->spx->clearBasis();
       }
+#ifndef NDEBUG
       catch(const SPxException& x)
       {
-#ifndef NDEBUG
          std::string s = x.what();
          SCIPmessagePrintWarning(lpi->messagehdlr, "SoPlex threw an exception: %s\n", s.c_str());
+#else
+      catch(const SPxException&)
+      {
 #endif
          assert( lpi->spx->status() != SPxSolver::OPTIMAL );
          return SCIP_LPERROR;

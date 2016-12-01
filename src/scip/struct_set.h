@@ -417,24 +417,44 @@ struct SCIP_Set
 
    /* reoptimization settings */
    SCIP_Real             reopt_objsimsol;    /**< similarity of two objective functions to reuse stored solutions. */
-   SCIP_Real             reopt_objsimrootlp; /**< similarity of two sequential objective function to disable solving the root LP. */
+   SCIP_Real             reopt_objsimrootlp; /**< similarity of two sequential objective function to disable solving the
+                                              *   root LP.
+                                              */
    SCIP_Real             reopt_objsimdelay;  /**< minimum similarity for using reoptimization of the search tree. */
-   char                  reopt_varorderinterdiction; /** use the 'd'efault or a 'r'andom variable order for interdiction branching when applying the reoptimization */
-   int                   reopt_maxsavednodes;/**< maximal number of saved nodes */
+   char                  reopt_varorderinterdiction; /** use the 'd'efault or a 'r'andom variable order for interdiction
+                                                      *  branching when applying the reoptimization
+                                                      */
+   int                   reopt_forceheurrestart; /**< force a restart if the last n optimal solutions were found by
+                                                  *   heuristic reoptsols
+                                                  */
+   int                   reopt_maxcutage;    /**< maximal age of cuts to use them in reoptimization */
    int                   reopt_maxdiffofnodes;/**< maximal number of bound changes between two stored nodes on one path */
+   int                   reopt_maxsavednodes;/**< maximal number of saved nodes */
    int                   reopt_solvelp;      /**< strategy for solving the LP at nodes from reoptimization */
    int                   reopt_solvelpdiff;  /**< maximal number of bound changes at node to skip solving the LP */
-   int                   reopt_savesols;     /**< number of best solutions which should be saved for the following runs. (-1: save all) */
-   int                   reopt_forceheurrestart; /**< force a restart if the last n optimal solutions were found by heuristic reoptsols */
-   SCIP_Bool             reopt_enable;       /**< enable reoptimization */
-   SCIP_Bool             reopt_sepaglbinfsubtrees;/**< save global constraints to separate infeasible subtrees */
-   SCIP_Bool             reopt_sepabestsol;  /**< separate only the best solution, i.e., for constrained shortest path */
+   int                   reopt_savesols;     /**< number of best solutions which should be saved for the following runs.
+                                              *   (-1: save all)
+                                              */
    SCIP_Bool             reopt_commontimelimit;/**< time limit over all reoptimization rounds? */
-   SCIP_Bool             reopt_shrinkinner;  /**< replace branched inner nodes by their child nodes, if the number of bound changes is not to large */
-   SCIP_Bool             reopt_sbinit;       /**< try to fix variables before reoptimizing by probing like strong branching */
+   SCIP_Bool             reopt_enable;       /**< enable reoptimization */
    SCIP_Bool             reopt_reducetofrontier; /**< delete stored nodes which were not reoptimized */
    SCIP_Bool             reopt_saveconsprop; /**< save constraint propagations */
-   SCIP_Bool             reopt_usesplitcons; /**< use constraints to reconstruct the subtree pruned be dual reduction when reactivating the node */
+   SCIP_Bool             reopt_sbinit;       /**< try to fix variables before reoptimizing by probing like strong
+                                              *   branching
+                                              */
+   SCIP_Bool             reopt_shrinkinner;  /**< replace branched inner nodes by their child nodes, if the number of
+                                              *   bound changes is not to large
+                                              */
+   SCIP_Bool             reopt_sepaglbinfsubtrees;/**< save global constraints to separate infeasible subtrees */
+   SCIP_Bool             reopt_sepabestsol;  /**< separate only the best solution, i.e., for constrained shortest path */
+   SCIP_Bool             reopt_storevarhistory;/**< use variable history of the previous solve if the objective function
+                                                *   has changed only slightly
+                                                */
+   SCIP_Bool             reopt_usepscost;    /**< reuse pseudo costs if the objective function changed only slightly */
+   SCIP_Bool             reopt_usecuts;      /**< reoptimize cuts found at the root node */
+   SCIP_Bool             reopt_usesplitcons; /**< use constraints to reconstruct the subtree pruned be dual reduction
+                                              *   when reactivating the node
+                                              */
 
    /* separation settings */
    SCIP_Real             sepa_maxbounddist;  /**< maximal relative distance from current node's dual bound to primal bound

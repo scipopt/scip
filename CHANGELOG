@@ -48,6 +48,9 @@ features:
   FAST, MEDIUM, and EXHAUSTIVE are finished; during this timing only reductions are allowed that are self-contained, e.g.,
   fixing all variables and deleting all constraints of an independent component; note that reductions found in this timing
   do not trigger a new presolving round
+- added method SCIPcheckCopyLimits() which can be used to check that enough time and memory is left to run a sub-SCIP after
+  subtracting time and memory used by the main-SCIP, and SCIPcopyLimits() which copies these limits accordingly and disables
+  all other limits (need to be set by the plugin, if needed)
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
@@ -146,6 +149,7 @@ fixed bugs:
 - fixed bug in event system: bound change events of the new focus node must be processed, even if the bound
   is the same as at the last focus node
 - fixed memory bug in SCIP_DIGRAPH
+- fixed bug while changing the objective value of an original value after transforming the problem
 
 misc:
 - dropped support for Ipopt < 3.11
