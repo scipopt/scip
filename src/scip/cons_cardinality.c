@@ -2929,7 +2929,8 @@ SCIP_DECL_CONSCOPY(consCopyCardinality)
     /* only create the target constraint, if all variables could be copied */
    if( *valid )
    {
-      SCIP_CALL( SCIPcreateConsCardinality(scip, cons, consname, nvars, targetvars, sourceconsdata->cardval, targetindvars,            targetweights, initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
+      SCIP_CALL( SCIPcreateConsCardinality(scip, cons, consname, nvars, targetvars, sourceconsdata->cardval, targetindvars,
+            targetweights, initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
    }
 
    /* free buffer array */
