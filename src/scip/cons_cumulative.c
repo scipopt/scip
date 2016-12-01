@@ -1248,7 +1248,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
    /* create the subproblem */
    SCIP_CALL( SCIPcreateProbBasic(subscip, "cumulative") );
 
-   SCIP_CALL( SCIPallocBufferArray(subscip, &subvars, njobs) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(subscip, &subvars, njobs) );
 
    /* create for each job a start time variable */
    for( v = 0; v < njobs; ++v )
@@ -1372,7 +1372,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
       SCIP_CALL( SCIPreleaseVar(subscip, &subvars[v]) );
    }
 
-   SCIPfreeBufferArray(subscip, &subvars);
+   SCIPfreeBlockMemoryArray(subscip, &subvars, njobs);
 
    SCIP_CALL( SCIPfree(&subscip) );
 
