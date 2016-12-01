@@ -1418,6 +1418,13 @@ SCIP_RETCODE branchBalancedCardinality(
    int cnt;
    int j;
 
+   /* check parameters */
+   if( conshdlrdata->branchbalanced && SCIPconshdlrGetSepaFreq(conshdlr) != 1 )
+   {
+      SCIPerrorMessage("balanced branching is only possible if separation frequency of constraint handler is 1.\n");
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
    cnt = 0;
    nzero = 0;
    nnonzero = 0;
@@ -3097,21 +3104,7 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/balancedcutoff",
          "determines that balanced branching is only used if the branching cut off value \
          w.r.t. the current LP solution is greater than a given value",
-         &conshdlrdata->balancedcutoff, TRUE, DEFAULT_BALANCEDCUTOFF, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-
-   /* check parameters */
-   if( conshdlrdata->branchbalanced && SCIPconshdlrGetSepaFreq(conshdlr) != 1 )
-   {
-       SCIPerrorMessage("balanced branching is only possible if separation frequency of constraint handler is 1.\n");
-       return SCIP_PARAMETERWRONGVAL;
-    }
-
-   /* check parameters */
-   if( ! SCIPisPositive(scip, conshdlrdata->balancedcutoff) )
-   {
-       SCIPerrorMessage("the parameter balancedcutoff has to be positive.\n");
-       return SCIP_PARAMETERWRONGVAL;
-    }
+         &conshdlrdata->balancedcutoff, TRUE, DEFAULT_BALANCEDCUTOFF, 0.01, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
