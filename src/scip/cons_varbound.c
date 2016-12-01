@@ -528,7 +528,7 @@ SCIP_RETCODE resolvePropagation(
          }
          else
          {
-            /* increase the compute relaxed upper bound by an epsilon; that ensure that we get the actual inference bound due
+            /* increase the compute relaxed lower bound by an epsilon; that ensure that we get the actual inference bound due
              * to the integral condition of the variable bound variable
              */
             relaxedbd += SCIPfeastol(scip);
@@ -635,7 +635,7 @@ SCIP_RETCODE resolvePropagation(
 
          if( vbdcoef > 0.0 )
          {
-            /* increase the compute relaxed upper bound by an epsilon; that ensure that we get the actual inference bound due
+            /* increase the compute relaxed lower bound by an epsilon; that ensure that we get the actual inference bound due
              * to the integral condition of the variable bound variable
              */
             relaxedbd += SCIPfeastol(scip);
