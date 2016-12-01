@@ -1733,7 +1733,6 @@ SCIP_RETCODE selectVarLookaheadBranching(
             if( (branchruledata->maxnviolatedcons != -1) &&
                (validbounds->nviolatedbybaselp + binarybounddata->nviolatedentries >= branchruledata->maxnviolatedcons) )
             {
-               SCIPinfoMessage(scip, NULL, "Was here\n");
                status->maxnconsreached = TRUE;
             }
          }
