@@ -1518,7 +1518,7 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
 static
 SCIP_RETCODE checkConsQuadraticProblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        quadconshdlr,           /**< constraint handler data structure */
+   SCIP_CONSHDLR*        quadconshdlr,       /**< constraint handler data structure */
    SCIP_CONS*            cons,               /**< quadratic constraint */
    SCIP_Bool             allowbinary,        /**< if TRUE then allow binary variables in the problem, if FALSE then all
                                               *   variables have to be continuous */

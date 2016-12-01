@@ -137,7 +137,7 @@ then
 elif test "$DEBUGTOOL" = "gdb"
 then
     #  set a gdb command, but leave a place holder for the error file we want to log to, which gets replaced in 'run.sh'
-    DEBUGTOOLCMD='gdb -batch-silent -ex "run" -ex "set logging file ERRFILE_PLACEHOLDER" -ex "set logging on" -ex "thread apply all bt full" --args '
+    DEBUGTOOLCMD='gdb -batch-silent -return-child-result -ex "run" -ex "set logging file ERRFILE_PLACEHOLDER" -ex "set logging on" -ex "thread apply all bt full" --args '
 else
     DEBUGTOOLCMD=""
 fi

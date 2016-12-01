@@ -1675,6 +1675,13 @@ SCIP_RETCODE SCIPdebugAddSolVal(
    if( !SCIPdebugSolIsEnabled(scip) )
       return SCIP_OKAY;
 
+   if( debugsoldata->debugsol == NULL )
+   {
+      /* make sure a debug solution has been read, so we do not compare against the initial debugsolval == 0 */
+      SCIP_CALL( readSolution(scip->set) );
+   }
+
+#if 0
    if( SCIPvarIsOriginal(var) )
    {
       SCIPerrorMessage("adding solution values for original variables is forbidden\n");
@@ -1686,7 +1693,7 @@ SCIP_RETCODE SCIPdebugAddSolVal(
       SCIPerrorMessage("adding solution values for variable that are direct counterparts of original variables is forbidden\n");
       return SCIP_ERROR;
    }
-
+#endif
    /* allocate memory */
    if( debugsoldata->nsolvals >= debugsoldata->solsize )
    {
@@ -1731,8 +1738,6 @@ SCIP_RETCODE SCIPdebugAddSolVal(
    /* update objective function value of debug solution */
    debugsoldata->debugsolval += debugsoldata->solvals[i] * SCIPvarGetObj(var);
    SCIPdebugMsg(scip, "Debug Solution value is now %g.\n", debugsoldata->debugsolval);
-
-   assert(debugsoldata->debugsol != NULL);
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
    {

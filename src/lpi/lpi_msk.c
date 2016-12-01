@@ -2748,8 +2748,11 @@ SCIP_Bool SCIPlpiWasSolved(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   MSKprostae prosta;
    MSKsolstae solsta;
+   MSKrescodee restat;
+#if MSK_VERSION_MAJOR < 7
+   MSKprostae prosta;
+#endif
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
@@ -2757,9 +2760,15 @@ SCIP_Bool SCIPlpiWasSolved(
 
    SCIPdebugMessage("Calling SCIPlpiWasSolved (%d)\n",lpi->lpid);
 
-   SCIP_ABORT_FALSE( getSolutionStatus(lpi, &prosta, &solsta) );
+#if MSK_VERSION_MAJOR >= 7
+   restat = MSK_getsolsta(lpi->task, MSK_SOL_BAS, &solsta);
+#else
+   restat = MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, &prosta, &solsta);
+#endif
 
-   return (solsta == MSK_SOL_STA_OPTIMAL);
+   if ( restat != MSK_RES_OK )
+      return FALSE;
+   return (solsta != MSK_SOL_STA_UNKNOWN);
 }
 
 /** gets information about primal and dual feasibility of the current LP solution */
@@ -3308,17 +3317,15 @@ SCIP_RETCODE convertstat_mosek2scip(
 static
 SCIP_RETCODE convertstat_mosek2scip_slack(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   MSKaccmodee           acc,                /**< ??? */
-   MSKstakeye*           sk,                 /**< ??? */
-   int                   n,                  /**< size */
+   MSKaccmodee           acc,                /**< whether constraints or variables are accessed */
+   MSKstakeye*           sk,                 /**< Mosek basis status */
+   int                   m,                  /**< size */
    int*                  stat                /**< status array */
    )
 {
    int i;
 
-   /* slacks are stored as -1 in Mosek, i.e., bounds are reversed compared to SCIP  */
-
-   for( i = 0; i < n; i++ )
+   for( i = 0; i < m; i++ )
    {
       double sl;
       double su;
@@ -3340,14 +3347,13 @@ SCIP_RETCODE convertstat_mosek2scip_slack(
          break;
       case MSK_SK_UNK:
       case MSK_SK_INF:
-      case MSK_SK_UPR: /* Reversed */
-         stat[i] = (int)SCIP_BASESTAT_LOWER;
-         break;
-      case MSK_SK_LOW: /* Reversed */
+      case MSK_SK_UPR:
          stat[i] = (int)SCIP_BASESTAT_UPPER;
          break;
-      case MSK_SK_END:
+      case MSK_SK_LOW:
+         stat[i] = (int)SCIP_BASESTAT_LOWER;
          break;
+      case MSK_SK_END:
       default:
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
@@ -3790,8 +3796,10 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       for (i = 0; i < numnz; ++i)
          coef[inds[i]] = val[i];
 
+      *ninds = numnz;
       MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef) );
+      assert( *ninds <= nrows );
    }
    else
    {
@@ -3810,6 +3818,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       for (i = 0; i < numnz; ++i)
          coef[sub[i]] = val[i];
 
+      *ninds = numnz;
       MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
 

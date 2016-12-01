@@ -52,6 +52,7 @@ struct SCIP_Disp
    SCIP_Bool             stripline;          /**< should the column be separated with a line from its right neighbor? */
    SCIP_Bool             initialized;        /**< is display column initialized? */
    SCIP_Bool             active;             /**< should column be displayed to the screen? */
+   SCIP_DISPMODE         mode;               /**< mode in which the display column is activated */
 };
 
 #ifdef __cplusplus

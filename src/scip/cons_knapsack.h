@@ -189,7 +189,8 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    int*                  nsolitems,          /**< pointer to store number of items in solution, or NULL */
    int*                  nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
    SCIP_Real*            solval,             /**< pointer to store optimal solution value, or NULL */
-   SCIP_Bool*            success             /**< pointer to store if an error occured during solving (normally a memory problem) */
+   SCIP_Bool*            success             /**< pointer to store if an error occured during solving
+                                              *   (normally a memory problem) */
    );
 
 /** solves knapsack problem in maximization form approximately by solving the LP-relaxation of the problem using Dantzig's
@@ -211,7 +212,7 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
    );
 
-/** separates lifted valid inequalities for given knapsack problem */
+/** separates different classes of valid inequalities for the 0-1 knapsack problem */
 EXTERN
 SCIP_RETCODE SCIPseparateKnapsackCuts(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -221,7 +222,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
    int                   nvars,              /**< number of variables in knapsack constraint */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
-   SCIP_SOL*             sol,                /**< primal CIP solution to separate, NULL for current LP solution */
+   SCIP_SOL*             sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
    SCIP_Bool             usegubs,            /**< should GUB information be used for separation? */
    SCIP_Bool*            cutoff,             /**< pointer to store whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to add up the number of found cuts */

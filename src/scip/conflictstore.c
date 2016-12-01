@@ -288,8 +288,8 @@ SCIP_RETCODE delPosConflict(
    SCIP_PROB*            transprob,          /**< transformed problem, or NULL if delete = FALSE */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    int                   pos,                /**< position to remove */
-   SCIP_Bool             delete              /**< should the conflict be deleted? */
-)
+   SCIP_Bool             deleteconflict      /**< should the conflict be deleted? */
+   )
 {
    SCIP_CONS* conflict;
    int lastpos;
@@ -309,7 +309,7 @@ SCIP_RETCODE delPosConflict(
 #endif
 
    /* mark the constraint as deleted */
-   if( delete && !SCIPconsIsDeleted(conflict) )
+   if( deleteconflict && !SCIPconsIsDeleted(conflict) )
    {
       assert(transprob != NULL);
       SCIP_CALL( SCIPconsDelete(conflictstore->conflicts[pos], blkmem, set, stat, transprob) );
@@ -343,8 +343,8 @@ SCIP_RETCODE delPosDualray(
    SCIP_PROB*            transprob,          /**< transformed problem, or NULL if delete = FALSE */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    int                   pos,                /**< position to remove */
-   SCIP_Bool             delete              /**< should the dual ray be deleted? */
-)
+   SCIP_Bool             deleteconflict      /**< should the dual ray be deleted? */
+   )
 {
    SCIP_CONS* dualray;
    int lastpos;
@@ -360,7 +360,7 @@ SCIP_RETCODE delPosDualray(
 #endif
 
    /* mark the constraint as deleted */
-   if( delete && !SCIPconsIsDeleted(dualray) )
+   if( deleteconflict && !SCIPconsIsDeleted(dualray) )
    {
       assert(transprob != NULL);
       SCIP_CALL( SCIPconsDelete(dualray, blkmem, set, stat, transprob) );

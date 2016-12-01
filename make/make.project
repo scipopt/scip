@@ -78,6 +78,7 @@ VERBOSE		=	false
 OPT		=	opt
 COMP		=	gnu
 LPS		=	spx2
+TPI		=	none
 STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
@@ -126,6 +127,7 @@ CXX_o		=	-o # the trailing space is important
 LINKCC		=	gcc
 LINKCC_L	=	-L
 LINKCC_l	=	-l
+LINKCC_f	=	-f
 LINKCC_o	=	-o # the trailing space is important
 LINKCXX		=	g++
 LINKCXX_L	=	-L
@@ -219,9 +221,11 @@ LIBOBJSUBDIRS	=	$(LIBOBJDIR)/scip \
 			$(LIBOBJDIR)/blockmemshell \
 			$(LIBOBJDIR)/tclique \
 			$(LIBOBJDIR)/lpi \
+			$(LIBOBJDIR)/tpi \
 			$(LIBOBJDIR)/nlpi \
 			$(LIBOBJDIR)/xml \
-			$(LIBOBJDIR)/dijkstra
+			$(LIBOBJDIR)/dijkstra \
+			$(LIBOBJDIR)/tinycthread
 SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib
@@ -324,18 +328,26 @@ endif
 #-------------------------------------------------------
 # define flags for XPRESS
 ifeq ($(LPS),xprs)
-LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
 			$(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
-LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libxpress.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
+LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/shared/libxpress.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
 endif
 
 #-------------------------------------------------------
 # define flags for Mosek
 ifeq ($(LPS),msk)
-LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
 			$(LINKCC_l)iomp5.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
-LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT) \
-			$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
+LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT) \
+			$(SCIPREALPATH)/$(LIBDIR)/shared/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+ifneq ($(LINKRPATH),)
+MOSEKDIR	= 	$(dir $(realpath $(SCIPREALPATH)/$(LIBDIR)/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)))
+LPSLDFLAGS	+=      $(LINKRPATH)$(MOSEKDIR)
+endif
+# correct path for everything that comes after Mosek
+ifneq ($(SHARED),true)
+LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/static
+endif
 endif
 
 #-------------------------------------------------------
@@ -400,6 +412,34 @@ endif
 LPILIB		=	$(LPILIBNAME).$(BASE)
 LPILIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPILIB).$(LIBEXT)
 LPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPILIBNAME).$(LIBEXT)
+
+
+#-----------------------------------------------------------------------------
+# Parallel Interface
+#-----------------------------------------------------------------------------
+
+TPILIBNAME	=	tpi$(TPI)
+
+ifeq ($(TPI),omp)
+ifeq ($(COMP),gnu)
+TPICFLAGS  += $(LINKCC_f)openmp$(LINKLIBSUFFIX)
+TPILDFLAGS  += $(LINKCC_f)openmp$(LINKLIBSUFFIX)
+else ifeq ($(COMP),intel)
+TPICFLAGS  += -openmp$(LINKLIBSUFFIX)
+TPILDFLAGS  += -openmp$(LINKLIBSUFFIX)
+else
+TPICFLAGS  +=
+TPILDFLAGS  +=
+endif
+endif
+
+ifeq ($(TPI),none)
+TPILDFLAGS	+=
+endif
+
+TPILIB		=	$(TPILIBNAME).$(BASE)
+TPILIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIB).$(LIBEXT)
+TPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIBNAME).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -547,9 +587,9 @@ NLPILIBSHORTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(NLPILIBNAME).$(LIBEXT)
 # link SCIP for C projects
 LINKCXXSCIPALL	=	$(LINKCXX_L)$(SCIPDIR)/lib/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-			$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS)
+			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS)
 
 # link SCIP for C++ projects (including libobjscip)
 LINKCCSCIPALL	=	$(LINKCC_L)$(SCIPDIR)/lib/$(LIBTYPE) $(LINKCC_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
 			$(LINKCC_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-			$(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS)
+			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS)

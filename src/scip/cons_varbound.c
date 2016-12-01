@@ -1456,6 +1456,48 @@ SCIP_RETCODE propagateCons(
          SCIPvarGetName(consdata->vbdvar), SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar));
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
 
+      /* this did not seem to help but should be tested again, there might also still be a bug in there */
+#ifdef SCIP_DISABLED_CODE
+      /* local duality fixing of variables in the constraint */
+      if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->vbdvar)) && SCIPvarGetNLocksDown(consdata->vbdvar) == 1
+         && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->vbdvar))
+         && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar))
+         && ((consdata->vbdcoef > 0.0 && !SCIPisInfinity(scip, -consdata->lhs))
+            || (consdata->vbdcoef < 0.0 && !SCIPisInfinity(scip, consdata->rhs))) )
+      {
+         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->vbdvar),
+            SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar), SCIPvarGetLbLocal(consdata->vbdvar));
+         SCIP_CALL( SCIPchgVarUb(scip, consdata->vbdvar, SCIPvarGetLbLocal(consdata->vbdvar)) );
+      }
+      else if( !SCIPisPositive(scip, SCIPvarGetObj(consdata->vbdvar)) && SCIPvarGetNLocksUp(consdata->vbdvar) == 1
+         && !SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->vbdvar))
+         && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar))
+         && ((consdata->vbdcoef < 0.0 && !SCIPisInfinity(scip, -consdata->lhs))
+            || (consdata->vbdcoef > 0.0 && !SCIPisInfinity(scip, consdata->rhs))) )
+      {
+         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->vbdvar),
+            SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar));
+         SCIP_CALL( SCIPchgVarLb(scip, consdata->vbdvar, SCIPvarGetUbLocal(consdata->vbdvar)) );
+      }
+      if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->var)) && SCIPvarGetNLocksDown(consdata->var) == 1
+         && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->var))
+         && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var))
+         && !SCIPisInfinity(scip, -consdata->lhs) )
+      {
+         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->var),
+            SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var), SCIPvarGetLbLocal(consdata->var));
+         SCIP_CALL( SCIPchgVarUb(scip, consdata->var, SCIPvarGetLbLocal(consdata->var)) );
+      }
+      else if( !SCIPisPositive(scip, SCIPvarGetObj(consdata->var)) && SCIPvarGetNLocksUp(consdata->var) == 1
+         && !SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->var))
+         && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var))
+         && !SCIPisInfinity(scip, consdata->rhs) )
+      {
+         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->var),
+            SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var));
+         SCIP_CALL( SCIPchgVarLb(scip, consdata->var, SCIPvarGetUbLocal(consdata->var)) );
+      }
+#endif
       if( ndelconss != NULL )
          (*ndelconss)++;
    }
@@ -3997,6 +4039,8 @@ SCIP_DECL_CONSPROP(consPropVarbound)
    cutoff = FALSE;
    nchgbds = 0;
 
+   SCIPdebugMsg(scip, "propagating %d variable bound constraints\n", nmarkedconss);
+
    /* process constraints marked for propagation */
    for( i = 0; i < nmarkedconss && !cutoff; i++ )
    {
@@ -4589,7 +4633,7 @@ SCIP_RETCODE SCIPcreateConsVarbound(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
