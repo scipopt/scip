@@ -3422,19 +3422,23 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
    assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER);
 
-   /* correct rstat values for ">=" constraints: Here CPX_AT_LOWER bound means that the slack is 0, i.e., the upper bound is tight */
+   /* Copy rstat to internal structure and correct rstat values for ">=" constraints: Here CPX_AT_LOWER bound means that
+    * the slack is 0, i.e., the upper bound is tight. */
    nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
+   SCIP_CALL( ensureRstatMem(lpi, nrows) );
    for (i = 0; i < nrows; ++i)
    {
       if ( rstat[i] == (int) SCIP_BASESTAT_UPPER )
       {
          CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &sense, i, i) );
          if ( sense == 'L' )
-            rstat[i] = CPX_AT_LOWER;
+            lpi->rstat[i] = CPX_AT_LOWER;
       }
+      else
+         lpi->rstat[i] = rstat[i];
    }
 
-   CHECK_ZERO( lpi->messagehdlr, CPXcopybase(lpi->cpxenv, lpi->cpxlp, cstat, rstat) );
+   CHECK_ZERO( lpi->messagehdlr, CPXcopybase(lpi->cpxenv, lpi->cpxlp, cstat, lpi->rstat) );
 
    return SCIP_OKAY;
 }
