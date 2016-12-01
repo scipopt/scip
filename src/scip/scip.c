@@ -4070,6 +4070,128 @@ SCIP_RETCODE SCIPcopyOrigConsCompression(
    return SCIP_OKAY;
 }
 
+/** return updated time limit for a sub-SCIP */
+static
+SCIP_RETCODE getCopyTimelimit(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP_Real*            timelimit           /**< pointer to store sub-SCIP time limit */
+   )
+{
+   SCIP_CALL( SCIPgetRealParam(sourcescip, "limits/time", timelimit) );
+   if( !SCIPisInfinity(sourcescip, *timelimit) )
+      (*timelimit) -= SCIPgetSolvingTime(sourcescip);
+
+   return SCIP_OKAY;
+}
+
+/** return updated memory limit for a sub-SCIP */
+static
+SCIP_RETCODE getCopyMemlimit(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP_Real*            memorylimit         /**< pointer to store sub-SCIP memory limit */
+   )
+{
+   SCIP_CALL( SCIPgetRealParam(sourcescip, "limits/memory", memorylimit) );
+
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
+   if( !SCIPisInfinity(sourcescip, *memorylimit) )
+      (*memorylimit) -= (SCIPgetMemUsed(sourcescip) + SCIPgetMemExternEstim(sourcescip))/1048576.0;
+
+   return SCIP_OKAY;
+}
+
+/** checks if there is enough time and memory left for copying the sourcescip into a sub-SCIP and solve the sub-SCIP
+ *
+ *  This is the case if the time and memory limit that would be passed to the sub-SCIP are larger than 0.0
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPcheckCopyLimits(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP_Bool*            success             /**< pointer to store whether there is time and memory left to copy the
+                                              *   problem and run the sub-SCIP */
+   )
+{
+   SCIP_Real timelimit;
+   SCIP_Real memorylimit;
+
+   SCIP_CALL( getCopyTimelimit(sourcescip, &timelimit) );
+   SCIP_CALL( getCopyMemlimit(sourcescip, &memorylimit) );
+
+   *success = timelimit > 0.0 && memorylimit > 2.0 * SCIPgetMemExternEstim(sourcescip) / 1048576.0;
+
+   return SCIP_OKAY;
+}
+
+/** copies limits from source SCIP to target SCIP
+ *
+ *  @note time and memory limit are reduced by the amount already spent in the source SCIP before installing the limit
+ *        in the target SCIP
+ *  @note all other limits are disabled and need to be enabled afterwards, if needed
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPcopyLimits(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip          /**< target SCIP data structure */
+   )
+{
+   SCIP_Real timelimit;
+   SCIP_Real memorylimit;
+
+   SCIP_CALL( getCopyTimelimit(sourcescip, &timelimit) );
+   SCIP_CALL( getCopyMemlimit(sourcescip, &memorylimit) );
+
+   /* avoid negative limits */
+   if( timelimit < 0.0 )
+      timelimit = 0.0;
+   if( memorylimit < 0.0 )
+      memorylimit = 0.0;
+
+   /* set time and memory limit to the adjusted values */
+   SCIP_CALL( SCIPsetRealParam(targetscip, "limits/time", timelimit) );
+   SCIP_CALL( SCIPsetRealParam(targetscip, "limits/memory", memorylimit) );
+
+   /* disable all other limits */
+   SCIP_CALL( SCIPsetRealParam(targetscip, "limits/absgap", 0.0) );
+   SCIP_CALL( SCIPsetIntParam(targetscip, "limits/bestsol", -1) );
+   SCIP_CALL( SCIPsetRealParam(targetscip, "limits/gap", 0.0) );
+   SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/nodes", -1) );
+   SCIP_CALL( SCIPsetIntParam(targetscip, "limits/restarts", -1) );
+   SCIP_CALL( SCIPsetIntParam(targetscip, "limits/solutions", -1) );
+   SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/stallnodes", -1) );
+   SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1) );
+
+   /* the soft time limit event handler might not be included so we need to check if the parameter exists */
+   if( SCIPgetParam(targetscip, "limits/softtime") != NULL )
+   {
+      SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1) );
+   }
+
+   return SCIP_OKAY;
+}
 
 
 /*
