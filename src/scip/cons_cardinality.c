@@ -177,7 +177,7 @@ SCIP_RETCODE dropVarEventCardinality(
 
 /** fix variable in given node to 0 or add constraint if variable is multi-aggregated
  *
- *  @todo Try to handle multi-aggregated variables as in fixVariableZero() below.
+ *  @todo Try to handle multi-aggregated variables as in \ref fixVariableZero() below.
  */
 static
 SCIP_RETCODE fixVariableZeroNode(
@@ -1284,7 +1284,7 @@ SCIP_RETCODE propCardinality(
    return SCIP_OKAY;
 }
 
-/** apply unbalanced branching (see the function enforceCardinality() for further information) */
+/** apply unbalanced branching (see the function \ref enforceCardinality() for further information) */
 static
 SCIP_RETCODE branchUnbalancedCardinality(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -2039,7 +2039,7 @@ SCIP_RETCODE generateRowCardinality(
    return SCIP_OKAY;
 }
 
-/** initialize or separate bound inequalities from cardinality constraints (see the function generateRowCardinality() for an explanation of bound inequalities) */
+/** initialize or separate bound inequalities from cardinality constraints (see the function \ref generateRowCardinality() for an explanation of bound inequalities) */
 static
 SCIP_RETCODE initsepaBoundInequalityFromCardinality(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -3122,7 +3122,7 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
  *  NULL, the variables are ordered according to these weights (in
  *  ascending order).
  *
- *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ *  @note the constraint gets captured, hence at one point you have to release it using the method \ref SCIPreleaseCons()
  */
 SCIP_RETCODE SCIPcreateConsCardinality(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3318,7 +3318,7 @@ SCIP_RETCODE SCIPcreateConsCardinality(
  *  @warning Do NOT set the constraint to be modifiable manually, because this might lead
  *  to wrong results as the variable array will not be resorted
  *
- *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ *  @note the constraint gets captured, hence at one point you have to release it using the method \ref SCIPreleaseCons()
  */
 SCIP_RETCODE SCIPcreateConsBasicCardinality(
    SCIP*                 scip,               /**< SCIP data structure */
