@@ -170,9 +170,6 @@ SCIP_RETCODE applyOfins(
    SCIP_Real* fixedvals;
    int nfixedvars;
 
-   SCIP_Real timelimit;                           /* time limit for OFINS subproblem */
-   SCIP_Real memorylimit;                         /* memory limit for OFINS subproblem */
-
    int nvars;                                     /* number of source problem's variables */
    int nintvars;
    int i;
