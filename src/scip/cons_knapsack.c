@@ -1292,10 +1292,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    }
 
    /* allocate temporary memory and check for memory exceeding */
-   /* @note we do allocate normal memory instead of buffer memory, because the buffer will not be deleted directly and
-    *       might be a really huge block of memory which we will not use later on
-    */
-   retcode = SCIPallocMemoryArray(scip, &optvalues, nmyitems * intcap);
+   retcode = SCIPallocBufferArray(scip, &optvalues, nmyitems * intcap);
    if( retcode == SCIP_NOMEMORY )
    {
       SCIPdebugMsg(scip, "Did not get enough memory.\n");
@@ -1382,7 +1379,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       }
 
       SCIPfreeBufferArray(scip, &tempsort);
-      SCIPfreeMemoryArray(scip, &optvalues);
+      SCIPfreeBufferArray(scip, &optvalues);
 
       goto TERMINATE;
    }
@@ -1511,7 +1508,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
    /* free all temporary memory */
    SCIPfreeBufferArray(scip, &tempsort);
-   SCIPfreeMemoryArray(scip, &optvalues);
+   SCIPfreeBufferArray(scip, &optvalues);
 
  TERMINATE:
    SCIPfreeBufferArray(scip, &myitems);
