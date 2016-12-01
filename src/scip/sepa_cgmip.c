@@ -2147,44 +2147,27 @@ SCIP_RETCODE solveSubscip(
 
    subscip = mipdata->subscip;
 
-   /* determine timelimit */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if ( ! SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   if ( sepadata->timelimit < timelimit )
-      timelimit = sepadata->timelimit;
-   if ( timelimit > 0.0 )
+   SCIP_CALL( SCIPcheckCopyLimits(scip, success) );
+
+   if ( *success )
    {
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+      SCIP_CALL( SCIPcopyLimits(scip, subscip) );
+
+      SCIP_CALL( SCIPgetRealParam(subscip, "limits/time", &timelimit) );
+      SCIP_CALL( SCIPgetRealParam(subscip, "limits/memory", &memorylimit) );
+
+      /* reduce time and memory limit if a smaller limit is stored in the separator data */
+      if ( sepadata->timelimit < timelimit )
+      {
+         SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", sepadata->timelimit) );
+      }
+      if ( sepadata->memorylimit < memorylimit )
+      {
+         SCIP_CALL( SCIPsetRealParam(subscip, "limits/memorylimit", sepadata->memorylimit) );
+      }
    }
    else
-   {
-      *success = FALSE;
       return SCIP_OKAY;
-   }
-
-   /* determine memorylimit */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-   if ( sepadata->memorylimit < memorylimit )
-      memorylimit = sepadata->memorylimit;
-
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if ( ! SCIPisInfinity(scip, memorylimit) )
-   {
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-   }
-
-   /* set memory limit if at least twice the amount of memory is left as is currently used */
-   if ( memorylimit > 2.0 * (SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip)) / 1048576.0 )
-   {
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-   }
-   else
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
 
    /* set nodelimit for subproblem */
    if ( sepadata->minnodelimit < 0 || sepadata->maxnodelimit < 0 )

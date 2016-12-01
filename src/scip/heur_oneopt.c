@@ -417,33 +417,18 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIP_VAR**            subvars;            /* subproblem's variables                          */
       SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
 
-      SCIP_Real timelimit;                      /* time limit for zeroobj subproblem              */
-      SCIP_Real memorylimit;                    /* memory limit for zeroobj subproblem            */
-
       SCIP_SOL* startsol;
       SCIP_SOL** subsols;
+      SCIP_Bool success;
       int nsubsols;
 
       if( !heurdata->beforepresol )
          return SCIP_OKAY;
 
       /* check whether there is enough time and memory left */
-      timelimit = 0.0;
-      memorylimit = 0.0;
-      SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-      if( !SCIPisInfinity(scip, timelimit) )
-         timelimit -= SCIPgetSolvingTime(scip);
-      SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+      SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
 
-      /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-      if( !SCIPisInfinity(scip, memorylimit) )
-      {
-         memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-         memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-      }
-
-      /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-      if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
+      if( !success )
          return SCIP_OKAY;
 
       /* initialize the subproblem */
@@ -476,18 +461,26 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIPfreeBufferArray(scip, &subsolvals);
       SCIPhashmapFree(&varmapfw);
 
-      /* disable statistic timing inside sub SCIP */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
-
       /* deactivate basically everything except oneopt in the sub-SCIP */
       SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
       SCIP_CALL( SCIPsetHeuristics(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
       SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
+
+      /* set limits for the subproblem */
+      SCIP_CALL( SCIPcopyLimits(scip, subscip) );
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", 1LL) );
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+
       SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+
+#ifdef SCIP_DEBUG
+      /* for debugging, enable full output */
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#else
+      /* disable statistic timing inside sub SCIP and output to console */
       SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+#endif
 
       /* if necessary, some of the parameters have to be unfixed first */
       if( SCIPisParamFixed(subscip, "lp/solvefreq") )

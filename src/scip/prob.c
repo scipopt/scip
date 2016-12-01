@@ -596,7 +596,7 @@ SCIP_RETCODE SCIPprobTransform(
    (*target)->permuted = source->permuted;
 
    /* transform the conflict pool */
-   SCIP_CALL( SCIPconflictstoreTransform(conflictstore, blkmem, set, stat, tree, *target, eventfilter) );
+   SCIP_CALL( SCIPconflictstoreTransform(conflictstore, blkmem, set, stat, tree, *target, reopt, eventfilter) );
 
    return SCIP_OKAY;
 }
@@ -612,7 +612,6 @@ SCIP_RETCODE SCIPprobResetBounds(
    int v;
 
    assert(prob != NULL);
-   assert(!prob->transformed);
    assert(prob->nfixedvars == 0);
 
    for( v = 0; v < prob->nvars; ++v )
@@ -1557,6 +1556,16 @@ void SCIPprobUpdateDualbound(
          SCIPABORT();
       }
    }
+}
+
+/** invalidates the dual bound */
+void SCIPprobInvalidateDualbound(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->dualbound = SCIP_INVALID;
 }
 
 /** if possible, scales objective function such that it is integral with gcd = 1 */
