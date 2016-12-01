@@ -19,6 +19,7 @@
 #include "queens.hpp"
 #include <sstream>
 #include "scip_exception.hpp"
+#include "scip/pub_message.h"
 
 using namespace std;
 using namespace scipexamples;
@@ -34,7 +35,7 @@ scipexamples::QueensSolver::QueensSolver(size_t n)
    SCIP_CALL_EXC( SCIPincludeDefaultPlugins(_scip) );
 
    // disable scip output to stdout
-   SCIP_CALL_EXC( SCIPsetMessagehdlr(_scip, NULL) );
+   SCIPmessagehdlrSetQuiet(SCIPgetMessagehdlr(_scip), TRUE);
 
    // create an empty problem
    SCIP_CALL_EXC( SCIPcreateProb(_scip, "queens", NULL, NULL, NULL, NULL, NULL, NULL, NULL) );

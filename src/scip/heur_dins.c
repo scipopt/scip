@@ -543,6 +543,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolDins)
 
    /* initialize data */
    heurdata->usednodes = 0;
+   heurdata->lastnsolsfound = 0;
 
    /* create flag array */
    heurdata->deltalength = SCIPgetNBinVars(scip);
@@ -714,7 +715,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
-   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
 
    success = FALSE;
    eventhdlr = NULL;
@@ -816,11 +817,11 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    }
    if( !SCIPisParamFixed(subscip, "conflict/useinflp") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useinflp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/usesb") )
    {

@@ -26,7 +26,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_mutation.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 
 #define HEUR_NAME             "mutation"
 #define HEUR_DESC             "mutation heuristic randomly fixing variables"
@@ -67,7 +67,7 @@ struct SCIP_HeurData
    SCIP_Real             minimprove;         /**< factor by which Mutation should at least improve the incumbent      */
    SCIP_Longint          usednodes;          /**< nodes already used by Mutation in earlier calls                     */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem       */
-   SCIP_RANDGEN*         randnumgen;         /**< random number generator                              */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator                              */
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?        */
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?
@@ -89,7 +89,7 @@ SCIP_RETCODE determineVariableFixings(
    SCIP_Real*            fixedvals,          /**< array to store the fixing values to fix variables in the subproblem */
    int*                  nfixedvars,         /**< pointer to store the number of variables that should be fixed */
    SCIP_Real             minfixingrate,      /**< percentage of integer variables that have to be fixed         */
-   SCIP_RANDGEN*         randnumgen,         /**< random number generator                                       */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator                                       */
    SCIP_Bool*            success             /**< used to store whether the creation of the subproblem worked   */
    )
 {
@@ -264,7 +264,7 @@ SCIP_DECL_HEURINIT(heurInitMutation)
    heurdata->usednodes = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    return SCIP_OKAY;
@@ -284,7 +284,7 @@ SCIP_DECL_HEUREXIT(heurExitMutation)
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
+   SCIPrandomFree(&heurdata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -391,7 +391,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_CALL( SCIPcreate(&subscip) );
 
    /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
 
    /* create a problem copy as sub SCIP */
    SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "mutation", fixedvars, fixedvals, nfixedvars, heurdata->uselprows, heurdata->copycuts, &success) );
@@ -468,11 +468,11 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    }
    if( !SCIPisParamFixed(subscip, "conflict/useinflp") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useinflp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/usesb") )
    {

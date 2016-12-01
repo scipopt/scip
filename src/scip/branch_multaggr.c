@@ -201,7 +201,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
    SCIPdebugMsg(scip, " fractional variable: <%s> with value: %f is selected by strong branching\n", SCIPvarGetName(*bestcand), *bestsol);
 
    /* check if we would exceed the depth limit */
-   if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+   if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
    {
       SCIPdebugMsg(scip, "cannot perform probing in selectVarMultAggrBranching, depth limit reached.\n");
       *result = SCIP_DIDNOTRUN;

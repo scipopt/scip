@@ -31,6 +31,11 @@ for filename in sys.argv[1:]:
         continue
     print
     print "  --checking ", filename
+
+    if filename.find("misc_") >= 0:
+        print "    --> skipped"
+        continue
+
     print
     print
 

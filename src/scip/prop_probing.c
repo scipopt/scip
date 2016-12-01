@@ -26,7 +26,7 @@
 #include <string.h>
 
 #include "scip/prop_probing.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 
 
 #define PROP_NAME               "probing"
@@ -99,7 +99,7 @@ struct SCIP_PropData
    int                   nsumuseless;        /**< current number of useless probings */
    int                   maxdepth;           /**< maximal depth until propagation is executed */
    SCIP_Longint          lastnode;           /**< last node where probing was applied, or -1 for presolving, and -2 for not applied yet */
-   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 };
 
 
@@ -726,7 +726,7 @@ SCIP_DECL_PROPFREE(propFreeProbing)
    assert(propdata->nsortedbinvars == 0);
 
    /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &propdata->randnumgen) );
+   SCIPrandomFree(&propdata->randnumgen);
 
    SCIPfreeMemory(scip, &propdata);
    SCIPpropSetData(prop, NULL);
@@ -1109,7 +1109,7 @@ SCIP_RETCODE SCIPincludePropProbing(
    SCIP_CALL( initPropdata(scip, propdata) );
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &propdata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&propdata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    /* include propagator */

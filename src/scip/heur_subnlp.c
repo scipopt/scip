@@ -64,6 +64,7 @@ struct SCIP_HeurData
 
    SCIP_SOL*             startcand;          /**< candidate for start point for heuristic */
    SCIP_Real             startcandviol;      /**< violation of start point candidate w.r.t. constraint that reported this candidate */
+   SCIP_SOL*             lastsol;            /**< pointer to last found solution (or NULL if none), not captured, thus may be dangling */
 
    SCIP_NLPSTATISTICS*   nlpstatistics;      /**< statistics from NLP solver */
    SCIP_Bool             comblinearconsadded;/**< whether the linear constraint adding method has been called for combinatorial constraints already */
@@ -128,7 +129,6 @@ SCIP_RETCODE createSubSCIP(
    int i;
    SCIP_HASHMAP* varsmap;
    SCIP_HASHMAP* conssmap;
-   SCIP_HASHMAPLIST* list;
 #ifdef SCIP_DEBUG
    static const SCIP_Bool copydisplays = TRUE;
    static const SCIP_Bool copyreader = TRUE;
@@ -148,7 +148,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPcreate(&heurdata->subscip) );
 
    /* create variable hash mapping scip -> subscip */
-   SCIP_CALL( SCIPhashmapCreate(&varsmap, SCIPblkmem(scip), MAX(nvars, 5)) );
+   SCIP_CALL( SCIPhashmapCreate(&varsmap, SCIPblkmem(scip), nvars) );
 
    /* create sub-SCIP copy of CIP */
 
@@ -199,7 +199,7 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, NULL, NULL, 0, TRUE) );
 
    /* copy as many constraints as possible */
-   SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPcalcHashtableSize(2 * SCIPgetNConss(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPgetNConss(scip)) );
    SCIP_CALL( SCIPcopyConss(scip, heurdata->subscip, varsmap, conssmap, TRUE, FALSE, &heurdata->subscipisvalid) );
    SCIPhashmapFree(&conssmap);
    if( !heurdata->subscipisvalid )
@@ -229,12 +229,14 @@ SCIP_RETCODE createSubSCIP(
    /* we need to get all subscip variables, also those which are copies of fixed variables from the main scip
     * therefore we iterate over the hashmap
     */
-   for( i = 0; i < SCIPhashmapGetNLists(varsmap); ++i )
+   for( i = 0; i < SCIPhashmapGetNEntries(varsmap); ++i )
    {
-      for( list = SCIPhashmapGetList(varsmap, i); list != NULL; list = SCIPhashmapListGetNext(list) )
+      SCIP_HASHMAPENTRY* entry;
+      entry = SCIPhashmapGetEntry(varsmap, i);
+      if( entry != NULL )
       {
-         var    = (SCIP_VAR*)SCIPhashmapListGetOrigin(list);
-         subvar = (SCIP_VAR*)SCIPhashmapListGetImage(list);
+         var    = (SCIP_VAR*) SCIPhashmapEntryGetOrigin(entry);
+         subvar = (SCIP_VAR*) SCIPhashmapEntryGetImage(entry);
 
          assert(SCIPvarGetProbindex(subvar) >= 0);
          assert(SCIPvarGetProbindex(subvar) <= heurdata->nsubvars);
@@ -501,7 +503,8 @@ SCIP_RETCODE addLinearConstraints(
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
             SCIPgetNVarsLinear(scip, conss[i]), SCIPgetVarsLinear(scip, conss[i]), SCIPgetValsLinear(scip, conss[i]),
             0, NULL, 0, NULL, NULL,
-            SCIPgetLhsLinear(scip, conss[i]), SCIPgetRhsLinear(scip, conss[i])) );
+            SCIPgetLhsLinear(scip, conss[i]), SCIPgetRhsLinear(scip, conss[i]),
+            SCIP_EXPRCURV_LINEAR) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
@@ -557,7 +560,8 @@ SCIP_RETCODE addVarboundConstraints(
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
             2, vars, coefs,
             0, NULL, 0, NULL, NULL,
-            SCIPgetLhsVarbound(scip, conss[i]), SCIPgetRhsVarbound(scip, conss[i])) );
+            SCIPgetLhsVarbound(scip, conss[i]), SCIPgetRhsVarbound(scip, conss[i]),
+            SCIP_EXPRCURV_LINEAR) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
@@ -622,7 +626,8 @@ SCIP_RETCODE addLogicOrConstraints(
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
             nvars, SCIPgetVarsLogicor(scip, conss[i]), coefs,
             0, NULL, 0, NULL, NULL,
-            1.0, SCIPinfinity(scip)) );
+            1.0, SCIPinfinity(scip),
+            SCIP_EXPRCURV_LINEAR) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
@@ -713,7 +718,8 @@ SCIP_RETCODE addSetppcConstraints(
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
             nvars, SCIPgetVarsSetppc(scip, conss[i]), coefs,
             0, NULL, 0, NULL, NULL,
-            lhs, rhs) );
+            lhs, rhs,
+            SCIP_EXPRCURV_LINEAR) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
@@ -783,7 +789,8 @@ SCIP_RETCODE addKnapsackConstraints(
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
             nvars, SCIPgetVarsKnapsack(scip, conss[i]), coefs,
             0, NULL, 0, NULL, NULL,
-            -SCIPinfinity(scip), (SCIP_Real)SCIPgetCapacityKnapsack(scip, conss[i])) );
+            -SCIPinfinity(scip), (SCIP_Real)SCIPgetCapacityKnapsack(scip, conss[i]),
+            SCIP_EXPRCURV_LINEAR) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
@@ -850,7 +857,8 @@ static
 SCIP_RETCODE createSolFromNLP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure */
-   SCIP_SOL**            sol                 /**< buffer to store solution value; if pointing to NULL, then a new solution is created, otherwise values in the given one are overwritten */
+   SCIP_SOL**            sol,                /**< buffer to store solution value; if pointing to NULL, then a new solution is created, otherwise values in the given one are overwritten */
+   SCIP_HEUR*            authorheur          /**< the heuristic which should be registered as author of the solution */
    )
 {
    SCIP_HEURDATA* heurdata;
@@ -867,7 +875,11 @@ SCIP_RETCODE createSolFromNLP(
 
    if( *sol == NULL )
    {
-      SCIP_CALL( SCIPcreateSol(scip, sol, heur) );
+      SCIP_CALL( SCIPcreateSol(scip, sol, authorheur) );
+   }
+   else
+   {
+      SCIPsolSetHeur(*sol, authorheur);
    }
 
    /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
@@ -897,7 +909,8 @@ SCIP_RETCODE createSolFromSubScipSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    SCIP_SOL**            sol,                /**< buffer to store solution value; if pointing to NULL, then a new solution is created, otherwise values in the given one are overwritten */
-   SCIP_SOL*             subsol              /**< solution of sub-SCIP */
+   SCIP_SOL*             subsol,             /**< solution of sub-SCIP */
+   SCIP_HEUR*            authorheur          /**< the heuristic which should be registered as author of the solution */
    )
 {
    SCIP_HEURDATA* heurdata;
@@ -913,7 +926,11 @@ SCIP_RETCODE createSolFromSubScipSol(
 
    if( *sol == NULL )
    {
-      SCIP_CALL( SCIPcreateSol(scip, sol, heur) );
+      SCIP_CALL( SCIPcreateSol(scip, sol, authorheur) );
+   }
+   else
+   {
+      SCIPsolSetHeur(*sol, authorheur);
    }
 
    assert(heurdata->nsubvars == SCIPgetNOrigVars(heurdata->subscip));
@@ -948,6 +965,7 @@ SCIP_RETCODE solveSubNLP(
    SCIP_VAR*      var;
    SCIP_VAR*      subvar;
    int            i;
+   SCIP_HEUR*     authorheur;   /* the heuristic which will be the author of a solution, if found */
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -1036,6 +1054,14 @@ SCIP_RETCODE solveSubNLP(
       goto CLEANUP;
    }
 
+   /* if the refpoint comes from a heuristic, then make it the author of a found solution,
+    * otherwise let the subNLP heuristic claim authorship
+    */
+   if( refpoint == NULL || SCIPsolGetHeur(refpoint) == NULL )
+      authorheur = heur;
+   else
+      authorheur = SCIPsolGetHeur(refpoint);
+
    /* if sub-SCIP found solutions already, then pass them to main scip */
    for( i = 0; i < SCIPgetNSols(heurdata->subscip); ++i )
    {
@@ -1046,8 +1072,9 @@ SCIP_RETCODE solveSubNLP(
          SCIP_SOL* sol;
 
          sol = NULL;
-         SCIP_CALL( createSolFromSubScipSol(scip, heur, &sol, SCIPgetSols(heurdata->subscip)[i]) );
+         SCIP_CALL( createSolFromSubScipSol(scip, heur, &sol, SCIPgetSols(heurdata->subscip)[i], authorheur) );
 
+         heurdata->lastsol = sol; /* remember just the pointer so we might recognize if this solution comes back as startingpoint */
          SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, FALSE, TRUE, &stored) );
          if( stored )
          {
@@ -1072,8 +1099,9 @@ SCIP_RETCODE solveSubNLP(
       }
       else
       {
-         SCIP_CALL( createSolFromSubScipSol(scip, heur, &resultsol, SCIPgetSols(heurdata->subscip)[i]) );
+         SCIP_CALL( createSolFromSubScipSol(scip, heur, &resultsol, SCIPgetSols(heurdata->subscip)[i], authorheur) );
 
+         heurdata->lastsol = resultsol;
          SCIP_CALL( SCIPcheckSol(scip, resultsol, FALSE, FALSE, TRUE, FALSE, TRUE, &stored) );
          if( stored )
          {
@@ -1278,8 +1306,9 @@ SCIP_RETCODE solveSubNLP(
          SCIP_Bool  stored;
 
          sol = NULL;
-         SCIP_CALL( createSolFromNLP(scip, heur, &sol) );
+         SCIP_CALL( createSolFromNLP(scip, heur, &sol, authorheur) );
 
+         heurdata->lastsol = sol; /* remember just the pointer so we might recognize if this solution comes back as startingpoint */
          if( heurdata->resolvefromscratch )
          {
 #ifdef SCIP_DEBUG
@@ -1346,8 +1375,9 @@ SCIP_RETCODE solveSubNLP(
       {
          SCIP_Bool feasible;
 
-         SCIP_CALL( createSolFromNLP(scip, heur, &resultsol) );
+         SCIP_CALL( createSolFromNLP(scip, heur, &resultsol, authorheur) );
 
+         heurdata->lastsol = resultsol;
 #ifdef SCIP_DEBUG
          /* print the infeasibilities to stdout */
          SCIP_CALL( SCIPcheckSol(scip, resultsol, TRUE, TRUE, TRUE, FALSE, TRUE, &feasible) );
@@ -1405,7 +1435,7 @@ SCIP_RETCODE solveSubNLP(
          SCIP_Bool feasible;
 
          sol = NULL;
-         SCIP_CALL( createSolFromNLP(scip, heur, &sol) );
+         SCIP_CALL( createSolFromNLP(scip, heur, &sol, authorheur) );
 
          SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "subnlp solution is infeasbile\n");
 
@@ -1624,7 +1654,8 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
    SCIP_Longint          itercontingent,     /**< iteration limit for NLP solver, or -1 for default of NLP heuristic */
    SCIP_Real             timelimit,          /**< time limit for NLP solver                                      */
    SCIP_Real             minimprove,         /**< desired minimal relative improvement in objective function value */
-   SCIP_Longint*         iterused            /**< buffer to store number of iterations used by NLP solver, or NULL if not of interest */
+   SCIP_Longint*         iterused,           /**< buffer to store number of iterations used by NLP solver, or NULL if not of interest */
+   SCIP_SOL*             resultsol           /**< a solution where to store found solution values, if any, or NULL if to try adding to SCIP */
    )
 {
    SCIP_HEURDATA* heurdata;
@@ -1745,7 +1776,7 @@ SCIP_RETCODE SCIPapplyHeurSubNlp(
       cutoff = SCIPinfinity(scip);
 
    /* solve the subNLP and try to add solution to SCIP */
-   SCIP_CALL( solveSubNLP(scip, heur, result, refpoint, itercontingent, timelimit, iterused, FALSE, NULL) );
+   SCIP_CALL( solveSubNLP(scip, heur, result, refpoint, itercontingent, timelimit, iterused, FALSE, resultsol) );
 
    if( heurdata->subscip == NULL )
    {
@@ -2206,7 +2237,8 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
    if( heurdata->nlpverblevel >= 1 )
       SCIPmessagePrintInfo(SCIPgetMessagehdlr(scip), "calling subnlp heuristic\n");
 
-   SCIP_CALL( SCIPapplyHeurSubNlp(scip, heur, result, heurdata->startcand, itercontingent, timelimit, heurdata->minimprove, &iterused) );
+   SCIP_CALL( SCIPapplyHeurSubNlp(scip, heur, result, heurdata->startcand, itercontingent, timelimit,
+         heurdata->minimprove, &iterused, NULL) );
    heurdata->iterused += iterused;
 
    /* SCIP does not like cutoff as return, so we say didnotfind, since we did not find a solution */
@@ -2385,8 +2417,10 @@ SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
    if( heurdata->subscip == NULL )
       return SCIP_OKAY;
 
-   /* if the solution is from our heuristic, then it is useless to use it as starting point again */
-   if( SCIPsolGetHeur(solcand) == heur )
+   /* if the solution is the one we created (last), then it is useless to use it as starting point again
+    * (we cannot check SCIPsolGetHeur()==heur, as subnlp may not be registered as author of the solution)
+    */
+   if( heurdata->lastsol == solcand )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "consider solution candidate with violation %g and objective %g from %s\n",
@@ -2403,6 +2437,9 @@ SCIP_RETCODE SCIPupdateStartpointHeurSubNlp(
       SCIP_CALL( SCIPcreateSolCopy(scip, &heurdata->startcand, solcand) );
       SCIP_CALL( SCIPunlinkSol(scip, heurdata->startcand) );
       heurdata->startcandviol = violation;
+
+      /* remember which heuristic proposed the candidate */
+      SCIPsolSetHeur(heurdata->startcand, SCIPgetSolHeur(scip, solcand));
    }
 
    return SCIP_OKAY;

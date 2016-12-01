@@ -98,7 +98,7 @@
 #define MINARCS                               3 /**< minimal number of arcs in network to keep it for separation */
 #define MAXCAPACITYSLACK                    0.1 /**< maximal slack of weighted capacity constraints to use in aggregation */
 #define UNCAPACITATEDARCSTRESHOLD           0.8 /**< threshold for the percentage of commodities an uncapacitated arc should appear in */
-#define HASHSIZE_NODEPAIRS               131101 /**< minimal size of hash table for nodepairs */
+#define HASHSIZE_NODEPAIRS                  500 /**< minimal size of hash table for nodepairs */
 
 /* #define OUTPUTGRAPH                                   should a .gml graph of the network be generated for debugging purposes? */
 
@@ -4891,7 +4891,7 @@ SCIP_RETCODE nodepairqueueCreate(
    /* create a hash table for all used node pairs
     * hash table is only needed to have unique nodepairs (identify arcs using the same nodepair)
     */
-   hashtablesize = SCIPcalcHashtableSize(10*mcfnetwork->narcs);
+   hashtablesize = mcfnetwork->narcs;
    hashtablesize = MAX(hashtablesize, HASHSIZE_NODEPAIRS);
    SCIP_CALL( SCIPhashtableCreate(&hashtable, SCIPblkmem(scip), hashtablesize,
                                   hashGetKeyNodepairs, hashKeyEqNodepairs, hashKeyValNodepairs, (void*) mcfnetwork) );

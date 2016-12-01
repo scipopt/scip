@@ -438,7 +438,7 @@ SCIP_RETCODE createStartingData(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->gstartcomponents), propdata->ncomponents) );
 
    /* create hashmap */
-   SCIP_CALL( SCIPhashmapCreate(&(propdata->startmap), SCIPblkmem(scip), SCIPcalcHashtableSize(propdata->ncomponents)) );
+   SCIP_CALL( SCIPhashmapCreate(&(propdata->startmap), SCIPblkmem(scip), propdata->ncomponents) );
 
    propdata->nindices = 0;
    propdata->ngindices = 0;
@@ -839,7 +839,7 @@ SCIP_RETCODE analyzeGenVBoundConflict(
       return SCIP_OKAY;
 
    /* initialize conflict analysis */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, !SCIPisInfinity(scip, REALABS(SCIPgetCutoffbound(scip)))) );
 
    /* left-hand side variable >= ... */
    if( genvbound->boundtype == SCIP_BOUNDTYPE_LOWER )
@@ -1326,8 +1326,8 @@ SCIP_RETCODE setUpEvents(
    nprobvars = SCIPgetNVars(scip) + SCIPgetNFixedVars(scip);
    SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->lbevents), nprobvars) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->ubevents), nprobvars) );
-   SCIP_CALL( SCIPhashmapCreate(&(propdata->lbeventsmap), SCIPblkmem(scip), SCIPcalcHashtableSize(nprobvars)) );
-   SCIP_CALL( SCIPhashmapCreate(&(propdata->ubeventsmap), SCIPblkmem(scip), SCIPcalcHashtableSize(nprobvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&(propdata->lbeventsmap), SCIPblkmem(scip), nprobvars) );
+   SCIP_CALL( SCIPhashmapCreate(&(propdata->ubeventsmap), SCIPblkmem(scip), nprobvars) );
    propdata->nlbevents = 0;
    propdata->nubevents = 0;
 
@@ -1688,8 +1688,8 @@ SCIP_RETCODE initPropdata(
    propdata->ngenvbounds = 0;
 
    /* init genvboundstore hashmaps */
-   SCIP_CALL( SCIPhashmapCreate(&(propdata->lbgenvbounds), SCIPblkmem(scip), SCIPcalcHashtableSize(nprobvars)) );
-   SCIP_CALL( SCIPhashmapCreate(&(propdata->ubgenvbounds), SCIPblkmem(scip), SCIPcalcHashtableSize(nprobvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&(propdata->lbgenvbounds), SCIPblkmem(scip), nprobvars) );
+   SCIP_CALL( SCIPhashmapCreate(&(propdata->ubgenvbounds), SCIPblkmem(scip), nprobvars) );
 
    return SCIP_OKAY;
 }

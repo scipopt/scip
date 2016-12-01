@@ -742,6 +742,26 @@ void SCIPsetSortPropsName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** inserts concurrent solver type into the concurrent solver type list */
+extern
+SCIP_RETCODE SCIPsetIncludeConcsolverType(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONCSOLVERTYPE*  concsolvertype      /**< concurrent solver type */
+   );
+
+/** returns the concurrent solver type with the given name, or NULL if not existing */
+extern
+SCIP_CONCSOLVERTYPE* SCIPsetFindConcsolverType(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of concurrent solver type */
+   );
+
+/** inserts concurrent solver into the concurrent solver list */
+SCIP_RETCODE SCIPsetIncludeConcsolver(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
+   );
+
 /** inserts primal heuristic in primal heuristic list */
 extern
 SCIP_RETCODE SCIPsetIncludeHeur(
@@ -966,12 +986,6 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_Bool             restart             /**< was this exit solve call triggered by a restart? */
-   );
-
-/** returns the estimated number of bytes used by external software, e.g., the LP solver */
-extern
-SCIP_Longint SCIPsetGetMemExternEstim(
-   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** calculate memory size for dynamically allocated arrays */

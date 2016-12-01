@@ -27,7 +27,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/cons_linear.h"
 #include "scip/heur_crossover.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 
 #define HEUR_NAME             "crossover"
 #define HEUR_DESC             "LNS heuristic that fixes all variables that are identic in a couple of solutions"
@@ -56,7 +56,7 @@
                                               * cutpool of the original scip be copied to constraints of the subscip
                                               */
 #define DEFAULT_PERMUTE       FALSE          /* should the subproblem be permuted to increase diversification?        */
-#define HASHSIZE_SOLS         11113          /* size of hash table for solution tuples in crossover heuristic         */
+#define HASHSIZE_SOLS         500            /* size of hash table for solution tuples in crossover heuristic         */
 #define DEFAULT_BESTSOLLIMIT   -1            /* limit on number of improving incumbent solutions in sub-CIP           */
 #define DEFAULT_USEUCT        FALSE          /* should uct node selection be used at the beginning of the search?     */
 #define DEFAULT_RANDSEED         7           /* initial random seed                                                   */
@@ -94,7 +94,7 @@ struct SCIP_HeurData
    SCIP_Real             lplimfac;           /**< factor by which the limit on the number of LP depends on the node limit */
    SCIP_Bool             randomization;      /**< should the choice which sols to take be randomized?               */
    SCIP_Bool             dontwaitatroot;     /**< should the nwaitingnodes parameter be ignored at the root node?   */
-   SCIP_RANDGEN*         randnumgen;         /**< random number generator                                           */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator                                           */
    SCIP_HASHTABLE*       hashtable;          /**< hashtable used to store the solution tuples already used          */
    SOLTUPLE*             lasttuple;          /**< last tuple of solutions created by crossover                      */
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?      */
@@ -641,7 +641,7 @@ SCIP_DECL_HEURINIT(heurInitCrossover)
    heurdata->nextnodenumber = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    /* initialize hash table */
@@ -678,7 +678,7 @@ SCIP_DECL_HEUREXIT(heurExitCrossover)
    }
 
    /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
+   SCIPrandomFree(&heurdata->randnumgen);
 
    /* free hash table */
    assert(heurdata->hashtable != NULL);
@@ -839,7 +839,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_CALL( SCIPcreate(&subscip) );
 
    /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
    success = FALSE;
 
    /* create a copy of the transformed problem to be used by the heuristic */
@@ -921,11 +921,11 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    }
    if( !SCIPisParamFixed(subscip, "conflict/useinflp") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useinflp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
+      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
    }
    if( !SCIPisParamFixed(subscip, "conflict/usesb") )
    {

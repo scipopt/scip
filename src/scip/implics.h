@@ -373,6 +373,17 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    );
 
+/** computes clique components for all binary variables */
+extern
+SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< array of problem variables, sorted by variable type */
+   int                   nbinvars,           /**< number of binary variables */
+   int                   nintvars,           /**< number of integer variables */
+   int                   nimplvars           /**< number of implicit integer variables */
+   );
+
 /** returns the number of cliques stored in the clique list */
 extern
 int SCIPcliquelistGetNCliques(
@@ -412,6 +423,18 @@ SCIP_Longint SCIPcliquetableGetNEntries(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
+/** returns the number of clique components, or -1 if update is necessary first */
+extern
+int SCIPcliquetableGetNCliqueComponents(
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   );
+
+/** returns TRUE iff the connected clique components need an update (because new cliques were added) */
+extern
+SCIP_Bool SCIPcliquetableNeedsComponentUpdate(
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -424,7 +447,8 @@ SCIP_Longint SCIPcliquetableGetNEntries(
 #define SCIPcliquetableGetNCliques(cliquetable)      ((cliquetable)->ncliques)
 #define SCIPcliquetableGetCliques(cliquetable)       ((cliquetable)->cliques)
 #define SCIPcliquetableGetNEntries(cliquetable)      ((cliquetable)->nentries)
-
+#define SCIPcliquetableGetNCliqueComponents(cliquetable) ((cliquetable)->componentupdate ? -1 : (cliquetable)->ncliquecomponents)
+#define SCIPcliquetableNeedsComponentUpdate(cliquetable) ((cliquetable)->componentupdate)
 #endif
 
 #ifdef __cplusplus
