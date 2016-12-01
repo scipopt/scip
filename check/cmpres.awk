@@ -1198,7 +1198,7 @@ END {
                line = sprintf("%s  Large", line);
             else
                line = sprintf("%s %8.2f", line, confs[s,pidx]/confsoffirst);
-            
+
             if( !processed )
                line = sprintf("%s        -", line);
             else if( conftime[s,pidx] == conftimeoffirst )
@@ -1629,10 +1629,10 @@ END {
    # compute and print result for McNemar test to "solution found?"  w.r.t. reference setting
    printf("%-20s ","McNemar (feas)");
    printf("%-18s  ","               ");
-   
+
    if( printconfs )
      printf("%17s", "");
-   
+
      for( o = 1; o < nsolver; ++o )
    {
       # copy two-indexed arrays to one-indexed arrays
@@ -1647,7 +1647,7 @@ END {
       chi_squared = mcnemar(ref_array, solver_array, problistlen);
       printf("   x2 %7.4f",chi_squared);
       chi_to_p(chi_squared);
-         
+
       if( printconfs )
         printf("%18s", "");
    }
@@ -1656,10 +1656,10 @@ END {
    # compute and print result for McNemar test to "optimality proven?" w.r.t. reference setting
    printf("%-20s ","McNemar (opt)");
    printf("%-18s  ","               ");
-   
+
    if( printconfs )
      printf("%17s", "");
-   
+
    for( o = 1; o < nsolver; ++o )
    {
       # copy two-indexed arrays to one-indexed arrays
@@ -1674,7 +1674,7 @@ END {
       chi_squared = mcnemar(ref_array, solver_array, problistlen);
       printf("   x2 %7.4f",chi_squared);
       chi_to_p(chi_squared);
-         
+
       if( printconfs )
         printf("%18s", "");
    }
@@ -1683,10 +1683,10 @@ END {
    # compute and print result for Wilcoxon signed rank test for time to optimality w.r.t. reference setting
    printf("%-20s ","Wilcoxon (time)");
    printf("%-18s  ","               ");
-   
+
    if( printconfs )
      printf("%17s", "");
-   
+
    for( o = 1; o < nsolver; ++o )
    {
       s = printorder[o];
@@ -1698,7 +1698,7 @@ END {
       z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
       printf("   z %8.4f",z);
       z_to_p(z);
-         
+
       if( printconfs )
         printf("%18s", "");
    }
@@ -1710,10 +1710,10 @@ END {
    {
       printf("%-20s ","Wilcoxon (first)");
       printf("%-18s  ","               ");
-   
+
       if( printconfs )
         printf("%17s", "");
-   
+
       for( o = 1; o < nsolver; ++o )
       {
          s = printorder[o];
@@ -1725,7 +1725,7 @@ END {
 	 z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
 	 printf("   z %8.4f",z);
 	 z_to_p(z);
-         
+
          if( printconfs )
             printf("%18s", "");
       }
@@ -1735,10 +1735,10 @@ END {
    # compute and print result for Wilcoxon signed rank test for number of nodes w.r.t. reference setting
    printf("%-20s ","Wilcoxon (nodes)");
    printf("%-18s  ","               ");
-   
+
    if( printconfs )
      printf("%17s", "");
-   
+
    for( o = 1; o < nsolver; ++o )
    {
       parse_nodes(ref_array,solver_array,nodes,o,probidx,problistlen,status,infinity);
@@ -1748,7 +1748,7 @@ END {
       z = wilcoxon(ref_array, solver_array, n, infinity);
       printf("   z %8.4f",z);
       z_to_p(z);
-         
+
       if( printconfs )
         printf("%18s", "");
    }
@@ -1769,7 +1769,7 @@ END {
          z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
          printf("   z %8.4f", z );
          z_to_p(z);
-         
+
          if( printconfs )
            printf("%18s", "");
       }
