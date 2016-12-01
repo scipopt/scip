@@ -3124,9 +3124,10 @@ SCIP_RETCODE SCIPcreateConsCardinality(
    int                   nvars,              /**< number of variables in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
    int                   cardval,            /**< number of variables allowed to be nonzero */
-   SCIP_VAR**            indvars,            /**< indicator variables indicating which variables may be treated as nonzero in cardinality 
+   SCIP_VAR**            indvars,            /**< indicator variables indicating which variables may be treated as nonzero in cardinality
                                               *   constraint, or NULL if new indicator variables should be introduced automatically */
-   SCIP_Real*            weights,            /**< weights determining the variable order, or NULL if natural order should be used */
+   SCIP_Real*            weights,            /**< weights determining the variable order, or NULL if variables should be ordered in the
+                                              *   same way they were added to the constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -3320,9 +3321,10 @@ SCIP_RETCODE SCIPcreateConsBasicCardinality(
    int                   nvars,              /**< number of variables in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
    int                   cardval,            /**< number of variables allowed to be nonzero */
-   SCIP_VAR**            indvars,            /**< indicator variables indicating which variables may be treated as nonzero in cardinality 
+   SCIP_VAR**            indvars,            /**< indicator variables indicating which variables may be treated as nonzero in cardinality
                                               *   constraint, or NULL if new indicator variables should be introduced automatically */
-   SCIP_Real*            weights             /**< weights determining the variable order, or NULL if natural order should be used */
+   SCIP_Real*            weights             /**< weights determining the variable order, or NULL if variables should be ordered in the
+                                              *   same way they were added to the constraint */
    )
 {
    SCIP_CALL( SCIPcreateConsCardinality(scip, cons, name, nvars, vars, cardval, indvars, weights, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );

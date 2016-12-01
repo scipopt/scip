@@ -64,7 +64,8 @@ SCIP_RETCODE SCIPcreateConsCardinality(
    int                   cardval,            /**< number of variables allowed to be nonzero */
    SCIP_VAR**            indvars,            /**< indicator variables to indicate which variables may be treated as nonzero in cardinality
                                               *   constraint, or NULL if indicator variables should be created automatically */
-   SCIP_Real*            weights,            /**< weights determining the variable order, or NULL if natural order should be used */
+   SCIP_Real*            weights,            /**< weights determining the variable order, or NULL if variables should be ordered in the
+                                              *   same way they were added to the constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -108,7 +109,8 @@ SCIP_RETCODE SCIPcreateConsBasicCardinality(
    int                   cardval,            /**< number of variables allowed to be nonzero */
    SCIP_VAR**            indvars,            /**< indicator variables to indicate which variables may be treated as nonzero in cardinality
                                               *   constraint, or NULL if indicator variables should be created automatically */
-   SCIP_Real*            weights             /**< weights determining the variable order, or NULL if natural order should be used */
+   SCIP_Real*            weights             /**< weights determining the variable order, or NULL if variables should be ordered in the
+                                              *   same way they were added to the constraint */
    );
 
 /** changes cardinality value of cardinality constraint (i.e., right hand side of cardinality constraint) */
