@@ -66,7 +66,7 @@
                                          * implemented for testing and not recommended to be used!
                                          */
 #define DEFAULT_BESTSOLLIMIT   -1       /* limit on number of improving incumbent solutions in sub-CIP            */
-#define DEFAULT_USEUCT         FALSE     /* should uct node selection be used at the beginning of the search?     */
+#define DEFAULT_USEUCT         FALSE    /* should uct node selection be used at the beginning of the search?     */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Rens"
