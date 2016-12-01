@@ -415,7 +415,7 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(scip != NULL);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
 
    (*conshdlrdata)->allconsanddatas = NULL;
    (*conshdlrdata)->nallconsanddatas = 0;
@@ -474,7 +474,7 @@ SCIP_RETCODE conshdlrdataFree(
    (*conshdlrdata)->nallconsanddatas = 0;
    (*conshdlrdata)->sallconsanddatas = 0;
 
-   SCIPfreeMemory(scip, conshdlrdata);
+   SCIPfreeBlockMemory(scip, conshdlrdata);
 
    return SCIP_OKAY;
 }

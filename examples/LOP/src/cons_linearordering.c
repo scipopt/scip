@@ -1066,7 +1066,8 @@ SCIP_DECL_CONSCOPY(consCopyLinearOrdering)
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
-   for (i = 0; i < n; ++i)
+   /* free memory in reverse order */
+   for (i = n-1; i >= 0; --i)
       SCIPfreeBufferArrayNull(scip, &vars[i]);
    SCIPfreeBufferArray(scip, &vars);
 

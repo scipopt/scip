@@ -299,4 +299,3 @@ SCIP_PARALLELMODE SCIPsyncstoreGetMode(
 
 /**@} */
 #endif
-

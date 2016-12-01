@@ -191,5 +191,3 @@ int SCIPboundstoreGetNChgs(
 
    return boundstore->nbndchg;
 }
-
-

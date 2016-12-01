@@ -278,7 +278,7 @@ SCIP_DECL_HEURFREE(heurFreeLocalbranching)
    assert( heurdata != NULL );
 
    /* free heuristic data */
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -687,11 +687,10 @@ SCIP_RETCODE SCIPincludeHeurLocalbranching(
    )
 {
    SCIP_HEURDATA* heurdata;
-
    SCIP_HEUR* heur;
 
    /* create Localbranching primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -753,7 +752,6 @@ SCIP_RETCODE SCIPincludeHeurLocalbranching(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
          "should uct node selection be used at the beginning of the search?",
          &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }

@@ -2046,7 +2046,7 @@ SCIP_DECL_PROPFREE(propFreeVbounds)
    /* free propagator data */
    propdata = SCIPpropGetData(prop);
 
-   SCIPfreeMemory(scip, &propdata);
+   SCIPfreeBlockMemory(scip, &propdata);
    SCIPpropSetData(prop, NULL);
 
    return SCIP_OKAY;
@@ -2256,7 +2256,7 @@ SCIP_RETCODE SCIPincludePropVbounds(
    SCIP_PROP* prop;
 
    /* create vbounds propagator data */
-   SCIP_CALL( SCIPallocMemory(scip, &propdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
 
    /* reset propagation data */
    resetPropdata(propdata);

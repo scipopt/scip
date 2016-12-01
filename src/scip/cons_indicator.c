@@ -595,7 +595,7 @@ SCIP_DECL_CONFLICTFREE(conflictFreeIndicator)
    assert( strcmp(SCIPconflicthdlrGetName(conflicthdlr), CONFLICTHDLR_NAME) == 0 );
 
    conflicthdlrdata = SCIPconflicthdlrGetData(conflicthdlr);
-   SCIPfreeMemory(scip, &conflicthdlrdata);
+   SCIPfreeBlockMemory(scip, &conflicthdlrdata);
 
    return SCIP_OKAY;
 }
@@ -5106,7 +5106,7 @@ SCIP_DECL_CONSFREE(consFreeIndicator)
    conshdlrdata->naddlincons = 0;
    conshdlrdata->maxaddlincons = 0;
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -7003,7 +7003,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP_CONSHDLR* conshdlr;
 
    /* create constraint handler data (used in conflicthdlrdata) */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
 
    /* create event handler for bound change events */
    conshdlrdata->eventhdlrbound = NULL;
@@ -7076,7 +7076,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    }
 
    /* create conflict handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conflicthdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conflicthdlrdata) );
    conflicthdlrdata->conshdlrdata = conshdlrdata;
    conflicthdlrdata->conshdlr = conshdlr;
    assert( conflicthdlrdata->conshdlr != NULL );

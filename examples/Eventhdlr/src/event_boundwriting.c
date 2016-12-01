@@ -457,7 +457,7 @@ SCIP_DECL_EVENTFREE(eventFreeBoundwriting)
    assert(!eventhdlrdata->isopen);
    assert(eventhdlrdata->file == NULL);
 
-   SCIPfreeMemory(scip, &eventhdlrdata);
+   SCIPfreeBlockMemory(scip, &eventhdlrdata);
 
    return SCIP_OKAY;
 }
@@ -670,7 +670,7 @@ SCIP_RETCODE SCIPincludeEventHdlrBoundwriting(
    SCIP_EVENTHDLR* eventhdlr;
 
    /* create bounds reader data */
-   SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
    initEventhdlrdata(eventhdlrdata);
 
    eventhdlr = NULL;

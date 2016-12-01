@@ -185,7 +185,7 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(scip != NULL);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
 
    /* set event handler for bound change events */
    (*conshdlrdata)->eventhdlr = eventhdlr;
@@ -204,7 +204,7 @@ void conshdlrdataFree(
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
 
-   SCIPfreeMemory(scip, conshdlrdata);
+   SCIPfreeBlockMemory(scip, conshdlrdata);
 }
 
 /** catches events for variables

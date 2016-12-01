@@ -10100,7 +10100,7 @@ SCIP_RETCODE SCIPreadProb(
             int c;
             int h;
 
-            SCIP_CALL( SCIPallocClearMemoryArray(scip, &nconss, scip->set->nconshdlrs) );
+            SCIP_CALL( SCIPallocClearBufferArray(scip, &nconss, scip->set->nconshdlrs) );
 
             /* loop over all constraints and constraint-handlers to count for each type the amount of original
              * constraints
@@ -10129,7 +10129,7 @@ SCIP_RETCODE SCIPreadProb(
                }
             }
 
-            SCIPfreeMemoryArray(scip, &nconss);
+            SCIPfreeBufferArray(scip, &nconss);
          }
 
          /* in case the permutation seed is different to 0, permute the original problem */
@@ -10428,7 +10428,7 @@ SCIP_RETCODE SCIPfreeProb(
       SCIP_CALL( SCIPconflictstoreFree(&scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt,
             scip->eventfilter) );
       SCIP_CALL( SCIPprimalFree(&scip->origprimal, scip->mem->probmem) );
-      SCIP_CALL( SCIPprobFree(&scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
+      SCIP_CALL( SCIPprobFree(&scip->origprob, scip->messagehdlr, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
       SCIP_CALL( SCIPstatFree(&scip->stat, scip->mem->probmem) );
 
       /* readers */
@@ -15328,7 +15328,7 @@ SCIP_RETCODE freeTransform(
    SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
 
    /* free transformed problem data structures */
-   SCIP_CALL( SCIPprobFree(&scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
+   SCIP_CALL( SCIPprobFree(&scip->transprob, scip->messagehdlr, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
    SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->mem->probmem) );
    SCIP_CALL( SCIPrelaxationFree(&scip->relaxation, scip->mem->probmem, scip->primal) );

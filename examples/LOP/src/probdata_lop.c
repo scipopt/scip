@@ -54,14 +54,14 @@ SCIP_DECL_PROBDELORIG(probdelorigLOP)
 	 if (j != i)
 	    SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->vars[i][j]) );
       }
-      SCIPfreeMemoryArray(scip, &(*probdata)->vars[i]);
-      SCIPfreeMemoryArray(scip, &((*probdata)->W[i]));
+      SCIPfreeBlockMemoryArray(scip, &(*probdata)->vars[i], (*probdata)->n);
+      SCIPfreeBlockMemoryArray(scip, &((*probdata)->W[i]), (*probdata)->n);
    }
-   SCIPfreeMemoryArray(scip, &(*probdata)->vars);
-   SCIPfreeMemoryArray(scip, &((*probdata)->W));
+   SCIPfreeBlockMemoryArray(scip, &(*probdata)->vars, (*probdata)->n);
+   SCIPfreeBlockMemoryArray(scip, &((*probdata)->W), (*probdata)->n);
 
    /* free probdata */
-   SCIPfreeMemory(scip, probdata);
+   SCIPfreeBlockMemory(scip, probdata);
 
    return SCIP_OKAY;
 }
@@ -81,19 +81,19 @@ SCIP_DECL_PROBCOPY(probcopyLOP)
    assert( targetdata != NULL );
 
    /* set up data */
-   SCIP_CALL( SCIPallocMemory(scip, targetdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, targetdata) );
 
    n = sourcedata->n;
    (*targetdata)->n = n;
 
    /* set matrices */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->W), n) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->vars), n) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*targetdata)->W), n) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*targetdata)->vars), n) );
 
    for( i = 0; i < n; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->W[i]), n) ); /*lint !e866*/
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->vars[i]), n) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*targetdata)->W[i]), n) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*targetdata)->vars[i]), n) ); /*lint !e866*/
 
       for( j = 0; j < n; ++j )
       {
@@ -172,9 +172,9 @@ SCIP_RETCODE LOPreadFile(
    probdata->n = n;
 
    /* set up matrix */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &W, n) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &W, n) );
    for (i = 0; i < n; ++i)
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(W[i]), n) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(W[i]), n) ); /*lint !e866*/
    probdata->W = W;
 
    /* read matrix */
@@ -261,7 +261,7 @@ SCIP_RETCODE LOPcreateProb(
    char probname[SCIP_MAXSTRLEN];
 
    /* allocate memory */
-   SCIP_CALL( SCIPallocMemory(scip, &probdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &probdata) );
 
    /* take filename as problem name */
    SCIP_CALL( getProblemName(filename, probname, SCIP_MAXSTRLEN) );
@@ -294,10 +294,10 @@ SCIP_RETCODE LOPgenerateModel(
    assert( probdata != NULL );
 
    /* generate variables */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->vars, probdata->n) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &probdata->vars, probdata->n) );
    for (i = 0; i < probdata->n; ++i)
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->vars[i]), probdata->n) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(probdata->vars[i]), probdata->n) ); /*lint !e866*/
       for (j = 0; j < probdata->n; ++j)
       {
 	 if (j != i)

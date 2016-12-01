@@ -18,7 +18,7 @@ def obj_name_is_feasible(obj, names):
         return False
 
     return True
-    
+
 
 def zimpl_to_mop(problem_file, path_for_mop_file, output_basename, path_to_zimpl):
     """Takes a multicriteria problem file in extended zimpl format and
@@ -33,7 +33,7 @@ def zimpl_to_mop(problem_file, path_for_mop_file, output_basename, path_to_zimpl
         path_for_mop_file += "/"
     if path_to_zimpl and not path_to_zimpl.endswith("/"):
         path_to_zimpl += "/"
-    
+
     problem_filename = os.path.basename(problem_file)
     splitted = problem_filename.split('.') 
     basename, suffix = splitted[0], splitted[-1]
@@ -51,7 +51,7 @@ def zimpl_to_mop(problem_file, path_for_mop_file, output_basename, path_to_zimpl
 
     with open(problem_file, mode='r', encoding='utf-8') as src_file:
         with open(mzpl+file_suffix, mode='w', encoding='utf-8') as mzpl_file:
-            
+
             for line in src_file:
                 if not min_max_pattern_found:
                     min_max_match = min_max_pattern.match(line)
@@ -83,10 +83,10 @@ def zimpl_to_mop(problem_file, path_for_mop_file, output_basename, path_to_zimpl
 
                 mzpl_file.write(line)
 
-            proc = subprocess.Popen([path_to_zimpl+"zimpl", '-tmps', 
+            proc = subprocess.Popen([path_to_zimpl+"zimpl", '-tmps',
                                      '-o'+mzpl, '-v0', mzpl_file.name])
     os.wait()
-    
+
     zimpl_obj = "[ \t]*N[ \t]+OBJECTIV"
     zimpl_obj_pattern = re.compile(zimpl_obj)
     comment = "[ \t]*\*"
@@ -126,7 +126,7 @@ if __name__ == '__main__':
     parser.add_argument("file", help="file containing the multicriteria problem", type=str)
     parser.add_argument("-p", help="path where the output file should be saved; default is ./", metavar="PATH", type=str, default="./")
     parser.add_argument("-o", metavar="outfile_basename",
-                        help="basename for the output file; default is input file without extension", type=str)                        
+                        help="basename for the output file; default is input file without extension", type=str)
     parser.add_argument("--path_to_zimpl", help="path to the zimpl binary", metavar="PATH",
                         type=str, default="")
     args = parser.parse_args()

@@ -69,7 +69,7 @@ int main() {
   assert (obj3.size() == 16);
 
   auto feasible_outcomes = list<vector<int>>{};
-  
+
   for (int first = 0; first<4; ++first) {
     for (int sec = 0; sec<4; ++sec) {
       if (sec == first)
@@ -97,7 +97,7 @@ int main() {
   }
 
   std::cout << "NUMBER OF FEASIBLE OUTCOMES: " << feasible_outcomes.size() << "\n";
-  
+
   auto it = begin(feasible_outcomes);
   while (it != end(feasible_outcomes)) {
     auto dominated_eq = false;

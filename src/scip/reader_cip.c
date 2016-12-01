@@ -687,7 +687,7 @@ SCIP_RETCODE getConstraint(
    }
 
    /* copy buffer for working purpose */
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &copybuf, buf, len) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &copybuf, buf, len) );
    copybuf[len - 1] = '\0';
 
    /* parse the constraint */
@@ -695,7 +695,7 @@ SCIP_RETCODE getConstraint(
       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE, &success);
 
    /* free temporary buffer */
-   SCIPfreeMemoryArray(scip, &copybuf);
+   SCIPfreeBufferArray(scip, &copybuf);
 
    SCIP_CALL( retcode );
 
@@ -740,7 +740,7 @@ SCIP_DECL_READERFREE(readerFreeCip)
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
-   SCIPfreeMemory(scip, &readerdata);
+   SCIPfreeBlockMemory(scip, &readerdata);
 
    return SCIP_OKAY;
 }
@@ -1106,7 +1106,7 @@ SCIP_RETCODE SCIPincludeReaderCip(
    SCIP_READER* reader;
 
    /* create cip reader data */
-   SCIP_CALL( SCIPallocMemory(scip, &readerdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );

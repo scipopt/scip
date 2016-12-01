@@ -28,6 +28,7 @@ features:
 - the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
   as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
   though the solutions required an addition NLP solve
+- add check whether variables have been released when freeing SCIP
 - new constraint handler for cardinality constraints
 - implement a storage for conflicts to have more control over active conflicts
 - can now analyze dual unbounded rays of primal infeasible LPs

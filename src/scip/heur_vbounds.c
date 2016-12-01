@@ -313,8 +313,8 @@ SCIP_RETCODE initializeCandsLists(
    /* check if the candidate list contains enough candidates */
    if( nvbs >= heurdata->minfixingrate * nvars )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->vbvars, nvbs) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->vbbounds, nvbs) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->vbvars, nvbs) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->vbbounds, nvbs) );
 
       /* capture variable candidate list */
       for( v = 0; v < nvbs; ++v )
@@ -910,7 +910,7 @@ SCIP_DECL_HEURFREE(heurFreeVbounds)
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
 
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -934,8 +934,8 @@ SCIP_DECL_HEUREXITSOL(heurExitsolVbounds)
    }
 
    /* free varbounds array */
-   SCIPfreeMemoryArrayNull(scip, &heurdata->vbbounds);
-   SCIPfreeMemoryArrayNull(scip, &heurdata->vbvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &heurdata->vbbounds, heurdata->nvbvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &heurdata->vbvars, heurdata->nvbvars);
 
    /* reset heuristic data structure */
    heurdataReset(heurdata);
@@ -996,7 +996,7 @@ SCIP_RETCODE SCIPincludeHeurVbounds(
    SCIP_HEUR* heur;
 
    /* create vbounds primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    heurdataReset(heurdata);
 
    /* include primal heuristic */

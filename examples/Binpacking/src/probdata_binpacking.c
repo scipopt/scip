@@ -144,20 +144,20 @@ SCIP_RETCODE probdataCreate(
    assert(probdata != NULL);
 
    /* allocate memory */
-   SCIP_CALL( SCIPallocMemory(scip, probdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, probdata) );
 
    if( nvars > 0 )
    {
       /* copy variable array */
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*probdata)->vars, vars, nvars) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*probdata)->vars, vars, nvars) );
    }
    else
       (*probdata)->vars = NULL;
 
    /* duplicate arrays */
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*probdata)->conss, conss, nitems) );
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*probdata)->weights, weights, nitems) );
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*probdata)->ids, ids, nitems) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*probdata)->conss, conss, nitems) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*probdata)->weights, weights, nitems) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*probdata)->ids, ids, nitems) );
 
    (*probdata)->nvars = nvars;
    (*probdata)->varssize = nvars;
@@ -192,13 +192,13 @@ SCIP_RETCODE probdataFree(
    }
 
    /* free memory of arrays */
-   SCIPfreeMemoryArray(scip, &(*probdata)->vars);
-   SCIPfreeMemoryArray(scip, &(*probdata)->conss);
-   SCIPfreeMemoryArray(scip, &(*probdata)->weights);
-   SCIPfreeMemoryArray(scip, &(*probdata)->ids);
+   SCIPfreeBlockMemoryArray(scip, &(*probdata)->vars, (*probdata)->nvars);
+   SCIPfreeBlockMemoryArray(scip, &(*probdata)->conss, (*probdata)->nitems);
+   SCIPfreeBlockMemoryArray(scip, &(*probdata)->weights, (*probdata)->nitems);
+   SCIPfreeBlockMemoryArray(scip, &(*probdata)->ids, (*probdata)->nitems);
 
    /* free probdata */
-   SCIPfreeMemory(scip, probdata);
+   SCIPfreeBlockMemory(scip, probdata);
 
    return SCIP_OKAY;
 }
@@ -493,8 +493,10 @@ SCIP_RETCODE SCIPprobdataAddVar(
    /* check if enough memory is left */
    if( probdata->varssize == probdata->nvars )
    {
-      probdata->varssize = MAX(100, probdata->varssize * 2);
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &probdata->vars, probdata->varssize) );
+      int newsize;
+      newsize = MAX(100, probdata->varssize * 2);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &probdata->vars, probdata->varssize, newsize) );
+      probdata->varssize = newsize;
    }
 
    /* caputure variables */
