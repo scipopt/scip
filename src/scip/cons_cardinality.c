@@ -61,9 +61,9 @@
 
 /* branching rules */
 #define DEFAULT_BRANCHBALANCED    FALSE /**< whether to use balanced instead of unbalanced branching */
-#define DEFAULT_BALANCEDDEPTH        20 /**< only use balanced branching for predefined depth (-1: no limit) */
-#define DEFAULT_BALANCEDCUTOFF      2.0 /**< only use balanced branching if its efficacy (cut off value) w.r.t. the
-                                          *   current LP solution is greater than than a given value */
+#define DEFAULT_BALANCEDDEPTH        20 /**< maximum depth for using balanced branching (-1: no limit) */
+#define DEFAULT_BALANCEDCUTOFF      2.0 /**< determines that balanced branching is only used if the branching cut off value
+                                         *   w.r.t. the current LP solution is greater than a given value */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "cardinality"
@@ -96,9 +96,9 @@ struct SCIP_ConshdlrData
 {
    SCIP_HASHMAP*         varhash;            /**< hash map from implied variable to (binary) indicator variable */
    SCIP_Bool             branchbalanced;     /**< whether to use balanced instead of unbalanced branching */
-   int                   balanceddepth;      /**< only use balanced branching for predefined depth (-1: no limit) */
-   SCIP_Real             balancedcutoff;     /**< only use balanced branching if its efficacy (cut off value) w.r.t. the
-                                              *   current LP solution is greater than than a given value */
+   int                   balanceddepth;      /**< maximum depth for using balanced branching (-1: no limit) */
+   SCIP_Real             balancedcutoff;     /**< determines that balanced branching is only used if the branching cut off value
+                                              *   w.r.t. the current LP solution is greater than a given value */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
 };
 
@@ -1380,7 +1380,7 @@ SCIP_RETCODE branchBalancedCardinality(
    int                   cardval,            /**< cardinality value of constraint */
    int                   branchnnonzero,     /**< number of variables that are fixed to be nonzero */
    int                   branchpos,          /**< position in array 'vars' */
-   SCIP_Real             balancedcutoff     /**< cut off value for deciding whether to apply balanced branching */
+   SCIP_Real             balancedcutoff      /**< cut off value for deciding whether to apply balanced branching */
    )
 {
    SCIP_VAR** branchvars;
@@ -3073,13 +3073,13 @@ SCIP_RETCODE SCIPincludeConshdlrCardinality(
          "whether to use balanced instead of unbalanced branching",
          &conshdlrdata->branchbalanced, TRUE, DEFAULT_BRANCHBALANCED, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/branchabalanceddepth",
-         "only use balanced branching for predefined depth (-1: no limit)",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/balanceddepth",
+         "maximum depth for using balanced branching (-1: no limit)",
          &conshdlrdata->balanceddepth, TRUE, DEFAULT_BALANCEDDEPTH, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/balancedcutoff",
-         "only use balanced branching if its efficacy (cut off value) w.r.t. the \
-          current LP solution is greater than than a given value",
+         "determines that balanced branching is only used if the branching cut off value \
+         w.r.t. the current LP solution is greater than a given value",
          &conshdlrdata->balancedcutoff, TRUE, DEFAULT_BALANCEDCUTOFF, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    /* check parameters */
