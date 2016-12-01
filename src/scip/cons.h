@@ -41,6 +41,7 @@
 #include "scip/type_sepastore.h"
 #include "scip/type_cons.h"
 #include "scip/type_branch.h"
+#include "scip/type_reopt.h"
 #include "scip/pub_cons.h"
 
 #ifndef NDEBUG
@@ -595,7 +596,8 @@ SCIP_RETCODE SCIPconssetchgMakeGlobal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 /** increase count of applied cuts */
@@ -902,7 +904,7 @@ SCIP_RETCODE SCIPconsActive(
 extern
 SCIP_RETCODE SCIPconsDeactive(
    SCIP_CONS*            cons,               /**< constraint to notify */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                /**< global SCIP settings */
    );
 
 /** method to collect the variables of a constraint
@@ -949,7 +951,8 @@ SCIP_RETCODE SCIPconsDelete(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 /** gets and captures transformed constraint of a given constraint; if the constraint is not yet transformed,
@@ -1152,7 +1155,8 @@ SCIP_RETCODE SCIPconsAddAge(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_Real             deltaage            /**< value to add to the constraint's age */
+   SCIP_Real             deltaage,           /**< value to add to the constraint's age */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 /** increases age of constraint by 1.0;
@@ -1169,7 +1173,8 @@ SCIP_RETCODE SCIPconsIncAge(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 /** resets age of constraint to zero;

@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   event_globalbnd.h
- * @ingroup EVENTS 
+ * @ingroup EVENTS
  * @brief  eventhdlr for storing all global bound changes
  * @author Robert Lion Gottwald
  *

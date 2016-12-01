@@ -1126,14 +1126,18 @@ SCIP_RETCODE SCIPnodeCutoff(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   SCIP_Real oldlowerbound;
-
    assert(node != NULL);
    assert(set != NULL);
    assert(stat != NULL);
    assert(tree != NULL);
 
-   oldlowerbound = node->lowerbound;
+   if( set->reopt_enable )
+   {
+      assert(reopt != NULL);
+      /* check if the node should be stored for reoptimization */
+      SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
+            tree->root == node, tree->focusnode == node, node->lowerbound, tree->effectiverootdepth) );
+   }
 
    node->cutoff = TRUE;
    node->lowerbound = SCIPsetInfinity(set);
@@ -1143,13 +1147,6 @@ SCIP_RETCODE SCIPnodeCutoff(
 
    SCIPvisualCutoffNode(stat->visual, set, stat, node, TRUE);
 
-   if( set->reopt_enable )
-   {
-      assert(reopt != NULL);
-      /* check if the node should be stored for reoptimization */
-      SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, SCIPlpGetSolstat(lp),
-            tree->root == node, tree->focusnode == node, oldlowerbound, tree->effectiverootdepth) );
-   }
 
    SCIPsetDebugMsg(set, "cutting off %s node #%" SCIP_LONGINT_FORMAT " at depth %d (cutoffdepth: %d)\n",
       node->active ? "active" : "inactive", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->cutoffdepth);
@@ -2263,9 +2260,9 @@ void SCIPnodeUpdateLowerbound(
 
    if( newbound > node->lowerbound )
    {
-      SCIP_Real oldlowerbound;
+      SCIP_Real oldbound;
 
-      oldlowerbound = node->lowerbound;
+      oldbound = node->lowerbound;
       node->lowerbound = newbound;
       node->estimate = MAX(node->estimate, newbound);
       if( node->depth == 0 )
@@ -2274,7 +2271,7 @@ void SCIPnodeUpdateLowerbound(
          if( set->misc_calcintegral )
             SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), newbound);
       }
-      else if( set->misc_calcintegral && SCIPsetIsEQ(set, oldlowerbound, stat->lastlowerbound) )
+      else if( set->misc_calcintegral && SCIPsetIsEQ(set, oldbound, stat->lastlowerbound) )
       {
          SCIP_Real lowerbound;
          lowerbound = SCIPtreeGetLowerbound(tree, set);
@@ -3580,7 +3577,7 @@ SCIP_RETCODE nodeToLeaf(
       {
          assert(reopt != NULL);
          /* check if the node should be stored for reoptimization */
-         SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, *node, SCIP_EVENTTYPE_NODEINFEASIBLE, SCIPlpGetSolstat(lp),
+         SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, *node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
                tree->root == *node, tree->focusnode == *node, (*node)->lowerbound, tree->effectiverootdepth) );
       }
 
@@ -4241,7 +4238,7 @@ SCIP_RETCODE SCIPnodeFocus(
       {
          assert(reopt != NULL);
          /* check if the node should be stored for reoptimization */
-         SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, *node, SCIP_EVENTTYPE_NODEINFEASIBLE, SCIPlpGetSolstat(lp),
+         SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, *node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
                tree->root == (*node), tree->focusnode == (*node), (*node)->lowerbound, tree->effectiverootdepth) );
       }
 
@@ -4593,7 +4590,7 @@ SCIP_RETCODE SCIPnodeFocus(
             SCIP_Bool nodecutoff;
 
             SCIPsetDebugMsg(set, " -> applying constraint set changes of depth %d\n", d);
-            SCIP_CALL( SCIPconssetchgMakeGlobal(&tree->path[d]->conssetchg, blkmem, set, stat, transprob) );
+            SCIP_CALL( SCIPconssetchgMakeGlobal(&tree->path[d]->conssetchg, blkmem, set, stat, transprob, reopt) );
             SCIPsetDebugMsg(set, " -> applying bound changes of depth %d\n", d);
             SCIP_CALL( SCIPdomchgApplyGlobal(tree->path[d]->domchg, blkmem, set, stat, lp, branchcand, eventqueue, cliquetable,
                   &nodecutoff) );
@@ -5017,7 +5014,7 @@ SCIP_RETCODE SCIPtreeCutoff(
          {
             assert(reopt != NULL);
             /* check if the node should be stored for reoptimization */
-            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, SCIPlpGetSolstat(lp),
+            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
                   tree->root == node, tree->focusnode == node, node->lowerbound, tree->effectiverootdepth) );
          }
 
@@ -5040,7 +5037,7 @@ SCIP_RETCODE SCIPtreeCutoff(
          {
             assert(reopt != NULL);
             /* check if the node should be stored for reoptimization */
-            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, SCIPlpGetSolstat(lp),
+            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
                   tree->root == node, tree->focusnode == node, node->lowerbound, tree->effectiverootdepth) );
          }
 
@@ -7284,8 +7281,12 @@ int SCIPnodeGetNDualBndchgs(
     */
    for( i = nboundchgs-1; i >= 0; i--)
    {
-      if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY
-       && ((boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
+      SCIP_Bool isint;
+
+      isint = boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY || boundchgs[i].var->vartype == SCIP_VARTYPE_INTEGER
+           || boundchgs[i].var->vartype == SCIP_VARTYPE_IMPLINT;
+
+      if( isint && ((boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
             && boundchgs[i].data.inferencedata.reason.cons == NULL)
         || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
             && boundchgs[i].data.inferencedata.reason.prop == NULL)) )
@@ -7302,6 +7303,7 @@ void SCIPnodeGetDualBoundchgs(
    SCIP_NODE*            node,               /**< node data */
    SCIP_VAR**            vars,               /**< array of variables on which the bound change is based on dual information */
    SCIP_Real*            bounds,             /**< array of bounds which are based on dual information */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which are based on dual information */
    int*                  nvars,              /**< number of variables on which the bound change is based on dual information
                                               *   if this is larger than the array size, arrays should be reallocated and method
                                               *   should be called again */
@@ -7315,6 +7317,7 @@ void SCIPnodeGetDualBoundchgs(
    assert(node != NULL);
    assert(vars != NULL);
    assert(bounds != NULL);
+   assert(boundtypes != NULL);
    assert(nvars != NULL);
    assert(varssize >= 0);
 
@@ -7334,7 +7337,8 @@ void SCIPnodeGetDualBoundchgs(
     */
    for( i = nboundchgs-1; i >= 0; i--)
    {
-      if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+      if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY || boundchgs[i].var->vartype == SCIP_VARTYPE_INTEGER
+       || boundchgs[i].var->vartype == SCIP_VARTYPE_IMPLINT )
       {
          if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
                && boundchgs[i].data.inferencedata.reason.cons == NULL)
@@ -7354,7 +7358,8 @@ void SCIPnodeGetDualBoundchgs(
       for( i = i+1; i < nboundchgs; i++)
       {
          assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING );
-         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY || boundchgs[i].var->vartype == SCIP_VARTYPE_INTEGER
+          || boundchgs[i].var->vartype == SCIP_VARTYPE_IMPLINT )
          {
             if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
                   && boundchgs[i].data.inferencedata.reason.cons == NULL)
@@ -7363,6 +7368,7 @@ void SCIPnodeGetDualBoundchgs(
             {
                vars[j] = boundchgs[i].var;
                bounds[j] = boundchgs[i].newbound;
+               boundtypes[j] = boundchgs[i].boundtype;
                j++;
             }
          }
