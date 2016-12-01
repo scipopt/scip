@@ -36,6 +36,7 @@
 #include "scip/sepastore.h"
 #include "scip/cons.h"
 #include "scip/branch.h"
+#include "scip/reopt.h"
 #include "scip/pub_misc.h"
 
 #ifndef NDEBUG
@@ -5616,7 +5617,8 @@ SCIP_RETCODE SCIPconssetchgMakeGlobal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    )
 {
    SCIP_CONS* cons;
@@ -5675,7 +5677,7 @@ SCIP_RETCODE SCIPconssetchgMakeGlobal(
          /* globally delete constraint */
          if( !cons->deleted )
          {
-            SCIP_CALL( SCIPconsDelete(cons, blkmem, set, stat, prob) );
+            SCIP_CALL( SCIPconsDelete(cons, blkmem, set, stat, prob, reopt) );
          }
 
          /* release and remove constraint from the disabledconss array */
@@ -6244,7 +6246,8 @@ SCIP_RETCODE SCIPconsDelete(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    )
 {
    assert(cons != NULL);
@@ -6263,6 +6266,9 @@ SCIP_RETCODE SCIPconsDelete(
    }
    else
       cons->updateactivate = FALSE;
+
+   if( set->reopt_enable && !SCIPreoptConsCanBeDeleted(reopt, cons) )
+      return SCIP_OKAY;
 
    assert(!cons->active || cons->updatedeactivate);
    assert(!cons->enabled || cons->updatedeactivate);
@@ -6960,7 +6966,8 @@ SCIP_RETCODE SCIPconsAddAge(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_Real             deltaage            /**< value to add to the constraint's age */
+   SCIP_Real             deltaage,           /**< value to add to the constraint's age */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    )
 {
    assert(cons != NULL);
@@ -6983,7 +6990,7 @@ SCIP_RETCODE SCIPconsAddAge(
    {
       if( !cons->check && consExceedsAgelimit(cons, set) )
       {
-         SCIP_CALL( SCIPconsDelete(cons, blkmem, set, stat, prob) );
+         SCIP_CALL( SCIPconsDelete(cons, blkmem, set, stat, prob, reopt) );
       }
       else if( !cons->obsolete && consExceedsObsoleteage(cons, set) )
       {
@@ -7017,10 +7024,11 @@ SCIP_RETCODE SCIPconsIncAge(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    )
 {
-   SCIP_CALL( SCIPconsAddAge(cons, blkmem, set, stat, prob, 1.0) );
+   SCIP_CALL( SCIPconsAddAge(cons, blkmem, set, stat, prob, 1.0, reopt) );
 
    return SCIP_OKAY;
 }

@@ -472,6 +472,12 @@ void SCIPprobUpdateDualbound(
    SCIP_Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
    );
 
+/** invalidates the dual bound */
+extern
+void SCIPprobInvalidateDualbound(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
 /** returns the external value of the given internal objective value */
 extern
 SCIP_Real SCIPprobExternObjval(

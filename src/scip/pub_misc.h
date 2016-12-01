@@ -1812,7 +1812,6 @@ void SCIPpermuteArray(
    unsigned int*         randseed            /**< pointer to seed value for the random generator */
    );
 
-
 /** randomly shuffles parts of an array using the Fisher-Yates algorithm */
 extern
 void SCIPrandomPermuteArray(

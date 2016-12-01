@@ -1583,6 +1583,56 @@ SCIP_RETCODE SCIPcopyOrigConsCompression(
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    );
 
+/** checks if there is enough time and memory left for copying the sourcescip into a sub-SCIP and solve the sub-SCIP
+ *
+ *  This is the case if the time and memory limit that would be passed to the sub-SCIP are larger than 0.0
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcheckCopyLimits(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP_Bool*            success             /**< pointer to store whether there is time and memory left to copy the
+                                              *   problem and run the sub-SCIP */
+   );
+
+/** copies limits from source SCIP to target SCIP
+ *
+ *  @note time and memory limit are reduced by the amount already spent in the source SCIP before installing the limit
+ *        in the target SCIP
+ *  @note all other limits are disabled and need to be enabled afterwards, if needed
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyLimits(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip          /**< target SCIP data structure */
+   );
+
+
 /**@} */
 
 /*
@@ -5165,6 +5215,29 @@ SCIP_RETCODE SCIPsetProbName(
    const char*           name                /**< name to be set */
    );
 
+/** changes the objective function
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *
+ *  @note This method should be only used to change the objective function during two reoptimization runs and is only
+ *        recommended to an experienced user.
+ *
+ *  @note All variables not given in \p vars array are assumed to have an objective coefficient of zero.
+ */
+EXTERN
+SCIP_RETCODE SCIPchgReoptObjective(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_OBJSENSE         objsense,           /**< new objective function */
+   SCIP_VAR**            vars,               /**< problem variables */
+   SCIP_Real*            coefs,              /**< objective coefficients */
+   int                   nvars               /**< variables in vars array */
+   );
+
 /** returns objective sense of original problem
  *
  *  @return objective sense of original problem
@@ -6654,6 +6727,31 @@ EXTERN
 SCIP_RETCODE SCIPfreeSolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             restart             /**< should certain data be preserved for improved restarting? */
+   );
+
+/** frees branch and bound tree and all solution process data; statistics, presolving data and transformed problem is
+ *  preserved
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @post If this method is called in \SCIP stage \ref SCIP_STAGE_INIT or \ref SCIP_STAGE_PROBLEM, the stage of
+ *        \SCIP is not changed; otherwise, the \SCIP stage is changed to \ref SCIP_STAGE_PRESOLVED.
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPfreeReoptSolve(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** frees all solution process data including presolving and transformed problem, only original problem is kept
@@ -8328,6 +8426,8 @@ SCIP_RETCODE SCIPchgVarObj(
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
  */
 EXTERN
 SCIP_RETCODE SCIPaddVarObj(
@@ -17797,6 +17897,25 @@ SCIP_Real SCIPgetPrimalRayVal(
    SCIP_VAR*             var                 /**< variable to get value for */
    );
 
+/** updates the primal ray thats proves unboundedness
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPupdatePrimalRay(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             primalray           /**< the new primal ray */
+   );
+
 /**@} */
 
 
@@ -18505,7 +18624,7 @@ SCIP_RETCODE SCIPaddReoptnodeBndchg(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
    SCIP_VAR*             var,                /**< variable pointer */
-   SCIP_Real             val,                /**< value of the variable */
+   SCIP_Real             bound,              /**< variable bound to add */
    SCIP_BOUNDTYPE        boundtype           /**< bound type of the variable value */
    );
 
@@ -18539,8 +18658,12 @@ SCIP_RETCODE SCIPaddReoptnodeCons(
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
    SCIP_VAR**            vars,               /**< array of variables */
    SCIP_Real*            vals,               /**< array of variable bounds */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of variable boundtypes */
+   SCIP_Real             lhs,                /**< lhs of the constraint */
+   SCIP_Real             rhs,                /**< rhs of the constraint */
    int                   nvars,              /**< number of variables */
-   REOPT_CONSTYPE        constype            /**< type of the constraint */
+   REOPT_CONSTYPE        constype,           /**< type of the constraint */
+   SCIP_Bool             linear              /**< the given constraint has a linear representation */
    );
 
 /** return the branching path stored in the reoptree at ID id */
