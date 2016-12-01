@@ -17632,7 +17632,7 @@ SCIP_Real SCIPvarGetVSIDS(
       return SCIPvarGetVSIDS_rec(var, stat, dir);
 }
 
-/** returns the variable clique component index, or -1 if no index was computed */
+/** returns the index of the connected component of the clique graph that the variable belongs to, or -1 if not computed */
 int SCIPvarGetCliqueComponentIdx(
    SCIP_VAR*             var                 /**< problem variable */
    )
@@ -17641,7 +17641,7 @@ int SCIPvarGetCliqueComponentIdx(
    return var->clqcomponentidx;
 }
 
-/** sets the variable clique component index, or -1 if index should be reset */
+/** sets the index of the connected component of the clique graph that the variable belongs to, or -1 if not computed */
 void SCIPvarSetCliqueComponentIdx(
    SCIP_VAR*             var,                /**< problem variable */
    int                   idx                 /**< clique component index of this variable */
