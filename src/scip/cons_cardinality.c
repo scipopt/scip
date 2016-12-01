@@ -1057,21 +1057,37 @@ SCIP_RETCODE presolRoundCardinality(
    return SCIP_OKAY;
 }
 
-/** propagate variables */
+/** propagates a cardinality constraint and its variables
+ *
+ *  The number 'ntreatnonzeros' that is assigned to the constraint data returns the number of variables that are either
+ *  known to be nonzero or can be treated as nonzero. We say that a variable is known to be nonzero, if zero is outside
+ *  the domain of this variable. A variable can be treated as nonzero, if its corresponding indicator variable 'indvar' is
+ *  fixed to 1.0, e.g., by branching.
+ *
+ *  We perform the following propagation steps:
+ *
+ *  - if the number 'ntreatnonzeros' is greater than the cardinality value of the constraint, then the current subproblem
+ *    is marked as infeasible.
+ *  - if the cardinality constraint is saturated, i.e., the number 'ntreatnonzeros' is equal to the cardinality value of
+ *    the constraint, then fix all the other variables of the constraint to zero.
+ *  - remove the cardinality constraint locally if all variables are either fixed to zero or can be treated as nonzero.
+ *  - if a (binary) indicator variable is fixed to zero, then fix the corresponding implied variable to zero.
+ *  - if zero is outside of the domain of an implied variable, then fix the corresponding indicator variable to one.
+ */
 static
 SCIP_RETCODE propCardinality(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    SCIP_Bool*            cutoff,             /**< whether a cutoff happened */
-   int*                  ngen                /**< number of domain changes */
+   int*                  nchgdomain          /**< number of domain changes */
    )
 {
    assert(scip != NULL);
    assert(cons != NULL);
    assert(consdata != NULL);
    assert(cutoff != NULL);
-   assert(ngen != NULL);
+   assert(nchgdomain != NULL);
 
    *cutoff = FALSE;
 
@@ -1092,7 +1108,7 @@ SCIP_RETCODE propCardinality(
       SCIP_VAR** indvars;
       SCIP_Bool infeasible;
       SCIP_Bool tightened;
-      SCIP_Bool allVarFixed;
+      SCIP_Bool allvarfixed;
       int nvars;
       int cnt = 0;
       int j;
@@ -1104,7 +1120,7 @@ SCIP_RETCODE propCardinality(
       assert(indvars != NULL);
 
       /* fix free variables to zero */
-      allVarFixed = TRUE;
+      allvarfixed = TRUE;
       for( j = 0; j < nvars; ++j )
       {
          /* if variable is implied to be treated as nonzero */
@@ -1123,7 +1139,8 @@ SCIP_RETCODE propCardinality(
                SCIP_CALL( fixVariableZero(scip, var, &infeasible, &tightened) );
                if( infeasible )
                {
-                  SCIPdebugMsg(scip, "the node is infeasible, more than %d variables are fixed to be nonzero.\n", consdata->cardval);
+                  SCIPdebugMsg(scip, "the node is infeasible, more than %d variables are fixed to be nonzero.\n",
+                     consdata->cardval);
                   SCIP_CALL( SCIPresetConsAge(scip, cons) );
                   *cutoff = TRUE;
 
@@ -1132,25 +1149,25 @@ SCIP_RETCODE propCardinality(
 
                if( tightened )
                {
-                  SCIPdebugMsg(scip, "fixed variable <%s> to 0, since constraint <%s> with cardinality value %d is saturated.\n",
-                     SCIPvarGetName(var), SCIPconsGetName(cons), consdata->cardval);
-                  ++(*ngen);
+                  SCIPdebugMsg(scip, "fixed variable <%s> to 0, since constraint <%s> with cardinality value %d is \
+                     saturated.\n", SCIPvarGetName(var), SCIPconsGetName(cons), consdata->cardval);
+                  ++(*nchgdomain);
                }
                else
-                  allVarFixed = FALSE;
+                  allvarfixed = FALSE;
             }
          }
       }
       assert(cnt == consdata->ntreatnonzeros);
 
       /* reset constraint age counter */
-      if( *ngen > 0 )
+      if( *nchgdomain > 0 )
       {
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
       }
 
       /* delete constraint locally */
-      if( allVarFixed )
+      if( allvarfixed )
       {
          assert(!SCIPconsIsModifiable(cons));
          SCIP_CALL( SCIPdelConsLocal(scip, cons) );
@@ -1219,7 +1236,7 @@ SCIP_RETCODE propCardinality(
                   {
                      SCIPdebugMsg(scip, "fixed variable <%s> to 0, since indicator variable %s is 0.\n",
                         SCIPvarGetName(implvar), SCIPvarGetName(var));
-                     ++(*ngen);
+                     ++(*nchgdomain);
                   }
                }
             }
@@ -1255,7 +1272,7 @@ SCIP_RETCODE propCardinality(
                   SCIP_CALL( SCIPchgVarLb(scip, indvar, 1.0) );
                   SCIPdebugMsg(scip, "fixed variable <%s> to 1.0, since implied variable %s is nonzero.\n",
                      SCIPvarGetName(indvar), SCIPvarGetName(var));
-                  ++(*ngen);
+                  ++(*nchgdomain);
                }
             }
             eventdata->varmarked = FALSE;
@@ -1702,7 +1719,7 @@ SCIP_RETCODE enforceCardinality(
       SCIP_Bool allneg = TRUE;
       int nnonzero;    /* number of variables that are currently deactivated in constraint */
       int pos;         /* position of variable with largest LP solution value */
-      int ngen;
+      int nchgdomain;
       int cnt;
       int j;
 
@@ -1711,7 +1728,7 @@ SCIP_RETCODE enforceCardinality(
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
-      ngen = 0;
+      nchgdomain = 0;
       cnt = 0;
       nnonzero = 0;
       pos = -1;
@@ -1725,20 +1742,20 @@ SCIP_RETCODE enforceCardinality(
          continue;
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
-      SCIP_CALL( propCardinality(scip, cons, consdata, &cutoff, &ngen) );
+      SCIP_CALL( propCardinality(scip, cons, consdata, &cutoff, &nchgdomain) );
 
-      SCIPdebugMsg(scip, "propagating <%s> in enforcing (cutoff: %u, domain reductions: %d).\n", SCIPconsGetName(cons), cutoff, ngen);
+      SCIPdebugMsg(scip, "propagating <%s> in enforcing (cutoff: %u, domain reductions: %d).\n", SCIPconsGetName(cons), cutoff, nchgdomain);
       if( cutoff )
       {
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
-      if( ngen > 0 )
+      if( nchgdomain > 0 )
       {
          *result = SCIP_REDUCEDDOM;
          return SCIP_OKAY;
       }
-      assert(ngen == 0);
+      assert(nchgdomain == 0);
 
       /* check constraint */
       weight = 0.0;
@@ -2655,7 +2672,7 @@ SCIP_DECL_CONSCHECK(consCheckCardinality)
 static
 SCIP_DECL_CONSPROP(consPropCardinality)
 {  /*lint --e{715}*/
-   int ngen = 0;
+   int nchgdomain = 0;
    int c;
 
    assert(scip != NULL);
@@ -2682,15 +2699,15 @@ SCIP_DECL_CONSPROP(consPropCardinality)
       SCIPdebugMsg(scip, "Propagating cardinality constraint <%s>.\n", SCIPconsGetName(cons) );
 
       *result = SCIP_DIDNOTFIND;
-      SCIP_CALL( propCardinality(scip, cons, consdata, &cutoff, &ngen) );
+      SCIP_CALL( propCardinality(scip, cons, consdata, &cutoff, &nchgdomain) );
       if( cutoff )
       {
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
    }
-   SCIPdebugMsg(scip, "Propagated %d domains.\n", ngen);
-   if( ngen > 0 )
+   SCIPdebugMsg(scip, "Propagated %d domains.\n", nchgdomain);
+   if( nchgdomain > 0 )
       *result = SCIP_REDUCEDDOM;
 
    return SCIP_OKAY;
