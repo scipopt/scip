@@ -62,10 +62,11 @@ SCIP_RETCODE SCIPcreateConsCardinality(
    int                   nvars,              /**< number of variables in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
    int                   cardval,            /**< number of variables allowed to be nonzero */
-   SCIP_VAR**            indvars,            /**< indicator variables to indicate which variables may be treated as nonzero in cardinality
-                                              *   constraint, or NULL if indicator variables should be created automatically */
-   SCIP_Real*            weights,            /**< weights determining the variable order, or NULL if variables should be ordered in the
-                                              *   same way they were added to the constraint */
+   SCIP_VAR**            indvars,            /**< indicator variables to indicate which variables may be treated as nonzero
+                                              *   in cardinality constraint, or NULL if indicator variables should be
+                                              *   created automatically */
+   SCIP_Real*            weights,            /**< weights determining the variable order, or NULL if variables should be
+                                              *   ordered in the same way they were added to the constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
                                               *   Usually set to TRUE. Set to FALSE for 'lazy constraints'. */
    SCIP_Bool             separate,           /**< should the constraint be separated during LP processing?
@@ -107,10 +108,11 @@ SCIP_RETCODE SCIPcreateConsBasicCardinality(
    int                   nvars,              /**< number of variables in the constraint */
    SCIP_VAR**            vars,               /**< array with variables of constraint entries */
    int                   cardval,            /**< number of variables allowed to be nonzero */
-   SCIP_VAR**            indvars,            /**< indicator variables to indicate which variables may be treated as nonzero in cardinality
-                                              *   constraint, or NULL if indicator variables should be created automatically */
-   SCIP_Real*            weights             /**< weights determining the variable order, or NULL if variables should be ordered in the
-                                              *   same way they were added to the constraint */
+   SCIP_VAR**            indvars,            /**< indicator variables to indicate which variables may be treated as nonzero
+                                              *   in cardinality constraint, or NULL if indicator variables should be
+                                              *   created automatically */
+   SCIP_Real*            weights             /**< weights determining the variable order, or NULL if variables should be
+                                              *   ordered in the same way they were added to the constraint */
    );
 
 /** changes cardinality value of cardinality constraint (i.e., right hand side of cardinality constraint) */
@@ -127,8 +129,9 @@ SCIP_RETCODE SCIPaddVarCardinality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_VAR*             var,                /**< variable to add to the constraint */
-   SCIP_VAR*             indvar,             /**< indicator variable to indicate whether variable may be treated as nonzero in cardinality constraint
-                                              *   (or NULL if this variable should be created automatically) */
+   SCIP_VAR*             indvar,             /**< indicator variable to indicate whether variable may be treated as nonzero
+                                              *   in cardinality constraint (or NULL if this variable should be created
+                                              *   automatically) */
    SCIP_Real             weight              /**< weight determining position of variable */
    );
 
@@ -138,8 +141,9 @@ SCIP_RETCODE SCIPappendVarCardinality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_VAR*             var,                /**< variable to add to the constraint */
-   SCIP_VAR*             indvar              /**< indicator variable to indicate whether variable may be treated as nonzero in cardinality constraint
-                                              *   (or NULL if this variable should be created automatically) */
+   SCIP_VAR*             indvar              /**< indicator variable to indicate whether variable may be treated as nonzero
+                                              *   in cardinality constraint (or NULL if this variable should be created
+                                              *   automatically) */
    );
 
 /** gets number of variables in cardinality constraint */
