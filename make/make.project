@@ -323,6 +323,13 @@ endif
 ifeq ($(LPS),grb)
 LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)gurobi.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/shared/libgurobi.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
+ifneq ($(LINKRPATH),)
+ifneq ($(SCIPINTERNAL),)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/shared
+else
+LDFLAGS		+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)/shared
+endif
+endif
 endif
 
 #-------------------------------------------------------
