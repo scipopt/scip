@@ -1518,7 +1518,7 @@ SCIP_RETCODE presolveAddKKTQuadLinearTerms(
 static
 SCIP_RETCODE checkConsQuadraticProblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        quadconshdlr,           /**< constraint handler data structure */
+   SCIP_CONSHDLR*        quadconshdlr,       /**< constraint handler data structure */
    SCIP_CONS*            cons,               /**< quadratic constraint */
    SCIP_Bool             allowbinary,        /**< if TRUE then allow binary variables in the problem, if FALSE then all
                                               *   variables have to be continuous */
@@ -1998,7 +1998,7 @@ SCIP_RETCODE SCIPincludePresolQPKKTref(
          finite optimal solution might not exist and the KKT conditions would then be invalid",
          &presoldata->updatequadbounded, TRUE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" PRESOL_NAME "/updatequadindef",
+   SCIP_CALL( SCIPaddBoolParam(scip, "presolving/" PRESOL_NAME "/updatequadindef",
          "if TRUE then apply quadratic constraint update even if the quadratic constraint matrix is known to be indefinite",
          &presoldata->updatequadindef, TRUE, FALSE, NULL, NULL) );
 

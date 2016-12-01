@@ -2515,6 +2515,16 @@ SCIP_RETCODE getActiveVariables(
       for( v = 0; v < *nvars; ++v )
       {
          SCIP_CALL( SCIPvarGetOrigvarSum(&(*vars)[v], &(*scalars)[v], constant) );
+
+         /* negated variables with an original counterpart may also be returned by SCIPvarGetOrigvarSum();
+          * make sure we get the original variable in that case
+          */
+         if( SCIPvarGetStatus((*vars)[v]) == SCIP_VARSTATUS_NEGATED )
+         {
+            (*vars)[v] = SCIPvarGetNegatedVar((*vars)[v]);
+            (*scalars)[v] *= -1.0;
+            *constant += 1.0;
+         }
       }
    }
    return SCIP_OKAY;

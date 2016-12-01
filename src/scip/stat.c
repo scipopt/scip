@@ -37,6 +37,7 @@
 #include "scip/mem.h"
 #include "scip/var.h"
 #include "scip/history.h"
+#include "scip/concsolver.h"
 
 
 
@@ -67,6 +68,7 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->strongbranchtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->conflictlptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->relaxsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->sbsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -94,6 +96,7 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->collectvarhistory = TRUE;
    (*stat)->performpresol = FALSE;
    (*stat)->subscipdepth = 0;
+   (*stat)->detertimecnt = 0.0;
    (*stat)->nreoptruns = 0;
 
    SCIPstatReset(*stat, set, transprob, origprob);
@@ -122,6 +125,7 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->strongbranchtime);
    SCIPclockFree(&(*stat)->conflictlptime);
    SCIPclockFree(&(*stat)->lpsoltime);
+   SCIPclockFree(&(*stat)->relaxsoltime);
    SCIPclockFree(&(*stat)->pseudosoltime);
    SCIPclockFree(&(*stat)->sbsoltime);
    SCIPclockFree(&(*stat)->nodeactivationtime);
@@ -196,6 +200,7 @@ void SCIPstatReset(
    SCIPclockReset(stat->strongbranchtime);
    SCIPclockReset(stat->conflictlptime);
    SCIPclockReset(stat->lpsoltime);
+   SCIPclockReset(stat->relaxsoltime);
    SCIPclockReset(stat->pseudosoltime);
    SCIPclockReset(stat->sbsoltime);
    SCIPclockReset(stat->nodeactivationtime);
@@ -228,11 +233,14 @@ void SCIPstatReset(
    stat->nconflictlpiterations = 0;
    stat->ntotalnodes = 0;
    stat->ntotalinternalnodes = 0;
+   stat->ntotalnodesmerged = 0;
    stat->ncreatednodes = 0;
    stat->nlpsolsfound = 0;
+   stat->nrelaxsolsfound = 0;
    stat->npssolsfound = 0;
    stat->nsbsolsfound = 0;
    stat->nlpbestsolsfound = 0;
+   stat->nrelaxbestsolsfound = 0;
    stat->npsbestsolsfound = 0;
    stat->nsbbestsolsfound = 0;
    stat->nexternalsolsfound = 0;
@@ -251,7 +259,9 @@ void SCIPstatReset(
    stat->nvaridx = stat->marked_nvaridx;
    stat->ncolidx = stat->marked_ncolidx;
    stat->nrowidx = stat->marked_nrowidx;
+   stat->nnz = 0;
    stat->lpcount = 0;
+   stat->relaxcount = 0;
    stat->nlps = 0;
    stat->nrootlps = 0;
    stat->nprimallps = 0;
@@ -615,6 +625,7 @@ void SCIPstatEnableOrDisableStatClocks(
    SCIPclockEnableOrDisable(stat->strongbranchtime, enable);
    SCIPclockEnableOrDisable(stat->conflictlptime, enable);
    SCIPclockEnableOrDisable(stat->lpsoltime, enable);
+   SCIPclockEnableOrDisable(stat->relaxsoltime, enable);
    SCIPclockEnableOrDisable(stat->pseudosoltime, enable);
    SCIPclockEnableOrDisable(stat->sbsoltime, enable);
    SCIPclockEnableOrDisable(stat->nodeactivationtime, enable);

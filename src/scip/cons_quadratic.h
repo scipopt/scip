@@ -380,7 +380,7 @@ SCIP_VAR** SCIPgetLinearVarsQuadratic(
    );
 
 /** Gets the coefficients in the linear part of a quadratic constraint.
- *  Length is given by SCIPgetNQuadVarsQuadratic.
+ *  Length is given by SCIPgetNLinearVarsQuadratic.
  */
 EXTERN
 SCIP_Real* SCIPgetCoefsLinearVarsQuadratic(

@@ -1810,6 +1810,59 @@ SCIP_RETCODE enforcePseudo(
    return SCIP_OKAY;
 }
 
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_Bool cutoff;
+   SCIP_Bool separated;
+   int nchgbds;
+   int c;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(nconss == 0 || conss != NULL);
+   assert(result != NULL);
+
+   SCIPdebugMsg(scip, "Enforcing %d linking constraints for %s solution\n", nconss, sol == NULL ? "LP" : "relaxation");
+
+   cutoff = FALSE;
+   separated = FALSE;
+   nchgbds = 0;
+
+   /* check all useful linking constraints for feasibility */
+   for( c = 0; c < nusefulconss && !cutoff && nchgbds == 0; ++c )
+   {
+      SCIP_CALL( separateCons(scip, conss[c], sol, &cutoff, &separated, &nchgbds) );
+   }
+
+   /* check all obsolete linking constraints for feasibility */
+   for( c = nusefulconss; c < nconss && !cutoff && !separated && nchgbds == 0; ++c )
+   {
+      SCIP_CALL( separateCons(scip, conss[c], sol, &cutoff, &separated, &nchgbds) );
+   }
+
+   /* return the correct result */
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( nchgbds > 0 )
+      *result = SCIP_REDUCEDDOM;
+   else if( separated )
+      *result = SCIP_SEPARATED;
+   else
+      *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Callback methods of constraint handler
@@ -2100,43 +2153,17 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinking)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpLinking)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff;
-   SCIP_Bool separated;
-   int nchgbds;
-   int c;
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(nconss == 0 || conss != NULL);
-   assert(result != NULL);
+   return SCIP_OKAY;
+}
 
-   SCIPdebugMsg(scip, "LP enforcing %d linking constraints\n", nconss);
 
-   cutoff = FALSE;
-   separated = FALSE;
-   nchgbds = 0;
-
-   /* check all useful linking constraints for feasibility */
-   for( c = 0; c < nusefulconss && !cutoff && nchgbds == 0; ++c )
-   {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, &cutoff, &separated, &nchgbds) );
-   }
-
-   /* check all obsolete linking constraints for feasibility */
-   for( c = nusefulconss; c < nconss && !cutoff && !separated && nchgbds == 0; ++c )
-   {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, &cutoff, &separated, &nchgbds) );
-   }
-
-   /* return the correct result */
-   if( cutoff )
-      *result = SCIP_CUTOFF;
-   else if( nchgbds > 0 )
-      *result = SCIP_REDUCEDDOM;
-   else if( separated )
-      *result = SCIP_SEPARATED;
-   else
-      *result = SCIP_FEASIBLE;
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxLinking)
+{  /*lint --e{715}*/
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -3199,7 +3226,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLinking, consSepasolLinking, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinking) );
-
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxLinking) );
 
    /* include the linear constraint to linking constraint upgrade in the linear constraint handler */
    /* SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdLinking, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) ); */
