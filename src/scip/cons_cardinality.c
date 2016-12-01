@@ -1647,7 +1647,7 @@ SCIP_RETCODE branchBalancedCardinality(
  *
  *  We check whether the current solution is feasible. If not, the cardinality constraints can be enforced by different branching rules:
  *
- *  - Unbalanced branching: Branch on the neighborhood of a single variable @p i, i.e., in one branch \f$x_i\f$ is fixed to zero and in the
+ *  - Unbalanced branching: Branch on the neighborhood of a single variable \f$i\f$, i.e., in one branch \f$x_i\f$ is fixed to zero and in the
  *    other we modify cardinality constraints \f$|\mbox{supp}(x)| \leq k\f$ with \f$i\in D\f$ to
  *    \f$|\mbox{supp}(x_{D\setminus i}) \leq k-1\f$
  *
@@ -1657,11 +1657,11 @@ SCIP_RETCODE branchBalancedCardinality(
  *  \f[
  *        r \leq \frac{w}{W} < r+1.
  *  \f]
- *  Choose a number @p s with \f$0\leq s < \min\{k, r\}\f$. The branches are then
+ *  Choose a number \f$s\f$ with \f$0\leq s < \min\{k, r\}\f$. The branches are then
  *  \f[
  *        |\mbox{supp}(x_{d_1}, \ldots, x_{d_r})| \leq s \qquad \mbox{and}\qquad |\mbox{supp}(x_{d_{r+1}}, \ldots, x_{d_{n}})| \leq k-s-1,
  *  \f]
- *  where \f$d_1, \ldots, d_n\f$ are the elements of the set @p D.
+ *  where \f$d_1, \ldots, d_n\f$ are the elements of the set \f$D\f$.
  *
  * The branching constraint is chosen by the largest sum of variable values.
  */
