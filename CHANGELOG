@@ -41,6 +41,8 @@ features:
 - implemented and extended stuffing presolving in linear constraint handler
 
 parameters:
+- new parameter "branching/sumadjustweight" to adjust branching scores by adding a sum epsilon in order to keep score differences
+  near zero, which are otherwise completely disregarded (they are adjusted to at least sum epsilon)
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
   in the solvingphases-section to control how to switch the parameters, and whether a restart should be performed between the phases.
 - new parameter misc/referencevalue to pass a reference value for further analysis of the tree search, see also in 'features'
