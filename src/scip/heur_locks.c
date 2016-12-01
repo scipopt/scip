@@ -17,14 +17,6 @@
  * @brief  rounding locks primal heuristic
  * @author Michael Winkler
  * @author Gerald Gamrath
- *
- * The locks heuristic is a start heuristic that first tries to fix all binary variables, then solves the resulting LP
- * and tries to round the solution and finally solves a sub-MIP on the remaining problem if the LP solution could not be
- * rounded. The fixing works as follows: First, all variables are sorted by their total number of rounding locks (up-
- * and down-locks summed up). Then, looking at the variable with the highest number of locks first, the variable is
- * fixed to the bound where there are fewer locks (in case of ties, the bound which is better w.r.t. the objective
- * function). This fix is propagated and the activities of all LP rows are updated. If any LP row becomes redundant
- * w.r.t. the updated bounds, we adjust the rounding locks.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -38,7 +30,7 @@
 #define HEUR_DESC             "heuristic that fixes variables based on their rounding locks"
 #define HEUR_DISPCHAR         'k'
 #define HEUR_PRIORITY         2000
-#define HEUR_FREQ             -1
+#define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
