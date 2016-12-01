@@ -271,7 +271,7 @@ logarithm. Trigonometric functions are not yet supported by SCIP.
 </p>
 <p>
 Nonlinear objective functions are not supported by SCIP and must be modeled as constraint function.
-<em>Note</em>, that the support for non-quadratic nonlinear constraints is still in a <b>BETA</b>-stadium and not yet as
+<em>Note</em>, that the support for non-quadratic nonlinear constraints is not yet as
 robust as the rest of SCIP.
 Missing bounds on nonlinear variables and tiny or huge coefficients can easily lead to numerical problems,
 which can be avoided by careful modeling.

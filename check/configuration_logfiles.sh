@@ -40,34 +40,28 @@ SEEDS=$6     # the number of random seeds - 0 only default seeds
 SETNAME=$7   # the name of the setting
 TSTNAME=$8   # the name of the testset
 CONTINUE=$9  # should test continue an existing run
-# optional variables
-QUEUE=$10    # the queue name
-p=${11}      # the index of the current permutation - only needed if permutations are used
-s=${12}      # shift of the global random seed - only needed if different seeds are used
-
-if test "$QUEUE" = ""
-then
-    QUEUE=`hostname`
-fi
+QUEUE=${10}    # the queue name
+p=${11}      # the index of the current permutation
+s=${12}      # shift of the global random seed
 
 OUTFILE=results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.out
 ERRFILE=results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.err
 
 # if number of permutations is positive, add postfix
-if test $PERMUTE -gt 0
+if test $p -gt 0
 then
     # if number of seeds is positive, add postfix
-    if test $SEEDS -gt 0
+    if test $s -gt 0
     then
-        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"#s"$s"#p"$p.eval
+        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"-s"$s"-p"$p.eval
     else
-        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"#p"$p.eval
+        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"-p"$p.eval
     fi
 else
     # if number of seeds is positive, add postfix
-    if test $SEEDS -gt 0
+    if test $s -gt 0
     then
-        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"#s"$s.eval
+        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"-s"$s.eval
     else
         EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
     fi
@@ -112,20 +106,20 @@ NEWSHORTPROBNAME=`echo $SHORTPROBNAME | cut -c1-25`
 SHORTPROBNAME=$NEWSHORTPROBNAME
 
 # if number of permutations is positive, add postfix
-if test $PERMUTE -gt 0
+if test $p -gt 0
 then
     # if number of seeds is positive, add postfix
-    if test $SEEDS -gt 0
+    if test $s -gt 0
     then
-        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME#"s"$s#"p"$p
+        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME-"s"$s-"p"$p
     else
-        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME#"p"$p
+        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME-"p"$p
     fi
 else
     # if number of seeds is positive, add postfix
-    if test $SEEDS -gt 0
+    if test $s -gt 0
     then
-        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME#"s"$s
+        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME-"s"$s
     else
         FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME
     fi

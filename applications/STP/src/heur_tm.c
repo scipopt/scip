@@ -52,7 +52,7 @@
 #define DEFAULT_ROOTRUNS 50                  /**< number of runs at the root */
 #define DEFAULT_DURINGLPFREQ 10              /**< frequency during LP solving */
 #define DEFAULT_TYPE  0                      /**< heuristic to execute */
-#define DEFAULT_RANDSEED 0                   /**< seed for pseudo-random functions */
+#define DEFAULT_RANDSEED 5                   /**< seed for pseudo-random functions */
 
 #define AUTO        0
 #define TM_SP       1
@@ -76,7 +76,7 @@ struct SCIP_HeurData
    SCIP_Longint          nlpiterations;      /**< number of total LP iterations*/
    SCIP_Longint          ncalls;             /**< number of total calls (of TM) */
    SCIP_Longint          nexecs;             /**< number of total executions (of TM) */
-   SCIP_Real             hopfactor;          /**< edge multplication factor for hop constrained problems */
+   SCIP_Real             hopfactor;          /**< edge multiplication factor for hop constrained problems */
    int                   stp_type;           /**< problem type */
    int                   evalruns;           /**< number of runs */
    int                   initruns;           /**< number of initial runs */
@@ -86,6 +86,7 @@ struct SCIP_HeurData
    int                   type;               /**< Heuristic type: 0 automatic, 1 TM_SP, 2 TM_VORONOI, 3 TM_DIJKSTRA */
    int                   beststartnode;      /**< start node of the so far best found solution */
    unsigned int          randseed;           /**< seed value for random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    unsigned int          timing;             /**< timing for timing mask */
 };
 
@@ -626,18 +627,21 @@ SCIP_RETCODE computeSteinerTreeDijk(
    int*                  result,             /**< solution array (on edges) */
    int*                  dijkedge,           /**< predecessor edge array */
    int                   start,              /**< start vertex*/
-   unsigned int*         randseed,           /**< random seed */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    char*                 connected           /**< array marking all solution vertices*/
    )
 {
    int k;
    int nnodes;
+
    assert(g != NULL);
+
    nnodes = g->knots;
+
    for( k = 0; k < nnodes; k++ )
       g->mark[k] = (g->grad[k] > 0);
-   graph_path_st(scip, g, cost, dijkdist, dijkedge, start, randseed, connected);
 
+   graph_path_st(scip, g, cost, dijkdist, dijkedge, start, randnumgen, connected);
    SCIP_CALL( prune(scip, g, cost, costrev, result, connected) );
 
    return SCIP_OKAY;
@@ -657,7 +661,7 @@ SCIP_RETCODE computeSteinerTree(
    int*                  cluster,            /**< array used to store current vertices of each subtree during construction */
    int**                 pathedge,           /**< predecessor edge array */
    char*                 connected,          /**< array marking all solution vertices */
-   unsigned int*         randseed            /**< random seed */
+   SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
    )
 {
    SCIP_Real min;
@@ -702,7 +706,7 @@ SCIP_RETCODE computeSteinerTree(
    }
 
    connected[start] = TRUE;
-   SCIPpermuteIntArray(perm, 0, nnodes - 1, randseed);
+   SCIPrandomPermuteIntArray(randnumgen, perm, 0, nnodes - 1);
    /*
      printf("start %d\n", start);
      printf("root->start %f\n", pathdist[root][start]);
@@ -727,7 +731,7 @@ SCIP_RETCODE computeSteinerTree(
             ((g->stp_type == STP_DIRECTED || g->stp_type == STP_HOP_CONS) && !connected[root] && i != root) )
             continue;
 
-         z = SCIPgetRandomInt(0, nnodes - 1, randseed);
+         z = SCIPrandomGetInt(randnumgen, 0, nnodes - 1);
 
          for( k = 0; k < csize; k++ )
          {
@@ -797,7 +801,7 @@ SCIP_RETCODE computeDegConsTree(
    int*                  result,             /**< array to indicate whether an edge is in the solution */
    int*                  cluster,            /**< array for internal computations */
    int**                 pathedge,           /**< ancestor edges for shortest paths from each terminal to all nodes */
-   unsigned int*         randseed,           /**< random seed */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    char*                 connected,          /**< array to indicate whether a vertex is in the solution */
    char*                 solfound            /**< pointer to store whether a solution has been found */
    )
@@ -863,7 +867,7 @@ SCIP_RETCODE computeDegConsTree(
    }
    connected[start] = TRUE;
    tldegcount = MIN(g->grad[start], maxdegs[start]);
-   SCIPpermuteIntArray(perm, 0, nnodes - 1, randseed);
+   SCIPrandomPermuteIntArray(randnumgen, perm, 0, nnodes - 1);
 
    if( Is_term(g->term[start]) )
       termcount = 1;
@@ -887,7 +891,7 @@ SCIP_RETCODE computeDegConsTree(
          if( !Is_term(g->term[i]) || connected[i] || g->grad[i] == 0 )
             continue;
 
-         z = SCIPgetRandomInt(0, nnodes - 1, randseed);
+         z = SCIPrandomGetInt(randnumgen, 0, nnodes - 1);
 
          for( k = 0; k < csize; k++ )
          {
@@ -1421,7 +1425,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    int*                  starts,             /**< array containing start vertices (NULL to not provide any) */
-   int*                  bestnewstart,       /**< pointer to the start vertex resulting in the best soluton */
+   int*                  bestnewstart,       /**< pointer to the start vertex resulting in the best solution */
    int*                  best_result,        /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    int                   runs,               /**< number of runs */
    int                   bestincstart,       /**< best incumbent start vertex */
@@ -1608,7 +1612,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
       }
       else
       {
-         int randint = SCIPgetRandomInt(0, 5, &(heurdata->randseed));
+         int randint = SCIPrandomGetInt(heurdata->randnumgen, 0, 5);
          if( randint <= 2  )
             best = -1;
          else if( randint == 3 )
@@ -1627,7 +1631,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
       {
          for( k = 0; k < nnodes; k++ )
             perm[k] = k;
-         SCIPpermuteIntArray(perm, 0, nnodes, &(heurdata->randseed));
+         SCIPrandomPermuteIntArray(heurdata->randnumgen, perm, 0, nnodes);
 
          /* use terminals (randomly permutated) as starting points for TM heuristic */
          for( k = 0; k < nnodes; k++ )
@@ -1658,22 +1662,22 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
          int bbound = runs - runs / 3;
 
          for( k = 0; k < nnodes; k++ )
-	 {
-	    perm[k] = k;
+         {
+            perm[k] = k;
             if( SCIPisLT(scip, max, nodepriority[k]) && Is_term(graph->term[k]) )
                max = nodepriority[k];
-	 }
+         }
          for( k = 0; k < nnodes; k++ )
-	 {
+         {
             if( Is_term(graph->term[k]) )
             {
-               nodepriority[k] += SCIPgetRandomReal(0.0, max, &(heurdata->randseed));
+               nodepriority[k] += SCIPrandomGetReal(heurdata->randnumgen, 0.0, max);
             }
             else if( SCIPisLE(scip, 1.0, nodepriority[k]) )
             {
-               nodepriority[k] = nodepriority[k] * SCIPgetRandomReal(1.0, 2.0, &(heurdata->randseed));
+               nodepriority[k] = nodepriority[k] * SCIPrandomGetReal(heurdata->randnumgen, 1.0, 2.0);
             }
-	 }
+         }
 
          SCIPsortRealInt(nodepriority, perm, nnodes);
 
@@ -1809,7 +1813,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
          runs = nzterms;
       else if( runs < nzterms )
       {
-	 SCIP_Real minp = FARAWAY;
+         SCIP_Real minp = FARAWAY;
          for( t = 0; t < nterms - 1; t++ )
             if( rootedges_t[t] != UNKNOWN && SCIPisGT(scip, minp, graph->cost[flipedge(rootedges_t[t])]) )
                minp = graph->cost[flipedge(rootedges_t[t])];
@@ -1821,7 +1825,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
                if( rootedges_z[t] == UNKNOWN )
                   terminalprio[t] = 0.0;
                else
-		  terminalprio[t] = SCIPgetRandomReal(minp, graph->cost[flipedge(rootedges_t[t])], &(heurdata->randseed));
+                  terminalprio[t] = SCIPrandomGetReal(heurdata->randnumgen, minp, graph->cost[flipedge(rootedges_t[t])]);
 	 }
 	 else
 	 {
@@ -1833,12 +1837,12 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
                if( rootedges_z[t] == UNKNOWN )
                   terminalprio[t] = 0.0;
                else
-                  terminalprio[t] = nodepriority[graph->tail[rootedges_z[t]]] + SCIPgetRandomReal(0.0, max, &(heurdata->randseed));
+                  terminalprio[t] = nodepriority[graph->tail[rootedges_z[t]]] + SCIPrandomGetReal(heurdata->randnumgen, 0.0, max);
 	 }
          SCIPsortRealInt(terminalprio, terminalperm, nterms - 1);
       }
 
-      if( best >= 0 && best < nterms && SCIPgetRandomInt(0, 2, &(heurdata->randseed)) == 1 )
+      if( best >= 0 && best < nterms && SCIPrandomGetInt(heurdata->randnumgen, 0, 2) == 1 )
          terminalperm[runs - 1] = best;
 
       z = nterms - 2;
@@ -1866,7 +1870,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
 
          if( mode == TM_SP )
          {
-	    assert(pathdist != NULL);
+            assert(pathdist != NULL);
             assert(pathedge != NULL);
             if( !firstrun )
             {
@@ -1897,13 +1901,13 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
                   }
                }
             }
-            SCIP_CALL( computeSteinerTree(scip, graph, cost, costrev, pathdist, graph->tail[rootedge], perm, result, cluster, pathedge, connected, &(heurdata->randseed)) );
+            SCIP_CALL( computeSteinerTree(scip, graph, cost, costrev, pathdist, graph->tail[rootedge], perm, result, cluster, pathedge, connected, heurdata->randnumgen) );
             firstrun = FALSE;
          }
          else
          {
             assert(mode == TM_DIJKSTRA);
-            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, costrev, dijkdist, result, dijkedge, root, &(heurdata->randseed), connected) );
+            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, costrev, dijkdist, result, dijkedge, root, heurdata->randnumgen, connected) );
          }
          if( SCIPisStopped(scip) )
             break;
@@ -1975,7 +1979,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
                result[e] = UNKNOWN;
             }
 
-            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, costrev, dijkdist, result, dijkedge, root, &(heurdata->randseed), connected) );
+            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, costrev, dijkdist, result, dijkedge, root, heurdata->randnumgen, connected) );
 
             obj = 0.0;
             edgecount = 0;
@@ -2050,7 +2054,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
          }
          else if( mode == TM_DIJKSTRA )
          {
-            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, costrev, dijkdist, result, dijkedge, start[r], &(heurdata->randseed), connected) );
+            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, costrev, dijkdist, result, dijkedge, start[r],  heurdata->randnumgen, connected) );
          }
          else if( graph->stp_type == STP_DEG_CONS )
          {
@@ -2076,7 +2080,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
                }
             }
 
-            SCIP_CALL( computeDegConsTree(scip, graph, cost, costrev, pathdist, start[r], perm, result, cluster, pathedge, &(heurdata->randseed), connected, &solfound) );
+            SCIP_CALL( computeDegConsTree(scip, graph, cost, costrev, pathdist, start[r], perm, result, cluster, pathedge,  heurdata->randnumgen, connected, &solfound) );
          }
          else if( mode == TM_SP )
          {
@@ -2100,7 +2104,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
                   }
                }
             }
-            SCIP_CALL( computeSteinerTree(scip, graph, cost, costrev, pathdist, start[r], perm, result, cluster, pathedge, connected, &(heurdata->randseed)) );
+            SCIP_CALL( computeSteinerTree(scip, graph, cost, costrev, pathdist, start[r], perm, result, cluster, pathedge, connected, heurdata->randnumgen) );
          }
          else
          {
@@ -2203,6 +2207,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
  * Callback methods of primal heuristic
  */
 
+
 /** copy method for primal heuristic plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_HEURCOPY(heurCopyTM)
@@ -2229,6 +2234,9 @@ SCIP_DECL_HEURFREE(heurFreeTM)
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+
+   /* free random number generator */
+   SCIPrandomFree(&heurdata->randnumgen);
 
    /* free heuristic data */
    SCIPfreeMemory(scip, &heurdata);
@@ -2268,8 +2276,6 @@ SCIP_DECL_HEURINIT(heurInitTM)
 
 #ifdef WITH_UG
    heurdata->randseed += getUgRank();
-#else
-   heurdata->randseed = 0;
 #endif
 
    return SCIP_OKAY;
@@ -2419,8 +2425,8 @@ SCIP_DECL_HEUREXEC(heurExecTM)
       SCIP_Real randval;
       SCIP_Real randupper;
       SCIP_Real randlower;
-      randupper = SCIPgetRandomReal(1.1, 2.5, &(heurdata->randseed));
-      randlower = SCIPgetRandomReal(1.1, randupper, &(heurdata->randseed));
+      randupper = SCIPrandomGetReal(heurdata->randnumgen, 1.1, 2.5);
+      randlower = SCIPrandomGetReal(heurdata->randnumgen, 1.1, randupper);
 
       for( layer = 0; layer < 1; layer++ )
       {
@@ -2451,7 +2457,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                      if( Is_term(graph->term[e]) )
                         nodepriority[e] = (double) graph->grad[e];
                      else
-                        nodepriority[e] = SCIPgetRandomReal(0.0, 1.0, &(heurdata->randseed));
+                        nodepriority[e] = SCIPrandomGetReal(heurdata->randnumgen, 0.0, 1.0);
                   }
 	       }
 
@@ -2486,14 +2492,14 @@ SCIP_DECL_HEUREXEC(heurExecTM)
             SCIP_CALL( SCIPallocBufferArray(scip, &nodepriority, nnodes) );
 	    for( e = 0; e < nnodes; e++)
 	       nodepriority[e] = 0.0;
-            if( (heurdata->nlpiterations == SCIPgetNLPIterations(scip) && SCIPgetRandomInt(0, 3, &(heurdata->randseed)) != 1)
-               || SCIPgetRandomInt(0, 10, &(heurdata->randseed)) == 5 )
+            if( (heurdata->nlpiterations == SCIPgetNLPIterations(scip) && SCIPrandomGetInt(heurdata->randnumgen, 0, 3) != 1)
+               || SCIPrandomGetInt(heurdata->randnumgen, 0, 10) == 5 )
                partrand = TRUE;
 
-            if( !partrand && (heurdata->nlpiterations == SCIPgetNLPIterations(scip) || SCIPgetRandomInt(0, 25, &(heurdata->randseed)) == 10) )
+            if( !partrand && (heurdata->nlpiterations == SCIPgetNLPIterations(scip) || SCIPrandomGetInt(heurdata->randnumgen, 0, 25) == 10) )
                totalrand = TRUE;
-            else if( graph->stp_type == STP_DEG_CONS && heurdata->ncalls != 1 && SCIPgetRandomInt(0, 1, &(heurdata->randseed)) == 1 && (graph->maxdeg[graph->source[0]] == 1  ||
-                  SCIPgetRandomInt(0, 5, &(heurdata->randseed)) == 5)  )
+            else if( graph->stp_type == STP_DEG_CONS && heurdata->ncalls != 1 && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 1 && (graph->maxdeg[graph->source[0]] == 1  ||
+                  SCIPrandomGetInt(heurdata->randnumgen, 0, 5) == 5)  )
                totalrand = TRUE;
 
             if( graph->stp_type == STP_DEG_CONS && partrand )
@@ -2520,7 +2526,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                   {
                      if( totalrand )
                      {
-                        randval = SCIPgetRandomReal(randlower, randupper, &(heurdata->randseed));
+                        randval = SCIPrandomGetReal(heurdata->randnumgen, randlower, randupper);
                         cost[e] = graph->cost[e] * randval;
                      }
                      else
@@ -2530,7 +2536,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                   }
                   if( partrand )
                   {
-                     randval = SCIPgetRandomReal(randlower, randupper, &(heurdata->randseed));
+                     randval = SCIPrandomGetReal(heurdata->randnumgen, randlower, randupper);
                      cost[e] = cost[e] * randval;
                   }
                   if( SCIPisLT(scip, cost[e], BLOCKED) && SCIPisGT(scip, cost[e], maxcost) )
@@ -2545,7 +2551,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                /* swap costs; set a high cost if the variable is fixed to 0 */
                for( e = 0; e < nedges; e += 2)
                {
-                  randval = SCIPgetRandomReal(randlower, randupper, &(heurdata->randseed));
+                  randval = SCIPrandomGetReal(heurdata->randnumgen, randlower, randupper);
 
                   if( SCIPvarGetUbLocal(vars[layer * nedges + e + 1]) < 0.5 )
                   {
@@ -2707,22 +2713,19 @@ SCIP_RETCODE SCIPincludeHeurTM(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyTM) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeTM) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitTM) );
+
    heurdata->ncalls = 0;
    heurdata->nlpiterations = -1;
    heurdata->nexecs = 0;
+   heurdata->randseed = DEFAULT_RANDSEED;
 
-#ifdef WITH_UG
-   heurdata->randseed += getUgRank();
-#else
-   heurdata->randseed = 0;
-#endif
    /* add TM primal heuristic parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/evalruns",
          "number of runs for eval",
          &heurdata->evalruns, FALSE, DEFAULT_EVALRUNS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/randseed",
          "random seed for heuristic",
-         NULL, FALSE, DEFAULT_RANDSEED, 0, INT_MAX, paramChgdRandomseed, (SCIP_PARAMDATA*)heurdata) );
+         NULL, FALSE, DEFAULT_RANDSEED, 1, INT_MAX, paramChgdRandomseed, (SCIP_PARAMDATA*)heurdata) );
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/initruns",
          "number of runs for init",
          &heurdata->initruns, FALSE, DEFAULT_INITRUNS, -1, INT_MAX, NULL, NULL) );
@@ -2740,7 +2743,16 @@ SCIP_RETCODE SCIPincludeHeurTM(
          &heurdata->type, FALSE, DEFAULT_TYPE, 0, 3, NULL, NULL) );
    heurdata->hopfactor = DEFAULT_HOPFACTOR;
 
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when heuristc should be called (%u:BEFORENODE, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:AFTERNODE)", SCIP_HEURTIMING_BEFORENODE, SCIP_HEURTIMING_DURINGLPLOOP, SCIP_HEURTIMING_AFTERLPLOOP, SCIP_HEURTIMING_AFTERNODE);
+#ifdef WITH_UG
+   heurdata->randseed += getUgRank();
+#endif
+   printf("randseed %d \n",  heurdata->randseed);
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, heurdata->randseed)) );
+
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when heuristic should be called (%u:BEFORENODE, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:AFTERNODE)", SCIP_HEURTIMING_BEFORENODE, SCIP_HEURTIMING_DURINGLPLOOP, SCIP_HEURTIMING_AFTERLPLOOP, SCIP_HEURTIMING_AFTERNODE);
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/timing", paramdesc,
          (int*) &heurdata->timing, TRUE, (int) HEUR_TIMING, (int) SCIP_HEURTIMING_BEFORENODE, 2 * (int) SCIP_HEURTIMING_AFTERPSEUDONODE - 1, NULL, NULL) ); /*lint !e713*/
 

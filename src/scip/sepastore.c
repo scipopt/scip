@@ -359,11 +359,51 @@ SCIP_Bool sepastoreIsBdchgApplicable(
    return FALSE;
 }
 
-/** adds cut stored as LP row to separation storage and captures it;
- *  if the cut should be forced to be used, an infinite score has to be used
- */
+/** removes a non-forced cut from the separation storage */
 static
-SCIP_RETCODE sepastoreAddCut(
+SCIP_RETCODE sepastoreDelCut(
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
+   SCIP_LP*              lp,                 /**< LP data */
+   int                   pos                 /**< position of cut to delete */
+   )
+{
+   assert(sepastore != NULL);
+   assert(sepastore->cuts != NULL);
+   assert(sepastore->nforcedcuts <= pos && pos < sepastore->ncuts);
+
+   /* check, if the row deletions from separation storage events are tracked
+    * if so, issue ROWDELETEDSEPA event
+    */
+   if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDSEPA) != 0 )
+   {
+      SCIP_EVENT* event;
+
+      SCIP_CALL( SCIPeventCreateRowDeletedSepa(&event, blkmem, sepastore->cuts[pos]) );
+      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
+   }
+
+   /* release the row */
+   SCIP_CALL( SCIProwRelease(&sepastore->cuts[pos], blkmem, set, lp) );
+
+   /* move last cut to the empty position */
+   sepastore->cuts[pos] = sepastore->cuts[sepastore->ncuts-1];
+   sepastore->efficacies[pos] = sepastore->efficacies[sepastore->ncuts-1];
+   sepastore->objparallelisms[pos] = sepastore->objparallelisms[sepastore->ncuts-1];
+   sepastore->orthogonalities[pos] = sepastore->orthogonalities[sepastore->ncuts-1];
+   sepastore->scores[pos] = sepastore->scores[sepastore->ncuts-1];
+   sepastore->ncuts--;
+
+   return SCIP_OKAY;
+}
+
+/** adds cut to separation storage and captures it;
+ *  if the cut should be forced to enter the LP, an infinite score has to be used
+ */
+SCIP_RETCODE SCIPsepastoreAddCut(
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -392,6 +432,16 @@ SCIP_RETCODE sepastoreAddCut(
    assert(!SCIPsetIsInfinity(set, -SCIProwGetLhs(cut)) || !SCIPsetIsInfinity(set, SCIProwGetRhs(cut)));
    assert(eventqueue != NULL);
    assert(eventfilter != NULL);
+
+   /* debug: check cut for feasibility */
+   SCIP_CALL( SCIPdebugCheckRow(set, cut) ); /*lint !e506 !e774*/
+
+   /* update statistics of total number of found cuts */
+   if( !sepastore->initiallp )
+   {
+      sepastore->ncutsfound++;
+      sepastore->ncutsfoundround++;
+   }
 
    /* in the root node, every local cut is a global cut, and global cuts are nicer in many ways...*/
    if( root && SCIProwIsLocal(cut) )
@@ -503,86 +553,6 @@ SCIP_RETCODE sepastoreAddCut(
       SCIP_CALL( SCIPeventCreateRowAddedSepa(&event, blkmem, cut) );
       SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
    }
-
-   return SCIP_OKAY;
-}
-
-/** removes a non-forced cut from the separation storage */
-static
-SCIP_RETCODE sepastoreDelCut(
-   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
-   SCIP_LP*              lp,                 /**< LP data */
-   int                   pos                 /**< position of cut to delete */
-   )
-{
-   assert(sepastore != NULL);
-   assert(sepastore->cuts != NULL);
-   assert(sepastore->nforcedcuts <= pos && pos < sepastore->ncuts);
-
-   /* check, if the row deletions from separation storage events are tracked
-    * if so, issue ROWDELETEDSEPA event
-    */
-   if( eventfilter->len > 0 && (eventfilter->eventmask & SCIP_EVENTTYPE_ROWDELETEDSEPA) != 0 )
-   {
-      SCIP_EVENT* event;
-
-      SCIP_CALL( SCIPeventCreateRowDeletedSepa(&event, blkmem, sepastore->cuts[pos]) );
-      SCIP_CALL( SCIPeventqueueAdd(eventqueue, blkmem, set, NULL, NULL, NULL, eventfilter, &event) );
-   }
-
-   /* release the row */
-   SCIP_CALL( SCIProwRelease(&sepastore->cuts[pos], blkmem, set, lp) );
-
-   /* move last cut to the empty position */
-   sepastore->cuts[pos] = sepastore->cuts[sepastore->ncuts-1];
-   sepastore->efficacies[pos] = sepastore->efficacies[sepastore->ncuts-1];
-   sepastore->objparallelisms[pos] = sepastore->objparallelisms[sepastore->ncuts-1];
-   sepastore->orthogonalities[pos] = sepastore->orthogonalities[sepastore->ncuts-1];
-   sepastore->scores[pos] = sepastore->scores[sepastore->ncuts-1];
-   sepastore->ncuts--;
-
-   return SCIP_OKAY;
-}
-
-/** adds cut to separation storage and captures it;
- *  if the cut should be forced to enter the LP, an infinite score has to be used
- */
-SCIP_RETCODE SCIPsepastoreAddCut(
-   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global events */
-   SCIP_LP*              lp,                 /**< LP data */
-   SCIP_SOL*             sol,                /**< primal solution that was separated, or NULL for LP solution */
-   SCIP_ROW*             cut,                /**< separated cut */
-   SCIP_Bool             forcecut,           /**< should the cut be forced to enter the LP? */
-   SCIP_Bool             root,               /**< are we at the root node? */
-   SCIP_Bool*            infeasible          /**< pointer to store whether the cut is infeasible */
-   )
-{
-   assert(sepastore != NULL);
-   assert(cut != NULL);
-   assert(!SCIProwIsInLP(cut));
-   assert(!SCIPsetIsInfinity(set, -SCIProwGetLhs(cut)) || !SCIPsetIsInfinity(set, SCIProwGetRhs(cut)));
-
-   /* debug: check cut for feasibility */
-   SCIP_CALL( SCIPdebugCheckRow(set, cut) ); /*lint !e506 !e774*/
-
-   /* update statistics of total number of found cuts */
-   if( !sepastore->initiallp )
-   {
-      sepastore->ncutsfound++;
-      sepastore->ncutsfoundround++;
-   }
-
-   /* add LP row cut to separation storage */
-   SCIP_CALL( sepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, sol, cut, forcecut, root, infeasible) );
 
    return SCIP_OKAY;
 }

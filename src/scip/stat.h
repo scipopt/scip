@@ -152,6 +152,12 @@ void SCIPstatUpdateMemsaveMode(
    SCIP_MEM*             mem                 /**< block memory pools */
    );
 
+/** returns the estimated number of bytes used by extern software, e.g., the LP solver */
+extern
+SCIP_Longint SCIPstatGetMemExternEstim(
+   SCIP_STAT*            stat                /**< dynamic SCIP statistics */
+   );
+
 /** enables or disables all statistic clocks of \p stat concerning LP execution time, strong branching time, etc.
  *
  *  @note: The (pre-)solving time clocks which are relevant for the output during (pre-)solving

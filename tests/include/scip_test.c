@@ -40,8 +40,10 @@ SCIP_DECL_HEUREXEC(heurExecTest)
  *  SCIP_STAGE_PRESOLVED
  *  SCIP_STAGE_SOLVING
  *  SCIP_STAGE_SOLVED
+ *
+ *  If stage == SCIP_STAGE_SOLVING and enableNLP is true, then SCIP will build its NLP
  */
-SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage)
+SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage, SCIP_Bool enableNLP)
 {
    /* no output nor warnings */
    /* @todo reset output to previous level! */
@@ -78,6 +80,14 @@ SCIP_RETCODE TESTscipSetStage(SCIP* scip, SCIP_STAGE stage)
          SCIP_CALL( SCIPincludeHeurBasic(scip, NULL,
                   "heurTest", "heuristic to stop in SOLVING", '!', 1, 1, 0,
                   -1, SCIP_HEURTIMING_BEFORENODE, FALSE, heurExecTest, NULL) );
+
+         /* enable NLP */
+         if( enableNLP )
+         {
+            SCIP_CALL( SCIPpresolve(scip) );
+            SCIPenableNLP(scip);
+         }
+
          SCIP_CALL( SCIPsolve(scip) );
          break;
 

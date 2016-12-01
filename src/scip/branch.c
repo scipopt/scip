@@ -1285,7 +1285,7 @@ SCIP_RETCODE SCIPbranchruleCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "branching/%s/maxdepth", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal depth level, up to which branching rule <%s> should be used (-1 for no limit)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         &(*branchrule)->maxdepth, FALSE, maxdepth, -1, INT_MAX,
+         &(*branchrule)->maxdepth, FALSE, maxdepth, -1, SCIP_MAXTREEDEPTH,
          NULL, NULL) ); /*lint !e740*/
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "branching/%s/maxbounddist", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for applying branching rule (0.0: only on current best node, 1.0: on all nodes)");

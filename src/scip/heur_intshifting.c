@@ -25,7 +25,7 @@
 #include <string.h>
 
 #include "scip/heur_intshifting.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 
 #define HEUR_NAME             "intshifting"
 #define HEUR_DESC             "LP rounding heuristic with infeasibility recovering and final LP solving"
@@ -46,7 +46,7 @@ struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
    SCIP_Longint          lastlp;             /**< last LP number where the heuristic was applied */
-   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 };
 
 
@@ -595,7 +595,7 @@ SCIP_DECL_HEURINIT(heurInitIntshifting) /*lint --e{715}*/
    SCIPheurSetData(heur, heurdata);
 
    /* create random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &heurdata->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    return SCIP_OKAY;
@@ -615,7 +615,7 @@ SCIP_DECL_HEUREXIT(heurExitIntshifting) /*lint --e{715}*/
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
    /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &heurdata->randnumgen) );
+   SCIPrandomFree(&heurdata->randnumgen);
 
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);

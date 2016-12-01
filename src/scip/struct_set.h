@@ -169,12 +169,18 @@ struct SCIP_Set
                                               *   graph (-1: use every intermediate constraint) */
    int                   conf_maxconss;      /**< maximal number of conflict constraints accepted at an infeasible node
                                               *   (-1: use all generated conflict constraints) */
+   int                   conf_maxstoresize;  /**< maximal size of conflict store */
    int                   conf_reconvlevels;  /**< number of depth levels up to which UIP reconvergence constraints are
                                               *   generated (-1: generate reconvergence constraints in all depth levels) */
    SCIP_Bool             conf_enable;        /**< should conflict analysis be enabled? */
-   SCIP_Bool             conf_useprop;       /**< should propagation conflict analysis be used? */
-   SCIP_Bool             conf_useinflp;      /**< should infeasible LP conflict analysis be used? */
-   SCIP_Bool             conf_useboundlp;    /**< should bound exceeding LP conflict analysis be used? */
+   SCIP_Bool             conf_cleanbnddepend;/**< should conflicts related to an old cutoff bound be removed? */
+   SCIP_Bool             conf_useprop;       /**< should propagation conflict analysis be used? (uses conflict graph only) */
+   char                  conf_useinflp;      /**< should infeasible LP conflict analysis be used?
+                                              *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
+                                              */
+   char                  conf_useboundlp;    /**< should bound exceeding LP conflict analysis be used?
+                                              *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
+                                              */
    SCIP_Bool             conf_usesb;         /**< should infeasible/bound exceeding strong branching conflict analysis be
                                               *   used? */
    SCIP_Bool             conf_usepseudo;     /**< should pseudo solution conflict analysis be used? */
@@ -188,7 +194,10 @@ struct SCIP_Set
    SCIP_Bool             conf_seperate;      /**< should the conflict constraints be separated? */
    SCIP_Bool             conf_dynamic;       /**< should the conflict constraints be subject to aging? */
    SCIP_Bool             conf_removable;     /**< should the conflict's relaxations be subject to LP aging and cleanup? */
-   SCIP_Real             conf_depthscorefac; /**< score factor for depth level in bound relaxation heuristic of LP analysis */
+   SCIP_Real             conf_depthscorefac; /**< score factor for depth level in bound relaxation heuristic */
+   SCIP_Real             conf_proofscorefac; /**< score factor for contribution to infeasibility proof in bound relaxation heuristic */
+   SCIP_Real             conf_uplockscorefac;/**< score factor for number of up locks in bound relaxation heuristic */
+   SCIP_Real             conf_downlockscorefac;/**< score factor for number of down locks in bound relaxation heuristic */
    SCIP_Real             conf_scorefac;      /**< factor to decrease importance of variables' earlier conflict scores */
    int                   conf_restartnum;    /**< number of successful conflict analysis calls that trigger a restart
                                               *   (0: disable conflict restarts) */
@@ -207,6 +216,16 @@ struct SCIP_Set
    SCIP_Real             conf_conflictgraphweight; /**< the weight the VSIDS score is weight by updating the VSIDS for a
                                                     *   variable if it is part of a conflict graph
                                                     */
+   SCIP_Real             conf_weightsize;    /**< weight of the size of a conflict used in score calculation */
+   SCIP_Real             conf_weightrepropdepth;/**< weight of the prepropagtion depth of a conflict used in score calculation */
+   SCIP_Real             conf_weightvaliddepth;/**< weight of the valid depth of a conflict used in score calculation */
+   SCIP_Bool             conf_applymir;      /**< apply the MIR function on a dual ray */
+   SCIP_Bool             conf_prefermir;     /**< prefer a ray after applying the MIR function if the proof is still
+                                              *   valid, use both rays otherwise
+                                              */
+   SCIP_Real             conf_minimprove;    /**< minimal improvement of primal bound to remove conflicts depending on
+                                              *   a previous incumbent.
+                                              */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted
@@ -298,7 +317,6 @@ struct SCIP_Set
    char*                 nlp_solver;         /**< name of NLP solver to use */
 
    /* memory settings */
-   SCIP_Longint          mem_externestim;    /**< estimation of external memory usage, e.g., by LP solver */
    SCIP_Real             mem_savefac;        /**< fraction of maximal memory usage resulting in switch to memory saving mode */
    SCIP_Real             mem_arraygrowfac;   /**< memory growing factor for dynamically allocated arrays */
    SCIP_Real             mem_treegrowfac;    /**< memory growing factor for tree array */
@@ -313,8 +331,6 @@ struct SCIP_Set
    SCIP_Bool             misc_useconstable;  /**< should a hashtable be used to map from constraint names to constraints? */
    SCIP_Bool             misc_usesmalltables;/**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
    SCIP_Bool             misc_exactsolve;    /**< should the problem be solved exactly (with proven dual bounds)? */
-   SCIP_Bool             misc_permuteconss;  /**< should order of constraints be permuted (depends on permutationseed)? */
-   SCIP_Bool             misc_permutevars;   /**< should order of variables be permuted (depends on permutationseed)? */
    SCIP_Bool             misc_resetstat;     /**< should the statistics be reset if the transformed problem is freed
                                               *   otherwise the statistics get reset after original problem is freed (in
                                               *   case of bender decomposition this parameter should be set to FALSE and
@@ -335,8 +351,10 @@ struct SCIP_Set
    /* randomization parameters */
    int                   random_randomseedshift;/**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
    int                   random_permutationseed;/**< seed value for permuting the problem after the problem was tranformed
-                                                 *   (-1: no permutation) */
+                                                 *   (0: no permutation) */
    int                   random_randomseed;     /**< random seed for LP solver, e.g. for perturbations in the simplex (0: LP default) */
+   SCIP_Bool             random_permuteconss;   /**< should order of constraints be permuted (depends on permutationseed)? */
+   SCIP_Bool             random_permutevars;    /**< should order of variables be permuted (depends on permutationseed)? */
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,

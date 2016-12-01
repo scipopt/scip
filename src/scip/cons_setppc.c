@@ -30,7 +30,7 @@
 #include "scip/cons_setppc.h"
 #include "scip/cons_linear.h"
 #include "scip/cons_quadratic.h"
-#include "scip/random.h"
+#include "scip/pub_misc.h"
 
 
 #define CONSHDLR_NAME          "setppc"
@@ -62,7 +62,7 @@
 
 #define DEFAULT_PRESOLPAIRWISE     TRUE /**< should pairwise constraint comparison be performed in presolving? */
 
-#define HASHSIZE_SETPPCCONS      131101 /**< minimal size of hash table in setppc constraint tables */
+#define HASHSIZE_SETPPCCONS         500 /**< minimal size of hash table in setppc constraint tables */
 #define DEFAULT_PRESOLUSEHASHING   TRUE /**< should hash table be used for detecting redundant constraints in advance */
 #define NMINCOMPARISONS          200000 /**< number for minimal pairwise presolving comparisons */
 #define MINGAINPERNMINCOMPARISONS 1e-06 /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
@@ -119,7 +119,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             addvariablesascliques;/**< should we try to generate extra clique constraint out of all binary
                                                 *   variables to hopefully fasten the detection of redundant clique
                                                 *   constraints */
-   SCIP_RANDGEN*         randnumgen;         /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Bool             presolpairwise;     /**< should pairwise constraint comparison be performed in presolving? */
    SCIP_Bool             presolusehashing;   /**< should hash table be used for detecting redundant constraints in advance */
    SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
@@ -142,7 +142,7 @@ struct SCIP_ConsData
    unsigned int          changed:1;          /**< was constraint changed since last redundancy round in preprocessing? */
    unsigned int          varsdeleted:1;      /**< were variables deleted after last cleanup? */
    unsigned int          merged:1;           /**< are the constraint's equal/negated variables already merged? */
-   unsigned int          propagated:1;       /**< does this constraint need to be propagated? */
+   unsigned int          presolpropagated:1; /**< was the constraint already propagated in presolving w.r.t. the current domains? */
    unsigned int          existmultaggr:1;    /**< does this constraint contain aggregations */
 };
 
@@ -366,7 +366,7 @@ SCIP_RETCODE conshdlrdataCreate(
    (*conshdlrdata)->nsetpart = 0;
 
    /* create a random number generator */
-   SCIP_CALL( SCIPcreateRandomNumberGenerator(scip, &(*conshdlrdata)->randnumgen,
+   SCIP_CALL( SCIPrandomCreate(&(*conshdlrdata)->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    return SCIP_OKAY;
@@ -387,7 +387,7 @@ SCIP_RETCODE conshdlrdataFree(
 #endif
 
    /* free random number generator */
-   SCIP_CALL( SCIPfreeRandomNumberGenerator(scip, &(*conshdlrdata)->randnumgen) );
+   SCIPrandomFree(&(*conshdlrdata)->randnumgen);
 
    SCIPfreeMemory(scip, conshdlrdata);
 
@@ -561,6 +561,11 @@ SCIP_RETCODE consdataCreate(
    {
       int v;
 
+      /* @todo the setppc constraint handler does not remove fixed variables from its var array; removing those
+       * variables is only possible if we consider the values of nfixedones and nfixedzeros in all propagation methods
+       */
+#ifdef SCIP_DISABLED_CODE
+
       if( SCIPisConsCompressionEnabled(scip) )
       {
          SCIP_VAR** varsbuffer;
@@ -596,6 +601,7 @@ SCIP_RETCODE consdataCreate(
          SCIPfreeBufferArray(scip, &varsbuffer);
       }
       else
+#endif
       {
          /* for uncompressed copies, simply duplicate the whole array */
          SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*consdata)->vars, vars, nvars) );
@@ -642,7 +648,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->changed = TRUE;
    (*consdata)->varsdeleted = FALSE;
    (*consdata)->merged = FALSE;
-   (*consdata)->propagated = FALSE;
+   (*consdata)->presolpropagated = FALSE;
 
    return SCIP_OKAY;
 }
@@ -664,7 +670,7 @@ SCIP_RETCODE consdataCreateTransformed(
    SCIP_CALL( consdataCreate(scip, consdata, nvars, vars, setppctype) );
 
    /* transform the variables */
-   SCIP_CALL( SCIPgetTransformedVars(scip, nvars, (*consdata)->vars, (*consdata)->vars) );
+   SCIP_CALL( SCIPgetTransformedVars(scip, (*consdata)->nvars, (*consdata)->vars, (*consdata)->vars) );
 
    return SCIP_OKAY;
 }
@@ -916,20 +922,26 @@ SCIP_RETCODE catchEvent(
    if( SCIPisEQ(scip, SCIPvarGetUbLocal(var), 0.0) )
    {
       consdata->nfixedzeros++;
-      consdata->propagated = FALSE;
 
-      if( SCIPconsIsActive(cons) && consdata->nfixedzeros >= consdata->nvars - 1 )
+      /* during presolving, we may fix the last unfixed variable or do an aggregation if there are two unfixed variables */
+      if( SCIPconsIsActive(cons) && ((SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE) && (consdata->nfixedzeros >= consdata->nvars - 2)) )
       {
-         SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+         consdata->presolpropagated = FALSE;
+
+         /* during solving, we only propagate again if there is only one unfixed variable left */
+         if( consdata->nfixedzeros >= consdata->nvars - 1 )
+         {
+            SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+         }
       }
    }
    else if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), 1.0) )
    {
       consdata->nfixedones++;
-      consdata->propagated = FALSE;
 
       if( SCIPconsIsActive(cons) )
       {
+         consdata->presolpropagated = FALSE;
          SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
       }
    }
@@ -1139,6 +1151,12 @@ SCIP_RETCODE delCoefPos(
 
       /* drop bound change events of variable */
       SCIP_CALL( dropEvent(scip, cons, conshdlrdata->eventhdlr, pos) );
+
+      /* the last variable of the constraint was deleted; mark it for propagation (so that it can be deleted) */
+      if( consdata->nvars == 1 )
+      {
+         consdata->presolpropagated = FALSE;
+      }
    }
 
    /* delete coefficient from the LP row */
@@ -1793,10 +1811,7 @@ SCIP_RETCODE applyFixings(
                                  SCIPfreeBufferArray(scip, &consvals);
                                  SCIPfreeBufferArray(scip, &consvars);
 
-                                 /* all multi-aggregations should be resolved */
-                                 consdata->existmultaggr = FALSE;
-
-                                 return SCIP_OKAY;
+                                 goto TERMINATE;
                               }
 
                               if( fixed )
@@ -1815,10 +1830,7 @@ SCIP_RETCODE applyFixings(
                   SCIPfreeBufferArray(scip, &consvals);
                   SCIPfreeBufferArray(scip, &consvars);
 
-                  /* all multi-aggregations should be resolved */
-                  consdata->existmultaggr = FALSE;
-
-                  return SCIP_OKAY;
+                  goto TERMINATE;
                }
             }
 
@@ -1923,10 +1935,7 @@ SCIP_RETCODE applyFixings(
                   ++(*naddconss);
                }
 
-               /* all multi-aggregations should be resolved */
-               consdata->existmultaggr = FALSE;
-
-               return SCIP_OKAY;
+               goto TERMINATE;
             }
             /* we need to degrade this setppc constraint to a linear constraint*/
             else
@@ -1965,6 +1974,7 @@ SCIP_RETCODE applyFixings(
       }
    }
 
+ TERMINATE:
    /* all multi-aggregations should be resolved */
    consdata->existmultaggr = FALSE;
 
@@ -1993,7 +2003,8 @@ SCIP_RETCODE analyzeConflictZero(
       || consdata->setppctype == SCIP_SETPPCTYPE_COVERING); /*lint !e641*/
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
    for( v = 0; v < consdata->nvars; ++v )
    {
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
@@ -2028,7 +2039,8 @@ SCIP_RETCODE analyzeConflictOne(
       || consdata->setppctype == SCIP_SETPPCTYPE_PACKING); /*lint !e641*/
 
    /* initialize conflict analysis, and add the two variables assigned to one to conflict candidate queue */
-   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+   SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
+
    n = 0;
    for( v = 0; v < consdata->nvars && n < 2; ++v )
    {
@@ -2409,6 +2421,7 @@ SCIP_RETCODE separateCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< set partitioning / packing / covering constraint to be separated */
    SCIP_SOL*             sol,                /**< primal CIP solution, NULL for current LP solution */
+   SCIP_Bool             lpfeas,             /**< is the given solution feasible for the current LP ? */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if the node can be cut off */
    SCIP_Bool*            separated,          /**< pointer to store TRUE, if a cut was found */
    SCIP_Bool*            reduceddom          /**< pointer to store TRUE, if a domain reduction was found */
@@ -2434,13 +2447,13 @@ SCIP_RETCODE separateCons(
    assert(0 <= consdata->nfixedones && consdata->nfixedones <= consdata->nvars);
 
    /* skip constraints already in the LP */
-   if( sol == NULL && consdata->row != NULL && SCIProwIsInLP(consdata->row) )
+   if( lpfeas && consdata->row != NULL && SCIProwIsInLP(consdata->row) )
       return SCIP_OKAY;
 
    SCIPdebugMsg(scip, "separating constraint <%s>\n", SCIPconsGetName(cons));
 
    /* check constraint for violation only looking at the fixed variables, apply further fixings if possible */
-   if( sol == NULL )
+   if( lpfeas )
    {
       int nfixedvars = 0;
 
@@ -2459,12 +2472,12 @@ SCIP_RETCODE separateCons(
       assert(!addcut);
 
       /* variable's fixings didn't give us any information -> we have to check the constraint */
-      if( sol == NULL && consdata->row != NULL )
+      if( lpfeas && consdata->row != NULL )
       {
          SCIP_Real feasibility;
 
          assert(!SCIProwIsInLP(consdata->row));
-         feasibility = SCIPgetRowLPFeasibility(scip, consdata->row);
+         feasibility = SCIPgetRowSolFeasibility(scip, consdata->row, sol);
          addcut = SCIPisFeasNegative(scip, feasibility);
       }
       else
@@ -2605,7 +2618,6 @@ static
 SCIP_DECL_HASHKEYVAL(hashKeyValSetppccons)
 {
    SCIP_CONSDATA* consdata;
-   unsigned int hashval;
    int minidx;
    int mididx;
    int maxidx;
@@ -2628,9 +2640,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValSetppccons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + (unsigned int)maxidx; /*lint !e701*/
-
-   return hashval;
+   return SCIPhashTwo(SCIPcombineTwoInt(consdata->nvars, minidx),
+                      SCIPcombineTwoInt(mididx, maxidx));
 }
 
 /** add extra clique-constraints resulting from a given cliquepartition to SCIP */
@@ -3109,10 +3120,10 @@ SCIP_RETCODE presolvePropagateCons(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   if( consdata->propagated )
+   if( consdata->presolpropagated )
       return SCIP_OKAY;
 
-   consdata->propagated = TRUE;
+   consdata->presolpropagated = TRUE;
 
    vars = consdata->vars;
    nvars = consdata->nvars;
@@ -4899,7 +4910,7 @@ SCIP_RETCODE preprocessCliques(
    susefulvars = 2 * nvars; /* two times because of negated vars, maybe due to deleted variables we need to increase this */
 
    /* a hashmap from varindex to postion in varconsidxs array, because above is still too small */
-   SCIP_CALL( SCIPhashmapCreate(&vartoindex, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&vartoindex, SCIPblkmem(scip), nvars) );
 
    /* get temporary memory for the aggregation storage, to memorize aggregations which will be performed later, otherwise we would destroy our local data structures */
    saggregations = nvars;
@@ -5532,7 +5543,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
       return SCIP_OKAY;
 
    /* a hashmap from var to index when found in a set-partitioning constraint */
-   SCIP_CALL( SCIPhashmapCreate(&vartoindex, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nposvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&vartoindex, SCIPblkmem(scip), nposvars) );
 
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &chgtype, nconss) );
@@ -6235,7 +6246,7 @@ SCIP_RETCODE detectRedundantConstraints(
    assert(conss != NULL);
 
    /* create a hash table for the constraint set */
-   hashtablesize = SCIPcalcHashtableSize(10*nconss);
+   hashtablesize = nconss;
    hashtablesize = MAX(hashtablesize, HASHSIZE_SETPPCCONS);
    SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, hashtablesize,
          hashGetKeySetppccons, hashKeyEqSetppccons, hashKeyValSetppccons, (void*) scip) );
@@ -6743,6 +6754,72 @@ SCIP_RETCODE performVarDeletions(
    return SCIP_OKAY;
 }
 
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_Bool cutoff;
+   SCIP_Bool separated;
+   SCIP_Bool reduceddom;
+   int c;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(nconss == 0 || conss != NULL);
+   assert(result != NULL);
+
+   SCIPdebugMsg(scip, "Enforcing %d set partitioning / packing / covering constraints for %s solution\n", nconss,
+         sol == NULL ? "LP" : "relaxation");
+
+   *result = SCIP_FEASIBLE;
+
+   cutoff = FALSE;
+   separated = FALSE;
+   reduceddom = FALSE;
+
+   /* check all useful set partitioning / packing / covering constraints for feasibility */
+   for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
+   {
+      SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, &cutoff, &separated, &reduceddom) );
+   }
+
+   /* check all obsolete set partitioning / packing / covering constraints for feasibility */
+   for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
+   {
+      SCIP_CALL( separateCons(scip, conss[c], sol, TRUE, &cutoff, &separated, &reduceddom) );
+   }
+   
+#ifdef VARUSES
+#ifdef BRANCHLP
+   /* @todo also branch on relaxation solution */
+   if( (sol == NULL) && !cutoff && !separated && !reduceddom )
+   {
+      /* if solution is not integral, choose a variable set to branch on */
+      SCIP_CALL( branchLP(scip, conshdlr, result) );
+      if( *result != SCIP_FEASIBLE )
+         return SCIP_OKAY;
+   }
+#endif
+#endif
+
+   /* return the correct result */
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( separated )
+      *result = SCIP_SEPARATED;
+   else if( reduceddom )
+      *result = SCIP_REDUCEDDOM;
+
+   return SCIP_OKAY;
+}
 
 /*
  * upgrading of linear constraints
@@ -7333,7 +7410,7 @@ SCIP_DECL_CONSSEPALP(consSepalpSetppc)
    /* check all useful set partitioning / packing / covering constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, &cutoff, &separated, &reduceddom) );
+      SCIP_CALL( separateCons(scip, conss[c], NULL, TRUE, &cutoff, &separated, &reduceddom) );
    }
 
    /* combine set partitioning / packing / covering constraints to get more cuts */
@@ -7376,7 +7453,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSetppc)
    /* check all useful set partitioning / packing / covering constraints for feasibility */
    for( c = 0; c < nusefulconss && !cutoff; ++c )
    {
-      SCIP_CALL( separateCons(scip, conss[c], sol, &cutoff, &separated, &reduceddom) );
+      SCIP_CALL( separateCons(scip, conss[c], sol, FALSE, &cutoff, &separated, &reduceddom) );
    }
 
    /* combine set partitioning / packing / covering constraints to get more cuts */
@@ -7707,55 +7784,17 @@ SCIP_RETCODE branchPseudo(
 static
 SCIP_DECL_CONSENFOLP(consEnfolpSetppc)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff;
-   SCIP_Bool separated;
-   SCIP_Bool reduceddom;
-   int c;
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(nconss == 0 || conss != NULL);
-   assert(result != NULL);
+   return SCIP_OKAY;
+}
 
-   SCIPdebugMsg(scip, "LP enforcing %d set partitioning / packing / covering constraints\n", nconss);
 
-   *result = SCIP_FEASIBLE;
-
-   cutoff = FALSE;
-   separated = FALSE;
-   reduceddom = FALSE;
-
-   /* check all useful set partitioning / packing / covering constraints for feasibility */
-   for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
-   {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, &cutoff, &separated, &reduceddom) );
-   }
-
-   /* check all obsolete set partitioning / packing / covering constraints for feasibility */
-   for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
-   {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, &cutoff, &separated, &reduceddom) );
-   }
-
-#ifdef VARUSES
-#ifdef BRANCHLP
-   if( !cutoff && !separated && !reduceddom )
-   {
-      /* if solution is not integral, choose a variable set to branch on */
-      SCIP_CALL( branchLP(scip, conshdlr, result) );
-      if( *result != SCIP_FEASIBLE )
-         return SCIP_OKAY;
-   }
-#endif
-#endif
-
-   /* return the correct result */
-   if( cutoff )
-      *result = SCIP_CUTOFF;
-   else if( separated )
-      *result = SCIP_SEPARATED;
-   else if( reduceddom )
-      *result = SCIP_REDUCEDDOM;
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxSetppc)
+{  /*lint --e{715}*/
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -7897,7 +7936,7 @@ SCIP_DECL_CONSPROP(consPropSetppc)
    cutoff = FALSE;
    inpresolve = (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE);
 
-   /* propagate all useful set partitioning / packing / covering constraints */
+   /* propagate all marked set partitioning / packing / covering constraints */
    for( c = nmarkedconss - 1; c >= 0 && !cutoff; --c )
    {
       assert(SCIPconsGetData(conss[c]) != NULL);
@@ -7924,7 +7963,9 @@ SCIP_DECL_CONSPROP(consPropSetppc)
       assert(inpresolve || ! SCIPconsGetData(conss[c])->existmultaggr);
 
       SCIP_CALL( processFixings(scip, conss[c], &cutoff, &nfixedvars, &addcut, &mustcheck) );
-   }
+
+      SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[c]) );
+}
 
    /* return the correct result */
    if( cutoff )
@@ -8634,14 +8675,12 @@ SCIP_DECL_EVENTEXEC(eventExecSetppc)
    {
    case SCIP_EVENTTYPE_LBTIGHTENED:
       consdata->nfixedones++;
-      consdata->propagated = FALSE;
       break;
    case SCIP_EVENTTYPE_LBRELAXED:
       consdata->nfixedones--;
       break;
    case SCIP_EVENTTYPE_UBTIGHTENED:
       consdata->nfixedzeros++;
-      consdata->propagated = FALSE;
       break;
    case SCIP_EVENTTYPE_UBRELAXED:
       consdata->nfixedzeros--;
@@ -8679,9 +8718,17 @@ SCIP_DECL_EVENTEXEC(eventExecSetppc)
    assert(0 <= consdata->nfixedzeros && consdata->nfixedzeros <= consdata->nvars);
    assert(0 <= consdata->nfixedones && consdata->nfixedones <= consdata->nvars);
 
-   if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) && (consdata->nfixedones >= 1 || consdata->nfixedzeros >= consdata->nvars - 1) )
+   if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
    {
-      SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+      if( consdata->nfixedones >= 1 || consdata->nfixedzeros >= consdata->nvars - 1 )
+      {
+         consdata->presolpropagated = FALSE;
+         SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
+      }
+      else if( (SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE) && (consdata->nfixedzeros >= consdata->nvars - 2) )
+      {
+         consdata->presolpropagated = FALSE;
+      }
    }
 
    /*debugMsg(scip, " -> constraint has %d zero-fixed and %d one-fixed of %d variables\n",
@@ -8754,7 +8801,6 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%" SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsSetpack(scip, &cons, consname, 2, twovars,
             FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
-      SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
 
       /* if the constraint gets globally added, we also add the clique information */
       if( !SCIPconsIsLocal(cons) )
@@ -8771,7 +8817,9 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
             SCIPdebugMsg(scip, "new clique of conflict constraint %s led to infeasibility\n", consname);
          }
       }
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+      /* add conflict to SCIP */
+      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
 
       *result = SCIP_CONSADDED;
 
@@ -8876,6 +8924,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSetppc, consSepasolSetppc, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSetppc) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSetppc) );
 
    conshdlrdata->conshdlrlinear = SCIPfindConshdlr(scip,"linear");
 
@@ -8950,7 +8999,7 @@ SCIP_RETCODE SCIPcreateConsSetpart(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -9008,7 +9057,7 @@ SCIP_RETCODE SCIPcreateConsSetpack(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -9067,7 +9116,7 @@ SCIP_RETCODE SCIPcreateConsSetcover(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */

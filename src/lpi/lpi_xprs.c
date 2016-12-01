@@ -884,6 +884,14 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
+   assert(ncols > 0);
+   assert(obj != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+   assert(nnonz >= 0);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
 
    SCIPdebugMessage("adding %d columns with %d nonzeros to Xpress\n", ncols, nnonz);
 
@@ -904,11 +912,16 @@ SCIP_RETCODE SCIPlpiAddCols(
    }
 #endif
 
-   /* we need ncol+1 entries in the start array for Xpress */
-   for( c = 0; c < ncols; c++ )
-      lpi->indarray[c] = beg[c];
-   lpi->indarray[ncols] = nnonz;
+   /* only collect the start array if we have at least one non-zero */
+   if( nnonz > 0 )
+   {
+      /* we need ncol+1 entries in the start array for Xpress */
+      for( c = 0; c < ncols; c++ )
+         lpi->indarray[c] = beg[c];
+      lpi->indarray[ncols] = nnonz;
+   }
 
+   /* add the columns with (potential) non-zeros to the Xpress */
    CHECK_ZERO( lpi->messagehdlr, XPRSaddcols(lpi->xprslp, ncols, nnonz, obj, lpi->indarray, ind, val, lb, ub) );
 
    return SCIP_OKAY;
@@ -1010,6 +1023,13 @@ SCIP_RETCODE SCIPlpiAddRows(
 
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
+   assert(nrows >= 0);
+   assert(lhs != NULL);
+   assert(rhs != NULL);
+   assert(nnonz >= 0);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
 
    SCIPdebugMessage("adding %d rows with %d nonzeros to Xpress\n", nrows, nnonz);
 
@@ -1034,13 +1054,17 @@ SCIP_RETCODE SCIPlpiAddRows(
    /* convert lhs/rhs into sen/rhs/range tuples */
    convertSides(lpi, nrows, lhs, rhs);
 
-   for( r = 0; r < nrows; r++ )
-      lpi->indarray[r] = beg[r];
-   lpi->indarray[nrows] = nnonz;
+   /* only collect the start array if we have at least one non-zero */
+   if( nnonz > 0 )
+   {
+      for( r = 0; r < nrows; r++ )
+         lpi->indarray[r] = beg[r];
+      lpi->indarray[nrows] = nnonz;
+   }
 
    CHECK_ZERO( lpi->messagehdlr, XPRSaddrows(lpi->xprslp, nrows, nnonz, lpi->senarray, lpi->rhsarray, lpi->rngarray, lpi->indarray, ind, val) );
 
-   return SCIP_OKAY;
+     return SCIP_OKAY;
 }
 
 /** deletes all rows in the given range from LP */
