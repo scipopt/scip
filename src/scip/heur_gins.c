@@ -247,7 +247,7 @@ SCIP_RETCODE fillVariableGraph(
       SCIP_CONS* cons = conss[c];
 
       /* we only consider constraints that are checkable */
-      if( !SCIPconsIsChecked(cons) || !SCIPconsIsInitial(cons) )
+      if( !SCIPconsIsChecked(cons) )
          continue;
 
       /* request number of variables */
