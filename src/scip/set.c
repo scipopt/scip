@@ -42,6 +42,7 @@
 #include "scip/disp.h"
 #include "scip/dialog.h"
 #include "scip/heur.h"
+#include "scip/concsolver.h"
 #include "scip/compr.h"
 #include "scip/nodesel.h"
 #include "scip/presol.h"
@@ -324,28 +325,47 @@
 
 /* Reoptimization */
 
-#define SCIP_DEFAULT_REOPT_OBJSIMSOL       -1.0 /**< reuse stored solutions only if the similarity of the new and the old objective
+#define SCIP_DEFAULT_REOPT_OBJSIMSOL       -1.0 /**< re-use stored solutions only if the similarity of the new and the old objective
                                                      function is greater or equal than this value */
 #define SCIP_DEFAULT_REOPT_OBJSIMROOTLP     0.8 /**< similarity of two sequential objective function to disable solving the root LP. */
-#define SCIP_DEFAULT_REOPT_OBJSIMDELAY     -1.0 /**< start reoptimzing the search if the new objective function has similarity of
+#define SCIP_DEFAULT_REOPT_OBJSIMDELAY     -1.0 /**< start reoptimizing the search if the new objective function has similarity of
                                                  *   at least SCIP_DEFAULT_REOPT_DELAY w.r.t. the previous objective function. */
-#define SCIP_DEFAULT_REOPT_VARORDERINTERDICTION 'd' /** use the 'd'efault or a 'r'andom variable order for interdiction branching when applying the reoptimization */
+#define SCIP_DEFAULT_REOPT_VARORDERINTERDICTION 'd' /** use 'd'efault, 'r'andom or 'i'nference score for variable
+                                                     *  ordering when performing interdiction branching during
+                                                     *  reoptimization of nodes
+                                                     */
 #define SCIP_DEFAULT_REOPT_MAXSAVEDNODES  INT_MAX/**< maximum number of saved nodes */
 #define SCIP_DEFAULT_REOPT_MAXDIFFOFNODES INT_MAX/**< maximum number of bound changes of two ancestor nodes
                                                   *  such that the path get not shrunk */
-#define SCIP_DEFAULT_REOPT_FORCEHEURRESTART   3 /**< force a restart if the last n optimal solutions are found by reoptssols heuristic */
+#define SCIP_DEFAULT_REOPT_FORCEHEURRESTART   3 /**< force a restart if the last n optimal solutions are found by
+                                                 *   reoptsols heuristic
+                                                 */
 #define SCIP_DEFAULT_REOPT_SAVESOLS      INT_MAX/**< save n best solutions found so far. */
 #define SCIP_DEFAULT_REOPT_SOLVELP            1 /**< strategy for solving the LP at nodes from reoptimization */
 #define SCIP_DEFAULT_REOPT_SOLVELPDIFF        1 /**< difference of path length between two ancestor nodes to solve the LP */
 #define SCIP_DEFAULT_REOPT_ENABLE         FALSE /**< enable reoptimization */
 #define SCIP_DEFAULT_REOPT_SEPAGLBINFSUBTREES TRUE/**< save global constraints to separate infeasible subtrees */
-#define SCIP_DEFAULT_REOPT_SEPABESTSOL    FALSE /**< separate the optimal solution, i.e., for constraint shortest path problems */
+#define SCIP_DEFAULT_REOPT_SEPABESTSOL    FALSE /**< separate the optimal solution, e.g., for solving constraint shortest
+                                                 *   path problems
+                                                 */
+#define SCIP_DEFAULT_REOPT_STOREVARHISTOTY FALSE/**< use the variable history of the previous solve if the objective
+                                                 *   function has changed only slightly
+                                                 */
+#define SCIP_DEFAULT_REOPT_USEPSCOST      FALSE /**< re-use pseudo costs of the objective function changed only slightly */
 #define SCIP_DEFAULT_REOPT_COMMONTIMELIMIT FALSE/**< is the given time limit for all reoptimization round? */
-#define SCIP_DEFAULT_REOPT_SHRINKINNER     TRUE /**< replace branched transit nodes by their child nodes, if the number of bound changes is not to large */
-#define SCIP_DEFAULT_REOPT_STRONGBRANCHINIT TRUE/**< try to fix variables before reoptimizing by probing like strong branching */
+#define SCIP_DEFAULT_REOPT_SHRINKINNER     TRUE /**< replace branched transit nodes by their child nodes, if the number
+                                                 *   of bound changes is not to large
+                                                 */
+#define SCIP_DEFAULT_REOPT_STRONGBRANCHINIT TRUE/**< try to fix variables before reoptimizing by probing like strong
+                                                 *   branching
+                                                 */
 #define SCIP_DEFAULT_REOPT_REDUCETOFRONTIER TRUE/**< delete stored nodes which were not reoptimized */
 #define SCIP_DEFAULT_REOPT_SAVECONSPROP     FALSE/**< save constraint propagation */
-#define SCIP_DEFAULT_REOPT_USESPLITCONS    TRUE /**< use constraints to reconstruct the subtree pruned be dual reduction when reactivating the node */
+#define SCIP_DEFAULT_REOPT_USESPLITCONS    TRUE /**< use constraints to reconstruct the subtree pruned be dual reduction
+                                                 *   when reactivating the node
+                                                 */
+#define SCIP_DEFAULT_REOPT_USECUTS        FALSE /**< reoptimize cuts found at the root node */
+#define SCIP_DEFAULT_REOPT_MAXCUTAGE          0 /**< maximal age of a cut to be use for reoptimization */
 
 /* Propagating */
 
@@ -387,6 +407,31 @@
 #define SCIP_DEFAULT_SEPA_FEASTOLFAC      -1.00 /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
 #define SCIP_DEFAULT_SEPA_MINACTIVITYQUOT   0.8 /**< minimum cut activity quotient to convert cuts into constraints
                                                  *   during a restart (0.0: all cuts are converted) */
+
+/* Parallel */
+#define SCIP_DEFAULT_PARALLEL_MODE               1     /**< the mode for the parallel implementation. Either 0: opportunistic or
+                                                        *   1: deterministic */
+#define SCIP_DEFAULT_PARALLEL_MINNTHREADS        1     /**< the minimum number of threads used in parallel code */
+#define SCIP_DEFAULT_PARALLEL_MAXNTHREADS        8     /**< the maximum number of threads used in parallel code */
+
+/* Concurrent solvers */
+#define SCIP_DEFAULT_CONCURRENT_CHANGESEEDS     TRUE /**< should the concurrent solvers use different random seeds? */
+#define SCIP_DEFAULT_CONCURRENT_CHANGECHILDSEL  TRUE /**< should the concurrent solvers use different child selection rules? */
+#define SCIP_DEFAULT_CONCURRENT_COMMVARBNDS     TRUE /**< should the concurrent solvers communicate variable bounds? */
+#define SCIP_DEFAULT_CONCURRENT_PRESOLVEBEFORE  TRUE /**< should the problem be presolved before it is copied to the concurrent solvers? */
+#define SCIP_DEFAULT_CONCURRENT_INITSEED     5131912 /**< the seed used to initialize the random seeds for the concurrent solvers */
+#define SCIP_DEFAULT_CONCURRENT_FREQINIT         0.5 /**< initial frequency of synchronization with other threads
+                                                      *   (fraction of time required for solving the root LP) */
+#define SCIP_DEFAULT_CONCURRENT_FREQMAX         20.0 /**< maximal frequency of synchronization with other threads
+                                                      *   (fraction of time required for solving the root LP) */
+#define SCIP_DEFAULT_CONCURRENT_FREQFACTOR       1.5 /**< factor by which the frequency of synchronization is changed */
+#define SCIP_DEFAULT_CONCURRENT_TARGETPROGRESS 0.005 /**< when adapting the synchronization frequency this value is the targeted
+                                                       *   relative difference by which the absolute gap decreases per synchronization */
+#define SCIP_DEFAULT_CONCURRENT_MAXNSOLS           1 /**< maximum number of solutions that will be shared in a single synchronization */
+#define SCIP_DEFAULT_CONCURRENT_MAXNSYNCDELAY      3 /**< maximum number of synchronizations before reading is enforced regardless of delay */
+#define SCIP_DEFAULT_CONCURRENT_MINSYNCDELAY     2.0 /**< minimum delay before synchronization data is read */
+#define SCIP_DEFAULT_CONCURRENT_NBESTSOLS          1 /**< how many of the N best solutions should be considered for synchronization */
+#define SCIP_DEFAULT_CONCURRENT_PARAMSETPREFIX    "" /**< path prefix for parameter setting files of concurrent solvers */
 
 
 /* Timing */
@@ -599,17 +644,9 @@ SCIP_RETCODE SCIPsetSetReoptimizationParams(
 
    if( set->reopt_enable )
    {
-      /* disable conflict analysis
-       *
-       * TODO we may want to enable conflict analysis but disable it for bound exceeding LPs. hence, we have
-       * to ensure that conflict analysis based on dual information is not performed, therefore we have treat the case
-       * usesb = TRUE and useboundlp = FALSE with special care.
-       */
-      if( SCIPsetIsParamFixed(set, "conflict/enable") )
-      {
-         SCIP_CALL( SCIPsetChgParamFixed(set, "conflict/enable", FALSE) );
-      }
-      SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/enable", FALSE) );
+      /* disable some parts of conflict analysis */
+      SCIP_CALL( SCIPsetSetCharParam(set, messagehdlr, "conflict/useboundlp", 'o') );
+      SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/usepseudo", FALSE) );
 
       /* TODO check wheather multi aggregation can be enabled in reoptimization */
       if( SCIPsetIsParamFixed(set, "presolving/donotmultaggr") )
@@ -626,36 +663,8 @@ SCIP_RETCODE SCIPsetSetReoptimizationParams(
       {
          SCIP_CALL( SCIPsetChgParamFixed(set, "branching/nodereopt/priority", FALSE) );
       }
-      SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "branching/nodereopt/priority", 9000000) );
+      SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "branching/nodereopt/priority", INT_MAX/4) );
       SCIP_CALL( SCIPsetChgParamFixed(set, "branching/nodereopt/priority", TRUE) );
-
-      /* change priorities of reoptimization heuristics */
-      if( SCIPsetFindHeur(set, "ofins") != NULL )
-      {
-         if( SCIPsetIsParamFixed(set, "heuristics/ofins/freq") )
-         {
-            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/ofins/freq", FALSE) );
-         }
-         SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "heuristics/ofins/freq", 0) );
-      }
-
-      if( SCIPsetFindHeur(set, "reoptsols") != NULL )
-      {
-         if( SCIPsetIsParamFixed(set, "heuristics/reoptsols/freq") )
-         {
-            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/reoptsols/freq", FALSE) );
-         }
-         SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "heuristics/reoptsols/freq", 0) );
-      }
-
-      if( SCIPsetFindHeur(set, "trivialnegation") != NULL )
-      {
-         if( SCIPsetIsParamFixed(set, "heuristics/trivialnegation/freq") )
-         {
-            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/trivialnegation/freq", FALSE) );
-         }
-         SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "heuristics/trivialnegation/freq", 0) );
-      }
    }
    else
    {
@@ -673,7 +682,7 @@ SCIP_RETCODE SCIPsetSetReoptimizationParams(
       }
       SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "presolving/donotmultaggr") );
 
-      /* set the priorities to defeault */
+      /* set priority to defeault */
       if( SCIPsetFindBranchrule(set, "nodereopt") != NULL )
       {
          if( SCIPsetIsParamFixed(set, "branching/nodereopt/priority") )
@@ -681,34 +690,6 @@ SCIP_RETCODE SCIPsetSetReoptimizationParams(
             SCIP_CALL( SCIPsetChgParamFixed(set, "branching/nodereopt/priority", FALSE) );
          }
          SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "branching/nodereopt/priority") );
-      }
-
-      /* change priorities of reoptimization heuristics */
-      if( SCIPsetFindHeur(set, "ofins") != NULL )
-      {
-         if( SCIPsetIsParamFixed(set, "heuristics/ofins/freq") )
-         {
-            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/ofins/freq", FALSE) );
-         }
-         SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "heuristics/ofins/freq") );
-      }
-
-      if( SCIPsetFindHeur(set, "reoptsols") != NULL )
-      {
-         if( SCIPsetIsParamFixed(set, "heuristics/reoptsols/freq") )
-         {
-            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/reoptsols/freq", FALSE) );
-         }
-         SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "heuristics/reoptsols/freq") );
-      }
-
-      if( SCIPsetFindHeur(set, "trivialnegation") != NULL )
-      {
-         if( SCIPsetIsParamFixed(set, "heuristics/trivialnegation/freq") )
-         {
-            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/trivialnegation/freq", FALSE) );
-         }
-         SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "heuristics/trivialnegation/freq") );
       }
    }
 
@@ -1060,6 +1041,13 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->propssorted = FALSE;
    (*set)->propspresolsorted = FALSE;
    (*set)->propsnamesorted = FALSE;
+   (*set)->concsolvertypes = NULL;
+   (*set)->nconcsolvertypes = 0;
+   (*set)->concsolvertypessize = 0;
+   (*set)->concsolvers = NULL;
+   (*set)->nconcsolvers = 0;
+   (*set)->concsolverssize = 0;
+   (*set)->concurrent_paramsetprefix = NULL;
    (*set)->heurs = NULL;
    (*set)->nheurs = 0;
    (*set)->heurssize = 0;
@@ -2053,6 +2041,16 @@ SCIP_RETCODE SCIPsetCreate(
          "separate the optimal solution, i.e., for constrained shortest path",
          &(*set)->reopt_sepabestsol, TRUE, SCIP_DEFAULT_REOPT_SEPABESTSOL,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/storevarhistory",
+         "use variable history of the previous solve if the objctive function has changed only slightly",
+         &(*set)->reopt_storevarhistory, TRUE, SCIP_DEFAULT_REOPT_STOREVARHISTOTY,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/usepscost",
+         "re-use pseudo costs if the objective function changed only slightly ",
+         &(*set)->reopt_usepscost, TRUE, SCIP_DEFAULT_REOPT_USEPSCOST,
+         NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "reoptimization/solvelp",
          "at which reopttype should the LP be solved? (1: transit, 3: strong branched, 4: w/ added logicor, 5: only leafs).",
@@ -2075,7 +2073,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "reoptimization/objsimsol",
-         "similarity of two objective functions to reuse stored solutions",
+         "similarity of two objective functions to re-use stored solutions",
          &(*set)->reopt_objsimsol, TRUE, SCIP_DEFAULT_REOPT_OBJSIMSOL, -1.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
@@ -2118,8 +2116,18 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->reopt_usesplitcons, TRUE, SCIP_DEFAULT_REOPT_USESPLITCONS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
-         "reoptimization/varorderinterdiction", "use the 'd'efault or a 'r'andom variable order for interdiction branching when applying the reoptimization",
-         &(*set)->reopt_varorderinterdiction, TRUE, SCIP_DEFAULT_REOPT_VARORDERINTERDICTION, "dr",
+         "reoptimization/varorderinterdiction", "use 'd'efault, 'r'andom or a variable ordering based on 'i'nference score for interdiction branching used during reoptimization",
+         &(*set)->reopt_varorderinterdiction, TRUE, SCIP_DEFAULT_REOPT_VARORDERINTERDICTION, "dir",
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/usecuts",
+         "reoptimize cuts found at the root node",
+         &(*set)->reopt_usecuts, TRUE, SCIP_DEFAULT_REOPT_USECUTS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "reoptimization/maxcutage",
+         "maximal age of a cut to be use for reoptimization",
+         &(*set)->reopt_maxcutage, TRUE, SCIP_DEFAULT_REOPT_MAXCUTAGE, 0, INT_MAX,
          NULL, NULL) );
 
    /* separation parameters */
@@ -2237,6 +2245,95 @@ SCIP_RETCODE SCIPsetCreate(
          "separating/feastolfac",
          "factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off)",
          &(*set)->sepa_feastolfac, TRUE, SCIP_DEFAULT_SEPA_FEASTOLFAC, -1.0, 1.0,
+         NULL, NULL) );
+
+   /* parallel parameters */
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "parallel/mode",
+         "parallel optimisation mode, 0: opportunistic or 1: deterministic.",
+         &(*set)->parallel_spimode, FALSE, SCIP_DEFAULT_PARALLEL_MODE, 0, 1,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "parallel/minnthreads",
+         "the minimum number of threads used during parallel solve",
+         &(*set)->parallel_minnthreads, FALSE, SCIP_DEFAULT_PARALLEL_MINNTHREADS, 0, 64,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "parallel/maxnthreads",
+         "the maximum number of threads used during parallel solve",
+         &(*set)->parallel_maxnthreads, FALSE, SCIP_DEFAULT_PARALLEL_MAXNTHREADS, 0, 64,
+         NULL, NULL) );
+
+   /* concurrent solver parameters */
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "concurrent/changeseeds",
+         "set different random seeds in each concurrent solver?",
+         &(*set)->concurrent_changeseeds, FALSE, SCIP_DEFAULT_CONCURRENT_CHANGESEEDS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "concurrent/changechildsel",
+         "use different child selection rules in each concurrent solver?",
+         &(*set)->concurrent_changechildsel, FALSE, SCIP_DEFAULT_CONCURRENT_CHANGECHILDSEL,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "concurrent/commvarbnds",
+         "should the concurrent solvers communicate global variable bound changes?",
+         &(*set)->concurrent_commvarbnds, FALSE, SCIP_DEFAULT_CONCURRENT_COMMVARBNDS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "concurrent/presolvebefore",
+         "should the problem be presolved before it is copied to the concurrent solvers?",
+         &(*set)->concurrent_presolvebefore, FALSE, SCIP_DEFAULT_CONCURRENT_PRESOLVEBEFORE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "concurrent/initseed",
+         "maximum number of solutions that will be shared in a one synchronization",
+         &(*set)->concurrent_initseed, FALSE, SCIP_DEFAULT_CONCURRENT_INITSEED, 0, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "concurrent/sync/freqinit",
+         "initial frequency of synchronization with other threads",
+         &(*set)->concurrent_freqinit, FALSE, SCIP_DEFAULT_CONCURRENT_FREQINIT, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+      SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "concurrent/sync/freqmax",
+         "maximal frequency of synchronization with other threads",
+         &(*set)->concurrent_freqmax, FALSE, SCIP_DEFAULT_CONCURRENT_FREQMAX, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "concurrent/sync/freqfactor",
+         "factor by which the frequency of synchronization is changed",
+         &(*set)->concurrent_freqfactor, FALSE, SCIP_DEFAULT_CONCURRENT_FREQFACTOR, 1.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "concurrent/sync/targetprogress",
+         "when adapting the synchronization frequency this value is the targeted relative difference by which the absolute gap decreases per synchronization",
+         &(*set)->concurrent_targetprogress, FALSE, SCIP_DEFAULT_CONCURRENT_TARGETPROGRESS, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "concurrent/sync/maxnsols",
+         "maximum number of solutions that will be shared in a single synchronization",
+         &(*set)->concurrent_maxnsols, FALSE, SCIP_DEFAULT_CONCURRENT_MAXNSOLS, 0, 1000,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "concurrent/sync/maxnsyncdelay",
+         "maximum number of synchronizations before reading is enforced regardless of delay",
+         &(*set)->concurrent_maxnsyncdelay, TRUE, SCIP_DEFAULT_CONCURRENT_MAXNSYNCDELAY, 0, 100,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "concurrent/sync/minsyncdelay",
+         "minimum delay before synchronization data is read",
+         &(*set)->concurrent_minsyncdelay, FALSE, SCIP_DEFAULT_CONCURRENT_MINSYNCDELAY, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "concurrent/sync/nbestsols",
+         "how many of the N best solutions should be considered for synchronization?",
+         &(*set)->concurrent_nbestsols, FALSE, SCIP_DEFAULT_CONCURRENT_NBESTSOLS, 0, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
+         "concurrent/paramsetprefix",
+         "path prefix for parameter setting files of concurrent solvers",
+         &(*set)->concurrent_paramsetprefix, FALSE, SCIP_DEFAULT_CONCURRENT_PARAMSETPREFIX,
          NULL, NULL) );
 
    /* timing parameters */
@@ -2459,6 +2556,21 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPnlpiFree(&(*set)->nlpis[i]) );
    }
    BMSfreeMemoryArrayNull(&(*set)->nlpis);
+
+   /* free concsolvers */
+   for( i = 0; i < (*set)->nconcsolvers; ++i )
+   {
+      SCIP_CALL( SCIPconcsolverDestroyInstance(*set, &(*set)->concsolvers[i]) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->concsolvers);
+
+   /* free concsolvers types */
+   for( i = 0; i < (*set)->nconcsolvertypes; ++i )
+   {
+      SCIPconcsolverTypeFree(&(*set)->concsolvertypes[i]);
+   }
+   BMSfreeMemoryArrayNull(&(*set)->concsolvertypes);
+
 
    /* free information on external codes */
    for( i = 0; i < (*set)->nextcodes; ++i )
@@ -3844,6 +3956,72 @@ void SCIPsetSortPropsName(
       set->propspresolsorted = FALSE;
       set->propsnamesorted = TRUE;
    }
+}
+
+/** inserts concurrent solver type into the concurrent solver type list */
+SCIP_RETCODE SCIPsetIncludeConcsolverType(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONCSOLVERTYPE*  concsolvertype      /**< concurrent solver type */
+   )
+{
+   assert(set != NULL);
+   assert(concsolvertype != NULL);
+
+   if( set->nconcsolvertypes >= set->concsolvertypessize )
+   {
+      set->concsolvertypessize = SCIPsetCalcMemGrowSize(set, set->nconcsolvertypes + 1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->concsolvertypes, set->concsolvertypessize) );
+   }
+   assert(set->nconcsolvertypes < set->concsolvertypessize);
+
+   set->concsolvertypes[set->nconcsolvertypes] = concsolvertype;
+   set->nconcsolvertypes++;
+
+   return SCIP_OKAY;
+}
+
+/** returns the concurrent solver type with the given name, or NULL if not existing */
+SCIP_CONCSOLVERTYPE* SCIPsetFindConcsolverType(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of concurrent solver type */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->nconcsolvertypes; ++i )
+   {
+      if( strcmp(SCIPconcsolverTypeGetName(set->concsolvertypes[i]), name) == 0 )
+         return set->concsolvertypes[i];
+   }
+
+   return NULL;
+}
+
+/** inserts concurrent solver into the concurrent solver list */
+SCIP_RETCODE SCIPsetIncludeConcsolver(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
+   )
+{
+   assert(set != NULL);
+   assert(concsolver != NULL);
+
+   if( set->nconcsolvers >= set->concsolverssize )
+   {
+      set->concsolverssize = SCIPsetCalcMemGrowSize(set, set->nconcsolvers + 1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->concsolvers, set->concsolverssize) );
+   }
+   assert(set->nconcsolvers < set->concsolverssize);
+
+   set->concsolvers[set->nconcsolvers] = concsolver;
+   assert(set->nconcsolvers == SCIPconcsolverGetIdx(concsolver));
+
+   set->nconcsolvers++;
+
+   return SCIP_OKAY;
 }
 
 /** inserts primal heuristic in primal heuristic list */

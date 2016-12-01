@@ -4,7 +4,7 @@
 #
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-APPLICATIONS=(Coloring MinIISC Scheduler STP)
+APPLICATIONS=(Coloring MinIISC PolySCIP Scheduler STP)
 
 for APPLICATION in ${APPLICATIONS[@]}
 do

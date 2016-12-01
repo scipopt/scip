@@ -529,7 +529,7 @@ SCIP_RETCODE applyNlobbt(
    /* sort variables w.r.t. their nlscores if we did not solve any NLP for this node */
    if( propdata->currpos == 0 )
    {
-      SCIPsortDownRealIntPtr(propdata->nlscore, propdata->status, (void*)propdata->nlpivars, propdata->nlpinvars);
+      SCIPsortDownRealIntPtr(propdata->nlscore, propdata->status, (void**)propdata->nlpivars, propdata->nlpinvars);
    }
 
    /* set parameters of NLP solver */

@@ -1058,6 +1058,12 @@ SCIP_RETCODE SCIPlpFreeNorms(
    SCIP_LPINORMS**       lpinorms            /**< pointer to LP pricing norms information */
    );
 
+/** return the current cutoff bound of the lp */
+extern
+SCIP_Real SCIPlpGetCutoffbound(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
 /** sets the upper objective limit of the LP solver */
 extern
 SCIP_RETCODE SCIPlpSetCutoffbound(

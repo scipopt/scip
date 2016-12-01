@@ -1612,6 +1612,15 @@ SCIP_Real SCIPrelDiff(
 
 #endif
 
+/** computes the gap from the primal and the dual bound */
+EXTERN
+SCIP_Real SCIPcomputeGap(
+   SCIP_Real             eps,                /**< the value treated as zero */
+   SCIP_Real             inf,                /**< the value treated as infinity */
+   SCIP_Real             primalbound,        /**< the primal bound */
+   SCIP_Real             dualbound           /**< the dual bound */
+   );
+
 /**@} */
 
 
@@ -1802,7 +1811,6 @@ void SCIPpermuteArray(
                                               */
    unsigned int*         randseed            /**< pointer to seed value for the random generator */
    );
-
 
 /** randomly shuffles parts of an array using the Fisher-Yates algorithm */
 extern

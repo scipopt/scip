@@ -295,8 +295,15 @@ SCIP_RETCODE setupSubproblem(
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
-   /* disable output to console */
+#ifdef SCIP_DEBUG
+   /* for debugging, enable full output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#else
+   /* disable statistic timing inside sub SCIP and output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+#endif
 
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
@@ -358,12 +365,6 @@ SCIP_RETCODE setupSubproblem(
    /* todo check if
     * SCIP_CALL( SCIPsetEmphasis(subscip, SCIP_PARAMEMPHASIS_FEASIBILITY, TRUE) );
     * improves performance */
-
-#ifdef SCIP_DEBUG
-   /* for debugging proximity, enable MIP output */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
-#endif
 
    return SCIP_OKAY;
 }
@@ -670,9 +671,6 @@ SCIP_RETCODE SCIPapplyProximity(
    SCIP_RETCODE retcode;
    SCIP_Longint iterlim;
 
-   SCIP_Real timelimit;                      /* time limit for proximity subproblem              */
-   SCIP_Real memorylimit;                    /* memory limit for proximity subproblem            */
-
    SCIP_Real large;
    SCIP_Real inf;
 
@@ -761,22 +759,9 @@ SCIP_RETCODE SCIPapplyProximity(
       return SCIP_OKAY;
 
    /* check whether there is enough time and memory left */
-   timelimit = 0.0;
-   memorylimit = 0.0;
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &valid) );
 
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(scip, memorylimit) )
-   {
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-   }
-
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 2.0 * SCIPgetMemExternEstim(scip) / 1048576.0 )
+   if( ! valid )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -908,14 +893,10 @@ SCIP_RETCODE SCIPapplyProximity(
       }
    }
 
-   /* disable statistic timing inside sub SCIP */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
-
    /* set limits for the subproblem */
+   SCIP_CALL( SCIPcopyLimits(scip, subscip) );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nnodes) );
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/solutions", 1) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
    /* restrict LP iterations */
    /*todo set iterations limit depending on the number of iterations of the original problem root */

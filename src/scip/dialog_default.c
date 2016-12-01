@@ -1622,6 +1622,48 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecTransform)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the parallelopt command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecParallelOpt)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   SCIPdialogMessage(scip, NULL, "\n");
+   switch( SCIPgetStage(scip) )
+   {
+   case SCIP_STAGE_INIT:
+      SCIPdialogMessage(scip, NULL, "no problem exists\n");
+      break;
+
+   case SCIP_STAGE_PROBLEM:
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPsolveParallel(scip) );
+      break;
+
+   case SCIP_STAGE_SOLVED:
+      SCIPdialogMessage(scip, NULL, "problem is already solved\n");
+      break;
+
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITPRESOLVE:
+   case SCIP_STAGE_EXITPRESOLVE:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_EXITSOLVE:
+   case SCIP_STAGE_FREETRANS:
+   case SCIP_STAGE_FREE:
+   default:
+      SCIPerrorMessage("invalid SCIP stage\n");
+      return SCIP_INVALIDCALL;
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the optimize command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecOptimize)
 {  /*lint --e{715}*/
@@ -3745,6 +3787,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
+   /* optimize */
+   if( !SCIPdialogHasEntry(root, "parallelopt") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+                                   NULL,
+                                   SCIPdialogExecParallelOpt, NULL, NULL,
+                                   "parallelopt", "solve the problem in parallel", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
    /* presolve */
    if( !SCIPdialogHasEntry(root, "presolve") )
    {
@@ -4663,6 +4716,17 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
             NULL,
             SCIPdialogExecMenu, NULL, NULL,
             "numerics", "change parameters for numerical values", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
+   /* set parallel */
+   if( !SCIPdialogHasEntry(setmenu, "parallel") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "parallel", "change parameters for parallel implementation", TRUE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }

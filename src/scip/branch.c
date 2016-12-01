@@ -162,7 +162,8 @@ SCIP_RETCODE SCIPbranchcandCreate(
    (*branchcand)->npriopseudobins = 0;
    (*branchcand)->npriopseudoints = 0;
    (*branchcand)->pseudomaxpriority = INT_MIN;
-   (*branchcand)->validlpcandslp = -1;
+
+   SCIPbranchcandInvalidate(*branchcand);
 
    return SCIP_OKAY;
 }
@@ -184,6 +185,16 @@ SCIP_RETCODE SCIPbranchcandFree(
    BMSfreeMemory(branchcand);
 
    return SCIP_OKAY;
+}
+
+/** resets branching candidates storage */
+void SCIPbranchcandInvalidate(
+   SCIP_BRANCHCAND*      branchcand          /**< pointer to store branching candidate storage */
+   )
+{
+   assert(branchcand != NULL);
+
+   branchcand->validlpcandslp = -1;
 }
 
 /** calculates branching candidates for LP solution branching (fractional variables) */

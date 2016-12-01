@@ -109,6 +109,8 @@
                                          *   (negated) clique partition (used only if updatecliquepartitions is set to TRUE) */
 #define DEFAULT_UPDATECLIQUEPARTITIONS FALSE /**< should clique partition information be updated when old partition seems outdated? */
 
+#define MAXNCLIQUEVARSCOMP 1000000      /**< limit on number of pairwise comparisons in clique partitioning algorithm */
+
 /* @todo maybe use event SCIP_EVENTTYPE_VARUNLOCKED to decide for another dual-presolving run on a constraint */
 
 /*
@@ -200,8 +202,6 @@ struct SCIP_ConsData
    unsigned int          varsdeleted:1;      /**< were variables deleted after last cleanup? */
    unsigned int          existmultaggr:1;    /**< does this constraint contain multi-aggregations */
 };
-
-#define MAXNCLIQUEVARSCOMP 1000000
 
 /** event data for bound changes events */
 struct SCIP_EventData
