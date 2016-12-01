@@ -237,17 +237,14 @@ LPIINSTMSG	=	"  -> \"qsinc\" is the path to the QSopt \"include\" directory, e.g
 LPIINSTMSG	+=	" -> \"libqsopt.*\" is the path to the QSopt library, e.g., \"<QSopt-path>/libqsopt.a\""
 endif
 
+# Gurobi only supports shared libraries
 LPSOPTIONS	+=	grb
 ifeq ($(LPS),grb)
 FLAGS		+=	-I$(LIBDIR)/include/grbinc
 LPILIBOBJ	=	lpi/lpi_grb.o blockmemshell/memory.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/include/grbinc
-ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libgurobi.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
-else
-SOFTLINKS	+=	$(LIBDIR)/static/libgurobi.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
-endif
 LPIINSTMSG	=	"  -> \"grbinc\" is the path to the Gurobi \"include\" directory, e.g., \"<Gurobi-path>/include\".\n"
 LPIINSTMSG	+=	" -> \"libgurobi.*\" is the path to the Gurobi library, e.g., \"<Gurobi-path>/lib/libgurobi.so\""
 endif
@@ -269,6 +266,7 @@ ALLSRC		+=	$(LPILIBSRC)
 ifeq ($(SHARED),true)
 LPILIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(LPSLDFLAGS) $(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE))
 endif
+
 #-----------------------------------------------------------------------------
 # Parallel Interface
 #-----------------------------------------------------------------------------

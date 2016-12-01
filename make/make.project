@@ -322,7 +322,7 @@ endif
 # define flags for Gurobi
 ifeq ($(LPS),grb)
 LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)gurobi.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
-LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libgurobi.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
+LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/shared/libgurobi.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
 endif
 
 #-------------------------------------------------------
