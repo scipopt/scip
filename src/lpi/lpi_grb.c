@@ -1123,6 +1123,20 @@ SCIP_RETCODE delRangeVars(
    return SCIP_OKAY;
 }
 
+static
+void clearRangeInfo(
+   SCIP_LPI*             lpi                 /**< LP interface structure */
+   )
+{
+   assert(!lpi->rngvarsadded);
+   BMSfreeMemoryArrayNull(&lpi->rngrowmap);
+   BMSfreeMemoryArrayNull(&lpi->rngrows);
+   BMSfreeMemoryArrayNull(&lpi->rngvals);
+   lpi->nrngrows = 0;
+   lpi->rngrowssize = 0;
+   lpi->rngrowmapsize = 0;
+}
+
 /** creates or updates maps for ranged rows after new rows have been added */
 static
 SCIP_RETCODE addRangeInfo(
@@ -1620,6 +1634,7 @@ SCIP_RETCODE SCIPlpiAddRows(
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
+   assert((lpi->nrngrows > 0) == (lpi->rngrowmap != NULL));
 
    SCIPdebugMessage("adding %d rows with %d nonzeros to Gurobi\n", nrows, nnonz);
 
@@ -1754,12 +1769,17 @@ SCIP_RETCODE SCIPlpiDelRows(
 
       lpi->nrngrows = nrngrows;
 
-      /* move rngrowmap entries */
-      SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
-      for (i = firstrow; i < nrows; i++)
+      if ( nrngrows == 0 )
+         clearRangeInfo(lpi);
+      else
       {
-         lpi->rngrowmap[i] = lpi->rngrowmap[i+ndelrows];
-         assert(-1 <= lpi->rngrowmap[i] && lpi->rngrowmap[i] < lpi->nrngrows);
+         /* move rngrowmap entries */
+         SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
+         for (i = firstrow; i < nrows; i++)
+         {
+            lpi->rngrowmap[i] = lpi->rngrowmap[i+ndelrows];
+            assert(-1 <= lpi->rngrowmap[i] && lpi->rngrowmap[i] < lpi->nrngrows);
+         }
       }
    }
 
@@ -1845,15 +1865,20 @@ SCIP_RETCODE SCIPlpiDelRowset(
 
       lpi->nrngrows = nrngrows;
 
-      /* move rngrowmap entries */
-      for (i = 0; i < nrows; i++)
+      if ( nrngrows == 0 )
+         clearRangeInfo(lpi);
+      else
       {
-         int newrow = dstat[i];
-         assert(newrow <= i);
-         if ( newrow >= 0 )
+         /* move rngrowmap entries */
+         for (i = 0; i < nrows; i++)
          {
-            lpi->rngrowmap[newrow] = lpi->rngrowmap[i];
-            assert(-1 <= lpi->rngrowmap[newrow] && lpi->rngrowmap[newrow] < lpi->nrngrows);
+            int newrow = dstat[i];
+            assert(newrow <= i);
+            if ( newrow >= 0 )
+            {
+               lpi->rngrowmap[newrow] = lpi->rngrowmap[i];
+               assert(-1 <= lpi->rngrowmap[newrow] && lpi->rngrowmap[newrow] < lpi->nrngrows);
+            }
          }
       }
    }
@@ -1863,20 +1888,6 @@ SCIP_RETCODE SCIPlpiDelRowset(
    checkRangeInfo(lpi);
 
    return SCIP_OKAY;
-}
-
-static
-void clearRangeInfo(
-   SCIP_LPI*             lpi                 /**< LP interface structure */
-   )
-{
-   assert(!lpi->rngvarsadded);
-   BMSfreeMemoryArrayNull(&lpi->rngrowmap);
-   BMSfreeMemoryArrayNull(&lpi->rngrows);
-   BMSfreeMemoryArrayNull(&lpi->rngvals);
-   lpi->nrngrows = 0;
-   lpi->rngrowssize = 0;
-   lpi->rngrowmapsize = 0;
 }
 
 /** clears the whole LP */
