@@ -13995,12 +13995,12 @@ SCIP_RETCODE presolStuffing(
 
                if( SCIPisEQ(scip, lb + bounddelta, ub) )
                {
-                  SCIPinfoMessage(scip, NULL, "fix var <%s> to %g\n", SCIPvarGetName(var), lb + bounddelta);
+                  SCIPdebugMsg(scip, "fix var <%s> to %g\n", SCIPvarGetName(var), lb + bounddelta);
                   SCIP_CALL( SCIPfixVar(scip, var, lb + bounddelta, cutoff, &tightened) );
                }
                else
                {
-                  SCIPinfoMessage(scip, NULL, "tighten the lower bound of <%s> from %g to %g (ub=%g)\n", SCIPvarGetName(var), lb, lb + bounddelta, ub);
+                  SCIPdebugMsg(scip, "tighten the lower bound of <%s> from %g to %g (ub=%g)\n", SCIPvarGetName(var), lb, lb + bounddelta, ub);
                   SCIP_CALL( SCIPtightenVarLb(scip, var, lb + bounddelta, FALSE, cutoff, &tightened) );
                }
             }
@@ -14026,12 +14026,12 @@ SCIP_RETCODE presolStuffing(
 
                if( SCIPisEQ(scip, ub - bounddelta, lb) )
                {
-                  SCIPinfoMessage(scip, NULL, "fix var <%s> to %g\n", SCIPvarGetName(var), ub - bounddelta);
+                  SCIPdebugMsg(scip, "fix var <%s> to %g\n", SCIPvarGetName(var), ub - bounddelta);
                   SCIP_CALL( SCIPfixVar(scip, var, ub - bounddelta, cutoff, &tightened) );
                }
                else
                {
-                  SCIPinfoMessage(scip, NULL, "tighten the upper bound of <%s> from %g to %g (lb=%g)\n", SCIPvarGetName(var), ub, ub - bounddelta, lb);
+                  SCIPdebugMsg(scip, "tighten the upper bound of <%s> from %g to %g (lb=%g)\n", SCIPvarGetName(var), ub, ub - bounddelta, lb);
                   SCIP_CALL( SCIPtightenVarUb(scip, var, ub - bounddelta, FALSE, cutoff, &tightened) );
                }
             }
@@ -14046,14 +14046,14 @@ SCIP_RETCODE presolStuffing(
             else
                ++(*nchgbds);
 
-            SCIPinfoMessage(scip, NULL, "cons <%s>: %g <=\n", SCIPconsGetName(cons), factor > 0 ? consdata->lhs : -consdata->rhs);
+            SCIPdebugMsg(scip, "cons <%s>: %g <=\n", SCIPconsGetName(cons), factor > 0 ? consdata->lhs : -consdata->rhs);
             for( v = 0; v < nvars; ++v )
             {
-               SCIPinfoMessage(scip, NULL, "%+g <%s>([%g,%g],%g,[%d,%d],%s)\n", factor * vals[v], SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]),
+               SCIPdebugMsg(scip, "%+g <%s>([%g,%g],%g,[%d,%d],%s)\n", factor * vals[v], SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]),
                   SCIPvarGetUbGlobal(vars[v]), SCIPvarGetObj(vars[v]), SCIPvarGetNLocksDown(vars[v]), SCIPvarGetNLocksUp(vars[v]),
                   SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS ? "C" : "I");
             }
-            SCIPinfoMessage(scip, NULL, "<= %g\n", factor > 0 ? consdata->rhs : -consdata->lhs);
+            SCIPdebugMsg(scip, "<= %g\n", factor > 0 ? consdata->rhs : -consdata->lhs);
 
             for( v = 0; v < nvars; ++v )
             {
@@ -14063,13 +14063,13 @@ SCIP_RETCODE presolStuffing(
                if( factor * vals[v] < 0 )
                {
                   assert(SCIPvarGetNLocksDown(vars[v]) == 1);
-                  SCIPinfoMessage(scip, NULL, "fix <%s> to its lower bound (%g)\n", SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]));
+                  SCIPdebugMsg(scip, "fix <%s> to its lower bound (%g)\n", SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]));
                   SCIP_CALL( SCIPfixVar(scip, vars[v], SCIPvarGetLbGlobal(vars[v]), cutoff, &tightened) );
                }
                else
                {
                   assert(SCIPvarGetNLocksUp(vars[v]) == 1);
-                  SCIPinfoMessage(scip, NULL, "fix <%s> to its upper bound (%g)\n", SCIPvarGetName(vars[v]), SCIPvarGetUbGlobal(vars[v]));
+                  SCIPdebugMsg(scip, "fix <%s> to its upper bound (%g)\n", SCIPvarGetName(vars[v]), SCIPvarGetUbGlobal(vars[v]));
                   SCIP_CALL( SCIPfixVar(scip, vars[v], SCIPvarGetUbGlobal(vars[v]), cutoff, &tightened) );
                }
 

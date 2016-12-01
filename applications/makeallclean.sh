@@ -3,7 +3,7 @@
 # run with bash -e makeallclean.sh to stop on errors
 #
 
-APPLICATIONS=(Coloring MinIISC Scheduler STP)
+APPLICATIONS=(Coloring MinIISC PolySCIP Scheduler STP)
 LPSOLVERS=(spx2 cpx none)
 OPTS=(opt dbg)
 SHARED=(true false)

@@ -39,6 +39,17 @@ features:
 - add nonlinear optimization-based bound propagator solving two convex NLP relaxations for each variable
 - new presolving method presol_qpkktref to add the KKT conditions to QPs
 - implemented and extended stuffing presolving in linear constraint handler
+- allow to create constraints of constraint handlers that don't need constraints
+- nodes can now be postponed; currently, this can only be triggered by BEFORELP propagation callbacks
+- new components constraint handler which replaces the components presolver; it searches for independent subproblems
+  and solves small ones as sub-SCIPs during presolve, larger ones are solved alternatingly during the main solving process
+- new presolving timing FINAL: presolving methods with this timing are only called once after all other presolvers with timings
+  FAST, MEDIUM, and EXHAUSTIVE are finished; during this timing only reductions are allowed that are self-contained, e.g.,
+  fixing all variables and deleting all constraints of an independent component; note that reductions found in this timing
+  do not trigger a new presolving round
+- added method SCIPcheckCopyLimits() which can be used to check that enough time and memory is left to run a sub-SCIP after
+  subtracting time and memory used by the main-SCIP, and SCIPcopyLimits() which copies these limits accordingly and disables
+  all other limits (need to be set by the plugin, if needed)
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
@@ -58,6 +69,8 @@ parameters:
   projection of the point onto the region described by the constraint, which is supporting
 - parameters "conflict/useinflp" and "conflict/useboundlp" are now of type char (before bool)
 - add maximum branch-and-bound tree depth constant SCIP_MAXTREEDEPTH (replaces SCIPgetDepthLimit and SCIPtreeGetDepthLimit)
+- all parameters of the components presolver (starting with "presolving/components/") are now parameters of the components
+  constraint handler (starting with "constraints/components/")
 - new parameter presolving/qpkktref/updatequadbounded to add the KKT conditions to QPs only if all variables are bounded
 - new parameter presolving/qpkktref/updatequadindef to add the KKT conditions to QPs only if the quadratic matrix is indefinite
 - new parameter presolving/qpkktref/addkktbinary to allow the presence of binary variables for the KKT update
@@ -133,6 +146,7 @@ fixed bugs:
 - fixed bug in event system: bound change events of the new focus node must be processed, even if the bound
   is the same as at the last focus node
 - fixed memory bug in SCIP_DIGRAPH
+- fixed bug while changing the objective value of an original value after transforming the problem
 
 misc:
 - dropped support for Ipopt < 3.11
@@ -185,6 +199,7 @@ interface:
 - removed SCIPvarWasFixedAtIndex() and added SCIPgetVarWasFixedAtIndex()
 - new function SCIPswapReals() to swap two real values
 - new command line parameter -v to print detailed build options
+- the CPLEX LPI now also compiles with CPLEX 12.7.0.0
 
 Makefile:
 - revise sub-makefiles for MSVC on MinGW

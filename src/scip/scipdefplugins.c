@@ -56,6 +56,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrSuperindicator(scip) );
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
    SCIP_CALL( SCIPincludeConshdlrXor(scip) );
+   SCIP_CALL( SCIPincludeConshdlrComponents(scip) );
    SCIP_CALL( SCIPincludeReaderBnd(scip) );
    SCIP_CALL( SCIPincludeReaderCcg(scip) );
    SCIP_CALL( SCIPincludeReaderCip(scip) );
@@ -77,7 +78,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeReaderWbo(scip) );
    SCIP_CALL( SCIPincludeReaderZpl(scip) );
    SCIP_CALL( SCIPincludePresolBoundshift(scip) );
-   SCIP_CALL( SCIPincludePresolComponents(scip) );
    SCIP_CALL( SCIPincludePresolConvertinttobin(scip) );
    SCIP_CALL( SCIPincludePresolDomcol(scip) );
    SCIP_CALL( SCIPincludePresolImplfree(scip) );
@@ -190,6 +190,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
    SCIP_CALL( SCIPincludeDispDefault(scip) );
    SCIP_CALL( SCIPincludeEventHdlrSofttimelimit(scip) );
+   SCIP_CALL( SCIPincludeConcurrentScipSolvers(scip) );
 
    /* include NLPI's, if available */
    SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );

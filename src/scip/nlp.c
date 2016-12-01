@@ -4994,7 +4994,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
    }
    else if( SCIP_EVENTTYPE_BOUNDCHANGED & etype )
    {
-      SCIPdebugMessage("-> handling bound changed event %x, variable <%s>\n", etype, SCIPvarGetName(var) );
+      SCIPdebugMessage("-> handling bound changed event %"SCIP_EVENTTYPE_FORMAT", variable <%s>\n", etype, SCIPvarGetName(var) );
       SCIP_CALL( nlpUpdateVarBounds(scip->nlp, scip->set, var, SCIP_EVENTTYPE_BOUNDTIGHTENED & etype) );
    }
    else if( SCIP_EVENTTYPE_OBJCHANGED & etype )

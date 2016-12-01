@@ -85,6 +85,7 @@ SCIP_RETCODE SCIPinitConssLP(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_CUTPOOL*         cutpool,            /**< global cutpool */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
@@ -113,6 +114,7 @@ SCIP_RETCODE SCIPconstructCurrentLP(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_CUTPOOL*         cutpool,            /**< global cutpool */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
@@ -134,7 +136,8 @@ SCIP_RETCODE SCIPprimalHeuristics(
                                               *   (only needed when calling after node heuristics) */
    SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
    SCIP_Bool             nodeinfeasible,     /**< was the current node already detected to be infeasible? */
-   SCIP_Bool*            foundsol            /**< pointer to store whether a solution has been found */
+   SCIP_Bool*            foundsol,           /**< pointer to store whether a solution has been found */
+   SCIP_Bool*            unbounded           /**< pointer to store whether an unbounded ray was found in the LP */
    );
 
 /** applies one round of separation on the given primal solution or on the LP solution */
@@ -173,6 +176,7 @@ SCIP_RETCODE SCIPpriceLoop(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_CUTPOOL*         cutpool,            /**< global cutpool */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */

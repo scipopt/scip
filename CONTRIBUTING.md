@@ -7,6 +7,9 @@ Please see the [wiki](https://wiki.zib.de/confluence/display/SCIPOPTSUITE/Develo
 for information about our contribution workflow with git. If you don't have
 access to this page, request it from @bzfgleix.
 
+Additionally, you should install git hooks that check your commit messages, e.g. for correct formatting:
+[localhooks](https://git.zib.de/optimization/localhooks)
+
 ## Bug Reports
 Use the following sample template in the Issue description to ensure consistency
 across bug reports.
