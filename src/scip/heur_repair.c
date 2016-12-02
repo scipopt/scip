@@ -23,6 +23,7 @@
 /* This heuristic takes a infeasible solution and tries to repair it.
  * This can happen by variable fixing as long as the sum of all potential possible shiftings
  * is higher than alpha*slack or slack variables with a strong penalty on the objective function.
+ * This heuristic can not run if variable fixing and slack variables are turned off.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1196,8 +1197,8 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    heurdata = SCIPheurGetData(heur);
    SCIPdebugMsg(scip, "%s\n", heurdata->filename);
 
-   /* if repair already run, stop*/
-   if( 0 < SCIPheurGetNCalls(heur) && !(heurdata->usevarfix || heurdata->useslackvars) )
+   /* if repair already run, stop or if now repair mode is chosen */
+   if( 0 < SCIPheurGetNCalls(heur) || !(heurdata->usevarfix || heurdata->useslackvars) )
    {
       *result = SCIP_DIDNOTFIND;
       return SCIP_OKAY;
