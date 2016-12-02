@@ -52,6 +52,10 @@
 -emacro(681,SCIPdebugMessage)     // Loop is not entered
 -emacro(506,SCIPdebugPrintf)      // Constant value Boolean
 -emacro(681,SCIPdebugPrintf)      // Loop is not entered
+-emacro(506,SCIPdebugMsg)         // Constant value Boolean
+-emacro(681,SCIPdebugMsg)         // Loop is not entered
+-emacro(506,SCIPdebugMsgPrint)    // Constant value Boolean
+-emacro(681,SCIPdebugMsgPrint)    // Loop is not entered
 -emacro(506,SCIPstatisticMessage) // Constant value Boolean
 -emacro(681,SCIPstatisticMessage) // Loop is not entered
 -emacro(506,SCIPstatisticPrintf)  // Constant value Boolean
@@ -157,6 +161,10 @@
 
 -ecall(776,SCIPhashmapInsert)
 -ecall(776,SCIPhashmapExists)
+
+// turn off unusual use of 'SYM'
+-emacro(866,BMSallocBlockMemoryArray)
+-emacro(866,BMSfreeBlockMemoryArray)
 
 // turn off "Suspicious cast" messages involving size_t in SCIPhashmap*
 -ecall(571,SCIPhashmapInsert)
