@@ -185,8 +185,8 @@ class SPxSCIP : public SoPlex
    bool                  _lpinfo;
    bool                  _fromscratch;
    char*                 _probname;
-   SPxSolver::VarStatus* _colStat;          /**< column basis status used for strong branching */
-   SPxSolver::VarStatus* _rowStat;          /**< row basis status used for strong branching */
+   DataArray<SPxSolver::VarStatus> _colStat;  /**< column basis status used for strong branching */
+   DataArray<SPxSolver::VarStatus> _rowStat;  /**< row basis status used for strong branching */
 #ifdef WITH_LPSCHECK
    int                   _checknum;
    bool                  _doublecheck;
@@ -203,8 +203,8 @@ public:
       : _lpinfo(false),
         _fromscratch(false),
         _probname(NULL),
-        _colStat(NULL),
-        _rowStat(NULL),
+        _colStat(0),
+        _rowStat(0),
         _messagehdlr(messagehdlr)
    {
       if ( probname != NULL )
@@ -225,12 +225,6 @@ public:
    {
       if( _probname != NULL )
          spx_free(_probname); /*lint !e1551*/
-
-      if( _colStat != NULL )
-         spx_free(_colStat); /*lint !e1551*/
-
-      if( _rowStat != NULL )
-         spx_free(_rowStat); /*lint !e1551*/
 
       freePreStrongbranchingBasis(); /*lint !e1551*/
 
@@ -614,15 +608,12 @@ public:
    /** save the current basis */
    void savePreStrongbranchingBasis()
    {
-      assert(_rowStat == NULL);
-      assert(_colStat == NULL);
-
-      spx_alloc(_rowStat, numRowsReal());
-      spx_alloc(_colStat, numColsReal());
+      _rowStat.reSize(numRowsReal());
+      _colStat.reSize(numColsReal());
 
       try
       {
-         getBasis(_rowStat, _colStat);
+         getBasis(_rowStat.get_ptr(), _colStat.get_ptr());
       }
 #ifndef NDEBUG
       catch(const SPxException& x)
@@ -645,12 +636,12 @@ public:
    /** restore basis */
    void restorePreStrongbranchingBasis()
    {
-      assert(_rowStat != NULL);
-      assert(_colStat != NULL);
+      assert(_rowStat.size() == numRowsReal());
+      assert(_colStat.size() == numColsReal());
 
       try
       {
-         setBasis(_rowStat, _colStat);
+         setBasis(_rowStat.get_const_ptr(), _colStat.get_const_ptr());
       }
 #ifndef NDEBUG
       catch(const SPxException& x)
@@ -672,16 +663,14 @@ public:
    /** if basis is in store, delete it without restoring it */
    void freePreStrongbranchingBasis()
    {
-      if( _rowStat != NULL )
-         spx_free(_rowStat);
-      if( _colStat != NULL )
-         spx_free(_colStat);
+      _rowStat.clear();
+      _colStat.clear();
    }
 
    /** is pre-strong-branching basis freed? */
    bool preStrongbranchingBasisFreed() const
    {
-      return ((_rowStat == NULL ) && (_colStat == NULL));
+      return ((_rowStat.size() == 0 ) && (_colStat.size() == 0));
    }
 
 }; /*lint !e1748*/
