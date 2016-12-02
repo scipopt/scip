@@ -3479,8 +3479,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "auxvar_%d", conshdlrdata->auxvarid);
 
       /* @todo add an unique variable name */
-      SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
-            SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, MAX( -SCIPinfinity(scip), expr->interval.inf ),
+               MIN( SCIPinfinity(scip), expr->interval.sup ), 0.0, SCIP_VARTYPE_CONTINUOUS) );
       SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
      ++(conshdlrdata->auxvarid);
 
@@ -3551,7 +3551,8 @@ SCIP_RETCODE createAuxVars(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to check for auxiliary variables */
-   int                   nconss              /**< total number of constraints */
+   int                   nconss,             /**< total number of constraints */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected while creating the auxiliary vars */
    )
 {
    CREATE_AUXVARS_DATA createdata;
@@ -3562,6 +3563,7 @@ SCIP_RETCODE createAuxVars(
    assert(nconss >= 0);
 
    createdata.conshdlr = conshdlr;
+
 #ifdef SCIP_DEBUG_SOLUTION
    if( SCIPdebugIsMainscip(scip) )
    {
@@ -3570,6 +3572,7 @@ SCIP_RETCODE createAuxVars(
       assert(createdata.debugsol != NULL);
    }
 #endif
+
    for( i = 0; i < nconss; ++i )
    {
       assert(conss != NULL && conss[i] != NULL);
@@ -3579,20 +3582,29 @@ SCIP_RETCODE createAuxVars(
 
       if( consdata->expr != NULL && consdata->expr->auxvar == NULL )
       {
+         /* use 0 tag to recompute intervals; we do this here to have bounds for the auxiliary variables; note that we
+          * cannot trust variable bounds from SCIP, so we relax them a little bit (a.k.a. epsilon)
+          */
+         SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, FALSE, 0, SCIPepsilon(scip)) );
+
+         /* create auxiliary variables */
          SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, createAuxVarsEnterExpr, NULL, NULL, NULL, &createdata) );
 
-         /* set the bounds of the auxiliary variable of the root node to [lhs,rhs] */
-         assert(SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->expr->auxvar)));
-         assert(SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->expr->auxvar)));
+         /* change the bounds of the auxiliary variable of the root node to [lhs,rhs] */
+         SCIP_CALL( SCIPtightenVarLb(scip, consdata->expr->auxvar, consdata->lhs, FALSE, infeasible, NULL) );
 
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
+         if( *infeasible )
          {
-            SCIP_CALL( SCIPchgVarLb(scip, consdata->expr->auxvar, consdata->lhs) );
+            printf("infeasibility detected while creating vars: lhs of constraint (%g) > ub of node (%g)\n",
+                  consdata->lhs, SCIPvarGetUbLocal(consdata->expr->auxvar));
+            return SCIP_OKAY;
          }
-
-         if( !SCIPisInfinity(scip, consdata->rhs) )
+         SCIP_CALL( SCIPtightenVarUb(scip, consdata->expr->auxvar, consdata->rhs, FALSE, infeasible, NULL) );
+         if( *infeasible )
          {
-            SCIP_CALL( SCIPchgVarUb(scip, consdata->expr->auxvar, consdata->rhs) );
+            printf("infeasibility detected while creating vars: rhs of constraint (%g) < lb of node (%g)\n",
+                  consdata->rhs, SCIPvarGetLbLocal(consdata->expr->auxvar));
+            return SCIP_OKAY;
          }
       }
    }
@@ -4485,7 +4497,14 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
    /* add auxiliary variables to expressions */
    if( !conshdlrdata->restart )
    {
-      SCIP_CALL( createAuxVars(scip, conshdlr, conss, nconss) );
+      *infeasible = FALSE;
+      SCIP_CALL( createAuxVars(scip, conshdlr, conss, nconss, infeasible) );
+
+      /** @todo: it is not clear what does *infeasible == TRUE means. when setting it by hand (and therefore stopping
+       * the process of building the auxvars/initSepa, asserts pop up! so it seems it is not really stopping everything
+       */
+      if( *infeasible )
+         return SCIP_OKAY;
    }
 
    /* call LP initialization callbacks of the expression handlers */
