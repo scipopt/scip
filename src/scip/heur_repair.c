@@ -517,10 +517,8 @@ SCIP_RETCODE applyRepair(
 
    SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
-   /* author bzfhende: TODO try to only allocate a sub-SCIP solution if slack variables are used. Otherwise, it will be infeasible
-    * and need not be added
-    */
-   SCIP_CALL( SCIPcreateSol(subscip, &subsol, heur) );
+   if( heurdata->useslackvars )
+      SCIP_CALL( SCIPcreateSol(subscip, &subsol, heur) );
 
    /* Gets all original variables */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
@@ -610,7 +608,8 @@ SCIP_RETCODE applyRepair(
       /* Adds the sub representing variable to the sub-SCIP. */
       SCIP_CALL( SCIPcreateVarBasic(subscip, &subvars[i], varname, lb, ub, objval, vartype) );
       SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
-      SCIP_CALL( SCIPsetSolVal(subscip, subsol, subvars[i], value) );
+      if( heurdata->useslackvars )
+         SCIP_CALL( SCIPsetSolVal(subscip, subsol, subvars[i], value) );
 
       /* if necessary adds a constraint to represent the original bounds of x.*/
       if( !SCIPisFeasEQ(scip, varslack, 0.0) )
@@ -631,7 +630,8 @@ SCIP_RETCODE applyRepair(
          SCIP_CALL( SCIPaddVar(subscip, newvar) );
 
          /* set the value of the slack variable to 1 to punish the use of it. */
-         SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
+         if( heurdata->useslackvars )
+            SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
 
          /* adds a linear constraint to represent the old bounds */
          SCIP_CALL( SCIPcreateConsBasicVarbound(subscip, &cons, consvarname, subvars[i], newvar, varslack, lb, ub) );
@@ -774,7 +774,8 @@ SCIP_RETCODE applyRepair(
             (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "artificialslack_%s", SCIProwGetName(rows[i]));
             SCIP_CALL( SCIPcreateVarBasic(subscip, &newvar, varname, 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
             SCIP_CALL( SCIPaddVar(subscip, newvar) );
-            SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
+            if( heurdata->useslackvars )
+               SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
             SCIP_CALL( SCIPaddCoefLinear(subscip, subcons[i], newvar, slacks[i]) );
             SCIP_CALL( SCIPreleaseVar(subscip, &newvar) );
          }
@@ -831,9 +832,12 @@ SCIP_RETCODE applyRepair(
          goto TERMINATE;
       }
    }
+   if( heurdata->useslackvars )
+      SCIP_CALL( SCIPaddSolFree(subscip, &subsol, &success) );
 
 #ifdef SCIP_STATISTIC
-   heurdata->improvedoldsol = SCIPgetSolOrigObj(subscip, subsol);
+   if( heurdata->useslackvars )
+      heurdata->improvedoldsol = SCIPgetSolOrigObj(subscip, subsol);
 #endif
 
    if( !success )
@@ -877,12 +881,12 @@ SCIP_RETCODE applyRepair(
 #endif
 
    /*Adds the given solution to the sub-SCIP. */
-   retcode = SCIPtransformProb(subscip);
-#ifdef NDEBUG
+/*   retcode = SCIPtransformProb(subscip);*/
+/*#ifdef NDEBUG
    SCIP_CALL( SCIPaddSolFree(subscip, &subsol, &success) );
 #else
    SCIP_CALL( SCIPtrySolFree(subscip, &subsol, FALSE, FALSE, TRUE, FALSE, TRUE, &success ) );
-#endif
+#endif*/
 
    /* presolve the subproblem */
    retcode = SCIPpresolve(subscip);
@@ -897,7 +901,7 @@ SCIP_RETCODE applyRepair(
 #endif
       SCIPwarningMessage(scip, "Error while presolving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n", retcode);
 
-      goto FREESCIP;
+      goto TERMINATE;
    }
    /* solve the subproblem */
    retcode = SCIPsolve(subscip);
@@ -911,7 +915,7 @@ SCIP_RETCODE applyRepair(
             "Error while solving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n",
             retcode);
 
-      goto FREESCIP;
+      goto TERMINATE;
    }
 
    success = FALSE;
@@ -938,7 +942,8 @@ SCIP_RETCODE applyRepair(
       SCIPdebugMsg(scip,"No solution found!\n");
    }
 
-   if( SCIPgetStage(subscip) >= SCIP_STAGE_SOLVED ){
+   if( SCIPgetStage(subscip) >= SCIP_STAGE_SOLVED )
+   {
       heurdata->subiters = SCIPgetNLPIterations(subscip);
       heurdata->subnodes = SCIPgetNTotalNodes(subscip);
 #ifdef SCIP_STATISTIC
@@ -948,7 +953,7 @@ SCIP_RETCODE applyRepair(
    }
 
    /* terminates the solving process  */
-FREESCIP:
+TERMINATE:
    if( NULL != sol )
    {
       SCIP_CALL( SCIPfreeSol(scip, &sol) );
@@ -958,8 +963,6 @@ FREESCIP:
    {
       SCIP_CALL( SCIPreleaseVar(subscip, &subvars[i]) );
    }
-
-TERMINATE:
    SCIPfreeBufferArrayNull(scip, &inftycounter);
    SCIPfreeBufferArrayNull(scip, &subcons);
    SCIPfreeBufferArrayNull(scip, &slacks);
