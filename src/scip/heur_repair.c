@@ -528,8 +528,11 @@ SCIP_RETCODE applyRepair(
 
    SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
+   /* a trivial feasible solution can be constructed if violations are modeled with slack variables */
    if( heurdata->useslackvars )
+   {
       SCIP_CALL( SCIPcreateSol(subscip, &subsol, heur) );
+   }
 
    /* Gets all original variables */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
@@ -619,8 +622,12 @@ SCIP_RETCODE applyRepair(
       /* Adds the sub representing variable to the sub-SCIP. */
       SCIP_CALL( SCIPcreateVarBasic(subscip, &subvars[i], varname, lb, ub, objval, vartype) );
       SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
+
+      /* a trivial feasible solution can be constructed if violations are modeled with slack variables */
       if( heurdata->useslackvars )
+      {
          SCIP_CALL( SCIPsetSolVal(subscip, subsol, subvars[i], value) );
+      }
 
       /* if necessary adds a constraint to represent the original bounds of x.*/
       if( !SCIPisFeasEQ(scip, varslack, 0.0) )
@@ -640,9 +647,13 @@ SCIP_RETCODE applyRepair(
          }
          SCIP_CALL( SCIPaddVar(subscip, newvar) );
 
-         /* set the value of the slack variable to 1 to punish the use of it. */
+         /* set the value of the slack variable to 1 to punish the use of it.
+          * note that a trivial feasible solution can be only constructed if violations are modeled with slack variables
+          */
          if( heurdata->useslackvars )
+         {
             SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
+         }
 
          /* adds a linear constraint to represent the old bounds */
          SCIP_CALL( SCIPcreateConsBasicVarbound(subscip, &cons, consvarname, subvars[i], newvar, varslack, lb, ub) );
@@ -785,8 +796,9 @@ SCIP_RETCODE applyRepair(
             (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "artificialslack_%s", SCIProwGetName(rows[i]));
             SCIP_CALL( SCIPcreateVarBasic(subscip, &newvar, varname, 0.0, 1.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
             SCIP_CALL( SCIPaddVar(subscip, newvar) );
-            if( heurdata->useslackvars )
-               SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
+
+            /* a trivial feasible solution can be constructed if violations are modeled with slack variables */
+            SCIP_CALL( SCIPsetSolVal(subscip, subsol, newvar, 1.0) );
             SCIP_CALL( SCIPaddCoefLinear(subscip, subcons[i], newvar, slacks[i]) );
             SCIP_CALL( SCIPreleaseVar(subscip, &newvar) );
          }
@@ -831,8 +843,12 @@ SCIP_RETCODE applyRepair(
          goto TERMINATE;
       }
    }
+
+   /* a trivial feasible solution can be constructed if violations are modeled with slack variables */
    if( heurdata->useslackvars )
+   {
       SCIP_CALL( SCIPaddSolFree(subscip, &subsol, &success) );
+   }
 
 #ifdef SCIP_STATISTIC
    if( heurdata->useslackvars )
