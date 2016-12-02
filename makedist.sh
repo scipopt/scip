@@ -173,9 +173,10 @@ $NAME/check/instances/Semicontinuous/*.lp \
 $NAME/check/instances/Semicontinuous/*.mps
 rm -f $NAME
 echo ""
-echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile, Makefile.nmake, and makedist.sh ($VERSION):"
-grep "VERSION" src/scip/def.h
-grep "@version" doc/xternal.c
-grep "^VERSION" Makefile
-grep "^VERSION" Makefile.nmake
+echo "check version numbers in src/scip/def.h, doc/xternal.c, make.project, Makefile.nmake, and makedist.sh ($VERSION):"
+grep -H "SCIP_VERSION" src/scip/def.h
+grep -H "@version" doc/xternal.c
+grep -H "^SCIP_VERSION" make/make.project
+grep -H "^VERSION" Makefile.nmake
+echo ""
 tail src/scip/githash.c

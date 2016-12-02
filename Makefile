@@ -58,6 +58,16 @@ endif
 include $(SCIPDIR)/make/make.project
 
 #-----------------------------------------------------------------------------
+# default settings
+#-----------------------------------------------------------------------------
+
+VERSION		=	$(SCIP_VERSION)
+SCIPGITHASH	=
+SOFTLINKS	=
+MAKESOFTLINKS	=	true
+TOUCHLINKS	=	false
+
+#-----------------------------------------------------------------------------
 # define build flags
 #-----------------------------------------------------------------------------
 BUILDFLAGS =	" ARCH=$(ARCH)\\n\
@@ -90,16 +100,6 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		ZIMPL=$(ZIMPL)\\n\
 		ZIMPLOPT=$(ZIMPLOPT)\\n\
 		ZLIB=$(ZLIB)"
-
-#-----------------------------------------------------------------------------
-# default settings
-#-----------------------------------------------------------------------------
-
-VERSION		=	3.2.1.2
-SCIPGITHASH	=
-SOFTLINKS	=
-MAKESOFTLINKS	=	true
-TOUCHLINKS	=	false
 
 #-----------------------------------------------------------------------------
 # LP Solver Interface

@@ -178,6 +178,7 @@ makefile:
 - Running "make help" lists all makefile options.
 - All makefiles in examples/ and applications/ are updated.
 - The binaries now contain an rpath to the SCIP directory, such that shared libraries are found.
+- make.project contains the SCIP version as a define (SCIP_VERSION)
 
 
 SCIP version 3.2.2
