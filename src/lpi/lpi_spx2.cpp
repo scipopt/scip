@@ -3538,8 +3538,15 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    // @todo exploit sparsity in binv by looping over nrows
    /* calculate the scalar product of the row in B^-1 and A */
    Vector binvvec(nrows, binv);
+
+   /* temporary unscaled column of A */
+   DSVector acol;
+
    for( c = 0; c < ncols; ++c )
-      coef[c] = binvvec * lpi->spx->colVectorRealInternal(c);  /* scalar product */ /*lint !e1702*/
+   {
+      lpi->spx->getColVectorReal(c, acol);
+      coef[c] = binvvec * acol;  /* scalar product */ /*lint !e1702*/
+   }
 
    /* free memory if it was temporarily allocated */
    BMSfreeMemoryArrayNull(&buf);
@@ -3565,6 +3572,9 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    /* create a new uninitialized full vector */
    DVector col(lpi->spx->numRowsReal());
 
+   /* temporary sparse vector used for unscaling (memory is automatically enlarged) */
+   DSVector colinternal;
+
    SCIPdebugMessage("calling SCIPlpiGetBInvACol()\n");
 
    assert( lpi != NULL );
@@ -3580,9 +3590,13 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    if( ninds != NULL )
       *ninds = -1;
 
+   lpi->spx->getColVectorReal(c, colinternal);
+
    /* col needs to be cleared because copying colVectorReal only regards nonzeros */
    col.clear();
-   col = lpi->spx->colVectorRealInternal(c);
+
+   /* the copy is necessary to transform the sparse column into a dense vector */
+   col = colinternal;
 
    /* solve */
    if( ! lpi->spx->getBasisInverseTimesVecReal(col.get_ptr(), coef) )
