@@ -1646,7 +1646,7 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    )
 {
 #if (SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 3))
-   assert(ncols == lpi->spx->numColsReal() || (ncols == 0 && intInfo == NULL));
+   assert(ncols == lpi->spx->nCols() || (ncols == 0 && intInfo == NULL));
    lpi->spx->setIntegralityInformation(ncols, intInfo);
    return SCIP_OKAY;
 #else
