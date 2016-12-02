@@ -957,7 +957,6 @@ void* SCIPlpiGetSolverPointer(
    return (void*) lpi->spx;
 }
 
-#if (SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 3))
 /** pass integrality information about variables to the solver */
 SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
@@ -965,12 +964,15 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
    )
 {
+#if (SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 3))
    assert(ncols == lpi->spx->numColsReal() || (ncols == 0 && intInfo == NULL));
    lpi->spx->setIntegralityInformation(ncols, intInfo);
-
    return SCIP_OKAY;
-}
+#else
+   SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
+   return SCIP_LPERROR;
 #endif
+}
 
 /**@} */
 

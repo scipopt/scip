@@ -24,7 +24,7 @@ features:
 - new heuristic that tries to complete partial solutions
 - new global shift off all random seeds (randomization/randomseedshift) and unification of all existing random seeds
 - use new macros SCIPdebugMsg/SCIPsetDebugMsg/SCIPstatDebugMsg at all places where it makes sense
-- new feature solution polishing to improve fractionality of LP solutions
+- new feature solution polishing to improve integrality of LP solutions
 - new random number gerator in pub_misc.h
 - the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
   as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
