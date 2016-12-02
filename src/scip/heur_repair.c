@@ -895,14 +895,6 @@ SCIP_RETCODE applyRepair(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", -1) );
 #endif
 
-   /*Adds the given solution to the sub-SCIP. */
-/*   retcode = SCIPtransformProb(subscip);*/
-/*#ifdef NDEBUG
-   SCIP_CALL( SCIPaddSolFree(subscip, &subsol, &success) );
-#else
-   SCIP_CALL( SCIPtrySolFree(subscip, &subsol, FALSE, FALSE, TRUE, FALSE, TRUE, &success ) );
-#endif*/
-
    /* presolve the subproblem */
    retcode = SCIPpresolve(subscip);
 
