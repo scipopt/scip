@@ -165,7 +165,9 @@ SCIP_RETCODE sampleRandomPoints(
          }
          assert(SCIPisGE(scip, val ,lb) && SCIPisLE(scip, val, ub));
 
-         /* set solution value */
+         /* set solution value; round the sampled point for integer variables */
+         if( SCIPvarGetType(vars[i]) < SCIP_VARTYPE_CONTINUOUS )
+            val = SCIPfeasRound(scip, val);
          SCIP_CALL( SCIPsetSolVal(scip, sol, vars[i], val) );
       }
 
