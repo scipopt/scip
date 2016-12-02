@@ -511,7 +511,7 @@ SCIP_RETCODE resolvePropagation(
           * arithmetics, so we explicitly check this here.
           */
          if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-            relaxedbd = (consdata->lhs - (inferbd - 1.0 + MAX(2.0, REALABS(vbdcoef))*SCIPfeastol(scip))) / vbdcoef;
+            relaxedbd = (consdata->lhs - (inferbd - 1.0 + MAX(2.0, REALABS(vbdcoef)) * SCIPfeastol(scip))) / vbdcoef;
          else
             relaxedbd = (consdata->lhs - inferbd) / vbdcoef;
 
@@ -520,16 +520,16 @@ SCIP_RETCODE resolvePropagation(
 
          if( vbdcoef > 0.0 )
          {
-            /* decrease the compute relaxed upper bound by an epsilon; that ensure that we get the actual inference bound due
-             * to the integral condition of the variable bound variable
+            /* decrease the computed relaxed upper bound by an epsilon; this ensures that we get the actual
+             * inference bound due to the integrality condition of the variable bound variable
              */
             relaxedbd -= SCIPfeastol(scip);
             SCIP_CALL( SCIPaddConflictRelaxedUb(scip, vbdvar, bdchgidx, relaxedbd) );
          }
          else
          {
-            /* increase the compute relaxed lower bound by an epsilon; that ensure that we get the actual inference bound due
-             * to the integral condition of the variable bound variable
+            /* increase the computed relaxed lower bound by an epsilon; this ensures that we get the actual inference
+             * bound due to the integrality condition of the variable bound variable
              */
             relaxedbd += SCIPfeastol(scip);
             SCIP_CALL( SCIPaddConflictRelaxedLb(scip, vbdvar, bdchgidx, relaxedbd) );
@@ -571,7 +571,7 @@ SCIP_RETCODE resolvePropagation(
              * arithmetics, so we explicitly check this here.
              */
             if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-               relaxedub = consdata->lhs - (inferbd - 1.0 + MAX(2.0, REALABS(vbdcoef))*SCIPfeastol(scip)) * vbdcoef;
+               relaxedub = consdata->lhs - (inferbd - 1.0 + MAX(2.0, REALABS(vbdcoef)) * SCIPfeastol(scip)) * vbdcoef;
             else
                relaxedub = consdata->lhs - inferbd * vbdcoef;
 
@@ -595,8 +595,8 @@ SCIP_RETCODE resolvePropagation(
             assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, vbdvar, (consdata->lhs - relaxedub) / vbdcoef)));
          }
 
-         /* decrease the compute relaxed upper bound by an epsilon; that ensure that we get the actual inference bound due
-          * to the integral condition of the variable bound variable
+         /* decrease the computed relaxed upper bound by an epsilon; this ensures that we get the actual inference bound due
+          * to the integrality condition of the variable bound variable
           */
          relaxedub -= SCIPfeastol(scip);
 
@@ -635,16 +635,16 @@ SCIP_RETCODE resolvePropagation(
 
          if( vbdcoef > 0.0 )
          {
-            /* increase the compute relaxed lower bound by an epsilon; that ensure that we get the actual inference bound due
-             * to the integral condition of the variable bound variable
+            /* increase the computed relaxed lower bound by an epsilon; this ensures that we get the actual inference bound due
+             * to the integrality condition of the variable bound variable
              */
             relaxedbd += SCIPfeastol(scip);
             SCIP_CALL( SCIPaddConflictRelaxedLb(scip, vbdvar, bdchgidx, relaxedbd) );
          }
          else
          {
-            /* decrease the compute relaxed upper bound by an epsilon; that ensure that we get the actual inference bound due
-             * to the integral condition of the variable bound variable
+            /* decrease the computed relaxed upper bound by an epsilon; this ensures that we get the actual inference bound due
+             * to the integrality condition of the variable bound variable
              */
             relaxedbd -= SCIPfeastol(scip);
             SCIP_CALL( SCIPaddConflictRelaxedUb(scip, vbdvar, bdchgidx, relaxedbd) );
@@ -710,8 +710,8 @@ SCIP_RETCODE resolvePropagation(
             assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, vbdvar, (consdata->rhs - relaxedlb) / vbdcoef)));
          }
 
-         /* increase the compute relaxed lower bound by an epsilon; that ensure that we get the actual inference bound due
-          * to the integral condition of the variable bound variable
+         /* increase the computed relaxed lower bound by an epsilon; this ensures that we get the actual inference bound due
+          * to the integrality condition of the variable bound variable
           */
          relaxedlb += SCIPfeastol(scip);
 
