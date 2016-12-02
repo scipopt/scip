@@ -72,7 +72,33 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
+   SCIP_SOL*             infsol;             /**< infeasible solution to start with */
    char*                 filename;           /**< file name of a solution to be used as infeasible starting point */
+   SCIP_Longint          usednodes;          /**< number of already used nodes by repair */
+   SCIP_Real             relvarfixed;        /**< relative number of fixed variables */
+   SCIP_Real             alpha;              /**< how many times the potential should be bigger than the slack? */
+   SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
+   SCIP_Real             minfixingrate;      /**< minimum percentage of integer variables that have to be fixed */
+#ifdef SCIP_STATISTIC
+   SCIP_Real             relviolatedvars;    /**< relative number of violated variables */
+   SCIP_Real             subpresoltime;      /**< time for presolving the sub-SCIP */
+   SCIP_Real             relviolatedcons;    /**< relative number of violated cons */
+   SCIP_Real             originalsolval;     /**< value of the solution find by repair, in the original Problem*/
+   SCIP_Real             improvedoldsol;     /**< value of the given solution after being improved by SCIP */
+   int                   nviolatedvars;      /**< number of violated variables in the given solution */
+   int                   norigvars;          /**< number of all variables in the given problem */
+   int                   nviolatedcons;      /**< number of violated cons in the given solution */
+   int                   norcons;            /**< number of all cons in the given problem */
+#endif
+   int                   subnodes;           /**< number of nodes which were necessary to solve the sub-SCIP */
+   int                   subiters;           /**< contains total number of iterations used in primal and dual simplex
+                                              *   and barrier algorithm to solve the sub-SCIP
+                                              */
+   int                   nvarfixed;          /**< number of all variables fixed in the sub problem */
+   int                   runs;               /**< number of branch and bound runs performed to solve the sub-SCIP */
+   int                   nodesofs;           /**< number of nodes added to the contingent of the total nodes */
+   int                   maxnodes;           /**< maximum number of nodes to regard in the subproblem */
+   int                   minnodes;           /**< minimum number of nodes to regard in the subproblem */
    SCIP_Bool             roundit;            /**< if it is TRUE : fractional variables which are not fractional in the
                                               *   given solution are rounded, if it is FALSE : solving process of this
                                               *   heuristic is stopped.
@@ -82,34 +108,6 @@ struct SCIP_HeurData
                                               */
    SCIP_Bool             usevarfix;          /**< should variable fixings be used in repair subproblem? */
    SCIP_Bool             useslackvars;       /**< should slack variables be used in repair subproblem? */
-   int                   subnodes;           /**< number of nodes which were necessary to solve the sub-SCIP */
-   int                   subiters;           /**< contains total number of iterations used in primal and dual simplex
-                                              *   and barrier algorithm to solve the sub-SCIP
-                                              */
-#ifdef SCIP_STATISTIC
-   SCIP_Real             subpresoltime;      /**< time for presolving the sub-SCIP */
-   int                   nviolatedvars;      /**< number of violated variables in the given solution */
-   int                   norigvars;          /**< number of all variables in the given problem */
-   SCIP_Real             relviolatedvars;    /**< relative number of violated variables */
-   int                   nviolatedcons;      /**< number of violated cons in the given solution */
-   int                   norcons;            /**< number of all cons in the given problem */
-   SCIP_Real             relviolatedcons;    /**< relative number of violated cons */
-   SCIP_Real             originalsolval;     /**< value of the solution find by repair, in the original Problem*/
-   SCIP_Real             improvedoldsol;     /**< value of the given solution after being improved by SCIP */
-#endif
-
-   int                   nvarfixed;          /**< number of all variables fixed in the sub problem */
-   SCIP_Real             relvarfixed;        /**< relative number of fixed variables */
-   SCIP_SOL*             infsol;             /**< infeasible solution to start with */
-   int                   runs;               /**< number of branch and bound runs performed to solve the sub-SCIP */
-   SCIP_Real             alpha;              /**< how many times the potential should be bigger than the slack? */
-   int                   nodesofs;           /**< number of nodes added to the contingent of the total nodes */
-   int                   maxnodes;           /**< maximum number of nodes to regard in the subproblem */
-   int                   minnodes;           /**< minimum number of nodes to regard in the subproblem */
-   SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
-   SCIP_Longint          usednodes;          /**< number of already used nodes by repair */
-   SCIP_Real             minfixingrate;      /**< minimum percentage of integer variables that have to be fixed */
-
 };
 
 
