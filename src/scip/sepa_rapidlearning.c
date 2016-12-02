@@ -163,7 +163,7 @@ SCIP_DECL_SEPAFREE(sepaFreeRapidlearning)
    /* free separator data */
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
-   SCIPfreeMemory(scip, &sepadata);
+   SCIPfreeBlockMemory(scip, &sepadata);
    SCIPsepaSetData(sepa, NULL);
 
    return SCIP_OKAY;
@@ -186,8 +186,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    int* oldnconss;                           /* number of constraints without rapid learning conflicts               */
 
    SCIP_Longint nodelimit;                   /* node limit for the subproblem                  */
-   SCIP_Real timelimit;                      /* time limit for the subproblem                  */
-   SCIP_Real memorylimit;                    /* memory limit for the subproblem                */
 
    int nconshdlrs;                           /* size of conshdlr and oldnconss array                      */
    int nfixedvars;                           /* number of variables that could be fixed by rapid learning */
@@ -255,6 +253,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       return SCIP_OKAY; 
 
    if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
+
+   if( !success)
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -354,31 +358,19 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    restartnum = 1000;
 
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(scip, memorylimit) )   
-   {
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-   }
-
-   /* abort if no time is left or not enough memory to create a copy of SCIP
-    * for rapid learning, this does not include external memory usage, because no LPs are solved
-    */
-   if( timelimit <= 0.0 || memorylimit <= SCIPgetMemExternEstim(scip)/1048576.0 )
-      goto TERMINATE;
-
-   /* disable statistic timing inside sub SCIP */
+#ifdef SCIP_DEBUG
+   /* for debugging, enable full output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#else
+   /* disable statistic timing inside sub SCIP and output to console */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+#endif
 
+   /* set limits for the subproblem */
+   SCIP_CALL( SCIPcopyLimits(scip, subscip) );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit/5) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/restarts", 0) );
    SCIP_CALL( SCIPsetIntParam(subscip, "conflict/restartnum", restartnum) );
 
@@ -393,11 +385,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-#ifndef SCIP_DEBUG
-   /* disable output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-#endif
 
    /* add an objective cutoff */
    SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetUpperbound(scip)) );
@@ -685,7 +672,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
    SCIPhashmapFree(&varmapbw);
 
- TERMINATE:
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );
@@ -707,7 +693,7 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
    SCIP_SEPA* sepa;
 
    /* create rapidlearning separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,

@@ -2322,7 +2322,7 @@ SCIP_RETCODE updateArcData(
    if ( s == nsucc )
    {
       assert( data == NULL );
-      SCIP_CALL( SCIPallocMemory(scip, &data) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &data) );
       if ( lower )
       {
          data->lbimpl = newbound;
@@ -2708,6 +2708,11 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          origlinvals = SCIPgetValsLinear(scip, linearconss[c]);
          origrhs = SCIPgetRhsLinear(scip, linearconss[c]);
          origlhs = SCIPgetLhsLinear(scip, linearconss[c]);
+
+         if ( noriglinvars < 1 )
+            continue;
+         assert( origlinvars != NULL );
+         assert( origlinvals != NULL );
 
          /* copy variables and coefficients of linear constraint */
          SCIP_CALL( SCIPduplicateBufferArray(scip, &trafolinvars, origlinvars, noriglinvars) );
@@ -3488,7 +3493,7 @@ SCIP_RETCODE presolRoundVarsSOS1(
       nsucc = SCIPdigraphGetNSuccessors(implgraph, j);
 
       for (s = nsucc-1; s >= 0; --s)
-         SCIPfreeMemory(scip, &succdatas[s]);
+         SCIPfreeBlockMemory(scip, &succdatas[s]);
    }
    SCIPdigraphFree(&implgraph);
    SCIPfreeBufferArrayNull(scip, &totalvars);
@@ -3836,7 +3841,7 @@ SCIP_RETCODE initImplGraphSOS1(
       SCIP_NODEDATA* nodedata = NULL;
 
       /* create node data */
-      SCIP_CALL( SCIPallocMemory(scip, &nodedata) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &nodedata) );
       nodedata->var = implvars[i];
 
       /* set node data */
@@ -3945,7 +3950,7 @@ SCIP_RETCODE freeImplGraphSOS1(
       for (s = nsucc-1; s >= 0; --s)
       {
          assert( succdatas[s] != NULL );
-         SCIPfreeMemory(scip, &succdatas[s]);
+         SCIPfreeBlockMemory(scip, &succdatas[s]);
       }
    }
 
@@ -3955,7 +3960,7 @@ SCIP_RETCODE freeImplGraphSOS1(
       SCIP_NODEDATA* nodedata;
       nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conshdlrdata->implgraph, j);
       assert( nodedata != NULL );
-      SCIPfreeMemory(scip, &nodedata);
+      SCIPfreeBlockMemory(scip, &nodedata);
       SCIPdigraphSetNodeData(conshdlrdata->implgraph, NULL, j);
    }
 
@@ -6117,7 +6122,7 @@ SCIP_RETCODE initTCliquegraph(
 
 
    /* allocate clique data */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata->tcliquedata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata->tcliquedata) );
    tcliquedata = conshdlrdata->tcliquedata;
 
    /* initialize clique data */
@@ -8754,7 +8759,7 @@ SCIP_RETCODE initConflictgraph(
                assert( SCIPhashmapExists(conshdlrdata->varhash, var) );
 
                /* create node data */
-               SCIP_CALL( SCIPallocMemory(scip, &nodedata) );
+               SCIP_CALL( SCIPallocBlockMemory(scip, &nodedata) );
                nodedata->var = var;
                nodedata->lbboundvar = NULL;
                nodedata->ubboundvar = NULL;
@@ -8819,6 +8824,7 @@ SCIP_RETCODE initConflictgraph(
 /** free conflict graph, nodedata and hashmap */
 static
 SCIP_RETCODE freeConflictgraph(
+   SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    )
 {
@@ -8842,7 +8848,7 @@ SCIP_RETCODE freeConflictgraph(
       assert( nodedata != NULL );
 
       /* free node data */
-      SCIPfreeMemory(scip, &nodedata);
+      SCIPfreeBlockMemory(scip, &nodedata);
       SCIPdigraphSetNodeData(conshdlrdata->conflictgraph, NULL, j);
    }
 
@@ -8894,7 +8900,7 @@ SCIP_DECL_CONSFREE(consFreeSOS1)
    /* free stack of variables fixed to nonzero (usually already freed in consExitsolSOS1 unless instance was solved during presolving) */
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->fixnonzerovars, conshdlrdata->maxnfixnonzerovars); /*lint !e737*/
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -9001,7 +9007,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
    if ( conshdlrdata->tcliquegraph != NULL )
    {
       assert( conshdlrdata->tcliquedata != NULL );
-      SCIPfreeMemory(scip, &conshdlrdata->tcliquedata);
+      SCIPfreeBlockMemory(scip, &conshdlrdata->tcliquedata);
       tcliqueFree(&conshdlrdata->tcliquegraph);
    }
    assert(conshdlrdata->tcliquegraph == NULL);
@@ -9018,7 +9024,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
    assert( conshdlrdata->localconflicts == NULL );
 
    /* free conflict graph  */
-   SCIP_CALL( freeConflictgraph(conshdlrdata) );
+   SCIP_CALL( freeConflictgraph(scip, conshdlrdata) );
    assert( conshdlrdata->conflictgraph == NULL );
 
    return SCIP_OKAY;
@@ -9225,7 +9231,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
       nsos1vars = conshdlrdata->nsos1vars;
       if ( nsos1vars < 2 )
       {
-         SCIP_CALL( freeConflictgraph(conshdlrdata));
+         SCIP_CALL( freeConflictgraph(scip, conshdlrdata));
          return SCIP_OKAY;
       }
 
@@ -9283,7 +9289,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
       }
 
       /* free memory allocated in function initConflictgraph() */
-      SCIP_CALL( freeConflictgraph(conshdlrdata));
+      SCIP_CALL( freeConflictgraph(scip, conshdlrdata));
    }
    (*nchgcoefs) += nremovedvars;
 
@@ -10088,7 +10094,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CONSHDLR* conshdlr;
 
    /* create constraint handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    conshdlrdata->branchsos = TRUE;
    conshdlrdata->switchsos1branch = FALSE;
    conshdlrdata->switchcutsfromsos1 = FALSE;

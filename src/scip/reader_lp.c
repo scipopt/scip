@@ -879,9 +879,11 @@ SCIP_RETCODE readCoefficients(
    SCIP_Bool             isobjective,        /**< indicates whether we are currently reading the coefficients of the objective */
    char*                 name,               /**< pointer to store the name of the line; must be at least of size
                                               *   LP_MAX_LINELEN */
+   int*                  coefssize,          /**< size of vars and coefs arrays */
    SCIP_VAR***           vars,               /**< pointer to store the array with variables (must be freed by caller) */
    SCIP_Real**           coefs,              /**< pointer to store the array with coefficients (must be freed by caller) */
    int*                  ncoefs,             /**< pointer to store the number of coefficients */
+   int*                  quadcoefssize,      /**< size of quadvars1, quadvars2, quadcoefs arrays */
    SCIP_VAR***           quadvars1,          /**< pointer to store the array with first variables in quadratic terms (must be freed by caller) */
    SCIP_VAR***           quadvars2,          /**< pointer to store the array with second variables in quadratic terms (must be freed by caller) */
    SCIP_Real**           quadcoefs,          /**< pointer to store the array with coefficients in quadratic terms (must be freed by caller) */
@@ -893,22 +895,23 @@ SCIP_RETCODE readCoefficients(
    SCIP_Bool havevalue;
    SCIP_Real coef;
    int coefsign;
-   int coefssize;
    SCIP_Bool inquadpart;
-   int quadcoefssize;
    SCIP_VAR* firstquadvar;
 
    assert(lpinput != NULL);
    assert(name != NULL);
+   assert(coefssize != NULL);
    assert(vars != NULL);
    assert(coefs != NULL);
    assert(ncoefs != NULL);
+   assert(quadcoefssize != NULL);
    assert(quadvars1 != NULL);
    assert(quadvars2 != NULL);
    assert(quadcoefs != NULL);
    assert(nquadcoefs != NULL);
    assert(newsection != NULL);
 
+   *coefssize = 0;
    *vars = NULL;
    *coefs = NULL;
    *quadvars1 = NULL;
@@ -916,6 +919,7 @@ SCIP_RETCODE readCoefficients(
    *quadcoefs = NULL;
    *name = '\0';
    *ncoefs = 0;
+   *quadcoefssize = 0;
    *nquadcoefs = 0;
    *newsection = FALSE;
    inquadpart = FALSE;
@@ -959,14 +963,14 @@ SCIP_RETCODE readCoefficients(
    }
 
    /* initialize buffers for storing the coefficients */
-   coefssize = LP_INIT_COEFSSIZE;
-   SCIP_CALL( SCIPallocMemoryArray(scip, vars, coefssize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, coefs, coefssize) );
+   *coefssize = LP_INIT_COEFSSIZE;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, vars, *coefssize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, coefs, *coefssize) );
 
-   quadcoefssize = LP_INIT_QUADCOEFSSIZE;
-   SCIP_CALL( SCIPallocMemoryArray(scip, quadvars1, quadcoefssize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, quadvars2, quadcoefssize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, quadcoefs, quadcoefssize) );
+   *quadcoefssize = LP_INIT_QUADCOEFSSIZE;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, quadvars1, *quadcoefssize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, quadvars2, *quadcoefssize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, quadcoefs, *quadcoefssize) );
 
    /* read the coefficients */
    coefsign = +1;
@@ -1171,14 +1175,16 @@ SCIP_RETCODE readCoefficients(
          if( !SCIPisZero(scip, coef) )
          {
             /* resize the vars and coefs array if needed */
-            if( *ncoefs >= coefssize )
+            if( *ncoefs >= *coefssize )
             {
-               coefssize *= 2;
-               coefssize = MAX(coefssize, (*ncoefs)+1);
-               SCIP_CALL( SCIPreallocMemoryArray(scip, vars, coefssize) );
-               SCIP_CALL( SCIPreallocMemoryArray(scip, coefs, coefssize) );
+               int oldcoefssize;
+               oldcoefssize = *coefssize;
+               *coefssize *= 2;
+               *coefssize = MAX(*coefssize, (*ncoefs)+1);
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, vars, oldcoefssize, *coefssize) );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, coefs, oldcoefssize, *coefssize) );
             }
-            assert(*ncoefs < coefssize);
+            assert(*ncoefs < *coefssize);
 
             /* add coefficient */
             (*vars)[*ncoefs] = var;
@@ -1200,15 +1206,17 @@ SCIP_RETCODE readCoefficients(
          if( !SCIPisZero(scip, coef) )
          {
             /* resize the vars and coefs array if needed */
-            if( *nquadcoefs >= quadcoefssize )
+            if( *nquadcoefs >= *quadcoefssize )
             {
-               quadcoefssize *= 2;
-               quadcoefssize = MAX(quadcoefssize, (*nquadcoefs)+1);
-               SCIP_CALL( SCIPreallocMemoryArray(scip, quadvars1, quadcoefssize) );
-               SCIP_CALL( SCIPreallocMemoryArray(scip, quadvars2, quadcoefssize) );
-               SCIP_CALL( SCIPreallocMemoryArray(scip, quadcoefs, quadcoefssize) );
+               int oldquadcoefssize;
+               oldquadcoefssize = *quadcoefssize;
+               *quadcoefssize *= 2;
+               *quadcoefssize = MAX(*quadcoefssize, (*nquadcoefs)+1);
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, quadcoefs, oldquadcoefssize, *quadcoefssize) );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, quadvars2, oldquadcoefssize, *quadcoefssize) );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, quadvars1, oldquadcoefssize, *quadcoefssize) );
             }
-            assert(*nquadcoefs < quadcoefssize);
+            assert(*nquadcoefs < *quadcoefssize);
 
             /* add coefficient */
             (*quadvars1)[*nquadcoefs] = firstquadvar;
@@ -1241,17 +1249,21 @@ SCIP_RETCODE readObjective(
    char name[LP_MAX_LINELEN];
    SCIP_VAR** vars;
    SCIP_Real* coefs;
-   int ncoefs;
    SCIP_VAR** quadvars1;
    SCIP_VAR** quadvars2;
    SCIP_Real* quadcoefs;
-   int nquadcoefs;
    SCIP_Bool newsection;
+   int ncoefs;
+   int coefssize;
+   int quadcoefssize;
+   int nquadcoefs;
 
    assert(lpinput != NULL);
 
    /* read the objective coefficients */
-   SCIP_CALL( readCoefficients(scip, lpinput, TRUE, name, &vars, &coefs, &ncoefs, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, &newsection) );
+   SCIP_CALL( readCoefficients(scip, lpinput, TRUE, name, &coefssize, &vars, &coefs, &ncoefs,
+         &quadcoefssize, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, &newsection) );
+
    if( !hasError(lpinput) )
    {
       int i;
@@ -1305,11 +1317,11 @@ SCIP_RETCODE readObjective(
    }
 
    /* free memory */
-   SCIPfreeMemoryArrayNull(scip, &vars);
-   SCIPfreeMemoryArrayNull(scip, &coefs);
-   SCIPfreeMemoryArrayNull(scip, &quadvars1);
-   SCIPfreeMemoryArrayNull(scip, &quadvars2);
-   SCIPfreeMemoryArrayNull(scip, &quadcoefs);
+   SCIPfreeBlockMemoryArrayNull(scip, &quadcoefs, quadcoefssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &quadvars2, quadcoefssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &quadvars1, quadcoefssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &vars, coefssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &coefs, coefssize);
 
    return SCIP_OKAY;
 }
@@ -1345,6 +1357,8 @@ SCIP_RETCODE createIndicatorConstraint(
    SCIP_Bool local;
    SCIP_Bool dynamic;
    SCIP_Bool removable;
+   int lincoefssize;
+   int quadcoefssize;
    int nlincoefs;
    int nquadcoefs;
    int linsidesign;
@@ -1384,7 +1398,9 @@ SCIP_RETCODE createIndicatorConstraint(
    }
 
    /* read linear constraint */
-   SCIP_CALL( readCoefficients(scip, lpinput, FALSE, name2, &linvars, &lincoefs, &nlincoefs, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, &newsection) );
+   SCIP_CALL( readCoefficients(scip, lpinput, FALSE, name2, &lincoefssize, &linvars, &lincoefs, &nlincoefs,
+         &quadcoefssize, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, &newsection) );
+
    if( hasError(lpinput) )
       goto TERMINATE;
    if( newsection )
@@ -1504,11 +1520,11 @@ SCIP_RETCODE createIndicatorConstraint(
 
  TERMINATE:
    /* free memory */
-   SCIPfreeMemoryArrayNull(scip, &linvars);
-   SCIPfreeMemoryArrayNull(scip, &lincoefs);
-   SCIPfreeMemoryArrayNull(scip, &quadvars1);
-   SCIPfreeMemoryArrayNull(scip, &quadvars2);
-   SCIPfreeMemoryArrayNull(scip, &quadcoefs);
+   SCIPfreeBlockMemoryArrayNull(scip, &quadvars1, quadcoefssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &quadvars2, quadcoefssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &quadcoefs, quadcoefssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &lincoefs, lincoefssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &linvars, lincoefssize);
 
    SCIP_CALL( retcode );
 
@@ -1553,17 +1569,21 @@ SCIP_RETCODE readConstraints(
    SCIP_Bool modifiable;
    SCIP_Bool dynamic;
    SCIP_Bool removable;
+   SCIP_Bool isIndicatorCons;
    int ncoefs;
    int nquadcoefs;
    int sidesign;
-   SCIP_Bool isIndicatorCons;
+   int quadcoefssize;
+   int coefssize;
 
    assert(lpinput != NULL);
 
    retcode = SCIP_OKAY;
 
    /* read coefficients */
-   SCIP_CALL( readCoefficients(scip, lpinput, FALSE, name, &vars, &coefs, &ncoefs, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, &newsection) );
+   SCIP_CALL( readCoefficients(scip, lpinput, FALSE, name, &coefssize, &vars, &coefs, &ncoefs,
+         &quadcoefssize, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, &newsection) );
+
    if( hasError(lpinput) )
       goto TERMINATE;
    if( newsection )
@@ -1748,11 +1768,11 @@ SCIP_RETCODE readConstraints(
 
  TERMINATE:
    /* free memory */
-   SCIPfreeMemoryArrayNull(scip, &vars);
-   SCIPfreeMemoryArrayNull(scip, &coefs);
-   SCIPfreeMemoryArrayNull(scip, &quadvars1);
-   SCIPfreeMemoryArrayNull(scip, &quadvars2);
-   SCIPfreeMemoryArrayNull(scip, &quadcoefs);
+   SCIPfreeBlockMemoryArrayNull(scip, &quadcoefs, quadcoefssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &quadvars2, quadcoefssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &quadvars1, quadcoefssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &coefs, coefssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &vars, coefssize);
 
    SCIP_CALL( retcode );
 
@@ -3367,7 +3387,7 @@ SCIP_DECL_READERFREE(readerFreeLp)
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
-   SCIPfreeMemory(scip, &readerdata);
+   SCIPfreeBlockMemory(scip, &readerdata);
 
    return SCIP_OKAY;
 }
@@ -3410,7 +3430,7 @@ SCIP_RETCODE SCIPincludeReaderLp(
    SCIP_READER* reader;
 
    /* create reader data */
-   SCIP_CALL( SCIPallocMemory(scip, &readerdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
@@ -3452,13 +3472,13 @@ SCIP_RETCODE SCIPreadLp(
    lpinput.linebuf[0] = '\0';
    lpinput.probname[0] = '\0';
    lpinput.objname[0] = '\0';
-   SCIP_CALL( SCIPallocMemoryArray(scip, &lpinput.token, LP_MAX_LINELEN) ); /*lint !e506*/
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &lpinput.token, LP_MAX_LINELEN) ); /*lint !e506*/
    lpinput.token[0] = '\0';
-   SCIP_CALL( SCIPallocMemoryArray(scip, &lpinput.tokenbuf, LP_MAX_LINELEN) ); /*lint !e506*/
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &lpinput.tokenbuf, LP_MAX_LINELEN) ); /*lint !e506*/
    lpinput.tokenbuf[0] = '\0';
    for( i = 0; i < LP_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(lpinput.pushedtokens[i]), LP_MAX_LINELEN) );  /*lint !e866 !e506*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(lpinput.pushedtokens[i]), LP_MAX_LINELEN) );  /*lint !e866 !e506*/
    }
 
    lpinput.npushedtokens = 0;
@@ -3471,6 +3491,7 @@ SCIP_RETCODE SCIPreadLp(
    lpinput.haserror = FALSE;
    lpinput.comment = FALSE;
    lpinput.endline = FALSE;
+
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &(lpinput.initialconss)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &(lpinput.dynamicconss)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &(lpinput.dynamiccols)) );
@@ -3480,12 +3501,12 @@ SCIP_RETCODE SCIPreadLp(
    retcode = readLPFile(scip, &lpinput, filename);
 
    /* free dynamically allocated memory */
-   SCIPfreeMemoryArray(scip, &lpinput.token);
-   SCIPfreeMemoryArray(scip, &lpinput.tokenbuf);
    for( i = 0; i < LP_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIPfreeMemoryArray(scip, &lpinput.pushedtokens[i]);
+      SCIPfreeBlockMemoryArray(scip, &lpinput.pushedtokens[i], LP_MAX_LINELEN);
    }
+   SCIPfreeBlockMemoryArray(scip, &lpinput.tokenbuf, LP_MAX_LINELEN);
+   SCIPfreeBlockMemoryArray(scip, &lpinput.token, LP_MAX_LINELEN);
 
    if( retcode == SCIP_PLUGINNOTFOUND )
       retcode = SCIP_READERROR;

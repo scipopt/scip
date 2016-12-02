@@ -265,7 +265,7 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(conshdlrdata != NULL);
    assert(eventhdlr != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
 
    /* set event handler for catching events on watched variables */
    (*conshdlrdata)->eventhdlr = eventhdlr;
@@ -283,7 +283,7 @@ SCIP_RETCODE conshdlrdataFree(
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
 
-   SCIPfreeMemory(scip, conshdlrdata);
+   SCIPfreeBlockMemory(scip, conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -3068,7 +3068,7 @@ SCIP_DECL_CONFLICTFREE(conflictFreeBounddisjunction)
    assert(conflicthdlrdata != NULL);
 
    /* free conflict handler structure */
-   SCIPfreeMemory(scip, &conflicthdlrdata);
+   SCIPfreeBlockMemory(scip, &conflicthdlrdata);
 
    return SCIP_OKAY;
 }
@@ -3096,7 +3096,7 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
          eventExecBounddisjunction, NULL) );
 
    /* allocate memory for conflict handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conflicthdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conflicthdlrdata) );
 
    /* create conflict handler parameter */
    SCIP_CALL( SCIPaddRealParam(scip,

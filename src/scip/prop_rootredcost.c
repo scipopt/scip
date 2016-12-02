@@ -143,7 +143,7 @@ SCIP_RETCODE propdataCreate(
    SCIP_PROPDATA**       propdata            /**< pointer to store the created propagator data */
    )
 {
-   SCIP_CALL( SCIPallocMemory(scip, propdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, propdata) );
 
    propdataReset(scip, *propdata);
 
@@ -194,7 +194,7 @@ SCIP_RETCODE propdataExit(
    }
 
    /* free memory for non-zero reduced cost variables */
-   SCIPfreeMemoryArrayNull(scip, &propdata->redcostvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->redcostvars, propdata->nredcostvars);
 
    propdataReset(scip, propdata);
 
@@ -242,7 +242,7 @@ SCIP_RETCODE propdataInit(
       int k;
 
       k = 0;
-      SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->redcostvars, nredcostvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->redcostvars, nredcostvars) );
 
       SCIPdebugMsg(scip, "Store non-zero root reduced cost variables at address <%p>.\n", (void*)propdata->redcostvars);
 
@@ -517,7 +517,7 @@ SCIP_DECL_PROPFREE(propFreeRootredcost)
    assert(propdata != NULL);
    assert(propdata->redcostvars == NULL);
 
-   SCIPfreeMemory(scip, &propdata);
+   SCIPfreeBlockMemory(scip, &propdata);
    SCIPpropSetData(prop, NULL);
 
    return SCIP_OKAY;

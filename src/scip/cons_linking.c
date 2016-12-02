@@ -161,7 +161,7 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(conshdlrdata != NULL);
    assert(eventhdlr != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
 
    /* create hash map */
    (*conshdlrdata)->varmap = NULL;
@@ -187,7 +187,7 @@ SCIP_RETCODE conshdlrdataFree(
       SCIPhashmapFree(&(*conshdlrdata)->varmap);
 
    /* free memory of constraint handler data */
-   SCIPfreeMemory(scip, conshdlrdata);
+   SCIPfreeBlockMemory(scip, conshdlrdata);
 
    return SCIP_OKAY;
 }

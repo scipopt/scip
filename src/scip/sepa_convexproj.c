@@ -718,7 +718,7 @@ SCIP_DECL_SEPAFREE(sepaFreeConvexproj)
 
    SCIP_CALL( sepadataClear(scip, sepadata) );
 
-   SCIPfreeMemory(scip, &sepadata);
+   SCIPfreeBlockMemory(scip, &sepadata);
 
    SCIPsepaSetData(sepa, NULL);
 
@@ -878,7 +878,7 @@ SCIP_RETCODE SCIPincludeSepaConvexproj(
    SCIP_SEPA* sepa;
 
    /* create convexproj separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
 
    /* this sets all data in sepadata to 0 */
    BMSclearMemory(sepadata);

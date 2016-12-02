@@ -728,7 +728,7 @@ SCIP_DECL_PROPFREE(propFreeProbing)
    /* free random number generator */
    SCIPrandomFree(&propdata->randnumgen);
 
-   SCIPfreeMemory(scip, &propdata);
+   SCIPfreeBlockMemory(scip, &propdata);
    SCIPpropSetData(prop, NULL);
 
    return SCIP_OKAY;
@@ -1105,7 +1105,7 @@ SCIP_RETCODE SCIPincludePropProbing(
    SCIP_PROP* prop;
 
    /* create probing propagator data */
-   SCIP_CALL( SCIPallocMemory(scip, &propdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
    SCIP_CALL( initPropdata(scip, propdata) );
 
    /* create random number generator */

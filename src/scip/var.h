@@ -1289,6 +1289,16 @@ void SCIPvarMergeHistories(
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
+/** sets the history of a variable; this method is typacally used within reoptimization to keep and update the variable
+ *  history over several iteraions
+ */
+extern
+void SCIPvarSetHistory(
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_HISTORY*         history,            /**< the history which is to set */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
+
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of
  *  "solvaldelta" in the variable's solution value and resulting change of "objdelta" in the in the LP's objective value
  */
@@ -1645,7 +1655,7 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
    SCIP_Bool             removefromvar       /**< should the implications and variable bounds be removed from the var itself? */
    );
 
-/** sets the variable clique component index, or -1 if index should be reset */
+/** sets the index of the connected component of the clique graph that the variable belongs to, or -1 if not computed */
 extern
 void SCIPvarSetCliqueComponentIdx(
    SCIP_VAR*             var,                /**< problem variable */

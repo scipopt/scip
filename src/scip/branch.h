@@ -60,6 +60,12 @@ SCIP_RETCODE SCIPbranchcandFree(
    SCIP_BRANCHCAND**     branchcand          /**< pointer to store branching candidate storage */
    );
 
+/** invalidates branching candidates storage */
+extern
+void SCIPbranchcandInvalidate(
+   SCIP_BRANCHCAND*      branchcand          /**< pointer to store branching candidate storage */
+   );
+
 /** gets branching candidates for LP solution branching (fractional variables) */
 extern
 SCIP_RETCODE SCIPbranchcandGetLPCands(

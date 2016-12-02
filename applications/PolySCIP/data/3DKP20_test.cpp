@@ -101,7 +101,7 @@ int main() {
   auto sol_size = 20;
   for (auto i=1; i<=sol_size; ++i) {
     add_vecs_with_ones(vector<int>(sol_size,0),
-		       i, 0, feasible_solutions);    
+		       i, 0, feasible_solutions);
   }
   std::cout << "NUMBER OF FEASIBLE SOLS: " << feasible_solutions.size() << "\n";
   auto feasible_outcomes = list<vector<int>>{};
@@ -140,6 +140,3 @@ int main() {
   }
   return 0;
 }
-    
-
-

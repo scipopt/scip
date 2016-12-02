@@ -36,4 +36,3 @@ typedef struct SCIP_Concurrent SCIP_CONCURRENT;     /**< scip data required for 
 #endif
 
 #endif
-

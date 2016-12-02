@@ -1248,7 +1248,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
    /* create the subproblem */
    SCIP_CALL( SCIPcreateProbBasic(subscip, "cumulative") );
 
-   SCIP_CALL( SCIPallocMemoryArray(subscip, &subvars, njobs) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(subscip, &subvars, njobs) );
 
    /* create for each job a start time variable */
    for( v = 0; v < njobs; ++v )
@@ -1372,7 +1372,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
       SCIP_CALL( SCIPreleaseVar(subscip, &subvars[v]) );
    }
 
-   SCIPfreeMemoryArray(subscip, &subvars);
+   SCIPfreeBlockMemoryArray(subscip, &subvars, njobs);
 
    SCIP_CALL( SCIPfree(&subscip) );
 
@@ -1411,7 +1411,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipMip)
    /* create the subproblem */
    SCIP_CALL( SCIPcreateProbBasic(subscip, "cumulative") );
 
-   SCIP_CALL( SCIPallocMemoryArray(subscip, &binvars, njobs) );
+   SCIP_CALL( SCIPallocBufferArray(subscip, &binvars, njobs) );
 
    minest = INT_MAX;
    maxlct = INT_MIN;
@@ -1448,7 +1448,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipMip)
 
       SCIP_CALL( SCIPcreateConsBasicSetpart(subscip, &cons, name, 0, NULL) );
 
-      SCIP_CALL( SCIPallocMemoryArray(subscip, &binvars[v], timeinterval) );
+      SCIP_CALL( SCIPallocBufferArray(subscip, &binvars[v], timeinterval) );
 
       for( t = 0; t < timeinterval; ++t )
       {
@@ -1664,10 +1664,10 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipMip)
       {
          SCIP_CALL( SCIPreleaseVar(subscip, &binvars[v][t]) );
       }
-      SCIPfreeMemoryArray(subscip, &binvars[v]);
+      SCIPfreeBufferArray(subscip, &binvars[v]);
    }
 
-   SCIPfreeMemoryArray(subscip, &binvars);
+   SCIPfreeBufferArray(subscip, &binvars);
 
    SCIP_CALL( SCIPfree(&subscip) );
 
@@ -1698,7 +1698,7 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(conshdlrdata != NULL);
    assert(eventhdlr != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
 
    /* set event handler for checking if bounds of start time variables are tighten */
    (*conshdlrdata)->eventhdlr = eventhdlr;
@@ -1740,7 +1740,7 @@ void conshdlrdataFree(
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
 
-   SCIPfreeMemory(scip, conshdlrdata);
+   SCIPfreeBlockMemory(scip, conshdlrdata);
 }
 
 /**@} */

@@ -5391,7 +5391,7 @@ SCIP_DECL_CONSFREE(consFreeAbspower)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -5645,7 +5645,7 @@ SCIP_DECL_CONSDELETE(consDeleteAbspower)
       SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
    }
 
-   SCIPfreeMemory(scip, consdata);
+   SCIPfreeBlockMemory(scip, consdata);
 
    return SCIP_OKAY;
 }
@@ -5660,7 +5660,7 @@ SCIP_DECL_CONSTRANS(consTransAbspower)
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
 
-   SCIP_CALL( SCIPduplicateMemory(scip, &targetdata, sourcedata) );
+   SCIP_CALL( SCIPduplicateBlockMemory(scip, &targetdata, sourcedata) );
    assert(targetdata->xeventfilterpos == -1);
    assert(targetdata->zeventfilterpos == -1);
 
@@ -6982,7 +6982,7 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
    SCIP_EVENTHDLR* eventhdlr;
 
    /* create absolute power constraint handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    BMSclearMemory(conshdlrdata);
 
    /* include constraint handler */
@@ -7151,7 +7151,7 @@ SCIP_RETCODE SCIPcreateConsAbspower(
    }
 
    /* create constraint data */
-   SCIP_CALL( SCIPallocMemory( scip, &consdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
    BMSclearMemory(consdata);
    consdata->xeventfilterpos = -1;
    consdata->zeventfilterpos = -1;

@@ -24,10 +24,13 @@ features:
 - new heuristic that tries to complete partial solutions
 - new global shift off all random seeds (randomization/randomseedshift) and unification of all existing random seeds
 - use new macros SCIPdebugMsg/SCIPsetDebugMsg/SCIPstatDebugMsg at all places where it makes sense
+- new feature solution polishing to improve integrality of LP solutions
 - new random number gerator in pub_misc.h
 - the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
   as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
   though the solutions required an addition NLP solve
+- add check whether variables have been released when freeing SCIP
+- new constraint handler for cardinality constraints
 - implement a storage for conflicts to have more control over active conflicts
 - can now analyze dual unbounded rays of primal infeasible LPs
 - a print callback can now be specified for user expressions
@@ -47,6 +50,9 @@ features:
   FAST, MEDIUM, and EXHAUSTIVE are finished; during this timing only reductions are allowed that are self-contained, e.g.,
   fixing all variables and deleting all constraints of an independent component; note that reductions found in this timing
   do not trigger a new presolving round
+- added method SCIPcheckCopyLimits() which can be used to check that enough time and memory is left to run a sub-SCIP after
+  subtracting time and memory used by the main-SCIP, and SCIPcopyLimits() which copies these limits accordingly and disables
+  all other limits (need to be set by the plugin, if needed)
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
@@ -60,8 +66,14 @@ parameters:
 - moved permutationseed from misc to randomization
 - new parameter randomization/lpseed to set the initial seed of the LP solver
 - setting a value for a fixed parameter will no longer return with an error, if the new value equals the one to which the parameter is fixed
+- new parameter lp/solutionpolishing to enable LP polishing only at the root LP or always
 - parameters "misc/permutationseed", "misc/permuteconss", and "misc/permutevars" changed to "randomization/permutationseed",
   "randomization/permuteconss", and "randomization/permutevars"
+- new parameter constraints/cardinality/branchbalanced to decide whether to use a balanced branching scheme in the enforcing of cardinality
+  constraints
+- new parameter constraints/cardinality/balanceddepth to set the maximal depth until balanced branching is turned off
+- new parameter constraints/cardinality/balancedcutoff to determine that balanced branching is only used if the branching cut off value
+  w.r.t. the current LP solution is greater than a given value
 - new parameter "constraints/quadratic/projectedcuts" to enable convex quadratics to generate gradients cuts at the
   projection of the point onto the region described by the constraint, which is supporting
 - parameters "conflict/useinflp" and "conflict/useboundlp" are now of type char (before bool)
@@ -102,7 +114,7 @@ interface:
 - spx2 is the new default LP solver interface
 - new function SCIPsolveProbingRelax() to solve a relaxation within probing
 - new optional callback CONSENFORELAX for enforcement of relaxation solutions
-- new parameter fulllpinfo for SCIPincludeRelax() and SCIPincludeRelaxBasic() to indicate whether relaxation includes all linear rows and can be
+- new parameter includeslp for SCIPincludeRelax() and SCIPincludeRelaxBasic() to indicate whether relaxation includes all linear rows and can be
   enforced
 - new function SCIPgetIntVarXor() to access integer variable of XOR constraints
 - new function SCIPgetLastStrongbranchingLPSolstat() to query the LP statuses after strong branching on a variable
@@ -120,7 +132,17 @@ interface:
 - methods SCIPrandomGet{Int,Real}() substitutes SCIPgetRandom{Int,Real}() (marked to be depricated)
 - methods SCIPrandomPermute{Int}Array() substitutes SCIPpermuteRandom{Int}Array() (marked to be depricated)
 - method SCIPrandomGetSubset() substitutes SCIPgetRandomSubset() (marked to be depricated)
+- new method SCIPlpiSetIntegralityInformation() to improve SoPlex' solution polishing
 - SCIPapplyHeurSubNlp() can now return the solution found by the sub-NLP heuristic
+- new function SCIPcreateConsCardinality() to create a cardinality constraint
+- new function SCIPcreateConsBasicCardinality() to create a basic cardinality constraint
+- new function SCIPchgCardvalCardinality() to changes cardinality value of cardinality constraint (i.e., right hand side of cardinality constraint)
+- new function SCIPaddVarCardinality() to add a variable to a cardinality constraint
+- new function SCIPappendVarCardinality() to append a variable to a cardinality constraint
+- new function SCIPgetNVarsCardinality() to get the number of variables in a cardinality constraint
+- new function SCIPgetVarsCardinality() to get the array of variables in a cardinality constraint
+- new function SCIPgetCardvalCardinality() to get the cardinality value of a cardinality constraint (i.e., right hand side of cardinality constraint)
+- new function SCIPgetWeightsCardinality() to get the array of weights of a cardinality constraint
 - SCIPinitConflictAnalysis() gets now 2 additional values: the type of the conflict and whether the current cutoff bound is used or not
 - bound reader uses angle bracket around variable names
 - new functions SCIPgetLinvarMay{Decrease,Increase}Quadratic() to get index of a variable in linear term of quadratic constraint that may be decreased
@@ -143,6 +165,7 @@ fixed bugs:
 - fixed bug in event system: bound change events of the new focus node must be processed, even if the bound
   is the same as at the last focus node
 - fixed memory bug in SCIP_DIGRAPH
+- fixed bug while changing the objective value of an original value after transforming the problem
 
 misc:
 - dropped support for Ipopt < 3.11

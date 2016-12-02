@@ -636,8 +636,10 @@ SCIP_RETCODE solveSubscip(
    /* set time limit */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    if( !SCIPisInfinity(scip, timelimit) )
+   {
       timelimit -= SCIPgetSolvingTime(scip);
-   timelimit += SCIPgetSolvingTime(subscip);
+      timelimit += SCIPgetSolvingTime(subscip);
+   }
 
    /* set soft time limit, if specified in main SCIP */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/softtime", &softtimelimit) );
@@ -664,10 +666,14 @@ SCIP_RETCODE solveSubscip(
       return SCIP_OKAY;
    }
 
+   /* SCIP copy limits will set wrong time limits since it does not take into account time spent already in the
+    * sub-SCIP; nevertheless, we call it to set the memory limit and unset all other limits, if set in the main SCIP
+    */
+   SCIP_CALL( SCIPcopyLimits(scip, subscip) );
+
    /* set time and memory limit for the subproblem */
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/softtime", softtimelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
    /* set gap limit */
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", gaplimit) );

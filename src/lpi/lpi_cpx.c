@@ -1024,6 +1024,18 @@ void* SCIPlpiGetSolverPointer(
 {
    return (void*) lpi->cpxlp;
 }
+
+/** pass integrality information to LP solver */
+SCIP_RETCODE SCIPlpiSetIntegralityInformation(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   ncols,              /**< length of integrality array */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   )
+{
+   SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
+   return SCIP_LPERROR;
+}
+
 /**@} */
 
 
@@ -1864,7 +1876,7 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
-#if (CPX_VERSION < 12070000)
+#if CPX_VERSION < 12070000
    int retcode;
 #endif
 
@@ -2064,7 +2076,7 @@ SCIP_RETCODE SCIPlpiGetSides(
    SCIP_Real*            rhss                /**< array to store right hand side values, or NULL */
    )
 {
-#if (CPX_VERSION < 12070000)
+#if CPX_VERSION < 12070000
    int retval;
 #endif
 
@@ -3422,19 +3434,23 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
    assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER);
 
-   /* correct rstat values for ">=" constraints: Here CPX_AT_LOWER bound means that the slack is 0, i.e., the upper bound is tight */
+   /* Copy rstat to internal structure and correct rstat values for ">=" constraints: Here CPX_AT_LOWER bound means that
+    * the slack is 0, i.e., the upper bound is tight. */
    nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
+   SCIP_CALL( ensureRstatMem(lpi, nrows) );
    for (i = 0; i < nrows; ++i)
    {
       if ( rstat[i] == (int) SCIP_BASESTAT_UPPER )
       {
          CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &sense, i, i) );
          if ( sense == 'L' )
-            rstat[i] = CPX_AT_LOWER;
+            lpi->rstat[i] = CPX_AT_LOWER;
       }
+      else
+         lpi->rstat[i] = rstat[i];
    }
 
-   CHECK_ZERO( lpi->messagehdlr, CPXcopybase(lpi->cpxenv, lpi->cpxlp, cstat, rstat) );
+   CHECK_ZERO( lpi->messagehdlr, CPXcopybase(lpi->cpxenv, lpi->cpxlp, cstat, lpi->rstat) );
 
    return SCIP_OKAY;
 }
