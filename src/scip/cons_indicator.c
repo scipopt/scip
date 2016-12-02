@@ -5999,11 +5999,6 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
             SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
-
-            if( !(*infeasible) )
-            {
-               SCIP_CALL( SCIPaddPoolCut(scip, row) );
-            }
             SCIP_CALL( SCIPreleaseRow(scip, &row));
          }
       }
