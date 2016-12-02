@@ -18516,6 +18516,7 @@ SCIP_RETCODE SCIPfreeSyncstore(
  *  @return the \ref SCIP_SPI* parallel interface pointer to submit jobs for concurrent processing.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_TRANSFORMED
