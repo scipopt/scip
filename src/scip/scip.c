@@ -14194,7 +14194,7 @@ SCIP_RETCODE presolveRound(
 
       if( *timing == SCIP_PRESOLTIMING_FAST )
          ++(scip->stat->npresolroundsfast);
-      else
+      if( *timing == SCIP_PRESOLTIMING_MEDIUM )
          ++(scip->stat->npresolroundsmed);
    }
 
