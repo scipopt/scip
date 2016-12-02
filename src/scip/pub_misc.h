@@ -470,8 +470,10 @@ void** SCIPpqueueElems(
 
 #define SCIPcombineFourInt(a, b, c, d)      (((uint64_t) (a) << 48) + ((uint64_t) (b) << 32) + ((uint64_t) (c) << 16) + ((uint64_t) (d)) )
 
+/* computes a hashcode for a floating point value containing n bits after the comma */
+#define SCIPrealHashCode(x, n)              ( (x)*(1<<n) >= INT64_MAX ? INT64_MAX : ((x)*(1<<n) <= INT64_MIN ? INT64_MIN : (int64_t)((x)*(1<<n))) )
 
-#define SCIPrealHashCode(x, n)                 ( (x)*(1<<n) >= INT64_MAX ? INT64_MAX : ((x)*(1<<n) <= INT64_MIN ? INT64_MIN : (int64_t)((x)*(1<<n))))
+#define SCIPpositiveRealHashCode(x, n)      ( (x)*(1<<n) >= UINT64_MAX ? UINT64_MAX : (uint64_t)((x)*(1<<n)) )
 
 
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
