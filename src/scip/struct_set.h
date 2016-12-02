@@ -161,6 +161,7 @@ struct SCIP_Set
                                               *   one is detected to be infeasible? (only with propagation) */
    SCIP_Bool             branch_checksbsol;  /**< should LP solutions during strong branching with propagation be checked for feasibility? */
    SCIP_Bool             branch_roundsbsol;  /**< should LP solutions during strong branching with propagation be rounded? (only when checksbsol=TRUE) */
+   SCIP_Bool             branch_sumadjustscore; /**< score adjustment near zero by \b adding epsilon (TRUE) or using maximum (FALSE) */
 
    /* conflict analysis settings */
    SCIP_Real             conf_maxvarsfac;    /**< maximal fraction of variables involved in a conflict constraint */

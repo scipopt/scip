@@ -2124,10 +2124,20 @@ SCIP_Real SCIPbranchGetScore(
 
    assert(set != NULL);
 
-   /* slightly increase gains, such that for zero gains, the branch factor comes into account */
+   /* adjust scores near zero to always yield product score greater than 0 */
    eps = SCIPsetSumepsilon(set);
-   downgain = MAX(downgain, eps);
-   upgain = MAX(upgain, eps);
+   if( set->branch_sumadjustscore )
+   {
+      /* adjust scores by adding eps to keep near zero score differences between variables */
+      downgain = downgain + eps;
+      upgain = upgain + eps;
+   }
+   else
+   {
+      /* disregard near zero score differences between variables and consider the branching factor for them */
+      downgain = MAX(downgain, eps);
+      upgain = MAX(upgain, eps);
+   }
 
    switch( set->branch_scorefunc )
    {
