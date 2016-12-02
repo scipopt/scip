@@ -106,6 +106,7 @@
 #include "scip/heur_randrounding.h"
 #include "scip/heur_rens.h"
 #include "scip/heur_reoptsols.h"
+#include "scip/heur_repair.h"
 #include "scip/heur_rins.h"
 #include "scip/heur_rootsoldiving.h"
 #include "scip/heur_rounding.h"
