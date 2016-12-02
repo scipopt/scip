@@ -210,6 +210,8 @@ public:
       if ( probname != NULL )
          SOPLEX_TRY_ABORT( setProbname(probname) );
 
+      CHECK_SOPLEX_PARAM(setIntParam(SOLUTION_POLISHING, POLISHING_MAXBASICSLACK));
+
 #ifdef WITH_LPSCHECK
       int cpxstat;
       _checknum = 0;
@@ -954,6 +956,24 @@ void* SCIPlpiGetSolverPointer(
 {
    return (void*) lpi->spx;
 }
+
+/** pass integrality information about variables to the solver */
+SCIP_RETCODE SCIPlpiSetIntegralityInformation(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   ncols,              /**< length of integrality array */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   )
+{
+#if (SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 3))
+   assert(ncols == lpi->spx->numColsReal() || (ncols == 0 && intInfo == NULL));
+   lpi->spx->setIntegralityInformation(ncols, intInfo);
+   return SCIP_OKAY;
+#else
+   SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
+   return SCIP_LPERROR;
+#endif
+}
+
 /**@} */
 
 
@@ -3969,9 +3989,15 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       (void) lpi->spx->setIntParam(SoPlex::TIMER, ival);
       break;
 #endif
-#if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 220 && SOPLEX_SUBVERSION >= 3)
+#if SOPLEX_VERSION > 220 || (SOPLEX_VERSION == 220 && SOPLEX_SUBVERSION >= 3)
    case SCIP_LPPAR_RANDOMSEED:
       lpi->spx->setRandomSeed((unsigned int) ival);
+      break;
+#endif
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION >= 221 && SOPLEX_SUBVERSION > 1)
+   case SCIP_LPPAR_POLISHING:
+      assert(ival >= 0 && ival < 3);
+      (void) lpi->spx->setIntParam(SoPlex::SOLUTION_POLISHING, ival);
       break;
 #endif
    default:
