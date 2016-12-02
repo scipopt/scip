@@ -951,6 +951,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    /* set problem dimensions */
    opt->n = SCIPnlpiOracleGetNVars(problem->oracle);
    opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle);
+   SCIPdebugMessage("nvars %d nconss %d\n", opt->n, opt->m);
 
    /* assume that objective function is dense TODO use sparse representation */
    wsp->DF.nnz = opt->n;
@@ -958,10 +959,12 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    /* get number of non-zero entries in Jacobian */
    SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(problem->oracle, &offset, NULL) );
    wsp->DG.nnz = offset[opt->m];
+   SCIPdebugMessage("nnonz jacobian %d\n", wsp->DG.nnz);
 
    /* get number of non-zero entries in Hessian */
    SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(problem->oracle, &offset, NULL) );
    wsp->HM.nnz = offset[opt->n];
+   SCIPdebugMessage("nnonz hessian %d\n", wsp->HM.nnz);
 
    /* initialize data in WORHP */
    WorhpInit(opt, wsp, par, cnt);
@@ -978,6 +981,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    {
       opt->XL[i] = lbs[i];
       opt->XU[i] = ubs[i];
+      SCIPdebugMessage("bounds %d [%g,%g]\n", i, opt->XL[i], opt->XU[i]);
    }
 
    /* set constraint sides */
@@ -985,13 +989,19 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    {
       opt->GL[i] = SCIPnlpiOracleGetConstraintLhs(problem->oracle, i);
       opt->GU[i] = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
+      SCIPdebugMessage("sides %d [%g,%g]\n", i, opt->GL[i], opt->GU[i]);
    }
 
    /* set column indices of objective function; note that indices go from 1 to n */
    if( wsp->DF.NeedStructure )
    {
+      SCIPdebugMessage("column indices of objective function:");
       for( i = 0; i < opt->n; ++i )
+      {
          wsp->DF.row[i] = i + 1;
+         SCIPdebugMessage(" %d", wsp->DF.row[i]);
+      }
+      SCIPdebugMessage("\n");
    }
 
    /* set column and row indices of non-zero entries in Jacobian matrix */
@@ -1001,6 +1011,8 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
       int j;
 
       SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(problem->oracle, &offset, &cols) );
+      assert(offset[opt->m] == wsp->DG.nnz);
+      SCIPdebugMessage("column and row indices of jacobian:\n");
 
       nnonz = 0;
       j = offset[0];
@@ -1011,31 +1023,43 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
             /* note that column and row indices are shifted by one */
             wsp->DG.row[nnonz] = i + 1;
             wsp->DG.col[nnonz] = cols[j] + 1;
+            SCIPdebugMessage("  entry %d: (row,col) = (%d,%d)\n", nnonz, wsp->DG.row[nnonz], wsp->DG.col[nnonz]);
+            ++nnonz;
          }
       }
       assert(nnonz == wsp->DG.nnz);
+
+      /* sort arrays such that the entries are in column-major order */
+      SCIPsortIntInt(wsp->DG.col, wsp->DG.row, nnonz);
    }
 
-   /* set column and row indices of non-zero entries in Jacobian matrix */
+   /* set column and row indices of non-zero entries in hessian matrix */
    if( wsp->HM.NeedStructure )
    {
       int nnonz;
       int j;
 
       SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(problem->oracle, &offset, &cols) );
+      assert(offset[opt->n] == wsp->HM.nnz);
+      SCIPdebugMessage("column and row indices of hessian:\n");
 
       nnonz = 0;
       j = offset[0];
-      for( i = 0; i < opt->m; ++i )
+      for( i = 0; i < opt->n; ++i )
       {
          for( ; j < offset[i+1]; ++j )
          {
             /* note that column and row indices are shifted by one */
             wsp->HM.row[nnonz] = i + 1;
             wsp->HM.col[nnonz] = cols[j] + 1;
+            SCIPdebugMessage("  entry %d: (row,col) = (%d,%d)\n", nnonz, wsp->HM.row[nnonz], wsp->HM.col[nnonz]);
+            ++nnonz;
          }
       }
       assert(nnonz == wsp->HM.nnz);
+
+      /* sort arrays such that the entries are in column-major order */
+      SCIPsortIntInt(wsp->HM.col, wsp->HM.row, nnonz);
    }
 
    /* TODO set a start point */
