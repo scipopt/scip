@@ -235,6 +235,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    SCIP_ROW* row;
    unsigned int keyval;
    SCIP_Real maxval;
+   SCIP_Real minval;
    SCIP_SET* set;
 
    set = (SCIP_SET*) userptr;
@@ -242,10 +243,14 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    assert(row != NULL);
 
    maxval = SCIProwGetMaxval(row, set);
+   minval = SCIProwGetMinval(row, set);
    assert(row->nummaxval > 0);
    assert(row->validminmaxidx);
 
-   keyval = SCIPhashTwo(SCIPcombineThreeInt(row->maxidx, row->len, row->minidx), SCIPrealHashCode(maxval));
+   keyval = SCIPhashFour(SCIPrealHashCode(maxval, 10),
+                         SCIPrealHashCode(minval, 10),
+                         SCIPcombineThreeInt(row->maxidx, row->len, row->minidx),
+                         SCIPcombineTwoInt(row->nummaxval, row->numminval));
 
    return keyval;
 }
