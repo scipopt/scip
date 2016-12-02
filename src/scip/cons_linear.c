@@ -12707,9 +12707,9 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
 
    /* using only the variable indices as hash, since the values are compared by epsilon */
    return SCIPhashFour(SCIPcombineFourInt(consdata->nvars, minidx, mididx, maxidx),
-                       SCIPrealHashCode(consdata->vals[0]),
-                       SCIPrealHashCode(consdata->vals[consdata->nvars / 2]),
-                       SCIPrealHashCode(consdata->vals[consdata->nvars - 1]));
+                       SCIPrealHashCode(consdata->vals[0], 8),
+                       SCIPrealHashCode(consdata->vals[consdata->nvars / 2], 8),
+                       SCIPrealHashCode(consdata->vals[consdata->nvars - 1], 8));
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 

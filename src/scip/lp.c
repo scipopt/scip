@@ -6521,7 +6521,7 @@ SCIP_Real SCIProwGetMinval(
 
    if( row->numminval == 0 )
       rowCalcIdxsAndVals(row, set);
-   assert(row->numminval >= 0);
+   assert(row->numminval > 0);
    assert(row->minval >= 0.0 || row->len == 0);
 
    return row->minval;
