@@ -1887,7 +1887,7 @@ SCIP_RETCODE SCIPpriceLoop(
                                               *   not be used */
    )
 {
-   SCIP_NODE* focusnode;
+   SCIP_NODE* currentnode;
    int npricerounds;
    SCIP_Bool mustprice;
    SCIP_Bool cutoff;
@@ -1902,7 +1902,8 @@ SCIP_RETCODE SCIPpriceLoop(
    assert(lperror != NULL);
    assert(aborted != NULL);
 
-   focusnode = SCIPtreeGetFocusNode(tree);
+   currentnode = SCIPtreeGetCurrentNode(tree);
+   assert(currentnode == SCIPtreeGetFocusNode(tree) || SCIPtreeProbing(tree));
    *npricedcolvars = transprob->ncolvars;
    *lperror = FALSE;
    *aborted = FALSE;
@@ -1984,7 +1985,7 @@ SCIP_RETCODE SCIPpriceLoop(
             stoppricing = FALSE;
 
          /* update lower bound w.r.t. the lower bound given by the pricer */
-         SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, lb);
+         SCIPnodeUpdateLowerbound(currentnode, stat, set, tree, transprob, origprob, lb);
          SCIPsetDebugMsg(set, " -> new lower bound given by pricer %s: %g\n", SCIPpricerGetName(set->pricers[p]), lb);
       }
 
@@ -2056,7 +2057,7 @@ SCIP_RETCODE SCIPpriceLoop(
           || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT );
 
       /* if the lower bound is already higher than the cutoff bound, we can stop pricing */
-      mustprice = mustprice && SCIPsetIsLT(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
+      mustprice = mustprice && SCIPsetIsLT(set, SCIPnodeGetLowerbound(currentnode), primal->cutoffbound);
    }
    assert(lp->flushed);
    assert(lp->solved || *lperror);
