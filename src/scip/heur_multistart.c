@@ -31,8 +31,8 @@
 #define HEUR_NAME             "multistart"
 #define HEUR_DESC             "multistart heuristic for convex and nonconvex MINLPs"
 #define HEUR_DISPCHAR         'm'
-#define HEUR_PRIORITY         0
-#define HEUR_FREQ             -1
+#define HEUR_PRIORITY         -2100000
+#define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
@@ -46,10 +46,17 @@
 #define DEFAULT_MINIMPRITER   10             /**< default number of iteration when checking the minimum improvement */
 #define DEFAULT_MAXRELDIST    0.15           /**< default maximum distance between two points in the same cluster */
 #define DEFAULT_NLPMINIMPR    0.00           /**< default factor by which heuristic should at least improve the incumbent */
-#define DEFAULT_MAXNCLUSTER   10             /**< default maximum number of considered clusters per heuristic call */
+#define DEFAULT_GRADLIMIT     5e+6           /**< default limit for gradient computations for all improvePoint() calls */
+#define DEFAULT_MAXNCLUSTER   3              /**< default maximum number of considered clusters per heuristic call */
+#define DEFAULT_ONLYNLPS      TRUE           /**< should the heuristic run only on continuous problems? */
 
 #define MINFEAS               -1e+4          /**< minimum feasibility for a point; used for filtering and improving
                                               *   feasibility */
+#define MINIMPRFAC            0.95           /**< improvement factor used to discard randomly generated points with a
+                                              *   too large objective value */
+#define GRADCOSTFAC_LINEAR    1.0            /**< gradient cost factor for the number of linear variables */
+#define GRADCOSTFAC_QUAD      2.0            /**< gradient cost factor for the number of quadratic terms */
+#define GRADCOSTFAC_NONLINEAR 3.0            /**< gradient cost factor for the number of nodes in nonlinear expression */
 
 /*
  * Data structures
@@ -60,7 +67,6 @@ struct SCIP_HeurData
 {
    SCIP_EXPRINT*         exprinterpreter;    /**< expression interpreter to compute gradients */
    int                   nrndpoints;         /**< number of random points generated per execution call */
-   unsigned int          randseed;           /**< seed value for random number generator */
    SCIP_Real             maxboundsize;       /**< maximum variable domain size for unbounded variables */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_HEUR*            heursubnlp;         /**< sub-NLP heuristic */
@@ -71,8 +77,9 @@ struct SCIP_HeurData
 
    SCIP_Real             maxreldist;         /**< maximum distance between two points in the same cluster */
    SCIP_Real             nlpminimpr;         /**< factor by which heuristic should at least improve the incumbent */
-
+   SCIP_Real             gradlimit;          /**< limit for gradient computations for all improvePoint() calls (0 for no limit) */
    int                   maxncluster;        /**< maximum number of considered clusters per heuristic call */
+   SCIP_Bool             onlynlps;           /**< should the heuristic run only on continuous problems? */
 };
 
 
@@ -99,41 +106,48 @@ int getVarIndex(
 #define getVarIndex(varindex,var) ((int)(size_t)SCIPhashmapGetImage((varindex), (void*)(var)))
 #endif
 
-/** samples and stores random points */
+/** samples and stores random points; stores points which have a better objective value than the current incumbent
+ *  solution
+ */
 static
 SCIP_RETCODE sampleRandomPoints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            rndpoints,          /**< array to store all random points */
-   int                   nrndpoints,         /**< total number of random points to compute */
+   int                   nmaxrndpoints,      /**< maximum number of random points to compute */
    SCIP_Real             maxboundsize,       /**< maximum variable domain size for unbounded variables */
-   SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   SCIP_Real             bestobj,            /**< objective value in the transformed space of the current incumbent */
+   int*                  nstored             /**< pointer to store the number of randomly generated points */
    )
 {
    SCIP_VAR** vars;
+   SCIP_SOL* sol;
    SCIP_Real val;
    SCIP_Real lb;
    SCIP_Real ub;
    int nvars;
+   int niter;
    int i;
-   int k;
 
    assert(scip != NULL);
    assert(rndpoints != NULL);
-   assert(nrndpoints > 0);
+   assert(nmaxrndpoints > 0);
    assert(maxboundsize > 0.0);
    assert(randnumgen != NULL);
+   assert(nstored != NULL);
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
+   *nstored = 0;
 
-   for( k = 0; k < nrndpoints; ++k )
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+
+   for( niter = 0; niter < 3 * nmaxrndpoints && *nstored < nmaxrndpoints; ++niter )
    {
-      SCIP_CALL( SCIPcreateSol(scip, &rndpoints[k], NULL) );
-
       for( i = 0; i < nvars; ++i )
       {
-         lb = MIN(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]));
-         ub = MAX(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]));
+         lb = MIN(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])); /*lint !e666*/
+         ub = MAX(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])); /*lint !e666*/
 
          if( SCIPisEQ(scip, lb, ub) )
             val = (lb + ub) / 2.0;
@@ -151,12 +165,23 @@ SCIP_RETCODE sampleRandomPoints(
          }
          assert(SCIPisGE(scip, val ,lb) && SCIPisLE(scip, val, ub));
 
-         /* set solution value */
-         SCIP_CALL( SCIPsetSolVal(scip, rndpoints[k], vars[i], val) );
+         /* set solution value; round the sampled point for integer variables */
+         if( SCIPvarGetType(vars[i]) < SCIP_VARTYPE_CONTINUOUS )
+            val = SCIPfeasRound(scip, val);
+         SCIP_CALL( SCIPsetSolVal(scip, sol, vars[i], val) );
       }
 
-      assert(rndpoints[k] != NULL);
+      /* add solution if it is good enough */
+      if( SCIPisLE(scip, SCIPgetSolTransObj(scip, sol), bestobj) )
+      {
+         SCIP_CALL( SCIPcreateSolCopy(scip, &rndpoints[*nstored], sol) );
+         ++(*nstored);
+      }
    }
+   assert(*nstored <= nmaxrndpoints);
+   SCIPdebugMsg(scip, "found %d randomly generated points\n", *nstored);
+
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
    return SCIP_OKAY;
 }
@@ -305,7 +330,9 @@ SCIP_RETCODE improvePoint(
    int                   maxiter,            /**< maximum number of iterations */
    SCIP_Real             minimprfac,         /**< minimum required improving factor to proceed in the improvement of a single point */
    int                   minimpriter,        /**< number of iteration when checking the minimum improvement */
-   SCIP_Real*            minfeas             /**< pointer to store the minimum feasibility */
+   SCIP_Real*            minfeas,            /**< pointer to store the minimum feasibility */
+   SCIP_Real*            nlrowgradcosts,     /**< estimated costs for each gradient computation */
+   SCIP_Real*            gradcosts           /**< pointer to store the estimated gradient costs */
    )
 {
    SCIP_VAR** vars;
@@ -323,17 +350,21 @@ SCIP_RETCODE improvePoint(
    assert(minfeas != NULL);
    assert(nlrows != NULL);
    assert(nnlrows > 0);
+   assert(nlrowgradcosts != NULL);
+   assert(gradcosts != NULL);
+
+   *gradcosts = 0.0;
 
    SCIP_CALL( getMinFeas(scip, nlrows, nnlrows, point, minfeas) );
 #ifdef SCIP_DEBUG_IMPROVEPOINT
-   SCIPdebugMessage("start minfeas = %e\n", *minfeas);
+   printf("start minfeas = %e\n", *minfeas);
 #endif
 
    /* stop since start point is feasible */
    if( !SCIPisFeasLT(scip, *minfeas, 0.0) )
    {
 #ifdef SCIP_DEBUG_IMPROVEPOINT
-      SCIPdebugMessage("start point is feasible");
+      printf("start point is feasible");
 #endif
       return SCIP_OKAY;
    }
@@ -373,12 +404,15 @@ SCIP_RETCODE improvePoint(
          SCIP_CALL( SCIPgetNlRowSolActivity(scip, nlrows[i], point, &activity) );
          SCIP_CALL( computeGradient(scip, nlrows[i], exprinterpreter, point, varindex, grad, &nlrownorm) );
 
+         /* update estimated costs for computing gradients */
+         *gradcosts += nlrowgradcosts[i];
+
          /* stop if the gradient disappears at the current point */
          if( SCIPisZero(scip, nlrownorm) )
          {
             r = maxiter - 1;
 #ifdef SCIP_DEBUG_IMPROVEPOINT
-            SCIPdebugMessage("gradient vanished at current point -> stop\n");
+            printf("gradient vanished at current point -> stop\n");
 #endif
             break;
          }
@@ -401,8 +435,8 @@ SCIP_RETCODE improvePoint(
       {
          /* adjust point */
          updatevec[i] = SCIPgetSolVal(scip, point, vars[i]) + updatevec[i] / nviolnlrows;
-         updatevec[i] = MIN(updatevec[i], SCIPvarGetUbLocal(vars[i]));
-         updatevec[i] = MAX(updatevec[i], SCIPvarGetLbLocal(vars[i]));
+         updatevec[i] = MIN(updatevec[i], SCIPvarGetUbLocal(vars[i])); /*lint !e666*/
+         updatevec[i] = MAX(updatevec[i], SCIPvarGetLbLocal(vars[i])); /*lint !e666*/
 
          SCIP_CALL( SCIPsetSolVal(scip, point, vars[i], updatevec[i]) );
       }
@@ -411,16 +445,17 @@ SCIP_RETCODE improvePoint(
       SCIP_CALL( getMinFeas(scip, nlrows, nnlrows, point, minfeas) );
 
       /* check stopping criterion */
-      if( r % 5 == 0 && r > 0 )
+      if( r % minimpriter == 0 && r > 0 )
       {
-         if( *minfeas <= MINFEAS || (*minfeas-lastminfeas) / MAX(REALABS(*minfeas), REALABS(lastminfeas)) < minimprfac )
+         if( *minfeas <= MINFEAS
+            || (*minfeas-lastminfeas) / MAX(REALABS(*minfeas), REALABS(lastminfeas)) < minimprfac ) /*lint !e666*/
             break;
          lastminfeas = *minfeas;
       }
    }
 
 #ifdef SCIP_DEBUG_IMPROVEPOINT
-   SCIPdebugMessage("niter=%d minfeas=%e\n", r, *minfeas);
+   printf("niter=%d minfeas=%e\n", r, *minfeas);
 #endif
 
    SCIPfreeBufferArray(scip, &grad);
@@ -471,7 +506,7 @@ SCIP_RETCODE filterPoints(
       meanfeas *= pow(feasibilities[i] - minfeas + 1.0, 1.0 / npoints);
    }
    meanfeas += minfeas - 1.0;
-   SCIPdebugMessage("meanfeas = %e\n", meanfeas);
+   SCIPdebugMsg(scip, "meanfeas = %e\n", meanfeas);
 
    /* keep all points with which have a feasibility not much below the geometric mean of infeasibilities */
    for( i = 0; i < npoints; ++i )
@@ -650,7 +685,7 @@ SCIP_RETCODE solveNLP(
 
    /* round point for sub-NLP heuristic */
    SCIP_CALL( SCIProundSol(scip, refpoint, success) );
-   SCIPdebugMessage("rounding of refpoint successfully? %d\n", *success);
+   SCIPdebugMsg(scip, "rounding of refpoint successfully? %u\n", *success);
 
    /* round variables manually if the locks did not allow us to round them */
    if( !(*success) )
@@ -666,8 +701,8 @@ SCIP_RETCODE solveNLP(
 
             /* round and adjust value */
             val = SCIPround(scip, val);
-            val = MIN(val, SCIPvarGetUbLocal(vars[i]));
-            val = MAX(val, SCIPvarGetLbLocal(vars[i]));
+            val = MIN(val, SCIPvarGetUbLocal(vars[i])); /*lint !e666*/
+            val = MAX(val, SCIPvarGetLbLocal(vars[i])); /*lint !e666*/
             assert(SCIPisFeasIntegral(scip, val));
 
             SCIP_CALL( SCIPsetSolVal(scip, refpoint, vars[i], val) );
@@ -676,12 +711,45 @@ SCIP_RETCODE solveNLP(
    }
 
    /* call sub-NLP heuristic */
-   SCIP_CALL( SCIPapplyHeurSubNlp(scip, nlpheur, &nlpresult, refpoint, itercontingent, timelimit, minimprove, NULL, NULL) );
-   SCIPdebugMessage("sub-NLP result = %d solval= %g\n", nlpresult, SCIPgetSolOrigObj(scip, refpoint));
-
+   SCIP_CALL( SCIPapplyHeurSubNlp(scip, nlpheur, &nlpresult, refpoint, itercontingent, timelimit, minimprove,
+         NULL, NULL) );
    SCIP_CALL( SCIPfreeSol(scip, &refpoint) );
 
+   /* let sub-NLP heuristic decide whether the solution is feasible or not */
+   *success = nlpresult == SCIP_FOUNDSOL;
+
    return SCIP_OKAY;
+}
+
+/** recursive helper function to count the number of nodes in a sub-tree */
+static
+int getExprSize(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   int sum;
+   int i;
+
+   assert(expr != NULL);
+
+   sum = 0;
+   for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
+   {
+      SCIP_EXPR* child = SCIPexprGetChildren(expr)[i];
+      sum += getExprSize(child);
+   }
+   return 1 + sum;
+}
+
+/** returns the number of nodes in an expression tree */
+static
+int getExprtreeSize(
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+   )
+{
+   if( tree == NULL )
+      return 0;
+   return getExprSize(SCIPexprtreeGetRoot(tree));
 }
 
 /** main function of the multi-start heuristic (see @ref heur_multistart.h for more details); it consists of the
@@ -703,12 +771,19 @@ SCIP_RETCODE applyHeur(
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
+   SCIP_NLROW** nlrows;
    SCIP_SOL** points;
    SCIP_HASHMAP* varindex;
    SCIP_Real* feasibilities;
+   SCIP_Real* nlrowgradcosts;
    int* clusteridx;
+   SCIP_Real gradlimit;
+   SCIP_Real bestobj;
    int nusefulpoints;
+   int nrndpoints;
    int ncluster;
+   int nnlrows;
+   int npoints;
    int start;
    int i;
 
@@ -717,7 +792,11 @@ SCIP_RETCODE applyHeur(
    assert(result != NULL);
    assert(heurdata != NULL);
 
-   SCIPdebugMessage("call applyHeur()\n");
+   SCIPdebugMsg(scip, "call applyHeur()\n");
+
+   nlrows = SCIPgetNLPNlRows(scip);
+   nnlrows = SCIPgetNNLPNlRows(scip);
+   bestobj = SCIPgetNSols(scip) > 0 ? MINIMPRFAC * SCIPgetSolTransObj(scip, SCIPgetBestSol(scip)) : SCIPinfinity(scip);
 
    if( heurdata->exprinterpreter == NULL )
    {
@@ -725,6 +804,7 @@ SCIP_RETCODE applyHeur(
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &points, heurdata->nrndpoints) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nlrowgradcosts, nnlrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &feasibilities, heurdata->nrndpoints) );
    SCIP_CALL( SCIPallocBufferArray(scip, &clusteridx, heurdata->nrndpoints) );
    SCIP_CALL( SCIPhashmapCreate(&varindex, SCIPblkmem(scip), SCIPgetNVars(scip)) );
@@ -735,26 +815,47 @@ SCIP_RETCODE applyHeur(
       SCIP_CALL( SCIPhashmapInsert(varindex, (void*)SCIPgetVars(scip)[i], (void*)(size_t)i) );
    }
 
+   /* compute estimated costs of computing a gradient for each nlrow */
+   for( i = 0; i < nnlrows; ++i )
+   {
+      nlrowgradcosts[i] = GRADCOSTFAC_LINEAR * SCIPnlrowGetNLinearVars(nlrows[i])
+         + GRADCOSTFAC_QUAD * SCIPnlrowGetNQuadElems(nlrows[i])
+         + GRADCOSTFAC_NONLINEAR * getExprtreeSize(SCIPnlrowGetExprtree(nlrows[i]));
+   }
+
    /*
     * 1. sampling points in the current domain; for unbounded variables we use a bounded box
     */
-   SCIP_CALL( sampleRandomPoints(scip, points, heurdata->nrndpoints, heurdata->maxboundsize, heurdata->randnumgen) );
+   SCIP_CALL( sampleRandomPoints(scip, points, heurdata->nrndpoints, heurdata->maxboundsize, heurdata->randnumgen,
+         bestobj, &nrndpoints) );
+   assert(nrndpoints >= 0);
+
+   if( nrndpoints == 0 )
+      goto TERMINATE;
 
    /*
     * 2. improve points via consensus vectors
     */
-   for( i = 0; i < heurdata->nrndpoints; ++i )
+   gradlimit = heurdata->gradlimit == 0.0 ? SCIPinfinity(scip) : heurdata->gradlimit;
+   for( npoints = 0; npoints < nrndpoints && gradlimit >= 0 && !SCIPisStopped(scip); ++npoints )
    {
-      SCIP_CALL( improvePoint(scip, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), varindex, heurdata->exprinterpreter, points[i],
-         heurdata->maxiter, heurdata->minimprfac, heurdata->minimpriter, &feasibilities[i]) );
+      SCIP_Real gradcosts;
+
+      SCIP_CALL( improvePoint(scip, nlrows, nnlrows, varindex, heurdata->exprinterpreter, points[npoints],
+            heurdata->maxiter, heurdata->minimprfac, heurdata->minimpriter, &feasibilities[npoints], nlrowgradcosts,
+            &gradcosts) );
+
+      gradlimit -= gradcosts;
+      SCIPdebugMsg(scip, "improve point %d / %d gradlimit = %g\n", npoints, nrndpoints, gradlimit);
    }
+   assert(npoints > 0 && npoints <= nrndpoints);
 
    /*
     * 3. filter and cluster points
     */
-   SCIP_CALL( filterPoints(scip, points, feasibilities, heurdata->nrndpoints, &nusefulpoints) );
+   SCIP_CALL( filterPoints(scip, points, feasibilities, npoints, &nusefulpoints) );
    assert(nusefulpoints >= 0);
-   SCIPdebugMessage("nusefulpoints = %d\n", nusefulpoints);
+   SCIPdebugMsg(scip, "nusefulpoints = %d\n", nusefulpoints);
 
    if( nusefulpoints == 0 )
       goto TERMINATE;
@@ -762,7 +863,7 @@ SCIP_RETCODE applyHeur(
    SCIP_CALL( clusterPointsGreedy(scip, points, nusefulpoints, clusteridx, &ncluster, heurdata->maxboundsize,
          heurdata->maxreldist, heurdata->maxncluster) );
    assert(ncluster >= 0 && ncluster <= heurdata->maxncluster);
-   SCIPdebugMessage("ncluster = %d\n", ncluster);
+   SCIPdebugMsg(scip, "ncluster = %d\n", ncluster);
 
    SCIPsortIntPtr(clusteridx, (void**)points, nusefulpoints);
 
@@ -789,14 +890,14 @@ SCIP_RETCODE applyHeur(
       /* try to solve sub-NLP if we have enough time left */
       if( timelimit <= 1.0 )
       {
-         SCIPdebugMessage("not enough time left! (%g)\n", timelimit);
+         SCIPdebugMsg(scip, "not enough time left! (%g)\n", timelimit);
          break;
       }
 
       /* call sub-NLP heuristic */
       SCIP_CALL( solveNLP(scip, heur, heurdata->heursubnlp, &points[start], end - start, -1LL, timelimit,
             heurdata->nlpminimpr, &success) );
-      SCIPdebugMessage("solveNLP result = %d\n", success);
+      SCIPdebugMsg(scip, "solveNLP result = %d\n", success);
 
       if( success )
          *result = SCIP_FOUNDSOL;
@@ -807,7 +908,7 @@ SCIP_RETCODE applyHeur(
 
 TERMINATE:
    /* free memory */
-   for( i = heurdata->nrndpoints - 1; i >= 0 ; --i )
+   for( i = nrndpoints - 1; i >= 0 ; --i )
    {
       assert(points[i] != NULL);
       SCIP_CALL( SCIPfreeSol(scip, &points[i]) );
@@ -816,6 +917,7 @@ TERMINATE:
    SCIPhashmapFree(&varindex);
    SCIPfreeBufferArray(scip, &clusteridx);
    SCIPfreeBufferArray(scip, &feasibilities);
+   SCIPfreeBufferArray(scip, &nlrowgradcosts);
    SCIPfreeBufferArray(scip, &points);
 
    return SCIP_OKAY;
@@ -857,7 +959,6 @@ SCIP_DECL_HEURFREE(heurFreeMultistart)
    return SCIP_OKAY;
 }
 
-
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
 SCIP_DECL_HEURINIT(heurInitMultistart)
@@ -877,7 +978,6 @@ SCIP_DECL_HEURINIT(heurInitMultistart)
 
    return SCIP_OKAY;
 }
-
 
 /** deinitialization method of primal heuristic (called before transformed problem is freed) */
 static
@@ -913,13 +1013,16 @@ SCIP_DECL_HEUREXEC(heurExecMultistart)
    if( !SCIPisNLPConstructed(scip) || heurdata->heursubnlp == NULL )
       return SCIP_OKAY;
 
+   /* check whether the heuristic should be applied for a problem containing integer variables */
+   if( heurdata->onlynlps && (SCIPgetNBinVars(scip) > 0 || SCIPgetNIntVars(scip) > 0) )
+      return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
 
    SCIP_CALL( applyHeur(scip, heur, heurdata, result) );
 
    return SCIP_OKAY;
 }
-
 
 /*
  * primal heuristic specific interface methods
@@ -979,9 +1082,17 @@ SCIP_RETCODE SCIPincludeHeurMultistart(
          "factor by which heuristic should at least improve the incumbent",
          &heurdata->nlpminimpr, FALSE, DEFAULT_NLPMINIMPR, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/gradlimit",
+         "limit for gradient computations for all improvePoint() calls (0 for no limit)",
+         &heurdata->gradlimit, FALSE, DEFAULT_GRADLIMIT, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxncluster",
          "maximum number of considered clusters per heuristic call",
          &heurdata->maxncluster, FALSE, DEFAULT_MAXNCLUSTER, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/onlynlps",
+         "should the heuristic run only on continuous problems?",
+         &heurdata->onlynlps, FALSE, DEFAULT_ONLYNLPS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
