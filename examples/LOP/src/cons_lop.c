@@ -70,6 +70,7 @@ SCIP_RETCODE LOPseparate(
    SCIP_Bool*            cutoff              /**< output: pointer to store whether we detected a cutoff */
    )
 {
+   char s[SCIP_MAXSTRLEN];
    int i;
    int j;
    int k;
@@ -94,7 +95,6 @@ SCIP_RETCODE LOPseparate(
 	 if ( ! SCIPisFeasEQ(scip, valIJ + SCIPgetSolVal(scip, sol, vars[j][i]), 1.0) )
 	 {
 	    SCIP_ROW *row;
-	    char s[SCIP_MAXSTRLEN];
 
 	    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
 
@@ -127,7 +127,6 @@ SCIP_RETCODE LOPseparate(
 	    if ( SCIPisEfficacious(scip, sum - 2.0) )
 	    {
 	       SCIP_ROW *row;
-	       char s[SCIP_MAXSTRLEN];
 
 	       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "triangle#%d#%d#%d", i, j, k);
 
@@ -153,11 +152,6 @@ SCIP_RETCODE LOPseparate(
 
    return SCIP_OKAY;
 }
-
-
-
-
-
 
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
@@ -264,6 +258,7 @@ SCIP_DECL_CONSTRANS(consTransLOP)
 static
 SCIP_DECL_CONSINITLP(consInitlpLOP)
 {  /*lint --e{715}*/
+   char s[SCIP_MAXSTRLEN];
    int c;
    int nGen = 0;
 
@@ -296,7 +291,6 @@ SCIP_DECL_CONSINITLP(consInitlpLOP)
       {
 	 for (j = i+1; j < n; ++j)
 	 {
-	    char s[SCIP_MAXSTRLEN];
 	    SCIP_ROW* row;
 
 	    (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
@@ -327,8 +321,8 @@ SCIP_DECL_CONSINITLP(consInitlpLOP)
 static
 SCIP_DECL_CONSSEPALP(consSepalpLOP)
 {  /*lint --e{715}*/
-   int c;
    int nGen = 0;
+   int c;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -371,8 +365,8 @@ SCIP_DECL_CONSSEPALP(consSepalpLOP)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolLOP)
 {  /*lint --e{715}*/
-   int c;
    int nGen = 0;
+   int c;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -414,8 +408,9 @@ SCIP_DECL_CONSSEPASOL(consSepasolLOP)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpLOP)
 {  /*lint --e{715}*/
-   int c;
+   char s[SCIP_MAXSTRLEN];
    int nGen = 0;
+   int c;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -462,7 +457,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpLOP)
 	    {
 	       SCIP_ROW *row;
                SCIP_Bool infeasible;
-	       char s[SCIP_MAXSTRLEN];
 
 	       (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "sym#%d#%d", i, j);
 
@@ -499,7 +493,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpLOP)
 	       {
 		  SCIP_ROW *row;
                   SCIP_Bool infeasible;
-		  char s[SCIP_MAXSTRLEN];
 
 		  (void) SCIPsnprintf(s, SCIP_MAXSTRLEN, "triangle#%d#%d#%d", i, j, k);
 
@@ -1086,7 +1079,7 @@ SCIP_RETCODE SCIPincludeConshdlrLOP(
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpLOP, consEnfopsLOP, consCheckLOP, consLockLOP, NULL) );
-   assert(conshdlr != NULL);
+   assert( conshdlr != NULL );
 
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteLOP) );
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyLOP, consCopyLOP) );
