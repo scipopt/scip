@@ -25,7 +25,7 @@
 #include <scip/scip.h>
 #include <scip/scipdefplugins.h>
 
-#include "cons_linearordering.h"
+#include "cons_lop.h"
 #include "reader_lop.h"
 
 /** define macro to print error message and exit */
@@ -60,7 +60,7 @@ int main(
    SCIP_CALL_ERROR( SCIPincludeDefaultPlugins(scip) );
 
    /* include linear ordering constraint handler */
-   SCIP_CALL_ERROR( SCIPincludeConshdlrLinearOrdering(scip) );
+   SCIP_CALL_ERROR( SCIPincludeConshdlrLOP(scip) );
 
    /* include linear ordering file reader */
    SCIP_CALL_ERROR( SCIPincludeReaderLOP(scip) );

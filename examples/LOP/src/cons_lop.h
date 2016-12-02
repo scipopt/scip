@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_linearordering.h
+/**@file   cons_lop.h
  * @brief  constraint handler for linear ordering constraints
  * @author Marc Pfetsch
  *
@@ -30,8 +30,8 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __LOP_CONS_LINEARORDERING_H__
-#define __LOP_CONS_LINEARORDERING_H__
+#ifndef __LOP_CONS_LOP_H__
+#define __LOP_CONS_LOP_H__
 
 
 #include <scip/scip.h>
@@ -42,13 +42,13 @@ extern "C" {
 
 /** creates the handler for linear ordering constraints and includes it in SCIP */
 extern
-SCIP_RETCODE SCIPincludeConshdlrLinearOrdering(
+SCIP_RETCODE SCIPincludeConshdlrLOP(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** creates and captures a linear ordering constraint */
 extern
-SCIP_RETCODE SCIPcreateConsLinearOrdering(
+SCIP_RETCODE SCIPcreateConsLOP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */

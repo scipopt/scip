@@ -16,7 +16,7 @@
 /* uncomment for debug output: */
 /* #define SCIP_DEBUG */
 
-/**@file   cons_linearordering.c
+/**@file   cons_lop.c
  * @brief  example constraint handler for linear ordering constraints
  * @author Marc Pfetsch
  *
@@ -27,14 +27,14 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <cons_linearordering.h>
+#include <cons_lop.h>
 
 #include <assert.h>
 #include <string.h>
 
 
 /* constraint handler properties */
-#define CONSHDLR_NAME          "linearordering"
+#define CONSHDLR_NAME          "lop"
 #define CONSHDLR_DESC          "linear ordering constraint handler"
 #define CONSHDLR_SEPAPRIORITY       100 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY      -100 /**< priority of the constraint handler for constraint enforcing */
@@ -60,7 +60,7 @@ struct SCIP_ConsData
 
 /** separate symmetry equations and triangle inequalities */
 static
-SCIP_RETCODE LinearOrderingSeparate(
+SCIP_RETCODE LOPseparate(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    int                   n,                  /**< number of elements */
@@ -162,7 +162,7 @@ SCIP_RETCODE LinearOrderingSeparate(
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_CONSHDLRCOPY(conshdlrCopyLinearOrdering)
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyLOP)
 {  /*lint --e{715}*/
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -170,7 +170,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyLinearOrdering)
    assert( valid != NULL );
 
    /* call inclusion method of constraint handler */
-   SCIP_CALL( SCIPincludeConshdlrLinearOrdering(scip) );
+   SCIP_CALL( SCIPincludeConshdlrLOP(scip) );
 
    *valid = TRUE;
 
@@ -179,7 +179,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyLinearOrdering)
 
 /** frees specific constraint data */
 static
-SCIP_DECL_CONSDELETE(consDeleteLinearOrdering)
+SCIP_DECL_CONSDELETE(consDeleteLOP)
 {  /*lint --e{715}*/
    int i;
    int n;
@@ -205,7 +205,7 @@ SCIP_DECL_CONSDELETE(consDeleteLinearOrdering)
 
 /** transforms constraint data into data belonging to the transformed problem */
 static
-SCIP_DECL_CONSTRANS(consTransLinearOrdering)
+SCIP_DECL_CONSTRANS(consTransLOP)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_CONSDATA* sourcedata;
@@ -262,7 +262,7 @@ SCIP_DECL_CONSTRANS(consTransLinearOrdering)
 
 /** LP initialization method of constraint handler */
 static
-SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
+SCIP_DECL_CONSINITLP(consInitlpLOP)
 {  /*lint --e{715}*/
    int c;
    int nGen = 0;
@@ -325,7 +325,7 @@ SCIP_DECL_CONSINITLP(consInitlpLinearOrdering)
 
 /** separation method of constraint handler for LP solutions */
 static
-SCIP_DECL_CONSSEPALP(consSepalpLinearOrdering)
+SCIP_DECL_CONSSEPALP(consSepalpLOP)
 {  /*lint --e{715}*/
    int c;
    int nGen = 0;
@@ -353,7 +353,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLinearOrdering)
       assert( consdata != NULL );
 
       *result = SCIP_DIDNOTFIND;
-      SCIP_CALL( LinearOrderingSeparate(scip, conshdlr, consdata->n, consdata->vars, NULL, &nGen, &cutoff) );
+      SCIP_CALL( LOPseparate(scip, conshdlr, consdata->n, consdata->vars, NULL, &nGen, &cutoff) );
       if ( cutoff )
       {
          *result = SCIP_CUTOFF;
@@ -369,7 +369,7 @@ SCIP_DECL_CONSSEPALP(consSepalpLinearOrdering)
 
 /** separation method of constraint handler for arbitrary primal solutions */
 static
-SCIP_DECL_CONSSEPASOL(consSepasolLinearOrdering)
+SCIP_DECL_CONSSEPASOL(consSepasolLOP)
 {  /*lint --e{715}*/
    int c;
    int nGen = 0;
@@ -397,7 +397,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinearOrdering)
       assert( consdata != NULL );
 
       *result = SCIP_DIDNOTFIND;
-      SCIP_CALL( LinearOrderingSeparate(scip, conshdlr, consdata->n, consdata->vars, sol, &nGen, &cutoff) );
+      SCIP_CALL( LOPseparate(scip, conshdlr, consdata->n, consdata->vars, sol, &nGen, &cutoff) );
       if ( cutoff )
       {
          *result = SCIP_CUTOFF;
@@ -412,7 +412,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinearOrdering)
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
-SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
+SCIP_DECL_CONSENFOLP(consEnfolpLOP)
 {  /*lint --e{715}*/
    int c;
    int nGen = 0;
@@ -538,7 +538,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
-SCIP_DECL_CONSENFOPS(consEnfopsLinearOrdering)
+SCIP_DECL_CONSENFOPS(consEnfopsLOP)
 {  /*lint --e{715}*/
    int c;
 
@@ -619,7 +619,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinearOrdering)
 
 /** feasibility check method of constraint handler for integral solutions */
 static
-SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
+SCIP_DECL_CONSCHECK(consCheckLOP)
 {  /*lint --e{715}*/
    int c;
 
@@ -717,7 +717,7 @@ SCIP_DECL_CONSCHECK(consCheckLinearOrdering)
 
 /** domain propagation method of constraint handler */
 static
-SCIP_DECL_CONSPROP(consPropLinearOrdering)
+SCIP_DECL_CONSPROP(consPropLOP)
 {  /*lint --e{715}*/
    int c;
    int nGen = 0;
@@ -839,7 +839,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 
 /** propagation conflict resolving method of constraint handler */
 static
-SCIP_DECL_CONSRESPROP(consRespropLinearOrdering)
+SCIP_DECL_CONSRESPROP(consRespropLOP)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_VAR*** vars;
@@ -929,7 +929,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinearOrdering)
 
 /** variable rounding lock method of constraint handler */
 static
-SCIP_DECL_CONSLOCK(consLockLinearOrdering)
+SCIP_DECL_CONSLOCK(consLockLOP)
 {  /*lint --e{715}*/
    int i;
    int j;
@@ -968,7 +968,7 @@ SCIP_DECL_CONSLOCK(consLockLinearOrdering)
 
 /** constraint display method of constraint handler */
 static
-SCIP_DECL_CONSPRINT(consPrintLinearOrdering)
+SCIP_DECL_CONSPRINT(consPrintLOP)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
    SCIP_VAR*** vars;
@@ -987,7 +987,7 @@ SCIP_DECL_CONSPRINT(consPrintLinearOrdering)
    n = consdata->n;
    vars = consdata->vars;
 
-   SCIPinfoMessage(scip, file, "linearordering[");
+   SCIPinfoMessage(scip, file, "LOP[");
    for (i = 0; i < n; ++i)
    {
       if ( i > 0 )
@@ -1011,7 +1011,7 @@ SCIP_DECL_CONSPRINT(consPrintLinearOrdering)
 
 /** constraint copying method of constraint handler */
 static
-SCIP_DECL_CONSCOPY(consCopyLinearOrdering)
+SCIP_DECL_CONSCOPY(consCopyLOP)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* sourcedata;
    SCIP_VAR*** sourcevars;
@@ -1062,7 +1062,7 @@ SCIP_DECL_CONSCOPY(consCopyLinearOrdering)
       if ( name == 0 )
          name = SCIPconsGetName(sourcecons);
 
-      SCIP_CALL( SCIPcreateConsLinearOrdering(scip, cons, name, n, vars,
+      SCIP_CALL( SCIPcreateConsLOP(scip, cons, name, n, vars,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
@@ -1075,7 +1075,7 @@ SCIP_DECL_CONSCOPY(consCopyLinearOrdering)
 }
 
 /** creates the handler for linear ordering constraints and includes it in SCIP */
-SCIP_RETCODE SCIPincludeConshdlrLinearOrdering(
+SCIP_RETCODE SCIPincludeConshdlrLOP(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -1085,26 +1085,25 @@ SCIP_RETCODE SCIPincludeConshdlrLinearOrdering(
    conshdlr = NULL;
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
-         consEnfolpLinearOrdering, consEnfopsLinearOrdering, consCheckLinearOrdering, consLockLinearOrdering,
-         NULL) );
+         consEnfolpLOP, consEnfopsLOP, consCheckLOP, consLockLOP, NULL) );
    assert(conshdlr != NULL);
 
-   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteLinearOrdering) );
-   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyLinearOrdering, consCopyLinearOrdering) );
-   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinearOrdering) );
-   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpLinearOrdering) );
-   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLinearOrdering, consSepasolLinearOrdering,
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteLOP) );
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyLOP, consCopyLOP) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLOP) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpLOP) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLOP, consSepasolLOP,
          CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropLinearOrdering, CONSHDLR_PROPFREQ,
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropLOP, CONSHDLR_PROPFREQ,
          CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );
-   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropLinearOrdering) );
-   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintLinearOrdering) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropLOP) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintLOP) );
 
    return SCIP_OKAY;
 }
 
 /** creates and captures a linear ordering constraint */
-SCIP_RETCODE SCIPcreateConsLinearOrdering(
+SCIP_RETCODE SCIPcreateConsLOP(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
