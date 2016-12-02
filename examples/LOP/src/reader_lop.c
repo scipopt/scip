@@ -26,8 +26,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "cons_linearordering.h"
-
+#include "cons_lop.h"
 #include "reader_lop.h"
 
 #define READER_NAME             "lopreader"
@@ -219,7 +218,7 @@ SCIP_DECL_READERREAD(LOPreaderRead)
    }
 
    /* generate linear ordering constraint */
-   SCIP_CALL( SCIPcreateConsLinearOrdering(scip, &cons, "LOP", n, vars, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE,
+   SCIP_CALL( SCIPcreateConsLOP(scip, &cons, "LOP", n, vars, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE,
 	 FALSE, FALSE, FALSE, FALSE));
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );

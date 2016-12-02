@@ -197,6 +197,91 @@ SCIP_DECL_CONSDELETE(consDeleteLOP)
    return SCIP_OKAY;
 }
 
+/** deinitialization method of constraint handler (called before transformed problem is freed)
+ *
+ *  We output the final linear ordering.
+ */
+static
+SCIP_DECL_CONSEXIT(consExitLOP)
+{  /*lint --e{715}*/
+   SCIP_SOL* sol;
+   int c;
+   int i;
+   int j;
+   int n;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   SCIPdebugMsg(scip, "exiting linear ordering constraint handler <%s>.\n", SCIPconshdlrGetName(conshdlr));
+
+   /* avoid output for subscips */
+   if ( SCIPgetSubscipDepth(scip) > 0 )
+      return SCIP_OKAY;
+
+   /* get best solution */
+   sol = SCIPgetBestSol(scip);
+   if ( sol == NULL )
+      return SCIP_OKAY;
+
+   /* loop through all constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_VAR*** vars;
+      int* outdeg;
+      int* indices;
+
+      assert( conss != NULL );
+      assert( conss[c] != NULL );
+      SCIPdebugMsg(scip, "solution for for linear ordering constraint <%s>.\n", SCIPconsGetName(conss[c]));
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+      assert( consdata->vars != NULL );
+      n = consdata->n;
+      vars = consdata->vars;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &outdeg, n) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &indices, n) );
+
+      /* compute out-degree */
+      for (i = 0; i < n; ++i)
+      {
+	 int deg = 0;
+	 for (j = 0; j < n; ++j)
+	 {
+	    SCIP_Real val;
+
+	    if (j == i)
+	       continue;
+
+	    val = SCIPgetSolVal(scip, sol, vars[i][j]);
+	    assert( SCIPisFeasIntegral(scip, val) );
+	    if ( val < 0.5 )
+	       ++deg;
+	 }
+	 outdeg[i] = deg;
+	 indices[i] = i;
+      }
+
+      /* sort such that degrees are non-decreasing */
+      SCIPsortIntInt(outdeg, indices, n);
+
+      /* output */
+      SCIPinfoMessage(scip, NULL, "\nFinal order of linear ordering constraint <%s>:\n", SCIPconsGetName(conss[c]));
+      for (i = 0; i < n; ++i)
+	 SCIPinfoMessage(scip, NULL, "%d ", indices[i]);
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      SCIPfreeBufferArray(scip, &indices);
+      SCIPfreeBufferArray(scip, &outdeg);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** transforms constraint data into data belonging to the transformed problem */
 static
 SCIP_DECL_CONSTRANS(consTransLOP)
@@ -1082,6 +1167,7 @@ SCIP_RETCODE SCIPincludeConshdlrLOP(
    assert( conshdlr != NULL );
 
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteLOP) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitLOP) );
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyLOP, consCopyLOP) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLOP) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpLOP) );
