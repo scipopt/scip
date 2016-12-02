@@ -1045,7 +1045,13 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(dismantleExpr)
          SCIPinfoMessage(scip, NULL, "%*s[%s]: ", nspaces, "", type);
 
          if(strcmp(type, "var") == 0)
-            SCIPinfoMessage(scip, NULL, "%s\n", SCIPvarGetName(SCIPgetConsExprExprVarVar(expr)));
+         {
+            SCIP_VAR* var;
+
+            var = SCIPgetConsExprExprVarVar(expr);
+            SCIPinfoMessage(scip, NULL, "%s in [%g, %g]\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
+                  SCIPvarGetUbLocal(var));
+         }
          else if(strcmp(type, "sum") == 0)
             SCIPinfoMessage(scip, NULL, "%g\n", SCIPgetConsExprExprSumConstant(expr));
          else if(strcmp(type, "prod") == 0)
