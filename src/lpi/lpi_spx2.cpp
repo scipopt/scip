@@ -3573,7 +3573,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    DVector col(lpi->spx->numRowsReal());
 
    /* temporary sparse vector used for unscaling (memory is automatically enlarged) */
-   DSVector colinternal;
+   DSVector colsparse;
 
    SCIPdebugMessage("calling SCIPlpiGetBInvACol()\n");
 
@@ -3590,13 +3590,13 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    if( ninds != NULL )
       *ninds = -1;
 
-   lpi->spx->getColVectorReal(c, colinternal);
+   lpi->spx->getColVectorReal(c, colsparse);
 
    /* col needs to be cleared because copying colVectorReal only regards nonzeros */
    col.clear();
 
    /* the copy is necessary to transform the sparse column into a dense vector */
-   col = colinternal;
+   col = colsparse;
 
    /* solve */
    if( ! lpi->spx->getBasisInverseTimesVecReal(col.get_ptr(), coef) )
