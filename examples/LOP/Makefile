@@ -35,7 +35,7 @@ include $(SCIPDIR)/make/make.project
 #-----------------------------------------------------------------------------
 
 MAINNAME	=	lop
-MAINOBJ		=	cmain.o probdata_lop.o cons_linearordering.o
+MAINOBJ		=	cmain.o probdata_lop.o cons_linearordering.o reader_lop.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
 MAINDEP		=	$(SRCDIR)/depend.cmain.$(OPT)
 
