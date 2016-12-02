@@ -1646,8 +1646,8 @@ SCIP_RETCODE SCIPlpiSetIntegralityInformation(
    )
 {
 #if (SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 3))
-   assert(ncols == lpi->spx->nCols());
-   lpi->spx->setIntegralityInformation(intInfo);
+   assert(ncols == lpi->spx->numColsReal() || (ncols == 0 && intInfo == NULL));
+   lpi->spx->setIntegralityInformation(ncols, intInfo);
    return SCIP_OKAY;
 #else
    SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
