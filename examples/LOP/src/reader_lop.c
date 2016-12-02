@@ -202,13 +202,13 @@ SCIP_DECL_READERREAD(LOPreaderRead)
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars, n) );
    for (i = 0; i < n; ++i)
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &vars[i], n) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(vars[i]), n) );
       for (j = 0; j < n; ++j)
       {
 	 if (j != i)
 	 {
 	    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "x#%d#%d", i, j);
-	    SCIP_CALL( SCIPcreateVar(scip, &vars[i][j], name, 0.0, 1.0, W[i][j], SCIP_VARTYPE_BINARY,
+	    SCIP_CALL( SCIPcreateVar(scip, &(vars[i][j]), name, 0.0, 1.0, W[i][j], SCIP_VARTYPE_BINARY,
 		  TRUE, FALSE, NULL, NULL, NULL, NULL, NULL));
 	    SCIP_CALL( SCIPaddVar(scip, vars[i][j]) );
 	 }
@@ -237,11 +237,11 @@ SCIP_DECL_READERREAD(LOPreaderRead)
       {
 	 if (j != i)
 	 {
-	    SCIP_CALL( SCIPreleaseVar(scip, &vars[i][j]) );
+	    SCIP_CALL( SCIPreleaseVar(scip, &(vars[i][j])) );
 	 }
       }
-      SCIPfreeBlockMemoryArray(scip, &vars[i], n);
-      SCIPfreeBlockMemoryArray(scip, &W[i], n);
+      SCIPfreeBlockMemoryArray(scip, &(vars[i]), n);
+      SCIPfreeBlockMemoryArray(scip, &(W[i]), n);
    }
    SCIPfreeBlockMemoryArray(scip, &vars, n);
    SCIPfreeBlockMemoryArray(scip, &W, n);

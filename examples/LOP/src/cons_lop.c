@@ -117,7 +117,8 @@ SCIP_RETCODE LOPseparate(
 	 /* check triangle inequalities */
 	 for (k = 0; k < n; ++k)
 	 {
-	    SCIP_Real sum = 0.0;
+	    SCIP_Real sum;
+
 	    if (k == i || k == j)
 	       continue;
 
@@ -567,7 +568,8 @@ SCIP_DECL_CONSENFOLP(consEnfolpLOP)
 	    /* enforce triangle inequalities */
 	    for (k = 0; k < n; ++k)
 	    {
-	       SCIP_Real sum = 0.0;
+	       SCIP_Real sum;
+
 	       if (k == i || k == j)
 		  continue;
 
