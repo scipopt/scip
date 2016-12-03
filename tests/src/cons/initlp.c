@@ -71,6 +71,7 @@ SCIP_DECL_CONSLOCK(consLockTest)
 
 Test(cons, initlp)
 {
+   SCIP* scip;
    SCIP_CONSHDLR* conshdlr;
 
    /* initialize SCIP */
