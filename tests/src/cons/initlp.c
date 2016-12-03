@@ -63,7 +63,7 @@ static
 SCIP_DECL_CONSINITLP(consInitlpTest)
 {
    printf("initing lp test cons\n");
-   *infeasible = FALSE;
+   *infeasible = TRUE;
    return SCIP_OKAY;
 }
 
