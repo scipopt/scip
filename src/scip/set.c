@@ -1038,6 +1038,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->sepassorted = FALSE;
    (*set)->sepasnamesorted = FALSE;
    (*set)->props = NULL;
+   (*set)->props_presol = NULL;
    (*set)->nprops = 0;
    (*set)->propssize = 0;
    (*set)->propssorted = FALSE;
@@ -2518,6 +2519,7 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPpropFree(&(*set)->props[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->props);
+   BMSfreeMemoryArrayNull(&(*set)->props_presol);
 
    /* free primal heuristics */
    for( i = 0; i < (*set)->nheurs; ++i )
@@ -3894,12 +3896,15 @@ SCIP_RETCODE SCIPsetIncludeProp(
    {
       set->propssize = SCIPsetCalcMemGrowSize(set, set->nprops+1);
       SCIP_ALLOC( BMSreallocMemoryArray(&set->props, set->propssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->props_presol, set->propssize) );
    }
    assert(set->nprops < set->propssize);
 
    set->props[set->nprops] = prop;
+   set->props_presol[set->nprops] = prop;
    set->nprops++;
    set->propssorted = FALSE;
+   set->propspresolsorted = FALSE;
 
    return SCIP_OKAY;
 }
@@ -3935,7 +3940,6 @@ void SCIPsetSortProps(
    {
       SCIPsortPtr((void**)set->props, SCIPpropComp, set->nprops);
       set->propssorted = TRUE;
-      set->propspresolsorted = FALSE;
       set->propsnamesorted = FALSE;
    }
 }
@@ -3949,9 +3953,8 @@ void SCIPsetSortPropsPresol(
 
    if( !set->propspresolsorted )
    {
-      SCIPsortPtr((void**)set->props, SCIPpropCompPresol, set->nprops);
+      SCIPsortPtr((void**)set->props_presol, SCIPpropCompPresol, set->nprops);
       set->propspresolsorted = TRUE;
-      set->propssorted = FALSE;
       set->propsnamesorted = FALSE;
    }
 }
@@ -3967,7 +3970,6 @@ void SCIPsetSortPropsName(
    {
       SCIPsortPtr((void**)set->props, SCIPpropCompName, set->nprops);
       set->propssorted = FALSE;
-      set->propspresolsorted = FALSE;
       set->propsnamesorted = TRUE;
    }
 }
