@@ -21,8 +21,27 @@
 
 #include <scip/scip.h>
 #include "scip/scipdefplugins.h"
-#include <string.h>
 
+/* dummy check that always succeeds unless scip has constructed its LP */
+static
+SCIP_DECL_CONSCHECK(consCheckTest)
+{
+   printf("checking test cons\n");
+   *result = SCIP_INFEASIBLE;
+
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisLPConstructed(scip) )
+      *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+/* dummy initlp that returns infeasible */
+static
+SCIP_DECL_CONSINITLP(consInitlpTest)
+{
+   printf("initing lp test cons\n");
+   *infeasible = TRUE;
+   return SCIP_OKAY;
+}
 /* dummy enfolp that always succeeds */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpTest)
@@ -39,18 +58,6 @@ SCIP_DECL_CONSENFOPS(consEnfopsTest)
    *result = SCIP_FEASIBLE;
    return SCIP_OKAY;
 }
-/* dummy check that always succeeds unless scip has constructed its LP */
-static
-SCIP_DECL_CONSCHECK(consCheckTest)
-{
-   printf("checking test cons\n");
-   *result = SCIP_INFEASIBLE;
-
-   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING && SCIPisLPConstructed(scip) )
-      *result = SCIP_FEASIBLE;
-
-   return SCIP_OKAY;
-}
 /* dummy locks */
 static
 SCIP_DECL_CONSLOCK(consLockTest)
@@ -58,26 +65,13 @@ SCIP_DECL_CONSLOCK(consLockTest)
    printf("locking test cons\n");
    return SCIP_OKAY;
 }
-/* dummy initlp that always return infeasible */
-static
-SCIP_DECL_CONSINITLP(consInitlpTest)
-{
-   printf("initing lp test cons\n");
-   *infeasible = TRUE;
-   return SCIP_OKAY;
-}
 
-
-/** TESTS  **/
+/** TEST  **/
 #include "include/scip_test.h"
-static SCIP* scip;
 
-static
-void setup(void)
+Test(cons, initlp)
 {
    SCIP_CONSHDLR* conshdlr;
-
-   scip = NULL;
 
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
@@ -95,19 +89,13 @@ void setup(void)
 
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
-}
 
-static
-void teardown(void)
-{
+   /* solve problem and expect it to be infeasible */
+   SCIP_CALL( SCIPsolve(scip) );
+   cr_expect(SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE);
+
+   /* free memory and assert no memory leak */
    SCIP_CALL( SCIPfree(&scip) );
    cr_assert_null(scip);
    cr_assert_eq(BMSgetMemoryUsed(), 0, "Memory is leaking!");
-}
-
-
-Test(cons, initlp, .init = setup, .fini = teardown)
-{
-   SCIP_CALL( SCIPsolve(scip) );
-   cr_expect(SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE);
 }
