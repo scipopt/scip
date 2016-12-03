@@ -29,8 +29,13 @@
 
 #include "scip/presol_qpkktref.c"
 
+#include "include/scip_test.h"
 
-/* check number of added KKT constraints */
+/* macro to interface to criterion */
+#define SCIP_CALL_CR(x) cr_assert( (x) == SCIP_OKAY );
+
+
+/** check number of added KKT constraints */
 static
 SCIP_RETCODE checkNAddConss(
    SCIP*                 scip,               /**< SCIP instance */
@@ -89,7 +94,7 @@ SCIP_RETCODE checkNAddConss(
 }
 
 
-/* check number of dual constraints */
+/** check number of dual constraints */
 static
 SCIP_RETCODE checkNDualConss(
    SCIP*                 scip,               /**< SCIP instance */
@@ -190,7 +195,7 @@ SCIP_RETCODE checkConsKnapsack(
 
    /* set up hash map */
    SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip),
-                                SCIPcalcHashtableSize(10 * (SCIPgetNVars(scip) + SCIPgetNFixedVars(scip)))) );
+         SCIPcalcHashtableSize(10 * (SCIPgetNVars(scip) + SCIPgetNFixedVars(scip)))) );
 
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &dualconss, 2 * SCIPgetNVars(scip) + 2 * SCIPgetNFixedVars(scip)) ); /*lint !e647*/
@@ -641,27 +646,27 @@ SCIP_RETCODE createProb(
 {
    switch( instance )
    {
-      case 0:
-         SCIP_CALL( createProbLinear1(scip) );
-         break;
-      case 1:
-         SCIP_CALL( createProbLinear2(scip) );
-         break;
-      case 2:
-         SCIP_CALL( createProbKnapsack(scip) );
-         break;
-      case 3:
-         SCIP_CALL( createProbSetppc(scip) );
-        break;
-      case 4:
-         SCIP_CALL( createProbLogicor(scip) );
-        break;
-      case 5:
-         SCIP_CALL( createProbVarbound(scip) );
-        break;
-      default:
-         SCIPerrorMessage("unknown instance number\n");
-         return SCIP_INVALIDDATA;
+   case 0:
+      SCIP_CALL( createProbLinear1(scip) );
+      break;
+   case 1:
+      SCIP_CALL( createProbLinear2(scip) );
+      break;
+   case 2:
+      SCIP_CALL( createProbKnapsack(scip) );
+      break;
+   case 3:
+      SCIP_CALL( createProbSetppc(scip) );
+      break;
+   case 4:
+      SCIP_CALL( createProbLogicor(scip) );
+      break;
+   case 5:
+      SCIP_CALL( createProbVarbound(scip) );
+      break;
+   default:
+      SCIPerrorMessage("unknown instance number\n");
+      return SCIP_INVALIDDATA;
    }
 
    return SCIP_OKAY;
@@ -708,96 +713,57 @@ SCIP_RETCODE includeKKTSettings(
    return SCIP_OKAY;
 }
 
+/* test suite */
+TestSuite(qpkktref);
 
 /** run unittest */
-static
-SCIP_RETCODE runUnittest(void)
+Test(qpkktref, runUnittest)
 {
    SCIP* scip1 = NULL;
    SCIP* scip2 = NULL;
    int j;
-
-   /* output stuff for automatic unittest evaluation */
-   printf("@01 unittest-qpkktref ===========\n");
-   printf("=opt=  unittest-qpkktref 0\n\n");
 
    for (j = 0; j < 6; ++j)
    {
       SCIP_Bool equal = FALSE;
 
       /* initialize SCIP */
-      SCIP_CALL( SCIPcreate(&scip1) );
-      SCIP_CALL( SCIPcreate(&scip2) );
+      SCIP_CALL_CR( SCIPcreate(&scip1) );
+      SCIP_CALL_CR( SCIPcreate(&scip2) );
 
       /* include QP settings to scip1 (KKT conditions are not added, all presolvers are turned off) */
-      SCIP_CALL( includeQPSettings(scip1) );
+      SCIP_CALL_CR( includeQPSettings(scip1) );
 
       /* include KKT settings to scip2 (KKT conditions are added, all presolvers are turned off) */
-      SCIP_CALL( includeKKTSettings(scip2) );
+      SCIP_CALL_CR( includeKKTSettings(scip2) );
 
       /* create problem */
-      SCIP_CALL( createProb(scip1, j) );
-      SCIP_CALL( createProb(scip2, j) );
+      SCIP_CALL_CR( createProb(scip1, j) );
+      SCIP_CALL_CR( createProb(scip2, j) );
 
       /* solve */
-      SCIP_CALL( SCIPsolve(scip1) );
-      SCIP_CALL( SCIPsolve(scip2) );
+      SCIP_CALL_CR( SCIPsolve(scip1) );
+      SCIP_CALL_CR( SCIPsolve(scip2) );
       /*
-      SCIP_CALL( SCIPprintBestSol(scip1, NULL, FALSE) );
-      SCIP_CALL( SCIPprintStatistics(scip1, NULL) );
+      SCIP_CALL_CR( SCIPprintBestSol(scip1, NULL, FALSE) );
+      SCIP_CALL_CR( SCIPprintStatistics(scip1, NULL) );
       */
-      /*SCIP_CALL( SCIPwriteTransProblem(scip2, "trafounittestQP.lp", NULL, FALSE ) );*/
+      /*SCIP_CALL_CR( SCIPwriteTransProblem(scip2, "trafounittestQP.lp", NULL, FALSE ) );*/
 
       if ( SCIPisFeasEQ(scip1, SCIPgetPrimalbound(scip1), SCIPgetPrimalbound(scip2) ) )
          equal = TRUE;
 
       /* free transformed problem */
-      SCIP_CALL( SCIPfreeTransform(scip1) );
-      SCIP_CALL( SCIPfreeTransform(scip2) );
+      SCIP_CALL_CR( SCIPfreeTransform(scip1) );
+      SCIP_CALL_CR( SCIPfreeTransform(scip2) );
 
       /* free SCIP */
-      SCIP_CALL( SCIPfree(&scip1) );
-      SCIP_CALL( SCIPfree(&scip2) );
+      SCIP_CALL_CR( SCIPfree(&scip1) );
+      SCIP_CALL_CR( SCIPfree(&scip2) );
+
+      cr_assert( equal );
 
       /* check for memory leaks */
       BMScheckEmptyMemory();
-
-      if ( ! equal )
-      {
-         SCIPerrorMessage("Optimal solution of original problem is not equal to optimal solution of reformulated problem.\n");
-         return SCIP_ERROR;
-      }
    }
-
-   printf("Unit test for KKT-reformulation passed\n");
-
-   /* for automatic testing output the following */
-   printf("SCIP Status        : all tests passed\n");
-   printf("Ignore the following:\n");
-   printf("  solving          : 0.00\n");
-   printf("  nodes (total)    : 0\n");
-   printf("  Primal Bound     : 0.0\n");
-   printf("  Dual Bound       : 0.0\n");
-
-   return SCIP_OKAY;
-}
-
-/** main function */
-int
-main(
-   int                        argc,
-   char**                     argv
-   )
-{
-   SCIP_RETCODE retcode;
-
-   retcode = runUnittest();
-
-   if ( retcode != SCIP_OKAY )
-   {
-      SCIPprintError(retcode);
-      return -1;
-   }
-
-   return 0;
 }
