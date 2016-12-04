@@ -500,10 +500,19 @@ SCIP_RETCODE computeFacet(
    {
       if( i < nvars )
       {
-         assert(vars[i] != NULL);
+         SCIP_Real solval;
 
-         aux[i] = (SCIPgetSolVal(scip, sol, vars[i]) - SCIPvarGetLbLocal(vars[i])) /
-            (SCIPvarGetUbLocal(vars[i]) - SCIPvarGetLbLocal(vars[i]));
+         assert(vars[i] != NULL);
+         solval = SCIPgetSolVal(scip, sol, vars[i]);
+
+         /* explicitely handle solution which violate bounds of variables (this can happen because of tolerances) */
+         if( solval < SCIPvarGetLbLocal(vars[i]) )
+            aux[i] = 0.0;
+         else if( solval > SCIPvarGetUbLocal(vars[i]) )
+            aux[i] = 1.0;
+         else
+            aux[i] = (SCIPgetSolVal(scip, sol, vars[i]) - SCIPvarGetLbLocal(vars[i])) /
+               (SCIPvarGetUbLocal(vars[i]) - SCIPvarGetLbLocal(vars[i]));
 
          /* perturb point to hopefuly obtain a facet of the convex envelope */
          aux[i] += aux[i] > perturbation ? -perturbation : perturbation;
