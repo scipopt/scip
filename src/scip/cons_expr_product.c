@@ -236,7 +236,7 @@ SCIP_RETCODE freeExprlist(
    return SCIP_OKAY;
 }
 
-/** builds LP used to compute facets of the convex envelope of multilinear functionsi, see separatePointProduct */
+/** builds LP used to compute facets of the convex envelope of multilinear functions, see separatePointProduct */
 /* FIXME how does \ref works? */
 static
 SCIP_RETCODE buildMultilinearSeparationLP(
@@ -359,41 +359,57 @@ SCIP_Real evalCorner(
    return val;
 }
 
-#ifdef RIKUN
-/** checks if a facet is really an underestimate for all corners of the domain [l,u]; because of numerics it can happen
- * that a facet violates a corner of the domain; to make the facet valid we subtract the maximum violation from the
- * constant part of the facet; its a good excersise to write a comment describing the gray code...
+/** the given facet might not be a valid under(over)estimator, because of numerics and bad fixings; we compute \f$
+ * \max_{v \in V} f(v) - (\alpha v + \beta) \f$ (\f$\max_{v \in V} \alpha v + \beta - f(v) \f$) where \f$ V \f$ are the
+ * vertices of the domain, see separatePointProduct
  */
 static
-SCIP_Bool checkRikun(
+SCIP_Real computeMaxFacetError(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ECAGGR*          ecaggr,             /**< edge-concave aggregation data */
-   SCIP_Real*            fvals,              /**< array containing all corner values of the aggregation */
-   SCIP_Real*            facet               /**< current facet candidate (of dimension ecaggr->nvars + 1) */
+   SCIP_Real*            funvals,            /**< array containing the evaluation of the function at all corners */
+   SCIP_VAR**            vars,               /**< variables representing \f$ x_i \f$ */
+   int                   nvars,              /**< number of variables */
+   SCIP_Bool             overestimate,       /**< whether we check for an over or underestimator */
+   SCIP_Real             midval,             /**< coefficient representing \f$ mid(y) \f$ */
+   SCIP_INTERVAL         fixedinterval,      /**< interval evaluation of the fixed variables, \f$ \Pi_j y_j \f$ */
+   SCIP_Real*            facet               /**< current facet candidate (array of size nvars + 1 */
    )
 {
-   SCIP_Real maxviolation;
-   SCIP_Real val;
+   SCIP_Real maxerror;
+   SCIP_Real facetval;
+   SCIP_Real funval;
+   SCIP_Real error;
    unsigned int i;
    unsigned int ncorners;
    unsigned int prev;
 
    assert(scip != NULL);
-   assert(ecaggr != NULL);
-   assert(fvals != NULL);
+   assert(funvals != NULL);
    assert(facet != NULL);
 
-   ncorners = (unsigned int) poweroftwo[ecaggr->nvars];
-   maxviolation = 0.0;
+   ncorners = (unsigned int) poweroftwo[nvars];
+   maxerror = 0.0;
 
-   /* check for the origin */
-   val = facet[ecaggr->nvars];
-   for( i = 0; i < (unsigned int) ecaggr->nvars; ++i )
-      val += facet[i] * SCIPvarGetLbLocal(ecaggr->vars[i]);
+   /* check the origin */
+   facetval = facet[nvars];
+   for( i = 0; i < (unsigned int) nvars; ++i )
+      facetval += facet[i] * SCIPvarGetLbLocal(vars[i]);
 
-   /* update  maximum violation */
-   maxviolation = MAX(val - fvals[0], maxviolation);
-   assert(SCIPisFeasEQ(scip, maxviolation, 0.0));
+   /* compute largest/smallest possible value of function, depending on whether we are over/under-estimating */
+   funval = funvals[0] / midval;
+   if( overestimate )
+   {
+      funval *= funval > 0 ? fixedinterval.sup : fixedinterval.inf;
+      error = funval - facetval;
+   }
+   else
+   {
+      funval *= funval > 0 ? fixedinterval.inf : fixedinterval.sup;
+      error = facetval - funval;
+   }
+
+   /* update maximum error */
+   maxerror = MAX(error, maxerror);
 
    prev = 0;
    for( i = 1; i < ncorners; ++i )
@@ -411,33 +427,38 @@ SCIP_Bool checkRikun(
          ++pos;
 
       if( gray > prev )
-         val += facet[pos] * (SCIPvarGetUbLocal(ecaggr->vars[pos]) - SCIPvarGetLbLocal(ecaggr->vars[pos]));
+         facetval += facet[pos] * (SCIPvarGetUbLocal(vars[pos]) - SCIPvarGetLbLocal(vars[pos]));
       else
-         val -= facet[pos] * (SCIPvarGetUbLocal(ecaggr->vars[pos]) - SCIPvarGetLbLocal(ecaggr->vars[pos]));
+         facetval -= facet[pos] * (SCIPvarGetUbLocal(vars[pos]) - SCIPvarGetLbLocal(vars[pos]));
 
 
-      /* update  maximum violation */
-      maxviolation = MAX(val - fvals[gray], maxviolation);
-      assert(SCIPisFeasEQ(scip, maxviolation, 0.0));
+      /* compute largest/smallest possible value of function, depending on whether we are over/under-estimating */
+      funval = funvals[gray] / midval;
+      if( overestimate )
+      {
+         funval *= funval > 0 ? fixedinterval.sup : fixedinterval.inf;
+         error = funval - facetval;
+      }
+      else
+      {
+         funval *= funval > 0 ? fixedinterval.inf : fixedinterval.sup;
+         error = facetval - funval;
+      }
+
+      /* update  maximum error */
+      maxerror = MAX(error, maxerror);
 
       prev = gray;
    }
 
-   SCIPdebugMsg(scip, "maximum violation of facet: %2.8e\n", maxviolation);
+   SCIPdebugMsg(scip, "maximum error of facet: %2.8e\n", maxerror);
 
-   /* there seem to be numerical problems if the violation is too large; in this case we reject the facet */
-   if( maxviolation > ADJUSTFACETTOL )
-      return FALSE;
-
-   /* adjust constant part of the facet */
-   facet[ecaggr->nvars] -= maxviolation;
-
-   return TRUE;
+   return maxerror;
 }
-#endif
 
-/** computes a facet of convex/concave envelope of \f$ w = c \Pi_i x_i \f$ that tries to separate \f$ (w^*, x^*) \f$,
- * see separatePointProduct
+/** computes a facet of convex/concave envelope of \f$ w = c \Pi_i x_i \f$ that tries to separate \f$ (w^*, x^*) \f$;
+ * checks that the facet is valid for \f$ w = \frac{c}{mid(y)} \Pi_i x_i \Pi_j y_j \f$, where the \f$ y_j \f$ are
+ * (almost) fixed, see technical details of separatePointProduct
  */
 static
 SCIP_RETCODE computeFacet(
@@ -449,15 +470,18 @@ SCIP_RETCODE computeFacet(
    SCIP_VAR*             auxvar,             /**< variable representing \f$ w \f$ */
    SCIP_Real             coefficient,        /**< coefficient representing \f$ c \f$ */
    SCIP_Bool             overestimate,       /**< whether to compute facet of concave (TRUE) or convex (FALSE) envelope */
+   SCIP_Real             midval,             /**< coefficient representing \f$ mid(y) \f$ */
+   SCIP_INTERVAL         fixedinterval,      /**< interval evaluation of the fixed variables, \f$ \Pi_j y_j \f$ */
    SCIP_Real*            violation,          /**< buffer to store the violation between facet and sol */
    SCIP_Real*            facet               /**< buffer to store the facet; facet[nvars] holds facet's constant */
    )
 {
-   SCIP_Real* fvals;
+   SCIP_Real* funvals;
    SCIP_Real* aux; /* used for settings sides and getting the dual solution */
    SCIP_Real* lb;
    SCIP_Real* ub;
    SCIP_Real perturbation;
+   SCIP_Real maxfaceterror; /* stores violation between facet and function */
    int* inds;
    int ncorners;
    int ncols;
@@ -469,7 +493,7 @@ SCIP_RETCODE computeFacet(
    SCIP_CALL( SCIPlpiGetNRows(lp, &nrows) );
 
    /* allocate necessary memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &fvals, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &funvals, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &aux, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lb, ncols) );
@@ -485,13 +509,14 @@ SCIP_RETCODE computeFacet(
 
    for( i = 0; i < ncols; ++i )
    {
-      fvals[i] = i < ncorners ? evalCorner(vars, nvars, coefficient, i) : 0.0;
+      funvals[i] = i < ncorners ? evalCorner(vars, nvars, coefficient, i) : 0.0;
       inds[i] = i;
 
       /* update bounds; variables that are not in the LP are get fixed to 0 */
       lb[i] = 0.0;
       ub[i] = i < ncorners ? 1.0 : 0.0;
-      SCIPdebugMsg(scip, "bounds of LP col %d = [%e, %e]; obj = %e\n", i, lb[i], ub[i], fvals[i]);
+
+      SCIPdebugMsg(scip, "bounds of LP col %d = [%e, %e]; obj = %e\n", i, lb[i], ub[i], funvals[i]);
    }
 
    /* compute T^-1(x^*), i.e. T^-1(x^*)_i = (x^*_i - lb_i)/(ub_i - lb_i) */
@@ -529,7 +554,7 @@ SCIP_RETCODE computeFacet(
    }
 
    /* update LP */
-   SCIP_CALL( SCIPlpiChgObj(lp, ncols, inds, fvals) );
+   SCIP_CALL( SCIPlpiChgObj(lp, ncols, inds, funvals) );
    SCIP_CALL( SCIPlpiChgBounds(lp, ncols, inds, lb, ub) );
    SCIP_CALL( SCIPlpiChgSides(lp, nrows, inds, aux, aux) );
    SCIP_CALL( SCIPlpiChgObjsen(lp, overestimate ? SCIP_OBJSEN_MAXIMIZE : SCIP_OBJSEN_MINIMIZE) );
@@ -603,44 +628,57 @@ SCIP_RETCODE computeFacet(
 
       SCIPdebugMsgPrint(scip, "%3.4e * %s + ", facet[i], SCIPvarGetName(vars[i]));
    }
-   SCIPdebugMsgPrint(scip, "%3.4e\n", facet[nvars]);
+   SCIPdebugMsgPrint(scip, "%3.4e ", facet[nvars]);
 
    /* add \beta to the violation: at this point in the code, violation = g(x^*) */
    *violation += facet[nvars];
 
    /* compute actual violation */
    if( overestimate )
-   {
       *violation = SCIPgetSolVal(scip, sol, auxvar) - *violation;
-   }
    else
-   {
       *violation = *violation - SCIPgetSolVal(scip, sol, auxvar);
-   }
+
+   SCIPdebugMsgPrint(scip, "has a violation of %g\n", violation);
 
    /* if cut doesn't separate x^* (i.e. violation <= 0) there is no point in going on, since we only weaking the cut */
    if( SCIPisLE(scip, *violation, 0.0) )
    {
       /* free memory and return */
       SCIPfreeBufferArray(scip, &aux);
-      SCIPfreeBufferArray(scip, &fvals);
+      SCIPfreeBufferArray(scip, &funvals);
 
       return SCIP_OKAY;
    }
 
    /*
-    *  5. adjust and check facet with the algorithm of Rikun et al.
+    *  5. check and adjust facet with the algorithm of Rikun et al.
     */
 
-   //if( checkRikun(scip, ecaggr, fvals, facet) )
-   //{
-   //   SCIPdebugMsg(scip, "facet pass the check of Rikun et al.\n");
-   //   *success = TRUE;
-   //}
+   maxfaceterror = computeMaxFacetError(scip, funvals, vars, nvars, overestimate, midval, fixedinterval, facet);
+
+   /* adjust constant part of the facet by maxerror to make it a valid over/underestimator (not facet though) */
+   if( maxfaceterror > 0 )
+   {
+      /* there seem to be numerical problems if the error is too large; in this case we reject the facet */
+      if( maxfaceterror > ADJUSTFACETTOL )
+      {
+         SCIPdebugMsg(scip, "facet pass the check of Rikun et al.\n");
+         *violation = -1.0;
+      }
+
+      if( overestimate )
+         facet[nvars] += maxfaceterror;
+      else
+         facet[nvars] -= maxfaceterror;
+
+      /* update violation */
+      *violation -= maxfaceterror;
+   }
 
    /* free allocated memory */
    SCIPfreeBufferArray(scip, &aux);
-   SCIPfreeBufferArray(scip, &fvals);
+   SCIPfreeBufferArray(scip, &funvals);
 
    return SCIP_OKAY;
 }
@@ -1361,7 +1399,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
  *              \max \, \alpha^T x^* + \beta
  * \f]
  * \f[
- *     s.t. \; \sum_i \alpha^T v^i + \beta \le f(v^i), \, \forall i = 1, \ldots, 2^n
+ *     s.t. \; \alpha^T v^i + \beta \le f(v^i), \, \forall i = 1, \ldots, 2^n
  * \f]
  *
  * In principle, one would need to update the LP whenever the domain changes. However, \f$ [\ell,u] = T([0, 1]^n) \f$,
@@ -1378,7 +1416,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
  *              \max \, \bar \alpha^T T^{-1}(x^*) + \bar \beta
  * \f]
  * \f[
- *     s.t. \; \sum_i \bar \alpha^T u + \bar \beta \le f(T(u)), \, \forall u \in \{0, 1\}^n
+ *     s.t. \; \bar \alpha^T u + \bar \beta \le f(T(u)), \, \forall u \in \{0, 1\}^n
  * \f]
  *
  * and recover \f$ g \f$ by solving \f$ \bar \alpha_i = (u_i - \ell_i) \alpha_i, \bar \beta = \sum_i \alpha_i \ell_i +
@@ -1404,7 +1442,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
  * of minimize.
  *
  * #### Technical and implementation details
- * -# The special case \f$ n = 2 \f$ is handle separately
+ * -# The special case \f$ n = 2 \f$ is handled separately
  * -# \f$ U \f$ has exponentially many variables, so we only apply this separator for \f$ n \leq 10 \f$
  * -# We store a unique LP containing \f$ U = [u^1 | u^2 | \cdots | u^{2^n}] \f$, and \f$ U \f$ is build in such a way
  * that its submatrices consisting of the first \f$ k \f$ rows and first \f$ 2^k \f$ columns contains all the vectors in
@@ -1414,6 +1452,11 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
  * among all product expressions.
  * -# If the bounds are not finite, there is no underestimator. Also, \f$ T^{-1}(x^*) \f$ must be in the domain,
  * otherwise the dual is infeasible
+ * -# After a facet is computed, we check whether it is a valid facet (i.e. we check \f$ \alpha^T v + \beta \le f(v) \f$
+ * for every vertex \f$ v \f$). If we find a violation of at most ADJUSTFACETTOL, then we weaken \f$ \beta \f$ by this
+ * amount, otherwise, we discard the cut.
+ * -# If a variable is fixed within tolerances, we replace it with its value and compute the facet of the remaining
+ * expression. Note that since we are checking the cut for validity, this will never produce wrong result.
  * -# In every iteration we set _all_ \f$ 2^n \f$ bounds and objective values. The reason is that different products
  * have different number of children, so we might need to fix/unfix more variables
  * -# If \f$ x^* \f$ is in the boundary of the domain, then the LP has infinitely many solutions, some of which might
@@ -1436,6 +1479,19 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
  * information to maybe solve another to find a facet? How do the polytopes defining the pieces where the convex
  * envelope is linear looks like, i.e, given a point in the interior of a facet of the domain, does the midpoint of the
  * segment joining \f$ x^* \f$ with the center of the domain, always belongs to the interior of one of those polytopes?
+ *
+ * @todo checking that the computed cut is valid could be done more efficient: when there are no fixed variables, we can
+ * use the gray code to loop over the vertices in order to evaluate the underestimator (the evaluation of the function
+ * should be available in fval (see computeFacet)). When there are fixed variables, we compute the underestimator for a
+ * different function: suppose \f$ f(x,y) = c \Pi_i x_i \Pi_j y_j \f$ is the function we are underestimating and we fix
+ * the \f$ y \f$ variables at their mid point. Let \f$ y_m = \Pi_j mid(y_j) \f$, then we are actually computing an
+ * underestimator for \f$ h(x) = f(x, mid(y)) = c y_m \Pi_i x_i \f$. Let \f$ \alpha x + \beta \f$ be the underestimator
+ * and \f$ [y_l, y_u] \f$ be the interval of \f$ \Pi_j y_j \f$. To ensure the validity of the underestimator, we need to
+ * check whether \f$ \alpha x + \beta \le f(x,y) \f$ for every vertex of the domains \f$ [x] \f$ and \f$ [y] \f$.
+ * Given a vertex of \f$ x^i \in [x] \f$ we just need to pick the vertex of \f$ [y] \f$ that produces the worst value
+ * for \f$ f(x^i, y) \f$. However, since \f$ y \f$ don't appear in the underestimator, we don't care about the vertex
+ * itself, but of the value. This value has to be \f$ y_l \f$ or \f$ y_u \f$. So we actually just need to check whether
+ * \f$ \alpha x^i + \beta \le \min{ \frac{h(x^i) y_l}{y_m}, \frac{h(x^i) y_u}{y_m} } \f$
  */
 static
 SCIP_RETCODE separatePointProduct(
@@ -1491,6 +1547,28 @@ SCIP_RETCODE separatePointProduct(
 
    overestimate = SCIPisLT(scip, violation, 0.0);
    success = FALSE;
+
+   /* debug output: prints expression we are trying to separate, bounds of variables and point */
+#ifdef SCIP_DEBUG
+   SCIPdebugMsg(scip, "separating product with %d variables: will try to separate violated point (%g) by an %s\n",
+         SCIPgetConsExprExprNChildren(expr), violation, overestimate ? "overestimator": "underestimator");
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      child = SCIPgetConsExprExprChildren(expr)[c];
+      var = SCIPgetConsExprExprLinearizationVar(child);
+      assert(var != NULL);
+      SCIPdebugMsg(scip, "var: %s = %g in [%g, %g]\n", SCIPvarGetName(var), SCIPgetSolVal(scip, sol, var),
+            SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+
+      if( SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+      {
+         SCIPdebugMsg(scip, "unbounded factor related to\n");
+         SCIP_CALL( SCIPdismantleConsExprExpr(scip, child) );
+      }
+   }
+   SCIPdebugMsg(scip, "The product should be equal to auxvar: %s = %g in [%g, %g]\n", SCIPvarGetName(auxvar),
+         SCIPgetSolVal(scip, sol, auxvar), SCIPvarGetLbLocal(auxvar), SCIPvarGetUbLocal(auxvar));
+#endif
 
    /* bilinear term */
    if( SCIPgetConsExprExprNChildren(expr) == 2 )
@@ -1559,9 +1637,12 @@ SCIP_RETCODE separatePointProduct(
    {
       /* general case */
       SCIP_CONSEXPR_EXPRHDLRDATA* exprhdlrdata;
+      SCIP_INTERVAL fixedinterval;
       SCIP_Real* facet;
       SCIP_VAR** vars;
+      SCIP_Real midval;
       int nvars;
+      int pos;
       int i;
 
       exprhdlrdata = SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlrProduct(conshdlr));
@@ -1581,29 +1662,59 @@ SCIP_RETCODE separatePointProduct(
       assert(exprhdlrdata->multilinearseparationlp != NULL);
       assert(exprhdlrdata->lpsize > 0);
 
-      /* prepare data to compute the facet */
+      /* prepare data to compute a facet of the envelope */
       nvars = SCIPgetConsExprExprNChildren(expr);
 
       /* allocate necessary memory */
       SCIP_CALL( SCIPallocBufferArray(scip, &facet, nvars + 1) );
       SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
 
-      /* store variables */
+      /* store variables: we only store variables that are not fixed; compute the product of the fixed mid point of the
+       * fix variables along with their interval product
+       */
+      pos = 0;
+      midval = 1.0;
+      SCIPintervalSet(&fixedinterval, 1.0);
       for( i = 0; i < nvars; ++i )
-         vars[i] = SCIPgetConsExprExprLinearizationVar(SCIPgetConsExprExprChildren(expr)[i]);
-
-      /* compute facet */
-      SCIP_CALL( computeFacet(scip, exprhdlrdata->multilinearseparationlp, sol, vars, nvars, auxvar,
-               exprdata->coefficient, overestimate, &violation, facet) );
-
-      if( SCIPisLE(scip, violation, 0.0) )
       {
-         /* free memory and return */
-         SCIPfreeBufferArray(scip, &vars);
-         SCIPfreeBufferArray(scip, &facet);
+         var = SCIPgetConsExprExprLinearizationVar(SCIPgetConsExprExprChildren(expr)[i]);
 
-         return SCIP_OKAY;
+         if( SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+         {
+            SCIPdebugMsg(scip, "a factor is unbounded, no cut is possible\n");
+            goto CLEANUP;
+         }
+
+         if( !SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) )
+         {
+            vars[pos] = var;
+            ++pos;
+         }
+         else
+         {
+            SCIP_INTERVAL bounds;
+
+            midval *= (SCIPvarGetUbLocal(var) + SCIPvarGetLbLocal(var)) / 2.0;
+            SCIPintervalSetBounds(&bounds, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+            SCIPintervalMul(SCIPinfinity(scip), &fixedinterval, fixedinterval, bounds);
+         }
       }
+      nvars = pos; /* update number of vars */
+
+      /* nothing to do if all variables are fixed */
+      /* TODO if a single variable is unfix, should we add the linear equality w = constant * the_unfix_var ?? */
+      if( nvars == 0 )
+         goto CLEANUP;
+
+      SCIPdebugMsg(scip, "computing multilinear cut with %d variables, coef %g, midval %g\n", nvars, midval * exprdata->coefficient, midval );
+
+      /* compute facet of fixmid * coefficient * \Pi_i vars[i] */
+      SCIP_CALL( computeFacet(scip, exprhdlrdata->multilinearseparationlp, sol, vars, nvars, auxvar, midval *
+               exprdata->coefficient, overestimate, midval, fixedinterval, &violation, facet) );
+
+      /* if we can't separate the point, return */
+      if( SCIPisLE(scip, violation, 0.0) )
+         goto CLEANUP;
 
       /* build cut; multilinear cuts are only valid locally */
       SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "multilinear", 0, NULL, NULL, -SCIPinfinity(scip),
@@ -1621,6 +1732,7 @@ SCIP_RETCODE separatePointProduct(
          SCIP_CALL( SCIPchgRowRhs(scip, *cut, -facet[nvars]) );
       }
 
+CLEANUP:
       SCIPfreeBufferArray(scip, &vars);
       SCIPfreeBufferArray(scip, &facet);
    }
@@ -1658,7 +1770,14 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaProduct)
    *ncuts += 1;
 
 #ifdef SCIP_DEBUG
-   SCIPdebugMsg(scip, "add cut with violation %e\n", violation);
+   if( *result == infeasible )
+   {
+      SCIPdebugMsg(scip, "add cut makes node infeasible!\n");
+   }
+   else
+   {
+      SCIPdebugMsg(scip, "add cut with violation %e\n", -SCIPgetRowSolFeasibility(scip, cut, sol));
+   }
    SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
 #endif
 
