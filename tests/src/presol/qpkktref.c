@@ -31,9 +31,6 @@
 
 #include "include/scip_test.h"
 
-/* macro to interface to criterion */
-#define SCIP_CALL_CR(x) cr_assert( (x) == SCIP_OKAY );
-
 
 /** check number of added KKT constraints */
 static
@@ -728,38 +725,38 @@ Test(qpkktref, runUnittest)
       SCIP_Bool equal = FALSE;
 
       /* initialize SCIP */
-      SCIP_CALL_CR( SCIPcreate(&scip1) );
-      SCIP_CALL_CR( SCIPcreate(&scip2) );
+      SCIP_CALL( SCIPcreate(&scip1) );
+      SCIP_CALL( SCIPcreate(&scip2) );
 
       /* include QP settings to scip1 (KKT conditions are not added, all presolvers are turned off) */
-      SCIP_CALL_CR( includeQPSettings(scip1) );
+      SCIP_CALL( includeQPSettings(scip1) );
 
       /* include KKT settings to scip2 (KKT conditions are added, all presolvers are turned off) */
-      SCIP_CALL_CR( includeKKTSettings(scip2) );
+      SCIP_CALL( includeKKTSettings(scip2) );
 
       /* create problem */
-      SCIP_CALL_CR( createProb(scip1, j) );
-      SCIP_CALL_CR( createProb(scip2, j) );
+      SCIP_CALL( createProb(scip1, j) );
+      SCIP_CALL( createProb(scip2, j) );
 
       /* solve */
-      SCIP_CALL_CR( SCIPsolve(scip1) );
-      SCIP_CALL_CR( SCIPsolve(scip2) );
+      SCIP_CALL( SCIPsolve(scip1) );
+      SCIP_CALL( SCIPsolve(scip2) );
       /*
-      SCIP_CALL_CR( SCIPprintBestSol(scip1, NULL, FALSE) );
-      SCIP_CALL_CR( SCIPprintStatistics(scip1, NULL) );
+      SCIP_CALL( SCIPprintBestSol(scip1, NULL, FALSE) );
+      SCIP_CALL( SCIPprintStatistics(scip1, NULL) );
       */
-      /*SCIP_CALL_CR( SCIPwriteTransProblem(scip2, "trafounittestQP.lp", NULL, FALSE ) );*/
+      /*SCIP_CALL( SCIPwriteTransProblem(scip2, "trafounittestQP.lp", NULL, FALSE ) );*/
 
       if ( SCIPisFeasEQ(scip1, SCIPgetPrimalbound(scip1), SCIPgetPrimalbound(scip2) ) )
          equal = TRUE;
 
       /* free transformed problem */
-      SCIP_CALL_CR( SCIPfreeTransform(scip1) );
-      SCIP_CALL_CR( SCIPfreeTransform(scip2) );
+      SCIP_CALL( SCIPfreeTransform(scip1) );
+      SCIP_CALL( SCIPfreeTransform(scip2) );
 
       /* free SCIP */
-      SCIP_CALL_CR( SCIPfree(&scip1) );
-      SCIP_CALL_CR( SCIPfree(&scip2) );
+      SCIP_CALL( SCIPfree(&scip1) );
+      SCIP_CALL( SCIPfree(&scip2) );
 
       cr_assert( equal );
 
