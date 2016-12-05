@@ -129,7 +129,7 @@
  * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  3.2.1.2
+ * @version  4.0.0
  *
  * \image html scippy.png
  *
