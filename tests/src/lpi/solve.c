@@ -57,7 +57,7 @@ static
 void teardown(void)
 {
    SCIP_CALL( SCIPlpiFree(&lpi) );
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!");
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!");
 }
 
 TestSuite(solve, .init = setup, .fini = teardown);
