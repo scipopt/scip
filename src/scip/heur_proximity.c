@@ -685,6 +685,7 @@ SCIP_RETCODE SCIPapplyProximity(
    int i;
 
    SCIP_Bool valid;
+   SCIP_Bool success;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -786,9 +787,10 @@ SCIP_RETCODE SCIPapplyProximity(
 
       /* copy complete SCIP instance */
       valid = FALSE;
+
       /* create a problem copy as sub SCIP */
-      SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "dins", NULL, NULL, 0, heurdata->uselprows, TRUE, &valid) );
-      assert(valid);
+      SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "dins", NULL, NULL, 0, heurdata->uselprows, TRUE,
+            &success, &valid) );
 
       SCIPdebugMsg(scip, "Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
@@ -962,8 +964,6 @@ SCIP_RETCODE SCIPapplyProximity(
    if( nsubsols > 0 )
    {
       /* try to translate the sub problem solution to the original scip instance */
-      SCIP_Bool success;
-
       success = FALSE;
       SCIP_CALL( createNewSol(scip, subscip, subvars, heur, incumbent, heurdata->usefinallp, &success) );
 

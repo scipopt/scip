@@ -647,7 +647,7 @@ SCIP_RETCODE applyCompletesol(
    SCIP* subscip;
    SCIP_HASHMAP* varmapf;
    SCIP_VAR** vars;
-   SCIP_VAR** subvars;
+   SCIP_VAR** subvars = NULL;
    SCIP_Bool* tightened;
    SCIP_EVENTHDLR* eventhdlr;
    int nvars;
@@ -694,6 +694,8 @@ SCIP_RETCODE applyCompletesol(
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapf, SCIPblkmem(subscip), nvars) );
+
+   /* allocate memory to align the SCIP and the sub-SCIP variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
    eventhdlr = NULL;
@@ -717,6 +719,7 @@ SCIP_RETCODE applyCompletesol(
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapf, vars[i]);
      assert(subvars[i] != NULL);
    }
+
    /* free hash map */
    SCIPhashmapFree(&varmapf);
 

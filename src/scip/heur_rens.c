@@ -448,7 +448,8 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
 
    /* create a problem copy as sub SCIP */
-   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "rens", fixedvars, fixedvals, nfixedvars, uselprows, heurdata->copycuts, &success) );
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "rens", fixedvars, fixedvals, nfixedvars, uselprows,
+         heurdata->copycuts, &success, NULL) );
 
    eventhdlr = NULL;
    /* create event handler for LP events */

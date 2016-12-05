@@ -828,7 +828,8 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    success = FALSE;
 
    /* create a copy of the transformed problem to be used by the heuristic */
-   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "crossover", fixedvars, fixedvals, nfixedvars, heurdata->uselprows, heurdata->copycuts, &success) );
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "crossover", fixedvars, fixedvals, nfixedvars,
+         heurdata->uselprows, heurdata->copycuts, &success, NULL) );
 
    eventhdlr = NULL;
    /* create event handler for LP events */

@@ -698,6 +698,10 @@ SCIP_DECL_HEUREXEC(heurExecDins)
       goto TERMINATE;
 
    *result = SCIP_DIDNOTFIND;
+
+   SCIPdebugMsg(scip, "DINS subproblem: %d vars (%d binvars & %d intvars), %d cons\n",
+      SCIPgetNVars(subscip), SCIPgetNBinVars(subscip) , SCIPgetNIntVars(subscip) , SCIPgetNConss(subscip));
+
    /* initialize the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
 
@@ -709,9 +713,8 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    eventhdlr = NULL;
 
    /* create a problem copy as sub SCIP */
-   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "dins", fixedvars, fixedvals, binfixings + intfixings, heurdata->uselprows, heurdata->copycuts, &success) );
-   SCIPdebugMsg(scip, "DINS subproblem: %d vars (%d binvars & %d intvars), %d cons\n",
-      SCIPgetNVars(subscip), SCIPgetNBinVars(subscip) , SCIPgetNIntVars(subscip) , SCIPgetNConss(subscip));
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "dins", fixedvars, fixedvals, binfixings + intfixings,
+         heurdata->uselprows, heurdata->copycuts, &success, NULL) );
 
    /* create event handler for LP events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecDins, NULL) );

@@ -908,13 +908,15 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
    SCIP_Bool             uselprows,          /**< should the linear relaxation of the problem defined by LP rows be copied? */
    SCIP_Bool             copycuts,           /**< should cuts be copied (only if uselprows == FALSE) */
-   SCIP_Bool*            success             /**< was the copying successful? */
+   SCIP_Bool*            success,            /**< was the copying successful? */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    )
 {
    assert(sourcescip != NULL);
    assert(suffix != NULL);
    assert(subscip != NULL);
    assert(varmap != NULL);
+   assert(success != NULL);
 
    if( uselprows )
    {
@@ -937,7 +939,8 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    }
    else
    {
-      SCIP_CALL( SCIPcopyConsCompression(sourcescip, subscip, varmap, NULL, suffix, fixedvars, fixedvals, nfixedvars, TRUE, FALSE, TRUE, success) );
+      SCIP_CALL( SCIPcopyConsCompression(sourcescip, subscip, varmap, NULL, suffix, fixedvars, fixedvals, nfixedvars,
+            TRUE, FALSE, TRUE, valid) );
 
       if( copycuts )
       {
@@ -945,6 +948,8 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
          SCIP_CALL( SCIPcopyCuts(sourcescip, subscip, varmap, NULL, TRUE, NULL) );
       }
    }
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }

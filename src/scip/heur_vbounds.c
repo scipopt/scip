@@ -707,7 +707,7 @@ SCIP_RETCODE applyVbounds(
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
-      SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_vbounds", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_vbounds", NULL, NULL, 0, FALSE, FALSE, TRUE, NULL) );
 
       if( heurdata->copycuts )
       {
