@@ -79,6 +79,7 @@ SCIP_RETCODE testNlpi()
    int* lininds;
    int nquadelems;
    int nlinds;
+   int i;
 
    /*-----------------------------------------------------------------------
     *
@@ -135,10 +136,15 @@ SCIP_RETCODE testNlpi()
          NULL, NULL, &consnames[2]) );
 
    /* solve NLP */
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-10) );
    SCIP_CALL( SCIPnlpiSolve(nlpi, nlpiprob) );
 
    /* check primal solution */
    SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, NULL, NULL, NULL) );
+
+   for( i = 0; i < 4; ++i )
+      printf("x[%d] = %g\n", i, primal[i]);
+
    cr_expect(SCIPisFeasEQ(scip, primal[0], 0.0));
    cr_expect(SCIPisFeasEQ(scip, primal[1], 0.5));
    cr_expect(SCIPisFeasEQ(scip, primal[2], 1.0));
@@ -149,6 +155,8 @@ SCIP_RETCODE testNlpi()
    SCIPfreeBufferArray(scip, &lininds);
    SCIPfreeBufferArray(scip, &quadelems);
    SCIP_CALL( SCIPnlpiFreeProblem(nlpi, &nlpiprob) );
+
+   return SCIP_OKAY;
 }
 
 Test(nlpi, worhp, .init = setup, .fini = teardown,

@@ -47,7 +47,10 @@ struct SCIP_NlpiData
 {
    BMS_BLKMEM*                 blkmem;       /**< block memory */
    SCIP_MESSAGEHDLR*           messagehdlr;  /**< message handler */
+
+   /* parameter */
    SCIP_Real                   infinity;     /**< initial value for infinity */
+   SCIP_Real                   feastol;      /**< feastol */
 };
 
 /* TODO: fill in the necessary NLP problem instance data */
@@ -65,18 +68,56 @@ struct SCIP_NlpiProblem
    int                         lastsolsize;  /**< size of lastsol array */
    int                         lastniter;    /**< number of iterations in last run */
 
-   /* Worhp data structures (not used yet) */
+   /* Worhp data structures */
    OptVar*                     opt;          /**< Worhp variables  */
    Workspace*                  wsp;          /**< Worhp working space */
    Params*                     par;          /**< Worhp parameters */
    Control*                    cnt;          /**< Worhp control */
-
 };
 
+/** tuple containing row and column indices */
+struct Tuple
+{
+   int                         rowidx;       /**< row index */
+   int                         colidx;       /**< column index */
+   int                         col;          /**< column (value) */
+   int                         pos;          /**< position in sparse oracle data */
+};
+typedef struct Tuple TUPLE;
 
 /*
  * Local methods
  */
+
+/** comparison method for two tuples w.r.t. the column major order */
+static
+SCIP_DECL_SORTPTRCOMP(compColumnMajor)
+{
+   TUPLE* t1 = (TUPLE*)elem1;
+   TUPLE* t2 = (TUPLE*)elem2;
+
+   if( t1->col != t2->col )
+      return t1->col - t2->col;
+   return t1->rowidx - t2->rowidx;
+}
+
+/** comparison method for two tuples w.r.t. the column major order for lower triangle part followed by diagonal elements */
+static
+SCIP_DECL_SORTPTRCOMP(compColumnMajorLT)
+{
+   TUPLE* t1 = (TUPLE*)elem1;
+   TUPLE* t2 = (TUPLE*)elem2;
+
+   /* diagonal elements should be at the very end */
+   if( (t1->col == t1->rowidx) && (t2->col == t2->rowidx) )
+      return t1->col - t2->col;
+   if( (t1->col != t1->rowidx) && (t2->col == t2->rowidx) )
+      return -1;
+   if( (t1->col == t1->rowidx) && (t2->col != t2->rowidx) )
+      return 1;
+
+   return compColumnMajor(elem1, elem2);
+}
 
 /** clears the last solution information */
 static
@@ -294,7 +335,6 @@ SCIP_RETCODE evaluateWorhpRun(
   return SCIP_OKAY;
 }
 
-
 /** evaluates objective function and store the result in the corresponding WORHP data fields */
 static
 SCIP_RETCODE userF(
@@ -312,12 +352,23 @@ SCIP_RETCODE userF(
    assert(problem->opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle));
 
    SCIP_CALL( SCIPnlpiOracleEvalObjectiveValue(problem->oracle, problem->opt->X, &objval) );
-   problem->opt->F *= problem->wsp->ScaleObj * objval;
+   problem->opt->F = problem->wsp->ScaleObj * objval;
+
+#ifdef SCIP_DEBUG_USERF
+   {
+      int i;
+
+      printf("userF()\n");
+      for( i = 0; i < problem->opt->n; ++i )
+         printf("  x[%d] = %g\n", i, problem->opt->X[i]);
+      printf("  obj = %g\n", problem->opt->F);
+   }
+#endif
 
    return SCIP_OKAY;
 }
 
-/** evaluates objective function and store the result in the corresponding WORHP data fields */
+/** evaluates constraints and store the result in the corresponding WORHP data fields */
 static
 SCIP_RETCODE userG(
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
@@ -332,6 +383,19 @@ SCIP_RETCODE userG(
    assert(problem->opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle));
 
    SCIP_CALL( SCIPnlpiOracleEvalConstraintValues(problem->oracle, problem->opt->X, problem->opt->G) );
+
+#ifdef SCIP_DEBUG_USERG
+   {
+      int i;
+
+      printf("userG()\n");
+      for( i = 0; i < problem->opt->n; ++i )
+         printf("  x[%d] = %g\n", i, problem->opt->X[i]);
+
+      for( i = 0; i < problem->opt->m; ++i )
+         printf("  cons[%d] = %g\n", i, problem->opt->G[i]);
+   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -364,15 +428,32 @@ SCIP_RETCODE userDF(
          problem->wsp->DF.val[i] *= problem->wsp->ScaleObj;
    }
 
+#ifdef SCIP_DEBUG_USERDF
+   {
+      int i;
+
+      printf("userDF()\n");
+      for( i = 0; i < problem->opt->n; ++i )
+         printf("  x[%d] = %g\n", i, problem->opt->X[i]);
+
+      for( i = 0; i < problem->opt->n; ++i )
+         printf("  DF[%d] = %g\n", i, problem->wsp->DF.val[i]);
+   }
+#endif
+
    return SCIP_OKAY;
 }
 
 /** computes jacobian matrix and store the result in the corresponding WORHP data fields */
 static
 SCIP_RETCODE userDG(
-   SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
+   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
+   TUPLE**               dginds              /**< column and row indices of jacobian */
    )
 {
+   SCIP_Real* jacvals;
+   int i;
+
    assert(problem != NULL);
    assert(problem->oracle != NULL);
    assert(problem->blkmem != NULL);
@@ -380,8 +461,35 @@ SCIP_RETCODE userDG(
    assert(problem->wsp != NULL);
    assert(problem->opt->n = SCIPnlpiOracleGetNVars(problem->oracle));
    assert(problem->opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle));
+   assert(dginds != NULL);
 
-   SCIP_CALL( SCIPnlpiOracleEvalJacobian(problem->oracle, problem->opt->X, TRUE, NULL, problem->wsp->DG.val) );
+   SCIP_ALLOC( BMSallocMemoryArray(&jacvals, problem->wsp->DG.nnz) );
+   SCIP_CALL( SCIPnlpiOracleEvalJacobian(problem->oracle, problem->opt->X, TRUE, NULL, jacvals) );
+
+   /* map values with DG indices */
+   for( i = 0; i < problem->wsp->DG.nnz; ++i )
+   {
+      assert(dginds[i] != NULL);
+      problem->wsp->DG.val[i] = jacvals[dginds[i]->pos];
+   }
+
+   /* free memory */
+   BMSfreeMemoryArray(&jacvals);
+
+#ifdef SCIP_DEBUG_USERDG
+   {
+      printf("userDG()\n");
+      for( i = 0; i < problem->opt->n; ++i )
+      {
+         printf("  x[%d] = %g\n", i, problem->opt->X[i]);
+      }
+
+      for( i = 0; i < problem->wsp->DG.nnz; ++i )
+      {
+         printf("  DG[%d] = %g\n", i, problem->wsp->DG.val[i]);
+      }
+   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -389,9 +497,13 @@ SCIP_RETCODE userDG(
 /** computes hessian matrix and store the result in the corresponding WORHP data fields */
 static
 SCIP_RETCODE userHM(
-   SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
+   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
+   TUPLE**               hminds              /**< column and row indices of hessian */
    )
 {
+   SCIP_Real* hessianvals;
+   int i;
+
    assert(problem != NULL);
    assert(problem->oracle != NULL);
    assert(problem->blkmem != NULL);
@@ -399,6 +511,50 @@ SCIP_RETCODE userHM(
    assert(problem->wsp != NULL);
    assert(problem->opt->n = SCIPnlpiOracleGetNVars(problem->oracle));
    assert(problem->opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle));
+   assert(hminds != NULL);
+
+   /* evaluate hessian */
+   SCIP_ALLOC( BMSallocMemoryArray(&hessianvals, problem->wsp->HM.nnz) );
+   SCIP_CALL( SCIPnlpiOracleEvalHessianLag(problem->oracle, problem->opt->X, TRUE, problem->wsp->ScaleObj,
+         problem->opt->Mu, hessianvals) );
+
+   for( i = 0; i < problem->wsp->HM.nnz; ++i )
+   {
+      assert(hminds[i] != NULL);
+
+      /* check whether entry corresponds to an non-existing diagonal element */
+      if( hminds[i]->pos == -1 )
+      {
+         assert(hminds[i]->colidx == -1);
+         assert(hminds[i]->rowidx == hminds[i]->col);
+         problem->wsp->HM.val[i] = 0;
+      }
+      else
+      {
+         assert(hminds[i]->colidx != -1);
+         assert(hminds[i]->pos >= 0);
+
+         problem->wsp->HM.val[i] = hessianvals[hminds[i]->pos];
+      }
+   }
+
+   /* free memory */
+   BMSfreeMemoryArray(&hessianvals);
+
+#ifdef SCIP_DEBUG_HM
+   {
+      printf("userHM()\n");
+      for( i = 0; i < problem->opt->n; ++i )
+      {
+         printf("  x[%d] = %g\n", i, problem->opt->X[i]);
+      }
+
+      for( i = 0; i < problem->wsp->HM.nnz; ++i )
+      {
+         printf("  HM[%d] = %g\n", i, problem->wsp->HM.val[i]);
+      }
+   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -441,7 +597,10 @@ SCIP_DECL_NLPICOPY( nlpiCopyWorhp )
 
    targetdata->blkmem = sourcedata->blkmem;
    targetdata->messagehdlr = sourcedata->messagehdlr;
+
+   /* copy parameter */
    targetdata->infinity = sourcedata->infinity;
+   targetdata->feastol = sourcedata->feastol;
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -507,7 +666,8 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
    if( *problem == NULL )
       return SCIP_NOMEMORY;
 
-   /* initialize data for oracle */
+   /* initialize problem */
+   (*problem)->blkmem = data->blkmem;
    SCIP_CALL( SCIPnlpiOracleCreate(data->blkmem, &(*problem)->oracle) );
    SCIP_CALL( SCIPnlpiOracleSetInfinity((*problem)->oracle, data->infinity) );
    SCIP_CALL( SCIPnlpiOracleSetProblemName((*problem)->oracle, name) );
@@ -517,7 +677,6 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
    SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, &(*problem)->wsp) );
    SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, &(*problem)->par) );
    SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, &(*problem)->cnt) );
-   /* WorhpPreInit((*problem)->opt, (*problem)->wsp, (*problem)->par, (*problem)->cnt); */
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -542,6 +701,9 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemWorhp)
 
    if( (*problem)->opt != NULL )
    {
+      /* free memory for last solution information */
+      invalidateSolution(*problem);
+
       assert((*problem)->wsp != NULL);
       assert((*problem)->par != NULL);
       assert((*problem)->cnt != NULL);
@@ -926,12 +1088,16 @@ SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessWorhp )
 static
 SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
 {
-   SCIP_NLPIDATA* nlpidata;
    const SCIP_Real* lbs;
    const SCIP_Real* ubs;
    const int* offset;
    const int* cols;
+   SCIP_NLPIDATA* nlpidata;
+   TUPLE** dginds = NULL;
+   TUPLE** hminds = NULL;
+   int status;
    int i;
+   int j;
 
    OptVar* opt = problem->opt;
    Workspace* wsp = problem->wsp;
@@ -946,14 +1112,18 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
 
    /* properly zeros everything */
    WorhpPreInit(opt, wsp, par, cnt);
-   par->Infty = SCIP_DEFAULT_INFINITY;
+
+   /* set parameters */
+   InitParams(&status, par);
+   par->Infty = nlpidata->infinity;
+   par->TolFeas = nlpidata->feastol;
 
    /* set problem dimensions */
    opt->n = SCIPnlpiOracleGetNVars(problem->oracle);
    opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle);
    SCIPdebugMessage("nvars %d nconss %d\n", opt->n, opt->m);
 
-   /* assume that objective function is dense TODO use sparse representation */
+   /* assume that objective function is dense; TODO use sparse representation */
    wsp->DF.nnz = opt->n;
 
    /* get number of non-zero entries in Jacobian */
@@ -961,9 +1131,30 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    wsp->DG.nnz = offset[opt->m];
    SCIPdebugMessage("nnonz jacobian %d\n", wsp->DG.nnz);
 
-   /* get number of non-zero entries in Hessian */
-   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(problem->oracle, &offset, NULL) );
-   wsp->HM.nnz = offset[opt->n];
+   /* get number of non-zero entries in hessian
+    *
+    * note that Worhp wants to have the full diagonal in ANY case
+    */
+   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(problem->oracle, &offset, &cols) );
+   wsp->HM.nnz = 0;
+
+   j = offset[0];
+   for( i = 0; i < opt->n; ++i )
+   {
+      /* diagonal element */
+      ++(wsp->HM.nnz);
+
+      /* strict lower triangle elements */
+      for( ; j < offset[i+1]; ++j )
+      {
+         if( i != cols[j] )
+         {
+            assert(i > cols[j]);
+            ++(wsp->HM.nnz);
+         }
+      }
+   }
+   assert(offset[opt->n] <= wsp->HM.nnz);
    SCIPdebugMessage("nnonz hessian %d\n", wsp->HM.nnz);
 
    /* initialize data in WORHP */
@@ -1008,11 +1199,16 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    if( wsp->DG.NeedStructure )
    {
       int nnonz;
-      int j;
 
       SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(problem->oracle, &offset, &cols) );
       assert(offset[opt->m] == wsp->DG.nnz);
-      SCIPdebugMessage("column and row indices of jacobian:\n");
+
+      /* store mapping between nonzeros and (col,row) entries */
+      SCIP_ALLOC( BMSallocMemoryArray(&dginds, wsp->DG.nnz) );
+      for( i = 0; i < wsp->DG.nnz; ++i )
+      {
+         SCIP_ALLOC( BMSallocMemory(&dginds[i]) );
+      }
 
       nnonz = 0;
       j = offset[0];
@@ -1020,46 +1216,87 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
       {
          for( ; j < offset[i+1]; ++j )
          {
-            /* note that column and row indices are shifted by one */
-            wsp->DG.row[nnonz] = i + 1;
-            wsp->DG.col[nnonz] = cols[j] + 1;
-            SCIPdebugMessage("  entry %d: (row,col) = (%d,%d)\n", nnonz, wsp->DG.row[nnonz], wsp->DG.col[nnonz]);
+            dginds[nnonz]->rowidx = i;
+            dginds[nnonz]->colidx = j;
+            dginds[nnonz]->col = cols[j];
+            dginds[nnonz]->pos = nnonz;
             ++nnonz;
          }
       }
       assert(nnonz == wsp->DG.nnz);
 
       /* sort arrays such that the entries are in column-major order */
-      SCIPsortIntInt(wsp->DG.col, wsp->DG.row, nnonz);
+      SCIPsortPtr((void**)dginds, compColumnMajor, wsp->DG.nnz);
+
+      /* set column and row entries in Worhp data structure */
+      SCIPdebugMessage("column and row indices of jacobian:\n");
+      for( i = 0; i < wsp->DG.nnz; ++i )
+      {
+         /* note that column and row indices are shifted by one */
+         wsp->DG.row[i] = dginds[i]->rowidx + 1;
+         wsp->DG.col[i] = dginds[i]->col + 1;
+         assert(dginds[i]->col == cols[dginds[i]->colidx]);
+
+         SCIPdebugMessage("entry %d: (row,col) = (%d,%d)\n", i, wsp->DG.row[i], wsp->DG.col[i]);
+      }
    }
 
    /* set column and row indices of non-zero entries in hessian matrix */
    if( wsp->HM.NeedStructure )
    {
       int nnonz;
-      int j;
 
       SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(problem->oracle, &offset, &cols) );
-      assert(offset[opt->n] == wsp->HM.nnz);
-      SCIPdebugMessage("column and row indices of hessian:\n");
+      assert(offset[opt->n] <= wsp->HM.nnz);
+
+      /* store mapping between nonzeros and (col,row) entries */
+      SCIP_ALLOC( BMSallocMemoryArray(&hminds, wsp->HM.nnz) );
+      for( i = 0; i < wsp->HM.nnz; ++i )
+      {
+         SCIP_ALLOC( BMSallocMemory(&hminds[i]) );
+      }
 
       nnonz = 0;
       j = offset[0];
       for( i = 0; i < opt->n; ++i )
       {
+         SCIP_Bool adddiag = TRUE;
+
          for( ; j < offset[i+1]; ++j )
          {
-            /* note that column and row indices are shifted by one */
-            wsp->HM.row[nnonz] = i + 1;
-            wsp->HM.col[nnonz] = cols[j] + 1;
-            SCIPdebugMessage("  entry %d: (row,col) = (%d,%d)\n", nnonz, wsp->HM.row[nnonz], wsp->HM.col[nnonz]);
+            hminds[nnonz]->rowidx = i;
+            hminds[nnonz]->colidx = j;
+            hminds[nnonz]->col = cols[j];
+            hminds[nnonz]->pos = nnonz;
+            ++nnonz;
+
+            if( i == cols[j] )
+               adddiag = FALSE;
+         }
+
+         /* Worhp wants to have each diagonal element */
+         if( adddiag )
+         {
+            hminds[nnonz]->rowidx = i;
+            hminds[nnonz]->colidx = -1;
+            hminds[nnonz]->col = i;
+            hminds[nnonz]->pos = -1;
             ++nnonz;
          }
       }
       assert(nnonz == wsp->HM.nnz);
 
-      /* sort arrays such that the entries are in column-major order */
-      SCIPsortIntInt(wsp->HM.col, wsp->HM.row, nnonz);
+      /* sort lower triangle part in column-major order followed by diagonal elements */
+      SCIPsortPtr((void**)hminds, compColumnMajorLT, wsp->HM.nnz);
+
+      /* set column and row indices of hessian in Worhp; note that column and row indices are shifted by one */
+      SCIPdebugMessage("column and row indices of hessian:\n");
+      for( i = 0; i < wsp->HM.nnz; ++i )
+      {
+         wsp->HM.row[i] = hminds[i]->rowidx + 1;
+         wsp->HM.col[i] = hminds[i]->col + 1;
+         SCIPdebugMessage("entry %d: (row,col) = (%d,%d)\n", i, wsp->HM.row[i], wsp->HM.col[i]);
+      }
    }
 
    /* TODO set a start point */
@@ -1130,7 +1367,11 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
        */
       if( GetUserAction(cnt, evalDG) )
       {
-         SCIP_CALL( userDG(problem) );
+         /* TODO How can it happen that wsp->DG.NeedStructure is FALSE but still Worhp wants to call evalDG? */
+         if( dginds != NULL )
+         {
+            SCIP_CALL( userDG(problem, dginds) );
+         }
          DoneUserAction(cnt, evalDG);
       }
 
@@ -1140,7 +1381,11 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
        */
       if( GetUserAction(cnt, evalHM) )
       {
-         SCIP_CALL( userHM(problem) );
+         /* TODO How can it happen that wsp->HM.NeedStructure is FALSE but still Worhp wants to call evalHM? */
+         if( hminds != NULL )
+         {
+            SCIP_CALL( userHM(problem, hminds) );
+         }
          DoneUserAction(cnt, evalHM);
       }
 
@@ -1158,7 +1403,25 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    /* interpret Worhp result */
    SCIP_CALL( evaluateWorhpRun(problem, nlpidata->messagehdlr) );
 
-   /* free memory allocated in WORHP */
+   /* free memory */
+   if( hminds != NULL )
+   {
+      for( i = wsp->HM.nnz - 1; i >= 0; --i )
+      {
+         BMSfreeMemory(&hminds[i]);
+      }
+      BMSfreeMemoryArray(&hminds);
+   }
+   if( dginds != NULL )
+   {
+      for( i = wsp->DG.nnz - 1; i >= 0; --i )
+      {
+         BMSfreeMemory(&dginds[i]);
+      }
+      BMSfreeMemoryArray(&dginds);
+   }
+
+   /* free memory allocated in Worhp */
    WorhpFree(opt, wsp, par, cnt);
 
    return SCIP_OKAY;
@@ -1214,7 +1477,10 @@ SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatWorhp )
 static
 SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionWorhp )
 {
-   /* TODO */
+   assert(problem != NULL);
+
+   if( primalvalues != NULL )
+      *primalvalues = problem->lastsol;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -1341,7 +1607,65 @@ SCIP_DECL_NLPISETINTPAR( nlpiSetIntParWorhp )
 static
 SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParWorhp )
 {
-   /* TODO */
+   SCIP_NLPIDATA* data = SCIPnlpiGetData(nlpi);
+
+   assert(data != NULL);
+   assert(dval != NULL);
+
+   switch( type )
+   {
+      case SCIP_NLPPAR_FROMSCRATCH:
+      {
+         break;
+      }
+
+      case SCIP_NLPPAR_VERBLEVEL:
+      {
+         break;
+      }
+
+      case SCIP_NLPPAR_FEASTOL:
+      {
+         *dval = data->feastol;
+         break;
+      }
+
+      case SCIP_NLPPAR_RELOBJTOL:
+      {
+         break;
+      }
+
+      case SCIP_NLPPAR_LOBJLIM:
+      {
+         break;
+      }
+
+      case SCIP_NLPPAR_INFINITY:
+      {
+         *dval = data->infinity;
+         break;
+      }
+
+      case SCIP_NLPPAR_ITLIM:
+      {
+         break;
+      }
+
+      case SCIP_NLPPAR_TILIM:
+      {
+         break;
+      }
+
+      case SCIP_NLPPAR_OPTFILE:
+      {
+         break;
+      }
+
+      default:
+      {
+         break;
+      }
+   }
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -1357,7 +1681,64 @@ SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParWorhp )
 static
 SCIP_DECL_NLPISETREALPAR( nlpiSetRealParWorhp )
 {
-   /* TODO */
+   SCIP_NLPIDATA* data = SCIPnlpiGetData(nlpi);
+
+   assert(data != NULL);
+
+   switch( type )
+   {
+      case SCIP_NLPPAR_FROMSCRATCH:
+      {
+         break;
+      }
+
+      case SCIP_NLPPAR_VERBLEVEL:
+      {
+         break;
+      }
+
+      case SCIP_NLPPAR_FEASTOL:
+      {
+         data->feastol = dval;
+         break;
+      }
+
+      case SCIP_NLPPAR_RELOBJTOL:
+      {
+         break;
+      }
+
+      case SCIP_NLPPAR_LOBJLIM:
+      {
+         break;
+      }
+
+      case SCIP_NLPPAR_INFINITY:
+      {
+         data->infinity = dval;
+         break;
+      }
+
+      case SCIP_NLPPAR_ITLIM:
+      {
+         break;
+      }
+
+      case SCIP_NLPPAR_TILIM:
+      {
+         break;
+      }
+
+      case SCIP_NLPPAR_OPTFILE:
+      {
+         break;
+      }
+
+      default:
+      {
+         break;
+      }
+   }
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -1431,7 +1812,10 @@ SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    BMSclearMemory(nlpidata);
 
    nlpidata->blkmem = blkmem;
+
+   /* initialize parameter */
    nlpidata->infinity = SCIP_DEFAULT_INFINITY;
+   nlpidata->feastol = SCIP_DEFAULT_FEASTOL;
 
    /* checks the version of the library and header files */
    CHECK_WORHP_VERSION
