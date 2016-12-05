@@ -25,7 +25,7 @@ features:
 - new global shift off all random seeds (randomization/randomseedshift) and unification of all existing random seeds
 - use new macros SCIPdebugMsg/SCIPsetDebugMsg/SCIPstatDebugMsg at all places where it makes sense
 - new feature solution polishing to improve integrality of LP solutions
-- new random number gerator in pub_misc.h
+- new random number generator in pub_misc.h
 - the subnlp heuristic now gives ownership of a found solution to the heuristic that constructed the starting point, if any;
   as a consequence, MIP heuristics may now be shown more frequently for having found a solution when solving MINLPs, even
   though the solutions required an addition NLP solve
@@ -60,8 +60,8 @@ parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
   in the solvingphases-section to control how to switch the parameters, and whether a restart should be performed between the phases.
 - new parameter misc/referencevalue to pass a reference value for further analysis of the tree search, see also in 'features'
-- new parameter sepaperspective to turn on separation of perspective cuts for indicator contraints
-- new parameter sepapersplocal to decide whether local cuts can be used for perspective cuts for indicator contraints
+- new parameter sepaperspective to turn on separation of perspective cuts for indicator constraints
+- new parameter sepapersplocal to decide whether local cuts can be used for perspective cuts for indicator constraints
 - new parameter branching/relpscost/usesmallweightsitlim to use smaller weights for pseudo cost updates when LP
   iteration limit was hit
 - new parameter class randomization
@@ -129,11 +129,11 @@ interface:
 - new method SCIPinitializeRandomSeed()
 - new methods SCIPprintDebugMessage(), SCIPsetPrintDebugMessage(), SCIPstatPrintDebugMessage() that output debug messages and also print the
   subscip depth; the first two output via the message handler; also added macros SCIPdebugMsg(), SCIPsetDebugMsg(), SCIPstatDebugMsg()
-- new functions SCIPdebugMsgPrint()/SCIPsetDebugMsgPrint() that output a message without debug precode via the mesage handler (compare SCIPdebugPrinf())
+- new functions SCIPdebugMsgPrint()/SCIPsetDebugMsgPrint() that output a message without debug precode via the message handler (compare SCIPdebugPrinf())
 - add new parameter to SCIPtrySolFree, SCIPtryCurrentSol, and SCIPcheckSol to check all constraints when printing violations
-- methods SCIPrandomGet{Int,Real}() substitutes SCIPgetRandom{Int,Real}() (marked to be depricated)
-- methods SCIPrandomPermute{Int}Array() substitutes SCIPpermuteRandom{Int}Array() (marked to be depricated)
-- method SCIPrandomGetSubset() substitutes SCIPgetRandomSubset() (marked to be depricated)
+- methods SCIPrandomGet{Int,Real}() substitutes SCIPgetRandom{Int,Real}() (marked to be deprecated)
+- methods SCIPrandomPermute{Int}Array() substitutes SCIPpermuteRandom{Int}Array() (marked to be deprecated)
+- method SCIPrandomGetSubset() substitutes SCIPgetRandomSubset() (marked to be deprecated)
 - new method SCIPlpiSetIntegralityInformation() to improve SoPlex' solution polishing
 - SCIPapplyHeurSubNlp() can now return the solution found by the sub-NLP heuristic
 - new function SCIPcreateConsCardinality() to create a cardinality constraint
@@ -169,6 +169,8 @@ fixed bugs:
 - fixed memory bug in SCIP_DIGRAPH
 - fixed bug while changing the objective value of an original value after transforming the problem
 - fixed handling of infeasibility detected in CONSINITLP callback
+- fixed bug with sorting of propagators in presolving: the order can be changed by calling probing; thus, there is a copy of the
+  propagators, which is sorted by presolving priority
 
 misc:
 - dropped support for Ipopt < 3.11

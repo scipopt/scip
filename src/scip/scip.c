@@ -14161,6 +14161,8 @@ SCIP_RETCODE presolveRound(
    aborted = FALSE;
    lastranpresol = FALSE;
 
+   assert( scip->set->propspresolsorted );
+
    if( *timing == SCIP_PRESOLTIMING_EXHAUSTIVE )
    {
       /* In exhaustive presolving, we continue the loop where we stopped last time to avoid calling the same
@@ -14211,7 +14213,7 @@ SCIP_RETCODE presolveRound(
          priopresol = -1;
 
       if( j < propend )
-         prioprop = SCIPpropGetPresolPriority(scip->set->props[j]);
+         prioprop = SCIPpropGetPresolPriority(scip->set->props_presol[j]);
       else
          prioprop = -1;
 
@@ -14222,8 +14224,8 @@ SCIP_RETCODE presolveRound(
          if( prioprop < 0 )
             break;
 
-         SCIPdebugMsg(scip, "executing presolving of propagator <%s>\n", SCIPpropGetName(scip->set->props[j]));
-         SCIP_CALL( SCIPpropPresol(scip->set->props[j], scip->set, *timing, scip->stat->npresolrounds,
+         SCIPdebugMsg(scip, "executing presolving of propagator <%s>\n", SCIPpropGetName(scip->set->props_presol[j]));
+         SCIP_CALL( SCIPpropPresol(scip->set->props_presol[j], scip->set, *timing, scip->stat->npresolrounds,
                &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
@@ -14263,7 +14265,7 @@ SCIP_RETCODE presolveRound(
                "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i-1]));
          else
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props[j-1]));
+               "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props_presol[j-1]));
       }
       else if( result == SCIP_UNBOUNDED )
       {
@@ -14274,7 +14276,7 @@ SCIP_RETCODE presolveRound(
                "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i-1]));
          else
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "propagator <%s> detected  unboundedness (or infeasibility)\n", SCIPpropGetName(scip->set->props[j-1]));
+               "propagator <%s> detected  unboundedness (or infeasibility)\n", SCIPpropGetName(scip->set->props_presol[j-1]));
       }
 
       /* delete the variables from the problems that were marked to be deleted */
@@ -14352,6 +14354,8 @@ SCIP_RETCODE presolveRound(
       }
    }
 
+   assert( scip->set->propspresolsorted );
+
    /* call included presolvers with negative priority */
    while( !(*unbounded) && !(*infeasible) && !aborted && (i < presolend || j < propend) )
    {
@@ -14361,7 +14365,7 @@ SCIP_RETCODE presolveRound(
          priopresol = -INT_MAX;
 
       if( j < scip->set->nprops )
-         prioprop = SCIPpropGetPresolPriority(scip->set->props[j]);
+         prioprop = SCIPpropGetPresolPriority(scip->set->props_presol[j]);
       else
          prioprop = -INT_MAX;
 
@@ -14370,8 +14374,8 @@ SCIP_RETCODE presolveRound(
       {
          assert(prioprop <= 0);
 
-         SCIPdebugMsg(scip, "executing presolving of propagator <%s>\n", SCIPpropGetName(scip->set->props[j]));
-         SCIP_CALL( SCIPpropPresol(scip->set->props[j], scip->set, *timing, scip->stat->npresolrounds,
+         SCIPdebugMsg(scip, "executing presolving of propagator <%s>\n", SCIPpropGetName(scip->set->props_presol[j]));
+         SCIP_CALL( SCIPpropPresol(scip->set->props_presol[j], scip->set, *timing, scip->stat->npresolrounds,
                &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
@@ -14408,7 +14412,7 @@ SCIP_RETCODE presolveRound(
                "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i-1]));
          else
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props[j-1]));
+               "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props_presol[j-1]));
       }
       else if( result == SCIP_UNBOUNDED )
       {
@@ -14419,7 +14423,7 @@ SCIP_RETCODE presolveRound(
                "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i-1]));
          else
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "propagator <%s> detected  unboundedness (or infeasibility)\n", SCIPpropGetName(scip->set->props[j-1]));
+               "propagator <%s> detected  unboundedness (or infeasibility)\n", SCIPpropGetName(scip->set->props_presol[j-1]));
       }
 
       /* delete the variables from the problems that were marked to be deleted */
@@ -14702,20 +14706,6 @@ SCIP_RETCODE presolve(
       stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
    }
 
-   /* update clique components (for statistic output printed below) */
-   if( SCIPcliquetableNeedsComponentUpdate(scip->cliquetable) )
-   {
-      SCIP_VAR** vars;
-      int nbinvars;
-      int nintvars;
-      int nimplvars;
-
-      SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, &nimplvars, NULL) );
-
-      SCIP_CALL( SCIPcliquetableComputeCliqueComponents(scip->cliquetable, scip->set, vars, nbinvars, nintvars, nimplvars) );
-   }
-   assert(!SCIPcliquetableNeedsComponentUpdate(scip->cliquetable));
-
    if( *infeasible || *unbounded )
    {
       /* first change status of scip, so that all plugins in their exitpre callbacks can ask SCIP for the correct status */
@@ -14788,8 +14778,6 @@ SCIP_RETCODE presolve(
       scip->stat->npresolchgbds, scip->stat->npresoladdholes, scip->stat->npresolchgsides, scip->stat->npresolchgcoefs);
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       " %d implications, %d cliques\n", scip->stat->nimplications, SCIPcliquetableGetNCliques(scip->cliquetable));
-   SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "clique table has %d connected components\n", SCIPcliquetableGetNCliqueComponents(scip->cliquetable));
 
    /* remember number of constraints */
    SCIPprobMarkNConss(scip->transprob);

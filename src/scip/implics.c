@@ -3478,5 +3478,5 @@ SCIP_Bool SCIPcliquetableNeedsComponentUpdate(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    )
 {
-   return cliquetable->componentupdate;
+   return cliquetable->componentupdate || cliquetable->ncliquecomponents == -1;
 }

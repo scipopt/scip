@@ -196,7 +196,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecOptimize);
 
 /** dialog execution method for the parallelopt command */
 EXTERN
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecParallelOpt);
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecConcurrentOpt);
 
 /** dialog execution method for the presolve command */
 EXTERN
