@@ -923,6 +923,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGauge)
       return SCIP_OKAY;
    }
 
+   /* do not run if SCIP has no way of solving nonlinear problems */
+   if( SCIPgetNNlpis(scip) == 0 )
+   {
+      SCIPdebugMsg(scip, "SCIP can't solve nonlinear problems without a nlpi\n");
+      return SCIP_OKAY;
+   }
+
    /* if we don't have an interior point compute one; if we fail to compute one, then separator will not be run again;
     * otherwise, we also store the convex nlrows in sepadata
     */
