@@ -2402,6 +2402,17 @@ SCIP_DECL_CONSDELETE(consDeleteComponents)
    return SCIP_OKAY;
 }
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxComponents)
+{  /*lint --e{715}*/
+   assert(result != NULL );
+
+   /* no enforcement is performed, but the callback is needed for all constraint handlers with needscons = FALSE */
+   *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
 
 /** variable rounding lock method of constraint handler */
 static
@@ -2457,6 +2468,7 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
          CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING));
 
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, conshdlrFreeComponents) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxComponents) );
 #ifndef NDEBUG
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolComponents) );
 #endif
