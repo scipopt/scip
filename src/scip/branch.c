@@ -2629,7 +2629,14 @@ SCIP_RETCODE SCIPbranchExecExtern(
       SCIP_CALL( SCIPtreeBranchVar(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, var, val,
             NULL, NULL, NULL) );
 
-      *result = SCIP_BRANCHED;
+      if( tree->nchildren >= 1 )
+         *result = SCIP_BRANCHED;
+      /* if the bounds are too close, it may happen that we cannot branch but rather fix the variable */
+      else
+      {
+         assert(SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+         *result = SCIP_REDUCEDDOM;
+      }
    }
 
    return SCIP_OKAY;
