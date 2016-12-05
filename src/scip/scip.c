@@ -14702,20 +14702,6 @@ SCIP_RETCODE presolve(
       stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
    }
 
-   /* update clique components (for statistic output printed below) */
-   if( SCIPcliquetableNeedsComponentUpdate(scip->cliquetable) )
-   {
-      SCIP_VAR** vars;
-      int nbinvars;
-      int nintvars;
-      int nimplvars;
-
-      SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, &nimplvars, NULL) );
-
-      SCIP_CALL( SCIPcliquetableComputeCliqueComponents(scip->cliquetable, scip->set, vars, nbinvars, nintvars, nimplvars) );
-   }
-   assert(!SCIPcliquetableNeedsComponentUpdate(scip->cliquetable));
-
    if( *infeasible || *unbounded )
    {
       /* first change status of scip, so that all plugins in their exitpre callbacks can ask SCIP for the correct status */
@@ -14788,8 +14774,6 @@ SCIP_RETCODE presolve(
       scip->stat->npresolchgbds, scip->stat->npresoladdholes, scip->stat->npresolchgsides, scip->stat->npresolchgcoefs);
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       " %d implications, %d cliques\n", scip->stat->nimplications, SCIPcliquetableGetNCliques(scip->cliquetable));
-   SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "clique table has %d connected components\n", SCIPcliquetableGetNCliqueComponents(scip->cliquetable));
 
    /* remember number of constraints */
    SCIPprobMarkNConss(scip->transprob);
