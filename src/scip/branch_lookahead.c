@@ -56,6 +56,7 @@
 #define DEFAULT_REEVALAGE                    5LL
 #define DEFAULT_STOPBRANCHING                TRUE
 #define DEFAULT_PURGECONSONCUTOFF            TRUE
+#define DEFAULT_FORCEBRANCHING               FALSE
 
 /*
  * Data structures
@@ -113,6 +114,8 @@ typedef struct
                                               *   we stop using old data and start recalculating new first level data. */
    int                   maxnviolatedcons;   /**< The number of constraints we want to gather before restarting the run. Set
                                               *   to -1 for an unbounded list. */
+   SCIP_Bool             forcebranching;     /**< Execute the lookahead logic even if only one branching candidate is given.
+                                              *   May be used to calculate the score of a single candidate. */
 } CONFIGURATION;
 
 #ifdef SCIP_STATISTIC
@@ -872,9 +875,6 @@ static
 SCIP_RETCODE executeDeepBranchingOnVar(
    SCIP*                 scip,               /**< SCIP data structure */
    CONFIGURATION*        config,
-#ifdef SCIP_STATISTIC
-   STATISTICS*           statistics,
-#endif
    STATUS*               status,             /**< the status container */
    SCIP_SOL*             baselpsol,          /**< the lp solution in the base node */
    SCIP_NODE*            basenode,           /**< the base node */
@@ -892,7 +892,10 @@ SCIP_RETCODE executeDeepBranchingOnVar(
    int*                  ncutoffs,           /**< current (input) and resulting (output) number of cutoffs */
    SUPPOSEDDOMREDDATA*   supposedbounds,     /**< pointer which gets filled with the implicit domain reduction data from the
                                               *   second level */
-   BINARYBOUNDDATA*      binarybounddata     /**< pointer which gets filled with the data for implicit binary bounds */
+   BINARYBOUNDDATA*      binarybounddata,    /**< pointer which gets filled with the data for implicit binary bounds */
+#ifdef SCIP_STATISTIC
+   STATISTICS*           statistics
+#endif
    )
 {
    BRANCHINGRESULTDATA* downresultdata;
@@ -1097,9 +1100,6 @@ static
 SCIP_RETCODE executeDeepBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    CONFIGURATION*        config,
-#ifdef SCIP_STATISTIC
-   STATISTICS*           statistics,
-#endif
    STATUS*               status,             /**< the status container */
    SCIP_SOL*             baselpsol,          /**< the lp solution in the base node */
    SCIP_NODE*            basenode,           /**< the base node */
@@ -1114,7 +1114,10 @@ SCIP_RETCODE executeDeepBranching(
    int*                  ncutoffs,           /**< pointer which gets filled with the number of second level cutoffs */
    SUPPOSEDDOMREDDATA*   supposedbounds,     /**< pointer which gets filled with the implicit domain reduction data from the
                                               *   second level */
-   BINARYBOUNDDATA*      binarybounddata     /**< pointer which gets filled with the data for implicit binary bounds */
+   BINARYBOUNDDATA*      binarybounddata,     /**< pointer which gets filled with the data for implicit binary bounds */
+#ifdef SCIP_STATISTIC
+   STATISTICS*           statistics
+#endif
    )
 {
    SCIP_VAR** lpcands;
@@ -1145,9 +1148,9 @@ SCIP_RETCODE executeDeepBranching(
       /* execute the second level branching for a variable */
 
 #ifdef SCIP_STATISTIC
-      SCIP_CALL( executeDeepBranchingOnVar(scip, config, statistics, status, baselpsol, basenode, lpobjval, locallpobjval,
+      SCIP_CALL( executeDeepBranchingOnVar(scip, config, status, baselpsol, basenode, lpobjval, locallpobjval,
          basevarforbound, deepbranchvar, deepbranchvarsolval, deepbranchvarfrac, dualbound, dualboundvalid, fullcutoff,
-         weightdata, ncutoffs, supposedbounds, binarybounddata) );
+         weightdata, ncutoffs, supposedbounds, binarybounddata, statistics) );
 #else
       SCIP_CALL( executeDeepBranchingOnVar(scip, config, status, baselpsol, basenode, lpobjval, locallpobjval,
          basevarforbound, deepbranchvar, deepbranchvarsolval, deepbranchvarfrac, dualbound, dualboundvalid, fullcutoff,
@@ -1460,6 +1463,8 @@ void purgeBinaryBoundData(
 }
 
 
+
+
 /**
  * Selects a variable from a set of candidates by applying strong branching with a depth of 2.
  * If the branching generated additional bounds, like domain reductions from cutoffs, those are added and a suitable result
@@ -1473,9 +1478,6 @@ SCIP_RETCODE selectVarLookaheadBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    PERSISTENTDATA*       persistent,
    CONFIGURATION*        config,
-#ifdef SCIP_STATISTIC
-   STATISTICS*           statistics,
-#endif
    SCIP_SOL*             baselpsol,          /**< the lp solution of the base node */
    SCIP_VAR**            lpcands,            /**< array of fractional variables */
    SCIP_Real*            lpcandssol,         /**< array of fractional solution values */
@@ -1488,7 +1490,11 @@ SCIP_RETCODE selectVarLookaheadBranching(
    SCIP_Bool*            bestdownvalid,
    SCIP_Real*            bestup,
    SCIP_Bool*            bestupvalid,
-   SCIP_Real*            provedbound
+   SCIP_Real*            bestscore,
+   SCIP_Real*            provedbound,
+#ifdef SCIP_STATISTIC
+   STATISTICS*           statistics
+#endif
    )
 {
    assert(scip != NULL);
@@ -1497,7 +1503,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
    assert(status != NULL);
    assert(bestcand != NULL);
 
-   if( nlpcands == 1)
+   if( !config->forcebranching && nlpcands == 1)
    {
       /* if there is only one branching variable we can directly branch there */
       *bestcand = 0;
@@ -1509,7 +1515,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
          SCIPgetDepthLimit(scip), SCIPgetDepth(scip));
       status->depthtoosmall = TRUE;
    }
-   else if( nlpcands > 1 )
+   else if( config->forcebranching || nlpcands > 1 )
    {
       /* declare all variables */
       BRANCHINGRESULTDATA* downbranchingresult;
@@ -1518,7 +1524,6 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
       SCIP_NODE* basenode;
       SCIP_Real lpobjval;
-      SCIP_Real highestscore = 0;
       SCIP_Real highestscoreupperbound = SCIPinfinity(scip);
       SCIP_Real highestscorelowerbound = -SCIPinfinity(scip);
       int highestscoreindex = -1;
@@ -1632,13 +1637,13 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
                   /* execute the branchings on the second level after the down branching on the first level */
 #ifdef SCIP_STATISTIC
-                  SCIP_CALL( executeDeepBranching(scip, config, statistics, status, baselpsol, basenode, lpobjval, locallpobjval,
-                        basevarforbound, &downdualbound, &downdualboundvalid, &downbranchingresult->cutoff, scoredata->upperbounddata,
-                        &scoredata->ncutoffs, supposedbounds, binarybounddata) );
+                  SCIP_CALL( executeDeepBranching(scip, config, status, baselpsol, basenode, lpobjval, locallpobjval,
+                        basevarforbound, &downdualbound, &downdualboundvalid, &downbranchingresult->cutoff,
+                        scoredata->upperbounddata, &scoredata->ncutoffs, supposedbounds, binarybounddata, statistics) );
 #else
                   SCIP_CALL( executeDeepBranching(scip, config, status, baselpsol, basenode, lpobjval, locallpobjval,
-                        basevarforbound, &downdualbound, &downdualboundvalid, &downbranchingresult->cutoff, scoredata->upperbounddata,
-                        &scoredata->ncutoffs, supposedbounds, binarybounddata) );
+                        basevarforbound, &downdualbound, &downdualboundvalid, &downbranchingresult->cutoff,
+                        scoredata->upperbounddata, &scoredata->ncutoffs, supposedbounds, binarybounddata) );
 #endif
 
                   if( config->useimpliedbincons && config->purgeconsoncutoff && downbranchingresult->cutoff )
@@ -1683,13 +1688,13 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
                   /* execute the branchings on the second level after the up branching on the first level */
 #ifdef SCIP_STATISTIC
-                  SCIP_CALL( executeDeepBranching(scip, config, statistics, status, baselpsol, basenode, lpobjval, locallpobjval,
-                        basevarforbound, &updualbound, &updualboundvalid, &upbranchingresult->cutoff, scoredata->lowerbounddata,
-                        &scoredata->ncutoffs, supposedbounds, binarybounddata) );
+                  SCIP_CALL( executeDeepBranching(scip, config, status, baselpsol, basenode, lpobjval, locallpobjval,
+                        basevarforbound, &updualbound, &updualboundvalid, &upbranchingresult->cutoff,
+                        scoredata->lowerbounddata, &scoredata->ncutoffs, supposedbounds, binarybounddata, statistics) );
 #else
                   SCIP_CALL( executeDeepBranching(scip, config, status, baselpsol, basenode, lpobjval, locallpobjval,
-                        basevarforbound, &updualbound, &updualboundvalid, &upbranchingresult->cutoff, scoredata->lowerbounddata,
-                        &scoredata->ncutoffs, supposedbounds, binarybounddata) );
+                        basevarforbound, &updualbound, &updualboundvalid, &upbranchingresult->cutoff,
+                        scoredata->lowerbounddata, &scoredata->ncutoffs, supposedbounds, binarybounddata) );
 #endif
 
                   if( config->useimpliedbincons && config->purgeconsoncutoff && upbranchingresult->cutoff )
@@ -1760,14 +1765,13 @@ SCIP_RETCODE selectVarLookaheadBranching(
             else if( !status->limitreached )
             {
                /* if neither of both branches was cutoff we can calculate the weight for the current variable */
-               SCIP_Real currentScore;
+               SCIP_Real currentscore;
 
-               currentScore = calculateCurrentWeight(scip, scoredata);
+               currentscore = calculateCurrentWeight(scip, scoredata);
 
-               if( SCIPisFeasGT(scip, currentScore, highestscore) )
+               if( SCIPisFeasGT(scip, currentscore, *bestscore) )
                {
                   /* if the new weight is higher than the old one: replace it and update the index accordingly */
-                  highestscore = currentScore;
                   highestscoreindex = c;
                   highestscorelowerbound = SCIPvarGetLbLocal(branchvar);
                   highestscoreupperbound = SCIPvarGetUbLocal(branchvar);
@@ -1775,6 +1779,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
                   *bestdownvalid = downdualboundvalid;
                   *bestup = updualbound;
                   *bestupvalid = updualboundvalid;
+                  *bestscore = currentscore;
                }
 
                if( updualboundvalid && downdualboundvalid )
@@ -2175,6 +2180,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       SCIP_Real bestup;
       SCIP_Bool bestupvalid = FALSE;
       SCIP_Real provedbound;
+      SCIP_Real bestscore = 0;
       STATUS* status;
 
       /* get all fractional candidates we can branch on */
@@ -2187,11 +2193,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 
       /* execute the main logic */
 #ifdef SCIP_STATISTIC
-      SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata->persistent, branchruledata->config, branchruledata->statistics, baselpsol, lpcands, lpcandssol, lpcandsfrac, nlpcands,
-            &branchruledata->persistent->restartindex, status, &bestcand, &bestdown, &bestdownvalid, &bestup, &bestupvalid, &provedbound) );
+      SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata->persistent, branchruledata->config, baselpsol, lpcands,
+            lpcandssol, lpcandsfrac, nlpcands, &branchruledata->persistent->restartindex, status, &bestcand, &bestdown,
+            &bestdownvalid, &bestup, &bestupvalid, &bestscore, &provedbound, branchruledata->statistics) );
 #else
-      SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata->persistent, branchruledata->config, baselpsol, lpcands, lpcandssol, lpcandsfrac, nlpcands,
-            &branchruledata->persistent->restartindex, status, &bestcand, &bestdown, &bestdownvalid, &bestup, &bestupvalid, &provedbound) );
+      SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata->persistent, branchruledata->config, baselpsol, lpcands,
+            lpcandssol, lpcandsfrac, nlpcands, &branchruledata->persistent->restartindex, status, &bestcand, &bestdown,
+            &bestdownvalid, &bestup, &bestupvalid, &bestscore, &provedbound) );
 #endif
       SCIPdebugMessage("Result is <%i>\n", *result);
 
@@ -2381,5 +2389,9 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/purgeconsoncutoff",
          "if the first level down branch is infeasible, should we discard all constraints found for this variable?",
          &branchruledata->config->purgeconsoncutoff, TRUE, DEFAULT_PURGECONSONCUTOFF, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/forcebranching",
+         "should lookahead branching be applied even if there is just a single candidate?",
+         &branchruledata->config->forcebranching, TRUE, DEFAULT_FORCEBRANCHING, NULL, NULL) );
    return SCIP_OKAY;
 }
