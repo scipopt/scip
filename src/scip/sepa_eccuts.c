@@ -728,7 +728,7 @@ SCIP_RETCODE sepadataAddNlrowaggr(
    {
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->nlrowaggrs, sepadata->nlrowaggrssize, 2 * sepadata->nlrowaggrssize) ); /*lint !e506*/
       sepadata->nlrowaggrssize *= 2;
-      assert(sepadata->nlrowaggrssize >= sepadata->nlrowaggrssize + 1);
+      assert(sepadata->nlrowaggrssize >= sepadata->nnlrowaggrs + 1);
    }
 
    sepadata->nlrowaggrs[ sepadata->nnlrowaggrs ] = nlrowaggr;
@@ -2625,7 +2625,7 @@ SCIP_RETCODE separateCuts(
    ncuts = 0;
 
    /* try to compute cuts for each nonlinear row independently */
-   for( i = 0; i < sepadata->nnlrowaggrs && ncuts < nmaxcuts; ++i )
+   for( i = 0; i < sepadata->nnlrowaggrs && ncuts < nmaxcuts && !SCIPisStopped(scip); ++i )
    {
       SCIP_NLROWAGGR* nlrowaggr;
       SCIP_Bool separated;
@@ -2774,7 +2774,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
       SCIPstatistic( sepadata->aggrsearchtime -= SCIPgetTotalTime(scip) );
 
       SCIPdebugMsg(scip, "search for nonlinear row aggregations\n");
-      for( i = 0; i < SCIPgetNNLPNlRows(scip); ++i )
+      for( i = 0; i < SCIPgetNNLPNlRows(scip) && !SCIPisStopped(scip); ++i )
       {
          SCIP_NLROW* nlrow = SCIPgetNLPNlRows(scip)[i];
          SCIP_CALL( findAndStoreEcAggregations(scip, sepadata, nlrow, NULL) );
