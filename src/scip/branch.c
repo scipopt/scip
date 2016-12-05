@@ -2618,8 +2618,10 @@ SCIP_RETCODE SCIPbranchExecExtern(
       var = branchcand->externcands[bestcand];
       val = SCIPbranchGetBranchingPoint(set, tree, var, branchcand->externcandssol[bestcand]);
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
-      assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), val));
-      assert(SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)));
+      assert(SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) <= 2.02 * SCIPsetEpsilon(set)
+         || SCIPsetIsLT(set, SCIPvarGetLbLocal(var), val));
+      assert(SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) <= 2.02 * SCIPsetEpsilon(set)
+         || SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)));
 
       SCIPsetDebugMsg(set, "no branching method succeeded; fallback selected to branch on variable <%s> with bounds [%g, %g] on value %g\n",
          SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), val);
