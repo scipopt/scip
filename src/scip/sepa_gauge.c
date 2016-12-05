@@ -250,6 +250,7 @@ SCIP_RETCODE computeInteriorPoint(
       if( timelimit <= 1.0 )
       {
          SCIPdebugMsg(scip, "skip NLP solve; no time left\n");
+         sepadata->skipsepa = TRUE;
          goto CLEANUP;
       }
    }
