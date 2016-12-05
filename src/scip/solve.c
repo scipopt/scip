@@ -1074,25 +1074,37 @@ SCIP_RETCODE SCIPinitConssLP(
    assert(lp != NULL);
    assert(cutoff != NULL);
 
+   *cutoff = FALSE;
+
    /* inform separation storage, that LP is now filled with initial data */
    SCIPsepastoreStartInitialLP(sepastore);
 
    /* add LP relaxations of all initial constraints to LP */
    SCIPsetDebugMsg(set, "init LP: initial rows\n");
-   for( h = 0; h < set->nconshdlrs; ++h )
+   for( h = 0; h < set->nconshdlrs && !(*cutoff); ++h )
    {
       SCIP_CALL( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat, tree, firstsubtreeinit, cutoff) );
    }
 
-   if( set->reopt_enable && set->reopt_usecuts && firstsubtreeinit )
+   if( set->reopt_enable && set->reopt_usecuts && firstsubtreeinit && !(*cutoff) )
    {
-      /* add stored cuts */
+      /* add stored cuts from last reoptimization run */
       SCIP_CALL( SCIPreoptApplyCuts(reopt, tree->focusnode, sepastore, cutpool, blkmem, set, stat, eventqueue,
             eventfilter, lp, root) );
    }
 
-   SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
-         eventqueue, eventfilter, cliquetable, root, SCIP_EFFICIACYCHOICE_LP, cutoff) );
+   if( !(*cutoff) )
+   {
+      /* apply cuts */
+      SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
+            eventqueue, eventfilter, cliquetable, root, SCIP_EFFICIACYCHOICE_LP, cutoff) );
+   }
+   else
+   {
+      /* the current node will be cut off; we clear the sepastore */
+      SCIP_CALL( SCIPsepastoreClearCuts(sepastore, blkmem, set, eventqueue, eventfilter, lp) );
+   }
+
 
    /* inform separation storage, that initial LP setup is now finished */
    SCIPsepastoreEndInitialLP(sepastore);

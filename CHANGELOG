@@ -168,6 +168,7 @@ fixed bugs:
   is the same as at the last focus node
 - fixed memory bug in SCIP_DIGRAPH
 - fixed bug while changing the objective value of an original value after transforming the problem
+- fixed handling of infeasibility detected in CONSINITLP callback
 
 misc:
 - dropped support for Ipopt < 3.11
