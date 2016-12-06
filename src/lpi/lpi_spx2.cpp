@@ -2844,7 +2844,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->status() == SPxSolver::UNBOUNDED);
+   return lpi->spx->hasPrimalRay();
 }
 
 /** returns TRUE iff LP is proven to be primal unbounded */
@@ -2927,7 +2927,7 @@ SCIP_Bool SCIPlpiHasDualRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->status() == SPxSolver::INFEASIBLE);
+   return lpi->spx->hasDualFarkas();
 }
 
 /** returns TRUE iff LP is dual unbounded */
