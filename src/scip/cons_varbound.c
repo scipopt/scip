@@ -284,6 +284,12 @@ SCIP_RETCODE consdataCreate(
       return SCIP_INVALIDDATA;
    }
 
+   if( SCIPisZero(scip, vbdcoef) )
+   {
+      SCIPerrorMessage("varbound coefficient must be different to zero.\n");
+      return SCIP_INVALIDDATA;
+   }
+
    if( SCIPisInfinity(scip, vbdcoef) )
       vbdcoef = SCIPinfinity(scip);
    else if( SCIPisInfinity(scip, -vbdcoef) )
@@ -1177,6 +1183,22 @@ SCIP_RETCODE propagateCons(
    xub = SCIPvarGetUbLocal(consdata->var);
    ylb = SCIPvarGetLbLocal(consdata->vbdvar);
    yub = SCIPvarGetUbLocal(consdata->vbdvar);
+
+   /* it can happen that constraint is of form lhs <= x <= rhs */
+   if( SCIPisZero(scip, consdata->vbdcoef) && SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+   {
+      SCIP_Bool infeasible;
+      SCIP_Bool fixed;
+
+      SCIP_CALL( SCIPfixVar(scip, consdata->var, consdata->lhs, &infeasible, &fixed) );
+
+      if( infeasible )
+      {
+         SCIPdebugMsg(scip, "> constraint <%s> is infeasible.\n", SCIPconsGetName(cons));
+         *cutoff = TRUE;
+         return SCIP_OKAY;
+      }
+   }
 
    /* tighten bounds of variables as long as possible */
    do
