@@ -3581,7 +3581,8 @@ SCIP_RETCODE propAndSolve(
       oldninitconssadded = stat->ninitconssadded;
 
       /* call after LP propagators */
-      if( (*afterlpproplps) < stat->nnodelps && (*lpsolved) )
+      if( (*afterlpproplps) < stat->nnodelps
+            && (*lpsolved || SCIPrelaxationGetBestRelaxSolObj(relaxation) != -SCIPsetInfinity(set)) )
       {
          SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, *fullpropagation,
                SCIP_PROPTIMING_AFTERLPLOOP, cutoff, postpone) );
@@ -4013,7 +4014,8 @@ SCIP_RETCODE solveNode(
       afterlpproplps = -1L;
 
       while( !lperror && !(*cutoff) && (propagateagain || solvelpagain || solverelaxagain
-            || (afterlpproplps < stat->nnodelps && lpsolved)) )
+            || (afterlpproplps < stat->nnodelps
+                  && (lpsolved || SCIPrelaxationGetBestRelaxSolObj(relaxation) != -SCIPsetInfinity(set)))) )
       {
          solverelax = solverelaxagain;
          solverelaxagain = FALSE;
