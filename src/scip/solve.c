@@ -323,7 +323,7 @@ SCIP_RETCODE SCIPprimalHeuristics(
       if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) != 0 )
       {
          SCIPerrorMessage("Buffer not completely freed after executing heuristic <%s>\n", SCIPheurGetName(set->heurs[h]));
-         return SCIP_ERROR;
+         SCIPABORT();
       }
 #endif
 
@@ -411,7 +411,7 @@ SCIP_RETCODE propagationRound(
       if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) != 0 )
       {
          SCIPerrorMessage("Buffer not completely freed after executing propagator <%s>\n", SCIPpropGetName(set->props[i]));
-         return SCIP_ERROR;
+         SCIPABORT();
       }
 #endif
 
@@ -1544,7 +1544,7 @@ SCIP_RETCODE separationRoundLP(
       if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) != 0 )
       {
          SCIPerrorMessage("Buffer not completely freed after executing separator <%s>\n", SCIPsepaGetName(set->sepas[i]));
-         return SCIP_ERROR;
+         SCIPABORT();
       }
 #endif
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
