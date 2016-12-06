@@ -4654,7 +4654,7 @@ SCIP_RETCODE SCIPlpiSetState(
    assert(lpi->grbmodel != NULL);
 
    /* if there was no basis information available, the LPI state was not stored */
-   if( lpistate == NULL || lpistate->packrstat == NULL || lpistate->packcstat )
+   if( lpistate == NULL || lpistate->packrstat == NULL || lpistate->packcstat == NULL )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
