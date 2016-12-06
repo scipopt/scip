@@ -6367,6 +6367,10 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
                   rhs = (consdata->rhs - SIGN(consdata->xoffset) * consdata->power(ABS(consdata->xoffset), consdata->exponent)) / xcoef;
             }
             zcoef = consdata->zcoef / xcoef;
+
+            /* avoid numerical troubles if xcoef is too large */
+            if( SCIPisZero(scip, zcoef) )
+               zcoef = 0.0;
          }
          else
          {
@@ -6375,7 +6379,41 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
             zcoef = consdata->zcoef;
          }
 
-         if( SCIPvarGetType(consdata->z) < SCIP_VARTYPE_CONTINUOUS )
+         /* the upgraded constraint constraint reduces to lhs <= x <= rhs, try to fix x instead of creating a constraint */
+         if( SCIPisZero(scip, zcoef) && SCIPisEQ(scip, lhs, rhs) && SCIPvarIsIntegral(consdata->x) )
+         {
+            /* both sides are integral */
+            if( SCIPisIntegral(scip, lhs) )
+            {
+               SCIP_Bool fixed;
+
+               assert(SCIPisIntegral(scip, rhs));
+
+               SCIP_CALL( SCIPfixVar(scip, consdata->x, lhs, &infeas, &fixed) );
+
+               /* fixing x to lhs is infeasible */
+               if( infeas || !fixed )
+               {
+                  SCIPdebugMsg(scip, "propagation on constraint <%s> says problem is infeasible in presolve\n",
+                        SCIPconsGetName(conss[c]));  /*lint !e613*/
+                  *result = SCIP_CUTOFF;
+                  return SCIP_OKAY;
+               }
+
+               ++(*nchgbds);
+               break;
+            }
+            else
+            {
+               /* an integer variables cannot be fixed to a fractional value */
+               SCIPdebugMsg(scip, "propagation on constraint <%s> says problem is infeasible in presolve\n",
+                     SCIPconsGetName(conss[c]));  /*lint !e613*/
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
+         }
+
+         if( SCIPvarGetType(consdata->z) < SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, zcoef) )
          {
             SCIP_CALL( SCIPcreateConsVarbound(scip, &lincons, SCIPconsGetName(conss[c]),
                   consdata->x, consdata->z, zcoef, lhs, rhs,
