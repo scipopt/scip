@@ -121,9 +121,17 @@ void collectNonBinaryVBoundData(
             countnonzeros[*ncountnonzeros] = varidx;
             ++(*ncountnonzeros);
             newbounds[varidx] = bounds[pos];
+            lastbounds[*nimplidx] = SCIP_INVALID;
          }
          else if( newbounds[varidx] > bounds[pos] )
+         {
+            lastbounds[*nimplidx] = newbounds[varidx];
             newbounds[varidx] = bounds[pos];
+         }
+         else
+         {
+            lastbounds[*nimplidx] = SCIP_INVALID;
+         }
 
          *foundnonbin = MIN(*foundnonbin, varidx);
 
@@ -351,9 +359,17 @@ void collectNonBinaryVBoundData(
             countnonzeros[*ncountnonzeros] = varidx;
             ++(*ncountnonzeros);
             newbounds[varidx] = bounds[pos];
+            lastbounds[*nimplidx] = SCIP_INVALID;
          }
          else if( newbounds[varidx] < bounds[pos] )
+         {
+            lastbounds[*nimplidx] = newbounds[varidx];
             newbounds[varidx] = bounds[pos];
+         }
+         else
+         {
+            lastbounds[*nimplidx] = SCIP_INVALID;
+         }
 
          *foundnonbin = MIN(*foundnonbin, varidx);
 

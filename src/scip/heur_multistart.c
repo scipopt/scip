@@ -848,7 +848,10 @@ SCIP_RETCODE applyHeur(
       gradlimit -= gradcosts;
       SCIPdebugMsg(scip, "improve point %d / %d gradlimit = %g\n", npoints, nrndpoints, gradlimit);
    }
-   assert(npoints > 0 && npoints <= nrndpoints);
+   assert(npoints >= 0 && npoints <= nrndpoints);
+
+   if( npoints == 0 )
+      goto TERMINATE;
 
    /*
     * 3. filter and cluster points
