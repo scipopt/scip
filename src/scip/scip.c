@@ -3622,7 +3622,6 @@ SCIP_RETCODE doCopy(
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
    assert(suffix != NULL);
-   assert(valid != NULL);
    assert(global || !original);
 
    /* get time before start of copy procedure */
