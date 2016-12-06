@@ -299,6 +299,9 @@ SCIP_RETCODE SCIPprimalHeuristics(
 
    for( h = 0; h < set->nheurs; ++h )
    {
+#ifndef NDEBUG
+      size_t nusedbuffer = BMSgetNUsedBufferMemory(SCIPbuffer(set->scip));
+#endif
       /* it might happen that a diving heuristic renders the previously solved node LP invalid
        * such that additional calls to LP heuristics will fail; better abort the loop in this case
        */
@@ -320,7 +323,7 @@ SCIP_RETCODE SCIPprimalHeuristics(
             &ndelayedheurs, &result) );
 
 #ifndef NDEBUG
-      if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) != 0 )
+      if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) > nusedbuffer )
       {
          SCIPerrorMessage("Buffer not completely freed after executing heuristic <%s>\n", SCIPheurGetName(set->heurs[h]));
          SCIPABORT();
@@ -393,6 +396,9 @@ SCIP_RETCODE propagationRound(
    /* call additional propagators with nonnegative priority */
    for( i = 0; i < set->nprops && !(*postpone) && (!(*cutoff) || !abortoncutoff); ++i )
    {
+#ifndef NDEBUG
+      size_t nusedbuffer = BMSgetNUsedBufferMemory(SCIPbuffer(set->scip));
+#endif
       /* timing needs to fit */
       if( (SCIPpropGetTimingmask(set->props[i]) & timingmask) == 0 )
          continue;
@@ -408,7 +414,7 @@ SCIP_RETCODE propagationRound(
       SCIP_CALL( SCIPpropExec(set->props[i], set, stat, depth, onlydelayed, tree->sbprobing, timingmask, &result) );
 
 #ifndef NDEBUG
-      if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) != 0 )
+      if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) > nusedbuffer )
       {
          SCIPerrorMessage("Buffer not completely freed after executing propagator <%s>\n", SCIPpropGetName(set->props[i]));
          SCIPABORT();
@@ -1531,6 +1537,10 @@ SCIP_RETCODE separationRoundLP(
            && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
         ++i )
    {
+#ifndef NDEBUG
+      size_t nusedbuffer = BMSgetNUsedBufferMemory(SCIPbuffer(set->scip));
+#endif
+
       if( SCIPsepaGetPriority(set->sepas[i]) < 0 )
          continue;
 
@@ -1541,7 +1551,7 @@ SCIP_RETCODE separationRoundLP(
          SCIPsepaGetName(set->sepas[i]), SCIPsepaGetPriority(set->sepas[i]));
       SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, onlydelayed, &result) );
 #ifndef NDEBUG
-      if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) != 0 )
+      if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) > nusedbuffer )
       {
          SCIPerrorMessage("Buffer not completely freed after executing separator <%s>\n", SCIPsepaGetName(set->sepas[i]));
          SCIPABORT();
