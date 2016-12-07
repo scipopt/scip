@@ -210,8 +210,8 @@ SCIP_RETCODE generateCut(
     *       we build the convex relaxation using only globally valid constraints, the cuts are globally valid
     */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "proj_cut_%s_%u", SCIPnlrowGetName(nlrow), ++(sepadata->ncuts));
-   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, rowname, SCIPnlrowGetLhs(nlrow), SCIPnlrowGetRhs(nlrow),
-           TRUE, FALSE , TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, rowname, -SCIPinfinity(scip), SCIPinfinity(scip), TRUE, FALSE ,
+            TRUE) );
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, *row) );
 
