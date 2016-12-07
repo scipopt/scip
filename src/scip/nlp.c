@@ -4749,7 +4749,23 @@ SCIP_RETCODE nlpSolve(
       {
          for( i = 0; i < nlp->nvars; ++i )
          {
-            SCIP_CALL( SCIPvarSetNLPSol(nlp->vars[i], set, primalvals[nlp->varmap_nlp2nlpi[i]]) );  /*lint !e613 */
+            SCIP_Real lb = SCIPvarGetLbLocal(nlp->vars[i]);
+            SCIP_Real ub = SCIPvarGetUbLocal(nlp->vars[i]);
+            SCIP_Real solval = primalvals[nlp->varmap_nlp2nlpi[i]];
+
+            /* the NLP solver might propose a solution with small bound violations for fixed variables; mark the
+             * solution to be infeasible and adjust the values of these variables
+             */
+            if( SCIPsetIsFeasEQ(set, lb, ub) &&
+               (!SCIPsetIsFeasEQ(set, lb, solval) || !SCIPsetIsFeasEQ(set, ub, solval)) )
+            {
+               assert(nlp->solstat >= SCIP_NLPSOLSTAT_LOCINFEASIBLE);
+
+               solval = (lb + ub) / 2.0;
+               nlp->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+            }
+
+            SCIP_CALL( SCIPvarSetNLPSol(nlp->vars[i], set, solval) );  /*lint !e613 */
          }
 
          /* evaluate modified diving objective */
@@ -4761,8 +4777,24 @@ SCIP_RETCODE nlpSolve(
          nlp->primalsolobjval = 0.0;
          for( i = 0; i < nlp->nvars; ++i )
          {
-            SCIP_CALL( SCIPvarSetNLPSol(nlp->vars[i], set, primalvals[nlp->varmap_nlp2nlpi[i]]) );  /*lint !e613 */
-            nlp->primalsolobjval += SCIPvarGetObj(nlp->vars[i]) * primalvals[nlp->varmap_nlp2nlpi[i]];  /*lint !e613 */
+            SCIP_Real lb = SCIPvarGetLbLocal(nlp->vars[i]);
+            SCIP_Real ub = SCIPvarGetUbLocal(nlp->vars[i]);
+            SCIP_Real solval = primalvals[nlp->varmap_nlp2nlpi[i]];
+
+            /* the NLP solver might propose a solution with small bound violations for fixed variables; mark the
+             * solution to be infeasible and adjust the values of these variables
+             */
+            if( SCIPsetIsFeasEQ(set, lb, ub) &&
+               (!SCIPsetIsFeasEQ(set, lb, solval) || !SCIPsetIsFeasEQ(set, ub, solval)) )
+            {
+               assert(nlp->solstat >= SCIP_NLPSOLSTAT_LOCINFEASIBLE);
+
+               solval = (lb + ub) / 2.0;
+               nlp->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+            }
+
+            SCIP_CALL( SCIPvarSetNLPSol(nlp->vars[i], set, solval) );  /*lint !e613 */
+            nlp->primalsolobjval += SCIPvarGetObj(nlp->vars[i]) * solval;  /*lint !e613 */
          }
       }
 
