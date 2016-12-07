@@ -4759,8 +4759,6 @@ SCIP_RETCODE nlpSolve(
             if( SCIPsetIsFeasEQ(set, lb, ub) &&
                (!SCIPsetIsFeasEQ(set, lb, solval) || !SCIPsetIsFeasEQ(set, ub, solval)) )
             {
-               assert(nlp->solstat >= SCIP_NLPSOLSTAT_LOCINFEASIBLE);
-
                solval = (lb + ub) / 2.0;
                nlp->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
             }
@@ -4787,8 +4785,6 @@ SCIP_RETCODE nlpSolve(
             if( SCIPsetIsFeasEQ(set, lb, ub) &&
                (!SCIPsetIsFeasEQ(set, lb, solval) || !SCIPsetIsFeasEQ(set, ub, solval)) )
             {
-               assert(nlp->solstat >= SCIP_NLPSOLSTAT_LOCINFEASIBLE);
-
                solval = (lb + ub) / 2.0;
                nlp->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
             }
