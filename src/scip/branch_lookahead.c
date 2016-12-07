@@ -2218,6 +2218,8 @@ SCIP_RETCODE executeComparisonRun(
       SCIPgetBoolParam(scip, confenable, &prevconfenable);
       SCIPsetBoolParam(scip, confenable, FALSE);
 
+      assert(prevconfenable == TRUE);
+
       SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata->persistent, FALSE, branchruledata->compconfig, baselpsol, lpcands,
          lpcandssol, lpcandsfrac, nlpcands, &startindex, status, &bestcand, &bestdown,
          &bestdownvalid, &bestup, &bestupvalid, &bestscore, &provedbound, statistics) );
@@ -2343,11 +2345,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 #ifdef SCIP_STATISTIC
       /*TODO: clean up */
          /*SCIP_CALL( executeComparisonRun(scip, branchruledata, baselpsol, lpcands, lpcandssol, lpcandsfrac, nlpcands, branchruledata->persistent->restartindex) );*/
-         SCIPinfoMessage(scip, NULL, "Old nboundchgs <%i>, nprobboundchgs <%i>\n", scip->stat->nboundchgs, scip->stat->nprobboundchgs);
          SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata->persistent, TRUE, branchruledata->config, baselpsol, lpcands,
                lpcandssol, lpcandsfrac, nlpcands, &branchruledata->persistent->restartindex, status, &bestcand, &bestdown,
                &bestdownvalid, &bestup, &bestupvalid, &bestscore, &provedbound, branchruledata->statistics) );
-         SCIPinfoMessage(scip, NULL, "New nboundchgs <%i>, nprobboundchgs <%i>\n", scip->stat->nboundchgs, scip->stat->nprobboundchgs);
 #else
       SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata->persistent, TRUE, branchruledata->config, baselpsol, lpcands,
             lpcandssol, lpcandsfrac, nlpcands, &branchruledata->persistent->restartindex, status, &bestcand, &bestdown,
