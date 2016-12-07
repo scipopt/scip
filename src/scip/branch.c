@@ -2124,10 +2124,20 @@ SCIP_Real SCIPbranchGetScore(
 
    assert(set != NULL);
 
-   /* slightly increase gains, such that for zero gains, the branch factor comes into account */
+   /* adjust scores near zero to always yield product score greater than 0 */
    eps = SCIPsetSumepsilon(set);
-   downgain = MAX(downgain, eps);
-   upgain = MAX(upgain, eps);
+   if( set->branch_sumadjustscore )
+   {
+      /* adjust scores by adding eps to keep near zero score differences between variables */
+      downgain = downgain + eps;
+      upgain = upgain + eps;
+   }
+   else
+   {
+      /* disregard near zero score differences between variables and consider the branching factor for them */
+      downgain = MAX(downgain, eps);
+      upgain = MAX(upgain, eps);
+   }
 
    switch( set->branch_scorefunc )
    {
@@ -2608,8 +2618,10 @@ SCIP_RETCODE SCIPbranchExecExtern(
       var = branchcand->externcands[bestcand];
       val = SCIPbranchGetBranchingPoint(set, tree, var, branchcand->externcandssol[bestcand]);
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
-      assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), val));
-      assert(SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)));
+      assert(SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) <= 2.02 * SCIPsetEpsilon(set)
+         || SCIPsetIsLT(set, SCIPvarGetLbLocal(var), val));
+      assert(SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) <= 2.02 * SCIPsetEpsilon(set)
+         || SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)));
 
       SCIPsetDebugMsg(set, "no branching method succeeded; fallback selected to branch on variable <%s> with bounds [%g, %g] on value %g\n",
          SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), val);
@@ -2617,7 +2629,14 @@ SCIP_RETCODE SCIPbranchExecExtern(
       SCIP_CALL( SCIPtreeBranchVar(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, var, val,
             NULL, NULL, NULL) );
 
-      *result = SCIP_BRANCHED;
+      if( tree->nchildren >= 1 )
+         *result = SCIP_BRANCHED;
+      /* if the bounds are too close, it may happen that we cannot branch but rather fix the variable */
+      else
+      {
+         assert(SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+         *result = SCIP_REDUCEDDOM;
+      }
    }
 
    return SCIP_OKAY;

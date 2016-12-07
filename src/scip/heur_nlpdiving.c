@@ -1404,7 +1404,7 @@ SCIP_DECL_HEURFREE(heurFreeNlpdiving) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -2566,12 +2566,11 @@ SCIP_RETCODE SCIPincludeHeurNlpdiving(
    )
 {
    SCIP_HEURDATA* heurdata;
-   SCIP_HEUR* heur;
+   SCIP_HEUR* heur = NULL;
 
    /* create heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
-   heur = NULL;
    /* include heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecNlpdiving, heurdata) );

@@ -120,7 +120,7 @@ SCIP_RETCODE mpsinputCreate(
    assert(mpsi != NULL);
    assert(fp != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, mpsi) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, mpsi) );
 
    (*mpsi)->section     = MPS_NAME;
    (*mpsi)->fp          = fp;
@@ -149,7 +149,7 @@ void mpsinputFree(
    MPSINPUT**            mpsi                /**< mps input structure */
    )
 {
-   SCIPfreeMemory(scip, mpsi);
+   SCIPfreeBlockMemory(scip, mpsi);
 }
 
 /** returns the current section */

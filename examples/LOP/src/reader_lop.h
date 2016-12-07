@@ -13,47 +13,26 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   probdata_lop.h
- * @brief  handling of data needed for solving linear ordering problems
+/**@file   reader_lop.h
+ * @brief  linear ordering file reader
  * @author Marc Pfetsch
+ *
+ * This file implements the reader/parser used to read linear ordering problems. For more details see \ref READER.
  */
 
-#ifndef __LOP_PROBDATA_LOP__
-#define __LOP_PROBDATA_LOP__
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include <scip/scip.h>
+#ifndef __SCIP_READER_LOP_H__
+#define __SCIP_READER_LOP_H__
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
-/** create linear ordering problem instance */
+#include "scip/scip.h"
+
+
+/** includes the linear ordering file reader into SCIP */
 extern
-SCIP_RETCODE LOPcreateProb(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< name of file to read */
-   );
-
-/** create linear ordering problem model */
-extern
-SCIP_RETCODE LOPgenerateModel(
+SCIP_RETCODE SCIPincludeReaderLOP(
    SCIP*                 scip                /**< SCIP data structure */
    );
-
-/** evalutate solution */
-extern
-SCIP_RETCODE LOPevalSolution(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** return the number of elements */
-extern
-int LOPgetNElements(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

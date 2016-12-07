@@ -6196,7 +6196,7 @@ SCIP_DECL_CONSFREE(consFreeBivariate)
       SCIP_CALL( SCIPexprintFree(&conshdlrdata->exprinterpreter) );
    }
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -6504,7 +6504,7 @@ SCIP_DECL_CONSDELETE(consDeleteBivariate)
       SCIP_CALL( SCIPexprtreeFree(&(*consdata)->f) );
    }
 
-   SCIPfreeMemory(scip, consdata);
+   SCIPfreeBlockMemory(scip, consdata);
    *consdata = NULL;
 
    return SCIP_OKAY;
@@ -6522,7 +6522,7 @@ SCIP_DECL_CONSTRANS(consTransBivariate)
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
 
-   SCIP_CALL( SCIPduplicateMemory(scip, &targetdata, sourcedata) );
+   SCIP_CALL( SCIPduplicateBlockMemory(scip, &targetdata, sourcedata) );
    assert(targetdata->eventfilterpos == -1);
 
    assert(sourcedata->f != NULL);
@@ -7891,7 +7891,7 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
    SCIP_CONSHDLR* conshdlr;
 
    /* create bivariate constraint handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    BMSclearMemory(conshdlrdata);
 
    /* include constraint handler */
@@ -8049,7 +8049,7 @@ SCIP_RETCODE SCIPcreateConsBivariate(
    }
 
    /* create constraint data */
-   SCIP_CALL( SCIPallocMemory(scip, &consdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
    BMSclearMemory(consdata);
 
    SCIP_CALL( SCIPexprtreeCopy(SCIPblkmem(scip), &consdata->f, f) );

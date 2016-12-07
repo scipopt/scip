@@ -6601,6 +6601,7 @@ void SCIPdigraphFree(
       BMSfreeMemoryArrayNull(&(*digraph)->successors[i]);
       BMSfreeMemoryArrayNull(&(*digraph)->arcdata[i]);
    }
+   (*digraph)->nnodes = 0;
 
    /* free components structure */
    SCIPdigraphFreeComponents(*digraph);

@@ -438,7 +438,7 @@ SCIP_RETCODE conshdlrdataEnsureLinconsupgradesSize(
       int newsize;
 
       newsize = SCIPcalcMemGrowSize(scip, num);
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->linconsupgrades, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->linconsupgrades, conshdlrdata->linconsupgradessize, newsize) );
       conshdlrdata->linconsupgradessize = newsize;
    }
    assert(num <= conshdlrdata->linconsupgradessize);
@@ -494,7 +494,7 @@ SCIP_RETCODE linconsupgradeCreate(
    assert(linconsupgrade != NULL);
    assert(linconsupgd != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, linconsupgrade) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, linconsupgrade) );
    (*linconsupgrade)->linconsupgd = linconsupgd;
    (*linconsupgrade)->priority = priority;
    (*linconsupgrade)->active = TRUE;
@@ -513,7 +513,7 @@ void linconsupgradeFree(
    assert(linconsupgrade != NULL);
    assert(*linconsupgrade != NULL);
 
-   SCIPfreeMemory(scip, linconsupgrade);
+   SCIPfreeBlockMemory(scip, linconsupgrade);
 }
 
 /** creates constraint handler data for linear constraint handler */
@@ -528,7 +528,7 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(conshdlrdata != NULL);
    assert(eventhdlr != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
    (*conshdlrdata)->linconsupgrades = NULL;
    (*conshdlrdata)->linconsupgradessize = 0;
    (*conshdlrdata)->nlinconsupgrades = 0;
@@ -557,9 +557,9 @@ void conshdlrdataFree(
    {
       linconsupgradeFree(scip, &(*conshdlrdata)->linconsupgrades[i]);
    }
-   SCIPfreeMemoryArrayNull(scip, &(*conshdlrdata)->linconsupgrades);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*conshdlrdata)->linconsupgrades, (*conshdlrdata)->linconsupgradessize);
 
-   SCIPfreeMemory(scip, conshdlrdata);
+   SCIPfreeBlockMemory(scip, conshdlrdata);
 }
 
 /** creates a linear constraint upgrade data object */
@@ -10338,6 +10338,8 @@ SCIP_RETCODE dualPresolve(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Real minabsval;
+   SCIP_Real maxabsval;
    SCIP_Bool lhsexists;
    SCIP_Bool rhsexists;
    SCIP_Bool bestisint;
@@ -10372,6 +10374,8 @@ SCIP_RETCODE dualPresolve(
    bestpos = -1;
    bestisint = TRUE;
    bestislhs = FALSE;
+   minabsval = SCIPinfinity(scip);
+   maxabsval = -1.0;
 
    /* We only want to multi-aggregate variables, if they appear in maximal one additional constraint,
     * everything else would produce fill-in. Exceptions:
@@ -10402,6 +10406,7 @@ SCIP_RETCODE dualPresolve(
       SCIP_VAR* var;
       SCIP_Bool isint;
       SCIP_Real val;
+      SCIP_Real absval;
       SCIP_Real obj;
       SCIP_Real lb;
       SCIP_Real ub;
@@ -10410,6 +10415,20 @@ SCIP_RETCODE dualPresolve(
 
       var = consdata->vars[i];
       isint = (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+
+      val = consdata->vals[i];
+      absval = REALABS(val);
+      assert(SCIPisPositive(scip, absval));
+
+      /* calculate minimal and maximal absolute value */
+      if( absval < minabsval )
+         minabsval = absval;
+      if( absval > maxabsval )
+         maxabsval = absval;
+
+      /* do not try to multi aggregate, when numerical bad */
+      if( maxabsval / minabsval > MAXMULTIAGGRQUOTIENT )
+         return SCIP_OKAY;
 
       /* if we already found a candidate, skip integers */
       if( bestpos >= 0 && isint )
@@ -10424,7 +10443,6 @@ SCIP_RETCODE dualPresolve(
       if ( SCIPdoNotMultaggrVar(scip, var) )
          continue;
 
-      val = consdata->vals[i];
       obj = SCIPvarGetObj(var);
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
@@ -10642,9 +10660,26 @@ SCIP_RETCODE dualPresolve(
       {
          if( j != bestpos )
          {
+            SCIP_Real absaggrcoef;
+
             aggrvars[naggrs] = consdata->vars[j];
             aggrcoefs[naggrs] = -consdata->vals[j]/consdata->vals[bestpos];
             SCIPdebugMsgPrint(scip, " %+.15g<%s>", aggrcoefs[naggrs], SCIPvarGetName(aggrvars[naggrs]));
+
+            absaggrcoef = REALABS(aggrcoefs[naggrs]);
+
+            /* do not try to multi aggregate, when numerical bad */
+            if( absaggrcoef > MAXMULTIAGGRQUOTIENT || absaggrcoef < 1.0/MAXMULTIAGGRQUOTIENT )
+            {
+               SCIPdebugMsg(scip, "do not perform multi-aggregation: too large aggregation coefficients\n");
+
+               /* free temporary memory */
+               SCIPfreeBufferArray(scip, &aggrcoefs);
+               SCIPfreeBufferArray(scip, &aggrvars);
+
+               return SCIP_OKAY;
+            }
+
             if( bestisint )
             {
                /* coefficient must be integral: round it to exact integral value */
@@ -12707,9 +12742,9 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
 
    /* using only the variable indices as hash, since the values are compared by epsilon */
    return SCIPhashFour(SCIPcombineFourInt(consdata->nvars, minidx, mididx, maxidx),
-                       SCIPrealHashCode(consdata->vals[0]),
-                       SCIPrealHashCode(consdata->vals[consdata->nvars / 2]),
-                       SCIPrealHashCode(consdata->vals[consdata->nvars - 1]));
+                       SCIPrealHashCode(consdata->vals[0], 8),
+                       SCIPrealHashCode(consdata->vals[consdata->nvars / 2], 8),
+                       SCIPrealHashCode(consdata->vals[consdata->nvars - 1], 8));
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 

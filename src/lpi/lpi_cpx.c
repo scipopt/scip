@@ -1024,6 +1024,18 @@ void* SCIPlpiGetSolverPointer(
 {
    return (void*) lpi->cpxlp;
 }
+
+/** pass integrality information to LP solver */
+SCIP_RETCODE SCIPlpiSetIntegralityInformation(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   ncols,              /**< length of integrality array */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   )
+{
+   SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
+   return SCIP_LPERROR;
+}
+
 /**@} */
 
 

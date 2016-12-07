@@ -64,8 +64,8 @@ struct SCIP_BranchruleData
    SCIP_Real             minsuccessrate;     /**< minimum success rate for the cloud */
    SCIP_Real             minsuccessunion;    /**< minimum success rate for the union */
    SCIP_CLOCK*           cloudclock;         /**< clock for cloud diving */
-   SCIP_Bool*            skipdown;
-   SCIP_Bool*            skipup;
+   SCIP_Bool*            skipdown;           /**< should down branch be skiped? */
+   SCIP_Bool*            skipup;             /**< should up branch be skiped? */
    int                   ntried;             /**< number of times the cloud was tried */
    int                   ntriedunions;       /**< number of times the cloud was tried */
    int                   nuseful;            /**< number of times the cloud was useful (at least one LP skipped) */
@@ -73,6 +73,7 @@ struct SCIP_BranchruleData
    int                   ncloudpoints;       /**< sum of cloud points taken over all nodes with at least two poitns in cloud */
    int                   nsavedlps;          /**< sum of saved LPs taken over all nodes with at least two points in cloud */
    int                   maxdepthunion;      /**< maximum depth for the union */
+   int                   skipsize;           /**< size of skipdown and skipup array */
 };
 
 /*
@@ -103,10 +104,10 @@ SCIP_DECL_BRANCHFREE(branchFreeCloud)
       SCIP_CALL( SCIPfreeClock(scip, &(branchruledata->cloudclock)) );
    }
 
-   SCIPfreeMemoryArrayNull(scip, &branchruledata->skipdown);
-   SCIPfreeMemoryArrayNull(scip, &branchruledata->skipup);
+   SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->skipdown, branchruledata->skipsize);
+   SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->skipup, branchruledata->skipsize);
 
-   SCIPfreeMemory(scip, &branchruledata);
+   SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
@@ -207,13 +208,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    {
       assert(branchruledata->skipup == NULL);
 
-      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->skipdown, nvars) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->skipup, nvars) );
+      branchruledata->skipsize = nvars;
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->skipdown, branchruledata->skipsize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->skipup, branchruledata->skipsize) );
    }
 
    /* reset skipping arrays to zero */
-   BMSclearMemoryArray(branchruledata->skipdown, nlpcands);
-   BMSclearMemoryArray(branchruledata->skipup, nlpcands);
+   BMSclearMemoryArray(branchruledata->skipdown, branchruledata->skipsize);
+   BMSclearMemoryArray(branchruledata->skipup, branchruledata->skipsize);
 
    /* allocate required data structures */
    SCIP_CALL( SCIPallocBufferArray(scip, &lpcandsmin, nlpcands) );
@@ -512,8 +514,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 
          counter = 0;
          /* reset skipping arrays to zero */
-         BMSclearMemoryArray(branchruledata->skipdown, ndiscvars);
-         BMSclearMemoryArray(branchruledata->skipup, ndiscvars);
+         BMSclearMemoryArray(branchruledata->skipdown, branchruledata->skipsize);
+         BMSclearMemoryArray(branchruledata->skipup, branchruledata->skipsize);
 
          SCIP_CALL( SCIPallocBufferArray(scip, &newlpcands, ndiscvars) );
 
@@ -654,8 +656,9 @@ SCIP_RETCODE SCIPincludeBranchruleCloud(
    SCIP_BRANCHRULE* branchrule;
 
    /* create cloud branching rule data */
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
    branchruledata->lastcand = 0;
+   branchruledata->skipsize = 0;
    branchruledata->skipup = NULL;
    branchruledata->skipdown = NULL;
    SCIP_CALL( SCIPcreateClock(scip, &(branchruledata->cloudclock)) );

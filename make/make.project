@@ -72,6 +72,9 @@ SETCUTOFF	=	0
 VISUALIZE       =       false
 MAXJOBS         =       1
 
+# set SCIP version here for external projects
+# use underscore to make it compatible with def.h
+SCIP_VERSION	=   	4.0.0
 
 # compiling and linking parameters
 VERBOSE		=	false

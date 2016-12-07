@@ -340,16 +340,12 @@ SCIP_RETCODE SCIPincludeBranchruleNodereopt(
    )
 {
    SCIP_BRANCHRULE* branchrule;
-   SCIP_BRANCHRULEDATA* branchruledata;
 
    assert(scip != NULL );
 
-   /* no branching rule data */
-   branchruledata = NULL;
-
    /* include nodereopt branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC,
-         BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata));
+         BRANCHRULE_PRIORITY, BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, NULL));
 
    assert(branchrule != NULL );
 

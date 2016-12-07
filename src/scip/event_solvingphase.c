@@ -126,7 +126,7 @@ struct SCIP_EventhdlrData
    SCIP_Real             lasty;              /**< Y-value of last observation */
    SCIP_PARAM**          nondefaultparams;   /**< parameters with non-default values during problem initialization */
    int                   nnondefaultparams;  /**< number of parameters with non-default values during problem initialization  */
-
+   int                   nondefaultparamssize;/**< capacity of the array of non-default parameters */
    int                   eventfilterpos;     /**< the event filter position, or -1, if event has not (yet) been caught */
    DEPTHINFO**           depthinfos;         /**< array of depth infos for every depth of the search tree */
    int                   maxdepth;           /**< maximum depth so far */
@@ -356,7 +356,7 @@ SCIP_RETCODE createDepthinfo(
    assert(depthinfo != NULL);
 
    /* allocate the necessary memory */
-   SCIP_CALL( SCIPallocMemory(scip, depthinfo) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, depthinfo) );
 
    /* reset the depth information */
    (*depthinfo)->minestimate = SCIPinfinity(scip);
@@ -384,7 +384,7 @@ SCIP_RETCODE freeDepthinfo(
 
    /* free nodes data structure and then the structure itself */
    SCIPfreeBlockMemoryArray(scip, &(*depthinfo)->minnodes, (*depthinfo)->minnodescapacity);
-   SCIPfreeMemory(scip, depthinfo);
+   SCIPfreeBlockMemory(scip, depthinfo);
 
    return SCIP_OKAY;
 }
@@ -448,13 +448,13 @@ SCIP_RETCODE ensureDepthInfoArraySize(
    /* create depth info array with small initial size or enlarge the existing array if new node is deeper */
    if( oldsize == 0 )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &eventhdlrdata->depthinfos, 10) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &eventhdlrdata->depthinfos, 10) );
       newsize = 10;
    }
    else if( nodedepth + 1 >= eventhdlrdata->maxdepth )
    {
       assert(nodedepth > 0);
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &eventhdlrdata->depthinfos, 2 * nodedepth) ); /*lint !e647*/
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &eventhdlrdata->depthinfos, oldsize, 2 * nodedepth) ); /*lint !e647*/
       newsize = 2 * nodedepth;
    }
 
@@ -1219,7 +1219,7 @@ SCIP_DECL_EVENTFREE(eventFreeSolvingphase)
 
    SCIPregressionFree(&eventhdlrdata->regression);
 
-   SCIPfreeMemory(scip, &eventhdlrdata);
+   SCIPfreeBlockMemory(scip, &eventhdlrdata);
    SCIPeventhdlrSetData(eventhdlr, NULL);
 
    return SCIP_OKAY;
@@ -1264,7 +1264,7 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolSolvingphase)
       }
 
       /* free depth information array */
-      SCIPfreeMemoryArray(scip, &eventhdlrdata->depthinfos);
+      SCIPfreeBlockMemoryArray(scip, &eventhdlrdata->depthinfos, eventhdlrdata->maxdepth);
       eventhdlrdata->maxdepth = 0;
    }
 
@@ -1287,6 +1287,7 @@ SCIP_RETCODE collectNondefaultParams(
 
    eventhdlrdata->nnondefaultparams = 0;
    eventhdlrdata->nondefaultparams = NULL;
+   eventhdlrdata->nondefaultparamssize = 0;
 
    /* loop over parameters and store the non-default ones */
    for( p = 0; p < nparams; ++p )
@@ -1298,11 +1299,15 @@ SCIP_RETCODE collectNondefaultParams(
       {
          if( eventhdlrdata->nnondefaultparams == 0 )
          {
-            SCIP_CALL( SCIPallocMemoryArray(scip, &eventhdlrdata->nondefaultparams, 1) );
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &eventhdlrdata->nondefaultparams, 8) );
+            eventhdlrdata->nondefaultparamssize = 8;
          }
-         else
+         else if( eventhdlrdata->nnondefaultparams == eventhdlrdata->nondefaultparamssize )
          {
-            SCIP_CALL( SCIPreallocMemoryArray(scip, &eventhdlrdata->nondefaultparams, eventhdlrdata->nnondefaultparams + 1) );
+            eventhdlrdata->nondefaultparamssize *= 2;
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &eventhdlrdata->nondefaultparams,
+                  eventhdlrdata->nnondefaultparams, eventhdlrdata->nondefaultparamssize) );
+
          }
 
          eventhdlrdata->nondefaultparams[eventhdlrdata->nnondefaultparams++] = param;
@@ -1336,6 +1341,7 @@ SCIP_DECL_EVENTINIT(eventInitSolvingphase)
    eventhdlrdata->estimatereached = FALSE;
    eventhdlrdata->nnondefaultparams = 0;
    eventhdlrdata->nondefaultparams = NULL;
+   eventhdlrdata->nondefaultparamssize = 0;
 
    /* apply solving phase for the first time after problem was transformed to apply settings for the feasibility phase */
    if( eventhdlrdata->enabled )
@@ -1373,7 +1379,7 @@ SCIP_DECL_EVENTEXIT(eventExitSolvingphase)
    assert(eventhdlrdata != NULL);
 
    /* free collected, non-default parameters */
-   SCIPfreeMemoryArrayNull(scip, &eventhdlrdata->nondefaultparams);
+   SCIPfreeBlockMemoryArrayNull(scip, &eventhdlrdata->nondefaultparams, eventhdlrdata->nondefaultparamssize);
 
    return SCIP_OKAY;
 }
@@ -1474,7 +1480,7 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
 
    /* create solving phase event handler data */
    eventhdlrdata = NULL;
-   SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
    assert(eventhdlrdata != NULL);
 
    eventhdlrdata->feassetname = NULL;

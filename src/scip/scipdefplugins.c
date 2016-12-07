@@ -127,6 +127,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurFeaspump(scip) );
    SCIP_CALL( SCIPincludeHeurFixandinfer(scip) );
    SCIP_CALL( SCIPincludeHeurFracdiving(scip) );
+   SCIP_CALL( SCIPincludeHeurGins(scip) );
    SCIP_CALL( SCIPincludeHeurGuideddiving(scip) );
    SCIP_CALL( SCIPincludeHeurZeroobj(scip) );
    SCIP_CALL( SCIPincludeHeurIndicator(scip) );
@@ -148,6 +149,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurRandrounding(scip) );
    SCIP_CALL( SCIPincludeHeurRens(scip) );
    SCIP_CALL( SCIPincludeHeurReoptsols(scip) );
+   SCIP_CALL( SCIPincludeHeurRepair(scip) );
    SCIP_CALL( SCIPincludeHeurRins(scip) );
    SCIP_CALL( SCIPincludeHeurRootsoldiving(scip) );
    SCIP_CALL( SCIPincludeHeurRounding(scip) );

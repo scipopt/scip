@@ -437,7 +437,7 @@ SCIP_DECL_COMPRFREE(comprFreeWeakcompr)
    comprdata = SCIPcomprGetData(compr);
    assert(comprdata != NULL);
 
-   SCIPfreeMemory(scip, &comprdata);
+   SCIPfreeBlockMemory(scip, &comprdata);
    SCIPcomprSetData(compr, NULL);
 
    return SCIP_OKAY;
@@ -466,7 +466,7 @@ SCIP_DECL_COMPREXIT(comprExitWeakcompr)
 
       if( comprdata->representativessize > 0 )
       {
-         SCIPfreeMemoryArray(scip, &comprdata->representatives);
+         SCIPfreeBlockMemoryArray(scip, &comprdata->representatives, comprdata->representativessize);
       }
 
       comprdata->representatives = NULL;
@@ -530,7 +530,7 @@ SCIP_RETCODE SCIPincludeComprWeakcompr(
    SCIP_COMPR* compr;
 
    /* create weakcompr tree compression data */
-   SCIP_CALL( SCIPallocMemory(scip, &comprdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &comprdata) );
    assert(comprdata != NULL);
    comprdata->initialized = FALSE;
 

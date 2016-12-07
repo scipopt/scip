@@ -148,7 +148,7 @@ SCIP_DECL_HEURFREE(heurFreeLocks)
    heurdata = SCIPheurGetData(heur);
 
     /* free primal heuristic data */
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
 
    return SCIP_OKAY;
 }
@@ -949,7 +949,7 @@ SCIP_RETCODE SCIPincludeHeurLocks(
    SCIP_HEURDATA* heurdata;
 
    /* create primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,

@@ -427,7 +427,11 @@ public:
 
       try
       {
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+         (void) optimize();
+#else
          (void) solve();
+#endif
       }
       catch(const SPxException& x)
       {
@@ -943,6 +947,24 @@ void* SCIPlpiGetSolverPointer(
 {
    return (void*) lpi->spx;
 }
+
+/** pass integrality information about variables to the solver */
+SCIP_RETCODE SCIPlpiSetIntegralityInformation(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   ncols,              /**< length of integrality array */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   )
+{
+#if (SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 3))
+   assert(ncols == lpi->spx->numColsReal() || (ncols == 0 && intInfo == NULL));
+   lpi->spx->setIntegralityInformation(ncols, intInfo);
+   return SCIP_OKAY;
+#else
+   SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
+   return SCIP_LPERROR;
+#endif
+}
+
 /**@} */
 
 
@@ -1569,6 +1591,7 @@ SCIP_RETCODE SCIPlpiChgObj(
    return SCIP_OKAY;
 }
 
+/* todo unclear how to adapt to persistent scaling */
 /** multiplies a row with a non-zero scalar; for negative scalars, the row's sense is switched accordingly */
 SCIP_RETCODE SCIPlpiScaleRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -1592,7 +1615,11 @@ SCIP_RETCODE SCIPlpiScaleRow(
       assert( lpi->spx->preStrongbranchingBasisFreed() );
 
       /* get the row vector and the row's sides */
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+      SVector rowvec = lpi->spx->rowVectorRealInternal(row);
+#else
       SVector rowvec = lpi->spx->rowVectorReal(row);
+#endif
       lhs = lpi->spx->lhsReal(row);
       rhs = lpi->spx->rhsReal(row);
 
@@ -1637,6 +1664,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
    return SCIP_OKAY;
 }
 
+/* todo unclear how to adapt to persistent scaling */
 /** multiplies a column with a non-zero scalar; the objective value is multiplied with the scalar, and the bounds
  *  are divided by the scalar; for negative scalars, the column's bounds are switched
  */
@@ -1663,7 +1691,11 @@ SCIP_RETCODE SCIPlpiScaleCol(
       assert( lpi->spx->preStrongbranchingBasisFreed() );
 
       /* get the col vector and the col's bounds and objective value */
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+      SVector colvec = lpi->spx->colVectorRealInternal(col);
+#else
       SVector colvec = lpi->spx->colVectorReal(col);
+#endif
       obj = lpi->spx->objReal(col);
       lb = lpi->spx->lowerReal(col);
       ub = lpi->spx->upperReal(col);
@@ -1777,12 +1809,20 @@ SCIP_RETCODE SCIPlpiGetNNonz(
    if( lpi->spx->numRowsReal() < lpi->spx->numColsReal() )
    {
       for( i = 0; i < lpi->spx->numRowsReal(); ++i )
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+         (*nnonz) += lpi->spx->rowVectorRealInternal(i).size();
+#else
          (*nnonz) += lpi->spx->rowVectorReal(i).size();
+#endif
    }
    else
    {
       for( i = 0; i < lpi->spx->numColsReal(); ++i )
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+         (*nnonz) += lpi->spx->colVectorRealInternal(i).size();
+#else
          (*nnonz) += lpi->spx->colVectorReal(i).size();
+#endif
    }
 
    return SCIP_OKAY;
@@ -1817,13 +1857,39 @@ SCIP_RETCODE SCIPlpiGetCols(
    {
       assert(ub != NULL);
 
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+      if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
+      {
+         DVector lbvec(lpi->spx->numRowsReal());
+         DVector ubvec(lpi->spx->numRowsReal());
+         lpi->spx->getLowerReal(lbvec);
+         lpi->spx->getUpperReal(ubvec);
+         for( i = firstcol; i <= lastcol; ++i )
+         {
+            lb[i-firstcol] = lbvec[i];
+            ub[i-firstcol] = ubvec[i];
+         }
+      }
+      else
+      {
+         const Vector& lbvec = lpi->spx->lowerRealInternal();
+         const Vector& ubvec = lpi->spx->upperRealInternal();
+         for( i = firstcol; i <= lastcol; ++i )
+         {
+            lb[i-firstcol] = lbvec[i];
+            ub[i-firstcol] = ubvec[i];
+         }
+      }
+#else
       const Vector& lbvec = lpi->spx->lowerReal();
       const Vector& ubvec = lpi->spx->upperReal();
+
       for( i = firstcol; i <= lastcol; ++i )
       {
          lb[i-firstcol] = lbvec[i];
          ub[i-firstcol] = ubvec[i];
       }
+#endif
    }
    else
       assert(ub == NULL);
@@ -1834,6 +1900,30 @@ SCIP_RETCODE SCIPlpiGetCols(
       for( i = firstcol; i <= lastcol; ++i )
       {
          beg[i-firstcol] = *nnonz;
+
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+         if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
+         {
+            DSVector cvec;
+            lpi->spx->getColVectorReal(i, cvec);
+            for( j = 0; j < cvec.size(); ++j )
+            {
+               ind[*nnonz] = cvec.index(j);
+               val[*nnonz] = cvec.value(j);
+               (*nnonz)++;
+            }
+         }
+         else
+         {
+            const SVector& cvec = lpi->spx->colVectorRealInternal(i);
+            for( j = 0; j < cvec.size(); ++j )
+            {
+               ind[*nnonz] = cvec.index(j);
+               val[*nnonz] = cvec.value(j);
+               (*nnonz)++;
+            }
+         }
+#else
          const SVector& cvec = lpi->spx->colVectorReal(i);
          for( j = 0; j < cvec.size(); ++j )
          {
@@ -1841,6 +1931,7 @@ SCIP_RETCODE SCIPlpiGetCols(
             val[*nnonz] = cvec.value(j);
             (*nnonz)++;
          }
+#endif
       }
    }
    else
@@ -1882,6 +1973,30 @@ SCIP_RETCODE SCIPlpiGetRows(
    {
       assert(rhs != NULL);
 
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+      if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
+      {
+         DVector lhsvec(lpi->spx->numColsReal());
+         DVector rhsvec(lpi->spx->numColsReal());
+         lpi->spx->getLhsReal(lhsvec);
+         lpi->spx->getRhsReal(rhsvec);
+         for( i = firstrow; i <= lastrow; ++i )
+         {
+            lhs[i-firstrow] = lhsvec[i];
+            rhs[i-firstrow] = rhsvec[i];
+         }
+      }
+      else
+      {
+         const Vector& lhsvec = lpi->spx->lhsRealInternal();
+         const Vector& rhsvec = lpi->spx->rhsRealInternal();
+         for( i = firstrow; i <= lastrow; ++i )
+         {
+            lhs[i-firstrow] = lhsvec[i];
+            rhs[i-firstrow] = rhsvec[i];
+         }
+      }
+#else
       const Vector& lhsvec = lpi->spx->lhsReal();
       const Vector& rhsvec = lpi->spx->rhsReal();
       for( i = firstrow; i <= lastrow; ++i )
@@ -1889,6 +2004,7 @@ SCIP_RETCODE SCIPlpiGetRows(
          lhs[i-firstrow] = lhsvec[i];
          rhs[i-firstrow] = rhsvec[i];
       }
+#endif
    }
    else
       assert(rhs == NULL);
@@ -1899,6 +2015,30 @@ SCIP_RETCODE SCIPlpiGetRows(
       for( i = firstrow; i <= lastrow; ++i )
       {
          beg[i-firstrow] = *nnonz;
+
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+         if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
+         {
+            DSVector rvec;
+            lpi->spx->getRowVectorReal(i, rvec);
+            for( j = 0; j < rvec.size(); ++j )
+            {
+               ind[*nnonz] = rvec.index(j);
+               val[*nnonz] = rvec.value(j);
+               (*nnonz)++;
+            }
+         }
+         else
+         {
+            const SVector& rvec = lpi->spx->rowVectorRealInternal(i);
+            for( j = 0; j < rvec.size(); ++j )
+            {
+               ind[*nnonz] = rvec.index(j);
+               val[*nnonz] = rvec.value(j);
+               (*nnonz)++;
+            }
+         }
+#else
          const SVector& rvec = lpi->spx->rowVectorReal(i);
          for( j = 0; j < rvec.size(); ++j )
          {
@@ -1906,6 +2046,7 @@ SCIP_RETCODE SCIPlpiGetRows(
             val[*nnonz] = rvec.value(j);
             (*nnonz)++;
          }
+#endif
       }
    }
    else
@@ -2082,7 +2223,11 @@ SCIP_RETCODE SCIPlpiGetCoef(
    assert(0 <= row && row < lpi->spx->numRowsReal());
    assert(val != NULL);
 
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+   *val = lpi->spx->coefReal(row, col);
+#else
    *val = lpi->spx->colVectorReal(col)[row];
+#endif
 
    return SCIP_OKAY;
 }
@@ -2308,7 +2453,11 @@ SCIP_RETCODE lpiStrongbranch(
 #ifdef WITH_LPSCHECK
          spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+         status =  spx->optimize();
+#else
          status = spx->solve();
+#endif
          SCIPdebugMessage(" --> Terminate with status %d\n", status);
          switch( status )
          {
@@ -2387,7 +2536,11 @@ SCIP_RETCODE lpiStrongbranch(
 #ifdef WITH_LPSCHECK
             spx->setDoubleCheck(CHECK_SPXSTRONGBRANCH);
 #endif
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+            status = spx->optimize();
+#else
             status = spx->solve();
+#endif
             SCIPdebugMessage(" --> Terminate with status %d\n", status);
             switch( status )
             {
@@ -2680,7 +2833,7 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->status() == SPxSolver::UNBOUNDED);
+   return lpi->spx->hasPrimalRay();
 }
 
 /** returns TRUE iff LP is proven to be primal unbounded */
@@ -2763,7 +2916,7 @@ SCIP_Bool SCIPlpiHasDualRay(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   return (lpi->spx->status() == SPxSolver::INFEASIBLE);
+   return lpi->spx->hasDualFarkas();
 }
 
 /** returns TRUE iff LP is dual unbounded */
@@ -3448,8 +3601,21 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    // @todo exploit sparsity in binv by looping over nrows
    /* calculate the scalar product of the row in B^-1 and A */
    Vector binvvec(nrows, binv);
+
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+   /* temporary unscaled column of A */
+   DSVector acol;
+#endif
+
    for( c = 0; c < ncols; ++c )
+   {
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+      lpi->spx->getColVectorReal(c, acol);
+      coef[c] = binvvec * acol;  /* scalar product */ /*lint !e1702*/
+#else
       coef[c] = binvvec * lpi->spx->colVectorReal(c);  /* scalar product */ /*lint !e1702*/
+#endif
+   }
 
    /* free memory if it was temporarily allocated */
    BMSfreeMemoryArrayNull(&buf);
@@ -3475,6 +3641,11 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    /* create a new uninitialized full vector */
    DVector col(lpi->spx->numRowsReal());
 
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+   /* temporary sparse vector used for unscaling (memory is automatically enlarged) */
+   DSVector colsparse;
+#endif
+
    SCIPdebugMessage("calling SCIPlpiGetBInvACol()\n");
 
    assert( lpi != NULL );
@@ -3492,7 +3663,14 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 
    /* col needs to be cleared because copying colVectorReal only regards nonzeros */
    col.clear();
+
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+   lpi->spx->getColVectorReal(c, colsparse);
+   /* the copy is necessary to transform the sparse column into a dense vector */
+   col = colsparse;
+#else
    col = lpi->spx->colVectorReal(c);
+#endif
 
    /* solve */
    if( ! lpi->spx->getBasisInverseTimesVecReal(col.get_ptr(), coef) )
@@ -3958,9 +4136,20 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       (void) lpi->spx->setIntParam(SoPlex::TIMER, ival);
       break;
 #endif
-#if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 220 && SOPLEX_SUBVERSION >= 3)
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 3)
    case SCIP_LPPAR_RANDOMSEED:
       lpi->spx->setRandomSeed((unsigned int) ival);
+      break;
+#endif
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION >= 221 && SOPLEX_SUBVERSION >= 3)
+   case SCIP_LPPAR_POLISHING:
+      assert(ival >= 0 && ival < 3);
+      (void) lpi->spx->setIntParam(SoPlex::SOLUTION_POLISHING, ival);
+      break;
+#endif
+#if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
+   case SCIP_LPPAR_PERSISTENTSCALING:
+      lpi->spx->setBoolParam(SoPlex::PERSISTENTSCALING, (bool) ival);
       break;
 #endif
    default:

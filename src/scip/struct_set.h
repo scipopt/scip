@@ -72,6 +72,7 @@ struct SCIP_Set
    SCIP_RELAX**          relaxs;             /**< relaxators */
    SCIP_SEPA**           sepas;              /**< separators */
    SCIP_PROP**           props;              /**< propagators */
+   SCIP_PROP**           props_presol;       /**< propagators (sorted by presol priority) */
    SCIP_HEUR**           heurs;              /**< primal heuristics */
    SCIP_COMPR**          comprs;             /**< tree compressions */
    SCIP_EVENTHDLR**      eventhdlrs;         /**< event handlers */
@@ -136,7 +137,7 @@ struct SCIP_Set
    SCIP_Bool             sepassorted;        /**< are the separators sorted by priority? */
    SCIP_Bool             sepasnamesorted;    /**< are the separators sorted by name? */
    SCIP_Bool             propssorted;        /**< are the propagators sorted by priority? */
-   SCIP_Bool             propspresolsorted;  /**< are the propagators sorted by priority for presolving? */
+   SCIP_Bool             propspresolsorted;  /**< are the propagators in prop_presol sorted? */
    SCIP_Bool             propsnamesorted;    /**< are the propagators sorted by name? */
    SCIP_Bool             heurssorted;        /**< are the heuristics sorted by priority? */
    SCIP_Bool             heursnamesorted;    /**< are the heuristics sorted by name? */
@@ -161,6 +162,7 @@ struct SCIP_Set
                                               *   one is detected to be infeasible? (only with propagation) */
    SCIP_Bool             branch_checksbsol;  /**< should LP solutions during strong branching with propagation be checked for feasibility? */
    SCIP_Bool             branch_roundsbsol;  /**< should LP solutions during strong branching with propagation be rounded? (only when checksbsol=TRUE) */
+   SCIP_Bool             branch_sumadjustscore; /**< score adjustment near zero by \b adding epsilon (TRUE) or using maximum (FALSE) */
 
    /* conflict analysis settings */
    SCIP_Real             conf_maxvarsfac;    /**< maximal fraction of variables involved in a conflict constraint */
@@ -317,6 +319,8 @@ struct SCIP_Set
    SCIP_Real             lp_resolveiterfac;  /**< factor of average LP iterations that is used as LP iteration limit
                                               *   for LP resolve (-1: unlimited) */
    int                   lp_resolveitermin;  /**< minimum number of iterations that are allowed for LP resolve */
+   int                   lp_solutionpolishing;/**< LP solution polishing method (0: disabled, 1: only root, 2: always) */
+   SCIP_Bool             lp_persistentscaling;/**< use persistent LP scaling during branch and bound */
 
    /* NLP settings */
    SCIP_Bool             nlp_disable;        /**< should the NLP be disabled even if a constraint handler enabled it? */

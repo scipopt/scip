@@ -1622,8 +1622,8 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecTransform)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the parallelopt command */
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecParallelOpt)
+/** dialog execution method for the concurrentopt command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecConcurrentOpt)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
@@ -3788,12 +3788,12 @@ SCIP_RETCODE SCIPincludeDialogDefault(
    }
 
    /* optimize */
-   if( !SCIPdialogHasEntry(root, "parallelopt") )
+   if( !SCIPdialogHasEntry(root, "concurrentopt") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
                                    NULL,
-                                   SCIPdialogExecParallelOpt, NULL, NULL,
-                                   "parallelopt", "solve the problem in parallel", FALSE, NULL) );
+                                   SCIPdialogExecConcurrentOpt, NULL, NULL,
+                                   "concurrentopt", "solve the problem using concurrent solvers", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

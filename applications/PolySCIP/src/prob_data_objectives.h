@@ -99,4 +99,3 @@ private:
 };
 
 #endif //POLYSCIP_SRC_PROB_DATA_OBJECTIVES_H_INCLUDED
-				      

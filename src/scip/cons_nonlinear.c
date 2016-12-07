@@ -7245,14 +7245,14 @@ SCIP_DECL_CONSFREE(consFreeNonlinear)
    for( i = 0; i < conshdlrdata->nnlconsupgrades; ++i )
    {
       assert(conshdlrdata->nlconsupgrades[i] != NULL);
-      SCIPfreeMemory(scip, &conshdlrdata->nlconsupgrades[i]);
+      SCIPfreeBlockMemory(scip, &conshdlrdata->nlconsupgrades[i]);
    }
-   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->nlconsupgrades);
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->nlconsupgrades, conshdlrdata->nlconsupgradessize);
 
    /* free expressions interpreter */
    SCIP_CALL( SCIPexprintFree(&conshdlrdata->exprinterpreter) );
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -9176,7 +9176,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_CONSHDLR* conshdlr;
 
    /* create nonlinear constraint handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    BMSclearMemory(conshdlrdata);
 
    /* include constraint handler */
@@ -9338,7 +9338,7 @@ SCIP_RETCODE SCIPincludeNonlinconsUpgrade(
    }
 
    /* create a nonlinear constraint upgrade data object */
-   SCIP_CALL( SCIPallocMemory(scip, &nlconsupgrade) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &nlconsupgrade) );
    nlconsupgrade->nlconsupgd = nonlinconsupgd;
    nlconsupgrade->nodereform = nodereform;
    nlconsupgrade->priority   = priority;
@@ -9351,7 +9351,7 @@ SCIP_RETCODE SCIPincludeNonlinconsUpgrade(
       int newsize;
 
       newsize = SCIPcalcMemGrowSize(scip, conshdlrdata->nnlconsupgrades+1);
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->nlconsupgrades, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->nlconsupgrades, conshdlrdata->nnlconsupgrades, newsize) );
       conshdlrdata->nlconsupgradessize = newsize;
    }
    assert(conshdlrdata->nnlconsupgrades+1 <= conshdlrdata->nlconsupgradessize);

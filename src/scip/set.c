@@ -75,7 +75,7 @@
 #define SCIP_DEFAULT_BRANCH_FIRSTSBCHILD    'a' /**< child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, 'h'istory-based, or 'a'utomatic */
 #define SCIP_DEFAULT_BRANCH_CHECKSBSOL     TRUE /**< should LP solutions during strong branching with propagation be checked for feasibility? */
 #define SCIP_DEFAULT_BRANCH_ROUNDSBSOL     TRUE /**< should LP solutions during strong branching with propagation be rounded? (only when checksbsol=TRUE) */
-
+#define SCIP_DEFAULT_BRANCH_SUMADJUSTSCORE FALSE /**< score adjustment near zero by adding epsilon (TRUE) or using maximum (FALSE) */
 
 /* Tree Compression */
 
@@ -92,7 +92,7 @@
 #define SCIP_DEFAULT_CONF_LPITERATIONS       10 /**< maximal number of LP iterations in each LP resolving loop
                                                  *   (-1: no limit) */
 #define SCIP_DEFAULT_CONF_USEPROP          TRUE /**< should propagation conflict analysis be used? */
-#define SCIP_DEFAULT_CONF_USEINFLP          'c' /**< should infeasible LP conflict analysis be used?
+#define SCIP_DEFAULT_CONF_USEINFLP          'b' /**< should infeasible LP conflict analysis be used?
                                                  *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
                                                  */
 #define SCIP_DEFAULT_CONF_USEBOUNDLP        'o' /**< should bound exceeding LP conflict analysis be used?
@@ -240,6 +240,8 @@
 #define SCIP_DEFAULT_LP_RESOLVEITERFAC     -1.0 /**< factor of average LP iterations that is used as LP iteration limit
                                                  *   for LP resolve (-1.0: unlimited) */
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
+#define SCIP_DEFAULT_LP_SOLUTIONPOLISHING     0 /**< LP solution polishing method (0: disabled, 1: only root, 2: always) */
+#define SCIP_DEFAULT_LP_PERSISTENTSCALING FALSE /**< use persistent LP scaling during branch and bound */
 
 /* NLP */
 
@@ -1036,6 +1038,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->sepassorted = FALSE;
    (*set)->sepasnamesorted = FALSE;
    (*set)->props = NULL;
+   (*set)->props_presol = NULL;
    (*set)->nprops = 0;
    (*set)->propssize = 0;
    (*set)->propssorted = FALSE;
@@ -1149,6 +1152,11 @@ SCIP_RETCODE SCIPsetCreate(
          "branching/roundsbsol",
          "should LP solutions during strong branching with propagation be rounded? (only when checksbsol=TRUE)",
          &(*set)->branch_roundsbsol, TRUE, SCIP_DEFAULT_BRANCH_ROUNDSBSOL,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "branching/sumadjustscore",
+         "score adjustment near zero by adding epsilon (TRUE) or using maximum (FALSE)",
+         &(*set)->branch_sumadjustscore, TRUE, SCIP_DEFAULT_BRANCH_SUMADJUSTSCORE,
          NULL, NULL) );
 
    /* tree compression parameters */
@@ -1667,6 +1675,18 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/resolveitermin",
          "minimum number of iterations that are allowed for LP resolve",
          &(*set)->lp_resolveitermin, TRUE, SCIP_DEFAULT_LP_RESOLVEITERMIN, 1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "lp/persistentscaling",
+         "use persistent LP scaling during branch and bound",
+         &(*set)->lp_persistentscaling, TRUE, SCIP_DEFAULT_LP_PERSISTENTSCALING,
+         NULL, NULL) );
+
+
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "lp/solutionpolishing",
+         "LP solution polishing method (0: disabled, 1: only root, 2: always)",
+         &(*set)->lp_solutionpolishing, TRUE, SCIP_DEFAULT_LP_SOLUTIONPOLISHING, 0, 2,
          NULL, NULL) );
 
    /* NLP parameters */
@@ -2499,6 +2519,7 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPpropFree(&(*set)->props[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->props);
+   BMSfreeMemoryArrayNull(&(*set)->props_presol);
 
    /* free primal heuristics */
    for( i = 0; i < (*set)->nheurs; ++i )
@@ -3875,12 +3896,15 @@ SCIP_RETCODE SCIPsetIncludeProp(
    {
       set->propssize = SCIPsetCalcMemGrowSize(set, set->nprops+1);
       SCIP_ALLOC( BMSreallocMemoryArray(&set->props, set->propssize) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->props_presol, set->propssize) );
    }
    assert(set->nprops < set->propssize);
 
    set->props[set->nprops] = prop;
+   set->props_presol[set->nprops] = prop;
    set->nprops++;
    set->propssorted = FALSE;
+   set->propspresolsorted = FALSE;
 
    return SCIP_OKAY;
 }
@@ -3916,7 +3940,6 @@ void SCIPsetSortProps(
    {
       SCIPsortPtr((void**)set->props, SCIPpropComp, set->nprops);
       set->propssorted = TRUE;
-      set->propspresolsorted = FALSE;
       set->propsnamesorted = FALSE;
    }
 }
@@ -3930,9 +3953,8 @@ void SCIPsetSortPropsPresol(
 
    if( !set->propspresolsorted )
    {
-      SCIPsortPtr((void**)set->props, SCIPpropCompPresol, set->nprops);
+      SCIPsortPtr((void**)set->props_presol, SCIPpropCompPresol, set->nprops);
       set->propspresolsorted = TRUE;
-      set->propssorted = FALSE;
       set->propsnamesorted = FALSE;
    }
 }
@@ -3948,7 +3970,6 @@ void SCIPsetSortPropsName(
    {
       SCIPsortPtr((void**)set->props, SCIPpropCompName, set->nprops);
       set->propssorted = FALSE;
-      set->propspresolsorted = FALSE;
       set->propsnamesorted = TRUE;
    }
 }

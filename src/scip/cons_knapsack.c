@@ -1292,10 +1292,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    }
 
    /* allocate temporary memory and check for memory exceeding */
-   /* @note we do allocate normal memory instead of buffer memory, because the buffer will not be deleted directly and
-    *       might be a really huge block of memory which we will not use later on
-    */
-   retcode = SCIPallocMemoryArray(scip, &optvalues, nmyitems * intcap);
+   retcode = SCIPallocBufferArray(scip, &optvalues, nmyitems * intcap);
    if( retcode == SCIP_NOMEMORY )
    {
       SCIPdebugMsg(scip, "Did not get enough memory.\n");
@@ -1382,7 +1379,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
       }
 
       SCIPfreeBufferArray(scip, &tempsort);
-      SCIPfreeMemoryArray(scip, &optvalues);
+      SCIPfreeBufferArray(scip, &optvalues);
 
       goto TERMINATE;
    }
@@ -1511,7 +1508,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
 
    /* free all temporary memory */
    SCIPfreeBufferArray(scip, &tempsort);
-   SCIPfreeMemoryArray(scip, &optvalues);
+   SCIPfreeBufferArray(scip, &optvalues);
 
  TERMINATE:
    SCIPfreeBufferArray(scip, &myitems);
@@ -2816,8 +2813,8 @@ SCIP_RETCODE getLiftingSequence(
    assert(nvarsR >= 0);
 
    /* allocates temporary memory */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &sortkeypairsF, nvarsF) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &sortkeypairsFstore, nvarsF) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeypairsF, nvarsF) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeypairsFstore, nvarsF) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysC2, nvarsC2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeysR, nvarsR) );
 
@@ -2863,13 +2860,13 @@ SCIP_RETCODE getLiftingSequence(
    /* frees temporary memory */
    SCIPfreeBufferArray(scip, &sortkeysR);
    SCIPfreeBufferArray(scip, &sortkeysC2);
-   SCIPfreeMemoryArray(scip, &sortkeypairsFstore);
-   SCIPfreeMemoryArray(scip, &sortkeypairsF);
+   SCIPfreeBufferArray(scip, &sortkeypairsFstore);
+   SCIPfreeBufferArray(scip, &sortkeypairsF);
 
    return SCIP_OKAY;
 }
 
-/** categorizies GUBs of knapsack GUB partion into GOC1, GNC1, GF, GC2, and GR and computes a lifting sequence of the GUBs
+/** categorizes GUBs of knapsack GUB partion into GOC1, GNC1, GF, GC2, and GR and computes a lifting sequence of the GUBs
  *  for the sequential GUB wise lifting procedure
  */
 static
@@ -3081,8 +3078,8 @@ SCIP_RETCODE getLiftingSequenceGUB(
    SCIPfreeBufferArray(scip, &sortkeysC1);
 
    /* allocate and initialize temporary memory for sorting GUB constraints */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &sortkeypairsGFC1, ngubconss) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &sortkeypairsGFC1store, ngubconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeypairsGFC1, ngubconss) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeypairsGFC1store, ngubconss) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nC1varsingubcons, ngubconss) );
    BMSclearMemoryArray(nC1varsingubcons, ngubconss);
    for( i = 0; i < ngubconss; i++)
@@ -3385,8 +3382,8 @@ SCIP_RETCODE getLiftingSequenceGUB(
    ngubconss = origngubconss;
 #endif
    SCIPfreeBufferArray(scip, &nC1varsingubcons);
-   SCIPfreeMemoryArray(scip, &sortkeypairsGFC1store);
-   SCIPfreeMemoryArray(scip, &sortkeypairsGFC1);
+   SCIPfreeBufferArray(scip, &sortkeypairsGFC1store);
+   SCIPfreeBufferArray(scip, &sortkeypairsGFC1);
 
    return SCIP_OKAY;
 }
@@ -5306,7 +5303,7 @@ SCIP_RETCODE makeCoverMinimal(
 
    /* allocates temporary memory */
    nsortkeypairs = *ncovervars;
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sortkeypairs, nsortkeypairs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sortkeypairs, nsortkeypairs) );
 
    /* sorts C in the reverse order in which the variables were chosen to be in the cover, i.e. 
     *   such that (1 - x*_1)/a_1 >= ... >= (1 - x*_|C|)/a_|C|,  if          trans separation problem was used to find C 
@@ -5318,7 +5315,7 @@ SCIP_RETCODE makeCoverMinimal(
    {
       for( j = 0; j < *ncovervars; j++ )
       {
-         SCIP_CALL( SCIPallocBlockMemory(scip, &(sortkeypairs[j])) ); /*lint !e866 */
+         SCIP_CALL( SCIPallocBuffer(scip, &(sortkeypairs[j])) ); /*lint !e866 */
 
          sortkeypairs[j]->key1 = solvals[covervars[j]]; 
          sortkeypairs[j]->key2 = (SCIP_Real) weights[covervars[j]]; 
@@ -5328,7 +5325,7 @@ SCIP_RETCODE makeCoverMinimal(
    {
       for( j = 0; j < *ncovervars; j++ )
       {
-         SCIP_CALL( SCIPallocBlockMemory(scip, &(sortkeypairs[j])) ); /*lint !e866 */
+         SCIP_CALL( SCIPallocBuffer(scip, &(sortkeypairs[j])) ); /*lint !e866 */
 
          sortkeypairs[j]->key1 = (solvals[covervars[j]] - 1.0) / ((SCIP_Real) weights[covervars[j]]);
          sortkeypairs[j]->key2 = (SCIP_Real) (-weights[covervars[j]]);
@@ -5402,8 +5399,8 @@ SCIP_RETCODE makeCoverMinimal(
 
    /* frees temporary memory */
    for( j = nsortkeypairs-1; j >= 0; j-- )
-      SCIPfreeBlockMemory(scip, &(sortkeypairs[j])); /*lint !e866 */
-   SCIPfreeBlockMemoryArray(scip, &sortkeypairs, nsortkeypairs);
+      SCIPfreeBuffer(scip, &(sortkeypairs[j])); /*lint !e866 */
+   SCIPfreeBufferArray(scip, &sortkeypairs);
 
    return SCIP_OKAY;
 }
@@ -5812,8 +5809,8 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
        */
       if( conshdlrdata->reals1size == 0 )
       {
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->reals1, conshdlrdata->reals1size, 1) );
          conshdlrdata->reals1size = 1;
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->reals1, 1) );
          conshdlrdata->reals1[0] = 0.0;
       }
 
@@ -5825,12 +5822,10 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
        */
       if( conshdlrdata->reals1size < nbinvars )
       {
-         int oldsize;
-         oldsize = conshdlrdata->reals1size;
+         int oldsize = conshdlrdata->reals1size;
 
-         while( conshdlrdata->reals1size < nbinvars )
-            conshdlrdata->reals1size *= 2;
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->reals1, conshdlrdata->reals1size) );
+         conshdlrdata->reals1size = nbinvars;
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->reals1, oldsize, conshdlrdata->reals1size) );
          BMSclearMemoryArray(&(conshdlrdata->reals1[oldsize]), conshdlrdata->reals1size - oldsize); /*lint !e866 */
       }
       binvals = conshdlrdata->reals1;
@@ -9826,42 +9821,34 @@ SCIP_RETCODE tightenWeightsLift(
     */
    if( conshdlrdata->ints1size < nbinvars )
    {
-      int oldsize;
-      oldsize = conshdlrdata->ints1size;
+      int oldsize = conshdlrdata->ints1size;
 
-      while( conshdlrdata->ints1size < nbinvars )
-         conshdlrdata->ints1size *= 2;
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->ints1, conshdlrdata->ints1size) );
+      conshdlrdata->ints1size = nbinvars;
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->ints1, oldsize, conshdlrdata->ints1size) );
       BMSclearMemoryArray(&(conshdlrdata->ints1[oldsize]), conshdlrdata->ints1size - oldsize); /*lint !e866*/
    }
    if( conshdlrdata->ints2size < nbinvars )
    {
-      int oldsize;
-      oldsize = conshdlrdata->ints2size;
+      int oldsize = conshdlrdata->ints2size;
 
-      while( conshdlrdata->ints2size < nbinvars )
-         conshdlrdata->ints2size *= 2;
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->ints2, conshdlrdata->ints2size) );
+      conshdlrdata->ints2size = nbinvars;
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->ints2, oldsize, conshdlrdata->ints2size) );
       BMSclearMemoryArray(&(conshdlrdata->ints2[oldsize]), conshdlrdata->ints2size - oldsize); /*lint !e866*/
    }
    if( conshdlrdata->longints1size < nbinvars )
    {
-      int oldsize;
-      oldsize = conshdlrdata->longints1size;
+      int oldsize = conshdlrdata->longints1size;
 
-      while( conshdlrdata->longints1size < nbinvars )
-         conshdlrdata->longints1size *= 2;
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->longints1, conshdlrdata->longints1size) );
+      conshdlrdata->longints1size = nbinvars;
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->longints1, oldsize, conshdlrdata->longints1size) );
       BMSclearMemoryArray(&(conshdlrdata->longints1[oldsize]), conshdlrdata->longints1size - oldsize); /*lint !e866*/
    }
    if( conshdlrdata->longints2size < nbinvars )
    {
-      int oldsize;
-      oldsize = conshdlrdata->longints2size;
+      int oldsize = conshdlrdata->longints2size;
 
-      while( conshdlrdata->longints2size < nbinvars )
-         conshdlrdata->longints2size *= 2;
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->longints2, conshdlrdata->longints2size) );
+      conshdlrdata->longints2size = nbinvars;
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->longints2, oldsize, conshdlrdata->longints2size) );
       BMSclearMemoryArray(&(conshdlrdata->longints2[oldsize]), conshdlrdata->longints2size - oldsize); /*lint !e866*/
    }
 
@@ -9899,22 +9886,18 @@ SCIP_RETCODE tightenWeightsLift(
     */
    if( conshdlrdata->bools1size < nbinvars )
    {
-      int oldsize;
-      oldsize = conshdlrdata->bools1size;
+      int oldsize = conshdlrdata->bools1size;
 
-      while( conshdlrdata->bools1size < nbinvars )
-         conshdlrdata->bools1size *= 2;
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->bools1, conshdlrdata->bools1size) );
+      conshdlrdata->bools1size = nbinvars;
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->bools1, oldsize, conshdlrdata->bools1size) );
       BMSclearMemoryArray(&(conshdlrdata->bools1[oldsize]), conshdlrdata->bools1size - oldsize); /*lint !e866*/
    }
    if( conshdlrdata->bools2size < nbinvars )
    {
-      int oldsize;
-      oldsize = conshdlrdata->bools2size;
+      int oldsize = conshdlrdata->bools2size;
 
-      while( conshdlrdata->bools2size < nbinvars )
-         conshdlrdata->bools2size *= 2;
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->bools2, conshdlrdata->bools2size) );
+      conshdlrdata->bools2size = nbinvars;
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->bools2, oldsize, conshdlrdata->bools2size) );
       BMSclearMemoryArray(&(conshdlrdata->bools2[oldsize]), conshdlrdata->bools2size - oldsize); /*lint !e866*/
    }
 
@@ -10070,12 +10053,10 @@ SCIP_RETCODE tightenWeightsLift(
     */
    if( conshdlrdata->bools3size < consdata->nvars )
    {
-      int oldsize;
-      oldsize = conshdlrdata->bools3size;
+      int oldsize = conshdlrdata->bools3size;
 
-      while( conshdlrdata->bools3size < consdata->nvars )
-         conshdlrdata->bools3size *= 2;
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->bools3, conshdlrdata->bools3size) );
+      conshdlrdata->bools3size = consdata->nvars;;
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->bools3, oldsize, conshdlrdata->bools3size) );
       BMSclearMemoryArray(&(conshdlrdata->bools3[oldsize]), conshdlrdata->bools3size - oldsize); /*lint !e866*/
    }
 
@@ -10116,12 +10097,10 @@ SCIP_RETCODE tightenWeightsLift(
     */
    if( conshdlrdata->bools4size < consdata->nvars )
    {
-      int oldsize;
-      oldsize = conshdlrdata->bools4size;
+      int oldsize = conshdlrdata->bools4size;
 
-      while( conshdlrdata->bools4size < consdata->nvars )
-         conshdlrdata->bools4size *= 2;
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->bools4, conshdlrdata->bools4size) );
+      conshdlrdata->bools4size = consdata->nvars;
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->bools4, oldsize, conshdlrdata->bools4size) );
       BMSclearMemoryArray(&conshdlrdata->bools4[oldsize], conshdlrdata->bools4size - oldsize); /*lint !e866*/
    }
 
@@ -11983,7 +11962,7 @@ SCIP_DECL_CONSFREE(consFreeKnapsack)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    SCIPconshdlrSetData(conshdlr, NULL);
 
@@ -12007,8 +11986,7 @@ SCIP_DECL_CONSINIT(consInitKnapsack)
    /* all variables which are of integral type can be binary; this can be checked via the method SCIPvarIsBinary(var) */
    nvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->reals1, nvars) );
-   BMSclearMemoryArray(conshdlrdata->reals1, nvars);
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->reals1, nvars) );
    conshdlrdata->reals1size = nvars;
 
    return SCIP_OKAY;
@@ -12026,7 +12004,7 @@ SCIP_DECL_CONSEXIT(consExitKnapsack)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->reals1);
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->reals1, conshdlrdata->reals1size);
    conshdlrdata->reals1size = 0;
 
    return SCIP_OKAY;
@@ -12050,23 +12028,14 @@ SCIP_DECL_CONSINITPRE(consInitpreKnapsack)
    /* all variables which are of integral type can be binary; this can be checked via the method SCIPvarIsBinary(var) */
    nvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->ints1, nvars) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->ints2, nvars) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->longints1, nvars) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->longints2, nvars) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->bools1, nvars) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->bools2, nvars) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->bools3, nvars) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->bools4, nvars) );
-
-   BMSclearMemoryArray(conshdlrdata->ints1, nvars);
-   BMSclearMemoryArray(conshdlrdata->ints2, nvars);
-   BMSclearMemoryArray(conshdlrdata->longints1, nvars);
-   BMSclearMemoryArray(conshdlrdata->longints2, nvars);
-   BMSclearMemoryArray(conshdlrdata->bools1, nvars);
-   BMSclearMemoryArray(conshdlrdata->bools2, nvars);
-   BMSclearMemoryArray(conshdlrdata->bools3, nvars);
-   BMSclearMemoryArray(conshdlrdata->bools4, nvars);
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->ints1, nvars) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->ints2, nvars) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->longints1, nvars) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->longints2, nvars) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->bools1, nvars) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->bools2, nvars) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->bools3, nvars) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &conshdlrdata->bools4, nvars) );
 
    conshdlrdata->ints1size = nvars;
    conshdlrdata->ints2size = nvars;
@@ -12103,14 +12072,14 @@ SCIP_DECL_CONSEXITPRE(consExitpreKnapsack)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->ints1);
-   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->ints2);
-   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->longints1);
-   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->longints2);
-   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->bools1);
-   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->bools2);
-   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->bools3);
-   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->bools4);
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->ints1, conshdlrdata->ints1size);
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->ints2, conshdlrdata->ints2size);
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->longints1, conshdlrdata->longints1size);
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->longints2, conshdlrdata->longints2size);
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->bools1, conshdlrdata->bools1size);
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->bools2, conshdlrdata->bools2size);
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->bools3, conshdlrdata->bools3size);
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->bools4, conshdlrdata->bools4size);
 
    conshdlrdata->ints1size = 0;
    conshdlrdata->ints2size = 0;
@@ -13083,7 +13052,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
    SCIP_CONSHDLR* conshdlr;
 
    /* create knapsack constraint handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
 
    /* include event handler for bound change events */
    eventhdlrdata = NULL;
@@ -13517,4 +13486,3 @@ SCIP_ROW* SCIPgetRowKnapsack(
 
    return consdata->row;
 }
-

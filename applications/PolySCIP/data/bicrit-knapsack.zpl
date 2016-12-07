@@ -10,4 +10,4 @@ var x[I] binary;
 maximize Obj: sum <i> in I: cost1[i]*x[i];
 Obj2: sum <i> in I: cost2[i]*x[i];
 
-subto Weight: sum <i> in I: weight[i]*x[i] <= max_weight; 
+subto Weight: sum <i> in I: weight[i]*x[i] <= max_weight;

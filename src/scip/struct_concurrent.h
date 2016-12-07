@@ -55,4 +55,3 @@ struct SCIP_Concurrent
 #endif
 
 #endif
-

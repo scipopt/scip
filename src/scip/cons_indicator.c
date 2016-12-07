@@ -595,7 +595,7 @@ SCIP_DECL_CONFLICTFREE(conflictFreeIndicator)
    assert( strcmp(SCIPconflicthdlrGetName(conflicthdlr), CONFLICTHDLR_NAME) == 0 );
 
    conflicthdlrdata = SCIPconflicthdlrGetData(conflicthdlr);
-   SCIPfreeMemory(scip, &conflicthdlrdata);
+   SCIPfreeBlockMemory(scip, &conflicthdlrdata);
 
    return SCIP_OKAY;
 }
@@ -3456,9 +3456,27 @@ SCIP_RETCODE presolRoundIndicator(
          consdata->binvar = var;
       }
    }
+   else if ( SCIPvarGetStatus(consdata->binvar) == SCIP_VARSTATUS_NEGATED )
+   {
+      SCIP_VAR* var;
+
+      var = SCIPvarGetNegatedVar(consdata->binvar);
+      assert( var != NULL );
+
+      /* if the binary variable is the negated slack variable, we have 1 - s = 1 -> s = 0, i.e., the constraint is redundant */
+      if ( var == consdata->slackvar )
+      {
+         /* delete constraint */
+         assert( ! SCIPconsIsModifiable(cons) );
+         SCIP_CALL( SCIPdelCons(scip, cons) );
+         ++(*ndelconss);
+         *success = TRUE;
+         return SCIP_OKAY;
+      }
+   }
 
    /* check whether slack variable is aggregated  */
-   if ( SCIPvarGetStatus(consdata->slackvar) == SCIP_VARSTATUS_AGGREGATED )
+   if ( SCIPvarGetStatus(consdata->slackvar) == SCIP_VARSTATUS_AGGREGATED || SCIPvarGetStatus(consdata->slackvar) == SCIP_VARSTATUS_NEGATED )
    {
       SCIP_BOUNDTYPE boundtype = SCIP_BOUNDTYPE_LOWER;
       SCIP_Real bound;
@@ -3469,12 +3487,13 @@ SCIP_RETCODE presolRoundIndicator(
       bound = SCIPvarGetLbGlobal(var);
 
       SCIP_CALL( SCIPvarGetProbvarBound(&var, &bound, &boundtype) );
+      assert( var != consdata->slackvar );
 
-      /* we can replace the binary variable by the active variable if it is also a >= variable */
-      if ( var != consdata->slackvar && boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisGE(scip, bound, 0.0) )
+      /* we can replace the slack variable by the active variable if it is also a >= variable */
+      if ( var != consdata->binvar && boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisGE(scip, bound, 0.0) )
       {
          assert( SCIPvarIsActive(var) );
-         SCIPdebugMsg(scip, "Slack variable <%s> is aggregated and replaced by active variable <%s>.\n", SCIPvarGetName(consdata->slackvar), SCIPvarGetName(var) );
+         SCIPdebugMsg(scip, "Slack variable <%s> is aggregated or negated and replaced by active variable <%s>.\n", SCIPvarGetName(consdata->slackvar), SCIPvarGetName(var) );
 
          /* we need to update the events, locks, and captures */
          assert( conshdlrdata->eventhdlrbound != NULL );
@@ -5106,7 +5125,7 @@ SCIP_DECL_CONSFREE(consFreeIndicator)
    conshdlrdata->naddlincons = 0;
    conshdlrdata->maxaddlincons = 0;
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -5980,11 +5999,6 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
             SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
-
-            if( !(*infeasible) )
-            {
-               SCIP_CALL( SCIPaddPoolCut(scip, row) );
-            }
             SCIP_CALL( SCIPreleaseRow(scip, &row));
          }
       }
@@ -7003,7 +7017,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP_CONSHDLR* conshdlr;
 
    /* create constraint handler data (used in conflicthdlrdata) */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
 
    /* create event handler for bound change events */
    conshdlrdata->eventhdlrbound = NULL;
@@ -7076,7 +7090,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    }
 
    /* create conflict handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conflicthdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conflicthdlrdata) );
    conflicthdlrdata->conshdlrdata = conshdlrdata;
    conflicthdlrdata->conshdlr = conshdlr;
    assert( conflicthdlrdata->conshdlr != NULL );

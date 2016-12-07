@@ -465,7 +465,7 @@ SCIP_DECL_HEURFREE(heurFreeOfins)
    assert(heurdata != NULL);
 
    /* free heuristic data */
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -628,7 +628,7 @@ SCIP_RETCODE SCIPincludeHeurOfins(
    SCIP_HEUR* heur;
 
    /* create ofins primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    assert(heurdata != NULL);
 
    /* include primal heuristic */
