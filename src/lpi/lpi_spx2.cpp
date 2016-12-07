@@ -3405,33 +3405,24 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert( lpi->spx->preStrongbranchingBasisFreed() );
    invalidateSolution(lpi);
 
-   SPxSolver::VarStatus* spxcstat = NULL;
-   SPxSolver::VarStatus* spxrstat = NULL;
-   SCIP_ALLOC( BMSallocMemoryArray(&spxcstat, nCols) );
-   SCIP_ALLOC( BMSallocMemoryArray(&spxrstat, nRows) );
-
    for( i = 0; i < nRows; ++i )
    {
       switch( rstat[i] ) /*lint !e613*/
       {
       case SCIP_BASESTAT_LOWER:
-         spxrstat[i] = SPxSolver::ON_LOWER;
+         rstat[i] = SPxSolver::ON_LOWER;
          break;
       case SCIP_BASESTAT_BASIC:
-         spxrstat[i] = SPxSolver::BASIC;
+         rstat[i] = SPxSolver::BASIC;
          break;
       case SCIP_BASESTAT_UPPER:
-         spxrstat[i] = SPxSolver::ON_UPPER;
+         rstat[i] = SPxSolver::ON_UPPER;
          break;
       case SCIP_BASESTAT_ZERO:
          SCIPerrorMessage("slack variable has basis status ZERO (should not occur)\n");
-         BMSfreeMemoryArrayNull(&spxcstat);
-         BMSfreeMemoryArrayNull(&spxrstat);
          return SCIP_LPERROR; /*lint !e429*/
       default:
          SCIPerrorMessage("invalid basis status\n");
-         BMSfreeMemoryArrayNull(&spxcstat);
-         BMSfreeMemoryArrayNull(&spxrstat);
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
@@ -3442,30 +3433,25 @@ SCIP_RETCODE SCIPlpiSetBase(
       switch( cstat[i] ) /*lint !e613*/
       {
       case SCIP_BASESTAT_LOWER:
-         spxcstat[i] = SPxSolver::ON_LOWER;
+         cstat[i] = SPxSolver::ON_LOWER;
          break;
       case SCIP_BASESTAT_BASIC:
-         spxcstat[i] = SPxSolver::BASIC;
+         cstat[i] = SPxSolver::BASIC;
          break;
       case SCIP_BASESTAT_UPPER:
-         spxcstat[i] = SPxSolver::ON_UPPER;
+         cstat[i] = SPxSolver::ON_UPPER;
          break;
       case SCIP_BASESTAT_ZERO:
-         spxcstat[i] = SPxSolver::ZERO;
+         cstat[i] = SPxSolver::ZERO;
          break;
       default:
          SCIPerrorMessage("invalid basis status\n");
-         BMSfreeMemoryArrayNull(&spxcstat);
-         BMSfreeMemoryArrayNull(&spxrstat);
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
-   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(spxrstat, spxcstat) );
-
-   BMSfreeMemoryArrayNull(&spxcstat);
-   BMSfreeMemoryArrayNull(&spxrstat);
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis((SPxSolver::VarStatus*) rstat, (SPxSolver::VarStatus*) cstat) );
 
    return SCIP_OKAY;
 }
