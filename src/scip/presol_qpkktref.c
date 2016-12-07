@@ -724,7 +724,7 @@ SCIP_RETCODE presolveAddKKTLinearConss(
 
    /* remove linear constraints if lhs != rhs, since they are now redundant; their feasibility is already expressed
     * by s >= 0, where s is the new slack variable that we introduced for these linear constraints */
-   for( c = 0; c < nlinconss; ++c )
+   for( c = nlinconss-1; c >= 0; --c )
    {
       SCIP_CONS* lincons;
 
@@ -811,7 +811,7 @@ SCIP_RETCODE presolveAddKKTKnapsackConss(
 
    /* remove knapsack constraints, since they are now redundant; their feasibility is already expressed
     * by s >= 0, where s is the new slack variable that we introduced for these linear constraints */
-   for( c = 0; c < nconss; ++c )
+   for( c = nconss-1; c >= 0; --c )
    {
       assert( conss[c] != NULL );
       SCIP_CALL( SCIPdelCons(scip, conss[c]) );
@@ -910,7 +910,7 @@ SCIP_RETCODE presolveAddKKTSetppcConss(
 
    /* remove set packing constraints if lhs != rhs, since they are now redundant; their feasibility is already expressed
     * by s >= 0, where s is the new slack variable that we introduced for these linear constraints */
-   for( c = 0; c < nconss; ++c )
+   for( c = nconss-1; c >= 0; --c )
    {
       assert( conss[c] != NULL );
 
@@ -998,12 +998,12 @@ SCIP_RETCODE presolveAddKKTVarboundConss(
 
    /* remove varbound constraints if lhs != rhs, since they are now redundant; their feasibility is already expressed
     * by s >= 0, where s is the new slack variable that we introduced for these linear constraints */
-   for( c = 0; c < nconss; ++c )
+   for( c = nconss-1; c >= 0; --c )
    {
       SCIP_CONS* cons;
 
       cons = conss[c];
-      assert( conss[c] != NULL );
+      assert( cons != NULL );
 
       if( ! SCIPisFeasEQ(scip, SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons)) )
       {
@@ -1086,7 +1086,7 @@ SCIP_RETCODE presolveAddKKTLogicorConss(
 
    /* remove logicor constraints, since they are now redundant; their feasibility is already expressed
     * by s >= 0, where s is the new slack variable that we introduced for these linear constraints */
-   for( c = 0; c < nconss; ++c )
+   for( c = nconss-1; c >= 0; --c )
    {
       assert( conss[c] != NULL );
 
@@ -1625,7 +1625,10 @@ SCIP_RETCODE checkConsQuadraticProblem(
    else if( maydecrease >= 0 )
    {
       objind = maydecrease;
-      assert( mayincrease < 0 || mayincrease == objind );
+
+      /* if both mayincrease and maydecrese are nonnegative, then check objective coefficient */
+      if( mayincrease >= 0 && SCIPisFeasZero(scip, SCIPvarGetObj(lintermvars[maydecrease])) )
+         objind = mayincrease;
    }
    else
       objind = mayincrease;

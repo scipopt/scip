@@ -4219,6 +4219,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             }
          }
 
+         if( !consdata0->sorted )
+            consdataSort(consdata0);
+         assert(consdata0->sorted);
 
 #if 0
       /* if aggregation in the core of SCIP is not changed we do not need to call applyFixing, this would be the correct

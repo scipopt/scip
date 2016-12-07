@@ -390,7 +390,7 @@ void variableGraphFree(
    SCIPfreeBlockMemory(scip, vargraph);
 }
 
-/* breadth-first search on the variable constraint graph; uses a special kind of queue data structure that holds
+/* breadth-first (BFS) search on the variable constraint graph; uses a special kind of queue data structure that holds
  * two queue levels at the same time: the variables at the current distance and the ones at the next distance
  */
 static
@@ -399,7 +399,7 @@ SCIP_RETCODE variablegraphBreadthFirst(
    VARIABLEGRAPH*       vargraph,            /**< pointer to the variable graph */
    SCIP_VAR*            startvar,            /**< variable to calculate distance from */
    int*                 distances,           /**< array to keep distance in vargraph from startvar for every variable */
-   int                  maxdistance          /**< maximum distance from start variable */
+   int                  maxdistance          /**< maximum distance >= 0 from start variable (INT_MAX for complete BFS)*/
    )
 {
    SCIP_VAR** vars;
@@ -417,11 +417,12 @@ SCIP_RETCODE variablegraphBreadthFirst(
    assert(vargraph != NULL);
    assert(startvar != NULL);
    assert(distances != NULL);
+   assert(maxdistance >= 0);
 
    /* get variable data */
    nvars = SCIPgetNVars(scip);
    vars = SCIPgetVars(scip);
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &queue, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &queue, nvars) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &varbuffer, nvars) );
 
    SCIPhashtableRemoveAll(vargraph->visitedconss);
@@ -447,13 +448,16 @@ SCIP_RETCODE variablegraphBreadthFirst(
       int c;
       int varpos;
 
-      assert(distances[queue[currlvlidx]] >= 0);
       currvar = vars[queue[currlvlidx]];
       varpos = SCIPvarGetProbindex(currvar);
-      currentdistance = distances[currlvlidx];
+      currentdistance = distances[varpos];
+      assert(currentdistance >= 0);
+
+      /* distances must only be computed up to maxdistance  */
+      assert(currentdistance <= maxdistance);
 
       /* check for termination because maximum distance has been reached */
-      if( currentdistance > maxdistance )
+      if( currentdistance == maxdistance )
          break;
 
       assert(varpos >= 0);
@@ -497,7 +501,7 @@ SCIP_RETCODE variablegraphBreadthFirst(
             /* insert variables that were not considered yet into the next level queue */
             if( distances[nextvarpos] == -1 )
             {
-               distances[nextvarpos] = distances[varpos] + 1;
+               distances[nextvarpos] = currentdistance + 1;
                queue[nextlvlidx] = nextvarpos;
                nextlvlidx -= increment;
             }
@@ -1101,10 +1105,10 @@ SCIP_RETCODE selectNextVariable(
 
    } while( rollingHorizonRunAgain(scip, rollinghorizon, heurdata) && (*selvar == NULL || *selvarmaxdistance == 0) );
 
-   /* breadth-first search determines the distances of all variables that are no more than maxdistance + 1
-    * away from the start variable
+   /* breadth-first search determines the distances of all variables
+    * that are no more than maxdistance away from the start variable
     */
-   assert(*selvarmaxdistance <= rollinghorizon->lastmaxdistance + 1);
+   assert(*selvarmaxdistance <= rollinghorizon->lastmaxdistance);
    *selvarmaxdistance = MIN(*selvarmaxdistance, rollinghorizon->lastmaxdistance);
    rollinghorizon->lastdistance = minunuseddistance;
    rollinghorizon->lastmaxdistance = *selvarmaxdistance;
