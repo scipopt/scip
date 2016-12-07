@@ -2359,6 +2359,9 @@ SCIP_RETCODE SCIPcliquetableAdd(
                   {
                      *infeasible = TRUE;
 
+                     BMSfreeBlockMemoryArray(blkmem, &clqvars, size);
+                     BMSfreeBlockMemoryArray(blkmem, &clqvalues, size);
+
                      return SCIP_OKAY;
                   }
 
@@ -2423,6 +2426,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
 
       return SCIP_OKAY;
    }
+
    assert(!*infeasible);
 
    /* check if only one or less variables are left */
@@ -2518,6 +2522,10 @@ SCIP_RETCODE SCIPcliquetableAdd(
             sameclique->equation = TRUE;
 
          cliqueFree(&clique, blkmem);
+
+         BMSfreeBlockMemoryArray(blkmem, &clqvars, size);
+         BMSfreeBlockMemoryArray(blkmem, &clqvalues, size);
+
          return SCIP_OKAY;
       }
    }
@@ -2532,6 +2540,9 @@ SCIP_RETCODE SCIPcliquetableAdd(
       return SCIP_OKAY;
    }
    cliqueCheck(clique);
+
+   BMSfreeBlockMemoryArray(blkmem, &clqvars, size);
+   BMSfreeBlockMemoryArray(blkmem, &clqvalues, size);
 
    return SCIP_OKAY;
 }
