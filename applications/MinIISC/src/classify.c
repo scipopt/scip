@@ -31,6 +31,8 @@
 #define DEFAULT_MASTERGAPLIMIT         0.1        /**< gap bound for approximately solving the master problem */
 #define DEFAULT_REOPTIMIZATION         FALSE      /**< Use reoptimization to solve master problem? */
 #define DEFAULT_MASTERSTALLNODES       5000L      /**< stall nodes for the master problem */
+#define DEFAULT_BOUNDSONCLASSIFIER     FALSE      /**< Use unit bounds on classifier? */
+
 
 /** data needed for cut generation */
 struct BENDERS_Data
@@ -705,7 +707,8 @@ SCIP_Bool getNextPair(
 static
 SCIP_RETCODE readLIBSVM(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< name of file to read */
+   const char*           filename,           /**< name of file to read */
+   SCIP_Bool             boundsonclassifier  /**< Use unit bounds on classifier? */
    )
 {
    char name[SCIP_MAXSTRLEN];
@@ -745,6 +748,10 @@ SCIP_RETCODE readLIBSVM(
    /* create rhs variable */
    SCIP_CALL( SCIPcreateVar(scip, &rhsvar, NULL, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, rhsvar) );
+
+   /* determine rhs */
+   if ( boundsonclassifier )
+      delta = 10.0 * SCIPfeastol(scip);
 
    /* loop through file */
    while ( ! feof(file) )
@@ -800,7 +807,14 @@ SCIP_RETCODE readLIBSVM(
             if ( vars[idx-1] == NULL )
             {
                (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "w#%d", idx-1);
-               SCIP_CALL( SCIPcreateVar(scip, &vars[idx-1], name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+               if ( boundsonclassifier )
+               {
+                  SCIP_CALL( SCIPcreateVar(scip, &vars[idx-1], name, -1.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPcreateVar(scip, &vars[idx-1], name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+               }
                SCIP_CALL( SCIPaddVar(scip, vars[idx-1]) );
             }
             assert( vars[idx-1] != NULL );
@@ -875,6 +889,7 @@ SCIP_RETCODE solveClassification(
    SCIP_Longint masterstallnodes;
    SCIP_Real mastergaplimit;
    SCIP_Bool reoptimization;
+   SCIP_Bool boundsonclassifier;
 
    /* create master SCIP */
    SCIP_CALL( SCIPcreate(&masterscip) );
@@ -914,6 +929,11 @@ SCIP_RETCODE solveClassification(
          "Use reoptimization to solve master problem?",
          &reoptimization, TRUE, DEFAULT_REOPTIMIZATION, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(masterscip,
+         "miniisc/boundsonclassifier",
+         "Add unit bounds on the classifier?",
+         &boundsonclassifier, TRUE, DEFAULT_BOUNDSONCLASSIFIER, NULL, NULL) );
+
    /* read parameters if required */
    if ( settingsname != NULL )
    {
@@ -934,6 +954,8 @@ SCIP_RETCODE solveClassification(
 
    SCIPinfoMessage(masterscip, NULL, "Input file:\t%s\n", filename);
    SCIPinfoMessage(masterscip, NULL, "Problem name:\t%s\n\n", probname);
+   if ( boundsonclassifier )
+      SCIPinfoMessage(masterscip, NULL, "Using unit bounds on classifier.\n");
 
    /* ----------------------------------------------------------------------------------------*/
 
@@ -946,11 +968,14 @@ SCIP_RETCODE solveClassification(
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(origscip, "infeasible") );
 
-   /* read problem */
-   SCIP_CALL( readLIBSVM(origscip, filename) );
+   /* read data and create problem */
+   SCIP_CALL( readLIBSVM(origscip, filename, boundsonclassifier) );
 
-   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "infeas-%s.lp", probname);
-   SCIPinfoMessage(masterscip, NULL, "Writing infeasible model to file:%s.\n", name);
+   if ( boundsonclassifier )
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "classify-bnd-%s.lp", probname);
+   else
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "classify-%s.lp", probname);
+   SCIPinfoMessage(masterscip, NULL, "Writing infeasible classification model to file: %s.\n", name);
    SCIP_CALL( SCIPwriteOrigProblem(origscip, name, "lp", FALSE) );
 
    /* check that we have an LP */
