@@ -3178,6 +3178,7 @@ SCIP_RETCODE SCIPlpiGetPrimalRay(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
+   assert(lpi->spx->hasPrimalRay());
 
    try
    {
@@ -3209,6 +3210,7 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
 
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
+   assert(lpi->spx->hasDualFarkas());
 
    try
    {
