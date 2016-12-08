@@ -7357,6 +7357,12 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
    int c;
 
    assert(scip != NULL);
+
+   /* just return if SCIP is optimal, infeasible or unbounded */
+   if ( SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL || SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE ||
+        SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED || SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
+      return SCIP_OKAY;
+
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
 
@@ -7466,6 +7472,29 @@ SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   conshdlrdata->newsoleventfilterpos = -1;
+
+   /* reset flags and counters */
+   conshdlrdata->sepanlp = FALSE;
+   conshdlrdata->lastenfonode = NULL;
+   conshdlrdata->nenforounds = 0;
+
+   /* just return if SCIP is optimal, infeasible or unbounded; no that this goes here and not at the top of the method
+    * because we need to have some data consistency in exitsol */
+   if ( SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL || SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE ||
+        SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED || SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
+      return SCIP_OKAY;
+
+   if( nconss != 0 )
+   {
+      SCIP_EVENTHDLR* eventhdlr;
+
+      eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
+      assert(eventhdlr != NULL);
+
+      SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
+   }
+
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
@@ -7498,22 +7527,6 @@ SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
          SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
       }
    }
-
-   conshdlrdata->newsoleventfilterpos = -1;
-   if( nconss != 0 )
-   {
-      SCIP_EVENTHDLR* eventhdlr;
-
-      eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
-      assert(eventhdlr != NULL);
-
-      SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
-   }
-
-   /* reset flags and counters */
-   conshdlrdata->sepanlp = FALSE;
-   conshdlrdata->lastenfonode = NULL;
-   conshdlrdata->nenforounds = 0;
 
    return SCIP_OKAY;
 }
