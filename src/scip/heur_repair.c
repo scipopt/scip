@@ -1230,12 +1230,16 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
 
    if( !SCIPisLPConstructed(scip) )
    {
-      SCIP_Bool infeasible;
+      SCIP_Bool cutoff;
 
-      SCIP_CALL( SCIPconstructLP(scip, &infeasible) );
+      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-      if( infeasible )
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
+      if( cutoff )
+      {
+         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;
+      }
    }
 
    /* create original solution */

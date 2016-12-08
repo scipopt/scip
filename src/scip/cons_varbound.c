@@ -507,7 +507,7 @@ SCIP_RETCODE resolvePropagation(
           * arithmetics, so we explicitly check this here.
           */
          if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-            relaxedbd = (consdata->lhs - (inferbd - 1.0 + MAX(2.0, REALABS(vbdcoef)) * SCIPfeastol(scip))) / vbdcoef;
+            relaxedbd = (consdata->lhs - (inferbd - 1.0 + 2.0* SCIPfeastol(scip))) / vbdcoef;
          else
             relaxedbd = (consdata->lhs - inferbd) / vbdcoef;
 
@@ -567,7 +567,7 @@ SCIP_RETCODE resolvePropagation(
              * arithmetics, so we explicitly check this here.
              */
             if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-               relaxedub = consdata->lhs - (inferbd - 1.0 + MAX(2.0, REALABS(vbdcoef)) * SCIPfeastol(scip)) * vbdcoef;
+               relaxedub = consdata->lhs - (inferbd - 1.0 + 2.0 * SCIPfeastol(scip)) * vbdcoef;
             else
                relaxedub = consdata->lhs - inferbd * vbdcoef;
 
@@ -583,7 +583,7 @@ SCIP_RETCODE resolvePropagation(
              * arithmetics, so we explicitly check this here.
              */
             if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-               relaxedub = consdata->lhs - (inferbd + 1.0 - MAX(2.0, REALABS(vbdcoef))*SCIPfeastol(scip)) * vbdcoef;
+               relaxedub = consdata->lhs - (inferbd + 1.0 - 2.0 * SCIPfeastol(scip)) * vbdcoef;
             else
                relaxedub = consdata->lhs - inferbd * vbdcoef;
 
@@ -622,7 +622,7 @@ SCIP_RETCODE resolvePropagation(
           * arithmetics, so we explicitly check this here.
           */
          if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-            relaxedbd = (consdata->rhs - (inferbd + 1.0 - MAX(2.0, REALABS(vbdcoef))*SCIPfeastol(scip))) / vbdcoef;
+            relaxedbd = (consdata->rhs - (inferbd + 1.0 - 2.0 * SCIPfeastol(scip))) / vbdcoef;
          else
             relaxedbd = (consdata->rhs - inferbd) / vbdcoef;
 
@@ -682,7 +682,7 @@ SCIP_RETCODE resolvePropagation(
              * arithmetics, so we explicitly check this here.
              */
             if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-               relaxedlb = consdata->rhs - (inferbd + 1.0 - MAX(2.0, REALABS(vbdcoef))*SCIPfeastol(scip)) * vbdcoef;
+               relaxedlb = consdata->rhs - (inferbd + 1.0 - 2.0 * SCIPfeastol(scip)) * vbdcoef;
             else
                relaxedlb = consdata->rhs - inferbd * vbdcoef;
 
@@ -698,7 +698,7 @@ SCIP_RETCODE resolvePropagation(
              * arithmetics, so we explicitly check this here.
              */
             if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-               relaxedlb = consdata->rhs - (inferbd - 1.0 + MAX(2.0, REALABS(vbdcoef))*SCIPfeastol(scip)) * vbdcoef;
+               relaxedlb = consdata->rhs - (inferbd - 1.0 + 2.0 * SCIPfeastol(scip)) * vbdcoef;
             else
                relaxedlb = consdata->rhs - inferbd * vbdcoef;
 

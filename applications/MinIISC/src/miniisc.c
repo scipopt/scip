@@ -667,7 +667,7 @@ SCIP_RETCODE solveMinIISC(
    SCIP_Real lhs = -1.0;
    SCIP_Real rhs = -1.0;
    SCIP_VAR** origvars;
-   SCIP_Real obj = 1.0;
+   SCIP_Real obj = 0.0;
    SCIP_Real lb = 0.0;
    SCIP_Real ub;
    int norigvars;
@@ -791,7 +791,6 @@ SCIP_RETCODE solveMinIISC(
    SCIP_CALL( SCIPlpiGetNCols(lp, &m) );
 
    /* add columns for bounds */
-   obj = 0.0;
    ub = SCIPlpiInfinity(lp);
    for (v = 0; v < norigvars; ++v)
    {
