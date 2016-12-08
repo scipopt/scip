@@ -587,11 +587,15 @@ SCIP_RETCODE SCIPconflictstoreCreate(
    (*conflictstore)->maxstoresize = -1;
    (*conflictstore)->ncleanups = 0;
    (*conflictstore)->lastnodenum = -1;
+   (*conflictstore)->eventhdlr = SCIPsetFindEventhdlr(set, EVENTHDLR_NAME);
 
    /* create event handler for LP events */
-   SCIP_CALL( SCIPeventhdlrCreate(&(*conflictstore)->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, NULL, NULL,
-         NULL, NULL, eventInitsolConflictstore, eventExitsolConflictstore, NULL, eventExecConflictstore, NULL) );
-   SCIP_CALL( SCIPsetIncludeEventhdlr(set, (*conflictstore)->eventhdlr) );
+   if( (*conflictstore)->eventhdlr == NULL )
+   {
+      SCIP_CALL( SCIPeventhdlrCreate(&(*conflictstore)->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, NULL, NULL,
+            NULL, NULL, eventInitsolConflictstore, eventExitsolConflictstore, NULL, eventExecConflictstore, NULL) );
+      SCIP_CALL( SCIPsetIncludeEventhdlr(set, (*conflictstore)->eventhdlr) );
+   }
    assert((*conflictstore)->eventhdlr != NULL);
 
    return SCIP_OKAY;
