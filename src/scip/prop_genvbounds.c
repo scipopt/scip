@@ -292,8 +292,6 @@ SCIP_Real getGenVBoundsMinActivityConflict(
    {
       SCIP_Real bound;
 
-      assert(!SCIPisZero(scip, coefs[i]));
-
       if( coefs[i] > 0.0 )
       {
          /* get bound at current bound change */
@@ -708,7 +706,6 @@ SCIP_RETCODE resolveGenVBoundPropagation(
    for( i = 0; i < nvars; i++ )
    {
       assert(vars[i] != NULL);
-      assert(!SCIPisZero(scip, genvbound->coefs[i]));
       assert(SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE)));
       assert(SCIPisEQ(scip, SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE)));
 

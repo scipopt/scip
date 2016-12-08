@@ -2313,7 +2313,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                }
                assert(norigvars == conshdlrdata->nallvars);
 
-               retcode = SCIPduplicateBlockMemoryArray(scip, &allvars, conshdlrdata->allvars, norigvars);
+               retcode = SCIPduplicateBufferArray(scip, &allvars, conshdlrdata->allvars, norigvars);
                if( retcode != SCIP_OKAY )
                {
                   fclose(file); /*lint !e449*/

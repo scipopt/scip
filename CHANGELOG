@@ -171,6 +171,7 @@ fixed bugs:
 - fixed handling of infeasibility detected in CONSINITLP callback
 - fixed bug with sorting of propagators in presolving: the order can be changed by calling probing; thus, there is a copy of the
   propagators, which is sorted by presolving priority
+- avoid numerically unstable (multi-)aggregations
 
 misc:
 - dropped support for Ipopt < 3.11
