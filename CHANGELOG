@@ -168,7 +168,6 @@ fixed bugs:
   is the same as at the last focus node
 - fixed memory bug in SCIP_DIGRAPH
 - fixed bug while changing the objective value of an original value after transforming the problem
-- fixed handling of infeasibility detected in CONSINITLP callback
 - fixed bug with sorting of propagators in presolving: the order can be changed by calling probing; thus, there is a copy of the
   propagators, which is sorted by presolving priority
 - avoid numerically unstable (multi-)aggregations
