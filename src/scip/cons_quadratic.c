@@ -479,6 +479,7 @@ SCIP_RETCODE catchVarEvents(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
    int i;
 
    assert(scip != NULL);
@@ -497,7 +498,9 @@ SCIP_RETCODE catchVarEvents(
    {
       SCIP_CALL( catchLinearVarEvents(scip, eventhdlr, cons, i) );
 
-      consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(consdata->linvars[i]);
+      var = consdata->linvars[i];
+      consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(var)
+         && !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    }
 
    for( i = 0; i < consdata->nquadvars; ++i )
@@ -506,7 +509,9 @@ SCIP_RETCODE catchVarEvents(
 
       SCIP_CALL( catchQuadVarEvents(scip, eventhdlr, cons, i) );
 
-      consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(consdata->quadvarterms[i].var);
+      var = consdata->quadvarterms[i].var;
+      consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(var)
+         && !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    }
 
    consdata->ispropagated = FALSE;
@@ -1061,8 +1066,16 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 
       if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
       {
+         SCIP_VAR* var;
+
          SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
          consdata->ispropagated = FALSE;
+
+         var = varidx < 0 ? consdata->quadvarterms[-varidx-1].var : consdata->linvars[varidx];
+         assert(var != NULL);
+
+         if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
+            consdata->isremovedfixings = FALSE;
       }
    }
 
@@ -1875,7 +1888,8 @@ SCIP_RETCODE addLinearCoef(
 
    consdata->ispropagated = FALSE;
    consdata->ispresolved = FALSE;
-   consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(var);
+   consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(var)
+      && !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    if( consdata->nlinvars == 1 )
       consdata->linvarssorted = TRUE;
    else
@@ -2130,7 +2144,8 @@ SCIP_RETCODE addQuadVarTerm(
 
    consdata->ispropagated = FALSE;
    consdata->ispresolved  = FALSE;
-   consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(var);
+   consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(var)
+      && !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    if( consdata->nquadvars == 1 )
       consdata->quadvarssorted = TRUE;
    else
@@ -2371,7 +2386,8 @@ SCIP_RETCODE replaceQuadVarTermPos(
    /* install rounding locks for new variable */
    SCIP_CALL( lockQuadraticVariable(scip, cons, var) );
 
-   consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(var);
+   consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(var)
+      && !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    consdata->quadvarssorted = (consdata->nquadvars == 1);
    consdata->quadvarsmerged = FALSE;
    consdata->bilinsorted &= (quadvarterm->nadjbilin == 0);  /*lint !e514*/
@@ -2858,7 +2874,7 @@ SCIP_RETCODE removeFixedVariables(
    {
       var = consdata->linvars[i];
 
-      if( SCIPvarIsActive(var) )
+      if( SCIPvarIsActive(var) && !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
       {
          ++i;
          continue;
@@ -2869,7 +2885,15 @@ SCIP_RETCODE removeFixedVariables(
       coef = consdata->lincoefs[i];
       offset = 0.0;
 
-      SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &offset) );
+      if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
+      {
+         offset = coef * (SCIPvarGetLbGlobal(var) + SCIPvarGetUbGlobal(var)) / 2.0;
+         coef = 0.0;
+      }
+      else
+      {
+         SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &offset) );
+      }
 
       SCIPdebugMsg(scip, "  linear term %g*<%s> is replaced by %g * <%s> + %g\n", consdata->lincoefs[i], SCIPvarGetName(consdata->linvars[i]),
          coef, SCIPvarGetName(var), offset);
@@ -2932,7 +2956,7 @@ SCIP_RETCODE removeFixedVariables(
    {
       var = consdata->quadvarterms[i].var;
 
-      if( SCIPvarIsActive(var) )
+      if( SCIPvarIsActive(var) && !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
       {
          ++i;
          continue;
@@ -2942,7 +2966,16 @@ SCIP_RETCODE removeFixedVariables(
 
       coef   = 1.0;
       offset = 0.0;
-      SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &offset) );
+
+      if( !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
+      {
+         SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &offset) );
+      }
+      else
+      {
+         coef = 0.0;
+         offset = (SCIPvarGetLbGlobal(var) + SCIPvarGetUbGlobal(var)) / 2.0;
+      }
 
       SCIPdebugMsg(scip, "  quadratic variable <%s> with status %d is replaced by %g * <%s> + %g\n", SCIPvarGetName(consdata->quadvarterms[i].var),
          SCIPvarGetStatus(consdata->quadvarterms[i].var), coef, SCIPvarGetName(var), offset);
