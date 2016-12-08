@@ -81,7 +81,6 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    SCIP_Bool             copycuts,           /**< should cuts be copied (only if uselprows == FALSE) */
    SCIP_Bool*            success,            /**< was the copying successful? */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
-
    );
 
 #ifdef __cplusplus

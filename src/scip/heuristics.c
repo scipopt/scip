@@ -932,7 +932,7 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
       SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
       /* copy all variables */
-      SCIP_CALL( SCIPcopyVars(sourcescip, subscip, varmap, NULL,  fixedvars, fixedvals, nfixedvars, TRUE) );
+      SCIP_CALL( SCIPcopyVars(sourcescip, subscip, varmap, NULL, fixedvars, fixedvals, nfixedvars, TRUE) );
 
       /* create linear constraints from LP rows of the source problem */
       SCIP_CALL( createRows(sourcescip, subscip, varmap) );
