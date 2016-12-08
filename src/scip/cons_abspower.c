@@ -6379,7 +6379,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
             zcoef = consdata->zcoef;
          }
 
-         /* the upgraded constraint constraint reduces to lhs <= x <= rhs, try to fix x instead of creating a constraint */
+         /* the upgraded constraint reduces to lhs <= x <= rhs, try to fix x instead of creating a constraint */
          if( SCIPisZero(scip, zcoef) && SCIPisEQ(scip, lhs, rhs) && SCIPvarIsIntegral(consdata->x) )
          {
             /* both sides are integral */
