@@ -3015,7 +3015,8 @@ SCIP_RETCODE solveNodeRelax(
    SCIP_Bool*            solvelpagain,       /**< pointer to store TRUE, if the node's LP has to be solved again */
    SCIP_Bool*            solverelaxagain,    /**< pointer to store TRUE, if the external relaxators should be called
                                               *   again */
-   SCIP_Bool*            relaxcalled         /**< pointer to store TRUE, if at least one relaxator was called */
+   SCIP_Bool*            relaxcalled         /**< pointer to store TRUE, if at least one relaxator was called (unmodified
+                                              *   otherwise) */
    )
 {
    SCIP_RESULT result;
@@ -3030,8 +3031,6 @@ SCIP_RETCODE solveNodeRelax(
    assert(solverelaxagain != NULL);
    assert(relaxcalled != NULL);
    assert(!(*cutoff));
-
-   *relaxcalled = FALSE;
 
    /* sort by priority */
    SCIPsetSortRelaxs(set);
@@ -3521,6 +3520,7 @@ SCIP_RETCODE propAndSolve(
    SCIP_Bool*            fullpropagation,    /**< pointer to store whether we want to do a fullpropagation next time */
    SCIP_Bool*            propagateagain,     /**< pointer to store whether we want to propagate again */
    SCIP_Bool*            lpsolved,           /**< pointer to store whether the lp was solved */
+   SCIP_Bool*            relaxcalled,        /**< pointer to store whether a relaxator was called; initialized with last loop's result */
    SCIP_Bool*            solvelpagain,       /**< pointer to store whether we want to solve the lp again */
    SCIP_Bool*            solverelaxagain,    /**< pointer to store whether we want to solve the relaxation again */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
@@ -3533,7 +3533,6 @@ SCIP_RETCODE propAndSolve(
    )
 {
    SCIP_Bool newinitconss;
-   SCIP_Bool relaxcalled;
 
    assert(set != NULL);
    assert(stat != NULL);
@@ -3581,8 +3580,7 @@ SCIP_RETCODE propAndSolve(
       oldninitconssadded = stat->ninitconssadded;
 
       /* call after LP propagators */
-      if( (*afterlpproplps) < stat->nnodelps
-            && (*lpsolved || SCIPrelaxationGetBestRelaxSolObj(relaxation) != -SCIPsetInfinity(set)) )
+      if( ((*afterlpproplps) < stat->nnodelps && (*lpsolved)) || (*relaxcalled) )
       {
          SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, *fullpropagation,
                SCIP_PROPTIMING_AFTERLPLOOP, cutoff, postpone) );
@@ -3695,7 +3693,7 @@ SCIP_RETCODE propAndSolve(
    }
 
    /* solve external relaxations with non-negative priority */
-   relaxcalled = FALSE;
+   *relaxcalled = FALSE;
    if( solverelax && !(*cutoff) )
    {
       /* initialize value for the best relaxation solution */
@@ -3705,7 +3703,7 @@ SCIP_RETCODE propAndSolve(
       SCIPbranchcandClearExternCands(branchcand);
 
       SCIP_CALL( solveNodeRelax(blkmem, set, stat, tree, relaxation, primal, transprob, origprob, actdepth, TRUE,
-            cutoff, propagateagain, solvelpagain, solverelaxagain, &relaxcalled) );
+            cutoff, propagateagain, solvelpagain, solverelaxagain, relaxcalled) );
       assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
       /* check, if the path was cutoff */
@@ -3815,7 +3813,7 @@ SCIP_RETCODE propAndSolve(
    if( solverelax && !(*cutoff) )
    {
       SCIP_CALL( solveNodeRelax(blkmem, set, stat, tree, relaxation, primal, transprob, origprob, actdepth, FALSE, cutoff, propagateagain, solvelpagain,
-            solverelaxagain, &relaxcalled) );
+            solverelaxagain, relaxcalled) );
       assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
       /* check, if the path was cutoff */
@@ -4000,6 +3998,7 @@ SCIP_RETCODE solveNode(
       SCIP_Bool solvelp;
       SCIP_Bool propagate;
       SCIP_Bool forcedenforcement;
+      SCIP_Bool relaxcalled;
 
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
@@ -4010,12 +4009,12 @@ SCIP_RETCODE solveNode(
       nloops++;
       lperror = FALSE;
       lpsolved = FALSE;
+      relaxcalled = FALSE;
       forcedenforcement = FALSE;
       afterlpproplps = -1L;
 
       while( !lperror && !(*cutoff) && (propagateagain || solvelpagain || solverelaxagain
-            || (afterlpproplps < stat->nnodelps
-                  && (lpsolved || SCIPrelaxationGetBestRelaxSolObj(relaxation) != -SCIPsetInfinity(set)))) )
+            || (afterlpproplps < stat->nnodelps && lpsolved) || relaxcalled) )
       {
          solverelax = solverelaxagain;
          solverelaxagain = FALSE;
@@ -4034,7 +4033,7 @@ SCIP_RETCODE solveNode(
          SCIP_CALL( propAndSolve(blkmem, set, messagehdlr, stat, mem, origprob, transprob, primal, tree, reopt, lp,
                relaxation, pricestore, sepastore, branchcand, cutpool, delayedcutpool, conflict, conflictstore, eventfilter,
                eventqueue, cliquetable, focusnode, actdepth, propagate, solvelp, solverelax, forcedlpsolve, initiallpsolved,
-               fullseparation, &afterlpproplps, &heurtiming, &nlperrors, &fullpropagation, &propagateagain, &lpsolved,
+               fullseparation, &afterlpproplps, &heurtiming, &nlperrors, &fullpropagation, &propagateagain, &lpsolved, &relaxcalled,
                &solvelpagain, &solverelaxagain, cutoff, postpone, unbounded, stopped, &lperror, &pricingaborted, &forcedenforcement) );
          initiallpsolved |= lpsolved;
 
