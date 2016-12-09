@@ -3083,8 +3083,6 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    /* detect integer and implicit integer variables with bounds {0,1} because they might appear in cliques, as well */
    for( v = nbinvars; v < ndiscvars; ++v )
    {
-      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_IMPLINT);
-
       if( SCIPvarIsBinary(vars[v]) )
          ++nimplbinvars;
    }
