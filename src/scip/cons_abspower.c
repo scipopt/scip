@@ -6380,7 +6380,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
          }
 
          /* the upgraded constraint reduces to lhs <= x <= rhs, try to fix x instead of creating a constraint */
-         if( SCIPisZero(scip, zcoef) && SCIPisEQ(scip, lhs, rhs) && SCIPvarIsIntegral(consdata->x) )
+         if( SCIPisZero(scip, zcoef) && SCIPisEQ(scip, lhs, rhs) )
          {
             /* both sides are integral */
             if( SCIPisIntegral(scip, lhs) )
@@ -6400,7 +6400,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
                   return SCIP_OKAY;
                }
 
-               ++(*nchgbds);
+               ++(*nfixedvars);
                break;
             }
             else
