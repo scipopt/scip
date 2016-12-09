@@ -3630,14 +3630,15 @@ SCIP_RETCODE doCopy(
    /* start time measuring */
    SCIPclockStart(sourcescip->stat->copyclock, sourcescip->set);
 
-   /* in case there are active pricers and pricing is disabled the target SCIP will not be a valid copy of the source
-    * SCIP
-    */
-   localvalid = enablepricing || (SCIPgetNActivePricers(sourcescip) == 0);
-
    /* copy all plugins */
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
+
+   /* in case there are active pricers and pricing is disabled the target SCIP will not be a valid copy of the source
+    * SCIP
+    */
+   if( ! enablepricing && SCIPgetNActivePricers(sourcescip) > 0 )
+      localvalid = FALSE;
 
    SCIPdebugMsg(sourcescip, "Copying plugins was%s valid.\n", localvalid ? "" : " not");
 
