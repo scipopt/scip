@@ -299,6 +299,9 @@ SCIP_RETCODE SCIPprimalHeuristics(
 
    for( h = 0; h < set->nheurs; ++h )
    {
+#ifndef NDEBUG
+      size_t nusedbuffer = BMSgetNUsedBufferMemory(SCIPbuffer(set->scip));
+#endif
       /* it might happen that a diving heuristic renders the previously solved node LP invalid
        * such that additional calls to LP heuristics will fail; better abort the loop in this case
        */
@@ -318,6 +321,14 @@ SCIP_RETCODE SCIPprimalHeuristics(
 
       SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpstateforkdepth, heurtiming, nodeinfeasible,
             &ndelayedheurs, &result) );
+
+#ifndef NDEBUG
+      if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) > nusedbuffer )
+      {
+         SCIPerrorMessage("Buffer not completely freed after executing heuristic <%s>\n", SCIPheurGetName(set->heurs[h]));
+         SCIPABORT();
+      }
+#endif
 
       /* if the new solution cuts off the current node due to a new primal solution (via the cutoff bound) interrupt
        * calling the remaining heuristics
@@ -385,6 +396,9 @@ SCIP_RETCODE propagationRound(
    /* call additional propagators with nonnegative priority */
    for( i = 0; i < set->nprops && !(*postpone) && (!(*cutoff) || !abortoncutoff); ++i )
    {
+#ifndef NDEBUG
+      size_t nusedbuffer = BMSgetNUsedBufferMemory(SCIPbuffer(set->scip));
+#endif
       /* timing needs to fit */
       if( (SCIPpropGetTimingmask(set->props[i]) & timingmask) == 0 )
          continue;
@@ -398,6 +412,15 @@ SCIP_RETCODE propagationRound(
       SCIPsetDebugMsg(set, "calling propagator <%s>\n", SCIPpropGetName(set->props[i]));
 
       SCIP_CALL( SCIPpropExec(set->props[i], set, stat, depth, onlydelayed, tree->sbprobing, timingmask, &result) );
+
+#ifndef NDEBUG
+      if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) > nusedbuffer )
+      {
+         SCIPerrorMessage("Buffer not completely freed after executing propagator <%s>\n", SCIPpropGetName(set->props[i]));
+         SCIPABORT();
+      }
+#endif
+
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
 
@@ -1074,25 +1097,37 @@ SCIP_RETCODE SCIPinitConssLP(
    assert(lp != NULL);
    assert(cutoff != NULL);
 
+   *cutoff = FALSE;
+
    /* inform separation storage, that LP is now filled with initial data */
    SCIPsepastoreStartInitialLP(sepastore);
 
    /* add LP relaxations of all initial constraints to LP */
    SCIPsetDebugMsg(set, "init LP: initial rows\n");
-   for( h = 0; h < set->nconshdlrs; ++h )
+   for( h = 0; h < set->nconshdlrs && !(*cutoff); ++h )
    {
       SCIP_CALL( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat, tree, firstsubtreeinit, cutoff) );
    }
 
-   if( set->reopt_enable && set->reopt_usecuts && firstsubtreeinit )
+   if( set->reopt_enable && set->reopt_usecuts && firstsubtreeinit && !(*cutoff) )
    {
-      /* add stored cuts */
+      /* add stored cuts from last reoptimization run */
       SCIP_CALL( SCIPreoptApplyCuts(reopt, tree->focusnode, sepastore, cutpool, blkmem, set, stat, eventqueue,
             eventfilter, lp, root) );
    }
 
-   SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
-         eventqueue, eventfilter, cliquetable, root, SCIP_EFFICIACYCHOICE_LP, cutoff) );
+   if( !(*cutoff) )
+   {
+      /* apply cuts */
+      SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
+            eventqueue, eventfilter, cliquetable, root, SCIP_EFFICIACYCHOICE_LP, cutoff) );
+   }
+   else
+   {
+      /* the current node will be cut off; we clear the sepastore */
+      SCIP_CALL( SCIPsepastoreClearCuts(sepastore, blkmem, set, eventqueue, eventfilter, lp) );
+   }
+
 
    /* inform separation storage, that initial LP setup is now finished */
    SCIPsepastoreEndInitialLP(sepastore);
@@ -1514,6 +1549,10 @@ SCIP_RETCODE separationRoundLP(
            && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
         ++i )
    {
+#ifndef NDEBUG
+      size_t nusedbuffer = BMSgetNUsedBufferMemory(SCIPbuffer(set->scip));
+#endif
+
       if( SCIPsepaGetPriority(set->sepas[i]) < 0 )
          continue;
 
@@ -1523,7 +1562,13 @@ SCIP_RETCODE separationRoundLP(
       SCIPsetDebugMsg(set, " -> executing separator <%s> with priority %d\n",
          SCIPsepaGetName(set->sepas[i]), SCIPsepaGetPriority(set->sepas[i]));
       SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, onlydelayed, &result) );
-
+#ifndef NDEBUG
+      if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) > nusedbuffer )
+      {
+         SCIPerrorMessage("Buffer not completely freed after executing separator <%s>\n", SCIPsepaGetName(set->sepas[i]));
+         SCIPABORT();
+      }
+#endif
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
@@ -1560,7 +1605,7 @@ SCIP_RETCODE separationRoundLP(
          SCIPconshdlrGetName(set->conshdlrs_sepa[i]), SCIPconshdlrGetSepaPriority(set->conshdlrs_sepa[i]));
       SCIP_CALL( SCIPconshdlrSeparateLP(set->conshdlrs_sepa[i], blkmem, set, stat, sepastore, actdepth, onlydelayed,
             &result) );
-      
+
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);

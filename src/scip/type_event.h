@@ -32,7 +32,12 @@
 #include "scip/def.h"
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
+
+#if !defined(_MSC_VER) || _MSC_VER > 1600
 #include <inttypes.h>
+#else
+#define PRIx64 "llx"
+#endif
 
 #ifdef __cplusplus
 extern "C" {

@@ -5533,6 +5533,15 @@ SCIP_RETCODE getFarkasProof(
    assert(nrows == 0 || rows != NULL);
    assert(nrows == lp->nlpirows);
 
+   /* it can happen that infeasibility is detetected within LP presolve. in that case, the LP solver may not be able to
+    * to return the dual ray.
+    */
+   if( !SCIPlpiHasDualRay(lpi) )
+   {
+      *valid = FALSE;
+      return SCIP_OKAY;
+   }
+
    /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualfarkas, nrows) );
 

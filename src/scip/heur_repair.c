@@ -533,7 +533,7 @@ SCIP_RETCODE applyRepair(
       SCIP_CALL( SCIPcreateSol(subscip, &subsol, heur) );
    }
 
-   /* Gets all original variables */
+   /* gets all original variables */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nviolatedrows, nvars) );
@@ -549,7 +549,7 @@ SCIP_RETCODE applyRepair(
       factor = 0.0;
    }
 
-   /* Adds all original variables */
+   /* adds all original variables */
    ndiscvars = 0;
    for( i = 0; i < nvars; ++i )
    {
@@ -618,7 +618,7 @@ SCIP_RETCODE applyRepair(
       (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "sub_%s", SCIPvarGetName(vars[i]));
 
       objval = SCIPvarGetObj(vars[i]);
-      /* Adds the sub representing variable to the sub-SCIP. */
+      /* adds the sub representing variable to the sub-SCIP. */
       SCIP_CALL( SCIPcreateVarBasic(subscip, &subvars[i], varname, lb, ub, objval, vartype) );
       SCIP_CALL( SCIPaddVar(subscip, subvars[i]) );
 
@@ -1166,6 +1166,7 @@ SCIP_RETCODE writeDebugInformation(
     }
 
    probfile = fopen(probfilename, "w");
+
    /* test if file exists */
    if( NULL != probfile )
    {
@@ -1229,10 +1230,16 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
 
    if( !SCIPisLPConstructed(scip) )
    {
-      SCIP_CALL( SCIPconstructLP(scip, &success) );
+      SCIP_Bool cutoff;
 
-      if( success )
+      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
+      if( cutoff )
+      {
+         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;
+      }
    }
 
    /* create original solution */

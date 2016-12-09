@@ -1702,11 +1702,16 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
    {
       SCIP_Bool success;
 
-      /* check, if solution was feasible and good enough */
+      /* check, if solution was feasible and good enough
+       *
+       * Note that even if the NLP solver found a feasible solution it does not mean that is satisfy the integrality
+       * conditions for fixed variables. This happens because the NLP solver uses relative tolerances for the bound
+       * constraints but SCIP uses absolute tolerances for checking the integrality conditions.
+       */
 #ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, TRUE, FALSE, TRUE, TRUE, &success) );
 #else
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, TRUE, TRUE, &success) );
 #endif
       if( success )
       {
@@ -2463,11 +2468,16 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       /* create solution from diving NLP */
       SCIPdebugMsg(scip, "nlpdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
-      /* try to add solution to SCIP */
+      /* try to add solution to SCIP
+       *
+       * Note that even if the NLP solver found a feasible solution it does not mean that is satisfy the integrality
+       * conditions for fixed variables. This happens because the NLP solver uses relative tolerances for the bound
+       * constraints but SCIP uses absolute tolerances for checking the integrality conditions.
+       */
 #ifdef SCIP_DEBUG
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, TRUE, FALSE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, TRUE, TRUE, FALSE, TRUE, TRUE, &success) );
 #else
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, TRUE, TRUE, &success) );
 #endif
 
       /* check, if solution was feasible and good enough */

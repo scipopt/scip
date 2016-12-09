@@ -201,6 +201,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  Puts the LP relaxations of all "initial" constraints into the LP. The method should put a canonic LP relaxation
  *  of all given constraints to the LP with calls to SCIPaddCut().
  *
+ *  @warning It is not guaranteed that the problem is going to be declared infeasible if the infeasible pointer is set
+ *           to TRUE. Therefore, it is recommended that users do not end this method prematurely when an infeasiblity
+ *           is detected.
+ *
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself

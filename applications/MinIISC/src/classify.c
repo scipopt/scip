@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,12 +13,13 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   miniisc.c
- * @brief  find a minimum IIS cover
+/**@file   classify.c
+ * @brief  determine linear classifier using a Benders approach
  * @author Marc Pfetsch
  */
 
 #include <string.h>
+#include <ctype.h>
 #include <scip/scipdefplugins.h>
 #include <lpi/lpi.h>
 
@@ -30,6 +31,8 @@
 #define DEFAULT_MASTERGAPLIMIT         0.1        /**< gap bound for approximately solving the master problem */
 #define DEFAULT_REOPTIMIZATION         FALSE      /**< Use reoptimization to solve master problem? */
 #define DEFAULT_MASTERSTALLNODES       5000L      /**< stall nodes for the master problem */
+#define DEFAULT_BOUNDSONCLASSIFIER     FALSE      /**< Use unit bounds on classifier? */
+
 
 /** data needed for cut generation */
 struct BENDERS_Data
@@ -647,10 +650,215 @@ SCIP_RETCODE createAltLP(
    return SCIP_OKAY;
 }
 
-
-/** solve minimum IIS cover problem */
+/** Get next int from string s */
 static
-SCIP_RETCODE solveMinIISC(
+int getNextInt(
+   char**                s                   /**< string pointer (modified) */
+   )
+{
+   int tmp;
+
+   /* skip whitespace */
+   while ( isspace(**s) )
+      ++(*s);
+   tmp = atoi(*s);
+
+   /* skip number */
+   while ( (**s != 0) && (! isspace(**s)) )
+      ++(*s);
+
+   return tmp;
+}
+
+/** Get next pair from string s */
+static
+SCIP_Bool getNextPair(
+   char**                s,                  /**< string pointer (modified) */
+   int*                  idx,                /**< index of value */
+   SCIP_Real*            val                 /**< value */
+   )
+{
+   int status;
+
+   assert( idx != NULL );
+   assert( val != NULL );
+
+   /* skip whitespace */
+   while ( isspace(**s) )
+      ++(*s);
+
+   status = sscanf(*s, "%d:%lf", idx, val);
+   if ( status != 2 )
+      return FALSE;
+
+   /* skip numbers */
+   while ( (**s != 0) && (! isspace(**s)) )
+      ++(*s);
+
+   return TRUE;
+}
+
+/** read classification instance in LIBSVM format and generate infeasible problem
+ *
+ *  Format:
+ *  class type (+1, -1)
+ *  points in sparse format: index:value
+ */
+static
+SCIP_RETCODE readLIBSVM(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename,           /**< name of file to read */
+   SCIP_Bool             boundsonclassifier  /**< Use unit bounds on classifier? */
+   )
+{
+   char name[SCIP_MAXSTRLEN];
+   char* buffer;
+   FILE *file;
+   SCIP_VAR** vars;
+   SCIP_VAR** consvars;
+   SCIP_Real* consvals;
+   SCIP_VAR* rhsvar;
+   SCIP_CONS* cons;
+   SCIP_Real delta = 1.0;
+   int nmaxvars = 100;
+   int nconss = 0;
+   int j;
+
+   /* open file */
+   file = fopen(filename, "r");
+   if ( file == NULL )
+   {
+      SCIPerrorMessage("Could not open file <%s>.\n", filename);
+      SCIPprintSysError(filename);
+      return SCIP_NOFILE;
+   }
+
+   /* int space for string */
+   SCIP_CALL( SCIPallocBufferArray(scip, &buffer, 2 * SCIP_MAXSTRLEN) );
+
+   /* init variables */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nmaxvars) );
+   for (j = 0; j < nmaxvars; ++j)
+      vars[j] = NULL;
+
+   /* init constraint data */
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nmaxvars + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nmaxvars + 1) );
+
+   /* create rhs variable */
+   SCIP_CALL( SCIPcreateVar(scip, &rhsvar, NULL, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPaddVar(scip, rhsvar) );
+
+   /* determine rhs */
+   if ( boundsonclassifier )
+      delta = 10.0 * SCIPfeastol(scip);
+
+   /* loop through file */
+   while ( ! feof(file) )
+   {
+      SCIP_Real val;
+      int idx;
+      int class;
+      int cnt = 0;
+      char* s;
+
+      SCIPdebugMsg(scip, "constraint: %d\n", nconss);
+
+      /* read line */
+      if ( fgets(buffer, 2 * SCIP_MAXSTRLEN, file) == NULL )
+         break;
+      s = buffer;
+
+      /* parse class */
+      class = getNextInt(&s);
+      if ( class != -1 && class != 1 )
+      {
+         SCIPerrorMessage("Invalid class value: %d.\n", class);
+         return SCIP_READERROR;
+      }
+
+      /* parse values */
+      while ( getNextPair(&s, &idx, &val) )
+      {
+         if ( idx <= 0 )
+         {
+            SCIPerrorMessage("Index %d out of range.\n", idx);
+            return SCIP_READERROR;
+         }
+
+         /* possibly resize arrays */
+         if ( idx >= nmaxvars )
+         {
+            int newsize;
+
+            newsize = 2 * nmaxvars;
+            SCIP_CALL( SCIPreallocBufferArray(scip, &consvals, newsize + 1) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, newsize + 1) );
+            SCIP_CALL( SCIPreallocBufferArray(scip, &vars, newsize) );
+
+            for (j = nmaxvars; j < newsize; ++j)
+               vars[j] = NULL;
+
+            nmaxvars = newsize;
+         }
+         else
+         {
+            /* check if we do not yet know the variable */
+            if ( vars[idx-1] == NULL )
+            {
+               (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "w#%d", idx-1);
+               if ( boundsonclassifier )
+               {
+                  SCIP_CALL( SCIPcreateVar(scip, &vars[idx-1], name, -1.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPcreateVar(scip, &vars[idx-1], name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+               }
+               SCIP_CALL( SCIPaddVar(scip, vars[idx-1]) );
+            }
+            assert( vars[idx-1] != NULL );
+
+            consvars[cnt] = vars[idx-1];
+            consvals[cnt++] = ((SCIP_Real) class) * val;
+            assert( cnt <= nmaxvars );
+         }
+      }
+
+      /* create linear constraint */
+      consvars[cnt] = rhsvar;
+      consvals[cnt++] = -1.0 * ((SCIP_Real) class);
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "datapoint%d", nconss++);
+      SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name, cnt, consvars, consvals, delta, SCIPinfinity(scip)) );
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
+   fclose( file );
+
+   /* release variables */
+   for (j = 0; j < nmaxvars; ++j)
+   {
+      if ( vars[j] != NULL )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &vars[j]) );
+      }
+   }
+   SCIP_CALL( SCIPreleaseVar(scip, &rhsvar) );
+
+   SCIPfreeBufferArray(scip, &consvals);
+   SCIPfreeBufferArray(scip, &consvars);
+   SCIPfreeBufferArray(scip, &vars);
+
+   SCIPfreeBufferArray(scip, &buffer);
+
+   return SCIP_OKAY;
+}
+
+/** find linear classifier that minimizes the number of misclassified points */
+static
+SCIP_RETCODE solveClassification(
    const char*           filename,           /**< problem name */
    const char*           settingsname,       /**< name of parameter file (or NULL) */
    SCIP_Real             timelimit,          /**< time limit read from arguments */
@@ -658,6 +866,7 @@ SCIP_RETCODE solveMinIISC(
    int                   dispfreq            /**< display frequency */
    )
 {
+   char probname[SCIP_MAXSTRLEN];
    char name[SCIP_MAXSTRLEN];
    BENDERS_DATA data;
    SCIP* masterscip;
@@ -680,20 +889,21 @@ SCIP_RETCODE solveMinIISC(
    SCIP_Longint masterstallnodes;
    SCIP_Real mastergaplimit;
    SCIP_Bool reoptimization;
+   SCIP_Bool boundsonclassifier;
 
    /* create master SCIP */
    SCIP_CALL( SCIPcreate(&masterscip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(masterscip) );
-   if ( getProblemName(filename, name, SCIP_MAXSTRLEN) == 0 )
+   if ( getProblemName(filename, probname, SCIP_MAXSTRLEN) == 0 )
    {
       SCIPerrorMessage("Cannot extract problem name for filename <%s>.\n", filename);
       return SCIP_ERROR;
    }
-   SCIP_CALL( SCIPcreateProb(masterscip, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateProb(masterscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPsetObjsense(masterscip, SCIP_OBJSENSE_MINIMIZE) );
 
-   SCIPinfoMessage(masterscip, NULL, "Finding a minimum IIS cover using a set covering approach.\n");
-   SCIPinfoMessage(masterscip, NULL, "Implemented by Marc Pfetsch, 2015\n\n");
+   SCIPinfoMessage(masterscip, NULL, "Finding a linear classifier minimizing the number misclassifications using a Benders approach.\n");
+   SCIPinfoMessage(masterscip, NULL, "Implemented by Marc Pfetsch, 2016\n\n");
 
    SCIPprintVersion(masterscip, NULL);
    SCIPinfoMessage(masterscip, NULL, "\n");
@@ -719,6 +929,11 @@ SCIP_RETCODE solveMinIISC(
          "Use reoptimization to solve master problem?",
          &reoptimization, TRUE, DEFAULT_REOPTIMIZATION, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(masterscip,
+         "miniisc/boundsonclassifier",
+         "Add unit bounds on the classifier?",
+         &boundsonclassifier, TRUE, DEFAULT_BOUNDSONCLASSIFIER, NULL, NULL) );
+
    /* read parameters if required */
    if ( settingsname != NULL )
    {
@@ -738,7 +953,9 @@ SCIP_RETCODE solveMinIISC(
       SCIPinfoMessage(masterscip, NULL, "limits/time = %f\n\n", timelimit);
 
    SCIPinfoMessage(masterscip, NULL, "Input file:\t%s\n", filename);
-   SCIPinfoMessage(masterscip, NULL, "Problem name:\t%s\n\n", name);
+   SCIPinfoMessage(masterscip, NULL, "Problem name:\t%s\n\n", probname);
+   if ( boundsonclassifier )
+      SCIPinfoMessage(masterscip, NULL, "Using unit bounds on classifier.\n");
 
    /* ----------------------------------------------------------------------------------------*/
 
@@ -748,8 +965,18 @@ SCIP_RETCODE solveMinIISC(
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(origscip) );
 
-   /* read problem */
-   SCIP_CALL( SCIPreadProb(origscip, filename, NULL) );
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(origscip, "infeasible") );
+
+   /* read data and create problem */
+   SCIP_CALL( readLIBSVM(origscip, filename, boundsonclassifier) );
+
+   if ( boundsonclassifier )
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "classify-bnd-%s.lp", probname);
+   else
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "classify-%s.lp", probname);
+   SCIPinfoMessage(masterscip, NULL, "Writing infeasible classification model to file: %s.\n", name);
+   SCIP_CALL( SCIPwriteOrigProblem(origscip, name, "lp", FALSE) );
 
    /* check that we have an LP */
    if ( SCIPgetNOrigBinVars(origscip) + SCIPgetNOrigIntVars(origscip) > 0 )
@@ -897,7 +1124,7 @@ main(
       return -1;
    }
 
-   retcode = solveMinIISC(filename, settingsname, timelimit, memlimit, dispfreq);
+   retcode = solveClassification(filename, settingsname, timelimit, memlimit, dispfreq);
    if ( retcode != SCIP_OKAY )
    {
       SCIPprintError(retcode);
