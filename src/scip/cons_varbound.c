@@ -2865,7 +2865,11 @@ SCIP_RETCODE applyFixings(
                consdata->rhs = (consdata->rhs - varconstant)/varscalar;
             consdata->vbdcoef /= varscalar;
 
-	    consdata->tightened = FALSE;
+            /* try to avoid numerical troubles */
+            if( SCIPisIntegral(scip, consdata->vbdcoef) )
+               consdata->vbdcoef = SCIPround(scip, consdata->vbdcoef);
+
+            consdata->tightened = FALSE;
          }
          else
          {
@@ -2886,7 +2890,11 @@ SCIP_RETCODE applyFixings(
                consdata->rhs = (consdata->rhs + varconstant)/(-varscalar);
             consdata->vbdcoef /= varscalar;
 
-	    consdata->tightened = FALSE;
+            /* try to avoid numerical troubles */
+            if( SCIPisIntegral(scip, consdata->vbdcoef) )
+               consdata->vbdcoef = SCIPround(scip, consdata->vbdcoef);
+
+            consdata->tightened = FALSE;
          }
          /* release old variable */
          SCIP_CALL( SCIPreleaseVar(scip, &(consdata->var)) );
