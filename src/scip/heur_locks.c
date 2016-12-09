@@ -693,7 +693,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
             if( stored )
             {
-#ifndef NDEBUG
+#ifdef SCIP_MORE_DEBUG
                SCIP_Bool feasible;
                SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
                assert(feasible);
