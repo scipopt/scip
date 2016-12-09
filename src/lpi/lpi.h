@@ -758,8 +758,8 @@ SCIP_RETCODE SCIPlpiGetBase(
 EXTERN
 SCIP_RETCODE SCIPlpiSetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  cstat,              /**< array with column basis status */
-   int*                  rstat               /**< array with row basis status */
+   const int*            cstat,              /**< array with column basis status */
+   const int*            rstat               /**< array with row basis status */
    );
 
 /** returns the indices of the basic columns and rows; basic column n gives value n, basic row m gives value -1-m */
