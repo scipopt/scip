@@ -3980,7 +3980,7 @@ SCIP_RETCODE fixBounds(
 
       var = reoptnode->dualredscur->vars[v];
       val = reoptnode->dualredscur->vals[v];
-      boundtype = SCIPsetIsFeasEQ(set, val, 1.0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER;
+      boundtype = reoptnode->dualredscur->boundtypes[v];
 
       SCIP_CALL(SCIPvarGetProbvarBound(&var, &val, &boundtype));
       assert(SCIPvarIsTransformedOrigvar(var));
