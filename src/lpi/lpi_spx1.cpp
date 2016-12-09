@@ -1187,6 +1187,18 @@ public:
       return ((m_rowstat.size() == 0 ) && (m_colstat.size() == 0));
    }
 
+   /** provides access for temporary storage of basis status of rows */
+   DataArray<SPxSolver::VarStatus>& rowStat()
+   {
+      return m_rowstat;
+   }
+
+   /** provides access for temporary storage of basis status or columns */
+   DataArray<SPxSolver::VarStatus>& colStat()
+   {
+      return m_colstat;
+   }
+
    Status getStatus() const
    {
       return m_stat;
@@ -4043,19 +4055,25 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert( lpi->spx->preStrongbranchingBasisFreed() );
    invalidateSolution(lpi);
 
+   DataArray<SPxSolver::VarStatus>& m_colstat = lpi->spx->colStat();
+   DataArray<SPxSolver::VarStatus>& m_rowstat = lpi->spx->rowStat();
+
+   m_colstat.reSize(nCols);
+   m_rowstat.reSize(nRows);
+
    for( i = 0; i < nRows; ++i )
    {
       assert( rstat != 0 ); /* for lint */
       switch( rstat[i] )
       {
       case SCIP_BASESTAT_LOWER:
-         rstat[i] = SPxSolver::ON_LOWER;
+         m_rowstat[i] = SPxSolver::ON_LOWER;
          break;
       case SCIP_BASESTAT_BASIC:
-         rstat[i] = SPxSolver::BASIC;
+         m_rowstat[i] = SPxSolver::BASIC;
          break;
       case SCIP_BASESTAT_UPPER:
-         rstat[i] = SPxSolver::ON_UPPER;
+         m_rowstat[i] = SPxSolver::ON_UPPER;
          break;
       case SCIP_BASESTAT_ZERO:
          SCIPerrorMessage("slack variable has basis status ZERO (should not occur)\n");
@@ -4073,16 +4091,16 @@ SCIP_RETCODE SCIPlpiSetBase(
       switch( cstat[i] )
       {
       case SCIP_BASESTAT_LOWER:
-         cstat[i] = SPxSolver::ON_LOWER;
+         m_colstat[i] = SPxSolver::ON_LOWER;
          break;
       case SCIP_BASESTAT_BASIC:
-         cstat[i] = SPxSolver::BASIC;
+         m_colstat[i] = SPxSolver::BASIC;
          break;
       case SCIP_BASESTAT_UPPER:
-         cstat[i] = SPxSolver::ON_UPPER;
+         m_colstat[i] = SPxSolver::ON_UPPER;
          break;
       case SCIP_BASESTAT_ZERO:
-         cstat[i] = SPxSolver::ZERO;
+         m_colstat[i] = SPxSolver::ZERO;
          break;
       default:
          SCIPerrorMessage("invalid basis status\n");
@@ -4091,8 +4109,10 @@ SCIP_RETCODE SCIPlpiSetBase(
       }
    }
 
-   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis((SPxSolver::VarStatus*) rstat, (SPxSolver::VarStatus*) cstat) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(m_rowstat.get_const_ptr(), m_colstat.get_const_ptr()) );
    (void) lpi->spx->updateStatus();
+
+   lpi->spx->freePreStrongbranchingBasis();
 
    return SCIP_OKAY;
 }
