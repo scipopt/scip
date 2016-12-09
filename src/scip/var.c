@@ -1955,6 +1955,8 @@ SCIP_RETCODE varCreate(
    (*var)->nuses = 0;
    (*var)->nlocksdown = 0;
    (*var)->nlocksup = 0;
+   (*var)->nsoftlocksdown = 0;
+   (*var)->nsoftlocksup = 0;
    (*var)->branchpriority = 0;
    (*var)->branchdirection = SCIP_BRANCHDIR_AUTO; /*lint !e641*/
    (*var)->lbchginfossize = 0;
@@ -3337,8 +3339,13 @@ SCIP_RETCODE SCIPvarTransform(
       /* copy rounding locks */
       (*transvar)->nlocksdown = origvar->nlocksdown;
       (*transvar)->nlocksup = origvar->nlocksup;
+      (*transvar)->nsoftlocksdown = origvar->nsoftlocksdown;
+      (*transvar)->nsoftlocksup = origvar->nsoftlocksup;
       assert((*transvar)->nlocksdown >= 0);
       assert((*transvar)->nlocksup >= 0);
+      assert((*transvar)->nsoftlocksdown >= 0);
+      assert((*transvar)->nsoftlocksup >= 0);
+
 
       /* copy doNotMultiaggr status */
       (*transvar)->donotmultaggr = origvar->donotmultaggr;
@@ -4450,6 +4457,8 @@ SCIP_RETCODE SCIPvarAggregate(
    int branchpriority;
    int nlocksdown;
    int nlocksup;
+   int nsoftlocksdown;
+   int nsoftlocksup;
    int nvbds;
    int i;
    int j;
@@ -4530,8 +4539,12 @@ SCIP_RETCODE SCIPvarAggregate(
    /* unlock all rounding locks */
    nlocksdown = var->nlocksdown;
    nlocksup = var->nlocksup;
+   nsoftlocksdown = var->nsoftlocksdown;
+   nsoftlocksup = var->nsoftlocksup;
    var->nlocksdown = 0;
    var->nlocksup = 0;
+   var->nsoftlocksdown = 0;
+   var->nsoftlocksup = 0;
 
    /* check, if variable should be used as NEGATED variable of the aggregation variable */
    if( SCIPvarIsBinary(var) && SCIPvarIsBinary(aggvar)
@@ -4572,6 +4585,9 @@ SCIP_RETCODE SCIPvarAggregate(
 
    /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variable */
    SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, nlocksdown, nlocksup) );
+
+   /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variable */
+   SCIP_CALL( SCIPvarAddSoftLocks(var, blkmem, set, eventqueue, nsoftlocksdown, nsoftlocksup) );
 
    /* move the variable bounds to the aggregation variable:
     *  - add all variable bounds again to the variable, thus adding it to the aggregation variable
@@ -5124,6 +5140,8 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    SCIP_BRANCHDIR branchdirection;
    int nlocksdown;
    int nlocksup;
+   int nsoftlocksdown;
+   int nsoftlocksup;
    int v;
    SCIP_Real tmpconstant;
    SCIP_Real tmpscalar;
@@ -5310,8 +5328,12 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       /* unlock all rounding locks */
       nlocksdown = var->nlocksdown;
       nlocksup = var->nlocksup;
+      nsoftlocksdown = var->nsoftlocksdown;
+      nsoftlocksup = var->nsoftlocksup;
       var->nlocksdown = 0;
       var->nlocksup = 0;
+      var->nsoftlocksdown = 0;
+      var->nsoftlocksup = 0;
 
       /* convert variable into multi-aggregated variable */
       var->varstatus = SCIP_VARSTATUS_MULTAGGR; /*lint !e641*/
@@ -5326,6 +5348,9 @@ SCIP_RETCODE SCIPvarMultiaggregate(
 
       /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variables */
       SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, nlocksdown, nlocksup) );
+
+      /* relock the rounding locks of the variable, thus increasing the locks of the aggregation variables */
+      SCIP_CALL( SCIPvarAddSoftLocks(var, blkmem, set, eventqueue, nsoftlocksdown, nsoftlocksup) );
 
       /* update flags and branching factors and priorities of aggregation variables;
        * update preferred branching direction of all aggregation variables that don't have a preferred direction yet
