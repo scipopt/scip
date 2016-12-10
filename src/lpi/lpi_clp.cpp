@@ -2819,8 +2819,8 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 /** gets current basis status for columns and rows; arrays must be large enough to store the basis status */
 SCIP_RETCODE SCIPlpiGetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   const int*            cstat,              /**< array to store column basis status, or 0 */
-   const int*            rstat               /**< array to store row basis status, or 0 */
+   int*                  cstat,              /**< array to store column basis status, or 0 */
+   int*                  rstat               /**< array to store row basis status, or 0 */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetBase()\n");
@@ -2907,8 +2907,8 @@ SCIP_RETCODE SCIPlpiGetBase(
 /** sets current basis status for columns and rows */
 SCIP_RETCODE SCIPlpiSetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  cstat,              /**< array with column basis status */
-   int*                  rstat               /**< array with row basis status */
+   const int*            cstat,              /**< array with column basis status */
+   const int*            rstat               /**< array with row basis status */
    )
 {
    SCIPdebugMessage("calling SCIPlpiSetBase()\n");
