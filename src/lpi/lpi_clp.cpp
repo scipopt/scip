@@ -1100,7 +1100,7 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 SCIP_RETCODE SCIPlpiChgObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
-   int*                  ind,                /**< column indices to change objective value for */
+   const int*            ind,                /**< column indices to change objective value for */
    const SCIP_Real*      obj                 /**< new objective values for columns */
    )
 {
