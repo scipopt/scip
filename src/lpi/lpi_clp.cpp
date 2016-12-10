@@ -1101,7 +1101,7 @@ SCIP_RETCODE SCIPlpiChgObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
    int*                  ind,                /**< column indices to change objective value for */
-   SCIP_Real*            obj                 /**< new objective values for columns */
+   const SCIP_Real*      obj                 /**< new objective values for columns */
    )
 {
    SCIPdebugMessage("calling SCIPlpiChgObj()\n");
@@ -2819,8 +2819,8 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 /** gets current basis status for columns and rows; arrays must be large enough to store the basis status */
 SCIP_RETCODE SCIPlpiGetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  cstat,              /**< array to store column basis status, or 0 */
-   int*                  rstat               /**< array to store row basis status, or 0 */
+   const int*            cstat,              /**< array to store column basis status, or 0 */
+   const int*            rstat               /**< array to store row basis status, or 0 */
    )
 {
    SCIPdebugMessage("calling SCIPlpiGetBase()\n");
@@ -3264,7 +3264,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           /*blkmem*/,         /**< block memory */
-   SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
    )
 {
    int lpncols;
@@ -3431,7 +3431,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
 {
    assert(lpinorms == NULL);
