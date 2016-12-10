@@ -322,13 +322,16 @@ void incrementalStatsUpdate(
    assert(meanptr != NULL);
    assert(sumvarptr != NULL);
    assert(nobservations > 0 || add);
-   assert(*sumvarptr >= 0.0);
 
    addfactor = add ? 1.0 : -1.0;
 
    oldmean = *meanptr;
    *meanptr = oldmean + addfactor * (value - oldmean)/(SCIP_Real)nobservations;
    *sumvarptr += addfactor * (value - oldmean) * (value - (*meanptr));
+
+   /* it may happen that *sumvarptr is slightly negative, especially after a series of add/removal operations */
+   assert(*sumvarptr >= -1e-6);
+   *sumvarptr = MAX(0.0, *sumvarptr);
 }
 
 /** removes an observation (x,y) from the regression */

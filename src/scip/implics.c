@@ -1000,8 +1000,8 @@ SCIP_RETCODE cliqueCreateWithData(
    assert(values != NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, clique) );
-   (*clique)->vars = vars;
-   (*clique)->values = values;
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*clique)->vars, vars, nvars) );
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*clique)->values, values, nvars) );
    (*clique)->nvars = nvars;
    (*clique)->size = size;
    (*clique)->startcleanup = -1;
@@ -2308,7 +2308,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
    /* copy clique data */
    if( values == NULL )
    {
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &clqvalues, size) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &clqvalues, size) );
 
       /* initialize clique values data */
       for( v = nvars - 1; v >= 0; --v )
@@ -2316,9 +2316,9 @@ SCIP_RETCODE SCIPcliquetableAdd(
    }
    else
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &clqvalues, values, size) );
+      SCIP_CALL( SCIPsetDuplicateBufferArray(set, &clqvalues, values, size) );
    }
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &clqvars, vars, size) );
+   SCIP_CALL( SCIPsetDuplicateBufferArray(set, &clqvars, vars, size) );
 
    /* get active variables */
    SCIP_CALL( SCIPvarsGetProbvarBinary(&clqvars, &clqvalues, nvars) );
@@ -2359,7 +2359,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
                   {
                      *infeasible = TRUE;
 
-                     return SCIP_OKAY;
+                     goto FREEMEM;
                   }
 
                   continue;
@@ -2417,12 +2417,8 @@ SCIP_RETCODE SCIPcliquetableAdd(
 
    /* did we fix all variables or are we infeasible? */
    if( v >= 0 )
-   {
-      BMSfreeBlockMemoryArray(blkmem, &clqvars, size);
-      BMSfreeBlockMemoryArray(blkmem, &clqvalues, size);
+      goto FREEMEM;
 
-      return SCIP_OKAY;
-   }
    assert(!*infeasible);
 
    /* check if only one or less variables are left */
@@ -2451,10 +2447,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
          }
       }
 
-      BMSfreeBlockMemoryArray(blkmem, &clqvars, size);
-      BMSfreeBlockMemoryArray(blkmem, &clqvalues, size);
-
-      return SCIP_OKAY;
+      goto FREEMEM;
    }
 
    nlocalbdchgs = 0;
@@ -2468,12 +2461,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
 
    /* did we stop early due to a pair of negated variables? */
    if( nvars == 0 || *infeasible )
-   {
-      BMSfreeBlockMemoryArray(blkmem, &clqvars, size);
-      BMSfreeBlockMemoryArray(blkmem, &clqvalues, size);
-
-      return SCIP_OKAY;
-   }
+      goto FREEMEM;
 
    /* if less than two variables are left over, the clique is redundant */
    if( nvars > 1 )
@@ -2518,7 +2506,8 @@ SCIP_RETCODE SCIPcliquetableAdd(
             sameclique->equation = TRUE;
 
          cliqueFree(&clique, blkmem);
-         return SCIP_OKAY;
+
+         goto FREEMEM;
       }
    }
    else
@@ -2526,12 +2515,13 @@ SCIP_RETCODE SCIPcliquetableAdd(
       assert(!isequation);
       assert(nvars == 1);
 
-      BMSfreeBlockMemoryArray(blkmem, &clqvars, size);
-      BMSfreeBlockMemoryArray(blkmem, &clqvalues, size);
-
-      return SCIP_OKAY;
+      goto FREEMEM;
    }
    cliqueCheck(clique);
+
+  FREEMEM:
+   SCIPsetFreeBufferArray(set, &clqvalues);
+   SCIPsetFreeBufferArray(set, &clqvars);
 
    return SCIP_OKAY;
 }

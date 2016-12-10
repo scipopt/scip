@@ -2117,6 +2117,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    if( nviolatedrows == 0 && !cutoff )
    {
       SCIP_Bool stored;
+      SCIP_Bool trysol;
 
       for( v = 0; v <= lastindexofsusp; ++v )
       {
@@ -2145,11 +2146,13 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          SCIPdebugMsg(scip, "  Remaining variable <%s> set to <%g>; %d Violations\n", SCIPvarGetName(var), origsolval,
             nviolatedrows);
       }
+
       /* Fixing of remaining variables led to infeasibility */
       if( nviolatedrows > 0 )
          goto TERMINATE2;
 
-      stored = TRUE;
+      trysol = TRUE;
+
       /* if the constructed solution might still be extendable to a feasible solution, try this by
        * solving the remaining LP
        */
@@ -2207,27 +2210,34 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             SCIP_CALL( SCIPlinkLPSol(scip, sol) );
          }
          else
-            stored = FALSE;
+            trysol = FALSE;
 
          SCIPstatistic( heurdata->lpsolstat = SCIPgetLPSolstat(scip) );
       }
+
       /* check solution for feasibility, and add it to solution store if possible.
-       * Neither integrality nor feasibility of LP rows have to be checked, because they
+       * None of integrality, feasibility of LP rows, variable bounds have to be checked, because they
        * are guaranteed by the heuristic at this stage.
        */
-      if( stored )
+      if( trysol )
       {
+         SCIP_Bool printreason = FALSE;
+         SCIP_Bool completely = FALSE;
+
 #ifndef NDEBUG
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
-#else
-         /* @todo: maybe bounds don't need to be checked, in this case put an assert concerning stored ?????????? */
-         SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, TRUE, FALSE, FALSE, &stored) );
+         printreason = TRUE;
+         completely = TRUE;
 #endif
+
+         /* we once also checked the variable bounds which should not be necessary */
+         SCIP_CALL( SCIPtrySol(scip, sol, printreason, completely, FALSE, FALSE, FALSE, &stored) );
+
          if( stored )
          {
             SCIPdebugMsg(scip, "found feasible shifted solution:\n");
             SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
             *result = SCIP_FOUNDSOL;
+
             SCIPstatisticMessage("  Shiftandpropagate solution value: %16.9g \n", SCIPgetSolOrigObj(scip, sol));
          }
       }
