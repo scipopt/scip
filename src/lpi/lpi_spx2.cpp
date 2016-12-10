@@ -185,8 +185,8 @@ class SPxSCIP : public SoPlex
    bool                  _lpinfo;
    bool                  _fromscratch;
    char*                 _probname;
-   SPxSolver::VarStatus* _colStat;          /**< column basis status used for strong branching */
-   SPxSolver::VarStatus* _rowStat;          /**< row basis status used for strong branching */
+   DataArray<SPxSolver::VarStatus> _colStat;  /**< column basis status used for strong branching */
+   DataArray<SPxSolver::VarStatus> _rowStat;  /**< row basis status used for strong branching */
 #ifdef WITH_LPSCHECK
    int                   _checknum;
    bool                  _doublecheck;
@@ -203,8 +203,8 @@ public:
       : _lpinfo(false),
         _fromscratch(false),
         _probname(NULL),
-        _colStat(NULL),
-        _rowStat(NULL),
+        _colStat(0),
+        _rowStat(0),
         _messagehdlr(messagehdlr)
    {
       if ( probname != NULL )
@@ -225,12 +225,6 @@ public:
    {
       if( _probname != NULL )
          spx_free(_probname); /*lint !e1551*/
-
-      if( _colStat != NULL )
-         spx_free(_colStat); /*lint !e1551*/
-
-      if( _rowStat != NULL )
-         spx_free(_rowStat); /*lint !e1551*/
 
       freePreStrongbranchingBasis(); /*lint !e1551*/
 
@@ -618,15 +612,12 @@ public:
    /** save the current basis */
    void savePreStrongbranchingBasis()
    {
-      assert(_rowStat == NULL);
-      assert(_colStat == NULL);
-
-      spx_alloc(_rowStat, numRowsReal());
-      spx_alloc(_colStat, numColsReal());
+      _rowStat.reSize(numRowsReal());
+      _colStat.reSize(numColsReal());
 
       try
       {
-         getBasis(_rowStat, _colStat);
+         getBasis(_rowStat.get_ptr(), _colStat.get_ptr());
       }
 #ifndef NDEBUG
       catch(const SPxException& x)
@@ -649,12 +640,12 @@ public:
    /** restore basis */
    void restorePreStrongbranchingBasis()
    {
-      assert(_rowStat != NULL);
-      assert(_colStat != NULL);
+      assert(_rowStat.size() == numRowsReal());
+      assert(_colStat.size() == numColsReal());
 
       try
       {
-         setBasis(_rowStat, _colStat);
+         setBasis(_rowStat.get_const_ptr(), _colStat.get_const_ptr());
       }
 #ifndef NDEBUG
       catch(const SPxException& x)
@@ -676,16 +667,26 @@ public:
    /** if basis is in store, delete it without restoring it */
    void freePreStrongbranchingBasis()
    {
-      if( _rowStat != NULL )
-         spx_free(_rowStat);
-      if( _colStat != NULL )
-         spx_free(_colStat);
+      _rowStat.clear();
+      _colStat.clear();
    }
 
    /** is pre-strong-branching basis freed? */
    bool preStrongbranchingBasisFreed() const
    {
-      return ((_rowStat == NULL ) && (_colStat == NULL));
+      return ((_rowStat.size() == 0 ) && (_colStat.size() == 0));
+   }
+
+   /** provides access for temporary storage of basis status of rows */
+   DataArray<SPxSolver::VarStatus>& rowStat()
+   {
+      return _rowStat;
+   }
+
+   /** provides access for temporary storage of basis status or columns */
+   DataArray<SPxSolver::VarStatus>& colStat()
+   {
+      return _colStat;
    }
 
 }; /*lint !e1748*/
@@ -3418,33 +3419,30 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert( lpi->spx->preStrongbranchingBasisFreed() );
    invalidateSolution(lpi);
 
-   SPxSolver::VarStatus* spxcstat = NULL;
-   SPxSolver::VarStatus* spxrstat = NULL;
-   SCIP_ALLOC( BMSallocMemoryArray(&spxcstat, nCols) );
-   SCIP_ALLOC( BMSallocMemoryArray(&spxrstat, nRows) );
+   DataArray<SPxSolver::VarStatus>& _colstat = lpi->spx->colStat();
+   DataArray<SPxSolver::VarStatus>& _rowstat = lpi->spx->rowStat();
+
+   _colstat.reSize(nCols);
+   _rowstat.reSize(nRows);
 
    for( i = 0; i < nRows; ++i )
    {
       switch( rstat[i] ) /*lint !e613*/
       {
       case SCIP_BASESTAT_LOWER:
-         spxrstat[i] = SPxSolver::ON_LOWER;
+         _rowstat[i] = SPxSolver::ON_LOWER;
          break;
       case SCIP_BASESTAT_BASIC:
-         spxrstat[i] = SPxSolver::BASIC;
+         _rowstat[i] = SPxSolver::BASIC;
          break;
       case SCIP_BASESTAT_UPPER:
-         spxrstat[i] = SPxSolver::ON_UPPER;
+         _rowstat[i] = SPxSolver::ON_UPPER;
          break;
       case SCIP_BASESTAT_ZERO:
          SCIPerrorMessage("slack variable has basis status ZERO (should not occur)\n");
-         BMSfreeMemoryArrayNull(&spxcstat);
-         BMSfreeMemoryArrayNull(&spxrstat);
          return SCIP_LPERROR; /*lint !e429*/
       default:
          SCIPerrorMessage("invalid basis status\n");
-         BMSfreeMemoryArrayNull(&spxcstat);
-         BMSfreeMemoryArrayNull(&spxrstat);
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
@@ -3455,30 +3453,26 @@ SCIP_RETCODE SCIPlpiSetBase(
       switch( cstat[i] ) /*lint !e613*/
       {
       case SCIP_BASESTAT_LOWER:
-         spxcstat[i] = SPxSolver::ON_LOWER;
+         _colstat[i] = SPxSolver::ON_LOWER;
          break;
       case SCIP_BASESTAT_BASIC:
-         spxcstat[i] = SPxSolver::BASIC;
+         _colstat[i] = SPxSolver::BASIC;
          break;
       case SCIP_BASESTAT_UPPER:
-         spxcstat[i] = SPxSolver::ON_UPPER;
+         _colstat[i] = SPxSolver::ON_UPPER;
          break;
       case SCIP_BASESTAT_ZERO:
-         spxcstat[i] = SPxSolver::ZERO;
+         _colstat[i] = SPxSolver::ZERO;
          break;
       default:
          SCIPerrorMessage("invalid basis status\n");
-         BMSfreeMemoryArrayNull(&spxcstat);
-         BMSfreeMemoryArrayNull(&spxrstat);
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
-   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(spxrstat, spxcstat) );
-
-   BMSfreeMemoryArrayNull(&spxcstat);
-   BMSfreeMemoryArrayNull(&spxrstat);
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(_rowstat.get_const_ptr(), _colstat.get_const_ptr()) );
+   lpi->spx->freePreStrongbranchingBasis();
 
    return SCIP_OKAY;
 }
