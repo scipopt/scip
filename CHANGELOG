@@ -53,6 +53,7 @@ features:
 - added method SCIPcheckCopyLimits() which can be used to check that enough time and memory is left to run a sub-SCIP after
   subtracting time and memory used by the main-SCIP, and SCIPcopyLimits() which copies these limits accordingly and disables
   all other limits (need to be set by the plugin, if needed)
+- changed handling of coupling constraints in cons_indicator; the cuts will not be added to the pool, but are separated by default
 
 parameters:
 - new parameter "branching/sumadjustweight" to adjust branching scores by adding a sum epsilon in order to keep score differences
