@@ -1470,6 +1470,9 @@ SCIP_RETCODE SCIPlpiChgBounds(
    assert(lpi->cpxenv != NULL);
    assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
+   if ( ncols <= 0 )
+      return SCIP_OKAY;
+
    SCIPdebugMessage("changing %d bounds in CPLEX\n", ncols);
 
    for( i = 0; i < ncols; ++i )
@@ -1530,6 +1533,9 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
+
+   if ( nrows <= 0 )
+      return SCIP_OKAY;
 
    SCIPdebugMessage("changing %d sides in CPLEX\n", nrows);
 
