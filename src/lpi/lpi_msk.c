@@ -3378,7 +3378,7 @@ SCIP_RETCODE convertstat_mosek2scip_slack(
 /** convert SCIP to Mosek status */
 static
 void convertstat_scip2mosek(
-   int*                  stat,               /**< SCIP status array */
+   const int*            stat,               /**< SCIP status array */
    int                   n,                  /**< size of array */
    MSKstakeye*           resstat             /**< resulting Mosek status array */
    )
@@ -3409,7 +3409,7 @@ void convertstat_scip2mosek(
 /** convert SCIP to Mosek status - slack variables */
 static
 void convertstat_scip2mosek_slack(
-   int*                  stat,               /**< SCIP status array */
+   const int*            stat,               /**< SCIP status array */
    int                   n,                  /**< size of array */
    MSKstakeye*           resstat             /**< resulting Mosek status array */
    )
@@ -3979,7 +3979,7 @@ SCIP_RETCODE lpistatePack(
 /** unpacks row and column basis status from a packed LPi state object */
 static
 void lpistateUnpack(
-   SCIP_LPISTATE*        lpistate,           /**< pointer to LPi state data */
+   const SCIP_LPISTATE*  lpistate,           /**< pointer to LPi state data */
    MSKstakeye*           skx,                /**< ??? */
    MSKstakeye*           skc                 /**< ??? */
    )
