@@ -2223,9 +2223,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       {
          SCIP_Bool printreason = FALSE;
          SCIP_Bool completely = FALSE;
-
-#ifndef NDEBUG
+#ifdef SCIP_DEBUG
          printreason = TRUE;
+#endif
+#ifndef NDEBUG
          completely = TRUE;
 #endif
 
