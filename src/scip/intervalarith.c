@@ -2528,7 +2528,10 @@ void SCIPintervalLog(
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand));
 
-   if( operand.sup < 0.0 )
+   /* if operand.sup == 0.0, we could return -inf in resultant->sup, but that
+    * seems of little use and just creates problems somewhere else, e.g., #1230
+    */
+   if( operand.sup <= 0.0 )
    {
       SCIPintervalSetEmpty(resultant);
       return;
@@ -2536,12 +2539,7 @@ void SCIPintervalLog(
 
    if( operand.inf == operand.sup )  /*lint !e777 */
    {
-      if( operand.sup <= 0.0 )
-      {
-         resultant->inf = -infinity;
-         resultant->sup = -infinity;
-      }
-      else if( operand.sup == 1.0 )
+      if( operand.sup == 1.0 )
       {
          resultant->inf = 0.0;
          resultant->sup = 0.0;
@@ -2580,10 +2578,6 @@ void SCIPintervalLog(
    else if( operand.sup == 1.0 )
    {
       resultant->sup = 0.0;
-   }
-   else if( operand.sup == 0.0 )
-   {
-      resultant->sup = -infinity;
    }
    else
    {

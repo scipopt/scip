@@ -479,6 +479,7 @@ SCIP_RETCODE catchVarEvents(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_VAR* var;
    int i;
 
    assert(scip != NULL);
@@ -497,7 +498,9 @@ SCIP_RETCODE catchVarEvents(
    {
       SCIP_CALL( catchLinearVarEvents(scip, eventhdlr, cons, i) );
 
-      consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(consdata->linvars[i]);
+      var = consdata->linvars[i];
+      consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(var)
+         && !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    }
 
    for( i = 0; i < consdata->nquadvars; ++i )
@@ -506,7 +509,9 @@ SCIP_RETCODE catchVarEvents(
 
       SCIP_CALL( catchQuadVarEvents(scip, eventhdlr, cons, i) );
 
-      consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(consdata->quadvarterms[i].var);
+      var = consdata->quadvarterms[i].var;
+      consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(var)
+         && !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    }
 
    consdata->ispropagated = FALSE;
@@ -1061,8 +1066,16 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 
       if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
       {
+         SCIP_VAR* var;
+
          SCIP_CALL( SCIPmarkConsPropagate(scip, cons) );
          consdata->ispropagated = FALSE;
+
+         var = varidx < 0 ? consdata->quadvarterms[-varidx-1].var : consdata->linvars[varidx];
+         assert(var != NULL);
+
+         if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
+            consdata->isremovedfixings = FALSE;
       }
    }
 
@@ -1402,13 +1415,13 @@ SCIP_RETCODE consdataFree(
    }
 
    /* free interior point information, may exists if constraint is deleted in solving stage */
-   SCIPfreeMemoryArrayNull(scip, &(*consdata)->interiorpoint);
-   SCIPfreeMemoryArrayNull(scip, &(*consdata)->gaugecoefs);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->interiorpoint, (*consdata)->nquadvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->gaugecoefs, (*consdata)->nquadvars);
 
    /* free eigen decomposition information */
-   SCIPfreeMemoryArrayNull(scip, &(*consdata)->eigenvalues);
-   SCIPfreeMemoryArrayNull(scip, &(*consdata)->eigenvectors);
-   SCIPfreeMemoryArrayNull(scip, &(*consdata)->bp);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->eigenvalues, (*consdata)->nquadvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->eigenvectors, (int)((*consdata)->nquadvars*(*consdata)->nquadvars));
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->bp, (*consdata)->nquadvars);
 
    SCIPfreeBlockMemory(scip, consdata);
    *consdata = NULL;
@@ -1875,7 +1888,8 @@ SCIP_RETCODE addLinearCoef(
 
    consdata->ispropagated = FALSE;
    consdata->ispresolved = FALSE;
-   consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(var);
+   consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(var)
+      && !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    if( consdata->nlinvars == 1 )
       consdata->linvarssorted = TRUE;
    else
@@ -2130,7 +2144,8 @@ SCIP_RETCODE addQuadVarTerm(
 
    consdata->ispropagated = FALSE;
    consdata->ispresolved  = FALSE;
-   consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(var);
+   consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(var)
+      && !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    if( consdata->nquadvars == 1 )
       consdata->quadvarssorted = TRUE;
    else
@@ -2371,7 +2386,8 @@ SCIP_RETCODE replaceQuadVarTermPos(
    /* install rounding locks for new variable */
    SCIP_CALL( lockQuadraticVariable(scip, cons, var) );
 
-   consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(var);
+   consdata->isremovedfixings = consdata->isremovedfixings && SCIPvarIsActive(var)
+      && !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    consdata->quadvarssorted = (consdata->nquadvars == 1);
    consdata->quadvarsmerged = FALSE;
    consdata->bilinsorted &= (quadvarterm->nadjbilin == 0);  /*lint !e514*/
@@ -2858,7 +2874,7 @@ SCIP_RETCODE removeFixedVariables(
    {
       var = consdata->linvars[i];
 
-      if( SCIPvarIsActive(var) )
+      if( SCIPvarIsActive(var) && !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
       {
          ++i;
          continue;
@@ -2869,7 +2885,15 @@ SCIP_RETCODE removeFixedVariables(
       coef = consdata->lincoefs[i];
       offset = 0.0;
 
-      SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &offset) );
+      if( SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
+      {
+         offset = coef * (SCIPvarGetLbGlobal(var) + SCIPvarGetUbGlobal(var)) / 2.0;
+         coef = 0.0;
+      }
+      else
+      {
+         SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &offset) );
+      }
 
       SCIPdebugMsg(scip, "  linear term %g*<%s> is replaced by %g * <%s> + %g\n", consdata->lincoefs[i], SCIPvarGetName(consdata->linvars[i]),
          coef, SCIPvarGetName(var), offset);
@@ -2932,7 +2956,7 @@ SCIP_RETCODE removeFixedVariables(
    {
       var = consdata->quadvarterms[i].var;
 
-      if( SCIPvarIsActive(var) )
+      if( SCIPvarIsActive(var) && !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
       {
          ++i;
          continue;
@@ -2942,7 +2966,16 @@ SCIP_RETCODE removeFixedVariables(
 
       coef   = 1.0;
       offset = 0.0;
-      SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &offset) );
+
+      if( !SCIPisEQ(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
+      {
+         SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &offset) );
+      }
+      else
+      {
+         coef = 0.0;
+         offset = (SCIPvarGetLbGlobal(var) + SCIPvarGetUbGlobal(var)) / 2.0;
+      }
 
       SCIPdebugMsg(scip, "  quadratic variable <%s> with status %d is replaced by %g * <%s> + %g\n", SCIPvarGetName(consdata->quadvarterms[i].var),
          SCIPvarGetStatus(consdata->quadvarterms[i].var), coef, SCIPvarGetName(var), offset);
@@ -6993,7 +7026,7 @@ SCIP_RETCODE computeED(
    }
 
    /* we just need to pass the upper triangle of A since it is symmetric; build it here */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &consdata->eigenvectors, nn) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->eigenvectors, nn) );
    matrix = consdata->eigenvectors;
    BMSclearMemoryArray(matrix, nn);
 
@@ -7042,7 +7075,7 @@ SCIP_RETCODE computeED(
 #endif
 
    /* compute eigenvalues and eigenvectors */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &consdata->eigenvalues, n) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->eigenvalues, n) );
 
    if( LapackDsyev(TRUE, n, matrix, consdata->eigenvalues) != SCIP_OKAY )
    {
@@ -7054,7 +7087,7 @@ SCIP_RETCODE computeED(
       consdata->isedavailable = TRUE;
 
       /* compute b^T*P */
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &consdata->bp, n) );
+      SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &consdata->bp, n) );
       for( i = 0; i < n; i++ )
          for( j = 0; j < n; j++ )
             consdata->bp[i] += consdata->quadvarterms[j].lincoef * matrix[i*n + j];
@@ -7222,7 +7255,7 @@ SCIP_RETCODE computeInteriorPoint(
    if( method == 'a' && ((consdata->isconvex && SCIPisGE(scip, nlpiside, 0.0))
             || (consdata->isconcave && SCIPisLE(scip, nlpiside, 0.0))) )
    {
-      SCIP_CALL( SCIPallocClearMemoryArray(scip, &(consdata->interiorpoint), nquadvars) );
+      SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(consdata->interiorpoint), nquadvars) );
 
       *success = TRUE;
       goto TERMINATE;
@@ -7380,7 +7413,7 @@ SCIP_RETCODE computeInteriorPoint(
     */
    SCIP_CALL( SCIPnlpiGetSolution(nlpi, prob, &interiorpoint, NULL, NULL, NULL) );
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(consdata->interiorpoint), nquadvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->interiorpoint), nquadvars) );
 
    for( i = 0; i < nquadvars; i++ )
    {
@@ -7518,7 +7551,7 @@ SCIP_RETCODE computeGauge(
     * fortunately, sepabilinvar2pos in consdata gives us all the information that we need
     */
 
-   SCIP_CALL( SCIPallocClearMemoryArray(scip, &(consdata->gaugecoefs), consdata->nquadvars) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(scip, &(consdata->gaugecoefs), consdata->nquadvars) );
 
    /* compute value of quadratic part at interior point, build map and compute gaugeconst (c_gauge) */
    consdata->interiorpointval = 0;
@@ -11203,7 +11236,7 @@ SCIP_DECL_CONSFREE(consFreeQuadratic)
    }
    SCIPfreeMemoryArrayNull(scip, &conshdlrdata->quadconsupgrades);
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -11488,11 +11521,11 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
       SCIPfreeBlockMemoryArrayNull(scip, &consdata->factorleft,  consdata->nquadvars + 1);
       SCIPfreeBlockMemoryArrayNull(scip, &consdata->factorright, consdata->nquadvars + 1);
 
-      SCIPfreeMemoryArrayNull(scip, &consdata->interiorpoint);
-      SCIPfreeMemoryArrayNull(scip, &consdata->gaugecoefs);
-      SCIPfreeMemoryArrayNull(scip, &consdata->eigenvalues);
-      SCIPfreeMemoryArrayNull(scip, &consdata->eigenvectors);
-      SCIPfreeMemoryArrayNull(scip, &consdata->bp);
+      SCIPfreeBlockMemoryArrayNull(scip, &consdata->interiorpoint, consdata->nquadvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &consdata->gaugecoefs, consdata->nquadvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &consdata->eigenvalues, consdata->nquadvars);
+      SCIPfreeBlockMemoryArrayNull(scip, &consdata->eigenvectors, (int)(consdata->nquadvars*consdata->nquadvars));
+      SCIPfreeBlockMemoryArrayNull(scip, &consdata->bp, consdata->nquadvars);
    }
 
    if( SCIPgetStage(scip) != SCIP_STAGE_EXITSOLVE )
@@ -13167,7 +13200,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CONSHDLR* conshdlr;
 
    /* create quadratic constraint handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    BMSclearMemory(conshdlrdata);
 
    /* include constraint handler */

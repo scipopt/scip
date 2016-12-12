@@ -574,7 +574,7 @@ SCIP_RETCODE separateSCIs(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_CONSDATA*        consdata,           /**< the constraint data */
    SCIP_Bool*            infeasible,         /**< whether we detected infeasibility */
-   int*                  nfixedvars,         /**< number of variables fixed */
+   int*                  nfixedvars,         /**< pointer to store the number of variables fixed */
    int*                  ncuts               /**< pointer to store number of separated SCIs */
    )
 {
@@ -609,6 +609,7 @@ SCIP_RETCODE separateSCIs(
 
    *infeasible = FALSE;
    *nfixedvars = 0;
+   *ncuts = 0;
 
    nspcons = consdata->nspcons;
    nblocks = consdata->nblocks;
@@ -1375,16 +1376,16 @@ SCIP_RETCODE resolvePropagation(
    return SCIP_OKAY;
 }
 
-/** helper function to enforce constraints */
+/** separate or enforce constraints */
 static
-SCIP_RETCODE enforceConstraint(
+SCIP_RETCODE separateConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to process */
    int                   nconss,             /**< number of constraints */
    int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
-   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
-   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   SCIP_SOL*             sol,                /**< solution to separate (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result (should be initialized) */
    )
 {
    SCIP_Bool infeasible = FALSE;
@@ -1397,15 +1398,12 @@ SCIP_RETCODE enforceConstraint(
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   *result = SCIP_FEASIBLE;
-
-   /* we have a negative priority, so we should come after the integrality conshdlr */
-   assert( SCIPgetNLPBranchCands(scip) == 0 );
-
    /* loop through constraints */
-   for (c = 0; c < nusefulconss && ! infeasible; c++)
+   for (c = 0; c < nconss && ! infeasible; c++)
    {
       SCIP_CONSDATA* consdata;
+      int nconsfixedvars;
+      int nconscuts;
 
       assert( conss[c] != NULL );
 
@@ -1415,11 +1413,15 @@ SCIP_RETCODE enforceConstraint(
 
       /* get solution */
       copyValues(scip, consdata, sol);
-      SCIPdebugMsg(scip, "Relaxation enforcement for orbitope constraint <%s> for %s solution\n", SCIPconsGetName(conss[c]),
-            sol == NULL ? "LP" : "relaxation");
 
       /* separate */
-      SCIP_CALL( separateSCIs(scip, conshdlr, conss[c], consdata, &infeasible, &nfixedvars, &ncuts) );
+      SCIP_CALL( separateSCIs(scip, conshdlr, conss[c], consdata, &infeasible, &nconsfixedvars, &nconscuts) );
+      nfixedvars += nconsfixedvars;
+      ncuts += nconscuts;
+
+      /* stop after the useful constraints if we found cuts of fixed variables */
+      if ( c >= nusefulconss && (ncuts > 0 || nfixedvars > 0) )
+         break;
    }
 
    if ( infeasible )
@@ -1434,12 +1436,12 @@ SCIP_RETCODE enforceConstraint(
    }
    else if ( ncuts > 0 )
    {
-      SCIPdebugMsg(scip, "Separated %d SCIs during enforcement.\n", ncuts);
+      SCIPdebugMsg(scip, "Separated %d SCIs.\n", ncuts);
       *result = SCIP_SEPARATED;
    }
    else
    {
-      SCIPdebugMsg(scip, "No violated SCI found during enforcement.\n");
+      SCIPdebugMsg(scip, "No violated SCI found during separation.\n");
    }
 
    return SCIP_OKAY;
@@ -1512,61 +1514,20 @@ static
 SCIP_DECL_CONSSEPALP(consSepalpOrbitope)
 {  /*lint --e{715}*/
    assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIPdebugMsg(scip, "Separation of orbitope constraint handler <%s> for LP solution.\n", SCIPconshdlrGetName(conshdlr));
 
    *result = SCIP_DIDNOTRUN;
 
-   /* if solution is not integer */
-   if ( SCIPgetNLPBranchCands(scip) > 0 )
-   {
-      SCIP_Bool infeasible;
-      int nfixedvars = 0;
-      int ncuts = 0;
-      int c;
+   /* if solution is integer, skip separation */
+   if ( SCIPgetNLPBranchCands(scip) <= 0 )
+      return SCIP_OKAY;
 
-      *result = SCIP_DIDNOTFIND;
-      infeasible = FALSE;
+   *result = SCIP_DIDNOTFIND;
 
-      /* loop through constraints */
-      for (c = 0; c < nusefulconss && ! infeasible; c++)
-      {
-         SCIP_CONSDATA* consdata;
-
-         assert( conss[c] != NULL );
-
-         /* get data of constraint */
-         consdata = SCIPconsGetData(conss[c]);
-         assert( consdata != NULL );
-
-         /* get solution */
-         copyValues(scip, consdata, NULL);
-         SCIPdebugMsg(scip, "Separating SCIs for orbitope constraint <%s> ...\n", SCIPconsGetName(conss[c]));
-
-         /* separate */
-         SCIP_CALL( separateSCIs(scip, conshdlr, conss[c], consdata, &infeasible, &nfixedvars, &ncuts) );
-      }
-      if ( infeasible )
-      {
-         SCIPdebugMsg(scip, "Infeasible node.\n");
-         *result = SCIP_CUTOFF;
-      }
-      else if ( nfixedvars > 0 )
-      {
-         SCIPdebugMsg(scip, "Fixed %d variables.\n", nfixedvars);
-         *result = SCIP_REDUCEDDOM;
-      }
-      else if ( ncuts > 0 )
-      {
-         SCIPdebugMsg(scip, "Separated %d SCIs.\n", ncuts);
-         *result = SCIP_SEPARATED;
-      }
-      else
-      {
-         SCIPdebugMsg(scip, "No violated SCI found.\n");
-      }
-   }
+   /* separate constraints */
+   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -1575,55 +1536,15 @@ SCIP_DECL_CONSSEPALP(consSepalpOrbitope)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolOrbitope)
 {  /*lint --e{715}*/
-   SCIP_Bool infeasible = FALSE;
-   int nfixedvars = 0;
-   int ncuts = 0;
-   int c;
-
    assert( scip != NULL );
-   assert( conshdlr != NULL );
-   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
+
+   SCIPdebugMsg(scip, "Separation of orbitope constraint handler <%s> for primal solution.\n", SCIPconshdlrGetName(conshdlr));
 
    *result = SCIP_DIDNOTFIND;
 
-   /* loop through constraints */
-   for (c = 0; c < nusefulconss && ! infeasible; c++)
-   {
-      SCIP_CONSDATA* consdata;
-
-      /* get data of constraint */
-      assert( conss[c] != NULL );
-      consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL );
-
-      /* get solution */
-      copyValues(scip, consdata, sol);
-      SCIPdebugMsg(scip, "Separating SCIs (solution) for orbitope constraint <%s> \n", SCIPconsGetName(conss[c]));
-
-      /* separate */
-      SCIP_CALL( separateSCIs(scip, conshdlr, conss[c], consdata, &infeasible, &nfixedvars, &ncuts) );
-   }
-
-   if ( infeasible )
-   {
-      SCIPdebugMsg(scip, "Infeasible node.\n");
-      *result = SCIP_CUTOFF;
-   }
-   else if ( nfixedvars > 0 )
-   {
-      SCIPdebugMsg(scip, "Fixed %d variables.\n", nfixedvars);
-      *result = SCIP_REDUCEDDOM;
-   }
-   else if ( ncuts > 0 )
-   {
-      SCIPdebugMsg(scip, "Separated %d SCIs.\n", ncuts);
-      *result = SCIP_SEPARATED;
-   }
-   else
-   {
-      SCIPdebugMsg(scip, "No violated SCI found.\n");
-   }
+   /* separate constraints */
+   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -1633,7 +1554,18 @@ SCIP_DECL_CONSSEPASOL(consSepasolOrbitope)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpOrbitope)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
+   assert( scip != NULL );
+   assert( result != NULL );
+
+   /* we have a negative priority, so we should come after the integrality conshdlr */
+   assert( SCIPgetNLPBranchCands(scip) == 0 );
+
+   SCIPdebugMsg(scip, "Enforcement for orbitope constraint handler <%s> for LP solution.\n", SCIPconshdlrGetName(conshdlr));
+
+   *result = SCIP_FEASIBLE;
+
+   /* separate constraints */
+   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -1643,7 +1575,15 @@ SCIP_DECL_CONSENFOLP(consEnfolpOrbitope)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxOrbitope)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
+   assert( result != NULL );
+   assert( scip != NULL );
+
+   SCIPdebugMsg(scip, "Enforcement for orbitope constraint handler <%s> for relaxation solution.\n", SCIPconshdlrGetName(conshdlr));
+
+   *result = SCIP_FEASIBLE;
+
+   /* separate constraints */
+   SCIP_CALL( separateConstraints(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
    return SCIP_OKAY;
 }

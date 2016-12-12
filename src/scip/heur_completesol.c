@@ -862,7 +862,7 @@ SCIP_DECL_HEURFREE(heurFreeCompletesol)
    assert(heurdata != NULL);
 
    /* free heuristic data */
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -1031,7 +1031,7 @@ SCIP_RETCODE SCIPincludeHeurCompletesol(
    SCIP_HEUR* heur;
 
    /* create completesol primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    assert(heurdata != NULL);
 
    /* include primal heuristic */

@@ -58,6 +58,16 @@ endif
 include $(SCIPDIR)/make/make.project
 
 #-----------------------------------------------------------------------------
+# default settings
+#-----------------------------------------------------------------------------
+
+VERSION		=	$(SCIP_VERSION)
+SCIPGITHASH	=
+SOFTLINKS	=
+MAKESOFTLINKS	=	true
+TOUCHLINKS	=	false
+
+#-----------------------------------------------------------------------------
 # define build flags
 #-----------------------------------------------------------------------------
 BUILDFLAGS =	" ARCH=$(ARCH)\\n\
@@ -90,16 +100,6 @@ BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		ZIMPL=$(ZIMPL)\\n\
 		ZIMPLOPT=$(ZIMPLOPT)\\n\
 		ZLIB=$(ZLIB)"
-
-#-----------------------------------------------------------------------------
-# default settings
-#-----------------------------------------------------------------------------
-
-VERSION		=	3.2.1.2
-SCIPGITHASH	=
-SOFTLINKS	=
-MAKESOFTLINKS	=	true
-TOUCHLINKS	=	false
 
 #-----------------------------------------------------------------------------
 # LP Solver Interface
@@ -175,7 +175,7 @@ endif
 LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex \"src\" directory, e.g., \"<SoPlex-path>/src\".\n"
 LPIINSTMSG	+=	" -> \"libsoplex.*\" is the path to the SoPlex library, e.g., \"<SoPlex-path>/lib/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)\""
 ifeq ($(LPSCHECK),true)
-FLAGS		+=	-DWITH_LPSCHECK -I$(LIBDIR)/cpxinc
+FLAGS		+=	-DWITH_LPSCHECK -I$(LIBDIR)/include/cpxinc
 SOFTLINKS	+=	$(LIBDIR)/include/cpxinc
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
@@ -203,7 +203,7 @@ endif
 LPIINSTMSG	=	"  -> \"spxinc\" is the path to the SoPlex \"src\" directory, e.g., \"<SoPlex-path>/src\".\n"
 LPIINSTMSG	+=	" -> \"libsoplex.*\" is the path to the SoPlex library, e.g., \"<SoPlex-path>/lib/libsoplex.linux.x86.gnu.opt.a\""
 ifeq ($(LPSCHECK),true)
-FLAGS		+=	-DWITH_LPSCHECK -I$(LIBDIR)/cpxinc
+FLAGS		+=	-DWITH_LPSCHECK -I$(LIBDIR)/include/cpxinc
 SOFTLINKS	+=	$(LIBDIR)/include/cpxinc
 ifeq ($(SHARED),true)
 SOFTLINKS	+=	$(LIBDIR)/shared/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
@@ -444,6 +444,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/cons_and.o \
 			scip/cons_bivariate.o \
 			scip/cons_bounddisjunction.o \
+			scip/cons_cardinality.o \
 			scip/cons_conjunction.o \
 			scip/cons_countsols.o \
 			scip/cons_cumulative.o \
@@ -486,6 +487,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_feaspump.o \
 			scip/heur_fixandinfer.o \
 			scip/heur_fracdiving.o \
+			scip/heur_gins.o \
 			scip/heur_guideddiving.o \
 			scip/heur_indicator.o \
 			scip/heur_intdiving.o \
@@ -504,6 +506,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_proximity.o \
 			scip/heur_pscostdiving.o \
 			scip/heur_reoptsols.o \
+			scip/heur_repair.o \
 			scip/heur_randrounding.o \
 			scip/heur_rens.o \
 			scip/heur_rins.o \
@@ -1125,7 +1128,7 @@ depend:		scipdepend lpidepend tpidepend nlpidepend maindepend objscipdepend
 $(MAINFILE):	$(MAINOBJFILES) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(LPILIBFILE) $(TPILIBFILE) $(NLPILIBFILE) | $(BINDIR) $(BINOBJDIR) $(LIBOBJSUBDIRS)
 		@echo "-> linking $@"
 ifeq ($(LINKER),C)
-		-$(LINKCC) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCC_o)$@
+		-$(LINKCC) $(MAINOBJFILES) $(LINKCCSCIPALL) $(LINKCC_o)$@ \
 		|| ($(MAKE) errorhints && false)
 endif
 ifeq ($(LINKER),CPP)

@@ -466,7 +466,7 @@ SCIP_DECL_CONSFREE(consFreeViolatedCuts)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -558,7 +558,7 @@ SCIP_RETCODE SCIPincludeConshdlrViolatedCut(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
 
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    conshdlrdata->mipdata = mipdata;
 
    /* include constraint handler */
@@ -3845,7 +3845,7 @@ SCIP_DECL_SEPAFREE(sepaFreeCGMIP)
    sepadata = SCIPsepaGetData(sepa);
    assert( sepadata != NULL );
 
-   SCIPfreeMemory(scip, &sepadata);
+   SCIPfreeBlockMemory(scip, &sepadata);
 
    SCIPsepaSetData(sepa, NULL);
 
@@ -4041,7 +4041,7 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
    SCIP_SEPA* sepa;
 
    /* create separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
 
    sepa = NULL;
    /* include separator */

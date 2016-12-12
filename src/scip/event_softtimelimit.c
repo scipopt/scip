@@ -69,7 +69,7 @@ SCIP_DECL_EVENTFREE(eventFreeSofttimelimit)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   SCIPfreeMemory(scip, &eventhdlrdata);
+   SCIPfreeBlockMemory(scip, &eventhdlrdata);
    SCIPeventhdlrSetData(eventhdlr, NULL);
 
    return SCIP_OKAY;
@@ -164,12 +164,11 @@ SCIP_RETCODE SCIPincludeEventHdlrSofttimelimit(
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
-   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLR* eventhdlr = NULL;
 
-   SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
    eventhdlrdata->filterpos = -1;
 
-   eventhdlr = NULL;
    /* create event handler for events on watched variables */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecSofttimelimit, eventhdlrdata) );
    assert(eventhdlr != NULL);
@@ -182,7 +181,6 @@ SCIP_RETCODE SCIPincludeEventHdlrSofttimelimit(
    SCIP_CALL( SCIPaddRealParam(scip, "limits/softtime",
          "soft time limit which should be applied after first solution was found",
          &eventhdlrdata->softtimelimit, FALSE, -1.0, -1.0, SCIP_REAL_MAX, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }

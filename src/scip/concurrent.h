@@ -193,4 +193,3 @@ SCIP_Longint SCIPgetConcurrentNTightenedIntBnds(
 #endif
 
 #endif
-

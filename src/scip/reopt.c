@@ -459,15 +459,13 @@ SCIP_RETCODE reoptnodeDelete(
 
       for( c = 0; c < (*reoptnode)->nconss; c++ )
       {
+         assert((*reoptnode)->conss[c] != NULL);
          assert((*reoptnode)->conss[c]->vals != NULL);
          assert((*reoptnode)->conss[c]->vars != NULL);
 
-         if( (*reoptnode)->conss[c]->constype != REOPT_CONSTYPE_CUT && (*reoptnode)->conss[c]->boundtypes != NULL )
-         {
-            BMSfreeBlockMemoryArray(blkmem, &(*reoptnode)->conss[c]->boundtypes, (*reoptnode)->conss[c]->varssize);
-         }
-         BMSfreeBlockMemoryArray(blkmem, &(*reoptnode)->conss[c]->vals, (*reoptnode)->conss[c]->varssize);
-         BMSfreeBlockMemoryArray(blkmem, &(*reoptnode)->conss[c]->vars, (*reoptnode)->conss[c]->varssize);
+         BMSfreeBlockMemoryArrayNull(blkmem, &(*reoptnode)->conss[c]->boundtypes, (*reoptnode)->conss[c]->varssize);
+         BMSfreeBlockMemoryArrayNull(blkmem, &(*reoptnode)->conss[c]->vals, (*reoptnode)->conss[c]->varssize);
+         BMSfreeBlockMemoryArrayNull(blkmem, &(*reoptnode)->conss[c]->vars, (*reoptnode)->conss[c]->varssize);
          BMSfreeBlockMemory(blkmem, &(*reoptnode)->conss[c]); /*lint !e866*/
       }
       BMSfreeBlockMemoryArray(blkmem, &(*reoptnode)->conss, (*reoptnode)->consssize);
@@ -3982,7 +3980,7 @@ SCIP_RETCODE fixBounds(
 
       var = reoptnode->dualredscur->vars[v];
       val = reoptnode->dualredscur->vals[v];
-      boundtype = SCIPsetIsFeasEQ(set, val, 1.0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER;
+      boundtype = reoptnode->dualredscur->boundtypes[v];
 
       SCIP_CALL(SCIPvarGetProbvarBound(&var, &val, &boundtype));
       assert(SCIPvarIsTransformedOrigvar(var));
@@ -7691,7 +7689,7 @@ SCIP_RETCODE SCIPreoptApplyCuts(
    assert(reoptnode != NULL);
 
    ncuts = 0;
-   for( c = 0; c < reoptnode->nconss; c++ )
+   for( c = reoptnode->nconss-1; c >= 0; c-- )
    {
       SCIP_REOPTCONSDATA* cons;
 
@@ -7761,9 +7759,22 @@ SCIP_RETCODE SCIPreoptApplyCuts(
 
          SCIPsetFreeBufferArray(set, &vals);
          SCIPsetFreeBufferArray(set, &cols);
+
+         BMSfreeBlockMemoryArrayNull(blkmem, &reoptnode->conss[c]->boundtypes, reoptnode->conss[c]->varssize);
+         BMSfreeBlockMemoryArray(blkmem, &reoptnode->conss[c]->vals, reoptnode->conss[c]->varssize);
+         BMSfreeBlockMemoryArray(blkmem, &reoptnode->conss[c]->vars, reoptnode->conss[c]->varssize);
+         BMSfreeBlockMemory(blkmem, &reoptnode->conss[c]); /*lint !e866*/
+         --reoptnode->nconss;
       }
       else
-         ++c;
+      {
+#ifndef NDEBUG
+         int i;
+         for( i = c-1; i >= 0; i-- )
+            assert(reoptnode->conss[i]->constype != REOPT_CONSTYPE_CUT);
+#endif
+         break;
+      }
    }
 
    return SCIP_OKAY;

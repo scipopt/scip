@@ -187,7 +187,7 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(conshdlrdata != NULL);
    assert(eventhdlr != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
 
    /* set event handler for catching bound change events on variables */
    (*conshdlrdata)->eventhdlr = eventhdlr;
@@ -205,7 +205,7 @@ SCIP_RETCODE conshdlrdataFree(
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
 
-   SCIPfreeMemory(scip, conshdlrdata);
+   SCIPfreeBlockMemory(scip, conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -1981,7 +1981,7 @@ SCIP_RETCODE dualPresolve(
 
    size = 2 * (SCIPgetNBinVars(scip) + SCIPgetNImplVars(scip));
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &impoperands, size) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &impoperands, size) );
 
    for( c = nconss - 1; c >= 0 && !(*cutoff); --c )
    {
@@ -2533,7 +2533,7 @@ SCIP_RETCODE dualPresolve(
       }
    }
 
-   SCIPfreeMemoryArray(scip, &impoperands);
+   SCIPfreeBufferArray(scip, &impoperands);
 
    return SCIP_OKAY;
 }

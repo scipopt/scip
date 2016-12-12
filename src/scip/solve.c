@@ -299,6 +299,9 @@ SCIP_RETCODE SCIPprimalHeuristics(
 
    for( h = 0; h < set->nheurs; ++h )
    {
+#ifndef NDEBUG
+      size_t nusedbuffer = BMSgetNUsedBufferMemory(SCIPbuffer(set->scip));
+#endif
       /* it might happen that a diving heuristic renders the previously solved node LP invalid
        * such that additional calls to LP heuristics will fail; better abort the loop in this case
        */
@@ -318,6 +321,14 @@ SCIP_RETCODE SCIPprimalHeuristics(
 
       SCIP_CALL( SCIPheurExec(set->heurs[h], set, primal, depth, lpstateforkdepth, heurtiming, nodeinfeasible,
             &ndelayedheurs, &result) );
+
+#ifndef NDEBUG
+      if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) > nusedbuffer )
+      {
+         SCIPerrorMessage("Buffer not completely freed after executing heuristic <%s>\n", SCIPheurGetName(set->heurs[h]));
+         SCIPABORT();
+      }
+#endif
 
       /* if the new solution cuts off the current node due to a new primal solution (via the cutoff bound) interrupt
        * calling the remaining heuristics
@@ -385,6 +396,9 @@ SCIP_RETCODE propagationRound(
    /* call additional propagators with nonnegative priority */
    for( i = 0; i < set->nprops && !(*postpone) && (!(*cutoff) || !abortoncutoff); ++i )
    {
+#ifndef NDEBUG
+      size_t nusedbuffer = BMSgetNUsedBufferMemory(SCIPbuffer(set->scip));
+#endif
       /* timing needs to fit */
       if( (SCIPpropGetTimingmask(set->props[i]) & timingmask) == 0 )
          continue;
@@ -398,6 +412,15 @@ SCIP_RETCODE propagationRound(
       SCIPsetDebugMsg(set, "calling propagator <%s>\n", SCIPpropGetName(set->props[i]));
 
       SCIP_CALL( SCIPpropExec(set->props[i], set, stat, depth, onlydelayed, tree->sbprobing, timingmask, &result) );
+
+#ifndef NDEBUG
+      if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) > nusedbuffer )
+      {
+         SCIPerrorMessage("Buffer not completely freed after executing propagator <%s>\n", SCIPpropGetName(set->props[i]));
+         SCIPABORT();
+      }
+#endif
+
       *delayed = *delayed || (result == SCIP_DELAYED);
       *propagain = *propagain || (result == SCIP_REDUCEDDOM);
 
@@ -1074,25 +1097,37 @@ SCIP_RETCODE SCIPinitConssLP(
    assert(lp != NULL);
    assert(cutoff != NULL);
 
+   *cutoff = FALSE;
+
    /* inform separation storage, that LP is now filled with initial data */
    SCIPsepastoreStartInitialLP(sepastore);
 
    /* add LP relaxations of all initial constraints to LP */
    SCIPsetDebugMsg(set, "init LP: initial rows\n");
-   for( h = 0; h < set->nconshdlrs; ++h )
+   for( h = 0; h < set->nconshdlrs && !(*cutoff); ++h )
    {
       SCIP_CALL( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat, tree, firstsubtreeinit, cutoff) );
    }
 
-   if( set->reopt_enable && set->reopt_usecuts && firstsubtreeinit )
+   if( set->reopt_enable && set->reopt_usecuts && firstsubtreeinit && !(*cutoff) )
    {
-      /* add stored cuts */
+      /* add stored cuts from last reoptimization run */
       SCIP_CALL( SCIPreoptApplyCuts(reopt, tree->focusnode, sepastore, cutpool, blkmem, set, stat, eventqueue,
             eventfilter, lp, root) );
    }
 
-   SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
-         eventqueue, eventfilter, cliquetable, root, SCIP_EFFICIACYCHOICE_LP, cutoff) );
+   if( !(*cutoff) )
+   {
+      /* apply cuts */
+      SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
+            eventqueue, eventfilter, cliquetable, root, SCIP_EFFICIACYCHOICE_LP, cutoff) );
+   }
+   else
+   {
+      /* the current node will be cut off; we clear the sepastore */
+      SCIP_CALL( SCIPsepastoreClearCuts(sepastore, blkmem, set, eventqueue, eventfilter, lp) );
+   }
+
 
    /* inform separation storage, that initial LP setup is now finished */
    SCIPsepastoreEndInitialLP(sepastore);
@@ -1514,6 +1549,10 @@ SCIP_RETCODE separationRoundLP(
            && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY);
         ++i )
    {
+#ifndef NDEBUG
+      size_t nusedbuffer = BMSgetNUsedBufferMemory(SCIPbuffer(set->scip));
+#endif
+
       if( SCIPsepaGetPriority(set->sepas[i]) < 0 )
          continue;
 
@@ -1523,7 +1562,13 @@ SCIP_RETCODE separationRoundLP(
       SCIPsetDebugMsg(set, " -> executing separator <%s> with priority %d\n",
          SCIPsepaGetName(set->sepas[i]), SCIPsepaGetPriority(set->sepas[i]));
       SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, onlydelayed, &result) );
-
+#ifndef NDEBUG
+      if( BMSgetNUsedBufferMemory(SCIPbuffer(set->scip)) > nusedbuffer )
+      {
+         SCIPerrorMessage("Buffer not completely freed after executing separator <%s>\n", SCIPsepaGetName(set->sepas[i]));
+         SCIPABORT();
+      }
+#endif
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
@@ -1560,7 +1605,7 @@ SCIP_RETCODE separationRoundLP(
          SCIPconshdlrGetName(set->conshdlrs_sepa[i]), SCIPconshdlrGetSepaPriority(set->conshdlrs_sepa[i]));
       SCIP_CALL( SCIPconshdlrSeparateLP(set->conshdlrs_sepa[i], blkmem, set, stat, sepastore, actdepth, onlydelayed,
             &result) );
-      
+
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
@@ -1887,7 +1932,7 @@ SCIP_RETCODE SCIPpriceLoop(
                                               *   not be used */
    )
 {
-   SCIP_NODE* focusnode;
+   SCIP_NODE* currentnode;
    int npricerounds;
    SCIP_Bool mustprice;
    SCIP_Bool cutoff;
@@ -1902,7 +1947,8 @@ SCIP_RETCODE SCIPpriceLoop(
    assert(lperror != NULL);
    assert(aborted != NULL);
 
-   focusnode = SCIPtreeGetFocusNode(tree);
+   currentnode = SCIPtreeGetCurrentNode(tree);
+   assert(currentnode == SCIPtreeGetFocusNode(tree) || SCIPtreeProbing(tree));
    *npricedcolvars = transprob->ncolvars;
    *lperror = FALSE;
    *aborted = FALSE;
@@ -1984,7 +2030,7 @@ SCIP_RETCODE SCIPpriceLoop(
             stoppricing = FALSE;
 
          /* update lower bound w.r.t. the lower bound given by the pricer */
-         SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, lb);
+         SCIPnodeUpdateLowerbound(currentnode, stat, set, tree, transprob, origprob, lb);
          SCIPsetDebugMsg(set, " -> new lower bound given by pricer %s: %g\n", SCIPpricerGetName(set->pricers[p]), lb);
       }
 
@@ -2056,7 +2102,7 @@ SCIP_RETCODE SCIPpriceLoop(
           || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT );
 
       /* if the lower bound is already higher than the cutoff bound, we can stop pricing */
-      mustprice = mustprice && SCIPsetIsLT(set, SCIPnodeGetLowerbound(focusnode), primal->cutoffbound);
+      mustprice = mustprice && SCIPsetIsLT(set, SCIPnodeGetLowerbound(currentnode), primal->cutoffbound);
    }
    assert(lp->flushed);
    assert(lp->solved || *lperror);
@@ -3014,7 +3060,8 @@ SCIP_RETCODE solveNodeRelax(
    SCIP_Bool*            solvelpagain,       /**< pointer to store TRUE, if the node's LP has to be solved again */
    SCIP_Bool*            solverelaxagain,    /**< pointer to store TRUE, if the external relaxators should be called
                                               *   again */
-   SCIP_Bool*            relaxcalled         /**< pointer to store TRUE, if at least one relaxator was called */
+   SCIP_Bool*            relaxcalled         /**< pointer to store TRUE, if at least one relaxator was called (unmodified
+                                              *   otherwise) */
    )
 {
    SCIP_RESULT result;
@@ -3029,8 +3076,6 @@ SCIP_RETCODE solveNodeRelax(
    assert(solverelaxagain != NULL);
    assert(relaxcalled != NULL);
    assert(!(*cutoff));
-
-   *relaxcalled = FALSE;
 
    /* sort by priority */
    SCIPsetSortRelaxs(set);
@@ -3520,6 +3565,7 @@ SCIP_RETCODE propAndSolve(
    SCIP_Bool*            fullpropagation,    /**< pointer to store whether we want to do a fullpropagation next time */
    SCIP_Bool*            propagateagain,     /**< pointer to store whether we want to propagate again */
    SCIP_Bool*            lpsolved,           /**< pointer to store whether the lp was solved */
+   SCIP_Bool*            relaxcalled,        /**< pointer to store whether a relaxator was called; initialized with last loop's result */
    SCIP_Bool*            solvelpagain,       /**< pointer to store whether we want to solve the lp again */
    SCIP_Bool*            solverelaxagain,    /**< pointer to store whether we want to solve the relaxation again */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
@@ -3532,7 +3578,6 @@ SCIP_RETCODE propAndSolve(
    )
 {
    SCIP_Bool newinitconss;
-   SCIP_Bool relaxcalled;
 
    assert(set != NULL);
    assert(stat != NULL);
@@ -3580,7 +3625,7 @@ SCIP_RETCODE propAndSolve(
       oldninitconssadded = stat->ninitconssadded;
 
       /* call after LP propagators */
-      if( (*afterlpproplps) < stat->nnodelps && (*lpsolved) )
+      if( ((*afterlpproplps) < stat->nnodelps && (*lpsolved)) || (*relaxcalled) )
       {
          SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, *fullpropagation,
                SCIP_PROPTIMING_AFTERLPLOOP, cutoff, postpone) );
@@ -3693,7 +3738,7 @@ SCIP_RETCODE propAndSolve(
    }
 
    /* solve external relaxations with non-negative priority */
-   relaxcalled = FALSE;
+   *relaxcalled = FALSE;
    if( solverelax && !(*cutoff) )
    {
       /* initialize value for the best relaxation solution */
@@ -3703,7 +3748,7 @@ SCIP_RETCODE propAndSolve(
       SCIPbranchcandClearExternCands(branchcand);
 
       SCIP_CALL( solveNodeRelax(blkmem, set, stat, tree, relaxation, primal, transprob, origprob, actdepth, TRUE,
-            cutoff, propagateagain, solvelpagain, solverelaxagain, &relaxcalled) );
+            cutoff, propagateagain, solvelpagain, solverelaxagain, relaxcalled) );
       assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
       /* check, if the path was cutoff */
@@ -3813,7 +3858,7 @@ SCIP_RETCODE propAndSolve(
    if( solverelax && !(*cutoff) )
    {
       SCIP_CALL( solveNodeRelax(blkmem, set, stat, tree, relaxation, primal, transprob, origprob, actdepth, FALSE, cutoff, propagateagain, solvelpagain,
-            solverelaxagain, &relaxcalled) );
+            solverelaxagain, relaxcalled) );
       assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
       /* check, if the path was cutoff */
@@ -3998,6 +4043,7 @@ SCIP_RETCODE solveNode(
       SCIP_Bool solvelp;
       SCIP_Bool propagate;
       SCIP_Bool forcedenforcement;
+      SCIP_Bool relaxcalled;
 
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
@@ -4008,11 +4054,12 @@ SCIP_RETCODE solveNode(
       nloops++;
       lperror = FALSE;
       lpsolved = FALSE;
+      relaxcalled = FALSE;
       forcedenforcement = FALSE;
       afterlpproplps = -1L;
 
       while( !lperror && !(*cutoff) && (propagateagain || solvelpagain || solverelaxagain
-            || (afterlpproplps < stat->nnodelps && lpsolved)) )
+            || (afterlpproplps < stat->nnodelps && lpsolved) || relaxcalled) )
       {
          solverelax = solverelaxagain;
          solverelaxagain = FALSE;
@@ -4031,7 +4078,7 @@ SCIP_RETCODE solveNode(
          SCIP_CALL( propAndSolve(blkmem, set, messagehdlr, stat, mem, origprob, transprob, primal, tree, reopt, lp,
                relaxation, pricestore, sepastore, branchcand, cutpool, delayedcutpool, conflict, conflictstore, eventfilter,
                eventqueue, cliquetable, focusnode, actdepth, propagate, solvelp, solverelax, forcedlpsolve, initiallpsolved,
-               fullseparation, &afterlpproplps, &heurtiming, &nlperrors, &fullpropagation, &propagateagain, &lpsolved,
+               fullseparation, &afterlpproplps, &heurtiming, &nlperrors, &fullpropagation, &propagateagain, &lpsolved, &relaxcalled,
                &solvelpagain, &solverelaxagain, cutoff, postpone, unbounded, stopped, &lperror, &pricingaborted, &forcedenforcement) );
          initiallpsolved |= lpsolved;
 

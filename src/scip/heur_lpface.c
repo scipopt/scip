@@ -316,7 +316,7 @@ SCIP_RETCODE setupSubproblem(
 
    for( i = 0; i < nvars; ++i)
    {
-      if( ! SCIPisFeasZero(subscip, SCIPvarGetObj(vars[i])) )
+      if( ! SCIPisZero(subscip, SCIPvarGetObj(vars[i])) )
       {
          SCIP_CALL( SCIPaddCoefLinear(subscip, origobjcons, subvars[i], SCIPvarGetObj(vars[i])) );
 #ifndef NDEBUG
@@ -324,10 +324,10 @@ SCIP_RETCODE setupSubproblem(
 #endif
       }
    }
+   assert(nobjvars == SCIPgetNObjVars(scip));
 
    SCIP_CALL( SCIPaddCons(subscip, origobjcons) );
    SCIP_CALL( SCIPreleaseCons(subscip, &origobjcons) );
-   assert(nobjvars == SCIPgetNObjVars(scip));
 
    return SCIP_OKAY;
 }

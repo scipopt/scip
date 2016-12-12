@@ -1024,6 +1024,18 @@ void* SCIPlpiGetSolverPointer(
 {
    return (void*) lpi->cpxlp;
 }
+
+/** pass integrality information to LP solver */
+SCIP_RETCODE SCIPlpiSetIntegralityInformation(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   ncols,              /**< length of integrality array */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   )
+{
+   SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
+   return SCIP_LPERROR;
+}
+
 /**@} */
 
 
@@ -1458,6 +1470,9 @@ SCIP_RETCODE SCIPlpiChgBounds(
    assert(lpi->cpxenv != NULL);
    assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
+   if ( ncols <= 0 )
+      return SCIP_OKAY;
+
    SCIPdebugMessage("changing %d bounds in CPLEX\n", ncols);
 
    for( i = 0; i < ncols; ++i )
@@ -1518,6 +1533,9 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
+
+   if ( nrows <= 0 )
+      return SCIP_OKAY;
 
    SCIPdebugMessage("changing %d sides in CPLEX\n", nrows);
 
@@ -1596,8 +1614,8 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 SCIP_RETCODE SCIPlpiChgObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
-   int*                  ind,                /**< column indices to change objective value for */
-   SCIP_Real*            obj                 /**< new objective values for columns */
+   const int*            ind,                /**< column indices to change objective value for */
+   const SCIP_Real*      obj                 /**< new objective values for columns */
    )
 {
    assert(lpi != NULL);
@@ -3398,8 +3416,8 @@ SCIP_RETCODE SCIPlpiGetBase(
 /** sets current basis status for columns and rows */
 SCIP_RETCODE SCIPlpiSetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  cstat,              /**< array with column basis status */
-   int*                  rstat               /**< array with row basis status */
+   const int*            cstat,              /**< array with column basis status */
+   const int*            rstat               /**< array with row basis status */
    )
 {
    int i;
@@ -3821,7 +3839,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
    )
 {
    int lpncols;
@@ -4034,7 +4052,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
 {
    int lpnrows;

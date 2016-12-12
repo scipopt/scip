@@ -53,8 +53,9 @@
 struct SCIP_BranchruleData
 {
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
-   SCIP_Bool*            skipdown;
-   SCIP_Bool*            skipup;
+   int                   skipsize;           /**< size of skipdown and skipup array */
+   SCIP_Bool*            skipdown;           /**< should down branch be skiped? */
+   SCIP_Bool*            skipup;             /**< should up branch be skiped? */
 };
 
 
@@ -104,15 +105,13 @@ SCIP_RETCODE branch(
 
    if( branchruledata->skipdown == NULL )
    {
-      int nvars;
-      nvars = SCIPgetNVars(scip);
-
       assert(branchruledata->skipup == NULL);
 
-      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->skipdown, nvars) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->skipup, nvars) );
-      BMSclearMemoryArray(branchruledata->skipdown, nvars);
-      BMSclearMemoryArray(branchruledata->skipup, nvars);
+      branchruledata->skipsize = SCIPgetNVars(scip);
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->skipdown, branchruledata->skipsize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->skipup, branchruledata->skipsize) );
+      BMSclearMemoryArray(branchruledata->skipdown, branchruledata->skipsize);
+      BMSclearMemoryArray(branchruledata->skipup, branchruledata->skipsize);
    }
 
    /* get all non-fixed variables (not only the fractional ones) */
@@ -195,10 +194,10 @@ SCIP_DECL_BRANCHFREE(branchFreeAllfullstrong)
 
    /* free branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
-   SCIPfreeMemoryArrayNull(scip, &branchruledata->skipdown);
-   SCIPfreeMemoryArrayNull(scip, &branchruledata->skipup);
+   SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->skipdown, branchruledata->skipsize);
+   SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->skipup, branchruledata->skipsize);
 
-   SCIPfreeMemory(scip, &branchruledata);
+   SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
@@ -576,8 +575,9 @@ SCIP_RETCODE SCIPincludeBranchruleAllfullstrong(
    SCIP_BRANCHRULE* branchrule;
 
    /* create allfullstrong branching rule data */
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
    branchruledata->lastcand = 0;
+   branchruledata->skipsize = 0;
    branchruledata->skipup = NULL;
    branchruledata->skipdown = NULL;
 

@@ -456,7 +456,7 @@ SCIP_DECL_HEURFREE(heurFreeClique)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -662,9 +662,12 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    {
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-      /* return if infeasibility was detected during LP construction */
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
       if( cutoff )
+      {
+         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          goto TERMINATE;
+      }
 
       SCIP_CALL( SCIPflushLP(scip) );
    }
@@ -1078,7 +1081,7 @@ SCIP_RETCODE SCIPincludeHeurClique(
    SCIP_HEUR* heur;
 
    /* create clique primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,

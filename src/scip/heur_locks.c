@@ -148,7 +148,7 @@ SCIP_DECL_HEURFREE(heurFreeLocks)
    heurdata = SCIPheurGetData(heur);
 
     /* free primal heuristic data */
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
 
    return SCIP_OKAY;
 }
@@ -274,9 +274,12 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    {
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-      /* return if infeasibility was detected during LP construction */
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
       if( cutoff )
+      {
+         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;
+      }
 
       SCIP_CALL( SCIPflushLP(scip) );
 
@@ -690,7 +693,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
             if( stored )
             {
-#ifndef NDEBUG
+#ifdef SCIP_MORE_DEBUG
                SCIP_Bool feasible;
                SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
                assert(feasible);
@@ -949,7 +952,7 @@ SCIP_RETCODE SCIPincludeHeurLocks(
    SCIP_HEURDATA* heurdata;
 
    /* create primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeur(scip, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,

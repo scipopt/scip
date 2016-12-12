@@ -313,8 +313,8 @@ SCIP_RETCODE initializeCandsLists(
    /* check if the candidate list contains enough candidates */
    if( nvbs >= heurdata->minfixingrate * nvars )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->vbvars, nvbs) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->vbbounds, nvbs) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->vbvars, nvbs) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->vbbounds, nvbs) );
 
       /* capture variable candidate list */
       for( v = 0; v < nvbs; ++v )
@@ -359,6 +359,7 @@ SCIP_RETCODE applyVboundsFixings(
 {
    SCIP_VAR* var;
    SCIP_BOUNDTYPE bound;
+   SCIP_Bool newnode = TRUE;
    int v;
 
    /* for each variable in topological order: start at best bound (MINIMIZE: neg coeff --> ub, pos coeff: lb) */
@@ -383,15 +384,20 @@ SCIP_RETCODE applyVboundsFixings(
          continue;
 
       /* only open a new probing node if we will not exceed the maximal tree depth */
-      if( SCIP_MAXTREEDEPTH > SCIPgetDepth(scip) )
+      if( newnode && SCIP_MAXTREEDEPTH > SCIPgetDepth(scip) )
       {
          SCIP_CALL( SCIPnewProbingNode(scip) );
+         newnode = FALSE;
       }
 
       *lastvar = var;
 
       if( obj ? (tighten == (SCIPvarGetObj(var) >= 0)) : (tighten == (bound == SCIP_BOUNDTYPE_UPPER)) )
       {
+         /* we cannot fix to infinite bounds */
+         if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+            continue;
+
          /* fix variable to lower bound */
          SCIP_CALL( SCIPfixVarProbing(scip, var, SCIPvarGetLbLocal(var)) );
          SCIPdebugMsg(scip, "fixing %d: variable <%s> to lower bound <%g> (%d pseudo cands)\n",
@@ -402,6 +408,11 @@ SCIP_RETCODE applyVboundsFixings(
       {
          assert((obj && (tighten == (SCIPvarGetObj(var) < 0)))
             || (!obj && (tighten == (bound == SCIP_BOUNDTYPE_LOWER))));
+
+         /* we cannot fix to infinite bounds */
+         if( SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+            continue;
+
          /* fix variable to upper bound */
          SCIP_CALL( SCIPfixVarProbing(scip, var, SCIPvarGetUbLocal(var)) );
          SCIPdebugMsg(scip, "fixing %d: variable <%s> to upper bound <%g> (%d pseudo cands)\n",
@@ -411,6 +422,9 @@ SCIP_RETCODE applyVboundsFixings(
 
       /* check if problem is already infeasible */
       SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, infeasible, NULL) );
+
+      /* we want to create a new probing node */
+      newnode = TRUE;
    }
 
    SCIPdebugMsg(scip, "probing ended with %sfeasible problem\n", (*infeasible) ? "in" : "");
@@ -548,9 +562,12 @@ SCIP_RETCODE applyVbounds(
 
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-      /* return if infeasibility was detected during LP construction */
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
       if( cutoff )
+      {
+         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;
+      }
 
       SCIP_CALL( SCIPflushLP(scip) );
    }
@@ -910,7 +927,7 @@ SCIP_DECL_HEURFREE(heurFreeVbounds)
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
 
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -934,8 +951,8 @@ SCIP_DECL_HEUREXITSOL(heurExitsolVbounds)
    }
 
    /* free varbounds array */
-   SCIPfreeMemoryArrayNull(scip, &heurdata->vbbounds);
-   SCIPfreeMemoryArrayNull(scip, &heurdata->vbvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &heurdata->vbbounds, heurdata->nvbvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &heurdata->vbvars, heurdata->nvbvars);
 
    /* reset heuristic data structure */
    heurdataReset(heurdata);
@@ -996,7 +1013,7 @@ SCIP_RETCODE SCIPincludeHeurVbounds(
    SCIP_HEUR* heur;
 
    /* create vbounds primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    heurdataReset(heurdata);
 
    /* include primal heuristic */

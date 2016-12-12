@@ -322,13 +322,16 @@ void incrementalStatsUpdate(
    assert(meanptr != NULL);
    assert(sumvarptr != NULL);
    assert(nobservations > 0 || add);
-   assert(*sumvarptr >= 0.0);
 
    addfactor = add ? 1.0 : -1.0;
 
    oldmean = *meanptr;
    *meanptr = oldmean + addfactor * (value - oldmean)/(SCIP_Real)nobservations;
    *sumvarptr += addfactor * (value - oldmean) * (value - (*meanptr));
+
+   /* it may happen that *sumvarptr is slightly negative, especially after a series of add/removal operations */
+   assert(*sumvarptr >= -1e-6);
+   *sumvarptr = MAX(0.0, *sumvarptr);
 }
 
 /** removes an observation (x,y) from the regression */
@@ -1347,7 +1350,7 @@ uint32_t hashvalue(
    uint64_t              input               /**< key value */
    )
 {
-   return ( (uint32_t) ((0xaba59e95109ce4edull * input)>>32) ) | 1u;
+   return ( (uint32_t) ((0x9e3779b97f4a7c15ull * input)>>32) ) | 1u;
 }
 
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
@@ -2572,7 +2575,7 @@ SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqPtr)
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
 {  /*lint --e{715}*/
    /* the key is used as the keyvalue too */
-   return (unsigned int)(size_t) key;
+   return (unsigned int) ((0xd37e9a1ce2148403ull * (size_t) key)>>32);
 }
 
 
@@ -6601,6 +6604,7 @@ void SCIPdigraphFree(
       BMSfreeMemoryArrayNull(&(*digraph)->successors[i]);
       BMSfreeMemoryArrayNull(&(*digraph)->arcdata[i]);
    }
+   (*digraph)->nnodes = 0;
 
    /* free components structure */
    SCIPdigraphFreeComponents(*digraph);

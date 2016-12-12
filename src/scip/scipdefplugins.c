@@ -37,6 +37,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
    SCIP_CALL( SCIPincludeConshdlrBivariate(scip) ); /* bivariate needs to be after quadratic and nonlinear due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
+   SCIP_CALL( SCIPincludeConshdlrCardinality(scip) );
    SCIP_CALL( SCIPincludeConshdlrConjunction(scip) );
    SCIP_CALL( SCIPincludeConshdlrCountsols(scip) );
    SCIP_CALL( SCIPincludeConshdlrCumulative(scip) );
@@ -126,6 +127,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurFeaspump(scip) );
    SCIP_CALL( SCIPincludeHeurFixandinfer(scip) );
    SCIP_CALL( SCIPincludeHeurFracdiving(scip) );
+   SCIP_CALL( SCIPincludeHeurGins(scip) );
    SCIP_CALL( SCIPincludeHeurGuideddiving(scip) );
    SCIP_CALL( SCIPincludeHeurZeroobj(scip) );
    SCIP_CALL( SCIPincludeHeurIndicator(scip) );
@@ -147,6 +149,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurRandrounding(scip) );
    SCIP_CALL( SCIPincludeHeurRens(scip) );
    SCIP_CALL( SCIPincludeHeurReoptsols(scip) );
+   SCIP_CALL( SCIPincludeHeurRepair(scip) );
    SCIP_CALL( SCIPincludeHeurRins(scip) );
    SCIP_CALL( SCIPincludeHeurRootsoldiving(scip) );
    SCIP_CALL( SCIPincludeHeurRounding(scip) );

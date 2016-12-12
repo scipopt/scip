@@ -83,6 +83,7 @@ struct Dimensions
    int*                  lbs;                /**< lower bounds */
    int*                  ubs;                /**< upper bounds */
    int                   ndims;              /**< number of dimensions */
+   int                   size;               /**< size of lbs and ubs */
 };
 typedef struct Dimensions DIMENSIONS;
 
@@ -697,7 +698,7 @@ SCIP_RETCODE readerdataCreate(
    SCIP_READERDATA**     readerdata          /**< pointer to reader data */
    )
 {
-   SCIP_CALL( SCIPallocMemory(scip, readerdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, readerdata) );
 
    (*readerdata)->vararrays = NULL;
    (*readerdata)->nvararrays = 0;
@@ -724,12 +725,12 @@ SCIP_RETCODE ensureVararrySize(
       if( vararrayssize == 0 )
       {
          vararrayssize = 100;
-         SCIP_CALL( SCIPallocMemoryArray(scip, &readerdata->vararrays, vararrayssize) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &readerdata->vararrays, vararrayssize) );
       }
       else
       {
          vararrayssize *= 2;
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &readerdata->vararrays, vararrayssize) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &readerdata->vararrays, readerdata->vararrayssize, vararrayssize) );
       }
    }
 
@@ -756,12 +757,12 @@ SCIP_RETCODE ensureVararrySizeFznInput(
       if( vararrayssize == 0 )
       {
          vararrayssize = 100;
-         SCIP_CALL( SCIPallocMemoryArray(scip, &fzninput->vararrays, vararrayssize) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &fzninput->vararrays, vararrayssize) );
       }
       else
       {
          vararrayssize *= 2;
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &fzninput->vararrays, vararrayssize) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &fzninput->vararrays, fzninput->vararrayssize, vararrayssize) );
       }
    }
 
@@ -788,12 +789,12 @@ SCIP_RETCODE ensureConstarrySizeFznInput(
       if( constarrayssize == 0 )
       {
          constarrayssize = 100;
-         SCIP_CALL( SCIPallocMemoryArray(scip, &fzninput->constarrays, constarrayssize) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &fzninput->constarrays, constarrayssize) );
       }
       else
       {
          constarrayssize *= 2;
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &fzninput->constarrays, constarrayssize) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &fzninput->constarrays, fzninput->constarrayssize, constarrayssize) );
       }
    }
 
@@ -856,11 +857,12 @@ SCIP_RETCODE copyDimensions(
 {
    if( source != NULL )
    {
-      SCIP_CALL( SCIPallocMemory(scip, target) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, target) );
 
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*target)->lbs, source->lbs, source->ndims) );
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*target)->ubs, source->ubs, source->ndims) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*target)->lbs, source->lbs, source->ndims) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*target)->ubs, source->ubs, source->ndims) );
       (*target)->ndims = source->ndims;
+      (*target)->size = source->ndims;
    }
    else
       *target = NULL;
@@ -881,13 +883,13 @@ SCIP_RETCODE createVararray(
    )
 {
    /* allocate memory for the new vararray struct */
-   SCIP_CALL( SCIPallocMemory(scip, vararray) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, vararray) );
 
    /* copy variable pointers */
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*vararray)->vars, vars, nvars) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*vararray)->vars, vars, nvars) );
 
    /* copy variable array name */
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*vararray)->name, name, strlen(name)+1) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*vararray)->name, name, strlen(name)+1) );
 
    SCIP_CALL( copyDimensions(scip, &(*vararray)->info, info) );
 
@@ -906,9 +908,9 @@ void freeDimensions(
 {
    if( *dim != NULL )
    {
-      SCIPfreeMemoryArrayNull(scip, &(*dim)->lbs);
-      SCIPfreeMemoryArrayNull(scip, &(*dim)->ubs);
-      SCIPfreeMemory(scip, dim);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*dim)->lbs, (*dim)->size);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*dim)->ubs, (*dim)->size);
+      SCIPfreeBlockMemory(scip, dim);
    }
 }
 
@@ -921,10 +923,10 @@ void freeVararray(
 {
    freeDimensions(scip, &(*vararray)->info);
 
-   SCIPfreeMemoryArray(scip, &(*vararray)->name);
-   SCIPfreeMemoryArray(scip, &(*vararray)->vars);
+   SCIPfreeBlockMemoryArray(scip, &(*vararray)->name, strlen((*vararray)->name) + 1);
+   SCIPfreeBlockMemoryArray(scip, &(*vararray)->vars, (*vararray)->nvars);
 
-   SCIPfreeMemory(scip, vararray);
+   SCIPfreeBlockMemory(scip, vararray);
 }
 
 /** searches the variable array data base if a constant array exists with the given name; if it exists it is returned */
@@ -968,13 +970,13 @@ SCIP_RETCODE createConstarray(
    SCIPdebugMsg(scip, "create constant array <%s>\n", name);
 
    /* allocate memory for the new constarray struct */
-   SCIP_CALL( SCIPallocMemory(scip, constarray) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, constarray) );
 
    /* copy constant values */
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*constarray)->constants, constants, nconstants) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*constarray)->constants, constants, nconstants) );
 
    /* copy constant array name */
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*constarray)->name, name, strlen(name)+1) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*constarray)->name, name, strlen(name)+1) );
 
    (*constarray)->nconstants = nconstants;
    (*constarray)->type = type;
@@ -992,13 +994,13 @@ void freeConstarray(
    SCIPdebugMsg(scip, "free constant array <%s>\n", (*constarray)->name);
 
    /* free variable pointers */
-   SCIPfreeMemoryArray(scip, &(*constarray)->constants);
+   SCIPfreeBlockMemoryArray(scip, &(*constarray)->constants, (*constarray)->nconstants);
 
    /* free variable array name */
-   SCIPfreeMemoryArray(scip, &(*constarray)->name);
+   SCIPfreeBlockMemoryArray(scip, &(*constarray)->name, strlen((*constarray)->name) + 1);
 
    /* allocate memory for the new vararray struct */
-   SCIPfreeMemory(scip, constarray);
+   SCIPfreeBlockMemory(scip, constarray);
 }
 
 /** searches the constant array data base if a constant array exists with the given name; if it exists it is returned */
@@ -1047,18 +1049,19 @@ SCIP_RETCODE readerdataAddOutputvar(
    name = SCIPvarGetName(var);
 
    /* allocate memory for the new vararray struct */
-   SCIP_CALL( SCIPallocMemory(scip, &vararray) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &vararray) );
 
    /* copy variable pointers */
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &vararray->vars, &var, 1) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &vararray->vars, &var, 1) );
 
    /* copy variable array name */
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &vararray->name, name, strlen(name)+1) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &vararray->name, name, strlen(name)+1) );
 
-   SCIP_CALL( SCIPallocMemory(scip, &info) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &info) );
    info->lbs = NULL;
    info->ubs = NULL;
    info->ndims = 0;
+   info->size = 0;
 
    vararray->info = info;
    vararray->nvars = 1;
@@ -1550,9 +1553,10 @@ SCIP_RETCODE parseOutputDimensioninfo(
    nelements = 0;
    size = 100;
 
-   SCIP_CALL( SCIPallocMemory(scip, info) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*info)->lbs, size) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*info)->ubs, size) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, info) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*info)->lbs, size) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*info)->ubs, size) );
+   (*info)->size = size;
 
    /* check for bracket */
    if( !getNextToken(scip, fzninput) || !isChar(fzninput->token, '(') )
@@ -1569,8 +1573,9 @@ SCIP_RETCODE parseOutputDimensioninfo(
       if( nelements == size )
       {
          size *= 2;
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &(*info)->lbs, size) );
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &(*info)->ubs, size) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(*info)->lbs, (*info)->size, size) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(*info)->ubs, (*info)->size, size) );
+         (*info)->size = size;
       }
 
       /* we assume integer bounds */
@@ -1598,7 +1603,6 @@ SCIP_RETCODE parseName(
    DIMENSIONS**          info                /**< pointer to store the output dimension information if one */
    )
 {
-
    if( output != NULL )
       (*output) = FALSE;
 
@@ -4734,10 +4738,10 @@ SCIP_DECL_READERFREE(readerFreeFzn)
       freeVararray(scip, &readerdata->vararrays[v]);
    }
 
-   SCIPfreeMemoryArrayNull(scip, &readerdata->vararrays);
+   SCIPfreeBlockMemoryArrayNull(scip, &readerdata->vararrays, readerdata->vararrayssize);
 
    /* free reader data */
-   SCIPfreeMemory(scip, &readerdata);
+   SCIPfreeBlockMemory(scip, &readerdata);
 
    return SCIP_OKAY;
 }
@@ -4777,6 +4781,7 @@ SCIP_DECL_READERREAD(readerReadFzn)
    fzninput.constarrays = NULL;
    fzninput.nconstarrays = 0;
    fzninput.constarrayssize = 0;
+
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/initialconss", &(fzninput.initialconss)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicconss", &(fzninput.dynamicconss)) );
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamiccols", &(fzninput.dynamiccols)) );
@@ -4817,14 +4822,14 @@ SCIP_DECL_READERREAD(readerReadFzn)
    {
       freeVararray(scip, &fzninput.vararrays[i]);
    }
-   SCIPfreeMemoryArrayNull(scip, &(fzninput.vararrays));
+   SCIPfreeBlockMemoryArrayNull(scip, &(fzninput.vararrays), fzninput.vararrayssize);
 
    /* free constant arrays */
    for( i = 0; i < fzninput.nconstarrays; ++i )
    {
       freeConstarray(scip, &(fzninput.constarrays[i]));
    }
-   SCIPfreeMemoryArrayNull(scip, &fzninput.constarrays);
+   SCIPfreeBlockMemoryArrayNull(scip, &fzninput.constarrays, fzninput.constarrayssize);
 
    /* evaluate the result */
    if( fzninput.haserror )

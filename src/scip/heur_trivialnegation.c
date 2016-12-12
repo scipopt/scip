@@ -242,22 +242,17 @@ SCIP_RETCODE SCIPincludeHeurTrivialnegation(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;
-
-   /* no primal heuristic data */
-   heurdata = NULL;
 
    /* include heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
          HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecTrivialnegation, heurdata) );
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecTrivialnegation, NULL) );
 
    assert(heur != NULL);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyTrivialnegation) );
-
 
    return SCIP_OKAY;
 }

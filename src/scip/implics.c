@@ -1000,8 +1000,8 @@ SCIP_RETCODE cliqueCreateWithData(
    assert(values != NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, clique) );
-   (*clique)->vars = vars;
-   (*clique)->values = values;
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*clique)->vars, vars, nvars) );
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*clique)->values, values, nvars) );
    (*clique)->nvars = nvars;
    (*clique)->size = size;
    (*clique)->startcleanup = -1;
@@ -1752,18 +1752,14 @@ static
 SCIP_DECL_HASHKEYVAL(hashkeyvalClique)
 {  /*lint --e{715}*/
    SCIP_CLIQUE* clique;
-   unsigned int hashval;
-   int i;
 
    clique = (SCIP_CLIQUE*)key;
-   hashval = 0;
-   for( i = 0; i < clique->nvars; ++i )
-   {
-      hashval *= 31;
-      hashval += (unsigned int)(((size_t)clique->vars[i]) >> 1) + (unsigned int)clique->values[i];
-   }
 
-   return hashval;
+   return clique->nvars == 0 ? 0 : SCIPhashTwo(SCIPcombineTwoInt(SCIPvarGetIndex(clique->vars[0]),
+                                                                 SCIPvarGetIndex(clique->vars[clique->nvars-1])),
+                                               SCIPcombineThreeInt(clique->nvars,
+                                                                   clique->values[0],
+                                                                   clique->values[clique->nvars-1]));
 }
 
 #define HASHTABLE_CLIQUETABLE_SIZE 100
@@ -2308,7 +2304,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
    /* copy clique data */
    if( values == NULL )
    {
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &clqvalues, size) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &clqvalues, size) );
 
       /* initialize clique values data */
       for( v = nvars - 1; v >= 0; --v )
@@ -2316,9 +2312,9 @@ SCIP_RETCODE SCIPcliquetableAdd(
    }
    else
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &clqvalues, values, size) );
+      SCIP_CALL( SCIPsetDuplicateBufferArray(set, &clqvalues, values, size) );
    }
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &clqvars, vars, size) );
+   SCIP_CALL( SCIPsetDuplicateBufferArray(set, &clqvars, vars, size) );
 
    /* get active variables */
    SCIP_CALL( SCIPvarsGetProbvarBinary(&clqvars, &clqvalues, nvars) );
@@ -2359,7 +2355,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
                   {
                      *infeasible = TRUE;
 
-                     return SCIP_OKAY;
+                     goto FREEMEM;
                   }
 
                   continue;
@@ -2417,12 +2413,8 @@ SCIP_RETCODE SCIPcliquetableAdd(
 
    /* did we fix all variables or are we infeasible? */
    if( v >= 0 )
-   {
-      BMSfreeBlockMemoryArray(blkmem, &clqvars, size);
-      BMSfreeBlockMemoryArray(blkmem, &clqvalues, size);
+      goto FREEMEM;
 
-      return SCIP_OKAY;
-   }
    assert(!*infeasible);
 
    /* check if only one or less variables are left */
@@ -2451,10 +2443,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
          }
       }
 
-      BMSfreeBlockMemoryArray(blkmem, &clqvars, size);
-      BMSfreeBlockMemoryArray(blkmem, &clqvalues, size);
-
-      return SCIP_OKAY;
+      goto FREEMEM;
    }
 
    nlocalbdchgs = 0;
@@ -2468,12 +2457,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
 
    /* did we stop early due to a pair of negated variables? */
    if( nvars == 0 || *infeasible )
-   {
-      BMSfreeBlockMemoryArray(blkmem, &clqvars, size);
-      BMSfreeBlockMemoryArray(blkmem, &clqvalues, size);
-
-      return SCIP_OKAY;
-   }
+      goto FREEMEM;
 
    /* if less than two variables are left over, the clique is redundant */
    if( nvars > 1 )
@@ -2518,7 +2502,8 @@ SCIP_RETCODE SCIPcliquetableAdd(
             sameclique->equation = TRUE;
 
          cliqueFree(&clique, blkmem);
-         return SCIP_OKAY;
+
+         goto FREEMEM;
       }
    }
    else
@@ -2526,12 +2511,13 @@ SCIP_RETCODE SCIPcliquetableAdd(
       assert(!isequation);
       assert(nvars == 1);
 
-      BMSfreeBlockMemoryArray(blkmem, &clqvars, size);
-      BMSfreeBlockMemoryArray(blkmem, &clqvalues, size);
-
-      return SCIP_OKAY;
+      goto FREEMEM;
    }
    cliqueCheck(clique);
+
+  FREEMEM:
+   SCIPsetFreeBufferArray(set, &clqvalues);
+   SCIPsetFreeBufferArray(set, &clqvars);
 
    return SCIP_OKAY;
 }
@@ -3016,7 +3002,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 
 /** helper function that returns the graph node index for a variable during connected component detection */
 static
-int getNodeNumberBinvar(
+int getNodeIndexBinvar(
    SCIP_VAR*             binvar,             /**< binary (or implicit binary) variable */
    int                   nbinvars,           /**< number of binary variables */
    int                   nintvars,           /**< number of integer variables */
@@ -3054,7 +3040,13 @@ int getNodeNumberBinvar(
    return nodeindex;
 }
 
-/** computes connected components of the clique graph */
+/** computes connected components of the clique graph
+ *
+ *  use depth-first search similarly to the components presolver/constraint handler, representing a clique as a
+ *  path to reduce memory usage, but leaving the connected components the same
+ *
+ *  an update becomes necessary if a clique gets added with variables from different components
+ */
 SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -3124,6 +3116,12 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
          sizes[v - nintvars] = 0;
    }
 
+
+   /* we need to consider implicit integer variables for which SCIPvarIsBinary() returns TRUE.
+    * These may be scattered across the nimplvars many implicit integer variables.
+    * For simplicity, we add all implicit integer variables as nodes to the digraph, and subtract
+    * the amount of nonbinary implicit integer variables afterwards.
+    */
    SCIP_CALL( SCIPdigraphCreate(&digraph, nbinvars + nimplvars) );
    SCIP_CALL( SCIPdigraphSetSizes(digraph, sizes) );
 
@@ -3136,25 +3134,27 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
       SCIP_VAR** cliquevars;
       int nclqvars;
       int cv;
+      int lastactiveindex = -1;
 
       clique = cliques[c];
       cliquevars = SCIPcliqueGetVars(clique);
       nclqvars = SCIPcliqueGetNVars(clique);
       assert(nclqvars > 0);
 
-      /* add a variable and its predecessor in this clique as an arc to the digraph */
-      for( cv = 1; cv < nclqvars; ++cv )
+      /* add a variable and its last active predecessor in this clique as an arc to the digraph */
+      for( cv = 0; cv < nclqvars; ++cv )
       {
-         int startnode;
-         int endnode;
+         int nodeindex = getNodeIndexBinvar(cliquevars[cv], nbinvars, nintvars, nimplvars);
 
-         startnode = getNodeNumberBinvar(cliquevars[cv], nbinvars, nintvars, nimplvars);
-         endnode = getNodeNumberBinvar(cliquevars[cv - 1], nbinvars, nintvars, nimplvars);
-
-         /* add an arc to the digraph if both variables have an active representative */
-         if( startnode >= 0 && endnode >= 0 )
+         if( nodeindex >= 0 )
          {
-            SCIP_CALL( SCIPdigraphAddArc(digraph, startnode, endnode, NULL) );
+            /* add an arc to the digraph between this node and the previous active variable from this clique */
+            if( lastactiveindex >= 0 )
+            {
+               SCIP_CALL( SCIPdigraphAddArc(digraph, nodeindex, lastactiveindex, NULL) );
+            }
+            /* store this node index as active index for the next arc */
+            lastactiveindex = nodeindex;
          }
       }
    }
@@ -3464,5 +3464,5 @@ SCIP_Bool SCIPcliquetableNeedsComponentUpdate(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    )
 {
-   return cliquetable->componentupdate;
+   return cliquetable->componentupdate || cliquetable->ncliquecomponents == -1;
 }

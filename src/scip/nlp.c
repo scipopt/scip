@@ -4761,8 +4761,10 @@ SCIP_RETCODE nlpSolve(
          nlp->primalsolobjval = 0.0;
          for( i = 0; i < nlp->nvars; ++i )
          {
-            SCIP_CALL( SCIPvarSetNLPSol(nlp->vars[i], set, primalvals[nlp->varmap_nlp2nlpi[i]]) );  /*lint !e613 */
-            nlp->primalsolobjval += SCIPvarGetObj(nlp->vars[i]) * primalvals[nlp->varmap_nlp2nlpi[i]];  /*lint !e613 */
+            SCIP_Real solval = primalvals[nlp->varmap_nlp2nlpi[i]];
+
+            SCIP_CALL( SCIPvarSetNLPSol(nlp->vars[i], set, solval) );  /*lint !e613 */
+            nlp->primalsolobjval += SCIPvarGetObj(nlp->vars[i]) * solval;  /*lint !e613 */
          }
       }
 

@@ -439,7 +439,7 @@ SCIP_DECL_SEPAFREE(sepaFreeDisjunctive)/*lint --e{715}*/
    sepadata = SCIPsepaGetData(sepa);
    assert( sepadata != NULL );
 
-   SCIPfreeMemory(scip, &sepadata);
+   SCIPfreeBlockMemory(scip, &sepadata);
 
    SCIPsepaSetData(sepa, NULL);
 
@@ -866,7 +866,7 @@ SCIP_RETCODE SCIPincludeSepaDisjunctive(
    SCIP_SEPA* sepa = NULL;
 
    /* create separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
    sepadata->conshdlr = NULL;
    sepadata->lastncutsfound = 0;
 

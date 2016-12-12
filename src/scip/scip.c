@@ -10100,7 +10100,7 @@ SCIP_RETCODE SCIPreadProb(
             int c;
             int h;
 
-            SCIP_CALL( SCIPallocClearMemoryArray(scip, &nconss, scip->set->nconshdlrs) );
+            SCIP_CALL( SCIPallocClearBufferArray(scip, &nconss, scip->set->nconshdlrs) );
 
             /* loop over all constraints and constraint-handlers to count for each type the amount of original
              * constraints
@@ -10129,7 +10129,7 @@ SCIP_RETCODE SCIPreadProb(
                }
             }
 
-            SCIPfreeMemoryArray(scip, &nconss);
+            SCIPfreeBufferArray(scip, &nconss);
          }
 
          /* in case the permutation seed is different to 0, permute the original problem */
@@ -10428,7 +10428,7 @@ SCIP_RETCODE SCIPfreeProb(
       SCIP_CALL( SCIPconflictstoreFree(&scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt,
             scip->eventfilter) );
       SCIP_CALL( SCIPprimalFree(&scip->origprimal, scip->mem->probmem) );
-      SCIP_CALL( SCIPprobFree(&scip->origprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
+      SCIP_CALL( SCIPprobFree(&scip->origprob, scip->messagehdlr, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
       SCIP_CALL( SCIPstatFree(&scip->stat, scip->mem->probmem) );
 
       /* readers */
@@ -14161,6 +14161,8 @@ SCIP_RETCODE presolveRound(
    aborted = FALSE;
    lastranpresol = FALSE;
 
+   assert( scip->set->propspresolsorted );
+
    if( *timing == SCIP_PRESOLTIMING_EXHAUSTIVE )
    {
       /* In exhaustive presolving, we continue the loop where we stopped last time to avoid calling the same
@@ -14194,7 +14196,7 @@ SCIP_RETCODE presolveRound(
 
       if( *timing == SCIP_PRESOLTIMING_FAST )
          ++(scip->stat->npresolroundsfast);
-      else
+      if( *timing == SCIP_PRESOLTIMING_MEDIUM )
          ++(scip->stat->npresolroundsmed);
    }
 
@@ -14211,7 +14213,7 @@ SCIP_RETCODE presolveRound(
          priopresol = -1;
 
       if( j < propend )
-         prioprop = SCIPpropGetPresolPriority(scip->set->props[j]);
+         prioprop = SCIPpropGetPresolPriority(scip->set->props_presol[j]);
       else
          prioprop = -1;
 
@@ -14222,8 +14224,8 @@ SCIP_RETCODE presolveRound(
          if( prioprop < 0 )
             break;
 
-         SCIPdebugMsg(scip, "executing presolving of propagator <%s>\n", SCIPpropGetName(scip->set->props[j]));
-         SCIP_CALL( SCIPpropPresol(scip->set->props[j], scip->set, *timing, scip->stat->npresolrounds,
+         SCIPdebugMsg(scip, "executing presolving of propagator <%s>\n", SCIPpropGetName(scip->set->props_presol[j]));
+         SCIP_CALL( SCIPpropPresol(scip->set->props_presol[j], scip->set, *timing, scip->stat->npresolrounds,
                &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
@@ -14263,7 +14265,7 @@ SCIP_RETCODE presolveRound(
                "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i-1]));
          else
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props[j-1]));
+               "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props_presol[j-1]));
       }
       else if( result == SCIP_UNBOUNDED )
       {
@@ -14274,7 +14276,7 @@ SCIP_RETCODE presolveRound(
                "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i-1]));
          else
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "propagator <%s> detected  unboundedness (or infeasibility)\n", SCIPpropGetName(scip->set->props[j-1]));
+               "propagator <%s> detected  unboundedness (or infeasibility)\n", SCIPpropGetName(scip->set->props_presol[j-1]));
       }
 
       /* delete the variables from the problems that were marked to be deleted */
@@ -14352,6 +14354,8 @@ SCIP_RETCODE presolveRound(
       }
    }
 
+   assert( scip->set->propspresolsorted );
+
    /* call included presolvers with negative priority */
    while( !(*unbounded) && !(*infeasible) && !aborted && (i < presolend || j < propend) )
    {
@@ -14361,7 +14365,7 @@ SCIP_RETCODE presolveRound(
          priopresol = -INT_MAX;
 
       if( j < scip->set->nprops )
-         prioprop = SCIPpropGetPresolPriority(scip->set->props[j]);
+         prioprop = SCIPpropGetPresolPriority(scip->set->props_presol[j]);
       else
          prioprop = -INT_MAX;
 
@@ -14370,8 +14374,8 @@ SCIP_RETCODE presolveRound(
       {
          assert(prioprop <= 0);
 
-         SCIPdebugMsg(scip, "executing presolving of propagator <%s>\n", SCIPpropGetName(scip->set->props[j]));
-         SCIP_CALL( SCIPpropPresol(scip->set->props[j], scip->set, *timing, scip->stat->npresolrounds,
+         SCIPdebugMsg(scip, "executing presolving of propagator <%s>\n", SCIPpropGetName(scip->set->props_presol[j]));
+         SCIP_CALL( SCIPpropPresol(scip->set->props_presol[j], scip->set, *timing, scip->stat->npresolrounds,
                &scip->stat->npresolfixedvars, &scip->stat->npresolaggrvars, &scip->stat->npresolchgvartypes,
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
@@ -14408,7 +14412,7 @@ SCIP_RETCODE presolveRound(
                "presolver <%s> detected infeasibility\n", SCIPpresolGetName(scip->set->presols[i-1]));
          else
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props[j-1]));
+               "propagator <%s> detected infeasibility\n", SCIPpropGetName(scip->set->props_presol[j-1]));
       }
       else if( result == SCIP_UNBOUNDED )
       {
@@ -14419,7 +14423,7 @@ SCIP_RETCODE presolveRound(
                "presolver <%s> detected unboundedness (or infeasibility)\n", SCIPpresolGetName(scip->set->presols[i-1]));
          else
             SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "propagator <%s> detected  unboundedness (or infeasibility)\n", SCIPpropGetName(scip->set->props[j-1]));
+               "propagator <%s> detected  unboundedness (or infeasibility)\n", SCIPpropGetName(scip->set->props_presol[j-1]));
       }
 
       /* delete the variables from the problems that were marked to be deleted */
@@ -14565,7 +14569,6 @@ SCIP_RETCODE presolve(
    int presolstart = 0;
    int propstart = 0;
    int consstart = 0;
-   int ncliquecomponents;
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -14703,21 +14706,6 @@ SCIP_RETCODE presolve(
       stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
    }
 
-   /* update clique components if necessary */
-   if( SCIPcliquetableNeedsComponentUpdate(scip->cliquetable) )
-   {
-      SCIP_VAR** vars;
-      int nbinvars;
-      int nintvars;
-      int nimplvars;
-
-      SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, &nimplvars, NULL) );
-
-      SCIP_CALL( SCIPcliquetableComputeCliqueComponents(scip->cliquetable, scip->set, vars, nbinvars, nintvars, nimplvars) );
-   }
-   assert(!SCIPcliquetableNeedsComponentUpdate(scip->cliquetable));
-   ncliquecomponents = SCIPcliquetableGetNCliqueComponents(scip->cliquetable);
-
    if( *infeasible || *unbounded )
    {
       /* first change status of scip, so that all plugins in their exitpre callbacks can ask SCIP for the correct status */
@@ -14790,9 +14778,6 @@ SCIP_RETCODE presolve(
       scip->stat->npresolchgbds, scip->stat->npresoladdholes, scip->stat->npresolchgsides, scip->stat->npresolchgcoefs);
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
       " %d implications, %d cliques\n", scip->stat->nimplications, SCIPcliquetableGetNCliques(scip->cliquetable));
-
-   SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-         "Clique table has %d connected components (bin+impl bin vars)\n", ncliquecomponents);
 
    /* remember number of constraints */
    SCIPprobMarkNConss(scip->transprob);
@@ -15331,7 +15316,7 @@ SCIP_RETCODE freeTransform(
    SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
 
    /* free transformed problem data structures */
-   SCIP_CALL( SCIPprobFree(&scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
+   SCIP_CALL( SCIPprobFree(&scip->transprob, scip->messagehdlr, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
    SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->mem->probmem) );
    SCIP_CALL( SCIPrelaxationFree(&scip->relaxation, scip->mem->probmem, scip->primal) );
@@ -23878,15 +23863,9 @@ SCIP_RETCODE SCIPaddClique(
    return SCIP_OKAY;
 }
 
-/** creates a variable order consistent labeling of the given labels
+/** relabels the given labels in-place in an increasing fashion: the first seen label is 0, the next label 1, etc...
  *
- *  order consistent means that
- *  a) the label at the first position in the array is 0
- *  b) for every possible label \in {0, ..., nlabels - 1} there is an index j with label_j = i
- *  c) that for two indices i <= j, it holds that
- *     label_i > label_j if and only if there is a k < i such that label_k == label_j
- *
- *  every label equal to -1 is treated as a previously unseen, unique label and gets a new ordered label.
+ *  @note every label equal to -1 is treated as a previously unseen, unique label and gets a new ordered label.
  */
 static
 SCIP_RETCODE relabelOrderConsistent(
@@ -24174,9 +24153,9 @@ SCIP_RETCODE calcCliquePartitionGreedy(
 /** calculates a partition of the given set of binary variables into cliques; takes into account independent clique components
  *
  *  The algorithm performs the following steps:
- *  - recomputes connected clique components, if necessary
- *  - computes a clique partition for every connected clique component greedily.
- *  - relabels the resulting cliques such that the resulting partition obeys the variable order
+ *  - recomputes connected components of the clique table, if necessary
+ *  - computes a clique partition for every connected component greedily.
+ *  - relabels the resulting clique partition such that it satisfies the description below
  *
  *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
  *  were assigned to the same clique;
@@ -41014,6 +40993,7 @@ SCIP_RETCODE SCIPfreeSyncstore(
  *  @return the \ref SCIP_SPI* parallel interface pointer to submit jobs for concurrent processing.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_TRANSFORMED
@@ -41034,7 +41014,7 @@ SCIP_SYNCSTORE* SCIPgetSyncstore(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSyncstore", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetSyncstore", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->syncstore;
 }

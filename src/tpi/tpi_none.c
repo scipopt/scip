@@ -85,5 +85,3 @@ SCIP_RETCODE SCIPtpiExit(
 {
    return SCIP_ERROR;
 }
-
-

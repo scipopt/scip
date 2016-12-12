@@ -43,10 +43,10 @@ See the INSTALL file in the PolySCIP directory or the section 'Installation' at 
 The problem file (in \texttt{MOP} format) is the only mandatory command line argument:
 \begin{verbatim}
 ./polyscip /path_to_problem_file/problem_file.mop
-\end{verbatim} would run PolySCIP on the given file. To switch off the SCIP solver output you can execute 
+\end{verbatim} would run PolySCIP on the given file. To switch off the SCIP solver output you can execute
 \begin{verbatim}
 ./polyscip -p scipmip.set /path_to_problem_file/problem_file.mop
-\end{verbatim} where \texttt{scipmip.set} is a parameter file with SCIP Parameters 
+\end{verbatim} where \texttt{scipmip.set} is a parameter file with SCIP Parameters
 included in the PolySCIP directory. For more details about SCIP
 parameters, see the command line argument \textbf{-p} described below.
 
@@ -103,13 +103,13 @@ integer problem
 is written in MOP format as follows:
 \begin{verbatim}
 NAME        BICRIT
-OBJSENSE 
+OBJSENSE
  MAX
 ROWS
- N  Obj1            
- N  Obj2            
- E  Eqn             
- L  Lower           
+ N  Obj1
+ N  Obj2
+ E  Eqn
+ L  Lower
 COLUMNS
     x#1       Lower              1
     x#1       Eqn                1
@@ -185,7 +185,7 @@ The bi-criteria maximization problem of \cref{sec-format} could be modelled as f
 \begin{verbatim}
 set I := {1..3};
 param c1[I] := <1> 3, <2> 2, <3> -4;     #coefficients of the first objective
-param c2[I] := <3> 2 default 1;          #coefficients of the second objective 
+param c2[I] := <3> 2 default 1;          #coefficients of the second objective
 param low[I] := <1> 1, <2> 0.4, <3> 0;   #coefficients of the lower constraint
 var x[I] integer >= 0;
 
@@ -195,7 +195,7 @@ Obj2: sum <i> in I: c2[i]*x[i];
 subto Eqn: sum <i> in I: x[i] == 2;
 subto Lower: sum <i> in I: low[i]*x[i] <= 1.5;
 \end{verbatim}
-Saving the file, e.g., as test.zpl and running \texttt{mult\_zimpl\_to\_mop.py} on it would generate a file named \texttt{test.mop} which can be solved with PolySCIP. 
+Saving the file, e.g., as test.zpl and running \texttt{mult\_zimpl\_to\_mop.py} on it would generate a file named \texttt{test.mop} which can be solved with PolySCIP.
 \end{ex}
 
 \begin{ex}A tri-criteria linear programming minimization problem with a four-dimensional standard cube as feasible space and three unit vectors as objectives could be modelled as follows:
@@ -207,7 +207,7 @@ Obj2: x[2];
 Obj3: x[3];
 subto Bounds: forall <i> in I: 0 <= x[i] <= 1;
 \end{verbatim}
-Again, saving the file, e.g., as testCube.zpl and running \texttt{mult\_zimpl\_to\_mop.py} on it would generate a file named \texttt{testCube.mop} which can be solved with PolySCIP. 
+Again, saving the file, e.g., as testCube.zpl and running \texttt{mult\_zimpl\_to\_mop.py} on it would generate a file named \texttt{testCube.mop} which can be solved with PolySCIP.
 \end{ex}
 
 For more involved models there is also the possibility to read
@@ -216,7 +216,7 @@ Zimpl \href{http://zimpl.zib.de/download/zimpl.pdf}{user guide} for
 more details.
 
 \begin{thebibliography}{}
-\bibitem{mps-format} MPS format (short), 
+\bibitem{mps-format} MPS format (short),
   \url{https://en.wikipedia.org/wiki/MPS_%28format%29}
 
 \bibitem{mps-format2} MPS format (detailed),
