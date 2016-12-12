@@ -3172,7 +3172,7 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    SCIP_CALL( SCIPdigraphComputeUndirectedComponents(digraph, 1, components, &cliquetable->ncliquecomponents) );
 
    /* subtract superfluous integer and implicit integer variables added to the auxiliary graph */
-   cliquetable->ncliquecomponents -= (nimplvars - nimplbinvars);
+   cliquetable->ncliquecomponents -= (nintvars + nimplvars - nimplbinvars);
    assert(cliquetable->ncliquecomponents >= 0);
    assert(cliquetable->ncliquecomponents <= nbinvarstotal);
 
