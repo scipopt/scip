@@ -3690,7 +3690,9 @@ SCIP_Bool SCIPlpiIsDualFeasible(
       return FALSE; /*lint !e527*/
    }
 
-   return (lpi->solstat == GRB_OPTIMAL || (lpi->solstat == GRB_INFEASIBLE && algo == GRB_METHOD_DUAL));
+   return (lpi->solstat == GRB_OPTIMAL                                      ||
+           (lpi->solstat == GRB_INFEASIBLE      && algo == GRB_METHOD_DUAL) ||
+           (lpi->solstat == GRB_ITERATION_LIMIT && algo == GRB_METHOD_DUAL)   );
 }
 
 /** returns TRUE iff LP was solved to optimality */
@@ -3790,12 +3792,24 @@ SCIP_RETCODE SCIPlpiGetObjval(
    SCIP_Real*            objval              /**< stores the objective value */
    )
 {
+#ifndef NDEBUG
+   double oval = GRB_INFINITY;
+   double obnd = -GRB_INFINITY;
+#endif
+
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
 
    SCIPdebugMessage("getting solution's objective value\n");
 
-   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, objval) );
+#ifndef NDEBUG
+   (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, &oval);
+   (void)GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, &obnd);
+
+   assert(lpi->solstat != GRB_OPTIMAL || oval == obnd);
+#endif
+
+   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJBOUND, objval) );
 
    return SCIP_OKAY;
 }
@@ -3825,7 +3839,7 @@ SCIP_RETCODE SCIPlpiGetSol(
 
    if( objval != NULL )
    {
-      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_OBJVAL, objval) );
+      SCIP_CALL( SCIPlpiGetObjval(lpi, objval) );
    }
 
    if( primsol != NULL )
