@@ -1752,18 +1752,14 @@ static
 SCIP_DECL_HASHKEYVAL(hashkeyvalClique)
 {  /*lint --e{715}*/
    SCIP_CLIQUE* clique;
-   unsigned int hashval;
-   int i;
 
    clique = (SCIP_CLIQUE*)key;
-   hashval = 0;
-   for( i = 0; i < clique->nvars; ++i )
-   {
-      hashval *= 31;
-      hashval += (unsigned int)(((size_t)clique->vars[i]) >> 1) + (unsigned int)clique->values[i];
-   }
 
-   return hashval;
+   return clique->nvars == 0 ? 0 : SCIPhashTwo(SCIPcombineTwoInt(SCIPvarGetIndex(clique->vars[0]),
+                                                                 SCIPvarGetIndex(clique->vars[clique->nvars-1])),
+                                               SCIPcombineThreeInt(clique->nvars,
+                                                                   clique->values[0],
+                                                                   clique->values[clique->nvars-1]));
 }
 
 #define HASHTABLE_CLIQUETABLE_SIZE 100
