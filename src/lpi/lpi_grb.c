@@ -3997,20 +3997,19 @@ SCIP_RETCODE SCIPlpiGetBase(
    {
       int i;
 
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattrarray(lpi->grbmodel, GRB_INT_ATTR_CBASIS, 0, nrows, rstat) );
+
       for( i = 0; i < nrows; ++i )
       {
-         int stat;
-         CHECK_ZERO( lpi->messagehdlr, GRBgetintattrelement(lpi->grbmodel, GRB_INT_ATTR_CBASIS, i, &stat) );
-
-         if ( lpi->rngrowmap != NULL && lpi->rngrowmap[i] >= 0 && stat != GRB_BASIC )
+         if ( lpi->rngrowmap != NULL && lpi->rngrowmap[i] >= 0 && rstat[i] != GRB_BASIC )
          {
             /* get range row basis status from corresponding range variable */
-            int j = ncols + lpi->rngrowmap[i];
+            int idx = ncols + lpi->rngrowmap[i];
             assert(lpi->rngrowmap[i] < lpi->nrngrows);
-            CHECK_ZERO( lpi->messagehdlr, GRBgetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, &stat) );
+            CHECK_ZERO( lpi->messagehdlr, GRBgetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, idx, &rstat[i]) );
          }
 
-         switch( stat )
+         switch( rstat[i] )
          {
          case GRB_BASIC:
             rstat[i] = (int) SCIP_BASESTAT_BASIC;
@@ -4029,7 +4028,7 @@ SCIP_RETCODE SCIPlpiGetBase(
             break;
 
          default:
-            SCIPerrorMessage("invalid basis status %d\n", stat);
+            SCIPerrorMessage("invalid basis status %d\n", rstat[i]);
             SCIPABORT();
             return SCIP_INVALIDDATA; /*lint !e527*/
          }
@@ -4040,12 +4039,11 @@ SCIP_RETCODE SCIPlpiGetBase(
    {
       int j;
 
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintattrarray(lpi->grbmodel, GRB_INT_ATTR_VBASIS, 0, ncols, cstat) );
+
       for( j = 0; j < ncols; ++j )
       {
-         int stat;
-         CHECK_ZERO( lpi->messagehdlr, GRBgetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, &stat) );
-
-         switch( stat )
+         switch( cstat[j] )
          {
          case GRB_BASIC:
             cstat[j] = (int) SCIP_BASESTAT_BASIC;
@@ -4063,7 +4061,7 @@ SCIP_RETCODE SCIPlpiGetBase(
             break;
 
          default:
-            SCIPerrorMessage("invalid basis status %d\n", stat);
+            SCIPerrorMessage("invalid basis status %d\n", cstat[j]);
             SCIPABORT();
             return SCIP_INVALIDDATA; /*lint !e527*/
          }
@@ -4080,6 +4078,9 @@ SCIP_RETCODE SCIPlpiSetBase(
    const int*            rstat               /**< array with row basis status */
    )
 {
+   int *cbas = NULL;
+   int *vbas = NULL;
+
    int i, j;
    int nrows, ncols;
 
@@ -4095,42 +4096,42 @@ SCIP_RETCODE SCIPlpiSetBase(
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
 
+   SCIP_ALLOC( BMSallocMemoryArray(&cbas, nrows) );
+   SCIP_ALLOC( BMSallocMemoryArray(&vbas, ncols) );
+
    for( i = 0; i < nrows; ++i )
    {
-      const char* attr = GRB_INT_ATTR_CBASIS;
-      int idx = i;
-
-      if ( lpi->rngrowmap != NULL && lpi->rngrowmap[i] >= 0 )
-      {
-         /* set basis status of corresponding range variable; ranged row is always non-basic */
-         assert(lpi->rngrowmap[i] < lpi->nrngrows);
-         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_CBASIS, i, GRB_NONBASIC_LOWER) );
-         attr = GRB_INT_ATTR_VBASIS;
-         idx = ncols + lpi->rngrowmap[i];
-      }
-
       switch( rstat[i] )
       {
       case SCIP_BASESTAT_BASIC:
-         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, attr, idx, GRB_BASIC) );
+         cbas[i] = GRB_BASIC;
          break;
 
       case SCIP_BASESTAT_LOWER:
-         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, attr, idx, GRB_NONBASIC_LOWER) );
+         cbas[i] = GRB_NONBASIC_LOWER;
          break;
 
       case SCIP_BASESTAT_UPPER:
-         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, attr, idx, GRB_NONBASIC_UPPER) );
+         cbas[i] = GRB_NONBASIC_UPPER;
          break;
 
       case SCIP_BASESTAT_ZERO:
-         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, attr, idx, GRB_SUPERBASIC) );
+         cbas[i] = GRB_SUPERBASIC;
          break;
 
       default:
          SCIPerrorMessage("invalid basis status %d\n", rstat[i]);
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
+      }
+
+      if ( lpi->rngrowmap != NULL && lpi->rngrowmap[i] >= 0 )
+      {
+         /* set basis status of corresponding range variable; ranged row is always non-basic */
+         int idx = ncols + lpi->rngrowmap[i];
+         assert(lpi->rngrowmap[i] < lpi->nrngrows);
+         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, idx, cbas[i]) );
+         cbas[i] = GRB_NONBASIC_LOWER;
       }
    }
 
@@ -4139,19 +4140,19 @@ SCIP_RETCODE SCIPlpiSetBase(
       switch( cstat[j] )
       {
       case SCIP_BASESTAT_BASIC:
-         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, GRB_BASIC) );
+         vbas[j] = GRB_BASIC;
          break;
 
       case SCIP_BASESTAT_LOWER:
-         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, GRB_NONBASIC_LOWER) );
+         vbas[j] = GRB_NONBASIC_LOWER;
          break;
 
       case SCIP_BASESTAT_UPPER:
-         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, GRB_NONBASIC_UPPER) );
+         vbas[j] = GRB_NONBASIC_UPPER;
          break;
 
       case SCIP_BASESTAT_ZERO:
-         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, j, GRB_SUPERBASIC) );
+         vbas[j] = GRB_SUPERBASIC;
          break;
 
       default:
@@ -4160,6 +4161,12 @@ SCIP_RETCODE SCIPlpiSetBase(
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
+
+   CHECK_ZERO( lpi->messagehdlr, GRBsetintattrarray(lpi->grbmodel, GRB_INT_ATTR_CBASIS, 0, nrows, cbas) );
+   CHECK_ZERO( lpi->messagehdlr, GRBsetintattrarray(lpi->grbmodel, GRB_INT_ATTR_VBASIS, 0, ncols, vbas) );
+
+   BMSfreeMemoryArray(&vbas);
+   BMSfreeMemoryArray(&cbas);
 
    return SCIP_OKAY;
 }
