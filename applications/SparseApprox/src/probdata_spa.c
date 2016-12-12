@@ -75,11 +75,13 @@ SCIP_RETCODE createVariables(
       SCIP_CALL( SCIPallocClearMemoryArray(scip, &(probdata->edgevars[i]), nbins) );
       for( j = 0; j < nbins; ++j )
       {
-         if( SCIPisZero(scip, (probdata->cmatrix[i][j] - probdata->cmatrix[j][i])) && SCIPisZero(scip, (probdata->cmatrix[i][j] + probdata->cmatrix[j][i])) )
+         if( i == j || (SCIPisZero(scip, (probdata->cmatrix[i][j] - probdata->cmatrix[j][i])) && SCIPisZero(scip, (probdata->cmatrix[i][j] + probdata->cmatrix[j][i]))) )
             continue;
          SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->edgevars[i][j]), 3) );
          for( edgetype = 0; edgetype < 3; ++edgetype )
          {
+            if( edgetype == 0 && i < j )
+               continue;
             (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "y_%d_%d_%d", i, j, edgetype );
             SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->edgevars[i][j][edgetype], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_IMPLINT) );
             SCIP_CALL( SCIPaddVar(scip, probdata->edgevars[i][j][edgetype]) );
@@ -267,11 +269,13 @@ SCIP_DECL_PROBTRANS(probtransSpa)
       SCIP_CALL( SCIPallocClearMemoryArray(scip, &((*targetdata)->edgevars[i]), nbins) );
       for( j = 0; j < nbins; ++j )
       {
-         if( sourcedata->edgevars[i][j] == NULL )
+         if( sourcedata->edgevars[i][j] == NULL || i == j)
             continue;
          SCIP_CALL( SCIPallocClearMemoryArray(scip, &((*targetdata)->edgevars[i][j]), 3) );
          for( edgetype = 0; edgetype < 3; ++edgetype )
          {
+            if( edgetype == 0 && i < j )
+               continue;
             if( sourcedata->edgevars[i][j][edgetype] != NULL )
             {
                SCIP_CALL( SCIPtransformVar(scip, sourcedata->edgevars[i][j][edgetype], &((*targetdata)->edgevars[i][j][edgetype])) );
@@ -330,10 +334,12 @@ SCIP_DECL_PROBDELORIG(probdelorigSpa)
    {
       for( j = 0; j < (*probdata)->nbins; ++j )
       {
-         if( (*probdata)->edgevars[i][j] != NULL )
+         if( (*probdata)->edgevars[i][j] != NULL && j != i )
          {
             for ( edgetype = 0; edgetype < 3; ++edgetype )
             {
+               if( edgetype == 0 && i < j )
+                  continue;
                if( (*probdata)->edgevars[i][j][edgetype] != NULL )
                   SCIP_CALL( SCIPreleaseVar( scip, &((*probdata)->edgevars[i][j][edgetype])) );
             }
@@ -388,10 +394,12 @@ SCIP_DECL_PROBDELORIG(probdeltransSpa)
    {
       for( j = 0; j < (*probdata)->nbins; ++j )
       {
-         if( (*probdata)->edgevars[i][j] != NULL )
+         if( (*probdata)->edgevars[i][j] != NULL && j != i )
          {
             for ( edgetype = 0; edgetype < 3; ++edgetype )
             {
+               if( 0 == edgetype && j > i )
+                  continue;
                if( (*probdata)->edgevars[i][j][edgetype] != NULL )
                   SCIP_CALL( SCIPreleaseVar( scip, &((*probdata)->edgevars[i][j][edgetype])) );
             }
@@ -471,12 +479,14 @@ SCIP_DECL_PROBCOPY(probcopySpa)
       SCIP_CALL( SCIPallocClearMemoryArray(scip, &((*targetdata)->edgevars[i]), nbins) );
       for( j = 0; j < nbins; ++j )
       {
-         if( (sourcedata)->edgevars[i][j] == NULL )
+         if( (sourcedata)->edgevars[i][j] == NULL || j == i )
             continue;
          SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->edgevars[i][j]), 3) );
 
          for( edgetype = 0; edgetype < 3; ++edgetype )
          {
+            if( edgetype == 0 && j > i )
+               continue;
             if( sourcedata->edgevars[i][j][edgetype] != NULL )
             {
                SCIP_CALL( SCIPgetTransformedVar(sourcescip, sourcedata->edgevars[i][j][edgetype], &var) );
