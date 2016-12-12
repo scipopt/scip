@@ -337,16 +337,10 @@ SCIP_RETCODE SCIPincludePresolImplics(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_PRESOLDATA* presoldata;
    SCIP_PRESOL* presolptr;
 
-   /* create implics presolver data */
-   presoldata = NULL;
-
    /* include presolver */
-   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING,
-         presolExecImplics,
-         presoldata) );
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING, presolExecImplics, NULL) );
 
    assert(presolptr != NULL);
 

@@ -438,7 +438,7 @@ SCIP_RETCODE conshdlrdataEnsureLinconsupgradesSize(
       int newsize;
 
       newsize = SCIPcalcMemGrowSize(scip, num);
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->linconsupgrades, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->linconsupgrades, conshdlrdata->linconsupgradessize, newsize) );
       conshdlrdata->linconsupgradessize = newsize;
    }
    assert(num <= conshdlrdata->linconsupgradessize);
@@ -494,7 +494,7 @@ SCIP_RETCODE linconsupgradeCreate(
    assert(linconsupgrade != NULL);
    assert(linconsupgd != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, linconsupgrade) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, linconsupgrade) );
    (*linconsupgrade)->linconsupgd = linconsupgd;
    (*linconsupgrade)->priority = priority;
    (*linconsupgrade)->active = TRUE;
@@ -513,7 +513,7 @@ void linconsupgradeFree(
    assert(linconsupgrade != NULL);
    assert(*linconsupgrade != NULL);
 
-   SCIPfreeMemory(scip, linconsupgrade);
+   SCIPfreeBlockMemory(scip, linconsupgrade);
 }
 
 /** creates constraint handler data for linear constraint handler */
@@ -528,7 +528,7 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(conshdlrdata != NULL);
    assert(eventhdlr != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
    (*conshdlrdata)->linconsupgrades = NULL;
    (*conshdlrdata)->linconsupgradessize = 0;
    (*conshdlrdata)->nlinconsupgrades = 0;
@@ -557,9 +557,9 @@ void conshdlrdataFree(
    {
       linconsupgradeFree(scip, &(*conshdlrdata)->linconsupgrades[i]);
    }
-   SCIPfreeMemoryArrayNull(scip, &(*conshdlrdata)->linconsupgrades);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*conshdlrdata)->linconsupgrades, (*conshdlrdata)->linconsupgradessize);
 
-   SCIPfreeMemory(scip, conshdlrdata);
+   SCIPfreeBlockMemory(scip, conshdlrdata);
 }
 
 /** creates a linear constraint upgrade data object */
@@ -10338,6 +10338,8 @@ SCIP_RETCODE dualPresolve(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Real minabsval;
+   SCIP_Real maxabsval;
    SCIP_Bool lhsexists;
    SCIP_Bool rhsexists;
    SCIP_Bool bestisint;
@@ -10372,6 +10374,8 @@ SCIP_RETCODE dualPresolve(
    bestpos = -1;
    bestisint = TRUE;
    bestislhs = FALSE;
+   minabsval = SCIPinfinity(scip);
+   maxabsval = -1.0;
 
    /* We only want to multi-aggregate variables, if they appear in maximal one additional constraint,
     * everything else would produce fill-in. Exceptions:
@@ -10402,6 +10406,7 @@ SCIP_RETCODE dualPresolve(
       SCIP_VAR* var;
       SCIP_Bool isint;
       SCIP_Real val;
+      SCIP_Real absval;
       SCIP_Real obj;
       SCIP_Real lb;
       SCIP_Real ub;
@@ -10410,6 +10415,20 @@ SCIP_RETCODE dualPresolve(
 
       var = consdata->vars[i];
       isint = (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+
+      val = consdata->vals[i];
+      absval = REALABS(val);
+      assert(SCIPisPositive(scip, absval));
+
+      /* calculate minimal and maximal absolute value */
+      if( absval < minabsval )
+         minabsval = absval;
+      if( absval > maxabsval )
+         maxabsval = absval;
+
+      /* do not try to multi aggregate, when numerical bad */
+      if( maxabsval / minabsval > MAXMULTIAGGRQUOTIENT )
+         return SCIP_OKAY;
 
       /* if we already found a candidate, skip integers */
       if( bestpos >= 0 && isint )
@@ -10424,7 +10443,6 @@ SCIP_RETCODE dualPresolve(
       if ( SCIPdoNotMultaggrVar(scip, var) )
          continue;
 
-      val = consdata->vals[i];
       obj = SCIPvarGetObj(var);
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
@@ -10642,9 +10660,26 @@ SCIP_RETCODE dualPresolve(
       {
          if( j != bestpos )
          {
+            SCIP_Real absaggrcoef;
+
             aggrvars[naggrs] = consdata->vars[j];
             aggrcoefs[naggrs] = -consdata->vals[j]/consdata->vals[bestpos];
             SCIPdebugMsgPrint(scip, " %+.15g<%s>", aggrcoefs[naggrs], SCIPvarGetName(aggrvars[naggrs]));
+
+            absaggrcoef = REALABS(aggrcoefs[naggrs]);
+
+            /* do not try to multi aggregate, when numerical bad */
+            if( absaggrcoef > MAXMULTIAGGRQUOTIENT || absaggrcoef < 1.0/MAXMULTIAGGRQUOTIENT )
+            {
+               SCIPdebugMsg(scip, "do not perform multi-aggregation: too large aggregation coefficients\n");
+
+               /* free temporary memory */
+               SCIPfreeBufferArray(scip, &aggrcoefs);
+               SCIPfreeBufferArray(scip, &aggrvars);
+
+               return SCIP_OKAY;
+            }
+
             if( bestisint )
             {
                /* coefficient must be integral: round it to exact integral value */
@@ -12707,9 +12742,9 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
 
    /* using only the variable indices as hash, since the values are compared by epsilon */
    return SCIPhashFour(SCIPcombineFourInt(consdata->nvars, minidx, mididx, maxidx),
-                       SCIPrealHashCode(consdata->vals[0]),
-                       SCIPrealHashCode(consdata->vals[consdata->nvars / 2]),
-                       SCIPrealHashCode(consdata->vals[consdata->nvars - 1]));
+                       SCIPrealHashCode(consdata->vals[0], 8),
+                       SCIPrealHashCode(consdata->vals[consdata->nvars / 2], 8),
+                       SCIPrealHashCode(consdata->vals[consdata->nvars - 1], 8));
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
@@ -13638,7 +13673,7 @@ SCIP_RETCODE presolStuffing(
 
                maxcondactivity += val * lb;
                mincondactivity += val * lb;
-               swapped[nsingletons] = FALSE;
+               swapped[v] = FALSE;
                ratios[nsingletons] = obj / val;
                varpos[nsingletons] = v;
                nsingletons++;
@@ -13657,7 +13692,7 @@ SCIP_RETCODE presolStuffing(
 
                maxcondactivity += val * ub;
                mincondactivity += val * ub;
-               swapped[nsingletons] = TRUE;
+               swapped[v] = TRUE;
                ratios[nsingletons] = obj / val;
                varpos[nsingletons] = v;
                nsingletons++;
@@ -13742,7 +13777,7 @@ SCIP_RETCODE presolStuffing(
             ub = SCIPvarGetUbGlobal(var);
 
             assert(val > 0 || SCIPisPositive(scip, SCIPvarGetObj(var)));
-            assert((val < 0) == swapped[v]);
+            assert((val < 0) == swapped[idx]);
             val = REALABS(val);
 
             /* stop fixing if variable bounds are not finite */
@@ -13755,7 +13790,7 @@ SCIP_RETCODE presolStuffing(
             /* calculate the change in the row activities if this variable changes
              * its value from its worst to its best bound
              */
-            if( swapped[v] )
+            if( swapped[idx] )
                delta = -(lb - ub) * val;
             else
                delta =  (ub - lb) * val;
@@ -13764,7 +13799,7 @@ SCIP_RETCODE presolStuffing(
 
             if( SCIPisLE(scip, delta, rhs - maxcondactivity) )
             {
-               if( swapped[v] )
+               if( swapped[idx] )
                {
                   SCIPdebugMsg(scip, "fix <%s> to its lower bound %g\n", SCIPvarGetName(var), lb);
                   SCIP_CALL( SCIPfixVar(scip, var, lb, cutoff, &tightened) );
@@ -13787,7 +13822,7 @@ SCIP_RETCODE presolStuffing(
             else if( SCIPisGT(scip, rhs, maxcondactivity) )
             {
                SCIP_Real bounddelta = (rhs - maxcondactivity) / val;
-               if( swapped[v] )
+               if( swapped[idx] )
                {
                   SCIPdebugMsg(scip, "tighten the upper bound of <%s> from %g to %g\n", SCIPvarGetName(var), ub, ub - bounddelta);
                   SCIP_CALL( SCIPtightenVarUb(scip, var, ub - bounddelta, FALSE, cutoff, &tightened) );
@@ -13807,7 +13842,7 @@ SCIP_RETCODE presolStuffing(
             }
             else if( SCIPisLE(scip, rhs, mincondactivity) )
             {
-               if( swapped[v] )
+               if( swapped[idx] )
                {
                   SCIPdebugMsg(scip, "fix <%s> to its upper bound %g\n", SCIPvarGetName(var), ub);
                   SCIP_CALL( SCIPfixVar(scip, var, ub, cutoff, &tightened) );
@@ -13995,12 +14030,12 @@ SCIP_RETCODE presolStuffing(
 
                if( SCIPisEQ(scip, lb + bounddelta, ub) )
                {
-                  SCIPinfoMessage(scip, NULL, "fix var <%s> to %g\n", SCIPvarGetName(var), lb + bounddelta);
+                  SCIPdebugMsg(scip, "fix var <%s> to %g\n", SCIPvarGetName(var), lb + bounddelta);
                   SCIP_CALL( SCIPfixVar(scip, var, lb + bounddelta, cutoff, &tightened) );
                }
                else
                {
-                  SCIPinfoMessage(scip, NULL, "tighten the lower bound of <%s> from %g to %g (ub=%g)\n", SCIPvarGetName(var), lb, lb + bounddelta, ub);
+                  SCIPdebugMsg(scip, "tighten the lower bound of <%s> from %g to %g (ub=%g)\n", SCIPvarGetName(var), lb, lb + bounddelta, ub);
                   SCIP_CALL( SCIPtightenVarLb(scip, var, lb + bounddelta, FALSE, cutoff, &tightened) );
                }
             }
@@ -14026,12 +14061,12 @@ SCIP_RETCODE presolStuffing(
 
                if( SCIPisEQ(scip, ub - bounddelta, lb) )
                {
-                  SCIPinfoMessage(scip, NULL, "fix var <%s> to %g\n", SCIPvarGetName(var), ub - bounddelta);
+                  SCIPdebugMsg(scip, "fix var <%s> to %g\n", SCIPvarGetName(var), ub - bounddelta);
                   SCIP_CALL( SCIPfixVar(scip, var, ub - bounddelta, cutoff, &tightened) );
                }
                else
                {
-                  SCIPinfoMessage(scip, NULL, "tighten the upper bound of <%s> from %g to %g (lb=%g)\n", SCIPvarGetName(var), ub, ub - bounddelta, lb);
+                  SCIPdebugMsg(scip, "tighten the upper bound of <%s> from %g to %g (lb=%g)\n", SCIPvarGetName(var), ub, ub - bounddelta, lb);
                   SCIP_CALL( SCIPtightenVarUb(scip, var, ub - bounddelta, FALSE, cutoff, &tightened) );
                }
             }
@@ -14046,14 +14081,14 @@ SCIP_RETCODE presolStuffing(
             else
                ++(*nchgbds);
 
-            SCIPinfoMessage(scip, NULL, "cons <%s>: %g <=\n", SCIPconsGetName(cons), factor > 0 ? consdata->lhs : -consdata->rhs);
+            SCIPdebugMsg(scip, "cons <%s>: %g <=\n", SCIPconsGetName(cons), factor > 0 ? consdata->lhs : -consdata->rhs);
             for( v = 0; v < nvars; ++v )
             {
-               SCIPinfoMessage(scip, NULL, "%+g <%s>([%g,%g],%g,[%d,%d],%s)\n", factor * vals[v], SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]),
+               SCIPdebugMsg(scip, "%+g <%s>([%g,%g],%g,[%d,%d],%s)\n", factor * vals[v], SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]),
                   SCIPvarGetUbGlobal(vars[v]), SCIPvarGetObj(vars[v]), SCIPvarGetNLocksDown(vars[v]), SCIPvarGetNLocksUp(vars[v]),
                   SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS ? "C" : "I");
             }
-            SCIPinfoMessage(scip, NULL, "<= %g\n", factor > 0 ? consdata->rhs : -consdata->lhs);
+            SCIPdebugMsg(scip, "<= %g\n", factor > 0 ? consdata->rhs : -consdata->lhs);
 
             for( v = 0; v < nvars; ++v )
             {
@@ -14063,13 +14098,13 @@ SCIP_RETCODE presolStuffing(
                if( factor * vals[v] < 0 )
                {
                   assert(SCIPvarGetNLocksDown(vars[v]) == 1);
-                  SCIPinfoMessage(scip, NULL, "fix <%s> to its lower bound (%g)\n", SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]));
+                  SCIPdebugMsg(scip, "fix <%s> to its lower bound (%g)\n", SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]));
                   SCIP_CALL( SCIPfixVar(scip, vars[v], SCIPvarGetLbGlobal(vars[v]), cutoff, &tightened) );
                }
                else
                {
                   assert(SCIPvarGetNLocksUp(vars[v]) == 1);
-                  SCIPinfoMessage(scip, NULL, "fix <%s> to its upper bound (%g)\n", SCIPvarGetName(vars[v]), SCIPvarGetUbGlobal(vars[v]));
+                  SCIPdebugMsg(scip, "fix <%s> to its upper bound (%g)\n", SCIPvarGetName(vars[v]), SCIPvarGetUbGlobal(vars[v]));
                   SCIP_CALL( SCIPfixVar(scip, vars[v], SCIPvarGetUbGlobal(vars[v]), cutoff, &tightened) );
                }
 
@@ -14550,6 +14585,77 @@ SCIP_RETCODE fullDualPresolve(
    return SCIP_OKAY;
 }
 
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool checkrelmaxabs;
+   SCIP_Bool violated;
+   SCIP_Bool cutoff = FALSE;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   checkrelmaxabs = conshdlrdata->checkrelmaxabs;
+
+   SCIPdebugMsg(scip, "Enforcement method of linear constraints for %s solution\n", sol == NULL ? "LP" : "relaxation");
+
+   /* check for violated constraints
+    * LP is processed at current node -> we can add violated linear constraints to the SCIP_LP
+    */
+   *result = SCIP_FEASIBLE;
+
+   /* check all useful linear constraints for feasibility */
+   for( c = 0; c < nusefulconss; ++c )
+   {
+      SCIP_CALL( checkCons(scip, conss[c], sol, FALSE, checkrelmaxabs, &violated) );
+
+      if( violated )
+      {
+         /* insert LP row as cut */
+         SCIP_CALL( addRelaxation(scip, conss[c], sol, &cutoff) );
+         if ( cutoff )
+            *result = SCIP_CUTOFF;
+         else
+            *result = SCIP_SEPARATED;
+      }
+   }
+
+   /* check all obsolete linear constraints for feasibility */
+   for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
+   {
+      SCIP_CALL( checkCons(scip, conss[c], sol, FALSE, checkrelmaxabs, &violated) );
+
+      if( violated )
+      {
+         /* insert LP row as cut */
+         SCIP_CALL( addRelaxation(scip, conss[c], sol, &cutoff) );
+         if ( cutoff )
+            *result = SCIP_CUTOFF;
+         else
+            *result = SCIP_SEPARATED;
+      }
+   }
+   
+   SCIPdebugMsg(scip, "-> constraints checked, %s\n", *result == SCIP_FEASIBLE ? "all constraints feasible" : "infeasibility detected");
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of constraint handler
@@ -15340,64 +15446,19 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinear)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpLinear)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool checkrelmaxabs;
-   SCIP_Bool violated;
-   SCIP_Bool cutoff = FALSE;
-   int c;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(result != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   checkrelmaxabs = conshdlrdata->checkrelmaxabs;
-
-   /*SCIPdebugMsg(scip, "Enfolp method of linear constraints\n");*/
-
-   /* check for violated constraints
-    * LP is processed at current node -> we can add violated linear constraints to the SCIP_LP
-    */
-   *result = SCIP_FEASIBLE;
-
-   /* check all useful linear constraints for feasibility */
-   for( c = 0; c < nusefulconss; ++c )
-   {
-      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, checkrelmaxabs, &violated) );
-
-      if( violated )
-      {
-         /* insert LP row as cut */
-         SCIP_CALL( addRelaxation(scip, conss[c], NULL, &cutoff) );
-         if ( cutoff )
-            *result = SCIP_CUTOFF;
-         else
-            *result = SCIP_SEPARATED;
-      }
-   }
-
-   /* check all obsolete linear constraints for feasibility */
-   for( c = nusefulconss; c < nconss && *result == SCIP_FEASIBLE; ++c )
-   {
-      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, checkrelmaxabs, &violated) );
-
-      if( violated )
-      {
-         /* insert LP row as cut */
-         SCIP_CALL( addRelaxation(scip, conss[c], NULL, &cutoff) );
-         if ( cutoff )
-            *result = SCIP_CUTOFF;
-         else
-            *result = SCIP_SEPARATED;
-      }
-   }
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
    return SCIP_OKAY;
 }
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxLinear)
+{
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
+
+   return SCIP_OKAY;
+}
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
@@ -16777,6 +16838,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLinear, consSepasolLinear, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLinear) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxLinear) );
 
    if( SCIPfindConshdlr(scip, "quadratic") != NULL )
    {
@@ -16983,8 +17045,8 @@ SCIP_RETCODE SCIPcreateConsLinear(
    SCIP_Bool             modifiable,         /**< is constraint modifiable (subject to column generation)?
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
-   SCIP_Bool             dynamic,            /**< Is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+   SCIP_Bool             dynamic,            /**< is constraint subject to aging?
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */

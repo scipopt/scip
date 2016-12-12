@@ -309,20 +309,14 @@ SCIP_RETCODE SCIPincludePropDualfix(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_PROPDATA* propdata;
    SCIP_PROP* prop;
 
-   /* create dualfix propagator data */
-   propdata = NULL;
-
    /* include propagator */
-   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         propExecDualfix, propdata) );
+   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, propExecDualfix, NULL) );
    assert(prop != NULL);
 
    SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyDualfix) );
-   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolDualfix, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS,
-         PROP_PRESOLTIMING) );
+   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolDualfix, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOLTIMING) );
 
    return SCIP_OKAY;
 }

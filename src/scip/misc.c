@@ -322,13 +322,16 @@ void incrementalStatsUpdate(
    assert(meanptr != NULL);
    assert(sumvarptr != NULL);
    assert(nobservations > 0 || add);
-   assert(*sumvarptr >= 0.0);
 
    addfactor = add ? 1.0 : -1.0;
 
    oldmean = *meanptr;
    *meanptr = oldmean + addfactor * (value - oldmean)/(SCIP_Real)nobservations;
    *sumvarptr += addfactor * (value - oldmean) * (value - (*meanptr));
+
+   /* it may happen that *sumvarptr is slightly negative, especially after a series of add/removal operations */
+   assert(*sumvarptr >= -1e-6);
+   *sumvarptr = MAX(0.0, *sumvarptr);
 }
 
 /** removes an observation (x,y) from the regression */
@@ -1341,11 +1344,13 @@ static int primetable[] = {
 };
 static const int primetablesize = sizeof(primetable)/sizeof(int);
 
-/**< simple and fast 2-universal hash function using multiply and shift */
+/** simple and fast 2-universal hash function using multiply and shift */
 static
-uint32_t hashvalue(uint64_t input)
+uint32_t hashvalue(
+   uint64_t              input               /**< key value */
+   )
 {
-   return ( (uint32_t) ((0xaba59e95109ce4edull * input)>>32) ) | 1u;
+   return ( (uint32_t) ((0x9e3779b97f4a7c15ull * input)>>32) ) | 1u;
 }
 
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
@@ -2570,7 +2575,7 @@ SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqPtr)
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
 {  /*lint --e{715}*/
    /* the key is used as the keyvalue too */
-   return (unsigned int)(size_t) key;
+   return (unsigned int) ((0xd37e9a1ce2148403ull * (size_t) key)>>32);
 }
 
 
@@ -2602,7 +2607,7 @@ SCIP_RETCODE hashmapInsert(
    assert(hashmap->slots != NULL);
    assert(hashmap->hashes != NULL);
    assert(hashmap->mask > 0);
-   assert(origin != NULL);
+   assert(hashval != 0);
 
    pos = hashval>>(hashmap->shift);
    elemdistance = 0;
@@ -2679,6 +2684,7 @@ SCIP_Bool hashmapLookup(
 
    /* get the hash value */
    hashval = hashvalue((size_t)origin);
+   assert(hashval != 0);
 
    *pos = hashval>>(hashmap->shift);
    elemdistance = 0;
@@ -5419,6 +5425,15 @@ void SCIPsortDown(
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortDownRealRealPtrPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealRealPtrPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  void*
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
 
 /* SCIPsortDownRealLongRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownRealLongRealInt
@@ -6589,6 +6604,7 @@ void SCIPdigraphFree(
       BMSfreeMemoryArrayNull(&(*digraph)->successors[i]);
       BMSfreeMemoryArrayNull(&(*digraph)->arcdata[i]);
    }
+   (*digraph)->nnodes = 0;
 
    /* free components structure */
    SCIPdigraphFreeComponents(*digraph);
@@ -6621,19 +6637,23 @@ SCIP_RETCODE ensureSuccessorsSize(
    assert(idx >= 0);
    assert(idx < digraph->nnodes);
    assert(newsize > 0);
+   assert(digraph->successorssize[idx] == 0 || digraph->successors[idx] != NULL);
+   assert(digraph->successorssize[idx] == 0 || digraph->arcdata[idx] != NULL);
 
    /* check whether array is big enough, and realloc, if needed */
    if( newsize > digraph->successorssize[idx] )
    {
-      if( digraph->successorssize[idx] == 0 )
+      if( digraph->successors[idx] == NULL )
       {
+         assert(digraph->arcdata[idx] == NULL);
          digraph->successorssize[idx] = STARTSUCCESSORSSIZE;
          SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
          SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }
       else
       {
-         digraph->successorssize[idx] = 2 * digraph->successorssize[idx];
+         assert(digraph->arcdata[idx] != NULL);
+         digraph->successorssize[idx] = MAX(newsize, 2 * digraph->successorssize[idx]);
          SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
          SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }
@@ -9845,4 +9865,30 @@ SCIP_Real SCIPrelDiff(
    quot = MAX3(1.0, absval1, absval2);
 
    return (val1-val2)/quot;
+}
+
+
+/** computes the gap from the primal and the dual bound */
+SCIP_Real SCIPcomputeGap(
+   SCIP_Real             eps,                /**< the value treated as zero */
+   SCIP_Real             inf,                /**< the value treated as infinity */
+   SCIP_Real             primalbound,        /**< the primal bound */
+   SCIP_Real             dualbound           /**< the dual bound */
+   )
+{
+   if( EPSEQ(primalbound, dualbound, eps) )
+      return 0.0;
+   else if( EPSZ(dualbound, eps) ||
+            EPSZ(primalbound, eps) ||
+            REALABS(primalbound) >= inf ||
+            REALABS(dualbound) >= inf ||
+            primalbound * dualbound < 0.0 )
+      return inf;
+   else
+   {
+      SCIP_Real absdual = REALABS(dualbound);
+      SCIP_Real absprimal = REALABS(primalbound);
+
+      return REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
+   }
 }

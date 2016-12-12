@@ -1306,14 +1306,11 @@ SCIP_RETCODE SCIPincludePresolDualinfer(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_PRESOLDATA* presoldata;
    SCIP_PRESOL* presol;
-
-   presoldata = NULL;
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
-         PRESOL_TIMING, presolExecDualinfer, presoldata) );
+         PRESOL_TIMING, presolExecDualinfer, NULL) );
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyDualinfer) );
 
    return SCIP_OKAY;

@@ -23,6 +23,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
+#include <strings.h>
+#endif
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
@@ -227,7 +231,7 @@ SCIP_RETCODE readSolfile(
          (*vals)[i] = (*vals)[i-1];
       }
       SCIP_ALLOC( BMSduplicateMemoryArray(&(*names)[i], name, strlen(name)+1) );
-      SCIPdebugMsg(scip, "found variable <%s>: value <%g>\n", (*names)[i], val);
+      SCIPdebugMsg(set->scip, "found variable <%s>: value <%g>\n", (*names)[i], val);
       (*vals)[i] = val;
       (*nvals)++;
    }
@@ -252,7 +256,7 @@ SCIP_RETCODE readSolfile(
          debugsolval += (*vals)[i] * SCIPvarGetObj(var);
       }
    }
-   SCIPdebugMsg(scip, "Debug Solution value is %g.\n", debugsolval);
+   SCIPdebugMsg(set->scip, "Debug Solution value is %g.\n", debugsolval);
 
 #ifdef SCIP_MORE_DEBUG
    SCIPsortPtrReal((void**)vars, solvalues, sortVarsAfterNames, nfound);
@@ -1656,6 +1660,7 @@ SCIP_RETCODE SCIPdebugAddSolVal(
    )
 {
    SCIP_DEBUGSOLDATA* debugsoldata;
+   SCIP_Real testval;
    const char* varname;
    int i;
 
@@ -1670,6 +1675,13 @@ SCIP_RETCODE SCIPdebugAddSolVal(
    if( !SCIPdebugSolIsEnabled(scip) )
       return SCIP_OKAY;
 
+   if( debugsoldata->debugsol == NULL )
+   {
+      /* make sure a debug solution has been read, so we do not compare against the initial debugsolval == 0 */
+      SCIP_CALL( readSolution(scip->set) );
+   }
+
+#if 0
    if( SCIPvarIsOriginal(var) )
    {
       SCIPerrorMessage("adding solution values for original variables is forbidden\n");
@@ -1681,7 +1693,7 @@ SCIP_RETCODE SCIPdebugAddSolVal(
       SCIPerrorMessage("adding solution values for variable that are direct counterparts of original variables is forbidden\n");
       return SCIP_ERROR;
    }
-
+#endif
    /* allocate memory */
    if( debugsoldata->nsolvals >= debugsoldata->solsize )
    {
@@ -1726,8 +1738,6 @@ SCIP_RETCODE SCIPdebugAddSolVal(
    /* update objective function value of debug solution */
    debugsoldata->debugsolval += debugsoldata->solvals[i] * SCIPvarGetObj(var);
    SCIPdebugMsg(scip, "Debug Solution value is now %g.\n", debugsoldata->debugsolval);
-
-   assert(debugsoldata->debugsol != NULL);
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
    {

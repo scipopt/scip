@@ -49,19 +49,34 @@ MAINSHORTLINK	=	$(BINDIR)/$(MAINNAME)
 MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 
 
+CLASSIFYNAME	=	classify
+CLASSIFYOBJ	=	benders.o readargs.o classify.o
+
+CLASSIFYSRC	=	$(addprefix $(SRCDIR)/,$(CLASSIFYOBJ:.o=.c))
+CLASSIFYDEP	=	$(SRCDIR)/depend.cmain.$(OPT)
+
+CLASSIFY	=	$(CLASSIFYNAME).$(BASE).$(LPS)$(EXEEXTENSION)
+CLASSIFYFILE	=	$(BINDIR)/$(CLASSIFY)
+CLASSIFYSHORTLINK =	$(BINDIR)/$(CLASSIFYNAME)
+CLASSIFYOBJFILES =	$(addprefix $(OBJDIR)/,$(CLASSIFYOBJ))
+
+
 #-----------------------------------------------------------------------------
 # Rules
 #-----------------------------------------------------------------------------
 
 ifeq ($(VERBOSE),false)
-.SILENT:	$(MAINFILE) $(MAINOBJFILES) $(MAINSHORTLINK)
+.SILENT:	$(MAINFILE) $(MAINOBJFILES) $(MAINSHORTLINK) $(CLASSIFYFILE) $(CLASSIFYOBJFILES) $(CLASSIFYSHORTLINK)
 endif
 
 .PHONY: all
 all:            $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
 
+.PHONY: $(CLASSIFYNAME)
+$(CLASSIFYNAME): $(CLASSIFYFILE) $(CLASSIFYSHORTLINK)
+
 .PHONY: lint
-lint:		$(MAINSRC)
+lint:		$(MAINSRC) $(CLASSIFYSRC)
 		-rm -f lint.out
 		$(SHELL) -ec 'for i in $^; \
 			do \
@@ -86,6 +101,10 @@ $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
 		cd $(dir $@) && ln -s $(notdir $(MAINFILE)) $(notdir $@)
 
+$(CLASSIFYSHORTLINK):	$(CLASSIFYFILE)
+		@rm -f $@
+		cd $(dir $@) && ln -s $(notdir $(CLASSIFYFILE)) $(notdir $@)
+
 $(OBJDIR):
 		@-mkdir -p $(OBJDIR)
 
@@ -100,10 +119,10 @@ test:           $(MAINFILE)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_set.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_tmpfile_setup_scip.sh);
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.sh);
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-			$(CONTINUE) $(LOCK) "appl" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE);
+			$(CONTINUE) $(LOCK) "appl" $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) $(SEEDS);
 
 .PHONY: clean
 clean:		$(OBJDIR)
@@ -112,6 +131,7 @@ ifneq ($(OBJDIR),)
 		@echo "-> remove main objective files"
 endif
 		@-rm -f $(MAINFILE) $(MAINSHORTLINK)
+		@-rm -f $(CLASSIFYFILE) $(CLASSIFYSHORTLINK)
 		@echo "-> remove binary"
 
 .PHONY: tags
@@ -128,11 +148,11 @@ depend:		$(SCIPDIR)
 
 $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
-		$(LINKCXX) $(MAINOBJFILES) \
-		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-                $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX) $(MAINOBJFILES) $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
+
+$(CLASSIFYFILE): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(CLASSIFYOBJFILES)
+		@echo "-> linking $@"
+		$(LINKCXX) $(CLASSIFYOBJFILES) $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"

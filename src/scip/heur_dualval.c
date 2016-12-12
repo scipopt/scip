@@ -101,6 +101,7 @@ struct SCIP_HeurData
    SCIP_Real             mingap;             /**< don't run the heuristic if the gap is less than mingap */
    SCIP_Real             lambdaslack;        /**< the value added to the objective function */
    SCIP_Real             lambdaobj;          /**< the value the original objective function is scaled with */
+   int                   integervarssize;    /**< size of integervars array */
    int                   nintegervars;       /**< number of integer variables in the original problem */
    int                   heurverblevel;      /**< verblevel, range is 0 to 4 */
    int                   nlpverblevel;       /**< sets verblevel of the included nlp */
@@ -1068,8 +1069,9 @@ SCIP_RETCODE createSubSCIP(
    vars = SCIPgetOrigVars(scip);
    nvars = SCIPgetNOrigVars(scip);
 
-   SCIP_CALL( SCIPallocMemoryArray(heurdata->subscip, &(heurdata->integervars), nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(heurdata->integervars), nvars) );
    BMSclearMemoryArray(heurdata->integervars, nvars);
+   heurdata->integervarssize = nvars;
    j = 0;
 
    /* here we relax the variables (or indicator constraints, since indicator variables cannot be relaxed) */
@@ -2497,7 +2499,7 @@ SCIP_DECL_HEURFREE(heurFreeDualval)
 
    heurdata = SCIPheurGetData(heur);
 
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
 
    return SCIP_OKAY;
 }
@@ -2555,8 +2557,7 @@ SCIP_DECL_HEUREXIT(heurExitDualval)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   if( heurdata->integervars != NULL )
-      SCIPfreeMemoryArray(heurdata->subscip, &heurdata->integervars);
+   SCIPfreeBlockMemoryArrayNull(scip, &heurdata->integervars, heurdata->integervarssize);
 
    if( heurdata->subscip != NULL)
    {
@@ -2768,7 +2769,7 @@ SCIP_RETCODE SCIPincludeHeurDualval(
    SCIP_HEUR* heur = NULL;
 
    /* create dualval primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    BMSclearMemory(heurdata);
 
    /* include primal heuristic */

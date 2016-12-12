@@ -1,11 +1,3 @@
-/*
- * heur_spagreedy.c
- *
- *  Created on: Dec 7, 2015
- *      Author: bzfeifle
- */
-
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -34,7 +26,7 @@
 #include "scip/misc.h"
 #include "probdata_spa.h"
 #include "heur_spagreedy.h"
-#include "scip/cons_and.c"
+#include "scip/cons_and.h"
 
 #define HEUR_NAME             "spagreedy"
 #define HEUR_DESC             "primal heuristic template"

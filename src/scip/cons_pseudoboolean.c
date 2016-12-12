@@ -415,7 +415,7 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(scip != NULL);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
 
    (*conshdlrdata)->allconsanddatas = NULL;
    (*conshdlrdata)->nallconsanddatas = 0;
@@ -474,7 +474,7 @@ SCIP_RETCODE conshdlrdataFree(
    (*conshdlrdata)->nallconsanddatas = 0;
    (*conshdlrdata)->sallconsanddatas = 0;
 
-   SCIPfreeMemory(scip, conshdlrdata);
+   SCIPfreeBlockMemory(scip, conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -7968,6 +7968,31 @@ SCIP_DECL_CONSENFOLP(consEnfolpPseudoboolean)
 }
 
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxPseudoboolean)
+{  /*lint --e{715}*/
+   SCIP_Bool violated;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
+
+   violated = FALSE;
+
+   /* check all and-constraints */
+   SCIP_CALL( checkAndConss(scip, conshdlr, sol, &violated) );
+
+   if( violated )
+      *result = SCIP_INFEASIBLE;
+   else
+      *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsPseudoboolean)
@@ -8749,6 +8774,7 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
          CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintPseudoboolean) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransPseudoboolean) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxPseudoboolean) );
 
    /* add pseudoboolean constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -8785,9 +8811,9 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    SCIP_VAR*             indvar,             /**< indicator variable if it's a soft constraint, or NULL */
    SCIP_Real             weight,             /**< weight of the soft constraint, if it is one */
    SCIP_Bool             issoftcons,         /**< is this a soft constraint */
-   SCIP_VAR*             intvar,             /**< a artificial variable which was added only for the objective function,
+   SCIP_VAR*             intvar,             /**< an artificial variable which was added only for the objective function,
                                               *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective funktion */
+                                              *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -9057,7 +9083,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
    SCIP_VAR*             indvar,             /**< indicator variable if it's a soft constraint, or NULL */
    SCIP_Real             weight,             /**< weight of the soft constraint, if it is one */
    SCIP_Bool             issoftcons,         /**< is this a soft constraint */
-   SCIP_VAR*             intvar,             /**< a artificial variable which was added only for the objective function,
+   SCIP_VAR*             intvar,             /**< an artificial variable which was added only for the objective function,
                                               *   if this variable is not NULL this constraint (without this integer
                                               *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of constraint */

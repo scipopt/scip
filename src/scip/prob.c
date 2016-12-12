@@ -178,7 +178,8 @@ SCIP_Bool varHasName(
  * problem creation
  */
 
-/** creates problem data structure by copying the source problem; 
+/** creates problem data structure by copying the source problem
+ *
  *  If the problem type requires the use of variable pricers, these pricers should be activated with calls
  *  to SCIPactivatePricer(). These pricers are automatically deactivated, when the problem is freed.
  */
@@ -196,8 +197,8 @@ SCIP_RETCODE SCIPprobCopy(
    SCIP_Bool             global              /**< create a global or a local copy? */
    )
 {
-   SCIP_PROBDATA* targetdata;
-   SCIP_RESULT result;
+   SCIP_PROBDATA* targetdata = NULL;
+   SCIP_RESULT result = SCIP_DIDNOTRUN;
 
    assert(prob != NULL);
    assert(set != NULL);
@@ -206,9 +207,6 @@ SCIP_RETCODE SCIPprobCopy(
    assert(sourceprob != NULL);
    assert(varmap != NULL);
    assert(consmap != NULL);
-
-   result = SCIP_DIDNOTRUN;
-   targetdata = NULL;
 
    /* create problem and initialize callbacks with NULL */
    SCIP_CALL( SCIPprobCreate(prob, blkmem, set, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE) );
@@ -226,19 +224,19 @@ SCIP_RETCODE SCIPprobCopy(
       }
 
       assert(targetdata == NULL || result == SCIP_SUCCESS);
-   }
 
-   /* if copying was successful, add data and callbacks */
-   if( result == SCIP_SUCCESS )
-   {
-      assert( targetdata != NULL );
-      (*prob)->probdelorig = sourceprob->probdelorig;
-      (*prob)->probtrans = sourceprob->probtrans;
-      (*prob)->probdeltrans = sourceprob->probdeltrans;
-      (*prob)->probinitsol = sourceprob->probinitsol;
-      (*prob)->probexitsol = sourceprob->probexitsol;
-      (*prob)->probcopy = sourceprob->probcopy;
-      (*prob)->probdata = targetdata;
+      /* if copying was successful, add data and callbacks */
+      if( result == SCIP_SUCCESS )
+      {
+         assert( targetdata != NULL );
+         (*prob)->probdelorig = sourceprob->probdelorig;
+         (*prob)->probtrans = sourceprob->probtrans;
+         (*prob)->probdeltrans = sourceprob->probdeltrans;
+         (*prob)->probinitsol = sourceprob->probinitsol;
+         (*prob)->probexitsol = sourceprob->probexitsol;
+         (*prob)->probcopy = sourceprob->probcopy;
+         (*prob)->probdata = targetdata;
+      }
    }
 
    return SCIP_OKAY;
@@ -395,6 +393,7 @@ void SCIPprobSetCopy(
 /** frees problem data structure */
 SCIP_RETCODE SCIPprobFree(
    SCIP_PROB**           prob,               /**< pointer to problem data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -402,6 +401,7 @@ SCIP_RETCODE SCIPprobFree(
    SCIP_LP*              lp                  /**< current LP data (or NULL, if it's the original problem) */
    )
 {
+   SCIP_Bool warnreleasevar = TRUE;
    int v;
 
    assert(prob != NULL);
@@ -453,6 +453,14 @@ SCIP_RETCODE SCIPprobFree(
    for( v = (*prob)->nvars - 1; v >= 0; --v )
    {
       assert(SCIPvarGetProbindex((*prob)->vars[v]) >= 0);
+
+      if ( warnreleasevar && SCIPvarGetNUses((*prob)->vars[v]) > 1 )
+      {
+         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP. Consider releasing variable first.\n",
+            (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->vars[v]));
+         warnreleasevar = FALSE;
+      }
+
       SCIP_CALL( SCIPvarRemove((*prob)->vars[v], blkmem, NULL, set, TRUE) );
       SCIP_CALL( SCIPvarRelease(&(*prob)->vars[v], blkmem, set, eventqueue, lp) );
    }
@@ -462,6 +470,14 @@ SCIP_RETCODE SCIPprobFree(
    for( v = (*prob)->nfixedvars - 1; v >= 0; --v )
    {
       assert(SCIPvarGetProbindex((*prob)->fixedvars[v]) == -1);
+
+      if ( warnreleasevar && SCIPvarGetNUses((*prob)->fixedvars[v]) > 1 )
+      {
+         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP. Consider releasing variable first.\n",
+            (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->fixedvars[v]));
+         warnreleasevar = FALSE;
+      }
+
       SCIP_CALL( SCIPvarRelease(&(*prob)->fixedvars[v], blkmem, set, eventqueue, lp) );
    }
    BMSfreeMemoryArrayNull(&(*prob)->fixedvars);
@@ -580,7 +596,7 @@ SCIP_RETCODE SCIPprobTransform(
    (*target)->permuted = source->permuted;
 
    /* transform the conflict pool */
-   SCIP_CALL( SCIPconflictstoreTransform(conflictstore, blkmem, set, stat, tree, *target, eventfilter) );
+   SCIP_CALL( SCIPconflictstoreTransform(conflictstore, blkmem, set, stat, tree, *target, reopt, eventfilter) );
 
    return SCIP_OKAY;
 }
@@ -596,7 +612,6 @@ SCIP_RETCODE SCIPprobResetBounds(
    int v;
 
    assert(prob != NULL);
-   assert(!prob->transformed);
    assert(prob->nfixedvars == 0);
 
    for( v = 0; v < prob->nvars; ++v )
@@ -1543,6 +1558,16 @@ void SCIPprobUpdateDualbound(
    }
 }
 
+/** invalidates the dual bound */
+void SCIPprobInvalidateDualbound(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->dualbound = SCIP_INVALID;
+}
+
 /** if possible, scales objective function such that it is integral with gcd = 1 */
 SCIP_RETCODE SCIPprobScaleObj(
    SCIP_PROB*            transprob,          /**< tranformed problem data */
@@ -1611,6 +1636,13 @@ SCIP_RETCODE SCIPprobScaleObj(
          for( v = 0; v < nints && gcd != 1; ++v )
          {
             SCIP_Longint absobj;
+
+            /* if absobj exceeds maximum SCIP_Longint value, return */
+            if( REALABS(objvals[v]) * intscalar + 0.5 > SCIP_LONGINT_MAX )
+            {
+               SCIPsetFreeBufferArray(set, &objvals);
+               return SCIP_OKAY;
+            }
 
             absobj = (SCIP_Longint)(REALABS(objvals[v]) * intscalar + 0.5);
             if( gcd == 0 )

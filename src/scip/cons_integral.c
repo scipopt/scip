@@ -94,6 +94,55 @@ SCIP_DECL_CONSENFOLP(consEnfolpIntegral)
    return SCIP_OKAY;
 }
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxIntegral)
+{  /*lint --e{715}*/
+   SCIP_VAR** vars;
+   int nbinvars;
+   int nintvars;
+   int i;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(scip != NULL);
+   assert(conss == NULL);
+   assert(nconss == 0);
+   assert(result != NULL);
+
+   SCIPdebugMsg(scip, "Enforelax method of integrality constraint\n");
+
+   *result = SCIP_FEASIBLE;
+
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
+
+   for( i = 0; i < nbinvars + nintvars; ++i )
+   {
+      assert(vars[i] != NULL);
+      assert(SCIPvarIsIntegral(vars[i]));
+
+      if( !SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[i])) )
+      {
+         if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])) )
+         {
+            SCIPdebugMsg(scip, "Cutoff for integral variable %s with bounds [%f, %f] and value %f\n", SCIPvarGetName(vars[i]),
+                  SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i]), SCIPgetSolVal(scip, sol, vars[i]));
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+         else
+         {
+            /* @todo better way to handle this would be a BRANCHEXECRELAX callback that could also implement pseudo costs for
+             * relaxation solutions instead of using the enforelaxcallback which is mainly intended for spatial branching
+             */
+            SCIP_CALL( SCIPaddExternBranchCand(scip, vars[i], 0.2, SCIPgetSolVal(scip, sol, vars[i])) );
+            *result = SCIP_INFEASIBLE;
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** feasibility check method of constraint handler for integral solutions */
 static
@@ -258,23 +307,19 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
-
-   /* create integral constraint handler data */
-   conshdlrdata = NULL;
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
-         consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral, consLockIntegral,
-         conshdlrdata) );
+         consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral, consLockIntegral, NULL) );
 
    assert(conshdlr != NULL);
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyIntegral, consCopyIntegral) );
    SCIP_CALL( SCIPsetConshdlrGetDiveBdChgs(scip, conshdlr, consGetDiveBdChgsIntegral) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxIntegral) );
 
    return SCIP_OKAY;
 }

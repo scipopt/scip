@@ -103,7 +103,7 @@ SCIP_DECL_PRESOLFREE(presolFreeBoundshift)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
-   SCIPfreeMemory(scip, &presoldata);
+   SCIPfreeBlockMemory(scip, &presoldata);
    SCIPpresolSetData(presol, NULL);
 
    return SCIP_OKAY;
@@ -244,7 +244,7 @@ SCIP_RETCODE SCIPincludePresolBoundshift(
    SCIP_PRESOL* presolptr;
 
    /* create boundshift presolver data */
-   SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
    initPresoldata(presoldata);
 
    /* include presolver */

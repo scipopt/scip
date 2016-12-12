@@ -66,7 +66,7 @@
                                          * implemented for testing and not recommended to be used!
                                          */
 #define DEFAULT_BESTSOLLIMIT   -1       /* limit on number of improving incumbent solutions in sub-CIP            */
-#define DEFAULT_USEUCT         FALSE     /* should uct node selection be used at the beginning of the search?     */
+#define DEFAULT_USEUCT         FALSE    /* should uct node selection be used at the beginning of the search?     */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Rens"
@@ -381,8 +381,6 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
 
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem             */
-   SCIP_Real timelimit;                      /* time limit for RENS subproblem                  */
-   SCIP_Real memorylimit;                    /* memory limit for RENS subproblem                */
    SCIP_Real allfixingrate;                  /* percentage of all variables fixed               */
    SCIP_Real intfixingrate;                  /* percentage of integer variables fixed           */
 
@@ -434,22 +432,9 @@ SCIP_RETCODE SCIPapplyRens(
    assert(heurdata != NULL);
 
    /* check whether there is enough time and memory left */
-   timelimit = 0.0;
-   memorylimit = 0.0;
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) && !heurdata->extratime )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
 
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(scip, memorylimit) )
-   {
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-   }
-
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
+   if( !success )
       goto TERMINATE;
 
    *result = SCIP_DIDNOTFIND;
@@ -494,19 +479,22 @@ SCIP_RETCODE SCIPapplyRens(
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
-   /* disable output to console */
+#ifdef SCIP_DEBUG
+   /* for debugging, enable full output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#else
+   /* disable statistic timing inside sub SCIP and output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-
-   /* disable statistic timing inside sub SCIP */
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+#endif
 
    /* set limits for the subproblem */
+   SCIP_CALL( SCIPcopyLimits(scip, subscip) );
    heurdata->nodelimit = maxnodes;
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", maxnodes) );
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->bestsollimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
@@ -555,12 +543,6 @@ SCIP_RETCODE SCIPapplyRens(
          SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
       }
    }
-
-#ifdef SCIP_DEBUG
-   /* for debugging RENS, enable MIP output */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
-#endif
 
    /* if there is already a solution, add an objective cutoff */
    if( SCIPgetNSols(scip) > 0 )
@@ -720,7 +702,7 @@ SCIP_DECL_HEURFREE(heurFreeRens)
    assert( heurdata != NULL );
 
    /* free heuristic data */
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -829,7 +811,7 @@ SCIP_RETCODE SCIPincludeHeurRens(
    SCIP_HEUR* heur;
 
    /* create Rens primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,

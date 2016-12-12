@@ -81,14 +81,10 @@ SCIP_RETCODE SCIPincludeReaderWbo(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_READERDATA* readerdata;
    SCIP_READER* reader;
 
-   /* create reader data */
-   readerdata = NULL;
-
    /* include reader */
-   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, NULL) );
 
    assert(reader != NULL);
 
