@@ -925,18 +925,24 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
+   /* LP face requires that the LP defines a valid lower bound for the current node */
+   if( ! SCIPisLPRelax(scip) || ! SCIPallColsInLP(scip) )
+      return SCIP_OKAY;
+
    assert(SCIPgetCurrentNode(scip) != NULL);
    focusnodelb = SCIPgetNodeLowerbound(scip, SCIPgetCurrentNode(scip));
-   assert(SCIPisGE(scip, focusnodelb, SCIPgetLPObjval(scip)));
 
-   /* delay heuristic if the active search tree path is not deep enough */
-   if( SCIPgetDepth(scip) < heurdata->minpathlen - 1 )
-      return SCIP_OKAY;
+   /* from the checked conditions, the LP objective should be a valid lower bound for the current node */
+   assert(SCIPisGE(scip, focusnodelb, SCIPgetLPObjval(scip)));
 
    /* do not run if the current focus node already has a lower bound higher than the LP value at the node,
     * for example, due to strong branching
     */
    if( SCIPisGT(scip, focusnodelb, SCIPgetLPObjval(scip)) )
+      return SCIP_OKAY;
+
+   /* delay heuristic if the active search tree path is not deep enough */
+   if( SCIPgetDepth(scip) < heurdata->minpathlen - 1 )
       return SCIP_OKAY;
 
    /* only run at lower bound defining nodes */
