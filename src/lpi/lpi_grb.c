@@ -4078,11 +4078,11 @@ SCIP_RETCODE SCIPlpiSetBase(
    const int*            rstat               /**< array with row basis status */
    )
 {
-   int *cbas = NULL;
-   int *vbas = NULL;
-
    int i, j;
    int nrows, ncols;
+#ifndef NDEBUG
+   int nrngsfound = 0;
+#endif
 
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
@@ -4096,27 +4096,27 @@ SCIP_RETCODE SCIPlpiSetBase(
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
 
-   SCIP_ALLOC( BMSallocMemoryArray(&cbas, nrows) );
-   SCIP_ALLOC( BMSallocMemoryArray(&vbas, ncols) );
+   SCIP_CALL( ensureCstatMem(lpi, ncols+lpi->nrngrows) );
+   SCIP_CALL( ensureRstatMem(lpi, nrows) );
 
    for( i = 0; i < nrows; ++i )
    {
       switch( rstat[i] )
       {
       case SCIP_BASESTAT_BASIC:
-         cbas[i] = GRB_BASIC;
+         lpi->rstat[i] = GRB_BASIC;
          break;
 
       case SCIP_BASESTAT_LOWER:
-         cbas[i] = GRB_NONBASIC_LOWER;
+         lpi->rstat[i] = GRB_NONBASIC_LOWER;
          break;
 
       case SCIP_BASESTAT_UPPER:
-         cbas[i] = GRB_NONBASIC_UPPER;
+         lpi->rstat[i] = GRB_NONBASIC_UPPER;
          break;
 
       case SCIP_BASESTAT_ZERO:
-         cbas[i] = GRB_SUPERBASIC;
+         lpi->rstat[i] = GRB_SUPERBASIC;
          break;
 
       default:
@@ -4130,8 +4130,11 @@ SCIP_RETCODE SCIPlpiSetBase(
          /* set basis status of corresponding range variable; ranged row is always non-basic */
          int idx = ncols + lpi->rngrowmap[i];
          assert(lpi->rngrowmap[i] < lpi->nrngrows);
-         CHECK_ZERO( lpi->messagehdlr, GRBsetintattrelement(lpi->grbmodel, GRB_INT_ATTR_VBASIS, idx, cbas[i]) );
-         cbas[i] = GRB_NONBASIC_LOWER;
+         lpi->cstat[idx] = lpi->rstat[i];
+         lpi->rstat[i] = GRB_NONBASIC_LOWER;
+#ifndef NDEBUG
+         nrngsfound++;
+#endif
       }
    }
 
@@ -4140,19 +4143,19 @@ SCIP_RETCODE SCIPlpiSetBase(
       switch( cstat[j] )
       {
       case SCIP_BASESTAT_BASIC:
-         vbas[j] = GRB_BASIC;
+         lpi->cstat[j] = GRB_BASIC;
          break;
 
       case SCIP_BASESTAT_LOWER:
-         vbas[j] = GRB_NONBASIC_LOWER;
+         lpi->cstat[j] = GRB_NONBASIC_LOWER;
          break;
 
       case SCIP_BASESTAT_UPPER:
-         vbas[j] = GRB_NONBASIC_UPPER;
+         lpi->cstat[j] = GRB_NONBASIC_UPPER;
          break;
 
       case SCIP_BASESTAT_ZERO:
-         vbas[j] = GRB_SUPERBASIC;
+         lpi->cstat[j] = GRB_SUPERBASIC;
          break;
 
       default:
@@ -4162,11 +4165,12 @@ SCIP_RETCODE SCIPlpiSetBase(
       }
    }
 
-   CHECK_ZERO( lpi->messagehdlr, GRBsetintattrarray(lpi->grbmodel, GRB_INT_ATTR_CBASIS, 0, nrows, cbas) );
-   CHECK_ZERO( lpi->messagehdlr, GRBsetintattrarray(lpi->grbmodel, GRB_INT_ATTR_VBASIS, 0, ncols, vbas) );
+#ifndef NDEBUG
+   assert(nrngsfound == lpi->nrngrows);
+#endif
 
-   BMSfreeMemoryArray(&vbas);
-   BMSfreeMemoryArray(&cbas);
+   CHECK_ZERO( lpi->messagehdlr, GRBsetintattrarray(lpi->grbmodel, GRB_INT_ATTR_CBASIS, 0, nrows, lpi->rstat) );
+   CHECK_ZERO( lpi->messagehdlr, GRBsetintattrarray(lpi->grbmodel, GRB_INT_ATTR_VBASIS, 0, ncols+lpi->nrngrows, lpi->cstat) );
 
    return SCIP_OKAY;
 }
