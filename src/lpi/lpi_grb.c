@@ -184,6 +184,15 @@ struct SCIP_LPiState
    ROWPACKET*            packrstat;          /**< row basis status in compressed form */
 };
 
+/** LPi norms stores pricing norms */
+struct SCIP_LPiNorms
+{
+   int                   ncols;              /**< number of columns for which dual norm is stored */
+   int                   nrows;              /**< number of rows for which dual norm is stored */
+   double*               colnorm;            /**< dual norms for columns */
+   double*               rownorm;            /**< dual norms for rows */
+};
+
 
 static GRBenv*           grbenv = NULL;      /**< Gurobi environment (only needed for initialization) */
 static int               numlp = 0;          /**< number of open LP objects */
@@ -2750,11 +2759,6 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    SCIPdebugMessage("Gurobi primal simplex needed %d iterations to gain LP status %d\n", (int) cnt, lpi->solstat);
 
-   /*
-     CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->grbenv, lpi->grbmodel, NULL, NULL, &primalfeasible, &dualfeasible) );
-     SCIPdebugMessage(" -> Gurobi returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
-     lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
-   */
    primalfeasible = FALSE;
    dualfeasible = FALSE;
 
@@ -4865,18 +4869,49 @@ SCIP_RETCODE SCIPlpiWriteState(
 /**@name LP Pricing Norms Methods */
 /**@{ */
 
-/** stores LPi pricing norms information
- *  @todo should we store norm information?
- */
+/** stores LPi pricing norms information */
 SCIP_RETCODE SCIPlpiGetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
 {  /*lint --e{715}*/
+   int hasnorm;
+   int ncols;
+   int nrows;
+
+   assert(blkmem != NULL);
+   assert(lpi != NULL);
    assert(lpinorms != NULL);
 
-   (*lpinorms) = NULL;
+   *lpinorms = NULL;
+
+   /* if there is no basis information available (e.g. after barrier without crossover), norms cannot be saved */
+   if( !lpi->solisbasic )
+      return SCIP_OKAY;
+
+   /* check if dual norms are available:
+    *  value 0: no basis, so no norms available
+    *  value 1: basis exists, so norms can be computed
+    *  value 2: norms are available
+    */
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_HASDUALNORM, &hasnorm) );
+   if( hasnorm <= 1 )
+      return SCIP_OKAY;
+
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMCONSTRS, &nrows) );
+
+   /* allocate lpinorms data */
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, lpinorms) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*lpinorms)->colnorm, ncols) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*lpinorms)->rownorm, nrows) );
+   (*lpinorms)->ncols = ncols;
+   (*lpinorms)->nrows = nrows;
+
+   /* query dual norms from Gurobi */
+   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_VDUALNORM, 0, ncols, (*lpinorms)->colnorm) );
+   CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_CDUALNORM, 0, nrows, (*lpinorms)->rownorm) );
 
    return SCIP_OKAY;
 }
@@ -4890,9 +4925,17 @@ SCIP_RETCODE SCIPlpiSetNorms(
    const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
 {  /*lint --e{715}*/
-   assert(lpinorms == NULL);
+   assert(blkmem != NULL);
+   assert(lpi != NULL);
 
-   /* no work necessary */
+   /* if there was no pricing norms information available, the LPI norms were not stored */
+   if( lpinorms == NULL )
+      return SCIP_OKAY;
+
+   /* store dual norms in Gurobi */
+   CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_VDUALNORM, 0, lpinorms->ncols, lpinorms->colnorm) );
+   CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_CDUALNORM, 0, lpinorms->nrows, lpinorms->rownorm) );
+
    return SCIP_OKAY;
 }
 
@@ -4903,9 +4946,16 @@ SCIP_RETCODE SCIPlpiFreeNorms(
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
 {  /*lint --e{715}*/
-   assert(lpinorms == NULL);
+   assert(lpi != NULL);
+   assert(lpinorms != NULL);
 
-   /* no work necessary */
+   if ( *lpinorms != NULL )
+   {
+      BMSfreeBlockMemoryArray(blkmem, &(*lpinorms)->colnorm, (*lpinorms)->ncols);
+      BMSfreeBlockMemoryArray(blkmem, &(*lpinorms)->rownorm, (*lpinorms)->nrows);
+      BMSfreeBlockMemory(blkmem, lpinorms);
+   }
+
    return SCIP_OKAY;
 }
 
