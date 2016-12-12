@@ -2812,8 +2812,10 @@ SCIP_RETCODE SCIPlpiSolveDual(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   int oldprimdual = 0;
    int retval;
    double cnt;
+   double itlim;
 
    assert( lpi != NULL );
    assert( lpi->grbmodel != NULL );
@@ -2848,6 +2850,16 @@ SCIP_RETCODE SCIPlpiSolveDual(
       SCIP_CALL( addRangeVars(lpi) );
    }
 
+   SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_ITERATIONLIMIT, &itlim) );
+   if ( itlim < GRB_INFINITY )
+   {
+      /* turn off primal-dual switching for an LP solve that might be
+       * a strong branching LP solve
+       */
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintparam(lpi->grbenv, "GURO_PAR_PRIMDUALSWITCH", &oldprimdual) );
+      CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(lpi->grbenv, "GURO_PAR_PRIMDUALSWITCH", 0) );
+   }
+
    retval = GRBoptimize(lpi->grbmodel);
    switch( retval  )
    {
@@ -2857,6 +2869,12 @@ SCIP_RETCODE SCIPlpiSolveDual(
       return SCIP_NOMEMORY;
    default:
       return SCIP_LPERROR;
+   }
+
+   if ( oldprimdual != 0 )
+   {
+      /* reset primal-dual switch to its original value */
+      CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(lpi->grbenv, "GURO_PAR_PRIMDUALSWITCH", oldprimdual) );
    }
 
    CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
