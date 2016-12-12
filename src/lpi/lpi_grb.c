@@ -17,6 +17,8 @@
  * @ingroup LPIS
  * @brief  LP interface for Gurobi
  * @author Marc Pfetsch
+ * @author Tobias Achterberg
+ * @author Michael Winkler
  *
  * This LPI is beta!
  *
