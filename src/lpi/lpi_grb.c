@@ -3438,54 +3438,13 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
 
    if( primalfeasible != NULL )
    {
-      *primalfeasible = (lpi->solstat == GRB_OPTIMAL || (lpi->solstat == GRB_UNBOUNDED && algo == GRB_METHOD_PRIMAL));
+      *primalfeasible = SCIPlpiIsPrimalFeasible(lpi);
    }
 
    if( dualfeasible != NULL )
    {
-      *dualfeasible = (lpi->solstat == GRB_OPTIMAL || (lpi->solstat == GRB_INFEASIBLE && algo == GRB_METHOD_DUAL));
+      *dualfeasible = SCIPlpiIsDualFeasible(lpi);
    }
-
-
-#ifdef SCIP_DISABLED_CODE
-   /* @todo: check whether this code is needed anymore (this was the first version) */
-   SCIP_Real viol;
-   SCIP_Real tol;
-
-   assert( lpi != NULL );
-   assert( lpi->grbmodel != NULL );
-   assert( lpi->solstat >= 1 );
-
-   SCIPdebugMessage("getting solution feasibility\n");
-
-   if( primalfeasible != NULL )
-   {
-      if(lpi->solstat != GRB_INF_OR_UNBD && lpi->solstat != GRB_INFEASIBLE)
-      {
-         /* check whether maximum scaled violation is smaller than feasibility tolerance */
-         CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_CONSTR_SRESIDUAL, &viol) );
-         CHECK_ZERO( lpi->messagehdlr, GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_FEASIBILITYTOL, &tol) );
-         *primalfeasible = (viol <= tol) ? TRUE : FALSE;
-         SCIPdebugMessage("primal violation: %g  (tol: %g)\n", viol, tol);
-      }
-      else
-         *primalfeasible = FALSE;
-   }
-
-   if( dualfeasible != NULL )
-   {
-      if(lpi->solstat != GRB_UNBOUNDED && lpi->solstat != GRB_INFEASIBLE)
-      {
-         /* check whether maximum scaled dual violation is smaller than optimality tolerance */
-         CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_DUAL_SRESIDUAL, &viol) );
-         CHECK_ZERO( lpi->messagehdlr, GRBgetdblparam(lpi->grbenv, GRB_DBL_PAR_OPTIMALITYTOL, &tol) );
-         *dualfeasible = (viol <= tol) ? TRUE : FALSE;
-         SCIPdebugMessage("dual violation: %g  (tol: %g)\n", viol, tol);
-      }
-      else
-         *dualfeasible = FALSE;
-   }
-#endif
 
    return SCIP_OKAY;
 }
