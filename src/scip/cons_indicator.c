@@ -242,10 +242,10 @@
 /* default values for parameters */
 #define DEFAULT_BRANCHINDICATORS    FALSE    /**< Branch on indicator constraints in enforcing? */
 #define DEFAULT_GENLOGICOR          FALSE    /**< Generate logicor constraints instead of cuts? */
-#define DEFAULT_ADDCOUPLING          TRUE    /**< Add coupling constraints if big-M is small enough? */
+#define DEFAULT_ADDCOUPLING          TRUE    /**< Add coupling constraints or rows if big-M is small enough? */
 #define DEFAULT_MAXCOUPLINGVALUE      1e4    /**< maximum coefficient for binary variable in coupling constraint */
-#define DEFAULT_ADDCOUPLINGCONS     FALSE    /**< Add initial coupling inequalities as linear constraints, if 'addcoupling' is true? */
-#define DEFAULT_SEPACOUPLINGCUTS    FALSE    /**< Should the coupling inequalities be separated dynamically? */
+#define DEFAULT_ADDCOUPLINGCONS     FALSE    /**< Add initial variable upper bound constraints, if 'addcoupling' is true? */
+#define DEFAULT_SEPACOUPLINGCUTS     TRUE    /**< Should the coupling inequalities be separated dynamically? */
 #define DEFAULT_SEPACOUPLINGLOCAL   FALSE    /**< Allow to use local bounds in order to separate coupling inequalities? */
 #define DEFAULT_SEPACOUPLINGVALUE     1e4    /**< maximum coefficient for binary variable in separated coupling constraint */
 #define DEFAULT_SEPAALTERNATIVELP   FALSE    /**< Separate using the alternative LP? */
@@ -324,7 +324,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             branchindicators;   /**< Branch on indicator constraints in enforcing? */
    SCIP_Bool             genlogicor;         /**< Generate logicor constraints instead of cuts? */
    SCIP_Bool             addcoupling;        /**< whether the coupling inequalities should be added at the beginning */
-   SCIP_Bool             addcouplingcons;    /**< whether coupling inequalities should be variable bounds, if 'addcoupling' is true*/
+   SCIP_Bool             addcouplingcons;    /**< Add initial variable upper bound constraints, if 'addcoupling' is true? */
    SCIP_Bool             sepacouplingcuts;   /**< Should the coupling inequalities be separated dynamically? */
    SCIP_Bool             sepacouplinglocal;  /**< Allow to use local bounds in order to separate coupling inequalities? */
    SCIP_Bool             sepaperspective;    /**< Separate cuts based on perspective formulation? */
@@ -7114,7 +7114,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/addcoupling",
-         "Add coupling constraints if big-M is small enough?",
+         "Add coupling constraints or rows if big-M is small enough?",
          &conshdlrdata->addcoupling, TRUE, DEFAULT_ADDCOUPLING, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
@@ -7124,7 +7124,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/addcouplingcons",
-         "Add initial coupling inequalities as linear constraints, if 'addcoupling' is true?",
+         "Add initial variable upper bound constraints, if 'addcoupling' is true?",
          &conshdlrdata->addcouplingcons, TRUE, DEFAULT_ADDCOUPLINGCONS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,

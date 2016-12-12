@@ -1350,7 +1350,7 @@ uint32_t hashvalue(
    uint64_t              input               /**< key value */
    )
 {
-   return ( (uint32_t) ((0xaba59e95109ce4edull * input)>>32) ) | 1u;
+   return ( (uint32_t) ((0x9e3779b97f4a7c15ull * input)>>32) ) | 1u;
 }
 
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
@@ -2575,7 +2575,7 @@ SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqPtr)
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
 {  /*lint --e{715}*/
    /* the key is used as the keyvalue too */
-   return (unsigned int)(size_t) key;
+   return (unsigned int) ((0xd37e9a1ce2148403ull * (size_t) key)>>32);
 }
 
 
