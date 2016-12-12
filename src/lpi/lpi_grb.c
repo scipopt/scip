@@ -179,6 +179,7 @@ struct SCIP_LPiState
 {
    int                   ncols;              /**< number of LP columns */
    int                   nrows;              /**< number of LP rows */
+   int                   nrngrows;           /**< number of ranged rows in LP */
    COLPACKET*            packcstat;          /**< column basis status in compressed form */
    ROWPACKET*            packrstat;          /**< row basis status in compressed form */
 };
@@ -604,7 +605,7 @@ void lpistatePack(
    assert(lpistate->packcstat != NULL);
    assert(lpistate->packrstat != NULL);
 
-   SCIPencodeDualBitNeg(cstat, lpistate->packcstat, lpistate->ncols);
+   SCIPencodeDualBitNeg(cstat, lpistate->packcstat, lpistate->ncols + lpistate->nrngrows);
    SCIPencodeDualBitNeg(rstat, lpistate->packrstat, lpistate->nrows);
 }
 
@@ -620,7 +621,7 @@ void lpistateUnpack(
    assert(lpistate->packcstat != NULL);
    assert(lpistate->packrstat != NULL);
 
-   SCIPdecodeDualBitNeg(lpistate->packcstat, cstat, lpistate->ncols);
+   SCIPdecodeDualBitNeg(lpistate->packcstat, cstat, lpistate->ncols + lpistate->nrngrows);
    SCIPdecodeDualBitNeg(lpistate->packrstat, rstat, lpistate->nrows);
 }
 
@@ -630,7 +631,8 @@ SCIP_RETCODE lpistateCreate(
    SCIP_LPISTATE**       lpistate,           /**< pointer to LPi state */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    int                   ncols,              /**< number of columns to store */
-   int                   nrows               /**< number of rows to store */
+   int                   nrows,              /**< number of rows to store */
+   int                   nrngrows            /**< number of ranged rows */
    )
 {
    assert(lpistate != NULL);
@@ -639,7 +641,7 @@ SCIP_RETCODE lpistateCreate(
    assert(nrows >= 0);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, lpistate) );
-   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*lpistate)->packcstat, colpacketNum(ncols)) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*lpistate)->packcstat, colpacketNum(ncols + nrngrows)) );
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*lpistate)->packrstat, rowpacketNum(nrows)) );
 
    return SCIP_OKAY;
@@ -656,7 +658,7 @@ void lpistateFree(
    assert(lpistate != NULL);
    assert(*lpistate != NULL);
 
-   BMSfreeBlockMemoryArrayNull(blkmem, &(*lpistate)->packcstat, colpacketNum((*lpistate)->ncols));
+   BMSfreeBlockMemoryArrayNull(blkmem, &(*lpistate)->packcstat, colpacketNum((*lpistate)->ncols + (*lpistate)->nrngrows));
    BMSfreeBlockMemoryArrayNull(blkmem, &(*lpistate)->packrstat, rowpacketNum((*lpistate)->nrows));
    BMSfreeBlockMemory(blkmem, lpistate);
 }
@@ -4643,7 +4645,7 @@ SCIP_RETCODE SCIPlpiGetState(
    }
 
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
-   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
    assert(ncols >= 0);
    assert(nrows >= 0);
 
@@ -4653,11 +4655,13 @@ SCIP_RETCODE SCIPlpiGetState(
    if ( success )
    {
       /* allocate lpistate data */
-      SCIP_CALL( lpistateCreate(lpistate, blkmem, ncols, nrows) );
+      SCIP_CALL( lpistateCreate(lpistate, blkmem, ncols, nrows, lpi->nrngrows) );
       (*lpistate)->ncols = ncols;
       (*lpistate)->nrows = nrows;
+      (*lpistate)->nrngrows = lpi->nrngrows;
 
-      SCIPdebugMessage("stored Gurobi LPI state in %p (%d cols, %d rows)\n", (void*) *lpistate, ncols, nrows);
+      SCIPdebugMessage("stored Gurobi LPI state in %p (%d cols, %d rows, %d ranged rows)\n",
+                       (void*) *lpistate, ncols, nrows, lpi->nrngrows);
 
       /* pack LPi state data */
       lpistatePack(*lpistate, lpi->cstat, lpi->rstat);
@@ -4671,6 +4675,7 @@ SCIP_RETCODE SCIPlpiGetState(
       SCIP_ALLOC( BMSallocBlockMemory(blkmem, lpistate) );
       (*lpistate)->ncols = ncols;
       (*lpistate)->nrows = nrows;
+      (*lpistate)->nrngrows = lpi->nrngrows;
       (*lpistate)->packrstat = NULL;
       (*lpistate)->packcstat = NULL;
    }
@@ -4700,36 +4705,40 @@ SCIP_RETCODE SCIPlpiSetState(
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPlpiGetNRows(lpi, &nrows) );
-   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_NUMVARS, &ncols) );
+   SCIP_CALL( SCIPlpiGetNCols(lpi, &ncols) );
    assert(lpistate->ncols <= ncols);
    assert(lpistate->nrows <= nrows);
+   assert(lpistate->nrngrows <= lpi->nrngrows);
 
-   SCIPdebugMessage("loading LPI state %p (%d cols, %d rows) into Gurobi LP with %d cols and %d rows\n",
-      (void*) lpistate, lpistate->ncols, lpistate->nrows, ncols, nrows);
+   SCIPdebugMessage("loading LPI state %p (%d cols, %d rows, %d ranged rows) into Gurobi LP with %d cols, %d rows, and %d ranged rows\n",
+                    (void*) lpistate, lpistate->ncols, lpistate->nrows, lpistate->nrngrows,
+                    ncols, nrows, lpi->nrngrows);
 
    if( lpistate->ncols == 0 || lpistate->nrows == 0 )
       return SCIP_OKAY;
 
    /* allocate enough memory for storing uncompressed basis information */
-   SCIP_CALL( ensureCstatMem(lpi, ncols) );
+   SCIP_CALL( ensureCstatMem(lpi, ncols + lpi->nrngrows) );
    SCIP_CALL( ensureRstatMem(lpi, nrows) );
 
    /* unpack LPi state data */
    lpistateUnpack(lpistate, lpi->cstat, lpi->rstat);
 
-   /**@todo LPI state needs to store number of range variables, so that the basis can be patched up
-    *       correctly for new range and new structural variables
-    */
+   if ( lpistate->nrngrows > 0 && lpistate->ncols < ncols )
+   {
+      /* New columns have been added: need to move range variable information */
+      memmove(&lpi->cstat[ncols], &lpi->cstat[lpistate->ncols], lpistate->nrngrows * sizeof(*lpi->cstat));
+   }
 
    /* extend the basis to the current LP beyond the previously existing columns */
    for( i = lpistate->ncols; i < ncols; ++i )
    {
       SCIP_Real bnd;
-      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_LB, i, i, &bnd) );
+      CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_LB, i, &bnd) );
       if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
       {
          /* if lower bound is +/- infinity -> try upper bound */
-         CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_UB, i, i, &bnd) );
+         CHECK_ZERO( lpi->messagehdlr, GRBgetdblattrelement(lpi->grbmodel, GRB_DBL_ATTR_UB, i, &bnd) );
          if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
             lpi->cstat[i] = (int) SCIP_BASESTAT_ZERO;  /* variable is free */
          else
@@ -4738,6 +4747,8 @@ SCIP_RETCODE SCIPlpiSetState(
       else
          lpi->cstat[i] = (int) SCIP_BASESTAT_LOWER;    /* use finite lower bound */
    }
+   for( i = lpistate->nrngrows; i < lpi->nrngrows; ++i )
+      lpi->cstat[ncols + i] = (int) SCIP_BASESTAT_LOWER;
    for( i = lpistate->nrows; i < nrows; ++i )
       lpi->rstat[i] = (int) SCIP_BASESTAT_BASIC;
 
@@ -4781,7 +4792,7 @@ SCIP_Bool SCIPlpiHasStateBasis(
    SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
    )
 {  /*lint --e{715}*/
-   return (lpistate != NULL);
+   return (lpistate != NULL && lpistate->packcstat != NULL);
 }
 
 /** reads LP state (like basis information from a file */
