@@ -4926,7 +4926,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_LPITLIM:
       SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_ITERATIONLIMIT, &dtemp) );
       assert( dtemp >= 0.0 );
-      if( dtemp >= GRB_INFINITY )
+      if( dtemp >= INT_MAX )
          *ival = INT_MAX;
       else
          *ival = (int) dtemp;
@@ -5009,7 +5009,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_OUTPUTFLAG, 0) );
       break;
    case SCIP_LPPAR_LPITLIM:
-      SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_ITERATIONLIMIT, (double) ival) );
+      {
+         double itlim = (ival >= INT_MAX ? GRB_INFINITY : ival);
+         SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_ITERATIONLIMIT, itlim) );
+      }
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;
