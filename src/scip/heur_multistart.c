@@ -1013,7 +1013,7 @@ SCIP_DECL_HEUREXEC(heurExecMultistart)
    *result = SCIP_DIDNOTRUN;
 
    /* check cases for which the heuristic is not applicable */
-   if( !SCIPisNLPConstructed(scip) || heurdata->heursubnlp == NULL )
+   if( !SCIPisNLPConstructed(scip) || heurdata->heursubnlp == NULL || SCIPgetNNlpis(scip) <= 0 )
       return SCIP_OKAY;
 
    /* check whether the heuristic should be applied for a problem containing integer variables */
