@@ -53,6 +53,44 @@
 /**
  * assign the variables in scip according to the found clusterassignment
  */
+
+static
+SCIP_RETCODE writeLPSolSpa(
+   SCIP*                scip
+   )
+{
+   int i,j;
+   int nbins;
+   int ncluster;
+   SCIP_VAR**** edgevars;
+   SCIP_VAR*** binvars;
+
+   edgevars = SCIPspaGetEdgevars(scip);
+   binvars = SCIPspaGetBinvars(scip);
+   nbins = SCIPspaGetNrBins(scip);
+   ncluster = SCIPspaGetNrCluster(scip);
+
+   for( i = 0; i < nbins; ++i )
+   {
+      for( j = 0; j < ncluster; ++j )
+      {
+         printf("x_%d_%d %f, ", i, j, SCIPvarGetLPSol(binvars[i][j]));
+      }
+      printf("\n");
+   }
+
+   for( i = 0; i < nbins; ++i )
+   {
+      for( j = 0; j < nbins; ++j )
+      {
+         if( 0 != edgevars[i][j] )
+            printf("y_%d_%d %f, ", i, j, SCIPvarGetLPSol(edgevars[i][j][1]));
+      }
+      printf("\n");
+   }
+
+   return SCIP_OKAY;
+}
 static
 SCIP_RETCODE assignVars(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -111,7 +149,7 @@ SCIP_RETCODE assignVars(
             }
             for( c2 = 0; c2 < ncluster; ++c2 )
             {
-               if( NULL == edgevars[i][j][c] || c == c2 )
+               if( NULL == edgevars[i][j] || c == c2 )
                   continue;
                if( c2 == c + 1 || ( c2 == 0 && c == ncluster -1) )
                {
@@ -237,7 +275,6 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
    if( SCIPgetNLPBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
-   SCIPdebugMsg(scip, "Number of Fractional variables is: %d\n", SCIPgetNLPBranchCands(scip));
    nbins = SCIPspaGetNrBins(scip);
    ncluster = SCIPspaGetNrCluster(scip);
    assert(nbins > 0);

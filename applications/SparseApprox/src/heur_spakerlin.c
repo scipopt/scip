@@ -36,7 +36,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define MAXROUNDS             5
-#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
+#define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
 #define HEUR_USESSUBSCIP      FALSE          /**< does the heuristic use a secondary SCIP instance? */
 
 /*
@@ -253,7 +253,7 @@ SCIP_Real getObjective(
    for( c = 0; c < ncluster; ++c )
    {
       c2 = ( c + 1 ) % ncluster;
-      objective += REALABS( qmatrix[c][c2] - qmatrix[c2][c]);
+      objective += ( qmatrix[c][c2] - qmatrix[c2][c]);
       objective += scale * qmatrix[c][c];
    }
    /* if we have no transitions at all then irreversibility should be set to 0 */
@@ -450,7 +450,7 @@ SCIP_RETCODE assignVars(
             }
             for( c2 = 0; c2 < ncluster; ++c2 )
             {
-               if( NULL == edgevars[i][j][c] || c == c2 )
+               if( NULL == edgevars[i][j] || c == c2 )
                   continue;
                if( c2 == c + 1 || ( c2 == 0 && c == ncluster -1) )
                {
@@ -719,7 +719,7 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
       {
          SCIP_CALL( SCIPcreateSol(scip, &worksol, heur) );
          assignVars(scip, worksol, solclustering, nbins, ncluster, qmatrix, cmatrix);
-         SCIPtrySolFree(scip, &worksol, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible);
+         SCIPtrySolFree(scip, &worksol, FALSE, TRUE, TRUE, TRUE, TRUE, &feasible);
       }
       if( feasible )
       {

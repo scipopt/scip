@@ -48,6 +48,7 @@ MAINOBJ		=	probdata_spa.o \
 			heur_spakerlin.o \
 			branch_multinode.o \
 			sepa_edge.o \
+			sepa_subtour.o \
 			spaplugins.o \
 			main.o
 
