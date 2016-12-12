@@ -612,7 +612,7 @@ SCIP_DECL_HEURFREE(heurFreeCrossover)
    assert(heurdata != NULL);
 
    /* free heuristic data */
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -701,8 +701,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_VAR** subvars;                       /* subproblem's variables                              */
    SCIP_SOL** sols;
 
-   SCIP_Real memorylimit;                    /* memory limit for the subproblem                     */
-   SCIP_Real timelimit;                      /* time limit for the subproblem                       */
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem                 */
    SCIP_Real upperbound;
    SCIP_Bool success;
@@ -781,25 +779,13 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       return SCIP_OKAY;
 
    /* consider time and memory limits of the main SCIP */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
 
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(scip, memorylimit) )
-   {
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-   }
-
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
+   if( !success )
       return SCIP_OKAY;
 
    if( SCIPisStopped(scip) )
      return SCIP_OKAY;
-
 
    /* get variable information */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
@@ -808,7 +794,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* check whether discrete variables are available */
    if( nbinvars == 0 && nintvars == 0 )
       return SCIP_OKAY;
-
 
    /* allocate necessary buffer storage for selection of variable fixings */
    SCIP_CALL( SCIPallocBufferArray(scip, &selection, nusedsols) );
@@ -865,27 +850,23 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
-   /* disable statistic timing inside sub SCIP */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
-
-   /* disable output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 #ifdef SCIP_DEBUG
-   /* for debugging crossover, enable MIP output */
+   /* for debugging, enable full output */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", TRUE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#else
+   /* disable statistic timing inside sub SCIP and output to console */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 #endif
 
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->bestsollimit) );
 
-
    /* set limits for the subproblem */
+   SCIP_CALL( SCIPcopyLimits(scip, subscip) );
    heurdata->nodelimit = nstallnodes;
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nstallnodes) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
    /* forbid recursive call of heuristics and separators solving subMIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
@@ -1090,7 +1071,7 @@ SCIP_RETCODE SCIPincludeHeurCrossover(
    SCIP_HEUR* heur;
 
    /* create Crossover primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,

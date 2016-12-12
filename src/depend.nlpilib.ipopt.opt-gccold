@@ -6,7 +6,8 @@ $(LIBOBJDIR)/nlpi/nlpi.o: src/nlpi/nlpi.c src/scip/pub_message.h src/scip/def.h 
 $(LIBOBJDIR)/nlpi/nlpioracle.o: src/nlpi/nlpioracle.c src/scip/pub_message.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/type_message.h \
  src/scip/struct_message.h src/scip/pub_misc.h src/blockmemshell/memory.h \
- src/scip/type_misc.h src/scip/type_var.h src/scip/struct_misc.h \
+ src/scip/type_misc.h src/scip/type_var.h src/scip/pub_misc_select.h \
+ src/scip/type_misc.h src/scip/pub_misc_sort.h src/scip/struct_misc.h \
  src/nlpi/nlpioracle.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
  src/nlpi/type_exprinterpret.h src/nlpi/pub_expr.h \
  src/scip/intervalarith.h src/nlpi/struct_expr.h src/nlpi/exprinterpret.h
@@ -16,7 +17,8 @@ $(LIBOBJDIR)/nlpi/expr.o: src/nlpi/expr.c src/nlpi/pub_expr.h src/scip/def.h \
  src/blockmemshell/memory.h src/nlpi/type_expr.h \
  src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
  src/scip/type_misc.h src/nlpi/exprinterpret.h src/scip/pub_misc.h \
- src/scip/type_var.h src/scip/struct_misc.h
+ src/scip/type_var.h src/scip/pub_misc_select.h src/scip/type_misc.h \
+ src/scip/pub_misc_sort.h src/scip/struct_misc.h
 $(LIBOBJDIR)/nlpi/exprinterpret_none.o: src/nlpi/exprinterpret_none.c \
  src/scip/pub_message.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/type_message.h src/scip/struct_message.h \
@@ -33,41 +35,42 @@ $(LIBOBJDIR)/nlpi/nlpi_ipopt.o: src/nlpi/nlpi_ipopt.cpp src/nlpi/nlpi_ipopt.h \
  src/scip/type_misc.h src/nlpi/nlpioracle.h src/nlpi/type_exprinterpret.h \
  src/nlpi/exprinterpret.h src/scip/intervalarith.h src/scip/interrupt.h \
  src/scip/type_interrupt.h src/scip/pub_misc.h src/scip/type_var.h \
+ src/scip/pub_misc_select.h src/scip/type_misc.h src/scip/pub_misc_sort.h \
  src/scip/struct_misc.h \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
-  \
- 
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpoptConfig.h \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpIpoptApplication.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpJournalist.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpoptConfig.h \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpTypes.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpReferenced.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpDebug.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpSmartPtr.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpTNLP.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpUtils.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpException.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpAlgTypes.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpReturnCodes.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpReturnCodes_inc.h \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpNLP.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpVector.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpTaggedObject.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpObserver.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpCachedResults.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpMatrix.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpSymMatrix.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpOptionsList.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpRegOptions.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpIpoptCalculatedQuantities.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpSolveStatistics.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpJournalist.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpIpoptData.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpIteratesVector.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpCompoundVector.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpTimingStatistics.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpTimedTask.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpTNLPAdapter.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpOrigIpoptNLP.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpIpoptNLP.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpNLPScaling.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpOrigIpoptNLP.hpp \
+ lib/static/ipopt.linux.x86_64.gnu.opt/include/coin/IpLapack.hpp

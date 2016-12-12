@@ -19,6 +19,7 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  * @author Gerald Gamrath
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -54,9 +55,9 @@ SCIP_DECL_HASHGETKEY(hashGetKeyParam)
    return param->name;
 }
 
-/** checks whether parameter can be changed and issues a warning message if it is fixed */
+/** tests whether parameter can be changed and issues an error message if it is fixed */
 static
-SCIP_RETCODE paramCheckFixed(
+SCIP_RETCODE paramTestFixed(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
@@ -65,20 +66,19 @@ SCIP_RETCODE paramCheckFixed(
 
    if( param->isfixed )
    {
-      SCIPmessagePrintWarning(messagehdlr, "parameter <%s> is fixed and cannot be changed. Unfix it to allow changing the value.\n",
-         param->name);
+      SCIPerrorMessage("parameter <%s> is fixed and cannot be changed. Unfix it to allow changing the value.\n", param->name);
       return SCIP_PARAMETERWRONGVAL;
    }
 
    return SCIP_OKAY;
 }
 
-/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid */
+/** tests parameter value according to the given feasible domain; issues an error message if value was invalid */
 static
-SCIP_RETCODE paramCheckBool(
+SCIP_RETCODE paramTestBool(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Bool             value               /**< value to check */
+   SCIP_Bool             value               /**< value to test */
    )
 {
    assert(param != NULL);
@@ -86,20 +86,19 @@ SCIP_RETCODE paramCheckBool(
 
    if( value != TRUE && value != FALSE )
    {
-      SCIPmessagePrintWarning(messagehdlr, "Invalid value <%d> for bool parameter <%s>. Must be <0> (FALSE) or <1> (TRUE).\n",
-         value, param->name);
+      SCIPerrorMessage("Invalid value <%d> for bool parameter <%s>. Must be <0> (FALSE) or <1> (TRUE).\n", value, param->name);
       return SCIP_PARAMETERWRONGVAL;
    }
 
    return SCIP_OKAY;
 }
 
-/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid */
+/** tests parameter value according to the given feasible domain; issues an error message if value was invalid */
 static
-SCIP_RETCODE paramCheckInt(
+SCIP_RETCODE paramTestInt(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   int                   value               /**< value to check */
+   int                   value               /**< value to test */
    )
 {
    assert(param != NULL);
@@ -107,7 +106,7 @@ SCIP_RETCODE paramCheckInt(
 
    if( value < param->data.intparam.minvalue || value > param->data.intparam.maxvalue )
    {
-      SCIPmessagePrintWarning(messagehdlr, "Invalid value <%d> for int parameter <%s>. Must be in range [%d,%d].\n",
+      SCIPerrorMessage("Invalid value <%d> for int parameter <%s>. Must be in range [%d,%d].\n",
          value, param->name, param->data.intparam.minvalue, param->data.intparam.maxvalue);
       return SCIP_PARAMETERWRONGVAL;
    }
@@ -115,12 +114,12 @@ SCIP_RETCODE paramCheckInt(
    return SCIP_OKAY;
 }
 
-/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid */
+/** tests parameter value according to the given feasible domain; issues an error message if value was invalid */
 static
-SCIP_RETCODE paramCheckLongint(
+SCIP_RETCODE paramTestLongint(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Longint          value               /**< value to check */
+   SCIP_Longint          value               /**< value to test */
    )
 {
    assert(param != NULL);
@@ -128,7 +127,7 @@ SCIP_RETCODE paramCheckLongint(
 
    if( value < param->data.longintparam.minvalue || value > param->data.longintparam.maxvalue )
    {
-      SCIPmessagePrintWarning(messagehdlr, "Invalid value <%" SCIP_LONGINT_FORMAT "> for longint parameter <%s>. Must be in range [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "].\n",
+      SCIPerrorMessage("Invalid value <%" SCIP_LONGINT_FORMAT "> for longint parameter <%s>. Must be in range [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "].\n",
          value, param->name, param->data.longintparam.minvalue, param->data.longintparam.maxvalue);
       return SCIP_PARAMETERWRONGVAL;
    }
@@ -136,12 +135,12 @@ SCIP_RETCODE paramCheckLongint(
    return SCIP_OKAY;
 }
 
-/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid */
+/** tests parameter value according to the given feasible domain; issues an error message if value was invalid */
 static
-SCIP_RETCODE paramCheckReal(
+SCIP_RETCODE paramTestReal(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Real             value               /**< value to check */
+   SCIP_Real             value               /**< value to test */
    )
 {
    assert(param != NULL);
@@ -149,7 +148,7 @@ SCIP_RETCODE paramCheckReal(
 
    if( value < param->data.realparam.minvalue || value > param->data.realparam.maxvalue )
    {
-      SCIPmessagePrintWarning(messagehdlr, "Invalid real parameter value <%.15g> for parameter <%s>. Must be in range [%.15g,%.15g].\n",
+      SCIPerrorMessage("Invalid value <%.15g> for real parameter <%s>. Must be in range [%.15g,%.15g].\n",
          value, param->name, param->data.realparam.minvalue, param->data.realparam.maxvalue);
       return SCIP_PARAMETERWRONGVAL;
    }
@@ -157,12 +156,12 @@ SCIP_RETCODE paramCheckReal(
    return SCIP_OKAY;
 }
 
-/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid */
+/** tests parameter value according to the given feasible domain; issues an error message if value was invalid */
 static
-SCIP_RETCODE paramCheckChar(
+SCIP_RETCODE paramTestChar(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   char                  value               /**< value to check */
+   char                  value               /**< value to test */
    )
 {
    assert(param != NULL);
@@ -170,7 +169,7 @@ SCIP_RETCODE paramCheckChar(
 
    if( value == '\b' || value == '\f' || value == '\n' || value == '\r' || value == '\v' )
    {
-      SCIPmessagePrintWarning(messagehdlr, "Invalid char parameter value <%x>.\n", (int)value);
+      SCIPerrorMessage("Invalid value <%x> for char parameter <%s>.\n", (int)value, param->name);
       return SCIP_PARAMETERWRONGVAL;
    }
 
@@ -184,8 +183,8 @@ SCIP_RETCODE paramCheckChar(
 
       if( *c != value )
       {
-         SCIPmessagePrintWarning(messagehdlr, "Invalid char parameter value <%c>. Must be in set {%s}.\n",
-            value, param->data.charparam.allowedvalues);
+         SCIPerrorMessage("Invalid value <%c> for char parameter <%s>. Must be in set {%s}.\n",
+            value, param->name, param->data.charparam.allowedvalues);
          return SCIP_PARAMETERWRONGVAL;
       }
    }
@@ -193,12 +192,12 @@ SCIP_RETCODE paramCheckChar(
    return SCIP_OKAY;
 }
 
-/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid */
+/** tests parameter value according to the given feasible domain; issues an error message if value was invalid */
 static
-SCIP_RETCODE paramCheckString(
+SCIP_RETCODE paramTestString(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           value               /**< value to check */
+   const char*           value               /**< value to test */
    )
 {
    unsigned int i;
@@ -208,7 +207,7 @@ SCIP_RETCODE paramCheckString(
 
    if( value == NULL )
    {
-      SCIPmessagePrintWarning(messagehdlr, "Cannot assign a NULL string to a string parameter.\n");
+      SCIPerrorMessage("Cannot assign a NULL string to a string parameter.\n");
       return SCIP_PARAMETERWRONGVAL;
    }
 
@@ -216,7 +215,7 @@ SCIP_RETCODE paramCheckString(
    {
       if( value[i] == '\b' || value[i] == '\f' || value[i] == '\n' || value[i] == '\r' || value[i] == '\v' )
       {
-         SCIPmessagePrintWarning(messagehdlr, "Invalid character <%x> in string parameter at position %d.\n", (int)value[i], i);
+         SCIPerrorMessage("Invalid character <%x> in string parameter <%s> at position %d.\n", (int)value[i], param->name, i);
          return SCIP_PARAMETERWRONGVAL;
       }
    }
@@ -1363,7 +1362,7 @@ SCIP_RETCODE paramParseChar(
    return SCIP_OKAY;
 }
 
-/** sets String parameter according to the value of the given string */
+/** sets string parameter according to the value of the given string */
 static
 SCIP_RETCODE paramParseString(
    SCIP_PARAM*           param,              /**< parameter */
@@ -3190,12 +3189,12 @@ SCIP_RETCODE paramsetSetPresolvingFast(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "propagating/probing/maxprerounds", 0, quiet) );
    }
 
-   /* explicitly disable components presolver, if included */
+   /* explicitly disable components constraint handler, if included */
 #ifndef NDEBUG
-   if( SCIPsetFindPresol(set, "components") != NULL )
+   if( SCIPsetFindConshdlr(set, "components") != NULL )
 #endif
    {
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/components/maxrounds", 0, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/maxprerounds", 0, quiet) );
    }
 
    /* explicitly disable dominated columns presolver, if included */
@@ -3724,8 +3723,14 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/agelimit", 1, quiet) );
 
       /* turn off components presolver since we are currently not able to handle that in case of counting */
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/components/maxrounds", 0, quiet) );
-      break;
+#ifndef NDEBUG
+      if( SCIPsetFindConshdlr(set, "components") != NULL )
+#endif
+      {
+         SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/maxprerounds", 0, quiet) );
+         SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/propfreq", -1, quiet) );
+         break;
+      }
 
    case SCIP_PARAMEMPHASIS_CPSOLVER:
       /* shrink the minimal maximum value for the conflict length */
@@ -3965,6 +3970,15 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
 
          SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, -1, quiet) );
       }
+   }
+
+   /* turn off components constraint handler */
+   #ifndef NDEBUG
+   if( SCIPsetFindConshdlr(set, "components") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/maxprerounds", 0, quiet) );
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/propfreq", -1, quiet) );
    }
 
    return SCIP_OKAY;
@@ -4207,48 +4221,88 @@ void SCIPparamSetFixed(
    param->isfixed = fixed;
 }
 
-/** checks value of SCIP_Bool parameter; issues a warning message if value is invalid */
-SCIP_RETCODE SCIPparamCheckBool(
+/** checks whether value of bool parameter is valid */
+SCIP_Bool SCIPparamIsValidBool(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Bool             value               /**< value to check */
+   )
+{
+   return ( value == TRUE || value == FALSE );
+}
+
+/** checks whether value of integer parameter is valid */
+SCIP_Bool SCIPparamIsValidInt(
+   SCIP_PARAM*           param,              /**< parameter */
+   int                   value               /**< value to check */
    )
 {
    assert(param != NULL);
 
-   SCIP_CALL_QUIET( paramCheckBool(param, messagehdlr, value) );
-
-   return SCIP_OKAY;
+   return ( value >= param->data.intparam.minvalue && value <= param->data.intparam.maxvalue );
 }
 
-/** checks value of string parameter; issues a warning message if value is invalid */
-SCIP_RETCODE SCIPparamCheckString(
+/** checks whether value of SCIP_Longint parameter is valid */
+SCIP_Bool SCIPparamIsValidLongint(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           value               /**< value to check */
-   )
-{
-   return paramCheckString(param, messagehdlr, value);
-}
-
-/** checks value of character parameter; issues a warning message if value is invalid */
-SCIP_RETCODE SCIPparamCheckChar(
-   SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char            value               /**< value to check */
-   )
-{
-	return paramCheckChar(param, messagehdlr, value);
-}
-
-/** checks value of SCIP_Longint parameter; issues a warning message if value is invalid */
-SCIP_RETCODE SCIPparamCheckLongint(
-   SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Longint          value               /**< value to check */
    )
 {
-   return paramCheckLongint(param, messagehdlr, value);
+   assert( param != NULL );
+
+   return ( value >= param->data.longintparam.minvalue && value <= param->data.longintparam.maxvalue );
+}
+
+/** checks whether value of SCIP_Real parameter is valid */
+SCIP_Bool SCIPparamIsValidReal(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Real             value               /**< value to check */
+   )
+{
+   assert( param != NULL );
+
+   return ( value >= param->data.realparam.minvalue && value <= param->data.realparam.maxvalue );
+}
+
+/** checks whether value of char parameter is valid */
+SCIP_Bool SCIPparamIsValidChar(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Real             value               /**< value to check */
+   )
+{
+   assert( param != NULL );
+
+   if( value == '\b' || value == '\f' || value == '\n' || value == '\r' || value == '\v' )
+      return FALSE;
+
+   if( param->data.charparam.allowedvalues != NULL )
+   {
+      char* c;
+
+      c = param->data.charparam.allowedvalues;
+      while( *c != '\0' && *c != value )
+         c++;
+
+      if( *c != value )
+         return FALSE;
+   }
+
+   return TRUE;
+}
+
+/** checks whether value of string parameter is valid */
+SCIP_Bool SCIPparamIsValidString(
+   SCIP_PARAM*           param,              /**< parameter */
+   const char*           value               /**< value to check */
+   )
+{
+   unsigned int i;
+
+   for( i = 0; i < (unsigned int) strlen(value); ++i )
+   {
+      if( value[i] == '\b' || value[i] == '\f' || value[i] == '\n' || value[i] == '\r' || value[i] == '\v' )
+         return FALSE;
+   }
+   return TRUE;
 }
 
 /** sets value of SCIP_Bool parameter */
@@ -4264,13 +4318,13 @@ SCIP_RETCODE SCIPparamSetBool(
    assert(param != NULL);
 
    /* check, if value is possible for the parameter and the parameter is not fixed */
-   SCIP_CALL_QUIET( paramCheckBool(param, messagehdlr, value) );
+   SCIP_CALL_QUIET( paramTestBool(param, messagehdlr, value) );
 
    /* is the value of the parameter changed? */
-   if( initialize ||  (param->data.boolparam.valueptr != NULL && *param->data.boolparam.valueptr != value)
+   if( initialize || (param->data.boolparam.valueptr != NULL && *param->data.boolparam.valueptr != value)
       || (param->data.boolparam.valueptr == NULL && param->data.boolparam.curvalue != value) )
    {
-      SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
+      SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
       /* set the parameter's current value */
       if( param->data.boolparam.valueptr != NULL )
@@ -4306,13 +4360,13 @@ SCIP_RETCODE SCIPparamSetInt(
    assert(param != NULL);
 
    /* check, if value is possible for the parameter and the parameter is not fixed */
-   SCIP_CALL_QUIET( paramCheckInt(param, messagehdlr, value) );
+   SCIP_CALL_QUIET( paramTestInt(param, messagehdlr, value) );
 
    /* is the value of the parameter changed? */
    if( initialize || (param->data.intparam.valueptr != NULL && *param->data.intparam.valueptr != value)
       || (param->data.intparam.valueptr == NULL && param->data.intparam.curvalue != value) )
    {
-      SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
+      SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
       /* set the parameter's current value */
       if( param->data.intparam.valueptr != NULL )
@@ -4348,13 +4402,13 @@ SCIP_RETCODE SCIPparamSetLongint(
    assert(param != NULL);
 
    /* check, if value is possible for the parameter and the parameter is not fixed */
-   SCIP_CALL_QUIET( paramCheckLongint(param, messagehdlr, value) );
+   SCIP_CALL_QUIET( paramTestLongint(param, messagehdlr, value) );
 
    /* is the value of the parameter changed? */
    if( initialize ||  (param->data.longintparam.valueptr != NULL && *param->data.longintparam.valueptr != value)
       || (param->data.longintparam.valueptr == NULL && param->data.longintparam.curvalue != value) )
    {
-      SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
+      SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
       /* set the parameter's current value */
       if( param->data.longintparam.valueptr != NULL )
@@ -4392,13 +4446,13 @@ SCIP_RETCODE SCIPparamSetReal(
    /* check, if value is possible for the parameter and the parameter is not fixed */
    value = MAX(value, SCIP_REAL_MIN);
    value = MIN(value, SCIP_REAL_MAX);
-   SCIP_CALL_QUIET( paramCheckReal(param, messagehdlr, value) );
+   SCIP_CALL_QUIET( paramTestReal(param, messagehdlr, value) );
 
    /* is the value of the parameter changed? */
    if( initialize ||  (param->data.realparam.valueptr != NULL && *param->data.realparam.valueptr != value)
       || (param->data.realparam.valueptr == NULL && param->data.realparam.curvalue != value) )
    {
-      SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
+      SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
       /* set the parameter's current value */
       if( param->data.realparam.valueptr != NULL )
@@ -4434,13 +4488,13 @@ SCIP_RETCODE SCIPparamSetChar(
    assert(param != NULL);
 
    /* check, if value is possible for the parameter and the parameter is not fixed */
-   SCIP_CALL_QUIET( paramCheckChar(param, messagehdlr, value) );
+   SCIP_CALL_QUIET( paramTestChar(param, messagehdlr, value) );
 
    /* is the value of the parameter changed? */
    if( initialize || (param->data.charparam.valueptr != NULL && *param->data.charparam.valueptr != value)
       || (param->data.charparam.valueptr == NULL && param->data.charparam.curvalue != value) )
    {
-      SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
+      SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
       /* set the parameter's current value */
       if( param->data.charparam.valueptr != NULL )
@@ -4475,8 +4529,8 @@ SCIP_RETCODE SCIPparamSetString(
    assert(param != NULL);
 
    /* check, if value is possible for the parameter and the parameter is not fixed */
-   SCIP_CALL_QUIET( paramCheckString(param, messagehdlr, value) );
-   SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
+   SCIP_CALL_QUIET( paramTestString(param, messagehdlr, value) );
+   SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 
    /* set the parameter's current value */
    if( param->data.stringparam.valueptr != NULL )

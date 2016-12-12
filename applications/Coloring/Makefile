@@ -14,7 +14,7 @@
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 #@file    Makefile
-#@brief   Makefile for C Coloring example using SCIP as a callable library
+#@brief   Makefile for C Coloring application using SCIP as a callable library
 #@author  Thorsten Koch
 #@author  Tobias Achterberg
 #@author  Marc Pfetsch
@@ -40,9 +40,16 @@ include $(SCIPDIR)/make/make.project
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINNAME	=	sparseApprox
-MAINOBJ		=	reader_spa.o \
-			spaplugins.o \
+MAINNAME	=	coloring
+MAINOBJ		=	reader_col.o \
+			reader_csol.o \
+			probdata_coloring.o \
+			pricer_coloring.o \
+			cons_storeGraph.o \
+			branch_coloring.o \
+			branch_strongcoloring.o \
+			heur_init.o \
+			coloringplugins.o \
 			main.o
 
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
@@ -110,7 +117,7 @@ test:           $(MAINFILE)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-			$(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE);
+			$(CONTINUE) $(LOCK) "example" $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) $(SEEDS);
 
 .PHONY: clean
 clean:		$(OBJDIR)
@@ -135,11 +142,7 @@ depend:		$(SCIPDIR)
 
 $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
-		$(LINKCXX) $(MAINOBJFILES) \
-		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-                $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX) $(MAINOBJFILES) $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"

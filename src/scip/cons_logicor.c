@@ -177,7 +177,7 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(conshdlrdata != NULL);
    assert(eventhdlr != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
 
    (*conshdlrdata)->nlastcliquesneg = 0;
    (*conshdlrdata)->nlastimplsneg = 0;
@@ -200,7 +200,7 @@ SCIP_RETCODE conshdlrdataFree(
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
 
-   SCIPfreeMemory(scip, conshdlrdata);
+   SCIPfreeBlockMemory(scip, conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -3833,6 +3833,63 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdLogicor)
    return SCIP_OKAY;
 }
 
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool cutoff;
+   SCIP_Bool separated;
+   SCIP_Bool reduceddom;
+   int c;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(nconss == 0 || conss != NULL);
+   assert(result != NULL);
+
+   SCIPdebugMsg(scip, "Enforcing %d logic or constraints for %s solution\n", nconss, sol == NULL ? "LP" : "relaxation");
+
+   *result = SCIP_FEASIBLE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   cutoff = FALSE;
+   separated = FALSE;
+   reduceddom = FALSE;
+
+   /* check all useful logic or constraints for feasibility */
+   for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
+   {
+      SCIP_CALL( separateCons(scip, conss[c], sol, conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
+   }
+
+   /* check all obsolete logic or constraints for feasibility */
+   for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
+   {
+      SCIP_CALL( separateCons(scip, conss[c], sol, conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
+   }
+
+   /* return the correct result */
+   if( cutoff )
+      *result = SCIP_CUTOFF;
+   else if( separated )
+      *result = SCIP_SEPARATED;
+   else if( reduceddom )
+      *result = SCIP_REDUCEDDOM;
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Callback methods of constraint handler
@@ -4150,47 +4207,17 @@ SCIP_DECL_CONSSEPASOL(consSepasolLogicor)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpLogicor)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool cutoff;
-   SCIP_Bool separated;
-   SCIP_Bool reduceddom;
-   int c;
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
-   assert(conshdlr != NULL);
-   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
-   assert(nconss == 0 || conss != NULL);
-   assert(result != NULL);
+   return SCIP_OKAY;
+}
 
-   SCIPdebugMsg(scip, "LP enforcing %d logic or constraints\n", nconss);
 
-   *result = SCIP_FEASIBLE;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   cutoff = FALSE;
-   separated = FALSE;
-   reduceddom = FALSE;
-
-   /* check all useful logic or constraints for feasibility */
-   for( c = 0; c < nusefulconss && !cutoff && !reduceddom; ++c )
-   {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
-   }
-
-   /* check all obsolete logic or constraints for feasibility */
-   for( c = nusefulconss; c < nconss && !cutoff && !separated && !reduceddom; ++c )
-   {
-      SCIP_CALL( separateCons(scip, conss[c], NULL, conshdlrdata->eventhdlr, &cutoff, &separated, &reduceddom) );
-   }
-
-   /* return the correct result */
-   if( cutoff )
-      *result = SCIP_CUTOFF;
-   else if( separated )
-      *result = SCIP_SEPARATED;
-   else if( reduceddom )
-      *result = SCIP_REDUCEDDOM;
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxLogicor)
+{  /*lint --e{715}*/
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -5064,6 +5091,7 @@ SCIP_RETCODE SCIPincludeConshdlrLogicor(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpLogicor, consSepasolLogicor, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransLogicor) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxLogicor) );
 
    conshdlrdata->conshdlrlinear = SCIPfindConshdlr(scip, "linear");
    conshdlrdata->conshdlrsetppc = SCIPfindConshdlr(scip, "setppc");
@@ -5130,7 +5158,7 @@ SCIP_RETCODE SCIPcreateConsLogicor(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */

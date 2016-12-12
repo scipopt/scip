@@ -1820,6 +1820,9 @@ SCIP_DECL_EXPRCURV( exprcurvRealPower )
 
 /** point evaluation for EXPR_INTPOWER */
 static
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 SCIP_DECL_EXPREVAL( exprevalIntPower )
 {   /*lint --e{715}*/
    assert(result  != NULL);
@@ -5531,10 +5534,12 @@ SCIP_RETCODE exprParse(
    if( SCIPexprGetOperator(arg1) == SCIP_EXPR_CONST )
    {
       SCIP_CALL( SCIPexprMulConstant(blkmem, expr, arg2, SCIPexprGetOpReal(arg1)) );
+      SCIPexprFreeDeep(blkmem, &arg1);
    }
    else if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
    {
       SCIP_CALL( SCIPexprMulConstant(blkmem, expr, arg1, SCIPexprGetOpReal(arg2)) );
+      SCIPexprFreeDeep(blkmem, &arg2);
    }
    else
    {
@@ -14389,6 +14394,13 @@ void SCIPexprgraphDisableNode(
    if( !node->enabled )
       return;
 
+   /* workaround: don't disable nodes if there could be more users than the one who is disabling the node
+    * otherwise, if there are several nonlinear constraints using the same expression graph node as root node,
+    * we might get enabled constraints with disabled node
+    */
+   if( node->nuses > 1 )
+      return;
+
    /* if all parents of node are disabled, then also node can be disabled */
    node->enabled = FALSE;
    for( i = 0; i < node->nparents; ++i )
@@ -15864,9 +15876,9 @@ SCIP_RETCODE SCIPexprgraphSimplify(
          {
             SCIP_EXPRGRAPHNODE* constnode;
 
-            if( node->value != node->value )  /*lint !e777*/
+            if( !SCIPisFinite(node->value) )  /*lint !e777*/
             {
-               SCIPdebugMessage("Expression graph simplify turned node into NaN.\n");
+               SCIPdebugMessage("Expression graph simplify turned node into NaN or inf.\n");
                *domainerror = TRUE;
                break;
             }

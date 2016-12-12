@@ -185,7 +185,7 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(scip != NULL);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
 
    /* set event handler for bound change events */
    (*conshdlrdata)->eventhdlr = eventhdlr;
@@ -204,7 +204,7 @@ void conshdlrdataFree(
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
 
-   SCIPfreeMemory(scip, conshdlrdata);
+   SCIPfreeBlockMemory(scip, conshdlrdata);
 }
 
 /** catches events for variables
@@ -281,6 +281,12 @@ SCIP_RETCODE consdataCreate(
    {
       SCIPerrorMessage("left hand side of varbound constraint greater than right hand side\n");
       SCIPerrorMessage(" -> lhs=%g, rhs=%g\n", lhs, rhs);
+      return SCIP_INVALIDDATA;
+   }
+
+   if( SCIPisZero(scip, vbdcoef) )
+   {
+      SCIPerrorMessage("varbound coefficient must be different to zero.\n");
       return SCIP_INVALIDDATA;
    }
 
@@ -500,12 +506,14 @@ SCIP_RETCODE resolvePropagation(
       {
          SCIP_Real relaxedbd;
 
-         /* For integer variables, we can reduce the inferbound by 1 - 2eps, because this will be adjusted
-          * to the bound we need; however, if inferbound has a large value, adding 2*eps might be lost
-          * due to fixed precision floating point arithmetics, so we explicitly check this here.
+         /* For integer variables, we can reduce the inferbound by 1 - z * eps, because this will be adjusted
+          * to the bound we need; however, we need to choose z large enough to prevent numerical troubles due to
+          * too small and too large vbdcoef values.
+          * If inferbound has a large value, adding z*eps might be lost due to fixed precision floating point
+          * arithmetics, so we explicitly check this here.
           */
-         if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip))
-            relaxedbd = (consdata->lhs - (inferbd - 1.0 + 2*SCIPfeastol(scip))) / vbdcoef;
+         if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
+            relaxedbd = (consdata->lhs - (inferbd - 1.0 + 2.0* SCIPfeastol(scip))) / vbdcoef;
          else
             relaxedbd = (consdata->lhs - inferbd) / vbdcoef;
 
@@ -514,10 +522,18 @@ SCIP_RETCODE resolvePropagation(
 
          if( vbdcoef > 0.0 )
          {
+            /* decrease the computed relaxed upper bound by an epsilon; this ensures that we get the actual
+             * inference bound due to the integrality condition of the variable bound variable
+             */
+            relaxedbd -= SCIPfeastol(scip);
             SCIP_CALL( SCIPaddConflictRelaxedUb(scip, vbdvar, bdchgidx, relaxedbd) );
          }
          else
          {
+            /* increase the computed relaxed lower bound by an epsilon; this ensures that we get the actual inference
+             * bound due to the integrality condition of the variable bound variable
+             */
+            relaxedbd += SCIPfeastol(scip);
             SCIP_CALL( SCIPaddConflictRelaxedLb(scip, vbdvar, bdchgidx, relaxedbd) );
          }
       }
@@ -550,21 +566,39 @@ SCIP_RETCODE resolvePropagation(
           */
          if( vbdcoef > 0.0 )
          {
-            relaxedub = consdata->lhs - (inferbd - 1.0 + 2*SCIPfeastol(scip)) * vbdcoef;
+            /* For integer variables, we can reduce the inferbound by 1-z*eps, because this will be adjusted
+             * to the bound we need; however, we need to choose z large enough to prevent numerical troubles due to
+             * too small and too large vbdcoef values.
+             * If inferbound has a large value, adding z*eps might be lost due to fixed precision floating point
+             * arithmetics, so we explicitly check this here.
+             */
+            if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
+               relaxedub = consdata->lhs - (inferbd - 1.0 + 2.0 * SCIPfeastol(scip)) * vbdcoef;
+            else
+               relaxedub = consdata->lhs - inferbd * vbdcoef;
 
             /* check the computed relaxed upper bound is a proper reason for the inference bound which has to be explained */
             assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, vbdvar, (consdata->lhs - relaxedub) / vbdcoef)));
          }
          else
          {
-            relaxedub = consdata->lhs - (inferbd + 1.0 - 2*SCIPfeastol(scip)) * vbdcoef;
+            /* For integer variables, we can reduce the inferbound by 1-z*eps, because this will be adjusted
+             * to the bound we need; however, we need to choose z large enough to prevent numerical troubles due to
+             * too small and too large vbdcoef values.
+             * If inferbound has a large value, adding z*eps might be lost due to fixed precision floating point
+             * arithmetics, so we explicitly check this here.
+             */
+            if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
+               relaxedub = consdata->lhs - (inferbd + 1.0 - 2.0 * SCIPfeastol(scip)) * vbdcoef;
+            else
+               relaxedub = consdata->lhs - inferbd * vbdcoef;
 
             /* check the computed relaxed upper bound is a proper reason for the inference bound which has to be explained */
             assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, vbdvar, (consdata->lhs - relaxedub) / vbdcoef)));
          }
 
-         /* decrease the compute relaxed upper bound by an epsilon; that ensure that we get the actual inference bound due
-          * to the integral condition of the variable bound variable
+         /* decrease the computed relaxed upper bound by an epsilon; this ensures that we get the actual inference bound due
+          * to the integrality condition of the variable bound variable
           */
          relaxedub -= SCIPfeastol(scip);
 
@@ -587,8 +621,14 @@ SCIP_RETCODE resolvePropagation(
       {
          SCIP_Real relaxedbd;
 
-         if( SCIPvarIsIntegral(var) )
-            relaxedbd = (consdata->rhs - (inferbd + 1.0 - 2*SCIPfeastol(scip))) / vbdcoef;
+         /* For integer variables, we can reduce the inferbound by 1-z*eps, because this will be adjusted
+          * to the bound we need; however, we need to choose z large enough to prevent numerical troubles due to
+          * too small and too large vbdcoef values.
+          * If inferbound has a large value, adding z*eps might be lost due to fixed precision floating point
+          * arithmetics, so we explicitly check this here.
+          */
+         if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
+            relaxedbd = (consdata->rhs - (inferbd + 1.0 - 2.0 * SCIPfeastol(scip))) / vbdcoef;
          else
             relaxedbd = (consdata->rhs - inferbd) / vbdcoef;
 
@@ -597,10 +637,18 @@ SCIP_RETCODE resolvePropagation(
 
          if( vbdcoef > 0.0 )
          {
+            /* increase the computed relaxed lower bound by an epsilon; this ensures that we get the actual inference bound due
+             * to the integrality condition of the variable bound variable
+             */
+            relaxedbd += SCIPfeastol(scip);
             SCIP_CALL( SCIPaddConflictRelaxedLb(scip, vbdvar, bdchgidx, relaxedbd) );
          }
          else
          {
+            /* decrease the computed relaxed upper bound by an epsilon; this ensures that we get the actual inference bound due
+             * to the integrality condition of the variable bound variable
+             */
+            relaxedbd -= SCIPfeastol(scip);
             SCIP_CALL( SCIPaddConflictRelaxedUb(scip, vbdvar, bdchgidx, relaxedbd) );
          }
       }
@@ -633,21 +681,39 @@ SCIP_RETCODE resolvePropagation(
           */
          if( vbdcoef > 0.0 )
          {
-            relaxedlb = consdata->rhs - (inferbd + 1.0 - 2*SCIPfeastol(scip)) * vbdcoef;
+            /* For integer variables, we can reduce the inferbound by 1-z*eps, because this will be adjusted
+             * to the bound we need; however, we need to choose z large enough to prevent numerical troubles due to
+             * too small and too large vbdcoef values.
+             * If inferbound has a large value, adding z*eps might be lost due to fixed precision floating point
+             * arithmetics, so we explicitly check this here.
+             */
+            if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
+               relaxedlb = consdata->rhs - (inferbd + 1.0 - 2.0 * SCIPfeastol(scip)) * vbdcoef;
+            else
+               relaxedlb = consdata->rhs - inferbd * vbdcoef;
 
             /* check the computed relaxed lower bound is a proper reason for the inference bound which has to be explained */
             assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarUb(scip, vbdvar, (consdata->rhs - relaxedlb) / vbdcoef)));
          }
          else
          {
-            relaxedlb = consdata->rhs - (inferbd - 1.0 + 2*SCIPfeastol(scip)) * vbdcoef;
+            /* For integer variables, we can reduce the inferbound by 1-z*eps, because this will be adjusted
+             * to the bound we need; however, we need to choose z large enough to prevent numerical troubles due to
+             * too small and too large vbdcoef values.
+             * If inferbound has a large value, adding z*eps might be lost due to fixed precision floating point
+             * arithmetics, so we explicitly check this here.
+             */
+            if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
+               relaxedlb = consdata->rhs - (inferbd - 1.0 + 2.0 * SCIPfeastol(scip)) * vbdcoef;
+            else
+               relaxedlb = consdata->rhs - inferbd * vbdcoef;
 
             /* check the computed relaxed lower bound is a proper reason for the inference bound which has to be explained */
             assert(SCIPisEQ(scip, inferbd, SCIPadjustedVarLb(scip, vbdvar, (consdata->rhs - relaxedlb) / vbdcoef)));
          }
 
-         /* inccrease the compute relaxed lower bound by an epsilon; that ensure that we get the actual inference bound due
-          * to the integral condition of the variable bound variable
+         /* increase the computed relaxed lower bound by an epsilon; this ensures that we get the actual inference bound due
+          * to the integrality condition of the variable bound variable
           */
          relaxedlb += SCIPfeastol(scip);
 
@@ -1178,6 +1244,22 @@ SCIP_RETCODE propagateCons(
    ylb = SCIPvarGetLbLocal(consdata->vbdvar);
    yub = SCIPvarGetUbLocal(consdata->vbdvar);
 
+   /* it can happen that constraint is of form lhs <= x <= rhs */
+   if( SCIPisZero(scip, consdata->vbdcoef) && SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+   {
+      SCIP_Bool infeasible;
+      SCIP_Bool fixed;
+
+      SCIP_CALL( SCIPfixVar(scip, consdata->var, consdata->lhs, &infeasible, &fixed) );
+
+      if( infeasible )
+      {
+         SCIPdebugMsg(scip, "> constraint <%s> is infeasible.\n", SCIPconsGetName(cons));
+         *cutoff = TRUE;
+         return SCIP_OKAY;
+      }
+   }
+
    /* tighten bounds of variables as long as possible */
    do
    {
@@ -1456,6 +1538,48 @@ SCIP_RETCODE propagateCons(
          SCIPvarGetName(consdata->vbdvar), SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar));
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
 
+      /* this did not seem to help but should be tested again, there might also still be a bug in there */
+#ifdef SCIP_DISABLED_CODE
+      /* local duality fixing of variables in the constraint */
+      if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->vbdvar)) && SCIPvarGetNLocksDown(consdata->vbdvar) == 1
+         && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->vbdvar))
+         && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar))
+         && ((consdata->vbdcoef > 0.0 && !SCIPisInfinity(scip, -consdata->lhs))
+            || (consdata->vbdcoef < 0.0 && !SCIPisInfinity(scip, consdata->rhs))) )
+      {
+         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->vbdvar),
+            SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar), SCIPvarGetLbLocal(consdata->vbdvar));
+         SCIP_CALL( SCIPchgVarUb(scip, consdata->vbdvar, SCIPvarGetLbLocal(consdata->vbdvar)) );
+      }
+      else if( !SCIPisPositive(scip, SCIPvarGetObj(consdata->vbdvar)) && SCIPvarGetNLocksUp(consdata->vbdvar) == 1
+         && !SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->vbdvar))
+         && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar))
+         && ((consdata->vbdcoef < 0.0 && !SCIPisInfinity(scip, -consdata->lhs))
+            || (consdata->vbdcoef > 0.0 && !SCIPisInfinity(scip, consdata->rhs))) )
+      {
+         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->vbdvar),
+            SCIPvarGetLbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar), SCIPvarGetUbLocal(consdata->vbdvar));
+         SCIP_CALL( SCIPchgVarLb(scip, consdata->vbdvar, SCIPvarGetUbLocal(consdata->vbdvar)) );
+      }
+      if( !SCIPisNegative(scip, SCIPvarGetObj(consdata->var)) && SCIPvarGetNLocksDown(consdata->var) == 1
+         && !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->var))
+         && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var))
+         && !SCIPisInfinity(scip, -consdata->lhs) )
+      {
+         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->var),
+            SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var), SCIPvarGetLbLocal(consdata->var));
+         SCIP_CALL( SCIPchgVarUb(scip, consdata->var, SCIPvarGetLbLocal(consdata->var)) );
+      }
+      else if( !SCIPisPositive(scip, SCIPvarGetObj(consdata->var)) && SCIPvarGetNLocksUp(consdata->var) == 1
+         && !SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->var))
+         && SCIPisFeasLT(scip, SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var))
+         && !SCIPisInfinity(scip, consdata->rhs) )
+      {
+         SCIPdebugMsg(scip, " --> fixing <%s>[%.15g,%.15g] to %.15g\n", SCIPvarGetName(consdata->var),
+            SCIPvarGetLbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var), SCIPvarGetUbLocal(consdata->var));
+         SCIP_CALL( SCIPchgVarLb(scip, consdata->var, SCIPvarGetUbLocal(consdata->var)) );
+      }
+#endif
       if( ndelconss != NULL )
          (*ndelconss)++;
    }
@@ -2763,7 +2887,11 @@ SCIP_RETCODE applyFixings(
                consdata->rhs = (consdata->rhs - varconstant)/varscalar;
             consdata->vbdcoef /= varscalar;
 
-	    consdata->tightened = FALSE;
+            /* try to avoid numerical troubles */
+            if( SCIPisIntegral(scip, consdata->vbdcoef) )
+               consdata->vbdcoef = SCIPround(scip, consdata->vbdcoef);
+
+            consdata->tightened = FALSE;
          }
          else
          {
@@ -2784,7 +2912,11 @@ SCIP_RETCODE applyFixings(
                consdata->rhs = (consdata->rhs + varconstant)/(-varscalar);
             consdata->vbdcoef /= varscalar;
 
-	    consdata->tightened = FALSE;
+            /* try to avoid numerical troubles */
+            if( SCIPisIntegral(scip, consdata->vbdcoef) )
+               consdata->vbdcoef = SCIPround(scip, consdata->vbdcoef);
+
+            consdata->tightened = FALSE;
          }
          /* release old variable */
          SCIP_CALL( SCIPreleaseVar(scip, &(consdata->var)) );
@@ -3209,8 +3341,8 @@ SCIP_RETCODE tightenCoefs(
             consdata->lhs, SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
             consdata->lhs, SCIPvarGetName(consdata->var), newcoef, SCIPvarGetName(consdata->vbdvar), newrhs);
 
-	 /* we cannot allow that the coefficient changes the sign because of the rounding locks */
-	 assert(consdata->vbdcoef * newcoef > 0);
+         /* we cannot allow that the coefficient changes the sign because of the rounding locks */
+         assert(consdata->vbdcoef * newcoef > 0);
 
          consdata->vbdcoef = newcoef;
          consdata->rhs = newrhs;
@@ -3227,6 +3359,8 @@ SCIP_RETCODE tightenCoefs(
             SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
             assert(consdata->tightened);
          }
+         else
+            consdata->tightened = (SCIPisIntegral(scip, consdata->vbdcoef) && SCIPisIntegral(scip, consdata->rhs));
       }
       else if( consdata->vbdcoef < 0.0 && SCIPisFeasGT(scip, xlb, consdata->lhs) && SCIPisFeasLT(scip, xub, consdata->rhs - consdata->vbdcoef) )
       {
@@ -3247,8 +3381,8 @@ SCIP_RETCODE tightenCoefs(
             consdata->lhs, SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
             newlhs, SCIPvarGetName(consdata->var), newcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs);
 
-	 /* we cannot allow that the coefficient changes the sign because of the rounding locks */
-	 assert(consdata->vbdcoef * newcoef > 0);
+         /* we cannot allow that the coefficient changes the sign because of the rounding locks */
+         assert(consdata->vbdcoef * newcoef > 0);
 
          consdata->vbdcoef = newcoef;
          consdata->lhs = newlhs;
@@ -3265,6 +3399,8 @@ SCIP_RETCODE tightenCoefs(
             SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
             assert(consdata->tightened);
          }
+         else
+            consdata->tightened = (SCIPisIntegral(scip, consdata->vbdcoef) && SCIPisIntegral(scip, consdata->lhs));
       }
    }
    else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )
@@ -3280,8 +3416,8 @@ SCIP_RETCODE tightenCoefs(
             SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->lhs,
             SCIPvarGetName(consdata->var), consdata->lhs - xlb, SCIPvarGetName(consdata->vbdvar), consdata->lhs);
 
-	 /* we cannot allow that the coefficient changes the sign because of the rounding locks */
-	 assert(consdata->vbdcoef * (consdata->lhs - xlb) > 0);
+         /* we cannot allow that the coefficient changes the sign because of the rounding locks */
+         assert(consdata->vbdcoef * (consdata->lhs - xlb) > 0);
 
          consdata->vbdcoef = consdata->lhs - xlb;
          (*nchgcoefs)++;
@@ -3296,8 +3432,8 @@ SCIP_RETCODE tightenCoefs(
             SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->lhs,
             SCIPvarGetName(consdata->var), consdata->vbdcoef - consdata->lhs + xlb, SCIPvarGetName(consdata->vbdvar), xlb);
 
-	 /* we cannot allow that the coefficient changes the sign because of the rounding locks */
-	 assert(consdata->vbdcoef * (consdata->vbdcoef - consdata->lhs + xlb) > 0);
+         /* we cannot allow that the coefficient changes the sign because of the rounding locks */
+         assert(consdata->vbdcoef * (consdata->vbdcoef - consdata->lhs + xlb) > 0);
 
          consdata->vbdcoef = consdata->vbdcoef - consdata->lhs + xlb;
          consdata->lhs = xlb;
@@ -3318,8 +3454,8 @@ SCIP_RETCODE tightenCoefs(
             SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
             SCIPvarGetName(consdata->var), consdata->rhs - xub, SCIPvarGetName(consdata->vbdvar), consdata->rhs);
 
-	 /* we cannot allow that the coefficient changes the sign because of the rounding locks */
-	 assert(consdata->vbdcoef * (consdata->rhs - xub) > 0);
+         /* we cannot allow that the coefficient changes the sign because of the rounding locks */
+         assert(consdata->vbdcoef * (consdata->rhs - xub) > 0);
 
          consdata->vbdcoef = consdata->rhs - xub;
          (*nchgcoefs)++;
@@ -3334,8 +3470,8 @@ SCIP_RETCODE tightenCoefs(
             SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
             SCIPvarGetName(consdata->var), consdata->vbdcoef - consdata->rhs + xub, SCIPvarGetName(consdata->vbdvar), xub);
 
-	 /* we cannot allow that the coefficient changes the sign because of the rounding locks */
-	 assert(consdata->vbdcoef * (consdata->vbdcoef - consdata->rhs + xub) > 0);
+         /* we cannot allow that the coefficient changes the sign because of the rounding locks */
+         assert(consdata->vbdcoef * (consdata->vbdcoef - consdata->rhs + xub) > 0);
 
          consdata->vbdcoef = consdata->vbdcoef - consdata->rhs + xub;
          consdata->rhs = xub;
@@ -3869,6 +4005,46 @@ SCIP_DECL_CONSENFOLP(consEnfolpVarbound)
 }
 
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxVarbound)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int i;
+
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   *result = SCIP_FEASIBLE;
+
+   for( i = 0; i < nconss; i++ )
+   {
+      if( !checkCons(scip, conss[i], sol, FALSE) )
+      {
+         assert((*result) == SCIP_INFEASIBLE || (*result) == SCIP_FEASIBLE);
+         (*result) = SCIP_INFEASIBLE;
+
+         SCIP_CALL( SCIPresetConsAge(scip, conss[i]) );
+
+         SCIP_CALL( separateCons(scip, conss[i], conshdlrdata->usebdwidening, sol, result) );
+         assert((*result) != SCIP_FEASIBLE);
+
+         if( (*result) != SCIP_INFEASIBLE )
+            break;
+      }
+      else
+      {
+         /* increase age of constraint */
+         SCIP_CALL( SCIPincConsAge(scip, conss[i]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsVarbound)
@@ -3956,6 +4132,8 @@ SCIP_DECL_CONSPROP(consPropVarbound)
 
    cutoff = FALSE;
    nchgbds = 0;
+
+   SCIPdebugMsg(scip, "propagating %d variable bound constraints\n", nmarkedconss);
 
    /* process constraints marked for propagation */
    for( i = 0; i < nmarkedconss && !cutoff; i++ )
@@ -4496,6 +4674,7 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpVarbound, consSepasolVarbound, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransVarbound) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxVarbound) );
 
    if( SCIPfindConshdlr(scip,"linear") != NULL )
    {
@@ -4548,7 +4727,7 @@ SCIP_RETCODE SCIPcreateConsVarbound(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */

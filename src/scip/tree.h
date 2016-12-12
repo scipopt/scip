@@ -118,6 +118,7 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the given node can be cut off */
+   SCIP_Bool             postponed,          /**< was the current focus node postponed? */
    SCIP_Bool             exitsolve           /**< are we in exitsolve stage, so we only need to loose the children */
    );
 
@@ -385,6 +386,7 @@ void SCIPnodeGetDualBoundchgs(
    SCIP_NODE*            node,               /**< node data */
    SCIP_VAR**            vars,               /**< array of variables on which the bound change is based on dual information */
    SCIP_Real*            bounds,             /**< array of bounds which are based on dual information */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which are based on dual information */
    int*                  nvars,              /**< number of variables on which the bound change is based on dual information
                                               *   if this is larger than the array size, arrays should be reallocated and method
                                               *   should be called again */

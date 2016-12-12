@@ -94,7 +94,9 @@ struct SCIP_CliqueTable
    int                   ncleanupfixedvars;  /**< number of fixed variables when the last cleanup was performed */
    int                   ncleanupaggrvars;   /**< number of aggregated variables when the last cleanup was performed */
    int                   ndirtycliques;      /**< number of cliques stored when the last cleanup was performed */
+   int                   ncliquecomponents;  /**< number of connected components in clique graph */
    SCIP_Bool             incleanup;          /**< is this clique table currently performing cleanup? */
+   SCIP_Bool             componentupdate;    /**< must the connected components of the clique graph be updated? */
 };
 
 #ifdef __cplusplus

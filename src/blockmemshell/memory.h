@@ -438,35 +438,35 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 
 /* block memory management mapped to standard memory management */
 
-#define BMScreateBlockMemory(csz,gbf)                        (void*)(0x01) /* dummy to not return a NULL pointer */
-#define BMSclearBlockMemory(mem)                             /**/
-#define BMSclearBlockMemoryNull(mem)                         /**/
-#define BMSdestroyBlockMemory(mem)                           /**/
-#define BMSdestroyBlockMemoryNull(mem)                       /**/
-#define BMSallocBlockMemory(mem,ptr)                         BMSallocMemory(ptr)
-#define BMSallocBlockMemoryArray(mem,ptr,num)                BMSallocMemoryArray(ptr,num)
-#define BMSallocClearBlockMemoryArray(mem,ptr,num)           BMSallocClearMemoryArray(ptr,num)
-#define BMSallocBlockMemorySize(mem,ptr,size)                BMSallocMemorySize(ptr,size)
-#define BMSreallocBlockMemoryArray(mem,ptr,oldnum,newnum)    BMSreallocMemoryArray(ptr,newnum)
-#define BMSreallocBlockMemorySize(mem,ptr,oldsize,newsize)   BMSreallocMemorySize(ptr,newsize)
-#define BMSduplicateBlockMemory(mem, ptr, source)            BMSduplicateMemory(ptr,source)
-#define BMSduplicateBlockMemoryArray(mem, ptr, source, num)  BMSduplicateMemoryArray(ptr,source,num)
-#define BMSfreeBlockMemory(mem,ptr)                          BMSfreeMemory(ptr)
-#define BMSfreeBlockMemoryNull(mem,ptr)                      BMSfreeMemoryNull(ptr)
-#define BMSfreeBlockMemoryArray(mem,ptr,num)                 BMSfreeMemoryArray(ptr)
-#define BMSfreeBlockMemoryArrayNull(mem,ptr,num)             BMSfreeMemoryArrayNull(ptr)
-#define BMSfreeBlockMemorySize(mem,ptr,size)                 BMSfreeMemory(ptr)
-#define BMSfreeBlockMemorySizeNull(mem,ptr,size)             BMSfreeMemoryNull(ptr)
-#define BMSgarbagecollectBlockMemory(mem)                    /**/
-#define BMSgetBlockMemoryTotal(mem)                          0LL
-#define BMSgetBlockMemoryUsed(mem)                           0LL
-#define BMSgetBlockMemoryLazy(mem)                           0LL
-#define BMSgetBlockMemoryUsedMax(mem)                        0LL
-#define BMSgetBlockMemoryLazyMax(mem)                        0LL
-#define BMSgetBlockMemoryTotalMax(mem)                       0LL
-#define BMSgetBlockPointerSize(mem,ptr)                      0
-#define BMSdisplayBlockMemory(mem)                           /**/
-#define BMSblockMemoryCheckEmpty(mem)                        0LL
+#define BMScreateBlockMemory(csz,gbf)                        (SCIP_UNUSED(csz), SCIP_UNUSED(gbf), (void*)(0x01)) /* dummy to not return a NULL pointer */
+#define BMSclearBlockMemory(mem)                             SCIP_UNUSED(mem)
+#define BMSclearBlockMemoryNull(mem)                         SCIP_UNUSED(mem)
+#define BMSdestroyBlockMemory(mem)                           SCIP_UNUSED(mem)
+#define BMSdestroyBlockMemoryNull(mem)                       SCIP_UNUSED(mem)
+#define BMSallocBlockMemory(mem,ptr)                         (SCIP_UNUSED(mem), BMSallocMemory(ptr))
+#define BMSallocBlockMemoryArray(mem,ptr,num)                (SCIP_UNUSED(mem), BMSallocMemoryArray(ptr,num))
+#define BMSallocClearBlockMemoryArray(mem,ptr,num)           (SCIP_UNUSED(mem), BMSallocClearMemoryArray(ptr,num))
+#define BMSallocBlockMemorySize(mem,ptr,size)                (SCIP_UNUSED(mem), BMSallocMemorySize(ptr,size))
+#define BMSreallocBlockMemoryArray(mem,ptr,oldnum,newnum)    (SCIP_UNUSED(mem), SCIP_UNUSED(oldnum), BMSreallocMemoryArray(ptr,newnum))
+#define BMSreallocBlockMemorySize(mem,ptr,oldsize,newsize)   (SCIP_UNUSED(mem), SCIP_UNUSED(oldsize), BMSreallocMemorySize(ptr,newsize))
+#define BMSduplicateBlockMemory(mem, ptr, source)            (SCIP_UNUSED(mem), BMSduplicateMemory(ptr,source))
+#define BMSduplicateBlockMemoryArray(mem, ptr, source, num)  (SCIP_UNUSED(mem), BMSduplicateMemoryArray(ptr,source,num))
+#define BMSfreeBlockMemory(mem,ptr)                          (SCIP_UNUSED(mem), BMSfreeMemory(ptr))
+#define BMSfreeBlockMemoryNull(mem,ptr)                      (SCIP_UNUSED(mem), BMSfreeMemoryNull(ptr))
+#define BMSfreeBlockMemoryArray(mem,ptr,num)                 (SCIP_UNUSED(mem), SCIP_UNUSED(num), BMSfreeMemoryArray(ptr))
+#define BMSfreeBlockMemoryArrayNull(mem,ptr,num)             (SCIP_UNUSED(mem), SCIP_UNUSED(num), BMSfreeMemoryArrayNull(ptr))
+#define BMSfreeBlockMemorySize(mem,ptr,size)                 (SCIP_UNUSED(mem), SCIP_UNUSED(size), BMSfreeMemory(ptr))
+#define BMSfreeBlockMemorySizeNull(mem,ptr,size)             (SCIP_UNUSED(mem), SCIP_UNUSED(size), BMSfreeMemoryNull(ptr))
+#define BMSgarbagecollectBlockMemory(mem)                    SCIP_UNUSED(mem)
+#define BMSgetBlockMemoryTotal(mem)                          (SCIP_UNUSED(mem), 0LL)
+#define BMSgetBlockMemoryUsed(mem)                           (SCIP_UNUSED(mem), 0LL)
+#define BMSgetBlockMemoryLazy(mem)                           (SCIP_UNUSED(mem), 0LL)
+#define BMSgetBlockMemoryUsedMax(mem)                        (SCIP_UNUSED(mem), 0LL)
+#define BMSgetBlockMemoryLazyMax(mem)                        (SCIP_UNUSED(mem), 0LL)
+#define BMSgetBlockMemoryTotalMax(mem)                       (SCIP_UNUSED(mem), 0LL)
+#define BMSgetBlockPointerSize(mem,ptr)                      (SCIP_UNUSED(mem), SCIP_UNUSED(ptr), 0)
+#define BMSdisplayBlockMemory(mem)                           SCIP_UNUSED(mem)
+#define BMSblockMemoryCheckEmpty(mem)                        (SCIP_UNUSED(mem), 0LL)
 
 #endif
 

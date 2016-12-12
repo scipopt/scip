@@ -141,7 +141,7 @@ do
         for SETNAME in ${SETTINGSLIST[@]}
         do
             # infer the names of all involved files from the arguments
-            . ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SETNAME $TSTNAME $CONTINUE $QUEUE  $p
+            . ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SETNAME $TSTNAME $CONTINUE $QUEUE  $p 0
 
             # skip instance if log file is present and we want to continue a previously launched test run
             if test "$SKIPINSTANCE" = "true"

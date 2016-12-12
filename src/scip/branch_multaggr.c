@@ -68,6 +68,7 @@ struct SCIP_BranchruleData
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
    int                   maxproprounds;      /**< maximum number of propagation rounds to be performed during strong branching
                                               *   before solving the LP (-1: no limit, -2: parameter settings) */
+   int                   skipsize;           /**< size of skipdown and skipup array */
    SCIP_Bool*            skipdown;           /**< should be branching on down child be skipped? */
    SCIP_Bool*            skipup;             /**< should be branching on up child be skipped? */
 #ifdef SCIP_STATISTIC
@@ -124,9 +125,10 @@ SCIP_RETCODE ensureArraySize(
    /* check whether the size of the array is big enough; reallocate memory if needed */
    if( branchruledata->nmultaggrbranch + 1 > branchruledata->size )
    {
-      branchruledata->size = 2 * branchruledata->size;
-      assert(branchruledata->size >= branchruledata->nmultaggrbranch + 1);
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &branchruledata->ratioggain, branchruledata->size) );
+      int newsize = SCIPcalcMemGrowSize(scip, branchruledata->nmultaggrbranch + 1);
+      assert(newsize >= branchruledata->nmultaggrbranch + 1);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &branchruledata->ratioggain, branchruledata->size, newsize) );
+      branchruledata->size = newsize;
    }
    return SCIP_OKAY;
 }
@@ -565,11 +567,11 @@ SCIP_DECL_BRANCHFREE(branchFreeMultAggr)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   SCIPstatistic(SCIPfreeMemoryArrayNull(scip , &branchruledata->ratioggain));
-   SCIPfreeMemoryArrayNull(scip, &branchruledata->skipdown);
-   SCIPfreeMemoryArrayNull(scip, &branchruledata->skipup);
+   SCIPstatistic(SCIPfreeBlockMemoryArrayNull(scip , &branchruledata->ratioggain, branchruledata->size));
+   SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->skipdown, branchruledata->skipsize);
+   SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->skipup, branchruledata->skipsize);
 
-   SCIPfreeMemory(scip, &branchruledata);
+   SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
@@ -604,7 +606,7 @@ SCIP_DECL_BRANCHINIT(branchInitMultAggr)
       branchruledata->nmultaggrbrcall = 0;
       branchruledata->totalmultaggrcands = 0;
       branchruledata->totallpcands = 0;
-      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->ratioggain, branchruledata->size) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->ratioggain, branchruledata->size) );
       BMSclearMemoryArray(branchruledata->ratioggain, branchruledata->size);
       SCIP_CALL( SCIPcreateClock(scip, &branchruledata->clckstrongbr) );
       SCIP_CALL( SCIPcreateClock(scip, &branchruledata->clckmultaggrbr) );
@@ -704,10 +706,11 @@ SCIP_DECL_BRANCHEXIT(branchExitMultAggr)
    )
    if( branchruledata->skipdown != NULL )
    {
-      SCIPfreeMemoryArray(scip, &branchruledata->skipup);
-      SCIPfreeMemoryArray(scip, &branchruledata->skipdown);
+      SCIPfreeBlockMemoryArray(scip, &branchruledata->skipup, branchruledata->skipsize);
+      SCIPfreeBlockMemoryArray(scip, &branchruledata->skipdown, branchruledata->skipsize);
       branchruledata->skipdown = NULL;
       branchruledata->skipup = NULL;
+      branchruledata->skipsize = 0;
    }
    return SCIP_OKAY;
 }
@@ -802,14 +805,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
 
    if( branchruledata->skipdown == NULL )
    {
-      int nvars = SCIPgetNVars(scip);
-
       assert(branchruledata->skipup == NULL);
 
-      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->skipdown, nvars) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->skipup, nvars) );
-      BMSclearMemoryArray(branchruledata->skipdown, nvars);
-      BMSclearMemoryArray(branchruledata->skipup, nvars);
+      branchruledata->skipsize = SCIPgetNVars(scip);
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->skipdown, branchruledata->skipsize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->skipup, branchruledata->skipsize) );
+      BMSclearMemoryArray(branchruledata->skipdown, branchruledata->skipsize);
+      BMSclearMemoryArray(branchruledata->skipup, branchruledata->skipsize);
    }
 
    /* start the clock to get the time spent inside the function */
@@ -1047,8 +1049,9 @@ SCIP_RETCODE SCIPincludeBranchruleMultAggr(
    SCIP_BRANCHRULE* branchrule;
 
    /* create multaggr branching rule data */
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
    branchruledata->lastcand = 0;
+   branchruledata->skipsize = 0;
    branchruledata->skipup = NULL;
    branchruledata->skipdown = NULL;
    SCIPstatistic(branchruledata->ratioggain = NULL);

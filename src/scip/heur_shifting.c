@@ -575,7 +575,7 @@ SCIP_DECL_HEURINIT(heurInitShifting) /*lint --e{715}*/
    assert(SCIPheurGetData(heur) == NULL);
 
    /* create heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
    heurdata->lastlp = -1;
 
@@ -604,7 +604,7 @@ SCIP_DECL_HEUREXIT(heurExitShifting) /*lint --e{715}*/
    /* free random number generator */
    SCIPrandomFree(&heurdata->randnumgen);
 
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;

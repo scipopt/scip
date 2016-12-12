@@ -12,29 +12,27 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   ReaderMOP.cpp
- * @brief  mop reader
+/**
+ * @brief .mop file format reader
  * @author Sebastian Schenker, Timo Strunk
  *
- * The mop-reader adapts the mps-reader of SCIP by the functionality to read multiple objectives.
- *
+ * Adaption of SCIP MPS reader towards MOP format with multiple objectives.
  * The input file has to follow some simple conventions
- * - It has to contain a problem in 
+ * - It has to contain a problem in
  * <a href="http://en.wikipedia.org/wiki/MPS_%28format%29">MPS</a> format
  * - The file extension must be <code>.mop</code>
  * - Every row marked <code>N</code> is treated as an objective
- *
  */
 
 #include "ReaderMOP.h"
-#include "objscip/objscip.h"
-#include "ProbDataObjectives.h"
 
 #include <iostream>
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
 
+#include "objscip/objscip.h"
+#include "prob_data_objectives.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
@@ -122,7 +120,7 @@ SCIP_RETCODE mpsinputCreate(
    assert(mpsi != NULL);
    assert(fp != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, mpsi) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, mpsi) );
 
    (*mpsi)->section     = MPS_NAME;
    (*mpsi)->fp          = fp;
@@ -151,7 +149,7 @@ void mpsinputFree(
    MPSINPUT**            mpsi                /**< mps input structure */
    )
 {
-   SCIPfreeMemory(scip, mpsi);
+   SCIPfreeBlockMemory(scip, mpsi);
 }
 
 /** returns the current section */
@@ -2014,7 +2012,7 @@ SCIP_RETCODE readRowsMop(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-  ProbDataObjectives* probdata;
+   ProbDataObjectives* probdata;
    SCIP_Bool dynamicrows;
    SCIP_Bool dynamicconss;
 
@@ -2043,9 +2041,8 @@ SCIP_RETCODE readRowsMop(
 
       if( *mpsinputField1(mpsi) == 'N' )
       {
-	probdata = dynamic_cast<ProbDataObjectives *>(SCIPgetObjProbData(scip));
-	bool added = probdata->addObjName(mpsinputField2(mpsi));
-	assert(added);
+         probdata = dynamic_cast<ProbDataObjectives *>(SCIPgetObjProbData(scip));
+         probdata->addObjName(mpsinputField2(mpsi));
       }
       else
       {
@@ -2172,9 +2169,10 @@ SCIP* scip /**< SCIP data structure */
       cons = SCIPfindCons(scip, mpsinputField2(mpsi));
       if( cons == NULL ) 
       {
-	 /* row is objective */
-	bool added = probdata->addObjValue(var, mpsinputField2(mpsi), val);
-	assert(added);
+         /* row is objective */
+         probdata->addObjCoeff(var, mpsinputField2(mpsi), val);
+         //std::cout << "obj : " << mpsinputField2(mpsi) << " val : " << val << "\n";
+
       }
       else if( !SCIPisZero(scip, val) )
       {
@@ -2191,8 +2189,8 @@ SCIP* scip /**< SCIP data structure */
          if( cons == NULL )
          {
             /* row is objective */
-	   bool added = probdata->addObjValue(var, mpsinputField4(mpsi), val);
-	   assert(added);
+            probdata->addObjCoeff(var, mpsinputField4(mpsi), val);
+            //std::cout << "obj : " << mpsinputField4(mpsi) << " val : " << val << "\n";
          }
          else if( !SCIPisZero(scip, val) )
          {
@@ -2308,7 +2306,7 @@ SCIP_RETCODE readMOP(
 
 /** destructor of file reader to free user data (called when SCIP is exiting) */
 SCIP_DECL_READERFREE(ReaderMOP::scip_free) {
-   return SCIP_OKAY;
+        return SCIP_OKAY;
 }
 
 SCIP_DECL_READERREAD(ReaderMOP::scip_read) {

@@ -155,21 +155,9 @@ SCIP_Bool SCIPpropIsDelayed(
    SCIP_PROP*            prop                /**< propagator */
    );
 
-/** should propagator be delayed during presolving, if other propagators found reductions? */
-EXTERN
-SCIP_Bool SCIPpropIsPresolDelayed(
-   SCIP_PROP*            prop                /**< propagator */
-   );
-
 /** was propagator delayed at the last call? */
 EXTERN
 SCIP_Bool SCIPpropWasDelayed(
-   SCIP_PROP*            prop                /**< propagator */
-   );
-
-/** was presolving of propagator delayed at the last call? */
-EXTERN
-SCIP_Bool SCIPpropWasPresolDelayed(
    SCIP_PROP*            prop                /**< propagator */
    );
 

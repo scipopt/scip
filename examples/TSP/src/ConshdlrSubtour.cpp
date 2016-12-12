@@ -225,7 +225,7 @@ SCIP_DECL_CONSDELETE(ConshdlrSubtour::scip_delete)
    assert(consdata != NULL);
 
    release_graph(&(*consdata)->graph);
-   SCIPfreeMemory(scip, consdata);
+   SCIPfreeBlockMemory(scip, consdata);
 
    return SCIP_OKAY;
 }/*lint !e715*/
@@ -241,7 +241,7 @@ SCIP_DECL_CONSTRANS(ConshdlrSubtour::scip_trans)
    assert( sourcedata != NULL );
    targetdata = NULL;
 
-   SCIP_CALL( SCIPallocMemory(scip, &targetdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &targetdata) );
    targetdata->graph = sourcedata->graph;
    capture_graph(targetdata->graph);
 
@@ -622,7 +622,7 @@ SCIP_DECL_CONSCOPY(ConshdlrSubtour::scip_copy)
 
    /* create constraint data */
    consdata = NULL;
-   SCIP_CALL( SCIPallocMemory( scip, &consdata) );
+   SCIP_CALL( SCIPallocBlockMemory( scip, &consdata) );
    ProbDataTSP * probdatatsp;
    probdatatsp = dynamic_cast<ProbDataTSP *>(SCIPgetObjProbData(scip));
    assert( probdatatsp != NULL );
@@ -668,7 +668,7 @@ SCIP_RETCODE tsp::SCIPcreateConsSubtour(
    }
 
    /* create constraint data */
-   SCIP_CALL( SCIPallocMemory( scip, &consdata) ); /*lint !e530*/
+   SCIP_CALL( SCIPallocBlockMemory( scip, &consdata) ); /*lint !e530*/
    consdata->graph = graph;
    capture_graph( consdata->graph );
 

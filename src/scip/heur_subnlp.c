@@ -2031,7 +2031,7 @@ SCIP_DECL_HEURFREE(heurFreeSubNlp)
    assert(heurdata->var_scip2subscip == NULL);
    assert(heurdata->startcand == NULL);
 
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
 
    return SCIP_OKAY;
 }
@@ -2272,7 +2272,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP_HEUR* heur;
 
    /* create Nlp primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    BMSclearMemory(heurdata);
 
    /* include variable event handler */
