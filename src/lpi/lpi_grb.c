@@ -4939,6 +4939,8 @@ SCIP_RETCODE SCIPlpiSetNorms(
    const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
 {  /*lint --e{715}*/
+   int error;
+
    assert(blkmem != NULL);
    assert(lpi != NULL);
 
@@ -4947,8 +4949,17 @@ SCIP_RETCODE SCIPlpiSetNorms(
       return SCIP_OKAY;
 
    /* store dual norms in Gurobi */
-   CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_VDUALNORM, 0, lpinorms->ncols, lpinorms->colnorm) );
-   CHECK_ZERO( lpi->messagehdlr, GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_CDUALNORM, 0, lpinorms->nrows, lpinorms->rownorm) );
+   error = GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_VDUALNORM, 0, lpinorms->ncols, lpinorms->colnorm);
+   if( error )
+   {
+      SCIPdebugMessage("Warning: setting dual variable norms failed with Gurobi error %d\n", error);
+   }
+
+   error = GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_CDUALNORM, 0, lpinorms->nrows, lpinorms->rownorm);
+   if( error )
+   {
+      SCIPdebugMessage("Warning: setting dual constraint norms failed with Gurobi error %d\n", error);
+   }
 
    return SCIP_OKAY;
 }
