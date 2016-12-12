@@ -2508,7 +2508,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
       }
       else
       {
-         SCIPsetDebugMsg(set, "same clique %p already found in cliquetable -> discard new one\n", (void*) sameclique);
+         SCIPsetDebugMsg(set, "same clique %p (id: %d) already found in cliquetable -> discard new one\n", (void*) sameclique, sameclique->id);
 
          /* update equation status of clique */
          /* @note if we might change the order of the clique, e.g. put the equations up front, we should rather remove
@@ -3017,7 +3017,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 /** helper function that returns the graph node index for a variable during connected component detection */
 static
 int getNodeIndexBinvar(
-   SCIP_VAR*             binvar              /**< binary (or implicit binary) variable */
+   SCIP_VAR*             binvar              /**< binary (or binary integer or implicit binary) variable */
    )
 {
    SCIP_VAR* activevar;
@@ -3093,6 +3093,7 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    /* if there are no binary variables, return */
    if( nbinvarstotal == 0 )
    {
+      SCIPsetDebugMsg(set, "0 binary variables in total --> 0 connected components in the clique graph");
       cliquetable->ncliquecomponents = 0;
       return SCIP_OKAY;
    }
@@ -3100,6 +3101,7 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    /* no cliques are present */
    if( cliquetable->ncliques == 0 )
    {
+      SCIPsetDebugMsg(set, "0 cliques --> Clique graph has %d isolated nodes", nbinvarstotal);
       cliquetable->ncliquecomponents = nbinvarstotal;
       return SCIP_OKAY;
    }
@@ -3118,9 +3120,9 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    for( v = nbinvars; v < nbinvars + nintvars + nimplvars; ++v )
    {
       if( SCIPvarIsBinary(vars[v]) )
-         sizes[v - nintvars] = 2 * (SCIPvarGetNCliques(vars[v], TRUE) + SCIPvarGetNCliques(vars[v], FALSE));
+         sizes[v] = 2 * (SCIPvarGetNCliques(vars[v], TRUE) + SCIPvarGetNCliques(vars[v], FALSE));
       else
-         sizes[v - nintvars] = 0;
+         sizes[v] = 0;
    }
 
 
@@ -3175,6 +3177,8 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    cliquetable->ncliquecomponents -= (nintvars + nimplvars - nimplbinvars);
    assert(cliquetable->ncliquecomponents >= 0);
    assert(cliquetable->ncliquecomponents <= nbinvarstotal);
+
+   SCIPsetDebugMsg(set, "connected components detection: %d comps (%d clqs, %d vars)", cliquetable->ncliquecomponents, cliquetable->ncliques, nbinvarstotal);
 
    /* save variable component in variable data structure */
    for( v = 0; v < ndiscvars; ++v )
