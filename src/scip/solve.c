@@ -4520,10 +4520,6 @@ SCIP_RETCODE solveNode(
    {
       SCIPsetDebugMsg(set, "node is cut off\n");
 
-      if( SCIPtreeHasFocusNodeLP(tree) && lp->flushed && lp->solved && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
-      {
-
-      }
       SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));
       *infeasible = TRUE;
       SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, focusnode) ); /*lint !e506 !e774*/

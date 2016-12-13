@@ -102,6 +102,7 @@ struct SCIP_EventhdlrData
    char*                 improvesetname;     /**< settings file parameter for the improvement phase -- precedence over emphasis settings  */
    char*                 proofsetname;       /**< settings file parameter for the proof phase -- precedence over emphasis settings */
    SCIP_Real             optimalvalue;       /**< value of optimal solution of the problem */
+   SCIP_Longint          nnodesleft;         /**< store the number of open nodes that are considered internally to update data */
    SOLVINGPHASE          solvingphase;       /**< the current solving phase */
    char                  transitionmethod;   /**< transition method from improvement phase -> proof phase?
                                                *  (e)stimate based, (l)ogarithmic regression based, (o)ptimal value based (cheat!),
@@ -189,6 +190,7 @@ SCIP_RETCODE addNodesInformation(
 
    assert(nnodes == 0 || nodes != NULL);
    assert(scip != NULL);
+   assert(eventhdlrdata->depthinfos != NULL);
 
    /* store every relevant node in the data structure for its depth */
    for( n = 0; n < nnodes; ++n )
@@ -226,6 +228,9 @@ SCIP_RETCODE addNodesInformation(
       if( SCIPisLT(scip, estim, SCIPgetUpperbound(scip) ) )
          ++eventhdlrdata->nnodesbelowincumbent;
    }
+
+   /* update the number of open search nodes */
+   eventhdlrdata->nnodesleft += nnodes;
 
    return SCIP_OKAY;
 }
@@ -325,6 +330,7 @@ SCIP_RETCODE recomputeNodeInformation(
 
    eventhdlrdata->nrank1nodes = 0;
    eventhdlrdata->nnodesbelowincumbent = 0;
+   eventhdlrdata->nnodesleft = 0;
 
    assert(eventhdlrdata != NULL);
 
@@ -428,6 +434,9 @@ void releaseNodeFromDepthInfo(
 
    /* increase the number of solved nodes at this depth */
    ++(depthinfo->nsolvednodes);
+
+   /* decrease the counter for the number of open nodes */
+   --eventhdlrdata->nnodesleft;
 }
 
 /** ensures sufficient size for depthInfo array */
@@ -494,7 +503,8 @@ SCIP_RETCODE releaseNodeInformation(
 
 
    /* in case that selected nodes were cut off in between two calls to this method, build data structures from scratch again */
-   if( SCIPgetNDelayedCutoffs(scip) > eventhdlrdata->lastndelayedcutoffs || eventhdlrdata->newbestsol )
+   if( SCIPgetNDelayedCutoffs(scip) > eventhdlrdata->lastndelayedcutoffs || eventhdlrdata->newbestsol
+         || eventhdlrdata->nnodesleft - 1 != SCIPgetNNodesLeft(scip) )
    {
       SCIP_CALL( recomputeNodeInformation(scip, eventhdlrdata) );
 
@@ -505,6 +515,8 @@ SCIP_RETCODE releaseNodeInformation(
       /* remove the node from the data structures */
       releaseNodeFromDepthInfo(scip, eventhdlrdata, node);
    }
+
+   assert(eventhdlrdata->nnodesleft == SCIPgetNNodesLeft(scip));
 
    return SCIP_OKAY;
 }
@@ -1105,6 +1117,7 @@ SCIP_RETCODE updateDataStructures(
       /* release the focus node from the open node data structures */
       case SCIP_EVENTTYPE_NODEFOCUSED:
          assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+
          SCIP_CALL( releaseNodeInformation(scip, eventhdlrdata, SCIPgetCurrentNode(scip)));
          assert(eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
 
@@ -1114,8 +1127,8 @@ SCIP_RETCODE updateDataStructures(
       case SCIP_EVENTTYPE_NODEBRANCHED:
          assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
 
-         /* in the case of new best solution, we recompute node information from scratch */
-         if( eventhdlrdata->newbestsol )
+         /* if we lost track of exact number of open search nodes, we recompute node information from scratch */
+         if( eventhdlrdata->newbestsol || eventhdlrdata->nnodesleft + SCIPgetNChildren(scip) != SCIPgetNNodesLeft(scip) )
          {
             SCIP_CALL( recomputeNodeInformation(scip, eventhdlrdata) );
             eventhdlrdata->newbestsol = FALSE;
@@ -1127,6 +1140,8 @@ SCIP_RETCODE updateDataStructures(
             SCIP_CALL( SCIPgetChildren(scip, &children, &nchildren) );
             SCIP_CALL( addNodesInformation(scip, eventhdlrdata, children, nchildren) );
          }
+
+         assert(eventhdlrdata->nnodesleft == SCIPgetNNodesLeft(scip));
          break;
 
       default:
@@ -1137,11 +1152,8 @@ SCIP_RETCODE updateDataStructures(
     * or end of a node solution process because we delay the recomputation of the node information)
     */
    assert(SCIPgetStage(scip) != SCIP_STAGE_SOLVING ||
-          (eventtype & SCIP_EVENTTYPE_BESTSOLFOUND) ||
-          eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
-   assert(SCIPgetStage(scip) != SCIP_STAGE_SOLVING ||
-          (eventtype & SCIP_EVENTTYPE_BESTSOLFOUND) ||
-          eventhdlrdata->nnodesbelowincumbent == checkLeavesBelowIncumbent(scip));
+          (eventtype == SCIP_EVENTTYPE_BESTSOLFOUND) ||
+          (eventhdlrdata->nnodesleft == SCIPgetNNodesLeft(scip) && eventhdlrdata->nnodesbelowincumbent == checkLeavesBelowIncumbent(scip)));
 
    return SCIP_OKAY;
 }
@@ -1159,24 +1171,28 @@ void testCriteria(
    if( ! eventhdlrdata->logreached && checkLogCriterion(scip, eventhdlrdata) )
    {
       eventhdlrdata->logreached = TRUE;
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Log criterion reached after %lld nodes, %.2f sec.\n", SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Log criterion reached after %lld nodes, %.2f sec.\n",
+         SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
    }
    if( ! eventhdlrdata->rank1reached && checkRankOneTransition(scip, eventhdlrdata) )
    {
       eventhdlrdata->rank1reached = TRUE;
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Rank 1 criterion reached after %lld nodes, %.2f sec.\n", SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Rank 1 criterion reached after %lld nodes, %.2f sec.\n",
+         SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
    }
 
    if( ! eventhdlrdata->estimatereached && checkEstimateCriterion(scip, eventhdlrdata) )
    {
       eventhdlrdata->estimatereached = TRUE;
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Estimate criterion reached after %lld nodes, %.2f sec.\n", SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Estimate criterion reached after %lld nodes, %.2f sec.\n",
+         SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
    }
 
    if( ! eventhdlrdata->optimalreached && checkOptimalSolution(scip, eventhdlrdata) )
    {
       eventhdlrdata->optimalreached = TRUE;
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Optimum reached after %lld nodes, %.2f sec.\n", SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Optimum reached after %lld nodes, %.2f sec.\n",
+         SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
    }
 }
 
@@ -1236,6 +1252,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolSolvingphase)
    eventhdlrdata->depthinfos = NULL;
    eventhdlrdata->maxdepth = 0;
    eventhdlrdata->nnodesbelowincumbent = 0;
+   eventhdlrdata->nnodesleft = 0;
    eventhdlrdata->nrank1nodes = 0;
    eventhdlrdata->lastndelayedcutoffs = SCIPgetNDelayedCutoffs(scip);
    eventhdlrdata->newbestsol = FALSE;
