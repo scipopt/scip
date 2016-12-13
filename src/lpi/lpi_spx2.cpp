@@ -645,7 +645,7 @@ public:
 
       try
       {
-         setBasis(_rowStat.get_const_ptr(), _colStat.get_const_ptr());
+         setBasis(_rowStat.get_ptr(), _colStat.get_ptr());
       }
 #ifndef NDEBUG
       catch(const SPxException& x)
@@ -3471,7 +3471,7 @@ SCIP_RETCODE SCIPlpiSetBase(
       }
    }
 
-   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(_rowstat.get_const_ptr(), _colstat.get_const_ptr()) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(_rowstat.get_ptr(), _colstat.get_ptr()) );
    lpi->spx->freePreStrongbranchingBasis();
 
    return SCIP_OKAY;
