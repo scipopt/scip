@@ -11513,8 +11513,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
          SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }
 
-      assert(consdata->sepaquadvars     != NULL || consdata->nquadvars == 0);
-      assert(consdata->sepabilinvar2pos != NULL || consdata->nquadvars == 0);
+      assert(!SCIPconsIsEnabled(conss[c]) || consdata->sepaquadvars     != NULL || consdata->nquadvars == 0);
+      assert(!SCIPconsIsEnabled(conss[c]) || consdata->sepabilinvar2pos != NULL || consdata->nquadvars == 0);
       SCIPfreeBlockMemoryArrayNull(scip, &consdata->sepaquadvars,     consdata->nquadvars);
       SCIPfreeBlockMemoryArrayNull(scip, &consdata->sepabilinvar2pos, consdata->nbilinterms);
 

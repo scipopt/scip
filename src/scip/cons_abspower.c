@@ -356,7 +356,8 @@ SCIP_DECL_HASHKEYVAL(presolveFindDuplicatesKeyVal)
    consdata = SCIPconsGetData((SCIP_CONS*)key);
    assert(consdata != NULL);
 
-   return ((unsigned int)(size_t)consdata->x << 16) + (unsigned int)(consdata->exponent*0x80);
+   return SCIPhashTwo(SCIPvarGetIndex(consdata->x),
+                      SCIPpositiveRealHashCode(consdata->exponent, 7));
 }  /*lint !e715*/
 
 /** checks if two constraints have the same z variable and the same exponent */
@@ -389,7 +390,8 @@ SCIP_DECL_HASHKEYVAL(presolveFindDuplicatesKeyVal2)
    consdata = SCIPconsGetData((SCIP_CONS*)key);
    assert(consdata != NULL);
 
-   return ((unsigned int)(size_t)consdata->z << 16) + (unsigned int)(consdata->exponent*0x80);
+   return SCIPhashTwo(SCIPvarGetIndex(consdata->z),
+                      SCIPpositiveRealHashCode(consdata->exponent, 7));
 }  /*lint !e715*/
 
 /** upgrades a signpower constraint to a linear constraint if a second signpower constraint with same nonlinear term is available */
@@ -6367,6 +6369,10 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
                   rhs = (consdata->rhs - SIGN(consdata->xoffset) * consdata->power(ABS(consdata->xoffset), consdata->exponent)) / xcoef;
             }
             zcoef = consdata->zcoef / xcoef;
+
+            /* avoid numerical troubles if xcoef is too large */
+            if( SCIPisZero(scip, zcoef) )
+               zcoef = 0.0;
          }
          else
          {
@@ -6375,7 +6381,41 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
             zcoef = consdata->zcoef;
          }
 
-         if( SCIPvarGetType(consdata->z) < SCIP_VARTYPE_CONTINUOUS )
+         /* the upgraded constraint reduces to lhs <= x <= rhs, try to fix x instead of creating a constraint */
+         if( SCIPisZero(scip, zcoef) && SCIPisEQ(scip, lhs, rhs) )
+         {
+            /* both sides are integral */
+            if( SCIPisIntegral(scip, lhs) )
+            {
+               SCIP_Bool fixed;
+
+               assert(SCIPisIntegral(scip, rhs));
+
+               SCIP_CALL( SCIPfixVar(scip, consdata->x, lhs, &infeas, &fixed) );
+
+               /* fixing x to lhs is infeasible */
+               if( infeas || !fixed )
+               {
+                  SCIPdebugMsg(scip, "propagation on constraint <%s> says problem is infeasible in presolve\n",
+                        SCIPconsGetName(conss[c]));  /*lint !e613*/
+                  *result = SCIP_CUTOFF;
+                  return SCIP_OKAY;
+               }
+
+               ++(*nfixedvars);
+               break;
+            }
+            else
+            {
+               /* an integer variables cannot be fixed to a fractional value */
+               SCIPdebugMsg(scip, "propagation on constraint <%s> says problem is infeasible in presolve\n",
+                     SCIPconsGetName(conss[c]));  /*lint !e613*/
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
+         }
+
+         if( SCIPvarGetType(consdata->z) < SCIP_VARTYPE_CONTINUOUS && !SCIPisZero(scip, zcoef) )
          {
             SCIP_CALL( SCIPcreateConsVarbound(scip, &lincons, SCIPconsGetName(conss[c]),
                   consdata->x, consdata->z, zcoef, lhs, rhs,
