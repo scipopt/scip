@@ -155,15 +155,15 @@ SCIP_RETCODE sampleRandomPoints(
          else if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
             val = SCIPrandomGetReal(randnumgen, lb, ub);
          else if( !SCIPisInfinity(scip, -lb) )
-            val = SCIPrandomGetReal(randnumgen, lb, lb + maxboundsize);
+            val = lb + SCIPrandomGetReal(randnumgen, 0.0, maxboundsize);
          else if( !SCIPisInfinity(scip, ub) )
-            val = SCIPrandomGetReal(randnumgen, ub - maxboundsize, ub);
+            val = ub - SCIPrandomGetReal(randnumgen, 0.0, maxboundsize);
          else
          {
             assert(SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub));
             val = SCIPrandomGetReal(randnumgen, -0.5*maxboundsize, 0.5*maxboundsize);
          }
-         assert(SCIPisGE(scip, val ,lb) && SCIPisLE(scip, val, ub));
+         assert(SCIPisGE(scip, val, lb) && SCIPisLE(scip, val, ub));
 
          /* set solution value; round the sampled point for integer variables */
          if( SCIPvarGetType(vars[i]) < SCIP_VARTYPE_CONTINUOUS )
