@@ -56,6 +56,8 @@
 -emacro(681,SCIPdebugMsg)         // Loop is not entered
 -emacro(506,SCIPdebugMsgPrint)    // Constant value Boolean
 -emacro(681,SCIPdebugMsgPrint)    // Loop is not entered
+-emacro(506,SCIPsetDebugMsg)    // Constant value Boolean
+-emacro(681,SCIPsetDebugMsg)    // Loop is not entered
 -emacro(506,SCIPstatisticMessage) // Constant value Boolean
 -emacro(681,SCIPstatisticMessage) // Loop is not entered
 -emacro(506,SCIPstatisticPrintf)  // Constant value Boolean
@@ -171,6 +173,12 @@
 -ecall(571,SCIPhashmapGetImage)
 -ecall(571,SCIPhashmapSetImage)
 -ecall(571,SCIPhashmapExists)
+-emacro(571,SCIPhashTwo)
+-emacro(571,SCIPcombineTwoInt)
+-emacro(571,SCIPcombineThreeInt)
+-emacro(571,SCIPcombineFourInt)
+-emacro(571,SCIPrealHashCode)
+-emacro(571,SCIPpositiveRealHashCode)
 
 // ------------------------------------------------------------------
 // turn off some warnings about C++ classes:
