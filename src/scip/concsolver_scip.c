@@ -309,7 +309,7 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
    SCIP_ALLOC( BMSallocMemory(&data) );
    SCIPconcsolverSetData(concsolver, data);
 
-   initConcsolver(scip, concsolver);
+   SCIP_CALL( initConcsolver(scip, concsolver) );
 
    /* check if emphasis setting should be loaded */
    if( typedata->loademphasis )
@@ -376,7 +376,7 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
    SCIP_CALL( SCIPsetIntParam(data->solverscip, "display/verblevel", 0) );
 
    /* use wall clock time in subscips */
-   SCIP_CALL( SCIPsetIntParam(data->solverscip, "timing/clocktype", SCIP_CLOCKTYPE_WALL) );
+   SCIP_CALL( SCIPsetIntParam(data->solverscip, "timing/clocktype", (int)SCIP_CLOCKTYPE_WALL) );
 
    /* only catch ctrlc in one solver */
    if( SCIPconcsolverGetIdx(concsolver) != 0 )
@@ -592,7 +592,8 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
     * the solution array is sorted, we will cosider the best
     * solutions
     */
-   nsols = MIN(SCIPgetNSols(data->solverscip), maxcandsols);
+   nsols = SCIPgetNSols(data->solverscip);
+   nsols = MIN(nsols, maxcandsols);
    sols = SCIPgetSols(data->solverscip);
 
    for( i = 0; i < nsols; ++i )
@@ -635,7 +636,7 @@ SCIP_DECL_CONCSOLVERSYNCWRITE(concsolverScipSyncWrite)
 /** reads the solutions and bounds from the given synchronization data */
 static
 SCIP_DECL_CONCSOLVERSYNCREAD(concsolverScipSyncRead)
-{
+{  /*lint --e{715}*/
    int                    i;
    int                    nsols;
    SCIP_Real**            solvals;

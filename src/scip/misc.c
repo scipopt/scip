@@ -47,7 +47,6 @@
  */
 
 #define SQRTOFTWO                  1.4142136 /**< the square root of 2 with sufficient precision */
-#define SQUARED(x) ((x) * (x))
 
 /**< contains all critical values for a one-sided two sample t-test up to 15 degrees of freedom
  *   a critical value represents a threshold for rejecting the null-hypothesis in hypothesis testing at
@@ -2443,11 +2442,11 @@ SCIP_RETCODE SCIPhashtableRemove(
 
       /* nothing to do since there is no chain that needs to be moved */
       if( hashtable->hashes[nextpos] == 0 )
-         return SCIP_OKAY;
+         break;
 
       /* check if the element is the start of a new chain and return if that is the case */
       if( (hashtable->hashes[nextpos]>>(hashtable->shift)) == nextpos )
-         return SCIP_OKAY;
+         break;
 
       /* element should be moved to the left and next element needs to be checked */
       hashtable->slots[pos] = hashtable->slots[nextpos];
@@ -9642,7 +9641,6 @@ void SCIPselectWeightedMedian(
    int left;
    int right;
    int j;
-   int recursiondepth;
    SCIP_Real residualcapacity;
 
    assert(keys != NULL);
@@ -9674,7 +9672,6 @@ void SCIPselectWeightedMedian(
    left = 0;
    right = nkeys - 1;
    residualcapacity = capacity;
-   recursiondepth = 0;
 
    while( right - left + 1 > MINREMAININGKEYSSIZE )
    {
@@ -9691,14 +9688,12 @@ void SCIPselectWeightedMedian(
       SCIP_Real elements[NELEMSMEDIANSEL];
       int elementidxs[NELEMSMEDIANSEL];
 
-      ++recursiondepth;
-
       /* todo maybe select pivot randomized */
       for( i = 0; i < NELEMSMEDIANSEL; ++i )
       {
-         int index = left + (right - left) * i / (NELEMSMEDIANSEL - 1);
-         elements[i] = keys[indices[index]];
-         elementidxs[i] = index;
+         int idx = left + (right - left) * i / (NELEMSMEDIANSEL - 1);
+         elements[i] = keys[indices[idx]];
+         elementidxs[i] = idx;
       }
 
       SCIPsortRealInt(elements, elementidxs, NELEMSMEDIANSEL);
