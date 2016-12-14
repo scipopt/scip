@@ -3490,7 +3490,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
       SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
      ++(conshdlrdata->auxvarid);
 
-      /* mark the auxiliary variable to be invalid after a restart happend; this prevents SCIP do create linear
+      /* mark the auxiliary variable to be invalid after a restart happened; this prevents SCIP to create linear
        * constraints from cuts that contain at least one auxiliary variable
        */
      SCIPvarSetCutInvalidAfterRestart(expr->auxvar, TRUE);

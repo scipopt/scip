@@ -1518,7 +1518,7 @@ SCIP_RETCODE copyCuts(
          for( i = 0; i < ncols && takecut; ++i )
          {
             vars[i] = SCIPcolGetVar(cols[i]);
-            takecut = takecut && !SCIPvarIsCutInvalidAfterRestart(vars[i]);
+            takecut = !SCIPvarIsCutInvalidAfterRestart(vars[i]);
          }
 
          /* discard cut if it contains a variable which is invalid after a restart */
