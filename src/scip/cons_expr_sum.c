@@ -980,7 +980,6 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaSum)
 
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
-   assert(exprdata->row != NULL);
 
    *result = SCIP_DIDNOTFIND;
 
