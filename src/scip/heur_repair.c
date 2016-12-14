@@ -270,13 +270,16 @@ SCIP_RETCODE tryFixVar(
    assert(NULL != inftycounter);
    assert(NULL != heurdata);
 
+   infeasible = TRUE;
+   fixed = FALSE;
+
    if( SCIPisFeasLT(scip, SCIPgetSolVal(scip, sol, var), SCIPvarGetLbGlobal(var)) )
    {
-      return FALSE;
+      return SCIP_OKAY;
    }
    if( SCIPisFeasGT(scip, SCIPgetSolVal(scip, sol, var), SCIPvarGetUbGlobal(var)) )
    {
-      return FALSE;
+      return SCIP_OKAY;
    }
 
    col = SCIPvarGetCol(var);
@@ -345,7 +348,7 @@ SCIP_RETCODE tryFixVar(
                inftycounter[rowindex]++;
             }
          }
-         return FALSE;
+         return SCIP_OKAY;
       }
    }
 
@@ -356,7 +359,7 @@ SCIP_RETCODE tryFixVar(
    SCIPdebugMsg(scip,"Variable %s is fixed to %g\n",SCIPvarGetName(var),
          SCIPgetSolVal(scip, sol, var));
 
-   return TRUE;
+   return SCIP_OKAY;
 }
 
 /** checks if all integral variables in the given solution are integral. */
@@ -1282,13 +1285,18 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    }
    *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( SCIPtrySolFree(scip, &(heurdata->infsol), FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
+   SCIP_CALL( SCIPtrySol(scip, heurdata->infsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
 
    /* the solution is not feasible for the original problem; we will try to repair it */
    if( !success )
    {
+      assert(NULL != heurdata->infsol);
       assert(heurdata->usevarfix || heurdata->useslackvars);
       SCIP_CALL( applyRepair(scip, heur, result, nnodes) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPfreeSol(scip, &(heurdata->infsol)) );
    }
 
    return SCIP_OKAY;

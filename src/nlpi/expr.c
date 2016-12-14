@@ -11069,12 +11069,31 @@ void exprgraphNodePropagateBounds(
             }
 
             if( abc_flag == 'a' )
+            {
                SCIPintervalAdd(infinity, &a, a, monomialcoef);
+               /* if monomialcoef is such that a exceeds value for infinity, then stop */
+               if( a.inf >= infinity || a.sup <= -infinity )
+                  break;
+            }
             else if( abc_flag == 'b' )
+            {
                SCIPintervalAdd(infinity, &b, b, monomialcoef);
+               /* if monomialcoef is such that b exceeds value for infinity, then stop */
+               if( b.inf >= infinity || b.sup <= -infinity )
+                  break;
+            }
             else
+            {
                SCIPintervalSub(infinity, &c, c, monomialcoef);
+               /* if monomialcoef is such that c exceeds value for infinity, then stop */
+               if( c.inf >= infinity || c.sup <= -infinity )
+                  break;
+            }
          }
+
+         /* if we run out of numbers (within -infinity,infinity) above, then stop */
+         if( j < nmonomials )
+            continue;
 
          /* now have equation a*child^(2n) + b*child^n = c
           * solve a*y^2 + b*y = c, then child^n = y
