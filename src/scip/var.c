@@ -1973,6 +1973,7 @@ SCIP_RETCODE varCreate(
    (*var)->deletable = FALSE;
    (*var)->delglobalstructs = FALSE;
    (*var)->clqcomponentidx = -1;
+   (*var)->invalidrestart = FALSE;
 
    stat->nvaridx++;
 
