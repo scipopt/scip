@@ -4160,11 +4160,25 @@ SCIP_RETCODE addLinearization(
    /* add linearization to SCIP row */
    if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );  /*lint !e644*/
+      if( SCIProwGetLhs(row) - constant < 0.0 && SCIProwGetLhs(row) - constant > -SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, -1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );  /*lint !e644*/
+      }
    }
    if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      if( SCIProwGetRhs(row) - constant > 0.0 && SCIProwGetRhs(row) - constant < SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, 1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      }
    }
    SCIP_CALL( SCIPaddVarsToRow(scip, row, nvars, SCIPexprtreeGetVars(exprtree), grad) );
 
@@ -4264,11 +4278,25 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    /* add secant to SCIP row */
    if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );
+      if( SCIProwGetLhs(row) - constant < 0.0 && SCIProwGetLhs(row) - constant > -SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, -1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );
+      }
    }
    if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      if( SCIProwGetRhs(row) - constant > 0.0 && SCIProwGetRhs(row) - constant < SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, 1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      }
    }
    if( slope != 0.0 )
    {
@@ -4616,11 +4644,25 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
    /* add hyperplane coefs to SCIP row */
    if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );
+      if( SCIProwGetLhs(row) - constant < 0.0 && SCIProwGetLhs(row) - constant > -SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, -1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );
+      }
    }
    if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      if( SCIProwGetRhs(row) - constant > 0.0 && SCIProwGetRhs(row) - constant < SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, 1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      }
    }
    SCIP_CALL( SCIPaddVarsToRow(scip, row, 1, &x, &coefx) );
    SCIP_CALL( SCIPaddVarsToRow(scip, row, 1, &y, &coefy) );
@@ -4870,11 +4912,25 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    /* substract constant from lhs or rhs */
    if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - obj[nvars]) );
+      if( SCIProwGetLhs(row) - obj[nvars] < 0.0 && SCIProwGetLhs(row) - obj[nvars] > -SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, -1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - obj[nvars]) );
+      }
    }
    if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - obj[nvars]) );
+      if( SCIProwGetRhs(row) - obj[nvars] > 0.0 && SCIProwGetRhs(row) - obj[nvars] < SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, 1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - obj[nvars]) );
+      }
    }
 
    *success = TRUE;
@@ -5095,14 +5151,27 @@ SCIP_RETCODE addUserEstimator(
          SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[i], childcoeffs[i]*treecoef, varcoeffs, &constant ) );
       }
 
-      if( !SCIPisInfinity( scip, -SCIProwGetLhs( row ) ) )
+      if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
       {
-         SCIP_CALL( SCIPchgRowLhs( scip, row, SCIProwGetLhs( row ) - constant ) );
+         if( SCIProwGetLhs(row) - constant < 0.0 && SCIProwGetLhs(row) - constant > -SCIPepsilon(scip) )
+         {
+            SCIP_CALL( SCIPchgRowLhs(scip, row, -1.1*SCIPepsilon(scip)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );  /*lint !e644*/
+         }
       }
-
-      if( !SCIPisInfinity( scip,  SCIProwGetRhs( row ) ) )
+      if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
       {
-         SCIP_CALL( SCIPchgRowRhs( scip, row, SCIProwGetRhs( row ) - constant ) );
+         if( SCIProwGetRhs(row) - constant > 0.0 && SCIProwGetRhs(row) - constant < SCIPepsilon(scip) )
+         {
+            SCIP_CALL( SCIPchgRowRhs(scip, row, 1.1*SCIPepsilon(scip)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+         }
       }
 
       SCIP_CALL( SCIPaddVarsToRow( scip, row, nvars, vars, varcoeffs ) );
@@ -5264,11 +5333,25 @@ SCIP_RETCODE addIntervalGradientEstimator(
    /* add interval gradient estimator to row */
    if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );
+      if( SCIProwGetLhs(row) - constant < 0.0 && SCIProwGetLhs(row) - constant > -SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, -1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );  /*lint !e644*/
+      }
    }
    if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      if( SCIProwGetRhs(row) - constant > 0.0 && SCIProwGetRhs(row) - constant < SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, 1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      }
    }
    SCIP_CALL( SCIPaddVarsToRow(scip, row, nvars, vars, coefs) );
 
@@ -5473,11 +5556,25 @@ SCIP_RETCODE generateCut(
 
          if( side == SCIP_SIDETYPE_LEFT )
          {
-            SCIP_CALL( SCIPchgRowLhs(scip, *row, SCIProwGetLhs(*row) - constant) );
+            if( SCIProwGetLhs(*row) - constant < 0.0 && SCIProwGetLhs(*row) - constant > -SCIPepsilon(scip) )
+            {
+               SCIP_CALL( SCIPchgRowLhs(scip, *row, -1.1*SCIPepsilon(scip)) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPchgRowLhs(scip, *row, SCIProwGetLhs(*row) - constant) );
+            }
          }
          else
          {
-            SCIP_CALL( SCIPchgRowRhs(scip, *row, SCIProwGetRhs(*row) - constant) );
+            if( SCIProwGetRhs(*row) - constant > 0.0 && SCIProwGetRhs(*row) - constant < SCIPepsilon(scip) )
+            {
+               SCIP_CALL( SCIPchgRowRhs(scip, *row, 1.1*SCIPepsilon(scip)) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPchgRowRhs(scip, *row, SCIProwGetRhs(*row) - constant) );
+            }
          }
 
          /* update min/max coefficient */
