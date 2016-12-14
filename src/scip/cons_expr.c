@@ -3447,7 +3447,7 @@ SCIP_RETCODE registerBranchingCandidates(
 
             /* introduce all variables which do not have been fixed yet and appear in some violated expressions */
             if( SCIPisGT(scip, violation, SCIPfeastol(scip))
-               && !SCIPisFeasEQ(scip, SCIPcomputeVarLbLocal(scip, var), SCIPcomputeVarUbLocal(scip, var)) )
+               && !SCIPisEQ(scip, SCIPcomputeVarLbLocal(scip, var), SCIPcomputeVarUbLocal(scip, var)) )
             {
                SCIP_CALL( SCIPaddExternBranchCand(scip, var, violation, SCIP_INVALID) );
                ++(*nnotify);
