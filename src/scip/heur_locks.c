@@ -528,8 +528,18 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          {
             row = colrows[r];
             rowpos = SCIProwGetLPPos(row);
+
+            /* the row is not in the LP */
+            if( rowpos == -1 )
+               continue;
+
             assert(lprows[rowpos] == row);
 
+            /* we disregard cuts */
+            if( SCIProwGetRank(row) > 0 )
+               continue;
+
+            /* the row is already fulfilled */
             if( fulfilled[rowpos] )
                continue;
 
