@@ -4591,8 +4591,6 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 
    maxviol = 0.0;
 
-   SCIP_CALL( SCIPprintSol(scip, NULL, NULL, FALSE) );
-
    /* force tightenings when calling enforcement for the first time for a node */
    force = conshdlrdata->lastenfolpnodenum != SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
    conshdlrdata->lastenfolpnodenum = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
