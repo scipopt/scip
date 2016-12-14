@@ -190,19 +190,23 @@ SCIP_RETCODE SCIPheurSyncPassSol(
    assert(heur != NULL);
    assert(sol != NULL);
    assert(strcmp(HEUR_NAME, SCIPheurGetName(heur)) == 0);
+
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
    SCIPsolSetHeur(sol, heur);
    solobj = SCIPgetSolTransObj(scip, sol);
+
    /* check if we have an empty space in the solution array or
-    * if we need to discard the worst solution */
+    * if we need to discard the worst solution
+    */
    if( heurdata->nsols < heurdata->maxnsols )
    {
       /* if the maximum number of solutions is not yet reached just
        * insert the solution sorted by its objective value */
       i = heurdata->nsols++;
+
       while( i > 0 && solobj > SCIPgetSolTransObj(scip, heurdata->sols[i - 1]) )
       {
          heurdata->sols[i] =  heurdata->sols[i - 1];
@@ -215,7 +219,8 @@ SCIP_RETCODE SCIPheurSyncPassSol(
       /* already have reached the maximum number of solutions so
        * we need to check if the solution is better than a previous
        * one and free the worst solution to make room for it if that
-       * is the case */
+       * is the case
+       */
       i = 0;
       while( i < heurdata->nsols && solobj < SCIPgetSolTransObj(scip, heurdata->sols[i]) )
       {
@@ -239,11 +244,13 @@ SCIP_RETCODE SCIPheurSyncPassSol(
       else
       {
          /* solution is not better just discard it */
-         SCIPfreeSol(scip, &sol);
+         SCIP_CALL( SCIPfreeSol(scip, &sol) );
       }
    }
    assert(heurdata->nsols > 0);
    assert(heurdata->nsols <= heurdata->maxnsols);
+
    SCIPheurSetFreq(heur, 1);
+
    return SCIP_OKAY;
 }

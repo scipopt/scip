@@ -2957,11 +2957,11 @@ SCIP_RETCODE solveNodeLP(
 
    if( !(*cutoff) && !(*lperror) )
    {
+      SCIP_Longint oldninitconssadded;
+      SCIP_Longint oldnboundchgs;
+      SCIP_Longint olddomchgcount;
       int oldnpricedvars;
-      int oldninitconssadded;
       int oldncutsapplied;
-      int oldnboundchgs;
-      int olddomchgcount;
 
       oldnpricedvars = transprob->ncolvars;
       oldninitconssadded = stat->ninitconssadded;
@@ -3045,12 +3045,10 @@ SCIP_RETCODE solveNodeLP(
 /** calls relaxators */
 static
 SCIP_RETCODE solveNodeRelax(
-   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_RELAXATION*      relaxation,         /**< relaxators */
-   SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    int                   depth,              /**< depth of current node */
@@ -3747,7 +3745,7 @@ SCIP_RETCODE propAndSolve(
       /* clear the storage of external branching candidates */
       SCIPbranchcandClearExternCands(branchcand);
 
-      SCIP_CALL( solveNodeRelax(blkmem, set, stat, tree, relaxation, primal, transprob, origprob, actdepth, TRUE,
+      SCIP_CALL( solveNodeRelax(set, stat, tree, relaxation, transprob, origprob, actdepth, TRUE,
             cutoff, propagateagain, solvelpagain, solverelaxagain, relaxcalled) );
       assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
@@ -3857,8 +3855,8 @@ SCIP_RETCODE propAndSolve(
    /* solve external relaxations with negative priority */
    if( solverelax && !(*cutoff) )
    {
-      SCIP_CALL( solveNodeRelax(blkmem, set, stat, tree, relaxation, primal, transprob, origprob, actdepth, FALSE, cutoff, propagateagain, solvelpagain,
-            solverelaxagain, relaxcalled) );
+      SCIP_CALL( solveNodeRelax(set, stat, tree, relaxation, transprob, origprob, actdepth, FALSE, cutoff,
+            propagateagain, solvelpagain, solverelaxagain, relaxcalled) );
       assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
       /* check, if the path was cutoff */

@@ -8397,9 +8397,13 @@ SCIP_RETCODE lpCopyIntegrality(
 
    /* only pass integrality information if integer variables are present */
    if( nintegers > 0 )
-      SCIPlpiSetIntegralityInformation(lp->lpi, lp->ncols, integerInfo);
+   {
+      SCIP_CALL( SCIPlpiSetIntegralityInformation(lp->lpi, lp->ncols, integerInfo) );
+   }
    else
-      SCIPlpiSetIntegralityInformation(lp->lpi, 0, NULL);
+   {
+      SCIP_CALL( SCIPlpiSetIntegralityInformation(lp->lpi, 0, NULL) );
+   }
 
    SCIPsetFreeBufferArray(set, &integerInfo);
 

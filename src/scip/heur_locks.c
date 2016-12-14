@@ -636,7 +636,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          if( nglbfulfilledrows == nlprows )
             break;
       }
-   }
+   } /*lint --e{850}*/
 
    /* check that we had enough fixings */
    npscands = SCIPgetNPseudoBranchCands(scip);
