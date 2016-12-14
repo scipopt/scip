@@ -143,6 +143,10 @@ struct SCIP_ConshdlrData
    unsigned int             lastbrscoretag;  /**< last branching score tag used */
    unsigned int             lastdifftag;     /**< last tag used for computing gradients */
 
+   SCIP_Longint             lastenfolpnodenum; /**< number of node for which enforcement has been called last */
+   SCIP_Longint             lastenfopsnodenum; /**< number of node for which enforcement has been called last */
+   SCIP_Longint             lastpropnodenum; /**< number node for which propagation has been called last */
+
    SCIP_EVENTHDLR*          eventhdlr;       /**< handler for variable bound change events */
 
    int                      maxproprounds;   /**< limit on number of propagation rounds for a set of constraints within one round of SCIP propagation */
@@ -1714,6 +1718,7 @@ SCIP_RETCODE forwardPropCons(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONS*              cons,             /**< constraint to propagate */
    SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
+   SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
    SCIP_Bool*              redundant,        /**< buffer to store whether the constraint is redundant */
    int*                    ntightenings      /**< buffer to store the number of auxiliary variable tightenings */
@@ -1783,11 +1788,12 @@ SCIP_RETCODE forwardPropCons(
          SCIP_INTERVAL auxvarinterval;
          assert(SCIPvarGetLbLocal(consdata->expr->auxvar) <= SCIPvarGetUbLocal(consdata->expr->auxvar));  /* can SCIP ensure this by today? */
 
-         SCIPintervalSetBounds(&auxvarinterval, SCIPvarGetLbLocal(consdata->expr->auxvar) - SCIPepsilon(scip), SCIPvarGetUbLocal(consdata->expr->auxvar) + SCIPepsilon(scip));
+         SCIPintervalSetBounds(&auxvarinterval, SCIPvarGetLbLocal(consdata->expr->auxvar) - SCIPepsilon(scip),
+            SCIPvarGetUbLocal(consdata->expr->auxvar) + SCIPepsilon(scip));
          SCIPintervalIntersect(&interval, interval, auxvarinterval);
       }
 
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, infeasible, ntightenings) );
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, force, infeasible, ntightenings) );
    }
 
 #ifdef SCIP_DEBUG
@@ -1813,6 +1819,7 @@ SCIP_RETCODE reversePropConss(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONS**             conss,            /**< constraints to propagate */
    int                     nconss,           /**< total number of constraints to propagate */
+   SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
    int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
    )
@@ -1881,7 +1888,7 @@ SCIP_RETCODE reversePropConss(
 #endif
 
       /* call reverse propagation callback */
-      SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, infeasible, &nreds) );
+      SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, infeasible, &nreds, force) );
       assert(nreds >= 0);
       *ntightenings += nreds;
 
@@ -1942,6 +1949,7 @@ SCIP_RETCODE propConss(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to propagate */
    int                   nconss,             /**< total number of constraints */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
    SCIP_RESULT*          result,             /**< pointer to store the result */
    int*                  nchgbds,            /**< buffer to add the number of changed bounds */
    int*                  ndelconss           /**< buffer to add the number of deleted constraints */
@@ -2001,7 +2009,7 @@ SCIP_RETCODE propConss(
             redundant = FALSE;
             ntightenings = 0;
 
-            SCIP_CALL( forwardPropCons(scip, conss[i], (roundnr != 0), &cutoff, &redundant, &ntightenings) );
+            SCIP_CALL( forwardPropCons(scip, conss[i], (roundnr != 0), force, &cutoff, &redundant, &ntightenings) );
             assert(ntightenings >= 0);
             *nchgbds += ntightenings;
 
@@ -2022,7 +2030,7 @@ SCIP_RETCODE propConss(
       }
 
       /* apply backward propagation; mark constraint as propagated */
-      SCIP_CALL( reversePropConss(scip, conss, nconss, &cutoff, &ntightenings) );
+      SCIP_CALL( reversePropConss(scip, conss, nconss, force, &cutoff, &ntightenings) );
 
       /* @todo add parameter for the minimum number of tightenings to trigger a new propagation round */
       success = ntightenings > 0;
@@ -3439,7 +3447,7 @@ SCIP_RETCODE registerBranchingCandidates(
 
             /* introduce all variables which do not have been fixed yet and appear in some violated expressions */
             if( SCIPisGT(scip, violation, SCIPfeastol(scip))
-               && !SCIPisEQ(scip, SCIPcomputeVarLbLocal(scip, var), SCIPcomputeVarUbLocal(scip, var)) )
+               && !SCIPisFeasEQ(scip, SCIPcomputeVarLbLocal(scip, var), SCIPcomputeVarUbLocal(scip, var)) )
             {
                SCIP_CALL( SCIPaddExternBranchCand(scip, var, violation, SCIP_INVALID) );
                ++(*nnotify);
@@ -4572,6 +4580,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
    SCIP_Real minviolation;
    SCIP_Real maxviol;
    SCIP_RESULT propresult;
+   SCIP_Bool force;
    int nnotify;
    int nchgbds;
    int ndelconss;
@@ -4581,6 +4590,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
    assert(conshdlr != NULL);
 
    maxviol = 0.0;
+
+   SCIP_CALL( SCIPprintSol(scip, NULL, NULL, FALSE) );
+
+   /* force tightenings when calling enforcement for the first time for a node */
+   force = conshdlrdata->lastenfolpnodenum != SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+   conshdlrdata->lastenfolpnodenum = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    for( c = 0; c < nconss; ++c )
    {
@@ -4600,7 +4615,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
    /* try to propagate */
    nchgbds = 0;
    ndelconss = 0;
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, &propresult, &nchgbds, &ndelconss) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, force, &propresult, &nchgbds, &ndelconss) );
 
    if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
    {
@@ -4635,12 +4650,18 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
    SCIP_CONSDATA* consdata;
    SCIP_RESULT propresult;
+   SCIP_Bool force;
    int nchgbds;
    int ndelconss;
    int nnotify;
    int c;
+
+   /* force tightenings when calling enforcement for the first time for a node */
+   force = conshdlrdata->lastenfopsnodenum == SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+   conshdlrdata->lastenfopsnodenum = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    *result = SCIP_FEASIBLE;
    for( c = 0; c < nconss; ++c )
@@ -4661,7 +4682,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
    /* try to propagate */
    nchgbds = 0;
    ndelconss = 0;
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, &propresult, &nchgbds, &ndelconss) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, force, &propresult, &nchgbds, &ndelconss) );
 
    if( (propresult == SCIP_CUTOFF) || (propresult == SCIP_REDUCEDDOM) )
    {
@@ -4738,13 +4759,19 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
 static
 SCIP_DECL_CONSPROP(consPropExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   SCIP_Bool force;
    int nchgbds;
    int ndelconss;
+
+   /* force tightenings when calling propagation for the first time for a node */
+   force = conshdlrdata->lastpropnodenum != SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+   conshdlrdata->lastpropnodenum = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    nchgbds = 0;
    ndelconss = 0;
 
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, result, &nchgbds, &ndelconss) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, force, result, &nchgbds, &ndelconss) );
    assert(nchgbds >= 0);
 
    return SCIP_OKAY;
@@ -4789,7 +4816,7 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
    }
 
    /* propagate constraints */
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, result, nchgbds, ndelconss) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, FALSE, result, nchgbds, ndelconss) );
    assert(*nchgbds >= 0);
    assert(*ndelconss >= 0);
 
@@ -6455,10 +6482,18 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
    SCIP_INTERVAL           newbounds,        /**< new bounds for the expression */
+   SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*              cutoff,           /**< buffer to store whether a node's bounds were propagated to an empty interval */
    int*                    ntightenings      /**< buffer to add the total number of tightenings */
    )
 {
+   SCIP_Real oldlb = SCIPintervalGetInf(expr->interval);
+   SCIP_Real oldub = SCIPintervalGetSup(expr->interval);
+   SCIP_Real newlb;
+   SCIP_Real newub;
+   SCIP_Bool tightenlb;
+   SCIP_Bool tightenub;
+
    assert(scip != NULL);
    assert(expr != NULL);
    assert(cutoff != NULL);
@@ -6468,35 +6503,43 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    *cutoff = FALSE;
 
    /* check if the new bounds lead to an empty interval */
-   if( SCIPintervalGetInf(newbounds) > SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr))
-      || SCIPintervalGetSup(newbounds) < SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)) )
+   if( SCIPintervalGetInf(newbounds) > oldub || SCIPintervalGetSup(newbounds) < oldlb )
    {
       SCIPintervalSetEmpty(&expr->interval);
       *cutoff = TRUE;
       return SCIP_OKAY;
    }
 
-   /* do not consider very small tightenings */
-   if( SCIPisLbBetter(scip, SCIPintervalGetInf(newbounds), SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)))
-      || SCIPisUbBetter(scip, SCIPintervalGetSup(newbounds), SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr))) )
-   {
-      SCIP_VAR* var;
+   /* intersect old interval with the new one */
+   SCIPintervalIntersect(&expr->interval, expr->interval, newbounds);
+   newlb = SCIPintervalGetInf(expr->interval);
+   newub = SCIPintervalGetSup(expr->interval);
 
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "tighten bounds of ");
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
       SCIPinfoMessage(scip, NULL, "");
-      SCIPinfoMessage(scip, NULL, " from [%e,%e] to ", SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)));
+      SCIPinfoMessage(scip, NULL, " from [%g,%g] to [%g,%g]\n", oldlb, oldub, newlb, newub);
 #endif
 
-      /* intersect old bound with the found one */
-      SCIPintervalIntersect(&expr->interval, expr->interval, newbounds);
+   /* check which bound can be tightened */
+   if( force )
+   {
+      tightenlb = SCIPisGT(scip, newlb, oldlb);
+      tightenub = SCIPisLT(scip, newub, oldub);
+   }
+   else
+   {
+      tightenlb = SCIPisLbBetter(scip, newlb, oldlb, oldub);
+      tightenub = SCIPisUbBetter(scip, newub, oldlb, oldub);
+   }
 
-#ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "[%e,%e]\n", SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)));
-#endif
+   /* tighten interval of the expression and variable bounds of linearization variables */
+   if( tightenlb || tightenub )
+   {
+      SCIP_VAR* var;
 
-      /* mark expression as tightened; important for reverse propagation to ignore irrelevant sub-expressions*/
+      /* mark expression as tightened; important for reverse propagation to ignore irrelevant sub-expressions */
       expr->hastightened = TRUE;
 
       /* do not tighten variable in problem stage (important for unittests)
@@ -6504,37 +6547,23 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       if( SCIPgetStage(scip) < SCIP_STAGE_TRANSFORMED )
          return SCIP_OKAY;
 
+      /* tighten bounds of linearization variable */
       var = SCIPgetConsExprExprLinearizationVar(expr);
-
       if( var != NULL )
       {
          SCIP_Bool tightened;
 
-#ifdef SCIP_DEBUG
-         SCIP_Real oldlb;
-         SCIP_Real oldub;
-         oldlb = SCIPvarGetLbLocal(SCIPgetConsExprExprVarVar(expr));
-         oldub = SCIPvarGetUbLocal(SCIPgetConsExprExprVarVar(expr));
-#endif
-
-         /* tighten lower bound */
-         SCIP_CALL( SCIPtightenVarLb(scip, var, SCIPintervalGetInf(expr->interval), FALSE, cutoff, &tightened) );
-
-         if( tightened )
-            ++(*ntightenings);
-
-         /* tighten upper bound */
-         if( !(*cutoff) )
+         if( tightenlb )
          {
-            SCIP_CALL( SCIPtightenVarUb(scip, var, SCIPintervalGetSup(expr->interval), FALSE, cutoff, &tightened) );
-
-            if( tightened )
-               ++(*ntightenings);
+            SCIP_CALL( SCIPtightenVarLb(scip, var, newlb, force, cutoff, &tightened) );
+            (*ntightenings) += tightened ? 1 : 0;
          }
 
-#ifdef SCIP_DEBUG
-         SCIPdebugMsg(scip, "tighten bounds of %s from [%e, %e] -> [%e, %e]\n", SCIPvarGetName(var), oldlb, oldub, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-#endif
+         if( tightenub && !(*cutoff) )
+         {
+            SCIP_CALL( SCIPtightenVarUb(scip, var, newub, force, cutoff, &tightened) );
+            (*ntightenings) += tightened ? 1 : 0;
+         }
       }
    }
 

@@ -242,12 +242,14 @@ extern "C" {
  *  - expr : expression to be evaluated
  *  - infeasible: buffer to store whether an expression's bounds were propagated to an empty interval
  *  - nreductions : buffer to store the number of interval reductions of all children
+ *  - force : force tightening even if it is below the bound strengthening tolerance
  */
 #define SCIP_DECL_CONSEXPR_REVERSEPROP(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_Bool* infeasible, \
-   int* nreductions)
+   int* nreductions, \
+   SCIP_Bool force)
 
 /** expression (interval-) evaluation callback
  *
