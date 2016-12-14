@@ -98,8 +98,9 @@
 #include "lpi/lpi.h"
 #include "nlpi/pub_expr.h"
 
-/* include global presolving and heuristics methods */
+/* include global presolving, cuts, and heuristics methods */
 #include "scip/presolve.h"
+#include "scip/cuts.h"
 #include "scip/heuristics.h"
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
