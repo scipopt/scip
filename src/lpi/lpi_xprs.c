@@ -3275,7 +3275,12 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       break;
    case SCIP_LPPAR_SCALING:
       CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_SCALING, &ictrlval) );
-      *ival = (ictrlval != 0);
+      if( ictrlval == 0 )
+         *ival = 0;
+      else if( ictrlval >= 16 )
+         *ival = 2;
+      else
+         *ival = 1;
       break;
    case SCIP_LPPAR_PRESOLVING:
       *ival = lpi->par_presolve;
@@ -3338,8 +3343,20 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_KEEPBASIS, (ival == FALSE) ? 1 : 0) );
       break;
    case SCIP_LPPAR_SCALING:
-      assert(ival == TRUE || ival == FALSE);
-      CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_SCALING, (ival == TRUE) ? 35 : 0) );
+      assert(ival >= 0 && ival <= 2);
+      if( ival == 0 )
+      {
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_SCALING, 0) );
+      }
+      else if( ival == 1 )
+      {
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_SCALING, 163) );
+      }
+      else
+      {
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_SCALING, 16) );
+      }
+
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);

@@ -217,7 +217,6 @@ class SPxSCIP : public SPxSolver
 #endif
    char*                 m_probname;         /**< problem name */
    bool                  m_fromscratch;      /**< use old basis indicator */
-   bool                  m_scaling;          /**< use lp scaling */
    bool                  m_presolving;       /**< use lp presolving */
    Real                  m_lpifeastol;       /**< feastol set by SCIPlpiSetRealpar() */
    Real                  m_lpiopttol;        /**< opttol set by SCIPlpiSetRealpar() */
@@ -228,6 +227,7 @@ class SPxSCIP : public SPxSolver
    bool                  m_autopricing;      /**< is automatic pricing selected? */
    int                   m_itlim;            /**< iteration limit (-1 for unbounded) */
    int                   m_itused;           /**< number of iterations spent in phase one of auto pricing */
+   int                   m_scaling;          /**< lp scaling, 0: none, 1: normal, 2: aggressive */
    DataArray<SPxSolver::VarStatus> m_rowstat; /**< basis status of rows before starting strong branching (if available, 0 otherwise) */
    DataArray<SPxSolver::VarStatus> m_colstat; /**< basis status of columns before starting strong branching (if available, 0 otherwise) */
    NameSet*              m_rownames;         /**< row names */
@@ -253,7 +253,7 @@ public:
       : SPxSolver(LEAVE, COLUMN),
         m_probname(0),
         m_fromscratch(false),
-        m_scaling(true),
+        m_scaling(1),
         m_presolving(true),
         m_objLoLimit(-soplex::infinity),
         m_objUpLimit(soplex::infinity),
@@ -434,12 +434,12 @@ public:
       m_fromscratch = fs;
    }
 
-   bool getScaling() const
+   int getScaling() const
    {
       return m_scaling;
    }
 
-   void setScaling(bool s)
+   void setScaling(int s)
    {
       m_scaling = s;
    }
@@ -887,7 +887,7 @@ public:
       assert(!getFromScratch() || getBasisStatus() == SPxBasis::NO_PROBLEM);
 
       /* use scaler and simplifier if no basis is loaded, i.e., if solving for the first time or from scratch */
-      if( SPxSolver::getBasisStatus() == SPxBasis::NO_PROBLEM && getScaling() && nCols() > 0 && nRows() > 0 )
+      if( SPxSolver::getBasisStatus() == SPxBasis::NO_PROBLEM && (getScaling() > 0) && nCols() > 0 && nRows() > 0 )
       {
          spx_alloc(scaler, 1);
          scaler = new (scaler) SPxEquiliSC();
@@ -5136,7 +5136,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_SCALING:
       assert(ival == TRUE || ival == FALSE);
-      lpi->spx->setScaling(bool(ival));
+      lpi->spx->setScaling(ival);
       break;
 #if SOPLEX_VERSION >= 201
    case SCIP_LPPAR_TIMING:
