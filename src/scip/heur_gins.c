@@ -59,7 +59,7 @@
 #define DEFAULT_NODESOFS      500           /**< number of nodes added to the contingent of the total nodes */
 #define DEFAULT_MAXNODES      5000          /**< maximum number of nodes to regard in the subproblem */
 #define DEFAULT_MINIMPROVE    0.01          /**< factor by which Gins should at least improve the incumbent */
-#define DEFAULT_MINNODES      50LL          /**< minimum number of nodes to regard in the subproblem */
+#define DEFAULT_MINNODES      50            /**< minimum number of nodes to regard in the subproblem */
 #define DEFAULT_MINFIXINGRATE 0.66          /**< minimum percentage of integer variables that have to be fixed */
 #define DEFAULT_NODESQUOT     0.15          /**< subproblem nodes in relation to nodes of the original problem */
 #define DEFAULT_NWAITINGNODES 100           /**< number of nodes without incumbent change that heuristic should wait */
@@ -72,13 +72,15 @@
 #define DEFAULT_POTENTIAL      'r'          /**< the reference point to compute the neighborhood potential: (r)oot or (p)seudo solution */
 #define DEFAULT_MAXDISTANCE     3           /**< maximum distance to selected variable to enter the subproblem, or -1 to
                                              *   select the distance that best approximates the minimum fixing rate from below */
-#define NHISTOGRAMBINS         10           /* number of bins for histograms */
 #define DEFAULT_RANDSEED       71
 #define DEFAULT_RELAXDENSECONSS FALSE       /**< should dense constraints (at least as dense as 1 - minfixingrate) be
                                              *   ignored by connectivity graph? */
 #define DEFAULT_USEROLLINGHORIZON TRUE      /**< should the heuristic solve a sequence of sub-MIP's around the first selected variable */
 #define DEFAULT_ROLLHORIZONLIMFAC 0.75      /**< limiting percentage for variables already used in sub-SCIPs to terminate rolling
                                              *   horizon approach */
+#ifdef SCIP_STATISTIC
+#define NHISTOGRAMBINS         10           /* number of bins for histograms */
+#endif
 /*
  * Data structures
  */
@@ -241,10 +243,13 @@ SCIP_RETCODE fillVariableGraph(
    {
       int nconsvars;
       int v;
-      int nconsdiscvars;
-      int nconscontvars;
       SCIP_Bool success;
       SCIP_CONS* cons = conss[c];
+
+      SCIPstatistic(
+         int nconsdiscvars;
+         int nconscontvars;
+      )
 
       /* we only consider constraints that are checkable */
       if( !SCIPconsIsChecked(cons) )
@@ -269,7 +274,7 @@ SCIP_RETCODE fillVariableGraph(
       if( !success )
          continue;
 
-      nconsdiscvars = nconscontvars = 0;
+      SCIPstatistic( nconsdiscvars = nconscontvars = 0; )
 
       /* loop over constraint variables and add this constraint to them if they are active */
       for( v = 0; v < nconsvars; ++v )
@@ -280,12 +285,13 @@ SCIP_RETCODE fillVariableGraph(
          if( varpos == -1 )
             continue;
 
+#ifdef SCIP_STATISTIC
          /* count discrete and continuous problem variables */
          if( SCIPvarIsIntegral(varbuffer[v]) )
             ++nconsdiscvars;
          else
             ++nconscontvars;
-
+#endif
          /* ensure array size */
          if( vargraph->varconssize[varpos] == vargraph->nvarconss[varpos]  )
          {
@@ -299,7 +305,7 @@ SCIP_RETCODE fillVariableGraph(
             }
             else
             {
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &vargraph->varconss[varpos], vargraph->varconssize[varpos], newmem) );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &vargraph->varconss[varpos], vargraph->varconssize[varpos], newmem) ); /*lint !e866*/
             }
             vargraph->varconssize[varpos] = newmem;
          }
@@ -377,7 +383,7 @@ void variableGraphFree(
 
    for( v = nvars - 1; v >= 0; --v )
    {
-      SCIPfreeBlockMemoryArrayNull(scip, &(*vargraph)->varconss[v], (*vargraph)->varconssize[v]);
+      SCIPfreeBlockMemoryArrayNull(scip, &(*vargraph)->varconss[v], (*vargraph)->varconssize[v]); /*lint !e866*/
    }
 
    /* allocate and clear memory */
@@ -679,8 +685,7 @@ SCIP_Real getPotential(
             break;
          default:
             SCIPerrorMessage("Unknown potential computation %c specified\n", heurdata->potential);
-            SCIPABORT();
-            referencepoint = SCIPgetSolVal(scip, sol, var);
+            referencepoint = 0.0;
             break;
       }
 
@@ -815,7 +820,7 @@ SCIP_RETCODE determineMaxDistance(
    zeropos = -1;
 
    /* TODO: use selection method instead */
-   SCIPsortedvecFindInt(distancescopy, 0, nrelevantdistances, &zeropos);
+   (void)SCIPsortedvecFindInt(distancescopy, 0, nrelevantdistances, &zeropos);
    assert(zeropos >= 0);
 
    /* determine the critical index to look for an appropriate neighborhood distance, starting from the zero position */
@@ -929,12 +934,12 @@ SCIP_RETCODE selectInitialVariable(
       choosevar = NULL;
       do
       {
-         int index = SCIPrandomGetInt(heurdata->randnumgen, 0, nintegralvarsleft - 1);
-         choosevar = varscopy[index];
+         int idx = SCIPrandomGetInt(heurdata->randnumgen, 0, nintegralvarsleft - 1);
+         choosevar = varscopy[idx];
          /* sort inactive variables to the end */
          if( SCIPvarGetProbindex(choosevar) < 0 )
          {
-            varscopy[index] = varscopy[nintegralvarsleft - 1];
+            varscopy[idx] = varscopy[nintegralvarsleft - 1];
             --nintegralvarsleft;
          }
       }
@@ -953,7 +958,7 @@ SCIP_RETCODE selectInitialVariable(
       SCIP_CALL( SCIPallocBufferArray(scip, &neighborhood, nvars) );
 
       /* determine breadth-first distances from the chosen variable */
-      variablegraphBreadthFirst(scip, vargraph, choosevar, distances, maxdistance);
+      SCIP_CALL( variablegraphBreadthFirst(scip, vargraph, choosevar, distances, maxdistance) );
 
       /* use either automatic or user-defined max-distance for neighborhood in variable constraint graph */
       if( heurdata->maxdistance != -1 )
@@ -1441,7 +1446,7 @@ SCIP_RETCODE determineLimits(
 
    /* reward gins if it succeeded often, count the setup costs for the sub-MIP as 100 nodes */
    maxnnodesr *= 1.0 + 2.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(heurdata->nsubmips + 1.0);
-   maxnnodes = (SCIP_Longint) maxnnodesr - 100 * heurdata->nsubmips;
+   maxnnodes = (SCIP_Longint)(maxnnodesr - 100.0 * heurdata->nsubmips);
    maxnnodes += heurdata->nodesofs;
 
    /* determine the node limit for the current process */

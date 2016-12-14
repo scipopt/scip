@@ -410,11 +410,10 @@ SCIP_RETCODE improvePoint(
          /* stop if the gradient disappears at the current point */
          if( SCIPisZero(scip, nlrownorm) )
          {
-            r = maxiter - 1;
 #ifdef SCIP_DEBUG_IMPROVEPOINT
             printf("gradient vanished at current point -> stop\n");
 #endif
-            break;
+            goto TERMINATE;
          }
 
          /* compute -g(x_k) / ||grad(g)(x_k)||^2 for a constraint g(x_k) <= 0 */
@@ -454,6 +453,7 @@ SCIP_RETCODE improvePoint(
       }
    }
 
+TERMINATE:
 #ifdef SCIP_DEBUG_IMPROVEPOINT
    printf("niter=%d minfeas=%e\n", r, *minfeas);
 #endif

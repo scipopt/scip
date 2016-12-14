@@ -10816,7 +10816,7 @@ SCIP_RETCODE SCIPchgReoptObjective(
    origvars = scip->origprob->vars;
    norigvars = scip->origprob->nvars;
 
-#if SCIP_MORE_DEBUG
+#ifdef SCIP_MORE_DEBUG
    SCIPdebugMsg(scip, "objective function need to be set:\n");
    for( i = 0; i < nvars; i++ )
    {
@@ -10868,7 +10868,7 @@ SCIP_RETCODE SCIPchgReoptObjective(
       SCIP_CALL( SCIPaddVarObj(scip, vars[i], objscalar * coefs[i]) );
    }
 
-#if SCIP_MORE_DEBUG
+#ifdef SCIP_MORE_DEBUG
    SCIPdebugMsg(scip, "new objective function:\n");
    for( i = 0; i < norigvars; i++ )
    {
@@ -16870,8 +16870,6 @@ SCIP_RETCODE SCIPfreeReoptSolve(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
-
-   return SCIP_OKAY;
 }
 
 /** frees all solution process data including presolving and transformed problem, only original problem is kept

@@ -2227,7 +2227,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          printreason = TRUE;
 #endif
 #ifndef NDEBUG
-         completely = TRUE;
+         completely = TRUE; /*lint !e838*/
 #endif
 
          /* we once also checked the variable bounds which should not be necessary */

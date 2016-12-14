@@ -56,8 +56,12 @@
 -emacro(681,SCIPdebugMsg)         // Loop is not entered
 -emacro(506,SCIPdebugMsgPrint)    // Constant value Boolean
 -emacro(681,SCIPdebugMsgPrint)    // Loop is not entered
--emacro(506,SCIPsetDebugMsg)    // Constant value Boolean
--emacro(681,SCIPsetDebugMsg)    // Loop is not entered
+-emacro(506,SCIPsetDebugMsg)      // Constant value Boolean
+-emacro(681,SCIPsetDebugMsg)      // Loop is not entered
+-emacro(506,SCIPstatDebugMsg)     // Constant value Boolean
+-emacro(681,SCIPstatDebugMsg)     // Loop is not entered
+-emacro(506,SCIPsetDebugMsgPrint) // Constant value Boolean
+-emacro(681,SCIPsetDebugMsgPrint) // Loop is not entered
 -emacro(506,SCIPstatisticMessage) // Constant value Boolean
 -emacro(681,SCIPstatisticMessage) // Loop is not entered
 -emacro(506,SCIPstatisticPrintf)  // Constant value Boolean

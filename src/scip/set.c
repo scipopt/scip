@@ -107,9 +107,7 @@
 
 /* Conflict Analysis (conflict graph) */
 
-#define SCIP_DEFAULT_CONF_ENABLECONFGRAPH  TRUE /**< analyze the conflict graph */
 #define SCIP_DEFAULT_CONF_MAXSTORESIZE    10000 /**< maximal size of the conflict pool */
-#define SCIP_DEFAULT_CONF_CLEANUPFREQ         5 /**< frequency to clean up the storage if it is not full */
 #define SCIP_DEFAULT_CONF_RECONVLEVELS       -1 /**< number of depth levels up to which UIP reconvergence constraints are
                                                  *   generated (-1: generate reconvergence constraints in all depth levels) */
 #define SCIP_DEFAULT_CONF_CLEANBNDDEPEND   TRUE /**< should conflicts based on an old cutoff bound removed? */
@@ -148,7 +146,6 @@
 
 /* Conflict Analysis (dual ray) */
 
-#define SCIP_DEFAULT_CONF_ENABLEDUALRAY   FALSE /**< enable dual ray analyzes */
 #define SCIP_DEFAULT_CONF_APPLYMIR        FALSE /**< apply MIR function to dual rays */
 #define SCIP_DEFAULT_CONF_PREFERMIR        TRUE /**< prefer a ray after applying the MIR function if the proof is still
                                                   *   valid, use both rays otherwise */
