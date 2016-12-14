@@ -6523,13 +6523,13 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    /* check which bound can be tightened */
    if( force )
    {
-      tightenlb = SCIPisGT(scip, newlb, oldlb);
-      tightenub = SCIPisLT(scip, newub, oldub);
+      tightenlb = !SCIPisInfinity(scip, -newlb) && SCIPisGT(scip, newlb, oldlb);
+      tightenub = !SCIPisInfinity(scip, newub) && SCIPisLT(scip, newub, oldub);
    }
    else
    {
-      tightenlb = SCIPisLbBetter(scip, newlb, oldlb, oldub);
-      tightenub = SCIPisUbBetter(scip, newub, oldlb, oldub);
+      tightenlb = !SCIPisInfinity(scip, -newlb) && SCIPisLbBetter(scip, newlb, oldlb, oldub);
+      tightenub = !SCIPisInfinity(scip, newub) && SCIPisUbBetter(scip, newub, oldlb, oldub);
    }
 
    /* tighten interval of the expression and variable bounds of linearization variables */
