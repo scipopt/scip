@@ -173,6 +173,7 @@ fixed bugs:
 - fixed bug with sorting of propagators in presolving: the order can be changed by calling probing; thus, there is a copy of the
   propagators, which is sorted by presolving priority
 - avoid numerically unstable (multi-)aggregations
+- added missing capturing and releasing mechanism in genvbounds propagator
 
 misc:
 - dropped support for Ipopt < 3.11
