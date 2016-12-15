@@ -3214,14 +3214,14 @@ SCIP_RETCODE enforceConstraints(
    
    
    /* enforce (best) relaxation solution if the LP has a worse objective value */
-   enforcerelaxsol = SCIPrelaxationGetBestRelaxSolObj(relaxation) != -SCIPsetInfinity(set) && (!SCIPtreeHasFocusNodeLP(tree)
+   enforcerelaxsol = (! SCIPsetIsInfinity(set, -1 * SCIPrelaxationGetBestRelaxSolObj(relaxation))) && (!SCIPtreeHasFocusNodeLP(tree)
          || SCIPsetIsGT(set, SCIPrelaxationGetBestRelaxSolObj(relaxation), SCIPlpGetObjval(lp, set, prob)));
    
    /* enforce constraints by branching, applying additional cutting planes (if LP is being processed),
     * introducing new constraints, or tighten the domains
     */
 #ifndef SCIP_NDEBUG
-   if( SCIPrelaxationGetBestRelaxSolObj(relaxation) != -SCIPsetInfinity(set) && (!SCIPtreeHasFocusNodeLP(tree)
+   if( (! SCIPsetIsInfinity(set, -1 * SCIPrelaxationGetBestRelaxSolObj(relaxation))) && (!SCIPtreeHasFocusNodeLP(tree)
          || SCIPsetIsGT(set, SCIPrelaxationGetBestRelaxSolObj(relaxation), SCIPlpGetObjval(lp, set, prob))))
    {
       SCIPsetDebugMsg(set, "enforcing constraints on relaxation solution\n");
@@ -4088,7 +4088,7 @@ SCIP_RETCODE solveNode(
       fullseparation = FALSE;
 
       /* reset relaxation solution to best solution found, this might be important for heuristics depending on the relaxation solution */
-      if( SCIPrelaxationGetBestRelaxSolObj(relaxation) != -SCIPsetInfinity(set) )
+      if( ! SCIPsetIsInfinity(set, -1 * SCIPrelaxationGetBestRelaxSolObj(relaxation)) )
       {
          SCIP_Real val;
          int i;
@@ -4121,7 +4121,7 @@ SCIP_RETCODE solveNode(
                   SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE, *cutoff, &foundsol, unbounded) );
             *afternodeheur = TRUE; /* the AFTERNODE heuristics should not be called again after the node */
          }
-         else if( lpsolved || SCIPrelaxationGetBestRelaxSolObj(relaxation) != -SCIPsetInfinity(set) )
+         else if( lpsolved || (! SCIPsetIsInfinity(set, -1 * SCIPrelaxationGetBestRelaxSolObj(relaxation))) )
          {
             SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_AFTERLPLOOP,
                   *cutoff, &foundsol, unbounded) );
@@ -4234,7 +4234,7 @@ SCIP_RETCODE solveNode(
          SCIP_Bool stored;
          
          /* in case the relaxation was enforced add this solution, otherwise decide between LP and pseudosol */
-         if( SCIPrelaxationGetBestRelaxSolObj(relaxation) != -SCIPsetInfinity(set) && (!SCIPtreeHasFocusNodeLP(tree)
+         if( (! SCIPsetIsInfinity(set, -1 * SCIPrelaxationGetBestRelaxSolObj(relaxation))) && (!SCIPtreeHasFocusNodeLP(tree)
                || SCIPsetIsGT(set, SCIPrelaxationGetBestRelaxSolObj(relaxation), SCIPlpGetObjval(lp, set, transprob))) )
          {
             SCIP_CALL( SCIPprimalTrySol(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
@@ -4566,7 +4566,7 @@ SCIP_RETCODE addCurrentSolution(
    SCIP_Bool foundsol;
 
    /* found a feasible solution */
-   if( SCIPrelaxationGetBestRelaxSolObj(relaxation) != -SCIPsetInfinity(set) && (!SCIPtreeHasFocusNodeLP(tree)
+   if( (! SCIPsetIsInfinity(set, -1 * SCIPrelaxationGetBestRelaxSolObj(relaxation))) && (!SCIPtreeHasFocusNodeLP(tree)
          || SCIPsetIsGT(set, SCIPrelaxationGetBestRelaxSolObj(relaxation), SCIPlpGetObjval(lp, set, transprob))) )
    {
       /* start clock for relaxation solutions */
@@ -4872,7 +4872,7 @@ SCIP_RETCODE SCIPsolveCIP(
             {
                SCIP_SOL* sol;
                
-               if( SCIPrelaxationGetBestRelaxSolObj(relaxation) != -SCIPsetInfinity(set) && (!SCIPtreeHasFocusNodeLP(tree)
+               if( (! SCIPsetIsInfinity(set, -1 * SCIPrelaxationGetBestRelaxSolObj(relaxation))) && (!SCIPtreeHasFocusNodeLP(tree)
                      || SCIPsetIsGT(set, SCIPrelaxationGetBestRelaxSolObj(relaxation), SCIPlpGetObjval(lp, set, transprob))) )
                {
                   sol = SCIPrelaxationGetBestRelaxSol(relaxation);
