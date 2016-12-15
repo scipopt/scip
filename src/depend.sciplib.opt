@@ -6955,15 +6955,7 @@ $(LIBOBJDIR)/scip/reader_zpl.o: src/scip/reader_zpl.c src/scip/reader_zpl.h src/
  src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
- src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
- src/scip/cons_linear.h src/scip/cons_sos1.h src/scip/cons_sos2.h \
- src/scip/cons_indicator.h src/scip/cons_quadratic.h \
- src/scip/cons_nonlinear.h lib/include/zimplinc/zimpl/bool.h \
- lib/include/zimplinc/zimpl/ratlptypes.h lib/include/zimplinc/zimpl/mme.h \
- lib/include/zimplinc/zimpl/numb.h lib/include/zimplinc/zimpl/bound.h \
- lib/include/zimplinc/zimpl/mono.h lib/include/zimplinc/zimpl/term.h \
- lib/include/zimplinc/zimpl/xlpglue.h \
- lib/include/zimplinc/zimpl/zimpllib.h
+ src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
 $(LIBOBJDIR)/scip/sepa_cgmip.o: src/scip/sepa_cgmip.c src/scip/sepa_cgmip.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
  src/scip/type_message.h src/scip/struct_message.h \
