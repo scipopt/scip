@@ -3493,7 +3493,7 @@ SCIP_RETCODE presolRoundVarsSOS1(
       nsucc = SCIPdigraphGetNSuccessors(implgraph, j);
 
       for (s = nsucc-1; s >= 0; --s)
-         SCIPfreeBlockMemory(scip, &succdatas[s]);
+         SCIPfreeBlockMemory(scip, &succdatas[s]);/*lint !e866*/
    }
    SCIPdigraphFree(&implgraph);
    SCIPfreeBufferArrayNull(scip, &totalvars);
@@ -3950,7 +3950,7 @@ SCIP_RETCODE freeImplGraphSOS1(
       for (s = nsucc-1; s >= 0; --s)
       {
          assert( succdatas[s] != NULL );
-         SCIPfreeBlockMemory(scip, &succdatas[s]);
+         SCIPfreeBlockMemory(scip, &succdatas[s]);/*lint !e866*/
       }
    }
 
