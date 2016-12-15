@@ -13962,9 +13962,9 @@ SCIP_RETCODE SCIPlpGetSol(
        */
       if( stilldualfeasible )
       {
-         if( lpirows[r]->dualsol > 0.0 && !SCIPsetIsInfinity(set, -(lpirows[r]->lhs - lpirows[r]->constant)) )
+         if( lpirows[r]->dualsol > 0.0 && !SCIPsetIsInfinity(set, -lpirows[r]->lhs) )
             dualbound += (lpirows[r]->dualsol * (lpirows[r]->lhs - lpirows[r]->constant));
-         else if( lpirows[r]->dualsol < 0.0 && !SCIPsetIsInfinity(set, lpirows[r]->rhs - lpirows[r]->constant) )
+         else if( lpirows[r]->dualsol < 0.0 && !SCIPsetIsInfinity(set, lpirows[r]->rhs) )
             dualbound += (lpirows[r]->dualsol * (lpirows[r]->rhs - lpirows[r]->constant));
       }
    }
