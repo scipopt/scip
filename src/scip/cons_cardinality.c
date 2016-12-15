@@ -108,7 +108,7 @@ struct SCIP_EventData
    SCIP_CONSDATA*        consdata;           /**< cardinality constraint data to process the bound change for */
    SCIP_VAR*             var;                /**< implied variable */
    SCIP_VAR*             indvar;             /**< indicator variable */
-   int                   pos:30;             /**< position in constraint */
+   unsigned int          pos:30;             /**< position in constraint */
    unsigned int          varmarked:1;        /**< whether implied variable is marked for propagation */
    unsigned int          indvarmarked:1;     /**< whether indicator variable is marked for propagation */
 };
@@ -130,6 +130,7 @@ SCIP_RETCODE catchVarEventCardinality(
    assert(var != NULL);
    assert(indvar != NULL);
    assert(eventdata != NULL);
+   assert(pos >= 0);
 
    /* create event data of indicator variable */
    SCIP_CALL( SCIPallocBlockMemory(scip, eventdata) );
@@ -138,7 +139,7 @@ SCIP_RETCODE catchVarEventCardinality(
    (*eventdata)->indvar = indvar;
    (*eventdata)->varmarked = FALSE;
    (*eventdata)->indvarmarked = FALSE;
-   (*eventdata)->pos = pos;
+   (*eventdata)->pos = (unsigned int)pos;
 
    /* catch bound change events of each variable */
    SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, *eventdata, NULL) );
@@ -709,7 +710,7 @@ SCIP_RETCODE deleteVarCardinality(
       if( consdata->weights != NULL )
          consdata->weights[j] = consdata->weights[j+1];
 
-      consdata->eventdatas[j]->pos = j;
+      consdata->eventdatas[j]->pos = (unsigned int)j;
    }
    --consdata->nvars;
 
@@ -2567,7 +2568,7 @@ SCIP_DECL_CONSPRESOL(consPresolCardinality)
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpCardinality)
-{
+{  /*lint --e{715}*/
    SCIP_Bool cutoff;
 
    assert(scip != NULL);
