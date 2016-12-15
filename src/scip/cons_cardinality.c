@@ -553,7 +553,7 @@ SCIP_RETCODE addVarCardinality(
 
          if( consdata->eventdatas[pos] != NULL )
          {
-            consdata->eventdatas[pos]->pos = pos;
+            consdata->eventdatas[pos]->pos = (unsigned int)pos;
          }
       }
       else
