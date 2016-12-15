@@ -392,6 +392,7 @@ SCIP_RETCODE execmain(int argc, char** argv)
             SCIP_CALL( SCIPaddCoefLinear(scip, con, i > j ? arc_var[i][j] : arc_var[j][i], 1.0) ); /*lint !e732 !e747*/
          }
       }
+      SCIP_CALL( SCIPreleaseCons(scip, &con) );
    }
 
    /* add set packing constraints (Node 0 is the depot) */
@@ -448,6 +449,22 @@ SCIP_RETCODE execmain(int argc, char** argv)
    /********************
     * Deinitialization *
     ********************/
+
+   /* release variables */
+   for (int i = 0; i < num_nodes; ++i)
+   {
+      if ( i > 0 )
+      {
+         SCIP_CALL( SCIPreleaseCons(scip, &part_con[i]) );
+      }
+      for (int j = 0; j < i; ++j)
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &arc_var[i][j]) );
+         SCIP_CALL( SCIPreleaseCons(scip, &arc_con[i][j]) );
+      }
+   }
+
+
    SCIP_CALL( SCIPfree(&scip) );
 
    BMScheckEmptyMemory();

@@ -405,7 +405,7 @@ SCIP_DECL_READERFREE(readerFreePbm)
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
 
-   SCIPfreeMemory(scip, &readerdata);
+   SCIPfreeBlockMemory(scip, &readerdata);
 
    return SCIP_OKAY;
 }
@@ -442,7 +442,7 @@ SCIP_RETCODE SCIPincludeReaderPbm(
    SCIP_READERDATA* readerdata;
 
    /* create pbm reader data */
-   SCIP_CALL( SCIPallocMemory(scip, &readerdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
 
    /* include pbm reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,

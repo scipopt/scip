@@ -1154,7 +1154,7 @@ SCIP_DECL_PRESOLFREE(presolFreeGateextraction)
       SCIPhashtableFree(&(presoldata->hashdatatable));
    }
 
-   SCIPfreeMemory(scip, &presoldata);
+   SCIPfreeBlockMemory(scip, &presoldata);
    SCIPpresolSetData(presol, NULL);
 
    return SCIP_OKAY;
@@ -1786,7 +1786,7 @@ SCIP_RETCODE SCIPincludePresolGateextraction(
    SCIP_PRESOL* presol;
 
    /* alloc presolve data object */
-   SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
 
    /* initialize gateextraction presolver data */
    presoldataInit(presoldata);

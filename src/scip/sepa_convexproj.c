@@ -210,8 +210,8 @@ SCIP_RETCODE generateCut(
     *       we build the convex relaxation using only globally valid constraints, the cuts are globally valid
     */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "proj_cut_%s_%u", SCIPnlrowGetName(nlrow), ++(sepadata->ncuts));
-   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, rowname, SCIPnlrowGetLhs(nlrow), SCIPnlrowGetRhs(nlrow),
-           TRUE, FALSE , TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, rowname, -SCIPinfinity(scip), SCIPinfinity(scip), TRUE, FALSE ,
+            TRUE) );
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, *row) );
 
@@ -718,7 +718,7 @@ SCIP_DECL_SEPAFREE(sepaFreeConvexproj)
 
    SCIP_CALL( sepadataClear(scip, sepadata) );
 
-   SCIPfreeMemory(scip, &sepadata);
+   SCIPfreeBlockMemory(scip, &sepadata);
 
    SCIPsepaSetData(sepa, NULL);
 
@@ -878,7 +878,7 @@ SCIP_RETCODE SCIPincludeSepaConvexproj(
    SCIP_SEPA* sepa;
 
    /* create convexproj separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
 
    /* this sets all data in sepadata to 0 */
    BMSclearMemory(sepadata);

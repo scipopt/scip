@@ -50,10 +50,8 @@ SCIP_DECL_EVENTCOPY(eventCopySofttimelimit)
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
-#if 0 /* should the event handler be copied??? */
    /* call inclusion method of event handler */
    SCIP_CALL( SCIPincludeEventHdlrSofttimelimit(scip) );
-#endif
 
    return SCIP_OKAY;
 }
@@ -71,7 +69,7 @@ SCIP_DECL_EVENTFREE(eventFreeSofttimelimit)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   SCIPfreeMemory(scip, &eventhdlrdata);
+   SCIPfreeBlockMemory(scip, &eventhdlrdata);
    SCIPeventhdlrSetData(eventhdlr, NULL);
 
    return SCIP_OKAY;
@@ -129,6 +127,7 @@ static
 SCIP_DECL_EVENTEXEC(eventExecSofttimelimit)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_Real timelimit;
 
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
@@ -141,7 +140,12 @@ SCIP_DECL_EVENTEXEC(eventExecSofttimelimit)
 
    SCIPdebugMsg(scip, "exec method of event handler for soft time limit\n");
 
-   SCIP_CALL( SCIPsetRealParam(scip, "limits/time", eventhdlrdata->softtimelimit) );
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
+   if( eventhdlrdata->softtimelimit < timelimit )
+   {
+      SCIP_CALL( SCIPsetRealParam(scip, "limits/time", eventhdlrdata->softtimelimit) );
+   }
 
    /* notify SCIP that your event handler wants to drop the event type best solution found */
    SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, eventhdlrdata->filterpos) );
@@ -160,12 +164,11 @@ SCIP_RETCODE SCIPincludeEventHdlrSofttimelimit(
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
-   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLR* eventhdlr = NULL;
 
-   SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
    eventhdlrdata->filterpos = -1;
 
-   eventhdlr = NULL;
    /* create event handler for events on watched variables */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecSofttimelimit, eventhdlrdata) );
    assert(eventhdlr != NULL);
@@ -178,7 +181,6 @@ SCIP_RETCODE SCIPincludeEventHdlrSofttimelimit(
    SCIP_CALL( SCIPaddRealParam(scip, "limits/softtime",
          "soft time limit which should be applied after first solution was found",
          &eventhdlrdata->softtimelimit, FALSE, -1.0, -1.0, SCIP_REAL_MAX, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }

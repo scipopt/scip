@@ -57,7 +57,7 @@ static
 void teardown(void)
 {
    SCIP_CALL( SCIPlpiFree(&lpi) );
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!");
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!");
 }
 
 TestSuite(solve, .init = setup, .fini = teardown);
@@ -111,6 +111,8 @@ SCIP_RETCODE performTest(
    SCIP_CALL( SCIPlpiGetNCols(lpi, &ntmpcols) );
    cr_assert( nrows == ntmprows );
    cr_assert( ncols == ntmpcols );
+
+   cr_assert( ! SCIPlpiWasSolved(lpi) );
 
    /* solve problem */
    if ( solveprimal )
@@ -238,10 +240,26 @@ SCIP_RETCODE performTest(
       assert( exp_primsol != NULL );
       if ( SCIPlpiHasPrimalRay(lpi) )
       {
+         SCIP_Real scalingfactor = 1.0;
+
          SCIP_CALL( SCIPlpiGetPrimalRay(lpi, primsol) );
+
+         /* loop until scaling factor can be determined */
          for (j = 0; j < ncols; ++j)
          {
-            cr_assert_float_eq(primsol[j], exp_primsol[j], EPS, "Violation of primal ray %d: %g != %g\n", j, primsol[j], exp_primsol[j]);
+            if ( REALABS(exp_primsol[j]) < EPS )
+               cr_assert_float_eq(primsol[j], exp_primsol[j], EPS, "Violation of primal ray %d: %g != %g\n", j, primsol[j], exp_primsol[j]);
+            else
+            {
+               scalingfactor = primsol[j]/exp_primsol[j];
+               break;
+            }
+         }
+
+         /* again loop over ray */
+         for (j = 0; j < ncols; ++j)
+         {
+            cr_assert_float_eq(primsol[j], scalingfactor * exp_primsol[j], EPS, "Violation of primal ray %d: %g != %g\n", j, primsol[j], scalingfactor * exp_primsol[j]);
          }
       }
    }
@@ -260,10 +278,26 @@ SCIP_RETCODE performTest(
       assert( exp_dualsol != NULL );
       if ( SCIPlpiHasDualRay(lpi) )
       {
+         SCIP_Real scalingfactor = 1.0;
+
          SCIP_CALL( SCIPlpiGetDualfarkas(lpi, dualsol) );
+
+         /* loop until scaling factor can be determined */
          for (i = 0; i < nrows; ++i)
          {
-            cr_assert_float_eq(dualsol[i], exp_dualsol[i], EPS, "Violation of dual ray %d: %g != %g\n", i, dualsol[i], exp_dualsol[i]);
+            if ( REALABS(exp_dualsol[i]) < EPS )
+               cr_assert_float_eq(dualsol[i], exp_dualsol[i], EPS, "Violation of dual ray %d: %g != %g\n", i, dualsol[i], exp_dualsol[i]);
+            else
+            {
+               scalingfactor = dualsol[i]/exp_dualsol[i];
+               break;
+            }
+         }
+
+         /* again loop over ray */
+         for (i = 0; i < nrows; ++i)
+         {
+            cr_assert_float_eq(dualsol[i], scalingfactor * exp_dualsol[i], EPS, "Violation of dual ray %d: %g != %g\n", i, dualsol[i], scalingfactor * exp_dualsol[i]);
          }
       }
    }

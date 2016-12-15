@@ -647,6 +647,135 @@ SCIP_RETCODE upgradeSuperindicator(
    return SCIP_OKAY;
 }
 
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
+   SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_Bool cont;
+   int i;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(result != NULL);
+
+   /* if the solution is infeasible anyway, skip the enforcement */
+   if( solinfeasible )
+   {
+      *result = SCIP_FEASIBLE;
+      return SCIP_OKAY;
+   }
+
+   SCIPdebugMsg(scip, "executing enforcement callback for %s solution\n", sol == NULL ? "LP" : "relaxation");
+
+   cont = TRUE;
+   *result = SCIP_FEASIBLE;
+
+#ifdef SCIP_OUTPUT
+   SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
+#endif
+
+   /* check all constraints */
+   for( i = nconss-1; i >= 0 && cont; i-- )
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_RESULT locresult;
+
+      consdata = SCIPconsGetData(conss[i]);
+      assert(consdata != NULL);
+
+      locresult = SCIP_FEASIBLE;
+
+      /* enforce only if binvar is fixed to one */
+      if( SCIPvarGetLbLocal(consdata->binvar) > 0.5 )
+      {
+         assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->binvar), 1.0));
+         
+         if( sol == NULL )
+         {
+            SCIPdebugMsg(scip, "binvar <%s> == 1 locally --> SCIPenfolpCons() on constraint <%s>\n",
+               SCIPvarGetName(consdata->binvar), SCIPconsGetName(consdata->slackcons));
+
+            SCIP_CALL( SCIPenfolpCons(scip, consdata->slackcons, solinfeasible, &locresult) );
+         }
+         else
+         {
+            SCIPdebugMsg(scip, "binvar <%s> == 1 locally --> SCIPenforelaxCons() on constraint <%s>\n",
+               SCIPvarGetName(consdata->binvar), SCIPconsGetName(consdata->slackcons));
+
+            SCIP_CALL( SCIPenforelaxCons(scip, consdata->slackcons, sol, solinfeasible, &locresult) );
+         }
+
+         SCIPdebugPrintf(" --> %slocresult=%d\n", locresult == SCIP_FEASIBLE ? "satisfied, " : "", locresult);
+      }
+      /* otherwise check if we have not yet detected infeasibility */
+      else if( *result == SCIP_FEASIBLE )
+      {
+         SCIP_CALL( consdataCheckSuperindicator(scip, consdata, sol, TRUE, FALSE, FALSE, &locresult) );
+      }
+
+      /* evaluate result */
+      switch( locresult )
+      {
+      case SCIP_CUTOFF:
+      case SCIP_BRANCHED:
+         assert(*result != SCIP_CUTOFF);
+         assert(*result != SCIP_BRANCHED);
+         *result = locresult;
+         cont = FALSE;
+         break;
+      case SCIP_CONSADDED:
+         assert(*result != SCIP_CUTOFF);
+         assert(*result != SCIP_BRANCHED);
+         if( *result != SCIP_CUTOFF )
+            *result = locresult;
+         break;
+      case SCIP_REDUCEDDOM:
+         assert(*result != SCIP_CUTOFF);
+         assert(*result != SCIP_BRANCHED);
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_CONSADDED )
+            *result = locresult;
+         break;
+      case SCIP_SEPARATED:
+         assert(*result != SCIP_CUTOFF);
+         assert(*result != SCIP_BRANCHED);
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_CONSADDED
+            && *result != SCIP_REDUCEDDOM )
+            *result = locresult;
+         break;
+      case SCIP_INFEASIBLE:
+         assert(*result != SCIP_CUTOFF);
+         assert(*result != SCIP_BRANCHED);
+         if( *result != SCIP_CUTOFF
+            && *result != SCIP_CONSADDED
+            && *result != SCIP_REDUCEDDOM
+            && *result != SCIP_SEPARATED
+            && *result != SCIP_BRANCHED )
+            *result = locresult;
+         break;
+      case SCIP_FEASIBLE:
+         break;
+      default:
+         SCIPerrorMessage("invalid SCIP result %d\n", locresult);
+         return SCIP_INVALIDRESULT;
+      }  /*lint !e788*/
+   }
+
+   SCIPdebugMsg(scip, "enforcement result=%d\n", *result);
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Callback methods of constraint handler
@@ -684,7 +813,7 @@ SCIP_DECL_CONSFREE(consFreeSuperindicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    SCIPconshdlrSetData(conshdlr, NULL);
 
@@ -1022,108 +1151,16 @@ SCIP_DECL_CONSSEPASOL(consSepasolSuperindicator)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpSuperindicator)
 {  /*lint --e{715}*/
-   SCIP_Bool cont;
-   int i;
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, solinfeasible, result) );
 
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(result != NULL);
+   return SCIP_OKAY;
+}
 
-   /* if the solution is infeasible anyway, skip the enforcement */
-   if( solinfeasible )
-   {
-      *result = SCIP_FEASIBLE;
-      return SCIP_OKAY;
-   }
-
-   SCIPdebugMsg(scip, "executing enfolp callback\n");
-
-   cont = TRUE;
-   *result = SCIP_FEASIBLE;
-
-#ifdef SCIP_OUTPUT
-   SCIP_CALL( SCIPprintSol(scip, NULL, NULL, FALSE) );
-#endif
-
-   /* check all constraints */
-   for( i = nconss-1; i >= 0 && cont; i-- )
-   {
-      SCIP_CONSDATA* consdata;
-      SCIP_RESULT locresult;
-
-      consdata = SCIPconsGetData(conss[i]);
-      assert(consdata != NULL);
-
-      locresult = SCIP_FEASIBLE;
-
-      /* enforce only if binvar is fixed to one */
-      if( SCIPvarGetLbLocal(consdata->binvar) > 0.5 )
-      {
-         assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->binvar), 1.0));
-
-         SCIPdebugMsg(scip, "binvar <%s> == 1 locally --> SCIPenfolpCons() on constraint <%s>\n",
-            SCIPvarGetName(consdata->binvar), SCIPconsGetName(consdata->slackcons));
-
-         SCIP_CALL( SCIPenfolpCons(scip, consdata->slackcons, solinfeasible, &locresult) );
-
-         SCIPdebugMsgPrint(scip, " --> %slocresult=%d\n", locresult == SCIP_FEASIBLE ? "satisfied, " : "", locresult);
-      }
-      /* otherwise check if we have not yet detected infeasibility */
-      else if( *result == SCIP_FEASIBLE )
-      {
-         SCIP_CALL( consdataCheckSuperindicator(scip, consdata, NULL, TRUE, FALSE, FALSE, &locresult) );
-      }
-
-      /* evaluate result */
-      switch( locresult )
-      {
-      case SCIP_CUTOFF:
-      case SCIP_BRANCHED:
-         assert(*result != SCIP_CUTOFF);
-         assert(*result != SCIP_BRANCHED);
-         *result = locresult;
-         cont = FALSE;
-         break;
-      case SCIP_CONSADDED:
-         assert(*result != SCIP_CUTOFF);
-         assert(*result != SCIP_BRANCHED);
-         if( *result != SCIP_CUTOFF )
-            *result = locresult;
-         break;
-      case SCIP_REDUCEDDOM:
-         assert(*result != SCIP_CUTOFF);
-         assert(*result != SCIP_BRANCHED);
-         if( *result != SCIP_CUTOFF
-            && *result != SCIP_CONSADDED )
-            *result = locresult;
-         break;
-      case SCIP_SEPARATED:
-         assert(*result != SCIP_CUTOFF);
-         assert(*result != SCIP_BRANCHED);
-         if( *result != SCIP_CUTOFF
-            && *result != SCIP_CONSADDED
-            && *result != SCIP_REDUCEDDOM )
-            *result = locresult;
-         break;
-      case SCIP_INFEASIBLE:
-         assert(*result != SCIP_CUTOFF);
-         assert(*result != SCIP_BRANCHED);
-         if( *result != SCIP_CUTOFF
-            && *result != SCIP_CONSADDED
-            && *result != SCIP_REDUCEDDOM
-            && *result != SCIP_SEPARATED
-            && *result != SCIP_BRANCHED )
-            *result = locresult;
-         break;
-      case SCIP_FEASIBLE:
-         break;
-      default:
-         SCIPerrorMessage("invalid SCIP result %d\n", locresult);
-         return SCIP_INVALIDRESULT;
-      }  /*lint !e788*/
-   }
-
-   SCIPdebugMsg(scip, "enfolp result=%d\n", *result);
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxSuperindicator)
+{  /*lint --e{715}*/
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, solinfeasible, result) );
 
    return SCIP_OKAY;
 }
@@ -1864,7 +1901,7 @@ SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
    SCIP_DIALOG* dialog;
 
    /* create superindicator constraint handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
 
    conshdlrdata->nrejects = 0;
 
@@ -1891,6 +1928,7 @@ SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropSuperindicator) );
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSuperindicator, consSepasolSuperindicator, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransSuperindicator) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxSuperindicator) );
 
    /* includes or updates the default dialog menus in SCIP */
    SCIP_CALL( SCIPincludeDialogDefault(scip) );

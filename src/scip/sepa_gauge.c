@@ -250,6 +250,7 @@ SCIP_RETCODE computeInteriorPoint(
       if( timelimit <= 1.0 )
       {
          SCIPdebugMsg(scip, "skip NLP solve; no time left\n");
+         sepadata->skipsepa = TRUE;
          goto CLEANUP;
       }
    }
@@ -855,7 +856,7 @@ SCIP_DECL_SEPAFREE(sepaFreeGauge)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   SCIPfreeMemory(scip, &sepadata);
+   SCIPfreeBlockMemory(scip, &sepadata);
 
    SCIPsepaSetData(sepa, NULL);
 
@@ -919,6 +920,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGauge)
    if( !SCIPisNLPConstructed(scip) )
    {
       SCIPdebugMsg(scip, "NLP not constructed, skipping gauge separator\n");
+      return SCIP_OKAY;
+   }
+
+   /* do not run if SCIP has no way of solving nonlinear problems */
+   if( SCIPgetNNlpis(scip) == 0 )
+   {
+      SCIPdebugMsg(scip, "SCIP can't solve nonlinear problems without a nlpi\n");
       return SCIP_OKAY;
    }
 
@@ -1038,7 +1046,7 @@ SCIP_RETCODE SCIPincludeSepaGauge(
    SCIP_SEPA* sepa;
 
    /* create gauge separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
 
    /* this sets all data in sepadata to 0 */
    BMSclearMemory(sepadata);

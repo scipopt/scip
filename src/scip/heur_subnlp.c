@@ -1019,6 +1019,15 @@ SCIP_RETCODE solveSubNLP(
          *result = SCIP_CUTOFF;
       goto CLEANUP;
    }
+   if( SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVING )
+   {
+      /* presolve was stopped because some still existing limit was hit (e.g., memory) */
+      SCIPdebugMsg(scip, "SCIP returned from presolve in stage presolving with status %d\n", SCIPgetStatus(heurdata->subscip));
+      /* if presolve found subproblem infeasible, report this to caller by setting *result to cutoff */
+      if( SCIPgetStatus(heurdata->subscip) == SCIP_STATUS_INFEASIBLE )
+         *result = SCIP_CUTOFF;
+      goto CLEANUP;
+   }
    assert(SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVED);
 
    if( SCIPgetNVars(heurdata->subscip) > 0 )
@@ -2032,7 +2041,7 @@ SCIP_DECL_HEURFREE(heurFreeSubNlp)
    assert(heurdata->var_scip2subscip == NULL);
    assert(heurdata->startcand == NULL);
 
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
 
    return SCIP_OKAY;
 }
@@ -2250,7 +2259,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP_HEUR* heur;
 
    /* create Nlp primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    BMSclearMemory(heurdata);
 
    /* include variable event handler */
