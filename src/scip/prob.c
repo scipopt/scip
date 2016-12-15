@@ -1243,7 +1243,12 @@ SCIP_RETCODE SCIPprobRemoveConsName(
    /* remove constraint's name from the namespace */
    if( consHasName(cons) && prob->consnames != NULL )
    {
-      SCIP_CALL( SCIPhashtableRemove(prob->consnames, (void*)cons) );
+      SCIP_CONS* currentcons;
+      currentcons = (SCIP_CONS*)SCIPhashtableRetrieve(prob->consnames, (void*)(cons->name));
+      if( currentcons == cons )
+      {
+         SCIP_CALL( SCIPhashtableRemove(prob->consnames, (void*)cons) );
+      }
    }
 
    return SCIP_OKAY;
