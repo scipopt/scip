@@ -3277,7 +3277,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_SCALING, &ictrlval) );
       if( ictrlval == 0 )
          *ival = 0;
-      else if( ictrlval >= 16 )
+      else if( ictrlval == 16 )
          *ival = 2;
       else
          *ival = 1;

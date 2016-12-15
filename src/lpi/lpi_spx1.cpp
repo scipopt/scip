@@ -227,7 +227,7 @@ class SPxSCIP : public SPxSolver
    bool                  m_autopricing;      /**< is automatic pricing selected? */
    int                   m_itlim;            /**< iteration limit (-1 for unbounded) */
    int                   m_itused;           /**< number of iterations spent in phase one of auto pricing */
-   int                   m_scaling;          /**< lp scaling, 0: none, 1: normal, 2: aggressive */
+   int                   m_scaling;          /**< LP scaling (0: none, 1: normal, 2: aggressive) */
    DataArray<SPxSolver::VarStatus> m_rowstat; /**< basis status of rows before starting strong branching (if available, 0 otherwise) */
    DataArray<SPxSolver::VarStatus> m_colstat; /**< basis status of columns before starting strong branching (if available, 0 otherwise) */
    NameSet*              m_rownames;         /**< row names */

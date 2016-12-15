@@ -4143,7 +4143,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       }
       break;
    case SCIP_LPPAR_SCALING:
-      assert(ival == TRUE || ival == FALSE);
+      assert(ival >= 0 && ival <= 2);
       if( ival == 0 )
          (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_OFF);
       else if( ival == 1 )
