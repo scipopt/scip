@@ -3160,6 +3160,8 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
       SCIP_CONS** conss;
       SCIP_Longint oldndomchgs;
       SCIP_Longint oldnprobdomchgs;
+      int oldncuts;
+      int oldnactiveconss;
 
       SCIPdebugMessage("enforcing constraints %d to %d of %d constraints of handler <%s> (%s relaxation solution)\n",
          firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name, relaxchanged ? "new" : "old");
@@ -3173,6 +3175,8 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
       /* get the array of the constraints to be processed */
       conss = &(conshdlr->enfoconss[firstcons]);
 
+      oldncuts = SCIPsepastoreGetNCuts(sepastore);
+      oldnactiveconss = stat->nactiveconss;
       oldndomchgs = stat->nboundchgs + stat->nholechgs;
       oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
 
@@ -3214,6 +3218,8 @@ SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
 
       if( *result == SCIP_CUTOFF )
          conshdlr->ncutoffs++;
+      conshdlr->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
+      conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
 
       if( *result != SCIP_BRANCHED )
       {
