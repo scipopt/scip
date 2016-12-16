@@ -151,6 +151,8 @@ struct SCIP_ConshdlrData
 
    int                      maxproprounds;   /**< limit on number of propagation rounds for a set of constraints within one round of SCIP propagation */
 
+   SCIP_Bool                restart;         /**< did a restart happen? */
+
    /* separation parameters */
    SCIP_Real                mincutviolationsepa;    /**< minimal violation of a cut in order to add it to relaxation during separation */
    SCIP_Real                mincutviolationenfofac; /**< minimal target violation of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
@@ -3547,8 +3549,15 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeAuxVarsEnterExpr)
 
       SCIPdebugMsg(scip, "remove auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
 
-      /* remove variable locks */
-      SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
+      /* remove variable locks if variable is not used by any other plug-in which can be done by checking whether
+       * SCIPvarGetNUses() returns 2 (1 for the core; and of for cons_expr); note that SCIP does not enforce to have 0
+       * locks when freeing a variable
+       */
+      assert(SCIPvarGetNUses(expr->auxvar) >= 2);
+      if( SCIPvarGetNUses(expr->auxvar) == 2 )
+      {
+         SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
+      }
 
       SCIP_CALL( SCIPreleaseVar(scip, &expr->auxvar) );
       assert(expr->auxvar == NULL);
@@ -4318,18 +4327,24 @@ SCIP_DECL_CONSEXIT(consExitExpr)
 
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#if 0
 static
 SCIP_DECL_CONSINITPRE(consInitpreExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   /* remove auxiliary variables when a restart has happened; this ensures that the previous branch-and-bound tree
+    * removed all of his captures on variables; variables that are not release by any plug-in (nuses = 2) will then
+    * unlocked and freed
+    */
+   if( conshdlrdata->restart )
+   {
+      SCIP_CALL( freeAuxVars(scip, conshdlr, conss, nconss) );
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consInitpreExpr NULL
-#endif
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
@@ -4407,8 +4422,12 @@ SCIP_DECL_CONSINITSOL(consInitsolExpr)
 static
 SCIP_DECL_CONSEXITSOL(consExitsolExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   conshdlrdata->restart = restart;
 
    /* call separation deinitialization callbacks; after a restart, the rows stored in the expressions are broken */
    SCIP_CALL( exitSepa(scip, conshdlr, conss, nconss) );
@@ -4425,8 +4444,13 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       }
    }
 
-   /* remove auxiliary variables from expressions */
-   SCIP_CALL( freeAuxVars(scip, conshdlr, conss, nconss) );
+   /* remove auxiliary variables from expressions; if a restart is about to happen, remove auxiliary variables in
+    * CONSINITPRE
+    */
+   if( !conshdlrdata->restart )
+   {
+      SCIP_CALL( freeAuxVars(scip, conshdlr, conss, nconss) );
+   }
 
    return SCIP_OKAY;
 }
