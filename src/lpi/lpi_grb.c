@@ -2821,6 +2821,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    )
 {
    int oldprimdual = 0;
+   int oldpresolve = GRB_PRESOLVE_OFF;
    int retval;
    double cnt;
    double itlim;
@@ -2865,7 +2866,19 @@ SCIP_RETCODE SCIPlpiSolveDual(
        * a strong branching LP solve
        */
       CHECK_ZERO( lpi->messagehdlr, GRBgetintparam(lpi->grbenv, "GURO_PAR_PRIMDUALSWITCH", &oldprimdual) );
-      CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(lpi->grbenv, "GURO_PAR_PRIMDUALSWITCH", 0) );
+      if ( oldprimdual != 0 )
+      {
+         CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(lpi->grbenv, "GURO_PAR_PRIMDUALSWITCH", 0) );
+      }
+
+      /* turn off presolve to avoid the case where the iteration limit is reached
+       * and we do not get a valid dual bound installed for the original model
+       */
+      CHECK_ZERO( lpi->messagehdlr, GRBgetintparam(lpi->grbenv, GRB_INT_PAR_PRESOLVE, &oldpresolve) );
+      if ( oldpresolve != GRB_PRESOLVE_OFF )
+      {
+         CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(lpi->grbenv, GRB_INT_PAR_PRESOLVE, GRB_PRESOLVE_OFF) );
+      }
    }
 
    retval = GRBoptimize(lpi->grbmodel);
@@ -2877,12 +2890,6 @@ SCIP_RETCODE SCIPlpiSolveDual(
       return SCIP_NOMEMORY;
    default:
       return SCIP_LPERROR;
-   }
-
-   if ( oldprimdual != 0 )
-   {
-      /* reset primal-dual switch to its original value */
-      CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(lpi->grbenv, "GURO_PAR_PRIMDUALSWITCH", oldprimdual) );
    }
 
    CHECK_ZERO( lpi->messagehdlr, GRBgetdblattr(lpi->grbmodel, GRB_DBL_ATTR_ITERCOUNT, &cnt) );
@@ -2940,6 +2947,16 @@ SCIP_RETCODE SCIPlpiSolveDual(
    }
 
    checkRangeInfo(lpi);
+
+   /* reset parameters to their original values */
+   if ( oldprimdual != 0 )
+   {
+      CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(lpi->grbenv, "GURO_PAR_PRIMDUALSWITCH", oldprimdual) );
+   }
+   if ( oldpresolve != GRB_PRESOLVE_OFF )
+   {
+      CHECK_ZERO( lpi->messagehdlr, GRBsetintparam(lpi->grbenv, GRB_INT_PAR_PRESOLVE, oldpresolve) );
+   }
 
    return SCIP_OKAY;
 }
