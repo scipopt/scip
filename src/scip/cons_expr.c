@@ -3498,12 +3498,12 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
       SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
             SCIP_VARTYPE_CONTINUOUS) );
       SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
-     ++(conshdlrdata->auxvarid);
+      ++(conshdlrdata->auxvarid);
 
       /* mark the auxiliary variable to be invalid after a restart happened; this prevents SCIP to create linear
        * constraints from cuts that contain at least one auxiliary variable
        */
-     SCIPvarSetCutInvalidAfterRestart(expr->auxvar, TRUE);
+      SCIPvarSetCutInvalidAfterRestart(expr->auxvar, TRUE);
 
       SCIPdebugMsg(scip, "add auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
 
