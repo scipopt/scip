@@ -3494,7 +3494,7 @@ SCIP_RETCODE reformulate(
       assert(conss[c] != NULL);  /*lint !e613*/
 
       /* skip constraints that are to be deleted */
-      if( SCIPconsIsDeleted(conss[c]) )
+      if( SCIPconsIsDeleted(conss[c]) )  /*lint !e613*/
          continue;
 
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
@@ -4158,7 +4158,7 @@ SCIP_RETCODE addLinearization(
    while( TRUE );  /*lint !e506*/
 
    /* add linearization to SCIP row */
-   if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
+   if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) && constant != 0.0 )  /*lint !e644*/
    {
       if( SCIProwGetLhs(row) - constant < 0.0 && SCIProwGetLhs(row) - constant > -SCIPepsilon(scip) )
       {
@@ -4166,10 +4166,10 @@ SCIP_RETCODE addLinearization(
       }
       else
       {
-         SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );  /*lint !e644*/
+         SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );
       }
    }
-   if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
+   if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) && constant != 0.0 )
    {
       if( SCIProwGetRhs(row) - constant > 0.0 && SCIProwGetRhs(row) - constant < SCIPepsilon(scip) )
       {
@@ -7342,7 +7342,7 @@ SCIP_DECL_CONSFREE(consFreeNonlinear)
    for( i = 0; i < conshdlrdata->nnlconsupgrades; ++i )
    {
       assert(conshdlrdata->nlconsupgrades[i] != NULL);
-      SCIPfreeBlockMemory(scip, &conshdlrdata->nlconsupgrades[i]);
+      SCIPfreeBlockMemory(scip, &conshdlrdata->nlconsupgrades[i]);  /*lint !e866*/
    }
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->nlconsupgrades, conshdlrdata->nlconsupgradessize);
 
@@ -7431,7 +7431,7 @@ SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
       SCIP_CALL( consdataSetExprtrees(scip, consdata, 0, NULL, NULL, FALSE) );
 
       /* mark constraint for propagation */
-      SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );
+      SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );  /*lint !e613*/
    }
 
    return SCIP_OKAY;

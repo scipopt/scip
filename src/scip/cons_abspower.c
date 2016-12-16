@@ -2306,9 +2306,9 @@ SCIP_RETCODE registerBranchingCandidates(
       }
       break;
    }
-   while( TRUE );
+   while( TRUE );  /*lint !e506 */
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e438*/
 }
 
 /** registers a variable from a violated constraint as branching candidate that has a large absolute value in the relaxation */
