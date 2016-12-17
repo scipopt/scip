@@ -4761,7 +4761,7 @@ SCIP_RETCODE nlpSolve(
          nlp->primalsolobjval = 0.0;
          for( i = 0; i < nlp->nvars; ++i )
          {
-            SCIP_Real solval = primalvals[nlp->varmap_nlp2nlpi[i]];
+            SCIP_Real solval = primalvals[nlp->varmap_nlp2nlpi[i]];  /*lint !e613 */
 
             SCIP_CALL( SCIPvarSetNLPSol(nlp->vars[i], set, solval) );  /*lint !e613 */
             nlp->primalsolobjval += SCIPvarGetObj(nlp->vars[i]) * solval;  /*lint !e613 */
@@ -4997,7 +4997,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
    else if( SCIP_EVENTTYPE_BOUNDCHANGED & etype )
    {
       SCIPdebugMessage("-> handling bound changed event %"SCIP_EVENTTYPE_FORMAT", variable <%s>\n", etype, SCIPvarGetName(var) );
-      SCIP_CALL( nlpUpdateVarBounds(scip->nlp, scip->set, var, SCIP_EVENTTYPE_BOUNDTIGHTENED & etype) );
+      SCIP_CALL( nlpUpdateVarBounds(scip->nlp, scip->set, var, (SCIP_Bool)(SCIP_EVENTTYPE_BOUNDTIGHTENED & etype)) );
    }
    else if( SCIP_EVENTTYPE_OBJCHANGED & etype )
    {
