@@ -633,7 +633,6 @@ SCIP_RETCODE createCoveringProblem(
          if( conshdlr != NULL )
             mapsize += SCIPconshdlrGetNActiveConss(conshdlr);
          mapsize = MAX(mapsize, nnlprows);
-         mapsize = SCIPcalcHashtableSize(2*mapsize);
          assert(mapsize > 0);
 
          /* create hash map */
@@ -2104,7 +2103,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_HEUR*            heur,               /**< heuristic data structure */
    int                   coversize,          /**< size of the cover */
    int*                  cover,              /**< problem indices of the variables in the cover */
-   SCIP_Real*            fixedvals,         /**< fixing values for the variables in the cover */
+   SCIP_Real*            fixedvals,          /**< fixing values for the variables in the cover */
    SCIP_Real             timelimit,          /**< time limit */
    SCIP_Real             memorylimit,        /**< memory limit */
    SCIP_Longint          nodelimit,          /**< node limit */
@@ -2168,7 +2167,7 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
    /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
    /* copy original problem to subproblem; do not copy pricers */
    SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", fixedvars, fixedvals, nfixedvars, heurdata->globalbounds, FALSE, TRUE, validsolved) );
@@ -2387,7 +2386,7 @@ SCIP_RETCODE performFixing(
    if( SCIPisUbBetter(scip, val, oldlb, oldub) )
    {
       /* we only want to open a new probing node if we do not exceed the maximal tree depth */
-      if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
+      if( SCIPgetDepth(scip) < SCIP_MAXTREEDEPTH )
       {
          /* create next probing node */
          SCIP_CALL( SCIPnewProbingNode(scip) );
@@ -2432,7 +2431,7 @@ SCIP_RETCODE performFixing(
    if( SCIPisLbBetter(scip, val, oldlb, oldub) )
    {
       /* we only want to open a new probing node if we do not exceed the maximal tree depth */
-      if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
+      if( SCIPgetDepth(scip) < SCIP_MAXTREEDEPTH )
       {
          /* create next probing node */
          SCIP_CALL( SCIPnewProbingNode(scip) );
@@ -3113,7 +3112,7 @@ SCIP_DECL_HEURFREE(heurFreeUndercover)
    assert(heurdata != NULL);
 
    /* free heuristic data */
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -3182,7 +3181,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
       SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP);
 
    /* find nonlinear constraint handlers */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->nlconshdlrs, 7) );/*lint !e506*/
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->nlconshdlrs, 7) );/*lint !e506*/
    h = 0;
 
    heurdata->nlconshdlrs[h] = SCIPfindConshdlr(scip, "and");
@@ -3217,6 +3216,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolUndercover)
       h++;
 
    heurdata->nnlconshdlrs = h;
+   assert( heurdata->nnlconshdlrs <= 7 );
 
    /* find NLP local search heuristic */
    heurdata->nlpheur = SCIPfindHeur(scip, "subnlp");
@@ -3244,7 +3244,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolUndercover)
    assert(heurdata != NULL);
 
    /* free array of nonlinear constraint handlers */
-   SCIPfreeMemoryArray(scip, &heurdata->nlconshdlrs);
+   SCIPfreeBlockMemoryArray(scip, &heurdata->nlconshdlrs, 7);
 
    /* reset timing, if it was changed temporary (at the root node) */
    SCIPheurSetTimingmask(heur, HEUR_TIMING);
@@ -3398,7 +3398,7 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
    SCIP_HEUR* heur;
 
    /* create undercover primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* always use local bounds */
    heurdata->globalbounds = FALSE;

@@ -90,7 +90,33 @@ Test(select, random_permutation, .description = "tests selection on a bunch of r
          }
          cr_assert_lt(k, end, "Element %d is not in the right partition [%d,%d]\n", j, start, end);
       }
+   }
+}
 
+/* For SCIPselectWeightedInt, we test the boundary case when the capacity is 0. In this case, the algorithm should always return
+ * the first element (since the algorithm partially sorts the given array). To test this, we build an all 1 array (key) and modify
+ * its i-th position to be 0, call SCIPselectWeightedInt and expect key[0] to be 0
+ */
+Test(select, zero_capacity, .description = "tests if weighted median selection always returns the minimum element when the capacity is zero")
+{
+   int i;
+   int key[ARRAYMEMSIZE];
 
+   /* initialize key to be all ones */
+   for( i = 0; i < ARRAYMEMSIZE; ++i )
+      key[i] = 1;
+
+   /* test if the minimum element of the key array is selected, no matter where it is at the beginning */
+   for( i = 0; i < ARRAYMEMSIZE; ++i )
+   {
+      int medianpos;
+      key[i] = 0;
+      medianpos = -1;
+      SCIPselectWeightedInt(key, NULL, 0.0, ARRAYMEMSIZE, &medianpos);
+      cr_assert_eq(medianpos, 0, "Selection process found median at pos %d, should be 0", medianpos);
+      cr_assert_eq(key[0], 0, "Selection process selected wrong median %d at pos 0, should be 0", key[0]);
+
+      /* start next iteration with an all 1-s array */
+      key[0] = 1;
    }
 }

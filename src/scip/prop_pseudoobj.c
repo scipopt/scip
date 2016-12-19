@@ -36,7 +36,7 @@
 
 #define PROP_NAME              "pseudoobj"
 #define PROP_DESC              "pseudo objective function propagator"
-#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_AFTERLPLOOP | SCIP_PROPTIMING_DURINGLPLOOP
+#define PROP_TIMING             SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_DURINGLPLOOP | SCIP_PROPTIMING_AFTERLPLOOP
 #define PROP_PRIORITY           3000000 /**< propagator priority */
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -97,14 +97,16 @@ struct SCIP_PropData
    SCIP_Real             cutoffbound;        /**< last cutoff bound used for propagation */
    SCIP_Real             glbpseudoobjval;    /**< last global pseudo objective used in presolving */
    SCIP_Real             maxvarsfrac;        /**< maximal fraction of non-binary variables with non-zero objective
-                                              *   without a bound reduction before aborted */
+                                              *   without a bound reduction before aborted
+                                              */
    SCIP_Real             maxpseudoobjact;    /**< maximal global pseudo objective activity */
    int                   maxpseudoobjactinf; /**< number of coefficients contributing with infinite value to maxpseudoobjact */
    int                   nminactvars;        /**< number of binary variables with non-zero objective contribution w.r.t. minimum activity of the objective function */
    int                   nmaxactvars;        /**< number of binary variables with non-zero objective contribution w.r.t. maximum activity of the objective function */
    int                   nobjintvars;        /**< number of non-binary variables with non-zero objective */
    int                   minuseless;         /**< minimal number of successive non-binary variable propagator whithout
-                                              *   a bound reduction before aborted */
+                                              *   a bound reduction before aborted
+                                              */
    int                   lastvarnum;         /**< last non-binary variable number that was looked at */
    int                   glbfirstnonfixed;   /**< index of first globally non-fixed binary variable in minactvars array */
    int                   maxactfirstnonfixed;/**< index of first globally non-fixed binary variable in maxctvars array */
@@ -112,6 +114,9 @@ struct SCIP_PropData
    int                   nnewvars;           /**< counter for counting number of new variables added */
    int                   maxnewvars;         /**< number of variable added after the propagator is reinitialized? */
    int                   maximplvars;        /**< maximum number of binary variables the implications are used if turned on (-1: unlimited)? */
+   int                   minactsize;         /**< size of minactvars and minactimpls array */
+   int                   maxactsize;         /**< size of maxactvars and maxactchgs array */
+   int                   objintvarssize;     /**< size of objintvars array*/
    SCIP_Bool             glbpropagated;      /**< are global domains propagated */
    SCIP_Bool             propfullinroot;     /**< do we want to propagate all non-binary variables if we are propagating the root node */
    SCIP_Bool             propcutoffbound;    /**< propagate new cutoff bound directly globally */
@@ -683,6 +688,9 @@ void propdataReset(
    propdata->maxactfirstnonfixed = 0;
    propdata->firstnonfixed = 0;
    propdata->nnewvars = 0;
+   propdata->minactsize = 0;
+   propdata->maxactsize = 0;
+   propdata->objintvarssize = 0;
    propdata->catchvaradded = FALSE;
    propdata->initialized = FALSE;
 }
@@ -711,11 +719,11 @@ SCIP_RETCODE propdataExit(
    }
 
    /* free memory for non-zero objective variables */
-   SCIPfreeMemoryArrayNull(scip, &propdata->minactvars);
-   SCIPfreeMemoryArrayNull(scip, &propdata->minactimpls);
-   SCIPfreeMemoryArrayNull(scip, &propdata->maxactvars);
-   SCIPfreeMemoryArrayNull(scip, &propdata->maxactchgs);
-   SCIPfreeMemoryArrayNull(scip, &propdata->objintvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->minactvars, propdata->minactsize);
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->minactimpls, propdata->minactsize);
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->maxactvars, propdata->maxactsize);
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->maxactchgs, propdata->maxactsize);
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->objintvars, propdata->objintvarssize);
 
    /* reset propagator data structure */
    propdataReset(scip, propdata);
@@ -1519,7 +1527,7 @@ SCIP_RETCODE propdataInit(
    nobjvars = 0;
    nbinobjvars = 0;
 
-   SCIP_CALL( SCIPhashmapCreate(&binobjvarmap, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNObjVars(scip) * 5)) );
+   SCIP_CALL( SCIPhashmapCreate(&binobjvarmap, SCIPblkmem(scip), SCIPgetNObjVars(scip)) );
 
    /* count and collect variable problem indices of variables with non-zero objective coefficient */
    for( v = 0; v < nvars; ++v )
@@ -1566,11 +1574,14 @@ SCIP_RETCODE propdataInit(
       useimplics = (propdata->propuseimplics && nbinobjvars < propdata->maximplvars);
 
       /* allocate memory for all arrays */
-      SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->minactvars, nbinvars) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->minactimpls, nbinvars) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->maxactvars, nbinvars) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->maxactchgs, nbinvars) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->objintvars, nobjvars - nbinobjvars) );
+      propdata->minactsize = nbinvars;
+      propdata->maxactsize = nbinvars;
+      propdata->objintvarssize = nobjvars - nbinobjvars;
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->minactvars, propdata->minactsize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->minactimpls, propdata->minactsize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->maxactvars, propdata->maxactsize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->maxactchgs, propdata->maxactsize) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->objintvars, propdata->objintvarssize) );
 
       if( useimplics )
       {
@@ -1587,7 +1598,7 @@ SCIP_RETCODE propdataInit(
 
          if( ncliques > 0 )
          {
-            SCIP_CALL( SCIPhashtableCreate(&uselesscliques, SCIPblkmem(scip), SCIPcalcHashtableSize(ncliques),
+            SCIP_CALL( SCIPhashtableCreate(&uselesscliques, SCIPblkmem(scip), ncliques,
                   cliqueGetHashkey, cliqueIsHashkeyEq, cliqueGetHashkeyVal, NULL) );
          }
          else
@@ -1604,7 +1615,7 @@ SCIP_RETCODE propdataInit(
       /* collect the variables with non-zero objective contribution and catch global bound tighten events that decrease the
        * maximal pseudo objective activity
        */
-      for( v = 0; v < nvars && (nobjintvars == 0 || nobjintvars < nobjvars - nbinobjvars); ++v )
+      for( v = 0; v < nvars && (nobjintvars == 0 || nobjintvars < propdata->objintvarssize); ++v )
       {
          var = vars[v];
          assert(var != NULL);
@@ -1674,7 +1685,7 @@ SCIP_RETCODE propdataInit(
             if( SCIPisZero(scip, objval) )
                continue;
 
-            assert(nobjintvars < nobjvars - nbinobjvars);
+            assert(nobjintvars < propdata->objintvarssize);
 
             propdata->objintvars[nobjintvars] = var;
             nobjintvars++;
@@ -1704,8 +1715,9 @@ SCIP_RETCODE propdataInit(
 
       if( nminactvars == 0 )
       {
-         SCIPfreeMemoryArray(scip, &propdata->minactvars);
-         SCIPfreeMemoryArray(scip, &propdata->minactimpls);
+         SCIPfreeBlockMemoryArray(scip, &propdata->minactvars, propdata->minactsize);
+         SCIPfreeBlockMemoryArray(scip, &propdata->minactimpls, propdata->minactsize);
+         propdata->minactsize = 0;
          propdata->minactvars = NULL;
          propdata->minactimpls = NULL;
       }
@@ -1721,8 +1733,9 @@ SCIP_RETCODE propdataInit(
 
       if( nmaxactvars == 0 )
       {
-         SCIPfreeMemoryArray(scip, &propdata->maxactvars);
-         SCIPfreeMemoryArray(scip, &propdata->maxactchgs);
+         SCIPfreeBlockMemoryArray(scip, &propdata->maxactvars, propdata->maxactsize);
+         SCIPfreeBlockMemoryArray(scip, &propdata->maxactchgs, propdata->maxactsize);
+         propdata->maxactsize = 0;
          propdata->maxactvars = NULL;
          propdata->maxactchgs = NULL;
       }
@@ -1738,7 +1751,8 @@ SCIP_RETCODE propdataInit(
 
       if( nobjintvars == 0 )
       {
-         SCIPfreeMemoryArray(scip, &propdata->objintvars);
+         SCIPfreeBlockMemoryArray(scip, &propdata->objintvars, propdata->objintvarssize);
+         propdata->objintvarssize = 0;
          propdata->objintvars = NULL;
       }
       else
@@ -1781,7 +1795,7 @@ SCIP_RETCODE propdataInit(
    /* create hash table which is used for resolving bound changes */
    if( nminactvars > 0 )
    {
-      SCIP_CALL( SCIPhashtableCreate(&propdata->addedvars, SCIPblkmem(scip), SCIPcalcHashtableSize(5*nvars),
+      SCIP_CALL( SCIPhashtableCreate(&propdata->addedvars, SCIPblkmem(scip), nvars,
             SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
    }
    else
@@ -2383,7 +2397,7 @@ SCIP_RETCODE propagateCutoffboundBinvar(
          assert(SCIPgetDepth(scip) > 0);
 
          /* initialize conflict analysis */
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+         SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, TRUE) );
 
          /* add all variable whose best bound changes increased the pseudo objective value above to cutoff bound */
          SCIP_CALL( resolvePropagation(scip, propdata, pseudoobjval, NULL, -1, SCIP_BOUNDTYPE_UPPER, NULL) );
@@ -2732,8 +2746,8 @@ SCIP_RETCODE propagateCutoffbound(
 
    /* @note A new global pseudo objective value could be used to retrieve global fixings. There is, however, no need to
     *       check if a new global pseudo objective value is available. This is the case since a new (better) global
-    *       pseudo activity implicis that a global bound change was performed. That causes that the root node of the
-    *       search tree get marked for repropagation. That will result in propagation call of the pseudo objective
+    *       pseudo activity implies that a global bound change was performed. That causes that the root node of the
+    *       search tree gets marked for repropagation. That will result in a propagation call of the pseudo objective
     *       propagator.
     */
 
@@ -2788,9 +2802,9 @@ SCIP_RETCODE propagateCutoffbound(
          assert(SCIPgetDepth(scip) > 0);
 
          /* initialize conflict analysis */
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+         SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, TRUE) );
 
-         /* add all variable whose best bound changes increased the pseudo objective value above to cutoff bound */
+         /* add all variable whose best bound changes increased the pseudo objective value above the cutoff bound */
          SCIP_CALL( resolvePropagation(scip, propdata, cutoffbound, NULL, -1, SCIP_BOUNDTYPE_UPPER, NULL) );
 
          /* analyze the conflict */
@@ -3389,7 +3403,7 @@ SCIP_DECL_PROPFREE(propFreePseudoobj)
 
    /* free propagator data */
    propdata = SCIPpropGetData(prop);
-   SCIPfreeMemory(scip, &propdata);
+   SCIPfreeBlockMemory(scip, &propdata);
    SCIPpropSetData(prop, NULL);
 
    return SCIP_OKAY;
@@ -3669,7 +3683,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 
 
    /* create pseudoobj propagator data */
-   SCIP_CALL( SCIPallocMemory(scip, &propdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
 
    /* reset propagator data structure */
    propdataReset(scip, propdata);

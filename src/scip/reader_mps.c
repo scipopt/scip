@@ -148,7 +148,7 @@ SCIP_RETCODE mpsinputCreate(
    assert(mpsi != NULL);
    assert(fp != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, mpsi) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, mpsi) );
 
    (*mpsi)->section     = MPS_NAME;
    (*mpsi)->fp          = fp;
@@ -182,7 +182,7 @@ void mpsinputFree(
    MPSINPUT**            mpsi                /**< mps input structure */
    )
 {
-   SCIPfreeMemory(scip, mpsi);
+   SCIPfreeBlockMemory(scip, mpsi);
 }
 
 /** returns the current section */
@@ -2849,6 +2849,16 @@ SCIP_RETCODE getLinearCoeffs(
       for( v = 0; v < nactivevars; ++v )
       {
          SCIP_CALL( SCIPvarGetOrigvarSum(&activevars[v], &activevals[v], &activeconstant) );
+
+         /* negated variables with an original counterpart may also be returned by SCIPvarGetOrigvarSum();
+          * make sure we get the original variable in that case
+          */
+         if( SCIPvarGetStatus(activevars[v]) == SCIP_VARSTATUS_NEGATED )
+         {
+            activevars[v] = SCIPvarGetNegatedVar(activevars[v]);
+            activevals[v] *= -1.0;
+            activeconstant += 1.0;
+         }
       }
    }
 
@@ -2955,7 +2965,7 @@ SCIP_RETCODE checkVarnames(
    faulty = 0;
 
    /* allocate memory */
-   SCIP_CALL( SCIPhashmapCreate(varnameHashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(varnameHashmap, SCIPblkmem(scip), nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, varnames, nvars) );
 
    /* check if the variable names are not to long */
@@ -3565,7 +3575,7 @@ SCIP_DECL_READERFREE(readerFreeMps)
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
-   SCIPfreeMemory(scip, &readerdata);
+   SCIPfreeBlockMemory(scip, &readerdata);
 
    return SCIP_OKAY;
 }
@@ -3710,14 +3720,14 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    /* create hashtable for storing aggregated variables */
    if( nfixedvars > 0 )
    {
-      SCIP_CALL( SCIPhashtableCreate(&varFixedHash, SCIPblkmem(scip), 5 * nfixedvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+      SCIP_CALL( SCIPhashtableCreate(&varFixedHash, SCIPblkmem(scip), nfixedvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
    }
    else
       varFixedHash = NULL;
 
    if( nvars > 0 )
    {
-      SCIP_CALL( SCIPhashtableCreate(&indicatorSlackHash, SCIPblkmem(scip), 5 * nvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+      SCIP_CALL( SCIPhashtableCreate(&indicatorSlackHash, SCIPblkmem(scip), nvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
    }
    else
       indicatorSlackHash = NULL;
@@ -4248,7 +4258,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
                /* compute column entries */
                SCIP_CALL( getLinearCoeffs(scip, rowname, rowvars, rowvals, nrowvars + 1, transformed, matrix, &rhss[k]) );
 
-               SCIPinfoMessage(scip, file, "%g, %g\n", rowvals[1], rhss[k]);
+               SCIPdebugMsg(scip, "%g, %g\n", rowvals[1], rhss[k]);
                ++k;
             }
 
@@ -4727,7 +4737,7 @@ SCIP_RETCODE SCIPincludeReaderMps(
    SCIP_READER* reader;
 
    /* create reader data */
-   SCIP_CALL( SCIPallocMemory(scip, &readerdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );

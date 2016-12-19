@@ -344,6 +344,19 @@ SCIP_DECL_CONSENFOLP(consEnfolpConjunction)
 }
 
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxConjunction)
+{  /*lint --e{715}*/
+   *result = SCIP_FEASIBLE;
+
+   /* add all constraints to the current node */
+   SCIP_CALL( addAllConss(scip, conss, nconss, result) );
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsConjunction)
@@ -741,16 +754,13 @@ SCIP_RETCODE SCIPincludeConshdlrConjunction(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
-   /* create conjunction constraint handler data */
-   conshdlrdata = NULL;
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpConjunction, consEnfopsConjunction, consCheckConjunction, consLockConjunction,
-         conshdlrdata) );
+         NULL) );
 
    assert(conshdlr != NULL);
 
@@ -762,7 +772,7 @@ SCIP_RETCODE SCIPincludeConshdlrConjunction(
          CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintConjunction) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransConjunction) );
-
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxConjunction) );
 
    return SCIP_OKAY;
 }
@@ -861,4 +871,3 @@ SCIP_RETCODE SCIPaddConsElemConjunction(
 
    return SCIP_OKAY;
 }
-

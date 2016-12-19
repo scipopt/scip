@@ -108,7 +108,7 @@ SCIP_RETCODE tryOneOpt(
          continue;
 
       /* return if the we would exceed the depth limit of the tree */
-      if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+      if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
          break;
 
       /* get rid of all bound changes */
@@ -225,7 +225,7 @@ SCIP_RETCODE trySolCandidate(
    SCIP_CALL( SCIPstartProbing(scip) );
 
    /* we can stop here if we have already reached the maximal depth */
-   if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+   if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
    {
       SCIP_CALL( SCIPendProbing(scip) );
       return SCIP_OKAY;
@@ -392,7 +392,7 @@ SCIP_DECL_HEURFREE(heurFreeIndicator)
    SCIPfreeBlockMemoryArrayNull(scip, &(heurdata->solcand), heurdata->nindconss);
 
    /* free heuristic data */
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -524,7 +524,7 @@ SCIP_RETCODE SCIPincludeHeurIndicator(
    SCIP_HEUR* heur;
 
    /* create Indicator primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    heurdata->nindconss = 0;
    heurdata->indconss = NULL;
    heurdata->solcand = NULL;

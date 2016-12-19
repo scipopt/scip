@@ -135,6 +135,13 @@ SCIP_RETCODE SCIPdispAutoActivate(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** changes the display column mode */
+extern
+void SCIPdispChgMode(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_DISPMODE         mode                /**< the display column mode */
+   );
+
 #ifdef __cplusplus
 }
 #endif

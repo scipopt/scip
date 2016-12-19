@@ -214,7 +214,7 @@ SCIP_DECL_SEPAFREE(sepaFreeStrongcg)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   SCIPfreeMemory(scip, &sepadata);
+   SCIPfreeBlockMemory(scip, &sepadata);
 
    SCIPsepaSetData(sepa, NULL);
 
@@ -585,7 +585,7 @@ SCIP_RETCODE SCIPincludeSepaStrongcg(
    SCIP_SEPA* sepa;
 
    /* create separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
    sepadata->lastncutsfound = 0;
 
    /* include separator */

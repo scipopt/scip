@@ -35,6 +35,7 @@
 
 #include <stdio.h>
 
+#include "scip/pub_misc.h"
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 
@@ -47,14 +48,14 @@ static const unsigned int randseed = 42;
 /** sets up problem */
 static
 SCIP_RETCODE setupProblem(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
    )
 {
    SCIP_VAR* a;
    SCIP_VAR* b;
    SCIP_VAR* r;
 
-   unsigned int seed;
    char name[SCIP_MAXSTRLEN];
    int i;
 
@@ -71,7 +72,6 @@ SCIP_RETCODE setupProblem(
    SCIP_CALL( SCIPaddVar(scip, r) );
 
    /* create soc constraints, add to problem, and forget about them */
-   seed = randseed;
    for( i = 0; i < npoints; ++i )
    {
       SCIP_CONS* cons;
@@ -80,8 +80,8 @@ SCIP_RETCODE setupProblem(
 
       ab[0] = a;
       ab[1] = b;
-      xy[0] = -SCIPgetRandomReal(1.0, 10.0, &seed);
-      xy[1] = -SCIPgetRandomReal(1.0, 10.0, &seed);
+      xy[0] = -SCIPrandomGetReal(randnumgen, 1.0, 10.0);
+      xy[1] = -SCIPrandomGetReal(randnumgen, 1.0, 10.0);
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "point%d", i);
       SCIP_CALL( SCIPcreateConsBasicSOC(scip, &cons, name, 2, ab, NULL, xy, 0.0, r, 1.0, 0.0) );
@@ -102,6 +102,7 @@ static
 SCIP_RETCODE runCircle(void)
 {
    SCIP* scip;
+   SCIP_RANDNUMGEN* randnumgen;
 
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
@@ -112,7 +113,10 @@ SCIP_RETCODE runCircle(void)
    SCIPinfoMessage(scip, NULL, "*********************************************\n");
    SCIPinfoMessage(scip, NULL, "\n");
 
-   SCIP_CALL( setupProblem(scip) );
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, SCIPblkmem(scip), randseed) );
+
+   SCIP_CALL( setupProblem(scip, randnumgen) );
 
    SCIPinfoMessage(scip, NULL, "Original problem:\n");
    SCIP_CALL( SCIPprintOrigProblem(scip, NULL, "cip", FALSE) );
@@ -127,6 +131,9 @@ SCIP_RETCODE runCircle(void)
       SCIPinfoMessage(scip, NULL, "\nSolution:\n");
       SCIP_CALL( SCIPprintSol(scip, SCIPgetBestSol(scip), NULL, FALSE) );
    }
+
+   /* free random number generator */
+   SCIPrandomFree(&randnumgen);
 
    SCIP_CALL( SCIPfree(&scip) );
 

@@ -107,7 +107,7 @@ SCIP_DECL_NODESELFREE(nodeselFreeHybridestim)
    /* free user data of node selector */
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
-   SCIPfreeMemory(scip, &nodeseldata);
+   SCIPfreeBlockMemory(scip, &nodeseldata);
    SCIPnodeselSetData(nodesel, nodeseldata);
 
    return SCIP_OKAY;
@@ -318,7 +318,7 @@ SCIP_RETCODE SCIPincludeNodeselHybridestim(
    SCIP_NODESEL* nodesel;
 
    /* allocate and initialize node selector data; this has to be freed in the destructor */
-   SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &nodeseldata) );
 
    /* include node selector */
    SCIP_CALL( SCIPincludeNodeselBasic(scip, &nodesel, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,

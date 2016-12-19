@@ -711,15 +711,15 @@ SCIP_RETCODE SCIPheurCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling primal heuristic <%s> (-1: never, 0: only at depth freqofs)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*heur)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
+                  &(*heur)->freq, FALSE, freq, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freqofs", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency offset for calling primal heuristic <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*heur)->freqofs, FALSE, freqofs, 0, INT_MAX, NULL, NULL) );
+                  &(*heur)->freqofs, FALSE, freqofs, 0, SCIP_MAXTREEDEPTH, NULL, NULL) );
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdepth", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal depth level to call primal heuristic <%s> (-1: no limit)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*heur)->maxdepth, TRUE, maxdepth, -1, INT_MAX, NULL, NULL) );
+                  &(*heur)->maxdepth, TRUE, maxdepth, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -1016,7 +1016,8 @@ SCIP_RETCODE SCIPheurExec(
       if( *result != SCIP_FOUNDSOL
          && *result != SCIP_DIDNOTFIND
          && *result != SCIP_DIDNOTRUN
-         && *result != SCIP_DELAYED )
+         && *result != SCIP_DELAYED
+         && *result != SCIP_UNBOUNDED )
       {
          SCIPerrorMessage("execution method of primal heuristic <%s> returned invalid result <%d>\n", 
             heur->name, *result);
@@ -1034,7 +1035,7 @@ SCIP_RETCODE SCIPheurExec(
          set->heurssorted = FALSE;
       }
    }
-   assert(*result == SCIP_DIDNOTRUN || *result == SCIP_DELAYED || heur->delaypos == -1);
+   assert(*result == SCIP_DIDNOTRUN || *result == SCIP_DELAYED || *result == SCIP_UNBOUNDED || heur->delaypos == -1);
 
    /* check if the heuristic was (still) delayed */
    if( *result == SCIP_DELAYED || heur->delaypos >= 0 )

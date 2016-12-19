@@ -553,7 +553,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             assert(bdchgvals != NULL);
 
             /* return if we reached the depth limit */
-            if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+            if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
             {
                SCIPdebugMsg(scip, "depth limit reached, we stop diving immediately.\n");
                goto TERMINATE;

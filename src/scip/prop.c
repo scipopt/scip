@@ -38,7 +38,6 @@
 #include "scip/struct_prop.h"
 
 
-
 /** compares two propagators w. r. to their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPpropComp)
 {  /*lint --e{715}*/
@@ -146,7 +145,7 @@ SCIP_RETCODE SCIPpropCreate(
    /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
     * error message
     */
-   if( presoltiming < SCIP_PRESOLTIMING_NONE || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
+   if( presoltiming < SCIP_PRESOLTIMING_NONE || presoltiming > SCIP_PRESOLTIMING_MAX )
    {
       SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
          "'SCIP_PRESOLTIMING' for <%s> propagator instead.\n", name);
@@ -193,7 +192,7 @@ SCIP_RETCODE SCIPpropCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/freq", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling propagator <%s> (-1: never, 0: only in root node)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         &(*prop)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
+         &(*prop)->freq, FALSE, freq, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/delay", name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname,
@@ -218,10 +217,10 @@ SCIP_RETCODE SCIPpropCreate(
          &(*prop)->maxprerounds, FALSE, presolmaxrounds, -1, INT_MAX, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/presoltiming", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing mask of the presolving method of propagator <%s> (%u:FAST, %u:MEDIUM, %u:EXHAUSTIVE)",
-      name, SCIP_PRESOLTIMING_FAST, SCIP_PRESOLTIMING_MEDIUM, SCIP_PRESOLTIMING_EXHAUSTIVE);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing mask of the presolving method of propagator <%s> (%u:FAST, %u:MEDIUM, %u:EXHAUSTIVE, %u:FINAL)",
+      name, SCIP_PRESOLTIMING_FAST, SCIP_PRESOLTIMING_MEDIUM, SCIP_PRESOLTIMING_EXHAUSTIVE, SCIP_PRESOLTIMING_FINAL);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         (int*)&(*prop)->presoltiming, TRUE, (int)presoltiming, (int) SCIP_PRESOLTIMING_NONE, (int) SCIP_PRESOLTIMING_ALWAYS, NULL, NULL) ); /*lint !e740*/
+         (int*)&(*prop)->presoltiming, TRUE, (int)presoltiming, (int) SCIP_PRESOLTIMING_NONE, (int) SCIP_PRESOLTIMING_MAX, NULL, NULL) ); /*lint !e740*/
 
 
    return SCIP_OKAY;
@@ -651,7 +650,8 @@ SCIP_RETCODE SCIPpropExec(
             && *result != SCIP_REDUCEDDOM
             && *result != SCIP_DIDNOTFIND
             && *result != SCIP_DIDNOTRUN
-            && *result != SCIP_DELAYED )
+            && *result != SCIP_DELAYED
+            && *result != SCIP_DELAYNODE )
          {
             SCIPerrorMessage("execution method of propagator <%s> returned invalid result <%d>\n", 
                prop->name, *result);
@@ -858,7 +858,7 @@ SCIP_RETCODE SCIPpropSetPresol(
    /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
     * error message
     */
-   if( presoltiming < SCIP_PRESOLTIMING_FAST || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
+   if( presoltiming < SCIP_PRESOLTIMING_FAST || presoltiming > SCIP_PRESOLTIMING_MAX )
    {
       SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
          "'SCIP_PRESOLTIMING' for <%s> constraint handler instead.\n", prop->name);

@@ -206,7 +206,7 @@ SCIP_RETCODE performRandRounding(
              * otherwise we finish at this point.
              * @todo: Maybe we want to continue with the same node because we do not backtrack.
              */
-            if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
+            if( SCIPgetDepth(scip) < SCIP_MAXTREEDEPTH )
             {
                SCIP_CALL( SCIPnewProbingNode(scip) );
             }
@@ -357,7 +357,7 @@ SCIP_DECL_HEURFREE(heurFreeRandrounding) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -483,7 +483,7 @@ SCIP_RETCODE SCIPincludeHeurRandrounding(
    SCIP_HEUR* heur;
 
    /* create heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,

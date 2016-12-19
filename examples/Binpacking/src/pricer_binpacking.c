@@ -392,9 +392,8 @@ SCIP_RETCODE initPricing(
    }
 
    /* create capacity constraint */
-   SCIP_CALL( SCIPcreateConsBasicKnapsack(subscip, &cons, "capacity", nvars, vars, vals,
-         capacity) );
-   
+   SCIP_CALL( SCIPcreateConsBasicKnapsack(subscip, &cons, "capacity", nvars, vars, vals, capacity) );
+
    SCIP_CALL( SCIPaddCons(subscip, cons) );
    SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
 
@@ -430,11 +429,11 @@ SCIP_DECL_PRICERFREE(pricerFreeBinpacking)
    if( pricerdata != NULL)
    {
       /* free memory */
-      SCIPfreeMemoryArrayNull(scip, &pricerdata->conss);
-      SCIPfreeMemoryArrayNull(scip, &pricerdata->weights);
-      SCIPfreeMemoryArrayNull(scip, &pricerdata->ids);
+      SCIPfreeBlockMemoryArrayNull(scip, &pricerdata->conss, pricerdata->nitems);
+      SCIPfreeBlockMemoryArrayNull(scip, &pricerdata->weights, pricerdata->nitems);
+      SCIPfreeBlockMemoryArrayNull(scip, &pricerdata->ids, pricerdata->nitems);
 
-      SCIPfreeMemory(scip, &pricerdata);
+      SCIPfreeBlockMemory(scip, &pricerdata);
    }
 
    return SCIP_OKAY;
@@ -559,7 +558,8 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
-   SCIP_CALL( SCIPallocMemoryArray(subscip, &vars, nitems) );
+   /* allocate in orginal scip, since otherwise the buffer counts in subscip are not correct */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nitems) );
 
    /* initialization local pricing problem */
    SCIP_CALL( initPricing(scip, pricerdata, subscip, vars) );
@@ -670,7 +670,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
    }
 
    /* free pricer MIP */
-   SCIPfreeMemoryArray(subscip, &vars);
+   SCIPfreeBufferArray(scip, &vars);
 
    if( addvar || SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
       (*result) = SCIP_SUCCESS;
@@ -722,7 +722,7 @@ SCIP_RETCODE SCIPincludePricerBinpacking(
    SCIP_PRICER* pricer;
 
    /* create binpacking variable pricer data */
-   SCIP_CALL( SCIPallocMemory(scip, &pricerdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &pricerdata) );
 
    pricerdata->conshdlr = SCIPfindConshdlr(scip, "samediff");
    assert(pricerdata->conshdlr != NULL);
@@ -774,9 +774,9 @@ SCIP_RETCODE SCIPpricerBinpackingActivate(
    assert(pricerdata != NULL);
 
    /* copy arrays */
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &pricerdata->conss, conss, nitems) );
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &pricerdata->weights, weights, nitems) );
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &pricerdata->ids, ids, nitems) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &pricerdata->conss, conss, nitems) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &pricerdata->weights, weights, nitems) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &pricerdata->ids, ids, nitems) );
 
    pricerdata->nitems = nitems;
    pricerdata->capacity = capacity;

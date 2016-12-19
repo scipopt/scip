@@ -112,7 +112,7 @@ SCIP_DECL_HEURFREE(heurFreeIntdiving) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -384,7 +384,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
       SCIP_Longint nnewdomreds;
 
       /* open a new probing node if this will not exceed the maximal tree depth, otherwise stop here */
-      if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
+      if( SCIPgetDepth(scip) < SCIP_MAXTREEDEPTH )
       {
          SCIP_CALL( SCIPnewProbingNode(scip) );
          divedepth++;
@@ -570,7 +570,7 @@ SCIP_DECL_HEUREXEC(heurExecIntdiving) /*lint --e{715}*/
             SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
 
             /* after backtracking there has to be at least one open node without exceeding the maximal tree depth */
-            assert(SCIPgetDepthLimit(scip) > SCIPgetDepth(scip));
+            assert(SCIP_MAXTREEDEPTH > SCIPgetDepth(scip));
 
             SCIP_CALL( SCIPnewProbingNode(scip) );
 
@@ -650,7 +650,7 @@ SCIP_RETCODE SCIPincludeHeurIntdiving(
    SCIP_HEUR* heur;
 
    /* create Intdiving primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -705,4 +705,3 @@ SCIP_RETCODE SCIPincludeHeurIntdiving(
 
    return SCIP_OKAY;
 }
-

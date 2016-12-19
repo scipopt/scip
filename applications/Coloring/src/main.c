@@ -78,12 +78,12 @@ main(
   SCIP_RETCODE retcode;
 
   retcode = SCIPrunColoringShell(argc, argv, "scip.set");
-  
+
   if( retcode != SCIP_OKAY )
   {
      SCIPprintError(retcode);
      return -1;
   }
-  
+
   return 0;
 }

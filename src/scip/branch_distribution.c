@@ -1015,7 +1015,7 @@ SCIP_DECL_EVENTFREE(eventFreeDistribution)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   SCIPfreeMemory(scip, &eventhdlrdata);
+   SCIPfreeBlockMemory(scip, &eventhdlrdata);
    SCIPeventhdlrSetData(eventhdlr, NULL);
 
    return SCIP_OKAY;
@@ -1085,7 +1085,7 @@ SCIP_DECL_BRANCHFREE(branchFreeDistribution)
 
    /* free internal arrays first */
    SCIP_CALL( branchruledataFreeArrays(scip, branchruledata) );
-   SCIPfreeMemory(scip, &branchruledata);
+   SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
@@ -1305,7 +1305,7 @@ SCIP_RETCODE SCIPincludeBranchruleDistribution(
 
    /* create distribution branching rule data */
    branchruledata = NULL;
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
 
    branchruledata->memsize = 0;
    branchruledata->rowmeans = NULL;
@@ -1318,7 +1318,7 @@ SCIP_RETCODE SCIPincludeBranchruleDistribution(
 
    /* create event handler first to finish branch rule data */
    eventhdlrdata = NULL;
-   SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
    eventhdlrdata->branchruledata = branchruledata;
 
    branchruledata->eventhdlr = NULL;

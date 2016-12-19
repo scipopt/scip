@@ -81,7 +81,7 @@ SCIP_DECL_PRESOLFREE(presolFreeConvertinttobin)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
-   SCIPfreeMemory(scip, &presoldata);
+   SCIPfreeBlockMemory(scip, &presoldata);
    SCIPpresolSetData(presol, NULL);
 
    return SCIP_OKAY;
@@ -300,7 +300,7 @@ SCIP_RETCODE SCIPincludePresolConvertinttobin(
    SCIP_PRESOL* presolptr;
 
    /* create convertinttobin presolver data */
-   SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
 
    presoldata->maxdomainsize = DEFAULT_MAXDOMAINSIZE;
    presoldata->onlypoweroftwo = DEFAULT_ONLYPOWERSOFTWO;
