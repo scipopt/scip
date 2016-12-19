@@ -15296,6 +15296,10 @@ SCIP_RETCODE freeTransform(
       SCIP_CALL( SCIPreoptReset(scip->reopt, scip->set, scip->mem->probmem) );
    }
 
+#if 0
+   /* TODO on some nonlinear instances it happens that a lock is removed that was not added maybe due to reformulations?)
+    *      not removing the locks fixes the issue
+    */
    /* remove var locks set to avoid dual reductions */
    if( scip->set->reopt_enable || !scip->set->misc_allowdualreds )
    {
@@ -15307,6 +15311,7 @@ SCIP_RETCODE freeTransform(
          SCIP_CALL( SCIPaddVarLocks(scip, scip->transprob->vars[v], -1, -1) );
       }
    }
+#endif
 
    /* clean the conflict store
     *
