@@ -31,9 +31,16 @@ static unsigned int randomseed = 42;
 
 typedef struct SomeType
 {
-   SCIP_RBTREE_KEY(int key);
+   SCIP_RBTREE_HOOKS;
+   int key;
    SCIP_Real whateverdata;
 } SOME_TYPE;
+
+#define SOMETYPE_LT(a,b) ( a < b->key )
+#define SOMETYPE_GT(a,b) ( a > b->key )
+
+static
+SCIP_DEF_RBTREE_FIND(findSomeType, int, SOME_TYPE, SOMETYPE_LT, SOMETYPE_GT)
 
 
 /* TEST SUITE */
@@ -87,7 +94,7 @@ Test(rbtree, rb_random_insert, .description = "tests rb tree insertion and looku
 
       elem->key = key[i];
       elem->whateverdata = sqrt(key[i]);
-      pos = SCIPrbtreeFindInt(root, elem->key, &parent);
+      pos = findSomeType(root, elem->key, &parent);
 
       cr_assert(pos != 0);
       SCIPrbtreeInsert(&root, parent, pos, elem);
@@ -105,24 +112,24 @@ Test(rbtree, rb_random_insert, .description = "tests rb tree insertion and looku
    /* check number of elements was correct */
    cr_assert_eq(i, len);
    /* check lookup of specific elements */
-   pos = SCIPrbtreeFindInt(root, 10, &x);
+   pos = findSomeType(root, 10, &x);
    cr_assert(pos == 0);
    cr_assert(x->key == 10);
    /* delete element 10 */
    SCIPrbtreeDelete(&root, x);
    BMSfreeBlockMemory(blkmem, &x);
    /* lookup and delete 100 */
-   pos = SCIPrbtreeFindInt(root, 100, &x);
+   pos = findSomeType(root, 100, &x);
    cr_assert(pos == 0);
    cr_assert(x->key == 100);
    SCIPrbtreeDelete(&root, x);
    BMSfreeBlockMemory(blkmem, &x);
 
    /* lookup of deleted element should not find element and return predecessor/successor */
-   pos = SCIPrbtreeFindInt(root, 10, &x);
+   pos = findSomeType(root, 10, &x);
    cr_assert( (x->key == 9 && pos == -1) || (x->key == 11 && pos == 1) );
 
-   pos = SCIPrbtreeFindInt(root, 100, &x);
+   pos = findSomeType(root, 100, &x);
    cr_assert( (x->key == 99 && pos == -1) || (x->key == 101 && pos == 1) );
 
    /* iterate again and check order */

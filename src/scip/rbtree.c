@@ -325,21 +325,3 @@ void SCIPrbtreeInsert_call(
    MAKE_RED(node);
    rbInsertFixup(root, node);
 }
-
-#define SORTTPL_NAMEEXT Int_call
-#define SORTTPL_KEYTYPE int
-#include "rbtreetpl.c"
-
-#define SORTTPL_NAMEEXT Real_call
-#define SORTTPL_KEYTYPE SCIP_Real
-#include "rbtreetpl.c"
-
-#define SORTTPL_NAMEEXT Ptr_call
-#define SORTTPL_KEYTYPE void*
-#define SORTTPL_PTRCOMP
-#include "rbtreetpl.c"
-
-#define SORTTPL_NAMEEXT Elem_call
-#define RBTREE_NO_KEY
-#define SORTTPL_PTRCOMP
-#include "rbtreetpl.c"
