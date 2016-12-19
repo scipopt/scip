@@ -15297,6 +15297,9 @@ SCIP_RETCODE freeTransform(
    }
 
 #if 0
+   /* TODO on some nonlinear instances it happens that a lock is removed that was not added maybe due to reformulations?)
+    *      not removing the locks fixes the issue
+    */
    /* remove var locks set to avoid dual reductions */
    if( scip->set->reopt_enable || !scip->set->misc_allowdualreds )
    {
