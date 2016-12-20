@@ -4063,10 +4063,13 @@ SCIP_RETCODE SCIPlpiGetIntpar(
 
       if( scaleparam == SoPlex::SCALER_OFF )
          *ival = 0;
-      else if( scaleparam == SoPlex::SCALER_BIEQUI || scaleparam == SoPlex::SCALER_UNIEQUI )
+      else if( scaleparam == SoPlex::SCALER_BIEQUI )
          *ival = 1;
       else
+      {
+         assert(scaleparam == SoPlex::SCALER_LEASTSQ);
          *ival = 2;
+      }
       break;
 #if SOPLEX_VERSION >= 201
    case SCIP_LPPAR_TIMING:
