@@ -305,7 +305,7 @@ struct SCIP_Set
    SCIP_Bool             lp_checkprimfeas;   /**< should LP solutions be checked for primal feasibility, resolving LP when numerical troubles occur? */
    SCIP_Bool             lp_checkdualfeas;   /**< should LP solutions be checked for dual feasibility, resolving LP when numerical troubles occur? */
    int                   lp_fastmip;         /**< which FASTMIP setting of LP solver should be used? 0: off, 1: medium, 2: full */
-   SCIP_Bool             lp_scaling;         /**< should scaling of LP solver be used? */
+   int                   lp_scaling;         /**< LP scaling (0: none, 1: normal, 2: aggressive) */
    SCIP_Bool             lp_presolving;      /**< should presolving of LP solver be used? */
    SCIP_Bool             lp_lexdualalgo;     /**< should the lexicographic dual algorithm be used? */
    SCIP_Bool             lp_lexdualrootonly; /**< should the lexicographic dual algorithm be applied only at the root node */
