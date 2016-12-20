@@ -1460,14 +1460,14 @@ SCIP_RETCODE determineLimits(
    return SCIP_OKAY;
 }
 
-/** updates heurdata after a run of crossover */
+/** updates heurdata after a run of GINS */
 static
 void updateFailureStatistic(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
    )
 {
-   /* increase number of failures, calculate next node at which crossover should be called and update actual solutions */
+   /* increase number of failures, calculate next node at which GINS should be called and update actual solutions */
    heurdata->nfailures++;
    heurdata->nextnodenumber = (heurdata->nfailures <= 25
       ? SCIPgetNNodes(scip) + 100*(2LL << heurdata->nfailures) /*lint !e703*/
