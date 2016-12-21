@@ -726,7 +726,7 @@ SCIP_RETCODE sepadataAddNlrowaggr(
    }
    else if( sepadata->nlrowaggrssize < sepadata->nnlrowaggrs + 1 )
    {
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->nlrowaggrs, sepadata->nlrowaggrssize, 2 * sepadata->nlrowaggrssize) ); /*lint !e506*/
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->nlrowaggrs, sepadata->nlrowaggrssize, 2 * sepadata->nlrowaggrssize) ); /*lint !e506 !e647*/
       sepadata->nlrowaggrssize *= 2;
       assert(sepadata->nlrowaggrssize >= sepadata->nnlrowaggrs + 1);
    }
