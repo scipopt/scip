@@ -17263,6 +17263,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
    SCIP_Real constant;
    int requiredsize;
    int v;
+   SCIP_Bool success;
 
    if( SCIPisGT(scip, lhs, rhs) )
    {
@@ -17291,7 +17292,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
       for( v = 0; v < nvars; ++v )
-         coefs[v] = 1.0;      
+         coefs[v] = 1.0;
    }
 
    constant = 0.0;
@@ -17322,18 +17323,20 @@ SCIP_RETCODE SCIPcopyConsLinear(
       }
    }
 
+
+   success = TRUE;
    /* map variables of the source constraint to variables of the target SCIP */
-   for( v = 0; v < nvars && *valid; ++v )
+   for( v = 0; v < nvars && success; ++v )
    {
       SCIP_VAR* var;
       var = vars[v];
 
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &vars[v], varmap, consmap, global, valid) );
-      assert(!(*valid) || vars[v] != NULL);
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &vars[v], varmap, consmap, global, &success) );
+      assert(!(success) || vars[v] != NULL);
    }
 
    /* only create the target constraint, if all variables could be copied */
-   if( *valid )
+   if( success )
    {
       if( !SCIPisInfinity(scip, -lhs) )
          lhs -= constant;
@@ -17344,6 +17347,8 @@ SCIP_RETCODE SCIPcopyConsLinear(
       SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs, 
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
+   else
+      *valid = FALSE;
 
    /* free buffer array */
    SCIPfreeBufferArray(scip, &coefs);
