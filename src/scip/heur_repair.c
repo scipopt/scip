@@ -1209,7 +1209,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    /* use read method to enter solution from a file */
    if( strcmp(heurdata->filename, DEFAULT_FILENAME) == 0 )
    {
-      SCIP_CALL( SCIPlinkLPSol(scip, heurdata->infsol) );
+      retcode = SCIPlinkLPSol(scip, heurdata->infsol);
    }
    else
    {
