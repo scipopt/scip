@@ -1436,12 +1436,12 @@ SCIP_RETCODE separateConstraints(
    }
    else if ( ncuts > 0 )
    {
-      SCIPdebugMsg(scip, "Separated %d SCIs during enforcement.\n", ncuts);
+      SCIPdebugMsg(scip, "Separated %d SCIs.\n", ncuts);
       *result = SCIP_SEPARATED;
    }
    else
    {
-      SCIPdebugMsg(scip, "No violated SCI found during enforcement.\n");
+      SCIPdebugMsg(scip, "No violated SCI found during separation.\n");
    }
 
    return SCIP_OKAY;
@@ -1576,6 +1576,7 @@ static
 SCIP_DECL_CONSENFORELAX(consEnforelaxOrbitope)
 {  /*lint --e{715}*/
    assert( result != NULL );
+   assert( scip != NULL );
 
    SCIPdebugMsg(scip, "Enforcement for orbitope constraint handler <%s> for relaxation solution.\n", SCIPconshdlrGetName(conshdlr));
 

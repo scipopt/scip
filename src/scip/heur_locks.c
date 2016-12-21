@@ -274,9 +274,12 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    {
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-      /* return if infeasibility was detected during LP construction */
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
       if( cutoff )
+      {
+         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;
+      }
 
       SCIP_CALL( SCIPflushLP(scip) );
 
@@ -525,8 +528,18 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          {
             row = colrows[r];
             rowpos = SCIProwGetLPPos(row);
+
+            /* the row is not in the LP */
+            if( rowpos == -1 )
+               continue;
+
             assert(lprows[rowpos] == row);
 
+            /* we disregard cuts */
+            if( SCIProwGetRank(row) > 0 )
+               continue;
+
+            /* the row is already fulfilled */
             if( fulfilled[rowpos] )
                continue;
 
@@ -623,7 +636,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          if( nglbfulfilledrows == nlprows )
             break;
       }
-   }
+   } /*lint --e{850}*/
 
    /* check that we had enough fixings */
    npscands = SCIPgetNPseudoBranchCands(scip);
@@ -690,7 +703,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 
             if( stored )
             {
-#ifndef NDEBUG
+#ifdef SCIP_MORE_DEBUG
                SCIP_Bool feasible;
                SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, TRUE, TRUE, TRUE, TRUE, &feasible) );
                assert(feasible);

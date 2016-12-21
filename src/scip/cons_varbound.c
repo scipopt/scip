@@ -284,6 +284,12 @@ SCIP_RETCODE consdataCreate(
       return SCIP_INVALIDDATA;
    }
 
+   if( SCIPisZero(scip, vbdcoef) )
+   {
+      SCIPerrorMessage("varbound coefficient must be different to zero.\n");
+      return SCIP_INVALIDDATA;
+   }
+
    if( SCIPisInfinity(scip, vbdcoef) )
       vbdcoef = SCIPinfinity(scip);
    else if( SCIPisInfinity(scip, -vbdcoef) )
@@ -507,7 +513,7 @@ SCIP_RETCODE resolvePropagation(
           * arithmetics, so we explicitly check this here.
           */
          if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-            relaxedbd = (consdata->lhs - (inferbd - 1.0 + MAX(2.0, REALABS(vbdcoef)) * SCIPfeastol(scip))) / vbdcoef;
+            relaxedbd = (consdata->lhs - (inferbd - 1.0 + 2.0* SCIPfeastol(scip))) / vbdcoef;
          else
             relaxedbd = (consdata->lhs - inferbd) / vbdcoef;
 
@@ -567,7 +573,7 @@ SCIP_RETCODE resolvePropagation(
              * arithmetics, so we explicitly check this here.
              */
             if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-               relaxedub = consdata->lhs - (inferbd - 1.0 + MAX(2.0, REALABS(vbdcoef)) * SCIPfeastol(scip)) * vbdcoef;
+               relaxedub = consdata->lhs - (inferbd - 1.0 + 2.0 * SCIPfeastol(scip)) * vbdcoef;
             else
                relaxedub = consdata->lhs - inferbd * vbdcoef;
 
@@ -583,7 +589,7 @@ SCIP_RETCODE resolvePropagation(
              * arithmetics, so we explicitly check this here.
              */
             if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-               relaxedub = consdata->lhs - (inferbd + 1.0 - MAX(2.0, REALABS(vbdcoef))*SCIPfeastol(scip)) * vbdcoef;
+               relaxedub = consdata->lhs - (inferbd + 1.0 - 2.0 * SCIPfeastol(scip)) * vbdcoef;
             else
                relaxedub = consdata->lhs - inferbd * vbdcoef;
 
@@ -622,7 +628,7 @@ SCIP_RETCODE resolvePropagation(
           * arithmetics, so we explicitly check this here.
           */
          if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-            relaxedbd = (consdata->rhs - (inferbd + 1.0 - MAX(2.0, REALABS(vbdcoef))*SCIPfeastol(scip))) / vbdcoef;
+            relaxedbd = (consdata->rhs - (inferbd + 1.0 - 2.0 * SCIPfeastol(scip))) / vbdcoef;
          else
             relaxedbd = (consdata->rhs - inferbd) / vbdcoef;
 
@@ -682,7 +688,7 @@ SCIP_RETCODE resolvePropagation(
              * arithmetics, so we explicitly check this here.
              */
             if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-               relaxedlb = consdata->rhs - (inferbd + 1.0 - MAX(2.0, REALABS(vbdcoef))*SCIPfeastol(scip)) * vbdcoef;
+               relaxedlb = consdata->rhs - (inferbd + 1.0 - 2.0 * SCIPfeastol(scip)) * vbdcoef;
             else
                relaxedlb = consdata->rhs - inferbd * vbdcoef;
 
@@ -698,7 +704,7 @@ SCIP_RETCODE resolvePropagation(
              * arithmetics, so we explicitly check this here.
              */
             if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip) )
-               relaxedlb = consdata->rhs - (inferbd - 1.0 + MAX(2.0, REALABS(vbdcoef))*SCIPfeastol(scip)) * vbdcoef;
+               relaxedlb = consdata->rhs - (inferbd - 1.0 + 2.0 * SCIPfeastol(scip)) * vbdcoef;
             else
                relaxedlb = consdata->rhs - inferbd * vbdcoef;
 
@@ -1237,6 +1243,22 @@ SCIP_RETCODE propagateCons(
    xub = SCIPvarGetUbLocal(consdata->var);
    ylb = SCIPvarGetLbLocal(consdata->vbdvar);
    yub = SCIPvarGetUbLocal(consdata->vbdvar);
+
+   /* it can happen that constraint is of form lhs <= x <= rhs */
+   if( SCIPisZero(scip, consdata->vbdcoef) && SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+   {
+      SCIP_Bool infeasible;
+      SCIP_Bool fixed;
+
+      SCIP_CALL( SCIPfixVar(scip, consdata->var, consdata->lhs, &infeasible, &fixed) );
+
+      if( infeasible )
+      {
+         SCIPdebugMsg(scip, "> constraint <%s> is infeasible.\n", SCIPconsGetName(cons));
+         *cutoff = TRUE;
+         return SCIP_OKAY;
+      }
+   }
 
    /* tighten bounds of variables as long as possible */
    do
@@ -2865,7 +2887,11 @@ SCIP_RETCODE applyFixings(
                consdata->rhs = (consdata->rhs - varconstant)/varscalar;
             consdata->vbdcoef /= varscalar;
 
-	    consdata->tightened = FALSE;
+            /* try to avoid numerical troubles */
+            if( SCIPisIntegral(scip, consdata->vbdcoef) )
+               consdata->vbdcoef = SCIPround(scip, consdata->vbdcoef);
+
+            consdata->tightened = FALSE;
          }
          else
          {
@@ -2886,7 +2912,11 @@ SCIP_RETCODE applyFixings(
                consdata->rhs = (consdata->rhs + varconstant)/(-varscalar);
             consdata->vbdcoef /= varscalar;
 
-	    consdata->tightened = FALSE;
+            /* try to avoid numerical troubles */
+            if( SCIPisIntegral(scip, consdata->vbdcoef) )
+               consdata->vbdcoef = SCIPround(scip, consdata->vbdcoef);
+
+            consdata->tightened = FALSE;
          }
          /* release old variable */
          SCIP_CALL( SCIPreleaseVar(scip, &(consdata->var)) );
@@ -3311,8 +3341,8 @@ SCIP_RETCODE tightenCoefs(
             consdata->lhs, SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
             consdata->lhs, SCIPvarGetName(consdata->var), newcoef, SCIPvarGetName(consdata->vbdvar), newrhs);
 
-	 /* we cannot allow that the coefficient changes the sign because of the rounding locks */
-	 assert(consdata->vbdcoef * newcoef > 0);
+         /* we cannot allow that the coefficient changes the sign because of the rounding locks */
+         assert(consdata->vbdcoef * newcoef > 0);
 
          consdata->vbdcoef = newcoef;
          consdata->rhs = newrhs;
@@ -3329,6 +3359,8 @@ SCIP_RETCODE tightenCoefs(
             SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
             assert(consdata->tightened);
          }
+         else
+            consdata->tightened = (SCIPisIntegral(scip, consdata->vbdcoef) && SCIPisIntegral(scip, consdata->rhs));
       }
       else if( consdata->vbdcoef < 0.0 && SCIPisFeasGT(scip, xlb, consdata->lhs) && SCIPisFeasLT(scip, xub, consdata->rhs - consdata->vbdcoef) )
       {
@@ -3349,8 +3381,8 @@ SCIP_RETCODE tightenCoefs(
             consdata->lhs, SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
             newlhs, SCIPvarGetName(consdata->var), newcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs);
 
-	 /* we cannot allow that the coefficient changes the sign because of the rounding locks */
-	 assert(consdata->vbdcoef * newcoef > 0);
+         /* we cannot allow that the coefficient changes the sign because of the rounding locks */
+         assert(consdata->vbdcoef * newcoef > 0);
 
          consdata->vbdcoef = newcoef;
          consdata->lhs = newlhs;
@@ -3367,6 +3399,8 @@ SCIP_RETCODE tightenCoefs(
             SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
             assert(consdata->tightened);
          }
+         else
+            consdata->tightened = (SCIPisIntegral(scip, consdata->vbdcoef) && SCIPisIntegral(scip, consdata->lhs));
       }
    }
    else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )
@@ -3382,8 +3416,8 @@ SCIP_RETCODE tightenCoefs(
             SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->lhs,
             SCIPvarGetName(consdata->var), consdata->lhs - xlb, SCIPvarGetName(consdata->vbdvar), consdata->lhs);
 
-	 /* we cannot allow that the coefficient changes the sign because of the rounding locks */
-	 assert(consdata->vbdcoef * (consdata->lhs - xlb) > 0);
+         /* we cannot allow that the coefficient changes the sign because of the rounding locks */
+         assert(consdata->vbdcoef * (consdata->lhs - xlb) > 0);
 
          consdata->vbdcoef = consdata->lhs - xlb;
          (*nchgcoefs)++;
@@ -3398,8 +3432,8 @@ SCIP_RETCODE tightenCoefs(
             SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->lhs,
             SCIPvarGetName(consdata->var), consdata->vbdcoef - consdata->lhs + xlb, SCIPvarGetName(consdata->vbdvar), xlb);
 
-	 /* we cannot allow that the coefficient changes the sign because of the rounding locks */
-	 assert(consdata->vbdcoef * (consdata->vbdcoef - consdata->lhs + xlb) > 0);
+         /* we cannot allow that the coefficient changes the sign because of the rounding locks */
+         assert(consdata->vbdcoef * (consdata->vbdcoef - consdata->lhs + xlb) > 0);
 
          consdata->vbdcoef = consdata->vbdcoef - consdata->lhs + xlb;
          consdata->lhs = xlb;
@@ -3420,8 +3454,8 @@ SCIP_RETCODE tightenCoefs(
             SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
             SCIPvarGetName(consdata->var), consdata->rhs - xub, SCIPvarGetName(consdata->vbdvar), consdata->rhs);
 
-	 /* we cannot allow that the coefficient changes the sign because of the rounding locks */
-	 assert(consdata->vbdcoef * (consdata->rhs - xub) > 0);
+         /* we cannot allow that the coefficient changes the sign because of the rounding locks */
+         assert(consdata->vbdcoef * (consdata->rhs - xub) > 0);
 
          consdata->vbdcoef = consdata->rhs - xub;
          (*nchgcoefs)++;
@@ -3436,8 +3470,8 @@ SCIP_RETCODE tightenCoefs(
             SCIPvarGetName(consdata->var), xlb, xub, consdata->vbdcoef, SCIPvarGetName(consdata->vbdvar), consdata->rhs,
             SCIPvarGetName(consdata->var), consdata->vbdcoef - consdata->rhs + xub, SCIPvarGetName(consdata->vbdvar), xub);
 
-	 /* we cannot allow that the coefficient changes the sign because of the rounding locks */
-	 assert(consdata->vbdcoef * (consdata->vbdcoef - consdata->rhs + xub) > 0);
+         /* we cannot allow that the coefficient changes the sign because of the rounding locks */
+         assert(consdata->vbdcoef * (consdata->vbdcoef - consdata->rhs + xub) > 0);
 
          consdata->vbdcoef = consdata->vbdcoef - consdata->rhs + xub;
          consdata->rhs = xub;

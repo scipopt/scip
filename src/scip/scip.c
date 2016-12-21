@@ -10817,7 +10817,7 @@ SCIP_RETCODE SCIPchgReoptObjective(
    origvars = scip->origprob->vars;
    norigvars = scip->origprob->nvars;
 
-#if SCIP_MORE_DEBUG
+#ifdef SCIP_MORE_DEBUG
    SCIPdebugMsg(scip, "objective function need to be set:\n");
    for( i = 0; i < nvars; i++ )
    {
@@ -10869,7 +10869,7 @@ SCIP_RETCODE SCIPchgReoptObjective(
       SCIP_CALL( SCIPaddVarObj(scip, vars[i], objscalar * coefs[i]) );
    }
 
-#if SCIP_MORE_DEBUG
+#ifdef SCIP_MORE_DEBUG
    SCIPdebugMsg(scip, "new objective function:\n");
    for( i = 0; i < norigvars; i++ )
    {
@@ -15297,6 +15297,10 @@ SCIP_RETCODE freeTransform(
       SCIP_CALL( SCIPreoptReset(scip->reopt, scip->set, scip->mem->probmem) );
    }
 
+#if 0
+   /* TODO on some nonlinear instances it happens that a lock is removed that was not added maybe due to reformulations?)
+    *      not removing the locks fixes the issue
+    */
    /* remove var locks set to avoid dual reductions */
    if( scip->set->reopt_enable || !scip->set->misc_allowdualreds )
    {
@@ -15308,6 +15312,7 @@ SCIP_RETCODE freeTransform(
          SCIP_CALL( SCIPaddVarLocks(scip, scip->transprob->vars[v], -1, -1) );
       }
    }
+#endif
 
    /* clean the conflict store
     *
@@ -16871,8 +16876,6 @@ SCIP_RETCODE SCIPfreeReoptSolve(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
-
-   return SCIP_OKAY;
 }
 
 /** frees all solution process data including presolving and transformed problem, only original problem is kept
@@ -41295,15 +41298,24 @@ SCIP_Longint SCIPgetNDelayedCutoffs(
  *  @return the total number of LPs solved so far
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
  */
 SCIP_Longint SCIPgetNLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPs", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->stat->nlps;
 }

@@ -2618,8 +2618,10 @@ SCIP_RETCODE SCIPbranchExecExtern(
       var = branchcand->externcands[bestcand];
       val = SCIPbranchGetBranchingPoint(set, tree, var, branchcand->externcandssol[bestcand]);
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
-      assert(SCIPsetIsLT(set, SCIPvarGetLbLocal(var), val));
-      assert(SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)));
+      assert(SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) <= 2.02 * SCIPsetEpsilon(set)
+         || SCIPsetIsLT(set, SCIPvarGetLbLocal(var), val));
+      assert(SCIPrelDiff(SCIPvarGetUbLocal(var), SCIPvarGetLbLocal(var)) <= 2.02 * SCIPsetEpsilon(set)
+         || SCIPsetIsLT(set, val, SCIPvarGetUbLocal(var)));
 
       SCIPsetDebugMsg(set, "no branching method succeeded; fallback selected to branch on variable <%s> with bounds [%g, %g] on value %g\n",
          SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), val);
@@ -2627,7 +2629,14 @@ SCIP_RETCODE SCIPbranchExecExtern(
       SCIP_CALL( SCIPtreeBranchVar(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, var, val,
             NULL, NULL, NULL) );
 
-      *result = SCIP_BRANCHED;
+      if( tree->nchildren >= 1 )
+         *result = SCIP_BRANCHED;
+      /* if the bounds are too close, it may happen that we cannot branch but rather fix the variable */
+      else
+      {
+         assert(SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+         *result = SCIP_REDUCEDDOM;
+      }
    }
 
    return SCIP_OKAY;

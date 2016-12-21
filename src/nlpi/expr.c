@@ -1820,6 +1820,9 @@ SCIP_DECL_EXPRCURV( exprcurvRealPower )
 
 /** point evaluation for EXPR_INTPOWER */
 static
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 SCIP_DECL_EXPREVAL( exprevalIntPower )
 {   /*lint --e{715}*/
    assert(result  != NULL);
@@ -11066,12 +11069,31 @@ void exprgraphNodePropagateBounds(
             }
 
             if( abc_flag == 'a' )
+            {
                SCIPintervalAdd(infinity, &a, a, monomialcoef);
+               /* if monomialcoef is such that a exceeds value for infinity, then stop */
+               if( a.inf >= infinity || a.sup <= -infinity )
+                  break;
+            }
             else if( abc_flag == 'b' )
+            {
                SCIPintervalAdd(infinity, &b, b, monomialcoef);
+               /* if monomialcoef is such that b exceeds value for infinity, then stop */
+               if( b.inf >= infinity || b.sup <= -infinity )
+                  break;
+            }
             else
+            {
                SCIPintervalSub(infinity, &c, c, monomialcoef);
+               /* if monomialcoef is such that c exceeds value for infinity, then stop */
+               if( c.inf >= infinity || c.sup <= -infinity )
+                  break;
+            }
          }
+
+         /* if we run out of numbers (within -infinity,infinity) above, then stop */
+         if( j < nmonomials )
+            continue;
 
          /* now have equation a*child^(2n) + b*child^n = c
           * solve a*y^2 + b*y = c, then child^n = y
@@ -13374,6 +13396,7 @@ SCIP_RETCODE SCIPexprgraphCreateNodeUser(
    exprdata->prop = prop;
    exprdata->copydata = copydata;
    exprdata->freedata = freedata;
+   exprdata->print = print;
 
    opdata.data = (void*) exprdata;
 

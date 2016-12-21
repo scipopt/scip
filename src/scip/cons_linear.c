@@ -4187,13 +4187,11 @@ SCIP_RETCODE normalizeCons(
                consdata->minabsval = 1.0;
 
             maxabsval = 1.0;
-            minabsval = 1.0;
          }
          else
          {
             /* get maximal absolute coefficient */
             maxabsval = consdataGetMaxAbsval(consdata);
-            minabsval = consdataGetMinAbsval(consdata);
          }
 
          /* get new consdata information, because scalecons() might have deleted variables */
@@ -6951,7 +6949,7 @@ SCIP_RETCODE tightenBounds(
       tightenmode = 1;
 
    /* stop if we already tightened the constraint and the tightening is not forced */
-   if( !force && consdata->boundstightened >= tightenmode )
+   if( !force && (consdata->boundstightened >= tightenmode) )
       return SCIP_OKAY;
 
    /* ensure that the variables are properly sorted */
@@ -7009,7 +7007,7 @@ SCIP_RETCODE tightenBounds(
    for( nrounds = 0; (force || consdata->boundstightened < tightenmode) && nrounds < MAXTIGHTENROUNDS; ++nrounds )
    {
       /* mark the constraint to have the variables' bounds tightened */
-      consdata->boundstightened = tightenmode;
+      consdata->boundstightened = (unsigned int)tightenmode;
 
       /* try to tighten the bounds of each variable in the constraint. During solving process, the binary variable
        * sorting enables skipping variables
@@ -10338,6 +10336,8 @@ SCIP_RETCODE dualPresolve(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Real minabsval;
+   SCIP_Real maxabsval;
    SCIP_Bool lhsexists;
    SCIP_Bool rhsexists;
    SCIP_Bool bestisint;
@@ -10372,6 +10372,8 @@ SCIP_RETCODE dualPresolve(
    bestpos = -1;
    bestisint = TRUE;
    bestislhs = FALSE;
+   minabsval = SCIPinfinity(scip);
+   maxabsval = -1.0;
 
    /* We only want to multi-aggregate variables, if they appear in maximal one additional constraint,
     * everything else would produce fill-in. Exceptions:
@@ -10402,6 +10404,7 @@ SCIP_RETCODE dualPresolve(
       SCIP_VAR* var;
       SCIP_Bool isint;
       SCIP_Real val;
+      SCIP_Real absval;
       SCIP_Real obj;
       SCIP_Real lb;
       SCIP_Real ub;
@@ -10410,6 +10413,20 @@ SCIP_RETCODE dualPresolve(
 
       var = consdata->vars[i];
       isint = (SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+
+      val = consdata->vals[i];
+      absval = REALABS(val);
+      assert(SCIPisPositive(scip, absval));
+
+      /* calculate minimal and maximal absolute value */
+      if( absval < minabsval )
+         minabsval = absval;
+      if( absval > maxabsval )
+         maxabsval = absval;
+
+      /* do not try to multi aggregate, when numerical bad */
+      if( maxabsval / minabsval > MAXMULTIAGGRQUOTIENT )
+         return SCIP_OKAY;
 
       /* if we already found a candidate, skip integers */
       if( bestpos >= 0 && isint )
@@ -10424,7 +10441,6 @@ SCIP_RETCODE dualPresolve(
       if ( SCIPdoNotMultaggrVar(scip, var) )
          continue;
 
-      val = consdata->vals[i];
       obj = SCIPvarGetObj(var);
       lb = SCIPvarGetLbGlobal(var);
       ub = SCIPvarGetUbGlobal(var);
@@ -10642,9 +10658,26 @@ SCIP_RETCODE dualPresolve(
       {
          if( j != bestpos )
          {
+            SCIP_Real absaggrcoef;
+
             aggrvars[naggrs] = consdata->vars[j];
             aggrcoefs[naggrs] = -consdata->vals[j]/consdata->vals[bestpos];
             SCIPdebugMsgPrint(scip, " %+.15g<%s>", aggrcoefs[naggrs], SCIPvarGetName(aggrvars[naggrs]));
+
+            absaggrcoef = REALABS(aggrcoefs[naggrs]);
+
+            /* do not try to multi aggregate, when numerical bad */
+            if( absaggrcoef > MAXMULTIAGGRQUOTIENT || absaggrcoef < 1.0/MAXMULTIAGGRQUOTIENT )
+            {
+               SCIPdebugMsg(scip, "do not perform multi-aggregation: too large aggregation coefficients\n");
+
+               /* free temporary memory */
+               SCIPfreeBufferArray(scip, &aggrcoefs);
+               SCIPfreeBufferArray(scip, &aggrvars);
+
+               return SCIP_OKAY;
+            }
+
             if( bestisint )
             {
                /* coefficient must be integral: round it to exact integral value */
@@ -12677,7 +12710,6 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
    return (coefsequal || coefsnegated);
 }
 
-#define MULTIPLIER 2048
 /** returns the hash value of the key */
 static
 SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
@@ -13505,14 +13537,12 @@ SCIP_RETCODE preprocessConstraintPairs(
 static
 SCIP_RETCODE presolStuffing(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< linear constraint handler data */
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_Bool             singletonstuffing,  /**< should singleton variable stuffing be performed? */
    SCIP_Bool             singlevarstuffing,  /**< should single variable stuffing be performed? */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
    int*                  nfixedvars,         /**< pointer to count the total number of fixed variables */
-   int*                  nchgbds,            /**< pointer to count the total number of tightened bounds */
-   int*                  ndelconss           /**< pointer to count the total number of deleted constraints */
+   int*                  nchgbds             /**< pointer to count the total number of tightened bounds */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -13913,7 +13943,7 @@ SCIP_RETCODE presolStuffing(
           * @todo use some tolerance
           * @todo check size of domain and updated ratio for integer variables already?
           */
-         if( ratio > bestratio || ((ratio == bestratio) && downlocks == 0 && (bestdownlocks > 0
+         if( ratio > bestratio || ((ratio == bestratio) && downlocks == 0 && (bestdownlocks > 0 /*lint !e777*/
                   || (SCIPvarGetType(vars[bestindex]) != SCIP_VARTYPE_CONTINUOUS
                      && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS))) )
          {
@@ -15419,7 +15449,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinear)
 /** constraint enforcing method of constraint handler for relaxation solutions */
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxLinear)
-{
+{  /*lint --e{715}*/
    SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
    return SCIP_OKAY;
@@ -15894,8 +15924,8 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       if( !cutoff && SCIPconsIsActive(cons) && SCIPconsIsChecked(cons) &&
          (conshdlrdata->singletonstuffing || conshdlrdata->singlevarstuffing) && SCIPallowDualReds(scip) )
       {
-         SCIP_CALL( presolStuffing(scip, conshdlrdata, cons, conshdlrdata->singletonstuffing,
-               conshdlrdata->singlevarstuffing, &cutoff, nfixedvars, nchgbds, ndelconss) );
+         SCIP_CALL( presolStuffing(scip, cons, conshdlrdata->singletonstuffing,
+               conshdlrdata->singlevarstuffing, &cutoff, nfixedvars, nchgbds) );
 
          /* handle empty constraint */
          if( consdata->nvars == 0 )

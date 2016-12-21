@@ -5533,6 +5533,15 @@ SCIP_RETCODE getFarkasProof(
    assert(nrows == 0 || rows != NULL);
    assert(nrows == lp->nlpirows);
 
+   /* it can happen that infeasibility is detetected within LP presolve. in that case, the LP solver may not be able to
+    * to return the dual ray.
+    */
+   if( !SCIPlpiHasDualRay(lpi) )
+   {
+      *valid = FALSE;
+      return SCIP_OKAY;
+   }
+
    /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualfarkas, nrows) );
 
@@ -5743,14 +5752,14 @@ SCIP_Bool isSeparatingRootLPSol(
 /** apply the MIR function to a given constraint */
 static
 SCIP_RETCODE applyMIR(
-   SCIP_SET*             set,                /**< global SCIP settimngs */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_Real*            vals,               /**< values of variables */
    SCIP_Bool*            varused,            /**< used array */
-   int*                  varinds,            /**< array of indeces with non-zero value */
-   int*                  nvarinds,           /**< number of indeces with non-zero value */
+   int*                  varinds,            /**< array of indices with non-zero value */
+   int*                  nvarinds,           /**< number of indices with non-zero value */
    SCIP_Real*            rhs,                /**< right-hand side of constraint */
-   SCIP_Bool*            success             /**< pounter to store whether apply MIR was successfull */
+   SCIP_Bool*            success             /**< pointer to store whether apply MIR was successful */
    )
 {
    SCIP_Real* copy_vals;
@@ -5780,14 +5789,14 @@ SCIP_RETCODE applyMIR(
    copy_rhs = (*rhs);
    copy_nvarinds = (*nvarinds);
 
-   SCIP_CALL( SCIPcutsApplyMIR(set->scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL, MINFRAC, MAXFRAC,
+   SCIP_CALL( SCIPcutsApplyMIR(set->scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL, MINFRAC, 1.0,
          SCALE, NULL, NULL, copy_vals, &copy_rhs, copy_varinds, &copy_nvarinds, &minact, copy_varused, success, &islocal) );
    assert(!islocal);
 
    if( *success )
    {
       /* check whether the constraint is still globally valid */
-      if( SCIPsetIsFeasLE(set, minact, copy_rhs) )
+      if( SCIPsetIsFeasGE(set, minact, copy_rhs) )
       {
          separoot = FALSE;
          *success = FALSE;
@@ -5796,7 +5805,7 @@ SCIP_RETCODE applyMIR(
       {
          /* check whether the new constraint cuts off the root LP solution
           *
-          * todo: do we realy want this?
+          * todo: do we really want this?
           */
          if( isSeparatingRootLPSol(set, transprob, transprob->vars, copy_vals, copy_rhs, transprob->nvars, FALSE) )
             separoot = TRUE;
@@ -6124,7 +6133,7 @@ SCIP_RETCODE tightenSingleVar(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidates */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table */
-   SCIP_VAR*             var,                /**< problem varibale */
+   SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             val,                /**< coefficient of the variable */
    SCIP_Real             rhs                 /**< rhs of the constraint */
    )
@@ -6134,8 +6143,26 @@ SCIP_RETCODE tightenSingleVar(
 
    assert(tree != NULL);
 
-   newbound = rhs/val;
-   boundtype = (val > 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
+   /* if variable and coefficient are integral the rhs can be rounded down */
+   if( SCIPvarIsIntegral(var) && SCIPsetIsIntegral(set, val) )
+   {
+      newbound = SCIPsetFeasFloor(set, rhs)/val;
+      boundtype = (val > 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
+      SCIPvarAdjustBd(var, set, boundtype, &newbound);
+   }
+   else
+   {
+      newbound = rhs/val;
+      boundtype = (val > 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
+      SCIPvarAdjustBd(var, set, boundtype, &newbound);
+   }
+
+   /* skip numerical unstable bound changes */
+   if( (boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsLE(set, newbound, SCIPvarGetLbGlobal(var)))
+      || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsGE(set, newbound, SCIPvarGetUbGlobal(var))) )
+   {
+      return SCIP_OKAY;
+   }
 
    /* the new bound contradicts a global bound, we need to add a constraint of size 1 that enforces detection
     * of global infeasibility
@@ -6169,7 +6196,7 @@ SCIP_RETCODE tightenSingleVar(
 
 /** perform conflict analysis based on a dual unbounded ray
  *
- *  given an aggregation of rows lhs <= a^Tx such that lhs > maxactivity. if the consttraint has size one we add a
+ *  given an aggregation of rows lhs <= a^Tx such that lhs > maxactivity. if the constraint has size one we add a
  *  bound change instead of the constraint.
  *
  *  we call tightenDualray() to strengthen the constraint:
@@ -6273,7 +6300,7 @@ SCIP_RETCODE performDualRayAnalysis(
       }
       else
       {
-         /* appling the MIR function yields a valid constraint */
+         /* applying the MIR function yields a valid constraint */
          if( success )
          {
             /* create and add the alternative proof
@@ -6342,7 +6369,7 @@ SCIP_RETCODE runBoundHeuristic(
    int*                  iterations,         /**< pointer to store the total number of LP iterations used */
    SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
    SCIP_Bool             marklpunsolved,     /**< whether LP should be marked unsolved after analysis (needed for strong branching) */
-   SCIP_Bool*            valid               /**< pointer to store whether the result is stil a valid proof */
+   SCIP_Bool*            valid               /**< pointer to store whether the result is still a valid proof */
    )
 {
    SCIP_LPBDCHGS* oldlpbdchgs;

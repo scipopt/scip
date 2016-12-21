@@ -292,8 +292,6 @@ SCIP_Real getGenVBoundsMinActivityConflict(
    {
       SCIP_Real bound;
 
-      assert(!SCIPisZero(scip, coefs[i]));
-
       if( coefs[i] > 0.0 )
       {
          /* get bound at current bound change */
@@ -606,14 +604,25 @@ SCIP_RETCODE freeGenVBound(
    GENVBOUND*            genvbound
    )
 {
+   int i;
+
    assert(scip != NULL);
    assert(genvbound != NULL);
    assert(genvbound->coefs != NULL);
    assert(genvbound->vars != NULL);
+   assert(genvbound->var != NULL);
 
+   /* release variables */
+   for( i = 0; i < genvbound->ncoefs; ++i )
+   {
+      assert(genvbound->vars[i] != NULL);
+      SCIP_CALL( SCIPreleaseVar(scip, &(genvbound->vars[i])) );
+   }
+   SCIP_CALL( SCIPreleaseVar(scip, &genvbound->var) );
+
+   /* free memory */
    SCIPfreeBlockMemoryArray(scip, &(genvbound->coefs), genvbound->coefssize);
    SCIPfreeBlockMemoryArray(scip, &(genvbound->vars), genvbound->coefssize);
-
    SCIPfreeBlockMemory(scip, &genvbound);
 
    return SCIP_OKAY;
@@ -708,7 +717,6 @@ SCIP_RETCODE resolveGenVBoundPropagation(
    for( i = 0; i < nvars; i++ )
    {
       assert(vars[i] != NULL);
-      assert(!SCIPisZero(scip, genvbound->coefs[i]));
       assert(SCIPisEQ(scip, SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, TRUE), SCIPgetVarLbAtIndex(scip, vars[i], bdchgidx, FALSE)));
       assert(SCIPisEQ(scip, SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, TRUE), SCIPgetVarUbAtIndex(scip, vars[i], bdchgidx, FALSE)));
 
@@ -2000,8 +2008,8 @@ SCIP_RETCODE SCIPgenVBoundAdd(
 
    SCIP_PROPDATA* propdata;
    GENVBOUND* genvbound;
-
    SCIP_Bool newgenvbound;
+   int i;
 
    assert(scip != NULL);
    assert(genvboundprop != NULL);
@@ -2031,6 +2039,16 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    genvbound = getGenVBound(scip, propdata, var, boundtype);
    newgenvbound = (genvbound == NULL);
 
+   /* release previous variables */
+   if( !newgenvbound )
+   {
+      for( i = 0; i < genvbound->ncoefs; ++i )
+      {
+         assert(genvbound->vars[i] != NULL);
+         SCIP_CALL( SCIPreleaseVar(scip, &(genvbound->vars[i])) );
+      }
+   }
+
    /* check if there already is a genvbound corresponding to this bound, freeing its data and overwriting it */
    if( !newgenvbound && genvbound->ncoefs < ncoefs )
    {
@@ -2045,8 +2063,6 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    }
    else if( !newgenvbound && genvbound->ncoefs == ncoefs )
    {
-      int i;
-
       /* just update entries */
       for( i = 0; i < ncoefs; i++ )
       {
@@ -2056,8 +2072,6 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    }
    else if( !newgenvbound && genvbound->ncoefs > ncoefs )
    {
-      int i;
-
       /* reallocate memory for arrays in genvbound to free unused memory */
       if( genvbound->coefssize < ncoefs )
       {
@@ -2089,6 +2103,18 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    genvbound->var = var;
    genvbound->ncoefs = ncoefs;
    genvbound->constant = constant;
+
+   /* capture variables */
+   for( i = 0; i < genvbound->ncoefs; ++i )
+   {
+      assert(genvbound->vars[i] != NULL);
+      SCIP_CALL( SCIPcaptureVar(scip, genvbound->vars[i]) );
+   }
+   if( newgenvbound )
+   {
+      assert(genvbound->var != NULL);
+      SCIP_CALL( SCIPcaptureVar(scip, genvbound->var) );
+   }
 
    /* the cutoff bound is valid w.r.t. the current objective function in the transformed problem; during presolving,
     * however, the objective function can change (e.g., when a variable is fixed, its contribution in the objective
@@ -2251,6 +2277,7 @@ SCIP_DECL_PROPINITPRE(propInitpreGenvbounds)
 static
 SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
 {  /*lint --e{715}*/
+   SCIP_VAR** vars;
    SCIP_PROPDATA* propdata;
    int i;
 
@@ -2260,6 +2287,8 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
 
    SCIPdebugMsg(scip, "propexitpre in problem <%s>: removing fixed, aggregated, negated, and multi-aggregated variables from right-hand side\n",
       SCIPgetProbName(scip));
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, SCIPgetNTotalVars(scip)) );
 
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
@@ -2273,9 +2302,16 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
    {
       GENVBOUND* genvbound;
       int requiredsize;
+      int nvars;
+      int j;
 
       genvbound = propdata->genvboundstore[i];
       assert(genvbound != NULL);
+
+      /* store variables of the genvbound to release them properly */
+      assert(genvbound->ncoefs <= SCIPgetNTotalVars(scip));
+      BMScopyMemoryArray(vars, genvbound->vars, genvbound->ncoefs);
+      nvars = genvbound->ncoefs;
 
       /* replace non-active by active variables and update constant; note that this may result in coefficients where
        * SCIPisZero() is true; this should not create any problems
@@ -2295,6 +2331,18 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
 
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, genvbound->vars, genvbound->coefs, &genvbound->ncoefs, requiredsize, &genvbound->constant, &requiredsize, TRUE) );
          assert(requiredsize <= genvbound->ncoefs);
+      }
+
+      /* capture new and release old variables */
+      for( j = 0; j < genvbound->ncoefs; ++j )
+      {
+         assert(genvbound->vars[j] != NULL);
+         SCIP_CALL( SCIPcaptureVar(scip, genvbound->vars[j]) );
+      }
+      for( j = 0; j < nvars; ++j )
+      {
+         assert(vars[j] != NULL);
+         SCIP_CALL( SCIPreleaseVar(scip, &vars[j]) );
       }
 
       /* if the resulting genvbound is trivial, remove it */
@@ -2325,6 +2373,8 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
       else
          ++i;
    }
+
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }

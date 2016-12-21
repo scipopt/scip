@@ -1273,8 +1273,8 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 SCIP_RETCODE SCIPlpiChgObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
-   int*                  ind,                /**< column indices to change objective value for */
-   SCIP_Real*            obj                 /**< new objective values for columns */
+   const int*            ind,                /**< column indices to change objective value for */
+   const SCIP_Real*      obj                 /**< new objective values for columns */
    )
 {
    assert(lpi != NULL);
@@ -2679,8 +2679,8 @@ SCIP_RETCODE SCIPlpiGetBase(
 /** sets current basis status for columns and rows */
 SCIP_RETCODE SCIPlpiSetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  cstat,              /**< array with column basis status */
-   int*                  rstat               /**< array with row basis status */
+   const int*            cstat,              /**< array with column basis status */
+   const int*            rstat               /**< array with row basis status */
    )
 {
    int* slackstats;
@@ -3039,7 +3039,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
    )
 {
    int nrows;
@@ -3215,7 +3215,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
 {
    assert(lpinorms == NULL);
@@ -3275,7 +3275,12 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       break;
    case SCIP_LPPAR_SCALING:
       CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_SCALING, &ictrlval) );
-      *ival = (ictrlval != 0);
+      if( ictrlval == 0 )
+         *ival = 0;
+      else if( ictrlval == 16 )
+         *ival = 2;
+      else
+         *ival = 1;
       break;
    case SCIP_LPPAR_PRESOLVING:
       *ival = lpi->par_presolve;
@@ -3338,8 +3343,20 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_KEEPBASIS, (ival == FALSE) ? 1 : 0) );
       break;
    case SCIP_LPPAR_SCALING:
-      assert(ival == TRUE || ival == FALSE);
-      CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_SCALING, (ival == TRUE) ? 35 : 0) );
+      assert(ival >= 0 && ival <= 2);
+      if( ival == 0 )
+      {
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_SCALING, 0) );
+      }
+      else if( ival == 1 )
+      {
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_SCALING, 163) );
+      }
+      else
+      {
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_SCALING, 16) );
+      }
+
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);

@@ -3494,7 +3494,7 @@ SCIP_RETCODE reformulate(
       assert(conss[c] != NULL);  /*lint !e613*/
 
       /* skip constraints that are to be deleted */
-      if( SCIPconsIsDeleted(conss[c]) )
+      if( SCIPconsIsDeleted(conss[c]) )  /*lint !e613*/
          continue;
 
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
@@ -4158,13 +4158,27 @@ SCIP_RETCODE addLinearization(
    while( TRUE );  /*lint !e506*/
 
    /* add linearization to SCIP row */
-   if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
+   if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) && constant != 0.0 )  /*lint !e644*/
    {
-      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );  /*lint !e644*/
+      if( SCIProwGetLhs(row) - constant < 0.0 && SCIProwGetLhs(row) - constant > -SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, -1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );
+      }
    }
-   if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
+   if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) && constant != 0.0 )
    {
-      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      if( SCIProwGetRhs(row) - constant > 0.0 && SCIProwGetRhs(row) - constant < SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, 1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      }
    }
    SCIP_CALL( SCIPaddVarsToRow(scip, row, nvars, SCIPexprtreeGetVars(exprtree), grad) );
 
@@ -4264,11 +4278,25 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    /* add secant to SCIP row */
    if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );
+      if( SCIProwGetLhs(row) - constant < 0.0 && SCIProwGetLhs(row) - constant > -SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, -1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );
+      }
    }
    if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      if( SCIProwGetRhs(row) - constant > 0.0 && SCIProwGetRhs(row) - constant < SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, 1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      }
    }
    if( slope != 0.0 )
    {
@@ -4616,11 +4644,25 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
    /* add hyperplane coefs to SCIP row */
    if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );
+      if( SCIProwGetLhs(row) - constant < 0.0 && SCIProwGetLhs(row) - constant > -SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, -1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );
+      }
    }
    if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      if( SCIProwGetRhs(row) - constant > 0.0 && SCIProwGetRhs(row) - constant < SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, 1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      }
    }
    SCIP_CALL( SCIPaddVarsToRow(scip, row, 1, &x, &coefx) );
    SCIP_CALL( SCIPaddVarsToRow(scip, row, 1, &y, &coefy) );
@@ -4870,11 +4912,25 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    /* substract constant from lhs or rhs */
    if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - obj[nvars]) );
+      if( SCIProwGetLhs(row) - obj[nvars] < 0.0 && SCIProwGetLhs(row) - obj[nvars] > -SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, -1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - obj[nvars]) );
+      }
    }
    if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - obj[nvars]) );
+      if( SCIProwGetRhs(row) - obj[nvars] > 0.0 && SCIProwGetRhs(row) - obj[nvars] < SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, 1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - obj[nvars]) );
+      }
    }
 
    *success = TRUE;
@@ -5095,14 +5151,27 @@ SCIP_RETCODE addUserEstimator(
          SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[i], childcoeffs[i]*treecoef, varcoeffs, &constant ) );
       }
 
-      if( !SCIPisInfinity( scip, -SCIProwGetLhs( row ) ) )
+      if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
       {
-         SCIP_CALL( SCIPchgRowLhs( scip, row, SCIProwGetLhs( row ) - constant ) );
+         if( SCIProwGetLhs(row) - constant < 0.0 && SCIProwGetLhs(row) - constant > -SCIPepsilon(scip) )
+         {
+            SCIP_CALL( SCIPchgRowLhs(scip, row, -1.1*SCIPepsilon(scip)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );  /*lint !e644*/
+         }
       }
-
-      if( !SCIPisInfinity( scip,  SCIProwGetRhs( row ) ) )
+      if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
       {
-         SCIP_CALL( SCIPchgRowRhs( scip, row, SCIProwGetRhs( row ) - constant ) );
+         if( SCIProwGetRhs(row) - constant > 0.0 && SCIProwGetRhs(row) - constant < SCIPepsilon(scip) )
+         {
+            SCIP_CALL( SCIPchgRowRhs(scip, row, 1.1*SCIPepsilon(scip)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+         }
       }
 
       SCIP_CALL( SCIPaddVarsToRow( scip, row, nvars, vars, varcoeffs ) );
@@ -5264,11 +5333,25 @@ SCIP_RETCODE addIntervalGradientEstimator(
    /* add interval gradient estimator to row */
    if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );
+      if( SCIProwGetLhs(row) - constant < 0.0 && SCIProwGetLhs(row) - constant > -SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, -1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );  /*lint !e644*/
+      }
    }
    if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      if( SCIProwGetRhs(row) - constant > 0.0 && SCIProwGetRhs(row) - constant < SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, 1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      }
    }
    SCIP_CALL( SCIPaddVarsToRow(scip, row, nvars, vars, coefs) );
 
@@ -5473,11 +5556,25 @@ SCIP_RETCODE generateCut(
 
          if( side == SCIP_SIDETYPE_LEFT )
          {
-            SCIP_CALL( SCIPchgRowLhs(scip, *row, SCIProwGetLhs(*row) - constant) );
+            if( SCIProwGetLhs(*row) - constant < 0.0 && SCIProwGetLhs(*row) - constant > -SCIPepsilon(scip) )
+            {
+               SCIP_CALL( SCIPchgRowLhs(scip, *row, -1.1*SCIPepsilon(scip)) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPchgRowLhs(scip, *row, SCIProwGetLhs(*row) - constant) );
+            }
          }
          else
          {
-            SCIP_CALL( SCIPchgRowRhs(scip, *row, SCIProwGetRhs(*row) - constant) );
+            if( SCIProwGetRhs(*row) - constant > 0.0 && SCIProwGetRhs(*row) - constant < SCIPepsilon(scip) )
+            {
+               SCIP_CALL( SCIPchgRowRhs(scip, *row, 1.1*SCIPepsilon(scip)) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPchgRowRhs(scip, *row, SCIProwGetRhs(*row) - constant) );
+            }
          }
 
          /* update min/max coefficient */
@@ -7245,7 +7342,7 @@ SCIP_DECL_CONSFREE(consFreeNonlinear)
    for( i = 0; i < conshdlrdata->nnlconsupgrades; ++i )
    {
       assert(conshdlrdata->nlconsupgrades[i] != NULL);
-      SCIPfreeBlockMemory(scip, &conshdlrdata->nlconsupgrades[i]);
+      SCIPfreeBlockMemory(scip, &conshdlrdata->nlconsupgrades[i]);  /*lint !e866*/
    }
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->nlconsupgrades, conshdlrdata->nlconsupgradessize);
 
@@ -7334,7 +7431,7 @@ SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
       SCIP_CALL( consdataSetExprtrees(scip, consdata, 0, NULL, NULL, FALSE) );
 
       /* mark constraint for propagation */
-      SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );
+      SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );  /*lint !e613*/
    }
 
    return SCIP_OKAY;
@@ -7357,6 +7454,12 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
    int c;
 
    assert(scip != NULL);
+
+   /* just return if SCIP is optimal, infeasible or unbounded */
+   if ( SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL || SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE ||
+        SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED || SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
+      return SCIP_OKAY;
+
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
 
@@ -7466,6 +7569,29 @@ SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   conshdlrdata->newsoleventfilterpos = -1;
+
+   /* reset flags and counters */
+   conshdlrdata->sepanlp = FALSE;
+   conshdlrdata->lastenfonode = NULL;
+   conshdlrdata->nenforounds = 0;
+
+   /* just return if SCIP is optimal, infeasible or unbounded; no that this goes here and not at the top of the method
+    * because we need to have some data consistency in exitsol */
+   if ( SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL || SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE ||
+        SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED || SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
+      return SCIP_OKAY;
+
+   if( nconss != 0 )
+   {
+      SCIP_EVENTHDLR* eventhdlr;
+
+      eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
+      assert(eventhdlr != NULL);
+
+      SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
+   }
+
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
@@ -7498,22 +7624,6 @@ SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
          SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
       }
    }
-
-   conshdlrdata->newsoleventfilterpos = -1;
-   if( nconss != 0 )
-   {
-      SCIP_EVENTHDLR* eventhdlr;
-
-      eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
-      assert(eventhdlr != NULL);
-
-      SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
-   }
-
-   /* reset flags and counters */
-   conshdlrdata->sepanlp = FALSE;
-   conshdlrdata->lastenfonode = NULL;
-   conshdlrdata->nenforounds = 0;
 
    return SCIP_OKAY;
 }

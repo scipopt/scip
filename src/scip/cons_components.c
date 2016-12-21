@@ -112,9 +112,6 @@ struct SCIP_ConshdlrData
    SCIP_Longint          nodelimit;          /**< maximum number of nodes to be solved in subproblems */
    SCIP_Real             intfactor;          /**< the weight of an integer variable compared to binary variables */
    SCIP_Real             feastolfactor;      /**< parameter to increase the feasibility tolerance in all sub-SCIPs */
-   SCIP_Bool             didsearch;          /**< did the presolver already search for components? */
-   SCIP_Bool             pluginscopied;      /**< was the copying of the plugins successful? */
-   SCIP_Bool             writeproblems;      /**< should the single components be written as an .cip-file? */
    int                   maxintvars;         /**< maximum number of integer (or binary) variables to solve a subproblem
                                               *   directly (-1: no solving) */
    int                   maxdepth;           /**< maximum depth of a node to run components detection (-1: disable
@@ -185,7 +182,7 @@ int getMinsize(
 
    assert(conshdlrdata != NULL);
 
-   minsize = conshdlrdata->minrelsize * SCIPgetNVars(scip);
+   minsize = (int)(conshdlrdata->minrelsize * SCIPgetNVars(scip));
    minsize = MAX(minsize, conshdlrdata->minsize);
 
    return minsize;
@@ -309,7 +306,7 @@ SCIP_RETCODE componentSetupWorkingSol(
       SCIP_VAR* subvar;
       int nsourcevars;
       int nnewvars;
-      int index = 0;
+      int idx = 0;
       int nvars;
       int v;
 
@@ -345,9 +342,9 @@ SCIP_RETCODE componentSetupWorkingSol(
                assert(SCIPisEQ(scip, SCIPvarGetLbLocal(sourcevars[v]), SCIPvarGetUbLocal(sourcevars[v])));
 
                component->fixedvarsobjsum += SCIPvarGetLbGlobal(subvar) * SCIPvarGetObj(subvar);
-               component->fixedvars[index] = sourcevars[v];
-               component->fixedsubvars[index] = subvar;
-               ++index;
+               component->fixedvars[idx] = sourcevars[v];
+               component->fixedsubvars[idx] = subvar;
+               ++idx;
 
                SCIP_CALL( SCIPsetSolVal(subscip, component->workingsol, subvar, SCIPvarGetLbGlobal(subvar)) );
             }
@@ -363,7 +360,7 @@ SCIP_RETCODE componentSetupWorkingSol(
             assert(subvar == NULL || SCIPisLT(subscip, SCIPvarGetLbGlobal(subvar), SCIPvarGetUbGlobal(subvar)));
          }
       }
-      component->nfixedvars = index;
+      component->nfixedvars = idx;
       assert(component->nfixedvars <= component->fixedvarssize);
       SCIPdebugMsg(scip, "%d locally fixed variables have been copied, objective contribution: %g\n",
          component->nfixedvars, component->fixedvarsobjsum);
@@ -496,7 +493,6 @@ SCIP_RETCODE createSubscip(
 static
 SCIP_RETCODE copyToSubscip(
    SCIP*                 scip,               /**< source SCIP */
-   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP*                 subscip,            /**< target SCIP */
    const char*           name,               /**< name for copied problem */
    SCIP_VAR**            vars,               /**< array of variables to copy */
@@ -602,7 +598,7 @@ SCIP_RETCODE componentCreateSubscip(
       /* get name of the original problem and add "comp_nr" */
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d", problem->name, component->number);
 
-      SCIP_CALL( copyToSubscip(scip, conshdlrdata, component->subscip, name, component->vars, component->subvars,
+      SCIP_CALL( copyToSubscip(scip, component->subscip, name, component->vars, component->subvars,
             conss, varmap, consmap, component->nvars, nconss, success) );
 
       if( !(*success) )
@@ -1133,6 +1129,17 @@ SCIP_RETCODE solveComponent(
       break;
    case SCIP_STATUS_USERINTERRUPT:
       SCIP_CALL( SCIPinterruptSolve(scip) );
+      break;
+   case SCIP_STATUS_UNKNOWN:
+   case SCIP_STATUS_NODELIMIT:
+   case SCIP_STATUS_TOTALNODELIMIT:
+   case SCIP_STATUS_STALLNODELIMIT:
+   case SCIP_STATUS_TIMELIMIT:
+   case SCIP_STATUS_MEMLIMIT:
+   case SCIP_STATUS_GAPLIMIT:
+   case SCIP_STATUS_SOLLIMIT:
+   case SCIP_STATUS_BESTSOLLIMIT:
+   case SCIP_STATUS_RESTARTLIMIT:
    default:
       break;
    }
@@ -1170,9 +1177,12 @@ SCIP_RETCODE solveComponent(
          if( problem->nlowerboundinf == 0 )
          {
             SCIPdebugMessage("component <%s>: dual bound increased from %16.9g to %16.9g, new dual bound of problem <%s>: %16.9g (gap: %16.9g, absgap: %16.9g)\n",
-               SCIPgetProbName(subscip), component->lastdualbound, newdualbound, problem->name, SCIPretransformObj(scip, problem->lowerbound),
+               SCIPgetProbName(subscip), component->lastdualbound, newdualbound, problem->name,
+               SCIPretransformObj(scip, problem->lowerbound),
                problem->nfeascomps == problem->ncomponents ?
-               (SCIPgetSolOrigObj(scip, problem->bestsol) - SCIPretransformObj(scip, problem->lowerbound)) / MAX(ABS(SCIPretransformObj(scip, problem->lowerbound)),SCIPgetSolOrigObj(scip, problem->bestsol)) : SCIPinfinity(scip),
+               (SCIPgetSolOrigObj(scip, problem->bestsol) - SCIPretransformObj(scip, problem->lowerbound)) /
+               MAX( ABS( SCIPretransformObj(scip, problem->lowerbound) ), SCIPgetSolOrigObj(scip, problem->bestsol) ) /*lint !e666*/
+               : SCIPinfinity(scip),
                problem->nfeascomps == problem->ncomponents ?
                SCIPgetSolOrigObj(scip, problem->bestsol) - SCIPretransformObj(scip, problem->lowerbound) : SCIPinfinity(scip));
             SCIP_CALL( SCIPupdateLocalLowerbound(scip, problem->lowerbound) );
@@ -1219,9 +1229,12 @@ SCIP_RETCODE solveComponent(
             SCIP_CALL( SCIPaddSol(scip, problem->bestsol, &feasible) );
 
             SCIPdebugMessage("component <%s>: primal bound decreased from %16.9g to %16.9g, new primal bound of problem <%s>: %16.9g (gap: %16.9g, absgap: %16.9g)\n",
-               SCIPgetProbName(subscip), component->lastprimalbound, SCIPgetPrimalbound(subscip), problem->name, SCIPgetSolOrigObj(scip, problem->bestsol),
+               SCIPgetProbName(subscip), component->lastprimalbound, SCIPgetPrimalbound(subscip), problem->name,
+               SCIPgetSolOrigObj(scip, problem->bestsol),
                problem->nfeascomps == problem->ncomponents ?
-               (SCIPgetSolOrigObj(scip, problem->bestsol) - SCIPretransformObj(scip, problem->lowerbound)) / MAX(ABS(SCIPretransformObj(scip, problem->lowerbound)),SCIPgetSolOrigObj(scip, problem->bestsol)) : SCIPinfinity(scip),
+               (SCIPgetSolOrigObj(scip, problem->bestsol) - SCIPretransformObj(scip, problem->lowerbound)) /
+               MAX( ABS( SCIPretransformObj(scip, problem->lowerbound) ),SCIPgetSolOrigObj(scip, problem->bestsol) ) /*lint !e666*/
+               : SCIPinfinity(scip),
                problem->nfeascomps == problem->ncomponents ?
                SCIPgetSolOrigObj(scip, problem->bestsol) - SCIPretransformObj(scip, problem->lowerbound) : SCIPinfinity(scip));
          }
@@ -1453,8 +1466,8 @@ SCIP_RETCODE sortComponents(
             nintvars++;
       }
       ncontvars = ncvars - nintvars - nbinvars;
-      ndiscvars = nbinvars + conshdlrdata->intfactor * nintvars;
-      compsize[c] = ((1000 * ndiscvars + (950.0 * ncontvars)/nvars));
+      ndiscvars = (int)(nbinvars + conshdlrdata->intfactor * nintvars);
+      compsize[c] = ((1000.0 * ndiscvars + (950.0 * ncontvars)/nvars));
 
       /* component fulfills the maxsize requirement */
       if( ndiscvars <= conshdlrdata->maxintvars )
@@ -1515,7 +1528,7 @@ SCIP_RETCODE createAndSplitProblem(
    SCIP_HASHMAP* varmap;
    SCIP_VAR** compvars;
    SCIP_CONS** compconss;
-   SCIP_Bool success;
+   SCIP_Bool success = TRUE;
    int nfixedvars = SCIPgetNVars(scip) - compstartsvars[ncomponents];
    int ncompconss;
    int comp;
@@ -1938,7 +1951,6 @@ SCIP_RETCODE findComponents(
                      firstvaridxpercons, ncompsminsize, ncompsmaxsize) );
 
                /* determine start indices of components in sortedvars and sortedconss array */
-               c = 0;
                i = 0;
 
                while( i < nconss && conscomponent[i] == -1 )
@@ -2112,7 +2124,8 @@ SCIP_DECL_CONSPROP(consPropComponents)
          SCIP_CONS* cons;
 
          SCIPdebugMsg(scip, "found %d components (%d fulfulling the minsize requirement) at node %lld at depth %d (%d)\n",
-            ncomponents, ncompsminsize, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip), SCIPgetDepth(scip) + conshdlrdata->subscipdepth);
+            ncomponents, ncompsminsize, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip),
+            SCIPgetDepth(scip) + conshdlrdata->subscipdepth);
 
          /* if there are components with size smaller than the limit, we merge them with the smallest component */
          if( ncomponents > ncompsminsize )
@@ -2144,13 +2157,14 @@ SCIP_DECL_CONSPROP(consPropComponents)
                }
             }
             assert(m == ncompsminsize);
-            assert(compstartsvars[m] = nsortedvars);
-            assert(compstartsconss[m] = nsortedconss);
+            assert(compstartsvars[m] == nsortedvars);
+            assert(compstartsconss[m] == nsortedconss);
 
             ncomponents = m;
          }
 
-         SCIP_CALL( createAndSplitProblem(scip, conshdlrdata, fixedvarsobjsum, sortedvars, sortedconss, compstartsvars, compstartsconss, ncomponents, &problem) );
+         SCIP_CALL( createAndSplitProblem(scip, conshdlrdata, fixedvarsobjsum, sortedvars, sortedconss, compstartsvars,
+               compstartsconss, ncomponents, &problem) );
 
          /* if the problem is not NULL, copying worked fine */
          if( problem != NULL )
@@ -2340,7 +2354,7 @@ SCIP_DECL_CONSPRESOL(consPresolComponents)
          /* get name of the original problem and add "comp_nr" */
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d", SCIPgetProbName(scip), comp);
 
-         SCIP_CALL( copyToSubscip(scip, conshdlrdata, subscip, name, compvars, subvars,
+         SCIP_CALL( copyToSubscip(scip, subscip, name, compvars, subvars,
                compconss, varmap, consmap, ncompvars, ncompconss, &success) );
 
          if( !success )

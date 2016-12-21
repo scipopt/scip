@@ -1378,8 +1378,8 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 SCIP_RETCODE SCIPlpiChgObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
-   int*                  ind,                /**< column indices to change objective value for */
-   SCIP_Real*            obj                 /**< new objective values for columns */
+   const int*            ind,                /**< column indices to change objective value for */
+   const SCIP_Real*      obj                 /**< new objective values for columns */
    )
 {
    assert(MosekEnv != NULL);
@@ -3378,7 +3378,7 @@ SCIP_RETCODE convertstat_mosek2scip_slack(
 /** convert SCIP to Mosek status */
 static
 void convertstat_scip2mosek(
-   int*                  stat,               /**< SCIP status array */
+   const int*            stat,               /**< SCIP status array */
    int                   n,                  /**< size of array */
    MSKstakeye*           resstat             /**< resulting Mosek status array */
    )
@@ -3409,7 +3409,7 @@ void convertstat_scip2mosek(
 /** convert SCIP to Mosek status - slack variables */
 static
 void convertstat_scip2mosek_slack(
-   int*                  stat,               /**< SCIP status array */
+   const int*            stat,               /**< SCIP status array */
    int                   n,                  /**< size of array */
    MSKstakeye*           resstat             /**< resulting Mosek status array */
    )
@@ -3476,8 +3476,8 @@ SCIP_RETCODE SCIPlpiGetBase(
 /** sets current basis status for columns and rows */
 SCIP_RETCODE SCIPlpiSetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  cstat,              /**< array with column basis status */
-   int*                  rstat               /**< array with row basis status */
+   const int*            cstat,              /**< array with column basis status */
+   const int*            rstat               /**< array with row basis status */
    )
 {
    int nrows;
@@ -3979,7 +3979,7 @@ SCIP_RETCODE lpistatePack(
 /** unpacks row and column basis status from a packed LPi state object */
 static
 void lpistateUnpack(
-   SCIP_LPISTATE*        lpistate,           /**< pointer to LPi state data */
+   const SCIP_LPISTATE*  lpistate,           /**< pointer to LPi state data */
    MSKstakeye*           skx,                /**< ??? */
    MSKstakeye*           skc                 /**< ??? */
    )
@@ -4051,7 +4051,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LP state information (like basis information) */
    )
 {  /*lint --e{715}*/
    int nrows;
@@ -4229,7 +4229,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
 {
    assert(lpinorms == NULL);
@@ -4261,7 +4261,7 @@ SCIP_RETCODE SCIPlpiFreeNorms(
 static const char* paramname[] = {
    "SCIP_LPPAR_FROMSCRATCH",                 /* solver should start from scratch at next call? */
    "SCIP_LPPAR_FASTMIP",                     /* fast mip setting of LP solver */
-   "SCIP_LPPAR_SCALING",                     /* should LP solver use scaling? */
+   "SCIP_LPPAR_SCALING",                     /* which scaling should LP solver use? */
    "SCIP_LPPAR_PRESOLVING",                  /* should LP solver use presolving? */
    "SCIP_LPPAR_PRICING",                     /* pricing strategy */
    "SCIP_LPPAR_LPINFO",                      /* should LP solver output information to the screen? */
@@ -4287,7 +4287,7 @@ const char* paramty2str(
    /* check if the parameters in this order */
    assert(SCIP_LPPAR_FROMSCRATCH == 0);      /* solver should start from scratch at next call? */
    assert(SCIP_LPPAR_FASTMIP == 1);          /* fast mip setting of LP solver */
-   assert(SCIP_LPPAR_SCALING == 2);          /* should LP solver use scaling? */
+   assert(SCIP_LPPAR_SCALING == 2);          /* which scaling should LP solver use? */
    assert(SCIP_LPPAR_PRESOLVING == 3);       /* should LP solver use presolving? */
    assert(SCIP_LPPAR_PRICING == 4);          /* pricing strategy */
    assert(SCIP_LPPAR_LPINFO == 5);           /* should LP solver output information to the screen? */
@@ -4328,7 +4328,12 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       return  SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:                   /* should LP solver use scaling? */
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_SCALING, ival) );
-      *ival = (*ival != MSK_SCALING_NONE);
+      if( *ival == MSK_SCALING_NONE )
+         *ival = 0;
+      else if( *ival == MSK_SCALING_AGGRESSIVE )
+         *ival = 2;
+      else
+         *ival = 1;
       break;
    case SCIP_LPPAR_PRESOLVING:                /* should LP solver use presolving? */
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_PRESOLVE_USE, ival) );
@@ -4397,7 +4402,13 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_FASTMIP:                   /* fast mip setting of LP solver */
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:                   /* should LP solver use scaling? */
-      scaling = (ival ? MSK_SCALING_FREE : MSK_SCALING_NONE);
+      if( ival == 0 )
+         scaling = MSK_SCALING_NONE;
+      else if( ival == 1 )
+         scaling = MSK_SCALING_FREE;
+      else
+         scaling = MSK_SCALING_AGGRESSIVE;
+
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, scaling) );
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_SCALING, scaling) );
       break;

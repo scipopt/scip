@@ -95,7 +95,7 @@ SCIP_EXPRINTCAPABILITY SCIPexprintGetExprtreeCapability(
    )
 {
    return SCIP_EXPRINTCAPABILITY_NONE;
-}
+} /*lint !e715*/
 
 /** frees interpreter data */
 SCIP_RETCODE SCIPexprintFreeData(

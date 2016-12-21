@@ -2796,18 +2796,18 @@ SCIP_RETCODE lpSetFastmip(
 static
 SCIP_RETCODE lpSetScaling(
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_Bool             scaling,            /**< new SCALING setting */
+   int                   scaling,            /**< new SCALING setting */
    SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
    )
 {
    assert(lp != NULL);
    assert(success != NULL);
 
-   SCIP_CALL( lpCheckBoolpar(lp, SCIP_LPPAR_SCALING, lp->lpiscaling) );
+   SCIP_CALL( lpCheckIntpar(lp, SCIP_LPPAR_SCALING, lp->lpiscaling) );
 
    if( scaling != lp->lpiscaling )
    {
-      SCIP_CALL( lpSetBoolpar(lp, SCIP_LPPAR_SCALING, scaling, success) );
+      SCIP_CALL( lpSetIntpar(lp, SCIP_LPPAR_SCALING, scaling, success) );
       if( *success )
          lp->lpiscaling = scaling;
    }
@@ -8397,9 +8397,13 @@ SCIP_RETCODE lpCopyIntegrality(
 
    /* only pass integrality information if integer variables are present */
    if( nintegers > 0 )
-      SCIPlpiSetIntegralityInformation(lp->lpi, lp->ncols, integerInfo);
+   {
+      SCIP_CALL( SCIPlpiSetIntegralityInformation(lp->lpi, lp->ncols, integerInfo) );
+   }
    else
-      SCIPlpiSetIntegralityInformation(lp->lpi, 0, NULL);
+   {
+      SCIP_CALL( SCIPlpiSetIntegralityInformation(lp->lpi, 0, NULL) );
+   }
 
    SCIPsetFreeBufferArray(set, &integerInfo);
 
@@ -8974,7 +8978,7 @@ SCIP_RETCODE SCIPlpCreate(
          "LP Solver <%s>: fastmip setting not available -- SCIP parameter has no effect\n",
          SCIPlpiGetSolverName());
    }
-   SCIP_CALL( lpSetBoolpar(*lp, SCIP_LPPAR_SCALING, (*lp)->lpiscaling, &success) );
+   SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_SCALING, (*lp)->lpiscaling, &success) );
    (*lp)->lpihasscaling = success;
    if( !success )
    {
@@ -11223,12 +11227,12 @@ SCIP_RETCODE lpSolveStable(
    if( (*lperror) || !SCIPlpiIsIterlimExc(lp->lpi) )
    {
       /* solve again with opposite scaling setting (starts from the solution of the last LP solving call) */
-      SCIP_CALL( lpSetScaling(lp, !set->lp_scaling, &success) );
+      SCIP_CALL( lpSetScaling(lp, (set->lp_scaling > 0) ? 0 : 1, &success) );
       if( success )
       {
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again with %s %s scaling\n",
-            stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_scaling ? "with" : "without");
+            stat->nnodes, stat->nlps, lpalgoName(lpalgo), (set->lp_scaling == 0) ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
          /* check for stability */
@@ -11406,12 +11410,12 @@ SCIP_RETCODE lpSolveStable(
       }
 
       /* solve again with opposite scaling and other simplex */
-      SCIP_CALL( lpSetScaling(lp, !set->lp_scaling, &success) );
+      SCIP_CALL( lpSetScaling(lp, (set->lp_scaling > 0) ? 0 : 1, &success) );
       if( success )
       {
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again from scratch with %s %s scaling\n",
-            stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_scaling ? "with" : "without");
+            stat->nnodes, stat->nlps, lpalgoName(lpalgo), (set->lp_scaling == 0) ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
          /* check for stability */
@@ -13958,9 +13962,9 @@ SCIP_RETCODE SCIPlpGetSol(
        */
       if( stilldualfeasible )
       {
-         if( lpirows[r]->dualsol > 0.0 && !SCIPsetIsInfinity(set, -(lpirows[r]->lhs - lpirows[r]->constant)) )
+         if( lpirows[r]->dualsol > 0.0 && !SCIPsetIsInfinity(set, -lpirows[r]->lhs) )
             dualbound += (lpirows[r]->dualsol * (lpirows[r]->lhs - lpirows[r]->constant));
-         else if( lpirows[r]->dualsol < 0.0 && !SCIPsetIsInfinity(set, lpirows[r]->rhs - lpirows[r]->constant) )
+         else if( lpirows[r]->dualsol < 0.0 && !SCIPsetIsInfinity(set, lpirows[r]->rhs) )
             dualbound += (lpirows[r]->dualsol * (lpirows[r]->rhs - lpirows[r]->constant));
       }
    }
@@ -14150,7 +14154,10 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       if( SCIPsetIsZero(set, ray[c]) )
          lpicols[c]->primsol = primsol[c];
       else
-         lpicols[c]->primsol = primsol[c] + rayscale * ray[c];
+      {
+         SCIP_Real primsolval = primsol[c] + rayscale * ray[c];
+         lpicols[c]->primsol = SCIPsetIsInfinity(set, primsolval) ? SCIPsetInfinity(set) : primsolval;
+      }
       lpicols[c]->redcost = SCIP_INVALID;
       lpicols[c]->validredcostlp = -1;
    }
