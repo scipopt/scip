@@ -1,8 +1,6 @@
 #!/bin/bash
 
-# This script will work only if there is one .eval file in results/
-# check/results should only contain results from one run
-
+# in the jenkins build instructions, the TESTSET variable should be set
 cd check/
 if [ -z "$TESTSET" ]; then
     echo "Missing testset information. Aborting..."
