@@ -2831,6 +2831,9 @@ SCIP_RETCODE SCIPsolveLinearProb3(
    assert(x != NULL);
    assert(success != NULL);
 
+   BMScopyMemoryArray(Acopy, A, N*N);
+   BMScopyMemoryArray(bcopy, b, N);
+
    /* compute the LU factorization */
    IpLapackDgetrf(N, Acopy, pivotcopy, N, info);
 
