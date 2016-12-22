@@ -3700,6 +3700,9 @@ SCIP_RETCODE doCopy(
    if( useconscompression && (nfixedvars > 0 || !global) )
    {
       SCIP_CALL( SCIPenableConsCompression(targetscip) );
+
+      /* domain reductions yield a copy that is no longer guaranteed to be valid */
+      localvalid = FALSE;
    }
 
    /* copy all (original) constraints */
