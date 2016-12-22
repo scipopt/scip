@@ -1372,7 +1372,7 @@ SCIP_RETCODE SCIPlpiAddRows(
 #if (CPX_VERSION <= 1100)
       if( lpi->rngfound == FALSE )
       {
-         SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_SCALING, FALSE) );
+         SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_SCALING, 0) );
          lpi->rngfound = TRUE;
       }
 #endif
@@ -4142,7 +4142,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       if( lpi->rngfound )
          return SCIP_PARAMETERUNKNOWN;
 #endif
-      *ival = (getIntParam(lpi, CPX_PARAM_SCAIND) == 0);
+      *ival = getIntParam(lpi, CPX_PARAM_SCAIND) + 1;
       break;
    case SCIP_LPPAR_PRESOLVING:
       *ival = (getIntParam(lpi, CPX_PARAM_PREIND) == CPX_ON);
@@ -4229,12 +4229,12 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
 #endif
    case SCIP_LPPAR_SCALING:
-      assert(ival == TRUE || ival == FALSE);
+      assert(0 <= ival && ival <= 2);
 #if (CPX_VERSION <= 1100)
       if( lpi->rngfound )
          return SCIP_PARAMETERUNKNOWN;
 #endif
-      setIntParam(lpi, CPX_PARAM_SCAIND, ival == TRUE ? 0 : -1);
+      setIntParam(lpi, CPX_PARAM_SCAIND, ival - 1);
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);

@@ -13396,6 +13396,7 @@ SCIP_RETCODE SCIPexprgraphCreateNodeUser(
    exprdata->prop = prop;
    exprdata->copydata = copydata;
    exprdata->freedata = freedata;
+   exprdata->print = print;
 
    opdata.data = (void*) exprdata;
 

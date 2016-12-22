@@ -167,7 +167,7 @@ SCIP_DECL_EVENTEXEC(eventExecGlobalbnd)
          break;
       default:
          SCIPABORT();
-         return SCIP_ERROR;
+         return SCIP_ERROR; /*lint !e527*/
    }
 
    if( !eventhdlrdata->storebounds )

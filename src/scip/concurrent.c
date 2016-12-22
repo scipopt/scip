@@ -168,7 +168,9 @@ SCIP_RETCODE SCIPfreeConcurrent(
    {
       /* we are in the main SCIP so free the concurrent structure */
       if( scip->concurrent->wallclock != NULL )
-         SCIPfreeClock(scip, &scip->concurrent->wallclock);
+      {
+         SCIP_CALL( SCIPfreeClock(scip, &scip->concurrent->wallclock) );
+      }
 
       SCIPfreeBlockMemoryArray(scip, &scip->concurrent->varperm, SCIPgetNOrigVars(scip));
 

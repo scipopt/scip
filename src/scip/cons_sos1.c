@@ -2464,7 +2464,10 @@ SCIP_RETCODE updateImplicationGraphSOS1(
             lb = SCIPvarGetLbLocal(vars[w]);
             ub = SCIPvarGetUbLocal(vars[w]);
             coef = coefs[w];
-            assert( ! SCIPisFeasZero(scip, coef) );
+
+            if ( SCIPisFeasZero(scip, coef) )
+               continue;
+
             newbound = implbound / coef;
 
             /* check if an implication can be added/updated or assumption x_v != 0 is infeasible */
@@ -3039,8 +3042,11 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          if ( ninftynonzero == 0 && v < ntrafolinvars )
          {
             linval = trafolinvals[v];
+
+            if ( SCIPisFeasZero(scip, linval) )
+               continue;
+
             /* compute new bound */
-            assert( ! SCIPisFeasZero(scip, linval) );
             if ( SCIPisFeasPositive(scip, newboundnores) && ! inftynores )
                newbound = newboundnonzero;
             else
@@ -3238,8 +3244,10 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          {
             linval = trafolinvals[v];
 
+            if ( SCIPisFeasZero(scip, linval) )
+               continue;
+
             /* compute new bound */
-            assert( ! SCIPisFeasZero(scip, linval) );
             if ( SCIPisFeasNegative(scip, newboundnores) && ! inftynores )
                newbound = newboundnonzero;
             else

@@ -4033,6 +4033,8 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    int*                  ival                /**< buffer to store the parameter value */
    )
 {
+   int scaleparam;
+
    SCIPdebugMessage("calling SCIPlpiGetIntpar()\n");
 
    assert(lpi != NULL);
@@ -4057,7 +4059,19 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = (int) lpi->pricing;
       break;
    case SCIP_LPPAR_SCALING:
-      *ival = (int) (lpi->spx->intParam(SoPlex::SCALER) != SoPlex::SCALER_OFF);
+      scaleparam = lpi->spx->intParam(SoPlex::SCALER);
+
+      if( scaleparam == SoPlex::SCALER_OFF )
+         *ival = 0;
+      else if( scaleparam == SoPlex::SCALER_BIEQUI )
+         *ival = 1;
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 2)
+      else
+      {
+         assert(scaleparam == SoPlex::SCALER_LEASTSQ);
+         *ival = 2;
+      }
+#endif
       break;
 #if SOPLEX_VERSION >= 201
    case SCIP_LPPAR_TIMING:
@@ -4134,8 +4148,16 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       }
       break;
    case SCIP_LPPAR_SCALING:
-      assert(ival == TRUE || ival == FALSE);
-      (void) lpi->spx->setIntParam(SoPlex::SCALER, ( ival ? SoPlex::SCALER_BIEQUI : SoPlex::SCALER_OFF));
+      assert(ival >= 0 && ival <= 2);
+      if( ival == 0 )
+         (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_OFF);
+      else if( ival == 1 )
+         (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_BIEQUI);
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 2)
+      else
+         (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_LEASTSQ);
+#endif
+
       break;
 #if SOPLEX_VERSION >= 201
    case SCIP_LPPAR_TIMING:
