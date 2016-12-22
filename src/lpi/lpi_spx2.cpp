@@ -4065,11 +4065,13 @@ SCIP_RETCODE SCIPlpiGetIntpar(
          *ival = 0;
       else if( scaleparam == SoPlex::SCALER_BIEQUI )
          *ival = 1;
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 2)
       else
       {
          assert(scaleparam == SoPlex::SCALER_LEASTSQ);
          *ival = 2;
       }
+#endif
       break;
 #if SOPLEX_VERSION >= 201
    case SCIP_LPPAR_TIMING:
@@ -4151,8 +4153,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_OFF);
       else if( ival == 1 )
          (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_BIEQUI);
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 2)
       else
          (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_LEASTSQ);
+#endif
 
       break;
 #if SOPLEX_VERSION >= 201
