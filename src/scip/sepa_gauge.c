@@ -875,6 +875,7 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolGauge)
 
    assert(sepadata != NULL);
 
+   /* free memory and reset data */
    if( sepadata->isintsolavailable )
    {
       SCIPfreeBlockMemoryArray(scip, &sepadata->nlrowsidx, sepadata->nlrowssize);
@@ -882,10 +883,18 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolGauge)
       SCIPfreeBlockMemoryArray(scip, &sepadata->nlrows, sepadata->nlrowssize);
       SCIP_CALL( SCIPfreeSol(scip, &sepadata->intsol) );
       SCIP_CALL( SCIPexprintFree(&sepadata->exprinterpreter) );
-   }
 
-   /* set all data in sepadata to 0 */
-   BMSclearMemory(sepadata);
+      sepadata->nnlrows = 0;
+      sepadata->nnlrowsidx = 0;
+      sepadata->nlrowssize = 0;
+      sepadata->isintsolavailable = FALSE;
+   }
+   assert(sepadata->nnlrows == 0);
+   assert(sepadata->nnlrowsidx == 0);
+   assert(sepadata->nlrowssize == 0);
+   assert(sepadata->isintsolavailable == FALSE);
+
+   sepadata->skipsepa = FALSE;
 
    return SCIP_OKAY;
 }
