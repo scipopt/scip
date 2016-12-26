@@ -636,6 +636,17 @@ SCIP_RETCODE SCIPvarAddLocks(
    int                   addnlocksup         /**< increase in number of rounding up locks */
    );
 
+/** modifies softlock numbers for rounding */
+extern
+SCIP_RETCODE SCIPvarAddLocksSoft(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   int                   addnlocksdown,      /**< increase in number of rounding down locks */
+   int                   addnlocksup         /**< increase in number of rounding up locks */
+   );
+
 /** changes type of variable; cannot be called, if var belongs to a problem */
 extern
 SCIP_RETCODE SCIPvarChgType(
