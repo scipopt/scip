@@ -692,7 +692,7 @@ int SORTTPL_NAME(sorttpl_selectPivotIndex, SORTTPL_NAMEEXT)
    return pivotindex;
 }
 
-/** makro that performs an exchange in the weighted selection algorithm, including weights */
+/** macro that performs an exchange in the weighted selection algorithm, including weights */
 #define EXCH(x,y)                                                                              \
    do                                                                                          \
    {                                                                                           \
