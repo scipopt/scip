@@ -165,6 +165,7 @@ interface:
 - the parameters of SCIPlpiChgObj(), SCIPlpiSetBase(), SCIPlpiSetState(), SCIPlpiSetNorms() have been declared as const
 
 fixed bugs:
+- correct handling of implicit integer variables with fractional solution value in simplerounding heuristic
 - avoid numerically troublesome aggregations
 - fixed bug in event system: bound change events of the new focus node must be processed, even if the bound
   is the same as at the last focus node
