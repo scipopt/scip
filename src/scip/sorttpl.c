@@ -233,6 +233,129 @@ void SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
    }
 }
 
+/** returns the index a,b, or c of the median element among key[a], key[b], and key[c] */
+static
+int SORTTPL_NAME(sorttpl_medianThree, SORTTPL_NAMEEXT)
+(
+   SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
+   SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
+   int                   a,                  /**< first index of the key array to consider */
+   int                   b,                  /**< second index of the key array to consider */
+   int                   c                   /**< third index of the array to consider */
+   )
+{
+   assert(a >= 0);
+   assert(b >= 0);
+   assert(c >= 0);
+   assert(a != b);
+   assert(b != c);
+   assert(c != a);
+   /* let the elements in the unsorted order be a,b,c at positions start, mid, and end */
+   if( SORTTPL_ISBETTER( key[a], key[b]) ) /* a <= b */
+   {
+      if( SORTTPL_ISBETTER( key[b], key[c]) ) /* b <= c */
+         /* resulting permutation: a b c */
+         return b;
+      else /* b > c */
+      {
+         if( SORTTPL_ISBETTER( key[a], key[c]) ) /* a <= c */
+            /* resulting permutation: a c b */
+            return c;
+         else
+            /* resulting permutation: c a b */
+            return a;
+      }
+   }
+   else /* a > b */
+   {
+      if( SORTTPL_ISBETTER( key[b], key[c] ) )
+      {
+         if( SORTTPL_ISBETTER( key[a], key[c]) )
+            /* resulting permutation: b a c */
+            return a;
+         else
+            /* resulting permutation: b c a */
+            return c;
+      }
+      else
+         /* resulting permutation: c b a */
+         return b;
+   }
+}
+/* guess a median for the key array [start, ..., end] by using the median of the first, last, and middle element */
+static
+int SORTTPL_NAME(sorttpl_selectPivotIndex, SORTTPL_NAMEEXT)
+(
+   SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
+   SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
+   SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
+   int                   start,              /**< first index of the key array to consider */
+   int                   end                 /**< last index of the key array to consider */
+   )
+{
+   int pivotindex;
+
+   /* use the middle index on small arrays */
+   if( end - start + 1 <= SORTTPL_SHELLSORTMAX )
+      pivotindex = (start + end) / 2;
+   else if( end - start + 1 <= 50000 )
+   {
+      /* select the median of the first, last, and middle element as pivot element */
+      int mid = (start + end) / 2;
+      pivotindex = SORTTPL_NAME(sorttpl_medianThree, SORTTPL_NAMEEXT)
+            (key,
+                  SORTTPL_HASPTRCOMPPAR(ptrcomp)
+                  SORTTPL_HASINDCOMPPAR(indcomp)
+                  SORTTPL_HASINDCOMPPAR(dataptr)
+                  start, mid, end);
+   }
+   else
+   {
+      /* use the median of medians of nine evenly distributed elements of the key array */
+      int gap = (end - start + 1) / 9;
+      int median1;
+      int median2;
+      int median3;
+
+      /* this should always hold */
+      assert(start + 8 * gap <= end);
+
+      /* collect 3 medians evenly distributed over the array */
+      median1 = SORTTPL_NAME(sorttpl_medianThree, SORTTPL_NAMEEXT)
+            (key,
+               SORTTPL_HASPTRCOMPPAR(ptrcomp)
+               SORTTPL_HASINDCOMPPAR(indcomp)
+               SORTTPL_HASINDCOMPPAR(dataptr)
+               start, start + gap, start + 2 * gap);
+
+      median2 = SORTTPL_NAME(sorttpl_medianThree, SORTTPL_NAMEEXT)
+            (key,
+               SORTTPL_HASPTRCOMPPAR(ptrcomp)
+               SORTTPL_HASINDCOMPPAR(indcomp)
+               SORTTPL_HASINDCOMPPAR(dataptr)
+               start + 3 * gap, start + 4 * gap, start + 5 * gap);
+      median3 = SORTTPL_NAME(sorttpl_medianThree, SORTTPL_NAMEEXT)
+            (key,
+               SORTTPL_HASPTRCOMPPAR(ptrcomp)
+               SORTTPL_HASINDCOMPPAR(indcomp)
+               SORTTPL_HASINDCOMPPAR(dataptr)
+               start + 6 * gap, start + 7 * gap, start + 8 * gap);
+
+      /* compute and return the median of the medians */
+      pivotindex = SORTTPL_NAME(sorttpl_medianThree, SORTTPL_NAMEEXT)
+            (key,
+               SORTTPL_HASPTRCOMPPAR(ptrcomp)
+               SORTTPL_HASINDCOMPPAR(indcomp)
+               SORTTPL_HASINDCOMPPAR(dataptr)
+               median1, median2, median3);
+   }
+
+   return pivotindex;
+}
+
 
 /** quick-sort an array of pointers; pivot is the medial element */
 static
@@ -264,7 +387,12 @@ void SORTTPL_NAME(sorttpl_qSort, SORTTPL_NAMEEXT)
       int mid;
 
       /* select pivot element */
-      mid = (start+end)/2;
+      mid = SORTTPL_NAME(sorttpl_selectPivotIndex, SORTTPL_NAMEEXT)
+            (key,
+                  SORTTPL_HASPTRCOMPPAR(ptrcomp)
+                  SORTTPL_HASINDCOMPPAR(indcomp)
+                  SORTTPL_HASINDCOMPPAR(dataptr)
+                  start, end);
       pivotkey = key[mid];
 
       /* partition the array into elements < pivot [start,hi] and elements >= pivot [lo,end] */
@@ -641,59 +769,7 @@ SCIP_Bool SORTTPL_NAME(SCIPsortedvecFind, SORTTPL_NAMEEXT)
 
 #endif
 
-/* guess a median for the key array [start, ..., end] by using the median of the first, last, and middle element */
-static
-int SORTTPL_NAME(sorttpl_selectPivotIndex, SORTTPL_NAMEEXT)
-(
-   SORTTPL_KEYTYPE*      key,                /**< pointer to data array that defines the order */
-   SORTTPL_HASPTRCOMPPAR( SCIP_DECL_SORTPTRCOMP((*ptrcomp)) )  /**< data element comparator */
-   SORTTPL_HASINDCOMPPAR( SCIP_DECL_SORTINDCOMP((*indcomp)) )  /**< data element comparator */
-   SORTTPL_HASINDCOMPPAR( void*                  dataptr    )  /**< pointer to data field that is given to the external compare method */
-   int                   start,              /**< first index of the key array to consider */
-   int                   end                 /**< last index of the key array to consider */
-   )
-{
-   int mid;
-   int pivotindex;
-   /* select the median of the first, last, and middle element as pivot element */
-   mid = (start + end) / 2;
 
-   /* let the elements in the unsorted order be a,b,c at positions start, mid, and end */
-   if( SORTTPL_ISBETTER( key[start], key[mid]) ) /* a <= b */
-   {
-      if( SORTTPL_ISBETTER( key[mid], key[end]) ) /* b <= c */
-         /* resulting permutation: a b c */
-         pivotindex = mid;
-      else /* b > c */
-      {
-         if( SORTTPL_ISBETTER( key[start], key[end]) ) /* a <= c */
-            /* resulting permutation: a c b */
-            pivotindex = end;
-         else
-            /* resulting permutation: c a b */
-            pivotindex = start;
-      }
-   }
-   else /* a > b */
-   {
-      if( SORTTPL_ISBETTER( key[mid], key[end] ) )
-      {
-         if( SORTTPL_ISBETTER( key[start], key[end]) )
-            /* resulting permutation: b a c */
-            pivotindex = start;
-         else
-            /* resulting permutation: b c a */
-            pivotindex = end;
-      }
-      else
-      {
-         /* resulting permutation: c b a */
-         pivotindex = mid;
-      }
-   }
-
-   return pivotindex;
-}
 
 /** partially sorts a given keys array around the weighted median w.r.t. the \p capacity and permutes the additional 'field' arrays
  *  in the same way.
