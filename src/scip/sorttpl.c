@@ -36,6 +36,7 @@
  */
 #include "scip/def.h"
 #define SORTTPL_SHELLSORTMAX 25
+#define SORTTPL_MINSIZENINTHER 50000 /* minimum input size to use ninther (median of nine) for pivot selection */
 
 #ifndef SORTTPL_NAMEEXT
 #error You need to define SORTTPL_NAMEEXT.
@@ -298,7 +299,7 @@ int SORTTPL_NAME(sorttpl_selectPivotIndex, SORTTPL_NAMEEXT)
    /* use the middle index on small arrays */
    if( end - start + 1 <= SORTTPL_SHELLSORTMAX )
       pivotindex = (start + end) / 2;
-   else if( end - start + 1 <= 50000 )
+   else if( end - start + 1 < SORTTPL_MINSIZENINTHER )
    {
       /* select the median of the first, last, and middle element as pivot element */
       int mid = (start + end) / 2;
@@ -1054,4 +1055,5 @@ void SORTTPL_NAME(SCIPselect, SORTTPL_NAMEEXT)
 #undef EXCH
 #undef SORTTPL_SWAP
 #undef SORTTPL_SHELLSORTMAX
+#undef SORTTPL_MINSIZENINTHER
 #undef SORTTPL_BACKWARDS
