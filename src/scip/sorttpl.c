@@ -122,31 +122,28 @@
 /* comparator method */
 #ifdef SORTTPL_PTRCOMP
 #ifdef SORTTPL_BACKWARDS
-#define SORTTPL_ISBETTER(x,y) (ptrcomp((x), (y)) > 0)
-#define SORTTPL_ISWORSE(x,y) (ptrcomp((x), (y)) < 0)
+#define SORTTPL_CMP(x,y) (-ptrcomp((x), (y)))
 #else
-#define SORTTPL_ISBETTER(x,y) (ptrcomp((x), (y)) < 0)
-#define SORTTPL_ISWORSE(x,y) (ptrcomp((x), (y)) > 0)
+#define SORTTPL_CMP(x,y) (ptrcomp((x), (y)))
 #endif
 #else
 #ifdef SORTTPL_INDCOMP
 #ifdef SORTTPL_BACKWARDS
-#define SORTTPL_ISBETTER(x,y) (indcomp(dataptr, (x), (y)) > 0)
-#define SORTTPL_ISWORSE(x,y) (indcomp(dataptr, (x), (y)) < 0)
+#define SORTTPL_CMP(x,y) (-indcomp(dataptr, (x), (y)))
 #else
-#define SORTTPL_ISBETTER(x,y) (indcomp(dataptr, (x), (y)) < 0)
-#define SORTTPL_ISWORSE(x,y) (indcomp(dataptr, (x), (y)) > 0)
+#define SORTTPL_CMP(x,y) (indcomp(dataptr, (x), (y)))
 #endif
 #else
 #ifdef SORTTPL_BACKWARDS
-#define SORTTPL_ISBETTER(x,y) ((x) > (y))
-#define SORTTPL_ISWORSE(x,y) ((x) < (y))
+#define SORTTPL_CMP(x,y) ((y) - (x))
 #else
-#define SORTTPL_ISBETTER(x,y) ((x) < (y))
-#define SORTTPL_ISWORSE(x,y) ((x) > (y))
+#define SORTTPL_CMP(x,y) ((x) - (y))
 #endif
 #endif
 #endif
+
+#define SORTTPL_ISBETTER(x,y) (SORTTPL_CMP(x,y) < 0)
+#define SORTTPL_ISWORSE(x,y) (SORTTPL_CMP(x,y) > 0)
 
 /* swapping two variables */
 #define SORTTPL_SWAP(T,x,y) \
@@ -695,6 +692,24 @@ int SORTTPL_NAME(sorttpl_selectPivotIndex, SORTTPL_NAMEEXT)
    return pivotindex;
 }
 
+/** macro that performs an exchange in the weighted selection algorithm, including weights */
+#define EXCH(x,y)                                                                              \
+   do                                                                                          \
+   {                                                                                           \
+      SORTTPL_SWAP(SORTTPL_KEYTYPE, key[x], key[y]);                                           \
+                                                                                               \
+      if( weights != NULL )                                                                    \
+         SORTTPL_SWAP(SCIP_Real, weights[x], weights[y]);                                      \
+                                                                                               \
+      SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[x], field1[y]); )             \
+      SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[x], field2[y]); )             \
+      SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[x], field3[y]); )             \
+      SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[x], field4[y]); )             \
+      SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD5TYPE, field5[x], field5[y]); )             \
+      SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD6TYPE, field6[x], field6[y]); )             \
+   }                                                                                           \
+   while( FALSE )
+
 /** partially sorts a given keys array around the weighted median w.r.t. the \p capacity and permutes the additional 'field' arrays
  *  in the same way.
  *
@@ -718,22 +733,23 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
    int*                  medianpos           /**< pointer to store the index of the weighted median, or NULL, if not needed */
    )
 {
-   int start;
-   int end;
+   int hi;
+   int lo;
    int j;
    int recursiondepth;
    SCIP_Real residualcapacity;
 
-   start = 0;
-   end = len - 1;
+   lo = 0;
+   hi = len - 1;
    residualcapacity = capacity;
    recursiondepth = 0;
 
-   while( end - start + 1 > SORTTPL_SHELLSORTMAX )
+   while( hi - lo + 1 > SORTTPL_SHELLSORTMAX )
    {
       int i;
-      int hi;
-      int lo;
+      int bt;
+      int wt;
+      int p;
       int pivotindex;
       SCIP_Real betterweightsum;
       SCIP_Real pivotweight;
@@ -747,122 +763,103 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
                   SORTTPL_HASPTRCOMPPAR(ptrcomp)
                   SORTTPL_HASINDCOMPPAR(indcomp)
                   SORTTPL_HASINDCOMPPAR(dataptr)
-                  start, end);
+                  lo, hi);
 
       pivot = key[pivotindex];
 
       /* swap pivot element to the end of the array */
-      if( pivotindex != end )
+      if( pivotindex != lo )
       {
-         SORTTPL_SWAP(SORTTPL_KEYTYPE, key[end], key[pivotindex]);
-
-         if( weights != NULL )
-            SORTTPL_SWAP(SCIP_Real, weights[end], weights[pivotindex]);
-
-         SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[end], field1[pivotindex]); )
-         SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[end], field2[pivotindex]); )
-         SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[end], field3[pivotindex]); )
-         SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[end], field4[pivotindex]); )
-         SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD5TYPE, field5[end], field5[pivotindex]); )
-         SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD6TYPE, field6[end], field6[pivotindex]); )
+         EXCH(lo, pivotindex);
       }
 
-      lo = start;
-      hi = end - 1;
+      /* initialize array indices for the current element, the better elements, and the worse elements */
+      i = lo;
+      bt = lo;
+      wt = hi;
 
-      /* loop over elements and swap if one is too small and one is too large */
-      while( lo <= hi )
+      /* iterate through elements once to establish three partition into better elements, equal elements, and worse elements
+       *
+       * at every iteration, i denotes the current, previously unseen element, starting from the position lo
+       * all elements [lo,...bt - 1] are better than the pivot
+       * all elements [wt + 1,... hi] are worse than the pivot
+       *
+       * at termination, all elements [bt,...wt] are equal to the pivot element
+       * */
+      while( i <= wt )
       {
-         if( !SORTTPL_ISBETTER(key[lo], pivot ) && SORTTPL_ISBETTER( key[hi], pivot) )
+         /* element i is better than pivot; exchange elements i and bt, increase both */
+         if( SORTTPL_ISBETTER(key[i], pivot) )
          {
-            SORTTPL_SWAP(SORTTPL_KEYTYPE, key[lo], key[hi]);
-
-            if( weights != NULL )
-               SORTTPL_SWAP(SCIP_Real, weights[lo], weights[hi]);
-
-            SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[lo], field1[hi]); )
-            SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[lo], field2[hi]); )
-            SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[lo], field3[hi]); )
-            SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[lo], field4[hi]); )
-            SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD5TYPE, field5[lo], field5[hi]); )
-            SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD6TYPE, field6[lo], field6[hi]); )
-
-            ++lo;
-            --hi;
+            EXCH(i, bt);
+            i++;
+            bt++;
          }
-         /* loop until hi indexes an element is detected that is better than the pivot */
-         while( hi >= start && !SORTTPL_ISBETTER(key[hi], pivot) )
-            --hi;
-
-         while( lo < end && SORTTPL_ISBETTER(key[lo], pivot) )
-            ++lo;
+         /* element i is worse than pivot: exchange it with the element at position wt; no increment of i
+          * because an unseen element is waiting at index i after the swap
+          */
+         else if( SORTTPL_ISWORSE(key[i], pivot) )
+         {
+           EXCH(i, wt);
+           wt--;
+         }
+         else
+            i++;
       }
 
-      assert(hi == lo - 1);
-
-      /* place pivot element back to where it belongs */
-      if( lo != end )
-      {
-         /* because lo skipped all elements that are better, there should be no element left that is better to the right of lo */
-         assert(!SORTTPL_ISBETTER(key[lo], pivot));
-         SORTTPL_SWAP(SORTTPL_KEYTYPE, key[lo], key[end]);
-
-         if( weights != NULL )
-            SORTTPL_SWAP(SCIP_Real, weights[lo], weights[end]);
-
-         SORTTPL_HASFIELD1( SORTTPL_SWAP(SORTTPL_FIELD1TYPE, field1[lo], field1[end]); )
-         SORTTPL_HASFIELD2( SORTTPL_SWAP(SORTTPL_FIELD2TYPE, field2[lo], field2[end]); )
-         SORTTPL_HASFIELD3( SORTTPL_SWAP(SORTTPL_FIELD3TYPE, field3[lo], field3[end]); )
-         SORTTPL_HASFIELD4( SORTTPL_SWAP(SORTTPL_FIELD4TYPE, field4[lo], field4[end]); )
-         SORTTPL_HASFIELD5( SORTTPL_SWAP(SORTTPL_FIELD5TYPE, field5[lo], field5[end]); )
-         SORTTPL_HASFIELD6( SORTTPL_SWAP(SORTTPL_FIELD6TYPE, field6[lo], field6[end]); )
-      }
+      assert(wt >= bt);
 
       if( weights != NULL )
       {
          betterweightsum = 0.0;
          /* collect weights of elements larger than the pivot  */
-         for( i = start; i < lo; ++i )
+         for( i = lo; i < bt; ++i )
          {
             assert(SORTTPL_ISBETTER(key[i], pivot));
             betterweightsum += weights[i];
          }
-         pivotweight = weights[lo];
       }
       else
       {
          /* if all weights are equal to one, we directly know the larger and the equal weight sum */
-         betterweightsum = lo - start;
-         pivotweight = 1.0;
+         betterweightsum = bt - lo;
       }
 
-      /* we selected the right median. */
-      if( betterweightsum < residualcapacity && betterweightsum + pivotweight >= residualcapacity)
+      /* the weight in the better half of the array exceeds the capacity. Continue the search there */
+      if( betterweightsum >= residualcapacity )
       {
-         if( medianpos != NULL )
-            *medianpos = lo;
-
-         return;
-      }
-
-      /* pivot is too large; continue search in the left half of the array */
-      else if( betterweightsum >= residualcapacity )
-      {
-         end = lo - 1;
+         hi = bt - 1;
       }
       else
       {
-         assert(betterweightsum + pivotweight < residualcapacity);
-         start = lo + 1;
-         residualcapacity -= betterweightsum + pivotweight;
+         SCIP_Real weightsum = betterweightsum;
+         /* loop through duplicates of pivot element and check if one is the weighted median */
+         for( p = bt; p <= wt; ++p )
+         {
+            assert(SORTTPL_CMP(key[p], pivot) == 0);
+            pivotweight = weights != NULL ? weights[p] : 1;
+            weightsum += pivotweight;
+
+            /* the element at index p is exactly the weighted median */
+            if( weightsum >= residualcapacity )
+            {
+               if( medianpos != NULL )
+                  *medianpos = p;
+
+               return;
+            }
+         }
+
+         /* continue loop by searching the remaining elements [wt+1,...,hi] */
+         residualcapacity -= weightsum;
+         lo = wt + 1;
       }
    }
 
-   assert(start <= end || end == -1 || start == len);
-   assert(end - start + 1 <= SORTTPL_SHELLSORTMAX);
+   assert(hi - lo + 1 <= SORTTPL_SHELLSORTMAX);
 
    /* use shell sort to solve the remaining elements completely */
-   if( end - start + 1 > 1 )
+   if( hi - lo + 1 > 1 )
    {
       SORTTPL_NAME(sorttpl_shellSort, SORTTPL_NAMEEXT)
       (key, weights,
@@ -875,10 +872,10 @@ void SORTTPL_NAME(SCIPselectWeighted, SORTTPL_NAMEEXT)
          SORTTPL_HASPTRCOMPPAR(ptrcomp)
          SORTTPL_HASINDCOMPPAR(indcomp)
          SORTTPL_HASINDCOMPPAR(dataptr)
-         start, end);
+         lo, hi);
    }
    /* determine the median position among the remaining elements */
-   for( j = start; j <= MAX(end, start); ++j )
+   for( j = lo; j <= MAX(lo, hi); ++j )
    {
       SCIP_Real weight = (weights != NULL ? weights[j] : 1);
       /* we finally found the median element */
@@ -977,6 +974,8 @@ void SORTTPL_NAME(SCIPselect, SORTTPL_NAMEEXT)
 #undef SORTTPL_HASINDCOMPPAR
 #undef SORTTPL_ISBETTER
 #undef SORTTPL_ISWORSE
+#undef SORTTPL_CMP
+#undef EXCH
 #undef SORTTPL_SWAP
 #undef SORTTPL_SHELLSORTMAX
 #undef SORTTPL_BACKWARDS
