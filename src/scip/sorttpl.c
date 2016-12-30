@@ -36,7 +36,7 @@
  */
 #include "scip/def.h"
 #define SORTTPL_SHELLSORTMAX 25
-#define SORTTPL_MINSIZENINTHER 50000 /* minimum input size to use ninther (median of nine) for pivot selection */
+#define SORTTPL_MINSIZENINTHER 729 /* minimum input size to use ninther (median of nine) for pivot selection */
 
 #ifndef SORTTPL_NAMEEXT
 #error You need to define SORTTPL_NAMEEXT.
