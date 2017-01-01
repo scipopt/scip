@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*
- */
 #define SCIP_DEBUG
+ */
 #define SCIP_STATISTIC
 
 /**@file   branch_lookahead.c
@@ -517,7 +517,7 @@ SCIP_RETCODE addBinaryBoundEntry(
    container->secondlvlvars[emptyindex] = secondlvlvar;
    container->nentries = emptyindex + 1;
 
-   SCIPinfoMessage(scip, NULL, "Added constraint <%s> + <%s> <= 1\n", SCIPvarGetName(firstlvlvar), SCIPvarGetName(secondlvlvar));
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Added constraint <%s> + <%s> <= 1\n", SCIPvarGetName(firstlvlvar), SCIPvarGetName(secondlvlvar));
 
    if( isBinaryConstraintViolatedBySolution(scip, firstlvlvar, secondlvlvar, baselpsol) )
    {
@@ -642,7 +642,7 @@ SCIP_RETCODE executeDownBranching(
 
       SCIPdebugMessage("NConss <%i>\n", SCIPgetNConss(scip));
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &status->lperror, &resultdata->cutoff) );
-      SCIP_CALL( printCurrentSolution(scip) );
+      /*SCIP_CALL( printCurrentSolution(scip) );*/
 
       solstat = SCIPgetLPSolstat(scip);
       assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
@@ -719,7 +719,7 @@ SCIP_RETCODE executeUpBranching(
 
       SCIPdebugMessage("NConss <%i>\n", SCIPgetNConss(scip));
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &status->lperror, &resultdata->cutoff) );
-      SCIP_CALL( printCurrentSolution(scip) );
+      /*SCIP_CALL( printCurrentSolution(scip) );*/
 
       solstat = SCIPgetLPSolstat(scip);
       assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
@@ -1238,7 +1238,7 @@ SCIP_RETCODE executeDeepBranching(
 #endif
    }
 
-   SCIPinfoMessage(scip, NULL, "Found <%i> binary constrainst.\n", binarybounddata->nentries);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Found <%i> binary constraints.\n", binarybounddata->nentries);
 
    return SCIP_OKAY;
 }
@@ -1359,7 +1359,7 @@ SCIP_RETCODE handleImpliedBinaryBounds(
          statistics->nbinconst++;
       )
    }
-   SCIPinfoMessage(scip, NULL, "Added <%i> implied binary constraints.\n", nentries);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Added <%i> implied binary constraints.\n", nentries);
    return SCIP_OKAY;
 }
 
@@ -1723,7 +1723,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
                   /* execute the branchings on the second level after the down branching on the first level */
 #ifdef SCIP_STATISTIC
-                  SCIP_CALL( printCurrentSolution(scip) );
+                  /*SCIP_CALL( printCurrentSolution(scip) );*/
 
                   SCIP_CALL( executeDeepBranching(scip, config, status, baselpsol, basenode, lpobjval, locallpobjval,
                         basevarforbound, &downdualbound, &downdualboundvalid, &downbranchingresult->cutoff,
@@ -1776,7 +1776,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
                   /* execute the branchings on the second level after the up branching on the first level */
 #ifdef SCIP_STATISTIC
-                  SCIP_CALL( printCurrentSolution(scip) );
+                  /*SCIP_CALL( printCurrentSolution(scip) );*/
 
                   SCIP_CALL( executeDeepBranching(scip, config, status, baselpsol, basenode, lpobjval, locallpobjval,
                         basevarforbound, &updualbound, &updualboundvalid, &upbranchingresult->cutoff,
@@ -2192,118 +2192,6 @@ SCIP_DECL_BRANCHEXITSOL(branchExitSolLookahead)
    return SCIP_OKAY;
 }
 
-static
-SCIP_RETCODE executeComparisonRun(
-   SCIP*                 scip,
-   SCIP_BRANCHRULEDATA*  branchruledata,
-   SCIP_SOL*             baselpsol,
-   SCIP_VAR**            lpcands,
-   SCIP_Real*            lpcandssol,
-   SCIP_Real*            lpcandsfrac,
-   int                   nlpcands,
-   int                   startindex
-   )
-{
-
-   if( branchruledata->comp == LOOKAHEAD )
-   {
-      const char* confenable = "conflict/enable";
-      SCIP_Bool prevconfenable;
-      STATUS* status;
-      STATISTICS* statistics;
-      int bestcand = 0;
-      int i;
-      SCIP_Real* upperbounds;
-      SCIP_Real* lowerbounds;
-      SCIP_Longint oldnconflictconssfound;
-      int oldnconss;
-      int oldnfixedvars;
-      int oldnlprows;
-      int oldnvars;
-      SCIP_SOL* oldsolution;
-      SCIP_SOL* newsolution;
-      int oldnbounchgs = scip->stat->nboundchgs;
-      int oldnprobboundchgs = scip->stat->nprobboundchgs;
-
-      /* the fields below are (currently) never evaluated */
-      SCIP_Real bestdown;
-      SCIP_Bool bestdownvalid = FALSE;
-      SCIP_Real bestup;
-      SCIP_Bool bestupvalid = FALSE;
-      SCIP_Real provedbound;
-      SCIP_Real bestscore = 0;
-
-      SCIPstartClock(scip, branchruledata->compclock);
-
-      SCIP_CALL( allocateStatus(scip, &status) );
-
-      SCIP_CALL( SCIPallocBuffer(scip, &statistics) );
-      /* 17 current number of possible result values and the index is 1 based, so 17 + 1 as array size with unused 0 element */
-      SCIP_CALL( SCIPallocBufferArray(scip, &statistics->nresults, 17 + 1) );
-      SCIP_CALL( initStatistics(scip, statistics) );
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &upperbounds, nlpcands) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &lowerbounds, nlpcands) );
-      for( i = 0; i < nlpcands; i++ )
-      {
-         upperbounds[i] = SCIPvarGetUbLocal(lpcands[i]);
-         lowerbounds[i] = SCIPvarGetLbLocal(lpcands[i]);
-      }
-
-      oldnconflictconssfound = SCIPgetNConflictConssFound(scip);
-      oldnconss = SCIPgetNConss(scip);
-      oldnfixedvars = SCIPgetNFixedVars(scip);
-      oldnlprows = SCIPgetNLPRows(scip);
-      oldnvars = SCIPgetNVars(scip);
-      SCIP_CALL( copyCurrentSolution(scip, &oldsolution) );
-
-      SCIPgetBoolParam(scip, confenable, &prevconfenable);
-      SCIPsetBoolParam(scip, confenable, FALSE);
-
-      assert(prevconfenable == TRUE);
-
-      SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata->persistent, FALSE, branchruledata->compconfig, baselpsol, lpcands,
-         lpcandssol, lpcandsfrac, nlpcands, &startindex, status, &bestcand, &bestdown,
-         &bestdownvalid, &bestup, &bestupvalid, &bestscore, &provedbound, statistics) );
-
-      SCIPsetBoolParam(scip, confenable, prevconfenable);
-
-      SCIP_CALL( copyCurrentSolution(scip, &newsolution) );
-
-      assert(SCIPareSolsEqual(scip, oldsolution, newsolution));
-      assert(oldnvars == SCIPgetNVars(scip));
-      assert(oldnlprows == SCIPgetNLPRows(scip));
-      assert(oldnfixedvars == SCIPgetNFixedVars(scip));
-      assert(oldnconss == SCIPgetNConss(scip));
-      assert(oldnconflictconssfound == SCIPgetNConflictConssFound(scip));
-
-      for( i = 0; i < nlpcands; i++ )
-      {
-         assert(upperbounds[i] == SCIPvarGetUbLocal(lpcands[i]));
-         assert(lowerbounds[i] == SCIPvarGetLbLocal(lpcands[i]));
-      }
-
-      SCIPfreeSol(scip, &newsolution);
-      SCIPfreeSol(scip, &oldsolution);
-
-      SCIPfreeBufferArray(scip, &lowerbounds);
-      SCIPfreeBufferArray(scip, &upperbounds);
-/*
-      SCIPinfoMessage(scip, NULL, "=== Comparison Statistics start ===\n");
-      printStatistics(scip, statistics);
-      SCIPinfoMessage(scip, NULL, "=== Comparison Statistics end ===\n");
-*/
-      assert(oldnbounchgs - oldnprobboundchgs == scip->stat->nboundchgs - scip->stat->nprobboundchgs);
-
-      SCIPfreeBufferArray(scip, &statistics->nresults);
-      SCIPfreeBuffer(scip, &statistics);
-      freeStatus(scip, &status);
-
-      SCIPstopClock(scip, branchruledata->compclock);
-   }
-   return SCIP_OKAY;
-}
-
 /** get a copy of the fractional candidates we can branch on
  *
  * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -2397,14 +2285,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 
       /* execute the main logic */
 #ifdef SCIP_STATISTIC
-      /*TODO: clean up */
-         SCIPinfoMessage(scip, NULL, "  Started with <%i> conss\n", SCIPgetNConss(scip));
-         SCIP_CALL( executeComparisonRun(scip, branchruledata, baselpsol, lpcands, lpcandssol, lpcandsfrac, nlpcands, branchruledata->persistent->restartindex) );
-         SCIPinfoMessage(scip, NULL, "Continued with <%i> conss\n", SCIPgetNConss(scip));
-         SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata->persistent, TRUE, branchruledata->config, baselpsol, lpcands,
-               lpcandssol, lpcandsfrac, nlpcands, &branchruledata->persistent->restartindex, status, &bestcand, &bestdown,
-               &bestdownvalid, &bestup, &bestupvalid, &bestscore, &provedbound, branchruledata->statistics) );
-         SCIPinfoMessage(scip, NULL, " Finished with <%i> conss\n", SCIPgetNConss(scip));
+	  SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata->persistent, TRUE, branchruledata->config, baselpsol, lpcands,
+		    lpcandssol, lpcandsfrac, nlpcands, &branchruledata->persistent->restartindex, status, &bestcand, &bestdown,
+		    &bestdownvalid, &bestup, &bestupvalid, &bestscore, &provedbound, branchruledata->statistics) );
 #else
       SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata->persistent, TRUE, branchruledata->config, baselpsol, lpcands,
             lpcandssol, lpcandsfrac, nlpcands, &branchruledata->persistent->restartindex, status, &bestcand, &bestdown,
