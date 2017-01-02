@@ -440,7 +440,7 @@ SCIP_RETCODE checkData(
 
 /** TESTS **/
 
-/* Test 1:
+/** Test 1
  *
  * max 3 x1 +   x2
  *     2 x1 +   x2 <= 10
@@ -518,7 +518,7 @@ Test(solve, test1)
 }
 
 
-/* Test 2:
+/** Test 2
  *
  * max 3 x1 +   x2
  *     2 x1 +   x2 <= 10
@@ -591,7 +591,7 @@ Test(solve, test2)
 }
 
 
-/* Test 3:
+/** Test 3
  *
  * min 10 y1 + 15 y2
  *      2 y1 +   y2 == 3
@@ -659,7 +659,7 @@ Test(solve, test3)
 }
 
 
-/* Test 4:
+/** Test 4
  *
  * max x1 + x2
  *     x1 - x2 <= 0
@@ -708,7 +708,7 @@ Test(solve, test4)
 }
 
 
-/* Test 5: Test objective limit
+/** Test 5: Test objective limit
  *
  * Use second problem from Test 1 and set objective limit.
  *
@@ -765,4 +765,130 @@ Test(solve, test5)
 
    /* check that data stored in lpi is still the same */
    SCIP_CALL( checkData(SCIP_OBJSEN_MAXIMIZE, 2, obj, lb, ub, 2, lhs, rhs, 4, beg, ind, val) );
+}
+
+
+/** Test 6: More complex example
+ *
+ * The original problem was the following (arising from the qpkktref unit test), which displays a bug in CPLEX 12.7.0
+ * w.r.t. scaling:
+ *   Minimize t_objvar
+ *   Subject To
+ *     KKTBinary1_y:                 - t_dual_y_bin1 + t_dual_y_bin2 + t_dual_y_slackbin1 = 0
+ *     KKTlin_lower_1:               - t_x - t_y + t_slack_lhs_lower + t_slack_ub_z       = 0.75
+ *     KKTBinary1_x:                 - t_dual_x_bin1 + t_dual_x_bin2 + t_dual_x_slackbin1 = 0
+ *     KKTlin_lower_0:               - t_x - t_y + t_slack_ub_z - t_slack_rhs_lower       = 0.25
+ *     quadratic_side1_estimation_0: 2.75 t_x - 3.75 t_y + t_objvar + 2.28 t_slack_ub_z  <= 5.0496
+ *     quadratic_side0_estimation_0: 1.25 t_x - 0.25 t_y + t_objvar + 2 t_slack_ub_z     >= 2.6875
+ *     quadratic_side1_estimation_0: 0.75 t_x - 0.25 t_y + t_objvar + 0.68 t_slack_ub_z  <= 4.2056
+ *     quadratic_side0_estimation_0: 2.75 t_x - 0.25 t_y + t_objvar + 3 t_slack_ub_z     >= 4.4375
+ *   Bounds
+ *     t_x = 1
+ *     t_y = 0
+ *     -2.562500001 <= t_objvar <= -0.0624999989999999
+ *     0 <= t_slack_lhs_lower <= 0.5
+ *     t_dual_x_bin1 Free
+ *     t_dual_x_bin2 Free
+ *     t_dual_x_slackbin1 = 0
+ *     t_dual_y_bin1 = 0
+ *     t_dual_y_bin2 Free
+ *     t_dual_y_slackbin1 Free
+ *     1.25 <= t_slack_ub_z <= 1.75
+ *     0 <= t_slack_rhs_lower <= 0.5
+ *   End
+ *
+ *  We use the following mapping between variables and indices:
+ *  0:  t_x = 1
+ *  1:  t_y = 0
+ *  2:  t_objvar
+ *  3:  t_slack_lhs_lower
+ *  4:  t_dual_x_bin1
+ *  5:  t_dual_x_bin2
+ *  6:  t_dual_x_slackbin1
+ *  7:  t_dual_y_bin1
+ *  8:  t_dual_y_bin2
+ *  9:  t_dual_y_slackbin1
+ *  10: t_slack_ub_z
+ *  11: t_slack_rhs_lower
+ */
+Test(solve, test6)
+{
+   SCIP_Real exp_objval = -2.0625;
+   SCIP_Real objval;
+   int varind[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+
+   /* LP data: */
+   SCIP_Real obj[12] = {0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+   SCIP_Real lb[12] = {1, 0, -2.5625, 0, -1e20, -1e20, 0.0, 0.0, -1e20, -1e20, 1.25, 0};
+   SCIP_Real ub[12] = {1, 0, -0.0625, 0.5, 1e20, 1e20, 0.0, 0.0, 1e20, 1e20, 1.75, 0.5};
+
+   SCIP_Real lhs[8] = {0, 0.75, 0, 0.25, -1e20, 2.6875, -1e20, 4.4375};
+   SCIP_Real rhs[8] = {0, 0.75, 0, 0.25, 5.0496, 1e20, 4.2056, 1e20};
+
+   /* matrix */
+   int beg[12] = {0, 6, 12, 16, 17, 18, 19, 20, 21, 22, 23, 29};
+   /*             x0                x1                x2          x3 x4 x5 x6 x7 x8 x9 x10               x11 */
+   int ind[30] = {1, 3, 4, 5, 6, 7, 1, 3, 4, 5, 6, 7, 4, 5, 6, 7, 1, 2, 2, 2, 0, 0, 0, 1, 3, 4, 5, 6, 7, 3};
+   /*                   x0                              x1                                  x2          x3 x4  x5 x6 x7  x8 x9 x10                     x11 */
+   SCIP_Real val[30] = {-1, -1, 2.75, 1.25, 0.75, 2.75, -1, -1, -3.75, -0.25, -0.25, -0.25, 1, 1, 1, 1, 1, -1, 1, 1, -1, 1, 1, 1, 1, 2.28, 2, 0.68, 3, -1.0};
+
+   /* load problem */
+   SCIP_CALL( SCIPlpiLoadColLP(lpi, SCIP_OBJSEN_MINIMIZE, 12, obj, lb, ub, NULL, 8, lhs, rhs, NULL, 30, beg, ind, val) );
+
+   /* set some parameters - simulate settings in SCIP */
+   SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_FROMSCRATCH, 0) );
+   SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_SCALING, 1) );
+   SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_PRESOLVING, 1) );
+   SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_PRICING, 0) );
+
+   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_FEASTOL, 1e-06) );
+   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_DUALFEASTOL, 1e-07) );
+
+   SCIP_CALL( SCIPlpiClearState(lpi) );
+
+   /* set objlimit */
+   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, 4.320412501) );
+
+   /* solve problem */
+   SCIP_CALL( SCIPlpiSolveDual(lpi) );
+
+   /* check status */
+   cr_assert( SCIPlpiWasSolved(lpi) );
+
+   /* the objective should be equal to the objective limit */
+   SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
+   cr_assert_geq(objval, exp_objval, "Objective value not equal to objective limit: %g != %g\n", objval, exp_objval);
+
+   /* check that data stored in lpi is still the same */
+   SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 12, obj, lb, ub, 8, lhs, rhs, 30, beg, ind, val) );
+
+   /* change some bounds */
+   lb[0] = 1;
+   ub[0] = 1;
+   lb[1] = 0;
+   ub[1] = 0;
+   lb[2] = -2.06255;
+   ub[2] = -2.0625;
+   lb[3] = 0;
+   ub[3] = 4.94694e-05;
+   lb[6] = 0;
+   ub[6] = 0;
+   lb[7] = 0;
+   ub[7] = 0;
+   lb[10] = 1.74995;
+   ub[10] = 1.750;
+   lb[11] = 0.499951;
+   ub[11] = 0.5;
+   SCIP_CALL( SCIPlpiChgBounds(lpi, 12, varind, lb, ub) );
+
+   /* set objlimit */
+   SCIP_CALL( SCIPlpiSetRealpar(lpi, SCIP_LPPAR_UOBJLIM, -2.0625) );
+
+   SCIP_CALL( SCIPlpiClearState(lpi) );
+
+   /* solve problem */
+   SCIP_CALL( SCIPlpiSolveDual(lpi) );
+
+   /* check that data stored in lpi is still the same */
+   SCIP_CALL( checkData(SCIP_OBJSEN_MINIMIZE, 12, obj, lb, ub, 8, lhs, rhs, 30, beg, ind, val) );
 }
