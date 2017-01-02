@@ -509,8 +509,14 @@ SCIP_RETCODE checkParameterValues(
 
    SCIP_CALL( getParameterValues(lpi, &par) );
    for( i = 0; i < NUMINTPARAM; ++i )
-      assert(lpi->curparam.intparval[i] == par.intparval[i]
-         || (lpi->curparam.intparval[i] == CPX_INT_MAX && par.intparval[i] >= CPX_INT_MAX));
+   {
+#if (CPX_VERSION == 12070000)
+      /* due to a bug in CPLEX 12.7.0, we need to disable scaling for this version */
+      if ( intparam[i] != CPX_PARAM_SCAIND )
+#endif
+         assert(lpi->curparam.intparval[i] == par.intparval[i]
+            || (lpi->curparam.intparval[i] == CPX_INT_MAX && par.intparval[i] >= CPX_INT_MAX));
+   }
    for( i = 0; i < NUMDBLPARAM; ++i )
       assert(MAX(lpi->curparam.dblparval[i], dblparammin[i]) == par.dblparval[i]); /*lint !e777*/
 #endif
@@ -540,7 +546,13 @@ SCIP_RETCODE setParameterValues(
          SCIPdebugMessage("setting CPLEX int parameter %d from %d to %d\n",
             intparam[i], lpi->curparam.intparval[i], cpxparam->intparval[i]);
          lpi->curparam.intparval[i] = cpxparam->intparval[i];
-         CHECK_ZERO( lpi->messagehdlr, CPXsetintparam(lpi->cpxenv, intparam[i], lpi->curparam.intparval[i]) );
+#if (CPX_VERSION == 12070000)
+         /* due to a bug in CPLEX 12.7.0, we need to disable scaling for this version */
+         if ( intparam[i] != CPX_PARAM_SCAIND )
+#endif
+         {
+            CHECK_ZERO( lpi->messagehdlr, CPXsetintparam(lpi->cpxenv, intparam[i], lpi->curparam.intparval[i]) );
+         }
       }
    }
    for( i = 0; i < NUMDBLPARAM; ++i )
@@ -1078,6 +1090,11 @@ SCIP_RETCODE SCIPlpiCreate(
 #if 0 /* turning presolve off seems to be faster than turning it off on demand (if presolve detects infeasibility) */
       /* turn presolve off, s.t. for an infeasible problem, a ray is always available */
    CHECK_ZERO( messagehdlr, CPXsetintparam((*lpi)->cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
+#endif
+
+#if (CPX_VERSION == 12070000)
+   /* due to a bug in CPLEX 12.7.0, we need to disable scaling for this version */
+   CHECK_ZERO( messagehdlr, CPXsetintparam((*lpi)->cpxenv, CPX_PARAM_SCAIND, -1) );
 #endif
 
    /* get default parameter values */
@@ -2165,6 +2182,15 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    invalidateSolution(lpi);
 
+#if (CPX_VERSION == 12070000)
+   {
+      int scaling;
+      /* due to a bug in CPLEX 12.7.0, we need to disable scaling for this version */
+      CHECK_ZERO( lpi->messagehdlr, CPXgetintparam(lpi->cpxenv, CPX_PARAM_SCAIND, &scaling) );
+      assert( scaling == -1 );
+   }
+#endif
+
    setIntParam(lpi, CPX_PARAM_ADVIND, lpi->fromscratch || lpi->clearstate ? CPX_OFF : CPX_ON);
    lpi->clearstate = FALSE;
 
@@ -2274,6 +2300,15 @@ SCIP_RETCODE SCIPlpiSolveDual(
    lpi->clearstate = FALSE;
 
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
+
+#if (CPX_VERSION == 12070000)
+   {
+      int scaling;
+      /* due to a bug in CPLEX 12.7.0 we need to disable scaling */
+      CHECK_ZERO( lpi->messagehdlr, CPXgetintparam(lpi->cpxenv, CPX_PARAM_SCAIND, &scaling) );
+      assert( scaling == -1 );
+   }
+#endif
 
    SCIPdebugMessage("calling CPXdualopt()\n");
    retval = CPXdualopt(lpi->cpxenv, lpi->cpxlp);
