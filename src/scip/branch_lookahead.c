@@ -1545,6 +1545,161 @@ void purgeBinaryBoundData(
    }
 }
 
+/** get a copy of the fractional candidates we can branch on
+ *
+ * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+static
+SCIP_RETCODE getLPBranchCands(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           lpcands,            /**< a pointer to store the variables */
+   SCIP_Real**           lpcandssol,         /**< a pointer to store the solution values of the vars */
+   SCIP_Real**           lpcandsfrac,
+   int*                  nlpcands            /**< a pointer to store the number of candidates */
+   )
+{
+   SCIP_VAR** tmplpcands;
+   SCIP_Real* tmplpcandssol;
+   SCIP_Real* tmplpcandsfrac;
+
+   /* get branching candidates and their solution values (integer variables with fractional value in the current LP) */
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, nlpcands, NULL, NULL) );
+   assert(*nlpcands > 0);
+
+   /* copy LP banching candidates and solution values, because they will be updated w.r.t. the strong branching LP
+    * solution during the second level branchings */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, lpcands, tmplpcands, *nlpcands) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, lpcandssol, tmplpcandssol, *nlpcands) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, lpcandsfrac, tmplpcandsfrac, *nlpcands) );
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE selectVarRecursive(
+   SCIP*                 scip,
+   STATUS*               status,
+   CONFIGURATION*        config,
+   VALIDDOMREDDATA*      validbounds,
+   SCIP_VAR**            lpcands,            /**< array of fractional variables */
+   SCIP_Real*            lpcandssol,         /**< array of fractional solution values */
+   SCIP_Real*            lpcandsfrac,
+   int                   nlpcands,           /**< number of fractional variables/solution values */
+   int                   recursiondepth
+   )
+{
+   int i;
+   int probingdepth;
+
+   assert(scip != NULL);
+   assert(lpcands != NULL);
+   assert(lpcandssol != NULL);
+   assert(lpcandsfrac != NULL);
+   assert(recursiondepth >= 1);
+   /* TODO: remove if finished */
+   assert(recursiondepth == 1);
+
+   probingdepth = SCIPgetProbingDepth(scip);
+
+   for( i = 0; i < nlpcands; i++ )
+   {
+      SCIP_VAR* branchvar;
+      SCIP_Real branchval;
+      SCIP_Real branchfrac;
+      BRANCHINGRESULTDATA* downbranchingresult;
+      BRANCHINGRESULTDATA* upbranchingresult;
+
+      branchvar = lpcands[i];
+      branchval = lpcandssol[i];
+      branchfrac = lpcandsfrac[i];
+
+      SCIP_CALL( SCIPallocBuffer(scip, &downbranchingresult) );
+      SCIP_CALL( SCIPallocBuffer(scip, &upbranchingresult) );
+
+      initBranchingResultData(scip, downbranchingresult);
+      initBranchingResultData(scip, upbranchingresult);
+
+      SCIP_CALL( executeDownBranching(scip, branchvar, branchval, downbranchingresult, status) );
+
+#if 0
+      if( recursiondepth > 1 )
+      {
+         /* TODO: maybe reuse these variables in the upbranching case */
+         SCIP_VAR** deeperlpcands;
+         SCIP_Real* deeperlpcandssol;
+         SCIP_Real* deeperlpcandsfrac;
+         int deepernlpcands;
+
+         SCIP_CALL( getLPBranchCands(scip, &deeperlpcands, &deeperlpcandssol, &deeperlpcandsfrac, &deepernlpcands) );
+
+         SCIP_CALL( selectVarRecursive(scip, status, deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, recursiondepth - 1) );
+
+         SCIPfreeBufferArray(scip, &deeperlpcandsfrac);
+         SCIPfreeBufferArray(scip, &deeperlpcandssol);
+         SCIPfreeBufferArray(scip, &deeperlpcands);
+      }
+#endif
+
+      /* reset the probing depth to undo the previous branching */
+      SCIPbacktrackProbing(scip, probingdepth);
+
+      SCIP_CALL( executeUpBranching(scip, branchvar, branchval, upbranchingresult, status) );
+
+#if 0
+      if( recursiondepth > 1 )
+      {
+         SCIP_VAR** deeperlpcands;
+         SCIP_Real* deeperlpcandssol;
+         SCIP_Real* deeperlpcandsfrac;
+         int deepernlpcands;
+
+         SCIP_CALL( getLPBranchCands(scip, &deeperlpcands, &deeperlpcandssol, &deeperlpcandsfrac, &deepernlpcands) );
+
+         SCIP_CALL( selectVarRecursive(scip, status, deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, recursiondepth - 1) );
+
+         SCIPfreeBufferArray(scip, &deeperlpcandsfrac);
+         SCIPfreeBufferArray(scip, &deeperlpcandssol);
+         SCIPfreeBufferArray(scip, &deeperlpcands);
+      }
+#endif
+
+      /* reset the probing depth to undo the previous branching */
+      SCIPbacktrackProbing(scip, probingdepth);
+
+
+      if( upbranchingresult->cutoff && downbranchingresult->cutoff )
+      {
+         /* if both first level branchings of one variable were cutoff, the whole base node can be cutoff */
+         status->firstlvlfullcutoff = TRUE;
+
+      }
+      else
+      {
+         if( upbranchingresult->cutoff )
+         {
+            /* if the up branching (on the lower bound) was cutoff, we can add this as a new upper bound for the var */
+            if( config->usedirectdomred )
+            {
+               addValidUpperBound(scip, branchval, branchvar, branchval, validbounds);
+            }
+         }
+         else if( downbranchingresult->cutoff )
+         {
+            if( config-> usedirectdomred )
+            {
+               addValidLowerBound(scip, branchval, branchvar, branchval, validbounds);
+            }
+         }
+         else if( !status->limitreached )
+         {
+            /* TODO: add scoring here */
+         }
+      }
+   }
+   return SCIP_OKAY;
+}
+
 /**
  * Selects a variable from a set of candidates by applying strong branching with a depth of 2.
  * If the branching generated additional bounds, like domain reductions from cutoffs, those are added and a suitable result
@@ -1572,7 +1727,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
    SCIP_Real*            bestup,
    SCIP_Bool*            bestupvalid,
    SCIP_Real*            bestscore,
-   SCIP_Real*            provedbound
+   SCIP_Real*            provedbound,
+   SCIP_Bool             onlyfullstrong,     /**< only the steps for fullstrong branching should be executed */
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics
 #endif
@@ -2188,37 +2344,6 @@ SCIP_DECL_BRANCHEXITSOL(branchExitSolLookahead)
       branchruledata->isinitialized = FALSE;
    }
 
-
-   return SCIP_OKAY;
-}
-
-/** get a copy of the fractional candidates we can branch on
- *
- * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-static
-SCIP_RETCODE getLPBranchCands(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR***           lpcands,            /**< a pointer to store the variables */
-   SCIP_Real**           lpcandssol,         /**< a pointer to store the solution values of the vars */
-   SCIP_Real**           lpcandsfrac,
-   int*                  nlpcands            /**< a pointer to store the number of candidates */
-   )
-{
-   SCIP_VAR** tmplpcands;
-   SCIP_Real* tmplpcandssol;
-   SCIP_Real* tmplpcandsfrac;
-
-   /* get branching candidates and their solution values (integer variables with fractional value in the current LP) */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, nlpcands, NULL, NULL) );
-   assert(*nlpcands > 0);
-
-   /* copy LP banching candidates and solution values, because they will be updated w.r.t. the strong branching LP
-    * solution during the second level branchings */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, lpcands, tmplpcands, *nlpcands) );
-   SCIP_CALL( SCIPduplicateBufferArray(scip, lpcandssol, tmplpcandssol, *nlpcands) );
-   SCIP_CALL( SCIPduplicateBufferArray(scip, lpcandsfrac, tmplpcandsfrac, *nlpcands) );
 
    return SCIP_OKAY;
 }
