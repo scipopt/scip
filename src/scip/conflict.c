@@ -5837,6 +5837,7 @@ SCIP_RETCODE applyMIR(
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DEBUG
 static
 void debugPrintViolationInfo(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -5847,7 +5848,9 @@ void debugPrintViolationInfo(
 {
    SCIPsetDebugMsg(set, "-> %s: minact=%g rhs=%g violation=%g\n",infostr != NULL ? infostr : "" , minact, rhs, minact - rhs);
 }
-
+#else
+#define debugPrintViolationInfo(...) /**/
+#endif
 
 /** tighten a given infeasibility proof a^Tx <= b with minact > b wrt local bounds
  *
