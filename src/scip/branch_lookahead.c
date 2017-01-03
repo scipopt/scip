@@ -1598,12 +1598,16 @@ SCIP_RETCODE selectVarRecursive(
    SCIP_VAR* bestcand;
 
    assert(scip != NULL);
+   assert(status != NULL);
+   assert(config != NULL);
+   assert(validbounds != NULL);
    assert(lpcands != NULL);
    assert(lpcandssol != NULL);
    assert(lpcandsfrac != NULL);
+   assert(decision != NULL);
    assert(recursiondepth >= 1);
    /* TODO: remove if finished */
-   assert(recursiondepth == 1);
+   assert(recursiondepth <= 2);
 
    probingdepth = SCIPgetProbingDepth(scip);
 
@@ -1627,47 +1631,62 @@ SCIP_RETCODE selectVarRecursive(
 
       SCIP_CALL( executeDownBranching(scip, branchvar, branchval, downbranchingresult, status) );
 
-#if 0
-      if( recursiondepth > 1 )
+      if( !downbranchingresult->cutoff && recursiondepth > 1 )
       {
          /* TODO: maybe reuse these variables in the upbranching case */
          SCIP_VAR** deeperlpcands;
          SCIP_Real* deeperlpcandssol;
          SCIP_Real* deeperlpcandsfrac;
          int deepernlpcands;
+         BRANCHINGDECISION* deeperdecision;
+         VALIDDOMREDDATA* deepervalidbounds;
 
          SCIP_CALL( copyLPBranchCands(scip, &deeperlpcands, &deeperlpcandssol, &deeperlpcandsfrac, &deepernlpcands) );
 
-         SCIP_CALL( selectVarRecursive(scip, status, deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, recursiondepth - 1) );
+         SCIP_CALL( allocateBranchingDecision(scip, &deeperdecision) );
 
+         /* TODO: maybe remove? */
+         SCIP_CALL( allocValidBoundData(scip, &deepervalidbounds) );
+
+         SCIP_CALL( selectVarRecursive(scip, status, config, deepervalidbounds, deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1) );
+
+         freeValidBoundData(scip, &deepervalidbounds);
+         freeBranchingDecision(scip, &deeperdecision);
          SCIPfreeBufferArray(scip, &deeperlpcandsfrac);
          SCIPfreeBufferArray(scip, &deeperlpcandssol);
          SCIPfreeBufferArray(scip, &deeperlpcands);
       }
-#endif
 
       /* reset the probing depth to undo the previous branching */
       SCIPbacktrackProbing(scip, probingdepth);
 
       SCIP_CALL( executeUpBranching(scip, branchvar, branchval, upbranchingresult, status) );
 
-#if 0
-      if( recursiondepth > 1 )
+      if( !upbranchingresult->cutoff && recursiondepth > 1 )
       {
          SCIP_VAR** deeperlpcands;
          SCIP_Real* deeperlpcandssol;
          SCIP_Real* deeperlpcandsfrac;
          int deepernlpcands;
+         BRANCHINGDECISION* deeperdecision;
+         VALIDDOMREDDATA* deepervalidbounds;
 
+         /* TODO: how can we have nlpcands == 0 here? maybe see status->lperror/->limitreached  */
          SCIP_CALL( copyLPBranchCands(scip, &deeperlpcands, &deeperlpcandssol, &deeperlpcandsfrac, &deepernlpcands) );
 
-         SCIP_CALL( selectVarRecursive(scip, status, deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, recursiondepth - 1) );
+         SCIP_CALL( allocateBranchingDecision(scip, &deeperdecision) );
 
+         /* TODO: maybe remove? */
+         SCIP_CALL( allocValidBoundData(scip, &deepervalidbounds) );
+
+         SCIP_CALL( selectVarRecursive(scip, status, config, deepervalidbounds, deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1) );
+
+         freeValidBoundData(scip, &deepervalidbounds);
+         freeBranchingDecision(scip, &deeperdecision);
          SCIPfreeBufferArray(scip, &deeperlpcandsfrac);
          SCIPfreeBufferArray(scip, &deeperlpcandssol);
          SCIPfreeBufferArray(scip, &deeperlpcands);
       }
-#endif
 
       /* reset the probing depth to undo the previous branching */
       SCIPbacktrackProbing(scip, probingdepth);
@@ -1678,8 +1697,11 @@ SCIP_RETCODE selectVarRecursive(
          if( upbranchingresult->cutoff && downbranchingresult->cutoff )
          {
             /* if both first level branchings of one variable were cutoff, the whole base node can be cutoff */
-            /* TODO: to be removed/reworked, if we use this method with depth > 1 */
-            status->firstlvlfullcutoff = TRUE;
+            /* TODO: invest a thougth to improve this */
+            if( probingdepth == 0 )
+            {
+               status->firstlvlfullcutoff = TRUE;
+            }
          }
          else if( upbranchingresult->cutoff )
          {
@@ -1772,7 +1794,7 @@ SCIP_RETCODE selectVarStart(
 
    SCIPstartProbing(scip);
 
-   SCIP_CALL( selectVarRecursive(scip, status, config, validbounds, lpcands, lpcandssol, lpcandsfrac, nlpcands, decision, 1) );
+   SCIP_CALL( selectVarRecursive(scip, status, config, validbounds, lpcands, lpcandssol, lpcandsfrac, nlpcands, decision, 2) );
 
    SCIPendProbing(scip);
 
