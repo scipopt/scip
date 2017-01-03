@@ -145,8 +145,7 @@
 #define USEVBDS                   FALSE /**< use variable bounds - see SCIPcutsAppyMIR() */
 #define ALLOWLOCAL                FALSE /**< allow to generate local cuts - see SCIPcutsAppyMIR() */
 #define FIXINTEGRALRHS            FALSE /**< try to generate an integral rhs - see SCIPcutsAppyMIR() */
-#define MINFRAC                   0.05  /**< minimal fractionality of floor(rhs) - see SCIPcutsAppyMIR() */
-#define MAXFRAC                   0.999 /**< maximal fractionality of floor(rhs) - see SCIPcutsAppyMIR() */
+#define MINFRAC                   0.05  /**< minimal fractionality of floor(rhs) - see SCIPcutsApplyMIR() */
 #define SCALE                     1.0   /**< additional scaling factor - see SCIPcutsApplyMIR() */
 
 /*#define SCIP_CONFGRAPH*/
@@ -605,7 +604,7 @@ SCIP_RETCODE SCIPconflicthdlrExec(
       SCIPclockStart(conflicthdlr->conflicttime, set);
 
       SCIP_CALL( conflicthdlr->conflictexec(set->scip, conflicthdlr, node, validnode, bdchginfos, relaxedbds, nbdchginfos,
-            conftype, usescutoffbound, set->conf_seperate, (SCIPnodeGetDepth(validnode) > 0), set->conf_dynamic,
+            conftype, usescutoffbound, set->conf_separate, (SCIPnodeGetDepth(validnode) > 0), set->conf_dynamic,
             set->conf_removable, resolved, result) );
 
       /* stop timing */
@@ -1069,7 +1068,7 @@ SCIP_Real calcBdchgScore(
    )
 {
    SCIP_COL* col;
-   SCIP_Real score = 0.0;
+   SCIP_Real score;
 
    score = set->conf_proofscorefac * (1.0 - proofactdelta/(prooflhs - proofact));
    score = MAX(score, 0.0);
@@ -2143,8 +2142,9 @@ SCIP_RETCODE conflictAddConflictCons(
    {
       int nbdchgs;
       int nredvars;
+#ifdef SCIP_DEBUG
       int oldnbdchginfos = conflictset->nbdchginfos;
-
+#endif
       assert(conflictset->validdepth == 0);
 
       SCIPclockStart(conflict->dIBclock, set);
@@ -2159,11 +2159,13 @@ SCIP_RETCODE conflictAddConflictCons(
          SCIP_CALL( SCIPdebugCheckConflict(blkmem, set, tree->root, conflictset->bdchginfos, conflictset->relaxedbds, conflictset->nbdchginfos) ); /*lint !e506 !e774*/
       }
 
+#ifdef SCIP_DEBUG
       SCIPsetDebugMsg(set, " -> conflict set removed %d redundant variables (old nvars %d, new nvars = %d)\n", nredvars, oldnbdchginfos, conflictset->nbdchginfos);
       SCIPsetDebugMsg(set, " -> conflict set led to %d global bound changes %s(cdpt:%d, fdpt:%d, confdpt:%d, len:%d):\n",
          nbdchgs, redundant ? "(conflict became redundant) " : "", SCIPtreeGetCurrentDepth(tree), SCIPtreeGetFocusDepth(tree),
          conflictset->conflictdepth, conflictset->nbdchginfos);
-      SCIPdebug(conflictsetPrint(conflictset));
+      conflictsetPrint(conflictset);
+#endif
 
       SCIPclockStop(conflict->dIBclock, set);
 
@@ -3589,7 +3591,6 @@ SCIP_RETCODE conflictResolveBound(
 #ifndef NDEBUG
    int nforcedbdchgqueue;
    int nbdchgqueue;
-   int i;
 
    /* store the current size of the conflict queues */
    assert(conflict != NULL);
@@ -3608,49 +3609,52 @@ SCIP_RETCODE conflictResolveBound(
    assert(actvar != NULL);
    assert(SCIPvarIsActive(actvar));
 
-   SCIPsetDebugMsg(set, "processing next conflicting bound (depth: %d, valid depth: %d, bdchgtype: %s [%s], vartype: %d): [<%s> %s %g(%g)]\n",
-      SCIPbdchginfoGetDepth(bdchginfo), validdepth,
-      SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "branch"
-      : SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER ? "cons" : "prop",
-      SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "-"
-      : SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER
-      ? SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo))
-      : SCIPbdchginfoGetInferProp(bdchginfo) == NULL ? "-"
-      : SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo)),
-      SCIPvarGetType(actvar), SCIPvarGetName(actvar),
-      SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-      SCIPbdchginfoGetNewbound(bdchginfo), relaxedbd);
-   SCIPsetDebugMsg(set, " - conflict set       :");
-
-#ifndef NDEBUG
-   for( i = 0; i < conflict->conflictset->nbdchginfos; ++i )
+#ifdef SCIP_DEBUG
    {
-      SCIPsetDebugMsgPrint(set, " [%d:<%s> %s %g(%g)]", SCIPbdchginfoGetDepth(conflict->conflictset->bdchginfos[i]),
-         SCIPvarGetName(SCIPbdchginfoGetVar(conflict->conflictset->bdchginfos[i])),
-         SCIPbdchginfoGetBoundtype(conflict->conflictset->bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-         SCIPbdchginfoGetNewbound(conflict->conflictset->bdchginfos[i]), conflict->conflictset->relaxedbds[i]);
-   }
-   SCIPsetDebugMsgPrint(set, "\n");
-   SCIPsetDebugMsg(set, " - forced candidates  :");
+      int i;
+      SCIPsetDebugMsg(set, "processing next conflicting bound (depth: %d, valid depth: %d, bdchgtype: %s [%s], vartype: %d): [<%s> %s %g(%g)]\n",
+         SCIPbdchginfoGetDepth(bdchginfo), validdepth,
+         SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "branch"
+            : SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER ? "cons" : "prop",
+               SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_BRANCHING ? "-"
+                        : SCIPbdchginfoGetChgtype(bdchginfo) == SCIP_BOUNDCHGTYPE_CONSINFER
+                          ? SCIPconsGetName(SCIPbdchginfoGetInferCons(bdchginfo))
+                                : SCIPbdchginfoGetInferProp(bdchginfo) == NULL ? "-"
+                                      : SCIPpropGetName(SCIPbdchginfoGetInferProp(bdchginfo)),
+                                        SCIPvarGetType(actvar), SCIPvarGetName(actvar),
+                                        SCIPbdchginfoGetBoundtype(bdchginfo) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+                                              SCIPbdchginfoGetNewbound(bdchginfo), relaxedbd);
+      SCIPsetDebugMsg(set, " - conflict set       :");
 
-   for( i = 0; i < nforcedbdchgqueue; ++i )
-   {
-      SCIP_BDCHGINFO* info = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->forcedbdchgqueue)[i]);
-      SCIPsetDebugMsgPrint(set, " [%d:<%s> %s %g(%g)]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),
-         bdchginfoIsInvalid(conflict, info) ? "<!>" : SCIPbdchginfoGetBoundtype(info) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-         SCIPbdchginfoGetNewbound(info), SCIPbdchginfoGetRelaxedBound(info));
-   }
-   SCIPsetDebugMsgPrint(set, "\n");
-   SCIPsetDebugMsg(set, " - optional candidates:");
+      for( i = 0; i < conflict->conflictset->nbdchginfos; ++i )
+      {
+         SCIPsetDebugMsgPrint(set, " [%d:<%s> %s %g(%g)]", SCIPbdchginfoGetDepth(conflict->conflictset->bdchginfos[i]),
+               SCIPvarGetName(SCIPbdchginfoGetVar(conflict->conflictset->bdchginfos[i])),
+               SCIPbdchginfoGetBoundtype(conflict->conflictset->bdchginfos[i]) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+                     SCIPbdchginfoGetNewbound(conflict->conflictset->bdchginfos[i]), conflict->conflictset->relaxedbds[i]);
+      }
+      SCIPsetDebugMsgPrint(set, "\n");
+      SCIPsetDebugMsg(set, " - forced candidates  :");
 
-   for( i = 0; i < nbdchgqueue; ++i )
-   {
-      SCIP_BDCHGINFO* info = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->bdchgqueue)[i]);
-      SCIPsetDebugMsgPrint(set, " [%d:<%s> %s %g(%g)]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),
-         bdchginfoIsInvalid(conflict, info) ? "<!>" : SCIPbdchginfoGetBoundtype(info) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-         SCIPbdchginfoGetNewbound(info), SCIPbdchginfoGetRelaxedBound(info));
+      for( i = 0; i < SCIPpqueueNElems(conflict->forcedbdchgqueue); ++i )
+      {
+         SCIP_BDCHGINFO* info = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->forcedbdchgqueue)[i]);
+         SCIPsetDebugMsgPrint(set, " [%d:<%s> %s %g(%g)]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),
+               bdchginfoIsInvalid(conflict, info) ? "<!>" : SCIPbdchginfoGetBoundtype(info) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+                     SCIPbdchginfoGetNewbound(info), SCIPbdchginfoGetRelaxedBound(info));
+      }
+      SCIPsetDebugMsgPrint(set, "\n");
+      SCIPsetDebugMsg(set, " - optional candidates:");
+
+      for( i = 0; i < SCIPpqueueNElems(conflict->bdchgqueue); ++i )
+      {
+         SCIP_BDCHGINFO* info = (SCIP_BDCHGINFO*)(SCIPpqueueElems(conflict->bdchgqueue)[i]);
+         SCIPsetDebugMsgPrint(set, " [%d:<%s> %s %g(%g)]", SCIPbdchginfoGetDepth(info), SCIPvarGetName(SCIPbdchginfoGetVar(info)),
+               bdchginfoIsInvalid(conflict, info) ? "<!>" : SCIPbdchginfoGetBoundtype(info) == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
+                     SCIPbdchginfoGetNewbound(info), SCIPbdchginfoGetRelaxedBound(info));
+      }
+      SCIPsetDebugMsgPrint(set, "\n");
    }
-   SCIPsetDebugMsgPrint(set, "\n");
 #endif
 
    /* check, if the bound change can and should be resolved:
@@ -3767,7 +3771,7 @@ SCIP_RETCODE conflictResolveBound(
    SCIPsetDebugMsg(set, "resolving status: %u\n", *resolved);
 
 #ifndef NDEBUG
-   /* subract the size of the conflicq queues */
+   /* subtract the size of the conflicq queues */
    nforcedbdchgqueue -= SCIPpqueueNElems(conflict->forcedbdchgqueue);
    nbdchgqueue -= SCIPpqueueNElems(conflict->bdchgqueue);
 
@@ -5499,7 +5503,6 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
 static
 SCIP_RETCODE getFarkasProof(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_PROB*            prob,               /**< transformed problem */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPI*             lpi,                /**< LPI data */
@@ -5681,7 +5684,7 @@ SCIP_RETCODE getFarkasProof(
       SCIPsetDebugMsg(set, " -> proof is not valid: %g <= %g\n", *farkaslhs, *farkasact);
    }
 
-  TERMINATE:
+TERMINATE:
    SCIPsetFreeBufferArray(set, &dualfarkas);
 
    return SCIP_OKAY;
@@ -5690,8 +5693,6 @@ SCIP_RETCODE getFarkasProof(
 /** calculates the minimal activity of a given set of bounds and coefficients */
 static
 SCIP_Real getMinActivity(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_Real*            vals,               /**< array of values */
    int*                  varinds,            /**< sparse data of variable indices */
    int                   nvarinds,           /**< number of variable indices*/
@@ -5720,7 +5721,6 @@ SCIP_Real getMinActivity(
 static
 SCIP_Bool isSeparatingRootLPSol(
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_VAR**            vars,               /**< array of problem variables */
    SCIP_Real*            vals,               /**< array of variable coefficients */
    SCIP_Real             side,               /**< side (lhs/rhs) of the constraint */
@@ -5738,8 +5738,6 @@ SCIP_Bool isSeparatingRootLPSol(
       assert(vars[i] != NULL);
       activity += (vals[i] * SCIPvarGetRootSol(vars[i]));
    }
-
-   cutoff = FALSE;
 
    if( islhs )
       cutoff = SCIPsetIsFeasLT(set, activity, side);
@@ -5807,7 +5805,7 @@ SCIP_RETCODE applyMIR(
           *
           * todo: do we really want this?
           */
-         if( isSeparatingRootLPSol(set, transprob, transprob->vars, copy_vals, copy_rhs, transprob->nvars, FALSE) )
+         if( isSeparatingRootLPSol(set, transprob->vars, copy_vals, copy_rhs, transprob->nvars, FALSE) )
             separoot = TRUE;
          else
             separoot = FALSE;
@@ -5839,6 +5837,18 @@ SCIP_RETCODE applyMIR(
    return SCIP_OKAY;
 }
 
+static
+void debugPrintViolationInfo(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             minact,             /**< min activity */
+   SCIP_Real             rhs,                /**< right hand side */
+   const char*           infostr             /**< additional info for this debug message, or NULL */
+   )
+{
+   SCIPsetDebugMsg(set, "-> %s: minact=%g rhs=%g violation=%g\n",infostr != NULL ? infostr : "" , minact, rhs, minact - rhs);
+}
+
+
 /** tighten a given infeasibility proof a^Tx <= b with minact > b wrt local bounds
  *
  *  remove all continuous variables from the proof. we don't care if the proof is locally invalid afterwards
@@ -5862,14 +5872,10 @@ SCIP_RETCODE tightenDualray(
    SCIP_Bool*            varused,            /**< bool array indicating whether a variable is part of the proof constraint */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
-   int*                  lbchginfoposs,      /**< positions of currently active lower bound change information in variables' arrays */
-   int*                  ubchginfoposs,      /**< positions of currently active upper bound change information in variables' arrays */
    SCIP_Bool*            success             /**< success pointer */
    )
 {
    SCIP_VAR** vars;
-   SCIP_Real minact;
-   SCIP_Real violation;
    int nbinvars;
    int ncontvars;
    int nintvars;
@@ -5895,22 +5901,17 @@ SCIP_RETCODE tightenDualray(
          ++ncontvars;
          break;
       default:
-         SCIPsetDebugMsg(set, "unexpected type %u od variable <%s>.\n", SCIPvarGetType(vars[varinds[i]]), SCIPvarGetName(vars[varinds[i]]));
+         SCIPsetDebugMsg(set, "unexpected type %u for variable <%s>.\n", SCIPvarGetType(vars[varinds[i]]), SCIPvarGetName(vars[varinds[i]]));
          return SCIP_INVALIDDATA;
-         break;
       }
    }
 
    SCIPsetDebugMsg(set, "start dualray tightening:\n");
 
-   /* get minimal activity */
-   minact = getMinActivity(set, transprob, vals, varinds, (*nvarinds), curvarlbs, curvarubs);
 
-   /* calculate the violation */
-   violation = minact-(*rhs);
-
-   SCIPsetDebugMsg(set, "-> tighten dual ray: nvars=%d (bin=%d, int=%d, cont=%d) minact=%g rhs=%g violation=%g\n",
-         (*nvarinds), nbinvars, nintvars, ncontvars, minact, *rhs, violation);
+   SCIPsetDebugMsg(set, "-> tighten dual ray: nvars=%d (bin=%d, int=%d, cont=%d)",
+         (*nvarinds), nbinvars, nintvars, ncontvars);
+   debugPrintViolationInfo(set, getMinActivity(vals, varinds, (*nvarinds), curvarlbs, curvarubs), *rhs, NULL);
 
    /* return if all variables are continuous */
    if( ncontvars == (*nvarinds) )
@@ -5924,11 +5925,7 @@ SCIP_RETCODE tightenDualray(
    {
       SCIP_CALL( applyMIR(set, transprob, vals, varused, varinds, nvarinds, rhs, success) );
 
-      /* get minimal activity */
-      minact = getMinActivity(set, transprob, vals, varinds, (*nvarinds), curvarlbs, curvarubs);
-
-      SCIPsetDebugMsg(set, "-> after applying MIR: minact=%g rhs=%g violation=%g\n", minact, *rhs, minact-(*rhs));
-
+      debugPrintViolationInfo(set, getMinActivity(vals, varinds, (*nvarinds), curvarlbs, curvarubs), *rhs, " after applying MIR: ");
       if( !(*success) )
          return SCIP_OKAY;
    }
@@ -5972,16 +5969,15 @@ SCIP_RETCODE tightenDualray(
                SCIPvarGetLbGlobal(vars[idx]), SCIPvarGetUbGlobal(vars[idx]), SCIPvarGetLbLocal(vars[idx]),
                SCIPvarGetUbLocal(vars[idx]), vals[idx]);
 
-         /* update activity and rhs */
-         minact -= (locbd * vals[idx]);
+         /* update rhs */
          (*rhs) -= (glbbd * vals[idx]);
 
-         SCIPsetDebugMsg(set, "-> update: minact=%g rhs=%g violation=%g\n", minact, *rhs, minact-(*rhs));
+         debugPrintViolationInfo(set, getMinActivity(vals, varinds, (*nvarinds), curvarlbs, curvarubs), *rhs, " update: ");
 
          vals[idx] = 0.0;
          varused[idx] = FALSE;
 
-         /* do not increase i, update sparsety pattern */
+         /* do not increase i, update sparsity pattern */
          varinds[i] = varinds[(*nvarinds)-1];
          --(*nvarinds);
       }
@@ -5992,17 +5988,10 @@ SCIP_RETCODE tightenDualray(
    {
       SCIP_CALL( applyMIR(set, transprob, vals, varused, varinds, nvarinds, rhs, success) );
 
-      /* get minimal activity */
-      minact = getMinActivity(set, transprob, vals, varinds, (*nvarinds), curvarlbs, curvarubs);
-
-      SCIPsetDebugMsg(set, "-> after applying MIR: minact=%g rhs=%g violation=%g\n", minact, *rhs, minact-(*rhs));
+      debugPrintViolationInfo(set, getMinActivity(vals, varinds, (*nvarinds), curvarlbs, curvarubs), *rhs, " after applying MIR: ");
    }
-   else
-      *success = (*success && TRUE);
 
 #ifdef SCIP_DEBUG
-   minact = getMinActivity(set, transprob, vals, varinds, *nvarinds, curvarlbs, curvarubs);
-
    SCIPsetDebugMsg(set, "-> final constraint after tightenDualray():\n");
    for( i = 0; i < *nvarinds; i++ )
    {
@@ -6010,7 +5999,7 @@ SCIP_RETCODE tightenDualray(
             SCIPvarGetLbGlobal(vars[varinds[i]]), SCIPvarGetUbGlobal(vars[varinds[i]]),
             SCIPvarGetLbLocal(vars[varinds[i]]), SCIPvarGetUbLocal(vars[varinds[i]]), SCIPvarGetType(vars[varinds[i]]));
    }
-   SCIPsetDebugMsg(set, "-> minact=%g rhs=%g violation=%g\n", minact, *rhs, minact-(*rhs));
+   debugPrintViolationInfo(set, getMinActivity(vals, varinds, (*nvarinds), curvarlbs, curvarubs), *rhs, " after applying MIR: ");
 #endif
 
    return SCIP_OKAY;
@@ -6024,7 +6013,6 @@ SCIP_RETCODE createAndAddDualray(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_PROB*            prob,               /**< transformed problem */
-   SCIP_TREE*            tree,               /**< tree data */
    SCIP_REOPT*           reopt,              /**< reoptimization data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    int                   nvars,              /**< number of variables in the proof constraint */
@@ -6046,8 +6034,8 @@ SCIP_RETCODE createAndAddDualray(
 
    assert(conflict != NULL);
    assert(conflictstore != NULL);
-   assert(vars != NULL || nvars == 0);
-   assert(vals != NULL || nvars == 0);
+   assert(nvars == 0 || vars != NULL);
+   assert(nvars == 0 || vals != NULL);
 
    prod = 0.0;
    normcons = 0.0;
@@ -6086,7 +6074,7 @@ SCIP_RETCODE createAndAddDualray(
 
    /* TODO: check if a more specialized constraint (setppc, logic-or etc) can be created */
    SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, nvars, vars, vals, lhs, rhs,
-         FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+         FALSE, separate, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
    /* mark constraint to be a conflict */
    SCIPconsMarkConflict(cons);
@@ -6098,8 +6086,8 @@ SCIP_RETCODE createAndAddDualray(
    SCIP_CALL( SCIPaddCons(set->scip, cons) );
 
    /* check whether the constraint separates the root solution */
-   if( (!SCIPsetIsInfinity(set, -lhs) && isSeparatingRootLPSol(set, prob, vars, vals, lhs, nvars, TRUE))
-      || (!SCIPsetIsInfinity(set, rhs) && isSeparatingRootLPSol(set, prob, vars, vals, rhs, nvars, FALSE)) )
+   if( (!SCIPsetIsInfinity(set, -lhs) && isSeparatingRootLPSol(set, vars, vals, lhs, nvars, TRUE))
+      || (!SCIPsetIsInfinity(set, rhs) && isSeparatingRootLPSol(set, vars, vals, rhs, nvars, FALSE)) )
       ++conflict->ndualrayinfseparoot;
 
    /* update statistics */
@@ -6174,8 +6162,8 @@ SCIP_RETCODE tightenSingleVar(
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbGlobal(var),
             SCIPvarGetUbGlobal(var), (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"), newbound);
 
-      SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, tree, reopt, blkmem, 1, &var, &val,
-            -SCIPsetInfinity(set), rhs, set->conf_seperate) );
+      SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, reopt, blkmem, 1, &var, &val,
+            -SCIPsetInfinity(set), rhs, set->conf_separate) );
    }
    else
    {
@@ -6222,9 +6210,7 @@ SCIP_RETCODE performDualRayAnalysis(
    SCIP_Real             farkaslhs,          /**< lhs of the proof constraint */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
-   int*                  lbchginfoposs,      /**< positions of currently active lower bound change information in variables' arrays */
-   int*                  ubchginfoposs,      /**< positions of currently active upper bound change information in variables' arrays */
-   SCIP_Bool             diving
+   SCIP_Bool             diving              /**< are we in strong branching or diving mode? */
    )
 {
    SCIP_VAR** mirvars;
@@ -6241,7 +6227,7 @@ SCIP_RETCODE performDualRayAnalysis(
    assert(set != NULL);
    assert(transprob != NULL);
    assert(farkascoefs != NULL);
-   assert(!SCIPsetIsInfinity(set, !farkaslhs));
+   assert(!SCIPsetIsInfinity(set, -farkaslhs));
 
    ndualrayvars = transprob->nvars;
    SCIP_CALL( SCIPsetDuplicateBufferArray(set, &mirvars, transprob->vars, ndualrayvars) );
@@ -6270,7 +6256,7 @@ SCIP_RETCODE performDualRayAnalysis(
    assert(nmirvars >= 1);
 
    /* calculate min. activity */
-   activity = getMinActivity(set, transprob, mirvals, varinds, nmirvars, curvarlbs, curvarubs);
+   activity = getMinActivity(mirvals, varinds, nmirvars, curvarlbs, curvarubs);
 
    /* it can happen that the proof is not valid anymore after removing small coefficients in SCIPcutsCleanupRow */
    if( SCIPsetIsFeasLE(set, activity, mirrhs) )
@@ -6289,8 +6275,7 @@ SCIP_RETCODE performDualRayAnalysis(
    else
    {
       /* try to enforce the constraint based on a dual ray */
-      SCIP_CALL( tightenDualray(set, transprob, mirvals, &mirrhs, varinds, &nmirvars, varused, curvarlbs, curvarubs,
-            lbchginfoposs, ubchginfoposs, &success) );
+      SCIP_CALL( tightenDualray(set, transprob, mirvals, &mirrhs, varinds, &nmirvars, varused, curvarlbs, curvarubs, &success) );
 
       /* only one variable has a coefficient different to zero, we add this bound change instead of a constraint */
       if( nmirvars == 1 && success && !diving )
@@ -6307,15 +6292,14 @@ SCIP_RETCODE performDualRayAnalysis(
              *
              * note: we have to use ndualrayvars instead of nmirvars because mirvars and mirvals are not sparse.
              */
-            SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, tree, reopt, blkmem, ndualrayvars, mirvars,
-                  mirvals, -SCIPsetInfinity(set), mirrhs, set->conf_seperate) );
+            SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, reopt, blkmem, ndualrayvars, mirvars,
+                  mirvals, -SCIPsetInfinity(set), mirrhs, set->conf_separate) );
          }
-
-         if( !success || (success && !set->conf_prefermir) )
+         else if( !set->conf_prefermir )
          {
             /* create and add the original proof */
-            SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, tree, reopt, blkmem, ndualrayvars, mirvars,
-                  farkascoefs, farkaslhs, SCIPsetInfinity(set), set->conf_seperate) );
+            SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, reopt, blkmem, ndualrayvars, mirvars,
+                  farkascoefs, farkaslhs, SCIPsetInfinity(set), set->conf_separate) );
          }
       }
    }
@@ -6546,7 +6530,7 @@ SCIP_RETCODE runBoundHeuristic(
             {
 
                /* the original LP exceeds the current cutoff bound, thus, we have not constructed the farkas proof */
-               SCIP_CALL( getFarkasProof(set, stat, transprob, lp, lpi, farkascoefs, farkaslhs, farkasactivity,
+               SCIP_CALL( getFarkasProof(set, transprob, lp, lpi, farkascoefs, farkaslhs, farkasactivity,
                      curvarlbs, curvarubs, valid) );
 
                /* the constructed Farkas proof is not valid, we need to break here */
@@ -6562,8 +6546,7 @@ SCIP_RETCODE runBoundHeuristic(
 
                   /* start dual ray analysis */
                   SCIP_CALL( performDualRayAnalysis(conflict, set, stat, blkmem, origprob, transprob, tree, reopt, lp, branchcand,
-                        eventqueue, cliquetable, conflictstore, farkascoefs, (*farkaslhs), curvarlbs, curvarubs, lbchginfoposs,
-                        ubchginfoposs, diving) );
+                        eventqueue, cliquetable, conflictstore, farkascoefs, (*farkaslhs), curvarlbs, curvarubs, diving) );
 
                   conflict->conflictset->conflicttype = oldconftype;
                }
@@ -6664,8 +6647,15 @@ SCIP_RETCODE conflictAnalyzeLP(
    SCIP_VAR** vars;
    SCIP_LPI* lpi;
    SCIP_Bool valid;
+   int* lbchginfoposs;
+   int* ubchginfoposs;
    int nvars;
    int v;
+   SCIP_Real* curvarlbs;
+   SCIP_Real* curvarubs;
+   SCIP_Real* farkascoefs;
+   SCIP_Real farkaslhs;
+   SCIP_Real farkasactivity;
 
    assert(conflict != NULL);
    assert(conflict->nconflictsets == 0);
@@ -6775,128 +6765,122 @@ SCIP_RETCODE conflictAnalyzeLP(
       }
    }
 
-   if( valid )
+
+   assert(valid);
+
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &lbchginfoposs, transprob->nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &ubchginfoposs, transprob->nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &farkascoefs, SCIPprobGetNVars(transprob)) );
+   BMSclearMemoryArray(farkascoefs, SCIPprobGetNVars(transprob));
+
+   farkasactivity = 0.0;
+   farkaslhs = 0.0;
+
+   /* get temporary memory for remembering variables' current bounds and corresponding bound change information
+    * positions in variable's bound change information arrays
+    */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &curvarlbs, nvars) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &curvarubs, nvars) );
+
+
+   /* get current bounds and current positions in lb/ubchginfos arrays of variables */
+   valid = TRUE;
+   for( v = 0; v < nvars && valid; ++v )
    {
-      int* lbchginfoposs;
-      int* ubchginfoposs;
-      SCIP_Real* curvarlbs;
-      SCIP_Real* curvarubs;
-      SCIP_Real* farkascoefs;
-      SCIP_Real farkaslhs;
-      SCIP_Real farkasactivity;
+      SCIP_VAR* var;
 
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &lbchginfoposs, transprob->nvars) );
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &ubchginfoposs, transprob->nvars) );
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &farkascoefs, SCIPprobGetNVars(transprob)) );
-      BMSclearMemoryArray(farkascoefs, SCIPprobGetNVars(transprob));
+      var = vars[v];
 
-      farkasactivity = 0.0;
-      farkaslhs = 0.0;
+      curvarlbs[v] = SCIPvarGetLbLP(var, set);
+      curvarubs[v] = SCIPvarGetUbLP(var, set);
+      lbchginfoposs[v] = var->nlbchginfos-1;
+      ubchginfoposs[v] = var->nubchginfos-1;
+      assert(diving || SCIPsetIsEQ(set, curvarlbs[v], SCIPvarGetLbLocal(var)));
+      assert(diving || SCIPsetIsEQ(set, curvarubs[v], SCIPvarGetUbLocal(var)));
 
-      /* get temporary memory for remembering variables' current bounds and corresponding bound change information
-       * positions in variable's bound change information arrays
-       */
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &curvarlbs, nvars) );
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &curvarubs, nvars) );
-
-
-      /* get current bounds and current positions in lb/ubchginfos arrays of variables */
-      valid = TRUE;
-      for( v = 0; v < nvars && valid; ++v )
+      /* check, if last bound changes were due to strong branching or diving */
+      if( diving )
       {
-         SCIP_VAR* var;
+         SCIP_Real lb;
+         SCIP_Real ub;
 
-         var = vars[v];
-
-         curvarlbs[v] = SCIPvarGetLbLP(var, set);
-         curvarubs[v] = SCIPvarGetUbLP(var, set);
-         lbchginfoposs[v] = var->nlbchginfos-1;
-         ubchginfoposs[v] = var->nubchginfos-1;
-         assert(diving || SCIPsetIsEQ(set, curvarlbs[v], SCIPvarGetLbLocal(var)));
-         assert(diving || SCIPsetIsEQ(set, curvarubs[v], SCIPvarGetUbLocal(var)));
-
-         /* check, if last bound changes were due to strong branching or diving */
-         if( diving )
+         lb = SCIPvarGetLbLocal(var);
+         ub = SCIPvarGetUbLocal(var);
+         if( SCIPsetIsGT(set, curvarlbs[v], lb) )
+            lbchginfoposs[v] = var->nlbchginfos;
+         else if( SCIPsetIsLT(set, curvarlbs[v], lb) )
          {
-            SCIP_Real lb;
-            SCIP_Real ub;
-
-            lb = SCIPvarGetLbLocal(var);
-            ub = SCIPvarGetUbLocal(var);
-            if( SCIPsetIsGT(set, curvarlbs[v], lb) )
-               lbchginfoposs[v] = var->nlbchginfos;
-            else if( SCIPsetIsLT(set, curvarlbs[v], lb) )
-            {
-               /* the bound in the diving LP was relaxed -> the LP is not a subproblem of the current node -> abort! */
-               /**@todo we could still analyze such a conflict, but we would have to take care with our data structures */
-               valid = FALSE;
-            }
-            if( SCIPsetIsLT(set, curvarubs[v], ub) )
-               ubchginfoposs[v] = var->nubchginfos;
-            else if( SCIPsetIsGT(set, curvarubs[v], ub) )
-            {
-               /* the bound in the diving LP was relaxed -> the LP is not a subproblem of the current node -> abort! */
-               /**@todo we could still analyze such a conflict, but we would have to take care with our data structures */
-               valid = FALSE;
-            }
+            /* the bound in the diving LP was relaxed -> the LP is not a subproblem of the current node -> abort! */
+            /**@todo we could still analyze such a conflict, but we would have to take care with our data structures */
+            valid = FALSE;
+         }
+         if( SCIPsetIsLT(set, curvarubs[v], ub) )
+            ubchginfoposs[v] = var->nubchginfos;
+         else if( SCIPsetIsGT(set, curvarubs[v], ub) )
+         {
+            /* the bound in the diving LP was relaxed -> the LP is not a subproblem of the current node -> abort! */
+            /**@todo we could still analyze such a conflict, but we would have to take care with our data structures */
+            valid = FALSE;
          }
       }
-
-      if( !valid )
-         goto TERMINATE;
-
-      if( SCIPlpiIsPrimalInfeasible(lpi) )
-      {
-         SCIP_CALL( getFarkasProof(set, stat, transprob, lp, lpi, farkascoefs, &farkaslhs, &farkasactivity, curvarlbs,
-               curvarubs, &valid) );
-      }
-
-      if( !valid )
-         goto TERMINATE;
-
-      /* start dual ray analysis */
-      if( SCIPlpiIsPrimalInfeasible(lpi) && (set->conf_useinflp == 'd' || set->conf_useinflp == 'b')
-            && conflict->conflictset->conflicttype == SCIP_CONFTYPE_INFEASLP )
-      {
-         /* start dual ray analysis */
-         SCIP_CALL( performDualRayAnalysis(conflict, set, stat, blkmem, origprob, transprob, tree, reopt, lp, branchcand,
-               eventqueue, cliquetable, conflictstore, farkascoefs, farkaslhs, curvarlbs, curvarubs, lbchginfoposs,
-               ubchginfoposs, diving) );
-      }
-
-      /* start conflict analysis */
-      if( (set->conf_useinflp == 'c' || set->conf_useinflp == 'b') && valid )
-      {
-         SCIP_CALL( runBoundHeuristic(conflict, set, stat, origprob, transprob, tree, reopt, lp, lpi, branchcand,
-               eventqueue, cliquetable, conflictstore, blkmem, farkascoefs, &farkaslhs, &farkasactivity, curvarlbs,
-               curvarubs, lbchginfoposs, ubchginfoposs, iterations, diving, marklpunsolved, &valid) );
-
-         if( !valid )
-            goto TERMINATE;
-
-         /* analyze the conflict starting with remaining bound changes */
-         SCIP_CALL( conflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, transprob, tree, diving,
-               lbchginfoposs, ubchginfoposs, nconss, nliterals, nreconvconss, nreconvliterals) );
-
-         /* flush conflict set storage */
-         SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable) );
-      }
-
-     TERMINATE:
-      SCIPsetFreeBufferArray(set, &curvarubs);
-      SCIPsetFreeBufferArray(set, &curvarlbs);
-      SCIPsetFreeBufferArray(set, &farkascoefs);
-      SCIPsetFreeBufferArray(set, &ubchginfoposs);
-      SCIPsetFreeBufferArray(set, &lbchginfoposs);
    }
 
+   if( !valid )
+      goto TERMINATE;
+
+   if( SCIPlpiIsPrimalInfeasible(lpi) )
+   {
+      SCIP_CALL( getFarkasProof(set, transprob, lp, lpi, farkascoefs, &farkaslhs, &farkasactivity, curvarlbs,
+            curvarubs, &valid) );
+   }
+
+   if( !valid )
+      goto TERMINATE;
+
+   /* start dual ray analysis */
+   if( SCIPlpiIsPrimalInfeasible(lpi) && (set->conf_useinflp == 'd' || set->conf_useinflp == 'b')
+         && conflict->conflictset->conflicttype == SCIP_CONFTYPE_INFEASLP )
+   {
+      /* start dual ray analysis */
+      SCIP_CALL( performDualRayAnalysis(conflict, set, stat, blkmem, origprob, transprob, tree, reopt, lp, branchcand,
+            eventqueue, cliquetable, conflictstore, farkascoefs, farkaslhs, curvarlbs, curvarubs, diving) );
+   }
+
+   /* start conflict analysis */
+   if( (set->conf_useinflp == 'c' || set->conf_useinflp == 'b') )
+   {
+      assert(valid);
+      SCIP_CALL( runBoundHeuristic(conflict, set, stat, origprob, transprob, tree, reopt, lp, lpi, branchcand,
+            eventqueue, cliquetable, conflictstore, blkmem, farkascoefs, &farkaslhs, &farkasactivity, curvarlbs,
+            curvarubs, lbchginfoposs, ubchginfoposs, iterations, diving, marklpunsolved, &valid) );
+
+      if( !valid )
+         goto TERMINATE;
+
+      /* analyze the conflict starting with remaining bound changes */
+      SCIP_CALL( conflictAnalyzeRemainingBdchgs(conflict, blkmem, set, stat, transprob, tree, diving,
+            lbchginfoposs, ubchginfoposs, nconss, nliterals, nreconvconss, nreconvliterals) );
+
+      /* flush conflict set storage */
+      SCIP_CALL( SCIPconflictFlushConss(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable) );
+   }
+
+   TERMINATE:
+   SCIPsetFreeBufferArray(set, &curvarubs);
+   SCIPsetFreeBufferArray(set, &curvarlbs);
+   SCIPsetFreeBufferArray(set, &farkascoefs);
+   SCIPsetFreeBufferArray(set, &ubchginfoposs);
+   SCIPsetFreeBufferArray(set, &lbchginfoposs);
+
 #ifdef SCIP_DEBUG
+   {
       SCIP_Real uobjlim;
       SCIPdebugMessage("analyzing conflict on infeasible LP (infeasible: %u, objlimexc: %u, optimal:%u) in depth %d (diving: %u)\n",
-         SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi), SCIPlpiIsOptimal(lpi), SCIPtreeGetCurrentDepth(tree), diving);
+            SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi), SCIPlpiIsOptimal(lpi), SCIPtreeGetCurrentDepth(tree), diving);
 
       SCIP_CALL( SCIPlpiGetRealpar(lpi, SCIP_LPPAR_UOBJLIM, &uobjlim) );
       SCIPdebugMessage(" -> objective limit in LP solver: %g (in LP: %g)\n", uobjlim, lp->lpiuobjlim);
+   }
 #endif
 
    return SCIP_OKAY;
