@@ -15,7 +15,7 @@
 
 /**@file   cons.c
  * @brief  unit test for checking setters on scip.c
- * @authro Felipe Serrano
+ * @author Felipe Serrano
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
