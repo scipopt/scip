@@ -17,6 +17,10 @@
  * @brief  LookaheadAbbreviated branching rule
  * @author Christoph Schubert
  */
+/*
+ */
+#define SCIP_DEBUG
+#define SCIP_STATISTIC
 
 #include "scip/common_branch_lookahead.h"
 
@@ -69,22 +73,19 @@ void freeValidBoundData(
 
 SCIP_RETCODE branchOnVar(
    SCIP*                 scip                /**< SCIP data structure */,
-   SCIP_VAR*             var,                /**< the variable to branch on */
-   SCIP_Real             val,                /**< the value to branch on */
-   SCIP_Real             bestdown,
-   SCIP_Bool             bestdownvalid,
-   SCIP_Real             bestup,
-   SCIP_Real             bestupvalid,
-   SCIP_Real             provedbound
+   BRANCHINGDECISION*    decision
 )
 {
+   SCIP_VAR* bestvar = decision->bestvar;
+   SCIP_Real bestval = decision->bestval;
+
    SCIP_NODE* downchild = NULL;
    SCIP_NODE* upchild = NULL;
 
    SCIPdebugMessage("Effective branching on var <%s> with value <%g>. Old domain: [%g..%g].\n",
-      SCIPvarGetName(var), val, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+      SCIPvarGetName(bestvar), bestval, SCIPvarGetLbLocal(bestvar), SCIPvarGetUbLocal(bestvar));
 
-   SCIP_CALL( SCIPbranchVarVal(scip, var, val, &downchild, NULL, &upchild) );
+   SCIP_CALL( SCIPbranchVarVal(scip, bestvar, bestval, &downchild, NULL, &upchild) );
 
    assert(downchild != NULL);
    assert(upchild != NULL);
@@ -94,6 +95,12 @@ SCIP_RETCODE branchOnVar(
     */
    if( SCIPallColsInLP(scip) && !SCIPisExactSolve(scip) )
    {
+      SCIP_Real bestdown = decision->bestdown;
+      SCIP_Bool bestdownvalid = decision->bestdownvalid;
+      SCIP_Real bestup = decision->bestup;
+      SCIP_Bool bestupvalid = decision->bestupvalid;
+      SCIP_Real provedbound = decision->provedbound;
+
       SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdownvalid ? MAX(bestdown, provedbound) : provedbound) );
       SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestupvalid ? MAX(bestup, provedbound) : provedbound) );
    }
@@ -383,6 +390,49 @@ SCIP_RETCODE addDomainReductions(
    SCIPdebugMessage("Added <%d> real domain reductions to the problem.\n", nboundsadded);
 
    return SCIP_OKAY;
+}
+
+SCIP_RETCODE allocateBranchingDecision(
+   SCIP*                 scip,
+   BRANCHINGDECISION**   decision
+   )
+{
+   SCIPallocBuffer(scip, decision);
+   (*decision)->bestvar = NULL;
+   (*decision)->bestdownvalid = FALSE;
+   (*decision)->bestupvalid = FALSE;
+
+   return SCIP_OKAY;
+}
+
+void copyBranchingDecision(
+   BRANCHINGDECISION*    sourcedecision,
+   BRANCHINGDECISION*    targetdecision
+   )
+{
+   targetdecision->bestvar = sourcedecision->bestvar;
+   targetdecision->bestval = sourcedecision->bestval;
+   targetdecision->bestdown = sourcedecision->bestdown;
+   targetdecision->bestdownvalid = sourcedecision->bestdownvalid;
+   targetdecision->bestup = sourcedecision->bestup;
+   targetdecision->bestupvalid = sourcedecision->bestupvalid;
+   targetdecision->provedbound = sourcedecision->provedbound;
+}
+
+SCIP_Bool isBranchingDecisionValid(
+   SCIP*                 scip,
+   BRANCHINGDECISION*    decision
+   )
+{
+   return decision->bestvar != NULL;
+}
+
+void freeBranchingDecision(
+   SCIP*                 scip,
+   BRANCHINGDECISION**   decision
+   )
+{
+   SCIPfreeBuffer(scip, decision);
 }
 
 static const char* names[18] = { "", "SCIP_DIDNOTRUN", "SCIP_DELAYED", "SCIP_DIDNOTFIND", "SCIP_FEASIBLE", "SCIP_INFEASIBLE",

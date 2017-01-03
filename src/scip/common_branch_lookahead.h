@@ -66,6 +66,18 @@ struct ValidDomRedData
 };
 typedef struct ValidDomRedData VALIDDOMREDDATA;
 
+struct BranchingDecision
+{
+   SCIP_VAR*             bestvar;
+   SCIP_Real             bestval;
+   SCIP_Real             bestdown;
+   SCIP_Bool             bestdownvalid;
+   SCIP_Real             bestup;
+   SCIP_Bool             bestupvalid;
+   SCIP_Real             provedbound;
+};
+typedef struct BranchingDecision BRANCHINGDECISION;
+
 /**
  * Allocates buffer memory for the given ValidDomRedData and the contained arrays.
  */
@@ -83,6 +95,28 @@ void freeValidBoundData(
    VALIDDOMREDDATA**     validbounddata      /**< The struct that should be freed. */
 );
 
+SCIP_RETCODE allocateBranchingDecision(
+   SCIP*                 scip,
+   BRANCHINGDECISION**   decision
+);
+
+SCIP_Bool isBranchingDecisionValid(
+   SCIP*                 scip,
+   BRANCHINGDECISION*    decision
+);
+
+void copyBranchingDecision(
+   BRANCHINGDECISION*    sourcedecision,
+   BRANCHINGDECISION*    targetdecision
+);
+
+void freeBranchingDecision(
+   SCIP*                 scip,
+   BRANCHINGDECISION**   decision
+);
+
+
+
 /**
  * Executes the branching on a given variable with a given value.
  *
@@ -91,14 +125,8 @@ void freeValidBoundData(
  */
 EXTERN
 SCIP_RETCODE branchOnVar(
-   SCIP*                 scip                /**< SCIP data structure */,
-   SCIP_VAR*             var,                /**< the variable to branch on */
-   SCIP_Real             val,                /**< the value to branch on */
-   SCIP_Real             bestdown,
-   SCIP_Bool             bestdownvalid,
-   SCIP_Real             bestup,
-   SCIP_Real             bestupvalid,
-   SCIP_Real             provedbound
+   SCIP*                 scip,               /**< SCIP data structure */
+   BRANCHINGDECISION*    decision
 );
 
 /**
