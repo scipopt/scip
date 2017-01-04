@@ -1872,8 +1872,8 @@ SCIP_RETCODE SCIPlpiGetCols(
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
       if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
       {
-         DVector lbvec(lpi->spx->numRowsReal());
-         DVector ubvec(lpi->spx->numRowsReal());
+         DVector lbvec(lpi->spx->numColsReal());
+         DVector ubvec(lpi->spx->numColsReal());
          lpi->spx->getLowerReal(lbvec);
          lpi->spx->getUpperReal(ubvec);
          for( i = firstcol; i <= lastcol; ++i )
@@ -1988,8 +1988,8 @@ SCIP_RETCODE SCIPlpiGetRows(
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
       if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
       {
-         DVector lhsvec(lpi->spx->numColsReal());
-         DVector rhsvec(lpi->spx->numColsReal());
+         DVector lhsvec(lpi->spx->numRowsReal());
+         DVector rhsvec(lpi->spx->numRowsReal());
          lpi->spx->getLhsReal(lhsvec);
          lpi->spx->getRhsReal(rhsvec);
          for( i = firstrow; i <= lastrow; ++i )
