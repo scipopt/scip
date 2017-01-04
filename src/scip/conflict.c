@@ -6022,8 +6022,7 @@ SCIP_RETCODE createAndAddDualray(
    SCIP_VAR**            vars,               /**< problem variables */
    SCIP_Real*            vals,               /**< coefficients of the proof constraint */
    SCIP_Real             lhs,                /**< lhs of the proof constraint */
-   SCIP_Real             rhs,                /**< rhs of the proof constraint */
-   SCIP_Bool             separate            /**< should the constraint be separable? */
+   SCIP_Real             rhs                 /**< rhs of the proof constraint */
    )
 {
    SCIP_CONS* cons;
@@ -6077,7 +6076,7 @@ SCIP_RETCODE createAndAddDualray(
 
    /* TODO: check if a more specialized constraint (setppc, logic-or etc) can be created */
    SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, nvars, vars, vals, lhs, rhs,
-         FALSE, separate, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+         FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
    /* mark constraint to be a conflict */
    SCIPconsMarkConflict(cons);
@@ -6166,7 +6165,7 @@ SCIP_RETCODE tightenSingleVar(
             SCIPvarGetUbGlobal(var), (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"), newbound);
 
       SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, reopt, blkmem, 1, &var, &val,
-            -SCIPsetInfinity(set), rhs, set->conf_separate) );
+            -SCIPsetInfinity(set), rhs) );
    }
    else
    {
@@ -6296,13 +6295,13 @@ SCIP_RETCODE performDualRayAnalysis(
              * note: we have to use ndualrayvars instead of nmirvars because mirvars and mirvals are not sparse.
              */
             SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, reopt, blkmem, ndualrayvars, mirvars,
-                  mirvals, -SCIPsetInfinity(set), mirrhs, set->conf_separate) );
+                  mirvals, -SCIPsetInfinity(set), mirrhs) );
          }
          else if( !set->conf_prefermir )
          {
             /* create and add the original proof */
             SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, reopt, blkmem, ndualrayvars, mirvars,
-                  farkascoefs, farkaslhs, SCIPsetInfinity(set), set->conf_separate) );
+                  farkascoefs, farkaslhs, SCIPsetInfinity(set)) );
          }
       }
    }
