@@ -1272,7 +1272,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/separate",
          "should the conflict constraints be separated?",
-         &(*set)->conf_seperate, TRUE, SCIP_DEFAULT_CONF_SEPARATE,
+         &(*set)->conf_separate, TRUE, SCIP_DEFAULT_CONF_SEPARATE,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/dynamic",
