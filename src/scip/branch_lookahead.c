@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*
- */
 #define SCIP_DEBUG
+ */
 #define SCIP_STATISTIC
 
 /**@file   branch_lookahead.c
