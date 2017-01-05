@@ -677,6 +677,7 @@ SCIP_RETCODE readCoefficients(
    SCIP_Bool             isobjective,        /**< indicates whether we are currently reading the coefficients of the objective */
    char*                 name,               /**< pointer to store the name of the line; must be at least of size
                                               *   LP_MAX_LINELEN */
+   int*                  coefssize,          /**< size of vars and coefs arrays */
    SCIP_VAR***           vars,               /**< pointer to store the array with variables (must be freed by caller) */
    SCIP_Real**           coefs,              /**< pointer to store the array with coefficients (must be freed by caller) */
    int*                  ncoefs,             /**< pointer to store the number of coefficients */
@@ -687,15 +688,16 @@ SCIP_RETCODE readCoefficients(
    SCIP_Bool havevalue;
    SCIP_Real coef;
    int coefsign;
-   int coefssize;
 
    assert(lpinput != NULL);
    assert(name != NULL);
+   assert(coefssize != NULL);
    assert(vars != NULL);
    assert(coefs != NULL);
    assert(ncoefs != NULL);
    assert(newsection != NULL);
 
+   *coefssize = 0;
    *vars = NULL;
    *coefs = NULL;
    *name = '\0';
@@ -741,9 +743,9 @@ SCIP_RETCODE readCoefficients(
    }
 
    /* initialize buffers for storing the coefficients */
-   coefssize = LP_INIT_COEFSSIZE;
-   SCIP_CALL( SCIPallocMemoryArray(scip, vars, coefssize) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, coefs, coefssize) );
+   *coefssize = LP_INIT_COEFSSIZE;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, vars, *coefssize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, coefs, *coefssize) );
 
    /* read the coefficients */
    coefsign = +1;
@@ -839,14 +841,17 @@ SCIP_RETCODE readCoefficients(
       if( !SCIPisZero(scip, coef) )
       {
          /* resize the vars and coefs array if needed */
-         if( *ncoefs >= coefssize )
+         if( *ncoefs >= *coefssize )
          {
-            coefssize *= 2;
-            coefssize = MAX(coefssize, (*ncoefs)+1);
-            SCIP_CALL( SCIPreallocMemoryArray(scip, vars, coefssize) );
-            SCIP_CALL( SCIPreallocMemoryArray(scip, coefs, coefssize) );
+            int oldcoefssize;
+
+            oldcoefssize = *coefssize;
+            *coefssize *= 2;
+            *coefssize = MAX(*coefssize, (*ncoefs)+1);
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, vars, oldcoefssize, *coefssize) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, coefs, oldcoefssize, *coefssize) );
          }
-         assert(*ncoefs < coefssize);
+         assert(*ncoefs < *coefssize);
 
          /* add coefficient */
          (*vars)[*ncoefs] = var;
@@ -874,35 +879,21 @@ SCIP_RETCODE readObjective(
    char name[LP_MAX_LINELEN];
    SCIP_VAR** vars;
    SCIP_Real* coefs;
-   int ncoefs;
    SCIP_Bool newsection;
+   int coefssize;
+   int ncoefs;
 
    assert(lpinput != NULL);
 
    /* read the objective coefficients */
-   SCIP_CALL( readCoefficients(scip, lpinput, TRUE, name, &vars, &coefs, &ncoefs, &newsection) );
-   if( !hasError(lpinput) )
-   {
-      int i;
-      SCIP_VAR** oldvars;
+   SCIP_CALL( readCoefficients(scip, lpinput, TRUE, name, &coefssize, &vars, &coefs, &ncoefs, &newsection) );
 
-      /* set all linear coefficients to 0 */
-      oldvars = SCIPgetVars(scip);
-      for( i = 0; i < SCIPgetNVars(scip); i++ )
-      {
-         SCIP_CALL( SCIPchgVarObj(scip, oldvars[i], 0.0) );
-      }
-
-      /* set the linear objective values */
-      for( i = 0; i < ncoefs; ++i )
-      {
-         SCIP_CALL( SCIPchgVarObj(scip, vars[i], coefs[i]) );
-      }
-   }
+   /* change the objective function */
+   SCIP_CALL( SCIPchgReoptObjective(scip, lpinput->objsense, vars, coefs, ncoefs) );
 
    /* free memory */
-   SCIPfreeMemoryArrayNull(scip, &vars);
-   SCIPfreeMemoryArrayNull(scip, &coefs);
+   SCIPfreeBlockMemoryArrayNull(scip, &coefs, coefssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &vars, coefssize);
 
    return SCIP_OKAY;
 }
@@ -927,7 +918,11 @@ SCIP_RETCODE readDiffFile(
    }
 
    /* free transformed problem */
-   if( SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM )
+   if( SCIPisReoptEnabled(scip) && SCIPgetStage(scip) >= SCIP_STAGE_PROBLEM )
+   {
+      SCIP_CALL( SCIPfreeReoptSolve(scip) );
+   }
+   else
    {
       SCIP_CALL( SCIPfreeTransform(scip) );
    }
@@ -1003,11 +998,10 @@ SCIP_RETCODE SCIPincludeReaderDiff(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_READERDATA* readerdata = NULL;
    SCIP_READER* reader;
 
    /* include reader */
-   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, NULL) );
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyDiff) );
@@ -1034,13 +1028,13 @@ SCIP_RETCODE SCIPreadDiff(
    lpinput.linebuf[0] = '\0';
    lpinput.probname[0] = '\0';
    lpinput.objname[0] = '\0';
-   SCIP_CALL( SCIPallocMemoryArray(scip, &lpinput.token, LP_MAX_LINELEN) ); /*lint !e506*/
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &lpinput.token, LP_MAX_LINELEN) ); /*lint !e506*/
    lpinput.token[0] = '\0';
-   SCIP_CALL( SCIPallocMemoryArray(scip, &lpinput.tokenbuf, LP_MAX_LINELEN) ); /*lint !e506*/
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &lpinput.tokenbuf, LP_MAX_LINELEN) ); /*lint !e506*/
    lpinput.tokenbuf[0] = '\0';
    for( i = 0; i < LP_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(lpinput.pushedtokens[i]), LP_MAX_LINELEN) );  /*lint !e866 !e506*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(lpinput.pushedtokens[i]), LP_MAX_LINELEN) );  /*lint !e866 !e506*/
    }
 
    lpinput.npushedtokens = 0;
@@ -1056,22 +1050,18 @@ SCIP_RETCODE SCIPreadDiff(
    SCIP_CALL( readDiffFile(scip, &lpinput, filename) );
 
    /* free dynamically allocated memory */
-   SCIPfreeMemoryArray(scip, &lpinput.token);
-   SCIPfreeMemoryArray(scip, &lpinput.tokenbuf);
    for( i = 0; i < LP_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIPfreeMemoryArray(scip, &lpinput.pushedtokens[i]);
+      SCIPfreeBlockMemoryArray(scip, &lpinput.pushedtokens[i], LP_MAX_LINELEN);
    }
+   SCIPfreeBlockMemoryArray(scip, &lpinput.tokenbuf, LP_MAX_LINELEN);
+   SCIPfreeBlockMemoryArray(scip, &lpinput.token, LP_MAX_LINELEN);
 
    /* evaluate the result */
    if( lpinput.haserror )
       return SCIP_READERROR;
-   else
-   {
-      /* set objective sense */
-      SCIP_CALL( SCIPsetObjsense(scip, lpinput.objsense) );
-      *result = SCIP_SUCCESS;
-   }
+
+   *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }

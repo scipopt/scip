@@ -392,7 +392,7 @@ SCIP_DECL_HEURFREE(heurFreeIndicator)
    SCIPfreeBlockMemoryArrayNull(scip, &(heurdata->solcand), heurdata->nindconss);
 
    /* free heuristic data */
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -524,7 +524,7 @@ SCIP_RETCODE SCIPincludeHeurIndicator(
    SCIP_HEUR* heur;
 
    /* create Indicator primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    heurdata->nindconss = 0;
    heurdata->indconss = NULL;
    heurdata->solcand = NULL;

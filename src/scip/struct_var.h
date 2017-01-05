@@ -243,7 +243,8 @@ struct SCIP_Var
    SCIP_HISTORY*         historycrun;        /**< branching and inference history information for current run */
    SCIP_VALUEHISTORY*    valuehistory;       /**< branching and inference history information which are value based, or NULL if not used */
    SCIP_Longint          closestvblpcount;   /**< LP count for which the closestvlbidx/closestvubidx entries are valid */
-   int                   clqcomponentidx;    /**< clique component index of variable, or -1 if not computed */
+   int                   clqcomponentidx;    /**< index of clique graph's connected component that the variable belongs to,
+                                              *   or -1 if not computed */
    int                   index;              /**< consecutively numbered variable identifier */
    int                   probindex;          /**< array position in problems vars array, or -1 if not assigned to a problem */
    int                   pseudocandindex;    /**< array position in pseudo branching candidates array, or -1 */
@@ -275,6 +276,7 @@ struct SCIP_Var
    unsigned int          branchdirection:2;  /**< preferred branching direction of the variable (downwards, upwards, auto) */
    unsigned int          eventqueueimpl:1;   /**< is an IMPLADDED event on this variable currently in the event queue? */
    unsigned int          delglobalstructs:1; /**< is variable marked to be removed from global structures (cliques etc.)? */
+   unsigned int          invalidrestart:1;   /**< TRUE if each cut containing this variable must not be used after a restart */
 };
 
 #ifdef __cplusplus

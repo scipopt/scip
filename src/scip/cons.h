@@ -41,6 +41,7 @@
 #include "scip/type_sepastore.h"
 #include "scip/type_cons.h"
 #include "scip/type_branch.h"
+#include "scip/type_reopt.h"
 #include "scip/pub_cons.h"
 
 #ifndef NDEBUG
@@ -99,6 +100,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
    SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
    SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
+   SCIP_DECL_CONSENFORELAX ((*consenforelax)), /**< enforcing constraints for relaxation solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
@@ -219,6 +221,22 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
    SCIP_SOL*             sol,                /**< primal solution that should be separated */
    int                   depth,              /**< depth of current node */
    SCIP_Bool             execdelayed,        /**< execute separation method even if it is marked to be delayed */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
+/** calls enforcing method of constraint handler for a relaxation solution for all constraints added after last
+ *  conshdlrResetEnfo() call
+ */
+extern
+SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_SOL*             relaxsol,           /**< solution to be enforced */
+   SCIP_Bool             solinfeasible,      /**< was the solution already found out to be infeasible? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -578,7 +596,8 @@ SCIP_RETCODE SCIPconssetchgMakeGlobal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 /** increase count of applied cuts */
@@ -788,6 +807,15 @@ SCIP_RETCODE SCIPconsEnfolp(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** enforces single constraint for a given relaxation solution */
+SCIP_RETCODE SCIPconsEnforelax(
+   SCIP_CONS*            cons,               /**< constraint to enforce */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< solution to be enforced */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
 /** calls LP initialization method for single constraint */
 extern
 SCIP_RETCODE SCIPconsInitlp(
@@ -876,7 +904,7 @@ SCIP_RETCODE SCIPconsActive(
 extern
 SCIP_RETCODE SCIPconsDeactive(
    SCIP_CONS*            cons,               /**< constraint to notify */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                /**< global SCIP settings */
    );
 
 /** method to collect the variables of a constraint
@@ -923,7 +951,8 @@ SCIP_RETCODE SCIPconsDelete(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 /** gets and captures transformed constraint of a given constraint; if the constraint is not yet transformed,
@@ -1126,7 +1155,8 @@ SCIP_RETCODE SCIPconsAddAge(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_Real             deltaage            /**< value to add to the constraint's age */
+   SCIP_Real             deltaage,           /**< value to add to the constraint's age */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 /** increases age of constraint by 1.0;
@@ -1143,7 +1173,8 @@ SCIP_RETCODE SCIPconsIncAge(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 /** resets age of constraint to zero;

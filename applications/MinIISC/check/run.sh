@@ -50,8 +50,12 @@ then
     SETTINGSSTR="-s "$SETTINGS
 fi
 
-echo $EXECNAME $FILENAME -t $TIMELIMIT -m $MEMLIMIT -d $DISPFREQ 2>>$ERRFILE | tee -a $OUTFILE
-$EXECNAME $FILENAME -t $TIMELIMIT -m $MEMLIMIT -d $DISPFREQ 2>>$ERRFILE | tee -a $OUTFILE
+#if we use a debugger command, we need to replace the errfile place holder by the actual err-file for logging
+EXECNAME=${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}
+echo $EXECNAME $FILENAME >> $ERRFILE
+
+echo $EXECNAME $FILENAME $SETTINGSSTR -t $TIMELIMIT -m $MEMLIMIT -d $DISPFREQ 2>>$ERRFILE | tee -a $OUTFILE
+bash -c "$EXECNAME $FILENAME $SETTINGSSTR -t $TIMELIMIT -m $MEMLIMIT -d $DISPFREQ" 2>>$ERRFILE | tee -a $OUTFILE
 retcode=${PIPESTATUS[0]}
 if test $retcode != 0
 then

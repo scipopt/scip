@@ -520,7 +520,7 @@ SCIP_DECL_HEURFREE(heurFreeDins)
    assert(heurdata != NULL);
 
    /* free heuristic data */
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -596,10 +596,8 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    SCIP_Longint maxnnodes;                   /* maximum number of subnodes                                   */
    SCIP_Longint nsubnodes;                   /* nodelimit for subscip                                        */
 
-   SCIP_Real timelimit;                      /* timelimit for subscip (equals remaining time of scip)        */
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem                          */
    SCIP_Real upperbound;
-   SCIP_Real memorylimit;                    /* memory limit for solution process of subscip                 */
    int nvars;                                /* number of variables in original SCIP                         */
    int nbinvars;                             /* number of binary variables in original SCIP                  */
    int nintvars;                             /* number of general integer variables in original SCIP         */
@@ -666,29 +664,19 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    if( SCIPisStopped(scip) )
      return SCIP_OKAY;
 
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(scip, memorylimit) )
-   {
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-   }
-
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
-      return SCIP_OKAY;
-
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
    assert(nbinvars <= nvars);
 
    /* do not run heuristic if only continuous variables are present */
    if( nbinvars == 0 && nintvars == 0 )
+      return SCIP_OKAY;
+
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
+
+   /* abort if no time is left or not enough memory to create a copy of SCIP */
+   if( !success )
       return SCIP_OKAY;
 
    assert(vars != NULL);
@@ -758,30 +746,22 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
-   /* disable output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-
 #ifdef SCIP_DEBUG
-   /* for debugging DINS, enable MIP output */
+   /* for debugging, enable full output */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
-#endif
-
-   /* disable statistic timing inside sub SCIP unless we are in debug mode and print the statistic timing */
-#ifdef SCIP_DEBUG
-   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", TRUE) );
 #else
-   /* disable statistic timing inside sub SCIP */
+   /* disable statistic timing inside sub SCIP and output to console */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 #endif
 
    /* set limits for the subproblem */
+   SCIP_CALL( SCIPcopyLimits(scip, subscip) );
    heurdata->nodelimit = nsubnodes;
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", MAX(10, nsubnodes/10)) );
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->bestsollimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
    /* forbid recursive call of heuristics and separators solving subMIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
@@ -945,7 +925,7 @@ SCIP_RETCODE SCIPincludeHeurDins(
    SCIP_HEUR* heur;
 
    /* create Dins primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,

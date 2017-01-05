@@ -14,6 +14,8 @@ echo "Running all tests on examples."
 # parse command line
 MAKEARGS=""
 QUIET=0
+LIBTYPE="static"
+LIBEXT="a"
 for i in $@
 do
     if test "$i" = "-q"
@@ -21,6 +23,12 @@ do
 	echo "Quiet mode."
 	QUIET=1
     else
+	# test whether we want to build shared libraries (need bash "testing" w.r.t. regexp)
+	if [[ "$i" =~ SHARED[\s]*=true ]]
+	then
+	    LIBTYPE="shared"
+	    LIBEXT="so"
+	fi
 	MAKEARGS="$MAKEARGS $i"
     fi
 done
@@ -53,14 +61,14 @@ for OPT in ${OPTS[@]}
 do
     for LPS in ${LPSOLVERS[@]}
     do
-	LPILIB=../lib/liblpi$LPS.$OSTYPE.$ARCH.gnu.$OPT.a
+	LPILIB=../lib/$LIBTYPE/liblpi$LPS.$OSTYPE.$ARCH.gnu.$OPT.$LIBEXT
 	if test ! -e $LPILIB
 	then
 	    echo "Error: "$LPILIB" does not exist, please compile SCIP with OPT="$OPT" and LPS="$LPS"." >> ../applicationtestsummary.log
 	    echo "Error: "$LPILIB" does not exist, please compile SCIP with OPT="$OPT" and LPS="$LPS"."
 	    exit 1
 	fi
-	SCIPLIB=../lib/libscip.$OSTYPE.$ARCH.gnu.$OPT.a
+	SCIPLIB=../lib/$LIBTYPE/libscip.$OSTYPE.$ARCH.gnu.$OPT.$LIBEXT
 	if test ! -e $SCIPLIB
 	then
 	    echo "Error: "$SCIPLIB" does not exist, please compile SCIP with OPT="$OPT" and LPS="$LPS"." >> ../applicationtestsummary.log

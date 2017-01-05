@@ -115,6 +115,7 @@ struct SCIP_ConsData
    SCIP_Real             rhsviol;            /**< violation of right-hand side by current solution (used temporarily inside constraint handler) */
 
    unsigned int          ispropagated:1;     /**< did we propagate the current bounds already? */
+   unsigned int          issimplified:1;     /**< did we simplify the expression tree already? */
 
    SCIP_NLROW*           nlrow;              /**< a nonlinear row representation of this constraint */
 
@@ -142,15 +143,19 @@ struct SCIP_ConshdlrData
    unsigned int             lastbrscoretag;  /**< last branching score tag used */
    unsigned int             lastdifftag;     /**< last tag used for computing gradients */
 
+   SCIP_Longint             lastenfolpnodenum; /**< number of node for which enforcement has been called last */
+   SCIP_Longint             lastenfopsnodenum; /**< number of node for which enforcement has been called last */
+   SCIP_Longint             lastpropnodenum; /**< number node for which propagation has been called last */
+
    SCIP_EVENTHDLR*          eventhdlr;       /**< handler for variable bound change events */
 
    int                      maxproprounds;   /**< limit on number of propagation rounds for a set of constraints within one round of SCIP propagation */
 
+   SCIP_Bool                restart;         /**< did a restart happen? */
+
    /* separation parameters */
    SCIP_Real                mincutviolationsepa;    /**< minimal violation of a cut in order to add it to relaxation during separation */
    SCIP_Real                mincutviolationenfofac; /**< minimal target violation of a cut in order to add it to relaxation during enforcement as factor of feasibility tolerance (may be ignored) */
-
-   unsigned int             restart;         /**< whether we are running after a restart */
 };
 
 /** data passed on during expression evaluation in a point */
@@ -1721,6 +1726,7 @@ SCIP_RETCODE forwardPropCons(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONS*              cons,             /**< constraint to propagate */
    SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
+   SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
    SCIP_Bool*              redundant,        /**< buffer to store whether the constraint is redundant */
    int*                    ntightenings      /**< buffer to store the number of auxiliary variable tightenings */
@@ -1790,11 +1796,12 @@ SCIP_RETCODE forwardPropCons(
          SCIP_INTERVAL auxvarinterval;
          assert(SCIPvarGetLbLocal(consdata->expr->auxvar) <= SCIPvarGetUbLocal(consdata->expr->auxvar));  /* can SCIP ensure this by today? */
 
-         SCIPintervalSetBounds(&auxvarinterval, SCIPvarGetLbLocal(consdata->expr->auxvar) - SCIPepsilon(scip), SCIPvarGetUbLocal(consdata->expr->auxvar) + SCIPepsilon(scip));
+         SCIPintervalSetBounds(&auxvarinterval, SCIPvarGetLbLocal(consdata->expr->auxvar) - SCIPepsilon(scip),
+            SCIPvarGetUbLocal(consdata->expr->auxvar) + SCIPepsilon(scip));
          SCIPintervalIntersect(&interval, interval, auxvarinterval);
       }
 
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, infeasible, ntightenings) );
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, force, infeasible, ntightenings) );
    }
 
 #ifdef SCIP_DEBUG
@@ -1820,6 +1827,7 @@ SCIP_RETCODE reversePropConss(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONS**             conss,            /**< constraints to propagate */
    int                     nconss,           /**< total number of constraints to propagate */
+   SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*              infeasible,       /**< buffer to store whether an expression's bounds were propagated to an empty interval */
    int*                    ntightenings      /**< buffer to store the number of (variable) tightenings */
    )
@@ -1888,7 +1896,7 @@ SCIP_RETCODE reversePropConss(
 #endif
 
       /* call reverse propagation callback */
-      SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, infeasible, &nreds) );
+      SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, infeasible, &nreds, force) );
       assert(nreds >= 0);
       *ntightenings += nreds;
 
@@ -1949,6 +1957,7 @@ SCIP_RETCODE propConss(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to propagate */
    int                   nconss,             /**< total number of constraints */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
    SCIP_RESULT*          result,             /**< pointer to store the result */
    int*                  nchgbds,            /**< buffer to add the number of changed bounds */
    int*                  ndelconss           /**< buffer to add the number of deleted constraints */
@@ -2008,7 +2017,7 @@ SCIP_RETCODE propConss(
             redundant = FALSE;
             ntightenings = 0;
 
-            SCIP_CALL( forwardPropCons(scip, conss[i], (roundnr != 0), &cutoff, &redundant, &ntightenings) );
+            SCIP_CALL( forwardPropCons(scip, conss[i], (roundnr != 0), force, &cutoff, &redundant, &ntightenings) );
             assert(ntightenings >= 0);
             *nchgbds += ntightenings;
 
@@ -2029,7 +2038,7 @@ SCIP_RETCODE propConss(
       }
 
       /* apply backward propagation; mark constraint as propagated */
-      SCIP_CALL( reversePropConss(scip, conss, nconss, &cutoff, &ntightenings) );
+      SCIP_CALL( reversePropConss(scip, conss, nconss, force, &cutoff, &ntightenings) );
 
       /* @todo add parameter for the minimum number of tightenings to trigger a new propagation round */
       success = ntightenings > 0;
@@ -2332,15 +2341,20 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
 
    SCIPdebugMsg(scip, "  exec event %u for %s in %s\n", eventtype, SCIPvarGetName(var), SCIPconsGetName(cons));
 
-   /* mark constraint to be propagated again */
+   /* mark constraint to be propagated and simplified again */
    /* TODO: we only need to re-propagate if SCIP_EVENTTYPE_BOUNDTIGHTENED, but we need to reevaluate
     * the intervals (forward-propagation) when SCIP_EVENTTYPE_BOUNDRELAXED
     * at some point we should start using the intevaltag for this
     */
    if( (eventtype & SCIP_EVENTTYPE_BOUNDCHANGED) != (unsigned int) 0 )
    {
-      SCIPdebugMsg(scip, "  propagate %s again\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "  propagate and simplify %s again\n", SCIPconsGetName(cons));
       consdata->ispropagated = FALSE;
+      consdata->issimplified = FALSE;
+   }
+   if( (eventtype & SCIP_EVENTTYPE_VARFIXED) != (unsigned int) 0 )
+   {
+      consdata->issimplified = FALSE;
    }
 
    return SCIP_OKAY;
@@ -2525,15 +2539,19 @@ static
 SCIP_RETCODE simplifyConstraints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints */
-   int                   nconss              /**< total number of constraints */
+   int                   nconss,             /**< total number of constraints */
+   SCIP_Bool*            success             /**< pointer to store whether an expression has been simplified */
    )
 {
-   int i;
    SCIP_CONSDATA* consdata;
+   int i;
 
    assert(scip != NULL);
    assert(conss != NULL);
    assert(nconss >= 0);
+   assert(success != NULL);
+
+   *success = FALSE;
 
    /* simplify each constraint's expression */
    for( i = 0; i < nconss; ++i )
@@ -2543,11 +2561,15 @@ SCIP_RETCODE simplifyConstraints(
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      if( consdata->expr != NULL )
+      if( !consdata->issimplified && consdata->expr != NULL )
       {
          SCIP_CONSEXPR_EXPR* simplified;
 
+         /* TODO check whether something has changed because of SCIPsimplifyConsExprExpr */
+         *success = TRUE;
+
          SCIP_CALL( SCIPsimplifyConsExprExpr(scip, consdata->expr, &simplified) );
+         consdata->issimplified = TRUE;
 
          /* If root expression changed, then we need to take care updating the locks as well (the consdata is the one holding consdata->expr "as a child").
           * If root expression did not change, some subexpression may still have changed, but the locks were taking care of in the corresponding SCIPreplaceConsExprExprChild() call.
@@ -3482,7 +3504,12 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(createAuxVarsEnterExpr)
       SCIP_CALL( SCIPcreateVarBasic(scip, &expr->auxvar, name, MAX( -SCIPinfinity(scip), expr->interval.inf ),
                MIN( SCIPinfinity(scip), expr->interval.sup ), 0.0, SCIP_VARTYPE_CONTINUOUS) );
       SCIP_CALL( SCIPaddVar(scip, expr->auxvar) );
-     ++(conshdlrdata->auxvarid);
+      ++(conshdlrdata->auxvarid);
+
+      /* mark the auxiliary variable to be invalid after a restart happened; this prevents SCIP to create linear
+       * constraints from cuts that contain at least one auxiliary variable
+       */
+      SCIPvarSetCutInvalidAfterRestart(expr->auxvar, TRUE);
 
       SCIPdebugMsg(scip, "add auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
 
@@ -3528,8 +3555,15 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeAuxVarsEnterExpr)
 
       SCIPdebugMsg(scip, "remove auxiliary variable %s for expression %p\n", SCIPvarGetName(expr->auxvar), (void*)expr);
 
-      /* remove variable locks */
-      SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
+      /* remove variable locks if variable is not used by any other plug-in which can be done by checking whether
+       * SCIPvarGetNUses() returns 2 (1 for the core; and of for cons_expr); note that SCIP does not enforce to have 0
+       * locks when freeing a variable
+       */
+      assert(SCIPvarGetNUses(expr->auxvar) >= 2);
+      if( SCIPvarGetNUses(expr->auxvar) == 2 )
+      {
+         SCIP_CALL( SCIPaddVarLocks(scip, expr->auxvar, -1, -1) );
+      }
 
       SCIP_CALL( SCIPreleaseVar(scip, &expr->auxvar) );
       assert(expr->auxvar == NULL);
@@ -4280,9 +4314,6 @@ SCIP_DECL_CONSINIT(consInitExpr)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   if( conshdlrdata->restart )
-      return SCIP_OKAY;
-
    for( i = 0; i < nconss; ++i )
    {
       SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
@@ -4314,18 +4345,24 @@ SCIP_DECL_CONSEXIT(consExitExpr)
 
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
-#if 0
 static
 SCIP_DECL_CONSINITPRE(consInitpreExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+   /* remove auxiliary variables when a restart has happened; this ensures that the previous branch-and-bound tree
+    * removed all of his captures on variables; variables that are not release by any plug-in (nuses = 2) will then
+    * unlocked and freed
+    */
+   if( conshdlrdata->restart )
+   {
+      SCIP_CALL( freeAuxVars(scip, conshdlr, conss, nconss) );
+   }
 
    return SCIP_OKAY;
 }
-#else
-#define consInitpreExpr NULL
-#endif
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
@@ -4335,6 +4372,35 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
 
    if( nconss > 0 )
    {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+      SCIP_Bool success;
+      int i;
+
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+
+      /* simplify constraints */
+      SCIP_CALL( simplifyConstraints(scip, conss, nconss, &success) );
+
+      /* replace common subexpressions */
+      if( success )
+      {
+         SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
+
+         /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
+          * been changed after simplification; now we completely recollect all variable expression and variable events
+          */
+         for( i = 0; i < nconss; ++i )
+         {
+            SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
+            SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(conss[i])) );
+         }
+         for( i = 0; i < nconss; ++i )
+         {
+            SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
+            SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
+         }
+      }
+
       /* tell SCIP that we have something nonlinear */
       SCIPenableNLP(scip);
    }
@@ -4347,15 +4413,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreExpr)
 static
 SCIP_DECL_CONSINITSOL(consInitsolExpr)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    int c;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   if( conshdlrdata->restart )
-      return SCIP_OKAY;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -4386,14 +4445,10 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
    int c;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
+   conshdlrdata->restart = restart;
 
    /* call separation deinitialization callbacks; after a restart, the rows stored in the expressions are broken */
    SCIP_CALL( exitSepa(scip, conshdlr, conss, nconss) );
-
-   conshdlrdata->restart = restart;
-   if( conshdlrdata->restart )
-      return SCIP_OKAY;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -4407,8 +4462,13 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
       }
    }
 
-   /* remove auxiliary variables from expressions */
-   SCIP_CALL( freeAuxVars(scip, conshdlr, conss, nconss) );
+   /* remove auxiliary variables from expressions; if a restart is about to happen, remove auxiliary variables in
+    * CONSINITPRE
+    */
+   if( !conshdlrdata->restart )
+   {
+      SCIP_CALL( freeAuxVars(scip, conshdlr, conss, nconss) );
+   }
 
    return SCIP_OKAY;
 }
@@ -4488,24 +4548,9 @@ SCIP_DECL_CONSTRANS(consTransExpr)
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
 SCIP_DECL_CONSINITLP(consInitlpExpr)
-{  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   /* add auxiliary variables to expressions */
-   if( !conshdlrdata->restart )
-   {
-      *infeasible = FALSE;
-      SCIP_CALL( createAuxVars(scip, conshdlr, conss, nconss, infeasible) );
-
-      /** @todo: it is not clear what does *infeasible == TRUE means. when setting it by hand (and therefore stopping
-       * the process of building the auxvars/initSepa, asserts pop up! so it seems it is not really stopping everything
-       */
-      if( *infeasible )
-         return SCIP_OKAY;
-   }
+{
+   /* create auxiliary variables */
+   SCIP_CALL( createAuxVars(scip, conshdlr, conss, nconss) );
 
    /* call LP initialization callbacks of the expression handlers */
    SCIP_CALL( initSepa(scip, conshdlr, conss, nconss, infeasible) );
@@ -4577,6 +4622,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
    SCIP_Real minviolation;
    SCIP_Real maxviol;
    SCIP_RESULT propresult;
+   SCIP_Bool force;
    int nnotify;
    int nchgbds;
    int ndelconss;
@@ -4586,6 +4632,10 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
    assert(conshdlr != NULL);
 
    maxviol = 0.0;
+
+   /* force tightenings when calling enforcement for the first time for a node */
+   force = conshdlrdata->lastenfolpnodenum != SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+   conshdlrdata->lastenfolpnodenum = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    for( c = 0; c < nconss; ++c )
    {
@@ -4605,7 +4655,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
    /* try to propagate */
    nchgbds = 0;
    ndelconss = 0;
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, &propresult, &nchgbds, &ndelconss) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, force, &propresult, &nchgbds, &ndelconss) );
 
    if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
    {
@@ -4640,12 +4690,18 @@ SCIP_DECL_CONSENFOLP(consEnfolpExpr)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
    SCIP_CONSDATA* consdata;
    SCIP_RESULT propresult;
+   SCIP_Bool force;
    int nchgbds;
    int ndelconss;
    int nnotify;
    int c;
+
+   /* force tightenings when calling enforcement for the first time for a node */
+   force = conshdlrdata->lastenfopsnodenum == SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+   conshdlrdata->lastenfopsnodenum = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    *result = SCIP_FEASIBLE;
    for( c = 0; c < nconss; ++c )
@@ -4666,7 +4722,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
    /* try to propagate */
    nchgbds = 0;
    ndelconss = 0;
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, &propresult, &nchgbds, &ndelconss) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, force, &propresult, &nchgbds, &ndelconss) );
 
    if( (propresult == SCIP_CUTOFF) || (propresult == SCIP_REDUCEDDOM) )
    {
@@ -4743,13 +4799,19 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
 static
 SCIP_DECL_CONSPROP(consPropExpr)
 {  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   SCIP_Bool force;
    int nchgbds;
    int ndelconss;
+
+   /* force tightenings when calling propagation for the first time for a node */
+   force = conshdlrdata->lastpropnodenum != SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
+   conshdlrdata->lastpropnodenum = SCIPnodeGetNumber(SCIPgetCurrentNode(scip));
 
    nchgbds = 0;
    ndelconss = 0;
 
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, result, &nchgbds, &ndelconss) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, force, result, &nchgbds, &ndelconss) );
    assert(nchgbds >= 0);
 
    return SCIP_OKAY;
@@ -4762,39 +4824,39 @@ SCIP_DECL_CONSPRESOL(consPresolExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool infeasible;
+   SCIP_Bool success;
    int i;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   *result = SCIP_DIDNOTRUN;
-   if( conshdlrdata->restart )
-      return SCIP_OKAY;
-
    *result = SCIP_DIDNOTFIND;
 
    /* simplify constraints */
-   SCIP_CALL( simplifyConstraints(scip, conss, nconss) );
+   SCIP_CALL( simplifyConstraints(scip, conss, nconss, &success) );
 
    /* replace common subexpressions */
-   SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
+   if( success )
+   {
+      SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
 
-   /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
-    * been changed after simplification; now we completely recollect all variable expression and variable events
-    */
-   for( i = 0; i < nconss; ++i )
-   {
-      SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
-      SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(conss[i])) );
-   }
-   for( i = 0; i < nconss; ++i )
-   {
-      SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
-      SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
+      /* FIXME: this is a dirty hack for updating the variable expressions stored inside an expression which might have
+       * been changed after simplification; now we completely recollect all variable expression and variable events
+       */
+      for( i = 0; i < nconss; ++i )
+      {
+         SCIP_CALL( dropVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
+         SCIP_CALL( freeVarExprs(scip, SCIPconsGetData(conss[i])) );
+      }
+      for( i = 0; i < nconss; ++i )
+      {
+         SCIP_CALL( storeVarExprs(scip, SCIPconsGetData(conss[i])) );
+         SCIP_CALL( catchVarEvents(scip, conshdlrdata->eventhdlr, conss[i]) );
+      }
    }
 
    /* propagate constraints */
-   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, result, nchgbds, ndelconss) );
+   SCIP_CALL( propConss(scip, conshdlr, conss, nconss, FALSE, result, nchgbds, ndelconss) );
    assert(*nchgbds >= 0);
    assert(*ndelconss >= 0);
 
@@ -6460,10 +6522,18 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
    SCIP_INTERVAL           newbounds,        /**< new bounds for the expression */
+   SCIP_Bool               force,            /**< force tightening even if below bound strengthening tolerance */
    SCIP_Bool*              cutoff,           /**< buffer to store whether a node's bounds were propagated to an empty interval */
    int*                    ntightenings      /**< buffer to add the total number of tightenings */
    )
 {
+   SCIP_Real oldlb = SCIPintervalGetInf(expr->interval);
+   SCIP_Real oldub = SCIPintervalGetSup(expr->interval);
+   SCIP_Real newlb;
+   SCIP_Real newub;
+   SCIP_Bool tightenlb;
+   SCIP_Bool tightenub;
+
    assert(scip != NULL);
    assert(expr != NULL);
    assert(cutoff != NULL);
@@ -6473,35 +6543,43 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    *cutoff = FALSE;
 
    /* check if the new bounds lead to an empty interval */
-   if( SCIPintervalGetInf(newbounds) > SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr))
-      || SCIPintervalGetSup(newbounds) < SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)) )
+   if( SCIPintervalGetInf(newbounds) > oldub || SCIPintervalGetSup(newbounds) < oldlb )
    {
       SCIPintervalSetEmpty(&expr->interval);
       *cutoff = TRUE;
       return SCIP_OKAY;
    }
 
-   /* do not consider very small tightenings */
-   if( SCIPisLbBetter(scip, SCIPintervalGetInf(newbounds), SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)))
-      || SCIPisUbBetter(scip, SCIPintervalGetSup(newbounds), SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr))) )
-   {
-      SCIP_VAR* var;
+   /* intersect old interval with the new one */
+   SCIPintervalIntersect(&expr->interval, expr->interval, newbounds);
+   newlb = SCIPintervalGetInf(expr->interval);
+   newub = SCIPintervalGetSup(expr->interval);
 
 #ifdef SCIP_DEBUG
       SCIPinfoMessage(scip, NULL, "tighten bounds of ");
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
       SCIPinfoMessage(scip, NULL, "");
-      SCIPinfoMessage(scip, NULL, " from [%e,%e] to ", SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)));
+      SCIPinfoMessage(scip, NULL, " from [%g,%g] to [%g,%g]\n", oldlb, oldub, newlb, newub);
 #endif
 
-      /* intersect old bound with the found one */
-      SCIPintervalIntersect(&expr->interval, expr->interval, newbounds);
+   /* check which bound can be tightened */
+   if( force )
+   {
+      tightenlb = !SCIPisInfinity(scip, -newlb) && SCIPisGT(scip, newlb, oldlb);
+      tightenub = !SCIPisInfinity(scip, newub) && SCIPisLT(scip, newub, oldub);
+   }
+   else
+   {
+      tightenlb = !SCIPisInfinity(scip, -newlb) && SCIPisLbBetter(scip, newlb, oldlb, oldub);
+      tightenub = !SCIPisInfinity(scip, newub) && SCIPisUbBetter(scip, newub, oldlb, oldub);
+   }
 
-#ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "[%e,%e]\n", SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)));
-#endif
+   /* tighten interval of the expression and variable bounds of linearization variables */
+   if( tightenlb || tightenub )
+   {
+      SCIP_VAR* var;
 
-      /* mark expression as tightened; important for reverse propagation to ignore irrelevant sub-expressions*/
+      /* mark expression as tightened; important for reverse propagation to ignore irrelevant sub-expressions */
       expr->hastightened = TRUE;
 
       /* do not tighten variable in problem stage (important for unittests)
@@ -6509,37 +6587,23 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
       if( SCIPgetStage(scip) < SCIP_STAGE_TRANSFORMED )
          return SCIP_OKAY;
 
+      /* tighten bounds of linearization variable */
       var = SCIPgetConsExprExprLinearizationVar(expr);
-
       if( var != NULL )
       {
          SCIP_Bool tightened;
 
-#ifdef SCIP_DEBUG
-         SCIP_Real oldlb;
-         SCIP_Real oldub;
-         oldlb = SCIPvarGetLbLocal(SCIPgetConsExprExprVarVar(expr));
-         oldub = SCIPvarGetUbLocal(SCIPgetConsExprExprVarVar(expr));
-#endif
-
-         /* tighten lower bound */
-         SCIP_CALL( SCIPtightenVarLb(scip, var, SCIPintervalGetInf(expr->interval), FALSE, cutoff, &tightened) );
-
-         if( tightened )
-            ++(*ntightenings);
-
-         /* tighten upper bound */
-         if( !(*cutoff) )
+         if( tightenlb )
          {
-            SCIP_CALL( SCIPtightenVarUb(scip, var, SCIPintervalGetSup(expr->interval), FALSE, cutoff, &tightened) );
-
-            if( tightened )
-               ++(*ntightenings);
+            SCIP_CALL( SCIPtightenVarLb(scip, var, newlb, force, cutoff, &tightened) );
+            (*ntightenings) += tightened ? 1 : 0;
          }
 
-#ifdef SCIP_DEBUG
-         SCIPdebugMsg(scip, "tighten bounds of %s from [%e, %e] -> [%e, %e]\n", SCIPvarGetName(var), oldlb, oldub, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-#endif
+         if( tightenub && !(*cutoff) )
+         {
+            SCIP_CALL( SCIPtightenVarUb(scip, var, newub, force, cutoff, &tightened) );
+            (*ntightenings) += tightened ? 1 : 0;
+         }
       }
    }
 

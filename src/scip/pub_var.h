@@ -845,10 +845,24 @@ SCIP_VALUEHISTORY* SCIPvarGetValuehistory(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
-/** returns the variable clique component index, or -1 if no index was computed */
+/** returns the index of the connected component of the clique graph that the variable belongs to, or -1 if not computed */
 EXTERN
 int SCIPvarGetCliqueComponentIdx(
    SCIP_VAR*             var                 /**< problem variable */
+   );
+
+
+/** returns whether a cut containing this variable is invalid after a restart */
+EXTERN
+SCIP_Bool SCIPvarIsCutInvalidAfterRestart(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** sets whether a cut containing this variable is invalid after a restart */
+EXTERN
+void SCIPvarSetCutInvalidAfterRestart(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_Bool             invalid             /**< value */
    );
 
 #ifdef NDEBUG
@@ -947,6 +961,8 @@ int SCIPvarGetCliqueComponentIdx(
 #define SCIPvarGetNBdchgInfosUb(var)      ((var)->nubchginfos)
 #define SCIPvarGetValuehistory(var)       (var)->valuehistory
 #define SCIPvarGetCliqueComponentIdx(var) ((var)->clqcomponentidx)
+#define SCIPvarIsCutInvalidAfterRestart(var)((var)->invalidrestart)
+#define SCIPvarSetCutInvalidAfterRestart(var, val)((var)->invalidrestart = (val))
 
 #endif
 

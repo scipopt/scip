@@ -183,7 +183,7 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(conshdlrdata != NULL);
    assert(eventhdlr != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
 
    /* set event handler for catching events on watched variables */
    (*conshdlrdata)->eventhdlr = eventhdlr;
@@ -201,7 +201,7 @@ SCIP_RETCODE conshdlrdataFree(
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
 
-   SCIPfreeMemory(scip, conshdlrdata);
+   SCIPfreeBlockMemory(scip, conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -4219,6 +4219,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             }
          }
 
+         if( !consdata0->sorted )
+            consdataSort(consdata0);
+         assert(consdata0->sorted);
 
 #if 0
       /* if aggregation in the core of SCIP is not changed we do not need to call applyFixing, this would be the correct
@@ -4707,6 +4710,43 @@ SCIP_DECL_CONSENFOLP(consEnfolpXor)
          SCIP_Bool separated;
 
          SCIP_CALL( separateCons(scip, conss[i], NULL, conshdlrdata->separateparity, &separated, &cutoff) );
+         if ( cutoff )
+            *result = SCIP_CUTOFF;
+         else
+         {
+            assert(separated); /* because the solution is integral, the separation always finds a cut */
+            *result = SCIP_SEPARATED;
+         }
+         return SCIP_OKAY;
+      }
+   }
+   *result = SCIP_FEASIBLE;
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxXor)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool violated;
+   SCIP_Bool cutoff;
+   int i;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   /* method is called only for integral solutions, because the enforcing priority is negative */
+   for( i = 0; i < nconss; i++ )
+   {
+      SCIP_CALL( checkCons(scip, conss[i], sol, FALSE, &violated) );
+      if( violated )
+      {
+         SCIP_Bool separated;
+
+         SCIP_CALL( separateCons(scip, conss[i], sol, conshdlrdata->separateparity, &separated, &cutoff) );
          if ( cutoff )
             *result = SCIP_CUTOFF;
          else
@@ -5532,6 +5572,7 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpXor, consSepasolXor, CONSHDLR_SEPAFREQ,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransXor) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxXor) );
 
    if ( SCIPfindConshdlr(scip, "linear") != NULL )
    {

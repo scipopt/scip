@@ -137,7 +137,7 @@ then
 elif test "$DEBUGTOOL" = "gdb"
 then
     #  set a gdb command, but leave a place holder for the error file we want to log to, which gets replaced in 'run.sh'
-    DEBUGTOOLCMD='gdb -batch-silent -ex "run" -ex "set logging file ERRFILE_PLACEHOLDER" -ex "set logging on" -ex "thread apply all bt full" --args '
+    DEBUGTOOLCMD='gdb -batch-silent -return-child-result -ex "run" -ex "set logging file ERRFILE_PLACEHOLDER" -ex "set logging on" -ex "thread apply all bt full" --args '
 else
     DEBUGTOOLCMD=""
 fi
@@ -165,6 +165,11 @@ fi
 COUNT=0
 for INSTANCE in `cat $FULLTSTNAME | awk '{print $1}'`
 do
+    # if the key word DONE appears in the test file, skip the remaining test file
+    if test "$INSTANCE" = "DONE"
+    then
+        break
+    fi
     # check if problem instance exists
     for IPATH in ${POSSIBLEPATHS[@]}
     do

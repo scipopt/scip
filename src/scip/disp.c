@@ -33,7 +33,7 @@
 #include "scip/disp.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-
+#include "scip/syncstore.h"
 #include "scip/struct_disp.h"
 
 
@@ -122,6 +122,7 @@ SCIP_RETCODE SCIPdispCreate(
    (*disp)->stripline = stripline;
    (*disp)->initialized = FALSE;
    (*disp)->active = (dispstatus == SCIP_DISPSTATUS_ON);
+   (*disp)->mode = SCIP_DISPMODE_DEFAULT;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "display/%s/active", name);
@@ -450,11 +451,16 @@ SCIP_RETCODE SCIPdispAutoActivate(
    )
 {
    SCIP_DISP** disps;
+   SCIP_SYNCSTORE* syncstore;
+   SCIP_DISPMODE mode;
    int totalwidth;
    int width;
    int i;
 
    assert(set != NULL);
+
+   syncstore = SCIPgetSyncstore(set->scip);
+   assert(syncstore != NULL);
 
    /* sort display columns w.r. to their priority */
    SCIP_ALLOC( BMSduplicateMemoryArray(&disps, set->disps, set->ndisps) );
@@ -462,13 +468,18 @@ SCIP_RETCODE SCIPdispAutoActivate(
 
    totalwidth = 0;
 
+   if( SCIPsyncstoreIsInitialized(syncstore) )
+      mode = SCIP_DISPMODE_CONCURRENT;
+   else
+      mode = SCIP_DISPMODE_DEFAULT;
+
    /* first activate all columns with display status ON */
    for( i = 0; i < set->ndisps; ++i )
    {
       width = disps[i]->width;
       if( disps[i]->stripline )
          width++;
-      if( disps[i]->dispstatus == SCIP_DISPSTATUS_ON )
+      if( disps[i]->dispstatus == SCIP_DISPSTATUS_ON && (disps[i]->mode & mode) )
       {
          disps[i]->active = TRUE;
          totalwidth += width;
@@ -487,7 +498,7 @@ SCIP_RETCODE SCIPdispAutoActivate(
          width = disps[i]->width;
          if( disps[i]->stripline )
             width++;
-         if( totalwidth + width <= set->disp_width )
+         if( totalwidth + width <= set->disp_width && (disps[i]->mode & mode) )
          {
             disps[i]->active = TRUE;
             totalwidth += width;
@@ -499,6 +510,15 @@ SCIP_RETCODE SCIPdispAutoActivate(
    BMSfreeMemoryArray(&disps);
 
    return SCIP_OKAY;
+}
+
+/** changes the display column mode */
+void SCIPdispChgMode(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_DISPMODE         mode                /**< the display column mode */
+   )
+{
+   disp->mode = mode;
 }
 
 static

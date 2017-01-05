@@ -132,7 +132,7 @@ SCIP_Bool hasUncoloredNode(
       /* node not yet colored */
       if(colors[i] == -1)
       {
-	return TRUE;
+         return TRUE;
       }
    }
    return FALSE;
@@ -352,7 +352,9 @@ SCIP_RETCODE runTabuCol(
    }
 
    /* init matrices */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &tabu, nnodes) );   /* stores iteration at which tabu node/color pair will expire to be tabu */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &tabu, nnodes) );   /* stores iteration at which tabu node/color pair will
+                                                              * expire to be tabu
+                                                              */
    SCIP_CALL( SCIPallocMemoryArray(scip, &adj, nnodes) );    /* stores number of adjacent nodes using specified color */
 
    for( i = 0; i < nnodes; i++ )
@@ -361,7 +363,7 @@ SCIP_RETCODE runTabuCol(
       SCIP_CALL( SCIPallocMemoryArray(scip, &(adj[i]), maxcolors) ); /*lint !e866*/
       for( j = 0; j < maxcolors; j++ )
       {
-	 tabu[i][j] = 0;
+         tabu[i][j] = 0;
          adj[i][j] = 0;
       }
    }
@@ -378,11 +380,11 @@ SCIP_RETCODE runTabuCol(
       while(  firstedge <= lastedge )
       {
          node2 = *firstedge;
-	 color2 = colors[node2];
-	 assert( 0 <= color2 && color2 < maxcolors );
-	 (adj[node1][color2])++;
-	 if( color1 == color2 )
-	    obj++;
+         color2 = colors[node2];
+         assert( 0 <= color2 && color2 < maxcolors );
+         (adj[node1][color2])++;
+         if( color1 == color2 )
+            obj++;
          firstedge++;
       }
    }
@@ -398,94 +400,94 @@ SCIP_RETCODE runTabuCol(
       /* perform predefined number of iterations */
       for( iter = 1; iter <= heurdata->maxiter; iter++ )
       {
-	 /* find best 1-move among those with critical vertex */
-	 minnode = -1;
-	 mincolor = -1;
-	 minvalue = nnodes * nnodes;
-	 ncritical = 0;
-	 for( node1 = 0; node1 < nnodes; node1++ )
-	 {
-	    aspiration = FALSE;
-	    color1 = colors[node1];
-	    assert( 0 <= color1 && color1 < maxcolors );
+         /* find best 1-move among those with critical vertex */
+         minnode = -1;
+         mincolor = -1;
+         minvalue = nnodes * nnodes;
+         ncritical = 0;
+         for( node1 = 0; node1 < nnodes; node1++ )
+         {
+            aspiration = FALSE;
+            color1 = colors[node1];
+            assert( 0 <= color1 && color1 < maxcolors );
 
-	    /* if node is critical (has incident violated edges) */
-	    if( adj[node1][color1] > 0 )
-	    {
-	       ncritical++;
-	       /* check all colors */
-	       for( j = 0; j < maxcolors; j++ )
-	       {
-		  /* if color is new */
-		  if( j != color1 )
-		  {
-		     /* change in the number of violated edges: */
-		     d = adj[node1][j] - adj[node1][color1];
+            /* if node is critical (has incident violated edges) */
+            if( adj[node1][color1] > 0 )
+            {
+               ncritical++;
+               /* check all colors */
+               for( j = 0; j < maxcolors; j++ )
+               {
+                  /* if color is new */
+                  if( j != color1 )
+                  {
+                     /* change in the number of violated edges: */
+                     d = adj[node1][j] - adj[node1][color1];
 
-		     /* 'aspiration criterion': stop if we get feasible solution */
-		     if( obj + d == 0 )
-		     {
+                     /* 'aspiration criterion': stop if we get feasible solution */
+                     if( obj + d == 0 )
+                     {
                         if( heurdata->output >= 1 )
                            printf("   Feasible solution found after %d iterations!\n\n", iter);
-			minnode = node1;
-			mincolor = j;
-			minvalue = d;
-			aspiration = TRUE;
-			break;
-		     }
+                        minnode = node1;
+                        mincolor = j;
+                        minvalue = d;
+                        aspiration = TRUE;
+                        break;
+                     }
 
-		     /* if not tabu and better value */
-		     if( tabu[node1][j] < iter &&  d < minvalue )
-		     {
-			minnode = node1;
-			mincolor = j;
-			minvalue = d;
-		     }
-		  }
-	       }
-	    }
-	    if( aspiration )
-	       break;
-	 }
+                     /* if not tabu and better value */
+                     if( tabu[node1][j] < iter &&  d < minvalue )
+                     {
+                        minnode = node1;
+                        mincolor = j;
+                        minvalue = d;
+                     }
+                  }
+               }
+            }
+            if( aspiration )
+            break;
+         }
 
-	 /* if no candidate could be found - tabu list is too restrictive: just skip current iteration */
-	 if( minnode == -1 )
-	 {
-	    restrictive = TRUE;
-	    continue;
-	 }
-	 assert( minnode != -1 );
-	 assert( mincolor >= 0 );
+         /* if no candidate could be found - tabu list is too restrictive: just skip current iteration */
+         if( minnode == -1 )
+         {
+            restrictive = TRUE;
+            continue;
+         }
+         assert( minnode != -1 );
+         assert( mincolor >= 0 );
 
-	 /* perform changes */
-	 assert( colors[minnode] != mincolor );
-	 oldcolor = colors[minnode];
-	 colors[minnode] = mincolor;
-	 obj += minvalue;
-	 assert( obj == getNViolatedEdges(graph, colors) );
-	 if( obj < bestobj )
-	    bestobj = obj;
+         /* perform changes */
+         assert( colors[minnode] != mincolor );
+         oldcolor = colors[minnode];
+         colors[minnode] = mincolor;
+         obj += minvalue;
+         assert( obj == getNViolatedEdges(graph, colors) );
+         if( obj < bestobj )
+            bestobj = obj;
 
-	 if( heurdata->output == 2 && (iter) % (heurdata->dispfreq) == 0 )
-	 {
-            printf("Iter: %d  obj: %d  critical: %d   node: %d  color: %d  delta: %d\n",
-                                        iter, obj, ncritical, minnode, mincolor, minvalue);
-	 }
+         if( heurdata->output == 2 && (iter) % (heurdata->dispfreq) == 0 )
+         {
+            printf("Iter: %d  obj: %d  critical: %d   node: %d  color: %d  delta: %d\n", iter, obj, ncritical, minnode,
+                  mincolor, minvalue);
+         }
 
-	 /* terminate if valid coloring has been found */
-	 if( obj == 0 )
-	    break;
+         /* terminate if valid coloring has been found */
+         if( obj == 0 )
+            break;
 
-	 /* update tabu list */
-	 assert( tabu[minnode][oldcolor] < iter );
-	 tabu[minnode][oldcolor] = iter + (heurdata->tabubase) + (int) (((double) ncritical) * (heurdata->tabugamma));
+         /* update tabu list */
+         assert( tabu[minnode][oldcolor] < iter );
+         tabu[minnode][oldcolor] = iter + (heurdata->tabubase) + (int) (((double) ncritical) * (heurdata->tabugamma));
 
-	 /* update adj matrix */
-	 for( firstedge = tcliqueGetFirstAdjedge(graph, minnode); firstedge <= tcliqueGetLastAdjedge(graph, minnode); firstedge++ )
-	 {
-	    (adj[*firstedge][mincolor])++;
-	    (adj[*firstedge][oldcolor])--;
-	 }
+         /* update adj matrix */
+         for( firstedge = tcliqueGetFirstAdjedge(graph, minnode); firstedge <= tcliqueGetLastAdjedge(graph, minnode); firstedge++ )
+         {
+            (adj[*firstedge][mincolor])++;
+            (adj[*firstedge][oldcolor])--;
+         }
       }
    }
    if( heurdata->output == 2 )
@@ -504,11 +506,11 @@ SCIP_RETCODE runTabuCol(
 
    for( i = 0; i < nnodes; i++ )
    {
-      SCIPfreeMemoryArray(scip, &(tabu[i]));
       SCIPfreeMemoryArray(scip, &(adj[i]));
+      SCIPfreeMemoryArray(scip, &(tabu[i]));
    }
-   SCIPfreeMemoryArray(scip, &tabu);
    SCIPfreeMemoryArray(scip, &adj);
+   SCIPfreeMemoryArray(scip, &tabu);
 
    /* check whether valid coloring has been found */
    *success = (obj == 0);
@@ -540,7 +542,7 @@ SCIP_DECL_HEURFREE(heurFreeInit)
 
    /* free heuristic rule data */
    heurdata = SCIPheurGetData(heur);
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -579,8 +581,8 @@ SCIP_DECL_HEUREXEC(heurExecInit)
    if( COLORprobGetNStableSets(scip) == 0 )
    {
       /* get memory for arrays */
-      SCIP_CALL( SCIPallocMemoryArray(scip, &colors, nnodes) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &bestcolors, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &colors, nnodes) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &bestcolors, nnodes) );
 
       /* get the node-constraits */
       constraints = COLORprobGetConstraints(scip);
@@ -622,7 +624,7 @@ SCIP_DECL_HEUREXEC(heurExecInit)
                nstablesetnodes++;
             }
          }
-         /* try to add more nodes to the stable set without violationg the stability */
+         /* try to add more nodes to the stable set without violating the stability */
          for( j = 0; j < nnodes; j++ )
          {
             indnode = TRUE;
@@ -662,8 +664,8 @@ SCIP_DECL_HEUREXEC(heurExecInit)
 
       }
 
-      SCIPfreeMemoryArray(scip, &colors);
-      SCIPfreeMemoryArray(scip, &bestcolors);
+      SCIPfreeBufferArray(scip, &bestcolors);
+      SCIPfreeBufferArray(scip, &colors);
 
    }
    /* create solution consisting of all yet created stable sets,
@@ -699,7 +701,7 @@ SCIP_RETCODE SCIPincludeHeurInit(
    SCIP_HEUR* heur;
 
    /* create init primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    heur = NULL;
    /* include primal heuristic */

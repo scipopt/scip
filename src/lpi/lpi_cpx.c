@@ -1024,6 +1024,18 @@ void* SCIPlpiGetSolverPointer(
 {
    return (void*) lpi->cpxlp;
 }
+
+/** pass integrality information to LP solver */
+SCIP_RETCODE SCIPlpiSetIntegralityInformation(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   ncols,              /**< length of integrality array */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   )
+{
+   SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
+   return SCIP_LPERROR;
+}
+
 /**@} */
 
 
@@ -1458,6 +1470,9 @@ SCIP_RETCODE SCIPlpiChgBounds(
    assert(lpi->cpxenv != NULL);
    assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
+   if ( ncols <= 0 )
+      return SCIP_OKAY;
+
    SCIPdebugMessage("changing %d bounds in CPLEX\n", ncols);
 
    for( i = 0; i < ncols; ++i )
@@ -1518,6 +1533,9 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
+
+   if ( nrows <= 0 )
+      return SCIP_OKAY;
 
    SCIPdebugMessage("changing %d sides in CPLEX\n", nrows);
 
@@ -1596,8 +1614,8 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 SCIP_RETCODE SCIPlpiChgObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
-   int*                  ind,                /**< column indices to change objective value for */
-   SCIP_Real*            obj                 /**< new objective values for columns */
+   const int*            ind,                /**< column indices to change objective value for */
+   const SCIP_Real*      obj                 /**< new objective values for columns */
    )
 {
    assert(lpi != NULL);
@@ -1864,7 +1882,9 @@ SCIP_RETCODE SCIPlpiGetRows(
    SCIP_Real*            val                 /**< buffer to store values of constraint matrix entries, or NULL */
    )
 {
+#if CPX_VERSION < 12070000
    int retcode;
+#endif
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -1879,6 +1899,7 @@ SCIP_RETCODE SCIPlpiGetRows(
       SCIP_CALL( ensureSidechgMem(lpi, lastrow - firstrow + 1) );
       CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, lpi->senarray, firstrow, lastrow) );
       CHECK_ZERO( lpi->messagehdlr, CPXgetrhs(lpi->cpxenv, lpi->cpxlp, lpi->rhsarray, firstrow, lastrow) );
+#if CPX_VERSION < 12070000
       retcode = CPXgetrngval(lpi->cpxenv, lpi->cpxlp, lpi->rngarray, firstrow, lastrow);
       if( retcode != CPXERR_NO_RNGVAL ) /* ignore "No range values" error */
       {
@@ -1886,6 +1907,9 @@ SCIP_RETCODE SCIPlpiGetRows(
       }
       else
          BMSclearMemoryArray(lpi->rngarray, lastrow-firstrow+1);
+#else
+      CHECK_ZERO( lpi->messagehdlr, CPXgetrngval(lpi->cpxenv, lpi->cpxlp, lpi->rngarray, firstrow, lastrow) );
+#endif
 
       /* convert sen/rhs/range into lhs/rhs tuples */
       reconvertSides(lpi, lastrow - firstrow + 1, lhs, rhs);
@@ -2058,7 +2082,9 @@ SCIP_RETCODE SCIPlpiGetSides(
    SCIP_Real*            rhss                /**< array to store right hand side values, or NULL */
    )
 {
+#if CPX_VERSION < 12070000
    int retval;
+#endif
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -2071,6 +2097,7 @@ SCIP_RETCODE SCIPlpiGetSides(
    SCIP_CALL( ensureSidechgMem(lpi, lastrow - firstrow + 1) );
    CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, lpi->senarray, firstrow, lastrow) );
    CHECK_ZERO( lpi->messagehdlr, CPXgetrhs(lpi->cpxenv, lpi->cpxlp, lpi->rhsarray, firstrow, lastrow) );
+#if CPX_VERSION < 12070000
    retval = CPXgetrngval(lpi->cpxenv, lpi->cpxlp, lpi->rngarray, firstrow, lastrow);
    if( retval != CPXERR_NO_RNGVAL ) /* ignore "No range values" error */
    {
@@ -2078,6 +2105,9 @@ SCIP_RETCODE SCIPlpiGetSides(
    }
    else
       BMSclearMemoryArray(lpi->rngarray, lastrow-firstrow+1);
+#else
+   CHECK_ZERO( lpi->messagehdlr, CPXgetrngval(lpi->cpxenv, lpi->cpxlp, lpi->rngarray, firstrow, lastrow) );
+#endif
 
    /* convert sen/rhs/range into lhs/rhs tuples */
    reconvertSides(lpi, lastrow - firstrow + 1, lhss, rhss);
@@ -3386,8 +3416,8 @@ SCIP_RETCODE SCIPlpiGetBase(
 /** sets current basis status for columns and rows */
 SCIP_RETCODE SCIPlpiSetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  cstat,              /**< array with column basis status */
-   int*                  rstat               /**< array with row basis status */
+   const int*            cstat,              /**< array with column basis status */
+   const int*            rstat               /**< array with row basis status */
    )
 {
    int i;
@@ -3410,19 +3440,23 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert((int)SCIP_BASESTAT_UPPER == CPX_AT_UPPER);
    assert((int)SCIP_BASESTAT_ZERO == CPX_FREE_SUPER);
 
-   /* correct rstat values for ">=" constraints: Here CPX_AT_LOWER bound means that the slack is 0, i.e., the upper bound is tight */
+   /* Copy rstat to internal structure and correct rstat values for ">=" constraints: Here CPX_AT_LOWER bound means that
+    * the slack is 0, i.e., the upper bound is tight. */
    nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
+   SCIP_CALL( ensureRstatMem(lpi, nrows) );
    for (i = 0; i < nrows; ++i)
    {
       if ( rstat[i] == (int) SCIP_BASESTAT_UPPER )
       {
          CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &sense, i, i) );
          if ( sense == 'L' )
-            rstat[i] = CPX_AT_LOWER;
+            lpi->rstat[i] = CPX_AT_LOWER;
       }
+      else
+         lpi->rstat[i] = rstat[i];
    }
 
-   CHECK_ZERO( lpi->messagehdlr, CPXcopybase(lpi->cpxenv, lpi->cpxlp, cstat, rstat) );
+   CHECK_ZERO( lpi->messagehdlr, CPXcopybase(lpi->cpxenv, lpi->cpxlp, cstat, lpi->rstat) );
 
    return SCIP_OKAY;
 }
@@ -3805,7 +3839,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
    )
 {
    int lpncols;
@@ -4018,7 +4052,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
 {
    int lpnrows;

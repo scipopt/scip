@@ -625,6 +625,18 @@ void* SCIPlpiGetSolverPointer(
    return (void*) lpi->task;
 }
 
+/** pass integrality information to LP solver */
+SCIP_RETCODE SCIPlpiSetIntegralityInformation(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   ncols,              /**< length of integrality array */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   )
+{
+   SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
+   return SCIP_LPERROR;
+}
+
+
 
 /*
  * LPI Creation and Destruction Methods
@@ -1366,8 +1378,8 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 SCIP_RETCODE SCIPlpiChgObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
-   int*                  ind,                /**< column indices to change objective value for */
-   SCIP_Real*            obj                 /**< new objective values for columns */
+   const int*            ind,                /**< column indices to change objective value for */
+   const SCIP_Real*      obj                 /**< new objective values for columns */
    )
 {
    assert(MosekEnv != NULL);
@@ -2748,8 +2760,11 @@ SCIP_Bool SCIPlpiWasSolved(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   MSKprostae prosta;
    MSKsolstae solsta;
+   MSKrescodee restat;
+#if MSK_VERSION_MAJOR < 7
+   MSKprostae prosta;
+#endif
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
@@ -2757,9 +2772,15 @@ SCIP_Bool SCIPlpiWasSolved(
 
    SCIPdebugMessage("Calling SCIPlpiWasSolved (%d)\n",lpi->lpid);
 
-   SCIP_ABORT_FALSE( getSolutionStatus(lpi, &prosta, &solsta) );
+#if MSK_VERSION_MAJOR >= 7
+   restat = MSK_getsolsta(lpi->task, MSK_SOL_BAS, &solsta);
+#else
+   restat = MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, &prosta, &solsta);
+#endif
 
-   return (solsta == MSK_SOL_STA_OPTIMAL);
+   if ( restat != MSK_RES_OK )
+      return FALSE;
+   return (solsta != MSK_SOL_STA_UNKNOWN);
 }
 
 /** gets information about primal and dual feasibility of the current LP solution */
@@ -3308,17 +3329,15 @@ SCIP_RETCODE convertstat_mosek2scip(
 static
 SCIP_RETCODE convertstat_mosek2scip_slack(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   MSKaccmodee           acc,                /**< ??? */
-   MSKstakeye*           sk,                 /**< ??? */
-   int                   n,                  /**< size */
+   MSKaccmodee           acc,                /**< whether constraints or variables are accessed */
+   MSKstakeye*           sk,                 /**< Mosek basis status */
+   int                   m,                  /**< size */
    int*                  stat                /**< status array */
    )
 {
    int i;
 
-   /* slacks are stored as -1 in Mosek, i.e., bounds are reversed compared to SCIP  */
-
-   for( i = 0; i < n; i++ )
+   for( i = 0; i < m; i++ )
    {
       double sl;
       double su;
@@ -3340,14 +3359,13 @@ SCIP_RETCODE convertstat_mosek2scip_slack(
          break;
       case MSK_SK_UNK:
       case MSK_SK_INF:
-      case MSK_SK_UPR: /* Reversed */
-         stat[i] = (int)SCIP_BASESTAT_LOWER;
-         break;
-      case MSK_SK_LOW: /* Reversed */
+      case MSK_SK_UPR:
          stat[i] = (int)SCIP_BASESTAT_UPPER;
          break;
-      case MSK_SK_END:
+      case MSK_SK_LOW:
+         stat[i] = (int)SCIP_BASESTAT_LOWER;
          break;
+      case MSK_SK_END:
       default:
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
@@ -3360,7 +3378,7 @@ SCIP_RETCODE convertstat_mosek2scip_slack(
 /** convert SCIP to Mosek status */
 static
 void convertstat_scip2mosek(
-   int*                  stat,               /**< SCIP status array */
+   const int*            stat,               /**< SCIP status array */
    int                   n,                  /**< size of array */
    MSKstakeye*           resstat             /**< resulting Mosek status array */
    )
@@ -3391,7 +3409,7 @@ void convertstat_scip2mosek(
 /** convert SCIP to Mosek status - slack variables */
 static
 void convertstat_scip2mosek_slack(
-   int*                  stat,               /**< SCIP status array */
+   const int*            stat,               /**< SCIP status array */
    int                   n,                  /**< size of array */
    MSKstakeye*           resstat             /**< resulting Mosek status array */
    )
@@ -3458,8 +3476,8 @@ SCIP_RETCODE SCIPlpiGetBase(
 /** sets current basis status for columns and rows */
 SCIP_RETCODE SCIPlpiSetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  cstat,              /**< array with column basis status */
-   int*                  rstat               /**< array with row basis status */
+   const int*            cstat,              /**< array with column basis status */
+   const int*            rstat               /**< array with row basis status */
    )
 {
    int nrows;
@@ -3790,8 +3808,10 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       for (i = 0; i < numnz; ++i)
          coef[inds[i]] = val[i];
 
+      *ninds = numnz;
       MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef) );
+      assert( *ninds <= nrows );
    }
    else
    {
@@ -3810,6 +3830,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       for (i = 0; i < numnz; ++i)
          coef[sub[i]] = val[i];
 
+      *ninds = numnz;
       MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
 
@@ -3958,7 +3979,7 @@ SCIP_RETCODE lpistatePack(
 /** unpacks row and column basis status from a packed LPi state object */
 static
 void lpistateUnpack(
-   SCIP_LPISTATE*        lpistate,           /**< pointer to LPi state data */
+   const SCIP_LPISTATE*  lpistate,           /**< pointer to LPi state data */
    MSKstakeye*           skx,                /**< ??? */
    MSKstakeye*           skc                 /**< ??? */
    )
@@ -4030,7 +4051,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LP state information (like basis information) */
    )
 {  /*lint --e{715}*/
    int nrows;
@@ -4208,7 +4229,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
 {
    assert(lpinorms == NULL);
