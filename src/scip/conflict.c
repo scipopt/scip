@@ -5877,7 +5877,7 @@ SCIP_RETCODE tightenDualray(
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
    SCIP_Bool*            success             /**< success pointer */
    )
-{
+{/*lint --e{715}*/
    SCIP_VAR** vars;
    int nbinvars;
    int ncontvars;
