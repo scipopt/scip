@@ -1471,6 +1471,17 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
  * @note This could be accelerated: Since \f$ f(v^i) = 0 \f$, whenever a component of the vertex is 0, we can sort the
  * variables so that the first \f$ p \f$ have a 0.0 bound. This way, if \f$ i_0 \f$ is the first vertex such that \f$
  * f(v^{i_0}) = 0 \f$, then we can loop increasing by \f$ 2^p \f$ in every iteration.
+ * -# to check that the computed cut is valid we do the following: when there are no fixed variables, we use a gray code
+ * to loop over the vertices of the box domain in order to evaluate the underestimator. When there are fixed variables,
+ * we compute the underestimator for a different function: suppose \f$ f(x,y) = c \Pi_i x_i \Pi_j y_j \f$ is the
+ * function we are underestimating and we fix the \f$ y \f$ variables at their mid point. Let \f$ y_m = \Pi_j mid(y_j)
+ * \f$, then we are actually computing an underestimator for \f$ h(x) = f(x, mid(y)) = c y_m \Pi_i x_i \f$. Let \f$
+ * \alpha x + \beta \f$ be the underestimator and \f$ [y_l, y_u] \f$ be the interval of \f$ \Pi_j y_j \f$. To ensure the
+ * validity of the underestimator, we check whether \f$ \alpha x + \beta \le f(x,y) \f$ for every vertex of the domains
+ * \f$ [x] \f$ and \f$ [y] \f$.  Given a vertex of \f$ x^i \in [x] \f$ we just need to pick the vertex of \f$ [y] \f$
+ * that produces the worst value for \f$ f(x^i, y) \f$. However, since \f$ y \f$ does not appear in the underestimator,
+ * we don't care about the vertex itself, but of the value. This value has to be \f$ y_l \f$ or \f$ y_u \f$. So we
+ * actually just check whether \f$ \alpha x^i + \beta \le \min{ \frac{h(x^i) y_l}{y_m}, \frac{h(x^i) y_u}{y_m} } \f$
  *
  * @todo the solution is a facet if all variables of the primal have positive reduced costs (i.e. the solution is
  * unique). In the dual, this means that there are \f$ n + 1 \f$ variables with positive value. Can we use this or some
@@ -1479,19 +1490,6 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
  * information to maybe solve another to find a facet? How do the polytopes defining the pieces where the convex
  * envelope is linear looks like, i.e, given a point in the interior of a facet of the domain, does the midpoint of the
  * segment joining \f$ x^* \f$ with the center of the domain, always belongs to the interior of one of those polytopes?
- *
- * @todo checking that the computed cut is valid could be done more efficient: when there are no fixed variables, we can
- * use the gray code to loop over the vertices in order to evaluate the underestimator (the evaluation of the function
- * should be available in fval (see computeFacet)). When there are fixed variables, we compute the underestimator for a
- * different function: suppose \f$ f(x,y) = c \Pi_i x_i \Pi_j y_j \f$ is the function we are underestimating and we fix
- * the \f$ y \f$ variables at their mid point. Let \f$ y_m = \Pi_j mid(y_j) \f$, then we are actually computing an
- * underestimator for \f$ h(x) = f(x, mid(y)) = c y_m \Pi_i x_i \f$. Let \f$ \alpha x + \beta \f$ be the underestimator
- * and \f$ [y_l, y_u] \f$ be the interval of \f$ \Pi_j y_j \f$. To ensure the validity of the underestimator, we need to
- * check whether \f$ \alpha x + \beta \le f(x,y) \f$ for every vertex of the domains \f$ [x] \f$ and \f$ [y] \f$.
- * Given a vertex of \f$ x^i \in [x] \f$ we just need to pick the vertex of \f$ [y] \f$ that produces the worst value
- * for \f$ f(x^i, y) \f$. However, since \f$ y \f$ don't appear in the underestimator, we don't care about the vertex
- * itself, but of the value. This value has to be \f$ y_l \f$ or \f$ y_u \f$. So we actually just need to check whether
- * \f$ \alpha x^i + \beta \le \min{ \frac{h(x^i) y_l}{y_m}, \frac{h(x^i) y_u}{y_m} } \f$
  */
 static
 SCIP_RETCODE separatePointProduct(
