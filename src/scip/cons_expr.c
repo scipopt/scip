@@ -3595,6 +3595,7 @@ SCIP_RETCODE createAuxVars(
 
    assert(conss != NULL || nconss == 0);
    assert(nconss >= 0);
+   assert(infeasible != NULL);
 
    createdata.conshdlr = conshdlr;
 
@@ -4550,7 +4551,11 @@ static
 SCIP_DECL_CONSINITLP(consInitlpExpr)
 {
    /* create auxiliary variables */
-   SCIP_CALL( createAuxVars(scip, conshdlr, conss, nconss) );
+   SCIP_CALL( createAuxVars(scip, conshdlr, conss, nconss, infeasible) );
+
+   /* if creating auxiliary variables detected an infeasible (because of bounds), stop initing lp */
+   if( *infeasible )
+      return SCIP_OKAY;
 
    /* call LP initialization callbacks of the expression handlers */
    SCIP_CALL( initSepa(scip, conshdlr, conss, nconss, infeasible) );
