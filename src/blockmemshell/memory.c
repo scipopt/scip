@@ -18,6 +18,7 @@
  * @author Tobias Achterberg
  * @author Gerald Gamrath
  * @author Marc Pfetsch
+ * @author Jakob Witzig
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
