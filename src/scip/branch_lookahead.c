@@ -62,8 +62,9 @@
 #define DEFAULT_STOPBRANCHING                TRUE
 #define DEFAULT_PURGECONSONCUTOFF            TRUE
 #define DEFAULT_FORCEBRANCHING               FALSE
-#define DEFAULT_COMPARISON                   LOOKAHEAD
 #define DEFAULT_ONLYFULLSTRONG               FALSE
+#define DEFAULT_RECURSION                    FALSE
+#define DEFAULT_RECURSIONDEPTH               2
 
 /*
  * Data structures
@@ -126,7 +127,10 @@ typedef struct
                                               *   to -1 for an unbounded list. */
    SCIP_Bool             forcebranching;     /**< Execute the lookahead logic even if only one branching candidate is given.
                                               *   May be used to calculate the score of a single candidate. */
-   SCIP_Bool             onlyfullstrong;     /**< Execute only the first level calculations, so basically mimic a FSB. */
+   SCIP_Bool             recursion;          /**< Should the new recursion approach should be used? */
+   SCIP_Bool             onlyfullstrong;     /**< In case recursion == FALSE, execute only the first level calculations, so
+                                              *   basically mimic a FSB. */
+   int                   recursiondepth;     /**< In case recursion == TRUE, how deep should the recursion go? */
 } CONFIGURATION;
 
 #ifdef SCIP_STATISTIC
@@ -1960,7 +1964,8 @@ SCIP_RETCODE selectVarStart(
    BRANCHINGDECISION*    decision
    )
 {
-   int recursiondepth = 2;
+   CONFIGURATION* config;
+   int recursiondepth;
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandssol;
    SCIP_Real* lpcandsfrac;
@@ -1968,7 +1973,9 @@ SCIP_RETCODE selectVarStart(
    VALIDDOMREDDATA* validbounds;
    SUPPOSEDDOMREDDATA* supposedbounds;
    BINARYVARLIST* binaryvarlist;
-   CONFIGURATION* config;
+
+   config = branchruledata->config;
+   recursiondepth = config->recursiondepth;
 
    SCIP_CALL( copyLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
 
@@ -1978,7 +1985,6 @@ SCIP_RETCODE selectVarStart(
 
    SCIP_CALL( allocBinaryVarList(scip, &binaryvarlist, recursiondepth) );
 
-   config = branchruledata->config;
 
    SCIPstartProbing(scip);
 
@@ -2728,10 +2734,17 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 
       /* execute the main logic */
 #ifdef SCIP_STATISTIC
-      SCIP_CALL( selectVarStart(scip, branchruledata, status, decision) );
-      /*SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata->persistent, TRUE, branchruledata->config, baselpsol, lpcands,
-            lpcandssol, lpcandsfrac, nlpcands, &branchruledata->persistent->restartindex, status, &decision->bestvar, &decision->bestval, &decision->bestdown,
-            &decision->bestdownvalid, &decision->bestup, &decision->bestupvalid, &decision->provedbound, branchruledata->statistics) );*/
+      if( branchruledata->config->recursion )
+      {
+         SCIP_CALL( selectVarStart(scip, branchruledata, status, decision) );
+      }
+      else
+      {
+         SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata->persistent, TRUE, branchruledata->config, baselpsol,
+               lpcands, lpcandssol, lpcandsfrac, nlpcands, &branchruledata->persistent->restartindex, status,
+               &decision->bestvar, &decision->bestval, &decision->bestdown, &decision->bestdownvalid, &decision->bestup,
+               &decision->bestupvalid, &decision->provedbound, branchruledata->statistics) );
+      }
 #else
       SCIP_CALL( selectVarLookaheadBranching(scip, branchruledata->persistent, TRUE, branchruledata->config, baselpsol, lpcands,
             lpcandssol, lpcandsfrac, nlpcands, &branchruledata->persistent->restartindex, status, &decision->bestvar, &decision->bestdown,
@@ -2904,9 +2917,16 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "should lookahead branching be applied even if there is just a single candidate?",
          &branchruledata->config->forcebranching, TRUE, DEFAULT_FORCEBRANCHING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/recursion",
+         "should the new recursion approach be used?",
+         &branchruledata->config->recursion, TRUE, DEFAULT_RECURSION, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/lookahead/onlyfullstrong",
          "should only the first level be evaluated? basically mimics FSB",
          &branchruledata->config->onlyfullstrong, TRUE, DEFAULT_ONLYFULLSTRONG, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/lookahead/recursiondepth",
+         "In case of recursion, how deep should it go?",
+         &branchruledata->config->recursiondepth, TRUE, DEFAULT_RECURSIONDEPTH, 1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
