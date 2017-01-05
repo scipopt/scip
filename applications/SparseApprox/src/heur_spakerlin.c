@@ -37,7 +37,7 @@
 #define HEUR_MAXDEPTH         -1
 #define MAXROUNDS             5
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
-#define HEUR_USESSUBSCIP      FALSE          /**< does the heuristic use a secondary SCIP instance? */
+#define HEUR_USESSUBSCIP      TRUE          /**< does the heuristic use a secondary SCIP instance? */
 
 /*
  * Data structures
@@ -57,7 +57,7 @@ struct SCIP_HeurData
 
 /** Get the bin-var assignment from scip and save it as a matrix */
 static
-void getSolutionValues(
+SCIP_RETCODE getSolutionValues(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             bestsol,            /**< The solution */
    SCIP_Real**           solclustering,      /**< Matrix to save the bin-vars*/
@@ -74,6 +74,7 @@ void getSolutionValues(
    SCIP_VAR**** edgevars;
    int nbins;
    int ncluster;
+   char model;
 
    nbins = SCIPspaGetNrBins(scip);
    ncluster = SCIPspaGetNrCluster(scip);
@@ -81,66 +82,116 @@ void getSolutionValues(
    binvars = SCIPspaGetBinvars(scip);
    edgevars = SCIPspaGetEdgevars(scip);
    assert(binvars != NULL && edgevars != NULL);
+   SCIP_CALL( SCIPgetCharParam(scip, "model", &model) );
 
-   /* Get the bin-variable values from the solution */
-   for( i = 0; i < nbins; ++i )
+   if( model == 's' )
    {
-      for( c = 0; c < ncluster; ++c )
+      /* Get the bin-variable values from the solution */
+      for( i = 0; i < nbins; ++i )
       {
-         binfixed[i][c] = FALSE;
-         if( binvars[i][c] != NULL )
+         for( c = 0; c < ncluster; ++c )
          {
-            if( (SCIPisEQ(scip, SCIPvarGetUbGlobal(binvars[i][c]), SCIPvarGetLbGlobal(binvars[i][c]))) )
+            binfixed[i][c] = FALSE;
+            if( binvars[i][c] != NULL )
             {
-               solclustering[i][c] = SCIPgetSolVal(scip, bestsol, binvars[i][c]);
-               binfixed[i][c] = TRUE;
-               if( SCIPisEQ(scip, solclustering[i][c], 1) )
+               if( (SCIPisEQ(scip, SCIPvarGetUbGlobal(binvars[i][c]), SCIPvarGetLbGlobal(binvars[i][c]))) )
                {
-                  clusterofbin[i] = c;
-                  nbinsincluster[c]++;
-               }
-            }else
-            {
-               SCIP_Real solval = SCIPgetSolVal(scip, bestsol, binvars[i][c]);
-               assert(SCIPisIntegral(scip, solval));
-               solclustering[i][c] = solval;
-               if( SCIPisEQ(scip, solval, 1.0) )
+                  solclustering[i][c] = SCIPgetSolVal(scip, bestsol, binvars[i][c]);
+                  binfixed[i][c] = TRUE;
+                  if( SCIPisEQ(scip, solclustering[i][c], 1) )
+                  {
+                     clusterofbin[i] = c;
+                     nbinsincluster[c]++;
+                  }
+               }else
                {
-                  clusterofbin[i] = c;
-                  nbinsincluster[c]++;
+                  SCIP_Real solval = SCIPgetSolVal(scip, bestsol, binvars[i][c]);
+                  assert(SCIPisIntegral(scip, solval));
+                  solclustering[i][c] = solval;
+                  if( SCIPisEQ(scip, solval, 1.0) )
+                  {
+                     clusterofbin[i] = c;
+                     nbinsincluster[c]++;
+                  }
                }
             }
-         }
-         else
-         {
-            binfixed[i][c] = TRUE;
-            for( k = 0; k < 3; ++k )
+            else
             {
-               if( k != c )
+               binfixed[i][c] = TRUE;
+               for( k = 0; k < 3; ++k )
                {
-                  j = 0;
-                  while((binvars[j][k] == NULL || SCIPvarGetStatus(binvars[j][k]) == SCIP_VARSTATUS_FIXED || j == i))
+                  if( k != c )
                   {
-                     j++;
-                     if ( j == nbins - 1 )
-                        break;
-                  }
-                  if( j < nbins )
-                  {
-                     if( NULL != edgevars[i][j] && NULL != edgevars[i][j][k] && SCIPvarIsActive(edgevars[i][j][k]) )
+                     j = 0;
+                     while((binvars[j][k] == NULL || SCIPvarGetStatus(binvars[j][k]) == SCIP_VARSTATUS_FIXED || j == i))
                      {
-                        solclustering[i][c] = 1;
-                        clusterofbin[i] = c;
-                        nbinsincluster[c]++;
+                        j++;
+                        if ( j == nbins - 1 )
+                           break;
                      }
-                     else
-                        solclustering[i][c] = 0;
+                     if( j < nbins )
+                     {
+                        if( NULL != edgevars[i][j] && NULL != edgevars[i][j][k] && SCIPvarIsActive(edgevars[i][j][k]) )
+                        {
+                           solclustering[i][c] = 1;
+                           clusterofbin[i] = c;
+                           nbinsincluster[c]++;
+                        }
+                        else
+                           solclustering[i][c] = 0;
+                     }
                   }
                }
             }
          }
       }
    }
+   else if ( model == 'e' )
+   {
+      SCIP_Bool processed[nbins];
+      int nextbin;
+      int currentbin;
+      int currentcluster;
+      int nprocessed;
+      nprocessed = 0;
+      currentbin = 0;
+      for( i = 0; i < nbins; ++i )
+      {
+         processed[i] = FALSE;
+      }
+      currentcluster = 0;
+      while( nprocessed < nbins && currentcluster < ncluster )
+      {
+         nextbin = -1;
+         solclustering[currentbin][currentcluster] = 1;
+         processed[currentbin] = TRUE;
+         nprocessed++;
+         for( i = currentbin + 1; i < nbins; ++i )
+         {
+            if( SCIPgetSolVal(scip, bestsol, edgevars[i][currentbin][0]) > 0 )
+            {
+               solclustering[i][currentcluster] = 1;
+               processed[i] = TRUE;
+               nprocessed++;
+            }
+            else if( !processed[i] && nextbin == -1 )
+            {
+               nextbin = i;
+            }
+         }
+         currentcluster++;
+         currentbin = nextbin;
+      }
+      for( i = 0; i < nbins; ++i )
+      {
+         if( !processed[i] )
+            solclustering[i][0] = 1;
+      }
+
+   }
+   else
+      SCIPABORT();
+   return SCIP_OKAY;
 }
 
 /** check if a clustermatrix is a valid paritioning of the bins */
@@ -363,7 +414,7 @@ SCIP_Bool switchNext(
       return FALSE;
    assert(maxbin >= 0 && maxcluster >= 0);
    assert(maxbin < nbins && maxcluster < ncluster);
-   assert(maxboundlocal >= 0);
+   /*assert(maxboundlocal >= 0);*/
    /* assign the exchange and update all saving-structures */
    setBinToCluster(clustering, cmatrix, qmatrix, maxbin, clusterofbin[maxbin], FALSE, nbins, ncluster);
    setBinToCluster(clustering, cmatrix, qmatrix, maxbin, maxcluster, TRUE, nbins, ncluster);
@@ -401,37 +452,41 @@ SCIP_RETCODE assignVars(
    int i,j;
    int c;
    int c2;
+   char model;
    SCIP_VAR* var;
    SCIP_VAR*** binvars;
    SCIP_VAR****  edgevars;
 
    assert(nbins > 0 && ncluster > 0);
 
+   SCIP_CALL( SCIPgetCharParam(scip, "model", &model) );
    binvars = SCIPspaGetBinvars(scip);
    edgevars = SCIPspaGetEdgevars(scip);
 
    for ( c = 0; c < ncluster; ++c )
    {
-      for( c2 = 0; c2 < ncluster; ++c2 )
+      if( model == 's' )
       {
-         qmatrix[c][c2] = 0;
-      }
-      /* set values of binary variables */
-      for ( i = 0; i < nbins; ++i )
-      {
-         if( NULL != binvars[i][c] )
+         for( c2 = 0; c2 < ncluster; ++c2 )
          {
-            if( SCIPvarIsTransformed(binvars[i][c]) )
-               var = binvars[i][c];
-            else
-               var = SCIPvarGetTransVar(binvars[i][c] );
-            /* check if the clusterassignment ist feasible for the variable bounds. If not do not assign the variable */
-            if( var != NULL && SCIPisLE(scip, SCIPvarGetLbGlobal(var), clustering[i][c]) && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
-               SCIP_CALL( SCIPsetSolVal( scip, sol, var, clustering[i][c]) );
-            assert( SCIPisIntegral(scip, clustering[i][c]) );
+            qmatrix[c][c2] = 0;
+         }
+         /* set values of binary variables */
+         for ( i = 0; i < nbins; ++i )
+         {
+            if( NULL != binvars[i][c] )
+            {
+               if( SCIPvarIsTransformed(binvars[i][c]) )
+                  var = binvars[i][c];
+               else
+                  var = SCIPvarGetTransVar(binvars[i][c] );
+               /* check if the clusterassignment ist feasible for the variable bounds. If not do not assign the variable */
+               if( var != NULL && SCIPisLE(scip, SCIPvarGetLbGlobal(var), clustering[i][c]) && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
+                  SCIP_CALL( SCIPsetSolVal( scip, sol, var, clustering[i][c]) );
+               assert( SCIPisIntegral(scip, clustering[i][c]) );
+            }
          }
       }
-
       /* set the value for the edgevariables */
       for( i = 0; i < nbins; ++i )
       {
@@ -666,7 +721,7 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
       SCIPallocClearMemoryArray(scip, &binfixed[i], ncluster);
    }
 
-   getSolutionValues(scip, bestsol, solclustering, binfixed, clusterofbin, nbinsincluster);
+   SCIP_CALL( getSolutionValues(scip, bestsol, solclustering, binfixed, clusterofbin, nbinsincluster) );
 
    if( !isPartition(scip, solclustering, nbins, ncluster) )
       heurpossible = FALSE;

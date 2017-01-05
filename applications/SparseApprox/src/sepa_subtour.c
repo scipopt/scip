@@ -29,12 +29,12 @@
 
 #define SEPA_NAME              "subtour"
 #define SEPA_DESC              "separator that elininates subtours of length smaller than |NCluster| in cycle-clusterign application"
-#define SEPA_PRIORITY         536870911
+#define SEPA_PRIORITY              1000
 #define SEPA_FREQ                     1
 #define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_USESSUBSCIP          FALSE      /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE      /**< should separation method be delayed, if other separators found cuts? */
-#define MAXROUNDS                     5
+#define MAXROUNDS                    10
 
 /** Consider three bins i,j,k. If there is a way from i to j and j and k are int the same cluster, then i and k can be also considered adjacent.
  *  This method adds new arcs to the capacity-graph based on this observation.
