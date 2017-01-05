@@ -97,7 +97,8 @@ void freeValidBoundData(
 
 SCIP_RETCODE allocateBranchingDecision(
    SCIP*                 scip,
-   BRANCHINGDECISION**   decision
+   BRANCHINGDECISION**   decision,
+   SCIP_Real             lpobjval
 );
 
 SCIP_Bool isBranchingDecisionValid(

@@ -394,13 +394,15 @@ SCIP_RETCODE addDomainReductions(
 
 SCIP_RETCODE allocateBranchingDecision(
    SCIP*                 scip,
-   BRANCHINGDECISION**   decision
+   BRANCHINGDECISION**   decision,
+   SCIP_Real             lpobjval
    )
 {
    SCIPallocBuffer(scip, decision);
    (*decision)->bestvar = NULL;
    (*decision)->bestdownvalid = FALSE;
    (*decision)->bestupvalid = FALSE;
+   (*decision)->provedbound = lpobjval;
 
    return SCIP_OKAY;
 }
