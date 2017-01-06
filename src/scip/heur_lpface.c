@@ -80,7 +80,6 @@ struct SCIP_HeurData
    SCIP_Longint          usednodes;          /**< nodes already used by lpface in earlier calls                  */
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem     */
 
-   SCIP_Longint          nwaitingnodes;      /**< number of nodes without incumbent change heuristic should wait    */
    unsigned int          nfailures;          /**< number of failures since last successful call                     */
    SCIP_Longint          nextnodenumber;     /**< number of nodes at which lpface should be called the next time */
    SCIP_Real             lastlpobjinfeas;    /**< last LP objective where the sub-MIP was run to proven infeasibility */
@@ -316,7 +315,7 @@ SCIP_RETCODE setupSubproblem(
 
    for( i = 0; i < nvars; ++i)
    {
-      if( ! SCIPisFeasZero(subscip, SCIPvarGetObj(vars[i])) )
+      if( ! SCIPisZero(subscip, SCIPvarGetObj(vars[i])) )
       {
          SCIP_CALL( SCIPaddCoefLinear(subscip, origobjcons, subvars[i], SCIPvarGetObj(vars[i])) );
 #ifndef NDEBUG
@@ -324,10 +323,10 @@ SCIP_RETCODE setupSubproblem(
 #endif
       }
    }
+   assert(nobjvars == SCIPgetNObjVars(scip));
 
    SCIP_CALL( SCIPaddCons(subscip, origobjcons) );
    SCIP_CALL( SCIPreleaseCons(subscip, &origobjcons) );
-   assert(nobjvars == SCIPgetNObjVars(scip));
 
    return SCIP_OKAY;
 }
@@ -495,8 +494,7 @@ SCIP_RETCODE setSubscipLimits(
 static
 SCIP_RETCODE setSubscipParameters(
    SCIP*                 scip,               /**< original SCIP data structure */
-   SCIP*                 subscip,            /**< data structure of the sub-problem */
-   SCIP_HEURDATA*        heurdata            /**< heuristic data structure */
+   SCIP*                 subscip             /**< data structure of the sub-problem */
    )
 {
 
@@ -843,7 +841,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolLpface)
    if( heurdata->subscipdata->subscip != NULL )
    {
       /* free kept data structures first */
-      subscipdataFreeSubscip(scip, heurdata->subscipdata);
+      SCIP_CALL( subscipdataFreeSubscip(scip, heurdata->subscipdata) );
 
    }
 
@@ -887,7 +885,7 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    SCIP_EVENTHDLR* eventhdlr = NULL;         /* event handler for LP events */
 
    SCIP_VAR** vars;                          /* original problem's variables */
-   SCIP_VAR** subvars = NULL;                /* subproblem's variables */
+   SCIP_VAR** subvars;                      /* subproblem's variables */
 
    SCIP_Real focusnodelb;
    SCIP_Real rootlb;
@@ -925,18 +923,24 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
+   /* LP face requires that the LP defines a valid lower bound for the current node */
+   if( ! SCIPisLPRelax(scip) || ! SCIPallColsInLP(scip) )
+      return SCIP_OKAY;
+
    assert(SCIPgetCurrentNode(scip) != NULL);
    focusnodelb = SCIPgetNodeLowerbound(scip, SCIPgetCurrentNode(scip));
-   assert(SCIPisGE(scip, focusnodelb, SCIPgetLPObjval(scip)));
 
-   /* delay heuristic if the active search tree path is not deep enough */
-   if( SCIPgetDepth(scip) < heurdata->minpathlen - 1 )
-      return SCIP_OKAY;
+   /* from the checked conditions, the LP objective should be a valid lower bound for the current node */
+   assert(SCIPisGE(scip, focusnodelb, SCIPgetLPObjval(scip)));
 
    /* do not run if the current focus node already has a lower bound higher than the LP value at the node,
     * for example, due to strong branching
     */
    if( SCIPisGT(scip, focusnodelb, SCIPgetLPObjval(scip)) )
+      return SCIP_OKAY;
+
+   /* delay heuristic if the active search tree path is not deep enough */
+   if( SCIPgetDepth(scip) < heurdata->minpathlen - 1 )
       return SCIP_OKAY;
 
    /* only run at lower bound defining nodes */
@@ -1080,7 +1084,7 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
          }
       }
 
-      /* we use a block memory array here because we might want to keep the array for several runs */
+      /* allocate memory to hold sub-SCIP variables */
       SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
       /* fill subvars array with mapping from original variables and set the objective coefficient to the desired value */
@@ -1127,7 +1131,7 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       }
 
       /* set up sub-SCIP parameters */
-      SCIP_CALL( setSubscipParameters(scip, subscip, heurdata) );
+      SCIP_CALL( setSubscipParameters(scip, subscip) );
    }
 
    /* determine node, memory, and time limits for the sub-SCIP. Both node and time limit change with every call to
@@ -1239,8 +1243,6 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       else
       {
          SCIP_CALL( subscipdataFreeSubscip(scip, heurdata->subscipdata) );
-         subscip = NULL;
-         subvars = NULL;
       }
 
       subscipdataReset(heurdata->subscipdata);

@@ -1845,10 +1845,10 @@ SCIP_Bool SCIPsetIsSumRelGE(
 /** prints a debugging message if SCIP_DEBUG flag is set */
 #ifdef SCIP_DEBUG
 #define SCIPsetDebugMsg(set, ...)       SCIPsetPrintDebugMessage(set, __FILE__, __LINE__, __VA_ARGS__)
-#define SCIPsetDebugMsgPrint(scip, ...) SCIPsetDebugMessagePrint(scip, __VA_ARGS__)
+#define SCIPsetDebugMsgPrint(set, ...)  SCIPsetDebugMessagePrint(set, __VA_ARGS__)
 #else
 #define SCIPsetDebugMsg(set, ...)       while ( FALSE ) SCIPsetPrintDebugMessage(set, __FILE__, __LINE__, __VA_ARGS__)
-#define SCIPsetDebugMsgPrint(scip, ...) while ( FALSE ) SCIPsetDebugMessagePrint(scip, __VA_ARGS__)
+#define SCIPsetDebugMsgPrint(set, ...)  while ( FALSE ) SCIPsetDebugMessagePrint(set, __VA_ARGS__)
 #endif
 
 #else

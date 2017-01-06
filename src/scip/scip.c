@@ -577,7 +577,7 @@ int SCIPminorVersion(
    void
    )
 {
-   return (SCIP_VERSION/10) % 10;
+   return (SCIP_VERSION/10) % 10; /*lint !e778*/
 }
 
 /** returns SCIP technical version
@@ -930,7 +930,7 @@ SCIP_RETCODE SCIPprintStage(
       SCIP_CALL( SCIPprintStatus(scip, file) );
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "]");
 
-      if( scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, SCIPgetObjsense(scip) * getPrimalbound(scip))  )
+      if( scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, (int)SCIPgetObjsense(scip) * getPrimalbound(scip))  )
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " (objective limit reached)");
 
       break;
@@ -4178,16 +4178,16 @@ SCIP_RETCODE SCIPcopyLimits(
    SCIP_CALL( SCIPsetRealParam(targetscip, "limits/absgap", 0.0) );
    SCIP_CALL( SCIPsetIntParam(targetscip, "limits/bestsol", -1) );
    SCIP_CALL( SCIPsetRealParam(targetscip, "limits/gap", 0.0) );
-   SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/nodes", -1) );
+   SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/nodes", -1LL) );
    SCIP_CALL( SCIPsetIntParam(targetscip, "limits/restarts", -1) );
    SCIP_CALL( SCIPsetIntParam(targetscip, "limits/solutions", -1) );
-   SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/stallnodes", -1) );
-   SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1) );
+   SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/stallnodes", -1LL) );
+   SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1LL) );
 
    /* the soft time limit event handler might not be included so we need to check if the parameter exists */
    if( SCIPgetParam(targetscip, "limits/softtime") != NULL )
    {
-      SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1) );
+      SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1LL) );
    }
 
    return SCIP_OKAY;
@@ -10816,7 +10816,7 @@ SCIP_RETCODE SCIPchgReoptObjective(
    origvars = scip->origprob->vars;
    norigvars = scip->origprob->nvars;
 
-#if SCIP_MORE_DEBUG
+#ifdef SCIP_MORE_DEBUG
    SCIPdebugMsg(scip, "objective function need to be set:\n");
    for( i = 0; i < nvars; i++ )
    {
@@ -10868,7 +10868,7 @@ SCIP_RETCODE SCIPchgReoptObjective(
       SCIP_CALL( SCIPaddVarObj(scip, vars[i], objscalar * coefs[i]) );
    }
 
-#if SCIP_MORE_DEBUG
+#ifdef SCIP_MORE_DEBUG
    SCIPdebugMsg(scip, "new objective function:\n");
    for( i = 0; i < norigvars; i++ )
    {
@@ -13868,7 +13868,8 @@ SCIP_RETCODE SCIPtransformProb(
       SCIP_Bool approxactivenonzeros;
 
       /* determine number of non-zeros */
-      maxnonzeros = MAX(((SCIP_Real)SCIPgetNConss(scip)) * SCIPgetNVars(scip), 1.0);
+      maxnonzeros = (SCIP_Real)SCIPgetNConss(scip) * SCIPgetNVars(scip);
+      maxnonzeros = MAX(maxnonzeros, 1.0);
       SCIP_CALL( calcNonZeros(scip, &nchecknonzeros, &nactivenonzeros, &approxchecknonzeros, &approxactivenonzeros) );
 
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
@@ -14750,7 +14751,8 @@ SCIP_RETCODE presolve(
       }
 
       /* determine number of non-zeros */
-      maxnonzeros = MAX(((SCIP_Real)SCIPgetNConss(scip)) * SCIPgetNVars(scip), 1.0);
+      maxnonzeros = (SCIP_Real)SCIPgetNConss(scip) * SCIPgetNVars(scip);
+      maxnonzeros = MAX(maxnonzeros, 1.0);
       SCIP_CALL( calcNonZeros(scip, &nchecknonzeros, &nactivenonzeros, &approxchecknonzeros, &approxactivenonzeros) );
       scip->stat->nnz = nactivenonzeros;
 
@@ -15296,6 +15298,10 @@ SCIP_RETCODE freeTransform(
       SCIP_CALL( SCIPreoptReset(scip->reopt, scip->set, scip->mem->probmem) );
    }
 
+#if 0
+   /* TODO on some nonlinear instances it happens that a lock is removed that was not added maybe due to reformulations?)
+    *      not removing the locks fixes the issue
+    */
    /* remove var locks set to avoid dual reductions */
    if( scip->set->reopt_enable || !scip->set->misc_allowdualreds )
    {
@@ -15307,6 +15313,7 @@ SCIP_RETCODE freeTransform(
          SCIP_CALL( SCIPaddVarLocks(scip, scip->transprob->vars[v], -1, -1) );
       }
    }
+#endif
 
    /* clean the conflict store
     *
@@ -16870,8 +16877,6 @@ SCIP_RETCODE SCIPfreeReoptSolve(
       SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
       return SCIP_INVALIDCALL;
    }  /*lint !e788*/
-
-   return SCIP_OKAY;
 }
 
 /** frees all solution process data including presolving and transformed problem, only original problem is kept
@@ -24104,7 +24109,7 @@ SCIP_RETCODE relabelOrderConsistent(
          {
             ++classidx;
             localclassidx = classidx;
-            SCIPhashmapInsert(classidx2newlabel, (void*)(size_t)currentlabel, (void *)(size_t)classidx);
+            SCIP_CALL( SCIPhashmapInsert(classidx2newlabel, (void*)(size_t)currentlabel, (void *)(size_t)classidx) );
          }
          else
          {
@@ -33544,8 +33549,8 @@ SCIP_RETCODE SCIPcreateConvexNlp(
    int nvars;
    SCIP_Real* lbs;
    SCIP_Real* ubs;
-   SCIP_Real* objvals;
-   int* objinds;
+   SCIP_Real* objvals = NULL;
+   int* objinds = NULL;
    const char** varnames;
    int nobjinds;
    int nconss;
@@ -33609,7 +33614,7 @@ SCIP_RETCODE SCIPcreateConvexNlp(
          objinds[nobjinds] = i;
          ++nobjinds;
       }
-  }
+   }
 
    /* add variables */
    SCIP_CALL( SCIPnlpiAddVars(nlpi, nlpiprob, nvars, lbs, ubs, varnames) );
@@ -33641,8 +33646,8 @@ SCIP_RETCODE SCIPcreateConvexNlp(
    exprtrees[nconss] = NULL;
    exprvaridxs[nconss] = NULL;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &lininds[nconss], nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &linvals[nconss], nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lininds[nconss], nvars) ); /*lint !e866*/
+   SCIP_CALL( SCIPallocBufferArray(scip, &linvals[nconss], nvars) ); /*lint !e866*/
 
    for( i = 0; i < nvars; ++i )
    {
@@ -33699,8 +33704,8 @@ SCIP_RETCODE SCIPcreateConvexNlp(
 
          nlininds[nconss] = SCIPnlrowGetNLinearVars(nlrows[i]);
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &lininds[nconss], nlininds[nconss]) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &linvals[nconss], nlininds[nconss]) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &lininds[nconss], nlininds[nconss]) ); /*lint !e866*/
+         SCIP_CALL( SCIPallocBufferArray(scip, &linvals[nconss], nlininds[nconss]) ); /*lint !e866*/
 
          for( k = 0; k < nlininds[nconss]; ++k )
          {
@@ -33722,7 +33727,7 @@ SCIP_RETCODE SCIPcreateConvexNlp(
          SCIP_VAR* var2;
 
          nquadelems[nconss] = SCIPnlrowGetNQuadElems(nlrows[i]);
-         SCIP_CALL( SCIPallocBufferArray(scip, &quadelems[nconss], nquadelems[nconss]) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &quadelems[nconss], nquadelems[nconss]) ); /*lint !e866*/
 
          for( k = 0; k < nquadelems[nconss]; ++k )
          {
@@ -33760,7 +33765,7 @@ SCIP_RETCODE SCIPcreateConvexNlp(
           */
          exprtrees[nconss] = SCIPnlrowGetExprtree(nlrows[i]);
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridxs[nconss], SCIPexprtreeGetNVars(exprtrees[nconss])) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridxs[nconss], SCIPexprtreeGetNVars(exprtrees[nconss])) ); /*lint !e866*/
 
          for( k = 0; k < SCIPexprtreeGetNVars(exprtrees[nconss]); ++k )
          {
@@ -33899,7 +33904,7 @@ SCIP_RETCODE SCIPaddConvexNlpRows(
    assert(nlpi != NULL);
    assert(nlpiprob != NULL);
    assert(var2idx != NULL);
-   assert(rows != NULL || nrows == 0);
+   assert(nrows == 0 || rows != NULL);
 
    SCIPdebugMsg(scip, "call SCIPaddConvexNlpRowsNlobbt() with %d rows\n", nrows);
 
@@ -33927,7 +33932,7 @@ SCIP_RETCODE SCIPaddConvexNlpRows(
       linvals[i] = SCIProwGetVals(rows[i]);
       lininds[i] = NULL;
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &lininds[i], SCIProwGetNNonz(rows[i])) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &lininds[i], SCIProwGetNNonz(rows[i])) ); /*lint !e866*/
 
       for( k = 0; k < SCIProwGetNNonz(rows[i]); ++k )
       {
@@ -41173,7 +41178,6 @@ void SCIPsetFocusnodeLP(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
 SCIP_RETCODE SCIPconstructSyncstore(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -41239,7 +41243,6 @@ SCIP_RETCODE SCIPfreeSyncstore(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
 SCIP_SYNCSTORE* SCIPgetSyncstore(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -41524,15 +41527,24 @@ SCIP_Longint SCIPgetNDelayedCutoffs(
  *  @return the total number of LPs solved so far
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
  */
 SCIP_Longint SCIPgetNLPs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPs", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
    return scip->stat->nlps;
 }

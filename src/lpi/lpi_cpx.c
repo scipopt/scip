@@ -509,8 +509,14 @@ SCIP_RETCODE checkParameterValues(
 
    SCIP_CALL( getParameterValues(lpi, &par) );
    for( i = 0; i < NUMINTPARAM; ++i )
-      assert(lpi->curparam.intparval[i] == par.intparval[i]
-         || (lpi->curparam.intparval[i] == CPX_INT_MAX && par.intparval[i] >= CPX_INT_MAX));
+   {
+#if (CPX_VERSION == 12070000)
+      /* due to a bug in CPLEX 12.7.0, we need to disable scaling for this version */
+      if ( intparam[i] != CPX_PARAM_SCAIND )
+#endif
+         assert(lpi->curparam.intparval[i] == par.intparval[i]
+            || (lpi->curparam.intparval[i] == CPX_INT_MAX && par.intparval[i] >= CPX_INT_MAX));
+   }
    for( i = 0; i < NUMDBLPARAM; ++i )
       assert(MAX(lpi->curparam.dblparval[i], dblparammin[i]) == par.dblparval[i]); /*lint !e777*/
 #endif
@@ -540,7 +546,13 @@ SCIP_RETCODE setParameterValues(
          SCIPdebugMessage("setting CPLEX int parameter %d from %d to %d\n",
             intparam[i], lpi->curparam.intparval[i], cpxparam->intparval[i]);
          lpi->curparam.intparval[i] = cpxparam->intparval[i];
-         CHECK_ZERO( lpi->messagehdlr, CPXsetintparam(lpi->cpxenv, intparam[i], lpi->curparam.intparval[i]) );
+#if (CPX_VERSION == 12070000)
+         /* due to a bug in CPLEX 12.7.0, we need to disable scaling for this version */
+         if ( intparam[i] != CPX_PARAM_SCAIND )
+#endif
+         {
+            CHECK_ZERO( lpi->messagehdlr, CPXsetintparam(lpi->cpxenv, intparam[i], lpi->curparam.intparval[i]) );
+         }
       }
    }
    for( i = 0; i < NUMDBLPARAM; ++i )
@@ -1080,6 +1092,11 @@ SCIP_RETCODE SCIPlpiCreate(
    CHECK_ZERO( messagehdlr, CPXsetintparam((*lpi)->cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
 #endif
 
+#if (CPX_VERSION == 12070000)
+   /* due to a bug in CPLEX 12.7.0, we need to disable scaling for this version */
+   CHECK_ZERO( messagehdlr, CPXsetintparam((*lpi)->cpxenv, CPX_PARAM_SCAIND, -1) );
+#endif
+
    /* get default parameter values */
    SCIP_CALL( getParameterValues((*lpi), &((*lpi)->defparam)) );
    copyParameterValues(&((*lpi)->curparam), &((*lpi)->defparam));
@@ -1372,7 +1389,7 @@ SCIP_RETCODE SCIPlpiAddRows(
 #if (CPX_VERSION <= 1100)
       if( lpi->rngfound == FALSE )
       {
-         SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_SCALING, FALSE) );
+         SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_SCALING, 0) );
          lpi->rngfound = TRUE;
       }
 #endif
@@ -1470,6 +1487,9 @@ SCIP_RETCODE SCIPlpiChgBounds(
    assert(lpi->cpxenv != NULL);
    assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
+   if ( ncols <= 0 )
+      return SCIP_OKAY;
+
    SCIPdebugMessage("changing %d bounds in CPLEX\n", ncols);
 
    for( i = 0; i < ncols; ++i )
@@ -1530,6 +1550,9 @@ SCIP_RETCODE SCIPlpiChgSides(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
+
+   if ( nrows <= 0 )
+      return SCIP_OKAY;
 
    SCIPdebugMessage("changing %d sides in CPLEX\n", nrows);
 
@@ -1608,8 +1631,8 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 SCIP_RETCODE SCIPlpiChgObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
-   int*                  ind,                /**< column indices to change objective value for */
-   SCIP_Real*            obj                 /**< new objective values for columns */
+   const int*            ind,                /**< column indices to change objective value for */
+   const SCIP_Real*      obj                 /**< new objective values for columns */
    )
 {
    assert(lpi != NULL);
@@ -2159,6 +2182,15 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    invalidateSolution(lpi);
 
+#if (CPX_VERSION == 12070000)
+   {
+      int scaling;
+      /* due to a bug in CPLEX 12.7.0, we need to disable scaling for this version */
+      CHECK_ZERO( lpi->messagehdlr, CPXgetintparam(lpi->cpxenv, CPX_PARAM_SCAIND, &scaling) );
+      assert( scaling == -1 );
+   }
+#endif
+
    setIntParam(lpi, CPX_PARAM_ADVIND, lpi->fromscratch || lpi->clearstate ? CPX_OFF : CPX_ON);
    lpi->clearstate = FALSE;
 
@@ -2268,6 +2300,15 @@ SCIP_RETCODE SCIPlpiSolveDual(
    lpi->clearstate = FALSE;
 
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
+
+#if (CPX_VERSION == 12070000)
+   {
+      int scaling;
+      /* due to a bug in CPLEX 12.7.0 we need to disable scaling */
+      CHECK_ZERO( lpi->messagehdlr, CPXgetintparam(lpi->cpxenv, CPX_PARAM_SCAIND, &scaling) );
+      assert( scaling == -1 );
+   }
+#endif
 
    SCIPdebugMessage("calling CPXdualopt()\n");
    retval = CPXdualopt(lpi->cpxenv, lpi->cpxlp);
@@ -3410,8 +3451,8 @@ SCIP_RETCODE SCIPlpiGetBase(
 /** sets current basis status for columns and rows */
 SCIP_RETCODE SCIPlpiSetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  cstat,              /**< array with column basis status */
-   int*                  rstat               /**< array with row basis status */
+   const int*            cstat,              /**< array with column basis status */
+   const int*            rstat               /**< array with row basis status */
    )
 {
    int i;
@@ -3833,7 +3874,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
    )
 {
    int lpncols;
@@ -4046,7 +4087,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
 {
    int lpnrows;
@@ -4136,7 +4177,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       if( lpi->rngfound )
          return SCIP_PARAMETERUNKNOWN;
 #endif
-      *ival = (getIntParam(lpi, CPX_PARAM_SCAIND) == 0);
+      *ival = getIntParam(lpi, CPX_PARAM_SCAIND) + 1;
       break;
    case SCIP_LPPAR_PRESOLVING:
       *ival = (getIntParam(lpi, CPX_PARAM_PREIND) == CPX_ON);
@@ -4223,12 +4264,12 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
 #endif
    case SCIP_LPPAR_SCALING:
-      assert(ival == TRUE || ival == FALSE);
+      assert(0 <= ival && ival <= 2);
 #if (CPX_VERSION <= 1100)
       if( lpi->rngfound )
          return SCIP_PARAMETERUNKNOWN;
 #endif
-      setIntParam(lpi, CPX_PARAM_SCAIND, ival == TRUE ? 0 : -1);
+      setIntParam(lpi, CPX_PARAM_SCAIND, ival - 1);
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);

@@ -107,9 +107,7 @@
 
 /* Conflict Analysis (conflict graph) */
 
-#define SCIP_DEFAULT_CONF_ENABLECONFGRAPH  TRUE /**< analyze the conflict graph */
 #define SCIP_DEFAULT_CONF_MAXSTORESIZE    10000 /**< maximal size of the conflict pool */
-#define SCIP_DEFAULT_CONF_CLEANUPFREQ         5 /**< frequency to clean up the storage if it is not full */
 #define SCIP_DEFAULT_CONF_RECONVLEVELS       -1 /**< number of depth levels up to which UIP reconvergence constraints are
                                                  *   generated (-1: generate reconvergence constraints in all depth levels) */
 #define SCIP_DEFAULT_CONF_CLEANBNDDEPEND   TRUE /**< should conflicts based on an old cutoff bound removed? */
@@ -148,7 +146,6 @@
 
 /* Conflict Analysis (dual ray) */
 
-#define SCIP_DEFAULT_CONF_ENABLEDUALRAY   FALSE /**< enable dual ray analyzes */
 #define SCIP_DEFAULT_CONF_APPLYMIR        FALSE /**< apply MIR function to dual rays */
 #define SCIP_DEFAULT_CONF_PREFERMIR        TRUE /**< prefer a ray after applying the MIR function if the proof is still
                                                   *   valid, use both rays otherwise */
@@ -226,7 +223,7 @@
 #define SCIP_DEFAULT_LP_CHECKPRIMFEAS      TRUE /**< should LP solutions be checked for primal feasibility to resolve LP at numerical troubles? */
 #define SCIP_DEFAULT_LP_CHECKDUALFEAS      TRUE /**< should LP solutions be checked for dual feasibility to resolve LP at numerical troubles? */
 #define SCIP_DEFAULT_LP_FASTMIP               1 /**< should FASTMIP setting of LP solver be used? */
-#define SCIP_DEFAULT_LP_SCALING            TRUE /**< should scaling of LP solver be used? */
+#define SCIP_DEFAULT_LP_SCALING               1 /**< LP scaling (0: none, 1: normal, 2: aggressive) */
 #define SCIP_DEFAULT_LP_PRESOLVING         TRUE /**< should presolving of LP solver be used? */
 #define SCIP_DEFAULT_LP_LEXDUALALGO       FALSE /**< should the dual lexicographic algorithm be used? */
 #define SCIP_DEFAULT_LP_LEXDUALROOTONLY    TRUE /**< should the lexicographic dual algorithm be applied only at the root node */
@@ -1616,10 +1613,10 @@ SCIP_RETCODE SCIPsetCreate(
          "which FASTMIP setting of LP solver should be used? 0: off, 1: low",
          &(*set)->lp_fastmip, TRUE, SCIP_DEFAULT_LP_FASTMIP, 0, 1,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/scaling",
-         "should scaling of LP solver be used?",
-         &(*set)->lp_scaling, TRUE, SCIP_DEFAULT_LP_SCALING,
+         "LP scaling (0: none, 1: normal, 2: aggressive)",
+         &(*set)->lp_scaling, TRUE, SCIP_DEFAULT_LP_SCALING, 0, 2,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "lp/presolving",

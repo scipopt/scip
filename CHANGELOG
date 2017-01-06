@@ -53,6 +53,7 @@ features:
 - added method SCIPcheckCopyLimits() which can be used to check that enough time and memory is left to run a sub-SCIP after
   subtracting time and memory used by the main-SCIP, and SCIPcopyLimits() which copies these limits accordingly and disables
   all other limits (need to be set by the plugin, if needed)
+- changed handling of coupling constraints in cons_indicator; the cuts will not be added to the pool, but are separated by default
 
 parameters:
 - new parameter "branching/sumadjustweight" to adjust branching scores by adding a sum epsilon in order to keep score differences
@@ -161,8 +162,10 @@ interface:
 - add missing functions SCIPisIntParamValid() and SCIPisRealParamValid() to scip.c/h
 - Setting a parameter to a non-valid value now produces an error message instead of a warning.
 - add SCIPcreateConvexNlp, SCIPupdateConvexNlp, and SCIPaddConvexNlpRows to create and update a convex nonlinear relaxation
+- the parameters of SCIPlpiChgObj(), SCIPlpiSetBase(), SCIPlpiSetState(), SCIPlpiSetNorms() have been declared as const
 
 fixed bugs:
+- correct handling of implicit integer variables with fractional solution value in simplerounding heuristic
 - avoid numerically troublesome aggregations
 - fixed bug in event system: bound change events of the new focus node must be processed, even if the bound
   is the same as at the last focus node
@@ -171,6 +174,7 @@ fixed bugs:
 - fixed bug with sorting of propagators in presolving: the order can be changed by calling probing; thus, there is a copy of the
   propagators, which is sorted by presolving priority
 - avoid numerically unstable (multi-)aggregations
+- added missing capturing and releasing mechanism in genvbounds propagator
 
 misc:
 - dropped support for Ipopt < 3.11

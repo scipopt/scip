@@ -2528,7 +2528,10 @@ void SCIPintervalLog(
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand));
 
-   if( operand.sup < 0.0 )
+   /* if operand.sup == 0.0, we could return -inf in resultant->sup, but that
+    * seems of little use and just creates problems somewhere else, e.g., #1230
+    */
+   if( operand.sup <= 0.0 )
    {
       SCIPintervalSetEmpty(resultant);
       return;
@@ -2536,12 +2539,7 @@ void SCIPintervalLog(
 
    if( operand.inf == operand.sup )  /*lint !e777 */
    {
-      if( operand.sup <= 0.0 )
-      {
-         resultant->inf = -infinity;
-         resultant->sup = -infinity;
-      }
-      else if( operand.sup == 1.0 )
+      if( operand.sup == 1.0 )
       {
          resultant->inf = 0.0;
          resultant->sup = 0.0;
@@ -2580,10 +2578,6 @@ void SCIPintervalLog(
    else if( operand.sup == 1.0 )
    {
       resultant->sup = 0.0;
-   }
-   else if( operand.sup == 0.0 )
-   {
-      resultant->sup = -infinity;
    }
    else
    {
@@ -2685,7 +2679,7 @@ void SCIPintervalSin(
       modinf += 2*M_PI;
    modsup = modinf + intervallen;
 
-   for( b = 0; TRUE; ++b )
+   for( b = 0; ; ++b )
    {
       if( modinf <= extremepoints[b] )
       {
@@ -2729,9 +2723,9 @@ void SCIPintervalSin(
     * so extend the computed interval slightly to increase the chance that it will contain the complete sin(operand)
     */
    if( resultant->inf > -1.0 )
-      resultant->inf = MAX(-1.0, resultant->inf - 1e-10 * REALABS(resultant->inf));
+      resultant->inf = MAX(-1.0, resultant->inf - 1e-10 * REALABS(resultant->inf));  /*lint !e666*/
    if( resultant->sup <  1.0 )
-      resultant->sup = MIN( 1.0, resultant->sup + 1e-10 * REALABS(resultant->sup));
+      resultant->sup = MIN( 1.0, resultant->sup + 1e-10 * REALABS(resultant->sup));  /*lint !e666*/
 
    assert(resultant->inf <= resultant->sup);
 }
@@ -2771,7 +2765,7 @@ void SCIPintervalCos(
       modinf += 2*M_PI;
    modsup = modinf + intervallen;
 
-   for( b = 0; TRUE; ++b )
+   for( b = 0; ; ++b )
    {
       if( modinf <= extremepoints[b] )
       {
@@ -2815,9 +2809,9 @@ void SCIPintervalCos(
     * so extend the computed interval slightly to increase the chance that it will contain the complete cos(operand)
     */
    if( resultant->inf > -1.0 )
-      resultant->inf = MAX(-1.0, resultant->inf - 1e-10 * REALABS(resultant->inf));
+      resultant->inf = MAX(-1.0, resultant->inf - 1e-10 * REALABS(resultant->inf));  /*lint !e666*/
    if( resultant->sup <  1.0 )
-      resultant->sup = MIN( 1.0, resultant->sup + 1e-10 * REALABS(resultant->sup));
+      resultant->sup = MIN( 1.0, resultant->sup + 1e-10 * REALABS(resultant->sup));  /*lint !e666*/
 
    assert(resultant->inf <= resultant->sup);
 }

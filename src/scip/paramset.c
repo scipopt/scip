@@ -148,7 +148,7 @@ SCIP_RETCODE paramTestReal(
 
    if( value < param->data.realparam.minvalue || value > param->data.realparam.maxvalue )
    {
-      SCIPerrorMessage("Invalid real parameter value <%.15g> for parameter <%s>. Must be in range [%.15g,%.15g].\n",
+      SCIPerrorMessage("Invalid value <%.15g> for real parameter <%s>. Must be in range [%.15g,%.15g].\n",
          value, param->name, param->data.realparam.minvalue, param->data.realparam.maxvalue);
       return SCIP_PARAMETERWRONGVAL;
    }
@@ -169,7 +169,7 @@ SCIP_RETCODE paramTestChar(
 
    if( value == '\b' || value == '\f' || value == '\n' || value == '\r' || value == '\v' )
    {
-      SCIPerrorMessage("Invalid char parameter value <%x>.\n", (int)value);
+      SCIPerrorMessage("Invalid value <%x> for char parameter <%s>.\n", (int)value, param->name);
       return SCIP_PARAMETERWRONGVAL;
    }
 
@@ -183,8 +183,8 @@ SCIP_RETCODE paramTestChar(
 
       if( *c != value )
       {
-         SCIPerrorMessage("Invalid char parameter value <%c>. Must be in set {%s}.\n",
-            value, param->data.charparam.allowedvalues);
+         SCIPerrorMessage("Invalid value <%c> for char parameter <%s>. Must be in set {%s}.\n",
+            value, param->name, param->data.charparam.allowedvalues);
          return SCIP_PARAMETERWRONGVAL;
       }
    }
@@ -215,7 +215,7 @@ SCIP_RETCODE paramTestString(
    {
       if( value[i] == '\b' || value[i] == '\f' || value[i] == '\n' || value[i] == '\r' || value[i] == '\v' )
       {
-         SCIPerrorMessage("Invalid character <%x> in string parameter at position %d.\n", (int)value[i], i);
+         SCIPerrorMessage("Invalid character <%x> in string parameter <%s> at position %d.\n", (int)value[i], param->name, i);
          return SCIP_PARAMETERWRONGVAL;
       }
    }
@@ -4266,7 +4266,7 @@ SCIP_Bool SCIPparamIsValidReal(
 /** checks whether value of char parameter is valid */
 SCIP_Bool SCIPparamIsValidChar(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_Real             value               /**< value to check */
+   const char            value               /**< value to check */
    )
 {
    assert( param != NULL );

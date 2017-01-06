@@ -237,7 +237,6 @@ SCIP_RETCODE SCIPincludePropSync(
 
 
 /** adds a boundchange to the sync propagator */
-EXTERN
 SCIP_RETCODE SCIPpropSyncAddBndchg(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROP*            prop,               /**< sync propagator */

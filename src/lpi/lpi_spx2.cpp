@@ -185,8 +185,8 @@ class SPxSCIP : public SoPlex
    bool                  _lpinfo;
    bool                  _fromscratch;
    char*                 _probname;
-   SPxSolver::VarStatus* _colStat;          /**< column basis status used for strong branching */
-   SPxSolver::VarStatus* _rowStat;          /**< row basis status used for strong branching */
+   DataArray<SPxSolver::VarStatus> _colStat;  /**< column basis status used for strong branching */
+   DataArray<SPxSolver::VarStatus> _rowStat;  /**< row basis status used for strong branching */
 #ifdef WITH_LPSCHECK
    int                   _checknum;
    bool                  _doublecheck;
@@ -203,8 +203,8 @@ public:
       : _lpinfo(false),
         _fromscratch(false),
         _probname(NULL),
-        _colStat(NULL),
-        _rowStat(NULL),
+        _colStat(0),
+        _rowStat(0),
         _messagehdlr(messagehdlr)
    {
       if ( probname != NULL )
@@ -225,12 +225,6 @@ public:
    {
       if( _probname != NULL )
          spx_free(_probname); /*lint !e1551*/
-
-      if( _colStat != NULL )
-         spx_free(_colStat); /*lint !e1551*/
-
-      if( _rowStat != NULL )
-         spx_free(_rowStat); /*lint !e1551*/
 
       freePreStrongbranchingBasis(); /*lint !e1551*/
 
@@ -618,15 +612,12 @@ public:
    /** save the current basis */
    void savePreStrongbranchingBasis()
    {
-      assert(_rowStat == NULL);
-      assert(_colStat == NULL);
-
-      spx_alloc(_rowStat, numRowsReal());
-      spx_alloc(_colStat, numColsReal());
+      _rowStat.reSize(numRowsReal());
+      _colStat.reSize(numColsReal());
 
       try
       {
-         getBasis(_rowStat, _colStat);
+         getBasis(_rowStat.get_ptr(), _colStat.get_ptr());
       }
 #ifndef NDEBUG
       catch(const SPxException& x)
@@ -649,12 +640,12 @@ public:
    /** restore basis */
    void restorePreStrongbranchingBasis()
    {
-      assert(_rowStat != NULL);
-      assert(_colStat != NULL);
+      assert(_rowStat.size() == numRowsReal());
+      assert(_colStat.size() == numColsReal());
 
       try
       {
-         setBasis(_rowStat, _colStat);
+         setBasis(_rowStat.get_ptr(), _colStat.get_ptr());
       }
 #ifndef NDEBUG
       catch(const SPxException& x)
@@ -676,16 +667,26 @@ public:
    /** if basis is in store, delete it without restoring it */
    void freePreStrongbranchingBasis()
    {
-      if( _rowStat != NULL )
-         spx_free(_rowStat);
-      if( _colStat != NULL )
-         spx_free(_colStat);
+      _rowStat.clear();
+      _colStat.clear();
    }
 
    /** is pre-strong-branching basis freed? */
    bool preStrongbranchingBasisFreed() const
    {
-      return ((_rowStat == NULL ) && (_colStat == NULL));
+      return ((_rowStat.size() == 0 ) && (_colStat.size() == 0));
+   }
+
+   /** provides access for temporary storage of basis status of rows */
+   DataArray<SPxSolver::VarStatus>& rowStat()
+   {
+      return _rowStat;
+   }
+
+   /** provides access for temporary storage of basis status or columns */
+   DataArray<SPxSolver::VarStatus>& colStat()
+   {
+      return _colStat;
    }
 
 }; /*lint !e1748*/
@@ -1562,8 +1563,8 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 SCIP_RETCODE SCIPlpiChgObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
-   int*                  ind,                /**< column indices to change objective value for */
-   SCIP_Real*            obj                 /**< new objective values for columns */
+   const int*            ind,                /**< column indices to change objective value for */
+   const SCIP_Real*      obj                 /**< new objective values for columns */
    )
 {
    int i;
@@ -3400,8 +3401,8 @@ SCIP_RETCODE SCIPlpiGetBase(
 /** sets current basis status for columns and rows */
 SCIP_RETCODE SCIPlpiSetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  cstat,              /**< array with column basis status */
-   int*                  rstat               /**< array with row basis status */
+   const int*            cstat,              /**< array with column basis status */
+   const int*            rstat               /**< array with row basis status */
    )
 {
    int i;
@@ -3418,33 +3419,30 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert( lpi->spx->preStrongbranchingBasisFreed() );
    invalidateSolution(lpi);
 
-   SPxSolver::VarStatus* spxcstat = NULL;
-   SPxSolver::VarStatus* spxrstat = NULL;
-   SCIP_ALLOC( BMSallocMemoryArray(&spxcstat, nCols) );
-   SCIP_ALLOC( BMSallocMemoryArray(&spxrstat, nRows) );
+   DataArray<SPxSolver::VarStatus>& _colstat = lpi->spx->colStat();
+   DataArray<SPxSolver::VarStatus>& _rowstat = lpi->spx->rowStat();
+
+   _colstat.reSize(nCols);
+   _rowstat.reSize(nRows);
 
    for( i = 0; i < nRows; ++i )
    {
       switch( rstat[i] ) /*lint !e613*/
       {
       case SCIP_BASESTAT_LOWER:
-         spxrstat[i] = SPxSolver::ON_LOWER;
+         _rowstat[i] = SPxSolver::ON_LOWER;
          break;
       case SCIP_BASESTAT_BASIC:
-         spxrstat[i] = SPxSolver::BASIC;
+         _rowstat[i] = SPxSolver::BASIC;
          break;
       case SCIP_BASESTAT_UPPER:
-         spxrstat[i] = SPxSolver::ON_UPPER;
+         _rowstat[i] = SPxSolver::ON_UPPER;
          break;
       case SCIP_BASESTAT_ZERO:
          SCIPerrorMessage("slack variable has basis status ZERO (should not occur)\n");
-         BMSfreeMemoryArrayNull(&spxcstat);
-         BMSfreeMemoryArrayNull(&spxrstat);
          return SCIP_LPERROR; /*lint !e429*/
       default:
          SCIPerrorMessage("invalid basis status\n");
-         BMSfreeMemoryArrayNull(&spxcstat);
-         BMSfreeMemoryArrayNull(&spxrstat);
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
@@ -3455,30 +3453,26 @@ SCIP_RETCODE SCIPlpiSetBase(
       switch( cstat[i] ) /*lint !e613*/
       {
       case SCIP_BASESTAT_LOWER:
-         spxcstat[i] = SPxSolver::ON_LOWER;
+         _colstat[i] = SPxSolver::ON_LOWER;
          break;
       case SCIP_BASESTAT_BASIC:
-         spxcstat[i] = SPxSolver::BASIC;
+         _colstat[i] = SPxSolver::BASIC;
          break;
       case SCIP_BASESTAT_UPPER:
-         spxcstat[i] = SPxSolver::ON_UPPER;
+         _colstat[i] = SPxSolver::ON_UPPER;
          break;
       case SCIP_BASESTAT_ZERO:
-         spxcstat[i] = SPxSolver::ZERO;
+         _colstat[i] = SPxSolver::ZERO;
          break;
       default:
          SCIPerrorMessage("invalid basis status\n");
-         BMSfreeMemoryArrayNull(&spxcstat);
-         BMSfreeMemoryArrayNull(&spxrstat);
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
-   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(spxrstat, spxcstat) );
-
-   BMSfreeMemoryArrayNull(&spxcstat);
-   BMSfreeMemoryArrayNull(&spxrstat);
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(_rowstat.get_ptr(), _colstat.get_ptr()) );
+   lpi->spx->freePreStrongbranchingBasis();
 
    return SCIP_OKAY;
 }
@@ -3752,7 +3746,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           /*blkmem*/,         /**< block memory */
-   SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
    )
 {
    int lpncols;
@@ -3972,7 +3966,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
 {  /*lint --e{715}*/
 #if ((SOPLEX_VERSION == 201 && SOPLEX_SUBVERSION >= 3) || SOPLEX_VERSION > 201)
@@ -3991,7 +3985,7 @@ SCIP_RETCODE SCIPlpiSetNorms(
       return SCIP_OKAY;
 
    SCIPdebugMessage("loading LPi simplex norms %p (%d rows, %d cols) into SoPlex LP with %d rows and %d cols\n",
-      (void *) lpinorms, lpinorms->nrows, lpinorms->ncols, lpi->spx->numRowsReal(), lpi->spx->numColsReal());
+      (const void *) lpinorms, lpinorms->nrows, lpinorms->ncols, lpi->spx->numRowsReal(), lpi->spx->numColsReal());
 
    (void) lpi->spx->setDualNorms(lpinorms->nrows, lpinorms->ncols, lpinorms->norms);
 #endif
@@ -4039,6 +4033,8 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    int*                  ival                /**< buffer to store the parameter value */
    )
 {
+   int scaleparam;
+
    SCIPdebugMessage("calling SCIPlpiGetIntpar()\n");
 
    assert(lpi != NULL);
@@ -4063,7 +4059,19 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = (int) lpi->pricing;
       break;
    case SCIP_LPPAR_SCALING:
-      *ival = (int) (lpi->spx->intParam(SoPlex::SCALER) != SoPlex::SCALER_OFF);
+      scaleparam = lpi->spx->intParam(SoPlex::SCALER);
+
+      if( scaleparam == SoPlex::SCALER_OFF )
+         *ival = 0;
+      else if( scaleparam == SoPlex::SCALER_BIEQUI )
+         *ival = 1;
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 2)
+      else
+      {
+         assert(scaleparam == SoPlex::SCALER_LEASTSQ);
+         *ival = 2;
+      }
+#endif
       break;
 #if SOPLEX_VERSION >= 201
    case SCIP_LPPAR_TIMING:
@@ -4140,8 +4148,16 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       }
       break;
    case SCIP_LPPAR_SCALING:
-      assert(ival == TRUE || ival == FALSE);
-      (void) lpi->spx->setIntParam(SoPlex::SCALER, ( ival ? SoPlex::SCALER_BIEQUI : SoPlex::SCALER_OFF));
+      assert(ival >= 0 && ival <= 2);
+      if( ival == 0 )
+         (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_OFF);
+      else if( ival == 1 )
+         (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_BIEQUI);
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 2)
+      else
+         (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_LEASTSQ);
+#endif
+
       break;
 #if SOPLEX_VERSION >= 201
    case SCIP_LPPAR_TIMING:
