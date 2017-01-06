@@ -1000,8 +1000,8 @@ SCIP_RETCODE cliqueCreateWithData(
    assert(values != NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, clique) );
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*clique)->vars, vars, nvars) );
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*clique)->values, values, nvars) );
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*clique)->vars, vars, size) );
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*clique)->values, values, size) );
    (*clique)->nvars = nvars;
    (*clique)->size = size;
    (*clique)->startcleanup = -1;
@@ -2467,7 +2467,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
       /* @todo check if we can aggregate variables if( clique->equation && clique->nvars == 2 ) */
 
       /* create the clique data structure */
-      SCIP_CALL( cliqueCreateWithData(&clique, blkmem, size, clqvars, clqvalues, nvars, cliquetable->ncreatedcliques, isequation) );
+      SCIP_CALL( cliqueCreateWithData(&clique, blkmem, nvars, clqvars, clqvalues, nvars, cliquetable->ncreatedcliques, isequation) );
 
       sameclique = (SCIP_CLIQUE*)SCIPhashtableRetrieve(cliquetable->hashtable, (void*)clique);
 

@@ -577,7 +577,7 @@ int SCIPminorVersion(
    void
    )
 {
-   return (SCIP_VERSION/10) % 10;
+   return (SCIP_VERSION/10) % 10; /*lint !e778*/
 }
 
 /** returns SCIP technical version
@@ -930,7 +930,7 @@ SCIP_RETCODE SCIPprintStage(
       SCIP_CALL( SCIPprintStatus(scip, file) );
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "]");
 
-      if( scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, SCIPgetObjsense(scip) * getPrimalbound(scip))  )
+      if( scip->primal->nlimsolsfound == 0 && !SCIPisInfinity(scip, (int)SCIPgetObjsense(scip) * getPrimalbound(scip))  )
          SCIPmessageFPrintInfo(scip->messagehdlr, file, " (objective limit reached)");
 
       break;
@@ -2822,7 +2822,7 @@ SCIP_RETCODE SCIPcopyConss(
             {
                /* add the constraint as a conflict to the conflict pool of targetscip */
                SCIP_CALL( SCIPconflictstoreAddConflict(targetscip->conflictstore, targetscip->mem->probmem, targetscip->set,
-                     targetscip->stat, NULL, NULL, targetscip->reopt, NULL, targetcons, SCIP_CONFTYPE_UNKNOWN, FALSE, -SCIPinfinity(targetscip)) );
+                     targetscip->stat, NULL, NULL, targetscip->reopt, targetcons, SCIP_CONFTYPE_UNKNOWN, FALSE, -SCIPinfinity(targetscip)) );
             }
 
             /* release constraint once for the creation capture */
@@ -4172,16 +4172,16 @@ SCIP_RETCODE SCIPcopyLimits(
    SCIP_CALL( SCIPsetRealParam(targetscip, "limits/absgap", 0.0) );
    SCIP_CALL( SCIPsetIntParam(targetscip, "limits/bestsol", -1) );
    SCIP_CALL( SCIPsetRealParam(targetscip, "limits/gap", 0.0) );
-   SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/nodes", -1) );
+   SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/nodes", -1LL) );
    SCIP_CALL( SCIPsetIntParam(targetscip, "limits/restarts", -1) );
    SCIP_CALL( SCIPsetIntParam(targetscip, "limits/solutions", -1) );
-   SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/stallnodes", -1) );
-   SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1) );
+   SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/stallnodes", -1LL) );
+   SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1LL) );
 
    /* the soft time limit event handler might not be included so we need to check if the parameter exists */
    if( SCIPgetParam(targetscip, "limits/softtime") != NULL )
    {
-      SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1) );
+      SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1LL) );
    }
 
    return SCIP_OKAY;
@@ -10419,8 +10419,7 @@ SCIP_RETCODE SCIPfreeProb(
       {
          SCIP_CALL( SCIPreoptFree(&scip->reopt, scip->set, scip->origprimal, scip->mem->probmem) );
       }
-      SCIP_CALL( SCIPconflictstoreFree(&scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt,
-            scip->eventfilter) );
+      SCIP_CALL( SCIPconflictstoreFree(&scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
       SCIP_CALL( SCIPprimalFree(&scip->origprimal, scip->mem->probmem) );
       SCIP_CALL( SCIPprobFree(&scip->origprob, scip->messagehdlr, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
       SCIP_CALL( SCIPstatFree(&scip->stat, scip->mem->probmem) );
@@ -12917,7 +12916,7 @@ SCIP_RETCODE SCIPaddConflict(
 
    /* add the conflict to the conflict store */
    SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
-         scip->transprob, scip->reopt, scip->eventfilter, cons, conftype, iscutoffinvolved, primalbound) );
+         scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
 
    /* mark constraint to be a conflict */
    SCIPconsMarkConflict(cons);
@@ -13862,7 +13861,8 @@ SCIP_RETCODE SCIPtransformProb(
       SCIP_Bool approxactivenonzeros;
 
       /* determine number of non-zeros */
-      maxnonzeros = MAX(((SCIP_Real)SCIPgetNConss(scip)) * SCIPgetNVars(scip), 1.0);
+      maxnonzeros = (SCIP_Real)SCIPgetNConss(scip) * SCIPgetNVars(scip);
+      maxnonzeros = MAX(maxnonzeros, 1.0);
       SCIP_CALL( calcNonZeros(scip, &nchecknonzeros, &nactivenonzeros, &approxchecknonzeros, &approxactivenonzeros) );
 
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
@@ -14744,7 +14744,8 @@ SCIP_RETCODE presolve(
       }
 
       /* determine number of non-zeros */
-      maxnonzeros = MAX(((SCIP_Real)SCIPgetNConss(scip)) * SCIPgetNVars(scip), 1.0);
+      maxnonzeros = (SCIP_Real)SCIPgetNConss(scip) * SCIPgetNVars(scip);
+      maxnonzeros = MAX(maxnonzeros, 1.0);
       SCIP_CALL( calcNonZeros(scip, &nchecknonzeros, &nactivenonzeros, &approxchecknonzeros, &approxactivenonzeros) );
       scip->stat->nnz = nactivenonzeros;
 
@@ -15290,6 +15291,10 @@ SCIP_RETCODE freeTransform(
       SCIP_CALL( SCIPreoptReset(scip->reopt, scip->set, scip->mem->probmem) );
    }
 
+#if 0
+   /* TODO on some nonlinear instances it happens that a lock is removed that was not added maybe due to reformulations?)
+    *      not removing the locks fixes the issue
+    */
    /* remove var locks set to avoid dual reductions */
    if( scip->set->reopt_enable || !scip->set->misc_allowdualreds )
    {
@@ -15301,6 +15306,7 @@ SCIP_RETCODE freeTransform(
          SCIP_CALL( SCIPaddVarLocks(scip, scip->transprob->vars[v], -1, -1) );
       }
    }
+#endif
 
    /* clean the conflict store
     *
@@ -15566,8 +15572,7 @@ SCIP_RETCODE prepareReoptimization(
    {
       assert(scip->transprob != NULL);
 
-      SCIP_CALL( SCIPreoptMergeVarHistory(scip->reopt, scip->set, scip->stat, scip->origprob, scip->transprob,
-            scip->origprob->vars, scip->origprob->nvars) );
+      SCIP_CALL( SCIPreoptMergeVarHistory(scip->reopt, scip->set, scip->stat, scip->origprob->vars, scip->origprob->nvars) );
 
       SCIP_CALL( SCIPrelaxationCreate(&scip->relaxation, scip->mem->probmem, scip->set, scip->stat, scip->primal,
             scip->tree) );
@@ -16018,8 +16023,8 @@ SCIP_RETCODE SCIPsolve(
       /* store variable history */
       if( scip->set->reopt_storevarhistory )
       {
-         SCIP_CALL( SCIPreoptUpdateVarHistory(scip->reopt, scip->set, scip->stat, scip->origprob, scip->transprob,
-               scip->mem->probmem, scip->origprob->vars, scip->origprob->nvars) );
+         SCIP_CALL( SCIPreoptUpdateVarHistory(scip->reopt, scip->set, scip->stat, scip->mem->probmem,
+               scip->origprob->vars, scip->origprob->nvars) );
       }
    }
 
@@ -23896,7 +23901,7 @@ SCIP_RETCODE relabelOrderConsistent(
          {
             ++classidx;
             localclassidx = classidx;
-            SCIPhashmapInsert(classidx2newlabel, (void*)(size_t)currentlabel, (void *)(size_t)classidx);
+            SCIP_CALL( SCIPhashmapInsert(classidx2newlabel, (void*)(size_t)currentlabel, (void *)(size_t)classidx) );
          }
          else
          {
@@ -33306,8 +33311,8 @@ SCIP_RETCODE SCIPcreateConvexNlp(
    int nvars;
    SCIP_Real* lbs;
    SCIP_Real* ubs;
-   SCIP_Real* objvals;
-   int* objinds;
+   SCIP_Real* objvals = NULL;
+   int* objinds = NULL;
    const char** varnames;
    int nobjinds;
    int nconss;
@@ -33371,7 +33376,7 @@ SCIP_RETCODE SCIPcreateConvexNlp(
          objinds[nobjinds] = i;
          ++nobjinds;
       }
-  }
+   }
 
    /* add variables */
    SCIP_CALL( SCIPnlpiAddVars(nlpi, nlpiprob, nvars, lbs, ubs, varnames) );
@@ -33403,8 +33408,8 @@ SCIP_RETCODE SCIPcreateConvexNlp(
    exprtrees[nconss] = NULL;
    exprvaridxs[nconss] = NULL;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &lininds[nconss], nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &linvals[nconss], nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lininds[nconss], nvars) ); /*lint !e866*/
+   SCIP_CALL( SCIPallocBufferArray(scip, &linvals[nconss], nvars) ); /*lint !e866*/
 
    for( i = 0; i < nvars; ++i )
    {
@@ -33461,8 +33466,8 @@ SCIP_RETCODE SCIPcreateConvexNlp(
 
          nlininds[nconss] = SCIPnlrowGetNLinearVars(nlrows[i]);
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &lininds[nconss], nlininds[nconss]) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &linvals[nconss], nlininds[nconss]) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &lininds[nconss], nlininds[nconss]) ); /*lint !e866*/
+         SCIP_CALL( SCIPallocBufferArray(scip, &linvals[nconss], nlininds[nconss]) ); /*lint !e866*/
 
          for( k = 0; k < nlininds[nconss]; ++k )
          {
@@ -33484,7 +33489,7 @@ SCIP_RETCODE SCIPcreateConvexNlp(
          SCIP_VAR* var2;
 
          nquadelems[nconss] = SCIPnlrowGetNQuadElems(nlrows[i]);
-         SCIP_CALL( SCIPallocBufferArray(scip, &quadelems[nconss], nquadelems[nconss]) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &quadelems[nconss], nquadelems[nconss]) ); /*lint !e866*/
 
          for( k = 0; k < nquadelems[nconss]; ++k )
          {
@@ -33522,7 +33527,7 @@ SCIP_RETCODE SCIPcreateConvexNlp(
           */
          exprtrees[nconss] = SCIPnlrowGetExprtree(nlrows[i]);
 
-         SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridxs[nconss], SCIPexprtreeGetNVars(exprtrees[nconss])) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &exprvaridxs[nconss], SCIPexprtreeGetNVars(exprtrees[nconss])) ); /*lint !e866*/
 
          for( k = 0; k < SCIPexprtreeGetNVars(exprtrees[nconss]); ++k )
          {
@@ -33661,7 +33666,7 @@ SCIP_RETCODE SCIPaddConvexNlpRows(
    assert(nlpi != NULL);
    assert(nlpiprob != NULL);
    assert(var2idx != NULL);
-   assert(rows != NULL || nrows == 0);
+   assert(nrows == 0 || rows != NULL);
 
    SCIPdebugMsg(scip, "call SCIPaddConvexNlpRowsNlobbt() with %d rows\n", nrows);
 
@@ -33689,7 +33694,7 @@ SCIP_RETCODE SCIPaddConvexNlpRows(
       linvals[i] = SCIProwGetVals(rows[i]);
       lininds[i] = NULL;
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &lininds[i], SCIProwGetNNonz(rows[i])) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &lininds[i], SCIProwGetNNonz(rows[i])) ); /*lint !e866*/
 
       for( k = 0; k < SCIProwGetNNonz(rows[i]); ++k )
       {
@@ -40935,7 +40940,6 @@ void SCIPsetFocusnodeLP(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
 SCIP_RETCODE SCIPconstructSyncstore(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -41001,7 +41005,6 @@ SCIP_RETCODE SCIPfreeSyncstore(
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
-EXTERN
 SCIP_SYNCSTORE* SCIPgetSyncstore(
    SCIP*                 scip                /**< SCIP data structure */
    )

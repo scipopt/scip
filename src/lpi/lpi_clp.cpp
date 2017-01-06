@@ -3485,9 +3485,9 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       break;
    case SCIP_LPPAR_SCALING:
       if( lpi->clp->scalingFlag() != 0 )     // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later)
-	 *ival = TRUE;
+         *ival = TRUE;
       else
-	 *ival = FALSE;
+         *ival = FALSE;
       break;
    case SCIP_LPPAR_PRICING:
       *ival = (int)lpi->pricing;          // store pricing method in LPI struct
@@ -3572,7 +3572,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->startscratch = ival;
       break;
    case SCIP_LPPAR_SCALING:
-      lpi->clp->scaling(ival == TRUE ? 3 : 0);    // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
+      lpi->clp->scaling((ival > 0) ? 3 : 0);    // 0 -off, 1 equilibrium, 2 geometric, 3, auto, 4 dynamic(later));
       break;
    case SCIP_LPPAR_PRICING:
       /* should not happen - see above */

@@ -60,7 +60,7 @@
 enum ConvexSide
 {
    LHS = 0,                                  /**< left hand side */
-   RHS = 1,                                  /**< right hand side */
+   RHS = 1                                   /**< right hand side */
 };
 typedef enum ConvexSide CONVEXSIDE;
 
@@ -204,7 +204,7 @@ SCIP_RETCODE computeInteriorPoint(
    objvarlb = INTERIOROBJVARLB;
    one = 1.0;
    SCIP_CALL( SCIPnlpiAddVars(nlpi, nlpiprob, 1, &objvarlb, NULL, NULL) );
-   SCIP_CALL( SCIPnlpiSetObjective(nlpi, nlpiprob, 1, &objvaridx, &one, 0, NULL, NULL, NULL, 0) );
+   SCIP_CALL( SCIPnlpiSetObjective(nlpi, nlpiprob, 1, &objvaridx, &one, 0, NULL, NULL, NULL, 0.0) );
 
    /* add objective variables to constraints; for this we need to get nlpi oracle to have access to number of
     * constraints and which constraints are nonlinear
@@ -327,7 +327,7 @@ SCIP_RETCODE computeInteriorPoint(
 CLEANUP:
    /* free memory */
    SCIPhashmapFree(&var2nlpiidx);
-   SCIPnlpiFreeProblem(nlpi, &nlpiprob);
+   SCIP_CALL( SCIPnlpiFreeProblem(nlpi, &nlpiprob) );
 
    return SCIP_OKAY;
 }
@@ -503,7 +503,6 @@ SCIP_RETCODE findBoundaryPoint(
          case BOUNDARY:
             SCIPdebugMsg(scip, "Done\n");
             return SCIP_OKAY;
-            break;
 
          case INTERIOR:
             /* want to be closer to tosepasol */
@@ -728,7 +727,7 @@ SCIP_RETCODE separateCuts(
 
    /* don't separate if, under SCIP tolerances, only a slight perturbation of the interior point in the direction of
     * tosepasol gives a point that is in the exterior */
-   buildConvexCombination(scip, VIOLATIONFAC * SCIPfeastol(scip), intsol, tosepasol, sol);
+   SCIP_CALL( buildConvexCombination(scip, VIOLATIONFAC * SCIPfeastol(scip), intsol, tosepasol, sol) );
    SCIP_CALL( findPointPosition(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, sol, &position) );
 
    if( position == EXTERIOR )
@@ -736,7 +735,7 @@ SCIP_RETCODE separateCuts(
 #ifdef SCIP_DEBUG
       SCIPdebugMsg(scip, "segment joining intsol and tosepasol seems to be contained in the exterior of the region, can't separate\n");
       /* move from intsol in the direction of -tosepasol to check if we are really tangent to the region */
-      buildConvexCombination(scip, -1e-3, intsol, tosepasol, sol);
+      SCIP_CALL( buildConvexCombination(scip, -1e-3, intsol, tosepasol, sol) );
       SCIP_CALL( findPointPosition(scip, nlrows, nlrowsidx, nnlrowsidx, convexsides, sol, &position) );
       if( position == EXTERIOR )
       {
@@ -876,6 +875,7 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolGauge)
 
    assert(sepadata != NULL);
 
+   /* free memory and reset data */
    if( sepadata->isintsolavailable )
    {
       SCIPfreeBlockMemoryArray(scip, &sepadata->nlrowsidx, sepadata->nlrowssize);
@@ -883,10 +883,18 @@ SCIP_DECL_SEPAEXITSOL(sepaExitsolGauge)
       SCIPfreeBlockMemoryArray(scip, &sepadata->nlrows, sepadata->nlrowssize);
       SCIP_CALL( SCIPfreeSol(scip, &sepadata->intsol) );
       SCIP_CALL( SCIPexprintFree(&sepadata->exprinterpreter) );
-   }
 
-   /* set all data in sepadata to 0 */
-   BMSclearMemory(sepadata);
+      sepadata->nnlrows = 0;
+      sepadata->nnlrowsidx = 0;
+      sepadata->nlrowssize = 0;
+      sepadata->isintsolavailable = FALSE;
+   }
+   assert(sepadata->nnlrows == 0);
+   assert(sepadata->nnlrowsidx == 0);
+   assert(sepadata->nlrowssize == 0);
+   assert(sepadata->isintsolavailable == FALSE);
+
+   sepadata->skipsepa = FALSE;
 
    return SCIP_OKAY;
 }
