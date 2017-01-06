@@ -16018,7 +16018,7 @@ SCIP_RETCODE SCIPsolve(
             {
                SCIPdebugMsg(scip, "try to add solution to the solution tree:\n");
                SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob,
-                     scip->transprob, NULL, FALSE) ); );
+                     scip->transprob, NULL, FALSE, FALSE) ); );
 
                SCIP_CALL( SCIPreoptAddSol(scip->reopt, scip->set, scip->stat, scip->origprimal, scip->mem->probmem,
                      sol, s == 0, &added, scip->origprob->vars, scip->origprob->nvars, scip->stat->nreoptruns) );
@@ -38478,7 +38478,8 @@ SCIP_RETCODE SCIPprintSol(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
    }
 
-   SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, file, printzeros) );
+   SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, file, FALSE,
+         printzeros) );
 
    if( file != NULL && scip->messagehdlr != NULL )
    {
@@ -38539,7 +38540,7 @@ SCIP_RETCODE SCIPprintTransSol(
    SCIPprintReal(scip, file, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob), 20, 9);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
 
-   SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->transprob, NULL, file, printzeros) );
+   SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->transprob, NULL, file, FALSE, printzeros) );
 
    if( currentsol )
    {
@@ -38550,6 +38551,64 @@ SCIP_RETCODE SCIPprintTransSol(
    return SCIP_OKAY;
 }
 
+/** outputs discrete variables of solution in original problem space to the given file stream
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_RETCODE SCIPprintMIPStart(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   SCIP_Real objvalue;
+   SCIP_Bool oldquiet = FALSE;
+
+   assert(SCIPisTransformed(scip) || sol != NULL);
+   assert(sol != NULL);
+   assert(!SCIPsolIsPartial(sol));
+
+   SCIP_CALL( checkStage(scip, "SCIPprintMIPStart", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   if( file != NULL && scip->messagehdlr != NULL )
+   {
+      oldquiet = SCIPmessagehdlrIsQuiet(scip->messagehdlr);
+      SCIPmessagehdlrSetQuiet(scip->messagehdlr, FALSE);
+   }
+
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "objective value:                 ");
+
+   if( SCIPsolIsOriginal(sol) )
+      objvalue = SCIPsolGetOrigObj(sol);
+   else
+      objvalue = SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
+
+   SCIPprintReal(scip, file, objvalue, 20, 15);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
+
+   SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, file, TRUE,
+         TRUE) );
+
+   if( file != NULL && scip->messagehdlr != NULL )
+   {
+      SCIPmessagehdlrSetQuiet(scip->messagehdlr, oldquiet);
+   }
+
+   return SCIP_OKAY;
+}
 
 /** outputs dual solution from LP solver to file stream */
 static
