@@ -480,6 +480,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_clique.o \
 			scip/heur_coefdiving.o \
 			scip/heur_completesol.o \
+			scip/heur_conflictdiving.o \
 			scip/heur_crossover.o \
 			scip/heur_dins.o \
 			scip/heur_distributiondiving.o \

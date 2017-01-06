@@ -79,6 +79,7 @@
 #include "scip/heur_clique.h"
 #include "scip/heur_coefdiving.h"
 #include "scip/heur_completesol.h"
+#include "scip/heur_conflictdiving.h"
 #include "scip/heur_crossover.h"
 #include "scip/heur_dins.h"
 #include "scip/heur_distributiondiving.h"

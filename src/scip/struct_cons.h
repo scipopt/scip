@@ -55,6 +55,8 @@ struct SCIP_Cons
    int                   propconsspos;       /**< position of constraint in the handler's propconss array */
    int                   nlockspos;          /**< number of times, the constraint locked rounding of its variables */
    int                   nlocksneg;          /**< number of times, the constraint locked vars for the constraint's negation */
+   int                   nsoftlockspos;      /**< number of times, the constraint locked rounding of its variables */
+   int                   nsoftlocksneg;      /**< number of times, the constraint locked vars for the constraint's negation */
    int                   activedepth;        /**< depth level of constraint activation (-2: inactive, -1: problem constraint) */
    int                   validdepth;         /**< depth level where constraint is valid (-1: equals activedepth) */
    int                   nuses;              /**< number of times, this constraint is referenced */

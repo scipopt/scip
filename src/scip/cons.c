@@ -4074,7 +4074,7 @@ SCIP_RETCODE SCIPconshdlrLockVars(
    assert(conshdlr->conslock != NULL);
    assert(!conshdlr->needscons);
 
-   SCIP_CALL( conshdlr->conslock(set->scip, conshdlr, NULL, +1, 0) );
+   SCIP_CALL( conshdlr->conslock(set->scip, conshdlr, NULL, FALSE, +1, 0) );
 
    return SCIP_OKAY;
 }
@@ -4089,7 +4089,7 @@ SCIP_RETCODE SCIPconshdlrUnlockVars(
    assert(conshdlr->conslock != NULL);
    assert(!conshdlr->needscons);
 
-   SCIP_CALL( conshdlr->conslock(set->scip, conshdlr, NULL, -1, 0) );
+   SCIP_CALL( conshdlr->conslock(set->scip, conshdlr, NULL, FALSE, -1, 0) );
 
    return SCIP_OKAY;
 }
@@ -5771,6 +5771,8 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->age = 0.0;
    (*cons)->nlockspos = 0;
    (*cons)->nlocksneg = 0;
+   (*cons)->nsoftlockspos = 0;
+   (*cons)->nsoftlocksneg = 0;
    (*cons)->nuses = 0;
    (*cons)->nupgradelocks = 0;
    (*cons)->initial = initial;
@@ -7178,7 +7180,54 @@ SCIP_RETCODE SCIPconsAddLocks(
    /* lock the variables, if the constraint switched from unlocked to locked or from locked to unlocked */
    if( updlockpos != 0 || updlockneg != 0 )
    {
-      SCIP_CALL( cons->conshdlr->conslock(set->scip, cons->conshdlr, cons, updlockpos, updlockneg) );
+      SCIP_CALL( cons->conshdlr->conslock(set->scip, cons->conshdlr, cons, FALSE, updlockpos, updlockneg) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds given values to softlock status of the constraint and updates the rounding softlocks of the involved variables */
+SCIP_RETCODE SCIPconsAddLocksSoft(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   nsoftlockspos,      /**< increase in number of rounding locks for constraint */
+   int                   nsoftlocksneg       /**< increase in number of rounding locks for constraint's negation */
+   )
+{
+   int oldnsoftlockspos;
+   int oldnsoftlocksneg;
+   int updlockpos;
+   int updlockneg;
+
+   assert(cons != NULL);
+   assert(cons->conshdlr != NULL);
+   assert(cons->conshdlr->conslock != NULL);
+   assert(cons->nsoftlockspos >= 0);
+   assert(cons->nsoftlocksneg >= 0);
+   assert(-2 <= nsoftlockspos && nsoftlockspos <= 2);
+   assert(-2 <= nsoftlocksneg && nsoftlocksneg <= 2);
+   assert(set != NULL);
+   assert(cons->scip == set->scip);
+
+   /* update the rounding locks */
+   oldnsoftlockspos = cons->nsoftlockspos;
+   oldnsoftlocksneg = cons->nsoftlocksneg;
+   cons->nsoftlockspos += nsoftlockspos;
+   cons->nsoftlocksneg += nsoftlocksneg;
+   assert(cons->nsoftlockspos >= 0);
+   assert(cons->nsoftlocksneg >= 0);
+
+   /* check, if the constraint switched from unlocked to locked, or from locked to unlocked */
+   updlockpos = (int)(cons->nsoftlockspos > 0) - (int)(oldnsoftlockspos > 0);
+   updlockneg = (int)(cons->nsoftlocksneg > 0) - (int)(oldnsoftlocksneg > 0);
+
+   /* lock the variables, if the constraint switched from unlocked to locked or from locked to unlocked
+    *
+    * TODO: why only if the status changes?
+    */
+   if( updlockpos != 0 || updlockneg != 0 )
+   {
+      SCIP_CALL( cons->conshdlr->conslock(set->scip, cons->conshdlr, cons, TRUE, updlockpos, updlockneg) );
    }
 
    return SCIP_OKAY;
@@ -8220,6 +8269,10 @@ int SCIPconsGetNLocksNeg(
 
    return cons->nlocksneg;
 }
+
+
+// TODO: add softlocks getter
+
 
 /** returns if the constraint was already added to a SCIP instance */
 SCIP_Bool SCIPconsIsAdded(

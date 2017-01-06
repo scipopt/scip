@@ -1217,6 +1217,14 @@ SCIP_RETCODE SCIPconsAddLocks(
    int                   nlocksneg           /**< increase in number of rounding locks for constraint's negation */
    );
 
+/** adds given values to softlock status of the constraint and updates the rounding softlocks of the involved variables */
+extern
+SCIP_RETCODE SCIPconsAddLocksSoft(
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   nsoftlockspos,      /**< increase in number of rounding locks for constraint */
+   int                   nsoftlocksneg       /**< increase in number of rounding locks for constraint's negation */
+   );
 
 /*
  * Hash functions

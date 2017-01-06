@@ -310,6 +310,8 @@ SCIP_RETCODE delPosConflict(
    SCIPsetDebugMsg(set, "-> remove conflict at pos=%d with age=%g\n", pos, SCIPconsGetAge(conflict));
 #endif
 
+   SCIP_CALL( SCIPconsAddLocksSoft(conflict, set, -1, -1) );
+
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(conflict) )
    {
@@ -362,7 +364,7 @@ SCIP_RETCODE delPosDualray(
    SCIPsetDebugMsg(set, "-> remove dual ray at pos=%d with age=%g\n", pos, SCIPconsGetAge(dualray));
 #endif
 
-   SCIP_CALL( SCIPconsAddLocks(dualray, set, -1, 0) );
+   SCIP_CALL( SCIPconsAddLocksSoft(dualray, set, -1, -1) );
 
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(dualray) )
@@ -748,7 +750,7 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    conflictstore->dualrayconfs[conflictstore->ndualrayconfs] = dualraycons;
    ++conflictstore->ndualrayconfs;
 
-   SCIP_CALL( SCIPconsAddLocks(dualraycons, set, +1, 0) );
+   SCIP_CALL( SCIPconsAddLocksSoft(dualraycons, set, +1, +1) );
 
    return SCIP_OKAY;
 }
@@ -838,6 +840,9 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
 
    ++conflictstore->nconflicts;
    ++conflictstore->nconflictsfound;
+
+   /* add softlocks */
+   SCIP_CALL( SCIPconsAddLocksSoft(cons, set, +1, +1) );
 
 #ifdef SCIP_PRINT_DETAILS
    SCIPsetDebugMsg(set, "add conflict <%s> to conflict store at position %d\n", SCIPconsGetName(cons), conflictstore->nconflicts-1);
@@ -1039,7 +1044,7 @@ SCIP_RETCODE SCIPconflictstoreTransform(
          ++ntransconss;
       }
 
-      SCIP_CALL( SCIPconsAddLocks(transcons, set, +1, 0) );
+      SCIP_CALL( SCIPconsAddLocksSoft(transcons, set, +1, +1) );
 
       SCIP_CALL( SCIPconsRelease(&conflictstore->origconfs[i], blkmem, set) );
    }

@@ -424,7 +424,7 @@ SCIP_DECL_CONSLOCK(consLockObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_lock(scip, conshdlr, cons, nlockspos, nlocksneg) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_lock(scip, conshdlr, cons, FALSE, nlockspos, nlocksneg) );
 
    return SCIP_OKAY;
 }

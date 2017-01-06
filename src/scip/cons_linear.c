@@ -16154,22 +16154,50 @@ SCIP_DECL_CONSLOCK(consLockLinear)
       {
          if( haslhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+            if( softlock )
+            {
+               SCIP_CALL( SCIPaddVarLocksSoft(scip, consdata->vars[i], nlockspos, nlocksneg) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+            }
          }
          if( hasrhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
+            if( softlock )
+            {
+               SCIP_CALL( SCIPaddVarLocksSoft(scip, consdata->vars[i], nlocksneg, nlockspos) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
+            }
          }
       }
       else
       {
          if( haslhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
+            if( softlock )
+            {
+               SCIP_CALL( SCIPaddVarLocksSoft(scip, consdata->vars[i], nlocksneg, nlockspos) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
+            }
          }
          if( hasrhs )
          {
-            SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+            if( softlock )
+            {
+               SCIP_CALL( SCIPaddVarLocksSoft(scip, consdata->vars[i], nlockspos, nlocksneg) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlockspos, nlocksneg) );
+            }
          }
       }
    }

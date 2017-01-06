@@ -140,11 +140,11 @@ SCIP_DECL_HEUREXEC(heurExecTrivial)
       }
 
       /* set variables to the bound with fewer locks, if tie choose an average value */
-      if( SCIPvarGetNLocksDown(vars[i]) >  SCIPvarGetNLocksUp(vars[i]) )
+      if( SCIPvarGetNLocksDown(vars[i]) + SCIPvarGetNLocksSoftDown(vars[i]) > SCIPvarGetNLocksUp(vars[i]) + SCIPvarGetNLocksSoftUp(vars[i]) )
       {
          SCIP_CALL( SCIPsetSolVal(scip, locksol, vars[i], ub) );
       }
-      else if( SCIPvarGetNLocksDown(vars[i]) <  SCIPvarGetNLocksUp(vars[i]) )
+      else if( SCIPvarGetNLocksDown(vars[i]) + SCIPvarGetNLocksSoftDown(vars[i]) <  SCIPvarGetNLocksUp(vars[i]) + SCIPvarGetNLocksSoftUp(vars[i]) )
       {
          SCIP_CALL( SCIPsetSolVal(scip, locksol, vars[i], lb) );
       }

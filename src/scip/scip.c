@@ -28457,6 +28457,36 @@ SCIP_RETCODE SCIPaddConsLocks(
    return SCIP_OKAY;
 }
 
+/** adds given values to softlock status of the constraint and updates the rounding softlocks of the involved variables
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_RETCODE SCIPaddConsLocksSoft(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   int                   nlockspos,          /**< increase in number of rounding locks for constraint */
+   int                   nlocksneg           /**< increase in number of rounding locks for constraint's negation */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPaddConsLocksSoft", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
+
+   SCIP_CALL( SCIPconsAddLocksSoft(cons, scip->set, nlockspos, nlocksneg) );
+
+   return SCIP_OKAY;
+}
+
 /** checks single constraint for feasibility of the given solution
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
