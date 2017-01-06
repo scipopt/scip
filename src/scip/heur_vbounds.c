@@ -503,7 +503,7 @@ SCIP_RETCODE applyVbounds(
    int oldnpscands;
    int npscands;
    int nvars;
-   SCIPstatistic( int nprevars = nvars; )
+   SCIPstatistic( int nprevars; )
 
    assert(heur != NULL);
    assert(heurdata != NULL);
@@ -514,6 +514,8 @@ SCIP_RETCODE applyVbounds(
 
    /* get variable data of original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   SCIPstatistic( nprevars = nvars; )
 
    if( nvbvars < nvars * heurdata->minfixingrate )
       return SCIP_OKAY;
