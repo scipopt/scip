@@ -2828,7 +2828,7 @@ SCIP_RETCODE SCIPcopyConss(
             {
                /* add the constraint as a conflict to the conflict pool of targetscip */
                SCIP_CALL( SCIPconflictstoreAddConflict(targetscip->conflictstore, targetscip->mem->probmem, targetscip->set,
-                     targetscip->stat, NULL, NULL, targetscip->reopt, NULL, targetcons, SCIP_CONFTYPE_UNKNOWN, FALSE, -SCIPinfinity(targetscip)) );
+                     targetscip->stat, NULL, NULL, targetscip->reopt, targetcons, SCIP_CONFTYPE_UNKNOWN, FALSE, -SCIPinfinity(targetscip)) );
             }
 
             /* release constraint once for the creation capture */
@@ -10425,8 +10425,7 @@ SCIP_RETCODE SCIPfreeProb(
       {
          SCIP_CALL( SCIPreoptFree(&scip->reopt, scip->set, scip->origprimal, scip->mem->probmem) );
       }
-      SCIP_CALL( SCIPconflictstoreFree(&scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt,
-            scip->eventfilter) );
+      SCIP_CALL( SCIPconflictstoreFree(&scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
       SCIP_CALL( SCIPprimalFree(&scip->origprimal, scip->mem->probmem) );
       SCIP_CALL( SCIPprobFree(&scip->origprob, scip->messagehdlr, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
       SCIP_CALL( SCIPstatFree(&scip->stat, scip->mem->probmem) );
@@ -12923,7 +12922,7 @@ SCIP_RETCODE SCIPaddConflict(
 
    /* add the conflict to the conflict store */
    SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
-         scip->transprob, scip->reopt, scip->eventfilter, cons, conftype, iscutoffinvolved, primalbound) );
+         scip->transprob, scip->reopt, cons, conftype, iscutoffinvolved, primalbound) );
 
    /* mark constraint to be a conflict */
    SCIPconsMarkConflict(cons);
@@ -15579,8 +15578,7 @@ SCIP_RETCODE prepareReoptimization(
    {
       assert(scip->transprob != NULL);
 
-      SCIP_CALL( SCIPreoptMergeVarHistory(scip->reopt, scip->set, scip->stat, scip->origprob, scip->transprob,
-            scip->origprob->vars, scip->origprob->nvars) );
+      SCIP_CALL( SCIPreoptMergeVarHistory(scip->reopt, scip->set, scip->stat, scip->origprob->vars, scip->origprob->nvars) );
 
       SCIP_CALL( SCIPrelaxationCreate(&scip->relaxation, scip->mem->probmem, scip->set, scip->stat, scip->primal,
             scip->tree) );
@@ -16031,8 +16029,8 @@ SCIP_RETCODE SCIPsolve(
       /* store variable history */
       if( scip->set->reopt_storevarhistory )
       {
-         SCIP_CALL( SCIPreoptUpdateVarHistory(scip->reopt, scip->set, scip->stat, scip->origprob, scip->transprob,
-               scip->mem->probmem, scip->origprob->vars, scip->origprob->nvars) );
+         SCIP_CALL( SCIPreoptUpdateVarHistory(scip->reopt, scip->set, scip->stat, scip->mem->probmem,
+               scip->origprob->vars, scip->origprob->nvars) );
       }
    }
 

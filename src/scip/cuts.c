@@ -234,7 +234,6 @@ void findBestLb(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
-   SCIP_Bool             ignoresol,          /**< should the LP solution be ignored? (eg, apply MIR to dualray) */
    SCIP_Real*            bestlb,             /**< pointer to store best bound value */
    int*                  bestlbtype          /**< pointer to store best bound type */
    )
@@ -292,7 +291,6 @@ void findBestUb(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
-   SCIP_Bool             ignoresol,          /**< should the LP solution be ignored? (eg, apply MIR to dualray) */
    SCIP_Real*            bestub,             /**< pointer to store best bound value */
    int*                  bestubtype          /**< pointer to store best bound type */
    )
@@ -374,8 +372,6 @@ SCIP_Real getMIRRowActivity(
 /** calculates the minimal activity of the given MIR */
 static
 SCIP_Real getMIRMinActivity(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    int*                  varinds,            /**< sparsity pattern of non-zero MIR coefficients */
@@ -1388,7 +1384,7 @@ SCIP_RETCODE cutsTransformMIRRow(
             uselb = TRUE;
 
             /* find closest upper bound in standard upper bound (and variable upper bounds for continuous variables) */
-            findBestUb(set, stat, var, sol, usevbds && fixintegralrhs, allowlocal && fixintegralrhs, ignoresol, &bestub, &bestubtype);
+            findBestUb(set, stat, var, sol, usevbds && fixintegralrhs, allowlocal && fixintegralrhs, &bestub, &bestubtype);
          }
          else
          {
@@ -1433,7 +1429,7 @@ SCIP_RETCODE cutsTransformMIRRow(
             uselb = FALSE;
 
             /* find closest lower bound in standard lower bound (and variable lower bounds for continuous variables) */
-            findBestLb(set, stat, var, sol, usevbds && fixintegralrhs, allowlocal && fixintegralrhs, ignoresol, &bestlb, &bestlbtype);
+            findBestLb(set, stat, var, sol, usevbds && fixintegralrhs, allowlocal && fixintegralrhs, &bestlb, &bestlbtype);
          }
       }
       else
@@ -1443,10 +1439,10 @@ SCIP_RETCODE cutsTransformMIRRow(
          /* bound selection should be done automatically */
 
          /* find closest lower bound in standard lower bound (and variable lower bounds for continuous variables) */
-         findBestLb(set, stat, var, sol, usevbds, allowlocal, ignoresol, &bestlb, &bestlbtype);
+         findBestLb(set, stat, var, sol, usevbds, allowlocal, &bestlb, &bestlbtype);
 
          /* find closest upper bound in standard upper bound (and variable upper bounds for continuous variables) */
-         findBestUb(set, stat, var, sol, usevbds, allowlocal, ignoresol, &bestub, &bestubtype);
+         findBestUb(set, stat, var, sol, usevbds, allowlocal, &bestub, &bestubtype);
 
          /* check, if variable is free variable */
          if( SCIPsetIsInfinity(set, -bestlb) && SCIPsetIsInfinity(set, bestub) )
@@ -2058,8 +2054,7 @@ void cutsRoundMIRRow(
    int*                  nvarinds,           /**< pointer to number of non-zero MIR coefficients */
    int*                  varsign,            /**< stores the sign of the transformed variable in summation */
    int*                  boundtype,          /**< stores the bound used for transformed variable (vlb/vub_idx or -1 for lb/ub) */
-   SCIP_Real             f0,                 /**< fractional value of rhs */
-   SCIP_Bool             ignoresol           /**< should the current sol be ignored? */
+   SCIP_Real             f0                  /**< fractional value of rhs */
    )
 {
    SCIP_Real onedivoneminusf0;
@@ -2959,7 +2954,7 @@ SCIP_RETCODE cutsLpCalcMIR(
       goto TERMINATE;
 
    *mirrhs = downrhs;
-   cutsRoundMIRRow(set, prob, mircoef, mirrhs, varused, varinds, &nvarinds, varsign, boundtype, f0, FALSE);
+   cutsRoundMIRRow(set, prob, mircoef, mirrhs, varused, varinds, &nvarinds, varsign, boundtype, f0);
    SCIPdebug(printMIR(set, stat, prob, sol, mircoef, *mirrhs, FALSE, FALSE));
 
    /* substitute aggregated slack variables:
@@ -3055,13 +3050,11 @@ SCIP_RETCODE cutsApplyMIR(
 
    /* only temporary */
    assert(mksetcoefs == NULL);
+   assert(mksetcoefsvalid == NULL);
 
    SCIPdebugMessage("applying MIR function (scale: %g)\n", scale);
 
    *success = FALSE;
-
-   if( mksetcoefsvalid != NULL )
-      *mksetcoefsvalid = FALSE;
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &varsign, prob->nvars) );
@@ -3101,12 +3094,6 @@ SCIP_RETCODE cutsApplyMIR(
          nvarinds, varsign, boundtype, &freevariable, &localbdsused) );
    assert(allowlocal || !localbdsused);
    *islocal = *islocal || localbdsused;
-
-   /* store the coefficients of the variables in the constructed mixed knapsack set */
-   if( mksetcoefs != NULL )
-      BMScopyMemoryArray(mksetcoefs, mircoef, prob->nvars);
-   if( mksetcoefsvalid != NULL )
-      *mksetcoefsvalid = TRUE;
 
    if( freevariable )
       goto TERMINATE;
@@ -3151,7 +3138,7 @@ SCIP_RETCODE cutsApplyMIR(
       goto TERMINATE;
 
    *mirrhs = downrhs;
-   cutsRoundMIRRow(set, prob, mircoef, mirrhs, varused, varinds, nvarinds, varsign, boundtype, f0, TRUE);
+   cutsRoundMIRRow(set, prob, mircoef, mirrhs, varused, varinds, nvarinds, varsign, boundtype, f0);
    SCIPdebug(printMIR(set, stat, prob, NULL, mircoef, *mirrhs, TRUE, *islocal));
 
    /* remove again all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
@@ -3161,7 +3148,7 @@ SCIP_RETCODE cutsApplyMIR(
    SCIPdebug(printMIR(set, stat, prob, NULL, mircoef, rhs, TRUE, *islocal));
 
    /* calculate cut activity */
-   *minact = getMIRMinActivity(set, stat, prob, mircoef, varinds, *nvarinds, *islocal);
+   *minact = getMIRMinActivity(prob, mircoef, varinds, *nvarinds, *islocal);
    *success = TRUE;
 
   TERMINATE:
