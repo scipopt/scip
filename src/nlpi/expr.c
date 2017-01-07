@@ -2859,7 +2859,11 @@ SCIP_DECL_EXPREVAL( exprevalPolynomial )
             else if( exponent < 0.0 )
             {
                /* 0^negative = nan */
-               *result = log(-1.0);
+#ifdef NAN
+               *result = NAN;
+#else
+               *result = 0.0 / 0.0;
+#endif
                return SCIP_OKAY;
             }
             /* 0^0 == 1 */
