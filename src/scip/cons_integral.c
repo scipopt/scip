@@ -141,8 +141,10 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxIntegral)
       }
    }
 
-   /* if we found a branching candidate, immediately branch to be able to return SCIP_BRANCHED and stop the enforcement loop */
-   if ( *result == SCIP_INFEASIBLE )
+   /* if we have found a branching candidate, immediately branch to be able to return SCIP_BRANCHED and stop the
+    * enforcement loop
+    */
+   if( *result == SCIP_INFEASIBLE )
    {
       /* call branching methods for external candidates */
       SCIP_CALL( SCIPbranchExtern(scip, result) );
