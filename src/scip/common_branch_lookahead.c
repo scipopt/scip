@@ -18,8 +18,8 @@
  * @author Christoph Schubert
  */
 /*
- */
 #define SCIP_DEBUG
+ */
 #define SCIP_STATISTIC
 
 #include "scip/common_branch_lookahead.h"

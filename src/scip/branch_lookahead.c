@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*
-#define SCIP_DEBUG
  */
+#define SCIP_DEBUG
 #define SCIP_STATISTIC
 
 /**@file   branch_lookahead.c
@@ -260,7 +260,6 @@ SCIP_RETCODE allocBinaryVarList(
    int                   startsize
    )
 {
-   SCIPABORT();
    SCIP_CALL( SCIPallocBuffer(scip, list) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*list)->binaryvars, startsize) );
 
@@ -273,15 +272,39 @@ SCIP_RETCODE allocBinaryVarList(
 }
 
 static
+void printBinaryVarList(
+   SCIP*                 scip,
+   BINARYVARLIST*        list
+   )
+{
+   int i;
+
+   SCIPinfoMessage(scip, NULL, "Size <%i>/<%i> [", list->nbinaryvars, list->memorysize);
+   for( i = 0; i < list->nbinaryvars; i++ )
+   {
+      if( i != 0 )
+      {
+         SCIPinfoMessage(scip, NULL, ", ");
+      }
+      SCIPinfoMessage(scip, NULL, "%s", list->binaryvars[i] ? SCIPvarGetName(list->binaryvars[i]) : "NULL");
+   }
+   SCIPinfoMessage(scip, NULL, "]\n");
+}
+
+static
 SCIP_RETCODE appendToBinaryVarList(
    SCIP*                 scip,
    BINARYVARLIST*        list,
    SCIP_VAR*             vartoadd
    )
 {
+
    assert(list != NULL);
    assert(vartoadd != NULL);
    /*assert(SCIPvarIsBinary(vartoadd));*/
+
+   SCIPinfoMessage(scip, NULL, "Add <%s> to list: ", SCIPvarGetName(vartoadd));
+   printBinaryVarList(scip, list);
 
    if( list->memorysize == list->nbinaryvars )
    {
@@ -294,6 +317,9 @@ SCIP_RETCODE appendToBinaryVarList(
    list->binaryvars[list->nbinaryvars] = vartoadd;
    list->nbinaryvars++;
 
+   SCIPinfoMessage(scip, NULL, "List after: ");
+   printBinaryVarList(scip, list);
+
    return SCIP_OKAY;
 }
 
@@ -305,16 +331,23 @@ SCIP_VAR* dropFromBinaryVarList(
 {
    SCIP_VAR* lastelement;
 
+   SCIPinfoMessage(scip, NULL, "Delete last element of list: ");
+   printBinaryVarList(scip, list);
+
    assert(list != NULL);
    assert(list->nbinaryvars > 0);
-   assert(list->binaryvars[list->nbinaryvars] != NULL);
+   assert(list->binaryvars[list->nbinaryvars-1] != NULL);
 
-   lastelement = list->binaryvars[list->nbinaryvars];
-   list->binaryvars[list->nbinaryvars] = NULL;
+   lastelement = list->binaryvars[list->nbinaryvars-1];
+   list->binaryvars[list->nbinaryvars-1] = NULL;
 
    assert(lastelement != NULL);
 
    list->nbinaryvars--;
+
+   SCIPinfoMessage(scip, NULL, "List after: ");
+   printBinaryVarList(scip, list);
+
    return lastelement;
 }
 
@@ -324,7 +357,8 @@ void freeBinaryVarList(
    BINARYVARLIST**       list
    )
 {
-   SCIPfreeBufferArray(scip, list);
+   SCIPfreeBufferArray(scip, &(*list)->binaryvars);
+   SCIPfreeBuffer(scip, list);
 }
 /*
  * Local methods for the data structures
@@ -1740,12 +1774,15 @@ SCIP_RETCODE selectVarRecursive(
    for( i = 0; i < nlpcands && !status->cutoff; i++ )
    {
       SCIP_VAR* branchvar;
+      SCIP_VAR* negbranchvar;
       SCIP_Real branchval;
       BRANCHINGRESULTDATA* downbranchingresult;
       BRANCHINGRESULTDATA* upbranchingresult;
 
       branchvar = lpcands[i];
       branchval = lpcandssol[i];
+
+      negbranchvar = SCIPvarGetNegatedVar(branchvar);
 
       SCIPdebugMessage("Depth <%i>, Started branching on var <%s>\n", probingdepth, SCIPvarGetName(branchvar));
 
@@ -1754,6 +1791,17 @@ SCIP_RETCODE selectVarRecursive(
 
       initBranchingResultData(scip, downbranchingresult);
       initBranchingResultData(scip, upbranchingresult);
+
+      if( SCIPvarIsBinary(branchvar) )
+      {
+         /* In case that the branch variable is binary, add the negated var to the list.
+          * This list is used to generate a set packing constraint for cutoff branches which were reached by only using
+          * binary variables.
+          * DownBranching on a binary variable x means: x <= 0
+          * When this cutoff occurs we have that: x >= 1 <=> 1-x <= 0
+          */
+         SCIP_CALL( appendToBinaryVarList(scip, binaryvarlist, negbranchvar) );
+      }
 
       SCIP_CALL( executeDownBranching(scip, branchvar, branchval, downbranchingresult, status) );
 
@@ -1775,6 +1823,7 @@ SCIP_RETCODE selectVarRecursive(
             VALIDDOMREDDATA* deepervalidbounds;
             SUPPOSEDDOMREDDATA* deepersupposedbounds;
             STATUS* deeperstatus;
+            SCIP_VAR* droppedelement;
             SCIP_Real deeperlpobjval = SCIPgetLPObjval(scip);
 
             SCIP_CALL( allocateStatus(scip, &deeperstatus) );
@@ -1791,7 +1840,9 @@ SCIP_RETCODE selectVarRecursive(
 
             SCIP_CALL( selectVarRecursive(scip, deeperstatus, config, deepervalidbounds, deepersupposedbounds, binaryvarlist, deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1) );
 
-            dropFromBinaryVarList(scip, binaryvarlist);
+            droppedelement = dropFromBinaryVarList(scip, binaryvarlist);
+
+            assert(droppedelement == branchvar);
             assert(binaryvarlist->nbinaryvars == probingdepth);
 
             /* the proved dual bound of the deeper branching cannot be less than the current dual bound, as every deeper
@@ -1836,6 +1887,7 @@ SCIP_RETCODE selectVarRecursive(
             VALIDDOMREDDATA* deepervalidbounds;
             SUPPOSEDDOMREDDATA* deepersupposedbounds;
             STATUS* deeperstatus;
+            SCIP_VAR* droppedelement;
             SCIP_Real deeperlpobjval = SCIPgetLPObjval(scip);
 
             SCIP_CALL( allocateStatus(scip, &deeperstatus) );
@@ -1852,7 +1904,9 @@ SCIP_RETCODE selectVarRecursive(
 
             SCIP_CALL( selectVarRecursive(scip, deeperstatus, config, deepervalidbounds, deepersupposedbounds, binaryvarlist, deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1) );
 
-            dropFromBinaryVarList(scip, binaryvarlist);
+            droppedelement = dropFromBinaryVarList(scip, binaryvarlist);
+
+            assert(droppedelement == branchvar);
             assert(binaryvarlist->nbinaryvars == probingdepth);
 
             /* the proved dual bound of the deeper branching cannot be less than the current dual bound, as every deeper
@@ -1984,7 +2038,6 @@ SCIP_RETCODE selectVarStart(
    SCIP_CALL( allocSupposedBoundData(scip, &supposedbounds) );
 
    SCIP_CALL( allocBinaryVarList(scip, &binaryvarlist, recursiondepth) );
-
 
    SCIPstartProbing(scip);
 
