@@ -31,10 +31,6 @@ GAMSDIR		=	gams
 
 include $(SCIPDIR)/make/make.project
 
-ifneq ($(LINKRPATH),)
-LIBBUILDFLAGS	+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
-endif
-
 GAMSIODIR	=	$(GAMSDIR)/apifiles/C/api
 
 #-----------------------------------------------------------------------------

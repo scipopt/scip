@@ -2158,6 +2158,7 @@ SCIP_RETCODE readNonlinearExprs(
 
          *constype = NONLINEAR;
       }
+   /* cppcheck-suppress unusedLabel */
    TERMINATE:
       SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 

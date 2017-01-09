@@ -2545,6 +2545,7 @@ SCIP_RETCODE readMps(
       SCIP_CALL_TERMINATE( retcode, SCIPsetObjsense(scip, mpsinputObjsense(mpsi)), TERMINATE );
    }
 
+ /* cppcheck-suppress unusedLabel */
  TERMINATE:
    mpsinputFree(scip, &mpsi);
 
