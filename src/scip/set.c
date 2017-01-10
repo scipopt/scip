@@ -2571,11 +2571,7 @@ SCIP_RETCODE SCIPsetFree(
    BMSfreeMemoryArrayNull(&(*set)->nlpis);
 
    /* free concsolvers */
-   for( i = 0; i < (*set)->nconcsolvers; ++i )
-   {
-      SCIP_CALL( SCIPconcsolverDestroyInstance(*set, &(*set)->concsolvers[i]) );
-   }
-   BMSfreeMemoryArrayNull(&(*set)->concsolvers);
+   SCIP_CALL( SCIPsetFreeConcsolvers(*set) );
 
    /* free concsolvers types */
    for( i = 0; i < (*set)->nconcsolvertypes; ++i )
@@ -4033,6 +4029,28 @@ SCIP_RETCODE SCIPsetIncludeConcsolver(
    assert(set->nconcsolvers == SCIPconcsolverGetIdx(concsolver));
 
    set->nconcsolvers++;
+
+   return SCIP_OKAY;
+}
+
+/** frees all concurrent solvers in the concurrent solver list */
+SCIP_RETCODE SCIPsetFreeConcsolvers(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   int i;
+   assert(set != NULL);
+
+   /* call user callback for each concurrent solver */
+   for( i = 0; i < set->nconcsolvers; ++i )
+   {
+      SCIP_CALL( SCIPconcsolverDestroyInstance(set, &set->concsolvers[i]) );
+   }
+
+   /* set size and number to zero and free the concurent solver array */
+   set->nconcsolvers = 0;
+   set->concsolverssize = 0;
+   BMSfreeMemoryArrayNull(&set->concsolvers);
 
    return SCIP_OKAY;
 }

@@ -10413,6 +10413,15 @@ SCIP_RETCODE SCIPfreeProb(
    {
       int i;
 
+      /* free concsolvers and deinitialize the syncstore */
+      if( scip->set->nconcsolvers > 0 )
+      {
+         assert(SCIPsyncstoreIsInitialized(scip->syncstore));
+
+         SCIP_CALL( SCIPsetFreeConcsolvers(scip->set) );
+         SCIP_CALL( SCIPsyncstoreExit(scip->syncstore) );
+      }
+
       /* deactivate all pricers */
       for( i = scip->set->nactivepricers-1; i >= 0; --i )
       {

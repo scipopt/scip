@@ -757,9 +757,16 @@ SCIP_CONCSOLVERTYPE* SCIPsetFindConcsolverType(
    );
 
 /** inserts concurrent solver into the concurrent solver list */
+extern
 SCIP_RETCODE SCIPsetIncludeConcsolver(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_CONCSOLVER*      concsolver          /**< concurrent solver */
+   );
+
+/** frees all concurrent solvers in the concurrent solver list */
+extern
+SCIP_RETCODE SCIPsetFreeConcsolvers(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** inserts primal heuristic in primal heuristic list */
