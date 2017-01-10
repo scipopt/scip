@@ -221,6 +221,14 @@ typedef struct
    int                   nboundedvars;       /**< The length of the boundedvars array. */
 } SUPPOSEDDOMREDDATA;
 
+typedef struct
+{
+   SCIP_Real*            lowerbounds;
+   SCIP_Bool*            lowerboundsvalid;
+   SCIP_Real*            upperbounds;
+   SCIP_Bool*            upperboundsvalid;
+} DOMAINREDUCTIONS;
+
 /**
  * A container to hold the implied binary bounds found, as these are added after the main loop of the branching rule. The
  * size of both arrays is changed dynamically, as we otherwise would need up to nvar*nvars number of entries to represent
@@ -254,6 +262,249 @@ typedef struct
 } BINARYLISTLIST;
 
 static
+SCIP_RETCODE allocDomainReductions(
+   SCIP*                 scip,
+   DOMAINREDUCTIONS**    domainreductions
+   )
+{
+   int ntotalvars;
+   int i;
+
+   ntotalvars = SCIPgetNVars(scip);
+
+   SCIP_CALL( SCIPallocBuffer(scip, domainreductions) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*domainreductions)->lowerbounds, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*domainreductions)->upperbounds, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*domainreductions)->lowerboundsvalid, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*domainreductions)->upperboundsvalid, ntotalvars) );
+
+   for( i = 0; i < ntotalvars; i++ )
+   {
+      (*domainreductions)->lowerboundsvalid[i] = FALSE;
+      (*domainreductions)->upperboundsvalid[i] = FALSE;
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+void addLowerBound(
+   SCIP*                 scip,
+   SCIP_VAR*             branchvar,
+   SCIP_Real             branchval,
+   DOMAINREDUCTIONS*     domainreductions
+   )
+{
+   int varindex;
+   SCIP_Real newlowerbound;
+
+   varindex = SCIPvarGetProbindex(branchvar);
+
+   if( domainreductions->lowerboundsvalid[varindex] )
+   {
+      newlowerbound = MIN(domainreductions->lowerbounds[varindex], branchval);
+   }
+   else
+   {
+      newlowerbound = branchval;
+   }
+
+   domainreductions->lowerbounds[varindex] = newlowerbound;
+   domainreductions->lowerboundsvalid[varindex] = TRUE;
+}
+
+static
+void addUpperBound(
+   SCIP*                 scip,
+   SCIP_VAR*             branchvar,
+   SCIP_Real             branchval,
+   DOMAINREDUCTIONS*     domainreductions
+   )
+{
+   int varindex;
+   SCIP_Real newupperbound;
+
+   varindex = SCIPvarGetProbindex(branchvar);
+
+   if( domainreductions->upperboundsvalid[varindex] )
+   {
+      newupperbound = MIN(domainreductions->upperbounds[varindex], branchval);
+   }
+   else
+   {
+      newupperbound = branchval;
+   }
+
+   domainreductions->upperbounds[varindex] = newupperbound;
+   domainreductions->upperboundsvalid[varindex] = TRUE;
+}
+
+static
+void applyDeeperDomainReductions(
+   SCIP*                 scip,
+   DOMAINREDUCTIONS*     targetdomainreductions,
+   DOMAINREDUCTIONS*     downdomainreductions,
+   DOMAINREDUCTIONS*     updomainreductions
+   )
+{
+   int ntotalvars;
+   int i;
+
+   ntotalvars = SCIPgetNVars(scip);
+
+   for( i = 0; i < ntotalvars; i++ )
+   {
+      if( downdomainreductions->lowerboundsvalid[i] && updomainreductions->lowerboundsvalid[i] )
+      {
+         SCIP_Real newlowerbound;
+
+         if( targetdomainreductions->lowerboundsvalid[i] )
+         {
+            newlowerbound = MAX(
+               MIN(downdomainreductions->lowerbounds[i], updomainreductions->lowerbounds[i]),
+               targetdomainreductions->lowerbounds[i]);
+         }
+         else
+         {
+            newlowerbound = MIN(downdomainreductions->lowerbounds[i], updomainreductions->lowerbounds[i]);
+         }
+
+         targetdomainreductions->lowerbounds[i] = newlowerbound;
+         targetdomainreductions->lowerboundsvalid[i] = TRUE;
+      }
+
+      if( downdomainreductions->upperboundsvalid[i] && updomainreductions->upperboundsvalid[i] )
+      {
+         SCIP_Real newupperbound;
+
+         if( targetdomainreductions->upperboundsvalid[i] )
+         {
+            newupperbound = MIN(
+               MAX(downdomainreductions->upperbounds[i], updomainreductions->upperbounds[i]),
+               targetdomainreductions->upperbounds[i]);
+         }
+         else
+         {
+            newupperbound = MAX(downdomainreductions->upperbounds[i], updomainreductions->upperbounds[i]);
+         }
+
+         targetdomainreductions->upperbounds[i] = newupperbound;
+         targetdomainreductions->upperboundsvalid[i] = TRUE;
+      }
+   }
+}
+
+static
+SCIP_RETCODE applyDomainReductions(
+   SCIP*                 scip,
+   DOMAINREDUCTIONS*     domainreductions,
+   SCIP_Bool*            domredcutoff,
+   SCIP_Bool*            domred
+   )
+{
+   int i;
+   SCIP_VAR** probvars;
+   int nprobvars;
+   int nboundsadded = 0;
+
+   probvars = SCIPgetVars(scip);
+   nprobvars = SCIPgetNVars(scip);
+
+   for( i = 0; i < nprobvars; i++ )
+   {
+      SCIP_VAR* var;
+
+      var = probvars[i];
+
+      if( !*domredcutoff && domainreductions->lowerboundsvalid[i] )
+      {
+         SCIP_Bool infeasible;
+         SCIP_Bool tightened;
+         SCIP_Real oldlowerbound;
+         SCIP_Real proposedlowerbound;
+         SCIP_Real newlowerbound;
+
+         /* get the old and the new lower bound */
+         oldlowerbound = SCIPvarGetLbLocal(var);
+         proposedlowerbound = domainreductions->lowerbounds[i];
+
+         /* add the new bound */
+         SCIP_CALL( SCIPtightenVarLb(scip, var, proposedlowerbound, FALSE, &infeasible, &tightened) );
+
+         newlowerbound = SCIPvarGetLbLocal(var);
+         SCIPdebugMessage("Variable <%s>, old lower bound <%g>, proposed lower bound <%g>, new lower bound <%g>\n",
+            SCIPvarGetName(var), oldlowerbound, proposedlowerbound, newlowerbound);
+
+         if( infeasible )
+         {
+            /* the domain reduction may result in an empty model (ub < lb) */
+            *domredcutoff = TRUE;
+            SCIPdebugMessage("The domain reduction of variable <%s> resulted in an empty model.\n",
+               SCIPvarGetName(var));
+         }
+         else if( tightened )
+         {
+            /* the lb is now strictly greater than before */
+            *domred = TRUE;
+            SCIPdebugMessage("The lower bound of variable <%s> was successfully tightened.\n", SCIPvarGetName(var));
+            nboundsadded++;
+         }
+      }
+
+      if( !*domredcutoff && domainreductions->upperboundsvalid[i] )
+      {
+         SCIP_Bool infeasible;
+         SCIP_Bool tightened;
+         SCIP_Real oldupperbound;
+         SCIP_Real proposedupperbound;
+         SCIP_Real newupperbound;
+
+         /* get the old and the new upper bound */
+         oldupperbound = SCIPvarGetUbLocal(var);
+         proposedupperbound = domainreductions->upperbounds[i];
+
+         /* add the new bound */
+         SCIP_CALL( SCIPtightenVarUb(scip, var, proposedupperbound, FALSE, &infeasible, &tightened) );
+
+         newupperbound = SCIPvarGetUbLocal(var);
+         SCIPdebugMessage("Variable <%s>, old upper bound <%g>, proposed upper bound <%g>, new upper bound <%g>\n",
+            SCIPvarGetName(var), oldupperbound, proposedupperbound, newupperbound);
+
+         if( infeasible )
+         {
+            /* the domain reduction may result in an empty model (ub < lb) */
+            *domredcutoff = TRUE;
+            SCIPdebugMessage("The upper bound of variable <%s> could not be tightened.\n", SCIPvarGetName(var));
+         }
+         else if( tightened )
+         {
+            /* the ub is now strictly smaller than before */
+            *domred = TRUE;
+            SCIPdebugMessage("The upper bound of variable <%s> was successfully tightened.\n", SCIPvarGetName(var));
+            nboundsadded++;
+         }
+      }
+   }
+
+   SCIPdebugMessage("Added <%d> real domain reductions to the problem.\n", nboundsadded);
+
+   return SCIP_OKAY;
+}
+
+static
+void freeDomainReductions(
+   SCIP*                 scip,
+   DOMAINREDUCTIONS**    domainreductions
+   )
+{
+   SCIPfreeBufferArray(scip, &(*domainreductions)->upperboundsvalid);
+   SCIPfreeBufferArray(scip, &(*domainreductions)->lowerboundsvalid);
+   SCIPfreeBufferArray(scip, &(*domainreductions)->upperbounds);
+   SCIPfreeBufferArray(scip, &(*domainreductions)->lowerbounds);
+   SCIPfreeBuffer(scip, domainreductions);
+}
+
+static
 SCIP_RETCODE allocBinaryVarList(
    SCIP*                 scip,
    BINARYVARLIST**       list,
@@ -262,8 +513,6 @@ SCIP_RETCODE allocBinaryVarList(
 {
    SCIP_CALL( SCIPallocBuffer(scip, list) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*list)->binaryvars, startsize) );
-
-   /* TODO: we need to handle the vars some other way, this way we overwrite everything */
 
    (*list)->nbinaryvars = 0;
    (*list)->memorysize = startsize;
@@ -279,16 +528,16 @@ void printBinaryVarList(
 {
    int i;
 
-   SCIPinfoMessage(scip, NULL, "Size <%i>/<%i> [", list->nbinaryvars, list->memorysize);
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Size <%i>/<%i> [", list->nbinaryvars, list->memorysize);
    for( i = 0; i < list->nbinaryvars; i++ )
    {
       if( i != 0 )
       {
-         SCIPinfoMessage(scip, NULL, ", ");
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, ", ");
       }
-      SCIPinfoMessage(scip, NULL, "%s", list->binaryvars[i] ? SCIPvarGetName(list->binaryvars[i]) : "NULL");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "%s", list->binaryvars[i] ? SCIPvarGetName(list->binaryvars[i]) : "NULL");
    }
-   SCIPinfoMessage(scip, NULL, "]\n");
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "]\n");
 }
 
 static
@@ -301,9 +550,9 @@ SCIP_RETCODE appendToBinaryVarList(
 
    assert(list != NULL);
    assert(vartoadd != NULL);
-   /*assert(SCIPvarIsBinary(vartoadd));*/
+   assert(SCIPvarIsBinary(vartoadd));
 
-   SCIPinfoMessage(scip, NULL, "Add <%s> to list: ", SCIPvarGetName(vartoadd));
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Add <%s> to list: ", SCIPvarGetName(vartoadd));
    printBinaryVarList(scip, list);
 
    if( list->memorysize == list->nbinaryvars )
@@ -317,7 +566,7 @@ SCIP_RETCODE appendToBinaryVarList(
    list->binaryvars[list->nbinaryvars] = vartoadd;
    list->nbinaryvars++;
 
-   SCIPinfoMessage(scip, NULL, "List after: ");
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "List after: ");
    printBinaryVarList(scip, list);
 
    return SCIP_OKAY;
@@ -331,7 +580,7 @@ SCIP_VAR* dropFromBinaryVarList(
 {
    SCIP_VAR* lastelement;
 
-   SCIPinfoMessage(scip, NULL, "Delete last element of list: ");
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Delete last element of list: ");
    printBinaryVarList(scip, list);
 
    assert(list != NULL);
@@ -345,7 +594,7 @@ SCIP_VAR* dropFromBinaryVarList(
 
    list->nbinaryvars--;
 
-   SCIPinfoMessage(scip, NULL, "List after: ");
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "List after: ");
    printBinaryVarList(scip, list);
 
    return lastelement;
@@ -1731,8 +1980,7 @@ SCIP_RETCODE selectVarRecursive(
    SCIP*                 scip,
    STATUS*               status,
    CONFIGURATION*        config,
-   VALIDDOMREDDATA*      validbounds,
-   SUPPOSEDDOMREDDATA*   supposedbounds,
+   DOMAINREDUCTIONS*     domainreductions,
    BINARYVARLIST*        binaryvarlist,
    SCIP_VAR**            lpcands,            /**< array of fractional variables */
    SCIP_Real*            lpcandssol,         /**< array of fractional solution values */
@@ -1750,7 +1998,6 @@ SCIP_RETCODE selectVarRecursive(
    assert(scip != NULL);
    assert(status != NULL);
    assert(config != NULL);
-   assert(validbounds != NULL);
    assert(lpcands != NULL);
    assert(lpcandssol != NULL);
    assert(lpcandsfrac != NULL);
@@ -1771,26 +2018,35 @@ SCIP_RETCODE selectVarRecursive(
    decision->bestup = SCIPgetLPObjval(scip);
    decision->bestupvalid = FALSE;
 
-   for( i = 0; i < nlpcands && !status->cutoff; i++ )
+   for( i = 0; i < nlpcands && !status->lperror && !status->cutoff; i++ )
    {
       SCIP_VAR* branchvar;
       SCIP_VAR* negbranchvar;
       SCIP_Real branchval;
       BRANCHINGRESULTDATA* downbranchingresult;
       BRANCHINGRESULTDATA* upbranchingresult;
+      DOMAINREDUCTIONS* downdomainreductions;
+      DOMAINREDUCTIONS* updomainreductions;
 
       branchvar = lpcands[i];
       branchval = lpcandssol[i];
 
-      negbranchvar = SCIPvarGetNegatedVar(branchvar);
+      assert(branchvar != NULL);
 
       SCIPdebugMessage("Depth <%i>, Started branching on var <%s>\n", probingdepth, SCIPvarGetName(branchvar));
+
+      SCIP_CALL( SCIPgetNegatedVar(scip, branchvar, &negbranchvar) );
+
+      assert(negbranchvar != NULL);
 
       SCIP_CALL( SCIPallocBuffer(scip, &downbranchingresult) );
       SCIP_CALL( SCIPallocBuffer(scip, &upbranchingresult) );
 
       initBranchingResultData(scip, downbranchingresult);
       initBranchingResultData(scip, upbranchingresult);
+
+      SCIP_CALL( allocDomainReductions(scip, &downdomainreductions) );
+      SCIP_CALL( allocDomainReductions(scip, &updomainreductions) );
 
       if( SCIPvarIsBinary(branchvar) )
       {
@@ -1820,30 +2076,14 @@ SCIP_RETCODE selectVarRecursive(
          if( deepernlpcands > 0 )
          {
             BRANCHINGDECISION* deeperdecision;
-            VALIDDOMREDDATA* deepervalidbounds;
-            SUPPOSEDDOMREDDATA* deepersupposedbounds;
             STATUS* deeperstatus;
-            SCIP_VAR* droppedelement;
             SCIP_Real deeperlpobjval = SCIPgetLPObjval(scip);
 
             SCIP_CALL( allocateStatus(scip, &deeperstatus) );
 
             SCIP_CALL( allocateBranchingDecision(scip, &deeperdecision, deeperlpobjval) );
 
-            /* TODO: maybe remove? or transfer to the outer valid bounds (only if really valid!) */
-            SCIP_CALL( allocValidBoundData(scip, &deepervalidbounds) );
-
-            SCIP_CALL( allocSupposedBoundData(scip, &deepersupposedbounds) );
-
-            SCIP_CALL( appendToBinaryVarList(scip, binaryvarlist, branchvar) );
-            assert(binaryvarlist->nbinaryvars == probingdepth+1);
-
-            SCIP_CALL( selectVarRecursive(scip, deeperstatus, config, deepervalidbounds, deepersupposedbounds, binaryvarlist, deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1) );
-
-            droppedelement = dropFromBinaryVarList(scip, binaryvarlist);
-
-            assert(droppedelement == branchvar);
-            assert(binaryvarlist->nbinaryvars == probingdepth);
+            SCIP_CALL( selectVarRecursive(scip, deeperstatus, config, downdomainreductions, binaryvarlist, deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1) );
 
             /* the proved dual bound of the deeper branching cannot be less than the current dual bound, as every deeper
              * node has more/tighter constraints and as such cannot be better than the base LP. */
@@ -1853,8 +2093,6 @@ SCIP_RETCODE selectVarRecursive(
             downbranchingresult->cutoff = deeperstatus->cutoff;
 
             freeStatus(scip, &deeperstatus);
-            freeSupposedBoundData(scip, &deepersupposedbounds);
-            freeValidBoundData(scip, &deepervalidbounds);
             freeBranchingDecision(scip, &deeperdecision);
          }
          SCIPfreeBufferArray(scip, &deeperlpcandsfrac);
@@ -1862,8 +2100,28 @@ SCIP_RETCODE selectVarRecursive(
          SCIPfreeBufferArray(scip, &deeperlpcands);
       }
 
+      if( SCIPvarIsBinary(branchvar) )
+      {
+         SCIP_VAR* droppedelement;
+
+         droppedelement = dropFromBinaryVarList(scip, binaryvarlist);
+
+         assert(droppedelement == negbranchvar);
+      }
+
       /* reset the probing depth to undo the previous branching */
       SCIPbacktrackProbing(scip, probingdepth);
+
+      if( SCIPvarIsBinary(branchvar) )
+      {
+         /* In case that the branch variable is binary, add the var to the list.
+          * This list is used to generate a set packing constraint for cutoff branches which were reached by only using
+          * binary variables.
+          * UpBranching on a binary variable x means: x >= 1
+          * When this cutoff occurs we have that: x <= 0
+          */
+         SCIP_CALL( appendToBinaryVarList(scip, binaryvarlist, branchvar) );
+      }
 
       SCIP_CALL( executeUpBranching(scip, branchvar, branchval, upbranchingresult, status) );
 
@@ -1884,30 +2142,14 @@ SCIP_RETCODE selectVarRecursive(
          if( deepernlpcands > 0 )
          {
             BRANCHINGDECISION* deeperdecision;
-            VALIDDOMREDDATA* deepervalidbounds;
-            SUPPOSEDDOMREDDATA* deepersupposedbounds;
             STATUS* deeperstatus;
-            SCIP_VAR* droppedelement;
             SCIP_Real deeperlpobjval = SCIPgetLPObjval(scip);
 
             SCIP_CALL( allocateStatus(scip, &deeperstatus) );
 
             SCIP_CALL( allocateBranchingDecision(scip, &deeperdecision, deeperlpobjval) );
 
-            /* TODO: maybe remove? or transfer to the outer valid bounds (only if really valid!) */
-            SCIP_CALL( allocValidBoundData(scip, &deepervalidbounds) );
-
-            SCIP_CALL( allocSupposedBoundData(scip, &deepersupposedbounds) );
-
-            SCIP_CALL( appendToBinaryVarList(scip, binaryvarlist, branchvar) );
-            assert(binaryvarlist->nbinaryvars == probingdepth+1);
-
-            SCIP_CALL( selectVarRecursive(scip, deeperstatus, config, deepervalidbounds, deepersupposedbounds, binaryvarlist, deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1) );
-
-            droppedelement = dropFromBinaryVarList(scip, binaryvarlist);
-
-            assert(droppedelement == branchvar);
-            assert(binaryvarlist->nbinaryvars == probingdepth);
+            SCIP_CALL( selectVarRecursive(scip, deeperstatus, config, updomainreductions, binaryvarlist, deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1) );
 
             /* the proved dual bound of the deeper branching cannot be less than the current dual bound, as every deeper
              * node has more/tighter constraints and as such cannot be better than the base LP. */
@@ -1917,8 +2159,6 @@ SCIP_RETCODE selectVarRecursive(
             upbranchingresult->cutoff = deeperstatus->cutoff;
 
             freeStatus(scip, &deeperstatus);
-            freeSupposedBoundData(scip, &deepersupposedbounds);
-            freeValidBoundData(scip, &deepervalidbounds);
             freeBranchingDecision(scip, &deeperdecision);
          }
          SCIPfreeBufferArray(scip, &deeperlpcandsfrac);
@@ -1926,11 +2166,23 @@ SCIP_RETCODE selectVarRecursive(
          SCIPfreeBufferArray(scip, &deeperlpcands);
       }
 
+      if( SCIPvarIsBinary(branchvar) )
+      {
+         SCIP_VAR* droppedelement;
+
+         droppedelement = dropFromBinaryVarList(scip, binaryvarlist);
+
+         assert(droppedelement == branchvar);
+      }
+
       /* reset the probing depth to undo the previous branching */
       SCIPbacktrackProbing(scip, probingdepth);
 
       {
          /* TODO: move this block to an own method when finished */
+
+         /* TODO: add a parameter "usedomainreductions" or so for this case */
+         applyDeeperDomainReductions(scip, domainreductions, downdomainreductions, updomainreductions);
 
          if( upbranchingresult->cutoff && downbranchingresult->cutoff )
          {
@@ -1942,11 +2194,11 @@ SCIP_RETCODE selectVarRecursive(
          else if( upbranchingresult->cutoff )
          {
             SCIPdebugMessage("Depth <%i>, Up branch cutoff\n", probingdepth);
-            /* if the up branching (on the lower bound) was cutoff, we can add this as a new upper bound for the var */
-            if( config->usedirectdomred )
-            {
-               addValidUpperBound(scip, branchval, branchvar, branchval, validbounds);
-            }
+
+            /* TODO: add a parameter "usedomainreductions" or so for this case */
+            addUpperBound(scip, branchvar, branchval, domainreductions);
+
+            /* TODO: add binary constraint here?*/
 
             if( downbranchingresult->dualboundvalid )
             {
@@ -1957,10 +2209,10 @@ SCIP_RETCODE selectVarRecursive(
          {
             SCIPdebugMessage("Depth <%i>, Up branch cutoff\n", probingdepth);
 
-            if( config-> usedirectdomred )
-            {
-               addValidLowerBound(scip, branchval, branchvar, branchval, validbounds);
-            }
+            /* TODO: add a parameter "usedomainreductions" or so for this case */
+            addLowerBound(scip, branchvar, branchval, domainreductions);
+
+            /* TODO: add binary constraint here?*/
 
             if( upbranchingresult->dualboundvalid )
             {
@@ -2003,6 +2255,8 @@ SCIP_RETCODE selectVarRecursive(
          }
       }
 
+      freeDomainReductions(scip, &updomainreductions);
+      freeDomainReductions(scip, &downdomainreductions);
       SCIPfreeBuffer(scip, &upbranchingresult);
       SCIPfreeBuffer(scip, &downbranchingresult);
    }
@@ -2024,8 +2278,7 @@ SCIP_RETCODE selectVarStart(
    SCIP_Real* lpcandssol;
    SCIP_Real* lpcandsfrac;
    int nlpcands;
-   VALIDDOMREDDATA* validbounds;
-   SUPPOSEDDOMREDDATA* supposedbounds;
+   DOMAINREDUCTIONS* domainreductions;
    BINARYVARLIST* binaryvarlist;
 
    config = branchruledata->config;
@@ -2033,28 +2286,26 @@ SCIP_RETCODE selectVarStart(
 
    SCIP_CALL( copyLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
 
-   SCIP_CALL( allocValidBoundData(scip, &validbounds) );
-
-   SCIP_CALL( allocSupposedBoundData(scip, &supposedbounds) );
+   /* TODO: add a parameter "usedomainreductions" or so for this case */
+   SCIP_CALL( allocDomainReductions(scip, &domainreductions) );
 
    SCIP_CALL( allocBinaryVarList(scip, &binaryvarlist, recursiondepth) );
 
    SCIPstartProbing(scip);
 
-   SCIP_CALL( selectVarRecursive(scip, status, config, validbounds, supposedbounds, binaryvarlist, lpcands, lpcandssol, lpcandsfrac, nlpcands, decision, recursiondepth) );
+   SCIP_CALL( selectVarRecursive(scip, status, config, domainreductions, binaryvarlist, lpcands, lpcandssol, lpcandsfrac, nlpcands, decision, recursiondepth) );
 
    SCIPendProbing(scip);
 
-   if( !status->lperror && !status->depthtoosmall && !status->cutoff
-      && (config->usedirectdomred || config->useimplieddomred) )
+   /* TODO: add a parameter "usedomainreductions" or so for this case */
+   if( !status->lperror && !status->depthtoosmall && !status->cutoff )
    {
-      SCIP_CALL( addDomainReductions(scip, validbounds, &status->domredcutoff, &status->domred) );
+      SCIP_CALL( applyDomainReductions(scip, domainreductions, &status->domredcutoff, &status->domred) );
    }
 
    assert(binaryvarlist->nbinaryvars == 0);
    freeBinaryVarList(scip, &binaryvarlist);
-   freeSupposedBoundData(scip, &supposedbounds);
-   freeValidBoundData(scip, &validbounds);
+   freeDomainReductions(scip, &domainreductions);
    freeLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac);
 
    return SCIP_OKAY;
