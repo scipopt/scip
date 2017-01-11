@@ -120,7 +120,6 @@
 #include "scip/heur_trysol.h"
 #include "scip/heur_twoopt.h"
 #include "scip/heur_undercover.h"
-#include "scip/heur_vardegree.h"
 #include "scip/heur_vbounds.h"
 #include "scip/heur_veclendiving.h"
 #include "scip/heur_zeroobj.h"

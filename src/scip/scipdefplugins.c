@@ -167,7 +167,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurTwoopt(scip) );
    SCIP_CALL( SCIPincludeHeurUndercover(scip) );
    SCIP_CALL( SCIPincludeHeurVbounds(scip) );
-   SCIP_CALL( SCIPincludeHeurVardegree(scip) );
    SCIP_CALL( SCIPincludeHeurVeclendiving(scip) );
    SCIP_CALL( SCIPincludeHeurZirounding(scip) );
    SCIP_CALL( SCIPincludePropDualfix(scip) );
