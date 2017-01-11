@@ -10413,6 +10413,15 @@ SCIP_RETCODE SCIPfreeProb(
    {
       int i;
 
+      /* free concsolvers and deinitialize the syncstore */
+      if( scip->set->nconcsolvers > 0 )
+      {
+         assert(SCIPsyncstoreIsInitialized(scip->syncstore));
+
+         SCIP_CALL( SCIPsetFreeConcsolvers(scip->set) );
+         SCIP_CALL( SCIPsyncstoreExit(scip->syncstore) );
+      }
+
       /* deactivate all pricers */
       for( i = scip->set->nactivepricers-1; i >= 0; --i )
       {
@@ -13858,7 +13867,6 @@ SCIP_RETCODE SCIPtransformProb(
    }
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
 
-   if( scip->set->disp_verblevel == SCIP_VERBLEVEL_FULL )
    {
       SCIP_Real maxnonzeros;
       SCIP_Longint nchecknonzeros;
@@ -13870,6 +13878,7 @@ SCIP_RETCODE SCIPtransformProb(
       maxnonzeros = (SCIP_Real)SCIPgetNConss(scip) * SCIPgetNVars(scip);
       maxnonzeros = MAX(maxnonzeros, 1.0);
       SCIP_CALL( calcNonZeros(scip, &nchecknonzeros, &nactivenonzeros, &approxchecknonzeros, &approxactivenonzeros) );
+      scip->stat->nnz = nactivenonzeros;
 
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "original problem has %s%" SCIP_LONGINT_FORMAT " active (%g%%) nonzeros and %s%" SCIP_LONGINT_FORMAT " (%g%%) check nonzeros\n",
