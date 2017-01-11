@@ -1378,6 +1378,7 @@ void createBinaryConstraintName(
 static
 SCIP_RETCODE addBinaryConstraint(
    SCIP*                 scip,               /**< SCIP data structure */
+   STATUS*               status,
    CONFIGURATION*        config,
 #ifdef SCIP_STATISTIC
    STATISTICS*           statistics,
@@ -1407,6 +1408,8 @@ SCIP_RETCODE addBinaryConstraint(
    SCIP_CALL( SCIPaddConsNode(scip, basenode, constraint, NULL) );
    /* release the constraint, as it is no longer needed */
    SCIP_CALL( SCIPreleaseCons(scip, &constraint) );
+
+   status->addimpbinconst = TRUE;
 
    /* TODO: maybe add the constraint after the full run? Then we have to save all constraints in an own array */
 
@@ -2178,9 +2181,9 @@ SCIP_RETCODE selectVarRecursive(
       if( config->useimpliedbincons && downbranchingresult->cutoff && binaryvarlist->nbinaryvars == probingdepth )
       {
 #ifdef SCIP_STATISTIC
-         addBinaryConstraint(scip, config, statistics, basenode, binaryvarlist);
+         addBinaryConstraint(scip, status, config, statistics, basenode, binaryvarlist);
 #else
-         addBinaryConstraint(scip, config, basenode, binaryvarlist);
+         addBinaryConstraint(scip, status, config, basenode, binaryvarlist);
 #endif
       }
 
@@ -2257,9 +2260,9 @@ SCIP_RETCODE selectVarRecursive(
       if( config->useimpliedbincons && upbranchingresult->cutoff && binaryvarlist->nbinaryvars == probingdepth )
       {
 #ifdef SCIP_STATISTIC
-         addBinaryConstraint(scip, config, statistics, basenode, binaryvarlist);
+         addBinaryConstraint(scip, status, config, statistics, basenode, binaryvarlist);
 #else
-         addBinaryConstraint(scip, config, basenode, binaryvarlist);
+         addBinaryConstraint(scip, status, config, basenode, binaryvarlist);
 #endif
       }
 
