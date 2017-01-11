@@ -40,6 +40,8 @@
 #define ADJUSTFACETTOL             1e-6 /**< adjust resulting facets in checkRikun() up to a violation of this value */
 #define USEDUALSIMPLEX             TRUE /**< use dual or primal simplex algorithm? */
 
+#define MAXMULTILINSEPALPSIZE      14   /**< maximum size of the multilinear separation LP */
+
 /** first values for 2^n */
 static const int poweroftwo[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
 
@@ -236,8 +238,7 @@ SCIP_RETCODE freeExprlist(
    return SCIP_OKAY;
 }
 
-/** builds LP used to compute facets of the convex envelope of multilinear functions, see separatePointProduct */
-/* FIXME how does \ref works? */
+/** builds LP used to compute facets of the convex envelope of multilinear functions, see @ref separatePointProduct() */
 static
 SCIP_RETCODE buildMultilinearSeparationLP(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -259,6 +260,7 @@ SCIP_RETCODE buildMultilinearSeparationLP(
 
    assert(scip != NULL);
    assert(lp != NULL);
+   assert(0 < lpsize && lpsize < MAXMULTILINSEPALPSIZE);
 
    SCIPdebugMsg(scip, "Building LP for computing facets of convex envelope of multilinear terms\n");
 
@@ -308,6 +310,7 @@ SCIP_RETCODE buildMultilinearSeparationLP(
 
          a <<= 1; /*lint !e701*/
          ++row;
+         assert(0 <= row && row < MAXMULTILINSEPALPSIZE);
          assert(poweroftwo[row] == a);
       }
 
@@ -458,7 +461,7 @@ SCIP_Real computeMaxFacetError(
 
 /** computes a facet of convex/concave envelope of \f$ w = c \Pi_i x_i \f$ that tries to separate \f$ (w^*, x^*) \f$;
  * checks that the facet is valid for \f$ w = \frac{c}{mid(y)} \Pi_i x_i \Pi_j y_j \f$, where the \f$ y_j \f$ are
- * (almost) fixed, see technical details of separatePointProduct
+ * (almost) fixed, see technical details of @ref separatePointProduct()
  */
 static
 SCIP_RETCODE computeFacet(
@@ -663,7 +666,7 @@ SCIP_RETCODE computeFacet(
       /* there seem to be numerical problems if the error is too large; in this case we reject the facet */
       if( maxfaceterror > ADJUSTFACETTOL )
       {
-         SCIPdebugMsg(scip, "facet pass the check of Rikun et al.\n");
+         SCIPdebugMsg(scip, "ignoring facet due to instability, it cuts off a vertex by %g.\n", maxfaceterror);
          *violation = -1.0;
       }
 
@@ -1643,23 +1646,6 @@ SCIP_RETCODE separatePointProduct(
       int pos;
       int i;
 
-      exprhdlrdata = SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlrProduct(conshdlr));
-
-      /* if LP is not constructed, build it now */
-      if( exprhdlrdata->lpsize == 0 )
-      {
-         assert(exprhdlrdata->multilinearseparationlp == NULL);
-
-         /* find out size of LP */
-         /* FIXME: here I want to loop over all product expressions to find the one that has the maximum number of children */
-         exprhdlrdata->lpsize = 10;
-
-         SCIP_CALL( buildMultilinearSeparationLP(scip, exprhdlrdata->lpsize, &(exprhdlrdata->multilinearseparationlp))
-               );
-      }
-      assert(exprhdlrdata->multilinearseparationlp != NULL);
-      assert(exprhdlrdata->lpsize > 0);
-
       /* prepare data to compute a facet of the envelope */
       nvars = SCIPgetConsExprExprNChildren(expr);
 
@@ -1698,11 +1684,39 @@ SCIP_RETCODE separatePointProduct(
          }
       }
       nvars = pos; /* update number of vars */
+      assert(nvars >= 0);
 
       /* nothing to do if all variables are fixed */
       /* TODO if a single variable is unfix, should we add the linear equality w = constant * the_unfix_var ?? */
       if( nvars == 0 )
          goto CLEANUP;
+
+      /* currently, we can't separate if there are too many variables (we could if we split the product in smaller
+       * products, but this is not so simple with the current design) */
+      if( nvars >= MAXMULTILINSEPALPSIZE )
+         goto CLEANUP;
+
+      exprhdlrdata = SCIPgetConsExprExprHdlrData(SCIPgetConsExprExprHdlrProduct(conshdlr));
+
+      /* if LP is not constructed, build it now */
+      if( exprhdlrdata->lpsize == 0 )
+      {
+         assert(exprhdlrdata->multilinearseparationlp == NULL);
+
+         SCIP_CALL( buildMultilinearSeparationLP(scip, nvars, &(exprhdlrdata->multilinearseparationlp)) );
+         exprhdlrdata->lpsize = nvars;
+      }
+      /* if LP is not large enough, rebuild it */
+      else if( exprhdlrdata->lpsize < nvars )
+      {
+         assert(exprhdlrdata->multilinearseparationlp != NULL);
+         SCIP_CALL( SCIPlpiFree(&(exprhdlrdata->multilinearseparationlp)) );
+
+         SCIP_CALL( buildMultilinearSeparationLP(scip, nvars, &(exprhdlrdata->multilinearseparationlp)) );
+         exprhdlrdata->lpsize = nvars;
+      }
+      assert(exprhdlrdata->multilinearseparationlp != NULL);
+      assert(exprhdlrdata->lpsize >= nvars);
 
       SCIPdebugMsg(scip, "computing multilinear cut with %d variables, coef %g, midval %g\n", nvars, midval * exprdata->coefficient, midval );
 
