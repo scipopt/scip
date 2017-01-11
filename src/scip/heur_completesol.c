@@ -48,11 +48,14 @@
 #define DEFAULT_NODESQUOT     0.1       /**< subproblem nodes in relation to nodes of the original problem */
 #define DEFAULT_LPLIMFAC      2.0       /**< factor by which the limit on the number of LP depends on the node limit */
 #define DEFAULT_OBJWEIGHT     1.0       /**< weight of the original objective function (1: only original objective) */
+#define DEFAULT_BOUNDWIDENING 0.1       /**< bound widening factor applied to continuous variables
+                                         *   (0: fix variables to given solution values, 1: relax to global bounds)
+                                         */
 #define DEFAULT_MINIMPROVE    0.01      /**< factor by which the incumbent should be improved at least */
 #define DEFAULT_MINOBJWEIGHT 1e-3       /**< minimal weight for original objective function (zero could lead to infinite solutions) */
 #define DEFAULT_IGNORECONT  FALSE       /**< should solution values for continuous variables be ignored? */
 #define DEFAULT_BESTSOLS        5       /**< heuristic stops, if the given number of improving solutions were found (-1: no limit) */
-#define DEFAULT_MAXPROPROUNDS  10       /**< maximal number of iterations in proagation (-1: no limit) */
+#define DEFAULT_MAXPROPROUNDS  10       /**< maximal number of iterations in propagation (-1: no limit) */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Completesol"
@@ -71,10 +74,13 @@ struct SCIP_HeurData
    SCIP_Real             nodelimit;          /**< the nodelimit employed in the current sub-SCIP, for the event handler*/
    SCIP_Real             lplimfac;           /**< factor by which the limit on the number of LP depends on the node limit */
    SCIP_Real             objweight;          /**< weight of the original objective function (1: only original obj, 0: try to keep to given solution) */
+   SCIP_Real             boundwidening;      /**< bound widening factor applied to continuous variables
+                                              *   (0: fix variables to given solution values, 1: relax to global bounds)
+                                              */
    SCIP_Real             minimprove;         /**< factor by which the incumbent should be improved at least */
    SCIP_Bool             ignorecont;         /**< should solution values for continuous variables be ignored? */
    int                   bestsols;           /**< heuristic stops, if the given number of improving solutions were found (-1: no limit) */
-   int                   maxproprounds;      /**< maximal number of iterations in proagation (-1: no limit) */
+   int                   maxproprounds;      /**< maximal number of iterations in propagation (-1: no limit) */
 };
 
 /* ---------------- Callback methods of event handler ---------------- */
@@ -179,7 +185,7 @@ SCIP_RETCODE createSubproblem(
 
    objcons = NULL;
 
-   /* add constraints to messure the distance to the given partial solution */
+   /* add constraints to measure the distance to the given partial solution */
    for( i = 0; i < nvars; i++ )
    {
       SCIP_Real solval;
@@ -230,7 +236,7 @@ SCIP_RETCODE createSubproblem(
       /* skip variables where we already found some bound tightenings */
       if( tightened[idx] == FALSE )
       {
-         /* special case: vars[i] is binary; we do not add an extra variable, but we mimic the behaviour we would get with it.
+         /* special case: vars[i] is binary; we do not add an extra variable, but we mimic the behavior we would get with it.
           * E.g., if the solval is 0.3, setting the variable to 0 would give a cost of 0.3 * epsobj, setting it to 1 gives
           * 0.7 * epsobj. Thus, 0.3 * epsobj can be treated as a constant in the objective function and the variable gets
           * an objective coefficient of 0.4 * epsobj.
@@ -343,7 +349,7 @@ SCIP_RETCODE createNewSol(
       SCIP_CALL( SCIPsetSolVal(scip, newsol, vars[v], solval) );
    }
 
-   /* try to add new solution to scip and free it immediately */
+   /* try to add new solution to SCIP and free it immediately */
    SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, success) );
 
    return SCIP_OKAY;
@@ -457,7 +463,7 @@ SCIP_RETCODE tightenVariables(
 
       solval = SCIPgetSolVal(scip, sol, vars[v]);
 
-      /* skip unknows variables */
+      /* skip unknown variables */
       if( solval == SCIP_UNKNOWN ) /*lint !e777*/
          continue;
       assert(!SCIPisInfinity(scip, solval) && !SCIPisInfinity(scip, -solval));
@@ -548,18 +554,18 @@ SCIP_RETCODE tightenVariables(
             SCIP_Real ub = SCIPvarGetUbGlobal(vars[v]);
             SCIP_Real lb = SCIPvarGetLbGlobal(vars[v]);
 
-            /* both bound are finite; add 10% of domain range to the new bounds */
-            if( !SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub) )
-               offset = REALABS(0.1 * (ub-lb));
+            /* both bound are finite */
+            if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
+               offset = REALABS(heurdata->boundwidening * (ub-lb));
             else
             {
-               /* if one bound is finite, add 10% of range between solval and finite bound the new bounds */
+               /* if one bound is finite, widen bound w.r.t. solution value and finite bound */
                if( !SCIPisInfinity(scip, -lb) )
-                  offset = REALABS(0.1 * (solval-lb));
+                  offset = REALABS(heurdata->boundwidening * (solval-lb));
                else
                {
                   assert(!SCIPisInfinity(scip, ub));
-                  offset = REALABS(0.1 * (ub-solval));
+                  offset = REALABS(heurdata->boundwidening * (ub-solval));
                }
             }
 
@@ -724,7 +730,7 @@ SCIP_RETCODE applyCompletesol(
    SCIP_CALL( createSubproblem(scip, subscip, heurdata, subvars, partialsol, tightened, &success) );
    if( !success )
    {
-      SCIPdebugMsg(scip, "Error while creating completesol subproblem wrt partial solurion <%p>.\n", (void*)partialsol);
+      SCIPdebugMsg(scip, "Error while creating completesol subproblem w.r.t. partial solution <%p>.\n", (void*)partialsol);
       goto TERMINATE;
    }
    SCIPdebugMsg(scip, "Completesol subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
@@ -734,11 +740,11 @@ SCIP_RETCODE applyCompletesol(
 
 #ifdef SCIP_DEBUG
    /* for debugging, enable full output */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", SCIP_VERBLEVEL_FULL) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", -1) );
 #else
    /* disable statistic timing inside sub SCIP and output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 #endif
 
@@ -1056,7 +1062,7 @@ SCIP_RETCODE SCIPincludeHeurCompletesol(
          &heurdata->minnodes, TRUE, DEFAULT_MINNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxunkownrate",
-         "maximal rate of changed coefficients",
+         "maximal rate of unknown solution values",
          &heurdata->maxunknownrate, FALSE, DEFAULT_MAXUNKRATE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/addallsols",
@@ -1079,6 +1085,10 @@ SCIP_RETCODE SCIPincludeHeurCompletesol(
          "weight of the original objective function (1: only original objective)",
          &heurdata->objweight, TRUE, DEFAULT_OBJWEIGHT, DEFAULT_MINOBJWEIGHT, 1.0, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/boundwidening",
+         "bound widening factor applied to continuous variables (0: fix variables to given solution values, 1: relax to global bounds)",
+         &heurdata->boundwidening, TRUE, DEFAULT_BOUNDWIDENING, 0.0, 1.0, NULL, NULL) );
+
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minimprove",
          "factor by which the incumbent should be improved at least",
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
@@ -1092,7 +1102,7 @@ SCIP_RETCODE SCIPincludeHeurCompletesol(
          &heurdata->bestsols, FALSE, DEFAULT_BESTSOLS, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxproprounds",
-         "maximal number of iterations in proagation (-1: no limit)",
+         "maximal number of iterations in propagation (-1: no limit)",
          &heurdata->maxproprounds, FALSE, DEFAULT_MAXPROPROUNDS, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;

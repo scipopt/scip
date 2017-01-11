@@ -115,7 +115,7 @@ public:
    std::string                 defoptions;   /**< modified default options for Ipopt */
 
    /** constructor */
-   SCIP_NlpiData(
+   explicit SCIP_NlpiData(
       BMS_BLKMEM* blkmem_                    /**< block memory */
       )
      : blkmem(blkmem_),
@@ -174,6 +174,7 @@ private:
 public:
    bool                  approxhessian;      /**< do we tell Ipopt to approximate the hessian? (may also be false if user set to approx. hessian via option file) */
 
+   // cppcheck-suppress uninitMemberVar
    /** constructor */
    ScipNLP(
       SCIP_NLPIPROBLEM*  nlpiproblem_ = NULL,/**< NLPI problem data */

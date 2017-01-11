@@ -2601,8 +2601,6 @@ SCIP_Bool SCIPlpiIsObjlimExc(
       return ( lpi->clp->isPrimalObjectiveLimitReached() || lpi->clp->isDualObjectiveLimitReached() );
    }
    */
-
-   return FALSE;
 }
 
 
