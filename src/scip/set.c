@@ -2263,7 +2263,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "parallel/mode",
          "parallel optimisation mode, 0: opportunistic or 1: deterministic.",
-         &(*set)->parallel_spimode, FALSE, SCIP_DEFAULT_PARALLEL_MODE, 0, 1,
+         &(*set)->parallel_mode, FALSE, SCIP_DEFAULT_PARALLEL_MODE, 0, 1,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "parallel/minnthreads",

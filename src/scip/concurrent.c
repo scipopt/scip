@@ -51,16 +51,12 @@ SCIP_RETCODE SCIPcreateConcurrent(
    int*                  varperm             /**< permutation of variables for communication */
    )
 {
-   SCIP_SYNCSTORE*   syncstore;
    int nvars;
 
    assert(scip != NULL);
    assert(concsolver != NULL);
    assert(varperm != NULL);
    assert(scip->concurrent == NULL);
-
-   syncstore = SCIPgetSyncstore(scip);
-   assert(syncstore != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, &scip->concurrent) );
 
@@ -74,14 +70,14 @@ SCIP_RETCODE SCIPcreateConcurrent(
    scip->concurrent->solidx = 0;
    scip->stat->subscipdepth = 0;
 
-   if( SCIPsyncstoreGetMode(syncstore) == SCIP_PARA_DETERMINISTIC )
+   if( scip->set->parallel_mode == SCIP_PARA_DETERMINISTIC )
    {
       scip->concurrent->dettime = 0.0;
       scip->concurrent->wallclock = NULL;
    }
    else
    {
-      SCIP_CALL( SCIPcreateWallClock(scip, & scip->concurrent->wallclock) );
+      SCIP_CALL( SCIPcreateWallClock(scip, &scip->concurrent->wallclock) );
       SCIP_CALL( SCIPstartClock(scip, scip->concurrent->wallclock) );
    }
 
