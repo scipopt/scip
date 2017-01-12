@@ -1228,6 +1228,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    }
    else if( retcode != SCIP_OKAY )
    {
+      SCIPwarningMessage(scip, "cannot run repair!!!\n");
       SCIP_CALL( SCIPfreeSol(scip, &(heurdata->infsol)) );
       return SCIP_OKAY;
    }
