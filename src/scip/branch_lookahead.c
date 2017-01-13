@@ -344,6 +344,7 @@ void addUpperBound(
    SCIP*                 scip,
    SCIP_VAR*             branchvar,
    SCIP_Real             branchval,
+   SCIP_SOL*             baselpsol,
    DOMAINREDUCTIONS*     domainreductions
    )
 {
@@ -355,6 +356,7 @@ void addUpperBound(
    if( domainreductions->upperboundsvalid[varindex] )
    {
       newupperbound = MIN(domainreductions->upperbounds[varindex], branchval);
+
    }
    else
    {
@@ -362,6 +364,12 @@ void addUpperBound(
    }
 
    domainreductions->upperbounds[varindex] = newupperbound;
+
+   if( !domainreductions->lowerboundsvalid[varindex] && !domainreductions->upperboundsvalid[varindex])
+   {
+      domainreductions->nreducedvars++;
+   }
+
    domainreductions->upperboundsvalid[varindex] = TRUE;
 }
 
@@ -2022,10 +2030,11 @@ SCIP_RETCODE handleImpliedBinaryBounds(
       /* release the constraint, as it is no longer needed */
       SCIP_CALL( SCIPreleaseCons(scip, &constraint) );
 
-      SCIPstatistic(
-         statistics->nbinconst++;
-      )
    }
+   SCIPstatistic(
+      statistics->nbinconst += binarybounddata->nentries;
+      statistics->nbinconstvio += binarybounddata->nviolatedentries;
+   )
    SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Added <%i> implied binary constraints.\n", nentries);
    return SCIP_OKAY;
 }
@@ -2286,6 +2295,7 @@ static
 SCIP_RETCODE selectVarRecursive(
    SCIP*                 scip,
    STATUS*               status,
+   PERSISTENTDATA*       persistent,
    CONFIGURATION*        config,
    SCIP_SOL*             baselpsol,
    DOMAINREDUCTIONS*     domainreductions,
@@ -2321,6 +2331,7 @@ SCIP_RETCODE selectVarRecursive(
    decision->bestdownvalid = FALSE;
    decision->bestup = SCIPgetLPObjval(scip);
    decision->bestupvalid = FALSE;
+   decision->provedbound = SCIPgetLPObjval(scip);
 
    if( !config->forcebranching && nlpcands == 1 )
    {
@@ -2340,27 +2351,33 @@ SCIP_RETCODE selectVarRecursive(
       else
       {
          int i;
+         int c;
          SCIP_Real bestscore = -SCIPinfinity(scip);
          SCIP_Real bestscorelowerbound;
          SCIP_Real bestscoreupperbound;
+         SCIP_Real localbaselpsolval = SCIPgetLPObjval(scip);
 
          bestscorelowerbound = SCIPvarGetLbLocal(decision->bestvar);
          bestscoreupperbound = SCIPvarGetUbLocal(decision->bestvar);
 
          SCIPdebugMessage("Started selectVarRecursive with depth <%i>/<%i> and <%i> candidates.\n", probingdepth+1, recursiondepth+probingdepth, nlpcands);
 
-         for( i = 0; i < nlpcands && isExecuteBranchingLoop(status) && !SCIPisStopped(scip); i++ )
+         for( i = 0, c = persistent->restartindex; i < nlpcands && isExecuteBranchingLoop(status) && !SCIPisStopped(scip); i++, c++ )
          {
             SCIP_VAR* branchvar;
             SCIP_VAR* negbranchvar;
             SCIP_Real branchval;
+            SCIP_Real branchvalfrac;
             BRANCHINGRESULTDATA* downbranchingresult;
             BRANCHINGRESULTDATA* upbranchingresult;
             DOMAINREDUCTIONS* downdomainreductions;
             DOMAINREDUCTIONS* updomainreductions;
 
-            branchvar = lpcands[i];
-            branchval = lpcandssol[i];
+            c = c % nlpcands;
+
+            branchvar = lpcands[c];
+            branchval = lpcandssol[c];
+            branchvalfrac = lpcandsfrac[c];
 
             assert(branchvar != NULL);
 
@@ -2397,6 +2414,7 @@ SCIP_RETCODE selectVarRecursive(
 
             SCIP_CALL( executeDownBranching(scip, branchvar, branchval, downbranchingresult, status) );
 
+
             if( config->useimpliedbincons && downbranchingresult->cutoff
                   && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
             {
@@ -2410,6 +2428,11 @@ SCIP_RETCODE selectVarRecursive(
                SCIP_Real* deeperlpcandssol;
                SCIP_Real* deeperlpcandsfrac;
                int deepernlpcands;
+               SCIP_Real localdowngain;
+
+               localdowngain = MAX(0, downbranchingresult->objval - localbaselpsolval);
+
+               SCIP_CALL( SCIPupdateVarPseudocost(scip, branchvar, 0.0-branchvalfrac, localdowngain, 1.0) );
 
                SCIP_CALL( copyLPBranchCands(scip, &deeperlpcands, &deeperlpcandssol, &deeperlpcandsfrac, &deepernlpcands) );
 
@@ -2426,11 +2449,11 @@ SCIP_RETCODE selectVarRecursive(
                   SCIP_CALL( allocateBranchingDecision(scip, &deeperdecision, deeperlpobjval) );
 
 #ifdef SCIP_STATISTIC
-                  SCIP_CALL( selectVarRecursive(scip, deeperstatus, config, baselpsol, downdomainreductions, binconsdata,
+                  SCIP_CALL( selectVarRecursive(scip, deeperstatus, persistent, config, baselpsol, downdomainreductions, binconsdata,
                         deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1,
                         statistics) );
 #else
-                  SCIP_CALL( selectVarRecursive(scip, deeperstatus, config, baselpsol, downdomainreductions, binconsdata,
+                  SCIP_CALL( selectVarRecursive(scip, deeperstatus, persistent, config, baselpsol, downdomainreductions, binconsdata,
                         deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1) );
 #endif
 
@@ -2486,6 +2509,11 @@ SCIP_RETCODE selectVarRecursive(
                SCIP_Real* deeperlpcandssol;
                SCIP_Real* deeperlpcandsfrac;
                int deepernlpcands;
+               SCIP_Real localupgain;
+
+               localupgain = MAX(0, upbranchingresult->objval - localbaselpsolval);
+
+               SCIP_CALL( SCIPupdateVarPseudocost(scip, branchvar, 1.0-branchvalfrac, localupgain, 1.0) );
 
                SCIP_CALL( copyLPBranchCands(scip, &deeperlpcands, &deeperlpcandssol, &deeperlpcandsfrac, &deepernlpcands) );
 
@@ -2503,11 +2531,11 @@ SCIP_RETCODE selectVarRecursive(
 
 
 #ifdef SCIP_STATISTIC
-                  SCIP_CALL( selectVarRecursive(scip, deeperstatus, config, baselpsol, downdomainreductions, binconsdata,
+                  SCIP_CALL( selectVarRecursive(scip, deeperstatus, persistent, config, baselpsol, downdomainreductions, binconsdata,
                         deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1,
                         statistics) );
 #else
-                  SCIP_CALL( selectVarRecursive(scip, deeperstatus, config, baselpsol, updomainreductions, binconsdata,
+                  SCIP_CALL( selectVarRecursive(scip, deeperstatus, persistent, config, baselpsol, updomainreductions, binconsdata,
                         deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1) );
 #endif
 
@@ -2668,6 +2696,8 @@ SCIP_RETCODE selectVarRecursive(
                status->propagationdomred = TRUE;
             }
          }
+
+         persistent->restartindex = c;
       }
    }
 
@@ -2686,6 +2716,7 @@ SCIP_RETCODE selectVarStart(
    )
 {
    CONFIGURATION* config;
+   PERSISTENTDATA* persistent;
    int recursiondepth;
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandssol;
@@ -2702,7 +2733,9 @@ SCIP_RETCODE selectVarStart(
    SCIPstatistic( assert(statistics != NULL) );
 
    config = branchruledata->config;
+   persistent = branchruledata->persistent;
    assert(config != NULL);
+   assert(persistent != NULL);
 
    recursiondepth = config->recursiondepth;
    assert(recursiondepth > 0);
@@ -2725,11 +2758,12 @@ SCIP_RETCODE selectVarStart(
    }
 
    SCIPstartProbing(scip);
+   SCIPenableVarHistory(scip);
 
 #ifdef SCIP_STATISTIC
-   SCIP_CALL( selectVarRecursive(scip, status, config, baselpsol, domainreductions, binconsdata, lpcands, lpcandssol, lpcandsfrac, nlpcands, decision, recursiondepth, statistics) );
+   SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, lpcands, lpcandssol, lpcandsfrac, nlpcands, decision, recursiondepth, statistics) );
 #else
-   SCIP_CALL( selectVarRecursive(scip, status, config, baselpsol, domainreductions, binconsdata, lpcands, lpcandssol, lpcandsfrac, nlpcands, decision, recursiondepth) );
+   SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, lpcands, lpcandssol, lpcandsfrac, nlpcands, decision, recursiondepth) );
 #endif
 
    SCIPendProbing(scip);
@@ -2738,14 +2772,11 @@ SCIP_RETCODE selectVarStart(
    if( config->useimpliedbincons )
    {
       SCIP_NODE* basenode;
-      PERSISTENTDATA* persistent;
 
       assert(binconsdata->binaryvars->nbinaryvars == 0);
 
       basenode = SCIPgetCurrentNode(scip);
-      persistent = branchruledata->persistent;
 
-      assert(persistent != NULL);
 
 #ifdef SCIP_STATISTIC
       SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->createdconstraints, &status->addimpbinconst, statistics) );
@@ -2830,6 +2861,10 @@ SCIP_RETCODE selectVarLookaheadBranching(
    {
       /* if there is only one branching variable we can directly branch there */
       *bestcand = lpcands[0];
+      *bestval = lpcandssol[0];
+      *bestupvalid = FALSE;
+      *bestdownvalid = FALSE;
+      *provedbound = SCIPgetLPObjval(scip);
    }
    else if( SCIPgetDepthLimit(scip) <= (SCIPgetDepth(scip) + 2) )
    {
@@ -3224,6 +3259,10 @@ SCIP_RETCODE selectVarLookaheadBranching(
             && (config->usedirectdomred || config->useimplieddomred) )
          {
             /* if we have no other result status set and found (potential) implied domain reductions, we add those here */
+            SCIPstatistic(
+               statistics->ndomainreductions += validbounds->nboundedvars;
+               statistics->ndomredvio += validbounds->nviolatedbybaselp;
+            );
             SCIP_CALL( addDomainReductions(scip, validbounds, &status->domredcutoff, &status->domred) );
          }
       }

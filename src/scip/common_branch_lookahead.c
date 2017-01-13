@@ -82,6 +82,8 @@ SCIP_RETCODE branchOnVar(
    SCIP_NODE* downchild = NULL;
    SCIP_NODE* upchild = NULL;
 
+   assert(!SCIPisIntegral(scip, bestval));
+
    SCIPdebugMessage("Effective branching on var <%s> with value <%g>. Old domain: [%g..%g].\n",
       SCIPvarGetName(bestvar), bestval, SCIPvarGetLbLocal(bestvar), SCIPvarGetUbLocal(bestvar));
 
