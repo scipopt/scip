@@ -786,7 +786,7 @@ SCIP_RETCODE nodeAssignParent(
       node->lowerbound = parent->lowerbound;
       node->estimate = parent->estimate;
       node->depth = parent->depth+1; /*lint !e732*/
-      if( parent->depth >= SCIP_MAXTREEDEPTH-1 )
+      if( parent->depth >= SCIP_MAXTREEDEPTH )
       {
          SCIPerrorMessage("maximal depth level exceeded\n");
          return SCIP_MAXDEPTHLEVEL;
@@ -4825,9 +4825,9 @@ SCIP_RETCODE SCIPtreeCreateRoot(
 
 #ifndef NDEBUG
    /* check, if the sizes in the data structures match the maximal numbers defined here */
-   tree->root->depth = SCIP_MAXTREEDEPTH;
+   tree->root->depth = SCIP_MAXTREEDEPTH + 1;
    tree->root->repropsubtreemark = MAXREPROPMARK;
-   assert(tree->root->depth == SCIP_MAXTREEDEPTH);
+   assert(tree->root->depth - 1 == SCIP_MAXTREEDEPTH);
    assert(tree->root->repropsubtreemark == MAXREPROPMARK);
    tree->root->depth++;             /* this should produce an overflow and reset the value to 0 */
    tree->root->repropsubtreemark++; /* this should produce an overflow and reset the value to 0 */
