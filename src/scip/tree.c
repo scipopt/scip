@@ -31,6 +31,7 @@
 #include "scip/visual.h"
 #include "scip/event.h"
 #include "scip/lp.h"
+#include "scip/relax.h"
 #include "scip/var.h"
 #include "scip/implics.h"
 #include "scip/primal.h"
@@ -6443,6 +6444,7 @@ SCIP_RETCODE treeBacktrackProbing(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
    SCIP_PRIMAL*          primal,             /**< primal data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -6504,6 +6506,11 @@ SCIP_RETCODE treeBacktrackProbing(
             for( i = node->data.probingnode->nchgdobjs - 1; i >= 0; --i )
             {
                assert(tree->probingobjchanged);
+
+               /* inform relaxation and update objective value of relaxation solution */
+               SCIPrelaxationUpdateVarObj(relaxation, set, node->data.probingnode->origobjvars[i],
+                     SCIPvarGetObj(node->data.probingnode->origobjvars[i]), node->data.probingnode->origobjvals[i]);
+
                SCIP_CALL( SCIPvarChgObj(node->data.probingnode->origobjvars[i], blkmem, set, transprob, primal, lp,
                      eventqueue, node->data.probingnode->origobjvals[i]) );
             }
@@ -6584,6 +6591,7 @@ SCIP_RETCODE SCIPtreeBacktrackProbing(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
    SCIP_PRIMAL*          primal,             /**< primal data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -6597,8 +6605,8 @@ SCIP_RETCODE SCIPtreeBacktrackProbing(
    assert(0 <= probingdepth && probingdepth <= SCIPtreeGetProbingDepth(tree));
 
    /* undo the domain and constraint set changes and free the temporary probing nodes below the given probing depth */
-   SCIP_CALL( treeBacktrackProbing(tree, reopt, blkmem, set, stat, transprob, origprob, lp, primal, branchcand, eventqueue,
-         eventfilter, cliquetable, probingdepth) );
+   SCIP_CALL( treeBacktrackProbing(tree, reopt, blkmem, set, stat, transprob, origprob, lp, relaxation, primal, branchcand,
+         eventqueue, eventfilter, cliquetable, probingdepth) );
 
    assert(SCIPtreeProbing(tree));
    assert(SCIPnodeGetType(SCIPtreeGetCurrentNode(tree)) == SCIP_NODETYPE_PROBINGNODE);
@@ -6619,6 +6627,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
    SCIP_PRIMAL*          primal,             /**< Primal LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -6640,8 +6649,8 @@ SCIP_RETCODE SCIPtreeEndProbing(
    assert(set != NULL);
 
    /* undo the domain and constraint set changes of the temporary probing nodes and free the probing nodes */
-   SCIP_CALL( treeBacktrackProbing(tree, reopt, blkmem, set, stat, transprob, origprob, lp, primal, branchcand, eventqueue,
-         eventfilter, cliquetable, -1) );
+   SCIP_CALL( treeBacktrackProbing(tree, reopt, blkmem, set, stat, transprob, origprob, lp, relaxation, primal, branchcand,
+         eventqueue, eventfilter, cliquetable, -1) );
    assert(tree->probingsumchgdobjs == 0);
    assert(!tree->probingobjchanged);
    assert(!lp->divingobjchg);
