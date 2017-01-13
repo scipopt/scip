@@ -156,6 +156,8 @@ typedef struct
    int*                  nsinglecutoffs;
    int*                  nfullcutoffs;
    int                   ndomainreductions;
+   int                   nbinconstvio;
+   int                   ndomredvio;
 } STATISTICS;
 #endif
 
@@ -421,6 +423,7 @@ void applyDeeperDomainReductions(
 static
 SCIP_RETCODE applyDomainReductions(
    SCIP*                 scip,
+   SCIP_SOL*             baselpsol,
    DOMAINREDUCTIONS*     domainreductions,
    SCIP_Bool*            domredcutoff,
    SCIP_Bool*            domred
@@ -433,6 +436,7 @@ SCIP_RETCODE applyDomainReductions(
    SCIP_VAR** probvars;
    int nprobvars;
    int nboundsadded = 0;
+   int nboundsaddedvio = 0;
 
    probvars = SCIPgetVars(scip);
    nprobvars = SCIPgetNVars(scip);
@@ -440,8 +444,12 @@ SCIP_RETCODE applyDomainReductions(
    for( i = 0; i < nprobvars; i++ )
    {
       SCIP_VAR* var;
+      SCIP_Real baselpval;
+      SCIP_Bool boundadded = FALSE;
+      SCIP_Bool boundaddedvio = FALSE;
 
       var = probvars[i];
+      baselpval = SCIPgetSolVal(scip, baselpsol, var);
 
       if( !*domredcutoff && domainreductions->lowerboundsvalid[i] )
       {
@@ -472,9 +480,16 @@ SCIP_RETCODE applyDomainReductions(
          else if( tightened )
          {
             /* the lb is now strictly greater than before */
-            *domred = TRUE;
             SCIPdebugMessage("The lower bound of variable <%s> was successfully tightened.\n", SCIPvarGetName(var));
-            nboundsadded++;
+            boundadded = TRUE;
+
+            if( SCIPisLT(scip, baselpval, newlowerbound) )
+            {
+               SCIPdebugMessage("The lower bound of variable <%s> is violated by the base lp value <%g>.\n",
+                  SCIPvarGetName(var), baselpval);
+               *domred = TRUE;
+               boundaddedvio = TRUE;
+            }
          }
       }
 
@@ -506,18 +521,36 @@ SCIP_RETCODE applyDomainReductions(
          else if( tightened )
          {
             /* the ub is now strictly smaller than before */
-            *domred = TRUE;
             SCIPdebugMessage("The upper bound of variable <%s> was successfully tightened.\n", SCIPvarGetName(var));
-            nboundsadded++;
+            boundadded = TRUE;
+
+            if( SCIPisGT(scip, baselpval, newupperbound) )
+            {
+               SCIPdebugMessage("The upper bound of variable <%s> is violated by the base lp value <%g>.\n",
+                  SCIPvarGetName(var), baselpval);
+               *domred = TRUE;
+               boundaddedvio = TRUE;
+            }
          }
+      }
+
+      if( boundadded )
+      {
+         nboundsadded++;
+      }
+
+      if( boundaddedvio )
+      {
+         nboundsaddedvio++;
       }
    }
 
    SCIPstatistic(
       statistics->ndomainreductions += nboundsadded;
+      statistics->ndomredvio += nboundsaddedvio;
    );
 
-   SCIPdebugMessage("Added <%d> real domain reductions to the problem.\n", nboundsadded);
+   SCIPdebugMessage("Truly changed <%d> domains of the problem.\n", nboundsadded);
 
    return SCIP_OKAY;
 }
@@ -734,6 +767,8 @@ void initStatistics(
    statistics->nsecondlvllps = 0;
    statistics->nbinconst = 0;
    statistics->nstoflvlcutoffs = 0;
+   statistics->nbinconstvio = 0;
+   statistics->ndomredvio = 0;
 
    for( i = 0; i < 18; i++)
    {
@@ -1484,7 +1519,6 @@ void createBinaryConstraintName(
 static
 SCIP_RETCODE addBinaryConstraint(
    SCIP*                 scip,               /**< SCIP data structure */
-   STATUS*               status,
    CONFIGURATION*        config,
    BINCONSDATA*          binconsdata,
    SCIP_SOL*             baselpsol
@@ -1563,11 +1597,11 @@ SCIP_RETCODE applyBinaryConstraints(
       SCIP_CALL( SCIPreleaseCons(scip, &constraint) );
 
       *consadded = TRUE;
-
    }
 
    SCIPstatistic(
       statistics->nbinconst += conslist->nconstraints;
+      statistics->nbinconstvio += conslist->nviolatedcons;
    );
 
 
@@ -2366,7 +2400,7 @@ SCIP_RETCODE selectVarRecursive(
             if( config->useimpliedbincons && downbranchingresult->cutoff
                   && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
             {
-               addBinaryConstraint(scip, status, config, binconsdata, baselpsol);
+               addBinaryConstraint(scip, config, binconsdata, baselpsol);
             }
 
             if( !downbranchingresult->cutoff && !status->lperror && !status->limitreached && recursiondepth > 1 )
@@ -2406,7 +2440,6 @@ SCIP_RETCODE selectVarRecursive(
                   downbranchingresult->dualbound = deeperdecision->provedbound;
                   downbranchingresult->dualboundvalid = TRUE;
                   downbranchingresult->cutoff = deeperstatus->cutoff;
-                  status->addimpbinconst |= deeperstatus->addimpbinconst;
 
                   freeStatus(scip, &deeperstatus);
                   freeBranchingDecision(scip, &deeperdecision);
@@ -2444,7 +2477,7 @@ SCIP_RETCODE selectVarRecursive(
 
             if( config->useimpliedbincons && upbranchingresult->cutoff && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
             {
-               addBinaryConstraint(scip, status, config, binconsdata, baselpsol);
+               addBinaryConstraint(scip, config, binconsdata, baselpsol);
             }
 
             if( !upbranchingresult->cutoff && !status->lperror && !status->limitreached && recursiondepth > 1 )
@@ -2484,7 +2517,6 @@ SCIP_RETCODE selectVarRecursive(
                   upbranchingresult->dualbound = deeperdecision->provedbound;
                   upbranchingresult->dualboundvalid = TRUE;
                   upbranchingresult->cutoff = deeperstatus->cutoff;
-                  status->addimpbinconst |= deeperstatus->addimpbinconst;
 
                   freeStatus(scip, &deeperstatus);
                   freeBranchingDecision(scip, &deeperdecision);
@@ -2595,7 +2627,7 @@ SCIP_RETCODE selectVarRecursive(
                      decision->provedbound = MAX(decision->provedbound, downdualbound);
                   }
 
-                  if( config->useimpliedbincons || config->usedirectdomred || config->useimplieddomred )
+                  if( (config->maxnviolatedcons != -1) && (config->useimpliedbincons || config->usedirectdomred || config->useimplieddomred) )
                   {
                      int nimpliedbincons = 0;
                      int ndomreds = 0;
@@ -2612,8 +2644,7 @@ SCIP_RETCODE selectVarRecursive(
                         SCIPdebugMessage("Depth <%i>, Found <%i> violating bound changes.\n", probingdepth, ndomreds);
                      }
 
-                     if( (config->maxnviolatedcons != -1) &&
-                        (nimpliedbincons + ndomreds >= config->maxnviolatedcons) )
+                     if( nimpliedbincons + ndomreds >= config->maxnviolatedcons )
                      {
                         status->maxnconsreached = TRUE;
                      }
@@ -2661,13 +2692,27 @@ SCIP_RETCODE selectVarStart(
    SCIP_Real* lpcandsfrac;
    int nlpcands;
    DOMAINREDUCTIONS* domainreductions = NULL;
-   BINCONSDATA* binconsdata;
-   SCIP_SOL* baselpsol;
+   BINCONSDATA* binconsdata = NULL;
+   SCIP_SOL* baselpsol = NULL;
+
+   assert(scip != NULL);
+   assert(branchruledata != NULL);
+   assert(status != NULL);
+   assert(decision != NULL);
+   SCIPstatistic( assert(statistics != NULL) );
 
    config = branchruledata->config;
+   assert(config != NULL);
+
    recursiondepth = config->recursiondepth;
+   assert(recursiondepth > 0);
 
    SCIP_CALL( copyLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
+
+   if( config->usedomainreduction || config->useimpliedbincons )
+   {
+      SCIP_CALL( copyCurrentSolution(scip, &baselpsol) );
+   }
 
    if( config->usedomainreduction )
    {
@@ -2677,8 +2722,6 @@ SCIP_RETCODE selectVarStart(
    if( config->useimpliedbincons )
    {
       SCIP_CALL( allocBinConsData(scip, &binconsdata, recursiondepth) );
-
-      SCIP_CALL( copyCurrentSolution(scip, &baselpsol) );
    }
 
    SCIPstartProbing(scip);
@@ -2695,10 +2738,14 @@ SCIP_RETCODE selectVarStart(
    if( config->useimpliedbincons )
    {
       SCIP_NODE* basenode;
-
-      basenode = SCIPgetCurrentNode(scip);
+      PERSISTENTDATA* persistent;
 
       assert(binconsdata->binaryvars->nbinaryvars == 0);
+
+      basenode = SCIPgetCurrentNode(scip);
+      persistent = branchruledata->persistent;
+
+      assert(persistent != NULL);
 
 #ifdef SCIP_STATISTIC
       SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->createdconstraints, &status->addimpbinconst, statistics) );
@@ -2706,9 +2753,15 @@ SCIP_RETCODE selectVarStart(
       SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->createdconstraints, &status->addimpbinconst) );
 #endif
 
-      SCIP_CALL( SCIPfreeSol(scip, &baselpsol) );
-
       freeBinConsData(scip, &binconsdata);
+
+      SCIP_CALL( SCIPlinkLPSol(scip, persistent->prevbinsolution) );
+      SCIP_CALL( SCIPunlinkSol(scip, persistent->prevbinsolution) );
+
+      if( status->addimpbinconst )
+      {
+         copyBranchingDecision(decision, persistent->prevdecision);
+      }
    }
 
    if( config->usedomainreduction )
@@ -2716,12 +2769,17 @@ SCIP_RETCODE selectVarStart(
       if( !status->lperror && !status->depthtoosmall && !status->cutoff )
       {
 #ifdef SCIP_STATISTIC
-         SCIP_CALL( applyDomainReductions(scip, domainreductions, &status->domredcutoff, &status->domred, statistics) );
+         SCIP_CALL( applyDomainReductions(scip, baselpsol, domainreductions, &status->domredcutoff, &status->domred, statistics) );
 #else
-         SCIP_CALL( applyDomainReductions(scip, domainreductions, &status->domredcutoff, &status->domred) );
+         SCIP_CALL( applyDomainReductions(scip, baselpsol, domainreductions, &status->domredcutoff, &status->domred) );
 #endif
       }
       freeDomainReductions(scip, &domainreductions);
+   }
+
+   if( config->usedomainreduction || config->useimpliedbincons )
+   {
+      SCIP_CALL( SCIPfreeSol(scip, &baselpsol) );
    }
 
    freeLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac);
@@ -3316,8 +3374,8 @@ void printStatistics(
       statistics->nfirstlvlcutoffs, statistics->nsecondlvlcutoffs);
    SCIPinfoMessage(scip, NULL, "Cutoff <%i> branches on the first level based on a full cutoff on the second level\n",
       statistics->nstoflvlcutoffs);
-   SCIPinfoMessage(scip, NULL, "Added <%i> binary constraints\n", statistics->nbinconst);
-   SCIPinfoMessage(scip, NULL, "Reduced <%i> domains.\n", statistics->ndomainreductions);
+   SCIPinfoMessage(scip, NULL, "Added <%i> binary constraints, of which <%i> where violated by the base LP.\n", statistics->nbinconst, statistics->nbinconstvio);
+   SCIPinfoMessage(scip, NULL, "Reduced the domain of <%i> vars, <%i> of them where violated by the base LP.\n", statistics->ndomainreductions, statistics->ndomredvio);
 }
 
 /*
