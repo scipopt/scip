@@ -34,6 +34,6 @@ then
 else
   echo -e "Uploading to ruberband"
   cd check/
-  #./evalcheck_cluster.sh -R results/check.$TESTSET.*.eval
+  ./evalcheck_cluster.sh -R results/check.$TESTSET.*.eval
   cd ..
 fi
