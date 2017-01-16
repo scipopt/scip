@@ -1544,7 +1544,7 @@ SCIP_RETCODE createAndSplitProblem(
    for( comp = 0; comp < ncomponents; comp++ )
    {
       SCIP_CALL( initComponent(*problem) );
-      assert((*problem)->ncomponents == comp);
+      assert((*problem)->ncomponents == comp+1);
 
       component = &(*problem)->components[comp];
 
