@@ -57,11 +57,13 @@
 #define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
+#define DEFAULT_RANDSEED             89 /**< initial random seed */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 };
 
 
@@ -124,6 +126,9 @@ SCIP_DECL_HEURINIT(heurInitFracdiving) /*lint --e{715}*/
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+
    return SCIP_OKAY;
 }
 
@@ -140,6 +145,9 @@ SCIP_DECL_HEUREXIT(heurExitFracdiving) /*lint --e{715}*/
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+
+   /* free random number generator */
+   SCIPrandomFree(&heurdata->randnumgen);
 
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
@@ -176,6 +184,7 @@ SCIP_DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
 {
+   SCIP_HEURDATA* heurdata;
    SCIP_Real obj;
    SCIP_Real objnorm;
    SCIP_Real objgain;
@@ -193,6 +202,9 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
       return SCIP_OKAY;
    }
 
+   heurdata = SCIPheurGetData(SCIPfindHeur(scip, HEUR_NAME));
+   assert(heurdata != NULL);
+
    mayrounddown = SCIPvarMayRoundDown(cand);
    mayroundup = SCIPvarMayRoundUp(cand);
 
@@ -203,6 +215,9 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
     */
    if( mayrounddown != mayroundup )
       *roundup = mayrounddown;
+   /* try to avoid variability; decide random of the LP solution can contain some noise. */
+   else if( SCIPisEQ(scip, candsfrac, 0.5) )
+      *roundup = (SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0);
    else
       *roundup = (candsfrac > 0.5);
 
@@ -224,21 +239,29 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
 
    assert(objgain >= -1.0 && objgain <= 1.0);
 
-      /* penalize too small fractions */
-      if( candsfrac < 0.01 )
+   /* penalize too small fractions */
+   if( SCIPisEQ(scip, candsfrac, 0.01) )
+   {
+      /* try to avoid variability; decide random of the LP solution can contain some noise.
+       * use a 1:2 chance for increasing the fractionality, i.e., the score.
+       */
+      if( SCIPrandomGetInt(heurdata->randnumgen, 0, 2) == 0 )
          candsfrac += 10.0;
+   }
+   else if( candsfrac < 0.01 )
+      candsfrac += 10.0;
 
-      /* prefer decisions on binary variables */
-      if( !SCIPvarIsBinary(cand) )
-         candsfrac *= 1000.0;
+   /* prefer decisions on binary variables */
+   if( !SCIPvarIsBinary(cand) )
+      candsfrac *= 1000.0;
 
-      /* prefer variables which cannot be rounded by scoring their fractionality */
-      if( !(mayrounddown || mayroundup) )
-         *score = -candsfrac;
-      else
-         *score =  -2.0 - objgain;
+   /* prefer variables which cannot be rounded by scoring their fractionality */
+   if( !(mayrounddown || mayroundup) )
+      *score = -candsfrac;
+   else
+      *score =  -2.0 - objgain;
 
-      return SCIP_OKAY;
+   return SCIP_OKAY;
 }
 
 /*
