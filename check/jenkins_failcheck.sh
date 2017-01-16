@@ -19,6 +19,7 @@ cd ..
 NFAILS=`grep -c fail $BASEFILE.*res`
 
 # construct string which shows the destination of the out, err, and res files
+SCIPDIR=`pwd`
 ERRORFILE=`ls $BASEFILE.*.err`
 OUTFILE=`ls $BASEFILE.*.out`
 RESFILE=`ls $BASEFILE.*.res`
@@ -27,9 +28,9 @@ DESTINATION="$SCIPDIR/$OUTFILE \n$SCIPDIR/$ERRORFILE \n$SCIPDIR/$RESFILE"
 # check read fails
 if [ $NFAILS -gt 0 ];
 then
-  SUBJECT="[FAIL] [GITBRANCH: $GITBRANCH] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
+  SUBJECT="FAIL [BRANCH: $GITBRANCH] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
   ERRORINSTANCES=`grep fail $BASEFILE.*.res`
-  echo -e "$ERRORINSTANCES \nThe files can be found here:\n$DESTINATION\n Please note that the files might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+  echo -e "$ERRORINSTANCES \n\nThe files can be found here:\n$DESTINATION\n\nPlease note that the files might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
 else
   echo -e "Uploading to ruberband"
   cd check/
