@@ -191,7 +191,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
    SCIP_Bool mayrounddown;
    SCIP_Bool mayroundup;
 
-   heurdata = SCIPheurGetData(SCIPfindHeur(scip, HEUR_NAME));
+   heurdata = (SCIP_HEURDATA*)dataptr;
    assert(heurdata != NULL);
 
    mayrounddown = SCIPvarMayRoundDown(cand);

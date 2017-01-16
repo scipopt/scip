@@ -1059,7 +1059,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
             /* check whether the variable is one of the most fractionals and label if so */
             insertFlipCand(mostfracvars, mostfracvals, &nflipcands, maxnflipcands, var, frac);
 
-            /* try to avoid variability; decide random of the LP solution can contain some noise. */
+            /* try to avoid variability; decide randomly if the LP solution can contain some noise. */
             if( SCIPisEQ(scip, frac, 0.5) )
             {
                if( SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0 )

@@ -134,8 +134,10 @@ typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all
  *
  *  input:
  *  - scip            : SCIP main data structure
- *  - cand            : Candidate variable for which the score should be determined
+ *  - diveset         : diving settings for scoring
+ *  - dataptr         : pointer to heurdata
  *  - divetype        : represents different methods for a dive set to explore the next children
+ *  - cand            : Candidate variable for which the score should be determined
  *  - candsol         : solution value of variable in LP relaxation solution
  *  - candsfrac       : fractional part of solution value of variable
  *  - score           : pointer for diving score value - small scores are preferred
@@ -143,7 +145,7 @@ typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all
  *
  *  returns SCIP_OKAY if everything worked, otherwise, a suitable error code
  */
-#define SCIP_DECL_DIVESETGETSCORE(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIVESET* diveset, SCIP_DIVETYPE divetype, SCIP_VAR* cand, SCIP_Real candsol, SCIP_Real candsfrac, \
+#define SCIP_DECL_DIVESETGETSCORE(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIVESET* diveset, void* dataptr, SCIP_DIVETYPE divetype, SCIP_VAR* cand, SCIP_Real candsol, SCIP_Real candsfrac, \
    SCIP_Real* score, SCIP_Bool* roundup)
 
 #ifdef __cplusplus

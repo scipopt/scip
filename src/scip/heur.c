@@ -599,6 +599,7 @@ void divesetFree(
 SCIP_RETCODE SCIPdivesetGetScore(
    SCIP_DIVESET*         diveset,            /**< general diving settings */
    SCIP_SET*             set,                /**< SCIP settings */
+   void*                 dataptr,            /**< pointer to data field of additional data */
    SCIP_DIVETYPE         divetype,           /**< the type of diving that should be applied */
    SCIP_VAR*             divecand,           /**< the candidate for which the branching direction is requested */
    SCIP_Real             divecandsol,        /**< LP solution value of the candidate */
@@ -613,7 +614,8 @@ SCIP_RETCODE SCIPdivesetGetScore(
    assert(divecand != NULL);
    assert(divetype & diveset->divetypemask);
 
-   SCIP_CALL( diveset->divesetgetscore(set->scip, diveset, divetype, divecand, divecandsol, divecandfrac, candscore, roundup) );
+   SCIP_CALL( diveset->divesetgetscore(set->scip, dataptr, diveset, divetype, divecand, divecandsol, divecandfrac,
+         candscore, roundup) );
 
    return SCIP_OKAY;
 }

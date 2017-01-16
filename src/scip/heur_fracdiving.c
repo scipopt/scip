@@ -202,7 +202,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
       return SCIP_OKAY;
    }
 
-   heurdata = SCIPheurGetData(SCIPfindHeur(scip, HEUR_NAME));
+   heurdata = (SCIP_HEURDATA*)dataptr;
    assert(heurdata != NULL);
 
    mayrounddown = SCIPvarMayRoundDown(cand);
@@ -215,7 +215,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
     */
    if( mayrounddown != mayroundup )
       *roundup = mayrounddown;
-   /* try to avoid variability; decide random of the LP solution can contain some noise. */
+   /* try to avoid variability; decide randomly if the LP solution can contain some noise. */
    else if( SCIPisEQ(scip, candsfrac, 0.5) )
       *roundup = (SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0);
    else
@@ -242,10 +242,10 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
    /* penalize too small fractions */
    if( SCIPisEQ(scip, candsfrac, 0.01) )
    {
-      /* try to avoid variability; decide random of the LP solution can contain some noise.
-       * use a 1:2 chance for increasing the fractionality, i.e., the score.
+      /* try to avoid variability; decide randomly if the LP solution can contain some noise.
+       * use a 1:SCIP_SCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
        */
-      if( SCIPrandomGetInt(heurdata->randnumgen, 0, 2) == 0 )
+      if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_SCORE_PENALTYRATIO) == 0 )
          candsfrac += 10.0;
    }
    else if( candsfrac < 0.01 )

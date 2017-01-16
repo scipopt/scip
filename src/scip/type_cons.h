@@ -858,6 +858,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
  *  - diveset         : diving settings for scoring
+ *  - dataptr         : pointer to data field of additional data
  *  - sol             : current diving solution, usually the LP relaxation solution
  *
  *  output:
@@ -865,7 +866,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - infeasible      : pointer to store whether the constraint handler detected an infeasibility in the local node
  */
 #define SCIP_DECL_CONSGETDIVEBDCHGS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_DIVESET* diveset, \
-      SCIP_SOL* sol, SCIP_Bool* success, SCIP_Bool* infeasible)
+      void* dataptr, SCIP_SOL* sol, SCIP_Bool* success, SCIP_Bool* infeasible)
 
 #ifdef __cplusplus
 }
