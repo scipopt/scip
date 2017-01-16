@@ -293,6 +293,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       heurdata = SCIPheurGetData(heur);
       assert(heurdata != NULL);
    }
+   else
+      heurdata = NULL;
 
    /* don't try to dive, if we took too many LP iterations during diving */
    if( SCIPdivesetGetNLPIterations(diveset) >= maxnlpiterations )
