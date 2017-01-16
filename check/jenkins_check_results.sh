@@ -29,6 +29,14 @@ done < /dev/stdin
 jobidsstr=$(printf ",%s" "${slurmjobids[@]}")
 jobidsstr=${jobidsstr:1}
 
+# get some relevant information
+SCIPVERSIONOUTPUT=`bin/scip -v | sed -e 's/$/@/'`
+
 # execute checker after all jobs completed
 export TESTSET=$1
+export GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
+export GITBRANCH=`git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* //'`
+export OPT=1`echo $SCIPVERSIONOUTPUT | sed -e 's/.* OPT=\([^@]*\).*/\1/'`
+export LPS=1`echo $SCIPVERSIONOUTPUT | sed -e 's/.* LPS=\([^@]*\).*/\1/'`
+
 sbatch --dependency=afterany:${jobidsstr} --kill-on-invalid-dep=yes --cpus-per-task=1 --mem=100 --time=10 --partition=mip-dbg --account=mip check/jenkins_failcheck.sh
