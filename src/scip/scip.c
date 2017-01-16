@@ -35941,7 +35941,7 @@ SCIP_RETCODE SCIPgetDivesetScore(
 
    SCIP_CALL( checkStage(scip, "SCIPgetDivesetScore", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPdivesetGetScore(diveset, dataptr, scip->set, divetype, divecand, divecandsol, divecandfrac, candscore,
+   SCIP_CALL( SCIPdivesetGetScore(diveset, scip->set, dataptr, divetype, divecand, divecandsol, divecandfrac, candscore,
          roundup) );
 
    return SCIP_OKAY;

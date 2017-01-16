@@ -614,7 +614,7 @@ SCIP_RETCODE SCIPdivesetGetScore(
    assert(divecand != NULL);
    assert(divetype & diveset->divetypemask);
 
-   SCIP_CALL( diveset->divesetgetscore(set->scip, dataptr, diveset, divetype, divecand, divecandsol, divecandfrac,
+   SCIP_CALL( diveset->divesetgetscore(set->scip, diveset, dataptr, divetype, divecand, divecandsol, divecandfrac,
          candscore, roundup) );
 
    return SCIP_OKAY;
