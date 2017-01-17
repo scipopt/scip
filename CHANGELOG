@@ -165,6 +165,7 @@ interface:
 - the parameters of SCIPlpiChgObj(), SCIPlpiSetBase(), SCIPlpiSetState(), SCIPlpiSetNorms() have been declared as const
 
 fixed bugs:
+- correct handling of implicit integer variables with fractional solution value in simplerounding heuristic
 - avoid numerically troublesome aggregations
 - fixed bug in event system: bound change events of the new focus node must be processed, even if the bound
   is the same as at the last focus node
@@ -174,6 +175,7 @@ fixed bugs:
   propagators, which is sorted by presolving priority
 - avoid numerically unstable (multi-)aggregations
 - added missing capturing and releasing mechanism in genvbounds propagator
+- improved counting of memory consumption by using more block memory and counting all allocated memory
 
 misc:
 - dropped support for Ipopt < 3.11

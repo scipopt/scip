@@ -2444,7 +2444,7 @@ SCIP_DECL_PROPEXITSOL(propExitsolObbt)
       /* free bounds */
       for( i = propdata->nbounds - 1; i >= 0; i-- )
       {
-         SCIPfreeBlockMemory(scip, &(propdata->bounds[i]));
+         SCIPfreeBlockMemory(scip, &(propdata->bounds[i])); /*lint !e866*/
       }
       SCIPfreeBlockMemoryArray(scip, &(propdata->bounds), propdata->boundssize);
    }

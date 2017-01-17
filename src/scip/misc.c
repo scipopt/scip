@@ -7326,6 +7326,7 @@ SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
 
    assert(retcode == SCIP_OKAY);
 
+ /* cppcheck-suppress unusedLabel */
  TERMINATE:
    BMSfreeMemoryArrayNull(&lowlink);
    BMSfreeMemoryArrayNull(&dfsidx);

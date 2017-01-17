@@ -291,7 +291,7 @@ SCIP_DECL_EVENTEXEC(processNonlinearVarEvent)
    if( eventtype & SCIP_EVENTTYPE_BOUNDCHANGED )
    {
       SCIPdebugMsg(scip, "changed %s bound on expression graph variable <%s> from %g to %g\n",
-         eventtype & SCIP_EVENTTYPE_LBCHANGED ? "lower" : "upper",
+         (eventtype & SCIP_EVENTTYPE_LBCHANGED) ? "lower" : "upper",
          SCIPvarGetName(SCIPeventGetVar(event)), SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
 
       if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )

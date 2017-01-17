@@ -4266,7 +4266,7 @@ SCIP_Bool SCIPparamIsValidReal(
 /** checks whether value of char parameter is valid */
 SCIP_Bool SCIPparamIsValidChar(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_Real             value               /**< value to check */
+   const char            value               /**< value to check */
    )
 {
    assert( param != NULL );

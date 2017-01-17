@@ -3405,11 +3405,9 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_PRESOLVING:
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:
-      rval = QSget_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING,ival);
-      if( *ival )
-         *ival = TRUE;
-      else
-         *ival = FALSE;
+      rval = QSget_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, ival);
+      assert((*ival) == 0 || (*ival) == 1);
+
       break;
    case SCIP_LPPAR_PRICING:
       *ival = lpi->pricing;
@@ -3448,10 +3446,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    switch( type )
    {
    case SCIP_LPPAR_SCALING:
-      if( ival == TRUE )
-         rval = QSset_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, 1);
-      else
+      if( ival == 0 )
          rval = QSset_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, 0);
+      else
+         rval = QSset_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, 1);
       break;
    case SCIP_LPPAR_PRICING:
       lpi->pricing = ival;

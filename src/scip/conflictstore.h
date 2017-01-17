@@ -55,8 +55,7 @@ SCIP_RETCODE SCIPconflictstoreFree(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
-   SCIP_REOPT*           reopt,              /**< reoptimization data */
-   SCIP_EVENTFILTER*     eventfilter         /**< event filter */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 /** cleans conflict store */
@@ -97,7 +96,6 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    SCIP_TREE*            tree,               /**< branch and bound tree (or NULL for an original constraint) */
    SCIP_PROB*            transprob,          /**< transformed problem (or NULL for an original constraint) */
    SCIP_REOPT*           reopt,              /**< reoptimization data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< eventfilter (or NULL for an original constraint) */
    SCIP_CONS*            cons,               /**< constraint representing the conflict */
    SCIP_CONFTYPE         conftype,           /**< type of the conflict */
    SCIP_Bool             cutoffinvolved,     /**< is a cutoff bound involved in this conflict */
@@ -155,8 +153,7 @@ SCIP_RETCODE SCIPconflictstoreTransform(
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_REOPT*           reopt,              /**< reoptimization data */
-   SCIP_EVENTFILTER*     eventfilter         /**< eventfiler */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 #ifdef __cplusplus

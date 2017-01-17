@@ -446,6 +446,9 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
 
+   /* do not abort subproblem on CTRL-C */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
+
 #ifdef SCIP_DEBUG
    /* for debugging, enable full output */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );

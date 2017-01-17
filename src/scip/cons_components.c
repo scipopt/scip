@@ -1544,7 +1544,7 @@ SCIP_RETCODE createAndSplitProblem(
    for( comp = 0; comp < ncomponents; comp++ )
    {
       SCIP_CALL( initComponent(*problem) );
-      assert((*problem)->ncomponents == comp);
+      assert((*problem)->ncomponents == comp+1);
 
       component = &(*problem)->components[comp];
 
@@ -1869,11 +1869,8 @@ SCIP_RETCODE findComponents(
    (*nsortedconss) = 0;
    for( c = 0; c < ntmpconss; c++ )
    {
-      if( SCIPconsIsChecked(tmpconss[c]) )
-      {
-         sortedconss[(*nsortedconss)] = tmpconss[c];
-         (*nsortedconss)++;
-      }
+      sortedconss[(*nsortedconss)] = tmpconss[c];
+      (*nsortedconss)++;
    }
 
    if( nvars > 1 && *nsortedconss > 1 )

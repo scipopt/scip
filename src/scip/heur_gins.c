@@ -1460,14 +1460,14 @@ SCIP_RETCODE determineLimits(
    return SCIP_OKAY;
 }
 
-/** updates heurdata after a run of crossover */
+/** updates heurdata after a run of GINS */
 static
 void updateFailureStatistic(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
    )
 {
-   /* increase number of failures, calculate next node at which crossover should be called and update actual solutions */
+   /* increase number of failures, calculate next node at which GINS should be called and update actual solutions */
    heurdata->nfailures++;
    heurdata->nextnodenumber = (heurdata->nfailures <= 25
       ? SCIPgetNNodes(scip) + 100*(2LL << heurdata->nfailures) /*lint !e703*/
@@ -1691,6 +1691,12 @@ SCIP_DECL_HEUREXEC(heurExecGins)
       if( !success )
       {
          SCIPdebugMsg(scip, "Could not create the subproblem -> skip call\n");
+
+         /* do not count this as a call to the heuristic */
+         *result = SCIP_DIDNOTRUN;
+
+         /* count this as a failure and increase the number of waiting nodes until the next call */
+         updateFailureStatistic(scip, heurdata);
          goto TERMINATE;
       }
 
@@ -1700,7 +1706,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
       ++heurdata->nsubmips;
 
       /* create the variable mapping hash map */
-      SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+      SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
 
       /* create a problem copy as sub SCIP */
       SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "gins", fixedvars, fixedvals, nfixedvars,
