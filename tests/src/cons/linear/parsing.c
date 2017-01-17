@@ -115,6 +115,7 @@ void teardown(void)
    /* remove the cip-file for this test */
    if( strncmp(filename, FNAME, 5)  == 0 )
       remove(filename);
+
 }
 
 /** compares a linear data structure to a given constraint */
@@ -207,7 +208,7 @@ Test(parsing_linear, equation_const, .description = "test if a ranged row -const
 {
    lindata.lhs = -5.0;
    lindata.rhs = 5.0;
-   sprintf(filename, FNAME, "equation_1");
+   sprintf(filename, FNAME, "equation_const");
 
    performTestOnLinData();
 }
@@ -223,7 +224,7 @@ Test(parsing_linear, inf_lhs, .description = "test if an infinite left hand side
 Test(parsing_linear, inf_rhs, .description = "test if an infinite right hand side is correctly handled")
 {
    lindata.lhs = 0.0;
-   sprintf(filename, FNAME, "inf_lhs");
+   sprintf(filename, FNAME, "inf_rhs");
 
    performTestOnLinData();
 }
@@ -248,7 +249,7 @@ Test(parsing_linear, free_constraint, .description = "test if a free row is corr
    lindata.names[0] = (char *)"v1";
    lindata.nnonz = 1;
 
-   sprintf(filename, FNAME, "equation_onevariable");
+   sprintf(filename, FNAME, "free_constraint");
 
    performTestOnLinData();
 }
@@ -261,7 +262,7 @@ Test(parsing_linear, infeasible_constraint, .description = "test infeasible cons
    lindata.names[0] = (char *)"v1";
    lindata.nnonz = 1;
 
-   sprintf(filename, FNAME, "equation_onevariable");
+   sprintf(filename, FNAME, "infeasible_constraint");
 
    performTestOnLinData();
 }
