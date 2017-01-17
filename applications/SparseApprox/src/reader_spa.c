@@ -82,6 +82,7 @@ SCIP_RETCODE readSpa(
    SCIP_FILE* fp;               /* file-reader */
    char buf[COL_MAX_LINELEN];   /* maximal length of line */
    int nbins;
+   int ncluster;
    char* char_p;
    SCIP_Real** cmatrix;
    int i;
@@ -117,6 +118,7 @@ SCIP_RETCODE readSpa(
    /* read out number of nodes and edges, the pointer char_p will be changed */
 
    nbins = (int) getNextNumber(&char_p);
+   ncluster = (int) getNextNumber(&char_p);
 
    if ( nbins <= 0 )
    {
@@ -124,6 +126,11 @@ SCIP_RETCODE readSpa(
       return SCIP_READERROR;
    }
 
+   if ( ncluster <= 0 || nbins <= ncluster )
+   {
+         SCIPerrorMessage("Number of cluster must be positive and smaller than number of bins!\n");
+         return SCIP_READERROR;
+   }
    /* create cmatrix */
    SCIP_CALL( SCIPallocMemoryArray(scip, &cmatrix, nbins) );
    for( i = 0; i < nbins; i++)
@@ -150,7 +157,7 @@ SCIP_RETCODE readSpa(
    }
 
    /* create problem data */
-   SCIP_CALL( SCIPcreateProbSpa(scip, filename, nbins, cmatrix) );
+   SCIP_CALL( SCIPcreateProbSpa(scip, filename, nbins, ncluster, cmatrix) );
    SCIPinfoMessage(scip, NULL, "Original problem: \n");
 
    for ( i = nbins - 1; i >= 0; i-- )
@@ -219,6 +226,10 @@ SCIP_RETCODE SCIPincludeReaderSpa(
 
    SCIP_CALL( SCIPsetReaderCopy( scip, reader, readerCopySpa) );
    SCIP_CALL( SCIPsetReaderRead( scip, reader, readerReadSpa ) );
+
+   SCIP_CALL( SCIPaddRealParam(scip,"scale_coherence","factor to scale the cohrence in the target function", NULL, FALSE, 0.001, 0.0, 1.0, NULL, NULL ) );
+   SCIP_CALL( SCIPaddIntParam(scip, "ncluster", "the amount of clusters allowed", NULL, FALSE, 3, 1, 100, NULL, NULL) );
+   SCIP_CALL( SCIPaddCharParam(scip, "model", "the model variant", NULL, FALSE, 's', "se", NULL, NULL) );
 
    return SCIP_OKAY;
 }

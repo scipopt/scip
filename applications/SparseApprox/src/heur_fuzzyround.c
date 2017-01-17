@@ -91,6 +91,7 @@ SCIP_RETCODE writeLPSolSpa(
 
    return SCIP_OKAY;
 }
+
 static
 SCIP_RETCODE assignVars(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -259,6 +260,7 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
    SCIP_Real** clustering;
    SCIP_Real** qmatrix;
    SCIP_Bool feasible;
+   char model;
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -282,7 +284,9 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
 
    binvars = SCIPspaGetBinvars(scip);
    assert(binvars != NULL);
-
+   SCIP_CALL( SCIPgetCharParam(scip, "model", &model) );
+   if( model != 's' )
+      return SCIP_OKAY;
    /* allocate memory */
 
    SCIPallocClearMemoryArray(scip, &clustering , nbins);

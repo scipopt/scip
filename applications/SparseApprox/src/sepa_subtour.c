@@ -19,7 +19,6 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
 #include <assert.h>
 #include <string.h>
 
@@ -34,7 +33,61 @@
 #define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_USESSUBSCIP          FALSE      /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE      /**< should separation method be delayed, if other separators found cuts? */
-#define MAXROUNDS                    10
+#define MAXROUNDS                    15
+
+#ifdef SCIP_DEBUG
+static
+void printCycle(
+   SCIP*                 scip,
+   int*                  cycle,
+   int                   cyclelength,
+   int**                 connectmatrix,
+   int                   contractions,
+   int                   nbins
+)
+{
+   int i;
+   SCIPinfoMessage(scip, NULL, "cycle_l%d_c%d: %d", cyclelength, contractions, cycle[0]);
+   for( i = 0; i < cyclelength; ++i )
+   {
+      if( -1 == connectmatrix[cycle[i]][cycle[i+1]] )
+      {
+         SCIPinfoMessage(scip, NULL, " -> %d", cycle[i+1]);
+      }
+      else
+      {
+         SCIPinfoMessage(scip, NULL, " -> %d <-> %d", connectmatrix[cycle[i]][cycle[i+1]], cycle[i+1]);
+      }
+   }
+   SCIPinfoMessage(scip, NULL, "\n");
+}
+
+static
+void printPath(
+   SCIP*                 scip,
+   int*                  path,
+   int                   pathlength,
+   int**                 connectmatrix,
+   int                   contractions,
+   int                   nbins
+)
+{
+   int i;
+   SCIPinfoMessage(scip, NULL, "path_l%d_c%d: %d", pathlength, contractions, path[0]);
+   for( i = 0; i < pathlength; ++i )
+   {
+      if( -1 == connectmatrix[path[i]][path[i+1]] )
+      {
+         SCIPinfoMessage(scip, NULL, " -> %d", path[i+1]);
+      }
+      else
+      {
+         SCIPinfoMessage(scip, NULL, " -> %d <-> %d", connectmatrix[path[i]][path[i+1]], path[i+1]);
+      }
+   }
+   SCIPinfoMessage(scip, NULL, "\n");
+}
+#endif
 
 /** Consider three bins i,j,k. If there is a way from i to j and j and k are int the same cluster, then i and k can be also considered adjacent.
  *  This method adds new arcs to the capacity-graph based on this observation.
@@ -94,7 +147,7 @@ SCIP_RETCODE contractAdjGraph(
          }
       }
    }
-#ifndef SCIP_DEBUG
+#ifdef SCIP_DEBUG
    for( i = 0; i < nbins; ++i )
    {
       for( j = 0; j < nbins; ++j )
@@ -129,7 +182,7 @@ SCIP_RETCODE addSubtourCuts(
    char cutname[SCIP_MAXSTRLEN];
    SCIP_Bool* processed;
    SCIP_ROW* cut;
-   int cycle[cyclelength];
+   int cycle[cyclelength + 1];
    int nbins;
    int successor;
    int currnode;
@@ -146,7 +199,7 @@ SCIP_RETCODE addSubtourCuts(
    {
       if( processed[i] )
          continue;
-      if( SCIPisFeasGT(scip, adjmatrices[cyclelength - 1][i][i], cyclelength - 1) )
+      if( SCIPisGT(scip, adjmatrices[cyclelength - 1][i][i], cyclelength - 1) )
       {
          cycle[0] = i;
          processed[i] = TRUE;
@@ -163,17 +216,19 @@ SCIP_RETCODE addSubtourCuts(
                   processed[successor] = TRUE;
                   if( connectmatrix[cycle[k]][cycle[k+1]] >= 0 )
                      contractions++;
+                  break;
                }
             }
          }
          if( connectmatrix[cycle[cyclelength - 1]][cycle[0]] >= 0)
             contractions++;
+         cycle[cyclelength] = i;
          (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "subtour_%d_legnth_%d_contracted_%d", i, cyclelength, contractions );
 
          SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut,sepa, cutname, -SCIPinfinity(scip), cyclelength - 1 + contractions, FALSE, FALSE, TRUE) );
          SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
 
-         for( k = 0; k < cyclelength - 1; ++k )
+         for( k = 0; k < cyclelength; ++k )
          {
 
             if( connectmatrix[cycle[k]][cycle[k+1]] >= 0)
@@ -184,16 +239,10 @@ SCIP_RETCODE addSubtourCuts(
             else
                SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[cycle[k]][cycle[k+1]][1], 1.0) );
          }
-         if( connectmatrix[cycle[cyclelength - 1]][cycle[0]] >= 0)
-         {
-            SCIP_CALL(SCIPaddVarToRow(scip, cut, edgevars[cycle[cyclelength - 1]][connectmatrix[cycle[cyclelength - 1]][cycle[0]]][1], 1.0) );
-            SCIP_CALL(SCIPaddVarToRow(scip, cut, edgevars[MAX(connectmatrix[cycle[cyclelength - 1]][cycle[0]],cycle[0])][MIN(connectmatrix[cycle[cyclelength - 1]][cycle[0]],cycle[0])][0], 1.0) );
-         }
-         else
-            SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[cycle[cyclelength - 1]][cycle[0]][1], 1.0) );
          SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-         SCIPdebug( SCIPprintRow(scip, cut, NULL) );
+         SCIPdebug( printCycle(scip, cycle, cyclelength, connectmatrix, contractions, nbins) );
          SCIPdebugMsg(scip, "Computed violation: %f \n", adjmatrices[cyclelength - 1][i][i] - cyclelength + 1);
+
          if( SCIPisCutEfficacious(scip, NULL, cut) )
          {
             SCIP_CALL( SCIPaddPoolCut(scip, cut) );
@@ -223,6 +272,7 @@ SCIP_RETCODE addPathCuts(
    SCIP_VAR**** edgevars;
    char cutname[SCIP_MAXSTRLEN];
    SCIP_Bool* processed;
+   SCIP_Bool invalid;
    SCIP_ROW* cut;
    SCIP_Real pathcap;
    SCIP_Real edgecap;
@@ -244,6 +294,13 @@ SCIP_RETCODE addPathCuts(
    {
       for( j = 0; j < SCIPdigraphGetNSuccessors(capgraph, i); ++j )
       {
+         SCIP_Bool* inpath;
+         SCIP_CALL( SCIPallocClearMemoryArray(scip, &inpath, nbins) );
+         inpath[i] = TRUE;
+         inpath[j] = TRUE;
+         invalid = FALSE;
+         if( -1 != connectmatrix[i][j] )
+            inpath[connectmatrix[i][j]] = TRUE;
          successor = SCIPdigraphGetSuccessors(capgraph, i)[j];
          pathcap = adjmatrices[pathlength - 1][i][j];
          edgecap = adjmatrices[0][i][j];
@@ -259,48 +316,63 @@ SCIP_RETCODE addPathCuts(
                   successor = SCIPdigraphGetSuccessors(capgraph, currnode)[l];
                   if( SCIPisEQ(scip, adjmatrices[0][currnode][successor] + adjmatrices[pathlength - (k + 2)][successor][j], adjmatrices[pathlength - (k + 1)][currnode][j]) )
                   {
+                     if( inpath[successor] )
+                        invalid = TRUE;
                      path[k + 1] = successor;
+                     inpath[successor] = TRUE;
                      processed[successor] = TRUE;
                      if( connectmatrix[path[k]][path[k+1]] >= 0 )
+                     {
+                        if( inpath[connectmatrix[path[k]][path[k+1]]] )
+                           invalid = TRUE;
+                        inpath[connectmatrix[path[k]][path[k+1]]] = TRUE;
                         contractions++;
+                     }
                      break;
                   }
                }
             }
-            path[pathlength] = j;
-            if( connectmatrix[path[pathlength - 1]][j] >= 0 )
-               contractions++;
-            if( connectmatrix[i][j] > 0 )
-               contractions++;
-            (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "pathcut_%d_legnth_%d_contractions_%d", i, pathlength, contractions );
-            SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut,sepa, cutname, -SCIPinfinity(scip), pathlength + contractions, FALSE, FALSE, TRUE) );
-            SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
-
-            for( k = 0; k < pathlength; ++k )
+            if(!invalid)
             {
-               if( connectmatrix[path[k]][path[k+1]] >= 0)
+               path[pathlength] = j;
+               if( connectmatrix[path[pathlength - 1]][j] >= 0 )
+                  contractions++;
+               if( connectmatrix[i][j] > 0 )
+                  contractions++;
+               (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "pathcut_%d_legnth_%d_contractions_%d", i, pathlength, contractions );
+               SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut,sepa, cutname, -SCIPinfinity(scip), pathlength + contractions, FALSE, FALSE, TRUE) );
+               SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
+
+               for( k = 0; k < pathlength; ++k )
                {
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[path[k]][connectmatrix[path[k]][path[k+1]]][1], 1.0) );
-                  SCIP_CALL(SCIPaddVarToRow(scip, cut, edgevars[MAX(connectmatrix[path[k]][path[k+1]],path[k+1])][MIN(connectmatrix[path[k]][path[k+1]],path[k+1])][0], 1.0) );
+                  if( connectmatrix[path[k]][path[k+1]] >= 0)
+                  {
+                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[path[k]][connectmatrix[path[k]][path[k+1]]][1], 1.0) );
+                     SCIP_CALL(SCIPaddVarToRow(scip, cut, edgevars[MAX(connectmatrix[path[k]][path[k+1]],path[k+1])][MIN(connectmatrix[path[k]][path[k+1]],path[k+1])][0], 1.0) );
+                  }
+                  else
+                     SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[path[k]][path[k+1]][1], 1.0) );
+               }
+               if( connectmatrix[i][j] >= 0)
+               {
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][connectmatrix[i][j]][1], 1.0) );
+                  SCIP_CALL(SCIPaddVarToRow(scip, cut, edgevars[MAX(connectmatrix[i][j],j)][MIN(connectmatrix[i][j],j)][0], 1.0) );
                }
                else
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[path[k]][path[k+1]][1], 1.0) );
-            }
-            if( connectmatrix[i][j] >= 0)
-            {
-               SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][connectmatrix[i][j]][1], 1.0) );
-               SCIP_CALL(SCIPaddVarToRow(scip, cut, edgevars[MAX(connectmatrix[i][j],j)][MIN(connectmatrix[i][j],j)][0], 1.0) );
-            }
-            else
-               SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][j][1], 1.0) );
-            SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
-            if( SCIPisCutEfficacious(scip, NULL, cut) )
-            {
-               SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-               *result = SCIP_SEPARATED;
-            }
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][j][1], 1.0) );
+               SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+               SCIPdebug( printPath(scip, path, pathlength, connectmatrix, contractions, nbins) );
+               SCIPdebug( SCIPprintRow(scip, cut, NULL) );
+               SCIPdebugMsg(scip, "Computed violation: %f \n", pathcap + edgecap - pathlength);
+               if( SCIPisCutEfficacious(scip, NULL, cut) )
+               {
+                  SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+                  *result = SCIP_SEPARATED;
+               }
 
-            SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+               SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+            }
+            SCIPfreeMemoryArray(scip, &inpath);
          }
       }
 
@@ -386,7 +458,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
    SCIPdebugMsg(scip, "Calls at node: %d \n", rounds);
    if( (rounds >= MAXROUNDS) )
    {
-    *result = SCIP_DIDNOTRUN;
+      *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
    edgevars = SCIPspaGetEdgevars(scip);
@@ -434,17 +506,17 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
       }
    }
    /** Contract undirected edges with sufficiently large lp-value */
-   SCIP_CALL( contractAdjGraph(scip, capgraph, adjmatrices, connectmatrix) );
+/*   SCIP_CALL( contractAdjGraph(scip, capgraph, adjmatrices, connectmatrix) );*/
 
    cyclelength = 2;
    *result = SCIP_DIDNOTFIND;
    /* Loop until we have found a violation or until we have checked all possible violations */
-   while( cyclelength < ncluster && *result==SCIP_DIDNOTFIND )
+   while( cyclelength < ncluster )
    {
       /* Compute the next adjacency matrix */
       violation = computeNextAdj(scip, capgraph, adjmatrices, cyclelength);
       /* If we found a violation separate it */
-      if( violation )
+      if( violation && SCIP_DIDNOTFIND )
          SCIP_CALL( addSubtourCuts(scip, sepa, capgraph, adjmatrices, connectmatrix, cyclelength, result) );
       SCIP_CALL( addPathCuts(scip, sepa, capgraph, adjmatrices, connectmatrix, cyclelength, result) );
       cyclelength++;

@@ -21,6 +21,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define SCIP_DEBUG_SOLUTION "debug.sol"
 
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
@@ -367,13 +368,14 @@ SCIP_RETCODE SCIPrunSpa(
    SCIP_CALL( SCIPcreate(&scip) );
 
    /* add the problem-specifix parameters to scip */
-
+/*   SCIPenableDebugSol(scip);*/
    /* include reader, problemdata*/
    SCIP_CALL( SCIPincludeSpaPlugins(scip) );
 
    /**********************************
     * Process command line arguments *
     **********************************/
+
 
    SCIP_CALL( processArguments(scip, argc, argv, defaultsetname) );
 

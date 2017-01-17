@@ -92,6 +92,7 @@ SCIP_RETCODE SCIPcreateProbSpa(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< problem name */
    int                   nbins,              /**< number of bins */
+   int                   ncluster,           /**< number of cluster */
    SCIP_Real**           cmatrix             /**< the transition matrix */
 );
 
