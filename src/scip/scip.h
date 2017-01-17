@@ -21599,7 +21599,7 @@ void SCIPprintReal(
    int                   precision           /**< number of significant digits printed */
    );
 
-/* parse a real value that was written with SCIPprintReal() */
+/** parse a real value that was written with SCIPprintReal() */
 EXTERN
 SCIP_Bool SCIPparseReal(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -45343,7 +45343,7 @@ void SCIPprintReal(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, (const char*)strformat, s);
 }
 
-/* parse a real value that was written with SCIPprintReal() */
+/** parse a real value that was written with SCIPprintReal() */
 SCIP_Bool SCIPparseReal(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to search */
@@ -45351,13 +45351,14 @@ SCIP_Bool SCIPparseReal(
    char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    )
 {
-   char* localstr = str;
-   SCIP_Bool hasminus;
+   char* localstr;
 
    assert(scip != NULL);
    assert(str != NULL);
    assert(value != NULL);
    assert(endptr != NULL);
+
+   localstr = (char*)str;
 
    /* ignore white space */
    while(isspace((unsigned char)*localstr))
@@ -45367,7 +45368,7 @@ SCIP_Bool SCIPparseReal(
    if( strncmp(localstr, "+infinity", 9) == 0 )
    {
       *value = SCIPinfinity(scip);
-      *endptr = (char *)(localstr + 9);
+      *endptr = (char*)(localstr + 9);
       return TRUE;
    }
    else if( strncmp(localstr, "-infinity", 9) == 0 )
@@ -45381,9 +45382,7 @@ SCIP_Bool SCIPparseReal(
       /* parse a finite value */
       return SCIPstrToRealValue(str, value, endptr);
    }
-
 }
-
 
 /*
  * memory management
