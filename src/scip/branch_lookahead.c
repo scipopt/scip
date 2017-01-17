@@ -158,6 +158,11 @@ typedef struct
    int                   ndomainreductions;
    int                   nbinconstvio;
    int                   ndomredvio;
+   int                   nsinglecandidate;
+   int                   ndepthreached;
+   int                   noldbranchused;
+   int*                  nlpssolved;
+   int*                  npropdomred;
 } STATISTICS;
 #endif
 
@@ -780,6 +785,9 @@ void initStatistics(
    statistics->nstoflvlcutoffs = 0;
    statistics->nbinconstvio = 0;
    statistics->ndomredvio = 0;
+   statistics->nsinglecandidate = 0;
+   statistics->ndepthreached = 0;
+   statistics->noldbranchused = 0;
 
    for( i = 0; i < 18; i++)
    {
@@ -788,7 +796,9 @@ void initStatistics(
 
    for( i = 0; i < recursiondepth; i++ )
    {
+      statistics->npropdomred[i] = 0;
       statistics->nfullcutoffs[i] = 0;
+      statistics->nlpssolved[i] = 0;
       statistics->nsinglecutoffs[i] = 0;
       statistics->ndomainreductions = 0;
    }
@@ -2392,6 +2402,7 @@ SCIP_RETCODE selectVarRecursive(
    if( !config->forcebranching && nlpcands == 1 )
    {
       SCIPdebugMessage("Only one candidate (<%s>) is given. This one is chosen without calculations.\n", SCIPvarGetName(lpcands[0]));
+      SCIPstatistic( statistics->nsinglecandidate++; )
    }
    else
    {
@@ -2403,6 +2414,7 @@ SCIP_RETCODE selectVarRecursive(
          SCIPdebugMessage("Cannot perform probing in selectVarRecursive, depth limit reached. Current:<%i>, Max:<%i>\n",
             SCIPgetDepthLimit(scip), SCIPgetDepth(scip) + recursiondepth);
          status->depthtoosmall = TRUE;
+         SCIPstatistic( statistics->ndepthreached++; )
       }
       else
       {
@@ -2426,8 +2438,6 @@ SCIP_RETCODE selectVarRecursive(
             SCIP_Real branchvalfrac;
             BRANCHINGRESULTDATA* downbranchingresult;
             BRANCHINGRESULTDATA* upbranchingresult;
-            DOMAINREDUCTIONS* downdomainreductions;
-            DOMAINREDUCTIONS* updomainreductions;
 
             c = c % nlpcands;
 
@@ -2446,9 +2456,13 @@ SCIP_RETCODE selectVarRecursive(
             if( persistent != NULL && isUseOldBranching(scip, config, persistent, branchvar) ){
                getOldBranching(scip, persistent, branchvar, downbranchingresult, upbranchingresult);
                useoldbranching = TRUE;
+               SCIPstatistic( statistics->noldbranchused++; )
             }
             else
             {
+               DOMAINREDUCTIONS* downdomainreductions;
+               DOMAINREDUCTIONS* updomainreductions;
+
                SCIPdebugMessage("Depth <%i>, Started branching on var <%s>\n", probingdepth, SCIPvarGetName(branchvar));
 
                if( config->usedomainreduction )
@@ -2477,6 +2491,7 @@ SCIP_RETCODE selectVarRecursive(
                SCIPdebugMessage("Depth <%i>, Started down branching on var <%s> with var < <%g>\n", probingdepth, SCIPvarGetName(branchvar), branchval);
 
                SCIP_CALL( executeDownBranching(scip, branchvar, branchval, downbranchingresult, status) );
+               SCIPstatistic( statistics->nlpssolved[probingdepth]++; )
 
 
                if( config->useimpliedbincons && downbranchingresult->cutoff
@@ -2567,6 +2582,7 @@ SCIP_RETCODE selectVarRecursive(
                SCIPdebugMessage("Depth <%i>, Started up branching on var <%s> with var > <%g>\n", probingdepth, SCIPvarGetName(branchvar), branchval);
 
                SCIP_CALL( executeUpBranching(scip, branchvar, branchval, upbranchingresult, status) );
+               SCIPstatistic( statistics->nlpssolved[probingdepth]++; )
 
                if( config->useimpliedbincons && upbranchingresult->cutoff && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
                {
@@ -2640,15 +2656,21 @@ SCIP_RETCODE selectVarRecursive(
                {
                   updateOldBranching(scip, persistent, branchvar, downbranchingresult, upbranchingresult);
                }
+
+               if( config->usedomainreduction )
+               {
+                  if( !useoldbranching )
+                  {
+                     applyDeeperDomainReductions(scip, domainreductions, downdomainreductions, updomainreductions);
+                  }
+
+                  freeDomainReductions(scip, &updomainreductions);
+                  freeDomainReductions(scip, &downdomainreductions);
+               }
             }
 
             {
                /* TODO: move this block to an own method when finished */
-
-               if( config->usedomainreduction && !useoldbranching )
-               {
-                  applyDeeperDomainReductions(scip, domainreductions, downdomainreductions, updomainreductions);
-               }
 
                if( upbranchingresult->cutoff && downbranchingresult->cutoff )
                {
@@ -2757,12 +2779,6 @@ SCIP_RETCODE selectVarRecursive(
                }
             }
 
-
-            if( config->usedomainreduction )
-            {
-               freeDomainReductions(scip, &updomainreductions);
-               freeDomainReductions(scip, &downdomainreductions);
-            }
             SCIPfreeBuffer(scip, &upbranchingresult);
             SCIPfreeBuffer(scip, &downbranchingresult);
 
@@ -2771,6 +2787,7 @@ SCIP_RETCODE selectVarRecursive(
                /* in case the bounds of the current highest scored solution have changed due to domain propagation during the
                 * lookahead branching we can/should not branch on this variable but instead return the SCIP_REDUCEDDOM result */
                status->propagationdomred = TRUE;
+               SCIPstatistic( statistics->npropdomred[probingdepth]++; )
             }
          }
 
@@ -3484,9 +3501,13 @@ void printStatistics(
 
    for( i = 0; i < recursiondepth; i++ ) {
       SCIPinfoMessage(scip, NULL, "In depth <%i>, <%i> fullcutoffs and <%i> single cutoffs were found.\n", i, statistics->nfullcutoffs[i], statistics->nsinglecutoffs[i]);
+      SCIPinfoMessage(scip, NULL, "In depth <%i>, <%i> LPs were solved.\n", i, statistics->nlpssolved[i]);
+      SCIPinfoMessage(scip, NULL, "In depth <%i>, a decision was discarded <%i> times due to domain reduction because of propagation.\n", i, statistics->npropdomred[i]);
    }
 
-
+   SCIPinfoMessage(scip, NULL, "In <%i> times, only one branching candidate was given.\n", statistics->nsinglecandidate);
+   SCIPinfoMessage(scip, NULL, "Old branching results were used in <%i> cases.\n", statistics->noldbranchused);
+   SCIPinfoMessage(scip, NULL, "Depth limit was reached <%i> times.\n", statistics->ndepthreached);
    SCIPinfoMessage(scip, NULL, "Solved <%i> lps on the first level and <%i> lps on the second level\n",
       statistics->nfirstlvllps, statistics->nsecondlvllps);
    SCIPinfoMessage(scip, NULL, "Cutoff <%i> branches on the first level and <%i> on the second level\n",
@@ -3548,6 +3569,8 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
    SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->nresults, 17 + 1) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->nsinglecutoffs, recursiondepth) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->nfullcutoffs, recursiondepth) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->nlpssolved, recursiondepth) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->npropdomred, recursiondepth) );
 
    initStatistics(scip, branchruledata->statistics, recursiondepth);
 
@@ -3568,6 +3591,8 @@ SCIP_DECL_BRANCHEXIT(branchExitLookahead)
 
    printStatistics(scip, branchruledata->statistics, recursiondepth);
 
+   SCIPfreeMemoryArray(scip, &branchruledata->statistics->npropdomred);
+   SCIPfreeMemoryArray(scip, &branchruledata->statistics->nlpssolved);
    SCIPfreeMemoryArray(scip, &branchruledata->statistics->nfullcutoffs);
    SCIPfreeMemoryArray(scip, &branchruledata->statistics->nsinglecutoffs);
    SCIPfreeMemoryArray(scip, &branchruledata->statistics->nresults);
