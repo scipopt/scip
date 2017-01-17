@@ -13813,6 +13813,8 @@ SCIP_RETCODE presolStuffing(
                   (*nfixedvars)++;
                }
             }
+#if 0       /* this is not needed and should be done by activity-based bound tightening anyway after all other continuous
+             * singleton columns were fixed; doing it here may introduce numerical troubles in case of large bounds. */
             /* the variable does not fit completely, but we can at least tighten its bound */
             else if( SCIPisGT(scip, rhs, maxcondactivity) )
             {
@@ -13835,6 +13837,7 @@ SCIP_RETCODE presolStuffing(
                   (*nchgbds)++;
                }
             }
+#endif
             else if( SCIPisLE(scip, rhs, mincondactivity) )
             {
                if( swapped[idx] )
