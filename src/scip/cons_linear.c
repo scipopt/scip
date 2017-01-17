@@ -13813,31 +13813,11 @@ SCIP_RETCODE presolStuffing(
                   (*nfixedvars)++;
                }
             }
-#if 0       /* this is not needed and should be done by activity-based bound tightening anyway after all other continuous
-             * singleton columns were fixed; doing it here may introduce numerical troubles in case of large bounds. */
-            /* the variable does not fit completely, but we can at least tighten its bound */
-            else if( SCIPisGT(scip, rhs, maxcondactivity) )
-            {
-               SCIP_Real bounddelta = (rhs - maxcondactivity) / val;
-               if( swapped[idx] )
-               {
-                  SCIPdebugMsg(scip, "tighten the upper bound of <%s> from %g to %g\n", SCIPvarGetName(var), ub, ub - bounddelta);
-                  SCIP_CALL( SCIPtightenVarUb(scip, var, ub - bounddelta, FALSE, cutoff, &tightened) );
-               }
-               else
-               {
-                  SCIPdebugMsg(scip, "tighten the lower bound of <%s> from %g to %g\n", SCIPvarGetName(var), lb, lb + bounddelta);
-                  SCIP_CALL( SCIPtightenVarLb(scip, var, lb + bounddelta, FALSE, cutoff, &tightened) );
-               }
-
-               if( *cutoff )
-                  break;
-               if( tightened )
-               {
-                  (*nchgbds)++;
-               }
-            }
-#endif
+            /* @note: we could in theory tighten the bound of the first singleton variable which does not fall into the above case,
+             *        since it cannot be fully fixed. However, this is not needed and should be done by activity-based bound tightening
+             *        anyway after all other continuous singleton columns were fixed; doing it here may introduce numerical
+             *        troubles in case of large bounds.
+             */
             else if( SCIPisLE(scip, rhs, mincondactivity) )
             {
                if( swapped[idx] )
