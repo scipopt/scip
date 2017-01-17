@@ -16265,7 +16265,7 @@ SCIP_RETCODE findOperators(
          case '<':
          case '=':
          case '>':
-            if( (curr[1] == '=') )
+            if( curr[1] == '=' )
             {
                found = TRUE;
                increment += 2;
