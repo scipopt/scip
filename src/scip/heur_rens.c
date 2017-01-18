@@ -620,10 +620,8 @@ SCIP_RETCODE SCIPapplyRens(
        */
       if( retcode != SCIP_OKAY )
       {
-#ifndef NDEBUG
-         SCIP_CALL( retcode );
-#endif
          SCIPwarningMessage(scip, "Error while solving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+         SCIPABORT();
       }
       else
       {

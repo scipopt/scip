@@ -1730,11 +1730,9 @@ SCIP_DECL_HEUREXEC(heurExecGins)
        */
       if( retcode != SCIP_OKAY )
       {
-#ifndef NDEBUG
-         SCIP_CALL( retcode );
-#endif
          SCIPwarningMessage(scip, "Error while solving subproblem in Gins heuristic; sub-SCIP terminated with code <%d>\n",
                retcode);
+         SCIPABORT();
       }
       else
       {
