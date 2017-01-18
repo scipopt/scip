@@ -305,6 +305,7 @@ void checkConssArrays(
       assert(conshdlr->propconss[c]->markpropagate == (c < conshdlr->nmarkedpropconss));
       assert(conshdlr->propconss[c]->markpropagate || (conshdlr->propconss[c]->obsolete == (c >= conshdlr->nusefulpropconss)));
    }
+   assert(conshdlr->nmarkedpropconss <= conshdlr->npropconss);
 }
 #endif
 #endif
@@ -671,6 +672,7 @@ void conshdlrMarkConsPropagate(
    cons->propconsspos = conshdlr->nmarkedpropconss;
 
    conshdlr->nmarkedpropconss++;
+   assert(conshdlr->nmarkedpropconss <= conshdlr->npropconss);
 
    checkConssArrays(conshdlr);
 }
@@ -1264,6 +1266,7 @@ void conshdlrDelPropcons(
    }
    conshdlr->npropconss--;
    cons->propconsspos = -1;
+   assert(conshdlr->nmarkedpropconss <= conshdlr->npropconss);
 
    checkConssArrays(conshdlr);
 }
@@ -3770,8 +3773,6 @@ SCIP_RETCODE SCIPconshdlrPropagate(
          int nmarkedpropconss;
          int firstcons;
 
-         nmarkedpropconss = conshdlr->nmarkedpropconss;
-
          /* check, if the current domains were already propagated */
          if( !fullpropagation && conshdlr->lastpropdomchgcount == stat->domchgcount )
          {
@@ -3792,6 +3793,8 @@ SCIP_RETCODE SCIPconshdlrPropagate(
          assert(firstcons >= 0);
          assert(firstcons + nconss <= conshdlr->npropconss);
          assert(nusefulconss <= nconss);
+
+         nmarkedpropconss = conshdlr->nmarkedpropconss - firstcons;
 
          /* constraint handlers without constraints should only be called once */
          if( nconss > 0 || fullpropagation
@@ -3834,6 +3837,9 @@ SCIP_RETCODE SCIPconshdlrPropagate(
                SCIPclockStart(conshdlr->sbproptime, set);
             else
                SCIPclockStart(conshdlr->proptime, set);
+
+            assert(nusefulconss <= nconss);
+            assert(nmarkedpropconss <= nconss);
 
             /* call external method */
             SCIP_CALL( conshdlr->consprop(set->scip, conshdlr, conss, nconss, nusefulconss, nmarkedpropconss, proptiming, result) );
