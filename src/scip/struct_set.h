@@ -492,10 +492,10 @@ struct SCIP_Set
    int                   sepa_poolfreq;      /**< separation frequency for the global cut pool */
 
    /* parallel settings */
-   int                   parallel_spimode;           /**< the mode for the parallel implementation. 0: opportunistic or
-                                                      *   1: deterministic */
-   int                   parallel_minnthreads;       /**< the minimum number of threads used for parallel code */
-   int                   parallel_maxnthreads;       /**< the maximum number of threads used for parallel code */
+   int                   parallel_mode;      /**< the mode for the parallel implementation. 0: opportunistic or
+                                              *   1: deterministic */
+   int                   parallel_minnthreads;/**< the minimum number of threads used for parallel code */
+   int                   parallel_maxnthreads;/**< the maximum number of threads used for parallel code */
 
    /* concurrent solver settings */
    SCIP_Bool             concurrent_changeseeds;    /**< change the seeds in the different solvers? */

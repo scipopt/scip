@@ -267,6 +267,16 @@ SCIP_Real SCIPrelaxationGetBestRelaxSolObj(
    SCIP_RELAXATION*      relaxation          /**< global relaxation data */
    );
 
+/** updates objective value of current relaxation solution after change of objective coefficient */
+extern
+void SCIPrelaxationUpdateVarObj(
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< variable with changed objective coefficient */
+   SCIP_Real             oldobj,             /**< old objective coefficient */
+   SCIP_Real             newobj              /**< new objective coefficient */
+   );
+
 #ifdef __cplusplus
 }
 #endif
