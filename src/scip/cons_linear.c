@@ -16255,26 +16255,35 @@ SCIP_RETCODE findOperators(
 
    curr = (char*)str;
    *success = TRUE;
+
+   /* loop over the input string to find all operators */
    while( *curr && *success )
    {
       SCIP_Bool found = FALSE;
       int increment = 1;
+
       /* try if we found a possible operator */
       switch( *curr )
       {
          case '<':
          case '=':
          case '>':
+
+            /* check if the two characters curr[0,1] form an operator together */
             if( curr[1] == '=' )
             {
                found = TRUE;
-               increment += 2;
+
+               /* update increment to continue after this operator */
+               increment = 2;
             }
             break;
          case '[':
             if( strncmp(curr, "[free]", 6) == 0 )
             {
                found = TRUE;
+
+               /* update increment to continue after this operator */
                increment = 6;
             }
             break;
@@ -16403,17 +16412,20 @@ SCIP_DECL_CONSPARSE(consParseLinear)
          break;
       case '>':
          assert(firstop[1] == '=');
+         assert(secondop == NULL);
          /* we have a_1 x_1 + ... + a_n x_n >= lhs */
          lhsstrptr = firstop + 2;
          break;
       case '=':
          assert(firstop[1] == '=');
+         assert(secondop == NULL);
          /* we have a_1 x_1 + ... + a_n x_n == lhs (rhs) */
          rhsstrptr = firstop + 2;
          lhsstrptr = firstop + 2;
          break;
       case '[':
          assert(strncmp(firstop, "[free]", 6) == 0);
+         assert(secondop == NULL);
          /* nothing to assign in case of a free a_1 x_1 + ... + a_n x_n [free] */
          break;
       default:
@@ -16423,7 +16435,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    }
 
    /* parse left hand side, if necessary */
-   if( lhsstrptr )
+   if( lhsstrptr != NULL )
    {
       if( ! SCIPparseReal(scip, lhsstrptr, &lhs, &endptr) )
       {
@@ -16437,7 +16449,7 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    }
 
    /* parse right hand side, if different from left hand side */
-   if( rhsstrptr && rhsstrptr != lhsstrptr )
+   if( rhsstrptr != NULL && rhsstrptr != lhsstrptr )
    {
       if( ! SCIPparseReal(scip, rhsstrptr, &rhs, &endptr) )
       {
