@@ -5438,6 +5438,8 @@ SCIP_RETCODE exprParse(
 
       arg1 = *expr;
       ++str;
+      while( isspace((unsigned char)*str) && str != lastchar + 1 )
+         ++str;
 
       if( str[0] == '(' )
       {
@@ -5469,15 +5471,16 @@ SCIP_RETCODE exprParse(
       }
 
       constant = SCIPexprGetOpReal(arg2);
+      SCIPexprFreeDeep(blkmem, &arg2);
 
       /* expr^number is intpower or realpower */
       if( EPSISINT(constant, 0.0) ) /*lint !e835*/
       {
-         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_INTPOWER, arg1, (int)SCIPexprGetOpReal(arg2)) );
+         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_INTPOWER, arg1, (int)constant) );
       }
       else
       {
-         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_REALPOWER, arg1, SCIPexprGetOpReal(arg2)) );
+         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_REALPOWER, arg1, constant) );
       }
 
       /* ignore whitespace */
