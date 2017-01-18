@@ -5225,7 +5225,7 @@ SCIP_RETCODE exprParse(
 
       SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_SQRT, arg1) );
    }
-   /* three character operators */
+   /* three character operators with 1 argument */
    else if(
       strncmp(str, "abs", 3) == 0 ||
       strncmp(str, "cos", 3) == 0 ||
@@ -5271,6 +5271,38 @@ SCIP_RETCODE exprParse(
          assert(strncmp(opname, "tan", 3) == 0);
          SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_TAN, arg1) );
       }
+   }
+   /* three character operators with 2 arguments */
+   else if(
+      strncmp(str, "max", 3) == 0 ||
+      strncmp(str, "min", 3) == 0 )
+   {
+      /* we have a string of the form "min(...,...)" or "max(...,...)"
+       * first find the closing parenthesis, then the comma
+       */
+      const char* comma;
+      SCIP_EXPROP op;
+
+      op = (str[1] == 'a' ? SCIP_EXPR_MAX : SCIP_EXPR_MIN);
+
+      str += 3;
+      SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length) );
+
+      SCIP_CALL( exprparseFindSeparatingComma(str+1, &comma, endptr - str - 1) );
+
+      /* parse first argument [str+1..comma-1] */
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str + 1, comma - str - 1, comma - 1, nvars, varnames, vartable, recursiondepth + 1) );
+
+      /* parse second argument [comma+1..endptr] */
+      ++comma;
+      while( comma < endptr && *comma == ' ' )
+         ++comma;
+
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg2, comma, endptr - comma, endptr - 1, nvars, varnames, vartable, recursiondepth + 1) );
+
+      SCIP_CALL( SCIPexprCreate(blkmem, expr, op, arg1, arg2) );
+
+      str = endptr + 1;
    }
    else if( strncmp(str, "power", 5) == 0 )
    {
