@@ -1784,7 +1784,7 @@ int getHashNumber(
    assert(size >= 0);
    assert(BMSisAligned((size_t)size)); /*lint !e571*/
 
-   return (int) (((unsigned int)size * 0x9e3779b9u)>>(32-CHKHASH_POWER));
+   return (int) (((uint32_t)size * UINT32_C(0x9e3779b9))>>(32-CHKHASH_POWER));
 }
 
 /** creates a block memory allocation data structure */
