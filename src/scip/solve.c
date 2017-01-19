@@ -4321,15 +4321,6 @@ SCIP_RETCODE solveNode(
                SCIP_CALL( SCIPbranchExecExtern(blkmem, set, stat, transprob, origprob, tree, reopt, lp, sepastore, branchcand,
                      eventqueue, primal->cutoffbound, TRUE, &result) );
                assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
-
-               /* SCIP cannot guarantee convergence if it is necessary to branch on unbounded (continuous) variables */
-               if( !stat->branchedunbdcontvar && stat->lastbranchvar != NULL )
-               {
-                  SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-                     "Starting spatial branch-and-bound on unbounded variable <%s> - cannot guarantee convergence.\n",
-                     SCIPvarGetName(stat->lastbranchvar));
-                  stat->branchedunbdcontvar = TRUE;
-               }
             }
 
             if( result == SCIP_DIDNOTRUN || result == SCIP_DIDNOTFIND )
@@ -4340,13 +4331,19 @@ SCIP_RETCODE solveNode(
                SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
                      primal->cutoffbound, TRUE, &result) );
                assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
+            }
 
-               /* SCIP cannot guarantee convergence if it is necessary to branch on unbounded (continuous) variables */
-               if( !stat->branchedunbdcontvar && stat->lastbranchvar != NULL )
+            /* SCIP cannot guarantee convergence if it is necessary to branch on unbounded (continuous) variables */
+            if( result == SCIP_BRANCHED )
+            {
+               SCIP_VAR* var = stat->lastbranchvar;
+
+               if( var != NULL && !stat->branchedunbdcontvar && !SCIPvarIsIntegral(var)
+                  && (SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)) || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var))) )
                {
                   SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-                     "Starting spatial branch-and-bound on unbounded variable <%s> - cannot guarantee convergence.\n",
-                     SCIPvarGetName(stat->lastbranchvar));
+                     "Starting spatial branch-and-bound on unbounded variable ([%g,%g]) - cannot guarantee convergence.\n",
+                     SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetName(var));
                   stat->branchedunbdcontvar = TRUE;
                }
             }
