@@ -608,8 +608,6 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    SCIP_Bool success;                        /* used to store whether new solution was found or not          */
 
-   SCIP_RETCODE retcode;
-
    assert(heur != NULL);
    assert(scip != NULL);
    assert(result != NULL);
@@ -812,6 +810,9 @@ SCIP_DECL_HEUREXEC(heurExecDins)
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
    }
 
+   /* speed up sub-SCIP by not checking dual LP feasibility */
+   SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+
    /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
     * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
     * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
@@ -857,7 +858,11 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    /* solve the subproblem */
    SCIPdebugMsg(scip, "solving DINS sub-MIP with neighborhoodsize %d and maxnodes %" SCIP_LONGINT_FORMAT "\n", heurdata->neighborhoodsize, nsubnodes);
-   retcode = SCIPsolve(subscip);
+
+   /* Errors in solving the subproblem should not kill the overall solving process
+    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+    */
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
    /* drop LP events of sub-SCIP */
    if( !heurdata->uselprows )
@@ -865,17 +870,6 @@ SCIP_DECL_HEUREXEC(heurExecDins)
       assert(eventhdlr != NULL);
 
       SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
-   }
-
-   /* Errors in solving the subproblem should not kill the overall solving process
-    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-    */
-   if( retcode != SCIP_OKAY )
-   {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip, "Error while solving subproblem in DINS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
    }
 
    /* print solving statistics of subproblem if we are in SCIP's debug mode */
