@@ -121,6 +121,8 @@ typedef struct
                                               *   progingdepth. */
    int*                  nsinglecandidate;   /**< The number of times a single candidate was given to the recursion routine
                                               *   per probingdepth. */
+   int*                  noldbranchused;     /**< The number of times old branching data is used (see the reevalage
+                                              *   parameter in the CONFIGURATION struct) */
    int                   nbinconst;          /**< The number of binary constraints added to the base node. */
    int                   nbinconstvio;       /**< The number of binary constraints added to the base node, that are violated
                                               *   by the LP at that node. */
@@ -128,8 +130,6 @@ typedef struct
    int                   ndomredvio;         /**< The number of domain reductions added to the base node, that are violated
                                               *   by the LP at that node. */
    int                   ndepthreached;      /**< The number of times the branching was aborted due to a too small depth. */
-   int                   noldbranchused;     /**< The number of times old branching data is used (see the reevalage
-                                              *   parameter in the CONFIGURATION struct) */
 } STATISTICS;
 #endif
 
@@ -187,10 +187,12 @@ typedef struct
 typedef struct
 {
    SCIP_Real*            lowerbounds;        /**< The new lower bounds found for each variable in the problem. */
-   SCIP_Bool*            lowerboundsvalid;   /**< Indicates whether the lower bound may be added to the base node. */
+   SCIP_Bool*            lowerboundset;      /**< Indicates whether the lower bound may be added to the base node. */
    SCIP_Real*            upperbounds;        /**< The new upper bounds found for each variable in the problem. */
-   SCIP_Bool*            upperboundsvalid;   /**< Indicates whether the upper bound may be added to the base node. */
-   int                   nreducedvars;       /**< Tracks the number of vars that have a new lower or upper bound set. */
+   SCIP_Bool*            upperboundset;      /**< Indicates whether the upper bound may be added to the base node. */
+   SCIP_Bool*            baselpviolated;     /**< Indicates whether the base lp solution violates the new bounds of a var.*/
+   int                   nviolatedvars;      /**< Tracks the number of vars that have a violated (by the base lp) new lower
+                                              *   or upper bound. */
 } DOMAINREDUCTIONS;
 
 /**
@@ -241,6 +243,9 @@ SCIP_RETCODE allocDomainReductions(
    int ntotalvars;
    int i;
 
+   assert(scip != NULL);
+   assert(domreds != NULL);
+
    /* The arrays saves the data for all variables in the problem via the ProbIndex. See SCIPvarGetProbindex() */
    ntotalvars = SCIPgetNVars(scip);
 
@@ -248,18 +253,20 @@ SCIP_RETCODE allocDomainReductions(
    SCIP_CALL( SCIPallocBuffer(scip, domreds) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*domreds)->lowerbounds, ntotalvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*domreds)->upperbounds, ntotalvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*domreds)->lowerboundsvalid, ntotalvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*domreds)->upperboundsvalid, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*domreds)->lowerboundset, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*domreds)->upperboundset, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*domreds)->baselpviolated, ntotalvars) );
 
    /* Initialize the validity arrays to FALSE, such that the (undefined) starting values are not used. */
    for( i = 0; i < ntotalvars; i++ )
    {
-      (*domreds)->lowerboundsvalid[i] = FALSE;
-      (*domreds)->upperboundsvalid[i] = FALSE;
+      (*domreds)->lowerboundset[i] = FALSE;
+      (*domreds)->upperboundset[i] = FALSE;
+      (*domreds)->baselpviolated[i] = FALSE;
    }
 
    /* At the start we have no domain reductions for any variable. */
-   (*domreds)->nreducedvars = 0;
+   (*domreds)->nviolatedvars = 0;
 
    return SCIP_OKAY;
 }
@@ -270,141 +277,172 @@ SCIP_RETCODE allocDomainReductions(
 static
 void addLowerBound(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             branchvar,          /**< The variable the bound should be added for. */
-   SCIP_Real             branchval,          /**< The new lower bound for the variable. */
+   SCIP_VAR*             var,                /**< The variable the bound should be added for. */
+   SCIP_Real             lowerbound,         /**< The new lower bound for the variable. */
    SCIP_SOL*             baselpsol,          /**< The LP solution of the base problem. Used to check whether the domain
                                               *   reduction is violated by it. */
    DOMAINREDUCTIONS*     domainreductions    /**< The struct the domain reduction should be added to. */
    )
 {
-   /*TODO: update the number of really reduced vars*/
    int varindex;
+   SCIP_Real basesolutionval;
    SCIP_Real newlowerbound;
 
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(lowerbound != NULL);
+   assert(baselpsol != NULL);
+   assert(domainreductions != NULL);
+
    /* The arrays inside DOMAINREDUCTIONS are indexed via the problem index. */
-   varindex = SCIPvarGetProbindex(branchvar);
+   varindex = SCIPvarGetProbindex(var);
+
+   /* We get the solution value to check whether the domain reduction is violated in the base LP */
+   basesolutionval = SCIPgetSolVal(scip, baselpsol, var);
 
    /* If we hava an old lower bound we take the stronger one, so the MIN is taken. Otherwise we use the new lower bound
     * directly. */
-   if( domainreductions->lowerboundsvalid[varindex] )
+   if( domainreductions->lowerboundset[varindex] )
    {
-      newlowerbound = MIN(domainreductions->lowerbounds[varindex], branchval);
+      newlowerbound = MAX(domainreductions->lowerbounds[varindex], lowerbound);
    }
    else
    {
-      newlowerbound = branchval;
+      newlowerbound = lowerbound;
    }
    domainreductions->lowerbounds[varindex] = newlowerbound;
+   domainreductions->lowerboundset[varindex] = TRUE;
 
-   /*  */
-   if( !domainreductions->lowerboundsvalid[varindex] && !domainreductions->upperboundsvalid[varindex])
+   /* In case the new lower bound is greater than the base solution val and the base solution val is not violated by a
+    * previously found bound, we increment the nviolatedvars counter and set the baselpviolated flag.  */
+   if( SCIPisGT(scip, newlowerbound, basesolutionval) && !domainreductions->baselpviolated[varindex] )
    {
-      domainreductions->nreducedvars++;
+      domainreductions->baselpviolated[varindex] = TRUE;
+      domainreductions->nviolatedvars++;
    }
-
-   domainreductions->lowerboundsvalid[varindex] = TRUE;
-
 }
 
+/**
+ * add an upper bound to the DOMAINREDUCTIONS struct
+ */
 static
 void addUpperBound(
-   SCIP*                 scip,
-   SCIP_VAR*             branchvar,
-   SCIP_Real             branchval,
-   SCIP_SOL*             baselpsol,
-   DOMAINREDUCTIONS*     domainreductions
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< The variable the bound should be added for. */
+   SCIP_Real             upperbound,         /**< The new upper bound for the variable. */
+   SCIP_SOL*             baselpsol,          /**< The LP solution of the base problem. Used to check whether the domain
+                                              *   reduction is violated by it. */
+   DOMAINREDUCTIONS*     domainreductions    /**< The struct the domain reduction should be added to. */
    )
 {
-   /*TODO: update the number of really reduced vars*/
    int varindex;
+   SCIP_Real basesolutionval;
    SCIP_Real newupperbound;
 
-   varindex = SCIPvarGetProbindex(branchvar);
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(upperbound != NULL);
+   assert(baselpsol != NULL);
+   assert(domainreductions != NULL);
 
-   if( domainreductions->upperboundsvalid[varindex] )
+   /* The arrays inside DOMAINREDUCTIONS are indexed via the problem index. */
+   varindex = SCIPvarGetProbindex(var);
+
+   /* We get the solution value to check whether the domain reduction is violated in the base LP */
+   basesolutionval = SCIPgetSolVal(scip, baselpsol, var);
+
+   /* If we hava an old upper bound we take the stronger one, so the MIN is taken. Otherwise we use the new upper bound
+    * directly. */
+   if( domainreductions->upperboundset[varindex] )
    {
-      newupperbound = MIN(domainreductions->upperbounds[varindex], branchval);
-
+      newupperbound = MIN(domainreductions->upperbounds[varindex], upperbound);
    }
    else
    {
-      newupperbound = branchval;
+      newupperbound = upperbound;
    }
-
    domainreductions->upperbounds[varindex] = newupperbound;
+   domainreductions->upperboundset[varindex] = TRUE;
 
-   if( !domainreductions->lowerboundsvalid[varindex] && !domainreductions->upperboundsvalid[varindex])
+   /* In case the new upper bound is lesser than the base solution val and the base solution val is not violated by a
+    * previously found bound, we increment the nviolatedvars counter and set the baselpviolated flag.  */
+   if( SCIPisLT(scip, newupperbound, basesolutionval) && !domainreductions->baselpviolated[varindex] )
    {
-      domainreductions->nreducedvars++;
+      domainreductions->baselpviolated[varindex] = TRUE;
+      domainreductions->nviolatedvars++;
    }
-
-   domainreductions->upperboundsvalid[varindex] = TRUE;
 }
 
+/**
+ * merges the domain reduction data from the two given branching childs data into the target parent data
+ */
 static
 void applyDeeperDomainReductions(
-   SCIP*                 scip,
-   DOMAINREDUCTIONS*     targetdomainreductions,
-   DOMAINREDUCTIONS*     downdomainreductions,
-   DOMAINREDUCTIONS*     updomainreductions
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             baselpsol,          /**< The LP solution of the base problem. Used to check whether the domain
+                                              *   reduction is violated by it. */
+   DOMAINREDUCTIONS*     targetdomreds,      /**< The target that should be filled with the merged data. */
+   DOMAINREDUCTIONS*     downdomreds,        /**< One of the source DOMAINREDUCTIONS. */
+   DOMAINREDUCTIONS*     updomreds           /**< The other source DOMAINREDUCTIONS. */
    )
 {
-   int ntotalvars;
+   SCIP_VAR** vars;
+   int nvars;
    int i;
 
-   ntotalvars = SCIPgetNVars(scip);
+   assert(scip != NULL);
+   assert(scip != baselpsol);
+   assert(scip != targetdomreds);
+   assert(scip != downdomreds);
+   assert(scip != updomreds);
 
-   for( i = 0; i < ntotalvars; i++ )
+   /* as the bounds are tracked for all vars we have to iterate over all vars */
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+
+   assert(vars != NULL);
+   assert(nvars > 0);
+
+   for( i = 0; i < nvars; i++ )
    {
-      if( downdomainreductions->lowerboundsvalid[i] && updomainreductions->lowerboundsvalid[i] )
+      assert(vars[i] != NULL);
+
+      /* If not both child branches have a lower bound for a var, we cannot apply the lower bound to the parent */
+      if( downdomreds->lowerboundset[i] && updomreds->lowerboundset[i] )
       {
-         SCIP_Real newlowerbound;
+         /* If both child branches have a lower bound for a var, the MIN of both values represents a valid lower bound */
+         SCIP_Real newlowerbound = MIN(downdomreds->lowerbounds[i], updomreds->lowerbounds[i]);
 
-         if( targetdomainreductions->lowerboundsvalid[i] )
-         {
-            newlowerbound = MAX(
-               MIN(downdomainreductions->lowerbounds[i], updomainreductions->lowerbounds[i]),
-               targetdomainreductions->lowerbounds[i]);
-         }
-         else
-         {
-            newlowerbound = MIN(downdomainreductions->lowerbounds[i], updomainreductions->lowerbounds[i]);
-         }
-
-         targetdomainreductions->lowerbounds[i] = newlowerbound;
-         targetdomainreductions->lowerboundsvalid[i] = TRUE;
+         /* This MIN can now be added via the default add method */
+         addLowerBound(scip, vars[i], newlowerbound, baselpsol, targetdomreds);
       }
 
-      if( downdomainreductions->upperboundsvalid[i] && updomainreductions->upperboundsvalid[i] )
+      /* If not both child branches have a lower bound for a var, we cannot apply the lower bound to the parent */
+      if( downdomreds->upperboundset[i] && updomreds->upperboundset[i] )
       {
-         SCIP_Real newupperbound;
+         /* If both child branches have an upper bound for a var, the MAX of both values represents a valid upper bound */
+         SCIP_Real newupperbound = MAX(downdomreds->upperbounds[i], updomreds->upperbounds[i]);
 
-         if( targetdomainreductions->upperboundsvalid[i] )
-         {
-            newupperbound = MIN(
-               MAX(downdomainreductions->upperbounds[i], updomainreductions->upperbounds[i]),
-               targetdomainreductions->upperbounds[i]);
-         }
-         else
-         {
-            newupperbound = MAX(downdomainreductions->upperbounds[i], updomainreductions->upperbounds[i]);
-         }
-
-         targetdomainreductions->upperbounds[i] = newupperbound;
-         targetdomainreductions->upperboundsvalid[i] = TRUE;
+         /* This MAX can now be added via the default add method */
+         addUpperBound(scip, vars[i], newupperbound, baselpsol, targetdomreds);
       }
    }
 }
 
+/**
+ * Applies the domain reductions the current node.
+ */
 static
 SCIP_RETCODE applyDomainReductions(
-   SCIP*                 scip,
-   SCIP_SOL*             baselpsol,
-   DOMAINREDUCTIONS*     domainreductions,
-   SCIP_Bool*            domredcutoff,
-   SCIP_Bool*            domred
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             baselpsol,          /**< The LP solution of the base problem. Used to check whether the domain
+                                              *   reduction is violated by it. */
+   DOMAINREDUCTIONS*     domreds,            /**< The domain reductions that should be applied the current node. */
+   SCIP_Bool*            domredcutoff,       /**< Pointer to store whether a cutoff was found due to domain reductions */
+   SCIP_Bool*            domred              /**< Pointer to store whether a strict cutoff was added. (Strict in the sense
+                                              *   that the new domain is violated by the bese LP solution.) */
 #ifdef SCIP_STATISTIC
-   ,STATISTICS*          statistics
+   ,STATISTICS*          statistics          /**< The statistics container. */
 #endif
    )
 {
@@ -414,10 +452,24 @@ SCIP_RETCODE applyDomainReductions(
    int nboundsadded = 0;
    int nboundsaddedvio = 0;
 
+   assert(scip != NULL);
+   assert(baselpsol != NULL);
+   assert(domreds != NULL);
+   assert(domredcutoff != NULL);
+   assert(domred != NULL);
+   SCIPstatistic( assert(statistics != NULL) );
+
+   /* initially we have no cutoff */
+   *domredcutoff = FALSE;
+
+   /* as the bounds are tracked for all vars we have to iterate over all vars */
    probvars = SCIPgetVars(scip);
    nprobvars = SCIPgetNVars(scip);
 
-   for( i = 0; i < nprobvars; i++ )
+   assert(probvars != NULL);
+   assert(nprobvars > 0);
+
+   for( i = 0; i < nprobvars && !*domredcutoff; i++ )
    {
       SCIP_VAR* var;
       SCIP_Real baselpval;
@@ -425,9 +477,12 @@ SCIP_RETCODE applyDomainReductions(
       SCIP_Bool boundaddedvio = FALSE;
 
       var = probvars[i];
+
+      assert(var != NULL);
+
       baselpval = SCIPgetSolVal(scip, baselpsol, var);
 
-      if( !*domredcutoff && domainreductions->lowerboundsvalid[i] )
+      if( !*domredcutoff && domreds->lowerboundset[i] )
       {
          SCIP_Bool infeasible;
          SCIP_Bool tightened;
@@ -437,7 +492,7 @@ SCIP_RETCODE applyDomainReductions(
 
          /* get the old and the new lower bound */
          oldlowerbound = SCIPvarGetLbLocal(var);
-         proposedlowerbound = domainreductions->lowerbounds[i];
+         proposedlowerbound = domreds->lowerbounds[i];
 
          /* add the new bound */
          SCIP_CALL( SCIPtightenVarLb(scip, var, proposedlowerbound, FALSE, &infeasible, &tightened) );
@@ -469,7 +524,7 @@ SCIP_RETCODE applyDomainReductions(
          }
       }
 
-      if( !*domredcutoff && domainreductions->upperboundsvalid[i] )
+      if( !*domredcutoff && domreds->upperboundset[i] )
       {
          SCIP_Bool infeasible;
          SCIP_Bool tightened;
@@ -479,7 +534,7 @@ SCIP_RETCODE applyDomainReductions(
 
          /* get the old and the new upper bound */
          oldupperbound = SCIPvarGetUbLocal(var);
-         proposedupperbound = domainreductions->upperbounds[i];
+         proposedupperbound = domreds->upperbounds[i];
 
          /* add the new bound */
          SCIP_CALL( SCIPtightenVarUb(scip, var, proposedupperbound, FALSE, &infeasible, &tightened) );
@@ -492,7 +547,8 @@ SCIP_RETCODE applyDomainReductions(
          {
             /* the domain reduction may result in an empty model (ub < lb) */
             *domredcutoff = TRUE;
-            SCIPdebugMessage("The upper bound of variable <%s> could not be tightened.\n", SCIPvarGetName(var));
+            SCIPdebugMessage("The domain reduction of variable <%s> resulted in an empty model.\n",
+               SCIPvarGetName(var));
          }
          else if( tightened )
          {
@@ -510,11 +566,13 @@ SCIP_RETCODE applyDomainReductions(
          }
       }
 
+      /* We increment the number of bounds added at most once per var */
       if( boundadded )
       {
          nboundsadded++;
       }
 
+      /* We increment the number of bounds violated by the base lp at most once per var */
       if( boundaddedvio )
       {
          nboundsaddedvio++;
@@ -524,156 +582,167 @@ SCIP_RETCODE applyDomainReductions(
    SCIPstatistic(
       statistics->ndomred += nboundsadded;
       statistics->ndomredvio += nboundsaddedvio;
-   );
+   )
 
-   SCIPdebugMessage("Truly changed <%d> domains of the problem.\n", nboundsadded);
+   SCIPdebugMessage("Truly changed <%d> domains of the problem, <%d> of them are violated by the base lp.\n", nboundsadded,
+      nboundsaddedvio);
 
    return SCIP_OKAY;
 }
 
+/**
+ * frees the given DOMAINREDUCTIONS and all contained Arrays in the opposite order of allocation
+ */
 static
 void freeDomainReductions(
-   SCIP*                 scip,
-   DOMAINREDUCTIONS**    domainreductions
+   SCIP*                 scip,               /**< SCIP data structure */
+   DOMAINREDUCTIONS**    domreds             /**< Pointer to the struct to be freed. */
    )
 {
-   SCIPfreeBufferArray(scip, &(*domainreductions)->upperboundsvalid);
-   SCIPfreeBufferArray(scip, &(*domainreductions)->lowerboundsvalid);
-   SCIPfreeBufferArray(scip, &(*domainreductions)->upperbounds);
-   SCIPfreeBufferArray(scip, &(*domainreductions)->lowerbounds);
-   SCIPfreeBuffer(scip, domainreductions);
+   assert(scip != NULL);
+   assert(domreds != NULL);
+
+   SCIPfreeBufferArray(scip, &(*domreds)->baselpviolated);
+   SCIPfreeBufferArray(scip, &(*domreds)->upperboundset);
+   SCIPfreeBufferArray(scip, &(*domreds)->lowerboundset);
+   SCIPfreeBufferArray(scip, &(*domreds)->upperbounds);
+   SCIPfreeBufferArray(scip, &(*domreds)->lowerbounds);
+   SCIPfreeBuffer(scip, domreds);
 }
 
+/**
+ * Allocates and initializes the BINARYVARLIST struct.
+ */
 static
 SCIP_RETCODE allocBinaryVarList(
-   SCIP*                 scip,
-   BINARYVARLIST**       list,
-   int                   startsize
+   SCIP*                 scip,               /**< SCIP data structure */
+   BINARYVARLIST**       list,               /**< Pointer to the list to be allocated and initialized. */
+   int                   startsize           /**< The number of entries the list initially can hold. */
    )
 {
    SCIP_CALL( SCIPallocBuffer(scip, list) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*list)->binaryvars, startsize) );
 
+   /* We start with no entries and the (current) max length */
    (*list)->nbinaryvars = 0;
    (*list)->memorysize = startsize;
 
    return SCIP_OKAY;
 }
 
-static
-void printBinaryVarList(
-   SCIP*                 scip,
-   BINARYVARLIST*        list
-   )
-{
-   int i;
-
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Size <%i>/<%i> [", list->nbinaryvars, list->memorysize);
-   for( i = 0; i < list->nbinaryvars; i++ )
-   {
-      if( i != 0 )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, ", ");
-      }
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "%s", list->binaryvars[i] ? SCIPvarGetName(list->binaryvars[i]) : "NULL");
-   }
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "]\n");
-}
-
+/**
+ * Appends a binary variable to the list, reallocating the list if necessary.
+ */
 static
 SCIP_RETCODE appendToBinaryVarList(
-   SCIP*                 scip,
-   BINARYVARLIST*        list,
-   SCIP_VAR*             vartoadd
+   SCIP*                 scip,               /**< SCIP data structure */
+   BINARYVARLIST*        list,               /**< The list to add the var to. */
+   SCIP_VAR*             vartoadd            /**< The binary var to add to the list. */
    )
 {
    assert(list != NULL);
    assert(vartoadd != NULL);
    assert(SCIPvarIsBinary(vartoadd));
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Add <%s> to list: ", SCIPvarGetName(vartoadd));
-   printBinaryVarList(scip, list);
-
+   /* In case the list tries to hold more elements than it has space, reallocate  */
    if( list->memorysize == list->nbinaryvars )
    {
-      /* resize the array, such that it can hold the new element */
+      /* resize the array, such that it can hold at least the new element */
       int newmemsize = SCIPcalcMemGrowSize(scip, list->memorysize + 1);
       SCIP_CALL( SCIPreallocBufferArray(scip, &list->binaryvars, newmemsize) );
       list->memorysize = newmemsize;
    }
 
+   /* Set the new var at the first unused place, which is the length used as index */
    list->binaryvars[list->nbinaryvars] = vartoadd;
    list->nbinaryvars++;
-
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "List after: ");
-   printBinaryVarList(scip, list);
 
    return SCIP_OKAY;
 }
 
+/**
+ * Remove and return the last element from the list.
+ */
 static
 SCIP_VAR* dropFromBinaryVarList(
-   SCIP*                 scip,
-   BINARYVARLIST*        list
+   SCIP*                 scip,               /**< SCIP data structure */
+   BINARYVARLIST*        list                /**< The list to remove the last element from. */
    )
 {
    SCIP_VAR* lastelement;
-
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Delete last element of list: ");
-   printBinaryVarList(scip, list);
 
    assert(list != NULL);
    assert(list->nbinaryvars > 0);
    assert(list->binaryvars[list->nbinaryvars-1] != NULL);
 
+   /* get the last element and set the last pointer to NULL (maybe unnecessary, but feels cleaner) */
    lastelement = list->binaryvars[list->nbinaryvars-1];
    list->binaryvars[list->nbinaryvars-1] = NULL;
 
    assert(lastelement != NULL);
 
+   /* decrement the number of entries */
    list->nbinaryvars--;
-
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "List after: ");
-   printBinaryVarList(scip, list);
 
    return lastelement;
 }
 
+/**
+ * Frees all resources allocated by a BINARYVARLIST in opposite order of allocation.
+ */
 static
 void freeBinaryVarList(
-   SCIP*                 scip,
-   BINARYVARLIST**       list
+   SCIP*                 scip,               /**< SCIP data structure */
+   BINARYVARLIST**       list                /**< Pointer to the list to free */
    )
 {
+   assert(scip != NULL);
+   assert(list != NULL);
+
    SCIPfreeBufferArray(scip, &(*list)->binaryvars);
    SCIPfreeBuffer(scip, list);
 }
 
+/**
+ * Allocate and initialize the list holding the constraints.
+ */
 static
 SCIP_RETCODE allocConstraintList(
-   SCIP*                 scip,
-   CONSTRAINTLIST**      conslist
+   SCIP*                 scip,               /**< SCIP data structure */
+   CONSTRAINTLIST**      conslist,           /**< Pointer to the list to be allocated and initialized. */
+   int                   startsize           /**< The number of entries the list initially can hold. */
    )
 {
+   assert(scip != NULL);
+   assert(conslist != NULL);
+   assert(startsize > 0);
+
    SCIP_CALL( SCIPallocBuffer(scip, conslist) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*conslist)->constraints, 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*conslist)->constraints, startsize) );
+
+   /* We start without any constraints */
    (*conslist)->nconstraints = 0;
-   (*conslist)->memorysize = 1;
+   (*conslist)->memorysize = startsize;
    (*conslist)->nviolatedcons = 0;
 
    return SCIP_OKAY;
 }
 
+/**
+ * Append an element to the end of the list of constraints.
+ */
 static
 SCIP_RETCODE appendToConstraintList(
-   SCIP*                 scip,
-   CONSTRAINTLIST*       list,
-   SCIP_CONS*            constoadd
+   SCIP*                 scip,               /**< SCIP data structure */
+   CONSTRAINTLIST*       list,               /**< The list to add the element to. */
+   SCIP_CONS*            constoadd           /**< The element to add to the list. */
    )
 {
+   assert(scip != NULL);
    assert(list != NULL);
    assert(constoadd != NULL);
 
+   /* In case the list tries to hold more elements than it has space, reallocate  */
    if( list->memorysize == list->nconstraints )
    {
       /* resize the array, such that it can hold the new element */
@@ -682,50 +751,68 @@ SCIP_RETCODE appendToConstraintList(
       list->memorysize = newmemsize;
    }
 
+   /* Set the new var at the first unused place, which is the length used as index */
    list->constraints[list->nconstraints] = constoadd;
    list->nconstraints++;
 
    return SCIP_OKAY;
 }
 
+/**
+ * Free all resources of a constraint list in opposite order to the allocation.
+ */
 static
 void freeConstraintList(
-   SCIP*                 scip,
-   CONSTRAINTLIST**      conslist
+   SCIP*                 scip,               /**< SCIP data structure */
+   CONSTRAINTLIST**      conslist            /**< Pointer to the list to be freed. */
    )
 {
+   assert(scip != NULL);
+   assert(conslist != NULL);
+
    SCIPfreeBufferArray(scip, &(*conslist)->constraints);
    SCIPfreeBuffer(scip, conslist);
 }
 
+/**
+ * Allocate and initialize the BINCONSDATA struct.
+ */
 static
 SCIP_RETCODE allocBinConsData(
-   SCIP*                 scip,
-   BINCONSDATA**         consdata,
-   int                   maxdepth
+   SCIP*                 scip,               /**< SCIP data structure */
+   BINCONSDATA**         consdata,           /**< Pointer to the struct to be allocated and initialized. */
+   int                   maxdepth,           /**< The depth of the recursion as an upper bound of branch vars to hold. */
+   int                   nstartcons          /**< The start size of the array containing the constraints. */
    )
 {
+   assert(scip != NULL);
+   assert(consdata != NULL);
+   assert(maxdepth > 0);
+   assert(nstartcons > 0);
+
    SCIP_CALL( SCIPallocBuffer(scip, consdata) );
    SCIP_CALL( allocBinaryVarList(scip, &(*consdata)->binaryvars, maxdepth) );
-   SCIP_CALL( allocConstraintList(scip, &(*consdata)->createdconstraints) );
+   SCIP_CALL( allocConstraintList(scip, &(*consdata)->createdconstraints, nstartcons) );
 
    return SCIP_OKAY;
 }
 
+/**
+ * Free all resources in a BINCONSDATA in opposite order of allocation.
+ */
 static
 void freeBinConsData(
-   SCIP*                 scip,
-   BINCONSDATA**         consdata
+   SCIP*                 scip,               /**< SCIP data structure */
+   BINCONSDATA**         consdata            /**< Pointer to he struct to be freed. */
    )
 {
+   assert(scip != NULL);
+   assert(consdata != NULL);
+
    freeConstraintList(scip, &(*consdata)->createdconstraints);
    freeBinaryVarList(scip, &(*consdata)->binaryvars);
    SCIPfreeBuffer(scip, consdata);
 }
-
-/*
- * Local methods for the data structures
- */
 
 #ifdef SCIP_STATISTIC
 static
@@ -741,7 +828,7 @@ void initStatistics(
    statistics->nbinconstvio = 0;
    statistics->ndomredvio = 0;
    statistics->ndepthreached = 0;
-   statistics->noldbranchused = 0;
+   statistics->ndomred = 0;
 
    for( i = 0; i < 18; i++)
    {
@@ -750,12 +837,12 @@ void initStatistics(
 
    for( i = 0; i < recursiondepth; i++ )
    {
+      statistics->noldbranchused[i] = 0;
       statistics->nsinglecandidate[i] = 0;
       statistics->npropdomred[i] = 0;
       statistics->nfullcutoffs[i] = 0;
       statistics->nlpssolved[i] = 0;
       statistics->nsinglecutoffs[i] = 0;
-      statistics->ndomred = 0;
    }
 }
 #endif
@@ -1281,6 +1368,8 @@ SCIP_RETCODE selectVarRecursive(
 #endif
    )
 {
+   int probingdepth;
+
    assert(scip != NULL);
    assert(status != NULL);
    assert(config != NULL);
@@ -1294,6 +1383,8 @@ SCIP_RETCODE selectVarRecursive(
    assert(recursiondepth >= 1);
    SCIPstatistic( assert(statistics != NULL) );
 
+   probingdepth = SCIPgetProbingDepth(scip);
+
    /* init default decision */
    decision->bestvar = lpcands[0];
    decision->bestval = lpcandssol[0];
@@ -1306,11 +1397,10 @@ SCIP_RETCODE selectVarRecursive(
    if( !config->forcebranching && nlpcands == 1 )
    {
       SCIPdebugMessage("Only one candidate (<%s>) is given. This one is chosen without calculations.\n", SCIPvarGetName(lpcands[0]));
-      SCIPstatistic( statistics->nsinglecandidate++; )
+      SCIPstatistic( statistics->nsinglecandidate[probingdepth]++; )
    }
    else
    {
-      int probingdepth = SCIPgetProbingDepth(scip);
 
       if( SCIPgetDepthLimit(scip) <= (SCIPgetDepth(scip) + recursiondepth) )
       {
@@ -1360,7 +1450,7 @@ SCIP_RETCODE selectVarRecursive(
             if( persistent != NULL && isUseOldBranching(scip, config, persistent, branchvar) ){
                getOldBranching(scip, persistent, branchvar, downbranchingresult, upbranchingresult);
                useoldbranching = TRUE;
-               SCIPstatistic( statistics->noldbranchused++; )
+               SCIPstatistic( statistics->noldbranchused[probingdepth]++; )
             }
             else
             {
@@ -1565,7 +1655,7 @@ SCIP_RETCODE selectVarRecursive(
                {
                   if( !useoldbranching )
                   {
-                     applyDeeperDomainReductions(scip, domainreductions, downdomainreductions, updomainreductions);
+                     applyDeeperDomainReductions(scip, baselpsol, domainreductions, downdomainreductions, updomainreductions);
                   }
 
                   freeDomainReductions(scip, &updomainreductions);
@@ -1671,7 +1761,7 @@ SCIP_RETCODE selectVarRecursive(
 
                      if( config->usedomainreduction )
                      {
-                        ndomreds = domainreductions->nreducedvars;
+                        ndomreds = domainreductions->nviolatedvars;
                         SCIPdebugMessage("Depth <%i>, Found <%i> violating bound changes.\n", probingdepth, ndomreds);
                      }
 
@@ -1755,7 +1845,7 @@ SCIP_RETCODE selectVarStart(
 
    if( config->usebincons )
    {
-      SCIP_CALL( allocBinConsData(scip, &binconsdata, recursiondepth) );
+      SCIP_CALL( allocBinConsData(scip, &binconsdata, recursiondepth, 0.5*nlpcands) );
    }
 
    SCIPstartProbing(scip);
@@ -1929,9 +2019,9 @@ void printStatistics(
       SCIPinfoMessage(scip, NULL, "In depth <%i>, <%i> LPs were solved.\n", i, statistics->nlpssolved[i]);
       SCIPinfoMessage(scip, NULL, "In depth <%i>, a decision was discarded <%i> times due to domain reduction because of propagation.\n", i, statistics->npropdomred[i]);
       SCIPinfoMessage(scip, NULL, "In depth <%i>, only one branching candidate was given <%i> times.\n", i, statistics->nsinglecandidate[i]);
+      SCIPinfoMessage(scip, NULL, "In depth <%i>, old branching results were used in <%i> cases.\n", i, statistics->noldbranchused[i]);
    }
 
-   SCIPinfoMessage(scip, NULL, "Old branching results were used in <%i> cases.\n", statistics->noldbranchused);
    SCIPinfoMessage(scip, NULL, "Depth limit was reached <%i> times.\n", statistics->ndepthreached);
    SCIPinfoMessage(scip, NULL, "Added <%i> binary constraints, of which <%i> where violated by the base LP.\n", statistics->nbinconst, statistics->nbinconstvio);
    SCIPinfoMessage(scip, NULL, "Reduced the domain of <%i> vars, <%i> of them where violated by the base LP.\n", statistics->ndomred, statistics->ndomredvio);
@@ -1992,6 +2082,7 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
    SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->nlpssolved, recursiondepth) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->npropdomred, recursiondepth) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->nsinglecandidate, recursiondepth) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->noldbranchused, recursiondepth) );
 
    initStatistics(scip, branchruledata->statistics, recursiondepth);
 
@@ -2005,20 +2096,23 @@ static
 SCIP_DECL_BRANCHEXIT(branchExitLookahead)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
+   STATISTICS* statistics;
    int recursiondepth;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
+   statistics = branchruledata->statistics;
    recursiondepth = branchruledata->config->recursiondepth;
 
-   printStatistics(scip, branchruledata->statistics, recursiondepth);
+   printStatistics(scip, statistics, recursiondepth);
 
-   SCIPfreeMemoryArray(scip, &branchruledata->statistics->nsinglecandidate);
-   SCIPfreeMemoryArray(scip, &branchruledata->statistics->npropdomred);
-   SCIPfreeMemoryArray(scip, &branchruledata->statistics->nlpssolved);
-   SCIPfreeMemoryArray(scip, &branchruledata->statistics->nfullcutoffs);
-   SCIPfreeMemoryArray(scip, &branchruledata->statistics->nsinglecutoffs);
-   SCIPfreeMemoryArray(scip, &branchruledata->statistics->nresults);
-   SCIPfreeMemory(scip, &branchruledata->statistics);
+   SCIPfreeMemoryArray(scip, &statistics->noldbranchused);
+   SCIPfreeMemoryArray(scip, &statistics->nsinglecandidate);
+   SCIPfreeMemoryArray(scip, &statistics->npropdomred);
+   SCIPfreeMemoryArray(scip, &statistics->nlpssolved);
+   SCIPfreeMemoryArray(scip, &statistics->nfullcutoffs);
+   SCIPfreeMemoryArray(scip, &statistics->nsinglecutoffs);
+   SCIPfreeMemoryArray(scip, &statistics->nresults);
+   SCIPfreeMemory(scip, &statistics);
 
    return SCIP_OKAY;
 }
