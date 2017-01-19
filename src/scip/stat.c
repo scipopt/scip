@@ -95,6 +95,7 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->inrestart = FALSE;
    (*stat)->collectvarhistory = TRUE;
    (*stat)->performpresol = FALSE;
+   (*stat)->branchedunbdcontvar = FALSE;
    (*stat)->subscipdepth = 0;
    (*stat)->detertimecnt = 0.0;
    (*stat)->nreoptruns = 0;
