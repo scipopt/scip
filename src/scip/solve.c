@@ -4341,9 +4341,9 @@ SCIP_RETCODE solveNode(
                if( var != NULL && !stat->branchedunbdvar && (SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var))
                      || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var))) )
                {
-                  SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+                  SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
                      "Starting spatial branch-and-bound on unbounded variable <%s> ([%g,%g]) - cannot guarantee finite termination.\n",
-                     SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetName(var));
+                     SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
                   stat->branchedunbdvar = TRUE;
                }
             }
