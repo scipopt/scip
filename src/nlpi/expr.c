@@ -5225,7 +5225,7 @@ SCIP_RETCODE exprParse(
 
       SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_SQRT, arg1) );
    }
-   /* three character operators */
+   /* three character operators with 1 argument */
    else if(
       strncmp(str, "abs", 3) == 0 ||
       strncmp(str, "cos", 3) == 0 ||
@@ -5271,6 +5271,38 @@ SCIP_RETCODE exprParse(
          assert(strncmp(opname, "tan", 3) == 0);
          SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_TAN, arg1) );
       }
+   }
+   /* three character operators with 2 arguments */
+   else if(
+      strncmp(str, "max", 3) == 0 ||
+      strncmp(str, "min", 3) == 0 )
+   {
+      /* we have a string of the form "min(...,...)" or "max(...,...)"
+       * first find the closing parenthesis, then the comma
+       */
+      const char* comma;
+      SCIP_EXPROP op;
+
+      op = (str[1] == 'a' ? SCIP_EXPR_MAX : SCIP_EXPR_MIN);
+
+      str += 3;
+      SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length) );
+
+      SCIP_CALL( exprparseFindSeparatingComma(str+1, &comma, endptr - str - 1) );
+
+      /* parse first argument [str+1..comma-1] */
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str + 1, comma - str - 1, comma - 1, nvars, varnames, vartable, recursiondepth + 1) );
+
+      /* parse second argument [comma+1..endptr] */
+      ++comma;
+      while( comma < endptr && *comma == ' ' )
+         ++comma;
+
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg2, comma, endptr - comma, endptr - 1, nvars, varnames, vartable, recursiondepth + 1) );
+
+      SCIP_CALL( SCIPexprCreate(blkmem, expr, op, arg1, arg2) );
+
+      str = endptr + 1;
    }
    else if( strncmp(str, "power", 5) == 0 )
    {
@@ -5401,24 +5433,15 @@ SCIP_RETCODE exprParse(
 
    if( str[0] == '^' )
    {
-      /* a '^' behind the found expression indicates a constant power */
+      /* a '^' behind the found expression indicates a power */
       SCIP_Real constant;
 
       arg1 = *expr;
       ++str;
+      while( isspace((unsigned char)*str) && str != lastchar + 1 )
+         ++str;
 
-      if( str[0] == '(' )
-      {
-         /* we use exprParse to evaluate the bracketed argument */
-         SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length) );
-         SCIP_CALL( exprParse(blkmem, messagehdlr, &arg2, str + 1, endptr - str - 1, endptr -1, nvars, varnames, vartable, recursiondepth + 1) );
-
-         /* everything else should be written as (int|real|sign)power(a,b)... */
-         assert(SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST);
-
-         str = endptr + 1;
-      }
-      else if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
+      if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
       {
          /* there is a number coming */
          if( !SCIPstrToRealValue(str, &number, &nonconstendptr) )
@@ -5429,23 +5452,54 @@ SCIP_RETCODE exprParse(
 
          SCIP_CALL( SCIPexprCreate(blkmem, &arg2, SCIP_EXPR_CONST, number) );
          str = nonconstendptr;
+
+         constant = SCIPexprGetOpReal(arg2);
+         SCIPexprFreeDeep(blkmem, &arg2);
+
+         /* expr^number is intpower or realpower */
+         if( EPSISINT(constant, 0.0) ) /*lint !e835*/
+         {
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_INTPOWER, arg1, (int)constant) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_REALPOWER, arg1, constant) );
+         }
+      }
+      else if( str[0] == '(' )
+      {
+         /* we use exprParse to evaluate the exponent */
+
+         SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length) );
+         SCIP_CALL( exprParse(blkmem, messagehdlr, &arg2, str + 1, endptr - str - 1, endptr -1, nvars, varnames, vartable, recursiondepth + 1) );
+
+         if( SCIPexprGetOperator(arg2) != SCIP_EXPR_CONST )
+         {
+            /* reformulate arg1^arg2 as exp(arg2 * log(arg1)) */
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_LOG, arg1) );
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_MUL, *expr, arg2) );
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_EXP, *expr) );
+         }
+         else
+         {
+            /* expr^number is intpower or realpower */
+            constant = SCIPexprGetOpReal(arg2);
+            SCIPexprFreeDeep(blkmem, &arg2);
+            if( EPSISINT(constant, 0.0) ) /*lint !e835*/
+            {
+               SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_INTPOWER, arg1, (int)constant) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_REALPOWER, arg1, constant) );
+            }
+         }
+         str = endptr + 1;
       }
       else
       {
          SCIPerrorMessage("unexpected string following ^ in  %.*s\n", length, str);
          return SCIP_READERROR;
-      }
-
-      constant = SCIPexprGetOpReal(arg2);
-
-      /* expr^number is intpower or realpower */
-      if( EPSISINT(constant, 0.0) ) /*lint !e835*/
-      {
-         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_INTPOWER, arg1, (int)SCIPexprGetOpReal(arg2)) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_REALPOWER, arg1, SCIPexprGetOpReal(arg2)) );
       }
 
       /* ignore whitespace */
@@ -5454,7 +5508,7 @@ SCIP_RETCODE exprParse(
    }
 
    /* check for a two argument operator that is not a multiplication */
-   if( str[0] == '+' || str[0] == '-' || str[0] == '/' || str[0] == '^' )
+   if( str <= lastchar && (str[0] == '+' || str[0] == '-' || str[0] == '/') )
    {
       char op;
 
@@ -5511,7 +5565,7 @@ SCIP_RETCODE exprParse(
       ++str;
 
    /* we are either done or we have a multiplication? */
-   if( str >= lastchar + 1)
+   if( str >= lastchar + 1 )
    {
       SCIPdebugMessage("exprParse (%i): returns expression ", recursiondepth);
       SCIPdebug( SCIPexprPrint(*expr, messagehdlr, NULL, NULL, NULL, NULL) );
