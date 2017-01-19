@@ -95,6 +95,7 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->inrestart = FALSE;
    (*stat)->collectvarhistory = TRUE;
    (*stat)->performpresol = FALSE;
+   (*stat)->branchedunbdvar = FALSE;
    (*stat)->subscipdepth = 0;
    (*stat)->detertimecnt = 0.0;
    (*stat)->nreoptruns = 0;
@@ -309,6 +310,7 @@ void SCIPstatReset(
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
+   stat->branchedunbdvar = FALSE;
 
    stat->ndivesetlpiterations = 0;
    stat->ndivesetcalls = 0;
@@ -513,6 +515,7 @@ void SCIPstatResetCurrentRun(
    stat->nobjleaves = 0;
    stat->ninfeasleaves = 0;
    stat->nfeasleaves = 0;
+   stat->branchedunbdvar = FALSE;
 
    stat->nearlybacktracks = 0;
    stat->nnodesaboverefbound = 0;
