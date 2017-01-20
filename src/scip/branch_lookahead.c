@@ -12,11 +12,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
 /*
- */
-#define SCIP_DEBUG
-#define SCIP_STATISTIC
 #define PRINTNODECONS
+#define SCIP_DEBUG
+*/
+#define SCIP_STATISTIC
 
 /**@file   branch_lookahead.c
  * @brief  lookahead branching rule
@@ -290,7 +291,6 @@ void addLowerBound(
 
    assert(scip != NULL);
    assert(var != NULL);
-   assert(lowerbound != NULL);
    assert(baselpsol != NULL);
    assert(domainreductions != NULL);
 
@@ -341,7 +341,6 @@ void addUpperBound(
 
    assert(scip != NULL);
    assert(var != NULL);
-   assert(upperbound != NULL);
    assert(baselpsol != NULL);
    assert(domainreductions != NULL);
 
@@ -391,10 +390,10 @@ void applyDeeperDomainReductions(
    int i;
 
    assert(scip != NULL);
-   assert(scip != baselpsol);
-   assert(scip != targetdomreds);
-   assert(scip != downdomreds);
-   assert(scip != updomreds);
+   assert(baselpsol != NULL);
+   assert(targetdomreds != NULL);
+   assert(downdomreds != NULL);
+   assert(updomreds != NULL);
 
    /* as the bounds are tracked for all vars we have to iterate over all vars */
    vars = SCIPgetVars(scip);
@@ -1845,7 +1844,7 @@ SCIP_RETCODE selectVarStart(
 
    if( config->usebincons )
    {
-      SCIP_CALL( allocBinConsData(scip, &binconsdata, recursiondepth, 0.5*nlpcands) );
+      SCIP_CALL( allocBinConsData(scip, &binconsdata, recursiondepth, SCIPceil(scip, 0.5*nlpcands)) );
    }
 
    SCIPstartProbing(scip);
@@ -1877,12 +1876,13 @@ SCIP_RETCODE selectVarStart(
 
       freeBinConsData(scip, &binconsdata);
 
-      /* TODO: maybe only do this, if constraints where actually added? */
-      SCIP_CALL( SCIPlinkLPSol(scip, persistent->prevbinsolution) );
-      SCIP_CALL( SCIPunlinkSol(scip, persistent->prevbinsolution) );
 
       if( status->addbinconst )
       {
+         /* TODO: maybe only do this, if constraints where actually added? */
+         SCIP_CALL( SCIPlinkLPSol(scip, persistent->prevbinsolution) );
+         SCIP_CALL( SCIPunlinkSol(scip, persistent->prevbinsolution) );
+
          copyBranchingDecision(decision, persistent->prevdecision);
       }
    }
