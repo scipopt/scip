@@ -61,6 +61,7 @@
 /** method is to print in row in case SCIP_DEBUG is defined */
 static
 void debugRowPrint(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_ROW*             row                 /**< LP row */
    )
 {
@@ -71,16 +72,16 @@ void debugRowPrint(
    /* print row name */
    if( row->name != NULL && row->name[0] != '\0' )
    {
-      SCIPdebugPrintf("%s: ", row->name);
+      SCIPsetDebugMsgPrint(set, "%s: ", row->name);
    }
 
    /* print left hand side */
-   SCIPdebugPrintf("%.15g <= ", row->lhs);
+   SCIPsetDebugMsgPrint(set, "%.15g <= ", row->lhs);
 
    /* print coefficients */
    if( row->len == 0 )
    {
-      SCIPdebugPrintf("0 ");
+      SCIPsetDebugMsgPrint(set, "0 ");
    }
    for( i = 0; i < row->len; ++i )
    {
@@ -88,26 +89,27 @@ void debugRowPrint(
       assert(row->cols[i]->var != NULL);
       assert(SCIPvarGetName(row->cols[i]->var) != NULL);
       assert(SCIPvarGetStatus(row->cols[i]->var) == SCIP_VARSTATUS_COLUMN);
-      SCIPdebugPrintf("%+.15g<%s> ", row->vals[i], SCIPvarGetName(row->cols[i]->var));
+      SCIPsetDebugMsgPrint(set, "%+.15g<%s> ", row->vals[i], SCIPvarGetName(row->cols[i]->var));
    }
 
    /* print constant */
    if( REALABS(row->constant) > SCIP_DEFAULT_EPSILON )
    {
-      SCIPdebugPrintf("%+.15g ", row->constant);
+      SCIPsetDebugMsgPrint(set, "%+.15g ", row->constant);
    }
 
    /* print right hand side */
-   SCIPdebugPrintf("<= %.15g\n", row->rhs);
+   SCIPsetDebugMsgPrint(set, "<= %.15g\n", row->rhs);
 }
 #else
-#define debugRowPrint(x) /**/
+#define debugRowPrint(x,y) /**/
 #endif
 
 #ifdef SCIP_DEBUG
 /** method to output column if SCIP_DEBUG is define */
 static
 void debugColPrint(
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_COL*             col                 /**< LP column */
    )
 {
@@ -117,23 +119,23 @@ void debugColPrint(
    assert(col->var != NULL);
 
    /* print bounds */
-   SCIPdebugPrintf("(obj: %.15g) [%.15g,%.15g], ", col->obj, col->lb, col->ub);
+   SCIPsetDebugMsgPrint(set, "(obj: %.15g) [%.15g,%.15g], ", col->obj, col->lb, col->ub);
 
    /* print coefficients */
    if( col->len == 0 )
    {
-      SCIPdebugPrintf("<empty>");
+      SCIPsetDebugMsgPrint(set, "<empty>");
    }
    for( r = 0; r < col->len; ++r )
    {
       assert(col->rows[r] != NULL);
       assert(col->rows[r]->name != NULL);
-      SCIPdebugPrintf("%+.15g<%s> ", col->vals[r], col->rows[r]->name);
+      SCIPsetDebugMsgPrint(set, "%+.15g<%s> ", col->vals[r], col->rows[r]->name);
    }
-   SCIPdebugPrintf("\n");
+   SCIPsetDebugMsgPrint(set, "\n");
 }
 #else
-#define debugColPrint(x) /**/
+#define debugColPrint(x,y) /**/
 #endif
 
 /*
@@ -4951,7 +4953,7 @@ SCIP_RETCODE rowScale(
    SCIP_CALL( SCIProwChgConstant(row, blkmem, set, stat, eventqueue, lp, 0.0) );
 
    SCIPsetDebugMsg(set, "scaled row <%s> (integral: %u)\n", row->name, row->integral);
-   debugRowPrint(row);
+   debugRowPrint(set, row);
 
 #ifdef SCIP_DEBUG
    /* check integrality status of row */
@@ -7826,7 +7828,7 @@ SCIP_RETCODE lpFlushAddCols(
       assert(nnonz + col->nlprows <= naddcoefs);
 
       SCIPsetDebugMsg(set, "flushing added column <%s>: ", SCIPvarGetName(col->var));
-      debugColPrint(col);
+      debugColPrint(set, col);
 
       /* Because the column becomes a member of the LP solver, it now can take values
        * different from zero. That means, we have to include the column in the corresponding
@@ -8040,7 +8042,7 @@ SCIP_RETCODE lpFlushAddRows(
       assert(nnonz + row->nlpcols <= naddcoefs);
 
       SCIPsetDebugMsg(set, "flushing added row <%s>: ", row->name);
-      debugRowPrint(row);
+      debugRowPrint(set, row);
 
       /* Because the row becomes a member of the LP solver, its dual variable now can take values
        * different from zero. That means, we have to include the row in the corresponding

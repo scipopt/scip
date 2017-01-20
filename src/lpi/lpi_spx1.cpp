@@ -253,7 +253,6 @@ public:
       : SPxSolver(LEAVE, COLUMN),
         m_probname(0),
         m_fromscratch(false),
-        m_scaling(1),
         m_presolving(true),
         m_objLoLimit(-soplex::infinity),
         m_objUpLimit(soplex::infinity),
@@ -262,6 +261,7 @@ public:
         m_autopricing(true),
         m_itlim(-1),
         m_itused(0),
+        m_scaling(1),
         m_rowstat(0),
         m_colstat(0),
         m_rownames(0),
@@ -908,6 +908,8 @@ public:
       if( scaler != NULL || simplifier != NULL )
          origlp = SPxLP(*this);
 
+      m_itused = 0;
+
    SOLVEAGAIN:
       /* perform scaling and presolving */
       if( scaler != NULL )
@@ -962,7 +964,6 @@ public:
       }
 
       /* solve */
-      m_itused = 0;
       if( result != SPxSimplifier::VANISHED )
       {
          /* we have to deactivate the objective limit, since we do not know the transformed value */

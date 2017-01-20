@@ -13499,6 +13499,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
          continue;
 
       /* if it is actually a square term, remember it's coefficient */
+      /* cppcheck-suppress nullPointer */
       if( quadvars1[i] == quadvars2[i] )   /*lint !e613*/
          sqrcoef = quadcoefs[i];   /*lint !e613 */
       else
@@ -13521,6 +13522,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
          consdata->quadvarterms[var1pos].sqrcoef += sqrcoef;
       }
 
+      /* cppcheck-suppress nullPointer */
       if( quadvars1[i] == quadvars2[i] )  /*lint !e613*/
          continue;
 

@@ -626,6 +626,15 @@
  *   This way the code can be checked by valgrind or similar tools. (The individual options <code>NOBLKMEM=\<true|false\></code>
  *   and <code>NOBUFMEM=\<true|false\></code> to turn off the SCIP block and buffer memory, respectively, exist as well).
  *
+ * - <code>TPI=\<tny|omp|none\></code> This determines the threading library that is used for the concurrent solver.
+ *   The options are the following:
+ *      - <code>none</code>: use no threading library and therefore disable the concurrent solver feature
+ *      - <code>tny</code>: use the tinycthread's library which is bundled with SCIP. This
+ *                          is a wrapper around the plattform specific threading library ad should work
+ *                          for Linux, Mac OS X and Windows.
+ *      - <code>omp</code>: use the OpenMP. This will not work with microsoft compilers, since they do not support
+ *                          the required OpenMP version.
+ *
  * You can use other compilers - depending on the system:
  *
  * - <code>COMP=<clang|gnu|intel></code> Use Clang, Gnu (default) or Intel compiler.
