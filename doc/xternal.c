@@ -30,28 +30,27 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Overview (\OTHERDOCU)
- *
- * \OTHERDOCUTEXT
- *
+/**@mainpage Overview
  *
  *
  * @section WHATISSCIP What is SCIP?
  *
- * SCIP is a framework to solve constraint integer programs (CIPs). In particular,
+ * SCIP is a framework to solve constraint integer programs (CIPs) and mixed-integer nonlinear programs. In particular,
  *
- * - SCIP is a branch-and-cut-and-price framework,
- * - incorporates a full-scale mixed integer programming (MIP) solver, and
- * - incorporates a full-scale mixed integer quadratically constrained programming (MIQCP) solver.
+ * - SCIP incorporates a mixed-integer programming (MIP) solver as well as
+ * - an LP based mixed-integer nonlinear programming (MINLP) solver, and
+ * - is a framework for branch-and-cut-and-price.
  *
- * See the web site of <a href="http://scip.zib.de">SCIP</a> for more information about licensing and to download SCIP.
- *
- * SCIP is developed together with <a href="http://www3.mathematik.tu-darmstadt.de/ags/optimierung/research/discrete-optimization.html">TU Darmstadt</a> and
+ * SCIP is developed together with
+ * <a href="http://www3.mathematik.tu-darmstadt.de/ags/optimierung/research/discrete-optimization.html">TU Darmstadt</a> and
  * <a href="http://www.am.uni-erlangen.de/wima/">University of Erlangen-N&uuml;rnberg (Chair of EDOM)</a>
  * and has more than 500,000 lines of C code.
  *
+ * See the web site of <a href="http://scip.zib.de">SCIP</a> for more information about licensing and to download SCIP.
+ *
  * @section GETTINGSTARTED Getting started
  *
+ * - \ref WHATPROBLEMS "What types of optimization problems does SCIP solve?"
  * - \ref MAKE    "Installation information / Makefiles"
  * - \ref LICENSE "License"
  *
@@ -145,7 +144,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Binpacking"><b>Binpacking</b></a>
+ *  \ref BINPACKING_MAIN "Binpacking"
  *  </td>
  *  <td>
  *  An implementation of the column generation approach for the binpacking problem. It includes a customized reader,
@@ -249,7 +248,7 @@
  *  <a href="http://scip.zib.de/doc/applications/Coloring"><b>Coloring</b></a>
  *  </td>
  *  <td>
- *  An implemenation of the column generation approach for graph coloring of Mehrotra and Trick.
+ *  An implementation of the column generation approach for graph coloring of Mehrotra and Trick.
  *  </td>
  *  </tr>
  *  <tr>
@@ -277,6 +276,35 @@
  *  </td>
  *  </tr>
  *  </table>
+ *
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page WHATPROBLEMS What types of optimization problems does SCIP solve?
+ *
+ * As a stand-alone solver, SCIP can solve mixed-integer nonlinear programs \b (MINLPs), to which it applies
+ * an LP based spatial branch-and-cut algorithm. This method is guaranteed to solve bounded MINLPs
+ * within a given numerical tolerance in a finite amount of time. In particular, SCIP is a stand-alone
+ * solver for mixed-integer linear programs \b (MIPs).
+ *
+ * As a framework, SCIP also provides the tools to solve constraint optimization problems defined over
+ * integer and continuous variables. Therefore, the design of SCIP
+ * supports the easy integration of constraints of arbitrary type into the solver.
+ *
+ * Originally, SCIP could solve constraint integer programs \b (CIPs), which are constraint optimization problems that become
+ * linear programs (LPs) after the integer variables are fixed.
+ *
+ * @section PROBLEMCLASSES Some important subclasses of CIP and MINLP
+ *
+ *
+ *
+ * @section SECTION_SCIPALGO Schematic of the node solving loop of SCIP
+ *
+ * This section gives an overview of the algorithm that SCIP applies, as well as some hints how to start customizing the
+ * behavior of SCIP through
+ *
+ * - parameter settings
+ * - additional user plugins
  *
  */
 
@@ -1825,7 +1853,7 @@
  *
  * A usual implementation just
  * calls the interface method which includes the constraint handler to the model. For example, this callback is
- * implemented for the knapsack constraint handler as follows:
+ * implemented for the \ref cons_knapsack.c "knapsack constraint handler" as follows:
  *
  * \code
  * static
@@ -1922,40 +1950,8 @@
  * implement the CONSTRANS method and create a copy of the constraint data.
  *
  * Here is an example, which is taken from the \ref cons_knapsack.h "knapsack constraint handler":
- * \code
- * static
- * SCIP_DECL_CONSTRANS(consTransKnapsack)
- * {
- *    SCIP_CONSHDLRDATA* conshdlrdata;
- *    SCIP_CONSDATA* sourcedata;
- *    SCIP_CONSDATA* targetdata;
  *
- *    assert(conshdlr != NULL);
- *    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
- *    assert(SCIPgetStage(scip) == SCIP_STAGE_TRANSFORMING);
- *    assert(sourcecons != NULL);
- *    assert(targetcons != NULL);
- *
- *    sourcedata = SCIPconsGetData(sourcecons);
- *    assert(sourcedata != NULL);
- *    assert(sourcedata->row == NULL);
- *
- *    conshdlrdata = SCIPconshdlrGetData(conshdlr);
- *    assert(conshdlrdata != NULL);
- *    assert(conshdlrdata->eventhdlr != NULL);
- *
- *    SCIP_CALL( consdataCreate(scip, &targetdata, conshdlrdata->eventhdlr,
- *          sourcedata->nvars, sourcedata->vars, sourcedata->weights, sourcedata->capacity) );
- *
- *    SCIP_CALL( SCIPcreateCons(scip, targetcons, SCIPconsGetName(sourcecons), conshdlr, targetdata,
- *          SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
- *          SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
- *          SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
- *          SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
+ * @snippet src/scip/cons_knapsack.c example of a transformation callback
  *
  * @subsection CONSINITLP
  *
@@ -2206,6 +2202,8 @@
  *
  * This callback can be implemented to return the number of variables involved into a particular constraint.
  * In order to have access to the variable pointers, consider implementing @ref CONSGETVARS.
+ *
+ * @snippet src/scip/cons_linear.c Callback for the number of variables
  *
  * @subsection CONSGETDIVEBDCHGS
  *

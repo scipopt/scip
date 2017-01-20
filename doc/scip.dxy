@@ -663,7 +663,9 @@ INPUT                  = . \
                          ../src/tclique \
                          ../src/dijkstra \
                          ../src/xml \
-                         ../src/blockmemshell
+                         ../src/blockmemshell \
+                         ../examples/Binpacking/src/ \
+                         ../examples/Binpacking/doc/xternal_binpacking.c \
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is
@@ -714,7 +716,9 @@ EXCLUDE_SYMLINKS       = NO
 # against the file with absolute path, so to exclude all test directories
 # for example use the pattern */test/*
 
-EXCLUDE_PATTERNS       = *xyz*
+EXCLUDE_PATTERNS       = *xyz* \
+                         buildflags.c \
+                         githash.c
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the
@@ -797,6 +801,7 @@ EXCLUDE_SYMBOLS        = Ipopt \
                          InferInfo \
                          levelGraph \
                          LpInput \
+                         PROBLEM \
                          mcfdata \
                          MpsInput \
                          nodepair \
@@ -828,7 +833,8 @@ EXCLUDE_SYMBOLS        = Ipopt \
 
 EXAMPLE_PATH           = inc/ \
                          ../ \
-                         ../release-notes/
+                         ../release-notes/ \
+                         ../src
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the
 # EXAMPLE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp
@@ -848,7 +854,8 @@ EXAMPLE_RECURSIVE      = NO
 # directories that contain image that are included in the documentation (see
 # the \image command).
 
-IMAGE_PATH             = pictures/
+IMAGE_PATH             = pictures/ \
+                         ../examples/Binpacking/doc/pics
 
 # The INPUT_FILTER tag can be used to specify a program that doxygen should
 # invoke to filter for each input file. Doxygen will invoke the filter program
@@ -1039,7 +1046,8 @@ HTML_EXTRA_STYLESHEET  = scip.css
 # the files will be copied as-is; there are no commands or markers available.
 
 HTML_EXTRA_FILES       = pictures/miniscippy.png \
-                         pictures/scippy.png
+                         pictures/scippy.png \
+                         ../examples/Binpacking/doc/pics/binpacking.png \
 
 # The HTML_COLORSTYLE_HUE tag controls the color of the HTML output.
 # Doxygen will adjust the colors in the style sheet and background images
