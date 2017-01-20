@@ -329,7 +329,6 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    int i;
 
    SCIP_Bool success;
-   SCIP_Bool valid;
 
    assert( heur != NULL );
    assert( scip != NULL );
