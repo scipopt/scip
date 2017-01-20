@@ -914,32 +914,18 @@ SCIP_RETCODE applyRepair(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", -1) );
 #endif
 
-   /* presolve the subproblem */
-   retcode = SCIPpresolve(subscip);
-
-   /* errors in solving the subproblem should not kill the overall solving process;
-    * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-    */
-   if( retcode != SCIP_OKAY )
-   {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip, "Error while presolving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n", retcode);
-
-      goto TERMINATE;
-   }
    /* solve the subproblem */
    retcode = SCIPsolve(subscip);
 
+   /* errors in sub-SCIPs should not kill the overall solving process. Hence, we print a warning message. Only
+    * in debug mode, SCIP will stop
+    */
    if( retcode != SCIP_OKAY )
    {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip,
-            "Error while solving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n",
-            retcode);
+      SCIPwarningMessage(scip, "Error while solving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n",
+         retcode);
+
+      SCIPABORT();
 
       goto TERMINATE;
    }

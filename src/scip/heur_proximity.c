@@ -668,7 +668,6 @@ SCIP_RETCODE SCIPapplyProximity(
 
    SCIP_SOL* incumbent;
    SCIP_CONS* objcons;
-   SCIP_RETCODE retcode;
    SCIP_Longint iterlim;
 
    SCIP_Real large;
@@ -920,8 +919,14 @@ SCIP_RETCODE SCIPapplyProximity(
    nfixedvars = SCIPgetNFixedVars(subscip) - nfixedvars;
    assert(nfixedvars >= 0);
    SCIPstatisticMessage("presolve fixings %d: %d\n", ++(heurdata->subprobidx), nfixedvars);
-   retcode = SCIPsolve(subscip);
 
+   /* errors in solving the subproblem should not kill the overall solving process;
+    * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+    */
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+   /* print solving statistics of subproblem if we are in SCIP's debug mode */
+   SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
    SCIPstatisticMessage("solve of subscip %d:"
          "usednodes: %" SCIP_LONGINT_FORMAT " "
          "lp iters: %" SCIP_LONGINT_FORMAT " "
@@ -930,22 +935,9 @@ SCIP_RETCODE SCIPapplyProximity(
          SCIPgetNNodes(subscip), SCIPgetNLPIterations(subscip), SCIPgetNRootLPIterations(subscip), SCIPgetPresolvingTime(subscip));
 
    SCIPstatisticMessage("Solving Time %d: %.2f\n", heurdata->subprobidx, SCIPgetSolvingTime(subscip) );
+
    /* drop LP events of sub-SCIP */
    SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
-
-   /* errors in solving the subproblem should not kill the overall solving process;
-    * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-    */
-   if( retcode != SCIP_OKAY )
-   {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip, "Error while solving subproblem in proximity heuristic; sub-SCIP terminated with code <%d>\n",retcode);
-   }
-
-   /* print solving statistics of subproblem if we are in SCIP's debug mode */
-   SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
 
    /* keep track of relevant information for future runs of heuristic */
    if( nusednodes != NULL )
