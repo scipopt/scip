@@ -388,6 +388,9 @@ BEGIN {
 /set limits objective/ {
    objectivelimit = $4;
 }
+#/^  lookahead        :/ {
+#  tottime -= $3;
+#}
 
 /^read problem/ { niter += 1; }
 
