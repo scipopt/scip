@@ -63,7 +63,7 @@ endif (ZIMPL_COUNT)
 add_executable(${EXECUTABLE_NAME} ${SOURCE_FILES})
 
 # add target link libraries depending on whether libzimpl* and which libsoplex* was found
-target_link_libraries(${EXECUTABLE_NAME} ${SCIP_LIB} ${OBJSCIP_LIB} ${NLPI_LIB} ${LPS_LIB} ${GMP_LIBRARIES} ${Readline_LIBRARY} ${ZLIB_LIBRARIES} ${ZIMPL_LIB} ${SOPLEX_LIB_STATIC})
+target_link_libraries(${EXECUTABLE_NAME} ${SCIP_LIB} ${OBJSCIP_LIB} ${NLPI_LIB} ${LPS_LIB} ${TPINONE_LIB} ${GMP_LIBRARIES} ${Readline_LIBRARY} ${ZLIB_LIBRARIES} ${SOPLEX_LIB_STATIC})
 #if (ZIMPL_COUNT)
 #    if (SOPLEX_SHARED_COUNT)
 #        target_link_libraries(${EXECUTABLE_NAME} ${SCIP_LIB} ${OBJSCIP_LIB} ${NLPI_LIB} ${LPS_LIB} ${GMP_LIBRARIES} ${Readline_LIBRARY} ${ZLIB_LIBRARIES} ${ZIMPL_LIB} ${SOPLEX_LIB_SHARED})
