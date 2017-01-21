@@ -4332,6 +4332,21 @@ SCIP_RETCODE solveNode(
                      primal->cutoffbound, TRUE, &result) );
                assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
             }
+
+            /* SCIP cannot guarantee convergence if it is necessary to branch on unbounded variables */
+            if( result == SCIP_BRANCHED )
+            {
+               SCIP_VAR* var = stat->lastbranchvar;
+
+               if( var != NULL && !stat->branchedunbdvar && (SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var))
+                     || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var))) )
+               {
+                  SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+                     "Starting spatial branch-and-bound on unbounded variable <%s> ([%g,%g]) - cannot guarantee finite termination.\n",
+                     SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+                  stat->branchedunbdvar = TRUE;
+               }
+            }
          }
 
          switch( result )

@@ -21623,6 +21623,15 @@ void SCIPprintReal(
    int                   precision           /**< number of significant digits printed */
    );
 
+/** parse a real value that was written with SCIPprintReal() */
+EXTERN
+SCIP_Bool SCIPparseReal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           str,                /**< string to search */
+   SCIP_Real*            value,              /**< pointer to store the parsed value */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
+   );
+
 /**@} */
 
 
