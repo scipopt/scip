@@ -125,8 +125,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process multicriteria zimpl file")
     parser.add_argument("file", help="file containing the multicriteria problem", type=str)
     parser.add_argument("-p", help="path where the output file should be saved; default is ./", metavar="PATH", type=str, default="./")
-    parser.add_argument("-o", metavar="outfile_basename",
-                        help="basename for the output file; default is input file without extension", type=str)
+    parser.add_argument("-o", metavar="BASENAME",
+                        help="basename for the output file; default is input file without extension", type=str)                        
     parser.add_argument("--path_to_zimpl", help="path to the zimpl binary", metavar="PATH",
                         type=str, default="")
     args = parser.parse_args()
