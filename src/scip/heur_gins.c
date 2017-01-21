@@ -1711,7 +1711,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
 
       /* create a problem copy as sub SCIP */
       SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "gins", fixedvars, fixedvals, nfixedvars,
-            heurdata->uselprows, heurdata->copycuts, &success) );
+            heurdata->uselprows, heurdata->copycuts, &success, NULL) );
 
       for( i = 0; i < nvars; i++ )
          subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);

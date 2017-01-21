@@ -329,7 +329,6 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    int i;
 
    SCIP_Bool success;
-   SCIP_Bool valid;
 
    assert( heur != NULL );
    assert( scip != NULL );
@@ -421,12 +420,9 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
 
-   valid = FALSE;
    /* create a problem copy as sub SCIP */
-   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "rins", fixedvars, fixedvals, nfixedvars, heurdata->uselprows, heurdata->copycuts, &valid) );
-
-   SCIPdebugMsg(scip, "Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
-   assert(valid);
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "rins", fixedvars, fixedvals, nfixedvars,
+         heurdata->uselprows, heurdata->copycuts, &success, NULL) );
 
    eventhdlr = NULL;
    /* create event handler for LP events */

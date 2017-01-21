@@ -999,7 +999,7 @@ SCIP_RETCODE SCIPgetConsCopy(
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    );
 
 /** copies constraints from the source-SCIP and adds these to the target-SCIP; for mapping the
@@ -1393,7 +1393,7 @@ SCIP_RETCODE SCIPcopy(
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
-   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
 
 /** copies source SCIP to target SCIP but compresses constraints
@@ -1462,7 +1462,7 @@ SCIP_RETCODE SCIPcopyConsCompression(
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
-   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
 
 /** copies source SCIP original problem to target SCIP; the copying process is done in the following order:
@@ -1516,7 +1516,7 @@ SCIP_RETCODE SCIPcopyOrig(
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
-   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
 
 /** copies source SCIP original problem to target SCIP but compresses constraints
@@ -1581,7 +1581,7 @@ SCIP_RETCODE SCIPcopyOrigConsCompression(
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
-   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
 
 /** checks if there is enough time and memory left for copying the sourcescip into a sub-SCIP and solve the sub-SCIP

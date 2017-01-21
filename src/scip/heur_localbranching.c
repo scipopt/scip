@@ -427,7 +427,8 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    success = FALSE;
 
    /* create a problem copy as sub SCIP */
-   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "localbranching", NULL, NULL, 0, heurdata->uselprows, heurdata->copycuts, &success) );
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "localbranching", NULL, NULL, 0, heurdata->uselprows,
+         heurdata->copycuts, &success, NULL) );
 
    /* create event handler for LP events */
    eventhdlr = NULL;
