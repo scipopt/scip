@@ -238,7 +238,7 @@
                                                  *   for LP resolve (-1.0: unlimited) */
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
 #define SCIP_DEFAULT_LP_SOLUTIONPOLISHING     0 /**< LP solution polishing method (0: disabled, 1: only root, 2: always) */
-#define SCIP_DEFAULT_LP_PERSISTENTSCALING FALSE /**< use persistent LP scaling during branch and bound */
+#define SCIP_DEFAULT_LP_PERSISTENTSCALING  TRUE /**< use persistent LP scaling during branch and bound */
 
 /* NLP */
 

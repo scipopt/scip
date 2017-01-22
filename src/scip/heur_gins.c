@@ -76,7 +76,7 @@
 #define DEFAULT_RELAXDENSECONSS FALSE       /**< should dense constraints (at least as dense as 1 - minfixingrate) be
                                              *   ignored by connectivity graph? */
 #define DEFAULT_USEROLLINGHORIZON TRUE      /**< should the heuristic solve a sequence of sub-MIP's around the first selected variable */
-#define DEFAULT_ROLLHORIZONLIMFAC 0.75      /**< limiting percentage for variables already used in sub-SCIPs to terminate rolling
+#define DEFAULT_ROLLHORIZONLIMFAC  0.4      /**< limiting percentage for variables already used in sub-SCIPs to terminate rolling
                                              *   horizon approach */
 #ifdef SCIP_STATISTIC
 #define NHISTOGRAMBINS         10           /* number of bins for histograms */
