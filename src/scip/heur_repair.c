@@ -1168,6 +1168,9 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL &&  strcmp(heurdata->filename, DEFAULT_FILENAME) == 0 )
+      return SCIP_OKAY;
+
    /* calculate the maximal number of branching nodes until heuristic is aborted */
    nnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
 
