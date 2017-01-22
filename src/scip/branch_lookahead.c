@@ -56,13 +56,14 @@
 #define DEFAULT_USEIMPLIEDBINARYCONSTRAINTS  TRUE
 #define DEFAULT_ADDBINCONSROW                FALSE
 #define DEFAULT_MAXNUMBERVIOLATEDCONS        10000
-#define DEFAULT_REEVALAGE                    5LL
+#define DEFAULT_REEVALAGE                    10LL
 #define DEFAULT_STOPBRANCHING                TRUE
 #define DEFAULT_PURGECONSONCUTOFF            TRUE
 #define DEFAULT_FORCEBRANCHING               FALSE
 #define DEFAULT_ONLYFULLSTRONG               FALSE
 #define DEFAULT_RECURSIONDEPTH               2
 #define DEFAULT_USEDOMAINREDUCTION           TRUE
+#define DEFAULT_ADDNONVIOCONS                FALSE
 
 /*
  * Data structures
@@ -104,6 +105,7 @@ typedef struct
    SCIP_Bool             forcebranching;     /**< Execute the lookahead logic even if only one branching candidate is given.
                                               *   May be used to calculate the score of a single candidate. */
    int                   recursiondepth;     /**< How deep should the recursion go? Default for Lookahead: 2 */
+   SCIP_Bool             addnonviocons;      /**< Should constraints be added, that are not violated by the base LP? */
 } CONFIGURATION;
 
 #ifdef SCIP_STATISTIC
@@ -131,6 +133,7 @@ typedef struct
    int                   ndomredvio;         /**< The number of domain reductions added to the base node, that are violated
                                               *   by the LP at that node. */
    int                   ndepthreached;      /**< The number of times the branching was aborted due to a too small depth. */
+   int                   ndomredcons;        /**< The number of binary constraints ignored, as they would be dom reds. */
 } STATISTICS;
 #endif
 
@@ -828,6 +831,7 @@ void initStatistics(
    statistics->ndomredvio = 0;
    statistics->ndepthreached = 0;
    statistics->ndomred = 0;
+   statistics->ndomredcons = 0;
 
    for( i = 0; i < 18; i++)
    {
@@ -1145,45 +1149,59 @@ SCIP_RETCODE addBinaryConstraint(
    CONFIGURATION*        config,
    BINCONSDATA*          binconsdata,
    SCIP_SOL*             baselpsol
+#ifdef SCIP_STATISTIC
+   ,STATISTICS*          statistics
+#endif
    )
 {
-   int i;
-   SCIP_CONS* constraint;
-   char constraintname[SCIP_MAXSTRLEN];
-   SCIP_VAR** negatedvars;
-   SCIP_Real lhssum = 0;
-
-   SCIPdebugMessage("Adding binary constraint for <%i> vars.\n", binconsdata->binaryvars->nbinaryvars);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &negatedvars, binconsdata->binaryvars->nbinaryvars) );
-   for( i = 0; i < binconsdata->binaryvars->nbinaryvars; i++ )
+   /* If we only have one var for the constraint we can ignore it, as it is already added as a domain reduction. */
+   if( binconsdata->binaryvars->nbinaryvars > 1 )
    {
-      SCIP_CALL( SCIPgetNegatedVar(scip, binconsdata->binaryvars->binaryvars[i], &negatedvars[i]) );
-      lhssum += SCIPgetSolVal(scip, baselpsol, negatedvars[i]);
-   }
+      int i;
+      SCIP_CONS* constraint;
+      char constraintname[SCIP_MAXSTRLEN];
+      SCIP_VAR** negatedvars;
+      SCIP_Real lhssum = 0;
 
-   /* create a name for the new constraint */
-   createBinaryConstraintName(scip, negatedvars, binconsdata->binaryvars->nbinaryvars, constraintname);
-   /* create the constraint with the frehsly created name */
-   SCIP_CALL( createBinaryConstraint(scip, config, &constraint, constraintname, negatedvars, binconsdata->binaryvars->nbinaryvars) );
+      SCIPdebugMessage("Adding binary constraint for <%i> vars.\n", binconsdata->binaryvars->nbinaryvars);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &negatedvars, binconsdata->binaryvars->nbinaryvars) );
+      for( i = 0; i < binconsdata->binaryvars->nbinaryvars; i++ )
+      {
+         SCIP_CALL( SCIPgetNegatedVar(scip, binconsdata->binaryvars->binaryvars[i], &negatedvars[i]) );
+         lhssum += SCIPgetSolVal(scip, baselpsol, negatedvars[i]);
+      }
+
+      if( config->addnonviocons || lhssum < 1 )
+      {
+         /* create a name for the new constraint */
+         createBinaryConstraintName(scip, negatedvars, binconsdata->binaryvars->nbinaryvars, constraintname);
+         /* create the constraint with the frehsly created name */
+         SCIP_CALL( createBinaryConstraint(scip, config, &constraint, constraintname, negatedvars, binconsdata->binaryvars->nbinaryvars) );
 
 #ifdef PRINTNODECONS
-   SCIPinfoMessage(scip, NULL, "Created constraint:\n");
-   SCIP_CALL( SCIPprintCons(scip, constraint, NULL) );
-   SCIPinfoMessage(scip, NULL, "\n");
+         SCIPinfoMessage(scip, NULL, "Created constraint:\n");
+         SCIP_CALL( SCIPprintCons(scip, constraint, NULL) );
+         SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
-   SCIPfreeBufferArray(scip, &negatedvars);
+         SCIP_CALL( appendToConstraintList(scip, binconsdata->createdconstraints, constraint) );
+      }
 
-   SCIP_CALL( appendToConstraintList(scip, binconsdata->createdconstraints, constraint) );
+      /* the constraint we are building is a logic or: we have a list of binary variables that were
+       * cutoff while we branched on with >= 1. So we have the constraint: x_1 + ... + x_n <= n-1.
+       * Let y = (1-x), then we have an equivalent formulation: y_1 + ... + y_n >= 1. If the base lp
+       * is violating this constraint we count this for our number of violated constraitns and bounds. */
+      if( lhssum < 1 )
+      {
+         binconsdata->createdconstraints->nviolatedcons++;
+      }
 
-   /* the constraint we are building is a logic or: we have a list of binary variables that were
-    * cutoff while we branched on with >= 1. So we have the constraint: x_1 + ... + x_n <= n-1.
-    * Let y = (1-x), then we have an equivalent formulation: y_1 + ... + y_n >= 1. If the base lp
-    * is violating this constraint we count this for our number of violated constraitns and bounds. */
-   if( lhssum < 1 )
+      SCIPfreeBufferArray(scip, &negatedvars);
+   }
+   else
    {
-      binconsdata->createdconstraints->nviolatedcons++;
+      SCIPstatistic(statistics->ndomredcons++;)
    }
 
    return SCIP_OKAY;
@@ -1490,7 +1508,11 @@ SCIP_RETCODE selectVarRecursive(
                if( config->usebincons && downbranchingresult->cutoff
                      && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
                {
+#ifdef SCIP_STATISTIC
+                  addBinaryConstraint(scip, config, binconsdata, baselpsol, statistics);
+#else
                   addBinaryConstraint(scip, config, binconsdata, baselpsol);
+#endif
                }
 
                if( !downbranchingresult->cutoff && !status->lperror && !status->limitreached && recursiondepth > 1 )
@@ -1579,7 +1601,11 @@ SCIP_RETCODE selectVarRecursive(
 
                if( config->usebincons && upbranchingresult->cutoff && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
                {
+#ifdef SCIP_STATISTIC
+                  addBinaryConstraint(scip, config, binconsdata, baselpsol, statistics);
+#else
                   addBinaryConstraint(scip, config, binconsdata, baselpsol);
+#endif
                }
 
                if( !upbranchingresult->cutoff && !status->lperror && !status->limitreached && recursiondepth > 1 )
@@ -2022,6 +2048,7 @@ void printStatistics(
       SCIPinfoMessage(scip, NULL, "In depth <%i>, old branching results were used in <%i> cases.\n", i, statistics->noldbranchused[i]);
    }
 
+   SCIPinfoMessage(scip, NULL, "Ignored <%i> binary constraints, that would be domain reductions.\n", statistics->ndomredcons);
    SCIPinfoMessage(scip, NULL, "Depth limit was reached <%i> times.\n", statistics->ndepthreached);
    SCIPinfoMessage(scip, NULL, "Added <%i> binary constraints, of which <%i> where violated by the base LP.\n", statistics->nbinconst, statistics->nbinconstvio);
    SCIPinfoMessage(scip, NULL, "Reduced the domain of <%i> vars, <%i> of them where violated by the base LP.\n", statistics->ndomred, statistics->ndomredvio);
@@ -2380,6 +2407,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/usedomainreduction",
          "should domain reductions found via cutoff be applied (only in recursion)?",
          &branchruledata->config->usedomainreduction, TRUE, DEFAULT_USEDOMAINREDUCTION, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/addnonviocons",
+         "should constraints be added, that are not violated by the base LP?",
+         &branchruledata->config->addnonviocons, TRUE, DEFAULT_ADDNONVIOCONS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
