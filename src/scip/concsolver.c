@@ -376,7 +376,7 @@ SCIP_RETCODE SCIPconcsolverSync(
       prevlb = SCIPsyncdataGetLowerbound(prevsync);
       newub = SCIPsyncdataGetUpperbound(syncdata);
       newlb = SCIPsyncdataGetLowerbound(syncdata);
-      lbok = prevlb > SCIPsetInfinity(set);
+      lbok = prevlb > -SCIPsetInfinity(set);
       ubok = prevub < SCIPsetInfinity(set);
 
       if( lbok && ubok )

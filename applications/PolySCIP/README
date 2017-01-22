@@ -2,12 +2,11 @@
 PolySCIP
 =====================================================================
 
-PolySCIP is a solver for multi-criteria integer programming as well as
-multi-criteria linear programming. The name PolySCIP is composed of
-Poly (from the Greek πολύς meaning "many") and SCIP.  The current
-version of PolySCIP computes the so-called non-dominated extreme
-points of the problem instance. Its file format .mop is based on the
-.mps file format.
+PolySCIP (http://polyscip.zib.de) is a solver for multi-criteria
+integer programming and multi-criteria linear programming
+problems. The name PolySCIP is composed of Poly (from the Greek πολύς
+meaning "many") and SCIP.
+
 
 Contents
 ========
@@ -16,17 +15,19 @@ INSTALL - General building and installation instructions
 
 LICENCE - Using, copying, distribution and modification terms
 
+Makefile - PolySCIP makefile
+
 scipmip.set - Parameter setting file for SCIP
 
 cmake/ - CMake related files
 
 data/ - Test problems in .mop file format
 
-doc/ - Doxygen files 
+doc/ - Doxygen files and userguide.tex
 
 src/ - Source code 
 src/tclap/ - Templatized Command Line Argument Parser (own COPYING file)
 
-mult_zimpl/ - A script that helps to generate .mop files via Zimpl
+mult_zimpl/ - Script and example for easy .mop files generation (via algebraic modeling language ZIMPL)
 
 

@@ -596,7 +596,7 @@ SCIP_RETCODE SCIPprobTransform(
    (*target)->permuted = source->permuted;
 
    /* transform the conflict pool */
-   SCIP_CALL( SCIPconflictstoreTransform(conflictstore, blkmem, set, stat, tree, *target, reopt, eventfilter) );
+   SCIP_CALL( SCIPconflictstoreTransform(conflictstore, blkmem, set, stat, tree, *target, reopt) );
 
    return SCIP_OKAY;
 }

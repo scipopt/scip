@@ -1872,8 +1872,8 @@ SCIP_RETCODE SCIPlpiGetCols(
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
       if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
       {
-         DVector lbvec(lpi->spx->numRowsReal());
-         DVector ubvec(lpi->spx->numRowsReal());
+         DVector lbvec(lpi->spx->numColsReal());
+         DVector ubvec(lpi->spx->numColsReal());
          lpi->spx->getLowerReal(lbvec);
          lpi->spx->getUpperReal(ubvec);
          for( i = firstcol; i <= lastcol; ++i )
@@ -1988,8 +1988,8 @@ SCIP_RETCODE SCIPlpiGetRows(
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
       if( lpi->spx->boolParam(SoPlex::PERSISTENTSCALING) )
       {
-         DVector lhsvec(lpi->spx->numColsReal());
-         DVector rhsvec(lpi->spx->numColsReal());
+         DVector lhsvec(lpi->spx->numRowsReal());
+         DVector rhsvec(lpi->spx->numRowsReal());
          lpi->spx->getLhsReal(lhsvec);
          lpi->spx->getRhsReal(rhsvec);
          for( i = firstrow; i <= lastrow; ++i )
@@ -4065,11 +4065,13 @@ SCIP_RETCODE SCIPlpiGetIntpar(
          *ival = 0;
       else if( scaleparam == SoPlex::SCALER_BIEQUI )
          *ival = 1;
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 2)
       else
       {
          assert(scaleparam == SoPlex::SCALER_LEASTSQ);
          *ival = 2;
       }
+#endif
       break;
 #if SOPLEX_VERSION >= 201
    case SCIP_LPPAR_TIMING:
@@ -4151,8 +4153,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
          (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_OFF);
       else if( ival == 1 )
          (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_BIEQUI);
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 2)
       else
          (void) lpi->spx->setIntParam(SoPlex::SCALER, SoPlex::SCALER_LEASTSQ);
+#endif
 
       break;
 #if SOPLEX_VERSION >= 201

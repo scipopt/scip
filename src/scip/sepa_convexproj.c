@@ -118,8 +118,12 @@ SCIP_RETCODE sepadataClear(
       SCIP_CALL( SCIPexprintFree(&sepadata->exprinterpreter) );
 
       sepadata->nlpinvars = 0;
+      sepadata->nnlrows = 0;
+      sepadata->nlrowssize = 0;
    }
    assert(sepadata->nlpinvars == 0);
+   assert(sepadata->nnlrows == 0);
+   assert(sepadata->nlrowssize == 0);
 
    sepadata->skipsepa = FALSE;
 

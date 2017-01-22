@@ -463,8 +463,6 @@ SCIP_RETCODE SCIPreoptMergeVarHistory(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_VAR**            vars,               /**< original problem variables */
    int                   nvars               /**< number of original problem variables */
    );
@@ -475,8 +473,6 @@ SCIP_RETCODE SCIPreoptUpdateVarHistory(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            origprob,           /**< original problem */
-   SCIP_PROB*            transprob,          /**< transformed problem */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR**            vars,               /**< variable array */
    int                   nvars               /**< number of variables */

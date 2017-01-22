@@ -51,7 +51,7 @@
 /* exec the event handler */
 static
 SCIP_DECL_EVENTEXEC(eventExecConflictstore)
-{
+{/*lint --e{715}*/
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(event != NULL);
@@ -149,9 +149,7 @@ static
 SCIP_RETCODE initConflictstore(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_EVENTFILTER*     eventfilter,        /**< event filter */
-   BMS_BLKMEM*           blkmem              /**< block memory */
+   SCIP_PROB*            transprob           /**< transformed problem */
    )
 {
    assert(conflictstore != NULL);
@@ -233,7 +231,8 @@ SCIP_RETCODE conflictstoreEnsureMem(
       }
       else
       {
-         newsize = MIN(conflictstore->maxstoresize, SCIPsetCalcMemGrowSize(set, num));
+         newsize = SCIPsetCalcMemGrowSize(set, num);
+         newsize = MIN(conflictstore->maxstoresize, newsize);
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflictstore->conflicts, conflictstore->conflictsize,
                newsize) );
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &conflictstore->primalbounds, conflictstore->conflictsize,
@@ -263,8 +262,7 @@ SCIP_RETCODE conflictstoreEnsureMem(
 static
 void adjustStorageSize(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   int                   ndelconfs           /**< number of deleted conflicts */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(conflictstore != NULL);
@@ -273,7 +271,8 @@ void adjustStorageSize(
    if( conflictstore->storesize - conflictstore->nconflicts <= set->conf_maxconss
       && conflictstore->storesize < conflictstore->maxstoresize )
    {
-      conflictstore->storesize += MIN(set->conf_maxconss, (int)(ceil(0.01 * conflictstore->storesize)));
+      SCIP_Real increase = ceil(0.01 * conflictstore->storesize);
+      conflictstore->storesize += MIN(set->conf_maxconss, (int)(increase));
       conflictstore->storesize = MIN(conflictstore->storesize, conflictstore->maxstoresize);
    }
 
@@ -510,7 +509,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
 
    /* adjust size of the storage if we use a dynamic store */
    if( set->conf_maxstoresize == -1 )
-      adjustStorageSize(conflictstore, set, ndelconfs);
+      adjustStorageSize(conflictstore, set);
    assert(conflictstore->initstoresize <= conflictstore->storesize);
    assert(conflictstore->storesize <= conflictstore->maxstoresize);
 
@@ -607,8 +606,7 @@ SCIP_RETCODE SCIPconflictstoreFree(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
-   SCIP_REOPT*           reopt,              /**< reoptimization data */
-   SCIP_EVENTFILTER*     eventfilter         /**< event filter */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    )
 {
    assert(conflictstore != NULL);
@@ -761,7 +759,6 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    SCIP_TREE*            tree,               /**< branch and bound tree (or NULL for an original constraint) */
    SCIP_PROB*            transprob,          /**< transformed problem (or NULL for an original constraint) */
    SCIP_REOPT*           reopt,              /**< reoptimization data */
-   SCIP_EVENTFILTER*     eventfilter,        /**< eventfilter (or NULL for an original constraint) */
    SCIP_CONS*            cons,               /**< constraint representing the conflict */
    SCIP_CONFTYPE         conftype,           /**< type of the conflict */
    SCIP_Bool             cutoffinvolved,     /**< is a cutoff bound involved in this conflict */
@@ -797,7 +794,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    /* initialize the storage */
    if( conflictstore->maxstoresize == -1 )
    {
-      SCIP_CALL( initConflictstore(conflictstore, set, transprob, eventfilter, blkmem) );
+      SCIP_CALL( initConflictstore(conflictstore, set, transprob) );
    }
    assert(conflictstore->initstoresize >= 0);
    assert(conflictstore->initstoresize <= conflictstore->maxstoresize);
@@ -1001,8 +998,7 @@ SCIP_RETCODE SCIPconflictstoreTransform(
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_REOPT*           reopt,              /**< reoptimization data */
-   SCIP_EVENTFILTER*     eventfilter         /**< eventfiler */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    )
 {
    int ntransconss;
@@ -1029,7 +1025,7 @@ SCIP_RETCODE SCIPconflictstoreTransform(
 
       if( transcons != NULL )
       {
-         SCIP_CALL( SCIPconflictstoreAddConflict(conflictstore, blkmem, set, stat, tree, transprob, reopt, eventfilter, transcons,
+         SCIP_CALL( SCIPconflictstoreAddConflict(conflictstore, blkmem, set, stat, tree, transprob, reopt, transcons,
                SCIP_CONFTYPE_UNKNOWN, FALSE, -SCIPsetInfinity(set)) );
 
          ++ntransconss;

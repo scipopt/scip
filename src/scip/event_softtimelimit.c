@@ -152,7 +152,7 @@ SCIP_DECL_EVENTEXEC(eventExecSofttimelimit)
    eventhdlrdata->filterpos = -1;
 
    /* print best solution value */
-   SCIPinfoMessage(scip, NULL, "changed time limit to %.1f after first solution was found\n",
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "changed time limit to %.1f after first solution was found\n",
       eventhdlrdata->softtimelimit);
 
    return SCIP_OKAY;

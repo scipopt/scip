@@ -899,8 +899,6 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    int nintvars;
    int i;
 
-   SCIP_RETCODE retcode;
-
    assert(heur != NULL);
    assert(scip != NULL);
    assert(result != NULL);
@@ -1168,18 +1166,10 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    SCIPdebug(
       SCIP_CALL( subscipGetInfo(scip, subscip) );
    )
-   retcode = SCIPsolve(subscip);
 
    /* Errors in solving the subproblem should not kill the overall solving process.
     * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop. */
-   if( retcode != SCIP_OKAY )
-   {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip, "Error while solving subproblem in Lpface heuristic; sub-SCIP terminated with code <%d>\n",
-         retcode);
-   }
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
    /* print solving statistics of subproblem if we are in SCIP's debug mode */
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );

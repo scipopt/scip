@@ -448,7 +448,8 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
 
    /* create a problem copy as sub SCIP */
-   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "rens", fixedvars, fixedvals, nfixedvars, uselprows, heurdata->copycuts, &success) );
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "rens", fixedvars, fixedvals, nfixedvars, uselprows,
+         heurdata->copycuts, &success, NULL) );
 
    eventhdlr = NULL;
    /* create event handler for LP events */
@@ -531,6 +532,9 @@ SCIP_RETCODE SCIPapplyRens(
          SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", FALSE) );
       }
 
+      /* speed up sub-SCIP by not checking dual LP feasibility */
+      SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+
       /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
        * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
        * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
@@ -576,10 +580,8 @@ SCIP_RETCODE SCIPapplyRens(
     */
    if( retcode != SCIP_OKAY )
    {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
       SCIPwarningMessage(scip, "Error while presolving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+      SCIPABORT();
 
       /* free sub problem data */
       SCIPfreeBufferArray(scip, &subvars);
@@ -620,10 +622,8 @@ SCIP_RETCODE SCIPapplyRens(
        */
       if( retcode != SCIP_OKAY )
       {
-#ifndef NDEBUG
-         SCIP_CALL( retcode );
-#endif
          SCIPwarningMessage(scip, "Error while solving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+         SCIPABORT();
       }
       else
       {

@@ -13813,28 +13813,11 @@ SCIP_RETCODE presolStuffing(
                   (*nfixedvars)++;
                }
             }
-            /* the variable does not fit completely, but we can at least tighten its bound */
-            else if( SCIPisGT(scip, rhs, maxcondactivity) )
-            {
-               SCIP_Real bounddelta = (rhs - maxcondactivity) / val;
-               if( swapped[idx] )
-               {
-                  SCIPdebugMsg(scip, "tighten the upper bound of <%s> from %g to %g\n", SCIPvarGetName(var), ub, ub - bounddelta);
-                  SCIP_CALL( SCIPtightenVarUb(scip, var, ub - bounddelta, FALSE, cutoff, &tightened) );
-               }
-               else
-               {
-                  SCIPdebugMsg(scip, "tighten the lower bound of <%s> from %g to %g\n", SCIPvarGetName(var), lb, lb + bounddelta);
-                  SCIP_CALL( SCIPtightenVarLb(scip, var, lb + bounddelta, FALSE, cutoff, &tightened) );
-               }
-
-               if( *cutoff )
-                  break;
-               if( tightened )
-               {
-                  (*nchgbds)++;
-               }
-            }
+            /* @note: we could in theory tighten the bound of the first singleton variable which does not fall into the above case,
+             *        since it cannot be fully fixed. However, this is not needed and should be done by activity-based bound tightening
+             *        anyway after all other continuous singleton columns were fixed; doing it here may introduce numerical
+             *        troubles in case of large bounds.
+             */
             else if( SCIPisLE(scip, rhs, mincondactivity) )
             {
                if( swapped[idx] )
@@ -16231,7 +16214,111 @@ SCIP_DECL_CONSCOPY(consCopyLinear)
    assert(cons != NULL || *valid == FALSE);
 
    return SCIP_OKAY;
-}   
+}
+
+/* find operators '<=', '==', '>=', [free] in input string and return those places. There should only be one operator,
+ * except for ranged rows for which exactly two operators '<=' must be present
+ */
+static
+SCIP_RETCODE findOperators(
+   const char*           str,                /**< null terminated input string */
+   char**                firstoperator,      /**< pointer to store the string starting at the first operator */
+   char**                secondoperator,     /**< pointer to store the string starting at the second operator */
+   SCIP_Bool*            success             /**< pointer to store if the line contains a valid operator order */
+   )
+{
+   char* curr;
+
+   assert(str != NULL);
+   assert(firstoperator != NULL);
+   assert(secondoperator != NULL);
+
+   *firstoperator = NULL;
+   *secondoperator = NULL;
+
+   curr = (char*)str;
+   *success = TRUE;
+
+   /* loop over the input string to find all operators */
+   while( *curr && *success )
+   {
+      SCIP_Bool found = FALSE;
+      int increment = 1;
+
+      /* try if we found a possible operator */
+      switch( *curr )
+      {
+         case '<':
+         case '=':
+         case '>':
+
+            /* check if the two characters curr[0,1] form an operator together */
+            if( curr[1] == '=' )
+            {
+               found = TRUE;
+
+               /* update increment to continue after this operator */
+               increment = 2;
+            }
+            break;
+         case '[':
+            if( strncmp(curr, "[free]", 6) == 0 )
+            {
+               found = TRUE;
+
+               /* update increment to continue after this operator */
+               increment = 6;
+            }
+            break;
+         default:
+            break;
+
+      }
+
+      /* assign the found operator to the first or second pointer and check for violations of the linear constraint grammar */
+      if( found )
+      {
+         if( *firstoperator == NULL )
+         {
+            *firstoperator = curr;
+         }
+         else
+         {
+            if( *secondoperator != NULL )
+            {
+               SCIPerrorMessage("Found more than two operators in line %s\n", str);
+               *success = FALSE;
+            }
+            else if( strncmp(*firstoperator, "<=", 2) != 0 )
+            {
+               SCIPerrorMessage("Two operators in line that is not a ranged row: %s", str);
+               *success = FALSE;
+            }
+            else if( strncmp(curr, "<=", 2) != 0 )
+            {
+               SCIPerrorMessage("Bad second operator, expected ranged row specification: %s", str);
+               *success = FALSE;
+            }
+
+            *secondoperator = curr;
+         }
+      }
+
+      curr += increment;
+   }
+
+   /* check if we did find at least one operator */
+   if( *success )
+   {
+      if( *firstoperator == NULL )
+      {
+         SCIPerrorMessage("Could not find any operator in line %s\n", str);
+         *success = FALSE;
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** constraint parsing method of constraint handler */
 static
@@ -16245,6 +16332,12 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    SCIP_Real  lhs;
    SCIP_Real  rhs;
    char*      endptr;
+   char*      firstop;
+   char*      secondop;
+   SCIP_Bool  operatorsuccess;
+   char*      lhsstrptr;
+   char*      rhsstrptr;
+   char*      varstrptr;
 
    assert(scip != NULL);
    assert(success != NULL);
@@ -16266,33 +16359,85 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    while( isspace((unsigned char)*str) )
       ++str;
 
-   /* check for left hand side */
-   if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
+   /* find operators in the line first, all other remaining parsing depends on occurence of the operators '<=', '>=', '==',
+    * and the special word [free]
+    */
+   SCIP_CALL( findOperators(str, &firstop, &secondop, &operatorsuccess) );
+
+   /* if the grammar is not valid for parsing a linear constraint, return */
+   if( ! operatorsuccess )
+      return SCIP_OKAY;
+
+   varstrptr = (char *)str;
+   lhsstrptr = rhsstrptr = NULL;
+   assert(firstop != NULL);
+
+   /* assign the strings for parsing the left hand side, right hand side, and the linear variable sum */
+   switch( *firstop )
    {
-      /* there is a number coming, maybe it is a left-hand-side */
-      if( !SCIPstrToRealValue(str, &lhs, &endptr) )
+      case '<':
+         assert(firstop[1] == '=');
+         /* we have ranged row lhs <= a_1 x_1 + ... + a_n x_n <= rhs */
+         if( secondop != NULL )
+         {
+            assert(secondop[0] == '<' && secondop[1] == '=');
+            lhsstrptr = (char *)str;
+            varstrptr = firstop + 2;
+            rhsstrptr = secondop + 2;
+         }
+         else
+         {
+            /* we have an inequality with infinite left hand side a_1 x_1 + ... + a_n x_n <= rhs */
+            lhsstrptr = NULL;
+            varstrptr = (char *)str;
+            rhsstrptr = firstop + 2;
+         }
+         break;
+      case '>':
+         assert(firstop[1] == '=');
+         assert(secondop == NULL);
+         /* we have a_1 x_1 + ... + a_n x_n >= lhs */
+         lhsstrptr = firstop + 2;
+         break;
+      case '=':
+         assert(firstop[1] == '=');
+         assert(secondop == NULL);
+         /* we have a_1 x_1 + ... + a_n x_n == lhs (rhs) */
+         rhsstrptr = firstop + 2;
+         lhsstrptr = firstop + 2;
+         break;
+      case '[':
+         assert(strncmp(firstop, "[free]", 6) == 0);
+         assert(secondop == NULL);
+         /* nothing to assign in case of a free a_1 x_1 + ... + a_n x_n [free] */
+         break;
+      default:
+         /* it should not be possible that a different character appears in that position */
+         SCIPerrorMessage("Parsing has wrong operator character '%c', should be one of <=>[", *firstop);
+         return SCIP_READERROR;
+   }
+
+   /* parse left hand side, if necessary */
+   if( lhsstrptr != NULL )
+   {
+      if( ! SCIPparseReal(scip, lhsstrptr, &lhs, &endptr) )
       {
-         SCIPerrorMessage("error parsing number from <%s>\n", str);
+         SCIPerrorMessage("error parsing left hand side number from <%s>\n", lhsstrptr);
          return SCIP_OKAY;
       }
 
-      /* ignore whitespace */
-      while( isspace((unsigned char)*endptr) )
-         ++endptr;
+      /* in case of an equation, assign the left also to the right hand side */
+      if( rhsstrptr == lhsstrptr )
+         rhs = lhs;
+   }
 
-      if( endptr[0] != '<' || endptr[1] != '=' )
+   /* parse right hand side, if different from left hand side */
+   if( rhsstrptr != NULL && rhsstrptr != lhsstrptr )
+   {
+      if( ! SCIPparseReal(scip, rhsstrptr, &rhs, &endptr) )
       {
-         /* no '<=' coming, so it was the first coefficient, but not a left-hand-side */
-         lhs = -SCIPinfinity(scip);
-      }
-      else
-      {
-         /* it was indeed a left-hand-side, so continue parsing after it */
-         str = endptr + 2;
-
-         /* ignore whitespace */
-         while( isspace((unsigned char)*str) )
-            ++str;
+         SCIPerrorMessage("error parsing right hand side number from <%s>\n", lhsstrptr);
+         return SCIP_OKAY;
       }
    }
 
@@ -16301,8 +16446,10 @@ SCIP_DECL_CONSPARSE(consParseLinear)
    SCIP_CALL( SCIPallocBufferArray(scip, &vars,  coefssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coefs, coefssize) );
 
+   assert(varstrptr != NULL);
+
    /* parse linear sum to get variables and coefficients */
-   SCIP_CALL( SCIPparseVarsLinearsum(scip, str, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
+   SCIP_CALL( SCIPparseVarsLinearsum(scip, varstrptr, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
 
    if( *success && requsize > coefssize )
    {
@@ -16311,77 +16458,18 @@ SCIP_DECL_CONSPARSE(consParseLinear)
       SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  coefssize) );
       SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, coefssize) );
 
-      SCIP_CALL( SCIPparseVarsLinearsum(scip, str, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
+      SCIP_CALL( SCIPparseVarsLinearsum(scip, varstrptr, vars, coefs, &nvars, coefssize, &requsize, &endptr, success) );
       assert(!*success || requsize <= coefssize); /* if successful, then should have had enough space now */
    }
 
    if( !*success )
    {
-      SCIPerrorMessage("no luck in parsing linear sum '%s'\n", str);
+      SCIPerrorMessage("no luck in parsing linear sum '%s'\n", varstrptr);
    }
    else
    {
-      (*success) = FALSE;
-      str = endptr;
-
-      /* check for left or right hand side */
-      while( isspace((unsigned char)*str) )
-         ++str;
-
-      /* check for free constraint */
-      if( strncmp(str, "[free]", 6) == 0 )
-      {
-         if( !SCIPisInfinity(scip, -lhs) )
-         {
-            SCIPerrorMessage("cannot have left hand side and [free] status \n");
-            return SCIP_OKAY;
-         }
-         (*success) = TRUE;
-      }
-      else
-      {
-         switch( *str )
-         {
-         case '<':
-            *success = SCIPstrToRealValue(str+2, &rhs, &endptr);
-            break;
-         case '=':
-            if( !SCIPisInfinity(scip, -lhs) )
-            {
-               SCIPerrorMessage("cannot have == on rhs if there was a <= on lhs\n");
-               return SCIP_OKAY;
-            }
-            else
-            {
-               *success = SCIPstrToRealValue(str+2, &rhs, &endptr);
-               lhs = rhs;
-            }
-            break;
-         case '>':
-            if( !SCIPisInfinity(scip, -lhs) )
-            {
-               SCIPerrorMessage("cannot have => on rhs if there was a <= on lhs\n");
-               return SCIP_OKAY;
-            }
-            else
-            {
-               *success = SCIPstrToRealValue(str+2, &lhs, &endptr);
-               break;
-            }
-         case '\0':
-            *success = TRUE;
-            break;
-         default:
-            SCIPerrorMessage("unexpected character %c\n", *str);
-            return SCIP_OKAY;
-         }
-      }
-
-      if( *success )
-      {
-         SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-      }
+      SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
    SCIPfreeBufferArray(scip, &coefs);
@@ -17263,6 +17351,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
    SCIP_Real constant;
    int requiredsize;
    int v;
+   SCIP_Bool success;
 
    if( SCIPisGT(scip, lhs, rhs) )
    {
@@ -17291,7 +17380,7 @@ SCIP_RETCODE SCIPcopyConsLinear(
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &coefs, nvars) );
       for( v = 0; v < nvars; ++v )
-         coefs[v] = 1.0;      
+         coefs[v] = 1.0;
    }
 
    constant = 0.0;
@@ -17322,18 +17411,20 @@ SCIP_RETCODE SCIPcopyConsLinear(
       }
    }
 
+
+   success = TRUE;
    /* map variables of the source constraint to variables of the target SCIP */
-   for( v = 0; v < nvars && *valid; ++v )
+   for( v = 0; v < nvars && success; ++v )
    {
       SCIP_VAR* var;
       var = vars[v];
 
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &vars[v], varmap, consmap, global, valid) );
-      assert(!(*valid) || vars[v] != NULL);
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &vars[v], varmap, consmap, global, &success) );
+      assert(!(success) || vars[v] != NULL);
    }
 
    /* only create the target constraint, if all variables could be copied */
-   if( *valid )
+   if( success )
    {
       if( !SCIPisInfinity(scip, -lhs) )
          lhs -= constant;
@@ -17344,6 +17435,8 @@ SCIP_RETCODE SCIPcopyConsLinear(
       SCIP_CALL( SCIPcreateConsLinear(scip, cons, name, nvars, vars, coefs, lhs, rhs, 
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
+   else
+      *valid = FALSE;
 
    /* free buffer array */
    SCIPfreeBufferArray(scip, &coefs);

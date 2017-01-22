@@ -503,7 +503,7 @@ SCIP_RETCODE applyVbounds(
    int oldnpscands;
    int npscands;
    int nvars;
-   SCIPstatistic( int nprevars = nvars; )
+   SCIPstatistic( int nprevars; )
 
    assert(heur != NULL);
    assert(heurdata != NULL);
@@ -514,6 +514,8 @@ SCIP_RETCODE applyVbounds(
 
    /* get variable data of original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
+   SCIPstatistic( nprevars = nvars; )
 
    if( nvbvars < nvars * heurdata->minfixingrate )
       return SCIP_OKAY;
@@ -710,7 +712,7 @@ SCIP_RETCODE applyVbounds(
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
-      SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_vbounds", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "_vbounds", NULL, NULL, 0, FALSE, FALSE, TRUE, NULL) );
 
       if( heurdata->copycuts )
       {
@@ -771,6 +773,9 @@ SCIP_RETCODE applyVbounds(
          SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", FALSE) );
       }
 
+      /* speed up sub-SCIP by not checking dual LP feasibility */
+      SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+
       /* employ a limit on the number of enforcement rounds in the quadratic constraint handlers; this fixes the issue that
        * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
        * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
@@ -824,7 +829,7 @@ SCIP_RETCODE applyVbounds(
          }
       }
 #else
-      SCIP_CALL( SCIPpresolve(subscip) );
+      SCIP_CALL_ABORT( SCIPpresolve(subscip) );
 #endif
 
       SCIPdebugMsg(scip, "vbounds heuristic presolved subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
@@ -852,7 +857,7 @@ SCIP_RETCODE applyVbounds(
             }
          }
 #else
-         SCIP_CALL( SCIPsolve(subscip) );
+         SCIP_CALL_ABORT( SCIPsolve(subscip) );
 #endif
 
          /* check, whether a solution was found; due to numerics, it might happen that not all solutions are feasible ->

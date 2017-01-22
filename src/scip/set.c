@@ -238,7 +238,7 @@
                                                  *   for LP resolve (-1.0: unlimited) */
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
 #define SCIP_DEFAULT_LP_SOLUTIONPOLISHING     0 /**< LP solution polishing method (0: disabled, 1: only root, 2: always) */
-#define SCIP_DEFAULT_LP_PERSISTENTSCALING FALSE /**< use persistent LP scaling during branch and bound */
+#define SCIP_DEFAULT_LP_PERSISTENTSCALING  TRUE /**< use persistent LP scaling during branch and bound */
 
 /* NLP */
 
@@ -1272,7 +1272,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/separate",
          "should the conflict constraints be separated?",
-         &(*set)->conf_seperate, TRUE, SCIP_DEFAULT_CONF_SEPARATE,
+         &(*set)->conf_separate, TRUE, SCIP_DEFAULT_CONF_SEPARATE,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/dynamic",
@@ -2263,7 +2263,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "parallel/mode",
          "parallel optimisation mode, 0: opportunistic or 1: deterministic.",
-         &(*set)->parallel_spimode, FALSE, SCIP_DEFAULT_PARALLEL_MODE, 0, 1,
+         &(*set)->parallel_mode, FALSE, SCIP_DEFAULT_PARALLEL_MODE, 0, 1,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "parallel/minnthreads",
@@ -2571,11 +2571,7 @@ SCIP_RETCODE SCIPsetFree(
    BMSfreeMemoryArrayNull(&(*set)->nlpis);
 
    /* free concsolvers */
-   for( i = 0; i < (*set)->nconcsolvers; ++i )
-   {
-      SCIP_CALL( SCIPconcsolverDestroyInstance(*set, &(*set)->concsolvers[i]) );
-   }
-   BMSfreeMemoryArrayNull(&(*set)->concsolvers);
+   SCIP_CALL( SCIPsetFreeConcsolvers(*set) );
 
    /* free concsolvers types */
    for( i = 0; i < (*set)->nconcsolvertypes; ++i )
@@ -4033,6 +4029,28 @@ SCIP_RETCODE SCIPsetIncludeConcsolver(
    assert(set->nconcsolvers == SCIPconcsolverGetIdx(concsolver));
 
    set->nconcsolvers++;
+
+   return SCIP_OKAY;
+}
+
+/** frees all concurrent solvers in the concurrent solver list */
+SCIP_RETCODE SCIPsetFreeConcsolvers(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   int i;
+   assert(set != NULL);
+
+   /* call user callback for each concurrent solver */
+   for( i = 0; i < set->nconcsolvers; ++i )
+   {
+      SCIP_CALL( SCIPconcsolverDestroyInstance(set, &set->concsolvers[i]) );
+   }
+
+   /* set size and number to zero and free the concurent solver array */
+   set->nconcsolvers = 0;
+   set->concsolverssize = 0;
+   BMSfreeMemoryArrayNull(&set->concsolvers);
 
    return SCIP_OKAY;
 }
