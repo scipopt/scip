@@ -1143,18 +1143,16 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    heurdata = SCIPheurGetData(heur);
    SCIPdebugMsg(scip, "%s\n", heurdata->filename);
 
-   /* if repair already ran or neither variable fixing nor slack variables are enabled, stop */
-   if( 0 < SCIPheurGetNCalls(heur) || !(heurdata->usevarfix || heurdata->useslackvars) )
-   {
-      *result = SCIP_DIDNOTFIND;
-      return SCIP_OKAY;
-   }
-
    /* checks the result pointer*/
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 
-   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL &&  strcmp(heurdata->filename, DEFAULT_FILENAME) == 0 )
+   /* if repair already ran or neither variable fixing nor slack variables are enabled, stop */
+   if( 0 < SCIPheurGetNCalls(heur) || !(heurdata->usevarfix || heurdata->useslackvars) )
+      return SCIP_OKAY;
+
+   /* do not run if the neither the LP is constructed nor a user given solution exists */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL && strcmp(heurdata->filename, DEFAULT_FILENAME) == 0 )
       return SCIP_OKAY;
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
@@ -1171,9 +1169,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
 
    /* check whether we have enough nodes left to call subproblem solving */
    if( nnodes < heurdata->minnodes )
-   {
       return SCIP_OKAY;
-   }
 
    if( !SCIPhasCurrentNodeLP(scip) )
       return SCIP_OKAY;
@@ -1217,7 +1213,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    }
    else if( retcode != SCIP_OKAY )
    {
-      SCIPwarningMessage(scip, "cannot run repair!!!\n");
+      SCIPwarningMessage(scip, "cannot run repair, unknown return status <%d>\n", retcode);
       SCIP_CALL( SCIPfreeSol(scip, &(heurdata->infsol)) );
       return SCIP_OKAY;
    }
@@ -1231,6 +1227,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
       SCIP_CALL( SCIPfreeSol(scip, &(heurdata->infsol)) );
       return SCIP_OKAY;
    }
+
    *result = SCIP_DIDNOTFIND;
 
    SCIP_CALL( SCIPtrySol(scip, heurdata->infsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
