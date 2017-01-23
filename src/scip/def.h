@@ -238,7 +238,7 @@ extern "C" {
  * Scoring settings
  */
 
-#define SCIP_SCORE_PENALTYRATIO       1  /**< ratio for penalizing to small score that are within the tolerances */
+#define SCIP_SCORE_PENALTYRATIO       2  /**< ratio for penalizing too small score that are within the tolerances */
 
 /*
  * Global debugging settings
