@@ -310,9 +310,20 @@
  *            &l_{j} \leq x_{j} \leq u_{j} && \forall j \in \mathcal{N} \\
  *            &x_{j} \in \mathbb{Z} && \forall j \in \mathcal{I}
  *        \f}
- *    <td>-\ref reader_cip.h "SCIPs constraint integer programming format"
- *
- *    <td></td>
+ *    <td>
+ *        <ul>
+ *          <li>\ref reader_cip.h "CIP"
+ *          <li>\ref reader_gms.h "GMS"
+ *          <li>\ref reader_osil.h "OSiL"
+ *          <li>\ref reader_pip.h "PIP"
+ *          <li>\ref reader_zpl.h "ZPL"
+ *        </ul>
+ *    <td>check/instances/MINLP/
+ *    <td>
+ *       <ul>
+ *          <li>Compile with <code>IPOPT=true</code> for better performance
+ *          <li>Compile with <code>GAMS=true</code> to read gms-files
+ *          <li>see <a href="FAQ\FILEEXT#minlptypes"> Which kind of MINLPs are supported by SCIP? </a> in the FAQ.
  * <tr>
  *    <td>Constraint Integer Program (CIP)
  *    <td>\f{align*}{
@@ -321,9 +332,32 @@
  *            & x \in \mathbb{Z}^{p}, y  \in \mathbb{R}^{n - p}
  *        \f}
  *        where \f$\forall i \in\mathcal{M}, \forall x^* \in \mathbb{Z}^{p},\f$ \f$ \{ y : C_i(x^*, y) = \text{true} \} \f$ is a polyhedron.
+ *    <td>
+ *       <ul>
+ *          <li>\ref reader_cip.h "CIP"
+ *          <li>\ref reader_fzn.h "FlatZinc"
+ *       </ul>
+ *    <td>check/instances/CP
+ *    <td>
+ *       <ul>
+ *          <li>SCIP supports a limited number of arbitrary constraints; see \ref CONS "How to add constraint handlers"
+ *          to learn how to extend the SCIP framework to a given CIP.
+ *          <li>Use the emphasis setting <code>set emphasis cpsolver</code> to completely disable LP solves and
+ *          use depth-first search with periodic restarts, see also
+ *          <a href="FAQ\FILEEXT#scipascpsolver"> Can I use SCIP as a pure CP solver? </a> in the FAQ.
+ *       </ul>
  * <tr>
  *    <td>Convex MINLP
  *    <td>like MINLP, all \f$g_i\f$ are \b convex.
+ *    <td> see MINLP formats
+ *    <td>
+ *       check/instances/MINLP/circle.cip
+ *    <td>
+ *       <ul>
+ *          <li>everything that holds for MINLP
+ *          <li>in addition, use <code>constraints/nonlinear/assumeconvex = TRUE</code> to inform SCIP about a convex
+ *          problem in cases where the automated detection is not strong enough.
+ *       </ul>
  * <tr>
  *    <td>Mixed-integer linear program (MIP)
  *    <td>\f{align*}{
@@ -332,6 +366,23 @@
  *            &l_{j} \leq x_{j} \leq u_{j} && \forall j \in \mathcal{N} \\
  *            &x_{j} \in \mathbb{Z} && \forall j \in \mathcal{I}
  *        \f}
+ *    <td>
+ *       <ul>
+ *          <li>\ref reader_cip.h "CIP"
+ *          <li>\ref reader_mps.h "MPS"
+ *          <li>\ref reader_lp.h "LP"
+ *          <li>\ref reader_zpl.h "ZPL"
+ *       </li>
+ *    <td>check/instances/MIP/
+ *    <td>
+ *       <ul>
+ *          <li>SCIP requires an external LP solver to solve LP relaxations, which needs to be specified
+ *          at compilation time. By default, it uses SoPlex (<code>LPS=spx</code>). See \ref MAKE for a
+ *          list of available LP solver interfaces and how to use them inside SCIP.
+ *          <li>Compile with Zimpl support (<code>ZIMPL=true</code>) to read in Zimpl models directly.
+ *          <li>SCIP comes with many different parameters. Use the provided emphasis settings (see \ref SHELL "this tutorial")
+ *          to change many parameters at once and boost the performance.
+ *       </ul>
  * <tr>
  *    <td>Linear program (LP)
  *    <td>\f{align*}{
@@ -339,6 +390,9 @@
  *            \text{s.t.} \quad& Ax \geq b \\
  *            & x_{j} \geq 0 && \forall j \in \mathcal{N}
  *        \f}
+ *    <td>see MIP formats
+ *    <td>
+ *    <td>see <a href="FAQ\FILEEXT#scipaslpsolver">Can I use SCIP as a pure LP solver</a> in the FAQ.
  * <tr>
  *    <td>Pseudoboolean optimization
  *    <td>\f{align*}{
@@ -346,13 +400,24 @@
  *            \text{s.t.} \quad& \sum_{k=0}^p a_{ik} \cdot \prod_{j \in \mathcal{N}_{ik}} x_j \leq b_i && \forall i \in \mathcal{M} \\
  *            &x_{j} \in \{0,1\} && \forall j \in \mathcal{N}
  *        \f}
+ *    <td>
+ *       <ul>
+ *          <li>\ref reader_wbo.h "WBO"
+ *          <li>\ref reader_opb.h "OPB"
+ *       </ul>
+ *    <td>check/instances/PseudoBoolean/
  * <tr>
  *    <td>Satisfiability (SAT) and variants
  *    <td>\f{align*}{
  *            \text{min} \quad& 0 \\
- *            \text{s.t.} \quad&\bigvee\limits_{j \in B_i} x_j \vee \bigvee\limits_{j \in \bar{B}_i} & \neg x_j = \text{true} && \forall i \in \mathcal{M}\\
+ *            \text{s.t.} \quad&\bigvee\limits_{j \in B_i} x_j \vee \bigvee\limits_{j \in \bar{B}_i} \neg x_j = \text{true} && \forall i \in \mathcal{M}\\
  *            &x_{j} \in \{\text{false},\text{true}\} && \forall j \in \mathcal{N}
  *        \f}
+ *    <td>
+ *        <ul>
+ *          <li>\ref reader_cnf.h "CNF"
+ *       </ul>
+ *    <td>check/instances/SAT/
  * <tr>
  *    <td>Multicriteria optimization
  *    <td>\f{align*}{
@@ -361,9 +426,7 @@
  *         &x \in \mathbb{K}^n
  *          \f}
  *          where \f$\mathbb{K}\f$ is either \f$\mathbb{Z}\f$ or \f$\mathbb{R}\f$.
- * <tr>
- *    <td>Mixed-integer semidefinite program (MISDP)
- * </table>
+ *     <td colspan="3"> see the <a href="http://polyscip.zib.de/">PolySCIP web page</a>
  *
  *
  * @section SECTION_SCIPALGO Schematic of the node solving loop of SCIP
