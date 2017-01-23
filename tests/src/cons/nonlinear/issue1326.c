@@ -32,6 +32,7 @@ Test(issue1326, read_solve_prob)
 
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 
+   /* trick to get cip file on same directory without knowing path */
    (void) SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%sip", __FILE__);
    SCIP_CALL( SCIPreadProb(scip, filename, NULL) );
 
