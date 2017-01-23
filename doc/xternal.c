@@ -296,6 +296,74 @@
  *
  * @section PROBLEMCLASSES Some important subclasses of CIP and MINLP
  *
+ * The following table gives a non-exhaustive list of common types of mathematical optimization problems that can be solved
+ * through SCIP itself or one of its extensions.
+ *
+ * <table>
+ * <caption> Some problem classes that can be solved by SCIP</caption>
+ * <tr><th>Problem class<th>Mathematical problem description <th>Supported file formats <th>Example Problems <th>Recommendations
+ * <tr>
+ *    <td>Mixed-integer nonlinear program (MINLP)
+ *    <td>\f{align*}{
+ *            \text{min} \quad& f(x) \\
+ *            \text{s.t.} \quad& g_{i}(x) \leq 0 && \forall i \in \mathcal{M} \\
+ *            &l_{j} \leq x_{j} \leq u_{j} && \forall j \in \mathcal{N} \\
+ *            &x_{j} \in \mathbb{Z} && \forall j \in \mathcal{I}
+ *        \f}
+ *    <td>-\ref reader_cip.h "SCIPs constraint integer programming format"
+ *
+ *    <td></td>
+ * <tr>
+ *    <td>Constraint Integer Program (CIP)
+ *    <td>\f{align*}{
+ *            \text{min} \quad& c^T x + d^T y \\
+ *            \text{s.t.} \quad& C_i(x,y) = \text{true} && \forall i \in \mathcal{M} \\
+ *            & x \in \mathbb{Z}^{p}, y  \in \mathbb{R}^{n - p}
+ *        \f}
+ *        where \f$\forall i \in\mathcal{M}, \forall x^* \in \mathbb{Z}^{p},\f$ \f$ \{ y : C_i(x^*, y) = \text{true} \} \f$ is a polyhedron.
+ * <tr>
+ *    <td>Convex MINLP
+ *    <td>like MINLP, all \f$g_i\f$ are \b convex.
+ * <tr>
+ *    <td>Mixed-integer linear program (MIP)
+ *    <td>\f{align*}{
+ *            \text{min} \quad& c^T x \\
+ *            \text{s.t.} \quad& Ax \geq b \\
+ *            &l_{j} \leq x_{j} \leq u_{j} && \forall j \in \mathcal{N} \\
+ *            &x_{j} \in \mathbb{Z} && \forall j \in \mathcal{I}
+ *        \f}
+ * <tr>
+ *    <td>Linear program (LP)
+ *    <td>\f{align*}{
+ *            \text{min} \quad& c^T x \\
+ *            \text{s.t.} \quad& Ax \geq b \\
+ *            & x_{j} \geq 0 && \forall j \in \mathcal{N}
+ *        \f}
+ * <tr>
+ *    <td>Pseudoboolean optimization
+ *    <td>\f{align*}{
+ *            \text{min} \quad& c^T x \\
+ *            \text{s.t.} \quad& \sum_{k=0}^p a_{ik} \cdot \prod_{j \in \mathcal{N}_{ik}} x_j \leq b_i && \forall i \in \mathcal{M} \\
+ *            &x_{j} \in \{0,1\} && \forall j \in \mathcal{N}
+ *        \f}
+ * <tr>
+ *    <td>Satisfiability (SAT) and variants
+ *    <td>\f{align*}{
+ *            \text{min} \quad& 0 \\
+ *            \text{s.t.} \quad&\bigvee\limits_{j \in B_i} x_j \vee \bigvee\limits_{j \in \bar{B}_i} & \neg x_j = \text{true} && \forall i \in \mathcal{M}\\
+ *            &x_{j} \in \{\text{false},\text{true}\} && \forall j \in \mathcal{N}
+ *        \f}
+ * <tr>
+ *    <td>Multicriteria optimization
+ *    <td>\f{align*}{
+ *         \text{min} \quad &(c_1^T x,\ldots,c_k^T x) \\
+ *         \text{s.t. } \quad& Ax \geq b \\
+ *         &x \in \mathbb{K}^n
+ *          \f}
+ *          where \f$\mathbb{K}\f$ is either \f$\mathbb{Z}\f$ or \f$\mathbb{R}\f$.
+ * <tr>
+ *    <td>Mixed-integer semidefinite program (MISDP)
+ * </table>
  *
  *
  * @section SECTION_SCIPALGO Schematic of the node solving loop of SCIP
