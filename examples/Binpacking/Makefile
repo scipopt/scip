@@ -19,7 +19,7 @@
 #@author  Stefan Heinz
 
 #-----------------------------------------------------------------------------
-# path 
+# path
 #-----------------------------------------------------------------------------
 
 SCIPDIR         =       ../..
@@ -43,7 +43,7 @@ CMAINOBJ	=	branch_ryanfoster.o \
 			reader_bpa.o \
 			vardata_binpacking.o
 
-CXXMAINOBJ	=	 
+CXXMAINOBJ	=
 
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(CMAINOBJ:.o=.c))
 MAINSRC		+=	$(addprefix $(SRCDIR)/,$(CXXMAINOBJ:.o=.cpp))
@@ -104,7 +104,7 @@ $(OBJDIR):
 $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
-.PHONY: clean    
+.PHONY: clean
 clean:		$(OBJDIR)
 ifneq ($(OBJDIR),)
 		@-(rm -f $(OBJDIR)/*.o && rmdir $(OBJDIR));
@@ -125,7 +125,7 @@ test:           $(MAINFILE)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_tmpfile_setup_scip.sh configuration_tmpfile_setup_binpacking.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) false $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE);
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "example" $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) false $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) $(SEEDS);
 
 .PHONY: tags
 tags:
@@ -141,11 +141,7 @@ depend:		$(SCIPDIR)
 
 $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
-		$(LINKCXX) $(MAINOBJFILES) \
-		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-                $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX) $(MAINOBJFILES) $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"

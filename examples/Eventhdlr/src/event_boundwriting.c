@@ -332,7 +332,7 @@ SCIP_RETCODE writeBounds(
             SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
             /* create the variable mapping hash map */
-            SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+            SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
             submipdb = SCIP_INVALID;
             valid = FALSE;
@@ -457,7 +457,7 @@ SCIP_DECL_EVENTFREE(eventFreeBoundwriting)
    assert(!eventhdlrdata->isopen);
    assert(eventhdlrdata->file == NULL);
 
-   SCIPfreeMemory(scip, &eventhdlrdata);
+   SCIPfreeBlockMemory(scip, &eventhdlrdata);
 
    return SCIP_OKAY;
 }
@@ -522,7 +522,7 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
    assert(event != NULL);
    assert(((SCIPeventGetType(event) & SCIP_EVENTTYPE_NODESOLVED) == SCIP_EVENTTYPE_NODEFEASIBLE) || ((SCIPeventGetType(event) & SCIP_EVENTTYPE_NODESOLVED) == SCIP_EVENTTYPE_NODEINFEASIBLE) || ((SCIPeventGetType(event) & SCIP_EVENTTYPE_NODESOLVED) == SCIP_EVENTTYPE_NODEBRANCHED));
 
-   SCIPdebugMessage("exec method of event handler for writing primal- and dualbounds\n");
+   SCIPdebugMsg(scip, "exec method of event handler for writing primal- and dualbounds\n");
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
@@ -670,7 +670,7 @@ SCIP_RETCODE SCIPincludeEventHdlrBoundwriting(
    SCIP_EVENTHDLR* eventhdlr;
 
    /* create bounds reader data */
-   SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
    initEventhdlrdata(eventhdlrdata);
 
    eventhdlr = NULL;

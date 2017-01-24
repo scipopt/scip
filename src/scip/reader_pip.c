@@ -300,7 +300,7 @@ SCIP_Bool getNextToken(
    {
       swapPointers(&pipinput->token, &pipinput->pushedtokens[pipinput->npushedtokens-1]);
       pipinput->npushedtokens--;
-      SCIPdebugMessage("(line %d) read token again: '%s'\n", pipinput->linenumber, pipinput->token);
+      SCIPdebugMsg(scip, "(line %d) read token again: '%s'\n", pipinput->linenumber, pipinput->token);
       return TRUE;
    }
 
@@ -313,7 +313,7 @@ SCIP_Bool getNextToken(
          if( !getNextLine(scip, pipinput) )
          {
             pipinput->section = PIP_END;
-            SCIPdebugMessage("(line %d) end of file\n", pipinput->linenumber);
+            SCIPdebugMsg(scip, "(line %d) end of file\n", pipinput->linenumber);
             return FALSE;
          }
          assert(pipinput->linepos == 0);
@@ -374,7 +374,7 @@ SCIP_Bool getNextToken(
    assert(tokenlen < PIP_MAX_LINELEN);
    pipinput->token[tokenlen] = '\0';
 
-   SCIPdebugMessage("(line %d) read token: '%s'\n", pipinput->linenumber, pipinput->token);
+   SCIPdebugMsg(scip, "(line %d) read token: '%s'\n", pipinput->linenumber, pipinput->token);
 
    return TRUE;
 }
@@ -449,7 +449,7 @@ SCIP_Bool isNewSection(
       || strcasecmp(pipinput->token, "MINIMUM") == 0
       || strcasecmp(pipinput->token, "MIN") == 0 )
    {
-      SCIPdebugMessage("(line %d) new section: OBJECTIVE\n", pipinput->linenumber);
+      SCIPdebugMsg(scip, "(line %d) new section: OBJECTIVE\n", pipinput->linenumber);
       pipinput->section = PIP_OBJECTIVE;
       pipinput->objsense = SCIP_OBJSENSE_MINIMIZE;
       return TRUE;
@@ -459,7 +459,7 @@ SCIP_Bool isNewSection(
       || strcasecmp(pipinput->token, "MAXIMUM") == 0
       || strcasecmp(pipinput->token, "MAX") == 0 )
    {
-      SCIPdebugMessage("(line %d) new section: OBJECTIVE\n", pipinput->linenumber);
+      SCIPdebugMsg(scip, "(line %d) new section: OBJECTIVE\n", pipinput->linenumber);
       pipinput->section = PIP_OBJECTIVE;
       pipinput->objsense = SCIP_OBJSENSE_MAXIMIZE;
       return TRUE;
@@ -473,7 +473,7 @@ SCIP_Bool isNewSection(
       {
          if( strcasecmp(pipinput->token, "TO") == 0 )
          {
-            SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", pipinput->linenumber);
+            SCIPdebugMsg(scip, "(line %d) new section: CONSTRAINTS\n", pipinput->linenumber);
             pipinput->section = PIP_CONSTRAINTS;
             return TRUE;
          }
@@ -491,7 +491,7 @@ SCIP_Bool isNewSection(
       {
          if( strcasecmp(pipinput->token, "THAT") == 0 )
          {
-            SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", pipinput->linenumber);
+            SCIPdebugMsg(scip, "(line %d) new section: CONSTRAINTS\n", pipinput->linenumber);
             pipinput->section = PIP_CONSTRAINTS;
             return TRUE;
          }
@@ -505,7 +505,7 @@ SCIP_Bool isNewSection(
       || strcasecmp(pipinput->token, "S.T.") == 0
       || strcasecmp(pipinput->token, "ST.") == 0 )
    {
-      SCIPdebugMessage("(line %d) new section: CONSTRAINTS\n", pipinput->linenumber);
+      SCIPdebugMsg(scip, "(line %d) new section: CONSTRAINTS\n", pipinput->linenumber);
       pipinput->section = PIP_CONSTRAINTS;
       return TRUE;
    }
@@ -513,7 +513,7 @@ SCIP_Bool isNewSection(
    if( strcasecmp(pipinput->token, "BOUNDS") == 0
       || strcasecmp(pipinput->token, "BOUND") == 0 )
    {
-      SCIPdebugMessage("(line %d) new section: BOUNDS\n", pipinput->linenumber);
+      SCIPdebugMsg(scip, "(line %d) new section: BOUNDS\n", pipinput->linenumber);
       pipinput->section = PIP_BOUNDS;
       return TRUE;
    }
@@ -525,7 +525,7 @@ SCIP_Bool isNewSection(
       || strcasecmp(pipinput->token, "INTEGERS") == 0
       || strcasecmp(pipinput->token, "INT") == 0 )
    {
-      SCIPdebugMessage("(line %d) new section: GENERALS\n", pipinput->linenumber);
+      SCIPdebugMsg(scip, "(line %d) new section: GENERALS\n", pipinput->linenumber);
       pipinput->section = PIP_GENERALS;
       return TRUE;
    }
@@ -534,14 +534,14 @@ SCIP_Bool isNewSection(
       || strcasecmp(pipinput->token, "BINARIES") == 0
       || strcasecmp(pipinput->token, "BIN") == 0 )
    {
-      SCIPdebugMessage("(line %d) new section: BINARIES\n", pipinput->linenumber);
+      SCIPdebugMsg(scip, "(line %d) new section: BINARIES\n", pipinput->linenumber);
       pipinput->section = PIP_BINARIES;
       return TRUE;
    }
 
    if( strcasecmp(pipinput->token, "END") == 0 )
    {
-      SCIPdebugMessage("(line %d) new section: END\n", pipinput->linenumber);
+      SCIPdebugMsg(scip, "(line %d) new section: END\n", pipinput->linenumber);
       pipinput->section = PIP_END;
       return TRUE;
    }
@@ -656,7 +656,7 @@ SCIP_RETCODE getVariable(
       SCIP_VAR* newvar;
 
       /* create new variable of the given name */
-      SCIPdebugMessage("creating new variable: <%s>\n", name);
+      SCIPdebugMsg(scip, "creating new variable: <%s>\n", name);
       SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS,
             !dynamiccols, dynamiccols, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, newvar) );
@@ -900,7 +900,7 @@ SCIP_RETCODE readPolynomial(
             /* the second token was a colon: the first token is the line name */
             (void)strncpy(name, pipinput->tokenbuf, PIP_MAX_LINELEN);
             name[PIP_MAX_LINELEN - 1] = '\0';
-            SCIPdebugMessage("(line %d) read constraint name: '%s'\n", pipinput->linenumber, name);
+            SCIPdebugMsg(scip, "(line %d) read constraint name: '%s'\n", pipinput->linenumber, name);
          }
          else
          {
@@ -919,7 +919,7 @@ SCIP_RETCODE readPolynomial(
    /* initialize buffer for storing the variables */
    varssize = PIP_INIT_VARSSIZE;
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, varssize) );
-   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), SCIPcalcHashtableSize(PIP_INIT_VARSSIZE)) );
+   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), PIP_INIT_VARSSIZE) );
 
    /* initialize buffer for storing the monomials */
    monomialssize = PIP_INIT_MONOMIALSSIZE;
@@ -996,7 +996,7 @@ SCIP_RETCODE readPolynomial(
          if( issign )
          {
             coefsign = nextcoefsign;
-            SCIPdebugMessage("(line %d) read coefficient sign: %+d\n", pipinput->linenumber, coefsign);
+            SCIPdebugMsg(scip, "(line %d) read coefficient sign: %+d\n", pipinput->linenumber, coefsign);
             havesign = TRUE;
             nextcoefsign = +1;
             continue;
@@ -1006,7 +1006,7 @@ SCIP_RETCODE readPolynomial(
       /* check if we read a sign */
       if( isSign(pipinput, &coefsign) )
       {
-         SCIPdebugMessage("(line %d) read coefficient sign: %+d\n", pipinput->linenumber, coefsign);
+         SCIPdebugMsg(scip, "(line %d) read coefficient sign: %+d\n", pipinput->linenumber, coefsign);
 
          if( nfactors > 0 || havevalue )
          {
@@ -1056,7 +1056,7 @@ SCIP_RETCODE readPolynomial(
          else
             monomialdegree = SCIP_EXPR_DEGREEINFINITY;
 
-         SCIPdebugMessage("(line %d) read exponent value %g for variable %s\n", pipinput->linenumber, exponent,
+         SCIPdebugMsg(scip, "(line %d) read exponent value %g for variable %s\n", pipinput->linenumber, exponent,
             SCIPvarGetName(vars[varidxs[nfactors-1]]));
          continue;
       }
@@ -1064,7 +1064,7 @@ SCIP_RETCODE readPolynomial(
       /* check if we read a value */
       if( isValue(scip, pipinput, &coef) )
       {
-         SCIPdebugMessage("(line %d) read coefficient value: %g with sign %+d\n", pipinput->linenumber, coef, coefsign);
+         SCIPdebugMsg(scip, "(line %d) read coefficient value: %g with sign %+d\n", pipinput->linenumber, coef, coefsign);
 
          if( havevalue )
          {
@@ -1118,9 +1118,9 @@ SCIP_RETCODE readPolynomial(
    SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), exprtree, expression, 0, 0, NULL) );
    SCIP_CALL( SCIPexprtreeSetVars(*exprtree, nvars, vars) );
 
-   SCIPdebugMessage("read polynomial of degree %d: ", *degree);
+   SCIPdebugMsg(scip, "read polynomial of degree %d: ", *degree);
    SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(*exprtree, SCIPgetMessagehdlr(scip), NULL) ) );
-   SCIPdebugPrintf("\n");
+   SCIPdebugMsgPrint(scip, "\n");
 
  TERMINATE_READPOLYNOMIAL:
    SCIPfreeBufferArray(scip, &vars);
@@ -1373,7 +1373,7 @@ SCIP_RETCODE readObjective(
          SCIP_CALL( SCIPaddLinearVarQuadratic(scip, quadobjcons, quadobjvar, -1.0) );
 
          SCIP_CALL( SCIPaddCons(scip, quadobjcons) );
-         SCIPdebugMessage("(line %d) added constraint <%s> to represent quadratic objective: ", pipinput->linenumber, SCIPconsGetName(quadobjcons));
+         SCIPdebugMsg(scip, "(line %d) added constraint <%s> to represent quadratic objective: ", pipinput->linenumber, SCIPconsGetName(quadobjcons));
          SCIPdebugPrintCons(scip, quadobjcons, NULL);
 
          SCIP_CALL( SCIPreleaseCons(scip, &quadobjcons) );
@@ -1418,7 +1418,7 @@ SCIP_RETCODE readObjective(
          SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
          SCIP_CALL( SCIPaddCons(scip, nonlinobjcons) );
-         SCIPdebugMessage("(line %d) added constraint <%s> to represent nonlinear objective: ", pipinput->linenumber, SCIPconsGetName(nonlinobjcons));
+         SCIPdebugMsg(scip, "(line %d) added constraint <%s> to represent nonlinear objective: ", pipinput->linenumber, SCIPconsGetName(nonlinobjcons));
          SCIPdebugPrintCons(scip, nonlinobjcons, NULL);
 
          SCIP_CALL( SCIPreleaseCons(scip, &nonlinobjcons) );
@@ -1615,7 +1615,7 @@ SCIP_RETCODE readConstraints(
    if( retcode == SCIP_OKAY )
    {
       SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIPdebugMessage("(line %d) created constraint: ", pipinput->linenumber);
+      SCIPdebugMsg(scip, "(line %d) created constraint: ", pipinput->linenumber);
       SCIPdebugPrintCons(scip, cons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
@@ -1798,7 +1798,7 @@ SCIP_RETCODE readBounds(
       /*lint --e{777}*/
       if ( ub != SCIPinfinity(scip) )
          SCIP_CALL( SCIPchgVarUb(scip, var, ub) );
-      SCIPdebugMessage("(line %d) new bounds: <%s>[%g,%g]\n", pipinput->linenumber, SCIPvarGetName(var),
+      SCIPdebugMsg(scip, "(line %d) new bounds: <%s>[%g,%g]\n", pipinput->linenumber, SCIPvarGetName(var),
          SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    }
 
@@ -2079,7 +2079,7 @@ void appendLine(
 
    (*linecnt) += (int) strlen(extension);
 
-   SCIPdebugMessage("linebuffer <%s>, length = %lu\n", linebuffer, (unsigned long)strlen(linebuffer));
+   SCIPdebugMsg(scip, "linebuffer <%s>, length = %lu\n", linebuffer, (unsigned long)strlen(linebuffer));
 
    if( (*linecnt) > PIP_PRINTLEN )
       endLine(scip, file, linebuffer, linecnt);
@@ -3488,7 +3488,7 @@ SCIP_RETCODE SCIPwritePip(
 
    /* create hashtable for storing aggregated variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &aggregatedVars, nvars) );
-   SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), 1000, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+   SCIP_CALL( SCIPhashtableCreate(&varAggregated, SCIPblkmem(scip), nvars/10, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
 
    /* check for aggregated variables in quadratic parts of quadratic constraints and output aggregations as linear constraints */
    for (c = 0; c < nConsQuadratic; ++c)
@@ -3735,14 +3735,10 @@ SCIP_RETCODE SCIPincludeReaderPip(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_READERDATA* readerdata;
    SCIP_READER* reader;
 
-   /* create reader data */
-   readerdata = NULL;
-
    /* include reader */
-   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, NULL) );
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyPip) );
@@ -3770,13 +3766,13 @@ SCIP_RETCODE SCIPreadPip(
    pipinput.linebuf[0] = '\0';
    pipinput.probname[0] = '\0';
    pipinput.objname[0] = '\0';
-   SCIP_CALL( SCIPallocMemoryArray(scip, &pipinput.token, PIP_MAX_LINELEN) ); /*lint !e506*/
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &pipinput.token, PIP_MAX_LINELEN) ); /*lint !e506*/
    pipinput.token[0] = '\0';
-   SCIP_CALL( SCIPallocMemoryArray(scip, &pipinput.tokenbuf, PIP_MAX_LINELEN) ); /*lint !e506*/
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &pipinput.tokenbuf, PIP_MAX_LINELEN) ); /*lint !e506*/
    pipinput.tokenbuf[0] = '\0';
    for( i = 0; i < PIP_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((pipinput.pushedtokens)[i]), PIP_MAX_LINELEN) ); /*lint !e866 !e506*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((pipinput.pushedtokens)[i]), PIP_MAX_LINELEN) ); /*lint !e866 !e506*/
    }
 
    pipinput.npushedtokens = 0;
@@ -3797,10 +3793,10 @@ SCIP_RETCODE SCIPreadPip(
    /* free dynamically allocated memory */
    for( i = PIP_MAX_PUSHEDTOKENS - 1; i >= 0 ; --i )
    {
-      SCIPfreeMemoryArray(scip, &pipinput.pushedtokens[i]);
+      SCIPfreeBlockMemoryArray(scip, &pipinput.pushedtokens[i], PIP_MAX_LINELEN);
    }
-   SCIPfreeMemoryArray(scip, &pipinput.tokenbuf);
-   SCIPfreeMemoryArray(scip, &pipinput.token);
+   SCIPfreeBlockMemoryArray(scip, &pipinput.tokenbuf, PIP_MAX_LINELEN);
+   SCIPfreeBlockMemoryArray(scip, &pipinput.token, PIP_MAX_LINELEN);
 
    if( retcode == SCIP_PLUGINNOTFOUND )
       retcode = SCIP_READERROR;

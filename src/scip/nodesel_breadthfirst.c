@@ -73,7 +73,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBreadthfirst)
    }
    if( *selnode != NULL )
    {
-      SCIPdebugMessage("Selecting next node number %" SCIP_LONGINT_FORMAT " at depth %d\n", SCIPnodeGetNumber(*selnode), SCIPnodeGetDepth(*selnode));
+      SCIPdebugMsg(scip, "Selecting next node number %" SCIP_LONGINT_FORMAT " at depth %d\n", SCIPnodeGetNumber(*selnode), SCIPnodeGetDepth(*selnode));
    }
 
    return SCIP_OKAY;
@@ -126,15 +126,11 @@ SCIP_RETCODE SCIPincludeNodeselBreadthfirst(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_NODESELDATA* nodeseldata;
    SCIP_NODESEL* nodesel;
-
-   /* create breadthfirst node selector data */
-   nodeseldata = NULL;
 
    /* include node selector */
    SCIP_CALL( SCIPincludeNodeselBasic(scip, &nodesel, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
-         nodeselSelectBreadthfirst, nodeselCompBreadthfirst, nodeseldata) );
+         nodeselSelectBreadthfirst, nodeselCompBreadthfirst, NULL) );
 
    assert(nodesel != NULL);
 

@@ -252,7 +252,7 @@ SCIP_RETCODE branchCons(
       SCIP_CALL( SCIPdelConsNode(scip, child, cons) );
    }
 
-   SCIPdebugMessage("disjunction constraint <%s> branched %d childs\n", SCIPconsGetName(cons), nconss);
+   SCIPdebugMsg(scip, "disjunction constraint <%s> branched %d childs\n", SCIPconsGetName(cons), nconss);
 
    /* reset constraint age */
    SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -371,6 +371,41 @@ SCIP_RETCODE propagateCons(
    return SCIP_OKAY;
 }
 
+/** helper function to enforce constraints */
+static
+SCIP_RETCODE enforceConstraint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to process */
+   int                   nconss,             /**< number of constraints */
+   SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool branch;
+   int c;
+
+   *result = SCIP_FEASIBLE;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   branch = SCIPgetNPseudoBranchCands(scip) == 0 || conshdlrdata->alwaysbranch;
+
+   for( c = 0; c < nconss && *result != SCIP_BRANCHED; ++c )
+   {
+      /* check the disjunction */
+      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, FALSE, FALSE, result) );
+
+      if( *result == SCIP_INFEASIBLE && branch )
+      {
+         SCIP_CALL( branchCons(scip, conss[c], result) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of constraint handler
  */
@@ -405,7 +440,7 @@ SCIP_DECL_CONSFREE(consFreeDisjunction)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    SCIPconshdlrSetData(conshdlr, NULL);
 
@@ -452,6 +487,8 @@ SCIP_DECL_CONSINITLP(consInitlpDisjunction)
    SCIP_CONSDATA* consdata;
    int c;
 
+   *infeasible = FALSE;
+
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);
@@ -472,27 +509,17 @@ SCIP_DECL_CONSINITLP(consInitlpDisjunction)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpDisjunction)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool branch;
-   int c;
+   SCIP_CALL( enforceConstraint(scip, conshdlr,  conss,  nconss,  result) );
 
-   *result = SCIP_FEASIBLE;
+   return SCIP_OKAY;
+}
 
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
 
-   branch = SCIPgetNPseudoBranchCands(scip) == 0 || conshdlrdata->alwaysbranch;
-
-   for( c = 0; c < nconss && *result != SCIP_BRANCHED; ++c )
-   {
-      /* check the disjunction */
-      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, FALSE, FALSE, result) );
-
-      if( *result == SCIP_INFEASIBLE && branch )
-      {
-         SCIP_CALL( branchCons(scip, conss[c], result) );
-      }
-   }
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxDisjunction)
+{  /*lint --e{715}*/
+   SCIP_CALL( enforceConstraint(scip, conshdlr,  conss,  nconss,  result) );
 
    return SCIP_OKAY;
 }
@@ -502,27 +529,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpDisjunction)
 static
 SCIP_DECL_CONSENFOPS(consEnfopsDisjunction)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool branch;
-   int c;
-
-   *result = SCIP_FEASIBLE;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   branch = SCIPgetNPseudoBranchCands(scip) == 0 || conshdlrdata->alwaysbranch;
-
-   for( c = 0; c < nconss && *result != SCIP_BRANCHED; ++c )
-   {
-      /* check the disjunction */
-      SCIP_CALL( checkCons(scip, conss[c], NULL, FALSE, FALSE, FALSE, result) );
-
-      if( *result == SCIP_INFEASIBLE && branch )
-      {
-         SCIP_CALL( branchCons(scip, conss[c], result) );
-      }
-   }
+   SCIP_CALL( enforceConstraint(scip, conshdlr,  conss,  nconss,  result) );
 
    return SCIP_OKAY;
 }
@@ -536,11 +543,16 @@ SCIP_DECL_CONSCHECK(consCheckDisjunction)
 
    *result = SCIP_FEASIBLE;
 
-   for( c = 0; c < nconss && *result == SCIP_FEASIBLE; ++c )
+   for( c = 0; c < nconss && (*result == SCIP_FEASIBLE || completely); ++c )
    {
+      SCIP_RESULT tmpres;
+
       /* check the disjunction */
-      SCIP_CALL( checkCons(scip, conss[c], sol, checkintegrality, checklprows, printreason, result) );
-      assert(*result == SCIP_FEASIBLE || *result == SCIP_INFEASIBLE);
+      SCIP_CALL( checkCons(scip, conss[c], sol, checkintegrality, checklprows, printreason, &tmpres) );
+      assert(tmpres == SCIP_FEASIBLE || tmpres == SCIP_INFEASIBLE);
+
+      if( tmpres == SCIP_INFEASIBLE )
+         *result = SCIP_INFEASIBLE;
    }
 
    return SCIP_OKAY;
@@ -705,7 +717,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
    assert(str != NULL);
    assert(name != NULL);
 
-   SCIPdebugMessage("parsing disjunction <%s>\n", name);
+   SCIPdebugMsg(scip, "parsing disjunction <%s>\n", name);
 
    *success = TRUE;
 
@@ -720,7 +732,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
 
    if( saveptr == NULL )
    {
-      SCIPdebugMessage("error parsing disjunctive constraint: \"%s\"\n", str);
+      SCIPdebugMsg(scip, "error parsing disjunctive constraint: \"%s\"\n", str);
       *success = FALSE;
       goto TERMINATE;
    }
@@ -765,7 +777,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
 		  }
 		  else
 		  {
-		     SCIPdebugMessage("error parsing disjunctive constraint: \"%s\"\n", str);
+		     SCIPdebugMsg(scip, "error parsing disjunctive constraint: \"%s\"\n", str);
 		     *success = FALSE;
 		     goto TERMINATE;
 		  }
@@ -796,7 +808,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
 	    SCIP_CALL( SCIPduplicateBufferArray(scip, &token, nexttokenstart, saveptr - nexttokenstart + 1) );
 	    token[saveptr - nexttokenstart] = '\0';
 
-	    SCIPdebugMessage("disjunctive parsing token(constraint): %s\n", token);
+	    SCIPdebugMsg(scip, "disjunctive parsing token(constraint): %s\n", token);
 
 	    /* parsing a constraint, part of the disjunction */
 	    SCIP_CALL( SCIPparseCons(scip, &(conss[nconss]), token, initial, separate, enforce, FALSE, propagate, TRUE, modifiable, dynamic, removable, stickingatnode, success) );
@@ -807,7 +819,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
 	       ++nconss;
 	    else
 	    {
-	       SCIPdebugMessage("error parsing disjunctive constraint: \"%s\"\n", str);
+	       SCIPdebugMsg(scip, "error parsing disjunctive constraint: \"%s\"\n", str);
 	       goto TERMINATE;
 	    }
 	    /* skip ',' delimeter */
@@ -838,7 +850,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
 
    if( saveptr == NULL )
    {
-      SCIPdebugMessage("error parsing disjunctive constraint: \"%s\"\n", str);
+      SCIPdebugMsg(scip, "error parsing disjunctive constraint: \"%s\"\n", str);
       *success = FALSE;
       goto TERMINATE;
    }
@@ -858,7 +870,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
       SCIP_CALL( SCIPduplicateBufferArray(scip, &token, nexttokenstart, saveptr - nexttokenstart + 1) );
       token[saveptr - nexttokenstart] = '\0';
 
-      SCIPdebugMessage("disjunctive parsing token(constraint): %s\n", token);
+      SCIPdebugMsg(scip, "disjunctive parsing token(constraint): %s\n", token);
 
       /* parsing a constraint, part of the disjunction */
       SCIP_CALL( SCIPparseCons(scip, &(conss[nconss]), token, initial, separate, enforce, FALSE, propagate, TRUE, modifiable, dynamic, removable, stickingatnode, success) );
@@ -992,7 +1004,7 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
    SCIP_CONSHDLR* conshdlr;
 
    /* create disjunction constraint handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
@@ -1014,7 +1026,7 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropDisjunction, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransDisjunction) );
-
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxDisjunction) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/alwaysbranch",

@@ -31,7 +31,7 @@
 #define HEUR_DESC             "negate solution entries if an objective coefficient changes the sign, enters or leaves the objective."
 #define HEUR_DISPCHAR         'j'
 #define HEUR_PRIORITY         40000
-#define HEUR_FREQ             -1
+#define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         0
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
@@ -65,18 +65,21 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
    SCIP_SOL* feasiblechanged;     /* solution with all feasible entries negated */
    SCIP_SOL* singlenegatedsol;    /* solution with exactly one negated entry */
    SCIP_VAR** vars;
-   int nvars;
+   int nbinvars;
    int i;
 
    SCIP_Real solval;
+
+   vars = SCIPgetVars(scip);
+   nbinvars = SCIPgetNBinVars(scip);
 
    *result = SCIP_DIDNOTRUN;
 
    if( !SCIPisReoptEnabled(scip) )
       return SCIP_OKAY;
 
-   vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip);
+   if( nbinvars < SCIPgetNVars(scip) )
+      return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
 
@@ -92,7 +95,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
    SCIP_CALL( SCIPcreateSol(scip, &singlenegatedsol, heur) );
 
    /* copy the solutions */
-   for( i = 0; i < nvars; i++ )
+   for( i = 0; i < nbinvars; i++ )
    {
       solval = SCIPgetSolVal(scip, lastbestsol, vars[i]);
       SCIP_CALL( SCIPsetSolVal(scip, allchanged, vars[i], solval) );
@@ -105,7 +108,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
    assert(SCIPsolGetHeur(singlenegatedsol) == heur);
 
    /* change the entries */
-   for( i = 0; i < nvars; i++ )
+   for( i = 0; i < nbinvars; i++ )
    {
       SCIP_VAR* transvar;
 
@@ -120,6 +123,10 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
          SCIP_Real oldcoef;
          SCIP_Bool changed;
 
+         /* perform negation only on variables that are not globally fixed */
+         if( SCIPvarGetLbGlobal(vars[i]) > 0.5 || SCIPvarGetUbGlobal(vars[i]) < 0.5 )
+            continue;
+
          SCIP_CALL( SCIPgetReoptOldObjCoef(scip, transvar, SCIPgetNReoptRuns(scip), &oldcoef));
          SCIP_CALL( SCIPgetReoptOldObjCoef(scip, transvar, SCIPgetNReoptRuns(scip)-1, &newcoef));
 
@@ -131,7 +138,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             changed |= SCIPisPositive(scip, oldcoef) == SCIPisNegative(scip, newcoef); /*lint !e514*/
          }
 
-         SCIPdebugMessage("check variable <%s> which has %schanged from %g to %g\n", SCIPvarGetName(transvar), changed ? "" : "not ", oldcoef, newcoef);
+         SCIPdebugMsg(scip, "check variable <%s> which has %schanged from %g to %g\n", SCIPvarGetName(transvar), changed ? "" : "not ", oldcoef, newcoef);
 
          if( changed )
          {
@@ -149,12 +156,16 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             obj = SCIPgetSolTransObj(scip, allchanged);
             if( SCIPisFeasLT(scip, obj, SCIPgetCutoffbound(scip)) )
             {
-               SCIPdebugMessage("try solution with all negations\n");
-               SCIP_CALL( SCIPtrySol(scip, allchanged, FALSE, FALSE, FALSE, TRUE, &success) );
+               SCIPdebugMsg(scip, "try solution with all negations\n");
+#ifdef SCIP_DEBUG
+               SCIP_CALL( SCIPtrySol(scip, allchanged, TRUE, FALSE, TRUE, FALSE, TRUE, &success) );
+#else
+               SCIP_CALL( SCIPtrySol(scip, allchanged, FALSE, FALSE, TRUE, FALSE, TRUE, &success) );
+#endif
 
                if( success )
                {
-                  SCIPdebugMessage("found feasible solution solution:\n");
+                  SCIPdebugMsg(scip, "found feasible solution solution:\n");
                   SCIPdebug( SCIP_CALL( SCIPprintSol(scip, allchanged, NULL, FALSE) ) );
 
                   *result = SCIP_FOUNDSOL;
@@ -166,12 +177,15 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             obj = SCIPgetSolTransObj(scip, feasiblechanged);
             if( SCIPisFeasLT(scip, obj, SCIPgetCutoffbound(scip)) )
             {
-               SCIPdebugMessage("try solution with feasible negations\n");
-               SCIP_CALL( SCIPtrySol(scip, feasiblechanged, FALSE, FALSE, FALSE, TRUE, &success) );
-
+               SCIPdebugMsg(scip, "try solution with feasible negations\n");
+#ifdef SCIP_DEBUG
+               SCIP_CALL( SCIPtrySol(scip, feasiblechanged, TRUE, FALSE, TRUE, FALSE, TRUE, &success) );
+#else
+               SCIP_CALL( SCIPtrySol(scip, feasiblechanged, FALSE, FALSE, TRUE, FALSE, TRUE, &success) );
+#endif
                if( success )
                {
-                  SCIPdebugMessage("found feasible solution solution:\n");
+                  SCIPdebugMsg(scip, "found feasible solution solution:\n");
                   SCIPdebug( SCIP_CALL( SCIPprintSol(scip, feasiblechanged, NULL, FALSE) ) );
 
                   *result = SCIP_FOUNDSOL;
@@ -189,12 +203,15 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             if( SCIPisFeasLT(scip, obj, SCIPgetCutoffbound(scip)) )
             {
                success = FALSE;
-               SCIPdebugMessage("try solution with a single negation\n");
-               SCIP_CALL( SCIPtrySol(scip, singlenegatedsol, FALSE, FALSE, FALSE, TRUE, &success) );
-
+               SCIPdebugMsg(scip, "try solution with a single negation\n");
+#ifdef SCIP_DEBUG
+               SCIP_CALL( SCIPtrySol(scip, singlenegatedsol, TRUE, FALSE, TRUE, FALSE, TRUE, &success) );
+#else
+               SCIP_CALL( SCIPtrySol(scip, singlenegatedsol, FALSE, FALSE, TRUE, FALSE, TRUE, &success) );
+#endif
                if( success )
                {
-                  SCIPdebugMessage("found feasible solution:\n");
+                  SCIPdebugMsg(scip, "found feasible solution:\n");
                   SCIPdebug( SCIP_CALL( SCIPprintSol(scip, singlenegatedsol, NULL, FALSE) ) );
 
                   *result = SCIP_FOUNDSOL;
@@ -225,22 +242,17 @@ SCIP_RETCODE SCIPincludeHeurTrivialnegation(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;
-
-   /* no primal heuristic data */
-   heurdata = NULL;
 
    /* include heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
          HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
-         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecTrivialnegation, heurdata) );
+         HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecTrivialnegation, NULL) );
 
    assert(heur != NULL);
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyTrivialnegation) );
-
 
    return SCIP_OKAY;
 }

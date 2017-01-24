@@ -85,7 +85,7 @@ SCIP_DECL_NODESELFREE(nodeselFreeBfs)
    /* free user data of node selector */
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
-   SCIPfreeMemory(scip, &nodeseldata);
+   SCIPfreeBlockMemory(scip, &nodeseldata);
    SCIPnodeselSetData(nodesel, nodeseldata);
 
    return SCIP_OKAY;
@@ -131,12 +131,12 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
 
    /* check, if we exceeded the maximal plunging depth */
    plungedepth = SCIPgetPlungeDepth(scip);
-   if( plungedepth > maxplungedepth )
+   if( plungedepth >= maxplungedepth )
    {
       /* we don't want to plunge again: select best node from the tree */
-      SCIPdebugMessage("plungedepth: [%d,%d], cur: %d -> abort plunging\n", minplungedepth, maxplungedepth, plungedepth);
+      SCIPdebugMsg(scip, "plungedepth: [%d,%d], cur: %d -> abort plunging\n", minplungedepth, maxplungedepth, plungedepth);
       *selnode = SCIPgetBestNode(scip);
-      SCIPdebugMessage("  -> best node   : lower=%g\n",
+      SCIPdebugMsg(scip, "  -> best node   : lower=%g\n",
          *selnode != NULL ? SCIPnodeGetLowerbound(*selnode) : SCIPinfinity(scip));
    }
    else
@@ -148,7 +148,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
       if( plungedepth < minplungedepth )
       {
          maxbound = SCIPinfinity(scip);
-         SCIPdebugMessage("plungedepth: [%d,%d], cur: %d => maxbound: infinity\n",
+         SCIPdebugMsg(scip, "plungedepth: [%d,%d], cur: %d => maxbound: infinity\n",
             minplungedepth, maxplungedepth, plungedepth);
       }
       else
@@ -167,7 +167,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
          /* calculate maximal plunging bound */
          maxbound = lowerbound + maxplungequot * (cutoffbound - lowerbound);
 
-         SCIPdebugMessage("plungedepth: [%d,%d], cur: %d, bounds: [%g,%g], maxbound: %g\n",
+         SCIPdebugMsg(scip, "plungedepth: [%d,%d], cur: %d, bounds: [%g,%g], maxbound: %g\n",
             minplungedepth, maxplungedepth, plungedepth, lowerbound, cutoffbound, maxbound);         
       }
 
@@ -179,7 +179,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
       if( node != NULL && SCIPnodeGetLowerbound(node) < maxbound )
       {
          *selnode = node;
-         SCIPdebugMessage("  -> selected prio child: lower=%g\n", SCIPnodeGetLowerbound(*selnode));
+         SCIPdebugMsg(scip, "  -> selected prio child: lower=%g\n", SCIPnodeGetLowerbound(*selnode));
       }
       else
       {
@@ -187,7 +187,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
          if( node != NULL && SCIPnodeGetLowerbound(node) < maxbound )
          {
             *selnode = node;
-            SCIPdebugMessage("  -> selected best child: lower=%g\n", SCIPnodeGetLowerbound(*selnode));
+            SCIPdebugMsg(scip, "  -> selected best child: lower=%g\n", SCIPnodeGetLowerbound(*selnode));
          }
          else
          {
@@ -195,7 +195,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
             if( node != NULL && SCIPnodeGetLowerbound(node) < maxbound )
             {
                *selnode = node;
-               SCIPdebugMessage("  -> selected prio sibling: lower=%g\n", SCIPnodeGetLowerbound(*selnode));
+               SCIPdebugMsg(scip, "  -> selected prio sibling: lower=%g\n", SCIPnodeGetLowerbound(*selnode));
             }
             else
             {
@@ -203,12 +203,12 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
                if( node != NULL && SCIPnodeGetLowerbound(node) < maxbound )
                {
                   *selnode = node;
-                  SCIPdebugMessage("  -> selected best sibling: lower=%g\n", SCIPnodeGetLowerbound(*selnode));
+                  SCIPdebugMsg(scip, "  -> selected best sibling: lower=%g\n", SCIPnodeGetLowerbound(*selnode));
                }
                else
                {
                   *selnode = SCIPgetBestNode(scip);
-                  SCIPdebugMessage("  -> selected best leaf: lower=%g\n",
+                  SCIPdebugMsg(scip, "  -> selected best leaf: lower=%g\n",
                      *selnode != NULL ? SCIPnodeGetLowerbound(*selnode) : SCIPinfinity(scip));
                }
             }
@@ -299,7 +299,7 @@ SCIP_RETCODE SCIPincludeNodeselBfs(
    SCIP_NODESEL* nodesel;
 
    /* allocate and initialize node selector data; this has to be freed in the destructor */
-   SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &nodeseldata) );
 
    /* include node selector */
    SCIP_CALL( SCIPincludeNodeselBasic(scip, &nodesel, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -49,6 +49,7 @@ struct SCIP_ProbData
 {
    TCLIQUE_GRAPH*   graph;              /* the preprocessed graph */
    SCIP_CONS**      constraints;        /* array of added constraints */
+   int              constraintssize;    /* allocated size of constraints array */
 
    /* stable set / variable - information*/
    int**            stablesets;         /* array of stable sets */
@@ -68,23 +69,23 @@ struct SCIP_ProbData
  * Local methods
  */
 
-/** 
+/**
  *  Preprocessing of the graph, using 2 methods in order to find redundant nodes
  *  that can be deleted and easily colored later.
  *
- *  Foundation of these methods is the computation of a maximum clique C with M nodes. 
+ *  Foundation of these methods is the computation of a maximum clique C with M nodes.
  *  After this computation, the following two steps are repeated until no node was deleted
  *  in the last iteration:
- *  
+ *
  *  1: Low-Degree:
  *  Iterativly delete all nodes v in the graph G with degree d(v) < M ( don't delete nodes of C )
  *
  *  2: Dominated Neighbourhood:
- *  If the neighbourhood of one node v is part of the neighbourhood of another node w, v can 
+ *  If the neighbourhood of one node v is part of the neighbourhood of another node w, v can
  *  be deleted, since it can later get the same color as w.
  */
-static 
-SCIP_RETCODE preprocessGraph( 
+static
+SCIP_RETCODE preprocessGraph(
    SCIP*                 scip               /**< SCIP data structure */
    )
 {
@@ -96,14 +97,14 @@ SCIP_RETCODE preprocessGraph(
    TCLIQUE_WEIGHT   maxcliqueweight;    /* weight of the maximum weight clique */
    TCLIQUE_STATUS   status;             /* status of clique-computation */
    TCLIQUE_GRAPH*   currgraph;          /* the current, not preprocessed graph in each step */
-   int currnnodes;                      /* the current number of nodes in each step */ 
+   int currnnodes;                      /* the current number of nodes in each step */
    int actnewnode;                      /* the number of nodes yet marked for beeing in the graph in the next round */
    int* newnodes;                       /* the nodes that will be in the graph in the next round */
    int* degrees;                        /* the degrees of the nodes */
    int myround;                         /* the number of the current round */
    int ndeletednodes;                   /* the total number of deleted nodes */
    int nnodesdeleteddegreethisround;    /* the number of nodes deleted due to low degree in the current round */
-   int nnodesdeletedneighbourthisround; /* the number of nodes deleted due to neighbourhood in the current round */
+   int nnodesdeletedneighbourthisround; /* the number of nodes deleted due to neighborhood in the current round */
    int*  firstedge;                     /* pointer for the edges in the graph */
    int*  lastedge;                      /* pointer for the edges in the graph */
    int i;
@@ -158,22 +159,20 @@ SCIP_RETCODE preprocessGraph(
 
    currnnodes = tcliqueGetNNodes(probdata->oldgraph);
 
-   /* get memory for array of deletednodes */  
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->deletednodes), COLORprobGetOriginalNNodes(scip)) );
-
-   /* get memory for array new2oldnodes */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->new2oldnode), COLORprobGetOriginalNNodes(scip)) );  
+   /* get memory for array of deletednodes and new2oldnodes */
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(probdata->deletednodes), currnnodes) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(probdata->new2oldnode), currnnodes) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &newnodes, COLORprobGetOriginalNNodes(scip)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &maxcliquenodes, COLORprobGetOriginalNNodes(scip)) );
-   
+
    for ( i = 0; i < currnnodes; i++ )
    {
       /* set weights of the nodes to 1 */
       tcliqueChangeWeight(currgraph, i, 1);
       /* every node in the graph represents the same node in the original graph */
       probdata->new2oldnode[i] = i;
-   } 
+   }
 
    /* compute maximum clique */
    tcliqueMaxClique(NULL, NULL, NULL, NULL, currgraph, NULL, NULL, maxcliquenodes,
@@ -187,7 +186,7 @@ SCIP_RETCODE preprocessGraph(
    myround = 0;
 
    /* main loop */
-   while ( (nnodesdeleteddegreethisround > 0) || (nnodesdeletedneighbourthisround > 0) ) 
+   while ( (nnodesdeleteddegreethisround > 0) || (nnodesdeletedneighbourthisround > 0) )
    {
       myround++;
       nnodesdeleteddegreethisround = 0;
@@ -203,7 +202,7 @@ SCIP_RETCODE preprocessGraph(
          for (i = 0; i < currnnodes; i++)
          {
             /* degree is low, node can be deleted */
-            if ( (degrees[i] < nmaxcliquenodes ) 
+            if ( (degrees[i] < nmaxcliquenodes )
                && (!COLORprobIsNodeInArray(probdata->new2oldnode[i], maxcliquenodes, nmaxcliquenodes)) )
             {
                probdata->deletednodes[ndeletednodes] = probdata->new2oldnode[i];
@@ -211,7 +210,7 @@ SCIP_RETCODE preprocessGraph(
                nnodesdeleteddegreethisround++;
                ndeletednodes++;
             }
-            /* node will be in the new graph, because degree is not low enought for deletion or it is in the maxClique */
+            /* node will be in the new graph, because degree is not low enough for deletion or it is in the maxClique */
             else
             {
                newnodes[actnewnode] = probdata->new2oldnode[i];
@@ -219,7 +218,7 @@ SCIP_RETCODE preprocessGraph(
             }
          }
 
-         /* at least one node was deletet, create new graph ( tclique doesn't support deletion of nodes) */
+         /* at least one node was deleted, create new graph (tclique doesn't support deletion of nodes) */
          if ( changed )
          {
             assert(actnewnode+ndeletednodes == COLORprobGetOriginalNNodes(scip));
@@ -247,7 +246,7 @@ SCIP_RETCODE preprocessGraph(
                lastedge = tcliqueGetLastAdjedge(probdata->oldgraph, newnodes[i]);
                while ( firstedge <= lastedge )
                {
-                  /* try to find a node in newnodes which corresponds 
+                  /* try to find a node in newnodes which corresponds
                      to the node in the old graph, that is the end-node of the edge */
                   for ( j = i+1; j < actnewnode; j++ )
                   {
@@ -289,12 +288,12 @@ SCIP_RETCODE preprocessGraph(
 
       /* set changed to TRUE for getting into the while-loop */
       changed = TRUE;
-      /* loop for finding dominated neighbourhoods */
+      /* loop for finding dominated neighborhoods */
       while ( changed == TRUE )
       {
          changed = FALSE;
          actnewnode = 0;
-         /* i is the node which is checked for beeing dominated */
+         /* i is the node which is checked for being dominated */
          for ( i = 0; i < currnnodes; i++ )
          {
             assert(!COLORprobIsNodeInArray(probdata->new2oldnode[i], probdata->deletednodes, ndeletednodes));
@@ -305,9 +304,9 @@ SCIP_RETCODE preprocessGraph(
                /* j is the node for which is checked whether it dominates i */
                for ( j = 0; j < currnnodes; j++ )
                {
-                  /* i must be distinct from j, there must be no edge between i and j, 
+                  /* i must be distinct from j, there must be no edge between i and j,
                      j may not have been deleted due to degree in the last round */
-                  if ( (j != i) && !tcliqueIsEdge(currgraph, i, j) 
+                  if ( (j != i) && !tcliqueIsEdge(currgraph, i, j)
                      && (!COLORprobIsNodeInArray(probdata->new2oldnode[j], probdata->deletednodes, ndeletednodes)) )
                      /** @todo only check nodes deleted in the last round */
                   {
@@ -336,8 +335,8 @@ SCIP_RETCODE preprocessGraph(
                      }
                   }
                } /* end for j */
-               
-               /* if i is dominated by no other node and thus not deleted, 
+
+               /* if i is dominated by no other node and thus not deleted,
                   put it into newnodes, so that it is in the next graph */
                if ( ndeletednodes == 0 || probdata->deletednodes[ndeletednodes-1] != probdata->new2oldnode[i])
                {
@@ -345,7 +344,7 @@ SCIP_RETCODE preprocessGraph(
                   actnewnode++;
                }
             }
-            /* if i is in the maxClique und was thus not deleted,
+            /* if i is in the maxClique and was thus not deleted,
                put it into newnodes, so that it is in the next graph */
             else
             {
@@ -354,7 +353,7 @@ SCIP_RETCODE preprocessGraph(
             }
          } /*end for i */
 
-         /* at least one node was deletet, create new graph ( tclique doesn't support deletion of nodes) */
+         /* at least one node was deleted, create new graph (tclique doesn't support deletion of nodes) */
          if ( changed )
          {
             assert(actnewnode+ndeletednodes == COLORprobGetOriginalNNodes(scip));
@@ -382,7 +381,7 @@ SCIP_RETCODE preprocessGraph(
                lastedge = tcliqueGetLastAdjedge(probdata->oldgraph, newnodes[i]);
                while ( firstedge <= lastedge )
                {
-                  /* try to find a node in newnodes which corresponds 
+                  /* try to find a node in newnodes which corresponds
                      to the node in the old graph, that is the end-node of the edge */
                   for ( j = i+1; j < actnewnode; j++ )
                   {
@@ -423,7 +422,7 @@ SCIP_RETCODE preprocessGraph(
             }
          }
       } /* end of loop for finding dominated neighbourhoods */
-      
+
       printf("Round %d of preprocessing:\n", myround);
       printf("   deleted low degree vertices: %d\n", nnodesdeleteddegreethisround);
       printf("   deleted almost cliques:      %d\n", nnodesdeletedneighbourthisround);
@@ -466,7 +465,7 @@ SCIP_DECL_PROBTRANS(probtransColoring)
    assert(targetdata != NULL);
 
    /* allocate memory */
-   SCIP_CALL( SCIPallocMemory(scip, targetdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, targetdata) );
 
    if( !tcliqueCreate(&((*targetdata)->graph)) ) /* create the transformed graph */
    {
@@ -479,11 +478,11 @@ SCIP_DECL_PROBTRANS(probtransColoring)
    (*targetdata)->oldgraph = sourcedata->oldgraph;      /* copy link to original graph */
 
    /* allocate memory for sets and lenghts of the sets */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->stablesets), sourcedata->maxstablesets) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->stablesetlengths), sourcedata->maxstablesets) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->stablesetvars), sourcedata->maxstablesets) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->deletednodes), tcliqueGetNNodes(sourcedata->oldgraph)) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->new2oldnode), tcliqueGetNNodes(sourcedata->oldgraph)) );  
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*targetdata)->stablesets), sourcedata->maxstablesets) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*targetdata)->stablesetlengths), sourcedata->maxstablesets) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*targetdata)->stablesetvars), sourcedata->maxstablesets) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*targetdata)->deletednodes), tcliqueGetNNodes(sourcedata->oldgraph)) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*targetdata)->new2oldnode), tcliqueGetNNodes(sourcedata->oldgraph)) );
 
    for ( i = 0; i < tcliqueGetNNodes(sourcedata->oldgraph); i++ )
    {
@@ -505,7 +504,8 @@ SCIP_DECL_PROBTRANS(probtransColoring)
    }
 
    /* create array for constraints */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->constraints, tcliqueGetNNodes(sourcedata->graph)) );
+   (*targetdata)->constraintssize = tcliqueGetNNodes(sourcedata->graph);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*targetdata)->constraints, (*targetdata)->constraintssize) );
    /* tranform constraints */
    SCIP_CALL( SCIPtransformConss(scip, tcliqueGetNNodes(sourcedata->graph), sourcedata->constraints,
          (*targetdata)->constraints) );
@@ -554,28 +554,28 @@ SCIP_DECL_PROBDELTRANS(probdeltransColoring)
    assert(scip != NULL);
    assert(probdata != NULL);
 
-   /* relese constraints and free array for constraints */
+   /* release constraints and free array for constraints */
    for ( i = 0; i < tcliqueGetNNodes((*probdata)->graph); i++)
    {
       SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->constraints[i])) );
    }
-   SCIPfreeMemoryArray(scip, &((*probdata)->constraints));
+   SCIPfreeBlockMemoryArray(scip, &((*probdata)->constraints), (*probdata)->constraintssize);
 
-   /* free the arrays for the stable sets and relese the related variables */
+   /* free the arrays for the stable sets and release the related variables */
    for ( i = (*probdata)->nstablesets-1; i >= 0; i-- )
    {
       SCIPfreeBlockMemoryArray(scip, &((*probdata)->stablesets[i]), (*probdata)->stablesetlengths[i]); /*lint !e866*/
       SCIP_CALL( SCIPreleaseVar(scip, &((*probdata)->stablesetvars[i])) );
    }
 
-   SCIPfreeMemoryArray(scip, &((*probdata)->new2oldnode));
-   SCIPfreeMemoryArray(scip, &((*probdata)->deletednodes));
-   SCIPfreeMemoryArray(scip, &((*probdata)->stablesetvars));
-   SCIPfreeMemoryArray(scip, &((*probdata)->stablesetlengths));
-   SCIPfreeMemoryArray(scip, &((*probdata)->stablesets));
+   SCIPfreeBlockMemoryArray(scip, &((*probdata)->new2oldnode), tcliqueGetNNodes((*probdata)->oldgraph));
+   SCIPfreeBlockMemoryArray(scip, &((*probdata)->deletednodes), tcliqueGetNNodes((*probdata)->oldgraph));
+   SCIPfreeBlockMemoryArray(scip, &((*probdata)->stablesetvars), (*probdata)->maxstablesets);
+   SCIPfreeBlockMemoryArray(scip, &((*probdata)->stablesetlengths), (*probdata)->maxstablesets);
+   SCIPfreeBlockMemoryArray(scip, &((*probdata)->stablesets), (*probdata)->maxstablesets);
 
    tcliqueFree(&(*probdata)->graph);
-   SCIPfreeMemory(scip, probdata);
+   SCIPfreeBlockMemory(scip, probdata);
    return SCIP_OKAY;
 }
 
@@ -586,32 +586,32 @@ SCIP_DECL_PROBDELORIG(probdelorigColoring)
 
    assert(probdata != NULL);
    assert(*probdata != NULL);
-  
-   SCIPfreeMemoryArray(scip, &((*probdata)->new2oldnode));
-   SCIPfreeMemoryArray(scip, &((*probdata)->deletednodes));  
+
+   SCIPfreeBlockMemoryArray(scip, &((*probdata)->new2oldnode), tcliqueGetNNodes((*probdata)->oldgraph));
+   SCIPfreeBlockMemoryArray(scip, &((*probdata)->deletednodes), tcliqueGetNNodes((*probdata)->oldgraph));
 
    for ( i = (*probdata)->nstablesets-1; i >= 0; i-- )
    {
       SCIPfreeBlockMemoryArray(scip, &((*probdata)->stablesets[i]), (*probdata)->stablesetlengths[i]); /*lint !e866*/
       SCIP_CALL( SCIPreleaseVar(scip, &((*probdata)->stablesetvars[i])) );
    }
-   SCIPfreeMemoryArray(scip, &((*probdata)->stablesetvars));
-   SCIPfreeMemoryArray(scip, &((*probdata)->stablesetlengths));
-   SCIPfreeMemoryArray(scip, &((*probdata)->stablesets));
+   SCIPfreeBlockMemoryArray(scip, &((*probdata)->stablesetvars), (*probdata)->maxstablesets);
+   SCIPfreeBlockMemoryArray(scip, &((*probdata)->stablesetlengths), (*probdata)->maxstablesets);
+   SCIPfreeBlockMemoryArray(scip, &((*probdata)->stablesets), (*probdata)->maxstablesets);
 
    /* release Constraints */
    for ( i = 0; i < tcliqueGetNNodes((*probdata)->graph); i++ )
    {
       SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->constraints[i])) );
    }
-   SCIPfreeMemoryArray(scip, &((*probdata)->constraints));   
+   SCIPfreeBlockMemoryArray(scip, &((*probdata)->constraints), (*probdata)->constraintssize);
 
    /* free memory used for graph */
    tcliqueFree(&((*probdata)->graph));
    tcliqueFree(&((*probdata)->oldgraph));
 
    /* free probdata */
-   SCIPfreeMemory(scip, probdata);
+   SCIPfreeBlockMemory(scip, probdata);
 
    return SCIP_OKAY;
 }
@@ -670,7 +670,7 @@ SCIP_DECL_EVENTEXEC(eventExecProbdatavardeleted)
 /** sets up the problem data */
 SCIP_RETCODE SCIPcreateProbColoring(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name,               /**< problem name */           
+   const char*           name,               /**< problem name */
    int                   nnodes,             /**< number of nodes */
    int                   nedges,             /**< number of edges */
    int**                 edges               /**< array with start- and endpoints of the edges */
@@ -683,9 +683,9 @@ SCIP_RETCODE SCIPcreateProbColoring(
    assert(nedges >= 0); /* no negative number of edges */
 
    printf("Creating problem: %s \n", name);
-   
+
    /* allocate memory */
-   SCIP_CALL( SCIPallocMemory(scip, &probdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &probdata) );
 
    /* create graph */
    if( !tcliqueCreate(&((probdata)->oldgraph)) )
@@ -722,12 +722,13 @@ SCIP_RETCODE SCIPcreateProbColoring(
    }
 
    /* create constraints */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->constraints), nnodes) );
+   probdata->constraintssize = nnodes;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(probdata->constraints), probdata->constraintssize) );
 
    /* at the beginning memory for 2 sets */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->stablesets), 2) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->stablesetlengths), 2) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->stablesetvars), 2) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(probdata->stablesets), 2) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(probdata->stablesetlengths), 2) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(probdata->stablesetvars), 2) );
 
    probdata->maxstablesets = 2;
    probdata->nstablesets = 0;
@@ -737,7 +738,7 @@ SCIP_RETCODE SCIPcreateProbColoring(
          eventExecProbdatavardeleted, NULL) );
 
    /* create problem in SCIP */
-   SCIP_CALL( SCIPcreateProb(scip, name, probdelorigColoring, probtransColoring, probdeltransColoring, 
+   SCIP_CALL( SCIPcreateProb(scip, name, probdelorigColoring, probtransColoring, probdeltransColoring,
          NULL, NULL, NULL, probdata) );
 
    SCIP_CALL( preprocessGraph(scip) );
@@ -763,7 +764,7 @@ int COLORprobGetNStableSets(
 }
 
 
-/** prints all stable sets to standart output */
+/** prints all stable sets to standard output */
 void COLORprobPrintStableSets(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -790,7 +791,7 @@ void COLORprobPrintStableSets(
 }
 
 
-/** prints the requested stable set to standart output */
+/** prints the requested stable set to standard output */
 void COLORprobPrintStableSet(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   setnumber           /**< the number of the requested set */
@@ -860,7 +861,7 @@ SCIP_VAR* COLORprobGetVarForStableSet(
 
 
 /** checks whether a node is in a given stable set, returns true iff it is */
-SCIP_Bool COLORprobIsNodeInStableSet( 
+SCIP_Bool COLORprobIsNodeInStableSet(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   setindex,           /**< index of the stable set */
    int                   node                /**< number of the node */
@@ -900,13 +901,13 @@ SCIP_Bool COLORprobIsNodeInStableSet(
 /** checks whether the first set is equal to the second set, both sets have to be sorted in a decreasing way */
 SCIP_Bool COLORprobStableSetsAreEqual(
    SCIP*                 scip,               /**< SCIP data structure */
-   int*                  set1,               /**< array of nodes in the first set */ 
+   int*                  set1,               /**< array of nodes in the first set */
    int                   nset1nodes,         /**< number of nodes in the first set */
-   int*                  set2,               /**< array of nodes in the second set */ 
+   int*                  set2,               /**< array of nodes in the second set */
    int                   nset2nodes          /**< number of nodes in the second set */
    )
 {
-   
+
    int i;
 
    assert(scip != NULL);
@@ -929,18 +930,18 @@ SCIP_Bool COLORprobStableSetsAreEqual(
 }
 
 
-/** checks whether the given stable set is new
-    returns TRUE if the stable is new, 
-            FALSE if it is equal to an already existing stable set */
+/** checks whether the given stable set is new returns TRUE if the stable is new, FALSE if it is equal to an already
+ * existing stable set
+ */
 SCIP_Bool COLORprobStableSetIsNew(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  stablesetnodes,     /**< array of nodes in the stable set */
    int                   nstablesetnodes     /**< number of nodes in the stable set */
    )
 {
-   SCIP_PROBDATA* probdata; 
+   SCIP_PROBDATA* probdata;
    int i;
-   
+
    assert(stablesetnodes != NULL);
    assert(scip != NULL);
    probdata = SCIPgetProbData(scip);
@@ -951,8 +952,8 @@ SCIP_Bool COLORprobStableSetIsNew(
 
    for ( i = 0; i < COLORprobGetNStableSets(scip); i++ )
    {
-      if ( COLORprobStableSetsAreEqual(scip, stablesetnodes, nstablesetnodes, 
-               probdata->stablesets[i], 
+      if ( COLORprobStableSetsAreEqual(scip, stablesetnodes, nstablesetnodes,
+               probdata->stablesets[i],
                probdata->stablesetlengths[i]) )
       {
          return FALSE;
@@ -962,8 +963,8 @@ SCIP_Bool COLORprobStableSetIsNew(
    return TRUE;
 }
 
-/** adds a new stable set, the set must be sorted descendingly, 
- *  attention: you need to check whether it is new before adding it
+/** adds a new stable set, the set must be sorted in descending order;
+ *  @note you need to check whether it is new before adding it
  */
 SCIP_RETCODE COLORprobAddNewStableSet(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -972,36 +973,36 @@ SCIP_RETCODE COLORprobAddNewStableSet(
    int*                  setindex            /**< return value: index of the stable set */
    )
 {
-   SCIP_PROBDATA* probdata; 
+   SCIP_PROBDATA* probdata;
    int newsize;
    int i;
-   
+
    assert(stablesetnodes != NULL);
    assert(scip != NULL);
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
 
-   /* the set should be sorted descendingly */
+   /* the set should be sorted in descending */
 #ifndef NDEBUG
    for ( i = 0; i < nstablesetnodes-2; i++ )
    {
       assert(stablesetnodes[i]>stablesetnodes[i+1]);
    }
 #endif
- 
+
    /* ensure that array is big enough */
    if ( (probdata->nstablesets + 1) > probdata->maxstablesets)
    {
-      newsize = 2* probdata->maxstablesets;
+      newsize = SCIPcalcMemGrowSize(scip, probdata->maxstablesets + 1);
       assert(newsize >  probdata->nstablesets + 1);
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(probdata->stablesets), newsize) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(probdata->stablesetlengths), newsize) );
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(probdata->stablesetvars), newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(probdata->stablesets), probdata->maxstablesets, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(probdata->stablesetlengths), probdata->maxstablesets, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(probdata->stablesetvars), probdata->maxstablesets, newsize) );
+      SCIPdebugMessage("Set-array resized: %d --> %d\n", probdata->maxstablesets, newsize);
       probdata->maxstablesets = newsize;
-      SCIPdebugMessage("Set-array resized: %d --> %d\n", newsize/2, newsize);
    }
 
-   /* alloc memory for the new stable set */
+   /* allocate memory for the new stable set */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(probdata->stablesets[probdata->nstablesets]), nstablesetnodes) ); /*lint !e866*/
    probdata->stablesetlengths[probdata->nstablesets] = nstablesetnodes;
    probdata->stablesetvars[probdata->nstablesets] = NULL;
@@ -1026,7 +1027,7 @@ void COLORprobGetStableSet(
    int*                  nelements           /**< return value: number of elements in the stable set */
    )
 {
-   SCIP_PROBDATA* probdata; 
+   SCIP_PROBDATA* probdata;
 
    assert(scip != NULL);
    probdata = SCIPgetProbData(scip);
@@ -1045,7 +1046,7 @@ void COLORprobGetStableSets(
    int*                  nstablesets         /**< return value: number of sets */
    )
 {
-   SCIP_PROBDATA* probdata; 
+   SCIP_PROBDATA* probdata;
 
    assert(scip != NULL);
    probdata = SCIPgetProbData(scip);
@@ -1157,13 +1158,13 @@ int COLORprobGetNewNodeForOriginalNode(
 {
    SCIP_PROBDATA* probdata;
    int i;
-   
+
    assert(scip != NULL);
    probdata = SCIPgetProbData(scip);
 
    assert(probdata != NULL);
    assert(node >= 0 && node < COLORprobGetOriginalNNodes(scip));
-   
+
    for ( i = 0; i < COLORprobGetOriginalNNodes(scip); i++ )
    {
       if ( probdata->new2oldnode[i] == node )
@@ -1172,7 +1173,7 @@ int COLORprobGetNewNodeForOriginalNode(
          return -1;
    }
    return -1;
-   
+
 }
 
 
@@ -1214,7 +1215,7 @@ SCIP_RETCODE COLORprobGetComplementaryGraph(
    TCLIQUE_GRAPH*        graph,               /**< the given graph */
    TCLIQUE_GRAPH*        cgraph               /**< the complementary graph is saved in here */
    )
-{   
+{
    int nnodes;
    int i;
    int j;
@@ -1298,7 +1299,7 @@ SCIP_RETCODE COLORprobSetUpArrayOfCons(
 {
    SCIP_CONS** constraints;
    int nnodes;
-   int i; 
+   int i;
 
    assert(scip != NULL);
 
@@ -1308,7 +1309,7 @@ SCIP_RETCODE COLORprobSetUpArrayOfCons(
    for ( i = 0; i < nnodes; i++ )
    {
       char consname[SCIP_MAXSTRLEN];
-     
+
       /* create the constraint */
       sprintf(consname, "Node-Constraint%d", i+1);
 

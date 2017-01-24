@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="3.2.1"
+VERSION="4.0.0"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -63,7 +63,7 @@ $NAME/src/dijkstra/*.c $NAME/src/dijkstra/*.h \
 $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.h \
 $NAME/src/tclique/*.c $NAME/src/tclique/*.h \
 $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
-$NAME/src/cppad/* $NAME/src/cppad/local/* \
+$NAME/src/cppad/* $NAME/src/cppad/local/* $NAME/src/cppad/utility/* \
 $NAME/applications/Coloring/* $NAME/applications/Coloring/doc/* $NAME/applications/Coloring/data/* \
 $NAME/applications/Coloring/check/testset/short.test $NAME/applications/Coloring/check/testset/short.solu \
 $NAME/applications/Coloring/src/depend.* \
@@ -173,9 +173,10 @@ $NAME/check/instances/Semicontinuous/*.lp \
 $NAME/check/instances/Semicontinuous/*.mps
 rm -f $NAME
 echo ""
-echo "check version numbers in src/scip/def.h, doc/xternal.c, Makefile, Makefile.nmake, and makedist.sh ($VERSION):"
-grep "VERSION" src/scip/def.h
-grep "@version" doc/xternal.c
-grep "^VERSION" Makefile
-grep "^VERSION" Makefile.nmake
+echo "check version numbers in src/scip/def.h, doc/xternal.c, make.project, Makefile.nmake, and makedist.sh ($VERSION):"
+grep -H "SCIP_VERSION" src/scip/def.h
+grep -H "@version" doc/xternal.c
+grep -H "^SCIP_VERSION" make/make.project
+grep -H "^VERSION" Makefile.nmake
+echo ""
 tail src/scip/githash.c

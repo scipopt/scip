@@ -35,6 +35,11 @@
 #include "scip/type_clock.h"
 #include "scip/type_visual.h"
 #include "scip/type_history.h"
+#include "scip/type_var.h"
+#include "scip/type_lp.h"
+#include "scip/type_heur.h"
+#include "scip/type_relax.h"
+#include "scip/type_misc.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,6 +48,7 @@ extern "C" {
 /** problem and runtime specific statistics */
 struct SCIP_Stat
 {
+   SCIP_REGRESSION*      regressioncandsobjval;/**< linear regression of pairs (nbranchcands, lpobjval) for every node */
    SCIP_Longint          nlpiterations;      /**< total number of LP iterations */
    SCIP_Longint          nrootlpiterations;  /**< total number of LP iterations in root node */
    SCIP_Longint          nrootfirstlpiterations;/**< number of LP iterations for first LP solved at the root node */
@@ -63,20 +69,31 @@ struct SCIP_Stat
    SCIP_Longint          nconflictlpiterations;/**< number of simplex iterations used in conflict analysis */
    SCIP_Longint          nnodes;             /**< number of nodes processed in current run (including focus node) */
    SCIP_Longint          ninternalnodes;     /**< number of nodes processed in current run where a branching was performed */
+   SCIP_Longint          nobjleaves;         /**< number of leaf nodes processed that reached the cutoff bound */
+   SCIP_Longint          nfeasleaves;        /**< number of leaf nodes processed with feasible relaxation solution */
+   SCIP_Longint          ninfeasleaves;      /**< number of infeasible leaf nodes processed */
    SCIP_Longint          ntotalnodes;        /**< total number of nodes processed in all runs (including focus node) */
    SCIP_Longint          ntotalinternalnodes;/**< total number of nodes processed in all runs where a branching was performed */
+   SCIP_Longint          ntotalnodesmerged;  /**< total number of nodes added ot the statistics of the main SCIP so far (see SCIPmergeStatistics) */
    SCIP_Longint          ncreatednodes;      /**< total number of nodes created */
    SCIP_Longint          ncreatednodesrun;   /**< number of nodes created in current run */
    SCIP_Longint          nactivatednodes;    /**< number of times, a node got activated in current run */
    SCIP_Longint          ndeactivatednodes;  /**< number of times, a node got deactivated in current run */
+   SCIP_Longint          nearlybacktracks;   /**< counter for early switches (if children dual bound is below reference value) */
+   SCIP_Longint          nnodesaboverefbound;/**< counter for the number of focus nodes exceeding the reference bound */
    SCIP_Longint          nbacktracks;        /**< number of times, the new node was chosen from the leaves queue */
    SCIP_Longint          ndelayedcutoffs;    /**< number of times, the selected node was from a cut off subtree */
    SCIP_Longint          nreprops;           /**< number of times, a solved node is repropagated again */
    SCIP_Longint          nrepropboundchgs;   /**< number of bound changes generated in repropagating nodes */
    SCIP_Longint          nrepropcutoffs;     /**< number of times, a repropagated node was cut off */
    SCIP_Longint          nlpsolsfound;       /**< number of CIP-feasible LP solutions found so far */
+   SCIP_Longint          nrelaxsolsfound;    /**< number of CIP-feasible relaxation solutions found so far */
    SCIP_Longint          npssolsfound;       /**< number of CIP-feasible pseudo solutions found so far */
    SCIP_Longint          nsbsolsfound;       /**< number of CIP-feasible solutions found during strong branching so far */
+   SCIP_Longint          nlpbestsolsfound;   /**< number of new best CIP-feasible LP solutions found so far */
+   SCIP_Longint          nrelaxbestsolsfound;/**< number of new best CIP-feasible relaxation solutions found so far */
+   SCIP_Longint          npsbestsolsfound;   /**< number of new best CIP-feasible pseudo solutions found so far */
+   SCIP_Longint          nsbbestsolsfound;   /**< number of new best CIP-feasible solutions found during strong branching so far */
    SCIP_Longint          nexternalsolsfound; /**< number of externally given CIP-feasible solutions (or new solutions found when transforming old ones) */
    SCIP_Longint          lastdispnode;       /**< last node for which an information line was displayed */
    SCIP_Longint          lastdivenode;       /**< last node where LP diving was applied */
@@ -89,8 +106,10 @@ struct SCIP_Stat
    SCIP_Longint          nprobholechgs;      /**< total number of hole changes generated in the tree  during probing */
    SCIP_Longint          nsbdowndomchgs;     /**< total number of domain changes generated at down children during strong branching */
    SCIP_Longint          nsbupdomchgs;       /**< total number of domain changes generated at up children during strong branching */
-   SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */   
+   SCIP_Longint          nsbtimesiterlimhit; /**< total number of times that the strong branching iteration limit was hit */
+   SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */
    SCIP_Longint          ninitconssadded;    /**< total number of initial constraints added during the solve */
+   SCIP_Longint          externmemestim;     /**< estimation of external memory usage, e.g., by LP solver */
    SCIP_Real             firstlpdualbound;   /**< dual bound of root node computed by first LP solve (without cuts) */
    SCIP_Real             rootlowerbound;     /**< lower bound of root node */
    SCIP_Real             vsidsweight;        /**< current weight to use for updating VSIDS in history */
@@ -112,6 +131,9 @@ struct SCIP_Stat
    SCIP_Real             lastdualbound;      /**< last (non-infinite) dual bound (in transformed space) for integral evaluation */
    SCIP_Real             lastlowerbound;     /**< last lower bound (in transformed space) for integral evaluation */
    SCIP_Real             lastupperbound;     /**< last upper bound (in transformed space) for integral evaluation */
+   SCIP_Real             rootlpbestestimate; /**< best-estimate for final root LP solution that changes with every pseudo-cost update */
+   SCIP_Real             referencebound;     /**< objective bound for reference purposes */
+   SCIP_Real             detertimecnt;       /**< internal counter for deterministic time */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           solvingtimeoverall; /**< total time used for solving (including presolving) during reoptimization */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
@@ -124,6 +146,7 @@ struct SCIP_Stat
    SCIP_CLOCK*           strongbranchtime;   /**< strong branching time */
    SCIP_CLOCK*           conflictlptime;     /**< conflict analysis LP solution time */
    SCIP_CLOCK*           lpsoltime;          /**< time needed for storing feasible LP solutions */
+   SCIP_CLOCK*           relaxsoltime;       /**< time needed for storing feasible relaxation solutions */
    SCIP_CLOCK*           pseudosoltime;      /**< time needed for storing feasible pseudo solutions */
    SCIP_CLOCK*           sbsoltime;          /**< time needed for searching and storing feasible strong branching solutions */
    SCIP_CLOCK*           nodeactivationtime; /**< time needed for path switching and activating nodes */
@@ -138,7 +161,10 @@ struct SCIP_Stat
    SCIP_HEUR*            firstprimalheur;    /**< heuristic which found the first primal solution */
    SCIP_STATUS           status;             /**< SCIP solving status */
    SCIP_BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
+   SCIP_LPSOLSTAT        lastsblpsolstats[2];/**< last LP solving statuses for variable strong branching */
+   SCIP_Longint          nnz;                /**< number of nonzeros in presolved problem */
    SCIP_Longint          lpcount;            /**< internal counter, where all lp calls are counted; this includes the restored lps after diving and probing */
+   SCIP_Longint          relaxcount;         /**< internal counter, where all relax calls are counted */
    SCIP_Longint          nlps;               /**< total number of LPs solved with at least 1 iteration */
    SCIP_Longint          nrootlps;           /**< number of LPs solved at the root node with at least 1 iteration */
    SCIP_Longint          nprimallps;         /**< number of primal LPs solved with at least 1 iteration */
@@ -226,6 +252,7 @@ struct SCIP_Stat
    SCIP_Bool             inrestart;          /**< are we currently restarting the system? */
    SCIP_Bool             collectvarhistory;  /**< should variable history statistics be collected */
    SCIP_Bool             performpresol;      /**< indicates whether presolving is enabled */
+   SCIP_Bool             branchedunbdvar;    /**< indicates whether branching on an unbounded variable has been performed */
 };
 
 #ifdef __cplusplus

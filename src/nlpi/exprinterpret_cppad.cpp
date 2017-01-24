@@ -75,7 +75,7 @@ using CppAD::SCIPInterval;
 #endif
 
 #include <cppad/cppad.hpp>
-#include <cppad/error_handler.hpp>
+#include <cppad/utility/error_handler.hpp>
 
 /* CppAD is not thread-safe by itself, but uses some static datastructures
  * To run it in a multithreading environment, a special CppAD memory allocator that is aware of the multiple threads has to be used.
@@ -85,6 +85,7 @@ using CppAD::SCIPInterval;
 #ifndef NPARASCIP
 #include <pthread.h>
 
+#if 0  // this workaround does not compile anymore when updating to CppAD 2016 - is it still necessary?
 /* workaround error message regarding missing implementation of tanh during initialization of static variables (see cppad/local/erf.hpp) */
 namespace CppAD
 {
@@ -103,6 +104,7 @@ template <> AD<SCIPInterval> erf_template(
    return AD<SCIPInterval>();
 }
 }
+#endif
 
 /** mutex for locking in pthread case */
 static pthread_mutex_t cppadmutex = PTHREAD_MUTEX_INITIALIZER;
@@ -178,7 +180,7 @@ char init_parallel(void)
    return 0;
 }
 
-/** a dummy variable that can is initialized to the result of init_parallel
+/** a dummy variable that is initialized to the result of init_parallel
  *
  *  The purpose is to make sure that init_parallel() is called before any multithreading is started.
  */
@@ -201,16 +203,6 @@ SCIPInterval CondExpOp(
       );
 
    return SCIPInterval();
-}
-
-/** another function that returns whether two intervals are the same (required by CppAD) */
-inline
-bool EqualOpSeq(
-   const SCIPInterval&   x,                  /**< first operand */
-   const SCIPInterval&   y                   /**< second operand */
-   )
-{
-   return x == y;
 }
 
 /** another function required by CppAD */
@@ -318,6 +310,21 @@ int Integer(
       );
 
    return 0;
+}
+
+/** absolute zero multiplication
+ *
+ * @return [0,0] if first argument is [0,0] independent of whether the second argument is an empty interval or not
+ */
+inline
+SCIPInterval azmul(
+   const SCIPInterval&   x,                  /**< first operand */
+   const SCIPInterval&   y                   /**< second operand */
+   )
+{
+   if( x.inf == 0.0 && x.sup == 0.0 )
+      return SCIPInterval(0.0, 0.0);
+   return x * y;
 }
 
 /** printing of an interval (required by CppAD) */
@@ -1216,7 +1223,7 @@ SCIP_RETCODE exprEvalUser(
    Type* hessian
    )
 {
-   return SCIPexprEvalUser(expr, x, &funcval, gradient, hessian);
+   return SCIPexprEvalUser(expr, x, &funcval, gradient, hessian); /*lint !e429*/
 }
 
 template<>
@@ -1510,7 +1517,7 @@ private:
       {
          s[j] = false;
          for( size_t i = 0; i < n; i++ )
-            s[j] |= r[i * q + j]; /*lint !e1786*/
+            s[j] |= (bool)r[i * q + j]; /*lint !e1786*/
       }
 
       return true;
@@ -1588,7 +1595,7 @@ private:
          for( j = 0; j < q; j++ )
             for( i = 0; i < n; i++ )
                for( k = 0; k < n; ++k )
-                  v[ i * q + j] |= r[ k * q + j];
+                  v[ i * q + j] |= (bool) r[ k * q + j];
 
       return true;
    }

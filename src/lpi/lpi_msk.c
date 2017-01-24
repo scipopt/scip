@@ -193,7 +193,7 @@ void MSKAPI printstr(
       return;
 #endif
 
-   SCIPdebugMessage("MOSEK: %s",str);
+   SCIPdebugMessage("MOSEK: %s", str);
 }
 
 #if DEBUG_CHECK_DATA > 0
@@ -625,6 +625,18 @@ void* SCIPlpiGetSolverPointer(
    return (void*) lpi->task;
 }
 
+/** pass integrality information to LP solver */
+SCIP_RETCODE SCIPlpiSetIntegralityInformation(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   ncols,              /**< length of integrality array */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   )
+{
+   SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
+   return SCIP_LPERROR;
+}
+
+
 
 /*
  * LPI Creation and Destruction Methods
@@ -654,7 +666,9 @@ SCIP_RETCODE SCIPlpiCreate(
       MOSEK_CALL( MSK_makeenv(&MosekEnv, NULL) );
 #endif
       MOSEK_CALL( MSK_linkfunctoenvstream(MosekEnv, MSK_STREAM_LOG, NULL, printstr) );
+#if MSK_VERSION_MAJOR < 8
       MOSEK_CALL( MSK_initenv(MosekEnv) );
+#endif
    }
 
    numlp++;
@@ -746,11 +760,11 @@ SCIP_RETCODE SCIPlpiLoadColLP(
    double* blx;
    double* bux;
 
-   SCIPdebugMessage("Calling SCIPlpiLoadColLP (%d)\n",lpi->lpid);
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+
+   SCIPdebugMessage("Calling SCIPlpiLoadColLP (%d)\n",lpi->lpid);
 
    /* initialize all array with NULL */
    aptre = NULL;
@@ -875,6 +889,16 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    if( nnonz > 0 )
    {
+#ifndef NDEBUG
+      /* perform check that no new rows are added - this is forbidden */
+      int nrows;
+      int j;
+
+      MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < nrows );
+#endif
+
       SCIP_CALL( getEndptrs(ncols, beg, nnonz, &aptre) );
       MOSEK_CALL( MSK_putacolslice(lpi->task, oldcols, oldcols+ncols, beg, aptre, ind, val) );
       BMSfreeMemoryArray(&aptre);
@@ -1051,6 +1075,16 @@ SCIP_RETCODE SCIPlpiAddRows(
 
    if( nnonz > 0 )
    {
+#ifndef NDEBUG
+      /* perform check that no new cols are added - this is forbidden */
+      int ncols;
+      int j;
+
+      MOSEK_CALL( MSK_getnumvar(lpi->task, &ncols) );
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < ncols );
+#endif
+
       SCIP_CALL( getEndptrs(nrows, beg, nnonz, &aptre) );
       MOSEK_CALL( MSK_putarowslice(lpi->task, oldrows, oldrows+nrows, beg, aptre, ind, val) );
       BMSfreeMemoryArray(&aptre);
@@ -1202,10 +1236,12 @@ SCIP_RETCODE SCIPlpiChgBounds(
    MSKboundkeye* bkx;
    double* blx;
    double* bux;
+   int i;
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
 
    SCIPdebugMessage("Calling SCIPlpiChgBounds (%d)\n",lpi->lpid);
 
@@ -1215,6 +1251,22 @@ SCIP_RETCODE SCIPlpiChgBounds(
 
    if (ncols == 0)
       return SCIP_OKAY;
+
+   /* @todo This test could be integrated into generateMskBounds, but then this function needs to be able to return an
+    * error, which requires some rewriting. */
+   for (i = 0; i < ncols; ++i)
+   {
+      if ( SCIPlpiIsInfinity(lpi, lb[i]) )
+      {
+         SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[i]);
+         return SCIP_LPERROR;
+      }
+      if ( SCIPlpiIsInfinity(lpi, -ub[i]) )
+      {
+         SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[i]);
+         return SCIP_LPERROR;
+      }
+   }
 
    SCIP_ALLOC( BMSallocMemoryArray(&bkx, ncols) );
    SCIP_ALLOC( BMSallocMemoryArray(&blx, ncols) );
@@ -1326,8 +1378,8 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 SCIP_RETCODE SCIPlpiChgObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
-   int*                  ind,                /**< column indices to change objective value for */
-   SCIP_Real*            obj                 /**< new objective values for columns */
+   const int*            ind,                /**< column indices to change objective value for */
+   const SCIP_Real*      obj                 /**< new objective values for columns */
    )
 {
    assert(MosekEnv != NULL);
@@ -2217,7 +2269,6 @@ SCIP_RETCODE SCIPlpiSolveDual(
 
    SCIPdebugMessage("Calling SCIPlpiSolveDual[%d] (%d)\n",optimizecount,lpi->lpid);
 
-
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_INTEGER, MSK_ON) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_HOTSTART_LU, MSK_ON) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_OPTIMIZER, MSK_OPTIMIZER_DUAL_SIMPLEX) );
@@ -2382,15 +2433,15 @@ SCIP_RETCODE SCIPlpiStrongbranch(
    double newub;
    double newlb;
 
-   SCIPdebugMessage("Calling SCIPlpiStrongbranch (%d)\n",lpi->lpid);
+   assert(MosekEnv != NULL);
+   assert(lpi != NULL);
+   assert(lpi->task != NULL);
+
+   SCIPdebugMessage("Calling SCIPlpiStrongbranch (%d)\n", lpi->lpid);
 
 #if DEBUG_CHECK_DATA > 0
    SCIP_CALL( scip_checkdata(lpi, "SCIPlpiStrongbranch") );
 #endif
-
-   assert(MosekEnv != NULL);
-   assert(lpi != NULL);
-   assert(lpi->task != NULL);
 
    if (lpi->termcode != MSK_RES_OK)
    {
@@ -2709,8 +2760,11 @@ SCIP_Bool SCIPlpiWasSolved(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
-   MSKprostae prosta;
    MSKsolstae solsta;
+   MSKrescodee restat;
+#if MSK_VERSION_MAJOR < 7
+   MSKprostae prosta;
+#endif
 
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
@@ -2718,9 +2772,15 @@ SCIP_Bool SCIPlpiWasSolved(
 
    SCIPdebugMessage("Calling SCIPlpiWasSolved (%d)\n",lpi->lpid);
 
-   SCIP_ABORT_FALSE( getSolutionStatus(lpi, &prosta, &solsta) );
+#if MSK_VERSION_MAJOR >= 7
+   restat = MSK_getsolsta(lpi->task, MSK_SOL_BAS, &solsta);
+#else
+   restat = MSK_getsolutionstatus(lpi->task, MSK_SOL_BAS, &prosta, &solsta);
+#endif
 
-   return (solsta == MSK_SOL_STA_OPTIMAL);
+   if ( restat != MSK_RES_OK )
+      return FALSE;
+   return (solsta != MSK_SOL_STA_UNKNOWN);
 }
 
 /** gets information about primal and dual feasibility of the current LP solution */
@@ -3152,11 +3212,11 @@ SCIP_RETCODE SCIPlpiGetIterations(
    int*                  iterations          /**< pointer to store the number of iterations of the last solve call */
    )
 {
-   SCIPdebugMessage("Calling SCIPlpiGetIterations (%d)\n",lpi->lpid);
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+
+   SCIPdebugMessage("Calling SCIPlpiGetIterations (%d)\n",lpi->lpid);
 
    *iterations = lpi->itercount;
 
@@ -3269,17 +3329,15 @@ SCIP_RETCODE convertstat_mosek2scip(
 static
 SCIP_RETCODE convertstat_mosek2scip_slack(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   MSKaccmodee           acc,                /**< ??? */
-   MSKstakeye*           sk,                 /**< ??? */
-   int                   n,                  /**< size */
+   MSKaccmodee           acc,                /**< whether constraints or variables are accessed */
+   MSKstakeye*           sk,                 /**< Mosek basis status */
+   int                   m,                  /**< size */
    int*                  stat                /**< status array */
    )
 {
    int i;
 
-   /* slacks are stored as -1 in Mosek, i.e., bounds are reversed compared to SCIP  */
-
-   for( i = 0; i < n; i++ )
+   for( i = 0; i < m; i++ )
    {
       double sl;
       double su;
@@ -3301,14 +3359,13 @@ SCIP_RETCODE convertstat_mosek2scip_slack(
          break;
       case MSK_SK_UNK:
       case MSK_SK_INF:
-      case MSK_SK_UPR: /* Reversed */
-         stat[i] = (int)SCIP_BASESTAT_LOWER;
-         break;
-      case MSK_SK_LOW: /* Reversed */
+      case MSK_SK_UPR:
          stat[i] = (int)SCIP_BASESTAT_UPPER;
          break;
-      case MSK_SK_END:
+      case MSK_SK_LOW:
+         stat[i] = (int)SCIP_BASESTAT_LOWER;
          break;
+      case MSK_SK_END:
       default:
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
@@ -3321,7 +3378,7 @@ SCIP_RETCODE convertstat_mosek2scip_slack(
 /** convert SCIP to Mosek status */
 static
 void convertstat_scip2mosek(
-   int*                  stat,               /**< SCIP status array */
+   const int*            stat,               /**< SCIP status array */
    int                   n,                  /**< size of array */
    MSKstakeye*           resstat             /**< resulting Mosek status array */
    )
@@ -3352,7 +3409,7 @@ void convertstat_scip2mosek(
 /** convert SCIP to Mosek status - slack variables */
 static
 void convertstat_scip2mosek_slack(
-   int*                  stat,               /**< SCIP status array */
+   const int*            stat,               /**< SCIP status array */
    int                   n,                  /**< size of array */
    MSKstakeye*           resstat             /**< resulting Mosek status array */
    )
@@ -3392,11 +3449,11 @@ SCIP_RETCODE SCIPlpiGetBase(
    int nrows;
    int ncols;
 
-   SCIPdebugMessage("Calling SCIPlpiGetBase (%d)\n",lpi->lpid);
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+
+   SCIPdebugMessage("Calling SCIPlpiGetBase (%d)\n",lpi->lpid);
 
    MOSEK_CALL( MSK_getnumvar(lpi->task, &ncols) );
    MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
@@ -3419,18 +3476,18 @@ SCIP_RETCODE SCIPlpiGetBase(
 /** sets current basis status for columns and rows */
 SCIP_RETCODE SCIPlpiSetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  cstat,              /**< array with column basis status */
-   int*                  rstat               /**< array with row basis status */
+   const int*            cstat,              /**< array with column basis status */
+   const int*            rstat               /**< array with row basis status */
    )
 {
    int nrows;
    int ncols;
 
-   SCIPdebugMessage("Calling SCIPlpiSetBase (%d)\n",lpi->lpid);
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+
+   SCIPdebugMessage("Calling SCIPlpiSetBase (%d)\n",lpi->lpid);
 
    MOSEK_CALL( MSK_getnumvar(lpi->task, &ncols) );
    MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
@@ -3508,11 +3565,11 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    int nrows;
    int i;
 
-   SCIPdebugMessage("Calling SCIPlpiGetBInvCol (%d)\n",lpi->lpid);
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+
+   SCIPdebugMessage("Calling SCIPlpiGetBInvCol (%d)\n",lpi->lpid);
 
    MOSEK_CALL( MSK_getnumcon(lpi->task,&nrows) );
    MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
@@ -3712,8 +3769,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
    SCIP_Real*            coef,               /**< vector to return coefficients */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                                *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715}*/
@@ -3722,11 +3779,11 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    int numnz;
    int i;
 
-   SCIPdebugMessage("Calling SCIPlpiGetBInvACol (%d)\n",lpi->lpid);
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+
+   SCIPdebugMessage("Calling SCIPlpiGetBInvACol (%d)\n",lpi->lpid);
 
    MOSEK_CALL( MSK_getnumcon(lpi->task, &nrows) );
 #if MSK_VERSION_MAJOR < 7
@@ -3736,12 +3793,13 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 #endif
    SCIP_ALLOC( BMSallocMemoryArray( &val, numnz+1) );
 
+   /* init coefficients */
+   for (i = 0; i < nrows; ++i)
+      coef[i] = 0;
+
    /* check whether we require a dense or sparse result vector */
    if ( ninds != NULL && inds != NULL )
    {
-      for (i = 0; i < nrows; ++i)
-         coef[i] = 0;
-
 #if MSK_VERSION_MAJOR < 7
       MOSEK_CALL( MSK_getavec(lpi->task, MSK_ACC_VAR, c, &numnz, inds, val) );
 #else
@@ -3751,16 +3809,15 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       for (i = 0; i < numnz; ++i)
          coef[inds[i]] = val[i];
 
+      *ninds = numnz;
       MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, ninds, inds, coef) );
+      assert( *ninds <= nrows );
    }
    else
    {
       int* sub;
       SCIP_ALLOC( BMSallocMemoryArray( &sub, nrows) );
-
-      for (i = 0; i < nrows; ++i)
-         coef[i] = 0;
 
 #if MSK_VERSION_MAJOR < 7
       MOSEK_CALL( MSK_getavec(lpi->task, MSK_ACC_VAR, c, &numnz, sub, val) );
@@ -3771,6 +3828,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       for (i = 0; i < numnz; ++i)
          coef[sub[i]] = val[i];
 
+      if ( ninds != NULL )
+         *ninds = numnz;
       MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
 
@@ -3919,7 +3978,7 @@ SCIP_RETCODE lpistatePack(
 /** unpacks row and column basis status from a packed LPi state object */
 static
 void lpistateUnpack(
-   SCIP_LPISTATE*        lpistate,           /**< pointer to LPi state data */
+   const SCIP_LPISTATE*  lpistate,           /**< pointer to LPi state data */
    MSKstakeye*           skx,                /**< ??? */
    MSKstakeye*           skc                 /**< ??? */
    )
@@ -3944,12 +4003,12 @@ SCIP_RETCODE SCIPlpiGetState(
    int nrows;
    int ncols;
 
-   SCIPdebugMessage("Calling SCIPlpiGetState (%d)\n",lpi->lpid);
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
    assert(lpistate != NULL);
+
+   SCIPdebugMessage("Calling SCIPlpiGetState (%d)\n",lpi->lpid);
 
    *lpistate = NULL;
 
@@ -3991,7 +4050,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE*        lpistate            /**< LP state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LP state information (like basis information) */
    )
 {  /*lint --e{715}*/
    int nrows;
@@ -4121,11 +4180,11 @@ SCIP_RETCODE SCIPlpiWriteState(
    const char*           fname               /**< file name */
    )
 {
-   SCIPdebugMessage("writing LP state to file <%s>\n", fname);
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+
+   SCIPdebugMessage("writing LP state to file <%s>\n", fname);
 
    /* set parameter to be able to write */
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_WRITE_SOL_HEAD, MSK_ON) );
@@ -4169,7 +4228,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
 {
    assert(lpinorms == NULL);
@@ -4201,7 +4260,7 @@ SCIP_RETCODE SCIPlpiFreeNorms(
 static const char* paramname[] = {
    "SCIP_LPPAR_FROMSCRATCH",                 /* solver should start from scratch at next call? */
    "SCIP_LPPAR_FASTMIP",                     /* fast mip setting of LP solver */
-   "SCIP_LPPAR_SCALING",                     /* should LP solver use scaling? */
+   "SCIP_LPPAR_SCALING",                     /* which scaling should LP solver use? */
    "SCIP_LPPAR_PRESOLVING",                  /* should LP solver use presolving? */
    "SCIP_LPPAR_PRICING",                     /* pricing strategy */
    "SCIP_LPPAR_LPINFO",                      /* should LP solver output information to the screen? */
@@ -4227,7 +4286,7 @@ const char* paramty2str(
    /* check if the parameters in this order */
    assert(SCIP_LPPAR_FROMSCRATCH == 0);      /* solver should start from scratch at next call? */
    assert(SCIP_LPPAR_FASTMIP == 1);          /* fast mip setting of LP solver */
-   assert(SCIP_LPPAR_SCALING == 2);          /* should LP solver use scaling? */
+   assert(SCIP_LPPAR_SCALING == 2);          /* which scaling should LP solver use? */
    assert(SCIP_LPPAR_PRESOLVING == 3);       /* should LP solver use presolving? */
    assert(SCIP_LPPAR_PRICING == 4);          /* pricing strategy */
    assert(SCIP_LPPAR_LPINFO == 5);           /* should LP solver output information to the screen? */
@@ -4252,11 +4311,11 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    int*                  ival                /**< buffer to store the parameter value */
                               )
 {  /*lint --e{641}*/
-   SCIPdebugMessage("getting int parameter %s\n", paramty2str(type));
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+
+   SCIPdebugMessage("getting int parameter %s\n", paramty2str(type));
 
    switch (type)
    {
@@ -4268,7 +4327,12 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       return  SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:                   /* should LP solver use scaling? */
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_SCALING, ival) );
-      *ival = (*ival != MSK_SCALING_NONE);
+      if( *ival == MSK_SCALING_NONE )
+         *ival = 0;
+      else if( *ival == MSK_SCALING_AGGRESSIVE )
+         *ival = 2;
+      else
+         *ival = 1;
       break;
    case SCIP_LPPAR_PRESOLVING:                /* should LP solver use presolving? */
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_PRESOLVE_USE, ival) );
@@ -4302,7 +4366,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 
 #if SCIP_CONTROLS_PRICING
    /*lint --e{641}*/
-   static int pricing[7] = {
+   static int pricing[7] =
+   {
       MSK_SIM_SELECTION_SE,
       MSK_SIM_SELECTION_SE,
       MSK_SIM_SELECTION_FULL,
@@ -4313,8 +4378,6 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    };
 #endif
 
-   SCIPdebugMessage("Calling SCIPlpiSetIntpar (%d) Parameter=<%s>  Value=<%d>\n", lpi->lpid, paramty2str(type), ival);
-
    assert(SCIP_PRICING_LPIDEFAULT == 0);
    assert(SCIP_PRICING_AUTO == 1);
    assert(SCIP_PRICING_FULL == 2);
@@ -4323,11 +4386,11 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    assert(SCIP_PRICING_STEEPQSTART == 5);
    assert(SCIP_PRICING_DEVEX == 6);
 
-   SCIPdebugMessage("Calling SCIPlpiSetIntpar (%d) %s = %d\n",lpi->lpid,paramty2str(type),ival);
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+
+   SCIPdebugMessage("Calling SCIPlpiSetIntpar (%d) Parameter=<%s>  Value=<%d>\n", lpi->lpid, paramty2str(type), ival);
 
    switch (type)
    {
@@ -4338,7 +4401,13 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_FASTMIP:                   /* fast mip setting of LP solver */
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:                   /* should LP solver use scaling? */
-      scaling = (ival ? MSK_SCALING_FREE : MSK_SCALING_NONE);
+      if( ival == 0 )
+         scaling = MSK_SCALING_NONE;
+      else if( ival == 1 )
+         scaling = MSK_SCALING_FREE;
+      else
+         scaling = MSK_SCALING_AGGRESSIVE;
+
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, scaling) );
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_SCALING, scaling) );
       break;
@@ -4434,11 +4503,11 @@ SCIP_RETCODE SCIPlpiGetRealpar(
    SCIP_Real*            dval                /**< buffer to store the parameter value */
    )
 {
-   SCIPdebugMessage("getting real parameter %s\n", paramty2str(type));
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+
+   SCIPdebugMessage("getting real parameter %s\n", paramty2str(type));
 
    switch (type)
    {
@@ -4477,11 +4546,11 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    SCIP_Real             dval                /**< parameter value */
    )
 {
-   SCIPdebugMessage("setting real parameter %s to %g\n", paramty2str(type), dval);
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+
+   SCIPdebugMessage("setting real parameter %s to %g\n", paramty2str(type), dval);
 
    /**@todo Limits shouldn't be hardcoded */
 
@@ -4567,11 +4636,11 @@ SCIP_RETCODE SCIPlpiReadLP(
 {
    int olddataformat;
 
-   SCIPdebugMessage("Calling SCIPlpiReadLP (%d), filename <%s>\n",lpi->lpid, fname);
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+
+   SCIPdebugMessage("Calling SCIPlpiReadLP (%d), filename <%s>\n",lpi->lpid, fname);
 
    MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_READ_DATA_FORMAT, &olddataformat) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_READ_DATA_FORMAT, MSK_DATA_FORMAT_LP) );
@@ -4589,11 +4658,11 @@ SCIP_RETCODE SCIPlpiWriteLP(
 {
    int olddataformat;
 
-   SCIPdebugMessage("Calling SCIPlpiReadLP (%d), filename <%s>\n",lpi->lpid, fname);
-
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+
+   SCIPdebugMessage("Calling SCIPlpiReadLP (%d), filename <%s>\n",lpi->lpid, fname);
 
    MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_WRITE_DATA_FORMAT, &olddataformat) );
    MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_WRITE_DATA_FORMAT, MSK_DATA_FORMAT_LP) );

@@ -1,12 +1,12 @@
-/* $Id: bool_fun.hpp 2910 2013-10-07 13:27:58Z bradbell $ */
-# ifndef CPPAD_BOOL_FUN_INCLUDED
-# define CPPAD_BOOL_FUN_INCLUDED
+// $Id$
+# ifndef CPPAD_BOOL_FUN_HPP
+# define CPPAD_BOOL_FUN_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -22,12 +22,9 @@ $spell
 	const
 $$
 
-$index bool, AD function$$
-$index function, AD bool$$
-$index unary, AD bool$$
-$index binary, AD bool$$
 
 $section AD Boolean Functions$$
+$mindex bool CPPAD_BOOL_UNARY CPPAD_BOOL_BINARY$$
 
 $head Syntax$$
 $codei%CPPAD_BOOL_UNARY(%Base%, %unary_name%)
@@ -61,7 +58,7 @@ $codei%
 %$$
 It is the value at which the user provided version of $icode unary_name$$
 is to be evaluated.
-It is also used for the first argument to the 
+It is also used for the first argument to the
 user provided version of $icode binary_name$$.
 
 $head x$$
@@ -71,7 +68,7 @@ $codei%
 %$$
 It is the value at which the CppAD provided version of $icode unary_name$$
 is to be evaluated.
-It is also used for the first argument to the 
+It is also used for the first argument to the
 CppAD provided version of $icode binary_name$$.
 
 $head b$$
@@ -81,14 +78,13 @@ $codei%
 %$$
 
 $head Create Unary$$
-$index CPPAD_BOOL_UNARY$$
 The preprocessor macro invocation
 $codei%
 	CPPAD_BOOL_UNARY(%Base%, %unary_name%)
 %$$
 defines the version of $icode unary_name$$ with a $codei%AD<%Base%>%$$
 argument.
-This can with in a namespace 
+This can with in a namespace
 (not the $code CppAD$$ namespace)
 but must be outside of any routine.
 
@@ -117,14 +113,13 @@ It is the second argument to
 the CppAD provided version of $icode binary_name$$.
 
 $head Create Binary$$
-$index CPPAD_BOOL_BINARY$$
 The preprocessor macro invocation
 $codei%
 	CPPAD_BOOL_BINARY(%Base%, %binary_name%)
 %$$
 defines the version of $icode binary_name$$ with $codei%AD<%Base%>%$$
 arguments.
-This can with in a namespace 
+This can with in a namespace
 (not the $code CppAD$$ namespace)
 but must be outside of any routine.
 
@@ -145,8 +140,8 @@ $cref bool_fun.cpp$$
 contains an example and test of these operations.
 It returns true if it succeeds and false otherwise.
 
-$head Deprecated$$
-The preprocessor symbols $code CppADCreateUnaryBool$$ 
+$head Deprecated 2007-07-31$$
+The preprocessor symbols $code CppADCreateUnaryBool$$
 and $code CppADCreateBinaryBool$$ are defined to be the same as
 $code CPPAD_BOOL_UNARY$$ and $code CPPAD_BOOL_BINARY$$ respectively
 (but their use is deprecated).
@@ -156,15 +151,12 @@ $end
 
 namespace CppAD { // BEGIN_CPPAD_NAMESPACE
 /*!
-\defgroup bool_fun_hpp bool_fun.hpp
-\{
 \file bool_fun.hpp
-Routines and macros that implement functions from AD<Base> to bool
-\ref bool_fun_hpp.
+Routines and macros that implement functions from AD<Base> to bool.
 */
 
 /*!
-Macro that defines a unary function <tt>bool F(AD<Base> x)</tt> 
+Macro that defines a unary function <tt>bool F(AD<Base> x)</tt>
 using <tt>bool F(Base x)</tt>.
 
 \param Base
@@ -198,13 +190,13 @@ template <class Base>
 inline bool AD<Base>::UnaryBool(
 	bool FunName(const Base &x),
 	const AD<Base> &x
-) 
+)
 {
 	return FunName(x.value_);
 }
 
 /*!
-Macro that defines a binary function <tt>bool F(AD<Base> x, AD<Base> y)</tt> 
+Macro that defines a binary function <tt>bool F(AD<Base> x, AD<Base> y)</tt>
 using <tt>bool F(Base x, Base y)</tt>.
 
 \param Base
@@ -243,11 +235,10 @@ template <class Base>
 inline bool AD<Base>::BinaryBool(
 	bool FunName(const Base &x, const Base &y),
 	const AD<Base> &x, const AD<Base> &y
-) 
+)
 {
 	return FunName(x.value_, y.value_);
 }
 
-/*! \} */
 } // END_CPPAD_NAMESPACE
 # endif

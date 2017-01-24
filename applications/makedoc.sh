@@ -3,14 +3,15 @@
 # run with bash -e makeall.sh to stop on errors
 #
 
-APPLICATIONS=(Coloring Scheduler STP)
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+APPLICATIONS=(Coloring MinIISC PolySCIP Scheduler STP)
 
 for APPLICATION in ${APPLICATIONS[@]}
 do
     echo
     echo ===== $APPLICATION =====
     echo
-    if (! make -C $APPLICATION doc )
+    if (! make -C $DIR/$APPLICATION doc )
     then
 	exit $STATUS
     fi

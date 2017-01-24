@@ -24,7 +24,6 @@
 #include <string.h>
 
 #include "scip/heur_guideddiving.h"
-#include "scip/pub_dive.h"
 
 #define HEUR_NAME             "guideddiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings in direction of incumbent solutions"
@@ -98,7 +97,7 @@ SCIP_DECL_HEURFREE(heurFreeGuideddiving) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -264,7 +263,7 @@ SCIP_RETCODE SCIPincludeHeurGuideddiving(
    SCIP_HEUR* heur;
 
    /* create Guideddiving primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -286,4 +285,3 @@ SCIP_RETCODE SCIPincludeHeurGuideddiving(
 
    return SCIP_OKAY;
 }
-

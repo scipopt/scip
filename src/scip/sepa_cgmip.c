@@ -441,11 +441,11 @@ SCIP_RETCODE solCutIsViolated(
 #ifdef SCIP_DEBUG
    if ( SCIPisEfficacious(subscip, (act - rhs)/norm) )
    {
-      SCIPdebugMessage("Violated cut from solution - act: %f, rhs: %f, norm: %f, eff.: %f\n", act, rhs, norm, (act-rhs)/norm);
+      SCIPdebugMsg(scip, "Violated cut from solution - act: %f, rhs: %f, norm: %f, eff.: %f\n", act, rhs, norm, (act-rhs)/norm);
    }
    else
    {
-      SCIPdebugMessage("Rejected cut from solution - act: %f, rhs: %f, norm: %f, eff.: %f\n", act, rhs, norm, (act-rhs)/norm);
+      SCIPdebugMsg(scip, "Rejected cut from solution - act: %f, rhs: %f, norm: %f, eff.: %f\n", act, rhs, norm, (act-rhs)/norm);
    }
 #endif
 
@@ -466,7 +466,7 @@ SCIP_DECL_CONSFREE(consFreeViolatedCuts)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -558,7 +558,7 @@ SCIP_RETCODE SCIPincludeConshdlrViolatedCut(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
 
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    conshdlrdata->mipdata = mipdata;
 
    /* include constraint handler */
@@ -1346,14 +1346,14 @@ SCIP_RETCODE createSubscip(
 #ifndef NDEBUG
    if ( sepadata->intconvert && ncols >= sepadata->intconvmin )
    {
-      SCIPdebugMessage("Converted %u fractional integral variables to have integral value.\n", nintconverted);
+      SCIPdebugMsg(scip, "Converted %u fractional integral variables to have integral value.\n", nintconverted);
    }
    if ( sepadata->contconvert && ncols >= sepadata->contconvmin )
    {
-      SCIPdebugMessage("Converted %u integral variables to be continuous.\n", ncontconverted);
+      SCIPdebugMsg(scip, "Converted %u integral variables to be continuous.\n", ncontconverted);
    }
 #endif
-   SCIPdebugMessage("original variables: %d integral, %d continuous, %u shifted, %u complemented, %u at lb, %u at ub\n",
+   SCIPdebugMsg(scip, "original variables: %d integral, %d continuous, %u shifted, %u complemented, %u at lb, %u at ub\n",
       SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip), SCIPgetNContVars(scip),
       nshifted, ncomplemented, nlbounds, nubounds);
 
@@ -1410,7 +1410,7 @@ SCIP_RETCODE createSubscip(
          ++cnt;
 
 #ifdef SCIP_MORE_DEBUG
-         SCIPdebugMessage("Created variable <%s> for equation <%s>.\n", name, SCIProwGetName(row));
+         SCIPdebugMsg(scip, "Created variable <%s> for equation <%s>.\n", name, SCIProwGetName(row));
 #endif
 
          (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "yeq2_%d", i);
@@ -1420,7 +1420,7 @@ SCIP_RETCODE createSubscip(
          ++cnt;
 
 #ifdef SCIP_MORE_DEBUG
-         SCIPdebugMessage("Created variable <%s> for equation <%s>.\n", name, SCIProwGetName(row));
+         SCIPdebugMsg(scip, "Created variable <%s> for equation <%s>.\n", name, SCIProwGetName(row));
 #endif
       }
       else
@@ -1451,7 +1451,7 @@ SCIP_RETCODE createSubscip(
                ++cnt;
 
 #ifdef SCIP_MORE_DEBUG
-               SCIPdebugMessage("Created variable <%s> for >= inequality <%s> (weight: %f).\n", name, SCIProwGetName(row), weight);
+               SCIPdebugMsg(scip, "Created variable <%s> for >= inequality <%s> (weight: %f).\n", name, SCIProwGetName(row), weight);
 #endif
             }
          }
@@ -1481,7 +1481,7 @@ SCIP_RETCODE createSubscip(
                ++cnt;
 
 #ifdef SCIP_MORE_DEBUG
-               SCIPdebugMessage("Created variable <%s> for <= inequality <%s> (weight: %f).\n", name, SCIProwGetName(row), weight);
+               SCIPdebugMsg(scip, "Created variable <%s> for <= inequality <%s> (weight: %f).\n", name, SCIProwGetName(row), weight);
 #endif
             }
          }
@@ -1515,7 +1515,7 @@ SCIP_RETCODE createSubscip(
          ++cnt;
 
 #ifdef SCIP_MORE_DEBUG
-         SCIPdebugMessage("Created variable <%s> for upper bound on objective (weight: %f).\n", name, weight);
+         SCIPdebugMsg(scip, "Created variable <%s> for upper bound on objective (weight: %f).\n", name, weight);
 #endif
       }
 
@@ -1529,7 +1529,7 @@ SCIP_RETCODE createSubscip(
          ++cnt;
 
 #ifdef SCIP_MORE_DEBUG
-         SCIPdebugMessage("Created variable <%s> for lower bound on objective (weight: %f).\n", name, weight);
+         SCIPdebugMsg(scip, "Created variable <%s> for lower bound on objective (weight: %f).\n", name, weight);
 #endif
       }
 
@@ -1957,7 +1957,7 @@ SCIP_RETCODE createSubscip(
       ++mipdata->m;
    }
 
-   SCIPdebugMessage("Subscip has %u vars (%d integral, %d continuous), %u conss.\n",
+   SCIPdebugMsg(scip, "Subscip has %u vars (%d integral, %d continuous), %u conss.\n",
       mipdata->n, SCIPgetNIntVars(subscip), SCIPgetNContVars(subscip), mipdata->m);
 
    /* free temporary memory */
@@ -2108,8 +2108,8 @@ SCIP_RETCODE subscipSetParams(
 
       /* disable conflict analysis */
       /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) ); */
-      /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) ); */
-      /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) ); */
+      /*     SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useinflp", 'o') ); */
+      /*     SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') ); */
       /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) ); */
       /*     SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) ); */
 
@@ -2147,44 +2147,27 @@ SCIP_RETCODE solveSubscip(
 
    subscip = mipdata->subscip;
 
-   /* determine timelimit */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if ( ! SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   if ( sepadata->timelimit < timelimit )
-      timelimit = sepadata->timelimit;
-   if ( timelimit > 0.0 )
+   SCIP_CALL( SCIPcheckCopyLimits(scip, success) );
+
+   if ( *success )
    {
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
+      SCIP_CALL( SCIPcopyLimits(scip, subscip) );
+
+      SCIP_CALL( SCIPgetRealParam(subscip, "limits/time", &timelimit) );
+      SCIP_CALL( SCIPgetRealParam(subscip, "limits/memory", &memorylimit) );
+
+      /* reduce time and memory limit if a smaller limit is stored in the separator data */
+      if ( sepadata->timelimit < timelimit )
+      {
+         SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", sepadata->timelimit) );
+      }
+      if ( sepadata->memorylimit < memorylimit )
+      {
+         SCIP_CALL( SCIPsetRealParam(subscip, "limits/memorylimit", sepadata->memorylimit) );
+      }
    }
    else
-   {
-      *success = FALSE;
       return SCIP_OKAY;
-   }
-
-   /* determine memorylimit */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-   if ( sepadata->memorylimit < memorylimit )
-      memorylimit = sepadata->memorylimit;
-
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if ( ! SCIPisInfinity(scip, memorylimit) )
-   {
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-   }
-
-   /* set memory limit if at least twice the amount of memory is left as is currently used */
-   if ( memorylimit > 2.0 * (SCIPgetMemUsed(scip) + SCIPgetMemExternEstim(scip)) / 1048576.0 )
-   {
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-   }
-   else
-   {
-      *success = FALSE;
-      return SCIP_OKAY;
-   }
 
    /* set nodelimit for subproblem */
    if ( sepadata->minnodelimit < 0 || sepadata->maxnodelimit < 0 )
@@ -2199,7 +2182,7 @@ SCIP_RETCODE solveSubscip(
    assert( nodelimit >= 0 );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit) );
 
-   SCIPdebugMessage("Solving sub-SCIP (time limit: %f  mem limit: %f  node limit: %" SCIP_LONGINT_FORMAT ") ...\n", timelimit, memorylimit, nodelimit);
+   SCIPdebugMsg(scip, "Solving sub-SCIP (time limit: %f  mem limit: %f  node limit: %" SCIP_LONGINT_FORMAT ") ...\n", timelimit, memorylimit, nodelimit);
 
    /* disable statistic timing inside sub SCIP */
    if( !sepadata->output )
@@ -2299,7 +2282,7 @@ SCIP_RETCODE solveSubscip(
       /* solve some more, if a feasible solution was found */
       if ( status == SCIP_STATUS_BESTSOLLIMIT )
       {
-         SCIPdebugMessage("Continue solving separation problem ...\n");
+         SCIPdebugMsg(scip, "Continue solving separation problem ...\n");
 
          SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", STALLNODELIMIT) );
          retcode = SCIPsolve(subscip);
@@ -2931,7 +2914,7 @@ SCIP_RETCODE createCGCutDirect(
    /* take next solution if cut was not valid */
    if ( ! success )
    {
-      SCIPdebugMessage("cut not valid - skipping ...\n");
+      SCIPdebugMsg(scip, "cut not valid - skipping ...\n");
       return SCIP_OKAY;
    }
 
@@ -2994,7 +2977,7 @@ SCIP_RETCODE createCGCutDirect(
       SCIP_CALL( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, mipdata->normtype,
             cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
 
-      SCIPdebugMessage("act=%f, rhs=%f, norm=%f, eff=%f\n", cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm);
+      SCIPdebugMsg(scip, "act=%f, rhs=%f, norm=%f, eff=%f\n", cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm);
 
       /* if norm is 0, the cut is trivial */
       if ( SCIPisPositive(scip, cutnorm) )
@@ -3043,7 +3026,7 @@ SCIP_RETCODE createCGCutDirect(
                   prevrows[*nprevrows] = cut;
                   ++(*nprevrows);
 
-                  SCIPdebugMessage(" -> CG-cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+                  SCIPdebugMsg(scip, " -> CG-cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
                      name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                      SCIPgetCutEfficacy(scip, NULL, cut),
                      SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
@@ -3061,7 +3044,7 @@ SCIP_RETCODE createCGCutDirect(
                }
                else
                {
-                  SCIPdebugMessage("Cut already exists.\n");
+                  SCIPdebugMsg(scip, "Cut already exists.\n");
                   /* release the row */
                   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
                }
@@ -3242,7 +3225,7 @@ SCIP_RETCODE createCGCutCMIR(
          boundtypesfortrans, (int) MAXAGGRLEN(nvars), MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
          weights, -1.0, NULL, -1, -1, NULL, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
    assert( sepadata->allowlocal || !cutislocal );
-   SCIPdebugMessage("CMIR: success = %u, cut is%sviolated (cutact: %g, cutrhs: %g)\n", success, 
+   SCIPdebugMsg(scip, "CMIR: success = %u, cut is%sviolated (cutact: %g, cutrhs: %g)\n", success,
       SCIPisFeasGT(scip, cutact, cutrhs) ? " " : " not ", cutact, cutrhs);
 
    /* if successful, convert dense cut into sparse row, and add the row as a cut */
@@ -3301,7 +3284,7 @@ SCIP_RETCODE createCGCutCMIR(
 
                if ( ! SCIPisCutEfficacious(scip, NULL, cut) )
                {
-                  SCIPdebugMessage(" -> CG-cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
+                  SCIPdebugMsg(scip, " -> CG-cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
                      name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                      SCIPgetCutEfficacy(scip, NULL, cut));
 
@@ -3328,7 +3311,7 @@ SCIP_RETCODE createCGCutCMIR(
                      prevrows[*nprevrows] = cut;
                      ++(*nprevrows);
 
-                     SCIPdebugMessage(" -> CG-cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d, min=%f, max=%f (range=%f)\n",
+                     SCIPdebugMsg(scip, " -> CG-cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d, min=%f, max=%f (range=%f)\n",
                         name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                         SCIPgetCutEfficacy(scip, NULL, cut), SCIProwGetRank(cut),
                         SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
@@ -3346,7 +3329,7 @@ SCIP_RETCODE createCGCutCMIR(
                   }
                   else
                   {
-                     SCIPdebugMessage("Cut already exists.\n");
+                     SCIPdebugMsg(scip, "Cut already exists.\n");
                      /* release the row */
                      SCIP_CALL( SCIPreleaseRow(scip, &cut) );
                   }
@@ -3354,7 +3337,7 @@ SCIP_RETCODE createCGCutCMIR(
             }
             else
             {
-               SCIPdebugMessage(" -> CG-cut <%s> could not be scaled to integral coefficients: act=%f, rhs=%f, norm=%f, eff=%f\n",
+               SCIPdebugMsg(scip, " -> CG-cut <%s> could not be scaled to integral coefficients: act=%f, rhs=%f, norm=%f, eff=%f\n",
                   name, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, NULL, cut));
 
                /* release the row */
@@ -3472,7 +3455,7 @@ SCIP_RETCODE createCGCutStrongCG(
    SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, (int) MAXAGGRLEN(nvars), MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
          weights, NULL, -1, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
    assert( sepadata->allowlocal || !cutislocal );
-   SCIPdebugMessage("Strong-CG: success = %u, cut is%sviolated (cutact: %g, cutrhs: %g)\n", success,
+   SCIPdebugMsg(scip, "Strong-CG: success = %u, cut is%sviolated (cutact: %g, cutrhs: %g)\n", success,
       SCIPisFeasGT(scip, cutact, cutrhs) ? " " : " not ", cutact, cutrhs);
 
    /* if successful, convert dense cut into sparse row, and add the row as a cut */
@@ -3530,7 +3513,7 @@ SCIP_RETCODE createCGCutStrongCG(
 
                if ( ! SCIPisCutEfficacious(scip, NULL, cut) )
                {
-                  SCIPdebugMessage(" -> CG-cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f rank=%d\n",
+                  SCIPdebugMsg(scip, " -> CG-cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f rank=%d\n",
                      name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                      SCIPgetCutEfficacy(scip, NULL, cut), SCIProwGetRank(cut));
 
@@ -3557,7 +3540,7 @@ SCIP_RETCODE createCGCutStrongCG(
                      prevrows[*nprevrows] = cut;
                      ++(*nprevrows);
 
-                     SCIPdebugMessage(" -> CG-cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+                     SCIPdebugMsg(scip, " -> CG-cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
                         name, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                         SCIPgetCutEfficacy(scip, NULL, cut),
                         SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
@@ -3577,7 +3560,7 @@ SCIP_RETCODE createCGCutStrongCG(
                   }
                   else
                   {
-                     SCIPdebugMessage("Cut already exists.\n");
+                     SCIPdebugMsg(scip, "Cut already exists.\n");
                      /* release the row */
                      SCIP_CALL( SCIPreleaseRow(scip, &cut) );
                   }
@@ -3585,7 +3568,7 @@ SCIP_RETCODE createCGCutStrongCG(
             }
             else
             {
-               SCIPdebugMessage(" -> CG-cut <%s> could not be scaled to integral coefficients: act=%f, rhs=%f, norm=%f, eff=%f\n",
+               SCIPdebugMsg(scip, " -> CG-cut <%s> could not be scaled to integral coefficients: act=%f, rhs=%f, norm=%f, eff=%f\n",
                   name, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, NULL, cut));
 
                /* release the row */
@@ -3652,7 +3635,7 @@ SCIP_RETCODE createCGCuts(
    if ( nsols == 0 )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("Generating CG-cuts from %d sols (cmir: %u, strong-cg: %u) ...\n", nsols, sepadata->usecmir, sepadata->usestrongcg);
+   SCIPdebugMsg(scip, "Generating CG-cuts from %d sols (cmir: %u, strong-cg: %u) ...\n", nsols, sepadata->usecmir, sepadata->usestrongcg);
 
    sols = SCIPgetSols(subscip);
 
@@ -3762,7 +3745,7 @@ SCIP_RETCODE freeSubscip(
    sepadata = SCIPsepaGetData(sepa);
    assert( sepadata != NULL );
 
-   SCIPdebugMessage("Freeing subscip ...\n");
+   SCIPdebugMsg(scip, "Freeing subscip ...\n");
 
    subscip = mipdata->subscip;
    assert( subscip != NULL );
@@ -3862,7 +3845,7 @@ SCIP_DECL_SEPAFREE(sepaFreeCGMIP)
    sepadata = SCIPsepaGetData(sepa);
    assert( sepadata != NULL );
 
-   SCIPfreeMemory(scip, &sepadata);
+   SCIPfreeBlockMemory(scip, &sepadata);
 
    SCIPsepaSetData(sepa, NULL);
 
@@ -3982,7 +3965,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    /* preceed with separation */
    *result = SCIP_DIDNOTFIND;
 
-   SCIPdebugMessage("separating CG-cuts via sub-MIPs: %d cols, %d rows\n", ncols, nrows);
+   SCIPdebugMsg(scip, "separating CG-cuts via sub-MIPs: %d cols, %d rows\n", ncols, nrows);
 
    /* prepare data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &mipdata) );
@@ -4029,7 +4012,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    SCIP_CALL( freeSubscip(scip, sepa, mipdata) );
    SCIPfreeBlockMemory(scip, &mipdata);
 
-   SCIPdebugMessage("Found %u CG-cuts.\n", ngen);
+   SCIPdebugMsg(scip, "Found %u CG-cuts.\n", ngen);
 
    if ( cutoff )
       *result = SCIP_CUTOFF;
@@ -4058,7 +4041,7 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
    SCIP_SEPA* sepa;
 
    /* create separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
 
    sepa = NULL;
    /* include separator */

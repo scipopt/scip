@@ -99,8 +99,6 @@ do
 
             # check if fail occurs
             NFAILS=`grep -c fail $BASEFILE.*res`
-            NABORTS=`grep -c abort $BASEFILE.*res`
-            NREADERRORS=`grep -c readerror $BASEFILE.*res`
 
             # construct string which shows the destination of the out, err, and res files
             ERRORFILE=`ls $BASEFILE.*.err`
@@ -114,43 +112,6 @@ do
                 SUBJECT="[FAIL] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
                 ERRORINSTANCES=`grep fail $BASEFILE.*.res`
                 echo -e "$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
-            fi
-
-            # check read errors
-            if [ $NREADERRORS -gt 0 ];
-            then
-                SUBJECT="[READERROR] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
-                ERRORINSTANCES=`grep readerror $BASEFILE.*.res`
-                echo -e "$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
-            fi
-
-            # check aborts
-            if [ $NABORTS -gt 0 ];
-            then
-                SUBJECT="[ABORT] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
-                ERRORINSTANCES=`grep abort $BASEFILE.*.res`
-                ASSERTINFO=`grep Assertion $BASEFILE.*.err`
-                echo -e "$ASSERTINFO \n$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
-            fi
-
-            # check performance in opt mode
-            if [ "$OPT" == "opt" ];
-            then
-                NOK=`grep -c ok $BASEFILE.*res`
-                NSOLVED=`grep -c solved $BASEFILE.*res`
-                NTIMEOUTS=`grep -c timeouts $BASEFILE.*res`
-
-                if [ -f "check/results/check.$TEST.*$LASTGITHASH.*.$OPT.*res" ];
-                then
-                    NLASTTIMEOUTS=`grep -c timeouts check/results/check.$TEST.*$LASTGITHASH.*.$OPT.$LPS.*res`
-
-                    # check time outs
-                    if [ $NTIMEOUTS -gt NLASTTIMEOUTS ];
-                    then
-                    SUBJECT="[TIMEOUT] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
-                    grep timeouts $BASEFILE.*.res | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
-                    fi
-                fi
             fi
 
             # in any case send a mail to admin

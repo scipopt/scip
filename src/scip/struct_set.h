@@ -46,6 +46,7 @@
 #include "scip/type_sepa.h"
 #include "scip/type_prop.h"
 #include "nlpi/type_nlpi.h"
+#include "scip/type_concsolver.h"
 #include "scip/debug.h"
 
 #ifdef __cplusplus
@@ -71,6 +72,7 @@ struct SCIP_Set
    SCIP_RELAX**          relaxs;             /**< relaxators */
    SCIP_SEPA**           sepas;              /**< separators */
    SCIP_PROP**           props;              /**< propagators */
+   SCIP_PROP**           props_presol;       /**< propagators (sorted by presol priority) */
    SCIP_HEUR**           heurs;              /**< primal heuristics */
    SCIP_COMPR**          comprs;             /**< tree compressions */
    SCIP_EVENTHDLR**      eventhdlrs;         /**< event handlers */
@@ -80,6 +82,8 @@ struct SCIP_Set
    SCIP_DISP**           disps;              /**< display columns */
    SCIP_DIALOG**         dialogs;            /**< dialogs */
    SCIP_NLPI**           nlpis;              /**< interfaces to NLP solvers */
+   SCIP_CONCSOLVERTYPE** concsolvertypes;    /**< concurrent solver types */
+   SCIP_CONCSOLVER**     concsolvers;        /**< the concurrent solvers used for solving */
    SCIP_DEBUGSOLDATA*    debugsoldata;       /**< data for debug solutions */
    char**                extcodenames;       /**< names of externals codes */
    char**                extcodedescs;       /**< descriptions of external codes */
@@ -116,6 +120,10 @@ struct SCIP_Set
    int                   dialogssize;        /**< size of dialogs array */
    int                   nnlpis;             /**< number of NLPIs */
    int                   nlpissize;          /**< size of NLPIs array */
+   int                   nconcsolvertypes;   /**< number of concurrent solver types */
+   int                   concsolvertypessize;/**< size of concurrent solver types array */
+   int                   nconcsolvers;       /**< number of concurrent solvers used for solving */
+   int                   concsolverssize;    /**< size of concurrent solvers array */
    int                   nextcodes;          /**< number of external codes */
    int                   extcodessize;       /**< size of external code arrays */
    SCIP_Bool             pricerssorted;      /**< are the pricers sorted by activity and priority? */
@@ -129,7 +137,7 @@ struct SCIP_Set
    SCIP_Bool             sepassorted;        /**< are the separators sorted by priority? */
    SCIP_Bool             sepasnamesorted;    /**< are the separators sorted by name? */
    SCIP_Bool             propssorted;        /**< are the propagators sorted by priority? */
-   SCIP_Bool             propspresolsorted;  /**< are the propagators sorted by priority for presolving? */
+   SCIP_Bool             propspresolsorted;  /**< are the propagators in prop_presol sorted? */
    SCIP_Bool             propsnamesorted;    /**< are the propagators sorted by name? */
    SCIP_Bool             heurssorted;        /**< are the heuristics sorted by priority? */
    SCIP_Bool             heursnamesorted;    /**< are the heuristics sorted by name? */
@@ -142,7 +150,7 @@ struct SCIP_Set
 
    /* branching settings */
    char                  branch_scorefunc;   /**< branching score function ('s'um, 'p'roduct, 'q'uotient) */
-   char                  branch_firstsbchild;/**< child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic */
+   char                  branch_firstsbchild;/**< child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, 'h'istory-based, or 'a'utomatic */
    SCIP_Real             branch_scorefac;    /**< branching score factor to weigh downward and upward gain prediction
                                               *   in sum score function */
    SCIP_Bool             branch_preferbinary;/**< should branching on binary variables be preferred? */
@@ -154,6 +162,7 @@ struct SCIP_Set
                                               *   one is detected to be infeasible? (only with propagation) */
    SCIP_Bool             branch_checksbsol;  /**< should LP solutions during strong branching with propagation be checked for feasibility? */
    SCIP_Bool             branch_roundsbsol;  /**< should LP solutions during strong branching with propagation be rounded? (only when checksbsol=TRUE) */
+   SCIP_Bool             branch_sumadjustscore; /**< score adjustment near zero by \b adding epsilon (TRUE) or using maximum (FALSE) */
 
    /* conflict analysis settings */
    SCIP_Real             conf_maxvarsfac;    /**< maximal fraction of variables involved in a conflict constraint */
@@ -168,12 +177,18 @@ struct SCIP_Set
                                               *   graph (-1: use every intermediate constraint) */
    int                   conf_maxconss;      /**< maximal number of conflict constraints accepted at an infeasible node
                                               *   (-1: use all generated conflict constraints) */
+   int                   conf_maxstoresize;  /**< maximal size of conflict store */
    int                   conf_reconvlevels;  /**< number of depth levels up to which UIP reconvergence constraints are
                                               *   generated (-1: generate reconvergence constraints in all depth levels) */
    SCIP_Bool             conf_enable;        /**< should conflict analysis be enabled? */
-   SCIP_Bool             conf_useprop;       /**< should propagation conflict analysis be used? */
-   SCIP_Bool             conf_useinflp;      /**< should infeasible LP conflict analysis be used? */
-   SCIP_Bool             conf_useboundlp;    /**< should bound exceeding LP conflict analysis be used? */
+   SCIP_Bool             conf_cleanbnddepend;/**< should conflicts related to an old cutoff bound be removed? */
+   SCIP_Bool             conf_useprop;       /**< should propagation conflict analysis be used? (uses conflict graph only) */
+   char                  conf_useinflp;      /**< should infeasible LP conflict analysis be used?
+                                              *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
+                                              */
+   char                  conf_useboundlp;    /**< should bound exceeding LP conflict analysis be used?
+                                              *   ('o'ff, 'c'onflict graph, 'd'ual ray, 'b'oth conflict graph and dual ray)
+                                              */
    SCIP_Bool             conf_usesb;         /**< should infeasible/bound exceeding strong branching conflict analysis be
                                               *   used? */
    SCIP_Bool             conf_usepseudo;     /**< should pseudo solution conflict analysis be used? */
@@ -184,10 +199,13 @@ struct SCIP_Set
    SCIP_Bool             conf_repropagate;   /**< should earlier nodes be repropagated in order to replace branching
                                               *   decisions by deductions? */
    SCIP_Bool             conf_keepreprop;    /**< should constraints be kept for repropagation even if they are too long? */
-   SCIP_Bool             conf_seperate;      /**< should the conflict constraints be separated? */
+   SCIP_Bool             conf_separate;      /**< should the conflict constraints be separated? */
    SCIP_Bool             conf_dynamic;       /**< should the conflict constraints be subject to aging? */
    SCIP_Bool             conf_removable;     /**< should the conflict's relaxations be subject to LP aging and cleanup? */
-   SCIP_Real             conf_depthscorefac; /**< score factor for depth level in bound relaxation heuristic of LP analysis */
+   SCIP_Real             conf_depthscorefac; /**< score factor for depth level in bound relaxation heuristic */
+   SCIP_Real             conf_proofscorefac; /**< score factor for contribution to infeasibility proof in bound relaxation heuristic */
+   SCIP_Real             conf_uplockscorefac;/**< score factor for number of up locks in bound relaxation heuristic */
+   SCIP_Real             conf_downlockscorefac;/**< score factor for number of down locks in bound relaxation heuristic */
    SCIP_Real             conf_scorefac;      /**< factor to decrease importance of variables' earlier conflict scores */
    int                   conf_restartnum;    /**< number of successful conflict analysis calls that trigger a restart
                                               *   (0: disable conflict restarts) */
@@ -206,6 +224,16 @@ struct SCIP_Set
    SCIP_Real             conf_conflictgraphweight; /**< the weight the VSIDS score is weight by updating the VSIDS for a
                                                     *   variable if it is part of a conflict graph
                                                     */
+   SCIP_Real             conf_weightsize;    /**< weight of the size of a conflict used in score calculation */
+   SCIP_Real             conf_weightrepropdepth;/**< weight of the prepropagtion depth of a conflict used in score calculation */
+   SCIP_Real             conf_weightvaliddepth;/**< weight of the valid depth of a conflict used in score calculation */
+   SCIP_Bool             conf_applymir;      /**< apply the MIR function on a dual ray */
+   SCIP_Bool             conf_prefermir;     /**< prefer a ray after applying the MIR function if the proof is still
+                                              *   valid, use both rays otherwise
+                                              */
+   SCIP_Real             conf_minimprove;    /**< minimal improvement of primal bound to remove conflicts depending on
+                                              *   a previous incumbent.
+                                              */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted
@@ -277,7 +305,7 @@ struct SCIP_Set
    SCIP_Bool             lp_checkprimfeas;   /**< should LP solutions be checked for primal feasibility, resolving LP when numerical troubles occur? */
    SCIP_Bool             lp_checkdualfeas;   /**< should LP solutions be checked for dual feasibility, resolving LP when numerical troubles occur? */
    int                   lp_fastmip;         /**< which FASTMIP setting of LP solver should be used? 0: off, 1: medium, 2: full */
-   SCIP_Bool             lp_scaling;         /**< should scaling of LP solver be used? */
+   int                   lp_scaling;         /**< LP scaling (0: none, 1: normal, 2: aggressive) */
    SCIP_Bool             lp_presolving;      /**< should presolving of LP solver be used? */
    SCIP_Bool             lp_lexdualalgo;     /**< should the lexicographic dual algorithm be used? */
    SCIP_Bool             lp_lexdualrootonly; /**< should the lexicographic dual algorithm be applied only at the root node */
@@ -291,13 +319,14 @@ struct SCIP_Set
    SCIP_Real             lp_resolveiterfac;  /**< factor of average LP iterations that is used as LP iteration limit
                                               *   for LP resolve (-1: unlimited) */
    int                   lp_resolveitermin;  /**< minimum number of iterations that are allowed for LP resolve */
+   int                   lp_solutionpolishing;/**< LP solution polishing method (0: disabled, 1: only root, 2: always) */
+   SCIP_Bool             lp_persistentscaling;/**< use persistent LP scaling during branch and bound */
 
    /* NLP settings */
    SCIP_Bool             nlp_disable;        /**< should the NLP be disabled even if a constraint handler enabled it? */
    char*                 nlp_solver;         /**< name of NLP solver to use */
 
    /* memory settings */
-   SCIP_Longint          mem_externestim;    /**< estimation of external memory usage, e.g., by LP solver */
    SCIP_Real             mem_savefac;        /**< fraction of maximal memory usage resulting in switch to memory saving mode */
    SCIP_Real             mem_arraygrowfac;   /**< memory growing factor for dynamically allocated arrays */
    SCIP_Real             mem_treegrowfac;    /**< memory growing factor for tree array */
@@ -312,10 +341,6 @@ struct SCIP_Set
    SCIP_Bool             misc_useconstable;  /**< should a hashtable be used to map from constraint names to constraints? */
    SCIP_Bool             misc_usesmalltables;/**< should smaller hashtables be used? yields better performance for small problems with about 100 variables */
    SCIP_Bool             misc_exactsolve;    /**< should the problem be solved exactly (with proven dual bounds)? */
-   int                   misc_permutationseed;/**< seed value for permuting the problem after the problem was tranformed 
-                                               *   (-1: no permutation) */
-   SCIP_Bool             misc_permuteconss;  /**< should order of constraints be permuted (depends on permutationseed)? */
-   SCIP_Bool             misc_permutevars;   /**< should order of variables be permuted (depends on permutationseed)? */
    SCIP_Bool             misc_resetstat;     /**< should the statistics be reset if the transformed problem is freed
                                               *   otherwise the statistics get reset after original problem is freed (in
                                               *   case of bender decomposition this parameter should be set to FALSE and
@@ -331,7 +356,15 @@ struct SCIP_Set
    SCIP_Bool             misc_outputorigsol; /**< should the best solution be transformed to the orignal space and be output in command line run? */
    SCIP_Bool             misc_allowdualreds; /**< should dual reductions in propagation methods and presolver be allowed? */
    SCIP_Bool             misc_allowobjprop;  /**< should propagation to the current objective be allowed in propagation methods? */
-   SCIP_Bool             misc_alwaysgetduals;/**< should the Farkas duals always be collected when an LP is infeasible? */
+   SCIP_Real             misc_referencevalue;/**< objective value for reference purposes */
+
+   /* randomization parameters */
+   int                   random_randomseedshift;/**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
+   int                   random_permutationseed;/**< seed value for permuting the problem after the problem was tranformed
+                                                 *   (0: no permutation) */
+   int                   random_randomseed;     /**< random seed for LP solver, e.g. for perturbations in the simplex (0: LP default) */
+   SCIP_Bool             random_permuteconss;   /**< should order of constraints be permuted (depends on permutationseed)? */
+   SCIP_Bool             random_permutevars;    /**< should order of variables be permuted (depends on permutationseed)? */
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
@@ -387,24 +420,44 @@ struct SCIP_Set
 
    /* reoptimization settings */
    SCIP_Real             reopt_objsimsol;    /**< similarity of two objective functions to reuse stored solutions. */
-   SCIP_Real             reopt_objsimrootlp; /**< similarity of two sequential objective function to disable solving the root LP. */
+   SCIP_Real             reopt_objsimrootlp; /**< similarity of two sequential objective function to disable solving the
+                                              *   root LP.
+                                              */
    SCIP_Real             reopt_objsimdelay;  /**< minimum similarity for using reoptimization of the search tree. */
-   char                  reopt_varorderinterdiction; /** use the 'd'efault or a 'r'andom variable order for interdiction branching when applying the reoptimization */
-   int                   reopt_maxsavednodes;/**< maximal number of saved nodes */
+   char                  reopt_varorderinterdiction; /** use the 'd'efault or a 'r'andom variable order for interdiction
+                                                      *  branching when applying the reoptimization
+                                                      */
+   int                   reopt_forceheurrestart; /**< force a restart if the last n optimal solutions were found by
+                                                  *   heuristic reoptsols
+                                                  */
+   int                   reopt_maxcutage;    /**< maximal age of cuts to use them in reoptimization */
    int                   reopt_maxdiffofnodes;/**< maximal number of bound changes between two stored nodes on one path */
+   int                   reopt_maxsavednodes;/**< maximal number of saved nodes */
    int                   reopt_solvelp;      /**< strategy for solving the LP at nodes from reoptimization */
    int                   reopt_solvelpdiff;  /**< maximal number of bound changes at node to skip solving the LP */
-   int                   reopt_savesols;     /**< number of best solutions which should be saved for the following runs. (-1: save all) */
-   int                   reopt_forceheurrestart; /**< force a restart if the last n optimal solutions were found by heuristic reoptsols */
-   SCIP_Bool             reopt_enable;       /**< enable reoptimization */
-   SCIP_Bool             reopt_sepaglbinfsubtrees;/**< save global constraints to separate infeasible subtrees */
-   SCIP_Bool             reopt_sepabestsol;  /**< separate only the best solution, i.e., for constrained shortest path */
+   int                   reopt_savesols;     /**< number of best solutions which should be saved for the following runs.
+                                              *   (-1: save all)
+                                              */
    SCIP_Bool             reopt_commontimelimit;/**< time limit over all reoptimization rounds? */
-   SCIP_Bool             reopt_shrinkinner;  /**< replace branched inner nodes by their child nodes, if the number of bound changes is not to large */
-   SCIP_Bool             reopt_sbinit;       /**< try to fix variables before reoptimizing by probing like strong branching */
+   SCIP_Bool             reopt_enable;       /**< enable reoptimization */
    SCIP_Bool             reopt_reducetofrontier; /**< delete stored nodes which were not reoptimized */
    SCIP_Bool             reopt_saveconsprop; /**< save constraint propagations */
-   SCIP_Bool             reopt_usesplitcons; /**< use constraints to reconstruct the subtree pruned be dual reduction when reactivating the node */
+   SCIP_Bool             reopt_sbinit;       /**< try to fix variables before reoptimizing by probing like strong
+                                              *   branching
+                                              */
+   SCIP_Bool             reopt_shrinkinner;  /**< replace branched inner nodes by their child nodes, if the number of
+                                              *   bound changes is not to large
+                                              */
+   SCIP_Bool             reopt_sepaglbinfsubtrees;/**< save global constraints to separate infeasible subtrees */
+   SCIP_Bool             reopt_sepabestsol;  /**< separate only the best solution, i.e., for constrained shortest path */
+   SCIP_Bool             reopt_storevarhistory;/**< use variable history of the previous solve if the objective function
+                                                *   has changed only slightly
+                                                */
+   SCIP_Bool             reopt_usepscost;    /**< reuse pseudo costs if the objective function changed only slightly */
+   SCIP_Bool             reopt_usecuts;      /**< reoptimize cuts found at the root node */
+   SCIP_Bool             reopt_usesplitcons; /**< use constraints to reconstruct the subtree pruned be dual reduction
+                                              *   when reactivating the node
+                                              */
 
    /* separation settings */
    SCIP_Real             sepa_maxbounddist;  /**< maximal relative distance from current node's dual bound to primal bound
@@ -438,6 +491,29 @@ struct SCIP_Set
    int                   sepa_cutagelimit;   /**< maximum age a cut can reach before it is deleted from the global cut pool */
    int                   sepa_poolfreq;      /**< separation frequency for the global cut pool */
 
+   /* parallel settings */
+   int                   parallel_mode;      /**< the mode for the parallel implementation. 0: opportunistic or
+                                              *   1: deterministic */
+   int                   parallel_minnthreads;/**< the minimum number of threads used for parallel code */
+   int                   parallel_maxnthreads;/**< the maximum number of threads used for parallel code */
+
+   /* concurrent solver settings */
+   SCIP_Bool             concurrent_changeseeds;    /**< change the seeds in the different solvers? */
+   SCIP_Bool             concurrent_changechildsel; /**< change the child selection rule in different solvers? */
+   SCIP_Bool             concurrent_commvarbnds;    /**< should the concurrent solvers communicate global variable bound changes? */
+   SCIP_Bool             concurrent_presolvebefore; /**< should the problem be presolved before it is copied to the concurrent solvers? */
+   int                   concurrent_initseed;       /**< the seed for computing the concurrent solver seeds */
+   SCIP_Real             concurrent_freqinit;       /**< initial frequency of synchronization */
+   SCIP_Real             concurrent_freqmax;        /**< maximal frequency of synchronization */
+   SCIP_Real             concurrent_freqfactor;     /**< factor by which the frequency of synchronization changes */
+   SCIP_Real             concurrent_targetprogress; /**< when adapting the synchronization frequency this value is the targeted
+                                                     *   relative difference by which the absolute gap decreases per synchronization */
+   int                   concurrent_maxnsols;       /**< maximum number of solutions that will get stored in one synchronization */
+   int                   concurrent_nbestsols;      /**< number of best solutions that should be considered for synchronization */
+   int                   concurrent_maxnsyncdelay;  /**< max number of synchronizations before data is used */
+   SCIP_Real             concurrent_minsyncdelay;   /**< min offset before synchronization data is used */
+   char*                 concurrent_paramsetprefix; /**< path prefix for parameter setting files of concurrent solver scip-custom */
+
    /* timing settings */
    SCIP_CLOCKTYPE        time_clocktype;     /**< default clock type to use */
    SCIP_Bool             time_enabled;       /**< is timing enabled? */
@@ -464,6 +540,7 @@ struct SCIP_Set
 
    /* Writing */
    SCIP_Bool             write_allconss;     /**< should all constraints be written (including the redundant constraints)? */
+   SCIP_Bool             write_printzeros;   /**< should variables set to zero be printed? */
    int                   write_genoffset;    /**< when writing the problem with generic names, we start with index
                                               *   0; using this parameter we can change the starting index to be
                                               *   different */

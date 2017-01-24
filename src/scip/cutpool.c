@@ -104,11 +104,11 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqCut)
       || row1->minidx != row2->minidx
       || row1->maxidx != row2->maxidx
       || row1->nummaxval != row2->nummaxval
+      || row1->numminval != row2->numminval
       || REALABS(row1->lhs - row2->lhs) > SCIP_DEFAULT_EPSILON
       || REALABS(row1->rhs - row2->rhs) > SCIP_DEFAULT_EPSILON
-      || REALABS(row1->sqrnorm - row2->sqrnorm) > SCIP_DEFAULT_SUMEPSILON
-      || REALABS(row1->sumnorm - row2->sumnorm) > SCIP_DEFAULT_SUMEPSILON
       || REALABS(row1->maxval - row2->maxval) > SCIP_DEFAULT_EPSILON
+      || REALABS(row1->minval - row2->minval) > SCIP_DEFAULT_EPSILON
        )
       return FALSE;
 
@@ -234,8 +234,8 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
 {  /*lint --e{715}*/
    SCIP_ROW* row;
    unsigned int keyval;
-   int maxabsval;
-   SCIP_Real maxval;  
+   SCIP_Real maxval;
+   SCIP_Real minval;
    SCIP_SET* set;
 
    set = (SCIP_SET*) userptr;
@@ -243,17 +243,15 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    assert(row != NULL);
 
    maxval = SCIProwGetMaxval(row, set);
+   minval = SCIProwGetMinval(row, set);
    assert(row->nummaxval > 0);
+   assert(row->numminval > 0);
    assert(row->validminmaxidx);
 
-   if( maxval > (SCIP_Real) INT_MAX )
-      maxabsval = 0;
-   else if( maxval < 1.0 )
-      maxabsval = (int) (10000*maxval);
-   else
-      maxabsval = (int) maxval;
-
-   keyval = (row->maxidx << 29) + (row->len << 22) + (row->minidx << 11) + maxabsval; /*lint !e701*/
+   keyval = SCIPhashFour(SCIPpositiveRealHashCode(maxval, 8),
+                         SCIPpositiveRealHashCode(minval, 12),
+                         SCIPcombineThreeInt(row->maxidx, row->len, row->minidx),
+                         SCIPcombineTwoInt(row->nummaxval, row->numminval));
 
    return keyval;
 }
@@ -724,7 +722,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
    cutpool->ncalls++;
    found = FALSE;
 
-   SCIPdebugMessage("separating%s cut pool %p with %d cuts, beginning with cut %d\n", ( sol == NULL ) ? "" : " solution from", (void*)cutpool, cutpool->ncuts, firstunproc);
+   SCIPsetDebugMsg(set, "separating%s cut pool %p with %d cuts, beginning with cut %d\n", ( sol == NULL ) ? "" : " solution from", (void*)cutpool, cutpool->ncuts, firstunproc);
 
    /* start timing */
    SCIPclockStart(cutpool->poolclock, set);
@@ -773,7 +771,7 @@ SCIP_RETCODE SCIPcutpoolSeparate(
             else if( (sol == NULL && SCIProwIsLPEfficacious(row, set, stat, lp, root)) || (sol != NULL && SCIProwIsSolEfficacious(row, set, stat, sol, root)) )
             {
                /* insert cut in separation storage */
-               SCIPdebugMessage(" -> separated cut <%s> from the cut pool (feasibility: %g)\n",
+               SCIPsetDebugMsg(set, " -> separated cut <%s> from the cut pool (feasibility: %g)\n",
                   SCIProwGetName(row), ( sol == NULL ) ? SCIProwGetLPFeasibility(row, set, stat, lp) : SCIProwGetSolFeasibility(row, set, stat, sol) );
                SCIP_CALL( SCIPsepastoreAddCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, sol, row, FALSE, root, &cutoff) );
 

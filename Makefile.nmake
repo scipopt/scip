@@ -29,11 +29,11 @@ ARCH			=	x86
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION			=	3.2.1
+VERSION			=	4.0.0
 VERBOSE			=	false
 OPT				=	opt
 COMP			=	msvc
-LPS				=	spx
+LPS			=	spx
 SHARED			=	false
 LEGACY			=	false
 

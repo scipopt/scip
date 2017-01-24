@@ -931,14 +931,14 @@ SCIP_RETCODE addVar(
       /* if the number is unknown we have no valid primal solution candidate */
       if( numb_equal(startval, numb_unknown()) )
       {
-         SCIPdebugMessage("primal solution candidate contains an unknown value for variable <%s>(%g)\n",
+         SCIPdebugMsg(scip, "primal solution candidate contains an unknown value for variable <%s>(%g)\n",
             SCIPvarGetName(var), (SCIP_Real)numb_todbl(startval));
          readerdata->valid = FALSE;
       }
       else
       {
          assert(readerdata->sol != NULL);
-         SCIPdebugMessage("change solution solution <%p>: <%s> = <%g>\n", 
+         SCIPdebugMsg(scip, "change solution solution <%p>: <%s> = <%g>\n",
             (void*)readerdata->sol, SCIPvarGetName(var), (SCIP_Real)numb_todbl(startval));
 
          /* set value within the primal solution candidate */
@@ -1359,7 +1359,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
       else
          *compextension = '\0';
       (void) SCIPsnprintf(namewithoutpath, SCIP_MAXSTRLEN, "%s.%s%s", name, extension, compextension);
-      if( getcwd(oldpath, SCIP_MAXSTRLEN) == NULL )
+      if( (char*)getcwd(oldpath, SCIP_MAXSTRLEN) == NULL )
       {
          SCIPerrorMessage("error getting the current path\n");
          return SCIP_READERROR;
@@ -1379,7 +1379,7 @@ SCIP_DECL_READERREAD(readerReadZpl)
    if( SCIPgetVerbLevel(scip) >= SCIP_VERBLEVEL_NORMAL )
    {
       char currentpath[SCIP_MAXSTRLEN];
-      if( getcwd(currentpath, SCIP_MAXSTRLEN) == NULL )
+      if( (char*)getcwd(currentpath, SCIP_MAXSTRLEN) == NULL )
       {
          SCIPerrorMessage("error getting the current path\n");
          return SCIP_READERROR;

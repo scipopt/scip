@@ -24,7 +24,6 @@
 #include <string.h>
 
 #include "scip/heur_pscostdiving.h"
-#include "scip/pub_dive.h"
 
 #define HEUR_NAME             "pscostdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the pseudo cost values"
@@ -100,7 +99,7 @@ SCIP_DECL_HEURFREE(heurFreePscostdiving) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -241,7 +240,7 @@ SCIP_RETCODE SCIPincludeHeurPscostdiving(
    SCIP_HEUR* heur;
 
    /* create Pscostdiving primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,

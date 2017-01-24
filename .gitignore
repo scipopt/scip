@@ -7,6 +7,7 @@
 *.so
 *~
 \#*
+backup/
 bin/
 lib/
 obj/
@@ -39,12 +40,8 @@ lint/size-options.lnt
 
 localhooks/
 src/scip/githash.c
+src/scip/buildflags.c
 settings/
-interfaces/ampl/solvers
-interfaces/ampl/check/locks
-interfaces/ampl/check/results
-interfaces/ampl/lint
-examples/CallableLibrary/lint
 unittests/check/results
 unittests/check/locks
 unittests/check/evalcheck.sh
@@ -53,3 +50,7 @@ interfaces/python/.cache/
 interfaces/python/build/
 interfaces/python/include/
 interfaces/python/tests/check
+interfaces/python/pyscipopt/*.c
+interfaces/gams/gams
+examples/*/doc/html
+applications/*/doc/html

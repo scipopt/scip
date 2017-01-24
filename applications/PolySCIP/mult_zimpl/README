@@ -1,0 +1,8 @@
+Contents of directory
+============================
+
+mult_zimpl_to_mop.py	- Python3 script which does some rewriting and calls ZIMPL in order to generate .mop problem files for PolySCIP; execute 'python3 mult_zimpl_to_mop.py -h' for cmd line parameters
+
+tenfelde_podehl.zpl     - Example mult_zimpl file; execute 'python3 mult_zimpl_to_python.py --path_to_zimpl <PATH> tenfelde_podehl.zpl' in order to generate 'tenfelde_podehl.mop' problem file
+
+AP_p-3_n-5.zpl		- Example mult_zimpl file; execute 'python3 mult_zimpl_to_python.py --path_to_zimpl <PATH> AP_p-3_n-5.zpl' in order to generate 'AP_p-3_n-5.mop' problem file

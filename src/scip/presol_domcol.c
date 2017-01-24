@@ -117,7 +117,7 @@ void printRow(
    rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix, row);
    valpnt = SCIPmatrixGetRowValPtr(matrix, row);
 
-   SCIPdebugPrintf("\n(L:%g) [%c] %g  <=",
+   SCIPdebugMsgPrint(scip, "\n(L:%g) [%c] %g  <=",
       (SCIPmatrixGetRowNMinActPosInf(matrix, row) + SCIPmatrixGetRowNMinActNegInf(matrix,row) > 0) ?
       -SCIPinfinity(scip) :
       SCIPmatrixGetRowMinActivity(matrix, row), relation, SCIPmatrixGetRowLhs(matrix, row));
@@ -126,10 +126,10 @@ void printRow(
       c = *rowpnt;
       val = *valpnt;
       var = SCIPmatrixGetVar(matrix, c);
-      SCIPdebugPrintf("  %g{%s[idx:%d][bnd:%g,%g]}",
+      SCIPdebugMsgPrint(scip, "  %g{%s[idx:%d][bnd:%g,%g]}",
          val, SCIPvarGetName(var), c, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
    }
-   SCIPdebugPrintf(" <=  %g (U:%g)", (SCIPmatrixGetRowNMaxActPosInf(matrix, row) + SCIPmatrixGetRowNMaxActNegInf(matrix, row) > 0) ?
+   SCIPdebugMsgPrint(scip, " <=  %g (U:%g)", (SCIPmatrixGetRowNMaxActPosInf(matrix, row) + SCIPmatrixGetRowNMaxActNegInf(matrix, row) > 0) ?
       SCIPinfinity(scip) :
       SCIPmatrixGetRowRhs(matrix, row), SCIPmatrixGetRowMaxActivity(matrix , row));
 }
@@ -159,13 +159,13 @@ SCIP_RETCODE printRowsOfCol(
       rows[i] = *colpnt;
    }
 
-   SCIPdebugPrintf("\n-------");
-   SCIPdebugPrintf("\ncol %d number rows: %d",col,numrows);
+   SCIPdebugMsgPrint(scip, "\n-------");
+   SCIPdebugMsgPrint(scip, "\ncol %d number rows: %d",col,numrows);
    for( i = 0; i < numrows; i++ )
    {
       printRow(scip, matrix, rows[i]);
    }
-   SCIPdebugPrintf("\n-------");
+   SCIPdebugMsgPrint(scip, "\n-------");
 
    SCIPfreeBufferArray(scip, &rows);
 
@@ -207,7 +207,7 @@ SCIP_RETCODE printDomRelInfo(
       return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
-   SCIPdebugPrintf("\n\n### [%c], obj:%g->%g,\t%s[idx:%d](nrows:%d)->%s[idx:%d](nrows:%d)\twclb=%g, ub'=%g, ub=%g",
+   SCIPdebugMsgPrint(scip, "\n\n### [%c], obj:%g->%g,\t%s[idx:%d](nrows:%d)->%s[idx:%d](nrows:%d)\twclb=%g, ub'=%g, ub=%g",
       type, SCIPvarGetObj(dominatingvar), SCIPvarGetObj(dominatedvar),
       SCIPvarGetName(dominatingvar), dominatingidx, SCIPmatrixGetColNNonzs(matrix, dominatingidx),
       SCIPvarGetName(dominatedvar), dominatedidx, SCIPmatrixGetColNNonzs(matrix, dominatedidx),
@@ -781,7 +781,7 @@ SCIP_RETCODE calcVarBoundsDominating(
    assert(matrix != NULL);
    assert(0 <= row && row < SCIPmatrixGetNRows(matrix) );
    assert(0 <= coldominating && coldominating < SCIPmatrixGetNColumns(matrix));
-      assert(0 <= coldominated && coldominated < SCIPmatrixGetNColumns(matrix));
+   assert(0 <= coldominated && coldominated < SCIPmatrixGetNColumns(matrix));
 
    assert(ubcalculated != NULL);
    assert(calculatedub != NULL);
@@ -1223,7 +1223,7 @@ SCIP_RETCODE predBndStr(
 
          if( SCIPisLE(scip, lb, newub) && SCIPisLT(scip, newub, oldub) )
          {
-            SCIPdebugMessage("[ub]\tupper bound for dominating variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
+            SCIPdebugMsg(scip, "[ub]\tupper bound for dominating variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
                SCIPvarGetName(dominatingvar), lb, oldub, lb, newub);
             SCIP_CALL( SCIPchgVarUb(scip, dominatingvar, newub) );
             (*nchgbds)++;
@@ -1251,7 +1251,7 @@ SCIP_RETCODE predBndStr(
 
          if( SCIPisLT(scip, oldlb, newlb) && SCIPisLE(scip, newlb, ub) )
          {
-            SCIPdebugMessage("[lb]\tlower bound of dominating variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
+            SCIPdebugMsg(scip, "[lb]\tlower bound of dominating variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
                SCIPvarGetName(dominatingvar), oldlb, ub, newlb, ub);
             SCIP_CALL( SCIPchgVarLb(scip, dominatingvar, newlb) );
             (*nchgbds)++;
@@ -1280,7 +1280,7 @@ SCIP_RETCODE predBndStr(
 
          if( SCIPisLT(scip, oldlb, newlb) && SCIPisLE(scip, newlb, ub) )
          {
-            SCIPdebugMessage("[wcub]\tlower bound of dominating variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
+            SCIPdebugMsg(scip, "[wcub]\tlower bound of dominating variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
                SCIPvarGetName(dominatingvar), oldlb, ub, newlb, ub);
             SCIP_CALL( SCIPchgVarLb(scip, dominatingvar, newlb) );
             (*nchgbds)++;
@@ -1307,7 +1307,7 @@ SCIP_RETCODE predBndStr(
 
          if( SCIPisLE(scip, lb, newub) && SCIPisLT(scip, newub, oldub) )
          {
-            SCIPdebugMessage("[ub]\tupper bound of dominated variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
+            SCIPdebugMsg(scip, "[ub]\tupper bound of dominated variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
                SCIPvarGetName(dominatedvar), lb, oldub, lb, newub);
             SCIP_CALL( SCIPchgVarUb(scip, dominatedvar, newub) );
             (*nchgbds)++;
@@ -1336,7 +1336,7 @@ SCIP_RETCODE predBndStr(
 
          if( SCIPisLE(scip, lb, newub) && SCIPisLT(scip, newub, oldub) )
          {
-            SCIPdebugMessage("[wclb]\tupper bound of dominated variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
+            SCIPdebugMsg(scip, "[wclb]\tupper bound of dominated variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
                SCIPvarGetName(dominatedvar), lb, oldub, lb, newub);
             SCIP_CALL( SCIPchgVarUb(scip, dominatedvar, newub) );
             (*nchgbds)++;
@@ -1360,7 +1360,7 @@ SCIP_RETCODE predBndStr(
 
          if( SCIPisLT(scip, oldlb, newlb) && SCIPisLE(scip, newlb, ub) )
          {
-            SCIPdebugMessage("[lb]\tlower bound of dominated variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
+            SCIPdebugMsg(scip, "[lb]\tlower bound of dominated variable <%s> changed: [%.17f,%.17f] -> [%.17f,%.17f]\n",
                SCIPvarGetName(dominatedvar), oldlb, ub, newlb, ub);
             SCIP_CALL( SCIPchgVarLb(scip, dominatedvar, newlb) );
             (*nchgbds)++;
@@ -1682,7 +1682,7 @@ SCIP_RETCODE findDominancePairs(
          tmpwcupperbounddominatedcol2 = tmpwcupperbounddominatedcol1;
 
          /* compare rows of this column pair */
-         while( (col1domcol2 || col2domcol1) && (r1 < nrows1 || r2 < nrows2))
+         while( (col1domcol2 || col2domcol1) && (r1 < nrows1 || r2 < nrows2) )
          {
             assert((r1 >= nrows1-1) || (rows1[r1] < rows1[r1+1]));
             assert((r2 >= nrows2-1) || (rows2[r2] < rows2[r2+1]));
@@ -1736,13 +1736,15 @@ SCIP_RETCODE findDominancePairs(
                assert(rows1[r1] == rows2[r2]);
 
                /* if both columns are binary variables we check if they have a common clique
-                  and do not calculate any bounds */
+                * and do not calculate any bounds
+                */
                if( onlybinvars && !onlyoneone )
                {
-                  if( vals1[r1]<0 && vals2[r2]<0 )
+                  if( vals1[r1] < 0 && vals2[r2] < 0 )
                   {
                      if( (SCIPmatrixGetRowNMaxActPosInf(matrix, rows1[r1]) + SCIPmatrixGetRowNMaxActNegInf(matrix, rows1[r1]) == 0)
-                        && SCIPisFeasLE(scip, SCIPmatrixGetRowMaxActivity(matrix, rows1[r1]) + MAX(vals1[r1], vals2[r2]), SCIPmatrixGetRowLhs(matrix, rows1[r1])) )
+                        && SCIPisFeasLE(scip, SCIPmatrixGetRowMaxActivity(matrix, rows1[r1]) + MAX(vals1[r1], vals2[r2]),
+                           SCIPmatrixGetRowLhs(matrix, rows1[r1])) )
                      {
                         onlyoneone = TRUE;
                      }
@@ -1750,10 +1752,11 @@ SCIP_RETCODE findDominancePairs(
 
                   if( !onlyoneone && !SCIPmatrixIsRowRhsInfinity(matrix, rows1[r1]) )
                   {
-                     if ( vals1[r1]>0 && vals2[r2]>0 )
+                     if ( vals1[r1] > 0 && vals2[r2] > 0 )
                      {
                         if( (SCIPmatrixGetRowNMinActPosInf(matrix, rows1[r1]) + SCIPmatrixGetRowNMinActNegInf(matrix, rows1[r1]) == 0)
-                           && SCIPisFeasGE(scip, SCIPmatrixGetRowMinActivity(matrix, rows1[r1]) + MIN(vals1[r1], vals2[r2]), SCIPmatrixGetRowRhs(matrix, rows1[r1])) )
+                           && SCIPisFeasGE(scip, SCIPmatrixGetRowMinActivity(matrix, rows1[r1]) + MIN(vals1[r1], vals2[r2]),
+                              SCIPmatrixGetRowRhs(matrix, rows1[r1])) )
                         {
                            onlyoneone = TRUE;
                         }
@@ -1803,8 +1806,9 @@ SCIP_RETCODE findDominancePairs(
                }
 
                /* we do not use bound calulations if two binary variable are in one common clique.
-                  for the other cases we claim the same sign for the coefficients to
-                  achieve monotonically decreasing predictive bound functions. */
+                * for the other cases we claim the same sign for the coefficients to
+                * achieve monotonically decreasing predictive bound functions.
+                */
                if( !onlyoneone &&
                   ((vals1[r1] < 0 && vals2[r2] < 0) || (vals1[r1] > 0 && vals2[r2] > 0)) )
                {
@@ -1967,7 +1971,7 @@ SCIP_DECL_PRESOLFREE(presolFreeDomcol)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
-   SCIPfreeMemory(scip, &presoldata);
+   SCIPfreeBlockMemory(scip, &presoldata);
    SCIPpresolSetData(presol, NULL);
 
    return SCIP_OKAY;
@@ -2097,7 +2101,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
                var = SCIPmatrixGetVar(matrix, varidx);
 
                /* we only regard variables which were not processed yet and
-                  are present within equalities or ranged rows */
+                * are present within equalities or ranged rows
+                */
                if( !varsprocessed[varidx] && varineq[varidx] )
                {
                   /* we search only for dominance relations between the same variable type */
@@ -2304,7 +2309,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
                SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
                if( infeasible )
                {
-                  SCIPdebugMessage(" -> infeasible fixing\n");
+                  SCIPdebugMsg(scip, " -> infeasible fixing\n");
                   *result = SCIP_CUTOFF;
 
                   break;
@@ -2332,7 +2337,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
                SCIP_CALL( SCIPfixVar(scip, var, ub, &infeasible, &fixed) );
                if( infeasible )
                {
-                  SCIPdebugMessage(" -> infeasible fixing\n");
+                  SCIPdebugMsg(scip, " -> infeasible fixing\n");
                   *result = SCIP_CUTOFF;
 
                   break;
@@ -2369,7 +2374,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 #ifdef SCIP_DEBUG
       if( (nconvarsfixed + nintvarsfixed + nbinvarsfixed) > 0 )
       {
-         SCIPdebugMessage("### %d vars [%" SCIP_LONGINT_FORMAT " dom] => fixed [cont: %d, int: %d, bin: %d], %scutoff detected\n",
+         SCIPdebugMsg(scip, "### %d vars [%" SCIP_LONGINT_FORMAT " dom] => fixed [cont: %d, int: %d, bin: %d], %scutoff detected\n",
             ncols, ndomrelations, nconvarsfixed, nintvarsfixed, nbinvarsfixed, (*result != SCIP_CUTOFF) ? "no " : "");
       }
 #endif
@@ -2393,7 +2398,7 @@ SCIP_RETCODE SCIPincludePresolDomcol(
    SCIP_PRESOL* presol;
 
    /* create domcol presolver data */
-   SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,

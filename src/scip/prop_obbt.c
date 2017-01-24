@@ -152,6 +152,7 @@ struct SCIP_PropData
    int                   orderingalgo;       /**< which type of ordering algorithm should we use?
                                               *   (0: no, 1: greedy, 2: greedy reverse) */
    int                   nbounds;            /**< length of interesting bounds array */
+   int                   boundssize;         /**< size of bounds array */
    int                   nminfilter;         /**< minimal number of filtered bounds to apply another filter round */
    int                   nfiltered;          /**< number of filtered bounds by solving auxiliary variables */
    int                   ntrivialfiltered;   /**< number of filtered bounds because the LP value was equal to the bound */
@@ -218,25 +219,25 @@ SCIP_RETCODE solveLP(
       switch( lpsolstat )
       {
       case SCIP_LPSOLSTAT_ITERLIMIT:
-         SCIPdebugMessage("   reached lp iteration limit\n");
+         SCIPdebugMsg(scip, "   reached lp iteration limit\n");
          break;
       case SCIP_LPSOLSTAT_TIMELIMIT:
-         SCIPdebugMessage("   reached time limit while solving lp\n");
+         SCIPdebugMsg(scip, "   reached time limit while solving lp\n");
          break;
       case SCIP_LPSOLSTAT_UNBOUNDEDRAY:
-         SCIPdebugMessage("   lp was unbounded\n");
+         SCIPdebugMsg(scip, "   lp was unbounded\n");
          break;
       case SCIP_LPSOLSTAT_NOTSOLVED:
-         SCIPdebugMessage("   lp was not solved\n");
+         SCIPdebugMsg(scip, "   lp was not solved\n");
          break;
       case SCIP_LPSOLSTAT_ERROR:
-         SCIPdebugMessage("   an error occured during solving lp\n");
+         SCIPdebugMsg(scip, "   an error occured during solving lp\n");
          break;
       case SCIP_LPSOLSTAT_INFEASIBLE:
       case SCIP_LPSOLSTAT_OBJLIMIT:
       case SCIP_LPSOLSTAT_OPTIMAL: /* should not appear because it is handled earlier */
       default:
-         SCIPdebugMessage("   received an unexpected solstat during solving lp: %d\n", lpsolstat);
+         SCIPdebugMsg(scip, "   received an unexpected solstat during solving lp: %d\n", lpsolstat);
       }
    }
 #endif
@@ -265,11 +266,11 @@ SCIP_RETCODE addObjCutoff(
 
    if( SCIPisInfinity(scip, SCIPgetCutoffbound(scip)) )
    {
-      SCIPdebugMessage("no objective cutoff since there is no cutoff bound\n");
+      SCIPdebugMsg(scip, "no objective cutoff since there is no cutoff bound\n");
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("create objective cutoff and add it to the LP\n");
+   SCIPdebugMsg(scip, "create objective cutoff and add it to the LP\n");
 
    /* get variables data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -394,7 +395,7 @@ int getIterationsLeft(
 
    if( itlimit == -1 )
    {
-      SCIPdebugMessage("iterations left: unlimited\n");
+      SCIPdebugMsg(scip, "iterations left: unlimited\n");
       return -1;
    }
    else
@@ -403,7 +404,7 @@ int getIterationsLeft(
       itsleft = MAX(itsleft, 0);
       itsleft = MIN(itsleft, INT_MAX);
 
-      SCIPdebugMessage("iterations left: %d\n", (int) itsleft);
+      SCIPdebugMsg(scip, "iterations left: %d\n", (int) itsleft);
       return (int) itsleft;
    }
 }
@@ -510,7 +511,7 @@ SCIP_RETCODE createGenVBound(
     */
    assert(SCIPgetDepth(scip) == 0 || (SCIPinProbing(scip) && SCIPgetDepth(scip) == 1));
 
-   SCIPdebugMessage("      try to create a genvbound for <%s>...\n", SCIPvarGetName(bound->var));
+   SCIPdebugMsg(scip, "      try to create a genvbound for <%s>...\n", SCIPvarGetName(bound->var));
 
    /* a genvbound with a multiplier for x_i would not help us */
    if( SCIPisZero(scip, SCIPgetVarRedcost(scip, bound->var)) )
@@ -627,7 +628,7 @@ SCIP_RETCODE createGenVBound(
          /* add genvbound */
          if( addgenvbound && !SCIPisInfinity(scip, -c) )
          {
-            SCIPdebugMessage("         adding genvbound\n");
+            SCIPdebugMsg(scip, "         adding genvbound\n");
             SCIP_CALL( SCIPgenVBoundAdd(scip, propdata->genvboundprop, genvboundvars, xi, genvboundcoefs, ncoefs,
                   !SCIPisPositive(scip, gamma_dual) ? 0.0 : -gamma_dual, c, bound->boundtype) );
 
@@ -640,12 +641,12 @@ SCIP_RETCODE createGenVBound(
       }
       else
       {
-         SCIPdebugMessage("         trivial genvbound, skipping\n");
+         SCIPdebugMsg(scip, "         trivial genvbound, skipping\n");
       }
    }
    else
    {
-      SCIPdebugMessage("         found multiplier for <%s>: %g, skipping\n",
+      SCIPdebugMsg(scip, "         found multiplier for <%s>: %g, skipping\n",
          SCIPvarGetName(bound->var), SCIPgetVarRedcost(scip, bound->var));
    }
 
@@ -697,7 +698,7 @@ SCIP_RETCODE filterExistingLP(
    /* only apply filtering if an LP solution is at hand */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
    {
-      SCIPdebugMessage("can't filter using existing lp solution since it was not solved to optimality\n");
+      SCIPdebugMsg(scip, "can't filter using existing lp solution since it was not solved to optimality\n");
       return SCIP_OKAY;
    }
 
@@ -725,7 +726,7 @@ SCIP_RETCODE filterExistingLP(
 
          /* mark bound as filtered */
          bound->filtered = TRUE;
-         SCIPdebugMessage("trivial filtered var: %s boundval=%e solval=%e\n", SCIPvarGetName(bound->var), boundval, solval);
+         SCIPdebugMsg(scip, "trivial filtered var: %s boundval=%e solval=%e\n", SCIPvarGetName(bound->var), boundval, solval);
 
          /* get the basis status of the variable */
          basestat = SCIPcolGetBasisStatus(SCIPvarGetCol(bound->var));
@@ -772,7 +773,7 @@ SCIP_RETCODE filterExistingLP(
                if( found )
                {
                   propdata->ngenvboundstrivfil += 1;
-                  SCIPdebugMessage("found genvbound during trivial filtering\n");
+                  SCIPdebugMsg(scip, "found genvbound during trivial filtering\n");
                }
             }
 
@@ -835,7 +836,7 @@ SCIP_RETCODE filterRound(
 
    if( !optimal )
    {
-      SCIPdebugMessage("skipping filter round since the LP was not solved to optimality\n");
+      SCIPdebugMsg(scip, "skipping filter round since the LP was not solved to optimality\n");
       return SCIP_OKAY;
    }
 
@@ -917,7 +918,7 @@ SCIP_RETCODE filterRound(
                if( found )
                {
                   propdata->ngenvboundsaggrfil += 1;
-                  SCIPdebugMessage("found genvbound during aggressive filtering\n");
+                  SCIPdebugMsg(scip, "found genvbound during aggressive filtering\n");
                }
 
             }
@@ -986,7 +987,7 @@ SCIP_RETCODE filterBounds(
    /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
-   SCIPdebugMessage("start filter rounds\n");
+   SCIPdebugMsg(scip, "start filter rounds\n");
 
    SCIP_CALL( SCIPallocBufferArray(scip, &objcoefs, propdata->nbounds) );
    SCIP_CALL( SCIPallocBufferArray(scip, &objcoefsinds, propdata->nbounds) );
@@ -1024,10 +1025,10 @@ SCIP_RETCODE filterBounds(
 
    do
    {
-      SCIPdebugMessage("doing a lower bounds round\n");
+      SCIPdebugMsg(scip, "doing a lower bounds round\n");
       SCIP_CALL( filterRound(scip, propdata, nleftiterations, &nfiltered, objcoefs, objcoefsinds, nobjcoefs) );
       ntotalfiltered += nfiltered;
-      SCIPdebugMessage("filtered %d more bounds in lower bounds round\n", nfiltered);
+      SCIPdebugMsg(scip, "filtered %d more bounds in lower bounds round\n", nfiltered);
 
       /* update iterations left */
       nleftiterations = getIterationsLeft(scip, nolditerations, itlimit);
@@ -1079,16 +1080,16 @@ SCIP_RETCODE filterBounds(
 
    do
    {
-      SCIPdebugMessage("doing an upper bounds round\n");
+      SCIPdebugMsg(scip, "doing an upper bounds round\n");
       SCIP_CALL( filterRound(scip, propdata, nleftiterations, &nfiltered, objcoefs, objcoefsinds, nobjcoefs) );
-      SCIPdebugMessage("filtered %d more bounds in upper bounds round\n", nfiltered);
+      SCIPdebugMsg(scip, "filtered %d more bounds in upper bounds round\n", nfiltered);
       ntotalfiltered += nfiltered;
       /* update iterations left */
       nleftiterations = getIterationsLeft(scip, nolditerations, itlimit);
    }
    while( nfiltered >= propdata->nminfilter && ( nleftiterations == -1 ||  nleftiterations > 0 ) );
 
-   SCIPdebugMessage("filtered %d this round\n", ntotalfiltered);
+   SCIPdebugMsg(scip, "filtered %d this round\n", ntotalfiltered);
    propdata->nfiltered += ntotalfiltered;
 
    /* free array */
@@ -1146,13 +1147,13 @@ SCIP_RETCODE applyBoundChgs(
          if( infeas )
          {
             *result = SCIP_CUTOFF;
-            SCIPdebugMessage("cut off\n");
+            SCIPdebugMsg(scip, "cut off\n");
             break;
          }
 
          if( tightened )
          {
-            SCIPdebug( SCIPdebugMessage("tightended: %s old: %e new: %e\n" , SCIPvarGetName(bound->var), oldbound,
+            SCIPdebug( SCIPdebugMsg(scip, "tightended: %s old: %e new: %e\n" , SCIPvarGetName(bound->var), oldbound,
                   bound->newval) );
             *result = SCIP_REDUCEDDOM;
             SCIPdebug( ntightened++ );
@@ -1160,7 +1161,7 @@ SCIP_RETCODE applyBoundChgs(
       }
    }
 
-   SCIPdebug( SCIPdebugMessage("tightened bounds: %d\n", ntightened) );
+   SCIPdebug( SCIPdebugMsg(scip, "tightened bounds: %d\n", ntightened) );
 
    return SCIP_OKAY;
 }
@@ -1272,7 +1273,7 @@ SCIP_RETCODE sortBounds(
    assert(scip != NULL);
    assert(propdata != NULL);
 
-   SCIPdebugMessage("sort bounds\n");
+   SCIPdebugMsg(scip, "sort bounds\n");
    SCIPsortDownPtr((void**) propdata->bounds, compBoundsBoundtype, propdata->nbounds);
 
    return SCIP_OKAY;
@@ -1382,7 +1383,7 @@ SCIP_RETCODE applySeparation(
 
       /* find and store cuts to separate the current LP solution */
       SCIP_CALL( SCIPseparateSol(scip, NULL, inroot, FALSE, &delayed, &cutoff) );
-      SCIPdebugMessage("applySeparation() - ncuts = %d\n", SCIPgetNCuts(scip));
+      SCIPdebugMsg(scip, "applySeparation() - ncuts = %d\n", SCIPgetNCuts(scip));
 
       /* leave if we did not found any cut */
       if( SCIPgetNCuts(scip) == 0 )
@@ -1394,8 +1395,8 @@ SCIP_RETCODE applySeparation(
       nlpiter = SCIPgetNLPIterations(scip);
       SCIP_CALL( solveLP(scip, (int) *nleftiterations, &error, &optimal) );
       nlpiter = SCIPgetNLPIterations(scip) - nlpiter;
-      SCIPdebugMessage("applySeparation() - optimal=%u error=%u lpiter=%" SCIP_LONGINT_FORMAT "\n", optimal, error, nlpiter);
-      SCIPdebugMessage("oldval = %e newval = %e\n", oldval, SCIPvarGetLPSol(currbound->var));
+      SCIPdebugMsg(scip, "applySeparation() - optimal=%u error=%u lpiter=%" SCIP_LONGINT_FORMAT "\n", optimal, error, nlpiter);
+      SCIPdebugMsg(scip, "oldval = %e newval = %e\n", oldval, SCIPvarGetLPSol(currbound->var));
 
       /* leave if we did not solve the LP to optimality or an error occured */
       if( error || !optimal )
@@ -1414,7 +1415,7 @@ SCIP_RETCODE applySeparation(
       if( !SCIPisEQ(scip, oldval, SCIPvarGetLPSol(currbound->var)) )
       {
          SCIP_CALL( tightenBoundProbing(scip, currbound, SCIPvarGetLPSol(currbound->var), &tightened) );
-         SCIPdebugMessage("apply separation - tightened=%u oldval=%e newval=%e\n", tightened, oldval,
+         SCIPdebugMsg(scip, "apply separation - tightened=%u oldval=%e newval=%e\n", tightened, oldval,
             SCIPvarGetLPSol(currbound->var));
 
          *success |= tightened;
@@ -1465,7 +1466,7 @@ SCIP_RETCODE findNewBounds(
       /* if the first bound is filtered or done then there is no bound left */
       if( propdata->bounds[0]->done || propdata->bounds[0]->filtered )
       {
-         SCIPdebugMessage("no unprocessed/unfiltered bound left\n");
+         SCIPdebugMsg(scip, "no unprocessed/unfiltered bound left\n");
          return SCIP_OKAY;
       }
 
@@ -1475,7 +1476,7 @@ SCIP_RETCODE findNewBounds(
             !propdata->bounds[propdata->lastidx]->filtered )
          ++propdata->lastidx;
 
-      SCIPdebugMessage("lastidx = %d\n", propdata->lastidx);
+      SCIPdebugMsg(scip, "lastidx = %d\n", propdata->lastidx);
    }
 
    /* find the first unprocessed bound */
@@ -1484,7 +1485,7 @@ SCIP_RETCODE findNewBounds(
    /* skip if there is no bound left */
    if( nextboundidx == -1 )
    {
-      SCIPdebugMessage("no unprocessed/unfiltered bound left\n");
+      SCIPdebugMsg(scip, "no unprocessed/unfiltered bound left\n");
       return SCIP_OKAY;
    }
 
@@ -1509,13 +1510,13 @@ SCIP_RETCODE findNewBounds(
       /* set objective for curr */
       SCIP_CALL( setObjProbing(scip, propdata, currbound, 1.0) );
 
-      SCIPdebugMessage("before solving      Boundtype: %d , LB: %e , UB: %e\n",
+      SCIPdebugMsg(scip, "before solving      Boundtype: %d , LB: %e , UB: %e\n",
          currbound->boundtype == SCIP_BOUNDTYPE_LOWER, SCIPvarGetLbLocal(currbound->var),
          SCIPvarGetUbLocal(currbound->var) );
-      SCIPdebugMessage("before solving      var <%s>, LP value: %f\n",
+      SCIPdebugMsg(scip, "before solving      var <%s>, LP value: %f\n",
          SCIPvarGetName(currbound->var), SCIPvarGetLPSol(currbound->var));
 
-      SCIPdebugMessage("probing iterations before solve: %lld \n", SCIPgetNLPIterations(scip));
+      SCIPdebugMsg(scip, "probing iterations before solve: %lld \n", SCIPgetNLPIterations(scip));
 
       propdata->nprobingiterations -= SCIPgetNLPIterations(scip);
 
@@ -1525,12 +1526,12 @@ SCIP_RETCODE findNewBounds(
       propdata->nprobingiterations += SCIPgetNLPIterations(scip);
       propdata->nsolvedbounds++;
 
-      SCIPdebugMessage("probing iterations after solve: %lld \n", SCIPgetNLPIterations(scip));
-      SCIPdebugMessage("OPT: %u ERROR: %u\n" , optimal, error);
-      SCIPdebugMessage("after solving      Boundtype: %d , LB: %e , UB: %e\n",
+      SCIPdebugMsg(scip, "probing iterations after solve: %lld \n", SCIPgetNLPIterations(scip));
+      SCIPdebugMsg(scip, "OPT: %u ERROR: %u\n" , optimal, error);
+      SCIPdebugMsg(scip, "after solving      Boundtype: %d , LB: %e , UB: %e\n",
          currbound->boundtype == SCIP_BOUNDTYPE_LOWER, SCIPvarGetLbLocal(currbound->var),
          SCIPvarGetUbLocal(currbound->var) );
-      SCIPdebugMessage("after solving      var <%s>, LP value: %f\n",
+      SCIPdebugMsg(scip, "after solving      var <%s>, LP value: %f\n",
          SCIPvarGetName(currbound->var), SCIPvarGetLPSol(currbound->var));
 
       /* update nleftiterations */
@@ -1539,7 +1540,7 @@ SCIP_RETCODE findNewBounds(
 
       if( error )
       {
-         SCIPdebugMessage("ERROR during LP solving\n");
+         SCIPdebugMsg(scip, "ERROR during LP solving\n");
 
          /* set the objective of currbound to zero to null the whole objective; otherwise the objective is wrong when
           * we call findNewBounds() for the convex phase
@@ -1572,17 +1573,17 @@ SCIP_RETCODE findNewBounds(
          success = FALSE;
          if( propdata->tightintboundsprobing && SCIPvarIsIntegral(currbound->var) )
          {
-            SCIPdebugMessage("tightening bound %s = %e bounds: [%e, %e]\n", SCIPvarGetName(currbound->var),
+            SCIPdebugMsg(scip, "tightening bound %s = %e bounds: [%e, %e]\n", SCIPvarGetName(currbound->var),
                 currbound->newval, SCIPvarGetLbLocal(currbound->var), SCIPvarGetUbLocal(currbound->var) );
             SCIP_CALL( tightenBoundProbing(scip, currbound, currbound->newval, &success) );
-            SCIPdebugMessage("tightening bound %s\n", success ? "successful" : "not successful");
+            SCIPdebugMsg(scip, "tightening bound %s\n", success ? "successful" : "not successful");
          }
          else if( propdata->tightcontboundsprobing && !SCIPvarIsIntegral(currbound->var) )
          {
-            SCIPdebugMessage("tightening bound %s = %e bounds: [%e, %e]\n", SCIPvarGetName(currbound->var),
+            SCIPdebugMsg(scip, "tightening bound %s = %e bounds: [%e, %e]\n", SCIPvarGetName(currbound->var),
                currbound->newval, SCIPvarGetLbLocal(currbound->var), SCIPvarGetUbLocal(currbound->var) );
             SCIP_CALL( tightenBoundProbing(scip, currbound, currbound->newval, &success) );
-            SCIPdebugMessage("tightening bound %s\n", success ? "successful" : "not successful");
+            SCIPdebugMsg(scip, "tightening bound %s\n", success ? "successful" : "not successful");
          }
 
          /* separate current OBBT LP solution */
@@ -1617,7 +1618,7 @@ SCIP_RETCODE findNewBounds(
          if( propdata->applytrivialfilter )
          {
             SCIP_CALL( filterExistingLP(scip, propdata, &nfiltered, currbound) );
-            SCIPdebugMessage("filtered %d bounds via inspecting present LP solution\n", nfiltered);
+            SCIPdebugMsg(scip, "filtered %d bounds via inspecting present LP solution\n", nfiltered);
             propdata->ntrivialfiltered += nfiltered;
          }
 
@@ -1630,7 +1631,7 @@ SCIP_RETCODE findNewBounds(
             SCIP_Bool cutoff;
 
             SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, &ndomredsfound) );
-            SCIPdebugMessage("propagation - cutoff %u  ndomreds %" SCIP_LONGINT_FORMAT "\n", cutoff, ndomredsfound);
+            SCIPdebugMsg(scip, "propagation - cutoff %u  ndomreds %" SCIP_LONGINT_FORMAT "\n", cutoff, ndomredsfound);
 
             propdata->npropagatedomreds += ndomredsfound;
             propdata->propagatecounter = 0;
@@ -1646,7 +1647,7 @@ SCIP_RETCODE findNewBounds(
       /* check if there is no unprocessed and unfiltered node left */
       if( nextboundidx == -1 )
       {
-         SCIPdebugMessage("NO unvisited/unfiltered bound left!\n");
+         SCIPdebugMsg(scip, "NO unvisited/unfiltered bound left!\n");
          break;
       }
 
@@ -1656,11 +1657,11 @@ SCIP_RETCODE findNewBounds(
 
    if( iterationsleft )
    {
-      SCIPdebugMessage("still iterations left: %" SCIP_LONGINT_FORMAT "\n", *nleftiterations);
+      SCIPdebugMsg(scip, "still iterations left: %" SCIP_LONGINT_FORMAT "\n", *nleftiterations);
    }
    else
    {
-      SCIPdebugMessage("no iterations left\n");
+      SCIPdebugMsg(scip, "no iterations left\n");
    }
 
    return SCIP_OKAY;
@@ -1695,7 +1696,7 @@ SCIP_RETCODE applyObbt(
    assert(propdata != NULL);
    assert(itlimit == -1 || itlimit >= 0);
 
-   SCIPdebugMessage("apply obbt\n");
+   SCIPdebugMsg(scip, "apply obbt\n");
 
    oldlbs = NULL;
    oldubs = NULL;
@@ -1749,7 +1750,7 @@ SCIP_RETCODE applyObbt(
    if( propdata->applytrivialfilter && !continuenode )
    {
       SCIP_CALL( filterExistingLP(scip, propdata, &nfiltered, NULL) );
-      SCIPdebugMessage("filtered %d bounds via inspecting present LP solution\n", nfiltered);
+      SCIPdebugMsg(scip, "filtered %d bounds via inspecting present LP solution\n", nfiltered);
       propdata->ntrivialfiltered += nfiltered;
    }
 
@@ -1758,7 +1759,7 @@ SCIP_RETCODE applyObbt(
 
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
-   SCIPdebugMessage("start probing\n");
+   SCIPdebugMsg(scip, "start probing\n");
 
    /* tighten dual feastol */
    if( propdata->dualfeastol < olddualfeastol )
@@ -1850,14 +1851,14 @@ SCIP_RETCODE applyObbt(
 
             if( bound->boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisLbBetter(scip, SCIPvarGetLbLocal(bound->var), oldlb, oldub) )
             {
-               SCIPdebugMessage("tighter lower bound due to propagation: %d - %e -> %e\n", i, oldlb, SCIPvarGetLbLocal(bound->var));
+               SCIPdebugMsg(scip, "tighter lower bound due to propagation: %d - %e -> %e\n", i, oldlb, SCIPvarGetLbLocal(bound->var));
                bound->newval = SCIPvarGetLbLocal(bound->var);
                bound->found = TRUE;
             }
 
             if( bound->boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisUbBetter(scip, SCIPvarGetUbLocal(bound->var), oldlb, oldub) )
             {
-               SCIPdebugMessage("tighter upper bound due to propagation: %d - %e -> %e\n", i, oldub, SCIPvarGetUbLocal(bound->var));
+               SCIPdebugMsg(scip, "tighter upper bound due to propagation: %d - %e -> %e\n", i, oldub, SCIPvarGetUbLocal(bound->var));
                bound->newval = SCIPvarGetUbLocal(bound->var);
                bound->found = TRUE;
             }
@@ -1870,7 +1871,7 @@ SCIP_RETCODE applyObbt(
 
    /* end probing */
    SCIP_CALL( SCIPendProbing(scip) );
-   SCIPdebugMessage("end probing!\n");
+   SCIPdebugMsg(scip, "end probing!\n");
 
    /* release cutoff row if there is one */
    if( propdata->cutoffrow != NULL )
@@ -2027,11 +2028,11 @@ SCIP_RETCODE getNLPVarsNonConvexity(
    if( conshdlr != NULL )
    {
 
-      /*SCIPdebugMessage("cons_quadratic is there!\n");*/
+      /*SCIPdebugMsg(scip, "cons_quadratic is there!\n");*/
       nconss = SCIPconshdlrGetNActiveConss(conshdlr);
       conss = SCIPconshdlrGetConss(conshdlr);
 
-      SCIPdebugMessage("nconss(quadratic) = %d\n", nconss);
+      SCIPdebugMsg(scip, "nconss(quadratic) = %d\n", nconss);
 
       for( i = 0; i < nconss; ++i )
       {
@@ -2054,7 +2055,7 @@ SCIP_RETCODE getNLPVarsNonConvexity(
       nconss = SCIPconshdlrGetNActiveConss(conshdlr);
       conss = SCIPconshdlrGetConss(conshdlr);
 
-      SCIPdebugMessage("nconss(nonlinear) = %d\n", nconss);
+      SCIPdebugMsg(scip, "nconss(nonlinear) = %d\n", nconss);
 
       for( i = 0; i < nconss; ++i )
       {
@@ -2080,7 +2081,7 @@ SCIP_RETCODE getNLPVarsNonConvexity(
       nconss = SCIPconshdlrGetNActiveConss(conshdlr);
       conss = SCIPconshdlrGetConss(conshdlr);
 
-      SCIPdebugMessage("nconss(bivariate) = %d\n", nconss);
+      SCIPdebugMsg(scip, "nconss(bivariate) = %d\n", nconss);
 
       for( i = 0; i < nconss; ++i )
       {
@@ -2127,7 +2128,7 @@ SCIP_RETCODE getNLPVarsNonConvexity(
       nconss = SCIPconshdlrGetNActiveConss(conshdlr);
       conss = SCIPconshdlrGetConss(conshdlr);
 
-      SCIPdebugMessage("nconss(abspower) = %d\n", nconss);
+      SCIPdebugMsg(scip, "nconss(abspower) = %d\n", nconss);
 
       for( i = 0; i < nconss; ++i )
       {
@@ -2180,7 +2181,7 @@ SCIP_RETCODE initBounds(
    assert(propdata != NULL);
    assert(SCIPisNLPConstructed(scip));
 
-   SCIPdebugMessage("initialize bounds\n");
+   SCIPdebugMsg(scip, "initialize bounds\n");
 
    /* get variable data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -2202,7 +2203,8 @@ SCIP_RETCODE initBounds(
    }
 
    /* allocate interesting bounds array */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->bounds), 2 * nvars) );
+   propdata->boundssize = 2 * nvars;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->bounds), 2 * nvars) );
 
    /* get all interesting variables and their bounds */
    bdidx = 0;
@@ -2214,7 +2216,7 @@ SCIP_RETCODE initBounds(
 
          /* create lower bound */
          bdaddress = &(propdata->bounds[bdidx]);
-         SCIP_CALL( SCIPallocMemory(scip, bdaddress) );
+         SCIP_CALL( SCIPallocBlockMemory(scip, bdaddress) );
          propdata->bounds[bdidx]->boundtype = SCIP_BOUNDTYPE_LOWER;
          propdata->bounds[bdidx]->var = vars[i];
          propdata->bounds[bdidx]->found = FALSE;
@@ -2228,7 +2230,7 @@ SCIP_RETCODE initBounds(
 
          /* create upper bound */
          bdaddress = &(propdata->bounds[bdidx]);
-         SCIP_CALL( SCIPallocMemory(scip, bdaddress) );
+         SCIP_CALL( SCIPallocBlockMemory(scip, bdaddress) );
          propdata->bounds[bdidx]->boundtype = SCIP_BOUNDTYPE_UPPER;
          propdata->bounds[bdidx]->var = vars[i];
          propdata->bounds[bdidx]->found = FALSE;
@@ -2245,8 +2247,8 @@ SCIP_RETCODE initBounds(
    /* free memory for buffering nonlinearities */
    assert(nlcount != NULL);
    assert(nccount != NULL);
-   SCIPfreeBufferArray(scip, &nlcount);
    SCIPfreeBufferArray(scip, &nccount);
+   SCIPfreeBufferArray(scip, &nlcount);
 
    /* set number of interesting bounds */
    propdata->nbounds = bdidx;
@@ -2255,10 +2257,11 @@ SCIP_RETCODE initBounds(
    if( propdata->nbounds <= 0 )
    {
       assert(propdata->nbounds == 0);
-      SCIPfreeMemoryArray(scip, &(propdata->bounds));
+      assert(propdata->boundssize >= 0 );
+      SCIPfreeBlockMemoryArray(scip, &(propdata->bounds), propdata->boundssize);
    }
 
-   SCIPdebugMessage("problem has %d/%d interesting bounds\n", propdata->nbounds, 2 * nvars);
+   SCIPdebugMsg(scip, "problem has %d/%d interesting bounds\n", propdata->nbounds, 2 * nvars);
 
    if( propdata->nbounds > 0 )
    {
@@ -2293,14 +2296,14 @@ SCIP_DECL_PROPINITSOL(propInitsolObbt)
 
    propdata->bounds = NULL;
    propdata->nbounds = -1;
+   propdata->boundssize = 0;
    propdata->cutoffrow = NULL;
    propdata->lastnode = -1;
-
 
    /* if genvbounds propagator is not available, we cannot create genvbounds */
    propdata->genvboundprop = propdata->creategenvbounds ? SCIPfindProp(scip, GENVBOUND_PROP_NAME) : NULL;
 
-   SCIPdebugMessage("creating genvbounds: %s\n", propdata->genvboundprop != NULL ? "true" : "false");
+   SCIPdebugMsg(scip, "creating genvbounds: %s\n", propdata->genvboundprop != NULL ? "true" : "false");
 
    return SCIP_OKAY;
 }
@@ -2325,7 +2328,7 @@ SCIP_DECL_PROPEXEC(propExecObbt)
    /* only run for nonlinear problems, i.e., if NLP is constructed */
    if( !SCIPisNLPConstructed(scip) )
    {
-      SCIPdebugMessage("NLP not constructed, skipping obbt\n");
+      SCIPdebugMsg(scip, "NLP not constructed, skipping obbt\n");
       return SCIP_OKAY;
    }
 
@@ -2334,7 +2337,7 @@ SCIP_DECL_PROPEXEC(propExecObbt)
     */
    if( !SCIPallColsInLP(scip) )
    {
-      SCIPdebugMessage("not all columns in LP, skipping obbt\n");
+      SCIPdebugMsg(scip, "not all columns in LP, skipping obbt\n");
       return SCIP_OKAY;
    }
 
@@ -2365,7 +2368,7 @@ SCIP_DECL_PROPEXEC(propExecObbt)
    /**@todo disable */
    if( propdata->nbounds <= 0 )
    {
-      SCIPdebugMessage("there are no interesting bounds\n");
+      SCIPdebugMsg(scip, "there are no interesting bounds\n");
       return SCIP_OKAY;
    }
 
@@ -2375,14 +2378,14 @@ SCIP_DECL_PROPEXEC(propExecObbt)
       return SCIP_OKAY;
    }
 
-   SCIPdebugMessage("applying obbt for problem <%s> at depth %d\n", SCIPgetProbName(scip), SCIPgetDepth(scip));
+   SCIPdebugMsg(scip, "applying obbt for problem <%s> at depth %d\n", SCIPgetProbName(scip), SCIPgetDepth(scip));
 
    /* without an optimal LP solution we don't want to run; this may be because propagators with higher priority have
     * already found reductions or numerical troubles occured during LP solving
     */
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL && SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_UNBOUNDEDRAY )
    {
-      SCIPdebugMessage("aborting since no optimal LP solution is at hand\n");
+      SCIPdebugMsg(scip, "aborting since no optimal LP solution is at hand\n");
       return SCIP_OKAY;
    }
 
@@ -2441,9 +2444,9 @@ SCIP_DECL_PROPEXITSOL(propExitsolObbt)
       /* free bounds */
       for( i = propdata->nbounds - 1; i >= 0; i-- )
       {
-         SCIPfreeMemory(scip, &(propdata->bounds[i]));
+         SCIPfreeBlockMemory(scip, &(propdata->bounds[i])); /*lint !e866*/
       }
-      SCIPfreeMemoryArray(scip, &(propdata->bounds));
+      SCIPfreeBlockMemoryArray(scip, &(propdata->bounds), propdata->boundssize);
    }
 
    propdata->nbounds = -1;
@@ -2463,7 +2466,7 @@ SCIP_DECL_PROPFREE(propFreeObbt)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   SCIPfreeMemory(scip, &propdata);
+   SCIPfreeBlockMemory(scip, &propdata);
 
    SCIPpropSetData(prop, NULL);
 
@@ -2484,7 +2487,7 @@ SCIP_RETCODE SCIPincludePropObbt(
    SCIP_PROP* prop;
 
    /* create obbt propagator data */
-   SCIP_CALL( SCIPallocMemory(scip, &propdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
 
    /* initialize statistic variables */
    propdata->nprobingiterations = 0;

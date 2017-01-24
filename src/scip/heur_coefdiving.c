@@ -27,7 +27,6 @@
 #include <string.h>
 
 #include "scip/heur_coefdiving.h"
-#include "scip/pub_dive.h"
 
 #define HEUR_NAME             "coefdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the matrix coefficients"
@@ -102,7 +101,7 @@ SCIP_DECL_HEURFREE(heurFreeCoefdiving) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -255,7 +254,7 @@ SCIP_RETCODE SCIPincludeHeurCoefdiving(
    SCIP_HEUR* heur;
 
    /* create coefdiving primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,

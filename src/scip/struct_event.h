@@ -176,8 +176,8 @@ struct SCIP_EventFilter
    int                   len;                /**< number entries in filter arrays (used and deleted) */
    int                   firstfreepos;       /**< first deleted slot; remaining slots are in poslist */
    int                   firstdeletedpos;    /**< first delayed deleted slot; remaining slots are in poslist */
-   unsigned int          eventmask;          /**< mask for events that are handled by any event handler in the filter */
-   unsigned int          delayedeventmask;   /**< mask for delayed added events */
+   SCIP_EVENTTYPE        eventmask;          /**< mask for events that are handled by any event handler in the filter */
+   SCIP_EVENTTYPE        delayedeventmask;   /**< mask for delayed added events */
    SCIP_Bool             delayupdates;       /**< should additions and deletions to the filter be delayed? */
 };
 

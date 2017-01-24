@@ -432,7 +432,7 @@ SCIP_DECL_HEURFREE(heurFreeRounding) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -573,7 +573,7 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
    /* get LP rows */
    SCIP_CALL( SCIPgetLPRowsData(scip, &lprows, &nlprows) );
 
-   SCIPdebugMessage("executing rounding heuristic: %d LP rows, %d fractionals\n", nlprows, nfrac);
+   SCIPdebugMsg(scip, "executing rounding heuristic: %d LP rows, %d fractionals\n", nlprows, nfrac);
 
    /* get memory for activities, violated rows, and row violation positions */
    SCIP_CALL( SCIPallocBufferArray(scip, &activities, nlprows) );
@@ -630,7 +630,7 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
       SCIP_Real oldsolval;
       SCIP_Real newsolval;
 
-      SCIPdebugMessage("rounding heuristic: nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
+      SCIPdebugMsg(scip, "rounding heuristic: nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
          nfrac, nviolrows, SCIPgetSolOrigObj(scip, sol), SCIPretransformObj(scip, minobj));
 
       /* minobj < SCIPgetCutoffbound(scip) should be true, otherwise the rounding variable selection
@@ -651,7 +651,7 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
          assert(0 <= rowpos && rowpos < nlprows);
          assert(violrowpos[rowpos] == nviolrows-1);
 
-         SCIPdebugMessage("rounding heuristic: try to fix violated row <%s>: %g <= %g <= %g\n",
+         SCIPdebugMsg(scip, "rounding heuristic: try to fix violated row <%s>: %g <= %g <= %g\n",
             SCIProwGetName(row), SCIProwGetLhs(row), activities[rowpos], SCIProwGetRhs(row));
          if( SCIPisFeasLT(scip, activities[rowpos], SCIProwGetLhs(row)) )
          {
@@ -667,18 +667,18 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
       }
       else
       {
-         SCIPdebugMessage("rounding heuristic: search rounding variable and try to stay feasible\n");
+         SCIPdebugMsg(scip, "rounding heuristic: search rounding variable and try to stay feasible\n");
          SCIP_CALL( selectEssentialRounding(scip, sol, minobj, lpcands, nlpcands, &roundvar, &oldsolval, &newsolval) );
       }
 
       /* check, whether rounding was possible */
       if( roundvar == NULL )
       {
-         SCIPdebugMessage("rounding heuristic:  -> didn't find a rounding variable\n");
+         SCIPdebugMsg(scip, "rounding heuristic:  -> didn't find a rounding variable\n");
          break;
       }
 
-      SCIPdebugMessage("rounding heuristic:  -> round var <%s>, oldval=%g, newval=%g, obj=%g\n",
+      SCIPdebugMsg(scip, "rounding heuristic:  -> round var <%s>, oldval=%g, newval=%g, obj=%g\n",
          SCIPvarGetName(roundvar), oldsolval, newsolval, SCIPvarGetObj(roundvar));
 
       /* update row activities of globally valid rows */
@@ -696,7 +696,7 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
       else if( obj < 0.0 && newsolval < oldsolval )
          minobj -= obj;
 
-      SCIPdebugMessage("rounding heuristic:  -> nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
+      SCIPdebugMsg(scip, "rounding heuristic:  -> nfrac=%d, nviolrows=%d, obj=%g (best possible obj: %g)\n",
          nfrac, nviolrows, SCIPgetSolOrigObj(scip, sol), SCIPretransformObj(scip, minobj));
    }
 
@@ -710,12 +710,12 @@ SCIP_DECL_HEUREXEC(heurExecRounding) /*lint --e{715}*/
        * done in the rounding heuristic itself; however, be better check feasibility of LP rows,
        * because of numerical problems with activity updating
        */
-      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, TRUE, &stored) );
+      SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, FALSE, TRUE, &stored) );
 
       if( stored )
       {
 #ifdef SCIP_DEBUG
-         SCIPdebugMessage("found feasible rounded solution:\n");
+         SCIPdebugMsg(scip, "found feasible rounded solution:\n");
          SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) );
 #endif
          *result = SCIP_FOUNDSOL;
@@ -744,7 +744,7 @@ SCIP_RETCODE SCIPincludeHeurRounding(
    SCIP_HEUR* heur;
 
    /* create Rounding primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,

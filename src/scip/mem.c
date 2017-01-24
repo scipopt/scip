@@ -66,6 +66,12 @@ SCIP_RETCODE SCIPmemFree(
    BMSdestroyBufferMemory(&(*mem)->cleanbuffer);
    BMSdestroyBufferMemory(&(*mem)->buffer);
 
+   /* print unfreed memory */
+#ifndef NDEBUG
+   (void) BMSblockMemoryCheckEmpty((*mem)->setmem);
+   (void) BMSblockMemoryCheckEmpty((*mem)->probmem);
+#endif
+
    /* free block memory */
    BMSdestroyBlockMemory(&(*mem)->probmem);
    BMSdestroyBlockMemory(&(*mem)->setmem);
@@ -84,4 +90,45 @@ SCIP_Longint SCIPmemGetUsed(
 
    return BMSgetBlockMemoryUsed(mem->setmem) + BMSgetBlockMemoryUsed(mem->probmem)
       + BMSgetBufferMemoryUsed(mem->buffer) + BMSgetBufferMemoryUsed(mem->cleanbuffer);
+}
+
+/** returns the total number of bytes in block and buffer memory */
+SCIP_Longint SCIPmemGetTotal(
+   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
+   )
+{
+   assert(mem != NULL);
+
+   return BMSgetBlockMemoryAllocated(mem->setmem) + BMSgetBlockMemoryAllocated(mem->probmem)
+      + BMSgetBufferMemoryUsed(mem->buffer) + BMSgetBufferMemoryUsed(mem->cleanbuffer);
+}
+
+/** returns the maximal number of used bytes in block memory */
+SCIP_Longint SCIPmemGetUsedBlockmemoryMax(
+   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
+   )
+{
+   assert(mem != NULL);
+
+   return BMSgetBlockMemoryUsedMax(mem->setmem) + BMSgetBlockMemoryUsedMax(mem->probmem);
+}
+
+/** returns the maximal number of allocated but not used bytes in block memory */
+SCIP_Longint SCIPmemGetUnusedBlockmemoryMax(
+   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
+   )
+{
+   assert(mem != NULL);
+
+   return BMSgetBlockMemoryUnusedMax(mem->setmem) + BMSgetBlockMemoryUnusedMax(mem->probmem);
+}
+
+/** returns the maximal number of allocated bytes in block memory */
+SCIP_Longint SCIPmemGetAllocatedBlockmemoryMax(
+   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
+   )
+{
+   assert(mem != NULL);
+
+   return BMSgetBlockMemoryAllocatedMax(mem->setmem) + BMSgetBlockMemoryAllocatedMax(mem->probmem);
 }

@@ -1,12 +1,12 @@
-/* $Id: lu_ratio.hpp 2506 2012-10-24 19:36:49Z bradbell $ */
-# ifndef CPPAD_LU_RATIO_INCLUDED
-# define CPPAD_LU_RATIO_INCLUDED
+// $Id$
+# ifndef CPPAD_LU_RATIO_HPP
+# define CPPAD_LU_RATIO_HPP
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-15 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
-the terms of the 
+the terms of the
                     Eclipse Public License Version 1.0.
 
 A copy of this license is included in the COPYING file of this distribution.
@@ -28,13 +28,9 @@ $spell
 	ADvector
 $$
 
-$index LuRatio$$
-$index linear, Lu factor equation$$
-$index equation, Lu factor$$
-$index determinant, Lu factor$$
-$index solve, Lu factor$$
 
 $section LU Factorization of A Square Matrix and Stability Calculation$$
+$mindex LuRatio linear equation solve$$
 
 $head Syntax$$
 $code# include <cppad/cppad.hpp>$$
@@ -44,7 +40,7 @@ $icode%sign% = LuRatio(%ip%, %jp%, %LU%, %ratio%)%$$
 
 
 $head Description$$
-Computes an LU factorization of the matrix $icode A$$ 
+Computes an LU factorization of the matrix $icode A$$
 where $icode A$$ is a square matrix.
 A measure of the numerical stability called $icode ratio$$ is calculated.
 This ratio is useful when the results of $code LuRatio$$ are
@@ -107,7 +103,7 @@ and the size of $icode LU$$ must equal $latex n * n$$
 (see description of $cref/ADvector/LuRatio/ADvector/$$ below).
 
 $subhead A$$
-We define $icode A$$ as the matrix corresponding to the input 
+We define $icode A$$ as the matrix corresponding to the input
 value of $icode LU$$.
 
 $subhead P$$
@@ -117,7 +113,7 @@ $codei%
 %$$
 
 $subhead L$$
-We define the lower triangular matrix $icode L$$ in terms of the 
+We define the lower triangular matrix $icode L$$ in terms of the
 output value of $icode LU$$.
 The matrix $icode L$$ is zero above the diagonal
 and the rest of the elements are defined by
@@ -143,17 +139,16 @@ $codei%
 	%L% * %U% = %P%
 %$$
 If the return value of $icode sign$$ is zero,
-the contents of $icode L$$ and $icode U$$ are not defined. 
+the contents of $icode L$$ and $icode U$$ are not defined.
 
 $subhead Determinant$$
-$index determinant$$
 If the return value $icode sign$$ is zero,
 the determinant of $icode A$$ is zero.
 If $icode sign$$ is non-zero,
 using the output value of $icode LU$$
 the determinant of the matrix $icode A$$ is equal to
 $codei%
-%sign% * %LU%[%ip%[0], %jp%[0]] * %...% * %LU%[%ip%[%n%-1], %jp%[%n%-1]] 
+%sign% * %LU%[%ip%[0], %jp%[0]] * %...% * %LU%[%ip%[%n%-1], %jp%[%n%-1]]
 %$$
 
 $head ratio$$
@@ -163,8 +158,8 @@ $codei%
 %$$
 On input, the value of $icode ratio$$ does not matter.
 On output it is a measure of how good the choice of pivots is.
-For $latex p = 0 , \ldots , n-1$$, 
-the $th p$$ pivot element is the element of maximum absolute value of a 
+For $latex p = 0 , \ldots , n-1$$,
+the $th p$$ pivot element is the element of maximum absolute value of a
 $latex (n-p) \times (n-p)$$ sub-matrix.
 The ratio of each element of sub-matrix divided by the pivot element
 is computed.
@@ -172,7 +167,7 @@ The return value of $icode ratio$$ is the maximum absolute value of
 such ratios over with respect to all elements and all the pivots.
 
 $subhead Purpose$$
-Suppose that the execution of a call to $code LuRatio$$ 
+Suppose that the execution of a call to $code LuRatio$$
 is recorded in the $codei%ADFun<%Base%>%$$ object $icode F$$.
 Then a call to $cref Forward$$ of the form
 $codei%
@@ -181,7 +176,7 @@ $codei%
 with $icode k$$ equal to zero will revaluate this Lu factorization
 with the same pivots and a new value for $icode A$$.
 In this case, the resulting $icode ratio$$ may not be one.
-If $icode ratio$$ is too large (the meaning of too large is up to you), 
+If $icode ratio$$ is too large (the meaning of too large is up to you),
 the current pivots do not yield a stable LU factorization of $icode A$$.
 A better choice for the pivots (for this value of $icode A$$)
 will be made if you recreate the $code ADFun$$ object
@@ -195,7 +190,7 @@ The routine $cref CheckSimpleVector$$ will generate an error message
 if this is not the case.
 
 $head ADvector$$
-The type $icode ADvector$$ must be a 
+The type $icode ADvector$$ must be a
 $cref/simple vector class/SimpleVector/$$ with elements of type
 $codei%AD<%Base%>%$$.
 The routine $cref CheckSimpleVector$$ will generate an error message
@@ -218,7 +213,7 @@ namespace CppAD { // BEGIN CppAD namespace
 // Lines different from the code in cppad/lu_factor.hpp end with           //
 template <class SizeVector, class ADvector, class Base>                    //
 int LuRatio(SizeVector &ip, SizeVector &jp, ADvector &LU, AD<Base> &ratio) //
-{	
+{
 	typedef ADvector FloatVector;                                       //
 	typedef AD<Base>       Float;                                       //
 
@@ -264,7 +259,7 @@ int LuRatio(SizeVector &ip, SizeVector &jp, ADvector &LU, AD<Base> &ratio) //
 
 	// Reduce the matrix P to L * U using n pivots
 	for(p = 0; p < n; p++)
-	{	// determine row and column corresponding to element of 
+	{	// determine row and column corresponding to element of
 		// maximum absolute value in remaining part of P
 		imax = jmax = n;
 		emax = zero;
@@ -290,7 +285,7 @@ int LuRatio(SizeVector &ip, SizeVector &jp, ADvector &LU, AD<Base> &ratio) //
 				CondExpGt(etmp, ratio, etmp, ratio);         //
 			}                                                    //
 		}                                                            //
-		CPPAD_ASSERT_KNOWN( 
+		CPPAD_ASSERT_KNOWN(
 			(imax < n) & (jmax < n) ,
 			"AbsGeq must return true when second argument is zero"
 		);
@@ -317,27 +312,27 @@ int LuRatio(SizeVector &ip, SizeVector &jp, ADvector &LU, AD<Base> &ratio) //
 			return   0;
 		}
 
-		// Reduce U by the elementary transformations that maps 
+		// Reduce U by the elementary transformations that maps
 		// LU( ip[p], jp[p] ) to one.  Only need transform elements
 		// above the diagonal in U and LU( ip[p] , jp[p] ) is
 		// corresponding value below diagonal in L.
 		for(j = p+1; j < n; j++)
 			LU[ ip[p] * n + jp[j] ] /= pivot;
 
-		// Reduce U by the elementary transformations that maps 
-		// LU( ip[i], jp[p] ) to zero. Only need transform elements 
-		// above the diagonal in U and LU( ip[i], jp[p] ) is 
+		// Reduce U by the elementary transformations that maps
+		// LU( ip[i], jp[p] ) to zero. Only need transform elements
+		// above the diagonal in U and LU( ip[i], jp[p] ) is
 		// corresponding value below diagonal in L.
 		for(i = p+1; i < n; i++ )
 		{	etmp = LU[ ip[i] * n + jp[p] ];
 			for(j = p+1; j < n; j++)
-			{	LU[ ip[i] * n + jp[j] ] -= 
+			{	LU[ ip[i] * n + jp[j] ] -=
 					etmp * LU[ ip[p] * n + jp[j] ];
-			} 
+			}
 		}
 	}
 	return sign;
 }
-} // END CppAD namespace 
+} // END CppAD namespace
 
 # endif

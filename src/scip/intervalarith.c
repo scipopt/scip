@@ -22,8 +22,11 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define _USE_MATH_DEFINES   /* to get M_PI on Windows */
+
 #include <stdlib.h>
 #include <assert.h>
+#include <math.h>
 
 #include "scip/def.h"
 #include "scip/intervalarith.h"
@@ -301,9 +304,13 @@ double nextafter(double x, double y)
    unsigned lx;
    unsigned ly;
 
+   /* cppcheck-suppress invalidPointerCast */
    hx = __HI(x);     /* high word of x */
+   /* cppcheck-suppress invalidPointerCast */
    lx = __LO(x);     /* low  word of x */
+   /* cppcheck-suppress invalidPointerCast */
    hy = __HI(y);     /* high word of y */
+   /* cppcheck-suppress invalidPointerCast */
    ly = __LO(y);     /* low  word of y */
    ix = hx&0x7fffffff;     /* |x| */
    iy = hy&0x7fffffff;     /* |y| */
@@ -320,7 +327,9 @@ double nextafter(double x, double y)
    if( (ix|lx) == 0 )
    {
       /* return +-minsubnormal */
+      /* cppcheck-suppress invalidPointerCast */
       __HI(x) = hy&0x80000000;
+      /* cppcheck-suppress invalidPointerCast */
       __LO(x) = 1;
       y = x * x;
       if ( y == x )
@@ -375,12 +384,16 @@ double nextafter(double x, double y)
       if( y != x )
       {
          /* raise underflow flag */
+         /* cppcheck-suppress invalidPointerCast */
          __HI(y) = hx;
+         /* cppcheck-suppress invalidPointerCast */
          __LO(y) = lx;
          return y;
       }
    }
+   /* cppcheck-suppress invalidPointerCast */
    __HI(x) = hx;
+   /* cppcheck-suppress invalidPointerCast */
    __LO(x) = lx;
    return x;
 }
@@ -2525,7 +2538,10 @@ void SCIPintervalLog(
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand));
 
-   if( operand.sup < 0.0 )
+   /* if operand.sup == 0.0, we could return -inf in resultant->sup, but that
+    * seems of little use and just creates problems somewhere else, e.g., #1230
+    */
+   if( operand.sup <= 0.0 )
    {
       SCIPintervalSetEmpty(resultant);
       return;
@@ -2533,12 +2549,7 @@ void SCIPintervalLog(
 
    if( operand.inf == operand.sup )  /*lint !e777 */
    {
-      if( operand.sup <= 0.0 )
-      {
-         resultant->inf = -infinity;
-         resultant->sup = -infinity;
-      }
-      else if( operand.sup == 1.0 )
+      if( operand.sup == 1.0 )
       {
          resultant->inf = 0.0;
          resultant->sup = 0.0;
@@ -2577,10 +2588,6 @@ void SCIPintervalLog(
    else if( operand.sup == 1.0 )
    {
       resultant->sup = 0.0;
-   }
-   else if( operand.sup == 0.0 )
-   {
-      resultant->sup = -infinity;
    }
    else
    {
@@ -2645,6 +2652,178 @@ void SCIPintervalAbs(
       resultant->inf = -operand.sup;
       resultant->sup = -operand.inf;
    }
+}
+
+/** stores sine value of operand in resultant
+ * NOTE: the operations are not applied rounding-safe here
+ */
+void SCIPintervalSin(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   )
+{
+   SCIP_Real intervallen;
+   SCIP_Real modinf;
+   SCIP_Real modsup;
+   SCIP_Real finf;
+   SCIP_Real fsup;
+   int a;
+   int b;
+   int nbetween;
+   /* first one is 1 so even indices are the maximum points */
+   static SCIP_Real extremepoints[] = {0.5*M_PI, 1.5*M_PI, 2.5*M_PI, 3.5*M_PI};
+
+   assert(resultant != NULL);
+   assert(!SCIPintervalIsEmpty(infinity, operand));
+
+   intervallen = operand.sup - operand.inf;
+   if( intervallen >= 2*M_PI )
+   {
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
+      return;
+   }
+
+   modinf = fmod(operand.inf, 2*M_PI);
+   if( modinf < 0.0 )
+      modinf += 2*M_PI;
+   modsup = modinf + intervallen;
+
+   for( b = 0; ; ++b )
+   {
+      if( modinf <= extremepoints[b] )
+      {
+         a = b;
+         break;
+      }
+   }
+   for( ; b < 4; ++b )
+   {
+      if( modsup <= extremepoints[b] )
+         break;
+   }
+
+   nbetween = b-a;
+
+   if( nbetween > 1 )
+   {
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
+      return;
+   }
+
+   finf = sin(operand.inf);
+   fsup = sin(operand.sup);
+
+   if( nbetween == 0 )
+   {
+      if( a & 1 ) /* next extremepoint is minimum -> decreasing -> finf < fsup */
+         SCIPintervalSetBounds(resultant, fsup, finf);
+      else
+         SCIPintervalSetBounds(resultant, finf, fsup);
+   }
+   else /* 1 extremepoint in between */
+   {
+       if( a & 1 ) /* extremepoint is minimum */
+          SCIPintervalSetBounds(resultant, -1.0, MAX(finf,fsup));
+       else
+          SCIPintervalSetBounds(resultant, MIN(finf,fsup), 1.0);
+   }
+
+   /* above operations did not take outward rounding into account,
+    * so extend the computed interval slightly to increase the chance that it will contain the complete sin(operand)
+    */
+   if( resultant->inf > -1.0 )
+      resultant->inf = MAX(-1.0, resultant->inf - 1e-10 * REALABS(resultant->inf));  /*lint !e666*/
+   if( resultant->sup <  1.0 )
+      resultant->sup = MIN( 1.0, resultant->sup + 1e-10 * REALABS(resultant->sup));  /*lint !e666*/
+
+   assert(resultant->inf <= resultant->sup);
+}
+
+/** stores cosine value of operand in resultant
+ * NOTE: the operations are not applied rounding-safe here
+ */
+void SCIPintervalCos(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   )
+{
+   SCIP_Real intervallen;
+   SCIP_Real modinf;
+   SCIP_Real modsup;
+   SCIP_Real finf;
+   SCIP_Real fsup;
+   int a;
+   int b;
+   int nbetween;
+   /* first one is -1 so even indices are the minimum points */
+   static SCIP_Real extremepoints[] = {M_PI, 2*M_PI, 3*M_PI};
+
+   assert(resultant != NULL);
+   assert(!SCIPintervalIsEmpty(infinity, operand));
+
+   intervallen = operand.sup - operand.inf;
+   if( intervallen >= 2*M_PI )
+   {
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
+      return;
+   }
+
+   modinf = fmod(operand.inf, 2*M_PI);
+   if( modinf < 0.0 )
+      modinf += 2*M_PI;
+   modsup = modinf + intervallen;
+
+   for( b = 0; ; ++b )
+   {
+      if( modinf <= extremepoints[b] )
+      {
+         a = b;
+         break;
+      }
+   }
+   for( ; b < 3; ++b )
+   {
+      if( modsup <= extremepoints[b] )
+         break;
+   }
+
+   nbetween = b-a;
+
+   if( nbetween > 1 )
+   {
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
+      return;
+   }
+
+   finf = cos(operand.inf);
+   fsup = cos(operand.sup);
+
+   if( nbetween == 0 )
+   {
+      if( a & 1 ) /* next extremepoint is maximum -> increasing -> finf < fsup */
+         SCIPintervalSetBounds(resultant, finf, fsup);
+      else
+         SCIPintervalSetBounds(resultant, fsup, finf);
+   }
+   else /* 1 extremepoint in between */
+   {
+       if( a & 1 ) /* extremepoint is maximum */
+          SCIPintervalSetBounds(resultant, MIN(finf,fsup), 1.0);
+       else
+          SCIPintervalSetBounds(resultant, -1.0, MAX(finf,fsup));
+   }
+
+   /* above operations did not take outward rounding into account,
+    * so extend the computed interval slightly to increase the chance that it will contain the complete cos(operand)
+    */
+   if( resultant->inf > -1.0 )
+      resultant->inf = MAX(-1.0, resultant->inf - 1e-10 * REALABS(resultant->inf));  /*lint !e666*/
+   if( resultant->sup <  1.0 )
+      resultant->sup = MIN( 1.0, resultant->sup + 1e-10 * REALABS(resultant->sup));  /*lint !e666*/
+
+   assert(resultant->inf <= resultant->sup);
 }
 
 /** stores sign of operand in resultant */
@@ -3408,7 +3587,8 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       if( rhs.sup >= infinity )
       {
          /* we can't do much if rhs.sup is infinite
-          * but we may to a bit of xbnds isn't too huge and rhs.inf > -infinity  */
+          * but we may do a bit of xbnds isn't too huge and rhs.inf > -infinity
+          */
          minvalleft  = -infinity;
          maxvalright =  infinity;
       }
@@ -3733,7 +3913,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       }
 
       /* evaluate the case r(rhs,y) = 0, which is to min/max -b(y) w.r.t. r(rhs,y) = 0, y in ybnds
-       * with the above assigments
+       * with the above assignments
        *   rcoef_y     = axy * bx  / (2.0*ax) - by;
        *   rcoef_yy    = axy * axy / (4.0*ax) - ay;
        *   rcoef_const = bx  * bx  / (4.0*ax);
@@ -3753,9 +3933,10 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
          SCIPintervalSet(&rcoef_y_int, (SCIP_Real)rcoef_y);
          SCIPintervalSetBounds(&rhs2, (SCIP_Real)(-rhs.sup - rcoef_const), (SCIP_Real)(-rhs.inf - rcoef_const));
 
-         /* first find all y >= 0 such that rcoef_y * y + rcoef_yy * y^2 in -rhs2, if ybnds.sup > 0.0
-          * and evaluate -b(y) w.r.t. these values */
-         if( ybnds.sup > 0.0 )
+         /* first find all y >= 0 such that rcoef_y * y + rcoef_yy * y^2 in -rhs2, if ybnds.sup >= 0.0
+          * and evaluate -b(y) w.r.t. these values
+          */
+         if( ybnds.sup >= 0.0 )
          {
             SCIP_INTERVAL ypos;
 
@@ -3796,7 +3977,9 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
          }
 
          /* next find all y <= 0 such that rcoef_y * y + rcoef_yy * y^2 in -rhs2, if ybnds.inf < 0.0
-          * and evaluate -b(y) w.r.t. these values */
+          * and evaluate -b(y) w.r.t. these values
+          * (the case y fixed to 0 has been handled in the ybnds.sup >= 0 case above)
+          */
          if( ybnds.inf < 0.0 )
          {
             SCIP_INTERVAL yneg;
@@ -3850,13 +4033,19 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
           * this is only possible if rhs.inf > -infinity, otherwise the value for maxvalleft is not valid (but tightening wouldn't be possible for sure anyway) */
          assert(EPSGE(minvalright, minvalleft, 1e-9)); /* right interval should not be above lower bound of left interval */
          if( minvalright > -infinity )
+         {
+            assert(minvalright < infinity);
             resultant->inf = (SCIP_Real)(minvalright / sqrtax);
+         }
       }
       else
       {
          /* otherwise, tighten lower bound of sqrt(ax)*x to lower bound of -sqrt(r(rhs,y))-b(y) */
          if( minvalleft > -infinity )
+         {
+            assert(minvalleft < infinity);
             resultant->inf = (SCIP_Real)(minvalleft / sqrtax);
+         }
       }
 
       if( rhs.inf > -infinity && xbnds.sup < infinity && EPSLT(xbnds.sup, minvalright / sqrtax, 1e-9) )
@@ -3865,13 +4054,19 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
           * this is only possible if rhs.inf > -infinity, otherwise the value for minvalright is not valid (but tightening wouldn't be possible for sure anyway) */
          assert(EPSLE(maxvalleft, maxvalright, 1e-9)); /* left interval should not be above upper bound of right interval */
          if( maxvalleft < infinity )
+         {
+            assert(maxvalleft > -infinity);
             resultant->sup = (SCIP_Real)(maxvalleft / sqrtax);
+         }
       }
       else
       {
          /* otherwise, tighten upper bound of sqrt(ax)*x to upper bound of sqrt(r(rhs,y))-b(y) */
          if( maxvalright < infinity )
+         {
+            assert(maxvalright > -infinity);
             resultant->sup = (SCIP_Real)(maxvalright / sqrtax);
+         }
       }
 
       resultant->inf -= 1e-10 * REALABS(resultant->inf);
@@ -4001,14 +4196,24 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
                ymin = -ay * bx + sqrt(MAX(d, 0.0));
                ymin /= axy * ay;
 
-               val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
-               minval = MIN(val, minval);
+               if( ymin > ybnds.inf && ymin < ybnds.sup )
+               {
+                  assert(bx + axy * ymin != 0.0);
+
+                  val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
+                  minval = MIN(val, minval);
+               }
 
                ymin = -ay * bx - sqrt(MAX(d, 0.0));
                ymin /= axy * ay;
 
-               val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
-               minval = MIN(val, minval);
+               if(ymin > ybnds.inf && ymin < ybnds.sup )
+               {
+                  assert(bx + axy * ymin != 0.0);
+
+                  val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
+                  minval = MIN(val, minval);
+               }
             }
          }
       }

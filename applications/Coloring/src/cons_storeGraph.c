@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -213,7 +213,7 @@ SCIP_DECL_CONSFREE(consFreeStoreGraph)
 
    /* free constraint handler storage */
    assert(conshdlrData->stack == NULL);
-   SCIPfreeMemory(scip, &conshdlrData);
+   SCIPfreeBlockMemory(scip, &conshdlrData);
 
    return SCIP_OKAY;
 }
@@ -233,7 +233,7 @@ SCIP_DECL_CONSINITSOL(consInitsolStoreGraph)
    assert(conshdlrData != NULL);
 
    /* prepare stack */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrData->stack, conshdlrData->maxstacksize) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrData->stack, conshdlrData->maxstacksize) );
    SCIP_CALL( createConsStoreGraphAtRoot(scip, &cons, "root", COLORprobGetGraph(scip)) );
 
    /* release constraints */
@@ -428,8 +428,9 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
    /* put constraint on the stack */
    if ( conshdlrData->nstack >= conshdlrData->maxstacksize )
    {
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &(conshdlrData->stack), (2 * conshdlrData->maxstacksize)) ); /*lint !e715 !e647*/
-      conshdlrData->maxstacksize = 2*(conshdlrData->maxstacksize);
+      SCIP_Real newsize = SCIPcalcMemGrowSize(scip, conshdlrData->maxstacksize);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(conshdlrData->stack), conshdlrData->maxstacksize, newsize) ); /*lint !e715 !e647*/
+      conshdlrData->maxstacksize = newsize;
       SCIPdebugMessage("reallocating Memory for stack! %d --> %d\n", conshdlrData->maxstacksize/2, conshdlrData->maxstacksize);
    }
    conshdlrData->stack[conshdlrData->nstack] = cons;
@@ -748,7 +749,7 @@ SCIP_RETCODE COLORincludeConshdlrStoreGraph(
 
    SCIPdebugMessage("Including graph storage constraint handler.\n");
 
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrData) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrData) );
    conshdlrData->stack = NULL;
    conshdlrData->nstack = 0;
    conshdlrData->maxstacksize = 25;

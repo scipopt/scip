@@ -23,6 +23,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#if defined(_WIN32) || defined(_WIN64)
+#else
+#include <strings.h>
+#endif
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
@@ -39,7 +43,7 @@
 
 #ifdef SCIP_DEBUG_SOLUTION
 
-#define SCIP_HASHSIZE_DEBUG        131101    /**< minimum size of hash map for storing whether a solution is valid for the node */
+#define SCIP_HASHSIZE_DEBUG        500    /**< minimum size of hash map for storing whether a solution is valid for the node */
 
 struct SCIP_DebugSolData
 {
@@ -227,7 +231,7 @@ SCIP_RETCODE readSolfile(
          (*vals)[i] = (*vals)[i-1];
       }
       SCIP_ALLOC( BMSduplicateMemoryArray(&(*names)[i], name, strlen(name)+1) );
-      SCIPdebugMessage("found variable <%s>: value <%g>\n", (*names)[i], val);
+      SCIPdebugMsg(set->scip, "found variable <%s>: value <%g>\n", (*names)[i], val);
       (*vals)[i] = val;
       (*nvals)++;
    }
@@ -252,7 +256,7 @@ SCIP_RETCODE readSolfile(
          debugsolval += (*vals)[i] * SCIPvarGetObj(var);
       }
    }
-   SCIPdebugMessage("Debug Solution value is %g.\n", debugsolval);
+   SCIPdebugMsg(set->scip, "Debug Solution value is %g.\n", debugsolval);
 
 #ifdef SCIP_MORE_DEBUG
    SCIPsortPtrReal((void**)vars, solvalues, sortVarsAfterNames, nfound);
@@ -334,7 +338,6 @@ SCIP_RETCODE getSolutionValue(
    assert(var != NULL);
    assert(val != NULL);
 
-
    debugsoldata = SCIPsetGetDebugSolData(set);
    assert(debugsoldata != NULL);
 
@@ -346,15 +349,17 @@ SCIP_RETCODE getSolutionValue(
    }
 
    SCIP_CALL( readSolution(set) );
-   SCIPdebugMessage("Now handling variable <%s>, which has status %d, is of type %d, and was deleted: %d, negated: %d, transformed: %d\n",
+   SCIPsetDebugMsg(set, "Now handling variable <%s>, which has status %d, is of type %d, and was deleted: %d, negated: %d, transformed: %d\n",
       SCIPvarGetName(var), SCIPvarGetStatus(var), SCIPvarGetType(var), SCIPvarIsDeleted(var), SCIPvarIsNegated(var),SCIPvarIsTransformedOrigvar(var));
+
    /* ignore deleted variables */
    if( SCIPvarIsDeleted(var) )
    {
-      SCIPdebugMessage("**** unknown solution value for deleted variable <%s>\n", SCIPvarGetName(var));
+      SCIPsetDebugMsg(set, "**** unknown solution value for deleted variable <%s>\n", SCIPvarGetName(var));
       *val = SCIP_UNKNOWN;
       return SCIP_OKAY;
    }
+
    /* retransform variable onto original variable space */
    solvar = var;
    scalar = 1.0;
@@ -365,13 +370,14 @@ SCIP_RETCODE getSolutionValue(
       constant = SCIPvarGetNegationConstant(solvar);
       solvar = SCIPvarGetNegationVar(solvar);
    }
+
    if( SCIPvarIsTransformed(solvar) )
    {
       SCIP_CALL( SCIPvarGetOrigvarSum(&solvar, &scalar, &constant) );
       if( solvar == NULL )
       {
          /* if no original counterpart, then maybe someone added a value for the transformed variable, so search for var (or its negation) */
-         SCIPdebugMessage("variable <%s> has no original counterpart\n", SCIPvarGetName(var));
+         SCIPsetDebugMsg(set, "variable <%s> has no original counterpart\n", SCIPvarGetName(var));
          solvar = var;
          scalar = 1.0;
          constant = 0.0;
@@ -383,6 +389,7 @@ SCIP_RETCODE getSolutionValue(
          }
       }
    }
+
    /* perform a binary search for the variable */
    name = SCIPvarGetName(solvar);
    left = 0;
@@ -398,12 +405,19 @@ SCIP_RETCODE getSolutionValue(
       else
       {
          *val = scalar * debugsoldata->solvals[middle] + constant;
+
+         if( SCIPsetIsFeasLT(set, *val, SCIPvarGetLbGlobal(var)) || SCIPsetIsFeasGT(set, *val, SCIPvarGetUbGlobal(var)) )
+         {
+            SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "invalid solution value %.15g for variable <%s>[%.15g,%.15g]\n",
+               *val, SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+         }
+
          return SCIP_OKAY;
       }
    }
    *val = constant;
 
-   if( *val < SCIPvarGetLbGlobal(var) - 1e-06 || *val > SCIPvarGetUbGlobal(var) + 1e-06 )
+   if( SCIPsetIsFeasLT(set, *val, SCIPvarGetLbGlobal(var)) || SCIPsetIsFeasGT(set, *val, SCIPvarGetUbGlobal(var)) )
    {
       SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "invalid solution value %.15g for variable <%s>[%.15g,%.15g]\n",
          *val, SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
@@ -529,7 +543,7 @@ SCIP_RETCODE isSolutionInNode(
    /* generate the hashmap */
    if( debugsoldata->solinnode == NULL )
    {
-      SCIP_CALL( SCIPhashmapCreate(&debugsoldata->solinnode, blkmem, SCIPcalcHashtableSize(SCIP_HASHSIZE_DEBUG)) );
+      SCIP_CALL( SCIPhashmapCreate(&debugsoldata->solinnode, blkmem, SCIP_HASHSIZE_DEBUG) );
    }
 
    /* check, whether we know already whether the solution is contained in the given node */
@@ -729,7 +743,7 @@ SCIP_RETCODE SCIPdebugCheckConss(
 
       SCIP_CALL( SCIPcheckCons(scip, conss[c], debugsoldata->debugsol, TRUE, TRUE, TRUE, &result) );
 
-      SCIPdebugMessage(" -> checking of constraint %s returned result <%d>\n", SCIPconsGetName(conss[c]), result);
+      SCIPdebugMsg(scip, " -> checking of constraint %s returned result <%d>\n", SCIPconsGetName(conss[c]), result);
 
       if( result != SCIP_FEASIBLE )
       {
@@ -760,7 +774,6 @@ SCIP_RETCODE SCIPdebugCheckRow(
 
    assert(set != NULL);
    assert(row != NULL);
-
 
    debugsoldata = SCIPsetGetDebugSolData(set);
    assert(debugsoldata != NULL);
@@ -816,7 +829,7 @@ SCIP_RETCODE SCIPdebugCheckRow(
          maxactivity += vals[i] * SCIPvarGetLbGlobal(var);
       }
    }
-   SCIPdebugMessage("debugging solution on row <%s>: %g <= [%g,%g] <= %g\n",
+   SCIPsetDebugMsg(set, "debugging solution on row <%s>: %g <= [%g,%g] <= %g\n",
       SCIProwGetName(row), lhs, minactivity, maxactivity, rhs);
 
    /* check row for violation */
@@ -866,7 +879,7 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
 
    /* get solution value of variable */
    SCIP_CALL( getSolutionValue(scip->set, var, &varsol) );
-   SCIPdebugMessage("debugging solution on lower bound of <%s>[%g] >= %g\n", SCIPvarGetName(var), varsol, lb);
+   SCIPdebugMsg(scip, "debugging solution on lower bound of <%s>[%g] >= %g\n", SCIPvarGetName(var), varsol, lb);
 
    /* check validity of debugging solution */
    if( varsol != SCIP_UNKNOWN && SCIPisFeasLT(scip, varsol, lb) ) /*lint !e777*/
@@ -903,7 +916,7 @@ SCIP_RETCODE SCIPdebugCheckUbGlobal(
 
    /* get solution value of variable */
    SCIP_CALL( getSolutionValue(scip->set, var, &varsol) );
-   SCIPdebugMessage("debugging solution on upper bound of <%s>[%g] <= %g\n", SCIPvarGetName(var), varsol, ub);
+   SCIPdebugMsg(scip, "debugging solution on upper bound of <%s>[%g] <= %g\n", SCIPvarGetName(var), varsol, ub);
 
    /* check validity of debugging solution */
    if( varsol != SCIP_UNKNOWN && SCIPisFeasGT(scip, varsol, ub) ) /*lint !e777*/
@@ -1647,6 +1660,7 @@ SCIP_RETCODE SCIPdebugAddSolVal(
    )
 {
    SCIP_DEBUGSOLDATA* debugsoldata;
+   SCIP_Real testval;
    const char* varname;
    int i;
 
@@ -1661,6 +1675,13 @@ SCIP_RETCODE SCIPdebugAddSolVal(
    if( !SCIPdebugSolIsEnabled(scip) )
       return SCIP_OKAY;
 
+   if( debugsoldata->debugsol == NULL )
+   {
+      /* make sure a debug solution has been read, so we do not compare against the initial debugsolval == 0 */
+      SCIP_CALL( readSolution(scip->set) );
+   }
+
+#if 0
    if( SCIPvarIsOriginal(var) )
    {
       SCIPerrorMessage("adding solution values for original variables is forbidden\n");
@@ -1672,7 +1693,7 @@ SCIP_RETCODE SCIPdebugAddSolVal(
       SCIPerrorMessage("adding solution values for variable that are direct counterparts of original variables is forbidden\n");
       return SCIP_ERROR;
    }
-
+#endif
    /* allocate memory */
    if( debugsoldata->nsolvals >= debugsoldata->solsize )
    {
@@ -1698,7 +1719,7 @@ SCIP_RETCODE SCIPdebugAddSolVal(
       }
       else
       {
-         SCIPdebugMessage("already have stored debugging solution value %g for variable <%s>, do not store same value again\n", val, varname);
+         SCIPdebugMsg(scip, "already have stored debugging solution value %g for variable <%s>, do not store same value again\n", val, varname);
          for( ; i < debugsoldata->nsolvals; ++i )
          {
             debugsoldata->solnames[i] = debugsoldata->solnames[i+1];
@@ -1710,21 +1731,22 @@ SCIP_RETCODE SCIPdebugAddSolVal(
 
    /* insert new solution value */
    SCIP_ALLOC( BMSduplicateMemoryArray(&(debugsoldata->solnames[i]), varname, strlen(varname)+1) );
-   SCIPdebugMessage("add variable <%s>: value <%g>\n", debugsoldata->solnames[i], val);
+   SCIPdebugMsg(scip, "add variable <%s>: value <%g>\n", debugsoldata->solnames[i], val);
    debugsoldata->solvals[i] = val;
    debugsoldata->nsolvals++;
 
    /* update objective function value of debug solution */
    debugsoldata->debugsolval += debugsoldata->solvals[i] * SCIPvarGetObj(var);
-   SCIPdebugMessage("Debug Solution value is now %g.\n", debugsoldata->debugsolval);
-
-   assert(debugsoldata->debugsol != NULL);
+   SCIPdebugMsg(scip, "Debug Solution value is now %g.\n", debugsoldata->debugsolval);
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_ORIGINAL )
    {
       /* add values to SCIP debug solution */
       SCIP_CALL( SCIPsetSolVal(scip, debugsoldata->debugsol, var, debugsoldata->solvals[i] ) );
    }
+
+   /* get solution value once to produce warning if solution was cut off */
+   SCIPdebugGetSolVal(scip, var, &testval);
 
    return SCIP_OKAY;
 }

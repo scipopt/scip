@@ -175,7 +175,7 @@ unsigned int SCIPnodeGetReoptID(
 EXTERN
 void SCIPnodeSetReopttype(
    SCIP_NODE*            node,               /**< node */
-   SCIP_REOPTTYPE        type                /**< reoptimization type */
+   SCIP_REOPTTYPE        reopttype           /**< reoptimization type */
    );
 
 /** sets a unique id to identify the node during reoptimization */
@@ -220,6 +220,12 @@ SCIP_Bool SCIPnodeIsPropagatedAgain(
    SCIP_NODE*            node                /**< node data */
    );
 
+/* returns the set of changed constraints for a particular node */
+EXTERN
+SCIP_CONSSETCHG* SCIPnodeGetConssetchg(
+   SCIP_NODE*            node                /**< node data */
+   );
+
 
 #ifdef NDEBUG
 
@@ -236,6 +242,7 @@ SCIP_Bool SCIPnodeIsPropagatedAgain(
 #define SCIPnodeGetParent(node)         ((node)->parent)
 #define SCIPnodeIsActive(node)          ((node)->active)
 #define SCIPnodeIsPropagatedAgain(node) ((node)->reprop)
+#define SCIPnodeGetConssetchg(node)    ((node)->conssetchg)
 
 #endif
 

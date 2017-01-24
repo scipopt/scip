@@ -57,6 +57,13 @@ SCIP_RETCODE SCIPprimalFree(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
+/** clears primal data */
+extern
+SCIP_RETCODE SCIPprimalClear(
+   SCIP_PRIMAL**         primal,             /**< pointer to primal data */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
 /** sets the cutoff bound in primal data and in LP solver */
 extern
 SCIP_RETCODE SCIPprimalSetCutoffbound(
@@ -137,6 +144,22 @@ SCIP_Bool SCIPprimalUpperboundIsSol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob            /**< original problem data */
+   );
+
+/** returns the primal ray thats proves unboundedness */
+extern
+SCIP_SOL* SCIPprimalGetRay(
+   SCIP_PRIMAL*          primal              /**< primal data */
+   );
+
+/** update the primal ray thats proves unboundedness */
+extern
+SCIP_RETCODE SCIPprimalUpdateRay(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_SOL*             primalray,          /**< the new primal ray */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** adds primal solution to solution storage by copying it */
@@ -237,6 +260,7 @@ SCIP_RETCODE SCIPprimalTrySol(
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -260,6 +284,7 @@ SCIP_RETCODE SCIPprimalTrySolFree(
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -283,6 +308,7 @@ SCIP_RETCODE SCIPprimalTryCurrentSol(
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution (or NULL if it's from the tree) */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */

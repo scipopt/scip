@@ -66,11 +66,11 @@ SCIP_DECL_NODESELSELECT(nodeselSelectDfs)
       *selnode = SCIPgetPrioSibling(scip);
       if( *selnode == NULL )
       {
-         SCIPdebugMessage("select best leaf\n");
+         SCIPdebugMsg(scip, "select best leaf\n");
          *selnode = SCIPgetBestLeaf(scip);
       }
 
-      SCIPdebugMessage("select best sibling leaf\n");
+      SCIPdebugMsg(scip, "select best sibling leaf\n");
    }
 
    return SCIP_OKAY;
@@ -120,15 +120,11 @@ SCIP_RETCODE SCIPincludeNodeselDfs(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_NODESELDATA* nodeseldata;
    SCIP_NODESEL* nodesel;
-
-   /* create dfs node selector data */
-   nodeseldata = NULL;
 
    /* include node selector */
    SCIP_CALL( SCIPincludeNodeselBasic(scip, &nodesel, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,
-          nodeselSelectDfs, nodeselCompDfs, nodeseldata) );
+          nodeselSelectDfs, nodeselCompDfs, NULL) );
 
    assert(nodesel != NULL);
 
@@ -136,4 +132,3 @@ SCIP_RETCODE SCIPincludeNodeselDfs(
 
    return SCIP_OKAY;
 }
-

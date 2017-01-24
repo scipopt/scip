@@ -64,6 +64,8 @@
 #include "scip/type_sepa.h"
 #include "scip/type_prop.h"
 #include "nlpi/type_nlpi.h"
+#include "scip/type_concsolver.h"
+#include "scip/type_syncstore.h"
 
 /* include public interfaces, s.t. the user only needs to include scip.h */
 #include "scip/pub_branch.h"
@@ -96,8 +98,10 @@
 #include "lpi/lpi.h"
 #include "nlpi/pub_expr.h"
 
-/* include global presolving methods */
+/* include global presolving, cuts, and heuristics methods */
 #include "scip/presolve.h"
+#include "scip/cuts.h"
+#include "scip/heuristics.h"
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.
@@ -112,6 +116,9 @@
 #include "scip/tree.h"
 #include "scip/misc.h"
 #include "scip/var.h"
+#include "scip/cons.h"
+#include "scip/solve.h"
+#include "scip/debug.h"
 #endif
 
 #ifdef __cplusplus
@@ -176,6 +183,16 @@ int SCIPsubversion(
  */
 EXTERN
 void SCIPprintVersion(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** prints detailed information on the compile-time flags
+ *
+ *  @note If the message handler is set to a NULL pointer nothing will be printed
+ */
+EXTERN
+void SCIPprintBuildOptions(
    SCIP*                 scip,               /**< SCIP data structure */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
@@ -367,7 +384,6 @@ SCIP_Bool SCIPisStopped(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-
 /**@} */
 
 /*
@@ -405,6 +421,33 @@ void SCIPdisableDebugSol(
 /*
  * message output methods
  */
+
+/* if we have a C99 compiler */
+#ifdef SCIP_HAVE_VARIADIC_MACROS
+
+/** prints a debugging message if SCIP_DEBUG flag is set */
+#ifdef SCIP_DEBUG
+#define SCIPdebugMsg(scip, ...)         SCIPprintDebugMessage(scip, __FILE__, __LINE__, __VA_ARGS__)
+#define SCIPdebugMsgPrint(scip, ...)    SCIPdebugMessagePrint(scip, __VA_ARGS__)
+#else
+#define SCIPdebugMsg(scip, ...)         while ( FALSE ) SCIPprintDebugMessage(scip, __FILE__, __LINE__, __VA_ARGS__)
+#define SCIPdebugMsgPrint(scip, ...)    while ( FALSE ) SCIPdebugMessagePrint(scip, __VA_ARGS__)
+#endif
+
+#else
+/* if we do not have a C99 compiler, use a workaround that prints a message, but not the file and linenumber */
+
+/** prints a debugging message if SCIP_DEBUG flag is set */
+#ifdef SCIP_DEBUG
+#define SCIPdebugMsg                    printf("debug: "), SCIPdebugMessagePrint
+#define SCIPdebugMsgPrint               SCIPdebugMessagePrint
+#else
+#define SCIPdebugMsg                    while ( FALSE ) SCIPdebugMessagePrint
+#define SCIPdebugMsgPrint               while ( FALSE ) SCIPdebugMessagePrint
+#endif
+
+#endif
+
 
 /**@name Message Output Methods */
 /**@{ */
@@ -453,6 +496,24 @@ void SCIPsetMessagehdlrQuiet(
 /** prints a warning message via the message handler */
 EXTERN
 void SCIPwarningMessage(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
+/** prints a debug message */
+EXTERN
+void SCIPprintDebugMessage(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline,         /**< line in the source file where the function was called */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
+/** prints a debug message without precode */
+EXTERN
+void SCIPdebugMessagePrint(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           formatstr,          /**< format string like in printf() function */
    ...                                       /**< format arguments line in printf() function */
@@ -589,6 +650,15 @@ SCIP_RETCODE SCIPcopyPlugins(
  *
  *  @pre This method can be called if targetscip is in one of the following stages:
  *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_FREE
  *
  *  @post After calling this method targetscip reaches one of the following stages depending on if and when the solution
@@ -650,6 +720,52 @@ SCIP_RETCODE SCIPcopyOrigProb(
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL  */
    const char*           name                /**< problem name of target */
+   );
+
+/** enables constraint compression.
+ *
+ *  If constraint compression is enabled, fixed variables will be treated as constants
+ *  by all constraints that are copied after calling this method.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPenableConsCompression(
+   SCIP*                 scip                /**< source SCIP data structure */
+   );
+
+/** is constraint compression enabled?
+ *
+ *  If constraint compression is enabled, fixed variables can be treated as constants
+ *  by all constraints that are copied after calling this method.
+ *
+ *  @return TRUE if problem constraint compression is enabled, otherwise FALSE
+ *
+ *  @pre This method can be called if scip is in one of the following stages:
+  *      - \ref SCIP_STAGE_PROBLEM
+  *      - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_Bool SCIPisConsCompressionEnabled(
+   SCIP*                 scip                /**< source SCIP data structure */
    );
 
 /** returns copy of the source variable; if there already is a copy of the source variable in the variable hash map,
@@ -742,6 +858,9 @@ SCIP_RETCODE SCIPcopyVars(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
+   SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
+   int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
    SCIP_Bool             global              /**< should global or local bounds be used? */
    );
 
@@ -783,8 +902,11 @@ SCIP_RETCODE SCIPcopyOrigVars(
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables to the corresponding
                                               *   target variables, or NULL */
-   SCIP_HASHMAP*         consmap             /**< a hashmap to store the mapping of source constraints to the corresponding
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
+   SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
+   int                   nfixedvars          /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
    );
 
 /** merges the histories of variables from a source SCIP into a target SCIP. The two data structures should point to
@@ -877,7 +999,7 @@ SCIP_RETCODE SCIPgetConsCopy(
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    );
 
 /** copies constraints from the source-SCIP and adds these to the target-SCIP; for mapping the
@@ -1058,6 +1180,54 @@ SCIP_RETCODE SCIPcopyCuts(
    int*                  ncutsadded          /**< pointer to store number of copied cuts, or NULL */
    );
 
+/** copies all active conflicts from the conflict pool of sourcescip and adds them as linear constraints to targetscip
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @note sourcescip stage does not change
+ *
+ *  @note targetscip stage does not change
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyConflicts(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance?
+                                              *   If TRUE, the modifiable flag of constraints will be copied. */
+   SCIP_Bool*            valid               /**< pointer to store whether all constraints were validly copied */
+   );
+
 /** copies implications and cliques of sourcescip to targetscip
  *
  *  This function should be called for a targetscip in transformed stage. It can save time in presolving of the
@@ -1223,7 +1393,76 @@ SCIP_RETCODE SCIPcopy(
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
-   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
+   );
+
+/** copies source SCIP to target SCIP but compresses constraints
+ *
+ *  constraint compression is performed by removing fixed variables immediately
+ *  during constraint creation if the involved constraint handlers support
+ *  compression
+ *
+ *  the copying process is done in the following order:
+ *  1) copy the plugins
+ *  2) copy the settings
+ *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
+ *  4) copy all active variables
+ *     a) fix all variable copies specified by \p fixedvars, \p fixedvals, and \p nfixedvars
+ *     b) enable constraint compression
+ *  5) copy all constraints
+ *
+ *  @note: in case that a combination of local bounds and explicit fixing values should be used,
+ *         the fixing value of a variable is prefered if local bounds and fixing value disagree.
+ *
+ *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *        Also, 'passmessagehdlr' should be set to FALSE.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyConsCompression(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   const char*           suffix,             /**< optional suffix for problem name inside the target SCIP */
+   SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
+   int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Bool             global,             /**< create a global or a local copy? */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
+                                              *   plugins will be copied and activated, and the modifiable flag of
+                                              *   constraints will be respected. If FALSE, valid will be set to FALSE, when
+                                              *   there are pricers present */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
 
 /** copies source SCIP original problem to target SCIP; the copying process is done in the following order:
@@ -1277,8 +1516,123 @@ SCIP_RETCODE SCIPcopyOrig(
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
-   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
+
+/** copies source SCIP original problem to target SCIP but compresses constraints
+ *
+ *  constraint compression is performed by removing fixed variables immediately
+ *  during constraint creation if the involved constraint handlers support
+ *  compression
+ *
+ *  the copying process is done in the following order:
+ *  1) copy the plugins
+ *  2) copy the settings
+ *  3) create problem data in target-SCIP and copy the problem data of the source-SCIP
+ *  4) copy all original variables
+ *     a) fix all variable copies specified by \p fixedvars, \p fixedvals, and \p nfixedvars
+ *     b) enable constraint compression
+ *  5) copy all constraints
+ *
+ *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
+ *
+ *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
+ *        Also, 'passmessagehdlr' should be set to FALSE.
+ *  @note Do not change the source SCIP environment during the copying process
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @pre This method can be called if targetscip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  @note sourcescip stage does not get changed
+ *
+ *  @note targetscip stage does not get changed
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyOrigConsCompression(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
+                                              *   target variables, or NULL */
+   SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
+                                              *   target constraints, or NULL */
+   const char*           suffix,             /**< optional suffix for problem name inside the target SCIP */
+   SCIP_VAR**            fixedvars,          /**< source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Real*            fixedvals,          /**< array of fixing values for target SCIP variables, or NULL */
+   int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
+   SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
+                                              *   plugins will be copied and activated, and the modifiable flag of
+                                              *   constraints will be respected. If FALSE, valid will be set to FALSE, when
+                                              *   there are pricers present */
+   SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
+   );
+
+/** checks if there is enough time and memory left for copying the sourcescip into a sub-SCIP and solve the sub-SCIP
+ *
+ *  This is the case if the time and memory limit that would be passed to the sub-SCIP are larger than 0.0
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcheckCopyLimits(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP_Bool*            success             /**< pointer to store whether there is time and memory left to copy the
+                                              *   problem and run the sub-SCIP */
+   );
+
+/** copies limits from source SCIP to target SCIP
+ *
+ *  @note time and memory limit are reduced by the amount already spent in the source SCIP before installing the limit
+ *        in the target SCIP
+ *  @note all other limits are disabled and need to be enabled afterwards, if needed
+ *
+ *  @pre This method can be called if sourcescip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyLimits(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip          /**< target SCIP data structure */
+   );
+
 
 /**@} */
 
@@ -1551,12 +1905,9 @@ SCIP_RETCODE SCIPsetBoolParam(
    SCIP_Bool             value               /**< new value of the parameter */
    );
 
-/** checks the value of an existing SCIP_Bool parameter; issues a warning message if value was invalid
- *
- *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
- */
+/** checks whether the value of an existing SCIP_Bool parameter is valid */
 EXTERN
-SCIP_RETCODE SCIPcheckBoolParam(
+SCIP_Bool SCIPisBoolParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_Bool             value               /**< value to check */
@@ -1586,6 +1937,14 @@ SCIP_RETCODE SCIPsetIntParam(
    int                   value               /**< new value of the parameter */
    );
 
+/** checks whether the value of an existing int parameter is valid */
+EXTERN
+SCIP_Bool SCIPisIntParamValid(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   int                   value               /**< value to check */
+   );
+
 /** changes the value of an existing SCIP_Longint parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1610,12 +1969,9 @@ SCIP_RETCODE SCIPsetLongintParam(
    SCIP_Longint          value               /**< new value of the parameter */
    );
 
-/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid
- *
- *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
- */
+/** checks whether parameter value of an existing SCIP_Longint paramter is valid */
 EXTERN
-SCIP_RETCODE SCIPcheckLongintParam(
+SCIP_Bool SCIPisLongintParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_Longint          value               /**< value to check */
@@ -1645,6 +2001,14 @@ SCIP_RETCODE SCIPsetRealParam(
    SCIP_Real             value               /**< new value of the parameter */
    );
 
+/** checks whether parameter value of an existing SCIP_Real paramter is valid */
+EXTERN
+SCIP_Bool SCIPisRealParamValid(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Real             value               /**< value to check */
+   );
+
 /** changes the value of an existing char parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1669,12 +2033,9 @@ SCIP_RETCODE SCIPsetCharParam(
    char                  value               /**< new value of the parameter */
    );
 
-/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid
- *
- *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
- */
+/** checks whether parameter value for a given SCIP_Real parameter is valid */
 EXTERN
-SCIP_RETCODE SCIPcheckCharParam(
+SCIP_Bool SCIPisCharParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
    const char            value               /**< value to check */
@@ -1704,12 +2065,9 @@ SCIP_RETCODE SCIPsetStringParam(
    const char*           value               /**< new value of the parameter */
    );
 
-/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid
- *
- *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
- */
+/** checks whether parameter value for a given string parameter is valid */
 EXTERN
-SCIP_RETCODE SCIPcheckStringParam(
+SCIP_Bool SCIPisStringParamValid(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
    const char*           value               /**< value to check */
@@ -1780,13 +2138,17 @@ SCIP_RETCODE SCIPresetParams(
 
 /** sets parameters to
  *
- *  - SCIP_PARAMEMPHASIS_DEFAULT to use default values (see also SCIPresetParams())
- *  - SCIP_PARAMEMPHASIS_COUNTER to get feasible and "fast" counting process
- *  - SCIP_PARAMEMPHASIS_CPSOLVER to get CP like search (e.g. no LP relaxation)
- *  - SCIP_PARAMEMPHASIS_EASYCIP to solve easy problems fast
- *  - SCIP_PARAMEMPHASIS_FEASIBILITY to detect feasibility fast
- *  - SCIP_PARAMEMPHASIS_HARDLP to be capable to handle hard LPs
- *  - SCIP_PARAMEMPHASIS_OPTIMALITY to prove optimality fast
+ *  - \ref SCIP_PARAMEMPHASIS_DEFAULT to use default values (see also SCIPresetParams())
+ *  - \ref SCIP_PARAMEMPHASIS_COUNTER to get feasible and "fast" counting process
+ *  - \ref SCIP_PARAMEMPHASIS_CPSOLVER to get CP like search (e.g. no LP relaxation)
+ *  - \ref SCIP_PARAMEMPHASIS_EASYCIP to solve easy problems fast
+ *  - \ref SCIP_PARAMEMPHASIS_FEASIBILITY to detect feasibility fast
+ *  - \ref SCIP_PARAMEMPHASIS_HARDLP to be capable to handle hard LPs
+ *  - \ref SCIP_PARAMEMPHASIS_OPTIMALITY to prove optimality fast
+ *  - \ref SCIP_PARAMEMPHASIS_PHASEFEAS to find feasible solutions during a 3 phase solution process
+ *  - \ref SCIP_PARAMEMPHASIS_PHASEIMPROVE to find improved solutions during a 3 phase solution process
+ *  - \ref SCIP_PARAMEMPHASIS_PHASEPROOF to proof optimality during a 3 phase solution process
+ *
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -2301,6 +2663,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
    SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
    SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
+   SCIP_DECL_CONSENFORELAX ((*consenforelax)), /**< enforcing constraints for relaxation solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
@@ -2394,6 +2757,22 @@ SCIP_RETCODE SCIPsetConshdlrProp(
    int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
    SCIP_PROPTIMING       proptiming          /**< positions in the node solving loop where propagation should be executed */
+   );
+
+/** sets relaxation enforcement method of the constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetConshdlrEnforelax(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSENFORELAX ((*consenforelax)) /**< enforcement method for relaxation solution of constraint handler (might be NULL) */
    );
 
 /** sets copy method of both the constraint handler and each associated constraint
@@ -3036,6 +3415,7 @@ SCIP_RETCODE SCIPincludeRelax(
    const char*           desc,               /**< description of relaxation handler */
    int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxation handler */
+   SCIP_Bool             includeslp,         /**< Does the relaxator contain all cuts in the LP? */
    SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxation handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxation handler */
    SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxation handler */
@@ -3061,6 +3441,7 @@ SCIP_RETCODE SCIPincludeRelaxBasic(
    const char*           desc,               /**< description of relaxation handler */
    int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxation handler */
+   SCIP_Bool             includeslp,         /**< Does the relaxator contain all cuts in the LP? */
    SCIP_DECL_RELAXEXEC   ((*relaxexec)),     /**< execution method of relaxation handler */
    SCIP_RELAXDATA*       relaxdata           /**< relaxation handler data */
    );
@@ -3440,6 +3821,51 @@ SCIP_RETCODE SCIPsetPropPresolPriority(
    );
 
 
+/** creates a concurrent solver type and includes it in SCIP.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPincludeConcsolverType(
+   SCIP*                               scip,                       /**< SCIP data structure */
+   const char*                         name,                       /**< name of concurrent_solver */
+   SCIP_Real                           prefpriodefault,            /**< the default preferred priority of this concurrent solver type */
+   SCIP_DECL_CONCSOLVERCREATEINST      ((*concsolvercreateinst)),  /**< data copy method of concurrent solver */
+   SCIP_DECL_CONCSOLVERDESTROYINST     ((*concsolverdestroyinst)), /**< data copy method of concurrent solver */
+   SCIP_DECL_CONCSOLVERINITSEEDS       ((*concsolverinitseeds)),   /**< initialize random seeds of concurrent solver */
+   SCIP_DECL_CONCSOLVEREXEC            ((*concsolverexec)),        /**< execution method of concurrent solver */
+   SCIP_DECL_CONCSOLVERCOPYSOLVINGDATA ((*concsolvercopysolvdata)),/**< method to copy solving data */
+   SCIP_DECL_CONCSOLVERSTOP            ((*concsolverstop)),        /**< terminate solving in concurrent solver */
+   SCIP_DECL_CONCSOLVERSYNCWRITE       ((*concsolversyncwrite)),   /**< synchronization method of concurrent solver */
+   SCIP_DECL_CONCSOLVERSYNCREAD        ((*concsolversyncread)),    /**< synchronization method of concurrent solver */
+   SCIP_DECL_CONCSOLVERTYPEFREEDATA    ((*concsolvertypefreedata)),/**< method to free data of concurrent solver type */
+   SCIP_CONCSOLVERTYPEDATA*            data                        /**< the concurent solver type's data */
+   );
+
+/** returns the concurrent solver type with the given name, or NULL if not existing */
+EXTERN
+SCIP_CONCSOLVERTYPE* SCIPfindConcsolverType(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of concurrent_solver */
+   );
+
+/** returns the array of included concurrent solver types */
+EXTERN
+SCIP_CONCSOLVERTYPE** SCIPgetConcsolverTypes(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the number of included concurrent solver types */
+EXTERN
+int SCIPgetNConcsolverTypes(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** creates a primal heuristic and includes it in SCIP.
  *
  *  @note method has all heuristic callbacks as arguments and is thus changed every time a new
@@ -3463,8 +3889,8 @@ SCIP_RETCODE SCIPincludeHeur(
    int                   freq,               /**< frequency for calling primal heuristic */
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-   unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed;
-                                              *   see definition of SCIP_HeurTiming for possible values */
+   SCIP_HEURTIMING       timingmask,         /**< positions in the node solving loop where heuristic should be executed;
+                                              *   see definition of SCIP_HEURTIMING for possible values */
    SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
@@ -3495,8 +3921,8 @@ SCIP_RETCODE SCIPincludeHeurBasic(
    int                   freq,               /**< frequency for calling primal heuristic */
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
-   unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed;
-                                              *   see definition of SCIP_HeurTiming for possible values */
+   SCIP_HEURTIMING       timingmask,         /**< positions in the node solving loop where heuristic should be executed;
+                                              *   see definition of SCIP_HEURTIMING for possible values */
    SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_DECL_HEUREXEC    ((*heurexec)),      /**< execution method of primal heuristic */
    SCIP_HEURDATA*        heurdata            /**< primal heuristic data */
@@ -4190,6 +4616,13 @@ SCIP_RETCODE SCIPautoselectDisps(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** changes the display column mode */
+EXTERN
+void SCIPchgDispMode(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_DISPMODE         mode                /**< the display column mode */
+   );
+
 /** includes an NLPI in SCIP */
 EXTERN
 SCIP_RETCODE SCIPincludeNlpi(
@@ -4783,6 +5216,29 @@ SCIP_RETCODE SCIPsetProbName(
    const char*           name                /**< name to be set */
    );
 
+/** changes the objective function
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *
+ *  @note This method should be only used to change the objective function during two reoptimization runs and is only
+ *        recommended to an experienced user.
+ *
+ *  @note All variables not given in \p vars array are assumed to have an objective coefficient of zero.
+ */
+EXTERN
+SCIP_RETCODE SCIPchgReoptObjective(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_OBJSENSE         objsense,           /**< new objective function */
+   SCIP_VAR**            vars,               /**< problem variables */
+   SCIP_Real*            coefs,              /**< objective coefficients */
+   int                   nvars               /**< variables in vars array */
+   );
+
 /** returns objective sense of original problem
  *
  *  @return objective sense of original problem
@@ -4989,6 +5445,12 @@ SCIP_Real SCIPgetObjlimit(
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note This function should be used to inform SCIP that the objective function is integral, helping to improve the
+ *        performance. This is useful when using column generation. If no column generation (pricing) is used, SCIP
+ *        automatically detects whether the objective function is integral or can be scaled to be integral. However, in
+ *        any case, the user has to make sure that no variable is added during the solving process that destroys this
+ *        property.
  */
 EXTERN
 SCIP_RETCODE SCIPsetObjIntegral(
@@ -5007,6 +5469,11 @@ SCIP_RETCODE SCIPsetObjIntegral(
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note If no pricing is performed, SCIP automatically detects whether the objective function is integral or can be
+ *        scaled to be integral, helping to improve performance. This function returns the result. Otherwise
+ *        SCIPsetObjIntegral() can be used to inform SCIP. However, in any case, the user has to make sure that no
+ *        variable is added during the solving process that destroys this property.
  */
 EXTERN
 SCIP_Bool SCIPisObjIntegral(
@@ -5077,9 +5544,6 @@ SCIP_RETCODE SCIPaddPricedVar(
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
 EXTERN
@@ -5628,6 +6092,7 @@ SCIP_RETCODE SCIPaddCons(
  *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_EXITSOLVE
  */
 EXTERN
 SCIP_RETCODE SCIPdelCons(
@@ -5818,6 +6283,44 @@ int SCIPgetNCheckConss(
 
 /**@name Local Subproblem Methods */
 /**@{ */
+
+/** adds a conflict to a given node or globally to the problem if @p node == NULL.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note this method will release the constraint
+ */
+EXTERN
+SCIP_RETCODE SCIPaddConflict(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< node to add conflict (or NULL if global) */
+   SCIP_CONS*            cons,               /**< constraint representing the conflict */
+   SCIP_NODE*            validnode,          /**< node at which the constraint is valid (or NULL) */
+   SCIP_CONFTYPE         conftype,           /**< type of the conflict */
+   SCIP_Bool             iscutoffinvolved    /**< is a cutoff bound involved in this conflict */
+   );
+
+/** removes all conflicts depending on an old cutoff bound if the improvement of the incumbent is good enough
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPclearConflictStore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENT*           event               /**< event data */
+   );
 
 /** adds constraint to the given node (and all of its subnodes), even if it is a global constraint;
  *  It is sometimes desirable to add the constraint to a more local node (i.e., a node of larger depth) even if
@@ -6174,6 +6677,33 @@ SCIP_RETCODE SCIPsolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** transforms, presolves, and solves problem using additional solvers which emphasize on
+ * finding solutions.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @post After calling this method \SCIP reaches one of the following stages depending on if and when the solution
+ *        process was interrupted:
+ *        - \ref SCIP_STAGE_PRESOLVING if the solution process was interrupted during presolving
+ *        - \ref SCIP_STAGE_SOLVING if the solution process was interrupted during the tree search
+ *        - \ref SCIP_STAGE_SOLVED if the solving process was not interrupted
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPsolveParallel(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** frees branch and bound tree and all solution process data; statistics, presolving data and transformed problem is
  *  preserved
  *
@@ -6198,6 +6728,31 @@ EXTERN
 SCIP_RETCODE SCIPfreeSolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             restart             /**< should certain data be preserved for improved restarting? */
+   );
+
+/** frees branch and bound tree and all solution process data; statistics, presolving data and transformed problem is
+ *  preserved
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @post If this method is called in \SCIP stage \ref SCIP_STAGE_INIT or \ref SCIP_STAGE_PROBLEM, the stage of
+ *        \SCIP is not changed; otherwise, the \SCIP stage is changed to \ref SCIP_STAGE_PRESOLVED.
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPfreeReoptSolve(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** frees all solution process data including presolving and transformed problem, only original problem is kept
@@ -7241,6 +7796,49 @@ SCIP_Real SCIPgetVarFarkasCoef(
    SCIP_VAR*             var                 /**< variable to get reduced costs, should be a column in current node LP */
    );
 
+/** returns lower bound of variable directly before or after the bound change given by the bound change index
+ *  was applied
+ */
+EXTERN
+SCIP_Real SCIPgetVarLbAtIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   SCIP_Bool             after               /**< should the bound change with given index be included? */
+   );
+
+/** returns upper bound of variable directly before or after the bound change given by the bound change index
+ *  was applied
+ */
+EXTERN
+SCIP_Real SCIPgetVarUbAtIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   SCIP_Bool             after               /**< should the bound change with given index be included? */
+   );
+
+/** returns lower or upper bound of variable directly before or after the bound change given by the bound change index
+ *  was applied
+ */
+EXTERN
+SCIP_Real SCIPgetVarBdAtIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   SCIP_Bool             after               /**< should the bound change with given index be included? */
+   );
+
+/** returns whether the binary variable was fixed at the time given by the bound change index */
+EXTERN
+SCIP_Bool SCIPgetVarWasFixedAtIndex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index representing time on path to current node */
+   SCIP_Bool             after               /**< should the bound change with given index be included? */
+   );
+
 /** gets solution value for variable in current node
  *
  *  @return solution value for variable in current node
@@ -7617,6 +8215,13 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
                                               *   solving process should be stopped (e.g., due to a time limit) */
    );
 
+/** get LP solution status of last strong branching call (currently only works for strong branching with propagation) */
+EXTERN
+SCIP_LPSOLSTAT SCIPgetLastStrongbranchLPSolStat(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHDIR        branchdir           /**< branching direction for which LP solution status is requested */
+   );
+
 /** gets strong branching information on COLUMN variable of the last SCIPgetVarStrongbranch() call;
  *  returns values of SCIP_INVALID, if strong branching was not yet called on the given variable;
  *  keep in mind, that the returned old values may have nothing to do with the current LP solution
@@ -7822,6 +8427,8 @@ SCIP_RETCODE SCIPchgVarObj(
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
  */
 EXTERN
 SCIP_RETCODE SCIPaddVarObj(
@@ -8641,7 +9248,13 @@ SCIP_RETCODE SCIPaddClique(
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    );
 
-/** calculates a partition of the given set of binary variables into cliques;
+/** calculates a partition of the given set of binary variables into cliques; takes into account independent clique components
+ *
+ *  The algorithm performs the following steps:
+ *  - recomputes connected components of the clique table, if necessary
+ *  - computes a clique partition for every connected component greedily.
+ *  - relabels the resulting clique partition such that it satisfies the description below
+ *
  *  afterwards the output array contains one value for each variable, such that two variables got the same value iff they
  *  were assigned to the same clique;
  *  the first variable is always assigned to clique 0, and a variable can only be assigned to clique i if at least one of
@@ -9138,6 +9751,13 @@ SCIP_Bool SCIPallowDualReds(
 EXTERN
 SCIP_Bool SCIPallowObjProp(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** modifies an initial seed value with the global shift of random seeds */
+EXTERN
+unsigned int SCIPinitializeRandomSeed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   initialseedvalue    /**< initial seed value to be modified */
    );
 
 /** marks the variable that it must not be multi-aggregated
@@ -9983,7 +10603,9 @@ SCIP_Bool SCIPisConflictAnalysisApplicable(
  */
 EXTERN
 SCIP_RETCODE SCIPinitConflictAnalysis(
-   SCIP*                 scip                /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONFTYPE         conftype,           /**< type of conflict */
+   SCIP_Bool             iscutoffinvolved    /**< is the current cutoff bound involved? */
    );
 
 /** adds lower bound of variable at the time of the given bound change index to the conflict analysis' candidate storage;
@@ -10979,6 +11601,7 @@ SCIP_RETCODE SCIPdisableConsPropagation(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_EXITPRESOLVE
@@ -11104,6 +11727,25 @@ SCIP_RETCODE SCIPenfolpCons(
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
+/** enforces single constraint for a given relaxation solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @note This is an advanced method and should be used with caution.  It may only be called for constraints that were not
+ *        added to SCIP beforehand.
+ */
+SCIP_RETCODE SCIPenforelaxCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint to enforce */
+   SCIP_SOL*             sol,                /**< solution to enforce */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   );
+
 /** calls LP initialization method for single constraint
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -11118,7 +11760,9 @@ SCIP_RETCODE SCIPenfolpCons(
 EXTERN
 SCIP_RETCODE SCIPinitlpCons(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint to initialize */
+   SCIP_CONS*            cons,               /**< constraint to initialize */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected while building the LP */
+
    );
 
 /** calls separation method of single constraint for LP solution
@@ -12100,6 +12744,10 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @note calling this method in SCIP_STAGE_SOLVED is only recommended to experienced users and should only be called
+ *        for pure LP instances (without presolving)
  */
 EXTERN
 SCIP_Real SCIPgetColRedcost(
@@ -12438,6 +13086,8 @@ SCIP_RETCODE SCIPflushRowExtensions(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
+ *  @attention If the absolute value of val is below the SCIP epsilon tolerance, the variable will not added.
+ *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
@@ -12464,6 +13114,8 @@ SCIP_RETCODE SCIPaddVarToRow(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
+ *  @attention If a coefficients absolute value is below the SCIP epsilon tolerance, the variable with its value is not added.
+ *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
@@ -12482,6 +13134,8 @@ SCIP_RETCODE SCIPaddVarsToRow(
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @attention If the absolute value of val is below the SCIP epsilon tolerance, the variables will not added.
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_INITSOLVE
@@ -13368,7 +14022,8 @@ SCIP_RETCODE SCIPcreateNlRow(
    SCIP_QUADELEM*        quadelems,          /**< elements (i.e., monomials) in quadratic term, or NULL if nquadelems == 0 */
    SCIP_EXPRTREE*        expression,         /**< nonlinear expression, or NULL */
    SCIP_Real             lhs,                /**< left hand side */
-   SCIP_Real             rhs                 /**< right hand side */
+   SCIP_Real             rhs,                /**< right hand side */
+   SCIP_EXPRCURV         curvature           /**< curvature of the nonlinear row */
    );
 
 /** creates and captures an NLP nonlinear row without any coefficients
@@ -14095,6 +14750,49 @@ void SCIPaddBilinMcCormick(
    SCIP_Real*            lincoefy,           /**< buffer to add coefficient of second variable in linearization */
    SCIP_Real*            linconstant,        /**< buffer to add constant of linearization */
    SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
+   );
+
+/** creates a convex NLP relaxation and stores it in a given NLPI problem; the function computes for each variable which
+ *  the number of non-linearly occurrences and stores it in the nlscore array
+ *
+ *  @note the first row corresponds always to the cutoff row (even if cutoffbound is SCIPinfinity(scip))
+ **/
+EXTERN
+SCIP_RETCODE SCIPcreateConvexNlp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLROW**          nlrows,             /**< nonlinear rows */
+   int                   nnlrows,            /**< total number of nonlinear rows */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< empty nlpi problem */
+   SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpi
+                                              *   problem */
+   SCIP_Real*            nlscore,            /**< array to store the score of each nonlinear variable (NULL if not
+                                              *   needed) */
+   SCIP_Real             cutoffbound,        /**< cutoff bound */
+   SCIP_Bool             setobj              /**< should the objective function be set? */
+   );
+
+/** updates bounds of each variable and the cutoff row in the nlpiproblem */
+EXTERN
+SCIP_RETCODE SCIPupdateConvexNlp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem representing the convex NLP relaxation */
+   SCIP_HASHMAP*         var2nlpiidx,        /**< mapping between variables and nlpi indices */
+   SCIP_VAR**            nlpivars,           /**< array containing all variables of the nlpi */
+   int                   nlpinvars,          /**< total number of nlpi variables */
+   SCIP_Real             cutoffbound         /**< new cutoff bound */
+   );
+
+/** adds linear rows to the convex NLP relaxation */
+SCIP_RETCODE SCIPaddConvexNlpRows(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
+   SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem */
+   SCIP_HASHMAP*         var2idx,            /**< empty hash map to store mapping between variables and indices in nlpi
+                                              *   problem */
+   SCIP_ROW**            rows,               /**< rows to add */
+   int                   nrows               /**< total number of rows to add */
    );
 
 /**@} */
@@ -15138,6 +15836,22 @@ SCIP_RETCODE SCIPapplyCutsProbing(
    SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
    );
 
+/** solves relaxation(s) at the current probing node (cannot be applied at preprocessing stage);
+ *  no separation or pricing is applied
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPsolveProbingRelax(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            cutoff              /**< pointer to store whether a relaxation was infeasible or the objective
+                                              *   limit was reached (or NULL, if not needed) */
+   );
+
 /** stores the candidate score and preferred rounding direction for a candidate variable */
 EXTERN
 SCIP_RETCODE SCIPgetDivesetScore(
@@ -15946,6 +16660,21 @@ SCIP_RETCODE SCIPcreateCurrentSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
+/** creates a partial primal solution, initialized to unknown values
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPcreatePartialSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
 /** creates a primal solution, initialized to unknown values
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -16650,6 +17379,45 @@ SCIP_RETCODE SCIPprintTransSol(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
 
+/** outputs discrete variables of solution in original problem space to the given file stream
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+SCIP_RETCODE SCIPprintMIPStart(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< primal solution */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** check whether the dual solution is available
+ *
+ * @note This is used when calling \ref SCIPprintDualSol()
+ *
+ * @return is dual solution available?
+ *
+ * @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_Bool SCIPisDualSolAvailable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             printreason         /**< print warning message if dualsol is not available? */
+   );
+
 /** outputs dual solution from LP solver to file stream
  *
  *  @note This only works if no presolving has been performed, which can be checked by calling method \ref
@@ -16878,6 +17646,31 @@ SCIP_RETCODE SCIPreadSol(
    const char*           filename            /**< name of the input file */
    );
 
+/** reads a given solution file and store the solution values in the given solution pointer
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPreadSolFile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename,           /**< name of the input file */
+   SCIP_SOL*             sol,                /**< solution pointer */
+   SCIP_Bool             xml,                /**< true, iff the given solution in written in XML */
+   SCIP_Bool*            partial,            /**< pointer to store if the solution is partial */
+   SCIP_Bool*            error               /**< pointer store if an error occured */
+   );
+
 /** adds feasible primal solution to solution storage by copying it
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -16962,6 +17755,7 @@ SCIP_RETCODE SCIPtrySol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -16988,6 +17782,7 @@ SCIP_RETCODE SCIPtrySolFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violation be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -17008,9 +17803,41 @@ SCIP_RETCODE SCIPtryCurrentSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violation be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
+   );
+
+/** returns all partial solutions
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_SOL** SCIPgetPartialSols(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns number of partial solutions
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+int SCIPgetNPartialSols(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** checks solution for feasibility without adding it to the solution store
@@ -17034,6 +17861,7 @@ SCIP_RETCODE SCIPcheckSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violation be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -17092,6 +17920,25 @@ EXTERN
 SCIP_Real SCIPgetPrimalRayVal(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var                 /**< variable to get value for */
+   );
+
+/** updates the primal ray thats proves unboundedness
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPupdatePrimalRay(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             primalray           /**< the new primal ray */
    );
 
 /**@} */
@@ -17289,6 +18136,23 @@ SCIP_RETCODE SCIPdropRowEvent(
 
 /**@name Tree Methods */
 /**@{ */
+
+/** gets focus node in the tree
+ *
+ *  if we are in probing/diving mode this method returns the node in the tree where the probing/diving mode was started.
+ *
+ *  @return the current node of the search tree
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_NODE* SCIPgetFocusNode(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 /** gets current node in the tree
  *
@@ -17614,6 +18478,95 @@ void SCIPsetFocusnodeLP(
 
 
 /*
+ * parallel interface methods
+ */
+
+/**@name Parallel Interface Methods */
+/**@{ */
+
+/** Constructs the parallel interface to execute processes concurrently.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPconstructSyncstore(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** releases the current synchronization store
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *       - \ref SCIP_STAGE_FREE
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPfreeSyncstore(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** Gets the synchronization store.
+ *
+ *  @return the \ref SCIP_SPI* parallel interface pointer to submit jobs for concurrent processing.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_SYNCSTORE* SCIPgetSyncstore(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@} */
+
+
+
+/*
  * reoptimization methods
  */
 
@@ -17697,7 +18650,7 @@ SCIP_RETCODE SCIPaddReoptnodeBndchg(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
    SCIP_VAR*             var,                /**< variable pointer */
-   SCIP_Real             val,                /**< value of the variable */
+   SCIP_Real             bound,              /**< variable bound to add */
    SCIP_BOUNDTYPE        boundtype           /**< bound type of the variable value */
    );
 
@@ -17731,8 +18684,12 @@ SCIP_RETCODE SCIPaddReoptnodeCons(
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
    SCIP_VAR**            vars,               /**< array of variables */
    SCIP_Real*            vals,               /**< array of variable bounds */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of variable boundtypes */
+   SCIP_Real             lhs,                /**< lhs of the constraint */
+   SCIP_Real             rhs,                /**< rhs of the constraint */
    int                   nvars,              /**< number of variables */
-   REOPT_CONSTYPE        constype            /**< type of the constraint */
+   REOPT_CONSTYPE        constype,           /**< type of the constraint */
+   SCIP_Bool             linear              /**< the given constraint has a linear representation */
    );
 
 /** return the branching path stored in the reoptree at ID id */
@@ -17937,6 +18894,30 @@ int SCIPgetNReoptRuns(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** add given number to the number of processed nodes in current run and in all runs, including the focus node
+ *
+ *  @return the number of processed nodes in current run, including the focus node
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+EXTERN
+void SCIPaddNNodes(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Longint          nnodes              /**< number of processed nodes to add to the statistics */
+   );
+
 /** gets number of processed nodes in current run, including the focus node
  *
  *  @return the number of processed nodes in current run, including the focus node
@@ -17994,6 +18975,98 @@ SCIP_Longint SCIPgetNTotalNodes(
  */
 EXTERN
 int SCIPgetNNodesLeft(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of leaf nodes processed with feasible relaxation solution
+ *
+ * @return number of leaf nodes processed with feasible relaxation solution
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+EXTERN
+SCIP_Longint SCIPgetNFeasibleLeaves(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of infeasible leaf nodes processed
+ *
+ * @return number of infeasible leaf nodes processed
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+EXTERN
+SCIP_Longint SCIPgetNInfeasibleLeaves(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of processed leaf nodes that hit LP objective limit
+ *
+ * @return number of processed leaf nodes that hit LP objective limit
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+EXTERN
+SCIP_Longint SCIPgetNObjlimLeaves(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of times a selected node was from a cut off subtree
+ *
+ *  @return number of times a selected node was from a cut off subtree
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+EXTERN
+SCIP_Longint SCIPgetNDelayedCutoffs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -18581,26 +19654,6 @@ int SCIPgetFocusDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets maximal allowed tree depth
- *
- *  @return gets maximal allowed tree depth
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- */
-EXTERN
-int SCIPgetDepthLimit(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** gets maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)
  *
  *  @return the maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)
@@ -18822,6 +19875,12 @@ SCIP_Real SCIPgetFirstLPLowerboundRoot(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+
+/** the primal bound of the very first solution */
+EXTERN
+SCIP_Real SCIPgetFirstPrimalBound(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 /** gets global primal bound (objective value of best solution or user objective limit) for the original problem
  *
@@ -19083,6 +20142,21 @@ SCIP_Real SCIPgetAvgPseudocostCountCurrentRun(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
+/** gets the number of pseudo cost updates for the given direction over all variables
+ *
+ *  @return the number of pseudo cost updates for the given direction over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_Real SCIPgetPseudocostCount(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   SCIP_Bool             onlycurrentrun      /**< use only history of current run? */
+   );
+
 /** gets the average pseudo cost score value over all variables, assuming a fractionality of 0.5
  *
  *  @return the average pseudo cost score value over all variables, assuming a fractionality of 0.5
@@ -19094,6 +20168,21 @@ SCIP_Real SCIPgetAvgPseudocostCountCurrentRun(
 EXTERN
 SCIP_Real SCIPgetAvgPseudocostScore(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the variance of pseudo costs for all variables in the requested direction
+ *
+ *  @return the variance of pseudo costs for all variables in the requested direction
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_Real SCIPgetPseudocostVariance(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHDIR        branchdir,          /**< the branching direction, up or down */
+   SCIP_Bool             onlycurrentrun      /**< use only history of current run? */
    );
 
 /** gets the average pseudo cost score value over all variables, assuming a fractionality of 0.5,
@@ -19269,6 +20358,20 @@ SCIP_Real SCIPgetAvgCutoffScore(
  */
 EXTERN
 SCIP_Real SCIPgetAvgCutoffScoreCurrentRun(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets deterministic time number of LPs solved so far
+ *
+ *  @return the total number of LPs solved so far
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_Real SCIPgetDeterministicTime(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -20502,6 +21605,12 @@ SCIP_Bool SCIPisUpdateUnreliable(
 #define SCIPconvertRealToLongint(scip, real)      ((SCIP_Longint)((real) < 0 ? ((real) - 0.5) : ((real) + 0.5)))
 
 #define SCIPisUpdateUnreliable(scip, newval, oldval) SCIPsetIsUpdateUnreliable((scip)->set, newval, oldval)
+
+#define SCIPmarkConsPropagate(scip, cons)         SCIPconsMarkPropagate(cons, (scip)->set)
+#define SCIPgetStage(scip)                        (((scip)->set)->stage)
+#define SCIPhasPerformedPresolve(scip)            ((scip)->stat)->performpresol)
+#define SCIPisStopped(scip)                       SCIPsolveIsStopped((scip)->set, (scip)->stat, 0)
+
 #endif
 
 /** outputs a real number, or "+infinity", or "-infinity" to a file */
@@ -20512,6 +21621,15 @@ void SCIPprintReal(
    SCIP_Real             val,                /**< value to print */
    int                   width,              /**< width of the field */
    int                   precision           /**< number of significant digits printed */
+   );
+
+/** parse a real value that was written with SCIPprintReal() */
+EXTERN
+SCIP_Bool SCIPparseReal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           str,                /**< string to search */
+   SCIP_Real*            value,              /**< pointer to store the parsed value */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
    );
 
 /**@} */
@@ -20649,6 +21767,15 @@ BMS_BUFMEM* SCIPcleanbuffer(
  */
 EXTERN
 SCIP_Longint SCIPgetMemUsed(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the total number of bytes in block and buffer memory
+ *
+ *  @return the total number of bytes in block and buffer memory.
+ */
+EXTERN
+SCIP_Longint SCIPgetMemTotal(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -21082,7 +22209,6 @@ int SCIPgetPtrarrayMaxIdx(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
    );
-
 
 /**@} */
 #ifdef __cplusplus

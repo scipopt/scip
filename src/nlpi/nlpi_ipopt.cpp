@@ -72,6 +72,8 @@ using namespace Ipopt;
 #define MAXPERTURB         0.01              /**< maximal perturbation of bounds in starting point heuristic */
 #define FEASTOLFACTOR      0.05              /**< factor for user-given feasibility tolerance to get feasibility tolerance that is actually passed to Ipopt */
 
+#define DEFAULT_RANDSEED   71                /**< initial random seed */
+
 /* Convergence check (see ScipNLP::intermediate_callback)
  *
  * If the fastfail option is enabled, then we stop Ipopt if the reduction in
@@ -113,7 +115,7 @@ public:
    std::string                 defoptions;   /**< modified default options for Ipopt */
 
    /** constructor */
-   SCIP_NlpiData(
+   explicit SCIP_NlpiData(
       BMS_BLKMEM* blkmem_                    /**< block memory */
       )
      : blkmem(blkmem_),
@@ -162,6 +164,7 @@ class ScipNLP : public TNLP
 {
 private:
    SCIP_NLPIPROBLEM*     nlpiproblem;        /**< NLPI problem data */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 
    SCIP_Real             conv_prtarget[convcheck_nchecks]; /**< target primal infeasibility for each convergence check */
    SCIP_Real             conv_dutarget[convcheck_nchecks]; /**< target dual infeasibility for each convergence check */
@@ -171,15 +174,24 @@ private:
 public:
    bool                  approxhessian;      /**< do we tell Ipopt to approximate the hessian? (may also be false if user set to approx. hessian via option file) */
 
+   // cppcheck-suppress uninitMemberVar
    /** constructor */
    ScipNLP(
-      SCIP_NLPIPROBLEM*  nlpiproblem_ = NULL /**< NLPI problem data */
+      SCIP_NLPIPROBLEM*  nlpiproblem_ = NULL,/**< NLPI problem data */
+      BMS_BLKMEM*        blkmem = NULL       /**< block memory */
       )
-      : nlpiproblem(nlpiproblem_), approxhessian(false)
-   { }
+      : nlpiproblem(nlpiproblem_), randnumgen(NULL), approxhessian(false)
+   {
+      assert(blkmem != NULL);
+      SCIP_CALL_ABORT_QUIET( SCIPrandomCreate(&randnumgen, blkmem, DEFAULT_RANDSEED) );
+   }
 
    /** destructor */
-   ~ScipNLP() { }
+   ~ScipNLP()
+   {
+      assert(randnumgen != NULL);
+      SCIPrandomFree(&randnumgen);
+   }
 
    /** sets NLPI data structure */
    void setNLPIPROBLEM(SCIP_NLPIPROBLEM* nlpiproblem_)
@@ -564,7 +576,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
       }
 
       /* initialize Ipopt/SCIP NLP interface */
-      (*problem)->nlp = new ScipNLP(*problem);
+      (*problem)->nlp = new ScipNLP(*problem, data->blkmem);
       if( IsNull((*problem)->nlp) )
          throw std::bad_alloc();
    }
@@ -1093,12 +1105,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
       }
       else
       {
-         /* ReOptimizeNLP with Ipopt <= 3.10.3 could return a solution not within bounds if all variables are fixed (see Ipopt ticket #179) */
-#if (IPOPT_VERSION_MAJOR > 3) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR > 10) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR == 10 && IPOPT_VERSION_RELEASE > 3)
          status = problem->ipopt->ReOptimizeTNLP(GetRawPtr(problem->nlp));
-#else
-         status = problem->ipopt->OptimizeTNLP(GetRawPtr(problem->nlp));
-#endif
       }
 
       // catch the very bad status codes
@@ -1128,7 +1135,7 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          problem->lasttime  = stats->TotalCPUTime();
       }
    }
-   catch( IpoptException except )
+   catch( IpoptException& except )
    {
       SCIPerrorMessage("Ipopt returned with exception: %s\n", except.Message().c_str());
       return SCIP_ERROR;
@@ -2151,21 +2158,19 @@ bool ScipNLP::get_starting_point(
       else
       {
          SCIP_Real lb, ub;
-         unsigned int perturbseed;
 
          SCIPdebugMessage("Ipopt started without intial primal values; make up starting guess by projecting 0 onto variable bounds\n");
 
-         perturbseed = 1;
          for( int i = 0; i < n; ++i )
          {
             lb = SCIPnlpiOracleGetVarLbs(nlpiproblem->oracle)[i];
             ub = SCIPnlpiOracleGetVarUbs(nlpiproblem->oracle)[i];
             if( lb > 0.0 )
-               x[i] = SCIPgetRandomReal(lb, lb + MAXPERTURB*MIN(1.0, ub-lb), &perturbseed);
+               x[i] = SCIPrandomGetReal(randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
             else if( ub < 0.0 )
-               x[i] = SCIPgetRandomReal(ub - MAXPERTURB*MIN(1.0, ub-lb), ub, &perturbseed);
+               x[i] = SCIPrandomGetReal(randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
             else
-               x[i] = SCIPgetRandomReal(MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)), &perturbseed);
+               x[i] = SCIPrandomGetReal(randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
          }
       }
    }
@@ -2826,6 +2831,9 @@ SCIP_RETCODE SCIPsolveLinearProb3(
    assert(b != NULL);
    assert(x != NULL);
    assert(success != NULL);
+
+   BMScopyMemoryArray(Acopy, A, N*N);
+   BMScopyMemoryArray(bcopy, b, N);
 
    /* compute the LU factorization */
    IpLapackDgetrf(N, Acopy, pivotcopy, N, info);

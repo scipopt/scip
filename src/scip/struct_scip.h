@@ -36,14 +36,18 @@
 #include "scip/type_implics.h"
 #include "scip/type_prob.h"
 #include "scip/type_primal.h"
+#include "scip/type_relax.h"
 #include "scip/type_tree.h"
 #include "scip/type_pricestore.h"
 #include "scip/type_sepastore.h"
+#include "scip/type_conflictstore.h"
 #include "scip/type_cutpool.h"
 #include "scip/type_branch.h"
 #include "scip/type_conflict.h"
 #include "scip/type_dialog.h"
 #include "scip/type_reopt.h"
+#include "scip/type_concurrent.h"
+#include "scip/type_syncstore.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -84,8 +88,13 @@ struct Scip
    /* SOLVING */
    SCIP_PRICESTORE*      pricestore;         /**< storage for priced variables */
    SCIP_SEPASTORE*       sepastore;          /**< storage for separated cuts */
+   SCIP_CONFLICTSTORE*   conflictstore;      /**< storage for conflicts */
    SCIP_CUTPOOL*         cutpool;            /**< global cut pool */
    SCIP_CUTPOOL*         delayedcutpool;     /**< global delayed cut pool */
+
+   /* PARALLEL */
+   SCIP_SYNCSTORE*       syncstore;          /**< the data structure for storing synchronization information */
+   SCIP_CONCURRENT*      concurrent;         /**< data required for concurrent solve */
 };
 
 #ifdef __cplusplus

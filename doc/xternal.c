@@ -129,7 +129,7 @@
  * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  3.2.1
+ * @version  4.0.0
  *
  * \image html scippy.png
  *
@@ -593,48 +593,58 @@
  *   the optimized mode. The third option <code>opt-gccold</code> will work with older GCC compilers before version
  *   4.2. We recommend using newer GCC versions.
  *
- * - <code>LPS=\<clp|cpx|grb|msk|qso|spx|xprs|none\></code> This determines the LP-solver, which should have been
+ * - <code>LPS=\<clp|cpx|grb|msk|qso|spx|xprs|none\></code> This determines the LP-solver, which should be
  *   installed separately from SCIP. The options are the following:
  *      - <code>clp</code>: COIN-OR Clp LP-solver
  *      - <code>cpx</code>: CPLEX LP-solver
  *      - <code>grb</code>: Gurobi LP-solver (interface is in beta stage)
  *      - <code>msk</code>: Mosek LP-solver
  *      - <code>qso</code>: QSopt LP-solver
- *      - <code>spx</code>: SoPlex LP-solver (default)
+ *      - <code>spx</code>: old SoPlex LP-solver (for versions < 2)
+ *      - <code>spx2</code>: new SoPlex LP-solver (default) (from version 2)
  *      - <code>xprs</code>: XPress LP-solver
  *      - <code>none</code>: no LP-solver (you should set the parameter \<lp/solvefreq\> to \<-1\> to avoid solving LPs)
  *
  * - <code>LPSOPT=\<dbg|opt|opt-gccold\></code> Chooses the debug or optimized version (or old GCC optimized) version of
- *   the LP-solver. (currently only available for SoPlex and CLP)
+ *   the LP-solver (currently only available for SoPlex and CLP).
  *
- * - <code>ZIMPL=\<true|false\></code> Turns direct support of ZIMPL in SCIP on (default) or off, respectively.
- * - <code>ZIMPLOPT=\<dbg|opt|opt-gccold\></code> Chooses the debug or optimized (default) (or old GCC optimized)
- *   version of ZIMPL, if ZIMPL support is enabled. \n
+ * - <code>ZIMPL=\<true|false\></code> Turns direct support of ZIMPL in SCIP on (default) or off, respectively.\n
  *   If the ZIMPL-support is disabled, the GMP-library is no longer needed for SCIP and therefore not linked to SCIP.
+ *
+ * - <code>ZIMPLOPT=\<dbg|opt|opt-gccold\></code> Chooses the debug or optimized (default) (or old GCC optimized)
+ *   version of ZIMPL, if ZIMPL support is enabled.
  *
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
  *
- * - <code>IPOPT=\<true|false\></code> to enable or disable (default) IPOPT interface (needs IPOPT)
+ * - <code>IPOPT=\<true|false\></code> Enable or disable (default) IPOPT interface (needs IPOPT >= 3.11).
  *
- * - <code>EXPRINT=\<cppad|none\></code>   to use CppAD as expressions interpreter (default) or no expressions interpreter
+ * - <code>EXPRINT=\<cppad|none\></code> Use CppAD as expressions interpreter (default) or no expressions interpreter.
  *
- * - <code>GAMS=\<true|false\></code>   to enable or disable (default) reading functionality in GAMS reader (needs GAMS)
+ * - <code>GAMS=\<true|false\></code> Enable or disable (default) reading functionality in GAMS reader (needs GAMS).
+ *
+ * - <code>NOBLKBUFMEM=\<true|false\></code> Turns the internal SCIP block and buffer memory off or on (default).
+ *   This way the code can be checked by valgrind or similar tools. (The individual options <code>NOBLKMEM=\<true|false\></code>
+ *   and <code>NOBUFMEM=\<true|false\></code> to turn off the SCIP block and buffer memory, respectively, exist as well).
+ *
+ * - <code>TPI=\<tny|omp|none\></code> This determines the threading library that is used for the concurrent solver.
+ *   The options are the following:
+ *      - <code>none</code>: use no threading library and therefore disable the concurrent solver feature
+ *      - <code>tny</code>: use the tinycthread's library which is bundled with SCIP. This
+ *                          is a wrapper around the plattform specific threading library ad should work
+ *                          for Linux, Mac OS X and Windows.
+ *      - <code>omp</code>: use the OpenMP. This will not work with microsoft compilers, since they do not support
+ *                          the required OpenMP version.
+ *
+ * You can use other compilers - depending on the system:
+ *
+ * - <code>COMP=<clang|gnu|intel></code> Use Clang, Gnu (default) or Intel compiler.
  *
  * There are additional parameters for Linux/Gnu compilers:
- *
- * - <code>NOBLKBUFMEM=\<true\></code> turns off the internal SCIP block and buffer memory.  This way the code can be checked by valgrind or
- *   similar tools. (The individual options <code>NOBLKMEM=\<true\></code> and <code>NOBUFMEM=\<true\></code> to turn off the SCIP block and
- *   buffer memory, respectively, exist as well).
  *
  * - <code>SHARED=\<true\></code> generates a shared object of the SCIP libraries.  (The binary uses these shared
  *   libraries as well.)
  * - <code>OPT=prf</code> generates a profiling version of SCIP providing a detailed statistic of the time usage of
  *   every method of SCIP.
- *
- * You can use other compilers - depending on the system:
- *
- * - <code>COMP=intel</code> Uses of the Intel compiler which is only available with the main optimization flags
- *   <code>OPT=\<dbg|opt\></code>. (Default is gcc/g++ represented through <code>COMP=gnu</code>.)
  *
  * There is the possibility to watch the compilation more precisely:
  *
@@ -642,11 +652,12 @@
  *
  * The SCIP makefile supports several targets (used via <code>make ... "target"</code>):
  *
+ * - <code>all (or no target)</code> Build SCIP library and binary.
  * - <code>links</code> Reconfigures the links in the "lib" directory.
  * - <code>doc</code> Creates documentation in the "doc" directory.
  * - <code>clean</code> Removes all object files.
  * - <code>depend</code> Creates dependencies files. This is only needed if you add files to SCIP.
- * - <code>check</code> Runs the check script, see \ref TEST.
+ * - <code>check or test</code> Runs the check script, see \ref TEST.
  *
  * The SCIP makefiles are structured as follows.
  *
@@ -949,7 +960,7 @@
  *
  * \code
  * SCIP version 2.0.1 [precision: 8 byte] [memory: block] [mode: optimized] [LP solver: SoPlex 1.5.0]
- * Copyright (c) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * External codes:
  *   SoPlex 1.5.0         Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)
@@ -1841,12 +1852,15 @@
  * }
  * \endcode
  *
- * <b>Note:</b> If you implement this callback, take care when setting the valid pointer. The valid pointer should be
- * set to TRUE if (and only if!) you can make sure that all necessary data of the constraint handler are copied
- * correctly. If the complete problem is validly copied, i.e. if the copy methods of all problem defining plugins
- * (constraint handlers and pricers) return <code>*valid = TRUE</code>, then dual reductions found for the copied problem can be
- * transferred to the original SCIP instance. Thus, if the valid pointer is wrongly set to TRUE, it might happen that
- * optimal solutions are cut off.
+ * <b>Note:</b> If you implement this callback, take care when setting the valid pointer.
+ *
+ * A problem copy is called valid if it is valid in both the primal and the dual sense, i.e., if
+ *
+ *  -   it is a relaxation of the source problem
+ *  -   it does not enlarge the feasible region.
+ *
+ * A constraint handler may choose to not copy a constraint and still declare the resulting copy as valid. It must ensure
+ * the feasibility of any solution to the problem copy in the original (source) space.
  *
  * <b>Note:</b> If you implement this callback and the constraint handler needs constraints (see CONSHDLR_NEEDSCONS),
  * then you also need to implement the callback \ref CONSCOPY.
@@ -2014,6 +2028,23 @@
  * CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, and CONSHDLR_DELAYSEPA, which influence the behaviour of SCIP
  * calling CONSSEPASOL.
  *
+ * @subsection CONSENFORELAX
+ *
+ * The CONSENFORELAX callback is similar to the CONSENFOLP and CONSENFOPS callbacks, but deals with relaxation solutions.
+ *
+ * If the best bound computed by a relaxator that includes the whole LP is strictly better than the bound of the LP itself,
+ * the corresponding relaxation solution will get enforced. Therefore the CONSENFORELAX callback will only be called for
+ * solutions that satisfy all active LP-constraints.
+ *
+ * Like the ENFOLP and ENFOPS callbacks, the ENFORELAX callback has to check whether the solution given in sol satisfies
+ * all the constraints of the constraint handler. Since the callback is only called for relaxators including the whole LP,
+ * cuts may be added with a result of SCIP_SEPARATED, like in the ENFOLP callback. It is also possible to return
+ * SCIP_SOLVELP if the relaxation solution is invalid for some reason and the LP should be solved instead.
+ *
+ * Note that the CONSENFORELAX callback is only relevant if relaxators are used. Since the basic distribution of the
+ * SCIP Optimization Suite does not contain any relaxators, this callback can be ignored unless any relaxators are added
+ * via user-plugins.
+ *
  * @subsection CONSPROP
  *
  * The CONSPROP callback is called during the subproblem processing.
@@ -2136,7 +2167,7 @@
  * To get the corresponding target variable of a given source variable, you can use the variable map directly:
  *
  * \code
- * targetvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, sourcevar);
+ * targetvar = (SCIP_VAR*) SCIPhashmapGetImage(varmap, sourcevar);
  * \endcode
  *
  * We recommend, however, to use the method SCIPgetVarCopy() which gets besides others the variable map and the constraint map as input
@@ -2149,9 +2180,14 @@
  *
  * Finally, the result pointer <code>valid</code> has to be set to TRUE if (and only if!) the copy process was successful.
  *
- * <b>Note:</b> Be careful when setting the valid pointer. If you set the valid pointer to TRUE, but the constraint was
- * not copied one-to-one, then optimal solutions might be cut off during the search (see section
- * CONSHDLRCOPY above).
+ * <b>Note:</b> Be careful when setting the valid pointer.
+ * A problem copy is called valid if it is valid in both the primal and the dual sense, i.e., if
+ *
+ *  -   it is a relaxation of the source problem
+ *  -   it does not enlarge the feasible region.
+ *
+ * A constraint handler may choose to not copy a constraint and still declare the resulting copy as valid. Therefore, it must ensure
+ * the feasibility of any solution to the problem copy in the original (source) space.
  *
  * For an example implementation we refer to cons_linear.h. Additional documentation and the complete list of all
  * parameters can be found in the file in type_cons.h.
@@ -4227,7 +4263,7 @@
  * @section DIVING_FURTHERINFO Further information
  *
  * This is all there is to extend the SCIP set of diving heuristics by a new one. For further information, please see
- * diveset related methods in \ref type_heur.h, \ref pub_heur.h, \ref pub_dive.h, and \ref heur_guideddiving.h or
+ * diveset related methods in \ref type_heur.h, \ref pub_heur.h, \ref heuristics.h, and \ref heur_guideddiving.h or
  * other diving heuristics that implement diving through a diveset.
  */
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -4306,6 +4342,13 @@
  * 0, 7, 14, ... of the branching tree. A frequency of 0 means that the callback is only executed at the root node, i.e.,
  * only the relaxation of the root problem is solved. A frequency of -1 disables the relaxation handler.
  *
+ * \par RELAX_INCLUDESLP: whether the whole lp is included in the relaxation.
+ * This flag should be set to TRUE if all active LP-rows are included in the relaxation and every feasible solution produced
+ * by the relaxator will satisfy all these LP-constraints. Only if this is set to TRUE, the solutions of this relaxator can
+ * be enforced using the \ref CONSENFORELAX callback, meaning that they will be used as primal solutions if feasible and can
+ * be separated or branched on. If this flag is set to FALSE, only the lowerbound computed by the relaxator will be used in
+ * the solving process.
+ *
  *
  * @section RELAX_DATA Relaxation Handler Data
  *
@@ -4366,19 +4409,22 @@
  * Note that, like the LP relaxation, the relaxation handler should only operate on variables for which the corresponding
  * column exists in the transformed problem. Typical methods called by a relaxation handler are SCIPconstructLP() and SCIPflushLP() to
  * make sure that the LP of the current node is constructed and its data can be accessed via calls to SCIPgetLPRowsData()
- * and SCIPgetLPColsData(), SCIPseparateSol() to call the cutting plane separators for a given primal solution, and
- * SCIPupdateLocalLowerbound() to update the current node's dual bound after having solved the relaxation.
- * In addition, you may want to call SCIPtrySolFree() if you think that you have found a feasible primal solution.
+ * and SCIPgetLPColsData(), and SCIPseparateSol() to call the cutting plane separators for a given primal solution.
  *
- * The primal solution of the relaxation can be stored inside the data structures of SCIP with
- * <code>SCIPsetRelaxSolVal()</code> and <code>SCIPsetRelaxSolVals()</code> and later accessed by
- * <code>SCIPgetRelaxSolVal()</code>.
+ * The lowerbound computed by the relaxation should be returned in the lowerbound pointer. The primal solution of the relaxation can
+ * be stored inside the data structures of SCIP with <code>SCIPsetRelaxSolVal()</code> and <code>SCIPsetRelaxSolVals()</code>. If the
+ * RELAX_INCLUDESLP flag is set to true, this solution will be enforced and, if feasible, added to the solution storage if the
+ * lowerbound of this relaxator is the largest among all relaxators and the LP. You may also call SCIPtrySolFree() directly from the
+ * relaxation handler to make sure that a solution is added to the solution storage if it is feasible, even if the relaxator does not
+ * include the LP or another relaxator produced a stronger bound. After the relaxation round is finished, the best relaxation solution
+ * can be accessed via <code>SCIPgetRelaxSolVal()</code>.
  * Furthermore, there is a list of external branching candidates, that can be filled by relaxation handlers and constraint handlers,
- * allowing branching rules to take these candidates as a guide on how to split the problem into subproblems.
- * Relaxation handlers should store appropriate candidates in this list using the method <code>SCIPaddExternBranchCand()</code>.
+ * allowing branching rules to take these candidates as a guide on how to split the problem into subproblems. If the relaxation
+ * solution is enforced, the integrality constraint handler will add external branching candidates for the relaxation solution
+ * automatically, but the relaxation handler can also directly call <code>SCIPaddExternBranchCand()</code>.
  *
- * Usually, the RELAXEXEC callback only solves the relaxation and provides a lower (dual) bound with a call to
- * SCIPupdateLocalLowerbound().
+ * Usually, the RELAXEXEC callback only solves the relaxation and provides a lower (dual) bound through the corresponding pointer and
+ * possibly a solution through <code>SCIPsetRelaxSolVal()</code> calls.
  * However, it may also produce domain reductions, add additional constraints or generate cutting planes. It has the
  * following options:
  *  - detecting that the node is infeasible in the variable's bounds and can be cut off (result SCIP_CUTOFF)
@@ -4396,7 +4442,10 @@
  * In the above criteria, "the same relaxation" means that the LP relaxation stayed unmodified. This means in particular
  * that no row has been added and no bounds have been modified. For example, changing the bounds of a variable will, as
  * long as it was a COLUMN variable, lead to a modification in the LP such that the relaxation handler is called again
- * after it returned with the result code SCIP_REDUCEDDOM.
+ * after it returned with the result code SCIP_REDUCEDDOM. If the relaxation solution should be enforced, the relaxation
+ * handler has to produce a new solution in this case which satisfies the updated LP. If a relaxation handler should only run
+ * once per node to compute a lower bound, it should store the node of the last relaxation call itself and return
+ * SCIP_DIDNOTRUN for subsequent calls in the same node.
  *
  *
  * @section RELAX_ADDITIONALCALLBACKS Additional Callback Methods of a Relaxation Handler
@@ -5601,8 +5650,6 @@
  * Additional documentation for the callback methods of an expression interpreter, in particular for their input parameters,
  * can be found in the file \ref exprinterpret.h
  *
- * Note that the expression interpreter API has <b>BETA status</b> and thus may change in the next version.
- *
  * Here is what you have to do to implement an expression interpreter:
  * -# Copy the file \ref exprinterpret_none.c into a file named "exprinterpreti_myexprinterpret.c".
  *    \n
@@ -5918,27 +5965,44 @@
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page MEMORY Using the memory functions of SCIP
  *
- *  SCIP provides three ways for allocating memory.
+ *  SCIP provides three ways for allocating memory:
+ *  -# <b>block memory:</b> efficient handling of memory blocks of similar small sizes
+ *  -# <b>buffer memory:</b> efficient handling of memory that needs to locally be allocated and freed
+ *  -# <b>standard memory:</b> access to standard malloc/free
  *
- *  @section STDMEM Standard memory
+ *  <em>Whenever possible, the first two should be used, because of reasons detailed below.</em>
  *
- *  SCIP provides an access to the standard C functions @c malloc and @c free with the additional feature of tracking
- *  memory in debug mode. In this way, memory leaks can be easily detected. This feature is automatically activated in
- *  debug mode.
+ *  In the following, we provide a brief description of these methods. We refer the reader to the dissertation of Tobias
+ *  Achterberg for more details. We also present best practice models.
  *
- *  The most important functions are
- *  - SCIPallocMemory(), SCIPallocMemoryArray() to allocate memory
- *  - SCIPfreeMemory(), SCIPfreeMemoryArray() to free memory
+ *  @section MEMBACK Background
  *
+ *  The main goals for providing such particular methods are:
+ * - <em>Accounting:</em> Using its own functions, SCIP knows the total size of memory allocated internally and can change its
+ *   behavior: for instance, it can change to "memory saving mode" (using depth first search (DFS) and possibly do a garbage
+ *   collection). It also allows for keeping a memory limit.
+ * - <em>Speed:</em> SCIP often needs to allocate a very large number of small blocks of similar sizes (often powers of
+ *   two). Depending on the operating system and compiler, the methods implemented in SCIP can be faster, since blocks
+ *   of the same size are grouped together. Especially at the end of the 1990ies the standard malloc/free methods were
+ *   quite ineffective. The experiments of Tobias Achterberg in 2007 show a speed improvement of 11 % when using block
+ *   memory.
+ * - <em>Efficiency:</em> Since blocks are groups in sizes, the blocks do not need to store their sizes within each
+ *   block. In comparison, standard malloc/free stores the size using one word for each memory chunk. The price to pay
+ *   is that one needs to pass the size to the methods that free a block. In any case, the methods in SCIP can save
+ *   memory. Moreover, buffer memory is stored in similar places and not spread out, which also might help cache.
+ * - <em>Debugging:</em> All of the possibilities provide methods to detect memory leaks. Together with tools like
+ *   valgrind, this can be quite effective in avoiding such problems.
+ *
+ *  @n
  *  @section BLKMEM Block memory
  *
  *  SCIP offers its own block memory handling, which allows efficient handling of smaller blocks of memory in cases in
- *  which many blocks of the same (small) size appear. This is adaquate for branch-and-cut codes in which small blocks
+ *  which many blocks of the same (small) size appear. This is adequate for branch-and-cut codes in which small blocks
  *  of the same size are allocated and freed very often (for data structures used to store rows or branch-and-bound
  *  nodes). Actually, most blocks allocated within SCIP have small sizes like 8, 16, 30, 32, 64.  The idea is simple:
  *  There is a separate list of memory blocks for each interesting small size. When allocating memory, the list is
- *  checked for a free spot in the list; if no such spot exists the list is enlarged. Freeing just sets the block to be
- *  available. Very large blocks are handled separatedly. See the dissertation of Tobias Achterberg for more details.
+ *  checked for a free spot in the list; if no such spot exists, the list is enlarged. Freeing just sets the block to be
+ *  available. Very large blocks are handled separately. See the dissertation of Tobias Achterberg for more details.
  *
  *  One important comment is that freeing block memory requires the size of the block in order to find the right list.
  *
@@ -5963,35 +6027,84 @@
  *     SCIPfreeBlockMemoryArray(scip, &array, nvars);
  *  }
  *  \endcode
+ *  @n
  *
  *  @section BUFMEM Buffer memory
  *
- *  In addition to block memory, SCIP offers buffer memory. This should be used if memory is locally
- *  used within a function and freed within the same function. For this purpose, SCIP has a list of memory buffers
- *  that are reused for this purpose. In this way, a very efficient allocation/freeing is possible.
+ *  @subsection BUFMEMSTD Standard Buffer Memory
+ *
+ *  In addition to block memory, SCIP offers buffer memory. This should be used if memory is locally used within a
+ *  function and freed within the same function. For this purpose, SCIP has a list of memory buffers that are reused for
+ *  this purpose. In this way, a very efficient allocation/freeing is possible.
+ *
+ *  Note that the buffers are organized in a stack, i.e., freeing buffers in reverse order of allocation is faster.
  *
  *  The most important functions are
- *  - SCIPallocBufferMemory(), SCIPallocBufferArray() to allocate memory
- *  - SCIPfreeBufferMemory(), SCIPfreeBufferArray() to free memory
+ *  - SCIPallocBuffer(), SCIPallocBufferArray() to allocate memory,
+ *  - SCIPfreeBuffer(), SCIPfreeBufferArray() to free memory.
  *
- *  SCIP 3.2 introduced a new type of buffer memory, the clean buffer. It provides memory which is initialized to zero
+ *  @subsection BUFMEMCLEAN Clean Buffer Memory
+ *
+ *  SCIP 3.2 introduced a new type of buffer memory, the <em>clean buffer</em>. It provides memory which is initialized to zero
  *  and requires the user to reset the memory to zero before freeing it. This can be used at performance-critical
  *  places where only few nonzeros are added to a dense array and removing these nonzeros individually is much faster
- *  than clearing the whole array. Same as the normal buffer array, the clean buffer should be used for temporary memory
+ *  than clearing the whole array. Similar to the normal buffer array, the clean buffer should be used for temporary memory
  *  allocated and freed within the same function.
  *
  *  The most important functions are
- *  - SCIPallocCleanBufferArray() to allocate memory
- *  - SCIPfreeCleanBufferArray() to free memory
+ *  - SCIPallocCleanBufferArray() to allocate memory,
+ *  - SCIPfreeCleanBufferArray() to free memory.
  *
- *  @section GENMEM General notes
+ *  @n
+ *  @section STDMEM Standard memory
+ *
+ *  SCIP provides an access to the standard C functions @c malloc and @c free with the additional feature of tracking
+ *  memory in debug mode. In this way, memory leaks can be easily detected. This feature is automatically activated in
+ *  debug mode.
+ *
+ *  The most important functions are
+ *  - SCIPallocMemory(), SCIPallocMemoryArray() to allocate memory,
+ *  - SCIPfreeMemory(), SCIPfreeMemoryArray() to free memory.
+ *
+ *  @n
+ *  @section MEMBESTPRACTICE Best Practice of Using Memory Functions
+ *
+ *  Since allocating and freeing memory is very crucial for the speed and memory consumption of a program, it is
+ *  important to keep the following notes and recommendations in mind.
+ *
+ *  @subsection GEN General Notes
  *
  *  The following holds for all three types of memory functions:
- *  - In debug mode the arguments are checked for overly large allocations (negative sizes are converted into very large values of type @c size_t).
- *  - The functions always allocate at least one byte, so that freeing is always possible.
+ *  - In debug mode, the arguments are checked for overly large allocations (usually arising from a bug). Note that all
+ *    arguments are converted to unsigned values of type @c size_t, such that negative sizes are converted into very
+ *    large values.
+ *  - The functions always allocate at least one byte and return non-NULL pointers if memory is available. In particular,
+ *    freeing is always possible.
  *  - The freeing methods set the pointer to the memory to NULL.
- *  - For maximum speed you should free memory in the reverse order in which it was allocated.
- *    For block and buffer memory this @b significantly speeds up the code.
+ *  - Debugging can be supported by using the compiler flags @p NOBLKMEM=true, @p NOBUFMEM=true, @p NOBLKBUFMEM=true
+ *    that turn off the usage of block memory, buffer memory, as well as block and buffer memory, respectively. Since,
+ *    the internal block and buffer memory is freed at the end (leaving no memory leaks), turning them off allows tools
+ *    like valgrind to find memory leaks.
+ *  - Moreover, additional checks can be turned on by defining @p CHECKMEM in memory.c.
+ *
+ *  @n
+ *  @subsection DOS Things to do ...
+ *
+ *  - Use buffer memory if your memory chunk can be allocated and freed within the same function.
+ *  - Use buffer and block memory wherever possible, because of the reasons explained above.
+ *  - Free memory in the reverse order in which it was allocated! For block and buffer memory this @b significantly
+ *    speeds up the code.
+ *  - Use as few memory allocations/freeing operations as possible, since these functions take a significant amount of time.
+ *
+ *  @n
+ *  @subsection DONTS Things to avoid ...
+ *
+ *  - Avoid the usage of standard memory, since SCIP is unaware of the size used in such blocks.
+ *  - Avoid reallocation with only slightly increased size, rather use a geometrically growing
+ *    size allocation. SCIPcalcMemGrowSize() is one way to calculate new sizes.
+ *  - Be careful with buffer memory reallocation: For single buffers, the memory is reallocated (using malloc); since
+ *    the actual space might be larger than what was needed at allocation time, reallocation sometimes comes without
+ *    extra cost. Note that reallocating block memory in most cases implies moving memory arround.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -6062,7 +6175,7 @@
  *     <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
  * \code
  * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
- * Copyright (c) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * user parameter file <scip.set> not found - using default parameters
  *
@@ -7298,10 +7411,6 @@
   *   - Removed method SCIPreallocBufferSize()
   *   - Removed method SCIPfreeBufferSize()
   *   - Removed method callback SCIPdialogExecConflictgraph()
-  *
-  * <br>
-  * @section MISCELLANEOUS7 Miscellaneous
-  *
   * <br>
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
   */

@@ -80,7 +80,7 @@ SCIP_DECL_NODESELFREE(nodeselFreeRestartdfs)
    /* free user data of node selector */
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
-   SCIPfreeMemory(scip, &nodeseldata);
+   SCIPfreeBlockMemory(scip, &nodeseldata);
    SCIPnodeselSetData(nodesel, nodeseldata);
 
    return SCIP_OKAY;
@@ -172,7 +172,7 @@ SCIP_RETCODE SCIPincludeNodeselRestartdfs(
    SCIP_NODESEL* nodesel;
 
    /* allocate and initialize node selector data; this has to be freed in the destructor */
-   SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &nodeseldata) );
    nodeseldata->lastrestart = 0;
    nodeseldata->nprocessedleaves = 0;
    nodeseldata->selectbestfreq = SELECTBESTFREQ;
