@@ -28,7 +28,7 @@
 #define HEUR_NAME             "conflictdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. soft locks"
 #define HEUR_DISPCHAR         '~'
-#define HEUR_PRIORITY         -1000000
+#define HEUR_PRIORITY         -1000250
 #define HEUR_FREQ             5
 #define HEUR_FREQOFS          1
 #define HEUR_MAXDEPTH         -1
@@ -52,7 +52,7 @@
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
-#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.15 /**< percentage of immediate domain changes during probing to trigger LP resolve */
+#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.01 /**< percentage of immediate domain changes during probing to trigger LP resolve */
 #define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
@@ -169,26 +169,18 @@ SCIP_DECL_HEUREXEC(heurExecConflictdiving) /*lint --e{715}*/
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
 {
+   SCIP_Real softlocksum = SCIPvarGetNLocksSoftDown(cand) + SCIPvarGetNLocksSoftUp(cand);
    SCIP_Bool mayrounddown = SCIPvarMayRoundDown(cand);
    SCIP_Bool mayroundup = SCIPvarMayRoundUp(cand);
 
-   if( mayrounddown || mayroundup )
+   /* variable can be rounded in exactly one direction */
+   if( mayrounddown != mayroundup )
    {
-      /* choose rounding direction:
-       * - if variable may be rounded in both directions, round corresponding to the fractionality
-       * - otherwise, round in the infeasible direction
-       */
-      if( mayrounddown && mayroundup )
-      {
-         assert( divetype != SCIP_DIVETYPE_SOS1VARIABLE );
-         *roundup = (SCIPvarGetNLocksSoftDown(cand) > SCIPvarGetNLocksSoftUp(cand));
-      }
-      else
-         *roundup = mayrounddown;
+      *roundup = mayroundup;
    }
    else
    {
-      *roundup = (SCIPvarGetNLocksSoftDown(cand) > SCIPvarGetNLocksSoftUp(cand));
+      *roundup = (SCIPvarGetNLocksSoftDown(cand) >= SCIPvarGetNLocksSoftUp(cand));
    }
 
    if( *roundup )
@@ -207,13 +199,13 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
             SCIPABORT();
             return SCIP_INVALIDDATA; /*lint !e527*/
       } /*lint !e788*/
-      *score = SCIPvarGetNLocksUp(cand) + SCIPvarGetNLocksSoftUp(cand);
+      *score = SCIPvarGetNLocksUp(cand)/MAX(1.0, softlocksum) + 0.0001 * SCIPvarGetNLocksSoftUp(cand);
    }
    else
    {
       if ( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
          candsfrac = 1.0 - candsfrac;
-      *score = SCIPvarGetNLocksSoftDown(cand) + 0.001 * SCIPvarGetNLocksDown(cand);
+      *score = SCIPvarGetNLocksSoftDown(cand)/MAX(1.0, softlocksum) + 0.0001 * SCIPvarGetNLocksDown(cand);
    }
 
 
@@ -224,6 +216,10 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreConflictdiving)
    /* prefer decisions on binary variables */
    if( !SCIPvarIsBinary(cand) )
       (*score) *= 0.1;
+
+   /* penalize the variable if it may be rounded. */
+   if( mayrounddown || mayroundup )
+      (*score) -= SCIPgetNLPRows(scip);
 
    /* check, if candidate is new best candidate: prefer unroundable candidates in any case */
    assert( (0.0 < candsfrac && candsfrac < 1.0) || SCIPvarIsBinary(cand) || divetype == SCIP_DIVETYPE_SOS1VARIABLE );

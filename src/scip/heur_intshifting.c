@@ -317,8 +317,8 @@ SCIP_RETCODE selectShifting(
 
       /* calculate the score of the shifting (prefer smaller values) */
       if( isfrac )
-         shiftscore = increase ? -1.0 / (SCIPvarGetNLocksUp(var) + SCIPvarGetNLocksSoftUp(var) + 1.0) :
-            -1.0 / (SCIPvarGetNLocksDown(var) + SCIPvarGetNLocksSoftDown(var) + 1.0);
+         shiftscore = increase ? -1.0 / (SCIPvarGetNLocksUp(var) + 1.0) :
+            -1.0 / (SCIPvarGetNLocksDown(var) + 1.0);
       else
       {
          if( increase )

@@ -213,13 +213,13 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
             SCIPABORT();
             return SCIP_INVALIDDATA; /*lint !e527*/
       } /*lint !e788*/
-      *score = SCIPvarGetNLocksUp(cand) + SCIPvarGetNLocksSoftUp(cand);
+      *score = SCIPvarGetNLocksUp(cand);
    }
    else
    {
       if ( divetype == SCIP_DIVETYPE_SOS1VARIABLE && SCIPisFeasNegative(scip, candsol) )
          candsfrac = 1.0 - candsfrac;
-      *score = SCIPvarGetNLocksDown(cand) + SCIPvarGetNLocksSoftDown(cand);
+      *score = SCIPvarGetNLocksDown(cand);
    }
 
 

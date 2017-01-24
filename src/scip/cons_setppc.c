@@ -8374,7 +8374,14 @@ SCIP_DECL_CONSLOCK(consLockSetppc)
 
    for( i = 0; i < consdata->nvars; ++i )
    {
-      SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksdown, nlocksup) );
+      if( softlock )
+      {
+         SCIP_CALL( SCIPaddVarLocksSoft(scip, consdata->vars[i], nlockspos, nlocksneg) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksdown, nlocksup) );
+      }
    }
 
    return SCIP_OKAY;

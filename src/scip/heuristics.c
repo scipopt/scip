@@ -89,7 +89,7 @@ SCIP_RETCODE selectNextDiving(
    SCIP_Bool*            lpcandroundup,      /**< array to remember whether the preferred branching direction is upwards */
    int*                  nviollpcands,       /**< pointer to store the number of LP candidates whose solution value already violates local bounds */
    int                   nlpcands,           /**< number of current LP cands */
-   SCIP_Bool*            enfosuccess,        /**< pointer to store whether a candidate was sucessfully found */
+   SCIP_Bool*            enfosuccess,        /**< pointer to store whether a candidate was successfully found */
    SCIP_Bool*            infeasible          /**< pointer to store whether the diving can be immediately aborted because it is infeasible */
    )
 {

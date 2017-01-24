@@ -310,7 +310,7 @@ SCIP_RETCODE delPosConflict(
    SCIPsetDebugMsg(set, "-> remove conflict at pos=%d with age=%g\n", pos, SCIPconsGetAge(conflict));
 #endif
 
-   SCIP_CALL( SCIPconsAddLocksSoft(conflict, set, -1, -1) );
+//   SCIP_CALL( SCIPconsAddLocksSoft(conflict, set, -1, -1) );
 
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(conflict) )
@@ -364,7 +364,7 @@ SCIP_RETCODE delPosDualray(
    SCIPsetDebugMsg(set, "-> remove dual ray at pos=%d with age=%g\n", pos, SCIPconsGetAge(dualray));
 #endif
 
-   SCIP_CALL( SCIPconsAddLocksSoft(dualray, set, -1, -1) );
+//   SCIP_CALL( SCIPconsAddLocksSoft(dualray, set, -1, -1) );
 
    /* mark the constraint as deleted */
    if( deleteconflict && !SCIPconsIsDeleted(dualray) )
