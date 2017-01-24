@@ -2,7 +2,7 @@
 /*                                                                           */
 /*        This file is part of the program PolySCIP                          */
 /*                                                                           */
-/*    Copyright (C) 2012-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2012-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  PolySCIP is distributed under the terms of the ZIB Academic License.     */
@@ -13,16 +13,11 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**
- * @brief  Weight space vertex
- * @author Sebastian Schenker, Timo Strunk
+ * @file weight_space_vertex.h
+ * @brief Class representing a vertex of the (partial) weight space polyhedron
+ * @author Sebastian Schenker
+ * @author Timo Strunk
  *
- * Data structure storing combinatorial and geometric information
- * about a vertex of the weight space polyhedron. A weight space
- * vertex is represented by a weight 'w' and an weighted objective
- * value 'a' and is a vertex of the (partial) weight space polyhedron
- * P = {(w,a) \in \Lambda \times R : w \cdot y >= a \forall y \in Y'}
- * where Y' is the (current) set of non-dominated points and \Lambda
- * is the set of normalized weights
  */
 
 #ifndef POLYSCIP_SRC_WEIGHT_SPACE_VERTEX_H_INCLUDED
@@ -40,16 +35,28 @@
 
 namespace polyscip {
 
-    /** Vertex of the weight space polyhedron. */
+    /**
+     * @class WeightSpaceVertex
+     * @brief Class representing a vertex of the (partial) weight space polyhedron
+     * @details A vertex of the (partial) weight space polyhedron is given
+     * by a weight vector 'weight_' and an weighted objective value 'weighted_obj_val' and
+     * is active for a certain number of inequalities of the form
+     * 'weight_ \\cdot y >= weighted_obj_val' where y are non-dominated extreme points
+     * of the considered problem
+     */
     class WeightSpaceVertex {
 
     public:
+        /**
+         * Different statuses a weight space vertex can take
+         */
         enum class VertexStatus {marked, obsolete, unmarked, special};
 
-        /** Creates a vertex of the (partial) weight space polyhedron.
-         * @param incident_facets Facets defining of the weight space polyhedron defining the vertex
-         * @param weight Corresponding weight
-         * @param weighted_obj_val Corresponding maximal weight objective val in weight space polyhedron
+        /**
+         * Default constructor
+         * @param incident_facets Incident facets of the constructed vertex
+         * @param weight Lhs coefficients of the constructed vertex
+         * @param weighted_obj_val Rhs coefficient of the constructed vertex
          * @param sort_facets if true, incident facets are sorted
          */
         explicit  WeightSpaceVertex(WeightSpacePolyhedron::FacetContainer incident_facets,
@@ -57,6 +64,16 @@ namespace polyscip {
                                     ValueType weighted_obj_val,
                                     bool sort_facets = true);
 
+        /**
+         * Constructor creating a new vertex from an obsolete and non-obsolete vertex via
+         * the equality new_vertex = obs_coeff * obs + non_obs_coeff * non_obs
+         * @param obs_coeff Coefficient of obsolete vertex
+         * @param non_obs_coeff Coefficient of non-obsolete vertex
+         * @param obs Obsolete vertex
+         * @param non_obs Non-obsolete vertex
+         * @param incident_facet Incident facet of new vertex
+         * @param wsp_dimension Dimension of the corresponding weight space polyhedron
+         */
         explicit WeightSpaceVertex(double obs_coeff,
                                    double non_obs_coeff,
                                    const WeightSpaceVertex* obs,
@@ -64,72 +81,100 @@ namespace polyscip {
                                    const std::shared_ptr<const WeightSpaceFacet>& incident_facet,
                                    std::size_t wsp_dimension);
 
-        /** Return associated weight of weight space vertex
-         * @return weight of vertex
+        /**
+         * Returns associated weight vector of weight space vertex
+         * @return Weight vector of vertex
          */
         WeightType getWeight() const;
 
-        /** Return weighted objective value of associated vertex
+        /**
+         * Returns weighted objective value of vertex
          * @return weighted objective value
          */
         ValueType getCurrentWOV() const;
 
+        /**
+         * Outcome vector \\cdot weight vector
+         * @param outcome Outcome vector
+         * @return Scalarproduct of outcome and weight vector of vertex
+         */
         double getWeightedOutcome(const OutcomeType& outcome) const;
 
+        /**
+         * Computes slack
+         * @param outcome Outcome vector
+         * @param outcome_is_ray Indicates whether given outcome corresponds to ray
+         * @return outcome \\cdot weight - weighted_obj_val if outcome corresponds to point;
+         * else outcome \\cdot weight
+         */
         double computeSlack(const OutcomeType& outcome, bool outcome_is_ray) const;
 
-        OutcomeType getIncFacetsBounds(std::function<ValueType()> limit,
-                                       std::function<ValueType(const ValueType&, const ValueType&)> cmp) const;
-        OutcomeType getIncFacetsLowerBounds() const;
-        OutcomeType getIncFacetsUpperBounds() const;
 
-        /** Checks whether weight of vertex corresponds to unit weight
-         * @param index index of 1 in unit weight
-         * @return true if weight of vertex is unit weight with 1 at index; false otherwise
+        /**
+         * Indicates whether weight vector of vertex corresponds to some unit vector
+         * @return true if weight vector of vertex corresponds to some unit vector; otherwise false
          */
         bool hasUnitWeight() const;
+
+        /**
+         * Indicates whether weight vector of vertex corresponds to zero vector
+         * @return true if weight vector of vertex is zero vector; otherwise false
+         */
         bool hasZeroWeight() const;
 
+        /**
+         * Get vertex status
+         * @return Status of vertex
+         */
         VertexStatus getStatus() const {return vertex_status_;};
+
+        /**
+         * Set vertex status
+         * @param status New status of vertex
+         */
         void setStatus(VertexStatus status) {vertex_status_ = status;};
 
-        /** Checks whether weight of vertex corresponds with given weight
-         * @param weight weight to check against
+        /**
+         * Compare weight vectors
+         * @param weight Weight to check against
+         * @return true if given weight vector coincides with weight vector of vertex; otherwise false
          */
         bool hasSameWeight(const WeightType& weight) const;
 
-        /** Prints weight space vertex information to output stream.
-         * @param printFacets if true, then defining facets are printed
+        /**
+         * Print function
+         * @param os Output stream to write to
+         * @param printFacets Indicate whehter incident facets should be printed
          */
         void print(std::ostream& os, bool printFacets = false) const;
 
     private:
 
-        friend bool WeightSpacePolyhedron::areAdjacent(const WeightSpaceVertex* v, const WeightSpaceVertex* w);
-        /*friend double WeightSpacePolyhedron::calculateConvexCombValue(const WeightSpaceVertex* obs,
-                                                                      const WeightSpaceVertex* non_obs,
-                                                                      const OutcomeType& outcome,
-                                                                      bool outcome_is_ray);*/
+        /**
+         * @relates WeightSpacePolyhedron
+         * @param v
+         * @param w
+         * @return
+         */
+        friend bool WeightSpacePolyhedron::areAdjacent(const WeightSpaceVertex* v,
+                                                       const WeightSpaceVertex* w);
 
-
-        /** Returns the weight h * weight1 + (1-h) * weight2
-         * @param weight1 weight of vertex
-         * @param weight2 weight of another vertex
-         * @param h combination coefficient
-         * @return convex combination h * weight1 + (1-h) * weight2
+        /**
+         * Compute convex combination of weights
+         * @param weight1 First weight vector
+         * @param weight2 Second weight vector
+         * @param h Coefficient for convex combination
+         * @return h * weight1 + (1-h) * weight2
          */
         static const WeightType calculateWeightCombination(double h,
                                                            const WeightType& weight1,
                                                            const WeightType& weight2);
 
 
-        VertexStatus vertex_status_;
-        /**< incident facets */
-        WeightSpacePolyhedron::FacetContainer incident_facets_;
-        /**< used weight */
-        WeightType weight_;
-        /**< corresponding weighted objective value */
-        ValueType weighted_obj_val_;
+        VertexStatus vertex_status_; ///< Corresponding status of vertex
+        WeightSpacePolyhedron::FacetContainer incident_facets_; ///< Incident facets of vertex
+        WeightType weight_; ///< Corresponding weight vector of vertex
+        ValueType weighted_obj_val_; ///< Corresponding weighted objective value of vertex
     };
 
 }

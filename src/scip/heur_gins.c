@@ -76,7 +76,7 @@
 #define DEFAULT_RELAXDENSECONSS FALSE       /**< should dense constraints (at least as dense as 1 - minfixingrate) be
                                              *   ignored by connectivity graph? */
 #define DEFAULT_USEROLLINGHORIZON TRUE      /**< should the heuristic solve a sequence of sub-MIP's around the first selected variable */
-#define DEFAULT_ROLLHORIZONLIMFAC 0.75      /**< limiting percentage for variables already used in sub-SCIPs to terminate rolling
+#define DEFAULT_ROLLHORIZONLIMFAC  0.4      /**< limiting percentage for variables already used in sub-SCIPs to terminate rolling
                                              *   horizon approach */
 #ifdef SCIP_STATISTIC
 #define NHISTOGRAMBINS         10           /* number of bins for histograms */
@@ -1711,7 +1711,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
 
       /* create a problem copy as sub SCIP */
       SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "gins", fixedvars, fixedvals, nfixedvars,
-            heurdata->uselprows, heurdata->copycuts, &success) );
+            heurdata->uselprows, heurdata->copycuts, &success, NULL) );
 
       for( i = 0; i < nvars; i++ )
          subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);

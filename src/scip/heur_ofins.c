@@ -238,7 +238,7 @@ SCIP_RETCODE applyOfins(
 
    /* create a problem copy as sub SCIP */
    SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "ofins", fixedvars, fixedvals, nfixedvars, FALSE,
-         FALSE, &success) );
+         FALSE, &success, NULL) );
    assert(success);
 
    SCIPfreeBufferArrayNull(scip, &fixedvals);

@@ -1159,7 +1159,6 @@ SCIP_RETCODE solveSubMIP(
    SCIP_RETCODE retcode;
    int c;
    int nsubsols;
-   SCIP_Bool valid;
 
    /* check whether there is enough time and memory left */
    SCIP_CALL( SCIPcheckCopyLimits(scip, success) );
@@ -1176,7 +1175,7 @@ SCIP_RETCODE solveSubMIP(
    *success = FALSE;
 
    /* copy original problem to subproblem; do not copy pricers */
-   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", NULL, NULL, 0, FALSE, FALSE, TRUE, NULL) );
 
    /* assert that cover variables are fixed in source and target SCIP */
    for( c = 0; c < ncovervars; c++)
