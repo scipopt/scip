@@ -5027,6 +5027,23 @@ SCIP_RETCODE getCoeffsAndConstantFromLinearExpr(
       return SCIP_OKAY;
    }
 
+   case SCIP_EXPR_SUM: /* just recurse */
+   {
+      SCIP_EXPR** children;
+      int nchildren;
+      int c;
+
+      children = SCIPexprGetChildren(expr);
+      nchildren = SCIPexprGetNChildren(expr);
+
+      for( c = 0; c < nchildren; ++c )
+      {
+         SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[c], scalar, varcoeffs, constant ) );
+      }
+
+      return SCIP_OKAY;
+   }
+
    case SCIP_EXPR_LINEAR: /* add scaled constant and recurse on children with their coeff multiplied into scalar */
    {
       SCIP_Real* childCoeffs;
