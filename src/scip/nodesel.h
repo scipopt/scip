@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nodesel.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for node selectors and node priority queues
  * @author Tobias Achterberg
  */

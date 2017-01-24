@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cuts.h
+ * @ingroup PUBLICCOREAPI
  * @brief  Header file for methods used to generate and strengthen cuts
  * @author Jakob Witzig
  *

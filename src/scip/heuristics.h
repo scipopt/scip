@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heuristics.h
+ * @ingroup PUBLICCOREAPI
  * @brief  methods commonly used by primal heuristics
  * @author Gregor Hendel
  */

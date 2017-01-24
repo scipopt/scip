@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  SCIP callable library
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -6947,8 +6947,8 @@ SCIP_Bool SCIPisInRestart(
  * variable methods
  */
 
-/**@name Variable Methods */
-/**@{ */
+/**@addtogroup PublicVariableMethods Public Variable Methods */
+/*@{ */
 
 /** creates and captures problem variable; if variable is of integral type, fractional bounds are automatically rounded;
  *  an integer variable with bounds zero and one is automatically converted into a binary variable;

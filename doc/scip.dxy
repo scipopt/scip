@@ -195,7 +195,7 @@ TAB_SIZE               = 8
 # will result in a user-defined paragraph with heading "Side Effects:".
 # You can put \n's in the value part of an alias to insert newlines.
 
-ALIASES                = "SCIP=<a href= http://scip.zib.de>SCIP</a>" \
+ALIASES                = "SCIP=<b>SCIP</b>" \
                          "OTHERDOCU=Developer's Manual" \
                          "OTHERDOCUTEXT=This manual lists all methods and data types of SCIP, including the internal ones that users should not call. The <a class= qindex href= ../html/index.shtml>User's Manual</a> might be more helpful for regular SCIP users." \
                          FILEEXT=.shtml

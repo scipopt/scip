@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_misc.h
+ * @ingroup PUBLICCOREAPI
  * @brief  public data structures and miscellaneous methods
  * @author Tobias Achterberg
  * @author Gerald Gamrath
@@ -62,6 +63,10 @@ extern "C" {
  */
 
 /**@defgroup STATISTICALTESTS Methods for statistical tests
+ * @ingroup PUBLICCOREAPI
+ * @brief public methods for statistical tests
+ *
+ * Below are the public methods for statistical tests inside of \SCIP
  *
  * @{
  */
@@ -117,6 +122,10 @@ SCIP_Real SCIPnormalCDF(
 /**@} */
 
 /**@defgroup Regression Regression methods for linear regression
+ * @ingroup PUBLICCOREAPI
+ * @brief public methods for linear regression
+ *
+ * Below are the public methods for incremental linear regression of observations pairs \f$(X_i,Y_i), i=1\dots,n\f$
  *
  * @{
  */
@@ -176,11 +185,13 @@ void SCIPregressionFree(
 /**@} */
 
 /*
- * GML graphical printing methods
- * For a detailed format decription see http://docs.yworks.com/yfiles/doc/developers-guide/gml.html
  */
 
 /**@defgroup GMLgraph GML graphical printing
+ * @ingroup PUBLICCOREAPI
+ * @brief GML graph printing methods
+ *
+ * For a detailed format decription see http://docs.yworks.com/yfiles/doc/developers-guide/gml.html
  *
  * @{
  */
@@ -246,6 +257,8 @@ void SCIPgmlWriteClosing(
 
 
 /** @defgroup DataStructures Data Structures
+ *  @ingroup PUBLICCOREAPI
+ *  @brief commonly used data structures
  *
  *  Below you find a list of available data structures
  *
@@ -1490,6 +1503,8 @@ void SCIPbtSetRoot(
 
 
 /**@defgroup MiscellaneousMethods Miscellaneous Methods
+ * @ingroup PUBLICCOREAPI
+ * @brief commonly used methods from different categories
  *
  * Below you find a list of miscellaneous methods grouped by different categories
  *@{

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   stat.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for problem statistics
  * @author Tobias Achterberg
  */

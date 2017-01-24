@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_misc_select.h
+ * @ingroup PUBLICCOREAPI
  * @brief  methods for selecting (weighted) k-medians
  * @author Gregor Hendel
  *
@@ -37,6 +38,8 @@ extern "C" {
  */
 
 /**@defgroup SelectionAlgorithms Selection and weighted selection algorithms
+ * @ingroup PUBLICCOREAPI
+ * @brief public methods for the selection of (weighted) k-median.
  *
  * The methods in this group perform a selection of the (weighted)  \f$ k \f$-median from an unsorted array of elements.
  * The necessary element swaps are performed in-place on the array of keys.

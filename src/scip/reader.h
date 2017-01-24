@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for input file readers
  * @author Tobias Achterberg
  */

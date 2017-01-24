@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_sol.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for storing primal CIP solutions
  * @author Tobias Achterberg
  */

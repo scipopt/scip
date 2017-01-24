@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_branch.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for branching rules and branching candidate storage
  * @author Tobias Achterberg
  */

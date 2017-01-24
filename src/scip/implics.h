@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   implics.h
+ * @ingroup INTERNALAPI
  * @brief  methods for implications, variable bounds, and cliques
  * @author Tobias Achterberg
  */

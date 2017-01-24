@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   var.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for problem variables
  * @author Tobias Achterberg
  */

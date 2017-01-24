@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_pricestore.h
- * @brief  datastructures for storing priced variables
+ * @ingroup INTERNALAPI
+ * @brief  data structures for storing priced variables
  * @author Tobias Achterberg
  */
 

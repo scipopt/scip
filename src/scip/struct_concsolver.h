@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_concsolver.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for concurrent solvers
  * @author Robert Lion Gottwald
  */

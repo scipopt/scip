@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presolve.h
+ * @ingroup PUBLICCOREAPI
  * @brief  internal methods for presolving
  * @author Michael Winkler
  */

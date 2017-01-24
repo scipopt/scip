@@ -7,7 +7,7 @@
       <tab type="files" visible="no" title=""/>
       <tab type="globals" visible="no" title=""/>
     </tab>
-    <tab type="modules" visible="yes" title="Plugin Types"/>
+    <tab type="modules" visible="yes" title="SCIP C-API"/>
     <tab type="classes" visible="no" title="">
       <tab type="classes" visible="no" title="Wrapper Classes"/>
       <tab type="classindex" visible="$ALPHABETICAL_INDEX" title=""/>
