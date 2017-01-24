@@ -278,8 +278,7 @@ void setup_sepadata(void)
    cr_assert_not_null(sepadata->nlpi);
 
    SCIP_CALL( SCIPnlpiCreateProblem(sepadata->nlpi, &sepadata->nlpiprob, "convexproj-nlp-unittest") );
-   SCIP_CALL( SCIPhashmapCreate(&sepadata->var2nlpiidx, SCIPblkmem(scip),
-            SCIPcalcHashtableSize(sepadata->nlpinvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&sepadata->var2nlpiidx, SCIPblkmem(scip), sepadata->nlpinvars) );
    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) );
 
    /* I shouldn't care about the cutoff, just assert that the lp solution satisfies the cutoff bound */

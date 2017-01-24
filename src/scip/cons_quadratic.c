@@ -7031,7 +7031,7 @@ SCIP_RETCODE computeED(
    BMSclearMemoryArray(matrix, nn);
 
    /* @todo if we are called in solving stage (or late from initsol), we can avoid the hashmap by using sepabilinvar2pos */
-   SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * n)) );
+   SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), n) );
 
    for( i = 0; i < n; ++i )
    {
