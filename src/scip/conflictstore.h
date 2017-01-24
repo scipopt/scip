@@ -156,6 +156,16 @@ SCIP_RETCODE SCIPconflictstoreTransform(
    SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
+extern
+SCIP_Real SCIPconflictstoreGetAvgNnzDualray(
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
+   );
+
+extern
+int SCIPconflictstoreGetNDualrays(
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
+   );
+
 #ifdef __cplusplus
 }
 #endif

@@ -43,6 +43,7 @@ struct SCIP_ConflictStore
    SCIP_Real             avgswitchlength;    /**< average length of switched paths */
    SCIP_Longint          lastnodenum;        /**< number of the last seen node */
    SCIP_Longint          ncleanups;          /**< number of storage cleanups */
+   SCIP_Longint          nnzdualrays;        /**< number of non-zeros in all stored dual rays */
    int                   conflictsize;       /**< size of conflict array (bounded by conflict->maxpoolsize) */
    int                   origconflictsize;   /**< size of origconfs array */
    int                   nconflicts;         /**< number of stored conflicts */

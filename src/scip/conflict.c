@@ -5960,7 +5960,7 @@ SCIP_RETCODE tightenDualray(
 
          /* get appropriate global and local bounds */
          glbbd = (vals[idx] < 0.0 ? SCIPvarGetUbGlobal(vars[idx]) : SCIPvarGetLbGlobal(vars[idx]));
-         locbd = (vals[idx] < 0.0 ? SCIPvarGetUbLocal(vars[idx]) : SCIPvarGetLbLocal(vars[idx]));
+         locbd = (vals[idx] < 0.0 ? curvarubs[idx] : curvarlbs[idx]);
 
          if( !SCIPsetIsEQ(set, glbbd, locbd) )
          {
@@ -6059,6 +6059,13 @@ SCIP_RETCODE createAndAddDualray(
    /* don't store dualrays that are to long / have to much non-zeros */
    if( set->conf_minmaxvars < nnonzeros && nnonzeros > set->conf_maxvarsfac * prob->nvars )
       return SCIP_OKAY;
+
+   if( SCIPconflictstoreGetNDualrays(conflictstore) > 10
+      && (SCIPconflictstoreGetNDualrays(conflictstore) * SCIPconflictstoreGetAvgNnzDualray(conflictstore) + nnonzeros) / (SCIPconflictstoreGetNDualrays(conflictstore)) > 1.5 * stat->avgnnz )
+      return SCIP_OKAY;
+
+   printf("ndualrays=%d   curavg=%g   nnz=%d   avgnnz=%g\n", SCIPconflictstoreGetNDualrays(conflictstore),
+         SCIPconflictstoreGetAvgNnzDualray(conflictstore), nnonzeros, stat->avgnnz);
 
    /* check whether the constraint is orthogonal enough */
    if( SCIPsetIsZero(set, normobj) )

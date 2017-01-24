@@ -261,6 +261,7 @@ void SCIPstatReset(
    stat->ncolidx = stat->marked_ncolidx;
    stat->nrowidx = stat->marked_nrowidx;
    stat->nnz = 0;
+   stat->avgnnz = 0;
    stat->lpcount = 0;
    stat->relaxcount = 0;
    stat->nlps = 0;
