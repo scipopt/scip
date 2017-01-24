@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   presol_qpkktref.c
+/**@file   presol_qpkktref.h
  * @brief  qpkktref presolver
  * @author Tobias Fischer
  *
