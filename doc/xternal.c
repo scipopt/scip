@@ -59,6 +59,7 @@
  * - \ref FILEREADERS "Readable file formats"
  * - \ref START       "How to start a new project"
  * - \ref EXAMPLES    "Examples"
+ * - \ref APPLICATIONS "Extensions of SCIP for specific applications"
  *
  * @section FURTHERINFORMATION References
  *
@@ -67,10 +68,6 @@
  *
  * - \ref DOC     "How to search the documentation for interface methods"
  * - \ref FAQ     "Frequently asked questions (FAQ)"
- * - \ref TEST     "How to run automated tests with SCIP"
- * - \ref COUNTER  "How to use SCIP to count feasible solutions"
- * - \ref REOPT    "How to use reoptimization in SCIP"
- * - \ref APPLICATIONS "Extensions of SCIP for specific applications"
  *
  *
  * @section PROGRAMMING Programming with SCIP
@@ -107,9 +104,9 @@
  * @subsection HOWTOUSESECTION How to use ...
  *
  *   - \ref CONF    "Conflict analysis"
- *   - \ref REOPT   "Reoptimization"
  *   - \ref TEST    "How to run automated tests with SCIP"
  *   - \ref COUNTER "How to use SCIP to count feasible solutions"
+ *   - \ref REOPT   "How to use reoptimization in SCIP"
  *
  *
  * @section FURTHERINFO Further information
