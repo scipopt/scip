@@ -48,6 +48,8 @@ extern "C" {
 
 
 /**@defgroup ColumnMethods Column methods
+ * @ingroup PUBLICCOREAPI
+ * @brief public methods for LP columns
  *
  * @{
  */
@@ -236,6 +238,8 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
 
 
 /**@defgroup RowMethods Row methods
+ * @ingroup PUBLICCOREAPI
+ * @brief public methods for LP rows
  *
  * @{
  */
@@ -518,13 +522,6 @@ void SCIProwChgRank(
 #define SCIProwChgRank(row, cutrank)    ((row)->rank = (cutrank))
 
 #endif
-
-/**@} */
-
-/**@defgroup LPMethods LP methods
- *
- * @{
- */
 
 /**@} */
 
