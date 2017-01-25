@@ -33,6 +33,13 @@
 extern "C" {
 #endif
 
+/**@defgroup PublicPropagatorMethods Propagators
+ * @ingroup PluginManagementMethods
+ * @brief  methods for propagator plugins
+ *
+ * @{
+ */
+
 /** compares two propagators w. r. to their priority */
 EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPpropComp);
@@ -257,6 +264,8 @@ void SCIPpropSetPresolTiming(
    SCIP_PROP*            prop,               /**< propagator */
    SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

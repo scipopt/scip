@@ -33,6 +33,15 @@
 extern "C" {
 #endif
 
+/**@defgroup PublicHeuristicMethods Primal Heuristics
+ * @ingroup PluginManagementMethods
+ * @brief  methods for primal heuristic plugins
+ *
+ * @{
+ */
+
+
+
 /** compares two heuristics w. r. to their priority */
 EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPheurComp);
@@ -170,6 +179,8 @@ int SCIPheurGetNDivesets(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
+/* @} */
+
 /** get the heuristic to which this diving setting belongs */
 EXTERN
 SCIP_HEUR* SCIPdivesetGetHeur(
@@ -188,6 +199,13 @@ void SCIPdivesetSetWorkSolution(
    SCIP_DIVESET*         diveset,            /**< diving settings */
    SCIP_SOL*             sol                 /**< new working solution for this dive set, or NULL */
    );
+
+/**@defgroup PublicDivesetMethods Dive sets
+ * @ingroup PublicSpecialHeuristicMethods
+ * @brief methods for dive sets to control the generic diving algorithm
+ *
+ * @{
+ */
 
 /** get the name of the dive set */
 EXTERN
@@ -347,6 +365,8 @@ SCIP_Bool SCIPdivesetSupportsType(
    SCIP_DIVESET*         diveset,            /**< diving settings */
    SCIP_DIVETYPE         divetype            /**< bit mask that represents the supported dive types by this dive set */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

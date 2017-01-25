@@ -34,6 +34,13 @@
 extern "C" {
 #endif
 
+/**@defgroup PublicConflictMethods Conflict Analysis
+ * @ingroup PluginManagementMethods
+ * @brief public methods related to conflict analysis
+ *
+ * @{
+ */
+
 /** compares two conflict handlers w. r. to their priority */
 EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPconflicthdlrComp);
@@ -90,6 +97,8 @@ EXTERN
 SCIP_Real SCIPconflicthdlrGetTime(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

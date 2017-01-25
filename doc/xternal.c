@@ -78,7 +78,7 @@
  *
  *   - \ref CODE    "Coding style guidelines"
  *   - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
- *   - \ref MEMORY  "Using the memory functions of \SCIP"
+ *   - \ref MEMORY  "Using the memory functions of SCIP"
  *   - \ref DEBUG   "Debugging"
  *
  * @subsection HOWTOADD How to add ...
@@ -7687,39 +7687,45 @@
  *
  */
 
- /**@defgroup PUBLICAPI Public C-API of SCIP
-  * @brief methods and headers of the C-API of \SCIP
+ /**@defgroup PUBLICAPI Public API of SCIP
+  * @brief methods and headers of the public C-API of \SCIP
+  *
+  * The public API of \SCIP is separated into a core API and a plugin API. The first contains all methods that can
+  * be accessed by including the header scip.h. The plugin API is a collection of methods that are provided by
+  * the default plugins of \SCIP.
+
+  *
   *
   */
 
-/**@defgroup PUBLICCOREAPI Public C-API of SCIP
+/**@defgroup PUBLICCOREAPI Core API
  * @ingroup PUBLICAPI
- * @brief methods and headers of the plugin-independent C-API provided by the \SCIP core.
+ * @brief methods and headers of the plugin-independent C-API provided by the \SCIP header file scip.h.
  *
- * This page lists headers containing methods provided by the core of SCIP that can be used via the
- * callable library.
+ * This module comprises methods provided by the header file scip.h. Including this header into a user-written extension
+ * suffices to have all plugin-independent functionality of \SCIP available. Plugin-independent
+ * user functionality includes the
  *
- * All of the headers listed below include functions that are allowed to be used by a plugin. In addition,
- * every (default) plugin may declare public functions that are special to objects
- * that this plugin manages. The latter functions reside in the header files of the plugin.
- * An example would be the \ref cons_linear.h "header of the linear constraint handler",
- * which defines additional public functions.
+ * - creation of problems that \SCIP should solve
+ * - fine-grained access to initiate the solving process of \SCIP
+ * - access to all sorts of solving process statistics
+ * - commonly used data structures and algorithms
+ * - the management of plugins
+ * - ...
  *
- * A table for the functions sorted by topics is given below. You also find a list of files that contain
- * public API functions.
+ * In order facilitate the navigation through the core API of \SCIP, it is structured into different modules.
  */
 
  /**@defgroup PUBLICPLUGINAPI Plugin API of SCIP
   * @ingroup PUBLICAPI
-  * @brief public C-API provided by the default plugins of \SCIP
+  * @brief core API extensions provided by the default plugins of \SCIP
   *
-  * This page lists default plugin headers that contain additional public API methods of \SCIP. These methods extend
-  * the \ref PUBLICCOREAPI "plugin-independent C-API of \SCIP".
+  * All default plugins of \SCIP, especially the default \ref CONSHDLRS "constraint handlers", provide
+  * valuable extensions to the \ref PUBLICCOREAPI "core API" of \SCIP.
+  * For a better overview, this page lists all default plugin headers structured into modules based on their individual
+  * topic.
   *
-  * All of the headers listed below include functions that are allowed to be used by a plugin.
-  *
-  * A table for the functions sorted by topics is given below. You also find a list of files that contain
-  * plugin API functions.
+  * All of the modules listed below provide functions that are allowed to be used by user-written extensions of \SCIP.
   */
 
 
@@ -7741,6 +7747,46 @@
  *
  * All headers below include the descriptions of callback methods of
  * certain plugins. For more detail see the corresponding header.
+ */
+
+/**@defgroup PublicProblemMethods Problem Creation
+ * @ingroup PUBLICCOREAPI
+ * @brief methods to create a problem that \SCIP should solve
+ *
+ * This module summarizes the main methods needed to create a problem for \SCIP, and access its most important members:
+ * - Declaring, adding, acessing, and changing variables of the problem
+ * - Declaring, adding, acessing, and changing constraints of the problem
+ * - Creating, adding, acessing, changing, and checking of solutions to the problem
+ *
+ * @note These core methods are not sufficient to create constraints of a certain type that is provided by the default plugins of \SCIP.
+ *  An example would be the creation of a linear constraint for which the methods provided by the
+ *  \ref cons_linear.h "linear constraint handler" must be used. Such methods are provided by the default plugins of \SCIP
+ *  and can be found in the \ref PUBLICPLUGINAPI.
+ */
+
+ /**@defgroup PublicSolveMethods Solving Process
+ * @ingroup PUBLICCOREAPI
+ * @brief  methods to control the solving process of \SCIP
+ *
+ * This large group of methods and modules comprises the solving process related API of \SCIP. This includes
+ *
+ * -# changing parameters to control the solver behavior
+ * -# access search tree related information
+ * -# access relaxation information
+ * -# access various solving process statistics
+ * -# solve auxiliary relaxations and subproblems using LP/NLP diving or probing mode
+ *
+ *
+ */
+
+/* @} */
+
+
+
+/**@defgroup PluginManagementMethods Methods for managing plugins
+ * @ingroup PUBLICCOREAPI
+ * @brief Methods for the inclusion and management of SCIP plugins and callback functions
+ *
  */
 
 /**@defgroup BRANCHINGRULES Branching Rules

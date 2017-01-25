@@ -33,6 +33,13 @@
 extern "C" {
 #endif
 
+/**@defgroup PublicPresolverMethods Presolver
+ * @ingroup PluginManagementMethods
+ * @brief methods for presolver plugins
+ *
+ * @{
+ */
+
 /** compares two presolvers w. r. to their priority */
 EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPpresolComp);
@@ -174,6 +181,8 @@ EXTERN
 int SCIPpresolGetNCalls(
    SCIP_PRESOL*          presol              /**< presolver */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

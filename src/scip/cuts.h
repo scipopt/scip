@@ -15,7 +15,7 @@
 
 /**@file   cuts.h
  * @ingroup PUBLICCOREAPI
- * @brief  Header file for methods used to generate and strengthen cuts
+ * @brief  common methods used to generate and strengthen cuts
  * @author Jakob Witzig
  *
  */
@@ -39,6 +39,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup PublicCutMethods
+ *
+ * @{
+ */
 
 /** calculates a strong CG cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0 because
  *  these rows cannot participate in an MIR cut.
@@ -170,6 +175,8 @@ void SCIPcutsCleanupRow(
    int*                  nvarinds,           /**< pointer to number of non-zero MIR coefficients */
    SCIP_Bool             islocal             /**< is the row only valid locally? */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

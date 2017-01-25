@@ -42,6 +42,13 @@ extern "C" {
  * Node methods
  */
 
+/**@defgroup PublicNodeMethods Nodes
+ * @ingroup PublicTreeMethods
+ * @brief  methods for nodes of the search tree of \SCIP
+ *
+ * @{
+ */
+
 /** node comparator for best lower bound */
 EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPnodeCompLowerbound);
@@ -245,6 +252,8 @@ SCIP_CONSSETCHG* SCIPnodeGetConssetchg(
 #define SCIPnodeGetConssetchg(node)    ((node)->conssetchg)
 
 #endif
+
+/* @} */
 
 #ifdef __cplusplus
 }

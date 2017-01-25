@@ -35,6 +35,13 @@
 extern "C" {
 #endif
 
+/**@defgroup PublicDisplayMethods Displays
+ * @ingroup PluginManagementMethods
+ * @brief  methods for the inclusion and access of display plugins
+ *
+ * @{
+ */
+
 /** gets user data of display column */
 EXTERN
 SCIP_DISPDATA* SCIPdispGetData(
@@ -122,6 +129,8 @@ void SCIPdispTime(
    SCIP_Real             val,                /**< value in seconds to display */
    int                   width               /**< width to fit into */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

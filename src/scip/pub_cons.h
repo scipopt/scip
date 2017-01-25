@@ -41,6 +41,13 @@ extern "C" {
  * Constraint handler methods
  */
 
+/**@defgroup PublicConshdlrMethods Constraint handlers
+ * @ingroup PluginManagementMethods
+ * @brief methods for constraint handlers
+ *
+ * @{
+ */
+
 /** compares two constraint handlers w. r. to their separation priority */
 EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPconshdlrCompSepa);
@@ -507,9 +514,19 @@ void SCIPconshdlrSetPresolTiming(
    SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */
    );
 
+/* @} */
+
 /*
  * Constraint methods
  */
+
+/**@defgroup PublicConstraintMethods Problem Constraints
+ * @ingroup PublicProblemMethods
+ * @brief Public methods for constraints
+ *
+ * @{
+ */
+
 
 /** returns the name of the constraint 
  *
@@ -795,6 +812,8 @@ int SCIPconsGetNUpgradeLocks(
 #define SCIPconsGetNUpgradeLocks(cons)  ((cons)->nupgradelocks)
 
 #endif
+
+/* @} */
 
 #ifdef __cplusplus
 }

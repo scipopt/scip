@@ -47,10 +47,12 @@ extern "C" {
  * methods for variables 
  */
 
-/**@defgroup PublicVariableMethods Public Variable Methods
- * @ingroup PUBLICCOREAPI
- * @brief public methods for problem variables */
-/* @{ */
+/**@defgroup PublicVariableMethods Problem Variables
+ * @ingroup PublicProblemMethods
+ * @brief public methods for problem variables
+ *
+ * @{
+ */
 
 /** gets number of locks for rounding down */
 EXTERN

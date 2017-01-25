@@ -33,6 +33,13 @@
 extern "C" {
 #endif
 
+/**@defgroup PublicPricerMethods Pricer
+ * @ingroup PluginManagementMethods
+ * @brief  methods to include and access pricer plugins of \SCIP
+ *
+ * @{
+ */
+
 /** compares two pricers w. r. to their priority */
 EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPpricerComp);
@@ -113,6 +120,8 @@ EXTERN
 SCIP_Bool SCIPpricerIsInitialized(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

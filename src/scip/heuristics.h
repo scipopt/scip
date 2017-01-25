@@ -31,6 +31,13 @@
 extern "C" {
 #endif
 
+/**@defgroup PublicSpecialHeuristicMethods Special Methods
+ * @ingroup PublicHeuristicMethods
+ * @brief  methods commonly used by primal heuristics
+ *
+ * @{
+ */
+
 /** performs a diving within the limits of the diveset parameters
  *
  *  This method performs a diving according to the settings defined by the diving settings @p diveset; Contrary to the
@@ -82,6 +89,8 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    SCIP_Bool             copycuts,           /**< should cuts be copied (only if uselprows == FALSE) */
    SCIP_Bool*            success             /**< was the copying successful? */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

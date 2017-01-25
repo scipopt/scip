@@ -32,6 +32,13 @@
 extern "C" {
 #endif
 
+/**@defgroup PublicCutMethods Cuts and Cutpools
+ * @ingroup PublicLPMethods
+ * @brief common methods used to manipulate, generate, and strengthen cuts and to organize the cutpool
+ *
+ * @{
+ */
+
 /** gets the row of the cut */
 EXTERN
 SCIP_ROW* SCIPcutGetRow(
@@ -89,6 +96,8 @@ EXTERN
 SCIP_Longint SCIPcutpoolGetNCutsFound(
    SCIP_CUTPOOL*         cutpool             /**< cut pool */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -33,6 +33,13 @@
 extern "C" {
 #endif
 
+/**@defgroup PublicBranchRuleMethods Branching Rules
+ * @ingroup PluginManagementMethods
+ * @brief  methods for branching rule plugins
+ *
+ * @{
+ */
+
 /** compares two branching rules w. r. to their priority */
 EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPbranchruleComp);
@@ -151,6 +158,8 @@ EXTERN
 SCIP_Bool SCIPbranchruleIsInitialized(
    SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

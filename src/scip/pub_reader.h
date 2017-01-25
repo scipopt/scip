@@ -32,6 +32,13 @@
 extern "C" {
 #endif
 
+/**@defgroup PublicReaderMethods Reader
+ * @ingroup PluginManagementMethods
+ * @brief methods for the inclusion and access to reader plugins of \SCIP
+ *
+ * @{
+ */
+
 /** gets user data of reader */
 EXTERN
 SCIP_READERDATA* SCIPreaderGetData(
@@ -74,6 +81,8 @@ EXTERN
 SCIP_Bool SCIPreaderCanWrite(
    SCIP_READER*          reader              /**< reader */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

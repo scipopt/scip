@@ -40,6 +40,13 @@ extern "C" {
  * Event handler methods
  */
 
+/**@defgroup PublicEventHandlerMethods Event Handler
+ * @ingroup PluginManagementMethods
+ * @brief  methods for event handlers
+ *
+ * @{
+ */
+
 /** gets name of event handler */
 EXTERN
 const char* SCIPeventhdlrGetName(
@@ -77,9 +84,22 @@ SCIP_Real SCIPeventhdlrGetTime(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
+/* @} */
 
 /*
  * Event methods
+ */
+
+/**@defgroup PublicEventMethods Event Handling
+ * @ingroup PublicSolveMethods
+ * @brief  methods to create, catch, process, and drop events during the solving process of \SCIP
+ *
+ * Events can only be caught during the operation on the transformed problem.
+ * Events on variables can only be caught for transformed variables.
+ * If you want to catch an event for an original variable, you have to get the corresponding transformed variable
+ * with a call to SCIPgetTransformedVar() and catch the event on the transformed variable.
+ *
+ * @{
  */
 
 /** gets type of event */
@@ -220,6 +240,8 @@ SCIP_Real SCIPeventGetRowNewSideVal(
 #define SCIPeventGetRowNewSideVal(event)          ((event)->data.eventrowsidechanged.newval)
 
 #endif
+
+/* @} */
 
 #ifdef __cplusplus
 }

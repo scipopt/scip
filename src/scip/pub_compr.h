@@ -33,6 +33,13 @@
 extern "C" {
 #endif
 
+/**@defgroup PublicCompressionMethods Tree Compression
+ * @ingroup PluginManagementMethods
+ * @brief  public methods for tree compressions
+ *
+ * @{
+ */
+
 /** compares two compressions w. r. to their priority */
 EXTERN
 SCIP_DECL_SORTPTRCOMP(SCIPcomprComp);
@@ -107,6 +114,8 @@ EXTERN
 SCIP_Real SCIPcomprGetTime(
    SCIP_COMPR*           compr               /**< tree compression */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

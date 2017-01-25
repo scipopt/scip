@@ -32,6 +32,13 @@
 extern "C" {
 #endif
 
+/**@defgroup PublicNodeSelectorMethods Node Selector
+ * @ingroup PluginManagementMethods
+ * @brief  methods for node selector plugin management
+ *
+ * @{
+ */
+
 /** gets name of node selector */
 EXTERN
 const char* SCIPnodeselGetName(
@@ -86,6 +93,8 @@ EXTERN
 SCIP_Real SCIPnodeselGetTime(
    SCIP_NODESEL*         nodesel             /**< node selector */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -62,8 +62,8 @@ extern "C" {
  * methods for statistical tests
  */
 
-/**@defgroup STATISTICALTESTS Methods for statistical tests
- * @ingroup PUBLICCOREAPI
+/**@defgroup STATISTICALTESTS Statistical tests
+ * @ingroup MiscellaneousMethods
  * @brief public methods for statistical tests
  *
  * Below are the public methods for statistical tests inside of \SCIP
@@ -121,9 +121,9 @@ SCIP_Real SCIPnormalCDF(
 
 /**@} */
 
-/**@defgroup Regression Regression methods for linear regression
- * @ingroup PUBLICCOREAPI
- * @brief public methods for linear regression
+/**@defgroup Regression Linear Regression
+ * @ingroup MiscellaneousMethods
+ * @brief methods for linear regression
  *
  * Below are the public methods for incremental linear regression of observations pairs \f$(X_i,Y_i), i=1\dots,n\f$
  *
@@ -187,8 +187,8 @@ void SCIPregressionFree(
 /*
  */
 
-/**@defgroup GMLgraph GML graphical printing
- * @ingroup PUBLICCOREAPI
+/**@defgroup GMLgraph GML Graphical Printing
+ * @ingroup MiscellaneousMethods
  * @brief GML graph printing methods
  *
  * For a detailed format decription see http://docs.yworks.com/yfiles/doc/developers-guide/gml.html
@@ -270,7 +270,7 @@ void SCIPgmlWriteClosing(
  * Sparse solution
  */
 
-/**@defgroup SparseSol Sparse solution
+/**@defgroup SparseSol Sparse Solution
  *
  * @{
  */
@@ -890,7 +890,7 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
  * Activity
  */
 
-/**@defgroup ResourceActivity Resource activity
+/**@defgroup ResourceActivity Resource Activity
  *
  *@{
  */
@@ -1507,7 +1507,7 @@ void SCIPbtSetRoot(
  * @brief commonly used methods from different categories
  *
  * Below you find a list of miscellaneous methods grouped by different categories
- *@{
+ * @{
  */
 
 /*
@@ -1712,7 +1712,7 @@ void SCIPrandomFree(
  * Additional math functions
  */
 
-/**@defgroup AdditionalMathFunctions Additional math functions
+/**@defgroup AdditionalMathFunctions Additional Math Functions
  *
  *@{
  */

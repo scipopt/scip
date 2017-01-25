@@ -81,7 +81,7 @@ void SCIPhistoryUpdatePseudocost(
    );
 
 
-/**@defgroup ValueHistory Value based history
+/**@defgroup ValueHistory Value Based History
  * @ingroup INTERNALAPI
  * @brief Value based history methods
  *

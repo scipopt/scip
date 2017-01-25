@@ -47,8 +47,8 @@ extern "C" {
 #endif
 
 
-/**@defgroup ColumnMethods Column methods
- * @ingroup PUBLICCOREAPI
+/**@defgroup PublicColumnMethods LP Column
+ * @ingroup PublicLPMethods
  * @brief public methods for LP columns
  *
  * @{
@@ -237,9 +237,9 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
 
 
 
-/**@defgroup RowMethods Row methods
- * @ingroup PUBLICCOREAPI
- * @brief public methods for LP rows
+/**@defgroup PublicRowMethods LP Row
+ * @ingroup PublicLPMethods
+ * @brief methods for LP rows
  *
  * @{
  */

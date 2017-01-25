@@ -38,6 +38,14 @@
 extern "C" {
 #endif
 
+/**@defgroup PublicSolutionMethods Primal Solution
+ * @ingroup PublicProblemMethods
+ * @brief  methods to create and change primal solutions of \SCIP
+ *
+ * @{
+ */
+
+
 /** gets origin of solution */
 EXTERN
 SCIP_SOLORIGIN SCIPsolGetOrigin(
@@ -123,6 +131,8 @@ int SCIPsolGetIndex(
 #define SCIPsolGetIndex(sol)            (sol)->index
 #define SCIPsolSetHeur(sol,newheur)     ((sol)->heur = (newheur))
 #endif
+
+/* @} */
 
 #ifdef __cplusplus
 }
