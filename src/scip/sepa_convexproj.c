@@ -820,8 +820,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       assert(sepadata->nlpi != NULL);
 
       SCIP_CALL( SCIPnlpiCreateProblem(sepadata->nlpi, &sepadata->nlpiprob, "convexproj-nlp") );
-      SCIP_CALL( SCIPhashmapCreate(&sepadata->var2nlpiidx, SCIPblkmem(scip),
-            SCIPcalcHashtableSize(sepadata->nlpinvars)) );
+      SCIP_CALL( SCIPhashmapCreate(&sepadata->var2nlpiidx, SCIPblkmem(scip), sepadata->nlpinvars) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) );
 
       SCIP_CALL( SCIPcreateConvexNlp(scip, sepadata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),

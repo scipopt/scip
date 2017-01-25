@@ -53,7 +53,7 @@ void getMatrix(SCIP_Real* matrix)
    n = consdata->nquadvars;
 
    BMSclearMemoryArray(matrix, n*n);
-   SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * n)) );
+   SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), n) );
 
    for( i = 0; i < n; ++i )
    {

@@ -1545,9 +1545,6 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarIsActive(var) || SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
 
-   if( set->reopt_enable )
-      return SCIP_OKAY;
-
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
 
@@ -6453,7 +6450,8 @@ SCIP_RETCODE varProcessChgLbGlobal(
    }
 
    /* remove redundant implications and variable bounds */
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+   if( (SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE)
+      && (!set->reopt_enable || set->stage == SCIP_STAGE_PRESOLVING) )
    {
       SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, TRUE, TRUE) );
    }
@@ -6627,7 +6625,8 @@ SCIP_RETCODE varProcessChgUbGlobal(
    }
 
    /* remove redundant implications and variable bounds */
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+   if( (SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE)
+      && (!set->reopt_enable || set->stage == SCIP_STAGE_PRESOLVING) )
    {
       SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, TRUE, TRUE) );
    }

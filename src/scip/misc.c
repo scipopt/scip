@@ -1353,7 +1353,7 @@ uint32_t hashvalue(
 }
 
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
-int SCIPcalcHashtableSize(
+int SCIPcalcMultihashSize(
    int                   minsize             /**< minimal size of the hash table */
    )
 {
