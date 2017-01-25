@@ -615,7 +615,7 @@ SCIP_RETCODE presolveFindDuplicates(
 
    /* check all constraints in the given set for duplicates, dominance, or possible simplifications w.r.t. the x variable */
 
-   SCIP_CALL( SCIPmultihashCreate(&multihash, SCIPblkmem(scip), SCIPcalcHashtableSize(nconss),
+   SCIP_CALL( SCIPmultihashCreate(&multihash, SCIPblkmem(scip), SCIPcalcMultihashSize(nconss),
          presolveFindDuplicatesGetKey, presolveFindDuplicatesKeyEQ, presolveFindDuplicatesKeyVal, (void*)scip) );
 
    for( c = 0; c < nconss && !*infeas; ++c )
@@ -940,7 +940,7 @@ SCIP_RETCODE presolveFindDuplicates(
 
    /* check all constraints in the given set for duplicates, dominance, or possible simplifications w.r.t. the z variable */
 
-   SCIP_CALL( SCIPmultihashCreate(&multihash, SCIPblkmem(scip), SCIPcalcHashtableSize(nconss),
+   SCIP_CALL( SCIPmultihashCreate(&multihash, SCIPblkmem(scip), SCIPcalcMultihashSize(nconss),
          presolveFindDuplicatesGetKey, presolveFindDuplicatesKeyEQ2, presolveFindDuplicatesKeyVal2, (void*) scip) );
 
    for( c = 0; c < nconss && !*infeas; ++c )

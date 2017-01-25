@@ -1050,7 +1050,7 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       SCIP_CALL( SCIPcreate(&subscip) );
 
       /* create the variable hash map */
-      SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+      SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
       success = FALSE;
 
       eventhdlr = NULL;
