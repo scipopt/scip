@@ -16,9 +16,8 @@
 /**@file   cuts.c
  * @brief  Methods used to generate and strengthen cuts
  * @author Jakob Witzig
- *
  */
-//#define SCIP_DEBUG
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/def.h"
@@ -376,13 +375,12 @@ SCIP_Real getMIRMinActivity(
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    int*                  varinds,            /**< sparsity pattern of non-zero MIR coefficients */
    int                   nvarinds,           /**< number of non-zero MIR coefficients */
-   SCIP_Bool             islocal
+   SCIP_Bool             islocal             /**< whether local bounds should be used */
    )
 {
-   SCIP_Real act;
+   SCIP_Real act = 0.0;
    int i;
 
-   act = 0.0;
    for( i = 0; i < nvarinds; i++ )
    {
       int v;
@@ -393,11 +391,11 @@ SCIP_Real getMIRMinActivity(
 
       if( mircoef[v] > 0.0 )
       {
-            act += mircoef[v] * (islocal ? SCIPvarGetLbLocal(prob->vars[v]) : SCIPvarGetLbGlobal(prob->vars[v]));
+         act += mircoef[v] * (islocal ? SCIPvarGetLbLocal(prob->vars[v]) : SCIPvarGetLbGlobal(prob->vars[v]));
       }
       else
       {
-            act += mircoef[v] * (islocal ? SCIPvarGetUbLocal(prob->vars[v]) : SCIPvarGetUbGlobal(prob->vars[v]));
+         act += mircoef[v] * (islocal ? SCIPvarGetUbLocal(prob->vars[v]) : SCIPvarGetUbGlobal(prob->vars[v]));
       }
    }
 

@@ -884,6 +884,9 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", heurdata->maxnodes) );
 
+      /* speed up sub-SCIP by not checking dual LP feasibility */
+      SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+
       /* forbid call of heuristics and separators solving sub-CIPs */
       SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
@@ -945,18 +948,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
        * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
-#ifdef NDEBUG
-      {
-         SCIP_RETCODE retstat;
-         retstat = SCIPpresolve(subscip);
-         if( retstat != SCIP_OKAY )
-         {
-            SCIPwarningMessage(scip, "Error while presolving subMIP in clique heuristic; sub-SCIP terminated with code <%d>\n", retstat);
-         }
-      }
-#else
-      SCIP_CALL( SCIPpresolve(subscip) );
-#endif
+      SCIP_CALL_ABORT( SCIPpresolve(subscip) );
 
       SCIPdebugMsg(scip, "clique heuristic presolved subproblem: %d vars, %d cons; fixing value = %g\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars));
 
@@ -971,18 +963,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
          SCIPdebugMsg(scip, "solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
 
-#ifdef NDEBUG
-         {
-            SCIP_RETCODE retstat;
-            retstat = SCIPsolve(subscip);
-            if( retstat != SCIP_OKAY )
-            {
-               SCIPwarningMessage(scip, "Error while solving subMIP in clique heuristic; sub-SCIP terminated with code <%d>\n",retstat);
-            }
-         }
-#else
-         SCIP_CALL( SCIPsolve(subscip) );
-#endif
+         SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
          SCIPdebugMsg(scip, "ending solving clique-submip at time %g, status = %d\n", SCIPgetSolvingTime(scip), SCIPgetStatus(subscip));
 
          /* check, whether a solution was found; due to numerics, it might happen that not all solutions are feasible ->

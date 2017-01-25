@@ -58,6 +58,7 @@
  * - \ref FILEREADERS "Readable file formats"
  * - \ref START       "How to start a new project"
  * - \ref EXAMPLES    "Examples"
+ * - \ref APPLICATIONS "Extensions of SCIP for specific applications"
  *
  * @section FURTHERINFORMATION References
  *
@@ -66,9 +67,6 @@
  *
  * - \ref DOC     "How to search the documentation for interface methods"
  * - \ref FAQ     "Frequently asked questions (FAQ)"
- * - \ref TEST     "How to run automated tests with \SCIP"
- * - \ref COUNTER  "How to use \SCIP to count feasible solutions"
- * - \ref REOPT    "How to use reoptimization in \SCIP"
  * - \ref APPLICATIONS "Extensions of \SCIP for specific applications"
  *
  *
@@ -106,9 +104,9 @@
  * @subsection HOWTOUSESECTION How to use ...
  *
  *   - \ref CONF    "Conflict analysis"
- *   - \ref REOPT   "Reoptimization"
- *   - \ref TEST    "How to run automated tests with \SCIP"
- *   - \ref COUNTER "How to use \SCIP to count feasible solutions"
+ *   - \ref TEST    "How to run automated tests with SCIP"
+ *   - \ref COUNTER "How to use SCIP to count feasible solutions"
+ *   - \ref REOPT   "How to use reoptimization in SCIP"
  *
  *
  * @section FURTHERINFO Further information
@@ -788,6 +786,15 @@
  * - <code>NOBLKBUFMEM=\<true|false\></code> Turns the internal \SCIP block and buffer memory off or on (default).
  *   This way the code can be checked by valgrind or similar tools. (The individual options <code>NOBLKMEM=\<true|false\></code>
  *   and <code>NOBUFMEM=\<true|false\></code> to turn off the \SCIP block and buffer memory, respectively, exist as well).
+ *
+ * - <code>TPI=\<tny|omp|none\></code> This determines the threading library that is used for the concurrent solver.
+ *   The options are the following:
+ *      - <code>none</code>: use no threading library and therefore disable the concurrent solver feature
+ *      - <code>tny</code>: use the tinycthread's library which is bundled with SCIP. This
+ *                          is a wrapper around the plattform specific threading library ad should work
+ *                          for Linux, Mac OS X and Windows.
+ *      - <code>omp</code>: use the OpenMP. This will not work with microsoft compilers, since they do not support
+ *                          the required OpenMP version.
  *
  * You can use other compilers - depending on the system:
  *
@@ -2006,12 +2013,15 @@
  * }
  * \endcode
  *
- * <b>Note:</b> If you implement this callback, take care when setting the valid pointer. The valid pointer should be
- * set to TRUE if (and only if!) you can make sure that all necessary data of the constraint handler are copied
- * correctly. If the complete problem is validly copied, i.e. if the copy methods of all problem defining plugins
- * (constraint handlers and pricers) return <code>*valid = TRUE</code>, then dual reductions found for the copied problem can be
- * transferred to the original SCIP instance. Thus, if the valid pointer is wrongly set to TRUE, it might happen that
- * optimal solutions are cut off.
+ * <b>Note:</b> If you implement this callback, take care when setting the valid pointer.
+ *
+ * A problem copy is called valid if it is valid in both the primal and the dual sense, i.e., if
+ *
+ *  -   it is a relaxation of the source problem
+ *  -   it does not enlarge the feasible region.
+ *
+ * A constraint handler may choose to not copy a constraint and still declare the resulting copy as valid. It must ensure
+ * the feasibility of any solution to the problem copy in the original (source) space.
  *
  * <b>Note:</b> If you implement this callback and the constraint handler needs constraints (see CONSHDLR_NEEDSCONS),
  * then you also need to implement the callback \ref CONSCOPY.
@@ -2286,7 +2296,7 @@
  * To get the corresponding target variable of a given source variable, you can use the variable map directly:
  *
  * \code
- * targetvar = (SCIP_VAR*) (size_t) SCIPhashmapGetImage(varmap, sourcevar);
+ * targetvar = (SCIP_VAR*) SCIPhashmapGetImage(varmap, sourcevar);
  * \endcode
  *
  * We recommend, however, to use the method SCIPgetVarCopy() which gets besides others the variable map and the constraint map as input
@@ -2299,9 +2309,14 @@
  *
  * Finally, the result pointer <code>valid</code> has to be set to TRUE if (and only if!) the copy process was successful.
  *
- * <b>Note:</b> Be careful when setting the valid pointer. If you set the valid pointer to TRUE, but the constraint was
- * not copied one-to-one, then optimal solutions might be cut off during the search (see section
- * CONSHDLRCOPY above).
+ * <b>Note:</b> Be careful when setting the valid pointer.
+ * A problem copy is called valid if it is valid in both the primal and the dual sense, i.e., if
+ *
+ *  -   it is a relaxation of the source problem
+ *  -   it does not enlarge the feasible region.
+ *
+ * A constraint handler may choose to not copy a constraint and still declare the resulting copy as valid. Therefore, it must ensure
+ * the feasibility of any solution to the problem copy in the original (source) space.
  *
  * For an example implementation we refer to cons_linear.h. Additional documentation and the complete list of all
  * parameters can be found in the file in type_cons.h.

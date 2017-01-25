@@ -914,32 +914,18 @@ SCIP_RETCODE applyRepair(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", -1) );
 #endif
 
-   /* presolve the subproblem */
-   retcode = SCIPpresolve(subscip);
-
-   /* errors in solving the subproblem should not kill the overall solving process;
-    * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-    */
-   if( retcode != SCIP_OKAY )
-   {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip, "Error while presolving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n", retcode);
-
-      goto TERMINATE;
-   }
    /* solve the subproblem */
    retcode = SCIPsolve(subscip);
 
+   /* errors in sub-SCIPs should not kill the overall solving process. Hence, we print a warning message. Only
+    * in debug mode, SCIP will stop
+    */
    if( retcode != SCIP_OKAY )
    {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip,
-            "Error while solving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n",
-            retcode);
+      SCIPwarningMessage(scip, "Error while solving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n",
+         retcode);
+
+      SCIPABORT();
 
       goto TERMINATE;
    }
@@ -1157,16 +1143,17 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    heurdata = SCIPheurGetData(heur);
    SCIPdebugMsg(scip, "%s\n", heurdata->filename);
 
-   /* if repair already ran or neither variable fixing nor slack variables are enabled, stop */
-   if( 0 < SCIPheurGetNCalls(heur) || !(heurdata->usevarfix || heurdata->useslackvars) )
-   {
-      *result = SCIP_DIDNOTFIND;
-      return SCIP_OKAY;
-   }
-
    /* checks the result pointer*/
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
+
+   /* if repair already ran or neither variable fixing nor slack variables are enabled, stop */
+   if( 0 < SCIPheurGetNCalls(heur) || !(heurdata->usevarfix || heurdata->useslackvars) )
+      return SCIP_OKAY;
+
+   /* do not run if the neither the LP is constructed nor a user given solution exists */
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL && strcmp(heurdata->filename, DEFAULT_FILENAME) == 0 )
+      return SCIP_OKAY;
 
    /* calculate the maximal number of branching nodes until heuristic is aborted */
    nnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
@@ -1182,9 +1169,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
 
    /* check whether we have enough nodes left to call subproblem solving */
    if( nnodes < heurdata->minnodes )
-   {
       return SCIP_OKAY;
-   }
 
    if( !SCIPhasCurrentNodeLP(scip) )
       return SCIP_OKAY;
@@ -1228,6 +1213,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    }
    else if( retcode != SCIP_OKAY )
    {
+      SCIPwarningMessage(scip, "cannot run repair, unknown return status <%d>\n", retcode);
       SCIP_CALL( SCIPfreeSol(scip, &(heurdata->infsol)) );
       return SCIP_OKAY;
    }
@@ -1241,6 +1227,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
       SCIP_CALL( SCIPfreeSol(scip, &(heurdata->infsol)) );
       return SCIP_OKAY;
    }
+
    *result = SCIP_DIDNOTFIND;
 
    SCIP_CALL( SCIPtrySol(scip, heurdata->infsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );

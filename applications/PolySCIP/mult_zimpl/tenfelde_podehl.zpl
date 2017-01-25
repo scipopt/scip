@@ -29,5 +29,4 @@ subto rows: forall <i> in I do
 
 subto col: forall <i> in I do
       sum <j> in I: x[j,i] == 1;
-
-#subto cons_obj2: sum <i,j> in I*I: obj2[i,j]*x[i,j] <= 15;
+      

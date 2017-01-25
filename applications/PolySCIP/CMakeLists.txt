@@ -23,7 +23,7 @@ configure_file("${PROJECT_SOURCE_DIR}/${CMAKE}/PolySCIPConfig.h.in" "${PROJECT_S
 
 include(FindPackageHandleStandardArgs)
 find_package(SCIP REQUIRED)
-#find_package(SOPLEX REQUIRED)
+find_package(SOPLEX REQUIRED)
 find_package(ZLIB)
 find_package(GMP)
 find_package(Readline)

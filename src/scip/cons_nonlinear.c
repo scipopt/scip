@@ -5027,6 +5027,23 @@ SCIP_RETCODE getCoeffsAndConstantFromLinearExpr(
       return SCIP_OKAY;
    }
 
+   case SCIP_EXPR_SUM: /* just recurse */
+   {
+      SCIP_EXPR** children;
+      int nchildren;
+      int c;
+
+      children = SCIPexprGetChildren(expr);
+      nchildren = SCIPexprGetNChildren(expr);
+
+      for( c = 0; c < nchildren; ++c )
+      {
+         SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[c], scalar, varcoeffs, constant ) );
+      }
+
+      return SCIP_OKAY;
+   }
+
    case SCIP_EXPR_LINEAR: /* add scaled constant and recurse on children with their coeff multiplied into scalar */
    {
       SCIP_Real* childCoeffs;
@@ -7454,12 +7471,6 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
    int c;
 
    assert(scip != NULL);
-
-   /* just return if SCIP is optimal, infeasible or unbounded */
-   if ( SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL || SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE ||
-        SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED || SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
-      return SCIP_OKAY;
-
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
 
@@ -7569,29 +7580,6 @@ SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   conshdlrdata->newsoleventfilterpos = -1;
-
-   /* reset flags and counters */
-   conshdlrdata->sepanlp = FALSE;
-   conshdlrdata->lastenfonode = NULL;
-   conshdlrdata->nenforounds = 0;
-
-   /* just return if SCIP is optimal, infeasible or unbounded; no that this goes here and not at the top of the method
-    * because we need to have some data consistency in exitsol */
-   if ( SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL || SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE ||
-        SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED || SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
-      return SCIP_OKAY;
-
-   if( nconss != 0 )
-   {
-      SCIP_EVENTHDLR* eventhdlr;
-
-      eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
-      assert(eventhdlr != NULL);
-
-      SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
-   }
-
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
@@ -7624,6 +7612,22 @@ SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
          SCIP_CALL( SCIPaddNlRow(scip, consdata->nlrow) );
       }
    }
+
+   conshdlrdata->newsoleventfilterpos = -1;
+   if( nconss != 0 )
+   {
+      SCIP_EVENTHDLR* eventhdlr;
+
+      eventhdlr = SCIPfindEventhdlr(scip, CONSHDLR_NAME"_newsolution");
+      assert(eventhdlr != NULL);
+
+      SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_SOLFOUND, eventhdlr, (SCIP_EVENTDATA*)conshdlr, &conshdlrdata->newsoleventfilterpos) );
+   }
+
+   /* reset flags and counters */
+   conshdlrdata->sepanlp = FALSE;
+   conshdlrdata->lastenfonode = NULL;
+   conshdlrdata->nenforounds = 0;
 
    return SCIP_OKAY;
 }
@@ -8356,18 +8360,19 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
 
    /* if simplifier found some undefined expression, then declare problem as infeasible
     * usually, this should be discovered during domain propagation already, but since that is using interval arithmetics,
-    *   it may overestimate in a way that actually undefined expressions still get a value assigned (e.g., 0^(-1) = [-inf,inf]) */
+    *   it may overestimate in a way that actually undefined expressions still get a value assigned (e.g., 0^(-1) = [-inf,inf])
+    */
    if( domainerror )
-   {
       *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   }
 
    havegraphchange |= havechange;
 
    /* if graph has changed, then we will try upgrades, otherwise we only do for changing or not-yet-presolved constraints */
    tryupgrades = havegraphchange;
 
+   /* remove fix vars, do some algebraic manipulation, etc; this loop need to finish, even if a cutoff is found because data
+    * might be unconsistent otherwise (i.e. some asserts might pop later, e.g. exitpresol, etc)
+    */
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
@@ -8387,7 +8392,9 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
          havechange = TRUE;
       }
 
-      /* the reductions below require the constraint nonlinear function to be in the expression graph, which is only the case for active constraints */
+      /* the reductions below require the constraint nonlinear function to be in the expression graph, which is only the
+       * case for active constraints
+       */
       if( !SCIPconsIsActive(conss[c]) )
          continue;
 
@@ -8406,7 +8413,6 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
             SCIPdebugMsg(scip, "constraint <%s> is constant and infeasible\n", SCIPconsGetName(conss[c]));
             SCIP_CALL( SCIPdelCons(scip, conss[c]) );
             *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
          }
          else
          {
@@ -8414,7 +8420,9 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
             SCIPdebugMsg(scip, "constraint <%s> is constant and feasible, deleting\n", SCIPconsGetName(conss[c]));
             SCIP_CALL( SCIPdelCons(scip, conss[c]) );
             ++*ndelconss;
-            *result = SCIP_SUCCESS;
+
+            if( *result != SCIP_CUTOFF )
+               *result = SCIP_SUCCESS;
             continue;
          }
       }
@@ -8427,6 +8435,10 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
       if( !consdata->ispresolved )
          tryupgrades = TRUE;
    }
+
+   /* if a cutoff was found, return; data is consistent at this point */
+   if( *result == SCIP_CUTOFF )
+      return SCIP_OKAY;
 
    if( tryupgrades )
    {

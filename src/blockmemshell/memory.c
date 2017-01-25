@@ -645,7 +645,8 @@ void BMSfreeMemoryNull_call(
  * Efficient memory management for objects of varying sizes
  ***********************************************************/
 
-#define CHKHASH_SIZE               1013 /**< size of chunk block hash table; should be prime */
+#define CHKHASH_POWER              10                 /**< power for size of chunk block hash table */
+#define CHKHASH_SIZE               (1<<CHKHASH_POWER) /**< size of chunk block hash table is 2^CHKHASH_POWER */
 
 /** collection of chunk blocks */
 struct BMS_BlkMem
@@ -1736,7 +1737,7 @@ void checkBlkmem(
          tmpmemalloc += ((chkmem->elemsize * chkmem->storesize) + chkmem->nchunks * sizeof(CHUNK) + sizeof(BMS_CHKMEM)
             + chkmem->chunkssize * sizeof(CHUNK*));
          tmpmemused += (chkmem->elemsize * (chkmem->storesize - chkmem->eagerfreesize - chkmem->lazyfreesize));
-	 chkmem = chkmem->nextchkmem;
+         chkmem = chkmem->nextchkmem;
       }
    }
    assert(tmpmemalloc == blkmem->memallocated);
@@ -1768,7 +1769,7 @@ BMS_CHKMEM* findChkmem(
    {
       chkmem = blkmem->chkmemhash[i];
       while( chkmem != NULL && !isPtrInChkmem(chkmem, ptr) )
-	 chkmem = chkmem->nextchkmem;
+         chkmem = chkmem->nextchkmem;
    }
 
    return chkmem;
@@ -1783,7 +1784,7 @@ int getHashNumber(
    assert(size >= 0);
    assert(BMSisAligned((size_t)size)); /*lint !e571*/
 
-   return (size % CHKHASH_SIZE);
+   return (int) (((uint32_t)size * UINT32_C(0x9e3779b9))>>(32-CHKHASH_POWER));
 }
 
 /** creates a block memory allocation data structure */
@@ -1802,7 +1803,7 @@ BMS_BLKMEM* BMScreateBlockMemory_call(
    if( blkmem != NULL )
    {
       for( i = 0; i < CHKHASH_SIZE; ++i )
-	 blkmem->chkmemhash[i] = NULL;
+         blkmem->chkmemhash[i] = NULL;
       blkmem->initchunksize = initchunksize;
       blkmem->garbagefactor = garbagefactor;
       blkmem->memused = 0;

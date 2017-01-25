@@ -329,8 +329,6 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    int i;
 
    SCIP_Bool success;
-   SCIP_Bool valid;
-   SCIP_RETCODE retcode;
 
    assert( heur != NULL );
    assert( scip != NULL );
@@ -422,12 +420,9 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
 
-   valid = FALSE;
    /* create a problem copy as sub SCIP */
-   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "rins", fixedvars, fixedvals, nfixedvars, heurdata->uselprows, heurdata->copycuts, &valid) );
-
-   SCIPdebugMsg(scip, "Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
-   assert(valid);
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "rins", fixedvars, fixedvals, nfixedvars,
+         heurdata->uselprows, heurdata->copycuts, &success, NULL) );
 
    eventhdlr = NULL;
    /* create event handler for LP events */
@@ -515,6 +510,9 @@ SCIP_DECL_HEUREXEC(heurExecRins)
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
    }
 
+   /* speed up sub-SCIP by not checking dual LP feasibility */
+   SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+
    /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
     * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
     * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
@@ -549,27 +547,17 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP_CALL( SCIPtransformProb(subscip) );
    SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
 
+   /* Errors in solving the subproblem should not kill the overall solving process
+    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+    */
    /* solve the subproblem */
-   retcode = SCIPsolve(subscip);
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
    /* drop LP events of sub-SCIP */
    SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
 
-   /* Errors in solving the subproblem should not kill the overall solving process
-    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-    */
-   if( retcode != SCIP_OKAY )
-   {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip, "Error while solving subproblem in RINS heuristic; sub-SCIP terminated with code <%d>\n",retcode);
-   }
-   else
-   {
-      /* we try to merge variable statistics with those of our main SCIP */
-      SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
-   }
+   /* we try to merge variable statistics with those of our main SCIP */
+   SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
 
    /* print solving statistics of subproblem if we are in SCIP's debug mode */
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );

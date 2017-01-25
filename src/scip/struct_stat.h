@@ -253,6 +253,7 @@ struct SCIP_Stat
    SCIP_Bool             inrestart;          /**< are we currently restarting the system? */
    SCIP_Bool             collectvarhistory;  /**< should variable history statistics be collected */
    SCIP_Bool             performpresol;      /**< indicates whether presolving is enabled */
+   SCIP_Bool             branchedunbdvar;    /**< indicates whether branching on an unbounded variable has been performed */
 };
 
 #ifdef __cplusplus
