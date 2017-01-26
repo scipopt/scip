@@ -76,7 +76,7 @@
 #define DEFAULT_RELAXDENSECONSS FALSE       /**< should dense constraints (at least as dense as 1 - minfixingrate) be
                                              *   ignored by connectivity graph? */
 #define DEFAULT_USEROLLINGHORIZON TRUE      /**< should the heuristic solve a sequence of sub-MIP's around the first selected variable */
-#define DEFAULT_ROLLHORIZONLIMFAC 0.75      /**< limiting percentage for variables already used in sub-SCIPs to terminate rolling
+#define DEFAULT_ROLLHORIZONLIMFAC  0.4      /**< limiting percentage for variables already used in sub-SCIPs to terminate rolling
                                              *   horizon approach */
 #ifdef SCIP_STATISTIC
 #define NHISTOGRAMBINS         10           /* number of bins for histograms */
@@ -1368,6 +1368,9 @@ SCIP_RETCODE setupSubScip(
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
    }
 
+   /* speed up sub-SCIP by not checking dual LP feasibility */
+   SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+
    /* employ a limit on the number of enforcement rounds in the quadratic constraint handlers; this fixes the issue that
     * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
     * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
@@ -1624,8 +1627,6 @@ SCIP_DECL_HEUREXEC(heurExecGins)
 
    SCIP_Bool success;
 
-   SCIP_RETCODE retcode;
-
    assert(heur != NULL);
    assert(scip != NULL);
    assert(result != NULL);
@@ -1710,7 +1711,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
 
       /* create a problem copy as sub SCIP */
       SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "gins", fixedvars, fixedvals, nfixedvars,
-            heurdata->uselprows, heurdata->copycuts, &success) );
+            heurdata->uselprows, heurdata->copycuts, &success, NULL) );
 
       for( i = 0; i < nvars; i++ )
          subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
@@ -1723,24 +1724,14 @@ SCIP_DECL_HEUREXEC(heurExecGins)
 
       /* solve the subproblem */
       SCIPdebugMsg(scip, "Solve Gins subMIP\n");
-      retcode = SCIPsolve(subscip);
 
       /* Errors in solving the subproblem should not kill the overall solving process
        * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
-      if( retcode != SCIP_OKAY )
-      {
-#ifndef NDEBUG
-         SCIP_CALL( retcode );
-#endif
-         SCIPwarningMessage(scip, "Error while solving subproblem in Gins heuristic; sub-SCIP terminated with code <%d>\n",
-               retcode);
-      }
-      else
-      {
-         /* transfer variable statistics from sub-SCIP */
-         SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
-      }
+      SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+      /* transfer variable statistics from sub-SCIP */
+      SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
 
       heurdata->usednodes += SCIPgetNNodes(subscip);
 

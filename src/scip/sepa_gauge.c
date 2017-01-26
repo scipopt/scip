@@ -195,7 +195,7 @@ SCIP_RETCODE computeInteriorPoint(
 
    nvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "gauge-interiorpoint-nlp") );
-   SCIP_CALL( SCIPhashmapCreate(&var2nlpiidx, SCIPblkmem(scip), SCIPcalcHashtableSize(nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&var2nlpiidx, SCIPblkmem(scip), nvars) );
    SCIP_CALL( SCIPcreateConvexNlp(scip, nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), nlpiprob, var2nlpiidx,
             NULL, SCIPgetCutoffbound(scip), FALSE) );
 

@@ -912,6 +912,8 @@ public:
       if( scaler != NULL || simplifier != NULL )
          origlp = SPxLP(*this);
 
+      m_itused = 0;
+
    SOLVEAGAIN:
       /* perform scaling and presolving */
       if( scaler != NULL )
@@ -966,7 +968,6 @@ public:
       }
 
       /* solve */
-      m_itused = 0;
       if( result != SPxSimplifier::VANISHED )
       {
          /* we have to deactivate the objective limit, since we do not know the transformed value */

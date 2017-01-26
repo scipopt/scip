@@ -13,8 +13,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**
+ * @file ReaderMOP.h
  * @brief .mop file format reader
- * @author Sebastian Schenker, Timo Strunk
+ * @author Sebastian Schenker
+ * @author Timo Strunk
  *
  * Adaption of SCIP MPS reader towards MOP format with multiple objectives.
  * The input file has to follow some simple conventions
@@ -29,15 +31,32 @@
 
 #include "objscip/objscip.h"
 
+/**
+ * @class ReaderMOP
+ * @brief Class for .mop file reader
+ */
 class ReaderMOP : public scip::ObjReader {
 public:
+    /**
+     * Constructor
+     * @param scip SCIP pointer
+     */
     ReaderMOP(SCIP *scip)
             : scip::ObjReader(scip, "MOP Reader", "file reader for MOP file", "mop") { };
 
+    /**
+     * Destructor
+     */
     virtual ~ReaderMOP() { };
 
+    /**
+     * Virtual SCIP function
+     */
     virtual SCIP_DECL_READERFREE(scip_free);
 
+    /**
+     * Virtual SCIP function
+     */
     virtual SCIP_DECL_READERREAD(scip_read);
 
 };

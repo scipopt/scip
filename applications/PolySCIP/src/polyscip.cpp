@@ -2,7 +2,7 @@
 /*                                                                           */
 /*        This file is part of the program PolySCIP                          */
 /*                                                                           */
-/*    Copyright (C) 2012-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2012-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  PolySCIP is distributed under the terms of the ZIB Academic License.     */
@@ -13,10 +13,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**
- * @brief  PolySCIP solver
+ * @file polyscip.cpp
+ * @brief  Implements PolySCIP solver class
  * @author Sebastian Schenker
  *
- * Implements PolySCIP solver class.
  */
 
 
@@ -24,7 +24,7 @@
 
 #include <algorithm> //std::transform, std::max, std::copy
 #include <array>
-#include <cmath> //std::abs
+#include <cmath> //std::abs, std::modf
 #include <cstddef> //std::size_t
 #include <fstream>
 #include <functional> //std::plus, std::negate, std::function, std::reference_wrapper
@@ -70,18 +70,35 @@ using std::vector;
 
 namespace polyscip {
 
-    using DDMethod = doubledescription::DoubleDescriptionMethod;
+    using DDMethod = doubledescription::DoubleDescriptionMethod; ///< abbreviation
 
+    /**
+     * Default constructor
+     * @param outcome Corresponding outcome to take two-dimensional projection of
+     * @param first First (objective) index of outcome to consider for projection
+     * @param second Second (objective) index of outcome to consider for projection
+     */
     TwoDProj::TwoDProj(const OutcomeType& outcome, size_t first, size_t second)
             : proj_(outcome.at(first), outcome.at(second))
     {}
 
+    /**
+     * Ostream operator
+     * @param os Output stream
+     * @param proj Projection to write to stream
+     * @return Output stream
+     */
     ostream& operator<<(ostream& os, const TwoDProj& p) {
         os << "Proj = [" << p.proj_.first << ", " << p.proj_.second << "]";
         return os;
     }
 
-
+    /**
+     * Ostream operator
+     * @param os Output stream
+     * @param nd_proj Non-dominated projections to write to stream
+     * @return Output stream
+     */
     ostream& operator<<(ostream& os, const NondomProjections& nd) {
         os << "Nondominated projections: ";
         for (const auto& p_pair : nd.nondom_projections_)
@@ -89,6 +106,12 @@ namespace polyscip {
         return os;
     }
 
+    /**
+     * Add projection and corresponding result to non-dominated projections
+     * @param proj Projection to add
+     * @param res Corresponding result of projections
+     * @return Iterator pointing to proj
+     */
     NondomProjections::ProjMap::iterator NondomProjections::add(TwoDProj proj, Result res) {
         auto ret_find = nondom_projections_.find(proj);
         if (ret_find == end(nondom_projections_)) { // key not found
@@ -101,7 +124,13 @@ namespace polyscip {
         }
     }
 
-
+    /**
+     * Default constructor
+     * @param epsilon Error value for comparisons
+     * @param supported Results to take non-dominated projections
+     * @param first First (objective) index to consider for projection
+     * @param second Second (objective) index to consider for projection
+     */
     NondomProjections::NondomProjections(double eps,
                                          const ResultContainer &supported,
                                          size_t first,
@@ -136,15 +165,29 @@ namespace polyscip {
         current_ = begin(nondom_projections_);
     }
 
+    /**
+     * lhs-Projection epsilonDominates rhs-Projection if lhs.first - epsilon < rhs.first && lhs.second - epsilon < rhs.second
+     * @param lhs lhs-Projection
+     * @param rhs rhs-Projection
+     * @return true if lhs-Projection epsilon-dominated rhs-Projection; false otherwise
+     */
     bool NondomProjections::epsilonDominates(const TwoDProj& lhs, const TwoDProj& rhs) const {
         return lhs.getFirst() - epsilon_ < rhs.getFirst() && lhs.getSecond() - epsilon_ < rhs.getSecond();
     }
 
+    /**
+     * Advances current_ iterator
+     */
     void NondomProjections::update() {
         assert (current_ != std::prev(end(nondom_projections_)) && current_ != end(nondom_projections_));
         ++current_;
     }
 
+    /**
+     * Incorporates a new projection and corresponding result into non-dominated projections
+     * @param proj Projection to incorporated
+     * @param res Corresponding result of projection
+     */
     void NondomProjections::update(TwoDProj proj, Result res) {
         assert (current_ != std::prev(end(nondom_projections_)) && current_ != end(nondom_projections_));
         auto it = add(proj, res);
@@ -158,6 +201,10 @@ namespace polyscip {
         }
     }
 
+    /**
+     * Get outcomes corresponding to non-dominated projections
+     * @return Vector of outcomes corresponding to non-dominated projections
+     */
     vector<OutcomeType> NondomProjections::getNondomProjOutcomes() const {
         auto outcomes = vector<OutcomeType>{};
         for (auto it=begin(nondom_projections_); it!=end(nondom_projections_); ++it) {
@@ -167,38 +214,73 @@ namespace polyscip {
         return outcomes;
     }
 
+    /**
+     * Indicates that all stored projections are investigated
+     * @return true if all stored projections have been investigated; false otherwise
+     */
     bool NondomProjections::finished() const {
         assert (current_ != end(nondom_projections_));
         return current_ == std::prev(end(nondom_projections_));
     }
 
+    /**
+     * Copy constructor
+     * @param box RectangularBox to copy
+     */
     RectangularBox::RectangularBox(const std::vector<Interval>& box)
             : box_(begin(box), end(box))
     {}
 
+    /**
+     * Move constructor
+     * @param box RectangularBox to copy
+     */
     RectangularBox::RectangularBox(std::vector<Interval>&& box)
             : box_(begin(box), end(box))
     {}
 
-    RectangularBox::RectangularBox(vector<Interval>::const_iterator first_beg,
-                                   vector<Interval>::const_iterator first_end,
+    /**
+     * Constructor: constructs box first_beg x ... x (first_end-1) x second x third_bex x ... x (third_end-1)
+     * @param first_beg Iterator referring to interval
+     * @param first_end Iterator referring to past-the-end interval
+     * @param second Middle interval
+     * @param third_beg Iterator referring to interval
+     * @param third_end Iterator referring to past-the-end interval
+     */
+    RectangularBox::RectangularBox(std::vector<Interval>::const_iterator first_beg,
+                                   std::vector<Interval>::const_iterator first_end,
                                    Interval second,
-                                   vector<Interval>::const_iterator third_beg,
-                                   vector<Interval>::const_iterator third_end) {
+                                   std::vector<Interval>::const_iterator third_beg,
+                                   std::vector<Interval>::const_iterator third_end) {
         std::copy(first_beg, first_end, std::back_inserter(box_));
         box_.push_back(second);
         std::copy(third_beg, third_end, std::back_inserter(box_));
     }
 
+    /**
+     * Get get number of intervals
+     * @return Dimension of rectangular box
+     */
     size_t RectangularBox::size() const {
         return box_.size();
     }
 
+    /**
+     * Get interval of box
+     * @param index Corresponding interval index
+     * @return Interval corresponding to index
+     */
     RectangularBox::Interval RectangularBox::getInterval(size_t index) const {
         assert (index < size());
         return box_[index];
     }
 
+    /**
+     * Ostream operator
+     * @param os Output stream to write to
+     * @param box Box to write to stream
+     * @return Output stream
+     */
     std::ostream &operator<<(std::ostream& os, const RectangularBox& box) {
         for (auto interval : box.box_)
             os << "[ " << interval.first << ", " << interval.second << " ) ";
@@ -206,6 +288,11 @@ namespace polyscip {
         return os;
     }
 
+    /**
+     * Indicates whether given box is subset
+     * @param other Box to compare
+     * @return true if 'other' is subset; false otherwise
+     */
     bool RectangularBox::isSupersetOf(const RectangularBox &other) const {
         assert (other.box_.size() == this->box_.size());
         for (size_t i=0; i<box_.size(); ++i) {
@@ -215,6 +302,11 @@ namespace polyscip {
         return true;
     }
 
+    /**
+     * Indicates whether given box is superset
+     * @param other Box to compare
+     * @return true if 'other' is superset; false otherwise
+     */
     bool RectangularBox::isSubsetOf(const RectangularBox &other) const {
         assert (this->box_.size() == other.box_.size());
         for (size_t i=0; i<box_.size(); ++i) {
@@ -224,6 +316,11 @@ namespace polyscip {
         return true;
     }
 
+    /**
+     * Indicates whether given box is disjoint
+     * @param other Box to compare
+     * @return true if 'other' is disjoint; false otherwise
+     */
     bool RectangularBox::isDisjointFrom(const RectangularBox &other) const {
         assert (this->box_.size() == other.box_.size());
         for (size_t i=0; i<box_.size(); ++i) {
@@ -235,6 +332,11 @@ namespace polyscip {
         return false;
     }
 
+    /**
+     * Indicates whether a_i + epsilon > e_i for all i
+     * @param epsilon Value to add to left interval limit
+     * @return true if a_i + epsilon <= e_i for all i; false otherwise
+     */
     bool RectangularBox::isFeasible(double epsilon) const {
         for (const auto& elem : box_) {
             if (elem.first + epsilon > elem.second)
@@ -243,6 +345,11 @@ namespace polyscip {
         return true;
     }
 
+    /**
+     * Indicates whether outcome dominates entire box
+     * @param outcome Outcome to compare to
+     * @return true if given outcome dominates entire box; false otherwise
+     */
     bool RectangularBox::isDominated(const OutcomeType& outcome) const {
         assert (outcome.size() == box_.size());
         for (size_t i=0; i<box_.size(); ++i) {
@@ -253,6 +360,12 @@ namespace polyscip {
         return true;
     }
 
+    /**
+     * Get interval intersection with respect to given dimension and given box
+     * @param index Interval index to take intersection
+     * @param other Box to consider intersection
+     * @return Interval intersection
+     */
     RectangularBox::Interval RectangularBox::getIntervalIntersection(std::size_t index, const RectangularBox& other) const {
         assert (box_.size() == other.box_.size());
         auto int_beg = std::max(box_[index].first, other.box_[index].first);
@@ -261,23 +374,29 @@ namespace polyscip {
         return {int_beg, int_end};
     }
 
+    /**
+     * Makes disjoint rectangular boxes with respect to given box
+     * @param delta Feasibility threshold
+     * @param other Box to compare to
+     * @return Container of disjoint boxes
+     */
     vector<RectangularBox> RectangularBox::getDisjointPartsFrom(double delta, const RectangularBox &other) const {
         auto size = this->box_.size();
         assert (size == other.box_.size());
         auto disjoint_partitions = vector<RectangularBox>{};
         auto intersections = vector<Interval>{};
         for (size_t i=0; i<size; ++i) {
-            if (box_[i].first < other.box_[i].first - epsilon_) { // non-empty to the left
+            if (box_[i].first < other.box_[i].first) { // non-empty to the left
                 auto new_box = RectangularBox(begin(intersections), end(intersections),
-                                              {box_[i].first, other.box_[i].first - epsilon_},
+                                              {box_[i].first, other.box_[i].first},
                                               begin(box_)+(i+1), end(box_));
                 if (new_box.isFeasible(delta))
                     disjoint_partitions.push_back(std::move(new_box));
 
             }
-            if (other.box_[i].second + epsilon_ < box_[i].second) { // non-empty to the right
+            if (other.box_[i].second < box_[i].second) { // non-empty to the right
                 auto new_box = RectangularBox(begin(intersections), end(intersections),
-                                              {other.box_[i].second + epsilon_, box_[i].second},
+                                              {other.box_[i].second, box_[i].second},
                                               begin(box_)+(i+1), end(box_));
                 if (new_box.isFeasible(delta))
                     disjoint_partitions.push_back(std::move(new_box));
@@ -287,6 +406,11 @@ namespace polyscip {
         return disjoint_partitions;
     }
 
+    /**
+     * Default constructor
+     * @param argc Argument count
+     * @param argv Argument vector
+     */
     Polyscip::Polyscip(int argc, const char *const *argv)
             : cmd_line_args_(argc, argv),
               polyscip_status_(PolyscipStatus::Unsolved),
@@ -312,22 +436,35 @@ namespace polyscip {
                 polyscip_status_ = PolyscipStatus::Error;
             }
         }
-
-        if (cmd_line_args_.hasTimeLimit() && cmd_line_args_.getTimeLimit() <= 0) {
-            cout << "Invalid time limit.\n";
+        if (cmd_line_args_.getDelta() <= 0) {
+            cout << "Please choose positive value for parameter --delta .\n";
             polyscip_status_ = PolyscipStatus::Error;
         }
-
+        if (cmd_line_args_.getEpsilon() <= 0) {
+            cout << "Please choose positive value for parameter --epsilon .\n";
+            polyscip_status_ = PolyscipStatus::Error;
+        }
+        if (cmd_line_args_.hasTimeLimit() && cmd_line_args_.getTimeLimit() <= 0) {
+            cout << "Please choose positive value for parameter --timelLimit .\n";
+            polyscip_status_ = PolyscipStatus::Error;
+        }
         if (!filenameIsOkay(cmd_line_args_.getProblemFile())) {
             cout << "Invalid problem file.\n";
             polyscip_status_ = PolyscipStatus::Error;
         }
     }
 
+    /**
+     * Constructor
+     * @param cmd_line_args Command line parameter object
+     * @param scip SCIP pointer
+     * @param no_objs Number of considered objective
+     * @param clock_total Clock measuring total computation time
+     */
     Polyscip::Polyscip(const CmdLineArgs& cmd_line_args,
-                       SCIP *scip,
-                       size_t no_objs,
-                       SCIP_CLOCK *clock_total)
+                       SCIP* scip,
+                       std::size_t no_objs,
+                       SCIP_CLOCK* clock_total)
             : cmd_line_args_{cmd_line_args},
               polyscip_status_{PolyscipStatus::ProblemRead},
               scip_{scip},
@@ -338,6 +475,9 @@ namespace polyscip {
               is_sub_prob_(true)
     {}
 
+    /**
+     * Destructor
+     */
     Polyscip::~Polyscip() {
         if (!is_sub_prob_) {
             SCIPfreeClock(scip_, addressof(clock_total_));
@@ -345,7 +485,10 @@ namespace polyscip {
         }
     }
 
-
+    /**
+     * Print PolySCIP status
+     * @param os Output stream to print to
+     */
     void Polyscip::printStatus(std::ostream& os) const {
         switch(polyscip_status_) {
             case PolyscipStatus::TwoProjPhase:
@@ -375,6 +518,11 @@ namespace polyscip {
         }
     }
 
+    /**
+     * Compute non-dominated points of given problem
+     * @attention readProblem() needs to be called before
+     * @return SCIP_OKAY if everything worked; otherwise a suitable error code is passed
+     */
     SCIP_RETCODE Polyscip::computeNondomPoints() {
         if (polyscip_status_ == PolyscipStatus::ProblemRead) {
             SCIP_CALL(SCIPstartClock(scip_, clock_total_));
@@ -408,6 +556,12 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
+    /**
+     * Compute lexicographic optimal results
+     * @param orig_vars Container storing original problem variables with non-zero coefficients for each objective
+     * @param orig_vals Container storing original non-zero objective coefficients for each objective
+     * @return SCIP_OKAY if everything worked; otherwise a suitable error code is passed
+     */
     SCIP_RETCODE Polyscip::computeLexicographicOptResults(vector<vector<SCIP_VAR*>>& orig_vars,
                                                           vector<vector<ValueType>>& orig_vals) {
         polyscip_status_ = PolyscipStatus::LexOptPhase;
@@ -420,9 +574,16 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
+    /**
+     * Compute lexicographic optimal result with given objective having highest preference
+     * @param obj Objective with highest preference
+     * @param orig_vars Container storing original problem variables with non-zero coefficients for each objective
+     * @param orig_vals Container storing original non-zero objective coefficients for each objective
+     * @return SCIP_OKAY if everything worked; otherwise a suitable error code is passed
+     */
     SCIP_RETCODE Polyscip::computeLexicographicOptResult(size_t considered_obj,
-                                                          vector<vector<SCIP_VAR*>>& orig_vars,
-                                                          vector<vector<ValueType>>& orig_vals) {
+                                                         vector<vector<SCIP_VAR*>>& orig_vars,
+                                                         vector<vector<ValueType>>& orig_vals) {
         assert (considered_obj < no_objs_);
         auto current_obj = considered_obj;
         auto obj_val_cons = vector<SCIP_CONS*>{};
@@ -452,6 +613,7 @@ namespace polyscip {
             else if (scip_status == SCIP_STATUS_UNBOUNDED) {
                 assert (current_obj == considered_obj);
                 SCIP_CALL( handleUnboundedStatus(true) );
+                unbd_orig_objs_.push_back(considered_obj);
                 break;
             }
             else if (scip_status == SCIP_STATUS_TIMELIMIT) {
@@ -487,32 +649,76 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
+    /**
+     * Compute bounded non-dominated extreme points for objective for which unbounded ray exits
+     * @return SCIP_OKAY if everything worked; otherwise a suitable error code is passed
+     */
+    SCIP_RETCODE Polyscip::computeBoundedNondomResultsForUnbdObjs() {
+        auto dd = DDMethod(scip_, no_objs_, bounded_, unbounded_);
+        dd.computeVRep_Var1();
+        auto v_rep= dd.moveVRep();
+        for (auto unbd_obj : unbd_orig_objs_) {
+            for (const auto &v : v_rep) {
+                if (v->hasNonUnitAndNonZeroWeight()) {
+                    auto weight = v->moveWeight();
+                    assert (weight[unbd_obj] > 0.);
+                    weight[unbd_obj] -= weight[unbd_obj] / 100;
+                    SCIP_CALL(setWeightedObjective(weight));
+                    SCIP_CALL(solve());
+                    auto status = SCIPgetStatus(scip_);
+                    if (status == SCIP_STATUS_OPTIMAL) {
+                        auto bd_result = getOptimalResult();
+                        if (outcomeIsNew(bd_result.second, begin(bounded_), end(bounded_))) {
+                            bounded_.push_back(std::move(bd_result));
+                        }
+                    }
+                    else if (status == SCIP_STATUS_TIMELIMIT) {
+                        polyscip_status_ = PolyscipStatus::TimeLimitReached;
+                        return SCIP_OKAY;
+                    }
+                    else {
+                        polyscip_status_ = PolyscipStatus::Error;
+                        return SCIP_OKAY;
+                    }
+                }
+            }
+        }
+        return SCIP_OKAY;
+    }
 
+    /**
+     * Compute non-dominated points which are not lexicographically optimal
+     * @param orig_vars Container storing original problem variables with non-zero coefficients for each objective
+     * @param orig_vals Container storing original non-zero objective coefficients for each objective
+     * @return SCIP_OKAY if everything worked; otherwise a suitable error code is passed
+     */
     SCIP_RETCODE Polyscip::computeNonLexicographicNondomResults(const vector<vector<SCIP_VAR *>> &orig_vars,
                                                                 const vector<vector<ValueType>> &orig_vals) {
         polyscip_status_ = PolyscipStatus::TwoProjPhase;
-
+        if (unboundedResultsExist()) {
+            SCIP_CALL( computeBoundedNondomResultsForUnbdObjs() );
+        }
         // consider all (k over 2 ) combinations of considered objective functions
         std::map<ObjPair, vector<OutcomeType>> proj_nondom_outcomes_map;
         for (size_t obj_1=0; obj_1!=no_objs_-1; ++obj_1) {
             for (auto obj_2=obj_1+1; obj_2!=no_objs_; ++obj_2) {
-                if (polyscip_status_ == PolyscipStatus::TwoProjPhase) {
-                    auto proj_nondom_outcomes = solveWeightedTchebycheff(orig_vars,
-                                                                         orig_vals,
-                                                                         obj_1, obj_2);
+                if (polyscip_status_ != PolyscipStatus::TwoProjPhase) {
+                    return SCIP_OKAY;
+                }
+                else {
+                        auto proj_nondom_outcomes = solveWeightedTchebycheff(orig_vars,
+                                                                             orig_vals,
+                                                                             obj_1, obj_2);
 
-                    proj_nondom_outcomes_map.insert({ObjPair(obj_1, obj_2), proj_nondom_outcomes});
+                        proj_nondom_outcomes_map.insert({ObjPair(obj_1, obj_2), proj_nondom_outcomes});
                 }
             }
         }
-
-
-        if (no_objs_ == 3) {
+        if (no_objs_ == 3 && polyscip_status_ == PolyscipStatus::TwoProjPhase) {
             auto feasible_boxes = computeFeasibleBoxes(proj_nondom_outcomes_map,
                                                        orig_vars,
                                                        orig_vals);
             auto disjoint_boxes = computeDisjointBoxes(std::move(feasible_boxes));
-
             assert (feasible_boxes.size() <= disjoint_boxes.size());
 
             for (const auto& box : disjoint_boxes) {
@@ -524,11 +730,13 @@ namespace polyscip {
                 if (cmd_line_args_.beVerbose()) {
                     cout << "Checking  box = " << box << "\n";
                 }
-
                 auto new_res = computeNondomPointsInBox(box,
                                                         orig_vars,
                                                         orig_vals);
                 for (const auto &res : new_res) {
+                    if (polyscip_status_ != PolyscipStatus::TwoProjPhase) {
+                        return SCIP_OKAY;
+                    }
                     if (is_sub_prob_) {
                         bounded_.push_back(res);
                     }
@@ -540,13 +748,19 @@ namespace polyscip {
                 }
             }
         }
-
         if (polyscip_status_ == PolyscipStatus::TwoProjPhase)
             polyscip_status_ = PolyscipStatus::Finished;
 
         return SCIP_OKAY;
     }
 
+    /**
+     * Indicates whether given outcome is globally dominated
+     * @param outcome Outcome to check for dominance
+     * @param orig_vars Container storing original problem variables with non-zero coefficients for each objective
+     * @param orig_vals Container storing original non-zero objective coefficients for each objective
+     * @return true if given outcome is dominated; false otherwise
+     */
     bool Polyscip::boxResultIsDominated(const OutcomeType& outcome,
                                         const vector<vector<SCIP_VAR*>>& orig_vars,
                                         const vector<vector<ValueType>>& orig_vals) {
@@ -606,6 +820,13 @@ namespace polyscip {
         return is_dominated;
     }
 
+    /**
+     * Compute locally non-dominated results in given rectangular box
+     * @param box Rectangular box
+     * @param orig_vars Container storing original problem variables with non-zero coefficients for each objective
+     * @param orig_vals Container storing original non-zero objective coefficients for each objective
+     * @return Container with locally non-dominated results
+     */
     ResultContainer Polyscip::computeNondomPointsInBox(const RectangularBox& box,
                                                        const vector<vector<SCIP_VAR *>>& orig_vars,
                                                        const vector<vector<ValueType>>& orig_vals) {
@@ -648,19 +869,30 @@ namespace polyscip {
 
         // check computed subproblem results
         assert (!sub_poly->unboundedResultsExist());
-        assert (sub_poly->getStatus() == PolyscipStatus::Finished);
 
         auto new_nondom_res = ResultContainer{};
-        if (sub_poly->numberOfBoundedResults() > 0) {
-            for (auto it = sub_poly->supportedCBegin(); it != sub_poly->supportedCEnd(); ++it) {
-                new_nondom_res.push_back(std::move(*it));
+        if (sub_poly->getStatus() == PolyscipStatus::Finished) {
+            if (sub_poly->numberOfBoundedResults() > 0) {
+                for (auto it = sub_poly->boundedCBegin(); it != sub_poly->boundedCEnd(); ++it) {
+                    new_nondom_res.push_back(std::move(*it));
+                }
             }
+        }
+        else if (sub_poly->getStatus() == PolyscipStatus::TimeLimitReached) {
+            polyscip_status_ = PolyscipStatus::TimeLimitReached;
+        }
+        else {
+            polyscip_status_ = PolyscipStatus::Error;
         }
         sub_poly.reset();
         return new_nondom_res;
     }
 
-
+    /**
+     * Compute disjoint rectangular boxes from given feasible rectangular boxes
+     * @param feasible_boxes List of feasible boxes
+     * @return Vector of disjoint feasible rectangular boxes
+     */
     vector<RectangularBox> Polyscip::computeDisjointBoxes(list<RectangularBox>&& feasible_boxes) const {
         // delete redundant boxes
         auto current = begin(feasible_boxes);
@@ -711,7 +943,13 @@ namespace polyscip {
         return disjoint_boxes;
     }
 
-
+    /**
+     * Compute feasible rectangular boxes
+     * @param proj_nondom_outcomes Non-dominated outcomes which are non-dominated for objective pair
+     * @param orig_vars Container storing original problem variables with non-zero coefficients for each objective
+     * @param orig_vals Container storing original non-zero objective coefficients for each objective
+     * @return List of feasible rectangular boxes
+     */
     list<RectangularBox> Polyscip::computeFeasibleBoxes(const map<ObjPair, vector<OutcomeType>> &proj_nd_outcomes,
                                                         const vector<vector<SCIP_VAR *>> &orig_vars,
                                                         const vector<vector<ValueType>> &orig_vals) {
@@ -739,6 +977,16 @@ namespace polyscip {
         return feasible_boxes;
     }
 
+
+    /**
+     * Create constraint: new_var - beta_i * orig_vals \\cdot orig_vars >= - beta_i * rhs
+     * @param new_var Non-original variable
+     * @param orig_vars Container storing original problem variables with non-zero coefficients for each objective
+     * @param orig_vals Container storing original non-zero objective coefficients for each objective
+     * @param rhs rhs value
+     * @param beta_i coefficient
+     * @return Pointer to corresponding SCIP constraint
+     */
     SCIP_CONS* Polyscip::createNewVarTransformCons(SCIP_VAR *new_var,
                                                    const vector<SCIP_VAR *> &orig_vars,
                                                    const vector<ValueType> &orig_vals,
@@ -754,7 +1002,7 @@ namespace polyscip {
         vals.push_back(1.);
 
         SCIP_CONS* cons = nullptr;
-        // add contraint new_var  - beta_i* vals \cdot vars >= - beta_i * ref_point[i]
+        // add contraint new_var  - beta_i* vals \cdot vars >= - beta_i * rhs
         SCIPcreateConsBasicLinear(scip_,
                                   addressof(cons),
                                   "new_variable_transformation_constraint",
@@ -767,13 +1015,13 @@ namespace polyscip {
         return cons;
     }
 
-    /** create constraint:
-     *
-     * @param orig_vars
-     * @param orig_vals
-     * @param lhs
-     * @param rhs
-     * @return
+    /**
+     * Create constraint: lhs <= vals \\cdot vars <= rhs
+     * @param vars Considered variables
+     * @param vals Considered coefficient values
+     * @param lhs lhs value
+     * @param rhs rhs value
+     * @return Pointer to corresponding SCIP constraint
      */
     SCIP_CONS* Polyscip::createObjValCons(const vector<SCIP_VAR *>& vars,
                                           const vector<ValueType>& vals,
@@ -794,6 +1042,17 @@ namespace polyscip {
         return cons;
     }
 
+    /**
+     * Computes non-dominated point which fulfills: obj_val_cons1 = obj_val_cons1_rhs and obj_val_cons2 = obj_val_cons2_rhs
+     * @param obj_val_cons1 First constraint to consider
+     * @param obj_val_cons2 Second constraint to consider
+     * @param obj_val_cons1_rhs Corresponding rhs of first constraint
+     * @param obj_val_cons2_rhs Corresponding rhs of second constraint
+     * @param obj_1 Considered objective index corresponding to first constraint
+     * @param obj_2 Considered objective index corresponding to second constraint
+     * @param results Container to store computed non-dominated result
+     * @return SCIP_OKAY if everything worked; otherwise a suitable error code is passed
+     */
     SCIP_RETCODE Polyscip::computeNondomProjResult(SCIP_CONS *cons1,
                                                    SCIP_CONS *cons2,
                                                    ValueType rhs_cons1,
@@ -838,7 +1097,7 @@ namespace polyscip {
         }
         else {
             cout << "unexpected SCIP status in computeNondomProjResult: " +
-                         std::to_string(SCIPgetStatus(scip_)) + "\n";
+                    std::to_string(int(SCIPgetStatus(scip_))) + "\n";
             polyscip_status_ = PolyscipStatus::Error;
         }
 
@@ -848,11 +1107,18 @@ namespace polyscip {
     }
 
 
-
+    /**
+     * Compute non-dominated points via subproblems with weighted Tchebycheff norm
+     * @param orig_vars Container storing original problem variables with non-zero coefficients for each objective
+     * @param orig_vals Container storing original non-zero objective coefficients for each objective
+     * @param obj_1 Index of first considered objective
+     * @param obj_2 Index of second considered objective
+     * @return Container of non-dominated outcomes which are also non-dominated for projection onto obj_1 and obj_2
+     */
     vector<OutcomeType> Polyscip::solveWeightedTchebycheff(const vector<vector<SCIP_VAR*>>& orig_vars,
-                                                    const vector<vector<ValueType>>& orig_vals,
-                                                    size_t obj_1,
-                                                    size_t obj_2){
+                                                           const vector<vector<ValueType>>& orig_vals,
+                                                           size_t obj_1,
+                                                           size_t obj_2){
 
         assert (orig_vars.size() == orig_vals.size());
         assert (orig_vals.size() == no_objs_);
@@ -879,7 +1145,6 @@ namespace polyscip {
                                               obj_2);
 
         auto last_proj = nondom_projs.getLastProj();
-
         while (!nondom_projs.finished() && polyscip_status_ == PolyscipStatus::TwoProjPhase) {
             auto left_proj = nondom_projs.getLeftProj();
             auto right_proj = nondom_projs.getRightProj();
@@ -942,7 +1207,7 @@ namespace polyscip {
             }
             else {
                 std::cerr << "Unexpected SCIP status in solveWeightedTchebycheff: " +
-                        std::to_string(SCIPgetStatus(scip_)) + "\n";
+                        std::to_string(int(SCIPgetStatus(scip_))) + "\n";
                 polyscip_status_ = PolyscipStatus::Error;
             }
 
@@ -1000,18 +1265,36 @@ namespace polyscip {
 
     }
 
+    /**
+     * Get PolySCIP status
+     * @return Current PolySCIP status
+     */
     Polyscip::PolyscipStatus Polyscip::getStatus() const {
         return polyscip_status_;
     }
 
+    /**
+     * Get number of bounded results
+     * @return Number of computed bounded results
+     */
     std::size_t Polyscip::numberOfBoundedResults() const {
         return bounded_.size();
     }
 
+    /**
+     * Get number of unbounded results
+     * @return Number of computed unbounded results
+     */
     std::size_t Polyscip::numberofUnboundedResults() const {
         return unbounded_.size();
     }
 
+    /**
+     * Resolve INFORUNBD SCIP status to either infeasible or unbounded
+     * @param weight Weight yielding INFORUNBD status
+     * @param with_presolving Indicates whether presolving should be used or not
+     * @return SCIP_OKAY if everything worked; otherwise a suitable error code is passed
+     */
     SCIP_STATUS Polyscip::separateINFORUNBD(const WeightType& weight, bool with_presolving) {
         if (!with_presolving)
             SCIPsetPresolving(scip_, SCIP_PARAMSETTING_OFF, TRUE);
@@ -1040,7 +1323,11 @@ namespace polyscip {
         return status;
     }
 
-
+    /**
+     * Handle SCIP status that is neither optimal nor unbounded
+     * @param status Current SCIP status
+     * @return SCIP_OKAY if everything worked; otherwise a suitable error code is passed
+     */
     SCIP_RETCODE Polyscip::handleNonOptNonUnbdStatus(SCIP_STATUS status) {
         assert (status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_UNBOUNDED);
         if (status == SCIP_STATUS_TIMELIMIT) {
@@ -1056,6 +1343,11 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
+    /**
+     * Handle unbounded SCIP status
+     * @param check_if_new_result Indicates whether to check if computed results is already known
+     * @return SCIP_OKAY if everything worked; otherwise a suitable error code is passed
+     */
     SCIP_RETCODE Polyscip::handleUnboundedStatus(bool check_if_new_result) {
         if (!SCIPhasPrimalRay(scip_)) {
             SCIP_CALL( SCIPsetPresolving(scip_, SCIP_PARAMSETTING_OFF, TRUE) );
@@ -1079,41 +1371,12 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
-/*    SCIP_RETCODE Polyscip::handleOptimalStatus(const WeightType& weight,
-                                               ValueType current_opt_val) {
-        auto best_sol = SCIPgetBestSol(scip_);
-        SCIP_SOL *finite_sol{nullptr};
-        SCIP_Bool same_obj_val{FALSE};
-        SCIP_CALL(SCIPcreateFiniteSolCopy(scip_, addressof(finite_sol), best_sol, addressof(same_obj_val)));
-
-        if (!same_obj_val) {
-            auto diff = std::fabs(SCIPgetSolOrigObj(scip_, best_sol) -
-                                  SCIPgetSolOrigObj(scip_, finite_sol));
-            if (diff > 1.0e-5) {
-                cout << "absolute value difference after calling SCIPcreateFiniteSolCopy: " << diff << "\n";
-                SCIP_CALL(SCIPfreeSol(scip_, addressof(finite_sol)));
-                cout << "SCIPcreateFiniteSolCopy: unacceptable difference in objective values.\n";
-                polyscip_status_ = PolyscipStatus::Error;
-                return SCIP_OKAY;
-            }
-        }
-        assert (finite_sol != nullptr);
-        auto result = getResult(true, finite_sol);
-
-        assert (weight.size() == result.second.size());
-        auto weighted_outcome = std::inner_product(weight.cbegin(),
-                                                   weight.cend(),
-                                                   result.second.cbegin(),
-                                                   0.);
-
-        if (weighted_outcome + cmd_line_args_.getEpsilon() <= current_opt_val) {
-            bounded_.push_back(std::move(result));
-        }
-
-        SCIP_CALL(SCIPfreeSol(scip_, addressof(finite_sol)));
-        return SCIP_OKAY;
-    }*/
-
+    /**
+     * Get computed result
+     * @param outcome_is_bounded Indicates whether previous computation yielded unbounded status
+     * @param primal_sol Corresponding SCIP primal solution pointer if previous computation yielded optimal status
+     * @return Result type
+     */
     Result Polyscip::getResult(bool outcome_is_bounded, SCIP_SOL *primal_sol) {
         SolType sol;
         auto outcome = OutcomeType(no_objs_,0.);
@@ -1140,8 +1403,10 @@ namespace polyscip {
         return {sol, outcome};
     }
 
-
-
+    /**
+     * Get bounded optimal result
+     * @return Result type
+     */
     Result Polyscip::getOptimalResult() {
         auto best_sol = SCIPgetBestSol(scip_);
         assert (best_sol != nullptr);
@@ -1165,13 +1430,26 @@ namespace polyscip {
         return new_result;
     }
 
-
+    /**
+     * Indicates whether given outcome was not computed before
+     * @param outcome Outcome to check
+     * @param outcome_is_bounded Indicates whether given outcome is bounded or unbounded
+     * @return true if given outcome was not computed before; false otherwise
+     */
     bool Polyscip::outcomeIsNew(const OutcomeType& outcome, bool outcome_is_bounded) const {
         auto beg_it = outcome_is_bounded ? begin(bounded_) : begin(unbounded_);
         auto end_it = outcome_is_bounded ? end(bounded_) : end(unbounded_);
         return std::find_if(beg_it, end_it, [&outcome](const Result& res){return outcome == res.second;}) == end_it;
     }
 
+
+    /**
+     * Indicates whether given outcome is new with respect to other given results
+     * @param outcome Outcome to check
+     * @param beg Const_iterator to beginning of result container
+     * @param last Const_iterator to past-the-end of result container
+     * @return true if given outcome does not coincide with outcomes; false otherwise
+     */
     bool Polyscip::outcomeIsNew(const OutcomeType& outcome,
                                 ResultContainer::const_iterator beg,
                                 ResultContainer::const_iterator last) const {
@@ -1182,6 +1460,13 @@ namespace polyscip {
         });
     }
 
+    /**
+     * Indicates whether given outcomes coincide within some epsilon error
+     * @param a First outcome to compare
+     * @param b Second outcome to compare
+     * @param epsilon Allowed error
+     * @return true if outcomes coincides; false otherwise
+     */
     bool Polyscip::outcomesCoincide(const OutcomeType& a, const OutcomeType& b, double epsilon) {
         assert (a.size() == b.size());
         return std::equal(begin(a), end(a), begin(b),
@@ -1191,6 +1476,10 @@ namespace polyscip {
                           });
     }
 
+    /**
+     * Solves currently considered SCIP instance
+     * @return SCIP_OKAY if everything worked; otherwise a suitable error code is passed
+     */
     SCIP_RETCODE Polyscip::solve() {
         if (cmd_line_args_.hasTimeLimit()) { // set SCIP timelimit
             auto remaining_time = std::max(cmd_line_args_.getTimeLimit() -
@@ -1201,6 +1490,11 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
+    /**
+     * Set weighted objective: weight * (c_1,...,c_k) \\cdot x
+     * @param weight Weight
+     * @return SCIP_OKAY if everything worked; otherwise a suitable error code is passed
+     */
     SCIP_RETCODE Polyscip::setWeightedObjective(const WeightType& weight){
         if (SCIPisTransformed(scip_))
             SCIP_CALL( SCIPfreeTransform(scip_) );
@@ -1216,18 +1510,28 @@ namespace polyscip {
         else { // weight != all zeros vector
             for (auto i = 0; i < no_vars; ++i) {
                 auto val = obj_probdata->getWeightedObjVal(vars[i], weight);
+                auto no_decimals = cmd_line_args_.roundWeightedObjCoeff();
+                if (no_decimals) {
+                    ValueType intpart, fractpart;
+                    fractpart = std::modf(val, &intpart);
+                    fractpart = round(pow(10,no_decimals)*fractpart)/pow(10,no_decimals);
+                    val = intpart + fractpart;
+                }
                 SCIP_CALL(SCIPchgVarObj(scip_, vars[i], val));
             }
         }
         return SCIP_OKAY;
     }
 
+    /**
+     * Compute non-dominated extreme point results
+     * @return SCIP_OKAY if everything worked; otherwise a suitable error code is passed
+     */
     SCIP_RETCODE Polyscip::computeWeightSpaceResults() {
         polyscip_status_ = PolyscipStatus::WeightSpacePhase;
         auto v_rep = DDMethod(scip_, no_objs_, bounded_, unbounded_);
         v_rep.computeVRep_Var1();
-        weight_space_poly_ = global::make_unique<WeightSpacePolyhedron>(scip_,
-                                                                        no_objs_,
+        weight_space_poly_ = global::make_unique<WeightSpacePolyhedron>(no_objs_,
                                                                         v_rep.moveVRep(),
                                                                         v_rep.moveHRep());
 
@@ -1273,6 +1577,10 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
+    /**
+     * Print results
+     * @param os Output stream to print to
+     */
     void Polyscip::printResults(ostream &os) const {
         auto new_line = false;
         for (const auto& result : bounded_) {
@@ -1303,11 +1611,22 @@ namespace polyscip {
         }
     }
 
+    /**
+     * Print solution
+     * @param sol Solution to print
+     * @param os Output stream to write to
+     */
     void Polyscip::printSol(const SolType& sol, ostream& os) const {
         for (const auto& elem : sol)
             os << elem.first << "=" << elem.second << " ";
     }
 
+    /**
+     * Print outcome
+     * @param outcome Outcome to print
+     * @param os Output stream to write to
+     * @param desc Description to print before given outcome
+     */
     void Polyscip::outputOutcome(const OutcomeType &outcome, std::ostream &os, const std::string desc) const {
         if (obj_sense_ == SCIP_OBJSENSE_MAXIMIZE) {
             global::print(outcome, desc + "[ ", "] ", os, true);
@@ -1317,11 +1636,23 @@ namespace polyscip {
         }
     }
 
+    /**
+     * Check whether file can be opened
+     * @param filename Name of file to open
+     * @return true if corresponding file can be opened; false otherwise
+     */
     bool Polyscip::filenameIsOkay(const string& filename) {
         std::ifstream file(filename.c_str());
         return file.good();
     }
 
+    /**
+     * Print objective
+     * @param obj_no Corresponding index of objective
+     * @param nonzero_indices Indices of variables with non-zero coefficients
+     * @param nonzero_vals Corresponding non-zero coefficient variable values
+     * @param os Output stream to write to
+     */
     void Polyscip::printObjective(size_t obj_no,
                                   const std::vector<int>& nonzero_indices,
                                   const std::vector<SCIP_Real>& nonzero_vals,
@@ -1336,6 +1667,14 @@ namespace polyscip {
         os << "\n";
     }
 
+    /**
+     * Indicates whether objective given by index is redundant
+     * @param begin_nonzeros begin_nonzeros[i+1] = begin_nonzeros[i] + obj_probdata->getNumberNonzeroCoeffs(i)
+     * @param obj_to_nonzero_indices indices of non-zero variables for each objective
+     * @param obj_to_nonzero_values non-zero variables for each objective
+     * @param index index of objective to check
+     * @return true if checked objective is redundant; false otherwise
+     */
     bool Polyscip::objIsRedundant(const vector<int>& begin_nonzeros,
                                   const vector< vector<int> >& obj_to_nonzero_indices,
                                   const vector< vector<SCIP_Real> >& obj_to_nonzero_values,
@@ -1372,7 +1711,6 @@ namespace polyscip {
         auto lhs = vector<SCIP_Real>(global::narrow_cast<size_t>(no_rows), 0.);
         for (auto i=0; i<no_rows; ++i)
             lhs[i] = obj_probdata->getObjCoeff(vars[i], checked_obj);
-        auto rhs = vector<SCIP_Real>(lhs);
 
         retcode =  SCIPlpiLoadColLP(lpi,
                                     SCIP_OBJSEN_MINIMIZE,
@@ -1383,7 +1721,7 @@ namespace polyscip {
                                     nullptr,
                                     no_rows,
                                     lhs.data(),
-                                    rhs.data(),
+                                    lhs.data(),
                                     nullptr,
                                     no_nonzero,
                                     beg.data(),
@@ -1411,6 +1749,10 @@ namespace polyscip {
         return is_redundant;
     }
 
+    /**
+     * Read multi-objective problem file
+     * @return SCIP_OKAY if everything worked; otherwise a suitable error code is passed
+     */
     SCIP_RETCODE Polyscip::readProblem() {
         if (polyscip_status_ != PolyscipStatus::Unsolved) {
             return  SCIP_OKAY;
@@ -1490,6 +1832,9 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
+    /**
+     * Write results to file named 'solutions_name-of-problem-file.txt'
+     */
     void Polyscip::writeResultsToFile() const {
         auto prob_file = cmd_line_args_.getProblemFile();
         size_t prefix = prob_file.find_last_of("/"), //separate path/ and filename.mop
@@ -1512,6 +1857,13 @@ namespace polyscip {
             std::cerr << "ERROR writing solution file\n.";
     }
 
+    /**
+     * Checks whether results corresponding to given iterator is dominated or equal to other given elements
+     * @param it Const_iterator corresponding to result
+     * @param beg_it Const_iterator to beginning of result container
+     * @param end_it Const_iterator to past-the-end of result container
+     * @return true if result given by it is dominated or equal to other given results; false otherwise
+     */
     bool Polyscip::isDominatedOrEqual(ResultContainer::const_iterator it,
                                       ResultContainer::const_iterator beg_it,
                                       ResultContainer::const_iterator end_it) const {
@@ -1531,6 +1883,10 @@ namespace polyscip {
     }
 
 
+    /**
+     * Indicates whether dominated results were computed
+     * @return true if dominated bounded results were computed
+     */
     bool Polyscip::dominatedPointsFound() const {
         for (auto cur=begin(bounded_); cur!=end(bounded_); ++cur) {
             if (isDominatedOrEqual(cur, begin(bounded_), end(bounded_)))

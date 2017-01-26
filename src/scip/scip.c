@@ -2578,7 +2578,7 @@ SCIP_RETCODE SCIPgetConsCopy(
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    )
 {
    SCIP_HASHMAP* localvarmap;
@@ -2621,15 +2621,19 @@ SCIP_RETCODE SCIPgetConsCopy(
    {
       /* if found capture existing copy of the constraint */
       SCIP_CALL( SCIPcaptureCons(targetscip, *targetcons) );
-      *success = TRUE;
+      *valid = TRUE;
    }
    else
    {
       /* otherwise create a copy of the constraint */
       SCIP_CALL( SCIPconsCopy(targetcons, targetscip->set, name, sourcescip, sourceconshdlr, sourcecons, localvarmap, localconsmap,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, success) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
 
-      if( *success && !uselocalconsmap )
+      /* it is possible for the constraint handler to declare the copy valid although no target constraint was created */
+      assert(*targetcons == NULL || *valid);
+
+      /* if a target constraint was created */
+      if( *targetcons != NULL && !uselocalconsmap )
       {
          /* insert constraint into mapping between source SCIP and the target SCIP */
          SCIP_CALL( SCIPhashmapInsert(consmap, sourcecons, *targetcons) );
@@ -2748,14 +2752,12 @@ SCIP_RETCODE SCIPcopyConss(
    {
       SCIP_CONS** sourceconss;
       SCIP_CONS* targetcons;
-      SCIP_Bool success;
       int nsourceconss;
       int c;
 
       assert(sourceconshdlrs[i] != NULL);
 
-      /* constraint handlers have to explicitly set the success pointer to TRUE */
-      success = FALSE;
+      /* constraint handlers have to explicitly set the valid pointer to TRUE for every single constraint */
 
       /* Get all active constraints for copying; this array contains all active constraints;
        * constraints are active if they are globally valid and not deleted after presolving OR they
@@ -2786,6 +2788,7 @@ SCIP_RETCODE SCIPcopyConss(
       /* copy all constraints of one constraint handler */
       for( c = 0; c < nsourceconss; ++c )
       {
+         SCIP_Bool singlevalid = FALSE;
          /* all constraints have to be active */
          assert(sourceconss[c] != NULL);
          assert(SCIPconsIsActive(sourceconss[c]));
@@ -2804,12 +2807,14 @@ SCIP_RETCODE SCIPcopyConss(
                SCIPconsIsInitial(sourceconss[c]), SCIPconsIsSeparated(sourceconss[c]),
                SCIPconsIsEnforced(sourceconss[c]), SCIPconsIsChecked(sourceconss[c]),
                SCIPconsIsPropagated(sourceconss[c]), FALSE, SCIPconsIsModifiable(sourceconss[c]),
-               SCIPconsIsDynamic(sourceconss[c]), SCIPconsIsRemovable(sourceconss[c]), FALSE, global, &success) );
+               SCIPconsIsDynamic(sourceconss[c]), SCIPconsIsRemovable(sourceconss[c]), FALSE, global, &singlevalid) );
 
-         /* add the copied constraint to target SCIP if the copying process was valid */
-         if( success )
+         /* it is possible for a constraint handler to declare the copy valid, although no target constraint was created */
+         assert(targetcons == NULL || singlevalid);
+
+         /* add the copied constraint to target SCIP if the copying process created a constraint */
+         if( targetcons != NULL )
          {
-            assert(targetcons != NULL);
 
             if( !enablepricing )
                SCIPconsSetModifiable(targetcons, FALSE);
@@ -2830,8 +2835,9 @@ SCIP_RETCODE SCIPcopyConss(
          }
          else
          {
-            *valid = FALSE;
-            SCIPdebugMsg(sourcescip, "failed to copy constraint %s\n", SCIPconsGetName(sourceconss[c]));
+            *valid = (*valid && singlevalid);
+            SCIPdebugMsg(sourcescip, "Constraint %s not copied, copy is %svalid\n",
+                  SCIPconsGetName(sourceconss[c]), *valid ? "" : "not ");
          }
       }
    }
@@ -3599,7 +3605,7 @@ SCIP_RETCODE doCopy(
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
-   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not, or NULL */
    )
 {
    SCIP_HASHMAP* localvarmap;
@@ -3609,13 +3615,13 @@ SCIP_RETCODE doCopy(
    SCIP_Bool uselocalvarmap;
    SCIP_Bool uselocalconsmap;
    SCIP_Bool consscopyvalid;
+   SCIP_Bool localvalid;
    SCIP_Bool msghdlrquiet;
    char name[SCIP_MAXSTRLEN];
 
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
    assert(suffix != NULL);
-   assert(valid != NULL);
    assert(global || !original);
 
    /* get time before start of copy procedure */
@@ -3624,16 +3630,17 @@ SCIP_RETCODE doCopy(
    /* start time measuring */
    SCIPclockStart(sourcescip->stat->copyclock, sourcescip->set);
 
+   /* copy all plugins */
+   SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
+         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
+
    /* in case there are active pricers and pricing is disabled the target SCIP will not be a valid copy of the source
     * SCIP
     */
-   (*valid) = enablepricing || (SCIPgetNActivePricers(sourcescip) == 0);
+   if( ! enablepricing && SCIPgetNActivePricers(sourcescip) > 0 )
+      localvalid = FALSE;
 
-   /* copy all plugins */
-   SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-         TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, valid) );
-
-   SCIPdebugMsg(sourcescip, "Copying plugins was%s valid.\n", *valid ? "" : " not");
+   SCIPdebugMsg(sourcescip, "Copying plugins was%s valid.\n", localvalid ? "" : " not");
 
    uselocalvarmap = (varmap == NULL);
    uselocalconsmap = (consmap == NULL);
@@ -3687,6 +3694,9 @@ SCIP_RETCODE doCopy(
    if( useconscompression && (nfixedvars > 0 || !global) )
    {
       SCIP_CALL( SCIPenableConsCompression(targetscip) );
+
+      /* domain reductions yield a copy that is no longer guaranteed to be valid */
+      localvalid = FALSE;
    }
 
    /* copy all (original) constraints */
@@ -3701,7 +3711,7 @@ SCIP_RETCODE doCopy(
 
    SCIPdebugMsg(sourcescip, "Copying constraints was%s valid.\n", consscopyvalid ? "" : " not");
 
-   (*valid) = *valid && consscopyvalid;
+   localvalid = localvalid && consscopyvalid;
 
    if( uselocalvarmap )
    {
@@ -3733,6 +3743,10 @@ SCIP_RETCODE doCopy(
    SCIP_CALL( SCIPsyncstoreRelease(&targetscip->syncstore) );
    targetscip->syncstore = sourcescip->syncstore;
    SCIP_CALL( SCIPsyncstoreCapture(targetscip->syncstore) );
+
+   /* return the information about a valid copy to the user */
+   if( valid != NULL )
+      *valid = localvalid;
 
    return SCIP_OKAY;
 }
@@ -3788,7 +3802,7 @@ SCIP_RETCODE SCIPcopy(
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
-   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    )
 {
    SCIP_VAR** fixedvars = NULL;
@@ -3800,7 +3814,6 @@ SCIP_RETCODE SCIPcopy(
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
    assert(suffix != NULL);
-   assert(valid != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyConsCompression", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
@@ -3878,7 +3891,7 @@ SCIP_RETCODE SCIPcopyConsCompression(
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
-   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    )
 {
    SCIP_Bool original = FALSE;
@@ -3887,7 +3900,6 @@ SCIP_RETCODE SCIPcopyConsCompression(
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
    assert(suffix != NULL);
-   assert(valid != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyConsCompression", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
@@ -3951,7 +3963,7 @@ SCIP_RETCODE SCIPcopyOrig(
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
-   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    )
 {
    SCIP_VAR** fixedvars = NULL;
@@ -3964,7 +3976,6 @@ SCIP_RETCODE SCIPcopyOrig(
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
    assert(suffix != NULL);
-   assert(valid != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
    SCIP_CALL( checkStage(sourcescip, "SCIPcopyOrig", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
@@ -4037,7 +4048,7 @@ SCIP_RETCODE SCIPcopyOrigConsCompression(
                                               *   constraints will be respected. If FALSE, valid will be set to FALSE, when
                                               *   there are pricers present */
    SCIP_Bool             passmessagehdlr,    /**< should the message handler be passed */
-   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    )
 {
    SCIP_Bool original = TRUE;
@@ -4047,7 +4058,6 @@ SCIP_RETCODE SCIPcopyOrigConsCompression(
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
    assert(suffix != NULL);
-   assert(valid != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
     SCIP_CALL( checkStage(sourcescip, "SCIPcopyOrigConsCompression", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
@@ -41057,7 +41067,7 @@ SCIP_RETCODE SCIPfreeSyncstore(
 
 /** Gets the parallel interface to execute processes concurrently.
  *
- *  @return the \ref SCIP_SPI* parallel interface pointer to submit jobs for concurrent processing.
+ *  @return the \ref SCIP_SYNCSTORE parallel interface pointer to submit jobs for concurrent processing.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_INIT
@@ -45411,8 +45421,46 @@ void SCIPprintReal(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, (const char*)strformat, s);
 }
 
+/** parse a real value that was written with SCIPprintReal() */
+SCIP_Bool SCIPparseReal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           str,                /**< string to search */
+   SCIP_Real*            value,              /**< pointer to store the parsed value */
+   char**                endptr              /**< pointer to store the final string position if successfully parsed, otherwise @p str */
+   )
+{
+   char* localstr;
 
+   assert(scip != NULL);
+   assert(str != NULL);
+   assert(value != NULL);
+   assert(endptr != NULL);
 
+   localstr = (char*)str;
+
+   /* ignore white space */
+   while(isspace((unsigned char)*localstr))
+      ++localstr;
+
+   /* test for a special infinity first */
+   if( strncmp(localstr, "+infinity", 9) == 0 )
+   {
+      *value = SCIPinfinity(scip);
+      *endptr = (char*)(localstr + 9);
+      return TRUE;
+   }
+   else if( strncmp(localstr, "-infinity", 9) == 0 )
+   {
+      *value = -SCIPinfinity(scip);
+      *endptr = (char*)(localstr + 9);
+      return TRUE;
+   }
+   else
+   {
+      /* parse a finite value */
+      return SCIPstrToRealValue(str, value, endptr);
+   }
+}
 
 /*
  * memory management
