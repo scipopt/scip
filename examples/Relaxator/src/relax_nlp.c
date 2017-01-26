@@ -96,8 +96,7 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
    assert(nlpi != NULL);
 
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "relax-NLP") );
-   SCIP_CALL( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip),
-         SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
    SCIP_CALL( SCIPcreateConvexNlp(scip, nlpi, nlrows, nnlrows, nlpiprob, var2idx, NULL, SCIPgetCutoffbound(scip),
          TRUE) );

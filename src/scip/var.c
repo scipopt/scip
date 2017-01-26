@@ -1545,9 +1545,6 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarIsActive(var) || SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
 
-   if( set->reopt_enable )
-      return SCIP_OKAY;
-
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
 
@@ -6453,7 +6450,8 @@ SCIP_RETCODE varProcessChgLbGlobal(
    }
 
    /* remove redundant implications and variable bounds */
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+   if( (SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE)
+      && (!set->reopt_enable || set->stage == SCIP_STAGE_PRESOLVING) )
    {
       SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, TRUE, TRUE) );
    }
@@ -6627,7 +6625,8 @@ SCIP_RETCODE varProcessChgUbGlobal(
    }
 
    /* remove redundant implications and variable bounds */
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+   if( (SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE)
+      && (!set->reopt_enable || set->stage == SCIP_STAGE_PRESOLVING) )
    {
       SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, TRUE, TRUE) );
    }
@@ -7192,8 +7191,11 @@ SCIP_RETCODE varProcessChgLbLocal(
 
    if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM )
    {
-      /* we do not want to exceed the upperbound, which could have happened due to numerics */
+      /* we do not want to exceed the upper bound, which could have happened due to numerics */
       newbound = MIN(newbound, var->locdom.ub);
+
+      /* we do not want to undercut the global lower bound, which could have happened due to numerics */
+      newbound = MAX(newbound, var->glbdom.lb);
    }
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 
@@ -7354,8 +7356,11 @@ SCIP_RETCODE varProcessChgUbLocal(
 
    if( SCIPsetGetStage(set) != SCIP_STAGE_PROBLEM )
    {
-      /* we do not want to undercut the lowerbound, which could have happened due to numerics */
+      /* we do not want to undercut the lower bound, which could have happened due to numerics */
       newbound = MAX(newbound, var->locdom.lb);
+
+      /* we do not want to exceed the global upper bound, which could have happened due to numerics */
+      newbound = MIN(newbound, var->glbdom.ub);
    }
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsFeasIntegral(set, newbound));
 

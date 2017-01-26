@@ -7965,7 +7965,7 @@ SCIP_DECL_CONSPROP(consPropSetppc)
       SCIP_CALL( processFixings(scip, conss[c], &cutoff, &nfixedvars, &addcut, &mustcheck) );
 
       SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[c]) );
-}
+   }
 
    /* return the correct result */
    if( cutoff )

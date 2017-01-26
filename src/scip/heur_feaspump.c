@@ -1276,16 +1276,8 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
           * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
           */
-#ifdef NDEBUG
-         retcode = SCIPsolve(probingscip);
-         if( retcode != SCIP_OKAY )
-         {
-            SCIPwarningMessage(scip, "Error while solving sub-SCIP in stage 3 of feasibility pump heuristic; sub-SCIP terminated with code <%d>\n",
-               retcode);
-         }
-#else
-         SCIP_CALL( SCIPsolve(probingscip) );
-#endif
+         SCIP_CALL_ABORT( SCIPsolve(probingscip) );
+
          /* check, whether a solution was found */
          if( SCIPgetNSols(probingscip) > 0 )
          {

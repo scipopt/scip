@@ -528,8 +528,18 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          {
             row = colrows[r];
             rowpos = SCIProwGetLPPos(row);
+
+            /* the row is not in the LP */
+            if( rowpos == -1 )
+               continue;
+
             assert(lprows[rowpos] == row);
 
+            /* we disregard cuts */
+            if( SCIProwGetRank(row) > 0 )
+               continue;
+
+            /* the row is already fulfilled */
             if( fulfilled[rowpos] )
                continue;
 
@@ -626,7 +636,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          if( nglbfulfilledrows == nlprows )
             break;
       }
-   }
+   } /*lint --e{850}*/
 
    /* check that we had enough fixings */
    npscands = SCIPgetNPseudoBranchCands(scip);
@@ -802,6 +812,9 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
       }
 
+      /* speed up sub-SCIP by not checking dual LP feasibility */
+      SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+
       /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
        * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
        * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
@@ -860,7 +873,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          }
       }
 #else
-      SCIP_CALL( SCIPpresolve(subscip) );
+      SCIP_CALL_ABORT( SCIPpresolve(subscip) );
 #endif
 
       SCIPdebugMsg(scip, "locks heuristic presolved subproblem: %d vars, %d cons; fixing value = %g\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars));
@@ -888,7 +901,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
             }
          }
 #else
-         SCIP_CALL( SCIPsolve(subscip) );
+         SCIP_CALL_ABORT( SCIPsolve(subscip) );
 #endif
          SCIPdebugMsg(scip, "ending locks locks-submip at time %g, status = %d\n", SCIPgetSolvingTime(scip), SCIPgetStatus(subscip));
 

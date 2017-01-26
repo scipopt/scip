@@ -3769,8 +3769,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
    SCIP_Real*            coef,               /**< vector to return coefficients */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                                *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715}*/
@@ -3793,12 +3793,13 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 #endif
    SCIP_ALLOC( BMSallocMemoryArray( &val, numnz+1) );
 
+   /* init coefficients */
+   for (i = 0; i < nrows; ++i)
+      coef[i] = 0;
+
    /* check whether we require a dense or sparse result vector */
    if ( ninds != NULL && inds != NULL )
    {
-      for (i = 0; i < nrows; ++i)
-         coef[i] = 0;
-
 #if MSK_VERSION_MAJOR < 7
       MOSEK_CALL( MSK_getavec(lpi->task, MSK_ACC_VAR, c, &numnz, inds, val) );
 #else
@@ -3818,9 +3819,6 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       int* sub;
       SCIP_ALLOC( BMSallocMemoryArray( &sub, nrows) );
 
-      for (i = 0; i < nrows; ++i)
-         coef[i] = 0;
-
 #if MSK_VERSION_MAJOR < 7
       MOSEK_CALL( MSK_getavec(lpi->task, MSK_ACC_VAR, c, &numnz, sub, val) );
 #else
@@ -3830,7 +3828,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       for (i = 0; i < numnz; ++i)
          coef[sub[i]] = val[i];
 
-      *ninds = numnz;
+      if ( ninds != NULL )
+         *ninds = numnz;
       MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
 
@@ -4261,7 +4260,7 @@ SCIP_RETCODE SCIPlpiFreeNorms(
 static const char* paramname[] = {
    "SCIP_LPPAR_FROMSCRATCH",                 /* solver should start from scratch at next call? */
    "SCIP_LPPAR_FASTMIP",                     /* fast mip setting of LP solver */
-   "SCIP_LPPAR_SCALING",                     /* should LP solver use scaling? */
+   "SCIP_LPPAR_SCALING",                     /* which scaling should LP solver use? */
    "SCIP_LPPAR_PRESOLVING",                  /* should LP solver use presolving? */
    "SCIP_LPPAR_PRICING",                     /* pricing strategy */
    "SCIP_LPPAR_LPINFO",                      /* should LP solver output information to the screen? */
@@ -4287,7 +4286,7 @@ const char* paramty2str(
    /* check if the parameters in this order */
    assert(SCIP_LPPAR_FROMSCRATCH == 0);      /* solver should start from scratch at next call? */
    assert(SCIP_LPPAR_FASTMIP == 1);          /* fast mip setting of LP solver */
-   assert(SCIP_LPPAR_SCALING == 2);          /* should LP solver use scaling? */
+   assert(SCIP_LPPAR_SCALING == 2);          /* which scaling should LP solver use? */
    assert(SCIP_LPPAR_PRESOLVING == 3);       /* should LP solver use presolving? */
    assert(SCIP_LPPAR_PRICING == 4);          /* pricing strategy */
    assert(SCIP_LPPAR_LPINFO == 5);           /* should LP solver output information to the screen? */
@@ -4328,7 +4327,12 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       return  SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:                   /* should LP solver use scaling? */
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_SIM_SCALING, ival) );
-      *ival = (*ival != MSK_SCALING_NONE);
+      if( *ival == MSK_SCALING_NONE )
+         *ival = 0;
+      else if( *ival == MSK_SCALING_AGGRESSIVE )
+         *ival = 2;
+      else
+         *ival = 1;
       break;
    case SCIP_LPPAR_PRESOLVING:                /* should LP solver use presolving? */
       MOSEK_CALL( MSK_getintparam(lpi->task, MSK_IPAR_PRESOLVE_USE, ival) );
@@ -4397,7 +4401,13 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_FASTMIP:                   /* fast mip setting of LP solver */
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:                   /* should LP solver use scaling? */
-      scaling = (ival ? MSK_SCALING_FREE : MSK_SCALING_NONE);
+      if( ival == 0 )
+         scaling = MSK_SCALING_NONE;
+      else if( ival == 1 )
+         scaling = MSK_SCALING_FREE;
+      else
+         scaling = MSK_SCALING_AGGRESSIVE;
+
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_SIM_SCALING, scaling) );
       MOSEK_CALL( MSK_putintparam(lpi->task, MSK_IPAR_INTPNT_SCALING, scaling) );
       break;

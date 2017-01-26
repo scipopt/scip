@@ -155,15 +155,15 @@ SCIP_RETCODE sampleRandomPoints(
          else if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
             val = SCIPrandomGetReal(randnumgen, lb, ub);
          else if( !SCIPisInfinity(scip, -lb) )
-            val = SCIPrandomGetReal(randnumgen, lb, lb + maxboundsize);
+            val = lb + SCIPrandomGetReal(randnumgen, 0.0, maxboundsize);
          else if( !SCIPisInfinity(scip, ub) )
-            val = SCIPrandomGetReal(randnumgen, ub - maxboundsize, ub);
+            val = ub - SCIPrandomGetReal(randnumgen, 0.0, maxboundsize);
          else
          {
             assert(SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub));
             val = SCIPrandomGetReal(randnumgen, -0.5*maxboundsize, 0.5*maxboundsize);
          }
-         assert(SCIPisGE(scip, val ,lb) && SCIPisLE(scip, val, ub));
+         assert(SCIPisGE(scip, val, lb) && SCIPisLE(scip, val, ub));
 
          /* set solution value; round the sampled point for integer variables */
          if( SCIPvarGetType(vars[i]) < SCIP_VARTYPE_CONTINUOUS )
@@ -410,11 +410,10 @@ SCIP_RETCODE improvePoint(
          /* stop if the gradient disappears at the current point */
          if( SCIPisZero(scip, nlrownorm) )
          {
-            r = maxiter - 1;
 #ifdef SCIP_DEBUG_IMPROVEPOINT
             printf("gradient vanished at current point -> stop\n");
 #endif
-            break;
+            goto TERMINATE;
          }
 
          /* compute -g(x_k) / ||grad(g)(x_k)||^2 for a constraint g(x_k) <= 0 */
@@ -454,6 +453,7 @@ SCIP_RETCODE improvePoint(
       }
    }
 
+TERMINATE:
 #ifdef SCIP_DEBUG_IMPROVEPOINT
    printf("niter=%d minfeas=%e\n", r, *minfeas);
 #endif

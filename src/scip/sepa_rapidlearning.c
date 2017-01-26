@@ -207,7 +207,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
                                              * e.g., because a constraint could not be copied or a primal solution
                                              * could not be copied back 
                                              */
-
+   SCIP_Bool valid;
    int ndiscvars;
 
    soladded = FALSE;
@@ -269,10 +269,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
    SCIP_CALL( SCIPcreate(&subscip) );
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
-   success = FALSE;
+   valid = FALSE;
 
    /* copy the subproblem */
-   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapfw, NULL, "rapid", NULL, NULL, 0, FALSE, FALSE, TRUE, &success) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapfw, NULL, "rapid", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
 
    if( sepadata->copycuts )
    {
@@ -302,7 +302,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
     * but no variables should be missing because we stop earlier anyway if pricers are present).
     * By disabling dual presolving, conflicts found in a relaxation are still valid for the original problem.
     */
-   if( !success )
+   if( ! valid )
    {
       for( i = 0; i < nvars; i++ )
       {     
@@ -310,7 +310,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       }
    }
 
-   SCIPdebugMsg(scip, "Copying SCIP was%s successful.\n", success ? "" : " not");
+   SCIPdebugMsg(scip, "Copying SCIP was%s valid.\n", valid ? "" : " not");
 
    /* mimic an FD solver: DFS, no LP solving, 1-FUIP instead of all-FUIP */
    if( SCIPisParamFixed(subscip, "lp/solvefreq") )
@@ -568,7 +568,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
                SCIP_CONS* conscopy;
 
                cons = conss[c];
-               assert(cons != NULL);        
+               assert(cons != NULL);
 
                success = FALSE;
 
@@ -614,7 +614,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
          SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
          if( tightened )
-            nbdchgs++;   
+            nbdchgs++;
       }
 
    n1startinfers = 0;
@@ -634,14 +634,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
          SCIP_Real upconflen;
 
          /* copy downwards branching statistics */
-         downvsids = SCIPgetVarVSIDS(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);            
+         downvsids = SCIPgetVarVSIDS(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);
          downconflen = SCIPgetVarAvgConflictlength(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);
-         downinfer = SCIPgetVarAvgInferences(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);            
+         downinfer = SCIPgetVarAvgInferences(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);
 
          /* copy upwards branching statistics */
-         upvsids = SCIPgetVarVSIDS(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);                     
+         upvsids = SCIPgetVarVSIDS(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);
          upconflen = SCIPgetVarAvgConflictlength(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);
-         upinfer = SCIPgetVarAvgInferences(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);            
+         upinfer = SCIPgetVarAvgInferences(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);
 
          /* memorize statistics */
          if( downinfer+downconflen+downvsids > 0.0 || upinfer+upconflen+upvsids != 0 )

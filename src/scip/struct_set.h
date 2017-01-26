@@ -199,7 +199,7 @@ struct SCIP_Set
    SCIP_Bool             conf_repropagate;   /**< should earlier nodes be repropagated in order to replace branching
                                               *   decisions by deductions? */
    SCIP_Bool             conf_keepreprop;    /**< should constraints be kept for repropagation even if they are too long? */
-   SCIP_Bool             conf_seperate;      /**< should the conflict constraints be separated? */
+   SCIP_Bool             conf_separate;      /**< should the conflict constraints be separated? */
    SCIP_Bool             conf_dynamic;       /**< should the conflict constraints be subject to aging? */
    SCIP_Bool             conf_removable;     /**< should the conflict's relaxations be subject to LP aging and cleanup? */
    SCIP_Real             conf_depthscorefac; /**< score factor for depth level in bound relaxation heuristic */
@@ -305,7 +305,7 @@ struct SCIP_Set
    SCIP_Bool             lp_checkprimfeas;   /**< should LP solutions be checked for primal feasibility, resolving LP when numerical troubles occur? */
    SCIP_Bool             lp_checkdualfeas;   /**< should LP solutions be checked for dual feasibility, resolving LP when numerical troubles occur? */
    int                   lp_fastmip;         /**< which FASTMIP setting of LP solver should be used? 0: off, 1: medium, 2: full */
-   SCIP_Bool             lp_scaling;         /**< should scaling of LP solver be used? */
+   int                   lp_scaling;         /**< LP scaling (0: none, 1: normal, 2: aggressive) */
    SCIP_Bool             lp_presolving;      /**< should presolving of LP solver be used? */
    SCIP_Bool             lp_lexdualalgo;     /**< should the lexicographic dual algorithm be used? */
    SCIP_Bool             lp_lexdualrootonly; /**< should the lexicographic dual algorithm be applied only at the root node */
@@ -492,10 +492,10 @@ struct SCIP_Set
    int                   sepa_poolfreq;      /**< separation frequency for the global cut pool */
 
    /* parallel settings */
-   int                   parallel_spimode;           /**< the mode for the parallel implementation. 0: opportunistic or
-                                                      *   1: deterministic */
-   int                   parallel_minnthreads;       /**< the minimum number of threads used for parallel code */
-   int                   parallel_maxnthreads;       /**< the maximum number of threads used for parallel code */
+   int                   parallel_mode;      /**< the mode for the parallel implementation. 0: opportunistic or
+                                              *   1: deterministic */
+   int                   parallel_minnthreads;/**< the minimum number of threads used for parallel code */
+   int                   parallel_maxnthreads;/**< the maximum number of threads used for parallel code */
 
    /* concurrent solver settings */
    SCIP_Bool             concurrent_changeseeds;    /**< change the seeds in the different solvers? */

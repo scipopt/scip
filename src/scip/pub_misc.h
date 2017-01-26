@@ -476,12 +476,6 @@ void** SCIPpqueueElems(
 #define SCIPpositiveRealHashCode(x, n)      ( (x)*(1<<n) >= UINT64_MAX ? UINT64_MAX : (uint64_t)((x)*(1<<n)) )
 
 
-/** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
-EXTERN
-int SCIPcalcHashtableSize(
-   int                   minsize             /**< minimal size of the hash table */
-   );
-
 /** creates a hash table */
 EXTERN
 SCIP_RETCODE SCIPhashtableCreate(
@@ -513,22 +507,14 @@ void SCIPhashtableClear(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    );
 
-/** inserts element in hash table (multiple inserts of same element possible)
- *
- *  @note A pointer to a multihashlist returned by SCIPhashtableRetrieveNext() might get invalid when adding an element
- *        to the hash table, due to dynamic resizing.
- */
+/** inserts element in hash table (multiple inserts of same element override the previous entry) */
 EXTERN
 SCIP_RETCODE SCIPhashtableInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 element             /**< element to insert into the table */
    );
 
-/** inserts element in hash table (multiple insertion of same element is checked and results in an error)
- *
- *  @note A pointer to a multihashlist returned by SCIPhashtableRetrieveNext() might get invalid when adding a new
- *        element to the hash table, due to dynamic resizing.
- */
+/** inserts element in hash table (multiple insertion of same element is checked and results in an error) */
 EXTERN
 SCIP_RETCODE SCIPhashtableSafeInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
@@ -539,20 +525,6 @@ SCIP_RETCODE SCIPhashtableSafeInsert(
 EXTERN
 void* SCIPhashtableRetrieve(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
-   void*                 key                 /**< key to retrieve */
-   );
-
-/** retrieve element with key from hash table, returns NULL if not existing
- *  can be used to retrieve all entries with the same key (one-by-one)
- *
- *  @note The returned multihashlist pointer might get invalid when adding a new element to the hash table.
- */
-EXTERN
-void* SCIPhashtableRetrieveNext(
-   SCIP_HASHTABLE*       hashtable,          /**< hash table */
-   SCIP_MULTIHASHLIST**  multihashlist,      /**< input: entry in hash table list from which to start searching, or NULL
-                                              *   output: entry in hash table list corresponding to element after
-                                              *           retrieved one, or NULL */
    void*                 key                 /**< key to retrieve */
    );
 
@@ -570,11 +542,7 @@ SCIP_RETCODE SCIPhashtableRemove(
    void*                 element             /**< element to remove from the table */
    );
 
-/** removes all elements of the hash table
- *
- *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
- *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
- */
+/** removes all elements of the hash table */
 EXTERN
 void SCIPhashtableRemoveAll(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
@@ -597,6 +565,23 @@ EXTERN
 void SCIPhashtablePrintStatistics(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   );
+
+/**@} */
+
+/*
+ * MultiHash Table
+ */
+
+/**@defgroup MultiHash Hash Table allowing duplicate entries
+ *
+ *@{
+ */
+
+/** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
+EXTERN
+int SCIPcalcMultihashSize(
+   int                   minsize             /**< minimal size of the hash table */
    );
 
 /** creates a multihash table */

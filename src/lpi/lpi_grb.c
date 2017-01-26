@@ -5000,8 +5000,8 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:
       SCIP_CALL( getIntParam(lpi, GRB_INT_PAR_SCALEFLAG, &temp) );
-      assert( temp == 0 || temp == 1 );
-      *ival = (temp == 1) ? TRUE : FALSE;
+      assert(temp >= 0 && temp <= 2);
+      *ival = temp;
       break;
    case SCIP_LPPAR_PRESOLVING:
       SCIP_CALL( getIntParam(lpi, GRB_INT_PAR_PRESOLVE, &temp) );
@@ -5053,11 +5053,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       assert(ival == TRUE || ival == FALSE);
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:
-      assert(ival == TRUE || ival == FALSE);
-      if( ival )
-         SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SCALEFLAG, 1) );
-      else
-         SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SCALEFLAG, 0) );
+      assert(ival >= 0 && ival <= 2);
+      SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SCALEFLAG, ival) );
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);

@@ -593,9 +593,9 @@ SCIP_RETCODE presolveAddKKTLinearCons(
       SCIP_VAR* duallin = NULL;
       int j;
 
-      /* scip one iteration if lhs equals rhs */
-      if( SCIPisFeasEQ(scip, lhs, rhs) )
-         i = 1;
+      /* skip one iteration if lhs equals rhs */
+      if( i == 0 && SCIPisFeasEQ(scip, lhs, rhs) )
+         continue;
 
       /* create dual variable corresponding to linear constraint */
       if( i == 0 )
@@ -1774,6 +1774,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
 
    /* desired structure: matrix associated to quadratic constraint is indefinite;
     * otherwise, the problem usually can be solved faster by standard methods. */
+   SCIP_CALL( SCIPcheckCurvatureQuadratic(scip, cons) );
    if( ! presoldata->updatequadindef && ( SCIPisConvexQuadratic(scip, cons) || SCIPisConcaveQuadratic(scip, cons) ) )
    {
       SCIPdebugMsg(scip, "quadratic constraint update failed, since matrix associated to quadratic constraint <%s> is not \

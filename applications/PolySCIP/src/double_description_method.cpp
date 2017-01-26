@@ -2,7 +2,7 @@
 /*                                                                           */
 /*        This file is part of the program PolySCIP                          */
 /*                                                                           */
-/*    Copyright (C) 2012-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2012-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  PolySCIP is distributed under the terms of the ZIB Academic License.     */
@@ -13,11 +13,11 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**
- * @brief Double description method
+ * @file double_description_method.cpp
+ * @brief Implements the double description method for transforming a polyhedron given
+ * via its h-representation into its v-representation
  * @author Sebastian Schenker
  *
- * Implements the double description method for transforming a polyhedron given
- * via its v-representation into its h-representation.
  */
 
 #include "double_description_method.h"
@@ -46,6 +46,13 @@ namespace polyscip {
 
     namespace doubledescription {
 
+        /**
+         * Constructor
+         * @param scip SCIP pointer
+         * @param weight Corresponding weight for the constructed vertex
+         * @param wov Corresponding weighted objective value for the constructed vertex
+         * @param h_rep Current h-representation
+         */
         V_RepT::V_RepT(SCIP* scip, WeightType&& weight, ValueType&& wov, const H_RepC& h_rep)
                 : weight_(weight),
                   wov_(wov),
@@ -57,10 +64,18 @@ namespace polyscip {
             setSlacksAndMinInfeasInd(scip, h_rep);
         }
 
+        /**
+         * Constructor
+         * @param scip SCIP pointer
+         * @param plus
+         * @param minus
+         * @param index_of_ineq
+         * @param h_rep
+         */
         V_RepT::V_RepT(SCIP* scip,
                        const V_RepT& plus,
                        const V_RepT& minus,
-                       size_t index_of_ineq,
+                       std::size_t index_of_ineq,
                        const H_RepC& h_rep)
                 : min_infeas_ind_(false, 0)
         {
@@ -82,32 +97,66 @@ namespace polyscip {
             setSlacksAndMinInfeasInd(scip, h_rep);
         }
 
+        /**
+         * Equal operator
+         * @param rhs v-representation object to compare with
+         * @return true if objects are considered equal; otherwise false
+         */
         bool V_RepT::operator==(const V_RepT& rhs) const {
             return std::tie(weight_, wov_) == std::tie(rhs.weight_, rhs.wov_);
         }
 
+        /**
+         * Not equal operator
+         * @param rhs v-representation object to compare with
+         * @return true if objects are considered not equal; otherwise false
+         */
         bool V_RepT::operator!=(const V_RepT& rhs) const {
             return !(operator==(rhs));
         }
 
+        /**
+         * Get slack value
+         * @param index Corresponding index to get slack for
+         * @return Slack value
+         */
         ValueType V_RepT::getSlack(std::size_t index) const {
             assert (inds_to_slacks_.count(index) != 0);
             return inds_to_slacks_.at(index);
         }
 
+        /**
+         * Get minimal infeasibility index
+         * @return minimal infeasibility index
+         */
         size_t V_RepT::getMinInfeasIndex() const {
             assert (min_infeas_ind_.first);
             return min_infeas_ind_.second;
         }
 
+        /**
+         * Indicates whether given index is zero index
+         * @param index Index to check
+         * @return true if index is zero index; false otherwise
+         */
         bool V_RepT::isZeroSlackIndex(size_t index) const {
             return zero_slacks_.test(index);
         }
 
-        bool V_RepT::hasNonZeroWeight() const {
-            return std::any_of(weight_.cbegin(), weight_.cend(), [](const ValueType& val){return val != 0.;});
+        /**
+         * Indicates whether corresponding weight is neither unit vector nor zero vector
+         * @return true if weight is neither unit vector nor zero vector; false otherwise
+         */
+        bool V_RepT::hasNonUnitAndNonZeroWeight() const {
+            return (std::count_if(weight_.cbegin(), weight_.cend(), [](const ValueType& val){return val != 0.;}) > 1);
         }
 
+
+        /**
+         * Set slack and minimal infeasibility index
+         * @param scip SCIP pointer
+         * @param h_rep h-representation
+         */
         void V_RepT::setSlacksAndMinInfeasInd(SCIP* scip, const H_RepC& h_rep) {
             for (size_t i=0; i<h_rep.size(); ++i) {
                 auto result = std::inner_product(weight_.cbegin(), weight_.cend(),
@@ -129,7 +178,11 @@ namespace polyscip {
             }
         }
 
-        //todo test ratio between wov_ und weight
+        /**
+         * Indicates whether corresponding weight should be normalized
+         * @param threshold Normalizing threshold
+         * @return true if weight should be normalized; false otherwise
+         */
         bool V_RepT::shouldNormalize(double threshold) const {
             if (std::fabs(wov_) > threshold)
                 return true;
@@ -138,12 +191,23 @@ namespace polyscip {
             return false;
         }
 
+
+        /**
+         * Normalizing weight function
+         * @param normalizing_val Value by which weights are normalized
+         */
         void V_RepT::normalize(double normalizing_val) {
             std::transform(begin(weight_), end(weight_), begin(weight_),
                            [normalizing_val](const ValueType &val) { return val / normalizing_val; });
             wov_ /= normalizing_val;
         }
 
+        /**
+         * Print function
+         * @param os Output stream to print to
+         * @param withIncidentFacets Boolean indicating whether incident facets should also be printed
+         * @param h_rep
+         */
         void V_RepT::print(std::ostream& os, bool withIncidentFacets, const H_RepC& h_rep) const {
             global::print(weight_, "Weight = [", "]", os);
             os << " Coeff = " << wov_ << "\n";
@@ -161,10 +225,23 @@ namespace polyscip {
         }
 
 
+        /**
+         * Indicates whether zero indices are subset of given zero indices
+         * @param common_zero_inds Zero indices
+         * @return true if zero indices are subset of given common_zero_inds
+         */
         bool V_RepT::hasZeroIndsSuperSet(const std::bitset<kMaxInitialHrepSize>& common_zero_inds) const {
             return (common_zero_inds & zero_slacks_).count() >= common_zero_inds.count();
         }
 
+
+        /**
+         * Constructor
+         * @param scip SCIP pointer
+         * @param no_all_obj Number of objectives
+         * @param bounded Bounded results
+         * @param unbounded Unbounded results
+         */
         DoubleDescriptionMethod::DoubleDescriptionMethod(SCIP *scip,
                                                          size_t no_all_objs,
                                                          const ResultContainer& bounded_results,
@@ -191,6 +268,12 @@ namespace polyscip {
             }
         }
 
+        /**
+         * Check for minimal infeasibility condition
+         * @param r1 First element
+         * @param r2 Second element
+         * @return Tuple
+         */
         std::tuple<bool, DoubleDescriptionMethod::VarOrder, size_t> DoubleDescriptionMethod::minInfeasCondition(const V_RepT& r1, const V_RepT& r2) const {
             auto minInfeasInd1 = r1.getMinInfeasIndex();
             auto minInfeasInd2 = r2.getMinInfeasIndex();
@@ -207,6 +290,15 @@ namespace polyscip {
             }
         }
 
+        /**
+         * Detailed description of algorithm can be found on page 13 in "Double Description Method Revisited"
+         * @param r1
+         * @param r2
+         * @param k
+         * @param i
+         * @param v_rep
+         * @param with_adjacency_test
+         */
         void DoubleDescriptionMethod::conditionalStoreEdge(const V_RepT& plus,
                                                            const V_RepT& minus,
                                                            size_t k,
@@ -223,11 +315,19 @@ namespace polyscip {
             }
         }
 
+        /**
+         * Print function
+         * @param os Output stream to write to
+         * @param withIncidentFacets Indicates whether corresponding facets should be printed
+         */
         void DoubleDescriptionMethod::printVRep(std::ostream &os, bool withIncidentFacets) const {
             for (const auto& v : v_rep_)
                 v->print(os, withIncidentFacets, h_rep_);
         }
 
+        /**
+         * Standard double description algorithm
+         */
         void DoubleDescriptionMethod::computeVRep() {
             auto current_v_rep = computeInitialVRep();
             ++current_hrep_index_;
@@ -238,6 +338,14 @@ namespace polyscip {
             v_rep_ = current_v_rep;
         }
 
+        /**
+         * Applies infeasibility condition
+         * @param r1
+         * @param r2
+         * @param current_v_rep
+         * @param index
+         * @param with_adjacency_test
+         */
         void DoubleDescriptionMethod::applyInfeasCondition(const V_RepT& r1,
                                                            const V_RepT& r2,
                                                            const V_RepC& v_rep,
@@ -255,6 +363,9 @@ namespace polyscip {
             }
         }
 
+        /**
+         * Variation 1 of double description algorithm
+         */
         void DoubleDescriptionMethod::computeVRep_Var1() {
             auto current_v_rep = computeInitialVRep();
 
@@ -275,6 +386,11 @@ namespace polyscip {
         }
 
 
+        /**
+         * Incorporate next hyperplane into v-representation; Variation1 algorithm
+         * @param current_v_rep Current v-representation
+         * @return Extended v-representation
+         */
         V_RepC DoubleDescriptionMethod::extendVRep_Var1(V_RepC&& current_v_rep) {
 
             auto extended_v_rep = V_RepC{};
@@ -310,7 +426,11 @@ namespace polyscip {
             return extended_v_rep;
         }
 
-
+        /**
+         * Incorporate next hyperplane into v-representation; standard algorithm
+         * @param cur_v_rep Current v-representation
+         * @return Extended v-representation
+         */
         V_RepC DoubleDescriptionMethod::extendVRep(V_RepC&& cur_v_rep) {
             auto extended_v_rep = V_RepC{};
             auto plus = V_RepC{};
@@ -342,6 +462,14 @@ namespace polyscip {
             return extended_v_rep;
         }
 
+
+        /**
+         * Compute adjacent pairs of elements in v-representation
+         * @param plus Elements in plus partition
+         * @param minus Elements in minus partition
+         * @param current_v_rep Current v-representation
+         * @return Adjacent elements
+         */
         DoubleDescriptionMethod::AdjPairContainer DoubleDescriptionMethod::computeAdjacentPairs(const V_RepC& plus,
                                                                                                 const V_RepC& minus,
                                                                                                 const V_RepC& current_v_rep) const {
@@ -356,32 +484,25 @@ namespace polyscip {
             return adj_pairs;
         }
 
-
+        /**
+         * Computes the intersection of zero indices for two given v-representation elements
+         * @param v First element
+         * @param w Second element
+         * @return bitset with ones indicating common zero slacks
+         */
         std::bitset<V_RepT::kMaxInitialHrepSize> DoubleDescriptionMethod::getCommonZeroSlackIndices(const V_RepT &v,
                                                                                                     const V_RepT &w) const {
             return v.zero_slacks_ & w.zero_slacks_;
         }
 
-        /*bool DoubleDescriptionMethod::rayPairIsAdjacent(size_t index1,
-                                                        size_t index2,
-                                                        const V_RepC& cur_v_rep) const {
 
-            auto common_zero_inds = getCommonZeroSlackIndices(*cur_v_rep[index1], *cur_v_rep[index2]);
-
-            for (size_t i = 0; i < cur_v_rep.size(); ++i) {
-                if (i == index1 || i == index2)
-                    continue;
-                else if (cur_v_rep[i]->hasZeroIndsSuperSet(common_zero_inds)) {
-                    *//* check whether current_rep[i] is multiple of current_rep[index1] or current_rep[index2] *//*
-                    if (!isMultiple(*cur_v_rep[i], *cur_v_rep[index1]) &&
-                        !isMultiple(*cur_v_rep[i], *cur_v_rep[index2]))
-                        return false;
-                }
-            }
-            return true;
-        }*/
-
-
+        /**
+         * Indicates whether given elements are adjacent
+         * @param ray1
+         * @param ray2
+         * @param v_rep
+         * @return True if r1 and r2 are adjancent; false otherwise
+         */
         bool DoubleDescriptionMethod::rayPairIsAdjacent(const V_RepT& ray1,
                                                         const V_RepT& ray2,
                                                         const V_RepC& v_rep) const {
@@ -401,7 +522,13 @@ namespace polyscip {
         }
 
 
-        //todo Check function thoroughly
+        /**
+         * Indicates whether first element is multiple of second element
+         * @param v First v-representation element
+         * @param w Second v-representation element
+         * @return true if v is multiple of w; false otherwise
+         * @todo Rewrite in less complicated fashion
+         */
         bool DoubleDescriptionMethod::isMultiple(const V_RepT& v, const V_RepT& w) const {
             assert (v.weight_.size() == w.weight_.size());
             auto scip_ptr = scip_; // needed for lambda functions
@@ -447,6 +574,14 @@ namespace polyscip {
             }
         }
 
+        /**
+         * Indicates whether weight of first element is a multiple (with value v_multiple) of weight of second element
+         * @param scip SCIP pointer
+         * @param v_multiple Value
+         * @param v First element
+         * @param w Second element
+         * @return true if weight of first element is a v_multiple of weight of second element; false otherwise
+         */
         bool DoubleDescriptionMethod::weightIsMultiple(SCIP* scip, double v_multiple, const V_RepT& v, const V_RepT& w) const {
             auto mismatch_weight = std::mismatch(begin(v.weight_),
                                                  end(v.weight_),
@@ -457,6 +592,15 @@ namespace polyscip {
         }
 
 
+        /**
+         * Computes initial v-representation of following h-representation:
+         * 1) bounded \\cdot (w_1,...,w_k) -a >= 0
+         * 2) w_1 >= 0
+         * ...
+         * k+1) w_k >= 0
+         * where (w_1,...,w_k) is a weight vector
+         * @return Initial v-representation
+         */
         V_RepC DoubleDescriptionMethod::computeInitialVRep() const {
             // create initial v_rep
             auto init_v_rep = V_RepC{};
