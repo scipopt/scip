@@ -108,6 +108,7 @@ struct key
 #define KEY_TERMINALS_ROOTP      3006
 #define KEY_TERMINALS_TG         3007
 #define KEY_TERMINALS_GROUPS     3008
+#define KEY_TERMINALS_TR         3009
 
 #define KEY_COORDINATES_DD       4001
 #define KEY_COORDINATES_DDD      4002
@@ -225,6 +226,7 @@ static const struct key keyword_table[] =
       {  "terminals.terminals",      KEY_TERMINALS_TERMINALS,    "n"         },
       {  "terminals.tg",             KEY_TERMINALS_TG,           "nn"        },
       {  "terminals.tp",             KEY_TERMINALS_TP,           "nn"        },
+      {  "terminals.tr",             KEY_TERMINALS_TR,           "nn"        },
    };
 
 struct section
@@ -966,7 +968,7 @@ SCIP_RETCODE graph_load(
 
             /* Yes, so lets get the rest of the line if possible
              */
-            if( stp_type == STP_MAX_NODE_WEIGHT && p->format != NULL && (p->sw_code == KEY_TERMINALS_T || p->sw_code == KEY_GRAPH_E) )
+            if( (stp_type == STP_MWCSP || stp_type == STP_RMWCSP) && p->format != NULL && (p->sw_code == KEY_TERMINALS_T || p->sw_code == KEY_GRAPH_E) )
             {
                if( p->sw_code == KEY_TERMINALS_T)
                   format = (char*)"nn";
@@ -974,7 +976,7 @@ SCIP_RETCODE graph_load(
                   format = (char*)"nn";
             }
 
-            if( stp_type == STP_DIRECTED && p->sw_code == KEY_GRAPH_A )
+            if( stp_type == STP_SAP && p->sw_code == KEY_GRAPH_A )
             {
                format = (char*)"nnnn";
             }
@@ -1023,30 +1025,33 @@ SCIP_RETCODE graph_load(
                case KEY_COMMENT_PROBLEM :
                   (void)printf("Problem: [%s]\n", para[0].s);
                   if( strcmp(para[0].s, "SPG") == 0 )
-                     stp_type = STP_UNDIRECTED;
+                     stp_type = STP_SPG;
                   else if( strcmp(para[0].s, "PCSPG") == 0
                      || strcmp(para[0].s, "Prize-Collecting Steiner Problem in Graphs") == 0 )
-                     stp_type = STP_PRIZE_COLLECTING;
+                     stp_type = STP_PCSPG;
                   else if( strcmp(para[0].s, "RPCST") == 0
                      || strcmp(para[0].s, "Rooted Prize-Collecting Steiner Problem in Graphs") == 0 )
-                     stp_type = STP_ROOTED_PRIZE_COLLECTING;
+                     stp_type = STP_RPCSPG;
                   else if( strcmp(para[0].s, "NWSPG") == 0 )
-                     stp_type = STP_NODE_WEIGHTS;
+                     stp_type = STP_NWSPG;
                   else if( strcmp(para[0].s, "DCST") == 0 )
-                     stp_type = STP_DEG_CONS;
+                     stp_type = STP_DCSTP;
                   else if( strcmp(para[0].s, "RSMT") == 0 )
-                     stp_type = STP_GRID;
+                     stp_type = STP_RSMT;
                   else if( strcmp(para[0].s, "OARSMT") == 0 )
-                     stp_type = STP_OBSTACLES_GRID;
+                     stp_type = STP_OARSMT;
                   else if( strcmp(para[0].s, "Maximum Node Weight Connected Subgraph") == 0
                      || strcmp(para[0].s, "MWCS") == 0 )
-                     stp_type = STP_MAX_NODE_WEIGHT;
+                     stp_type = STP_MWCSP;
+                  else if( strcmp(para[0].s, "Rooted Maximum Node Weight Connected Subgraph") == 0
+                     || strcmp(para[0].s, "RMWCS") == 0 )
+                     stp_type = STP_RMWCSP;
                   else if( strcmp(para[0].s, "HCDST") == 0 )
-                     stp_type = STP_HOP_CONS;
+                     stp_type = STP_DHCSTP;
                   else if( strcmp(para[0].s, "SAP") == 0 )
-                     stp_type = STP_DIRECTED;
+                     stp_type = STP_SAP;
                   else if( strcmp(para[0].s, "GSTP") == 0 )
-                     stp_type = GSTP;
+                     stp_type = STP_GSTP;
                   break;
                case KEY_COMMENT_REMARK :
                   (void)printf("Comment: [%s]\n", para[0].s);
@@ -1054,16 +1059,17 @@ SCIP_RETCODE graph_load(
                      transformed = 1;
                   break;
                case KEY_GRAPH_NODES :
+                  assert(para != NULL);
                   nodes = (int)para[0].n;
                   break;
                case KEY_GRAPH_OBSTACLES :
                   nobstacles = (int)para[0].n;
                   if( nobstacles > 0 )
-                     stp_type = STP_OBSTACLES_GRID;
+                     stp_type = STP_OARSMT;
                   break;
                case KEY_GRAPH_HOPLIMIT :
                   hoplimit = (int)para[0].n;
-                  stp_type = STP_HOP_CONS;
+                  stp_type = STP_DHCSTP;
                   break;
                case KEY_GRAPH_EDGES :
                   edges = (int)para[0].n;
@@ -1081,7 +1087,7 @@ SCIP_RETCODE graph_load(
 
                   if( g == NULL )
                   {
-                     if( stp_type == GSTP )
+                     if( stp_type == STP_GSTP )
                         SCIP_CALL( graph_init(scip, graph, nodes * 2, edges * 2 + nodes * nodes, 1, 0) );
                      else
                         SCIP_CALL( graph_init(scip, graph, nodes, edges * 2, 1, 0) );
@@ -1091,14 +1097,14 @@ SCIP_RETCODE graph_load(
                      for( i = 0; i < nodes; i++ )
                         graph_knot_add(g, -1);
 
-                     if( stp_type == STP_HOP_CONS )
+                     if( stp_type == STP_DHCSTP )
                      {
                         assert(hoplimit != UNKNOWN);
                         g->hoplimit = hoplimit;
                      }
                   }
 
-                  if( stp_type == STP_HOP_CONS )
+                  if( stp_type == STP_DHCSTP )
                   {
                      tail = (int)para[0].n - 1;
                      head = (int)para[1].n - 1;
@@ -1112,11 +1118,11 @@ SCIP_RETCODE graph_load(
                         g->cost[i] = (double)para[2].n;
 
                   }
-                  else if( stp_type == STP_DIRECTED )
+                  else if( stp_type == STP_SAP )
                   {
                      graph_edge_add(scip, g, (int)para[0].n - 1, (int)para[1].n - 1, (double)para[2].n, (double)para[3].n);
                   }
-                  else if( stp_type == STP_MAX_NODE_WEIGHT )
+                  else if( stp_type == STP_MWCSP || stp_type == STP_RMWCSP )
                   {
                      graph_edge_add(scip, g, (int)para[0].n - 1, (int)para[1].n - 1, 0.0, 0.0);
                   }
@@ -1138,7 +1144,7 @@ SCIP_RETCODE graph_load(
                      if( g->maxdeg == NULL )
                      {
                         SCIP_CALL( SCIPallocMemoryArray(scip, &(g->maxdeg), nodes ) );
-                        stp_type = STP_DEG_CONS;
+                        stp_type = STP_DCSTP;
                      }
                      g->maxdeg[degcount++] = (int)para[0].n;
                   }
@@ -1154,8 +1160,8 @@ SCIP_RETCODE graph_load(
                   assert(g != NULL);
                   assert(presol != NULL);
 
-                  if( stp_type != STP_NODE_WEIGHTS )
-                     stp_type = STP_NODE_WEIGHTS;
+                  if( stp_type != STP_NWSPG )
+                     stp_type = STP_NWSPG;
 
                   if( Is_term(g->term[nwcount]) )
                      presol->fixed += nodeweight;
@@ -1197,26 +1203,26 @@ SCIP_RETCODE graph_load(
                      break;
                   }
                   assert(g == NULL);
+
+                  // ætodo fix problem with edges over obstacles
+                  message(MSG_FATAL, &curf, "Obstacle avoiding RSMT problems are currently not supported in this format \n");
+
                   SCIP_CALL( graph_obstgrid_create(scip, graph, scaled_coordinates, obstacle_coords, nodes, grid_dim, nobstacles, scale_order) );
                   g = *graph;
-		  if( obstacle_coords != NULL )
-                  for( i = 3; i >= 0; i-- )
-                     SCIPfreeBufferArrayNull(scip, &(obstacle_coords[i]));
+                  if( obstacle_coords != NULL )
+                     for( i = 3; i >= 0; i-- )
+                        SCIPfreeBufferArrayNull(scip, &(obstacle_coords[i]));
                   SCIPfreeBufferArrayNull(scip, &(obstacle_coords));
                   break;
                case KEY_TERMINALS_END :
                   if( transformed == 0 )
                   {
-                     if( stp_type == STP_MAX_NODE_WEIGHT )
+                     if( stp_type == STP_RMWCSP )
                      {
                         assert(nodes == termcount);
                         if( g != NULL )
                         {
-#if 1
-                          SCIP_CALL( graph_maxweight_transform(scip, g, g->prize) );
-#else
-			  SCIP_CALL( graph_MwcsToSap(scip, g, g->prize) );
-#endif
+                          SCIP_CALL( graph_rootmaxweight_transform(scip, g) );
                         }
                         else
                         {
@@ -1224,17 +1230,26 @@ SCIP_RETCODE graph_load(
                            ret = FAILURE;
                            break;
                         }
-
                      }
-                     else if( stp_type == STP_PRIZE_COLLECTING )
+                     else if( stp_type == STP_MWCSP )
                      {
-#if 1
-                       SCIP_CALL( graph_prize_transform(scip, g) );
-#else
-		       SCIP_CALL( graph_PcToSap(scip, g) );
-#endif
+                        assert(nodes == termcount);
+                        if( g != NULL )
+                        {
+                          SCIP_CALL( graph_maxweight_transform(scip, g, g->prize) );
+                        }
+                        else
+                        {
+                           message(MSG_FATAL, &curf, "graph not initialized \n");
+                           ret = FAILURE;
+                           break;
+                        }
                      }
-                     else if( stp_type == STP_ROOTED_PRIZE_COLLECTING )
+                     else if( stp_type == STP_PCSPG )
+                     {
+                        SCIP_CALL( graph_prize_transform(scip, g) );
+                     }
+                     else if( stp_type == STP_RPCSPG )
                      {
                         SCIP_CALL( graph_rootprize_transform(scip, g) );
                      }
@@ -1245,16 +1260,16 @@ SCIP_RETCODE graph_load(
                   terms = (int)para[0].n;
                   assert(terms > 0);
 
-                  if( stp_type == STP_MAX_NODE_WEIGHT )
+                  if( stp_type == STP_MWCSP || stp_type == STP_RMWCSP )
                   {
                      assert(terms == nodes);
-		     assert(g != NULL);
+                     assert(g != NULL);
                      if( g->prize == NULL )
                         SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), terms) );
                   }
                   break;
                case KEY_TERMINALS_GROUPS :
-                  assert(stp_type == GSTP);
+                  assert(stp_type == STP_GSTP);
                   tgroups = (int)para[0].n;
                   presol->fixed -= tgroups * 1e+8;
                   for( i = 0; i < tgroups; i++ )
@@ -1282,41 +1297,49 @@ SCIP_RETCODE graph_load(
                   assert(terms > 0);
                   g->source[0] = (int)para[0].n - 1;
                   graph_knot_chg(g, (int)para[0].n - 1, 0);
-                  stp_type = STP_ROOTED_PRIZE_COLLECTING;
+                  stp_type = STP_RPCSPG;
                   if( g->prize == NULL )
                      SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), nodes) );
                   g->prize[(int)para[0].n - 1] = FARAWAY;
                   break;
                case KEY_TERMINALS_T :
-                  if( stp_type == STP_MAX_NODE_WEIGHT )
+                  if( stp_type == STP_MWCSP || stp_type == STP_RMWCSP )
                   {
-		     assert(g != NULL);
+                     assert(g != NULL);
                      assert(g->prize != NULL);
                      g->prize[(int)para[0].n - 1] = (double)para[1].n;
                      if( SCIPisGT(scip, (double)para[1].n, 0.0) )
                         presol->fixed -= (double)para[1].n;
-                     /*  printf("maxnodeweight: %f \n", (double)para[1].n);*/
                      termcount++;
                   }
                   else
                      graph_knot_chg(g, (int)para[0].n - 1, 0);
                   break;
                case KEY_TERMINALS_TG :
-		  assert(g != NULL);
+                  assert(g != NULL);
                   assert(tgroups > 0);
                   graph_edge_add(scip, g, (int)para[0].n - 1, g->knots - tgroups + (int)para[1].n - 1, 1e+8,  1e+8);
                   assert(Is_term(g->term[g->knots - tgroups + (int)para[1].n - 1]));
                   break;
                case KEY_TERMINALS_TP :
-		  assert(g != NULL);
+                  assert(g != NULL);
                   graph_knot_chg(g, (int)para[0].n - 1, 0);
                   if( g->prize == NULL )
                   {
-                     assert(stp_type != STP_ROOTED_PRIZE_COLLECTING);
-                     stp_type = STP_PRIZE_COLLECTING;
+                     assert(stp_type != STP_RPCSPG);
+                     stp_type = STP_PCSPG;
                      SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), nodes) );
                   }
                   g->prize[(int)para[0].n - 1] = (double)para[1].n;
+                  termcount++;
+                  break;
+               case KEY_TERMINALS_TR :
+                  assert(stp_type == STP_RMWCSP);
+                  assert(g != NULL);
+                  assert(g->prize != NULL);
+                  g->prize[(int)para[0].n - 1] = FARAWAY;
+                  presol->fixed -= (double)para[1].n;
+                  graph_knot_chg(g, (int)para[0].n - 1, 0);
                   termcount++;
                   break;
                case KEY_COORDINATES_DD :
@@ -1362,13 +1385,13 @@ SCIP_RETCODE graph_load(
                   /* scale all coordinates such that they are integers */
                   SCIP_CALL( scale_coords(coordinates, &scaled_coordinates, &scale_order, nodes, grid_dim) );
 
-		  if( coordinates != NULL )
-                  for( i = 0; i < grid_dim; i++ )
-                     SCIPfreeMemoryArrayNull(scip, &(coordinates[i]));
+                  if( coordinates != NULL )
+                     for( i = 0; i < grid_dim; i++ )
+                        SCIPfreeMemoryArrayNull(scip, &(coordinates[i]));
 
                   SCIPfreeMemoryArrayNull(scip, &coordinates);
 
-                  if( stp_type != STP_OBSTACLES_GRID )
+                  if( stp_type != STP_OARSMT )
                   {
                      SCIP_CALL( graph_grid_create(scip, graph, scaled_coordinates, nodes, grid_dim, scale_order) );
                      g = *graph;
@@ -1415,16 +1438,16 @@ SCIP_RETCODE graph_load(
          }
       }
    }
-   /* Was there an error in an incuded file ?
-    * Than close the main file.
+   /* Was there an error in an included file ?
+    * If so, close the main file.
     */
-   if (save.fp != NULL)
+   if( save.fp != NULL )
       (void)fclose(save.fp);
 
    /* Close the actual file anyway. Since we stop at encountering
     * a line with "EOF" on it, this will be the normal case.
     */
-   if (curf.fp != NULL)
+   if( curf.fp != NULL )
       (void)fclose(curf.fp);
 
    if( ret == SUCCESS )
@@ -1433,7 +1456,7 @@ SCIP_RETCODE graph_load(
 
       if( g->source[0] == UNKNOWN )
       {
-         for(i = 0; i < g->knots; i++)
+         for( i = 0; i < g->knots; i++ )
             if ((g->term[i] == 0)
                && ((g->source[0] < 0) || (g->grad[i] > g->grad[g->source[0]])))
                g->source[0] = i;
@@ -1444,7 +1467,7 @@ SCIP_RETCODE graph_load(
          if( stp_type != UNKNOWN )
             g->stp_type = stp_type;
          else
-            g->stp_type = STP_UNDIRECTED;
+            g->stp_type = STP_SPG;
       }
       graph_flags(g, (has_coordinates ? GRAPH_HAS_COORDINATES : 0)
          | (is_gridgraph ? GRAPH_IS_GRIDGRAPH    : 0));
