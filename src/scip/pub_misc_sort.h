@@ -38,7 +38,7 @@ extern "C" {
  */
 
 /**@defgroup SortingAlgorithms Sorting Algorithms
- * @ingroup MiscellaneusMethods
+ * @ingroup MiscellaneousMethods
  * @brief public methods for in place sorting of arrays
  *
  * Below are the public methods for in place sorting of up to six arrays of joint data.

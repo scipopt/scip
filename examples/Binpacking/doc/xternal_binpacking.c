@@ -165,14 +165,6 @@
  *   recommend to use such a code checker. It is always a surprising the stuff such tools detect.
  *   <br>
  *
- * - <b>doc</b>
- *   <br>
- *   Generates a html documentation. For this call the external tool
- *   <a href="http://doxygen.org">doyxgen</a> is needed.
- *   After generating the documentation, you can use your favorite browser to open the main page
- *   <code>doc/html/index.shtml</code>.
- *   <br>
- *
  * - <b>clean</b>
  *   <br>
  *   Remove all objective files, libraries, and binaries.
