@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_history.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for branching and inference history
  * @author Tobias Achterberg
  */

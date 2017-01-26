@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_set.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for global SCIP settings
  * @author Tobias Achterberg
  */

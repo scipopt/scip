@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   presol.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for presolvers
  * @author Tobias Achterberg
  */

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_var.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for problem variables
  * @author Tobias Achterberg
  */

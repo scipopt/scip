@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scipbuildflags.h
+ * @ingroup PUBLICCOREAPI
  * @brief  build flags methods
  * @author Felipe Serrano
  */

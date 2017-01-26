@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   solve.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for main solving loop and node processing
  * @author Tobias Achterberg
  */

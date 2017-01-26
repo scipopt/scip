@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_paramset.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for handling parameter settings
  * @author Tobias Achterberg
  * @author Timo Berthold

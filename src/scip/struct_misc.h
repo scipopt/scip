@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_misc.h
+ * @ingroup INTERNALAPI
  * @brief  miscellaneous datastructures
  * @author Tobias Achterberg
  */

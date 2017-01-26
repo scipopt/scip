@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_cons.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for constraints and constraint handlers
  * @author Tobias Achterberg
  */

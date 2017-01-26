@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lpi.h
- * @ingroup PUBLICMETHODS
+ * @ingroup INTERNALAPI
  * @brief  interface methods for specific LP solvers
  * @author Tobias Achterberg
  * @author Marc Pfetsch

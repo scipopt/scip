@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   history.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for branching and inference history
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -80,9 +81,9 @@ void SCIPhistoryUpdatePseudocost(
    );
 
 
-/**@defgroup ValueHistory Value based history
- *
- * Value based history methods
+/**@defgroup ValueHistory Value Based History
+ * @ingroup INTERNALAPI
+ * @brief Value based history methods
  *
  * @{
  */

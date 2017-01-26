@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_concurrent.h
+ * @ingroup INTERNALAPI
  * @brief  concurrent data struct
  * @author Robert Lion Gottwald
  */

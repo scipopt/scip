@@ -18,7 +18,7 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  *
- * This constraint handler is used to store the branching decision of the \ref BRANCHING "Ryan/Foster branching rule"
+ * This constraint handler is used to store the branching decision of the \ref BINPACKING_BRANCHING "Ryan/Foster branching rule"
  * which is implemented in \ref branch_ryanfoster.c.
  *
  */

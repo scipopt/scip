@@ -16501,6 +16501,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsLinear)
    return SCIP_OKAY;
 }
 
+/**! [Callback for the number of variables]*/
 /** constraint method of constraint handler which returns the number of variables (if possible) */
 static
 SCIP_DECL_CONSGETNVARS(consGetNVarsLinear)
@@ -16515,6 +16516,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsLinear)
 
    return SCIP_OKAY;
 }
+/**! [Callback for the number of variables]*/
 
 /*
  * Callback methods of event handler

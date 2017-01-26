@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sol.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for storing primal CIP solutions
  * @author Tobias Achterberg
  */

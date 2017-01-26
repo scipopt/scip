@@ -19,7 +19,7 @@
  * @author Stefan Heinz
  *
  * This file implements the variable pricer which check if variables exist with negative reduced cost. See for more
- * details \ref PRICER.
+ * details \ref BINPACKING_PRICER.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

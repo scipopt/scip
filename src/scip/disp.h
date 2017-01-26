@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   disp.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for displaying runtime statistics
  * @author Tobias Achterberg
  */

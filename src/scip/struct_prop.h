@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_prop.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for propagators
  * @author Tobias Achterberg
  */

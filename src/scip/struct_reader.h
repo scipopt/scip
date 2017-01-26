@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_reader.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for input file readers
  * @author Tobias Achterberg
  */

@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_branch.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for branching rules
  * @author Tobias Achterberg
  */
@@ -32,6 +32,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@defgroup PublicBranchRuleMethods Branching Rules
+ * @ingroup PluginManagementMethods
+ * @brief  methods for branching rule plugins
+ *
+ * @{
+ */
 
 /** compares two branching rules w. r. to their priority */
 EXTERN
@@ -151,6 +158,8 @@ EXTERN
 SCIP_Bool SCIPbranchruleIsInitialized(
    SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for primal heuristics
  * @author Tobias Achterberg
  */

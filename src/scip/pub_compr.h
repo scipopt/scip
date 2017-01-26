@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_compr.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for tree compressions
  * @author Jakob Witzig
  */
@@ -32,6 +32,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@defgroup PublicCompressionMethods Tree Compression
+ * @ingroup PluginManagementMethods
+ * @brief  public methods for tree compressions
+ *
+ * @{
+ */
 
 /** compares two compressions w. r. to their priority */
 EXTERN
@@ -107,6 +114,8 @@ EXTERN
 SCIP_Real SCIPcomprGetTime(
    SCIP_COMPR*           compr               /**< tree compression */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

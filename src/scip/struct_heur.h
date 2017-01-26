@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_heur.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for primal heuristics
  * @author Tobias Achterberg
  */
