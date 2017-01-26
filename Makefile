@@ -811,7 +811,7 @@ endif
 
 .PHONY: doc
 doc:
-		cd doc; $(DOXY) $(MAINSHORTNAME).dxy; $(DOXY) $(MAINSHORTNAME)devel.dxy
+		cd doc; $(DOXY) $(MAINSHORTNAME).dxy;
 
 .PHONY: docpreview
 docpreview:

@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_nodesel.h
- * @brief  datastructures for node selectors and node priority queues
+ * @ingroup INTERNALAPI
+ * @brief  data structures for node selectors and node priority queues
  * @author Tobias Achterberg
  */
 

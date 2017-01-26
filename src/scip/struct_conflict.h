@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_conflict.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for conflict analysis
  * @author Tobias Achterberg
  */

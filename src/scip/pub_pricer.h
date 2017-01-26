@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_pricer.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for variable pricers
  * @author Tobias Achterberg
  */
@@ -32,6 +32,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@defgroup PublicPricerMethods Pricer
+ * @ingroup PluginManagementMethods
+ * @brief  methods to include and access pricer plugins of \SCIP
+ *
+ * @{
+ */
 
 /** compares two pricers w. r. to their priority */
 EXTERN
@@ -113,6 +120,8 @@ EXTERN
 SCIP_Bool SCIPpricerIsInitialized(
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

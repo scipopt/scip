@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_disp.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for displaying runtime statistics
  * @author Tobias Achterberg
  */
@@ -34,6 +34,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@defgroup PublicDisplayMethods Displays
+ * @ingroup PluginManagementMethods
+ * @brief  methods for the inclusion and access of display plugins
+ *
+ * @{
+ */
 
 /** gets user data of display column */
 EXTERN
@@ -122,6 +129,8 @@ void SCIPdispTime(
    SCIP_Real             val,                /**< value in seconds to display */
    int                   width               /**< width to fit into */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

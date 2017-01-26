@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cutpool.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for storing cuts in a cut pool
  * @author Tobias Achterberg
  */

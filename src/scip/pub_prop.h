@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_prop.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for propagators
  * @author Tobias Achterberg
  */
@@ -32,6 +32,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@defgroup PublicPropagatorMethods Propagators
+ * @ingroup PluginManagementMethods
+ * @brief  methods for propagator plugins
+ *
+ * @{
+ */
 
 /** compares two propagators w. r. to their priority */
 EXTERN
@@ -257,6 +264,8 @@ void SCIPpropSetPresolTiming(
    SCIP_PROP*            prop,               /**< propagator */
    SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

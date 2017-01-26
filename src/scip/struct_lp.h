@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_lp.h
- * @brief  datastructures for LP management
+ * @ingroup INTERNALAPI
+ * @brief  data structures for LP management
  * @author Tobias Achterberg
  *
  *  In SCIP, the LP is defined as follows:

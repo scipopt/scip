@@ -33996,7 +33996,7 @@ SCIP_RETCODE SCIPaddCut(
  */
 SCIP_RETCODE SCIPaddPoolCut(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW*             row                 /**< cutting plane to add */
+   SCIP_ROW*             row                 /**< row to remove */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPaddPoolCut", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );

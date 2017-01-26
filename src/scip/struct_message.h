@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_message.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for problem statistics
  * @author Tobias Achterberg
  */

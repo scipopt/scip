@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for propagators
  * @author Tobias Achterberg
  */

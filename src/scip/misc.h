@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   misc.h
+ * @ingroup INTERNALAPI
  * @brief  internal miscellaneous methods
  * @author Tobias Achterberg
  */

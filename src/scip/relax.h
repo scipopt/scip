@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   relax.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for relaxators
  * @author Tobias Achterberg
  */

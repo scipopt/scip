@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lp.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for LP management
  * @author Tobias Achterberg
  * @author Marc Pfetsch

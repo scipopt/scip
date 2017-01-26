@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   tree.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for branch and bound tree
  * @author Tobias Achterberg
  * @author Timo Berthold

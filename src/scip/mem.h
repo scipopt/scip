@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   mem.h
+ * @ingroup INTERNALAPI
  * @brief  methods for block memory pools and memory buffers
  * @author Tobias Achterberg
  */

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   set.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for global SCIP settings
  * @author Tobias Achterberg
  * @author Timo Berthold

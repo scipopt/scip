@@ -185,11 +185,11 @@ SECTION: General Questions about SCIP
       the methods are ordered by topics.
     </p>
 
-    QUESTION: Can I use SCIP as a pure CP-Solver?
+    QUESTION: Can I use SCIP as a pure CP/SAT Solver?
     LABEL:scipascpsolver
     ANSWER:
     <p>
-        Yes. SCIP can be used as a pure CP-Solver by typing
+        Yes. SCIP can be used as a pure CP/SAT Solver by typing
         <code>set emphasis cpsolver</code> in the shell or by using the function <code>SCIPsetEmphasis()</code>.
         Furthermore, you can compile SCIP without any LP-Solver by <code>make LPS=none</code>.
         See <a href="#howtochangebehaviour">here</a> for more on changing the behavior of SCIP.

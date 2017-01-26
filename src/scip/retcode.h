@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   retcode.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for return codes for SCIP methods
  * @author Tobias Achterberg
  */

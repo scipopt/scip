@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_cutpool.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for storing cuts in a cut pool
  * @author Tobias Achterberg
  */

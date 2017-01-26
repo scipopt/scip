@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_nlp.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for NLP management
  * @author Thorsten Gellermann
  * @author Stefan Vigerske

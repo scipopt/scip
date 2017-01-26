@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_sepa.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for separators
  * @author Tobias Achterberg
  */
@@ -32,6 +32,15 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@defgroup PublicSeparatorMethods Separators
+ * @ingroup PluginManagementMethods
+ * @brief methods for separator plugins
+ *
+ * @{
+ */
+
 
 /** compares two separators w. r. to their priority */
 EXTERN
@@ -180,6 +189,8 @@ EXTERN
 SCIP_Bool SCIPsepaIsInitialized(
    SCIP_SEPA*            sepa                /**< separator */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }
