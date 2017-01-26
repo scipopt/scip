@@ -20,22 +20,7 @@
  * @author Tobias Achterberg
  * @author Michael Winkler
  *
- * This LPI is beta!
- *
- * Several things are missing in the Gurobi interface that make this LPI relatively useless:
- *
- * - Gurobi currently does not allow to access the basis inverse.
- * - Strong branching is supported, but not documented.
- * - The support of ranged rows is complicated for the user: one has to keep track of the additional
- *   variables, which are added to generate a ranged row. Hence, one would need to adapt the count
- *   of variables and retrieve the information of ranged rows to get the correct answers.
- *
- * While the first two issues only influence the performance, the third is critical for some
- * problems, which contain ranged rows.
- *
- * @todo Check whether functions for basis inverses are correct. Which ones are the right ones?
- *
- * @todo Check whether solisbasic is correctly used.
+ * This LPI is beta! It only works with Gurobi versions >= 7.0.2.
  *
  * @todo Try quad-precision and concurrent runs.
  *
