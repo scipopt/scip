@@ -1710,7 +1710,7 @@ SCIP_RETCODE SCIPdualAscentStp(
    }
 
    /* (main) dual ascent loop */
-   while( SCIPpqueueNElems(pqueue) > 0 ) //&& !SCIPisStopped(scip) ) todo
+   while( SCIPpqueueNElems(pqueue) > 0 && !SCIPisStopped(scip) )
    {
       /* get active vertex of minimum score */
       gnodeact = (GNODE*) SCIPpqueueRemove(pqueue);
@@ -2200,7 +2200,7 @@ SCIP_RETCODE SCIPdualAscentStpSol(
    }
 
    /* (main) dual ascent loop */
-   while( SCIPpqueueNElems(pqueue) > 0 ) // && !SCIPisStopped(scip) ) todo
+   while( SCIPpqueueNElems(pqueue) > 0 && !SCIPisStopped(scip) )
    {
       /* get active vertex of minimum score */
       gnodeact = (GNODE*) SCIPpqueueRemove(pqueue);

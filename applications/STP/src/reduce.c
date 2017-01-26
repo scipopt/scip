@@ -2436,7 +2436,7 @@ SCIP_RETCODE redLoopStp(
    /* get timelimit parameter */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
-   while( rerun )//&& !SCIPisStopped(scip) ) todo
+   while( rerun && !SCIPisStopped(scip) )
    {
       int danelims = 0;
       int lenelims = 0;
