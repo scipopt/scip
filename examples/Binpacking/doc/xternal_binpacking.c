@@ -13,44 +13,43 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal.c
- * @brief  main document page
+/**@file   xternal_binpacking.c
+ * @brief  The bin packing example of SCIP
  * @author Timo Berthold
  * @author Stefan Heinz
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Overview
+/**@page BINPACKING_MAIN Overview
  * @author Timo Berthold
  * @author Stefan Heinz
  *
- * This example contains a branch-and-price approach for the binpacking problem which is realized with the framework 
+ * This example contains a branch-and-price approach for the binpacking problem which is realized with the framework
  * \SCIP. Therefore, the following plugins are implemented:
  *
- * - a problem reader which parses the problem out of file and creates the corresponding problem within \SCIP
- *   (reader_bpa.c)
- * - a (global) problem data structure which contains all necessary information (probdata_binpacking.c)
- * - a pricer which generates new variables/columns during the search (pricer_binpacking.c)
- * - the Ryan/Foster branching rule (branch_ryanfoster.c)
- * - a constraint handler which handles the branching decisions of the Ryan/Foster branching (cons_samediff.c)
- * - a variable data structure which stores information for each variable and is needed to perform the Ryan/Foster
- *   branching (vardata_binpacking.c)
+ * - a \ref reader_bpa.c "problem reader" which parses the problem out of file and creates the corresponding problem within \SCIP
+ * - a \ref probdata_binpacking.c "(global) problem data structure" which contains all necessary information
+ * - a \ref pricer_binpacking.c "pricer" which generates new variables/columns during the search
+ * - the \ref branch_ryanfoster.c "Ryan/Foster branching rule"
+ * - a \ref cons_samediff.c "constraint handler" which handles the branching decisions of the Ryan/Foster branching
+ * - a \ref vardata_binpacking.c "variable data structure" which stores information for each variable and is needed to perform the Ryan/Foster
+ *   branching
  *
  * In the following we introduce the problem, explain the use of the reader plugin and pricer plugin. Finally, we
- * introduce the Ryan/Foster branching rule and briefly discuss how that specific branching rule can be realized within
+ * introduce the Ryan/Foster branching rule and briefly discuss how that specific branching rule is realized within
  * the framework \SCIP.
  *
- * -# \ref PROBLEM "Problem description"
- * -# \ref READER "Parsing the input format and creating the problem"
- * -# \ref PROBLEMDATA "Main problem data"
- * -# \ref PRICER "Pricing new variables"
- * -# \ref BRANCHING "Ryan/Foster branching"
- * -# \ref MAKEFILE "The Makefile"
+ * -# \ref BINPACKING_PROBLEM "Problem description"
+ * -# \ref BINPACKING_READER "Parsing the input format and creating the problem"
+ * -# \ref BINPACKING_PROBLEMDATA "Main problem data"
+ * -# \ref BINPACKING_PRICER "Pricing new variables"
+ * -# \ref BINPACKING_BRANCHING "Ryan/Foster branching"
+ * -# \ref BINPACKING_MAKEFILE "The Makefile"
  *
  */
 
-/**@page PROBLEM Problem description
+/**@page BINPACKING_PROBLEM Problem description
  *
  * The binpacking problem consists of the task to distribute a given set of items \f$ [n] := \{1, \dots, n\}\f$ with
  * nonnegative size \f$s_i\f$ to a minimal number of bins, all of the same capacity \f$\kappa\f$.  As example consider 9
@@ -75,7 +74,7 @@
  * \f]
  *
  * An integer program can be formulated as follows:
- * 
+ *
  * \f[
  *  \begin{array}[t]{rll}
  *    \min & \displaystyle \sum_{S \in \mathcal{S}} x_{S} \\
@@ -131,12 +130,12 @@
 
 
 
-/**@page MAKEFILE The Makefile
+/**@page BINPACKING_MAKEFILE The Makefile
  *
  * The Makefile is based on the main \SCIP Makefile. This means that all compiling options which are
  * available for \SCIP are also available for the binpacking project. Below, you find a list
  * of the most important compiling flags, the values they can take, and a short description. The
- * values in bold face are the default values. 
+ * values in bold face are the default values.
  *
  * - <code>LPS={clp | cpx | none | <b>spx</b>}</code>
  *   <br>
@@ -148,22 +147,22 @@
  *
  * - <code>OPT={dbg | <b>opt</b>}</code>
  *   <br>
- *   Defines if the projects gets compiled in debug (<code>dbg</code>) mode or 
+ *   Defines if the projects gets compiled in debug (<code>dbg</code>) mode or
  *   optimized (<code><b>opt</b></code>) mode. In the debug mode all assertions are checked.
  *
  * - <code>ZIMPL={false | <b>true</b>}</code>
  *   <br>
  *   Defines if the modeling language ZIMPL should be linked to binary or not.
- * 
- * In the following we explain the all <b>Makefile targets</b>. 
+ *
+ * In the following we explain the all <b>Makefile targets</b>.
  *
  * - <b>lint</b>
  *   <br>
  *   Statically checks the code for uninitialized variables and many other possible problems,
- *   which even do not lead to compiler errors. For this, the
+ *   which even do not lead to compiler errors. For this,
  *   the external tool flexelint is needed. The call produces the file <code>lint.out</code>
  *   which contains all the detected warnings. From the experience when developing \SCIP, we strongly
- *   recommend to use such a code checker. It is always a surprising the stuff such tools detect.  
+ *   recommend to use such a code checker. It is always a surprising the stuff such tools detect.
  *   <br>
  *
  * - <b>doc</b>
@@ -179,10 +178,9 @@
  *   Remove all objective files, libraries, and binaries.
  *   <br>
  *
- * - <b>test</b> 
- *   <br> 
- *   Starts an automated test run based on the SCIP test runs (see <a
- *   href="http://scip.zib.de/doc/html/TEST.php">How to run automated tests with SCIP</a>).
+ * - <b>test</b>
+ *   <br>
+ *   Starts an automated test run based on the SCIP test runs (see \ref TEST "How to run automated tests with SCIP").
  *   <br>
  *
  * - <b>tags</b>
@@ -194,4 +192,3 @@
  *   <br>
  *   Generates the dependencies for the compiling process.
  */
- 

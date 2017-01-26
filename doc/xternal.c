@@ -33,7 +33,7 @@
 /**@mainpage Overview
  *
  *
- * @section WHATISSCIP What is \SCIP?
+ * @section WHATISSCIP What is SCIP?
  *
  * \SCIP is a framework to solve constraint integer programs (CIPs) and mixed-integer nonlinear programs. In particular,
  *
@@ -50,7 +50,7 @@
  *
  * @section GETTINGSTARTED Getting started
  *
- * - \ref WHATPROBLEMS "What types of optimization problems does \SCIP solve?"
+ * - \ref WHATPROBLEMS "What types of optimization problems does SCIP solve?"
  * - \ref MAKE    "Installation information / Makefiles"
  * - \ref LICENSE "License"
  *
@@ -63,16 +63,16 @@
  * @section FURTHERINFORMATION References
  *
  * - \ref PUBLICAPI "List of callable functions"
- * - \ref PARAMETERS "List of all \SCIP parameters"
+ * - \ref PARAMETERS "List of all SCIP parameters"
  *
  * - \ref DOC     "How to search the documentation for interface methods"
  * - \ref FAQ     "Frequently asked questions (FAQ)"
- * - \ref APPLICATIONS "Extensions of \SCIP for specific applications"
+ * - \ref APPLICATIONS "Extensions of SCIP for specific applications"
  *
  *
- * @section PROGRAMMING Programming with \SCIP
+ * @section PROGRAMMING Programming with SCIP
  *
- * @subsection CODINGBASICS Coding basics for \SCIP
+ * @subsection CODINGBASICS Coding basics for SCIP
  *
  *   - \ref CODE    "Coding style guidelines"
  *   - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
