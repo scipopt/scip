@@ -49,34 +49,19 @@ MAINSHORTLINK	=	$(BINDIR)/$(MAINNAME)
 MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ))
 
 
-CLASSIFYNAME	=	classify
-CLASSIFYOBJ	=	benders.o readargs.o classify.o
-
-CLASSIFYSRC	=	$(addprefix $(SRCDIR)/,$(CLASSIFYOBJ:.o=.c))
-CLASSIFYDEP	=	$(SRCDIR)/depend.cmain.$(OPT)
-
-CLASSIFY	=	$(CLASSIFYNAME).$(BASE).$(LPS)$(EXEEXTENSION)
-CLASSIFYFILE	=	$(BINDIR)/$(CLASSIFY)
-CLASSIFYSHORTLINK =	$(BINDIR)/$(CLASSIFYNAME)
-CLASSIFYOBJFILES =	$(addprefix $(OBJDIR)/,$(CLASSIFYOBJ))
-
-
 #-----------------------------------------------------------------------------
 # Rules
 #-----------------------------------------------------------------------------
 
 ifeq ($(VERBOSE),false)
-.SILENT:	$(MAINFILE) $(MAINOBJFILES) $(MAINSHORTLINK) $(CLASSIFYFILE) $(CLASSIFYOBJFILES) $(CLASSIFYSHORTLINK)
+.SILENT:	$(MAINFILE) $(MAINOBJFILES) $(MAINSHORTLINK)
 endif
 
 .PHONY: all
 all:            $(SCIPDIR) $(MAINFILE) $(MAINSHORTLINK)
 
-.PHONY: $(CLASSIFYNAME)
-$(CLASSIFYNAME): $(CLASSIFYFILE) $(CLASSIFYSHORTLINK)
-
 .PHONY: lint
-lint:		$(MAINSRC) $(CLASSIFYSRC)
+lint:		$(MAINSRC)
 		-rm -f lint.out
 		$(SHELL) -ec 'for i in $^; \
 			do \
@@ -100,10 +85,6 @@ doc:
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
 		cd $(dir $@) && ln -s $(notdir $(MAINFILE)) $(notdir $@)
-
-$(CLASSIFYSHORTLINK):	$(CLASSIFYFILE)
-		@rm -f $@
-		cd $(dir $@) && ln -s $(notdir $(CLASSIFYFILE)) $(notdir $@)
 
 $(OBJDIR):
 		@-mkdir -p $(OBJDIR)
@@ -131,7 +112,6 @@ ifneq ($(OBJDIR),)
 		@echo "-> remove main objective files"
 endif
 		@-rm -f $(MAINFILE) $(MAINSHORTLINK)
-		@-rm -f $(CLASSIFYFILE) $(CLASSIFYSHORTLINK)
 		@echo "-> remove binary"
 
 .PHONY: tags
@@ -149,10 +129,6 @@ depend:		$(SCIPDIR)
 $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
 		$(LINKCXX) $(MAINOBJFILES) $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
-
-$(CLASSIFYFILE): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(CLASSIFYOBJFILES)
-		@echo "-> linking $@"
-		$(LINKCXX) $(CLASSIFYOBJFILES) $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"

@@ -165,11 +165,6 @@ fi
 COUNT=0
 for INSTANCE in `cat $FULLTSTNAME | awk '{print $1}'`
 do
-    # if the key word DONE appears in the test file, skip the remaining test file
-    if test "$INSTANCE" = "DONE"
-    then
-        break
-    fi
     # check if problem instance exists
     for IPATH in ${POSSIBLEPATHS[@]}
     do
