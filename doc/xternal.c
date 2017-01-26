@@ -7705,10 +7705,7 @@
  /**@defgroup PUBLICAPI Public API of SCIP
   * @brief methods and headers of the public C-API of \SCIP
   *
-  * The public API of \SCIP is separated into a core API and a plugin API. The first contains all methods that can
-  * be accessed by including the header scip.h. The plugin API is a collection of methods that are provided by
-  * the default plugins of \SCIP.
-
+  * \PUBLICAPIDESCRIPTION
   *
   *
   */
@@ -7733,10 +7730,12 @@
 
  /**@defgroup PUBLICPLUGINAPI Plugin API of SCIP
   * @ingroup PUBLICAPI
-  * @brief core API extensions provided by the default plugins of \SCIP
+  * @brief core API extensions provided by the default plugins of \SCIP, includable via scipdefplugins.h.
   *
   * All default plugins of \SCIP, especially the default \ref CONSHDLRS "constraint handlers", provide
-  * valuable extensions to the \ref PUBLICCOREAPI "core API" of \SCIP.
+  * valuable extensions to the \ref PUBLICCOREAPI "core API" of \SCIP. These methods are made available
+  * by including scipdefplugins.h to user-written extensions.
+  *
   * For a better overview, this page lists all default plugin headers structured into modules based on their individual
   * topic.
   *
@@ -7749,8 +7748,7 @@
   *
   * This page lists the header files of internal API methods. In contrast to the public API, these internal methods
   * should not be used by user plugins and extensions of SCIP. Please consult
-  * \ref PUBLICCOREAPI "the plugin-independent API" and \ref PUBLICPLUGINAPI "the default plugin API" for a complete
-  * API available for user plugins.
+  * \ref PUBLICCOREAPI "the Core API" and \ref PUBLICPLUGINAPI "Plugin API" for the complete API available to user plugins.
   *
   */
 
