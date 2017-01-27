@@ -31,7 +31,10 @@
 extern "C" {
 #endif
 
-/** includes the default display columns in SCIP */
+/** includes the default display columns in SCIP
+ *
+ *  @ingroup DisplayIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeDispDefault(
    SCIP*                 scip                /**< SCIP data structure */
