@@ -7377,7 +7377,7 @@ void SCIPnodeGetDualBoundchgs(
             {
                vars[j] = boundchgs[i].var;
                bounds[j] = boundchgs[i].newbound;
-               boundtypes[j] = boundchgs[i].boundtype;
+               boundtypes[j] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
                j++;
             }
          }
