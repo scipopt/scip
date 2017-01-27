@@ -31,7 +31,10 @@
 extern "C" {
 #endif
 
-/** creates the oddcycle separator and includes it in SCIP */
+/** creates the oddcycle separator and includes it in SCIP
+ *
+ * @ingroup SeparatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeSepaOddcycle(
    SCIP*                 scip                /**< SCIP data structure */
