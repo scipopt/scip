@@ -215,6 +215,14 @@ SCIP_RETCODE SCIPlpiAddCols(
 {  /*lint --e{715}*/
    assert( lpi != NULL );
    assert( lpi->ncols >= 0 );
+   assert(obj != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
+   assert(nnonz >= 0);
+   assert(ncols >= 0);
 
 #ifndef NDEBUG
    {
