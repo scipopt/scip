@@ -239,12 +239,12 @@ extern "C" {
  * Probing scoring settings
  */
 
-#define SCIP_PROBINGSCORE_PENALTYRATIO    2  /**< ratio for penalizing too small fractionalities while probing.
+#define SCIP_PROBINGSCORE_PENALTYRATIO    2  /**< ratio for penalizing too small fractionalities in diving heuristics.
                                               *   if the fractional part of a variable is smaller than a given threshold
                                               *   the corresponding score gets penalized. due to numerical troubles
                                               *   we will flip a coin whenever SCIPisEQ(scip, fractionality, threshold)
-                                              *   evaluates to true. this parameter defines the change that a coin flip
-                                              *   leads penalizing the score, i.e., there is 1:2 change for penalizing.
+                                              *   evaluates to true. this parameter defines the chance that this results
+                                              *   in penalizing the score, i.e., there is 1:2 chance for penalizing.
                                               */
 
 /*
