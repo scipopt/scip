@@ -4748,7 +4748,7 @@ SCIP_RETCODE getInferenceOrder(
    }
 
    /* sort vars and vals by score */
-   SCIPsortDownRealRealPtrPtr(infscore, bounds, (void**) vars, (void**) boundtypes, nvars);
+   SCIPsortDownRealRealPtrPtr(infscore, bounds, (void**) vars, (void*) boundtypes, nvars);
 
    /* free buffer */
    SCIPsetFreeBufferArray(set, &infscore);
