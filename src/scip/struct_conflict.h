@@ -136,6 +136,7 @@ struct SCIP_Conflict
    SCIP_Longint          npseudoconfliterals;/**< total number of literals in valid pseudo solution conflict constraints */
    SCIP_Longint          npseudoreconvconss; /**< number of reconvergence constraints detected in pseudo sol conflict analysis */
    SCIP_Longint          npseudoreconvliterals;/**< total number of literals in valid pseudo solution reconvergence constraints */
+   SCIP_Longint          ndualrayinfglobal;
    SCIP_Longint          ndualrayinfsuccess; /**< number of successfully dual ray analysis calls for infeasible LPs */
    SCIP_Longint          ndualrayinfseparoot;/**< number of infeasible dual rays separating the root LP solution */
 
