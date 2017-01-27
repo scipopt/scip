@@ -30,8 +30,6 @@ tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*~" \
 --exclude=".*" \
 --exclude="*xyz*" \
---exclude="nlpioracle.c" \
---exclude="nlpioracle.h" \
 --exclude="exprinterpret_cppad.cpp" \
 --exclude="nlpi_ipopt.cpp" \
 --exclude="lpi_c*" \
@@ -42,6 +40,11 @@ tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="lpi_spx121.cpp" \
 --exclude="lpi_spx132.cpp" \
 --exclude="lpi_xprs.c" \
+--exclude="def_openmp.h" \
+--exclude="tpi_openmp*" \
+--exclude="tpi_tnycthrd*" \
+--exclude="type_tpi_openmp*" \
+--exclude="type_tpi_tnycthrd*" \
 $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
 $NAME/doc/scip* $NAME/doc/xternal.c $NAME/doc/inc/faq.inc \
 $NAME/doc/howtoadd.dxy $NAME/doc/interfaces.dxy \
