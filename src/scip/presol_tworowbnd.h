@@ -30,7 +30,10 @@
 extern "C" {
 #endif
 
-/** creates the tworowbnd presolver and includes it in SCIP */
+/** creates the tworowbnd presolver and includes it in SCIP
+ *
+ * @ingroup PresolverIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePresolTworowbnd(
    SCIP*                 scip                /**< SCIP data structure */
