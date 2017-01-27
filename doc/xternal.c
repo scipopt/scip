@@ -49,6 +49,7 @@
  * See the web site of <a href="http://scip.zib.de">\SCIP</a> for more information about licensing and to download \SCIP.
  *
  * @section GETTINGSTARTED Getting started
+ * -\ref NEWTUTORIAL
  *
  * - \ref WHATPROBLEMS "What types of optimization problems does SCIP solve?"
  * - \ref MAKE    "Installation information / Makefiles"
@@ -1094,10 +1095,19 @@
  *
  */
 
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page NEWTUTORIAL New interactive shell tutorial
+ *
+ * Here is a new interactive shell tutorial
+ *
+ * \snippet tutorial.txt SnippetVersion
+ */
+
+
 
 /**@page SHELL Tutorial: the interactive shell
  *
- * If are using \SCIP as a black box solver, here you will find some tips and tricks what you can do.
+ * If you are using \SCIP as a black box solver, here you will find some tips and tricks what you can do.
  *
  * @section TUTORIAL_OPTIMIZE Read and optimize a problem instance
  *
@@ -2096,7 +2106,7 @@
  *
  * Here is an example, which is taken from the \ref cons_knapsack.h "knapsack constraint handler":
  *
- * @snippet src/scip/cons_knapsack.c example of a transformation callback
+ * @snippet src/scip/cons_knapsack.c SnippetConsTransKnapsack
  *
  * @subsection CONSINITLP
  *
@@ -7810,12 +7820,32 @@
  * \ref BRANCH "here".
  */
 
+/**@defgroup BranchingRuleIncludes Inclusion methods
+ * @ingroup BRANCHINGRULES
+ * @brief methods to include specific branching rules into \SCIP
+ *
+ * This module contains methods to include specific branching rules into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all branching rules) using SCIPincludeDefaultPlugins()
+ *
+ */
+
 /**@defgroup CONSHDLRS  Constraint Handler
  * @ingroup PUBLICPLUGINAPI
  * @brief This page contains a list of all constraint handlers which are currently available.
  *
  * A detailed description what a constraint handler does and how to add a constraint handler to SCIP can be found
  * \ref CONS "here".
+ */
+
+/**@defgroup ConsHdlrIncludes Inclusion methods
+ * @ingroup CONSHDLRS
+ * @brief methods to include specific constraint handlers into \SCIP
+ *
+ * This module contains methods to include specific constraint handlers into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default constraint handlers) using SCIPincludeDefaultPlugins()
+ *
  */
 
 /**@defgroup DIALOGS Dialogs
@@ -7826,12 +7856,32 @@
  * \ref DIALOG "here".
  */
 
+/**@defgroup DialogIncludes Inclusion methods
+ * @ingroup DIALOGS
+ * @brief methods to include specific dialogs into \SCIP
+ *
+ * This module contains methods to include specific dialogs into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default dialogs) using SCIPincludeDefaultPlugins()
+ *
+ */
+
 /**@defgroup DISPLAYS Displays
  * @ingroup PUBLICPLUGINAPI
  * @brief This page contains a list of all displays (output columns)  which are currently available.
  *
  * A detailed description what a display does and how to add a display to SCIP can be found
  * \ref DISP "here".
+ *
+ */
+
+/**@defgroup DisplayIncludes Inclusion methods
+ * @ingroup DISPLAYS
+ * @brief methods to include specific displays into \SCIP
+ *
+ * This module contains methods to include specific displays into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default displays) using SCIPincludeDefaultPlugins()
  *
  */
 
@@ -7845,10 +7895,20 @@
 
 /**@defgroup EXPRINTS Expression Interpreter
  * @ingroup PUBLICPLUGINAPI
- * @brief This page contains a list of all expression interpreter which are currently available.
+ * @brief This page contains a list of all expression interpreters which are currently available.
  *
  * A detailed description what a expression interpreter does and how to add a expression interpreter to SCIP can be found
  * \ref EXPRINT "here".
+ */
+
+/**@defgroup ExprintIncludes Inclusion methods
+ * @ingroup EXPRINTS
+ * @brief methods to include specific expression interpreters into \SCIP
+ *
+ * This module contains methods to include specific expression interpreters into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default expression interpreters) using SCIPincludeDefaultPlugins()
+ *
  */
 
 /**@defgroup FILEREADERS File Readers
@@ -7884,6 +7944,16 @@
  *
  */
 
+/**@defgroup FileReaderIncludes Inclusion methods
+ * @ingroup FILEREADERS
+ * @brief methods to include specific file readers into \SCIP
+ *
+ * This module contains methods to include specific file readers into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default file readers) using SCIPincludeDefaultPlugins()
+ *
+ */
+
 /**@defgroup LPIS LP Solver Interfaces
  * @ingroup PUBLICPLUGINLPI
  * @brief This page contains a list of all LP solver interfaces which are currently available.
@@ -7897,6 +7967,16 @@
  * \ref NODESEL "here".
  */
 
+/**@defgroup NodeSelectorIncludes Inclusion methods
+ * @ingroup NODESELECTORS
+ * @brief methods to include specific node selectors into \SCIP
+ *
+ * This module contains methods to include specific node selectors into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default node selectors) using SCIPincludeDefaultPlugins()
+ *
+ */
+
 /**@defgroup NLPIS NLP Solver Interfaces
  * @ingroup PUBLICPLUGINAPI
  * @brief This page contains a list of all NLP solver interfaces which are currently available.
@@ -7905,12 +7985,32 @@
  * \ref NLPI "here".
  */
 
+/**@defgroup NLPIIncludes Inclusion methods
+ * @ingroup NLPIS
+ * @brief methods to include specific NLP solver interfaces into \SCIP
+ *
+ * This module contains methods to include specific NLP solver interfaces into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default NLP solver interfaces) using SCIPincludeDefaultPlugins()
+ *
+ */
+
 /**@defgroup PRESOLVERS Presolvers
  * @ingroup PUBLICPLUGINAPI
  * @brief This page contains a list of all presolvers which are currently available.
  *
  * A detailed description what a presolver does and how to add a presolver to SCIP can be found
  * \ref PRESOL "here".
+ */
+
+/**@defgroup PresolverIncludes Inclusion methods
+ * @ingroup PRESOLVERS
+ * @brief methods to include specific presolvers into \SCIP
+ *
+ * This module contains methods to include specific presolvers into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default presolvers) using SCIPincludeDefaultPlugins()
+ *
  */
 
 /**@defgroup PRICERS Pricers
@@ -7929,12 +8029,32 @@
  * \ref HEUR "here".
  */
 
+/**@defgroup PrimalHeuristicIncludes Inclusion methods
+ * @ingroup PRIMALHEURISTICS
+ * @brief methods to include specific primal heuristics into \SCIP
+ *
+ * This module contains methods to include specific primal heuristics into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default primal heuristics) using SCIPincludeDefaultPlugins()
+ *
+ */
+
 /**@defgroup PROPAGATORS Propagators
  * @ingroup PUBLICPLUGINAPI
  * @brief This page contains a list of all propagators which are currently available.
  *
  * A detailed description what a propagator does and how to add a propagator to SCIP can be found
  * \ref PROP "here".
+ */
+
+/**@defgroup PropagatorIncludes Inclusion methods
+ * @ingroup PROPAGATORS
+ * @brief methods to include specific propagators into \SCIP
+ *
+ * This module contains methods to include specific propagators into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default propagators) using SCIPincludeDefaultPlugins()
+ *
  */
 
 /**@defgroup RELAXATORS Relaxation Handlers
@@ -7953,6 +8073,16 @@
  *
  * A detailed description what a separator does and how to add a separator to SCIP can be found
  * \ref SEPA "here".
+ */
+
+/**@defgroup SeparatorIncludes Inclusion methods
+ * @ingroup SEPARATORS
+ * @brief methods to include specific separators into \SCIP
+ *
+ * This module contains methods to include specific separators into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default separators) using SCIPincludeDefaultPlugins()
+ *
  */
 
 /**@page PARAMETERS List of all SCIP parameters
