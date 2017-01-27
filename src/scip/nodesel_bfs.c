@@ -73,6 +73,7 @@ SCIP_DECL_NODESELCOPY(nodeselCopyBfs)
 }
 
 /** destructor of node selector to free user data (called when SCIP is exiting) */
+/**! [SnippetNodeselFreeBfs] */
 static
 SCIP_DECL_NODESELFREE(nodeselFreeBfs)
 {  /*lint --e{715}*/
@@ -90,6 +91,7 @@ SCIP_DECL_NODESELFREE(nodeselFreeBfs)
 
    return SCIP_OKAY;
 }
+/**! [SnippetNodeselFreeBfs] */
 
 
 /** node selection method of node selector */

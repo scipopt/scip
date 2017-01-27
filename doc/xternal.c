@@ -2660,22 +2660,9 @@
  *
  * If you are using separator data (see \ref SEPA_DATA and \ref SEPA_INTERFACE), you have to implement this method
  * in order to free the separator data. This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_SEPAFREE(sepaFreeMyseparator)
- * {
- *    SCIP_SEPADATA* sepadata;
+ * 
+ * @snippet src/scip/sepa_gomory.c SnippetSepaFreeGomory
  *
- *    sepadata = SCIPsepaGetData(sepa);
- *    assert(sepadata != NULL);
- *
- *    SCIPfreeMemory(scip, &sepadata);
- *
- *    SCIPsepaSetData(sepa, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your separator data, remember to free this memory
  * before freeing the separator data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -2923,22 +2910,9 @@
  *
  * If you are using propagator data, you have to implement this method in order to free the propagator data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_PROPFREE(propFreeMypropagator)
- * {
- *    SCIP_PROPDATA* propdata;
+ * 
+ * @snippet src/scip/prop_redcost.c SnippetPropFreeRedcost
  *
- *    propdata = SCIPpropGetData(prop);
- *    assert(propdata != NULL);
- *
- *    SCIPfreeMemory(scip, &propdata);
- *
- *    SCIPpropSetData(prop, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your propagator data, remember to free this memory
  * before freeing the propagator data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -3274,22 +3248,9 @@
  *
  * If you are using branching rule data, you have to implement this method in order to free the branching rule data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_BRANCHFREE(branchFreeMybranchingrule)
- * {
- *    SCIP_BRANCHRULEDATA* branchruledata;
  *
- *    branchruledata = SCIPbranchruleGetData(branchrule);
- *    assert(branchruledata != NULL);
+ * @snippet src/scip/branch_random.c SnippetBranchFreeRandom
  *
- *    SCIPfreeMemory(scip, &branchruledata);
- *
- *    SCIPbranchruleSetData(branchrule, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your branching rule data, remember to free this memory
  * before freeing the branching rule data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -3512,22 +3473,9 @@
  *
  * If you are using node selector data, you have to implement this method in order to free the node selector data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_NODESELFREE(nodeselFreeMynodeselector)
- * {
- *    SCIP_NODESELDATA* nodeseldata;
- *
- *    nodeseldata = SCIPnodeselGetData(nodesel);
- *    assert(nodeseldata != NULL);
- *
- *    SCIPfreeMemory(scip, &nodeseldata);
- *
- *    SCIPnodeselSetData(nodesel, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
+
+ * @snippet src/scip/nodesel_bfs.c SnippetNodeselFreeBfs
+
  * If you have allocated memory for fields in your node selector data, remember to free this memory
  * before freeing the node selector data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -3802,22 +3750,9 @@
  *
  * If you are using primal heuristic data, you have to implement this method in order to free the primal heuristic data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_HEURFREE(heurFreeMyheuristic)
- * {
- *    SCIP_HEURDATA* heurdata;
  *
- *    heurdata = SCIPheurGetData(heur);
- *    assert(heurdata != NULL);
+ * @snippet applications/Coloring/src/heur_init.c SnippetHeurFreeInit
  *
- *    SCIPfreeMemory(scip, &heurdata);
- *
- *    SCIPheurSetData(heur, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your primal heuristic data, remember to free this memory
  * before freeing the primal heuristic data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -4161,22 +4096,9 @@
  *
  * If you are using relaxation handler data, you have to implement this method in order to free the relaxation handler
  * data. This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_RELAXFREE(relaxFreeMyrelaxator)
- * {
- *    SCIP_RELAXDATA* relaxdata;
  *
- *    relaxdata = SCIPrelaxGetData(relax);
- *    assert(relaxdata != NULL);
+ * @snippet unittests/src/unittest-relax/relax_unittest.c SnippetRelaxFreeUnittest
  *
- *    SCIPfreeMemory(scip, &relaxdata);
- *
- *    SCIPrelaxSetData(relax, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your relaxation handler data, remember to free this memory
  * before freeing the relaxation handler data itself.
  * If you are using the C++ wrapper class, this method is not available.
