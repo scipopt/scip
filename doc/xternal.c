@@ -203,7 +203,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Queens/scip_intro.pdf"><b>Queen</b></a>
+ *  <a href="http://scip.zib.de/download/files/scip_intro_01.pdf"><b>Queens</b></a>
  *  </td>
  *  <td>
  *  An example showing the use of \SCIP as callable library.
