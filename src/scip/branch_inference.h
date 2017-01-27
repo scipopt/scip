@@ -49,7 +49,10 @@
 extern "C" {
 #endif
 
-/** creates the inference history branching rule and includes it in SCIP */
+/** creates the inference history branching rule and includes it in SCIP
+ *
+ *  @ingroup BranchingRuleIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeBranchruleInference(
    SCIP*                 scip                /**< SCIP data structure */

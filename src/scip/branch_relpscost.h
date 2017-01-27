@@ -49,11 +49,19 @@
 extern "C" {
 #endif
 
-/** creates the reliable pseudo cost branching rule and includes it in SCIP */
+/** creates the reliable pseudo cost branching rule and includes it in SCIP
+ *
+ *  @ingroup BranchingRuleIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup BRANCHINGRULES
+ *
+ * @{
+ */
 
 /** execution reliability pseudo cost branching with the given branching candidates */
 EXTERN
@@ -68,6 +76,8 @@ SCIP_RETCODE SCIPexecRelpscostBranching(
    SCIP_Bool             executebranching,   /**< perform a branching step after probing */
    SCIP_RESULT*          result              /**< pointer to the result of the execution */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }
