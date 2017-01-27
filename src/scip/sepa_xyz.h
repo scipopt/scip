@@ -31,11 +31,23 @@
 extern "C" {
 #endif
 
-/** creates the xyz separator and includes it in SCIP */
+/** creates the xyz separator and includes it in SCIP
+ *
+ * @ingroup SeparatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeSepaXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup SEPARATORS
+ *
+ * @{
+ */
+
+/* TODO place other public methods in this group to facilitate navigation through the documentation */
+
+/* @} */
 
 #ifdef __cplusplus
 }
