@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_tree.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for branch and bound tree
  * @author Tobias Achterberg
  */
@@ -40,6 +40,13 @@ extern "C" {
 
 /*
  * Node methods
+ */
+
+/**@defgroup PublicNodeMethods Nodes
+ * @ingroup PublicTreeMethods
+ * @brief  methods for nodes of the search tree of \SCIP
+ *
+ * @{
  */
 
 /** node comparator for best lower bound */
@@ -245,6 +252,8 @@ SCIP_CONSSETCHG* SCIPnodeGetConssetchg(
 #define SCIPnodeGetConssetchg(node)    ((node)->conssetchg)
 
 #endif
+
+/* @} */
 
 #ifdef __cplusplus
 }

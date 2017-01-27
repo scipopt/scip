@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_dialog.h
- * @brief  datastructures for user interface dialog
+ * @ingroup INTERNALAPI
+ * @brief  data structures for user interface dialog
  * @author Tobias Achterberg
  */
 

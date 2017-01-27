@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   primal.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for collecting primal CIP solutions and primal informations
  * @author Tobias Achterberg
  */

@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_var.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for problem variables
  * @author Tobias Achterberg
  */
@@ -45,6 +45,13 @@ extern "C" {
 
 /*
  * methods for variables 
+ */
+
+/**@defgroup PublicVariableMethods Problem Variables
+ * @ingroup PublicProblemMethods
+ * @brief public methods for problem variables
+ *
+ * @{
  */
 
 /** gets number of locks for rounding down */
@@ -1349,6 +1356,8 @@ SCIP_HOLELIST* SCIPholelistGetNext(
 #define SCIPholelistGetNext(holelist)          ((holelist)->next)
 
 #endif
+
+/**@} */
 
 #ifdef __cplusplus
 }

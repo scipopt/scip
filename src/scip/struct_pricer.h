@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_pricer.h
- * @brief  datastructures for variable pricers
+ * @ingroup INTERNALAPI
+ * @brief  data structures for variable pricers
  * @author Tobias Achterberg
  */
 

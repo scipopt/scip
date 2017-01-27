@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for constraints and constraint handlers
  * @author Tobias Achterberg
  */

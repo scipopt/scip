@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlp.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for NLP management
  * @author Thorsten Gellermann
  * @author Stefan Vigerske

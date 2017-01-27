@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scipshell.h
+ * @ingroup PUBLICCOREAPI
  * @brief  SCIP command line interface
  * @author Tobias Achterberg
  */

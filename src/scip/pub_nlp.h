@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_nlp.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for NLP management
  * @author Thorsten Gellermann
  * @author Stefan Vigerske
@@ -42,8 +42,19 @@
 extern "C" {
 #endif
 
-/**@name Expressions and Expression tree methods */
-/**@{ */
+/**@defgroup PublicNLPMethods NLP Relaxation
+ * @ingroup PUBLICCOREAPI
+ * @brief methods for the nonlinear relaxation
+ *
+ * @{
+ */
+
+
+/**@defgroup PublicExpressionTreeMethods Expression (Tree)
+ * @brief methods for expressions and expression trees
+ *
+ * @{
+ */
 
 /** returns variables of expression tree */
 EXTERN
@@ -86,8 +97,11 @@ int SCIPexprtreeFindVar(
 
 /**@} */
 
-/**@name Nonlinear row methods */
-/**@{ */
+/**@defgroup PublicNLRowMethods Nonlinear Rows
+ * @brief methods for the creation and interaction with rows of the NLP relaxation
+ *
+ * @{
+ */
 
 /** gets constant */
 EXTERN
@@ -210,6 +224,8 @@ SCIP_Real SCIPnlrowGetDualsol(
    );
 
 /**@} */
+
+/**@} */ /* PublicNLPMethods */
 
 #ifdef __cplusplus
 }

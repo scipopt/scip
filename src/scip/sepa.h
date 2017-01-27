@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepa.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for separators
  * @author Tobias Achterberg
  */

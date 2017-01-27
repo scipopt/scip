@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for branching rules and branching candidate storage
  * @author Tobias Achterberg
  */

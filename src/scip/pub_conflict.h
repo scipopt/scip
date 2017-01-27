@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_conflict.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for conflict analysis handlers
  * @author Tobias Achterberg
  */
@@ -33,6 +33,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@defgroup PublicConflictMethods Conflict Analysis
+ * @ingroup PluginManagementMethods
+ * @brief public methods related to conflict analysis
+ *
+ * @{
+ */
 
 /** compares two conflict handlers w. r. to their priority */
 EXTERN
@@ -90,6 +97,8 @@ EXTERN
 SCIP_Real SCIPconflicthdlrGetTime(
    SCIP_CONFLICTHDLR*    conflicthdlr        /**< conflict handler */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

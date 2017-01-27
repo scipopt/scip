@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_event.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for managing events
  * @author Tobias Achterberg
  */

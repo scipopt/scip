@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_history.h
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for branching and inference history structure
  * @author Stefan Heinz
  */

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   compr.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for tree compressions
  * @author Jakob Witzig
  */
