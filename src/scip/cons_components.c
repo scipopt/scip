@@ -327,7 +327,7 @@ SCIP_RETCODE componentSetupWorkingSol(
 
       for( v = 0; v < nsourcevars; ++v )
       {
-         subvar = SCIPhashmapGetImage(varmap, sourcevars[v]);
+         subvar = (SCIP_VAR*)SCIPhashmapGetImage(varmap, sourcevars[v]);
          if( subvar != NULL && SCIPvarGetIndex(subvar) >= nvars )
          {
             /* the variable is either locally fixed or could be an inactive variable present in a constraint
