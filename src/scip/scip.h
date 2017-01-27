@@ -3719,6 +3719,7 @@ SCIP_RETCODE SCIPsetSepaPriority(
  *
  * @{
  */
+
 /** creates a propagator and includes it in SCIP.
  *
 
