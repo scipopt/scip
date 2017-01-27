@@ -13,14 +13,14 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal.c
+/**@file   xternal_gmi.c
  * @brief  main document page
  * @author Marc Pfetsch
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Gomory Mixed Integer Cut Example
+/**@page GMI_MAIN Gomory Mixed Integer Cut Example
  * @version  1.0
  * @author   Giacomo Nannicini
  * @author   Marc Pfetsch
