@@ -35935,6 +35935,7 @@ SCIP_RETCODE SCIPsolveProbingRelax(
 SCIP_RETCODE SCIPgetDivesetScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< general diving settings */
+   SCIP_HEURDATA*        heurdata,           /**< data of the calling heuristic */
    SCIP_DIVETYPE         divetype,           /**< represents different methods for a dive set to explore the next children */
    SCIP_VAR*             divecand,           /**< the candidate for which the branching direction is requested */
    SCIP_Real             divecandsol,        /**< LP solution value of the candidate */
@@ -35950,7 +35951,8 @@ SCIP_RETCODE SCIPgetDivesetScore(
 
    SCIP_CALL( checkStage(scip, "SCIPgetDivesetScore", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPdivesetGetScore(diveset, scip->set, divetype, divecand, divecandsol, divecandfrac, candscore, roundup) );
+   SCIP_CALL( SCIPdivesetGetScore(diveset, scip->set, heurdata, divetype, divecand, divecandsol, divecandfrac, candscore,
+         roundup) );
 
    return SCIP_OKAY;
 }
@@ -36012,6 +36014,7 @@ void SCIPupdateDivesetStats(
 SCIP_RETCODE SCIPgetDiveBoundChanges(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< diving settings to control scoring */
+   SCIP_HEURDATA*        heurdata,           /**< data of the calling heuristic */
    SCIP_SOL*             sol,                /**< current solution of diving mode */
    SCIP_Bool*            success,            /**< pointer to store whether constraint handler successfully found a variable */
    SCIP_Bool*            infeasible          /**< pointer to store whether the current node was detected to be infeasible */
@@ -36038,7 +36041,8 @@ SCIP_RETCODE SCIPgetDiveBoundChanges(
     */
    for( i = 0; i < scip->set->nconshdlrs && !(*success || *infeasible); ++i )
    {
-      SCIP_CALL( SCIPconshdlrGetDiveBoundChanges(scip->set->conshdlrs_enfo[i], scip->set, diveset, sol, success, infeasible) );
+      SCIP_CALL( SCIPconshdlrGetDiveBoundChanges(scip->set->conshdlrs_enfo[i], scip->set, diveset, heurdata, sol,
+            success, infeasible) );
 
    }
 #ifndef NDEBUG
