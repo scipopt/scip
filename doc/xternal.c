@@ -49,7 +49,6 @@
  * See the web site of <a href="http://scip.zib.de">\SCIP</a> for more information about licensing and to download \SCIP.
  *
  * @section GETTINGSTARTED Getting started
- * -\ref NEWTUTORIAL
  *
  * - \ref WHATPROBLEMS "What types of optimization problems does SCIP solve?"
  * - \ref MAKE    "Installation information / Makefiles"
@@ -1094,16 +1093,6 @@
  *
  *
  */
-
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page NEWTUTORIAL New interactive shell tutorial
- *
- * Here is a new interactive shell tutorial
- *
- * \snippet tutorial.txt SnippetVersion
- */
-
-
 
 /**@page SHELL Tutorial: the interactive shell
  *
