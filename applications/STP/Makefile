@@ -17,6 +17,7 @@
 #@brief   Makefile for solving the Steiner tree problem using SCIP
 #@author  Gerald Gamrath
 #@author  Thorsten Koch
+#@author  Daniel Rehfeldt
 #@author  Michael Winkler
 
 #-----------------------------------------------------------------------------
@@ -43,8 +44,11 @@ CMAINOBJ	=	cmain.o \
 			grphmcut.o \
 			grphpath.o \
 			grphsave.o \
+			heur_ascendprune.o \
+			heur_slackprune.o \
 			heur_tm.o \
 			heur_local.o \
+			heur_prune.o \
 			heur_rec.o \
 			misc_stp.o \
 			probdata_stp.o \
