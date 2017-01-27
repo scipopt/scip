@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cmain.c
+/**@file   GMI/src/cmain.c
  * @brief  main file for GMI cut example
  * @author Marc Pfetsch
  */

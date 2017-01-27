@@ -225,7 +225,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/GMI"><b>GMI</b></a>
+ *  \ref GMI_MAIN "Gomory mixed integer cut example"
  *  </td>
  *  <td>
  *  An example about Gomory mixed-integer cuts.
