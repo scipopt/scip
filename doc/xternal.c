@@ -8010,6 +8010,17 @@
  * variable pricer to SCIP can be found \ref PRICER "here".
  */
 
+/**@defgroup PricerIncludes Inclusion methods
+* @ingroup PUBLICPLUGINAPI
+* @brief methods to include specific pricers into \SCIP
+*
+* This module contains methods to include specific pricers into \SCIP.
+*
+* @note All default plugins can be included at once using SCIPincludeDefaultPlugins(). There exists no pricer per default.
+*       In order to see examples of variable pricers, please consult the \ref EXAMPLES "Coding Examples" of \SCIP.
+*
+*/
+
 /**@defgroup PRIMALHEURISTICS Primal Heuristics
  * @ingroup PUBLICPLUGINAPI
  * @brief This page contains a list of all primal heuristics which are currently available.
