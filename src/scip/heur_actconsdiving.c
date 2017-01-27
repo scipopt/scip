@@ -327,9 +327,9 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreActconsdiving)
    if( SCIPisEQ(scip, candsfrac, 0.01) )
    {
       /* try to avoid variability; decide randomly if the LP solution can contain some noise.
-       * use a 1:SCIP_SCORE_PENALTYRATIO chance for scaling the score
+       * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for scaling the score
        */
-      if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_SCORE_PENALTYRATIO) == 0 )
+      if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
          (*score) *= 0.01;
    }
    else if( candsfrac < 0.01 )

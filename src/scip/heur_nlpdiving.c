@@ -296,9 +296,9 @@ SCIP_RETCODE chooseFracVar(
             if( SCIPisEQ(scip, frac, 0.01) )
             {
                /* try to avoid variability; decide randomly if the LP solution can contain some noise.
-                * use a 1:SCIP_SCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
+                * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
                 */
-               if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_SCORE_PENALTYRATIO) == 0 )
+               if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
                   objgain *= 1000.0;
             }
             else if( frac < 0.01 )
@@ -342,9 +342,9 @@ SCIP_RETCODE chooseFracVar(
          if( SCIPisEQ(scip, frac, 0.01) )
          {
             /* try to avoid variability; decide randomly if the LP solution can contain some noise.
-             * use a 1:SCIP_SCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
+             * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
              */
-            if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_SCORE_PENALTYRATIO) == 0 )
+            if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
                frac += 10.0;
          }
          else if( frac < 0.01 )
@@ -567,9 +567,9 @@ SCIP_RETCODE chooseCoefVar(
             if( SCIPisEQ(scip, frac, 0.01) )
             {
                /* try to avoid variability; decide randomly if the LP solution can contain some noise.
-                * use a 1:SCIP_SCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
+                * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
                 */
-               if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_SCORE_PENALTYRATIO) == 0 )
+               if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
                   nviolrows *= 100.0;
             }
             else if( frac < 0.01 )
@@ -624,9 +624,9 @@ SCIP_RETCODE chooseCoefVar(
          if( SCIPisEQ(scip, frac, 0.01) )
          {
             /* try to avoid variability; decide randomly if the LP solution can contain some noise.
-             * use a 1:SCIP_SCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
+             * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
              */
-            if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_SCORE_PENALTYRATIO) == 0 )
+            if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
                nviolrows *= 100.0;
          }
          else if( frac < 0.01 )
@@ -958,9 +958,9 @@ SCIP_RETCODE chooseGuidedVar(
             if( SCIPisEQ(scip, frac, 0.01) )
             {
                /* try to avoid variability; decide randomly if the LP solution can contain some noise.
-                * use a 1:SCIP_SCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
+                * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
                 */
-               if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_SCORE_PENALTYRATIO) == 0 )
+               if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
                   objgain *= 1000.0;
             }
             else if( frac < 0.01 )
@@ -996,9 +996,9 @@ SCIP_RETCODE chooseGuidedVar(
          if( SCIPisEQ(scip, frac, 0.01) )
          {
             /* try to avoid variability; decide randomly if the LP solution can contain some noise.
-             * use a 1:SCIP_SCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
+             * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
              */
-            if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_SCORE_PENALTYRATIO) == 0 )
+            if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
                frac += 10.0;
          }
          else if( frac < 0.01 )
@@ -1149,9 +1149,9 @@ SCIP_RETCODE chooseDoubleVar(
       if( SCIPisEQ(scip, frac, 0.01) )
       {
          /* try to avoid variability; decide randomly if the LP solution can contain some noise.
-          * use a 1:SCIP_SCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
+          * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
           */
-         if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_SCORE_PENALTYRATIO) == 0 )
+         if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
             frac += 10.0;
       }
       else if( frac < 0.01 )

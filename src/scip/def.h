@@ -235,10 +235,16 @@ extern "C" {
 #define SCIP_MAXTREEDEPTH             65534  /**< maximal allowed depth of the branch-and-bound tree */
 
 /*
- * Scoring settings
+ * Probing scoring settings
  */
 
-#define SCIP_SCORE_PENALTYRATIO       2  /**< ratio for penalizing too small score that are within the tolerances */
+#define SCIP_PROBINGSCORE_PENALTYRATIO    2  /**< ratio for penalizing too small fractionalities while probing.
+                                              *   if the fractional part of a variable is smaller than a given threshold
+                                              *   the corresponding score gets penalized. due to numerical troubles
+                                              *   we will flip a coin whenever SCIPisEQ(scip, fractionality, threshold)
+                                              *   evaluates to true. this parameter defines the change that a coin flip
+                                              *   leads penalizing the score, i.e., there is 1:2 change for penalizing.
+                                              */
 
 /*
  * Global debugging settings
