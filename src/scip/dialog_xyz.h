@@ -31,7 +31,10 @@
 extern "C" {
 #endif
 
-/** creates the xyz dialog and includes it in SCIP */
+/** creates the xyz dialog and includes it in SCIP
+ *
+ *  @ingroup DialogIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeDialogXyz(
    SCIP*                 scip                /**< SCIP data structure */
