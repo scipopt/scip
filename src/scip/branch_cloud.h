@@ -32,7 +32,10 @@
 extern "C" {
 #endif
 
-/** creates the cloud branching rule and includes it in SCIP */
+/** creates the cloud branching rule and includes it in SCIP
+ *
+ *  @ingroup BranchingRuleIncludes
+ */
 extern
 SCIP_RETCODE SCIPincludeBranchruleCloud(
    SCIP*                 scip                /**< SCIP data structure */

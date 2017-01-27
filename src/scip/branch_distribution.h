@@ -66,11 +66,19 @@
 extern "C" {
 #endif
 
-/** creates the distribution branching rule and includes it in SCIP */
+/** creates the distribution branching rule and includes it in SCIP
+ *
+ *  @ingroup BranchingRuleIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeBranchruleDistribution(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup BRANCHINGRULES
+ *
+ * @{
+ */
 
 /** calculate the variable's distribution parameters (mean and variance) for the bounds specified in the arguments.
  *  special treatment of infinite bounds necessary */
@@ -131,6 +139,8 @@ SCIP_RETCODE SCIPupdateDistributionScore(
    SCIP_Real*            downscore,          /**< pointer to store the new score for branching down */
    char                  scoreparam          /**< parameter to determine the way the score is calculated */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }
