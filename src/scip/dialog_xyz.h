@@ -40,6 +40,15 @@ SCIP_RETCODE SCIPincludeDialogXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/**@addtogroup DIALOGS
+ *
+ * @{
+ */
+
+/** TODO: add further methods to this group for documentation purposes */
+
+/* @} */
+
 #ifdef __cplusplus
 }
 #endif
