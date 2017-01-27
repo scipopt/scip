@@ -32,6 +32,11 @@
 extern "C" {
 #endif
 
+/**@addtogroup SEPARATORS
+ *
+ * @{
+ */
+
 /** Performs the cut generation heuristic of the c-MIR separation algorithm, i.e., tries to generate a c-MIR cut which is
  *  valid for the mixed knapsack set corresponding to the current aggregated constraint. Cuts will only be added here if 
  *  no pointer to store best scaling factor delta is given.
@@ -67,7 +72,12 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    SCIP_Bool*            deltavalid          /**< pointer to store whether best delta value is valid or NULL */
    );
 
-/** creates the cmir separator and includes it in SCIP */
+/* @} */
+
+/** creates the cmir separator and includes it in SCIP
+ *
+ * @ingroup SeparatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeSepaCmir(
    SCIP*                 scip                /**< SCIP data structure */

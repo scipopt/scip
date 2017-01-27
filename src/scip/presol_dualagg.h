@@ -45,7 +45,10 @@
 extern "C" {
 #endif
 
-/** creates the dualagg presolver and includes it in SCIP */
+/** creates the dualagg presolver and includes it in SCIP
+ *
+ * @ingroup PresolverIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePresolDualagg(
    SCIP*                 scip                /**< SCIP data structure */

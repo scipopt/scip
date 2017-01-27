@@ -82,7 +82,4 @@ running:
    (e.g. "bin/scipmip.linux.x86.gnu.opt.spx") or "bin/scipmip" which is a link
    to last compiled version
 
-5. To generate the documentation, you need to have doxygen installed, and
-   enter "make doc"
-
 On some machines, you should use gmake instead of make.

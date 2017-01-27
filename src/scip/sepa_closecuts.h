@@ -38,11 +38,19 @@
 extern "C" {
 #endif
 
-/** creates the closecuts separator and includes it in SCIP */
+/** creates the closecuts separator and includes it in SCIP
+ *
+ * @ingroup SeparatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeSepaClosecuts(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup SEPARATORS
+ *
+ * @{
+ */
 
 /** sets point to be used as base point for computing the point to be separated
  *
@@ -53,6 +61,8 @@ SCIP_RETCODE SCIPsetBasePointClosecuts(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol                 /**< base point solution */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

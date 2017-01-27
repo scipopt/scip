@@ -244,7 +244,7 @@ SCIP_RETCODE SCIPvalidateStpSol(
 #endif
       for(i = 0; i < g->knots; i++)
       {
-         if( g->stp_type == STP_DEG_CONS )
+         if( g->stp_type == STP_DCSTP )
          {
             deg = 0;
             for( e = g->outbeg[i]; e != EAT_LAST ; e = g->oeat[e] )

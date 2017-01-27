@@ -12139,7 +12139,7 @@ SCIP_DECL_CONSDELETE(consDeleteKnapsack)
 }
 
 /** transforms constraint data into data belonging to the transformed problem */
-/**! [example of a transformation callback]*/
+/**! [SnippetConsTransKnapsack]*/
 static
 SCIP_DECL_CONSTRANS(consTransKnapsack)
 {  /*lint --e{715}*/
@@ -12178,7 +12178,7 @@ SCIP_DECL_CONSTRANS(consTransKnapsack)
 
    return SCIP_OKAY;
 }
-/**! [example of a transformation callback]*/
+/**! [SnippetConsTransKnapsack]*/
 
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 static
