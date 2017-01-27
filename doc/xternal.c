@@ -195,7 +195,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/MIPSolver"><b>MIPSolver</b></a>
+ *  \ref MIPSOLVER_MAIN "MIP solver"
  *  </td>
  *  <td>
  *  A minimal implementation for using \SCIP included into another source code
