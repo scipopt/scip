@@ -10082,6 +10082,7 @@ SCIP_RETCODE exprgraphNodeUpdateBounds(
 
    /* call interval evaluation function for this operand */
    assert( exprOpTable[node->op].inteval != NULL );
+   SCIPintervalSet(&newbounds, 0.0);
    SCIP_CALL( exprOpTable[node->op].inteval(infinity, node->data, node->nchildren, childbounds, NULL, NULL, &newbounds) );
 
    /* free memory, if allocated before */
