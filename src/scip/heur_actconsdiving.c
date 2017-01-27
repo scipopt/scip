@@ -292,13 +292,11 @@ SCIP_DECL_HEUREXEC(heurExecActconsdiving) /*lint --e{715}*/
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreActconsdiving)
 {
-   SCIP_HEURDATA* heurdata;
    SCIP_Bool mayrounddown;
    SCIP_Bool mayroundup;
    SCIP_Real downscore;
    SCIP_Real upscore;
 
-   heurdata = (SCIP_HEURDATA*)dataptr;
    assert(heurdata != NULL);
 
    mayrounddown = SCIPvarMayRoundDown(cand);

@@ -183,7 +183,6 @@ SCIP_DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
 {
-   SCIP_HEURDATA* heurdata;
    SCIP_Real pscostdown;
    SCIP_Real pscostup;
    SCIP_Real pscostquot;
@@ -191,7 +190,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
    SCIP_Bool mayrounddown;
    SCIP_Bool mayroundup;
 
-   heurdata = (SCIP_HEURDATA*)dataptr;
    assert(heurdata != NULL);
 
    mayrounddown = SCIPvarMayRoundDown(cand);

@@ -79,7 +79,7 @@ static
 SCIP_RETCODE selectNextDiving(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< dive set */
-   void*                 dataptr,            /**< pointer to data field of additional data */
+   SCIP_HEURDATA*        heurdata,           /**< data of the calling heuristic */
    SCIP_SOL*             worksol,            /**< current working solution */
    SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered? */
    SCIP_Bool             storelpcandscores,  /**< should the scores of the LP candidates be updated? */
@@ -106,7 +106,7 @@ SCIP_RETCODE selectNextDiving(
    /* we use diving solution enforcement provided by the constraint handlers */
    if( !onlylpbranchcands )
    {
-      SCIP_CALL( SCIPgetDiveBoundChanges(scip, diveset, dataptr, worksol, enfosuccess, infeasible) );
+      SCIP_CALL( SCIPgetDiveBoundChanges(scip, diveset, heurdata, worksol, enfosuccess, infeasible) );
    }
    else
    {
@@ -128,7 +128,7 @@ SCIP_RETCODE selectNextDiving(
          /* scores are kept in arrays for faster reuse */
          if( storelpcandscores )
          {
-            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, dataptr, SCIP_DIVETYPE_INTEGRALITY, lpcands[c], lpcandssol[c],
+            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, heurdata, SCIP_DIVETYPE_INTEGRALITY, lpcands[c], lpcandssol[c],
                   lpcandsfrac[c], &lpcandsscores[c], &lpcandroundup[c]) );
          }
 
@@ -245,6 +245,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    int lpsolvefreq;
 
    assert(scip != NULL);
+   assert(heur != NULL);
    assert(result != NULL);
    assert(worksol != NULL);
 
@@ -288,13 +289,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    maxnlpiterations = (SCIP_Longint)((1.0 + 10*(oldsolsuccess+1.0)/(ncalls+1.0)) * SCIPdivesetGetMaxLPIterQuot(diveset) * nlpiterations);
    maxnlpiterations += SCIPdivesetGetMaxLPIterOffset(diveset);
 
-   if( heur != NULL )
-   {
-      heurdata = SCIPheurGetData(heur);
-      assert(heurdata != NULL);
-   }
-   else
-      heurdata = NULL;
+   heurdata = SCIPheurGetData(heur);
 
    /* don't try to dive, if we took too many LP iterations during diving */
    if( SCIPdivesetGetNLPIterations(diveset) >= maxnlpiterations )
@@ -515,7 +510,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
       enfosuccess = FALSE;
       /* select the next diving action by selecting appropriate dive bound changes for the preferred and alternative child */
-      SCIP_CALL( selectNextDiving(scip, diveset, (void*)heurdata, worksol, onlylpbranchcands, SCIPgetProbingDepth(scip) == lastlpdepth,
+      SCIP_CALL( selectNextDiving(scip, diveset, heurdata, worksol, onlylpbranchcands, SCIPgetProbingDepth(scip) == lastlpdepth,
              lpcands, lpcandssol, lpcandsfrac, lpcandsscores, lpcandroundup, &nviollpcands, nlpcands,
              &enfosuccess, &infeasible) );
 
@@ -737,7 +732,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                enfosuccess = FALSE;
 
                /* select the next diving action */
-               SCIP_CALL( selectNextDiving(scip, diveset, (void*)heurdata, worksol, onlylpbranchcands, SCIPgetProbingDepth(scip) == lastlpdepth,
+               SCIP_CALL( selectNextDiving(scip, diveset, heurdata, worksol, onlylpbranchcands, SCIPgetProbingDepth(scip) == lastlpdepth,
                       lpcands, lpcandssol, lpcandsfrac, lpcandsscores, lpcandroundup, &nviollpcands, nlpcands,
                       &enfosuccess, &infeasible) );
 

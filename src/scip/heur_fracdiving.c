@@ -184,12 +184,13 @@ SCIP_DECL_HEUREXEC(heurExecFracdiving) /*lint --e{715}*/
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
 {
-   SCIP_HEURDATA* heurdata;
    SCIP_Real obj;
    SCIP_Real objnorm;
    SCIP_Real objgain;
    SCIP_Bool mayrounddown;
    SCIP_Bool mayroundup;
+
+   assert(heurdata != NULL);
 
    /* score fractionality if candidate is an SOS1 variable */
    if ( divetype == SCIP_DIVETYPE_SOS1VARIABLE )
@@ -201,9 +202,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
 
       return SCIP_OKAY;
    }
-
-   heurdata = (SCIP_HEURDATA*)dataptr;
-   assert(heurdata != NULL);
 
    mayrounddown = SCIPvarMayRoundDown(cand);
    mayroundup = SCIPvarMayRoundUp(cand);

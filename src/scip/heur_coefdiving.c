@@ -180,11 +180,9 @@ SCIP_DECL_HEUREXEC(heurExecCoefdiving) /*lint --e{715}*/
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
 {
-   SCIP_HEURDATA* heurdata;
    SCIP_Bool mayrounddown = SCIPvarMayRoundDown(cand);
    SCIP_Bool mayroundup = SCIPvarMayRoundUp(cand);
 
-   heurdata = (SCIP_HEURDATA*)dataptr;
    assert(heurdata != NULL);
 
    if( mayrounddown || mayroundup )

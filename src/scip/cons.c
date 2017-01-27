@@ -3448,7 +3448,7 @@ SCIP_RETCODE SCIPconshdlrGetDiveBoundChanges(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_DIVESET*         diveset,            /**< diving settings to control scoring */
-   void*                 dataptr,            /**< pointer to data field of additional data */
+   SCIP_HEURDATA*        heurdata,           /**< data of the calling heuristic */
    SCIP_SOL*             sol,                /**< current solution of diving mode */
    SCIP_Bool*            success,            /**< pointer to store whether constraint handler successfully found a variable */
    SCIP_Bool*            infeasible          /**< pointer to store whether the current node was detected to be infeasible */
@@ -3463,7 +3463,7 @@ SCIP_RETCODE SCIPconshdlrGetDiveBoundChanges(
 
    if( conshdlr->consgetdivebdchgs != NULL )
    {
-      SCIP_CALL( conshdlr->consgetdivebdchgs(set->scip, conshdlr, diveset, dataptr, sol, success, infeasible) );
+      SCIP_CALL( conshdlr->consgetdivebdchgs(set->scip, conshdlr, diveset, heurdata, sol, success, infeasible) );
    }
 
    return SCIP_OKAY;
