@@ -1259,7 +1259,7 @@ SCIP_RETCODE solveSubMIP(
    SCIP_CALL( SCIPcheckCopyLimits(scip, success) );
 
    if( !(*success) )
-      goto TERMINATE;
+      return SCIP_OKAY;
 
    /* create subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
@@ -1393,7 +1393,6 @@ SCIP_RETCODE solveSubMIP(
       SCIP_CALL( createNewSol(scip, subscip, heur, varmap, subsols[c], success) );
    }
 
- TERMINATE:
    /* free sub-SCIP and hash map */
    SCIP_CALL( SCIPfree(&subscip) );
    SCIPhashmapFree(&varmap);
