@@ -986,10 +986,9 @@ TERMINATE:
    {
       SCIP_CALL( SCIPfreeSol(subscip, &subsol) );
    }
-   if( NULL != subscip )
-   {
-      SCIP_CALL( SCIPfree(&subscip) );
-   }
+
+   SCIP_CALL( SCIPfree(&subscip) );
+
    SCIPdebugMsg(scip, "repair finished\n");
    return SCIP_OKAY;
 }
