@@ -2181,7 +2181,7 @@
  * This can be done by the following procedure:
  *
  * @snippet applications/STP/src/pricer_stp.c SnippetPricerFreeSTP
-
+ *
  * If you have allocated memory for fields in your pricer data, remember to free this memory
  * before freeing the pricer data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -4315,40 +4315,15 @@
  * write/display the copied instances. Since the reader is in charge of that, you might want to copy the plugin. Below
  * you see a standard implementation.
  *
- * \code
- * static
- * SCIP_DECL_READERCOPY(readerCopyMyreader)
- * {
- *    assert(scip != NULL);
- *    assert(reader != NULL);
- *    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
- *
- *    SCIP_CALL( SCIPincludeReaderMyreader(scip) );
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
+ * @snippet src/scip/reader_mps.c SnippetReaderCopyMps
  *
  * @subsection READERFREE
  *
  * If you are using file reader data, you have to implement this method in order to free the file reader data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_READERFREE(readerFreeMyreader)
- * {
- *    SCIP_READERDATA* readerdata;
  *
- *    readerdata = SCIPreaderGetData(reader);
- *    assert(readerdata != NULL);
+ * @snippet src/scip/reader_mps.c SnippetReaderFreeMps
  *
- *    SCIPfreeMemory(scip, &readerdata);
- *
- *    SCIPreaderSetData(reader, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your file reader data, remember to free this memory
  * before freeing the file reader data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -4433,17 +4408,9 @@
  * \n
  * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the dialog, which can be done by the following lines of code:
- * \code
- * if( !SCIPdialogHasEntry(parentdialog, DIALOG_NAME) )
- * {
- *    SCIP_CALL( SCIPcreateDialog(scip, &dialog, dialogExecMydialog, dialogDescMydialog, dialogFreeMydialog,
- *          DIALOG_NAME, DIALOG_DESC, DIALOG_ISSUBMENU, dialogdata) );
  *
- *    SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
- *
- *    SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
- * }
- * \endcode
+ * @snippet src/scip/dialog_xyz.c SnippetDialogAddXyz
+
  * Here "parentdialog" has to be an existing dialog which is defined to be a menu (see DIALOG_ISSUBMENU), e.g.,
  * the default root dialog. The method SCIPgetRootDialog() returns the root dialog.
  *
@@ -4899,41 +4866,15 @@
  * (SCIP_EVENTTYPE_BESTSOLFOUND), you might want to implement that callback. The event handler example which you find
  * in the directory "examples/Eventhdlr/" uses that callback.
  *
- * \code
- * static
- * SCIP_DECL_EVENTCOPY(eventCopyBestsol)
- * {
- *    assert(scip != NULL);
- *    assert(eventhdlr != NULL);
- *    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
- *
- *    SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
- *
+ * @snippet src/scip/event_softtimelimit.c SnippetEventCopySofttimelimit
  *
  * @subsection EVENTFREE
  *
  * If you are using event handler data, you have to implement this method in order to free the event handler data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_EVENTFREE(eventFreeBestsol)
- * {
- *    SCIP_EVENTHDLRDATA* eventhdlrdata;
  *
- *    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
- *    assert(eventhdlrdata != NULL);
+ * @snippet src/scip/event_softtimelimit.c SnippetEventFreeSofttimelimit
  *
- *    SCIPfreeMemory(scip, &eventhdlrdata);
- *
- *    SCIPeventhdlrSetData(eventhdlr, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your event handler data, remember to free this memory
  * before freeing the event handler data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -5739,21 +5680,9 @@
  *  - Use <b>asserts</b> in your code to show preconditions for the parameters, invariants and postconditions.
  *    Assertions are boolean expressions which inevitably have to evaluate to <code>TRUE</code>. Consider the
  *    following example, taken from the file src/scip/cons_linear.c:
- *    \code
- *    SCIP_RETCODE consdataCatchEvent(
- *       SCIP*                 scip,               /**< SCIP data structure */
- *       SCIP_CONSDATA*        consdata,           /**< linear constraint data */
- *       SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
- *       int                   pos                 /**< array position of variable to catch bound change events for */
- *       )
- *       {
- *          assert(scip != NULL);
- *          assert(consdata != NULL);
- *          assert(eventhdlr != NULL);
- *          assert(0 <= pos && pos < consdata->nvars);
- *          ...
- *       }
- *    \endcode
+ *
+ *    @snippet src/scip/cons_linear.c SnippetDebugAssertions
+ *
  *    As you can see, both pointers and integers are checked for valid values at the beginning of the
  *    function <code>consdataCatchEvent()</code>. This is particularly important for, e.g., array indices like
  *    the variable <code>pos</code> in this example, where using the <code>consdata->nvars[pos]</code>
@@ -5793,91 +5722,23 @@
  *    containing a solution in SCIP format (see \ref EXAMPLE_2).
  *    This solution is then read and it is checked for every cut, whether the solution violates the cut.
  *
- *  @section EXAMPLE_1 How to activate debug messages
- *    For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.h, recompile SCIP
- *    in DBG mode, and run the SCIP interactive shell to solve p0033.mps from the
- *     <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
- * \code
- * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
- * Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * @section EXAMPLE_1 How to activate debug messages
+ * For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.h, recompile SCIP
+ * in DBG mode, and run the SCIP interactive shell to solve p0033.mps from the
+ * <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
  *
- * user parameter file <scip.set> not found - using default parameters
- *
- * SCIP> read check/IP/miplib/p0033.mps
- * original problem has 33 variables (33 bin, 0 int, 0 impl, 0 cont) and 16 constraints
- * SCIP> optimize
- * ...
- *  0.1s|     1 |     0 |   132 | 257k|   0 |  14 |  30 |  13 |  13 |  30 |  51 |  39 |   0 |   0 | 3.026472e+03 | 3.347000e+03 |  10.59%
- * [src/scip/heur_oneopt.c:332] debug: Row <R122> has activity 110
- * [src/scip/heur_oneopt.c:332] debug: Row <R123> has activity 216
- * ...
- * [src/scip/heur_oneopt.c:101] debug: Try to shift down variable <t_C157> with
- * [src/scip/heur_oneopt.c:102] debug:     lb:<-0> <= val:<1> <= ub:<1> and obj:<171> by at most: <1>
- * [src/scip/heur_oneopt.c:135] debug:  -> The shift value had to be reduced to <0>, because of row <R122>.
- * [src/scip/heur_oneopt.c:137] debug:     lhs:<-1e+20> <= act:<110> <= rhs:<148>, colval:<-60>
- * ...
- * [src/scip/heur_oneopt.c:383] debug:  Only one shiftcand found, var <t_C167>, which is now shifted by<-1.0>
- * k 0.1s|     1 |     0 |   132 | 258k|   0 |  14 |  30 |  13 |  13 |  30 |  51 |  39 |   0 |   0 | 3.026472e+03 | 3.164000e+03 |   4.54%
- * [src/scip/heur_oneopt.c:436] debug: found feasible shifted solution:
- * objective value:                     3164.00000000012
- * C157                                                1   (obj:171)
- * C163                                                1   (obj:163)
- * C164                                                1   (obj:69)
- * C170                                                1   (obj:49)
- * C172                                                1   (obj:258)
- * C174                                                1   (obj:250)
- * C175                                                1   (obj:500)
- * C179                                                1   (obj:318)
- * C181                                                1   (obj:318)
- * C182                                                1   (obj:159)
- * C183                                 1.00000000000038   (obj:318)
- * C184                                                1   (obj:159)
- * C185                                                1   (obj:318)
- * C186                                                1   (obj:114)
- * [src/scip/heur_oneopt.c:498] debug: Finished 1-opt heuristic
- * ...
- * \endcode
+ * \include debugexamples/example1.txt
  *
  * @section EXAMPLE_2 How to add a debug solution
  *
  * Continuing the example above, we finish the solving process.
  * The optimal solution can now be written to a file:
- * \code
- * SCIP> display solution
- *
- * objective value:                                 3089
- * C157                                                1   (obj:171)
- * C163                                                1   (obj:163)
- * C164                                                1   (obj:69)
- * C166                                                1   (obj:183)
- * C170                                                1   (obj:49)
- * C174                                                1   (obj:250)
- * C177                                                1   (obj:500)
- * C179                                                1   (obj:318)
- * C181                                                1   (obj:318)
- * C182                                                1   (obj:159)
- * C183                                                1   (obj:318)
- * C184                                                1   (obj:159)
- * C185                                                1   (obj:318)
- * C186                                                1   (obj:114)
- *
- * SCIP> write solution check/p0033.sol
- *
- * written solution information to file <check/p0033.sol>
- * \endcode
+ * \include debugexamples/example2_1.txt
  *
  * If we afterwards use
  * <code>\#define SCIP_DEBUG_SOLUTION "check/p0033.sol"</code> in debug.h, recompile and run SCIP,
  * it will output:
- * \code
- * SCIP> read check/IP/miplib/p0033.mps
- * original problem has 33 variables (33 bin, 0 int, 0 impl, 0 cont) and 16 constraints
- * SCIP> optimize
- *
- * presolving:
- * ***** debug: reading solution file <check/p0033.sol>
- * ***** debug: read 15 non-zero entries
- * \endcode
+ * \include debugexamples/example2_2.txt
  * Further debug output would only appear, if the solution was cut off in the solving process.
  * Of course, this is not the case! Hopefully...otherwise, please send a bug report ;-)
  */

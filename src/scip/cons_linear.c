@@ -691,6 +691,7 @@ SCIP_RETCODE unlockRounding(
 }
 
 /** creates event data for variable at given position, and catches events */
+/**! [SnippetDebugAssertions] */
 static
 SCIP_RETCODE consCatchEvent(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -725,6 +726,7 @@ SCIP_RETCODE consCatchEvent(
 
    return SCIP_OKAY;
 }
+/**! [SnippetDebugAssertions] */
 
 /** deletes event data for variable at given position, and drops events */
 static
