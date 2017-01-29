@@ -470,7 +470,7 @@
  *
  * In this section we state a few examples illustrating the \SCIP code style.
  *
- * @snippet src/scip/type_set.h SnippetCodeStyleExample
+ * @refsnippet{src/scip/type_set.h,SnippetCodeStyleExample}
  *
  *
  * @section XEMACS Customize (x)emacs
@@ -796,7 +796,7 @@
  *
  * Here is a new interactive shell tutorial
  *
- * \snippet tutorial.txt SnippetVersion
+ * @refsnippet{tutorial.txt,SnippetVersion}
  */
 
 
@@ -1409,7 +1409,7 @@
  * It should allocate and fill the constraint data, and call SCIPcreateCons().
  * Take a look at the following example from the \ref cons_knapsack.h "knapsack constraint handler":
  *
- * \snippet src/scip/cons_knapsack.c SnippetConsCreationKnapsack
+ * @refsnippet{src/scip/cons_knapsack.c,SnippetConsCreationKnapsack}
  *
  * In this example, consdataCreate() is a local method that allocates memory for the given consdata
  * and fills the data with the given <code>vars</code> array. For allocating memory for the constraint data, you
@@ -1562,7 +1562,7 @@
  *  fashion <b>without</b> adding or subtracting anything to them. In case of the knapsack constraints this
  *  method looks like this.
  *
- *  \snippet src/scip/cons_knapsack.c SnippetConsLockKnapsack
+ *  @refsnippet{src/scip/cons_knapsack.c,SnippetConsLockKnapsack}
  *
  *  To give same more intuition, consider the linear constraint \f$3x -5y +2z \leq 7\f$ as an example.
  *  The CONSLOCK callback method of the linear constraint handler should call
@@ -1590,7 +1590,7 @@
  * constraint handler data. This can be done by the following procedure (which is taken from the
  * \ref cons_knapsack.h "knapsack constraint handler"):
  *
- * \snippet src/scip/cons_knapsack.c SnippetConsFreeKnapsack
+ * @refsnippet{src/scip/cons_knapsack.c,SnippetConsFreeKnapsack}
  *
  * If you have allocated memory for fields in your constraint handler data, remember to free this memory
  * before freeing the constraint handler data itself.
@@ -1608,7 +1608,7 @@
  * calls the interface method which includes the constraint handler to the model. For example, this callback is
  * implemented for the \ref cons_knapsack.c "knapsack constraint handler" as follows:
  *
- * \snippet src/scip/cons_knapsack.c SnippetConsCopyKnapsack
+ * @refsnippet{src/scip/cons_knapsack.c,SnippetConsCopyKnapsack}
  *
  * <b>Note:</b> If you implement this callback, take care when setting the valid pointer.
  *
@@ -1693,7 +1693,7 @@
  *
  * Here is an example, which is taken from the \ref cons_knapsack.h "knapsack constraint handler":
  *
- * @snippet src/scip/cons_knapsack.c SnippetConsTransKnapsack
+ * @refsnippet{src/scip/cons_knapsack.c,SnippetConsTransKnapsack}
  *
  * @subsection CONSINITLP
  *
@@ -1950,7 +1950,7 @@
  * This callback can be implemented to return the number of variables involved into a particular constraint.
  * In order to have access to the variable pointers, consider implementing @ref CONSGETVARS.
  *
- * @snippet src/scip/cons_linear.c Callback for the number of variables
+ * @refsnippet{src/scip/cons_linear.c,Callback for the number of variables}
  *
  * @subsection CONSGETDIVEBDCHGS
  *
@@ -2180,7 +2180,7 @@
  * If you are using pricer data, you have to implement this method in order to free the pricer data.
  * This can be done by the following procedure:
  *
- * @snippet applications/STP/src/pricer_stp.c SnippetPricerFreeSTP
+ * @refsnippet{applications/STP/src/pricer_stp.c,SnippetPricerFreeSTP}
  *
  * If you have allocated memory for fields in your pricer data, remember to free this memory
  * before freeing the pricer data itself.
@@ -2403,7 +2403,7 @@
  * If you are using presolver data (see \ref PRESOL_DATA and \ref PRESOL_INTERFACE), you have to implement this method in order to free the presolver data.
  * This can be done by the following procedure:
  *
- * @snippet src/scip/presol_boundshift.c SnippetPresolFreeBoundshift
+ * @refsnippet{src/scip/presol_boundshift.c,SnippetPresolFreeBoundshift}
  *
  * If you have allocated memory for fields in your presolver data, remember to free this memory
  * before freeing the presolver data itself.
@@ -2661,7 +2661,7 @@
  * If you are using separator data (see \ref SEPA_DATA and \ref SEPA_INTERFACE), you have to implement this method
  * in order to free the separator data. This can be done by the following procedure:
  * 
- * @snippet src/scip/sepa_gomory.c SnippetSepaFreeGomory
+ * @refsnippet{src/scip/sepa_gomory.c,SnippetSepaFreeGomory}
  *
  * If you have allocated memory for fields in your separator data, remember to free this memory
  * before freeing the separator data itself.
@@ -2911,7 +2911,7 @@
  * If you are using propagator data, you have to implement this method in order to free the propagator data.
  * This can be done by the following procedure:
  * 
- * @snippet src/scip/prop_redcost.c SnippetPropFreeRedcost
+ * @refsnippet{src/scip/prop_redcost.c,SnippetPropFreeRedcost}
  *
  * If you have allocated memory for fields in your propagator data, remember to free this memory
  * before freeing the propagator data itself.
@@ -3249,7 +3249,7 @@
  * If you are using branching rule data, you have to implement this method in order to free the branching rule data.
  * This can be done by the following procedure:
  *
- * @snippet src/scip/branch_random.c SnippetBranchFreeRandom
+ * @refsnippet{src/scip/branch_random.c,SnippetBranchFreeRandom}
  *
  * If you have allocated memory for fields in your branching rule data, remember to free this memory
  * before freeing the branching rule data itself.
@@ -3473,9 +3473,9 @@
  *
  * If you are using node selector data, you have to implement this method in order to free the node selector data.
  * This can be done by the following procedure:
-
- * @snippet src/scip/nodesel_bfs.c SnippetNodeselFreeBfs
-
+ *
+ * @refsnippet{src/scip/nodesel_bfs.c,SnippetNodeselFreeBfs}
+ *
  * If you have allocated memory for fields in your node selector data, remember to free this memory
  * before freeing the node selector data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -3751,7 +3751,7 @@
  * If you are using primal heuristic data, you have to implement this method in order to free the primal heuristic data.
  * This can be done by the following procedure:
  *
- * @snippet applications/Coloring/src/heur_init.c SnippetHeurFreeInit
+ * @refsnippet{applications/Coloring/src/heur_init.c,SnippetHeurFreeInit}
  *
  * If you have allocated memory for fields in your primal heuristic data, remember to free this memory
  * before freeing the primal heuristic data itself.
@@ -4097,7 +4097,7 @@
  * If you are using relaxation handler data, you have to implement this method in order to free the relaxation handler
  * data. This can be done by the following procedure:
  *
- * @snippet unittests/src/unittest-relax/relax_unittest.c SnippetRelaxFreeUnittest
+ * @refsnippet{unittests/src/unittest-relax/relax_unittest.c,SnippetRelaxFreeUnittest}
  *
  * If you have allocated memory for fields in your relaxation handler data, remember to free this memory
  * before freeing the relaxation handler data itself.
@@ -4315,14 +4315,14 @@
  * write/display the copied instances. Since the reader is in charge of that, you might want to copy the plugin. Below
  * you see a standard implementation.
  *
- * @snippet src/scip/reader_mps.c SnippetReaderCopyMps
+ * @refsnippet{src/scip/reader_mps.c,SnippetReaderCopyMps}
  *
  * @subsection READERFREE
  *
  * If you are using file reader data, you have to implement this method in order to free the file reader data.
  * This can be done by the following procedure:
  *
- * @snippet src/scip/reader_mps.c SnippetReaderFreeMps
+ * @refsnippet{src/scip/reader_mps.c,SnippetReaderFreeMps}
  *
  * If you have allocated memory for fields in your file reader data, remember to free this memory
  * before freeing the file reader data itself.
@@ -4409,8 +4409,8 @@
  * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the dialog, which can be done by the following lines of code:
  *
- * @snippet src/scip/dialog_xyz.c SnippetDialogAddXyz
-
+ * @refsnippet{src/scip/dialog_xyz.c,SnippetDialogAddXyz}
+ *
  * Here "parentdialog" has to be an existing dialog which is defined to be a menu (see DIALOG_ISSUBMENU), e.g.,
  * the default root dialog. The method SCIPgetRootDialog() returns the root dialog.
  *
@@ -4866,14 +4866,14 @@
  * (SCIP_EVENTTYPE_BESTSOLFOUND), you might want to implement that callback. The event handler example which you find
  * in the directory "examples/Eventhdlr/" uses that callback.
  *
- * @snippet src/scip/event_softtimelimit.c SnippetEventCopySofttimelimit
+ * @refsnippet{src/scip/event_softtimelimit.c,SnippetEventCopySofttimelimit}
  *
  * @subsection EVENTFREE
  *
  * If you are using event handler data, you have to implement this method in order to free the event handler data.
  * This can be done by the following procedure:
  *
- * @snippet src/scip/event_softtimelimit.c SnippetEventFreeSofttimelimit
+ * @refsnippet{src/scip/event_softtimelimit.c,SnippetEventFreeSofttimelimit}
  *
  * If you have allocated memory for fields in your event handler data, remember to free this memory
  * before freeing the event handler data itself.
@@ -5679,9 +5679,9 @@
  *
  *  - Use <b>asserts</b> in your code to show preconditions for the parameters, invariants and postconditions.
  *    Assertions are boolean expressions which inevitably have to evaluate to <code>TRUE</code>. Consider the
- *    following example, taken from the file src/scip/cons_linear.c:
+ *    following example:
  *
- *    @snippet src/scip/cons_linear.c SnippetDebugAssertions
+ *    @refsnippet{src/scip/cons_linear.c,SnippetDebugAssertions}
  *
  *    As you can see, both pointers and integers are checked for valid values at the beginning of the
  *    function <code>consdataCatchEvent()</code>. This is particularly important for, e.g., array indices like
