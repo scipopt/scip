@@ -876,7 +876,7 @@ SCIP_RETCODE solnodeAddChild(
             if( SCIPsetIsLT(set, val, (*child)->value) )
             {
 #ifdef SCIP_MORE_DEBUG
-               SCIPsetDebugMsg(set, "-> need to switch:");
+               SCIPsetDebugMsg(set, "-> need to switch:\n");
                SCIPsetDebugMsg(set, "   before switching: node %p witch child=%p, sibling=%p, sol=%p, value=%g\n",
                   (void*) (*child), (void*) (*child)->child, (void*) (*child)->sibling, (void*) (*child)->sol,
                   (*child)->value);
@@ -4470,8 +4470,8 @@ SCIP_RETCODE dryBranch(
    }
 
    /* free buffer arrays */
-   SCIPsetFreeBufferArray(set, &cutoffchilds);
    SCIPsetFreeBufferArray(set, &redchilds);
+   SCIPsetFreeBufferArray(set, &cutoffchilds);
 
    return SCIP_OKAY;
 }
@@ -6869,8 +6869,6 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    assert(reoptnodes[0]->dualredscur != NULL);
    nbndchgs = reoptnodes[0]->dualredscur->nvars;
 
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &perm, reoptnodes[0]->dualredscur->nvars) );
-
    (*ncreatedchilds) = 0;
    (*naddedconss) = 0;
 
@@ -7370,7 +7368,7 @@ SCIP_RETCODE SCIPreoptApply(
          SCIP_VAR** vars;
          SCIP_Real* bounds;
          SCIP_BOUNDTYPE* boundtypes;
-         int* perm;
+         int* perm = NULL;
          int nvars;
 
          vars = reoptnode->dualredscur->vars;
@@ -7460,6 +7458,9 @@ SCIP_RETCODE SCIPreoptApply(
             if( !reopt->objhaschanged && SCIPsetIsGT(set, reopt->reopttree->reoptnodes[id]->lowerbound, estimate) )
                SCIPnodeSetEstimate(childnodes[c], set, reopt->reopttree->reoptnodes[id]->lowerbound);
          }
+
+         /* free buffer array */
+         SCIPsetFreeBufferArray(set, &perm);
 
          /* reset the stored dual constraints */
          SCIP_CALL( reoptnodeUpdateDualConss(reopt->reopttree->reoptnodes[id], blkmem) );
