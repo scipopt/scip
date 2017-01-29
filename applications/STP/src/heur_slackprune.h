@@ -13,47 +13,56 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   prop_stp.h
- * @brief  propagator for Steiner tree problems, using the LP reduced costs
+/**@file   heur_prune.h
+ * @ingroup PRIMALHEURISTICS
+ * @brief  dual-ascent and reduction based primal heuristic for Steiner problems
  * @author Daniel Rehfeldt
  *
- * This propagator makes use of the reduced cost of an optimally solved LP relaxation to propagate the variables, see
- * "SCIP-Jack - A solver for STP and variants with parallelization extensions" by
- * Gamrath, Koch, Maher, Rehfeldt and Shinano
+ * This file implements a dual-ascent and reduction based heuristic for Steiner problems. It is based on an approach
+ * described in T. Polzin's "Algorithms for the Steiner problem in networks".
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_PROP_STP_H__
-#define __SCIP_PROP_STP_H__
+#ifndef __SCIP_HEUR_SLACKPRUNE_H__
+#define __SCIP_HEUR_SLACKPRUNE_H__
+
 
 #include "scip/scip.h"
 #include "grph.h"
-#include "probdata_stp.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** creates the stp propagator and includes it in SCIP */
+/** creates the slack prune primal heuristic and includes it in SCIP */
 extern
-SCIP_RETCODE SCIPincludePropStp(
+SCIP_RETCODE SCIPincludeHeurSlackPrune(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** fix a variable (corresponding to an edge) to zero */
+/** execute slack-and-prune heuristic on given graph */
 extern
-SCIP_RETCODE fixedgevar(
+SCIP_RETCODE SCIPheurSlackPrune(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             edgevar,            /**< the variable to be fixed */
-   int*                  nfixed              /**< counter that is incriminated if variable could be fixed */
+   SCIP_VAR**            vars,               /**< problem variables or NULL */
+   GRAPH*                g,                  /**< the graph */
+   int*                  soledge,            /**< array to 1. provide and 2. return primal solution */
+   SCIP_Bool*            success,            /**< feasible solution found? */
+   SCIP_Bool             reducegraph         /**< try to reduce graph initially? */
    );
 
-/** return total number of arcs fixed by 'fixedgevar' method of this propagator */
+/** execute MWCSP slack-and-prune heuristic on given graph */
 extern
-int SCIPstpNfixedEdges(
-   SCIP*                 scip                /**< SCIP data structure */
+SCIP_RETCODE SCIPheurSlackPrunePcMw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< problem variables or NULL */
+   GRAPH*                g,                  /**< the graph */
+   int*                  soledge,            /**< array to 1. provide and 2. return primal solution */
+   SCIP_Bool*            success             /**< feasible solution found? */
    );
+
 
 #ifdef __cplusplus
 }

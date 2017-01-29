@@ -32,11 +32,19 @@
 extern "C" {
 #endif
 
-/** creates the sync propagator and includes it in SCIP */
+/** creates the sync propagator and includes it in SCIP
+ *
+ * @ingroup PropagatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePropSync(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup PROPAGATORS
+  *
+  * @{
+  */
 
 /** adds a boundchange to the sync propagator */
 EXTERN
@@ -59,6 +67,8 @@ EXTERN
 SCIP_Longint SCIPpropSyncGetNTightenedIntBnds(
    SCIP_PROP*            prop                /**< sync propagator */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

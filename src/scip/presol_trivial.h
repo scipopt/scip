@@ -34,7 +34,10 @@
 extern "C" {
 #endif
 
-/** creates the trivial presolver and includes it in SCIP */
+/** creates the trivial presolver and includes it in SCIP
+ *
+ * @ingroup PresolverIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePresolTrivial(
    SCIP*                 scip                /**< SCIP data structure */

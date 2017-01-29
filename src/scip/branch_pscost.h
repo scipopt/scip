@@ -46,11 +46,19 @@
 extern "C" {
 #endif
 
-/** creates the pseudo cost branching rule and includes it in SCIP */
+/** creates the pseudo cost branching rule and includes it in SCIP
+ *
+ *   @ingroup BranchingRuleIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeBranchrulePscost(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup BRANCHINGRULES
+ *
+ * @{
+ */
 
 /** selects a branching variable, due to pseudo cost, from the given candidate array and returns this variable together
  *  with a branching point */
@@ -64,6 +72,8 @@ SCIP_RETCODE SCIPselectBranchVarPscost(
    SCIP_VAR**            var,                /**< pointer to store the variable to branch on, or NULL if none */
    SCIP_Real*            brpoint             /**< pointer to store the branching point for the branching variable, will be fractional for a discrete variable */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

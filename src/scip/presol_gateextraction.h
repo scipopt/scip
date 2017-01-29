@@ -58,7 +58,10 @@
 extern "C" {
 #endif
 
-/** creates the gateextraction presolver and includes it in SCIP */
+/** creates the gateextraction presolver and includes it in SCIP
+ *
+ * @ingroup PresolverIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePresolGateextraction(
    SCIP*                 scip                /**< SCIP data structure */

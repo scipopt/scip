@@ -31,7 +31,10 @@
 extern "C" {
 #endif
 
-/** creates the xyz presolver and includes it in SCIP */
+/** creates the xyz presolver and includes it in SCIP
+ *
+ * @ingroup PresolverIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePresolXyz(
    SCIP*                 scip                /**< SCIP data structure */
@@ -40,5 +43,14 @@ SCIP_RETCODE SCIPincludePresolXyz(
 #ifdef __cplusplus
 }
 #endif
+
+/**@addtogroup PRESOLVERS
+ *
+ * @{
+ */
+
+/* TODO place other public methods in this group to facilitate navigation through the documentation */
+
+/* @} */
 
 #endif

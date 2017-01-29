@@ -51,7 +51,7 @@
                                                           *   original scip be copied to constraints of the subscip? */
 #define DEFAULT_USEFINALSUBMIP TRUE                      /**< should a final sub-MIP be solved to construct a feasible
                                                           *   solution if the LP was not roundable? */
-#define DEFAULT_RANDSEED      71                         /**< initial random seed */
+#define DEFAULT_RANDSEED      73                         /**< initial random seed */
 
 /** primal heuristic data */
 struct SCIP_HeurData

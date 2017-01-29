@@ -34,7 +34,7 @@
  *
  * @param[in] retcode SCIP_RETCODE you want to translate
  * @param[in] buffersize size of buffer
- * @param[out] buffer_str buffer to character array to store translated message, this must be at least of size \ref SCIP_MSG_MAX
+ * @param[out] buffer_str buffer to character array to store translated message, this must be at least of size SCIP_MSG_MAX
  * @return buffer_str or NULL, if retcode could not be translated
  */
 inline char* SCIPgetErrorString(SCIP_RETCODE retcode, char* buffer_str, int buffersize)

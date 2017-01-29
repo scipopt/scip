@@ -49,7 +49,6 @@
  * See the web site of <a href="http://scip.zib.de">\SCIP</a> for more information about licensing and to download \SCIP.
  *
  * @section GETTINGSTARTED Getting started
- * -\ref NEWTUTORIAL
  *
  * - \ref WHATPROBLEMS "What types of optimization problems does SCIP solve?"
  * - \ref MAKE    "Installation information / Makefiles"
@@ -196,7 +195,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/MIPSolver"><b>MIPSolver</b></a>
+ *  \ref MIPSOLVER_MAIN "MIP solver"
  *  </td>
  *  <td>
  *  A minimal implementation for using \SCIP included into another source code
@@ -204,7 +203,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Queens/scip_intro.pdf"><b>Queen</b></a>
+ *  <a href="http://scip.zib.de/download/files/scip_intro_01.pdf"><b>Queens</b></a>
  *  </td>
  *  <td>
  *  An example showing the use of \SCIP as callable library.
@@ -226,7 +225,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/GMI"><b>GMI</b></a>
+ *  \ref GMI_MAIN "Gomory mixed integer cut example"
  *  </td>
  *  <td>
  *  An example about Gomory mixed-integer cuts.
@@ -790,16 +789,6 @@
  *
  *
  */
-
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page NEWTUTORIAL New interactive shell tutorial
- *
- * Here is a new interactive shell tutorial
- *
- * @refsnippet{tutorial.txt,SnippetVersion}
- */
-
-
 
 /**@page SHELL Tutorial: the interactive shell
  *
@@ -7364,6 +7353,17 @@
  * Per default there exist no variable pricer. A detailed description what a variable pricer does and how to add a
  * variable pricer to SCIP can be found \ref PRICER "here".
  */
+
+/**@defgroup PricerIncludes Inclusion methods
+* @ingroup PUBLICPLUGINAPI
+* @brief methods to include specific pricers into \SCIP
+*
+* This module contains methods to include specific pricers into \SCIP.
+*
+* @note All default plugins can be included at once using SCIPincludeDefaultPlugins(). There exists no pricer per default.
+*       In order to see examples of variable pricers, please consult the \ref EXAMPLES "Coding Examples" of \SCIP.
+*
+*/
 
 /**@defgroup PRIMALHEURISTICS Primal Heuristics
  * @ingroup PUBLICPLUGINAPI

@@ -91,6 +91,7 @@ extern
 SCIP_RETCODE SCIPdivesetGetScore(
    SCIP_DIVESET*         diveset,            /**< general diving settings */
    SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_HEURDATA*        heurdata,           /**< data of the calling heuristic */
    SCIP_DIVETYPE         divetype,           /**< the type of diving that should be applied */
    SCIP_VAR*             divecand,           /**< the candidate for which the branching direction is requested */
    SCIP_Real             divecandsol,        /**< LP solution value of the candidate */

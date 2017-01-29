@@ -33,7 +33,10 @@
 extern "C" {
 #endif
 
-/** creates the stuffing presolver and includes it in SCIP */
+/** creates the stuffing presolver and includes it in SCIP
+ *
+ * @ingroup PresolverIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePresolStuffing(
    SCIP*                 scip                /**< SCIP data structure */

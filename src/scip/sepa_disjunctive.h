@@ -42,7 +42,10 @@
 extern "C" {
 #endif
 
-/** creates the disjunctive cut separator and includes it in SCIP */
+/** creates the disjunctive cut separator and includes it in SCIP
+ *
+ * @ingroup SeparatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeSepaDisjunctive(
    SCIP*                 scip                /**< SCIP data structure */

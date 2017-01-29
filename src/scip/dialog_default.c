@@ -776,9 +776,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs)
          SCIPconshdlrGetSepaFreq(conshdlrs[i]),
          SCIPconshdlrGetPropFreq(conshdlrs[i]),
          SCIPconshdlrGetEagerFreq(conshdlrs[i]));
-      SCIPdialogMessage(scip, NULL, "   %c", SCIPconshdlrGetPresolTiming(conshdlrs[i]) & SCIP_PRESOLTIMING_FAST ? 'f' : ' ');
-      SCIPdialogMessage(scip, NULL, "%c", SCIPconshdlrGetPresolTiming(conshdlrs[i]) & SCIP_PRESOLTIMING_MEDIUM ? 'm' : ' ');
-      SCIPdialogMessage(scip, NULL, "%c  ", SCIPconshdlrGetPresolTiming(conshdlrs[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE ? 'e' : ' ');
+      SCIPdialogMessage(scip, NULL, "   %c", (SCIPconshdlrGetPresolTiming(conshdlrs[i]) & SCIP_PRESOLTIMING_FAST) ? 'f' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c", (SCIPconshdlrGetPresolTiming(conshdlrs[i]) & SCIP_PRESOLTIMING_MEDIUM) ? 'm' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c  ", (SCIPconshdlrGetPresolTiming(conshdlrs[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE) ? 'e' : ' ');
       SCIPdialogMessage(scip, NULL, "%s", SCIPconshdlrGetDesc(conshdlrs[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
@@ -1016,9 +1016,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers)
       if( strlen(SCIPpresolGetName(presols[i])) > 20 )
          SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
       SCIPdialogMessage(scip, NULL, "%8d  ", SCIPpresolGetPriority(presols[i]));
-      SCIPdialogMessage(scip, NULL, "   %c", SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_FAST ? 'f' : ' ');
-      SCIPdialogMessage(scip, NULL, "%c", SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_MEDIUM ? 'm' : ' ');
-      SCIPdialogMessage(scip, NULL, "%c  ", SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE ? 'e' : ' ');
+      SCIPdialogMessage(scip, NULL, "   %c", (SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_FAST) ? 'f' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c", (SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_MEDIUM) ? 'm' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c  ", (SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE) ? 'e' : ' ');
       SCIPdialogMessage(scip, NULL, "%9d  ", SCIPpresolGetMaxrounds(presols[i]));
       SCIPdialogMessage(scip, NULL, "%s", SCIPpresolGetDesc(presols[i]));
       SCIPdialogMessage(scip, NULL, "\n");
@@ -1111,9 +1111,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPropagators)
       SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPpropGetPriority(props[i]), SCIPpropIsDelayed(props[i]) ? 'd' : ' ');
       SCIPdialogMessage(scip, NULL, "%4d  ", SCIPpropGetFreq(props[i]));
       SCIPdialogMessage(scip, NULL, "%8d  ", SCIPpropGetPresolPriority(props[i]));
-      SCIPdialogMessage(scip, NULL, "    %c", SCIPpropGetPresolTiming(props[i]) & SCIP_PRESOLTIMING_FAST ? 'f' : ' ');
-      SCIPdialogMessage(scip, NULL, "%c", SCIPpropGetPresolTiming(props[i]) & SCIP_PRESOLTIMING_MEDIUM ? 'm' : ' ');
-      SCIPdialogMessage(scip, NULL, "%c  ", SCIPpropGetPresolTiming(props[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE ? 'e' : ' ');
+      SCIPdialogMessage(scip, NULL, "    %c", (SCIPpropGetPresolTiming(props[i]) & SCIP_PRESOLTIMING_FAST) ? 'f' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c", (SCIPpropGetPresolTiming(props[i]) & SCIP_PRESOLTIMING_MEDIUM) ? 'm' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c  ", (SCIPpropGetPresolTiming(props[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE) ? 'e' : ' ');
       SCIPdialogMessage(scip, NULL, "%s", SCIPpropGetDesc(props[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }

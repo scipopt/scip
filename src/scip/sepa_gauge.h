@@ -74,7 +74,10 @@
 extern "C" {
 #endif
 
-/** creates the gauge separator and includes it in SCIP */
+/** creates the gauge separator and includes it in SCIP
+ *
+ * @ingroup SeparatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeSepaGauge(
    SCIP*                 scip                /**< SCIP data structure */

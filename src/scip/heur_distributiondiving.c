@@ -884,12 +884,10 @@ SCIP_DECL_HEUREXIT(heurExitDistributiondiving) /*lint --e{715}*/
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreDistributiondiving)
 {  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
    SCIP_Real upscore;
    SCIP_Real downscore;
    int varindex;
 
-   heurdata = SCIPheurGetData(SCIPdivesetGetHeur(diveset));
    assert(heurdata != NULL);
 
    /* process pending bound change events */

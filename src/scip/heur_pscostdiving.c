@@ -56,12 +56,14 @@
 #define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS TRUE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
+#define DEFAULT_RANDSEED            103 /**< initial random seed */
 
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 };
 
 /*
@@ -122,6 +124,9 @@ SCIP_DECL_HEURINIT(heurInitPscostdiving) /*lint --e{715}*/
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+
    return SCIP_OKAY;
 }
 
@@ -139,12 +144,14 @@ SCIP_DECL_HEUREXIT(heurExitPscostdiving) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
+   /* free random number generator */
+   SCIPrandomFree(&heurdata->randnumgen);
+
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
    return SCIP_OKAY;
 }
-
 
 /** execution method of primal heuristic */
 static
@@ -183,6 +190,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
    SCIP_Bool mayrounddown;
    SCIP_Bool mayroundup;
 
+   assert(heurdata != NULL);
+
    mayrounddown = SCIPvarMayRoundDown(cand);
    mayroundup = SCIPvarMayRoundUp(cand);
 
@@ -197,20 +206,31 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
    /*  determine the candidate direction. if the variable may be trivially rounded in one direction, take the other direction;
     *  otherwise, consider first the direction from the root solution, second the candidate fractionality, and
     *  last the direction of smaller pseudo costs
+    *
+    *  to avoid performance variability caused by numerics we use random numbers to decide whether we want to roundup or
+    *  round down if the values to compare are equal within tolerances.
     */
    assert(pscostdown >= 0.0 && pscostup >= 0.0);
    if( mayrounddown != mayroundup )
       *roundup = mayrounddown;
-   else if( candsol < SCIPvarGetRootSol(cand) - 0.4 )
+   else if( SCIPisLT(scip, candsol, SCIPvarGetRootSol(cand) - 0.4)
+         || (SCIPisEQ(scip, candsol, SCIPvarGetRootSol(cand) - 0.4) && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0) )
       *roundup = FALSE;
-   else if( candsol > SCIPvarGetRootSol(cand) + 0.4 )
+   else if( SCIPisGT(scip, candsol, SCIPvarGetRootSol(cand) + 0.4)
+         || (SCIPisEQ(scip, candsol, SCIPvarGetRootSol(cand) + 0.4) && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0) )
       *roundup = TRUE;
-   else if( candsfrac < 0.3 )
+   else if( SCIPisLT(scip, candsfrac, 0.3)
+         || (SCIPisLT(scip, candsfrac, 0.3) && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0) )
       *roundup = FALSE;
-   else if( candsfrac > 0.7 )
+   else if( SCIPisGT(scip, candsfrac, 0.7)
+         || (SCIPisEQ(scip, candsfrac, 0.7) && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0) )
+      *roundup = TRUE;
+   else if( SCIPisEQ(scip, pscostdown, pscostup) )
+      *roundup = (SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0);
+   else if( pscostdown > pscostup )
       *roundup = TRUE;
    else
-      *roundup = (pscostdown >= pscostup);
+      *roundup = FALSE;
 
    if( *roundup )
       pscostquot = sqrt(candsfrac) * (1.0 + pscostdown) / (1.0 + pscostup);

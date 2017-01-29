@@ -18,7 +18,7 @@
  * @brief  random variable branching rule
  * @author Tobias Achterberg
  *
- * The random branching rule randomly selects a candidate variable $j$ from the set of candidate variables.
+ * The random branching rule randomly selects a candidate variable from the set of candidate variables.
  *
  * The random branching rule and many other branching rules of SCIP are explained and compared in
  *
@@ -40,7 +40,10 @@
 extern "C" {
 #endif
 
-/** creates the random branching rule and includes it in SCIP */
+/** creates the random branching rule and includes it in SCIP
+ *
+ *  @ingroup BranchingRuleIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeBranchruleRandom(
    SCIP*                 scip                /**< SCIP data structure */
