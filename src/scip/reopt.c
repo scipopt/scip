@@ -7376,6 +7376,13 @@ SCIP_RETCODE SCIPreoptApply(
          boundtypes = reoptnode->dualredscur->boundtypes;
          nvars = reoptnode->dualredscur->nvars;
 
+         *ncreatedchilds = nvars+1;
+         *naddedconss = 0;
+
+         /* check if there is enough memory allocated */
+         if( childnodessize < *ncreatedchilds )
+            return SCIP_OKAY;
+
          /* create and fill permutation array */
          SCIP_CALL( SCIPsetAllocBufferArray(set, &perm, nvars) );
          for( c = 0; c < nvars; c++ )
@@ -7401,12 +7408,6 @@ SCIP_RETCODE SCIPreoptApply(
             default:
                return SCIP_INVALIDDATA;
          }
-
-         *ncreatedchilds = nvars+1;
-         *naddedconss = 0;
-
-         if( childnodessize < *ncreatedchilds )
-            return SCIP_OKAY;
 
          assert(reopt->reopttree->reoptnodes[id] != NULL);
          reoptnode = reopt->reopttree->reoptnodes[id];
