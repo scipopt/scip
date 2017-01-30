@@ -931,11 +931,11 @@ SCIP_RETCODE selectInitialVariable(
       ++nsearched;
 
       /* select a variable to start with randomly, but make sure it is active */
-      choosevar = NULL;
       do
       {
          int idx = SCIPrandomGetInt(heurdata->randnumgen, 0, nintegralvarsleft - 1);
          choosevar = varscopy[idx];
+         assert(choosevar != NULL);
          /* sort inactive variables to the end */
          if( SCIPvarGetProbindex(choosevar) < 0 )
          {
@@ -943,10 +943,10 @@ SCIP_RETCODE selectInitialVariable(
             --nintegralvarsleft;
          }
       }
-      while( choosevar != NULL && SCIPvarGetProbindex(choosevar) < 0 && nintegralvarsleft > 0);
+      while( SCIPvarGetProbindex(choosevar) < 0 && nintegralvarsleft > 0);
 
       /* if there was no variable chosen, there are no active variables left */
-      if( choosevar == NULL || SCIPvarGetProbindex(choosevar) < 0 )
+      if( SCIPvarGetProbindex(choosevar) < 0 )
       {
          SCIPdebugMsg(scip, "No active variable left to perform breadth-first search\n");
          break;
