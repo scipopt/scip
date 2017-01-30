@@ -132,6 +132,7 @@ SCIP_DECL_BRANCHCOPY(branchCopyRandom)
 }
 
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
+/**! [SnippetBranchFreeRandom] */
 static
 SCIP_DECL_BRANCHFREE(branchFreeRandom)
 {  /*lint --e{715}*/
@@ -147,6 +148,7 @@ SCIP_DECL_BRANCHFREE(branchFreeRandom)
 
    return SCIP_OKAY;
 }
+/**! [SnippetBranchFreeRandom] */
 
 
 /** initialization method of branching rule (called after problem was transformed) */

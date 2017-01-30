@@ -535,6 +535,7 @@ SCIP_DECL_HEURCOPY(heurCopyInit)
 }
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
+/**! [SnippetHeurFreeInit] */
 static
 SCIP_DECL_HEURFREE(heurFreeInit)
 {
@@ -547,6 +548,7 @@ SCIP_DECL_HEURFREE(heurFreeInit)
 
    return SCIP_OKAY;
 }
+/**! [SnippetHeurFreeInit] */
 
 
 /** execution method of primal heuristic */

@@ -172,6 +172,7 @@ SCIP_DECL_SEPACOPY(sepaCopyGomory)
 }
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
+/**! [SnippetSepaFreeGomory] */
 static
 SCIP_DECL_SEPAFREE(sepaFreeGomory)
 {  /*lint --e{715}*/
@@ -192,6 +193,7 @@ SCIP_DECL_SEPAFREE(sepaFreeGomory)
 
    return SCIP_OKAY;
 }
+/**! [SnippetSepaFreeGomory] */
 
 
 /** LP solution separation method of separator */
