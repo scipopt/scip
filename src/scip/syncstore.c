@@ -250,7 +250,7 @@ SCIP_Bool SCIPsyncstoreSolveIsStopped(
    return stopped;
 }
 
-/** sets the solve-is-stopped flag in the SPI so that subsequent calls to
+/** sets the solve-is-stopped flag in the syncstore so that subsequent calls to
  *  SCIPsyncstoreSolveIsStopped will return the given value in any thread
  */
 void SCIPsyncstoreSetSolveIsStopped(

@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cmain.c
+/**@file   examples/Eventhdlr/src/cmain.c
  * @brief  Main file for C compilation
  * @author Stefan Heinz
  */

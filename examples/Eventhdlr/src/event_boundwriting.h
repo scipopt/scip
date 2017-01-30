@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   event_boundwriting.h
+/**@file   examples/Eventhdlr/src/event_boundwriting.h
  * @brief  event handler for writing primal- and dualbound for all open nodes
  * @author Michael Winkler
  */

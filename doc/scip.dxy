@@ -671,6 +671,8 @@ INPUT                  = . \
                          ../examples/LOP/doc/xternal_lop.c \
                          ../examples/Binpacking/doc/xternal_binpacking.c \
                          ../examples/MIPSolver/doc/xternal_mipsolver.c \
+                         ../examples/Eventhdlr/doc/xternal_eventhdlr.c \
+                         ../examples/Eventhdlr/src/ \
                          ../examples/GMI/src/ \
                          ../examples/GMI/doc/xternal_gmi.c \
 
