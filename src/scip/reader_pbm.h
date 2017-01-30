@@ -31,11 +31,19 @@
 extern "C" {
 #endif
 
-/** includes the pbm file reader into SCIP */
+/** includes the pbm file reader into SCIP
+ *
+ *  @ingroup FileReaderIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeReaderPbm(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup FILEREADERS
+ *
+ * @{
+ */
 
 /* writes picture of matrix structure to file */
 EXTERN
@@ -50,6 +58,8 @@ SCIP_RETCODE SCIPwritePbm(
    int                   nconss,             /**< number of constraints in the problem */
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -42,7 +42,10 @@
 extern "C" {
 #endif
 
-/** includes the fix file reader into SCIP */
+/** includes the fix file reader into SCIP
+ *
+ *  @ingroup FileReaderIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeReaderFix(
    SCIP*                 scip                /**< SCIP data structure */
