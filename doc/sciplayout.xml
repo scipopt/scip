@@ -20,10 +20,7 @@
       <tab type="namespacemembers" visible="no" title=""/>
     </tab>
     <tab type="user" url="@ref INTERFACES" title="Interfaces"/>
-    <tab type="usergroup" title="Coding Examples">
-        <tab type="user" url="@ref EXAMPLES" title="Overview of coding examples"/>
-        <tab type="user" url="@ref BINPACKING_MAIN" title="Binpacking example"/>
-    </tab>
+    <tab type="user" url="@ref EXAMPLES" title="Examples"/>
     <tab type="user" url="@ref APPLICATIONS" title="Applications"/>
     <tab type="user" url="@ref HOWTOADD" title="How To"/>
   </navindex>
