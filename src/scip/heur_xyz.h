@@ -33,7 +33,10 @@
 extern "C" {
 #endif
 
-/** creates the xyz primal heuristic and includes it in SCIP */
+/** creates the xyz primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurXyz(
    SCIP*                 scip                /**< SCIP data structure */

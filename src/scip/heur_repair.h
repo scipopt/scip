@@ -36,7 +36,10 @@
 extern "C" {
 #endif
 
-/** creates the repair primal heuristic and includes it in SCIP */
+/** creates the repair primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurRepair(
    SCIP*                 scip                /**< SCIP data structure */

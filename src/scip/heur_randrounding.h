@@ -43,7 +43,10 @@
 extern "C" {
 #endif
 
-/** creates the rand rounding heuristic and includes it in SCIP */
+/** creates the rand rounding heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurRandrounding(
    SCIP*                 scip                /**< SCIP data structure */

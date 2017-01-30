@@ -31,7 +31,10 @@
 extern "C" {
 #endif
 
-/** creates the node selector for best first search and includes it in SCIP */
+/** creates the node selector for best first search and includes it in SCIP
+ *
+ *  @ingroup NodeSelectorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeNodeselBfs(
    SCIP*                 scip                /**< SCIP data structure */

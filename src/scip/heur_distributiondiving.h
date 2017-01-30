@@ -33,7 +33,10 @@
 extern "C" {
 #endif
 
-/** creates the distributiondiving heuristic and includes it in SCIP */
+/** creates the distributiondiving heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurDistributiondiving(
    SCIP*                 scip                /**< SCIP data structure */

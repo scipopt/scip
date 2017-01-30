@@ -35,7 +35,10 @@
 extern "C" {
 #endif
 
-/** creates the node selector for breadth first search and includes it in SCIP */
+/** creates the node selector for breadth first search and includes it in SCIP
+ *
+ *  @ingroup NodeSelectorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeNodeselBreadthfirst(
    SCIP*                 scip                /**< SCIP data structure */
