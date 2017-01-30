@@ -648,9 +648,7 @@ SCIP_RETCODE correctPresoldata(
                SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(presoldata->setppchashdatas), presoldata->ssetppchashdatas, newsize) );
                presoldata->ssetppchashdatas = newsize;
 
-               /* correct pointers in array, to point to the new storage, due to allocation, and add all elements to the
-                * hashtable again
-                */
+               /* add all elements to the hashtable again */
                for( d = presoldata->nsetppchashdatas - 1; d >= 0; --d )
                {
                   SCIP_CALL( SCIPhashtableInsert(presoldata->hashdatatable, (void*) &presoldata->setppchashdatas[d]) );
