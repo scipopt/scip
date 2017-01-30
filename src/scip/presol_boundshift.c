@@ -94,6 +94,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyBoundshift)
 
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
+/**! [SnippetPresolFreeBoundshift] */
 static
 SCIP_DECL_PRESOLFREE(presolFreeBoundshift)
 {  /*lint --e{715}*/   
@@ -108,6 +109,7 @@ SCIP_DECL_PRESOLFREE(presolFreeBoundshift)
 
    return SCIP_OKAY;
 }
+/**! [SnippetPresolFreeBoundshift] */
 
 
 /** presolving execution method */
