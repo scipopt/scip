@@ -165,7 +165,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/LOP"><b>LOP</b></a>
+ *  \ref LOP_MAIN "Linear Ordering"
  *  </td>
  *  <td>
  *  An example for implementing a constraint handler.
@@ -760,7 +760,7 @@
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
  *     - The <a href="http://scip.zib.de/doc/examples/TSP"><b>TSP</b></a>-example
  *        is a <b>branch-and-cut</b>-code in <b>C++</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/LOP"><b>LOP</b></a>-example
+ *     - The \ref LOP_MAIN LOP-example
  *       is a <b>branch-and-cut</b>-code in <b>C</b>.
  *     .
  * - Copy one of the examples in the <code>examples</code> directory (in the \SCIP root
@@ -5363,7 +5363,7 @@
  * @section Example
  *
  * Consider the constraint handler @p cons_linearordering.c in the
- * <a href="http://scip.zib.de/doc/examples/LOP"><b>linear ordering example</b></a>
+ * \ref LOP_MAIN "linear ordering example"
  * (see @p example/LOP directory). This constraint handler propagates the equations \f$x_{ij} + x_{ji} =
  * 1\f$ and triangle inequalities \f$x_{ij} + x_{jk} + x_{ki} \leq 2\f$.
  *
