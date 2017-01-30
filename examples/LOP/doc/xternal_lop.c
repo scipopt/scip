@@ -55,7 +55,7 @@
  * The following files provide the example code:
  * - cmain.c: Here the main function is located. It sets up SCIP, the
  * linear order project, and solves the problem.
- * - probdata_lop.c: this file provides code for reading the corresponding weight matrix 
+ * - probdata_lop.c: this file provides code for reading the corresponding weight matrix
  * and setting up the above model.
  * - cons_linearordering.c: contains the constraint handler that takes care of the
  * equations and the triangle inequalities.
@@ -64,28 +64,28 @@
  *
  * @section PROBLEMGENERATOR Problem Generator
  *
- * To use the problem generator you have do two things. First 
+ * To use the problem generator you have do two things. First
  * \ref PROBLEMGENERATORCOMPILE "compile the generator" and second \ref PROBLEMGENERATORUSEIT "use it".
  *
  * @subsection PROBLEMGENERATORCOMPILE Compile the Problem Generator
  *
- * Call the command 
- * 
- * <code>make genRandomLOPInstance</code> 
- * 
- * in main directory of the example. This will create a binary in the <code>bin/</code> directory 
+ * Call the command
+ *
+ * <code>make genRandomLOPInstance</code>
+ *
+ * in main directory of the example. This will create a binary in the <code>bin/</code> directory
  * with the name <code>genRandomLOPInstance</code>.
  *
  * @subsection PROBLEMGENERATORUSEIT Use the Problem Generator
- * 
+ *
  * The problem generator needs three parameter:
  * -# the name of the file to create
  * -# matrix dimension
- * -# the range of the integer values 
+ * -# the range of the integer values
  *
  * For example the call (in the main directory of the example)
  *
- * <code>bin/genRandomLOPInstance instance 10 6</code> 
+ * <code>bin/genRandomLOPInstance instance 10 6</code>
  *
  * produces a file named "instance" containing a matrix of dimension 10x10 with entries between 0 and 6.
  *
