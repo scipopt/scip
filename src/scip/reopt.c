@@ -1859,10 +1859,12 @@ SCIP_RETCODE shrinkNode(
 
          /* delete the current node */
          c = 0;
-         while( c < reoptnodes[parentid]->nchilds && reoptnodes[parentid]->childids[c] != id )
+         while( reoptnodes[parentid]->childids[c] != id )
+         {
             ++c;
+            assert(c < reoptnodes[parentid]->nchilds);
+         }
 
-         assert(c < reoptnodes[parentid]->nchilds);
          assert(reoptnodes[parentid]->childids[c] == id);
 
          /* replace the childid at position c by the last one */
