@@ -38,7 +38,6 @@ void setup(void)
       return;
 
    SCIP_CALL( SCIPcreate(&scip) );
-
 }
 
 /* frees memory allocated in setup() */
@@ -58,6 +57,8 @@ void teardown(void)
 static
 SCIP_RETCODE testNlpi()
 {
+   SCIP_NLPSOLSTAT nlpsolstat;
+   SCIP_NLPSTATISTICS* statistics;
    SCIP_NLPIPROBLEM* nlpiprob;
    SCIP_Real* primal;
 
@@ -138,6 +139,17 @@ SCIP_RETCODE testNlpi()
    /* solve NLP */
    SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-10) );
    SCIP_CALL( SCIPnlpiSolve(nlpi, nlpiprob) );
+   cr_assert(SCIPnlpiGetTermstat(nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
+
+   nlpsolstat = SCIPnlpiGetSolstat(nlpi, nlpiprob);
+   cr_assert(nlpsolstat <= SCIP_NLPSOLSTAT_LOCOPT);
+   printf("NLPSOLSTAT = %d\n", nlpsolstat);
+
+   /* print statistics */
+   SCIP_CALL( SCIPnlpStatisticsCreate(&statistics) );
+   SCIP_CALL( SCIPnlpiGetStatistics(nlpi, nlpiprob, statistics) );
+   printf("TIME = %f ITER = %d\n", SCIPnlpStatisticsGetTotalTime(statistics), SCIPnlpStatisticsGetNIterations(statistics));
+   SCIPnlpStatisticsFree(&statistics);
 
    /* check primal solution */
    SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, NULL, NULL, NULL) );
@@ -149,6 +161,31 @@ SCIP_RETCODE testNlpi()
    cr_expect(SCIPisFeasEQ(scip, primal[1], 0.5));
    cr_expect(SCIPisFeasEQ(scip, primal[2], 1.0));
    cr_expect(SCIPisFeasEQ(scip, primal[3], 2.0));
+
+   /* change some variable bounds */
+   lininds[0] = 2;
+   lbs[0] = 0.0;
+   ubs[0] = 0.5;
+   SCIP_CALL( SCIPnlpiChgVarBounds(nlpi, nlpiprob, 1, lininds, lbs, ubs) );
+
+   SCIP_CALL( SCIPnlpiSolve(nlpi, nlpiprob) );
+   cr_assert(SCIPnlpiGetTermstat(nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
+
+   nlpsolstat = SCIPnlpiGetSolstat(nlpi, nlpiprob);
+   cr_assert(nlpsolstat <= SCIP_NLPSOLSTAT_LOCOPT);
+   printf("NLPSOLSTAT = %d\n", nlpsolstat);
+
+   /* print statistics */
+   SCIP_CALL( SCIPnlpStatisticsCreate(&statistics) );
+   SCIP_CALL( SCIPnlpiGetStatistics(nlpi, nlpiprob, statistics) );
+   printf("TIME = %f ITER = %d\n", SCIPnlpStatisticsGetTotalTime(statistics), SCIPnlpStatisticsGetNIterations(statistics));
+   SCIPnlpStatisticsFree(&statistics);
+
+   /* check primal solution */
+   SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, NULL, NULL, NULL) );
+
+   for( i = 0; i < 4; ++i )
+      printf("x[%d] = %g\n", i, primal[i]);
 
    /* free memory */
    SCIPfreeBufferArray(scip, &linvals);

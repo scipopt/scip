@@ -1107,6 +1107,10 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    assert(nlpi != NULL);
    assert(problem != NULL);
 
+   problem->lastniter = -1;
+   problem->lasttime  = -1.0;
+   problem->lastsolinfeas = SCIP_INVALID;
+
    nlpidata = SCIPnlpiGetData(nlpi);
    assert(nlpidata != NULL);
 
@@ -1421,6 +1425,10 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
       BMSfreeMemoryArray(&dginds);
    }
 
+   /* store statistics */
+   problem->lastniter = wsp->MajorIter;
+   problem->lasttime = GetTimerCont(&cnt->Timer);
+
    /* free memory allocated in Worhp */
    WorhpFree(opt, wsp, par, cnt);
 
@@ -1438,9 +1446,10 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
 static
 SCIP_DECL_NLPIGETSOLSTAT( nlpiGetSolstatWorhp )
 {
-   /* TODO */
+   assert(nlpi != NULL);
+   assert(problem != NULL);
 
-   return SCIP_NLPSOLSTAT_UNKNOWN;  /*lint !e527*/
+   return problem->lastsolstat;
 }  /*lint !e715*/
 
 /** gives termination reason
@@ -1454,9 +1463,10 @@ SCIP_DECL_NLPIGETSOLSTAT( nlpiGetSolstatWorhp )
 static
 SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatWorhp )
 {
-   /* TODO */
+   assert(nlpi != NULL);
+   assert(problem != NULL);
 
-   return SCIP_NLPTERMSTAT_OTHER;  /*lint !e527*/
+   return problem->lasttermstat;
 }  /*lint !e715*/
 
 /** gives primal and dual solution values
@@ -1498,9 +1508,13 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionWorhp )
 static
 SCIP_DECL_NLPIGETSTATISTICS( nlpiGetStatisticsWorhp )
 {
-   /* TODO */
+   assert(nlpi != NULL);
+   assert(problem != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   SCIPnlpStatisticsSetNIterations(statistics, problem->lastniter);
+   SCIPnlpStatisticsSetTotalTime(statistics, problem->lasttime);
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** gives required size of a buffer to store a warmstart object
@@ -1838,19 +1852,20 @@ SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    return SCIP_OKAY;
 }
 
+/* TODO this is not thread-safe */
+static char NLPINAME[SCIP_MAXSTRLEN];
+
 /** gets string that identifies Worhp (version number) */
 const char* SCIPgetSolverNameWorhp(void)
 {
-   /* TODO maybe you can add this macro to worhp_version.h */
-   /* return "WORHP " WORHP_VERSION; */
-   return "WORHP 1.9.1";
+   (void) SCIPsnprintf(NLPINAME, SCIP_MAXSTRLEN, "WORHP %d.%d.%s", WORHP_MAJOR, WORHP_MINOR, WORHP_PATCH);
+   return NLPINAME;
 }
 
 /** gets string that describes Worhp (version number) */
 extern
 const char* SCIPgetSolverDescWorhp(void)
 {
-   /* TODO */
    return "Sequential Quadratic Programming developed at Research Institute Steinbeis (www.worhp.de)";
 }
 
