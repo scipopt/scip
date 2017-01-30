@@ -667,6 +667,8 @@ INPUT                  = . \
                          ../src/xml \
                          ../src/blockmemshell \
                          ../examples/Binpacking/src/ \
+                         ../examples/LOP/src/ \
+                         ../examples/LOP/doc/xternal_lop.c \
                          ../examples/Binpacking/doc/xternal_binpacking.c \
                          ../examples/MIPSolver/doc/xternal_mipsolver.c \
                          ../examples/GMI/src/ \
