@@ -14221,8 +14221,7 @@ TERMINATE:
 
    SCIPhashtableFree(&vars);
 
-   return SCIP_OKAY;
-}
+   return retcode;
 
 /** sets method to solve an individual cumulative condition */
 SCIP_RETCODE SCIPsetSolveCumulative(
