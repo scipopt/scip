@@ -20,7 +20,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Relaxator Example
+/**@page RELAXATOR_MAIN Relaxator Example
  * @author   Benjamin Mueller
  *
  * This example illustrates how to write a relaxator for SCIP. It extends the default plugins of <a
