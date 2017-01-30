@@ -31,6 +31,15 @@
 extern "C" {
 #endif
 
+/** creates the zeroobj primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
+EXTERN
+SCIP_RETCODE SCIPincludeHeurZeroobj(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /**@addtogroup PRIMALHEURISTICS
  *
  * @{
@@ -47,15 +56,6 @@ SCIP_RETCODE SCIPapplyZeroobj(
    );
 
 /* @} */
-
-/** creates the zeroobj primal heuristic and includes it in SCIP
- *
- *  @ingroup PrimalHeuristicIncludes
- */
-EXTERN
-SCIP_RETCODE SCIPincludeHeurZeroobj(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 #ifdef __cplusplus
 }

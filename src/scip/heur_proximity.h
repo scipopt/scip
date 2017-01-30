@@ -33,6 +33,15 @@
 extern "C" {
 #endif
 
+/** creates the proximity primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
+EXTERN
+SCIP_RETCODE SCIPincludeHeurProximity(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /**@addtogroup PRIMALHEURISTICS
  *
  * @{
@@ -64,15 +73,6 @@ SCIP_RETCODE SCIPdeleteSubproblemProximity(
    );
 
 /* @} */
-
-/** creates the proximity primal heuristic and includes it in SCIP
- *
- *  @ingroup PrimalHeuristicIncludes
- */
-EXTERN
-SCIP_RETCODE SCIPincludeHeurProximity(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 #ifdef __cplusplus
 }

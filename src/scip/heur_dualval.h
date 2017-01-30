@@ -61,7 +61,6 @@ SCIP_RETCODE SCIPapplyHeurDualval(
                                               *   solution is used */
    );
 
-
 /* @} */
 
 #ifdef __cplusplus
