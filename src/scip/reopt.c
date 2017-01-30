@@ -1859,7 +1859,7 @@ SCIP_RETCODE shrinkNode(
 
          /* delete the current node */
          c = 0;
-         while( reoptnodes[parentid]->childids[c] != id && c < reoptnodes[parentid]->nchilds )
+         while( c < reoptnodes[parentid]->nchilds && reoptnodes[parentid]->childids[c] != id )
             ++c;
 
          assert(reoptnodes[parentid]->childids[c] == id);
@@ -7515,7 +7515,7 @@ SCIP_RETCODE SCIPreoptApply(
 
       /* set the reopttype */
       assert(reoptnode->reopttype != (unsigned int)SCIP_REOPTTYPE_INFSUBTREE
-          && reoptnode->reopttype != (unsigned int)SCIP_REOPTTYPE_INFSUBTREE);
+          && reoptnode->reopttype != (unsigned int)SCIP_REOPTTYPE_STRBRANCHED);
       SCIPnodeSetReopttype(childnodes[0], (SCIP_REOPTTYPE)reoptnode->reopttype);
 
       /* set the unique id */
