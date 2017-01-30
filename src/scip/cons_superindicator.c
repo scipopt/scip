@@ -2188,7 +2188,7 @@ SCIP_RETCODE SCIPtransformMinUC(
 
    /* copy the conss array because it changes when adding and deleting constraints */
    nconss = SCIPgetNConss(scip);
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &conss, SCIPgetConss(scip), nconss) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &conss, SCIPgetConss(scip), nconss) );
 
    /* clear objective function and compute maximal branching priority */
    maxbranchprio = 0;
@@ -2280,7 +2280,7 @@ SCIP_RETCODE SCIPtransformMinUC(
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );
 
    /* free the allocated memory for the copied constraint array */
-   SCIPfreeBlockMemoryArray(scip, &conss, nconss);
+   SCIPfreeBufferArray(scip, &conss);
 
    return SCIP_OKAY;
 }
