@@ -1329,6 +1329,14 @@ SCIP_RETCODE SCIPlpiAddCols(
 {
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
+   assert(obj != 0);
+   assert(lb != 0);
+   assert(ub != 0);
+   assert(nnonz == 0 || beg != 0);
+   assert(nnonz == 0 || ind != 0);
+   assert(nnonz == 0 || val != 0);
+   assert(nnonz >= 0);
+   assert(ncols >= 0);
 
    SCIPdebugMessage("adding %d columns with %d nonzeros to Gurobi\n", ncols, nnonz);
 
