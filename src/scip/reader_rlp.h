@@ -31,7 +31,10 @@
 extern "C" {
 #endif
 
-/** includes the rlp file reader into SCIP */
+/** includes the rlp file reader into SCIP
+ *
+ *  @ingroup FileReaderIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeReaderRlp(
    SCIP*                 scip                /**< SCIP data structure */

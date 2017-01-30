@@ -39,7 +39,10 @@
 extern "C" {
 #endif
 
-/** includes the bnd file reader into SCIP */
+/** includes the bnd file reader into SCIP
+ *
+ *  @ingroup FileReaderIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeReaderBnd(
    SCIP*                 scip                /**< SCIP data structure */
