@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   event_bestsol.h
+/**@file   examples/Eventhdlr/src/event_bestsol.h
  * @brief  eventhdlr for best solution found
  * @author Stefan Heinz
  * @author Michael Winkler

@@ -13,36 +13,34 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal.c
+/**@file   examples/Eventhdlr/doc/xternal_eventhdlr.c
  * @brief  main document page
  * @author Stefan Heinz
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Event Handler Example
+/**@page     EVENTHDLR_MAIN
  * @author   Stefan Heinz
  *
- * This example illustrates the use of an event handler within <a href="http://scip.zib.de">SCIP</a>. It extends the
- * default plugins of <a href="http://scip.zib.de">SCIP</a> by two additional plugins, namely an event handler which
- * reacts on new best solutions and an event handler acting on processed nodes. You should also read the section <a
- * href="http://scip.zib.de/doc/html/EVENT.html">How to add event handler</a> in the <a
- * href="http://scip.zib.de/doc/html/index.html">SCIP doxygen</a> documentation which explains event handling in
- * general.
+ * This example illustrates the use of an event handler within \SCIP. It extends the
+ * default plugins of \SCIP by two additional plugins, namely an event handler which
+ * reacts on new best solutions and an event handler acting on processed nodes. You should also read the section
+ * \ref EVENT which explains event handling in general.
  *
- * The event handlers event_bestsol.c and event_boundwriting.c show how the create a customized event handler in <a
- * href="http://scip.zib.de">SCIP</a>. In case of an event handler, there are two important questions to answer:
+ * The event handlers event_bestsol.c and event_boundwriting.c show how the create a customized event handler in \SCIP.
+ * In case of an event handler, there are two important questions to answer:
  *  -# When to \a install the event handler and
  *  -# When to \a remove the event handler.
  *
  * <b>Note:</b> You can replace the event type in this example with any none-variable event. See
- * in the <a href="http://scip.zib.de/doc/html/type__event_8h.html">type_event.h</a> in the SCIP documentation for a
+ * in the type_event.h in the SCIP documentation for a
  * complete list.
  *
- * The remainder of this page focusses on the best solution event handler. See @ref event_boundwriting.c for
+ * The remainder of this page focusses on the best solution event handler. See event_boundwriting.c for
  * a documentation of the bound writing event handler.
  *
- * @section INSTALL Installing the event handler
+ * @section INSTALL_EVENTHDLR Installing the event handler
  *
  * In the following we describe the use of the callback methods of all event handler
  * for the installation of our event handler.
@@ -61,7 +59,7 @@
  * SCIP_DECL_EVENTINTSOL is too late to install the solution event because at that stage, we might have already missed
  * several solutions.
  *
- * \code 
+ * \code
  * static
  * SCIP_DECL_EVENTINIT(eventInitBestsol)
  * {
@@ -73,9 +71,9 @@
  *
  *    return SCIP_OKAY;
  * }
- * \endcode 
+ * \endcode
  *
- * The method SCIPcatchEvent() notifies <a href="http://scip.zib.de">SCIP</a> that we want to react on the event type best solution found.
+ * The method SCIPcatchEvent() notifies \SCIP that we want to react on the event type best solution found.
  *
  * @section REMOVE Remove the event handler
  *
@@ -87,17 +85,17 @@
  * Therefore, the right
  * place to drop that event handler is the callback SCIP_DECL_EVENTEXIT. Below you find the source code.
  *
- * \code 
+ * \code
  * static
  * SCIP_DECL_EVENTEXIT(eventExitBestsol)
- * { 
+ * {
  *    assert(scip != NULL);
  *    assert(eventhdlr != NULL);
  *    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
- *   
+ *
  *    SCIP_CALL( SCIPdropEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, -1) );
  *    return SCIP_OKAY;
- * } 
+ * }
  * \endcode
  *
  * The method SCIPdropEvent() tells SCIP that we want to drop the event type SCIP_EVENTTYPE_BESTSOLFOUND of belonging
@@ -112,7 +110,7 @@
  * \code
  * static
  * SCIP_DECL_EVENTEXEC(eventExecBestsol)
- * {  
+ * {
  *   SCIP_SOL* bestsol;
  *   SCIP_Real solvalue;
  *
@@ -123,30 +121,30 @@
  *   assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND);
  *
  *   SCIPdebugMessage("exec method of event handler for best solution found\n");
- *  
+ *
  *   bestsol = SCIPgetBestSol(scip);
  *   assert(bestsol != NULL);
  *   solvalue = SCIPgetSolOrigObj(scip, bestsol);
- *  
+ *
  *   SCIPinfoMessage(scip, NULL, "found new best solution with solution value <%g>\n", solvalue);
- *  
+ *
  *   return SCIP_OKAY;
  * }
  * \endcode
  *
  *
  * @section ADDING Including the event handler plugin
- * 
- * <a href="http://scip.zib.de">SCIP</a> is plugin-based. This means that all plugins which should be used have be
- * included into the <a href="http://scip.zib.de">SCIP</a> environment. In the case of the event handler, we are doing
- * this after the <a href="http://scip.zib.de">SCIP</a> environment was created (see cmain.c).
+ *
+ * \SCIP is plugin-based. This means that all plugins which should be used have be
+ * included into the \SCIP environment. In the case of the event handler, we are doing
+ * this after the \SCIP environment was created (see cmain.c).
  *
  * \code
  * static
  * SCIP_RETCODE runShell(
- *   int                        argc,  
- *   char**                     argv,   
- *   const char*                defaultsetname 
+ *   int                        argc,
+ *   char**                     argv,
+ *   const char*                defaultsetname
  *   )
  * {
  *   SCIP* scip = NULL;
@@ -163,7 +161,7 @@
  *   SCIP_CALL( SCIPfree(&scip) );
  *
  *   BMScheckEmptyMemory();
- *   
+ *
  *   return SCIP_OKAY;
  * }
  * \endcode

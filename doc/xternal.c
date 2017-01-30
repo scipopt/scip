@@ -217,7 +217,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Eventhdlr"><b>Eventhdlr</b></a>
+ *  \ref EVENTHDLR_MAIN "Event handler"
  *  </td>
  *  <td>
  *  A small example illustrating the use of an event handler.
