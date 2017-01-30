@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cppmain.cpp
+/**@file   examples/TSP/src/cppmain.cpp
  * @brief  main file for C++ TSP example using SCIP as a callable library
  * @author Tobias Achterberg
  * @author Timo Berthold
