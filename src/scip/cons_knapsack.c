@@ -7558,12 +7558,11 @@ SCIP_RETCODE propagateCons(
                int endvarposclique = cliqueendposs[c];
                int startvarposclique = cliquestartposs[c];
 
+               assert(myvars != NULL);
 
                maxvar = myvars[startvarposclique];
 
-
                assert(nnegcliques == consdata->nnegcliques);
-               assert(myvars != NULL);
                assert(myweights != NULL);
                assert(secondmaxweights != NULL);
                assert(cliquestartposs != NULL);

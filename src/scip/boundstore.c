@@ -73,10 +73,12 @@ SCIP_RETCODE SCIPboundstoreAdd(
    )
 {
    /* check if already stored a bound of same type for this variable */
-   int pos = boundstore->bndpos[varidx].pos[boundtype];
+   int pos;
 
    assert(scip != NULL);
    assert(boundstore != NULL);
+
+   pos = boundstore->bndpos[varidx].pos[boundtype];
 
    if( pos == 0 )
    {
