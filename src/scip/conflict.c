@@ -6082,7 +6082,7 @@ SCIP_RETCODE createAndAddDualray(
    SCIP_Real*            vals,               /**< coefficients of the proof constraint */
    SCIP_Real             lhs,                /**< lhs of the proof constraint */
    SCIP_Real             rhs,                /**< rhs of the proof constraint */
-   int                   repropdepth
+   int                   repropdepth,
    SCIP_Bool*            success             /**< pointer to store whether the constraint was accepted */
    )
 {
