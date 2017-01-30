@@ -7107,13 +7107,13 @@ SCIP_RETCODE SCIPconsResolvePropagation(
 {
    SCIP_CONSHDLR* conshdlr;
 
+   assert(set != NULL);
    assert(cons != NULL);
    assert((inferboundtype == SCIP_BOUNDTYPE_LOWER
          && SCIPgetVarLbAtIndex(set->scip, infervar, bdchgidx, TRUE) > SCIPvarGetLbGlobal(infervar))
       || (inferboundtype == SCIP_BOUNDTYPE_UPPER
          && SCIPgetVarUbAtIndex(set->scip, infervar, bdchgidx, TRUE) < SCIPvarGetUbGlobal(infervar)));
    assert(result != NULL);
-   assert(set != NULL);
    assert(cons->scip == set->scip);
 
    *result = SCIP_DIDNOTRUN;

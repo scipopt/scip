@@ -199,7 +199,7 @@ SCIP_RETCODE applyActivecons(
    SCIP_HASHMAP* varmapfw;                        /* mapping of SCIP variables to sub-SCIP variables */
    SCIP_VAR** vars;                               /* source problem's variables */
    SCIP_VAR** subvars;                            /* subproblem's variables */
-   SCIP_EVENTHDLR* eventhdlr;                     /* event handler for LP events */
+//   SCIP_EVENTHDLR* eventhdlr;                     /* event handler for LP events */
 
    SCIP_Real timelimit;                           /* time limit for OFINS subproblem */
    SCIP_Real memorylimit;                         /* memory limit for OFINS subproblem */
@@ -260,7 +260,7 @@ SCIP_RETCODE applyActivecons(
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
-   eventhdlr = NULL;
+//   eventhdlr = NULL;
 
    valid = FALSE;
 

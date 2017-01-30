@@ -257,7 +257,7 @@ SCIP_RETCODE tryFixVar(
    SCIP_ROW** rows;
    SCIP_COL* col;
    SCIP_Real* vals;
-   SCIP_Real alpha = heurdata->alpha;
+   SCIP_Real alpha;
    int nrows;
    int i;
    int sgn;
@@ -270,6 +270,7 @@ SCIP_RETCODE tryFixVar(
    assert(NULL != inftycounter);
    assert(NULL != heurdata);
 
+   alpha = heurdata->alpha;
    *infeasible = TRUE;
    *fixed = FALSE;
 

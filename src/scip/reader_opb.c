@@ -3891,7 +3891,7 @@ SCIP_RETCODE writeOpbRelevantAnds(
          for( v = nandvars[r] - 1; v >= 0; --v )
          {
             assert( andvars[r] != NULL );
-	    assert( andvars[r][v] != NULL );
+            assert( andvars[r][v] != NULL );
 
             SCIP_CALL( SCIPgetBinvarRepresentative(scip, andvars[r][v], &var, &neg) ); /*lint !e613 */
 

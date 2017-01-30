@@ -3350,7 +3350,6 @@ SCIP_RETCODE findUncapacitatedArcs(
 
                if( t == u )
                {
-                  assert(cols != NULL);
                   SCIPdebugMsg(scip, "         -> assign arcid:%i to column <%s>\n", arcid, SCIPvarGetName(SCIPcolGetVar(cols[c])));
                   colarcid[c] = arcid;
 
@@ -5433,7 +5432,7 @@ int nodepartitionIsConnected(
    int  a;
    int* rep;
 
-   assert(nodepartition != NULL);
+   assert(nodepartition->nodeclusters != NULL);
    nclusters = nodepartition->nclusters;
 
    if( SCIPallocBufferArray(scip, &rep, nclusters) != SCIP_OKAY )
