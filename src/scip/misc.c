@@ -6949,6 +6949,8 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    int i;
    int j;
 
+   SCIP_RETCODE retcode = SCIP_OKAY;
+
    assert(digraph != NULL);
    assert(digraph->nnodes > 0);
 
@@ -6961,12 +6963,12 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    digraph->ncomponents = 0;
    digraph->componentstartsize = 10;
 
-   SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&digraph->components, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&digraph->componentstarts, digraph->componentstartsize) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&ndirectedsuccessors, digraph->nnodes) );
+   SCIP_ALLOC_TERMINATE(retcode, BMSallocClearMemoryArray(&visited, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE(retcode, BMSallocMemoryArray(&digraph->components, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE(retcode, BMSallocMemoryArray(&digraph->componentstarts, digraph->componentstartsize), TERMINATE );
+   SCIP_ALLOC_TERMINATE(retcode, BMSallocMemoryArray(&dfsstack, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE(retcode, BMSallocMemoryArray(&stackadjvisited, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE(retcode, BMSallocMemoryArray(&ndirectedsuccessors, digraph->nnodes), TERMINATE );
 
    digraph->componentstarts[0] = 0;
 
@@ -6978,7 +6980,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    {
       for( j = 0; j < ndirectedsuccessors[i]; ++j )
       {
-         SCIP_CALL( SCIPdigraphAddArc(digraph, digraph->successors[i][j], i, NULL) );
+         SCIP_CALL_TERMINATE(retcode, SCIPdigraphAddArc(digraph, digraph->successors[i][j], i, NULL), TERMINATE );
       }
    }
 
@@ -7003,7 +7005,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
             digraph->componentstartsize = 2 * digraph->componentstartsize;
             assert(digraph->ncomponents < digraph->componentstartsize);
 
-            SCIP_ALLOC( BMSreallocMemoryArray(&digraph->componentstarts, digraph->componentstartsize) );
+            SCIP_ALLOC_TERMINATE(retcode, BMSreallocMemoryArray(&digraph->componentstarts, digraph->componentstartsize), TERMINATE );
          }
          digraph->componentstarts[digraph->ncomponents] = compstart + ndfsnodes;
 
@@ -7026,15 +7028,20 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    if( ncomponents != NULL )
       (*ncomponents) = digraph->ncomponents;
 
-   BMSfreeMemoryArray(&ndirectedsuccessors);
-   BMSfreeMemoryArray(&stackadjvisited);
-   BMSfreeMemoryArray(&dfsstack);
-   BMSfreeMemoryArray(&visited);
+TERMINATE:
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPdigraphFreeComponents(digraph);
+   }
+   BMSfreeMemoryArrayNull(&ndirectedsuccessors);
+   BMSfreeMemoryArrayNull(&stackadjvisited);
+   BMSfreeMemoryArrayNull(&dfsstack);
+   BMSfreeMemoryArrayNull(&visited);
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
-/** Performes an (almost) topological sort on the undirected components of the given directed graph. The undirected
+/** Performs an (almost) topological sort on the undirected components of the given directed graph. The undirected
  *  components should be computed before using SCIPdigraphComputeUndirectedComponents().
  *
  *  @note In general a topological sort is not unique.  Note, that there might be directed cycles, that are randomly
