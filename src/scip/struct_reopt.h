@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_reopt.h
+ * @ingroup INTERNALAPI
  * @brief  data structures for collecting reoptimization information
  * @author Jakob Witzig
  */

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   def.h
+ * @ingroup INTERNALAPI
  * @brief  common defines and data types used in all packages of SCIP
  * @author Tobias Achterberg
  */
@@ -233,6 +234,18 @@ extern "C" {
  */
 
 #define SCIP_MAXTREEDEPTH             65534  /**< maximal allowed depth of the branch-and-bound tree */
+
+/*
+ * Probing scoring settings
+ */
+
+#define SCIP_PROBINGSCORE_PENALTYRATIO    2  /**< ratio for penalizing too small fractionalities in diving heuristics.
+                                              *   if the fractional part of a variable is smaller than a given threshold
+                                              *   the corresponding score gets penalized. due to numerical troubles
+                                              *   we will flip a coin whenever SCIPisEQ(scip, fractionality, threshold)
+                                              *   evaluates to true. this parameter defines the chance that this results
+                                              *   in penalizing the score, i.e., there is 1:2 chance for penalizing.
+                                              */
 
 /*
  * Global debugging settings

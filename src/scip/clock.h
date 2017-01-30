@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   clock.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for clocks and timing issues
  * @author Tobias Achterberg
  */

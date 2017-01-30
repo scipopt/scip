@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlpi.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for NLPI solver interfaces
  * @author Stefan Vigerske
  * @author Thorsten Gellermann

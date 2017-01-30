@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   paramset.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for handling parameter settings
  * @author Tobias Achterberg
  * @author Timo Berthold

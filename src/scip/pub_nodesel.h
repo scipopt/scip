@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_nodesel.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for node selectors
  * @author Tobias Achterberg
  */
@@ -31,6 +31,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@defgroup PublicNodeSelectorMethods Node Selector
+ * @ingroup PluginManagementMethods
+ * @brief  methods for node selector plugin management
+ *
+ * @{
+ */
 
 /** gets name of node selector */
 EXTERN
@@ -86,6 +93,8 @@ EXTERN
 SCIP_Real SCIPnodeselGetTime(
    SCIP_NODESEL*         nodesel             /**< node selector */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -31,11 +31,23 @@
 extern "C" {
 #endif
 
-/** creates the xyz branching rule and includes it in SCIP */
+/** creates the xyz branching rule and includes it in SCIP
+ *
+ *  @ingroup BranchingRuleIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeBranchruleXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup BRANCHINGRULES
+ *
+ * @{
+ */
+
+/* TODO place other public methods in this group to facilitate navigation through the documentation */
+
+/* @} */
 
 #ifdef __cplusplus
 }

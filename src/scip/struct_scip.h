@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_scip.h
+ * @ingroup INTERNALAPI
  * @brief  SCIP main data structure
  * @author Tobias Achterberg
  */

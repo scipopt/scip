@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_primal.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for collecting primal CIP solutions and primal informations
  * @author Tobias Achterberg
  */

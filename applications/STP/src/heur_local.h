@@ -17,8 +17,9 @@
  * @brief  Improvement heuristic for Steiner problems
  * @author Daniel Rehfeldt
  *
- * This file implements three local heuristics, namely vertex insertion, key-path exchange and key-vertex elimination,
- * see "Fast Local Search for Steiner Trees in Graphs" by Uchoa and Werneck.
+ * This file implements three local search heuristics, namely vertex insertion, key-path exchange and key-vertex elimination,
+ * see "Fast Local Search for Steiner Trees in Graphs" by Uchoa and Werneck. Furthermore, it includes several non-published local
+ * search heuristics for prize-collecting Steiner problem tree variants.
  *
  */
 
@@ -56,7 +57,7 @@ SCIP_RETCODE extendSteinerTreePcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    PATH*                 vnoi,               /**< Voronoi data structure array */
-   SCIP_Real*            costrev,            /**< reversed edge costs */
+   SCIP_Real*            costrev,            /**< reversed edge costs array */
    int*                  vbase,              /**< array to store Voronoi bases to each vertex */
    int*                  stedge,             /**< array to indicate whether an edge is part of the Steiner tree */
    char*                 stvertex,           /**< uninitialized array to indicate whether an edge is part of the Steiner tree */

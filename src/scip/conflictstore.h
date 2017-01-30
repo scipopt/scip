@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   conflictstore.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for storing conflicts
  * @author Jakob Witzig
  */

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_stat.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for problem statistics
  * @author Tobias Achterberg
  * @author Timo Berthold

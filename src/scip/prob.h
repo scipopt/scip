@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prob.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for storing and manipulating the main problem
  * @author Tobias Achterberg
  */

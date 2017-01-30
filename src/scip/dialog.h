@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dialog.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for user interface dialog
  * @author Tobias Achterberg
  */

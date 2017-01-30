@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_clock.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for clocks and timing issues
  * @author Tobias Achterberg
  */

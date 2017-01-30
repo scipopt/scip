@@ -606,7 +606,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsObj)
    assert(conshdlrdata->objconshdlr != NULL);
 
    /* call virtual method of conshdlr object */
-   SCIP_CALL( conshdlrdata->objconshdlr->scip_getdivebdchgs(scip, conshdlr, diveset, sol, success, infeasible) );
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_getdivebdchgs(scip, conshdlr, diveset, heurdata, sol, success, infeasible) );
 
    return SCIP_OKAY;
 }

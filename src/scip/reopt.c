@@ -3286,7 +3286,7 @@ SCIP_RETCODE addGlobalCut(
          assert(boundtypes != NULL);
 
          reoptconsdata->vals[nvarsadded] = vals[v];
-         reoptconsdata->boundtypes[nvarsadded] = (SCIP_BOUNDTYPE)(1.0 - boundtypes[v]); /*lint !e641*/
+         reoptconsdata->boundtypes[nvarsadded] = (boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
          ++nvarsadded;
       }
       else
@@ -4748,7 +4748,7 @@ SCIP_RETCODE getInferenceOrder(
    }
 
    /* sort vars and vals by score */
-   SCIPsortDownRealRealPtrPtr(infscore, bounds, (void*) vars, (void*) boundtypes, nvars);
+   SCIPsortDownRealRealPtrPtr(infscore, bounds, (void**) vars, (void*) boundtypes, nvars);
 
    /* free buffer */
    SCIPsetFreeBufferArray(set, &infscore);

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_compr.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for tree compression techniques
  * @author Jakob Witzig
  */

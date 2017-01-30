@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_implics.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for implications, variable bounds, and cliques
  * @author Tobias Achterberg
  */

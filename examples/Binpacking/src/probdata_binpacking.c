@@ -18,9 +18,9 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  *
- * This file handles the main problem data used in that project. For more details see \ref PROBLEMDATA page.
+ * This file handles the main problem data used in that project. For more details see \ref BINPACKING_PROBLEMDATA page.
  *
- * @page PROBLEMDATA Main problem data
+ * @page BINPACKING_PROBLEMDATA Main problem data
  *
  * The problem data is accessible in all plugins. The function SCIPgetProbData() returns the pointer to that
  * structure. We use this data structure to store all the information of the binpacking problem. Since this structure is

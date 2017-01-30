@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   message.h
+ * @ingroup INTERNALAPI
  * @brief  message output methods
  * @author Tobias Achterberg
  *

@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_tree.h
- * @brief  datastructures for branch and bound tree
+ * @ingroup INTERNALAPI
+ * @brief  data structures for branch and bound tree
  * @author Tobias Achterberg
  */
 

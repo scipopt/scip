@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_dialog.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for user interface dialog
  * @author Tobias Achterberg
  */
@@ -38,6 +38,12 @@ extern "C" {
  * dialog handler
  */
 
+/**@defgroup PublicDialogMethods Dialogs
+ * @ingroup PluginManagementMethods
+ * @brief public methods for user interface dialogs
+ *
+ * @{
+ */
 /** returns the root dialog of the dialog handler */
 EXTERN
 SCIP_DIALOG* SCIPdialoghdlrGetRoot(
@@ -211,6 +217,8 @@ EXTERN
 SCIP_RETCODE SCIPdialogWriteHistory(
    const char*           filename            /**< file name for (over)writing history */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reopt.h
+ * @ingroup INTERNALAPI
  * @brief  data structures and methods for collecting reoptimization information
  * @author Jakob Witzig
  */

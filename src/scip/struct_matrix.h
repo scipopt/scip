@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_matrix.h
+ * @ingroup INTERNALAPI
  * @brief  data structure for MIP matrix
  * @author Dieter Weninger
  * @author Gerald Gamrath

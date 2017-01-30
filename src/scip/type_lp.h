@@ -83,19 +83,19 @@ typedef struct SCIP_LpSolVals SCIP_LPSOLVALS;     /**< collected values of the L
 
 /** column of an LP
  *
- *  - \ref ColumnMethods "List of all available methods"
+ *  - \ref PublicColumnMethods "List of all available methods"
  */
 typedef struct SCIP_Col SCIP_COL;
 
 /** row of an LP
  *
- *  - \ref RowMethods "List of all available methods"
+ *  - \ref PublicRowMethods "List of all available methods"
  */
 typedef struct SCIP_Row SCIP_ROW;
 
 /** LP structure
  *
- *  - \ref LPMethods "List of all available methods"
+ *  - \ref PublicLPMethods "List of all available methods"
  */
 typedef struct SCIP_Lp SCIP_LP;
 

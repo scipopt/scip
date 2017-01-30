@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   interrupt.h
+ * @ingroup INTERNALAPI
  * @brief  methods for catching the user CTRL-C interrupt
  * @author Tobias Achterberg
  */

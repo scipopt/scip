@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_misc_sort.h
+ * @ingroup PUBLICCOREAPI
  * @brief  methods for sorting joint arrays of various types
  * @author Gregor Hendel
  *
@@ -37,6 +38,10 @@ extern "C" {
  */
 
 /**@defgroup SortingAlgorithms Sorting Algorithms
+ * @ingroup MiscellaneousMethods
+ * @brief public methods for in place sorting of arrays
+ *
+ * Below are the public methods for in place sorting of up to six arrays of joint data.
  *
  * @{
  */

@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_disp.h
- * @brief  datastructures for displaying runtime statistics
+ * @ingroup INTERNALAPI
+ * @brief  data structures for displaying runtime statistics
  * @author Tobias Achterberg
  */
 

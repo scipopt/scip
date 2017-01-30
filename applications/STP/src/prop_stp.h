@@ -17,7 +17,9 @@
  * @brief  propagator for Steiner tree problems, using the LP reduced costs
  * @author Daniel Rehfeldt
  *
- * This propagator makes use of the reduced cost of an optimally solved LP relaxation to propagate the variables
+ * This propagator makes use of the reduced cost of an optimally solved LP relaxation to propagate the variables, see
+ * "SCIP-Jack - A solver for STP and variants with parallelization extensions" by
+ * Gamrath, Koch, Maher, Rehfeldt and Shinano
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -47,6 +49,11 @@ SCIP_RETCODE fixedgevar(
    int*                  nfixed              /**< counter that is incriminated if variable could be fixed */
    );
 
+/** return total number of arcs fixed by 'fixedgevar' method of this propagator */
+extern
+int SCIPstpNfixedEdges(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 #ifdef __cplusplus
 }

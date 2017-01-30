@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scipgithash.h
+ * @ingroup PUBLICCOREAPI
  * @brief  git hash methods
  * @author Stefan Heinz
  */

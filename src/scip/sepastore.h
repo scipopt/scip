@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sepastore.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for storing separated cuts
  * @author Tobias Achterberg
  */

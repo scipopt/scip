@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_relax.h
- * @brief  datastructures for relaxators
+ * @ingroup INTERNALAPI
+ * @brief  data structures for relaxators
  * @author Tobias Achterberg
  */
 

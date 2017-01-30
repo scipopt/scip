@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pricer.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for variable pricers
  * @author Tobias Achterberg
  */

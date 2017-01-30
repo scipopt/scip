@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_sepastore.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for storing conflicts
  * @author Jakob Witzig
  */
