@@ -36,11 +36,19 @@
 extern "C" {
 #endif
 
-/** creates the dualVal primal heuristic and includes it in SCIP */
+/** creates the dualVal primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurDualval(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup PRIMALHEURISTICS
+ *
+ * @{
+ */
 
 /** main procedure of the dualval heuristic */
 EXTERN
@@ -52,6 +60,9 @@ SCIP_RETCODE SCIPapplyHeurDualval(
    SCIP_SOL*             refpoint            /**< point to take fixation of discrete variables from; if NULL, then LP
                                               *   solution is used */
    );
+
+
+/* @} */
 
 #ifdef __cplusplus
 }

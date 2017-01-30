@@ -31,17 +31,27 @@
 extern "C" {
 #endif
 
+/**@addtogroup PRIMALHEURISTICS
+ *
+ * @{
+ */
+
 /** main procedure of the zeroobj heuristic, creates and solves a sub-SCIP */
 EXTERN
 SCIP_RETCODE SCIPapplyZeroobj(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
    SCIP_RESULT*          result,             /**< result data structure                                               */
-   SCIP_Real             minimprove,         /**< factor by which zeroobj should at least improve the incumbent          */
+   SCIP_Real             minimprove,         /**< factor by which zeroobj should at least improve the incumbent       */
    SCIP_Longint          nnodes              /**< node limit for the subproblem                                       */
    );
 
-/** creates the zeroobj primal heuristic and includes it in SCIP */
+/* @} */
+
+/** creates the zeroobj primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurZeroobj(
    SCIP*                 scip                /**< SCIP data structure */

@@ -36,7 +36,10 @@
 extern "C" {
 #endif
 
-/** creates the fracdiving heuristic and includes it in SCIP */
+/** creates the fracdiving heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurFracdiving(
    SCIP*                 scip                /**< SCIP data structure */

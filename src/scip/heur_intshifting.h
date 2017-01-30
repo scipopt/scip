@@ -36,7 +36,10 @@
 extern "C" {
 #endif
 
-/** creates the intshifting heuristic and includes it in SCIP */
+/** creates the intshifting heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurIntshifting(
    SCIP*                 scip                /**< SCIP data structure */

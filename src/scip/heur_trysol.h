@@ -36,11 +36,19 @@
 extern "C" {
 #endif
 
-/** creates the trysol primal heuristic and includes it in SCIP */
+/** creates the trysol primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurTrySol(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup PRIMALHEURISTICS
+ *
+ * @{
+ */
 
 /** pass solution to trysol heuristic */
 EXTERN
@@ -57,6 +65,8 @@ SCIP_RETCODE SCIPheurPassSolAddSol(
    SCIP_HEUR*            heur,               /**< trysol heuristic */
    SCIP_SOL*             sol                 /**< solution to be passed */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

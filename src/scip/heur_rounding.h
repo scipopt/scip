@@ -38,7 +38,10 @@
 extern "C" {
 #endif
 
-/** creates the rounding heuristic with infeasibility recovering and includes it in SCIP */
+/** creates the rounding heuristic with infeasibility recovering and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurRounding(
    SCIP*                 scip                /**< SCIP data structure */
