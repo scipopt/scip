@@ -54,11 +54,6 @@ extern "C" {
  * @{
  */
 
-/**
- * @name Public SCIP_VAR Methods
- * @{
- */
-
 /** gets number of locks for rounding down */
 EXTERN
 int SCIPvarGetNLocksDown(
@@ -1142,8 +1137,6 @@ SCIP_Bool SCIPvarWasFixedEarlier(
    SCIP_VAR*             var1,               /**< first binary variable */
    SCIP_VAR*             var2                /**< second binary variable */
    );
-
-/**@} */
 
 /**
  * @name Public SCIP_BDCHGIDX Methods
