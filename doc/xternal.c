@@ -231,6 +231,14 @@
  *  An example about Gomory mixed-integer cuts.
  *  </td>
  *  </tr>
+ *  <tr>
+ *  <td>
+ *  \ref RELAXATOR_MAIN "Relaxator example"
+ *  </td>
+ *  <td>
+ *  An example about using custom relaxators.
+ *  </td>
+ *  </tr>
  *  </table>
  *
  */
