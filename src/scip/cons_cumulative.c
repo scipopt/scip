@@ -14134,6 +14134,8 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
    int nvars;
    int v;
 
+   SCIP_RETCODE retcode = SCIP_OKAY;
+
    /* open file */
    (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s.gml", SCIPconsGetName(cons));
    file = fopen(filename, "w");
@@ -14151,8 +14153,8 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
 
    nvars = consdata->nvars;
 
-   SCIP_CALL( SCIPhashtableCreate(&vars, SCIPblkmem(scip), nvars,
-         SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
+   SCIP_CALL_TERMINATE(retcode, SCIPhashtableCreate(&vars, SCIPblkmem(scip), nvars,
+         SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL), TERMINATE);
 
    /* create opening of the GML format */
    SCIPgmlWriteOpening(file,  TRUE);
@@ -14164,7 +14166,7 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
       var = consdata->vars[v];
       assert(var != NULL);
 
-      SCIP_CALL( SCIPhashtableInsert(vars, (void*)var) );
+      SCIP_CALL_TERMINATE(retcode,  SCIPhashtableInsert(vars, (void*)var) , TERMINATE);
 
       if( SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var) < 0.5 )
          (void)SCIPsnprintf(color, SCIP_MAXSTRLEN, "%s", "#0000ff");
@@ -14213,6 +14215,7 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
    /* create closing of the GML format */
    SCIPgmlWriteClosing(file);
 
+TERMINATE:
    /* close file */
    fclose(file);
 
