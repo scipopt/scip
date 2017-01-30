@@ -736,19 +736,20 @@ SCIP_RETCODE SCIPcreate(
    SCIP**                scip                /**< pointer to SCIP data structure */
    )
 {
+   SCIP_RETCODE retcode = SCIP_OKAY;
    assert(scip != NULL);
 
    SCIP_ALLOC( BMSallocMemory(scip) );
 
    /* create a default message handler */
-   SCIP_CALL( SCIPcreateMessagehdlrDefault(&(*scip)->messagehdlr, TRUE, NULL, FALSE) );
+   SCIP_CALL_TERMINATE(retcode, SCIPcreateMessagehdlrDefault(&(*scip)->messagehdlr, TRUE, NULL, FALSE), TERMINATE);
 
-   SCIP_CALL( SCIPmemCreate(&(*scip)->mem) );
-   SCIP_CALL( SCIPsetCreate(&(*scip)->set, (*scip)->messagehdlr, (*scip)->mem->setmem, *scip) );
-   SCIP_CALL( SCIPinterruptCreate(&(*scip)->interrupt) );
-   SCIP_CALL( SCIPdialoghdlrCreate((*scip)->set, &(*scip)->dialoghdlr) );
-   SCIP_CALL( SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT) );
-   SCIP_CALL( SCIPsyncstoreCreate( &(*scip)->syncstore ) );
+   SCIP_CALL_TERMINATE(retcode, SCIPmemCreate(&(*scip)->mem), TERMINATE);
+   SCIP_CALL_TERMINATE(retcode, SCIPsetCreate(&(*scip)->set, (*scip)->messagehdlr, (*scip)->mem->setmem, *scip), TERMINATE);
+   SCIP_CALL_TERMINATE(retcode, SCIPinterruptCreate(&(*scip)->interrupt), TERMINATE);
+   SCIP_CALL_TERMINATE(retcode, SCIPdialoghdlrCreate((*scip)->set, &(*scip)->dialoghdlr), TERMINATE);
+   SCIP_CALL_TERMINATE(retcode, SCIPclockCreate(&(*scip)->totaltime, SCIP_CLOCKTYPE_DEFAULT), TERMINATE);
+   SCIP_CALL_TERMINATE(retcode, SCIPsyncstoreCreate( &(*scip)->syncstore ), TERMINATE);
 
    SCIPclockStart((*scip)->totaltime, (*scip)->set);
    (*scip)->stat = NULL;
@@ -771,22 +772,26 @@ SCIP_RETCODE SCIPcreate(
    (*scip)->reopt = NULL;
    (*scip)->concurrent = NULL;
 
-   SCIP_CALL( SCIPnlpInclude((*scip)->set, SCIPblkmem(*scip)) );
+   SCIP_CALL_TERMINATE(retcode, SCIPnlpInclude((*scip)->set, SCIPblkmem(*scip)), TERMINATE);
 
    if( strcmp(SCIPlpiGetSolverName(), "NONE") != 0 )
    {
-      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPlpiGetSolverName(), SCIPlpiGetSolverDesc()) );
+      SCIP_CALL_TERMINATE(retcode, SCIPsetIncludeExternalCode((*scip)->set, SCIPlpiGetSolverName(), SCIPlpiGetSolverDesc()), TERMINATE);
    }
    if( strcmp(SCIPexprintGetName(), "NONE") != 0 )
    {
-      SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, SCIPexprintGetName(), SCIPexprintGetDesc()) );
+      SCIP_CALL_TERMINATE(retcode, SCIPsetIncludeExternalCode((*scip)->set, SCIPexprintGetName(), SCIPexprintGetDesc()), TERMINATE);
    }
 
 #ifdef WITH_ZLIB
    SCIP_CALL( SCIPsetIncludeExternalCode((*scip)->set, "ZLIB " ZLIB_VERSION, "General purpose compression library by J. Gailly and M. Adler (zlib.net)") );
 #endif
-
-   return SCIP_OKAY;
+TERMINATE:
+   if( retcode != SCIP_OKAY )
+   {
+      SCIP_CALL( SCIPfree(scip) );
+   }
+   return retcode;
 }
 
 /** frees SCIP data structures
