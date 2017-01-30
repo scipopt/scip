@@ -3917,7 +3917,7 @@
  * We now explain how users can add their own relaxation handlers using the C interface. It is very easy to
  * transfer the C explanation to C++: whenever a method should be implemented using the SCIP_DECL_RELAX... notion,
  * reimplement the corresponding virtual member function of the abstract scip::ObjRelax wrapper base class.
- * Unfortunately, SCIP does not contain a default relaxation handler plugin, which could be used as an example.
+ * Example implementations of relaxation handlers can be found in the \ref RELAXATOR_MAIN "Relaxator example".
  *
  * Additional documentation for the callback methods of a relaxation handler can be found in the file type_relax.h.
  *
