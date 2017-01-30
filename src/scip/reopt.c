@@ -7055,10 +7055,10 @@ SCIP_RETCODE SCIPreoptSplitRoot(
          assert(reoptnodes[id]->varbounds != NULL);
          assert(reoptnodes[id]->varboundtypes != NULL);
 
-         /* ther permutation is the identity */
+         /* the permutation is the identity */
          if( set->reopt_varorderinterdiction == 'd' )
          {
-            /* copy first v bound changes */
+            /* copy first c bound changes */
             for( v = 0; v < c; v++ )
             {
                reoptnodes[id]->vars[v] = vars[v];
@@ -7068,7 +7068,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
          }
          else
          {
-            /* copy first v bound changes */
+            /* copy first c bound changes */
             for( v = 0; v < c; v++ )
             {
                reoptnodes[id]->vars[v] = vars[perm[v]];
@@ -7084,7 +7084,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
          reoptnodes[id]->varbounds[c] = bounds[perm[c]];
          if( SCIPvarGetType(vars[perm[c]]) != SCIP_VARTYPE_CONTINUOUS )
          {
-            if(boundtypes[perm[c]] == SCIP_BOUNDTYPE_LOWER )
+            if( boundtypes[perm[c]] == SCIP_BOUNDTYPE_LOWER )
                reoptnodes[id]->varbounds[c] -= 1.0;
             else
                reoptnodes[id]->varbounds[c] += 1.0;
