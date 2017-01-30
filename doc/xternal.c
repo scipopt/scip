@@ -4497,7 +4497,7 @@
  * The additional callback methods do not need to be implemented in every case.
  * They can be used, for example, to free private data.
  *
- * @subsection DIALOGPFREE
+ * @subsection DIALOGFREE
  *
  * If you are using dialog data, you have to implement this method in order to free the dialog data.
  * This can be done by the following procedure:
