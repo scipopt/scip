@@ -475,7 +475,9 @@ void SCIPnlpStatisticsSetTotalTime(
    SCIP_Real             totaltime           /**< solution time to store */
    );
 
-/* @} */
+/** @} */
+
+/** @} */
 
 #ifdef __cplusplus
 }
