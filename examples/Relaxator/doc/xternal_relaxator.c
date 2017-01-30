@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal.c
- * @brief  main document page
+/**@file   xternal_relaxator.c
+ * @brief  Main documentation page of the Relaxator example
  * @author Benjamin Mueller
  */
 
