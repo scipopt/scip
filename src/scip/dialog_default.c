@@ -3054,7 +3054,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
          {
             SCIP_Bool printzeros;
 
-            SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
+            retcode = SCIPgetBoolParam(scip, "write/printzeros", &printzeros);
+            if( retcode != SCIP_OKAY )
+            {
+               fclose(file);
+               SCIP_CALL( retcode );
+            }
 
             SCIPinfoMessage(scip, file, "\n");
             retcode = SCIPprintBestSol(scip, file, printzeros);
