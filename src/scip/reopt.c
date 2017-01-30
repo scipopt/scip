@@ -6902,7 +6902,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    if( !set->reopt_usesplitcons )
    {
       assert(perm == NULL);
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &perm, reoptnodes[0]->nvars) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &perm, nbndchgs) );
    }
 
    /* copy bounds */
