@@ -34,7 +34,10 @@
 extern "C" {
 #endif
 
-/** creates the mutation primal heuristic and includes it in SCIP */
+/** creates the mutation primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurMutation(
    SCIP*                 scip                /**< SCIP data structure */

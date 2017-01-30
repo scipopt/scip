@@ -38,7 +38,10 @@
 extern "C" {
 #endif
 
-/** creates the root node reduced cost strengthening propagator and includes it in SCIP */
+/** creates the root node reduced cost strengthening propagator and includes it in SCIP
+ *
+ * @ingroup PropagatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePropRootredcost(
    SCIP*                 scip                /**< SCIP data structure */

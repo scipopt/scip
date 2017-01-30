@@ -905,7 +905,7 @@ void checkChkmem(
    assert(chkmem->storesize == storesize);
    assert(chkmem->eagerfreesize == eagerfreesize);
 
-   assert((chkmem->eagerfreesize == 0) ^ (chkmem->firsteager != NULL));
+   assert(((unsigned int) (chkmem->eagerfreesize == 0)) ^ ( (unsigned int) (chkmem->firsteager != NULL)));
 
    if( chkmem->firsteager != NULL )
       assert(chkmem->firsteager->preveager == NULL);

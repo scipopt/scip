@@ -33,7 +33,10 @@
 extern "C" {
 #endif
 
-/** creates the activecons primal heuristic and includes it in SCIP */
+/** creates the activecons primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurActivecons(
    SCIP*                 scip                /**< SCIP data structure */

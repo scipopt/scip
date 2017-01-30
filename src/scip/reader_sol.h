@@ -64,7 +64,10 @@
 extern "C" {
 #endif
 
-/** includes the sol file reader into SCIP */
+/** includes the sol file reader into SCIP
+ *
+ *  @ingroup FileReaderIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeReaderSol(
    SCIP*                 scip                /**< SCIP data structure */

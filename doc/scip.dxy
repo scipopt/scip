@@ -197,7 +197,8 @@ TAB_SIZE               = 8
 
 ALIASES                = "SCIP=<b>SCIP</b>" \
                          FILEEXT=.shtml \
-                         PUBLICAPIDESCRIPTION="The public API of \SCIP is separated into a Core API and a Plugin API. The first contains all methods that can be accessed by including the header scip.h. The Plugin API is a collection of methods that are provided by the default plugins of \SCIP. The Plugin API is provided by scipdefplugins.h."
+                         PUBLICAPIDESCRIPTION="The public API of \SCIP is separated into a Core API and a Plugin API. The first contains all methods that can be accessed by including the header scip.h. The Plugin API is a collection of methods that are provided by the default plugins of \SCIP. The Plugin API is provided by scipdefplugins.h." \
+                         refsnippet{2}="@snippet \1 \2 \n\(Source: \1\)"
 
 # This tag can be used to specify a number of word-keyword mappings (TCL only).
 # A mapping has the form "name=value". For example adding
@@ -666,10 +667,16 @@ INPUT                  = . \
                          ../src/xml \
                          ../src/blockmemshell \
                          ../examples/Binpacking/src/ \
+                         ../examples/LOP/src/ \
+                         ../examples/LOP/doc/xternal_lop.c \
                          ../examples/Binpacking/doc/xternal_binpacking.c \
                          ../examples/MIPSolver/doc/xternal_mipsolver.c \
+                         ../examples/Eventhdlr/doc/xternal_eventhdlr.c \
+                         ../examples/Eventhdlr/src/ \
                          ../examples/GMI/src/ \
                          ../examples/GMI/doc/xternal_gmi.c \
+                         ../examples/Relaxator/src/ \
+                         ../examples/Relaxator/doc/xternal_relaxator.c \
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is

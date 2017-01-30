@@ -889,7 +889,7 @@ SCIP_Real computeObjWeightSize(
  *    \left[
  *    \begin{array}{r}
  *      -A \\
- *      A 
+ *      A
  *    \end{array}
  *    \right],
  *    \quad
@@ -2332,7 +2332,7 @@ SCIP_RETCODE solveSubscip(
 }
 
 
-/** Computes cut from the given multipliers 
+/** Computes cut from the given multipliers
  *
  *  Note that the cut computed here in general will not be the same as the one computed with the
  *  sub-MIP, because of numerical differences. Here, we only combine rows whose corresponding
@@ -3794,10 +3794,7 @@ SCIP_RETCODE freeSubscip(
       }
    }
 
-   if ( mipdata->subscip != NULL )
-   {
-      SCIP_CALL( SCIPfree(&(mipdata->subscip)) );
-   }
+   SCIP_CALL( SCIPfree(&(mipdata->subscip)) );
 
    SCIPfreeBlockMemoryArray(scip, &(mipdata->z), 2*mipdata->ncols); /*lint !e647*/
    SCIPfreeBlockMemoryArray(scip, &(mipdata->yrhs), mipdata->ntotalrows);

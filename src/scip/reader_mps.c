@@ -3554,6 +3554,7 @@ void printBoundSection(
  */
 
 /** copy method for reader plugins (called when SCIP copies plugins) */
+/**! [SnippetReaderCopyMps] */
 static
 SCIP_DECL_READERCOPY(readerCopyMps)
 {  /*lint --e{715}*/
@@ -3566,8 +3567,10 @@ SCIP_DECL_READERCOPY(readerCopyMps)
 
    return SCIP_OKAY;
 }
+/**! [SnippetReaderCopyMps] */
 
 /** destructor of reader to free user data (called when SCIP is exiting) */
+/**! [SnippetReaderFreeMps] */
 static
 SCIP_DECL_READERFREE(readerFreeMps)
 {
@@ -3580,6 +3583,7 @@ SCIP_DECL_READERFREE(readerFreeMps)
 
    return SCIP_OKAY;
 }
+/**! [SnippetReaderFreeMps] */
 
 /** problem reading method of reader */
 static

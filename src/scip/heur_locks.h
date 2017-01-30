@@ -40,8 +40,11 @@
 extern "C" {
 #endif
 
-/** creates the locks primal heuristic and includes it in SCIP */
-extern
+/** creates the locks primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
+EXTERN
 SCIP_RETCODE SCIPincludeHeurLocks(
    SCIP*                 scip                /**< SCIP data structure */
    );

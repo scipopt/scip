@@ -42,11 +42,19 @@
 extern "C" {
 #endif
 
-/** creates the NLP local search primal heuristic and includes it in SCIP */
+/** creates the NLP local search primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup PRIMALHEURISTICS
+  *
+  * @{
+  */
 
 /** updates the starting point for the NLP heuristic
  * 
@@ -123,6 +131,8 @@ SCIP_SOL* SCIPgetStartCandidateHeurSubNlp(
    SCIP*                 scip,               /**< original SCIP data structure                                   */
    SCIP_HEUR*            heur                /**< heuristic data structure                                       */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

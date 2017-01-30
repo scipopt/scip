@@ -32,11 +32,19 @@
 extern "C" {
 #endif
 
-/** creates the vbounds propagator and includes it in SCIP */
+/** creates the vbounds propagator and includes it in SCIP
+ *
+ * @ingroup PropagatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePropVbounds(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup PROPAGATORS
+  *
+  * @{
+  */
 
 /** returns TRUE if the propagator has the status that all variable lower and upper bounds are propagated */
 EXTERN
@@ -51,6 +59,8 @@ SCIP_RETCODE SCIPexecPropVbounds(
    SCIP_Bool             force,              /**< should domain changes for continuous variables be forced */
    SCIP_RESULT*          result              /**< pointer to store result */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

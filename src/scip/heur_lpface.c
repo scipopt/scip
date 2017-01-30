@@ -347,8 +347,8 @@ SCIP_RETCODE createNewSol(
    int        nvars;
    SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
    SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
-   SCIP_Bool printreason = FALSE;
-   SCIP_Bool completely = FALSE;
+   SCIP_Bool printreason;
+   SCIP_Bool completely;
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -378,6 +378,9 @@ SCIP_RETCODE createNewSol(
    completely = TRUE;
    SCIPdebugMsg(scip, "trying to transfer LP face solution with solution value %16.9g to main problem\n",
       SCIPretransformObj(scip, SCIPgetSolTransObj(scip, newsol)));
+#else
+   printreason = FALSE;
+   completely = FALSE;
 #endif
 
    /* try to add new solution to scip and free it immediately */

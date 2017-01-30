@@ -443,6 +443,7 @@ SCIP_DECL_PROPCOPY(propCopyRedcost)
 }
 
 /** destructor of propagator to free user data (called when SCIP is exiting) */
+/**! [SnippetPropFreeRedcost] */
 static
 SCIP_DECL_PROPFREE(propFreeRedcost)
 {  /*lint --e{715}*/
@@ -458,6 +459,7 @@ SCIP_DECL_PROPFREE(propFreeRedcost)
 
    return SCIP_OKAY;
 }
+/**! [SnippetPropFreeRedcost] */
 
 /** solving process initialization method of propagator (called when branch and bound process is about to begin) */
 static

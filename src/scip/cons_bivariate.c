@@ -774,6 +774,7 @@ SCIP_RETCODE computeViolation(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(consdata->z != NULL);
 
    if( SCIPexprtreeGetInterpreterData(consdata->f) == NULL )
    {
@@ -840,8 +841,7 @@ SCIP_RETCODE computeViolation(
        return SCIP_OKAY;
    }
 
-   if( consdata->z != NULL )
-      consdata->activity += consdata->zcoef * zval;
+   consdata->activity += consdata->zcoef * zval;
 
    /* compute violation of constraint sides */
    if( consdata->activity < consdata->lhs && !SCIPisInfinity(scip, -consdata->lhs) )

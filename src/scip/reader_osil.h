@@ -36,7 +36,10 @@
 extern "C" {
 #endif
 
-/** includes the osil file reader into SCIP */
+/** includes the osil file reader into SCIP
+ *
+ *  @ingroup FileReaderIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeReaderOsil(
    SCIP*                 scip                /**< SCIP data structure */

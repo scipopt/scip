@@ -7558,12 +7558,11 @@ SCIP_RETCODE propagateCons(
                int endvarposclique = cliqueendposs[c];
                int startvarposclique = cliquestartposs[c];
 
+               assert(myvars != NULL);
 
                maxvar = myvars[startvarposclique];
 
-
                assert(nnegcliques == consdata->nnegcliques);
-               assert(myvars != NULL);
                assert(myweights != NULL);
                assert(secondmaxweights != NULL);
                assert(cliquestartposs != NULL);
@@ -11937,6 +11936,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdKnapsack)
  */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
+/**! [SnippetConsCopyKnapsack] */
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyKnapsack)
 {  /*lint --e{715}*/
@@ -11951,8 +11951,10 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyKnapsack)
 
    return SCIP_OKAY;
 }
+/**! [SnippetConsCopyKnapsack] */
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
+/**! [SnippetConsFreeKnapsack] */
 static
 SCIP_DECL_CONSFREE(consFreeKnapsack)
 {  /*lint --e{715}*/
@@ -11968,6 +11970,7 @@ SCIP_DECL_CONSFREE(consFreeKnapsack)
 
    return SCIP_OKAY;
 }
+/**! [SnippetConsFreeKnapsack] */
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
@@ -12742,6 +12745,7 @@ SCIP_DECL_CONSRESPROP(consRespropKnapsack)
 }
 
 /** variable rounding lock method of constraint handler */
+/**! [SnippetConsLockKnapsack] */
 static
 SCIP_DECL_CONSLOCK(consLockKnapsack)
 {  /*lint --e{715}*/
@@ -12758,6 +12762,7 @@ SCIP_DECL_CONSLOCK(consLockKnapsack)
 
    return SCIP_OKAY;
 }
+/**! [SnippetConsLockKnapsack] */
 
 
 /** variable deletion method of constraint handler */
@@ -13187,6 +13192,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
+/**! [SnippetConsCreationKnapsack] */
 SCIP_RETCODE SCIPcreateConsKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -13252,6 +13258,7 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
 
    return SCIP_OKAY;
 }
+/**! [SnippetConsCreationKnapsack] */
 
 /** creates and captures a knapsack constraint
  *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the

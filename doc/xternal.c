@@ -165,7 +165,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/LOP"><b>LOP</b></a>
+ *  \ref LOP_MAIN "Linear Ordering"
  *  </td>
  *  <td>
  *  An example for implementing a constraint handler.
@@ -217,7 +217,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Eventhdlr"><b>Eventhdlr</b></a>
+ *  \ref EVENTHDLR_MAIN "Event handler"
  *  </td>
  *  <td>
  *  A small example illustrating the use of an event handler.
@@ -229,6 +229,14 @@
  *  </td>
  *  <td>
  *  An example about Gomory mixed-integer cuts.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  \ref RELAXATOR_MAIN "Relaxator example"
+ *  </td>
+ *  <td>
+ *  An example about using custom relaxators.
  *  </td>
  *  </tr>
  *  </table>
@@ -464,234 +472,27 @@
  * As an example, have a look at tree.c and see the examples below. We also provide settings for
  * \ref XEMACS "(x)emacs" and \ref ECLIPSE "eclipse".
  *
+ *
  * @section CODEEXAMPLES Examples
  *
  * In this section we state a few examples illustrating the \SCIP code style.
  *
- * \code
- * #ifdef __cplusplus
- * extern "C" {
- * #endif
+ * @refsnippet{src/scip/type_set.h,SnippetCodeStyleExample}
  *
- * /** SCIP operation stage */
- * enum SCIP_Stage
- * {
- *    SCIP_STAGE_INIT         =  0,        /**< SCIP datastructures are initialized, no problem exists */
- *    SCIP_STAGE_PROBLEM      =  1,        /**< the problem is being created and modified */
- *    SCIP_STAGE_TRANSFORMING =  2,        /**< the problem is being transformed into solving data space */
- *    SCIP_STAGE_TRANSFORMED  =  3,        /**< the problem was transformed into solving data space */
- *    SCIP_STAGE_PRESOLVING   =  4,        /**< the problem is being presolved */
- *    SCIP_STAGE_PRESOLVED    =  5,        /**< the problem was presolved */
- *    SCIP_STAGE_INITSOLVE    =  6,        /**< the solving process data is being initialized */
- *    SCIP_STAGE_SOLVING      =  7,        /**< the problem is being solved */
- *    SCIP_STAGE_SOLVED       =  8,        /**< the problem was solved */
- *    SCIP_STAGE_FREESOLVE    =  9,        /**< the solving process data is being freed */
- *    SCIP_STAGE_FREETRANS    = 10         /**< the transformed problem is being freed */
- * };
- * typedef enum SCIP_Stage SCIP_STAGE;
- *
- * /** possible settings for enabling/disabling algorithms and other features */
- * enum SCIP_Setting
- * {
- *    SCIP_UNDEFINED = 0,                  /**< undefined setting */
- *    SCIP_DISABLED  = 1,                  /**< feature is disabled */
- *    SCIP_AUTO      = 2,                  /**< feature is set to automatic mode */
- *    SCIP_ENABLED   = 3                   /**< feature is enabled */
- * };
- * typedef enum SCIP_Setting SCIP_SETTING;
- *
- * #ifdef __cplusplus
- * }
- * #endif
- * \endcode
  *
  * @section XEMACS Customize (x)emacs
  *
  * If you are using (x)emacs, you can use the following customization for the c++-mode. These settings satisfy the
  * coding guidelines of \SCIP.
  *
- * \verbatim
-  (add-hook 'c++-mode-hook
-    (function
-      (lambda ()
-    ;; SCIP customizations for c-mode and c++-mode
-    (setq-default c-basic-offset 3)
-    (c-set-offset 'substatement-open 0)
-    (c-set-offset 'statement-case-open 0)
-    (c-set-offset 'brace-list-open '-)
-    (c-set-offset 'inextern-lang '0)
-    (c-set-offset 'arglist-intro '+)
-    (c-set-offset 'arglist-cont 0)
-    (c-set-offset 'arglist-cont-nonempty '+)
-    (c-set-offset 'arglist-close '+)
-    (set-variable 'fill-column 120)
-   ;; this will make sure spaces are used instead of tabs
-    (setq tab-width 8 indent-tabs-mode nil)
-    )))\endverbatim
+ * \include codestyle/emacs_scip_codestyle.el
+ *
  *
  * @section ECLIPSE Customize eclipse
  *
- *
  * Eclipse user can use the profile below. This profile does not match the \SCIP coding guideline completely.
  *
- * \code
- *
- * <?xml version="1.0" encoding="UTF-8" standalone="no"?>
- * <profiles version="1">
- * <profile kind="CodeFormatterProfile" name="scip" version="1">
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_paren_in_method_declaration" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_for" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_new_line_in_empty_block" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.lineSplit" value="124"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_base_types" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.keep_else_statement_on_same_line" value="false"/>
- * <setting id="org.eclipse.cdt.core.formatter.indent_switchstatements_compare_to_switch" value="false"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_brace_in_array_initializer" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_method_declaration_parameters" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_if" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_exception_specification" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_parenthesized_expression" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_base_types" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.indent_body_declarations_compare_to_access_specifier" value="true"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_exception_specification" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_template_arguments" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_brace_in_block" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_method_declaration" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.use_tabs_only_for_leading_indentations" value="false"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_colon_in_labeled_statement" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_colon_in_case" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_array_initializer" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_enum_declarations" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.alignment_for_expressions_in_array_initializer" value="16"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_declarator_list" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_bracket" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_for" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_prefix_operator" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.tabulation.size" value="3"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_new_line_before_else_in_if_statement" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.alignment_for_enumerator_list" value="48"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_parenthesized_expression" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_between_empty_parens_in_method_declaration" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.alignment_for_declarator_list" value="16"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_switch" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_paren_in_parenthesized_expression" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.indent_empty_lines" value="false"/>
- * <setting id="org.eclipse.cdt.core.formatter.indent_switchstatements_compare_to_cases" value="true"/>
- * <setting id="org.eclipse.cdt.core.formatter.keep_empty_array_initializer_on_one_line" value="false"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_brace_in_method_declaration" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.put_empty_statement_on_new_line" value="true"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_brace_in_switch" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_cast" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_between_empty_braces_in_array_initializer" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.brace_position_for_method_declaration" value="next_line"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_while" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_question_in_conditional" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_semicolon" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_closing_angle_bracket_in_template_arguments" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_colon_in_base_clause" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.indent_breaks_compare_to_cases" value="true"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_unary_operator" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_declarator_list" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.alignment_for_arguments_in_method_invocation" value="16"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_paren_in_while" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_between_empty_brackets" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_bracket" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.alignment_for_parameters_in_method_declaration" value="48"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_new_line_before_closing_brace_in_array_initializer" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.number_of_empty_lines_to_preserve" value="1"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_method_invocation" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_brace_in_array_initializer" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_semicolon_in_for" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.brace_position_for_block" value="next_line"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_colon_in_conditional" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.brace_position_for_type_declaration" value="next_line"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_assignment_operator" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_angle_bracket_in_template_arguments" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_expression_list" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_angle_bracket_in_template_parameters" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.continuation_indentation" value="1"/>
- * <setting id="org.eclipse.cdt.core.formatter.alignment_for_expression_list" value="0"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_method_declaration" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_template_parameters" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_colon_in_default" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_binary_operator" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.alignment_for_conditional_expression" value="16"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_between_empty_parens_in_method_invocation" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_array_initializer" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_if" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.format_guardian_clause_on_one_line" value="false"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_cast" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.indent_access_specifier_compare_to_type_header" value="false"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_brace_in_type_declaration" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_colon_in_labeled_statement" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.continuation_indentation_for_array_initializer" value="1"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_method_declaration_parameters" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_semicolon_in_for" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_method_invocation" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.indent_body_declarations_compare_to_namespace_header" value="false"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_closing_brace_in_block" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_assignment_operator" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.alignment_for_compact_if" value="0"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_brace_in_array_initializer" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_new_line_at_end_of_file_if_missing" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_template_parameters" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_expression_list" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_question_in_conditional" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_paren_in_exception_specification" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_binary_operator" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_new_line_before_identifier_in_function_declaration" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.alignment_for_base_clause_in_type_declaration" value="80"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_method_declaration_throws" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_between_empty_parens_in_exception_specification" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_method_invocation_arguments" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.indent_declaration_compare_to_template_header" value="false"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_unary_operator" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_paren_in_switch" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.indent_statements_compare_to_body" value="true"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_method_declaration_throws" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.indent_statements_compare_to_block" value="true"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_template_arguments" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_new_line_before_catch_in_try_statement" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.alignment_for_throws_clause_in_method_declaration" value="48"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_paren_in_method_invocation" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_closing_paren_in_cast" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_paren_in_catch" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_angle_bracket_in_template_parameters" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.tabulation.char" value="space"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_angle_bracket_in_template_parameters" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_while" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_comma_in_method_invocation_arguments" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.brace_position_for_block_in_case" value="next_line"/>
- * <setting id="org.eclipse.cdt.core.formatter.compact_else_if" value="true"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_postfix_operator" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_colon_in_base_clause" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_new_line_after_template_declaration" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_catch" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.keep_then_statement_on_same_line" value="false"/>
- * <setting id="org.eclipse.cdt.core.formatter.brace_position_for_switch" value="next_line"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_paren_in_if" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_paren_in_switch" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.keep_imple_if_on_one_line" value="false"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_new_line_after_opening_brace_in_array_initializer" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.indentation.size" value="3"/>
- * <setting id="org.eclipse.cdt.core.formatter.brace_position_for_namespace_declaration" value="end_of_line"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_colon_in_conditional" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_comma_in_enum_declarations" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_prefix_operator" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_angle_bracket_in_template_arguments" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.brace_position_for_array_initializer" value="end_of_line"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_colon_in_case" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_paren_in_catch" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_brace_in_namespace_declaration" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_postfix_operator" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_closing_bracket" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_new_line_before_while_in_do_statement" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_before_opening_paren_in_for" value="do not insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_closing_angle_bracket_in_template_parameters" value="insert"/>
- * <setting id="org.eclipse.cdt.core.formatter.insert_space_after_opening_angle_bracket_in_template_arguments" value="do not insert"/>
- * </profile>
- * </profiles>
- * \endcode
+ * \include codestyle/eclipse_scip_codestyle.xml
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -840,112 +641,15 @@
  * Typing <code>make</code> uses SoPlex as LP solver and includes support for the modeling language ZIMPL. You will be asked the
  * following questions on the first call to "make" (example answers are already given):
  *
- * \verbatim
-  > make
-  make[1]: Entering directory `scip-1.2'
-
-  - Current settings: LPS=spx OSTYPE=linux ARCH=x86_64 COMP=gnu SUFFIX= ZIMPL=true ZIMPLOPT=opt IPOPT=false IPOPTOPT=opt
-
-  * \SCIP needs some softlinks to external programs, in particular, LP-solvers.
-  * Please insert the paths to the corresponding directories/libraries below.
-  * The links will be installed in the 'lib' directory.
-  * For more information and if you experience problems see the INSTALL file.
-
-    -> "spxinc" is the path to the SoPlex "src" directory, e.g., "../../soplex/src".
-    -> "libsoplex.*" is the path to the SoPlex library, e.g., "../../soplex/lib/libsoplex.linux.x86.gnu.opt.a"
-    -> "zimplinc" is a directory containing the path to the ZIMPL "src" directory, e.g., "../../zimpl/src".
-    -> "libzimpl.*" is the path to the ZIMPL library, e.g., "../../zimpl/lib/libzimpl.linux.x86.gnu.opt.a"
-
-  - preparing missing soft-link "lib/spxinc":
-  > Enter soft-link target file or directory for "lib/spxinc" (return if not needed):
-  > ../../soplex/src/
-  -> creating softlink "lib/spxinc" -> "../../soplex/src"
-
-
-  - preparing missing soft-link "lib/libsoplex.linux.x86_64.gnu.opt.a":
-  > Enter soft-link target file or directory for "lib/libsoplex.linux.x86_64.gnu.opt.a" (return if not needed):
-  > ../../soplex/lib/libsoplex.linux.x86_64.gnu.opt.a
-  -> creating softlink "lib/libsoplex.linux.x86_64.gnu.opt.a" -> "../../soplex/lib/libsoplex.linux.x86_64.gnu.opt.a"
-
-
-  - preparing missing soft-link "lib/libsoplex.linux.x86_64.gnu.opt.so":
-  * this soft-link is not necessarily needed since "lib/libsoplex.linux.x86_64.gnu.opt.a" already exists - press return to skip
-  > Enter soft-link target file or directory for "lib/libsoplex.linux.x86_64.gnu.opt.so" (return if not needed):
-  >
-  * skipped creation of softlink "lib/libsoplex.linux.x86_64.gnu.opt.so". Call "make links" if needed later.
-
-
-  - preparing missing soft-link "lib/zimplinc/zimpl":
-  > Enter soft-link target file or directory for "lib/zimplinc/zimpl" (return if not needed):
-  ../../zimpl/src/
-   creating softlink "lib/zimplinc/zimpl" -> "../../zimpl/src"
-
-
-  - preparing missing soft-link "lib/libzimpl.linux.x86_64.gnu.opt.a":
-  > Enter soft-link target file or directory for "lib/libzimpl.linux.x86_64.gnu.opt.a" (return if not needed):
-  > ../../zimpl/lib/libzimpl.linux.x86_64.gnu.opt.a
-  -> creating softlink "lib/libzimpl.linux.x86_64.gnu.opt.a" -> "../../zimpl/lib/libzimpl.linux.x86_64.gnu.opt.a"
-
-
-  - preparing missing soft-link "lib/libzimpl.linux.x86_64.gnu.opt.so":
-  * this soft-link is not necessarily needed since "lib/libzimpl.linux.x86_64.gnu.opt.a" already exists - press return to skip
-  > Enter soft-link target file or directory for "lib/libzimpl.linux.x86_64.gnu.opt.so" (return if not needed):
-  >
-  * skipped creation of softlink "lib/libzimpl.linux.x86_64.gnu.opt.so". Call "make links" if needed later.
-
-  ...
-
-  -> generating library lib/libobjscip-1.2.0.linux.x86_64.gnu.opt.a
-  -> generating library lib/liblpispx-1.2.0.linux.x86_64.gnu.opt.a
-  -> generating library lib/libscip-1.2.0.linux.x86_64.gnu.opt.a
-  -> linking bin/scip-1.2.0.linux.x86_64.gnu.opt.spx
-
-   \endverbatim
+ * \verbinclude makeexamples/example1.txt
  *
  * @section EXAMPLE2 Example 2 (CPLEX, with no ZIMPL support):
  *
  * Typing <code>make LPS=cpx ZIMPL=false</code>  uses CPLEX as LP solver. You will be asked the following questions on
  * the first call to "make" (example answers are already given):
  *
- * \verbatim
-  > make LPS=cpx ZIMPL=false
-  make[1]: Entering directory `scip-1.2'
-
-  - Current settings: LPS=cpx OSTYPE=linux ARCH=x86_64 COMP=gnu SUFFIX= ZIMPL=false ZIMPLOPT=opt IPOPT=false IPOPTOPT=opt
-
-  * \SCIP needs some softlinks to external programs, in particular, LP-solvers.
-  * Please insert the paths to the corresponding directories/libraries below.
-  * The links will be installed in the 'lib' directory.
-  * For more information and if you experience problems see the INSTALL file.
-
-    -> "cpxinc" is the path to the CPLEX "include" directory, e.g., "<CPLEX-path>/include/ilcplex".
-    -> "libcplex.*" is the path to the CPLEX library, e.g., "<CPLEX-path>/lib/x86_rhel4.0_3.4/static_pic/libcplex.a"
-
-  - preparing missing soft-link "lib/cpxinc":
-  > Enter soft-link target file or directory for "lib/cpxinc" (return if not needed):
-  > ../../cplex121/include
-  -> creating softlink "lib/cpxinc" -> "../../cplex121/include"
-
-
-  - preparing missing soft-link "lib/libcplex.linux.x86_64.gnu.a":
-  > Enter soft-link target file or directory for "lib/libcplex.linux.x86_64.gnu.a" (return if not needed):
-  > ../../cplex121/lib/x86-64_sles9.0_3.3/static_pic/libcplex.a
-  -> creating softlink "lib/libcplex.linux.x86_64.gnu.a" -> "../../../../adm_cple/cplex121/lib/x86-64_sles9.0_3.3/static_pic/libcplex.a"
-
-
-  - preparing missing soft-link "lib/libcplex.linux.x86_64.gnu.so":
-  > Enter soft-link target file or directory for "lib/libcplex.linux.x86_64.gnu.so" (return if not needed):
-  >
-  * skipped creation of softlink "lib/libcplex.linux.x86_64.gnu.so". Call "make links" if needed later.
-
-  ...
-
-  -> generating library lib/libobjscip-1.2.0.linux.x86_64.gnu.opt.a
-  -> generating library lib/liblpicpx-1.2.0.linux.x86_64.gnu.opt.a
-  -> generating library lib/libscip-1.2.0.linux.x86_64.gnu.opt.a
-  -> linking bin/scip-1.2.0.linux.x86_64.gnu.opt.cpx
-
-   \endverbatim
+ * \verbinclude makeexamples/example2.txt
+ *
  *
  * @section COMPILERPROBLEMS Compilation problems:
  *
@@ -1064,7 +768,7 @@
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
  *     - The <a href="http://scip.zib.de/doc/examples/TSP"><b>TSP</b></a>-example
  *        is a <b>branch-and-cut</b>-code in <b>C++</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/LOP"><b>LOP</b></a>-example
+ *     - The \ref LOP_MAIN LOP-example
  *       is a <b>branch-and-cut</b>-code in <b>C</b>.
  *     .
  * - Copy one of the examples in the <code>examples</code> directory (in the \SCIP root
@@ -1660,61 +1364,41 @@
  * SCIPincludeConshdlr().
  * It is called by the user, if (s)he wants to include the constraint handler, i.e., if (s)he wants to make
  * the constraint handler available to the model, and looks like this:
+ * \dontinclude src/scip/cons_knapsack.c
  *  -# If you are using constraint handler data, you have to <b>allocate the memory for the data</b> at this point.
  *     You also have to initialize the fields in struct SCIP_ConshdlrData afterwards.
- *  \code
- * SCIP_RETCODE SCIPincludeConshdlrKnapsack(
- * ...
- * )
- * {
- *    SCIP_EVENTHDLRDATA* eventhdlrdata;
- *    SCIP_CONSHDLRDATA* conshdlrdata;
- *    SCIP_CONSHDLR* conshdlr;
  *
- *  SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
- *  ...
- *  \endcode
+ *     \skip SCIP_RETCODE SCIPincludeConshdlrKnapsack(
+ *     \until SCIPallocBlockMemory
+ *
  *  -# Now, <b>SCIP gets notified</b> of the presence of the constraint handler together with its \ref CONS_FUNDAMENTALCALLBACKS "basic callbacks".
- *   \code
- *  SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
- *        CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
- *        consEnfolpKnapsack, consEnfopsKnapsack, consCheckKnapsack, consLockKnapsack,
- *        conshdlrdata) );
- *  assert(conshdlr != NULL);
- *  \endcode
+ *
+ *     \skip SCIPincludeConshdlrBasic
+ *     \until assert
+ *
  *  -# All \ref CONS_ADDITIONALCALLBACKS "additional callbacks" are added via their setter functions.
- *  \code
- *  SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyKnapsack, consCopyKnapsack) );
- *  SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransKnapsack) );
- *  \endcode
- *  -# If the constraint handler is a specialization of a general linear or nonlinear constraint, we want to include an <b>automatic
- * upgrading mechanism</b> by calling the interface method
- *  \code
- *  if( SCIPfindConshdlr(scip,"linear") != NULL )
- *  {
- *       SCIP_CALL( SCIPincludeLinconsUpgrade(scip, linconsUpgdKnapsack, LINCONSUPGD_PRIORITY, CONSHDLR_NAME) );
- *  }
- *  \endcode
- *  or
- * \code
- * SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, nonlinconsUpgdSubtour, NULL, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
- * \endcode
- * in the nonlinear case.
- * See also cons_nonlinear.h for further information about the general upgrade procedure in the nonlinear case.
+ *
+ *     \skip SCIPsetConshdlrCopy
+ *     \until SCIPsetConshdlrExit
+ *
+ *  -# If the constraint handler is a specialization of a general linear or nonlinear constraint, we want to include an
+ *     <b>automatic upgrading mechanism</b> by calling the interface method
+ *
+ *     \skip SCIPfindConshdlr
+ *     \until SCIPincludeLinconsUpgrade
+ *     or
+ *     \code
+ *     SCIP_CALL( SCIPincludeNonlinconsUpgrade(scip, nonlinconsUpgdSubtour, NULL, NONLINCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
+ *     \endcode
+ *
+ *     in the nonlinear case. See also cons_nonlinear.h for further information about the general upgrade procedure in the nonlinear case.
  *  -# You may also add <b>user parameters</b> for your constraint handler.
  * Some parameters which are important to play with are added to every constraint automatically, as, e.g.,
  * propagation or separation frequency.
- * \code
- *  SCIP_CALL( SCIPaddIntParam(scip,
- *        "constraints/knapsack/sepacardfreq",
- *        "multiplier on separation frequency, how often knapsack cuts are separated (-1: never, 0: only at root)",
- *        &conshdlrdata->sepacardfreq, TRUE, DEFAULT_SEPACARDFREQ, -1, INT_MAX, NULL, NULL) );
- *  ...
- *  return SCIP_OKAY;
- * }
- * \endcode
- *
- *
+ *     \skip SCIPaddIntParam
+ *     \until DEFAULT_SEPACARDFREQ
+ *     \skip SCIP_OKAY
+ *     \until }
  *
  *
  * The methods SCIPcreateConsSubtour() and SCIPcreateConsSubtourBasic() are called to create a single constraint of the constraint
@@ -1722,50 +1406,7 @@
  * It should allocate and fill the constraint data, and call SCIPcreateCons().
  * Take a look at the following example from the \ref cons_knapsack.h "knapsack constraint handler":
  *
- * \code
- * SCIP_RETCODE SCIPcreateConsKnapsack(
- *   SCIP*                 scip,
- *   SCIP_CONS**           cons,
- *   const char*           name,
- *   int                   nvars,
- *   SCIP_VAR**            vars,
- *   SCIP_Longint*         weights,
- *   SCIP_Longint          capacity,
- *   SCIP_Bool             initial,
- *   SCIP_Bool             separate,
- *   SCIP_Bool             enforce,
- *   SCIP_Bool             check,
- *   SCIP_Bool             propagate,
- *   SCIP_Bool             local,
- *   SCIP_Bool             modifiable,
- *   SCIP_Bool             dynamic,
- *   SCIP_Bool             removable,
- *   SCIP_Bool             stickingatnode
- *   )
- * {
- *    SCIP_CONSHDLRDATA* conshdlrdata;
- *    SCIP_CONSHDLR* conshdlr;
- *    SCIP_CONSDATA* consdata;
- *
- *    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
- *    if( conshdlr == NULL )
- *    {
- *       SCIPerrorMessage("knapsack constraint handler not found\n");
- *       return SCIP_PLUGINNOTFOUND;
- *    }
- *
- *    conshdlrdata = SCIPconshdlrGetData(conshdlr);
- *    assert(conshdlrdata != NULL);
- *    assert(conshdlrdata->eventhdlr != NULL);
- *
- *    SCIP_CALL( consdataCreate(scip, &consdata, conshdlrdata->eventhdlr, nvars, vars, weights, capacity) );
- *
- *    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
- *          local, modifiable, dynamic, removable, stickingatnode) );
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
+ * @refsnippet{src/scip/cons_knapsack.c,SnippetConsCreationKnapsack}
  *
  * In this example, consdataCreate() is a local method that allocates memory for the given consdata
  * and fills the data with the given <code>vars</code> array. For allocating memory for the constraint data, you
@@ -1918,24 +1559,7 @@
  *  fashion <b>without</b> adding or subtracting anything to them. In case of the knapsack constraints this
  *  method looks like this.
  *
- *  \code
- *  static
- *  SCIP_DECL_CONSLOCK(consLockKnapsack)
- *  {
- *     SCIP_CONSDATA* consdata;
- *     int i;
- *
- *     consdata = SCIPconsGetData(cons);
- *     assert(consdata != NULL);
- *
- *     for( i = 0; i < consdata->nvars; i++)
- *     {
- *        SCIP_CALL( SCIPaddVarLocks(scip, consdata->vars[i], nlocksneg, nlockspos) );
- *     }
- *
- *     return SCIP_OKAY;
- *  }
- * \endcode
+ *  @refsnippet{src/scip/cons_knapsack.c,SnippetConsLockKnapsack}
  *
  *  To give same more intuition, consider the linear constraint \f$3x -5y +2z \leq 7\f$ as an example.
  *  The CONSLOCK callback method of the linear constraint handler should call
@@ -1963,22 +1587,7 @@
  * constraint handler data. This can be done by the following procedure (which is taken from the
  * \ref cons_knapsack.h "knapsack constraint handler"):
  *
- * \code
- * static
- * SCIP_DECL_CONSFREE(consFreeKnapsack)
- * {
- *    SCIP_CONSHDLRDATA* conshdlrdata;
- *
- *    conshdlrdata = SCIPconshdlrGetData(conshdlr);
- *    assert(conshdlrdata != NULL);
- *
- *    SCIPfreeMemory(scip, &conshdlrdata);
- *
- *    SCIPconshdlrSetData(conshdlr, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
+ * @refsnippet{src/scip/cons_knapsack.c,SnippetConsFreeKnapsack}
  *
  * If you have allocated memory for fields in your constraint handler data, remember to free this memory
  * before freeing the constraint handler data itself.
@@ -1996,21 +1605,7 @@
  * calls the interface method which includes the constraint handler to the model. For example, this callback is
  * implemented for the \ref cons_knapsack.c "knapsack constraint handler" as follows:
  *
- * \code
- * static
- * SCIP_DECL_CONSHDLRCOPY(conshdlrCopyKnapsack)
- * {
- *    assert(scip != NULL);
- *    assert(conshdlr != NULL);
- *    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
- *
- *    SCIP_CALL( SCIPincludeConshdlrKnapsack(scip) );
- *
- *    *valid = TRUE;
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
+ * @refsnippet{src/scip/cons_knapsack.c,SnippetConsCopyKnapsack}
  *
  * <b>Note:</b> If you implement this callback, take care when setting the valid pointer.
  *
@@ -2095,7 +1690,7 @@
  *
  * Here is an example, which is taken from the \ref cons_knapsack.h "knapsack constraint handler":
  *
- * @snippet src/scip/cons_knapsack.c SnippetConsTransKnapsack
+ * @refsnippet{src/scip/cons_knapsack.c,SnippetConsTransKnapsack}
  *
  * @subsection CONSINITLP
  *
@@ -2352,7 +1947,7 @@
  * This callback can be implemented to return the number of variables involved into a particular constraint.
  * In order to have access to the variable pointers, consider implementing @ref CONSGETVARS.
  *
- * @snippet src/scip/cons_linear.c Callback for the number of variables
+ * @refsnippet{src/scip/cons_linear.c,Callback for the number of variables}
  *
  * @subsection CONSGETDIVEBDCHGS
  *
@@ -2581,22 +2176,9 @@
  *
  * If you are using pricer data, you have to implement this method in order to free the pricer data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_PRICERFREE(pricerFreeMypricer)
- * {
- *    SCIP_PRICERDATA* pricerdata;
  *
- *    pricerdata = SCIPpricerGetData(pricer);
- *    assert(pricerdata != NULL);
+ * @refsnippet{applications/STP/src/pricer_stp.c,SnippetPricerFreeSTP}
  *
- *    SCIPfreeMemory(scip, &pricerdata);
- *
- *    SCIPpricerSetData(pricer, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your pricer data, remember to free this memory
  * before freeing the pricer data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -2817,22 +2399,9 @@
  *
  * If you are using presolver data (see \ref PRESOL_DATA and \ref PRESOL_INTERFACE), you have to implement this method in order to free the presolver data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_PRESOLFREE(presolFreeMypresolver)
- * {
- *    SCIP_PRESOLDATA* presoldata;
  *
- *    presoldata = SCIPpresolGetData(presol);
- *    assert(presoldata != NULL);
+ * @refsnippet{src/scip/presol_boundshift.c,SnippetPresolFreeBoundshift}
  *
- *    SCIPfreeMemory(scip, &presoldata);
- *
- *    SCIPpresolSetData(presol, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your presolver data, remember to free this memory
  * before freeing the presolver data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -3088,22 +2657,9 @@
  *
  * If you are using separator data (see \ref SEPA_DATA and \ref SEPA_INTERFACE), you have to implement this method
  * in order to free the separator data. This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_SEPAFREE(sepaFreeMyseparator)
- * {
- *    SCIP_SEPADATA* sepadata;
+ * 
+ * @refsnippet{src/scip/sepa_gomory.c,SnippetSepaFreeGomory}
  *
- *    sepadata = SCIPsepaGetData(sepa);
- *    assert(sepadata != NULL);
- *
- *    SCIPfreeMemory(scip, &sepadata);
- *
- *    SCIPsepaSetData(sepa, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your separator data, remember to free this memory
  * before freeing the separator data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -3351,22 +2907,9 @@
  *
  * If you are using propagator data, you have to implement this method in order to free the propagator data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_PROPFREE(propFreeMypropagator)
- * {
- *    SCIP_PROPDATA* propdata;
+ * 
+ * @refsnippet{src/scip/prop_redcost.c,SnippetPropFreeRedcost}
  *
- *    propdata = SCIPpropGetData(prop);
- *    assert(propdata != NULL);
- *
- *    SCIPfreeMemory(scip, &propdata);
- *
- *    SCIPpropSetData(prop, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your propagator data, remember to free this memory
  * before freeing the propagator data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -3702,22 +3245,9 @@
  *
  * If you are using branching rule data, you have to implement this method in order to free the branching rule data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_BRANCHFREE(branchFreeMybranchingrule)
- * {
- *    SCIP_BRANCHRULEDATA* branchruledata;
  *
- *    branchruledata = SCIPbranchruleGetData(branchrule);
- *    assert(branchruledata != NULL);
+ * @refsnippet{src/scip/branch_random.c,SnippetBranchFreeRandom}
  *
- *    SCIPfreeMemory(scip, &branchruledata);
- *
- *    SCIPbranchruleSetData(branchrule, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your branching rule data, remember to free this memory
  * before freeing the branching rule data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -3940,22 +3470,9 @@
  *
  * If you are using node selector data, you have to implement this method in order to free the node selector data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_NODESELFREE(nodeselFreeMynodeselector)
- * {
- *    SCIP_NODESELDATA* nodeseldata;
  *
- *    nodeseldata = SCIPnodeselGetData(nodesel);
- *    assert(nodeseldata != NULL);
+ * @refsnippet{src/scip/nodesel_bfs.c,SnippetNodeselFreeBfs}
  *
- *    SCIPfreeMemory(scip, &nodeseldata);
- *
- *    SCIPnodeselSetData(nodesel, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your node selector data, remember to free this memory
  * before freeing the node selector data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -4230,22 +3747,9 @@
  *
  * If you are using primal heuristic data, you have to implement this method in order to free the primal heuristic data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_HEURFREE(heurFreeMyheuristic)
- * {
- *    SCIP_HEURDATA* heurdata;
  *
- *    heurdata = SCIPheurGetData(heur);
- *    assert(heurdata != NULL);
+ * @refsnippet{applications/Coloring/src/heur_init.c,SnippetHeurFreeInit}
  *
- *    SCIPfreeMemory(scip, &heurdata);
- *
- *    SCIPheurSetData(heur, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your primal heuristic data, remember to free this memory
  * before freeing the primal heuristic data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -4413,7 +3917,7 @@
  * We now explain how users can add their own relaxation handlers using the C interface. It is very easy to
  * transfer the C explanation to C++: whenever a method should be implemented using the SCIP_DECL_RELAX... notion,
  * reimplement the corresponding virtual member function of the abstract scip::ObjRelax wrapper base class.
- * Unfortunately, SCIP does not contain a default relaxation handler plugin, which could be used as an example.
+ * Example implementations of relaxation handlers can be found in the \ref RELAXATOR_MAIN "Relaxator example".
  *
  * Additional documentation for the callback methods of a relaxation handler can be found in the file type_relax.h.
  *
@@ -4589,22 +4093,9 @@
  *
  * If you are using relaxation handler data, you have to implement this method in order to free the relaxation handler
  * data. This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_RELAXFREE(relaxFreeMyrelaxator)
- * {
- *    SCIP_RELAXDATA* relaxdata;
  *
- *    relaxdata = SCIPrelaxGetData(relax);
- *    assert(relaxdata != NULL);
+ * @refsnippet{unittests/src/unittest-relax/relax_unittest.c,SnippetRelaxFreeUnittest}
  *
- *    SCIPfreeMemory(scip, &relaxdata);
- *
- *    SCIPrelaxSetData(relax, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your relaxation handler data, remember to free this memory
  * before freeing the relaxation handler data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -4821,40 +4312,15 @@
  * write/display the copied instances. Since the reader is in charge of that, you might want to copy the plugin. Below
  * you see a standard implementation.
  *
- * \code
- * static
- * SCIP_DECL_READERCOPY(readerCopyMyreader)
- * {
- *    assert(scip != NULL);
- *    assert(reader != NULL);
- *    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
- *
- *    SCIP_CALL( SCIPincludeReaderMyreader(scip) );
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
+ * @refsnippet{src/scip/reader_mps.c,SnippetReaderCopyMps}
  *
  * @subsection READERFREE
  *
  * If you are using file reader data, you have to implement this method in order to free the file reader data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_READERFREE(readerFreeMyreader)
- * {
- *    SCIP_READERDATA* readerdata;
  *
- *    readerdata = SCIPreaderGetData(reader);
- *    assert(readerdata != NULL);
+ * @refsnippet{src/scip/reader_mps.c,SnippetReaderFreeMps}
  *
- *    SCIPfreeMemory(scip, &readerdata);
- *
- *    SCIPreaderSetData(reader, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your file reader data, remember to free this memory
  * before freeing the file reader data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -4939,17 +4405,9 @@
  * \n
  * This method only has to be adjusted slightly.
  * It is responsible for notifying SCIP of the presence of the dialog, which can be done by the following lines of code:
- * \code
- * if( !SCIPdialogHasEntry(parentdialog, DIALOG_NAME) )
- * {
- *    SCIP_CALL( SCIPcreateDialog(scip, &dialog, dialogExecMydialog, dialogDescMydialog, dialogFreeMydialog,
- *          DIALOG_NAME, DIALOG_DESC, DIALOG_ISSUBMENU, dialogdata) );
  *
- *    SCIP_CALL( SCIPaddDialogEntry(scip, parentdialog, dialog) );
+ * @refsnippet{src/scip/dialog_xyz.c,SnippetDialogAddXyz}
  *
- *    SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
- * }
- * \endcode
  * Here "parentdialog" has to be an existing dialog which is defined to be a menu (see DIALOG_ISSUBMENU), e.g.,
  * the default root dialog. The method SCIPgetRootDialog() returns the root dialog.
  *
@@ -5047,7 +4505,7 @@
  * The additional callback methods do not need to be implemented in every case.
  * They can be used, for example, to free private data.
  *
- * @subsection DIALOGPFREE
+ * @subsection DIALOGFREE
  *
  * If you are using dialog data, you have to implement this method in order to free the dialog data.
  * This can be done by the following procedure:
@@ -5405,41 +4863,15 @@
  * (SCIP_EVENTTYPE_BESTSOLFOUND), you might want to implement that callback. The event handler example which you find
  * in the directory "examples/Eventhdlr/" uses that callback.
  *
- * \code
- * static
- * SCIP_DECL_EVENTCOPY(eventCopyBestsol)
- * {
- *    assert(scip != NULL);
- *    assert(eventhdlr != NULL);
- *    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
- *
- *    SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
- *
+ * @refsnippet{src/scip/event_softtimelimit.c,SnippetEventCopySofttimelimit}
  *
  * @subsection EVENTFREE
  *
  * If you are using event handler data, you have to implement this method in order to free the event handler data.
  * This can be done by the following procedure:
- * \code
- * static
- * SCIP_DECL_EVENTFREE(eventFreeBestsol)
- * {
- *    SCIP_EVENTHDLRDATA* eventhdlrdata;
  *
- *    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
- *    assert(eventhdlrdata != NULL);
+ * @refsnippet{src/scip/event_softtimelimit.c,SnippetEventFreeSofttimelimit}
  *
- *    SCIPfreeMemory(scip, &eventhdlrdata);
- *
- *    SCIPeventhdlrSetData(eventhdlr, NULL);
- *
- *    return SCIP_OKAY;
- * }
- * \endcode
  * If you have allocated memory for fields in your event handler data, remember to free this memory
  * before freeing the event handler data itself.
  * If you are using the C++ wrapper class, this method is not available.
@@ -5939,7 +5371,7 @@
  * @section Example
  *
  * Consider the constraint handler @p cons_linearordering.c in the
- * <a href="http://scip.zib.de/doc/examples/LOP"><b>linear ordering example</b></a>
+ * \ref LOP_MAIN "linear ordering example"
  * (see @p example/LOP directory). This constraint handler propagates the equations \f$x_{ij} + x_{ji} =
  * 1\f$ and triangle inequalities \f$x_{ij} + x_{jk} + x_{ki} \leq 2\f$.
  *
@@ -6244,22 +5676,10 @@
  *
  *  - Use <b>asserts</b> in your code to show preconditions for the parameters, invariants and postconditions.
  *    Assertions are boolean expressions which inevitably have to evaluate to <code>TRUE</code>. Consider the
- *    following example, taken from the file src/scip/cons_linear.c:
- *    \code
- *    SCIP_RETCODE consdataCatchEvent(
- *       SCIP*                 scip,               /**< SCIP data structure */
- *       SCIP_CONSDATA*        consdata,           /**< linear constraint data */
- *       SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
- *       int                   pos                 /**< array position of variable to catch bound change events for */
- *       )
- *       {
- *          assert(scip != NULL);
- *          assert(consdata != NULL);
- *          assert(eventhdlr != NULL);
- *          assert(0 <= pos && pos < consdata->nvars);
- *          ...
- *       }
- *    \endcode
+ *    following example:
+ *
+ *    @refsnippet{src/scip/cons_linear.c,SnippetDebugAssertions}
+ *
  *    As you can see, both pointers and integers are checked for valid values at the beginning of the
  *    function <code>consdataCatchEvent()</code>. This is particularly important for, e.g., array indices like
  *    the variable <code>pos</code> in this example, where using the <code>consdata->nvars[pos]</code>
@@ -6299,91 +5719,23 @@
  *    containing a solution in SCIP format (see \ref EXAMPLE_2).
  *    This solution is then read and it is checked for every cut, whether the solution violates the cut.
  *
- *  @section EXAMPLE_1 How to activate debug messages
- *    For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.h, recompile SCIP
- *    in DBG mode, and run the SCIP interactive shell to solve p0033.mps from the
- *     <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
- * \code
- * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
- * Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * @section EXAMPLE_1 How to activate debug messages
+ * For example, if we include a <code>\#define SCIP_DEBUG</code> at the top of \ref heur_oneopt.h, recompile SCIP
+ * in DBG mode, and run the SCIP interactive shell to solve p0033.mps from the
+ * <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
  *
- * user parameter file <scip.set> not found - using default parameters
- *
- * SCIP> read check/IP/miplib/p0033.mps
- * original problem has 33 variables (33 bin, 0 int, 0 impl, 0 cont) and 16 constraints
- * SCIP> optimize
- * ...
- *  0.1s|     1 |     0 |   132 | 257k|   0 |  14 |  30 |  13 |  13 |  30 |  51 |  39 |   0 |   0 | 3.026472e+03 | 3.347000e+03 |  10.59%
- * [src/scip/heur_oneopt.c:332] debug: Row <R122> has activity 110
- * [src/scip/heur_oneopt.c:332] debug: Row <R123> has activity 216
- * ...
- * [src/scip/heur_oneopt.c:101] debug: Try to shift down variable <t_C157> with
- * [src/scip/heur_oneopt.c:102] debug:     lb:<-0> <= val:<1> <= ub:<1> and obj:<171> by at most: <1>
- * [src/scip/heur_oneopt.c:135] debug:  -> The shift value had to be reduced to <0>, because of row <R122>.
- * [src/scip/heur_oneopt.c:137] debug:     lhs:<-1e+20> <= act:<110> <= rhs:<148>, colval:<-60>
- * ...
- * [src/scip/heur_oneopt.c:383] debug:  Only one shiftcand found, var <t_C167>, which is now shifted by<-1.0>
- * k 0.1s|     1 |     0 |   132 | 258k|   0 |  14 |  30 |  13 |  13 |  30 |  51 |  39 |   0 |   0 | 3.026472e+03 | 3.164000e+03 |   4.54%
- * [src/scip/heur_oneopt.c:436] debug: found feasible shifted solution:
- * objective value:                     3164.00000000012
- * C157                                                1   (obj:171)
- * C163                                                1   (obj:163)
- * C164                                                1   (obj:69)
- * C170                                                1   (obj:49)
- * C172                                                1   (obj:258)
- * C174                                                1   (obj:250)
- * C175                                                1   (obj:500)
- * C179                                                1   (obj:318)
- * C181                                                1   (obj:318)
- * C182                                                1   (obj:159)
- * C183                                 1.00000000000038   (obj:318)
- * C184                                                1   (obj:159)
- * C185                                                1   (obj:318)
- * C186                                                1   (obj:114)
- * [src/scip/heur_oneopt.c:498] debug: Finished 1-opt heuristic
- * ...
- * \endcode
+ * \include debugexamples/example1.txt
  *
  * @section EXAMPLE_2 How to add a debug solution
  *
  * Continuing the example above, we finish the solving process.
  * The optimal solution can now be written to a file:
- * \code
- * SCIP> display solution
- *
- * objective value:                                 3089
- * C157                                                1   (obj:171)
- * C163                                                1   (obj:163)
- * C164                                                1   (obj:69)
- * C166                                                1   (obj:183)
- * C170                                                1   (obj:49)
- * C174                                                1   (obj:250)
- * C177                                                1   (obj:500)
- * C179                                                1   (obj:318)
- * C181                                                1   (obj:318)
- * C182                                                1   (obj:159)
- * C183                                                1   (obj:318)
- * C184                                                1   (obj:159)
- * C185                                                1   (obj:318)
- * C186                                                1   (obj:114)
- *
- * SCIP> write solution check/p0033.sol
- *
- * written solution information to file <check/p0033.sol>
- * \endcode
+ * \include debugexamples/example2_1.txt
  *
  * If we afterwards use
  * <code>\#define SCIP_DEBUG_SOLUTION "check/p0033.sol"</code> in debug.h, recompile and run SCIP,
  * it will output:
- * \code
- * SCIP> read check/IP/miplib/p0033.mps
- * original problem has 33 variables (33 bin, 0 int, 0 impl, 0 cont) and 16 constraints
- * SCIP> optimize
- *
- * presolving:
- * ***** debug: reading solution file <check/p0033.sol>
- * ***** debug: read 15 non-zero entries
- * \endcode
+ * \include debugexamples/example2_2.txt
  * Further debug output would only appear, if the solution was cut off in the solving process.
  * Of course, this is not the case! Hopefully...otherwise, please send a bug report ;-)
  */

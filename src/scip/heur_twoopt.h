@@ -38,7 +38,10 @@
 extern "C" {
 #endif
 
-/** creates the twoopt primal heuristic and includes it in SCIP */
+/** creates the twoopt primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurTwoopt(
    SCIP*                 scip                /**< SCIP data structure */
