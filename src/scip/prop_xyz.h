@@ -31,6 +31,15 @@
 extern "C" {
 #endif
 
+/**@addtogroup PROPAGATORS
+ *
+ * @{
+ */
+
+/* TODO place other public methods in this group to facilitate navigation through the documentation */
+
+/* @} */
+
 /** creates the xyz propagator and includes it in SCIP
  *
  * @ingroup PropagatorIncludes
