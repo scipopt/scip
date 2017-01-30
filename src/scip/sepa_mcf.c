@@ -5949,7 +5949,7 @@ SCIP_RETCODE generateClusterCuts(
     */
 
    deltassize = 16;
-   SCIP_CALL( SCIPallocMemoryArray(scip, &deltas, deltassize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &deltas, deltassize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rowweights, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &comcutdemands, ncommodities) );
    SCIP_CALL( SCIPallocBufferArray(scip, &comdemands, ncommodities) );
@@ -6239,7 +6239,7 @@ SCIP_RETCODE generateClusterCuts(
                      if( ndeltas == deltassize )
                      {
                         deltassize *= 2;
-                        SCIP_CALL( SCIPreallocMemoryArray(scip, &deltas, deltassize) );
+                        SCIP_CALL( SCIPreallocBufferArray(scip, &deltas, deltassize) );
                      }
                      if( left < ndeltas )
                      {
@@ -6580,7 +6580,7 @@ SCIP_RETCODE generateClusterCuts(
    SCIPfreeBufferArray(scip, &comdemands);
    SCIPfreeBufferArray(scip, &comcutdemands);
    SCIPfreeBufferArray(scip, &rowweights);
-   SCIPfreeMemoryArray(scip, &deltas);
+   SCIPfreeBufferArray(scip, &deltas);
 
    return SCIP_OKAY;
 }
