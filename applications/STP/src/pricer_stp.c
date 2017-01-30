@@ -78,6 +78,7 @@ SCIP_DECL_PRICERCOPY(pricerCopyStp)
 }
 
 /** destructor of variable pricer to free user data (called when SCIP is exiting) */
+/**! [SnippetPricerFreeSTP] */
 static
 SCIP_DECL_PRICERFREE(pricerFreeStp)
 {
@@ -98,6 +99,7 @@ SCIP_DECL_PRICERFREE(pricerFreeStp)
 
    return SCIP_OKAY;
 }
+/**! [SnippetPricerFreeSTP] */
 
 /** initialization method of variable pricer (called after problem was transformed) */
 static

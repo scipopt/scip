@@ -31,7 +31,19 @@
 extern "C" {
 #endif
 
-/** creates the xyz propagator and includes it in SCIP */
+/**@addtogroup PROPAGATORS
+ *
+ * @{
+ */
+
+/* TODO place other public methods in this group to facilitate navigation through the documentation */
+
+/* @} */
+
+/** creates the xyz propagator and includes it in SCIP
+ *
+ * @ingroup PropagatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePropXyz(
    SCIP*                 scip                /**< SCIP data structure */

@@ -76,7 +76,10 @@
 extern "C" {
 #endif
 
-/** creates the edge-concave separator and includes it in SCIP */
+/** creates the edge-concave separator and includes it in SCIP
+ *
+ * @ingroup SeparatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeSepaEccuts(
    SCIP*                 scip                /**< SCIP data structure */

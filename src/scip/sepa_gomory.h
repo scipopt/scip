@@ -33,7 +33,10 @@
 extern "C" {
 #endif
 
-/** creates the Gomory MIR cut separator and includes it in SCIP */
+/** creates the Gomory MIR cut separator and includes it in SCIP
+ *
+ * @ingroup SeparatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeSepaGomory(
    SCIP*                 scip                /**< SCIP data structure */

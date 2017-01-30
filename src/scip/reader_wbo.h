@@ -34,7 +34,10 @@
 extern "C" {
 #endif
 
-/** includes the wbo file reader into SCIP */
+/** includes the wbo file reader into SCIP
+ *
+ *  @ingroup FileReaderIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeReaderWbo(
    SCIP*                 scip                /**< SCIP data structure */

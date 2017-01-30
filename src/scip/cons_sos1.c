@@ -7893,6 +7893,7 @@ SCIP_RETCODE getDiveBdChgsSOS1conflictgraph(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
    SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_HEURDATA*        heurdata,           /**< data of the calling heuristic */
    SCIP_SOL*             sol,                /**< solution */
    SCIP_Bool*            success             /**< pointer to store */
    )
@@ -7960,7 +7961,8 @@ SCIP_RETCODE getDiveBdChgsSOS1conflictgraph(
          {
             SCIP_Bool roundup;
 
-            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval, &score, &roundup) );
+            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, heurdata, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval,
+                  &score, &roundup) );
 
             fixneigh = roundup;
             if ( SCIPisFeasNegative(scip, solval) )
@@ -8033,6 +8035,7 @@ SCIP_RETCODE getDiveBdChgsSOS1constraints(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
    SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_HEURDATA*        heurdata,           /**< data of the calling heuristic */
    SCIP_SOL*             sol,                /**< solution */
    SCIP_Bool*            success             /**< pointer to store */
    )
@@ -8079,7 +8082,8 @@ SCIP_RETCODE getDiveBdChgsSOS1constraints(
          var = vars[j];
 
          /* check whether variable is nonzero w.r.t. sol and the bounds have not been fixed to zero by propagation */
-         if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, var)) && ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) ) )
+         if ( !SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, var))
+               && (!SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) || !SCIPisFeasZero(scip, SCIPvarGetUbLocal(var))) )
             ++cnt;
       }
 
@@ -8095,70 +8099,72 @@ SCIP_RETCODE getDiveBdChgsSOS1constraints(
          SCIP_Real score;
          SCIP_Real bound;
          SCIP_Real fracval;
-	 SCIP_Real lb;
-	 SCIP_Real ub;
+         SCIP_Real lb;
+         SCIP_Real ub;
          SCIP_Bool fixcomp;  /* whether to fix the complementary variables of the candidate in the SOS1 constraint to zero */
 
          var = vars[j];
          solval = SCIPgetSolVal(scip, sol, var);
-	 lb = SCIPvarGetLbLocal(var);
-	 ub = SCIPvarGetUbLocal(var);
+         lb = SCIPvarGetLbLocal(var);
+         ub = SCIPvarGetUbLocal(var);
 
          /* check whether variable is nonzero w.r.t. sol and the bounds have not been fixed to zero by propagation */
          if ( ! SCIPisFeasZero(scip, solval) && ( ! SCIPisFeasZero(scip, lb) || ! SCIPisFeasZero(scip, ub) ) )
-	 {
-	    /* compute (variable) bound of candidate */
-	    if ( SCIPisFeasNegative(scip, solval) )
-	       bound = lb;
-	    else
-	       bound = ub;
+         {
+            /* compute (variable) bound of candidate */
+            if ( SCIPisFeasNegative(scip, solval) )
+               bound = lb;
+            else
+               bound = ub;
 
-	    /* bound may have changed in propagation; ensure that fracval <= 1 */
-	    if ( SCIPisFeasLT(scip, REALABS(bound), REALABS(solval)) )
-	       bound = solval;
+            /* bound may have changed in propagation; ensure that fracval <= 1 */
+            if ( SCIPisFeasLT(scip, REALABS(bound), REALABS(solval)) )
+               bound = solval;
 
-	    /* ensure finiteness */
-	    bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound)); /*lint !e666*/
-	    fracval = MIN(DIVINGCUTOFFVALUE, REALABS(solval)); /*lint !e666*/
-	    assert( ! SCIPisInfinity(scip, bound) );
-	    assert( ! SCIPisInfinity(scip, fracval) );
-	    assert( SCIPisPositive(scip, bound) );
+            /* ensure finiteness */
+            bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound)); /*lint !e666*/
+            fracval = MIN(DIVINGCUTOFFVALUE, REALABS(solval)); /*lint !e666*/
+            assert( ! SCIPisInfinity(scip, bound) );
+            assert( ! SCIPisInfinity(scip, fracval) );
+            assert( SCIPisPositive(scip, bound) );
 
-	    /* get fractionality of candidate */
-	    fracval /= (bound + SCIPsumepsilon(scip));
+            /* get fractionality of candidate */
+            fracval /= (bound + SCIPsumepsilon(scip));
 
-	    /* should SOS1 variables be scored by the diving heuristics specific score function;
-	     *  otherwise use the score function of the SOS1 constraint handler */
-	    if ( SCIPdivesetSupportsType(diveset, SCIP_DIVETYPE_SOS1VARIABLE) )
-	    {
-	       SCIP_Bool roundup;
+            /* should SOS1 variables be scored by the diving heuristics specific score function;
+             *  otherwise use the score function of the SOS1 constraint handler
+             */
+            if ( SCIPdivesetSupportsType(diveset, SCIP_DIVETYPE_SOS1VARIABLE) )
+            {
+               SCIP_Bool roundup;
 
-	       SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval, &score, &roundup) );
+               SCIP_CALL( SCIPgetDivesetScore(scip, diveset, heurdata, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval,
+                &score, &roundup) );
 
-	       fixcomp = roundup;
-	       if ( SCIPisFeasNegative(scip, solval) )
-		  fixcomp = !fixcomp;
-	    }
-	    else
-	    {
-	       /* we always fix the complementary variables of the candidate in the SOS1 constraint to zero */
-	       fixcomp = TRUE;
+               fixcomp = roundup;
+               if ( SCIPisFeasNegative(scip, solval) )
+                  fixcomp = !fixcomp;
+            }
+            else
+            {
+               /* we always fix the complementary variables of the candidate in the SOS1 constraint to zero */
+               fixcomp = TRUE;
 
-	       /* score fractionality of candidate */
-	       score = fracval;
-	    }
+               /* score fractionality of candidate */
+               score = fracval;
+            }
 
-	    /* best candidate maximizes the score */
-	    if ( score > bestscore )
-	    {
-	       bestscore = score;
+            /* best candidate maximizes the score */
+            if ( score > bestscore )
+            {
+               bestscore = score;
 
-	       *success = TRUE;
-	       bestvar = var;
-	       bestcons = c;
-	       bestvarfixcomp = fixcomp;
-	    }
-	 }
+               *success = TRUE;
+               bestvar = var;
+               bestcons = c;
+               bestvarfixcomp = fixcomp;
+            }
+         }
       }
    }
    assert( !(*success) || bestvar != NULL );
@@ -10080,11 +10086,11 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
     * diving candidates) */
    if ( conshdlrdata->switchsos1branch )
    {
-      SCIP_CALL( getDiveBdChgsSOS1constraints(scip, conshdlr, diveset, sol, success) );
+      SCIP_CALL( getDiveBdChgsSOS1constraints(scip, conshdlr, diveset, heurdata, sol, success) );
    }
    else
    {
-      SCIP_CALL( getDiveBdChgsSOS1conflictgraph(scip, conshdlr, diveset, sol, success) );
+      SCIP_CALL( getDiveBdChgsSOS1conflictgraph(scip, conshdlr, diveset, heurdata, sol, success) );
    }
 
    return SCIP_OKAY;

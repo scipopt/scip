@@ -31,6 +31,12 @@
 extern "C" {
 #endif
 
+
+/**@addtogroup DIALOGS
+ *
+ * @{
+ */
+
 /** standard menu dialog execution method, that displays it's help screen if the remaining command line is empty */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecMenu);
@@ -333,6 +339,13 @@ SCIP_RETCODE SCIPcreateRootDialog(
    SCIP_DIALOG**         root                /**< pointer to store the root dialog */
    );
 
+/* @} */
+
+/**@addtogroup DialogIncludes
+ *
+ * @{
+ */
+
 /** includes or updates the default dialog menus in SCIP */
 EXTERN
 SCIP_RETCODE SCIPincludeDialogDefault(
@@ -350,6 +363,8 @@ EXTERN
 SCIP_RETCODE SCIPincludeDialogDefaultFix(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

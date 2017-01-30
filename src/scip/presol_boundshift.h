@@ -39,7 +39,10 @@
 extern "C" {
 #endif
 
-/** creates the boundshift presolver and includes it in SCIP */
+/** creates the boundshift presolver and includes it in SCIP
+ *
+ * @ingroup PresolverIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePresolBoundshift(
    SCIP*                 scip                /**< SCIP data structure */

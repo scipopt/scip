@@ -72,6 +72,7 @@ SCIP_DECL_RELAXCOPY(relaxCopyUnittest)
 #endif
 
 /** destructor of relaxator to free user data (called when SCIP is exiting) */
+/**! [SnippetRelaxFreeUnittest] */
 static
 SCIP_DECL_RELAXFREE(relaxFreeUnittest)
 {  /*lint --e{715}*/
@@ -88,6 +89,7 @@ SCIP_DECL_RELAXFREE(relaxFreeUnittest)
 
    return SCIP_OKAY;
 }
+/**! [SnippetRelaxFreeUnittest] */
 
 
 /** initialization method of relaxator (called after problem was transformed) */

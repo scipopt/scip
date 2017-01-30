@@ -324,21 +324,27 @@ SCIP_RETCODE handle1Cycle(
    /* just flipping the objective coefficients from +1 to -1 and the rounding from floor to ceil */
    for( i = 0; i < nflipcands; i++ )
    {
+      SCIP_Real sign = 1.0;
+
       var = mostfracvars[i];
       solval = SCIPvarGetLPSol(var);
       orgobjcoeff = SCIPvarGetObj(var);
       frac = SCIPfeasFrac(scip, solval);
 
-      if( frac > 0.5 )
+      if( SCIPisEQ(scip, frac, 0.5) )
       {
-         newobjcoeff = (1.0 - alpha) + alpha * orgobjcoeff;
-         solval = SCIPfeasFloor(scip, solval);
+         if( SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0 )
+            sign = -1.0;
       }
+      else if( frac > 0.5 )
+         solval = SCIPfeasFloor(scip, solval);
       else
       {
-         newobjcoeff = - (1.0 - alpha) + alpha * orgobjcoeff;
+         sign = -1.0;
          solval = SCIPfeasCeil(scip, solval);
       }
+      newobjcoeff = sign * (1.0 - alpha) + alpha * orgobjcoeff;
+
       /* updating the rounded solution and the objective */
       SCIP_CALL( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
       SCIP_CALL( SCIPchgVarObjDive(scip, var, newobjcoeff) );
@@ -369,6 +375,8 @@ SCIP_RETCODE handleCycle(
    /* just flipping the objective coefficients from +1 to -1 and the rounding from floor to ceil */
    for( i = 0; i < nbinandintvars; i++ )
    {
+      SCIP_Real sign = 1.0;
+
       /* decide arbitrarily whether the variable will be flipped or not */
       var = vars[i];
       solval = SCIPvarGetLPSol(var);
@@ -379,16 +387,21 @@ SCIP_RETCODE handleCycle(
       /* flip, iff the sum of the randomized number and the fractionality is big enough */
       if( MIN(frac, 1.0-frac) + MAX(flipprob, 0.0) > 0.5 )
       {
-         if( frac > 0.5 )
+         if( SCIPisEQ(scip, frac, 0.5) )
          {
-            newobjcoeff = (1.0 - alpha) + alpha * orgobjcoeff;
-            solval = SCIPfeasFloor(scip, solval);
+            if( SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0 )
+               sign = -1.0;
          }
+         if( frac > 0.5 )
+            solval = SCIPfeasFloor(scip, solval);
          else
          {
-            newobjcoeff = - (1.0 - alpha) + alpha * orgobjcoeff;
+            sign = -1.0;
             solval = SCIPfeasCeil(scip, solval);
          }
+
+         newobjcoeff = sign * (1.0 - alpha) + alpha * orgobjcoeff;
+
          SCIP_CALL( SCIPsetSolVal(scip, heurdata->roundedsol, var, solval) );
          SCIP_CALL( SCIPchgVarObjDive(scip, var, newobjcoeff) );
       }
@@ -1041,13 +1054,21 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          }
          else
          {
+            SCIP_Real scale = 1.0;
+
             /* check whether the variable is one of the most fractionals and label if so */
             insertFlipCand(mostfracvars, mostfracvals, &nflipcands, maxnflipcands, var, frac);
 
-            if( frac > 0.5 )
-               newobjcoeff = - (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
-            else
-               newobjcoeff = (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
+            /* try to avoid variability; decide randomly if the LP solution can contain some noise. */
+            if( SCIPisEQ(scip, frac, 0.5) )
+            {
+               if( SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0 )
+                  scale = -1.0;
+            }
+            else if( frac > 0.5 )
+               scale = -1.0;
+
+            newobjcoeff = scale * (1.0 - alpha)/scalingfactor + alpha * orgobjcoeff;
          }
 
          /* change one coefficient of the objective */

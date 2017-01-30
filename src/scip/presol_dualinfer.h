@@ -37,7 +37,10 @@
 extern "C" {
 #endif
 
-/** creates the dual inference presolver and includes it in SCIP */
+/** creates the dual inference presolver and includes it in SCIP
+ *
+ * @ingroup PresolverIncludes
+ */
 extern
 SCIP_RETCODE SCIPincludePresolDualinfer(
    SCIP*                 scip                /**< SCIP data structure */

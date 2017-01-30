@@ -13,27 +13,23 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal.c
- * @brief  main document page
- * @author Marc Pfetsch
+/**@file   xternal_mipsolver.c
+ * @brief  main documentation page of the MIP solver example
+ * @author Timo Berthold
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Gomory Mixed Integer Cut Example
- * @version  1.0
- * @author   Giacomo Nannicini
- * @author   Marc Pfetsch
+/**@page MIPSOLVER_MAIN example C++ project using SCIP as a MIP solver
+ * @version  0.1
+ * @author   Tobias Achterberg
  *
- *
- * This example provides a textbook implementation of Gomory mixed integer (GMI) cuts.
- *
- * The default implementation in SCIP does not produce GMI cuts in the strict sense, since it applies the CMIR function
- * to the aggregated row. This function can, among other things, take variable bounds into account. Thus, the resulting
- * cuts cannot be used for comparison with standard GMI cuts. This example remedies this situation.
- *
- * The implementation has been used in the paper@p
- * G. Cornuejols, F. Margot and G. Nannicini:@n
- * On the safety of Gomory cut generators.@n
- * Preprint 2012.
+ * This very basic example illustrates how to integrate SCIP into your C++ source code.  The SCIP header files are
+ * included from the directory which is denoted by SCIPDIR in the Makefile. If your SCIP headers are installed somewhere
+ * else, just change this link. Since this example is written in C++, objscip/objscip.h is included at the beginning of
+ * cppmain.cpp. It includes scip.h (which you would include when using SCIP as callable library in a C
+ * program). The main function shows how the SCIP_RETCODE can be caught and handled. In runSCIP(), you see how a SCIP
+ * instance is created and freed, plus a few more things. Here, the SCIP_RETCODEs are not checked explicitly but handled
+ * by the SCIP_CALL macro. Please also note the CallableLibrary example for nonlinear problems.
  */
+

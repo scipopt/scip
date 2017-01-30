@@ -23,6 +23,8 @@
 #ifndef __SCIP_TYPE_SET_H__
 #define __SCIP_TYPE_SET_H__
 
+/**! [SnippetCodeStyleExample] */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -62,5 +64,7 @@ typedef struct SCIP_Set SCIP_SET;                 /**< global SCIP settings */
 #ifdef __cplusplus
 }
 #endif
+
+/**! [SnippetCodeStyleExample] */
 
 #endif

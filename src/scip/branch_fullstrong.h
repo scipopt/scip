@@ -48,11 +48,19 @@
 extern "C" {
 #endif
 
-/** creates the full strong LP branching rule and includes it in SCIP */
+/** creates the full strong LP branching rule and includes it in SCIP
+ *
+ *  @ingroup BranchingRuleIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup BRANCHINGRULES
+ *
+ * @{
+ */
 
 /**
  * Selects a variable from a set of candidates by strong branching
@@ -89,6 +97,8 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    SCIP_Real*            provedbound,        /**< proved dual bound for current subtree               */
    SCIP_RESULT*          result              /**< result pointer                                      */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

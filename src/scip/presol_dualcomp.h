@@ -37,7 +37,10 @@
 extern "C" {
 #endif
 
-/** creates the dualcomp presolver and includes it in SCIP */
+/** creates the dualcomp presolver and includes it in SCIP
+ *
+ * @ingroup PresolverIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePresolDualcomp(
    SCIP*                 scip                /**< SCIP data structure */
