@@ -7055,14 +7055,28 @@ SCIP_RETCODE SCIPreoptSplitRoot(
          assert(reoptnodes[id]->varbounds != NULL);
          assert(reoptnodes[id]->varboundtypes != NULL);
 
-         /* copy first v bound changes */
-         for( v = 0; v < c; v++ )
+         /* ther permutation is the identity */
+         if( set->reopt_varorderinterdiction == 'd' )
          {
-            reoptnodes[id]->vars[v] = vars[perm[v]];
-            reoptnodes[id]->varbounds[v] = bounds[perm[v]];
-            reoptnodes[id]->varboundtypes[v] = boundtypes[perm[v]];
-            ++reoptnodes[id]->nvars;
+            /* copy first v bound changes */
+            for( v = 0; v < c; v++ )
+            {
+               reoptnodes[id]->vars[v] = vars[v];
+               reoptnodes[id]->varbounds[v] = bounds[v];
+               reoptnodes[id]->varboundtypes[v] = boundtypes[v];
+            }
          }
+         else
+         {
+            /* copy first v bound changes */
+            for( v = 0; v < c; v++ )
+            {
+               reoptnodes[id]->vars[v] = vars[perm[v]];
+               reoptnodes[id]->varbounds[v] = bounds[perm[v]];
+               reoptnodes[id]->varboundtypes[v] = boundtypes[perm[v]];
+            }
+         }
+         reoptnodes[id]->nvars += c;
 
          /* set bound change v+1 (= c) to vals[v] +/- 1 (depending on the bound- and vartype) */
          assert(v == c);
