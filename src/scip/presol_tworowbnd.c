@@ -634,7 +634,7 @@ void getActivities(
       SCIP_CALL_ABORT( SCIPincludeDefaultPlugins(subscip) );
       SCIP_CALL_ABORT( SCIPreadProb(subscip, "max.lp", NULL) );
       SCIP_CALL_ABORT( SCIPsetIntParam(subscip,"presolving/maxrounds",0) );
-      SCIP_CALL_ABORT( SCIPsolve(subscip);
+      SCIP_CALL_ABORT( SCIPsolve(subscip) );
       status = SCIPgetStatus(subscip);
       if(SCIP_STATUS_OPTIMAL == status)
       {
