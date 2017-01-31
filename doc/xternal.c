@@ -7413,10 +7413,10 @@
  * @ingroup PUBLICPLUGINAPI
  * @brief This page contains a list of all relaxation handlers which are currently available.
  *
- * Note that the linear programming relaxation is not implemented via the relaxation handler plugin. Per default there
- * exist no relaxation handler. A detailed description what a variable pricer does and how to add a A detailed
- * description what a relaxation handler does and how to add a relaxation handler to SCIP can be found \ref RELAX
- * "here".
+ * A detailed description what a relaxation handler does and how to add a relaxation handler to SCIP can be found
+ * \ref RELAX "here". Note that the linear programming relaxation is not implemented via the relaxation handler plugin.
+ * Per default no relaxation handler exists in SCIP. However, there are two relaxation handlers in the
+ * \ref RELAXATOR_MAIN "Relaxator example".
  */
 
 /**@defgroup SEPARATORS Separators

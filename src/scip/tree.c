@@ -2798,9 +2798,12 @@ void treeFindSwitchForks(
    if( (int)fork->depth > tree->cutoffdepth )
    {
 #ifndef NDEBUG
-      while( fork != NULL && !fork->cutoff )
-         fork = fork->parent;
       assert(fork != NULL);
+      while( !fork->cutoff )
+      {
+         fork = fork->parent;
+         assert(fork != NULL);
+      }
       assert((int)fork->depth >= tree->cutoffdepth);
 #endif
       *cutoff = TRUE;
