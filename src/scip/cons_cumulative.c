@@ -4977,7 +4977,6 @@ SCIP_RETCODE propagateLbTTEF(
       return SCIP_OKAY;
 
    begin = hmin - 1;
-   coreEnergyAfterStart = -1;
 
    minest = INT_MAX;
    maxlct = INT_MIN;
@@ -4997,7 +4996,6 @@ SCIP_RETCODE propagateLbTTEF(
    hmax = MIN(hmax, maxlct);
 
    maxavailable = (hmax - hmin) * capacity;
-   minavailable = maxavailable;
    totalenergy = computeTotalEnergy(durations, demands, nvars);
 
    /* check if the smallest interval has a size such that the total energy fits, if so we can skip the propagator */
@@ -8685,6 +8683,7 @@ SCIP_RETCODE addRelaxation(
    {
       SCIP_CALL( createRelaxation(scip, cons, cutsasconss) );
    }
+   assert(consdata->ndemandrows == 0 || consdata->demandrows != NULL);
 
    for( r = 0; r < consdata->ndemandrows && !(*infeasible); ++r )
    {
@@ -8729,6 +8728,7 @@ SCIP_RETCODE separateConsBinaryRepresentation(
    {
       SCIP_CALL( createRelaxation(scip, cons, FALSE) );
    }
+   assert(consdata->ndemandrows == 0 || consdata->demandrows != NULL);
 
    ncuts = 0;
 
@@ -10660,7 +10660,7 @@ SCIP_RETCODE tightenCapacity(
    {
       int oldnchgcoefs;
 
-      oldnchgcoefs = *nchgcoefs;
+      SCIPdebug(oldnchgcoefs = *nchgcoefs; )
 
       SCIPdebugMsg(scip, "+-+-+-+-+-+ --> CHANGE capacity of cons<%s> from %d to %d\n",
          SCIPconsGetName(cons), consdata->capacity, bestcapacity);
