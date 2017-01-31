@@ -3914,10 +3914,10 @@
  * handlers. In the latter case, the constraint handlers have to be extended to support this specific relaxation.
  * \n
  *
- * We now explain how users can add their own relaxation handlers using the C interface. It is very easy to
+ * We now explain how users can add their own relaxation handlers using the C interface. As an example, look into the NLP
+ * relaxation handler of the \ref RELAXATOR_MAIN "Relaxator example" (examples/Relaxator/src/relax_nlp.c). It is very easy to
  * transfer the C explanation to C++: whenever a method should be implemented using the SCIP_DECL_RELAX... notion,
  * reimplement the corresponding virtual member function of the abstract scip::ObjRelax wrapper base class.
- * Example implementations of relaxation handlers can be found in the \ref RELAXATOR_MAIN "Relaxator example".
  *
  * Additional documentation for the callback methods of a relaxation handler can be found in the file type_relax.h.
  *
