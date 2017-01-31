@@ -7130,7 +7130,6 @@ SCIP_RETCODE SCIPexprCreateUser(
 
    assert(blkmem != NULL);
    assert(expr != NULL);
-   assert(children != NULL || nchildren == 0);
    assert(eval != NULL);
    assert((evalcapability & SCIP_EXPRINTCAPABILITY_FUNCVALUE) != 0);  /* the function evaluation is not optional */
    assert(((evalcapability & SCIP_EXPRINTCAPABILITY_INTFUNCVALUE) == 0) || inteval != NULL);  /* if capability says it can do interval evaluation, then the corresponding callback needs to be provided */
@@ -7158,6 +7157,7 @@ SCIP_RETCODE SCIPexprCreateUser(
       SCIP_CALL( exprCreate(blkmem, expr, SCIP_EXPR_USER, 0, NULL, opdata) );
       return SCIP_OKAY;
    }
+   assert(children != NULL);
 
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &childrencopy, children, nchildren) );
 
