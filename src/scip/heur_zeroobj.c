@@ -472,7 +472,6 @@ SCIP_RETCODE SCIPapplyZeroobj(
       nobjvars = 0;
 #endif
 
-      cutoff = SCIPinfinity(scip);
       assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);

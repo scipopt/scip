@@ -441,7 +441,6 @@ TCLIQUE_WEIGHT tcliqueColoring(
 
          /* add the new colorinterval [1, range] to the list of chosen colorintervals for node */
          pnc->next = colorinterval;
-         pnc = colorinterval;
       }
       else
       {
@@ -495,7 +494,7 @@ TCLIQUE_WEIGHT tcliqueColoring(
             tocolor -= dif;
             pnc->next = colorinterval;
             pnc = colorinterval;
-         }	
+         }
       }
 
       debugMessage("-> updated neighbors:\n"); 

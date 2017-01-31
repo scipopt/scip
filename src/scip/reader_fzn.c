@@ -1723,7 +1723,6 @@ SCIP_RETCODE applyVariableAssignment(
    linkVar = (SCIP_VAR*) SCIPhashtableRetrieve(fzninput->varHashtable, (char*) assignment);
    constant = (FZNCONSTANT*) SCIPhashtableRetrieve(fzninput->constantHashtable, (char*) assignment);
 
-   fixvalue = 0.0;
    realvalue = SCIP_INVALID;
    boolvalue = FALSE;
 

@@ -570,8 +570,8 @@ SCIP_RETCODE separateCuts(
       case SCIP_NLPSOLSTAT_UNBOUNDED:
       default:
          SCIPerrorMessage("Projection NLP is not unbounded by construction, should not get here!\n");
-         nlpunstable = TRUE;
          SCIPABORT();
+         nlpunstable = TRUE;
    }
 
 

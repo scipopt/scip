@@ -976,6 +976,8 @@ SCIP_RETCODE addRelaxation(
          SCIP_CALL( createRelaxation(scip, cons) );
       }
 
+      assert(consdata->rows != NULL);
+
       /* add additional row */
       if( !SCIProwIsInLP(consdata->rows[0]) )
       {

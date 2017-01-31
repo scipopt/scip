@@ -472,7 +472,6 @@ SCIP_Real determineBound(
       }
 
       slaveincrement = FALSE;
-      masterincrement = FALSE;
       /* If one counter has already reached its limit, assign a huge number to the corresponding
        * row index to simulate an always greater row position. */
       if( i < nslaverows )

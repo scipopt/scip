@@ -5303,9 +5303,9 @@ SCIP_RETCODE addCliques(
    int c;
 
    assert(scip != NULL);
-   assert(conss != NULL || nconss == 0);
    assert(firstclique >= 0);
    assert(lastclique <= nconss);
+   assert(conss != NULL || ((nconss == 0) && (lastclique == 0)));
 
    /* add clique and implication information */
    for( c = firstclique; c < lastclique; ++c )

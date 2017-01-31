@@ -3807,7 +3807,6 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    tmpvarssize = *nvars;
 
    tmpvarssize2 = 1;
-   ntmpvars2 = 0;
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &tmpvars2, tmpvarssize2) );

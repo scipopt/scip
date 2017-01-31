@@ -1349,7 +1349,6 @@ SCIP_RETCODE solveSubMIP(
       SCIP_Real cutoffbound;
       SCIP_Real minimprove;
 
-      cutoffbound = SCIPinfinity(scip);
       assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);

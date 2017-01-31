@@ -2432,7 +2432,6 @@ SCIP_RETCODE lpiStrongbranch(
    assert(upvalid != NULL);
 
    spx = lpi->spx;
-   status = SPxSolver::UNKNOWN;
 #ifndef STRONGBRANCH_RESTOREBASIS
    fromparentbasis = false;
 #endif
