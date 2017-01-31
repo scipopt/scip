@@ -2572,39 +2572,79 @@ SCIP_DECL_HEUREXIT(heurExitDualval)
       }
       SCIP_CALL( SCIPhashmapRemoveAll(heurdata->dualvalues) );
       SCIPhashmapFree(&heurdata->dualvalues);
+
+      if( heurdata->varsciptosubscip != NULL )
+      {
+         SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->varsciptosubscip, TRUE) );
+
+         SCIPhashmapFree(&heurdata->varsciptosubscip);
+      }
+      if( heurdata->origsubscipConsMap != NULL )
+      {
+         SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->origsubscipConsMap, FALSE) );
+
+         SCIPhashmapFree(&heurdata->origsubscipConsMap);
+      }
+      if( heurdata->relaxcons != NULL )
+      {
+         SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->relaxcons, FALSE) );
+
+         SCIPhashmapFree(&heurdata->relaxcons);
+      }
+      if( heurdata->conss2nlrow != NULL )
+      {
+         SCIP_CALL( releaseHashmapNLPRows(heurdata->subscip, heurdata->conss2nlrow) );
+
+         SCIPhashmapFree(&heurdata->conss2nlrow);
+      }
+      if( heurdata->slack2var != NULL )
+      {
+         SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->slack2var, TRUE) );
+
+         SCIPhashmapFree(&heurdata->slack2var);
+      }
+      if( heurdata->indicopymap != NULL )
+      {
+         SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->indicopymap, TRUE) );
+
+         SCIPhashmapFree(&heurdata->indicopymap);
+      }
+      if( heurdata->indicopymapback != NULL )
+      {
+         SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->indicopymapback, TRUE) );
+
+         SCIPhashmapFree(&heurdata->indicopymapback);
+      }
+      if( heurdata->relaxconsindi != NULL )
+      {
+         SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->relaxconsindi, FALSE) );
+
+         SCIPhashmapFree(&heurdata->relaxconsindi);
+      }
+      if( heurdata->slackvarlbMap != NULL )
+      {
+         SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->slackvarlbMap, TRUE) );
+
+         SCIPhashmapFree(&heurdata->slackvarlbMap);
+      }
+      if( heurdata->slackvarubMap != NULL )
+      {
+         SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->slackvarubMap, TRUE) );
+
+         SCIPhashmapFree(&heurdata->slackvarubMap);
+      }
+
+      if( heurdata->subscip != NULL )
+      {
+         SCIP_CALL( freeSubSCIP(scip, heurdata) );
+      }
    }
 
-   if( heurdata->varsciptosubscip != NULL )
-   {
-      SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->varsciptosubscip, TRUE) );
-
-      SCIPhashmapFree(&heurdata->varsciptosubscip);
-   }
    if( heurdata->varsubsciptoscip != NULL )
    {
       SCIP_CALL( releaseHashmapEntries(scip, heurdata->varsubsciptoscip, TRUE) );
 
       SCIPhashmapFree(&heurdata->varsubsciptoscip);
-   }
-   if( heurdata->origsubscipConsMap != NULL )
-   {
-      SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->origsubscipConsMap, FALSE) );
-
-      SCIPhashmapFree(&heurdata->origsubscipConsMap);
-   }
-   if( heurdata->switchedvars != NULL )
-   {
-      SCIPhashmapFree(&heurdata->switchedvars);
-   }
-   if( heurdata->switchedvars2 != NULL )
-   {
-      SCIPhashmapFree(&heurdata->switchedvars2);
-   }
-   if( heurdata->relaxcons != NULL )
-   {
-      SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->relaxcons, FALSE) );
-
-      SCIPhashmapFree(&heurdata->relaxcons);
    }
    if( heurdata->slacktoindivarsmap != NULL )
    {
@@ -2618,52 +2658,13 @@ SCIP_DECL_HEUREXIT(heurExitDualval)
 
       SCIPhashmapFree(&heurdata->indicators);
    }
-   if( heurdata->conss2nlrow != NULL )
+   if( heurdata->switchedvars != NULL )
    {
-      SCIP_CALL( releaseHashmapNLPRows(heurdata->subscip, heurdata->conss2nlrow) );
-
-      SCIPhashmapFree(&heurdata->conss2nlrow);
+      SCIPhashmapFree(&heurdata->switchedvars);
    }
-   if( heurdata->slack2var != NULL )
+   if( heurdata->switchedvars2 != NULL )
    {
-      SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->slack2var, TRUE) );
-
-      SCIPhashmapFree(&heurdata->slack2var);
-   }
-   if( heurdata->indicopymap != NULL )
-   {
-      SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->indicopymap, TRUE) );
-
-      SCIPhashmapFree(&heurdata->indicopymap);
-   }
-   if( heurdata->indicopymapback != NULL )
-   {
-      SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->indicopymapback, TRUE) );
-
-      SCIPhashmapFree(&heurdata->indicopymapback);
-   }
-   if( heurdata->relaxconsindi != NULL )
-   {
-      SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->relaxconsindi, FALSE) );
-
-      SCIPhashmapFree(&heurdata->relaxconsindi);
-   }
-   if( heurdata->slackvarlbMap != NULL )
-   {
-      SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->slackvarlbMap, TRUE) );
-
-      SCIPhashmapFree(&heurdata->slackvarlbMap);
-   }
-   if( heurdata->slackvarubMap != NULL )
-   {
-      SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->slackvarubMap, TRUE) );
-
-      SCIPhashmapFree(&heurdata->slackvarubMap);
-   }
-
-   if( heurdata->subscip != NULL )
-   {
-      SCIP_CALL( freeSubSCIP(scip, heurdata) );
+      SCIPhashmapFree(&heurdata->switchedvars2);
    }
 
    /* reset some flags and counters */
