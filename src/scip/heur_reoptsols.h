@@ -33,21 +33,33 @@
 extern "C" {
 #endif
 
+/** creates the reoptsols primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
+EXTERN
+SCIP_RETCODE SCIPincludeHeurReoptsols(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup PRIMALHEURISTICS
+ *
+ * @{
+ */
+
 /* returns the number of checked solutions */
+EXTERN
 int SCIPreoptsolsGetNCheckedsols(
    SCIP*                 scip
    );
 
 /* returns the number of found improving solutions */
+EXTERN
 int SCIPreoptsolsGetNImprovingsols(
    SCIP*                 scip
    );
 
-/** creates the reoptsols primal heuristic and includes it in SCIP */
-extern
-SCIP_RETCODE SCIPincludeHeurReoptsols(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
+/* @} */
 
 #ifdef __cplusplus
 }

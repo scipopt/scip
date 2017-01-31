@@ -119,7 +119,7 @@ SCIP_RETCODE readBounds(
 
       /* parse the line */
       (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
-      nread = sscanf(buffer, format, varname, lbstring, ubstring);
+      (void) sscanf(buffer, format, varname, lbstring, ubstring);
 
       SCIP_CALL( SCIPparseVarName(scip, buffer, &var, &endptr) );
 

@@ -690,6 +690,7 @@ SCIP_RETCODE SCIPdialoghdlrAddInputLine(
    )
 {
    SCIP_LINELIST* linelist;
+   SCIP_RETCODE retcode = SCIP_OKAY;
 
    assert(dialoghdlr != NULL);
    assert(dialoghdlr->inputlistptr != NULL);
@@ -697,12 +698,16 @@ SCIP_RETCODE SCIPdialoghdlrAddInputLine(
    assert(inputline != NULL);
 
    SCIP_ALLOC( BMSallocMemory(&linelist) );
-   SCIP_ALLOC( BMSduplicateMemoryArray(&linelist->inputline, inputline, strlen(inputline)+1) );
+   SCIP_ALLOC_TERMINATE( retcode, BMSduplicateMemoryArray(&linelist->inputline, inputline, strlen(inputline)+1), TERMINATE );
    linelist->nextline = NULL;
    *dialoghdlr->inputlistptr = linelist;
    dialoghdlr->inputlistptr = &linelist->nextline;
 
-   return SCIP_OKAY;
+ TERMINATE:
+   if( retcode != SCIP_OKAY )
+      BMSfreeMemory(&linelist);
+
+   return retcode;
 }
 
 /** adds a command to the command history of the dialog handler; if a dialog is given, the command is preceeded
@@ -819,8 +824,12 @@ SCIP_RETCODE SCIPdialogCreate(
    SCIP_DIALOGDATA*      dialogdata          /**< user defined dialog data */
    )
 {
+   SCIP_RETCODE retcode;
+
    assert(dialog != NULL);
    assert(name != NULL);
+
+   retcode = SCIP_OKAY;
 
    SCIP_ALLOC( BMSallocMemory(dialog) );
    (*dialog)->dialogcopy = dialogcopy;
@@ -828,10 +837,10 @@ SCIP_RETCODE SCIPdialogCreate(
    (*dialog)->dialogdesc = dialogdesc;
    (*dialog)->dialogfree = dialogfree;
 
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*dialog)->name, name, strlen(name)+1) );
+   SCIP_ALLOC_TERMINATE( retcode, BMSduplicateMemoryArray(&(*dialog)->name, name, strlen(name)+1), TERMINATE );
    if( desc != NULL )
    {
-      SCIP_ALLOC( BMSduplicateMemoryArray(&(*dialog)->desc, desc, strlen(desc)+1) );
+      SCIP_ALLOC_TERMINATE( retcode, BMSduplicateMemoryArray(&(*dialog)->desc, desc, strlen(desc)+1), TERMINATE );
    }
    else
       (*dialog)->desc = NULL;
@@ -847,7 +856,14 @@ SCIP_RETCODE SCIPdialogCreate(
    /* capture dialog */
    SCIPdialogCapture(*dialog);
 
-   return SCIP_OKAY;
+ TERMINATE:
+   if( retcode != SCIP_OKAY )
+   {
+      BMSfreeMemoryArrayNull(&(*dialog)->name);
+      BMSfreeMemory(dialog);
+   }
+
+   return retcode;
 }
 
 /** frees dialog and all of its sub-dialogs */

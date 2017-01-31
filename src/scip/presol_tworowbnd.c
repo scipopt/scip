@@ -595,16 +595,15 @@ void getActivities(
    {
       SCIP_Real minsolve = 0.0;
       SCIP* subscip;
-      SCIP_RETCODE retcode;
       SCIP_SOL* sol;
       SCIP_STATUS status;
       SCIP_VAR** vars;
       int nvars;
       int objnonzeros = 0;
-      retcode = SCIPcreate(&subscip);
-      retcode = SCIPincludeDefaultPlugins(subscip);
-      retcode = SCIPreadProb(subscip, "min.lp", NULL);
-      retcode = SCIPsetIntParam(subscip,"presolving/maxrounds",0);
+      SCIP_CALL_ABORT( SCIPcreate(&subscip) );
+      SCIP_CALL_ABORT( SCIPincludeDefaultPlugins(subscip) );
+      SCIP_CALL_ABORT( SCIPreadProb(subscip, "min.lp", NULL) );
+      SCIP_CALL_ABORT( SCIPsetIntParam(subscip,"presolving/maxrounds",0) );
       vars = SCIPgetVars(subscip);
       nvars = SCIPgetNVars(subscip);
       for(i=0; i< nvars; i++)
@@ -614,7 +613,7 @@ void getActivities(
       }
       assert(numoverlap == objnonzeros);
 
-      retcode = SCIPsolve(subscip);
+      SCIP_CALL_ABORT( SCIPsolve(subscip) );
       status = SCIPgetStatus(subscip);
       if(SCIP_STATUS_OPTIMAL == status)
       {
@@ -626,19 +625,18 @@ void getActivities(
       {
          assert(SCIPisEQ(scip,-SCIPinfinity(scip),*minact));
       }
-      retcode = SCIPfree(&subscip);
+      SCIP_CALL_ABORT( SCIPfree(&subscip) );
    }
    {
       SCIP_Real maxsolve = 0.0;
       SCIP* subscip;
-      SCIP_RETCODE retcode;
       SCIP_SOL* sol;
       SCIP_STATUS status;
-      retcode = SCIPcreate(&subscip);
-      retcode = SCIPincludeDefaultPlugins(subscip);
-      retcode = SCIPreadProb(subscip, "max.lp", NULL);
-      retcode = SCIPsetIntParam(subscip,"presolving/maxrounds",0);
-      retcode = SCIPsolve(subscip);
+      SCIP_CALL_ABORT( SCIPcreate(&subscip) );
+      SCIP_CALL_ABORT( SCIPincludeDefaultPlugins(subscip) );
+      SCIP_CALL_ABORT( SCIPreadProb(subscip, "max.lp", NULL) );
+      SCIP_CALL_ABORT( SCIPsetIntParam(subscip,"presolving/maxrounds",0) );
+      SCIP_CALL_ABORT( SCIPsolve(subscip);
       status = SCIPgetStatus(subscip);
       if(SCIP_STATUS_OPTIMAL == status)
       {
@@ -650,7 +648,7 @@ void getActivities(
       {
          assert(SCIPisEQ(scip,SCIPinfinity(scip),*maxact));
       }
-      retcode = SCIPfree(&subscip);
+      SCIP_CALL_ABORT( SCIPfree(&subscip) );
    }
 #endif
 }/*lint !e438*/

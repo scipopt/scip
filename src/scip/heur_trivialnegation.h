@@ -33,8 +33,11 @@
 extern "C" {
 #endif
 
-/** creates the trivialnegation primal heuristic and includes it in SCIP */
-extern
+/** creates the trivialnegation primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
+EXTERN
 SCIP_RETCODE SCIPincludeHeurTrivialnegation(
    SCIP*                 scip                /**< SCIP data structure */
    );

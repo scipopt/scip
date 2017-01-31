@@ -2221,13 +2221,17 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
        */
       if( trysol )
       {
-         SCIP_Bool printreason = FALSE;
-         SCIP_Bool completely = FALSE;
+         SCIP_Bool printreason;
+         SCIP_Bool completely;
 #ifdef SCIP_DEBUG
          printreason = TRUE;
+#else
+         printreason = FALSE;
 #endif
 #ifndef NDEBUG
          completely = TRUE; /*lint !e838*/
+#else
+         completely = FALSE;
 #endif
 
          /* we once also checked the variable bounds which should not be necessary */

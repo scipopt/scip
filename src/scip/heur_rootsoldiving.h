@@ -31,7 +31,10 @@
 extern "C" {
 #endif
 
-/** creates the rootsoldiving heuristic and includes it in SCIP */
+/** creates the rootsoldiving heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurRootsoldiving(
    SCIP*                 scip                /**< SCIP data structure */

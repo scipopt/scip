@@ -33,7 +33,10 @@
 extern "C" {
 #endif
 
-/** creates the lpface primal heuristic and includes it in SCIP */
+/** creates the lpface primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurLpface(
    SCIP*                 scip                /**< SCIP data structure */

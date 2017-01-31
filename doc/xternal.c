@@ -173,7 +173,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/TSP"><b>TSP</b></a>
+ *  \ref TSP_MAIN "The TSP example"
  *  </td>
  *  <td>
  *  A short implementations of a constraint handler, two easy combinatorial heuristics, a file reader, etc. which
@@ -217,7 +217,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Eventhdlr"><b>Eventhdlr</b></a>
+ *  \ref EVENTHDLR_MAIN "Event handler"
  *  </td>
  *  <td>
  *  A small example illustrating the use of an event handler.
@@ -229,6 +229,14 @@
  *  </td>
  *  <td>
  *  An example about Gomory mixed-integer cuts.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  \ref RELAXATOR_MAIN "Relaxator example"
+ *  </td>
+ *  <td>
+ *  An example about using custom relaxators.
  *  </td>
  *  </tr>
  *  </table>
@@ -758,7 +766,7 @@
  *     - The <a href="http://scip.zib.de/doc/examples/Binpacking"><b>Binpacking</b></a>-example
  *       and the <a href="http://scip.zib.de/doc/applications/Coloring"><b>Coloring</b></a> application are
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/TSP"><b>TSP</b></a>-example
+ *     - The \ref TSP_MAIN "TSP example"
  *        is a <b>branch-and-cut</b>-code in <b>C++</b>.
  *     - The \ref LOP_MAIN LOP-example
  *       is a <b>branch-and-cut</b>-code in <b>C</b>.
@@ -1152,7 +1160,7 @@
  *
  * We now explain how users can add their own constraint handlers.
  * For an example, look into the subtour constraint handler (examples/TSP/src/ConshdlrSubtour.cpp) of the
- * <a href="http://scip.zib.de/doc/examples/TSP">TSP </a> example project.
+ * \ref TSP_MAIN project.
  * The example is written in C++ and uses the C++ wrapper classes.
  * However, we will explain the implementation of a constraint handler using the C interface.
  * It is very easy to transfer the C explanation to C++; whenever a method should be implemented using the
@@ -3906,10 +3914,10 @@
  * handlers. In the latter case, the constraint handlers have to be extended to support this specific relaxation.
  * \n
  *
- * We now explain how users can add their own relaxation handlers using the C interface. It is very easy to
+ * We now explain how users can add their own relaxation handlers using the C interface. As an example, look into the NLP
+ * relaxation handler of the \ref RELAXATOR_MAIN "Relaxator example" (examples/Relaxator/src/relax_nlp.c). It is very easy to
  * transfer the C explanation to C++: whenever a method should be implemented using the SCIP_DECL_RELAX... notion,
  * reimplement the corresponding virtual member function of the abstract scip::ObjRelax wrapper base class.
- * Unfortunately, SCIP does not contain a default relaxation handler plugin, which could be used as an example.
  *
  * Additional documentation for the callback methods of a relaxation handler can be found in the file type_relax.h.
  *
@@ -7405,10 +7413,10 @@
  * @ingroup PUBLICPLUGINAPI
  * @brief This page contains a list of all relaxation handlers which are currently available.
  *
- * Note that the linear programming relaxation is not implemented via the relaxation handler plugin. Per default there
- * exist no relaxation handler. A detailed description what a variable pricer does and how to add a A detailed
- * description what a relaxation handler does and how to add a relaxation handler to SCIP can be found \ref RELAX
- * "here".
+ * A detailed description what a relaxation handler does and how to add a relaxation handler to SCIP can be found
+ * \ref RELAX "here". Note that the linear programming relaxation is not implemented via the relaxation handler plugin.
+ * Per default no relaxation handler exists in SCIP. However, there are two relaxation handlers in the
+ * \ref RELAXATOR_MAIN "Relaxator example".
  */
 
 /**@defgroup SEPARATORS Separators

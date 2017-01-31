@@ -671,8 +671,14 @@ INPUT                  = . \
                          ../examples/LOP/doc/xternal_lop.c \
                          ../examples/Binpacking/doc/xternal_binpacking.c \
                          ../examples/MIPSolver/doc/xternal_mipsolver.c \
+                         ../examples/Eventhdlr/doc/xternal_eventhdlr.c \
+                         ../examples/Eventhdlr/src/ \
                          ../examples/GMI/src/ \
                          ../examples/GMI/doc/xternal_gmi.c \
+                         ../examples/Relaxator/src/ \
+                         ../examples/Relaxator/doc/xternal_relaxator.c \
+                         ../examples/TSP/src/ \
+                         ../examples/TSP/doc/xternal_tsp.c \
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is

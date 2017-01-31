@@ -31,7 +31,10 @@
 extern "C" {
 #endif
 
-/** creates the xyz node selector and includes it in SCIP */
+/** creates the xyz node selector and includes it in SCIP
+ *
+ *  @ingroup NodeSelectorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeNodeselXyz(
    SCIP*                 scip                /**< SCIP data structure */

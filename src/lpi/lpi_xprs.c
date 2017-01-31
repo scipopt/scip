@@ -3063,8 +3063,8 @@ SCIP_RETCODE SCIPlpiSetState(
    /* the dimension of the lpi state should not be larger than the current problem; it might be that columns and rows
     * are added since the saving of the lpi state
     */
-   assert(lpistate == NULL || lpistate->ncols <= ncols);
-   assert(lpistate == NULL || lpistate->nrows <= nrows);
+   assert(lpistate->ncols <= ncols);
+   assert(lpistate->nrows <= nrows);
 
    SCIPdebugMessage("loading LPI state %p (%d cols, %d rows) into Xpress\n", (void*)lpistate, lpistate->ncols, lpistate->nrows);
 
