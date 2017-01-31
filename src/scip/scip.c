@@ -39342,8 +39342,7 @@ SCIP_RETCODE readSolFile(
          }
          else
          {
-            SCIPfclose(file);
-            SCIP_CALL( retcode );
+            SCIP_CALL_FINALLY( retcode, SCIPfclose(file) );
          }
       }
    }
