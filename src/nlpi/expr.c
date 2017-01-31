@@ -11771,6 +11771,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    case SCIP_EXPR_MAX:
    {
       assert(node->nchildren == 2);
+      assert(childexprs != NULL);
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0], childexprs[1]) );  /*lint !e613*/
       break;
    }
@@ -11788,6 +11789,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    case SCIP_EXPR_SIGN:
    {
       assert(node->nchildren == 1);
+      assert(childexprs != NULL);
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0]) );  /*lint !e613*/
       break;
    }
