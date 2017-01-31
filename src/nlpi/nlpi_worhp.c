@@ -179,37 +179,9 @@ SCIP_RETCODE evaluateWorhpRun(
   }
 
   /* evaluation errors */
-  else if (problem->cnt->status == FunctionErrorF)
+  else if (problem->cnt->status == evalsNaN)
   {
-     SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of an invalid number in objective function evaluation!\n");
-     invalidateSolution(problem);
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
-  }
-  else if (problem->cnt->status == FunctionErrorG)
-  {
-     SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of an invalid number in constraint evaluation!\n");
-     invalidateSolution(problem);
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
-  }
-  else if (problem->cnt->status == FunctionErrorDF)
-  {
-     SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of an invalid number in gradient of objective function evaluation!\n");
-     invalidateSolution(problem);
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
-  }
-  else if (problem->cnt->status == FunctionErrorDG)
-  {
-     SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of an invalid number in jacobian of constraint evaluation!\n");
-     invalidateSolution(problem);
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
-  }
-  else if (problem->cnt->status == FunctionErrorHM)
-  {
-     SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of an invalid number in hessian evaluation!\n");
+     SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of a NaN value in an evaluation!\n");
      invalidateSolution(problem);
      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
      problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
@@ -257,7 +229,7 @@ SCIP_RETCODE evaluateWorhpRun(
    */
 
   /* everything went fine */
-  else if( problem->cnt->status == OptimalSolution )
+  else if( problem->cnt->status == OptimalSolution || problem->cnt->status == OptimalSolutionBoxEqual )
   {
      SCIPdebugMessage("Worhp terminated successfully at a local optimum!\n");
      problem->lastsolstat  = SCIP_NLPSOLSTAT_LOCOPT;
