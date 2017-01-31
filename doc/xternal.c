@@ -173,7 +173,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/TSP"><b>TSP</b></a>
+ *  \ref TSP_MAIN "The TSP example"
  *  </td>
  *  <td>
  *  A short implementations of a constraint handler, two easy combinatorial heuristics, a file reader, etc. which
@@ -766,7 +766,7 @@
  *     - The <a href="http://scip.zib.de/doc/examples/Binpacking"><b>Binpacking</b></a>-example
  *       and the <a href="http://scip.zib.de/doc/applications/Coloring"><b>Coloring</b></a> application are
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/TSP"><b>TSP</b></a>-example
+ *     - The \ref TSP_MAIN "TSP example"
  *        is a <b>branch-and-cut</b>-code in <b>C++</b>.
  *     - The \ref LOP_MAIN LOP-example
  *       is a <b>branch-and-cut</b>-code in <b>C</b>.
@@ -1160,7 +1160,7 @@
  *
  * We now explain how users can add their own constraint handlers.
  * For an example, look into the subtour constraint handler (examples/TSP/src/ConshdlrSubtour.cpp) of the
- * <a href="http://scip.zib.de/doc/examples/TSP">TSP </a> example project.
+ * \ref TSP_MAIN project.
  * The example is written in C++ and uses the C++ wrapper classes.
  * However, we will explain the implementation of a constraint handler using the C interface.
  * It is very easy to transfer the C explanation to C++; whenever a method should be implemented using the
@@ -3914,10 +3914,10 @@
  * handlers. In the latter case, the constraint handlers have to be extended to support this specific relaxation.
  * \n
  *
- * We now explain how users can add their own relaxation handlers using the C interface. It is very easy to
+ * We now explain how users can add their own relaxation handlers using the C interface. As an example, look into the NLP
+ * relaxation handler of the \ref RELAXATOR_MAIN "Relaxator example" (examples/Relaxator/src/relax_nlp.c). It is very easy to
  * transfer the C explanation to C++: whenever a method should be implemented using the SCIP_DECL_RELAX... notion,
  * reimplement the corresponding virtual member function of the abstract scip::ObjRelax wrapper base class.
- * Example implementations of relaxation handlers can be found in the \ref RELAXATOR_MAIN "Relaxator example".
  *
  * Additional documentation for the callback methods of a relaxation handler can be found in the file type_relax.h.
  *
