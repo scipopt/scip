@@ -18,6 +18,36 @@
  * @brief  Constraint handler for absolute power constraints \f$\textrm{lhs} \leq \textrm{sign}(x+a) |x+a|^n + c z \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
  *
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#ifndef __SCIP_CONS_ABSPOWER_H__
+#define __SCIP_CONS_ABSPOWER_H__
+
+#include "scip/scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** creates the handler for absolute power constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
+EXTERN
+SCIP_RETCODE SCIPincludeConshdlrAbspower(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Absolute Power Constraints
+ *
+ * @{
+ *
  * This constraint handler handles constraints of the form
  * \f[
  *   \textrm{lhs} \leq \textrm{sign}(x+a) |x+a|^n + c z \leq \textrm{rhs}
@@ -39,24 +69,8 @@
  * Stefan Vigerske@n
  * Decomposition of Multistage Stochastic Programs and a Constraint Integer Programming Approach to Mixed-Integer Nonlinear Programming@n
  * PhD Thesis, Humboldt-University Berlin, 2012, submitted.
+ *
  */
-
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#ifndef __SCIP_CONS_ABSPOWER_H__
-#define __SCIP_CONS_ABSPOWER_H__
-
-#include "scip/scip.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/** creates the handler for absolute power constraints and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeConshdlrAbspower(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 /** creates and captures a absolute power constraint
  *
@@ -185,6 +199,10 @@ SCIP_Real SCIPgetViolationAbspower(
    SCIP_CONS*            cons,               /**< absolute power constraint */
    SCIP_SOL*             sol                 /**< LP solution */
    );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

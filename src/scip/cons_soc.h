@@ -18,6 +18,37 @@
  * @brief  constraint handler for second order cone constraints \f$\sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} \leq \alpha_{n+1}\, (x_{n+1}+\beta_{n+1})\f$
  * @author Stefan Vigerske
  *
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#ifndef __SCIP_CONS_SOC_H__
+#define __SCIP_CONS_SOC_H__
+
+#include "scip/scip.h"
+#include "nlpi/type_nlpi.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** creates the handler for second order cone constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
+EXTERN
+SCIP_RETCODE SCIPincludeConshdlrSOC(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Second Order Cone Constraints
+ *
+ * @{
+ *
  * This constraint handler implements second order cone constraints of the form
  * \f[
  *    \sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} \leq \alpha_{n+1}\, (x_{n+1}+\beta_{n+1})
@@ -46,24 +77,6 @@
  * Computational experiments with a linear approximation of second order cone optimization@n
  * Technical Report 2000:1, Facult&eacute; Polytechnique de Mons, Belgium
  */
-
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#ifndef __SCIP_CONS_SOC_H__
-#define __SCIP_CONS_SOC_H__
-
-#include "scip/scip.h"
-#include "nlpi/type_nlpi.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/** creates the handler for second order cone constraints and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeConshdlrSOC(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 /** creates and captures a second order cone constraint
  *
@@ -212,6 +225,10 @@ SCIP_RETCODE SCIPaddToNlpiProblemSOC(
    SCIP_HASHMAP*         scipvar2nlpivar,    /**< mapping from SCIP variables to variable indices in NLPI */
    SCIP_Bool             names               /**< whether to pass constraint names to NLPI */
    );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

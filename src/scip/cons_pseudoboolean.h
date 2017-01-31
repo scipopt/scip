@@ -18,13 +18,6 @@
  * @brief  constraint handler for pseudoboolean constraints
  * @author Stefan Heinz
  * @author Michael Winkler
- *
- * The constraint handler deals with pseudo boolean constraints. These are constraints of the form
- * \f[
- * \mbox{lhs} \leq \sum_{k=0}^m c_k \cdot x_k  +  \sum_{i=0}^n c_i \cdot \prod_{j \in I_i} x_j \leq \mbox{rhs}
- * \f]
- * where all \f$x\f$ are binary and all \f$c\f$ are integer.
- *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -41,6 +34,32 @@ extern "C" {
 
 #define ARTIFICIALVARNAMEPREFIX "andresultant_"
 
+
+
+/** creates the handler for pseudoboolean constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
+EXTERN
+SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Pseudoboolean Constraints
+ *
+ * @{
+ *
+ * The constraint handler deals with pseudo boolean constraints. These are constraints of the form
+ * \f[
+ * \mbox{lhs} \leq \sum_{k=0}^m c_k \cdot x_k  +  \sum_{i=0}^n c_i \cdot \prod_{j \in I_i} x_j \leq \mbox{rhs}
+ * \f]
+ * where all \f$x\f$ are binary and all \f$c\f$ are integer.
+ */
+
 /** solution status after solving LP */
 enum SCIP_LinearConsType
 {
@@ -56,13 +75,6 @@ enum SCIP_LinearConsType
 #endif
 };
 typedef enum SCIP_LinearConsType SCIP_LINEARCONSTYPE;
-
-
-/** creates the handler for pseudoboolean constraints and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 /** creates and captures a pseudoboolean constraint, with given linear and and-constraints */
 EXTERN
@@ -324,6 +336,10 @@ SCIP_Real SCIPgetRhsPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons                /**< pseudoboolean constraint */
    );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

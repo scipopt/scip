@@ -7179,7 +7179,7 @@
  * \ref CONS "here".
  */
 
-/**@defgroup ConsHdlrIncludes Inclusion methods
+/**@defgroup ConshdlrIncludes Inclusion methods
  * @ingroup CONSHDLRS
  * @brief methods to include specific constraint handlers into \SCIP
  *
