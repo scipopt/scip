@@ -42,14 +42,14 @@
  */
 
 /** tuple containing row and column indices */
-struct Tuple
+struct RowColIdx
 {
    int                         rowidx;       /**< row index */
    int                         colidx;       /**< column index */
    int                         col;          /**< column (value) */
    int                         pos;          /**< position in sparse oracle data */
 };
-typedef struct Tuple TUPLE;
+typedef struct RowColIdx ROWCOLIDX;
 
 /* TODO: fill in the necessary NLP solver interface data */
 
@@ -87,8 +87,8 @@ struct SCIP_NlpiProblem
    Params*                     par;          /**< Worhp parameters */
    Control*                    cnt;          /**< Worhp control */
 
-   TUPLE**                     dginds;       /**< array containing indices for gradients */
-   TUPLE**                     hminds;       /**< array containing indices for hessian */
+   ROWCOLIDX**                 dginds;       /**< array containing indices for gradients */
+   ROWCOLIDX**                 hminds;       /**< array containing indices for hessian */
 };
 
 /*
@@ -99,8 +99,8 @@ struct SCIP_NlpiProblem
 static
 SCIP_DECL_SORTPTRCOMP(compColumnMajor)
 {
-   TUPLE* t1 = (TUPLE*)elem1;
-   TUPLE* t2 = (TUPLE*)elem2;
+   ROWCOLIDX* t1 = (ROWCOLIDX*)elem1;
+   ROWCOLIDX* t2 = (ROWCOLIDX*)elem2;
 
    if( t1->col != t2->col )
       return t1->col - t2->col;
@@ -111,8 +111,8 @@ SCIP_DECL_SORTPTRCOMP(compColumnMajor)
 static
 SCIP_DECL_SORTPTRCOMP(compColumnMajorLT)
 {
-   TUPLE* t1 = (TUPLE*)elem1;
-   TUPLE* t2 = (TUPLE*)elem2;
+   ROWCOLIDX* t1 = (ROWCOLIDX*)elem1;
+   ROWCOLIDX* t2 = (ROWCOLIDX*)elem2;
 
    /* diagonal elements should be at the very end */
    if( (t1->col == t1->rowidx) && (t2->col == t2->rowidx) )
@@ -576,6 +576,13 @@ SCIP_RETCODE initWorhp(
    InitParams(&status, par);
    par->Infty = nlpidata->infinity;
    par->TolFeas = nlpidata->feastol;
+   par->ScaledKKT= FALSE;
+
+/* #ifdef SCIP_DEBUG */
+/*    par->CheckValuesDF = TRUE; */
+/*    par->CheckValuesDG = TRUE; */
+/*    par->CheckValuesHM = TRUE; */
+/* #endif */
 
    /* set problem dimensions */
    opt->n = SCIPnlpiOracleGetNVars(problem->oracle);
@@ -643,7 +650,7 @@ SCIP_RETCODE initWorhp(
    }
 
    /* set column indices of objective function; note that indices go from 1 to n */
-   if( wsp->DF.NeedStructure )
+   /* if( wsp->DF.NeedStructure ) evaluates to FALSE if DF is dense */
    {
       SCIPdebugMessage("column indices of objective function:");
       for( i = 0; i < opt->n; ++i )
@@ -655,7 +662,7 @@ SCIP_RETCODE initWorhp(
    }
 
    /* set column and row indices of non-zero entries in Jacobian matrix */
-   if( wsp->DG.NeedStructure )
+   /* if( wsp->DG.NeedStructure ) evaluates to FALSE if DG is dense */
    {
       int nnonz;
 
@@ -701,7 +708,7 @@ SCIP_RETCODE initWorhp(
    }
 
    /* set column and row indices of non-zero entries in hessian matrix */
-   if( wsp->HM.NeedStructure )
+   if( problem->par->UserHM || problem->par->FidifHM || problem->par->BFGSmethod > 1 )
    {
       int nnonz;
 
@@ -1560,6 +1567,8 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
       }
       BMSfreeMemoryArray(&problem->dginds);
    }
+
+   StatusMsg(opt, wsp, par, cnt);
 
    /* store statistics */
    problem->lastniter = wsp->MajorIter;

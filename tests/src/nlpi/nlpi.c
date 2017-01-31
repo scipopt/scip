@@ -252,14 +252,14 @@ SCIP_RETCODE solveQP(
       for( j = 0; j <= i; ++j )
       {
          quadelems[k].coef = (j < i) ? 2.0 * vals[i] * vals[j] : vals[i] * vals[j];
-         quadelems[k].idx1 = i;
-         quadelems[k].idx2 = j;
+         quadelems[k].idx1 = j;
+         quadelems[k].idx2 = i;
          ++k;
       }
    }
    assert(k <= n*n);
 
-   nquadelems = 1;
+   nquadelems = k;
    nlininds = 1;
    inds[0] = n;
    vals[0] = -1.0;
@@ -269,7 +269,7 @@ SCIP_RETCODE solveQP(
          NULL, NULL, NULL) );
 
    /* solve NLP */
-   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-6) );
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-9) );
    SCIP_CALL( SCIPnlpiSolve(nlpi, nlpiprob) );
    SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, NULL, NULL, NULL) );
 
@@ -364,15 +364,15 @@ Test(nlpi, solveQP, .description = "solves convex QP with different NLPIs"
    SCIP_CALL( SCIPincludeNlpi(scipipopt, ipopt) );
    SCIP_CALL( SCIPincludeExternalCodeInformation(scipipopt, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
 
-   for( i = 0; i < 100; ++i )
+   for( i = 0; i < 5; ++i )
    {
       SCIP_NLPSOLSTAT ipoptsolstat;
       SCIP_NLPSOLSTAT worhpsolstat;
       SCIP_Real ipoptval;
       SCIP_Real worhpval;
 
-      SCIP_CALL( solveQP(scipipopt, ipopt, i+1, 500, -100.0, 100.0, &ipoptval, &ipoptsolstat) );
-      SCIP_CALL( solveQP(scipworhp, worhp, i+1, 500, -100.0, 100.0, &worhpval, &worhpsolstat) );
+      SCIP_CALL( solveQP(scipipopt, ipopt, i+1, 100, -100.0, 100.0, &ipoptval, &ipoptsolstat) );
+      SCIP_CALL( solveQP(scipworhp, worhp, i+1, 100, -100.0, 100.0, &worhpval, &worhpsolstat) );
 
       cr_assert(ipoptsolstat != SCIP_NLPSOLSTAT_UNKNOWN);
       cr_assert(worhpsolstat != SCIP_NLPSOLSTAT_UNKNOWN);
