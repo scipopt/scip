@@ -17,6 +17,7 @@
  * @ingroup NLPIS
  * @brief   WORHP NLP interface
  * @author  Benjamin Mueller
+ * @author  Renke Kuhlmann
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -45,8 +46,6 @@ struct SCIP_NlpiData
 {
    BMS_BLKMEM*                 blkmem;       /**< block memory */
    SCIP_MESSAGEHDLR*           messagehdlr;  /**< message handler */
-
-   /* parameter */
    SCIP_Real                   infinity;     /**< initial value for infinity */
 };
 
