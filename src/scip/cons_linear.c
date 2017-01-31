@@ -7501,7 +7501,7 @@ SCIP_RETCODE propagateCons(
 
          nfixedvars = 0;
          naddconss = 0;
-         oldnchgbds = *nchgbds;
+         SCIPdebug( oldnchgbds = *nchgbds; )
 
          SCIP_CALL( rangedRowPropagation(scip, cons, cutoff, &nfixedvars, nchgbds, &naddconss) );
 
@@ -11243,8 +11243,8 @@ SCIP_RETCODE simplifyInequalities(
    else
       hasrhs = FALSE;
 
-   oldnchgcoefs = *nchgcoefs;
-   oldnchgsides = *nchgsides;
+   SCIPdebug( oldnchgcoefs = *nchgcoefs; )
+   SCIPdebug( oldnchgsides = *nchgsides; )
 
    /* @todo also work on ranged rows */
    if( haslhs && hasrhs )
@@ -11887,9 +11887,7 @@ SCIP_RETCODE simplifyInequalities(
                   /* swap bounds for 'standard' form */
                   if( !SCIPisFeasZero(scip, lb) )
                   {
-                     SCIP_Real tmp = lb;
-                     lb = ub;
-                     ub = tmp;
+                     ub = lb;
                      val *= -1;
                   }
 
@@ -11982,9 +11980,7 @@ SCIP_RETCODE simplifyInequalities(
                   /* swap bounds for 'standard' form */
                   if( !SCIPisFeasZero(scip, lb) )
                   {
-                     SCIP_Real tmp = lb;
-                     lb = ub;
-                     ub = tmp;
+                     ub = lb;
                      val *= -1;
                   }
 
@@ -12515,7 +12511,7 @@ SCIP_RETCODE aggregateConstraints(
          }
 
          /* setup best* variables that were not setup above because we are in the commonvarlindependent case */
-         bestvarweight = diffidx0minus1weight + diffidx1minus0weight;
+         SCIPdebug( bestvarweight = diffidx0minus1weight + diffidx1minus0weight; )
          bestnvars = consdata0->nvars + consdata1->nvars - 2*nvarscommon;
       }
 
@@ -13199,10 +13195,10 @@ SCIP_RETCODE preprocessConstraintPairs(
 
          default:
             SCIPerrorMessage("invalid comparison result\n");
+            SCIPABORT();
             var = NULL;
             val0 = 0.0;
             val1 = 0.0;
-            SCIPABORT();
          }
          assert(var != NULL);
 
@@ -13891,9 +13887,11 @@ SCIP_RETCODE presolStuffing(
       int bestdownlocks = 1;
       int downlocks;
       int uplocks;
-      int oldnfixedvars = *nfixedvars;
-      int oldnchgbds = *nchgbds;
+      int oldnfixedvars;
+      int oldnchgbds;
 
+      SCIPdebug( oldnfixedvars = *nfixedvars; )
+      SCIPdebug( oldnchgbds = *nchgbds; )
       /* loop over all variables to identify the best and second-best ratio */
       for( v = 0; v < nvars; ++v )
       {
