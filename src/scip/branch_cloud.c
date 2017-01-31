@@ -96,6 +96,12 @@ SCIP_DECL_BRANCHFREE(branchFreeCloud)
       int ncloudpoints = branchruledata->ncloudpoints;
       int nsavedlps = branchruledata->nsavedlps;
 
+      /* silence warnings if SCIPstatisticMessage is disabled */
+      SCIP_UNUSED(ntried);
+      SCIP_UNUSED(nuseful);
+      SCIP_UNUSED(ncloudpoints);
+      SCIP_UNUSED(nsavedlps);
+
       SCIPstatisticMessage("time spent diving in cloud branching: %g\n", SCIPgetClockTime(scip, branchruledata->cloudclock));
       SCIPstatisticMessage("cloud branching tried: %6d      found cloud: %6d \n", ntried, nuseful);
       SCIPstatisticMessage("cloud used points: %6d      saved LPs: %6d \n", ncloudpoints, nsavedlps);

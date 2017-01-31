@@ -146,8 +146,6 @@ SCIP_RETCODE determineFixings(
    /* store the number of fixings */
    *nfixedvars = fixingcounter;
 
-   fixingrate = 0.0;
-
    /* abort, if all variables should be fixed */
    if( fixingcounter == nbinvars + nintvars )
    {

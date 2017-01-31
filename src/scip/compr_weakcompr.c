@@ -142,7 +142,7 @@ SCIP_RETCODE constructCompression(
 
    *result = SCIP_DIDNOTRUN;
 
-   depth = 0;
+   SCIPdebug(depth = 0);
    size = 1;
    currentnode = SCIPgetStage(scip) <= SCIP_STAGE_PRESOLVED ? NULL : SCIPgetCurrentNode(scip);
 
@@ -152,7 +152,7 @@ SCIP_RETCODE constructCompression(
    {
       assert(currentnode != NULL);
       nleaveids = SCIPgetNReoptLeaves(scip, currentnode);
-      depth = SCIPnodeGetDepth(currentnode);
+      SCIPdebug(depth = SCIPnodeGetDepth(currentnode));
    }
 
    SCIPdebugMsg(scip, ">> start <%s> at node %llu (nleaves: %d, depth: %d)\n", COMPR_NAME,

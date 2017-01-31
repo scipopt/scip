@@ -9399,7 +9399,6 @@ SCIP_RETCODE simplifyInequalities(
          return SCIP_OKAY;
    }
 
-   vars = consdata->vars;
    weights = consdata->weights;
    nvars = consdata->nvars;
 

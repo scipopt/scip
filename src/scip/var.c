@@ -14094,9 +14094,6 @@ SCIP_Bool SCIPvarIsPscostRelerrorReliable(
    upsize = SCIPvarGetPseudocostCountCurrentRun(var, SCIP_BRANCHDIR_UPWARDS);
    size = MIN(downsize, upsize);
 
-   relerrordown = 0.0;
-   relerrorup = 0.0;
-
    /* Pseudo costs relative error can only be reliable if both directions have been tried at least twice */
    if( size <= 1.9 )
       return FALSE;

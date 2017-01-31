@@ -545,7 +545,7 @@ SCIP_RETCODE execRelpscost(
    {
       /* only one candidate: nothing has to be done */
       bestcand = 0;
-      ninitcands = 0;
+      SCIPdebug(ninitcands = 0);
    }
    else
    {

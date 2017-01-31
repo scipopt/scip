@@ -537,7 +537,6 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    solarray = NULL;
    zilpcands = NULL;
 
-   retcode = SCIP_OKAY;
    /* copy the current LP solution to the working solution and allocate memory for local data */
    SCIP_CALL( SCIPlinkLPSol(scip, sol) );
    SCIP_CALL_TERMINATE(retcode, SCIPallocBufferArray(scip, &solarray, nlpcands), TERMINATE);

@@ -12104,8 +12104,8 @@ SCIP_RETCODE simplifyInequalities(
    /* start gcd procedure for all variables */
    do
    {
-      oldnchgcoefs = *nchgcoefs;
-      oldnchgsides = *nchgsides;
+      SCIPdebug( oldnchgcoefs = *nchgcoefs; )
+      SCIPdebug( oldnchgsides = *nchgsides; )
 
       /* stop if we have two coeffcients which are one in absolute value */
       if( SCIPisEQ(scip, REALABS(vals[nvars - 1]), 1.0) && SCIPisEQ(scip, REALABS(vals[nvars - 2]), 1.0) )

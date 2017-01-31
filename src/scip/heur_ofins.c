@@ -547,8 +547,6 @@ SCIP_DECL_HEUREXEC(heurExecOfins)
       newcoefabs = REALABS(newcoef);
       oldcoefabs = REALABS(oldcoef);
 
-      frac = SCIP_INVALID;
-
       /* if both coefficients are zero nothing has changed */
       if( SCIPisZero(scip, newcoef) && SCIPisZero(scip, oldcoef) )
       {

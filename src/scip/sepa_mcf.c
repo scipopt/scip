@@ -3695,7 +3695,9 @@ SCIP_RETCODE cleanupNetwork(
             }
          }
          mcfdata->nnodes = newnnodes;
+#ifdef MCF_DEBUG
          nnodes = newnnodes;
+#endif
       }
 
       /* free temporary memory */
@@ -5266,7 +5268,7 @@ SCIP_RETCODE nodepartitionCreate(
       assert(nodepair != NULL);
       node1 = nodepair->node1;
       node2 = nodepair->node2;
-      weight  = nodepair->weight;
+      SCIPdebug( weight = nodepair->weight; )
 
       assert(node1 >= 0 && node1 < mcfnetwork->nnodes);
       assert(node2 >= 0 && node2 < mcfnetwork->nnodes);

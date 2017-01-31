@@ -2433,7 +2433,9 @@ SCIP_RETCODE lpiStrongbranch(
 
    spx = lpi->spx;
    status = SPxSolver::UNKNOWN;
+#ifndef STRONGBRANCH_RESTOREBASIS
    fromparentbasis = false;
+#endif
    error = false;
    oldItlim = spx->intParam(SoPlex::ITERLIMIT);
 

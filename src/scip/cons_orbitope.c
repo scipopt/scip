@@ -1036,7 +1036,6 @@ SCIP_RETCODE propagateCons(
          for (i = s+1; i < nspcons; ++i)
          {
             int beta;
-            beta = -2;
 
             assert( betaprev + 1 >= 0 );
             if ( betaprev == nblocks-1 || SCIPvarGetUbLocal(vars[i][betaprev+1]) < 0.5 ) /*lint !e679*/

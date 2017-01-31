@@ -494,7 +494,9 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
          }
       }
       else
-         score = 0.0;
+      {
+         SCIPdebug(score = 0.0;)
+      }
 
       SCIPdebugMsg(scip, " -> cand %d/%d (prio:%d) var <%s> (solval=%g, downgain=%g, upgain=%g, score=%g) -- best: <%s> (%g)\n",
          c, nlpcands, npriolpcands, SCIPvarGetName(lpcands[c]), lpcandssol[c], downgain, upgain, score,

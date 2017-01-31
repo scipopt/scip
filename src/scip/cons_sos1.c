@@ -9214,10 +9214,10 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
 
    *result = SCIP_DIDNOTRUN;
 
-   oldnfixedvars = *nfixedvars;
-   oldnchgbds = *nchgbds;
-   oldndelconss = *ndelconss;
-   oldnupgdconss = *nupgdconss;
+   SCIPdebug(oldnfixedvars = *nfixedvars);
+   SCIPdebug(oldnchgbds = *nchgbds);
+   SCIPdebug(oldndelconss = *ndelconss);
+   SCIPdebug(oldnupgdconss = *nupgdconss);
    nremovedvars = 0;
 
    /* only run if success if possible */
@@ -9308,7 +9308,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
    (*nchgcoefs) += nremovedvars;
 
    SCIPdebugMsg(scip, "presolving fixed %d variables, changed %d bounds, removed %d variables, deleted %d constraints, and upgraded %d constraints.\n",
-		    *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds, nremovedvars, *ndelconss - oldndelconss, *nupgdconss - oldnupgdconss);
+                *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds, nremovedvars, *ndelconss - oldndelconss, *nupgdconss - oldnupgdconss);
 
    return SCIP_OKAY;
 }

@@ -1655,11 +1655,7 @@ SCIP_RETCODE findDominancePairs(
 
          /* do we have a obj constant? */
          if( nrows1 == 0 || nrows2 == 0 )
-         {
-            col1domcol2 = FALSE;
-            col2domcol1 = FALSE;
             continue;
-         }
 
          /* initialize temporary bounds of dominating variable */
          tmpupperbounddominatingcol1 = SCIPinfinity(scip);

@@ -1530,7 +1530,6 @@ SCIP_RETCODE checkCons(
 
    /* calculate the constraint's activity */
    sum = 0.0;
-   solval = 0.0;
    for( v = 0; v < nvars && sum < 1.0; ++v )
    {
       assert(SCIPvarIsBinary(vars[v]));

@@ -1139,7 +1139,6 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    SCIP_Bool error;
    SCIP_Longint nnodes;
 
-   retcode = SCIP_OKAY;
    heurdata = SCIPheurGetData(heur);
    SCIPdebugMsg(scip, "%s\n", heurdata->filename);
 
