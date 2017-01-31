@@ -87,7 +87,6 @@ struct SCIP_NlpiProblem
    Params*                     par;          /**< Worhp parameters */
    Control*                    cnt;          /**< Worhp control */
 
-   ROWCOLIDX**                 dginds;       /**< array containing indices for gradients */
    ROWCOLIDX**                 hminds;       /**< array containing indices for hessian */
 
    /* parameters */
@@ -448,7 +447,6 @@ SCIP_RETCODE userDG(
    assert(problem->wsp != NULL);
    assert(problem->opt->n = SCIPnlpiOracleGetNVars(problem->oracle));
    assert(problem->opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle));
-   assert(problem->dginds != NULL);
 
    SCIP_ALLOC( BMSallocMemoryArray(&jacvals, problem->wsp->DG.nnz) );
    SCIP_CALL( SCIPnlpiOracleEvalJacobian(problem->oracle, problem->opt->X, TRUE, NULL, jacvals) );
@@ -456,8 +454,7 @@ SCIP_RETCODE userDG(
    /* map values with DG indices */
    for( i = 0; i < problem->wsp->DG.nnz; ++i )
    {
-      assert(problem->dginds[i] != NULL);
-      problem->wsp->DG.val[i] = jacvals[problem->dginds[i]->pos];
+      problem->wsp->DG.val[i] = jacvals[ problem->wsp->DG.perm[i]-1 ];
    }
 
    /* free memory */
@@ -571,7 +568,6 @@ SCIP_RETCODE initWorhp(
    assert(problem->wsp != NULL);
    assert(problem->par != NULL);
    assert(problem->opt != NULL);
-   assert(problem->dginds == NULL);
    assert(problem->hminds == NULL);
    assert(problem->firstrun);
 
@@ -666,42 +662,21 @@ SCIP_RETCODE initWorhp(
       SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(problem->oracle, &offset, &cols) );
       assert(offset[opt->m] == wsp->DG.nnz);
 
-      /* store mapping between nonzeros and (col,row) entries */
-      SCIP_ALLOC( BMSallocMemoryArray(&problem->dginds, wsp->DG.nnz) );
-      for( i = 0; i < wsp->DG.nnz; ++i )
-      {
-         SCIP_ALLOC( BMSallocMemory(&problem->dginds[i]) );
-      }
-
       nnonz = 0;
       j = offset[0];
       for( i = 0; i < opt->m; ++i )
       {
          for( ; j < offset[i+1]; ++j )
          {
-            problem->dginds[nnonz]->rowidx = i;
-            problem->dginds[nnonz]->colidx = j;
-            problem->dginds[nnonz]->col = cols[j];
-            problem->dginds[nnonz]->pos = nnonz;
+            wsp->DG.row[nnonz] = i + 1;
+            wsp->DG.col[nnonz] = cols[j] + 1;
             ++nnonz;
          }
       }
       assert(nnonz == wsp->DG.nnz);
 
-      /* sort arrays such that the entries are in column-major order */
-      SCIPsortPtr((void**)problem->dginds, compColumnMajor, wsp->DG.nnz);
-
-      /* set column and row entries in Worhp data structure */
-      SCIPdebugMessage("column and row indices of jacobian:\n");
-      for( i = 0; i < wsp->DG.nnz; ++i )
-      {
-         /* note that column and row indices are shifted by one */
-         wsp->DG.row[i] = problem->dginds[i]->rowidx + 1;
-         wsp->DG.col[i] = problem->dginds[i]->col + 1;
-         assert(problem->dginds[i]->col == cols[problem->dginds[i]->colidx]);
-
-         SCIPdebugMessage("entry %d: (row,col) = (%d,%d)\n", i, wsp->DG.row[i], wsp->DG.col[i]);
-      }
+      /* sort arrays w.r.t the column-major order */
+      SortWorhpMatrix(&wsp->DG);
    }
 
    /* set column and row indices of non-zero entries in hessian matrix */
@@ -780,7 +755,6 @@ SCIP_RETCODE updateWorhp(
    assert(problem->wsp != NULL);
    assert(problem->par != NULL);
    assert(problem->opt != NULL);
-   assert(problem->dginds == NULL);
    assert(problem->hminds == NULL);
    assert(problem->oracle != NULL);
    assert(problem->opt->n = SCIPnlpiOracleGetNVars(problem->oracle));
@@ -950,7 +924,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
    (*problem)->feastol = 1e-9;
    (*problem)->relobjtol = 1e-9;
    (*problem)->lobjlim = SCIP_INVALID;
-   (*problem)->timelim = SCIP_NLPPAR_INFINITY;
+   (*problem)->timelim = SCIP_DEFAULT_INFINITY;
    (*problem)->fromscratch = 0;
    (*problem)->verblevel = 0;
    (*problem)->itlim = INT_MAX;
@@ -1449,7 +1423,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    if( status != OK )
       return SCIP_INVALIDCALL;
 
-   par->ScaledKKT= FALSE;
+   par->ScaledKKT= TRUE;
    par->Infty = nlpidata->infinity;
    par->TolFeas = problem->feastol;
    par->TolOpti = problem->relobjtol;
@@ -1542,11 +1516,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
        */
       if( GetUserAction(cnt, evalDG) )
       {
-         /* TODO How can it happen that wsp->DG.NeedStructure is FALSE but still Worhp wants to call evalDG? */
-         if( problem->dginds != NULL )
-         {
-            SCIP_CALL( userDG(problem) );
-         }
+         SCIP_CALL( userDG(problem) );
          DoneUserAction(cnt, evalDG);
       }
 
@@ -1586,14 +1556,6 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
          BMSfreeMemory(&problem->hminds[i]);
       }
       BMSfreeMemoryArray(&problem->hminds);
-   }
-   if( problem->dginds != NULL )
-   {
-      for( i = wsp->DG.nnz - 1; i >= 0; --i )
-      {
-         BMSfreeMemory(&problem->dginds[i]);
-      }
-      BMSfreeMemoryArray(&problem->dginds);
    }
 
    StatusMsg(opt, wsp, par, cnt);
