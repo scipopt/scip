@@ -91,16 +91,17 @@ SCIP_DECL_BRANCHFREE(branchFreeCloud)
 
    if( branchruledata->cloudclock != NULL)
    {
-      int ntried = branchruledata->ntried;
-      int nuseful = branchruledata->nuseful;
-      int ncloudpoints = branchruledata->ncloudpoints;
-      int nsavedlps = branchruledata->nsavedlps;
+      int ntried;
+      int nuseful;
+      int ncloudpoints;
+      int nsavedlps;
 
-      /* silence warnings if SCIPstatisticMessage is disabled */
-      SCIP_UNUSED(ntried);
-      SCIP_UNUSED(nuseful);
-      SCIP_UNUSED(ncloudpoints);
-      SCIP_UNUSED(nsavedlps);
+      SCIPstatistic(
+         ntried = branchruledata->ntried;
+         nuseful = branchruledata->nuseful;
+         ncloudpoints = branchruledata->ncloudpoints;
+         nsavedlps = branchruledata->nsavedlps;
+      )
 
       SCIPstatisticMessage("time spent diving in cloud branching: %g\n", SCIPgetClockTime(scip, branchruledata->cloudclock));
       SCIPstatisticMessage("cloud branching tried: %6d      found cloud: %6d \n", ntried, nuseful);
