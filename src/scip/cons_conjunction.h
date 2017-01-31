@@ -18,11 +18,6 @@
  * @brief  constraint handler for conjunction constraints
  * @author Tobias Achterberg
  *
- * A conjunction constraint \f$ C \f$ is a constraint of the form
- * \f[
- *   C = C_1 \wedge \dots \wedge C_n
- * \f]
- *  where all the \f$ C_i \f$ are individual constraints themselves.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -49,6 +44,16 @@ SCIP_RETCODE SCIPincludeConshdlrConjunction(
 /**@addtogroup CONSHDLRS
  *
  * @{
+ *
+ * @name Conjunction Constraints
+ *
+ * @{
+ *
+ * A conjunction constraint \f$ C \f$ is a constraint of the form
+ * \f[
+ *   C = C_1 \wedge \dots \wedge C_n
+ * \f]
+ *  where all the \f$ C_i \f$ are individual constraints themselves.
  */
 
 /** creates and captures a conjunction constraint
@@ -100,6 +105,8 @@ SCIP_RETCODE SCIPaddConsElemConjunction(
    SCIP_CONS*            cons,               /**< conjunction constraint */
    SCIP_CONS*            addcons             /**< additional constraint in conjunction */
    );
+
+/* @} */
 
 /* @} */
 

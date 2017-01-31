@@ -20,6 +20,36 @@
  * @author Stefan Heinz
  * @author Jens Schulz
  *
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#ifndef __SCIP_CONS_CUMULATIVE_H__
+#define __SCIP_CONS_CUMULATIVE_H__
+
+
+#include "scip/scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+/** creates the constraint handler for cumulative constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
+EXTERN
+SCIP_RETCODE SCIPincludeConshdlrCumulative(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Cumulative Constraints
+ *
  * Given:
  * - a set of jobs, represented by their integer start time variables \f$S_j\f$, their array of processing times \f$p_j\f$ and of
  *   their demands \f$d_j\f$.
@@ -38,66 +68,6 @@
  * - Edge-finding from Petr Vilim, adjusted and simplified for dynamic repropagation
  *   (2009)
  * - energetic reasoning, see Baptiste, Le Pape, Nuijten (2001)
- */
-
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#ifndef __SCIP_CONS_CUMULATIVE_H__
-#define __SCIP_CONS_CUMULATIVE_H__
-
-
-#include "scip/scip.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/** solves given cumulative condition as independent sub problem
- *
- *  @note The time and memory limit should be respected.
- *
- *  @note If the problem was solved to the earliest start times (ests) and latest start times (lsts) array contain the
- *        solution values; If the problem was not solved these two arrays contain the global bounds at the time the sub
- *        solver was interrupted.
- *
- *  input:
- *  - njobs           : number of jobs (activities)
- *  - objvals         : array of objective coefficients for each job (linear objective function), or NULL if none
- *  - durations       : array of durations
- *  - demands         : array of demands
- *  - capacity        : cumulative capacity
- *  - hmin            : left bound of time axis to be considered (including hmin)
- *  - hmax            : right bound of time axis to be considered (not including hmax)
- *  - timelimit       : time limit for solving in seconds
- *  - memorylimit     : memory limit for solving in mega bytes (MB)
- *  - maxnodes        : maximum number of branch-and-bound nodes to solve the single cumulative constraint  (-1: no limit)
- *
- *  input/output:
- *  - ests            : array of earliest start times for each job
- *  - lsts            : array of latest start times for each job
- *
- *  output:
- *  - solved          : pointer to store if the problem is solved (to optimality)
- *  - infeasible      : pointer to store if the problem is infeasible
- *  - unbounded       : pointer to store if the problem is unbounded
- *  - error           : pointer to store if an error occurred
- *
- */
-#define SCIP_DECL_SOLVECUMULATIVE(x) SCIP_RETCODE x (int njobs, SCIP_Real* ests, SCIP_Real* lsts, SCIP_Real* objvals, \
-      int* durations, int* demands, int capacity, int hmin, int hmax, \
-      SCIP_Real timelimit, SCIP_Real memorylimit, SCIP_Longint maxnodes, \
-      SCIP_Bool* solved, SCIP_Bool* infeasible, SCIP_Bool* unbounded, SCIP_Bool* error)
-
-/** creates the constraint handler for cumulative constraints and includes it in SCIP
- *
- * @ingroup ConshdlrIncludes
- * */
-EXTERN
-SCIP_RETCODE SCIPincludeConshdlrCumulative(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/**@addtogroup CONSHDLRS
  *
  * @{
  */
@@ -334,6 +304,42 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
    SCIP_CONS*            cons                /**< cumulative constraint */
    );
 
+/** solves given cumulative condition as independent sub problem
+ *
+ *  @note The time and memory limit should be respected.
+ *
+ *  @note If the problem was solved to the earliest start times (ests) and latest start times (lsts) array contain the
+ *        solution values; If the problem was not solved these two arrays contain the global bounds at the time the sub
+ *        solver was interrupted.
+ *
+ *  input:
+ *  - njobs           : number of jobs (activities)
+ *  - objvals         : array of objective coefficients for each job (linear objective function), or NULL if none
+ *  - durations       : array of durations
+ *  - demands         : array of demands
+ *  - capacity        : cumulative capacity
+ *  - hmin            : left bound of time axis to be considered (including hmin)
+ *  - hmax            : right bound of time axis to be considered (not including hmax)
+ *  - timelimit       : time limit for solving in seconds
+ *  - memorylimit     : memory limit for solving in mega bytes (MB)
+ *  - maxnodes        : maximum number of branch-and-bound nodes to solve the single cumulative constraint  (-1: no limit)
+ *
+ *  input/output:
+ *  - ests            : array of earliest start times for each job
+ *  - lsts            : array of latest start times for each job
+ *
+ *  output:
+ *  - solved          : pointer to store if the problem is solved (to optimality)
+ *  - infeasible      : pointer to store if the problem is infeasible
+ *  - unbounded       : pointer to store if the problem is unbounded
+ *  - error           : pointer to store if an error occurred
+ *
+ */
+#define SCIP_DECL_SOLVECUMULATIVE(x) SCIP_RETCODE x (int njobs, SCIP_Real* ests, SCIP_Real* lsts, SCIP_Real* objvals, \
+      int* durations, int* demands, int capacity, int hmin, int hmax, \
+      SCIP_Real timelimit, SCIP_Real memorylimit, SCIP_Longint maxnodes, \
+      SCIP_Bool* solved, SCIP_Bool* infeasible, SCIP_Bool* unbounded, SCIP_Bool* error)
+
 /** sets method to solve an individual cumulative condition */
 EXTERN
 SCIP_RETCODE SCIPsetSolveCumulative(
@@ -396,6 +402,9 @@ int SCIPcomputeHmax(
    SCIP_PROFILE*         profile,            /**< worst case profile */
    int                   capacity            /**< capacity to check */
    );
+
+
+/* @} */
 
 /* @} */
 

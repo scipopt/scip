@@ -18,27 +18,6 @@
  * @brief  Constraint handler for absolute power constraints \f$\textrm{lhs} \leq \textrm{sign}(x+a) |x+a|^n + c z \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
  *
- * This constraint handler handles constraints of the form
- * \f[
- *   \textrm{lhs} \leq \textrm{sign}(x+a) |x+a|^n + c z \leq \textrm{rhs}
- * \f]
- * for \f$n > 1.0\f$ a rational number, \f$a\f$ and \f$c\f$ arbitrary, and \f$x\f$ and \f$z\f$ variables.
- * Note that \f$x\f$ can have \f$-a\f$ in the interior of its domain.
- *
- * Constraints are enforced by separation, domain propagation, and spatial branching.
- *
- * Cuts that separate on the convex hull of the graph of \f$\textrm{sign}(x+a) |x+a|^n\f$ are generated as long as they separate the relaxation solution.
- * Otherwise, spatial branching on \f$x\f$ is applied.
- *
- * Further, domain propagation is implemented to propagate bound changes on \f$x\f$ onto \f$z\f$, and vice versa, and
- * repropagation is implemented to allow for conflict analysis.
- * During presolve, a pairwise comparison of absolute power constraints may allow to fix or aggregate some variables.
- * See also
- *
- * @par
- * Stefan Vigerske@n
- * Decomposition of Multistage Stochastic Programs and a Constraint Integer Programming Approach to Mixed-Integer Nonlinear Programming@n
- * PhD Thesis, Humboldt-University Berlin, 2012, submitted.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -61,11 +40,36 @@ SCIP_RETCODE SCIPincludeConshdlrAbspower(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-
-
 /**@addtogroup CONSHDLRS
  *
  * @{
+ *
+ * @name Absolute Power Constraints
+ *
+ * @{
+ *
+ * This constraint handler handles constraints of the form
+ * \f[
+ *   \textrm{lhs} \leq \textrm{sign}(x+a) |x+a|^n + c z \leq \textrm{rhs}
+ * \f]
+ * for \f$n > 1.0\f$ a rational number, \f$a\f$ and \f$c\f$ arbitrary, and \f$x\f$ and \f$z\f$ variables.
+ * Note that \f$x\f$ can have \f$-a\f$ in the interior of its domain.
+ *
+ * Constraints are enforced by separation, domain propagation, and spatial branching.
+ *
+ * Cuts that separate on the convex hull of the graph of \f$\textrm{sign}(x+a) |x+a|^n\f$ are generated as long as they separate the relaxation solution.
+ * Otherwise, spatial branching on \f$x\f$ is applied.
+ *
+ * Further, domain propagation is implemented to propagate bound changes on \f$x\f$ onto \f$z\f$, and vice versa, and
+ * repropagation is implemented to allow for conflict analysis.
+ * During presolve, a pairwise comparison of absolute power constraints may allow to fix or aggregate some variables.
+ * See also
+ *
+ * @par
+ * Stefan Vigerske@n
+ * Decomposition of Multistage Stochastic Programs and a Constraint Integer Programming Approach to Mixed-Integer Nonlinear Programming@n
+ * PhD Thesis, Humboldt-University Berlin, 2012, submitted.
+ *
  */
 
 /** creates and captures a absolute power constraint
@@ -195,6 +199,8 @@ SCIP_Real SCIPgetViolationAbspower(
    SCIP_CONS*            cons,               /**< absolute power constraint */
    SCIP_SOL*             sol                 /**< LP solution */
    );
+
+/* @} */
 
 /* @} */
 

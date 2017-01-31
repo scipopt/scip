@@ -15,20 +15,11 @@
 
 /**@file   cons_xor.h
  * @ingroup CONSHDLRS
- * @brief  Constraint handler for "xor" constraints,  \f$rhs = x_1 \oplus x_2 \oplus \dots  \oplus x_n\f$
+ * @brief  Constraint handler for XOR constraints,  \f$rhs = x_1 \oplus x_2 \oplus \dots  \oplus x_n\f$
  * @author Tobias Achterberg
  * @author Stefan Heinz
  * @author Michael Winkler
  *
- * This constraint handler deals with "xor" constraint. These are constraint of the form:
- *
- * \f[
- *    rhs = x_1 \oplus x_2 \oplus \dots  \oplus x_n
- * \f]
- *
- * where \f$x_i\f$ is a binary variable for all \f$i\f$ and \f$rhs\f$ is bool. The variables \f$x\f$'s are called
- * operators. This constraint is satisfied if \f$rhs\f$ is TRUE and an odd number of the operators are TRUE or if the
- * \f$rhs\f$ is FALSE and a even number of operators are TRUE. Hence, if the sum of \f$rhs\f$ and operators is even.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -55,12 +46,26 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
 /**@addtogroup CONSHDLRS
  *
  * @{
+ *
+ * @name XOR Constraints
+ *
+ * @{
+ *
+ * This constraint handler deals with "xor" constraint. These are constraint of the form:
+ *
+ * \f[
+ *    rhs = x_1 \oplus x_2 \oplus \dots  \oplus x_n
+ * \f]
+ *
+ * where \f$x_i\f$ is a binary variable for all \f$i\f$ and \f$rhs\f$ is bool. The variables \f$x\f$'s are called
+ * operators. This constraint is satisfied if \f$rhs\f$ is TRUE and an odd number of the operators are TRUE or if the
+ * \f$rhs\f$ is FALSE and a even number of operators are TRUE. Hence, if the sum of \f$rhs\f$ and operators is even.
  */
 
 /** creates and captures an xor constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
-*/
+ */
 EXTERN
 SCIP_RETCODE SCIPcreateConsXor(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -139,6 +144,8 @@ SCIP_Bool SCIPgetRhsXor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
+
+/* @} */
 
 /* @} */
 

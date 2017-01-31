@@ -20,14 +20,6 @@
  * @author Stefan Heinz
  * @author Michael Winkler
  *
- * This constraint handler deals with "or" constraint. These are constraint of the form:
- *
- * \f[
- *    r = x_1 \vee x_2 \vee \dots  \vee x_n
- * \f]
- *
- * where \f$x_i\f$ is a binary variable for all \f$i\f$. Hence, \f$r\f$ is also of binary type. The variable \f$r\f$ is
- * called resultant and the \f$x\f$'s operators.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -54,6 +46,19 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
 /**@addtogroup CONSHDLRS
  *
  * @{
+ *
+ * @name OR Constraints
+ *
+ * @{
+ *
+ * This constraint handler deals with OR constraint. These are constraint of the form:
+ *
+ * \f[
+ *    r = x_1 \vee x_2 \vee \dots  \vee x_n
+ * \f]
+ *
+ * where \f$x_i\f$ is a binary variable for all \f$i\f$. Hence, \f$r\f$ is also of binary type. The variable \f$r\f$ is
+ * called resultant and the \f$x\f$'s operators.
  */
 
 /** creates and captures an or constraint
@@ -131,6 +136,8 @@ SCIP_VAR* SCIPgetResultantOr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
+
+/* @} */
 
 /* @} */
 

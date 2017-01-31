@@ -19,20 +19,6 @@
  * @author Timo Berthold
  * @author Marc Pfetsch
  *
- * This constraint handler can be used to handle symmetries in certain 0/1-programs. The principle
- * structure is that some variables can be ordered in matrix form, such that permuting columns does
- * not change the validity and objective function value of a solution. That is, the symmetry group
- * of the program contains the full symmetric group obtained by permuting the columns of this
- * matrix. The variables in each row have to be contained in set packing or partitioning
- * constraints.
- *
- * In more mathematical terms the structure has to be as follows: There are 0/1-variables
- * \f$x_{ij}\f$, \f$i \in \{1, \dots, p\}\f$, \f$j \in \{1, \dots, q\}\f$. The variables are coupled
- * through set packing or partitioning constraints:
- * \f[
- *    \sum_{j = 1}^q x_{ij} \leq 1  \quad \mbox{or} \quad \sum_{j = 1}^q x_{ij} = 1 \quad \mbox{for all }i = 1, \ldots, p.
- * \f]
- * Permuting columns of \f$x\f$ does not change the validity and objective function value of any feasible solution.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -50,7 +36,7 @@ extern "C" {
 /** creates the handler for orbitope constraints and includes it in SCIP
  *
  * @ingroup ConshdlrIncludes
- * */
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    SCIP*                 scip                /**< SCIP data structure */
@@ -59,6 +45,25 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
 /**@addtogroup CONSHDLRS
  *
  * @{
+ *
+ * @name Orbitope Constraints
+ *
+ * @{
+ *
+ * This constraint handler can be used to handle symmetries in certain 0/1-programs. The principle
+ * structure is that some variables can be ordered in matrix form, such that permuting columns does
+ * not change the validity and objective function value of a solution. That is, the symmetry group
+ * of the program contains the full symmetric group obtained by permuting the columns of this
+ * matrix. The variables in each row have to be contained in set packing or partitioning
+ * constraints.
+ *
+ * In more mathematical terms the structure has to be as follows: There are 0/1-variables
+ * \f$x_{ij}\f$, \f$i \in \{1, \dots, p\}\f$, \f$j \in \{1, \dots, q\}\f$. The variables are coupled
+ * through set packing or partitioning constraints:
+ * \f[
+ *    \sum_{j = 1}^q x_{ij} \leq 1  \quad \mbox{or} \quad \sum_{j = 1}^q x_{ij} = 1 \quad \mbox{for all }i = 1, \ldots, p.
+ * \f]
+ * Permuting columns of \f$x\f$ does not change the validity and objective function value of any feasible solution.
  */
 
 /** creates and captures a orbitope constraint
@@ -119,6 +124,8 @@ SCIP_RETCODE SCIPcreateConsBasicOrbitope(
    int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
    SCIP_Bool             resolveprop         /**< should propagation be resolved? */
    );
+
+/* @} */
 
 /* @} */
 

@@ -15,19 +15,11 @@
 
 /**@file   cons_and.h
  * @ingroup CONSHDLRS
- * @brief  Constraint handler for AND-constraints,  \f$r = x_1 \wedge x_2 \wedge \dots  \wedge x_n\f$
+ * @brief  Constraint handler for AND constraints,  \f$r = x_1 \wedge x_2 \wedge \dots  \wedge x_n\f$
  * @author Tobias Achterberg
  * @author Stefan Heinz
  * @author Michael Winkler
  *
- * This constraint handler deals with AND-constraints. These are constraint of the form:
- *
- * \f[
- *    r = x_1 \wedge x_2 \wedge \dots  \wedge x_n
- * \f]
- *
- * where \f$x_i\f$ is a binary variable for all \f$i\f$. Hence, \f$r\f$ is also of binary type. The variable \f$r\f$ is
- * called resultant and the \f$x\f$'s operators.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -54,6 +46,19 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
 /**@addtogroup CONSHDLRS
  *
  * @{
+ *
+ * @name AND Constraints
+ *
+ * @{
+ *
+ * This constraint handler deals with AND-constraints. These are constraint of the form:
+ *
+ * \f[
+ *    r = x_1 \wedge x_2 \wedge \dots  \wedge x_n
+ * \f]
+ *
+ * where \f$x_i\f$ is a binary variable for all \f$i\f$. Hence, \f$r\f$ is also of binary type. The variable \f$r\f$ is
+ * called resultant and the \f$x\f$'s operators.
  */
 
 /** creates and captures an and constraint
@@ -170,6 +175,8 @@ SCIP_RETCODE SCIPchgAndConsRemovableFlagWhenUpgr(
                                               *   TRUE
                                               */
    );
+
+/* @} */
 
 /* @} */
 

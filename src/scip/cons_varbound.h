@@ -22,13 +22,6 @@
  * @author Gerald Gamrath
  * @author Stefan Heinz
  *
- * This constraint handler handles a special type of linear constraints, namely variable bound constraints.
- * A variable bound constraint has the form
- * \f[
- *   lhs \leq x + c y \leq rhs
- * \f]
- * with coefficient \f$c \in Q\f$, \f$lhs\in Q \cup \{-\infty\}\f$, \f$rhs\in Q \cup \{\infty\}\f$,
- * and decision variables \f$x\f$ (non-binary) and \f$y\f$ (binary or integer).
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -55,6 +48,18 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
 /**@addtogroup CONSHDLRS
  *
  * @{
+ *
+ * @name Variable Bound Constraints
+ *
+ * @{
+ *
+ * This constraint handler handles a special type of linear constraints, namely variable bound constraints.
+ * A variable bound constraint has the form
+ * \f[
+ *   lhs \leq x + c y \leq rhs
+ * \f]
+ * with coefficient \f$c \in Q\f$, \f$lhs\in Q \cup \{-\infty\}\f$, \f$rhs\in Q \cup \{\infty\}\f$,
+ * and decision variables \f$x\f$ (non-binary) and \f$y\f$ (binary or integer).
  */
 
 /** creates and captures a variable bound constraint: lhs <= x + c*y <= rhs
@@ -173,6 +178,8 @@ SCIP_ROW* SCIPgetRowVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
+
+/* @} */
 
 /* @} */
 

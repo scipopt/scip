@@ -21,15 +21,6 @@
  * @author Marc Pfetsch
  * @author Kati Wolter
  *
- * This constraint handler handles linear constraints in their most general form. That is,
- * \f[
- *   lhs \leq \sum_{i=1}^n a_i x_i \leq rhs
- * \f]
- * with \f$a_i \in Q, i = 1,\dots,n\f$, \f$lhs\in Q \cup \{-\infty\}\f$, \f$rhs\in Q \cup \{\infty\}\f$,
- * and decision variables \f$x_i, i = 1,\dots,n\f$ which can be binary, integer, or continuous.
- *
- * Furthermore, this header offers the upgrade functionality of a general linear constraint into a more specific
- * constraint, such as a knapsack constraint, via SCIP_DECL_LINCONSUPGD() and SCIPincludeLinconsUpgrade()
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -43,9 +34,41 @@
 extern "C" {
 #endif
 
+
+
+/*
+ * constraint specific interface methods
+ */
+
+/** creates the handler for linear constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
+EXTERN
+SCIP_RETCODE SCIPincludeConshdlrLinear(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Linear Constraints
+ *
+ * This constraint handler handles linear constraints in their most general form. That is,
+ * \f[
+ *   lhs \leq \sum_{i=1}^n a_i x_i \leq rhs
+ * \f]
+ * with \f$a_i \in Q, i = 1,\dots,n\f$, \f$lhs\in Q \cup \{-\infty\}\f$, \f$rhs\in Q \cup \{\infty\}\f$,
+ * and decision variables \f$x_i, i = 1,\dots,n\f$ which can be binary, integer, or continuous.
+ *
+ * Furthermore, this header offers the upgrade functionality of a general linear constraint into a more specific
+ * constraint, such as a knapsack constraint, via SCIP_DECL_LINCONSUPGD() and SCIPincludeLinconsUpgrade()
+ *
+ * @{
+ */
+
 typedef struct SCIP_LinConsUpgrade SCIP_LINCONSUPGRADE; /**< linear constraint update method */
-
-
 
 /** upgrading method for linear constraints into more specific constraints
  *
@@ -82,25 +105,6 @@ typedef struct SCIP_LinConsUpgrade SCIP_LINCONSUPGRADE; /**< linear constraint u
       int nposbin, int nnegbin, int nposint, int nnegint, int nposimpl, int nnegimpl, int nposimplbin, int nnegimplbin, int nposcont, int nnegcont, \
       int ncoeffspone, int ncoeffsnone, int ncoeffspint, int ncoeffsnint, int ncoeffspfrac, int ncoeffsnfrac, \
       SCIP_Real poscoeffsum, SCIP_Real negcoeffsum, SCIP_Bool integral, SCIP_CONS** upgdcons)
-
-
-/*
- * constraint specific interface methods
- */
-
-/** creates the handler for linear constraints and includes it in SCIP
- *
- * @ingroup ConshdlrIncludes
- * */
-EXTERN
-SCIP_RETCODE SCIPincludeConshdlrLinear(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/**@addtogroup CONSHDLRS
- *
- * @{
- */
 
 /** includes a linear constraint update method into the linear constraint handler */
 EXTERN
@@ -340,6 +344,8 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    SCIP_CONS**           upgdcons            /**< pointer to store upgraded constraint, or NULL if not successful */
    );
 
+
+/* @} */
 
 /* @} */
 

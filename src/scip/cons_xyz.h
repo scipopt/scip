@@ -43,6 +43,10 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
 /**@addtogroup CONSHDLRS
  *
  * @{
+ *
+ * @name Xyz Constraints
+ *
+ * @{
  */
 
 /** creates and captures a xyz constraint
@@ -100,6 +104,8 @@ SCIP_RETCODE SCIPcreateConsBasicXyz(
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs                 /**< right hand side of constraint */
    );
+
+/* @} */
 
 /* @} */
 

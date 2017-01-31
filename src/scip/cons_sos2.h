@@ -18,10 +18,6 @@
  * @brief  constraint handler for SOS type 2 constraints
  * @author Marc Pfetsch
  *
- * A specially ordered set of type 2 (SOS2) is a sequence of variables such that at most two
- * variables are nonzero and if two variables are nonzero they must be adjacent in the specified
- * sequence. Note that it is in principle allowed that a variable appears twice, but it then can be
- * fixed to 0 if it is at least two apart in the sequence.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -48,6 +44,15 @@ SCIP_RETCODE SCIPincludeConshdlrSOS2(
 /**@addtogroup CONSHDLRS
  *
  * @{
+ *
+ * @name Specially Ordered Set (SOS) Type 2 Constraints
+ *
+ * @{
+ *
+ * A specially ordered set of type 2 (SOS2) is a sequence of variables such that at most two
+ * variables are nonzero and if two variables are nonzero they must be adjacent in the specified
+ * sequence. Note that it is in principle allowed that a variable appears twice, but it then can be
+ * fixed to 0 if it is at least two apart in the sequence.
  */
 
 /** creates and captures an SOS2 constraint
@@ -142,6 +147,8 @@ SCIP_Real* SCIPgetWeightsSOS2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
+
+/* @} */
 
 /* @} */
 
