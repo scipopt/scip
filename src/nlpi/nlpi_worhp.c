@@ -89,6 +89,16 @@ struct SCIP_NlpiProblem
 
    ROWCOLIDX**                 dginds;       /**< array containing indices for gradients */
    ROWCOLIDX**                 hminds;       /**< array containing indices for hessian */
+
+   /* parameters */
+   SCIP_Real                   feastol;      /**< feasibility tolerance for primal variables and slacks */
+   SCIP_Real                   relobjtol;    /**< relative objective tolerance */
+   SCIP_Real                   lobjlim;      /**< lower objective limit (cutoff) */
+   SCIP_Real                   timelim;      /**< NLP time limit */
+   int                         fromscratch;  /**< solver should start from scratch at next call?: 0 no, 1 yes */
+   int                         verblevel;    /**< verbosity level of output of NLP solver to the screen: 0 off, 1 normal, 2 debug, > 2 more debug */
+   int                         itlim;        /**< NLP iteration limit */
+   int                         fastfail;     /**< should the NLP solver stop early if convergence is slow?: 0 no, 1 yes */
 };
 
 /*
@@ -552,7 +562,6 @@ SCIP_RETCODE initWorhp(
    const int* offset;
    const int* cols;
    SCIP_NLPIDATA* nlpidata;
-   int status;
    int i;
    int j;
 
@@ -571,18 +580,6 @@ SCIP_RETCODE initWorhp(
 
    /* properly zeros everything */
    WorhpPreInit(opt, wsp, par, cnt);
-
-   /* set parameters */
-   InitParams(&status, par);
-   par->Infty = nlpidata->infinity;
-   par->TolFeas = nlpidata->feastol;
-   par->ScaledKKT= FALSE;
-
-/* #ifdef SCIP_DEBUG */
-/*    par->CheckValuesDF = TRUE; */
-/*    par->CheckValuesDG = TRUE; */
-/*    par->CheckValuesHM = TRUE; */
-/* #endif */
 
    /* set problem dimensions */
    opt->n = SCIPnlpiOracleGetNVars(problem->oracle);
@@ -948,6 +945,16 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
    SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, &(*problem)->par) );
    SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, &(*problem)->cnt) );
    WorhpPreInit((*problem)->opt, (*problem)->wsp, (*problem)->par, (*problem)->cnt);
+
+   /* set default parameters */
+   (*problem)->feastol = 1e-9;
+   (*problem)->relobjtol = 1e-9;
+   (*problem)->lobjlim = SCIP_INVALID;
+   (*problem)->timelim = SCIP_NLPPAR_INFINITY;
+   (*problem)->fromscratch = 0;
+   (*problem)->verblevel = 0;
+   (*problem)->itlim = INT_MAX;
+   (*problem)->fastfail = 0;
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1417,6 +1424,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    Control* cnt = problem->cnt;
    OptVar* opt = problem->opt;
    Params* par = problem->par;
+   int status;
    int i;
 
    problem->lastniter = -1;
@@ -1434,6 +1442,26 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    {
       SCIP_CALL( updateWorhp(problem) );
    }
+
+   /* set parameters */
+   InitParams(&status, par);
+
+   if( status != OK )
+      return SCIP_INVALIDCALL;
+
+   par->ScaledKKT= FALSE;
+   par->Infty = nlpidata->infinity;
+   par->TolFeas = problem->feastol;
+   par->TolOpti = problem->relobjtol;
+   par->TolComp = problem->relobjtol;
+   par->Timeout = problem->timelim;
+   par->MaxIter = problem->itlim;
+   par->NLPprint = problem->verblevel - 1; /* WORHP verbosity levels: -1 = off, 0 = normal, 1 = debug, >1 = more debug */
+
+   /* uncomment to activate gradient and hessian check */
+   /* par->CheckValuesDF = TRUE; */
+   /* par->CheckValuesDG = TRUE; */
+   /* par->CheckValuesHM = TRUE; */
 
 #ifdef SCIP_DEBUG
    SCIP_CALL( SCIPnlpiOraclePrintProblem(problem->oracle, nlpidata->messagehdlr, NULL) );
@@ -1634,6 +1662,8 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionWorhp )
    if( primalvalues != NULL )
       *primalvalues = problem->lastsol;
 
+   /* TODO return dual solution */
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -1728,9 +1758,80 @@ SCIP_DECL_NLPISETWARMSTARTMEMO( nlpiSetWarmstartMemoWorhp )
 static
 SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParWorhp )
 {
-   /* TODO */
+   assert(nlpi != NULL);
+   assert(ival != NULL);
+   assert(problem != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   switch( type )
+   {
+   case SCIP_NLPPAR_FROMSCRATCH:
+   {
+      *ival = 1;
+      break;
+   }
+
+   case SCIP_NLPPAR_VERBLEVEL:
+   {
+      *ival = problem->verblevel;
+      break;
+   }
+
+   case SCIP_NLPPAR_FEASTOL:
+   {
+      SCIPerrorMessage("feasibility tolerance parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_RELOBJTOL:
+   {
+      SCIPerrorMessage("relative objective tolerance parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_LOBJLIM:
+   {
+      SCIPerrorMessage("objective limit parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_INFINITY:
+   {
+      SCIPerrorMessage("infinity parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_ITLIM:
+   {
+      *ival = problem->itlim;
+      break;
+   }
+
+   case SCIP_NLPPAR_TILIM:
+   {
+      SCIPerrorMessage("time limit parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_OPTFILE:
+   {
+      SCIPerrorMessage("optfile parameter is of type string.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_FASTFAIL:
+   {
+      *ival = problem->fastfail ? 1 : 0;
+      break;
+   }
+
+   default:
+   {
+      SCIPerrorMessage("Parameter %d not known to Worhp interface.\n", type);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   }
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** sets integer parameter of NLP
@@ -1744,9 +1845,107 @@ SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParWorhp )
 static
 SCIP_DECL_NLPISETINTPAR( nlpiSetIntParWorhp )
 {
-   /* TODO */
+   assert(nlpi != NULL);
+   assert(problem != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   switch( type )
+   {
+   case SCIP_NLPPAR_FROMSCRATCH:
+   {
+      if( ival == 0 || ival == 1 )
+      {
+         SCIP_NLPIDATA* data;
+
+         data = SCIPnlpiGetData(nlpi);
+         assert(data != NULL);
+
+         SCIPmessagePrintWarning(data->messagehdlr, "from scratch parameter not supported by Worhp interface yet. Ignored.\n");
+      }
+      else
+      {
+         SCIPerrorMessage("Value %d for parameter from scratch out of range {0, 1}\n", ival);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+      break;
+   }
+
+   case SCIP_NLPPAR_VERBLEVEL:
+   {
+      assert(ival >= 0);
+      problem->verblevel = ival;
+      break;
+   }
+
+   case SCIP_NLPPAR_FEASTOL:
+   {
+      SCIPerrorMessage("feasibility tolerance parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_RELOBJTOL:
+   {
+      SCIPerrorMessage("relative objective tolerance parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_LOBJLIM:
+   {
+      SCIPerrorMessage("objective limit parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_INFINITY:
+   {
+      SCIPerrorMessage("infinity parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_ITLIM:
+   {
+      if( ival >= 0 )
+         problem->itlim = ival;
+      else
+      {
+         SCIPerrorMessage("Value %d for parameter iteration limit is negative\n", ival);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+      break;
+   }
+
+   case SCIP_NLPPAR_TILIM:
+   {
+      SCIPerrorMessage("time limit parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_OPTFILE:
+   {
+      SCIPerrorMessage("optfile parameter is of type string.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_FASTFAIL:
+   {
+      if( ival == 0 || ival == 1 )
+      {
+         problem->fastfail = ival;
+      }
+      else
+      {
+         SCIPerrorMessage("Value %d for parameter fastfail out of range {0, 1}\n", ival);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+      break;
+   }
+
+   default:
+   {
+      SCIPerrorMessage("Parameter %d not known to Worhp interface.\n", type);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   }
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** gets floating point parameter of NLP
@@ -1772,27 +1971,31 @@ SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParWorhp )
    {
       case SCIP_NLPPAR_FROMSCRATCH:
       {
-         break;
+         SCIPerrorMessage("fromscratch parameter is of type int.\n");
+         return SCIP_PARAMETERWRONGTYPE;
       }
 
       case SCIP_NLPPAR_VERBLEVEL:
       {
-         break;
+         SCIPerrorMessage("verblevel parameter is of type int.\n");
+         return SCIP_PARAMETERWRONGTYPE;
       }
 
       case SCIP_NLPPAR_FEASTOL:
       {
-         *dval = data->feastol;
+         *dval = problem->feastol;
          break;
       }
 
       case SCIP_NLPPAR_RELOBJTOL:
       {
+         *dval = problem->relobjtol;
          break;
       }
 
       case SCIP_NLPPAR_LOBJLIM:
       {
+         *dval = problem->lobjlim;
          break;
       }
 
@@ -1804,17 +2007,20 @@ SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParWorhp )
 
       case SCIP_NLPPAR_ITLIM:
       {
-         break;
+         SCIPerrorMessage("itlim parameter is of type int.\n");
+         return SCIP_PARAMETERWRONGTYPE;
       }
 
       case SCIP_NLPPAR_TILIM:
       {
+         *dval = problem->timelim;
          break;
       }
 
       case SCIP_NLPPAR_OPTFILE:
       {
-         break;
+         SCIPerrorMessage("optfile parameter is of type string.\n");
+         return SCIP_PARAMETERWRONGTYPE;
       }
 
       default:
@@ -1845,27 +2051,31 @@ SCIP_DECL_NLPISETREALPAR( nlpiSetRealParWorhp )
    {
       case SCIP_NLPPAR_FROMSCRATCH:
       {
-         break;
+         SCIPerrorMessage("fromscratch parameter is of type real.\n");
+         return SCIP_PARAMETERWRONGTYPE;
       }
 
       case SCIP_NLPPAR_VERBLEVEL:
       {
-         break;
+         SCIPerrorMessage("verblevel parameter is of type real.\n");
+         return SCIP_PARAMETERWRONGTYPE;
       }
 
       case SCIP_NLPPAR_FEASTOL:
       {
-         data->feastol = dval;
+         problem->feastol = dval;
          break;
       }
 
       case SCIP_NLPPAR_RELOBJTOL:
       {
+         problem->relobjtol = dval;
          break;
       }
 
       case SCIP_NLPPAR_LOBJLIM:
       {
+         problem->lobjlim = dval;
          break;
       }
 
@@ -1877,17 +2087,20 @@ SCIP_DECL_NLPISETREALPAR( nlpiSetRealParWorhp )
 
       case SCIP_NLPPAR_ITLIM:
       {
-         break;
+         SCIPerrorMessage("itlim parameter is of type real.\n");
+         return SCIP_PARAMETERWRONGTYPE;
       }
 
       case SCIP_NLPPAR_TILIM:
       {
+         problem->timelim = dval;
          break;
       }
 
       case SCIP_NLPPAR_OPTFILE:
       {
-         break;
+         SCIPerrorMessage("optfile parameter is of type string.\n");
+         return SCIP_PARAMETERWRONGTYPE;
       }
 
       default:
@@ -1913,7 +2126,17 @@ SCIP_DECL_NLPISETREALPAR( nlpiSetRealParWorhp )
 static
 SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParWorhp )
 {
-   /* TODO */
+   SCIP_NLPIDATA* nlpidata = SCIPnlpiGetData(nlpi);
+
+   if( SCIP_NLPPAR_OPTFILE )
+   {
+      SCIPmessagePrintWarning(nlpidata->messagehdlr, "optfile parameter not supported by Worhp interface yet. Ignored.\n");
+   }
+   else
+   {
+      SCIPerrorMessage("parameter %d is not of type string.\n", type);
+      return SCIP_PARAMETERWRONGTYPE;
+   }
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -1929,7 +2152,17 @@ SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParWorhp )
 static
 SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParWorhp )
 {
-   /* TODO */
+   SCIP_NLPIDATA* nlpidata = SCIPnlpiGetData(nlpi);
+
+   if( SCIP_NLPPAR_OPTFILE )
+   {
+      SCIPmessagePrintWarning(nlpidata->messagehdlr, "optfile parameter not supported by Worhp interface yet. Ignored.\n");
+   }
+   else
+   {
+      SCIPerrorMessage("parameter %d is not of type string.\n", type);
+      return SCIP_PARAMETERWRONGTYPE;
+   }
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
