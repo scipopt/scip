@@ -68,6 +68,9 @@ struct SCIP_NlpiProblem
    int                         lastsolsize;  /**< size of lastsol array */
    int                         lastniter;    /**< number of iterations in last run */
 
+   SCIP_Bool                   firstrun;     /**< whether the next NLP solve will be the first one (with the current problem structure) */
+   SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known */
+
    /* Worhp data structures */
    OptVar*                     opt;          /**< Worhp variables  */
    Workspace*                  wsp;          /**< Worhp working space */
@@ -667,7 +670,9 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
       return SCIP_NOMEMORY;
 
    /* initialize problem */
+   BMSclearMemory((*problem));
    (*problem)->blkmem = data->blkmem;
+   (*problem)->firstrun = TRUE;
    SCIP_CALL( SCIPnlpiOracleCreate(data->blkmem, &(*problem)->oracle) );
    SCIP_CALL( SCIPnlpiOracleSetInfinity((*problem)->oracle, data->infinity) );
    SCIP_CALL( SCIPnlpiOracleSetProblemName((*problem)->oracle, name) );
@@ -721,6 +726,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemWorhp)
       SCIP_CALL( SCIPnlpiOracleFree(&(*problem)->oracle) );
    }
 
+   BMSfreeMemoryArrayNull(&(*problem)->initguess);
    BMSfreeBlockMemory(data->blkmem, problem);
    *problem = NULL;
 
@@ -764,6 +770,10 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsWorhp )
    assert(problem->oracle != NULL);
 
    SCIP_CALL( SCIPnlpiOracleAddVars(problem->oracle, nvars, lbs, ubs, varnames) );
+
+   BMSfreeMemoryArrayNull(&problem->initguess);
+   invalidateSolution(problem);
+   problem->firstrun = TRUE;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -820,6 +830,9 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsWorhp )
          nquadelems, quadelems,
          exprvaridxs, exprtrees, names) );
 
+   invalidateSolution(problem);
+   problem->firstrun = TRUE;
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -862,6 +875,9 @@ SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveWorhp )
          nquadelems, quadelems,
          exprvaridxs, exprtree) );
 
+   invalidateSolution(problem);
+   problem->firstrun = TRUE;
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -883,6 +899,8 @@ SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsWorhp )
    assert(problem->oracle != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgVarBounds(problem->oracle, nvars, indices, lbs, ubs) );
+
+   invalidateSolution(problem);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -906,6 +924,8 @@ SCIP_DECL_NLPICHGCONSSIDES( nlpiChgConsSidesWorhp )
 
    SCIP_CALL( SCIPnlpiOracleChgConsSides(problem->oracle, nconss, indices, lhss, rhss) );
 
+   invalidateSolution(problem);
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -927,6 +947,11 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetWorhp )
    assert(problem->oracle != NULL);
 
    SCIP_CALL( SCIPnlpiOracleDelVarSet(problem->oracle, dstats) );
+
+   BMSfreeMemoryArrayNull(&problem->initguess); // @TODO keep initguess for remaining variables
+
+   invalidateSolution(problem);
+   problem->firstrun = TRUE;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -950,6 +975,9 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetWorhp )
 
    SCIP_CALL( SCIPnlpiOracleDelConsSet(problem->oracle, dstats) );
 
+   invalidateSolution(problem);
+   problem->firstrun = TRUE;
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -971,6 +999,8 @@ SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsWorhp )
    assert(problem->oracle != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgLinearCoefs(problem->oracle, idx, nvals, varidxs, vals) );
+
+   invalidateSolution(problem);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -995,6 +1025,8 @@ SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsWorhp )
 
    SCIP_CALL( SCIPnlpiOracleChgQuadCoefs(problem->oracle, idx, nquadelems, quadelems) );
 
+   invalidateSolution(problem);
+
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
 
@@ -1015,6 +1047,8 @@ SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeWorhp )
    assert(problem->oracle != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgExprtree(problem->oracle, idxcons, exprvaridxs, exprtree) );
+
+   invalidateSolution(problem);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -1038,6 +1072,8 @@ SCIP_DECL_NLPICHGNONLINCOEF( nlpiChgNonlinCoefWorhp )
    assert(problem->oracle != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgExprParam(problem->oracle, idxcons, idxparam, value) );
+
+   invalidateSolution(problem);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -1074,9 +1110,28 @@ SCIP_DECL_NLPICHGOBJCONSTANT( nlpiChgObjConstantWorhp )
 static
 SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessWorhp )
 {
-   /* TODO */
+   assert(nlpi != NULL);
+   assert(problem != NULL);
+   assert(problem->oracle != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   if( primalvalues != NULL )
+   {
+      if( !problem->initguess )
+      {
+         if( BMSduplicateMemoryArray(&problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle)) == NULL )
+            return SCIP_NOMEMORY;
+      }
+      else
+      {
+         BMScopyMemoryArray(problem->initguess, primalvalues, SCIPnlpiOracleGetNVars(problem->oracle));
+      }
+   }
+   else
+   {
+      BMSfreeMemoryArrayNull(&problem->initguess);
+   }
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** tries to solve NLP
