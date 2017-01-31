@@ -3043,6 +3043,7 @@ int getNodeIndexBinvar(
 SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR**            vars,               /**< array of problem variables, sorted by variable type */
    int                   nbinvars,           /**< number of binary variables */
    int                   nintvars,           /**< number of integer variables */
@@ -3117,7 +3118,7 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
     * For simplicity, we add all integer and implicit integer variables as nodes to the digraph, and subtract
     * the amount of nonbinary integer and implicit integer variables afterwards.
     */
-   SCIP_CALL( SCIPdigraphCreate(&digraph, ndiscvars) );
+   SCIP_CALL( SCIPdigraphCreate(&digraph, blkmem, ndiscvars) );
    SCIP_CALL( SCIPdigraphSetSizes(digraph, sizes) );
 
    cliques = cliquetable->cliques;
