@@ -88,11 +88,19 @@ extern "C" {
       SCIP_Real timelimit, SCIP_Real memorylimit, SCIP_Longint maxnodes, \
       SCIP_Bool* solved, SCIP_Bool* infeasible, SCIP_Bool* unbounded, SCIP_Bool* error)
 
-/** creates the constraint handler for cumulative constraints and includes it in SCIP */
+/** creates the constraint handler for cumulative constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrCumulative(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures a cumulative constraint */
 EXTERN
@@ -388,6 +396,8 @@ int SCIPcomputeHmax(
    SCIP_PROFILE*         profile,            /**< worst case profile */
    int                   capacity            /**< capacity to check */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -47,11 +47,19 @@ extern "C" {
 #endif
 
 
-/** creates the handler for orbitope constraints and includes it in SCIP */
+/** creates the handler for orbitope constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures a orbitope constraint
  *
@@ -111,6 +119,8 @@ SCIP_RETCODE SCIPcreateConsBasicOrbitope(
    int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
    SCIP_Bool             resolveprop         /**< should propagation be resolved? */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

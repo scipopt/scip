@@ -44,11 +44,19 @@
 extern "C" {
 #endif
 
-/** creates the handler for linking constraints and includes it in SCIP */
+/** creates the handler for linking constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrLinking(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures a linking constraint
  *
@@ -151,6 +159,8 @@ int* SCIPgetValsLinking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< linking constraint */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

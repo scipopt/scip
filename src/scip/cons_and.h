@@ -42,11 +42,19 @@
 extern "C" {
 #endif
 
-/** creates the handler for and constraints and includes it in SCIP */
+/** creates the handler for and constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrAnd(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures an and constraint
  *
@@ -162,6 +170,8 @@ SCIP_RETCODE SCIPchgAndConsRemovableFlagWhenUpgr(
                                               *   TRUE
                                               */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -36,11 +36,19 @@
 extern "C" {
 #endif
 
-/** creates the handler for SOS2 constraints and includes it in SCIP */
+/** creates the handler for SOS2 constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrSOS2(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures an SOS2 constraint
  *
@@ -134,6 +142,8 @@ SCIP_Real* SCIPgetWeightsSOS2(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

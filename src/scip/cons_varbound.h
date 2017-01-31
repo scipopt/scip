@@ -43,11 +43,19 @@
 extern "C" {
 #endif
 
-/** creates the handler for variable bound constraints and includes it in SCIP */
+/** creates the handler for variable bound constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrVarbound(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures a variable bound constraint: lhs <= x + c*y <= rhs
  *
@@ -165,6 +173,8 @@ SCIP_ROW* SCIPgetRowVarbound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

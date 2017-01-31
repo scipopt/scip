@@ -56,11 +56,19 @@ enum SCIP_SetppcType
 };
 typedef enum SCIP_SetppcType SCIP_SETPPCTYPE;
 
-/** creates the handler for set partitioning / packing / covering constraints and includes it in SCIP */
+/** creates the handler for set partitioning / packing / covering constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrSetppc(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures a set partitioning constraint
  *
@@ -286,6 +294,8 @@ int SCIPgetNFixedzerosSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

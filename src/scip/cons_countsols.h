@@ -34,6 +34,20 @@
 extern "C" {
 #endif
 
+/** creates the handler for countsol constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
+EXTERN
+SCIP_RETCODE SCIPincludeConshdlrCountsols(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
+
 /** dialog execution method for the count command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve);
@@ -45,12 +59,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount);
 /** execution method of dialog for writing all solutions */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions);
-
-/** creates the handler for countsol constraints and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeConshdlrCountsols(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 /** execute counting */
 EXTERN
@@ -112,6 +120,8 @@ EXTERN
 SCIP_RETCODE SCIPsetParamsCountsols(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

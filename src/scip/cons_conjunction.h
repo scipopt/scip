@@ -37,11 +37,19 @@
 extern "C" {
 #endif
 
-/** creates the handler for conjunction constraints and includes it in SCIP */
+/** creates the handler for conjunction constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrConjunction(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures a conjunction constraint
  *
@@ -92,6 +100,8 @@ SCIP_RETCODE SCIPaddConsElemConjunction(
    SCIP_CONS*            cons,               /**< conjunction constraint */
    SCIP_CONS*            addcons             /**< additional constraint in conjunction */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

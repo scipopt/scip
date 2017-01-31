@@ -46,11 +46,19 @@
 extern "C" {
 #endif
 
-/** creates the handler for indicator constraints and includes it in SCIP */
+/** creates the handler for indicator constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures an indicator constraint
  *
@@ -259,6 +267,8 @@ SCIP_RETCODE SCIPaddRowIndicator(
    SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */
    SCIP_ROW*             row                 /**< row to add */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

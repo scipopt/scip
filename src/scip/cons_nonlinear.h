@@ -110,11 +110,19 @@ extern "C" {
       SCIP_EXPRGRAPH* exprgraph, SCIP_EXPRGRAPHNODE* node,              \
       int* naddcons, SCIP_EXPRGRAPHNODE** reformnode)
 
-/** creates the handler for nonlinear constraints and includes it in SCIP */
+/** creates the handler for nonlinear constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** includes a nonlinear constraint upgrade method into the nonlinear constraint handler */
 EXTERN
@@ -448,6 +456,8 @@ SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
    SCIP_Real*            gamma_,             /**< coefficient of third coordinate */
    SCIP_Real*            delta               /**< constant right-hand side */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

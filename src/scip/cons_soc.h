@@ -59,11 +59,19 @@
 extern "C" {
 #endif
 
-/** creates the handler for second order cone constraints and includes it in SCIP */
+/** creates the handler for second order cone constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures a second order cone constraint
  *
@@ -212,6 +220,8 @@ SCIP_RETCODE SCIPaddToNlpiProblemSOC(
    SCIP_HASHMAP*         scipvar2nlpivar,    /**< mapping from SCIP variables to variable indices in NLPI */
    SCIP_Bool             names               /**< whether to pass constraint names to NLPI */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -42,11 +42,19 @@
 extern "C" {
 #endif
 
-/** creates the handler for or constraints and includes it in SCIP */
+/** creates the handler for or constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrOr(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures an or constraint
  *
@@ -123,6 +131,8 @@ SCIP_VAR* SCIPgetResultantOr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

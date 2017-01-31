@@ -40,11 +40,19 @@
 extern "C" {
 #endif
 
-/** creates the handler for cardinality constraints and includes it in SCIP */
+/** creates the handler for cardinality constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrCardinality(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures an cardinality constraint
  *
@@ -173,6 +181,8 @@ SCIP_Real* SCIPgetWeightsCardinality(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

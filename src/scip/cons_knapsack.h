@@ -39,11 +39,19 @@
 extern "C" {
 #endif
 
-/** creates the handler for knapsack constraints and includes it in SCIP */
+/** creates the handler for knapsack constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrKnapsack(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures a knapsack constraint
  *
@@ -243,6 +251,8 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    SCIP_Bool*            cutoff,             /**< pointer to store whether a cutoff was found */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

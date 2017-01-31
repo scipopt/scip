@@ -130,11 +130,19 @@ typedef struct SCIP_BilinTerm SCIP_BILINTERM;
       int nbinlin, int nbinquad, int nintlin, int nintquad, int nimpllin, int nimplquad, int ncontlin, int ncontquad, \
       SCIP_Bool integral, int* nupgdconss, SCIP_CONS** upgdconss, int upgdconsssize, SCIP_PRESOLTIMING presoltiming)
 
-/** creates the handler for quadratic constraints and includes it in SCIP */
+/** creates the handler for quadratic constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** includes a quadratic constraint upgrade method into the quadratic constraint handler */
 EXTERN
@@ -604,6 +612,8 @@ SCIP_RETCODE SCIPchgBilinCoefQuadratic(
    SCIP_VAR*             var2,               /**< second quadratic variable */
    SCIP_Real             coef                /**< coefficient of bilinear term */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

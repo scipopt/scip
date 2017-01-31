@@ -55,11 +55,19 @@ typedef enum
    SCIP_BIVAR_UNKNOWN            = 3         /* unknown */
 } SCIP_BIVAR_CONVEXITY;
 
-/** creates the handler for bivariate constraints and includes it in SCIP */
+/** creates the handler for bivariate constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrBivariate(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures a bivariate constraint
  *
@@ -156,6 +164,8 @@ SCIP_Real SCIPgetRhsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

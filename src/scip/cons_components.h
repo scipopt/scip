@@ -32,7 +32,10 @@
 extern "C" {
 #endif
 
-/** creates the components constraint handler and includes it in SCIP */
+/** creates the components constraint handler and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrComponents(
    SCIP*                 scip                /**< SCIP data structure */

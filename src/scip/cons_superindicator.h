@@ -45,11 +45,19 @@ extern "C" {
  *  constraint-specific interface methods
  */
 
-/** creates the handler for superindicator constraints and includes it in SCIP */
+/** creates the handler for superindicator constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures a superindicator constraint
  *
@@ -137,6 +145,8 @@ SCIP_RETCODE SCIPtransformMinUC(
 /** dialog execution method for the SCIPtransformMinUC() command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinUC);
+
+/* @} */
 
 #ifdef __cplusplus
 }

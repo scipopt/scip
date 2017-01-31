@@ -37,11 +37,19 @@
 extern "C" {
 #endif
 
-/** creates the handler for SOS1 constraints and includes it in SCIP */
+/** creates the handler for SOS1 constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures an SOS1 constraint
  *
@@ -186,6 +194,8 @@ SCIP_RETCODE SCIPmakeSOS1sFeasible(
    SCIP_Bool*            success             /**< pointer to store whether SOS1 constraints have been turned feasible and
                                               *   solution was good enough */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

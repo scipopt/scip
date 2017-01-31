@@ -58,11 +58,19 @@ enum SCIP_LinearConsType
 typedef enum SCIP_LinearConsType SCIP_LINEARCONSTYPE;
 
 
-/** creates the handler for pseudoboolean constraints and includes it in SCIP */
+/** creates the handler for pseudoboolean constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures a pseudoboolean constraint, with given linear and and-constraints */
 EXTERN
@@ -324,6 +332,8 @@ SCIP_Real SCIPgetRhsPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons                /**< pseudoboolean constraint */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

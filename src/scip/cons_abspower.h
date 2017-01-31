@@ -52,11 +52,21 @@
 extern "C" {
 #endif
 
-/** creates the handler for absolute power constraints and includes it in SCIP */
+/** creates the handler for absolute power constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrAbspower(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures a absolute power constraint
  *
@@ -185,6 +195,8 @@ SCIP_Real SCIPgetViolationAbspower(
    SCIP_CONS*            cons,               /**< absolute power constraint */
    SCIP_SOL*             sol                 /**< LP solution */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

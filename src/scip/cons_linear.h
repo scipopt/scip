@@ -88,11 +88,19 @@ typedef struct SCIP_LinConsUpgrade SCIP_LINCONSUPGRADE; /**< linear constraint u
  * constraint specific interface methods
  */
 
-/** creates the handler for linear constraints and includes it in SCIP */
+/** creates the handler for linear constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrLinear(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** includes a linear constraint update method into the linear constraint handler */
 EXTERN
@@ -332,6 +340,8 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    SCIP_CONS**           upgdcons            /**< pointer to store upgraded constraint, or NULL if not successful */
    );
 
+
+/* @} */
 
 #ifdef __cplusplus
 }

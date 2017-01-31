@@ -38,11 +38,19 @@
 extern "C" {
 #endif
 
-/** creates the handler for disjunction constraints and includes it in SCIP */
+/** creates the handler for disjunction constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrDisjunction(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ */
 
 /** creates and captures a disjunction constraint
  *
@@ -97,6 +105,8 @@ SCIP_RETCODE SCIPaddConsElemDisjunction(
    SCIP_CONS*            cons,               /**< disjunction constraint */
    SCIP_CONS*            addcons             /**< additional constraint in disjunction */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }
