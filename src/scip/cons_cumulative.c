@@ -7340,28 +7340,28 @@ SCIP_RETCODE propagateCumulativeCondition(
    SCIP_CALL( SCIPprofileCreate(&profile, capacity) );
 
    /* create core profile (compulsory parts) */
-   SCIP_CALL_TERMINATE(retcode, createCoreProfile(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax,
-         initialized, explanation, cutoff), TERMINATE);
+   SCIP_CALL_TERMINATE( retcode, createCoreProfile(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax,
+         initialized, explanation, cutoff), TERMINATE );
 
    /* propagate the job cores until nothing else can be detected */
    if( (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
    {
-      SCIP_CALL_TERMINATE(retcode, propagateTimetable(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
-            nchgbds, initialized, explanation, cutoff), TERMINATE);
+      SCIP_CALL_TERMINATE( retcode, propagateTimetable(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
+            nchgbds, initialized, explanation, cutoff), TERMINATE );
    }
 
    /* run edge finding propagator */
    if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
    {
-      SCIP_CALL_TERMINATE(retcode, propagateEdgeFinding(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
-            cons, initialized, explanation, nchgbds, cutoff), TERMINATE);
+      SCIP_CALL_TERMINATE( retcode, propagateEdgeFinding(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
+            cons, initialized, explanation, nchgbds, cutoff), TERMINATE );
    }
 
    /* run time-table edge-finding propagator */
    if( (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
    {
-      SCIP_CALL_TERMINATE(retcode, propagateTTEF(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
-            nchgbds, initialized, explanation, cutoff), TERMINATE);
+      SCIP_CALL_TERMINATE( retcode, propagateTTEF(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
+            nchgbds, initialized, explanation, cutoff), TERMINATE );
    }
    /* free resource profile */
 TERMINATE:
@@ -14156,8 +14156,8 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
 
    nvars = consdata->nvars;
 
-   SCIP_CALL_TERMINATE(retcode, SCIPhashtableCreate(&vars, SCIPblkmem(scip), nvars,
-         SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL), TERMINATE);
+   SCIP_CALL_TERMINATE( retcode, SCIPhashtableCreate(&vars, SCIPblkmem(scip), nvars,
+         SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL), TERMINATE );
 
    /* create opening of the GML format */
    SCIPgmlWriteOpening(file,  TRUE);
@@ -14169,7 +14169,7 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
       var = consdata->vars[v];
       assert(var != NULL);
 
-      SCIP_CALL_TERMINATE(retcode,  SCIPhashtableInsert(vars, (void*)var) , TERMINATE);
+      SCIP_CALL_TERMINATE( retcode,  SCIPhashtableInsert(vars, (void*)var) , TERMINATE );
 
       if( SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var) < 0.5 )
          (void)SCIPsnprintf(color, SCIP_MAXSTRLEN, "%s", "#0000ff");
