@@ -698,7 +698,7 @@ SCIP_RETCODE enforceConstraint(
       if( SCIPvarGetLbLocal(consdata->binvar) > 0.5 )
       {
          assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(consdata->binvar), 1.0));
-         
+
          if( sol == NULL )
          {
             SCIPdebugMsg(scip, "binvar <%s> == 1 locally --> SCIPenfolpCons() on constraint <%s>\n",
@@ -1495,10 +1495,9 @@ SCIP_DECL_CONSPRESOL(consPresolSuperindicator)
          if( *result != SCIP_DELAYED )
             *result = locresult;
          break;
-      case SCIP_DIDNOTRUN:
+      case SCIP_DIDNOTFIND:
          assert(*result != SCIP_CUTOFF);
          if( *result != SCIP_UNBOUNDED
-            && *result != SCIP_DIDNOTFIND
             && *result != SCIP_DELAYED
             && *result != SCIP_SUCCESS )
             *result = locresult;
