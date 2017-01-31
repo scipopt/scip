@@ -4203,7 +4203,7 @@ SCIP_RETCODE separateIISRounding(
    lp = conshdlrdata->altlp;
    assert( lp != NULL );
 
-   nGenOld = *nGen;
+   SCIPdebug( nGenOld = *nGen; )
    SCIPdebugMsg(scip, "Separating IIS-cuts by rounding ...\n");
 
 #ifndef NDEBUG
@@ -5746,9 +5746,8 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
-   oldnfixedvars = *nfixedvars;
-   oldndelconss = *ndelconss;
-
+   SCIPdebug( oldnfixedvars = *nfixedvars; )
+   SCIPdebug( oldndelconss = *ndelconss; )
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );

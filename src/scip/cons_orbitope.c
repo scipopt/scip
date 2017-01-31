@@ -850,7 +850,6 @@ SCIP_RETCODE propagateCons(
       assert( -1 <= firstnonzeroinrow && firstnonzeroinrow <= lastcolumn );
 
       /* compute rightmost possible position for a 1 */
-      lastoneinrow = -1;
       assert( !ispart || 0 <= lastoneprevrow );
       assert( lastoneprevrow <= lastcolumn );
 
