@@ -1,0 +1,4 @@
+../../../soplex/src/
+../../../soplex/lib/libsoplex.linux.x86_64.gnu.opt.a
+../../../../zimpl/src/
+../../../zimpl/lib/libzimpl.linux.x86_64.gnu.opt.a
