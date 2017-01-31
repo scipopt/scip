@@ -49,6 +49,7 @@ SCIP_RETCODE testNlpi(SCIP* scip, SCIP_NLPI* nlpi)
    const char* consnames[3] = {"c1", "c2", "c3"};
    SCIP_Real lhss[3] = {1, -INF, 2.5};
    SCIP_Real rhss[3] = {1, -1, 5};
+   SCIP_Real initguess[4];
    SCIP_QUADELEM* quadelems;
    SCIP_Real* linvals;
    int* lininds;
@@ -141,7 +142,11 @@ SCIP_RETCODE testNlpi(SCIP* scip, SCIP_NLPI* nlpi)
    SCIP_CALL( SCIPnlpiChgVarBounds(nlpi, nlpiprob, 1, lininds, lbs, ubs) );
 
    /* set the initial guess to the previous solution */
-   SCIP_CALL( SCIPnlpiSetInitialGuess(nlpi, nlpiprob, primal, NULL, NULL, NULL) );
+   initguess[0] = 0.6;
+   initguess[1] = 0.5;
+   initguess[2] = 0.4;
+   initguess[3] = 2.0;
+   SCIP_CALL( SCIPnlpiSetInitialGuess(nlpi, nlpiprob, initguess, NULL, NULL, NULL) );
 
    /* solve NLP */
    SCIP_CALL( SCIPnlpiSolve(nlpi, nlpiprob) );
@@ -271,8 +276,8 @@ SCIP_RETCODE solveQP(
    /* assert(SCIPnlpiGetSolstat(nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_FEASIBLE); */
    cr_assert(SCIPnlpiGetTermstat(nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
 
-   for( i = 0; i < n+1; ++i )
-      printf("x[%d] = %g\n", i, primal[i]);
+   /* for( i = 0; i < n+1; ++i ) */
+   /*    printf("x[%d] = %g\n", i, primal[i]); */
 
    *solval = primal[n];
    *nlpsolstat = SCIPnlpiGetSolstat(nlpi, nlpiprob);
@@ -371,7 +376,6 @@ Test(nlpi, solveQP, .description = "solves convex QP with different NLPIs"
 
       cr_assert(ipoptsolstat != SCIP_NLPSOLSTAT_UNKNOWN);
       cr_assert(worhpsolstat != SCIP_NLPSOLSTAT_UNKNOWN);
-
 
       if( ipoptsolstat == SCIP_NLPSOLSTAT_LOCOPT && worhpsolstat == SCIP_NLPSOLSTAT_LOCOPT )
       {
