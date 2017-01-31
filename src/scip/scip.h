@@ -204,12 +204,6 @@ void SCIPprintError(
    SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
    );
 
-/** update statistical information when a new solution was found */
-EXTERN
-void SCIPstoreSolutionGap(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /**@} */
 
 
@@ -20774,6 +20768,13 @@ SCIP_DEPRECATED
 SCIP_RETCODE SCIPwriteImplicationConflictGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< file name, or NULL for stdout */
+   );
+
+
+/** update statistical information when a new solution was found */
+EXTERN
+void SCIPstoreSolutionGap(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /**@} */

@@ -10419,7 +10419,8 @@ SCIP_RETCODE tightenWeights(
                backpos = nvars - 2;
             }
             break;
-         case 3:
+         default:
+            assert(k == 3);
             if( sumcoefcase )
             {
                if( weights[nvars - 4] < weights[nvars - 1] + weights[nvars - 2] )
@@ -10439,8 +10440,6 @@ SCIP_RETCODE tightenWeights(
                backpos = nvars - 3;
             }
             break;
-         default:
-            return SCIP_ERROR;
          }
 
          if( backpos <= pos )
