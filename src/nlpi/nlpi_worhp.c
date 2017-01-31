@@ -180,12 +180,20 @@ SCIP_RETCODE evaluateWorhpRun(
      problem->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
   }
   /* infeasible stationary point found */
-  else if( problem->cnt->status == LocalInfeas )
+  else if( problem->cnt->status == LocalInfeas || problem->cnt->status == LocalInfeasOptimal )
   {
      SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of convergence against infeasible stationary point!\n");
      invalidateSolution(problem);
      problem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
      problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+  }
+  /* regularization of Hessian matrix failed */
+  else if( problem->cnt->status == RegularizationFailed )
+  {
+     SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of regularization of Hessian matrix failed!\n");
+     invalidateSolution(problem);
+     problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+     problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
   }
 
   /*
