@@ -144,7 +144,6 @@ SCIP_RETCODE createSubproblem(
    /* if there is already a solution, add an objective cutoff */
    if( SCIPgetNSols(scip) > 0 )
    {
-      cutoff = SCIPinfinity(scip);
       assert(!SCIPisInfinity(scip, SCIPgetUpperbound(scip)));
 
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
@@ -994,7 +993,6 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
    }
 
    /* check the number of variables with unknown value and continuous variables with fractional value */
-   nunknown = 0;
    nfracints = 0;
 
    /* get all partial sols */

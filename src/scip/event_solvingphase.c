@@ -840,9 +840,9 @@ SCIP_RETCODE changeEmphasisParameters(
          break;
       case SOLVINGPHASE_UNINITIALIZED:
       default:
-         paramemphasis = SCIP_PARAMEMPHASIS_DEFAULT;
          SCIPdebugMsg(scip, "Unknown solving phase: %d -> ABORT!\n ", eventhdlrdata->solvingphase);
          SCIPABORT();
+         paramemphasis = SCIP_PARAMEMPHASIS_DEFAULT;
          break;
    }
 

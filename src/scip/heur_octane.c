@@ -289,7 +289,6 @@ SCIP_RETCODE generateAverageRay(
          else
             rownorm[i] = SQRT(rownorm[i]);
 
-         rowweight = 0.0;
          if( weighted )
          {
             rowweight = SCIProwGetDualsol(rows[i]);

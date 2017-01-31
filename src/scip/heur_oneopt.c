@@ -137,7 +137,6 @@ SCIP_Real calcShiftVal(
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
    obj = SCIPvarGetObj(var);
-   shiftval = 0.0;
    shiftdown = TRUE;
 
    /* determine shifting direction and maximal possible shifting w.r.t. corresponding bound */

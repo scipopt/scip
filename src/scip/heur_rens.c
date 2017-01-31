@@ -551,7 +551,6 @@ SCIP_RETCODE SCIPapplyRens(
    if( SCIPgetNSols(scip) > 0 )
    {
       SCIP_Real upperbound;
-      cutoff = SCIPinfinity(scip);
       assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);

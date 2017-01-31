@@ -3006,7 +3006,6 @@ SCIP_Real consdataGetActivity(
       activity = 0.0;
       nposinf = 0;
       nneginf = 0;
-      negsign = FALSE;
 
       for( v = 0; v < consdata->nvars; ++v )
       {

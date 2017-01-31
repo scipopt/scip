@@ -2115,7 +2115,6 @@ SCIP_RETCODE GUBsetCalcCliquePartition(
    SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpvars, vars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varseq, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeys, nvars) );
-   ncliquevars = 0;
 
    /* initialize the cliquepartition array with -1 */
    /* initialize the tmpvalues array */
@@ -7362,7 +7361,6 @@ SCIP_RETCODE propagateCons(
 #endif
 
    usenegatedclique = usenegatedclique && consdata->merged;
-   nnegcliques = -1;
 
    /* init for debugging */
    myvars = NULL;
@@ -7546,9 +7544,6 @@ SCIP_RETCODE propagateCons(
          if( !(*cutoff) && consdata->capacity >= minweightsum + consdata->onesweightsum )
          {
             SCIP_Longint maxcliqueweight;
-
-            c = 0;
-            maxcliqueweight = -1;
 
             /* loop over cliques */
             for( c = 0; c < nnegcliques; ++c )
@@ -8923,7 +8918,6 @@ SCIP_RETCODE dualWeightsTightening(
                if( (dualcapacity & 1) == 0 )
                {
                   newweight = dualcapacity / 2;
-                  startv = v;
 
                   /* set all middle coefficients */
                   for( ; v <= end; ++v )
@@ -9112,7 +9106,6 @@ SCIP_RETCODE dualWeightsTightening(
                   if( (dualcapacity & 1) == 0 )
                   {
                      newweight = dualcapacity / 2;
-                     startv = v;
 
                      /* set all middle coefficients */
                      for( ; v <= end; ++v )
@@ -9440,8 +9433,8 @@ SCIP_RETCODE simplifyInequalities(
    /* 3. start gcd procedure for all variables */
    do
    {
-      oldnchgcoefs = *nchgcoefs;
-      oldnchgsides = *nchgsides;
+      SCIPdebug( oldnchgcoefs = *nchgcoefs; )
+      SCIPdebug( oldnchgsides = *nchgsides; )
 
       vars = consdata->vars;
       weights = consdata->weights;
