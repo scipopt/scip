@@ -2803,7 +2803,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
 
       if( var == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "variable with name <%s> does not exist\n", SCIPvarGetName(var));
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Error while parsing variable.\n");
          *success = FALSE;
          goto TERMINATE;
       }

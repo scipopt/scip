@@ -3519,9 +3519,9 @@ void printBoundSection(
    {
       /* we should print the transformed problem, otherwise no fixed variable should exists */
       assert(transformed);
-      assert(fixvars != NULL);
 
       var = fixvars[v];
+
       assert(var != NULL);
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
 
@@ -3536,8 +3536,8 @@ void printBoundSection(
 
       if( !sectionName )
       {
-	 printBoundSectionName(scip, file);
-	 sectionName = TRUE;
+         printBoundSectionName(scip, file);
+         sectionName = TRUE;
       }
 
       /* print fixed variable */

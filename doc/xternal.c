@@ -187,7 +187,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/CallableLibrary"><b>CallableLibrary</b></a>
+ *  \ref CALLABLELIBRARY_MAIN "Callable Library Example"
  *  </td>
  *  <td>
  *  An example showing how to setup constraints (esp. nonlinear ones) when using \SCIP as callable library.
@@ -6993,7 +6993,7 @@
  * \ref CONS "here".
  */
 
-/**@defgroup ConsHdlrIncludes Inclusion methods
+/**@defgroup ConshdlrIncludes Inclusion methods
  * @ingroup CONSHDLRS
  * @brief methods to include specific constraint handlers into \SCIP
  *

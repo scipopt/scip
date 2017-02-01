@@ -2765,6 +2765,7 @@ void treeFindSwitchForks(
    lpfork = NULL;
    lpstatefork = NULL;
    subroot = NULL;
+   assert(fork != NULL);
 
    while( !fork->active )
    {
@@ -2798,7 +2799,6 @@ void treeFindSwitchForks(
    if( (int)fork->depth > tree->cutoffdepth )
    {
 #ifndef NDEBUG
-      assert(fork != NULL);
       while( !fork->cutoff )
       {
          fork = fork->parent;

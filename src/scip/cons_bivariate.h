@@ -20,6 +20,34 @@
  * @author Dennis Michaels
  * @author Stefan Vigerske
  *
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#ifndef __SCIP_CONS_BIVARIATE_H__
+#define __SCIP_CONS_BIVARIATE_H__
+
+#include "scip/scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** creates the handler for bivariate constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
+EXTERN
+SCIP_RETCODE SCIPincludeConshdlrBivariate(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Bivariate Constraints
+ *
  * This constraint handler handles constraints of the form
  * \f[
  *   \textrm{lhs} \leq f(x,y) + c z \leq \textrm{rhs}
@@ -34,18 +62,9 @@
  * Martin Ballerstein, Dennis Michaels, and Stefan Vigerske@n
  * Linear Underestimators for bivariate functions with a fixed convexity behavior@n
  * ZIB Report 13-02, 2013. http://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/1764
+ *
+ * @{
  */
-
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#ifndef __SCIP_CONS_BIVARIATE_H__
-#define __SCIP_CONS_BIVARIATE_H__
-
-#include "scip/scip.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 typedef enum
 {
@@ -54,12 +73,6 @@ typedef enum
    SCIP_BIVAR_CONVEX_CONCAVE     = 2,        /* f(x,y) is convex in x and concave in y */
    SCIP_BIVAR_UNKNOWN            = 3         /* unknown */
 } SCIP_BIVAR_CONVEXITY;
-
-/** creates the handler for bivariate constraints and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeConshdlrBivariate(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 /** creates and captures a bivariate constraint
  *
@@ -156,6 +169,10 @@ SCIP_Real SCIPgetRhsBivariate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
    );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

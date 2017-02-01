@@ -98,7 +98,6 @@ struct SCIP_LPi
    int                   cstatsize;                  /**< size of cstat array */
    int                   rstatsize;                  /**< size of rstat array */
    bool                  startscratch;               /**< start from scratch? */
-   bool                  presolving;                 /**< preform preprocessing? */
    SCIP_PRICING          pricing;                    /**< SCIP pricing setting  */
    bool                  validFactorization;         /**< whether we have a valid factorization in clp */
    SCIP_Bool             solved;                     /**< was the current LP solved? */

@@ -246,10 +246,10 @@ SCIP_RETCODE fillVariableGraph(
       SCIP_Bool success;
       SCIP_CONS* cons = conss[c];
 
-      SCIPstatistic(
-         int nconsdiscvars;
-         int nconscontvars;
-      )
+#ifdef SCIP_STATISTIC
+      int nconsdiscvars;
+      int nconscontvars;
+#endif
 
       /* we only consider constraints that are checkable */
       if( !SCIPconsIsChecked(cons) )
@@ -274,7 +274,10 @@ SCIP_RETCODE fillVariableGraph(
       if( !success )
          continue;
 
-      SCIPstatistic( nconsdiscvars = nconscontvars = 0; )
+#ifdef SCIP_STATISTIC
+      nconscontvars = 0
+      nconsdiscvars = 0;
+#endif
 
       /* loop over constraint variables and add this constraint to them if they are active */
       for( v = 0; v < nconsvars; ++v )

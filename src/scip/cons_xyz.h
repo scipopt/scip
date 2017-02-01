@@ -31,11 +31,23 @@
 extern "C" {
 #endif
 
-/** creates the handler for xyz constraints and includes it in SCIP */
+/** creates the handler for xyz constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Xyz Constraints
+ *
+ * @{
+ */
 
 /** creates and captures a xyz constraint
  *
@@ -92,6 +104,10 @@ SCIP_RETCODE SCIPcreateConsBasicXyz(
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs                 /**< right hand side of constraint */
    );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

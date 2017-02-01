@@ -4977,7 +4977,6 @@ SCIP_RETCODE propagateLbTTEF(
       return SCIP_OKAY;
 
    begin = hmin - 1;
-   coreEnergyAfterStart = -1;
 
    minest = INT_MAX;
    maxlct = INT_MIN;
@@ -4997,7 +4996,6 @@ SCIP_RETCODE propagateLbTTEF(
    hmax = MIN(hmax, maxlct);
 
    maxavailable = (hmax - hmin) * capacity;
-   minavailable = maxavailable;
    totalenergy = computeTotalEnergy(durations, demands, nvars);
 
    /* check if the smallest interval has a size such that the total energy fits, if so we can skip the propagator */
@@ -8685,6 +8683,7 @@ SCIP_RETCODE addRelaxation(
    {
       SCIP_CALL( createRelaxation(scip, cons, cutsasconss) );
    }
+   assert(consdata->ndemandrows == 0 || consdata->demandrows != NULL);
 
    for( r = 0; r < consdata->ndemandrows && !(*infeasible); ++r )
    {
@@ -8729,6 +8728,7 @@ SCIP_RETCODE separateConsBinaryRepresentation(
    {
       SCIP_CALL( createRelaxation(scip, cons, FALSE) );
    }
+   assert(consdata->ndemandrows == 0 || consdata->demandrows != NULL);
 
    ncuts = 0;
 
@@ -10660,7 +10660,7 @@ SCIP_RETCODE tightenCapacity(
    {
       int oldnchgcoefs;
 
-      oldnchgcoefs = *nchgcoefs;
+      SCIPdebug(oldnchgcoefs = *nchgcoefs; )
 
       SCIPdebugMsg(scip, "+-+-+-+-+-+ --> CHANGE capacity of cons<%s> from %d to %d\n",
          SCIPconsGetName(cons), consdata->capacity, bestcapacity);
@@ -12790,7 +12790,6 @@ SCIP_DECL_CONSSEPALP(consSepalpCumulative)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool cutoff;
-   SCIP_Bool reducedom;
    SCIP_Bool separated;
    int c;
 
@@ -12806,7 +12805,6 @@ SCIP_DECL_CONSSEPALP(consSepalpCumulative)
    SCIPdebugMsg(scip, "separating %d/%d cumulative constraints\n", nusefulconss, nconss);
 
    cutoff = FALSE;
-   reducedom = FALSE;
    separated = FALSE;
    (*result) = SCIP_DIDNOTRUN;
 
@@ -12818,12 +12816,12 @@ SCIP_DECL_CONSSEPALP(consSepalpCumulative)
    if( conshdlrdata->usebinvars )
    {
       /* check all useful cumulative constraints for feasibility  */
-      for( c = 0; c < nusefulconss && !reducedom && !cutoff; ++c )
+      for( c = 0; c < nusefulconss && !cutoff; ++c )
       {
          SCIP_CALL( separateConsBinaryRepresentation(scip, conss[c], NULL, &separated, &cutoff) );
       }
 
-      if( !cutoff && !reducedom && conshdlrdata->usecovercuts )
+      if( !cutoff && conshdlrdata->usecovercuts )
       {
          for( c = 0; c < nusefulconss; ++c )
          {
@@ -12844,8 +12842,6 @@ SCIP_DECL_CONSSEPALP(consSepalpCumulative)
 
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( reducedom )
-      *result = SCIP_REDUCEDDOM;
    else if( separated )
       *result = SCIP_SEPARATED;
 
@@ -12858,7 +12854,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolCumulative)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Bool cutoff;
-   SCIP_Bool reducedom;
    SCIP_Bool separated;
    int c;
 
@@ -12876,19 +12871,18 @@ SCIP_DECL_CONSSEPASOL(consSepasolCumulative)
    SCIPdebugMsg(scip, "separating %d/%d cumulative constraints\n", nusefulconss, nconss);
 
    cutoff = FALSE;
-   reducedom = FALSE;
    separated = FALSE;
    (*result) = SCIP_DIDNOTFIND;
 
    if( conshdlrdata->usebinvars )
    {
       /* check all useful cumulative constraints for feasibility  */
-      for( c = 0; c < nusefulconss && !cutoff && !reducedom; ++c )
+      for( c = 0; c < nusefulconss && !cutoff; ++c )
       {
          SCIP_CALL( separateConsBinaryRepresentation(scip, conss[c], NULL, &separated, &cutoff) );
       }
 
-      if( !cutoff && !reducedom && conshdlrdata->usecovercuts )
+      if( !cutoff && conshdlrdata->usecovercuts )
       {
          for( c = 0; c < nusefulconss; ++c )
          {
@@ -12908,8 +12902,6 @@ SCIP_DECL_CONSSEPASOL(consSepasolCumulative)
 
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( reducedom )
-      *result = SCIP_REDUCEDDOM;
    else if( separated )
       *result = SCIP_SEPARATED;
 

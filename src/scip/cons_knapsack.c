@@ -7555,17 +7555,19 @@ SCIP_RETCODE propagateCons(
             {
                SCIP_VAR* maxvar;
                SCIP_Bool maxvarfixed;
-               int endvarposclique = cliqueendposs[c];
-               int startvarposclique = cliquestartposs[c];
+               int endvarposclique;
+               int startvarposclique;
 
                assert(myvars != NULL);
-
-               maxvar = myvars[startvarposclique];
-
                assert(nnegcliques == consdata->nnegcliques);
                assert(myweights != NULL);
                assert(secondmaxweights != NULL);
                assert(cliquestartposs != NULL);
+
+               endvarposclique = cliqueendposs[c];
+               startvarposclique = cliquestartposs[c];
+
+               maxvar = myvars[startvarposclique];
 
                /* no need to process this negated clique because all variables are already fixed (which we detect from a fixed maxvar) */
                if( SCIPvarGetUbLocal(maxvar) - SCIPvarGetLbLocal(maxvar) < 0.5 )
@@ -10420,7 +10422,8 @@ SCIP_RETCODE tightenWeights(
                backpos = nvars - 2;
             }
             break;
-         case 3:
+         default:
+            assert(k == 3);
             if( sumcoefcase )
             {
                if( weights[nvars - 4] < weights[nvars - 1] + weights[nvars - 2] )
@@ -10440,8 +10443,6 @@ SCIP_RETCODE tightenWeights(
                backpos = nvars - 3;
             }
             break;
-         default:
-            return SCIP_ERROR;
          }
 
          if( backpos <= pos )

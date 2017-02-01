@@ -667,9 +667,11 @@ INPUT                  = . \
                          ../src/xml \
                          ../src/blockmemshell \
                          ../examples/Binpacking/src/ \
+                         ../examples/CallableLibrary/src/ \
                          ../examples/LOP/src/ \
                          ../examples/LOP/doc/xternal_lop.c \
                          ../examples/Binpacking/doc/xternal_binpacking.c \
+                         ../examples/CallableLibrary/doc/xternal_callablelibrary.c \
                          ../examples/MIPSolver/doc/xternal_mipsolver.c \
                          ../examples/Eventhdlr/doc/xternal_eventhdlr.c \
                          ../examples/Eventhdlr/src/ \
