@@ -64,7 +64,7 @@ struct SCIP_NlpiProblem
    SCIP_Real*                  lastdualcons; /**< dual solution from last run, if available */
    SCIP_Real*                  lastduallb;   /**< dual solution for lower bounds from last run, if available */
    SCIP_Real*                  lastdualub;   /**< dual solution for upper bounds from last run, if available */
-   int                         lastprimalsize;  /**< size of lastprimal array */
+   int                         lastprimalsize; /**< size of lastprimal array */
    int                         lastdualconssize; /**< size of lastdualcons array */
    int                         lastduallbsize; /**< size of lastduallb array */
    int                         lastdualubsize; /**< size of lastdualub array */
@@ -2179,14 +2179,10 @@ SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    return SCIP_OKAY;
 }
 
-/* TODO this is not thread-safe */
-static char NLPINAME[SCIP_MAXSTRLEN];
-
 /** gets string that identifies Worhp (version number) */
 const char* SCIPgetSolverNameWorhp(void)
 {
-   (void) SCIPsnprintf(NLPINAME, SCIP_MAXSTRLEN, "WORHP %d.%d.%s", WORHP_MAJOR, WORHP_MINOR, WORHP_PATCH);
-   return NLPINAME;
+   return "WORHP " WORHP_VERSION;
 }
 
 /** gets string that describes Worhp (version number) */
