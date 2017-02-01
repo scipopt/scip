@@ -1506,7 +1506,10 @@ void parseRange(
 
    /* current token should be the lower bound */
    if( !isValue(fzninput->token, lb) )
+   {
       syntaxError(scip, fzninput, "expected lower bound value");
+      return;
+   }
 
    /* check if we have a float notation or an integer notation which defines the type of the variable */
    if( fzninput->hasdot || !SCIPisIntegral(scip, *lb) )
@@ -1568,6 +1571,10 @@ SCIP_RETCODE parseOutputDimensioninfo(
    while( getNextToken(scip, fzninput) && !isChar(fzninput->token, ']') )
    {
       parseRange(scip, fzninput, &type, &lb, &ub);
+
+      if( fzninput->haserror )
+         return SCIP_OKAY;
+
       assert(type == FZN_INT);
 
       if( nelements == size )
@@ -1696,6 +1703,9 @@ void parseType(
        * belongs to the range expression */
       pushToken(fzninput);
       parseRange(scip, fzninput, type, lb, ub);
+
+      if( fzninput->haserror )
+         return;
    }
 
    SCIPdebugMsg(scip, "range =  [%g,%g]\n", *lb, *ub);
@@ -3794,6 +3804,9 @@ SCIP_RETCODE readFZNFile(
 
             /* parse range to detect constant type */
             parseRange(scip, fzninput, &type, &lb, &ub);
+
+            if( hasError(fzninput) )
+               break;
 
             /* parse the remaining constant statement */
             SCIP_CALL( parseConstant(scip, fzninput, type) );
