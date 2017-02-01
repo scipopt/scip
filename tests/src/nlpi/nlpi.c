@@ -35,6 +35,9 @@ SCIP_RETCODE testNlpi(SCIP* scip, SCIP_NLPI* nlpi)
    SCIP_NLPSTATISTICS* statistics;
    SCIP_NLPIPROBLEM* nlpiprob;
    SCIP_Real* primal;
+   SCIP_Real* dualcons;
+   SCIP_Real* duallb;
+   SCIP_Real* dualub;
 
    /* variables */
    const char* varnames[4] = {"x0", "x1", "x2", "x3"};
@@ -55,6 +58,7 @@ SCIP_RETCODE testNlpi(SCIP* scip, SCIP_NLPI* nlpi)
    int* lininds;
    int nquadelems;
    int nlinds;
+   int i;
 
    /*-----------------------------------------------------------------------
     *
@@ -124,10 +128,19 @@ SCIP_RETCODE testNlpi(SCIP* scip, SCIP_NLPI* nlpi)
    SCIPnlpStatisticsFree(&statistics);
 
    /* check primal solution */
-   SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, &dualcons, &duallb, &dualub) );
 
-   /* for( i = 0; i < 4; ++i ) */
-   /*    printf("x[%d] = %g\n", i, primal[i]); */
+
+   for( i = 0; i < 3; ++i )
+   {
+      printf("dualcons[%d] = %g\n", i, dualcons[i]);
+   }
+
+   for( i = 0; i < 4; ++i )
+   {
+      printf("duallb[%d] = %g\n", i, duallb[i]);
+      printf("dualub[%d] = %g\n", i, dualub[i]);
+   }
 
    cr_expect(SCIPisFeasEQ(scip, primal[0], 0.0));
    cr_expect(SCIPisFeasEQ(scip, primal[1], 0.5));
@@ -329,7 +342,7 @@ Test(nlpi, worhp, .description = "checks the NLPI for WORHP"
    SCIP_CALL( SCIPfree(&scip) );
 }
 
-Test(nlpi, Ipopt, .description = "checks the NLPI for Ipopt")
+Test(nlpi, ipopt, .description = "checks the NLPI for Ipopt")
 {
    SCIP* scip;
    SCIP_NLPI* nlpi;
