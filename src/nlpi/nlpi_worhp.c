@@ -139,7 +139,7 @@ SCIP_RETCODE evaluateWorhpRun(
    assert(problem->cnt != NULL);
 
   /* initialization error */
-  if (problem->cnt->status == InitError)
+  if( problem->cnt->status == InitError )
   {
      SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of initialization error!\n");
      invalidateSolution(problem);
@@ -147,7 +147,7 @@ SCIP_RETCODE evaluateWorhpRun(
      problem->lasttermstat = SCIP_NLPTERMSTAT_MEMERR;
   }
   /* data error */
-  else if (problem->cnt->status == DataError)
+  else if( problem->cnt->status == DataError )
   {
      SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of data error!\n");
      invalidateSolution(problem);
@@ -155,7 +155,7 @@ SCIP_RETCODE evaluateWorhpRun(
      problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
   }
   /* license error */
-  else if (problem->cnt->status == LicenseError)
+  else if( problem->cnt->status == LicenseError )
   {
      SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of license error!\n");
      invalidateSolution(problem);
@@ -164,7 +164,7 @@ SCIP_RETCODE evaluateWorhpRun(
   }
 
   /* evaluation errors */
-  else if (problem->cnt->status == evalsNaN)
+  else if( problem->cnt->status == evalsNaN )
   {
      SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of a NaN value in an evaluation!\n");
      invalidateSolution(problem);
@@ -228,6 +228,21 @@ SCIP_RETCODE evaluateWorhpRun(
      problem->lastsolstat  = SCIP_NLPSOLSTAT_LOCOPT;
      problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
   }
+  /* feasible point, KKT conditions are not satisfied, and WORHP thinks that there is no objective function */
+  else if( problem->cnt->status == OptimalSolutionConstantF )
+  {
+     SCIPdebugMessage("Worhp terminated successfully with a feasible point but KKT are not met!\n");
+     problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+     problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+  }
+  /* feasible point but KKT conditions are violated in unscaled space */
+  else if( problem->cnt->status == AcceptableSolutionSKKT || problem->cnt->status == AcceptableSolutionScaled
+     || problem->cnt->status == AcceptablePreviousScaled )
+  {
+     SCIPdebugMessage("Worhp terminated successfully with a feasible point but KKT are violated in unscaled space!\n");
+     problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+     problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+  }
   /* feasible and no further progress */
   else if( problem->cnt->status == LowPassFilterOptimal )
   {
@@ -243,14 +258,14 @@ SCIP_RETCODE evaluateWorhpRun(
      problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
   }
   /* acceptable solution found, but stopped due to limit or error */
-  else if( problem->cnt->status == AcceptableSolution )
+  else if( problem->cnt->status == AcceptableSolution || problem->cnt->status == AcceptableSolutionConstantF )
   {
      SCIPdebugMessage("Worhp terminated at acceptable solution due to limit or error!\n");
      problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
      problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
   }
   /* previously acceptable solution was found, but stopped due to limit or error */
-  else if( problem->cnt->status == AcceptablePrevious )
+  else if( problem->cnt->status == AcceptablePrevious || problem->cnt->status == AcceptablePreviousConstantF )
   {
      SCIPdebugMessage("Worhp previously found acceptable solution but terminated due to limit or error!\n");
      problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
@@ -286,7 +301,6 @@ SCIP_RETCODE evaluateWorhpRun(
      SCIPerrorMessage("Worhp returned with unknown solution status %d\n", problem->cnt->status);
      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
      problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
-     return SCIP_ERROR;
   }
 
   /* store solution */
