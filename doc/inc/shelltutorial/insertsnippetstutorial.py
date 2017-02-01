@@ -45,8 +45,8 @@ snippet_list = [
 
 
 def main():
-    with open("inc/shelltutorial/shelltutorialannotated.txt", "w") as annotated_file:
-        with open("inc/shelltutorial/shelltutorialraw.txt", "r") as raw_file:
+    with open("inc/shelltutorial/shelltutorialannotated.tmp", "w") as annotated_file:
+        with open("inc/shelltutorial/shelltutorialraw.tmp", "r") as raw_file:
             snippet_iterator = iter(snippet_list)
             current_snippet = snippet_iterator.next()
             for line in raw_file:

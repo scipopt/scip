@@ -800,21 +800,20 @@
 
 /**@page SHELL Tutorial: the interactive shell
  *
- * @dontinclude shelltutorial/shelltutorialannotated.txt
- *
  * If you are using \SCIP as a black box solver, here you will find some tips and tricks what you can do.
  *
  * @section TUTORIAL_OPTIMIZE Read and optimize a problem instance
  *
- * First of all, we need a \SCIP binary and an example problem file to work with.  Therefore, you can either download the
+ * First of all, we need a \SCIP binary and an example problem file to work with. Therefore, you can either download the
  * \SCIP standard distribution (which includes problem files) and compile it on your own or you can download a
- * precompiled binary and an example problem separately. \SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, OSiL, and other formats (see \ref FILEREADERS).
+ * precompiled binary and an example problem separately. \SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, OSiL, and 
+ * other formats (see \ref FILEREADERS).
  *
  * If you want to download the source code of the \SCIP standard distribution, we recommend to go to the <a
- * href="http://scip.zib.de/#download">SCIP download section</a>, download the latest release (version 3.0 as
+ * href="http://scip.zib.de/#download">SCIP download section</a>, download the latest release (version 4.0.0 as
  * of this writing), inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
  * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
- * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.mps.
+ * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.fzn.
  *
  * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/#download">SCIP download
  * section</a> and download an appropriate binary for your operating system. The \SCIP source code distribution already comes with
@@ -824,28 +823,27 @@
  *
  * Now start your binary, without any arguments. This opens the interactive shell, which should look somehow like this:
  *
- * @snippet shelltutorial/shelltutorialannotated.txt SnippetVersion
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetVersion
  *
  * First of all "help" shows you a list of all available shell commands. Brackets indicate a submenu with further options.
  *
- * @snippet shelltutorial/shelltutorialannotated.txt SnippetHelp
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetHelp
  *
  * Okay, let's solve some MIPs... use "read <path/to/file>" to parse a problem file, "optimize" to solve it and "display
  * solution" to show the nonzero variables of the best found solution.
  *
- * @snippet shelltutorial/shelltutorialannotated.txt SnippetOpt1
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetOpt1
  *
  * What do we see here? After "optimize", SCIP first goes into presolving. Not much is happening for this instance, just
  * the linear constraints get upgraded to more specific types. Each round of presolving will be displayed in a single
- * line, with a short summary at the end. Here, there has only been one round with actual changes, the second round did
- * not bring any further reductions.  Thus, it is not displayed and presolving is stopped. Then, we see the actual
- * solving process. The first three output lines indicate that new incumbent solutions were found by the primal
- * heuristics with display characters "t", "R", and "s"; see, how the "primalbound" column goes down from 27 to 25. In
- * the fourth line, two "cuts" are added.  Up to here, we needed 44 "LP iter"ations (34 for the first LP and 10 more to
- * resolve after adding cuts). Little later, the root node processing is finished. We see that there are now two open
- * nodes in the "left" column. From now on, we will see an output line every hundredth node or whenever a new incumbent
- * is found (e.g. at node 14 in the above output). After some more nodes, the "dualbound" starts moving, too. At one
- * point, both will be the same, and the solving process terminates, showing us some wrap-up information.
+ * line, with a short summary at the end. Then, we see the actual solving process. The letter in front of the first column
+ * is displayed, if a heuristic found a new primal solution. Which letter represents which heuristic can be seen with the 
+ * display heuristcs command, see \ref TUTORIAL_STATISTICS for an example.
+ * 
+ * After some lines the root node processing is finished. From now on, we will see an output line every hundredth node or 
+ * whenever a new incumbent is found. After some more nodes, the "dualbound" starts 
+ * moving, too. At one point, both will be the same, and the solving process terminates, showing us some wrap-up 
+ * information.
  *
  * The exact performance varies amongst different architectures, operating systems, and so on. Do not be worried if
  * your installation needs more or less time or nodes to solve. Also, this instance has more than 2000 different optimal
@@ -857,7 +855,7 @@
  * \SCIP can also write information to files. E.g., we could store the incumbent solution to a file, or output the
  * problem instance in another file format (the LP format is much more human readable than the MPS format, for example).
  *
- * @snippet shelltutorial/shelltutorialannotated.txt SnippetWriteSolutions
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetWriteSolutions
  *
  * Passing starting solutions can increase the solving performance so that \SCIP does not need to construct an initial feasible solution
  * by itself. After reading the problem instance, use the "read" command again, this time with a file containing solution information.
@@ -866,27 +864,23 @@
  *
  * Customized settings are not written or read with the "write" and "read" commands, but with the three commands
  *
- * @snippet shelltutorial/shelltutorialannotated.txt SnippetSaveSettingsOverview
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetSaveSettingsOverview
  *
  * See the section on parameters \ref TUTORIAL_PARAMETERS for more information.
  *
  * @section TUTORIAL_STATISTICS Displaying detailed solving statistics
  *
  * We might want to have some more information now. Which were the heuristics that found the solutions? What plugins
- *  were called during the solutions process and how much time did they spend? How did the instance that we were solving
- *  look?  Information on certain plugin types (e.g., heuristics, branching rules, separators) we get by
- *  "display <plugin-type>", information on the solution process, we get by "display statistics", and "display problem"
- *  shows us the current instance.
+ * were called during the solutions process and how much time did they spend? How did the instance that we were solving
+ * look?  Information on certain plugin types (e.g., heuristics, branching rules, separators) we get by
+ * "display <plugin-type>", information on the solution process, we get by "display statistics", and "display problem"
+ * shows us the current instance.
  *
- * @snippet shelltutorial/shelltutorialannotated.txt SnippetDisplayStatistics
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetDisplayStatistics
  *
- * We see that rounding and shifting were the heuristics producing the solutions in the beginning. Rounding is called at
- * every node, shifting only at every tenth level of the tree. The statistics are quite comprehensive, thus, we just
- * explain a few lines here. We get information for all types of plugins and for the overall solving process. Besides
- * others, we see that in six calls, the gomory cut separator and the strong Chv&aacute;tal-Gomory separator each produced
- * several hundred cuts (of which only a few entered the LP). The oneopt heuristic found one solution in 4 calls,
- * whereas coefdiving failed all 57 times it was called. All the LPs have been solved with the dual simplex algorithm, which
- * took about 0.2 seconds of the 0.7 seconds overall solving time.
+ * In the freq column of the display you can find how often a heuristic is called. The statistics are quite comprehensive,
+ * thus, we just explain a few lines here. We get information for all types of plugins and for the overall solving 
+ * process.
  *
  * @section TUTORIAL_PARAMETERS Changing parameters from the interactive shell
  *
@@ -894,7 +888,7 @@
  * wondering what happens if we disable them? Or what happens, if we are even more rigorous and disable all heuristics?
  * Or if we do the opposite and use aggressive heuristics?
  *
- * @snippet shelltutorial/shelltutorialannotated.txt SnippetSetSettings
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetSetSettings
  *
  * We can navigate through the menus step-by-step and get a list of available options and submenus. Thus, we select
  * "set" to change settings, "heuristics" to change settings of primal heuristics, "shifting" for that particular
@@ -905,7 +899,7 @@
  *
  * To solve a problem a second time, we have to read it and start the optimization process again.
  *
- * @snippet shelltutorial/shelltutorialannotated.txt SnippetOpt2
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetOpt2
  *
  * Okay, what happened here? First, we reset all parameters to their default values, using "set default". Next, we
  * loaded some meta-parameter settings (also see <a href="http://scip.zib.de/#faq">the FAQ</a>), to apply primal heuristics
@@ -913,16 +907,16 @@
  * we set the node limit to 200. Now, the optimal solution is already found at the root node, by a heuristic which is
  * deactivated by default.  Then, after node 200, the user defined node limit is reached which interrupts the solving
  * process, We see that now in the short status report, primal and dual bound are different, thus, the problem is not solved
- * yet.  Nevertheless, we could access statistics, see the current incumbent  solution, change parameters and so on.
+ * yet.  Nevertheless, we could access statistics, see the current incumbent solution, change parameters and so on.
  * Entering "optimize" we continue the solving process from the point on at which it has been interrupted.
  *
  * Once you found a non-default parameter setting that you wish to save and use in the future, use either the command
  *
- * @snippet shelltutorial/shelltutorialannotated.txt SnippetSaveSettingsFull
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetSaveSettingsFull
  *
  * to save <b>all</b> parameter values to the specified file, or
  *
- * @snippet shelltutorial/shelltutorialannotated.txt SnippetSaveSettingsDiff
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetSaveSettingsDiff
  *
  * in order to save only the nondefault parameters. The latter has several advantages, you can, e.g., combine parameter
  * settings from multiple settings files stored by the latter command, as long as they only affect mutually exclusive
@@ -930,7 +924,7 @@
  *
  * For loading a previously stored settings file, use the "load" command:
  *
- * @snippet shelltutorial/shelltutorialannotated.txt SnippetLoadSettings
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetLoadSettings
  *
  * Special attention should be drawn to the reserved settings file name "scip.set"; whenever the \SCIP interactive shell
  * is started from a working directory that contains a settings file with the name "scip.set", it will be automatically

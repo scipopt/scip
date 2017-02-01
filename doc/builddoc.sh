@@ -7,7 +7,7 @@ make -j clean
 make -j
 
 # run scip with some commands for the shell tutorial
-bin/scip < doc/inc/shelltutorial/commands | tee doc/inc/shelltutorial/shelltutorialraw.txt
+bin/scip < doc/inc/shelltutorial/commands | tee doc/inc/shelltutorial/shelltutorialraw.tmp
 
 # cleanup of files created by the SCIP commands
 rm stein27.lp

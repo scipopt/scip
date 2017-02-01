@@ -23,9 +23,7 @@ doc/html/
 doc/html_devel/
 doc/doxygen
 doc/scip.tag
-doc/*.tmp
-#doc/inc/shelltutorial/shelltutorialraw.txt
-#doc/inc/shelltutorial/shelltutorialannotated.txt
+doc/**/*.tmp
 .cproject
 .project
 .settings/
