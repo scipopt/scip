@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_relax.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for relaxation handlers
  * @author Tobias Achterberg
  */
@@ -32,6 +32,15 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
+/**@defgroup PublicRelaxatorMethods Relaxation Handlers
+ * @ingroup PluginManagementMethods
+ * @brief public methods for relaxation handlers
+ *
+ * @{
+ */
+
 
 /** compares two relaxation handlers w. r. to their priority */
 EXTERN
@@ -120,6 +129,8 @@ EXTERN
 void SCIPrelaxMarkUnsolved(
    SCIP_RELAX*           relax               /**< relaxation handler */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

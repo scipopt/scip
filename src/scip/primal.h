@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   primal.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for collecting primal CIP solutions and primal informations
  * @author Tobias Achterberg
  */
@@ -53,6 +54,13 @@ SCIP_RETCODE SCIPprimalCreate(
 /** frees primal data */
 extern
 SCIP_RETCODE SCIPprimalFree(
+   SCIP_PRIMAL**         primal,             /**< pointer to primal data */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** clears primal data */
+extern
+SCIP_RETCODE SCIPprimalClear(
    SCIP_PRIMAL**         primal,             /**< pointer to primal data */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
@@ -137,6 +145,22 @@ SCIP_Bool SCIPprimalUpperboundIsSol(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob            /**< original problem data */
+   );
+
+/** returns the primal ray thats proves unboundedness */
+extern
+SCIP_SOL* SCIPprimalGetRay(
+   SCIP_PRIMAL*          primal              /**< primal data */
+   );
+
+/** update the primal ray thats proves unboundedness */
+extern
+SCIP_RETCODE SCIPprimalUpdateRay(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_SOL*             primalray,          /**< the new primal ray */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** adds primal solution to solution storage by copying it */

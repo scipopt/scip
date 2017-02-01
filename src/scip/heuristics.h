@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heuristics.h
+ * @ingroup PUBLICCOREAPI
  * @brief  methods commonly used by primal heuristics
  * @author Gregor Hendel
  */
@@ -29,6 +30,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@defgroup PublicSpecialHeuristicMethods Special Methods
+ * @ingroup PublicHeuristicMethods
+ * @brief  methods commonly used by primal heuristics
+ *
+ * @{
+ */
 
 /** performs a diving within the limits of the diveset parameters
  *
@@ -79,8 +87,11 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
    SCIP_Bool             uselprows,          /**< should the linear relaxation of the problem defined by LP rows be copied? */
    SCIP_Bool             copycuts,           /**< should cuts be copied (only if uselprows == FALSE) */
-   SCIP_Bool*            success             /**< was the copying successful? */
+   SCIP_Bool*            success,            /**< was the copying successful? */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

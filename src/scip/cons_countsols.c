@@ -295,7 +295,7 @@ SCIP_RETCODE conshdlrdataCreate(
    SCIP_CONSHDLRDATA**   conshdlrdata        /**< pointer to store constraint handler data */
    )
 {
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
 
    (*conshdlrdata)->feasST = 0;
    (*conshdlrdata)->nDiscardSols = 0;
@@ -618,7 +618,11 @@ SCIP_RETCODE collectSolution(
    int nvars;
    int v;
 
-   /* ensure size of solution array */
+   /* ensure size of solution array
+    *
+    * we use normal memory instead of block memory because this plugin is rarely used and the size of 'solutions'
+    * can be arbitrary large and the change that the other blocks can be used is quite small
+    */
    if( conshdlrdata->nsolutions == conshdlrdata->ssolutions )
    {
       if( conshdlrdata->ssolutions == 0 )
@@ -1385,7 +1389,7 @@ SCIP_DECL_CONSFREE(consFreeCountsols)
    assert( conshdlrdata->nsolutions == 0 );
    assert( conshdlrdata->ssolutions == 0 );
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
 
    return SCIP_OKAY;
@@ -1426,7 +1430,7 @@ SCIP_DECL_CONSINIT(consInitCountsols)
       /* get number of integral variables */
       conshdlrdata->nallvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
 
-      SCIP_CALL( SCIPallocMemoryArray(scip, &conshdlrdata->allvars, conshdlrdata->nallvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->allvars, conshdlrdata->nallvars) );
 
       nallvars = 0;
 
@@ -1488,7 +1492,7 @@ SCIP_DECL_CONSEXIT(consExitCountsols)
    }
 
    /* free active variables */
-   SCIPfreeMemoryArrayNull(scip, &(conshdlrdata->vars) );
+   SCIPfreeBlockMemoryArrayNull(scip, &(conshdlrdata->vars), conshdlrdata->nvars);
    conshdlrdata->nvars = 0;
 
    if( conshdlrdata->allvars != NULL )
@@ -1505,8 +1509,8 @@ SCIP_DECL_CONSEXIT(consExitCountsols)
          SCIP_CALL( SCIPreleaseVar(scip, &conshdlrdata->allvars[v]) );
       }
 
-      SCIPfreeMemoryArrayNull(scip, &conshdlrdata->allvars);
-      conshdlrdata->nvars = 0;
+      SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->allvars, conshdlrdata->nallvars);
+      conshdlrdata->nallvars = 0;
    }
 
    if( conshdlrdata->nsolutions > 0 )
@@ -1596,7 +1600,7 @@ SCIP_DECL_CONSINITSOL(consInitsolCountsols)
 #endif
 
       /* copy array of active variables */
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(conshdlrdata->vars), vars, conshdlrdata->nvars) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(conshdlrdata->vars), vars, conshdlrdata->nvars) );
 
       /* store mapping from all active variables to their position afetr presolving because during solving new variables
        * might be added and therefore could destroy writing collected solutions

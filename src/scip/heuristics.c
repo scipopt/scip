@@ -79,6 +79,7 @@ static
 SCIP_RETCODE selectNextDiving(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< dive set */
+   SCIP_HEURDATA*        heurdata,           /**< data of the calling heuristic */
    SCIP_SOL*             worksol,            /**< current working solution */
    SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered? */
    SCIP_Bool             storelpcandscores,  /**< should the scores of the LP candidates be updated? */
@@ -105,7 +106,7 @@ SCIP_RETCODE selectNextDiving(
    /* we use diving solution enforcement provided by the constraint handlers */
    if( !onlylpbranchcands )
    {
-      SCIP_CALL( SCIPgetDiveBoundChanges(scip, diveset, worksol, enfosuccess, infeasible) );
+      SCIP_CALL( SCIPgetDiveBoundChanges(scip, diveset, heurdata, worksol, enfosuccess, infeasible) );
    }
    else
    {
@@ -127,7 +128,8 @@ SCIP_RETCODE selectNextDiving(
          /* scores are kept in arrays for faster reuse */
          if( storelpcandscores )
          {
-            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_INTEGRALITY, lpcands[c], lpcandssol[c], lpcandsfrac[c], &lpcandsscores[c], &lpcandroundup[c]) );
+            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, heurdata, SCIP_DIVETYPE_INTEGRALITY, lpcands[c], lpcandssol[c],
+                  lpcandsfrac[c], &lpcandsscores[c], &lpcandroundup[c]) );
          }
 
          score = lpcandsscores[c];
@@ -199,6 +201,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 {
    SCIP_CONSHDLR* indconshdlr;               /* constraint handler for indicator constraints */
    SCIP_CONSHDLR* sos1conshdlr;              /* constraint handler for SOS1 constraints */
+   SCIP_HEURDATA* heurdata;
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandssol;
 
@@ -242,6 +245,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    int lpsolvefreq;
 
    assert(scip != NULL);
+   assert(heur != NULL);
    assert(result != NULL);
    assert(worksol != NULL);
 
@@ -285,7 +289,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    maxnlpiterations = (SCIP_Longint)((1.0 + 10*(oldsolsuccess+1.0)/(ncalls+1.0)) * SCIPdivesetGetMaxLPIterQuot(diveset) * nlpiterations);
    maxnlpiterations += SCIPdivesetGetMaxLPIterOffset(diveset);
 
-
+   heurdata = SCIPheurGetData(heur);
 
    /* don't try to dive, if we took too many LP iterations during diving */
    if( SCIPdivesetGetNLPIterations(diveset) >= maxnlpiterations )
@@ -506,7 +510,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
       enfosuccess = FALSE;
       /* select the next diving action by selecting appropriate dive bound changes for the preferred and alternative child */
-      SCIP_CALL( selectNextDiving(scip, diveset, worksol, onlylpbranchcands, SCIPgetProbingDepth(scip) == lastlpdepth,
+      SCIP_CALL( selectNextDiving(scip, diveset, heurdata, worksol, onlylpbranchcands, SCIPgetProbingDepth(scip) == lastlpdepth,
              lpcands, lpcandssol, lpcandsfrac, lpcandsscores, lpcandroundup, &nviollpcands, nlpcands,
              &enfosuccess, &infeasible) );
 
@@ -728,7 +732,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                enfosuccess = FALSE;
 
                /* select the next diving action */
-               SCIP_CALL( selectNextDiving(scip, diveset, worksol, onlylpbranchcands, SCIPgetProbingDepth(scip) == lastlpdepth,
+               SCIP_CALL( selectNextDiving(scip, diveset, heurdata, worksol, onlylpbranchcands, SCIPgetProbingDepth(scip) == lastlpdepth,
                       lpcands, lpcandssol, lpcandsfrac, lpcandsscores, lpcandroundup, &nviollpcands, nlpcands,
                       &enfosuccess, &infeasible) );
 
@@ -908,13 +912,15 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    int                   nfixedvars,         /**< number of source variables whose copies should be fixed in the target SCIP environment, or NULL */
    SCIP_Bool             uselprows,          /**< should the linear relaxation of the problem defined by LP rows be copied? */
    SCIP_Bool             copycuts,           /**< should cuts be copied (only if uselprows == FALSE) */
-   SCIP_Bool*            success             /**< was the copying successful? */
+   SCIP_Bool*            success,            /**< was the copying successful? */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    )
 {
    assert(sourcescip != NULL);
    assert(suffix != NULL);
    assert(subscip != NULL);
    assert(varmap != NULL);
+   assert(success != NULL);
 
    if( uselprows )
    {
@@ -930,14 +936,15 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
       SCIP_CALL( SCIPcreateProb(subscip, probname, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
       /* copy all variables */
-      SCIP_CALL( SCIPcopyVars(sourcescip, subscip, varmap, NULL,  fixedvars, fixedvals, nfixedvars, TRUE) );
+      SCIP_CALL( SCIPcopyVars(sourcescip, subscip, varmap, NULL, fixedvars, fixedvals, nfixedvars, TRUE) );
 
       /* create linear constraints from LP rows of the source problem */
       SCIP_CALL( createRows(sourcescip, subscip, varmap) );
    }
    else
    {
-      SCIP_CALL( SCIPcopyConsCompression(sourcescip, subscip, varmap, NULL, suffix, fixedvars, fixedvals, nfixedvars, TRUE, FALSE, TRUE, success) );
+      SCIP_CALL( SCIPcopyConsCompression(sourcescip, subscip, varmap, NULL, suffix, fixedvars, fixedvals, nfixedvars,
+            TRUE, FALSE, TRUE, valid) );
 
       if( copycuts )
       {
@@ -945,6 +952,8 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
          SCIP_CALL( SCIPcopyCuts(sourcescip, subscip, varmap, NULL, TRUE, NULL) );
       }
    }
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }

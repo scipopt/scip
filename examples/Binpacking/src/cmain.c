@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cmain.c
+/**@file   Binpacking/src/cmain.c
  * @brief  Main file for binpacking pricing example
  * @author Timo Berthold
  * @author Stefan Heinz

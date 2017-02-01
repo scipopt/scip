@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_presol.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for presolvers
  * @author Tobias Achterberg
  */

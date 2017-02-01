@@ -68,7 +68,10 @@
 extern "C" {
 #endif
 
-/** creates the uct node selector and includes it in SCIP */
+/** creates the uct node selector and includes it in SCIP
+ *
+ *  @ingroup NodeSelectorIncludes
+ */
 extern
 SCIP_RETCODE SCIPincludeNodeselUct(
    SCIP*                 scip                /**< SCIP data structure */

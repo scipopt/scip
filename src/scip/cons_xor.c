@@ -183,7 +183,7 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(conshdlrdata != NULL);
    assert(eventhdlr != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
 
    /* set event handler for catching events on watched variables */
    (*conshdlrdata)->eventhdlr = eventhdlr;
@@ -201,7 +201,7 @@ SCIP_RETCODE conshdlrdataFree(
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
 
-   SCIPfreeMemory(scip, conshdlrdata);
+   SCIPfreeBlockMemory(scip, conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -676,36 +676,36 @@ void consdataSort(
    if( !consdata->sorted )
    {
       if( consdata->nvars <= 1 )
-	 consdata->sorted = TRUE;
+         consdata->sorted = TRUE;
       else
       {
-	 SCIP_VAR* var1 = NULL;
-	 SCIP_VAR* var2 = NULL;
+         SCIP_VAR* var1 = NULL;
+         SCIP_VAR* var2 = NULL;
 
-	 /* remember watch variables */
-	 if( consdata->watchedvar1 != -1 )
-	 {
-	    var1 = consdata->vars[consdata->watchedvar1];
-	    assert(var1 != NULL);
-	    consdata->watchedvar1 = -1;
-	    if( consdata->watchedvar2 != -1 )
-	    {
-	       var2 = consdata->vars[consdata->watchedvar2];
-	       assert(var2 != NULL);
-	       consdata->watchedvar2 = -1;
-	    }
-	 }
-	 assert(consdata->watchedvar1 == -1);
-	 assert(consdata->watchedvar2 == -1);
-	 assert(var1 != NULL || var2 == NULL);
+         /* remember watch variables */
+         if( consdata->watchedvar1 != -1 )
+         {
+            var1 = consdata->vars[consdata->watchedvar1];
+            assert(var1 != NULL);
+            consdata->watchedvar1 = -1;
+            if( consdata->watchedvar2 != -1 )
+            {
+               var2 = consdata->vars[consdata->watchedvar2];
+               assert(var2 != NULL);
+               consdata->watchedvar2 = -1;
+            }
+         }
+         assert(consdata->watchedvar1 == -1);
+         assert(consdata->watchedvar2 == -1);
+         assert(var1 != NULL || var2 == NULL);
 
-	 /* sort variables after index */
-	 SCIPsortPtr((void**)consdata->vars, SCIPvarCompActiveAndNegated, consdata->nvars);
-	 consdata->sorted = TRUE;
+         /* sort variables after index */
+         SCIPsortPtr((void**)consdata->vars, SCIPvarCompActiveAndNegated, consdata->nvars);
+         consdata->sorted = TRUE;
 
-	 /* correct watched variables */
-	 if( var1 != NULL )
-	 {
+         /* correct watched variables */
+         if( var1 != NULL )
+         {
             int v;
 
             /* since negated variables exist, we need to loop over all variables to find the old variable and cannot use
@@ -3497,7 +3497,7 @@ SCIP_RETCODE cliquePresolve(
             SCIP_Bool infeasible;
             SCIP_Bool fixed;
 
-	    SCIPdebugMsg(scip, "all variables of xor constraints <%s> are in one clique, so fixed all variables to 0\n",
+            SCIPdebugMsg(scip, "all variables of xor constraints <%s> are in one clique, so fixed all variables to 0\n",
             SCIPconsGetName(cons));
             SCIPdebug( SCIP_CALL( SCIPprintCons(scip, cons, NULL) ) );
 
@@ -3566,7 +3566,7 @@ SCIP_RETCODE cliquePresolve(
          }
 
          SCIP_CALL( SCIPaddCons(scip, newcons) );
-	 SCIPdebugMsg(scip, "added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
+         SCIPdebugMsg(scip, "added a clique/setppc constraint <%s> \n", SCIPconsGetName(newcons));
          SCIPdebug( SCIP_CALL( SCIPprintCons(scip, newcons, NULL) ) );
          ++(*naddconss);
 
@@ -3662,6 +3662,9 @@ SCIP_RETCODE detectRedundantConstraints(
          goto TERMINATE;
 
       consdata0 = SCIPconsGetData(cons0);
+
+      assert(consdata0 != NULL);
+
       /* sort the constraint */
       consdataSort(consdata0);
       assert(consdata0->sorted);
@@ -3678,7 +3681,7 @@ SCIP_RETCODE detectRedundantConstraints(
 
          consdata1 = SCIPconsGetData(cons1);
 
-         assert(consdata0 != NULL && consdata1 != NULL);
+         assert(consdata1 != NULL);
          assert(consdata0->nvars >= 1 && consdata0->nvars == consdata1->nvars);
 
          assert(consdata0->sorted && consdata1->sorted);
@@ -3803,6 +3806,9 @@ SCIP_RETCODE preprocessConstraintPairs(
 
       consdata1 = SCIPconsGetData(cons1);
       assert(consdata1 != NULL);
+
+      if( !consdata1->deleteintvar )
+         continue;
 
       /* it can happen that during preprocessing some variables got aggregated and a constraint now has not active
        * variables inside so we need to remove them for sorting
@@ -4073,7 +4079,7 @@ SCIP_RETCODE preprocessConstraintPairs(
             SCIPdebugMsg(scip, "xor constraints <%s> and <%s> are contradicting\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1));
             SCIPdebugPrintCons(scip, cons0, NULL);
-	    SCIPdebugPrintCons(scip, cons1, NULL);
+            SCIPdebugPrintCons(scip, cons1, NULL);
             *cutoff = TRUE;
          }
       }
@@ -4219,6 +4225,9 @@ SCIP_RETCODE preprocessConstraintPairs(
             }
          }
 
+         if( !consdata0->sorted )
+            consdataSort(consdata0);
+         assert(consdata0->sorted);
 
 #if 0
       /* if aggregation in the core of SCIP is not changed we do not need to call applyFixing, this would be the correct
@@ -5243,8 +5252,8 @@ SCIP_DECL_CONSCOPY(consCopyXor)
    {
       if( intvar != NULL )
       {
-	 SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, intvar, &targetintvar, varmap, consmap, global, valid) );
-	 assert(!(*valid) || targetintvar != NULL);
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, intvar, &targetintvar, varmap, consmap, global, valid) );
+         assert(!(*valid) || targetintvar != NULL);
 
          SCIPdebugMsg(scip, "Copied integral variable <%s> (bounds: [%g,%g])\n", SCIPvarGetName(targetintvar),
             global ? SCIPvarGetLbGlobal(intvar) : SCIPvarGetLbLocal(intvar),
@@ -5253,9 +5262,9 @@ SCIP_DECL_CONSCOPY(consCopyXor)
 
       if( *valid )
       {
-	 SCIP_CALL( createConsXorIntvar(scip, cons, consname, SCIPgetRhsXor(sourcescip, sourcecons), 0, NULL,
-	       targetintvar,
-	       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+         SCIP_CALL( createConsXorIntvar(scip, cons, consname, SCIPgetRhsXor(sourcescip, sourcecons), 0, NULL,
+               targetintvar, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable,
+               stickingatnode) );
       }
 
       return SCIP_OKAY;
@@ -5286,8 +5295,8 @@ SCIP_DECL_CONSCOPY(consCopyXor)
    if( *valid )
    {
       SCIP_CALL( createConsXorIntvar(scip, cons, consname, SCIPgetRhsXor(sourcescip, sourcecons), nvars, targetvars,
-	    targetintvar,
-	    initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+            targetintvar, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable,
+            stickingatnode) );
    }
 
    /* free buffer array */

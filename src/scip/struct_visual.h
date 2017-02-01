@@ -14,9 +14,11 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_visual.h
- * @brief  datastructures for output for visualization tools (VBC, BAK)
+ * @ingroup INTERNALAPI
+ * @brief  data structures for output for visualization tools (VBC, BAK)
  * @author Tobias Achterberg
  * @author Marc Pfetsch
+ * @author Gregor Hendel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

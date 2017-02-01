@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   paramset.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for handling parameter settings
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -467,7 +468,7 @@ SCIP_Bool SCIPparamIsValidReal(
 extern
 SCIP_Bool SCIPparamIsValidChar(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_Real             value               /**< value to check */
+   const char            value               /**< value to check */
    );
 
 /** checks whether value of string parameter is valid */

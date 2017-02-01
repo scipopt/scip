@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   branch.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for branching rules and branching candidate storage
  * @author Tobias Achterberg
  */
@@ -58,6 +59,12 @@ SCIP_RETCODE SCIPbranchcandCreate(
 extern
 SCIP_RETCODE SCIPbranchcandFree(
    SCIP_BRANCHCAND**     branchcand          /**< pointer to store branching candidate storage */
+   );
+
+/** invalidates branching candidates storage */
+extern
+void SCIPbranchcandInvalidate(
+   SCIP_BRANCHCAND*      branchcand          /**< pointer to store branching candidate storage */
    );
 
 /** gets branching candidates for LP solution branching (fractional variables) */

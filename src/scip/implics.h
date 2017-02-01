@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   implics.h
+ * @ingroup INTERNALAPI
  * @brief  methods for implications, variable bounds, and cliques
  * @author Tobias Achterberg
  */
@@ -373,7 +374,13 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    );
 
-/** computes clique components for all binary variables */
+/** computes connected components of the clique graph
+ *
+ *  use depth-first search similarly to the components presolver/constraint handler, representing a clique as a
+ *  path to reduce memory usage, but leaving the connected components the same
+ *
+ *  an update becomes necessary if a clique gets added with variables from different components
+ */
 extern
 SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */

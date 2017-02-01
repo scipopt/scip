@@ -1548,7 +1548,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    conss = SCIPconshdlrGetConss(conshdlr);
    assert(conss != NULL);
 
-   SCIPdebugMsg(scip, "caught new sol event %x from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
+   SCIPdebugMsg(scip, "caught new sol event %"SCIP_EVENTTYPE_FORMAT" from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
 
    SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, sol, NULL, 0.0, &cutoff) );
    /* ignore cutoff, cannot return status */
@@ -3130,7 +3130,6 @@ SCIP_RETCODE enforceConstraint(
    int                   nconss,             /**< number of constraints */
    int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
-   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
 {
@@ -4104,7 +4103,7 @@ SCIP_DECL_CONSINIT(consInitSOC)
    /* mark constraints for propagation */
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );
+      SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );  /*lint !e613*/
    }
 
    return SCIP_OKAY;
@@ -4529,7 +4528,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOC)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpSOC)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, solinfeasible, result) );
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -4539,7 +4538,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxSOC)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, solinfeasible, result) );
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
    return SCIP_OKAY;
 }

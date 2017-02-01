@@ -195,9 +195,10 @@ TAB_SIZE               = 8
 # will result in a user-defined paragraph with heading "Side Effects:".
 # You can put \n's in the value part of an alias to insert newlines.
 
-ALIASES                = "SCIP=<a href= http://scip.zib.de>SCIP</a>" \
-                         "OTHERDOCU=User's Manual" \
-                         "OTHERDOCUTEXT=This manual lists all methods and data types of the public API. Internal methods of SCIP are not accessible. Documentation of the internal methods can be found in the <a class= qindex href= ../html_devel/index.shtml>Developer's Manual</a>."
+ALIASES                = "SCIP=<b>SCIP</b>" \
+                         FILEEXT=.shtml \
+                         PUBLICAPIDESCRIPTION="The public API of \SCIP is separated into a Core API and a Plugin API. The first contains all methods that can be accessed by including the header scip.h. The Plugin API is a collection of methods that are provided by the default plugins of \SCIP. The Plugin API is provided by scipdefplugins.h." \
+                         refsnippet{2}="@snippet \1 \2 \n\(Source: \1\)"
 
 # This tag can be used to specify a number of word-keyword mappings (TCL only).
 # A mapping has the form "name=value". For example adding
@@ -366,7 +367,7 @@ EXTRACT_PACKAGE        = NO
 # If the EXTRACT_STATIC tag is set to YES all static members of a file
 # will be included in the documentation.
 
-EXTRACT_STATIC         = NO
+EXTRACT_STATIC         = YES
 
 # If the EXTRACT_LOCAL_CLASSES tag is set to YES classes (and structs)
 # defined locally in source files will be included in the documentation.
@@ -662,8 +663,22 @@ INPUT                  = . \
                          ../src/objscip \
                          ../src/tclique \
                          ../src/dijkstra \
+                         ../src/tpi \
                          ../src/xml \
-                         ../src/blockmemshell
+                         ../src/blockmemshell \
+                         ../examples/Binpacking/src/ \
+                         ../examples/LOP/src/ \
+                         ../examples/LOP/doc/xternal_lop.c \
+                         ../examples/Binpacking/doc/xternal_binpacking.c \
+                         ../examples/MIPSolver/doc/xternal_mipsolver.c \
+                         ../examples/Eventhdlr/doc/xternal_eventhdlr.c \
+                         ../examples/Eventhdlr/src/ \
+                         ../examples/GMI/src/ \
+                         ../examples/GMI/doc/xternal_gmi.c \
+                         ../examples/Relaxator/src/ \
+                         ../examples/Relaxator/doc/xternal_relaxator.c \
+                         ../examples/TSP/src/ \
+                         ../examples/TSP/doc/xternal_tsp.c \
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is
@@ -681,15 +696,10 @@ INPUT_ENCODING         = UTF-8
 # *.hxx *.hpp *.h++ *.idl *.odl *.cs *.php *.php3 *.inc *.m *.mm *.dox *.py
 # *.f90 *.f *.for *.vhd *.vhdl
 
-FILE_PATTERNS          = scip*.h \
-                         heuristics.* \
-                         *_*.h \
-                         lpi* \
-                         exprinterpret* \
-                         intervalarithext* \
-                         obj*.h \
-                         def.h \
-                         xternal.c \
+FILE_PATTERNS          = *.c \
+                         *.h \
+                         *.cpp \
+                         *.hpp \
                          interfaces.dxy \
                          howtoadd.dxy
 
@@ -719,8 +729,9 @@ EXCLUDE_SYMLINKS       = NO
 # against the file with absolute path, so to exclude all test directories
 # for example use the pattern */test/*
 
-EXCLUDE_PATTERNS       = struct* \
-                         *xyz*
+EXCLUDE_PATTERNS       = *xyz* \
+                         buildflags.c \
+                         githash.c
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the
@@ -757,17 +768,6 @@ EXCLUDE_SYMBOLS        = Ipopt \
                          nodepartition \
                          OpbInput \
                          PipInput \
-                         SCIP_BilinTerm \
-                         SCIP_ExprInt \
-                         SCIP_LinConsUpgrade \
-                         SCIP_LPi \
-                         SCIP_LPiState \
-                         SCIP_McfNetwork \
-                         SCIP_NlConsUpgrade \
-                         SCIP_NlpiProblem \
-                         SCIP_QuadConsUpgrade \
-                         SCIP_QuadElement \
-                         SCIP_QuadVarTerm \
                          ScipJournal \
                          ScipNLP \
                          SepaData_ConvexConcave \
@@ -790,15 +790,64 @@ EXCLUDE_SYMBOLS        = Ipopt \
                          Zerohalf_CutData \
                          Zerohalf_LPData \
                          Zerohalf_Mod2Data \
-                         Zerohalf_SubLPData
+                         Zerohalf_SubLPData \
+                         BMS_BlkMem \
+                         BMS_ChkMem \
+                         CGMIP_MIPData \
+                         Chunk \
+                         CipInput \
+                         clique \
+                         cliquehash \
+                         ConstArray \
+                         ConstraintMatrix \
+                         CPXParam \
+                         CumulativeProfile \
+                         Dijkstra_graph \
+                         Dimensions \
+                         exprOpTableElement \
+                         Freelist \
+                         FznConstant \
+                         FznInput \
+                         FznOutput \
+                         GRBParam \
+                         HessianData \
+                         InferInfo \
+                         levelGraph \
+                         LpInput \
+                         PROBLEM \
+                         mcfdata \
+                         MpsInput \
+                         nodepair \
+                         nodepairqueue \
+                         nodepartition \
+                         SCIPInterval \
+                         ScipJournal \
+                         ScipNLP \
+                         SepaData_ConvexConcave \
+                         SolTuple \
+                         sortkeypair \
+                         sparseGraph \
+                         SparseMatrix \
+                         SparseSolution \
+                         SPxSCIP \
+                         TCLIQUE_Graph \
+                         Term \
+                         ThetaTree \
+                         ThetaTreeNode \
+                         TLTree \
+                         TLTreeNode \
+                         VarArray \
+                         XML_ATTR_struct \
+                         XML_NODE_struct
 
 # The EXAMPLE_PATH tag can be used to specify one or more files or
 # directories that contain example code fragments that are included (see
 # the \include command).
 
 EXAMPLE_PATH           = inc/ \
-                         .. \
-                         ../release-notes
+                         ../ \
+                         ../release-notes/ \
+                         ../src
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the
 # EXAMPLE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp
@@ -818,7 +867,8 @@ EXAMPLE_RECURSIVE      = NO
 # directories that contain image that are included in the documentation (see
 # the \image command).
 
-IMAGE_PATH             = pictures/
+IMAGE_PATH             = pictures/ \
+                         ../examples/Binpacking/doc/pics
 
 # The INPUT_FILTER tag can be used to specify a program that doxygen should
 # invoke to filter for each input file. Doxygen will invoke the filter program
@@ -927,7 +977,7 @@ VERBATIM_HEADERS       = NO
 # of all compounds will be generated. Enable this if the project
 # contains a lot of classes, structs, unions or interfaces.
 
-ALPHABETICAL_INDEX     = NO
+ALPHABETICAL_INDEX     = YES
 
 # If the alphabetical index is enabled (see ALPHABETICAL_INDEX) then
 # the COLS_IN_ALPHA_INDEX tag can be used to specify the number of columns
@@ -940,7 +990,7 @@ COLS_IN_ALPHA_INDEX    = 5
 # The IGNORE_PREFIX tag can be used to specify one or more prefixes that
 # should be ignored while generating the index headers.
 
-IGNORE_PREFIX          =
+IGNORE_PREFIX          = SCIP_
 
 #---------------------------------------------------------------------------
 # configuration options related to the HTML output
@@ -955,7 +1005,7 @@ GENERATE_HTML          = YES
 # If a relative path is entered the value of OUTPUT_DIRECTORY will be
 # put in front of it. If left blank `html' will be used as the default path.
 
-HTML_OUTPUT            =
+HTML_OUTPUT            = html
 
 # The HTML_FILE_EXTENSION tag can be used to specify the file extension for
 # each generated HTML page (for example: .htm,.php,.asp). If it is left blank
@@ -999,7 +1049,7 @@ HTML_STYLESHEET        =
 # robust against future updates. Doxygen will copy the style sheet file to
 # the output directory.
 
-HTML_EXTRA_STYLESHEET  =  scip.css
+HTML_EXTRA_STYLESHEET  = scip.css
 
 # The HTML_EXTRA_FILES tag can be used to specify one or more extra images or
 # other source files which should be copied to the HTML output directory. Note
@@ -1009,7 +1059,8 @@ HTML_EXTRA_STYLESHEET  =  scip.css
 # the files will be copied as-is; there are no commands or markers available.
 
 HTML_EXTRA_FILES       = pictures/miniscippy.png \
-                         pictures/scippy.png
+                         pictures/scippy.png \
+                         ../examples/Binpacking/doc/pics/binpacking.png \
 
 # The HTML_COLORSTYLE_HUE tag controls the color of the HTML output.
 # Doxygen will adjust the colors in the style sheet and background images
@@ -1019,13 +1070,13 @@ HTML_EXTRA_FILES       = pictures/miniscippy.png \
 # 180 is cyan, 240 is blue, 300 purple, and 360 is red again.
 # The allowed range is 0 to 359.
 
-HTML_COLORSTYLE_HUE    = 240
+HTML_COLORSTYLE_HUE    = 220
 
 # The HTML_COLORSTYLE_SAT tag controls the purity (or saturation) of
 # the colors in the HTML output. For a value of 0 the output will use
 # grayscales only. A value of 255 will produce the most vivid colors.
 
-HTML_COLORSTYLE_SAT    = 100
+HTML_COLORSTYLE_SAT    = 0
 
 # The HTML_COLORSTYLE_GAMMA tag controls the gamma correction applied to
 # the luminance component of the colors in the HTML output. Values below
@@ -1271,7 +1322,7 @@ FORMULA_TRANSPARENT    = YES
 # output. When enabled you may also need to install MathJax separately and
 # configure the path to it using the MATHJAX_RELPATH option.
 
-USE_MATHJAX            = NO
+USE_MATHJAX            = YES
 
 # When MathJax is enabled you can set the default output format to be used for
 # thA MathJax output. Supported types are HTML-CSS, NativeMML (i.e. MathML) and
@@ -1290,12 +1341,12 @@ MATHJAX_FORMAT         = HTML-CSS
 # However, it is strongly recommended to install a local
 # copy of MathJax from http://www.mathjax.org before deployment.
 
-MATHJAX_RELPATH        = http://www.mathjax.org/mathjax
+MATHJAX_RELPATH        = ../MathJax
 
 # The MATHJAX_EXTENSIONS tag can be used to specify one or MathJax extension
 # names that should be enabled during MathJax rendering.
 
-MATHJAX_EXTENSIONS     =
+MATHJAX_EXTENSIONS     = TeX/AMSmath  TeX/AMSsymbol
 
 # When the SEARCHENGINE tag is enabled doxygen will generate a search box
 # for the HTML output. The underlying search engine uses javascript
@@ -1396,7 +1447,7 @@ PAPER_TYPE             = a4wide
 # The EXTRA_PACKAGES tag can be to specify one or more names of LaTeX
 # packages that should be included in the LaTeX output.
 
-EXTRA_PACKAGES         = amsmath amssymb
+EXTRA_PACKAGES         = amsmath amssymb times
 
 # The LATEX_HEADER tag can be used to specify a personal LaTeX header for
 # the generated latex document. The header should contain everything until
@@ -1685,7 +1736,7 @@ TAGFILES               =
 # When a file name is specified after GENERATE_TAGFILE, doxygen will create
 # a tag file that is based on the input files it reads.
 
-GENERATE_TAGFILE       = scip.tag
+GENERATE_TAGFILE       =
 
 # If the ALLEXTERNALS tag is set to YES all external classes will be listed
 # in the class index. If set to NO only the inherited external classes
@@ -1729,14 +1780,14 @@ MSCGEN_PATH            =
 # inheritance and usage relations if the target is undocumented
 # or is not a class.
 
-HIDE_UNDOC_RELATIONS   = YES
+HIDE_UNDOC_RELATIONS   = NO
 
 # If you set the HAVE_DOT tag to YES then doxygen will assume the dot tool is
 # available from the path. This tool is part of Graphviz, a graph visualization
 # toolkit from AT&T and Lucent Bell Labs. The other options in this section
 # have no effect if this option is set to NO (the default)
 
-HAVE_DOT               = YES
+HAVE_DOT               = NO
 
 # The DOT_NUM_THREADS specifies the number of dot invocations doxygen is
 # allowed to run in parallel. When set to 0 (the default) doxygen will
@@ -1803,21 +1854,21 @@ UML_LIMIT_NUM_FIELDS   = 10
 # If set to YES, the inheritance and collaboration graphs will show the
 # relations between templates and their instances.
 
-TEMPLATE_RELATIONS     = NO
+TEMPLATE_RELATIONS     = YES
 
 # If the ENABLE_PREPROCESSING, SEARCH_INCLUDES, INCLUDE_GRAPH, and HAVE_DOT
 # tags are set to YES then doxygen will generate a graph for each documented
 # file showing the direct and indirect include dependencies of the file with
 # other documented files.
 
-INCLUDE_GRAPH          = NO
+INCLUDE_GRAPH          = YES
 
 # If the ENABLE_PREPROCESSING, SEARCH_INCLUDES, INCLUDED_BY_GRAPH, and
 # HAVE_DOT tags are set to YES then doxygen will generate a graph for each
 # documented header file showing the documented files that directly or
 # indirectly include this file.
 
-INCLUDED_BY_GRAPH      = NO
+INCLUDED_BY_GRAPH      = YES
 
 # If the CALL_GRAPH and HAVE_DOT options are set to YES then
 # doxygen will generate a call dependency graph for every global function

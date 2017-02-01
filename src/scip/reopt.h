@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reopt.h
+ * @ingroup INTERNALAPI
  * @brief  data structures and methods for collecting reoptimization information
  * @author Jakob Witzig
  */
@@ -27,10 +28,14 @@
 #include "scip/def.h"
 #include "scip/pub_reopt.h"
 #include "scip/type_primal.h"
+#include "scip/type_sepastore.h"
+#include "scip/type_cutpool.h"
 #include "scip/type_retcode.h"
 #include "scip/type_misc.h"
 #include "scip/type_reopt.h"
 #include "scip/struct_reopt.h"
+#include "scip/struct_var.h"
+#include "scip/struct_history.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,22 +84,24 @@ SCIP_RETCODE SCIPreoptAddSol(
 /** add optimal solution */
 extern
 SCIP_RETCODE SCIPreoptAddOptSol(
-   SCIP_REOPT*           reopt,              /**< reopt data */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_SOL*             sol,                /**< solution to add */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PRIMAL*          origprimal          /**< original primal */
+   SCIP_PRIMAL*          origprimal,         /**< original primal */
+   SCIP_VAR**            vars,               /**< original problem variables */
+   int                   nvars               /**< number of original problem variables */
    );
 
 /** add a run */
 extern
 SCIP_RETCODE SCIPreoptAddRun(
-   SCIP_REOPT*           reopt,              /**< reopt data */
+   SCIP_REOPT*           reopt,              /**< reoptimization data sturcture */
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_VAR**            vars,               /**< trnasformed variables */
-   int                   nvars,              /**< number of transformed variables */
+   SCIP_VAR**            origvars,           /**< original problem variables */
+   int                   norigvars,          /**< number of original variables */
    int                   size                /**< number of expected solutions */
    );
 
@@ -106,25 +113,25 @@ int SCIPreoptGetNCheckedSols(
 
 /** update the number of checked solutions during the reoptimization process */
 extern
-void SCIPreoptSetNCheckedSols(
+void SCIPreoptAddNCheckedSols(
    SCIP_REOPT*           reopt,              /**< reoptimization data */
    int                   ncheckedsols        /**< number of updated solutions */
    );
 
-/** get the number of checked during the reoptimization process */
+/** get the number of checked solutions during the reoptimization process */
 extern
 int SCIPreoptGetNImprovingSols(
    SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
-/** update the number of checked during the reoptimization process */
+/** update the number of checked solutions during the reoptimization process */
 extern
-void SCIPreoptSetNImprovingSols(
+void SCIPreoptAddNImprovingSols(
    SCIP_REOPT*           reopt,              /**< reoptimization data */
    int                   nimprovingsols      /**< number of improving solutions */
    );
 
-/** returns number of solution */
+/** returns number of solutions stored in the solution tree of a given run */
 extern
 int SCIPreoptGetNSolsRun(
    SCIP_REOPT*           reopt,              /**< reoptimization data */
@@ -191,12 +198,12 @@ SCIP_Real SCIPreoptGetSimToFirst(
 /** return the similarity between two of objective functions of two given runs */
 extern
 SCIP_Real SCIPreoptGetSimilarity(
-   SCIP_REOPT*           reopt,              /**< reopt data */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   run1,               /**< number of the first run */
    int                   run2,               /**< number of the second run */
-   SCIP_VAR**            transvars,          /**< transformed problem variables */
-   int                   ntransvars          /**< number of transformed problem variables */
+   SCIP_VAR**            origvars,           /**< original problem variables */
+   int                   norigvars           /**< number of original problem variables */
    );
 
 /** returns the best solution of the last run */
@@ -229,6 +236,13 @@ SCIP_SOL* SCIPreoptGetBestSolRun(
    int                   run                 /**< number of the run (1,2,...) */
    );
 
+/** reset solving specific paramters */
+SCIP_RETCODE SCIPreoptReset(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
 /** reset marks of stored solutions to not updated */
 extern
 void SCIPreoptResetSolMarks(
@@ -259,6 +273,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
    BMS_BLKMEM*           blkmem,             /**< block memery */
    SCIP_NODE*            node,               /**< node of the search tree */
    SCIP_EVENTTYPE        eventtype,          /**< eventtype */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPSOLSTAT        lpsolstat,          /**< solution status of the LP */
    SCIP_Bool             isrootnode,         /**< the node is the root */
    SCIP_Bool             isfocusnode,        /**< the node is the current focus node */
@@ -340,6 +355,21 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
+/** add the stored cuts to the separation storage */
+SCIP_RETCODE SCIPreoptApplyCuts(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_NODE*            node,               /**< current focus node */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_CUTPOOL*         cutpool,            /**< global cutpool */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter */
+   SCIP_LP*              lp,                 /**< current LP */
+   SCIP_Bool             root                /**< bool whether the current node is the root */
+   );
+
 /** check if the LP of the given node should be solved or not */
 extern
 SCIP_Bool SCIPreoptGetSolveLP(
@@ -363,7 +393,6 @@ SCIP_RETCODE SCIPreoptApply(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   unsigned int          randseed,           /**< seed value for random generator */
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree to reactivate */
    unsigned int          id,                 /**< id of the node to reactivate */
    SCIP_Real             estimate,           /**< estimate of the child nodes that should be created */
@@ -397,8 +426,8 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   unsigned int          randseed,           /**< seed value for random generator */
    int*                  ncreatedchilds,     /**< pointer to store the number of created nodes */
    int*                  naddedconss         /**< pointer to store the number added constraints */
    );
@@ -419,6 +448,7 @@ extern
 SCIP_RETCODE SCIPreoptSaveOpenNodes(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_NODE**           leaves,             /**< array of open leave nodes */
    int                   nleaves,            /**< number of open leave nodes */
@@ -426,6 +456,27 @@ SCIP_RETCODE SCIPreoptSaveOpenNodes(
    int                   nchilds,            /**< number of open leave nodes */
    SCIP_NODE**           siblings,           /**< array of open sibling nodes */
    int                   nsiblings           /**< number of open leave nodes */
+   );
+
+/** merges the variable history of the current run with the stored history */
+extern
+SCIP_RETCODE SCIPreoptMergeVarHistory(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_VAR**            vars,               /**< original problem variables */
+   int                   nvars               /**< number of original problem variables */
+   );
+
+/** updates the variable history */
+extern
+SCIP_RETCODE SCIPreoptUpdateVarHistory(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR**            vars,               /**< variable array */
+   int                   nvars               /**< number of variables */
    );
 
 /*
@@ -459,6 +510,7 @@ SCIP_RETCODE SCIPreoptnodeDelete(
 extern
 SCIP_RETCODE SCIPreoptnodeAddBndchg(
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reopttree */
+   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR*             var,                /**< variable to add */
    SCIP_Real             val,                /**< value of the variable */
@@ -469,11 +521,16 @@ SCIP_RETCODE SCIPreoptnodeAddBndchg(
 extern
 SCIP_RETCODE SCIPreoptnodeAddCons(
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reopttree */
+   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_VAR**            consvars,           /**< variables which are part of the constraint */
-   SCIP_Real*            consvals,           /**< values of the variables */
+   SCIP_VAR**            vars,               /**< variables which are part of the constraint */
+   SCIP_Real*            bounds,             /**< bounds of the variables */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< boundtypes of the varibales (or NULL is the constraint is a cut) */
+   SCIP_Real             lhs,                /**< lhs of the constraint */
+   SCIP_Real             rhs,                /**< rhs of the constraint */
    int                   nvars,              /**< number of variables */
-   REOPT_CONSTYPE        constype            /**< type of the constraint */
+   REOPT_CONSTYPE        constype,           /**< type of the constraint */
+   SCIP_Bool             linear              /**< the given constraint has a linear representation */
    );
 
 /** return the branching path of the given node in the reoptimization tree */
@@ -488,6 +545,67 @@ void SCIPreoptnodeGetPath(
    int*                  nbndchgs,           /**< pointer to store the number of bound changes */
    int*                  nbndchgsafterdual   /**< pointer to store the number of bound changes applied after
                                               *  the first dual reduction at the given node */
+   );
+
+/** add a constraint to the reoptimization data structure */
+extern
+SCIP_RETCODE SCIPreoptAddCons(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_CONS*            cons                /**< constraint to add */
+   );
+
+/** save global lower and upper bounds
+ *
+ *  @note this method can only called once, i.e., after fishing presolving of the first problem
+ */
+extern
+SCIP_RETCODE SCIPreoptSaveGlobalBounds(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_PROB*            transprob,          /**< transformed problem data */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** save active constraints
+ *
+ *  @note this method can only called once, i.e., after fishing presolving of the first problem
+ */
+extern
+SCIP_RETCODE SCIPreoptSaveActiveConss(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_PROB*            transprob,          /**< transformed problem data */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** installs global lower and upper bounds */
+extern
+SCIP_RETCODE SCIPreoptInstallBounds(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem data */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** reactivate globally valid constraints that were deactivated and necessary to ensure correctness */
+extern
+SCIP_RETCODE SCIPreoptResetActiveConss(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic SCIP statistics */
+   );
+
+
+/** returns whether a constraint is necessary to ensure correctness and cannot be deleted */
+extern
+SCIP_Bool SCIPreoptConsCanBeDeleted(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_CONS*            cons                /**< problem constraint */
    );
 
 #ifdef __cplusplus

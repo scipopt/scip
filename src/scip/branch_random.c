@@ -132,6 +132,7 @@ SCIP_DECL_BRANCHCOPY(branchCopyRandom)
 }
 
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
+/**! [SnippetBranchFreeRandom] */
 static
 SCIP_DECL_BRANCHFREE(branchFreeRandom)
 {  /*lint --e{715}*/
@@ -142,11 +143,12 @@ SCIP_DECL_BRANCHFREE(branchFreeRandom)
    assert(branchruledata != NULL);
 
    /* free branching rule data */
-   SCIPfreeMemory(scip, &branchruledata);
+   SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
 }
+/**! [SnippetBranchFreeRandom] */
 
 
 /** initialization method of branching rule (called after problem was transformed) */
@@ -338,7 +340,7 @@ SCIP_RETCODE SCIPincludeBranchruleRandom(
    SCIP_BRANCHRULE* branchrule;
 
    /* create random branching rule data */
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
 
    /* include allfullstrong branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,

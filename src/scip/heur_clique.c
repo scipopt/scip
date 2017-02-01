@@ -456,7 +456,7 @@ SCIP_DECL_HEURFREE(heurFreeClique)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -541,8 +541,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    SCIP_Bool solvelp;
    char consname[SCIP_MAXSTRLEN];
 
-   SCIP_Real timelimit;                      /* timelimit for the subproblem        */
-   SCIP_Real memorylimit;
    SCIP_Longint nstallnodes;                 /* number of stalling nodes for the subproblem */
 
    SCIP_SOL* sol;
@@ -664,9 +662,12 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    {
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-      /* return if infeasibility was detected during LP construction */
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
       if( cutoff )
+      {
+         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          goto TERMINATE;
+      }
 
       SCIP_CALL( SCIPflushLP(scip) );
    }
@@ -833,7 +834,11 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       SCIP_HASHMAP* varmap;
       SCIP_Bool valid;
 
-      valid = FALSE;
+      /* check whether there is enough time and memory left */
+      SCIP_CALL( SCIPcheckCopyLimits(scip, &valid) );
+
+      if( !valid )
+         goto TERMINATE;
 
       /* get all variables again because SCIPconstructLP() might have changed the variables array */
       SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -864,41 +869,23 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* do not abort subproblem on CTRL-C */
       SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
-      /* disable output to console */
+#ifdef SCIP_DEBUG
+      /* for debugging, enable full output */
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#else
+      /* disable statistic timing inside sub SCIP and output to console */
       SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-
-      /* check whether there is enough time and memory left */
-      SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-      if( !SCIPisInfinity(scip, timelimit) )
-         timelimit -= SCIPgetSolvingTime(scip);
-      SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-
-      /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-      if( !SCIPisInfinity(scip, memorylimit) )
-      {
-         memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-         memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-      }
-
-      /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-      if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
-      {
-         /* free subproblem */
-         SCIPfreeBufferArray(scip, &subvars);
-         SCIP_CALL( SCIPfree(&subscip) );
-
-         goto TERMINATE;
-      }
-
-#ifndef SCIP_DEBUG
-      /* disable statistic timing inside sub SCIP */
       SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 #endif
+
       /* set limits for the subproblem */
+      SCIP_CALL( SCIPcopyLimits(scip, subscip) );
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", heurdata->maxnodes) );
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-      SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+
+      /* speed up sub-SCIP by not checking dual LP feasibility */
+      SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
 
       /* forbid call of heuristics and separators solving sub-CIPs */
       SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
@@ -925,12 +912,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       {
          SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 10) );
       }
-
-#ifdef SCIP_DEBUG
-      /* for debugging clique heuristic, enable MIP output */
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-      SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
-#endif
 
       /* if there is already a solution, add an objective cutoff */
       if( SCIPgetNSols(scip) > 0 )
@@ -967,18 +948,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
        * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
-#ifdef NDEBUG
-      {
-         SCIP_RETCODE retstat;
-         retstat = SCIPpresolve(subscip);
-         if( retstat != SCIP_OKAY )
-         {
-            SCIPwarningMessage(scip, "Error while presolving subMIP in clique heuristic; sub-SCIP terminated with code <%d>\n", retstat);
-         }
-      }
-#else
-      SCIP_CALL( SCIPpresolve(subscip) );
-#endif
+      SCIP_CALL_ABORT( SCIPpresolve(subscip) );
 
       SCIPdebugMsg(scip, "clique heuristic presolved subproblem: %d vars, %d cons; fixing value = %g\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars));
 
@@ -993,18 +963,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
          SCIPdebugMsg(scip, "solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
 
-#ifdef NDEBUG
-         {
-            SCIP_RETCODE retstat;
-            retstat = SCIPsolve(subscip);
-            if( retstat != SCIP_OKAY )
-            {
-               SCIPwarningMessage(scip, "Error while solving subMIP in clique heuristic; sub-SCIP terminated with code <%d>\n",retstat);
-            }
-         }
-#else
-         SCIP_CALL( SCIPsolve(subscip) );
-#endif
+         SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
          SCIPdebugMsg(scip, "ending solving clique-submip at time %g, status = %d\n", SCIPgetSolvingTime(scip), SCIPgetStatus(subscip));
 
          /* check, whether a solution was found; due to numerics, it might happen that not all solutions are feasible ->
@@ -1103,7 +1063,7 @@ SCIP_RETCODE SCIPincludeHeurClique(
    SCIP_HEUR* heur;
 
    /* create clique primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,

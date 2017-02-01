@@ -73,6 +73,7 @@ SCIP_DECL_NODESELCOPY(nodeselCopyBfs)
 }
 
 /** destructor of node selector to free user data (called when SCIP is exiting) */
+/**! [SnippetNodeselFreeBfs] */
 static
 SCIP_DECL_NODESELFREE(nodeselFreeBfs)
 {  /*lint --e{715}*/
@@ -85,11 +86,12 @@ SCIP_DECL_NODESELFREE(nodeselFreeBfs)
    /* free user data of node selector */
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
-   SCIPfreeMemory(scip, &nodeseldata);
+   SCIPfreeBlockMemory(scip, &nodeseldata);
    SCIPnodeselSetData(nodesel, nodeseldata);
 
    return SCIP_OKAY;
 }
+/**! [SnippetNodeselFreeBfs] */
 
 
 /** node selection method of node selector */
@@ -299,7 +301,7 @@ SCIP_RETCODE SCIPincludeNodeselBfs(
    SCIP_NODESEL* nodesel;
 
    /* allocate and initialize node selector data; this has to be freed in the destructor */
-   SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &nodeseldata) );
 
    /* include node selector */
    SCIP_CALL( SCIPincludeNodeselBasic(scip, &nodesel, NODESEL_NAME, NODESEL_DESC, NODESEL_STDPRIORITY, NODESEL_MEMSAVEPRIORITY,

@@ -41,7 +41,10 @@
 extern "C" {
 #endif
 
-/** creates the multi-aggregated branching rule and includes it in SCIP */
+/** creates the multi-aggregated branching rule and includes it in SCIP
+ *
+ *  @ingroup BranchingRuleIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeBranchruleMultAggr(
    SCIP*                 scip                /**< SCIP data structure */

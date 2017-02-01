@@ -31,6 +31,7 @@
 #include "scip/paramset.h"
 #include "scip/scip.h"
 #include "scip/sol.h"
+#include "scip/var.h"
 #include "scip/relax.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -741,4 +742,24 @@ SCIP_Real SCIPrelaxationGetBestRelaxSolObj(
    assert(relaxation != NULL);
 
    return relaxation->bestrelaxsolobj;
+}
+
+/** updates objective value of current relaxation solution after change of objective coefficient */
+void SCIPrelaxationUpdateVarObj(
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< variable with changed objective coefficient */
+   SCIP_Real             oldobj,             /**< old objective coefficient */
+   SCIP_Real             newobj              /**< new objective coefficient */
+   )
+{
+   SCIP_Real relaxsolval;
+
+   assert(relaxation != NULL);
+   assert(set != NULL);
+   assert(var != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+
+   relaxsolval = SCIPvarGetRelaxSol(var, set);
+   relaxation->relaxsolobjval += (newobj - oldobj) * relaxsolval;
 }

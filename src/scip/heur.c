@@ -599,6 +599,7 @@ void divesetFree(
 SCIP_RETCODE SCIPdivesetGetScore(
    SCIP_DIVESET*         diveset,            /**< general diving settings */
    SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_HEURDATA*        heurdata,           /**< data of the calling heuristic */
    SCIP_DIVETYPE         divetype,           /**< the type of diving that should be applied */
    SCIP_VAR*             divecand,           /**< the candidate for which the branching direction is requested */
    SCIP_Real             divecandsol,        /**< LP solution value of the candidate */
@@ -613,7 +614,8 @@ SCIP_RETCODE SCIPdivesetGetScore(
    assert(divecand != NULL);
    assert(divetype & diveset->divetypemask);
 
-   SCIP_CALL( diveset->divesetgetscore(set->scip, diveset, divetype, divecand, divecandsol, divecandfrac, candscore, roundup) );
+   SCIP_CALL( diveset->divesetgetscore(set->scip, diveset, heurdata, divetype, divecand, divecandsol, divecandfrac,
+         candscore, roundup) );
 
    return SCIP_OKAY;
 }
@@ -1016,7 +1018,8 @@ SCIP_RETCODE SCIPheurExec(
       if( *result != SCIP_FOUNDSOL
          && *result != SCIP_DIDNOTFIND
          && *result != SCIP_DIDNOTRUN
-         && *result != SCIP_DELAYED )
+         && *result != SCIP_DELAYED
+         && *result != SCIP_UNBOUNDED )
       {
          SCIPerrorMessage("execution method of primal heuristic <%s> returned invalid result <%d>\n", 
             heur->name, *result);
@@ -1034,7 +1037,7 @@ SCIP_RETCODE SCIPheurExec(
          set->heurssorted = FALSE;
       }
    }
-   assert(*result == SCIP_DIDNOTRUN || *result == SCIP_DELAYED || heur->delaypos == -1);
+   assert(*result == SCIP_DIDNOTRUN || *result == SCIP_DELAYED || *result == SCIP_UNBOUNDED || heur->delaypos == -1);
 
    /* check if the heuristic was (still) delayed */
    if( *result == SCIP_DELAYED || heur->delaypos >= 0 )

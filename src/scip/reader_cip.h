@@ -37,7 +37,10 @@
 extern "C" {
 #endif
 
-/** includes the cip file reader into SCIP */
+/** includes the cip file reader into SCIP
+ *
+ *  @ingroup FileReaderIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeReaderCip(
    SCIP*                 scip                /**< SCIP data structure */

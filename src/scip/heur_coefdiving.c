@@ -59,11 +59,13 @@
 #define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
+#define DEFAULT_RANDSEED             83 /**< default random seed */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 };
 
 /*
@@ -101,7 +103,7 @@ SCIP_DECL_HEURFREE(heurFreeCoefdiving) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -124,6 +126,9 @@ SCIP_DECL_HEURINIT(heurInitCoefdiving) /*lint --e{715}*/
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+
    return SCIP_OKAY;
 }
 
@@ -140,6 +145,9 @@ SCIP_DECL_HEUREXIT(heurExitCoefdiving) /*lint --e{715}*/
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+
+   /* free random number generator */
+   SCIPrandomFree(&heurdata->randnumgen);
 
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
@@ -175,6 +183,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
    SCIP_Bool mayrounddown = SCIPvarMayRoundDown(cand);
    SCIP_Bool mayroundup = SCIPvarMayRoundUp(cand);
 
+   assert(heurdata != NULL);
+
    if( mayrounddown || mayroundup )
    {
       /* choose rounding direction:
@@ -184,7 +194,12 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
       if( mayrounddown && mayroundup )
       {
          assert( divetype != SCIP_DIVETYPE_SOS1VARIABLE );
-         *roundup = (candsfrac > 0.5);
+
+         /* try to avoid variability; decide randomly if the LP solution can contain some noise */
+         if( SCIPisEQ(scip, candsfrac, 0.5) )
+            *roundup = (SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0);
+         else
+            *roundup = (candsfrac > 0.5);
       }
       else
          *roundup = mayrounddown;
@@ -224,7 +239,15 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
 
 
    /* penalize too small fractions */
-   if( candsfrac < 0.01 )
+   if( SCIPisEQ(scip, candsfrac, 0.01) )
+   {
+      /* try to avoid variability; decide randomly if the LP solution can contain some noise.
+       * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for scaling the score
+       */
+      if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
+         (*score) *= 0.01;
+   }
+   else if( candsfrac < 0.01 )
       (*score) *= 0.1;
 
    /* prefer decisions on binary variables */
@@ -254,7 +277,7 @@ SCIP_RETCODE SCIPincludeHeurCoefdiving(
    SCIP_HEUR* heur;
 
    /* create coefdiving primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,

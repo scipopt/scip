@@ -3735,14 +3735,10 @@ SCIP_RETCODE SCIPincludeReaderPip(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_READERDATA* readerdata;
    SCIP_READER* reader;
 
-   /* create reader data */
-   readerdata = NULL;
-
    /* include reader */
-   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, NULL) );
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyPip) );
@@ -3770,13 +3766,13 @@ SCIP_RETCODE SCIPreadPip(
    pipinput.linebuf[0] = '\0';
    pipinput.probname[0] = '\0';
    pipinput.objname[0] = '\0';
-   SCIP_CALL( SCIPallocMemoryArray(scip, &pipinput.token, PIP_MAX_LINELEN) ); /*lint !e506*/
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &pipinput.token, PIP_MAX_LINELEN) ); /*lint !e506*/
    pipinput.token[0] = '\0';
-   SCIP_CALL( SCIPallocMemoryArray(scip, &pipinput.tokenbuf, PIP_MAX_LINELEN) ); /*lint !e506*/
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &pipinput.tokenbuf, PIP_MAX_LINELEN) ); /*lint !e506*/
    pipinput.tokenbuf[0] = '\0';
    for( i = 0; i < PIP_MAX_PUSHEDTOKENS; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((pipinput.pushedtokens)[i]), PIP_MAX_LINELEN) ); /*lint !e866 !e506*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((pipinput.pushedtokens)[i]), PIP_MAX_LINELEN) ); /*lint !e866 !e506*/
    }
 
    pipinput.npushedtokens = 0;
@@ -3797,10 +3793,10 @@ SCIP_RETCODE SCIPreadPip(
    /* free dynamically allocated memory */
    for( i = PIP_MAX_PUSHEDTOKENS - 1; i >= 0 ; --i )
    {
-      SCIPfreeMemoryArray(scip, &pipinput.pushedtokens[i]);
+      SCIPfreeBlockMemoryArray(scip, &pipinput.pushedtokens[i], PIP_MAX_LINELEN);
    }
-   SCIPfreeMemoryArray(scip, &pipinput.tokenbuf);
-   SCIPfreeMemoryArray(scip, &pipinput.token);
+   SCIPfreeBlockMemoryArray(scip, &pipinput.tokenbuf, PIP_MAX_LINELEN);
+   SCIPfreeBlockMemoryArray(scip, &pipinput.token, PIP_MAX_LINELEN);
 
    if( retcode == SCIP_PLUGINNOTFOUND )
       retcode = SCIP_READERROR;

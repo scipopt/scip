@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   conflict.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for conflict analysis
  * @author Tobias Achterberg
  */

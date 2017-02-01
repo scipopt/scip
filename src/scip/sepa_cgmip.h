@@ -35,7 +35,10 @@
 extern "C" {
 #endif
 
-/** creates the Chvatal-Gomory-MIP cut separator and includes it in SCIP */
+/** creates the Chvatal-Gomory-MIP cut separator and includes it in SCIP
+ *
+ * @ingroup SeparatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeSepaCGMIP(
    SCIP*                 scip                /**< SCIP data structure */

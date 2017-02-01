@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for constraints and constraint handlers
  * @author Tobias Achterberg
  */
@@ -41,6 +42,7 @@
 #include "scip/type_sepastore.h"
 #include "scip/type_cons.h"
 #include "scip/type_branch.h"
+#include "scip/type_reopt.h"
 #include "scip/pub_cons.h"
 
 #ifndef NDEBUG
@@ -260,6 +262,7 @@ SCIP_RETCODE SCIPconshdlrGetDiveBoundChanges(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_DIVESET*         diveset,            /**< diving settings to control scoring */
+   SCIP_HEURDATA*        heurdata,           /**< data of the calling heuristic */
    SCIP_SOL*             sol,                /**< current solution of diving mode */
    SCIP_Bool*            success,            /**< pointer to store whether constraint handler successfully found a variable */
    SCIP_Bool*            infeasible          /**< pointer to store whether the current node was detected to be infeasible */
@@ -595,7 +598,8 @@ SCIP_RETCODE SCIPconssetchgMakeGlobal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 /** increase count of applied cuts */
@@ -660,9 +664,9 @@ SCIP_RETCODE SCIPconsCreate(
 
 /** copies source constraint of source SCIP into the target constraint for the target SCIP, using the variable map for
  *  mapping the variables of the source SCIP to the variables of the target SCIP; if the copying process was successful
- *  a constraint is creates and captures;
+ *  a constraint is created and captured;
  *
- *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
+ *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, an LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
@@ -691,7 +695,7 @@ SCIP_RETCODE SCIPconsCopy(
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    );
 
 /** parses constraint information (in cip format) out of a string; if the parsing process was successful a constraint is
@@ -902,7 +906,7 @@ SCIP_RETCODE SCIPconsActive(
 extern
 SCIP_RETCODE SCIPconsDeactive(
    SCIP_CONS*            cons,               /**< constraint to notify */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set                /**< global SCIP settings */
    );
 
 /** method to collect the variables of a constraint
@@ -949,7 +953,8 @@ SCIP_RETCODE SCIPconsDelete(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 /** gets and captures transformed constraint of a given constraint; if the constraint is not yet transformed,
@@ -1152,7 +1157,8 @@ SCIP_RETCODE SCIPconsAddAge(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_Real             deltaage            /**< value to add to the constraint's age */
+   SCIP_Real             deltaage,           /**< value to add to the constraint's age */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 /** increases age of constraint by 1.0;
@@ -1169,7 +1175,8 @@ SCIP_RETCODE SCIPconsIncAge(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 /** resets age of constraint to zero;

@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_lp.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for LP management
  * @author Tobias Achterberg
  */
@@ -47,7 +47,9 @@ extern "C" {
 #endif
 
 
-/**@defgroup ColumnMethods Column methods
+/**@defgroup PublicColumnMethods LP Column
+ * @ingroup PublicLPMethods
+ * @brief public methods for LP columns
  *
  * @{
  */
@@ -235,7 +237,9 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
 
 
 
-/**@defgroup RowMethods Row methods
+/**@defgroup PublicRowMethods LP Row
+ * @ingroup PublicLPMethods
+ * @brief methods for LP rows
  *
  * @{
  */
@@ -518,13 +522,6 @@ void SCIProwChgRank(
 #define SCIProwChgRank(row, cutrank)    ((row)->rank = (cutrank))
 
 #endif
-
-/**@} */
-
-/**@defgroup LPMethods LP methods
- *
- * @{
- */
 
 /**@} */
 

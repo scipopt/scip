@@ -52,6 +52,16 @@
 -emacro(681,SCIPdebugMessage)     // Loop is not entered
 -emacro(506,SCIPdebugPrintf)      // Constant value Boolean
 -emacro(681,SCIPdebugPrintf)      // Loop is not entered
+-emacro(506,SCIPdebugMsg)         // Constant value Boolean
+-emacro(681,SCIPdebugMsg)         // Loop is not entered
+-emacro(506,SCIPdebugMsgPrint)    // Constant value Boolean
+-emacro(681,SCIPdebugMsgPrint)    // Loop is not entered
+-emacro(506,SCIPsetDebugMsg)      // Constant value Boolean
+-emacro(681,SCIPsetDebugMsg)      // Loop is not entered
+-emacro(506,SCIPstatDebugMsg)     // Constant value Boolean
+-emacro(681,SCIPstatDebugMsg)     // Loop is not entered
+-emacro(506,SCIPsetDebugMsgPrint) // Constant value Boolean
+-emacro(681,SCIPsetDebugMsgPrint) // Loop is not entered
 -emacro(506,SCIPstatisticMessage) // Constant value Boolean
 -emacro(681,SCIPstatisticMessage) // Loop is not entered
 -emacro(506,SCIPstatisticPrintf)  // Constant value Boolean
@@ -158,11 +168,21 @@
 -ecall(776,SCIPhashmapInsert)
 -ecall(776,SCIPhashmapExists)
 
+// turn off unusual use of 'SYM'
+-emacro(866,BMSallocBlockMemoryArray)
+-emacro(866,BMSfreeBlockMemoryArray)
+
 // turn off "Suspicious cast" messages involving size_t in SCIPhashmap*
 -ecall(571,SCIPhashmapInsert)
 -ecall(571,SCIPhashmapGetImage)
 -ecall(571,SCIPhashmapSetImage)
 -ecall(571,SCIPhashmapExists)
+-emacro(571,SCIPhashTwo)
+-emacro(571,SCIPcombineTwoInt)
+-emacro(571,SCIPcombineThreeInt)
+-emacro(571,SCIPcombineFourInt)
+-emacro(571,SCIPrealHashCode)
+-emacro(571,SCIPpositiveRealHashCode)
 
 // ------------------------------------------------------------------
 // turn off some warnings about C++ classes:

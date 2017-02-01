@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   presol_qpkktref.c
+/**@file   presol_qpkktref.h
  * @brief  qpkktref presolver
  * @author Tobias Fischer
  *
@@ -86,7 +86,10 @@
 extern "C" {
 #endif
 
-/** creates the QP KKT reformulation presolver and includes it in SCIP */
+/** creates the QP KKT reformulation presolver and includes it in SCIP
+ *
+ * @ingroup PresolverIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePresolQPKKTref(
    SCIP*                 scip                /**< SCIP data structure */

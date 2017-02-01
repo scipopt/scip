@@ -152,6 +152,7 @@ struct SCIP_PropData
    int                   orderingalgo;       /**< which type of ordering algorithm should we use?
                                               *   (0: no, 1: greedy, 2: greedy reverse) */
    int                   nbounds;            /**< length of interesting bounds array */
+   int                   boundssize;         /**< size of bounds array */
    int                   nminfilter;         /**< minimal number of filtered bounds to apply another filter round */
    int                   nfiltered;          /**< number of filtered bounds by solving auxiliary variables */
    int                   ntrivialfiltered;   /**< number of filtered bounds because the LP value was equal to the bound */
@@ -2202,7 +2203,8 @@ SCIP_RETCODE initBounds(
    }
 
    /* allocate interesting bounds array */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->bounds), 2 * nvars) );
+   propdata->boundssize = 2 * nvars;
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(propdata->bounds), 2 * nvars) );
 
    /* get all interesting variables and their bounds */
    bdidx = 0;
@@ -2214,7 +2216,7 @@ SCIP_RETCODE initBounds(
 
          /* create lower bound */
          bdaddress = &(propdata->bounds[bdidx]);
-         SCIP_CALL( SCIPallocMemory(scip, bdaddress) );
+         SCIP_CALL( SCIPallocBlockMemory(scip, bdaddress) );
          propdata->bounds[bdidx]->boundtype = SCIP_BOUNDTYPE_LOWER;
          propdata->bounds[bdidx]->var = vars[i];
          propdata->bounds[bdidx]->found = FALSE;
@@ -2228,7 +2230,7 @@ SCIP_RETCODE initBounds(
 
          /* create upper bound */
          bdaddress = &(propdata->bounds[bdidx]);
-         SCIP_CALL( SCIPallocMemory(scip, bdaddress) );
+         SCIP_CALL( SCIPallocBlockMemory(scip, bdaddress) );
          propdata->bounds[bdidx]->boundtype = SCIP_BOUNDTYPE_UPPER;
          propdata->bounds[bdidx]->var = vars[i];
          propdata->bounds[bdidx]->found = FALSE;
@@ -2255,7 +2257,8 @@ SCIP_RETCODE initBounds(
    if( propdata->nbounds <= 0 )
    {
       assert(propdata->nbounds == 0);
-      SCIPfreeMemoryArray(scip, &(propdata->bounds));
+      assert(propdata->boundssize >= 0 );
+      SCIPfreeBlockMemoryArray(scip, &(propdata->bounds), propdata->boundssize);
    }
 
    SCIPdebugMsg(scip, "problem has %d/%d interesting bounds\n", propdata->nbounds, 2 * nvars);
@@ -2293,9 +2296,9 @@ SCIP_DECL_PROPINITSOL(propInitsolObbt)
 
    propdata->bounds = NULL;
    propdata->nbounds = -1;
+   propdata->boundssize = 0;
    propdata->cutoffrow = NULL;
    propdata->lastnode = -1;
-
 
    /* if genvbounds propagator is not available, we cannot create genvbounds */
    propdata->genvboundprop = propdata->creategenvbounds ? SCIPfindProp(scip, GENVBOUND_PROP_NAME) : NULL;
@@ -2441,9 +2444,9 @@ SCIP_DECL_PROPEXITSOL(propExitsolObbt)
       /* free bounds */
       for( i = propdata->nbounds - 1; i >= 0; i-- )
       {
-         SCIPfreeMemory(scip, &(propdata->bounds[i]));
+         SCIPfreeBlockMemory(scip, &(propdata->bounds[i])); /*lint !e866*/
       }
-      SCIPfreeMemoryArray(scip, &(propdata->bounds));
+      SCIPfreeBlockMemoryArray(scip, &(propdata->bounds), propdata->boundssize);
    }
 
    propdata->nbounds = -1;
@@ -2463,7 +2466,7 @@ SCIP_DECL_PROPFREE(propFreeObbt)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   SCIPfreeMemory(scip, &propdata);
+   SCIPfreeBlockMemory(scip, &propdata);
 
    SCIPpropSetData(prop, NULL);
 
@@ -2484,7 +2487,7 @@ SCIP_RETCODE SCIPincludePropObbt(
    SCIP_PROP* prop;
 
    /* create obbt propagator data */
-   SCIP_CALL( SCIPallocMemory(scip, &propdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
 
    /* initialize statistic variables */
    propdata->nprobingiterations = 0;

@@ -378,6 +378,17 @@ void* SCIPlpiGetSolverPointer(
    return (void*) lpi->prob;
 }
 
+/** pass integrality information to LP solver */
+SCIP_RETCODE SCIPlpiSetIntegralityInformation(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   ncols,              /**< length of integrality array */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   )
+{
+   SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
+   return SCIP_LPERROR;
+}
+
 /**@} */
 
 
@@ -573,8 +584,14 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    assert( lpi != NULL );
    assert( lpi->prob != NULL );
-   assert( ncols >= 0 );
-   assert( nnonz == 0 || (beg != NULL && ind != NULL && val != NULL) );
+   assert(obj != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
+   assert(nnonz >= 0);
+   assert(ncols >= 0);
 
    SCIPdebugMessage("adding %d columns with %d nonzeros to QSopt\n", ncols, nnonz);
 
@@ -1163,8 +1180,8 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 SCIP_RETCODE SCIPlpiChgObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
-   int*                  ind,                /**< column indices to change objective value for */
-   SCIP_Real*            obj                 /**< new objective values for columns */
+   const int*            ind,                /**< column indices to change objective value for */
+   const SCIP_Real*      obj                 /**< new objective values for columns */
    )
 {
    register int i;
@@ -2695,8 +2712,8 @@ SCIP_RETCODE SCIPlpiGetBase(
 /** sets current basis status for columns and rows */
 SCIP_RETCODE SCIPlpiSetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  cstat,              /**< array with column basis status */
-   int*                  rstat               /**< array with row basis status */
+   const int*            cstat,              /**< array with column basis status */
+   const int*            rstat               /**< array with row basis status */
    )
 {
    int rval;
@@ -3014,7 +3031,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
    )
 {  /*lint --e{715} */
    char* icstat;
@@ -3313,7 +3330,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
 {  /*lint --e{715} */
    int ncols;
@@ -3394,11 +3411,9 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_PRESOLVING:
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:
-      rval = QSget_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING,ival);
-      if( *ival )
-         *ival = TRUE;
-      else
-         *ival = FALSE;
+      rval = QSget_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, ival);
+      assert((*ival) == 0 || (*ival) == 1);
+
       break;
    case SCIP_LPPAR_PRICING:
       *ival = lpi->pricing;
@@ -3437,10 +3452,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    switch( type )
    {
    case SCIP_LPPAR_SCALING:
-      if( ival == TRUE )
-         rval = QSset_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, 1);
-      else
+      if( ival == 0 )
          rval = QSset_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, 0);
+      else
+         rval = QSset_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, 1);
       break;
    case SCIP_LPPAR_PRICING:
       lpi->pricing = ival;

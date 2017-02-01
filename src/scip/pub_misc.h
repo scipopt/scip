@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_misc.h
+ * @ingroup PUBLICCOREAPI
  * @brief  public data structures and miscellaneous methods
  * @author Tobias Achterberg
  * @author Gerald Gamrath
@@ -61,7 +62,11 @@ extern "C" {
  * methods for statistical tests
  */
 
-/**@defgroup STATISTICALTESTS Methods for statistical tests
+/**@defgroup STATISTICALTESTS Statistical tests
+ * @ingroup MiscellaneousMethods
+ * @brief public methods for statistical tests
+ *
+ * Below are the public methods for statistical tests inside of \SCIP
  *
  * @{
  */
@@ -116,7 +121,11 @@ SCIP_Real SCIPnormalCDF(
 
 /**@} */
 
-/**@defgroup Regression Regression methods for linear regression
+/**@defgroup Regression Linear Regression
+ * @ingroup MiscellaneousMethods
+ * @brief methods for linear regression
+ *
+ * Below are the public methods for incremental linear regression of observations pairs \f$(X_i,Y_i), i=1\dots,n\f$
  *
  * @{
  */
@@ -176,11 +185,13 @@ void SCIPregressionFree(
 /**@} */
 
 /*
- * GML graphical printing methods
- * For a detailed format decription see http://docs.yworks.com/yfiles/doc/developers-guide/gml.html
  */
 
-/**@defgroup GMLgraph GML graphical printing
+/**@defgroup GMLgraph GML Graphical Printing
+ * @ingroup MiscellaneousMethods
+ * @brief GML graph printing methods
+ *
+ * For a detailed format decription see http://docs.yworks.com/yfiles/doc/developers-guide/gml.html
  *
  * @{
  */
@@ -246,6 +257,8 @@ void SCIPgmlWriteClosing(
 
 
 /** @defgroup DataStructures Data Structures
+ *  @ingroup PUBLICCOREAPI
+ *  @brief commonly used data structures
  *
  *  Below you find a list of available data structures
  *
@@ -257,7 +270,7 @@ void SCIPgmlWriteClosing(
  * Sparse solution
  */
 
-/**@defgroup SparseSol Sparse solution
+/**@defgroup SparseSol Sparse Solution
  *
  * @{
  */
@@ -470,15 +483,11 @@ void** SCIPpqueueElems(
 
 #define SCIPcombineFourInt(a, b, c, d)      (((uint64_t) (a) << 48) + ((uint64_t) (b) << 32) + ((uint64_t) (c) << 16) + ((uint64_t) (d)) )
 
+/* computes a hashcode for a floating point value containing n bits after the comma */
+#define SCIPrealHashCode(x, n)              ( (x)*(1<<n) >= INT64_MAX ? INT64_MAX : ((x)*(1<<n) <= INT64_MIN ? INT64_MIN : (int64_t)((x)*(1<<n))) )
 
-#define SCIPrealHashCode(x)                 ((int64_t) ((x)*256))
+#define SCIPpositiveRealHashCode(x, n)      ( (x)*(1<<n) >= UINT64_MAX ? UINT64_MAX : (uint64_t)((x)*(1<<n)) )
 
-
-/** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
-EXTERN
-int SCIPcalcHashtableSize(
-   int                   minsize             /**< minimal size of the hash table */
-   );
 
 /** creates a hash table */
 EXTERN
@@ -511,22 +520,14 @@ void SCIPhashtableClear(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    );
 
-/** inserts element in hash table (multiple inserts of same element possible)
- *
- *  @note A pointer to a multihashlist returned by SCIPhashtableRetrieveNext() might get invalid when adding an element
- *        to the hash table, due to dynamic resizing.
- */
+/** inserts element in hash table (multiple inserts of same element override the previous entry) */
 EXTERN
 SCIP_RETCODE SCIPhashtableInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 element             /**< element to insert into the table */
    );
 
-/** inserts element in hash table (multiple insertion of same element is checked and results in an error)
- *
- *  @note A pointer to a multihashlist returned by SCIPhashtableRetrieveNext() might get invalid when adding a new
- *        element to the hash table, due to dynamic resizing.
- */
+/** inserts element in hash table (multiple insertion of same element is checked and results in an error) */
 EXTERN
 SCIP_RETCODE SCIPhashtableSafeInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
@@ -537,20 +538,6 @@ SCIP_RETCODE SCIPhashtableSafeInsert(
 EXTERN
 void* SCIPhashtableRetrieve(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
-   void*                 key                 /**< key to retrieve */
-   );
-
-/** retrieve element with key from hash table, returns NULL if not existing
- *  can be used to retrieve all entries with the same key (one-by-one)
- *
- *  @note The returned multihashlist pointer might get invalid when adding a new element to the hash table.
- */
-EXTERN
-void* SCIPhashtableRetrieveNext(
-   SCIP_HASHTABLE*       hashtable,          /**< hash table */
-   SCIP_MULTIHASHLIST**  multihashlist,      /**< input: entry in hash table list from which to start searching, or NULL
-                                              *   output: entry in hash table list corresponding to element after
-                                              *           retrieved one, or NULL */
    void*                 key                 /**< key to retrieve */
    );
 
@@ -568,11 +555,7 @@ SCIP_RETCODE SCIPhashtableRemove(
    void*                 element             /**< element to remove from the table */
    );
 
-/** removes all elements of the hash table
- *
- *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
- *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
- */
+/** removes all elements of the hash table */
 EXTERN
 void SCIPhashtableRemoveAll(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
@@ -595,6 +578,23 @@ EXTERN
 void SCIPhashtablePrintStatistics(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   );
+
+/**@} */
+
+/*
+ * MultiHash Table
+ */
+
+/**@defgroup MultiHash Hash Table allowing duplicate entries
+ *
+ *@{
+ */
+
+/** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
+EXTERN
+int SCIPcalcMultihashSize(
+   int                   minsize             /**< minimal size of the hash table */
    );
 
 /** creates a multihash table */
@@ -875,7 +875,7 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
  * Activity
  */
 
-/**@defgroup ResourceActivity Resource activity
+/**@defgroup ResourceActivity Resource Activity
  *
  *@{
  */
@@ -1488,9 +1488,11 @@ void SCIPbtSetRoot(
 
 
 /**@defgroup MiscellaneousMethods Miscellaneous Methods
+ * @ingroup PUBLICCOREAPI
+ * @brief commonly used methods from different categories
  *
  * Below you find a list of miscellaneous methods grouped by different categories
- *@{
+ * @{
  */
 
 /*
@@ -1612,6 +1614,15 @@ SCIP_Real SCIPrelDiff(
 
 #endif
 
+/** computes the gap from the primal and the dual bound */
+EXTERN
+SCIP_Real SCIPcomputeGap(
+   SCIP_Real             eps,                /**< the value treated as zero */
+   SCIP_Real             inf,                /**< the value treated as infinity */
+   SCIP_Real             primalbound,        /**< the primal bound */
+   SCIP_Real             dualbound           /**< the dual bound */
+   );
+
 /**@} */
 
 
@@ -1686,7 +1697,7 @@ void SCIPrandomFree(
  * Additional math functions
  */
 
-/**@defgroup AdditionalMathFunctions Additional math functions
+/**@defgroup AdditionalMathFunctions Additional Math Functions
  *
  *@{
  */
@@ -1802,7 +1813,6 @@ void SCIPpermuteArray(
                                               */
    unsigned int*         randseed            /**< pointer to seed value for the random generator */
    );
-
 
 /** randomly shuffles parts of an array using the Fisher-Yates algorithm */
 extern

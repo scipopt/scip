@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_disp.h
- * @brief  datastructures for displaying runtime statistics
+ * @ingroup INTERNALAPI
+ * @brief  data structures for displaying runtime statistics
  * @author Tobias Achterberg
  */
 
@@ -52,6 +53,7 @@ struct SCIP_Disp
    SCIP_Bool             stripline;          /**< should the column be separated with a line from its right neighbor? */
    SCIP_Bool             initialized;        /**< is display column initialized? */
    SCIP_Bool             active;             /**< should column be displayed to the screen? */
+   SCIP_DISPMODE         mode;               /**< mode in which the display column is activated */
 };
 
 #ifdef __cplusplus

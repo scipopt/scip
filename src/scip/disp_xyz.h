@@ -31,11 +31,23 @@
 extern "C" {
 #endif
 
-/** creates the xyz display column and includes it in SCIP */
+/** creates the xyz display column and includes it in SCIP
+ *
+ *  @ingroup DisplayIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeDispXyz(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup DISPLAYS
+ *
+ * @{
+ */
+
+/** TODO add further methods to this group for documentation purposes */
+
+/* @} */
 
 #ifdef __cplusplus
 }

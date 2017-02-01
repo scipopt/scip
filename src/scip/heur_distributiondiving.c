@@ -797,7 +797,7 @@ SCIP_DECL_EVENTFREE(eventFreeDistributiondiving)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   SCIPfreeMemory(scip, &eventhdlrdata);
+   SCIPfreeBlockMemory(scip, &eventhdlrdata);
    SCIPeventhdlrSetData(eventhdlr, NULL);
 
    return SCIP_OKAY;
@@ -834,7 +834,7 @@ SCIP_DECL_HEURFREE(heurFreeDistributiondiving) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -884,12 +884,10 @@ SCIP_DECL_HEUREXIT(heurExitDistributiondiving) /*lint --e{715}*/
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreDistributiondiving)
 {  /*lint --e{715}*/
-   SCIP_HEURDATA* heurdata;
    SCIP_Real upscore;
    SCIP_Real downscore;
    int varindex;
 
-   heurdata = SCIPheurGetData(SCIPdivesetGetHeur(diveset));
    assert(heurdata != NULL);
 
    /* process pending bound change events */
@@ -1033,7 +1031,7 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
 
    /* create distributiondiving data */
    heurdata = NULL;
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    heurdata->memsize = 0;
    heurdata->rowmeans = NULL;
@@ -1046,7 +1044,7 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
 
    /* create event handler first to finish heuristic data */
    eventhdlrdata = NULL;
-   SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
    eventhdlrdata->heurdata = heurdata;
 
    heurdata->eventhdlr = NULL;

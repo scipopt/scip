@@ -1024,12 +1024,12 @@ SCIP_RETCODE SCIPsolSetVal(
    SCIP_Real oldval;
 
    assert(sol != NULL);
+   assert(stat != NULL);
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL
       || sol->solorigin == SCIP_SOLORIGIN_ZERO
       || sol->solorigin == SCIP_SOLORIGIN_PARTIAL
       || sol->solorigin == SCIP_SOLORIGIN_UNKNOWN
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
-   assert(stat != NULL);
    assert(var != NULL);
    assert(SCIPisFinite(val));
 
@@ -1219,10 +1219,10 @@ SCIP_RETCODE SCIPsolIncVal(
    SCIP_Real oldval;
 
    assert(sol != NULL);
+   assert(stat != NULL);
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL
       || sol->solorigin == SCIP_SOLORIGIN_ZERO
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
-   assert(stat != NULL);
    assert(var != NULL);
    assert(!SCIPsetIsInfinity(set, incval) && !SCIPsetIsInfinity(set, -incval));
 
@@ -2034,6 +2034,7 @@ SCIP_RETCODE SCIPsolPrint(
    SCIP_PROB*            prob,               /**< problem data (original or transformed) */
    SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
    FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             mipstart,           /**< should only discrete variables be printed? */
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
@@ -2043,13 +2044,19 @@ SCIP_RETCODE SCIPsolPrint(
    assert(sol != NULL);
    assert(prob != NULL);
    assert(SCIPsolIsOriginal(sol) || prob->transformed || transprob != NULL);
+   assert(!mipstart || !SCIPsolIsPartial(sol));
 
    /* display variables of problem data */
    for( v = 0; v < prob->nfixedvars; ++v )
    {
       assert(prob->fixedvars[v] != NULL);
+
+      /* skip non-discrete variables in a mip start */
+      if( mipstart && !SCIPvarIsIntegral(prob->fixedvars[v]) )
+         continue;
+
       solval = SCIPsolGetVal(sol, set, stat, prob->fixedvars[v]);
-      if( printzeros
+      if( printzeros || mipstart
          || (sol->solorigin != SCIP_SOLORIGIN_PARTIAL && !SCIPsetIsZero(set, solval))
          || (sol->solorigin == SCIP_SOLORIGIN_PARTIAL && solval != SCIP_UNKNOWN) ) /*lint !e777*/
       {
@@ -2069,8 +2076,13 @@ SCIP_RETCODE SCIPsolPrint(
    for( v = 0; v < prob->nvars; ++v )
    {
       assert(prob->vars[v] != NULL);
+
+      /* skip non-discrete variables in a mip start */
+      if( mipstart && !SCIPvarIsIntegral(prob->vars[v]) )
+         continue;
+
       solval = SCIPsolGetVal(sol, set, stat, prob->vars[v]);
-      if( printzeros
+      if( printzeros || mipstart
          || (sol->solorigin != SCIP_SOLORIGIN_PARTIAL && !SCIPsetIsZero(set, solval))
          || (sol->solorigin == SCIP_SOLORIGIN_PARTIAL && solval != SCIP_UNKNOWN) ) /*lint !e777*/
       {
@@ -2097,8 +2109,12 @@ SCIP_RETCODE SCIPsolPrint(
          if( SCIPvarIsTransformedOrigvar(transprob->fixedvars[v]) )
             continue;
 
+         /* skip non-discrete variables in a mip start */
+         if( mipstart && !SCIPvarIsIntegral(transprob->fixedvars[v]) )
+            continue;
+
          solval = SCIPsolGetVal(sol, set, stat, transprob->fixedvars[v]);
-         if( printzeros || !SCIPsetIsZero(set, solval) )
+         if( printzeros || mipstart || !SCIPsetIsZero(set, solval) )
          {
             SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
             if( solval == SCIP_UNKNOWN ) /*lint !e777*/
@@ -2116,6 +2132,10 @@ SCIP_RETCODE SCIPsolPrint(
       {
          assert(transprob->vars[v] != NULL);
          if( SCIPvarIsTransformedOrigvar(transprob->vars[v]) )
+            continue;
+
+         /* skip non-discrete variables in a mip start */
+         if( mipstart && !SCIPvarIsIntegral(transprob->vars[v]) )
             continue;
 
          solval = SCIPsolGetVal(sol, set, stat, transprob->vars[v]);

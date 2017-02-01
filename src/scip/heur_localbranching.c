@@ -278,7 +278,7 @@ SCIP_DECL_HEURFREE(heurFreeLocalbranching)
    assert( heurdata != NULL );
 
    /* free heuristic data */
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -323,10 +323,8 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_SOL* bestsol;                        /* best solution so far                                  */
    SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
 
-   SCIP_Real timelimit;                      /* timelimit for subscip (equals remaining time of scip) */
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem                   */
    SCIP_Real upperbound;
-   SCIP_Real memorylimit;
 
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
    SCIP_VAR** vars;
@@ -335,8 +333,6 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    int i;
 
    SCIP_Bool success;
-
-   SCIP_RETCODE retcode;
 
    assert(heur != NULL);
    assert(scip != NULL);
@@ -408,6 +404,13 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
+
+   /* abort if no time is left or not enough memory to create a copy of SCIP */
+   if( !success )
+      return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
 
    SCIPdebugMsg(scip, "running localbranching heuristic ...\n");
@@ -424,13 +427,17 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    success = FALSE;
 
    /* create a problem copy as sub SCIP */
-   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "localbranching", NULL, NULL, 0, heurdata->uselprows, heurdata->copycuts, &success) );
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "localbranching", NULL, NULL, 0, heurdata->uselprows,
+         heurdata->copycuts, &success, NULL) );
 
    /* create event handler for LP events */
    eventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecLocalbranching, NULL) );
    if( eventhdlr == NULL )
    {
+      /* free hash map */
+      SCIPhashmapFree(&varmapfw);
+
       SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
       return SCIP_PLUGINNOTFOUND;
    }
@@ -452,38 +459,22 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
-#ifndef SCIP_DEBUG
-   /* disable output to console */
+#ifdef SCIP_DEBUG
+   /* for debugging, enable full output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#else
+   /* disable statistic timing inside sub SCIP and output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 #endif
 
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(scip, memorylimit) )
-   {
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-   }
-
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
-      goto TERMINATE;
-
-   /* disable statistic timing inside sub SCIP */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
-
    /* set limits for the subproblem */
+   SCIP_CALL( SCIPcopyLimits(scip, subscip) );
    heurdata->nodelimit = nsubnodes;
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", MAX(10, nsubnodes/10)) );
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->bestsollimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
    /* forbid recursive call of heuristics and separators solving subMIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
@@ -534,6 +525,9 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
    }
 
+   /* speed up sub-SCIP by not checking dual LP feasibility */
+   SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+
    /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
     * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
     * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
@@ -578,7 +572,12 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    /* solve the subproblem */
    SCIPdebugMsg(scip, "solving local branching subproblem with neighborhoodsize %d and maxnodes %" SCIP_LONGINT_FORMAT "\n",
       heurdata->curneighborhoodsize, nsubnodes);
-   retcode = SCIPsolve(subscip);
+
+
+   /* Errors in solving the subproblem should not kill the overall solving process
+    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+    */
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
    /* drop LP events of sub-SCIP */
    if( !heurdata->uselprows )
@@ -586,17 +585,6 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       assert(eventhdlr != NULL);
 
       SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
-   }
-
-   /* Errors in solving the subproblem should not kill the overall solving process
-    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-    */
-   if( retcode != SCIP_OKAY )
-   {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip, "Error while solving subproblem in local branching heuristic; sub-SCIP terminated with code <%d>\n",retcode);
    }
 
    /* print solving statistics of subproblem if we are in SCIP's debug mode */
@@ -695,11 +683,10 @@ SCIP_RETCODE SCIPincludeHeurLocalbranching(
    )
 {
    SCIP_HEURDATA* heurdata;
-
    SCIP_HEUR* heur;
 
    /* create Localbranching primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -761,7 +748,6 @@ SCIP_RETCODE SCIPincludeHeurLocalbranching(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
          "should uct node selection be used at the beginning of the search?",
          &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }

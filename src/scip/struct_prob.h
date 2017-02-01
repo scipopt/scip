@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_prob.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for storing and manipulating the main problem
  * @author Tobias Achterberg
  */

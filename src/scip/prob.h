@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prob.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for storing and manipulating the main problem
  * @author Tobias Achterberg
  */
@@ -135,6 +136,7 @@ void SCIPprobSetCopy(
 extern
 SCIP_RETCODE SCIPprobFree(
    SCIP_PROB**           prob,               /**< pointer to problem data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -470,6 +472,12 @@ extern
 void SCIPprobUpdateDualbound(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
+   );
+
+/** invalidates the dual bound */
+extern
+void SCIPprobInvalidateDualbound(
+   SCIP_PROB*            prob                /**< problem data */
    );
 
 /** returns the external value of the given internal objective value */

@@ -201,6 +201,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  Puts the LP relaxations of all "initial" constraints into the LP. The method should put a canonic LP relaxation
  *  of all given constraints to the LP with calls to SCIPaddCut().
  *
+ *  @warning It is not guaranteed that the problem is going to be declared infeasible if the infeasible pointer is set
+ *           to TRUE. Therefore, it is recommended that users do not end this method prematurely when an infeasiblity
+ *           is detected.
+ *
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
@@ -447,9 +451,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - SCIP_DIDNOTFIND : the propagator searched but did not find any domain reductions
  *  - SCIP_DIDNOTRUN  : the propagator was skipped
  *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
+ *  - SCIP_DELAYNODE  : the current node should be postponed (return value only valid for BEFORELP propagation)
  */
-#define SCIP_DECL_CONSPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, int nmarkedconss, \
-      SCIP_PROPTIMING proptiming, SCIP_RESULT* result)
+#define SCIP_DECL_CONSPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
+      int nmarkedconss, SCIP_PROPTIMING proptiming, SCIP_RESULT* result)
 
 /** presolving method of constraint handler
  *
@@ -853,6 +858,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
  *  - diveset         : diving settings for scoring
+ *  - heurdata        : data of the calling heuristic
  *  - sol             : current diving solution, usually the LP relaxation solution
  *
  *  output:
@@ -860,7 +866,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - infeasible      : pointer to store whether the constraint handler detected an infeasibility in the local node
  */
 #define SCIP_DECL_CONSGETDIVEBDCHGS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_DIVESET* diveset, \
-      SCIP_SOL* sol, SCIP_Bool* success, SCIP_Bool* infeasible)
+      SCIP_HEURDATA* heurdata, SCIP_SOL* sol, SCIP_Bool* success, SCIP_Bool* infeasible)
 
 #ifdef __cplusplus
 }

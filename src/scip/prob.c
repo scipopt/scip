@@ -393,6 +393,7 @@ void SCIPprobSetCopy(
 /** frees problem data structure */
 SCIP_RETCODE SCIPprobFree(
    SCIP_PROB**           prob,               /**< pointer to problem data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -400,6 +401,7 @@ SCIP_RETCODE SCIPprobFree(
    SCIP_LP*              lp                  /**< current LP data (or NULL, if it's the original problem) */
    )
 {
+   SCIP_Bool warnreleasevar = TRUE;
    int v;
 
    assert(prob != NULL);
@@ -451,6 +453,14 @@ SCIP_RETCODE SCIPprobFree(
    for( v = (*prob)->nvars - 1; v >= 0; --v )
    {
       assert(SCIPvarGetProbindex((*prob)->vars[v]) >= 0);
+
+      if ( warnreleasevar && SCIPvarGetNUses((*prob)->vars[v]) > 1 )
+      {
+         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP. Consider releasing variable first.\n",
+            (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->vars[v]));
+         warnreleasevar = FALSE;
+      }
+
       SCIP_CALL( SCIPvarRemove((*prob)->vars[v], blkmem, NULL, set, TRUE) );
       SCIP_CALL( SCIPvarRelease(&(*prob)->vars[v], blkmem, set, eventqueue, lp) );
    }
@@ -460,6 +470,14 @@ SCIP_RETCODE SCIPprobFree(
    for( v = (*prob)->nfixedvars - 1; v >= 0; --v )
    {
       assert(SCIPvarGetProbindex((*prob)->fixedvars[v]) == -1);
+
+      if ( warnreleasevar && SCIPvarGetNUses((*prob)->fixedvars[v]) > 1 )
+      {
+         SCIPmessageFPrintWarning(messagehdlr, "%s variable <%s> not released when freeing SCIP. Consider releasing variable first.\n",
+            (*prob)->transformed ? "Transformed" : "Original", SCIPvarGetName((*prob)->fixedvars[v]));
+         warnreleasevar = FALSE;
+      }
+
       SCIP_CALL( SCIPvarRelease(&(*prob)->fixedvars[v], blkmem, set, eventqueue, lp) );
    }
    BMSfreeMemoryArrayNull(&(*prob)->fixedvars);
@@ -578,7 +596,7 @@ SCIP_RETCODE SCIPprobTransform(
    (*target)->permuted = source->permuted;
 
    /* transform the conflict pool */
-   SCIP_CALL( SCIPconflictstoreTransform(conflictstore, blkmem, set, stat, tree, *target, eventfilter) );
+   SCIP_CALL( SCIPconflictstoreTransform(conflictstore, blkmem, set, stat, tree, *target, reopt) );
 
    return SCIP_OKAY;
 }
@@ -594,7 +612,6 @@ SCIP_RETCODE SCIPprobResetBounds(
    int v;
 
    assert(prob != NULL);
-   assert(!prob->transformed);
    assert(prob->nfixedvars == 0);
 
    for( v = 0; v < prob->nvars; ++v )
@@ -1226,7 +1243,12 @@ SCIP_RETCODE SCIPprobRemoveConsName(
    /* remove constraint's name from the namespace */
    if( consHasName(cons) && prob->consnames != NULL )
    {
-      SCIP_CALL( SCIPhashtableRemove(prob->consnames, (void*)cons) );
+      SCIP_CONS* currentcons;
+      currentcons = (SCIP_CONS*)SCIPhashtableRetrieve(prob->consnames, (void*)(cons->name));
+      if( currentcons == cons )
+      {
+         SCIP_CALL( SCIPhashtableRemove(prob->consnames, (void*)cons) );
+      }
    }
 
    return SCIP_OKAY;
@@ -1539,6 +1561,16 @@ void SCIPprobUpdateDualbound(
          SCIPABORT();
       }
    }
+}
+
+/** invalidates the dual bound */
+void SCIPprobInvalidateDualbound(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+
+   prob->dualbound = SCIP_INVALID;
 }
 
 /** if possible, scales objective function such that it is integral with gcd = 1 */

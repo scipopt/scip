@@ -185,11 +185,11 @@ SECTION: General Questions about SCIP
       the methods are ordered by topics.
     </p>
 
-    QUESTION: Can I use SCIP as a pure CP-Solver?
+    QUESTION: Can I use SCIP as a pure CP/SAT Solver?
     LABEL:scipascpsolver
     ANSWER:
     <p>
-        Yes. SCIP can be used as a pure CP-Solver by typing
+        Yes. SCIP can be used as a pure CP/SAT Solver by typing
         <code>set emphasis cpsolver</code> in the shell or by using the function <code>SCIPsetEmphasis()</code>.
         Furthermore, you can compile SCIP without any LP-Solver by <code>make LPS=none</code>.
         See <a href="#howtochangebehaviour">here</a> for more on changing the behavior of SCIP.
@@ -1115,6 +1115,26 @@ SECTION: Specific questions about the copy functionality in SCIP
         neighborhood heuristics (such as heur_rens.c). They can now easily copy the complete problem and fix a certain
         set of variables to work on a reasonable copy of the original problem.
     </p>
+    <p>
+        Since SCIP version 4.0.0, the additional copying method <code>SCIPcopyConsCompression()</code> is available,
+        which expects as additional argument a list of variables that should be fixed in the problem copy. These will be
+        fixed right away at creation, so that all constraints may treat those variables as constants to potentially
+        reduce the memory required to store the problem copy.
+    </p>
+    QUESTION: When should I use <code>SCIPcopy()</code> instead of <code>SCIPcopyConsCompression()</code>?
+    LABEL:comparecopyandconscompression
+    ANSWER:
+    <p>
+        This, of course, depends on the problem copy's intended use. The large neighborhood search heuristics such as, e.g.,
+        heur_rens.c, usually create a problem copy in which they fix a number of variables and solve the remaining, smaller
+        subproblem only once. In this case, it makes sense to use <code>SCIPcopyConsCompression()</code> that treats
+        fixed variables as constants at constraint creation time to save memory.
+    </p>
+    <p>
+        For a more general use of the problem copy such as resolving with different objective functions or multiple solves
+        for different sets of fixed variables, you should clearly use <code>SCIPcopy()</code> because this is beyond the
+        scope of a compressed copy.
+    </p>
 
     QUESTION: How do I get a copy of a variable or a constraint?
     LABEL:howtocopyvariablesandconstraints
@@ -1128,7 +1148,16 @@ SECTION: Specific questions about the copy functionality in SCIP
     LABEL:useofvalidpointer
     ANSWER:
     <p>
-        SCIP would like to know if the copied problem is a one to one copy. That is, if all problem defining objects
-        were successfully copied. If this is the case, all reductions made in the copy can be transferred to the
+        SCIP would like to know if the copied problem is a valid copy.
+        A problem copy is called valid if it is valid in both the primal and the dual sense, i.e., if
+        <ul>
+            <li>it is a relaxation of the source problem</li>
+            <li>it does not enlarge the feasible region.</li>
+        </ul>
+        If this is the case, all reductions made in the copy can be transferred to the
         original instance. The problem defining objects in SCIP are the constraint handlers and the variable pricers.
+    </p>
+    <p>
+       A constraint handler may choose to not copy a constraint and still declare the resulting copy as valid. Therefore, it must ensure
+       the feasibility of any solution to the problem copy in the original (source) space.
     </p>

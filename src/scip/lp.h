@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lp.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for LP management
  * @author Tobias Achterberg
  * @author Marc Pfetsch
@@ -1056,6 +1057,12 @@ SCIP_RETCODE SCIPlpFreeNorms(
    SCIP_LP*              lp,                 /**< LP data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS**       lpinorms            /**< pointer to LP pricing norms information */
+   );
+
+/** return the current cutoff bound of the lp */
+extern
+SCIP_Real SCIPlpGetCutoffbound(
+   SCIP_LP*              lp                  /**< current LP data */
    );
 
 /** sets the upper objective limit of the LP solver */

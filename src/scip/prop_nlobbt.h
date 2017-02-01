@@ -95,7 +95,10 @@
 extern "C" {
 #endif
 
-/** creates the nlobbt propagator and includes it in SCIP */
+/** creates the nlobbt propagator and includes it in SCIP
+ *
+ * @ingroup PropagatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePropNlobbt(
    SCIP*                 scip                /**< SCIP data structure */

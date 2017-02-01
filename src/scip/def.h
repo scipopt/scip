@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   def.h
+ * @ingroup INTERNALAPI
  * @brief  common defines and data types used in all packages of SCIP
  * @author Tobias Achterberg
  */
@@ -93,8 +94,8 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                321 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               2 /**< SCIP sub version number */
+#define SCIP_VERSION                400 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               0 /**< SCIP sub version number */
 #define SCIP_COPYRIGHT   "Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
@@ -232,7 +233,19 @@ extern "C" {
  * Tree settings
  */
 
-#define SCIP_MAXTREEDEPTH             65535  /**< maximal allowed depth of the branch-and-bound tree */
+#define SCIP_MAXTREEDEPTH             65534  /**< maximal allowed depth of the branch-and-bound tree */
+
+/*
+ * Probing scoring settings
+ */
+
+#define SCIP_PROBINGSCORE_PENALTYRATIO    2  /**< ratio for penalizing too small fractionalities in diving heuristics.
+                                              *   if the fractional part of a variable is smaller than a given threshold
+                                              *   the corresponding score gets penalized. due to numerical troubles
+                                              *   we will flip a coin whenever SCIPisEQ(scip, fractionality, threshold)
+                                              *   evaluates to true. this parameter defines the chance that this results
+                                              *   in penalizing the score, i.e., there is 1:2 chance for penalizing.
+                                              */
 
 /*
  * Global debugging settings
@@ -320,6 +333,7 @@ extern "C" {
                        }                                                                                      \
                        while( FALSE )
 
+#define SCIP_UNUSED(x) ((void) (x))
 
 /*
  * Define to mark deprecated API functions

@@ -86,7 +86,7 @@ struct SCIP_LPi
    SCIP_Real*            rngarray;           /**< array for storing range values */
    SCIP_Real*            valarray;           /**< array for storing coefficient values */
    int*                  cstat;              /**< array for storing column basis status */
-   int*                  rstat;              /**< array for storing row basis status */
+   int*                  rstat;              /**< array for storing row basis status (row status w.r.t. slack columns) */
    int*                  indarray;           /**< array for storing coefficient indices */
 
    int                   boundchgsize;       /**< size of larray and uarray */
@@ -113,7 +113,7 @@ struct SCIP_LPiState
    int                   ncols;              /**< number of LP columns */
    int                   nrows;              /**< number of LP rows */
    COLPACKET*            packcstat;          /**< column basis status in compressed form */
-   ROWPACKET*            packrstat;          /**< row basis status in compressed form */
+   ROWPACKET*            packrstat;          /**< row basis status in compressed form (row status w.r.t. slack columns) */
 };
 
 /**@name Debug check methods
@@ -151,25 +151,11 @@ void debugCheckRowrang(
    assert(0 <= firstrow && firstrow <= lastrow && lastrow < nrows);
 }
 
-/** check that current objective sense equals the given one */
-static
-void debugCheckObjsen(
-   SCIP_LPI*             lpi,                /**< LP interface structure */
-   SCIP_OBJSEN           objsen              /**< objective sense to be present */
-   )
-{
-   int curobjsens;
-
-   SCIP_CALL_ABORT( SCIPlpiGetObjsen(lpi, &curobjsens) );
-   assert(curobjsens == objsen);
-}
-
 #else
 
 /* in optimized mode the checks are replaced with an empty command */
 #define debugCheckColrang(lpi, firstcol, lastcol) /* */
 #define debugCheckRowrang(lpi, firstrow, lastrow) /* */
-#define debugCheckObjsen(lpi, objsen) /* */
 #endif
 
 /**@} */
@@ -333,7 +319,7 @@ static
 void lpistatePack(
    SCIP_LPISTATE*        lpistate,           /**< pointer to LPi state data */
    const int*            cstat,              /**< basis status of columns in unpacked format */
-   const int*            rstat               /**< basis status of rows in unpacked format */
+   const int*            rstat               /**< basis status of rows in unpacked format (row status w.r.t. slack columns) */
    )
 {
    assert(lpistate != NULL);
@@ -349,7 +335,7 @@ static
 void lpistateUnpack(
    const SCIP_LPISTATE*  lpistate,           /**< pointer to LPi state data */
    int*                  cstat,              /**< buffer for storing basis status of columns in unpacked format */
-   int*                  rstat               /**< buffer for storing basis status of rows in unpacked format */
+   int*                  rstat               /**< buffer for storing basis status of rows in unpacked format (row status w.r.t. slack columns) */
    )
 {
    assert(lpistate != NULL);
@@ -688,6 +674,17 @@ void* SCIPlpiGetSolverPointer(
    )
 {
    return (void*) lpi->xprslp;
+}
+
+/** pass integrality information to LP solver */
+SCIP_RETCODE SCIPlpiSetIntegralityInformation(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   ncols,              /**< length of integrality array */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   )
+{
+   SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
+   return SCIP_LPERROR;
 }
 
 /**@} */
@@ -1276,8 +1273,8 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 SCIP_RETCODE SCIPlpiChgObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
-   int*                  ind,                /**< column indices to change objective value for */
-   SCIP_Real*            obj                 /**< new objective values for columns */
+   const int*            ind,                /**< column indices to change objective value for */
+   const SCIP_Real*      obj                 /**< new objective values for columns */
    )
 {
    assert(lpi != NULL);
@@ -1559,7 +1556,6 @@ SCIP_RETCODE SCIPlpiGetRows(
 {
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
-   assert(lhss == rhss);
 
    debugCheckRowrang(lpi, firstrow, lastrow);
 
@@ -2082,7 +2078,7 @@ SCIP_RETCODE lpiStrongbranches(
    BMSfreeMemoryArray(&dbndval);
    BMSfreeMemoryArray(&mbndind);
 
-      return SCIP_OKAY;
+   return SCIP_OKAY;
 }
 
 /** performs strong branching iterations on one @b fractional candidate */
@@ -2238,11 +2234,15 @@ SCIP_Bool SCIPlpiHasPrimalRay(
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(lpi->solstat >= 0);
-   assert(lpi->solstat == XPRS_LP_UNBOUNDED);
 
+   /* check if the LP solution status is unbounded and that primal was solving the LP */
+   if (lpi->solstat != XPRS_LP_UNBOUNDED || lpi->solmethod != 'p')
+      return FALSE;
+
+   /* check if we can construct a primal ray */
    ABORT_ZERO( lpi->messagehdlr, FALSE, XPRSgetprimalray(lpi->xprslp, NULL, &hasRay) );
 
-   return hasRay;
+   return (SCIP_Bool)hasRay;
 }
 
 /** returns TRUE iff LP is proven to be primal feasible and unbounded */
@@ -2586,10 +2586,10 @@ SCIP_RETCODE SCIPlpiGetDualfarkas(
    assert(lpi->solstat >= 0);
    assert(dualfarkas != NULL);
 
+   /**@note The Farkas proof might be numerically questionable which is indicated by "hasRay" use SCIPlpiHasDualRay() to
+    *       check that!
+    */
    CHECK_ZERO( lpi->messagehdlr, XPRSgetdualray(lpi->xprslp, dualfarkas, &hasRay) );
-
-   if( !hasRay )
-      return SCIP_LPERROR;
 
    return SCIP_OKAY;
 }
@@ -2641,15 +2641,37 @@ SCIP_RETCODE SCIPlpiGetRealSolQuality(
 SCIP_RETCODE SCIPlpiGetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int*                  cstat,              /**< array to store column basis status, or NULL */
-   int*                  rstat               /**< array to store row basis status, or NULL */
+   int*                  rstat               /**< array to store row basis status, or NULL (the status is need for the row and not for the slack column) */
    )
 {
+   int nrows;
+   int r;
+
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
 
+   assert(SCIP_BASESTAT_LOWER == 0);
+   assert(SCIP_BASESTAT_BASIC == 1);
+   assert(SCIP_BASESTAT_UPPER == 2);
+
    SCIPdebugMessage("saving Xpress basis into %p/%p\n", (void*)rstat, (void*)cstat);
 
+   /* get the basis status */
    CHECK_ZERO( lpi->messagehdlr, XPRSgetbasis(lpi->xprslp, rstat, cstat) );
+
+   /* get the number of rows */
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
+
+   /* XPRSgetbasis collects the basis status for the column and the slack column, since SCIP request the basis for
+    * columns and rows we need to convert slack column status to row status
+    */
+   for( r = 0; r < nrows; ++r )
+   {
+      if (rstat[r] == SCIP_BASESTAT_LOWER)
+         rstat[r] = SCIP_BASESTAT_UPPER;
+      else if (rstat[r] == SCIP_BASESTAT_UPPER)
+         rstat[r] = SCIP_BASESTAT_LOWER;
+   }
 
    return SCIP_OKAY;
 }
@@ -2657,20 +2679,52 @@ SCIP_RETCODE SCIPlpiGetBase(
 /** sets current basis status for columns and rows */
 SCIP_RETCODE SCIPlpiSetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  cstat,              /**< array with column basis status */
-   int*                  rstat               /**< array with row basis status */
+   const int*            cstat,              /**< array with column basis status */
+   const int*            rstat               /**< array with row basis status */
    )
 {
+   int* slackstats;
+   int nrows;
+   int r;
+
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(cstat != NULL);
    assert(rstat != NULL);
 
+   assert(SCIP_BASESTAT_LOWER == 0);
+   assert(SCIP_BASESTAT_BASIC == 1);
+   assert(SCIP_BASESTAT_UPPER == 2);
+
    SCIPdebugMessage("loading basis %p/%p into Xpress\n", (void*)rstat, (void*)cstat);
 
    invalidateSolution(lpi);
 
-   CHECK_ZERO( lpi->messagehdlr, XPRSloadbasis(lpi->xprslp, rstat, cstat) );
+   /* get the number of rows */
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_ROWS, &nrows) );
+
+   SCIP_ALLOC( BMSallocMemoryArray(&slackstats, nrows) );
+
+   /* XPRSloadbasis expects the basis status for the column and the slack column, since SCIP has the basis status for
+    * columns and rows we need to convert row status to slack column status
+    */
+   for( r = 0; r < nrows; ++r )
+   {
+      if (rstat[r] == SCIP_BASESTAT_LOWER)
+         slackstats[r] = SCIP_BASESTAT_UPPER;
+      else if (rstat[r] == SCIP_BASESTAT_UPPER)
+         slackstats[r] = SCIP_BASESTAT_LOWER;
+      else
+         slackstats[r] = rstat[r];
+   }
+
+   /* load basis information into Xpress
+    *
+    * @note Xpress expects the row status w.r.t. slack columns!
+    */
+   CHECK_ZERO( lpi->messagehdlr, XPRSloadbasis(lpi->xprslp, slackstats, cstat) );
+
+   BMSfreeMemoryArray(&slackstats);
 
    lpi->clearstate = FALSE;
 
@@ -2965,7 +3019,10 @@ SCIP_RETCODE SCIPlpiGetState(
    SCIP_CALL( ensureCstatMem(lpi, ncols) );
    SCIP_CALL( ensureRstatMem(lpi, nrows) );
 
-   /* get unpacked basis information from Xpress */
+   /* get unpacked basis information from Xpress
+    *
+    * @note The row status is w.r.t. slack columns!
+    */
    CHECK_ZERO( lpi->messagehdlr, XPRSgetbasis(lpi->xprslp, lpi->rstat, lpi->cstat) );
 
    /* pack LPi state data */
@@ -2982,7 +3039,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
    )
 {
    int nrows;
@@ -3006,8 +3063,8 @@ SCIP_RETCODE SCIPlpiSetState(
    /* the dimension of the lpi state should not be larger than the current problem; it might be that columns and rows
     * are added since the saving of the lpi state
     */
-   assert(lpistate == NULL || lpistate->ncols <= ncols);
-   assert(lpistate == NULL || lpistate->nrows <= nrows);
+   assert(lpistate->ncols <= ncols);
+   assert(lpistate->nrows <= nrows);
 
    SCIPdebugMessage("loading LPI state %p (%d cols, %d rows) into Xpress\n", (void*)lpistate, lpistate->ncols, lpistate->nrows);
 
@@ -3015,7 +3072,10 @@ SCIP_RETCODE SCIPlpiSetState(
    SCIP_CALL( ensureCstatMem(lpi, ncols) );
    SCIP_CALL( ensureRstatMem(lpi, nrows) );
 
-   /* unpack LPi state data */
+   /* unpack LPi state data
+    *
+    * @note The row status is w.r.t. slack column!
+    */
    lpistateUnpack(lpistate, lpi->cstat, lpi->rstat);
 
    /* extend the basis to the current LP beyond the previously existing columns */
@@ -3041,7 +3101,10 @@ SCIP_RETCODE SCIPlpiSetState(
    for( i = lpistate->nrows; i < nrows; ++i )
       lpi->rstat[i] = SCIP_BASESTAT_BASIC;
 
-   /* load basis information into Xpress */
+   /* load basis information into Xpress
+    *
+    * @note Xpress expects the row status w.r.t. slack columns!
+    */
    CHECK_ZERO( lpi->messagehdlr, XPRSloadbasis(lpi->xprslp, lpi->rstat, lpi->cstat) );
 
    lpi->clearstate = FALSE;
@@ -3152,7 +3215,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
 {
    assert(lpinorms == NULL);
@@ -3212,7 +3275,12 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       break;
    case SCIP_LPPAR_SCALING:
       CHECK_ZERO( lpi->messagehdlr, XPRSgetintcontrol(lpi->xprslp, XPRS_SCALING, &ictrlval) );
-      *ival = (ictrlval != 0);
+      if( ictrlval == 0 )
+         *ival = 0;
+      else if( ictrlval == 16 )
+         *ival = 2;
+      else
+         *ival = 1;
       break;
    case SCIP_LPPAR_PRESOLVING:
       *ival = lpi->par_presolve;
@@ -3275,8 +3343,20 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_KEEPBASIS, (ival == FALSE) ? 1 : 0) );
       break;
    case SCIP_LPPAR_SCALING:
-      assert(ival == TRUE || ival == FALSE);
-      CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_SCALING, (ival == TRUE) ? 35 : 0) );
+      assert(ival >= 0 && ival <= 2);
+      if( ival == 0 )
+      {
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_SCALING, 0) );
+      }
+      else if( ival == 1 )
+      {
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_SCALING, 163) );
+      }
+      else
+      {
+         CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_SCALING, 16) );
+      }
+
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);
@@ -3339,15 +3419,39 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       *dval = dctrlval;
       break;
    case SCIP_LPPAR_LOBJLIM:
-      debugCheckObjsen(lpi, SCIP_OBJSEN_MAXIMIZE);
+   {
+      SCIP_OBJSEN objsen;
+
+      /* get objective sense of the current LP */
+      SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsen) );
+
+      /* in case we have a minimization problem we cannot return an objective lower bound since Xpress does not has such
+       * a control
+       */
+      if (objsen != SCIP_OBJSEN_MAXIMIZE)
+         return SCIP_PARAMETERUNKNOWN;
+
       CHECK_ZERO( lpi->messagehdlr, XPRSgetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, &dctrlval) );
       *dval = dctrlval;
       break;
+   }
    case SCIP_LPPAR_UOBJLIM:
-      debugCheckObjsen(lpi, SCIP_OBJSEN_MINIMIZE);
+   {
+      SCIP_OBJSEN objsen;
+
+      /* get objective sense of the current LP */
+      SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsen) );
+
+      /* in case we have a maximization problem we cannot return an objective upper bound since Xpress does not has such
+       * a control
+       */
+      if (objsen != SCIP_OBJSEN_MINIMIZE)
+         return SCIP_PARAMETERUNKNOWN;
+
       CHECK_ZERO( lpi->messagehdlr, XPRSgetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, &dctrlval) );
       *dval = dctrlval;
       break;
+   }
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -3388,13 +3492,37 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, dval) );
       break;
    case SCIP_LPPAR_LOBJLIM:
-      debugCheckObjsen(lpi, SCIP_OBJSEN_MAXIMIZE);
+   {
+      SCIP_OBJSEN objsen;
+
+      /* get objective sense of the current LP */
+      SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsen) );
+
+      /* in case we have a minimizationn problem we cannot return an objective lower bound since Xpress does not has such
+       * a control
+       */
+      if (objsen != SCIP_OBJSEN_MAXIMIZE)
+         return SCIP_PARAMETERUNKNOWN;
+
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, dval) );
       break;
+   }
    case SCIP_LPPAR_UOBJLIM:
-      debugCheckObjsen(lpi, SCIP_OBJSEN_MINIMIZE);
+   {
+      SCIP_OBJSEN objsen;
+
+      /* get objective sense of the current LP */
+      SCIP_CALL( SCIPlpiGetObjsen(lpi, &objsen) );
+
+      /* in case we have a maximization problem we cannot return an objective upper bound since Xpress does not has such
+       * a control
+       */
+      if (objsen != SCIP_OBJSEN_MINIMIZE)
+         return SCIP_PARAMETERUNKNOWN;
+
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MIPABSCUTOFF, dval) );
       break;
+   }
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/

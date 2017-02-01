@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   conflictstore.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for storing conflicts
  * @author Jakob Witzig
  */
@@ -32,6 +33,7 @@
 #include "scip/type_event.h"
 #include "scip/type_conflict.h"
 #include "scip/type_prob.h"
+#include "scip/type_reopt.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_tree.h"
@@ -54,7 +56,7 @@ SCIP_RETCODE SCIPconflictstoreFree(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
-   SCIP_EVENTFILTER*     eventfilter         /**< event filter */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 /** cleans conflict store */
@@ -63,7 +65,8 @@ SCIP_RETCODE SCIPconflictstoreClean(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat                /**< dynamic SCIP statistics */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 /** adds a constraint to the pool of dual rays
@@ -73,11 +76,12 @@ SCIP_RETCODE SCIPconflictstoreClean(
 extern
 SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
-   SCIP_CONS*            dualray,            /**< dual ray to add */
+   SCIP_CONS*            dualraycons,        /**< constraint based on a dual ray */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
-   SCIP_PROB*            transprob           /**< transformed problem */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 /** adds a conflict to the conflict store
@@ -90,9 +94,9 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
-   SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_EVENTFILTER*     eventfilter,        /**< eventfilter (or NULL original constraint) */
+   SCIP_TREE*            tree,               /**< branch and bound tree (or NULL for an original constraint) */
+   SCIP_PROB*            transprob,          /**< transformed problem (or NULL for an original constraint) */
+   SCIP_REOPT*           reopt,              /**< reoptimization data */
    SCIP_CONS*            cons,               /**< constraint representing the conflict */
    SCIP_CONFTYPE         conftype,           /**< type of the conflict */
    SCIP_Bool             cutoffinvolved,     /**< is a cutoff bound involved in this conflict */
@@ -107,6 +111,7 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_PROB*            transprob,          /**< transformed problem*/
+   SCIP_REOPT*           reopt,              /**< reoptimization data */
    SCIP_Real             cutoffbound         /**< current cutoff bound */
    );
 
@@ -149,7 +154,7 @@ SCIP_RETCODE SCIPconflictstoreTransform(
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_EVENTFILTER*     eventfilter         /**< eventfiler */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 #ifdef __cplusplus

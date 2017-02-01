@@ -37,6 +37,7 @@
 #include "scip/mem.h"
 #include "scip/var.h"
 #include "scip/history.h"
+#include "scip/concsolver.h"
 
 
 
@@ -94,7 +95,9 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->inrestart = FALSE;
    (*stat)->collectvarhistory = TRUE;
    (*stat)->performpresol = FALSE;
+   (*stat)->branchedunbdvar = FALSE;
    (*stat)->subscipdepth = 0;
+   (*stat)->detertimecnt = 0.0;
    (*stat)->nreoptruns = 0;
 
    SCIPstatReset(*stat, set, transprob, origprob);
@@ -231,6 +234,7 @@ void SCIPstatReset(
    stat->nconflictlpiterations = 0;
    stat->ntotalnodes = 0;
    stat->ntotalinternalnodes = 0;
+   stat->ntotalnodesmerged = 0;
    stat->ncreatednodes = 0;
    stat->nlpsolsfound = 0;
    stat->nrelaxsolsfound = 0;
@@ -256,6 +260,7 @@ void SCIPstatReset(
    stat->nvaridx = stat->marked_nvaridx;
    stat->ncolidx = stat->marked_ncolidx;
    stat->nrowidx = stat->marked_nrowidx;
+   stat->nnz = 0;
    stat->lpcount = 0;
    stat->relaxcount = 0;
    stat->nlps = 0;
@@ -305,6 +310,7 @@ void SCIPstatReset(
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
+   stat->branchedunbdvar = FALSE;
 
    stat->ndivesetlpiterations = 0;
    stat->ndivesetcalls = 0;
@@ -509,6 +515,7 @@ void SCIPstatResetCurrentRun(
    stat->nobjleaves = 0;
    stat->ninfeasleaves = 0;
    stat->nfeasleaves = 0;
+   stat->branchedunbdvar = FALSE;
 
    stat->nearlybacktracks = 0;
    stat->nnodesaboverefbound = 0;

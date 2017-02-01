@@ -63,7 +63,10 @@
 extern "C" {
 #endif
 
-/** includes the mst file reader into SCIP */
+/** includes the mst file reader into SCIP
+ *
+ *  @ingroup FileReaderIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeReaderMst(
    SCIP*                 scip                /**< SCIP data structure */

@@ -430,7 +430,7 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(eventhdlrbinvars != NULL);
    assert(eventhdlrintvars != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
 
    (*conshdlrdata)->eventhdlrbinvars = eventhdlrbinvars;
    (*conshdlrdata)->eventhdlrintvars = eventhdlrintvars;
@@ -449,7 +449,7 @@ SCIP_RETCODE conshdlrdataFree(
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
 
-   SCIPfreeMemory(scip, conshdlrdata);
+   SCIPfreeBlockMemory(scip, conshdlrdata);
 
    return SCIP_OKAY;
 }

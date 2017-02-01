@@ -172,6 +172,7 @@ SCIP_DECL_SEPACOPY(sepaCopyGomory)
 }
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
+/**! [SnippetSepaFreeGomory] */
 static
 SCIP_DECL_SEPAFREE(sepaFreeGomory)
 {  /*lint --e{715}*/
@@ -186,12 +187,13 @@ SCIP_DECL_SEPAFREE(sepaFreeGomory)
    /* free random number generator */
    SCIPrandomFree(&sepadata->randnumgen);
 
-   SCIPfreeMemory(scip, &sepadata);
+   SCIPfreeBlockMemory(scip, &sepadata);
 
    SCIPsepaSetData(sepa, NULL);
 
    return SCIP_OKAY;
 }
+/**! [SnippetSepaFreeGomory] */
 
 
 /** LP solution separation method of separator */
@@ -609,7 +611,7 @@ SCIP_RETCODE SCIPincludeSepaGomory(
    SCIP_SEPA* sepa;
 
    /* create separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
    sepadata->lastncutsfound = 0;
 
    /* create random number generator */

@@ -86,6 +86,7 @@ struct SCIP_HeurData
    SCIP_Real             iterquot;           /**< contingent of NLP iterations in relation to the number of nodes in SCIP */
    int                   itermin;            /**< minimal number of iterations required to start local search */
    SCIP_Bool             runalways;          /**< whether to run NLP heuristic always (independent of iteroffset,iterquot,itermin) */
+   int                   nsolfound;          /**< number of solutions found in this run (because we give authorship of solutions we found to the heuristic that proposed the starting point) */
 };
 
 
@@ -1018,6 +1019,15 @@ SCIP_RETCODE solveSubNLP(
          *result = SCIP_CUTOFF;
       goto CLEANUP;
    }
+   if( SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVING )
+   {
+      /* presolve was stopped because some still existing limit was hit (e.g., memory) */
+      SCIPdebugMsg(scip, "SCIP returned from presolve in stage presolving with status %d\n", SCIPgetStatus(heurdata->subscip));
+      /* if presolve found subproblem infeasible, report this to caller by setting *result to cutoff */
+      if( SCIPgetStatus(heurdata->subscip) == SCIP_STATUS_INFEASIBLE )
+         *result = SCIP_CUTOFF;
+      goto CLEANUP;
+   }
    assert(SCIPgetStage(heurdata->subscip) == SCIP_STAGE_PRESOLVED);
 
    if( SCIPgetNVars(heurdata->subscip) > 0 )
@@ -1085,6 +1095,7 @@ SCIP_RETCODE solveSubNLP(
                SCIPdebugMsg(scip, "SCIP stored solution from sub-SCIP root node\n");
             }
             *result = SCIP_FOUNDSOL;
+            ++heurdata->nsolfound;
             break;
          }
          else
@@ -1112,6 +1123,7 @@ SCIP_RETCODE solveSubNLP(
                SCIPdebugMsg(scip, "SCIP solution from sub-SCIP root node is feasible\n");
             }
             *result = SCIP_FOUNDSOL;
+            ++heurdata->nsolfound;
             break;
          }
          else
@@ -1237,6 +1249,12 @@ SCIP_RETCODE solveSubNLP(
       /* set feasibility tolerance, if tighttolerances is set */
       SCIP_CALL( SCIPsetNLPRealPar(heurdata->subscip, SCIP_NLPPAR_FEASTOL, heurdata->resolvetolfactor*SCIPfeastol(scip)) );
    }
+   /* TODO Would it make sense to already start with a tighter feastol than SCIP's?
+   else
+   {
+      SCIP_CALL( SCIPsetNLPRealPar(heurdata->subscip, SCIP_NLPPAR_FEASTOL, 0.1*SCIPfeastol(scip)) );
+   }
+   */
 
    /* set option file to use by NLP solver */
    if( heurdata->nlpoptfile != NULL && *heurdata->nlpoptfile != '\0' )
@@ -1338,6 +1356,7 @@ SCIP_RETCODE solveSubNLP(
             }
 
             *result = SCIP_FOUNDSOL;
+            ++heurdata->nsolfound;
          }
          else if( !tighttolerances && heurdata->resolvetolfactor < 1.0 )
          {
@@ -1394,6 +1413,7 @@ SCIP_RETCODE solveSubNLP(
                SCIPdebugMsg(scip, "solution reported by NLP solver feasible for SCIP\n");
             }
             *result = SCIP_FOUNDSOL;
+            ++heurdata->nsolfound;
          }
          else if( !tighttolerances && heurdata->resolvetolfactor < 1.0 )
          {
@@ -2031,7 +2051,7 @@ SCIP_DECL_HEURFREE(heurFreeSubNlp)
    assert(heurdata->var_scip2subscip == NULL);
    assert(heurdata->startcand == NULL);
 
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
 
    return SCIP_OKAY;
 }
@@ -2052,6 +2072,9 @@ SCIP_DECL_HEURINITSOL(heurInitsolSubNlp)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
    assert(heurdata->subscip == NULL);
+
+   /* reset solution found counter */
+   heurdata->nsolfound = 0;
 
    if( heurdata->keepcopy )
    {
@@ -2193,7 +2216,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
       itercontingent = (SCIP_Longint)(heurdata->iterquot * SCIPgetNNodes(scip));
 
       /* weight by previous success of heuristic */
-      itercontingent = (SCIP_Longint)(itercontingent * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
+      itercontingent = (SCIP_Longint)(itercontingent * 3.0 * (heurdata->nsolfound+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
       /* add the fixed offset */
       itercontingent += heurdata->iteroffset;
       /* subtract the number of iterations used so far */
@@ -2203,7 +2226,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
       {
          /* not enough iterations left to start NLP solver */
          SCIPdebugMsg(scip, "skip NLP heuristic; contingent=%" SCIP_LONGINT_FORMAT "; minimal number of iterations=%d; success ratio=%g\n",
-            itercontingent, heurdata->itermin, (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
+            itercontingent, heurdata->itermin, (heurdata->nsolfound+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
          return SCIP_OKAY;
       }
 
@@ -2272,7 +2295,7 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP_HEUR* heur;
 
    /* create Nlp primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    BMSclearMemory(heurdata);
 
    /* include variable event handler */

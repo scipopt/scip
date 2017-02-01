@@ -813,7 +813,7 @@ SCIP_DECL_CONSFREE(consFreeSuperindicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    SCIPconshdlrSetData(conshdlr, NULL);
 
@@ -1901,7 +1901,7 @@ SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
    SCIP_DIALOG* dialog;
 
    /* create superindicator constraint handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
 
    conshdlrdata->nrejects = 0;
 

@@ -12,29 +12,29 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   ReaderMOP.cpp
- * @brief  mop reader
- * @author Sebastian Schenker, Timo Strunk
+/**
+ * @file ReaderMOP.cpp
+ * @brief Class implementing .mop file reader
+ * @author Sebastian Schenker
+ * @author Timo Strunk
  *
- * The mop-reader adapts the mps-reader of SCIP by the functionality to read multiple objectives.
- *
+ * Adaption of SCIP MPS reader towards MOP format with multiple objectives.
  * The input file has to follow some simple conventions
- * - It has to contain a problem in 
+ * - It has to contain a problem in
  * <a href="http://en.wikipedia.org/wiki/MPS_%28format%29">MPS</a> format
  * - The file extension must be <code>.mop</code>
  * - Every row marked <code>N</code> is treated as an objective
- *
  */
 
 #include "ReaderMOP.h"
-#include "objscip/objscip.h"
-#include "ProbDataObjectives.h"
 
 #include <iostream>
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
 
+#include "objscip/objscip.h"
+#include "prob_data_objectives.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
@@ -48,13 +48,13 @@
 #include "scip/cons_bounddisjunction.h"
 #include "scip/pub_misc.h"
 
-#define MPS_MAX_LINELEN  1024
-#define MPS_MAX_NAMELEN   256
-#define MPS_MAX_VALUELEN   26
-#define MPS_MAX_FIELDLEN   20
+#define MPS_MAX_LINELEN  1024 ///< global define
+#define MPS_MAX_NAMELEN   256 ///< global define
+#define MPS_MAX_VALUELEN   26 ///< global define
+#define MPS_MAX_FIELDLEN   20 ///< global define
 
-#define PATCH_CHAR    '_'
-#define BLANK         ' '
+#define PATCH_CHAR    '_' ///< global define
+#define BLANK         ' ' ///< global define
 
 /** enum containing all mps sections */
 enum MpsSection
@@ -76,29 +76,29 @@ enum MpsSection
    MPS_INDICATORS,
    MPS_ENDATA
 };
-typedef enum MpsSection MPSSECTION;
+typedef enum MpsSection MPSSECTION; ///< typedef
 
 /** mps input structure */
 struct MpsInput
 {
-   MPSSECTION            section;
-   SCIP_FILE*            fp;
-   int                   lineno;
-   SCIP_OBJSENSE         objsense;
-   SCIP_Bool             haserror;
-   char                  buf[MPS_MAX_LINELEN];
-   const char*           f0;
-   const char*           f1;
-   const char*           f2;
-   const char*           f3;
-   const char*           f4;
-   const char*           f5;
-   char                  probname[MPS_MAX_NAMELEN];
-   char                  objname [MPS_MAX_NAMELEN];
-   SCIP_Bool             isinteger;
-   SCIP_Bool             isnewformat;
+   MPSSECTION            section;  ///< MpsSection enum
+   SCIP_FILE*            fp; ///< SCIP file pointer
+   int                   lineno; ///< line number
+   SCIP_OBJSENSE         objsense; ///< Objective sense
+   SCIP_Bool             haserror; ///< Indicates error
+   char                  buf[MPS_MAX_LINELEN]; ///< character
+   const char*           f0; ///< @todo
+   const char*           f1; ///< @todo
+   const char*           f2; ///< @todo
+   const char*           f3; ///< @todo
+   const char*           f4; ///< @todo
+   const char*           f5; ///< @todo
+   char                  probname[MPS_MAX_NAMELEN]; ///< problem name
+   char                  objname [MPS_MAX_NAMELEN]; ///< objective identifier
+   SCIP_Bool             isinteger; ///< Indicates integer
+   SCIP_Bool             isnewformat; ///< Indicates new MPS format
 };
-typedef struct MpsInput MPSINPUT;
+typedef struct MpsInput MPSINPUT; ///< typedef
 
 /** sparse matrix representation */
 struct SparseMatrix
@@ -109,7 +109,7 @@ struct SparseMatrix
    int                   nentries;           /**< number of elements in the arrays */
    int                   sentries;           /**< number of slots in the arrays */
 };
-typedef struct SparseMatrix SPARSEMATRIX;
+typedef struct SparseMatrix SPARSEMATRIX; ///< typedef
 
 /** creates the mps input structure */
 static
@@ -122,7 +122,7 @@ SCIP_RETCODE mpsinputCreate(
    assert(mpsi != NULL);
    assert(fp != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, mpsi) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, mpsi) );
 
    (*mpsi)->section     = MPS_NAME;
    (*mpsi)->fp          = fp;
@@ -151,7 +151,7 @@ void mpsinputFree(
    MPSINPUT**            mpsi                /**< mps input structure */
    )
 {
-   SCIPfreeMemory(scip, mpsi);
+   SCIPfreeBlockMemory(scip, mpsi);
 }
 
 /** returns the current section */
@@ -2014,7 +2014,7 @@ SCIP_RETCODE readRowsMop(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-  ProbDataObjectives* probdata;
+   ProbDataObjectives* probdata;
    SCIP_Bool dynamicrows;
    SCIP_Bool dynamicconss;
 
@@ -2043,9 +2043,8 @@ SCIP_RETCODE readRowsMop(
 
       if( *mpsinputField1(mpsi) == 'N' )
       {
-	probdata = dynamic_cast<ProbDataObjectives *>(SCIPgetObjProbData(scip));
-	bool added = probdata->addObjName(mpsinputField2(mpsi));
-	assert(added);
+         probdata = dynamic_cast<ProbDataObjectives *>(SCIPgetObjProbData(scip));
+         probdata->addObjName(mpsinputField2(mpsi));
       }
       else
       {
@@ -2172,9 +2171,10 @@ SCIP* scip /**< SCIP data structure */
       cons = SCIPfindCons(scip, mpsinputField2(mpsi));
       if( cons == NULL ) 
       {
-	 /* row is objective */
-	bool added = probdata->addObjValue(var, mpsinputField2(mpsi), val);
-	assert(added);
+         /* row is objective */
+         probdata->addObjCoeff(var, mpsinputField2(mpsi), val);
+         //std::cout << "obj : " << mpsinputField2(mpsi) << " val : " << val << "\n";
+
       }
       else if( !SCIPisZero(scip, val) )
       {
@@ -2191,8 +2191,8 @@ SCIP* scip /**< SCIP data structure */
          if( cons == NULL )
          {
             /* row is objective */
-	   bool added = probdata->addObjValue(var, mpsinputField4(mpsi), val);
-	   assert(added);
+            probdata->addObjCoeff(var, mpsinputField4(mpsi), val);
+            //std::cout << "obj : " << mpsinputField4(mpsi) << " val : " << val << "\n";
          }
          else if( !SCIPisZero(scip, val) )
          {
@@ -2308,9 +2308,10 @@ SCIP_RETCODE readMOP(
 
 /** destructor of file reader to free user data (called when SCIP is exiting) */
 SCIP_DECL_READERFREE(ReaderMOP::scip_free) {
-   return SCIP_OKAY;
+        return SCIP_OKAY;
 }
 
+/** problem reading method of reader */
 SCIP_DECL_READERREAD(ReaderMOP::scip_read) {
   assert(reader != NULL);
   assert(scip != NULL);

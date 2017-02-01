@@ -56,7 +56,7 @@
 enum ConvexSide
 {
    LHS = 0,                                  /**< left hand side */
-   RHS = 1,                                  /**< right hand side */
+   RHS = 1                                   /**< right hand side */
 };
 typedef enum ConvexSide CONVEXSIDE;
 
@@ -114,12 +114,16 @@ SCIP_RETCODE sepadataClear(
       SCIPfreeBlockMemoryArray(scip, &sepadata->convexsides, sepadata->nlrowssize);
       SCIPfreeBlockMemoryArray(scip, &sepadata->constraintviolation, sepadata->nlrowssize);
       SCIPhashmapFree(&sepadata->var2nlpiidx);
-      SCIPnlpiFreeProblem(sepadata->nlpi, &sepadata->nlpiprob);
+      SCIP_CALL( SCIPnlpiFreeProblem(sepadata->nlpi, &sepadata->nlpiprob) );
       SCIP_CALL( SCIPexprintFree(&sepadata->exprinterpreter) );
 
       sepadata->nlpinvars = 0;
+      sepadata->nnlrows = 0;
+      sepadata->nlrowssize = 0;
    }
    assert(sepadata->nlpinvars == 0);
+   assert(sepadata->nnlrows == 0);
+   assert(sepadata->nlrowssize == 0);
 
    sepadata->skipsepa = FALSE;
 
@@ -210,8 +214,8 @@ SCIP_RETCODE generateCut(
     *       we build the convex relaxation using only globally valid constraints, the cuts are globally valid
     */
    (void) SCIPsnprintf(rowname, SCIP_MAXSTRLEN, "proj_cut_%s_%u", SCIPnlrowGetName(nlrow), ++(sepadata->ncuts));
-   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, rowname, SCIPnlrowGetLhs(nlrow), SCIPnlrowGetRhs(nlrow),
-           TRUE, FALSE , TRUE) );
+   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, rowname, -SCIPinfinity(scip), SCIPinfinity(scip), TRUE, FALSE ,
+            TRUE) );
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, *row) );
 
@@ -554,6 +558,7 @@ SCIP_RETCODE separateCuts(
          SCIP_CALL( SCIPfreeSol(scip, &projection) );
          break;
 
+      case SCIP_NLPSOLSTAT_GLOBINFEASIBLE:
       case SCIP_NLPSOLSTAT_LOCINFEASIBLE:
          /* fallthrough;
           * @todo: write what it means to be locinfeasible and why it can't be used to cutoff the node */
@@ -612,6 +617,7 @@ SCIP_RETCODE computeMaxViolation(
    for( i = 0; i < sepadata->nnlrows; i++ )
    {
       SCIP_Real activity;
+      SCIP_Real violation;
 
       nlrow = sepadata->nlrows[i];
 
@@ -624,14 +630,16 @@ SCIP_RETCODE computeMaxViolation(
          assert(SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_CONVEX);
          assert(!SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrow)));
 
-         sepadata->constraintviolation[i] = MAX(activity - SCIPnlrowGetRhs(nlrow), 0.0);
+         violation = activity - SCIPnlrowGetRhs(nlrow);
+         sepadata->constraintviolation[i] = MAX(violation, 0.0);
       }
       if( sepadata->convexsides[i] == LHS )
       {
          assert(SCIPnlrowGetCurvature(nlrow) == SCIP_EXPRCURV_CONCAVE);
          assert(!SCIPisInfinity(scip, -SCIPnlrowGetLhs(nlrow)));
 
-         sepadata->constraintviolation[i] = MAX(SCIPnlrowGetLhs(nlrow) - activity, 0.0);
+         violation = SCIPnlrowGetLhs(nlrow) - activity;
+         sepadata->constraintviolation[i] = MAX(violation, 0.0);
       }
 
       /* compute maximum */
@@ -718,7 +726,7 @@ SCIP_DECL_SEPAFREE(sepaFreeConvexproj)
 
    SCIP_CALL( sepadataClear(scip, sepadata) );
 
-   SCIPfreeMemory(scip, &sepadata);
+   SCIPfreeBlockMemory(scip, &sepadata);
 
    SCIPsepaSetData(sepa, NULL);
 
@@ -812,8 +820,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       assert(sepadata->nlpi != NULL);
 
       SCIP_CALL( SCIPnlpiCreateProblem(sepadata->nlpi, &sepadata->nlpiprob, "convexproj-nlp") );
-      SCIP_CALL( SCIPhashmapCreate(&sepadata->var2nlpiidx, SCIPblkmem(scip),
-            SCIPcalcHashtableSize(sepadata->nlpinvars)) );
+      SCIP_CALL( SCIPhashmapCreate(&sepadata->var2nlpiidx, SCIPblkmem(scip), sepadata->nlpinvars) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) );
 
       SCIP_CALL( SCIPcreateConvexNlp(scip, sepadata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
@@ -878,7 +885,7 @@ SCIP_RETCODE SCIPincludeSepaConvexproj(
    SCIP_SEPA* sepa;
 
    /* create convexproj separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
 
    /* this sets all data in sepadata to 0 */
    BMSclearMemory(sepadata);

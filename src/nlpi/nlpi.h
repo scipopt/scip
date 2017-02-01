@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlpi.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for NLPI solver interfaces
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
@@ -30,6 +31,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup NLPIS
+ *
+ * @{
+ */
 
 /** compares two NLPIs w.r.t. their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPnlpiComp);
@@ -468,6 +474,10 @@ void SCIPnlpStatisticsSetTotalTime(
    SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
    SCIP_Real             totaltime           /**< solution time to store */
    );
+
+/** @} */
+
+/** @} */
 
 #ifdef __cplusplus
 }

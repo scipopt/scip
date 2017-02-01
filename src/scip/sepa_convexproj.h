@@ -69,7 +69,10 @@
 extern "C" {
 #endif
 
-/** creates the convexproj separator and includes it in SCIP */
+/** creates the convexproj separator and includes it in SCIP
+ *
+ * @ingroup SeparatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeSepaConvexproj(
    SCIP*                 scip                /**< SCIP data structure */

@@ -34,7 +34,10 @@
 extern "C" {
 #endif
 
-/** creates the nodereopt branching rule and includes it in SCIP */
+/** creates the nodereopt branching rule and includes it in SCIP
+ *
+ *  @ingroup BranchingRuleIncludes
+ */
 extern
 SCIP_RETCODE SCIPincludeBranchruleNodereopt(
    SCIP*                 scip                /**< SCIP data structure */

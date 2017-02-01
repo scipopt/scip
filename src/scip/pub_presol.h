@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_presol.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for presolvers
  * @author Tobias Achterberg
  */
@@ -32,6 +32,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@defgroup PublicPresolverMethods Presolver
+ * @ingroup PluginManagementMethods
+ * @brief methods for presolver plugins
+ *
+ * @{
+ */
 
 /** compares two presolvers w. r. to their priority */
 EXTERN
@@ -174,6 +181,8 @@ EXTERN
 int SCIPpresolGetNCalls(
    SCIP_PRESOL*          presol              /**< presolver */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

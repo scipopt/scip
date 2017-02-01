@@ -33,12 +33,27 @@
 extern "C" {
 #endif
 
+/** creates the proximity primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
+EXTERN
+SCIP_RETCODE SCIPincludeHeurProximity(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup PRIMALHEURISTICS
+ *
+ * @{
+ */
+
 /** main procedure of the proximity heuristic, creates and solves a sub-SCIP
  *
  *  @note the method can be applied in an iterative way, keeping the same subscip in between. If the @p freesubscip
  *        parameter is set to FALSE, the heuristic will keep the subscip data structures. Always set this parameter
  *        to TRUE, or call SCIPdeleteSubproblemProximity() afterwards
  */
+EXTERN
 SCIP_RETCODE SCIPapplyProximity(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
    SCIP_HEUR*            heur,               /**< heuristic data structure                                            */
@@ -51,16 +66,13 @@ SCIP_RETCODE SCIPapplyProximity(
    SCIP_Bool             freesubscip         /**< should the created sub-MIP be freed at the end of the method?       */
    );
 
-/** creates the proximity primal heuristic and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeHeurProximity(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** frees the sub-MIP created by proximity */
+EXTERN
 SCIP_RETCODE SCIPdeleteSubproblemProximity(
    SCIP*                 scip                /** SCIP data structure */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

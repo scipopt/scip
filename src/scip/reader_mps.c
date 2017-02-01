@@ -148,7 +148,7 @@ SCIP_RETCODE mpsinputCreate(
    assert(mpsi != NULL);
    assert(fp != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, mpsi) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, mpsi) );
 
    (*mpsi)->section     = MPS_NAME;
    (*mpsi)->fp          = fp;
@@ -182,7 +182,7 @@ void mpsinputFree(
    MPSINPUT**            mpsi                /**< mps input structure */
    )
 {
-   SCIPfreeMemory(scip, mpsi);
+   SCIPfreeBlockMemory(scip, mpsi);
 }
 
 /** returns the current section */
@@ -2545,6 +2545,7 @@ SCIP_RETCODE readMps(
       SCIP_CALL_TERMINATE( retcode, SCIPsetObjsense(scip, mpsinputObjsense(mpsi)), TERMINATE );
    }
 
+ /* cppcheck-suppress unusedLabel */
  TERMINATE:
    mpsinputFree(scip, &mpsi);
 
@@ -3553,6 +3554,7 @@ void printBoundSection(
  */
 
 /** copy method for reader plugins (called when SCIP copies plugins) */
+/**! [SnippetReaderCopyMps] */
 static
 SCIP_DECL_READERCOPY(readerCopyMps)
 {  /*lint --e{715}*/
@@ -3565,8 +3567,10 @@ SCIP_DECL_READERCOPY(readerCopyMps)
 
    return SCIP_OKAY;
 }
+/**! [SnippetReaderCopyMps] */
 
 /** destructor of reader to free user data (called when SCIP is exiting) */
+/**! [SnippetReaderFreeMps] */
 static
 SCIP_DECL_READERFREE(readerFreeMps)
 {
@@ -3575,10 +3579,11 @@ SCIP_DECL_READERFREE(readerFreeMps)
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
-   SCIPfreeMemory(scip, &readerdata);
+   SCIPfreeBlockMemory(scip, &readerdata);
 
    return SCIP_OKAY;
 }
+/**! [SnippetReaderFreeMps] */
 
 /** problem reading method of reader */
 static
@@ -4737,7 +4742,7 @@ SCIP_RETCODE SCIPincludeReaderMps(
    SCIP_READER* reader;
 
    /* create reader data */
-   SCIP_CALL( SCIPallocMemory(scip, &readerdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );

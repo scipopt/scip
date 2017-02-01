@@ -3494,7 +3494,7 @@ SCIP_RETCODE reformulate(
       assert(conss[c] != NULL);  /*lint !e613*/
 
       /* skip constraints that are to be deleted */
-      if( SCIPconsIsDeleted(conss[c]) )
+      if( SCIPconsIsDeleted(conss[c]) )  /*lint !e613*/
          continue;
 
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
@@ -4158,13 +4158,27 @@ SCIP_RETCODE addLinearization(
    while( TRUE );  /*lint !e506*/
 
    /* add linearization to SCIP row */
-   if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
+   if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) && constant != 0.0 )  /*lint !e644*/
    {
-      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );  /*lint !e644*/
+      if( SCIProwGetLhs(row) - constant < 0.0 && SCIProwGetLhs(row) - constant > -SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, -1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );
+      }
    }
-   if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
+   if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) && constant != 0.0 )
    {
-      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      if( SCIProwGetRhs(row) - constant > 0.0 && SCIProwGetRhs(row) - constant < SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, 1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      }
    }
    SCIP_CALL( SCIPaddVarsToRow(scip, row, nvars, SCIPexprtreeGetVars(exprtree), grad) );
 
@@ -4264,11 +4278,25 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
    /* add secant to SCIP row */
    if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );
+      if( SCIProwGetLhs(row) - constant < 0.0 && SCIProwGetLhs(row) - constant > -SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, -1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );
+      }
    }
    if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      if( SCIProwGetRhs(row) - constant > 0.0 && SCIProwGetRhs(row) - constant < SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, 1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      }
    }
    if( slope != 0.0 )
    {
@@ -4616,11 +4644,25 @@ SCIP_RETCODE addConcaveEstimatorBivariate(
    /* add hyperplane coefs to SCIP row */
    if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );
+      if( SCIProwGetLhs(row) - constant < 0.0 && SCIProwGetLhs(row) - constant > -SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, -1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );
+      }
    }
    if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      if( SCIProwGetRhs(row) - constant > 0.0 && SCIProwGetRhs(row) - constant < SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, 1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      }
    }
    SCIP_CALL( SCIPaddVarsToRow(scip, row, 1, &x, &coefx) );
    SCIP_CALL( SCIPaddVarsToRow(scip, row, 1, &y, &coefy) );
@@ -4870,11 +4912,25 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    /* substract constant from lhs or rhs */
    if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - obj[nvars]) );
+      if( SCIProwGetLhs(row) - obj[nvars] < 0.0 && SCIProwGetLhs(row) - obj[nvars] > -SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, -1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - obj[nvars]) );
+      }
    }
    if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - obj[nvars]) );
+      if( SCIProwGetRhs(row) - obj[nvars] > 0.0 && SCIProwGetRhs(row) - obj[nvars] < SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, 1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - obj[nvars]) );
+      }
    }
 
    *success = TRUE;
@@ -4968,6 +5024,23 @@ SCIP_RETCODE getCoeffsAndConstantFromLinearExpr(
       children = SCIPexprGetChildren( expr );
       SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[0], scalar, varcoeffs, constant ) );
       SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[1], -scalar, varcoeffs, constant ) );
+      return SCIP_OKAY;
+   }
+
+   case SCIP_EXPR_SUM: /* just recurse */
+   {
+      SCIP_EXPR** children;
+      int nchildren;
+      int c;
+
+      children = SCIPexprGetChildren(expr);
+      nchildren = SCIPexprGetNChildren(expr);
+
+      for( c = 0; c < nchildren; ++c )
+      {
+         SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[c], scalar, varcoeffs, constant ) );
+      }
+
       return SCIP_OKAY;
    }
 
@@ -5095,14 +5168,27 @@ SCIP_RETCODE addUserEstimator(
          SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[i], childcoeffs[i]*treecoef, varcoeffs, &constant ) );
       }
 
-      if( !SCIPisInfinity( scip, -SCIProwGetLhs( row ) ) )
+      if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
       {
-         SCIP_CALL( SCIPchgRowLhs( scip, row, SCIProwGetLhs( row ) - constant ) );
+         if( SCIProwGetLhs(row) - constant < 0.0 && SCIProwGetLhs(row) - constant > -SCIPepsilon(scip) )
+         {
+            SCIP_CALL( SCIPchgRowLhs(scip, row, -1.1*SCIPepsilon(scip)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );  /*lint !e644*/
+         }
       }
-
-      if( !SCIPisInfinity( scip,  SCIProwGetRhs( row ) ) )
+      if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
       {
-         SCIP_CALL( SCIPchgRowRhs( scip, row, SCIProwGetRhs( row ) - constant ) );
+         if( SCIProwGetRhs(row) - constant > 0.0 && SCIProwGetRhs(row) - constant < SCIPepsilon(scip) )
+         {
+            SCIP_CALL( SCIPchgRowRhs(scip, row, 1.1*SCIPepsilon(scip)) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+         }
       }
 
       SCIP_CALL( SCIPaddVarsToRow( scip, row, nvars, vars, varcoeffs ) );
@@ -5264,11 +5350,25 @@ SCIP_RETCODE addIntervalGradientEstimator(
    /* add interval gradient estimator to row */
    if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );
+      if( SCIProwGetLhs(row) - constant < 0.0 && SCIProwGetLhs(row) - constant > -SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, -1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowLhs(scip, row, SCIProwGetLhs(row) - constant) );  /*lint !e644*/
+      }
    }
    if( !SCIPisInfinity(scip,  SCIProwGetRhs(row)) )
    {
-      SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      if( SCIProwGetRhs(row) - constant > 0.0 && SCIProwGetRhs(row) - constant < SCIPepsilon(scip) )
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, 1.1*SCIPepsilon(scip)) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row) - constant) );
+      }
    }
    SCIP_CALL( SCIPaddVarsToRow(scip, row, nvars, vars, coefs) );
 
@@ -5473,11 +5573,25 @@ SCIP_RETCODE generateCut(
 
          if( side == SCIP_SIDETYPE_LEFT )
          {
-            SCIP_CALL( SCIPchgRowLhs(scip, *row, SCIProwGetLhs(*row) - constant) );
+            if( SCIProwGetLhs(*row) - constant < 0.0 && SCIProwGetLhs(*row) - constant > -SCIPepsilon(scip) )
+            {
+               SCIP_CALL( SCIPchgRowLhs(scip, *row, -1.1*SCIPepsilon(scip)) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPchgRowLhs(scip, *row, SCIProwGetLhs(*row) - constant) );
+            }
          }
          else
          {
-            SCIP_CALL( SCIPchgRowRhs(scip, *row, SCIProwGetRhs(*row) - constant) );
+            if( SCIProwGetRhs(*row) - constant > 0.0 && SCIProwGetRhs(*row) - constant < SCIPepsilon(scip) )
+            {
+               SCIP_CALL( SCIPchgRowRhs(scip, *row, 1.1*SCIPepsilon(scip)) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPchgRowRhs(scip, *row, SCIProwGetRhs(*row) - constant) );
+            }
          }
 
          /* update min/max coefficient */
@@ -5830,7 +5944,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    conss = SCIPconshdlrGetConss(conshdlr);
    assert(conss != NULL);
 
-   SCIPdebugMsg(scip, "catched new sol event %x from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
+   SCIPdebugMsg(scip, "catched new sol event %"SCIP_EVENTTYPE_FORMAT" from heur <%s>; have %d conss\n", SCIPeventGetType(event), SCIPheurGetName(SCIPsolGetHeur(sol)), nconss);
 
    SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, sol, NULL, 0.0) );
 
@@ -7245,14 +7359,14 @@ SCIP_DECL_CONSFREE(consFreeNonlinear)
    for( i = 0; i < conshdlrdata->nnlconsupgrades; ++i )
    {
       assert(conshdlrdata->nlconsupgrades[i] != NULL);
-      SCIPfreeMemory(scip, &conshdlrdata->nlconsupgrades[i]);
+      SCIPfreeBlockMemory(scip, &conshdlrdata->nlconsupgrades[i]);  /*lint !e866*/
    }
-   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->nlconsupgrades);
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->nlconsupgrades, conshdlrdata->nlconsupgradessize);
 
    /* free expressions interpreter */
    SCIP_CALL( SCIPexprintFree(&conshdlrdata->exprinterpreter) );
 
-   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPfreeBlockMemory(scip, &conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -7334,7 +7448,7 @@ SCIP_DECL_CONSINITPRE(consInitpreNonlinear)
       SCIP_CALL( consdataSetExprtrees(scip, consdata, 0, NULL, NULL, FALSE) );
 
       /* mark constraint for propagation */
-      SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );
+      SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );  /*lint !e613*/
    }
 
    return SCIP_OKAY;
@@ -8246,18 +8360,19 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
 
    /* if simplifier found some undefined expression, then declare problem as infeasible
     * usually, this should be discovered during domain propagation already, but since that is using interval arithmetics,
-    *   it may overestimate in a way that actually undefined expressions still get a value assigned (e.g., 0^(-1) = [-inf,inf]) */
+    *   it may overestimate in a way that actually undefined expressions still get a value assigned (e.g., 0^(-1) = [-inf,inf])
+    */
    if( domainerror )
-   {
       *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   }
 
    havegraphchange |= havechange;
 
    /* if graph has changed, then we will try upgrades, otherwise we only do for changing or not-yet-presolved constraints */
    tryupgrades = havegraphchange;
 
+   /* remove fix vars, do some algebraic manipulation, etc; this loop need to finish, even if a cutoff is found because data
+    * might be unconsistent otherwise (i.e. some asserts might pop later, e.g. exitpresol, etc)
+    */
    for( c = 0; c < nconss; ++c )
    {
       assert(conss != NULL);
@@ -8277,7 +8392,9 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
          havechange = TRUE;
       }
 
-      /* the reductions below require the constraint nonlinear function to be in the expression graph, which is only the case for active constraints */
+      /* the reductions below require the constraint nonlinear function to be in the expression graph, which is only the
+       * case for active constraints
+       */
       if( !SCIPconsIsActive(conss[c]) )
          continue;
 
@@ -8296,7 +8413,6 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
             SCIPdebugMsg(scip, "constraint <%s> is constant and infeasible\n", SCIPconsGetName(conss[c]));
             SCIP_CALL( SCIPdelCons(scip, conss[c]) );
             *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
          }
          else
          {
@@ -8304,7 +8420,9 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
             SCIPdebugMsg(scip, "constraint <%s> is constant and feasible, deleting\n", SCIPconsGetName(conss[c]));
             SCIP_CALL( SCIPdelCons(scip, conss[c]) );
             ++*ndelconss;
-            *result = SCIP_SUCCESS;
+
+            if( *result != SCIP_CUTOFF )
+               *result = SCIP_SUCCESS;
             continue;
          }
       }
@@ -8317,6 +8435,10 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
       if( !consdata->ispresolved )
          tryupgrades = TRUE;
    }
+
+   /* if a cutoff was found, return; data is consistent at this point */
+   if( *result == SCIP_CUTOFF )
+      return SCIP_OKAY;
 
    if( tryupgrades )
    {
@@ -9176,7 +9298,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_CONSHDLR* conshdlr;
 
    /* create nonlinear constraint handler data */
-   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &conshdlrdata) );
    BMSclearMemory(conshdlrdata);
 
    /* include constraint handler */
@@ -9338,7 +9460,7 @@ SCIP_RETCODE SCIPincludeNonlinconsUpgrade(
    }
 
    /* create a nonlinear constraint upgrade data object */
-   SCIP_CALL( SCIPallocMemory(scip, &nlconsupgrade) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &nlconsupgrade) );
    nlconsupgrade->nlconsupgd = nonlinconsupgd;
    nlconsupgrade->nodereform = nodereform;
    nlconsupgrade->priority   = priority;
@@ -9351,7 +9473,7 @@ SCIP_RETCODE SCIPincludeNonlinconsUpgrade(
       int newsize;
 
       newsize = SCIPcalcMemGrowSize(scip, conshdlrdata->nnlconsupgrades+1);
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->nlconsupgrades, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->nlconsupgrades, conshdlrdata->nnlconsupgrades, newsize) );
       conshdlrdata->nlconsupgradessize = newsize;
    }
    assert(conshdlrdata->nnlconsupgrades+1 <= conshdlrdata->nlconsupgradessize);

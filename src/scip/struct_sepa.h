@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_sepa.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for separators
  * @author Tobias Achterberg
  */

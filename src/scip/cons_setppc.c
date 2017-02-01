@@ -355,7 +355,7 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(conshdlrdata != NULL);
    assert(eventhdlr != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
 #ifdef VARUSES
    SCIP_CALL( SCIPcreateIntarray(scip, &(*conshdlrdata)->varuses) );
 #endif
@@ -389,7 +389,7 @@ SCIP_RETCODE conshdlrdataFree(
    /* free random number generator */
    SCIPrandomFree(&(*conshdlrdata)->randnumgen);
 
-   SCIPfreeMemory(scip, conshdlrdata);
+   SCIPfreeBlockMemory(scip, conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -7965,7 +7965,7 @@ SCIP_DECL_CONSPROP(consPropSetppc)
       SCIP_CALL( processFixings(scip, conss[c], &cutoff, &nfixedvars, &addcut, &mustcheck) );
 
       SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[c]) );
-}
+   }
 
    /* return the correct result */
    if( cutoff )

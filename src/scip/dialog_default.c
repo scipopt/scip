@@ -776,9 +776,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs)
          SCIPconshdlrGetSepaFreq(conshdlrs[i]),
          SCIPconshdlrGetPropFreq(conshdlrs[i]),
          SCIPconshdlrGetEagerFreq(conshdlrs[i]));
-      SCIPdialogMessage(scip, NULL, "   %c", SCIPconshdlrGetPresolTiming(conshdlrs[i]) & SCIP_PRESOLTIMING_FAST ? 'f' : ' ');
-      SCIPdialogMessage(scip, NULL, "%c", SCIPconshdlrGetPresolTiming(conshdlrs[i]) & SCIP_PRESOLTIMING_MEDIUM ? 'm' : ' ');
-      SCIPdialogMessage(scip, NULL, "%c  ", SCIPconshdlrGetPresolTiming(conshdlrs[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE ? 'e' : ' ');
+      SCIPdialogMessage(scip, NULL, "   %c", (SCIPconshdlrGetPresolTiming(conshdlrs[i]) & SCIP_PRESOLTIMING_FAST) ? 'f' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c", (SCIPconshdlrGetPresolTiming(conshdlrs[i]) & SCIP_PRESOLTIMING_MEDIUM) ? 'm' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c  ", (SCIPconshdlrGetPresolTiming(conshdlrs[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE) ? 'e' : ' ');
       SCIPdialogMessage(scip, NULL, "%s", SCIPconshdlrGetDesc(conshdlrs[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
@@ -1016,9 +1016,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers)
       if( strlen(SCIPpresolGetName(presols[i])) > 20 )
          SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
       SCIPdialogMessage(scip, NULL, "%8d  ", SCIPpresolGetPriority(presols[i]));
-      SCIPdialogMessage(scip, NULL, "   %c", SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_FAST ? 'f' : ' ');
-      SCIPdialogMessage(scip, NULL, "%c", SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_MEDIUM ? 'm' : ' ');
-      SCIPdialogMessage(scip, NULL, "%c  ", SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE ? 'e' : ' ');
+      SCIPdialogMessage(scip, NULL, "   %c", (SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_FAST) ? 'f' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c", (SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_MEDIUM) ? 'm' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c  ", (SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE) ? 'e' : ' ');
       SCIPdialogMessage(scip, NULL, "%9d  ", SCIPpresolGetMaxrounds(presols[i]));
       SCIPdialogMessage(scip, NULL, "%s", SCIPpresolGetDesc(presols[i]));
       SCIPdialogMessage(scip, NULL, "\n");
@@ -1111,9 +1111,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPropagators)
       SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPpropGetPriority(props[i]), SCIPpropIsDelayed(props[i]) ? 'd' : ' ');
       SCIPdialogMessage(scip, NULL, "%4d  ", SCIPpropGetFreq(props[i]));
       SCIPdialogMessage(scip, NULL, "%8d  ", SCIPpropGetPresolPriority(props[i]));
-      SCIPdialogMessage(scip, NULL, "    %c", SCIPpropGetPresolTiming(props[i]) & SCIP_PRESOLTIMING_FAST ? 'f' : ' ');
-      SCIPdialogMessage(scip, NULL, "%c", SCIPpropGetPresolTiming(props[i]) & SCIP_PRESOLTIMING_MEDIUM ? 'm' : ' ');
-      SCIPdialogMessage(scip, NULL, "%c  ", SCIPpropGetPresolTiming(props[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE ? 'e' : ' ');
+      SCIPdialogMessage(scip, NULL, "    %c", (SCIPpropGetPresolTiming(props[i]) & SCIP_PRESOLTIMING_FAST) ? 'f' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c", (SCIPpropGetPresolTiming(props[i]) & SCIP_PRESOLTIMING_MEDIUM) ? 'm' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c  ", (SCIPpropGetPresolTiming(props[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE) ? 'e' : ' ');
       SCIPdialogMessage(scip, NULL, "%s", SCIPpropGetDesc(props[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
@@ -1608,6 +1608,48 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecTransform)
    case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_EXITSOLVE:
+   case SCIP_STAGE_FREETRANS:
+   case SCIP_STAGE_FREE:
+   default:
+      SCIPerrorMessage("invalid SCIP stage\n");
+      return SCIP_INVALIDCALL;
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the concurrentopt command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecConcurrentOpt)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   SCIPdialogMessage(scip, NULL, "\n");
+   switch( SCIPgetStage(scip) )
+   {
+   case SCIP_STAGE_INIT:
+      SCIPdialogMessage(scip, NULL, "no problem exists\n");
+      break;
+
+   case SCIP_STAGE_PROBLEM:
+   case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_SOLVING:
+      SCIP_CALL( SCIPsolveParallel(scip) );
+      break;
+
+   case SCIP_STAGE_SOLVED:
+      SCIPdialogMessage(scip, NULL, "problem is already solved\n");
+      break;
+
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITPRESOLVE:
+   case SCIP_STAGE_EXITPRESOLVE:
+   case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_EXITSOLVE:
    case SCIP_STAGE_FREETRANS:
    case SCIP_STAGE_FREE:
@@ -3037,6 +3079,71 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the write mipstart command */
+static
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMIPStart)
+{  /*lint --e{715}*/
+   char* filename;
+   SCIP_Bool endoffile;
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
+   if( filename[0] != '\0' )
+   {
+      FILE* file;
+
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
+
+      file = fopen(filename, "w");
+      if( file == NULL )
+      {
+         SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
+         SCIPdialoghdlrClearBuffer(dialoghdlr);
+      }
+      else
+      {
+         SCIP_RETCODE retcode;
+         SCIP_SOL* sol;
+
+         SCIPinfoMessage(scip, file, "\n");
+
+         sol = SCIPgetBestSol(scip);
+
+         if( sol == NULL )
+         {
+            SCIPdialogMessage(scip, NULL, "no mip start available\n");
+            fclose(file);
+         }
+         else
+         {
+            retcode = SCIPprintMIPStart(scip, sol, file);
+            if( retcode != SCIP_OKAY )
+            {
+               fclose(file);
+               SCIP_CALL( retcode );
+            }
+            else
+            {
+               SCIPdialogMessage(scip, NULL, "written mip start information to file <%s>\n", filename);
+               fclose(file);
+            }
+         }
+      }
+   }
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for writing command line history */
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteCommandHistory)
@@ -3745,6 +3852,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
+   /* optimize */
+   if( !SCIPdialogHasEntry(root, "concurrentopt") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+                                   NULL,
+                                   SCIPdialogExecConcurrentOpt, NULL, NULL,
+                                   "concurrentopt", "solve the problem using concurrent solvers", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
    /* presolve */
    if( !SCIPdialogHasEntry(root, "presolve") )
    {
@@ -3870,13 +3988,24 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
-   /* write solution */
+   /* write finite solution */
    if( !SCIPdialogHasEntry(submenu, "finitesolution") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecWriteFiniteSolution, NULL, NULL,
             "finitesolution", "write best primal solution to file (try to make solution values finite, first)", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* write mip start */
+   if( !SCIPdialogHasEntry(submenu, "mipstart") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecWriteMIPStart, NULL, NULL,
+            "mipstart", "write mip start to file", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
@@ -4663,6 +4792,17 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
             NULL,
             SCIPdialogExecMenu, NULL, NULL,
             "numerics", "change parameters for numerical values", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
+   /* set parallel */
+   if( !SCIPdialogHasEntry(setmenu, "parallel") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL,
+            SCIPdialogExecMenu, NULL, NULL,
+            "parallel", "change parameters for parallel implementation", TRUE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }

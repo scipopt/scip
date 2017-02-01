@@ -34,7 +34,10 @@
 extern "C" {
 #endif
 
-/** creates the implied free presolver and includes it in SCIP */
+/** creates the implied free presolver and includes it in SCIP
+ *
+ * @ingroup PresolverIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePresolImplfree(
    SCIP*                 scip                /**< SCIP data structure */

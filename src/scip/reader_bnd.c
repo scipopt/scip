@@ -37,7 +37,7 @@
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
-#include <strings.h>
+#include <strings.h> /*lint --e{766}*/
 #endif
 
 #include "scip/reader_bnd.h"
@@ -119,7 +119,7 @@ SCIP_RETCODE readBounds(
 
       /* parse the line */
       (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
-      nread = sscanf(buffer, format, varname, lbstring, ubstring);
+      (void) sscanf(buffer, format, varname, lbstring, ubstring);
 
       SCIP_CALL( SCIPparseVarName(scip, buffer, &var, &endptr) );
 
@@ -197,8 +197,8 @@ SCIP_RETCODE readBounds(
          }
 
          /* collect best variable bounds */
-         lb = MAX(lb, SCIPvarGetLbGlobal(var));
-         ub = MIN(ub, SCIPvarGetUbGlobal(var));
+         lb = MAX(lb, SCIPvarGetLbGlobal(var)); /*lint !e666*/
+         ub = MIN(ub, SCIPvarGetUbGlobal(var)); /*lint !e666*/
       }
 
       /* note that we don't need to check if lb > ub in SCIPchgVar{Lb,Ub} */
@@ -304,8 +304,7 @@ SCIP_RETCODE SCIPwriteBnd(
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
    SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
    int                   nvars,              /**< number of active variables in the problem */
-   SCIP_RESULT*          result,             /**< pointer to store the result of the file writing call */
-   SCIP_READERDATA*      readerdata          /**< pointer to the data of the reader */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    )
 {
    SCIP_MESSAGEHDLR* messagehdlr;
@@ -368,7 +367,7 @@ SCIP_DECL_READERWRITE(readerWriteBnd)
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
 
-   SCIP_CALL( SCIPwriteBnd(scip, file, vars, nvars, result, SCIPreaderGetData(reader)) );
+   SCIP_CALL( SCIPwriteBnd(scip, file, vars, nvars, result) );
 
    return SCIP_OKAY;
 }
@@ -382,7 +381,7 @@ SCIP_DECL_READERFREE(readerFreeBnd)
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
-   SCIPfreeMemory(scip, &readerdata);
+   SCIPfreeBlockMemory(scip, &readerdata);
 
    return SCIP_OKAY;
 }
@@ -400,7 +399,7 @@ SCIP_RETCODE SCIPincludeReaderBnd(
    SCIP_READER* reader;
 
    /* create reader data */
-   SCIP_CALL( SCIPallocMemory(scip, &readerdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );

@@ -141,6 +141,18 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxIntegral)
       }
    }
 
+   /* if we have found a branching candidate, immediately branch to be able to return SCIP_BRANCHED and stop the
+    * enforcement loop
+    */
+   if( *result == SCIP_INFEASIBLE )
+   {
+      /* call branching methods for external candidates */
+      SCIP_CALL( SCIPbranchExtern(scip, result) );
+
+      /* since we only call it if we added external candidates, the branching rule should always be able to branch */
+      assert(*result != SCIP_DIDNOTRUN);
+   }
+
    return SCIP_OKAY;
 }
 
@@ -269,7 +281,8 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
       /* skip variable if solution value disagrees with the local bounds */
       if( ! SCIPisFeasIntegral(scip, solval) && SCIPisGE(scip, solval, SCIPvarGetLbLocal(vars[v])) && SCIPisLE(scip, solval, SCIPvarGetUbLocal(vars[v])) )
       {
-         SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_INTEGRALITY, vars[v], solval, solval - SCIPfloor(scip, solval), &score, &roundup) );
+         SCIP_CALL( SCIPgetDivesetScore(scip, diveset, heurdata, SCIP_DIVETYPE_INTEGRALITY, vars[v], solval,
+               solval - SCIPfloor(scip, solval), &score, &roundup) );
 
          /* we search for candidates with maximum score */
          if( score > bestscore )
@@ -307,17 +320,12 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
-
-   /* create integral constraint handler data */
-   conshdlrdata = NULL;
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
-         consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral, consLockIntegral,
-         conshdlrdata) );
+         consEnfolpIntegral, consEnfopsIntegral, consCheckIntegral, consLockIntegral, NULL) );
 
    assert(conshdlr != NULL);
 

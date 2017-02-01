@@ -136,7 +136,7 @@ SCIP_DECL_READERREAD(readerReadCsol)
    {
       i++;
    }
-   SCIP_CALL( SCIPallocMemoryArray(scip, &solprobname, i+2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &solprobname, i+2) );
    strncpy(solprobname, &buf[0], (unsigned int) i);
    solprobname[i]= '\0';
 
@@ -295,7 +295,7 @@ SCIP_DECL_READERREAD(readerReadCsol)
    }
    SCIPfreeBufferArray(scip, &setlengths);
    SCIPfreeBufferArray(scip, &sets);
-   SCIPfreeMemoryArray(scip, &solprobname);
+   SCIPfreeBufferArray(scip, &solprobname);
 
    return SCIP_OKAY;
 }

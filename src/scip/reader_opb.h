@@ -34,11 +34,19 @@
 extern "C" {
 #endif
 
-/** includes the opb file reader into SCIP */
+/** includes the opb file reader into SCIP
+ *
+ *  @ingroup FileReaderIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeReaderOpb(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup FILEREADERS
+ *
+ * @{
+ */
 
 /** reads problem from file */
 EXTERN
@@ -73,6 +81,8 @@ SCIP_RETCODE SCIPwriteOpb(
    SCIP_Bool             genericnames,       /**< should generic variable and constraint names be used */
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_mem.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for block memory pools and memory buffers
  * @author Tobias Achterberg
  */

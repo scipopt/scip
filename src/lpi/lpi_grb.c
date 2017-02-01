@@ -1092,6 +1092,18 @@ void* SCIPlpiGetSolverPointer(
 {
    return (void*) lpi->grbmodel;
 }
+
+/** pass integrality information to LP solver */
+SCIP_RETCODE SCIPlpiSetIntegralityInformation(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   ncols,              /**< length of integrality array */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   )
+{
+   SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
+   return SCIP_LPERROR;
+}
+
 /**@} */
 
 
@@ -1317,6 +1329,14 @@ SCIP_RETCODE SCIPlpiAddCols(
 {
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
+   assert(obj != 0);
+   assert(lb != 0);
+   assert(ub != 0);
+   assert(nnonz == 0 || beg != 0);
+   assert(nnonz == 0 || ind != 0);
+   assert(nnonz == 0 || val != 0);
+   assert(nnonz >= 0);
+   assert(ncols >= 0);
 
    SCIPdebugMessage("adding %d columns with %d nonzeros to Gurobi\n", ncols, nnonz);
 
@@ -1693,8 +1713,8 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 SCIP_RETCODE SCIPlpiChgObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
-   int*                  ind,                /**< column indices to change objective value for */
-   SCIP_Real*            obj                 /**< new objective values for columns */
+   const int*            ind,                /**< column indices to change objective value for */
+   const SCIP_Real*      obj                 /**< new objective values for columns */
    )
 {
    assert(lpi != NULL);
@@ -3468,8 +3488,8 @@ SCIP_RETCODE SCIPlpiGetBase(
 /** sets current basis status for columns and rows */
 SCIP_RETCODE SCIPlpiSetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  cstat,              /**< array with column basis status */
-   int*                  rstat               /**< array with row basis status */
+   const int*            cstat,              /**< array with column basis status */
+   const int*            rstat               /**< array with row basis status */
    )
 {
    int i, j;
@@ -4044,7 +4064,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
    )
 {
    int ncols;
@@ -4232,7 +4252,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
 {  /*lint --e{715}*/
    assert(lpinorms == NULL);
@@ -4292,8 +4312,8 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:
       SCIP_CALL( getIntParam(lpi, GRB_INT_PAR_SCALEFLAG, &temp) );
-      assert( temp == 0 || temp == 1 );
-      *ival = (temp == 1) ? TRUE : FALSE;
+      assert(temp >= 0 && temp <= 2);
+      *ival = temp;
       break;
    case SCIP_LPPAR_PRESOLVING:
       SCIP_CALL( getIntParam(lpi, GRB_INT_PAR_PRESOLVE, &temp) );
@@ -4345,11 +4365,8 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       assert(ival == TRUE || ival == FALSE);
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:
-      assert(ival == TRUE || ival == FALSE);
-      if( ival )
-         SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SCALEFLAG, 1) );
-      else
-         SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SCALEFLAG, 0) );
+      assert(ival >= 0 && ival <= 2);
+      SCIP_CALL( setIntParam(lpi, GRB_INT_PAR_SCALEFLAG, ival) );
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);

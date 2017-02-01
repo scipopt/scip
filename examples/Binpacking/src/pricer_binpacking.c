@@ -19,9 +19,9 @@
  * @author Stefan Heinz
  *
  * This file implements the variable pricer which check if variables exist with negative reduced cost. See
- * @ref PRICER for more details.
+ * @ref BINPACKING_PRICER for more details.
  *
- * @page PRICER Pricing new variables
+ * @page BINPACKING_PRICER Pricing new variables
  *
  * The task of the pricer is to search for new variables with negative reduced costs. For this, the following integer
  * program is solved:
@@ -37,7 +37,7 @@
  * \f]
  *
  * where \f$ (\lambda_S)_i \f$ for \f$i\in\{1,\dots,n\}\f$ are binary variables and \f$y^\star_i\f$ given by the dual
- * solution of the restricted master problem. See the \ref PROBLEM "problem description" for more details.
+ * solution of the restricted master problem. See the \ref BINPACKING_PROBLEM "problem description" for more details.
  *
  * To solve the above integer program, we create a new SCIP instance within SCIP and use the usual functions to create
  * variables and constraints. Besides, we need the current dual solutions to all set covering constraints (each stands
@@ -48,7 +48,7 @@
  * and over again. For example, if we branched or fixed a certain packing to zero, we have to make sure that we do not
  * generate the corresponding variables at that node again. For this, we have to add constraints forbidding to generate
  * variables which are locally fixed to zero. See the function addFixedVarsConss() for more details. While using the
- * \ref BRANCHING "Ryan/Foster branching", we also have to ensure that these branching decisions are respected. This is
+ * \ref BINPACKING_BRANCHING "Ryan/Foster branching", we also have to ensure that these branching decisions are respected. This is
  * realized within the function addBranchingDecisionConss().
  *
  * @note In case of this binpacking example, the master LP should not get infeasible after branching, because of the way
@@ -392,9 +392,8 @@ SCIP_RETCODE initPricing(
    }
 
    /* create capacity constraint */
-   SCIP_CALL( SCIPcreateConsBasicKnapsack(subscip, &cons, "capacity", nvars, vars, vals,
-         capacity) );
-   
+   SCIP_CALL( SCIPcreateConsBasicKnapsack(subscip, &cons, "capacity", nvars, vars, vals, capacity) );
+
    SCIP_CALL( SCIPaddCons(subscip, cons) );
    SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
 
@@ -430,11 +429,11 @@ SCIP_DECL_PRICERFREE(pricerFreeBinpacking)
    if( pricerdata != NULL)
    {
       /* free memory */
-      SCIPfreeMemoryArrayNull(scip, &pricerdata->conss);
-      SCIPfreeMemoryArrayNull(scip, &pricerdata->weights);
-      SCIPfreeMemoryArrayNull(scip, &pricerdata->ids);
+      SCIPfreeBlockMemoryArrayNull(scip, &pricerdata->conss, pricerdata->nitems);
+      SCIPfreeBlockMemoryArrayNull(scip, &pricerdata->weights, pricerdata->nitems);
+      SCIPfreeBlockMemoryArrayNull(scip, &pricerdata->ids, pricerdata->nitems);
 
-      SCIPfreeMemory(scip, &pricerdata);
+      SCIPfreeBlockMemory(scip, &pricerdata);
    }
 
    return SCIP_OKAY;
@@ -559,7 +558,8 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
-   SCIP_CALL( SCIPallocMemoryArray(subscip, &vars, nitems) );
+   /* allocate in orginal scip, since otherwise the buffer counts in subscip are not correct */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, nitems) );
 
    /* initialization local pricing problem */
    SCIP_CALL( initPricing(scip, pricerdata, subscip, vars) );
@@ -670,7 +670,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostBinpacking)
    }
 
    /* free pricer MIP */
-   SCIPfreeMemoryArray(subscip, &vars);
+   SCIPfreeBufferArray(scip, &vars);
 
    if( addvar || SCIPgetStatus(subscip) == SCIP_STATUS_OPTIMAL )
       (*result) = SCIP_SUCCESS;
@@ -722,7 +722,7 @@ SCIP_RETCODE SCIPincludePricerBinpacking(
    SCIP_PRICER* pricer;
 
    /* create binpacking variable pricer data */
-   SCIP_CALL( SCIPallocMemory(scip, &pricerdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &pricerdata) );
 
    pricerdata->conshdlr = SCIPfindConshdlr(scip, "samediff");
    assert(pricerdata->conshdlr != NULL);
@@ -774,9 +774,9 @@ SCIP_RETCODE SCIPpricerBinpackingActivate(
    assert(pricerdata != NULL);
 
    /* copy arrays */
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &pricerdata->conss, conss, nitems) );
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &pricerdata->weights, weights, nitems) );
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &pricerdata->ids, ids, nitems) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &pricerdata->conss, conss, nitems) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &pricerdata->weights, weights, nitems) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &pricerdata->ids, ids, nitems) );
 
    pricerdata->nitems = nitems;
    pricerdata->capacity = capacity;

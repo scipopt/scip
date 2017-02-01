@@ -79,11 +79,13 @@ struct EcAggr
 {
    SCIP_VAR**            vars;               /**< variables */
    int                   nvars;              /**< number of variables */
+   int                   varsize;            /**< size of vars array */
 
    SCIP_Real*            termcoefs;          /**< coefficients of bilinear terms */
    int*                  termvars1;          /**< index of the first variable of each bilinear term */
    int*                  termvars2;          /**< index of the second variable of each bilinear term*/
    int                   nterms;             /**< number of bilinear terms in the aggregation */
+   int                   termsize;           /**< size of term{coefs,vars1,vars2} arrays */
 };
 typedef struct EcAggr SCIP_ECAGGR;
 
@@ -110,6 +112,7 @@ struct NlrowAggr
    SCIP_VAR**            remtermvars2;       /**< second quadratic variable of remaining bilinear terms */
    SCIP_Real*            remtermcoefs;       /**< coefficients for each remaining bilinear term */
    int                   nremterms;          /**< number of remaining bilinear terms */
+   int                   remtermsize;        /**< size of remterm* arrays */
 
    SCIP_Real             rhs;                /**< rhs of the nonlinear row */
    SCIP_Real             constant;           /**< constant part of the nonlinear row */
@@ -121,6 +124,7 @@ struct SCIP_SepaData
 {
    SCIP_NLROWAGGR**      nlrowaggrs;         /**< array containing all nonlinear row aggregations */
    int                   nnlrowaggrs;        /**< number of nonlinear row aggregations */
+   int                   nlrowaggrssize;     /**< size of nlrowaggrs array */
    SCIP_Bool             searchedforaggr;    /**< flag if we already searched for nlrow aggregation candidates */
    int                   minaggrsize;        /**< only search for e.c. aggregations of at least this size (has to be >= 3) */
    int                   maxaggrsize;        /**< only search for e.c. aggregations of at most this size (has to be >= minaggrsize) */
@@ -168,16 +172,18 @@ SCIP_RETCODE ecaggrCreateEmpty(
    assert(nquadvars > 0);
    assert(nquadterms >= nquadvars);
 
-   SCIP_CALL( SCIPallocMemory(scip, ecaggr) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, ecaggr) );
 
    (*ecaggr)->nvars = 0;
    (*ecaggr)->nterms = 0;
+   (*ecaggr)->varsize = nquadvars;
+   (*ecaggr)->termsize = nquadterms;
 
    /* allocate enough memory for the quadratic variables and bilinear terms */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*ecaggr)->vars, nquadvars) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*ecaggr)->termcoefs, nquadterms) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*ecaggr)->termvars1, nquadterms) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*ecaggr)->termvars2, nquadterms) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*ecaggr)->vars, nquadvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*ecaggr)->termcoefs, nquadterms) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*ecaggr)->termvars1, nquadterms) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*ecaggr)->termvars2, nquadterms) );
 
    return SCIP_OKAY;
 }
@@ -192,12 +198,12 @@ SCIP_RETCODE ecaggrFree(
    assert(scip != NULL);
    assert(ecaggr != NULL);
 
-   SCIPfreeMemoryArray(scip, &((*ecaggr)->termcoefs));
-   SCIPfreeMemoryArray(scip, &((*ecaggr)->termvars1));
-   SCIPfreeMemoryArray(scip, &((*ecaggr)->termvars2));
-   SCIPfreeMemoryArray(scip, &((*ecaggr)->vars));
+   SCIPfreeBlockMemoryArray(scip, &((*ecaggr)->termcoefs), (*ecaggr)->termsize);
+   SCIPfreeBlockMemoryArray(scip, &((*ecaggr)->termvars1), (*ecaggr)->termsize);
+   SCIPfreeBlockMemoryArray(scip, &((*ecaggr)->termvars2), (*ecaggr)->termsize);
+   SCIPfreeBlockMemoryArray(scip, &((*ecaggr)->vars), (*ecaggr)->varsize);
 
-   SCIPfreeMemory(scip, ecaggr);
+   SCIPfreeBlockMemory(scip, ecaggr);
    *ecaggr = NULL;
 
    return SCIP_OKAY;
@@ -310,8 +316,8 @@ SCIP_RETCODE nlrowaggrStoreLinearTerms(
 
    if( nlinvars > 0 )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &nlrowaggr->linvars, nlinvars) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &nlrowaggr->lincoefs, nlinvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlrowaggr->linvars, nlinvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlrowaggr->lincoefs, nlinvars) );
       BMScopyMemoryArray(nlrowaggr->linvars, linvars, nlinvars);
       BMScopyMemoryArray(nlrowaggr->lincoefs, lincoefs, nlinvars);
    }
@@ -343,7 +349,7 @@ SCIP_RETCODE nlrowaggrStoreQuadraticVars(
    assert(nquadvars > 0);
 
    nlrowaggr->nquadvars = nquadvars;
-   SCIP_CALL( SCIPallocMemoryArray(scip, &nlrowaggr->quadvars, nquadvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &nlrowaggr->quadvars, nquadvars) );
    BMScopyMemoryArray(nlrowaggr->quadvars, quadvars, nquadvars);
 
    return SCIP_OKAY;
@@ -407,7 +413,7 @@ SCIP_RETCODE nlrowaggrCreate(
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrnterms, nfound) );
 
    /* create an empty nonlinear row aggregation */
-   SCIP_CALL( SCIPallocMemory(scip, nlrowaggr) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, nlrowaggr) );
    (*nlrowaggr)->nlrow = nlrow;
    (*nlrowaggr)->rhsaggr = rhsaggr;
    (*nlrowaggr)->nquadvars = nquadvars;
@@ -423,7 +429,7 @@ SCIP_RETCODE nlrowaggrCreate(
    (*nlrowaggr)->nremterms = 0;
 
    /* copy quadvar2aggr array */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*nlrowaggr)->quadvar2aggr, nquadvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlrowaggr)->quadvar2aggr, nquadvars) );
    BMScopyMemoryArray((*nlrowaggr)->quadvar2aggr, quadvar2aggr, nquadvars);
 
    /* store all linear terms */
@@ -468,12 +474,13 @@ SCIP_RETCODE nlrowaggrCreate(
    }
 
    /* create all edge-concave aggregations (empty) and remaining terms */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*nlrowaggr)->ecaggr, nfound) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlrowaggr)->ecaggr, nfound) );
    if( nremterms > 0 )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(*nlrowaggr)->remtermcoefs, nremterms) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(*nlrowaggr)->remtermvars1, nremterms) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(*nlrowaggr)->remtermvars2, nremterms) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlrowaggr)->remtermcoefs, nremterms) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlrowaggr)->remtermvars1, nremterms) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*nlrowaggr)->remtermvars2, nremterms) );
+      (*nlrowaggr)->remtermsize = nremterms;
    }
    (*nlrowaggr)->necaggr = nfound;
 
@@ -550,13 +557,13 @@ SCIP_RETCODE nlrowaggrFree(
    assert((*nlrowaggr)->nremterms >= 0);
 
    /* free remaining part */
-   SCIPfreeMemoryArrayNull(scip, &(*nlrowaggr)->remtermcoefs);
-   SCIPfreeMemoryArrayNull(scip, &(*nlrowaggr)->remtermvars1);
-   SCIPfreeMemoryArrayNull(scip, &(*nlrowaggr)->remtermvars2);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*nlrowaggr)->remtermcoefs, (*nlrowaggr)->remtermsize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*nlrowaggr)->remtermvars1, (*nlrowaggr)->remtermsize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*nlrowaggr)->remtermvars2, (*nlrowaggr)->remtermsize);
 
    /* free quadratic variables */
-   SCIPfreeMemoryArray(scip, &(*nlrowaggr)->quadvars);
-   SCIPfreeMemoryArray(scip, &(*nlrowaggr)->quadvar2aggr);
+   SCIPfreeBlockMemoryArray(scip, &(*nlrowaggr)->quadvars, (*nlrowaggr)->nquadvars);
+   SCIPfreeBlockMemoryArray(scip, &(*nlrowaggr)->quadvar2aggr, (*nlrowaggr)->nquadvars);
    (*nlrowaggr)->quadvars = NULL;
    (*nlrowaggr)->quadvar2aggr = NULL;
    (*nlrowaggr)->nquadvars = 0;
@@ -564,8 +571,8 @@ SCIP_RETCODE nlrowaggrFree(
    /* free linear part */
    if( (*nlrowaggr)->nlinvars > 0 )
    {
-      SCIPfreeMemoryArray(scip, &(*nlrowaggr)->linvars);
-      SCIPfreeMemoryArray(scip, &(*nlrowaggr)->lincoefs);
+      SCIPfreeBlockMemoryArray(scip, &(*nlrowaggr)->linvars, (*nlrowaggr)->nlinvars);
+      SCIPfreeBlockMemoryArray(scip, &(*nlrowaggr)->lincoefs, (*nlrowaggr)->nlinvars);
       (*nlrowaggr)->linvars = 0;
       (*nlrowaggr)->linvars = NULL;
       (*nlrowaggr)->lincoefs = NULL;
@@ -576,10 +583,10 @@ SCIP_RETCODE nlrowaggrFree(
    {
       SCIP_CALL( ecaggrFree(scip, &(*nlrowaggr)->ecaggr[i]) );
    }
-   SCIPfreeMemoryArray(scip, &(*nlrowaggr)->ecaggr);
+   SCIPfreeBlockMemoryArray(scip, &(*nlrowaggr)->ecaggr, (*nlrowaggr)->necaggr);
 
    /* free nlrow aggregation */
-   SCIPfreeMemory(scip, nlrowaggr);
+   SCIPfreeBlockMemory(scip, nlrowaggr);
 
    return SCIP_OKAY;
 }
@@ -624,7 +631,7 @@ SCIP_RETCODE sepadataCreate(
    assert(scip != NULL);
    assert(sepadata != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, sepadata) );
 
    (*sepadata)->nlrowaggrs = NULL;
    (*sepadata)->nnlrowaggrs = 0;
@@ -663,7 +670,7 @@ SCIP_RETCODE sepadataFreeNlrows(
          SCIP_CALL( nlrowaggrFree(scip, &sepadata->nlrowaggrs[i]) );
       }
 
-      SCIPfreeMemoryArray(scip, &sepadata->nlrowaggrs);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->nlrowaggrs, sepadata->nlrowaggrssize);
 
       sepadata->nlrowaggrs = NULL;
       sepadata->nnlrowaggrs = 0;
@@ -693,7 +700,7 @@ SCIP_RETCODE sepadataFree(
       (*sepadata)->lpisize = 0;
    }
 
-   SCIPfreeMemory(scip, sepadata);
+   SCIPfreeBlockMemory(scip, sepadata);
 
    return SCIP_OKAY;
 }
@@ -712,13 +719,16 @@ SCIP_RETCODE sepadataAddNlrowaggr(
    assert(sepadata != NULL);
    assert(nlrowaggr != NULL);
 
-   if( sepadata->nnlrowaggrs == 0 )
+   if( sepadata->nlrowaggrssize == 0 )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &sepadata->nlrowaggrs, 1) ); /*lint !e506*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &sepadata->nlrowaggrs, 2) ); /*lint !e506*/
+      sepadata->nlrowaggrssize = 2;
    }
-   else
+   else if( sepadata->nlrowaggrssize < sepadata->nnlrowaggrs + 1 )
    {
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &sepadata->nlrowaggrs, sepadata->nnlrowaggrs + 1) ); /*lint !e776*/
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &sepadata->nlrowaggrs, sepadata->nlrowaggrssize, 2 * sepadata->nlrowaggrssize) ); /*lint !e506 !e647*/
+      sepadata->nlrowaggrssize *= 2;
+      assert(sepadata->nlrowaggrssize >= sepadata->nnlrowaggrs + 1);
    }
 
    sepadata->nlrowaggrs[ sepadata->nnlrowaggrs ] = nlrowaggr;
@@ -1347,8 +1357,8 @@ SCIP_RETCODE searchEcAggr(
    /* arrays to store all arc variables of the MIP model; note that we introduce variables even for loops in the graph
     * to have an easy mapping from the edges of the graph to the quadratic elements
     */
-   SCIP_CALL( SCIPallocMemoryArray(subscip, &forwardarcs, nquadelems) );
-   SCIP_CALL( SCIPallocMemoryArray(subscip, &backwardarcs, nquadelems) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(subscip, &forwardarcs, nquadelems) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(subscip, &backwardarcs, nquadelems) );
 
    SCIP_CALL( createMIP(scip, subscip, sepadata, nlrow, rhsaggr, forwardarcs, backwardarcs, nodeweights, &nedges) );
    assert(nedges >= 0);
@@ -1464,8 +1474,8 @@ TERMINATE:
       SCIP_CALL( SCIPreleaseVar(subscip, &backwardarcs[i]) );
    }
 
-   SCIPfreeMemoryArray(subscip, &backwardarcs);
-   SCIPfreeMemoryArray(subscip, &forwardarcs);
+   SCIPfreeBlockMemoryArray(subscip, &backwardarcs, nquadelems);
+   SCIPfreeBlockMemoryArray(subscip, &forwardarcs, nquadelems);
    SCIP_CALL( SCIPfree(&subscip) );
 
    SCIPfreeBufferArray(scip, &nodeweights);
@@ -2615,7 +2625,7 @@ SCIP_RETCODE separateCuts(
    ncuts = 0;
 
    /* try to compute cuts for each nonlinear row independently */
-   for( i = 0; i < sepadata->nnlrowaggrs && ncuts < nmaxcuts; ++i )
+   for( i = 0; i < sepadata->nnlrowaggrs && ncuts < nmaxcuts && !SCIPisStopped(scip); ++i )
    {
       SCIP_NLROWAGGR* nlrowaggr;
       SCIP_Bool separated;
@@ -2764,7 +2774,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
       SCIPstatistic( sepadata->aggrsearchtime -= SCIPgetTotalTime(scip) );
 
       SCIPdebugMsg(scip, "search for nonlinear row aggregations\n");
-      for( i = 0; i < SCIPgetNNLPNlRows(scip); ++i )
+      for( i = 0; i < SCIPgetNNLPNlRows(scip) && !SCIPisStopped(scip); ++i )
       {
          SCIP_NLROW* nlrow = SCIPgetNLPNlRows(scip)[i];
          SCIP_CALL( findAndStoreEcAggregations(scip, sepadata, nlrow, NULL) );

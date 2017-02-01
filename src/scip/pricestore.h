@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pricestore.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for storing priced variables
  * @author Tobias Achterberg
  */

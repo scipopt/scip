@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   debug.h
+ * @ingroup INTERNALAPI
  * @brief  methods for debugging
  * @author Tobias Achterberg
  */

@@ -29,8 +29,10 @@
 
 #include "scip/presol_qpkktref.c"
 
+#include "include/scip_test.h"
 
-/* check number of added KKT constraints */
+
+/** check number of added KKT constraints */
 static
 SCIP_RETCODE checkNAddConss(
    SCIP*                 scip,               /**< SCIP instance */
@@ -89,7 +91,7 @@ SCIP_RETCODE checkNAddConss(
 }
 
 
-/* check number of dual constraints */
+/** check number of dual constraints */
 static
 SCIP_RETCODE checkNDualConss(
    SCIP*                 scip,               /**< SCIP instance */
@@ -129,8 +131,7 @@ SCIP_RETCODE checkConsLinear(
    SCIP_CALL( SCIPcreateConsBasicLinear(scip, &objcons, "objcons", 0, NULL, NULL, 0.0, 0.0) );
 
    /* set up hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip),
-         SCIPcalcHashtableSize(10 * (SCIPgetNVars(scip) + SCIPgetNFixedVars(scip)))) );
+   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), SCIPgetNVars(scip) + SCIPgetNFixedVars(scip)) );
 
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &dualconss, 2 * SCIPgetNVars(scip) + 2 * SCIPgetNFixedVars(scip)) ); /*lint !e647*/
@@ -189,8 +190,7 @@ SCIP_RETCODE checkConsKnapsack(
    SCIP_CALL( SCIPcreateConsBasicLinear(scip, &objcons, "objcons", 0, NULL, NULL, 0.0, 0.0) );
 
    /* set up hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip),
-                                SCIPcalcHashtableSize(10 * (SCIPgetNVars(scip) + SCIPgetNFixedVars(scip)))) );
+   SCIP_CALL( SCIPhashmapCreate(&varhash, SCIPblkmem(scip), SCIPgetNVars(scip) + SCIPgetNFixedVars(scip)) );
 
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &dualconss, 2 * SCIPgetNVars(scip) + 2 * SCIPgetNFixedVars(scip)) ); /*lint !e647*/
@@ -641,27 +641,27 @@ SCIP_RETCODE createProb(
 {
    switch( instance )
    {
-      case 0:
-         SCIP_CALL( createProbLinear1(scip) );
-         break;
-      case 1:
-         SCIP_CALL( createProbLinear2(scip) );
-         break;
-      case 2:
-         SCIP_CALL( createProbKnapsack(scip) );
-         break;
-      case 3:
-         SCIP_CALL( createProbSetppc(scip) );
-        break;
-      case 4:
-         SCIP_CALL( createProbLogicor(scip) );
-        break;
-      case 5:
-         SCIP_CALL( createProbVarbound(scip) );
-        break;
-      default:
-         SCIPerrorMessage("unknown instance number\n");
-         return SCIP_INVALIDDATA;
+   case 0:
+      SCIP_CALL( createProbLinear1(scip) );
+      break;
+   case 1:
+      SCIP_CALL( createProbLinear2(scip) );
+      break;
+   case 2:
+      SCIP_CALL( createProbKnapsack(scip) );
+      break;
+   case 3:
+      SCIP_CALL( createProbSetppc(scip) );
+      break;
+   case 4:
+      SCIP_CALL( createProbLogicor(scip) );
+      break;
+   case 5:
+      SCIP_CALL( createProbVarbound(scip) );
+      break;
+   default:
+      SCIPerrorMessage("unknown instance number\n");
+      return SCIP_INVALIDDATA;
    }
 
    return SCIP_OKAY;
@@ -708,18 +708,15 @@ SCIP_RETCODE includeKKTSettings(
    return SCIP_OKAY;
 }
 
+/* test suite */
+TestSuite(qpkktref);
 
 /** run unittest */
-static
-SCIP_RETCODE runUnittest(void)
+Test(qpkktref, runUnittest)
 {
    SCIP* scip1 = NULL;
    SCIP* scip2 = NULL;
    int j;
-
-   /* output stuff for automatic unittest evaluation */
-   printf("@01 unittest-qpkktref ===========\n");
-   printf("=opt=  unittest-qpkktref 0\n\n");
 
    for (j = 0; j < 6; ++j)
    {
@@ -759,45 +756,9 @@ SCIP_RETCODE runUnittest(void)
       SCIP_CALL( SCIPfree(&scip1) );
       SCIP_CALL( SCIPfree(&scip2) );
 
+      cr_assert( equal );
+
       /* check for memory leaks */
       BMScheckEmptyMemory();
-
-      if ( ! equal )
-      {
-         SCIPerrorMessage("Optimal solution of original problem is not equal to optimal solution of reformulated problem.\n");
-         return SCIP_ERROR;
-      }
    }
-
-   printf("Unit test for KKT-reformulation passed\n");
-
-   /* for automatic testing output the following */
-   printf("SCIP Status        : all tests passed\n");
-   printf("Ignore the following:\n");
-   printf("  solving          : 0.00\n");
-   printf("  nodes (total)    : 0\n");
-   printf("  Primal Bound     : 0.0\n");
-   printf("  Dual Bound       : 0.0\n");
-
-   return SCIP_OKAY;
-}
-
-/** main function */
-int
-main(
-   int                        argc,
-   char**                     argv
-   )
-{
-   SCIP_RETCODE retcode;
-
-   retcode = runUnittest();
-
-   if ( retcode != SCIP_OKAY )
-   {
-      SCIPprintError(retcode);
-      return -1;
-   }
-
-   return 0;
 }

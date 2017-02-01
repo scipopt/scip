@@ -62,7 +62,8 @@ enum SCIP_RowOriginType
 {
    SCIP_ROWORIGINTYPE_UNSPEC = 0,       /**< unspecified origin of row */
    SCIP_ROWORIGINTYPE_CONS   = 1,       /**< row created by constraint handler */
-   SCIP_ROWORIGINTYPE_SEPA   = 2        /**< row created by separator */
+   SCIP_ROWORIGINTYPE_SEPA   = 2,       /**< row created by separator */
+   SCIP_ROWORIGINTYPE_REOPT  = 3        /**< row created by reoptimization */
 };
 typedef enum SCIP_RowOriginType SCIP_ROWORIGINTYPE;
 
@@ -82,19 +83,19 @@ typedef struct SCIP_LpSolVals SCIP_LPSOLVALS;     /**< collected values of the L
 
 /** column of an LP
  *
- *  - \ref ColumnMethods "List of all available methods"
+ *  - \ref PublicColumnMethods "List of all available methods"
  */
 typedef struct SCIP_Col SCIP_COL;
 
 /** row of an LP
  *
- *  - \ref RowMethods "List of all available methods"
+ *  - \ref PublicRowMethods "List of all available methods"
  */
 typedef struct SCIP_Row SCIP_ROW;
 
 /** LP structure
  *
- *  - \ref LPMethods "List of all available methods"
+ *  - \ref PublicLPMethods "List of all available methods"
  */
 typedef struct SCIP_Lp SCIP_LP;
 

@@ -593,9 +593,9 @@ SCIP_RETCODE presolveAddKKTLinearCons(
       SCIP_VAR* duallin = NULL;
       int j;
 
-      /* scip one iteration if lhs equals rhs */
-      if( SCIPisFeasEQ(scip, lhs, rhs) )
-         i = 1;
+      /* skip one iteration if lhs equals rhs */
+      if( i == 0 && SCIPisFeasEQ(scip, lhs, rhs) )
+         continue;
 
       /* create dual variable corresponding to linear constraint */
       if( i == 0 )
@@ -724,7 +724,7 @@ SCIP_RETCODE presolveAddKKTLinearConss(
 
    /* remove linear constraints if lhs != rhs, since they are now redundant; their feasibility is already expressed
     * by s >= 0, where s is the new slack variable that we introduced for these linear constraints */
-   for( c = 0; c < nlinconss; ++c )
+   for( c = nlinconss-1; c >= 0; --c )
    {
       SCIP_CONS* lincons;
 
@@ -811,7 +811,7 @@ SCIP_RETCODE presolveAddKKTKnapsackConss(
 
    /* remove knapsack constraints, since they are now redundant; their feasibility is already expressed
     * by s >= 0, where s is the new slack variable that we introduced for these linear constraints */
-   for( c = 0; c < nconss; ++c )
+   for( c = nconss-1; c >= 0; --c )
    {
       assert( conss[c] != NULL );
       SCIP_CALL( SCIPdelCons(scip, conss[c]) );
@@ -910,7 +910,7 @@ SCIP_RETCODE presolveAddKKTSetppcConss(
 
    /* remove set packing constraints if lhs != rhs, since they are now redundant; their feasibility is already expressed
     * by s >= 0, where s is the new slack variable that we introduced for these linear constraints */
-   for( c = 0; c < nconss; ++c )
+   for( c = nconss-1; c >= 0; --c )
    {
       assert( conss[c] != NULL );
 
@@ -998,12 +998,12 @@ SCIP_RETCODE presolveAddKKTVarboundConss(
 
    /* remove varbound constraints if lhs != rhs, since they are now redundant; their feasibility is already expressed
     * by s >= 0, where s is the new slack variable that we introduced for these linear constraints */
-   for( c = 0; c < nconss; ++c )
+   for( c = nconss-1; c >= 0; --c )
    {
       SCIP_CONS* cons;
 
       cons = conss[c];
-      assert( conss[c] != NULL );
+      assert( cons != NULL );
 
       if( ! SCIPisFeasEQ(scip, SCIPgetLhsVarbound(scip, cons), SCIPgetRhsVarbound(scip, cons)) )
       {
@@ -1086,7 +1086,7 @@ SCIP_RETCODE presolveAddKKTLogicorConss(
 
    /* remove logicor constraints, since they are now redundant; their feasibility is already expressed
     * by s >= 0, where s is the new slack variable that we introduced for these linear constraints */
-   for( c = 0; c < nconss; ++c )
+   for( c = nconss-1; c >= 0; --c )
    {
       assert( conss[c] != NULL );
 
@@ -1625,7 +1625,10 @@ SCIP_RETCODE checkConsQuadraticProblem(
    else if( maydecrease >= 0 )
    {
       objind = maydecrease;
-      assert( mayincrease < 0 || mayincrease == objind );
+
+      /* if both mayincrease and maydecrese are nonnegative, then check objective coefficient */
+      if( mayincrease >= 0 && SCIPisFeasZero(scip, SCIPvarGetObj(lintermvars[maydecrease])) )
+         objind = mayincrease;
    }
    else
       objind = mayincrease;
@@ -1708,7 +1711,7 @@ SCIP_DECL_PRESOLFREE(presolFreeQPKKTref)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
-   SCIPfreeMemory(scip, &presoldata);
+   SCIPfreeBlockMemory(scip, &presoldata);
    SCIPpresolSetData(presol, NULL);
 
    return SCIP_OKAY;
@@ -1771,6 +1774,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
 
    /* desired structure: matrix associated to quadratic constraint is indefinite;
     * otherwise, the problem usually can be solved faster by standard methods. */
+   SCIP_CALL( SCIPcheckCurvatureQuadratic(scip, cons) );
    if( ! presoldata->updatequadindef && ( SCIPisConvexQuadratic(scip, cons) || SCIPisConcaveQuadratic(scip, cons) ) )
    {
       SCIPdebugMsg(scip, "quadratic constraint update failed, since matrix associated to quadratic constraint <%s> is not \
@@ -1977,7 +1981,7 @@ SCIP_RETCODE SCIPincludePresolQPKKTref(
    SCIP_PRESOL* presol= NULL;
 
    /* alloc presolve data object */
-   SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
