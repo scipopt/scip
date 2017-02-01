@@ -58,7 +58,6 @@ SCIP_RETCODE testNlpi(SCIP* scip, SCIP_NLPI* nlpi)
    int* lininds;
    int nquadelems;
    int nlinds;
-   int i;
 
    /*-----------------------------------------------------------------------
     *
@@ -115,39 +114,40 @@ SCIP_RETCODE testNlpi(SCIP* scip, SCIP_NLPI* nlpi)
          NULL, NULL, &consnames[2]) );
 
    /* solve NLP */
-   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-6) );
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-9) );
    SCIP_CALL( SCIPnlpiSolve(nlpi, nlpiprob) );
-
    cr_expect(SCIPnlpiGetTermstat(nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
    cr_expect(SCIPnlpiGetSolstat(nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
 
-   /* print statistics */
+   /* collect statistics */
    SCIP_CALL( SCIPnlpStatisticsCreate(&statistics) );
    SCIP_CALL( SCIPnlpiGetStatistics(nlpi, nlpiprob, statistics) );
-   printf("TIME = %f ITER = %d SOLSTAT = %d\n", SCIPnlpStatisticsGetTotalTime(statistics), SCIPnlpStatisticsGetNIterations(statistics), SCIPnlpiGetSolstat(nlpi, nlpiprob));
    SCIPnlpStatisticsFree(&statistics);
 
-   /* check primal solution */
    SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, &dualcons, &duallb, &dualub) );
 
-
-   for( i = 0; i < 3; ++i )
-   {
-      printf("dualcons[%d] = %g\n", i, dualcons[i]);
-   }
-
-   for( i = 0; i < 4; ++i )
-   {
-      printf("duallb[%d] = %g\n", i, duallb[i]);
-      printf("dualub[%d] = %g\n", i, dualub[i]);
-   }
-
+   /* check primal solution */
    cr_expect(SCIPisFeasEQ(scip, primal[0], 0.0));
    cr_expect(SCIPisFeasEQ(scip, primal[1], 0.5));
    cr_expect(SCIPisFeasEQ(scip, primal[2], 1.0));
    cr_expect(SCIPisFeasEQ(scip, primal[3], 2.0));
 
-   /* change bounds of x2 */
+   /* check dual solution */
+   cr_expect(SCIPisFeasEQ(scip, dualcons[0], 0.0));
+   cr_expect(SCIPisFeasEQ(scip, dualcons[1], 1.0));
+   cr_expect(SCIPisFeasEQ(scip, dualcons[2], -2.0));
+
+   cr_expect(SCIPisFeasEQ(scip, duallb[0], 0.0));
+   cr_expect(SCIPisFeasEQ(scip, duallb[1], 0.0));
+   cr_expect(SCIPisFeasEQ(scip, duallb[2], 0.0));
+   cr_expect(SCIPisFeasEQ(scip, duallb[3], 0.0));
+
+   cr_expect(SCIPisFeasEQ(scip, dualub[0], 0.0));
+   cr_expect(SCIPisFeasEQ(scip, dualub[1], 0.0));
+   cr_expect(SCIPisFeasEQ(scip, dualub[2], 0.0));
+   cr_expect(SCIPisFeasEQ(scip, dualub[3], 3.0));
+
+   /* change upper bound of x2 */
    lininds[0] = 2;
    lbs[0] = 0.0;
    ubs[0] = 0.5;
@@ -161,27 +161,38 @@ SCIP_RETCODE testNlpi(SCIP* scip, SCIP_NLPI* nlpi)
    SCIP_CALL( SCIPnlpiSetInitialGuess(nlpi, nlpiprob, initguess, NULL, NULL, NULL) );
 
    /* solve NLP */
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, nlpiprob, SCIP_NLPPAR_FEASTOL, 1e-9) );
    SCIP_CALL( SCIPnlpiSolve(nlpi, nlpiprob) );
-
    cr_expect(SCIPnlpiGetTermstat(nlpi, nlpiprob) == SCIP_NLPTERMSTAT_OKAY);
    cr_expect(SCIPnlpiGetSolstat(nlpi, nlpiprob) <= SCIP_NLPSOLSTAT_LOCOPT);
 
-   /* print statistics */
+   /* collect statistics */
    SCIP_CALL( SCIPnlpStatisticsCreate(&statistics) );
    SCIP_CALL( SCIPnlpiGetStatistics(nlpi, nlpiprob, statistics) );
-   printf("TIME = %f ITER = %d SOLSTAT = %d\n", SCIPnlpStatisticsGetTotalTime(statistics), SCIPnlpStatisticsGetNIterations(statistics), SCIPnlpiGetSolstat(nlpi, nlpiprob));
    SCIPnlpStatisticsFree(&statistics);
 
-   /* check primal solution */
-   SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPnlpiGetSolution(nlpi, nlpiprob, &primal, &dualcons, &duallb, &dualub) );
 
-   cr_expect(SCIPisFeasEQ(scip, primal[0], 0.651388));
+   /* check primal solution */
+   cr_expect(SCIPisFeasEQ(scip, primal[0], 0.6513878189));
    cr_expect(SCIPisFeasEQ(scip, primal[1], 0.5));
    cr_expect(SCIPisFeasEQ(scip, primal[2], 0.5));
    cr_expect(SCIPisFeasEQ(scip, primal[3], 2.0));
 
-   /* for( i = 0; i < 4; ++i ) */
-   /*    printf("x[%d] = %g\n", i, primal[i]); */
+   /* check dual solution */
+   cr_expect(SCIPisFeasEQ(scip, dualcons[0], -0.7226499019));
+   cr_expect(SCIPisFeasEQ(scip, dualcons[1], 0.0));
+   cr_expect(SCIPisFeasEQ(scip, dualcons[2], -2.0));
+
+   cr_expect(SCIPisFeasEQ(scip, duallb[0], 0.0));
+   cr_expect(SCIPisFeasEQ(scip, duallb[1], 0.0));
+   cr_expect(SCIPisFeasEQ(scip, duallb[2], 0.0));
+   cr_expect(SCIPisFeasEQ(scip, duallb[3], 0.0));
+
+   cr_expect(SCIPisFeasEQ(scip, dualub[0], 0.0));
+   cr_expect(SCIPisFeasEQ(scip, dualub[1], 0.0));
+   cr_expect(SCIPisFeasEQ(scip, dualub[2], 2.1933752453));
+   cr_expect(SCIPisFeasEQ(scip, dualub[3], 2.0));
 
    /* free memory */
    SCIPfreeBufferArray(scip, &linvals);
