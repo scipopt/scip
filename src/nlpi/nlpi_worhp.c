@@ -54,13 +54,20 @@ struct SCIP_NlpiProblem
    SCIP_NLPIORACLE*            oracle;       /**< Oracle-helper to store and evaluate NLP */
    BMS_BLKMEM*                 blkmem;       /**< block memory */
 
-   SCIP_Real*                  lastsol;      /**< solution from last run, if available */
    SCIP_NLPTERMSTAT            lasttermstat; /**< termination status from last run */
    SCIP_NLPSOLSTAT             lastsolstat;  /**< solution status from last run */
    SCIP_Real                   lastsolinfeas;/**< infeasibility (constraint violation) of solution stored in lastsol */
    SCIP_Real                   lasttime;     /**< time spend in last run */
-   int                         lastsolsize;  /**< size of lastsol array */
    int                         lastniter;    /**< number of iterations in last run */
+
+   SCIP_Real*                  lastprimal;   /**< primal solution from last run, if available */
+   SCIP_Real*                  lastdualcons; /**< dual solution from last run, if available */
+   SCIP_Real*                  lastduallb;   /**< dual solution for lower bounds from last run, if available */
+   SCIP_Real*                  lastdualub;   /**< dual solution for upper bounds from last run, if available */
+   int                         lastprimalsize;  /**< size of lastprimal array */
+   int                         lastdualconssize; /**< size of lastdualcons array */
+   int                         lastduallbsize; /**< size of lastduallb array */
+   int                         lastdualubsize; /**< size of lastdualub array */
 
    SCIP_Bool                   firstrun;     /**< whether the next NLP solve will be the first one (with the current problem structure) */
    SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known */
@@ -95,10 +102,19 @@ void invalidateSolution(
    assert(problem != NULL);
    assert(problem->blkmem != NULL);
 
-   BMSfreeBlockMemoryArrayNull(problem->blkmem, &(problem->lastsol), problem->lastsolsize);
+   BMSfreeBlockMemoryArrayNull(problem->blkmem, &(problem->lastprimal), problem->lastprimalsize);
+   BMSfreeBlockMemoryArrayNull(problem->blkmem, &(problem->lastdualcons), problem->lastdualconssize);
+   BMSfreeBlockMemoryArrayNull(problem->blkmem, &(problem->lastduallb), problem->lastduallbsize);
+   BMSfreeBlockMemoryArrayNull(problem->blkmem, &(problem->lastdualub), problem->lastdualubsize);
 
-   problem->lastsol = NULL;
-   problem->lastsolsize = 0;
+   problem->lastprimal = NULL;
+   problem->lastdualcons = NULL;
+   problem->lastduallb = NULL;
+   problem->lastdualub = NULL;
+   problem->lastprimalsize = 0;
+   problem->lastdualconssize = 0;
+   problem->lastduallbsize = 0;
+   problem->lastdualubsize = 0;
    problem->lastsolinfeas = SCIP_INVALID;
    problem->lastsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
    problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
@@ -111,6 +127,8 @@ SCIP_RETCODE evaluateWorhpRun(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler (might be NULL) */
    )
 {
+   int i;
+
    assert(problem != NULL);
    assert(problem->opt != NULL);
    assert(problem->wsp != NULL);
@@ -269,15 +287,44 @@ SCIP_RETCODE evaluateWorhpRun(
   }
 
   /* store solution */
-  if( problem->lastsol == NULL )
+  if( problem->lastprimal == NULL )
   {
-     SCIP_ALLOC( BMSduplicateBlockMemoryArray(problem->blkmem, &problem->lastsol, problem->opt->X, problem->opt->n) );
-     problem->lastsolsize = problem->opt->n;
+     SCIP_ALLOC( BMSduplicateBlockMemoryArray(problem->blkmem, &problem->lastprimal, problem->opt->X, problem->opt->n) );
+     problem->lastprimalsize = problem->opt->n;
+
+     SCIP_ALLOC( BMSduplicateBlockMemoryArray(problem->blkmem, &problem->lastdualcons, problem->opt->Mu, problem->opt->m) );
+     problem->lastdualconssize = problem->opt->m;
+
+     SCIP_ALLOC( BMSallocBlockMemoryArray(problem->blkmem, &problem->lastduallb, problem->opt->n) );
+     problem->lastduallbsize = problem->opt->n;
+
+     SCIP_ALLOC( BMSallocBlockMemoryArray(problem->blkmem, &problem->lastdualub, problem->opt->n) );
+     problem->lastdualubsize = problem->opt->n;
   }
   else
   {
-     BMScopyMemoryArray(problem->lastsol, problem->opt->X, problem->opt->n);
+     BMScopyMemoryArray(problem->lastprimal, problem->opt->X, problem->opt->n);
+     BMScopyMemoryArray(problem->lastdualcons, problem->opt->Mu, problem->opt->m);
   }
+
+  for( i = 0; i < problem->opt->n; ++i )
+  {
+     if( problem->opt->Lambda[i] <= 0.0 )
+     {
+        problem->lastduallb[i] = -problem->opt->Lambda[i];
+        problem->lastdualub[i] = 0.0;
+     }
+     else
+     {
+        problem->lastduallb[i] = 0.0;
+        problem->lastdualub[i] = problem->opt->Lambda[i];
+     }
+  }
+
+  assert(problem->lastprimal != NULL);
+  assert(problem->lastdualcons != NULL);
+  assert(problem->lastduallb != NULL);
+  assert(problem->lastdualub != NULL);
 
   return SCIP_OKAY;
 }
@@ -1552,11 +1599,18 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionWorhp )
    assert(problem != NULL);
 
    if( primalvalues != NULL )
-      *primalvalues = problem->lastsol;
+      *primalvalues = problem->lastprimal;
 
-   /* TODO return dual solution */
+   if( consdualvalues != NULL )
+      *consdualvalues = problem->lastdualcons;
 
-   return SCIP_OKAY;  /*lint !e527*/
+   if( varlbdualvalues != NULL )
+      *varlbdualvalues = problem->lastduallb;
+
+   if( varubdualvalues != NULL )
+      *varubdualvalues = problem->lastdualub;
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** gives solve statistics
