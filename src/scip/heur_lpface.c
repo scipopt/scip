@@ -559,7 +559,7 @@ SCIP_RETCODE setSubscipParameters(
    }
    if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
    {
-      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 1000) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
    }
 #endif
 

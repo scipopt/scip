@@ -446,11 +446,11 @@ SCIP_DECL_HEUREXEC(heurExecRins)
 
 #ifdef SCIP_DEBUG
    /* for debugging, enable full output */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", SCIP_VERBLEVEL_FULL) );
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
 #else
    /* disable statistic timing inside sub SCIP and output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 #endif
 
@@ -502,7 +502,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    }
    if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
    {
-      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 1000) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
    }
 #endif
 
