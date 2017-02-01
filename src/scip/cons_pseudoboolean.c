@@ -958,7 +958,7 @@ void checkConsConsistency(
 
    /* get variables and coefficients */
    SCIP_CALL_ABORT( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-   assert(nvars == 0 || (vars != NULL && coefs != NULL));
+   assert(nvars == 0 || (coefs != NULL));
 
    /* calculate all not artificial linear variables and all artificial and-resultants */
    SCIP_CALL_ABORT( getLinVarsAndAndRess(scip, cons, vars, coefs, nvars, linvars, lincoefs, &nlinvars,
@@ -1833,7 +1833,7 @@ SCIP_RETCODE consdataPrint(
 
    /* get variables and coefficient of linear constraint */
    SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-   assert(nvars == 0 || (vars != NULL && coefs != NULL));
+   assert(nvars == 0 || (coefs != NULL));
 
    /* calculate all not artificial linear variables and all artificial and-resultants which will be ordered like the
     * 'consanddatas' such that the and-resultant of the and-constraint is the and-resultant in the 'andress' array
@@ -2417,7 +2417,7 @@ SCIP_RETCODE chgLhs(
 
    /* get variables and coefficient of linear constraint */
    SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-   assert(nvars == 0 || (vars != NULL && coefs != NULL));
+   assert(nvars == 0 || (coefs != NULL));
 
    /* calculate all not artificial linear variables and all artificial and-resultants which will be ordered like the
     * 'consanddatas' such that the and-resultant of the and-constraint is the and-resultant in the 'andress' array
@@ -2590,7 +2590,7 @@ SCIP_RETCODE chgRhs(
 
    /* get variables and coefficient of linear constraint */
    SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-   assert(nvars == 0 || (vars != NULL && coefs != NULL));
+   assert(nvars == 0 || (coefs != NULL));
 
    /* calculate all not artificial linear variables and all artificial and-resultants which will be ordered like the
     * 'consanddatas' such that the and-resultant of the and-constraint is the and-resultant in the 'andress' array
@@ -3469,7 +3469,7 @@ SCIP_RETCODE checkOrigPbCons(
 
    /* get variables and coefficient of linear constraint */
    SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-   assert(nvars == 0 || (vars != NULL && coefs != NULL));
+   assert(nvars == 0 || (coefs != NULL));
 
    /* number of variables should be consistent, number of 'real' linear variables plus number of and-constraints should
     * have to be equal to the number of variables in the linear constraint
@@ -6049,7 +6049,7 @@ SCIP_RETCODE tryUpgradingLogicor(
 
       /* get variables and coefficients */
       SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, allvars, allcoefs, &nallvars) );
-      assert(allvars != NULL && allcoefs != NULL);
+      assert(allcoefs != NULL);
 
       /* calculate all not artificial linear variables */
       SCIP_CALL( getLinVarsAndAndRess(scip, cons, allvars, allcoefs, nallvars, linvars, lincoefs, &nlinvars,
@@ -6385,7 +6385,7 @@ SCIP_RETCODE tryUpgradingLogicor(
 
          /* get variables and coefficients */
          SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-         assert(nvars == 0 || (vars != NULL && coefs != NULL));
+         assert(nvars == 0 || (coefs != NULL));
 
 #ifndef NDEBUG
          /* all coefficients have to be 1 */
@@ -7264,7 +7264,6 @@ SCIP_RETCODE findAggregation(
 	 /* get variables and coefficients */
 	 SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, consvars, conscoefs, &nconsvars) );
 	 assert(nconsvars == consdata->nlinvars + nconsanddatas);
-	 assert(consvars != NULL);
 	 assert(conscoefs != NULL);
 
 #ifndef NDEBUG
@@ -7377,7 +7376,6 @@ SCIP_RETCODE findAggregation(
 	 /* get variables and coefficients */
 	 SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, consvars, conscoefs, &nconsvars) );
 	 assert(nconsvars == consdata->nlinvars + nconsanddatas);
-	 assert(consvars != NULL);
 	 assert(conscoefs != NULL);
 
 #ifndef NDEBUG
@@ -7605,7 +7603,7 @@ SCIP_DECL_CONSINITPRE(consInitprePseudoboolean)
 
          /* get variables and coefficient of linear constraint */
          SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-         assert(nvars == 0 || (vars != NULL && coefs != NULL));
+         assert(nvars == 0 || (coefs != NULL));
 
          if( consdata->issoftcons && conshdlrdata->decomposeindicatorpbcons )
          {
@@ -8167,7 +8165,7 @@ SCIP_DECL_CONSPRESOL(consPresolPseudoboolean)
 
       /* get variables and coefficient of linear constraint */
       SCIP_CALL( getLinearConsVarsData(scip, consdata->lincons, consdata->linconstype, vars, coefs, &nvars) );
-      assert(nvars == 0 || (vars != NULL && coefs != NULL));
+      assert(nvars == 0 || (coefs != NULL));
 
       /* calculate all not artificial linear variables and all artificial and-resultants which will be ordered like the
        * 'consanddatas' such that the and-resultant of the and-constraint is the and-resultant in the 'andress' array
