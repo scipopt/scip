@@ -35,7 +35,10 @@
 extern "C" {
 #endif
 
-/** creates the dual fixing propagator and includes it in SCIP */
+/** creates the dual fixing propagator and includes it in SCIP
+ *
+ * @ingroup PropagatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePropDualfix(
    SCIP*                 scip                /**< SCIP data structure */

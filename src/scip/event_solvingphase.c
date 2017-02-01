@@ -324,6 +324,8 @@ SCIP_RETCODE recomputeNodeInformation(
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
+   assert(eventhdlrdata != NULL);
+
    /* reset depth information */
    for( d = 0; d < eventhdlrdata->maxdepth; ++d )
       eventhdlrdata->depthinfos[d]->nminnodes = 0;
@@ -331,8 +333,6 @@ SCIP_RETCODE recomputeNodeInformation(
    eventhdlrdata->nrank1nodes = 0;
    eventhdlrdata->nnodesbelowincumbent = 0;
    eventhdlrdata->nnodesleft = 0;
-
-   assert(eventhdlrdata != NULL);
 
    nleaves = nchildren = nsiblings = 0;
 

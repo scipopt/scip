@@ -3662,6 +3662,9 @@ SCIP_RETCODE detectRedundantConstraints(
          goto TERMINATE;
 
       consdata0 = SCIPconsGetData(cons0);
+
+      assert(consdata0 != NULL);
+
       /* sort the constraint */
       consdataSort(consdata0);
       assert(consdata0->sorted);
@@ -3678,7 +3681,7 @@ SCIP_RETCODE detectRedundantConstraints(
 
          consdata1 = SCIPconsGetData(cons1);
 
-         assert(consdata0 != NULL && consdata1 != NULL);
+         assert(consdata1 != NULL);
          assert(consdata0->nvars >= 1 && consdata0->nvars == consdata1->nvars);
 
          assert(consdata0->sorted && consdata1->sorted);

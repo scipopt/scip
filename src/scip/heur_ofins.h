@@ -31,7 +31,10 @@
 extern "C" {
 #endif
 
-/** creates the ofins primal heuristic and includes it in SCIP */
+/** creates the ofins primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurOfins(
    SCIP*                 scip                /**< SCIP data structure */

@@ -37,7 +37,10 @@
 extern "C" {
 #endif
 
-/** creates the oneopt primal heuristic and includes it in SCIP */
+/** creates the oneopt primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurOneopt(
    SCIP*                 scip                /**< SCIP data structure */

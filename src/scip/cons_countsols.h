@@ -19,8 +19,6 @@
  * @author Stefan Heinz
  * @author Michael Winkler
  *
- * If this constraint handler is activated than it counts or collects all feasible solutions. We refer to \ref COUNTER for
- * more details about using SCIP for counting feasible solutions.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -34,6 +32,27 @@
 extern "C" {
 #endif
 
+/** creates the handler for countsol constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
+EXTERN
+SCIP_RETCODE SCIPincludeConshdlrCountsols(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Constraint Handler for counting solutions
+ *
+ * @{
+ *
+ * If this constraint handler is activated than it counts or collects all feasible solutions. We refer to \ref COUNTER for
+ * more details about using SCIP for counting feasible solutions.
+ */
+
 /** dialog execution method for the count command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve);
@@ -45,12 +64,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount);
 /** execution method of dialog for writing all solutions */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions);
-
-/** creates the handler for countsol constraints and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeConshdlrCountsols(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 /** execute counting */
 EXTERN
@@ -112,6 +125,10 @@ EXTERN
 SCIP_RETCODE SCIPsetParamsCountsols(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

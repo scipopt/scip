@@ -1024,12 +1024,12 @@ SCIP_RETCODE SCIPsolSetVal(
    SCIP_Real oldval;
 
    assert(sol != NULL);
+   assert(stat != NULL);
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL
       || sol->solorigin == SCIP_SOLORIGIN_ZERO
       || sol->solorigin == SCIP_SOLORIGIN_PARTIAL
       || sol->solorigin == SCIP_SOLORIGIN_UNKNOWN
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
-   assert(stat != NULL);
    assert(var != NULL);
    assert(SCIPisFinite(val));
 
@@ -1219,10 +1219,10 @@ SCIP_RETCODE SCIPsolIncVal(
    SCIP_Real oldval;
 
    assert(sol != NULL);
+   assert(stat != NULL);
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL
       || sol->solorigin == SCIP_SOLORIGIN_ZERO
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
-   assert(stat != NULL);
    assert(var != NULL);
    assert(!SCIPsetIsInfinity(set, incval) && !SCIPsetIsInfinity(set, -incval));
 

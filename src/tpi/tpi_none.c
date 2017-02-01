@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   spi_none.c
+/**@file   tpi_none.c
  * @ingroup TASKINTERFACE
  * @brief  the interface functions for dummy tpi
  * @author Stephen J. Maher

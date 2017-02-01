@@ -13,27 +13,17 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal.c
- * @brief  main document page
- * @author Marc Pfetsch
+/**@file   xternal_relaxator.c
+ * @brief  Main documentation page of the Relaxator example
+ * @author Benjamin Mueller
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Gomory Mixed Integer Cut Example
- * @version  1.0
- * @author   Giacomo Nannicini
- * @author   Marc Pfetsch
+/**@page RELAXATOR_MAIN Relaxator Example
+ * @author   Benjamin Mueller
  *
- *
- * This example provides a textbook implementation of Gomory mixed integer (GMI) cuts.
- *
- * The default implementation in SCIP does not produce GMI cuts in the strict sense, since it applies the CMIR function
- * to the aggregated row. This function can, among other things, take variable bounds into account. Thus, the resulting
- * cuts cannot be used for comparison with standard GMI cuts. This example remedies this situation.
- *
- * The implementation has been used in the paper@p
- * G. Cornuejols, F. Margot and G. Nannicini:@n
- * On the safety of Gomory cut generators.@n
- * Preprint 2012.
+ * This example illustrates how to write a relaxator for SCIP. It extends the default plugins of <a
+ * href="http://scip.zib.de">SCIP</a> by two additional relaxator plugins, one for solving the linear and another one
+ * for solving the convex nonlinear relaxation. Both relaxators are called in each node of the branch-and-bound tree.
  */

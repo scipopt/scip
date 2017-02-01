@@ -691,6 +691,7 @@ SCIP_RETCODE unlockRounding(
 }
 
 /** creates event data for variable at given position, and catches events */
+/**! [SnippetDebugAssertions] */
 static
 SCIP_RETCODE consCatchEvent(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -725,6 +726,7 @@ SCIP_RETCODE consCatchEvent(
 
    return SCIP_OKAY;
 }
+/**! [SnippetDebugAssertions] */
 
 /** deletes event data for variable at given position, and drops events */
 static
@@ -4768,12 +4770,16 @@ SCIP_RETCODE addConflictBounds(
    assert(cons != NULL);
 
    consdata = SCIPconsGetData(cons);
+
    assert(consdata != NULL);
+
    vars = consdata->vars;
    vals = consdata->vals;
    nvars = consdata->nvars;
+
    assert(vars != NULL || nvars == 0);
    assert(vals != NULL || nvars == 0);
+
    assert(-1 <= inferpos && inferpos < nvars);
    assert((infervar == NULL) == (inferpos == -1));
    assert(inferpos == -1 || vars[inferpos] == infervar); /*lint !e613*/
@@ -4867,9 +4873,6 @@ SCIP_RETCODE addConflictBounds(
             /* now add bounds as reasons until the residual capacity is exceeded */
             for( i = 0; i < nvars; ++i )
             {
-               assert(vars != NULL); /* for flexelint */
-               assert(vals != NULL); /* for flexelint */
-
                /* zero coefficients and the infered variable can be ignored */
                if( vars[i] == infervar || SCIPisZero(scip, vals[i]) )
                   continue;

@@ -13,14 +13,14 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal.c
+/**@file   xternal_tsp.c
  * @brief  main document page
  * @author Timo Berthold
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Overview
+/**@page TSP_MAIN TSP example
  * @version  0.9
  * @author   Timo Berthold
 
@@ -117,5 +117,3 @@
  * the corresponding edge \f$ e \f$ ,
  * if it does not close a subtour.
  */
-
-

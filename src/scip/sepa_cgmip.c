@@ -116,6 +116,7 @@
 #define DEFAULT_USEOBJLB          FALSE /**< Use lower bound on objective function (via lower bound)? */
 #define DEFAULT_SUBSCIPFAST        TRUE /**< Should the settings for the sub-MIP be optimized for speed? */
 #define DEFAULT_OUTPUT            FALSE /**< Should information about the sub-MIP and cuts be displayed? */
+#define DEFAULT_RANDSEED            101 /**< start random seed for random number generation */
 
 #define NROWSTOOSMALL                 5 /**< only separate if the number of rows is larger than this number */
 #define NCOLSTOOSMALL                 5 /**< only separate if the number of columns is larger than this number */
@@ -139,10 +140,10 @@
 
 #define MAXAGGRLEN(nvars)         nvars      /**< currently very large to allow any generation; an alternative would be (0.1*(nvars)+1000) */
 
-
 /** separator data */
 struct SCIP_SepaData
 {
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    int                   maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    int                   maxdepth;           /**< maximal depth at which the separator is applied */
@@ -889,7 +890,7 @@ SCIP_Real computeObjWeightSize(
  *    \left[
  *    \begin{array}{r}
  *      -A \\
- *      A 
+ *      A
  *    \end{array}
  *    \right],
  *    \quad
@@ -1229,7 +1230,7 @@ SCIP_RETCODE createSubscip(
             if ( sepadata->intconvert && ncols >= sepadata->intconvmin )
             {
                /* randomly convert variables */
-               if ( ((SCIP_Real) rand())/((SCIP_Real) RAND_MAX) <= sepadata->intconvfrac )
+               if ( SCIPrandomGetReal(sepadata->randnumgen, 0.0, 1.0) <= sepadata->intconvfrac )
                {
                   assert( ! SCIPisInfinity(scip, ub[j]) || ! SCIPisInfinity(scip, -lb[j]) );
 
@@ -1274,7 +1275,7 @@ SCIP_RETCODE createSubscip(
             if ( sepadata->contconvert && ncols >= sepadata->contconvmin )
             {
                /* randomly convert variables */
-               if ( ((SCIP_Real) rand())/((SCIP_Real) RAND_MAX) <= sepadata->contconvfrac )
+               if ( SCIPrandomGetReal(sepadata->randnumgen, 0.0, 1.0) <= sepadata->contconvfrac )
                {
                   /* preprocessing is also performed for converted columns */
                   mipdata->coltype[j] = colConverted;
@@ -2332,7 +2333,7 @@ SCIP_RETCODE solveSubscip(
 }
 
 
-/** Computes cut from the given multipliers 
+/** Computes cut from the given multipliers
  *
  *  Note that the cut computed here in general will not be the same as the one computed with the
  *  sub-MIP, because of numerical differences. Here, we only combine rows whose corresponding
@@ -3794,10 +3795,7 @@ SCIP_RETCODE freeSubscip(
       }
    }
 
-   if ( mipdata->subscip != NULL )
-   {
-      SCIP_CALL( SCIPfree(&(mipdata->subscip)) );
-   }
+   SCIP_CALL( SCIPfree(&(mipdata->subscip)) );
 
    SCIPfreeBlockMemoryArray(scip, &(mipdata->z), 2*mipdata->ncols); /*lint !e647*/
    SCIPfreeBlockMemoryArray(scip, &(mipdata->yrhs), mipdata->ntotalrows);
@@ -3815,6 +3813,36 @@ SCIP_RETCODE freeSubscip(
 /*
  * Callback methods
  */
+
+
+/** initialization method of separator (called after problem was transformed) */
+static
+SCIP_DECL_SEPAINIT(sepaInitCGMIP)
+{
+   SCIP_SEPADATA* sepadata;
+
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   /* create and initialize random number generator */
+   SCIP_CALL( SCIPrandomCreate(&sepadata->randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of separator (called before transformed problem is freed) */
+static
+SCIP_DECL_SEPAEXIT(sepaExitCGMIP)
+{  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
+
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   SCIPrandomFree(&sepadata->randnumgen);
+
+   return SCIP_OKAY;
+}
 
 /** copy method for separator plugins (called when SCIP copies plugins) */
 static
@@ -3987,7 +4015,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    mipdata->sepa = sepa;
    mipdata->sepadata = sepadata;
 
-
    /* get the type of norm to use for efficacy calculations */
    SCIP_CALL( SCIPgetCharParam(scip, "separating/efficacynorm", &mipdata->normtype) );
 
@@ -4027,7 +4054,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpCGMIP)
    return SCIP_OKAY;
 }
 
-
 /*
  * separator specific interface methods
  */
@@ -4051,6 +4077,8 @@ SCIP_RETCODE SCIPincludeSepaCGMIP(
 
    SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyCGMIP) );
    SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeCGMIP) );
+   SCIP_CALL( SCIPsetSepaInit(scip, sepa, sepaInitCGMIP) );
+   SCIP_CALL( SCIPsetSepaExit(scip, sepa, sepaExitCGMIP) );
 
    /* add separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

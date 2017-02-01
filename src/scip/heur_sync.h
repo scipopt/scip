@@ -40,11 +40,19 @@
 extern "C" {
 #endif
 
-/** creates the sync primal heuristic and includes it in SCIP */
+/** creates the sync primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurSync(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup PRIMALHEURISTICS
+  *
+  * @{
+  */
 
 /** pass solution to sync heuristic */
 EXTERN
@@ -53,6 +61,8 @@ SCIP_RETCODE SCIPheurSyncPassSol(
    SCIP_HEUR*            heur,               /**< sync heuristic */
    SCIP_SOL*             sol                 /**< solution to be passed */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

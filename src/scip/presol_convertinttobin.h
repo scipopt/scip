@@ -30,7 +30,10 @@
 extern "C" {
 #endif
 
-/** creates the convertinttobin presolver and includes it in SCIP */
+/** creates the convertinttobin presolver and includes it in SCIP
+ *
+ * @ingroup PresolverIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePresolConvertinttobin(
    SCIP*                 scip                /**< SCIP data structure */

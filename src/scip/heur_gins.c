@@ -246,10 +246,10 @@ SCIP_RETCODE fillVariableGraph(
       SCIP_Bool success;
       SCIP_CONS* cons = conss[c];
 
-      SCIPstatistic(
-         int nconsdiscvars;
-         int nconscontvars;
-      )
+#ifdef SCIP_STATISTIC
+      int nconsdiscvars;
+      int nconscontvars;
+#endif
 
       /* we only consider constraints that are checkable */
       if( !SCIPconsIsChecked(cons) )
@@ -274,7 +274,10 @@ SCIP_RETCODE fillVariableGraph(
       if( !success )
          continue;
 
-      SCIPstatistic( nconsdiscvars = nconscontvars = 0; )
+#ifdef SCIP_STATISTIC
+      nconscontvars = 0
+      nconsdiscvars = 0;
+#endif
 
       /* loop over constraint variables and add this constraint to them if they are active */
       for( v = 0; v < nconsvars; ++v )
@@ -931,11 +934,11 @@ SCIP_RETCODE selectInitialVariable(
       ++nsearched;
 
       /* select a variable to start with randomly, but make sure it is active */
-      choosevar = NULL;
       do
       {
          int idx = SCIPrandomGetInt(heurdata->randnumgen, 0, nintegralvarsleft - 1);
          choosevar = varscopy[idx];
+         assert(choosevar != NULL);
          /* sort inactive variables to the end */
          if( SCIPvarGetProbindex(choosevar) < 0 )
          {
@@ -943,10 +946,10 @@ SCIP_RETCODE selectInitialVariable(
             --nintegralvarsleft;
          }
       }
-      while( choosevar != NULL && SCIPvarGetProbindex(choosevar) < 0 && nintegralvarsleft > 0);
+      while( SCIPvarGetProbindex(choosevar) < 0 && nintegralvarsleft > 0);
 
       /* if there was no variable chosen, there are no active variables left */
-      if( choosevar == NULL || SCIPvarGetProbindex(choosevar) < 0 )
+      if( SCIPvarGetProbindex(choosevar) < 0 )
       {
          SCIPdebugMsg(scip, "No active variable left to perform breadth-first search\n");
          break;

@@ -13,17 +13,23 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal.c
- * @brief  main document page
- * @author Benjamin Mueller
+/**@file   xternal_mipsolver.c
+ * @brief  main documentation page of the MIP solver example
+ * @author Timo Berthold
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Relaxator Example
- * @author   Benjamin Mueller
+/**@page MIPSOLVER_MAIN example C++ project using SCIP as a MIP solver
+ * @version  0.1
+ * @author   Tobias Achterberg
  *
- * This example illustrates how to write a relaxator for SCIP. It extends the default plugins of <a
- * href="http://scip.zib.de">SCIP</a> by two additional relaxator plugins, one for solving the linear and another one
- * for solving the convex nonlinear relaxation. Both relaxators are called in each node of the branch-and-bound tree.
+ * This very basic example illustrates how to integrate SCIP into your C++ source code.  The SCIP header files are
+ * included from the directory which is denoted by SCIPDIR in the Makefile. If your SCIP headers are installed somewhere
+ * else, just change this link. Since this example is written in C++, objscip/objscip.h is included at the beginning of
+ * cppmain.cpp. It includes scip.h (which you would include when using SCIP as callable library in a C
+ * program). The main function shows how the SCIP_RETCODE can be caught and handled. In runSCIP(), you see how a SCIP
+ * instance is created and freed, plus a few more things. Here, the SCIP_RETCODEs are not checked explicitly but handled
+ * by the SCIP_CALL macro. Please also note the CallableLibrary example for nonlinear problems.
  */
+

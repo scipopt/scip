@@ -31,7 +31,10 @@
 extern "C" {
 #endif
 
-/** creates the completesol primal heuristic and includes it in SCIP */
+/** creates the completesol primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurCompletesol(
    SCIP*                 scip                /**< SCIP data structure */

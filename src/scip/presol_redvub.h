@@ -30,7 +30,10 @@
 extern "C" {
 #endif
 
-/** creates the redvub presolver and includes it in SCIP */
+/** creates the redvub presolver and includes it in SCIP
+ *
+ * @ingroup PresolverIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludePresolRedvub(
    SCIP*                 scip                /**< SCIP data structure */

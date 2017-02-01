@@ -15,18 +15,10 @@
 
 /**@file   cons_logicor.h
  * @ingroup CONSHDLRS
- * @brief  Constraint handler for logicor constraints \f$1^T x \ge 1\f$
- *         (equivalent to set covering, but algorithms are suited for depth first search).
+ * @brief  Constraint handler for logicor constraints \f$1^T x \ge 1\f$ (equivalent to set covering, but algorithms are suited for depth first search).
  * @author Tobias Achterberg
  * @author Michael Winkler
  *
- * This constraint handler handles a special type of linear constraints, namely
- * logic or constraints. These are equivalent to set covering constraints, but
- * are handled by special algorithms which are better suited for depth first search.
- * For a set of binary variables \f$x_i, i=1,\dots,n\f$, a logic or constraint has the form
- * \f[
- *   \sum_{i=1}^n x_i \ge 1.
- * \f]
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -41,11 +33,31 @@
 extern "C" {
 #endif
 
-/** creates the handler for logic or constraints and includes it in SCIP */
+/** creates the handler for logic or constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrLogicor(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Logicor Constraints
+ *
+ * @{
+ *
+ * This constraint handler handles a special type of linear constraints, namely
+ * logic or constraints. These are equivalent to set covering constraints, but
+ * are handled by special algorithms which are better suited for depth first search.
+ * For a set of binary variables \f$x_i, i=1,\dots,n\f$, a logic or constraint has the form
+ * \f[
+ *   \sum_{i=1}^n x_i \ge 1.
+ * \f]
+ */
 
 /** creates and captures a logic or constraint
  *
@@ -144,6 +156,10 @@ SCIP_ROW* SCIPgetRowLogicor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

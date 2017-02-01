@@ -31,7 +31,10 @@
 extern "C" {
 #endif
 
-/** creates the rapidlearning separator and includes it in SCIP */
+/** creates the rapidlearning separator and includes it in SCIP
+ *
+ * @ingroup SeparatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeSepaRapidlearning(
    SCIP*                 scip                /**< SCIP data structure */

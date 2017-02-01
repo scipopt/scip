@@ -16721,8 +16721,8 @@ SCIP_VARTYPE SCIPvarGetType(
 /** returns TRUE if the variable is of binary type; this is the case if:
  *  (1) variable type is binary
  *  (2) variable type is integer or implicit integer and 
- *      (i)  the lazy lower bound or the global lower bound is greater or equal to zero
- *      (ii) the lazy upper bound or the global upper bound is less tor equal to one 
+ *      (i)  the lazy lower bound or the global lower bound is greater than or equal to zero
+ *      (ii) the lazy upper bound or the global upper bound is less than or equal to one
  */
 SCIP_Bool SCIPvarIsBinary(
    SCIP_VAR*             var                 /**< problem variable */

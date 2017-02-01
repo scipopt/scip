@@ -7555,18 +7555,19 @@ SCIP_RETCODE propagateCons(
             {
                SCIP_VAR* maxvar;
                SCIP_Bool maxvarfixed;
-               int endvarposclique = cliqueendposs[c];
-               int startvarposclique = cliquestartposs[c];
+               int endvarposclique;
+               int startvarposclique;
 
-
-               maxvar = myvars[startvarposclique];
-
-
-               assert(nnegcliques == consdata->nnegcliques);
                assert(myvars != NULL);
+               assert(nnegcliques == consdata->nnegcliques);
                assert(myweights != NULL);
                assert(secondmaxweights != NULL);
                assert(cliquestartposs != NULL);
+
+               endvarposclique = cliqueendposs[c];
+               startvarposclique = cliquestartposs[c];
+
+               maxvar = myvars[startvarposclique];
 
                /* no need to process this negated clique because all variables are already fixed (which we detect from a fixed maxvar) */
                if( SCIPvarGetUbLocal(maxvar) - SCIPvarGetLbLocal(maxvar) < 0.5 )
@@ -10421,7 +10422,8 @@ SCIP_RETCODE tightenWeights(
                backpos = nvars - 2;
             }
             break;
-         case 3:
+         default:
+            assert(k == 3);
             if( sumcoefcase )
             {
                if( weights[nvars - 4] < weights[nvars - 1] + weights[nvars - 2] )
@@ -10441,8 +10443,6 @@ SCIP_RETCODE tightenWeights(
                backpos = nvars - 3;
             }
             break;
-         default:
-            return SCIP_ERROR;
          }
 
          if( backpos <= pos )
@@ -11937,6 +11937,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdKnapsack)
  */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
+/**! [SnippetConsCopyKnapsack] */
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyKnapsack)
 {  /*lint --e{715}*/
@@ -11951,8 +11952,10 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyKnapsack)
 
    return SCIP_OKAY;
 }
+/**! [SnippetConsCopyKnapsack] */
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
+/**! [SnippetConsFreeKnapsack] */
 static
 SCIP_DECL_CONSFREE(consFreeKnapsack)
 {  /*lint --e{715}*/
@@ -11968,6 +11971,7 @@ SCIP_DECL_CONSFREE(consFreeKnapsack)
 
    return SCIP_OKAY;
 }
+/**! [SnippetConsFreeKnapsack] */
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
@@ -12742,6 +12746,7 @@ SCIP_DECL_CONSRESPROP(consRespropKnapsack)
 }
 
 /** variable rounding lock method of constraint handler */
+/**! [SnippetConsLockKnapsack] */
 static
 SCIP_DECL_CONSLOCK(consLockKnapsack)
 {  /*lint --e{715}*/
@@ -12758,6 +12763,7 @@ SCIP_DECL_CONSLOCK(consLockKnapsack)
 
    return SCIP_OKAY;
 }
+/**! [SnippetConsLockKnapsack] */
 
 
 /** variable deletion method of constraint handler */
@@ -13187,6 +13193,7 @@ SCIP_RETCODE SCIPincludeConshdlrKnapsack(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
+/**! [SnippetConsCreationKnapsack] */
 SCIP_RETCODE SCIPcreateConsKnapsack(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
@@ -13252,6 +13259,7 @@ SCIP_RETCODE SCIPcreateConsKnapsack(
 
    return SCIP_OKAY;
 }
+/**! [SnippetConsCreationKnapsack] */
 
 /** creates and captures a knapsack constraint
  *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the

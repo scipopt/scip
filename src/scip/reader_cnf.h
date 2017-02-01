@@ -35,7 +35,10 @@
 extern "C" {
 #endif
 
-/** includes the cnf file reader into SCIP */
+/** includes the cnf file reader into SCIP
+ *
+ *  @ingroup FileReaderIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeReaderCnf(
    SCIP*                 scip                /**< SCIP data structure */

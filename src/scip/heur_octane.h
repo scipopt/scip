@@ -31,7 +31,10 @@
 extern "C" {
 #endif
 
-/** creates the octane primal heuristic and includes it in SCIP */
+/** creates the octane primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurOctane(
    SCIP*                 scip                /**< SCIP data structure */

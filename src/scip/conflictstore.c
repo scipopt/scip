@@ -792,7 +792,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    assert(transprob != NULL || SCIPconsIsOriginal(cons));
    assert(cons != NULL);
    assert(conftype != SCIP_CONFTYPE_BNDEXCEEDING || cutoffinvolved);
-   assert(!cutoffinvolved || (cutoffinvolved && !SCIPsetIsInfinity(set, REALABS(primalbound))));
+   assert(!cutoffinvolved || !SCIPsetIsInfinity(set, REALABS(primalbound)));
 
    /* mark the constraint to be a conflict */
    SCIPconsMarkConflict(cons);

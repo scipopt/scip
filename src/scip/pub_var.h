@@ -407,8 +407,8 @@ SCIP_VARTYPE SCIPvarGetType(
 /** returns TRUE if the variable is of binary type; this is the case if:
  *  (1) variable type is binary
  *  (2) variable type is integer or implicit integer and 
- *      (i)  the lazy lower bound or the global lower bound is greater or equal to zero
- *      (ii) the lazy upper bound or the global upper bound is less tor equal to one 
+ *      (i)  the lazy lower bound or the global lower bound is greater than or equal to zero
+ *      (ii) the lazy upper bound or the global upper bound is less than or equal to one
  */
 EXTERN
 SCIP_Bool SCIPvarIsBinary(
@@ -1138,6 +1138,12 @@ SCIP_Bool SCIPvarWasFixedEarlier(
    SCIP_VAR*             var2                /**< second binary variable */
    );
 
+/**
+ * @name Public SCIP_BDCHGIDX Methods
+ *
+ * @{
+ */
+
 /** returns whether first bound change index belongs to an earlier applied bound change than second one;
  *  if a bound change index is NULL, the bound change index represents the current time, i.e. the time after the
  *  last bound change was applied to the current node
@@ -1154,6 +1160,14 @@ SCIP_Bool SCIPbdchgidxIsEarlierNonNull(
    SCIP_BDCHGIDX*        bdchgidx1,          /**< first bound change index */
    SCIP_BDCHGIDX*        bdchgidx2           /**< second bound change index */
    );
+
+/**@} */
+
+/**
+ * @name Public SCIP_BDCHGINFO Methods
+ *
+ * @{
+ */
 
 /** returns old bound that was overwritten for given bound change information */
 EXTERN
@@ -1254,6 +1268,14 @@ SCIP_Bool SCIPbdchginfoIsTighter(
    SCIP_BDCHGINFO*       bdchginfo2          /**< second bound change information */
    );
 
+/**@} */
+
+/**
+ * @name Public SCIP_BOUNDCHG Methods
+ *
+ * @{
+ */
+
 /** returns the new value of the bound in the bound change data */
 EXTERN
 SCIP_Real SCIPboundchgGetNewbound(
@@ -1284,6 +1306,14 @@ SCIP_Bool SCIPboundchgIsRedundant(
    SCIP_BOUNDCHG*        boundchg            /**< bound change data */
    );
 
+/** @} */
+
+/**
+ * @name Public SCIP_DOMCHG Methods
+ *
+ * @{
+ */
+
 /** returns the number of bound changes in the domain change data */
 EXTERN
 int SCIPdomchgGetNBoundchgs(
@@ -1296,6 +1326,14 @@ SCIP_BOUNDCHG* SCIPdomchgGetBoundchg(
    SCIP_DOMCHG*          domchg,             /**< domain change data */
    int                   pos                 /**< position of the bound change in the domain change data */
    );
+
+/**@} */
+
+/**
+ * @name Public SCIP_HOLELIST Methods
+ *
+ * @{
+ */
 
 /** returns left bound of open interval in hole */
 EXTERN
@@ -1314,6 +1352,8 @@ EXTERN
 SCIP_HOLELIST* SCIPholelistGetNext(
    SCIP_HOLELIST*        holelist            /**< hole list pointer to hole of interest */
    );
+
+/**@} */
 
 #ifdef NDEBUG
 

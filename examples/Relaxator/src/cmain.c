@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cmain.c
+/**@file   Relaxator/src/cmain.c
  * @brief  Main file for C compilation
  * @author Benjamin Mueller
  */
