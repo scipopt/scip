@@ -461,6 +461,7 @@ SCIP_RETCODE userDG(
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
    )
 {
+   SCIP_RETCODE retcode;
    SCIP_Real* jacvals;
    int i;
 
@@ -472,34 +473,30 @@ SCIP_RETCODE userDG(
    assert(problem->opt->n = SCIPnlpiOracleGetNVars(problem->oracle));
    assert(problem->opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle));
 
-   SCIP_ALLOC( BMSallocMemoryArray(&jacvals, problem->wsp->DG.nnz) );
-   SCIP_CALL( SCIPnlpiOracleEvalJacobian(problem->oracle, problem->opt->X, TRUE, NULL, jacvals) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(problem->blkmem, &jacvals, problem->wsp->DG.nnz) );
+   retcode = SCIPnlpiOracleEvalJacobian(problem->oracle, problem->opt->X, TRUE, NULL, jacvals);
 
-   /* map values with DG indices */
-   for( i = 0; i < problem->wsp->DG.nnz; ++i )
+   if( retcode == SCIP_OKAY )
    {
-      problem->wsp->DG.val[i] = jacvals[ problem->wsp->DG.perm[i]-1 ];
+      /* map values with DG indices */
+      for( i = 0; i < problem->wsp->DG.nnz; ++i )
+      {
+         problem->wsp->DG.val[i] = jacvals[ problem->wsp->DG.perm[i]-1 ];
+      }
+
+#ifdef SCIP_DEBUG_USERDG
+      printf("userDG()\n");
+      for( i = 0; i < problem->opt->n; ++i )
+         printf("  x[%d] = %g\n", i, problem->opt->X[i]);
+      for( i = 0; i < problem->wsp->DG.nnz; ++i )
+         printf("  DG[%d] = %g\n", i, problem->wsp->DG.val[i]);
+#endif
    }
 
    /* free memory */
-   BMSfreeMemoryArray(&jacvals);
+   BMSfreeBlockMemoryArray(problem->blkmem, &jacvals, problem->wsp->DG.nnz);
 
-#ifdef SCIP_DEBUG_USERDG
-   {
-      printf("userDG()\n");
-      for( i = 0; i < problem->opt->n; ++i )
-      {
-         printf("  x[%d] = %g\n", i, problem->opt->X[i]);
-      }
-
-      for( i = 0; i < problem->wsp->DG.nnz; ++i )
-      {
-         printf("  DG[%d] = %g\n", i, problem->wsp->DG.val[i]);
-      }
-   }
-#endif
-
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** computes hessian matrix and store the result in the corresponding WORHP data fields */
@@ -510,6 +507,7 @@ SCIP_RETCODE userHM(
 {
    const int* offset;
    SCIP_Real* hessianvals;
+   SCIP_RETCODE retcode;
    int nnonz;
    int i;
 
@@ -526,39 +524,35 @@ SCIP_RETCODE userHM(
    nnonz = offset[problem->opt->n];
 
    /* evaluate hessian */
-   SCIP_ALLOC( BMSallocMemoryArray(&hessianvals, problem->wsp->HM.nnz) );
-   SCIP_CALL( SCIPnlpiOracleEvalHessianLag(problem->oracle, problem->opt->X, TRUE, problem->wsp->ScaleObj,
-         problem->opt->Mu, hessianvals) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(problem->blkmem, &hessianvals, problem->wsp->HM.nnz) );
+   retcode = SCIPnlpiOracleEvalHessianLag(problem->oracle, problem->opt->X, TRUE, problem->wsp->ScaleObj,
+         problem->opt->Mu, hessianvals);
 
-   assert(problem->wsp->HM.nnz >= nnonz);
-   for( i = 0; i < problem->wsp->HM.nnz; ++i )
+   if( retcode == SCIP_OKAY )
    {
-      /* an entry i with HM.perm[i] - 1 >= nnonz corresponds to an in SCIP non-existing diagonal element */
-      if( problem->wsp->HM.perm[i] - 1 >= nnonz )
-         problem->wsp->HM.val[i] = 0.0;
-      else
-         problem->wsp->HM.val[i] = hessianvals[ problem->wsp->HM.perm[i] - 1 ];
+      assert(problem->wsp->HM.nnz >= nnonz);
+      for( i = 0; i < problem->wsp->HM.nnz; ++i )
+      {
+         /* an entry i with HM.perm[i] - 1 >= nnonz corresponds to an in SCIP non-existing diagonal element */
+         if( problem->wsp->HM.perm[i] - 1 >= nnonz )
+            problem->wsp->HM.val[i] = 0.0;
+         else
+            problem->wsp->HM.val[i] = hessianvals[ problem->wsp->HM.perm[i] - 1 ];
+      }
+
+#ifdef SCIP_DEBUG_HM
+      printf("userHM()\n");
+      for( i = 0; i < problem->opt->n; ++i )
+         printf("  x[%d] = %g\n", i, problem->opt->X[i]);
+      for( i = 0; i < problem->wsp->HM.nnz; ++i )
+         printf("  HM[%d] = %g\n", i, problem->wsp->HM.val[i]);
+#endif
    }
 
    /* free memory */
-   BMSfreeMemoryArray(&hessianvals);
+   BMSfreeBlockMemoryArray(problem->blkmem, &hessianvals, problem->wsp->HM.nnz);
 
-#ifdef SCIP_DEBUG_HM
-   {
-      printf("userHM()\n");
-      for( i = 0; i < problem->opt->n; ++i )
-      {
-         printf("  x[%d] = %g\n", i, problem->opt->X[i]);
-      }
-
-      for( i = 0; i < problem->wsp->HM.nnz; ++i )
-      {
-         printf("  HM[%d] = %g\n", i, problem->wsp->HM.val[i]);
-      }
-   }
-#endif
-
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** initialize WORHP data */
@@ -1537,7 +1531,8 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
        */
       if( GetUserAction(cnt, evalF) )
       {
-         SCIP_CALL( userF(problem) );
+         if( userF(problem) != SCIP_OKAY )
+            break;
          DoneUserAction(cnt, evalF);
       }
 
@@ -1547,7 +1542,8 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
        */
       if( GetUserAction(cnt, evalG) )
       {
-         SCIP_CALL( userG(problem) );
+         if( userG(problem) != SCIP_OKAY )
+            break;
          DoneUserAction(cnt, evalG);
       }
 
@@ -1557,7 +1553,8 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
        */
       if( GetUserAction(cnt, evalDF) )
       {
-         SCIP_CALL( userDF(problem) );
+         if( userDF(problem) != SCIP_OKAY )
+            break;
          DoneUserAction(cnt, evalDF);
       }
 
@@ -1567,7 +1564,8 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
        */
       if( GetUserAction(cnt, evalDG) )
       {
-         SCIP_CALL( userDG(problem) );
+         if( userDG(problem) != SCIP_OKAY )
+            break;
          DoneUserAction(cnt, evalDG);
       }
 
@@ -1577,7 +1575,8 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
        */
       if( GetUserAction(cnt, evalHM) )
       {
-         SCIP_CALL( userHM(problem) );
+         if( userHM(problem) != SCIP_OKAY)
+            break;
          DoneUserAction(cnt, evalHM);
       }
 
