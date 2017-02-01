@@ -643,9 +643,14 @@ SCIP_RETCODE SCIPtpiCollectJobs(
 
          /* removing the finished job from finished jobs list */
          if( currjob == _threadpool->finishedjobs->firstjob )
+         {
             _threadpool->finishedjobs->firstjob = currjob->nextjob;
+         }
          else
+         {
+            assert(prevjob != NULL);
             prevjob->nextjob = currjob->nextjob;
+         }
 
          if( currjob == _threadpool->finishedjobs->lastjob )
             _threadpool->finishedjobs->lastjob = prevjob;
