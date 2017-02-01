@@ -2358,6 +2358,10 @@ SCIP_RETCODE varParse(
       /* parse global bounds */
       SCIP_CALL( parseBounds(set, strptr, token, &parsedlb, &parsedub, endptr) );
 
+      /* stop if parsing of bounds failed */
+      if( *endptr == NULL )
+         break;
+
       if( strncmp(token, "local", 5) == 0 && local )
       {
          *lb = parsedlb;
