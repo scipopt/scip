@@ -18,6 +18,9 @@
  * @brief   WORHP NLP interface
  * @author  Benjamin Mueller
  * @author  Renke Kuhlmann
+ *
+ * @todo So far, WORHP can not handle the case that variables have been fixed before warm-starting. Remove the code in
+ * nlpiChgVarBoundsWorhp when this has changed.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
