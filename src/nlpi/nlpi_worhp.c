@@ -1142,35 +1142,29 @@ SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveWorhp )
 static
 SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsWorhp )
 {
+   const SCIP_Real* oldlbs = SCIPnlpiOracleGetVarLbs(problem->oracle);
+   const SCIP_Real* oldubs = SCIPnlpiOracleGetVarUbs(problem->oracle);
+   int index;
    int i;
 
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-#ifdef SCIP_DEBUG
-   {
-      const SCIP_Real* oldlbs = SCIPnlpiOracleGetVarLbs(problem->oracle);
-      const SCIP_Real* oldubs = SCIPnlpiOracleGetVarUbs(problem->oracle);
-      int index;
-
-
-      for( i = 0; i < nvars; ++i )
-      {
-         index = indices[i];
-         SCIPdebugMessage("change bounds of %d from [%g,%g] -> [%g,%g]\n", index, oldlbs[index], oldubs[index],
-            lbs[i], ubs[i]);
-      }
-   }
-#endif
-
-   /* TODO: So far, WORHP can not handle fixed variables when applying a restart. The following code needs to be removed
-    * when this has changed.
+   /* TODO: So far, WORHP can not handle fixed variables (and fixed variables that have been unfixed) when applying a
+    * restart. The following code needs to be removed when this has changed.
     */
    for( i = 0; i < nvars; ++i )
    {
+      index = indices[i];
+      SCIPdebugMessage("change bounds of %d from [%g,%g] -> [%g,%g]\n", index, oldlbs[index], oldubs[index],
+         lbs[i], ubs[i]);
+
       if( REALABS(lbs[i] - ubs[i]) <= problem->feastol )
          problem->firstrun = TRUE;
+      else
+         if( REALABS(oldlbs[index] - oldubs[index]) <= problem->feastol )
+            problem->firstrun = TRUE;
    }
 
    SCIP_CALL( SCIPnlpiOracleChgVarBounds(problem->oracle, nvars, indices, lbs, ubs) );
