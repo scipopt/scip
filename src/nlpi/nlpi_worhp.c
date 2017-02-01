@@ -176,7 +176,7 @@ SCIP_RETCODE evaluateWorhpRun(
   /* numerical errors during solution of NLP */
   else if( (problem->cnt->status == QPerror) || (problem->cnt->status == MinimumStepsize) || (problem->cnt->status == TooBig) )
   {
-     SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of an numerical error during optimization!\n");
+     SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of a numerical error during optimization!\n");
      invalidateSolution(problem);
      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
