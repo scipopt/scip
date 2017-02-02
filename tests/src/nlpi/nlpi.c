@@ -390,15 +390,13 @@ Test(nlpi, solveQP, .init = setup, .fini = teardown,
    SCIP_Real worhpval;
    int i;
 
-   for( i = 0; i < 5; ++i )
+   for( i = 0; i < 10; ++i )
    {
       /* solve QP with Ipopt */
       if( ipopt != NULL )
       {
          SCIP_CALL( solveQP(ipopt, i+1, 100, -100.0, 100.0, SCIPinfinity(scip), INT_MAX, &ipoptval,
                &ipoptsolstat, &ipopttermstat) );
-         cr_assert(ipoptsolstat != SCIP_NLPSOLSTAT_UNKNOWN);
-         cr_assert(ipopttermstat != SCIP_NLPTERMSTAT_OTHER);
       }
 
       /* solve QP with WORHP */
@@ -406,8 +404,6 @@ Test(nlpi, solveQP, .init = setup, .fini = teardown,
       {
          SCIP_CALL( solveQP(worhp, i+1, 100, -100.0, 100.0, SCIPinfinity(scip), INT_MAX, &worhpval,
                &worhpsolstat, &worhptermstat) );
-         cr_assert(worhpsolstat != SCIP_NLPSOLSTAT_UNKNOWN);
-         cr_assert(worhptermstat != SCIP_NLPTERMSTAT_OTHER);
       }
 
       /* compare the solution values of WORHP and Ipopt */

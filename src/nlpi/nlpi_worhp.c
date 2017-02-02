@@ -1474,6 +1474,8 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
 
    par->algorithm = DEFAULT_ALGORITHM;
    par->ScaledKKT = DEFAULT_SCALEDKKT;
+   par->sKKTOnlyAcceptable = DEFAULT_SCALEDKKT;
+
    par->Infty = nlpidata->infinity;
    par->TolFeas = problem->feastol;
    par->TolOpti = problem->relobjtol;
