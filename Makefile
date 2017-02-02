@@ -354,7 +354,8 @@ ALLSRC		+=	$(NLPILIBSRC)
 
 ifeq ($(SHARED),true)
 NLPILIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(IPOPTLIBS) \
-			$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib)
+			$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib) \
+			$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/lib)
 endif
 
 
@@ -412,12 +413,10 @@ SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)
 LPIINSTMSG	+=	"\n  -> \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)\" is a directory containing the ipopt installation, i.e., \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin/IpIpoptApplication.hpp\", \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/libipopt*\", ... should exist.\n"
 endif
 
-# WORHP only provides shared libraries
+# WORHP provides only shared libraries
 ifeq ($(WORHP),true)
-SOFTLINKS	+=	$(LIBDIR)/include/worhpinc
-SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/libworhp.$(SHAREDLIBEXT).1
-LPIINSTMSG	+=	"\n  -> \"worhpinc\" is a directory containing the path to the WORHP \"include\" directory."
-LPIINSTMSG	+=	"\n  -> \"libworhp.*\" is the path to the WORHP library, e.g., \"<WORHP-path>/lib/libworhp.$(SHAREDLIBEXT).1\".\n"
+SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)
+LPIINSTMSG	+=	"\n  -> \"worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)\" is a directory containing the WORHP installation, i.e., \"worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/include/worhp/worhp.h\" should exist.\n"
 endif
 
 ifeq ($(GAMS),true)
