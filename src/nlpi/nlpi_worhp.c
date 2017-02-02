@@ -764,6 +764,8 @@ SCIP_RETCODE updateWorhp(
    assert(problem->opt->n == SCIPnlpiOracleGetNVars(problem->oracle));
    assert(problem->opt->m == SCIPnlpiOracleGetNConstraints(problem->oracle));
 
+   WorhpRestart(problem->opt, problem->wsp, problem->par, problem->cnt);
+
    /* update variable bounds */
    lbs = SCIPnlpiOracleGetVarLbs(problem->oracle);
    ubs = SCIPnlpiOracleGetVarUbs(problem->oracle);
@@ -779,8 +781,6 @@ SCIP_RETCODE updateWorhp(
       problem->opt->GL[i] = SCIPnlpiOracleGetConstraintLhs(problem->oracle, i);
       problem->opt->GU[i] = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
    }
-
-   WorhpRestart(problem->opt, problem->wsp, problem->par, problem->cnt);
 
    return SCIP_OKAY;
 }
@@ -1462,7 +1462,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    if( status != OK )
       return SCIP_INVALIDCALL;
 
-   par->algorithm = DEFAULT_ALGORITHM;;
+   par->algorithm = DEFAULT_ALGORITHM;
    par->ScaledKKT = DEFAULT_SCALEDKKT;
    par->Infty = nlpidata->infinity;
    par->TolFeas = problem->feastol;
