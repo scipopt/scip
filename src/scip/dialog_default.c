@@ -3042,38 +3042,18 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
       }
       else
       {
-         SCIP_RETCODE retcode;
+         SCIP_Bool printzeros;
+
          SCIPinfoMessage(scip, file, "solution status: ");
-         retcode = SCIPprintStatus(scip, file);
-         if( retcode != SCIP_OKAY )
-         {
-             fclose(file);
-             SCIP_CALL( retcode );
-         }
-         else
-         {
-            SCIP_Bool printzeros;
+         SCIP_CALL_FINALLY( SCIPprintStatus(scip, file), fclose(file) );
 
-            retcode = SCIPgetBoolParam(scip, "write/printzeros", &printzeros);
-            if( retcode != SCIP_OKAY )
-            {
-               fclose(file);
-               SCIP_CALL( retcode );
-            }
+         SCIP_CALL_FINALLY( SCIPgetBoolParam(scip, "write/printzeros", &printzeros), fclose(file) );
 
-            SCIPinfoMessage(scip, file, "\n");
-            retcode = SCIPprintBestSol(scip, file, printzeros);
-            if( retcode != SCIP_OKAY )
-            {
-               fclose(file);
-               SCIP_CALL( retcode );
-            }
-            else
-            {
-               SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
-               fclose(file);
-            }
-         }
+         SCIPinfoMessage(scip, file, "\n");
+         SCIP_CALL_FINALLY( SCIPprintBestSol(scip, file, printzeros), fclose(file) );
+
+         SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
+         fclose(file);
       }
    }
 
@@ -3113,7 +3093,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMIPStart)
       }
       else
       {
-         SCIP_RETCODE retcode;
          SCIP_SOL* sol;
 
          SCIPinfoMessage(scip, file, "\n");
@@ -3127,17 +3106,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMIPStart)
          }
          else
          {
-            retcode = SCIPprintMIPStart(scip, sol, file);
-            if( retcode != SCIP_OKAY )
-            {
-               fclose(file);
-               SCIP_CALL( retcode );
-            }
-            else
-            {
-               SCIPdialogMessage(scip, NULL, "written mip start information to file <%s>\n", filename);
-               fclose(file);
-            }
+            SCIP_CALL_FINALLY( SCIPprintMIPStart(scip, sol, file), fclose(file) );
+
+            SCIPdialogMessage(scip, NULL, "written mip start information to file <%s>\n", filename);
+            fclose(file);
          }
       }
    }
@@ -3291,18 +3263,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteStatistics)
       }
       else
       {
-         SCIP_RETCODE retcode;
-         retcode = SCIPprintStatistics(scip, file);
-         if( retcode != SCIP_OKAY )
-         {
-             fclose(file);
-             SCIP_CALL( retcode );
-         }
-         else
-         {
-            SCIPdialogMessage(scip, NULL, "written statistics to file <%s>\n", filename);
-            fclose(file);
-         }
+         SCIP_CALL_FINALLY( SCIPprintStatistics(scip, file), fclose(file) );
+
+         SCIPdialogMessage(scip, NULL, "written statistics to file <%s>\n", filename);
+         fclose(file);
       }
    }
 
