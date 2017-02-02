@@ -143,7 +143,7 @@ SCIP_RETCODE evaluateWorhpRun(
   /* initialization error */
   if( problem->cnt->status == InitError )
   {
-     SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of initialization error!\n");
+     SCIPdebugMessage("Worhp failed because of initialization error!\n");
      invalidateSolution(problem);
      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
      problem->lasttermstat = SCIP_NLPTERMSTAT_MEMERR;
@@ -151,7 +151,7 @@ SCIP_RETCODE evaluateWorhpRun(
   /* data error */
   else if( problem->cnt->status == DataError )
   {
-     SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of data error!\n");
+     SCIPdebugMessage("Worhp failed because of data error!\n");
      invalidateSolution(problem);
      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
      problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
@@ -159,7 +159,7 @@ SCIP_RETCODE evaluateWorhpRun(
   /* license error */
   else if( problem->cnt->status == LicenseError )
   {
-     SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of license error!\n");
+     SCIPerrorMessage("Worhp failed because of license error!\n");
      invalidateSolution(problem);
      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
      problem->lasttermstat = SCIP_NLPTERMSTAT_LICERR;
@@ -168,7 +168,7 @@ SCIP_RETCODE evaluateWorhpRun(
   /* evaluation errors */
   else if( problem->cnt->status == evalsNaN )
   {
-     SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of a NaN value in an evaluation!\n");
+     SCIPdebugMessage("Worhp failed because of a NaN value in an evaluation!\n");
      invalidateSolution(problem);
      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
      problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
@@ -181,7 +181,7 @@ SCIP_RETCODE evaluateWorhpRun(
   /* numerical errors during solution of NLP */
   else if( (problem->cnt->status == QPerror) || (problem->cnt->status == MinimumStepsize) || (problem->cnt->status == TooBig) )
   {
-     SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of a numerical error during optimization!\n");
+     SCIPdebugMessage("Worhp failed because of a numerical error during optimization!\n");
      invalidateSolution(problem);
      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
@@ -189,7 +189,7 @@ SCIP_RETCODE evaluateWorhpRun(
   /* maximal number of calls or iteration */
   else if( (problem->cnt->status == MaxCalls) || (problem->cnt->status == MaxIter) )
   {
-     SCIPmessagePrintWarning(messagehdlr, "Worhp failed because maximal number of calls or iterations is reached!\n");
+     SCIPdebugMessage("Worhp failed because maximal number of calls or iterations is reached!\n");
      invalidateSolution(problem);
      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
      problem->lasttermstat = SCIP_NLPTERMSTAT_ITLIM;
@@ -197,7 +197,7 @@ SCIP_RETCODE evaluateWorhpRun(
   /* time limit reached */
   else if( problem->cnt->status == Timeout )
   {
-     SCIPmessagePrintWarning(messagehdlr, "Worhp failed because time limit is reached!\n");
+     SCIPdebugMessage("Worhp failed because time limit is reached!\n");
      invalidateSolution(problem);
      problem->lastsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
      problem->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
@@ -205,7 +205,7 @@ SCIP_RETCODE evaluateWorhpRun(
   /* infeasible stationary point found */
   else if( problem->cnt->status == LocalInfeas || problem->cnt->status == LocalInfeasOptimal )
   {
-     SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of convergence against infeasible stationary point!\n");
+     SCIPdebugMessage("Worhp failed because of convergence against infeasible stationary point!\n");
      invalidateSolution(problem);
      problem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
      problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
@@ -213,7 +213,7 @@ SCIP_RETCODE evaluateWorhpRun(
   /* regularization of Hessian matrix failed */
   else if( problem->cnt->status == RegularizationFailed )
   {
-     SCIPmessagePrintWarning(messagehdlr, "Worhp failed because of regularization of Hessian matrix failed!\n");
+     SCIPdebugMessage("Worhp failed because of regularization of Hessian matrix failed!\n");
      invalidateSolution(problem);
      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
