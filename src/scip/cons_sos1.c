@@ -9214,10 +9214,10 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIPdebug(oldnfixedvars = *nfixedvars);
-   SCIPdebug(oldnchgbds = *nchgbds);
-   SCIPdebug(oldndelconss = *ndelconss);
-   SCIPdebug(oldnupgdconss = *nupgdconss);
+   SCIPdebug( oldnfixedvars = *nfixedvars; )
+   SCIPdebug( oldnchgbds = *nchgbds; )
+   SCIPdebug( oldndelconss = *ndelconss; )
+   SCIPdebug( oldnupgdconss = *nupgdconss; )
    nremovedvars = 0;
 
    /* only run if success if possible */

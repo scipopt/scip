@@ -536,6 +536,10 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
                *bestscore = score;
             }
          }
+         else
+         {
+            SCIPdebug( score = 0.0; )
+         }
 
          /* update pseudo cost values */
          if( !downinf )
