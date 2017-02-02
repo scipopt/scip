@@ -894,13 +894,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
-#if 0
-   /* disable conflict analysis */
-   if( !SCIPisParamFixed(subscip, "conflict/enable") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", FALSE) );
-   }
-#else
    /* enable conflict analysis and restrict conflict pool */
    if( !SCIPisParamFixed(subscip, "conflict/enable") )
    {
@@ -910,7 +903,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
    }
-#endif
 
    /* speed up sub-SCIP by not checking dual LP feasibility */
    SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );

@@ -545,13 +545,6 @@ SCIP_RETCODE setSubscipParameters(
       SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
    }
 
-#if 0
-   /* disable conflict analysis */
-   if( !SCIPisParamFixed(subscip, "conflict/enable") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", FALSE) );
-   }
-#else
    /* enable conflict analysis and restrict conflict pool */
    if( !SCIPisParamFixed(subscip, "conflict/enable") )
    {
@@ -561,7 +554,6 @@ SCIP_RETCODE setSubscipParameters(
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
    }
-#endif
 
    return SCIP_OKAY;
 }
