@@ -1672,7 +1672,7 @@ SCIP_RETCODE GUBconsCreate(
    assert(gubcons != NULL);
 
    /* allocate memory for GUB constraint data structures */
-   SCIP_CALL( SCIPallocMemory(scip, gubcons) );
+   SCIP_CALL( SCIPallocBuffer(scip, gubcons) );
    (*gubcons)->gubvarssize = GUBCONSGROWVALUE;
    SCIP_CALL( SCIPallocBufferArray(scip, &(*gubcons)->gubvars, (*gubcons)->gubvarssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*gubcons)->gubvarsstatus, (*gubcons)->gubvarssize) );
@@ -1697,7 +1697,7 @@ SCIP_RETCODE GUBconsFree(
    /* free allocated memory */
    SCIPfreeBufferArray(scip, &(*gubcons)->gubvarsstatus);
    SCIPfreeBufferArray(scip, &(*gubcons)->gubvars);
-   SCIPfreeMemory(scip, gubcons);
+   SCIPfreeBuffer(scip, gubcons);
 
    return SCIP_OKAY;
 }
@@ -1924,7 +1924,7 @@ SCIP_RETCODE GUBsetCreate(
    assert(capacity >= 0);
 
    /* allocate memory for GUB set data structures */
-   SCIP_CALL( SCIPallocMemory(scip, gubset) );
+   SCIP_CALL( SCIPallocBuffer(scip, gubset) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*gubset)->gubconss, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*gubset)->gubconsstatus, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*gubset)->gubconssidx, nvars) );
@@ -1983,7 +1983,7 @@ SCIP_RETCODE GUBsetFree(
    SCIPfreeBufferArray( scip, &(*gubset)->gubconssidx );
    SCIPfreeBufferArray( scip, &(*gubset)->gubconsstatus );
    SCIPfreeBufferArray( scip, &(*gubset)->gubconss );
-   SCIPfreeMemory(scip, gubset);
+   SCIPfreeBuffer(scip, gubset);
 
    return SCIP_OKAY;
 }

@@ -3042,33 +3042,18 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
       }
       else
       {
-         SCIP_RETCODE retcode;
+         SCIP_Bool printzeros;
+
          SCIPinfoMessage(scip, file, "solution status: ");
-         retcode = SCIPprintStatus(scip, file);
-         if( retcode != SCIP_OKAY )
-         {
-             fclose(file);
-             SCIP_CALL( retcode );
-         }
-         else
-         {
-            SCIP_Bool printzeros;
+         SCIP_CALL_FINALLY( SCIPprintStatus(scip, file), fclose(file) );
 
-            SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
+         SCIP_CALL_FINALLY( SCIPgetBoolParam(scip, "write/printzeros", &printzeros), fclose(file) );
 
-            SCIPinfoMessage(scip, file, "\n");
-            retcode = SCIPprintBestSol(scip, file, printzeros);
-            if( retcode != SCIP_OKAY )
-            {
-               fclose(file);
-               SCIP_CALL( retcode );
-            }
-            else
-            {
-               SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
-               fclose(file);
-            }
-         }
+         SCIPinfoMessage(scip, file, "\n");
+         SCIP_CALL_FINALLY( SCIPprintBestSol(scip, file, printzeros), fclose(file) );
+
+         SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
+         fclose(file);
       }
    }
 
@@ -3108,7 +3093,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMIPStart)
       }
       else
       {
-         SCIP_RETCODE retcode;
          SCIP_SOL* sol;
 
          SCIPinfoMessage(scip, file, "\n");
@@ -3122,17 +3106,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMIPStart)
          }
          else
          {
-            retcode = SCIPprintMIPStart(scip, sol, file);
-            if( retcode != SCIP_OKAY )
-            {
-               fclose(file);
-               SCIP_CALL( retcode );
-            }
-            else
-            {
-               SCIPdialogMessage(scip, NULL, "written mip start information to file <%s>\n", filename);
-               fclose(file);
-            }
+            SCIP_CALL_FINALLY( SCIPprintMIPStart(scip, sol, file), fclose(file) );
+
+            SCIPdialogMessage(scip, NULL, "written mip start information to file <%s>\n", filename);
+            fclose(file);
          }
       }
    }
@@ -3215,58 +3192,37 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteFiniteSolution)
       }
       else
       {
-         SCIP_RETCODE retcode;
+         SCIP_SOL* bestsol = SCIPgetBestSol(scip);
+         SCIP_Bool printzeros;
+
          SCIPinfoMessage(scip, file, "solution status: ");
-         retcode = SCIPprintStatus(scip, file);
-         if( retcode != SCIP_OKAY )
+
+         SCIP_CALL_FINALLY( SCIPprintStatus(scip, file), fclose(file) );
+
+         SCIPinfoMessage(scip, file, "\n");
+
+         if( bestsol != NULL )
          {
-             fclose(file);
-             SCIP_CALL( retcode );
+            SCIP_SOL* sol;
+            SCIP_Bool success;
+
+            SCIP_CALL_FINALLY( SCIPcreateFiniteSolCopy(scip, &sol, bestsol, &success), fclose(file) );
+
+            SCIP_CALL_FINALLY( SCIPgetBoolParam(scip, "write/printzeros", &printzeros), fclose(file) );
+
+            SCIP_CALL_FINALLY( SCIPprintSol(scip, sol, file, printzeros), fclose(file) );
+
+            SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
+
+            SCIP_CALL_FINALLY( SCIPfreeSol(scip, &sol), fclose(file) );
          }
          else
          {
-            SCIP_SOL* bestsol = SCIPgetBestSol(scip);
-
-            SCIPinfoMessage(scip, file, "\n");
-
-            if( bestsol != NULL )
-            {
-               SCIP_SOL* sol;
-               SCIP_Bool success;
-
-               retcode = SCIPcreateFiniteSolCopy(scip, &sol, bestsol, &success);
-
-               if( retcode == SCIP_OKAY )
-               {
-                  if( !success )
-                  {
-                     SCIPdialogMessage(scip, NULL, "error while creating finite solution\n");
-                  }
-                  else
-                  {
-                     SCIP_Bool printzeros;
-
-                     SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
-                     retcode = SCIPprintSol(scip, sol, file, printzeros);
-                     SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
-                  }
-
-                  SCIP_CALL( SCIPfreeSol(scip, &sol) );
-               }
-            }
-            else
-            {
-               SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "no solution available\n");
-               SCIPdialogMessage(scip, NULL, "no solution available\n", filename);
-            }
-
-            fclose(file);
-
-            if( retcode != SCIP_OKAY )
-            {
-               SCIP_CALL( retcode );
-            }
+            SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "no solution available\n");
+            SCIPdialogMessage(scip, NULL, "no solution available\n", filename);
          }
+
+         fclose(file);
       }
    }
 
@@ -3307,18 +3263,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteStatistics)
       }
       else
       {
-         SCIP_RETCODE retcode;
-         retcode = SCIPprintStatistics(scip, file);
-         if( retcode != SCIP_OKAY )
-         {
-             fclose(file);
-             SCIP_CALL( retcode );
-         }
-         else
-         {
-            SCIPdialogMessage(scip, NULL, "written statistics to file <%s>\n", filename);
-            fclose(file);
-         }
+         SCIP_CALL_FINALLY( SCIPprintStatistics(scip, file), fclose(file) );
+
+         SCIPdialogMessage(scip, NULL, "written statistics to file <%s>\n", filename);
+         fclose(file);
       }
    }
 
