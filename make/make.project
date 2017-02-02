@@ -527,7 +527,7 @@ endif
 ifeq ($(WORHP),true)
 FLAGS		+=	-DWITH_WORHP -I$(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/include
 LDFLAGS  += $(LINKCC_l)worhp
-LDFLAGS  += $(LINKCC_L)$(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/lib
+LDFLAGS  += $(LINKCC_L)$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/lib
 ifneq ($(LINKRPATH),)
 ifneq ($(SCIPINTERNAL),)
 LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/$(LIBEXTTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/lib
