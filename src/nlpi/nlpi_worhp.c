@@ -15,11 +15,11 @@
 
 /**@file    nlpi_worhp.c
  * @ingroup NLPIS
- * @brief   WORHP NLP interface
+ * @brief   Worhp NLP interface
  * @author  Benjamin Mueller
  * @author  Renke Kuhlmann
  *
- * @todo So far, WORHP can not handle the case that variables have been fixed before warm-starting. Remove the code in
+ * @todo So far, Worhp can not handle the case that variables have been fixed before warm-starting. Remove the code in
  * nlpiChgVarBoundsWorhp when this has changed.
  */
 
@@ -37,9 +37,13 @@
 
 #include "worhp/worhp.h"
 
-#define NLPI_NAME              "worhp"                      /* short concise name of solver */
-#define NLPI_DESC              "WORHP interface"            /* description of solver */
-#define NLPI_PRIORITY          -1                           /* priority of NLP solver */
+#define NLPI_NAME              "worhp"                      /**< short concise name of solver */
+#define NLPI_DESC              "Worhp interface"            /**< description of solver */
+#define NLPI_PRIORITY          1                            /**< priority of NLP solver */
+
+#define DEFAULT_ALGORITHM      1                            /**< default algorithm to solve NLP (1: interior point 2: SQP) */
+#define DEFAULT_VERBLEVEL      0                            /**< default verbosity level (0: normal 1: full 2: debug >2: more debug) */
+#define DEFAULT_SCALEDKKT      TRUE                         /**< default whether KKT conditions are allowed to be scaled in the solver */
 
 /*
  * Data structures
@@ -228,7 +232,7 @@ SCIP_RETCODE evaluateWorhpRun(
      problem->lastsolstat  = SCIP_NLPSOLSTAT_LOCOPT;
      problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
   }
-  /* feasible point, KKT conditions are not satisfied, and WORHP thinks that there is no objective function */
+  /* feasible point, KKT conditions are not satisfied, and Worhp thinks that there is no objective function */
   else if( problem->cnt->status == OptimalSolutionConstantF )
   {
      SCIPdebugMessage("Worhp terminated successfully with a feasible point but KKT are not met!\n");
@@ -346,7 +350,7 @@ SCIP_RETCODE evaluateWorhpRun(
   return SCIP_OKAY;
 }
 
-/** evaluates objective function and store the result in the corresponding WORHP data fields */
+/** evaluates objective function and store the result in the corresponding Worhp data fields */
 static
 SCIP_RETCODE userF(
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
@@ -379,7 +383,7 @@ SCIP_RETCODE userF(
    return SCIP_OKAY;
 }
 
-/** evaluates constraints and store the result in the corresponding WORHP data fields */
+/** evaluates constraints and store the result in the corresponding Worhp data fields */
 static
 SCIP_RETCODE userG(
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
@@ -411,7 +415,7 @@ SCIP_RETCODE userG(
    return SCIP_OKAY;
 }
 
-/** computes objective gradient and store the result in the corresponding WORHP data fields */
+/** computes objective gradient and store the result in the corresponding Worhp data fields */
 static
 SCIP_RETCODE userDF(
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
@@ -455,7 +459,7 @@ SCIP_RETCODE userDF(
    return SCIP_OKAY;
 }
 
-/** computes jacobian matrix and store the result in the corresponding WORHP data fields */
+/** computes jacobian matrix and store the result in the corresponding Worhp data fields */
 static
 SCIP_RETCODE userDG(
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
@@ -499,7 +503,7 @@ SCIP_RETCODE userDG(
    return retcode;
 }
 
-/** computes hessian matrix and store the result in the corresponding WORHP data fields */
+/** computes hessian matrix and store the result in the corresponding Worhp data fields */
 static
 SCIP_RETCODE userHM(
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
@@ -555,7 +559,7 @@ SCIP_RETCODE userHM(
    return retcode;
 }
 
-/** initialize WORHP data */
+/** initialize Worhp data */
 static
 SCIP_RETCODE initWorhp(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
@@ -628,7 +632,7 @@ SCIP_RETCODE initWorhp(
    assert(offset[opt->n] <= wsp->HM.nnz);
    SCIPdebugMessage("nnonz hessian %d\n", wsp->HM.nnz);
 
-   /* initialize data in WORHP */
+   /* initialize data in Worhp */
    WorhpInit(opt, wsp, par, cnt);
    if (cnt->status != FirstCall)
    {
@@ -743,7 +747,7 @@ SCIP_RETCODE initWorhp(
    return SCIP_OKAY;
 }
 
-/** update WORHP data */
+/** update Worhp data */
 static
 SCIP_RETCODE updateWorhp(
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
@@ -783,7 +787,7 @@ SCIP_RETCODE updateWorhp(
    return SCIP_OKAY;
 }
 
-/** frees WORHP data */
+/** frees Worhp data */
 static
 SCIP_RETCODE freeWorhp(
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
@@ -914,7 +918,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
    SCIP_CALL( SCIPnlpiOracleSetInfinity((*problem)->oracle, data->infinity) );
    SCIP_CALL( SCIPnlpiOracleSetProblemName((*problem)->oracle, name) );
 
-   /* allocate memory for WORHP data */
+   /* allocate memory for Worhp data */
    SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, &(*problem)->opt) );
    SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, &(*problem)->wsp) );
    SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, &(*problem)->par) );
@@ -927,7 +931,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
    (*problem)->lobjlim = SCIP_INVALID;
    (*problem)->timelim = SCIP_DEFAULT_INFINITY;
    (*problem)->fromscratch = 0;
-   (*problem)->verblevel = 0;
+   (*problem)->verblevel = DEFAULT_VERBLEVEL;
    (*problem)->itlim = INT_MAX;
    (*problem)->fastfail = 0;
 
@@ -961,7 +965,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemWorhp)
       assert((*problem)->par != NULL);
       assert((*problem)->cnt != NULL);
 
-      /* free WORHP data */
+      /* free Worhp data */
       SCIP_CALL( freeWorhp(*problem) );
       BMSfreeBlockMemory(data->blkmem, &(*problem)->cnt);
       BMSfreeBlockMemory(data->blkmem, &(*problem)->par);
@@ -1151,7 +1155,7 @@ SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsWorhp )
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   /* TODO: So far, WORHP can not handle fixed variables (and fixed variables that have been unfixed) when applying a
+   /* TODO: So far, Worhp can not handle fixed variables (and fixed variables that have been unfixed) when applying a
     * restart. The following code needs to be removed when this has changed.
     */
    for( i = 0; i < nvars; ++i )
@@ -1444,7 +1448,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    problem->lasttime  = -1.0;
    problem->lastsolinfeas = SCIP_INVALID;
 
-   /* initialize WORHP data if necessary */
+   /* initialize Worhp data if necessary */
    if( problem->firstrun )
    {
       SCIP_CALL( freeWorhp(problem) );
@@ -1462,19 +1466,22 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    if( status != OK )
       return SCIP_INVALIDCALL;
 
-   par->ScaledKKT= TRUE;
+   par->algorithm = DEFAULT_ALGORITHM;;
+   par->ScaledKKT = DEFAULT_SCALEDKKT;
    par->Infty = nlpidata->infinity;
    par->TolFeas = problem->feastol;
    par->TolOpti = problem->relobjtol;
    par->TolComp = problem->relobjtol;
    par->Timeout = problem->timelim;
    par->MaxIter = problem->itlim;
-   par->NLPprint = problem->verblevel - 1; /* WORHP verbosity levels: -1 = off, 0 = normal, 1 = debug, >1 = more debug */
+   par->NLPprint = problem->verblevel - 1; /* Worhp verbosity levels: -1 = off, 0 = normal, 1 = debug, >1 = more debug */
 
-   /* uncomment to activate gradient and hessian check */
-   /* par->CheckValuesDF = TRUE; */
-   /* par->CheckValuesDG = TRUE; */
-   /* par->CheckValuesHM = TRUE; */
+#ifdef CHECKFUNVALUES
+   /* activate gradient and hessian check */
+   par->CheckValuesDF = TRUE;
+   par->CheckValuesDG = TRUE;
+   par->CheckValuesHM = TRUE;
+#endif
 
 #ifdef SCIP_DEBUG
    SCIP_CALL( SCIPnlpiOraclePrintProblem(problem->oracle, nlpidata->messagehdlr, NULL) );
@@ -1490,7 +1497,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    }
 
    /*
-    * WORHP Reverse Communication loop.
+    * Worhp Reverse Communication loop.
     * In every iteration poll GetUserAction for the requested action, i.e. one
     * of {callWorhp, iterOutput, evalF, evalG, evalDF, evalDG, evalHM, fidif}.
     *
@@ -1500,7 +1507,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    while( cnt->status < TerminateSuccess && cnt->status > TerminateError )
    {
       /*
-       * WORHP's main routine.
+       * Worhp's main routine.
        * Do not manually reset callWorhp, this is only done by the FD routines.
        */
       if( GetUserAction(cnt, callWorhp) )
@@ -2212,7 +2219,7 @@ SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    assert(blkmem != NULL);
    assert(nlpi   != NULL);
 
-   /* create WORHP solver interface data */
+   /* create Worhp solver interface data */
    BMSallocMemory(&nlpidata);
    BMSclearMemory(nlpidata);
 

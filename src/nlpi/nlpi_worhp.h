@@ -14,9 +14,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file    nlpi_worhp.h
- * @brief   WORHP NLP interface
+ * @brief   Worhp NLP interface
  * @ingroup NLPIS
  * @author  Benjamin Mueller
+ * @author  Renke Kuhlmann
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -29,6 +30,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup NLPIS
+ *
+ * @{
+ */
 
 /** create solver interface for Worhp solver */
 extern
@@ -48,6 +54,8 @@ const char* SCIPgetSolverDescWorhp(void);
 /** returns whether Worhp is available, i.e., whether it has been linked in */
 extern
 SCIP_Bool SCIPisWorhpAvailableWorhp(void);
+
+/* @} */
 
 #ifdef __cplusplus
 }
