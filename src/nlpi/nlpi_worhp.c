@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -44,6 +44,8 @@
 #define DEFAULT_ALGORITHM      1                            /**< default algorithm to solve NLP (1: SQP 2: interior point) */
 #define DEFAULT_VERBLEVEL      0                            /**< default verbosity level (0: normal 1: full 2: debug >2: more debug) */
 #define DEFAULT_SCALEDKKT      TRUE                         /**< default whether KKT conditions are allowed to be scaled in the solver */
+#define DEFAULT_MAXITER        3000                         /**< default iteration limit for Worhp */
+#define DEFAULT_FEASTOL        1e-9                         /**< default feasibility tolerance for Worhp */
 
 /*
  * Data structures
@@ -659,13 +661,13 @@ SCIP_RETCODE initWorhp(
    /* set column indices of objective function; note that indices go from 1 to n */
    /* if( wsp->DF.NeedStructure ) evaluates to FALSE if DF is dense */
    {
-      SCIPdebugMessage("column indices of objective function:");
+      SCIPdebugPrintf("column indices of objective function:");
       for( i = 0; i < opt->n; ++i )
       {
          wsp->DF.row[i] = i + 1;
-         SCIPdebugMessage(" %d", wsp->DF.row[i]);
+         SCIPdebugPrintf(" %d", wsp->DF.row[i]);
       }
-      SCIPdebugMessage("\n");
+      SCIPdebugPrintf("\n");
    }
 
    /* set column and row indices of non-zero entries in Jacobian matrix */
@@ -737,7 +739,7 @@ SCIP_RETCODE initWorhp(
       SCIPdebugMessage("column and row indices of hessian:\n");
       for( i = 0; i < wsp->HM.nnz; ++i )
       {
-         SCIPdebugMessage("entry %d: (row,col) = (%d,%d)\n", i, wsp->HM.row[i], wsp->HM.col[i]);
+         SCIPdebugMessage("  entry %d: (row,col) = (%d,%d)\n", i, wsp->HM.row[i], wsp->HM.col[i]);
       }
 #endif
    }
@@ -923,13 +925,13 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
    WorhpPreInit((*problem)->opt, (*problem)->wsp, (*problem)->par, (*problem)->cnt);
 
    /* set default parameters */
-   (*problem)->feastol = 1e-9;
-   (*problem)->relobjtol = 1e-9;
+   (*problem)->feastol = DEFAULT_FEASTOL;
+   (*problem)->relobjtol = DEFAULT_FEASTOL;
    (*problem)->lobjlim = SCIP_INVALID;
    (*problem)->timelim = SCIP_DEFAULT_INFINITY;
    (*problem)->fromscratch = 0;
    (*problem)->verblevel = DEFAULT_VERBLEVEL;
-   (*problem)->itlim = INT_MAX;
+   (*problem)->itlim = DEFAULT_MAXITER;
    (*problem)->fastfail = 0;
 
    return SCIP_OKAY;
@@ -1871,7 +1873,7 @@ SCIP_DECL_NLPISETINTPAR( nlpiSetIntParWorhp )
          data = SCIPnlpiGetData(nlpi);
          assert(data != NULL);
 
-         SCIPmessagePrintWarning(data->messagehdlr, "from scratch parameter not supported by Worhp interface yet. Ignored.\n");
+         SCIPdebugMessage("from scratch parameter not supported by Worhp interface yet. Ignored.\n");
       }
       else
       {
