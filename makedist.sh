@@ -58,7 +58,7 @@ $NAME/src/*.c $NAME/src/*.cpp \
 $NAME/src/scip/*.c $NAME/src/scip/*.h \
 $NAME/src/nlpi/*.c $NAME/src/nlpi/*.cpp $NAME/src/nlpi/*.h \
 $NAME/src/lpi/*.c $NAME/src/lpi/*.cpp $NAME/src/lpi/*.h \
-$NAME/srx/tpi/*.c $NAME/src/tpi*.h \
+$NAME/src/tpi/*.c $NAME/src/tpi/*.h \
 $NAME/src/xml/*.c $NAME/src/xml/*.h \
 $NAME/src/dijkstra/*.c $NAME/src/dijkstra/*.h \
 $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.h \
