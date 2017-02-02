@@ -1586,7 +1586,16 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    }
 
    /* interpret Worhp result */
-   SCIP_CALL( evaluateWorhpRun(problem, nlpidata->messagehdlr) );
+   if( cnt->status < TerminateSuccess && cnt->status > TerminateError )
+   {
+      SCIPmessagePrintWarning(nlpidata->messagehdlr, "Worhp failed because of an invalid function evaluation!\n");
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
+   }
+   else
+   {
+      SCIP_CALL( evaluateWorhpRun(problem, nlpidata->messagehdlr) );
+   }
 
    /* free memory */
    StatusMsg(opt, wsp, par, cnt);
