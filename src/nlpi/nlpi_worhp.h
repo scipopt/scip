@@ -45,15 +45,21 @@ SCIP_RETCODE SCIPcreateNlpSolverWorhp(
 
 /** gets string that identifies Worhp (version number) */
 extern
-const char* SCIPgetSolverNameWorhp(void);
+const char* SCIPgetSolverNameWorhp(
+   void
+   );
 
 /** gets string that describes Worhp (version number) */
 extern
-const char* SCIPgetSolverDescWorhp(void);
+const char* SCIPgetSolverDescWorhp(
+   void
+   );
 
 /** returns whether Worhp is available, i.e., whether it has been linked in */
 extern
-SCIP_Bool SCIPisWorhpAvailableWorhp(void);
+SCIP_Bool SCIPisWorhpAvailableWorhp(
+   void
+   );
 
 /* @} */
 

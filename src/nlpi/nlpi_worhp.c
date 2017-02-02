@@ -2258,19 +2258,25 @@ SCIP_RETCODE SCIPcreateNlpSolverWorhp(
 }
 
 /** gets string that identifies Worhp (version number) */
-const char* SCIPgetSolverNameWorhp(void)
+const char* SCIPgetSolverNameWorhp(
+   void
+   )
 {
    return "WORHP " WORHP_VERSION;
 }
 
 /** gets string that describes Worhp (version number) */
-const char* SCIPgetSolverDescWorhp(void)
+const char* SCIPgetSolverDescWorhp(
+   void
+   )
 {
    return "Sequential Quadratic Programming developed at Research Institute Steinbeis (www.worhp.de)";
 }
 
 /** returns whether Worhp is available, i.e., whether it has been linked in */
-SCIP_Bool SCIPisWorhpAvailableWorhp(void)
+SCIP_Bool SCIPisWorhpAvailableWorhp(
+   void
+   )
 {
    return TRUE;
 }
