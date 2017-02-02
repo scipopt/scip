@@ -63,7 +63,6 @@ struct SCIP_NlpiProblem
 
    SCIP_NLPTERMSTAT            lasttermstat; /**< termination status from last run */
    SCIP_NLPSOLSTAT             lastsolstat;  /**< solution status from last run */
-   SCIP_Real                   lastsolinfeas;/**< infeasibility (constraint violation) of solution stored in lastsol */
    SCIP_Real                   lasttime;     /**< time spend in last run */
    int                         lastniter;    /**< number of iterations in last run */
 
@@ -122,7 +121,6 @@ void invalidateSolution(
    problem->lastdualconssize = 0;
    problem->lastduallbsize = 0;
    problem->lastdualubsize = 0;
-   problem->lastsolinfeas = SCIP_INVALID;
    problem->lastsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
    problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
 }
@@ -363,8 +361,8 @@ SCIP_RETCODE userF(
    assert(problem->blkmem != NULL);
    assert(problem->opt != NULL);
    assert(problem->wsp != NULL);
-   assert(problem->opt->n = SCIPnlpiOracleGetNVars(problem->oracle));
-   assert(problem->opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle));
+   assert(problem->opt->n == SCIPnlpiOracleGetNVars(problem->oracle));
+   assert(problem->opt->m == SCIPnlpiOracleGetNConstraints(problem->oracle));
 
    SCIP_CALL( SCIPnlpiOracleEvalObjectiveValue(problem->oracle, problem->opt->X, &objval) );
    problem->opt->F = problem->wsp->ScaleObj * objval;
@@ -394,8 +392,8 @@ SCIP_RETCODE userG(
    assert(problem->blkmem != NULL);
    assert(problem->opt != NULL);
    assert(problem->wsp != NULL);
-   assert(problem->opt->n = SCIPnlpiOracleGetNVars(problem->oracle));
-   assert(problem->opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle));
+   assert(problem->opt->n == SCIPnlpiOracleGetNVars(problem->oracle));
+   assert(problem->opt->m == SCIPnlpiOracleGetNConstraints(problem->oracle));
 
    SCIP_CALL( SCIPnlpiOracleEvalConstraintValues(problem->oracle, problem->opt->X, problem->opt->G) );
 
@@ -428,8 +426,8 @@ SCIP_RETCODE userDF(
    assert(problem->blkmem != NULL);
    assert(problem->opt != NULL);
    assert(problem->wsp != NULL);
-   assert(problem->opt->n = SCIPnlpiOracleGetNVars(problem->oracle));
-   assert(problem->opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle));
+   assert(problem->opt->n == SCIPnlpiOracleGetNVars(problem->oracle));
+   assert(problem->opt->m == SCIPnlpiOracleGetNConstraints(problem->oracle));
 
    /* TODO this needs to be changed if we store the gradient of the objective function in a sparse format */
    SCIP_CALL( SCIPnlpiOracleEvalObjectiveGradient(problem->oracle, problem->opt->X, TRUE, &objval,
@@ -474,8 +472,8 @@ SCIP_RETCODE userDG(
    assert(problem->blkmem != NULL);
    assert(problem->opt != NULL);
    assert(problem->wsp != NULL);
-   assert(problem->opt->n = SCIPnlpiOracleGetNVars(problem->oracle));
-   assert(problem->opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle));
+   assert(problem->opt->n == SCIPnlpiOracleGetNVars(problem->oracle));
+   assert(problem->opt->m == SCIPnlpiOracleGetNConstraints(problem->oracle));
 
    SCIP_ALLOC( BMSallocBlockMemoryArray(problem->blkmem, &jacvals, problem->wsp->DG.nnz) );
    retcode = SCIPnlpiOracleEvalJacobian(problem->oracle, problem->opt->X, TRUE, NULL, jacvals);
@@ -520,11 +518,11 @@ SCIP_RETCODE userHM(
    assert(problem->blkmem != NULL);
    assert(problem->opt != NULL);
    assert(problem->wsp != NULL);
-   assert(problem->opt->n = SCIPnlpiOracleGetNVars(problem->oracle));
-   assert(problem->opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle));
+   assert(problem->opt->n == SCIPnlpiOracleGetNVars(problem->oracle));
+   assert(problem->opt->m == SCIPnlpiOracleGetNConstraints(problem->oracle));
 
    /* get nonzero entries in HM of SCIP (excludes unused diagonal entries) */
-   SCIPnlpiOracleGetHessianLagSparsity(problem->oracle, &offset, NULL);
+   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(problem->oracle, &offset, NULL) );
    nnonz = offset[problem->opt->n];
 
    /* evaluate hessian */
@@ -763,8 +761,8 @@ SCIP_RETCODE updateWorhp(
    assert(problem->par != NULL);
    assert(problem->opt != NULL);
    assert(problem->oracle != NULL);
-   assert(problem->opt->n = SCIPnlpiOracleGetNVars(problem->oracle));
-   assert(problem->opt->m = SCIPnlpiOracleGetNConstraints(problem->oracle));
+   assert(problem->opt->n == SCIPnlpiOracleGetNVars(problem->oracle));
+   assert(problem->opt->m == SCIPnlpiOracleGetNConstraints(problem->oracle));
 
    /* update variable bounds */
    lbs = SCIPnlpiOracleGetVarLbs(problem->oracle);
@@ -866,7 +864,6 @@ SCIP_DECL_NLPIFREE( nlpiFreeWorhp )
    assert(data->blkmem != NULL);
 
    BMSfreeMemory(&data);
-   data = NULL;
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1446,7 +1443,6 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
 
    problem->lastniter = -1;
    problem->lasttime  = -1.0;
-   problem->lastsolinfeas = SCIP_INVALID;
 
    /* initialize Worhp data if necessary */
    if( problem->firstrun )
@@ -2039,6 +2035,12 @@ SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParWorhp )
          return SCIP_PARAMETERWRONGTYPE;
       }
 
+      case SCIP_NLPPAR_FASTFAIL:
+      {
+         SCIPerrorMessage("fastfail parameter is of type int.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+
       default:
       {
          break;
@@ -2119,6 +2121,12 @@ SCIP_DECL_NLPISETREALPAR( nlpiSetRealParWorhp )
          return SCIP_PARAMETERWRONGTYPE;
       }
 
+      case SCIP_NLPPAR_FASTFAIL:
+      {
+         SCIPerrorMessage("optfile parameter is of type int.\n");
+         return SCIP_PARAMETERWRONGTYPE;
+      }
+
       default:
       {
          break;
@@ -2144,7 +2152,7 @@ SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParWorhp )
 {
    SCIP_NLPIDATA* nlpidata = SCIPnlpiGetData(nlpi);
 
-   if( SCIP_NLPPAR_OPTFILE )
+   if( type == SCIP_NLPPAR_OPTFILE )
    {
       SCIPmessagePrintWarning(nlpidata->messagehdlr, "optfile parameter not supported by Worhp interface yet. Ignored.\n");
    }
@@ -2170,7 +2178,7 @@ SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParWorhp )
 {
    SCIP_NLPIDATA* nlpidata = SCIPnlpiGetData(nlpi);
 
-   if( SCIP_NLPPAR_OPTFILE )
+   if( type == SCIP_NLPPAR_OPTFILE )
    {
       SCIPmessagePrintWarning(nlpidata->messagehdlr, "optfile parameter not supported by Worhp interface yet. Ignored.\n");
    }
@@ -2256,14 +2264,12 @@ const char* SCIPgetSolverNameWorhp(void)
 }
 
 /** gets string that describes Worhp (version number) */
-extern
 const char* SCIPgetSolverDescWorhp(void)
 {
    return "Sequential Quadratic Programming developed at Research Institute Steinbeis (www.worhp.de)";
 }
 
 /** returns whether Worhp is available, i.e., whether it has been linked in */
-extern
 SCIP_Bool SCIPisWorhpAvailableWorhp(void)
 {
    return TRUE;
