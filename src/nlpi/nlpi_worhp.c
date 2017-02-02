@@ -46,6 +46,9 @@
 #define DEFAULT_SCALEDKKT      TRUE                         /**< default whether KKT conditions are allowed to be scaled in the solver */
 #define DEFAULT_MAXITER        3000                         /**< default iteration limit for Worhp */
 #define DEFAULT_FEASTOL        1e-9                         /**< default feasibility tolerance for Worhp */
+#define DEFAULT_RANDSEED       107                          /**< initial random seed */
+
+#define MAXPERTURB             0.01                         /**< maximal perturbation of bounds in starting point heuristic */
 
 /*
  * Data structures
@@ -62,6 +65,7 @@ struct SCIP_NlpiProblem
 {
    SCIP_NLPIORACLE*            oracle;       /**< Oracle-helper to store and evaluate NLP */
    BMS_BLKMEM*                 blkmem;       /**< block memory */
+   SCIP_RANDNUMGEN*            randnumgen;   /**< random number generator */
 
    SCIP_NLPTERMSTAT            lasttermstat; /**< termination status from last run */
    SCIP_NLPSOLSTAT             lastsolstat;  /**< solution status from last run */
@@ -934,6 +938,9 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemWorhp)
    (*problem)->itlim = DEFAULT_MAXITER;
    (*problem)->fastfail = 0;
 
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&(*problem)->randnumgen, (*problem)->blkmem, DEFAULT_RANDSEED) );
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -977,6 +984,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemWorhp)
       SCIP_CALL( SCIPnlpiOracleFree(&(*problem)->oracle) );
    }
 
+   SCIPrandomFree(&(*problem)->randnumgen);
    BMSfreeMemoryArrayNull(&(*problem)->initguess);
    BMSfreeBlockMemory(data->blkmem, problem);
    *problem = NULL;
@@ -1493,6 +1501,36 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
          problem->opt->X[i] = problem->initguess[i];
       }
    }
+   else
+   {
+      SCIP_Real lb, ub;
+
+      assert(problem->randnumgen != NULL);
+
+      SCIPdebugMessage("Worhp started without intial primal values; make up starting guess by projecting 0 onto variable bounds\n");
+
+      for( i = 0; i < problem->opt->n; ++i )
+      {
+         lb = SCIPnlpiOracleGetVarLbs(problem->oracle)[i];
+         ub = SCIPnlpiOracleGetVarUbs(problem->oracle)[i];
+
+         if( lb > 0.0 )
+            problem->opt->X[i] = SCIPrandomGetReal(problem->randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
+         else if( ub < 0.0 )
+            problem->opt->X[i] = SCIPrandomGetReal(problem->randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
+         else
+            problem->opt->X[i] = SCIPrandomGetReal(problem->randnumgen,
+               MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
+      }
+   }
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMessage("start point:\n");
+   for( i = 0; i < problem->opt->n; ++i )
+   {
+      SCIPdebugMessage("x[%d] = %f\n", i, problem->opt->X[i]);
+   }
+#endif
 
    /*
     * Worhp Reverse Communication loop.
