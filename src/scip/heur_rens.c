@@ -526,10 +526,14 @@ SCIP_RETCODE SCIPapplyRens(
          SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
       }
 
-      /* disable conflict analysis */
+      /* enable conflict analysis and restrict conflict pool */
       if( !SCIPisParamFixed(subscip, "conflict/enable") )
       {
-         SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", FALSE) );
+         SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
+      }
+      if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
       }
 
       /* speed up sub-SCIP by not checking dual LP feasibility */

@@ -234,25 +234,9 @@ SCIP_RETCODE setupSCIPparamsStage3(
    }
 
    /* disable conflict analysis */
-   if( !SCIPisParamFixed(probingscip, "conflict/useprop") )
+   if( !SCIPisParamFixed(probingscip, "conflict/enable") )
    {
-      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useprop", FALSE) );
-   }
-   if( !SCIPisParamFixed(probingscip, "conflict/useinflp") )
-   {
-      SCIP_CALL( SCIPsetCharParam(probingscip, "conflict/useinflp", 'o') );
-   }
-   if( !SCIPisParamFixed(probingscip, "conflict/useboundlp") )
-   {
-      SCIP_CALL( SCIPsetCharParam(probingscip, "conflict/useboundlp", 'o') );
-   }
-   if( !SCIPisParamFixed(probingscip, "conflict/usesb") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usesb", FALSE) );
-   }
-   if( !SCIPisParamFixed(probingscip, "conflict/usepseudo") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usepseudo", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/enable", FALSE) );
    }
 
    return SCIP_OKAY;
