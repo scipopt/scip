@@ -1070,7 +1070,7 @@ SCIP_Real SCIPconflictstoreGetAvgNnzDualray(
       return conflictstore->nnzdualrays / conflictstore->ndualrayconfs;
 }
 
-/** return the number of stored dualray constraints */
+/** returns the number of all stored dual ray constraints */
 int SCIPconflictstoreGetNDualrays(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    )

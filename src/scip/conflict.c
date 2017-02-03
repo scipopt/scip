@@ -6026,7 +6026,6 @@ SCIP_RETCODE createAndAddDualray(
    SCIP_Real*            vals,               /**< coefficients of the proof constraint */
    SCIP_Real             lhs,                /**< lhs of the proof constraint */
    SCIP_Real             rhs,                /**< rhs of the proof constraint */
-   int                   repropdepth,        /**< repropagation depth of the proof-constraint */
    SCIP_Bool*            success             /**< pointer to store whether the constraint was accepted */
    )
 {
@@ -6075,9 +6074,9 @@ SCIP_RETCODE createAndAddDualray(
 
    toolong = (fillin > (1.0 + (100.0 - SCIPconflictstoreGetNDualrays(conflictstore))/100.0) * stat->avgnnz);
 
-   SCIPsetDebugMsg(set, "check constraint: fill-in %g (nnz=%d), threshold %g, fdpt %d, cdpt %d, rdpt %d\n", fillin,
+   SCIPsetDebugMsg(set, "check constraint: fill-in %g (nnz=%d), threshold %g, fdpt %d, cdpt %d\n", fillin,
          nnonzeros, (1.0 + (100.0 - SCIPconflictstoreGetNDualrays(conflictstore))/100.0) * stat->avgnnz,
-         SCIPtreeGetFocusDepth(tree), SCIPtreeGetCurrentDepth(tree), repropdepth);
+         SCIPtreeGetFocusDepth(tree), SCIPtreeGetCurrentDepth(tree));
 
    if( toolong )
       return SCIP_OKAY;
@@ -6121,17 +6120,6 @@ SCIP_RETCODE createAndAddDualray(
          SCIPconflictstoreGetNDualrays(conflictstore));
 
    ++conflict->ndualrayinfglobal;
-
-   if( repropdepth > 0 && repropdepth < SCIPtreeGetCurrentDepth(tree) )
-   {
-      assert(tree->pathlen >= repropdepth);
-
-      /* mark the node in the repropdepth to be propagated again */
-      SCIPnodePropagateAgain(tree->path[repropdepth], set, stat, tree);
-
-      SCIPsetDebugMsg(set, "marked node %p (type %d) in depth %d to be repropagated due to dualray constraint found in depth %d\n",
-         (void*)tree->path[repropdepth], SCIPnodeGetType(tree->path[repropdepth]), repropdepth, SCIPtreeGetCurrentDepth(tree));
-   }
 
    /* check whether the constraint separates the root solution */
    if( (!SCIPsetIsInfinity(set, -lhs) && isSeparatingRootLPSol(set, vars, vals, lhs, nvars, TRUE))
@@ -6213,7 +6201,7 @@ SCIP_RETCODE tightenSingleVar(
             SCIPvarGetUbGlobal(var), (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"), newbound);
 
       SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, tree, reopt, blkmem, 1, &var, &val,
-            -SCIPsetInfinity(set), rhs, 0, success) );
+            -SCIPsetInfinity(set), rhs, success) );
    }
    else
    {
@@ -6235,53 +6223,6 @@ SCIP_RETCODE tightenSingleVar(
    ++conflict->ninflpsuccess;
 
    return SCIP_OKAY;
-}
-
-static
-int calcRepropDepth(
-   SCIP_VAR**            vars,
-   SCIP_Real*            vals,
-   int*                  varinds,
-   int                   nvars,
-   int*                  lbchginfoposs,
-   int*                  ubchginfoposs
-   )
-{
-   int repropdepth;
-   int i;
-
-   assert(vars != NULL);
-   assert(vals != NULL);
-   assert(lbchginfoposs != NULL);
-   assert(ubchginfoposs != NULL);
-
-   repropdepth = 0;
-
-   for( i = 0; i < nvars; i++ )
-   {
-      SCIP_BDCHGINFO* bdchginfo = NULL;
-      int depth;
-      int idx;
-
-      idx = varinds[i];
-      assert(idx >= 0);
-
-      if( vals[idx] < 0 && ubchginfoposs[idx] >= 0 )
-         bdchginfo = &vars[idx]->ubchginfos[ubchginfoposs[idx]];
-      else if( vals[idx] > 0 && lbchginfoposs[idx] >= 0 )
-         bdchginfo = &vars[idx]->lbchginfos[lbchginfoposs[idx]];
-
-      if( bdchginfo == NULL )
-         continue;
-
-      depth = SCIPbdchginfoGetDepth(bdchginfo);
-      assert(depth >= 0);
-
-      if( depth > repropdepth )
-         repropdepth = depth;
-   }
-
-   return repropdepth;
 }
 
 /** perform conflict analysis based on a dual unbounded ray
@@ -6412,21 +6353,18 @@ SCIP_RETCODE performDualRayAnalysis(
          /* applying the MIR function yields a valid constraint */
          if( mirsuccess )
          {
-            int repropdepth = 0; //(diving ? 0 : calcRepropDepth(mirvars, mirvals, varinds, nmirvars, lbchginfoposs, ubchginfoposs));
-            
-
             /* create and add the alternative proof
              *
              * note: we have to use ndualrayvars instead of nmirvars because mirvars and mirvals are not sparse.
              */
             SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, tree, reopt, blkmem, ndualrayvars, mirvars,
-                  mirvals, -SCIPsetInfinity(set), mirrhs, repropdepth, success) );
+                  mirvals, -SCIPsetInfinity(set), mirrhs, success) );
          }
          else if( !set->conf_prefermir )
          {
             /* create and add the original proof */
             SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, tree, reopt, blkmem, ndualrayvars, mirvars,
-                  farkascoefs, farkaslhs, SCIPsetInfinity(set), 0, success) );
+                  farkascoefs, farkaslhs, SCIPsetInfinity(set), success) );
          }
       }
    }
