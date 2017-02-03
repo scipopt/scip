@@ -6064,7 +6064,7 @@ SCIP_RETCODE createAndAddDualray(
       return SCIP_OKAY;
 
    /* check whether the constraint is orthogonal enough */
-   if( nvars <= 1 && SCIPsetIsZero(set, normobj) )
+   if( nvars <= 1 || SCIPsetIsZero(set, normobj) )
       orthogonality = 1.0;
    else
       orthogonality = 1.0 - REALABS(prod) / (SQRT(normcons) * SQRT(normobj));
