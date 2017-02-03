@@ -6123,7 +6123,7 @@ SCIP_RETCODE createAndAddDualray(
 
    ++conflict->ndualrayinfglobal;
 
-   if( repropdepth < SCIPtreeGetCurrentDepth(tree) )
+   if( repropdepth > 0 && repropdepth < SCIPtreeGetCurrentDepth(tree) )
    {
       assert(tree->pathlen >= repropdepth);
 
@@ -6413,7 +6413,9 @@ SCIP_RETCODE performDualRayAnalysis(
          /* applying the MIR function yields a valid constraint */
          if( mirsuccess )
          {
-            int repropdepth = (diving ? 0 : calcRepropDepth(mirvars, mirvals, varinds, nmirvars, lbchginfoposs, ubchginfoposs));
+            int repropdepth = 0; //(diving ? 0 : calcRepropDepth(mirvars, mirvals, varinds, nmirvars, lbchginfoposs, ubchginfoposs));
+            
+
             /* create and add the alternative proof
              *
              * note: we have to use ndualrayvars instead of nmirvars because mirvars and mirvals are not sparse.
