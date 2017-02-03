@@ -19,6 +19,37 @@
  * @author Timo Berthold
  * @author Marc Pfetsch
  *
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#ifndef __SCIP_CONS_ORBITOPE_H__
+#define __SCIP_CONS_ORBITOPE_H__
+
+#include "scip/scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+/** creates the handler for orbitope constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ */
+EXTERN
+SCIP_RETCODE SCIPincludeConshdlrOrbitope(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Orbitope Constraints
+ *
+ * @{
+ *
  * This constraint handler can be used to handle symmetries in certain 0/1-programs. The principle
  * structure is that some variables can be ordered in matrix form, such that permuting columns does
  * not change the validity and objective function value of a solution. That is, the symmetry group
@@ -34,24 +65,6 @@
  * \f]
  * Permuting columns of \f$x\f$ does not change the validity and objective function value of any feasible solution.
  */
-
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#ifndef __SCIP_CONS_ORBITOPE_H__
-#define __SCIP_CONS_ORBITOPE_H__
-
-#include "scip/scip.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
-/** creates the handler for orbitope constraints and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeConshdlrOrbitope(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 /** creates and captures a orbitope constraint
  *
@@ -111,6 +124,10 @@ SCIP_RETCODE SCIPcreateConsBasicOrbitope(
    int                   nblocks,            /**< number of symmetric variable blocks             <=> q */
    SCIP_Bool             resolveprop         /**< should propagation be resolved? */
    );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -4991,8 +4991,8 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       return SCIP_OKAY;
 
    /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
-   if( SCIPvarGetType(vary) > SCIPvarGetType(varx) || (SCIPvarGetType(vary) == SCIPvarGetType(varx) &&
-         SCIPvarIsBinary(varx) && !SCIPvarIsBinary(vary)) )
+   if( SCIPvarGetType(vary) > SCIPvarGetType(varx) ||
+         (SCIPvarGetType(vary) == SCIPvarGetType(varx) && !SCIPvarIsBinary(vary) && SCIPvarIsBinary(varx))  )
    {
       SCIP_VAR* var;
       SCIP_Real scalar;
@@ -5005,6 +5005,11 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       scalary = scalarx;
       scalarx = scalar;
    }
+
+   /* don't aggregate if the aggregation would lead to a binary variable aggregated to a non-binary variable */
+   if( SCIPvarIsBinary(varx) && !SCIPvarIsBinary(vary) )
+      return SCIP_OKAY;
+
    assert(SCIPvarGetType(varx) >= SCIPvarGetType(vary));
 
    /* figure out, which variable should be aggregated */

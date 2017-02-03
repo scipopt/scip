@@ -19,6 +19,38 @@
  * @author Tobias Achterberg
  * @author Michael Winkler
  *
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#ifndef __SCIP_CONS_SETPPC_H__
+#define __SCIP_CONS_SETPPC_H__
+
+
+#include "scip/scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+/** creates the handler for set partitioning / packing / covering constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
+EXTERN
+SCIP_RETCODE SCIPincludeConshdlrSetppc(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Set Packing/Partitioning/Covering Constraints
+ *
+ * @{
+ *
  * This constraint handler handles three special classes of linear constraints, namely
  * set partitioning, set packing, and set covering constraints.
  * For a set of binary variables \f$x_i, i=1,\dots,n\f$, a set partitioning constraint has the form
@@ -35,18 +67,6 @@
  * \f]
  */
 
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#ifndef __SCIP_CONS_SETPPC_H__
-#define __SCIP_CONS_SETPPC_H__
-
-
-#include "scip/scip.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /** type of setppc constraint: set partitioning, set packing, or set covering */
 enum SCIP_SetppcType
 {
@@ -55,12 +75,6 @@ enum SCIP_SetppcType
    SCIP_SETPPCTYPE_COVERING     = 2      /**< constraint is a set covering constraint:     sum(x) >= 1 */
 };
 typedef enum SCIP_SetppcType SCIP_SETPPCTYPE;
-
-/** creates the handler for set partitioning / packing / covering constraints and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeConshdlrSetppc(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 /** creates and captures a set partitioning constraint
  *
@@ -286,6 +300,10 @@ int SCIPgetNFixedzerosSetppc(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

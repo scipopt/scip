@@ -247,7 +247,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
                   (void)SCIPfgets(buffer, (int) sizeof(buffer), file);
                   if( buffer[0] != '\0' )
                   {
-                     SCIP_CALL( SCIPaddDialogInputLine(scip, buffer) );
+                     SCIP_CALL_FINALLY( SCIPaddDialogInputLine(scip, buffer), SCIPfclose(file) );
                   }
                }
                SCIPfclose(file);

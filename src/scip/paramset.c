@@ -2816,29 +2816,29 @@ SCIP_RETCODE paramsetSetHeuristicsAggressive(
          }
 
          SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, newfreq, quiet) );
-      }
 
-      /* LP iteration limits only get increased for heuristics which are activated by default */
-      if( SCIPparamGetIntDefault(param) > -1 )
-      {
-         /* construct (possible) parameter name for LP iteration offset */
-         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", heurname);
-         param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
-
-         if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_INT )
+         /* LP iteration limits only get increased for heuristics which are activated by default */
+         if( SCIPparamGetIntDefault(param) > -1 )
          {
-            /* set LP iteration offset to 1.5 time the current value */
-            SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, (int) (1.5 * SCIPparamGetIntDefault(param)), quiet) );
-         }
+            /* construct (possible) parameter name for LP iteration offset */
+            (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", heurname);
+            param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
 
-         /* construct (possible) parameter name for LP iteration quotient parameter */
-         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", heurname);
-         param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+            if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_INT )
+            {
+               /* set LP iteration offset to 1.5 time the current value */
+               SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, (int) (1.5 * SCIPparamGetIntDefault(param)), quiet) );
+            }
 
-         if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_REAL )
-         {
-            /* set LP iteration quotient to 1.5 time the current value */
-            SCIP_CALL( paramSetReal(paramset, set, messagehdlr, paramname, 1.5 * SCIPparamGetRealDefault(param), quiet) );
+            /* construct (possible) parameter name for LP iteration quotient parameter */
+            (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", heurname);
+            param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+
+            if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_REAL )
+            {
+               /* set LP iteration quotient to 1.5 time the current value */
+               SCIP_CALL( paramSetReal(paramset, set, messagehdlr, paramname, 1.5 * SCIPparamGetRealDefault(param), quiet) );
+            }
          }
       }
    }

@@ -20,12 +20,6 @@
  * @author Kati Wolter
  * @author Michael Winkler
  *
- * This constraint handler handles a special type of linear constraints, namely knapsack constraints.
- * A knapsack constraint has the form
- * \f[
- *   \sum_{i=1}^n a_i x_i \leq b
- * \f]
- * with non-negative integer coefficients \f$a_i\f$, integer right-hand side \f$b\f$, and binary variables \f$x_i\f$.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -39,11 +33,30 @@
 extern "C" {
 #endif
 
-/** creates the handler for knapsack constraints and includes it in SCIP */
+/** creates the handler for knapsack constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrKnapsack(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Knapsack Constraints
+ *
+ * @{
+ *
+ * This constraint handler handles a special type of linear constraints, namely knapsack constraints.
+ * A knapsack constraint has the form
+ * \f[
+ *   \sum_{i=1}^n a_i x_i \leq b
+ * \f]
+ * with non-negative integer coefficients \f$a_i\f$, integer right-hand side \f$b\f$, and binary variables \f$x_i\f$.
+ */
 
 /** creates and captures a knapsack constraint
  *
@@ -243,6 +256,10 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    SCIP_Bool*            cutoff,             /**< pointer to store whether a cutoff was found */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

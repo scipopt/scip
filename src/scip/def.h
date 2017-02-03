@@ -333,6 +333,18 @@ extern "C" {
                        }                                                                                      \
                        while( FALSE )
 
+#define SCIP_CALL_FINALLY(x, y)   do                                                                                     \
+                       {                                                                                      \
+                          SCIP_RETCODE _restat_;                                                              \
+                          if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
+                          {                                                                                   \
+                             SCIPerrorMessage("Error <%d> in function call\n", _restat_);                     \
+                             (y);                                                                             \
+                             return _restat_;                                                                 \
+                           }                                                                                  \
+                       }                                                                                      \
+                       while( FALSE )
+
 #define SCIP_UNUSED(x) ((void) (x))
 
 /*

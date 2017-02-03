@@ -676,45 +676,6 @@ void SCIPprintError(
    SCIPmessagePrintError("\n");
 }
 
-/** update statistical information when a new solution was found */
-void SCIPstoreSolutionGap(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_Real primalbound;
-   SCIP_Real dualbound;
-
-   primalbound = getPrimalbound(scip);
-   dualbound = getDualbound(scip);
-
-   if( SCIPsetIsEQ(scip->set, primalbound, dualbound) )
-      scip->stat->lastsolgap = 0.0;
-
-   else if( SCIPsetIsZero(scip->set, dualbound)
-      || SCIPsetIsZero(scip->set, primalbound)
-      || SCIPsetIsInfinity(scip->set, REALABS(primalbound))
-      || SCIPsetIsInfinity(scip->set, REALABS(dualbound))
-      || primalbound * dualbound < 0.0 )
-   {
-      scip->stat->lastsolgap = SCIPsetInfinity(scip->set);
-   }
-   else
-   {
-      SCIP_Real absdual = REALABS(dualbound);
-      SCIP_Real absprimal = REALABS(primalbound);
-
-      scip->stat->lastsolgap = REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
-   }
-
-   if( scip->primal->nsols == 1 )
-      scip->stat->firstsolgap = scip->stat->lastsolgap;
-
-   if( scip->set->stage == SCIP_STAGE_SOLVING && scip->set->misc_calcintegral )
-   {
-      SCIPstatUpdatePrimalDualIntegral(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
-   }
-}
-
 /*
  * general SCIP methods
  */
@@ -24262,7 +24223,7 @@ SCIP_RETCODE SCIPcalcCliquePartition(
 
       SCIP_CALL( SCIPgetVarsData(scip, &allvars, NULL, &nallbinvars, &nallintvars, &nallimplvars, NULL) );
 
-      SCIP_CALL( SCIPcliquetableComputeCliqueComponents(scip->cliquetable, scip->set, allvars, nallbinvars, nallintvars, nallimplvars) );
+      SCIP_CALL( SCIPcliquetableComputeCliqueComponents(scip->cliquetable, scip->set, SCIPblkmem(scip), allvars, nallbinvars, nallintvars, nallimplvars) );
    }
 
    assert(!SCIPcliquetableNeedsComponentUpdate(scip->cliquetable));
@@ -24692,7 +24653,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
 	 if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id1) )
 	 {
             assert(id1 >= 0);
-	    SCIP_CALL( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id1, (void*)(size_t) 1) );
+	    SCIP_CALL_FINALLY( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id1, (void*)(size_t) 1), fclose(gmlfile) );
 
 	    (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id1 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v1]));
 
@@ -24719,7 +24680,7 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
 	    if( !SCIPhashmapExists(nodehashmap, (void*)(size_t)id2) )
 	    {
                assert(id2 >= 0);
-	       SCIP_CALL( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id2, (void*)(size_t) 1) );
+	       SCIP_CALL_FINALLY( SCIPhashmapInsert(nodehashmap, (void*)(size_t)id2, (void*)(size_t) 1), fclose(gmlfile) );
 
 	       (void) SCIPsnprintf(nodename, SCIP_MAXSTRLEN, "%s%s", (id2 >= nallvars ? "~" : ""), SCIPvarGetName(clqvars[v2]));
 
@@ -39336,7 +39297,7 @@ SCIP_RETCODE readSolFile(
          }
          else
          {
-            SCIP_CALL( retcode );
+            SCIP_CALL_FINALLY( retcode, SCIPfclose(file) );
          }
       }
    }
@@ -44778,6 +44739,45 @@ SCIP_RETCODE SCIPwriteImplicationConflictGraph(
    SCIPwarningMessage(scip, "SCIPwriteImplicationConflictGraph() is deprecated and does not do anything anymore. All binary to binary implications are now stored in the clique data structure, which can be written to a GML formatted file via SCIPwriteCliqueGraph().\n");
 
    return SCIP_OKAY;
+}
+
+/** update statistical information when a new solution was found */
+void SCIPstoreSolutionGap(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_Real primalbound;
+   SCIP_Real dualbound;
+
+   primalbound = getPrimalbound(scip);
+   dualbound = getDualbound(scip);
+
+   if( SCIPsetIsEQ(scip->set, primalbound, dualbound) )
+      scip->stat->lastsolgap = 0.0;
+
+   else if( SCIPsetIsZero(scip->set, dualbound)
+      || SCIPsetIsZero(scip->set, primalbound)
+      || SCIPsetIsInfinity(scip->set, REALABS(primalbound))
+      || SCIPsetIsInfinity(scip->set, REALABS(dualbound))
+      || primalbound * dualbound < 0.0 )
+   {
+      scip->stat->lastsolgap = SCIPsetInfinity(scip->set);
+   }
+   else
+   {
+      SCIP_Real absdual = REALABS(dualbound);
+      SCIP_Real absprimal = REALABS(primalbound);
+
+      scip->stat->lastsolgap = REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
+   }
+
+   if( scip->primal->nsols == 1 )
+      scip->stat->firstsolgap = scip->stat->lastsolgap;
+
+   if( scip->set->stage == SCIP_STAGE_SOLVING && scip->set->misc_calcintegral )
+   {
+      SCIPstatUpdatePrimalDualIntegral(scip->stat, scip->set, scip->transprob, scip->origprob, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip) );
+   }
 }
 
 

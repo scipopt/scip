@@ -466,8 +466,6 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    int                nslacks;
    int                nroundings;
 
-   SCIP_RETCODE       retcode;
-
    SCIP_Bool          improvementfound;
    SCIP_Bool          numericalerror;
 
@@ -537,23 +535,22 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    solarray = NULL;
    zilpcands = NULL;
 
-   retcode = SCIP_OKAY;
    /* copy the current LP solution to the working solution and allocate memory for local data */
    SCIP_CALL( SCIPlinkLPSol(scip, sol) );
-   SCIP_CALL_TERMINATE(retcode, SCIPallocBufferArray(scip, &solarray, nlpcands), TERMINATE);
-   SCIP_CALL_TERMINATE(retcode, SCIPallocBufferArray(scip, &zilpcands, nlpcands), TERMINATE);
+   SCIP_CALL( SCIPallocBufferArray(scip, &solarray, nlpcands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &zilpcands, nlpcands) );
 
    /* copy necessary data to local arrays */
    BMScopyMemoryArray(solarray, lpcandssol, nlpcands);
    BMScopyMemoryArray(zilpcands, lpcands, nlpcands);
 
    /* allocate buffer data arrays */
-   SCIP_CALL_TERMINATE(retcode, SCIPallocBufferArray(scip, &slackvars, nslacks), TERMINATE);
-   SCIP_CALL_TERMINATE(retcode, SCIPallocBufferArray(scip, &upslacks, nslacks), TERMINATE);
-   SCIP_CALL_TERMINATE(retcode, SCIPallocBufferArray(scip, &downslacks, nslacks), TERMINATE);
-   SCIP_CALL_TERMINATE(retcode, SCIPallocBufferArray(scip, &slackvarcoeffs, nslacks), TERMINATE);
-   SCIP_CALL_TERMINATE(retcode, SCIPallocBufferArray(scip, &rowneedsslackvar, nslacks), TERMINATE);
-   SCIP_CALL_TERMINATE(retcode, SCIPallocBufferArray(scip, &activities, nslacks), TERMINATE);
+   SCIP_CALL( SCIPallocBufferArray(scip, &slackvars, nslacks) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &upslacks, nslacks) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &downslacks, nslacks) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &slackvarcoeffs, nslacks) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rowneedsslackvar, nslacks) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &activities, nslacks) );
 
    BMSclearMemoryArray(slackvars, nslacks);
    BMSclearMemoryArray(slackvarcoeffs, nslacks);
@@ -850,7 +847,7 @@ SCIP_DECL_HEUREXEC(heurExecZirounding)
    SCIPfreeBufferArrayNull(scip, &zilpcands);
    SCIPfreeBufferArrayNull(scip, &solarray);
 
-   return retcode;
+   return SCIP_OKAY;
 }
 
 /*
