@@ -582,6 +582,12 @@ SCIP_Longint SCIPconflictGetNDualrayInfSuccess(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 
+/** gets number of globally valid dualray constraints */
+extern
+SCIP_Longint SCIPconflictGetNDualrayInfGlobal(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
 /** gets average length of infeasible dualrays */
 extern
 SCIP_Longint SCIPconflictGetNDualrayInfeasibleNonzeros(
