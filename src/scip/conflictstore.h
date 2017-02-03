@@ -145,7 +145,7 @@ SCIP_RETCODE SCIPconflictstoreGetConflicts(
    int*                  nconflicts          /**< pointer to store the number of conflicts */
    );
 
-/** transformes all original conflicts into transformed conflicts */
+/** transforms all original conflicts into transformed conflicts */
 extern
 SCIP_RETCODE SCIPconflictstoreTransform(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
@@ -157,11 +157,13 @@ SCIP_RETCODE SCIPconflictstoreTransform(
    SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
+/** returns the number of non-zeros over all stored dual ray constraints */
 extern
 SCIP_Real SCIPconflictstoreGetAvgNnzDualray(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    );
 
+/** returns the number of all stored dual ray constraints */
 extern
 int SCIPconflictstoreGetNDualrays(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
