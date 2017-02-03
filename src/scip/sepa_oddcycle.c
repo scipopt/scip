@@ -3572,8 +3572,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
       return SCIP_OKAY;
    }
 
-   /* only call separator if enough implications (but not all implications should come from cliques) are present */
-   if( SCIPgetNImplications(scip) < 1 || SCIPgetNImplications(scip) + SCIPgetNCliques(scip) < 3 )
+   /* only call separator if enough implications and cliques are present */
+   if( SCIPgetNImplications(scip) + SCIPgetNCliques(scip) < 3 )
    {
       SCIPdebugMsg(scip, "skipping separator: not enough implications present\n");
       return SCIP_OKAY;
