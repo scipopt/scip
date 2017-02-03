@@ -5878,7 +5878,7 @@ SCIP_RETCODE tightenDualray(
    SCIP_Bool*            varused,            /**< bool array indicating whether a variable is part of the proof constraint */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
-   SCIP_Bool             diving,
+   SCIP_Bool             diving,             /**< are we in strong branching or diving mode? */
    SCIP_Bool*            success             /**< success pointer */
    )
 {/*lint --e{715}*/
@@ -6026,7 +6026,7 @@ SCIP_RETCODE createAndAddDualray(
    SCIP_Real*            vals,               /**< coefficients of the proof constraint */
    SCIP_Real             lhs,                /**< lhs of the proof constraint */
    SCIP_Real             rhs,                /**< rhs of the proof constraint */
-   int                   repropdepth,
+   int                   repropdepth,        /**< repropagation depth of the proof-constraint */
    SCIP_Bool*            success             /**< pointer to store whether the constraint was accepted */
    )
 {
@@ -6096,7 +6096,6 @@ SCIP_RETCODE createAndAddDualray(
    else
       return SCIP_INVALIDCALL;
 
-   /* TODO: check if a more specialized constraint (setppc, logic-or etc) can be created */
    SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, nvars, vars, vals, lhs, rhs,
          FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 

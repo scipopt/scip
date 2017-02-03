@@ -157,11 +157,14 @@ SCIP_RETCODE SCIPconflictstoreTransform(
    SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
+
+/** returns the average number of non-zeros over all stored dual ray constraints */
 extern
 SCIP_Real SCIPconflictstoreGetAvgNnzDualray(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    );
 
+/** return the number of stored dualray constraints */
 extern
 int SCIPconflictstoreGetNDualrays(
    SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
