@@ -817,7 +817,7 @@
  *
  * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/#download">SCIP download
  * section</a> and download an appropriate binary for your operating system. The \SCIP source code distribution already comes with
- * the example problem instance used throughout this tutorial. To follow this tutorial with a precompiled binary, we recommend downloading the instance
+ * the example instance used throughout this tutorial. To follow this tutorial with a precompiled binary, we recommend downloading the instance
  * <a href="http://miplib.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
  * the <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> homepage.
  *
@@ -829,23 +829,25 @@
  *
  * @snippet shelltutorial/shelltutorialannotated.tmp SnippetHelp
  *
- * Okay, let's solve some MIPs... use "read <path/to/file>" to parse a problem file, "optimize" to solve it and "display
+ * Okay, let's solve the example instance... use "read check/instances/MIP/stein27.fzn" to parse the instance file, "optimize" to solve it and "display
  * solution" to show the nonzero variables of the best found solution.
  *
  * @snippet shelltutorial/shelltutorialannotated.tmp SnippetOpt1
  *
  * What do we see here? After "optimize", SCIP first goes into presolving. Not much is happening for this instance, just
  * the linear constraints get upgraded to more specific types. Each round of presolving will be displayed in a single
- * line, with a short summary at the end. Then, we see the actual solving process. The letter in front of the first column
- * is displayed, if a heuristic found a new primal solution. Which letter represents which heuristic can be seen with the 
- * display heuristcs command, see \ref TUTORIAL_STATISTICS for an example.
+ * line, with a short summary at the end. Then, we see the actual solving process. The table output of the branch-and-cut 
+ * solving process is very detailed during the root node. Afterwards, a new line is displayed every 100th node.
+ * Furthermore, every new incumbent solution triggers a new table row, starting with a character to indicate the 
+ * heuristic that found the solution. Which letter represents which heuristic can be seen with the 
+ * "display heuristics" command, see \ref TUTORIAL_STATISTICS for an example.
  * 
  * After some lines the root node processing is finished. From now on, we will see an output line every hundredth node or 
  * whenever a new incumbent is found. After some more nodes, the "dualbound" starts 
  * moving, too. At one point, both will be the same, and the solving process terminates, showing us some wrap-up 
  * information.
  *
- * The exact performance varies amongst different architectures, operating systems, and so on. Do not be worried if
+ * The exact performance may of course vary among different architectures and operating systems. Do not be worried if
  * your installation needs more or less time or nodes to solve. Also, this instance has more than 2000 different optimal
  * solutions. The optimal objective value always has to be 18, but the solution vector may differ. If you are interested
  * in this behavior, which is called "performance variability", you may have a look at the MIPLIB2010 paper.
@@ -870,34 +872,37 @@
  *
  * @section TUTORIAL_STATISTICS Displaying detailed solving statistics
  *
- * We might want to have some more information now. Which were the heuristics that found the solutions? What plugins
- * were called during the solutions process and how much time did they spend? How did the instance that we were solving
- * look?  Information on certain plugin types (e.g., heuristics, branching rules, separators) we get by
- * "display <plugin-type>", information on the solution process, we get by "display statistics", and "display problem"
- * shows us the current instance.
+ * We might want to have some more information now. Which of the heuristics found solutions? Which plugins
+ * were called during the solutions process and how much time did they spend? 
+ * Information on certain plugin types (e.g., heuristics, branching rules, separators) is displayed via
+ * "display <plugin-type>", information on the solution process via "display statistics", and "display problem"
+ * shows the current instance.
  *
  * @snippet shelltutorial/shelltutorialannotated.tmp SnippetDisplayStatistics
  *
- * In the freq column of the display you can find how often a heuristic is called. The statistics are quite comprehensive,
- * thus, we just explain a few lines here. We get information for all types of plugins and for the overall solving 
- * process.
+ * The statistics obtained via "display statistics" are quite comprehensive,
+ * thus, we just explain a few lines here. Information is grouped by the plugin type. For the primal heuristics,
+ * the execution time in seconds is shown as well as the number of calls to the heuristic, and its success regarding
+ * the number of (best) solutions found by that heuristic. Appropriate statistics are also shown for presolvers, constraint handlers,
+ * separators, propagators, the search tree, etc. User-written plugins will appear automatically in these statistics,
+ * after they were included into \SCIP.
  *
  * @section TUTORIAL_PARAMETERS Changing parameters from the interactive shell
  *
- * Now, we can start playing around with parameters. Rounding and shifting seem to be quite successful on this instance,
+ * Now, we can start playing around with parameters. The primal heuristics Rounding and shifting seem to be quite successful on this instance,
  * wondering what happens if we disable them? Or what happens, if we are even more rigorous and disable all heuristics?
  * Or if we do the opposite and use aggressive heuristics?
  *
  * @snippet shelltutorial/shelltutorialannotated.tmp SnippetSetSettings
  *
- * We can navigate through the menus step-by-step and get a list of available options and submenus. Thus, we select
- * "set" to change settings, "heuristics" to change settings of primal heuristics, "shifting" for that particular
+ * We can navigate through the menus step-by-step and get a list of available options and submenus. Therefore, we select
+ * "set" to change settings, "heuristics" to change settings of primal heuristics, and "shifting" for that particular
  * heuristic. Then we see a list of parameters (and yet another submenu for advanced parameters), and disable this
  * heuristic by setting its calling frequency to -1. If we already know the path to a certain setting, we can directly
  * type it (as for the rounding heuristic in the above example). Note that we do not have to use the full names, but we
  * may use short versions, as long as they are unique.
  *
- * To solve a problem a second time, we have to read it and start the optimization process again.
+ * To solve a problem a second time, we have to read it in again before starting the optimization process.
  *
  * @snippet shelltutorial/shelltutorialannotated.tmp SnippetOpt2
  *
