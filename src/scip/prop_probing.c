@@ -287,15 +287,15 @@ SCIP_RETCODE sortVariables(
 #ifndef VARIANT_B
          scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
             - MAX(nlocksdown, nlocksup)
-            + 10*MIN(nimplzero, nimplone)
-            + 100*MIN(nclqzero, nclqone)  /*lint !e790*/
+            + 10.0 * MIN(nimplzero, nimplone)
+            + 100.0 * MIN(nclqzero, nclqone)  /*lint !e790*/
             - randomoffset; /* to break ties randomly */
 #else
          scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
          - ABS(nlocksdown - nlocksup)
          + MIN(nlocksdown, nlocksup)
-         + 500 * nimplzero + 50 * nimplone  /*lint !e790*/
-         + 50000 * nclqzero + 5000 * nclqone  /*lint !e790*/
+         + 500.0 * nimplzero + 50.0 * nimplone  /*lint !e790*/
+         + 50000.0 * nclqzero + 5000.0 * nclqone  /*lint !e790*/
          - randomoffset; /* to break ties randomly */
 #endif
       }

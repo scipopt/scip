@@ -3455,10 +3455,10 @@ SCIP_RETCODE cliquePresolve(
          }
          else
             assert(vars[v] != vars[v1]);
-         }
+      }
 
-         if( breaked )
-            break;
+      if( breaked )
+         break;
 
       --v;
    }
@@ -3470,8 +3470,7 @@ SCIP_RETCODE cliquePresolve(
       if( posnotinclq1 == -1 )
       {
          /* all variables of xor constraints <%s> (with rhs == 1) are in one clique, so create a setpartitioning
-          * constraint with all variables and delete this xor-constraint
-          */
+          * constraint with all variables and delete this xor-constraint */
          if( consdata->rhs )
          {
             SCIP_CONS* newcons;

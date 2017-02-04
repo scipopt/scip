@@ -585,7 +585,7 @@ SCIP_RETCODE SCIPapplyRens(
    if( retcode != SCIP_OKAY )
    {
       SCIPwarningMessage(scip, "Error while presolving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
-      SCIPABORT();
+      SCIPABORT();  /*lint --e{527}*/
 
       /* free sub problem data */
       SCIPfreeBufferArray(scip, &subvars);
