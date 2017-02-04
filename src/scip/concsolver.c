@@ -410,7 +410,7 @@ SCIP_RETCODE SCIPconcsolverSync(
 
    if( concsolver->nsyncs == 1 )
    {
-      syncdata = SCIPsyncstoreGetSyncdata(syncstore, 0);
+      syncdata = SCIPsyncstoreGetSyncdata(syncstore, 0LL);
       SCIP_CALL( SCIPsyncstoreEnsureAllSynced(syncstore, syncdata) );
       concsolver->syncdata = syncdata;
       SCIP_CALL( concsolvertype->concsolversyncread(concsolver, syncstore, syncdata, &nsols, &ntighterbnds, &ntighterintbnds) );

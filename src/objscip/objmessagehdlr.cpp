@@ -180,7 +180,6 @@ scip::ObjMessagehdlr* SCIPgetObjMessagehdlr(
 }
 
 /** set static error output function to the corresponding function of message handler */
-EXTERN
 void SCIPsetStaticErrorPrintingMessagehdlr(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )

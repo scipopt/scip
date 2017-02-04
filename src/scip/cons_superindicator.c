@@ -659,7 +659,7 @@ SCIP_RETCODE enforceConstraint(
    SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
-{
+{  /*lint --e{715}*/
    SCIP_Bool cont;
    int i;
 

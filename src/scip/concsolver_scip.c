@@ -441,10 +441,10 @@ SCIP_DECL_CONCSOLVERINITSEEDS(concsolverScipInitSeeds)
    data = SCIPconcsolverGetData(concsolver);
    assert(data != NULL);
 
-   SCIPinfoMessage(data->solverscip, NULL, "initializing seeds to %d in concurrent solver '%s'\n", seed, SCIPconcsolverGetName(concsolver));
+   SCIPinfoMessage(data->solverscip, NULL, "initializing seeds to %d in concurrent solver '%s'\n", (int) seed, SCIPconcsolverGetName(concsolver));
 
-   SCIP_CALL( SCIPsetIntParam(data->solverscip, "randomization/randomseedshift", seed) );
-   SCIP_CALL( SCIPsetIntParam(data->solverscip, "randomization/permutationseed", seed) );
+   SCIP_CALL( SCIPsetIntParam(data->solverscip, "randomization/randomseedshift", (int) seed) );
+   SCIP_CALL( SCIPsetIntParam(data->solverscip, "randomization/permutationseed", (int) seed) );
    SCIP_CALL( SCIPsetBoolParam(data->solverscip, "randomization/permutevars", TRUE) );
    SCIP_CALL( SCIPsetBoolParam(data->solverscip, "randomization/permuteconss", TRUE) );
 

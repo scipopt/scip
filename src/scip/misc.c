@@ -2043,7 +2043,7 @@ SCIP_RETCODE SCIPhashtableCreate(
     */
    (*hashtable)->shift = 32;
    (*hashtable)->shift -= (int)ceil(
-      log(MAX(32.0, tablesize / 0.9)) / log(2));
+      log(MAX(32.0, tablesize / 0.9)) / log(2.0));
 
    /* compute size from shift */
    nslots = 1<<(32 - (*hashtable)->shift);
@@ -2275,7 +2275,7 @@ SCIP_RETCODE SCIPhashtableInsert(
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(hashtable->userptr, element);
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = hashvalue(keyval);
+   hashval = hashvalue((uint64_t) keyval);
 
    return hashtableInsert(hashtable, element, key, hashval, TRUE);
 }
@@ -2307,7 +2307,7 @@ SCIP_RETCODE SCIPhashtableSafeInsert(
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(hashtable->userptr, element);
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = hashvalue(keyval);
+   hashval = hashvalue((uint64_t) keyval);
 
    return hashtableInsert(hashtable, element, key, hashval, FALSE);
 }
@@ -2334,7 +2334,7 @@ void* SCIPhashtableRetrieve(
 
    /* get the hash value of the key */
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = hashvalue(keyval);
+   hashval = hashvalue((uint64_t) keyval);
 
    pos = hashval>>(hashtable->shift);
    elemdistance = 0;
@@ -2406,7 +2406,7 @@ SCIP_RETCODE SCIPhashtableRemove(
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(hashtable->userptr, element);
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = hashvalue(keyval);
+   hashval = hashvalue((uint64_t) keyval);
 
    elemdistance = 0;
    pos = hashval>>(hashtable->shift);
@@ -2784,7 +2784,7 @@ SCIP_RETCODE SCIPhashmapCreate(
     */
    (*hashmap)->shift = 32;
    (*hashmap)->shift -= (int)ceil(
-      log(MAX(32, mapsize / 0.9)) / log(2));
+      log(MAX(32, mapsize / 0.9)) / log(2.0));
    nslots = 1<<(32 - (*hashmap)->shift);
    (*hashmap)->mask = nslots - 1;
    (*hashmap)->blkmem = blkmem;
@@ -3110,7 +3110,7 @@ int SCIPhashmapGetNElements(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    )
 {
-   return hashmap->nelements;
+   return (int) hashmap->nelements;
 }
 
 /** gives the number of entries in the internal arrays of a hash map */
@@ -3118,7 +3118,7 @@ int SCIPhashmapGetNEntries(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    )
 {
-   return hashmap->mask + 1;
+   return (int) hashmap->mask + 1;
 }
 
 /** gives the hashmap entry at the given index or NULL if entry is empty */
@@ -9847,10 +9847,11 @@ void SCIPselectWeightedMedian(
    /* collect data for explicit sorting */
    for( j = 0; j <= right - left; ++j )
    {
-      int index = indices[left + j];
-      keysbuffer[j] = keys[index];
-      weightsbuffer[j] = weights != NULL ? weights[index] : 1.0;
-      indicesbuffer[j] = index;
+      int idx;
+      idx = indices[left + j];
+      keysbuffer[j] = keys[idx];
+      weightsbuffer[j] = weights != NULL ? weights[idx] : 1.0;
+      indicesbuffer[j] = idx;
    }
 
    SCIPsortDownRealRealInt(keysbuffer, weightsbuffer, indicesbuffer, right - left + 1);

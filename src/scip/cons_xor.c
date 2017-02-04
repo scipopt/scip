@@ -3454,11 +3454,11 @@ SCIP_RETCODE cliquePresolve(
             break;
          }
          else
-         assert(vars[v] != vars[v1]);
+            assert(vars[v] != vars[v1]);
          }
 
          if( breaked )
-         break;
+            break;
 
       --v;
    }
@@ -3515,7 +3515,7 @@ SCIP_RETCODE cliquePresolve(
                   return SCIP_OKAY;
                }
                else
-               ++(*nfixedvars);
+                  ++(*nfixedvars);
             }
          }
       }

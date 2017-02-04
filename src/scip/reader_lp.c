@@ -2311,7 +2311,7 @@ SCIP_RETCODE readSos(
                /* get sign */
                if( isSign(lpinput, &sign) )
                {
-                 getNextToken(scip, lpinput);
+                  (void) getNextToken(scip, lpinput);
                }
 
                /* get weight */

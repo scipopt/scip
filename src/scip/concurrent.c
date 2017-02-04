@@ -70,7 +70,7 @@ SCIP_RETCODE SCIPcreateConcurrent(
    scip->concurrent->solidx = 0;
    scip->stat->subscipdepth = 0;
 
-   if( scip->set->parallel_mode == SCIP_PARA_DETERMINISTIC )
+   if( scip->set->parallel_mode == (int) SCIP_PARA_DETERMINISTIC )
    {
       scip->concurrent->dettime = 0.0;
       scip->concurrent->wallclock = NULL;

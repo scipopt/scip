@@ -769,9 +769,9 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
                   if( saveptr != NULL )
                   {
                      if( *saveptr == '(' )
-                     ++bracketcounter;
+                        ++bracketcounter;
                      else
-                     --bracketcounter;
+                        --bracketcounter;
 
                      ++saveptr;
                   }

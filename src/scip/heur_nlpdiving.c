@@ -570,7 +570,7 @@ SCIP_RETCODE chooseCoefVar(
                 * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
                 */
                if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
-                  nviolrows *= 100.0;
+                  nviolrows *= 100;
             }
             else if( frac < 0.01 )
                nviolrows *= 100;

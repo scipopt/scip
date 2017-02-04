@@ -1067,7 +1067,7 @@ SCIP_Real SCIPconflictstoreGetAvgNnzDualray(
    if( conflictstore->ndualrayconfs == 0 )
       return 0.0;
    else
-      return conflictstore->nnzdualrays / conflictstore->ndualrayconfs;
+      return (SCIP_Real) conflictstore->nnzdualrays / ((SCIP_Real) conflictstore->ndualrayconfs);
 }
 
 /** returns the number of all stored dual ray constraints */

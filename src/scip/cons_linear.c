@@ -4873,6 +4873,8 @@ SCIP_RETCODE addConflictBounds(
             /* now add bounds as reasons until the residual capacity is exceeded */
             for( i = 0; i < nvars; ++i )
             {
+               assert( vars != NULL && vals != NULL ); /* for lint */
+
                /* zero coefficients and the infered variable can be ignored */
                if( vars[i] == infervar || SCIPisZero(scip, vals[i]) )
                   continue;
@@ -6904,7 +6906,7 @@ SCIP_RETCODE tightenBounds(
    )
 {
    SCIP_CONSDATA* consdata;
-   int tightenmode;
+   unsigned int tightenmode;
    int nvars;
    int nrounds;
    int lastchange;

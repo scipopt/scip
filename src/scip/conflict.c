@@ -6259,7 +6259,7 @@ SCIP_RETCODE performDualRayAnalysis(
    SCIP_Bool*            globalinfeasible,   /**< pointer to store whether global infeasibility could be proven */
    SCIP_Bool*            success             /**< pointer to store success result */
    )
-{
+{  /*lint --e{715}*/
    SCIP_VAR** mirvars;
    SCIP_Real* mirvals;
    int* varinds;

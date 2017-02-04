@@ -11138,7 +11138,9 @@ SCIP_RETCODE lpSolveStable(
    {
       usepolishing = TRUE;
       if( lp->updateintegrality )
-         lpCopyIntegrality(lp, set);
+      {
+         SCIP_CALL( lpCopyIntegrality(lp, set) );
+      }
    }
    else
       usepolishing = FALSE;

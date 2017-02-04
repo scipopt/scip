@@ -230,13 +230,13 @@ SCIP_RETCODE sortVariables(
 
 #ifndef VARIANT_B
          tmp = -MAX(nlocksdown, nlocksup)
-	    + 10*MIN(nimplzero, nimplone)
-	    + 100*MIN(nclqzero, nclqone);
+	    + 10.0 * MIN(nimplzero, nimplone)
+	    + 100.0 * MIN(nclqzero, nclqone);
 #else
          tmp = - ABS(nlocksdown - nlocksup)
 	    + MIN(nlocksdown, nlocksup)
-	    + 500 * nimplzero + 50 * nimplone
-	    + 50000 * nclqzero + 5000 * nclqone;
+	    + 500.0 * nimplzero + 50.0 * nimplone
+	    + 50000.0 * nclqzero + 5000.0 * nclqone;
 #endif
 
          if( tmp > maxscore )

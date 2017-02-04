@@ -7545,10 +7545,7 @@ SCIP_RETCODE propagateCons(
          /* check, if weights of fixed variables don't exceeds knapsack capacity */
          if( !(*cutoff) && consdata->capacity >= minweightsum + consdata->onesweightsum )
          {
-            SCIP_Longint maxcliqueweight;
-
-            c = 0;
-            maxcliqueweight = -1;
+            SCIP_Longint maxcliqueweight = -1LL;
 
             /* loop over cliques */
             for( c = 0; c < nnegcliques; ++c )

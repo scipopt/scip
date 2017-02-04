@@ -175,7 +175,7 @@ SCIP_RETCODE applyOfins(
    int i;
 
    SCIP_SOL** subsols;
-   int nsubsols;
+   int nsubsols = 0;
 
    SCIP_Bool success;
    SCIP_RETCODE retcode;
@@ -263,10 +263,6 @@ SCIP_RETCODE applyOfins(
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
 
-   if( !success )
-      goto TERMINATE;
-
-
    /* set an objective limit */
    SCIPdebugMsg(scip, "set objective limit of %g to sub-SCIP\n", SCIPgetUpperbound(scip));
    SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetUpperbound(scip)) );
@@ -332,7 +328,7 @@ SCIP_RETCODE applyOfins(
    {
       SCIPwarningMessage(scip, "Error while presolving subproblem in %s heuristic; sub-SCIP terminated with code <%d>\n", HEUR_NAME, retcode);
 
-      SCIPABORT();
+      SCIPABORT(); /*lint --e{527}*/
 
       /* free */
       SCIPfreeBufferArray(scip, &subvars);
@@ -411,7 +407,7 @@ SCIP_RETCODE applyOfins(
             *result = SCIP_FOUNDSOL;
       }
       break;
-   }
+   } /*lint !e788*/
 
    SCIPstatisticPrintf("%s statistic: fixed %6.3f integer variables, needed %6.1f seconds, %" SCIP_LONGINT_FORMAT " nodes, solution %10.4f found at node %" SCIP_LONGINT_FORMAT "\n",
       HEUR_NAME, 0.0, SCIPgetSolvingTime(subscip), SCIPgetNNodes(subscip), success ? SCIPgetPrimalbound(scip) : SCIPinfinity(scip),

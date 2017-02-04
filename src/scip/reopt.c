@@ -6918,7 +6918,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
 
       /* fill a permutation array */
       if( !set->reopt_usesplitcons )
-         perm[v] = v;
+         perm[v] = v;   /*lint !e613*/
    }
    assert(reoptnodes[id]->nvars == reoptnodes[0]->dualredscur->nvars);
 

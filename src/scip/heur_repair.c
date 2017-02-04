@@ -923,11 +923,8 @@ SCIP_RETCODE applyRepair(
     */
    if( retcode != SCIP_OKAY )
    {
-      SCIPwarningMessage(scip, "Error while solving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n",
-         retcode);
-
-      SCIPABORT();
-
+      SCIPwarningMessage(scip, "Error while solving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+      SCIPABORT();  /*lint --e{527}*/
       goto TERMINATE;
    }
 

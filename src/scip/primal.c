@@ -836,7 +836,7 @@ SCIP_RETCODE primalAddOrigPartialSol(
    SCIP_PROB*            prob,               /**< original problem data */
    SCIP_SOL*             sol                 /**< primal CIP solution */
    )
-{
+{  /*lint --e{715}*/
    assert(primal != NULL);
    assert(set != NULL);
    assert(prob != NULL);

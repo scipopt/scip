@@ -450,7 +450,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
 #else
    /* disable statistic timing inside sub SCIP and output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", (int) SCIP_VERBLEVEL_NONE) );
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 #endif
 

@@ -404,7 +404,7 @@ SCIP_RETCODE constructCompression(
          }
 
          /* calculate the score */
-         score += ncovered * nnon_zero_vars;
+         score += (SCIP_Real) (ncovered * nnon_zero_vars);
 
          SCIPdebugMessage("-> current representation is of size %d with score = %.1f\n", nreps, score);
 
