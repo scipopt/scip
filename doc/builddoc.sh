@@ -30,5 +30,15 @@ cd ../../
 
 ### FINISHED FAQ GENERATION
 
+### START PARAMETER FILE CREATION
+
+cd ..
+
+bin/scip -c "set default set save doc/inc/parameters.set quit"
+
+cd doc
+
+### FINISHED FAQ GENERATION
+
 # finally build the scip documentation
 doxygen scip.dxy

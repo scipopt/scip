@@ -15,10 +15,6 @@ rm -f release/$NAME.tgz
 # run git status to clean the dirty git hash
 git status
 
-echo generating default setting files
-make LPS=none OPT=opt READLINE=false ZLIB=false ZIMPL=false -j4
-bin/scip -c "set default set save doc/inc/parameters.set quit"
-
 # Before we create a tarball change the director and file rights in a command way
 echo adjust file modes
 find ./ -type d -exec chmod 750 {} \;
@@ -30,9 +26,8 @@ tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*~" \
 --exclude=".*" \
 $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
-$NAME/doc/scip* $NAME/doc/xternal.c $NAME/doc/inc/faq.inc \
-$NAME/doc/howtoadd.dxy $NAME/doc/interfaces.dxy \
-$NAME/doc/inc/authors.inc $NAME/doc/inc/parameters.set \
+$NAME/doc/scip* $NAME/doc/xternal.c \
+$NAME/doc/inc/authors.inc \
 $NAME/doc/pictures/miniscippy.png $NAME/doc/pictures/scippy.png \
 $NAME/make/make.* \
 $NAME/check/check.sh $NAME/check/evalcheck.sh $NAME/check/check.awk \
@@ -76,6 +71,12 @@ $NAME/applications/Scheduler/src/*.c $NAME/applications/Scheduler/src/*.cpp $NAM
 $NAME/applications/Scheduler/data/*.sm \
 $NAME/applications/Scheduler/data/*.cmin \
 $NAME/applications/Scheduler/Makefile \
+$NAME/applications/MinIISC/Makefile $NAME/applications/MinIISC/INSTALL \
+$NAME/applications/MinIISC/doc/* \
+$NAME/applications/MinIISC/src/* \
+$NAME/applications/MinIISC/data/* \
+$NAME/applications/MinIISC/check/configuration_tmpfile_setup_miniisc.sh $NAME/applications/MinIISC/check/run.sh\
+$NAME/applications/MinIISC/check/run.sh $NAME/applications/MinIISC/check/testset/short.* \
 $NAME/applications/PolySCIP/doc/* \
 $NAME/applications/PolySCIP/src/*.cpp $NAME/applications/PolySCIP/src/*.h \
 $NAME/applications/PolySCIP/src/tclap/* $NAME/applications/PolySCIP/src/CMakeLists.txt \
@@ -97,24 +98,24 @@ $NAME/examples/Binpacking/check/testset/short.test $NAME/examples/Binpacking/che
 $NAME/examples/Binpacking/src/depend.* \
 $NAME/examples/Binpacking/src/*.c $NAME/examples/Binpacking/src/*.h \
 $NAME/examples/Binpacking/data/*.bpa \
-$NAME/examples/CallableLibrary/Makefile $NAME/examples/CallableLibrary/INSTALL \
-$NAME/examples/CallableLibrary/doc/scip.dxy $NAME/examples/CallableLibrary/doc/header.html \
-$NAME/examples/CallableLibrary/doc/layout.xml $NAME/examples/CallableLibrary/doc/xternal.c \
+$NAME/examples/CallableLibrary/Makefile \
+$NAME/examples/CallableLibrary/INSTALL \
+$NAME/examples/CallableLibrary/doc/* \
 $NAME/examples/CallableLibrary/src/depend.* $NAME/examples/CallableLibrary/src/*.c \
 $NAME/examples/Eventhdlr/* $NAME/examples/Eventhdlr/doc/* \
 $NAME/examples/Eventhdlr/src/depend.* \
 $NAME/examples/Eventhdlr/src/*.c $NAME/examples/Eventhdlr/src/*.h \
 $NAME/examples/GMI/Makefile \
-$NAME/examples/GMI/doc/xternal.c $NAME/examples/GMI/doc/gmi.dxy $NAME/examples/GMI/doc/header.html \
-$NAME/examples/GMI/check/testset/short.test $NAME/examples/GMI/check/testset/short.solu \
+$NAME/examples/GMI/doc/* \
+$NAME/examples/GMI/check/testset/short.* \
 $NAME/examples/GMI/settings/gmi* $NAME/examples/GMI/src/depend.* \
 $NAME/examples/GMI/src/*.c $NAME/examples/GMI/src/*.h \
 $NAME/examples/LOP/* $NAME/examples/LOP/doc/* $NAME/examples/LOP/data/* \
-$NAME/examples/LOP/check/check.sh $NAME/examples/LOP/check/testset/short.test $NAME/examples/LOP/check/testset/short.solu \
+$NAME/examples/LOP/check/check.sh $NAME/examples/LOP/check/testset/short.* \
 $NAME/examples/LOP/src/depend.* \
 $NAME/examples/LOP/src/*.c $NAME/examples/LOP/src/*.h \
 $NAME/examples/MIPSolver/Makefile  $NAME/examples/MIPSolver/INSTALL $NAME/examples/MIPSolver/scipmip.set \
-$NAME/examples/MIPSolver/doc/scipmip.dxy $NAME/examples/MIPSolver/doc/xternal.c \
+$NAME/examples/MIPSolver/doc/* \
 $NAME/examples/MIPSolver/src/depend.* \
 $NAME/examples/MIPSolver/src/*.cpp \
 $NAME/examples/Queens/* $NAME/examples/Queens/doc/scip_intro.tex \
@@ -124,7 +125,7 @@ $NAME/examples/TSP/Makefile $NAME/examples/TSP/INSTALL \
 $NAME/examples/TSP/runme.sh $NAME/examples/TSP/runviewer.sh \
 $NAME/examples/TSP/sciptsp.set \
 $NAME/examples/TSP/doc/* \
-$NAME/examples/TSP/check/testset/short.test $NAME/examples/TSP/check/testset/short.solu \
+$NAME/examples/TSP/check/testset/short.* \
 $NAME/examples/TSP/src/depend.* \
 $NAME/examples/TSP/src/*.cpp $NAME/examples/TSP/src/*.h \
 $NAME/examples/TSP/tspviewer/*.java $NAME/examples/TSP/tspdata/*.tsp \
@@ -142,18 +143,6 @@ $NAME/interfaces/ampl/check/instances/SOS/*.col $NAME/interfaces/ampl/check/inst
 $NAME/interfaces/ampl/check/instances/SOS/*.nl $NAME/interfaces/ampl/check/testset/short.solu \
 $NAME/interfaces/gams/Makefile $NAME/interfaces/gams/INSTALL $NAME/interfaces/gams/gamsinst.sh \
 $NAME/interfaces/gams/src/* \
-$NAME/interfaces/jni/createJniInterface.py $NAME/interfaces/jni/jniinterface.dxy \
-$NAME/interfaces/jni/Makefile $NAME/interfaces/jni/README \
-$NAME/interfaces/jni/src/*h $NAME/interfaces/jni/src/*c $NAME/interfaces/jni/src/depend* \
-$NAME/interfaces/jni/java/de/zib/jscip/nativ/NativeScipException.java \
-$NAME/interfaces/jni/examples/JniKnapsack/Makefile $NAME/interfaces/jni/examples/JniKnapsack/run.sh \
-$NAME/interfaces/jni/examples/JniKnapsack/java/JniKnapsack.java \
-$NAME/interfaces/jni/examples/JniKnapsack/data/solution.sol \
-$NAME/interfaces/jni/examples/JniKnapsack/data/test.lp \
-$NAME/interfaces/python/pyscipopt/* \
-$NAME/interfaces/python/tests/*.py \
-$NAME/interfaces/python/INSTALL \
-$NAME/interfaces/python/README $NAME/interfaces/python/*.py \
 $NAME/check/instances/CP/*.cip \
 $NAME/check/instances/Indicator/*.lp \
 $NAME/check/instances/MIP/*.fzn \
