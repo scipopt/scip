@@ -2943,6 +2943,22 @@ SCIP_DECL_EVENTEXEC(eventExecBounddisjunction)
 
    /*SCIPdebugMsg(scip, "exec method of event handler for bound disjunction constraints\n");*/
 
+   if( SCIPconsIsDeleted((SCIP_CONS*)eventdata) )
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_Bool cutoff;
+      SCIP_Bool infeasible;
+      SCIP_Bool reduceddom;
+      SCIP_Bool mustcheck;
+
+      consdata = SCIPconsGetData((SCIP_CONS*)eventdata);
+      assert(consdata != NULL);
+
+      SCIP_CALL( processWatchedVars(scip, (SCIP_CONS*)eventdata, eventhdlr, &cutoff, &infeasible, &reduceddom, &mustcheck) );
+
+      return SCIP_OKAY;
+   }
+
    if( (SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDRELAXED) != 0 )
    {
       SCIP_CALL( SCIPenableCons(scip, (SCIP_CONS*)eventdata) );
