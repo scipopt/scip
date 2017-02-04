@@ -22,5 +22,13 @@ python inc/shelltutorial/insertsnippetstutorial.py
 
 ### FINISHED SHELL TUTORIAL
 
+### START FAQ GENERATION
+
+cd inc/faq
+python parser.py ./ localdoxysubstitutions && php localfaq.php > faq.inc
+cd ../../
+
+### FINISHED FAQ GENERATION
+
 # finally build the scip documentation
 doxygen scip.dxy

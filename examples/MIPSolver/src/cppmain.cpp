@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cppmain.cpp
+/**@file   examples/MIPSolver/src/cppmain.cpp
  * @brief  main file for C++ example project using SCIP as a callable library
  * @author Tobias Achterberg
  */
