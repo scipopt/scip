@@ -19,6 +19,10 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  * @author Jens Schulz
+ * @author Gerald Gamrath
+ *
+ * More details about the heuristic can be found in "Structure-Based Primal Heuristics for Mixed Integer Programming"
+ * by Gamrath, Berthold, Heinz, Winkler: http://link.springer.com/chapter/10.1007%2F978-4-431-55420-2_3
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
