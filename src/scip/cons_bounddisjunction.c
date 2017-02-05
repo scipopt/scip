@@ -2943,6 +2943,10 @@ SCIP_DECL_EVENTEXEC(eventExecBounddisjunction)
 
    /*SCIPdebugMsg(scip, "exec method of event handler for bound disjunction constraints\n");*/
 
+   /* it can happen that the events are still active for a constraint that is marked to be deleted */
+   if( SCIPconsIsDeleted((SCIP_CONS*)eventdata) )
+      return SCIP_OKAY;
+
    if( (SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDRELAXED) != 0 )
    {
       SCIP_CALL( SCIPenableCons(scip, (SCIP_CONS*)eventdata) );
