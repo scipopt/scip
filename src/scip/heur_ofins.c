@@ -413,7 +413,6 @@ SCIP_RETCODE applyOfins(
       HEUR_NAME, 0.0, SCIPgetSolvingTime(subscip), SCIPgetNNodes(subscip), success ? SCIPgetPrimalbound(scip) : SCIPinfinity(scip),
       nsubsols > 0 ? SCIPsolGetNodenum(SCIPgetBestSol(subscip)) : -1 );
 
-  TERMINATE:
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );
