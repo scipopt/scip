@@ -43,7 +43,7 @@
 
 extern _Thread_local int _threadnumber;
 
-#define SCIPtpiGetThreadNum()                 _threadnumber
+#define SCIPtpiGetThreadNum()                 /*lint -e40*/ _threadnumber
 
 #endif
 

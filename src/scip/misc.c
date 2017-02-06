@@ -2046,7 +2046,7 @@ SCIP_RETCODE SCIPhashtableCreate(
       log(MAX(32.0, tablesize / 0.9)) / log(2.0));
 
    /* compute size from shift */
-   nslots = 1<<(32 - (*hashtable)->shift);
+   nslots = 1u<<(32 - (*hashtable)->shift);
 
    /* compute mask to do a fast modulo by nslots using bitwise and */
    (*hashtable)->mask = nslots - 1;
@@ -2149,7 +2149,7 @@ SCIP_RETCODE hashtableInsert(
 
    pos = hashval>>(hashtable->shift);
    elemdistance = 0;
-   while( TRUE )
+   while( TRUE ) /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2339,7 +2339,7 @@ void* SCIPhashtableRetrieve(
    pos = hashval>>(hashtable->shift);
    elemdistance = 0;
 
-   while( TRUE )
+   while( TRUE ) /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2410,7 +2410,7 @@ SCIP_RETCODE SCIPhashtableRemove(
 
    elemdistance = 0;
    pos = hashval>>(hashtable->shift);
-   while( TRUE )
+   while( TRUE ) /*lint !e716*/
    {
       /* slots empty so element not contained */
       if( hashtable->hashes[pos] == 0 )
@@ -2436,7 +2436,7 @@ SCIP_RETCODE SCIPhashtableRemove(
    /* remove element */
    hashtable->hashes[pos] = 0;
    --hashtable->nelements;
-   while( TRUE )
+   while( TRUE ) /*lint !e716*/
    {
       uint32_t nextpos = (pos + 1) & hashtable->mask;
 
@@ -2610,7 +2610,7 @@ SCIP_RETCODE hashmapInsert(
 
    pos = hashval>>(hashmap->shift);
    elemdistance = 0;
-   while( TRUE )
+   while( TRUE ) /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2688,7 +2688,7 @@ SCIP_Bool hashmapLookup(
    *pos = hashval>>(hashmap->shift);
    elemdistance = 0;
 
-   while( TRUE )
+   while( TRUE ) /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2785,7 +2785,7 @@ SCIP_RETCODE SCIPhashmapCreate(
    (*hashmap)->shift = 32;
    (*hashmap)->shift -= (int)ceil(
       log(MAX(32, mapsize / 0.9)) / log(2.0));
-   nslots = 1<<(32 - (*hashmap)->shift);
+   nslots = 1u<<(32 - (*hashmap)->shift);
    (*hashmap)->mask = nslots - 1;
    (*hashmap)->blkmem = blkmem;
    (*hashmap)->nelements = 0;
@@ -3032,7 +3032,7 @@ SCIP_RETCODE SCIPhashmapRemove(
       --hashmap->nelements;
 
       /* move other elements if necessary */
-      while( TRUE )
+      while( TRUE ) /*lint !e716*/
       {
          uint32_t nextpos = (pos + 1) & hashmap->mask;
 
@@ -6626,8 +6626,8 @@ void SCIPdigraphFree(
    /* free arrays storing the successor nodes and arc data */
    for( i = digraphptr->nnodes - 1; i >= 0; --i )
    {
-      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->successors[i], digraphptr->successorssize[i]);
-      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->arcdata[i], digraphptr->successorssize[i]);
+      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->successors[i], digraphptr->successorssize[i]); /*lint !e866*/
+      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->arcdata[i], digraphptr->successorssize[i]); /*lint !e866*/
    }
 
    /* free components structure */
@@ -8744,7 +8744,7 @@ int randomGetRand(
    unsigned long t;
 
    /* linear congruential */
-   randnumgen->seed = randnumgen->seed * (SCIP_Longint)1103515245 + 12345;
+   randnumgen->seed = (unsigned int)(randnumgen->seed * (SCIP_Longint)1103515245 + 12345);
 
    /* Xorshift */
    randnumgen->xor_seed ^= (randnumgen->xor_seed << 13);

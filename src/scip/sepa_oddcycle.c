@@ -2276,7 +2276,7 @@ SCIP_RETCODE separateHeur(
    assert(nscipimplvars >= 0);
 
    nintegral = nscipbinvars + nscipintvars + nscipimplvars;
-   assert(scipvars != NULL || ((nscipbinvars == 0) && (nscipintvars == 0) && (nscipimplvars == 0) & (nintegral == 0)));
+   assert(scipvars != NULL || ((nscipbinvars == 0) && (nscipintvars == 0) && (nscipimplvars == 0) && (nintegral == 0)));
 
    /* collect binary variables, including implicit binary */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nintegral) );
@@ -3010,7 +3010,7 @@ SCIP_RETCODE separateGLS(
    assert(nscipimplvars >= 0);
 
    nintegral = nscipbinvars + nscipintvars + nscipimplvars;
-   assert(scipvars != NULL || ((nscipbinvars == 0) && (nscipintvars == 0) && (nscipimplvars == 0) & (nintegral == 0)));
+   assert(scipvars != NULL || ((nscipbinvars == 0) && (nscipintvars == 0) && (nscipimplvars == 0) && (nintegral == 0)));
 
    /* collect binary variables, including implicit binary */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nintegral) );
