@@ -81,7 +81,6 @@ parameters:
   projection of the point onto the region described by the constraint, which is supporting
 - parameters "conflict/useinflp" and "conflict/useboundlp" are now of type char (before bool)
 - add maximum branch-and-bound tree depth constant SCIP_MAXTREEDEPTH (replaces SCIPgetDepthLimit and SCIPtreeGetDepthLimit)
-- new parameter lp/persistentscaling to preserve the LP scaling factors during branch and bound
   constraint handler (starting with "constraints/components/")
 - new parameter presolving/qpkktref/updatequadbounded to add the KKT conditions to QPs only if all variables are bounded
 - new parameter presolving/qpkktref/updatequadindef to add the KKT conditions to QPs only if the quadratic matrix is indefinite

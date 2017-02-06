@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -61,7 +61,7 @@ SCIP_RETCODE paramTestFixed(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
-{
+{  /*lint --e{715}*/
    assert(param != NULL);
 
    if( param->isfixed )
@@ -80,7 +80,7 @@ SCIP_RETCODE paramTestBool(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Bool             value               /**< value to test */
    )
-{
+{  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_BOOL);
 
@@ -100,7 +100,7 @@ SCIP_RETCODE paramTestInt(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    int                   value               /**< value to test */
    )
-{
+{  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_INT);
 
@@ -121,7 +121,7 @@ SCIP_RETCODE paramTestLongint(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Longint          value               /**< value to test */
    )
-{
+{  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_LONGINT);
 
@@ -142,7 +142,7 @@ SCIP_RETCODE paramTestReal(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Real             value               /**< value to test */
    )
-{
+{  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_REAL);
 
@@ -163,7 +163,7 @@ SCIP_RETCODE paramTestChar(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    char                  value               /**< value to test */
    )
-{
+{  /*lint --e{715}*/
    assert(param != NULL);
    assert(param->paramtype == SCIP_PARAMTYPE_CHAR);
 
@@ -199,7 +199,7 @@ SCIP_RETCODE paramTestString(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           value               /**< value to test */
    )
-{
+{  /*lint --e{715}*/
    unsigned int i;
 
    assert(param != NULL);
@@ -2816,29 +2816,29 @@ SCIP_RETCODE paramsetSetHeuristicsAggressive(
          }
 
          SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, newfreq, quiet) );
-      }
 
-      /* LP iteration limits only get increased for heuristics which are activated by default */
-      if( SCIPparamGetIntDefault(param) > -1 )
-      {
-         /* construct (possible) parameter name for LP iteration offset */
-         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", heurname);
-         param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
-
-         if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_INT )
+         /* LP iteration limits only get increased for heuristics which are activated by default */
+         if( SCIPparamGetIntDefault(param) > -1 )
          {
-            /* set LP iteration offset to 1.5 time the current value */
-            SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, (int) (1.5 * SCIPparamGetIntDefault(param)), quiet) );
-         }
+            /* construct (possible) parameter name for LP iteration offset */
+            (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", heurname);
+            param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
 
-         /* construct (possible) parameter name for LP iteration quotient parameter */
-         (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", heurname);
-         param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+            if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_INT )
+            {
+               /* set LP iteration offset to 1.5 time the current value */
+               SCIP_CALL( paramSetInt(paramset, set, messagehdlr, paramname, (int) (1.5 * SCIPparamGetIntDefault(param)), quiet) );
+            }
 
-         if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_REAL )
-         {
-            /* set LP iteration quotient to 1.5 time the current value */
-            SCIP_CALL( paramSetReal(paramset, set, messagehdlr, paramname, 1.5 * SCIPparamGetRealDefault(param), quiet) );
+            /* construct (possible) parameter name for LP iteration quotient parameter */
+            (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", heurname);
+            param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);
+
+            if( param != NULL && SCIPparamGetType(param) == SCIP_PARAMTYPE_REAL )
+            {
+               /* set LP iteration quotient to 1.5 time the current value */
+               SCIP_CALL( paramSetReal(paramset, set, messagehdlr, paramname, 1.5 * SCIPparamGetRealDefault(param), quiet) );
+            }
          }
       }
    }
@@ -3729,8 +3729,8 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       {
          SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/maxprerounds", 0, quiet) );
          SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/components/propfreq", -1, quiet) );
-         break;
       }
+      break;
 
    case SCIP_PARAMEMPHASIS_CPSOLVER:
       /* shrink the minimal maximum value for the conflict length */
@@ -4226,7 +4226,7 @@ SCIP_Bool SCIPparamIsValidBool(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_Bool             value               /**< value to check */
    )
-{
+{  /*lint --e{715}*/
    return ( value == TRUE || value == FALSE );
 }
 
@@ -4294,7 +4294,7 @@ SCIP_Bool SCIPparamIsValidString(
    SCIP_PARAM*           param,              /**< parameter */
    const char*           value               /**< value to check */
    )
-{
+{  /*lint --e{715}*/
    unsigned int i;
 
    for( i = 0; i < (unsigned int) strlen(value); ++i )

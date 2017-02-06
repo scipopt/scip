@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -381,7 +381,7 @@ SCIP_Real reoptSimilarity(
    norm_obj1 = 0.0;
    norm_obj2 = 0.0;
 
-   /* calc similarity */
+   /* calculate similarity */
    for( v = 0; v < nvars; v++ )
    {
       SCIP_VAR* origvar;
@@ -390,18 +390,16 @@ SCIP_Real reoptSimilarity(
       SCIP_Real c2;
       SCIP_Real lb;
       SCIP_Real ub;
-      SCIP_Real constant;
-      SCIP_Real scalar;
 
       origvar = vars[v];
 
       /* get the original variable */
       if( !SCIPvarIsOriginal(origvar) )
       {
-         SCIP_RETCODE retcode = SCIPvarGetOrigvarSum(&origvar, &scalar, &constant);
+         SCIP_Real constant = 0.0;
+         SCIP_Real scalar = 1.0;
 
-         if( retcode != SCIP_OKAY )
-            SCIPABORT();
+         SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
       }
       assert(origvar != NULL && SCIPvarIsOriginal(origvar));
 
@@ -1570,11 +1568,8 @@ SCIP_RETCODE transformIntoOrig(
    /* transform branching variables and bound changes applied before the first dual reduction */
    for( varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; varnr++ )
    {
-      SCIP_Real constant;
-      SCIP_Real scalar;
-
-      scalar = 1;
-      constant = 0;
+      SCIP_Real constant = 0.0;
+      SCIP_Real scalar = 1.0;
 
       if( !SCIPvarIsOriginal(reopt->reopttree->reoptnodes[id]->vars[varnr]) )
       {
@@ -1587,11 +1582,8 @@ SCIP_RETCODE transformIntoOrig(
    /* transform bound changes affected by dual reduction */
    for( varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; varnr++ )
    {
-      SCIP_Real constant;
-      SCIP_Real scalar;
-
-      scalar = 1;
-      constant = 0;
+      SCIP_Real constant = 0.0;
+      SCIP_Real scalar = 1.0;
 
       if( !SCIPvarIsOriginal(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]) )
       {
@@ -6918,7 +6910,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
 
       /* fill a permutation array */
       if( !set->reopt_usesplitcons )
-         perm[v] = v;
+         perm[v] = v;   /*lint !e613*/
    }
    assert(reoptnodes[id]->nvars == reoptnodes[0]->dualredscur->nvars);
 

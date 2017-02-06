@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -145,7 +145,7 @@ SCIP_RETCODE SCIPconflictstoreGetConflicts(
    int*                  nconflicts          /**< pointer to store the number of conflicts */
    );
 
-/** transformes all original conflicts into transformed conflicts */
+/** transforms all original conflicts into transformed conflicts */
 extern
 SCIP_RETCODE SCIPconflictstoreTransform(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
@@ -155,6 +155,18 @@ SCIP_RETCODE SCIPconflictstoreTransform(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_REOPT*           reopt               /**< reoptimization data */
+   );
+
+/** returns the average number of non-zeros over all stored dual ray constraints */
+extern
+SCIP_Real SCIPconflictstoreGetAvgNnzDualray(
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
+   );
+
+/** return the number of stored dualray constraints */
+extern
+int SCIPconflictstoreGetNDualrays(
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
    );
 
 #ifdef __cplusplus

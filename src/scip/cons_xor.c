@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3454,10 +3454,10 @@ SCIP_RETCODE cliquePresolve(
             break;
          }
          else
-         assert(vars[v] != vars[v1]);
-         }
+            assert(vars[v] != vars[v1]);
+      }
 
-         if( breaked )
+      if( breaked )
          break;
 
       --v;
@@ -3470,8 +3470,7 @@ SCIP_RETCODE cliquePresolve(
       if( posnotinclq1 == -1 )
       {
          /* all variables of xor constraints <%s> (with rhs == 1) are in one clique, so create a setpartitioning
-          * constraint with all variables and delete this xor-constraint
-          */
+          * constraint with all variables and delete this xor-constraint */
          if( consdata->rhs )
          {
             SCIP_CONS* newcons;
@@ -3515,7 +3514,7 @@ SCIP_RETCODE cliquePresolve(
                   return SCIP_OKAY;
                }
                else
-               ++(*nfixedvars);
+                  ++(*nfixedvars);
             }
          }
       }

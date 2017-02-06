@@ -187,7 +187,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/CallableLibrary"><b>CallableLibrary</b></a>
+ *  \ref CALLABLELIBRARY_MAIN "Callable Library Example"
  *  </td>
  *  <td>
  *  An example showing how to setup constraints (esp. nonlinear ones) when using \SCIP as callable library.
@@ -804,114 +804,50 @@
  *
  * @section TUTORIAL_OPTIMIZE Read and optimize a problem instance
  *
- * First of all, we need a \SCIP binary and an example problem file to work with.  Therefore, you can either download the
+ * First of all, we need a \SCIP binary and an example problem file to work with. Therefore, you can either download the
  * \SCIP standard distribution (which includes problem files) and compile it on your own or you can download a
- * precompiled binary and an example problem separately. \SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, OSiL, and other formats (see \ref FILEREADERS).
+ * precompiled binary and an example problem separately. \SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, OSiL, and 
+ * other formats (see \ref FILEREADERS).
  *
  * If you want to download the source code of the \SCIP standard distribution, we recommend to go to the <a
- * href="http://scip.zib.de/#download">SCIP download section</a>, download the latest release (version 3.0 as
+ * href="http://scip.zib.de/#download">SCIP download section</a>, download the latest release (version 4.0.0 as
  * of this writing), inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
  * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
- * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.mps.
+ * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.fzn.
  *
  * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/#download">SCIP download
  * section</a> and download an appropriate binary for your operating system. The \SCIP source code distribution already comes with
- * the example problem instance used throughout this tutorial. To follow this tutorial with a precompiled binary, we recommend downloading the instance
+ * the example instance used throughout this tutorial. To follow this tutorial with a precompiled binary, we recommend downloading the instance
  * <a href="http://miplib.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
  * the <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> homepage.
  *
  * Now start your binary, without any arguments. This opens the interactive shell, which should look somehow like this:
  *
- * \code
- * SCIP version 2.0.1 [precision: 8 byte] [memory: block] [mode: optimized] [LP solver: SoPlex 1.5.0]
- * Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
- *
- * External codes:
- *   SoPlex 1.5.0         Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)
- *   ZIMPL 3.1.0          Zuse Institute Mathematical Programming Language developed by T. Koch (zimpl.zib.de)
- *
- * user parameter file <scip.set> not found - using default parameters
- *
- * SCIP>
- * \endcode
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetVersion
  *
  * First of all "help" shows you a list of all available shell commands. Brackets indicate a submenu with further options.
- * \code
- * SCIP> help
-
- *  <display>             display information
- *  <set>                 load/save/change parameters
- * ...
- *  read                  read a problem
- * \endcode
  *
- * Okay, let's solve some MIPs... use "read <path/to/file>" to parse a problem file, "optimize" to solve it and "display
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetHelp
+ *
+ * Okay, let's solve the example instance... use "read check/instances/MIP/stein27.fzn" to parse the instance file, "optimize" to solve it and "display
  * solution" to show the nonzero variables of the best found solution.
-
- * \code
- * SCIP> read check/instances/MIP/stein27.fzn
- * original problem has 27 variables (27 bin, 0 int, 0 impl, 0 cont) and 118 constraints
- * SCIP> optimize
  *
- * feasible solution found by trivial heuristic, objective value  2.700000e+01
- * presolving:
- * (round 1) 0 del vars, 0 del conss, 0 chg bounds, 0 chg sides, 0 chg coeffs, 118 upgd conss, 0 impls, 0 clqs
- * presolving (2 rounds):
- *  0 deleted vars, 0 deleted constraints, 0 tightened bounds, 0 added holes, 0 changed sides, 0 changed coefficients
- *  0 implications, 0 cliques
- * presolved problem has 27 variables (27 bin, 0 int, 0 impl, 0 cont) and 118 constraints
- *       1 constraints of type <knapsack>
- *     117 constraints of type <logicor>
- * transformed objective value is always integral (scale: 1)
- * Presolving Time: 0.00
- *
- *  time | node  | left  |LP iter|LP it/n| mem |mdpt |frac |vars |cons |cols |rows |cuts |confs|strbr|  dualbound   | primalbound  |  gap
- * t 0.0s|     1 |     0 |    34 |     - | 337k|   0 |  21 |  27 | 118 |  27 | 118 |   0 |   0 |   0 | 1.300000e+01 | 2.700000e+01 | 107.69%
- * R 0.0s|     1 |     0 |    34 |     - | 338k|   0 |  21 |  27 | 118 |  27 | 118 |   0 |   0 |   0 | 1.300000e+01 | 2.600000e+01 | 100.00%
- * s 0.0s|     1 |     0 |    34 |     - | 339k|   0 |  21 |  27 | 118 |  27 | 118 |   0 |   0 |   0 | 1.300000e+01 | 2.500000e+01 |  92.31%
- *   0.0s|     1 |     0 |    44 |     - | 392k|   0 |  21 |  27 | 118 |  27 | 120 |   2 |   0 |   0 | 1.300000e+01 | 2.500000e+01 |  92.31%
- * b 0.0s|     1 |     0 |    44 |     - | 393k|   0 |  21 |  27 | 118 |  27 | 120 |   2 |   0 |   0 | 1.300000e+01 | 1.900000e+01 |  46.15%
- * ...
- *   0.1s|     1 |     2 |   107 |     - | 920k|   0 |  24 |  27 | 118 |  27 | 131 |  13 |   0 |  24 | 1.300000e+01 | 1.900000e+01 |  46.15%
- * R 0.1s|    14 |    10 |   203 |   7.4 | 935k|  13 |   - |  27 | 118 |  27 | 124 |  13 |   0 | 164 | 1.300000e+01 | 1.800000e+01 |  38.46%
- *   0.1s|   100 |    54 |   688 |   5.9 | 994k|  13 |  20 |  27 | 118 |  27 | 124 |  13 |   0 | 206 | 1.300000e+01 | 1.800000e+01 |  38.46%
- *   0.1s|   200 |    86 |  1195 |   5.5 |1012k|  13 |   - |  27 | 119 |  27 | 124 |  13 |   1 | 207 | 1.300000e+01 | 1.800000e+01 |  38.46%
- *  time | node  | left  |LP iter|LP it/n| mem |mdpt |frac |vars |cons |cols |rows |cuts |confs|strbr|  dualbound   | primalbound  |  gap
- *   0.2s|   300 |   106 |  1686 |   5.3 |1024k|  13 |   - |  27 | 119 |  27 | 124 |  13 |   1 | 207 | 1.350000e+01 | 1.800000e+01 |  33.33%
- * ...
- *   0.7s|  4100 |    50 | 18328 |   4.4 |1033k|  16 |   8 |  27 | 119 |  27 | 124 |  13 |  15 | 207 | 1.650000e+01 | 1.800000e+01 |   9.09%
- *
- * SCIP Status        : problem is solved [optimal solution found]
- * Solving Time (sec) : 0.73
- * Solving Nodes      : 4192
- * Primal Bound       : +1.80000000000000e+01 (283 solutions)
- * Dual Bound         : +1.80000000000000e+01
- * Gap                : 0.00 %
- *
- * SCIP> display solution
- *
- * objective value:                                   18
- * x0001                                               1   (obj:1)
- * x0003                                               1   (obj:1)
- * ...
- * x0027                                               1   (obj:1)
- *
- * SCIP>
- * \endcode
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetOpt1
  *
  * What do we see here? After "optimize", SCIP first goes into presolving. Not much is happening for this instance, just
  * the linear constraints get upgraded to more specific types. Each round of presolving will be displayed in a single
- * line, with a short summary at the end. Here, there has only been one round with actual changes, the second round did
- * not bring any further reductions.  Thus, it is not displayed and presolving is stopped. Then, we see the actual
- * solving process. The first three output lines indicate that new incumbent solutions were found by the primal
- * heuristics with display characters "t", "R", and "s"; see, how the "primalbound" column goes down from 27 to 25. In
- * the fourth line, two "cuts" are added.  Up to here, we needed 44 "LP iter"ations (34 for the first LP and 10 more to
- * resolve after adding cuts). Little later, the root node processing is finished. We see that there are now two open
- * nodes in the "left" column. From now on, we will see an output line every hundredth node or whenever a new incumbent
- * is found (e.g. at node 14 in the above output). After some more nodes, the "dualbound" starts moving, too. At one
- * point, both will be the same, and the solving process terminates, showing us some wrap-up information.
+ * line, with a short summary at the end. Then, we see the actual solving process. The table output of the branch-and-cut 
+ * solving process is very detailed during the root node. Afterwards, a new line is displayed every 100th node.
+ * Furthermore, every new incumbent solution triggers a new table row, starting with a character to indicate the 
+ * heuristic that found the solution. Which letter represents which heuristic can be seen with the 
+ * "display heuristics" command, see \ref TUTORIAL_STATISTICS for an example.
+ * 
+ * After some lines the root node processing is finished. From now on, we will see an output line every hundredth node or 
+ * whenever a new incumbent is found. After some more nodes, the "dualbound" starts 
+ * moving, too. At one point, both will be the same, and the solving process terminates, showing us some wrap-up 
+ * information.
  *
- * The exact performance varies amongst different architectures, operating systems, and so on. Do not be worried if
+ * The exact performance may of course vary among different architectures and operating systems. Do not be worried if
  * your installation needs more or less time or nodes to solve. Also, this instance has more than 2000 different optimal
  * solutions. The optimal objective value always has to be 18, but the solution vector may differ. If you are interested
  * in this behavior, which is called "performance variability", you may have a look at the MIPLIB2010 paper.
@@ -921,17 +857,7 @@
  * \SCIP can also write information to files. E.g., we could store the incumbent solution to a file, or output the
  * problem instance in another file format (the LP format is much more human readable than the MPS format, for example).
  *
- * \code
- * SCIP> write solution stein27.sol
- *
- * written solution information to file <stein27.sol>
- *
- * SCIP> write problem stein27.lp
- * written original problem to file <stein27.lp>
- *
- * SCIP> q
- * ...
- * \endcode
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetWriteSolutions
  *
  * Passing starting solutions can increase the solving performance so that \SCIP does not need to construct an initial feasible solution
  * by itself. After reading the problem instance, use the "read" command again, this time with a file containing solution information.
@@ -940,178 +866,70 @@
  *
  * Customized settings are not written or read with the "write" and "read" commands, but with the three commands
  *
- * \code
- * SCIP> set save _settingsfilename_
- * SCIP> set diffsave _settingsfilename_
- * SCIP> set load _settingsfilename_
- * \endcode
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetSaveSettingsOverview
  *
  * See the section on parameters \ref TUTORIAL_PARAMETERS for more information.
  *
  * @section TUTORIAL_STATISTICS Displaying detailed solving statistics
  *
- * We might want to have some more information now. Which were the heuristics that found the solutions? What plugins
- *  were called during the solutions process and how much time did they spend? How did the instance that we were solving
- *  look?  Information on certain plugin types (e.g., heuristics, branching rules, separators) we get by
- *  "display <plugin-type>", information on the solution process, we get by "display statistics", and "display problem"
- *  shows us the current instance.
+ * We might want to have some more information now. Which of the heuristics found solutions? Which plugins
+ * were called during the solutions process and how much time did they spend? 
+ * Information on certain plugin types (e.g., heuristics, branching rules, separators) is displayed via
+ * "display <plugin-type>", information on the solution process via "display statistics", and "display problem"
+ * shows the current instance.
  *
-  \code
- * SCIP> display heuristics
- *  primal heuristic     c priority freq ofs  description
- *  ----------------     - -------- ---- ---  -----------
- *  trivial              t    10000    0   0  start heuristic which tries some trivial solutions
- * ...
- *  rounding             R    -1000    1   0  LP rounding heuristic with infeasibility recovering
- *  shifting             s    -5000   10   0  LP rounding heuristic with infeasibility recovering also using continuous variables
- * ...
- * SCIP> display statistics
- * ...
- *   gomory           :       0.02          6          0          0        461          0
- *   cgmip            :       0.00          0          0          0          0          0
- *   strongcg         :       0.01          6          0          0        598          0
- * ...
- *   oneopt           :       0.01          4          1
- *   coefdiving       :       0.02         57          0
- * ...
- *   primal LP        :       0.00          0          0       0.00          -
- *   dual LP          :       0.20       4187      14351       3.43   71755.00
- * ...
- * \endcode
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetDisplayStatistics
  *
- * We see that rounding and shifting were the heuristics producing the solutions in the beginning. Rounding is called at
- * every node, shifting only at every tenth level of the tree. The statistics are quite comprehensive, thus, we just
- * explain a few lines here. We get information for all types of plugins and for the overall solving process. Besides
- * others, we see that in six calls, the gomory cut separator and the strong Chv&aacute;tal-Gomory separator each produced
- * several hundred cuts (of which only a few entered the LP). The oneopt heuristic found one solution in 4 calls,
- * whereas coefdiving failed all 57 times it was called. All the LPs have been solved with the dual simplex algorithm, which
- * took about 0.2 seconds of the 0.7 seconds overall solving time.
+ * The statistics obtained via "display statistics" are quite comprehensive,
+ * thus, we just explain a few lines here. Information is grouped by the plugin type. For the primal heuristics,
+ * the execution time in seconds is shown as well as the number of calls to the heuristic, and its success regarding
+ * the number of (best) solutions found by that heuristic. Appropriate statistics are also shown for presolvers, constraint handlers,
+ * separators, propagators, the search tree, etc. User-written plugins will appear automatically in these statistics,
+ * after they were included into \SCIP.
  *
  * @section TUTORIAL_PARAMETERS Changing parameters from the interactive shell
  *
- * Now, we can start playing around with parameters. Rounding and shifting seem to be quite successful on this instance,
+ * Now, we can start playing around with parameters. The primal heuristics Rounding and shifting seem to be quite successful on this instance,
  * wondering what happens if we disable them? Or what happens, if we are even more rigorous and disable all heuristics?
  * Or if we do the opposite and use aggressive heuristics?
  *
- * \code
- * SCIP> set
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetSetSettings
  *
- *   <branching>           change parameters for branching rules
- *  ...
- *   <heuristics>          change parameters for primal heuristics
- *
- * SCIP/set> heuristics
- *
- *   <actconsdiving>       LP diving heuristic that chooses fixings w.r.t. the active constraints
- *  ...
- *   <shifting>            LP rounding heuristic with infeasibility recovering also using continuous variables
- *  ...
- *
- * SCIP/set/heuristics> shifting
- *
- *   <advanced>            advanced parameters
- *   freq                  frequency for calling primal heuristic <shifting> (-1: never, 0: only at depth freqofs) [10]
- *   freqofs               frequency offset for calling primal heuristic <shifting> [0]
- *
- * SCIP/set/heuristics/shifting> freq
- * current value: 10, new value [-1,2147483647]: -1
- * heuristics/shifting/freq = -1
- *
- * SCIP> se he rou freq -1
- * heuristics/rounding/freq = -1
- *
- * SCIP> re check/instances/MIP/stein27.mps
- * original problem has 27 variables (27 bin, 0 int, 0 impl, 0 cont) and 118 constraints
- * SCIP> o
- *
- * feasible solution found by trivial heuristic, objective value  2.700000e+01
- * ...
- * z 0.1s|     3 |     4 |   140 |  10.5 |1060k|   2 |  22 |  27 | 118 |  27 | 123 |  14 |   0 |  66 | 1.300000e+01 | 1.900000e+01 |  46.15%
- * z 0.1s|     6 |     7 |   176 |  11.4 |1063k|   5 |  18 |  27 | 118 |  27 | 123 |  14 |   0 | 118 | 1.300000e+01 | 1.900000e+01 |  46.15%
- * * 0.1s|    39 |    28 |   386 |   7.0 |1092k|  14 |   - |  27 | 118 |  27 | 123 |  14 |   0 | 199 | 1.300000e+01 | 1.800000e+01 |  38.46%
- * ...
- * SCIP Status        : problem is solved [optimal solution found]
- * Solving Time (sec) : 0.75
- * Solving Nodes      : 4253
- * Primal Bound       : +1.80000000000000e+01 (287 solutions)
- * Dual Bound         : +1.80000000000000e+01
- * Gap                : 0.00 %
- *
- * SCIP>
- * \endcode
- *
- * We can navigate through the menus step-by-step and get a list of available options and submenus. Thus, we select
- * "set" to change settings, "heuristics" to change settings of primal heuristics, "shifting" for that particular
+ * We can navigate through the menus step-by-step and get a list of available options and submenus. Therefore, we select
+ * "set" to change settings, "heuristics" to change settings of primal heuristics, and "shifting" for that particular
  * heuristic. Then we see a list of parameters (and yet another submenu for advanced parameters), and disable this
  * heuristic by setting its calling frequency to -1. If we already know the path to a certain setting, we can directly
  * type it (as for the rounding heuristic in the above example). Note that we do not have to use the full names, but we
  * may use short versions, as long as they are unique.
  *
- * To solve a problem a second time, we have to read it and start the optimization process again.
+ * To solve a problem a second time, we have to read it in again before starting the optimization process.
  *
- * \code
- * SCIP> set default
- * reset parameters to their default values
- * SCIP> set heuristics emphasis
- *
- *   aggressive            sets heuristics <aggressive>
- *   fast                  sets heuristics <fast>
- *   off                   turns <off> all heuristics
- *
- * SCIP/set/heuristics/emphasis> aggr
- * heuristics/veclendiving/freq = 5
- * ...
- * heuristics/crossover/minfixingrate = 0.5
- * SCIP> read check/instances/MIP/stein27.mps
- * original problem has 27 variables (27 bin, 0 int, 0 impl, 0 cont) and 118 constraints
-
- * SCIP> opt
- * ...
- * D 0.1s|     1 |     0 |   107 |     - | 971k|   0 |  24 |  27 | 122 |  27 | 131 |  13 |   4 |   0 | 1.300000e+01 | 1.800000e+01 |  38.46%
- *   0.1s|     1 |     0 |   107 |     - | 971k|   0 |  24 |  27 | 122 |  27 | 131 |  13 |   4 |   0 | 1.300000e+01 | 1.800000e+01 |  38.46%
- *   0.1s|     1 |     0 |   119 |     - |1111k|   0 |  24 |  27 | 122 |  27 | 132 |  14 |   4 |   0 | 1.300000e+01 | 1.800000e+01 |  38.46%
- *   0.1s|     1 |     2 |   119 |     - |1112k|   0 |  24 |  27 | 122 |  27 | 132 |  14 |   4 |  24 | 1.300000e+01 | 1.800000e+01 |  38.46%
- *  time | node  | left  |LP iter|LP it/n| mem |mdpt |frac |vars |cons |cols |rows |cuts |confs|strbr|  dualbound   | primalbound  |  gap
- *   0.2s|   100 |    59 |   698 |   5.8 |1138k|  14 |  11 |  27 | 122 |  27 | 123 |  14 |   4 | 204 | 1.300000e+01 | 1.800000e+01 |  38.46%
- *   0.2s|   200 |    91 |  1226 |   5.6 |1155k|  14 |   - |  27 | 122 |  27 | 123 |  14 |   4 | 207 | 1.300000e+01 | 1.800000e+01 |  38.46%
- * ^Cpressed CTRL-C 1 times (5 times for forcing termination)
- *
- * SCIP Status        : solving was interrupted [user interrupt]
- * Solving Time (sec) : 0.32
- * Solving Nodes      : 216
- * Primal Bound       : +1.80000000000000e+01 (283 solutions)
- * Dual Bound         : +1.30000000000000e+01
- * Gap                : 38.46 %
- *
- * SCIP>
- * \endcode
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetOpt2
  *
  * Okay, what happened here? First, we reset all parameters to their default values, using "set default". Next, we
  * loaded some meta-parameter settings (also see <a href="http://scip.zib.de/#faq">the FAQ</a>), to apply primal heuristics
- * more aggressively. \SCIP shows us, which single parameters it changed therefore. Now, the optimal solution is already
- * found at the root node, by a heuristic which is deactivated by default.  Then, after node 200, the user pressed
- * CTRL-C which interrupts the solving process, We see that now in the short status report, primal and dual bound are
- * different, thus, the problem is not solved yet.  Nevertheless, we could access statistics, see the current incumbent
- * solution, change parameters and so on. Entering "optimize" we continue the solving process from the point on at which
- * it has been interrupted.
+ * more aggressively. \SCIP shows us, which single parameters it changed therefore. Additionally, for pedagogical purposes,
+ * we set the node limit to 200. Now, the optimal solution is already found at the root node, by a heuristic which is
+ * deactivated by default.  Then, after node 200, the user defined node limit is reached which interrupts the solving
+ * process, We see that now in the short status report, primal and dual bound are different, thus, the problem is not solved
+ * yet.  Nevertheless, we could access statistics, see the current incumbent solution, change parameters and so on.
+ * Entering "optimize" we continue the solving process from the point on at which it has been interrupted.
  *
  * Once you found a non-default parameter setting that you wish to save and use in the future, use either the command
- * \code
- * SCIP> set save settingsfile.set
- * \endcode
+ *
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetSaveSettingsFull
+ *
  * to save <b>all</b> parameter values to the specified file, or
- * \code
- * SCIP> set diffsave settingsfile.set
- * \endcode
+ *
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetSaveSettingsDiff
+ *
  * in order to save only the nondefault parameters. The latter has several advantages, you can, e.g., combine parameter
  * settings from multiple settings files stored by the latter command, as long as they only affect mutually exclusive
  * parameter values.
  *
  * For loading a previously stored settings file, use the "load" command:
  *
- * \code
- * SCIP> set load settingsfile.set
- * \endcode
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetLoadSettings
  *
  * Special attention should be drawn to the reserved settings file name "scip.set"; whenever the \SCIP interactive shell
  * is started from a working directory that contains a settings file with the name "scip.set", it will be automatically
@@ -1123,6 +941,7 @@
  *
  * We hope this tutorial gave you an overview of what is possible using the \SCIP interactive shell. Please also read our
  * \ref FAQ, in particular the section <a href="http://scip.zib.de/#faq">Using \SCIP as a standalone MIP/MINLP-Solver</a>.
+ *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -7179,7 +6998,7 @@
  * \ref CONS "here".
  */
 
-/**@defgroup ConsHdlrIncludes Inclusion methods
+/**@defgroup ConshdlrIncludes Inclusion methods
  * @ingroup CONSHDLRS
  * @brief methods to include specific constraint handlers into \SCIP
  *
