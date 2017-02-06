@@ -8900,7 +8900,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpipresolving = set->lp_presolving;
    (*lp)->lpilpinfo = set->disp_lpinfo;
    (*lp)->lpirowrepswitch = set->lp_rowrepswitch;
-   (*lp)->lpisolutionpolishing = set->lp_solutionpolishing;
+   (*lp)->lpisolutionpolishing = (set->lp_solutionpolishing > 0);
    (*lp)->lpiconditionlimit = set->lp_conditionlimit;
    (*lp)->lpiitlim = INT_MAX;
    (*lp)->lpipricing = SCIP_PRICING_AUTO;
@@ -9006,7 +9006,7 @@ SCIP_RETCODE SCIPlpCreate(
          "LP Solver <%s>: row representation of the basis not available -- SCIP parameter lp/rowrepswitch has no effect\n",
          SCIPlpiGetSolverName());
    }
-   SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_POLISHING, (*lp)->lpisolutionpolishing, &success) );
+   SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_POLISHING, ((*lp)->lpisolutionpolishing ? 1 : 0), &success) );
    (*lp)->lpihaspolishing = success;
    if( !success )
    {

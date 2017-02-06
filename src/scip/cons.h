@@ -906,7 +906,7 @@ SCIP_RETCODE SCIPconsActive(
 extern
 SCIP_RETCODE SCIPconsDeactive(
    SCIP_CONS*            cons,               /**< constraint to notify */
-   SCIP_SET*             set                /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** method to collect the variables of a constraint

@@ -11232,7 +11232,7 @@ SCIP_DECL_CONSFREE(consFreeQuadratic)
    for( i = 0; i < conshdlrdata->nquadconsupgrades; ++i )
    {
       assert(conshdlrdata->quadconsupgrades[i] != NULL);
-      SCIPfreeBlockMemory(scip, &conshdlrdata->quadconsupgrades[i]);
+      SCIPfreeBlockMemory(scip, &conshdlrdata->quadconsupgrades[i]); /*lint !e866*/
    }
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->quadconsupgrades, conshdlrdata->quadconsupgradessize);
 
