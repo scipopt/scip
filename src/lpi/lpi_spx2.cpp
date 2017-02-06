@@ -680,13 +680,13 @@ public:
    /** provides access for temporary storage of basis status of rows */
    DataArray<SPxSolver::VarStatus>& rowStat()
    {
-      return _rowStat;
+      return _rowStat; /*lint !e1536*/
    }
 
    /** provides access for temporary storage of basis status or columns */
    DataArray<SPxSolver::VarStatus>& colStat()
    {
-      return _colStat;
+      return _colStat; /*lint !e1536*/
    }
 
 }; /*lint !e1748*/
@@ -931,9 +931,9 @@ const char* SCIPlpiGetSolverName(
    SCIPdebugMessage("calling SCIPlpiGetSolverName()\n");
 
 #if (SOPLEX_SUBVERSION > 0)
-   snprintf(spxname, 100, "SoPlex %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778*/
+   snprintf(spxname, 100, "SoPlex %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778 !e845*/
 #else
-   snprintf(spxname, 100, "SoPlex %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778*/
+   snprintf(spxname, 100, "SoPlex %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778 !e845*/
 #endif
    return spxname;
 }
@@ -4167,7 +4167,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
 #endif
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 3)
    case SCIP_LPPAR_RANDOMSEED:
-      lpi->spx->setRandomSeed((unsigned int) ival);
+      lpi->spx->setRandomSeed((unsigned long)(long)ival);
       break;
 #endif
 #if SOPLEX_VERSION > 221 || (SOPLEX_VERSION >= 221 && SOPLEX_SUBVERSION >= 3)

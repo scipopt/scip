@@ -284,7 +284,7 @@ SCIP_Longint SCIPgetConcurrentMemTotal(
    if( scip->concurrent == NULL || scip->concurrent->mainscip != scip || scip->concurrent->concsolver == NULL )
       return SCIPgetMemTotal(scip);
    else
-      return MAX(SCIPgetMemTotal(scip), SCIPconcsolverGetMemTotal(scip->concurrent->concsolver));
+      return MAX(SCIPgetMemTotal(scip), SCIPconcsolverGetMemTotal(scip->concurrent->concsolver)); /*lint !e666*/
 }
 
 /** gets the dualbound in the last synchronization */

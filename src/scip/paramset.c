@@ -4449,8 +4449,8 @@ SCIP_RETCODE SCIPparamSetReal(
    SCIP_CALL_QUIET( paramTestReal(param, messagehdlr, value) );
 
    /* is the value of the parameter changed? */
-   if( initialize ||  (param->data.realparam.valueptr != NULL && *param->data.realparam.valueptr != value)
-      || (param->data.realparam.valueptr == NULL && param->data.realparam.curvalue != value) )
+   if( initialize || (param->data.realparam.valueptr != NULL && *param->data.realparam.valueptr != value) /*lint !e777*/
+      || (param->data.realparam.valueptr == NULL && param->data.realparam.curvalue != value) ) /*lint !e777*/
    {
       SCIP_CALL_QUIET( paramTestFixed(param, messagehdlr) );
 

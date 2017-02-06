@@ -3081,7 +3081,7 @@ SCIP_Longint getVarSignature(
    assert(var != NULL);
 
    sigidx = SCIPvarGetIndex(var) % (int)(8*sizeof(SCIP_Longint));
-   return ((unsigned SCIP_Longint)1) << sigidx; /*lint !e703*/
+   return (SCIP_Longint) ((unsigned SCIP_Longint)1) << sigidx; /*lint !e703*/
 }
 
 /** updates bit signatures after adding a single coefficient */
