@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2765,6 +2765,7 @@ void treeFindSwitchForks(
    lpfork = NULL;
    lpstatefork = NULL;
    subroot = NULL;
+   assert(fork != NULL);
 
    while( !fork->active )
    {
@@ -2798,7 +2799,6 @@ void treeFindSwitchForks(
    if( (int)fork->depth > tree->cutoffdepth )
    {
 #ifndef NDEBUG
-      assert(fork != NULL);
       while( !fork->cutoff )
       {
          fork = fork->parent;
@@ -4188,7 +4188,7 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_Bool             postponed,          /**< was the current focus node postponed? */
    SCIP_Bool             exitsolve           /**< are we in exitsolve stage, so we only need to loose the children */
    )
-{
+{  /*lint --e{715}*/
    SCIP_NODE* oldfocusnode;
    SCIP_NODE* fork;
    SCIP_NODE* lpfork;
@@ -4612,7 +4612,7 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(*cutoff || SCIPtreeIsPathComplete(tree));
 
    return SCIP_OKAY;
-}   
+}
 
 
 
@@ -7594,7 +7594,7 @@ void SCIPnodeGetConsProps(
       if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL)
        || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop != NULL) )
       {
-         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+         if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
             (*nconspropvars)++;
       }
       else if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons == NULL)
@@ -7611,7 +7611,7 @@ void SCIPnodeGetConsProps(
       {
          if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL )
          {
-            if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+            if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
             {
                vars[pos] = boundchgs[i].var;
                varboundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
@@ -7681,7 +7681,7 @@ void SCIPnodeGetBdChgsAfterDual(
       if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL)
        || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop != NULL) )
       {
-         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+         if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
             (*nbranchvars)++;
       }
    }
@@ -7695,7 +7695,7 @@ void SCIPnodeGetBdChgsAfterDual(
          if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL)
           || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop != NULL)  )
          {
-            if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+            if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
             {
                vars[p] = boundchgs[i].var;
                varboundtypes[p] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;

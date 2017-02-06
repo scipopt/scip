@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1917,7 +1917,7 @@ SCIP_RETCODE findComponents(
          SCIP_DIGRAPH* digraph;
 
          /* create and fill directed graph */
-         SCIP_CALL( SCIPdigraphCreate(&digraph, nunfixedvars) );
+         SCIP_CALL( SCIPdigraphCreate(&digraph, SCIPblkmem(scip), nunfixedvars) );
          SCIP_CALL( SCIPdigraphSetSizes(digraph, varlocks) );
          SCIP_CALL( fillDigraph(scip, digraph, sortedconss, *nsortedconss, unfixedvarpos, nunfixedvars, firstvaridxpercons, &success) );
 

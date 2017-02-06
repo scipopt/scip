@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1349,7 +1349,7 @@ uint32_t hashvalue(
    uint64_t              input               /**< key value */
    )
 {
-   return ( (uint32_t) ((0x9e3779b97f4a7c15ull * input)>>32) ) | 1u;
+   return ( (uint32_t) ((0x9e3779b97f4a7c15ULL * input)>>32) ) | 1u;
 }
 
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
@@ -2042,11 +2042,10 @@ SCIP_RETCODE SCIPhashtableCreate(
     * to the next power of two.
     */
    (*hashtable)->shift = 32;
-   (*hashtable)->shift -= (int)ceil(
-      log(MAX(32.0, tablesize / 0.9)) / log(2));
+   (*hashtable)->shift -= (int)ceil(log(MAX(32.0, tablesize / 0.9)) / log(2.0));
 
    /* compute size from shift */
-   nslots = 1<<(32 - (*hashtable)->shift);
+   nslots = 1u << (32 - (*hashtable)->shift);
 
    /* compute mask to do a fast modulo by nslots using bitwise and */
    (*hashtable)->mask = nslots - 1;
@@ -2149,7 +2148,7 @@ SCIP_RETCODE hashtableInsert(
 
    pos = hashval>>(hashtable->shift);
    elemdistance = 0;
-   while( TRUE )
+   while( TRUE )   /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2275,7 +2274,7 @@ SCIP_RETCODE SCIPhashtableInsert(
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(hashtable->userptr, element);
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = hashvalue(keyval);
+   hashval = hashvalue((uint64_t) keyval);
 
    return hashtableInsert(hashtable, element, key, hashval, TRUE);
 }
@@ -2307,7 +2306,7 @@ SCIP_RETCODE SCIPhashtableSafeInsert(
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(hashtable->userptr, element);
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = hashvalue(keyval);
+   hashval = hashvalue((uint64_t) keyval);
 
    return hashtableInsert(hashtable, element, key, hashval, FALSE);
 }
@@ -2334,12 +2333,12 @@ void* SCIPhashtableRetrieve(
 
    /* get the hash value of the key */
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = hashvalue(keyval);
+   hashval = hashvalue((uint64_t) keyval);
 
    pos = hashval>>(hashtable->shift);
    elemdistance = 0;
 
-   while( TRUE )
+   while( TRUE )   /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2406,11 +2405,11 @@ SCIP_RETCODE SCIPhashtableRemove(
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(hashtable->userptr, element);
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = hashvalue(keyval);
+   hashval = hashvalue((uint64_t) keyval);
 
    elemdistance = 0;
    pos = hashval>>(hashtable->shift);
-   while( TRUE )
+   while( TRUE )   /*lint !e716*/
    {
       /* slots empty so element not contained */
       if( hashtable->hashes[pos] == 0 )
@@ -2436,7 +2435,7 @@ SCIP_RETCODE SCIPhashtableRemove(
    /* remove element */
    hashtable->hashes[pos] = 0;
    --hashtable->nelements;
-   while( TRUE )
+   while( TRUE )   /*lint !e716*/
    {
       uint32_t nextpos = (pos + 1) & hashtable->mask;
 
@@ -2574,7 +2573,7 @@ SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqPtr)
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
 {  /*lint --e{715}*/
    /* the key is used as the keyvalue too */
-   return (unsigned int) ((0xd37e9a1ce2148403ull * (size_t) key)>>32);
+   return (unsigned int) ((0xd37e9a1ce2148403ULL * (size_t) key)>>32);
 }
 
 
@@ -2610,7 +2609,7 @@ SCIP_RETCODE hashmapInsert(
 
    pos = hashval>>(hashmap->shift);
    elemdistance = 0;
-   while( TRUE )
+   while( TRUE )   /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2688,7 +2687,7 @@ SCIP_Bool hashmapLookup(
    *pos = hashval>>(hashmap->shift);
    elemdistance = 0;
 
-   while( TRUE )
+   while( TRUE )   /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2783,9 +2782,8 @@ SCIP_RETCODE SCIPhashmapCreate(
     * to the next power of two.
     */
    (*hashmap)->shift = 32;
-   (*hashmap)->shift -= (int)ceil(
-      log(MAX(32, mapsize / 0.9)) / log(2));
-   nslots = 1<<(32 - (*hashmap)->shift);
+   (*hashmap)->shift -= (int)ceil(log(MAX(32, mapsize / 0.9)) / log(2.0));
+   nslots = 1u << (32 - (*hashmap)->shift);
    (*hashmap)->mask = nslots - 1;
    (*hashmap)->blkmem = blkmem;
    (*hashmap)->nelements = 0;
@@ -3032,7 +3030,7 @@ SCIP_RETCODE SCIPhashmapRemove(
       --hashmap->nelements;
 
       /* move other elements if necessary */
-      while( TRUE )
+      while( TRUE )   /*lint !e716*/
       {
          uint32_t nextpos = (pos + 1) & hashmap->mask;
 
@@ -3110,7 +3108,7 @@ int SCIPhashmapGetNElements(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    )
 {
-   return hashmap->nelements;
+   return (int) hashmap->nelements;
 }
 
 /** gives the number of entries in the internal arrays of a hash map */
@@ -3118,7 +3116,7 @@ int SCIPhashmapGetNEntries(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    )
 {
-   return hashmap->mask + 1;
+   return (int) hashmap->mask + 1;
 }
 
 /** gives the hashmap entry at the given index or NULL if entry is empty */
@@ -6444,24 +6442,27 @@ int SCIPprofileGetLatestFeasibleStart(
 /** creates directed graph structure */
 SCIP_RETCODE SCIPdigraphCreate(
    SCIP_DIGRAPH**        digraph,            /**< pointer to store the created directed graph */
+   BMS_BLKMEM*           blkmem,             /**< block memory to store the data */
    int                   nnodes              /**< number of nodes */
    )
 {
    assert(digraph != NULL);
+   assert(blkmem != NULL);
    assert(nnodes > 0);
 
    /* allocate memory for the graph and the arrays storing arcs and data */
-   SCIP_ALLOC( BMSallocMemory(digraph) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->successors, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->arcdata, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->successorssize, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->nsuccessors, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->nodedata, nnodes) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, digraph) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*digraph)->successors, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*digraph)->arcdata, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*digraph)->successorssize, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*digraph)->nsuccessors, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*digraph)->nodedata, nnodes) );
 
    /* store number of nodes */
    (*digraph)->nnodes = nnodes;
 
    /* at the beginning, no components are stored */
+   (*digraph)->blkmem = blkmem;
    (*digraph)->ncomponents = 0;
    (*digraph)->componentstartsize = 0;
    (*digraph)->components = NULL;
@@ -6477,17 +6478,19 @@ SCIP_RETCODE SCIPdigraphResize(
    )
 {
    int n;
+   assert(digraph != NULL);
+   assert(digraph->blkmem != NULL);
 
    /* check if the digraph has already a proper size */
    if( nnodes <= digraph->nnodes )
       return SCIP_OKAY;
 
    /* reallocate memory for increasing the arrays storing arcs and data */
-   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors, nnodes) );
-   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdata, nnodes) );
-   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successorssize, nnodes) );
-   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->nsuccessors, nnodes) );
-   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->nodedata, nnodes) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(digraph->blkmem, &digraph->successors, digraph->nnodes, nnodes) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(digraph->blkmem, &digraph->arcdata, digraph->nnodes, nnodes) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(digraph->blkmem, &digraph->successorssize, digraph->nnodes, nnodes) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(digraph->blkmem, &digraph->nsuccessors, digraph->nnodes, nnodes) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(digraph->blkmem, &digraph->nodedata, digraph->nnodes, nnodes) );
 
    /* initialize the new node data structures */
    for( n = digraph->nnodes; n < nnodes; ++n )
@@ -6509,24 +6512,36 @@ SCIP_RETCODE SCIPdigraphResize(
  */
 SCIP_RETCODE SCIPdigraphCopy(
    SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
-   SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
+   SCIP_DIGRAPH*         sourcedigraph,      /**< source directed graph */
+   BMS_BLKMEM*           targetblkmem        /**< block memory to store the target block memory, or NULL to use the same
+                                              *   the same block memory as used for the \p sourcedigraph */
    )
 {
    int ncomponents;
    int nnodes;
    int i;
 
-   SCIP_ALLOC( BMSallocMemory(targetdigraph) );
+   assert(sourcedigraph != NULL);
+   assert(targetdigraph != NULL);
+
+   /* use the source digraph block memory if not specified otherwise */
+   if( targetblkmem == NULL )
+      targetblkmem = sourcedigraph->blkmem;
+
+   assert(targetblkmem != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(targetblkmem, targetdigraph) );
 
    nnodes = sourcedigraph->nnodes;
    ncomponents = sourcedigraph->ncomponents;
    (*targetdigraph)->nnodes = nnodes;
    (*targetdigraph)->ncomponents = ncomponents;
+   (*targetdigraph)->blkmem = targetblkmem;
 
    /* copy arcs and data */
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->successors, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->arcdata, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->nodedata, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(targetblkmem, &(*targetdigraph)->successors, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(targetblkmem, &(*targetdigraph)->arcdata, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(targetblkmem, &(*targetdigraph)->nodedata, nnodes) );
 
    /* copy lists of successors and arc data */
    for( i = 0; i < nnodes; ++i )
@@ -6535,23 +6550,24 @@ SCIP_RETCODE SCIPdigraphCopy(
       {
          assert(sourcedigraph->successors[i] != NULL);
          assert(sourcedigraph->arcdata[i] != NULL);
-         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->successors[i]),
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &((*targetdigraph)->successors[i]),
                sourcedigraph->successors[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->arcdata[i]),
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &((*targetdigraph)->arcdata[i]),
                sourcedigraph->arcdata[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
       }
       /* copy node data - careful if these are pointers to some information -> need to be copied by hand */
       (*targetdigraph)->nodedata[i] = sourcedigraph->nodedata[i];
    }
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->successorssize, sourcedigraph->nsuccessors, nnodes) );
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->nsuccessors, sourcedigraph->nsuccessors, nnodes) );
+
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->successorssize, sourcedigraph->successorssize, nnodes) );
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->nsuccessors, sourcedigraph->nsuccessors, nnodes) );
 
    /* copy component data */
    if( ncomponents > 0 )
    {
-      SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->components, sourcedigraph->components,
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->components, sourcedigraph->components,
             sourcedigraph->componentstarts[ncomponents]) );
-      SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->componentstarts,
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->componentstarts,
             sourcedigraph->componentstarts,ncomponents + 1) ); /*lint !e776*/
       (*targetdigraph)->componentstartsize = ncomponents + 1;
    }
@@ -6572,14 +6588,16 @@ SCIP_RETCODE SCIPdigraphSetSizes(
    )
 {
    int i;
+   BMS_BLKMEM* blkmem;
 
    assert(digraph != NULL);
    assert(digraph->nnodes > 0);
+   blkmem = digraph->blkmem;
 
    for( i = 0; i < digraph->nnodes; ++i )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[i], sizes[i]) ); /*lint !e866*/
-      SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdata[i], sizes[i]) ); /*lint !e866*/
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->successors[i], sizes[i]) ); /*lint !e866*/
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->arcdata[i], sizes[i]) ); /*lint !e866*/
       digraph->successorssize[i] = sizes[i];
       digraph->nsuccessors[i] = 0;
    }
@@ -6593,33 +6611,38 @@ void SCIPdigraphFree(
    )
 {
    int i;
+   BMS_BLKMEM* blkmem;
+   SCIP_DIGRAPH* digraphptr;
 
    assert(digraph != NULL);
    assert(*digraph != NULL);
+   assert((*digraph)->blkmem != NULL);
+
+   blkmem = (*digraph)->blkmem;
+   digraphptr = *digraph;
 
    /* free arrays storing the successor nodes and arc data */
-   for( i = (*digraph)->nnodes - 1; i >= 0; --i )
+   for( i = digraphptr->nnodes - 1; i >= 0; --i )
    {
-      BMSfreeMemoryArrayNull(&(*digraph)->successors[i]);
-      BMSfreeMemoryArrayNull(&(*digraph)->arcdata[i]);
+      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->successors[i], digraphptr->successorssize[i]);
+      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->arcdata[i], digraphptr->successorssize[i]);
    }
-   (*digraph)->nnodes = 0;
 
    /* free components structure */
-   SCIPdigraphFreeComponents(*digraph);
-   assert((*digraph)->ncomponents == 0);
-   assert((*digraph)->componentstartsize == 0);
-   assert((*digraph)->components == NULL);
-   assert((*digraph)->componentstarts == NULL);
+   SCIPdigraphFreeComponents(digraphptr);
+   assert(digraphptr->ncomponents == 0);
+   assert(digraphptr->componentstartsize == 0);
+   assert(digraphptr->components == NULL);
+   assert(digraphptr->componentstarts == NULL);
 
    /* free directed graph data structure */
-   BMSfreeMemoryArray(&(*digraph)->nodedata);
-   BMSfreeMemoryArray(&(*digraph)->successorssize);
-   BMSfreeMemoryArray(&(*digraph)->nsuccessors);
-   BMSfreeMemoryArray(&(*digraph)->successors);
-   BMSfreeMemoryArray(&(*digraph)->arcdata);
+   BMSfreeBlockMemoryArray(blkmem, &digraphptr->nodedata, digraphptr->nnodes);
+   BMSfreeBlockMemoryArray(blkmem, &digraphptr->successorssize, digraphptr->nnodes);
+   BMSfreeBlockMemoryArray(blkmem, &digraphptr->nsuccessors, digraphptr->nnodes);
+   BMSfreeBlockMemoryArray(blkmem, &digraphptr->successors, digraphptr->nnodes);
+   BMSfreeBlockMemoryArray(blkmem, &digraphptr->arcdata, digraphptr->nnodes);
 
-   BMSfreeMemory(digraph);
+   BMSfreeBlockMemory(blkmem, digraph);
 }
 
 #define STARTSUCCESSORSSIZE 5
@@ -6632,12 +6655,17 @@ SCIP_RETCODE ensureSuccessorsSize(
    int                   newsize             /**< needed size */
    )
 {
+   BMS_BLKMEM* blkmem;
+
    assert(digraph != NULL);
+   assert(digraph->blkmem != NULL);
    assert(idx >= 0);
    assert(idx < digraph->nnodes);
    assert(newsize > 0);
    assert(digraph->successorssize[idx] == 0 || digraph->successors[idx] != NULL);
    assert(digraph->successorssize[idx] == 0 || digraph->arcdata[idx] != NULL);
+
+   blkmem = digraph->blkmem;
 
    /* check whether array is big enough, and realloc, if needed */
    if( newsize > digraph->successorssize[idx] )
@@ -6646,17 +6674,20 @@ SCIP_RETCODE ensureSuccessorsSize(
       {
          assert(digraph->arcdata[idx] == NULL);
          digraph->successorssize[idx] = STARTSUCCESSORSSIZE;
-         SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }
       else
       {
+         newsize = MAX(newsize, 2 * digraph->successorssize[idx]);
          assert(digraph->arcdata[idx] != NULL);
-         digraph->successorssize[idx] = MAX(newsize, 2 * digraph->successorssize[idx]);
-         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &digraph->successors[idx], digraph->successorssize[idx], newsize) ); /*lint !e866*/
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &digraph->arcdata[idx], digraph->successorssize[idx], newsize) ); /*lint !e866*/
+         digraph->successorssize[idx] = newsize;
       }
    }
+
+   assert(newsize <= digraph->successorssize[idx]);
 
    return SCIP_OKAY;
 }
@@ -6939,6 +6970,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
                                               *   number of components is accessed by SCIPdigraphGetNComponents() */
    )
 {
+   BMS_BLKMEM* blkmem;
    SCIP_Bool* visited;
    int* ndirectedsuccessors;
    int* stackadjvisited;
@@ -6949,8 +6981,13 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    int i;
    int j;
 
+   SCIP_RETCODE retcode = SCIP_OKAY;
+
    assert(digraph != NULL);
    assert(digraph->nnodes > 0);
+   assert(digraph->blkmem != NULL);
+
+   blkmem = digraph->blkmem;
 
    /* first free the old components */
    if( digraph->ncomponents > 0 )
@@ -6961,12 +6998,15 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    digraph->ncomponents = 0;
    digraph->componentstartsize = 10;
 
-   SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&digraph->components, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&digraph->componentstarts, digraph->componentstartsize) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&ndirectedsuccessors, digraph->nnodes) );
+   /* storage to hold components is stored in block memory */
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->components, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->componentstarts, digraph->componentstartsize) );
+
+   /* allocate temporary arrays */
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocClearMemoryArray(&visited, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&dfsstack, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&stackadjvisited, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&ndirectedsuccessors, digraph->nnodes), TERMINATE );
 
    digraph->componentstarts[0] = 0;
 
@@ -6978,7 +7018,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    {
       for( j = 0; j < ndirectedsuccessors[i]; ++j )
       {
-         SCIP_CALL( SCIPdigraphAddArc(digraph, digraph->successors[i][j], i, NULL) );
+         SCIP_CALL_TERMINATE( retcode, SCIPdigraphAddArc(digraph, digraph->successors[i][j], i, NULL), TERMINATE );
       }
    }
 
@@ -7000,10 +7040,13 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
          /* enlarge componentstartsize array, if needed */
          if( digraph->ncomponents >= digraph->componentstartsize )
          {
-            digraph->componentstartsize = 2 * digraph->componentstartsize;
-            assert(digraph->ncomponents < digraph->componentstartsize);
+            int newsize;
 
-            SCIP_ALLOC( BMSreallocMemoryArray(&digraph->componentstarts, digraph->componentstartsize) );
+            newsize = 2 * digraph->componentstartsize;
+            assert(digraph->ncomponents < newsize);
+
+            SCIP_ALLOC_TERMINATE( retcode, BMSreallocBlockMemoryArray(blkmem, &digraph->componentstarts, digraph->componentstartsize, newsize), TERMINATE );
+            digraph->componentstartsize = newsize;
          }
          digraph->componentstarts[digraph->ncomponents] = compstart + ndfsnodes;
 
@@ -7026,15 +7069,20 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    if( ncomponents != NULL )
       (*ncomponents) = digraph->ncomponents;
 
-   BMSfreeMemoryArray(&ndirectedsuccessors);
-   BMSfreeMemoryArray(&stackadjvisited);
-   BMSfreeMemoryArray(&dfsstack);
-   BMSfreeMemoryArray(&visited);
+TERMINATE:
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPdigraphFreeComponents(digraph);
+   }
+   BMSfreeMemoryArrayNull(&ndirectedsuccessors);
+   BMSfreeMemoryArrayNull(&stackadjvisited);
+   BMSfreeMemoryArrayNull(&dfsstack);
+   BMSfreeMemoryArrayNull(&visited);
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
-/** Performes an (almost) topological sort on the undirected components of the given directed graph. The undirected
+/** Performs an (almost) topological sort on the undirected components of the given directed graph. The undirected
  *  components should be computed before using SCIPdigraphComputeUndirectedComponents().
  *
  *  @note In general a topological sort is not unique.  Note, that there might be directed cycles, that are randomly
@@ -7342,13 +7390,18 @@ void SCIPdigraphFreeComponents(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
    )
 {
+   BMS_BLKMEM* blkmem;
+
    assert(digraph != NULL);
+   assert(digraph->blkmem != NULL);
+
+   blkmem = digraph->blkmem;
 
    /* free components structure */
    if( digraph->componentstartsize > 0 )
    {
-      BMSfreeMemoryArray(&digraph->componentstarts);
-      BMSfreeMemoryArray(&digraph->components);
+      BMSfreeBlockMemoryArray(blkmem, &digraph->componentstarts, digraph->componentstartsize);
+      BMSfreeBlockMemoryArray(blkmem, &digraph->components, digraph->nnodes);
       digraph->components = NULL;
       digraph->componentstarts = NULL;
       digraph->ncomponents = 0;
@@ -8689,7 +8742,7 @@ int randomGetRand(
    unsigned long t;
 
    /* linear congruential */
-   randnumgen->seed = randnumgen->seed * (SCIP_Longint)1103515245 + 12345;
+   randnumgen->seed = (unsigned int) (randnumgen->seed * (SCIP_Longint)1103515245 + 12345);
 
    /* Xorshift */
    randnumgen->xor_seed ^= (randnumgen->xor_seed << 13);
@@ -9605,234 +9658,6 @@ void SCIPsplitFilename(
       *lastdot = '\0';
    }
 }
-
-#define MINREMAININGKEYSSIZE 25
-#define NELEMSMEDIANSEL 3
-/** indirectly sorts a given keys array by permuting its indices, thereby yielding a partition of the indices into keys
- *  that are larger, equal, and smaller than the weighted median
- *
- *  in a sorting key_1 > key_2 > ... > key_n, the weighted median is the element key_m at position m that satisfies
- *  sum_{i < m} weight_i < capacity, but sum_{i <= m} weight_i >= capacity.
- *
- *  If the keys are not unique, then the median is not necessarily unique, which is why the algorithm returns a range of indices for the median.
- *
- *  As a result of applying this method, the indices are partially sorted. Looping over the indices 0,...,leftmedianidx - 1
- *  yields all elements with a key strictly larger than the weighted median. Looping over the indices rightmedianidx + 1, ..., nkeys
- *  contains only elements that are smaller than the median.
- *
- *  A special case is that all keys are unique, and all weights are equal to 1. In this case, the algorithm can be used to select the k-th
- *  largest element by using a capacity k.
- *
- *  If no weights-array is passed, the algorithm assumes weights equal to 1.
- */
-void SCIPselectWeightedMedian(
-   SCIP_Real*            keys,               /**< array of key values, indexed by indices, for which we compute the weighted median */
-   int*                  indices,            /**< indices array that should be partially sorted inplace */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   int                   nkeys,              /**< the number of keys and indices (indices range from 0 to nkeys - 1) */
-   SCIP_Real             capacity,           /**< (positive) capacity for the weights */
-   SCIP_Real*            median,             /**< pointer to store the weighted median */
-   int*                  leftmedianidx,      /**< pointer to store the leftmost occurence of median */
-   int*                  rightmedianidx      /**< pointer to store the rightmost occurence of median */
-   )
-{
-   SCIP_Real keysbuffer[MINREMAININGKEYSSIZE];
-   int indicesbuffer[MINREMAININGKEYSSIZE];
-   SCIP_Real weightsbuffer[MINREMAININGKEYSSIZE];
-   int left;
-   int right;
-   int j;
-   SCIP_Real residualcapacity;
-
-   assert(keys != NULL);
-   assert(indices != NULL);
-   assert(median != NULL);
-
-   *median = SCIP_INVALID;
-   /* rule out the trivial case that the capacity is larger than all weights together. In this case, no median exists */
-   if( weights == NULL && capacity > nkeys )
-   {
-      *leftmedianidx = *rightmedianidx = nkeys;
-      return;
-   }
-   else if( weights != NULL )
-   {
-      int i;
-      SCIP_Real weightsum = 0;
-      /* sum up weights */
-      for( i = 0; i < nkeys; ++i )
-         weightsum += weights[i];
-
-      if( weightsum < capacity )
-      {
-         *leftmedianidx = *rightmedianidx = nkeys;
-         return;
-      }
-   }
-
-   left = 0;
-   right = nkeys - 1;
-   residualcapacity = capacity;
-
-   while( right - left + 1 > MINREMAININGKEYSSIZE )
-   {
-      int i;
-      int smalleridx;
-      int largeridx;
-      int pivotindex;
-      int npivots;
-      SCIP_Real largeweightsum;
-      SCIP_Real equalweightsum;
-
-      SCIP_Real pivot;
-      /* select a pivot element */
-      SCIP_Real elements[NELEMSMEDIANSEL];
-      int elementidxs[NELEMSMEDIANSEL];
-
-      /* todo maybe select pivot randomized */
-      for( i = 0; i < NELEMSMEDIANSEL; ++i )
-      {
-         int idx = left + (right - left) * i / (NELEMSMEDIANSEL - 1);
-         elements[i] = keys[indices[idx]];
-         elementidxs[i] = idx;
-      }
-
-      SCIPsortRealInt(elements, elementidxs, NELEMSMEDIANSEL);
-      pivot = elements[NELEMSMEDIANSEL / 2];
-      pivotindex = elementidxs[NELEMSMEDIANSEL / 2];
-
-      largeridx = left;
-      smalleridx = right - 1;
-
-      /* swap pivot to the rightmost position */
-      SCIPswapInts(&indices[right], &indices[pivotindex]);
-
-      /* loop over elements and swap if one is too small and one is too large */
-      while( largeridx <= smalleridx )
-      {
-         if( keys[indices[largeridx]] <= pivot && keys[indices[smalleridx]] > pivot )
-         {
-            SCIPswapInts(&indices[smalleridx], &indices[largeridx]);
-            ++largeridx;
-            --smalleridx;
-         }
-         /* loop until an element is detected that is larger than the key indexed by smalleridx */
-         while( smalleridx >= left && keys[indices[smalleridx]] <= pivot )
-            --smalleridx;
-
-
-         while( largeridx < right - 1 && keys[indices[largeridx]] > pivot )
-            ++largeridx;
-      }
-      assert(smalleridx == largeridx - 1);
-      npivots = 0;
-
-      /* place pivot element(s) back to where they belong */
-      for( i = largeridx; i <= right; ++i )
-      {
-         if( keys[indices[i]] == pivot )
-         {
-            SCIPswapInts(&indices[largeridx + npivots], &indices[i]);
-            ++npivots;
-         }
-      }
-
-      assert(npivots > 0);
-
-      if( weights != NULL )
-      {
-         largeweightsum = 0.0;
-         /* collect weights of elements larger than the pivot  */
-         for( i = left; i < largeridx; ++i )
-         {
-            assert(keys[indices[i]] > pivot);
-            largeweightsum += weights[indices[i]];
-         }
-
-         equalweightsum = 0.0;
-
-         /* collect weights of elements that are equal to the pivot */
-         for( ; i < largeridx + npivots; ++i )
-         {
-            assert(keys[indices[i]] == pivot);
-            equalweightsum += weights[indices[i]];
-         }
-      }
-      else
-      {
-         /* if all weights are equal to one, we directly know the larger and the equal weight sum */
-         largeweightsum = largeridx;
-         equalweightsum = npivots;
-      }
-      if( largeweightsum < residualcapacity && largeweightsum + equalweightsum >= residualcapacity)
-      {
-         *median = pivot;
-         *leftmedianidx = largeridx;
-         *rightmedianidx = largeridx + npivots - 1;
-
-         return;
-      }
-
-      /* pivot is too large; continue search in the left half of the array */
-      else if( largeweightsum >= residualcapacity )
-      {
-         right = largeridx - 1;
-      }
-      else
-      {
-         assert(largeweightsum + equalweightsum < residualcapacity);
-         left = largeridx + npivots;
-         residualcapacity -= largeweightsum + equalweightsum;
-      }
-   }
-
-   assert(left <= right);
-   assert(right - left + 1 <= MINREMAININGKEYSSIZE);
-
-   /* collect data for explicit sorting */
-   for( j = 0; j <= right - left; ++j )
-   {
-      int index = indices[left + j];
-      keysbuffer[j] = keys[index];
-      weightsbuffer[j] = weights != NULL ? weights[index] : 1.0;
-      indicesbuffer[j] = index;
-   }
-
-   SCIPsortDownRealRealInt(keysbuffer, weightsbuffer, indicesbuffer, right - left + 1);
-
-   /* insert the elements sorted back into the indices array */
-   for( j = 0; j < right - left + 1; ++j )
-   {
-      SCIP_Real weight = weightsbuffer[j];
-      /* we finally found the median element */
-      if( weight > residualcapacity )
-      {
-         *median = keysbuffer[j];
-         *leftmedianidx = left + j;
-         *rightmedianidx = left + j;
-         break;
-      }
-      else
-      {
-         residualcapacity -= weight;
-      }
-   }
-
-   if( j == right - left + 1 )
-   {
-      *median = SCIP_INVALID;
-      *leftmedianidx = nkeys;
-      *rightmedianidx = nkeys;
-   }
-
-   /* copy back the final indices sorting */
-   for( j = 0; j < right - left + 1; ++j )
-   {
-      indices[left + j] = indicesbuffer[j];
-   }
-}
-
-
 
 /*
  * simple functions implemented as defines

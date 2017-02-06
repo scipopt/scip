@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -202,12 +202,6 @@ void SCIPprintBuildOptions(
 EXTERN
 void SCIPprintError(
    SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
-   );
-
-/** update statistical information when a new solution was found */
-EXTERN
-void SCIPstoreSolutionGap(
-   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /**@} */
@@ -18373,6 +18367,63 @@ SCIP_NODE* SCIPgetCurrentNode(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** gets depth of current node, or -1 if no current node exists; in probing, the current node is the last probing node,
+ *  such that the depth includes the probing path
+ *
+ *  @return the depth of current node, or -1 if no current node exists; in probing, the current node is the last probing node,
+ *  such that the depth includes the probing path
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+int SCIPgetDepth(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets depth of the focus node, or -1 if no focus node exists; the focus node is the currently processed node in the
+ *  branching tree, excluding the nodes of the probing path
+ *
+ *  @return the depth of the focus node, or -1 if no focus node exists; the focus node is the currently processed node in the
+ *  branching tree, excluding the nodes of the probing path
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+int SCIPgetFocusDepth(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets current plunging depth (successive times, a child was selected as next node)
+ *
+ *  @return the current plunging depth (successive times, a child was selected as next node)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+int SCIPgetPlungeDepth(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** gets the root node of the tree
  *
  *  @return the root node of the search tree
@@ -18494,6 +18545,20 @@ SCIP_RETCODE SCIPgetLeaves(
  */
 EXTERN
 int SCIPgetNLeaves(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of nodes left in the tree (children + siblings + leaves)
+ *
+ *  @return the number of nodes left in the tree (children + siblings + leaves)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+int SCIPgetNNodesLeft(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -19182,20 +19247,6 @@ SCIP_Longint SCIPgetNTotalNodes(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets number of nodes left in the tree (children + siblings + leaves)
- *
- *  @return the number of nodes left in the tree (children + siblings + leaves)
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- */
-EXTERN
-int SCIPgetNNodesLeft(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** gets number of leaf nodes processed with feasible relaxation solution
  *
  * @return number of leaf nodes processed with feasible relaxation solution
@@ -19828,50 +19879,6 @@ SCIP_Longint SCIPgetNConflictConssApplied(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets depth of current node, or -1 if no current node exists; in probing, the current node is the last probing node,
- *  such that the depth includes the probing path
- *
- *  @return the depth of current node, or -1 if no current node exists; in probing, the current node is the last probing node,
- *  such that the depth includes the probing path
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- */
-EXTERN
-int SCIPgetDepth(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** gets depth of the focus node, or -1 if no focus node exists; the focus node is the currently processed node in the
- *  branching tree, excluding the nodes of the probing path
- *
- *  @return the depth of the focus node, or -1 if no focus node exists; the focus node is the currently processed node in the
- *  branching tree, excluding the nodes of the probing path
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- */
-EXTERN
-int SCIPgetFocusDepth(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** gets maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)
  *
  *  @return the maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)
@@ -19929,19 +19936,6 @@ int SCIPgetMaxTotalDepth(
  */
 EXTERN
 SCIP_Longint SCIPgetNBacktracks(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** gets current plunging depth (successive times, a child was selected as next node)
- *
- *  @return the current plunging depth (successive times, a child was selected as next node)
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- */
-EXTERN
-int SCIPgetPlungeDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -20774,6 +20768,13 @@ SCIP_DEPRECATED
 SCIP_RETCODE SCIPwriteImplicationConflictGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< file name, or NULL for stdout */
+   );
+
+
+/** update statistical information when a new solution was found */
+EXTERN
+void SCIPstoreSolutionGap(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /**@} */

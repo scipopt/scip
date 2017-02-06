@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -11233,9 +11233,9 @@ SCIP_DECL_CONSFREE(consFreeQuadratic)
    for( i = 0; i < conshdlrdata->nquadconsupgrades; ++i )
    {
       assert(conshdlrdata->quadconsupgrades[i] != NULL);
-      SCIPfreeMemory(scip, &conshdlrdata->quadconsupgrades[i]);
+      SCIPfreeBlockMemory(scip, &conshdlrdata->quadconsupgrades[i]); /*lint !e866*/
    }
-   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->quadconsupgrades);
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->quadconsupgrades, conshdlrdata->quadconsupgradessize);
 
    SCIPfreeBlockMemory(scip, &conshdlrdata);
 
@@ -13376,7 +13376,7 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
    if( !conshdlrdataHasUpgrade(scip, conshdlrdata, quadconsupgd, conshdlrname) )
    {
       /* create a quadratic constraint upgrade data object */
-      SCIP_CALL( SCIPallocMemory(scip, &quadconsupgrade) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &quadconsupgrade) );
       quadconsupgrade->quadconsupgd = quadconsupgd;
       quadconsupgrade->priority     = priority;
       quadconsupgrade->active       = active;
@@ -13388,7 +13388,7 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
          int newsize;
 
          newsize = SCIPcalcMemGrowSize(scip, conshdlrdata->nquadconsupgrades+1);
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->quadconsupgrades, newsize) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->quadconsupgrades, conshdlrdata->quadconsupgradessize, newsize) );
          conshdlrdata->quadconsupgradessize = newsize;
       }
       assert(conshdlrdata->nquadconsupgrades+1 <= conshdlrdata->quadconsupgradessize);
