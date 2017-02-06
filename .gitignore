@@ -25,6 +25,7 @@ doc/doxygen
 doc/scip.tag
 doc/inc/faq/faqdata.php
 doc/inc/faq/faq.inc
+doc/inc/parameters.set
 doc/**/*.tmp
 .cproject
 .project
