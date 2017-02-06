@@ -43,7 +43,7 @@ extern "C" {
 #endif
 
 /**@defgroup PublicNLPMethods NLP Relaxation
- * @ingroup PUBLICCOREAPI
+ * @ingroup PublicSolveMethods
  * @brief methods for the nonlinear relaxation
  *
  * @{
