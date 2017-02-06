@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -22,6 +22,9 @@
  *
  * @todo allow smaller fixing rate for probing LP?
  * @todo allow smaller fixing rate after presolve if total number of variables is small (<= 1000)?
+ *
+ * More details about the heuristic can be found in "Structure-Based Primal Heuristics for Mixed Integer Programming"
+ * by Gamrath, Berthold, Heinz, Winkler: http://link.springer.com/chapter/10.1007%2F978-4-431-55420-2_3
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -349,7 +352,6 @@ SCIP_RETCODE applyVboundsFixings(
    SCIP_HEURDATA*        heurdata,           /**< structure containing heurdata */
    SCIP_VAR**            vars,               /**< variables to fix during probing */
    int                   nvbvars,            /**< number of variables in the variable bound graph */
-   SCIP_Bool             forward,            /**< should fixings be done forward w.r.t. the vbound graph? */
    SCIP_Bool             tighten,            /**< should variables be fixed to cause other fixings? */
    SCIP_Bool             obj,                /**< should the objective be taken into account? */
    SCIP_Bool*            infeasible,         /**< pointer to store whether problem is infeasible */
@@ -359,14 +361,13 @@ SCIP_RETCODE applyVboundsFixings(
 {
    SCIP_VAR* var;
    SCIP_BOUNDTYPE bound;
-   SCIP_Bool newnode = TRUE;
    int v;
 
-   /* for each variable in topological order: start at best bound (MINIMIZE: neg coeff --> ub, pos coeff: lb) */
+   /* loop over variables in topological order */
    for( v = 0; v < nvbvars && !(*infeasible); ++v )
    {
-      var = forward ? vars[v] : vars[nvbvars - 1 - v];
-      bound = forward ? heurdata->vbbounds[v] : heurdata->vbbounds[nvbvars - 1 - v];
+      var = vars[v];
+      bound = heurdata->vbbounds[v];
 
       /*SCIPdebugMsg(scip, "topoorder[%d]: %s(%s) (%s)\n", v,
          bound == SCIP_BOUNDTYPE_UPPER ? "ub" : "lb", SCIPvarGetName(var),
@@ -380,23 +381,39 @@ SCIP_RETCODE applyVboundsFixings(
       if( SCIPvarGetLbLocal(var) + 0.5 > SCIPvarGetUbLocal(var) )
          continue;
 
+      /* if obj == TRUE, we only regard bounds which are the worse bound w.r.t. the objective function (but possibly
+       * change this bound)
+       */
       if( obj && ((SCIPvarGetObj(var) >= 0) == (bound == SCIP_BOUNDTYPE_LOWER)) )
          continue;
 
-      /* only open a new probing node if we will not exceed the maximal tree depth */
-      if( newnode && SCIP_MAXTREEDEPTH > SCIPgetDepth(scip) )
-      {
-         SCIP_CALL( SCIPnewProbingNode(scip) );
-         newnode = FALSE;
-      }
-
       *lastvar = var;
 
+      /* there are four cases:
+       * 1) obj == FALSE; tighten == TRUE: we go through the list of variables and fix variables to force propagation;
+       *                                   this is be obtained by fixing the variable to the other bound (which means
+       *                                   that the current bound is changed and so, much propagation is triggered
+       *                                   since we are starting with the bounds which are most influential).
+       * 2) obj == tighten == FALSE:       we fix variables to avoid too much propagation in order to avoid reaching
+       *                                   infeasibility. Therefore, we fix the variable to the current bound, so that
+       *                                   this bound is not changed and does not propagate. The other bound is changed
+       *                                   and propagates, but is later in the order, so less influential.
+       * 3) obj == tighten == TRUE:        we only fix variables to their best bound w.r.t. the objective function;
+       *                                   this should give us better solutions, if we are successful
+       * 4) obj == TRUE, tighten == FALSE: we only fix variables to their worse bound w.r.t. the objective function;
+       *                                   this tends to keep the problem feasible, while finding not so good solutions
+       */
       if( obj ? (tighten == (SCIPvarGetObj(var) >= 0)) : (tighten == (bound == SCIP_BOUNDTYPE_UPPER)) )
       {
          /* we cannot fix to infinite bounds */
          if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
             continue;
+
+         /* only open a new probing node if we will not exceed the maximal tree depth */
+         if( SCIP_MAXTREEDEPTH > SCIPgetDepth(scip) )
+         {
+            SCIP_CALL( SCIPnewProbingNode(scip) );
+         }
 
          /* fix variable to lower bound */
          SCIP_CALL( SCIPfixVarProbing(scip, var, SCIPvarGetLbLocal(var)) );
@@ -413,6 +430,12 @@ SCIP_RETCODE applyVboundsFixings(
          if( SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
             continue;
 
+         /* only open a new probing node if we will not exceed the maximal tree depth */
+         if( SCIP_MAXTREEDEPTH > SCIPgetDepth(scip) )
+         {
+            SCIP_CALL( SCIPnewProbingNode(scip) );
+         }
+
          /* fix variable to upper bound */
          SCIP_CALL( SCIPfixVarProbing(scip, var, SCIPvarGetUbLocal(var)) );
          SCIPdebugMsg(scip, "fixing %d: variable <%s> to upper bound <%g> (%d pseudo cands)\n",
@@ -422,9 +445,6 @@ SCIP_RETCODE applyVboundsFixings(
 
       /* check if problem is already infeasible */
       SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, infeasible, NULL) );
-
-      /* we want to create a new probing node */
-      newnode = TRUE;
    }
 
    SCIPdebugMsg(scip, "probing ended with %sfeasible problem\n", (*infeasible) ? "in" : "");
@@ -483,7 +503,6 @@ SCIP_RETCODE applyVbounds(
    SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
    SCIP_VAR**            vbvars,             /**< variables to fix during probing */
    int                   nvbvars,            /**< number of variables to fix */
-   SCIP_Bool             forward,            /**< should fixings be done forward w.r.t. the vbound graph? */
    SCIP_Bool             tighten,            /**< should variables be fixed to cause other fixings? */
    SCIP_Bool             obj,                /**< should the objective be taken into account? */
    SCIP_RESULT*          result              /**< pointer to store the result */
@@ -582,7 +601,7 @@ SCIP_RETCODE applyVbounds(
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
 
    /* apply the variable fixings */
-   SCIP_CALL( applyVboundsFixings(scip, heurdata, vbvars, nvbvars, forward, tighten, obj, &infeasible,
+   SCIP_CALL( applyVboundsFixings(scip, heurdata, vbvars, nvbvars, tighten, obj, &infeasible,
          &lastfixedvar, &lastfixedlower) );
 
    /* try to repair probing */
@@ -887,8 +906,8 @@ SCIP_RETCODE applyVbounds(
 
 #ifdef SCIP_STATISTIC
    SCIP_CALL( SCIPstopClock(scip, clock) );
-   SCIPstatisticMessage("vbound: forward=%d tighten=%d obj=%d nvars=%d presolnvars=%d ratio=%.2f infeas=%d found=%d time=%.2f\n",
-      forward, tighten, obj, nvars, nprevars, (nvars - nprevars) / (SCIP_Real)nvars, infeasible,
+   SCIPstatisticMessage("vbound: tighten=%d obj=%d nvars=%d presolnvars=%d ratio=%.2f infeas=%d found=%d time=%.2f\n",
+      tighten, obj, nvars, nprevars, (nvars - nprevars) / (SCIP_Real)nvars, infeasible,
       foundsol ? 1 : 0, SCIPclockGetTime(clock) );
 #endif
 
@@ -991,16 +1010,11 @@ SCIP_DECL_HEUREXEC(heurExecVbounds)
       return SCIP_OKAY;
 
    /* try variable bounds */
-   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, TRUE, TRUE, result) );
-   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, TRUE, FALSE, result) );
-   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, FALSE, FALSE, result) );
-   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, FALSE, TRUE, result) );
-#if 0
-   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, TRUE, TRUE, result) );
-   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, TRUE, FALSE, result) );
-   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, FALSE, TRUE, result) );
-   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, FALSE, FALSE, result) );
-#endif
+   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, TRUE, result) );
+   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, TRUE, FALSE, result) );
+   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, FALSE, result) );
+   SCIP_CALL( applyVbounds(scip, heur, heurdata, heurdata->vbvars, heurdata->nvbvars, FALSE, TRUE, result) );
+
    return SCIP_OKAY;
 }
 

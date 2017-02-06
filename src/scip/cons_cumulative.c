@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -7319,6 +7319,8 @@ SCIP_RETCODE propagateCumulativeCondition(
 {
    SCIP_PROFILE* profile;
 
+   SCIP_RETCODE retcode = SCIP_OKAY;
+
    assert(nchgbds != NULL);
    assert(initialized != NULL);
    assert(cutoff != NULL);
@@ -7336,33 +7338,34 @@ SCIP_RETCODE propagateCumulativeCondition(
    SCIP_CALL( SCIPprofileCreate(&profile, capacity) );
 
    /* create core profile (compulsory parts) */
-   SCIP_CALL( createCoreProfile(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax,
-         initialized, explanation, cutoff) );
+   SCIP_CALL_TERMINATE( retcode, createCoreProfile(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax,
+         initialized, explanation, cutoff), TERMINATE );
 
    /* propagate the job cores until nothing else can be detected */
    if( (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
    {
-      SCIP_CALL( propagateTimetable(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
-            nchgbds, initialized, explanation, cutoff) );
+      SCIP_CALL_TERMINATE( retcode, propagateTimetable(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
+            nchgbds, initialized, explanation, cutoff), TERMINATE );
    }
 
    /* run edge finding propagator */
    if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
    {
-      SCIP_CALL( propagateEdgeFinding(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
-            cons, initialized, explanation, nchgbds, cutoff) );
+      SCIP_CALL_TERMINATE( retcode, propagateEdgeFinding(scip, conshdlrdata, nvars, vars, durations, demands, capacity, hmin, hmax,
+            cons, initialized, explanation, nchgbds, cutoff), TERMINATE );
    }
 
    /* run time-table edge-finding propagator */
    if( (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
    {
-      SCIP_CALL( propagateTTEF(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
-            nchgbds, initialized, explanation, cutoff) );
+      SCIP_CALL_TERMINATE( retcode, propagateTTEF(scip, conshdlrdata, profile, nvars, vars, durations, demands, capacity, hmin, hmax, cons,
+            nchgbds, initialized, explanation, cutoff), TERMINATE );
    }
    /* free resource profile */
+TERMINATE:
    SCIPprofileFree(&profile);
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** propagate the cumulative constraint */
@@ -14126,6 +14129,8 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
    int nvars;
    int v;
 
+   SCIP_RETCODE retcode = SCIP_OKAY;
+
    /* open file */
    (void)SCIPsnprintf(filename, SCIP_MAXSTRLEN, "%s.gml", SCIPconsGetName(cons));
    file = fopen(filename, "w");
@@ -14143,8 +14148,8 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
 
    nvars = consdata->nvars;
 
-   SCIP_CALL( SCIPhashtableCreate(&vars, SCIPblkmem(scip), nvars,
-         SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
+   SCIP_CALL_TERMINATE( retcode, SCIPhashtableCreate(&vars, SCIPblkmem(scip), nvars,
+         SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL), TERMINATE );
 
    /* create opening of the GML format */
    SCIPgmlWriteOpening(file,  TRUE);
@@ -14156,7 +14161,7 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
       var = consdata->vars[v];
       assert(var != NULL);
 
-      SCIP_CALL( SCIPhashtableInsert(vars, (void*)var) );
+      SCIP_CALL_TERMINATE( retcode,  SCIPhashtableInsert(vars, (void*)var) , TERMINATE );
 
       if( SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var) < 0.5 )
          (void)SCIPsnprintf(color, SCIP_MAXSTRLEN, "%s", "#0000ff");
@@ -14205,12 +14210,13 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
    /* create closing of the GML format */
    SCIPgmlWriteClosing(file);
 
+TERMINATE:
    /* close file */
    fclose(file);
 
    SCIPhashtableFree(&vars);
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** sets method to solve an individual cumulative condition */

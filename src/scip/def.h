@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -96,7 +96,7 @@ extern "C" {
 
 #define SCIP_VERSION                400 /**< SCIP version number (multiplied by 100 to get integer number) */
 #define SCIP_SUBVERSION               0 /**< SCIP sub version number */
-#define SCIP_COPYRIGHT   "Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_COPYRIGHT   "Copyright (C) 2002-2017 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*
@@ -330,6 +330,18 @@ extern "C" {
                              retcode = SCIP_NOMEMORY;                                                         \
                              goto TERM;                                                                       \
                           }                                                                                   \
+                       }                                                                                      \
+                       while( FALSE )
+
+#define SCIP_CALL_FINALLY(x, y)   do                                                                                     \
+                       {                                                                                      \
+                          SCIP_RETCODE _restat_;                                                              \
+                          if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
+                          {                                                                                   \
+                             SCIPerrorMessage("Error <%d> in function call\n", _restat_);                     \
+                             (y);                                                                             \
+                             return _restat_;                                                                 \
+                           }                                                                                  \
                        }                                                                                      \
                        while( FALSE )
 

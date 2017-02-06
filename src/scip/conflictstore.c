@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -349,7 +349,9 @@ SCIP_RETCODE delPosDualray(
    )
 {
    SCIP_CONS* dualray;
+   SCIP_Bool success;
    int lastpos;
+   int nvars;
 
    assert(conflictstore != NULL);
 
@@ -357,8 +359,13 @@ SCIP_RETCODE delPosDualray(
    dualray = conflictstore->dualrayconfs[pos];
    assert(dualray != NULL);
 
+   /* decrease the number of non-zeros */
+   SCIP_CALL( SCIPconsGetNVars(dualray, set, &nvars, &success) );
+   assert(success);
+   conflictstore->nnzdualrays -= nvars;
+
 #ifdef SCIP_PRINT_DETAILS
-   SCIPsetDebugMsg(set, "-> remove dual ray at pos=%d with age=%g\n", pos, SCIPconsGetAge(dualray));
+   SCIPsetDebugMsg(set, "-> remove dual ray at pos=%d age=%g nvars=%d\n", pos, SCIPconsGetAge(dualray), nvars);
 #endif
 
    /* mark the constraint as deleted */
@@ -574,6 +581,7 @@ SCIP_RETCODE SCIPconflictstoreCreate(
    (*conflictstore)->primalbounds = NULL;
    (*conflictstore)->dualrayconfs = NULL;
    (*conflictstore)->origconfs = NULL;
+   (*conflictstore)->nnzdualrays = 0;
    (*conflictstore)->conflictsize = 0;
    (*conflictstore)->origconflictsize = 0;
    (*conflictstore)->nconflicts = 0;
@@ -688,6 +696,9 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    SCIP_REOPT*           reopt               /**< reoptimization data */
    )
 {
+   int nvars;
+   SCIP_Bool success;
+
    assert(conflictstore != NULL);
    assert(conflictstore->ndualrayconfs <= CONFLICTSTORE_DUALSIZE);
 
@@ -743,6 +754,11 @@ SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    SCIPconsCapture(dualraycons);
    conflictstore->dualrayconfs[conflictstore->ndualrayconfs] = dualraycons;
    ++conflictstore->ndualrayconfs;
+
+   /* increase the number of non-zeros */
+   SCIP_CALL( SCIPconsGetNVars(dualraycons, set, &nvars, &success) );
+   assert(success);
+   conflictstore->nnzdualrays += nvars;
 
    return SCIP_OKAY;
 }
@@ -1038,3 +1054,27 @@ SCIP_RETCODE SCIPconflictstoreTransform(
 
    return SCIP_OKAY;
 }
+
+/** returns the average number of non-zeros over all stored dual ray constraints */
+SCIP_Real SCIPconflictstoreGetAvgNnzDualray(
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
+   )
+{
+   assert(conflictstore != NULL);
+
+   if( conflictstore->ndualrayconfs == 0 )
+      return 0.0;
+   else
+      return (SCIP_Real) conflictstore->nnzdualrays / ((SCIP_Real) conflictstore->ndualrayconfs);
+}
+
+/** returns the number of all stored dual ray constraints */
+int SCIPconflictstoreGetNDualrays(
+   SCIP_CONFLICTSTORE*   conflictstore       /**< conflict store */
+   )
+{
+   assert(conflictstore != NULL);
+
+   return conflictstore->ndualrayconfs;
+}
+

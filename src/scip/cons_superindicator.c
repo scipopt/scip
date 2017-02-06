@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -659,7 +659,7 @@ SCIP_RETCODE enforceConstraint(
    SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
-{
+{  /*lint --e{715}*/
    SCIP_Bool cont;
    int i;
 
@@ -2168,7 +2168,7 @@ SCIP_RETCODE SCIPtransformMinUC(
 
    /* copy the conss array because it changes when adding and deleting constraints */
    nconss = SCIPgetNConss(scip);
-   SCIP_ALLOC( BMSduplicateMemoryArray(&conss, SCIPgetConss(scip), nconss) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &conss, SCIPgetConss(scip), nconss) );
 
    /* clear objective function and compute maximal branching priority */
    maxbranchprio = 0;
@@ -2260,7 +2260,7 @@ SCIP_RETCODE SCIPtransformMinUC(
    SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MINIMIZE) );
 
    /* free the allocated memory for the copied constraint array */
-   BMSfreeMemoryArray(&conss);
+   SCIPfreeBufferArray(scip, &conss);
 
    return SCIP_OKAY;
 }
