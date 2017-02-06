@@ -1605,7 +1605,6 @@ SCIP_RETCODE SCIPlpiChgObj(
    return SCIP_OKAY;
 }
 
-/* todo unclear how to adapt to persistent scaling */
 /** multiplies a row with a non-zero scalar; for negative scalars, the row's sense is switched accordingly */
 SCIP_RETCODE SCIPlpiScaleRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -1678,7 +1677,6 @@ SCIP_RETCODE SCIPlpiScaleRow(
    return SCIP_OKAY;
 }
 
-/* todo unclear how to adapt to persistent scaling */
 /** multiplies a column with a non-zero scalar; the objective value is multiplied with the scalar, and the bounds
  *  are divided by the scalar; for negative scalars, the column's bounds are switched
  */
@@ -4176,11 +4174,6 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_POLISHING:
       assert(ival >= 0 && ival < 3);
       (void) lpi->spx->setIntParam(SoPlex::SOLUTION_POLISHING, ival);
-      break;
-#endif
-#if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 4)
-   case SCIP_LPPAR_PERSISTENTSCALING:
-      lpi->spx->setBoolParam(SoPlex::PERSISTENTSCALING, (bool) ival);
       break;
 #endif
    default:

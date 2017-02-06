@@ -321,7 +321,6 @@ struct SCIP_Set
                                               *   for LP resolve (-1: unlimited) */
    int                   lp_resolveitermin;  /**< minimum number of iterations that are allowed for LP resolve */
    int                   lp_solutionpolishing;/**< LP solution polishing method (0: disabled, 1: only root, 2: always) */
-   SCIP_Bool             lp_persistentscaling;/**< use persistent LP scaling during branch and bound */
 
    /* NLP settings */
    SCIP_Bool             nlp_disable;        /**< should the NLP be disabled even if a constraint handler enabled it? */
