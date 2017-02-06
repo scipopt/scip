@@ -1349,7 +1349,7 @@ uint32_t hashvalue(
    uint64_t              input               /**< key value */
    )
 {
-   return ( (uint32_t) ((0x9e3779b97f4a7c15ull * input)>>32) ) | 1u;
+   return ( (uint32_t) ((0x9e3779b97f4a7c15ULL * input)>>32) ) | 1u;
 }
 
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
@@ -2042,11 +2042,10 @@ SCIP_RETCODE SCIPhashtableCreate(
     * to the next power of two.
     */
    (*hashtable)->shift = 32;
-   (*hashtable)->shift -= (int)ceil(
-      log(MAX(32.0, tablesize / 0.9)) / log(2.0));
+   (*hashtable)->shift -= (int)ceil(log(MAX(32.0, tablesize / 0.9)) / log(2.0));
 
    /* compute size from shift */
-   nslots = 1<<(32 - (*hashtable)->shift);
+   nslots = 1u << (32 - (*hashtable)->shift);
 
    /* compute mask to do a fast modulo by nslots using bitwise and */
    (*hashtable)->mask = nslots - 1;
@@ -2149,7 +2148,7 @@ SCIP_RETCODE hashtableInsert(
 
    pos = hashval>>(hashtable->shift);
    elemdistance = 0;
-   while( TRUE )
+   while( TRUE )   /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2339,7 +2338,7 @@ void* SCIPhashtableRetrieve(
    pos = hashval>>(hashtable->shift);
    elemdistance = 0;
 
-   while( TRUE )
+   while( TRUE )   /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2410,7 +2409,7 @@ SCIP_RETCODE SCIPhashtableRemove(
 
    elemdistance = 0;
    pos = hashval>>(hashtable->shift);
-   while( TRUE )
+   while( TRUE )   /*lint !e716*/
    {
       /* slots empty so element not contained */
       if( hashtable->hashes[pos] == 0 )
@@ -2436,7 +2435,7 @@ SCIP_RETCODE SCIPhashtableRemove(
    /* remove element */
    hashtable->hashes[pos] = 0;
    --hashtable->nelements;
-   while( TRUE )
+   while( TRUE )   /*lint !e716*/
    {
       uint32_t nextpos = (pos + 1) & hashtable->mask;
 
@@ -2574,7 +2573,7 @@ SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqPtr)
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
 {  /*lint --e{715}*/
    /* the key is used as the keyvalue too */
-   return (unsigned int) ((0xd37e9a1ce2148403ull * (size_t) key)>>32);
+   return (unsigned int) ((0xd37e9a1ce2148403ULL * (size_t) key)>>32);
 }
 
 
@@ -2610,7 +2609,7 @@ SCIP_RETCODE hashmapInsert(
 
    pos = hashval>>(hashmap->shift);
    elemdistance = 0;
-   while( TRUE )
+   while( TRUE )   /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2688,7 +2687,7 @@ SCIP_Bool hashmapLookup(
    *pos = hashval>>(hashmap->shift);
    elemdistance = 0;
 
-   while( TRUE )
+   while( TRUE )   /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2783,9 +2782,8 @@ SCIP_RETCODE SCIPhashmapCreate(
     * to the next power of two.
     */
    (*hashmap)->shift = 32;
-   (*hashmap)->shift -= (int)ceil(
-      log(MAX(32, mapsize / 0.9)) / log(2.0));
-   nslots = 1<<(32 - (*hashmap)->shift);
+   (*hashmap)->shift -= (int)ceil(log(MAX(32, mapsize / 0.9)) / log(2.0));
+   nslots = 1u << (32 - (*hashmap)->shift);
    (*hashmap)->mask = nslots - 1;
    (*hashmap)->blkmem = blkmem;
    (*hashmap)->nelements = 0;
@@ -3032,7 +3030,7 @@ SCIP_RETCODE SCIPhashmapRemove(
       --hashmap->nelements;
 
       /* move other elements if necessary */
-      while( TRUE )
+      while( TRUE )   /*lint !e716*/
       {
          uint32_t nextpos = (pos + 1) & hashmap->mask;
 
@@ -8744,7 +8742,7 @@ int randomGetRand(
    unsigned long t;
 
    /* linear congruential */
-   randnumgen->seed = randnumgen->seed * (SCIP_Longint)1103515245 + 12345;
+   randnumgen->seed = (unsigned int) (randnumgen->seed * (SCIP_Longint)1103515245 + 12345);
 
    /* Xorshift */
    randnumgen->xor_seed ^= (randnumgen->xor_seed << 13);
