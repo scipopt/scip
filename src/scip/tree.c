@@ -7594,7 +7594,7 @@ void SCIPnodeGetConsProps(
       if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL)
        || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop != NULL) )
       {
-         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+         if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
             (*nconspropvars)++;
       }
       else if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons == NULL)
@@ -7611,7 +7611,7 @@ void SCIPnodeGetConsProps(
       {
          if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL )
          {
-            if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+            if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
             {
                vars[pos] = boundchgs[i].var;
                varboundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
@@ -7681,7 +7681,7 @@ void SCIPnodeGetBdChgsAfterDual(
       if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL)
        || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop != NULL) )
       {
-         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+         if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
             (*nbranchvars)++;
       }
    }
@@ -7695,7 +7695,7 @@ void SCIPnodeGetBdChgsAfterDual(
          if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL)
           || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop != NULL)  )
          {
-            if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+            if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
             {
                vars[p] = boundchgs[i].var;
                varboundtypes[p] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
