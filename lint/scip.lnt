@@ -42,6 +42,11 @@
 // turn off all errors for va_* functions:
 -emacro((*),va_*)
 
+// Avoid warnings with UINT64_MAX macro:
+// It seems that lint does not work with the definition
+// "# define UINT64_MAX (__UINT64_C(18446744073709551615))" in stdint.h
+++dUINT64_MAX=18446744073709551615UL
+
 // ---------------------------------------------------------
 // treat particular messages:
 -emacro(506,debugMessage)         // Constant value Boolean
