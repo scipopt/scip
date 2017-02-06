@@ -225,7 +225,7 @@ SCIP_RETCODE SCIPincludeEventHdlrGlobalbnd(
 
 /** gets the global bound changes stored in the eventhandler */
 SCIP_BOUNDSTORE* SCIPeventGlobalbndGetBoundChanges(
-   SCIP_EVENTHDLR*  eventhdlr           /**< the globalbound eventhandler */
+   SCIP_EVENTHDLR*       eventhdlr           /**< the globalbound eventhandler */
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
@@ -240,7 +240,7 @@ SCIP_BOUNDSTORE* SCIPeventGlobalbndGetBoundChanges(
 
 /** enables storing of bound changes */
 void SCIPeventGlobalbndEnableBoundStorage(
-   SCIP_EVENTHDLR*  eventhdlr           /**< the globalbound eventhandler */
+   SCIP_EVENTHDLR*       eventhdlr           /**< the globalbound eventhandler */
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
@@ -256,7 +256,7 @@ void SCIPeventGlobalbndEnableBoundStorage(
 
 /** disables storing of bound changes */
 void SCIPeventGlobalbndDisableBoundStorage(
-   SCIP_EVENTHDLR*  eventhdlr           /**< the globalbound eventhandler */
+   SCIP_EVENTHDLR*       eventhdlr           /**< the globalbound eventhandler */
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
@@ -272,7 +272,7 @@ void SCIPeventGlobalbndDisableBoundStorage(
 
 /** clears all bound changes stored in the eventhandler */
 void SCIPeventGlobalbndClearBoundChanges(
-   SCIP_EVENTHDLR*  eventhdlr           /**< the globalbound eventhandler */
+   SCIP_EVENTHDLR*       eventhdlr           /**< the globalbound eventhandler */
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;

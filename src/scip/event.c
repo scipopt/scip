@@ -435,8 +435,8 @@ SCIP_Real SCIPeventhdlrGetTime(
 
 /** creates a synchronization event */
 SCIP_RETCODE SCIPeventCreateSync(
-   SCIP_EVENT**          event,             /**< pointer to store the event */
-   BMS_BLKMEM*           blkmem             /**< block memory */
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(event != NULL);

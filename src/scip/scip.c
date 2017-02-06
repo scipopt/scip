@@ -12931,7 +12931,7 @@ SCIP_RETCODE SCIPclearConflictStore(
    assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND);
    assert(SCIPeventGetSol(event) != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPcleanConflictStore", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPclearConflictStore", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconflictstoreCleanNewIncumbent(scip->conflictstore, scip->set, scip->stat, scip->mem->probmem,
          scip->transprob, scip->reopt, scip->primal->cutoffbound) );
