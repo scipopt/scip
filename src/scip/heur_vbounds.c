@@ -392,14 +392,14 @@ SCIP_RETCODE applyVboundsFixings(
       /* there are four cases:
        * 1) obj == FALSE; tighten == TRUE: we go through the list of variables and fix variables to force propagation;
        *                                   this is be obtained by fixing the variable to the other bound (which means
-       *                                   that the current bound is changed and so much propagation is triggered
+       *                                   that the current bound is changed and so, much propagation is triggered
        *                                   since we are starting with the bounds which are most influential).
        * 2) obj == tighten == FALSE:       we fix variables to avoid too much propagation in order to avoid reaching
        *                                   infeasibility. Therefore, we fix the variable to the current bound, so that
        *                                   this bound is not changed and does not propagate. The other bound is changed
        *                                   and propagates, but is later in the order, so less influential.
        * 3) obj == tighten == TRUE:        we only fix variables to their best bound w.r.t. the objective function;
-       *                                   this should give us better solutions, if we are successfull
+       *                                   this should give us better solutions, if we are successful
        * 4) obj == TRUE, tighten == FALSE: we only fix variables to their worse bound w.r.t. the objective function;
        *                                   this tends to keep the problem feasible, while finding not so good solutions
        */
