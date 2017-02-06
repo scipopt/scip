@@ -10681,7 +10681,7 @@ SCIP_RETCODE tightenCapacity(
       consdata->capacity = bestcapacity;
       (*nchgsides)++;
 
-      SCIPdebugMsgPrint(scip, "; changed additionally %d coefficients\n", (*nchgcoefs)-oldnchgcoefs); /*lint !e530*/
+      SCIPdebugMsgPrint(scip, "; changed additionally %d coefficients\n", (*nchgcoefs) - oldnchgcoefs);
 
       consdata->varbounds = FALSE;
    }
