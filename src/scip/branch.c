@@ -2161,7 +2161,7 @@ SCIP_Real SCIPbranchGetScore(
    default:
       SCIPerrorMessage("invalid branching score function <%c>\n", set->branch_scorefunc);
       SCIPABORT();
-      score = 0.0;
+      score = 0.0; /*lint --e{527}*/
    }
 
    /* apply the branch factor of the variable */
