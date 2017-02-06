@@ -2358,6 +2358,10 @@ SCIP_RETCODE varParse(
       /* parse global bounds */
       SCIP_CALL( parseBounds(set, strptr, token, &parsedlb, &parsedub, endptr) );
 
+      /* stop if parsing of bounds failed */
+      if( *endptr == NULL )
+         break;
+
       if( strncmp(token, "local", 5) == 0 && local )
       {
          *lb = parsedlb;
@@ -3807,7 +3811,6 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    tmpvarssize = *nvars;
 
    tmpvarssize2 = 1;
-   ntmpvars2 = 0;
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &tmpvars2, tmpvarssize2) );
@@ -14098,9 +14101,6 @@ SCIP_Bool SCIPvarIsPscostRelerrorReliable(
    downsize = SCIPvarGetPseudocostCountCurrentRun(var, SCIP_BRANCHDIR_DOWNWARDS);
    upsize = SCIPvarGetPseudocostCountCurrentRun(var, SCIP_BRANCHDIR_UPWARDS);
    size = MIN(downsize, upsize);
-
-   relerrordown = 0.0;
-   relerrorup = 0.0;
 
    /* Pseudo costs relative error can only be reliable if both directions have been tried at least twice */
    if( size <= 1.9 )

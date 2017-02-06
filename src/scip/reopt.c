@@ -4385,8 +4385,6 @@ SCIP_RETCODE dryBranch(
 
    SCIPsetDebugMsg(set, "-> found %d redundant and %d infeasible nodes\n", nredchilds, ncutoffchilds);
 
-   c = 0;
-
    /* delete all nodes that can be cut off */
    while( ncutoffchilds > 0 )
    {
@@ -4406,8 +4404,6 @@ SCIP_RETCODE dryBranch(
       /* decrease the number of nodes to cutoff */
       --ncutoffchilds;
    }
-
-   c = 0;
 
    /* replace all redundant nodes their child nodes or cutoff the node if it is a leaf */
    while( nredchilds > 0 )
@@ -6000,7 +5996,6 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
 
       /* delete strong branching information of some exists */
       deleteLastDualBndchgs(reopt);
-      strongbranched = FALSE;
 
       SCIP_CALL( addNode(reopt, set, lp, blkmem, node, SCIP_REOPTTYPE_FEASIBLE, FALSE, isrootnode, lowerbound) );
       break;
@@ -6018,7 +6013,6 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
          if( SCIPnodeGetNumber(node) == reopt->lastbranched )
          {
             deleteLastDualBndchgs(reopt);
-            strongbranched = FALSE;
             break;
          }
 
@@ -6052,7 +6046,6 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
 
                /* delete strong branching information if some exists */
                deleteLastDualBndchgs(reopt);
-               strongbranched = FALSE;
 
                SCIPsetDebugMsg(set, " -> new reopttype   : %d\n", SCIP_REOPTTYPE_PRUNED);
                SCIP_CALL( addNode(reopt, set, lp, blkmem, node, SCIP_REOPTTYPE_PRUNED, FALSE, isrootnode, lowerbound) );

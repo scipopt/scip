@@ -814,7 +814,6 @@ SCIP_RETCODE applyVbounds(
          SCIP_Real cutoff;
 
          minimprove = heurdata->minimprove;
-         cutoff = SCIPinfinity(scip);
          assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
          upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);

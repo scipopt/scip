@@ -2160,8 +2160,8 @@ SCIP_Real SCIPbranchGetScore(
       break;
    default:
       SCIPerrorMessage("invalid branching score function <%c>\n", set->branch_scorefunc);
-      score = 0.0;
       SCIPABORT();
+      score = 0.0;
    }
 
    /* apply the branch factor of the variable */

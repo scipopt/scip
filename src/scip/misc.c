@@ -2148,7 +2148,7 @@ SCIP_RETCODE hashtableInsert(
 
    pos = hashval>>(hashtable->shift);
    elemdistance = 0;
-   while( TRUE )   /*lint !e716*/
+   while( TRUE ) /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2338,7 +2338,7 @@ void* SCIPhashtableRetrieve(
    pos = hashval>>(hashtable->shift);
    elemdistance = 0;
 
-   while( TRUE )   /*lint !e716*/
+   while( TRUE ) /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2409,7 +2409,7 @@ SCIP_RETCODE SCIPhashtableRemove(
 
    elemdistance = 0;
    pos = hashval>>(hashtable->shift);
-   while( TRUE )   /*lint !e716*/
+   while( TRUE ) /*lint !e716*/
    {
       /* slots empty so element not contained */
       if( hashtable->hashes[pos] == 0 )
@@ -2435,7 +2435,7 @@ SCIP_RETCODE SCIPhashtableRemove(
    /* remove element */
    hashtable->hashes[pos] = 0;
    --hashtable->nelements;
-   while( TRUE )   /*lint !e716*/
+   while( TRUE ) /*lint !e716*/
    {
       uint32_t nextpos = (pos + 1) & hashtable->mask;
 
@@ -2609,7 +2609,7 @@ SCIP_RETCODE hashmapInsert(
 
    pos = hashval>>(hashmap->shift);
    elemdistance = 0;
-   while( TRUE )   /*lint !e716*/
+   while( TRUE ) /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2687,7 +2687,7 @@ SCIP_Bool hashmapLookup(
    *pos = hashval>>(hashmap->shift);
    elemdistance = 0;
 
-   while( TRUE )   /*lint !e716*/
+   while( TRUE ) /*lint !e716*/
    {
       uint32_t distance;
 
@@ -3030,7 +3030,7 @@ SCIP_RETCODE SCIPhashmapRemove(
       --hashmap->nelements;
 
       /* move other elements if necessary */
-      while( TRUE )   /*lint !e716*/
+      while( TRUE ) /*lint !e716*/
       {
          uint32_t nextpos = (pos + 1) & hashmap->mask;
 
@@ -6624,8 +6624,8 @@ void SCIPdigraphFree(
    /* free arrays storing the successor nodes and arc data */
    for( i = digraphptr->nnodes - 1; i >= 0; --i )
    {
-      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->successors[i], digraphptr->successorssize[i]);
-      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->arcdata[i], digraphptr->successorssize[i]);
+      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->successors[i], digraphptr->successorssize[i]); /*lint !e866*/
+      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->arcdata[i], digraphptr->successorssize[i]); /*lint !e866*/
    }
 
    /* free components structure */

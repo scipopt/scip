@@ -1974,6 +1974,7 @@ SCIP_RETCODE computeAndConstraintInfos(
       /* check that all and-constraints doesn't contain any and-resultants, if they do try to resolve this */
       /* attention: if resolving leads to x = x*y*... , we can't do anything here ( this only means (... >=x and) y >= x, so normally the and-constraint needs to be
          deleted and the inequality from before needs to be added ) */
+      assert(*nandvars != NULL || *nresvars == 0);
       for( r = *nresvars - 1; r >= 0; --r )
       {
          ncontainedands = 0;

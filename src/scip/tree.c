@@ -1477,7 +1477,6 @@ SCIP_RETCODE nodeDeactivate(
       stat->ndeactivatednodes++;
 
    /* free node if it is a dead-end node, i.e., has no children */
-   freeNode = FALSE;
    switch( SCIPnodeGetType(node) )   
    {
    case SCIP_NODETYPE_FOCUSNODE:
@@ -4830,7 +4829,7 @@ SCIP_RETCODE SCIPtreeCreateRoot(
    /* check, if the sizes in the data structures match the maximal numbers defined here */
    tree->root->depth = SCIP_MAXTREEDEPTH + 1;
    tree->root->repropsubtreemark = MAXREPROPMARK;
-   assert(tree->root->depth - 1 == SCIP_MAXTREEDEPTH);
+   assert(tree->root->depth - 1 == SCIP_MAXTREEDEPTH); /*lint !e650*/
    assert(tree->root->repropsubtreemark == MAXREPROPMARK);
    tree->root->depth++;             /* this should produce an overflow and reset the value to 0 */
    tree->root->repropsubtreemark++; /* this should produce an overflow and reset the value to 0 */

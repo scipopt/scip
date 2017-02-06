@@ -716,7 +716,7 @@ void SCIPsyncdataGetSolutionBuffer(
 
    for( pos = 0; pos < syncdata->nsols; ++pos )
    {
-      if( syncdata->solobj[pos] < solobj || (syncdata->solobj[pos] == solobj && ownerid < syncdata->solsource[pos]) )
+      if( syncdata->solobj[pos] < solobj || (syncdata->solobj[pos] == solobj && ownerid < syncdata->solsource[pos]) ) /*lint !e777*/
          break;
    }
 

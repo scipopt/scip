@@ -871,7 +871,6 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
 {
    SCIP_Real improvement;
    int ndelconfs;
-   int ndelconfs_del;
    int i;
 
    assert(conflictstore != NULL);
@@ -881,7 +880,6 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
    assert(transprob != NULL);
 
    ndelconfs = 0;
-   ndelconfs_del = 0;
 
    /* return if we do not want to use the storage */
    if( set->conf_maxstoresize == 0 )
@@ -923,8 +921,8 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
    assert(conflictstore->ncbconflicts >= 0);
    assert(conflictstore->nconflicts >= 0);
 
-   SCIPsetDebugMsg(set, "-> removed %d/%d conflicts, %d depending on cutoff bound\n", ndelconfs+ndelconfs_del,
-         conflictstore->nconflicts+ndelconfs+ndelconfs_del, ndelconfs);
+   SCIPsetDebugMsg(set, "-> removed %d/%d conflicts, %d depending on cutoff bound\n", ndelconfs,
+         conflictstore->nconflicts+ndelconfs, ndelconfs);
 
    return SCIP_OKAY;
 }

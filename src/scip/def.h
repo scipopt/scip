@@ -263,7 +263,7 @@ extern "C" {
  *  @note In optimized mode this macro has no effect. That means, in case of an error it has to be ensured that code
  *        terminates with an error code or continues safely.
  */
-#define SCIPABORT() assert(FALSE)
+#define SCIPABORT() assert(FALSE) /*lint --e{527} */
 
 #define SCIP_CALL_ABORT_QUIET(x)  do { if( (x) != SCIP_OKAY ) SCIPABORT(); } while( FALSE )
 #define SCIP_CALL_QUIET(x)        do { SCIP_RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; } while( FALSE )
@@ -272,7 +272,7 @@ extern "C" {
 
 #define SCIP_CALL_ABORT(x) do                                                                                 \
                        {                                                                                      \
-                          SCIP_RETCODE _restat_;                                                              \
+                          SCIP_RETCODE _restat_; /*lint -e{506,774}*/                                         \
                           if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
                           {                                                                                   \
                              SCIPerrorMessage("Error <%d> in function call\n", _restat_);                     \
@@ -293,7 +293,7 @@ extern "C" {
 
 #define SCIP_CALL(x)   do                                                                                     \
                        {                                                                                      \
-                          SCIP_RETCODE _restat_;                                                              \
+                          SCIP_RETCODE _restat_; /*lint -e{506,774}*/                                         \
                           if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
                           {                                                                                   \
                              SCIPerrorMessage("Error <%d> in function call\n", _restat_);                     \

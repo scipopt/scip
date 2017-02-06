@@ -1404,7 +1404,6 @@ SCIP_Bool takeCut(
    if( !SCIProwIsInLP(SCIPcutGetRow(cut)) )
       return FALSE;
 
-   takecut = FALSE;
    switch( cutsel )
    {
       case 'a':
@@ -10175,7 +10174,6 @@ SCIP_RETCODE writeProblem(
    compression = NULL;
    file = NULL;
    tmpfilename = NULL;
-   retcode = SCIP_OKAY;
 
    if( filename != NULL &&  filename[0] != '\0' )
    {
@@ -14140,7 +14138,6 @@ SCIP_RETCODE presolveRound(
    *unbounded = FALSE;
    *infeasible = FALSE;
    aborted = FALSE;
-   lastranpresol = FALSE;
 
    assert( scip->set->propspresolsorted );
 

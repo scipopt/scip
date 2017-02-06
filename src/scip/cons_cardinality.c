@@ -2508,9 +2508,9 @@ SCIP_DECL_CONSPRESOL(consPresolCardinality)
    SCIPdebugMsg(scip, "Presolving cardinality constraints.\n");
 
    *result = SCIP_DIDNOTRUN;
-   oldnfixedvars = *nfixedvars;
-   oldndelconss = *ndelconss;
-   oldnupgdconss = *nupgdconss;
+   SCIPdebug( oldnfixedvars = *nfixedvars; )
+   SCIPdebug( oldndelconss = *ndelconss; )
+   SCIPdebug( oldnupgdconss = *nupgdconss; )
    nremovedvars = 0;
 
    /* only run if success if possible */

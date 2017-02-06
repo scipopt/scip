@@ -364,8 +364,6 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    lperror = FALSE;
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    divedepth = 0;
-   bestcandmayrounddown = FALSE;
-   bestcandmayroundup = FALSE;
    startnlpcands = nlpcands;
    while( !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
       && (divedepth < 10

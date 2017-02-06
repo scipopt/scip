@@ -265,7 +265,6 @@ SCIP_RETCODE constructCompression(
          SCIP_CALL( SCIPallocClearMemoryArray(scip, &common_vars, SCIPgetNOrigVars(scip)) );
 
          /* allocate buffer */
-         ncommon_vars = 0;
          nnon_zero_vars = 0;
          SCIP_CALL( SCIPallocBufferArray(scip, &idx_common_vars, nvars[current_id]) );
          SCIP_CALL( SCIPallocBufferArray(scip, &idx_non_zero, nvars[current_id]) );

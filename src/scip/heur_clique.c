@@ -921,7 +921,6 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          SCIP_Real cutoffbound;
 
          minimprove = heurdata->minimprove;
-         cutoffbound = SCIPinfinity(scip);
          assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
          upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);

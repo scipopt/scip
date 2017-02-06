@@ -1785,7 +1785,6 @@ SCIP_RETCODE findShortestPathToRoot(
    startQueue = 0;
    endQueue = 0;
    queue[0] = startnode;
-   v = 0;
 
    /* as long as queue is not empty */
    while( startQueue <= endQueue )
@@ -1977,7 +1976,6 @@ findUnblockedShortestPathToRoot(
    startQueue = 0;
    endQueue = 0;
    queue[0] = startnode;
-   v = 0;
 
    /* as long as queue is not empty */
    while( startQueue <= endQueue )
@@ -2278,7 +2276,7 @@ SCIP_RETCODE separateHeur(
    assert(nscipimplvars >= 0);
 
    nintegral = nscipbinvars + nscipintvars + nscipimplvars;
-   assert(scipvars != NULL || nintegral == 0);
+   assert(scipvars != NULL || ((nscipbinvars == 0) && (nscipintvars == 0) && (nscipimplvars == 0) && (nintegral == 0)));
 
    /* collect binary variables, including implicit binary */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nintegral) );
@@ -3012,7 +3010,7 @@ SCIP_RETCODE separateGLS(
    assert(nscipimplvars >= 0);
 
    nintegral = nscipbinvars + nscipintvars + nscipimplvars;
-   assert(scipvars != NULL || nintegral == 0);
+   assert(scipvars != NULL || ((nscipbinvars == 0) && (nscipintvars == 0) && (nscipimplvars == 0) && (nintegral == 0)));
 
    /* collect binary variables, including implicit binary */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nintegral) );
@@ -3600,7 +3598,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
 
    *result = SCIP_DIDNOTFIND;
    sepadata->oldncuts = sepadata->ncuts;
-   oldnliftedcuts = sepadata->nliftedcuts;
+   SCIPdebug( oldnliftedcuts = sepadata->nliftedcuts; )
 
    if( depth == 0 )
       sepadata->maxsepacutsround = sepadata->maxsepacutsroot;

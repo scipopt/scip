@@ -446,7 +446,6 @@ void getActivities(
          if( tmpval <= tmpupperbds[minsortedidx[i]] )
          {
             *minact += coefbaseoverlap[minsortedidx[i]] * tmpval;
-            minlhs -= coefotheroverlap[minsortedidx[i]] * tmpval;
             break;
          }
          else
@@ -517,7 +516,6 @@ void getActivities(
          if( tmpval <= tmpupperbds[maxsortedidx[i]] )
          {
             *maxact += coefbaseoverlap[maxsortedidx[i]] * tmpval;
-            maxlhs -= coefotheroverlap[maxsortedidx[i]] * tmpval;
             break;
          }
          else

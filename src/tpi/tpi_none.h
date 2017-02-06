@@ -40,7 +40,7 @@
 #define SCIPtpiDestroyCondition(condition)    SCIP_UNUSED(condition)
 #define SCIPtpiSignalCondition(condition)     (SCIP_UNUSED(condition), SCIP_OKAY)
 #define SCIPtpiBroadcastCondition(condition)  (SCIP_UNUSED(condition), SCIP_OKAY)
-#define SCIPtpiWaitCondition(condition, lock) (SCIP_UNUSED(condition), SCIP_UNUSED(lock), SCIP_OKAY)
+#define SCIPtpiWaitCondition(condition, lock) /*lint -e505*/ (SCIP_UNUSED(condition), SCIP_UNUSED(lock), SCIP_OKAY)
 
 
 #define SCIPtpiGetNumThreads()                1

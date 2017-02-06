@@ -128,7 +128,7 @@ struct SCIP_ConshdlrData
 /** constraint data for set partitioning / packing / covering constraints */
 struct SCIP_ConsData
 {
-   SCIP_Longint          signature;          /**< bit signature of vars array */
+   uint64_t              signature;          /**< bit signature of vars array */
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    SCIP_VAR**            vars;               /**< variables of the constraint */
    int                   varssize;           /**< size of vars array */
@@ -743,21 +743,9 @@ SCIP_RETCODE consdataPrint(
    return SCIP_OKAY;
 }
 
-/** returns the signature bitmask for the given variable */
-static
-SCIP_Longint getVarSignature(
-   SCIP_VAR*             var                 /**< variable */
-   )
-{
-   int sigidx;
-
-   sigidx = SCIPvarGetIndex(var) % (int)(8*sizeof(SCIP_Longint));
-   return (SCIP_Longint) ((unsigned SCIP_Longint)1) << sigidx; /*lint !e703*/
-}
-
 /** returns the bit signature of the given constraint data */
 static
-SCIP_Longint consdataGetSignature(
+uint64_t consdataGetSignature(
    SCIP_CONSDATA*        consdata            /**< set partitioning / packing / covering constraint data */
    )
 {
@@ -769,7 +757,7 @@ SCIP_Longint consdataGetSignature(
 
       consdata->signature = 0;
       for( i = 0; i < consdata->nvars; ++i )
-         consdata->signature |= getVarSignature(consdata->vars[i]);
+         consdata->signature |= SCIPhashSignature64(SCIPvarGetIndex(consdata->vars[i]));
       consdata->validsignature = TRUE;
    }
 
@@ -1062,7 +1050,7 @@ SCIP_RETCODE addCoef(
    consdata->vars[consdata->nvars] = var;
    consdata->nvars++;
    if( consdata->validsignature )
-      consdata->signature |= getVarSignature(var);
+      consdata->signature |= SCIPhashSignature64(SCIPvarGetIndex(var));
    consdata->sorted = (consdata->nvars == 1);
    consdata->changed = TRUE;
 
@@ -5303,9 +5291,9 @@ SCIP_RETCODE addCliques(
    int c;
 
    assert(scip != NULL);
-   assert(conss != NULL || nconss == 0);
    assert(firstclique >= 0);
    assert(lastclique <= nconss);
+   assert(conss != NULL || ((nconss == 0) && (lastclique == 0)));
 
    /* add clique and implication information */
    for( c = firstclique; c < lastclique; ++c )
@@ -6554,7 +6542,7 @@ SCIP_RETCODE removeRedundantConstraints(
 {
    SCIP_CONS* cons0;
    SCIP_CONSDATA* consdata0;
-   SCIP_Longint signature0;
+   uint64_t signature0;
    SCIP_Bool cons0changed;
    int c;
 
@@ -6589,8 +6577,8 @@ SCIP_RETCODE removeRedundantConstraints(
    {
       SCIP_CONS* cons1;
       SCIP_CONSDATA* consdata1;
-      SCIP_Longint signature1;
-      SCIP_Longint jointsignature;
+      uint64_t signature1;
+      uint64_t jointsignature;
       SCIP_Bool cons0iscontained;
       SCIP_Bool cons1iscontained;
       int v0;

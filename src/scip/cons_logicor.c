@@ -1530,7 +1530,6 @@ SCIP_RETCODE checkCons(
 
    /* calculate the constraint's activity */
    sum = 0.0;
-   solval = 0.0;
    for( v = 0; v < nvars && sum < 1.0; ++v )
    {
       assert(SCIPvarIsBinary(vars[v]));
@@ -3387,8 +3386,7 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
          SCIP_Bool neg1;
          int w;
 
-	 var1 = repvars[v];
-	 neg1 = negated[v];
+         var1 = repvars[v];
 
          /* if there is no negated variable, there can't be a negated clique */
          if( SCIPvarGetNegatedVar(var1) == NULL )
@@ -3406,21 +3404,20 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
          if( !SCIPvarIsActive(var1) )
             continue;
 
-	 /* no cliques available */
-	 if( SCIPvarGetNCliques(var1, neg1) == 0 && SCIPvarGetNImpls(var1, neg1) == 0 )
-	    continue;
+         /* no cliques available */
+         if( SCIPvarGetNCliques(var1, neg1) == 0 && SCIPvarGetNImpls(var1, neg1) == 0 )
+            continue;
 
-	 comppercons += (v - 1);
+         comppercons += (v - 1);
 
          breakloop = FALSE;
 
          for( w = v - 1; w >= 0; --w )
          {
-	    SCIP_VAR* var2;
+            SCIP_VAR* var2;
             SCIP_Bool neg2;
 
-	    var2 = repvars[w];
-	    neg2 = negated[w];
+            var2 = repvars[w];
 
             /* if there is no negated variable, there can't be a negated clique */
             if( SCIPvarGetNegatedVar(var2) == NULL )
@@ -3437,44 +3434,44 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
             if( !SCIPvarIsActive(var2) )
                continue;
 
-	    /* no cliques available */
-	    if( SCIPvarGetNCliques(var2, neg2) == 0 && SCIPvarGetNImpls(var2, neg2) == 0 )
-	       continue;
+            /* no cliques available */
+            if( SCIPvarGetNCliques(var2, neg2) == 0 && SCIPvarGetNImpls(var2, neg2) == 0 )
+               continue;
 
-	    /* check if both active variable are the same */
-	    if( var1 == var2 )
-	    {
-	       if( neg1 != neg2 )
-	       {
-		  SCIPdebugMsg(scip, "logicor constraint <%s> is redundant, because variable <%s> and its negation <%s> exist\n",
-                     SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
+            /* check if both active variable are the same */
+            if( var1 == var2 )
+            {
+               if( neg1 != neg2 )
+               {
+                  SCIPdebugMsg(scip, "logicor constraint <%s> is redundant, because variable <%s> and its negation <%s> exist\n",
+                               SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
 
-		  SCIP_CALL( SCIPdelCons(scip, cons) );
+                  SCIP_CALL( SCIPdelCons(scip, cons) );
 
-		  breakloop = TRUE;
-	       }
-	       else
-	       {
-#ifndef NDEBUG
-		  SCIP_VAR* lastvar = consdata->vars[consdata->nvars - 1];
-#endif
-		  SCIPdebugMsg(scip, "in logicor constraint <%s>, active variable of <%s> and active variable of <%s> are the same, removing the first\n",
-                     SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[v]), SCIPvarGetName(consdata->vars[w]));
+                  breakloop = TRUE;
+               }
+               else
+               {
+                  #ifndef NDEBUG
+                  SCIP_VAR* lastvar = consdata->vars[consdata->nvars - 1];
+                  #endif
+                  SCIPdebugMsg(scip, "in logicor constraint <%s>, active variable of <%s> and active variable of <%s> are the same, removing the first\n",
+                               SCIPconsGetName(cons), SCIPvarGetName(consdata->vars[v]), SCIPvarGetName(consdata->vars[w]));
 
-		  SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+                  SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
 
-		  if( v < consdata->nvars )
-		  {
-		     /* delCoefPos replaces the variable on position v with the last one, so w also need to correct the
-		      * negated array the same way, and because of deletion the number of variables is already decreased
-		      */
-		     assert(consdata->vars[v] == lastvar);
-		     negated[v] = negated[consdata->nvars];
-		  }
-		  ++(*nchgcoefs);
-	       }
-	       break;
-	    }
+                  if( v < consdata->nvars )
+                  {
+                     /* delCoefPos replaces the variable on position v with the last one, so w also need to correct the
+                      * negated array the same way, and because of deletion the number of variables is already decreased
+                      */
+                     assert(consdata->vars[v] == lastvar);
+                     negated[v] = negated[consdata->nvars];
+                  }
+                  ++(*nchgcoefs);
+               }
+               break;
+            }
 
             if( SCIPvarsHaveCommonClique(var1, neg1, var2, neg2, TRUE) && conshdlrsetppc != NULL )
             {
@@ -3522,9 +3519,9 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
          if( breakloop )
             break;
 
-	 /* do not do to many comparisons */
-	 if( comppercons > maxcomppercons )
-	    break;
+         /* do not do to many comparisons */
+         if( comppercons > maxcomppercons )
+            break;
       }
    }
 
