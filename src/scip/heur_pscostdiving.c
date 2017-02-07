@@ -63,7 +63,6 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 };
 
 /*
@@ -124,9 +123,6 @@ SCIP_DECL_HEURINIT(heurInitPscostdiving) /*lint --e{715}*/
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
-   /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
-
    return SCIP_OKAY;
 }
 
@@ -144,8 +140,6 @@ SCIP_DECL_HEUREXIT(heurExitPscostdiving) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
 
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
@@ -190,8 +184,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
    SCIP_Bool mayrounddown;
    SCIP_Bool mayroundup;
 
-   assert(heurdata != NULL);
-
    mayrounddown = SCIPvarMayRoundDown(cand);
    mayroundup = SCIPvarMayRoundUp(cand);
 
@@ -214,19 +206,19 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
    if( mayrounddown != mayroundup )
       *roundup = mayrounddown;
    else if( SCIPisLT(scip, candsol, SCIPvarGetRootSol(cand) - 0.4)
-         || (SCIPisEQ(scip, candsol, SCIPvarGetRootSol(cand) - 0.4) && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0) )
+         || (SCIPisEQ(scip, candsol, SCIPvarGetRootSol(cand) - 0.4) && SCIPrandomGetInt(SCIPdivesetGetRandnumgen(diveset), 0, 1) == 0) )
       *roundup = FALSE;
    else if( SCIPisGT(scip, candsol, SCIPvarGetRootSol(cand) + 0.4)
-         || (SCIPisEQ(scip, candsol, SCIPvarGetRootSol(cand) + 0.4) && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0) )
+         || (SCIPisEQ(scip, candsol, SCIPvarGetRootSol(cand) + 0.4) && SCIPrandomGetInt(SCIPdivesetGetRandnumgen(diveset), 0, 1) == 0) )
       *roundup = TRUE;
    else if( SCIPisLT(scip, candsfrac, 0.3)
-         || (SCIPisLT(scip, candsfrac, 0.3) && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0) )
+         || (SCIPisLT(scip, candsfrac, 0.3) && SCIPrandomGetInt(SCIPdivesetGetRandnumgen(diveset), 0, 1) == 0) )
       *roundup = FALSE;
    else if( SCIPisGT(scip, candsfrac, 0.7)
-         || (SCIPisEQ(scip, candsfrac, 0.7) && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0) )
+         || (SCIPisEQ(scip, candsfrac, 0.7) && SCIPrandomGetInt(SCIPdivesetGetRandnumgen(diveset), 0, 1) == 0) )
       *roundup = TRUE;
    else if( SCIPisEQ(scip, pscostdown, pscostup) )
-      *roundup = (SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0);
+      *roundup = (SCIPrandomGetInt(SCIPdivesetGetRandnumgen(diveset), 0, 1) == 0);
    else if( pscostdown > pscostup )
       *roundup = TRUE;
    else
@@ -278,7 +270,7 @@ SCIP_RETCODE SCIPincludeHeurPscostdiving(
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
-         DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScorePscostdiving) );
+         DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScorePscostdiving) );
 
    return SCIP_OKAY;
 }

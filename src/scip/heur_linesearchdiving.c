@@ -56,7 +56,7 @@
 #define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
-
+#define DEFAULT_RANDSEED             83 /**< default initialization for random seed number generation */
 /*
  * Data structures
  */
@@ -276,7 +276,7 @@ SCIP_RETCODE SCIPincludeHeurLinesearchdiving(
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
-         DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS,
+         DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED,
          DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScoreLinesearchdiving) );
 
    return SCIP_OKAY;
