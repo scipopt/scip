@@ -35,9 +35,7 @@
 extern "C" {
 #endif
 
-/**@defgroup PublicDisplayMethods Displays
- * @ingroup PluginManagementMethods
- * @brief  methods for the inclusion and access of display plugins
+/**@addtogroup PublicDisplayMethods
  *
  * @{
  */

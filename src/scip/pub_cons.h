@@ -41,9 +41,7 @@ extern "C" {
  * Constraint handler methods
  */
 
-/**@defgroup PublicConshdlrMethods Constraint handlers
- * @ingroup PluginManagementMethods
- * @brief methods for constraint handlers
+/**@addtogroup PublicConshdlrMethods
  *
  * @{
  */
@@ -520,9 +518,7 @@ void SCIPconshdlrSetPresolTiming(
  * Constraint methods
  */
 
-/**@defgroup PublicConstraintMethods Problem Constraints
- * @ingroup PublicProblemMethods
- * @brief Public methods for constraints
+/**@addtogroup PublicConstraintMethods
  *
  * @{
  */

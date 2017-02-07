@@ -32,9 +32,7 @@
 extern "C" {
 #endif
 
-/**@defgroup PublicNodeSelectorMethods Node Selector
- * @ingroup PluginManagementMethods
- * @brief  methods for node selector plugin management
+/**@addtogroup PublicNodeSelectorMethods
  *
  * @{
  */

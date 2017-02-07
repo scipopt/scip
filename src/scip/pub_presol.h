@@ -33,9 +33,7 @@
 extern "C" {
 #endif
 
-/**@defgroup PublicPresolverMethods Presolver
- * @ingroup PluginManagementMethods
- * @brief methods for presolver plugins
+/**@addtogroup PublicPresolverMethods
  *
  * @{
  */

@@ -47,9 +47,7 @@ extern "C" {
  * methods for variables 
  */
 
-/**@defgroup PublicVariableMethods Problem Variables
- * @ingroup PublicProblemMethods
- * @brief public methods for problem variables
+/**@addtogroup PublicVariableMethods
  *
  * @{
  */

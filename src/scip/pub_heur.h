@@ -33,9 +33,7 @@
 extern "C" {
 #endif
 
-/**@defgroup PublicHeuristicMethods Primal Heuristics
- * @ingroup PluginManagementMethods
- * @brief  methods for primal heuristic plugins
+/**@addtogroup PublicHeuristicMethods
  *
  * @{
  */
@@ -200,9 +198,7 @@ void SCIPdivesetSetWorkSolution(
    SCIP_SOL*             sol                 /**< new working solution for this dive set, or NULL */
    );
 
-/**@defgroup PublicDivesetMethods Dive sets
- * @ingroup PublicSpecialHeuristicMethods
- * @brief methods for dive sets to control the generic diving algorithm
+/**@addtogroup PublicDivesetMethods
  *
  * @{
  */

@@ -255,17 +255,6 @@ void SCIPgmlWriteClosing(
 
 /**@} */
 
-
-/** @defgroup DataStructures Data Structures
- *  @ingroup PUBLICCOREAPI
- *  @brief commonly used data structures
- *
- *  Below you find a list of available data structures
- *
- * @{
- */
-
-
 /*
  * Sparse solution
  */
@@ -339,6 +328,7 @@ SCIP_Bool SCIPsparseSolGetNextSol(
  */
 
 /**@defgroup Queue Queue
+ * @ingroup DataStructures
  * @brief circular FIFO queue
  *
  * @{
@@ -404,6 +394,7 @@ int SCIPqueueNElems(
  */
 
 /**@defgroup PriorityQueue Priority Queue
+ * @ingroup DataStructures
  * @brief priority queue with O(1) access to the minimum element
  *
  * @{
@@ -469,6 +460,7 @@ void** SCIPpqueueElems(
  */
 
 /**@defgroup HashTable Hash Table
+ * @ingroup DataStructures
  * @brief hash table that resolves conflicts by probing
  *
  *@{
@@ -592,6 +584,7 @@ void SCIPhashtablePrintStatistics(
  */
 
 /**@defgroup MultiHash Multi Hash table
+ * @ingroup DataStructures
  * @brief hash table that resolves conflicts by queueing, thereby allowing for duplicate entries
  *
  *@{
@@ -735,6 +728,7 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr);
  */
 
 /**@defgroup HashMap Hash Map
+ * @ingroup DataStructures
  * @brief hash map to store key-value pairs (called \p origin and \p image)
  *
  * @{
@@ -883,7 +877,8 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
  */
 
 /**@defgroup ResourceActivity Resource Activity
- * @ ressource activity data structure
+ * @ingroup DataStructures
+ * @brief ressource activity data structure
  *
  * @{
  */
@@ -946,6 +941,7 @@ int SCIPactivityGetEnergy(
  */
 
 /**@defgroup ResourceProfile Resource Profile
+ * @ingroup DataStructures
  * @brief ressource profile data structure
  *
  * @{
@@ -1075,6 +1071,7 @@ int SCIPprofileGetLatestFeasibleStart(
  */
 
 /**@defgroup DirectedGraph Directed Graph
+ * @ingroup DataStructures
  * @brief graph structure with common algorithms for directed and undirected graphs
  *
  * @{
@@ -1304,6 +1301,7 @@ void SCIPdigraphPrintComponents(
  */
 
 /**@defgroup BinaryTree Binary Search Tree
+ * @ingroup DataStructures
  * @brief binary search tree data structure
  *@{
  */
@@ -1497,22 +1495,12 @@ void SCIPbtSetRoot(
 
 /**@} */
 
-/**@} */
-
-
-/**@defgroup MiscellaneousMethods Miscellaneous Methods
- * @ingroup PUBLICCOREAPI
- * @brief commonly used methods from different categories
- *
- * Below you find a list of miscellaneous methods grouped by different categories
- * @{
- */
-
 /*
  * Numerical methods
  */
 
 /**@defgroup NumericalMethods Numerical Methods
+ * @ingroup MiscellaneousMethods
  * @brief commonly used numerical methods
  *
  * @{
@@ -1655,6 +1643,7 @@ SCIP_Real SCIPcomputeGap(
  */
 
 /**@defgroup RandomNumbers Random Numbers
+ * @ingroup MiscellaneousMethods
  * @brief structures and methods for pseudo random number generation
  *
  *@{
@@ -1751,6 +1740,7 @@ SCIP_RETCODE SCIPgetRandomSubset(
  */
 
 /**@defgroup PermutationsShuffling Permutations Shuffling
+ * @ingroup MiscellaneousMethods
  * @brief methods for shuffling arrays
  *
  * @{
@@ -1829,6 +1819,7 @@ void SCIPpermuteArray(
  */
 
 /**@defgroup Arrays Arrays
+ * @ingroup MiscellaneousMethods
  * @brief miscellaneous methods for arrays
  *
  * @{
@@ -1869,6 +1860,7 @@ SCIP_RETCODE SCIPcomputeArraysSetminus(
  */
 
 /**@defgroup StringMethods String Methods
+ * @ingroup MiscellaneousMethods
  * @brief commonly used methods for strings
  *
  *@{
@@ -1964,6 +1956,7 @@ void SCIPstrCopySection(
  */
 
 /**@defgroup FileMethods File Methods
+ * @ingroup MiscellaneousMethods
  * @brief commonly used file methods
  *
  * @{
@@ -1984,8 +1977,6 @@ void SCIPsplitFilename(
    char**                extension,          /**< pointer to store extension, or NULL if not needed */
    char**                compression         /**< pointer to store compression extension, or NULL if not needed */
    );
-
-/**@} */
 
 /**@} */
 
