@@ -23,8 +23,11 @@
  * @todo allow smaller fixing rate for probing LP?
  * @todo allow smaller fixing rate after presolve if total number of variables is small (<= 1000)?
  *
- * More details about the heuristic can be found in "Structure-Based Primal Heuristics for Mixed Integer Programming"
- * by Gamrath, Berthold, Heinz, Winkler: http://link.springer.com/chapter/10.1007%2F978-4-431-55420-2_3
+ * More details about the heuristic can be found in@n
+ * Structure-Based Primal Heuristics for Mixed Integer Programming@n
+ * Gerald Gamrath, Timo Berthold, Stefan Heinz, and Michael Winkler@n
+ * Optimization in the Real World, Volume 13 of the series Mathematics for Industry, pp 37-53@n
+ * Preliminary version available as <a href="https://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/5551">ZIB-Report 15-26</a>.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
