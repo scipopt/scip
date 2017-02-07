@@ -1139,7 +1139,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    heurdata = SCIPheurGetData(heur);
    SCIPdebugMsg(scip, "%s\n", heurdata->filename);
 
-   /* checks the result pointer*/
+   /* checks the result pointer */
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 
