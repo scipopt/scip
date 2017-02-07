@@ -8736,14 +8736,14 @@ void randomInitialize(
  *  [1] http://dl.acm.org/citation.cfm?doid=1268776.1268777
  */
 static
-int randomGetRand(
+uint32_t randomGetRand(
    SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
    )
 {
-   unsigned long t;
+   uint64_t t;
 
    /* linear congruential */
-   randnumgen->seed = (unsigned int) (randnumgen->seed * (SCIP_Longint)1103515245 + 12345);
+   randnumgen->seed = (uint32_t) (randnumgen->seed * UINT64_C(1103515245) + UINT64_C(12345));
 
    /* Xorshift */
    randnumgen->xor_seed ^= (randnumgen->xor_seed << 13);
@@ -8751,11 +8751,11 @@ int randomGetRand(
    randnumgen->xor_seed ^= (randnumgen->xor_seed << 5);
 
    /* Multiply-with-carry */
-   t = 698769069ULL * randnumgen->mwc_seed + randnumgen->cst_seed;
-   randnumgen->cst_seed = t >> 32;
-   randnumgen->mwc_seed = (unsigned int) t;
+   t = UINT64_C(698769069) * randnumgen->mwc_seed + randnumgen->cst_seed;
+   randnumgen->cst_seed = (uint32_t) (t >> 32);
+   randnumgen->mwc_seed = (uint32_t) t;
 
-   return (int)((randnumgen->seed + randnumgen->xor_seed + randnumgen->mwc_seed) % INT_MAX);
+   return randnumgen->seed + randnumgen->xor_seed + randnumgen->mwc_seed;
 }
 
 /** creates and initializes a random number generator */
@@ -8797,11 +8797,11 @@ int SCIPrandomGetInt(
 {
    SCIP_Real randnumber;
 
-   randnumber = (SCIP_Real)randomGetRand(randnumgen)/(INT_MAX+1.0);
+   randnumber = (SCIP_Real)randomGetRand(randnumgen)/(UINT32_MAX+1.0);
    assert(randnumber >= 0.0);
    assert(randnumber < 1.0);
 
-   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than INT_MAX
+   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than UINT32_MAX
     * apart
     */
    return (int) (minrandval*(1.0 - randnumber) + maxrandval*randnumber + randnumber);
@@ -8816,7 +8816,7 @@ SCIP_Real SCIPrandomGetReal(
 {
    SCIP_Real randnumber;
 
-   randnumber = (SCIP_Real)randomGetRand(randnumgen)/(SCIP_Real)INT_MAX;
+   randnumber = (SCIP_Real)randomGetRand(randnumgen)/(SCIP_Real)UINT32_MAX;
    assert(randnumber >= 0.0);
    assert(randnumber <= 1.0);
 
