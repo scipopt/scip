@@ -20,7 +20,7 @@
  *
  * Branching rule based on muliple optimal solutions to the current LP relaxation. See@n
  * Cloud Branching@n
- * Time Berthold and Domenico Salvagnin@n
+ * Timo Berthold and Domenico Salvagnin@n
  * Integration of AI and OR Techniques in Constraint Programming for Combinatorial Optimization Problems, CPAIOR 2013, LNCS 7874@n
  * Preliminary version available as <a href="http://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/1730">ZIB-Report 13-01</a>.
  */
