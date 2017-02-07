@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   heur_ascendPrune.h
+/**@file   heur_ascendprune.h
  * @ingroup PRIMALHEURISTICS
  * @brief  reduction and dual-cost based primal heuristic for Steiner problems
  * @author Daniel Rehfeldt
