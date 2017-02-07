@@ -111,7 +111,7 @@
  *
  * @section FURTHERINFO Further information
  *
- * @subsection CHG Changes between different versions of \SCIP
+ * @subsection CHG Changes between different versions of SCIP
  * - \ref CHANGELOG    "Change log"
  * - \ref RELEASENOTES "Release notes"
  * - \ref CHG8         "Interface changes between version 3.1 and 3.2"
@@ -123,7 +123,7 @@
  * - \ref CHG2         "Interface changes between version 1.0 and 1.1"
  * - \ref CHG1         "Interface changes between version 0.9 and 1.0"
  *
- * @subsection AUTHORS \SCIP Authors
+ * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
  * @version  4.0.0
@@ -259,6 +259,14 @@
  *  </tr>
  *  <tr>
  *  <td>
+ *  <a href="http://scip.zib.de/doc/applications/MinIISC"><b>MinIISC</b></a>
+ *  </td>
+ *  <td>
+ *  A solver that computes irreducible infeasible subsystems using Benders decomposition
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
  *  <a href="http://scip.zib.de/doc/applications/Scheduler"><b>Scheduler</b></a>
  *  </td>
  *  <td>
@@ -275,7 +283,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/applications/Poly\SCIP"><b>PolySCIP</b></a>
+ *  <a href="http://scip.zib.de/doc/applications/PolySCIP"><b>PolySCIP</b></a>
  *  </td>
  *  <td>
  *  A solver for multi-objective optimization problems.
