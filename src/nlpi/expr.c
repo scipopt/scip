@@ -5553,6 +5553,7 @@ SCIP_RETCODE exprParse(
          if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
          {
             SCIP_CALL( SCIPexprMulConstant(blkmem, expr, arg1, 1.0 / SCIPexprGetOpReal(arg2)) );
+            SCIPexprFreeShallow(blkmem, &arg2);
          }
          else
          {
