@@ -2286,7 +2286,6 @@ SCIP_RETCODE varParse(
    assert(vartype != NULL);
    assert(lazylb != NULL);
    assert(lazyub != NULL);
-   assert(endptr != NULL);
    assert(success != NULL);
 
    (*success) = TRUE;
@@ -3782,7 +3781,6 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
    assert(set != NULL);
    assert(nvars != NULL);
-   assert(vars != NULL || *nvars == 0);
    assert(scalars != NULL || *nvars == 0);
    assert(constant != NULL);
    assert(requiredsize != NULL);
@@ -8663,9 +8661,10 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
    SCIP_Real childnewleft;
    SCIP_Real childnewright;
 
+   assert(var != NULL);
+
    SCIPsetDebugMsg(set, "adding local hole (%g,%g) to <%s>\n", left, right, var->name);
 
-   assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);

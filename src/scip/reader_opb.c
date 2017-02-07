@@ -3886,6 +3886,7 @@ SCIP_RETCODE writeOpbRelevantAnds(
 
          firstprinted = FALSE;
 
+         /* cppcheck-suppress nullPointerRedundantCheck */
          assert( andvars != NULL && nandvars != NULL );
          assert( andvars[r] != NULL || nandvars[r] == 0 );
 

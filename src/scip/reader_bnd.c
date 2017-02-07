@@ -123,6 +123,7 @@ SCIP_RETCODE readBounds(
 
       SCIP_CALL( SCIPparseVarName(scip, buffer, &var, &endptr) );
 
+      /* cppcheck-suppress invalidscanf */
       nread = sscanf(endptr, "%s %s\n", lbstring, ubstring);
       if( nread < 1 )
       {
