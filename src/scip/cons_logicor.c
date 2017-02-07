@@ -1952,7 +1952,7 @@ SCIP_RETCODE detectRedundantConstraints(
 #ifndef NDEBUG
          consdata1 = SCIPconsGetData(cons1);
 #endif
-         assert(consdata0 != NULL && consdata1 != NULL);
+         assert(consdata1 != NULL);
          assert(consdata0->nvars >= 1 && consdata0->nvars == consdata1->nvars);
 
          assert(consdata0->sorted && consdata1->sorted);

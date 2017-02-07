@@ -7069,6 +7069,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    if( ncomponents != NULL )
       (*ncomponents) = digraph->ncomponents;
 
+   /* cppcheck-suppress unusedLabel */
 TERMINATE:
    if( retcode != SCIP_OKAY )
    {
