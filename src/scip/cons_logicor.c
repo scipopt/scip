@@ -2918,11 +2918,11 @@ SCIP_RETCODE removeRedundantConssAndNonzeros(
       }
 
       consdata = SCIPconsGetData(cons);
-      assert(consdata != NULL);
-      assert(consdata->nvars >= 2);
 
       /* sort the constraint */
       consdataSort(consdata);
+
+      assert(consdata->nvars >= 2);
    }
 
    SCIPsortPtr((void**)myconss, conssLogicorComp, nmyconss);

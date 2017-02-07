@@ -129,11 +129,11 @@ SCIP_RETCODE catchVarEventCardinality(
    assert(consdata != NULL);
    assert(var != NULL);
    assert(indvar != NULL);
-   assert(eventdata != NULL);
    assert(pos >= 0);
 
    /* create event data of indicator variable */
    SCIP_CALL( SCIPallocBlockMemory(scip, eventdata) );
+
    (*eventdata)->consdata = consdata;
    (*eventdata)->var = var;
    (*eventdata)->indvar = indvar;

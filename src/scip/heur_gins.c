@@ -275,7 +275,7 @@ SCIP_RETCODE fillVariableGraph(
          continue;
 
 #ifdef SCIP_STATISTIC
-      nconscontvars = 0
+      nconscontvars = 0;
       nconsdiscvars = 0;
 #endif
 
