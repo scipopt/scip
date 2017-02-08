@@ -6194,9 +6194,7 @@ SCIP_RETCODE tightenSingleVar(
       return SCIP_OKAY;
    }
 
-   /* the new bound contradicts a global bound, we need to add a constraint of size 1 that enforces detection
-    * of global infeasibility
-    */
+   /* the new bound contradicts a global bound, we can cutoff the root node immediately */
    if( (boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, newbound, SCIPvarGetUbGlobal(var)))
       || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, SCIPvarGetLbGlobal(var))) )
    {
@@ -6204,8 +6202,8 @@ SCIP_RETCODE tightenSingleVar(
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbGlobal(var),
             SCIPvarGetUbGlobal(var), (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"), newbound);
 
-      SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, transprob, tree, reopt, blkmem, 1, &var, &val,
-            -SCIPsetInfinity(set), rhs, success) );
+      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, tree, reopt, lp, blkmem) );
+      *success = TRUE;
    }
    else
    {
