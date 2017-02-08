@@ -396,10 +396,14 @@ SCIP_Real reoptSimilarity(
       /* get the original variable */
       if( !SCIPvarIsOriginal(origvar) )
       {
+         SCIP_RETCODE retcode;
          SCIP_Real constant = 0.0;
          SCIP_Real scalar = 1.0;
 
-         SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+         retcode = SCIPvarGetOrigvarSum(&origvar, &scalar, &constant);
+
+         if( retcode != SCIP_OKAY )
+            return SCIP_INVALIDDATA;
       }
       assert(origvar != NULL && SCIPvarIsOriginal(origvar));
 
