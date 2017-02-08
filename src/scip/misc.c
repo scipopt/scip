@@ -8801,7 +8801,7 @@ int SCIPrandomGetInt(
    assert(randnumber >= 0.0);
    assert(randnumber < 1.0);
 
-   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than UINT32_MAX
+   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than INT_MAX
     * apart
     */
    return (int) (minrandval*(1.0 - randnumber) + maxrandval*randnumber + randnumber);
