@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4203,7 +4203,7 @@ SCIP_RETCODE separateIISRounding(
    lp = conshdlrdata->altlp;
    assert( lp != NULL );
 
-   nGenOld = *nGen;
+   SCIPdebug( nGenOld = *nGen; )
    SCIPdebugMsg(scip, "Separating IIS-cuts by rounding ...\n");
 
 #ifndef NDEBUG
@@ -5746,9 +5746,8 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
-   oldnfixedvars = *nfixedvars;
-   oldndelconss = *ndelconss;
-
+   SCIPdebug( oldnfixedvars = *nfixedvars; )
+   SCIPdebug( oldndelconss = *ndelconss; )
    /* get constraint handler data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -6978,7 +6977,8 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
             SCIP_Real score;
             SCIP_Bool roundup;
 
-            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_INTEGRALITY, binvar, solval, 0.0, &score, &roundup) );
+            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_INTEGRALITY, binvar, solval, 0.0,
+                  &score, &roundup) );
 
             /* best candidate maximizes the score */
             if( score > bestscore )

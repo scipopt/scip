@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,11 +40,19 @@
 extern "C" {
 #endif
 
-/** creates the sync primal heuristic and includes it in SCIP */
+/** creates the sync primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurSync(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup PRIMALHEURISTICS
+  *
+  * @{
+  */
 
 /** pass solution to sync heuristic */
 EXTERN
@@ -53,6 +61,8 @@ SCIP_RETCODE SCIPheurSyncPassSol(
    SCIP_HEUR*            heur,               /**< sync heuristic */
    SCIP_SOL*             sol                 /**< solution to be passed */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

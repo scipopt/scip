@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,39 @@
  * @ingroup CONSHDLRS
  * @brief  constraint handler for quadratic constraints \f$\textrm{lhs} \leq \sum_{i,j=1}^n a_{i,j} x_ix_j + \sum_{i=1}^n b_i x_i \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
+ *
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#ifndef __SCIP_CONS_QUADRATIC_H__
+#define __SCIP_CONS_QUADRATIC_H__
+
+#include "scip/scip.h"
+#include "scip/intervalarith.h"
+#include "nlpi/type_nlpi.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+/** creates the handler for quadratic constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
+EXTERN
+SCIP_RETCODE SCIPincludeConshdlrQuadratic(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Quadratic Constraints
+ *
+ * @{
  *
  * This constraint handler handles constraints of the form
  * \f[
@@ -53,19 +86,6 @@
  * Linear inequalities for bounded products of variables@n
  * SIAG/OPT Views-and-News 22:1, 1-8, 2011.
  */
-
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#ifndef __SCIP_CONS_QUADRATIC_H__
-#define __SCIP_CONS_QUADRATIC_H__
-
-#include "scip/scip.h"
-#include "scip/intervalarith.h"
-#include "nlpi/type_nlpi.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /** event data for variable bound changes in quadratic constraints */
 typedef struct SCIP_QuadVarEventData SCIP_QUADVAREVENTDATA;
@@ -129,12 +149,6 @@ typedef struct SCIP_BilinTerm SCIP_BILINTERM;
 #define SCIP_DECL_QUADCONSUPGD(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONS* cons, \
       int nbinlin, int nbinquad, int nintlin, int nintquad, int nimpllin, int nimplquad, int ncontlin, int ncontquad, \
       SCIP_Bool integral, int* nupgdconss, SCIP_CONS** upgdconss, int upgdconsssize, SCIP_PRESOLTIMING presoltiming)
-
-/** creates the handler for quadratic constraints and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeConshdlrQuadratic(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 /** includes a quadratic constraint upgrade method into the quadratic constraint handler */
 EXTERN
@@ -604,6 +618,10 @@ SCIP_RETCODE SCIPchgBilinCoefQuadratic(
    SCIP_VAR*             var2,               /**< second quadratic variable */
    SCIP_Real             coef                /**< coefficient of bilinear term */
    );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -7106,13 +7106,13 @@ SCIP_RETCODE SCIPconsResolvePropagation(
 {
    SCIP_CONSHDLR* conshdlr;
 
+   assert(set != NULL);
    assert(cons != NULL);
    assert((inferboundtype == SCIP_BOUNDTYPE_LOWER
          && SCIPgetVarLbAtIndex(set->scip, infervar, bdchgidx, TRUE) > SCIPvarGetLbGlobal(infervar))
       || (inferboundtype == SCIP_BOUNDTYPE_UPPER
          && SCIPgetVarUbAtIndex(set->scip, infervar, bdchgidx, TRUE) < SCIPvarGetUbGlobal(infervar)));
    assert(result != NULL);
-   assert(set != NULL);
    assert(cons->scip == set->scip);
 
    *result = SCIP_DIDNOTRUN;

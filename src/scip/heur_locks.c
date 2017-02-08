@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -51,7 +51,7 @@
                                                           *   original scip be copied to constraints of the subscip? */
 #define DEFAULT_USEFINALSUBMIP TRUE                      /**< should a final sub-MIP be solved to construct a feasible
                                                           *   solution if the LP was not roundable? */
-#define DEFAULT_RANDSEED      71                         /**< initial random seed */
+#define DEFAULT_RANDSEED      73                         /**< initial random seed */
 
 /** primal heuristic data */
 struct SCIP_HeurData
@@ -834,7 +834,6 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          SCIP_Real cutoffbound;
 
          minimprove = heurdata->minimprove;
-         cutoffbound = SCIPinfinity(scip);
          assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
          upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);

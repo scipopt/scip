@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scip.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  SCIP callable library
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -129,8 +129,10 @@ extern "C" {
  * miscellaneous methods
  */
 
-/**@name Miscellaneous Methods */
-/**@{ */
+/**@addtogroup MiscellaneousMethods
+ *
+ * @{
+ */
 
 /** returns complete SCIP version number in the format "major . minor tech"
  *
@@ -203,12 +205,6 @@ void SCIPprintError(
    SCIP_RETCODE          retcode             /**< SCIP return code causing the error */
    );
 
-/** update statistical information when a new solution was found */
-EXTERN
-void SCIPstoreSolutionGap(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /**@} */
 
 
@@ -218,8 +214,10 @@ void SCIPstoreSolutionGap(
  * general SCIP methods
  */
 
-/**@name General SCIP Methods */
-/**@{ */
+/**@addtogroup GeneralSCIPMethods
+ *
+ * @{
+ */
 
 /** creates and initializes SCIP data structures
  *
@@ -390,8 +388,10 @@ SCIP_Bool SCIPisStopped(
  * debug solution methods
  */
 
-/**@name Debug Solution Methods */
-/**@{ */
+/**@addtogroup DebugSolutionMethods
+ *
+ * @{
+ */
 
 /** enable debug solution mechanism
  *
@@ -422,6 +422,11 @@ void SCIPdisableDebugSol(
  * message output methods
  */
 
+/**@addtogroup MessageOutputMethods
+ *
+ * @{
+ */
+
 /* if we have a C99 compiler */
 #ifdef SCIP_HAVE_VARIADIC_MACROS
 
@@ -448,9 +453,6 @@ void SCIPdisableDebugSol(
 
 #endif
 
-
-/**@name Message Output Methods */
-/**@{ */
 
 /** installs the given message handler, such that all messages are passed to this handler. A messages handler can be
  *  created via SCIPmessagehdlrCreate().
@@ -568,8 +570,10 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
  * SCIP copy methods
  */
 
-/**@name Copy Methods */
-/**@{ */
+/**@addtogroup CopyMethods
+ *
+ * @{
+ */
 
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
  *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the
@@ -1640,8 +1644,10 @@ SCIP_RETCODE SCIPcopyLimits(
  * parameter settings
  */
 
-/**@name Parameter Methods */
-/**@{ */
+/**@addtogroup ParameterMethods
+ *
+ * @{
+ */
 
 /** creates a SCIP_Bool parameter, sets it to its default value, and adds it to the parameter set
  *
@@ -2250,8 +2256,10 @@ int SCIPgetNParams(
  * SCIP user functionality methods: managing plugins
  */
 
-/**@name SCIP User Functionality Methods: Managing Plugins */
-/**@{ */
+/**@addtogroup PublicReaderMethods
+ *
+ * @{
+ */
 
 /** creates a reader and includes it in SCIP
  *
@@ -2384,6 +2392,13 @@ EXTERN
 int SCIPgetNReaders(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/* @} */
+
+/**@addtogroup PublicPricerMethods
+ *
+ * @{
+ */
 
 /** creates a variable pricer and includes it in SCIP
  *  To use the variable pricer for solving a problem, it first has to be activated with a call to SCIPactivatePricer().
@@ -2616,6 +2631,13 @@ SCIP_RETCODE SCIPdeactivatePricer(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer              /**< variable pricer */
    );
+
+/* @} */
+
+/**@addtogroup PublicConshdlrMethods
+ *
+ * @{
+ */
 
 /** creates a constraint handler and includes it in SCIP.
  *
@@ -3165,6 +3187,13 @@ int SCIPgetNConshdlrs(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/* @} */
+
+/**@addtogroup PublicConflictMethods
+ *
+ * @{
+ */
+
 /** creates a conflict handler and includes it in SCIP
  *
  *  @note method has all conflict handler callbacks as arguments and is thus changed every time a new
@@ -3281,6 +3310,13 @@ SCIP_RETCODE SCIPsetConflicthdlrPriority(
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
    int                   priority            /**< new priority of the conflict handler */
    );
+
+/* @} */
+
+/**@addtogroup PublicPresolverMethods
+ *
+ * @{
+ */
 
 /** creates a presolver and includes it in SCIP
  *
@@ -3401,6 +3437,13 @@ SCIP_RETCODE SCIPsetPresolPriority(
    int                   priority            /**< new priority of the presolver */
    );
 
+/* @} */
+
+/**@addtogroup PublicRelaxatorMethods
+ *
+ * @{
+ */
+
 /** creates a relaxation handler and includes it in SCIP
  *
  *  @note method has all relaxation handler callbacks as arguments and is thus changed every time a new
@@ -3520,6 +3563,13 @@ SCIP_RETCODE SCIPsetRelaxPriority(
    SCIP_RELAX*           relax,              /**< relaxation handler */
    int                   priority            /**< new priority of the relaxation handler */
    );
+
+/* @} */
+
+/**@addtogroup PublicSeparatorMethods
+ *
+ * @{
+ */
 
 /** creates a separator and includes it in SCIP.
  *
@@ -3649,8 +3699,16 @@ SCIP_RETCODE SCIPsetSepaPriority(
    int                   priority            /**< new priority of the separator */
    );
 
+/* @} */
+
+/**@addtogroup PublicPropagatorMethods
+ *
+ * @{
+ */
+
 /** creates a propagator and includes it in SCIP.
  *
+
  *  @note method has all propagator callbacks as arguments and is thus changed every time a new
  *        callback is added in future releases; consider using SCIPincludePropBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
@@ -3820,6 +3878,12 @@ SCIP_RETCODE SCIPsetPropPresolPriority(
    int                   presolpriority      /**< new presol priority of the propagator */
    );
 
+/* @} */
+
+/**@addtogroup PublicConcsolverTypeMethods
+ *
+ * @{
+ */
 
 /** creates a concurrent solver type and includes it in SCIP.
  *
@@ -3865,6 +3929,13 @@ EXTERN
 int SCIPgetNConcsolverTypes(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/* @} */
+
+/**@addtogroup PublicHeuristicMethods
+ *
+ * @{
+ */
 
 /** creates a primal heuristic and includes it in SCIP.
  *
@@ -4003,6 +4074,12 @@ SCIP_RETCODE SCIPsetHeurPriority(
    int                   priority            /**< new priority of the primal heuristic */
    );
 
+/* @} */
+
+/**@addtogroup PublicCompressionMethods
+ *
+ * @{
+ */
 /** creates a tree compression and includes it in SCIP.
  *
  *  @note method has all compression callbacks as arguments and is thus changed every time a new
@@ -4120,6 +4197,13 @@ SCIP_RETCODE SCIPsetComprPriority(
    int                   priority            /**< new priority of the tree compression */
    );
 
+/* @} */
+
+/**@addtogroup PublicDivesetMethods
+ *
+ * @{
+ */
+
 /** create a diving set associated with a primal heuristic. The primal heuristic needs to be included
  *  before this method can be called. The diveset is installed in the array of divesets of the heuristic
  *  and can be retrieved later by accessing SCIPheurGetDivesets()
@@ -4149,6 +4233,7 @@ SCIP_RETCODE SCIPcreateDiveset(
    SCIP_Real             lpresolvedomchgquot,/**< percentage of immediate domain changes during probing to trigger LP resolve */
    int                   lpsolvefreq,        /**< LP solve frequency for (0: only if enough domain reductions are found by propagation)*/
    int                   maxlpiterofs,       /**< additional number of allowed LP iterations */
+   unsigned int          initialseed,        /**< initial seed for random number generation */
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
@@ -4157,6 +4242,13 @@ SCIP_RETCODE SCIPcreateDiveset(
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
 
    );
+
+/* @} */
+
+/**@addtogroup PublicEventHandlerMethods
+ *
+ * @{
+ */
 
 /** creates an event handler and includes it in SCIP
  *
@@ -4271,6 +4363,13 @@ EXTERN
 int SCIPgetNEventhdlrs(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/* @} */
+
+/**@addtogroup PublicNodeSelectorMethods
+ *
+ * @{
+ */
 
 /** creates a node selector and includes it in SCIP.
  *
@@ -4404,6 +4503,13 @@ EXTERN
 SCIP_NODESEL* SCIPgetNodesel(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/* @} */
+
+/**@addtogroup PublicBranchRuleMethods
+ *
+ * @{
+ */
 
 /** creates a branching rule and includes it in SCIP
  *
@@ -4569,6 +4675,13 @@ SCIP_RETCODE SCIPsetBranchruleMaxbounddist(
    SCIP_Real             maxbounddist        /**< new maxbounddist of the branching rule */
    );
 
+/* @} */
+
+/**@addtogroup PublicDisplayMethods
+ *
+ * @{
+ */
+
 /** creates a display column and includes it in SCIP */
 EXTERN
 SCIP_RETCODE SCIPincludeDisp(
@@ -4623,6 +4736,13 @@ void SCIPchgDispMode(
    SCIP_DISPMODE         mode                /**< the display column mode */
    );
 
+/* @} */
+
+/**@addtogroup PublicNLPInterfaceMethods
+ *
+ * @{
+ */
+
 /** includes an NLPI in SCIP */
 EXTERN
 SCIP_RETCODE SCIPincludeNlpi(
@@ -4656,6 +4776,15 @@ SCIP_RETCODE SCIPsetNlpiPriority(
    SCIP_NLPI*            nlpi,               /**< NLPI */
    int                   priority            /**< new priority of the NLPI */
    );
+
+/* @} */
+
+/**@addtogroup PublicExternalCodeMethods
+ *
+ * @{
+ */
+
+
 
 /** includes information about an external code linked into the SCIP library */
 EXTERN
@@ -4696,17 +4825,16 @@ void SCIPprintExternalCodes(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
-/**@} */
-
-
-
+/* @} */
 
 /*
  * user interactive dialog methods
  */
 
-/**@name User Interactive Dialog Methods */
-/**@{ */
+/**@addtogroup PublicDialogMethods
+ *
+ * @{
+ */
 
 /** creates and includes dialog
  *
@@ -4729,7 +4857,7 @@ SCIP_RETCODE SCIPincludeDialog(
 
 /** returns if the dialog already exists
  *
- *  @return TRUE is returned if the dialog exits, otherwise FALSE.
+ *  @return TRUE is returned if the dialog exists, otherwise FALSE.
  */
 EXTERN
 SCIP_Bool SCIPexistsDialog(
@@ -4845,8 +4973,10 @@ SCIP_RETCODE SCIPstartInteraction(
  * global problem methods
  */
 
-/**@name Global Problem Methods */
-/**@{ */
+/**@addtogroup GlobalProblemMethods
+ *
+ * @{
+ */
 
 /** creates empty problem and initializes all solving data structures (the objective sense is set to MINIMIZE)
  *  If the problem type requires the use of variable pricers, these pricers should be added to the problem with calls
@@ -6281,8 +6411,10 @@ int SCIPgetNCheckConss(
  * local subproblem methods
  */
 
-/**@name Local Subproblem Methods */
-/**@{ */
+/**@addtogroup LocalSubproblemMethods
+ *
+ * @{
+ */
 
 /** adds a conflict to a given node or globally to the problem if @p node == NULL.
  *
@@ -6595,8 +6727,10 @@ SCIP_RETCODE SCIPchgChildPrio(
  * solve methods
  */
 
-/**@name Solve Methods */
-/**@{ */
+/**@addtogroup PublicSolveMethods
+ *
+ * @{
+ */
 
 /** initializes solving data structures and transforms problem
  *
@@ -6947,8 +7081,10 @@ SCIP_Bool SCIPisInRestart(
  * variable methods
  */
 
-/**@name Variable Methods */
-/**@{ */
+/**@addtogroup PublicVariableMethods
+ *
+ *@{
+ */
 
 /** creates and captures problem variable; if variable is of integral type, fractional bounds are automatically rounded;
  *  an integer variable with bounds zero and one is automatically converted into a binary variable;
@@ -10566,8 +10702,10 @@ SCIP_RETCODE SCIPprintVar(
  * conflict analysis methods
  */
 
-/**@name Conflict Analysis Methods */
-/**@{ */
+/**@addtogroup PublicConflictMethods
+ *
+ * @{
+ */
 
 /** return TRUE if conflict analysis is applicable; In case the function return FALSE there is no need to initialize the
  *  conflict analysis since it will not be applied
@@ -10902,8 +11040,10 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
  * constraint methods
  */
 
-/**@name Constraint Methods */
-/**@{ */
+/**@addtogroup PublicConstraintMethods
+ *
+ * @{
+ */
 
 /** creates and captures a constraint of the given constraint handler
  *
@@ -12026,8 +12166,10 @@ SCIP_RETCODE SCIPgetConsNVars(
  * LP methods
  */
 
-/**@name LP Methods */
-/**@{ */
+/**@addtogroup PublicLPMethods
+ *
+ * @{
+ */
 
 /** returns, whether the LP was or is to be solved in the current node
  *
@@ -12735,8 +12877,10 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
  * LP column methods
  */
 
-/**@name LP Column Methods */
-/**@{ */
+/**@addtogroup PublicColumnMethods
+ *
+ * @{
+ */
 
 /** returns the reduced costs of a column in the last (feasible) LP
  *
@@ -12788,8 +12932,10 @@ void SCIPmarkColNotRemovableLocal(
  * LP row methods
  */
 
-/**@name LP Row Methods */
-/**@{ */
+/**@addtogroup PublicRowMethods
+ *
+ * @{
+ */
 
 /** creates and captures an LP row from a constraint handler
  *
@@ -13431,8 +13577,10 @@ SCIP_RETCODE SCIPprintRow(
  * NLP methods
  */
 
-/**@name NLP Methods */
-/**@{ */
+/**@addtogroup PublicNLPMethods
+ *
+ * @{
+ */
 
 /** returns whether the NLP relaxation has been enabled
  *
@@ -13889,8 +14037,9 @@ SCIP_RETCODE SCIPgetNLPI(
  * NLP diving methods
  */
 
-/**@name NLP Diving Methods */
-/**@{ */
+/**@addtogroup PublicNLPDiveMethods
+ *
+ * @{ */
 
 /** initiates NLP diving making methods SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP(), SCIPchgVarsBoundsDiveNLP(), and SCIPsolveDiveNLP() available
  *
@@ -13994,8 +14143,10 @@ SCIP_RETCODE SCIPsolveDiveNLP(
  * NLP nonlinear row methods
  */
 
-/**@name NLP Nonlinear Row Methods */
-/**@{ */
+/**@addtogroup PublicNLRowMethods
+ *
+ * @{
+ */
 
 /** creates and captures an NLP row
  *
@@ -14567,8 +14718,10 @@ SCIP_RETCODE SCIPprintNlRow(
 
 /**@} */
 
-/**@name Expression tree methods */
-/**@{ */
+/**@addtogroup PublicExpressionTreeMethods
+ *
+ * @{
+ */
 
 /** replaces array of variables in expression tree by corresponding transformed variables
  *
@@ -14692,9 +14845,10 @@ SCIP_RETCODE SCIPevalExprtreeLocalBounds(
  * nonlinear methods
  */
 
-/**@name Nonlinear Methods */
-/**@{ */
-
+/**@addtogroup PublicNonlinearMethods
+ *
+ * @{
+ */
 
 /** computes coefficients of linearization of a square term in a reference point */
 EXTERN
@@ -14804,8 +14958,10 @@ SCIP_RETCODE SCIPaddConvexNlpRows(
  * cutting plane methods
  */
 
-/**@name Cutting Plane Methods */
-/**@{ */
+/**@addtogroup PublicCutMethods
+ *
+ * @{
+ */
 
 /** returns efficacy of the cut with respect to the given primal solution or the current LP solution:
  *  e = -feasibility/norm
@@ -14920,7 +15076,7 @@ SCIP_RETCODE SCIPaddPoolCut(
 EXTERN
 SCIP_RETCODE SCIPdelPoolCut(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW*             row                 /**< cutting plane to add */
+   SCIP_ROW*             row                 /**< row to remove */
    );
 
 /** gets current cuts in the global cut pool
@@ -15255,8 +15411,10 @@ SCIP_Real SCIPgetRelaxFeastolFactor(
  * LP diving methods
  */
 
-/**@name LP Diving Methods */
-/**@{ */
+/**@addtogroup PublicLPDivingMethods
+ *
+ * @{
+ */
 
 /** initiates LP diving, making methods SCIPchgVarObjDive(), SCIPchgVarLbDive(), and SCIPchgVarUbDive() available
  *
@@ -15535,8 +15693,10 @@ SCIP_Bool SCIPinDive(
  * probing methods
  */
 
-/**@name Probing Methods */
-/**@{ */
+/**@addtogroup PublicProbingMethods
+ *
+ * @{
+ */
 
 /** returns whether we are in probing mode; probing mode is activated via SCIPstartProbing() and stopped
  *  via SCIPendProbing()
@@ -15972,8 +16132,10 @@ void SCIPclearDiveBoundChanges(
  * branching methods
  */
 
-/**@name Branching Methods */
-/**@{ */
+/**@addtogroup PublicBranchingMethods
+ *
+ * @{
+ */
 
 /** gets branching candidates for LP solution branching (fractional variables) along with solution values,
  *  fractionalities, and number of branching candidates; The number of branching candidates does NOT
@@ -16558,8 +16720,10 @@ SCIP_RETCODE SCIPbranchPseudo(
  * primal solutions
  */
 
-/**@name Primal Solution Methods */
-/**@{ */
+/**@addtogroup PublicSolutionMethods
+ *
+ * @{
+ */
 
 /** creates a primal solution, initialized to zero
  *
@@ -17950,14 +18114,10 @@ SCIP_RETCODE SCIPupdatePrimalRay(
  * event methods
  */
 
-/**@name Event Methods
+/**@addtogroup PublicEventMethods
  *
- * Events can only be caught during the operation on the transformed problem.
- * Events on variables can only be caught for transformed variables.
- * If you want to catch an event for an original variable, you have to get the corresponding transformed variable
- * with a call to SCIPgetTransformedVar() and catch the event on the transformed variable.
+ * @{
  */
-/**@{ */
 
 /** catches a global (not variable or row dependent) event
  *
@@ -18134,8 +18294,10 @@ SCIP_RETCODE SCIPdropRowEvent(
  * tree methods
  */
 
-/**@name Tree Methods */
-/**@{ */
+/**@addtogroup PublicTreeMethods
+ *
+ * @{
+ */
 
 /** gets focus node in the tree
  *
@@ -18166,6 +18328,63 @@ SCIP_NODE* SCIPgetFocusNode(
  */
 EXTERN
 SCIP_NODE* SCIPgetCurrentNode(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets depth of current node, or -1 if no current node exists; in probing, the current node is the last probing node,
+ *  such that the depth includes the probing path
+ *
+ *  @return the depth of current node, or -1 if no current node exists; in probing, the current node is the last probing node,
+ *  such that the depth includes the probing path
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+int SCIPgetDepth(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets depth of the focus node, or -1 if no focus node exists; the focus node is the currently processed node in the
+ *  branching tree, excluding the nodes of the probing path
+ *
+ *  @return the depth of the focus node, or -1 if no focus node exists; the focus node is the currently processed node in the
+ *  branching tree, excluding the nodes of the probing path
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+int SCIPgetFocusDepth(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets current plunging depth (successive times, a child was selected as next node)
+ *
+ *  @return the current plunging depth (successive times, a child was selected as next node)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+int SCIPgetPlungeDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -18290,6 +18509,20 @@ SCIP_RETCODE SCIPgetLeaves(
  */
 EXTERN
 int SCIPgetNLeaves(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of nodes left in the tree (children + siblings + leaves)
+ *
+ *  @return the number of nodes left in the tree (children + siblings + leaves)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+int SCIPgetNNodesLeft(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -18481,8 +18714,10 @@ void SCIPsetFocusnodeLP(
  * parallel interface methods
  */
 
-/**@name Parallel Interface Methods */
-/**@{ */
+/**@addtogroup PublicParallelMethods
+ *
+ * @{
+ */
 
 /** Constructs the parallel interface to execute processes concurrently.
  *
@@ -18570,8 +18805,10 @@ SCIP_SYNCSTORE* SCIPgetSyncstore(
  * reoptimization methods
  */
 
-/**@name Reoptimization Methods */
-/**@{ */
+/**@addtogroup PublicReoptimizationMethods
+ *
+ * @{
+ */
 
 /** return the ids of child nodes stored in the reoptimization tree
  *
@@ -18831,7 +19068,7 @@ SCIP_Real SCIPgetReoptSimilarity(
    int                   run2                /**< number of run */
    );
 
-/** check the changes of teh variable coefficient in the objective function */
+/** check the changes of the variable coefficient in the objective function */
 EXTERN
 void SCIPgetVarCoefChg(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -18841,12 +19078,16 @@ void SCIPgetVarCoefChg(
    SCIP_Bool*            leaving             /**< coefficient gets zero coefficient */
    );
 
+/* @} */
+
 /*
  * statistic methods
  */
 
-/**@name Statistic Methods */
-/**@{ */
+/**@addtogroup PublicSolvingStatsMethods
+ *
+ * @{
+ */
 
 /** gets number of branch and bound runs performed, including the current run
  *
@@ -18961,20 +19202,6 @@ SCIP_Longint SCIPgetNNodes(
  */
 EXTERN
 SCIP_Longint SCIPgetNTotalNodes(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** gets number of nodes left in the tree (children + siblings + leaves)
- *
- *  @return the number of nodes left in the tree (children + siblings + leaves)
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- */
-EXTERN
-int SCIPgetNNodesLeft(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -19610,50 +19837,6 @@ SCIP_Longint SCIPgetNConflictConssApplied(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets depth of current node, or -1 if no current node exists; in probing, the current node is the last probing node,
- *  such that the depth includes the probing path
- *
- *  @return the depth of current node, or -1 if no current node exists; in probing, the current node is the last probing node,
- *  such that the depth includes the probing path
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- */
-EXTERN
-int SCIPgetDepth(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** gets depth of the focus node, or -1 if no focus node exists; the focus node is the currently processed node in the
- *  branching tree, excluding the nodes of the probing path
- *
- *  @return the depth of the focus node, or -1 if no focus node exists; the focus node is the currently processed node in the
- *  branching tree, excluding the nodes of the probing path
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- */
-EXTERN
-int SCIPgetFocusDepth(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** gets maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)
  *
  *  @return the maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)
@@ -19711,19 +19894,6 @@ int SCIPgetMaxTotalDepth(
  */
 EXTERN
 SCIP_Longint SCIPgetNBacktracks(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** gets current plunging depth (successive times, a child was selected as next node)
- *
- *  @return the current plunging depth (successive times, a child was selected as next node)
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- */
-EXTERN
-int SCIPgetPlungeDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -20047,6 +20217,9 @@ SCIP_Longint SCIPgetNSolsFound(
  *  @return the number of feasible primal solutions respecting the objective limit found so far
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVING
@@ -20555,17 +20728,24 @@ SCIP_RETCODE SCIPwriteImplicationConflictGraph(
    const char*           filename            /**< file name, or NULL for stdout */
    );
 
+
+/** update statistical information when a new solution was found */
+EXTERN
+void SCIPstoreSolutionGap(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /**@} */
-
-
-
 
 /*
  * timing methods
  */
 
-/**@name Timing Methods */
-/**@{ */
+
+/**@addtogroup PublicTimingMethods
+ *
+ * @{
+ */
 
 /** gets current time of day in seconds (standard time zone)
  *
@@ -20858,16 +21038,14 @@ SCIP_Real SCIPgetFirstLPTime(
 
 /**@} */
 
-
-
-
 /*
  * numeric values and comparisons
  */
 
-/**@name Numerical Methods */
-/**@{ */
-
+/**@addtogroup PublicToleranceMethods
+ *
+ * @{
+ */
 
 /** returns value treated as zero
  *
@@ -21669,8 +21847,14 @@ SCIP_Bool SCIPparseReal(
 /**@} */
 
 
-/**@name Block Memory Management Macros */
-/**@{ */
+/**@addtogroup PublicMemoryMethods
+ *
+ * @{
+ */
+
+/**@name Block Memory Management Macros
+ * @{
+ */
 
 #define SCIPallocBlockMemory(scip,ptr)          ( (BMSallocBlockMemory(SCIPblkmem(scip), (ptr)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
@@ -21695,11 +21879,15 @@ SCIP_Bool SCIPparseReal(
 #define SCIPfreeBlockMemoryArrayNull(scip,ptr,num) BMSfreeBlockMemoryArrayNull(SCIPblkmem(scip), (ptr), (num))
 #define SCIPfreeBlockMemorySize(scip,ptr,size)  BMSfreeBlockMemorySize(SCIPblkmem(scip), (ptr), (size))
 #define SCIPfreeBlockMemorySizeNull(scip,ptr,size) BMSfreeBlockMemorySizeNull(SCIPblkmem(scip), (ptr), (size))
+
 /**@} */
 
 
-/**@name Buffer Memory Management Macros */
-/**@{ */
+/**@name Buffer Memory Management Macros
+ *
+ * @{
+ */
+
 
 #define SCIPallocBuffer(scip,ptr)               ( (BMSallocBufferMemory(SCIPbuffer(scip), (ptr)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
@@ -21731,8 +21919,10 @@ SCIP_Bool SCIPparseReal(
 /**@} */
 
 
-/**@name Memory Management Functions */
-/**@{ */
+/**@name Memory Management Functions
+ *
+ * @{
+ */
 
 /** returns block memory to use at the current time
  *
@@ -21819,17 +22009,21 @@ void SCIPprintMemoryDiagnostic(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/**@} */
+/* @} */
 
-
+/* @} */
 
 
 /*
  * dynamic arrays
  */
 
-/**@name Dynamic Arrays */
-/**@{ */
+/**@defgroup PublicDynamicArrayMethods Dynamic Arrays
+ * @ingroup DataStructures
+ * @brief methods for the creation and access of dynamic arrays
+ *
+ * @{
+ */
 
 /** creates a dynamic array of real values
  *

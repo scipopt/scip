@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   conflict.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for conflict analysis
  * @author Tobias Achterberg
  */
@@ -578,6 +579,12 @@ SCIP_Real SCIPconflictGetStrongbranchTime(
 /** gets number of successful calls to infeasible dualray analysis */
 extern
 SCIP_Longint SCIPconflictGetNDualrayInfSuccess(
+   SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** gets number of globally valid dualray constraints */
+extern
+SCIP_Longint SCIPconflictGetNDualrayInfGlobal(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
    );
 

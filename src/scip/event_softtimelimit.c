@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -43,6 +43,7 @@ struct SCIP_EventhdlrData
  */
 
 /** copy method for event handler plugins (called when SCIP copies plugins) */
+/**! [SnippetEventCopySofttimelimit] */
 static
 SCIP_DECL_EVENTCOPY(eventCopySofttimelimit)
 {  /*lint --e{715}*/
@@ -55,8 +56,10 @@ SCIP_DECL_EVENTCOPY(eventCopySofttimelimit)
 
    return SCIP_OKAY;
 }
+/**! [SnippetEventCopySofttimelimit] */
 
 /** destructor of event handler to free user data (called when SCIP is exiting) */
+/**! [SnippetEventFreeSofttimelimit] */
 static
 SCIP_DECL_EVENTFREE(eventFreeSofttimelimit)
 {  /*lint --e{715}*/
@@ -74,6 +77,7 @@ SCIP_DECL_EVENTFREE(eventFreeSofttimelimit)
 
    return SCIP_OKAY;
 }
+/**! [SnippetEventFreeSofttimelimit] */
 
 
 

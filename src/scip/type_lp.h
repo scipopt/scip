@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -83,19 +83,19 @@ typedef struct SCIP_LpSolVals SCIP_LPSOLVALS;     /**< collected values of the L
 
 /** column of an LP
  *
- *  - \ref ColumnMethods "List of all available methods"
+ *  - \ref PublicColumnMethods "List of all available methods"
  */
 typedef struct SCIP_Col SCIP_COL;
 
 /** row of an LP
  *
- *  - \ref RowMethods "List of all available methods"
+ *  - \ref PublicRowMethods "List of all available methods"
  */
 typedef struct SCIP_Row SCIP_ROW;
 
 /** LP structure
  *
- *  - \ref LPMethods "List of all available methods"
+ *  - \ref PublicLPMethods "List of all available methods"
  */
 typedef struct SCIP_Lp SCIP_LP;
 

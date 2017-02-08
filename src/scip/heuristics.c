@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -127,7 +127,8 @@ SCIP_RETCODE selectNextDiving(
          /* scores are kept in arrays for faster reuse */
          if( storelpcandscores )
          {
-            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_INTEGRALITY, lpcands[c], lpcandssol[c], lpcandsfrac[c], &lpcandsscores[c], &lpcandroundup[c]) );
+            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_INTEGRALITY, lpcands[c], lpcandssol[c],
+                  lpcandsfrac[c], &lpcandsscores[c], &lpcandroundup[c]) );
          }
 
          score = lpcandsscores[c];
@@ -242,6 +243,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    int lpsolvefreq;
 
    assert(scip != NULL);
+   assert(heur != NULL);
    assert(result != NULL);
    assert(worksol != NULL);
 
@@ -284,8 +286,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    /*todo another factor of 10, REALLY? */
    maxnlpiterations = (SCIP_Longint)((1.0 + 10*(oldsolsuccess+1.0)/(ncalls+1.0)) * SCIPdivesetGetMaxLPIterQuot(diveset) * nlpiterations);
    maxnlpiterations += SCIPdivesetGetMaxLPIterOffset(diveset);
-
-
 
    /* don't try to dive, if we took too many LP iterations during diving */
    if( SCIPdivesetGetNLPIterations(diveset) >= maxnlpiterations )

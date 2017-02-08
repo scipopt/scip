@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -257,7 +257,7 @@ SCIP_RETCODE tryFixVar(
    SCIP_ROW** rows;
    SCIP_COL* col;
    SCIP_Real* vals;
-   SCIP_Real alpha = heurdata->alpha;
+   SCIP_Real alpha;
    int nrows;
    int i;
    int sgn;
@@ -270,6 +270,7 @@ SCIP_RETCODE tryFixVar(
    assert(NULL != inftycounter);
    assert(NULL != heurdata);
 
+   alpha = heurdata->alpha;
    *infeasible = TRUE;
    *fixed = FALSE;
 
@@ -488,10 +489,10 @@ SCIP_RETCODE createNewSol(
 /** tries to fix variables as an approach to repair a solution. */
 static
 SCIP_RETCODE applyRepair(
-   SCIP*                 scip,             /**< SCIP data structure of the problem */
-   SCIP_HEUR*            heur,             /**< pointer to this heuristic instance */
-   SCIP_RESULT*          result,           /**< pointer to return the result status */
-   SCIP_Longint          nnodes            /**< nodelimit for sub-SCIP */
+   SCIP*                 scip,               /**< SCIP data structure of the problem */
+   SCIP_HEUR*            heur,               /**< pointer to this heuristic instance */
+   SCIP_RESULT*          result,             /**< pointer to return the result status */
+   SCIP_Longint          nnodes              /**< nodelimit for sub-SCIP */
    )
 {
    SCIP* subscip = NULL;
@@ -922,11 +923,8 @@ SCIP_RETCODE applyRepair(
     */
    if( retcode != SCIP_OKAY )
    {
-      SCIPwarningMessage(scip, "Error while solving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n",
-         retcode);
-
-      SCIPABORT();
-
+      SCIPwarningMessage(scip, "Error while solving subproblem in REPAIR heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+      SCIPABORT();  /*lint --e{527}*/
       goto TERMINATE;
    }
 
@@ -986,10 +984,9 @@ TERMINATE:
    {
       SCIP_CALL( SCIPfreeSol(subscip, &subsol) );
    }
-   if( NULL != subscip )
-   {
-      SCIP_CALL( SCIPfree(&subscip) );
-   }
+
+   SCIP_CALL( SCIPfree(&subscip) );
+
    SCIPdebugMsg(scip, "repair finished\n");
    return SCIP_OKAY;
 }
@@ -1139,11 +1136,10 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    SCIP_Bool error;
    SCIP_Longint nnodes;
 
-   retcode = SCIP_OKAY;
    heurdata = SCIPheurGetData(heur);
    SCIPdebugMsg(scip, "%s\n", heurdata->filename);
 
-   /* checks the result pointer*/
+   /* checks the result pointer */
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 

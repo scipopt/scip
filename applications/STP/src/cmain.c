@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,6 +32,9 @@
 #include "cons_stp.h"
 #include "heur_tm.h"
 #include "heur_local.h"
+#include "heur_prune.h"
+#include "heur_ascendprune.h"
+#include "heur_slackprune.h"
 #include "heur_rec.h"
 #include "pricer_stp.h"
 #include "event_bestsol.h"
@@ -76,17 +79,25 @@ SCIP_RETCODE runShell(
 
    /* include steiner tree constraint handler */
    SCIP_CALL( SCIPincludeConshdlrStp(scip) );
-#if 1
+
    /* include Takahashi Matsuyama heuristic */
    SCIP_CALL( SCIPincludeHeurTM(scip) );
 
    /* include local heuristics */
    SCIP_CALL( SCIPincludeHeurLocal(scip) );
-#if 1
+
    /* include recombination heuristic */
    SCIP_CALL( SCIPincludeHeurRec(scip) );
-#endif
-#endif
+
+   /* include pruning heuristic */
+   SCIP_CALL( SCIPincludeHeurPrune(scip) );
+
+   /* include ascend-and-prune heuristic */
+   SCIP_CALL( SCIPincludeHeurAscendPrune(scip) );
+
+   /* include slack-and-prune heuristic */
+   SCIP_CALL( SCIPincludeHeurSlackPrune(scip) );
+
    /* include event handler for printing primal solution development */
    SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );
 
@@ -103,6 +114,11 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPsetIntParam(scip, "lp/rowagelimit", 30) );
    SCIP_CALL( SCIPsetIntParam(scip, "separating/maxrounds", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "separating/maxstallrounds", -1) );
+#if 0
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxroundsroot", 40) );
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxcutsroot", 4000) );
+#endif
+
    SCIP_CALL( SCIPsetIntParam(scip, "branching/relpscost/maxproprounds", 0) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/coefdiving/freq", -1) );
    SCIP_CALL( SCIPsetIntParam(scip, "heuristics/feaspump/freq", -1) );

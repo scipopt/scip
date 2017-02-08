@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3519,9 +3519,10 @@ void printBoundSection(
    {
       /* we should print the transformed problem, otherwise no fixed variable should exists */
       assert(transformed);
-      assert(fixvars != NULL);
 
+      /* cppcheck-suppress nullPointerRedundantCheck */
       var = fixvars[v];
+
       assert(var != NULL);
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
 
@@ -3536,8 +3537,8 @@ void printBoundSection(
 
       if( !sectionName )
       {
-	 printBoundSectionName(scip, file);
-	 sectionName = TRUE;
+         printBoundSectionName(scip, file);
+         sectionName = TRUE;
       }
 
       /* print fixed variable */
@@ -3554,6 +3555,7 @@ void printBoundSection(
  */
 
 /** copy method for reader plugins (called when SCIP copies plugins) */
+/**! [SnippetReaderCopyMps] */
 static
 SCIP_DECL_READERCOPY(readerCopyMps)
 {  /*lint --e{715}*/
@@ -3566,8 +3568,10 @@ SCIP_DECL_READERCOPY(readerCopyMps)
 
    return SCIP_OKAY;
 }
+/**! [SnippetReaderCopyMps] */
 
 /** destructor of reader to free user data (called when SCIP is exiting) */
+/**! [SnippetReaderFreeMps] */
 static
 SCIP_DECL_READERFREE(readerFreeMps)
 {
@@ -3580,6 +3584,7 @@ SCIP_DECL_READERFREE(readerFreeMps)
 
    return SCIP_OKAY;
 }
+/**! [SnippetReaderFreeMps] */
 
 /** problem reading method of reader */
 static

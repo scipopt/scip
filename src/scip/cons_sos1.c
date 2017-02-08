@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1812,7 +1812,7 @@ SCIP_RETCODE presolRoundConssSOS1(
 
    /* create digraph whose nodes represent variables and cliques in the conflict graph */
    csize = MAX(1, conshdlrdata->maxextensions) * nconss;
-   SCIP_CALL( SCIPdigraphCreate(&vertexcliquegraph, nsos1vars + csize) );
+   SCIP_CALL( SCIPdigraphCreate(&vertexcliquegraph, SCIPblkmem(scip), nsos1vars + csize) );
 
    /* allocate buffer arrays */
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nsos1vars) );
@@ -2858,7 +2858,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
       }
 
       /* create conflict graph of linear constraint */
-      SCIP_CALL( SCIPdigraphCreate(&conflictgraphlin, ntrafolinvars) );
+      SCIP_CALL( SCIPdigraphCreate(&conflictgraphlin, SCIPblkmem(scip), ntrafolinvars) );
       SCIP_CALL( genConflictgraphLinearCons(conshdlrdata, conflictgraphlin, conflictgraph, trafolinvars, ntrafolinvars, varindincons) );
 
       /* mark all the variables as 'not covered by some clique cover' */
@@ -3399,7 +3399,7 @@ SCIP_RETCODE presolRoundVarsSOS1(
    }
 
    /* create implication graph */
-   SCIP_CALL( SCIPdigraphCreate(&implgraph, ntotalvars) );
+   SCIP_CALL( SCIPdigraphCreate(&implgraph, SCIPblkmem(scip), ntotalvars) );
 
    /* try to tighten the lower and upper bounds of the variables */
    updateconfl = FALSE;
@@ -3807,7 +3807,7 @@ SCIP_RETCODE initImplGraphSOS1(
    nimplnodes = 0;
 
    /* create implication graph */
-   SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->implgraph, nsos1vars + nprobvars) );
+   SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->implgraph, SCIPblkmem(scip), nsos1vars + nprobvars) );
 
    /* create hashmap */
    SCIP_CALL( SCIPhashmapCreate(&implhash, SCIPblkmem(scip), nsos1vars + nprobvars) );
@@ -5096,7 +5096,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                      {
                         if ( localconflicts == NULL )
                         {
-                           SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, nsos1vars) );
+                           SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, SCIPblkmem(scip), nsos1vars) );
                            localconflicts = conshdlrdata->localconflicts;
                         }
                         SCIP_CALL( SCIPdigraphAddArc(localconflicts, vertex1, vertex2, NULL) );
@@ -5409,7 +5409,7 @@ SCIP_RETCODE enforceConflictgraph(
 
          if ( conshdlrdata->localconflicts == NULL )
          {
-            SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, nsos1vars ) );
+            SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, SCIPblkmem(scip), nsos1vars ) );
          }
 
          vars = consdata->vars;
@@ -7960,7 +7960,8 @@ SCIP_RETCODE getDiveBdChgsSOS1conflictgraph(
          {
             SCIP_Bool roundup;
 
-            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval, &score, &roundup) );
+            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval,
+                  &score, &roundup) );
 
             fixneigh = roundup;
             if ( SCIPisFeasNegative(scip, solval) )
@@ -8079,7 +8080,8 @@ SCIP_RETCODE getDiveBdChgsSOS1constraints(
          var = vars[j];
 
          /* check whether variable is nonzero w.r.t. sol and the bounds have not been fixed to zero by propagation */
-         if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, var)) && ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) ) )
+         if ( !SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, var))
+               && (!SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) || !SCIPisFeasZero(scip, SCIPvarGetUbLocal(var))) )
             ++cnt;
       }
 
@@ -8095,70 +8097,72 @@ SCIP_RETCODE getDiveBdChgsSOS1constraints(
          SCIP_Real score;
          SCIP_Real bound;
          SCIP_Real fracval;
-	 SCIP_Real lb;
-	 SCIP_Real ub;
+         SCIP_Real lb;
+         SCIP_Real ub;
          SCIP_Bool fixcomp;  /* whether to fix the complementary variables of the candidate in the SOS1 constraint to zero */
 
          var = vars[j];
          solval = SCIPgetSolVal(scip, sol, var);
-	 lb = SCIPvarGetLbLocal(var);
-	 ub = SCIPvarGetUbLocal(var);
+         lb = SCIPvarGetLbLocal(var);
+         ub = SCIPvarGetUbLocal(var);
 
          /* check whether variable is nonzero w.r.t. sol and the bounds have not been fixed to zero by propagation */
          if ( ! SCIPisFeasZero(scip, solval) && ( ! SCIPisFeasZero(scip, lb) || ! SCIPisFeasZero(scip, ub) ) )
-	 {
-	    /* compute (variable) bound of candidate */
-	    if ( SCIPisFeasNegative(scip, solval) )
-	       bound = lb;
-	    else
-	       bound = ub;
+         {
+            /* compute (variable) bound of candidate */
+            if ( SCIPisFeasNegative(scip, solval) )
+               bound = lb;
+            else
+               bound = ub;
 
-	    /* bound may have changed in propagation; ensure that fracval <= 1 */
-	    if ( SCIPisFeasLT(scip, REALABS(bound), REALABS(solval)) )
-	       bound = solval;
+            /* bound may have changed in propagation; ensure that fracval <= 1 */
+            if ( SCIPisFeasLT(scip, REALABS(bound), REALABS(solval)) )
+               bound = solval;
 
-	    /* ensure finiteness */
-	    bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound)); /*lint !e666*/
-	    fracval = MIN(DIVINGCUTOFFVALUE, REALABS(solval)); /*lint !e666*/
-	    assert( ! SCIPisInfinity(scip, bound) );
-	    assert( ! SCIPisInfinity(scip, fracval) );
-	    assert( SCIPisPositive(scip, bound) );
+            /* ensure finiteness */
+            bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound)); /*lint !e666*/
+            fracval = MIN(DIVINGCUTOFFVALUE, REALABS(solval)); /*lint !e666*/
+            assert( ! SCIPisInfinity(scip, bound) );
+            assert( ! SCIPisInfinity(scip, fracval) );
+            assert( SCIPisPositive(scip, bound) );
 
-	    /* get fractionality of candidate */
-	    fracval /= (bound + SCIPsumepsilon(scip));
+            /* get fractionality of candidate */
+            fracval /= (bound + SCIPsumepsilon(scip));
 
-	    /* should SOS1 variables be scored by the diving heuristics specific score function;
-	     *  otherwise use the score function of the SOS1 constraint handler */
-	    if ( SCIPdivesetSupportsType(diveset, SCIP_DIVETYPE_SOS1VARIABLE) )
-	    {
-	       SCIP_Bool roundup;
+            /* should SOS1 variables be scored by the diving heuristics specific score function;
+             *  otherwise use the score function of the SOS1 constraint handler
+             */
+            if ( SCIPdivesetSupportsType(diveset, SCIP_DIVETYPE_SOS1VARIABLE) )
+            {
+               SCIP_Bool roundup;
 
-	       SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval, &score, &roundup) );
+               SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval,
+                &score, &roundup) );
 
-	       fixcomp = roundup;
-	       if ( SCIPisFeasNegative(scip, solval) )
-		  fixcomp = !fixcomp;
-	    }
-	    else
-	    {
-	       /* we always fix the complementary variables of the candidate in the SOS1 constraint to zero */
-	       fixcomp = TRUE;
+               fixcomp = roundup;
+               if ( SCIPisFeasNegative(scip, solval) )
+                  fixcomp = !fixcomp;
+            }
+            else
+            {
+               /* we always fix the complementary variables of the candidate in the SOS1 constraint to zero */
+               fixcomp = TRUE;
 
-	       /* score fractionality of candidate */
-	       score = fracval;
-	    }
+               /* score fractionality of candidate */
+               score = fracval;
+            }
 
-	    /* best candidate maximizes the score */
-	    if ( score > bestscore )
-	    {
-	       bestscore = score;
+            /* best candidate maximizes the score */
+            if ( score > bestscore )
+            {
+               bestscore = score;
 
-	       *success = TRUE;
-	       bestvar = var;
-	       bestcons = c;
-	       bestvarfixcomp = fixcomp;
-	    }
-	 }
+               *success = TRUE;
+               bestvar = var;
+               bestcons = c;
+               bestvarfixcomp = fixcomp;
+            }
+         }
       }
    }
    assert( !(*success) || bestvar != NULL );
@@ -8719,7 +8723,7 @@ SCIP_RETCODE initConflictgraph(
       nodecreated[i] = FALSE;
 
    /* create conflict graph */
-   SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->conflictgraph, cntsos) );
+   SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->conflictgraph, SCIPblkmem(scip), cntsos) );
 
    /* set up hash map */
    SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->varhash, SCIPblkmem(scip), cntsos) );
@@ -8952,7 +8956,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
        /* create local conflict graph if needed */
        if ( conshdlrdata->addcomps )
        {
-          SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, conshdlrdata->nsos1vars) );
+          SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, SCIPblkmem(scip), conshdlrdata->nsos1vars) );
        }
 
        /* initialize stack of variables fixed to nonzero (memory may be already allocated in consTransSOS1()) */
@@ -9208,10 +9212,10 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
 
    *result = SCIP_DIDNOTRUN;
 
-   oldnfixedvars = *nfixedvars;
-   oldnchgbds = *nchgbds;
-   oldndelconss = *ndelconss;
-   oldnupgdconss = *nupgdconss;
+   SCIPdebug( oldnfixedvars = *nfixedvars; )
+   SCIPdebug( oldnchgbds = *nchgbds; )
+   SCIPdebug( oldndelconss = *ndelconss; )
+   SCIPdebug( oldnupgdconss = *nupgdconss; )
    nremovedvars = 0;
 
    /* only run if success if possible */
@@ -9302,7 +9306,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
    (*nchgcoefs) += nremovedvars;
 
    SCIPdebugMsg(scip, "presolving fixed %d variables, changed %d bounds, removed %d variables, deleted %d constraints, and upgraded %d constraints.\n",
-		    *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds, nremovedvars, *ndelconss - oldndelconss, *nupgdconss - oldnupgdconss);
+                *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds, nremovedvars, *ndelconss - oldndelconss, *nupgdconss - oldnupgdconss);
 
    return SCIP_OKAY;
 }

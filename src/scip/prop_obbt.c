@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1392,9 +1392,9 @@ SCIP_RETCODE applySeparation(
       /* apply cuts and resolve LP */
       SCIP_CALL( SCIPapplyCutsProbing(scip, &cutoff) );
       assert(SCIPgetNCuts(scip) == 0);
-      nlpiter = SCIPgetNLPIterations(scip);
+      SCIPdebug( nlpiter = SCIPgetNLPIterations(scip); )
       SCIP_CALL( solveLP(scip, (int) *nleftiterations, &error, &optimal) );
-      nlpiter = SCIPgetNLPIterations(scip) - nlpiter;
+      SCIPdebug( nlpiter = SCIPgetNLPIterations(scip) - nlpiter; )
       SCIPdebugMsg(scip, "applySeparation() - optimal=%u error=%u lpiter=%" SCIP_LONGINT_FORMAT "\n", optimal, error, nlpiter);
       SCIPdebugMsg(scip, "oldval = %e newval = %e\n", oldval, SCIPvarGetLPSol(currbound->var));
 

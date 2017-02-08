@@ -2,7 +2,7 @@
 /*                                                                           */
 /*        This file is part of the program PolySCIP                          */
 /*                                                                           */
-/*    Copyright (C) 2012-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2012-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  PolySCIP is distributed under the terms of the ZIB Academic License.     */

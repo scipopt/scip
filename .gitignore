@@ -23,7 +23,10 @@ doc/html/
 doc/html_devel/
 doc/doxygen
 doc/scip.tag
-doc/*.tmp
+doc/inc/faq/faqdata.php
+doc/inc/faq/faq.inc
+doc/inc/parameters.set
+doc/**/*.tmp
 .cproject
 .project
 .settings/
