@@ -6098,13 +6098,17 @@ SCIP_RETCODE createAndAddDualray(
    SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, nvars, vars, vals, lhs, rhs,
          FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 
-   upgdcons = NULL;
-   /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
-   SCIP_CALL( SCIPupgradeConsLinear(set->scip, cons, &upgdcons) );
-   if( upgdcons != NULL )
+   /* do not upgrade linear constraints of size 1 */
+   if( nvars > 1 )
    {
-      SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
-      cons = upgdcons;
+      upgdcons = NULL;
+      /* try to automatically convert a linear constraint into a more specific and more specialized constraint */
+      SCIP_CALL( SCIPupgradeConsLinear(set->scip, cons, &upgdcons) );
+      if( upgdcons != NULL )
+      {
+         SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
+         cons = upgdcons;
+      }
    }
 
    /* mark constraint to be a conflict */
