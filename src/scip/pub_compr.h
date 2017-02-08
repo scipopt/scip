@@ -33,9 +33,7 @@
 extern "C" {
 #endif
 
-/**@defgroup PublicCompressionMethods Tree Compression
- * @ingroup PluginManagementMethods
- * @brief  public methods for tree compressions
+/**@addtogroup PublicCompressionMethods
  *
  * @{
  */

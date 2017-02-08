@@ -6699,7 +6699,6 @@ SCIP_RETCODE generateCut(
    /* check if range of cut coefficients is ok
     * compute cut activity and violation in sol
     */
-   mincoef = 0.0; /* only for lint */
    maxcoef = 0.0; /* only for compiler */
    viol = 0.0;    /* only for compiler */
    if( success )
@@ -11233,7 +11232,7 @@ SCIP_DECL_CONSFREE(consFreeQuadratic)
    for( i = 0; i < conshdlrdata->nquadconsupgrades; ++i )
    {
       assert(conshdlrdata->quadconsupgrades[i] != NULL);
-      SCIPfreeBlockMemory(scip, &conshdlrdata->quadconsupgrades[i]);
+      SCIPfreeBlockMemory(scip, &conshdlrdata->quadconsupgrades[i]); /*lint !e866*/
    }
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->quadconsupgrades, conshdlrdata->quadconsupgradessize);
 
@@ -12438,7 +12437,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
                   assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
                   SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
-                  havechange = TRUE;
 
                   if( infeasible )
                   {

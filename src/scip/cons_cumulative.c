@@ -7362,6 +7362,7 @@ SCIP_RETCODE propagateCumulativeCondition(
             nchgbds, initialized, explanation, cutoff), TERMINATE );
    }
    /* free resource profile */
+   /* cppcheck-suppress unusedLabel */
 TERMINATE:
    SCIPprofileFree(&profile);
 
@@ -10680,7 +10681,7 @@ SCIP_RETCODE tightenCapacity(
       consdata->capacity = bestcapacity;
       (*nchgsides)++;
 
-      SCIPdebugMsgPrint(scip, "; changed additionally %d coefficients\n", (*nchgcoefs)-oldnchgcoefs);
+      SCIPdebugMsgPrint(scip, "; changed additionally %d coefficients\n", (*nchgcoefs) - oldnchgcoefs);
 
       consdata->varbounds = FALSE;
    }
@@ -14209,7 +14210,7 @@ SCIP_RETCODE SCIPvisualizeConsCumulative(
 
    /* create closing of the GML format */
    SCIPgmlWriteClosing(file);
-
+   /* cppcheck-suppress unusedLabel */
 TERMINATE:
    /* close file */
    fclose(file);

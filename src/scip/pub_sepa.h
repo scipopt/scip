@@ -34,9 +34,7 @@ extern "C" {
 #endif
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@defgroup PublicSeparatorMethods Separators
- * @ingroup PluginManagementMethods
- * @brief methods for separator plugins
+/**@addtogroup PublicSeparatorMethods
  *
  * @{
  */

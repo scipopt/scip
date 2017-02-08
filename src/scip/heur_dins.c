@@ -818,7 +818,6 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
 
    /* add an objective cutoff */
-   cutoff = SCIPinfinity(scip);
    assert(!SCIPisInfinity(scip, SCIPgetUpperbound(scip)));
 
    if( !SCIPisInfinity(scip, -1.0*SCIPgetLowerbound(scip)) )

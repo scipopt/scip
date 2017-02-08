@@ -1134,7 +1134,6 @@ SCIP_RETCODE presolveAddKKTAggregatedVars(
       int nvars;
 
       var = agrvars[v];
-      nvars = 0;
 
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
       {

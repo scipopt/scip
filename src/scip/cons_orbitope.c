@@ -850,7 +850,6 @@ SCIP_RETCODE propagateCons(
       assert( -1 <= firstnonzeroinrow && firstnonzeroinrow <= lastcolumn );
 
       /* compute rightmost possible position for a 1 */
-      lastoneinrow = -1;
       assert( !ispart || 0 <= lastoneprevrow );
       assert( lastoneprevrow <= lastcolumn );
 
@@ -1036,7 +1035,6 @@ SCIP_RETCODE propagateCons(
          for (i = s+1; i < nspcons; ++i)
          {
             int beta;
-            beta = -2;
 
             assert( betaprev + 1 >= 0 );
             if ( betaprev == nblocks-1 || SCIPvarGetUbLocal(vars[i][betaprev+1]) < 0.5 ) /*lint !e679*/

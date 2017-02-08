@@ -13,14 +13,14 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   xternal.c
+/**@file   xternal_vrp.c
  * @brief  main document page of VRP example
  * @author Andreas Bley
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Overview
+/**@page VRP_MAIN Overview
  * @version  0.1
  * @author   Andreas Bley
  *

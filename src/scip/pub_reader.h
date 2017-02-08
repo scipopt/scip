@@ -32,9 +32,7 @@
 extern "C" {
 #endif
 
-/**@defgroup PublicReaderMethods Reader
- * @ingroup PluginManagementMethods
- * @brief methods for the inclusion and access to reader plugins of \SCIP
+/**@addtogroup PublicReaderMethods
  *
  * @{
  */

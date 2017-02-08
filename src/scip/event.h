@@ -180,8 +180,8 @@ void SCIPeventhdlrEnableOrDisableClocks(
 /** creates a synchronization event */
 extern
 SCIP_RETCODE SCIPeventCreateSync(
-   SCIP_EVENT**          event,             /**< pointer to store the event */
-   BMS_BLKMEM*           blkmem             /**< block memory */
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** creates an event for an addition of a variable to the problem */

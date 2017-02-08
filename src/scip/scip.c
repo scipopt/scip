@@ -156,6 +156,7 @@ SCIP_RETCODE checkStage(
    SCIP_Bool             freescip            /**< may method be called in the FREE stage? */
    )
 {
+   /* cppcheck-suppress nullPointerRedundantCheck */
    assert(scip != NULL);
    assert(method != NULL);
 
@@ -1404,7 +1405,6 @@ SCIP_Bool takeCut(
    if( !SCIProwIsInLP(SCIPcutGetRow(cut)) )
       return FALSE;
 
-   takecut = FALSE;
    switch( cutsel )
    {
       case 'a':
@@ -10175,7 +10175,6 @@ SCIP_RETCODE writeProblem(
    compression = NULL;
    file = NULL;
    tmpfilename = NULL;
-   retcode = SCIP_OKAY;
 
    if( filename != NULL &&  filename[0] != '\0' )
    {
@@ -12931,7 +12930,7 @@ SCIP_RETCODE SCIPclearConflictStore(
    assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND);
    assert(SCIPeventGetSol(event) != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPcleanConflictStore", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPclearConflictStore", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconflictstoreCleanNewIncumbent(scip->conflictstore, scip->set, scip->stat, scip->mem->probmem,
          scip->transprob, scip->reopt, scip->primal->cutoffbound) );
@@ -14140,7 +14139,6 @@ SCIP_RETCODE presolveRound(
    *unbounded = FALSE;
    *infeasible = FALSE;
    aborted = FALSE;
-   lastranpresol = FALSE;
 
    assert( scip->set->propspresolsorted );
 
@@ -39232,6 +39230,7 @@ SCIP_RETCODE readSolFile(
          continue;
 
       /* parse the line */
+      /* cppcheck-suppress invalidscanf */
       nread = sscanf(buffer, "%s %s %s\n", varname, valuestring, objstring);
       if( nread < 2 )
       {

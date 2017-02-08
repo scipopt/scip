@@ -74,10 +74,10 @@ extern "C" {
 #define SCIPdebug(x)                        /**/
 
 /** prints a debugging message if SCIP_DEBUG flag is set - also consider using SCIPdebugMsg/SCIPsetDebugMsg */
-#define SCIPdebugMessage                while( FALSE ) printf
+#define SCIPdebugMessage                while( FALSE ) /*lint -e{530}*/ printf
 
 /** executes printf command only if SCIP_DEBUG flag is set */
-#define SCIPdebugPrintf                 while( FALSE ) printf
+#define SCIPdebugPrintf                 while( FALSE ) /*lint -e{530}*/ printf
 
 /** executes SCIPprintCons() and prints termination symbol ";\n" only if SCIP_DEBUG flag is set */
 #define SCIPdebugPrintCons(x,y,z)           /**/
@@ -101,10 +101,10 @@ extern "C" {
 #define SCIPstatistic(x)                        /**/
 
 /** prints a statistic message if SCIP_STATISTIC flag is set */
-#define SCIPstatisticMessage                while( FALSE ) printf
+#define SCIPstatisticMessage                while( FALSE ) /*lint -e{530}*/ printf
 
 /** executes printf command only if SCIP_STATISTIC flag is set */
-#define SCIPstatisticPrintf                 while( FALSE ) printf
+#define SCIPstatisticPrintf                 while( FALSE ) /*lint -e{530}*/ printf
 
 #endif
 

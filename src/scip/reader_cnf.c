@@ -156,8 +156,6 @@ SCIP_RETCODE readCnf(
    assert(scip != NULL);
    assert(file != NULL);
 
-   retcode = SCIP_OKAY;
-
    linecount = 0;
 
    /* read header */

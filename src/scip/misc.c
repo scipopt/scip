@@ -1349,7 +1349,7 @@ uint32_t hashvalue(
    uint64_t              input               /**< key value */
    )
 {
-   return ( (uint32_t) ((0x9e3779b97f4a7c15ull * input)>>32) ) | 1u;
+   return ( (uint32_t) ((0x9e3779b97f4a7c15ULL * input)>>32) ) | 1u;
 }
 
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
@@ -2042,11 +2042,10 @@ SCIP_RETCODE SCIPhashtableCreate(
     * to the next power of two.
     */
    (*hashtable)->shift = 32;
-   (*hashtable)->shift -= (int)ceil(
-      log(MAX(32.0, tablesize / 0.9)) / log(2.0));
+   (*hashtable)->shift -= (int)ceil(log(MAX(32.0, tablesize / 0.9)) / log(2.0));
 
    /* compute size from shift */
-   nslots = 1<<(32 - (*hashtable)->shift);
+   nslots = 1u << (32 - (*hashtable)->shift);
 
    /* compute mask to do a fast modulo by nslots using bitwise and */
    (*hashtable)->mask = nslots - 1;
@@ -2149,7 +2148,7 @@ SCIP_RETCODE hashtableInsert(
 
    pos = hashval>>(hashtable->shift);
    elemdistance = 0;
-   while( TRUE )
+   while( TRUE ) /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2339,7 +2338,7 @@ void* SCIPhashtableRetrieve(
    pos = hashval>>(hashtable->shift);
    elemdistance = 0;
 
-   while( TRUE )
+   while( TRUE ) /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2410,7 +2409,7 @@ SCIP_RETCODE SCIPhashtableRemove(
 
    elemdistance = 0;
    pos = hashval>>(hashtable->shift);
-   while( TRUE )
+   while( TRUE ) /*lint !e716*/
    {
       /* slots empty so element not contained */
       if( hashtable->hashes[pos] == 0 )
@@ -2436,7 +2435,7 @@ SCIP_RETCODE SCIPhashtableRemove(
    /* remove element */
    hashtable->hashes[pos] = 0;
    --hashtable->nelements;
-   while( TRUE )
+   while( TRUE ) /*lint !e716*/
    {
       uint32_t nextpos = (pos + 1) & hashtable->mask;
 
@@ -2574,7 +2573,7 @@ SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqPtr)
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
 {  /*lint --e{715}*/
    /* the key is used as the keyvalue too */
-   return (unsigned int) ((0xd37e9a1ce2148403ull * (size_t) key)>>32);
+   return (unsigned int) ((0xd37e9a1ce2148403ULL * (size_t) key)>>32);
 }
 
 
@@ -2610,7 +2609,7 @@ SCIP_RETCODE hashmapInsert(
 
    pos = hashval>>(hashmap->shift);
    elemdistance = 0;
-   while( TRUE )
+   while( TRUE ) /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2688,7 +2687,7 @@ SCIP_Bool hashmapLookup(
    *pos = hashval>>(hashmap->shift);
    elemdistance = 0;
 
-   while( TRUE )
+   while( TRUE ) /*lint !e716*/
    {
       uint32_t distance;
 
@@ -2783,9 +2782,8 @@ SCIP_RETCODE SCIPhashmapCreate(
     * to the next power of two.
     */
    (*hashmap)->shift = 32;
-   (*hashmap)->shift -= (int)ceil(
-      log(MAX(32, mapsize / 0.9)) / log(2.0));
-   nslots = 1<<(32 - (*hashmap)->shift);
+   (*hashmap)->shift -= (int)ceil(log(MAX(32, mapsize / 0.9)) / log(2.0));
+   nslots = 1u << (32 - (*hashmap)->shift);
    (*hashmap)->mask = nslots - 1;
    (*hashmap)->blkmem = blkmem;
    (*hashmap)->nelements = 0;
@@ -3032,7 +3030,7 @@ SCIP_RETCODE SCIPhashmapRemove(
       --hashmap->nelements;
 
       /* move other elements if necessary */
-      while( TRUE )
+      while( TRUE ) /*lint !e716*/
       {
          uint32_t nextpos = (pos + 1) & hashmap->mask;
 
@@ -6626,8 +6624,8 @@ void SCIPdigraphFree(
    /* free arrays storing the successor nodes and arc data */
    for( i = digraphptr->nnodes - 1; i >= 0; --i )
    {
-      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->successors[i], digraphptr->successorssize[i]);
-      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->arcdata[i], digraphptr->successorssize[i]);
+      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->successors[i], digraphptr->successorssize[i]); /*lint !e866*/
+      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->arcdata[i], digraphptr->successorssize[i]); /*lint !e866*/
    }
 
    /* free components structure */
@@ -7071,6 +7069,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    if( ncomponents != NULL )
       (*ncomponents) = digraph->ncomponents;
 
+   /* cppcheck-suppress unusedLabel */
 TERMINATE:
    if( retcode != SCIP_OKAY )
    {
@@ -8737,14 +8736,14 @@ void randomInitialize(
  *  [1] http://dl.acm.org/citation.cfm?doid=1268776.1268777
  */
 static
-int randomGetRand(
+uint32_t randomGetRand(
    SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
    )
 {
-   unsigned long t;
+   uint64_t t;
 
    /* linear congruential */
-   randnumgen->seed = randnumgen->seed * (SCIP_Longint)1103515245 + 12345;
+   randnumgen->seed = (uint32_t) (randnumgen->seed * UINT64_C(1103515245) + UINT64_C(12345));
 
    /* Xorshift */
    randnumgen->xor_seed ^= (randnumgen->xor_seed << 13);
@@ -8752,11 +8751,11 @@ int randomGetRand(
    randnumgen->xor_seed ^= (randnumgen->xor_seed << 5);
 
    /* Multiply-with-carry */
-   t = 698769069ULL * randnumgen->mwc_seed + randnumgen->cst_seed;
-   randnumgen->cst_seed = t >> 32;
-   randnumgen->mwc_seed = (unsigned int) t;
+   t = UINT64_C(698769069) * randnumgen->mwc_seed + randnumgen->cst_seed;
+   randnumgen->cst_seed = (uint32_t) (t >> 32);
+   randnumgen->mwc_seed = (uint32_t) t;
 
-   return (int)((randnumgen->seed + randnumgen->xor_seed + randnumgen->mwc_seed) % INT_MAX);
+   return randnumgen->seed + randnumgen->xor_seed + randnumgen->mwc_seed;
 }
 
 /** creates and initializes a random number generator */
@@ -8798,11 +8797,11 @@ int SCIPrandomGetInt(
 {
    SCIP_Real randnumber;
 
-   randnumber = (SCIP_Real)randomGetRand(randnumgen)/(INT_MAX+1.0);
+   randnumber = (SCIP_Real)randomGetRand(randnumgen)/(UINT32_MAX+1.0);
    assert(randnumber >= 0.0);
    assert(randnumber < 1.0);
 
-   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than INT_MAX
+   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than UINT32_MAX
     * apart
     */
    return (int) (minrandval*(1.0 - randnumber) + maxrandval*randnumber + randnumber);
@@ -8817,7 +8816,7 @@ SCIP_Real SCIPrandomGetReal(
 {
    SCIP_Real randnumber;
 
-   randnumber = (SCIP_Real)randomGetRand(randnumgen)/(SCIP_Real)INT_MAX;
+   randnumber = (SCIP_Real)randomGetRand(randnumgen)/(SCIP_Real)UINT32_MAX;
    assert(randnumber >= 0.0);
    assert(randnumber <= 1.0);
 

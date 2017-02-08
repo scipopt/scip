@@ -275,7 +275,7 @@ SCIP_RETCODE fillVariableGraph(
          continue;
 
 #ifdef SCIP_STATISTIC
-      nconscontvars = 0
+      nconscontvars = 0;
       nconsdiscvars = 0;
 #endif
 
@@ -373,8 +373,8 @@ SCIP_RETCODE variableGraphCreate(
 /** deinitialization method of variable graph data structure */
 static
 void variableGraphFree(
-   SCIP*                scip,                /**< SCIP data structure */
-   VARIABLEGRAPH**      vargraph             /**< pointer to the variable graph */
+   SCIP*                 scip,               /**< SCIP data structure */
+   VARIABLEGRAPH**       vargraph            /**< pointer to the variable graph */
    )
 {
    int nvars;
@@ -404,11 +404,11 @@ void variableGraphFree(
  */
 static
 SCIP_RETCODE variablegraphBreadthFirst(
-   SCIP*                scip,                /**< SCIP data structure */
-   VARIABLEGRAPH*       vargraph,            /**< pointer to the variable graph */
-   SCIP_VAR*            startvar,            /**< variable to calculate distance from */
-   int*                 distances,           /**< array to keep distance in vargraph from startvar for every variable */
-   int                  maxdistance          /**< maximum distance >= 0 from start variable (INT_MAX for complete BFS)*/
+   SCIP*                 scip,               /**< SCIP data structure */
+   VARIABLEGRAPH*        vargraph,           /**< pointer to the variable graph */
+   SCIP_VAR*             startvar,           /**< variable to calculate distance from */
+   int*                  distances,          /**< array to keep distance in vargraph from startvar for every variable */
+   int                   maxdistance         /**< maximum distance >= 0 from start variable (INT_MAX for complete BFS)*/
    )
 {
    SCIP_VAR** vars;
@@ -555,8 +555,8 @@ SCIP_RETCODE variablegraphBreadthFirst(
 /** create a rolling horizon data structure */
 static
 SCIP_RETCODE rollingHorizonCreate(
-   SCIP*                scip,               /**< SCIP data structure */
-   ROLLINGHORIZON**     rollinghorizon      /**< pointer to rolling horizon data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   ROLLINGHORIZON**      rollinghorizon      /**< pointer to rolling horizon data structure */
    )
 {
    int size;
@@ -579,8 +579,8 @@ SCIP_RETCODE rollingHorizonCreate(
 /** free a rolling horizon data structure */
 static
 SCIP_RETCODE rollingHorizonFree(
-   SCIP*                scip,               /**< SCIP data structure */
-   ROLLINGHORIZON**     rollinghorizon      /**< pointer to rolling horizon data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   ROLLINGHORIZON**      rollinghorizon      /**< pointer to rolling horizon data structure */
    )
 {
 
@@ -642,15 +642,16 @@ void rollingHorizonStoreDistances(
  */
 static
 SCIP_Real getPotential(
-   SCIP*                scip,                /**< SCIP data structure */
-   SCIP_HEURDATA*       heurdata,            /**< heuristic data */
-   SCIP_SOL*            sol,                 /**< solution */
-   SCIP_VAR**           vars,                /**< variable array */
-   int                  nvars                /**< length of variable array */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_VAR**            vars,               /**< variable array */
+   int                   nvars               /**< length of variable array */
    )
 {
    SCIP_Real potential;
    int i;
+
    assert(scip != NULL);
    assert(vars != NULL);
    assert(sol != NULL);
@@ -1374,7 +1375,6 @@ SCIP_RETCODE setupSubScip(
    }
 
    /* add an objective cutoff */
-   cutoff = SCIPinfinity(scip);
    assert( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) );
 
    upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);

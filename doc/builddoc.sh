@@ -3,6 +3,9 @@
 # change into SCIP root directory so that we can run bin/scip instead of ../bin/scip
 cd ..
 
+DOXYFILE=scip.dxy
+if [ -z $1 ]; then DOXYFILE=$1; fi
+
 ### START SHELL TUTORIAL
 
 # build a fresh version of SCIP
@@ -41,4 +44,4 @@ cd doc
 ### FINISHED FAQ GENERATION
 
 # finally build the scip documentation
-doxygen scip.dxy
+doxygen $DOXYFILE

@@ -42,16 +42,13 @@
 extern "C" {
 #endif
 
-/**@defgroup PublicNLPMethods NLP Relaxation
- * @ingroup PublicSolveMethods
- * @brief methods for the nonlinear relaxation
+/**@addtogroup PublicNLPMethods
  *
  * @{
  */
 
 
-/**@defgroup PublicExpressionTreeMethods Expression (Tree)
- * @brief methods for expressions and expression trees
+/**@addtogroup PublicExpressionTreeMethods
  *
  * @{
  */
@@ -97,8 +94,7 @@ int SCIPexprtreeFindVar(
 
 /**@} */
 
-/**@defgroup PublicNLRowMethods Nonlinear Rows
- * @brief methods for the creation and interaction with rows of the NLP relaxation
+/**@addtogroup PublicNLRowMethods
  *
  * @{
  */

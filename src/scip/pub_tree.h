@@ -42,9 +42,7 @@ extern "C" {
  * Node methods
  */
 
-/**@defgroup PublicNodeMethods Nodes
- * @ingroup PublicTreeMethods
- * @brief  methods for nodes of the search tree of \SCIP
+/**@addtogroup PublicNodeMethods
  *
  * @{
  */

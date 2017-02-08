@@ -279,12 +279,17 @@ SCIP_Longint SCIPgetConcurrentMemTotal(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_Longint memtotal = SCIPgetMemTotal(scip);
+
    assert(scip != NULL);
 
    if( scip->concurrent == NULL || scip->concurrent->mainscip != scip || scip->concurrent->concsolver == NULL )
-      return SCIPgetMemTotal(scip);
+      return memtotal;
    else
-      return MAX(SCIPgetMemTotal(scip), SCIPconcsolverGetMemTotal(scip->concurrent->concsolver));
+   {
+      SCIP_Longint concmemtotal = SCIPconcsolverGetMemTotal(scip->concurrent->concsolver);
+      return MAX(memtotal, concmemtotal);
+   }
 }
 
 /** gets the dualbound in the last synchronization */

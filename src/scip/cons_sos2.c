@@ -1503,8 +1503,8 @@ SCIP_DECL_CONSPRESOL(consPresolSOS2)
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
-   oldnfixedvars = *nfixedvars;
-   oldndelconss = *ndelconss;
+   SCIPdebug( oldnfixedvars = *nfixedvars; )
+   SCIPdebug( oldndelconss = *ndelconss; )
    nremovedvars = 0;
 
    /* only run if success is possible */

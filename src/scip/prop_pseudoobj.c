@@ -3026,7 +3026,6 @@ SCIP_Real getMaxObjPseudoactivityResidual(
 
    assert(propdata != NULL);
 
-   contrib = 0.0;
    objval = SCIPvarGetObj(var);
    if( SCIPvarGetWorstBoundType(var) == SCIP_BOUNDTYPE_UPPER )
    {

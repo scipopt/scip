@@ -38,9 +38,7 @@
 extern "C" {
 #endif
 
-/**@defgroup PublicSolutionMethods Primal Solution
- * @ingroup PublicProblemMethods
- * @brief  methods to create and change primal solutions of \SCIP
+/**@addtogroup PublicSolutionMethods
  *
  * @{
  */

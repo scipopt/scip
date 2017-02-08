@@ -89,19 +89,22 @@ struct SCIP_SyncData
 };
 
 /** struct for storing the position of avariables lower and upper bound in the boundstore */
-typedef struct {
+typedef struct
+{
    int                   pos[2];             /**< stores at pos[SCIP_BOUNDTYPE_LOWER] the position of the lowerbound and
                                               *   at pos[SCIP_BOUNDTYPE_UPPER] the position of the upperbound */
 } BoundPos;
 
 /** struct for storing a single boundchange in the boundstore */
-typedef struct {
+typedef struct
+{
    int                   varidx;             /**< the variables position in the variable array of the main scip */
    SCIP_Real             newbound;           /**< the variables new bound */
    SCIP_BOUNDTYPE        boundtype;          /**< the type of the variables new bound */
 } BoundChg;
 
-struct SCIP_BoundStore {
+struct SCIP_BoundStore
+{
    int                   nvars;              /**< the number of variables to store bounds for */
    BoundPos*             bndpos;             /**< array of size nvars to store the positions for all the bound changes
                                               *   stored in this boundstore */

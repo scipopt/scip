@@ -384,7 +384,6 @@ void transformVariable(
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
 
-   deltashift = 0.0;
    negatecoeffs = FALSE;
    /* if both lower and upper bound are -infinity and infinity, resp., this is reflected by a free transform status.
     * If the lower bound is already zero, this is reflected by identity transform status. In both cases, none of the
@@ -1856,7 +1855,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       SCIP_Real origsolval;
       SCIP_Real lb;
       SCIP_Real ub;
-      TRANSFORMSTATUS status;
       int nviolations;
       int permutedvarindex;
       int j;
@@ -1901,10 +1899,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          SCIP_CALL( updateTransformation(scip, matrix, heurdata, permutedvarindex,lb, ub, violatedrows, violatedrowpos,
                &nviolatedrows) );
 
-      status = matrix->transformstatus[permutedvarindex];
-
       SCIPdebugMsg(scip, "Variable %s with local bounds [%g,%g], status <%d>, matrix bound <%g>\n",
-         SCIPvarGetName(var), lb, ub, status, matrix->upperbounds[permutedvarindex]);
+         SCIPvarGetName(var), lb, ub, matrix->transformstatus[permutedvarindex], matrix->upperbounds[permutedvarindex]);
 
       /* ignore variable if propagation fixed it (lb and ub will be zero) */
       if( SCIPisFeasZero(scip, matrix->upperbounds[permutedvarindex]) )

@@ -34,9 +34,7 @@ extern "C" {
 #endif
 
 
-/**@defgroup PublicRelaxatorMethods Relaxation Handlers
- * @ingroup PluginManagementMethods
- * @brief public methods for relaxation handlers
+/**@addtogroup PublicRelaxatorMethods
  *
  * @{
  */
