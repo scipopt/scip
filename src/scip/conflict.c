@@ -6992,7 +6992,7 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
    )
 {
-   SCIP_Bool dualraysuccess;
+   SCIP_Bool dualraysuccess = FALSE;
    int iterations;
    int nconss;
    int nliterals;
