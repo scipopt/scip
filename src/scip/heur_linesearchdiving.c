@@ -56,7 +56,7 @@
 #define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
-#define DEFAULT_RANDSEED             83 /**< default initialization for random seed number generation */
+#define DEFAULT_RANDSEED            137 /**< default initialization for random seed number generation */
 /*
  * Data structures
  */

@@ -54,7 +54,7 @@
 #define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
-#define DEFAULT_RANDSEED             13 /**< initial seed for random number generation */
+#define DEFAULT_RANDSEED            127 /**< initial seed for random number generation */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
