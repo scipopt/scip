@@ -1138,8 +1138,8 @@ ifeq ($(LINKER),CPP)
 		|| ($(MAKE) errorhints && false)
 endif
 
-.PHONY: preprocess libscip
-libscip:
+.PHONY: libscip
+libscip:		preprocess
 		@$(MAKE) $(SCIPLIBFILE) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK)
 
 $(SCIPLIBFILE):	$(SCIPLIBOBJFILES) | $(LIBDIR)/$(LIBTYPE) $(LIBOBJSUBDIRS)
@@ -1150,8 +1150,8 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 
-.PHONY: preprocess libobjscip
-libobjscip:
+.PHONY: libobjscip
+libobjscip:		preprocess
 		@$(MAKE) $(OBJSCIPLIBFILE) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK)
 
 $(OBJSCIPLIBFILE):	$(OBJSCIPLIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
@@ -1162,8 +1162,8 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 
-.PHONY: preprocess liblpi
-liblpi:
+.PHONY: liblpi
+liblpi:		preprocess
 		@$(MAKE) $(LPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK)
 
 $(LPILIBFILE):	$(LPILIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
@@ -1174,8 +1174,8 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 
-.PHONY: preprocess libnlpi
-libnlpi:
+.PHONY: libnlpi
+libnlpi:		preprocess
 		@$(MAKE) $(NLPILIBFILE) $(NLPILIBLINK) $(NLPILIBSHORTLINK)
 
 $(NLPILIBFILE):	$(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
@@ -1186,8 +1186,8 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 
-.PHONY: preprocess libtpi
-libtpi:
+.PHONY: libtpi
+libtpi:		preprocess
 		@$(MAKE) $(TPILIBFILE) $(TPILIBLINK) $(TPILIBSHORTLINK)
 
 $(TPILIBFILE):	$(TPILIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)/$(LIBTYPE)
@@ -1198,8 +1198,8 @@ ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
 
-.PHONY: preprocess libscipsolver
-libscipsolver:
+.PHONY: libscipsolver
+libscipsolver:		preprocess
 		@$(MAKE) $(SCIPLIBSOLVERFILE) $(SCIPLIBSOLVERLINK) $(SCIPLIBSOLVERSHORTLINK)
 
 $(SCIPLIBSOLVERFILE): $(SCIPLIBOBJFILES) $(NLPILIBOBJFILES) $(LPILIBOBJFILES) $(TPILIBOBJFILES) $(OBJSCIPLIBOBJFILES) | $(LIBDIR)/$(LIBTYPE) $(LIBOBJSUBDIRS)
