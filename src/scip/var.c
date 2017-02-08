@@ -4453,6 +4453,7 @@ SCIP_RETCODE SCIPvarAggregate(
    int j;
 
    assert(var != NULL);
+   assert(aggvar != NULL);
    assert(var->scip == set->scip);
    assert(var->glbdom.lb == var->locdom.lb); /*lint !e777*/
    assert(var->glbdom.ub == var->locdom.ub); /*lint !e777*/
@@ -4485,7 +4486,6 @@ SCIP_RETCODE SCIPvarAggregate(
    if( SCIPvarGetHolelistGlobal(var) != NULL )
       return SCIP_OKAY;
 
-   assert(aggvar != NULL);
    assert(aggvar->glbdom.lb == aggvar->locdom.lb); /*lint !e777*/
    assert(aggvar->glbdom.ub == aggvar->locdom.ub); /*lint !e777*/
    assert(SCIPvarGetStatus(aggvar) == SCIP_VARSTATUS_LOOSE);
