@@ -2704,8 +2704,6 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 {
    double cnt;
    int retval;
-   int primalfeasible;
-   int dualfeasible;
 
    assert( lpi != NULL );
    assert( lpi->grbmodel != NULL );
@@ -2758,12 +2756,8 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    SCIPdebugMessage("Gurobi primal simplex needed %d iterations to gain LP status %d\n", (int) cnt, lpi->solstat);
 
-   primalfeasible = FALSE;
-   dualfeasible = FALSE;
-
-   if( lpi->solstat == GRB_INF_OR_UNBD
-      || (lpi->solstat == GRB_INFEASIBLE && !dualfeasible)
-      || (lpi->solstat == GRB_UNBOUNDED && !primalfeasible) )
+   /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
+   if( SCIPlpiIsPrimalInfeasible(lpi) && ! SCIPlpiHasPrimalRay(lpi) )
    {
       int presolve;
 
@@ -2771,7 +2765,6 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
       if( presolve != GRB_PRESOLVE_OFF )
       {
-         /* maybe the preprocessor solved the problem; but we need a solution, so solve again without preprocessing */
          SCIPdebugMessage("presolver may have solved the problem -> calling Gurobi primal simplex again without presolve\n");
 
          /* switch off preprocessing */
@@ -4916,13 +4909,13 @@ SCIP_RETCODE SCIPlpiSetNorms(
    error = GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_VDUALNORM, 0, lpinorms->ncols, lpinorms->colnorm);
    if( error )
    {
-      SCIPdebugMessage("Warning: setting dual variable norms failed with Gurobi error %d\n", error);
+      SCIPmessagePrintWarning(lpi->messagehdlr, "Warning: setting dual variable norms failed with Gurobi error %d\n", error);
    }
 
    error = GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_CDUALNORM, 0, lpinorms->nrows, lpinorms->rownorm);
    if( error )
    {
-      SCIPdebugMessage("Warning: setting dual constraint norms failed with Gurobi error %d\n", error);
+      SCIPmessagePrintWarning(lpi->messagehdlr, "Warning: setting dual constraint norms failed with Gurobi error %d\n", error);
    }
 
    return SCIP_OKAY;
