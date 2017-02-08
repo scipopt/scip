@@ -890,12 +890,7 @@ SCIP_DECL_NLPICOPY( nlpiCopyWorhp )
 
    targetdata = SCIPnlpiGetData(*targetnlpi);
    assert(targetdata != NULL);
-
-   targetdata->blkmem = sourcedata->blkmem;
-   targetdata->messagehdlr = sourcedata->messagehdlr;
-
-   /* copy parameter */
-   targetdata->infinity = sourcedata->infinity;
+   targetdata->blkmem = blkmem;
 
    return SCIP_OKAY;
 }  /*lint !e715*/
