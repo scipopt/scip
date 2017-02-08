@@ -210,7 +210,7 @@ Test(knapprox, noitemfits, .description = "tests corner case where no single ite
 
 Test(knapprox, biginstance, .description = "tests big random data")
 {
-   nitems = 999999; /* more than 25 items to call Balas Zemel algorithm */
+   nitems = 500; /* more than 25 items to call Balas Zemel algorithm */
 
    /* don't use a minimum weight of 1 because we might end up with a zero capacity */
    randomDataInit(randnumgen, 5);
@@ -241,7 +241,7 @@ Test(knapprox, bigandbad, .description = "tests big instance that is already sor
 {
    int i;
    SCIP_Real expectedprofit;
-   nitems = 999999; /* more than 25 items to call Balas Zemel algorithm */
+   nitems = 999; /* more than 25 items to call Balas Zemel algorithm */
 
    /* initialize profits that are decreasing, but equal weights */
    for( i = 0; i < nitems; ++i )
@@ -251,11 +251,11 @@ Test(knapprox, bigandbad, .description = "tests big instance that is already sor
    }
 
    /* odd weight ensures that only the first 49999 items fit */
-   capacity = 99999;
+   capacity = 99;
 
    callAndTestSolveKnapsackApproximately();
 
-   cr_assert_eq(nsolitems, 49999, "Wrong number of solution items");
+   cr_assert_eq(nsolitems, 49, "Wrong number of solution items");
 
    expectedprofit = ((nitems + 1)/ 3.0) * nsolitems - (SCIP_Real)(nsolitems - 1)*nsolitems / 6.0;
    cr_assert_float_eq(profit, expectedprofit, 1e-4, "Expectedprofit %g ~= profit %g\n", expectedprofit, profit);
@@ -265,7 +265,7 @@ Test(knapprox, manybiginstances, .description = "tests many big instances for ti
 {
    int ntries = 20;
    int trial = 1;
-   nitems = 999999; /* more than 25 items to call Balas Zemel algorithm */
+   nitems = 999; /* more than 25 items to call Balas Zemel algorithm */
 
    do
    {
@@ -276,31 +276,4 @@ Test(knapprox, manybiginstances, .description = "tests many big instances for ti
       callAndTestSolveKnapsackApproximately();
 
    } while( trial++ <= ntries );
-}
-
-Test(knapprox, shuffledata, .description = "tests consistent result when shuffling data")
-{
-   int npermutations = 20;
-   int permutation = 1;
-   SCIP_Real lastprofit;
-   nitems = 999;
-
-   randomDataInit(randnumgen, 2);
-   capacity /= 4;
-
-   lastprofit = -1.0;
-   do
-   {
-      /* by permuting and sorting, the items costs and weights are shuffled; the profit of the greedy solution, however, must not change */
-      SCIPrandomPermuteIntArray(randnumgen, items, 0, nitems);
-      SCIPsortIntRealLong(items, profits, weights, nitems);
-
-      callAndTestSolveKnapsackApproximately();
-
-      if( lastprofit >= 0.0 )
-         cr_assert_float_eq(lastprofit, profit, 1e-6, "Permutation %d has a different result from the previous: %.1g ~= %.1g", permutation, lastprofit, profit);
-
-      lastprofit = profit;
-
-   } while( permutation++ <= npermutations );
 }
