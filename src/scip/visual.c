@@ -285,7 +285,7 @@ SCIP_RETCODE SCIPvisualNewChild(
 
    nodenum = (size_t)stat->ncreatednodesrun;
    assert(nodenum > 0);
-   SCIP_CALL( SCIPhashmapInsert(visual->nodenum, node, (void*)nodenum) );
+   SCIP_CALL( SCIPhashmapSetImage(visual->nodenum, node, (void*)nodenum) );
 
    /* get nodenum of parent node from hash map */
    parentnodenum = (node->parent != NULL ? (size_t)SCIPhashmapGetImage(visual->nodenum, node->parent) : 0);
