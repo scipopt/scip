@@ -203,6 +203,9 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
       else
          sim = SCIPgetReoptSimilarity(scip, run, SCIPgetNReoptRuns(scip)-1);
 
+      if( sim == SCIP_INVALID )
+         return SCIP_INVALIDRESULT;
+
       if( sim >= objsimsol )
       {
          int s;
