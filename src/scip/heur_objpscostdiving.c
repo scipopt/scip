@@ -49,7 +49,7 @@
                                          *   (-1: no limit) */
 #define DEFAULT_DEPTHFAC            0.5 /**< maximal diving depth: number of binary/integer variables times depthfac */
 #define DEFAULT_DEPTHFACNOSOL       2.0 /**< maximal diving depth factor if no feasible solution was found yet */
-#define DEFAULT_RANDSEED            101 /**< initial random seed */
+#define DEFAULT_RANDSEED            139 /**< initial random seed */
 
 #define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
 

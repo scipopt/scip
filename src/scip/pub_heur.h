@@ -362,6 +362,12 @@ SCIP_Bool SCIPdivesetSupportsType(
    SCIP_DIVETYPE         divetype            /**< bit mask that represents the supported dive types by this dive set */
    );
 
+/** returns the random number generator of this \p diveset for tie-breaking */
+EXTERN
+SCIP_RANDNUMGEN* SCIPdivesetGetRandnumgen(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
 /* @} */
 
 #ifdef __cplusplus
