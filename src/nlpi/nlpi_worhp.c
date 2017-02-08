@@ -142,170 +142,208 @@ SCIP_RETCODE evaluateWorhpRun(
    assert(problem->par != NULL);
    assert(problem->cnt != NULL);
 
-  /* initialization error */
-  if( problem->cnt->status == InitError )
-  {
-     SCIPdebugMessage("Worhp failed because of initialization error!\n");
-     invalidateSolution(problem);
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_MEMERR;
-  }
-  /* data error */
-  else if( problem->cnt->status == DataError )
-  {
-     SCIPdebugMessage("Worhp failed because of data error!\n");
-     invalidateSolution(problem);
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
-  }
-  /* license error */
-  else if( problem->cnt->status == LicenseError )
-  {
-     SCIPerrorMessage("Worhp failed because of license error!\n");
-     invalidateSolution(problem);
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_LICERR;
-  }
+   switch( problem->cnt->status )
+   {
+   case InitError:
+   {
+      /* initialization error */
+      SCIPdebugMessage("Worhp failed because of initialization error!\n");
+      invalidateSolution(problem);
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_MEMERR;
+      break;
+   }
 
-  /* evaluation errors */
-  else if( problem->cnt->status == evalsNaN )
-  {
-     SCIPdebugMessage("Worhp failed because of a NaN value in an evaluation!\n");
-     invalidateSolution(problem);
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
-  }
+   case DataError:
+   {
+      /* data error */
+      SCIPdebugMessage("Worhp failed because of data error!\n");
+      invalidateSolution(problem);
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
+      break;
+   }
 
-  /*
-   * catch unsuccessful states
-   */
+   case LicenseError:
+   {
+      /* license error */
+      SCIPerrorMessage("Worhp failed because of license error!\n");
+      invalidateSolution(problem);
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_LICERR;
+      break;
+   }
 
-  /* numerical errors during solution of NLP */
-  else if( (problem->cnt->status == QPerror) || (problem->cnt->status == MinimumStepsize) || (problem->cnt->status == TooBig) )
-  {
-     SCIPdebugMessage("Worhp failed because of a numerical error during optimization!\n");
-     invalidateSolution(problem);
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
-  }
-  /* maximal number of calls or iteration */
-  else if( (problem->cnt->status == MaxCalls) || (problem->cnt->status == MaxIter) )
-  {
-     SCIPdebugMessage("Worhp failed because maximal number of calls or iterations is reached!\n");
-     invalidateSolution(problem);
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_ITLIM;
-  }
-  /* time limit reached */
-  else if( problem->cnt->status == Timeout )
-  {
-     SCIPdebugMessage("Worhp failed because time limit is reached!\n");
-     invalidateSolution(problem);
-     problem->lastsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
-  }
-  /* infeasible stationary point found */
-  else if( problem->cnt->status == LocalInfeas || problem->cnt->status == LocalInfeasOptimal )
-  {
-     SCIPdebugMessage("Worhp failed because of convergence against infeasible stationary point!\n");
-     invalidateSolution(problem);
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
-  }
-  /* regularization of Hessian matrix failed */
-  else if( problem->cnt->status == RegularizationFailed )
-  {
-     SCIPdebugMessage("Worhp failed because of regularization of Hessian matrix failed!\n");
-     invalidateSolution(problem);
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
-  }
+   case evalsNaN:
+   {
+      /* evaluation errors */
+      SCIPdebugMessage("Worhp failed because of a NaN value in an evaluation!\n");
+      invalidateSolution(problem);
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_EVALERR;
+      break;
+   }
 
-  /*
-   * catch successful states
-   */
+   case QPerror:
+   case MinimumStepsize:
+   case TooBig:
+   {
+      /* numerical errors during solution of NLP */
+      SCIPdebugMessage("Worhp failed because of a numerical error during optimization!\n");
+      invalidateSolution(problem);
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
+      break;
+   }
 
-  /* everything went fine */
-  else if( problem->cnt->status == OptimalSolution || problem->cnt->status == OptimalSolutionBoxEqual )
-  {
-     SCIPdebugMessage("Worhp terminated successfully at a local optimum!\n");
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_LOCOPT;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
-  }
-  /* feasible point, KKT conditions are not satisfied, and Worhp thinks that there is no objective function */
-  else if( problem->cnt->status == OptimalSolutionConstantF )
-  {
-     SCIPdebugMessage("Worhp terminated successfully with a feasible point but KKT are not met!\n");
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
-  }
-  /* feasible point but KKT conditions are violated in unscaled space */
-  else if( problem->cnt->status == AcceptableSolutionSKKT || problem->cnt->status == AcceptableSolutionScaled
-     || problem->cnt->status == AcceptablePreviousScaled )
-  {
-     SCIPdebugMessage("Worhp terminated successfully with a feasible point but KKT are violated in unscaled space!\n");
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
-  }
-  /* feasible and no further progress */
-  else if( problem->cnt->status == LowPassFilterOptimal )
-  {
-     SCIPdebugMessage("Worhp terminated at feasible solution without further progress!\n");
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
-  }
-  /* feasible and in feasibility mode, i.e., optimality not required */
-  else if( problem->cnt->status == FeasibleSolution )
-  {
-     SCIPdebugMessage("Worhp terminated at feasible solution, optimality was not required!\n");
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
-  }
-  /* acceptable solution found, but stopped due to limit or error */
-  else if( problem->cnt->status == AcceptableSolution || problem->cnt->status == AcceptableSolutionConstantF )
-  {
-     SCIPdebugMessage("Worhp terminated at acceptable solution due to limit or error!\n");
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
-  }
-  /* previously acceptable solution was found, but stopped due to limit or error */
-  else if( problem->cnt->status == AcceptablePrevious || problem->cnt->status == AcceptablePreviousConstantF )
-  {
-     SCIPdebugMessage("Worhp previously found acceptable solution but terminated due to limit or error!\n");
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
-  }
-  /* acceptable solution found, and no further progress */
-  else if( problem->cnt->status == LowPassFilterAcceptable )
-  {
-     SCIPdebugMessage("Worhp found acceptable solution but terminated due no further progress!\n");
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
-  }
-  /* acceptable solution found, but search direction is small or zero */
-  else if( (problem->cnt->status == SearchDirectionZero) || (problem->cnt->status == SearchDirectionSmall) )
-  {
-     SCIPdebugMessage("Worhp found acceptable solution but search direction is small or zero!\n");
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
-  }
-  /* acceptable solution found, but not optimal */
-  else if( (problem->cnt->status == FritzJohn) || (problem->cnt->status == NotDiffable) || (problem->cnt->status == Unbounded) )
-  {
-     SCIPdebugMessage("Worhp found acceptable solution but terminated perhaps due to nondifferentiability, unboundedness or at Fritz John point!\n");
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
-  }
+   case MaxCalls:
+   case MaxIter:
+   {
+      /* maximal number of calls or iteration */
+      SCIPdebugMessage("Worhp failed because maximal number of calls or iterations is reached!\n");
+      invalidateSolution(problem);
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_ITLIM;
+      break;
+   }
 
-  /*
-   * catch other states
-   */
-  else
-  {
-     SCIPerrorMessage("Worhp returned with unknown solution status %d\n", problem->cnt->status);
-     problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
-     problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
-  }
+   case Timeout:
+   {
+      /* time limit reached */
+      SCIPdebugMessage("Worhp failed because time limit is reached!\n");
+      invalidateSolution(problem);
+      problem->lastsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
+      break;
+   }
+
+   case LocalInfeas:
+   case LocalInfeasOptimal:
+   {
+      /* infeasible stationary point found */
+      SCIPdebugMessage("Worhp failed because of convergence against infeasible stationary point!\n");
+      invalidateSolution(problem);
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+      break;
+   }
+
+   case RegularizationFailed:
+   {
+      /* regularization of Hessian matrix failed */
+      SCIPdebugMessage("Worhp failed because of regularization of Hessian matrix failed!\n");
+      invalidateSolution(problem);
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
+      break;
+   }
+
+   case OptimalSolution:
+   case OptimalSolutionBoxEqual:
+   {
+      /* everything went fine */
+      SCIPdebugMessage("Worhp terminated successfully at a local optimum!\n");
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_LOCOPT;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+      break;
+   }
+
+   case OptimalSolutionConstantF:
+   {
+      /* feasible point, KKT conditions are not satisfied, and Worhp thinks that there is no objective function */
+      SCIPdebugMessage("Worhp terminated successfully with a feasible point but KKT are not met!\n");
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+      break;
+   }
+
+   case AcceptableSolutionSKKT:
+   case AcceptableSolutionScaled:
+   case AcceptablePreviousScaled:
+   {
+      /* feasible point but KKT conditions are violated in unscaled space */
+      SCIPdebugMessage("Worhp terminated successfully with a feasible point but KKT are violated in unscaled space!\n");
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+      break;
+   }
+
+   case LowPassFilterOptimal:
+   {
+      /* feasible and no further progress */
+      SCIPdebugMessage("Worhp terminated at feasible solution without further progress!\n");
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+      break;
+   }
+
+   case FeasibleSolution:
+   {
+      /* feasible and in feasibility mode, i.e., optimality not required */
+      SCIPdebugMessage("Worhp terminated at feasible solution, optimality was not required!\n");
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+      break;
+   }
+
+   case AcceptableSolution:
+   case AcceptableSolutionConstantF:
+   {
+      /* acceptable solution found, but stopped due to limit or error */
+      SCIPdebugMessage("Worhp terminated at acceptable solution due to limit or error!\n");
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+      break;
+   }
+
+   case AcceptablePrevious:
+   case AcceptablePreviousConstantF:
+   {
+      /* previously acceptable solution was found, but stopped due to limit or error */
+      SCIPdebugMessage("Worhp previously found acceptable solution but terminated due to limit or error!\n");
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+      break;
+   }
+
+   case LowPassFilterAcceptable:
+   {
+      /* acceptable solution found, and no further progress */
+      SCIPdebugMessage("Worhp found acceptable solution but terminated due no further progress!\n");
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+      break;
+   }
+
+   case SearchDirectionZero:
+   case SearchDirectionSmall:
+   {
+      /* acceptable solution found, but search direction is small or zero */
+      SCIPdebugMessage("Worhp found acceptable solution but search direction is small or zero!\n");
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+      break;
+   }
+
+   case FritzJohn:
+   case NotDiffable:
+   case Unbounded:
+   {
+      /* acceptable solution found, but not optimal */
+      SCIPdebugMessage("Worhp found acceptable solution but terminated perhaps due to nondifferentiability, unboundedness or at Fritz John point!\n");
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+      break;
+   }
+
+   default:
+   {
+      SCIPerrorMessage("Worhp returned with unknown solution status %d\n", problem->cnt->status);
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_OTHER;
+      return SCIP_OKAY;
+   }
+   }
 
   /* store solution */
   if( problem->lastprimal == NULL )
