@@ -680,13 +680,6 @@ SCIP_DECL_PROPEXEC(propExecNlobbt)
       return SCIP_OKAY;
    }
 
-   /* don't run if no feasible solution has been found so far */
-   if( SCIPisInfinity(scip, SCIPgetCutoffbound(scip)) )
-   {
-      SCIPdebugMsg(scip, "No feasible solution found so far, skipping nlobbt\n");
-      return SCIP_OKAY;
-   }
-
    /* consider all variables again if we process a new node */
    if( SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) != propdata->lastnode )
    {
