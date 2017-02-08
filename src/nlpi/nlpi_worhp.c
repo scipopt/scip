@@ -1676,7 +1676,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
       SCIP_CALL( evaluateWorhpRun(problem, nlpidata->messagehdlr) );
    }
 
-   /* free memory */
+   /* prints a status message with information about the current solver status */
    StatusMsg(opt, wsp, par, cnt);
 
    /* store statistics */
