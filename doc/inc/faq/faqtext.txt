@@ -486,7 +486,7 @@ SECTION: Using SCIP as a standalone solver
         Implicit integer variables are variables which attain an integer value in <em>every</em> optimal solution of the problem.
         As a trivial example, if our problem is to minimize a variable, subject to that variable being non-negative, then
         the variable can be regarded as implicit integer.
-        Other examples are variables that get fix to an integer value after all integer variables are fixed.
+        Other examples are variables that get fixed to an integer value after all integer variables are fixed.
         <br/><br/> <b>Note:</b> Care must be taken when declaring variables as implicit integer. If a bunch
         of variables could be declared implicit integer, then changing one of them to implicit integer might
         forbid other variables to be implicit integer. Consider, as an example, the constraint
@@ -494,7 +494,7 @@ SECTION: Using SCIP as a standalone solver
         Actually, either one of them could be declared implicit integer, but not both of them.
         Indeed, declaring <code>x</code> as implicit integer is fine, since in every optimal solution
         <code>y</code> will be integer and, given that the constraint has to be satisfied, <code>x</code> will be
-        integer as well. However, in absence of other constraints, <code>y</code> can not be declared
+        integer as well. However, in absence of other constraints, <code>y</code> cannot be declared
         implicit integer anymore.
     </p>
 
