@@ -212,7 +212,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
          || (SCIPisEQ(scip, candsol, SCIPvarGetRootSol(cand) + 0.4) && SCIPrandomGetInt(SCIPdivesetGetRandnumgen(diveset), 0, 1) == 0) )
       *roundup = TRUE;
    else if( SCIPisLT(scip, candsfrac, 0.3)
-         || (SCIPisLT(scip, candsfrac, 0.3) && SCIPrandomGetInt(SCIPdivesetGetRandnumgen(diveset), 0, 1) == 0) )
+         || (SCIPisEQ(scip, candsfrac, 0.3) && SCIPrandomGetInt(SCIPdivesetGetRandnumgen(diveset), 0, 1) == 0) )
       *roundup = FALSE;
    else if( SCIPisGT(scip, candsfrac, 0.7)
          || (SCIPisEQ(scip, candsfrac, 0.7) && SCIPrandomGetInt(SCIPdivesetGetRandnumgen(diveset), 0, 1) == 0) )
