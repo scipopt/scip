@@ -681,18 +681,31 @@ SCIP_RETCODE initWorhp(
    /* set variable bounds */
    lbs = SCIPnlpiOracleGetVarLbs(problem->oracle);
    ubs = SCIPnlpiOracleGetVarUbs(problem->oracle);
+
+   BMScopyMemoryArray(opt->XL, lbs, opt->n);
+   BMScopyMemoryArray(opt->XU, ubs, opt->n);
+
+#ifdef SCIP_DEBUG
    for( i = 0; i < opt->n; ++i )
    {
-      opt->XL[i] = lbs[i];
-      opt->XU[i] = ubs[i];
       SCIPdebugMessage("bounds %d [%g,%g]\n", i, opt->XL[i], opt->XU[i]);
    }
+#endif
 
    /* set constraint sides */
    for( i = 0; i < opt->m; ++i )
    {
       opt->GL[i] = SCIPnlpiOracleGetConstraintLhs(problem->oracle, i);
       opt->GU[i] = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
+
+      /* adjust constraint sides when both are infinite */
+      if( opt->GL[i] <= -nlpidata->infinity && opt->GU[i] >= nlpidata->infinity )
+      {
+         SCIPmessagePrintWarning(nlpidata->messagehdlr, "Lhs and rhs of constraint %d are infinite.\n", i);
+         opt->GL[i] = -nlpidata->infinity / 10.0;
+         opt->GU[i] = nlpidata->infinity / 10.0;
+      }
+
       SCIPdebugMessage("sides %d [%g,%g]\n", i, opt->GL[i], opt->GU[i]);
    }
 
@@ -1532,10 +1545,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    /* set initial guess (if available) */
    if( problem->initguess != NULL )
    {
-      for( i = 0; i < problem->opt->n; ++i )
-      {
-         problem->opt->X[i] = problem->initguess[i];
-      }
+      BMScopyMemoryArray(problem->opt->X, problem->initguess, problem->opt->n);
    }
    else
    {
