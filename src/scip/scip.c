@@ -14715,8 +14715,11 @@ SCIP_RETCODE presolve(
       SCIP_Longint nactivenonzeros;
       SCIP_Bool approxchecknonzeros;
       SCIP_Bool approxactivenonzeros;
+      SCIP_Bool infeas;
 
-      SCIP_CALL( exitPresolve(scip, *unbounded || *infeasible, infeasible) );
+      SCIP_CALL( exitPresolve(scip, *unbounded || *infeasible, &infeas) );
+      *infeasible = *infeasible || infeas;
+
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
 
       /* resort variables if we are not already done */
