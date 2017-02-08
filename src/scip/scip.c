@@ -13966,6 +13966,8 @@ SCIP_RETCODE exitPresolve(
    assert(scip->set->stage == SCIP_STAGE_PRESOLVING);
    assert(infeasible != NULL);
 
+   *infeasible = FALSE;
+
    /* switch stage to EXITPRESOLVE */
    scip->set->stage = SCIP_STAGE_EXITPRESOLVE;
 
