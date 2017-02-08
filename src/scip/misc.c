@@ -8741,7 +8741,7 @@ uint32_t randomGetRand(
 SCIP_RETCODE SCIPrandomCreate(
    SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   unsigned int          initialseed         /**< initial random seed (> 0) */
+   unsigned int          initialseed         /**< initial random seed */
    )
 {
    assert(randnumgen != NULL);
