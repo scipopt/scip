@@ -396,10 +396,14 @@ SCIP_Real reoptSimilarity(
       /* get the original variable */
       if( !SCIPvarIsOriginal(origvar) )
       {
+         SCIP_RETCODE retcode;
          SCIP_Real constant = 0.0;
          SCIP_Real scalar = 1.0;
 
-         SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+         retcode = SCIPvarGetOrigvarSum(&origvar, &scalar, &constant);
+
+         if( retcode != SCIP_OKAY )
+            return SCIP_INVALID;
       }
       assert(origvar != NULL && SCIPvarIsOriginal(origvar));
 
@@ -4699,6 +4703,9 @@ SCIP_RETCODE reoptSaveNewObj(
       /* calculate similarity to last objective */
       reopt->simtolastobj = reoptSimilarity(reopt, set, reopt->run-1, reopt->run-2, origvars, norigvars);
 
+      if( reopt->simtolastobj == SCIP_INVALID )
+         return SCIP_INVALIDRESULT;
+
       SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "new objective has similarity of %g compared to previous.\n",
          reopt->simtolastobj);
    }
@@ -5496,7 +5503,13 @@ SCIP_RETCODE SCIPreoptCheckRestart(
    {
       /* compute the similarity to the objective function of the first run after restarting */
       if( reopt->run > 1 && set->reopt_objsimdelay > -1.0 )
+      {
          sim = reoptSimilarity(reopt, set, reopt->run-1, MAX(0, reopt->lastrestart-1), transvars, ntransvars);
+
+         if( sim == SCIP_INVALID )
+            return SCIP_INVALIDRESULT;
+      }
+
 
       /* check similarity */
       if( SCIPsetIsFeasLT(set, sim, set->reopt_objsimdelay) )
@@ -6474,6 +6487,9 @@ SCIP_RETCODE SCIPreoptMergeVarHistory(
    {
       SCIP_Real sim;
       sim = reoptSimilarity(reopt, set, r, reopt->run-1, vars, nvars);
+
+      if( sim == SCIP_INVALID )
+         return SCIP_INVALIDRESULT;
 
       if( SCIPsetIsGT(set, sim, bestsim) )
       {
