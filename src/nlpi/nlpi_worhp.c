@@ -119,10 +119,6 @@ void invalidateSolution(
    BMSfreeBlockMemoryArrayNull(problem->blkmem, &(problem->lastduallb), problem->lastduallbsize);
    BMSfreeBlockMemoryArrayNull(problem->blkmem, &(problem->lastdualub), problem->lastdualubsize);
 
-   problem->lastprimal = NULL;
-   problem->lastdualcons = NULL;
-   problem->lastduallb = NULL;
-   problem->lastdualub = NULL;
    problem->lastprimalsize = 0;
    problem->lastdualconssize = 0;
    problem->lastduallbsize = 0;
