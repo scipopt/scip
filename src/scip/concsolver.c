@@ -340,6 +340,7 @@ SCIP_RETCODE SCIPconcsolverSync(
 
    if( SCIPsyncdataGetStatus(syncdata) != SCIP_STATUS_UNKNOWN )
    {
+      concsolver->syncdata = syncdata;
       SCIP_CALL( SCIPsyncstoreFinishSync(syncstore, &syncdata) );
       ++concsolver->nsyncs;
       SCIP_CALL( SCIPconcsolverStop(concsolver) );

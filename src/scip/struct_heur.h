@@ -39,6 +39,8 @@ struct SCIP_Diveset
    SCIP_HEUR*            heur;               /**< the heuristic to which this dive set belongs */
    char*                 name;               /**< name of dive controller, in case that a heuristic has several */
    SCIP_SOL*             sol;                /**< working solution of this dive set */
+   BMS_BLKMEM*           blkmem;             /**< block memory for parameter settings */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Real             minreldepth;        /**< minimal relative depth to start diving */
    SCIP_Real             maxreldepth;        /**< maximal relative depth to start diving */
    SCIP_Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to node LP iterations */
@@ -65,6 +67,7 @@ struct SCIP_Diveset
    int                   ncalls;             /**< the total number of calls of this dive set */
    int                   nsolcalls;          /**< number of calls with a leaf solution */
    int                   lpsolvefreq;        /**< LP solve frequency for diving heuristics */
+   unsigned int          initialseed;        /**< initial seed for the random number generator */
    SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands;  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */

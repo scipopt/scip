@@ -8674,51 +8674,30 @@ SCIP_Real SCIPgetRandomReal(
 
 
 /* initial seeds for KISS random number generator */
-#define DEFAULT_SEED 123456789;
-#define DEFAULT_XOR  362436000;
-#define DEFAULT_MWC  521288629;
-#define DEFAULT_CST  7654321;
+#define DEFAULT_SEED UINT32_C(123456789)
+#define DEFAULT_XOR  UINT32_C(362436000)
+#define DEFAULT_MWC  UINT32_C(521288629)
+#define DEFAULT_CST  UINT32_C(7654321)
 
 
 /** initialize the random number generator with a given start seed */
 static
 void randomInitialize(
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
-   unsigned int          initseed            /**< initial random seed (> 0) */
+   unsigned int          initseed            /**< initial random seed */
    )
 {
    assert(randnumgen != NULL);
-   assert(initseed > 0);
 
-   randnumgen->seed = (uint32_t)DEFAULT_SEED;
-   randnumgen->seed += initseed;
-   /* this is a special case to avoid zero after over flowing */
-   if( randnumgen->seed == 0 )
-      randnumgen->seed = initseed;
+   /* use MAX() to avoid zero after over flowing */
+   randnumgen->seed = MAX(SCIPhashTwo(DEFAULT_SEED, initseed), 1u);
+   randnumgen->xor_seed = MAX(SCIPhashTwo(DEFAULT_XOR, initseed), 1u);
+   randnumgen->mwc_seed = MAX(SCIPhashTwo(DEFAULT_MWC, initseed), 1u);
+   randnumgen->cst_seed = SCIPhashTwo(DEFAULT_CST, initseed);
+
    assert(randnumgen->seed > 0);
-
-   randnumgen->xor_seed = (uint32_t)DEFAULT_XOR;
-   randnumgen->xor_seed += initseed;
-   /* this is a special case to avoid zero after over flowing */
-   if( randnumgen->xor_seed == 0 )
-      randnumgen->xor_seed = initseed;
    assert(randnumgen->xor_seed > 0);
-
-   randnumgen->mwc_seed = (uint32_t)DEFAULT_MWC;
-   randnumgen->mwc_seed += initseed;
-
-   randnumgen->cst_seed = (uint32_t)DEFAULT_CST;
-   randnumgen->cst_seed += initseed;
-   /* this is a special case to avoid zero after over flowing */
-   if( randnumgen->mwc_seed == 0 && randnumgen->cst_seed == 0 )
-   {
-      randnumgen->mwc_seed = (uint32_t)DEFAULT_MWC;
-      randnumgen->mwc_seed -= initseed;
-
-      randnumgen->cst_seed = (uint32_t)DEFAULT_CST;
-      randnumgen->cst_seed -= initseed;
-   }
-   assert(randnumgen->mwc_seed > 0 || randnumgen->cst_seed > 0);
+   assert(randnumgen->mwc_seed > 0);
 
    return;
 }
@@ -8762,7 +8741,7 @@ uint32_t randomGetRand(
 SCIP_RETCODE SCIPrandomCreate(
    SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   unsigned int          initialseed         /**< initial random seed (> 0) */
+   unsigned int          initialseed         /**< initial random seed */
    )
 {
    assert(randnumgen != NULL);
@@ -8801,7 +8780,7 @@ int SCIPrandomGetInt(
    assert(randnumber >= 0.0);
    assert(randnumber < 1.0);
 
-   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than UINT32_MAX
+   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than INT_MAX
     * apart
     */
    return (int) (minrandval*(1.0 - randnumber) + maxrandval*randnumber + randnumber);

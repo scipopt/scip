@@ -7893,7 +7893,6 @@ SCIP_RETCODE getDiveBdChgsSOS1conflictgraph(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
    SCIP_DIVESET*         diveset,            /**< diving settings */
-   SCIP_HEURDATA*        heurdata,           /**< data of the calling heuristic */
    SCIP_SOL*             sol,                /**< solution */
    SCIP_Bool*            success             /**< pointer to store */
    )
@@ -7961,7 +7960,7 @@ SCIP_RETCODE getDiveBdChgsSOS1conflictgraph(
          {
             SCIP_Bool roundup;
 
-            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, heurdata, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval,
+            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval,
                   &score, &roundup) );
 
             fixneigh = roundup;
@@ -8035,7 +8034,6 @@ SCIP_RETCODE getDiveBdChgsSOS1constraints(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
    SCIP_DIVESET*         diveset,            /**< diving settings */
-   SCIP_HEURDATA*        heurdata,           /**< data of the calling heuristic */
    SCIP_SOL*             sol,                /**< solution */
    SCIP_Bool*            success             /**< pointer to store */
    )
@@ -8138,7 +8136,7 @@ SCIP_RETCODE getDiveBdChgsSOS1constraints(
             {
                SCIP_Bool roundup;
 
-               SCIP_CALL( SCIPgetDivesetScore(scip, diveset, heurdata, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval,
+               SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval,
                 &score, &roundup) );
 
                fixcomp = roundup;
@@ -10086,11 +10084,11 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
     * diving candidates) */
    if ( conshdlrdata->switchsos1branch )
    {
-      SCIP_CALL( getDiveBdChgsSOS1constraints(scip, conshdlr, diveset, heurdata, sol, success) );
+      SCIP_CALL( getDiveBdChgsSOS1constraints(scip, conshdlr, diveset, sol, success) );
    }
    else
    {
-      SCIP_CALL( getDiveBdChgsSOS1conflictgraph(scip, conshdlr, diveset, heurdata, sol, success) );
+      SCIP_CALL( getDiveBdChgsSOS1conflictgraph(scip, conshdlr, diveset, sol, success) );
    }
 
    return SCIP_OKAY;
