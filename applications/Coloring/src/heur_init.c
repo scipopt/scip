@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -535,6 +535,7 @@ SCIP_DECL_HEURCOPY(heurCopyInit)
 }
 
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
+/**! [SnippetHeurFreeInit] */
 static
 SCIP_DECL_HEURFREE(heurFreeInit)
 {
@@ -547,6 +548,7 @@ SCIP_DECL_HEURFREE(heurFreeInit)
 
    return SCIP_OKAY;
 }
+/**! [SnippetHeurFreeInit] */
 
 
 /** execution method of primal heuristic */

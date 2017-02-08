@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2803,7 +2803,7 @@ SCIP_DECL_CONSPARSE(consParseBounddisjunction)
 
       if( var == NULL )
       {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "variable with name <%s> does not exist\n", SCIPvarGetName(var));
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "Error while parsing variable.\n");
          *success = FALSE;
          goto TERMINATE;
       }
@@ -2942,6 +2942,10 @@ SCIP_DECL_EVENTEXEC(eventExecBounddisjunction)
    assert(event != NULL);
 
    /*SCIPdebugMsg(scip, "exec method of event handler for bound disjunction constraints\n");*/
+
+   /* it can happen that the events are still active for a constraint that is marked to be deleted */
+   if( SCIPconsIsDeleted((SCIP_CONS*)eventdata) )
+      return SCIP_OKAY;
 
    if( (SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDRELAXED) != 0 )
    {

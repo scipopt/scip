@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -129,11 +129,11 @@ SCIP_RETCODE catchVarEventCardinality(
    assert(consdata != NULL);
    assert(var != NULL);
    assert(indvar != NULL);
-   assert(eventdata != NULL);
    assert(pos >= 0);
 
    /* create event data of indicator variable */
    SCIP_CALL( SCIPallocBlockMemory(scip, eventdata) );
+
    (*eventdata)->consdata = consdata;
    (*eventdata)->var = var;
    (*eventdata)->indvar = indvar;
@@ -2508,9 +2508,9 @@ SCIP_DECL_CONSPRESOL(consPresolCardinality)
    SCIPdebugMsg(scip, "Presolving cardinality constraints.\n");
 
    *result = SCIP_DIDNOTRUN;
-   oldnfixedvars = *nfixedvars;
-   oldndelconss = *ndelconss;
-   oldnupgdconss = *nupgdconss;
+   SCIPdebug( oldnfixedvars = *nfixedvars; )
+   SCIPdebug( oldndelconss = *ndelconss; )
+   SCIPdebug( oldnupgdconss = *nupgdconss; )
    nremovedvars = 0;
 
    /* only run if success if possible */

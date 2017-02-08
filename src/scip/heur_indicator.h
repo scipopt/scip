@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -34,13 +34,22 @@
 extern "C" {
 #endif
 
-/** creates the indicator primal heuristic and includes it in SCIP */
+/** creates the indicator primal heuristic and includes it in SCIP
+ *
+ *  @ingroup PrimalHeuristicIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeHeurIndicator(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/**@addtogroup PRIMALHEURISTICS
+ *
+ * @{
+ */
+
 /** pass partial solution for indicator variables to heuristic */
+EXTERN
 SCIP_RETCODE SCIPheurPassIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< indicator heuristic */
@@ -48,6 +57,8 @@ SCIP_RETCODE SCIPheurPassIndicator(
    SCIP_CONS**           indconss,           /**< indicator constraints */
    SCIP_Bool*            solcand             /**< values for indicator variables in partial solution */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

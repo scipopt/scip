@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -526,10 +526,14 @@ SCIP_RETCODE SCIPapplyRens(
          SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
       }
 
-      /* disable conflict analysis */
+      /* enable conflict analysis and restrict conflict pool */
       if( !SCIPisParamFixed(subscip, "conflict/enable") )
       {
-         SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", FALSE) );
+         SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
+      }
+      if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
+      {
+         SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
       }
 
       /* speed up sub-SCIP by not checking dual LP feasibility */
@@ -551,7 +555,6 @@ SCIP_RETCODE SCIPapplyRens(
    if( SCIPgetNSols(scip) > 0 )
    {
       SCIP_Real upperbound;
-      cutoff = SCIPinfinity(scip);
       assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
@@ -581,7 +584,7 @@ SCIP_RETCODE SCIPapplyRens(
    if( retcode != SCIP_OKAY )
    {
       SCIPwarningMessage(scip, "Error while presolving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
-      SCIPABORT();
+      SCIPABORT();  /*lint --e{527}*/
 
       /* free sub problem data */
       SCIPfreeBufferArray(scip, &subvars);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -72,6 +72,7 @@ SCIP_DECL_RELAXCOPY(relaxCopyUnittest)
 #endif
 
 /** destructor of relaxator to free user data (called when SCIP is exiting) */
+/**! [SnippetRelaxFreeUnittest] */
 static
 SCIP_DECL_RELAXFREE(relaxFreeUnittest)
 {  /*lint --e{715}*/
@@ -88,6 +89,7 @@ SCIP_DECL_RELAXFREE(relaxFreeUnittest)
 
    return SCIP_OKAY;
 }
+/**! [SnippetRelaxFreeUnittest] */
 
 
 /** initialization method of relaxator (called after problem was transformed) */

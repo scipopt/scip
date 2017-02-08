@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,9 +33,7 @@
 extern "C" {
 #endif
 
-/**@defgroup PublicHeuristicMethods Primal Heuristics
- * @ingroup PluginManagementMethods
- * @brief  methods for primal heuristic plugins
+/**@addtogroup PublicHeuristicMethods
  *
  * @{
  */
@@ -200,9 +198,7 @@ void SCIPdivesetSetWorkSolution(
    SCIP_SOL*             sol                 /**< new working solution for this dive set, or NULL */
    );
 
-/**@defgroup PublicDivesetMethods Dive sets
- * @ingroup PublicSpecialHeuristicMethods
- * @brief methods for dive sets to control the generic diving algorithm
+/**@addtogroup PublicDivesetMethods
  *
  * @{
  */
@@ -364,6 +360,12 @@ EXTERN
 SCIP_Bool SCIPdivesetSupportsType(
    SCIP_DIVESET*         diveset,            /**< diving settings */
    SCIP_DIVETYPE         divetype            /**< bit mask that represents the supported dive types by this dive set */
+   );
+
+/** returns the random number generator of this \p diveset for tie-breaking */
+EXTERN
+SCIP_RANDNUMGEN* SCIPdivesetGetRandnumgen(
+   SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /* @} */

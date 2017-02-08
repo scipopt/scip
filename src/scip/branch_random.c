@@ -4,7 +4,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -132,6 +132,7 @@ SCIP_DECL_BRANCHCOPY(branchCopyRandom)
 }
 
 /** destructor of branching rule to free user data (called when SCIP is exiting) */
+/**! [SnippetBranchFreeRandom] */
 static
 SCIP_DECL_BRANCHFREE(branchFreeRandom)
 {  /*lint --e{715}*/
@@ -147,6 +148,7 @@ SCIP_DECL_BRANCHFREE(branchFreeRandom)
 
    return SCIP_OKAY;
 }
+/**! [SnippetBranchFreeRandom] */
 
 
 /** initialization method of branching rule (called after problem was transformed) */

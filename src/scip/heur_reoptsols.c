@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -202,6 +202,9 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
          sim = 1;
       else
          sim = SCIPgetReoptSimilarity(scip, run, SCIPgetNReoptRuns(scip)-1);
+
+      if( sim == SCIP_INVALID )
+         return SCIP_INVALIDRESULT;
 
       if( sim >= objsimsol )
       {

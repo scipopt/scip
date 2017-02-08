@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,11 +38,19 @@
 extern "C" {
 #endif
 
-/** includes the lp file reader into SCIP */
+/** includes the lp file reader into SCIP
+ *
+ *  @ingroup FileReaderIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeReaderLp(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup FILEREADERS
+ *
+ * @{
+ */
 
 /** reads problem from file */
 EXTERN
@@ -74,6 +82,8 @@ SCIP_RETCODE SCIPwriteLp(
    int                   nconss,             /**< number of constraints in the problem */
    SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

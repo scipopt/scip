@@ -32,4 +32,6 @@ fi
 # print matches for lines that have "Copyright" and "Zuse" but are not a valid ZIB copyright
 grep -iH "Copyright.*Zuse" $f | grep -v "Copyright (C) [0-9]*-2016 Konrad-Zuse-Zentrum" || true
 
+sed -i "s/\([0-9]*\)-[0-9]* by Zuse Institute Berlin (ZIB)/\1-$NEWYEAR by Zuse Institute Berlin (ZIB)/" doc/scipfooter.html
+
 done

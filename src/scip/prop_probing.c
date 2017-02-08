@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -230,13 +230,13 @@ SCIP_RETCODE sortVariables(
 
 #ifndef VARIANT_B
          tmp = -MAX(nlocksdown, nlocksup)
-	    + 10*MIN(nimplzero, nimplone)
-	    + 100*MIN(nclqzero, nclqone);
+	    + 10.0 * MIN(nimplzero, nimplone)
+	    + 100.0 * MIN(nclqzero, nclqone);
 #else
          tmp = - ABS(nlocksdown - nlocksup)
 	    + MIN(nlocksdown, nlocksup)
-	    + 500 * nimplzero + 50 * nimplone
-	    + 50000 * nclqzero + 5000 * nclqone;
+	    + 500.0 * nimplzero + 50.0 * nimplone
+	    + 50000.0 * nclqzero + 5000.0 * nclqone;
 #endif
 
          if( tmp > maxscore )
@@ -287,15 +287,15 @@ SCIP_RETCODE sortVariables(
 #ifndef VARIANT_B
          scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
             - MAX(nlocksdown, nlocksup)
-            + 10*MIN(nimplzero, nimplone)
-            + 100*MIN(nclqzero, nclqone)  /*lint !e790*/
+            + 10.0 * MIN(nimplzero, nimplone)
+            + 100.0 * MIN(nclqzero, nclqone)  /*lint !e790*/
             - randomoffset; /* to break ties randomly */
 #else
          scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
          - ABS(nlocksdown - nlocksup)
          + MIN(nlocksdown, nlocksup)
-         + 500 * nimplzero + 50 * nimplone  /*lint !e790*/
-         + 50000 * nclqzero + 5000 * nclqone  /*lint !e790*/
+         + 500.0 * nimplzero + 50.0 * nimplone  /*lint !e790*/
+         + 50000.0 * nclqzero + 5000.0 * nclqone  /*lint !e790*/
          - randomoffset; /* to break ties randomly */
 #endif
       }
@@ -1057,7 +1057,7 @@ SCIP_DECL_PROPEXEC(propExecProbing)
    naggrvars = 0;
    nchgbds = 0;
    startidx = 0;
-   oldnimplications = propdata->nimplications;
+   SCIPdebug( oldnimplications = propdata->nimplications; )
 
    /* start probing on found variables */
    SCIP_CALL( applyProbing(scip, propdata, binvars, nbinvars, nbinvars, &startidx, &nfixedvars, &naggrvars, &nchgbds, oldnfixedvars, oldnaggrvars, &delay, &cutoff) );

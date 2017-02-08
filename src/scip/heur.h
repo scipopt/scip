@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -60,6 +60,7 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_Real             lpresolvedomchgquot,/**< percentage of immediate domain changes during probing to trigger LP resolve */
    int                   lpsolvefreq,        /**< LP solve frequency for (0: only if enough domain reductions are found by propagation)*/
    int                   maxlpiterofs,       /**< additional number of allowed LP iterations */
+   unsigned int          initialseed,        /**< initial seed for random number generation */
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
@@ -69,8 +70,9 @@ SCIP_RETCODE SCIPdivesetCreate(
 
 /** resets diving settings counters */
 extern
-void SCIPdivesetReset(
-   SCIP_DIVESET*         diveset             /**< diveset to be reset */
+SCIP_RETCODE SCIPdivesetReset(
+   SCIP_DIVESET*         diveset,            /**< diveset to be reset */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** update diveset statistics and global diveset statistics */

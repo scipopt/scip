@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -42,16 +42,13 @@
 extern "C" {
 #endif
 
-/**@defgroup PublicNLPMethods NLP Relaxation
- * @ingroup PUBLICCOREAPI
- * @brief methods for the nonlinear relaxation
+/**@addtogroup PublicNLPMethods
  *
  * @{
  */
 
 
-/**@defgroup PublicExpressionTreeMethods Expression (Tree)
- * @brief methods for expressions and expression trees
+/**@addtogroup PublicExpressionTreeMethods
  *
  * @{
  */
@@ -97,8 +94,7 @@ int SCIPexprtreeFindVar(
 
 /**@} */
 
-/**@defgroup PublicNLRowMethods Nonlinear Rows
- * @brief methods for the creation and interaction with rows of the NLP relaxation
+/**@addtogroup PublicNLRowMethods
  *
  * @{
  */
