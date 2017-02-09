@@ -486,11 +486,9 @@ SECTION: Using SCIP as a standalone solver
 
         A variable <code>v</code> is implicit integer if it is guaranteed to take an integer
         solution value in every optimal solution to every remaining subproblem after
-        fixing all integer variables of the problem except for <code>v</code> itself.
-        In other words, dropping an integrality constraint on <code>v</code>
-        does not alter the set of optimal solutions.
+        fixing all integer variables of the problem.
         Implicit integer variables are represented by the
-        variable type `SCIP_VARTYPE_IMPLINT`.
+        variable type <code>SCIP_VARTYPE_IMPLINT</code>.
         Note that continuous as well as integer variables can be declared
         implicit integer.
     </p>
