@@ -842,7 +842,7 @@ SCIP_RETCODE determineMaxDistance(
       (*choosevardistance)--;
 
    /* update the maximum distance */
-   heurdata->maxseendistance = MAX(heurdata->maxseendistance, distancescopy[nrelevantdistances-1]);
+   heurdata->maxseendistance = MAX(heurdata->maxseendistance, distancescopy[nrelevantdistances - 1]);
 
    SCIPfreeBufferArray(scip, &distancescopy);
 
