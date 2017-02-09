@@ -1,12 +1,23 @@
 #!/bin/bash
 
-# change into SCIP root directory so that we can run bin/scip instead of ../bin/scip
-cd ..
+#
+# generate doxygen documentation for SCIP
+# requires python and php in PATH
+#
+# Optionally, a custom .dxy file can be passed for the doxygen configuration
+#
 
-DOXYFILE=scip.dxy
-if [ -z $1 ]; then DOXYFILE=$1; fi
+if [ $1 != "" ]
+then
+    DOXYFILE=$1
+else
+    DOXYFILE=scip.dxy
+fi
 
 ### START SHELL TUTORIAL
+
+# change into SCIP root directory so that we can run bin/scip instead of ../bin/scip
+cd ..
 
 # build a fresh version of SCIP
 make -j clean

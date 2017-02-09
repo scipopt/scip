@@ -121,8 +121,11 @@ SCIP_DECL_SORTPTRCOMP(compareConss)
    else if ( SCIPconsGetAge(cons1) < SCIPconsGetAge(cons2) )
       return +1;
    else
-#if 0
-   /* @todo if both constraints have the same age we prefere the constraint with more non-zeros */
+#ifdef SCIP_DISABLED_CODE
+   /* @todo if both constraints have the same age we prefere the constraint with more non-zeros
+    *       this requires a larges change of the callback, passing void-pointer (i.e. a scip
+    *       object) would necessary.
+    */
    {
       SCIP_Bool success;
       int nvars1;

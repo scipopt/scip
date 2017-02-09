@@ -318,7 +318,10 @@ SCIP_RETCODE handle1Cycle(
       if( SCIPisEQ(scip, frac, 0.5) )
       {
          if( SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0 )
+         {
             sign = -1.0;
+            solval = SCIPfeasCeil(scip, solval);
+         }
       }
       else if( frac > 0.5 )
          solval = SCIPfeasFloor(scip, solval);
@@ -374,7 +377,10 @@ SCIP_RETCODE handleCycle(
          if( SCIPisEQ(scip, frac, 0.5) )
          {
             if( SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0 )
+            {
                sign = -1.0;
+               solval = SCIPfeasCeil(scip, solval);
+            }
          }
          if( frac > 0.5 )
             solval = SCIPfeasFloor(scip, solval);
