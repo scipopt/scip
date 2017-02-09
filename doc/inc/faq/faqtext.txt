@@ -483,27 +483,25 @@ SECTION: Using SCIP as a standalone solver
     LABEL:implicitinteger
     ANSWER:
     <p>
-        A variable of type implicit integer, is a variable which attains an
-        integer value in <em>every</em> optimal solution of the remaining
-        problem obtained after fixing all integer variables to <em>any</em>
-        integer value.
-        <br/>
-        To put it differently, let <code>F</code> be the family of problems
-        obtained from each fixing of integer variables.
-        A variable <code>v</code> is implicit integer if for any problem
-        <code>P</code> in <code>F</code> and for every optimal solution of
-        <code>P</code>, the value of <code>v</code> is integer.
-        <br/>
-        Note that continuous as well as integer variables can be declared to
-        be implicit integer.
+
+        A variable <code>v</code> is implicit integer if it is guaranteed to take an integer
+        solution value in every optimal solution to every remaining subproblem after
+        fixing all integer variables of the problem except for <code>v</code> itself.
+        In other words, dropping an integrality constraint on <code>v</code>
+        does not alter the set of optimal solutions.
+        Implicit integer variables are represented by the
+        variable type `SCIP_VARTYPE_IMPLINT`.
+        Note that continuous as well as integer variables can be declared
+        implicit integer.
     </p>
     <p>
-        The advantage of these type of variables is that they can be treated
-        as continuous, in the sense that branching is not needed in order to
-        enforce integrality, and integers, in the sense that they can have
-        stronger propagations, better coefficients in cuts, etc.
+        The solver benefits from the presence of implicit integrality
+        in several ways: Implict integer variables can be treated
+        like continuous variables for branching because it is not necessary to
+        enforce integrality. They can be treated like integer variables
+        to yield stronger propagations, better coefficients in cuts, etc.
         <br/>
-        The advantage of this definition is that it allows heuristics to know
+        Another advantage of this definition is that it allows heuristics to know
         that if a feasible point has integer values for all integer variables,
         then either all implicit integer variables have integer values or the
         value of an implicit integer variable can be assigned to an integer
@@ -511,7 +509,7 @@ SECTION: Using SCIP as a standalone solver
     </p>
     <p>
         Currently, SCIP identifies implicit integer variables via feasibility
-        reasoning and optimality reasoning.
+        reasoning and optimality reasoning during presolving.
         <br/>
         As an example of feasibility reasoning, consider the constraint
         <code>x + y = 1</code> where both variables are integer.
