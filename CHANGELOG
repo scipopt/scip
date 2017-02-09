@@ -212,6 +212,7 @@ misc:
 - updated CppAD to 20160000
 
 makefile:
+- Building with SHARED=true automatically generates the combined library libscipsolver.so for easier linking
 - All objective files are now placed in obj/static or obj/shared, depending on SHARED=false or SHARED=true, respectively.
 - All internal and external libraries are placed in lib/static and lib/shared, the include files are in lib/include.
 - External projects (including make.project) can use the makefile variable LINKCXXSCIPALL or LINKCCSCIPALL to link all SCIP libraries.
