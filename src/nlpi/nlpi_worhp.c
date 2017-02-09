@@ -888,10 +888,6 @@ SCIP_DECL_NLPICOPY( nlpiCopyWorhp )
    SCIP_CALL( SCIPnlpiSetRealPar(*targetnlpi, NULL, SCIP_NLPPAR_INFINITY, sourcedata->infinity) );
    SCIP_CALL( SCIPnlpiSetMessageHdlr(*targetnlpi, sourcedata->messagehdlr) );
 
-   targetdata = SCIPnlpiGetData(*targetnlpi);
-   assert(targetdata != NULL);
-   targetdata->blkmem = blkmem;
-
    return SCIP_OKAY;
 }  /*lint !e715*/
 
