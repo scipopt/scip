@@ -1588,7 +1588,7 @@ SCIP_RETCODE propdataInit(
          int ncliques;
 
          /* create temporary buffer */
-         /* we store both lb and ub contributors in array contributors, and both could be nbinobjvars, we we need twice that size */
+         /* we store both lb and ub contributors in array contributors, and both could be nbinobjvars, we need twice that size */
          SCIP_CALL( SCIPallocBufferArray(scip, &contributors, 2 * nbinobjvars) );
          SCIP_CALL( SCIPallocBufferArray(scip, &collectedlbvars, nbinobjvars+1) );
          BMSclearMemoryArray(collectedlbvars, nbinobjvars+1); /* @todo: use a SCIPallocCleanBufferArray instead? */
