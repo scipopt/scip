@@ -1,4 +1,4 @@
-SCIP version NEXT
+SCIP version 4.0.0
 ==================
 
 features:
@@ -54,6 +54,8 @@ features:
   subtracting time and memory used by the main-SCIP, and SCIPcopyLimits() which copies these limits accordingly and disables
   all other limits (need to be set by the plugin, if needed)
 - changed handling of coupling constraints in cons_indicator; the cuts will not be added to the pool, but are separated by default
+- for users of the ampl interface, the display/logfile option has been added to set the name of a
+  file to write the SCIP log to (additionally to stdout)
 
 parameters:
 - new parameter "branching/sumadjustweight" to adjust branching scores by adding a sum epsilon in order to keep score differences
@@ -102,6 +104,7 @@ performance improvements:
 - reduce performance variability by using a small perturbation in the undercover heuristic
 - reduce performance variability by using random numbers as tie-breaker for external branching candidates
 - 1-opt heuristic can now be repeatedly executed as long as new incumbents are found
+- improve propagation of absolute-value expression in the case that the sign of the argument is fixed
 
 interface:
 - separated header pub_misc.h from repeated methods for sorting and (weighted) median selection; those are also available in separate headers pub_misc_sort.h
@@ -162,6 +165,14 @@ interface:
 - Setting a parameter to a non-valid value now produces an error message instead of a warning.
 - add SCIPcreateConvexNlp, SCIPupdateConvexNlp, and SCIPaddConvexNlpRows to create and update a convex nonlinear relaxation
 - the parameters of SCIPlpiChgObj(), SCIPlpiSetBase(), SCIPlpiSetState(), SCIPlpiSetNorms() have been declared as const
+- removed SCIPvarGetLbAtIndex() and added SCIPgetVarLbAtIndex()
+- removed SCIPvarGetUbAtIndex() and added SCIPgetVarUbAtIndex()
+- removed SCIPVarGetBdAtIndex() and added SCIPgetVarBdAtIndex()
+- removed SCIPvarWasFixedAtIndex() and added SCIPgetVarWasFixedAtIndex()
+- new function SCIPswapReals() to swap two real values
+- new command line parameter -v to print detailed build options
+- the CPLEX LPI now also compiles with CPLEX 12.7.0.0
+- major update ot the Gurobi LPI, which supports ranged rows now and several performance improvements, but only works with Gurobi version >= 7.0.2
 
 fixed bugs:
 - correct handling of implicit integer variables with fractional solution value in simplerounding heuristic
@@ -175,29 +186,6 @@ fixed bugs:
 - avoid numerically unstable (multi-)aggregations
 - added missing capturing and releasing mechanism in genvbounds propagator
 - improved counting of memory consumption by using more block memory and counting all allocated memory
-
-misc:
-- dropped support for Ipopt < 3.11
-- updated CppAD to 20160000
-
-makefile:
-- All objective files are now placed in obj/static or obj/shared, depending on SHARED=false or SHARED=true, respectively.
-- All internal and external libraries are placed in lib/static and lib/shared, the include files are in lib/include.
-- External projects (including make.project) can use the makefile variable LINKCXXSCIPALL or LINKCCSCIPALL to link all SCIP libraries.
-- Running "make help" lists all makefile options.
-- All makefiles in examples/ and applications/ are updated.
-- The binaries now contain an rpath to the SCIP directory, such that shared libraries are found.
-- make.project contains the SCIP version as a define (SCIP_VERSION)
-
-
-SCIP version 3.2.2
-==================
-
-features:
-- for users of the ampl interface, the display/logfile option has been added to set the name of a
-  file to write the SCIP log to (additionally to stdout)
-
-fixed bugs:
 - fixed bug in XML reader concerning comments
 - fixed wrong representation of SOC constraints in NLP
 - fixed possible segmentation fault in genvbounds propagator
@@ -216,26 +204,26 @@ fixed bugs:
 - SCIPisObjIntegral() now works correctly in SCIP_STAGE_PROBLEM
 - ignore lower and upper bound tightenigs beyond +/-infinity during solving
 - fix wrong NLP representation of logic or constraints in the dual value heuristic
-
-performance improvements:
-- improve propagation of absolute-value expression in the case that the sign of the argument is fixed
-
-interface:
 - time limit of SCIP-infinity is converted to LPI-infinity when setting it
-- removed SCIPvarGetLbAtIndex() and added SCIPgetVarLbAtIndex()
-- removed SCIPvarGetUbAtIndex() and added SCIPgetVarUbAtIndex()
-- removed SCIPVarGetBdAtIndex() and added SCIPgetVarBdAtIndex()
-- removed SCIPvarWasFixedAtIndex() and added SCIPgetVarWasFixedAtIndex()
-- new function SCIPswapReals() to swap two real values
-- new command line parameter -v to print detailed build options
-- the CPLEX LPI now also compiles with CPLEX 12.7.0.0
 
-Makefile:
+misc:
+- dropped support for Ipopt < 3.11
+- updated CppAD to 20160000
+
+makefile:
+- All objective files are now placed in obj/static or obj/shared, depending on SHARED=false or SHARED=true, respectively.
+- All internal and external libraries are placed in lib/static and lib/shared, the include files are in lib/include.
+- External projects (including make.project) can use the makefile variable LINKCXXSCIPALL or LINKCCSCIPALL to link all SCIP libraries.
+- Running "make help" lists all makefile options.
+- All makefiles in examples/ and applications/ are updated.
+- The binaries now contain an rpath to the SCIP directory, such that shared libraries are found.
+- make.project contains the SCIP version as a define (SCIP_VERSION)
 - revise sub-makefiles for MSVC on MinGW
 - fix bug in 'dll' target
 - make shared libraries aware of their dependencies
 - link binary to shared libs when compiling with SHARED=true
 - 'make install' copies now all header files
+
 
 SCIP version 3.2.1
 ==================
@@ -331,6 +319,7 @@ fixed bugs:
   on variables which might interfere with the pricing
 - fixed bug with infinite shift values in heur_shifting
 - fixed potential memory leak in genvbound propagator
+
 
 SCIP version 3.2.0
 ==================
@@ -1557,6 +1546,7 @@ Makefile
 - CppAD source code is now distributed with SCIP (src/cppad), so that lib/cppad is not used anymore;
   the default for EXPRINT has changed from none to cppad
 
+
 SCIP version 2.1.2
 ==================
 
@@ -1587,6 +1577,7 @@ performance improvements:
   to exponential growth in running time
 - force cuts from linearizations of convex constraint in NLP relax solution into LP, thus allowing faster proving of
   optimality for convex NLPs
+
 
 SCIP version 2.1.1
 ==================
@@ -1631,6 +1622,7 @@ parameters:
 - changed parameter "propagating/pseudoobj/maxcands" to "propagating/pseudoobj/minuseless" (see prop_pseudoobj.c)
   due to revision of the pseudo objective propagator
 - added parameters "heuristics/undercover/coverbd" and "heuristics/undercover/fixingorder"
+
 
 SCIP version 2.1.0
 ==================
@@ -2395,7 +2387,6 @@ features:
 - primal heuristics may now be called during presolving, using the new timing point SCIP_HEURTIMING_DURINGPRESOLLOOP
 - added new dialog for writing all solutions which are collected during the counting process (see cons_countsols.{c,h})
 - support for FreeBSD (32- and 64-bit) including minor changes in several scripts in the check-directory
-- added scripts for testruns and evaluation for gurobi, blis, symphony, glpk
 - minor changes on several evaluation scripts (new statuses: better, solved, sollimit, gaplimit) and short-mode for
   cmpres.awk
 - added new sorting method SCIPsortLongPtr, SCIPsortDownLongPtr and all corresponding methods
