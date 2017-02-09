@@ -13411,7 +13411,8 @@ SCIP_RETCODE SCIPupdateNodeLowerbound(
     */
    if( SCIPisGE(scip, newbound, scip->primal->cutoffbound) )
    {
-      SCIP_CALL( SCIPnodeCutoff(node, scip->set, scip->stat, scip->tree, scip->reopt, scip->lp, scip->mem->probmem) );
+      SCIP_CALL( SCIPnodeCutoff(node, scip->set, scip->stat, scip->tree, scip->transprob, scip->origprob, scip->reopt,
+            scip->lp, scip->mem->probmem) );
    }
 
    return SCIP_OKAY;
@@ -40786,7 +40787,8 @@ SCIP_RETCODE SCIPcutoffNode(
 {
    SCIP_CALL( checkStage(scip, "SCIPcutoffNode", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPnodeCutoff(node, scip->set, scip->stat, scip->tree, scip->reopt, scip->lp, scip->mem->probmem) );
+   SCIP_CALL( SCIPnodeCutoff(node, scip->set, scip->stat, scip->tree, scip->transprob, scip->origprob, scip->reopt,
+         scip->lp, scip->mem->probmem) );
 
    return SCIP_OKAY;
 }
