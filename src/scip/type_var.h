@@ -53,7 +53,7 @@ enum SCIP_Vartype
    SCIP_VARTYPE_BINARY     = 0,         /**< binary variable: \f$ x \in \{0,1\} \f$ */
    SCIP_VARTYPE_INTEGER    = 1,         /**< integer variable: \f$ x in \{lb, \dots, ub\} \f$ */
    SCIP_VARTYPE_IMPLINT    = 2,         /**< implicit integer variable: Integrality of this variable is implied for every optimal
-                                             solution to every remaining problem after fixing all integer and binary variables,
+                                             solution of the remaining problem after any fixing all integer and binary variables,
                                              without the explicit need to enforce integrality further */
    SCIP_VARTYPE_CONTINUOUS = 3          /**< continuous variable: \f$ lb \leq x \leq ub \f$ */
 };
