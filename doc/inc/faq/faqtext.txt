@@ -517,13 +517,16 @@ SECTION: Using SCIP as a standalone solver
         integer.
         This is because fixing one to an integer value forces the other to be
         integer as well.
-        Note that both variable cannot be declared implicit integer!
+        Note that you must not declare both variables implicit integer, since
+        the reasoning depends on the other variable still being of integer.
+        type
         <br/>
-        As a trivial example of optimality reasoning, consider the problem
-        <code>max x</code> subject to <code>x + y <= 10</code> and
+        As an example of optimality reasoning, consider the problem <code>max
+        x</code> subject to <code>x + y <= 10, x + 3y <= 12</code> and
         <code>y</code> has to be integer.
         After fixing <code>y</code> to any integer value, the optimal value of
-        <code>x</code> will be <code>10 -y</code> which is an integer.
+        <code>x</code> will be the minimum between <code>10 - y</code> and
+        <code>12 - 3y</code> which is an integer.
         Hence, <code>x</code> can be declared implicit integer.
         Note, however, that if the constraint is <code>2*x + y <= 10</code>, then we
         cannot conclude that <code>x</code> is implicit integer.
