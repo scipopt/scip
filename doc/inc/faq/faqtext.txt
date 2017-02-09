@@ -479,56 +479,6 @@ SECTION: Using SCIP as a standalone solver
         Finally, the readers for *.mps and *.lp files support the CPLEX extensions for <em>quadratic</em> constraints and objective.
     </p>
 
-    QUESTION: What is an implicit integer variable?
-    LABEL:implicitinteger
-    ANSWER:
-    <p>
-
-        A variable <code>v</code> is implicit integer if it is guaranteed to take an integer
-        solution value in every optimal solution to every remaining subproblem after
-        fixing all integer variables of the problem.
-        Implicit integer variables are represented by the
-        variable type <code>SCIP_VARTYPE_IMPLINT</code>.
-        Note that continuous as well as integer variables can be declared
-        implicit integer.
-    </p>
-    <p>
-        The solver benefits from the presence of implicit integrality
-        in several ways: Implict integer variables can be treated
-        like continuous variables for branching because it is not necessary to
-        enforce integrality. They can be treated like integer variables
-        to yield stronger propagations, better coefficients in cuts, etc.
-        <br/>
-        Another advantage of this definition is that it allows heuristics to know
-        that if a feasible point has integer values for all integer variables,
-        then either all implicit integer variables have integer values or the
-        value of an implicit integer variable can be assigned to an integer
-        without worsening the objective value.
-    </p>
-    <p>
-        Currently, SCIP identifies implicit integer variables via feasibility
-        reasoning and optimality reasoning during presolving.
-        <br/>
-        As an example of feasibility reasoning, consider the constraint
-        <code>x + y = 1</code> where both variables are integer.
-        From this constraint, either one of them could be declared implicit
-        integer.
-        This is because fixing one to an integer value forces the other to be
-        integer as well.
-        Note that you must not declare both variables implicit integer, since
-        the reasoning depends on the other variable still being of integer.
-        type
-        <br/>
-        As an example of optimality reasoning, consider the problem <code>max
-        x</code> subject to <code>x + y <= 10, x + 3y <= 12</code> and
-        <code>y</code> has to be integer.
-        After fixing <code>y</code> to any integer value, the optimal value of
-        <code>x</code> will be the minimum between <code>10 - y</code> and
-        <code>12 - 3y</code> which is an integer.
-        Hence, <code>x</code> can be declared implicit integer.
-        Note, however, that if the constraint is <code>2*x + y <= 10</code>, then we
-        cannot conclude that <code>x</code> is implicit integer.
-    </p>
 
 SECTION: Using SCIP included in another source code
 
@@ -823,6 +773,56 @@ SECTION: Using SCIP as a Branch-Cut-And-Price-Framework
         nvars = nbinvars + ninitvars + nimplvars + ncontvars.  There is no further sorting within these sections, as well as
         there is no sorting for the rows.  But each column and each row has a unique index, which can be obtained by
         <code>SCIPcolGetIndex()</code> and <code>SCIProwGetIndex()</code>, respectively.
+    </p>
+
+    QUESTION: What is an implicit integer variable?
+    LABEL:implicitinteger
+    ANSWER:
+    <p>
+
+        A variable <code>v</code> is implicit integer if it is guaranteed to take an integer
+        solution value in every optimal solution to every remaining subproblem after
+        fixing all integer variables of the problem.
+        Implicit integer variables are represented by the
+        variable type <code>SCIP_VARTYPE_IMPLINT</code>.
+        Note that continuous as well as integer variables can be declared
+        implicit integer.
+    </p>
+    <p>
+        The solver benefits from the presence of implicit integrality
+        in several ways: Implict integer variables can be treated
+        like continuous variables for branching because it is not necessary to
+        enforce integrality. They can be treated like integer variables
+        to yield stronger propagations, better coefficients in cuts, etc.
+        <br/>
+        Another advantage of this definition is that it allows heuristics to know
+        that if a feasible point has integer values for all integer variables,
+        then either all implicit integer variables have integer values or the
+        value of an implicit integer variable can be assigned to an integer
+        without worsening the objective value.
+    </p>
+    <p>
+        Currently, SCIP identifies implicit integer variables via feasibility
+        reasoning and optimality reasoning during presolving.
+        <br/>
+        As an example of feasibility reasoning, consider the constraint
+        <code>x + y = 1</code> where both variables are integer.
+        From this constraint, either one of them could be declared implicit
+        integer.
+        This is because fixing one to an integer value forces the other to be
+        integer as well.
+        Note that you must not declare both variables implicit integer, since
+        the reasoning depends on the other variable still being of integer.
+        type
+        <br/>
+        As an example of optimality reasoning, consider the problem <code>max
+        x</code> subject to <code>x + y <= 10</code> and
+        <code>y</code> has to be integer.
+        After fixing <code>y</code> to any integer value, the optimal value of
+        <code>x</code> will be <code>10 - y</code> which is an integer.
+        Hence, <code>x</code> can be declared implicit integer.
+        Note, however, that if the constraint is <code>2*x + y <= 10</code>, then we
+        cannot conclude that <code>x</code> is implicit integer.
     </p>
 
     QUESTION: When should I use which of the numerical comparison functions?
