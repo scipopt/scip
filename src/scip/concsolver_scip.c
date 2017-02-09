@@ -378,9 +378,8 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
    /* use wall clock time in subscips */
    SCIP_CALL( SCIPsetIntParam(data->solverscip, "timing/clocktype", (int)SCIP_CLOCKTYPE_WALL) );
 
-   /* only catch ctrlc in one solver */
-   if( SCIPconcsolverGetIdx(concsolver) != 0 )
-      SCIP_CALL( SCIPsetBoolParam(data->solverscip, "misc/catchctrlc", FALSE) );
+   /* don't catch ctrlc since already caught in main scip */
+   SCIP_CALL( SCIPsetBoolParam(data->solverscip, "misc/catchctrlc", FALSE) );
 
    /* one solver can do all dual reductions and share them with the other solvers */
    if( SCIPconcsolverGetIdx(concsolver) != 0 )
