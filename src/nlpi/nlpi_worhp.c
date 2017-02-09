@@ -874,7 +874,6 @@ static
 SCIP_DECL_NLPICOPY( nlpiCopyWorhp )
 {
    SCIP_NLPIDATA* sourcedata;
-   SCIP_NLPIDATA* targetdata;
 
    assert(sourcenlpi != NULL);
    assert(targetnlpi != NULL);
