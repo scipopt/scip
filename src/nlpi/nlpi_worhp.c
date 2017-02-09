@@ -601,6 +601,13 @@ SCIP_RETCODE userHM(
    return retcode;
 }
 
+/** Worhp print callback function that does nothing */
+static void noprint(
+   int                    mode,              /**< the mode */
+   const char             s[]                /**< a string */
+   )
+{ }
+
 /** initialize Worhp data */
 static
 SCIP_RETCODE initWorhp(
@@ -1495,6 +1502,18 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    problem->lastniter = -1;
    problem->lasttime  = -1.0;
 
+   if( problem->verblevel == 0 )
+   {
+      SetWorhpPrint(noprint);
+   }
+   else
+   {
+      /* TODO this should go to a function that prints to the SCIP message handler
+       * all this doesn't seem threadsafe at all!
+       */
+      SetWorhpPrint(WorhpDefaultPrintFunction);
+   }
+
    /* initialize Worhp data if necessary */
    if( problem->firstrun )
    {
@@ -2315,6 +2334,14 @@ SCIP_RETCODE SCIPcreateNlpSolverWorhp(
 
    /* initialize parameter */
    nlpidata->infinity = SCIP_DEFAULT_INFINITY;
+
+   /* disable Worhp's keyboard handler, not useful here and not threadsafe */
+   setenv("WORHP_DISABLE_KEYBOARD_HANDLER", "1", 0);
+
+#if DEFAULT_VERBLEVEL == 0
+   /* disable Worhp output by default */
+   SetWorhpPrint(noprint);
+#endif
 
    /* checks the version of the library and header files */
    CHECK_WORHP_VERSION
