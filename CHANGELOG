@@ -205,6 +205,7 @@ fixed bugs:
 - ignore lower and upper bound tightenigs beyond +/-infinity during solving
 - fix wrong NLP representation of logic or constraints in the dual value heuristic
 - time limit of SCIP-infinity is converted to LPI-infinity when setting it
+- fix LP activity of a row that has been modified
 
 misc:
 - dropped support for Ipopt < 3.11
