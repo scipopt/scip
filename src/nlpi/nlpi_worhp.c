@@ -218,7 +218,9 @@ SCIP_RETCODE evaluateWorhpRun(
    }
 
    case LocalInfeas:
+#if WORHP_MAJOR >= 2
    case LocalInfeasOptimal:
+#endif
    {
       /* infeasible stationary point found */
       SCIPdebugMessage("Worhp failed because of convergence against infeasible stationary point!\n");
@@ -258,8 +260,10 @@ SCIP_RETCODE evaluateWorhpRun(
    }
 
    case AcceptableSolutionSKKT:
+#if WORHP_MAJOR >= 2
    case AcceptableSolutionScaled:
    case AcceptablePreviousScaled:
+#endif
    {
       /* feasible point but KKT conditions are violated in unscaled space */
       SCIPdebugMessage("Worhp terminated successfully with a feasible point but KKT are violated in unscaled space!\n");
@@ -2338,7 +2342,13 @@ const char* SCIPgetSolverNameWorhp(
    void
    )
 {
+#ifdef WORHP_VERSION
    return "WORHP " WORHP_VERSION;
+#else
+   static char solvername[20];
+   sprintf(solvername, "WORHP %d.%d." WORHP_PATCH, WORHP_MAJOR, WORHP_MINOR);
+   return solvername;
+#endif
 }
 
 /** gets string that describes Worhp (version number) */
