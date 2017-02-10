@@ -577,6 +577,12 @@ SCIP_Bool SCIPconsIsActive(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** returns TRUE iff constraint has to be deactivated in update phase */
+EXTERN
+SCIP_Bool SCIPconsIsUpdatedeactivate(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** returns TRUE iff constraint is enabled in the current node */
 EXTERN
 SCIP_Bool SCIPconsIsEnabled(
