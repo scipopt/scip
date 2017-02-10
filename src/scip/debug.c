@@ -1681,19 +1681,6 @@ SCIP_RETCODE SCIPdebugAddSolVal(
       SCIP_CALL( readSolution(scip->set) );
    }
 
-#if 0
-   if( SCIPvarIsOriginal(var) )
-   {
-      SCIPerrorMessage("adding solution values for original variables is forbidden\n");
-      return SCIP_ERROR;
-   }
-
-   if( SCIPvarIsTransformedOrigvar(var) )
-   {
-      SCIPerrorMessage("adding solution values for variable that are direct counterparts of original variables is forbidden\n");
-      return SCIP_ERROR;
-   }
-#endif
    /* allocate memory */
    if( debugsoldata->nsolvals >= debugsoldata->solsize )
    {

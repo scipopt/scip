@@ -473,6 +473,8 @@ SCIP_RETCODE SCIPsyncstoreFinishSync(
    SCIP_SYNCDATA**       syncdata            /**< the synchronization data */
    )
 {
+   SCIP_Bool printline = FALSE;
+
    assert(syncdata != NULL);
    assert((*syncdata) != NULL);
    assert(syncstore != NULL);
@@ -486,12 +488,14 @@ SCIP_RETCODE SCIPsyncstoreFinishSync(
          SCIPsyncstoreSetSolveIsStopped(syncstore, TRUE);
 
       syncstore->lastsync = *syncdata;
+      printline = TRUE;
+
       SCIP_CALL( SCIPtpiBroadcastCondition(&(*syncdata)->allsynced) );
    }
 
    SCIP_CALL( SCIPtpiReleaseLock(&(*syncdata)->lock) );
 
-   if( *syncdata == syncstore->lastsync )
+   if( printline )
    {
       SCIP_CALL( SCIPprintDisplayLine(syncstore->mainscip, NULL, SCIP_VERBLEVEL_HIGH, TRUE) );
    }

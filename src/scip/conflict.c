@@ -2335,7 +2335,7 @@ SCIP_RETCODE SCIPconflictFlushConss(
             SCIPsetDebugMsg(set, " -> empty conflict set in depth %d cuts off sub tree at depth %d\n",
                focusdepth, conflictset->validdepth);
 
-            SCIP_CALL( SCIPnodeCutoff(tree->path[conflictset->validdepth], set, stat, tree, reopt, lp, blkmem) );
+            SCIP_CALL( SCIPnodeCutoff(tree->path[conflictset->validdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
             cutoffdepth = conflictset->validdepth;
             continue;
          }
@@ -6202,7 +6202,7 @@ SCIP_RETCODE tightenSingleVar(
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbGlobal(var),
             SCIPvarGetUbGlobal(var), (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"), newbound);
 
-      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, tree, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
       *success = TRUE;
    }
    else
@@ -6310,7 +6310,7 @@ SCIP_RETCODE performDualRayAnalysis(
    {
       SCIPsetDebugMsg(set, " -> empty farkas-proof in depth %d cuts off sub tree at depth 0\n", SCIPtreeGetFocusDepth(tree));
 
-      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, tree, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
       *globalinfeasible = TRUE;
       *success = TRUE;
