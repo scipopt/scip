@@ -3837,18 +3837,30 @@ SCIP_RETCODE copyConsPseudoboolean(
          SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetandconss, nsourceandconss) );
          SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetandcoefs, nsourceandconss) );
 
+         /* get the number of vars in the copied linear constraint and allocate buffers
+          * for the variables and the coefficients
+          */
          SCIP_CALL( getLinearConsNVars(targetscip, targetlincons, targetlinconstype, &ntargetlinvars) );
          SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetlinvars, ntargetlinvars) );
          SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetlincoefs, ntargetlinvars) );
 
-         SCIP_CALL( getLinearConsVarsData(targetscip, targetlincons, targetlinconstype, targetlinvars, targetlincoefs, &ntargetlinvars) );
-         SCIP_CALL( SCIPhashtableCreate(&linconsvarsmap, SCIPblkmem(targetscip), ntargetlinvars, SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
+         /* retrieve the variables of the copied linear constraint */
+         SCIP_CALL( getLinearConsVarsData(targetscip, targetlincons, targetlinconstype,
+                                          targetlinvars, targetlincoefs, &ntargetlinvars) );
+
+         /* now create a hashtable and insert the variables into it, so that it
+          * can be checked in constant time if a variable was removed due to
+          * compressed copying when looping over the and resultants
+          */
+         SCIP_CALL( SCIPhashtableCreate(&linconsvarsmap, SCIPblkmem(targetscip), ntargetlinvars, SCIPvarGetHashkey,
+                                        SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
 
          for( c = 0 ; c < ntargetlinvars; ++c )
          {
             SCIP_CALL( SCIPhashtableInsert(linconsvarsmap, targetlinvars[c]) );
          }
 
+         /* free the buffer arrays that were only required for building the hastable */
          SCIPfreeBufferArray(sourcescip, &targetlincoefs);
          SCIPfreeBufferArray(sourcescip, &targetlinvars);
 
