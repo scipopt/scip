@@ -29,12 +29,12 @@ LOCK=${12}
 VERSION=${13}
 LPS=${14}
 VALGRIND=${15}
-CLIENTTMPDIR=${16}
-REOPT=${17}
-OPTCOMMAND=${18}
-SETCUTOFF=${19}
-MAXJOBS=${20}
-VISUALIZE=${21}
+CLIENTTMPDIR=/usr/local/tmp
+REOPT=false
+OPTCOMMAND=optimize
+SETCUTOFF=0
+MAXJOBS=1
+VISUALIZE=false
 
 # check if all variables defined (by checking the last one)
 if test -z $VISUALIZE

@@ -21,8 +21,6 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#define SCIP_DEBUG_SOLUTION "debug.sol"
-
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/scipshell.h"
@@ -91,7 +89,6 @@ SCIP_RETCODE fromCommandLine(
       SCIP_CALL( retcode );
    }
 
-
    if( soluname != NULL )
    {
       retcode = SCIPreadProb(scip, soluname, NULL);
@@ -110,6 +107,8 @@ SCIP_RETCODE fromCommandLine(
       default:
          SCIP_CALL( retcode );
       }
+
+
    }
 
    /*******************
@@ -368,7 +367,7 @@ SCIP_RETCODE SCIPrunSpa(
    SCIP_CALL( SCIPcreate(&scip) );
 
    /* add the problem-specifix parameters to scip */
-/*   SCIPenableDebugSol(scip);*/
+
    /* include reader, problemdata*/
    SCIP_CALL( SCIPincludeSpaPlugins(scip) );
 

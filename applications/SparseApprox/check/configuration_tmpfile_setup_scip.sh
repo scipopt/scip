@@ -119,7 +119,6 @@ then
 
     echo $OPTCOMMAND                       >> $TMPFILE
     echo display statistics                >> $TMPFILE
-    echo display solution                  >> $TMPFILE
     echo checksol                          >> $TMPFILE
 else
     # read the difflist file

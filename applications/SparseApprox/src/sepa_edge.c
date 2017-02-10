@@ -30,13 +30,12 @@
 
 #define SEPA_NAME              "edge"
 #define SEPA_DESC              "separator to separate triangle-inequalities in cycle-clustering application"
-#define SEPA_PRIORITY          53687091
+#define SEPA_PRIORITY              2000
 #define SEPA_FREQ                     1
 #define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
-#define MAXROUNDS                     5
-#define MAXCUTS                    1000
+#define MAXCUTS                    5000
 
 /** copy method for separator plugins (called when SCIP copies plugins) */
 
@@ -75,11 +74,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
    int nadded;
 
    rounds = SCIPsepaGetNCallsAtNode(sepa);
-   if( (rounds >= MAXROUNDS && SCIPgetDepth(scip) == 0) )
-   {
-    *result = SCIP_DIDNOTRUN;
-      return SCIP_OKAY;
-   }
 
    edgevars = SCIPspaGetEdgevars(scip);
    nbins = SCIPspaGetNrBins(scip);
@@ -264,6 +258,36 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEdge)
                   }
                   ncuts++;
                }
+            }
+         }
+      }
+   }
+   /* separate edges by the valid inequality y_ij1 + y_ik0 + y_jk0 <= 1 */
+   for( i = 0; i < nbins; ++i )
+   {
+      for( j = 0; j < nbins; ++j )
+      {
+         for( k = 0; k < j && k < i; ++k )
+         {
+            if( NULL == edgevars[i][j] || NULL == edgevars[j][k] || NULL == edgevars[i][k] )
+               continue;
+            violation[ncuts] = SCIPvarGetLPSol(edgevars[i][j][1]) + SCIPvarGetLPSol(edgevars[i][k][0]) + SCIPvarGetLPSol(edgevars[j][k][0]) - 1;
+            if( violation[ncuts] > 0 )
+            {
+               (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "edgecut_%d_%d_%d", i, j, k );
+               SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &(cuts[ncuts]), sepa, cutname, -SCIPinfinity(scip), 2.0, FALSE, FALSE, TRUE) );
+               SCIP_CALL( SCIPcacheRowExtensions(scip, cuts[ncuts]) );
+               SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncuts], edgevars[i][j][1], 1.0) );
+               SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncuts], edgevars[i][k][0], 1.0) );
+               SCIP_CALL( SCIPaddVarToRow(scip, cuts[ncuts], edgevars[j][k][0], 1.0) );
+               SCIP_CALL( SCIPflushRowExtensions(scip, cuts[ncuts]) );
+               if( ncuts >= size - 1 )
+               {
+                  SCIP_CALL( SCIPreallocMemoryArray(scip, &violation, size + MAXCUTS) );
+                  SCIP_CALL( SCIPreallocMemoryArray(scip, &cuts, size + MAXCUTS) );
+                  size += MAXCUTS;
+               }
+               ncuts++;
             }
          }
       }

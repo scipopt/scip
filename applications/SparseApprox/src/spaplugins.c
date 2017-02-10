@@ -28,6 +28,7 @@
 #include "sepa_sparseapprox.h"
 #include "sepa_edge.h"
 #include "sepa_subtour.h"
+#include "sepa_partition.h"
 #include "heur_fuzzyround.h"
 #include "heur_spakerlin.h"
 #include "branch_multinode.h"
@@ -46,8 +47,10 @@ SCIP_RETCODE SCIPincludeSpaPlugins(
    SCIP_CALL( SCIPincludeHeurFuzzyround(scip) );
 
    SCIP_CALL( SCIPincludeHeurSpaGreedy(scip) );
-   SCIP_CALL( SCIPincludeBranchruleMultinode(scip) );
    SCIP_CALL( SCIPincludeSepaEdge(scip) );
+   SCIP_CALL( SCIPincludeBranchruleMultinode(scip) );
+   SCIP_CALL( SCIPincludeSepaPartition(scip) );
+
 /*   SCIP_CALL( SCIPincludeConshdlrTriangle(scip) );*/
 
    return SCIP_OKAY;

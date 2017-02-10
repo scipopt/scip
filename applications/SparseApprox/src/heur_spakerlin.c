@@ -445,48 +445,46 @@ SCIP_RETCODE assignVars(
    SCIP_Real**           clustering,         /**< The matrix with the clusterassignment */
    int                   nbins,              /**< The number of bins */
    int                   ncluster,           /**< The number of cluster */
-   SCIP_Real**           qmatrix,             /**< The irreversibility matrix */
+   SCIP_Real**           qmatrix,            /**< The irreversibility matrix */
    SCIP_Real**           cmatrix
 )
 {
    int i,j;
    int c;
    int c2;
-   char model;
    SCIP_VAR* var;
+   SCIP_CONS** conss;
+   int ncons;
    SCIP_VAR*** binvars;
    SCIP_VAR****  edgevars;
 
    assert(nbins > 0 && ncluster > 0);
 
-   SCIP_CALL( SCIPgetCharParam(scip, "model", &model) );
    binvars = SCIPspaGetBinvars(scip);
    edgevars = SCIPspaGetEdgevars(scip);
 
    for ( c = 0; c < ncluster; ++c )
    {
-      if( model == 's' )
+      for( c2 = 0; c2 < ncluster; ++c2 )
       {
-         for( c2 = 0; c2 < ncluster; ++c2 )
+         qmatrix[c][c2] = 0;
+      }
+      /* set values of binary variables */
+      for ( i = 0; i < nbins; ++i )
+      {
+         if( NULL != binvars[i][c] )
          {
-            qmatrix[c][c2] = 0;
-         }
-         /* set values of binary variables */
-         for ( i = 0; i < nbins; ++i )
-         {
-            if( NULL != binvars[i][c] )
-            {
-               if( SCIPvarIsTransformed(binvars[i][c]) )
-                  var = binvars[i][c];
-               else
-                  var = SCIPvarGetTransVar(binvars[i][c] );
-               /* check if the clusterassignment ist feasible for the variable bounds. If not do not assign the variable */
-               if( var != NULL && SCIPisLE(scip, SCIPvarGetLbGlobal(var), clustering[i][c]) && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
-                  SCIP_CALL( SCIPsetSolVal( scip, sol, var, clustering[i][c]) );
-               assert( SCIPisIntegral(scip, clustering[i][c]) );
-            }
+            if( SCIPvarIsTransformed(binvars[i][c]) )
+               var = binvars[i][c];
+            else
+               var = SCIPvarGetTransVar(binvars[i][c] );
+            /* check if the clusterassignment ist feasible for the variable bounds. If not do not assign the variable */
+            if( var != NULL && SCIPisLE(scip, SCIPvarGetLbGlobal(var), clustering[i][c]) && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
+               SCIP_CALL( SCIPsetSolVal( scip, sol, var, clustering[i][c]) );
+            assert( SCIPisIntegral(scip, clustering[i][c]) );
          }
       }
+
       /* set the value for the edgevariables */
       for( i = 0; i < nbins; ++i )
       {
@@ -539,9 +537,26 @@ SCIP_RETCODE assignVars(
          }
       }
    }
+   conss = SCIPgetConss(scip);
+   ncons = SCIPgetNConss(scip);
+   for( i = 0; i < ncons; ++i )
+   {
+      if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[i])),"and") == 0 )
+      {
+         SCIP_Real resval = 1.0;
+         var = SCIPgetResultantAnd(scip, conss[i]);
+         for( c = 0; c < SCIPgetNVarsAnd(scip, conss[i]); ++c )
+         {
+            if( SCIPisZero(scip, SCIPgetSolVal(scip, sol, SCIPgetVarsAnd(scip, conss[i])[c])))
+               resval = 0.0;
+         }
+         SCIP_CALL( SCIPsetSolVal(scip, sol, var, resval) );
+      }
+   }
 
    return SCIP_OKAY;
 }
+
 /*
  * Callback methods of primal heuristic
  */
@@ -721,6 +736,7 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
       SCIPallocClearMemoryArray(scip, &binfixed[i], ncluster);
    }
 
+   /* get the solution values from scip */
    SCIP_CALL( getSolutionValues(scip, bestsol, solclustering, binfixed, clusterofbin, nbinsincluster) );
 
    if( !isPartition(scip, solclustering, nbins, ncluster) )

@@ -26,6 +26,7 @@
 #include "scip/misc.h"
 #include "probdata_spa.h"
 #include "heur_spagreedy.h"
+#include "scip/cons_and.h"
 
 #define HEUR_NAME             "spagreedy"
 #define HEUR_DESC             "primal heuristic template"
@@ -214,6 +215,8 @@ SCIP_RETCODE assignVars(
    int c;
    int c2;
    SCIP_VAR* var;
+   SCIP_CONS** conss;
+   int ncons;
    SCIP_VAR*** binvars;
    SCIP_VAR****  edgevars;
 
@@ -294,6 +297,22 @@ SCIP_RETCODE assignVars(
                }
             }
          }
+      }
+   }
+   conss = SCIPgetConss(scip);
+   ncons = SCIPgetNConss(scip);
+   for( i = 0; i < ncons; ++i )
+   {
+      if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[i])),"and") == 0 )
+      {
+         SCIP_Real resval = 1.0;
+         var = SCIPgetResultantAnd(scip, conss[i]);
+         for( c = 0; c < SCIPgetNVarsAnd(scip, conss[i]); ++c )
+         {
+            if( SCIPisZero(scip, SCIPgetSolVal(scip, sol, SCIPgetVarsAnd(scip, conss[i])[c])))
+               resval = 0.0;
+         }
+         SCIP_CALL( SCIPsetSolVal(scip, sol, var, resval) );
       }
    }
 
@@ -675,7 +694,8 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
       /* set the variables the problem to the found clustering and test feasibility */
       SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
       SCIP_CALL( assignVars( scip, sol, clustering, nbins, ncluster, qmatrix, cmatrix) );
-      SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, FALSE, FALSE, FALSE, FALSE, &feasible) );
+      SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, TRUE, TRUE, TRUE, TRUE, &feasible) );
+      SCIPinfoMessage(scip, NULL, "\n" );
    }
    if( feasible )
       *result = SCIP_FOUNDSOL;

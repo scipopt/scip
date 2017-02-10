@@ -43,12 +43,14 @@ include $(SCIPDIR)/make/make.project
 MAINNAME	=	scip
 MAINOBJ		=	probdata_spa.o \
 			reader_spa.o \
+			cons_triangle.o \
 			heur_spagreedy.o \
 			heur_fuzzyround.o \
 			heur_spakerlin.o \
 			branch_multinode.o \
 			sepa_edge.o \
 			sepa_subtour.o \
+			sepa_partition.o \
 			spaplugins.o \
 			main.o
 

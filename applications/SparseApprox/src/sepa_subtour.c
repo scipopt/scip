@@ -33,7 +33,7 @@
 #define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_USESSUBSCIP          FALSE      /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE      /**< should separation method be delayed, if other separators found cuts? */
-#define MAXROUNDS                    15
+#define MAXCUTS                    5000
 
 #ifdef SCIP_DEBUG
 static
@@ -89,7 +89,7 @@ void printPath(
 }
 #endif
 
-/** Consider three bins i,j,k. If there is a way from i to j and j and k are int the same cluster, then i and k can be also considered adjacent.
+/** Consider three bins i,j,k. If there is a way from i to j and j and k are in the same cluster, then i and k can be also considered adjacent.
  *  This method adds new arcs to the capacity-graph based on this observation.
  */
 static
@@ -123,6 +123,7 @@ SCIP_RETCODE contractAdjGraph(
 
    for( i = 0; i < nbins; ++i )
    {
+      /* Iterate through all successors of i */
       for( j = 0; j < SCIPdigraphGetNSuccessors(capgraph, i); ++j )
       {
          succ = SCIPdigraphGetSuccessors(capgraph, i)[j];
@@ -139,8 +140,8 @@ SCIP_RETCODE contractAdjGraph(
                if( SCIPisZero(scip, adjmatrices[0][i][k]) )
                {
                   SCIPdigraphAddArc(capgraph, i, k, NULL);
-                  added[i][k] =  TRUE;
                }
+               added[i][k] =  TRUE;
                adjmatrices[0][i][k] = contractweight;
                connectmatrix[i][k] = succ;
             }
@@ -175,7 +176,8 @@ SCIP_RETCODE addSubtourCuts(
    SCIP_Real***          adjmatrices,        /**< The matrizes adjacency-matrix with the weight of all paths with 1,...,|Clutster| arcs */
    int**                 connectmatrix,      /**< The matrix that has the intermediate nodes of the contractions */
    int                   cyclelength,        /**< The length of the subtours to add */
-   SCIP_Bool*            result              /**< Pointer to store the result of separation */
+   SCIP_Bool*            result,             /**< Pointer to store the result of separation */
+   int*                  ncuts               /**< Pointer to store number of cuts */
 )
 {
    SCIP_VAR**** edgevars;
@@ -195,7 +197,7 @@ SCIP_RETCODE addSubtourCuts(
    nbins = SCIPdigraphGetNNodes(capgraph);
 
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &processed, nbins) );
-   for( i = 0; i < nbins; ++i )
+   for( i = 0; i < nbins && *ncuts < MAXCUTS; ++i )
    {
       if( processed[i] )
          continue;
@@ -204,12 +206,15 @@ SCIP_RETCODE addSubtourCuts(
          cycle[0] = i;
          processed[i] = TRUE;
          contractions = 0;
+         /* iterate throguh all bins in the cycle */
          for( k = 0; k < cyclelength - 1; ++k )
          {
+            currnode = cycle[k];
+            /* reconstruct the successor of the current bin from the adjacency matrices*/
             for( l = 0; l < SCIPdigraphGetNSuccessors(capgraph, cycle[k]); ++l )
             {
-               currnode = cycle[k];
                successor = SCIPdigraphGetSuccessors(capgraph, currnode)[l];
+               /* check if this successor of the current node is the one in the cycle. If so add it. */
                if( SCIPisEQ(scip, adjmatrices[0][currnode][successor] + adjmatrices[cyclelength - (k + 2)][successor][i], adjmatrices[cyclelength - (k + 1)][currnode][i]) )
                {
                   cycle[k + 1] = successor;
@@ -220,17 +225,17 @@ SCIP_RETCODE addSubtourCuts(
                }
             }
          }
-         if( connectmatrix[cycle[cyclelength - 1]][cycle[0]] >= 0)
-            contractions++;
          cycle[cyclelength] = i;
-         (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "subtour_%d_legnth_%d_contracted_%d", i, cyclelength, contractions );
+         if( connectmatrix[cycle[cyclelength - 1]][cycle[cyclelength]] >= 0)
+            contractions++;
 
+         /* construct the cut. Check for and add all necessary contractions */
+         (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "subtour_%d_legnth_%d_contracted_%d", i, cyclelength, contractions );
          SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut,sepa, cutname, -SCIPinfinity(scip), cyclelength - 1 + contractions, FALSE, FALSE, TRUE) );
          SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
 
          for( k = 0; k < cyclelength; ++k )
          {
-
             if( connectmatrix[cycle[k]][cycle[k+1]] >= 0)
             {
                SCIP_CALL(SCIPaddVarToRow(scip, cut, edgevars[MAX(connectmatrix[cycle[k]][cycle[k+1]],cycle[k+1])][MIN(connectmatrix[cycle[k]][cycle[k+1]],cycle[k+1])][0], 1.0) );
@@ -246,6 +251,7 @@ SCIP_RETCODE addSubtourCuts(
          if( SCIPisCutEfficacious(scip, NULL, cut) )
          {
             SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+            *ncuts += 1;
             *result = SCIP_SEPARATED;
          }
          SCIP_CALL( SCIPreleaseRow(scip, &cut) );
@@ -266,7 +272,8 @@ SCIP_RETCODE addPathCuts(
    SCIP_Real***          adjmatrices,        /**< The matrizes adjacency-matrix with the weight of all paths with 1,...,|Clutster| arcs */
    int**                 connectmatrix,      /**< The matrix that has the intermediate nodes of the contractions */
    int                   pathlength,         /**< The length of the path to separate */
-   SCIP_Bool*            result              /**< Pointer to store the result of separation */
+   SCIP_Bool*            result,             /**< Pointer to store the result of separation */
+   int*                  ncuts               /**< Pointer to store number of cuts */
 )
 {
    SCIP_VAR**** edgevars;
@@ -285,36 +292,43 @@ SCIP_RETCODE addPathCuts(
    int j;
    int k;
    int l;
+   int endnode;
 
    edgevars = SCIPspaGetEdgevars(scip);
    nbins = SCIPdigraphGetNNodes(capgraph);
 
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &processed, nbins) );
-   for( i = 0; i < nbins; ++i )
+   /* For all arcs (i,pathend) in the graph, check if a path-inequality of length pathlength is violated. If so, add the corresponding cut */
+   for( i = 0; i < nbins && *ncuts < MAXCUTS; ++i )
    {
-      for( j = 0; j < SCIPdigraphGetNSuccessors(capgraph, i); ++j )
+      for( j = 0; j < SCIPdigraphGetNSuccessors(capgraph, i) && *ncuts < MAXCUTS; ++j )
       {
          SCIP_Bool* inpath;
          SCIP_CALL( SCIPallocClearMemoryArray(scip, &inpath, nbins) );
+         endnode = SCIPdigraphGetSuccessors(capgraph,i)[j];
          inpath[i] = TRUE;
-         inpath[j] = TRUE;
+         inpath[endnode] = TRUE;
          invalid = FALSE;
-         if( -1 != connectmatrix[i][j] )
-            inpath[connectmatrix[i][j]] = TRUE;
-         successor = SCIPdigraphGetSuccessors(capgraph, i)[j];
-         pathcap = adjmatrices[pathlength - 1][i][j];
-         edgecap = adjmatrices[0][i][j];
+         contractions = 0;
+         if( -1 != connectmatrix[i][endnode] )
+         {
+            inpath[connectmatrix[i][endnode]] = TRUE;
+            contractions++;
+         }
+         /* pathcap + edgecap is the weight of the variables in the path. if it is greater then pathlength then the inequality is violated */
+         pathcap = adjmatrices[pathlength - 1][i][endnode];
+         edgecap = adjmatrices[0][i][endnode];
          if(SCIPisGT(scip, pathcap + edgecap, pathlength) )
          {
             path[0] = i;
-            contractions = 0;
+            /* reconstruct the path from the adjacency matrices */
             for( k = 0; k < pathlength - 1; ++k )
             {
                for( l = 0; l < SCIPdigraphGetNSuccessors(capgraph, path[k]); ++l )
                {
                   currnode = path[k];
                   successor = SCIPdigraphGetSuccessors(capgraph, currnode)[l];
-                  if( SCIPisEQ(scip, adjmatrices[0][currnode][successor] + adjmatrices[pathlength - (k + 2)][successor][j], adjmatrices[pathlength - (k + 1)][currnode][j]) )
+                  if( SCIPisEQ(scip, adjmatrices[0][currnode][successor] + adjmatrices[pathlength - (k + 2)][successor][endnode], adjmatrices[pathlength - (k + 1)][currnode][endnode]) )
                   {
                      if( inpath[successor] )
                         invalid = TRUE;
@@ -332,14 +346,14 @@ SCIP_RETCODE addPathCuts(
                   }
                }
             }
+            path[pathlength] = endnode;
+            if( connectmatrix[path[pathlength - 1]][endnode] >= 0)
+               contractions++;
+            /* if the path is not invalid(some node visited twice due to contractions, construct the corresponding cut*/
             if(!invalid)
             {
-               path[pathlength] = j;
-               if( connectmatrix[path[pathlength - 1]][j] >= 0 )
-                  contractions++;
-               if( connectmatrix[i][j] > 0 )
-                  contractions++;
-               (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "pathcut_%d_legnth_%d_contractions_%d", i, pathlength, contractions );
+               /*create cut and add it to cut pool */
+               (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "pathcut_%d_%d_legnth_%d_contractions_%d", i, endnode, pathlength, contractions );
                SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut,sepa, cutname, -SCIPinfinity(scip), pathlength + contractions, FALSE, FALSE, TRUE) );
                SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
 
@@ -353,13 +367,14 @@ SCIP_RETCODE addPathCuts(
                   else
                      SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[path[k]][path[k+1]][1], 1.0) );
                }
-               if( connectmatrix[i][j] >= 0)
+               if( connectmatrix[i][endnode] >= 0)
                {
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][connectmatrix[i][j]][1], 1.0) );
-                  SCIP_CALL(SCIPaddVarToRow(scip, cut, edgevars[MAX(connectmatrix[i][j],j)][MIN(connectmatrix[i][j],j)][0], 1.0) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][connectmatrix[i][endnode]][1], 1.0) );
+                  SCIP_CALL(SCIPaddVarToRow(scip, cut, edgevars[MAX(connectmatrix[i][endnode],endnode)][MIN(connectmatrix[i][endnode],endnode)][0], 1.0) );
                }
                else
-                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][j][1], 1.0) );
+                  SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][endnode][1], 1.0) );
+
                SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
                SCIPdebug( printPath(scip, path, pathlength, connectmatrix, contractions, nbins) );
                SCIPdebug( SCIPprintRow(scip, cut, NULL) );
@@ -367,13 +382,14 @@ SCIP_RETCODE addPathCuts(
                if( SCIPisCutEfficacious(scip, NULL, cut) )
                {
                   SCIP_CALL( SCIPaddPoolCut(scip, cut) );
+                  *ncuts += 1;
                   *result = SCIP_SEPARATED;
                }
 
                SCIP_CALL( SCIPreleaseRow(scip, &cut) );
             }
-            SCIPfreeMemoryArray(scip, &inpath);
          }
+         SCIPfreeMemoryArray(scip, &inpath);
       }
 
    }
@@ -447,6 +463,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
    SCIP_DIGRAPH*  capgraph;
    SCIP_Bool       violation;
    SCIP_Real  capacity;
+   int ncuts;
    int nbins;
    int ncluster;
    int i;
@@ -456,19 +473,17 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
 
    rounds = SCIPsepaGetNCallsAtNode(sepa);
    SCIPdebugMsg(scip, "Calls at node: %d \n", rounds);
-   if( (rounds >= MAXROUNDS) )
-   {
-      *result = SCIP_DIDNOTRUN;
-      return SCIP_OKAY;
-   }
+
    edgevars = SCIPspaGetEdgevars(scip);
    nbins = SCIPspaGetNrBins(scip);
    ncluster = SCIPspaGetNrCluster(scip);
+   ncuts = 0;
 
    assert(nbins > 0);
    assert(ncluster > 0);
    assert(NULL != edgevars);
 
+   /* allocate memory */
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &adjmatrices, ncluster) );
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &connectmatrix, nbins) );
    for( i = 0; i < nbins; ++i )
@@ -497,7 +512,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
          if( edgevars[i][j] != NULL && edgevars[i][j][1] != NULL )
          {
             capacity = SCIPvarGetLPSol(edgevars[i][j][1]);
-            if( SCIPisFeasPositive(scip, capacity) )
+            if( SCIPisPositive(scip, capacity) )
             {
                SCIP_CALL( SCIPdigraphAddArc(capgraph, i, j, &capacity) );
                adjmatrices[0][i][j] = capacity;
@@ -506,19 +521,21 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSubtour)
       }
    }
    /** Contract undirected edges with sufficiently large lp-value */
-/*   SCIP_CALL( contractAdjGraph(scip, capgraph, adjmatrices, connectmatrix) );*/
+   SCIP_CALL( contractAdjGraph(scip, capgraph, adjmatrices, connectmatrix) );
 
+   /* a cyclelength of one does not make sense as there are no loops */
    cyclelength = 2;
    *result = SCIP_DIDNOTFIND;
-   /* Loop until we have found a violation or until we have checked all possible violations */
-   while( cyclelength < ncluster )
+
+   /* Iterate until we have found a sufficient number of cuts or until we have checked all possible violations */
+   while( cyclelength < ncluster && ncuts < MAXCUTS )
    {
       /* Compute the next adjacency matrix */
       violation = computeNextAdj(scip, capgraph, adjmatrices, cyclelength);
       /* If we found a violation separate it */
-      if( violation && SCIP_DIDNOTFIND )
-         SCIP_CALL( addSubtourCuts(scip, sepa, capgraph, adjmatrices, connectmatrix, cyclelength, result) );
-      SCIP_CALL( addPathCuts(scip, sepa, capgraph, adjmatrices, connectmatrix, cyclelength, result) );
+      if( violation )
+         SCIP_CALL( addSubtourCuts(scip, sepa, capgraph, adjmatrices, connectmatrix, cyclelength, result, &ncuts) );
+      SCIP_CALL( addPathCuts(scip, sepa, capgraph, adjmatrices, connectmatrix, cyclelength, result, &ncuts) );
       cyclelength++;
    }
 

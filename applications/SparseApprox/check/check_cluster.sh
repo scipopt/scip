@@ -43,17 +43,17 @@ LPS=${10}
 DISPFREQ=${11}
 CONTINUE=${12}
 QUEUETYPE=${13}
-QUEUE=M610
+QUEUE=M620
 PPN=${15}
-CLIENTTMPDIR=${16}
+CLIENTTMPDIR=/usr/local/tmp
 NOWAITCLUSTER=${17}
-EXCLUSIVE=false
+EXCLUSIVE=true
 PERMUTE=${19}
 VALGRIND=${20}
-REOPT=${21}
-OPTCOMMAND=${22}
-SETCUTOFF=${23}
-VISUALIZE=${24}
+REOPT=false
+OPTCOMMAND=opt
+SETCUTOFF=0
+VISUALIZE=false
 
 # check if all variables defined (by checking the last one)
 if test -z $VISUALIZE
