@@ -7945,6 +7945,16 @@ SCIP_Bool SCIPconsIsActive(
    return cons->updateactivate || (cons->active && !cons->updatedeactivate);
 }
 
+/** returns TRUE iff constraint is active in the current node */
+SCIP_Bool SCIPconsIsUpdatedeactivate(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->updatedeactivate;
+}
+
 /** returns the depth in the tree at which the constraint is valid; returns INT_MAX, if the constraint is local
  *  and currently not active
  */
