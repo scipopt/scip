@@ -6094,7 +6094,6 @@ SCIP_RETCODE createAndAddDualray(
    {
 
       SCIPsetDebugMsg(set, "detect global infeasibility: lhs=%g, activity=%g, rhs=%g\n", lhs, activity, rhs);
-      printf("detect global infeasibility: lhs=%g, activity=%g, rhs=%g\n", lhs, activity, rhs);
 
       SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
