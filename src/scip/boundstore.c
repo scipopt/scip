@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -73,10 +73,12 @@ SCIP_RETCODE SCIPboundstoreAdd(
    )
 {
    /* check if already stored a bound of same type for this variable */
-   int pos = boundstore->bndpos[varidx].pos[boundtype];
+   int pos;
 
    assert(scip != NULL);
    assert(boundstore != NULL);
+
+   pos = boundstore->bndpos[varidx].pos[boundtype];
 
    if( pos == 0 )
    {

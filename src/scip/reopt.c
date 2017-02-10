@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -381,7 +381,7 @@ SCIP_Real reoptSimilarity(
    norm_obj1 = 0.0;
    norm_obj2 = 0.0;
 
-   /* calc similarity */
+   /* calculate similarity */
    for( v = 0; v < nvars; v++ )
    {
       SCIP_VAR* origvar;
@@ -390,18 +390,20 @@ SCIP_Real reoptSimilarity(
       SCIP_Real c2;
       SCIP_Real lb;
       SCIP_Real ub;
-      SCIP_Real constant;
-      SCIP_Real scalar;
 
       origvar = vars[v];
 
       /* get the original variable */
       if( !SCIPvarIsOriginal(origvar) )
       {
-         SCIP_RETCODE retcode = SCIPvarGetOrigvarSum(&origvar, &scalar, &constant);
+         SCIP_RETCODE retcode;
+         SCIP_Real constant = 0.0;
+         SCIP_Real scalar = 1.0;
+
+         retcode = SCIPvarGetOrigvarSum(&origvar, &scalar, &constant);
 
          if( retcode != SCIP_OKAY )
-            SCIPABORT();
+            return SCIP_INVALID;
       }
       assert(origvar != NULL && SCIPvarIsOriginal(origvar));
 
@@ -876,7 +878,7 @@ SCIP_RETCODE solnodeAddChild(
             if( SCIPsetIsLT(set, val, (*child)->value) )
             {
 #ifdef SCIP_MORE_DEBUG
-               SCIPsetDebugMsg(set, "-> need to switch:");
+               SCIPsetDebugMsg(set, "-> need to switch:\n");
                SCIPsetDebugMsg(set, "   before switching: node %p witch child=%p, sibling=%p, sol=%p, value=%g\n",
                   (void*) (*child), (void*) (*child)->child, (void*) (*child)->sibling, (void*) (*child)->sol,
                   (*child)->value);
@@ -1570,11 +1572,8 @@ SCIP_RETCODE transformIntoOrig(
    /* transform branching variables and bound changes applied before the first dual reduction */
    for( varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; varnr++ )
    {
-      SCIP_Real constant;
-      SCIP_Real scalar;
-
-      scalar = 1;
-      constant = 0;
+      SCIP_Real constant = 0.0;
+      SCIP_Real scalar = 1.0;
 
       if( !SCIPvarIsOriginal(reopt->reopttree->reoptnodes[id]->vars[varnr]) )
       {
@@ -1587,11 +1586,8 @@ SCIP_RETCODE transformIntoOrig(
    /* transform bound changes affected by dual reduction */
    for( varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nafterdualvars; varnr++ )
    {
-      SCIP_Real constant;
-      SCIP_Real scalar;
-
-      scalar = 1;
-      constant = 0;
+      SCIP_Real constant = 0.0;
+      SCIP_Real scalar = 1.0;
 
       if( !SCIPvarIsOriginal(reopt->reopttree->reoptnodes[id]->afterdualvars[varnr]) )
       {
@@ -1859,8 +1855,11 @@ SCIP_RETCODE shrinkNode(
 
          /* delete the current node */
          c = 0;
-         while( reoptnodes[parentid]->childids[c] != id && c < reoptnodes[parentid]->nchilds )
+         while( reoptnodes[parentid]->childids[c] != id )
+         {
             ++c;
+            assert(c < reoptnodes[parentid]->nchilds);
+         }
 
          assert(reoptnodes[parentid]->childids[c] == id);
 
@@ -3286,7 +3285,7 @@ SCIP_RETCODE addGlobalCut(
          assert(boundtypes != NULL);
 
          reoptconsdata->vals[nvarsadded] = vals[v];
-         reoptconsdata->boundtypes[nvarsadded] = (SCIP_BOUNDTYPE)(1.0 - boundtypes[v]); /*lint !e641*/
+         reoptconsdata->boundtypes[nvarsadded] = (boundtypes[v] == SCIP_BOUNDTYPE_LOWER ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER);
          ++nvarsadded;
       }
       else
@@ -4066,8 +4065,10 @@ SCIP_RETCODE fixInterdiction(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_NODE*            node,               /**< child node */
    unsigned int          id,                 /**< id of the node */
-   SCIP_VAR**            vars,               /**< variables in permuted order */
-   SCIP_Real*            vals,               /**< bounds in permuted order */
+   int*                  perm,               /**< array of permuted indices */
+   SCIP_VAR**            vars,               /**< variables */
+   SCIP_Real*            vals,               /**< bounds */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< boundtypes */
    int                   nvars,              /**< number of variables */
    int                   negbndchg           /**< index of the variable that should negated */
    )
@@ -4089,8 +4090,10 @@ SCIP_RETCODE fixInterdiction(
    assert(eventqueue != NULL);
    assert(cliquetable != NULL);
    assert(node != NULL);
+   assert(perm != NULL);
    assert(vars != NULL);
    assert(vals != NULL);
+   assert(boundtypes != NULL);
    assert(nvars >= 0);
    assert(blkmem != NULL);
    assert(0 < id && id < reopt->reopttree->reoptnodessize);
@@ -4111,21 +4114,24 @@ SCIP_RETCODE fixInterdiction(
 
    nbndchgs = MIN(negbndchg, nvars);
 
-   /* change the first negbndchg-1 bounds as stored in dualredscur and negate the negbndchg-th bound */
+   /* change the first nbndchg-1 bounds as stored in dualredscur and negate the negbndchg-th bound */
    for( v = 0; v < nbndchgs; v++ )
    {
-      var = vars[v];
-      val = vals[v];
-      boundtype = SCIPsetIsFeasEQ(set, val, 1.0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER;
+      var = vars[perm[v]];
+      val = vals[perm[v]];
+      boundtype = boundtypes[perm[v]];
 
       SCIP_CALL(SCIPvarGetProbvarBound(&var, &val, &boundtype));
       assert(SCIPvarIsTransformedOrigvar(var));
 
-      /* negate the negbndchg-th bound */
+      /* negate the last bound change */
       if( v == nbndchgs-1 )
       {
-         val = 1 - val;
          boundtype = (SCIP_BOUNDTYPE)(SCIP_BOUNDTYPE_UPPER - boundtype); /*lint !e656*/
+         if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && boundtype == SCIP_BOUNDTYPE_UPPER )
+            val = val - 1.0;
+         else if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && boundtype == SCIP_BOUNDTYPE_LOWER )
+            val = val + 1.0;
       }
 
       if( boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, val, SCIPvarGetLbLocal(var))
@@ -4383,8 +4389,6 @@ SCIP_RETCODE dryBranch(
 
    SCIPsetDebugMsg(set, "-> found %d redundant and %d infeasible nodes\n", nredchilds, ncutoffchilds);
 
-   c = 0;
-
    /* delete all nodes that can be cut off */
    while( ncutoffchilds > 0 )
    {
@@ -4404,8 +4408,6 @@ SCIP_RETCODE dryBranch(
       /* decrease the number of nodes to cutoff */
       --ncutoffchilds;
    }
-
-   c = 0;
 
    /* replace all redundant nodes their child nodes or cutoff the node if it is a leaf */
    while( nredchilds > 0 )
@@ -4463,8 +4465,8 @@ SCIP_RETCODE dryBranch(
    }
 
    /* free buffer arrays */
-   SCIPsetFreeBufferArray(set, &cutoffchilds);
    SCIPsetFreeBufferArray(set, &redchilds);
+   SCIPsetFreeBufferArray(set, &cutoffchilds);
 
    return SCIP_OKAY;
 }
@@ -4701,6 +4703,9 @@ SCIP_RETCODE reoptSaveNewObj(
       /* calculate similarity to last objective */
       reopt->simtolastobj = reoptSimilarity(reopt, set, reopt->run-1, reopt->run-2, origvars, norigvars);
 
+      if( reopt->simtolastobj == SCIP_INVALID )
+         return SCIP_INVALIDRESULT;
+
       SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "new objective has similarity of %g compared to previous.\n",
          reopt->simtolastobj);
    }
@@ -4715,6 +4720,7 @@ static
 SCIP_RETCODE getInferenceOrder(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   int*                  perm,               /**< array of indices that need to be permuted */
    SCIP_VAR**            vars,               /**< variable array to permute */
    SCIP_Real*            bounds,             /**< bound array to permute in the same order */
    SCIP_BOUNDTYPE*       boundtypes,         /**< boundtype array to permute in the same order */
@@ -4725,6 +4731,7 @@ SCIP_RETCODE getInferenceOrder(
    int v;
 
    assert(set != NULL);
+   assert(perm != NULL);
    assert(vars != NULL);
    assert(bounds != NULL);
    assert(boundtypes != NULL);
@@ -4747,60 +4754,13 @@ SCIP_RETCODE getInferenceOrder(
       }
    }
 
-   /* sort vars and vals by score */
-   SCIPsortDownRealRealPtrPtr(infscore, bounds, (void*) vars, (void*) boundtypes, nvars);
+   /* permute indices by inference score */
+   SCIPsortDownRealInt(infscore, perm, nvars);
 
    /* free buffer */
    SCIPsetFreeBufferArray(set, &infscore);
 
    return SCIP_OKAY;
-}
-
-/** permute the variable and bound array randomly */
-static
-void permuteRandom(
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
-   SCIP_VAR**            vars,               /**< variable array to permute */
-   SCIP_Real*            bounds,             /**< bound array to permute in the same order */
-   SCIP_BOUNDTYPE*       boundtypes,         /**< boundtype array to permute in the same order */
-   int                   nvars               /**< number of variables */
-   )
-{
-   SCIP_VAR* tmpvar;
-   SCIP_Real tmpbound;
-   SCIP_BOUNDTYPE tmpboundtype;
-   int end;
-   int i;
-
-   assert(vars != NULL);
-   assert(bounds != NULL);
-   assert(boundtypes != NULL);
-
-   end = nvars;
-
-   /* loop backwards through all variables (and bounds) and always swap the current last element to a random position */
-   while( end > 1 )
-   {
-      --end;
-
-      /* get a random position into which the last variable should be shuffled */
-      i = SCIPrandomGetInt(randnumgen, 0, end);
-
-      /* swap the last variable and the random variable */
-      tmpvar = vars[i];
-      vars[i] = vars[end];
-      vars[end] = tmpvar;
-
-      /* swap the last bound and the random bound */
-      tmpbound = bounds[i];
-      bounds[i] = bounds[end];
-      bounds[end] = tmpbound;
-
-      /* swap the last boundtype and the random boundtype */
-      tmpboundtype = boundtypes[i];
-      boundtypes[i] = boundtypes[end];
-      boundtypes[end] = tmpboundtype;
-   }
 }
 
 /** create a global constraint to separate the given solution */
@@ -5543,7 +5503,13 @@ SCIP_RETCODE SCIPreoptCheckRestart(
    {
       /* compute the similarity to the objective function of the first run after restarting */
       if( reopt->run > 1 && set->reopt_objsimdelay > -1.0 )
+      {
          sim = reoptSimilarity(reopt, set, reopt->run-1, MAX(0, reopt->lastrestart-1), transvars, ntransvars);
+
+         if( sim == SCIP_INVALID )
+            return SCIP_INVALIDRESULT;
+      }
+
 
       /* check similarity */
       if( SCIPsetIsFeasLT(set, sim, set->reopt_objsimdelay) )
@@ -6043,7 +6009,6 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
 
       /* delete strong branching information of some exists */
       deleteLastDualBndchgs(reopt);
-      strongbranched = FALSE;
 
       SCIP_CALL( addNode(reopt, set, lp, blkmem, node, SCIP_REOPTTYPE_FEASIBLE, FALSE, isrootnode, lowerbound) );
       break;
@@ -6061,7 +6026,6 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
          if( SCIPnodeGetNumber(node) == reopt->lastbranched )
          {
             deleteLastDualBndchgs(reopt);
-            strongbranched = FALSE;
             break;
          }
 
@@ -6095,7 +6059,6 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
 
                /* delete strong branching information if some exists */
                deleteLastDualBndchgs(reopt);
-               strongbranched = FALSE;
 
                SCIPsetDebugMsg(set, " -> new reopttype   : %d\n", SCIP_REOPTTYPE_PRUNED);
                SCIP_CALL( addNode(reopt, set, lp, blkmem, node, SCIP_REOPTTYPE_PRUNED, FALSE, isrootnode, lowerbound) );
@@ -6525,6 +6488,9 @@ SCIP_RETCODE SCIPreoptMergeVarHistory(
       SCIP_Real sim;
       sim = reoptSimilarity(reopt, set, r, reopt->run-1, vars, nvars);
 
+      if( sim == SCIP_INVALID )
+         return SCIP_INVALIDRESULT;
+
       if( SCIPsetIsGT(set, sim, bestsim) )
       {
          bestsim = sim;
@@ -6881,6 +6847,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    SCIP_VAR** vars;
    SCIP_Real* bounds;
    SCIP_BOUNDTYPE* boundtypes;
+   int* perm = NULL;
    unsigned int id;
    int nbndchgs;
    int nchilds;
@@ -6906,40 +6873,8 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    assert(reoptnodes[0]->dualredscur != NULL);
    nbndchgs = reoptnodes[0]->dualredscur->nvars;
 
-   vars = NULL;
-   bounds = NULL;
-   boundtypes = NULL;
-
    (*ncreatedchilds) = 0;
    (*naddedconss) = 0;
-
-   if( !set->reopt_usesplitcons )
-   {
-      vars = reoptnodes[0]->dualredscur->vars;
-      bounds = reoptnodes[0]->dualredscur->vals;
-      boundtypes = reoptnodes[0]->dualredscur->boundtypes;
-      nvars = reoptnodes[0]->dualredscur->nvars;
-
-      /* calculate the order of the variables */
-      switch (set->reopt_varorderinterdiction) {
-         /* default order */
-         case 'd':
-            break;
-
-         /* inference order */
-         case 'i':
-            SCIP_CALL( getInferenceOrder(set, stat, vars, bounds, boundtypes, nvars) );
-            break;
-
-         /* random order */
-         case 'r':
-            permuteRandom(reopt->randnumgen, vars, bounds, boundtypes, nvars);
-            break;
-
-      default:
-         return SCIP_INVALIDDATA;
-      }
-   }
 
    /* create a node with all variables fixed, i.e., reconstruct the root of the last iteration */
 
@@ -6967,6 +6902,13 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    assert(reoptnodes[id]->varbounds != NULL);
    assert(reoptnodes[id]->varboundtypes != NULL);
 
+   /* create a permutation array */
+   if( !set->reopt_usesplitcons )
+   {
+      assert(perm == NULL);
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &perm, nbndchgs) );
+   }
+
    /* copy bounds */
    for( v = 0; v < nbndchgs; v++ )
    {
@@ -6974,6 +6916,10 @@ SCIP_RETCODE SCIPreoptSplitRoot(
       reoptnodes[id]->varbounds[v] = reoptnodes[0]->dualredscur->vals[v];
       reoptnodes[id]->varboundtypes[v] = reoptnodes[0]->dualredscur->boundtypes[v];
       ++reoptnodes[id]->nvars;
+
+      /* fill a permutation array */
+      if( !set->reopt_usesplitcons )
+         perm[v] = v;   /*lint !e613*/
    }
    assert(reoptnodes[id]->nvars == reoptnodes[0]->dualredscur->nvars);
 
@@ -7058,9 +7004,34 @@ SCIP_RETCODE SCIPreoptSplitRoot(
       int c;
 
       assert(*ncreatedchilds == 1);
-      assert(vars != NULL);
-      assert(bounds != NULL);
-      assert(nvars > 0);
+      assert(perm != NULL);
+
+      vars = reoptnodes[0]->dualredscur->vars;
+      bounds = reoptnodes[0]->dualredscur->vals;
+      boundtypes = reoptnodes[0]->dualredscur->boundtypes;
+      nvars = reoptnodes[0]->dualredscur->nvars;
+      assert(perm[0] == 0 && perm[nvars-1] == nvars-1);
+
+      /* calculate the order of the variables */
+      switch (set->reopt_varorderinterdiction)
+      {
+         /* default order */
+         case 'd':
+            break;
+
+         /* inference order */
+         case 'i':
+            SCIP_CALL( getInferenceOrder(set, stat, perm, vars, bounds, boundtypes, nvars) );
+            break;
+
+         /* random order */
+         case 'r':
+            SCIPrandomPermuteIntArray(reopt->randnumgen, perm, 0, nvars-1);
+            break;
+
+         default:
+            return SCIP_INVALIDDATA;
+      }
 
       /* create nvars nodes in the fashion of interdiction branching */
       for( c = 0; c < nvars; c++ )
@@ -7073,7 +7044,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
          assert(reoptnodes[id] == NULL || reoptnodes[id]->nvars == 0);
 
          /*   1. create the node
-          *   2. fix the first v bound changes to vals[v] and v+1 to 1-vals[v]
+          *   2. fix the first v bound changes to vals[v] and v+1 to vals[v] +/- 1 (depending on the bound- and vartype)
           *   4. add the ID id as a child of the root node
           */
          SCIP_CALL( createReoptnode(reopttree, set, blkmem, id) );
@@ -7082,26 +7053,47 @@ SCIP_RETCODE SCIPreoptSplitRoot(
 
          /* check memory */
          SCIP_CALL( reoptnodeCheckMemory(reoptnodes[id], set, blkmem, c+1, 0, 0) );
-         assert(reoptnodes[id]->varssize >= c+1);
+         assert(reoptnodes[id]->varssize >= perm[c]+1);
          assert(reoptnodes[id]->nvars == 0);
          assert(reoptnodes[id]->vars != NULL);
          assert(reoptnodes[id]->varbounds != NULL);
          assert(reoptnodes[id]->varboundtypes != NULL);
 
-         /* copy first v bound changes */
-         for( v = 0; v < c; v++ )
+         /* the permutation is the identity */
+         if( set->reopt_varorderinterdiction == 'd' )
          {
-            reoptnodes[id]->vars[v] = vars[v];
-            reoptnodes[id]->varbounds[v] = bounds[v];
-            reoptnodes[id]->varboundtypes[v] = SCIPsetIsFeasEQ(set, bounds[v], 1.0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER;
-            ++reoptnodes[id]->nvars;
+            /* copy first c bound changes */
+            for( v = 0; v < c; v++ )
+            {
+               reoptnodes[id]->vars[v] = vars[v];
+               reoptnodes[id]->varbounds[v] = bounds[v];
+               reoptnodes[id]->varboundtypes[v] = boundtypes[v];
+            }
          }
+         else
+         {
+            /* copy first c bound changes */
+            for( v = 0; v < c; v++ )
+            {
+               reoptnodes[id]->vars[v] = vars[perm[v]];
+               reoptnodes[id]->varbounds[v] = bounds[perm[v]];
+               reoptnodes[id]->varboundtypes[v] = boundtypes[perm[v]];
+            }
+         }
+         reoptnodes[id]->nvars += c;
 
-         /* set bound change v+1 (= c) to 1-vals[c] */
+         /* set bound change v+1 (= c) to vals[v] +/- 1 (depending on the bound- and vartype) */
          assert(v == c);
-         reoptnodes[id]->vars[c] = vars[c];
-         reoptnodes[id]->varbounds[c] = 1-bounds[c];
-         reoptnodes[id]->varboundtypes[c] = SCIPsetIsFeasEQ(set, 1-bounds[c], 1.0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER;
+         reoptnodes[id]->vars[c] = vars[perm[c]];
+         reoptnodes[id]->varbounds[c] = bounds[perm[c]];
+         if( SCIPvarGetType(vars[perm[c]]) != SCIP_VARTYPE_CONTINUOUS )
+         {
+            if( boundtypes[perm[c]] == SCIP_BOUNDTYPE_LOWER )
+               reoptnodes[id]->varbounds[c] -= 1.0;
+            else
+               reoptnodes[id]->varbounds[c] += 1.0;
+         }
+         reoptnodes[id]->varboundtypes[c] = (boundtypes[perm[c]] == SCIP_BOUNDTYPE_UPPER ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER);
          ++reoptnodes[id]->nvars;
 
          /* add dummy1 as a child of the root node */
@@ -7111,7 +7103,11 @@ SCIP_RETCODE SCIPreoptSplitRoot(
       }
 
       assert(*ncreatedchilds == nvars+1);
+
+      SCIPsetFreeBufferArray(set, &perm);
+      perm = NULL;
    }
+   assert(perm == NULL);
 
    /* free the current dualredscur and assign dualredsnex */
    assert(reoptnodes[0]->dualredscur->vars != NULL);
@@ -7390,6 +7386,7 @@ SCIP_RETCODE SCIPreoptApply(
          SCIP_VAR** vars;
          SCIP_Real* bounds;
          SCIP_BOUNDTYPE* boundtypes;
+         int* perm = NULL;
          int nvars;
 
          vars = reoptnode->dualredscur->vars;
@@ -7397,32 +7394,38 @@ SCIP_RETCODE SCIPreoptApply(
          boundtypes = reoptnode->dualredscur->boundtypes;
          nvars = reoptnode->dualredscur->nvars;
 
-         /* calculate the order of the variables */
-         switch (set->reopt_varorderinterdiction)
-         {
-         /* default order */
-         case 'd':
-            break;
-
-         /* inference order */
-         case 'i':
-            SCIP_CALL( getInferenceOrder(set, stat, vars, bounds, boundtypes, nvars) );
-            break;
-
-         /* random order */
-         case 'r':
-            permuteRandom(reopt->randnumgen, vars, bounds, boundtypes, nvars);
-            break;
-
-         default:
-            return SCIP_INVALIDDATA;
-         }
-
          *ncreatedchilds = nvars+1;
          *naddedconss = 0;
 
+         /* check if there is enough memory allocated */
          if( childnodessize < *ncreatedchilds )
             return SCIP_OKAY;
+
+         /* create and fill permutation array */
+         SCIP_CALL( SCIPsetAllocBufferArray(set, &perm, nvars) );
+         for( c = 0; c < nvars; c++ )
+            perm[c] = c;
+
+         /* calculate the order of the variables */
+         switch (set->reopt_varorderinterdiction)
+         {
+            /* default order */
+            case 'd':
+               break;
+
+            /* inference order */
+            case 'i':
+               SCIP_CALL( getInferenceOrder(set, stat, perm, vars, bounds, boundtypes, nvars) );
+               break;
+
+            /* random order */
+            case 'r':
+               SCIPrandomPermuteIntArray(reopt->randnumgen, perm, 0, nvars-1);
+               break;
+
+            default:
+               return SCIP_INVALIDDATA;
+         }
 
          assert(reopt->reopttree->reoptnodes[id] != NULL);
          reoptnode = reopt->reopttree->reoptnodes[id];
@@ -7464,7 +7467,7 @@ SCIP_RETCODE SCIPreoptApply(
             {
                /* fix the first c bound changes and negate the (c+1)th */
                SCIP_CALL( fixInterdiction(reopt, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue, cliquetable,
-                     blkmem, childnodes[c], id, vars, bounds, nvars, c) );
+                     blkmem, childnodes[c], id, perm, vars, bounds, boundtypes, nvars, c) );
             }
 
             /* add all local constraints */
@@ -7474,6 +7477,9 @@ SCIP_RETCODE SCIPreoptApply(
             if( !reopt->objhaschanged && SCIPsetIsGT(set, reopt->reopttree->reoptnodes[id]->lowerbound, estimate) )
                SCIPnodeSetEstimate(childnodes[c], set, reopt->reopttree->reoptnodes[id]->lowerbound);
          }
+
+         /* free buffer array */
+         SCIPsetFreeBufferArray(set, &perm);
 
          /* reset the stored dual constraints */
          SCIP_CALL( reoptnodeUpdateDualConss(reopt->reopttree->reoptnodes[id], blkmem) );
@@ -7513,7 +7519,7 @@ SCIP_RETCODE SCIPreoptApply(
 
       /* set the reopttype */
       assert(reoptnode->reopttype != (unsigned int)SCIP_REOPTTYPE_INFSUBTREE
-          && reoptnode->reopttype != (unsigned int)SCIP_REOPTTYPE_INFSUBTREE);
+          && reoptnode->reopttype != (unsigned int)SCIP_REOPTTYPE_STRBRANCHED);
       SCIPnodeSetReopttype(childnodes[0], (SCIP_REOPTTYPE)reoptnode->reopttype);
 
       /* set the unique id */

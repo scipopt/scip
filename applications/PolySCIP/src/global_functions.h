@@ -2,7 +2,7 @@
 /*                                                                           */
 /*        This file is part of the program PolySCIP                          */
 /*                                                                           */
-/*    Copyright (C) 2012-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2012-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  PolySCIP is distributed under the terms of the ZIB Academic License.     */
@@ -13,10 +13,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**
+ * @file global_functions.h
  * @brief  Global helper functions
  * @author Sebastian Schenker
- *
- * Defines some global helper functions.
  *
  */
 
@@ -36,15 +35,30 @@ namespace polyscip {
 
     namespace global {
 
-        /** Based on code by Stephan T. Lavavej at http://channel9.msdn.com/Series/
+        /**
+         * Based on code by Stephan T. Lavavej at http://channel9.msdn.com/Series/
          * C9-Lectures-Stephan-T-Lavavej-Core-C-/STLCCSeries6
          */
         namespace impl_own_stl {
+            /**
+             * Helper function
+             * @tparam T
+             * @tparam Args
+             * @param args
+             * @return
+             */
             template<typename T, typename ... Args>
             std::unique_ptr<T> make_unique_helper(std::false_type, Args&&... args) {
                 return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
             }
 
+            /**
+             * Helper function
+             * @tparam T
+             * @tparam Args
+             * @param args
+             * @return
+             */
             template<typename T, typename ... Args>
             std::unique_ptr<T> make_unique_helper(std::true_type, Args&&... args) {
                 static_assert(std::extent<T>::value == 0,
@@ -54,8 +68,13 @@ namespace polyscip {
             }
         }
 
-        /** make_unique did not get into the C++11 standard, so we provide it ourselves
-         * until installed compiler can be expected to fully support C++14.
+        /**
+         * @details std::make_unique did not get into the C++11 standard, so we provide it ourselves
+         * until installed compiler can be expected to fully support C++14
+         * @tparam T
+         * @tparam Args
+         * @param args
+         * @return
          */
         template<typename T, typename ... Args>
         std::unique_ptr<T> make_unique(Args&&... args) {
@@ -63,13 +82,14 @@ namespace polyscip {
                     std::is_array<T>(),std::forward<Args>(args)... );
         }
 
-        /** Print helper function
+        /**
+         * Print function
          * @param container Container to be printed
          * @param prefix String printed before Container
          * @param suffix String printed after Container
-         * @param os Used output stream
-         * @param negate If true, negative of elements in Container will be written to output stream
-         * @param prec Used precision
+         * @param os Output stream to write to
+         * @param negate Indicates whether elements in Container shall be negated
+         * @param prec Used precision for output stream
          */
         template<typename Container>
         void print(const Container &container,
@@ -89,8 +109,11 @@ namespace polyscip {
             os << suffix;
         }
 
-        /** For conversion between two scalar numeric types where a value might be narrowed.
+        /**
+         * For conversion between two scalar numeric types where a value might be narrowed.
          * Taken from Stroustroup - "The C++ programming language" 4th edition, page 299
+         * @param v Value to convert
+         * @return Value in narrowed type
          */
         template<typename Target, typename Source>
         Target narrow_cast(Source v) {

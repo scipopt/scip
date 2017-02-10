@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -76,7 +76,7 @@
 #define DEFAULT_RELAXDENSECONSS FALSE       /**< should dense constraints (at least as dense as 1 - minfixingrate) be
                                              *   ignored by connectivity graph? */
 #define DEFAULT_USEROLLINGHORIZON TRUE      /**< should the heuristic solve a sequence of sub-MIP's around the first selected variable */
-#define DEFAULT_ROLLHORIZONLIMFAC 0.75      /**< limiting percentage for variables already used in sub-SCIPs to terminate rolling
+#define DEFAULT_ROLLHORIZONLIMFAC  0.4      /**< limiting percentage for variables already used in sub-SCIPs to terminate rolling
                                              *   horizon approach */
 #ifdef SCIP_STATISTIC
 #define NHISTOGRAMBINS         10           /* number of bins for histograms */
@@ -246,10 +246,10 @@ SCIP_RETCODE fillVariableGraph(
       SCIP_Bool success;
       SCIP_CONS* cons = conss[c];
 
-      SCIPstatistic(
-         int nconsdiscvars;
-         int nconscontvars;
-      )
+#ifdef SCIP_STATISTIC
+      int nconsdiscvars;
+      int nconscontvars;
+#endif
 
       /* we only consider constraints that are checkable */
       if( !SCIPconsIsChecked(cons) )
@@ -274,7 +274,10 @@ SCIP_RETCODE fillVariableGraph(
       if( !success )
          continue;
 
-      SCIPstatistic( nconsdiscvars = nconscontvars = 0; )
+#ifdef SCIP_STATISTIC
+      nconscontvars = 0;
+      nconsdiscvars = 0;
+#endif
 
       /* loop over constraint variables and add this constraint to them if they are active */
       for( v = 0; v < nconsvars; ++v )
@@ -370,8 +373,8 @@ SCIP_RETCODE variableGraphCreate(
 /** deinitialization method of variable graph data structure */
 static
 void variableGraphFree(
-   SCIP*                scip,                /**< SCIP data structure */
-   VARIABLEGRAPH**      vargraph             /**< pointer to the variable graph */
+   SCIP*                 scip,               /**< SCIP data structure */
+   VARIABLEGRAPH**       vargraph            /**< pointer to the variable graph */
    )
 {
    int nvars;
@@ -401,11 +404,11 @@ void variableGraphFree(
  */
 static
 SCIP_RETCODE variablegraphBreadthFirst(
-   SCIP*                scip,                /**< SCIP data structure */
-   VARIABLEGRAPH*       vargraph,            /**< pointer to the variable graph */
-   SCIP_VAR*            startvar,            /**< variable to calculate distance from */
-   int*                 distances,           /**< array to keep distance in vargraph from startvar for every variable */
-   int                  maxdistance          /**< maximum distance >= 0 from start variable (INT_MAX for complete BFS)*/
+   SCIP*                 scip,               /**< SCIP data structure */
+   VARIABLEGRAPH*        vargraph,           /**< pointer to the variable graph */
+   SCIP_VAR*             startvar,           /**< variable to calculate distance from */
+   int*                  distances,          /**< array to keep distance in vargraph from startvar for every variable */
+   int                   maxdistance         /**< maximum distance >= 0 from start variable (INT_MAX for complete BFS)*/
    )
 {
    SCIP_VAR** vars;
@@ -552,8 +555,8 @@ SCIP_RETCODE variablegraphBreadthFirst(
 /** create a rolling horizon data structure */
 static
 SCIP_RETCODE rollingHorizonCreate(
-   SCIP*                scip,               /**< SCIP data structure */
-   ROLLINGHORIZON**     rollinghorizon      /**< pointer to rolling horizon data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   ROLLINGHORIZON**      rollinghorizon      /**< pointer to rolling horizon data structure */
    )
 {
    int size;
@@ -576,8 +579,8 @@ SCIP_RETCODE rollingHorizonCreate(
 /** free a rolling horizon data structure */
 static
 SCIP_RETCODE rollingHorizonFree(
-   SCIP*                scip,               /**< SCIP data structure */
-   ROLLINGHORIZON**     rollinghorizon      /**< pointer to rolling horizon data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
+   ROLLINGHORIZON**      rollinghorizon      /**< pointer to rolling horizon data structure */
    )
 {
 
@@ -639,15 +642,16 @@ void rollingHorizonStoreDistances(
  */
 static
 SCIP_Real getPotential(
-   SCIP*                scip,                /**< SCIP data structure */
-   SCIP_HEURDATA*       heurdata,            /**< heuristic data */
-   SCIP_SOL*            sol,                 /**< solution */
-   SCIP_VAR**           vars,                /**< variable array */
-   int                  nvars                /**< length of variable array */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_VAR**            vars,               /**< variable array */
+   int                   nvars               /**< length of variable array */
    )
 {
    SCIP_Real potential;
    int i;
+
    assert(scip != NULL);
    assert(vars != NULL);
    assert(sol != NULL);
@@ -838,7 +842,7 @@ SCIP_RETCODE determineMaxDistance(
       (*choosevardistance)--;
 
    /* update the maximum distance */
-   heurdata->maxseendistance = MAX(heurdata->maxseendistance, distancescopy[nrelevantdistances]);
+   heurdata->maxseendistance = MAX(heurdata->maxseendistance, distancescopy[nrelevantdistances - 1]);
 
    SCIPfreeBufferArray(scip, &distancescopy);
 
@@ -931,11 +935,11 @@ SCIP_RETCODE selectInitialVariable(
       ++nsearched;
 
       /* select a variable to start with randomly, but make sure it is active */
-      choosevar = NULL;
       do
       {
          int idx = SCIPrandomGetInt(heurdata->randnumgen, 0, nintegralvarsleft - 1);
          choosevar = varscopy[idx];
+         assert(choosevar != NULL);
          /* sort inactive variables to the end */
          if( SCIPvarGetProbindex(choosevar) < 0 )
          {
@@ -943,10 +947,10 @@ SCIP_RETCODE selectInitialVariable(
             --nintegralvarsleft;
          }
       }
-      while( choosevar != NULL && SCIPvarGetProbindex(choosevar) < 0 && nintegralvarsleft > 0);
+      while( SCIPvarGetProbindex(choosevar) < 0 && nintegralvarsleft > 0);
 
       /* if there was no variable chosen, there are no active variables left */
-      if( choosevar == NULL || SCIPvarGetProbindex(choosevar) < 0 )
+      if( SCIPvarGetProbindex(choosevar) < 0 )
       {
          SCIPdebugMsg(scip, "No active variable left to perform breadth-first search\n");
          break;
@@ -1346,27 +1350,18 @@ SCIP_RETCODE setupSubScip(
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
-   /* disable conflict analysis */
-   if( !SCIPisParamFixed(subscip, "conflict/useprop") )
+   /* enable conflict analysis and restrict conflict pool */
+   if( !SCIPisParamFixed(subscip, "conflict/enable") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
    }
-   if( !SCIPisParamFixed(subscip, "conflict/useinflp") )
+   if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
    {
-      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useinflp", 'o') );
+      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
    }
-   if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
-   {
-      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
-   }
-   if( !SCIPisParamFixed(subscip, "conflict/usesb") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) );
-   }
-   if( !SCIPisParamFixed(subscip, "conflict/usepseudo") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
-   }
+
+   /* speed up sub-SCIP by not checking dual LP feasibility */
+   SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
 
    /* employ a limit on the number of enforcement rounds in the quadratic constraint handlers; this fixes the issue that
     * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
@@ -1380,7 +1375,6 @@ SCIP_RETCODE setupSubScip(
    }
 
    /* add an objective cutoff */
-   cutoff = SCIPinfinity(scip);
    assert( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) );
 
    upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
@@ -1624,8 +1618,6 @@ SCIP_DECL_HEUREXEC(heurExecGins)
 
    SCIP_Bool success;
 
-   SCIP_RETCODE retcode;
-
    assert(heur != NULL);
    assert(scip != NULL);
    assert(result != NULL);
@@ -1710,7 +1702,7 @@ SCIP_DECL_HEUREXEC(heurExecGins)
 
       /* create a problem copy as sub SCIP */
       SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "gins", fixedvars, fixedvals, nfixedvars,
-            heurdata->uselprows, heurdata->copycuts, &success) );
+            heurdata->uselprows, heurdata->copycuts, &success, NULL) );
 
       for( i = 0; i < nvars; i++ )
          subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
@@ -1723,24 +1715,14 @@ SCIP_DECL_HEUREXEC(heurExecGins)
 
       /* solve the subproblem */
       SCIPdebugMsg(scip, "Solve Gins subMIP\n");
-      retcode = SCIPsolve(subscip);
 
       /* Errors in solving the subproblem should not kill the overall solving process
        * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
        */
-      if( retcode != SCIP_OKAY )
-      {
-#ifndef NDEBUG
-         SCIP_CALL( retcode );
-#endif
-         SCIPwarningMessage(scip, "Error while solving subproblem in Gins heuristic; sub-SCIP terminated with code <%d>\n",
-               retcode);
-      }
-      else
-      {
-         /* transfer variable statistics from sub-SCIP */
-         SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
-      }
+      SCIP_CALL_ABORT( SCIPsolve(subscip) );
+
+      /* transfer variable statistics from sub-SCIP */
+      SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
 
       heurdata->usednodes += SCIPgetNNodes(subscip);
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -286,7 +286,6 @@ SCIP_RETCODE SCIPapplyZeroobj(
 
    SCIP_Bool success;
    SCIP_Bool valid;
-   SCIP_RETCODE retcode;
    SCIP_SOL** subsols;
    int nsubsols;
 
@@ -456,6 +455,9 @@ SCIP_RETCODE SCIPapplyZeroobj(
       SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/fracdiving/freq", -1) );
    }
 
+   /* speed up sub-SCIP by not checking dual LP feasibility */
+   SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+
    /* restrict LP iterations */
    SCIP_CALL( SCIPsetLongintParam(subscip, "lp/iterlim", 2*heurdata->maxlpiters / MAX(1,nnodes)) );
    SCIP_CALL( SCIPsetLongintParam(subscip, "lp/rootiterlim", heurdata->maxlpiters) );
@@ -470,7 +472,6 @@ SCIP_RETCODE SCIPapplyZeroobj(
       nobjvars = 0;
 #endif
 
-      cutoff = SCIPinfinity(scip);
       assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
@@ -510,7 +511,6 @@ SCIP_RETCODE SCIPapplyZeroobj(
    SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
 
    SCIPdebugMsg(scip, "solving subproblem: nnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes);
-   retcode = SCIPsolve(subscip);
 
    /* drop LP events of sub-SCIP */
    SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
@@ -518,13 +518,7 @@ SCIP_RETCODE SCIPapplyZeroobj(
    /* errors in solving the subproblem should not kill the overall solving process;
     * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
     */
-   if( retcode != SCIP_OKAY )
-   {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip, "Error while solving subproblem in zeroobj heuristic; sub-SCIP terminated with code <%d>\n",retcode);
-   }
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
    /* check, whether a solution was found;
     * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted

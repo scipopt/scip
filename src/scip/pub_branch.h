@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_branch.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for branching rules
  * @author Tobias Achterberg
  */
@@ -32,6 +32,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup PublicBranchRuleMethods
+ *
+ * @{
+ */
 
 /** compares two branching rules w. r. to their priority */
 EXTERN
@@ -151,6 +156,8 @@ EXTERN
 SCIP_Bool SCIPbranchruleIsInitialized(
    SCIP_BRANCHRULE*      branchrule          /**< branching rule */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

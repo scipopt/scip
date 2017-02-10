@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -570,8 +570,8 @@ SCIP_RETCODE separateCuts(
       case SCIP_NLPSOLSTAT_UNBOUNDED:
       default:
          SCIPerrorMessage("Projection NLP is not unbounded by construction, should not get here!\n");
-         nlpunstable = TRUE;
          SCIPABORT();
+         nlpunstable = TRUE;
    }
 
 
@@ -820,8 +820,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       assert(sepadata->nlpi != NULL);
 
       SCIP_CALL( SCIPnlpiCreateProblem(sepadata->nlpi, &sepadata->nlpiprob, "convexproj-nlp") );
-      SCIP_CALL( SCIPhashmapCreate(&sepadata->var2nlpiidx, SCIPblkmem(scip),
-            SCIPcalcHashtableSize(sepadata->nlpinvars)) );
+      SCIP_CALL( SCIPhashmapCreate(&sepadata->var2nlpiidx, SCIPblkmem(scip), sepadata->nlpinvars) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) );
 
       SCIP_CALL( SCIPcreateConvexNlp(scip, sepadata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),

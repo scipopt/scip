@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -189,28 +189,6 @@ SCIP_RETCODE disableConflictingDualReductions(
 
    SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowdualreds", FALSE) );
    return SCIP_OKAY;
-#if 0
-   /* TODO something is still poducing objective cutoffs so I use misc/allowdualreds for now */
-   /* presolvers */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/stuffing/maxrounds", 0) );
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", 0) );
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/dualcomp/maxrounds", 0) );  /*TODO: ok? */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/dualinfer/maxrounds", 0) ); /*TODO: probably fine */
-   /* SCIP_CALL( SCIPsetIntParam(scip, "presolving/dualagg/maxrounds", 0) ); TODO: seems to have no copy callback */
-   /* constraint handlers */
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/abspower/dualpresolve", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/and/dualpresolving", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/cumulative/dualpresolve", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/knapsack/dualpresolving", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/linear/dualpresolving", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/setppc/dualpresolving", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/logicor/dualpresolving", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/indicator/dualreductions", FALSE) );
-   /* SCIP_CALL( SCIPsetBoolParam(scip, "constraints/orbitope/dualreductions", FALSE) ); TODO add setting and change computeSCTable so that it does not require the triangle to be fixed */
-
-   /* TODO verify genvbounds, dualfix, and rootredcost propagators are fine (probably yes) */
-   return SCIP_OKAY;
-#endif
 }
 
 /** sets the child selection rule based on the index of the concurrent solver */
@@ -378,9 +356,8 @@ SCIP_DECL_CONCSOLVERCREATEINST(concsolverScipCreateInstance)
    /* use wall clock time in subscips */
    SCIP_CALL( SCIPsetIntParam(data->solverscip, "timing/clocktype", (int)SCIP_CLOCKTYPE_WALL) );
 
-   /* only catch ctrlc in one solver */
-   if( SCIPconcsolverGetIdx(concsolver) != 0 )
-      SCIP_CALL( SCIPsetBoolParam(data->solverscip, "misc/catchctrlc", FALSE) );
+   /* don't catch ctrlc since already caught in main scip */
+   SCIP_CALL( SCIPsetBoolParam(data->solverscip, "misc/catchctrlc", FALSE) );
 
    /* one solver can do all dual reductions and share them with the other solvers */
    if( SCIPconcsolverGetIdx(concsolver) != 0 )
@@ -441,10 +418,10 @@ SCIP_DECL_CONCSOLVERINITSEEDS(concsolverScipInitSeeds)
    data = SCIPconcsolverGetData(concsolver);
    assert(data != NULL);
 
-   SCIPinfoMessage(data->solverscip, NULL, "initializing seeds to %d in concurrent solver '%s'\n", seed, SCIPconcsolverGetName(concsolver));
+   SCIPinfoMessage(data->solverscip, NULL, "initializing seeds to %d in concurrent solver '%s'\n", (int) seed, SCIPconcsolverGetName(concsolver));
 
-   SCIP_CALL( SCIPsetIntParam(data->solverscip, "randomization/randomseedshift", seed) );
-   SCIP_CALL( SCIPsetIntParam(data->solverscip, "randomization/permutationseed", seed) );
+   SCIP_CALL( SCIPsetIntParam(data->solverscip, "randomization/randomseedshift", (int) seed) );
+   SCIP_CALL( SCIPsetIntParam(data->solverscip, "randomization/permutationseed", (int) seed) );
    SCIP_CALL( SCIPsetBoolParam(data->solverscip, "randomization/permutevars", TRUE) );
    SCIP_CALL( SCIPsetBoolParam(data->solverscip, "randomization/permuteconss", TRUE) );
 

@@ -7,7 +7,7 @@
       <tab type="files" visible="no" title=""/>
       <tab type="globals" visible="no" title=""/>
     </tab>
-    <tab type="modules" visible="yes" title="Plugin Types"/>
+    <tab type="modules" visible="yes" title="SCIP C-API" intro="The public API of SCIP is separated into a Core API and a Plugin API. The first contains all methods that can be accessed by including the header scip.h. The Plugin API is a collection of methods that are provided by the default plugins of SCIP. The Plugin API is provided by scipdefplugins.h."/>
     <tab type="classes" visible="no" title="">
       <tab type="classes" visible="no" title="Wrapper Classes"/>
       <tab type="classindex" visible="$ALPHABETICAL_INDEX" title=""/>
@@ -22,7 +22,7 @@
     <tab type="user" url="@ref INTERFACES" title="Interfaces"/>
     <tab type="user" url="@ref EXAMPLES" title="Examples"/>
     <tab type="user" url="@ref APPLICATIONS" title="Applications"/>
-    <tab type="user" url="@ref HOWTOADD" title="How To"/>
+    <tab type="user" url="@ref FAQ" title="FAQ"/>
   </navindex>
 
   <!-- Layout definition for a class page -->
@@ -139,12 +139,12 @@
       <namespaces visible="yes" title=""/>
       <dirs visible="yes" title=""/>
       <nestedgroups visible="yes" title=""/>
-      <files visible="yes" title=""/>
       <defines title=""/>
       <typedefs title=""/>
       <enums title=""/>
       <enumvalues title=""/>
       <functions title=""/>
+      <files visible="yes" title=""/>
       <variables title=""/>
       <signals title=""/>
       <publicslots title=""/>

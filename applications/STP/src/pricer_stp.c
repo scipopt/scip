@@ -4,7 +4,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -78,6 +78,7 @@ SCIP_DECL_PRICERCOPY(pricerCopyStp)
 }
 
 /** destructor of variable pricer to free user data (called when SCIP is exiting) */
+/**! [SnippetPricerFreeSTP] */
 static
 SCIP_DECL_PRICERFREE(pricerFreeStp)
 {
@@ -98,6 +99,7 @@ SCIP_DECL_PRICERFREE(pricerFreeStp)
 
    return SCIP_OKAY;
 }
+/**! [SnippetPricerFreeSTP] */
 
 /** initialization method of variable pricer (called after problem was transformed) */
 static

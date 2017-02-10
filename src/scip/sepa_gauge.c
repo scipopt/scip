@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -195,7 +195,7 @@ SCIP_RETCODE computeInteriorPoint(
 
    nvars = SCIPgetNVars(scip);
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "gauge-interiorpoint-nlp") );
-   SCIP_CALL( SCIPhashmapCreate(&var2nlpiidx, SCIPblkmem(scip), SCIPcalcHashtableSize(nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&var2nlpiidx, SCIPblkmem(scip), nvars) );
    SCIP_CALL( SCIPcreateConvexNlp(scip, nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip), nlpiprob, var2nlpiidx,
             NULL, SCIPgetCutoffbound(scip), FALSE) );
 

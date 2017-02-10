@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -137,7 +137,6 @@ SCIP_Real calcShiftVal(
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
    obj = SCIPvarGetObj(var);
-   shiftval = 0.0;
    shiftdown = TRUE;
 
    /* determine shifting direction and maximal possible shifting w.r.t. corresponding bound */
@@ -378,7 +377,6 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    int shiftcandssize;
    int nsuccessfulshifts;
    int niterations;
-   SCIP_RETCODE retcode;
 
    assert(heur != NULL);
    assert(scip != NULL);
@@ -512,37 +510,33 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       }
       SCIP_CALL( SCIPsetBoolParam(subscip, "heuristics/oneopt/beforepresol", FALSE) );
 
+      /* speed up sub-SCIP by not checking dual LP feasibility */
+      SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+
       if( valid )
       {
-         retcode = SCIPsolve(subscip);
 
          /* errors in solving the subproblem should not kill the overall solving process;
           * hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
           */
-         if( retcode != SCIP_OKAY )
-         {
-#ifndef NDEBUG
-            SCIP_CALL( retcode );
-#endif
-            SCIPwarningMessage(scip, "Error while solving subproblem in 1-opt heuristic; sub-SCIP terminated with code <%d>\n",retcode);
-         }
+         SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
 #ifdef SCIP_DEBUG
          SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 #endif
-      }
 
-      /* check, whether a solution was found;
-       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
-       */
-      nsubsols = SCIPgetNSols(subscip);
-      subsols = SCIPgetSols(subscip);
-      valid = FALSE;
-      for( i = 0; i < nsubsols && !valid; ++i )
-      {
-         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &valid) );
-         if( valid )
-            *result = SCIP_FOUNDSOL;
+         /* check, whether a solution was found;
+          * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
+          */
+         nsubsols = SCIPgetNSols(subscip);
+         subsols = SCIPgetSols(subscip);
+         valid = FALSE;
+         for( i = 0; i < nsubsols && !valid; ++i )
+         {
+            SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &valid) );
+            if( valid )
+               *result = SCIP_FOUNDSOL;
+         }
       }
 
       /* free subproblem */

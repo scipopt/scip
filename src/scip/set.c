@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -238,7 +238,6 @@
                                                  *   for LP resolve (-1.0: unlimited) */
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
 #define SCIP_DEFAULT_LP_SOLUTIONPOLISHING     0 /**< LP solution polishing method (0: disabled, 1: only root, 2: always) */
-#define SCIP_DEFAULT_LP_PERSISTENTSCALING FALSE /**< use persistent LP scaling during branch and bound */
 
 /* NLP */
 
@@ -281,7 +280,7 @@
 
 /* Randomization */
 #define SCIP_DEFAULT_RANDOM_RANDSEEDSHIFT     0 /**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
-#define SCIP_DEFAULT_RANDOM_PERMUTATIONSEED   0 /**< seed value for permuting the problem after the problem was transformed (0: no permutation) */
+#define SCIP_DEFAULT_RANDOM_PERMUTATIONSEED   0 /**< seed value for permuting the problem after reading/transformation (0: no permutation) */
 #define SCIP_DEFAULT_RANDOM_LPSEED            0 /**< random seed for LP solver, e.g. for perturbations in the simplex (0: LP default) */
 #define SCIP_DEFAULT_RANDOM_PERMUTECONSS   TRUE /**< should order of constraints be permuted (depends on permutationseed)? */
 #define SCIP_DEFAULT_RANDOM_PERMUTEVARS   FALSE /**< should order of variables be permuted (depends on permutationseed)? */
@@ -1673,12 +1672,6 @@ SCIP_RETCODE SCIPsetCreate(
          "minimum number of iterations that are allowed for LP resolve",
          &(*set)->lp_resolveitermin, TRUE, SCIP_DEFAULT_LP_RESOLVEITERMIN, 1, INT_MAX,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "lp/persistentscaling",
-         "use persistent LP scaling during branch and bound",
-         &(*set)->lp_persistentscaling, TRUE, SCIP_DEFAULT_LP_PERSISTENTSCALING,
-         NULL, NULL) );
-
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/solutionpolishing",
@@ -1838,7 +1831,7 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "randomization/permutationseed",
-         "seed value for permuting the problem after the problem was transformed (0: no permutation)",
+         "seed value for permuting the problem after reading/transformation (0: no permutation)",
          &(*set)->random_permutationseed, FALSE, SCIP_DEFAULT_RANDOM_PERMUTATIONSEED, 0, INT_MAX,
          NULL, NULL) );
 

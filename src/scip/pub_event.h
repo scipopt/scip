@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_event.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for managing events
  * @author Tobias Achterberg
  */
@@ -38,6 +38,11 @@ extern "C" {
 
 /*
  * Event handler methods
+ */
+
+/**@addtogroup PublicEventHandlerMethods
+ *
+ * @{
  */
 
 /** gets name of event handler */
@@ -77,9 +82,15 @@ SCIP_Real SCIPeventhdlrGetTime(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
+/* @} */
 
 /*
  * Event methods
+ */
+
+/**@addtogroup PublicEventMethods
+ *
+ * @{
  */
 
 /** gets type of event */
@@ -220,6 +231,8 @@ SCIP_Real SCIPeventGetRowNewSideVal(
 #define SCIPeventGetRowNewSideVal(event)          ((event)->data.eventrowsidechanged.newval)
 
 #endif
+
+/* @} */
 
 #ifdef __cplusplus
 }

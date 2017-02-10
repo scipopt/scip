@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -250,7 +250,7 @@ SCIP_Bool SCIPsyncstoreSolveIsStopped(
    return stopped;
 }
 
-/** sets the solve-is-stopped flag in the SPI so that subsequent calls to
+/** sets the solve-is-stopped flag in the syncstore so that subsequent calls to
  *  SCIPsyncstoreSolveIsStopped will return the given value in any thread
  */
 void SCIPsyncstoreSetSolveIsStopped(
@@ -473,6 +473,8 @@ SCIP_RETCODE SCIPsyncstoreFinishSync(
    SCIP_SYNCDATA**       syncdata            /**< the synchronization data */
    )
 {
+   SCIP_Bool printline = FALSE;
+
    assert(syncdata != NULL);
    assert((*syncdata) != NULL);
    assert(syncstore != NULL);
@@ -486,12 +488,14 @@ SCIP_RETCODE SCIPsyncstoreFinishSync(
          SCIPsyncstoreSetSolveIsStopped(syncstore, TRUE);
 
       syncstore->lastsync = *syncdata;
+      printline = TRUE;
+
       SCIP_CALL( SCIPtpiBroadcastCondition(&(*syncdata)->allsynced) );
    }
 
    SCIP_CALL( SCIPtpiReleaseLock(&(*syncdata)->lock) );
 
-   if( *syncdata == syncstore->lastsync )
+   if( printline )
    {
       SCIP_CALL( SCIPprintDisplayLine(syncstore->mainscip, NULL, SCIP_VERBLEVEL_HIGH, TRUE) );
    }
@@ -716,7 +720,7 @@ void SCIPsyncdataGetSolutionBuffer(
 
    for( pos = 0; pos < syncdata->nsols; ++pos )
    {
-      if( syncdata->solobj[pos] < solobj || (syncdata->solobj[pos] == solobj && ownerid < syncdata->solsource[pos]) )
+      if( syncdata->solobj[pos] < solobj || (syncdata->solobj[pos] == solobj && ownerid < syncdata->solsource[pos]) ) /*lint !e777*/
          break;
    }
 

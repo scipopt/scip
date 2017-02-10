@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1503,8 +1503,8 @@ SCIP_DECL_CONSPRESOL(consPresolSOS2)
    assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
-   oldnfixedvars = *nfixedvars;
-   oldndelconss = *ndelconss;
+   SCIPdebug( oldnfixedvars = *nfixedvars; )
+   SCIPdebug( oldndelconss = *ndelconss; )
    nremovedvars = 0;
 
    /* only run if success is possible */

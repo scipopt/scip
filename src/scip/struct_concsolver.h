@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_concsolver.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for concurrent solvers
  * @author Robert Lion Gottwald
  */
@@ -62,6 +63,8 @@ struct SCIP_ConcSolver
    SCIP_Real                           timesincelastsync;         /**< time since the last synchronization */
    SCIP_Real                           syncdelay;                 /**< current delay of synchronization data */
    SCIP_Real                           solvingtime;               /**< solving time with wall clock */
+   SCIP_Bool                           stopped;                   /**< flag to store if the concurrent solver has been stopped
+                                                                   *   through the SCIPconcsolverStop function */
    SCIP_Longint                        nlpiterations;             /**< number of lp iterations the concurrent solver used */
    SCIP_Longint                        nnodes;                    /**< number of nodes the concurrent solver used */
    SCIP_Longint                        nsolsrecvd;                /**< number of solutions the concurrent solver received */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3719,8 +3719,6 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
       SCIP_Real vbdrhs;
       int vbdind;
 
-      SCIPdebugMsg(scip, "upgrading constraint <%s> to variable bound constraint\n", SCIPconsGetName(cons));
-
       /* decide which variable we want to use as bounding variable y */
       if( SCIPvarGetType(vars[0]) < SCIPvarGetType(vars[1]) )
          vbdind = 0;
@@ -3734,6 +3732,12 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdVarbound)
          vbdind = 1;
       else
          vbdind = 0;
+
+      /* do not upgrade when it is numerical unstable */
+      if( SCIPisZero(scip, vals[vbdind]/vals[1-vbdind]) )
+         return SCIP_OKAY;
+
+      SCIPdebugMsg(scip, "upgrading constraint <%s> to variable bound constraint\n", SCIPconsGetName(cons));
 
       var = vars[1-vbdind];
       vbdvar = vars[vbdind];

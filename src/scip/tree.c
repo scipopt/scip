@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1122,11 +1122,15 @@ SCIP_RETCODE SCIPnodeCutoff(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP */
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
+   SCIP_Real oldbound;
+
    assert(node != NULL);
    assert(set != NULL);
    assert(stat != NULL);
@@ -1140,14 +1144,31 @@ SCIP_RETCODE SCIPnodeCutoff(
             tree->root == node, tree->focusnode == node, node->lowerbound, tree->effectiverootdepth) );
    }
 
+   oldbound = node->lowerbound;
    node->cutoff = TRUE;
    node->lowerbound = SCIPsetInfinity(set);
    node->estimate = SCIPsetInfinity(set);
    if( node->active )
       tree->cutoffdepth = MIN(tree->cutoffdepth, (int)node->depth);
 
-   SCIPvisualCutoffNode(stat->visual, set, stat, node, TRUE);
+   /* update primal integral */
+   if( node->depth == 0 )
+   {
+      stat->rootlowerbound = SCIPsetInfinity(set);
+      if( set->misc_calcintegral )
+         SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), SCIPsetInfinity(set));
+   }
+   else if( set->misc_calcintegral && SCIPsetIsEQ(set, oldbound, stat->lastlowerbound) )
+   {
+      SCIP_Real lowerbound;
+      lowerbound = SCIPtreeGetLowerbound(tree, set);
 
+      /* updating the primal integral is only necessary if dual bound has increased since last evaluation */
+      if( lowerbound > stat->lastlowerbound )
+         SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), SCIPsetInfinity(set));
+   }
+
+   SCIPvisualCutoffNode(stat->visual, set, stat, node, TRUE);
 
    SCIPsetDebugMsg(set, "cutting off %s node #%" SCIP_LONGINT_FORMAT " at depth %d (cutoffdepth: %d)\n",
       node->active ? "active" : "inactive", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->cutoffdepth);
@@ -1367,7 +1388,7 @@ SCIP_RETCODE nodeRepropagate(
    /* mark the node to be cut off if a cutoff was detected */
    if( *cutoff )
    {
-      SCIP_CALL( SCIPnodeCutoff(node, set, stat, tree, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(node, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
    }
 
    return SCIP_OKAY;
@@ -1423,7 +1444,7 @@ SCIP_RETCODE nodeActivate(
       node->reprop = set->conf_enable && set->conf_useprop;
 
       /* mark the node to be cut off */
-      SCIP_CALL( SCIPnodeCutoff(node, set, stat, tree, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(node, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
    }
 
    /* propagate node again, if the reprop flag is set; in the new focus node, no repropagation is necessary, because
@@ -1477,7 +1498,6 @@ SCIP_RETCODE nodeDeactivate(
       stat->ndeactivatednodes++;
 
    /* free node if it is a dead-end node, i.e., has no children */
-   freeNode = FALSE;
    switch( SCIPnodeGetType(node) )   
    {
    case SCIP_NODETYPE_FOCUSNODE:
@@ -1855,7 +1875,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
                probingchange) );
 
          /* mark the node with the conflicting bound change to be cut off */
-         SCIP_CALL( SCIPnodeCutoff(tree->path[conflictingdepth], set, stat, tree, reopt, lp, blkmem) );
+         SCIP_CALL( SCIPnodeCutoff(tree->path[conflictingdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
          return SCIP_OKAY;
       }
@@ -2187,7 +2207,7 @@ SCIP_RETCODE treeApplyPendingBdchgs(
        */
       if( conflictdepth == 0 )
       {
-         SCIP_CALL( SCIPnodeCutoff(tree->pendingbdchgs[i].node, set, stat, tree, reopt, lp, blkmem) );
+         SCIP_CALL( SCIPnodeCutoff(tree->pendingbdchgs[i].node, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
          if( ((int) tree->pendingbdchgs[i].node->depth) <= tree->effectiverootdepth )
             return SCIP_OKAY;
@@ -2765,6 +2785,7 @@ void treeFindSwitchForks(
    lpfork = NULL;
    lpstatefork = NULL;
    subroot = NULL;
+   assert(fork != NULL);
 
    while( !fork->active )
    {
@@ -2798,9 +2819,11 @@ void treeFindSwitchForks(
    if( (int)fork->depth > tree->cutoffdepth )
    {
 #ifndef NDEBUG
-      while( fork != NULL && !fork->cutoff )
+      while( !fork->cutoff )
+      {
          fork = fork->parent;
-      assert(fork != NULL);
+         assert(fork != NULL);
+      }
       assert((int)fork->depth >= tree->cutoffdepth);
 #endif
       *cutoff = TRUE;
@@ -3053,7 +3076,7 @@ SCIP_RETCODE treeSwitchPath(
    {
       assert(tree->pathlen > 0);
       assert(tree->path[tree->pathlen-1]->active);
-      SCIP_CALL( SCIPnodeCutoff(tree->path[tree->pathlen-1], set, stat, tree, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(tree->path[tree->pathlen-1], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
    }
 
    /* count the new LP sizes of the path */
@@ -4185,7 +4208,7 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_Bool             postponed,          /**< was the current focus node postponed? */
    SCIP_Bool             exitsolve           /**< are we in exitsolve stage, so we only need to loose the children */
    )
-{
+{  /*lint --e{715}*/
    SCIP_NODE* oldfocusnode;
    SCIP_NODE* fork;
    SCIP_NODE* lpfork;
@@ -4598,7 +4621,7 @@ SCIP_RETCODE SCIPnodeFocus(
 
             if( nodecutoff )
             {
-               SCIP_CALL( SCIPnodeCutoff(tree->path[d], set, stat, tree, reopt, lp, blkmem) );
+               SCIP_CALL( SCIPnodeCutoff(tree->path[d], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
                *cutoff = TRUE;
             }
          }
@@ -4609,7 +4632,7 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(*cutoff || SCIPtreeIsPathComplete(tree));
 
    return SCIP_OKAY;
-}   
+}
 
 
 
@@ -4827,7 +4850,7 @@ SCIP_RETCODE SCIPtreeCreateRoot(
    /* check, if the sizes in the data structures match the maximal numbers defined here */
    tree->root->depth = SCIP_MAXTREEDEPTH + 1;
    tree->root->repropsubtreemark = MAXREPROPMARK;
-   assert(tree->root->depth - 1 == SCIP_MAXTREEDEPTH);
+   assert(tree->root->depth - 1 == SCIP_MAXTREEDEPTH); /*lint !e650*/
    assert(tree->root->repropsubtreemark == MAXREPROPMARK);
    tree->root->depth++;             /* this should produce an overflow and reset the value to 0 */
    tree->root->repropsubtreemark++; /* this should produce an overflow and reset the value to 0 */
@@ -7377,7 +7400,7 @@ void SCIPnodeGetDualBoundchgs(
             {
                vars[j] = boundchgs[i].var;
                bounds[j] = boundchgs[i].newbound;
-               boundtypes[j] = boundchgs[i].boundtype;
+               boundtypes[j] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
                j++;
             }
          }
@@ -7591,7 +7614,7 @@ void SCIPnodeGetConsProps(
       if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL)
        || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop != NULL) )
       {
-         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+         if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
             (*nconspropvars)++;
       }
       else if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons == NULL)
@@ -7608,7 +7631,7 @@ void SCIPnodeGetConsProps(
       {
          if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL )
          {
-            if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+            if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
             {
                vars[pos] = boundchgs[i].var;
                varboundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
@@ -7678,7 +7701,7 @@ void SCIPnodeGetBdChgsAfterDual(
       if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL)
        || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop != NULL) )
       {
-         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+         if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
             (*nbranchvars)++;
       }
    }
@@ -7692,7 +7715,7 @@ void SCIPnodeGetBdChgsAfterDual(
          if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL)
           || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop != NULL)  )
          {
-            if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+            if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
             {
                vars[p] = boundchgs[i].var;
                varboundtypes[p] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;

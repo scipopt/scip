@@ -3,7 +3,7 @@
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
-/*    Copyright (C) 1996-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 1996-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
@@ -441,7 +441,6 @@ TCLIQUE_WEIGHT tcliqueColoring(
 
          /* add the new colorinterval [1, range] to the list of chosen colorintervals for node */
          pnc->next = colorinterval;
-         pnc = colorinterval;
       }
       else
       {
@@ -495,7 +494,7 @@ TCLIQUE_WEIGHT tcliqueColoring(
             tocolor -= dif;
             pnc->next = colorinterval;
             pnc = colorinterval;
-         }	
+         }
       }
 
       debugMessage("-> updated neighbors:\n"); 

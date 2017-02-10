@@ -2,7 +2,7 @@
 /*                                                                           */
 /*        This file is part of the program PolySCIP                          */
 /*                                                                           */
-/*    Copyright (C) 2012-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2012-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  PolySCIP is distributed under the terms of the ZIB Academic License.     */
@@ -13,16 +13,11 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**
- * @brief  Weight space vertex
- * @author Sebastian Schenker, Timo Strunk
+ * @file weight_space_vertex.cpp
+ * @brief Implements class representing vertex of (partial) weight space polyhedron
+ * @author Sebastian Schenker
+ * @author Timo Strunk
  *
- * Data structure storing combinatorial and geometric information
- * about a vertex of the weight space polyhedron. A weight space
- * vertex is represented by a weight 'w' and an weighted objective
- * value 'a' and is a vertex of the (partial) weight space polyhedron
- * P = {(w,a) \in \Lambda \times R : w \cdot y >= a \forall y \in Y'}
- * where Y' is the (current) set of non-dominated points and \Lambda
- * is the set of normalized weights
  */
 
 #include "weight_space_vertex.h"
@@ -47,7 +42,13 @@ using std::vector;
 
 namespace polyscip {
 
-
+    /**
+     * Default constructor
+     * @param incident_facets Incident facets of the constructed vertex
+     * @param weight Lhs coefficients of the constructed vertex
+     * @param weighted_obj_val Rhs coefficient of the constructed vertex
+     * @param sort_facets if true, incident facets are sorted
+     */
     WeightSpaceVertex::WeightSpaceVertex(WeightSpacePolyhedron::FacetContainer incident_facets,
                                          WeightType weight,
                                          ValueType weighted_obj_val,
@@ -60,15 +61,30 @@ namespace polyscip {
             sort(begin(incident_facets_), end(incident_facets_), WeightSpaceFacet::Compare());
     }
 
+    /**
+     * Returns weighted objective value of vertex
+     * @return weighted objective value
+     */
     ValueType WeightSpaceVertex::getCurrentWOV() const {
         return weighted_obj_val_;
     }
 
+
+    /**
+     * Constructor creating a new vertex from an obsolete and non-obsolete vertex via
+     * the equality new_vertex = obs_coeff * obs + non_obs_coeff * non_obs
+     * @param obs_coeff Coefficient of obsolete vertex
+     * @param non_obs_coeff Coefficient of non-obsolete vertex
+     * @param obs Obsolete vertex
+     * @param non_obs Non-obsolete vertex
+     * @param incident_facet Incident facet of new vertex
+     * @param wsp_dimension Dimension of the corresponding weight space polyhedron
+     */
     WeightSpaceVertex::WeightSpaceVertex(double obs_coeff,
                                          double non_obs_coeff,
                                          const WeightSpaceVertex* obs,
                                          const WeightSpaceVertex* non_obs,
-                                         const shared_ptr<const WeightSpaceFacet>& incident_facet,
+                                         const std::shared_ptr<const WeightSpaceFacet>& incident_facet,
                                          std::size_t wsp_dimension)
             : vertex_status_(VertexStatus::unmarked)
     {
@@ -99,35 +115,19 @@ namespace polyscip {
         weighted_obj_val_ /= normalize_val;
     }
 
+    /**
+     * Returns associated weight vector of weight space vertex
+     * @return Weight vector of vertex
+     */
     WeightType WeightSpaceVertex::getWeight() const {
         return weight_;
     }
 
-    OutcomeType WeightSpaceVertex::getIncFacetsBounds(std::function<ValueType()> limit,
-                                                      std::function<ValueType(const ValueType&, const ValueType&)> cmp) const {
-        auto bounds = OutcomeType(weight_.size(), limit());
-        for (const auto& f : incident_facets_) {
-            if (f->hasNonZeroWOVCoeff()) {
-                std::transform(f->coeffsBegin(),
-                               f->coeffsEnd(),
-                               bounds.begin(),
-                               bounds.begin(),
-                               cmp);
-            }
-        }
-        return bounds;
-    }
-
-    OutcomeType WeightSpaceVertex::getIncFacetsLowerBounds() const {
-        return getIncFacetsBounds([](){return std::numeric_limits<ValueType>::max();},
-                                  [](const ValueType& val1, const ValueType& val2){return std::min(val1, val2);});
-    }
-
-    OutcomeType WeightSpaceVertex::getIncFacetsUpperBounds() const {
-        return getIncFacetsBounds([](){return std::numeric_limits<ValueType>::lowest();},
-                                  [](const ValueType& val1, const ValueType& val2){return std::max(val1, val2);});
-    }
-
+    /**
+     * Outcome vector \\cdot weight vector
+     * @param outcome Outcome vector
+     * @return Scalarproduct of outcome and weight vector of vertex
+     */
     double WeightSpaceVertex::getWeightedOutcome(const OutcomeType& outcome) const {
         assert (outcome.size() == weight_.size());
         return std::inner_product(begin(outcome),
@@ -136,6 +136,13 @@ namespace polyscip {
                                   0.);
     }
 
+    /**
+     * Computes slack
+     * @param outcome Outcome vector
+     * @param outcome_is_ray Indicates whether given outcome corresponds to ray
+     * @return outcome \\cdot weight - weighted_obj_val if outcome corresponds to point;
+     * else outcome \\cdot weight
+     */
     double WeightSpaceVertex::computeSlack(const OutcomeType& outcome, bool outcome_is_ray) const {
         double slack = getWeightedOutcome(outcome);
         if (!outcome_is_ray)
@@ -143,21 +150,37 @@ namespace polyscip {
         return slack;
     }
 
+    /**
+     * Compute convex combination of weights
+     * @param weight1 First weight vector
+     * @param weight2 Second weight vector
+     * @param h Coefficient for convex combination
+     * @return h * weight1 + (1-h) * weight2
+     */
     const WeightType WeightSpaceVertex::calculateWeightCombination(double h,
                                                                    const WeightType& weight1,
                                                                    const WeightType& weight2) {
         assert (weight1.size() == weight2.size());
         auto new_weight = WeightType(weight1.size(),0.);
-        // set new_weight = h*weight1 + (1-h)*weight2
+        // new_weight = h*weight1 + (1-h)*weight2
         transform(begin(weight1), end(weight1), begin(weight2),
                   begin(new_weight), [h](ValueType w1, ValueType w2){return h*w1 + (1.-h)*w2;});
         return new_weight;
     }
 
+    /**
+     * Compare weight vectors
+     * @param weight Weight to check against
+     * @return true if given weight vector coincides with weight vector of vertex; otherwise false
+     */
     bool WeightSpaceVertex::hasSameWeight(const WeightType& weight) const {
         return weight_ == weight;
     }
 
+    /**
+     * Indicates whether weight vector of vertex corresponds to some unit vector
+     * @return true if weight vector of vertex corresponds to some unit vector; otherwise false
+     */
     bool WeightSpaceVertex::hasUnitWeight() const {
         for (std::size_t i=0; i<weight_.size(); ++i) {
             auto weight = WeightType(weight_.size(), 0.);
@@ -168,6 +191,10 @@ namespace polyscip {
         return false;
     }
 
+    /**
+     * Indicates whether weight vector of vertex corresponds to zero vector
+     * @return true if weight vector of vertex is zero vector; otherwise false
+     */
     bool WeightSpaceVertex::hasZeroWeight() const {
         for (std::size_t i=0; i<weight_.size(); ++i) {
             if (weight_[i] != 0)
@@ -176,6 +203,11 @@ namespace polyscip {
         return true;
     }
 
+    /**
+     * Print function
+     * @param os Output stream to write to
+     * @param printFacets Indicate whehter incident facets should be printed
+     */
     void WeightSpaceVertex::print(ostream& os, bool printFacets) const {
         global::print(weight_, "WeightSpaceVertex: weight = [", "]", os);
         os << "\n wov = " << weighted_obj_val_ << "\n";

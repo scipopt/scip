@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -908,6 +908,8 @@ public:
       if( scaler != NULL || simplifier != NULL )
          origlp = SPxLP(*this);
 
+      m_itused = 0;
+
    SOLVEAGAIN:
       /* perform scaling and presolving */
       if( scaler != NULL )
@@ -962,7 +964,6 @@ public:
       }
 
       /* solve */
-      m_itused = 0;
       if( result != SPxSimplifier::VANISHED )
       {
          /* we have to deactivate the objective limit, since we do not know the transformed value */
@@ -1610,9 +1611,9 @@ const char* SCIPlpiGetSolverName(
    SCIPdebugMessage("calling SCIPlpiGetSolverName()\n");
 
 #if (SOPLEX_SUBVERSION > 0)
-   sprintf(spxname, "SoPlex1 %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778*/
+   snprintf(spxname, 100, "SoPlex1 %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778*/
 #else
-   sprintf(spxname, "SoPlex1 %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778*/
+   snprintf(spxname, 100, "SoPlex1 %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778*/
 #endif
    return spxname;
 }
@@ -1623,12 +1624,17 @@ const char* SCIPlpiGetSolverDesc(
    )
 {
 #if (SOPLEX_VERSION >= 160)
-   sprintf(spxdesc, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de) [GitHash: %s]", getGitHash());
-#else
-   strcpy(spxdesc, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)");
-#endif
+   snprintf(spxdesc, 200, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de) [GitHash: %s]"
 #ifdef WITH_LPSCHECK
-   strcat(spxdesc, " - including CPLEX double check");
+     " - including CPLEX double check"
+#endif
+   , getGitHash());
+#else
+   snprintf(spxdesc, 200, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)"
+#ifdef WITH_LPSCHECK
+     " - including CPLEX double check"
+#endif
+   );
 #endif
    return spxdesc;
 }
@@ -1829,6 +1835,8 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert(nnonz == 0 || beg != NULL);
    assert(nnonz == 0 || ind != NULL);
    assert(nnonz == 0 || val != NULL);
+   assert(nnonz >= 0);
+   assert(ncols >= 0);
 
    invalidateSolution(lpi);
 

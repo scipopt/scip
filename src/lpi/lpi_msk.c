@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -853,6 +853,14 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert(MosekEnv != NULL);
    assert(lpi != NULL);
    assert(lpi->task != NULL);
+   assert(obj != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
+   assert(nnonz >= 0);
+   assert(ncols >= 0);
 
    SCIPdebugMessage("Calling SCIPlpiAddCols (%d)\n",lpi->lpid);
 
@@ -3769,8 +3777,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
    SCIP_Real*            coef,               /**< vector to return coefficients */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                                *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715}*/
@@ -3793,12 +3801,13 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 #endif
    SCIP_ALLOC( BMSallocMemoryArray( &val, numnz+1) );
 
+   /* init coefficients */
+   for (i = 0; i < nrows; ++i)
+      coef[i] = 0;
+
    /* check whether we require a dense or sparse result vector */
    if ( ninds != NULL && inds != NULL )
    {
-      for (i = 0; i < nrows; ++i)
-         coef[i] = 0;
-
 #if MSK_VERSION_MAJOR < 7
       MOSEK_CALL( MSK_getavec(lpi->task, MSK_ACC_VAR, c, &numnz, inds, val) );
 #else
@@ -3818,9 +3827,6 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       int* sub;
       SCIP_ALLOC( BMSallocMemoryArray( &sub, nrows) );
 
-      for (i = 0; i < nrows; ++i)
-         coef[i] = 0;
-
 #if MSK_VERSION_MAJOR < 7
       MOSEK_CALL( MSK_getavec(lpi->task, MSK_ACC_VAR, c, &numnz, sub, val) );
 #else
@@ -3830,7 +3836,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
       for (i = 0; i < numnz; ++i)
          coef[sub[i]] = val[i];
 
-      *ninds = numnz;
+      if ( ninds != NULL )
+         *ninds = numnz;
       MOSEK_CALL( MSK_putnaintparam(lpi->task, MSK_IPAR_BASIS_SOLVE_USE_PLUS_ONE_, MSK_OFF) );
       MOSEK_CALL( MSK_solvewithbasis(lpi->task, 0, &numnz, sub, coef) );
 

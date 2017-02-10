@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -489,8 +489,7 @@ SCIP_RETCODE applyNlobbt(
       assert(propdata->nlpi != NULL);
 
       SCIP_CALL( SCIPnlpiCreateProblem(propdata->nlpi, &propdata->nlpiprob, "nlobbt-nlp") );
-      SCIP_CALL( SCIPhashmapCreate(&propdata->var2nlpiidx, SCIPblkmem(scip),
-            SCIPcalcHashtableSize(propdata->nlpinvars)) );
+      SCIP_CALL( SCIPhashmapCreate(&propdata->var2nlpiidx, SCIPblkmem(scip), propdata->nlpinvars) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &propdata->nlpivars, SCIPgetVars(scip), propdata->nlpinvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->nlscore, propdata->nlpinvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->status, propdata->nlpinvars) );

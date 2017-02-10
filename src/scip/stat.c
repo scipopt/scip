@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -95,6 +95,7 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->inrestart = FALSE;
    (*stat)->collectvarhistory = TRUE;
    (*stat)->performpresol = FALSE;
+   (*stat)->branchedunbdvar = FALSE;
    (*stat)->subscipdepth = 0;
    (*stat)->detertimecnt = 0.0;
    (*stat)->nreoptruns = 0;
@@ -260,6 +261,7 @@ void SCIPstatReset(
    stat->ncolidx = stat->marked_ncolidx;
    stat->nrowidx = stat->marked_nrowidx;
    stat->nnz = 0;
+   stat->avgnnz = 0;
    stat->lpcount = 0;
    stat->relaxcount = 0;
    stat->nlps = 0;
@@ -309,6 +311,7 @@ void SCIPstatReset(
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
+   stat->branchedunbdvar = FALSE;
 
    stat->ndivesetlpiterations = 0;
    stat->ndivesetcalls = 0;
@@ -513,6 +516,7 @@ void SCIPstatResetCurrentRun(
    stat->nobjleaves = 0;
    stat->ninfeasleaves = 0;
    stat->nfeasleaves = 0;
+   stat->branchedunbdvar = FALSE;
 
    stat->nearlybacktracks = 0;
    stat->nnodesaboverefbound = 0;

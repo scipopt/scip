@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,6 +31,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup SEPARATORS
+ *
+ * @{
+ */
 
 /** Performs the cut generation heuristic of the c-MIR separation algorithm, i.e., tries to generate a c-MIR cut which is
  *  valid for the mixed knapsack set corresponding to the current aggregated constraint. Cuts will only be added here if 
@@ -67,7 +72,12 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    SCIP_Bool*            deltavalid          /**< pointer to store whether best delta value is valid or NULL */
    );
 
-/** creates the cmir separator and includes it in SCIP */
+/* @} */
+
+/** creates the cmir separator and includes it in SCIP
+ *
+ * @ingroup SeparatorIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeSepaCmir(
    SCIP*                 scip                /**< SCIP data structure */

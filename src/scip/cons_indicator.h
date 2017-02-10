@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,37 @@
  * @ingroup CONSHDLRS
  * @brief  constraint handler for indicator constraints
  * @author Marc Pfetsch
+ *
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#ifndef __SCIP_CONS_INDICATOR_H__
+#define __SCIP_CONS_INDICATOR_H__
+
+
+#include "scip/scip.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** creates the handler for indicator constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
+EXTERN
+SCIP_RETCODE SCIPincludeConshdlrIndicator(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Indicator Constraints
+ *
+ * @{
  *
  * An indicator constraint is given by a binary variable \f$z\f$ and an inequality \f$ax \leq
  * b\f$. It states that if \f$z = 1\f$ then \f$ax \leq b\f$ holds.
@@ -33,24 +64,6 @@
  *
  * The name indicator apparently comes from CPLEX.
  */
-
-/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-
-#ifndef __SCIP_CONS_INDICATOR_H__
-#define __SCIP_CONS_INDICATOR_H__
-
-
-#include "scip/scip.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/** creates the handler for indicator constraints and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeConshdlrIndicator(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
 
 /** creates and captures an indicator constraint
  *
@@ -259,6 +272,10 @@ SCIP_RETCODE SCIPaddRowIndicator(
    SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */
    SCIP_ROW*             row                 /**< row to add */
    );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

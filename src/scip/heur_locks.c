@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -51,7 +51,7 @@
                                                           *   original scip be copied to constraints of the subscip? */
 #define DEFAULT_USEFINALSUBMIP TRUE                      /**< should a final sub-MIP be solved to construct a feasible
                                                           *   solution if the LP was not roundable? */
-#define DEFAULT_RANDSEED      71                         /**< initial random seed */
+#define DEFAULT_RANDSEED      73                         /**< initial random seed */
 
 /** primal heuristic data */
 struct SCIP_HeurData
@@ -813,6 +813,9 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
       }
 
+      /* speed up sub-SCIP by not checking dual LP feasibility */
+      SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+
       /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
        * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
        * feasibility status of a single node without fractional branching candidates by separation (namely for uflquad
@@ -832,7 +835,6 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          SCIP_Real cutoffbound;
 
          minimprove = heurdata->minimprove;
-         cutoffbound = SCIPinfinity(scip);
          assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
          upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
@@ -871,7 +873,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          }
       }
 #else
-      SCIP_CALL( SCIPpresolve(subscip) );
+      SCIP_CALL_ABORT( SCIPpresolve(subscip) );
 #endif
 
       SCIPdebugMsg(scip, "locks heuristic presolved subproblem: %d vars, %d cons; fixing value = %g\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip), ((nvars - SCIPgetNVars(subscip)) / (SCIP_Real)nvars));
@@ -899,7 +901,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
             }
          }
 #else
-         SCIP_CALL( SCIPsolve(subscip) );
+         SCIP_CALL_ABORT( SCIPsolve(subscip) );
 #endif
          SCIPdebugMsg(scip, "ending locks locks-submip at time %g, status = %d\n", SCIPgetSolvingTime(scip), SCIPgetStatus(subscip));
 

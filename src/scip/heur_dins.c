@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -608,8 +608,6 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    SCIP_Bool success;                        /* used to store whether new solution was found or not          */
 
-   SCIP_RETCODE retcode;
-
    assert(heur != NULL);
    assert(scip != NULL);
    assert(result != NULL);
@@ -698,6 +696,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
       goto TERMINATE;
 
    *result = SCIP_DIDNOTFIND;
+
    /* initialize the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
 
@@ -709,9 +708,8 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    eventhdlr = NULL;
 
    /* create a problem copy as sub SCIP */
-   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "dins", fixedvars, fixedvals, binfixings + intfixings, heurdata->uselprows, heurdata->copycuts, &success) );
-   SCIPdebugMsg(scip, "DINS subproblem: %d vars (%d binvars & %d intvars), %d cons\n",
-      SCIPgetNVars(subscip), SCIPgetNBinVars(subscip) , SCIPgetNIntVars(subscip) , SCIPgetNConss(subscip));
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "dins", fixedvars, fixedvals, binfixings + intfixings,
+         heurdata->uselprows, heurdata->copycuts, &success, NULL) );
 
    /* create event handler for LP events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecDins, NULL) );
@@ -722,6 +720,9 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    }
 
    SCIPdebugMsg(scip, "Copying the SCIP instance was %ssuccessful.\n", success ? "" : "not ");
+
+   SCIPdebugMsg(scip, "DINS subproblem: %d vars (%d binvars & %d intvars), %d cons\n",
+      SCIPgetNVars(subscip), SCIPgetNBinVars(subscip) , SCIPgetNIntVars(subscip) , SCIPgetNConss(subscip));
 
    /* store subproblem variables that correspond to original variables */
    for( i = 0; i < nvars; i++ )
@@ -790,27 +791,18 @@ SCIP_DECL_HEUREXEC(heurExecDins)
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
-   /* disable conflict analysis */
-   if( !SCIPisParamFixed(subscip, "conflict/useprop") )
+   /* enable conflict analysis and restrict conflict pool */
+   if( !SCIPisParamFixed(subscip, "conflict/enable") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
    }
-   if( !SCIPisParamFixed(subscip, "conflict/useinflp") )
+   if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
    {
-      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useinflp", 'o') );
+      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
    }
-   if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
-   {
-      SCIP_CALL( SCIPsetCharParam(subscip, "conflict/useboundlp", 'o') );
-   }
-   if( !SCIPisParamFixed(subscip, "conflict/usesb") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) );
-   }
-   if( !SCIPisParamFixed(subscip, "conflict/usepseudo") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
-   }
+
+   /* speed up sub-SCIP by not checking dual LP feasibility */
+   SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
 
    /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
     * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
@@ -826,7 +818,6 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
 
    /* add an objective cutoff */
-   cutoff = SCIPinfinity(scip);
    assert(!SCIPisInfinity(scip, SCIPgetUpperbound(scip)));
 
    if( !SCIPisInfinity(scip, -1.0*SCIPgetLowerbound(scip)) )
@@ -857,7 +848,11 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    /* solve the subproblem */
    SCIPdebugMsg(scip, "solving DINS sub-MIP with neighborhoodsize %d and maxnodes %" SCIP_LONGINT_FORMAT "\n", heurdata->neighborhoodsize, nsubnodes);
-   retcode = SCIPsolve(subscip);
+
+   /* Errors in solving the subproblem should not kill the overall solving process
+    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+    */
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
    /* drop LP events of sub-SCIP */
    if( !heurdata->uselprows )
@@ -865,17 +860,6 @@ SCIP_DECL_HEUREXEC(heurExecDins)
       assert(eventhdlr != NULL);
 
       SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
-   }
-
-   /* Errors in solving the subproblem should not kill the overall solving process
-    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-    */
-   if( retcode != SCIP_OKAY )
-   {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip, "Error while solving subproblem in DINS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
    }
 
    /* print solving statistics of subproblem if we are in SCIP's debug mode */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -472,7 +472,6 @@ SCIP_Real determineBound(
       }
 
       slaveincrement = FALSE;
-      masterincrement = FALSE;
       /* If one counter has already reached its limit, assign a huge number to the corresponding
        * row index to simulate an always greater row position. */
       if( i < nslaverows )
