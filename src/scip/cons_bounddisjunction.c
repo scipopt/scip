@@ -2951,7 +2951,7 @@ SCIP_DECL_EVENTEXEC(eventExecBounddisjunction)
    /*SCIPdebugMsg(scip, "exec method of event handler for bound disjunction constraints\n");*/
 
    assert(SCIPconsGetData((SCIP_CONS*)eventdata) != NULL);
-   assert(SCIPconsIsActive((SCIP_CONS*)eventdata));
+   assert(SCIPconsIsActive((SCIP_CONS*)eventdata) || SCIPconsIsUpdatedeactivate((SCIP_CONS*)eventdata));
 
    if( (SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDRELAXED) != 0 )
    {
