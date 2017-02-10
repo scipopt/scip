@@ -2128,6 +2128,9 @@ SCIP_DECL_CONSEXITPRE(consExitpreBounddisjunction)
 
       SCIPdebugMsg(scip, "exit-presolving bound disjunction constraint <%s>\n", SCIPconsGetName(cons));
 
+      if( SCIPconsIsDeleted(cons) )
+         continue;
+
       /* remove all literals that are violated in global bounds, check redundancy due to global bounds */
       SCIP_CALL( applyGlobalBounds(scip, cons, conshdlrdata->eventhdlr, &redundant) );
 
@@ -2944,6 +2947,7 @@ SCIP_DECL_EVENTEXEC(eventExecBounddisjunction)
    /*SCIPdebugMsg(scip, "exec method of event handler for bound disjunction constraints\n");*/
 
    /* it can happen that the events are still active for a constraint that is marked to be deleted */
+   /* @todo is this still true? */
    if( SCIPconsIsDeleted((SCIP_CONS*)eventdata) )
       return SCIP_OKAY;
 
