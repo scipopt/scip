@@ -1567,7 +1567,7 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    }
 
    /* partially sort indices such that all elements that are larger than the break item appear first */
-   SCIPselectWeightedDownRealLongRealInt(tempsort, weights, profits, items, realweights, capacity, nitems, &criticalindex);
+   SCIPselectWeightedDownRealLongRealInt(tempsort, weights, profits, items, realweights, (SCIP_Real)capacity, nitems, &criticalindex);
 
    /* selects items as long as they fit into the knapsack */
    solitemsweight = 0;
@@ -13011,18 +13011,16 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
          assert(var != NULL);
 
          /* if the variable was aggregated or multiaggregated, we must signal to propagation that we are no longer merged */
-         switch( SCIPvarGetStatus(var) )
+         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
          {
-            case SCIP_VARSTATUS_MULTAGGR:
-               consdata->existmultaggr = TRUE;
-               /* lint -fallthrough */
-            case SCIP_VARSTATUS_AGGREGATED:
-               consdata->merged = FALSE;
-            default:
-               break;
+            consdata->existmultaggr = TRUE;
+            consdata->merged = FALSE;
          }
+         else if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
+            consdata->merged = FALSE;
+
       }
-      /* lint -fallthrough */
+      /*lint -fallthrough*/
    case SCIP_EVENTTYPE_IMPLADDED: /* further preprocessing might be possible due to additional implications */
       consdata->presolvedtiming = 0;
       break;

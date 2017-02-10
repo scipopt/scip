@@ -54,10 +54,8 @@ enum BoundStatus
 {
    UNSOLVED = 1,                             /**< did not solve LB or UB problem */
    SOLVEDLB = 2,                             /**< solved LB problem */
-   SOLVEDUB = 4,                             /**< solved UB problem */
-   SOLVED   = SOLVEDLB | SOLVEDUB            /**< solved LB and UB problem */
+   SOLVEDUB = 4                              /**< solved UB problem */
 };
-typedef enum BoundStatus BOUNDSTATUS;
 
 /** propagator data */
 struct SCIP_PropData
@@ -111,7 +109,7 @@ SCIP_RETCODE propdataClear(
       SCIPfreeBlockMemoryArray(scip, &propdata->nlscore, propdata->nlpinvars);
       SCIPfreeBlockMemoryArray(scip, &propdata->nlpivars, propdata->nlpinvars);
       SCIPhashmapFree(&propdata->var2nlpiidx);
-      SCIPnlpiFreeProblem(propdata->nlpi, &propdata->nlpiprob);
+      SCIP_CALL( SCIPnlpiFreeProblem(propdata->nlpi, &propdata->nlpiprob) );
 
       propdata->nlpinvars = 0;
    }
@@ -175,8 +173,8 @@ SCIP_Bool isNlobbtApplicable(
 
    return nconvexnlrows > 0
       && nnonconvexnlrows > 0
-      && (SCIPisGE(scip, nconvexnlrows, nnonconvexnlrows * propdata->minnonconvexfrac))
-      && (SCIPisGE(scip, nconvexnlrows, nlinearnlrows * propdata->minlinearfrac));
+      && (SCIPisGE(scip, (SCIP_Real)nconvexnlrows, nnonconvexnlrows * propdata->minnonconvexfrac))
+      && (SCIPisGE(scip, (SCIP_Real)nconvexnlrows, nlinearnlrows * propdata->minlinearfrac));
 }
 
 /** filters variables which achieve their lower or dual bound in the current NLP solution */
@@ -213,22 +211,22 @@ SCIP_RETCODE filterCands(
       assert(SCIPgetVars(scip)[varidx] == var);
       val = primal[varidx];
 
-      if( (propdata->status[i] & SOLVEDLB) == 0 && !SCIPisInfinity(scip, -val)
+      if( (propdata->status[i] & SOLVEDLB) == 0 && !SCIPisInfinity(scip, -val) /*lint !e641*/
          && SCIPisFeasLE(scip, val, SCIPvarGetLbLocal(var)) )
       {
          SCIPdebugMsg(scip, "filter LB of %s in [%g,%g] with %g\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
             SCIPvarGetUbLocal(var), val);
-         propdata->status[i] |= SOLVEDLB;
-         assert((propdata->status[i] & SOLVEDLB) != 0);
+         propdata->status[i] |= SOLVEDLB; /*lint !e641*/
+         assert((propdata->status[i] & SOLVEDLB) != 0); /*lint !e641*/
       }
 
-      if( (propdata->status[i] & SOLVEDUB) == 0 && !SCIPisInfinity(scip, val)
+      if( (propdata->status[i] & SOLVEDUB) == 0 && !SCIPisInfinity(scip, val) /*lint !e641*/
          && SCIPisFeasGE(scip, val, SCIPvarGetUbLocal(var)) )
       {
          SCIPdebugMsg(scip, "filter UB of %s in [%g,%g] with %g\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var),
             SCIPvarGetUbLocal(var), val);
-         propdata->status[i] |= SOLVEDUB;
-         assert((propdata->status[i] & SOLVEDUB) != 0);
+         propdata->status[i] |= SOLVEDUB; /*lint !e641*/
+         assert((propdata->status[i] & SOLVEDUB) != 0); /*lint !e641*/
       }
    }
 
@@ -470,7 +468,7 @@ SCIP_RETCODE applyNlobbt(
 
    /* compute NLP iteration limit */
    if( propdata->itlimitfactor > 0.0 )
-      nlpiterleft = propdata->itlimitfactor * SCIPgetNRootLPIterations(scip);
+      nlpiterleft = (int)(propdata->itlimitfactor * SCIPgetNRootLPIterations(scip));
    else
       nlpiterleft = INT_MAX;
 
@@ -504,7 +502,7 @@ SCIP_RETCODE applyNlobbt(
       assert(propdata->randnumgen != NULL);
       for( i = 0; i < propdata->nlpinvars; ++i )
       {
-         propdata->status[i] = UNSOLVED;
+         propdata->status[i] = UNSOLVED; /*lint !e641*/
          propdata->nlscore[i] *= 1.0 + SCIPrandomGetReal(propdata->randnumgen, SCIPfeastol(scip), 2.0 * SCIPfeastol(scip));
       }
 
@@ -571,14 +569,14 @@ SCIP_RETCODE applyNlobbt(
       assert(var == SCIPgetVars(scip)[varidx]);
 
       /* case: minimize var */
-      if( (propdata->status[propdata->currpos] & SOLVEDLB) == 0 )
+      if( (propdata->status[propdata->currpos] & SOLVEDLB) == 0 ) /*lint !e641*/
       {
          SCIP_CALL( solveNlp(scip, propdata, var, varidx, SCIP_BOUNDTYPE_LOWER, &iters, result) );
          nlpiterleft -= iters;
       }
 
       /* case: maximize var */
-      if( *result != SCIP_CUTOFF && (propdata->status[propdata->currpos] & SOLVEDUB) == 0 )
+      if( *result != SCIP_CUTOFF && (propdata->status[propdata->currpos] & SOLVEDUB) == 0 ) /*lint !e641*/
       {
          SCIP_CALL( solveNlp(scip, propdata, var, varidx, SCIP_BOUNDTYPE_UPPER, &iters, result) );
          nlpiterleft -= iters;

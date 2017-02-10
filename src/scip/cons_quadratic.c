@@ -7843,7 +7843,7 @@ SCIP_RETCODE computeReferencePointProjection(
    SCIP_Real* pt; /* stores P^T */
    SCIP_Real* bp;
    SCIP_Real* D;
-   SCIP_Real* y0;
+   SCIP_Real* y0_;
    SCIP_Real* yrho;
    SCIP_Real* yrhoprime;
    SCIP_Real c;
@@ -7887,7 +7887,7 @@ SCIP_RETCODE computeReferencePointProjection(
    isconcave = consdata->isconcave;
    assert((isconcave && !SCIPisInfinity(scip, -consdata->lhs)) || !SCIPisInfinity(scip, consdata->rhs));
 
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &y0, n) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &y0_, n) );
    SCIP_CALL( SCIPallocBufferArray(scip, &yrho, n) );
    SCIP_CALL( SCIPallocBufferArray(scip, &yrhoprime, n) );
 
@@ -7906,7 +7906,7 @@ SCIP_RETCODE computeReferencePointProjection(
    /* change coordinates: compute y(0) = x_0' * P */
    for( i = 0; i < n; i++ )
       for( j = 0; j < n; j++ )
-         y0[i] += SCIPgetSolVal(scip, refsol, consdata->quadvarterms[j].var) * pt[i*n + j];
+         y0_[i] += SCIPgetSolVal(scip, refsol, consdata->quadvarterms[j].var) * pt[i*n + j];
 
 #ifdef DEBUG_PROJ
    /* debug output */
@@ -7923,7 +7923,7 @@ SCIP_RETCODE computeReferencePointProjection(
    printf("\n");
    printf("P^T x_0: ");
    for( i = 0; i < n; i++ )
-      printf("%g ", y0[i]);
+      printf("%g ", y0_[i]);
    printf("\n");
    printf("P^T b: ");
    for( i = 0; i < n; i++ )
@@ -7956,8 +7956,8 @@ SCIP_RETCODE computeReferencePointProjection(
       for( i = 0; i < n; i++ )
       {
          assert(1.0 + rho * D[i] != 0.0);
-         yrho[i]      = (y0[i] - rho * bp[i]/2.0) / (1.0 + rho * D[i]);
-         yrhoprime[i] = -(D[i] * y0[i] + bp[i]/2.0) / ( (1.0 + rho * D[i])*(1.0 + rho * D[i]) );
+         yrho[i]      = (y0_[i] - rho * bp[i]/2.0) / (1.0 + rho * D[i]);
+         yrhoprime[i] = -(D[i] * y0_[i] + bp[i]/2.0) / ( (1.0 + rho * D[i])*(1.0 + rho * D[i]) );
          phirho      += yrho[i] * (yrho[i] * D[i] + bp[i]);
          phirhoprime += yrhoprime[i] * (2 * D[i] * yrho[i] + bp[i]);
       }
@@ -8014,7 +8014,7 @@ SCIP_RETCODE computeReferencePointProjection(
    }
 #endif
 
-   SCIPfreeBufferArray(scip, &y0);
+   SCIPfreeBufferArray(scip, &y0_);
    SCIPfreeBufferArray(scip, &yrho);
    SCIPfreeBufferArray(scip, &yrhoprime);
 
@@ -8588,8 +8588,9 @@ SCIP_RETCODE separatePoint(
                   SCIPABORT();
                   return SCIP_INVALIDDATA;  /*lint !e527*/
                }
+
+               SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], sol, efficacy, actminefficacy, inenforcement, bestefficacy, result) );
             }
-            SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], sol, efficacy, actminefficacy, inenforcement, bestefficacy, result) );
             continue;
          }
          else
@@ -11513,8 +11514,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
          SCIP_CALL( SCIPreleaseNlRow(scip, &consdata->nlrow) );
       }
 
-      assert(consdata->sepaquadvars     != NULL || consdata->nquadvars == 0);
-      assert(consdata->sepabilinvar2pos != NULL || consdata->nquadvars == 0);
+      assert(!SCIPconsIsEnabled(conss[c]) || consdata->sepaquadvars     != NULL || consdata->nquadvars == 0);   /*lint !e613 */
+      assert(!SCIPconsIsEnabled(conss[c]) || consdata->sepabilinvar2pos != NULL || consdata->nquadvars == 0);   /*lint !e613 */
       SCIPfreeBlockMemoryArrayNull(scip, &consdata->sepaquadvars,     consdata->nquadvars);
       SCIPfreeBlockMemoryArrayNull(scip, &consdata->sepabilinvar2pos, consdata->nbilinterms);
 
@@ -13494,45 +13495,46 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
    nbilinterms = 0;
    for( i = 0; i < nquadterms; ++i )
    {
-      if( SCIPisZero(scip, quadcoefs[i]) )
+      if( SCIPisZero(scip, quadcoefs[i]) )  /*lint !e613*/
          continue;
 
       /* if it is actually a square term, remember it's coefficient */
-      assert( quadvars1 != NULL && quadvars2 != NULL );
-      if( quadvars1[i] == quadvars2[i] )
-         sqrcoef = quadcoefs[i];
+      /* cppcheck-suppress nullPointer */
+      if( quadvars1[i] == quadvars2[i] )   /*lint !e613*/
+         sqrcoef = quadcoefs[i];   /*lint !e613 */
       else
          sqrcoef = 0.0;
 
       /* add quadvars1[i], if not in there already */
-      if( !SCIPhashmapExists(quadvaridxs, quadvars1[i]) )
+      if( !SCIPhashmapExists(quadvaridxs, quadvars1[i]) )  /*lint !e613*/
       {
-         SCIP_CALL( addQuadVarTerm(scip, *cons, quadvars1[i], 0.0, sqrcoef) );
+         SCIP_CALL( addQuadVarTerm(scip, *cons, quadvars1[i], 0.0, sqrcoef) );   /*lint !e613*/
          assert(consdata->nquadvars >= 0);
-         assert(consdata->quadvarterms[consdata->nquadvars-1].var == quadvars1[i]);
+         assert(consdata->quadvarterms[consdata->nquadvars-1].var == quadvars1[i]);  /*lint !e613*/
 
-         SCIP_CALL( SCIPhashmapInsert(quadvaridxs, quadvars1[i], (void*)(size_t)(consdata->nquadvars-1)) );
+         SCIP_CALL( SCIPhashmapInsert(quadvaridxs, quadvars1[i], (void*)(size_t)(consdata->nquadvars-1)) );   /*lint !e613*/
       }
       else if( !SCIPisZero(scip, sqrcoef) )
       {
          /* if it's there already, but we got a square coefficient, add it to the previous one */ 
-         var1pos = (int) (size_t) SCIPhashmapGetImage(quadvaridxs, quadvars1[i]);
-         assert(consdata->quadvarterms[var1pos].var == quadvars1[i]);
+         var1pos = (int) (size_t) SCIPhashmapGetImage(quadvaridxs, quadvars1[i]);   /*lint !e613*/
+         assert(consdata->quadvarterms[var1pos].var == quadvars1[i]);   /*lint !e613*/
          consdata->quadvarterms[var1pos].sqrcoef += sqrcoef;
       }
 
-      if( quadvars1[i] == quadvars2[i] )
+      /* cppcheck-suppress nullPointer */
+      if( quadvars1[i] == quadvars2[i] )  /*lint !e613*/
          continue;
 
       /* add quadvars2[i], if not in there already */
-      if( !SCIPhashmapExists(quadvaridxs, quadvars2[i]) )
+      if( !SCIPhashmapExists(quadvaridxs, quadvars2[i]) )   /*lint !e613*/
       {
          assert(sqrcoef == 0.0);
-         SCIP_CALL( addQuadVarTerm(scip, *cons, quadvars2[i], 0.0, 0.0) );
+         SCIP_CALL( addQuadVarTerm(scip, *cons, quadvars2[i], 0.0, 0.0) );   /*lint !e613*/
          assert(consdata->nquadvars >= 0);
-         assert(consdata->quadvarterms[consdata->nquadvars-1].var == quadvars2[i]);
+         assert(consdata->quadvarterms[consdata->nquadvars-1].var == quadvars2[i]);  /*lint !e613*/
 
-         SCIP_CALL( SCIPhashmapInsert(quadvaridxs, quadvars2[i], (void*)(size_t)(consdata->nquadvars-1)) );
+         SCIP_CALL( SCIPhashmapInsert(quadvaridxs, quadvars2[i], (void*)(size_t)(consdata->nquadvars-1)) );  /*lint !e613*/
       }
 
       ++nbilinterms;
@@ -13544,20 +13546,20 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
       SCIP_CALL( consdataEnsureBilinSize(scip, consdata, nbilinterms) );
       for( i = 0; i < nquadterms; ++i )
       {
-         if( SCIPisZero(scip, quadcoefs[i]) )
+         if( SCIPisZero(scip, quadcoefs[i]) )  /*lint !e613*/
             continue;
 
          /* square terms have been taken care of already */
-         if( quadvars1[i] == quadvars2[i] )
+         if( quadvars1[i] == quadvars2[i] )  /*lint !e613 */
             continue;
 
-         assert(SCIPhashmapExists(quadvaridxs, quadvars1[i]));
-         assert(SCIPhashmapExists(quadvaridxs, quadvars2[i]));
+         assert(SCIPhashmapExists(quadvaridxs, quadvars1[i]));  /*lint !e613*/
+         assert(SCIPhashmapExists(quadvaridxs, quadvars2[i]));  /*lint !e613*/
 
-         var1pos = (int) (size_t) SCIPhashmapGetImage(quadvaridxs, quadvars1[i]);
-         var2pos = (int) (size_t) SCIPhashmapGetImage(quadvaridxs, quadvars2[i]);
+         var1pos = (int) (size_t) SCIPhashmapGetImage(quadvaridxs, quadvars1[i]);  /*lint !e613*/
+         var2pos = (int) (size_t) SCIPhashmapGetImage(quadvaridxs, quadvars2[i]);  /*lint !e613*/
 
-         SCIP_CALL( addBilinearTerm(scip, *cons, var1pos, var2pos, quadcoefs[i]) );
+         SCIP_CALL( addBilinearTerm(scip, *cons, var1pos, var2pos, quadcoefs[i]) );  /*lint !e613*/
       }
    }
 
@@ -13565,19 +13567,19 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
    SCIP_CALL( consdataEnsureLinearVarsSize(scip, consdata, nlinvars) );
    for( i = 0; i < nlinvars; ++i )
    {
-      if( SCIPisZero(scip, lincoefs[i]) )
+      if( SCIPisZero(scip, lincoefs[i]) )  /*lint !e613*/
          continue;
 
       /* if it's a linear coefficient for a quadratic variable, add it there, otherwise add as linear variable */
-      if( SCIPhashmapExists(quadvaridxs, linvars[i]) )
+      if( SCIPhashmapExists(quadvaridxs, linvars[i]) )  /*lint !e613*/
       {
-         var1pos = (int) (size_t) SCIPhashmapGetImage(quadvaridxs, linvars[i]);
-         assert(consdata->quadvarterms[var1pos].var == linvars[i]);
-         consdata->quadvarterms[var1pos].lincoef += lincoefs[i];
+         var1pos = (int) (size_t) SCIPhashmapGetImage(quadvaridxs, linvars[i]);  /*lint !e613*/
+         assert(consdata->quadvarterms[var1pos].var == linvars[i]);  /*lint !e613*/
+         consdata->quadvarterms[var1pos].lincoef += lincoefs[i];  /*lint !e613*/
       }
       else
       {
-         SCIP_CALL( addLinearCoef(scip, *cons, linvars[i], lincoefs[i]) );
+         SCIP_CALL( addLinearCoef(scip, *cons, linvars[i], lincoefs[i]) );  /*lint !e613*/
       }
    }
 

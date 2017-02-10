@@ -3079,6 +3079,71 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the write mipstart command */
+static
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteMIPStart)
+{  /*lint --e{715}*/
+   char* filename;
+   SCIP_Bool endoffile;
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
+   if( filename[0] != '\0' )
+   {
+      FILE* file;
+
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
+
+      file = fopen(filename, "w");
+      if( file == NULL )
+      {
+         SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
+         SCIPdialoghdlrClearBuffer(dialoghdlr);
+      }
+      else
+      {
+         SCIP_RETCODE retcode;
+         SCIP_SOL* sol;
+
+         SCIPinfoMessage(scip, file, "\n");
+
+         sol = SCIPgetBestSol(scip);
+
+         if( sol == NULL )
+         {
+            SCIPdialogMessage(scip, NULL, "no mip start available\n");
+            fclose(file);
+         }
+         else
+         {
+            retcode = SCIPprintMIPStart(scip, sol, file);
+            if( retcode != SCIP_OKAY )
+            {
+               fclose(file);
+               SCIP_CALL( retcode );
+            }
+            else
+            {
+               SCIPdialogMessage(scip, NULL, "written mip start information to file <%s>\n", filename);
+               fclose(file);
+            }
+         }
+      }
+   }
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for writing command line history */
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteCommandHistory)
@@ -3923,13 +3988,24 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
-   /* write solution */
+   /* write finite solution */
    if( !SCIPdialogHasEntry(submenu, "finitesolution") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecWriteFiniteSolution, NULL, NULL,
             "finitesolution", "write best primal solution to file (try to make solution values finite, first)", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* write mip start */
+   if( !SCIPdialogHasEntry(submenu, "mipstart") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecWriteMIPStart, NULL, NULL,
+            "mipstart", "write mip start to file", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

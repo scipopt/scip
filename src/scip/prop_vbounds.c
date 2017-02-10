@@ -516,7 +516,7 @@ SCIP_RETCODE extractCycle(
    /* search for the start-point of the cycle; since the endpoint is at position stacksize - 1 we start at stacksize - 2
     * and go backwards
     */
-   for( j = stacksize - 2; dfsstack[j] != startidx && j >= 0; --j );
+   for( j = stacksize - 2; dfsstack[j] != startidx && j >= 0; --j ){};
    assert(j >= 0);
 
    for( ; j < stacksize - 1; ++j )

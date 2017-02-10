@@ -104,22 +104,20 @@ struct SCIP_PresolData
    int                   ssetppchashdatas;   /**< size of setppchashdata elements added to the hashtable */
    int                   ngates;             /**< number of found gates in presolving */
    int                   firstchangedlogicor;/**< position of the first new/changed logicor constraint in the
-					      *   usefullogicor array
-					      */
+                                              *   usefullogicor array
+                                              */
    int                   maxnvarslogicor;    /**< maximal number of variables a logicor constraint has */
-   int                   sorting;            /**< integer parameter how to sort logicor constraints for extracting
-					      *   gates
-					      */
+   int                   sorting;            /**< integer parameter how to sort logicor constraints for extracting gates */
    SCIP_Bool             usefulsetppcexist;  /**< did we find usable set-packing constraints for gate extraction */
    SCIP_Bool             usefullogicorexist; /**< did we find usable logicor constraints for gate extraction */
    SCIP_Bool             newsetppchashdatas; /**< flag indicating whether we found new set-packing constraint with two
-					      *   variables since the last presolving round
-					      */
+                                              *   variables since the last presolving round
+                                              */
    SCIP_Bool             initialized;        /**< was data alredy be initialized */
    SCIP_Bool             onlysetpart;        /**< boolean parameter whetehr we only want to extract linear gates */
    SCIP_Bool             searchequations;    /**< boolean parameter whetehr we want to search for equations arising from
-					      *   logicor and setppc constraints
-					      */
+                                              *   logicor and setppc constraints
+                                              */
 };
 
 
@@ -352,74 +350,74 @@ SCIP_RETCODE createPresoldata(
       /* find set-packing constraints with exactly two variables */
       for( c = 0; c < nsetppcs; ++c )
       {
-	 assert(SCIPconsIsActive(setppcs[c]));
+         assert(SCIPconsIsActive(setppcs[c]));
 
-	 if( SCIPgetTypeSetppc(scip, setppcs[c]) == SCIP_SETPPCTYPE_PACKING && SCIPgetNVarsSetppc(scip, setppcs[c]) == 2 && !SCIPconsIsModifiable(setppcs[c]) )
-	 {
-	    /* insert new element in hashtable */
-	    SCIP_CALL( SCIPhashtableInsert(presoldata->setppchashtable, (void*) setppcs[c]) );
+         if( SCIPgetTypeSetppc(scip, setppcs[c]) == SCIP_SETPPCTYPE_PACKING && SCIPgetNVarsSetppc(scip, setppcs[c]) == 2 && !SCIPconsIsModifiable(setppcs[c]) )
+         {
+            /* insert new element in hashtable */
+            SCIP_CALL( SCIPhashtableInsert(presoldata->setppchashtable, (void*) setppcs[c]) );
 
-	    usefulconss[nusefulconss] = setppcs[c];
-	    ++nusefulconss;
-	 }
+            usefulconss[nusefulconss] = setppcs[c];
+            ++nusefulconss;
+         }
       }
 
       /* add usefulconss constraints to hashdata elements */
       if( nusefulconss > 0 )
       {
-	 SCIP_Bool negated[2];
-	 int h;
+         SCIP_Bool negated[2];
+         int h;
 
-	 presoldata->usefulsetppcexist = TRUE;
-	 presoldata->ssetppchashdatas = nusefulconss;
+         presoldata->usefulsetppcexist = TRUE;
+         presoldata->ssetppchashdatas = nusefulconss;
 
-	 SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->setppchashdatas), nusefulconss) );
-	 SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->setppchashdatastore), nusefulconss) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->setppchashdatas), nusefulconss) );
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->setppchashdatastore), nusefulconss) );
 
-	 h = 0;
-	 for( c = 0; c < nusefulconss; ++c )
-	 {
-	    assert(SCIPconsIsActive(usefulconss[c]));
-	    assert(SCIPgetNVarsSetppc(scip, usefulconss[c]) == 2);
-	    presoldata->setppchashdatas[h] = &(presoldata->setppchashdatastore[h]);
+         h = 0;
+         for( c = 0; c < nusefulconss; ++c )
+         {
+            assert(SCIPconsIsActive(usefulconss[c]));
+            assert(SCIPgetNVarsSetppc(scip, usefulconss[c]) == 2);
+            presoldata->setppchashdatas[h] = &(presoldata->setppchashdatastore[h]);
 
-	    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(presoldata->setppchashdatas[h]->vars), SCIPgetVarsSetppc(scip, usefulconss[c]), 2) );
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(presoldata->setppchashdatas[h]->vars), SCIPgetVarsSetppc(scip, usefulconss[c]), 2) );
 
-	    SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[h]->vars[0], &(presoldata->setppchashdatas[h]->vars[0]), &(negated[0])) );
-	    SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[h]->vars[1], &(presoldata->setppchashdatas[h]->vars[1]), &(negated[1])) );
+            SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[h]->vars[0], &(presoldata->setppchashdatas[h]->vars[0]), &(negated[0])) );
+            SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[h]->vars[1], &(presoldata->setppchashdatas[h]->vars[1]), &(negated[1])) );
 
-	    if( SCIPvarGetStatus(presoldata->setppchashdatas[h]->vars[0]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(presoldata->setppchashdatas[h]->vars[0]) == SCIP_VARSTATUS_MULTAGGR
-	       || SCIPvarGetStatus(presoldata->setppchashdatas[h]->vars[1]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(presoldata->setppchashdatas[h]->vars[1]) == SCIP_VARSTATUS_MULTAGGR )
-	    {
-	       SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatas[h]->vars), 2);
-	       continue;
-	    }
+            if( SCIPvarGetStatus(presoldata->setppchashdatas[h]->vars[0]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(presoldata->setppchashdatas[h]->vars[0]) == SCIP_VARSTATUS_MULTAGGR
+                  || SCIPvarGetStatus(presoldata->setppchashdatas[h]->vars[1]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(presoldata->setppchashdatas[h]->vars[1]) == SCIP_VARSTATUS_MULTAGGR )
+            {
+               SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatas[h]->vars), 2);
+               continue;
+            }
 
-	    presoldata->setppchashdatas[h]->nvars = 2;
+            presoldata->setppchashdatas[h]->nvars = 2;
 
-	    /* capture variables */
-	    SCIP_CALL( SCIPcaptureVar(scip, presoldata->setppchashdatas[h]->vars[0]) );
-	    SCIP_CALL( SCIPcaptureVar(scip, presoldata->setppchashdatas[h]->vars[1]) );
+            /* capture variables */
+            SCIP_CALL( SCIPcaptureVar(scip, presoldata->setppchashdatas[h]->vars[0]) );
+            SCIP_CALL( SCIPcaptureVar(scip, presoldata->setppchashdatas[h]->vars[1]) );
 
-	    /* order the variables after their index */
-	    if( SCIPvarGetIndex(presoldata->setppchashdatas[h]->vars[0]) > SCIPvarGetIndex(presoldata->setppchashdatas[h]->vars[1]) )
-	    {
-	       SCIP_VAR* tmp = presoldata->setppchashdatas[h]->vars[0];
-	       presoldata->setppchashdatas[h]->vars[0] = presoldata->setppchashdatas[h]->vars[1];
-	       presoldata->setppchashdatas[h]->vars[1] = tmp;
-	    }
+            /* order the variables after their index */
+            if( SCIPvarGetIndex(presoldata->setppchashdatas[h]->vars[0]) > SCIPvarGetIndex(presoldata->setppchashdatas[h]->vars[1]) )
+            {
+               SCIP_VAR* tmp = presoldata->setppchashdatas[h]->vars[0];
+               presoldata->setppchashdatas[h]->vars[0] = presoldata->setppchashdatas[h]->vars[1];
+               presoldata->setppchashdatas[h]->vars[1] = tmp;
+            }
 
-	    presoldata->setppchashdatas[h]->cons = usefulconss[c];
+            presoldata->setppchashdatas[h]->cons = usefulconss[c];
 
-	    SCIP_CALL( SCIPhashtableInsert(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[h]) );
-	    SCIP_CALL( SCIPcaptureCons(scip, usefulconss[c]) );
+            SCIP_CALL( SCIPhashtableInsert(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[h]) );
+            SCIP_CALL( SCIPcaptureCons(scip, usefulconss[c]) );
 
-	    ++h;
-	 }
-	 presoldata->nsetppchashdatas = h;
+            ++h;
+         }
+         presoldata->nsetppchashdatas = h;
 
-	 if( presoldata->nsetppchashdatas > 0 )
-	    presoldata->newsetppchashdatas = TRUE;
+         if( presoldata->nsetppchashdatas > 0 )
+            presoldata->newsetppchashdatas = TRUE;
       }
    }
 
@@ -430,31 +428,31 @@ SCIP_RETCODE createPresoldata(
       /* capture all logicor constraints */
       for( c = 0; c < nlogicors; ++c )
       {
-	 assert(SCIPconsIsActive(logicors[c]));
+         assert(SCIPconsIsActive(logicors[c]));
 
-	 if( !SCIPconsIsModifiable(logicors[c]) && SCIPgetNVarsLogicor(scip, logicors[c]) >= 3 )
-	 {
-	    /* insert new element in hashtable */
-	    SCIP_CALL( SCIPhashtableInsert(presoldata->logicorhashtable, (void*) logicors[c]) );
-	    SCIP_CALL( SCIPcaptureCons(scip, logicors[c]) );
+         if( !SCIPconsIsModifiable(logicors[c]) && SCIPgetNVarsLogicor(scip, logicors[c]) >= 3 )
+         {
+            /* insert new element in hashtable */
+            SCIP_CALL( SCIPhashtableInsert(presoldata->logicorhashtable, (void*) logicors[c]) );
+            SCIP_CALL( SCIPcaptureCons(scip, logicors[c]) );
 
-	    usefulconss[nusefulconss] = logicors[c];
-	    ++nusefulconss;
+            usefulconss[nusefulconss] = logicors[c];
+            ++nusefulconss;
 
-	    /* update maximal entries in a logicor constraint */
-	    if( presoldata->maxnvarslogicor < SCIPgetNVarsLogicor(scip, logicors[c]) )
-	       presoldata->maxnvarslogicor = SCIPgetNVarsLogicor(scip, logicors[c]);
-	 }
+            /* update maximal entries in a logicor constraint */
+            if( presoldata->maxnvarslogicor < SCIPgetNVarsLogicor(scip, logicors[c]) )
+               presoldata->maxnvarslogicor = SCIPgetNVarsLogicor(scip, logicors[c]);
+         }
       }
 
       /* no usefulconss constraints */
       if( nusefulconss > 0 )
       {
-	 presoldata->firstchangedlogicor = 0;
-	 presoldata->usefullogicorexist = TRUE;
-	 presoldata->susefullogicor = nusefulconss;
-	 presoldata->nusefullogicor = nusefulconss;
-	 SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &presoldata->usefullogicor, usefulconss, presoldata->susefullogicor) );
+         presoldata->firstchangedlogicor = 0;
+         presoldata->usefullogicorexist = TRUE;
+         presoldata->susefullogicor = nusefulconss;
+         presoldata->nusefullogicor = nusefulconss;
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &presoldata->usefullogicor, usefulconss, presoldata->susefullogicor) );
       }
    }
 
@@ -483,83 +481,83 @@ SCIP_RETCODE cleanupHashDatas(
 
       for( c = presoldata->nsetppchashdatas - 1; c >= 0; --c )
       {
-	 SCIP_Bool removeentry = FALSE;
+         SCIP_Bool removeentry = FALSE;
 
-	 assert(presoldata->setppchashdatas[c] != NULL);
-	 assert(presoldata->setppchashdatas[c]->cons != NULL);
+         assert(presoldata->setppchashdatas[c] != NULL);
+         assert(presoldata->setppchashdatas[c]->cons != NULL);
 
-	 if( SCIPconsIsDeleted(presoldata->setppchashdatas[c]->cons) || SCIPconsIsModifiable(presoldata->setppchashdatas[c]->cons)
-	    || SCIPgetTypeSetppc(scip, presoldata->setppchashdatas[c]->cons) != SCIP_SETPPCTYPE_PACKING || SCIPgetNVarsSetppc(scip, presoldata->setppchashdatas[c]->cons) != 2 )
-	 {
-	    removeentry = TRUE;
-	 }
-	 else
-	 {
-	    SCIP_VAR* vars[2];
-	    SCIP_Bool negated[2];
+         if( SCIPconsIsDeleted(presoldata->setppchashdatas[c]->cons) || SCIPconsIsModifiable(presoldata->setppchashdatas[c]->cons)
+               || SCIPgetTypeSetppc(scip, presoldata->setppchashdatas[c]->cons) != SCIP_SETPPCTYPE_PACKING || SCIPgetNVarsSetppc(scip, presoldata->setppchashdatas[c]->cons) != 2 )
+         {
+            removeentry = TRUE;
+         }
+         else
+         {
+            SCIP_VAR* vars[2];
+            SCIP_Bool negated[2];
 
-	    SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[c]->vars[0], &(vars[0]), &(negated[0])) );
-	    SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[c]->vars[1], &(vars[1]), &(negated[1])) );
+            SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[c]->vars[0], &(vars[0]), &(negated[0])) );
+            SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[c]->vars[1], &(vars[1]), &(negated[1])) );
 
-	    if( SCIPvarGetStatus(vars[0]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(vars[0]) == SCIP_VARSTATUS_MULTAGGR
-	       || SCIPvarGetStatus(vars[1]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(vars[1]) == SCIP_VARSTATUS_MULTAGGR
-	       || presoldata->setppchashdatas[c]->vars[0] != vars[0] || presoldata->setppchashdatas[c]->vars[1] != vars[1] )
-	    {
-	       removeentry = TRUE;
-	    }
-	 }
+            if( SCIPvarGetStatus(vars[0]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(vars[0]) == SCIP_VARSTATUS_MULTAGGR
+                  || SCIPvarGetStatus(vars[1]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(vars[1]) == SCIP_VARSTATUS_MULTAGGR
+                  || presoldata->setppchashdatas[c]->vars[0] != vars[0] || presoldata->setppchashdatas[c]->vars[1] != vars[1] )
+            {
+               removeentry = TRUE;
+            }
+         }
 
-	 if( removeentry )
-	 {
-	    /* remove constraint from setppc-hashtable */
-	    assert(SCIPhashtableExists(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c]->cons));
-	    SCIP_CALL( SCIPhashtableRemove(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c]->cons) );
+         if( removeentry )
+         {
+            /* remove constraint from setppc-hashtable */
+            assert(SCIPhashtableExists(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c]->cons));
+            SCIP_CALL( SCIPhashtableRemove(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c]->cons) );
 
-	    /* remove hashdata entry from hashtable */
-	    SCIP_CALL( SCIPhashtableRemove(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[c]) );
+            /* remove hashdata entry from hashtable */
+            SCIP_CALL( SCIPhashtableRemove(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[c]) );
 
-	    /* release old constraints */
-	    SCIP_CALL( SCIPreleaseCons(scip, &(presoldata->setppchashdatas[c]->cons)) );
+            /* release old constraints */
+            SCIP_CALL( SCIPreleaseCons(scip, &(presoldata->setppchashdatas[c]->cons)) );
 
-	    /* release variables */
-	    SCIP_CALL( SCIPreleaseVar(scip, &(presoldata->setppchashdatas[c]->vars[0])) );
-	    SCIP_CALL( SCIPreleaseVar(scip, &(presoldata->setppchashdatas[c]->vars[1])) );
+            /* release variables */
+            SCIP_CALL( SCIPreleaseVar(scip, &(presoldata->setppchashdatas[c]->vars[0])) );
+            SCIP_CALL( SCIPreleaseVar(scip, &(presoldata->setppchashdatas[c]->vars[1])) );
 
-	    /* free memory for variables */
-	    SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatas[c]->vars), 2);
+            /* free memory for variables */
+            SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatas[c]->vars), 2);
 
-	    if( c < presoldata->nsetppchashdatas - 1 )
-	    {
-	       /* remove old hashdata entry from hashtable */
-	       SCIP_CALL( SCIPhashtableRemove(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[presoldata->nsetppchashdatas - 1]) );
-	    }
+            if( c < presoldata->nsetppchashdatas - 1 )
+            {
+               /* remove old hashdata entry from hashtable */
+               SCIP_CALL( SCIPhashtableRemove(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[presoldata->nsetppchashdatas - 1]) );
+            }
 
-	    /* move last content to free position */
-	    presoldata->setppchashdatas[c]->cons = presoldata->setppchashdatas[presoldata->nsetppchashdatas - 1]->cons;
-	    presoldata->setppchashdatas[c]->vars = presoldata->setppchashdatas[presoldata->nsetppchashdatas - 1]->vars;
-	    presoldata->setppchashdatas[c]->nvars = presoldata->setppchashdatas[presoldata->nsetppchashdatas - 1]->nvars;
+            /* move last content to free position */
+            presoldata->setppchashdatas[c]->cons = presoldata->setppchashdatas[presoldata->nsetppchashdatas - 1]->cons;
+            presoldata->setppchashdatas[c]->vars = presoldata->setppchashdatas[presoldata->nsetppchashdatas - 1]->vars;
+            presoldata->setppchashdatas[c]->nvars = presoldata->setppchashdatas[presoldata->nsetppchashdatas - 1]->nvars;
 
-	    if( c < presoldata->nsetppchashdatas - 1 )
-	    {
-	       /* add new hashdata entry from hashtable */
-	       SCIP_CALL( SCIPhashtableInsert(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[c]) );
-	    }
-	    --(presoldata->nsetppchashdatas);
-	 }
+            if( c < presoldata->nsetppchashdatas - 1 )
+            {
+               /* add new hashdata entry from hashtable */
+               SCIP_CALL( SCIPhashtableInsert(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[c]) );
+            }
+            --(presoldata->nsetppchashdatas);
+         }
       }
 
 #ifndef NDEBUG
       for( c = presoldata->nsetppchashdatas - 1; c >= 0; --c )
       {
-	 assert(presoldata->setppchashdatas[c] != NULL);
-	 assert(presoldata->setppchashdatas[c]->nvars == 2);
-	 assert(presoldata->setppchashdatas[c]->vars != NULL);
-	 assert(presoldata->setppchashdatas[c]->vars[0] != NULL);
-	 assert(presoldata->setppchashdatas[c]->vars[1] != NULL);
-	 assert(presoldata->setppchashdatas[c]->cons != NULL);
-	 assert(SCIPconsIsActive(presoldata->setppchashdatas[c]->cons));
-	 assert(SCIPhashtableExists(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[c]));
-	 assert(SCIPhashtableExists(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c]->cons));
+         assert(presoldata->setppchashdatas[c] != NULL);
+         assert(presoldata->setppchashdatas[c]->nvars == 2);
+         assert(presoldata->setppchashdatas[c]->vars != NULL);
+         assert(presoldata->setppchashdatas[c]->vars[0] != NULL);
+         assert(presoldata->setppchashdatas[c]->vars[1] != NULL);
+         assert(presoldata->setppchashdatas[c]->cons != NULL);
+         assert(SCIPconsIsActive(presoldata->setppchashdatas[c]->cons));
+         assert(SCIPhashtableExists(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[c]));
+         assert(SCIPhashtableExists(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c]->cons));
       }
 #endif
    }
@@ -603,20 +601,20 @@ SCIP_RETCODE correctPresoldata(
        */
       if( usefullogicorexisted && !presoldata->usefulsetppcexist )
       {
-	 /* correct maximal number of varables in logicor constraints */
-	 for( c = nlogicors - 1; c >= 0; --c )
-	 {
-	    assert(SCIPconsIsActive(logicors[c]));
+         /* correct maximal number of varables in logicor constraints */
+         for( c = nlogicors - 1; c >= 0; --c )
+         {
+            assert(SCIPconsIsActive(logicors[c]));
 
-	    /* update maximal entries in a logicor constraint */
-	    if( presoldata->maxnvarslogicor < SCIPgetNVarsLogicor(scip, logicors[c]) )
-	       presoldata->maxnvarslogicor = SCIPgetNVarsLogicor(scip, logicors[c]);
-	 }
+            /* update maximal entries in a logicor constraint */
+            if( presoldata->maxnvarslogicor < SCIPgetNVarsLogicor(scip, logicors[c]) )
+               presoldata->maxnvarslogicor = SCIPgetNVarsLogicor(scip, logicors[c]);
+         }
       }
 
       /* no correct logicor or set-packing constraints available, so abort */
       if( !presoldata->usefulsetppcexist || !presoldata->usefullogicorexist )
-	 return SCIP_OKAY;
+         return SCIP_OKAY;
    }
 
    /* correct old data */
@@ -632,78 +630,78 @@ SCIP_RETCODE correctPresoldata(
 
       if( SCIPgetTypeSetppc(scip, setppcs[c]) == SCIP_SETPPCTYPE_PACKING && SCIPgetNVarsSetppc(scip, setppcs[c]) == 2 && !SCIPconsIsModifiable(setppcs[c]) )
       {
-	 /* check if constraint is new, and correct array size if necessary */
-	 if( !SCIPhashtableExists(presoldata->setppchashtable, (void*) setppcs[c]) )
-	 {
-	    SCIP_Bool negated[2];
+         /* check if constraint is new, and correct array size if necessary */
+         if( !SCIPhashtableExists(presoldata->setppchashtable, (void*) setppcs[c]) )
+         {
+            SCIP_Bool negated[2];
 
-	    /* resize array if necessary */
-	    if( presoldata->nsetppchashdatas == presoldata->ssetppchashdatas )
-	    {
-	       int newsize;
-	       int d;
+            /* resize array if necessary */
+            if( presoldata->nsetppchashdatas == presoldata->ssetppchashdatas )
+            {
+               int newsize;
+               int d;
 
-	       newsize = SCIPcalcMemGrowSize(scip, presoldata->nsetppchashdatas + 1);
+               newsize = SCIPcalcMemGrowSize(scip, presoldata->nsetppchashdatas + 1);
 
-	       /* array already at maximal size */
-	       if( newsize <= presoldata->ssetppchashdatas )
-		  return SCIP_NOMEMORY;
+               /* array already at maximal size */
+               if( newsize <= presoldata->ssetppchashdatas )
+                  return SCIP_NOMEMORY;
 
-	       /* correct hashtable, remove old elements */
-	       SCIPhashtableRemoveAll(presoldata->hashdatatable);
+               /* correct hashtable, remove old elements */
+               SCIPhashtableRemoveAll(presoldata->hashdatatable);
 
-	       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(presoldata->setppchashdatas), presoldata->ssetppchashdatas, newsize) );
-	       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(presoldata->setppchashdatastore), presoldata->ssetppchashdatas, newsize) );
-	       presoldata->ssetppchashdatas = newsize;
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(presoldata->setppchashdatas), presoldata->ssetppchashdatas, newsize) );
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(presoldata->setppchashdatastore), presoldata->ssetppchashdatas, newsize) );
+               presoldata->ssetppchashdatas = newsize;
 
-	       /* correct pointers in array, to point to the new storage, due to allocation, and add all elements to the
-		* hashtable again
-		*/
-	       for( d = presoldata->nsetppchashdatas - 1; d >= 0; --d )
-	       {
-		  presoldata->setppchashdatas[d] = &(presoldata->setppchashdatastore[d]);
-		  SCIP_CALL( SCIPhashtableInsert(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[d]) );
-	       }
-	    }
+               /* correct pointers in array, to point to the new storage, due to allocation, and add all elements to the
+                * hashtable again
+                */
+               for( d = presoldata->nsetppchashdatas - 1; d >= 0; --d )
+               {
+                  presoldata->setppchashdatas[d] = &(presoldata->setppchashdatastore[d]);
+                  SCIP_CALL( SCIPhashtableInsert(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[d]) );
+               }
+            }
 
-	    /* insert new element in hashtable */
-	    SCIP_CALL( SCIPhashtableInsert(presoldata->setppchashtable, (void*) setppcs[c]) );
+            /* insert new element in hashtable */
+            SCIP_CALL( SCIPhashtableInsert(presoldata->setppchashtable, (void*) setppcs[c]) );
 
-	    assert(SCIPgetNVarsSetppc(scip, setppcs[c]) == 2);
-	    presoldata->setppchashdatas[presoldata->nsetppchashdatas] = &(presoldata->setppchashdatastore[presoldata->nsetppchashdatas]);
+            assert(SCIPgetNVarsSetppc(scip, setppcs[c]) == 2);
+            presoldata->setppchashdatas[presoldata->nsetppchashdatas] = &(presoldata->setppchashdatastore[presoldata->nsetppchashdatas]);
 
-	    SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars), SCIPgetVarsSetppc(scip, setppcs[c]), 2) );
-	    SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0], &(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0]), &(negated[0])) );
-	    SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1], &(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1]), &(negated[1])) );
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars), SCIPgetVarsSetppc(scip, setppcs[c]), 2) );
+            SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0], &(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0]), &(negated[0])) );
+            SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1], &(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1]), &(negated[1])) );
 
-	    if( SCIPvarGetStatus(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0]) == SCIP_VARSTATUS_MULTAGGR
-	       || SCIPvarGetStatus(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1]) == SCIP_VARSTATUS_MULTAGGR )
-	    {
-	       SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars), 2);
-	       continue;
-	    }
+            if( SCIPvarGetStatus(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0]) == SCIP_VARSTATUS_MULTAGGR
+                  || SCIPvarGetStatus(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1]) == SCIP_VARSTATUS_MULTAGGR )
+            {
+               SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars), 2);
+               continue;
+            }
 
-	    presoldata->setppchashdatas[presoldata->nsetppchashdatas]->nvars = 2;
+            presoldata->setppchashdatas[presoldata->nsetppchashdatas]->nvars = 2;
 
-	    /* capture variables */
-	    SCIP_CALL( SCIPcaptureVar(scip, presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0]) );
-	    SCIP_CALL( SCIPcaptureVar(scip, presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1]) );
+            /* capture variables */
+            SCIP_CALL( SCIPcaptureVar(scip, presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0]) );
+            SCIP_CALL( SCIPcaptureVar(scip, presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1]) );
 
-	    /* order the variables after their index */
-	    if( SCIPvarGetIndex(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0]) > SCIPvarGetIndex(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1]) )
-	    {
-	       SCIP_VAR* tmp = presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0];
-	       presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0] = presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1];
-	       presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1] = tmp;
-	    }
+            /* order the variables after their index */
+            if( SCIPvarGetIndex(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0]) > SCIPvarGetIndex(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1]) )
+            {
+               SCIP_VAR* tmp = presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0];
+               presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0] = presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1];
+               presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1] = tmp;
+            }
 
-	    presoldata->setppchashdatas[presoldata->nsetppchashdatas]->cons = setppcs[c];
+            presoldata->setppchashdatas[presoldata->nsetppchashdatas]->cons = setppcs[c];
 
-	    SCIP_CALL( SCIPhashtableInsert(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[presoldata->nsetppchashdatas]) );
-	    SCIP_CALL( SCIPcaptureCons(scip, setppcs[c]) );
+            SCIP_CALL( SCIPhashtableInsert(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[presoldata->nsetppchashdatas]) );
+            SCIP_CALL( SCIPcaptureCons(scip, setppcs[c]) );
 
-	    ++(presoldata->nsetppchashdatas);
-	 }
+            ++(presoldata->nsetppchashdatas);
+         }
       }
    }
 
@@ -726,15 +724,15 @@ SCIP_RETCODE correctPresoldata(
    {
       /* update maximal entries in a logicor constraint */
       if( presoldata->maxnvarslogicor < SCIPgetNVarsLogicor(scip, presoldata->usefullogicor[c]) )
-	 presoldata->maxnvarslogicor = SCIPgetNVarsLogicor(scip, presoldata->usefullogicor[c]);
+         presoldata->maxnvarslogicor = SCIPgetNVarsLogicor(scip, presoldata->usefullogicor[c]);
 
       if( !SCIPconsIsActive(presoldata->usefullogicor[c]) || SCIPconsIsModifiable(presoldata->usefullogicor[c]) || SCIPgetNVarsLogicor(scip, presoldata->usefullogicor[c]) < 3 )
       {
-	 SCIP_CALL( SCIPhashtableRemove(presoldata->logicorhashtable, (void*) presoldata->usefullogicor[c]) );
-	 SCIP_CALL( SCIPreleaseCons(scip, &(presoldata->usefullogicor[c])) );
+         SCIP_CALL( SCIPhashtableRemove(presoldata->logicorhashtable, (void*) presoldata->usefullogicor[c]) );
+         SCIP_CALL( SCIPreleaseCons(scip, &(presoldata->usefullogicor[c])) );
 
-	 presoldata->usefullogicor[c] = presoldata->usefullogicor[presoldata->nusefullogicor - 1];
-	 --(presoldata->nusefullogicor);
+         presoldata->usefullogicor[c] = presoldata->usefullogicor[presoldata->nusefullogicor - 1];
+         --(presoldata->nusefullogicor);
       }
    }
 
@@ -748,35 +746,35 @@ SCIP_RETCODE correctPresoldata(
 
       if( !SCIPconsIsModifiable(logicors[c]) && SCIPgetNVarsLogicor(scip, logicors[c]) >= 3 )
       {
-	 /* check if constraint is new, and correct array size if necessary */
-	 if( !SCIPhashtableExists(presoldata->logicorhashtable, (void*) logicors[c]) )
-	 {
-	    /* resize array if necessary */
-	    if( presoldata->nusefullogicor == presoldata->susefullogicor )
-	    {
-	       int newsize;
+         /* check if constraint is new, and correct array size if necessary */
+         if( !SCIPhashtableExists(presoldata->logicorhashtable, (void*) logicors[c]) )
+         {
+            /* resize array if necessary */
+            if( presoldata->nusefullogicor == presoldata->susefullogicor )
+            {
+               int newsize;
 
-	       newsize = SCIPcalcMemGrowSize(scip, presoldata->nusefullogicor + 1);
+               newsize = SCIPcalcMemGrowSize(scip, presoldata->nusefullogicor + 1);
 
-	       /* array already at maximal size */
-	       if( newsize <= presoldata->susefullogicor )
-		  return SCIP_NOMEMORY;
+               /* array already at maximal size */
+               if( newsize <= presoldata->susefullogicor )
+                  return SCIP_NOMEMORY;
 
-	       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(presoldata->usefullogicor), presoldata->susefullogicor, newsize) );
-	       presoldata->susefullogicor = newsize;
-	    }
+               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(presoldata->usefullogicor), presoldata->susefullogicor, newsize) );
+               presoldata->susefullogicor = newsize;
+            }
 
-	    /* insert new element in hashtable */
-	    SCIP_CALL( SCIPhashtableInsert(presoldata->logicorhashtable, (void*) logicors[c]) );
-	    SCIP_CALL( SCIPcaptureCons(scip, logicors[c]) );
+            /* insert new element in hashtable */
+            SCIP_CALL( SCIPhashtableInsert(presoldata->logicorhashtable, (void*) logicors[c]) );
+            SCIP_CALL( SCIPcaptureCons(scip, logicors[c]) );
 
-	    presoldata->usefullogicor[presoldata->nusefullogicor] = logicors[c];
-	    ++(presoldata->nusefullogicor);
+            presoldata->usefullogicor[presoldata->nusefullogicor] = logicors[c];
+            ++(presoldata->nusefullogicor);
 
-	    /* update maximal entries in a logicor constraint */
-	    if( presoldata->maxnvarslogicor < SCIPgetNVarsLogicor(scip, logicors[c]) )
-	       presoldata->maxnvarslogicor = SCIPgetNVarsLogicor(scip, logicors[c]);
-	 }
+            /* update maximal entries in a logicor constraint */
+            if( presoldata->maxnvarslogicor < SCIPgetNVarsLogicor(scip, logicors[c]) )
+               presoldata->maxnvarslogicor = SCIPgetNVarsLogicor(scip, logicors[c]);
+         }
       }
    }
 
@@ -844,40 +842,40 @@ SCIP_RETCODE extractGates(
    {
       /* do not work with fixed variables */
       if( SCIPvarGetLbLocal(logicorvars[d]) > 0.5 || SCIPvarGetUbLocal(logicorvars[d]) < 0.5 )
-	 return SCIP_OKAY;
+         return SCIP_OKAY;
 
       activevars[d] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, logicorvars[d]);
 
       if( activevars[d] == NULL )
       {
-	 SCIP_CALL( SCIPgetBinvarRepresentative(scip, logicorvars[d], &(activevars[d]), &negated) );
-	 SCIP_CALL( SCIPhashmapInsert(varmap, logicorvars[d], activevars[d]) );
+         SCIP_CALL( SCIPgetBinvarRepresentative(scip, logicorvars[d], &(activevars[d]), &negated) );
+         SCIP_CALL( SCIPhashmapInsert(varmap, logicorvars[d], activevars[d]) );
       }
 
       /* determine possible resultants a check if the other variables can appear in a set-packing constraint */
       if( SCIPvarIsNegated(activevars[d]) )
       {
-	 assert(SCIPvarIsActive(SCIPvarGetNegatedVar(activevars[d])));
+         assert(SCIPvarIsActive(SCIPvarGetNegatedVar(activevars[d])));
 
-	 if( SCIPvarGetNLocksDown(SCIPvarGetNegatedVar(activevars[d])) >= nlogicorvars - 1 )
-	 {
-	    posresultants[nposresultants] = activevars[d];
-	    ++nposresultants;
-	 }
-	 else if( SCIPvarGetNLocksDown(SCIPvarGetNegatedVar(activevars[d])) == 0 )
-	    return SCIP_OKAY;
+         if( SCIPvarGetNLocksDown(SCIPvarGetNegatedVar(activevars[d])) >= nlogicorvars - 1 )
+         {
+            posresultants[nposresultants] = activevars[d];
+            ++nposresultants;
+         }
+         else if( SCIPvarGetNLocksDown(SCIPvarGetNegatedVar(activevars[d])) == 0 )
+            return SCIP_OKAY;
       }
       else
       {
-	 assert(SCIPvarIsActive(activevars[d]));
+         assert(SCIPvarIsActive(activevars[d]));
 
-	 if( SCIPvarGetNLocksUp(activevars[d]) >= nlogicorvars - 1 )
-	 {
-	    posresultants[nposresultants] = activevars[d];
-	    ++nposresultants;
-	 }
-	 else if( SCIPvarGetNLocksUp(activevars[d]) == 0 )
-	    return SCIP_OKAY;
+         if( SCIPvarGetNLocksUp(activevars[d]) >= nlogicorvars - 1 )
+         {
+            posresultants[nposresultants] = activevars[d];
+            ++nposresultants;
+         }
+         else if( SCIPvarGetNLocksUp(activevars[d]) == 0 )
+            return SCIP_OKAY;
       }
    }
 
@@ -894,15 +892,15 @@ SCIP_RETCODE extractGates(
    {
       if( SCIPvarGetIndex(activevars[d]) == SCIPvarGetIndex(activevars[d - 1]) )
       {
-	 assert(presoldata->usefullogicor[pos] == logicor);
+         assert(presoldata->usefullogicor[pos] == logicor);
 
-	 SCIP_CALL( SCIPhashtableRemove(presoldata->logicorhashtable, (void*) logicor) );
-	 SCIP_CALL( SCIPreleaseCons(scip, &logicor) );
+         SCIP_CALL( SCIPhashtableRemove(presoldata->logicorhashtable, (void*) logicor) );
+         SCIP_CALL( SCIPreleaseCons(scip, &logicor) );
 
-	 presoldata->usefullogicor[pos] = presoldata->usefullogicor[presoldata->nusefullogicor - 1];
-	 --(presoldata->nusefullogicor);
+         presoldata->usefullogicor[pos] = presoldata->usefullogicor[presoldata->nusefullogicor - 1];
+         --(presoldata->nusefullogicor);
 
-	 return SCIP_OKAY;
+         return SCIP_OKAY;
       }
    }
 
@@ -914,34 +912,34 @@ SCIP_RETCODE extractGates(
 
       for( v = nlogicorvars - 1; v >= 0; --v )
       {
-	 if( activevars[v] == posresultants[d] )
-	    continue;
+         if( activevars[v] == posresultants[d] )
+            continue;
 
-	 /* variables need to be sorted */
-	 if( SCIPvarCompare(posresultants[d], activevars[v]) > 0 )
-	 {
-	    tmpvars[0] = activevars[v];
-	    tmpvars[1] = posresultants[d];
-	 }
-	 else
-	 {
-	    tmpvars[0] = posresultants[d];
-	    tmpvars[1] = activevars[v];
-	 }
-	 hashdata->vars = tmpvars;
+         /* variables need to be sorted */
+         if( SCIPvarCompare(posresultants[d], activevars[v]) > 0 )
+         {
+            tmpvars[0] = activevars[v];
+            tmpvars[1] = posresultants[d];
+         }
+         else
+         {
+            tmpvars[0] = posresultants[d];
+            tmpvars[1] = activevars[v];
+         }
+         hashdata->vars = tmpvars;
 
-	 hashmaphashdata = (HASHDATA*) SCIPhashtableRetrieve(presoldata->hashdatatable, (void*) hashdata);
+         hashmaphashdata = (HASHDATA*) SCIPhashtableRetrieve(presoldata->hashdatatable, (void*) hashdata);
 
-	 if( hashmaphashdata != NULL && SCIPconsIsActive(hashmaphashdata->cons) )
-	 {
-	    gateconss[ngateconss] = hashmaphashdata->cons;
-	    ++ngateconss;
-	 }
-	 else
-	    break;
+         if( hashmaphashdata != NULL && SCIPconsIsActive(hashmaphashdata->cons) )
+         {
+            gateconss[ngateconss] = hashmaphashdata->cons;
+            ++ngateconss;
+         }
+         else
+            break;
       }
       if( ngateconss == nlogicorvars - 1 )
-	 break;
+         break;
    }
 
    /* @todo, check for clique of all variables except the resultant */
@@ -953,19 +951,19 @@ SCIP_RETCODE extractGates(
 
       if( activevars[0] == posresultants[d] )
       {
-	 tmpvars[0] = activevars[1];
-	 tmpvars[1] = activevars[2];
+         tmpvars[0] = activevars[1];
+         tmpvars[1] = activevars[2];
       }
       else if( activevars[1] == posresultants[d] )
       {
-	 tmpvars[0] = activevars[0];
-	 tmpvars[1] = activevars[2];
+         tmpvars[0] = activevars[0];
+         tmpvars[1] = activevars[2];
       }
       else
       {
-	 assert(activevars[2] == posresultants[d]);
-	 tmpvars[0] = activevars[0];
-	 tmpvars[1] = activevars[1];
+         assert(activevars[2] == posresultants[d]);
+         tmpvars[0] = activevars[0];
+         tmpvars[1] = activevars[1];
       }
       hashdata->vars = tmpvars;
 
@@ -974,8 +972,8 @@ SCIP_RETCODE extractGates(
 
       if( hashmaphashdata != NULL && SCIPconsIsActive(hashmaphashdata->cons) )
       {
-	 gateconss[ngateconss] = hashmaphashdata->cons;
-	 ++ngateconss;
+         gateconss[ngateconss] = hashmaphashdata->cons;
+         ++ngateconss;
       }
    }
 
@@ -1015,98 +1013,98 @@ SCIP_RETCODE extractGates(
 #ifdef SCIP_DEBUG
       if( ngateconss == nlogicorvars )
       {
-	 SCIPdebugMsg(scip, "Following constraints form a set-partitioning constraint.\n");
+         SCIPdebugMsg(scip, "Following constraints form a set-partitioning constraint.\n");
       }
       else
       {
-	 SCIPdebugMsg(scip, "Following constraints form an and-constraint.\n");
+         SCIPdebugMsg(scip, "Following constraints form an and-constraint.\n");
       }
 #endif
 
       for( v = ngateconss - 1; v >= 0; --v )
       {
-	 assert(gateconss[v] != NULL);
+         assert(gateconss[v] != NULL);
 
-	 initial |= SCIPconsIsInitial(gateconss[v]);
-	 separate |= SCIPconsIsSeparated(gateconss[v]);
-	 enforce |= SCIPconsIsEnforced(gateconss[v]);
-	 check |= SCIPconsIsChecked(gateconss[v]);
-	 propagate |= SCIPconsIsPropagated(gateconss[v]);
-	 local &= SCIPconsIsLocal(gateconss[v]);
-	 modifiable &= SCIPconsIsModifiable(gateconss[v]);
-	 dynamic &= SCIPconsIsDynamic(gateconss[v]);
-	 removable &= SCIPconsIsRemovable(gateconss[v]);
-	 stickingatnode &= SCIPconsIsStickingAtNode(gateconss[v]);
+         initial |= SCIPconsIsInitial(gateconss[v]);
+         separate |= SCIPconsIsSeparated(gateconss[v]);
+         enforce |= SCIPconsIsEnforced(gateconss[v]);
+         check |= SCIPconsIsChecked(gateconss[v]);
+         propagate |= SCIPconsIsPropagated(gateconss[v]);
+         local &= SCIPconsIsLocal(gateconss[v]);
+         modifiable &= SCIPconsIsModifiable(gateconss[v]);
+         dynamic &= SCIPconsIsDynamic(gateconss[v]);
+         removable &= SCIPconsIsRemovable(gateconss[v]);
+         stickingatnode &= SCIPconsIsStickingAtNode(gateconss[v]);
 
-	 SCIPdebugPrintCons(scip, gateconss[v], NULL);
+         SCIPdebugPrintCons(scip, gateconss[v], NULL);
 
-	 SCIP_CALL( SCIPdelCons(scip, gateconss[v]) );
-	 ++(*ndelconss);
+         SCIP_CALL( SCIPdelCons(scip, gateconss[v]) );
+         ++(*ndelconss);
       }
 
       SCIPdebugPrintCons(scip, logicor, NULL);
 
       if( ngateconss == nlogicorvars - 1 )
       {
-	 SCIP_VAR** consvars;
+         SCIP_VAR** consvars;
 
-	 assert(!presoldata->onlysetpart);
+         assert(!presoldata->onlysetpart);
 
-	 SCIP_CALL( SCIPallocBufferArray(scip, &consvars, ngateconss) );
-	 i = 0;
+         SCIP_CALL( SCIPallocBufferArray(scip, &consvars, ngateconss) );
+         i = 0;
 
-	 /* determine and operands */
-	 for( v = nlogicorvars - 1; v >= 0; --v )
-	 {
-	    if( activevars[v] == posresultants[d] )
-	       continue;
+         /* determine and operands */
+         for( v = nlogicorvars - 1; v >= 0; --v )
+         {
+            if( activevars[v] == posresultants[d] )
+               continue;
 
-	    SCIP_CALL( SCIPgetNegatedVar(scip, activevars[v], &consvars[i]) );
-	    ++i;
-	 }
-	 assert(i == ngateconss);
+            SCIP_CALL( SCIPgetNegatedVar(scip, activevars[v], &consvars[i]) );
+            ++i;
+         }
+         assert(i == ngateconss);
 
-	 /* create and add "and" constraint for the extracted gate */
-	 (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "andgate_%d", presoldata->ngates);
-	 SCIP_CALL( SCIPcreateConsAnd(scip, &newcons, name, posresultants[d], ngateconss, consvars,
-	       initial, separate, enforce, check, propagate,
-	       local, modifiable, dynamic, removable, stickingatnode) );
+         /* create and add "and" constraint for the extracted gate */
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "andgate_%d", presoldata->ngates);
+         SCIP_CALL( SCIPcreateConsAnd(scip, &newcons, name, posresultants[d], ngateconss, consvars,
+               initial, separate, enforce, check, propagate,
+               local, modifiable, dynamic, removable, stickingatnode) );
 
-	 SCIP_CALL( SCIPaddCons(scip, newcons) );
-	 SCIPdebugMsg(scip, "-------------->\n");
-	 SCIPdebugPrintCons(scip, newcons, NULL);
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
+         SCIPdebugMsg(scip, "-------------->\n");
+         SCIPdebugPrintCons(scip, newcons, NULL);
 
-	 ++(*naddconss);
-	 ++(presoldata->ngates);
+         ++(*naddconss);
+         ++(presoldata->ngates);
 
-	 SCIP_CALL( SCIPdelCons(scip, logicor) );
-	 ++(*ndelconss);
+         SCIP_CALL( SCIPdelCons(scip, logicor) );
+         ++(*ndelconss);
 
-	 SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 
-	 SCIPfreeBufferArray(scip, &consvars);
+         SCIPfreeBufferArray(scip, &consvars);
       }
       else
       {
-	 assert(ngateconss == nlogicorvars);
+         assert(ngateconss == nlogicorvars);
 
-	 /* create and add set-partitioning constraint */
-	 (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "setpart_%d", presoldata->ngates);
-	 SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, name, nlogicorvars, activevars,
-	       initial, separate, enforce, check, propagate,
-	       local, modifiable, dynamic, removable, stickingatnode) );
+         /* create and add set-partitioning constraint */
+         (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "setpart_%d", presoldata->ngates);
+         SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, name, nlogicorvars, activevars,
+               initial, separate, enforce, check, propagate,
+               local, modifiable, dynamic, removable, stickingatnode) );
 
-	 SCIP_CALL( SCIPaddCons(scip, newcons) );
-	 SCIPdebugMsg(scip, "-------------->\n");
-	 SCIPdebugPrintCons(scip, newcons, NULL);
+         SCIP_CALL( SCIPaddCons(scip, newcons) );
+         SCIPdebugMsg(scip, "-------------->\n");
+         SCIPdebugPrintCons(scip, newcons, NULL);
 
-	 ++(*naddconss);
-	 ++(presoldata->ngates);
+         ++(*naddconss);
+         ++(presoldata->ngates);
 
-	 SCIP_CALL( SCIPdelCons(scip, logicor) );
-	 ++(*ndelconss);
+         SCIP_CALL( SCIPdelCons(scip, logicor) );
+         ++(*ndelconss);
 
-	 SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+         SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
       }
    }
 
@@ -1188,26 +1186,27 @@ SCIP_DECL_PRESOLEXIT(presolExitGateextraction)
       assert(presoldata->setppchashdatas != NULL || presoldata->nsetppchashdatas == 0);
       for( c = presoldata->nsetppchashdatas - 1; c >= 0; --c )
       {
-	 assert(presoldata->setppchashdatas[c] != NULL);
-	 assert(presoldata->setppchashdatas[c]->cons != NULL);
-	 assert(presoldata->setppchashdatas[c]->vars != NULL);
+         assert(presoldata->setppchashdatas[c] != NULL);
+         assert(presoldata->setppchashdatas[c]->cons != NULL);
+         assert(presoldata->setppchashdatas[c]->vars != NULL);
 
-	 /* remove constraint from setppc-hashtable */
-	 assert(SCIPhashtableExists(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c]->cons));
-	 SCIP_CALL( SCIPhashtableRemove(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c]->cons) );
+         /* remove constraint from setppc-hashtable */
+         assert(SCIPhashtableExists(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c]->cons));
+         SCIP_CALL( SCIPhashtableRemove(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c]->cons) );
 
-	 /* release old constraints */
-	 SCIP_CALL( SCIPreleaseCons(scip, &(presoldata->setppchashdatas[c]->cons)) );
 
-	 /* remove hashdata entry from hashtable */
-	 SCIP_CALL( SCIPhashtableRemove(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[c]) );
+         /* remove hashdata entry from hashtable */
+         SCIP_CALL( SCIPhashtableRemove(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[c]) );
 
-	 /* release variables */
-	 SCIP_CALL( SCIPreleaseVar(scip, &(presoldata->setppchashdatas[c]->vars[0])) );
-	 SCIP_CALL( SCIPreleaseVar(scip, &(presoldata->setppchashdatas[c]->vars[1])) );
+         /* release old constraints */
+         SCIP_CALL( SCIPreleaseCons(scip, &(presoldata->setppchashdatas[c]->cons)) );
 
-	 /* free memory for variables */
-	 SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatas[c]->vars), 2);
+         /* release variables */
+         SCIP_CALL( SCIPreleaseVar(scip, &(presoldata->setppchashdatas[c]->vars[0])) );
+         SCIP_CALL( SCIPreleaseVar(scip, &(presoldata->setppchashdatas[c]->vars[1])) );
+
+         /* free memory for variables */
+         SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatas[c]->vars), 2);
       }
 
       SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatastore), presoldata->ssetppchashdatas);
@@ -1311,18 +1310,18 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 
       for( c = nknapsackconss - 1; c >= 0; --c )
       {
-	 /* not implemented in master branch, but the constraint may be already sorted */
-	 /*SCIPsortKnapsack(scip, knapsackconss[c]);*/
+         /* not implemented in master branch, but the constraint may be already sorted */
+         /*SCIPsortKnapsack(scip, knapsackconss[c]);*/
 
-	 nvars = SCIPgetNVarsKnapsack(scip, knapsackconss[c]);
-	 vals = SCIPgetWeightsKnapsack(scip, knapsackconss[c]);
-	 vars = SCIPgetVarsKnapsack(scip, knapsackconss[c]);
-	 capacity = SCIPgetCapacityKnapsack(scip, knapsackconss[c]);
+         nvars = SCIPgetNVarsKnapsack(scip, knapsackconss[c]);
+         vals = SCIPgetWeightsKnapsack(scip, knapsackconss[c]);
+         vars = SCIPgetVarsKnapsack(scip, knapsackconss[c]);
+         capacity = SCIPgetCapacityKnapsack(scip, knapsackconss[c]);
 
-	 if( nvars > 1 && capacity == nvars - 1 && vals[0] == capacity && vals[1] == 1 )
-	 {
-	    printf("possible knapsack for gate extraction\n");
-	 }
+         if( nvars > 1 && capacity == nvars - 1 && vals[0] == capacity && vals[1] == 1 )
+         {
+            printf("possible knapsack for gate extraction\n");
+         }
       }
    }
 #endif
@@ -1486,208 +1485,208 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
       /* collect all set-packing/-partitioning constraints and corresponding data to be able to search faster */
       for( d = nsetppcconss - 1; d >= 0; --d )
       {
-	 setppc = setppcconss[d];
-	 assert(setppc != NULL);
+         setppc = setppcconss[d];
+         assert(setppc != NULL);
 
-	 if( SCIPconsIsDeleted(setppc) )
-	    continue;
+         if( SCIPconsIsDeleted(setppc) )
+            continue;
 
-	 /* @todo if of interest could also be implemented for set-covering constraints */
+         /* @todo if of interest could also be implemented for set-covering constraints */
 #if 1
-	 if( SCIPgetTypeSetppc(scip, setppc) == SCIP_SETPPCTYPE_COVERING )
-	    continue;
+         if( SCIPgetTypeSetppc(scip, setppc) == SCIP_SETPPCTYPE_COVERING )
+            continue;
 #endif
 
-	 nsetppcvars = SCIPgetNVarsSetppc(scip, setppc);
+         nsetppcvars = SCIPgetNVarsSetppc(scip, setppc);
 
-	 if( nsetppcvars < 2 )
-	    continue;
+         if( nsetppcvars < 2 )
+            continue;
 
-	 if( SCIPconsIsModifiable(setppc) )
-	    continue;
+         if( SCIPconsIsModifiable(setppc) )
+            continue;
 
-	 /* to big setppc constraints are picked out */
-	 if( nsetppcvars > size )
-	    continue;
+         /* to big setppc constraints are picked out */
+         if( nsetppcvars > size )
+            continue;
 
-	 setppcvars = SCIPgetVarsSetppc(scip, setppc);
-	 assert(setppcvars != NULL);
+         setppcvars = SCIPgetVarsSetppc(scip, setppc);
+         assert(setppcvars != NULL);
 
-	 /* get active setppc variables */
-	 for( v = nsetppcvars - 1; v >= 0; --v )
-	 {
-	    /* do not work with fixed variables */
-	    if( SCIPvarGetLbLocal(setppcvars[v]) > 0.5 || SCIPvarGetUbLocal(setppcvars[v]) < 0.5 )
-	       break;
+         /* get active setppc variables */
+         for( v = nsetppcvars - 1; v >= 0; --v )
+         {
+            /* do not work with fixed variables */
+            if( SCIPvarGetLbLocal(setppcvars[v]) > 0.5 || SCIPvarGetUbLocal(setppcvars[v]) < 0.5 )
+               break;
 
-	    activevarssetppc[v] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, setppcvars[v]);
+            activevarssetppc[v] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, setppcvars[v]);
 
-	    if( activevarssetppc[v] == NULL )
-	    {
-	       SCIP_CALL( SCIPgetBinvarRepresentative(scip, setppcvars[v], &(activevarssetppc[v]), &negated) );
-	       SCIP_CALL( SCIPhashmapInsert(varmap, setppcvars[v], activevarssetppc[v]) );
-	    }
-	 }
+            if( activevarssetppc[v] == NULL )
+            {
+               SCIP_CALL( SCIPgetBinvarRepresentative(scip, setppcvars[v], &(activevarssetppc[v]), &negated) );
+               SCIP_CALL( SCIPhashmapInsert(varmap, setppcvars[v], activevarssetppc[v]) );
+            }
+         }
 
-	 /* if we found a fixed variable we want disregard this constraint */
-	 if( v >= 0 )
-	    continue;
+         /* if we found a fixed variable we want disregard this constraint */
+         if( v >= 0 )
+            continue;
 
-	 /* variables need to be sorted after indices to be able to do a fast comparison */
-	 SCIPsortPtr((void**)activevarssetppc, SCIPvarComp, nsetppcvars);
+         /* variables need to be sorted after indices to be able to do a fast comparison */
+         SCIPsortPtr((void**)activevarssetppc, SCIPvarComp, nsetppcvars);
 
-	 setppchashdatas[nsetppchashdatas] = &(setppchashdatastore[nsetppchashdatas]);
+         setppchashdatas[nsetppchashdatas] = &(setppchashdatastore[nsetppchashdatas]);
 
-	 /* memorize set-packing data */
-	 SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(setppchashdatas[nsetppchashdatas]->vars), activevarssetppc, nsetppcvars) );
+         /* memorize set-packing data */
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(setppchashdatas[nsetppchashdatas]->vars), activevarssetppc, nsetppcvars) );
 
-	 setppchashdatas[nsetppchashdatas]->nvars = nsetppcvars;
-	 setppchashdatas[nsetppchashdatas]->cons = setppc;
-	 /* need to capture this constraint, because it might get deleted during the process */
-	 SCIP_CALL( SCIPcaptureCons(scip, setppc) );
+         setppchashdatas[nsetppchashdatas]->nvars = nsetppcvars;
+         setppchashdatas[nsetppchashdatas]->cons = setppc;
+         /* need to capture this constraint, because it might get deleted during the process */
+         SCIP_CALL( SCIPcaptureCons(scip, setppc) );
 
-	 /* add entry to local hashtable */
-	 SCIP_CALL( SCIPhashtableInsert(setppchashdatatable, (void*) setppchashdatas[nsetppchashdatas]) );
-	 ++nsetppchashdatas;
+         /* add entry to local hashtable */
+         SCIP_CALL( SCIPhashtableInsert(setppchashdatatable, (void*) setppchashdatas[nsetppchashdatas]) );
+         ++nsetppchashdatas;
       }
 
       /* check all (new) logicors against all collected set-packing/-partitioning constraints */
       for( c = nlogicorconss - 1; c >= 0 && !SCIPisStopped(scip); --c )
       {
-	 logicor = logicorconss[c];
-	 assert(logicor != NULL);
+         logicor = logicorconss[c];
+         assert(logicor != NULL);
 
-	 if( SCIPconsIsDeleted(logicor) )
-	    continue;
+         if( SCIPconsIsDeleted(logicor) )
+            continue;
 
-	 nlogicorvars = SCIPgetNVarsLogicor(scip, logicor);
+         nlogicorvars = SCIPgetNVarsLogicor(scip, logicor);
 
-	 if( nlogicorvars < 2 )
-	    continue;
+         if( nlogicorvars < 2 )
+            continue;
 
-	 if( SCIPconsIsModifiable(logicor) )
-	    continue;
+         if( SCIPconsIsModifiable(logicor) )
+            continue;
 
-	 assert(nlogicorvars <= size);
+         assert(nlogicorvars <= size);
 
-	 logicorvars = SCIPgetVarsLogicor(scip, logicor);
-	 assert(logicorvars != NULL);
+         logicorvars = SCIPgetVarsLogicor(scip, logicor);
+         assert(logicorvars != NULL);
 
-	 /* get active logicor variables */
-	 for( v = nlogicorvars - 1; v >= 0; --v )
-	 {
-	    /* do not work with fixed variables */
-	    if( SCIPvarGetLbLocal(logicorvars[v]) > 0.5 || SCIPvarGetUbLocal(logicorvars[v]) < 0.5 )
-	       break;
+         /* get active logicor variables */
+         for( v = nlogicorvars - 1; v >= 0; --v )
+         {
+            /* do not work with fixed variables */
+            if( SCIPvarGetLbLocal(logicorvars[v]) > 0.5 || SCIPvarGetUbLocal(logicorvars[v]) < 0.5 )
+               break;
 
-	    activevarslogicor[v] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, logicorvars[v]);
+            activevarslogicor[v] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, logicorvars[v]);
 
-	    /* if image does not exist, then there is no corresponding set-packing constraint */
-	    if( activevarslogicor[v] == NULL )
-	       break;
-	 }
+            /* if image does not exist, then there is no corresponding set-packing constraint */
+            if( activevarslogicor[v] == NULL )
+               break;
+         }
 
-	 if( v == -1 )
-	 {
-	    /* need sorting to be able to find the correct hashdata element */
-	    SCIPsortPtr((void**)activevarslogicor, SCIPvarComp, nlogicorvars);
+         if( v == -1 )
+         {
+            /* need sorting to be able to find the correct hashdata element */
+            SCIPsortPtr((void**)activevarslogicor, SCIPvarComp, nlogicorvars);
 
-	    hashdata->nvars = nlogicorvars;
-	    hashdata->vars = activevarslogicor;
+            hashdata->nvars = nlogicorvars;
+            hashdata->vars = activevarslogicor;
 
-	    hashmaphashdata = (HASHDATA*) SCIPhashtableRetrieve(setppchashdatatable, (void*) hashdata);
-	    assert(hashmaphashdata == NULL || hashmaphashdata->cons != NULL);
+            hashmaphashdata = (HASHDATA*) SCIPhashtableRetrieve(setppchashdatatable, (void*) hashdata);
+            assert(hashmaphashdata == NULL || hashmaphashdata->cons != NULL);
 
-	    if( hashmaphashdata != NULL && !SCIPconsIsDeleted(hashmaphashdata->cons) )
-	    {
-	       SCIP_Bool initial;
-	       SCIP_Bool separate;
-	       SCIP_Bool enforce;
-	       SCIP_Bool check;
-	       SCIP_Bool propagate;
-	       SCIP_Bool local;
-	       SCIP_Bool modifiable;
-	       SCIP_Bool dynamic;
-	       SCIP_Bool removable;
-	       SCIP_Bool stickingatnode;
+            if( hashmaphashdata != NULL && !SCIPconsIsDeleted(hashmaphashdata->cons) )
+            {
+               SCIP_Bool initial;
+               SCIP_Bool separate;
+               SCIP_Bool enforce;
+               SCIP_Bool check;
+               SCIP_Bool propagate;
+               SCIP_Bool local;
+               SCIP_Bool modifiable;
+               SCIP_Bool dynamic;
+               SCIP_Bool removable;
+               SCIP_Bool stickingatnode;
 
-	       setppc = hashmaphashdata->cons;
-	       assert(SCIPconsGetHdlr(setppc) == SCIPfindConshdlr(scip, "setppc"));
+               setppc = hashmaphashdata->cons;
+               assert(SCIPconsGetHdlr(setppc) == SCIPfindConshdlr(scip, "setppc"));
 
-	       initial = SCIPconsIsInitial(logicor) || SCIPconsIsInitial(setppc);
-	       separate = SCIPconsIsSeparated(logicor) || SCIPconsIsSeparated(setppc);
-	       enforce = SCIPconsIsEnforced(logicor) || SCIPconsIsEnforced(setppc);
-	       check = SCIPconsIsChecked(logicor) || SCIPconsIsChecked(setppc);
-	       propagate = SCIPconsIsPropagated(logicor) || SCIPconsIsPropagated(setppc);
-	       local = SCIPconsIsLocal(logicor) && SCIPconsIsLocal(setppc);
-	       modifiable = SCIPconsIsModifiable(logicor) && SCIPconsIsModifiable(setppc);
-	       dynamic = SCIPconsIsDynamic(logicor) && SCIPconsIsDynamic(setppc);
-	       removable = SCIPconsIsRemovable(logicor) && SCIPconsIsRemovable(setppc);
-	       stickingatnode = SCIPconsIsStickingAtNode(logicor) && SCIPconsIsStickingAtNode(setppc);
+               initial = SCIPconsIsInitial(logicor) || SCIPconsIsInitial(setppc);
+               separate = SCIPconsIsSeparated(logicor) || SCIPconsIsSeparated(setppc);
+               enforce = SCIPconsIsEnforced(logicor) || SCIPconsIsEnforced(setppc);
+               check = SCIPconsIsChecked(logicor) || SCIPconsIsChecked(setppc);
+               propagate = SCIPconsIsPropagated(logicor) || SCIPconsIsPropagated(setppc);
+               local = SCIPconsIsLocal(logicor) && SCIPconsIsLocal(setppc);
+               modifiable = SCIPconsIsModifiable(logicor) && SCIPconsIsModifiable(setppc);
+               dynamic = SCIPconsIsDynamic(logicor) && SCIPconsIsDynamic(setppc);
+               removable = SCIPconsIsRemovable(logicor) && SCIPconsIsRemovable(setppc);
+               stickingatnode = SCIPconsIsStickingAtNode(logicor) && SCIPconsIsStickingAtNode(setppc);
 
-	       /* check if logicor is redundant against a set-partitioning constraint */
-	       if( SCIPgetTypeSetppc(scip, setppc) == SCIP_SETPPCTYPE_PARTITIONING )
-	       {
-		  SCIP_CALL( SCIPsetConsInitial(scip, setppc, initial) );
-		  SCIP_CALL( SCIPsetConsSeparated(scip, setppc, separate) );
-		  SCIP_CALL( SCIPsetConsEnforced(scip, setppc, enforce) );
-		  SCIP_CALL( SCIPsetConsChecked(scip, setppc, check) );
-		  SCIP_CALL( SCIPsetConsPropagated(scip, setppc, propagate) );
-		  SCIP_CALL( SCIPsetConsLocal(scip, setppc, local) );
-		  SCIP_CALL( SCIPsetConsModifiable(scip, setppc, modifiable) );
-		  SCIP_CALL( SCIPsetConsDynamic(scip, setppc, dynamic) );
-		  SCIP_CALL( SCIPsetConsRemovable(scip, setppc, removable) );
-		  SCIP_CALL( SCIPsetConsStickingAtNode(scip, setppc, stickingatnode) );
+               /* check if logicor is redundant against a set-partitioning constraint */
+               if( SCIPgetTypeSetppc(scip, setppc) == SCIP_SETPPCTYPE_PARTITIONING )
+               {
+                  SCIP_CALL( SCIPsetConsInitial(scip, setppc, initial) );
+                  SCIP_CALL( SCIPsetConsSeparated(scip, setppc, separate) );
+                  SCIP_CALL( SCIPsetConsEnforced(scip, setppc, enforce) );
+                  SCIP_CALL( SCIPsetConsChecked(scip, setppc, check) );
+                  SCIP_CALL( SCIPsetConsPropagated(scip, setppc, propagate) );
+                  SCIP_CALL( SCIPsetConsLocal(scip, setppc, local) );
+                  SCIP_CALL( SCIPsetConsModifiable(scip, setppc, modifiable) );
+                  SCIP_CALL( SCIPsetConsDynamic(scip, setppc, dynamic) );
+                  SCIP_CALL( SCIPsetConsRemovable(scip, setppc, removable) );
+                  SCIP_CALL( SCIPsetConsStickingAtNode(scip, setppc, stickingatnode) );
 
-		  SCIPdebugMsg(scip, "Following logicor is redundant to the set-partitioning constraint.\n");
-		  SCIPdebugPrintCons(scip, logicor, NULL);
-		  SCIPdebugPrintCons(scip, setppc, NULL);
-	       }
-	       else
-	       {
-		  SCIP_CONS* newcons;
-		  char name[SCIP_MAXSTRLEN];
+                  SCIPdebugMsg(scip, "Following logicor is redundant to the set-partitioning constraint.\n");
+                  SCIPdebugPrintCons(scip, logicor, NULL);
+                  SCIPdebugPrintCons(scip, setppc, NULL);
+               }
+               else
+               {
+                  SCIP_CONS* newcons;
+                  char name[SCIP_MAXSTRLEN];
 
-		  assert(SCIPgetTypeSetppc(scip, setppc) == SCIP_SETPPCTYPE_PACKING);
+                  assert(SCIPgetTypeSetppc(scip, setppc) == SCIP_SETPPCTYPE_PACKING);
 
-		  SCIPdebugMsg(scip, "Following logicor and set-packing constraints form a set-partitioning constraint.\n");
-		  SCIPdebugPrintCons(scip, logicor, NULL);
-		  SCIPdebugPrintCons(scip, setppc, NULL);
+                  SCIPdebugMsg(scip, "Following logicor and set-packing constraints form a set-partitioning constraint.\n");
+                  SCIPdebugPrintCons(scip, logicor, NULL);
+                  SCIPdebugPrintCons(scip, setppc, NULL);
 
-		  /* create and add set-partitioning constraint */
-		  (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "setpart_%d", presoldata->ngates);
-		  SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, name, nlogicorvars, activevarslogicor,
-			initial, separate, enforce, check, propagate,
-			local, modifiable, dynamic, removable, stickingatnode) );
+                  /* create and add set-partitioning constraint */
+                  (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "setpart_%d", presoldata->ngates);
+                  SCIP_CALL( SCIPcreateConsSetpart(scip, &newcons, name, nlogicorvars, activevarslogicor,
+                        initial, separate, enforce, check, propagate,
+                        local, modifiable, dynamic, removable, stickingatnode) );
 
-		  SCIP_CALL( SCIPaddCons(scip, newcons) );
-		  SCIPdebugMsg(scip, "-------------->\n");
-		  SCIPdebugPrintCons(scip, newcons, NULL);
+                  SCIP_CALL( SCIPaddCons(scip, newcons) );
+                  SCIPdebugMsg(scip, "-------------->\n");
+                  SCIPdebugPrintCons(scip, newcons, NULL);
 
-		  ++(*naddconss);
-		  ++(presoldata->ngates);
+                  ++(*naddconss);
+                  ++(presoldata->ngates);
 
-		  /* delete redundant set-packing constraint */
-		  SCIP_CALL( SCIPdelCons(scip, setppc) );
-		  ++(*ndelconss);
+                  /* delete redundant set-packing constraint */
+                  SCIP_CALL( SCIPdelCons(scip, setppc) );
+                  ++(*ndelconss);
 
-		  SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
-	       }
+                  SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
+               }
 
-	       /* delete redundant logicor constraint */
-	       SCIP_CALL( SCIPdelCons(scip, logicor) );
-	       ++(*ndelconss);
-	    }
-	 }
+               /* delete redundant logicor constraint */
+               SCIP_CALL( SCIPdelCons(scip, logicor) );
+               ++(*ndelconss);
+            }
+         }
       }
 
       /* need to clear/release parts of hashdata objects */
       for( d = nsetppchashdatas - 1; d >= 0; --d )
       {
-	 /* need to release captured constraint */
-	 SCIP_CALL( SCIPreleaseCons(scip, &(setppchashdatas[d]->cons)) );
-	 /* need to free copied memory */
-	 SCIPfreeBlockMemoryArray(scip, &(setppchashdatas[d]->vars), setppchashdatas[d]->nvars);
+         /* need to release captured constraint */
+         SCIP_CALL( SCIPreleaseCons(scip, &(setppchashdatas[d]->cons)) );
+         /* need to free copied memory */
+         SCIPfreeBlockMemoryArray(scip, &(setppchashdatas[d]->vars), setppchashdatas[d]->nvars);
       }
 
       /* delete local hashtable */
@@ -1741,19 +1740,19 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
        */
       for( c = presoldata->nusefullogicor - 1; c >= endloop && !SCIPisStopped(scip); --c )
       {
-	 assert(presoldata->usefullogicor[c] != NULL);
+         assert(presoldata->usefullogicor[c] != NULL);
 
-	 /* logicor constraint has the form: x + y + z >= 1
-	  *
-	  * find set-packing constraints:  (~x + ~y >= 1 and ~x + ~z >= 1)  <=>  (x + y <= 1 and x + z <= 1)
-	  *
-	  * - these three constraints are aquivalent to: x = ~y * ~z (x = AND(~y,~z))
-	  *
-	  * if an additional set-packing constraint exists: y + z <= 1
-	  *
-	  * - these four constraints are aquivalent to: x + y + z = 1
-	  */
-	 SCIP_CALL( extractGates(scip, presoldata, c, varmap, gateconss, activevars, posresultants, hashdata, ndelconss, naddconss) );
+         /* logicor constraint has the form: x + y + z >= 1
+          *
+          * find set-packing constraints:  (~x + ~y >= 1 and ~x + ~z >= 1)  <=>  (x + y <= 1 and x + z <= 1)
+          *
+          * - these three constraints are aquivalent to: x = ~y * ~z (x = AND(~y,~z))
+          *
+          * if an additional set-packing constraint exists: y + z <= 1
+          *
+          * - these four constraints are aquivalent to: x + y + z = 1
+          */
+         SCIP_CALL( extractGates(scip, presoldata, c, varmap, gateconss, activevars, posresultants, hashdata, ndelconss, naddconss) );
       }
       SCIPfreeBuffer(scip, &hashdata);
       SCIPfreeBufferArray(scip, &posresultants);

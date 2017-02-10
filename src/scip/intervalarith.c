@@ -304,9 +304,13 @@ double nextafter(double x, double y)
    unsigned lx;
    unsigned ly;
 
+   /* cppcheck-suppress invalidPointerCast */
    hx = __HI(x);     /* high word of x */
+   /* cppcheck-suppress invalidPointerCast */
    lx = __LO(x);     /* low  word of x */
+   /* cppcheck-suppress invalidPointerCast */
    hy = __HI(y);     /* high word of y */
+   /* cppcheck-suppress invalidPointerCast */
    ly = __LO(y);     /* low  word of y */
    ix = hx&0x7fffffff;     /* |x| */
    iy = hy&0x7fffffff;     /* |y| */
@@ -323,7 +327,9 @@ double nextafter(double x, double y)
    if( (ix|lx) == 0 )
    {
       /* return +-minsubnormal */
+      /* cppcheck-suppress invalidPointerCast */
       __HI(x) = hy&0x80000000;
+      /* cppcheck-suppress invalidPointerCast */
       __LO(x) = 1;
       y = x * x;
       if ( y == x )
@@ -378,12 +384,16 @@ double nextafter(double x, double y)
       if( y != x )
       {
          /* raise underflow flag */
+         /* cppcheck-suppress invalidPointerCast */
          __HI(y) = hx;
+         /* cppcheck-suppress invalidPointerCast */
          __LO(y) = lx;
          return y;
       }
    }
+   /* cppcheck-suppress invalidPointerCast */
    __HI(x) = hx;
+   /* cppcheck-suppress invalidPointerCast */
    __LO(x) = lx;
    return x;
 }
@@ -2679,7 +2689,7 @@ void SCIPintervalSin(
       modinf += 2*M_PI;
    modsup = modinf + intervallen;
 
-   for( b = 0; TRUE; ++b )
+   for( b = 0; ; ++b )
    {
       if( modinf <= extremepoints[b] )
       {
@@ -2723,9 +2733,9 @@ void SCIPintervalSin(
     * so extend the computed interval slightly to increase the chance that it will contain the complete sin(operand)
     */
    if( resultant->inf > -1.0 )
-      resultant->inf = MAX(-1.0, resultant->inf - 1e-10 * REALABS(resultant->inf));
+      resultant->inf = MAX(-1.0, resultant->inf - 1e-10 * REALABS(resultant->inf));  /*lint !e666*/
    if( resultant->sup <  1.0 )
-      resultant->sup = MIN( 1.0, resultant->sup + 1e-10 * REALABS(resultant->sup));
+      resultant->sup = MIN( 1.0, resultant->sup + 1e-10 * REALABS(resultant->sup));  /*lint !e666*/
 
    assert(resultant->inf <= resultant->sup);
 }
@@ -2765,7 +2775,7 @@ void SCIPintervalCos(
       modinf += 2*M_PI;
    modsup = modinf + intervallen;
 
-   for( b = 0; TRUE; ++b )
+   for( b = 0; ; ++b )
    {
       if( modinf <= extremepoints[b] )
       {
@@ -2809,9 +2819,9 @@ void SCIPintervalCos(
     * so extend the computed interval slightly to increase the chance that it will contain the complete cos(operand)
     */
    if( resultant->inf > -1.0 )
-      resultant->inf = MAX(-1.0, resultant->inf - 1e-10 * REALABS(resultant->inf));
+      resultant->inf = MAX(-1.0, resultant->inf - 1e-10 * REALABS(resultant->inf));  /*lint !e666*/
    if( resultant->sup <  1.0 )
-      resultant->sup = MIN( 1.0, resultant->sup + 1e-10 * REALABS(resultant->sup));
+      resultant->sup = MIN( 1.0, resultant->sup + 1e-10 * REALABS(resultant->sup));  /*lint !e666*/
 
    assert(resultant->inf <= resultant->sup);
 }
