@@ -484,6 +484,10 @@ SCIP_RETCODE switchWatchedvars(
    assert(watchedvar1 == -1 || (0 <= watchedvar1 && watchedvar1 < consdata->nvars));
    assert(watchedvar2 == -1 || (0 <= watchedvar2 && watchedvar2 < consdata->nvars));
 
+   /* don't watch variables for non active constraints */
+   if( !SCIPconsIsActive(cons) )
+      return SCIP_OKAY;
+
    /* if one watched variable is equal to the old other watched variable, just switch positions */
    if( watchedvar1 == consdata->watchedvar2 || watchedvar2 == consdata->watchedvar1 )
    {
@@ -2515,11 +2519,11 @@ SCIP_DECL_CONSPRESOL(consPresolBounddisjunction)
             *result = SCIP_SUCCESS;
             continue;
          }
-	 else
-	 {
-	    /* try to upgrade the bounddisjunction constraint */
-	    SCIP_CALL( upgradeCons(scip, cons, ndelconss, naddconss) );
-	 }
+         else
+         {
+            /* try to upgrade the bounddisjunction constraint */
+            SCIP_CALL( upgradeCons(scip, cons, ndelconss, naddconss) );
+         }
       }
    }
 
@@ -2748,7 +2752,7 @@ SCIP_DECL_CONSCOPY(consCopyBounddisjunction)
    if( *valid )
    {
       SCIP_CALL( SCIPcreateConsBounddisjunction(scip, cons, name ? name : SCIPconsGetName(sourcecons), nvars, targetvars, boundtypes,
-         bounds, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );      
+         bounds, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
 
    SCIPfreeBufferArray(scip, &targetvars);
@@ -2946,10 +2950,8 @@ SCIP_DECL_EVENTEXEC(eventExecBounddisjunction)
 
    /*SCIPdebugMsg(scip, "exec method of event handler for bound disjunction constraints\n");*/
 
-   /* it can happen that the events are still active for a constraint that is marked to be deleted */
-   /* @todo is this still true? */
-   if( SCIPconsIsDeleted((SCIP_CONS*)eventdata) )
-      return SCIP_OKAY;
+   assert(SCIPconsGetData((SCIP_CONS*)eventdata) != NULL);
+   assert(SCIPconsIsActive((SCIP_CONS*)eventdata));
 
    if( (SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDRELAXED) != 0 )
    {
