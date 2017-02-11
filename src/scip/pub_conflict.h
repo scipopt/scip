@@ -34,9 +34,7 @@
 extern "C" {
 #endif
 
-/**@defgroup PublicConflictMethods Conflict Analysis
- * @ingroup PluginManagementMethods
- * @brief public methods related to conflict analysis
+/**@addtogroup PublicConflictMethods
  *
  * @{
  */

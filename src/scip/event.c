@@ -435,8 +435,8 @@ SCIP_Real SCIPeventhdlrGetTime(
 
 /** creates a synchronization event */
 SCIP_RETCODE SCIPeventCreateSync(
-   SCIP_EVENT**          event,             /**< pointer to store the event */
-   BMS_BLKMEM*           blkmem             /**< block memory */
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(event != NULL);
@@ -1480,7 +1480,7 @@ SCIP_RETCODE SCIPeventProcess(
    case SCIP_EVENTTYPE_DISABLED:
       break;
 
-   case SCIP_EVENTTYPE_SYNC:
+   case SCIP_EVENTTYPE_SYNC: /*lint !e30 !e142*/
    case SCIP_EVENTTYPE_VARADDED:
    case SCIP_EVENTTYPE_PRESOLVEROUND:
    case SCIP_EVENTTYPE_NODEFOCUSED:
@@ -2148,7 +2148,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
          SCIPerrorMessage("cannot add a disabled event to the event queue\n");
          return SCIP_INVALIDDATA;
 
-      case SCIP_EVENTTYPE_SYNC:
+      case SCIP_EVENTTYPE_SYNC: /*lint !e30 !e142*/
       case SCIP_EVENTTYPE_VARADDED:
       case SCIP_EVENTTYPE_VARDELETED:
       case SCIP_EVENTTYPE_VARFIXED:

@@ -5639,7 +5639,12 @@ SCIP_Bool generateCutLTIfindIntersection(
          SCIP_Real tl2;
          SCIP_Real denom;
 
-         assert(b * b - 4.0 * a * (c - wl) >= 0.0);
+         if( b * b - 4.0 * a * (c - wl) < 0.0 )
+         {
+            SCIPdebugMsg(scip, "probable numerical difficulties, give up\n");
+            return TRUE;
+         }
+
          denom = sqrt(b * b - 4.0 * a * (c - wl));
          tl1 = (-b - denom) / (2.0 * a);
          tl2 = (-b + denom) / (2.0 * a);
@@ -5652,7 +5657,12 @@ SCIP_Bool generateCutLTIfindIntersection(
          SCIP_Real tu2;
          SCIP_Real denom;
 
-         assert(b * b - 4.0 * a * (c - wu) >= 0.0);
+         if( b * b - 4.0 * a * (c - wu) < 0.0 )
+         {
+            SCIPdebugMsg(scip, "probable numerical difficulties, give up\n");
+            return TRUE;
+         }
+
          denom = sqrt(b * b - 4.0 * a * (c - wu));
          tu1 = (-b - denom) / (2.0 * a);
          tu2 = (-b + denom) / (2.0 * a);
@@ -6699,7 +6709,6 @@ SCIP_RETCODE generateCut(
    /* check if range of cut coefficients is ok
     * compute cut activity and violation in sol
     */
-   mincoef = 0.0; /* only for lint */
    maxcoef = 0.0; /* only for compiler */
    viol = 0.0;    /* only for compiler */
    if( success )
@@ -11233,7 +11242,7 @@ SCIP_DECL_CONSFREE(consFreeQuadratic)
    for( i = 0; i < conshdlrdata->nquadconsupgrades; ++i )
    {
       assert(conshdlrdata->quadconsupgrades[i] != NULL);
-      SCIPfreeBlockMemory(scip, &conshdlrdata->quadconsupgrades[i]);
+      SCIPfreeBlockMemory(scip, &conshdlrdata->quadconsupgrades[i]); /*lint !e866*/
    }
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->quadconsupgrades, conshdlrdata->quadconsupgradessize);
 
@@ -12438,7 +12447,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
                   assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
                   SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
-                  havechange = TRUE;
 
                   if( infeasible )
                   {

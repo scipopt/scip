@@ -46,8 +46,10 @@ tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="type_tpi_openmp*" \
 --exclude="type_tpi_tnycthrd*" \
 $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
-$NAME/doc/scip* $NAME/doc/xternal.c \
-$NAME/doc/inc/authors.inc \
+$NAME/doc/scip* $NAME/doc/xternal.c $NAME/doc/builddoc.sh \
+$NAME/doc/inc/codestyle/* $NAME/doc/inc/shelltutorial $NAME/doc/inc/debugexamples \
+$NAME/doc/inc/faq/faqtext.txt $NAME/doc/inc/faq/*.py $NAME/doc/inc/faq/localdoc.php \
+$NAME/doc/inc/makeexamples/* $NAME/doc/inc/shelltutorial/commands  $NAME/doc/inc/shelltutorial/insertsnippetstutorial.py \
 $NAME/doc/pictures/miniscippy.png $NAME/doc/pictures/scippy.png \
 $NAME/make/make.* \
 $NAME/release-notes/SCIP-* \
@@ -77,7 +79,7 @@ $NAME/applications/MinIISC/Makefile $NAME/applications/MinIISC/INSTALL \
 $NAME/applications/MinIISC/doc/* \
 $NAME/applications/MinIISC/src/* \
 $NAME/applications/MinIISC/data/* \
-$NAME/applications/MinIISC/check/configuration_tmpfile_setup_miniisc.sh $NAME/applications/MinIISC/check/run.sh\
+$NAME/applications/MinIISC/check/configuration_tmpfile_setup_miniisc.sh $NAME/applications/MinIISC/check/run.sh \
 $NAME/applications/MinIISC/check/run.sh $NAME/applications/MinIISC/check/testset/short.* \
 $NAME/applications/PolySCIP/doc/* \
 $NAME/applications/PolySCIP/src/*.cpp $NAME/applications/PolySCIP/src/*.h \

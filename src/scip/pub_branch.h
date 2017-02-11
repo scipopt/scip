@@ -33,9 +33,7 @@
 extern "C" {
 #endif
 
-/**@defgroup PublicBranchRuleMethods Branching Rules
- * @ingroup PluginManagementMethods
- * @brief  methods for branching rule plugins
+/**@addtogroup PublicBranchRuleMethods
  *
  * @{
  */

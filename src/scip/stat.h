@@ -213,8 +213,8 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
 #define SCIPupdateDeterministicTimeCount(stat, set, val) do { \
         (stat)->detertimecnt += (val); \
         if( (stat)->detertimecnt > 10000.0 ) { \
-            SCIPincrementConcurrentTime( (set)->scip, (stat)->detertimecnt ); \
-            (stat)->detertimecnt = 0.0; \
+           SCIP_CALL_ABORT( SCIPincrementConcurrentTime( (set)->scip, (stat)->detertimecnt ) ); \
+           (stat)->detertimecnt = 0.0;                                  \
         }\
     } while(0) \
 

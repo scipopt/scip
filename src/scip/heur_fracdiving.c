@@ -63,7 +63,6 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 };
 
 
@@ -126,9 +125,6 @@ SCIP_DECL_HEURINIT(heurInitFracdiving) /*lint --e{715}*/
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
-   /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
-
    return SCIP_OKAY;
 }
 
@@ -146,8 +142,6 @@ SCIP_DECL_HEUREXIT(heurExitFracdiving) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
 
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
@@ -190,8 +184,6 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
    SCIP_Bool mayrounddown;
    SCIP_Bool mayroundup;
 
-   assert(heurdata != NULL);
-
    /* score fractionality if candidate is an SOS1 variable */
    if ( divetype == SCIP_DIVETYPE_SOS1VARIABLE )
    {
@@ -215,7 +207,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
       *roundup = mayrounddown;
    /* try to avoid variability; decide randomly if the LP solution can contain some noise. */
    else if( SCIPisEQ(scip, candsfrac, 0.5) )
-      *roundup = (SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0);
+      *roundup = (SCIPrandomGetInt(SCIPdivesetGetRandnumgen(diveset), 0, 1) == 0);
    else
       *roundup = (candsfrac > 0.5);
 
@@ -243,7 +235,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreFracdiving)
       /* try to avoid variability; decide randomly if the LP solution can contain some noise.
        * use a 1:SCIP_PROBINGSCORE_PENALTYRATIO chance for increasing the fractionality, i.e., the score.
        */
-      if( SCIPrandomGetInt(heurdata->randnumgen, 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
+      if( SCIPrandomGetInt(SCIPdivesetGetRandnumgen(diveset), 0, SCIP_PROBINGSCORE_PENALTYRATIO) == 0 )
          candsfrac += 10.0;
    }
    else if( candsfrac < 0.01 )
@@ -293,7 +285,7 @@ SCIP_RETCODE SCIPincludeHeurFracdiving(
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL,
-         DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS,
+         DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED,
          DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScoreFracdiving) );
 
    return SCIP_OKAY;

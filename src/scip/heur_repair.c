@@ -489,10 +489,10 @@ SCIP_RETCODE createNewSol(
 /** tries to fix variables as an approach to repair a solution. */
 static
 SCIP_RETCODE applyRepair(
-   SCIP*                 scip,             /**< SCIP data structure of the problem */
-   SCIP_HEUR*            heur,             /**< pointer to this heuristic instance */
-   SCIP_RESULT*          result,           /**< pointer to return the result status */
-   SCIP_Longint          nnodes            /**< nodelimit for sub-SCIP */
+   SCIP*                 scip,               /**< SCIP data structure of the problem */
+   SCIP_HEUR*            heur,               /**< pointer to this heuristic instance */
+   SCIP_RESULT*          result,             /**< pointer to return the result status */
+   SCIP_Longint          nnodes              /**< nodelimit for sub-SCIP */
    )
 {
    SCIP* subscip = NULL;
@@ -1136,11 +1136,10 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    SCIP_Bool error;
    SCIP_Longint nnodes;
 
-   retcode = SCIP_OKAY;
    heurdata = SCIPheurGetData(heur);
    SCIPdebugMsg(scip, "%s\n", heurdata->filename);
 
-   /* checks the result pointer*/
+   /* checks the result pointer */
    assert(result != NULL);
    *result = SCIP_DIDNOTRUN;
 

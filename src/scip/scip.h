@@ -130,6 +130,7 @@ extern "C" {
  */
 
 /**@addtogroup MiscellaneousMethods
+ *
  * @{
  */
 
@@ -213,11 +214,9 @@ void SCIPprintError(
  * general SCIP methods
  */
 
-/**@defgroup GeneralSCIPMethods SCIP
- * @ingroup PublicProblemMethods
- * @brief methods to manipulate a SCIP object
+/**@addtogroup GeneralSCIPMethods
  *
- **@{
+ * @{
  */
 
 /** creates and initializes SCIP data structures
@@ -389,9 +388,7 @@ SCIP_Bool SCIPisStopped(
  * debug solution methods
  */
 
-/**@defgroup DebugSolutionMethods Debug Solution
- * @ingroup PUBLICCOREAPI
- * @brief methods to control the SCIP debug solution mechanism, see also \ref DEBUG
+/**@addtogroup DebugSolutionMethods
  *
  * @{
  */
@@ -425,9 +422,7 @@ void SCIPdisableDebugSol(
  * message output methods
  */
 
-/**@defgroup MessageOutputMethods Messaging
- * @ingroup PUBLICCOREAPI
- * @brief message output methods
+/**@addtogroup MessageOutputMethods
  *
  * @{
  */
@@ -575,9 +570,7 @@ SCIP_VERBLEVEL SCIPgetVerbLevel(
  * SCIP copy methods
  */
 
-/**@defgroup CopyMethods Problem Copies
- * @ingroup PublicProblemMethods
- * @brief methods to copy problems between a source and a target \SCIP
+/**@addtogroup CopyMethods
  *
  * @{
  */
@@ -1651,10 +1644,9 @@ SCIP_RETCODE SCIPcopyLimits(
  * parameter settings
  */
 
-/**@defgroup ParameterMethods Parameter
- * @ingroup PublicSolveMethods
- * @brief methods to create, query, and print user parameters
- *@{
+/**@addtogroup ParameterMethods
+ *
+ * @{
  */
 
 /** creates a SCIP_Bool parameter, sets it to its default value, and adds it to the parameter set
@@ -3888,9 +3880,7 @@ SCIP_RETCODE SCIPsetPropPresolPriority(
 
 /* @} */
 
-/**@defgroup PublicConcsolverTypeMethods Concurrent Solver Types
- * @ingroup PluginManagementMethods
- * @brief methods for concurrent solver type plugins
+/**@addtogroup PublicConcsolverTypeMethods
  *
  * @{
  */
@@ -4243,6 +4233,7 @@ SCIP_RETCODE SCIPcreateDiveset(
    SCIP_Real             lpresolvedomchgquot,/**< percentage of immediate domain changes during probing to trigger LP resolve */
    int                   lpsolvefreq,        /**< LP solve frequency for (0: only if enough domain reductions are found by propagation)*/
    int                   maxlpiterofs,       /**< additional number of allowed LP iterations */
+   unsigned int          initialseed,        /**< initial seed for random number generation */
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
@@ -4747,9 +4738,7 @@ void SCIPchgDispMode(
 
 /* @} */
 
-/**@defgroup PublicNLPInterfaceMethods NLP interfaces
- * @ingroup PluginManagementMethods
- * @brief  methods for the management of NLP interfaces
+/**@addtogroup PublicNLPInterfaceMethods
  *
  * @{
  */
@@ -4790,9 +4779,7 @@ SCIP_RETCODE SCIPsetNlpiPriority(
 
 /* @} */
 
-/**@defgroup PublicExternalCodeMethods External Codes
- * @ingroup PluginManagementMethods
- * @brief methods to access information about external codes used by \SCIP
+/**@addtogroup PublicExternalCodeMethods
  *
  * @{
  */
@@ -4986,9 +4973,7 @@ SCIP_RETCODE SCIPstartInteraction(
  * global problem methods
  */
 
-/**@defgroup GlobalProblemMethods Global Problem
- * @ingroup PublicProblemMethods
- * @brief methods to create, read and modify a global problem together with its callbacks
+/**@addtogroup GlobalProblemMethods
  *
  * @{
  */
@@ -6426,9 +6411,7 @@ int SCIPgetNCheckConss(
  * local subproblem methods
  */
 
-/**@defgroup LocalSubproblemMethods Local Subproblem
- * @ingroup PublicSolveMethods
- * @brief methods to query information about or strengthen the problem at the current local search node
+/**@addtogroup LocalSubproblemMethods
  *
  * @{
  */
@@ -12183,10 +12166,7 @@ SCIP_RETCODE SCIPgetConsNVars(
  * LP methods
  */
 
-/**@defgroup PublicLPMethods LP Relaxation
- * @ingroup PublicSolveMethods
- * @brief methods to build and access LP relaxation information
- * @see methods to interact with \ref PublicColumnMethods "LP columns" and \ref PublicRowMethods "LP rows"
+/**@addtogroup PublicLPMethods
  *
  * @{
  */
@@ -14057,9 +14037,7 @@ SCIP_RETCODE SCIPgetNLPI(
  * NLP diving methods
  */
 
-/**@defgroup PublicNLPDiveMethods NLP Diving
- * @ingroup PublicNLPMethods
- * @brief methods to initiate and conduct NLP Diving
+/**@addtogroup PublicNLPDiveMethods
  *
  * @{ */
 
@@ -14867,9 +14845,7 @@ SCIP_RETCODE SCIPevalExprtreeLocalBounds(
  * nonlinear methods
  */
 
-/**@defgroup PublicNonlinearMethods Nonlinear Data
- * @ingroup MiscellaneousMethods
- * @brief methods for nonlinear data
+/**@addtogroup PublicNonlinearMethods
  *
  * @{
  */
@@ -15435,9 +15411,7 @@ SCIP_Real SCIPgetRelaxFeastolFactor(
  * LP diving methods
  */
 
-/**@defgroup PublicLPDivingMethods LP Diving
- * @ingroup PublicSolveMethods
- * @brief methods to initiate and conduct LP diving
+/**@addtogroup PublicLPDivingMethods
  *
  * @{
  */
@@ -15719,9 +15693,7 @@ SCIP_Bool SCIPinDive(
  * probing methods
  */
 
-/**@defgroup PublicProbingMethods Probing
- * @ingroup PublicSolveMethods
- * @brief methods to intiate and control the probing mode of \SCIP
+/**@addtogroup PublicProbingMethods
  *
  * @{
  */
@@ -16045,7 +16017,6 @@ EXTERN
 SCIP_RETCODE SCIPgetDivesetScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< general diving settings */
-   SCIP_HEURDATA*        heurdata,           /**< data of the calling heuristic */
    SCIP_DIVETYPE         divetype,           /**< represents different methods for a dive set to explore the next children */
    SCIP_VAR*             divecand,           /**< the candidate for which the branching direction is requested */
    SCIP_Real             divecandsol,        /**< LP solution value of the candidate */
@@ -16101,7 +16072,6 @@ EXTERN
 SCIP_RETCODE SCIPgetDiveBoundChanges(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< diving settings to control scoring */
-   SCIP_HEURDATA*        heurdata,           /**< data of the calling heuristic */
    SCIP_SOL*             sol,                /**< current solution of diving mode */
    SCIP_Bool*            success,            /**< pointer to store whether constraint handler successfully found a variable */
    SCIP_Bool*            infeasible          /**< pointer to store whether the current node was detected to be infeasible */
@@ -16162,11 +16132,8 @@ void SCIPclearDiveBoundChanges(
  * branching methods
  */
 
-/**@defgroup PublicBranchingMethods Branching
- * @ingroup PublicSolveMethods
- * @brief methods for branching on LP solutions, relaxation solutions, and pseudo solutions
+/**@addtogroup PublicBranchingMethods
  *
- * @see \ref PublicVariableMethods "Public Variable methods" contains some typical variable branching score functions
  * @{
  */
 
@@ -18327,10 +18294,7 @@ SCIP_RETCODE SCIPdropRowEvent(
  * tree methods
  */
 
-/**@defgroup PublicTreeMethods Search Tree
- * @ingroup PublicSolveMethods
- * @brief  methods to query search tree related information
- * @see \ref PublicNodeMethods "Public methods for nodes"
+/**@addtogroup PublicTreeMethods
  *
  * @{
  */
@@ -18364,6 +18328,63 @@ SCIP_NODE* SCIPgetFocusNode(
  */
 EXTERN
 SCIP_NODE* SCIPgetCurrentNode(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets depth of current node, or -1 if no current node exists; in probing, the current node is the last probing node,
+ *  such that the depth includes the probing path
+ *
+ *  @return the depth of current node, or -1 if no current node exists; in probing, the current node is the last probing node,
+ *  such that the depth includes the probing path
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+int SCIPgetDepth(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets depth of the focus node, or -1 if no focus node exists; the focus node is the currently processed node in the
+ *  branching tree, excluding the nodes of the probing path
+ *
+ *  @return the depth of the focus node, or -1 if no focus node exists; the focus node is the currently processed node in the
+ *  branching tree, excluding the nodes of the probing path
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+int SCIPgetFocusDepth(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets current plunging depth (successive times, a child was selected as next node)
+ *
+ *  @return the current plunging depth (successive times, a child was selected as next node)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+int SCIPgetPlungeDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -18488,6 +18509,20 @@ SCIP_RETCODE SCIPgetLeaves(
  */
 EXTERN
 int SCIPgetNLeaves(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets number of nodes left in the tree (children + siblings + leaves)
+ *
+ *  @return the number of nodes left in the tree (children + siblings + leaves)
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+int SCIPgetNNodesLeft(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -18679,9 +18714,7 @@ void SCIPsetFocusnodeLP(
  * parallel interface methods
  */
 
-/**@defgroup PublicParallelMethods Parallel Interface
- * @ingroup PUBLICCOREAPI
- * @brief methods to construct the parallel interface of \SCIP
+/**@addtogroup PublicParallelMethods
  *
  * @{
  */
@@ -18772,9 +18805,7 @@ SCIP_SYNCSTORE* SCIPgetSyncstore(
  * reoptimization methods
  */
 
-/**@defgroup PublicReoptimizationMethods Reoptimization
- * @ingroup PublicSolveMethods
- * @brief methods for reoptimization related tasks
+/**@addtogroup PublicReoptimizationMethods
  *
  * @{
  */
@@ -19053,9 +19084,7 @@ void SCIPgetVarCoefChg(
  * statistic methods
  */
 
-/**@defgroup PublicSolvingStatsMethods Solving Statistics
- * @ingroup PublicSolveMethods
- * @brief methods to query statistics about the solving process
+/**@addtogroup PublicSolvingStatsMethods
  *
  * @{
  */
@@ -19173,20 +19202,6 @@ SCIP_Longint SCIPgetNNodes(
  */
 EXTERN
 SCIP_Longint SCIPgetNTotalNodes(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** gets number of nodes left in the tree (children + siblings + leaves)
- *
- *  @return the number of nodes left in the tree (children + siblings + leaves)
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- */
-EXTERN
-int SCIPgetNNodesLeft(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -19822,50 +19837,6 @@ SCIP_Longint SCIPgetNConflictConssApplied(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** gets depth of current node, or -1 if no current node exists; in probing, the current node is the last probing node,
- *  such that the depth includes the probing path
- *
- *  @return the depth of current node, or -1 if no current node exists; in probing, the current node is the last probing node,
- *  such that the depth includes the probing path
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- */
-EXTERN
-int SCIPgetDepth(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** gets depth of the focus node, or -1 if no focus node exists; the focus node is the currently processed node in the
- *  branching tree, excluding the nodes of the probing path
- *
- *  @return the depth of the focus node, or -1 if no focus node exists; the focus node is the currently processed node in the
- *  branching tree, excluding the nodes of the probing path
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- */
-EXTERN
-int SCIPgetFocusDepth(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** gets maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)
  *
  *  @return the maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)
@@ -19923,19 +19894,6 @@ int SCIPgetMaxTotalDepth(
  */
 EXTERN
 SCIP_Longint SCIPgetNBacktracks(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** gets current plunging depth (successive times, a child was selected as next node)
- *
- *  @return the current plunging depth (successive times, a child was selected as next node)
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- */
-EXTERN
-int SCIPgetPlungeDepth(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -20784,9 +20742,7 @@ void SCIPstoreSolutionGap(
  */
 
 
-/**@defgroup PublicTimingMethods Timing
- * @ingroup MiscellaneousMethods
- * @brief  methods for timing
+/**@addtogroup PublicTimingMethods
  *
  * @{
  */
@@ -21086,13 +21042,7 @@ SCIP_Real SCIPgetFirstLPTime(
  * numeric values and comparisons
  */
 
-/**@defgroup PublicToleranceMethods Computations With Tolerances
- * @ingroup NumericalMethods
- * @brief  methods used by the majority of operations involving floating-point computations in \SCIP
- *
- * - query the numerical tolerances of \SCIP, as well as special values such as infinity.
- * - change tolerances inside relaxations
- * - epsilon-comparison methods for floating point numbers
+/**@addtogroup PublicToleranceMethods
  *
  * @{
  */
@@ -21897,11 +21847,7 @@ SCIP_Bool SCIPparseReal(
 /**@} */
 
 
-/**@defgroup PublicMemoryMethods Memory Management
- * @ingroup MiscellaneousMethods
- * @brief  methods and macros to use the \SCIP memory management
- *
- * @see \ref MEMORY  "Using the memory functions of SCIP" for more information
+/**@addtogroup PublicMemoryMethods
  *
  * @{
  */
@@ -22074,7 +22020,7 @@ void SCIPprintMemoryDiagnostic(
 
 /**@defgroup PublicDynamicArrayMethods Dynamic Arrays
  * @ingroup DataStructures
- * @brief  methods to create and query dynamic arrays for different types
+ * @brief methods for the creation and access of dynamic arrays
  *
  * @{
  */

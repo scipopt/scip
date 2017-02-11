@@ -33,9 +33,7 @@
 extern "C" {
 #endif
 
-/**@defgroup PublicPricerMethods Pricer
- * @ingroup PluginManagementMethods
- * @brief  methods to include and access pricer plugins of \SCIP
+/**@addtogroup PublicPricerMethods
  *
  * @{
  */

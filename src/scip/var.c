@@ -2286,7 +2286,6 @@ SCIP_RETCODE varParse(
    assert(vartype != NULL);
    assert(lazylb != NULL);
    assert(lazyub != NULL);
-   assert(endptr != NULL);
    assert(success != NULL);
 
    (*success) = TRUE;
@@ -2357,6 +2356,10 @@ SCIP_RETCODE varParse(
 
       /* parse global bounds */
       SCIP_CALL( parseBounds(set, strptr, token, &parsedlb, &parsedub, endptr) );
+
+      /* stop if parsing of bounds failed */
+      if( *endptr == NULL )
+         break;
 
       if( strncmp(token, "local", 5) == 0 && local )
       {
@@ -3778,7 +3781,6 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
    assert(set != NULL);
    assert(nvars != NULL);
-   assert(vars != NULL || *nvars == 0);
    assert(scalars != NULL || *nvars == 0);
    assert(constant != NULL);
    assert(requiredsize != NULL);
@@ -3807,7 +3809,6 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    tmpvarssize = *nvars;
 
    tmpvarssize2 = 1;
-   ntmpvars2 = 0;
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &tmpvars2, tmpvarssize2) );
@@ -4452,6 +4453,7 @@ SCIP_RETCODE SCIPvarAggregate(
    int j;
 
    assert(var != NULL);
+   assert(aggvar != NULL);
    assert(var->scip == set->scip);
    assert(var->glbdom.lb == var->locdom.lb); /*lint !e777*/
    assert(var->glbdom.ub == var->locdom.ub); /*lint !e777*/
@@ -4484,7 +4486,6 @@ SCIP_RETCODE SCIPvarAggregate(
    if( SCIPvarGetHolelistGlobal(var) != NULL )
       return SCIP_OKAY;
 
-   assert(aggvar != NULL);
    assert(aggvar->glbdom.lb == aggvar->locdom.lb); /*lint !e777*/
    assert(aggvar->glbdom.ub == aggvar->locdom.ub); /*lint !e777*/
    assert(SCIPvarGetStatus(aggvar) == SCIP_VARSTATUS_LOOSE);
@@ -8660,9 +8661,10 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
    SCIP_Real childnewleft;
    SCIP_Real childnewright;
 
+   assert(var != NULL);
+
    SCIPsetDebugMsg(set, "adding local hole (%g,%g) to <%s>\n", left, right, var->name);
 
-   assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
@@ -14098,9 +14100,6 @@ SCIP_Bool SCIPvarIsPscostRelerrorReliable(
    downsize = SCIPvarGetPseudocostCountCurrentRun(var, SCIP_BRANCHDIR_DOWNWARDS);
    upsize = SCIPvarGetPseudocostCountCurrentRun(var, SCIP_BRANCHDIR_UPWARDS);
    size = MIN(downsize, upsize);
-
-   relerrordown = 0.0;
-   relerrorup = 0.0;
 
    /* Pseudo costs relative error can only be reliable if both directions have been tried at least twice */
    if( size <= 1.9 )

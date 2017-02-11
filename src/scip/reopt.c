@@ -396,10 +396,14 @@ SCIP_Real reoptSimilarity(
       /* get the original variable */
       if( !SCIPvarIsOriginal(origvar) )
       {
+         SCIP_RETCODE retcode;
          SCIP_Real constant = 0.0;
          SCIP_Real scalar = 1.0;
 
-         SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+         retcode = SCIPvarGetOrigvarSum(&origvar, &scalar, &constant);
+
+         if( retcode != SCIP_OKAY )
+            return SCIP_INVALID;
       }
       assert(origvar != NULL && SCIPvarIsOriginal(origvar));
 
@@ -4385,8 +4389,6 @@ SCIP_RETCODE dryBranch(
 
    SCIPsetDebugMsg(set, "-> found %d redundant and %d infeasible nodes\n", nredchilds, ncutoffchilds);
 
-   c = 0;
-
    /* delete all nodes that can be cut off */
    while( ncutoffchilds > 0 )
    {
@@ -4406,8 +4408,6 @@ SCIP_RETCODE dryBranch(
       /* decrease the number of nodes to cutoff */
       --ncutoffchilds;
    }
-
-   c = 0;
 
    /* replace all redundant nodes their child nodes or cutoff the node if it is a leaf */
    while( nredchilds > 0 )
@@ -4702,6 +4702,9 @@ SCIP_RETCODE reoptSaveNewObj(
    {
       /* calculate similarity to last objective */
       reopt->simtolastobj = reoptSimilarity(reopt, set, reopt->run-1, reopt->run-2, origvars, norigvars);
+
+      if( reopt->simtolastobj == SCIP_INVALID )
+         return SCIP_INVALIDRESULT;
 
       SCIPverbMessage(set->scip, SCIP_VERBLEVEL_HIGH, NULL, "new objective has similarity of %g compared to previous.\n",
          reopt->simtolastobj);
@@ -5500,7 +5503,13 @@ SCIP_RETCODE SCIPreoptCheckRestart(
    {
       /* compute the similarity to the objective function of the first run after restarting */
       if( reopt->run > 1 && set->reopt_objsimdelay > -1.0 )
+      {
          sim = reoptSimilarity(reopt, set, reopt->run-1, MAX(0, reopt->lastrestart-1), transvars, ntransvars);
+
+         if( sim == SCIP_INVALID )
+            return SCIP_INVALIDRESULT;
+      }
+
 
       /* check similarity */
       if( SCIPsetIsFeasLT(set, sim, set->reopt_objsimdelay) )
@@ -6000,7 +6009,6 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
 
       /* delete strong branching information of some exists */
       deleteLastDualBndchgs(reopt);
-      strongbranched = FALSE;
 
       SCIP_CALL( addNode(reopt, set, lp, blkmem, node, SCIP_REOPTTYPE_FEASIBLE, FALSE, isrootnode, lowerbound) );
       break;
@@ -6018,7 +6026,6 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
          if( SCIPnodeGetNumber(node) == reopt->lastbranched )
          {
             deleteLastDualBndchgs(reopt);
-            strongbranched = FALSE;
             break;
          }
 
@@ -6052,7 +6059,6 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
 
                /* delete strong branching information if some exists */
                deleteLastDualBndchgs(reopt);
-               strongbranched = FALSE;
 
                SCIPsetDebugMsg(set, " -> new reopttype   : %d\n", SCIP_REOPTTYPE_PRUNED);
                SCIP_CALL( addNode(reopt, set, lp, blkmem, node, SCIP_REOPTTYPE_PRUNED, FALSE, isrootnode, lowerbound) );
@@ -6481,6 +6487,9 @@ SCIP_RETCODE SCIPreoptMergeVarHistory(
    {
       SCIP_Real sim;
       sim = reoptSimilarity(reopt, set, r, reopt->run-1, vars, nvars);
+
+      if( sim == SCIP_INVALID )
+         return SCIP_INVALIDRESULT;
 
       if( SCIPsetIsGT(set, sim, bestsim) )
       {

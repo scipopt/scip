@@ -32,9 +32,7 @@
 extern "C" {
 #endif
 
-/**@defgroup PublicCutMethods Cuts and Cutpools
- * @ingroup PublicLPMethods
- * @brief common methods used to manipulate, generate, and strengthen cuts and to organize the cutpool
+/**@addtogroup PublicCutMethods
  *
  * @{
  */

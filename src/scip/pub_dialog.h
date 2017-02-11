@@ -38,9 +38,7 @@ extern "C" {
  * dialog handler
  */
 
-/**@defgroup PublicDialogMethods Dialogs
- * @ingroup PluginManagementMethods
- * @brief public methods for user interface dialogs
+/**@addtogroup PublicDialogMethods
  *
  * @{
  */

@@ -3520,6 +3520,7 @@ void printBoundSection(
       /* we should print the transformed problem, otherwise no fixed variable should exists */
       assert(transformed);
 
+      /* cppcheck-suppress nullPointerRedundantCheck */
       var = fixvars[v];
 
       assert(var != NULL);

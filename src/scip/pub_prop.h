@@ -33,9 +33,7 @@
 extern "C" {
 #endif
 
-/**@defgroup PublicPropagatorMethods Propagators
- * @ingroup PluginManagementMethods
- * @brief  methods for propagator plugins
+/**@addtogroup PublicPropagatorMethods
  *
  * @{
  */

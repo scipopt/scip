@@ -121,8 +121,11 @@ SCIP_DECL_SORTPTRCOMP(compareConss)
    else if ( SCIPconsGetAge(cons1) < SCIPconsGetAge(cons2) )
       return +1;
    else
-#if 0
-   /* @todo if both constraints have the same age we prefere the constraint with more non-zeros */
+#ifdef SCIP_DISABLED_CODE
+   /* @todo if both constraints have the same age we prefere the constraint with more non-zeros
+    *       this requires a larges change of the callback, passing void-pointer (i.e. a scip
+    *       object) would necessary.
+    */
    {
       SCIP_Bool success;
       int nvars1;
@@ -871,7 +874,6 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
 {
    SCIP_Real improvement;
    int ndelconfs;
-   int ndelconfs_del;
    int i;
 
    assert(conflictstore != NULL);
@@ -881,7 +883,6 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
    assert(transprob != NULL);
 
    ndelconfs = 0;
-   ndelconfs_del = 0;
 
    /* return if we do not want to use the storage */
    if( set->conf_maxstoresize == 0 )
@@ -923,8 +924,8 @@ SCIP_RETCODE SCIPconflictstoreCleanNewIncumbent(
    assert(conflictstore->ncbconflicts >= 0);
    assert(conflictstore->nconflicts >= 0);
 
-   SCIPsetDebugMsg(set, "-> removed %d/%d conflicts, %d depending on cutoff bound\n", ndelconfs+ndelconfs_del,
-         conflictstore->nconflicts+ndelconfs+ndelconfs_del, ndelconfs);
+   SCIPsetDebugMsg(set, "-> removed %d/%d conflicts, %d depending on cutoff bound\n", ndelconfs,
+         conflictstore->nconflicts+ndelconfs, ndelconfs);
 
    return SCIP_OKAY;
 }

@@ -193,8 +193,8 @@ struct SCIP_ConsData
                                               *   over all contributing values */
    SCIP_Real             maxactdelta;        /**< maximal activity contribution of a single variable, or SCIP_INVALID if invalid */
    SCIP_VAR*             maxactdeltavar;     /**< variable with maximal activity contribution, or NULL if invalid */
-   SCIP_Longint          possignature;       /**< bit signature of coefficients that may take a positive value */
-   SCIP_Longint          negsignature;       /**< bit signature of coefficients that may take a negative value */
+   uint64_t              possignature;       /**< bit signature of coefficients that may take a positive value */
+   uint64_t              negsignature;       /**< bit signature of coefficients that may take a negative value */
    SCIP_ROW*             row;                /**< LP row, if constraint is already stored in LP row format */
    SCIP_VAR**            vars;               /**< variables of constraint entries */
    SCIP_Real*            vals;               /**< coefficients of constraint entries */
@@ -3078,7 +3078,6 @@ SCIP_Real consdataGetActivity(
       activity = 0.0;
       nposinf = 0;
       nneginf = 0;
-      negsign = FALSE;
 
       for( v = 0; v < consdata->nvars; ++v )
       {
@@ -3142,20 +3141,6 @@ SCIP_Real consdataGetFeasibility(
    return MIN(consdata->rhs - activity, activity - consdata->lhs);
 }
 
-/** returns the signature bitmask for the given variable */
-static
-SCIP_Longint getVarSignature(
-   SCIP_VAR*             var                 /**< variable */
-   )
-{
-   int sigidx;
-
-   assert(var != NULL);
-
-   sigidx = SCIPvarGetIndex(var) % (int)(8*sizeof(SCIP_Longint));
-   return ((unsigned SCIP_Longint)1) << sigidx; /*lint !e703*/
-}
-
 /** updates bit signatures after adding a single coefficient */
 static
 void consdataUpdateSignatures(
@@ -3163,7 +3148,7 @@ void consdataUpdateSignatures(
    int                   pos                 /**< position of coefficient to update signatures for */
    )
 {
-   SCIP_Longint varsignature;
+   uint64_t varsignature;
    SCIP_Real lb;
    SCIP_Real ub;
    SCIP_Real val;
@@ -3171,7 +3156,7 @@ void consdataUpdateSignatures(
    assert(consdata != NULL);
    assert(consdata->validsignature);
 
-   varsignature = getVarSignature(consdata->vars[pos]);
+   varsignature = SCIPhashSignature64(SCIPvarGetIndex(consdata->vars[pos]));
    lb = SCIPvarGetLbGlobal(consdata->vars[pos]);
    ub = SCIPvarGetUbGlobal(consdata->vars[pos]);
    val = consdata->vals[pos];
@@ -7026,7 +7011,7 @@ SCIP_RETCODE tightenBounds(
       tightenmode = 1;
 
    /* stop if we already tightened the constraint and the tightening is not forced */
-   if( !force && (consdata->boundstightened >= tightenmode) )
+   if( !force && (consdata->boundstightened >= tightenmode) ) /*lint !e574*/
       return SCIP_OKAY;
 
    /* ensure that the variables are properly sorted */
@@ -7081,7 +7066,7 @@ SCIP_RETCODE tightenBounds(
    oldnchgbdstotal = *nchgbds;
 #endif
 
-   for( nrounds = 0; (force || consdata->boundstightened < tightenmode) && nrounds < MAXTIGHTENROUNDS; ++nrounds )
+   for( nrounds = 0; (force || consdata->boundstightened < tightenmode) && nrounds < MAXTIGHTENROUNDS; ++nrounds ) /*lint !e574*/
    {
       /* mark the constraint to have the variables' bounds tightened */
       consdata->boundstightened = (unsigned int)tightenmode;
@@ -7577,7 +7562,7 @@ SCIP_RETCODE propagateCons(
 
          nfixedvars = 0;
          naddconss = 0;
-         oldnchgbds = *nchgbds;
+         SCIPdebug( oldnchgbds = *nchgbds; )
 
          SCIP_CALL( rangedRowPropagation(scip, cons, cutoff, &nfixedvars, nchgbds, &naddconss) );
 
@@ -11303,8 +11288,8 @@ SCIP_RETCODE simplifyInequalities(
    else
       hasrhs = FALSE;
 
-   oldnchgcoefs = *nchgcoefs;
-   oldnchgsides = *nchgsides;
+   SCIPdebug( oldnchgcoefs = *nchgcoefs; )
+   SCIPdebug( oldnchgsides = *nchgsides; )
 
    /* @todo also work on ranged rows */
    if( haslhs && hasrhs )
@@ -11947,9 +11932,7 @@ SCIP_RETCODE simplifyInequalities(
                   /* swap bounds for 'standard' form */
                   if( !SCIPisFeasZero(scip, lb) )
                   {
-                     SCIP_Real tmp = lb;
-                     lb = ub;
-                     ub = tmp;
+                     ub = lb;
                      val *= -1;
                   }
 
@@ -12042,9 +12025,7 @@ SCIP_RETCODE simplifyInequalities(
                   /* swap bounds for 'standard' form */
                   if( !SCIPisFeasZero(scip, lb) )
                   {
-                     SCIP_Real tmp = lb;
-                     lb = ub;
-                     ub = tmp;
+                     ub = lb;
                      val *= -1;
                   }
 
@@ -12163,8 +12144,8 @@ SCIP_RETCODE simplifyInequalities(
    /* start gcd procedure for all variables */
    do
    {
-      oldnchgcoefs = *nchgcoefs;
-      oldnchgsides = *nchgsides;
+      SCIPdebug( oldnchgcoefs = *nchgcoefs; )
+      SCIPdebug( oldnchgsides = *nchgsides; )
 
       /* stop if we have two coeffcients which are one in absolute value */
       if( SCIPisEQ(scip, REALABS(vals[nvars - 1]), 1.0) && SCIPisEQ(scip, REALABS(vals[nvars - 2]), 1.0) )
@@ -12575,7 +12556,7 @@ SCIP_RETCODE aggregateConstraints(
          }
 
          /* setup best* variables that were not setup above because we are in the commonvarlindependent case */
-         bestvarweight = diffidx0minus1weight + diffidx1minus0weight;
+         SCIPdebug( bestvarweight = diffidx0minus1weight + diffidx1minus0weight; )
          bestnvars = consdata0->nvars + consdata1->nvars - 2*nvarscommon;
       }
 
@@ -13016,8 +12997,8 @@ SCIP_RETCODE preprocessConstraintPairs(
    int* commonidx1;
    int* diffidx0minus1;
    int* diffidx1minus0;
-   SCIP_Longint possignature0;
-   SCIP_Longint negsignature0;
+   uint64_t possignature0;
+   uint64_t negsignature0;
    SCIP_Bool cons0changed;
    SCIP_Bool cons0isequality;
    int diffidx1minus0size;
@@ -13071,8 +13052,8 @@ SCIP_RETCODE preprocessConstraintPairs(
    {
       SCIP_CONS* cons1;
       SCIP_CONSDATA* consdata1;
-      SCIP_Longint possignature1;
-      SCIP_Longint negsignature1;
+      uint64_t possignature1;
+      uint64_t negsignature1;
       SCIP_Bool cons0dominateslhs;
       SCIP_Bool cons1dominateslhs;
       SCIP_Bool cons0dominatesrhs;
@@ -13259,10 +13240,10 @@ SCIP_RETCODE preprocessConstraintPairs(
 
          default:
             SCIPerrorMessage("invalid comparison result\n");
+            SCIPABORT();
             var = NULL;
             val0 = 0.0;
             val1 = 0.0;
-            SCIPABORT();
          }
          assert(var != NULL);
 
@@ -13951,9 +13932,11 @@ SCIP_RETCODE presolStuffing(
       int bestdownlocks = 1;
       int downlocks;
       int uplocks;
-      int oldnfixedvars = *nfixedvars;
-      int oldnchgbds = *nchgbds;
+      int oldnfixedvars;
+      int oldnchgbds;
 
+      SCIPdebug( oldnfixedvars = *nfixedvars; )
+      SCIPdebug( oldnchgbds = *nchgbds; )
       /* loop over all variables to identify the best and second-best ratio */
       for( v = 0; v < nvars; ++v )
       {

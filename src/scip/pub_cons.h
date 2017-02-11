@@ -41,9 +41,7 @@ extern "C" {
  * Constraint handler methods
  */
 
-/**@defgroup PublicConshdlrMethods Constraint handlers
- * @ingroup PluginManagementMethods
- * @brief methods for constraint handlers
+/**@addtogroup PublicConshdlrMethods
  *
  * @{
  */
@@ -520,9 +518,7 @@ void SCIPconshdlrSetPresolTiming(
  * Constraint methods
  */
 
-/**@defgroup PublicConstraintMethods Problem Constraints
- * @ingroup PublicProblemMethods
- * @brief Public methods for constraints
+/**@addtogroup PublicConstraintMethods
  *
  * @{
  */
@@ -578,6 +574,12 @@ int SCIPconsGetValidDepth(
 /** returns TRUE iff constraint is active in the current node */
 EXTERN
 SCIP_Bool SCIPconsIsActive(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** returns TRUE iff constraint has to be deactivated in update phase */
+EXTERN
+SCIP_Bool SCIPconsIsUpdatedeactivate(
    SCIP_CONS*            cons                /**< constraint */
    );
 

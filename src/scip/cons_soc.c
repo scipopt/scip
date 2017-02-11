@@ -4688,7 +4688,7 @@ SCIP_DECL_CONSPROP(consPropSOC)
    int         nchgbds;
 
    assert(scip     != NULL);
-   assert(conss    != NULL || nconss == 0);
+   assert(conss    != NULL || ((nconss == 0) && (nmarkedconss == 0)));
    assert(result   != NULL);
 
    *result = SCIP_DIDNOTFIND;
