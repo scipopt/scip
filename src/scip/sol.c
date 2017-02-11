@@ -1631,32 +1631,24 @@ SCIP_RETCODE SCIPsolCheck(
             lb = SCIPvarGetLbGlobal(var);
             ub = SCIPvarGetUbGlobal(var);
 
-            if( checkbounds )
+            /* if we have to check bound and one of the current bounds is violated */
+            if( checkbounds && ((!SCIPsetIsInfinity(set, -lb) && SCIPsetIsFeasLT(set, solval, lb))
+                     || (!SCIPsetIsInfinity(set, ub) && SCIPsetIsFeasGT(set, solval, ub))) )
             {
-               /* check finite lower bound */
-               if( !SCIPsetIsInfinity(set, -lb) )
-                  *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb);
+               *feasible = FALSE;
 
-               /* check finite upper bound */
-               if( !SCIPsetIsInfinity(set, ub) )
-                  *feasible = *feasible && SCIPsetIsFeasLE(set, solval, ub);
-
-               /* if one of current bounds is violated */
-               if( SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub) )
+               if( printreason )
                {
-                  if( printreason )
-                  {
-                     SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
+                  SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
                         SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), MAX(lb - solval, 0.0) + MAX(solval - ub, 0.0));
-                  }
-#ifdef SCIP_DEBUG
-                  else
-                  {
-                     SCIPsetDebugMsgPrint(set, "  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
-                        SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
-                  }
-#endif
                }
+#ifdef SCIP_DEBUG
+               else
+               {
+                  SCIPsetDebugMsgPrint(set, "  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
+                        SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+               }
+#endif
             }
 
             /* check whether there are infinite variable values that lead to an objective value of +infinity */
