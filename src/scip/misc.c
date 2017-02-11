@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2043,7 +2043,7 @@ SCIP_RETCODE SCIPhashtableCreate(
     */
    (*hashtable)->shift = 32;
    (*hashtable)->shift -= (int)ceil(
-      log(MAX(32.0, tablesize / 0.9)) / log(2));
+      log(MAX(32.0, tablesize / 0.9)) / log(2.0));
 
    /* compute size from shift */
    nslots = 1<<(32 - (*hashtable)->shift);
@@ -2275,7 +2275,7 @@ SCIP_RETCODE SCIPhashtableInsert(
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(hashtable->userptr, element);
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = hashvalue(keyval);
+   hashval = hashvalue((uint64_t) keyval);
 
    return hashtableInsert(hashtable, element, key, hashval, TRUE);
 }
@@ -2307,7 +2307,7 @@ SCIP_RETCODE SCIPhashtableSafeInsert(
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(hashtable->userptr, element);
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = hashvalue(keyval);
+   hashval = hashvalue((uint64_t) keyval);
 
    return hashtableInsert(hashtable, element, key, hashval, FALSE);
 }
@@ -2334,7 +2334,7 @@ void* SCIPhashtableRetrieve(
 
    /* get the hash value of the key */
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = hashvalue(keyval);
+   hashval = hashvalue((uint64_t) keyval);
 
    pos = hashval>>(hashtable->shift);
    elemdistance = 0;
@@ -2406,7 +2406,7 @@ SCIP_RETCODE SCIPhashtableRemove(
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(hashtable->userptr, element);
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = hashvalue(keyval);
+   hashval = hashvalue((uint64_t) keyval);
 
    elemdistance = 0;
    pos = hashval>>(hashtable->shift);
@@ -2784,7 +2784,7 @@ SCIP_RETCODE SCIPhashmapCreate(
     */
    (*hashmap)->shift = 32;
    (*hashmap)->shift -= (int)ceil(
-      log(MAX(32, mapsize / 0.9)) / log(2));
+      log(MAX(32, mapsize / 0.9)) / log(2.0));
    nslots = 1<<(32 - (*hashmap)->shift);
    (*hashmap)->mask = nslots - 1;
    (*hashmap)->blkmem = blkmem;
@@ -3110,7 +3110,7 @@ int SCIPhashmapGetNElements(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    )
 {
-   return hashmap->nelements;
+   return (int) hashmap->nelements;
 }
 
 /** gives the number of entries in the internal arrays of a hash map */
@@ -3118,7 +3118,7 @@ int SCIPhashmapGetNEntries(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    )
 {
-   return hashmap->mask + 1;
+   return (int) hashmap->mask + 1;
 }
 
 /** gives the hashmap entry at the given index or NULL if entry is empty */
@@ -9660,234 +9660,6 @@ void SCIPsplitFilename(
       *lastdot = '\0';
    }
 }
-
-#define MINREMAININGKEYSSIZE 25
-#define NELEMSMEDIANSEL 3
-/** indirectly sorts a given keys array by permuting its indices, thereby yielding a partition of the indices into keys
- *  that are larger, equal, and smaller than the weighted median
- *
- *  in a sorting key_1 > key_2 > ... > key_n, the weighted median is the element key_m at position m that satisfies
- *  sum_{i < m} weight_i < capacity, but sum_{i <= m} weight_i >= capacity.
- *
- *  If the keys are not unique, then the median is not necessarily unique, which is why the algorithm returns a range of indices for the median.
- *
- *  As a result of applying this method, the indices are partially sorted. Looping over the indices 0,...,leftmedianidx - 1
- *  yields all elements with a key strictly larger than the weighted median. Looping over the indices rightmedianidx + 1, ..., nkeys
- *  contains only elements that are smaller than the median.
- *
- *  A special case is that all keys are unique, and all weights are equal to 1. In this case, the algorithm can be used to select the k-th
- *  largest element by using a capacity k.
- *
- *  If no weights-array is passed, the algorithm assumes weights equal to 1.
- */
-void SCIPselectWeightedMedian(
-   SCIP_Real*            keys,               /**< array of key values, indexed by indices, for which we compute the weighted median */
-   int*                  indices,            /**< indices array that should be partially sorted inplace */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   int                   nkeys,              /**< the number of keys and indices (indices range from 0 to nkeys - 1) */
-   SCIP_Real             capacity,           /**< (positive) capacity for the weights */
-   SCIP_Real*            median,             /**< pointer to store the weighted median */
-   int*                  leftmedianidx,      /**< pointer to store the leftmost occurence of median */
-   int*                  rightmedianidx      /**< pointer to store the rightmost occurence of median */
-   )
-{
-   SCIP_Real keysbuffer[MINREMAININGKEYSSIZE];
-   int indicesbuffer[MINREMAININGKEYSSIZE];
-   SCIP_Real weightsbuffer[MINREMAININGKEYSSIZE];
-   int left;
-   int right;
-   int j;
-   SCIP_Real residualcapacity;
-
-   assert(keys != NULL);
-   assert(indices != NULL);
-   assert(median != NULL);
-
-   *median = SCIP_INVALID;
-   /* rule out the trivial case that the capacity is larger than all weights together. In this case, no median exists */
-   if( weights == NULL && capacity > nkeys )
-   {
-      *leftmedianidx = *rightmedianidx = nkeys;
-      return;
-   }
-   else if( weights != NULL )
-   {
-      int i;
-      SCIP_Real weightsum = 0;
-      /* sum up weights */
-      for( i = 0; i < nkeys; ++i )
-         weightsum += weights[i];
-
-      if( weightsum < capacity )
-      {
-         *leftmedianidx = *rightmedianidx = nkeys;
-         return;
-      }
-   }
-
-   left = 0;
-   right = nkeys - 1;
-   residualcapacity = capacity;
-
-   while( right - left + 1 > MINREMAININGKEYSSIZE )
-   {
-      int i;
-      int smalleridx;
-      int largeridx;
-      int pivotindex;
-      int npivots;
-      SCIP_Real largeweightsum;
-      SCIP_Real equalweightsum;
-
-      SCIP_Real pivot;
-      /* select a pivot element */
-      SCIP_Real elements[NELEMSMEDIANSEL];
-      int elementidxs[NELEMSMEDIANSEL];
-
-      /* todo maybe select pivot randomized */
-      for( i = 0; i < NELEMSMEDIANSEL; ++i )
-      {
-         int idx = left + (right - left) * i / (NELEMSMEDIANSEL - 1);
-         elements[i] = keys[indices[idx]];
-         elementidxs[i] = idx;
-      }
-
-      SCIPsortRealInt(elements, elementidxs, NELEMSMEDIANSEL);
-      pivot = elements[NELEMSMEDIANSEL / 2];
-      pivotindex = elementidxs[NELEMSMEDIANSEL / 2];
-
-      largeridx = left;
-      smalleridx = right - 1;
-
-      /* swap pivot to the rightmost position */
-      SCIPswapInts(&indices[right], &indices[pivotindex]);
-
-      /* loop over elements and swap if one is too small and one is too large */
-      while( largeridx <= smalleridx )
-      {
-         if( keys[indices[largeridx]] <= pivot && keys[indices[smalleridx]] > pivot )
-         {
-            SCIPswapInts(&indices[smalleridx], &indices[largeridx]);
-            ++largeridx;
-            --smalleridx;
-         }
-         /* loop until an element is detected that is larger than the key indexed by smalleridx */
-         while( smalleridx >= left && keys[indices[smalleridx]] <= pivot )
-            --smalleridx;
-
-
-         while( largeridx < right - 1 && keys[indices[largeridx]] > pivot )
-            ++largeridx;
-      }
-      assert(smalleridx == largeridx - 1);
-      npivots = 0;
-
-      /* place pivot element(s) back to where they belong */
-      for( i = largeridx; i <= right; ++i )
-      {
-         if( keys[indices[i]] == pivot )
-         {
-            SCIPswapInts(&indices[largeridx + npivots], &indices[i]);
-            ++npivots;
-         }
-      }
-
-      assert(npivots > 0);
-
-      if( weights != NULL )
-      {
-         largeweightsum = 0.0;
-         /* collect weights of elements larger than the pivot  */
-         for( i = left; i < largeridx; ++i )
-         {
-            assert(keys[indices[i]] > pivot);
-            largeweightsum += weights[indices[i]];
-         }
-
-         equalweightsum = 0.0;
-
-         /* collect weights of elements that are equal to the pivot */
-         for( ; i < largeridx + npivots; ++i )
-         {
-            assert(keys[indices[i]] == pivot);
-            equalweightsum += weights[indices[i]];
-         }
-      }
-      else
-      {
-         /* if all weights are equal to one, we directly know the larger and the equal weight sum */
-         largeweightsum = largeridx;
-         equalweightsum = npivots;
-      }
-      if( largeweightsum < residualcapacity && largeweightsum + equalweightsum >= residualcapacity)
-      {
-         *median = pivot;
-         *leftmedianidx = largeridx;
-         *rightmedianidx = largeridx + npivots - 1;
-
-         return;
-      }
-
-      /* pivot is too large; continue search in the left half of the array */
-      else if( largeweightsum >= residualcapacity )
-      {
-         right = largeridx - 1;
-      }
-      else
-      {
-         assert(largeweightsum + equalweightsum < residualcapacity);
-         left = largeridx + npivots;
-         residualcapacity -= largeweightsum + equalweightsum;
-      }
-   }
-
-   assert(left <= right);
-   assert(right - left + 1 <= MINREMAININGKEYSSIZE);
-
-   /* collect data for explicit sorting */
-   for( j = 0; j <= right - left; ++j )
-   {
-      int index = indices[left + j];
-      keysbuffer[j] = keys[index];
-      weightsbuffer[j] = weights != NULL ? weights[index] : 1.0;
-      indicesbuffer[j] = index;
-   }
-
-   SCIPsortDownRealRealInt(keysbuffer, weightsbuffer, indicesbuffer, right - left + 1);
-
-   /* insert the elements sorted back into the indices array */
-   for( j = 0; j < right - left + 1; ++j )
-   {
-      SCIP_Real weight = weightsbuffer[j];
-      /* we finally found the median element */
-      if( weight > residualcapacity )
-      {
-         *median = keysbuffer[j];
-         *leftmedianidx = left + j;
-         *rightmedianidx = left + j;
-         break;
-      }
-      else
-      {
-         residualcapacity -= weight;
-      }
-   }
-
-   if( j == right - left + 1 )
-   {
-      *median = SCIP_INVALID;
-      *leftmedianidx = nkeys;
-      *rightmedianidx = nkeys;
-   }
-
-   /* copy back the final indices sorting */
-   for( j = 0; j < right - left + 1; ++j )
-   {
-      indices[left + j] = indicesbuffer[j];
-   }
-}
-
-
 
 /*
  * simple functions implemented as defines

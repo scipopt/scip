@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3123,31 +3123,6 @@ SCIP_RETCODE lpSetSolutionPolishing(
       SCIP_CALL( lpSetIntpar(lp, SCIP_LPPAR_POLISHING, (polishing ? 1 : 0), success) );
       if( *success )
          lp->lpisolutionpolishing = polishing;
-   }
-   else
-      *success = FALSE;
-
-   return SCIP_OKAY;
-}
-
-/** sets the PERSISTENTSCALING setting of the LP solver */
-static
-SCIP_RETCODE lpSetPersistentScaling(
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_Bool             persistentscaling,  /**< new PERSISTENTSCALING setting */
-   SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
-   )
-{
-   assert(lp != NULL);
-   assert(success != NULL);
-
-   SCIP_CALL( lpCheckBoolpar(lp, SCIP_LPPAR_PERSISTENTSCALING, lp->lpipersistentscaling) );
-
-   if( persistentscaling != lp->lpipersistentscaling )
-   {
-      SCIP_CALL( lpSetBoolpar(lp, SCIP_LPPAR_PERSISTENTSCALING, persistentscaling, success) );
-      if( *success )
-         lp->lpipersistentscaling = persistentscaling;
    }
    else
       *success = FALSE;
@@ -8933,7 +8908,6 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpithreads = set->lp_threads;
    (*lp)->lpitiming = (int) set->time_clocktype;
    (*lp)->lpirandomseed = set->random_randomseed;
-   (*lp)->lpipersistentscaling = set->lp_persistentscaling;
    (*lp)->storedsolvals = NULL;
 
    /* allocate arrays for diving */
@@ -9064,13 +9038,6 @@ SCIP_RETCODE SCIPlpCreate(
             "LP Solver <%s>: random seed parameter not available -- SCIP parameter has no effect\n",
             SCIPlpiGetSolverName());
       }
-   }
-   SCIP_CALL( lpSetBoolpar(*lp, SCIP_LPPAR_PERSISTENTSCALING, (*lp)->lpipersistentscaling, &success) );
-   if( !success )
-   {
-      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "LP Solver <%s>: persistent scaling setting not available -- SCIP parameter has no effect\n",
-         SCIPlpiGetSolverName());
    }
 
    return SCIP_OKAY;
@@ -11138,7 +11105,9 @@ SCIP_RETCODE lpSolveStable(
    {
       usepolishing = TRUE;
       if( lp->updateintegrality )
-         lpCopyIntegrality(lp, set);
+      {
+         SCIP_CALL( lpCopyIntegrality(lp, set) );
+      }
    }
    else
       usepolishing = FALSE;
@@ -11170,7 +11139,6 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetTiming(lp, set->time_clocktype, set->time_enabled, &success) );
    SCIP_CALL( lpSetRandomseed(lp, SCIPsetInitializeRandomSeed(set, set->random_randomseed), &success) );
    SCIP_CALL( lpSetSolutionPolishing(lp, usepolishing, &success) );
-   SCIP_CALL( lpSetPersistentScaling(lp, set->lp_persistentscaling, &success) );
    SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
 

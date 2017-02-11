@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -697,9 +697,6 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    *result = SCIP_DIDNOTFIND;
 
-   SCIPdebugMsg(scip, "DINS subproblem: %d vars (%d binvars & %d intvars), %d cons\n",
-      SCIPgetNVars(subscip), SCIPgetNBinVars(subscip) , SCIPgetNIntVars(subscip) , SCIPgetNConss(subscip));
-
    /* initialize the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
 
@@ -723,6 +720,9 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    }
 
    SCIPdebugMsg(scip, "Copying the SCIP instance was %ssuccessful.\n", success ? "" : "not ");
+
+   SCIPdebugMsg(scip, "DINS subproblem: %d vars (%d binvars & %d intvars), %d cons\n",
+      SCIPgetNVars(subscip), SCIPgetNBinVars(subscip) , SCIPgetNIntVars(subscip) , SCIPgetNConss(subscip));
 
    /* store subproblem variables that correspond to original variables */
    for( i = 0; i < nvars; i++ )

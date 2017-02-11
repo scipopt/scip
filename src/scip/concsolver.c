@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -410,7 +410,7 @@ SCIP_RETCODE SCIPconcsolverSync(
 
    if( concsolver->nsyncs == 1 )
    {
-      syncdata = SCIPsyncstoreGetSyncdata(syncstore, 0);
+      syncdata = SCIPsyncstoreGetSyncdata(syncstore, 0LL);
       SCIP_CALL( SCIPsyncstoreEnsureAllSynced(syncstore, syncdata) );
       concsolver->syncdata = syncdata;
       SCIP_CALL( concsolvertype->concsolversyncread(concsolver, syncstore, syncdata, &nsols, &ntighterbnds, &ntighterintbnds) );
