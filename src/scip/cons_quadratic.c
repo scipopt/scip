@@ -5633,21 +5633,27 @@ SCIP_Bool generateCutLTIfindIntersection(
 
    if( !SCIPisZero(scip, (SCIP_Real)a) )
    {
+      c /= a;
+      b /= a;
+
       if( wl != SCIP_INVALID )  /*lint !e777 */
       {
          SCIP_Real tl1;
          SCIP_Real tl2;
          SCIP_Real denom;
 
-         if( b * b - 4.0 * a * (c - wl) < 0.0 )
+         wl /= a;
+
+         if( b * b - 4.0 * (c - wl) < 0.0 )
          {
             SCIPdebugMsg(scip, "probable numerical difficulties, give up\n");
             return TRUE;
          }
 
-         denom = sqrt(b * b - 4.0 * a * (c - wl));
-         tl1 = (-b - denom) / (2.0 * a);
-         tl2 = (-b + denom) / (2.0 * a);
+         denom = sqrt(b * b - 4.0 * (c - wl));
+         tl1 = -0.5 * (b + copysign(denom, b));
+         tl2 = (c - wl) / tl1;
+
          tl = (tl1 < 0.0) ? tl2 : tl1;
       }
 
@@ -5657,15 +5663,18 @@ SCIP_Bool generateCutLTIfindIntersection(
          SCIP_Real tu2;
          SCIP_Real denom;
 
-         if( b * b - 4.0 * a * (c - wu) < 0.0 )
+         wu /= a;
+
+         if( b * b - 4.0 * (c - wu) < 0.0 )
          {
             SCIPdebugMsg(scip, "probable numerical difficulties, give up\n");
             return TRUE;
          }
 
-         denom = sqrt(b * b - 4.0 * a * (c - wu));
-         tu1 = (-b - denom) / (2.0 * a);
-         tu2 = (-b + denom) / (2.0 * a);
+         denom = sqrt(b * b - 4.0 * (c - wu));
+         tu1 = -0.5 * (b + copysign(denom, b));
+         tu2 = (c - wu) / tu1;
+
          tu = (tu1 < 0.0) ? tu2 : tu1;
       }
    }
