@@ -5638,6 +5638,7 @@ SCIP_Bool generateCutLTIfindIntersection(
          SCIP_Real tl1;
          SCIP_Real tl2;
          SCIP_Real denom;
+         SCIP_Real q;
 
          if( b * b - 4.0 * a * (c - wl) < 0.0 )
          {
@@ -5646,8 +5647,10 @@ SCIP_Bool generateCutLTIfindIntersection(
          }
 
          denom = sqrt(b * b - 4.0 * a * (c - wl));
-         tl1 = (-b - denom) / (2.0 * a);
-         tl2 = (-b + denom) / (2.0 * a);
+         q = -0.5 * (b + copysign(denom, b));
+         tl1 = q / a;
+         tl2 = (c - wl) / q;
+
          tl = (tl1 < 0.0) ? tl2 : tl1;
       }
 
@@ -5656,6 +5659,7 @@ SCIP_Bool generateCutLTIfindIntersection(
          SCIP_Real tu1;
          SCIP_Real tu2;
          SCIP_Real denom;
+         SCIP_Real q;
 
          if( b * b - 4.0 * a * (c - wu) < 0.0 )
          {
@@ -5664,8 +5668,10 @@ SCIP_Bool generateCutLTIfindIntersection(
          }
 
          denom = sqrt(b * b - 4.0 * a * (c - wu));
-         tu1 = (-b - denom) / (2.0 * a);
-         tu2 = (-b + denom) / (2.0 * a);
+         q = -0.5 * (b + copysign(denom, b));
+         tu1 = q / a;
+         tu2 = (c - wu) / q;
+
          tu = (tu1 < 0.0) ? tu2 : tu1;
       }
    }
