@@ -230,15 +230,18 @@ SECTION: General Questions about SCIP
     LABEL:staticvsshared
     ANSWER:
     <p>
-        When SCIP builds the binary it needs to link with the corresponding libraries of the LP-solver. There are usually
-        two ways to distribute a library. In the first (.a) the library is linked <em>statically</em> to SCIP; this means
-        that all of its information is packed into the binary. In the second way (.so) the library is a <em>shared</em>
-        library. In this case, the code of the library is not inserted into the binary itself, but is loaded at
-        runtime. This has the advantage that the binaries are smaller, but it comes at the cost that you have to make
-        sure that the library is found at runtime (for most systems it suffices to put the path of the library into the
-        <code>LD_LIBRARY_PATH</code> variable).<br/><br/>
-        There are compiler-dependent preferences which libraries should be included of both, a static and a shared version of the same name are available. In order to avoid confusion,
-        SCIP separates shared from static libraries into the directories "lib/static" and "lib/shared".
+        When SCIP builds the binary, it needs to link with the corresponding libraries, i.e., its own libraries and
+        those of an LP-solver. There are usually two ways to distribute a library (on UNIX systems). In the first
+        (with suffix ".a"), the library is linked <em>statically</em> to SCIP; this means that all information is packed
+        into the binary. In the second way (with suffix ".so"), the library is a <em>shared</em> library. In this case,
+        the code of the library is not inserted into the binary itself, but is loaded at runtime. This has the advantage
+        that the binaries are smaller, but it comes at the cost that you have to make sure that the library is found at
+        runtime. (SCIP adds <code>rpath</code> information containing the path to the shared libraries to the binary;
+        this usually allows to find these libraries at runtime. If this does not work, for most systems it suffices to
+        put the path of the library into the <code>LD_LIBRARY_PATH</code> environment variable).<br/><br/>
+        There are compiler-dependent preferences which version should be included if both a static and a shared version
+        of the same library are available. In order to avoid confusion, SCIP separates shared from static libraries into
+        the directories "lib/static" and "lib/shared". Note that some LP-solvers are only shipped with a shared version.
     </p>
 
     QUESTION: Can I compile SCIP as a shared library?
