@@ -305,9 +305,8 @@
  * As a framework, \SCIP also provides the tools to solve constraint optimization problems defined over
  * integer and continuous variables. Therefore, the design of \SCIP
  * supports the easy integration of constraints of arbitrary type into the solver.
- *
- * Originally, \SCIP could solve constraint integer programs \b (CIPs), which are constraint optimization problems that become
- * linear programs (LPs) after the integer variables are fixed.
+ * More precisely, \SCIP can handle the class of constraint integer programs \b (CIPs), which are constraint optimization problems
+ * that become linear programs (LPs) after the integer variables are fixed.
  *
  * @section PROBLEMCLASSES Some important subclasses of CIP and MINLP
  *
