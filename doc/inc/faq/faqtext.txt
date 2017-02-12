@@ -3,12 +3,14 @@ SECTION: General Questions about SCIP
     LABEL:whatisscip
     ANSWER:
     <p>
-      SCIP is a solver for Mixed Integer Linear and Nonlinear Problems that allows for an easy integration of arbitrary constraints. It can be used as a framework for <b>branch-cut-and-price</b>
+      SCIP is a solver for Mixed Integer Linear and Nonlinear Problems that allows for an easy integration of arbitrary constraints.
+      It can be used as a framework for <b>branch-cut-and-price</b>
       and contains all necessary plugins to serve as a <b>standalone solver</b> for MIP and MINLP.
     </p>
     <ul>
       <li>You can use the <a href="http://scip.zib.de/#download">precompiled binaries</a>
-          to solve MIPs and MINLPs. Learn more about the <a href="PATHTODOC/group__FILEREADERS.LINKEXT">file formats supported by SCIP</a>, and get <a href="PATHTODOC/WHATPROBLEMS.LINKEXT">an overview</a>
+          to solve MIPs and MINLPs. Learn more about the <a href="PATHTODOC/group__FILEREADERS.LINKEXT">file formats supported by SCIP</a>,
+          and get <a href="PATHTODOC/WHATPROBLEMS.LINKEXT">an overview</a>
           of the supported problem classes and additional recommendations for solving them.
       </li>
       <li>You can use SCIP as a subroutine for solving MINLPs and more general constraint integer programs from your own source code.</li>
@@ -23,9 +25,9 @@ SECTION: General Questions about SCIP
     LABEL:whenusescip
     ANSWER:
     <p>
-      If you are either looking for a fast non-commercial MIP-solver or for a
+      If you are either looking for a fast non-commercial MIP/MINLP-solver or for a
       branch-cut-and-price-framework in which you can directly implement your own methods
-      &mdash; which can even be for more general purposes than MIP.
+      and allows full control of the solving process.
     </p>
 
     QUESTION: I heard something about licenses. Do I have to pay for using SCIP?
