@@ -295,7 +295,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@page WHATPROBLEMS What types of optimization problems does \SCIP solve?
+/**@page WHATPROBLEMS What types of optimization problems does SCIP solve?
  *
  * As a stand-alone solver, \SCIP can solve mixed-integer nonlinear programs \b (MINLPs), to which it applies
  * an LP based spatial branch-and-cut algorithm. This method is guaranteed to solve bounded MINLPs
@@ -322,147 +322,182 @@
  * All examples and applications use the C or C++ APIs of \SCIP. Please have a look at \ref INTERFACES "SCIP interfaces"
  * to see how to use \SCIP from within other programming languages.
  *
- * <table>
- * <caption> Some problem classes that can be solved by \SCIP</caption>
- * <tr><th>Problem class<th>Mathematical problem description <th>Supported file formats <th>Example Problems <th>Recommendations
+ * <table class="types">
+ * <caption align="top">Some problem classes that can be solved by \SCIP</caption>
+ *    <tr style="border-bottom: medium solid black;">
+ *       <th>Problem class</th>
+ *       <th>Mathematical problem description</th>
+ *       <th>Supported file formats</th>
+ *       <th>Example Problems</th>
+ *       <th>Recommendations</th>
+ *    </tr>
  * <tr>
- *    <td>Mixed-integer linear program (MIP)
+ *    <td>Mixed-integer linear program (MIP)</td>
  *    <td>\f{align*}{
  *            \text{min} \quad& c^T x \\
  *            \text{s.t.} \quad& Ax \geq b \\
  *            &l_{j} \leq x_{j} \leq u_{j} && \forall j \in \mathcal{N} \\
  *            &x_{j} \in \mathbb{Z} && \forall j \in \mathcal{I}
  *        \f}
+ *    </td>
  *    <td>
  *       <ul>
- *          <li>\ref reader_cip.h "CIP"
- *          <li>\ref reader_mps.h "MPS"
- *          <li>\ref reader_lp.h "LP"
- *          <li>\ref reader_zpl.h "ZPL"
- *       </li>
- *    <td>check/instances/MIP/
+ *          <li>\ref reader_cip.h "CIP"</li>
+ *          <li>\ref reader_mps.h "MPS"</li>
+ *          <li>\ref reader_lp.h "LP"</li>
+ *          <li>\ref reader_zpl.h "ZPL"</li>
+ *       </ul>
+ *    </td>
+ *    <td>check/instances/MIP/</td>
  *    <td>
  *       <ul>
  *          <li>\SCIP requires an external LP solver to solve LP relaxations, which needs to be specified
  *          at compilation time. By default, it uses SoPlex (<code>LPS=spx</code>). See \ref MAKE for a
- *          list of available LP solver interfaces and how to use them inside \SCIP.
- *          <li>Compile with Zimpl support (<code>ZIMPL=true</code>) to read in Zimpl models directly.
+ *          list of available LP solver interfaces and how to use them inside \SCIP.</li>
+ *          <li>Compile with Zimpl support (<code>ZIMPL=true</code>) to read in Zimpl models directly.</li>
  *          <li>\SCIP comes with many different parameters. Use the provided emphasis settings (see \ref SHELL "this tutorial")
- *          to change many parameters at once and boost the performance.
+ *          to change many parameters at once and boost the performance.</li>
  *       </ul>
+ *    </td>
+ * </tr>
  * <tr>
- *    <td>Mixed-integer nonlinear program (MINLP)
+ *    <td>Mixed-integer nonlinear program (MINLP)</td>
  *    <td>\f{align*}{
  *            \text{min} \quad& f(x) \\
  *            \text{s.t.} \quad& g_{i}(x) \leq 0 && \forall i \in \mathcal{M} \\
  *            &l_{j} \leq x_{j} \leq u_{j} && \forall j \in \mathcal{N} \\
  *            &x_{j} \in \mathbb{Z} && \forall j \in \mathcal{I}
  *        \f}
+ *    </td>
  *    <td>
  *        <ul>
- *          <li>\ref reader_cip.h "CIP"
- *          <li>\ref reader_gms.h "GMS"
- *          <li>\ref reader_osil.h "OSiL"
- *          <li>\ref reader_pip.h "PIP"
- *          <li>\ref reader_zpl.h "ZPL"
+ *          <li>\ref reader_cip.h "CIP"</li>
+ *          <li>\ref reader_gms.h "GMS"</li>
+ *          <li>\ref reader_osil.h "OSiL"</li>
+ *          <li>\ref reader_pip.h "PIP"</li>
+ *          <li>\ref reader_zpl.h "ZPL"</li>
  *          <li>For MIQCPS:
- *          <ul>
- *              <li>\ref reader_lp.h "LP"
- *              <li>\ref reader_mps.h "MPS"
+ *             <ul>
+ *                <li>\ref reader_lp.h "LP"</li>
+ *                <li>\ref reader_mps.h "MPS"</li>
+ *             </ul>
+ *          </li>
  *        </ul>
- *    <td>check/instances/MINLP/
+ *    </td>
+ *    <td>check/instances/MINLP/</td>
  *    <td>
  *       <ul>
- *          <li>Compile with <code>IPOPT=true</code> for better performance
- *          <li>Compile with <code>GAMS=true</code> to read gms-files
- *          <li>See <a href="FAQ\FILEEXT#minlptypes"> Which kind of MINLPs are supported by \SCIP? </a> in the FAQ.
- *          <li>There is an interface for the modelling language AMPL, see \ref INTERFACES.
- *          <li>Mixed-integer quadratically constrained programs (MIQCP) can also be formulated as
- *          <ul>
- *              <li>\ref reader_lp.h "LP"
- *              <li>\ref reader_mps.h "MPS"
- *        </ul>
+ *          <li>Compile with <code>IPOPT=true</code> for better performance.</li>
+ *          <li>Compile with <code>GAMS=true</code> to read gms-files.</li>
+ *          <li>See <a href="FAQ\FILEEXT#minlptypes"> Which kind of MINLPs are supported by \SCIP? </a> in the FAQ.</li>
+ *          <li>There is an interface for the modelling language AMPL, see \ref INTERFACES.</li>
+ *          <li>Mixed-integer quadratically constrained programs (MIQCP) can also be formulated in the file formats
+ *             <ul>
+ *                <li>\ref reader_lp.h "LP", and</li>
+ *                <li>\ref reader_mps.h "MPS".</li>
+ *             </ul>
+ *          </li>
+ *       </ul>
+ *    </td>
+ * </td>
  * <tr>
- *    <td>Constraint Integer Program (CIP)
+ *    <td>Constraint Integer Program (CIP)</td>
  *    <td>\f{align*}{
  *            \text{min} \quad& c^T x + d^T y \\
  *            \text{s.t.} \quad& C_i(x,y) = \text{true} && \forall i \in \mathcal{M} \\
  *            & x \in \mathbb{Z}^{p}, y  \in \mathbb{R}^{n - p}
  *        \f}
  *        where \f$\forall i \in\mathcal{M}, \forall x^* \in \mathbb{Z}^{p},\f$ \f$ \{ y : C_i(x^*, y) = \text{true} \} \f$ is a polyhedron.
+ *    </td>
  *    <td>
  *       <ul>
- *          <li>\ref reader_cip.h "CIP"
- *          <li>\ref reader_fzn.h "FlatZinc"
+ *          <li>\ref reader_cip.h "CIP"</li>
+ *          <li>\ref reader_fzn.h "FlatZinc"</li>
  *       </ul>
- *    <td>check/instances/CP
+ *    </td>
+ *    <td>check/instances/CP</td>
  *    <td>
  *       <ul>
- *          <li>\SCIP supports a limited number of arbitrary constraints; see \ref CONS "How to add constraint handlers"
- *          to learn how to extend the \SCIP framework to a given CIP.
+ *          <li>\SCIP supports a limited number of general constraints; see \ref CONS "How to add constraint handlers"
+ *          to learn how to extend the \SCIP framework to a given CIP.</li>
  *          <li>Use the emphasis setting <code>set emphasis cpsolver</code> to completely disable LP solves and
  *          use depth-first search with periodic restarts, see also
- *          <a href="FAQ\FILEEXT#scipascpsolver"> Can I use \SCIP as a pure CP solver? </a> in the FAQ.
+ *          <a href="FAQ\FILEEXT#scipascpsolver"> Can I use \SCIP as a pure CP solver? </a> in the FAQ.</li>
  *       </ul>
+ *    </td>
  * <tr>
- *    <td>Convex MINLP
- *    <td>like MINLP, all \f$g_i\f$ are \b convex.
- *    <td> see MINLP formats
- *    <td>
- *       check/instances/MINLP/circle.cip
+ *    <td>Convex MINLP</td>
+ *    <td>Like MINLP, \f$f\f$ and all \f$g_i\f$ are \b convex.</td>
+ *    <td>see MINLP formats</td>
+ *    <td>check/instances/MINLP/circle.cip</td>
  *    <td>
  *       <ul>
- *          <li>everything that holds for MINLP
- *          <li>in addition, use <code>constraints/nonlinear/assumeconvex = TRUE</code> to inform \SCIP about a convex
- *          problem in cases where the automated detection is not strong enough.
+ *          <li>See the comments for MINLP.</li>
+ *          <li>In addition, use <code>constraints/nonlinear/assumeconvex = TRUE</code> to inform \SCIP about a convex
+ *          problem in cases where the automated detection is not strong enough.</li>
  *       </ul>
+ *    </td>
+ * </td>
  * <tr>
- *    <td>Linear program (LP)
+ *    <td>Linear program (LP)</td>
  *    <td>\f{align*}{
  *            \text{min} \quad& c^T x \\
  *            \text{s.t.} \quad& Ax \geq b \\
  *            & x_{j} \geq 0 && \forall j \in \mathcal{N}
  *        \f}
- *    <td>see MIP formats
- *    <td>
- *    <td>see <a href="FAQ\FILEEXT#scipaslpsolver">Can I use \SCIP as a pure LP solver</a> in the FAQ.
+ *    </td>
+ *    <td>see MIP formats</td>
+ *    <td></td>
+ *    <td>See <a href="FAQ\FILEEXT#scipaslpsolver">Can I use \SCIP as a pure LP solver</a> in the FAQ.</td>
+ * </td>
  * <tr>
- *    <td>Pseudoboolean optimization
+ *    <td>Pseudoboolean optimization</td>
  *    <td>\f{align*}{
  *            \text{min} \quad& c^T x \\
  *            \text{s.t.} \quad& \sum_{k=0}^p a_{ik} \cdot \prod_{j \in \mathcal{N}_{ik}} x_j \leq b_i && \forall i \in \mathcal{M} \\
  *            &x_{j} \in \{0,1\} && \forall j \in \mathcal{N}
  *        \f}
+ *    </td>
  *    <td>
  *       <ul>
- *          <li>\ref reader_wbo.h "WBO"
- *          <li>\ref reader_opb.h "OPB"
+ *          <li>\ref reader_wbo.h "WBO"</li>
+ *          <li>\ref reader_opb.h "OPB"</li>
  *       </ul>
- *    <td>check/instances/PseudoBoolean/
+ *    </td>
+ *    <td>check/instances/PseudoBoolean/</td>
+ *    <td></td>
+ * </tr>
  * <tr>
- *    <td>Satisfiability (SAT) and variants
+ *    <td>Satisfiability (SAT) and variants</td>
  *    <td>\f{align*}{
  *            \text{min} \quad& 0 \\
  *            \text{s.t.} \quad&\bigvee\limits_{j \in B_i} x_j \vee \bigvee\limits_{j \in \bar{B}_i} \neg x_j = \text{true} && \forall i \in \mathcal{M}\\
  *            &x_{j} \in \{\text{false},\text{true}\} && \forall j \in \mathcal{N}
  *        \f}
+ *    </td>
  *    <td>
  *        <ul>
- *          <li>\ref reader_cnf.h "CNF"
+ *          <li>\ref reader_cnf.h "CNF"</li>
  *       </ul>
- *    <td>check/instances/SAT/
+ *    </td>
+ *    <td>check/instances/SAT/</td>
  *    <td>Use the emphasis setting <code>set emphasis cpsolver</code> to completely disable LP solves and
  *          use depth-first search with periodic restarts, see also
  *          <a href="FAQ\FILEEXT#scipascpsolver"> Can I use \SCIP as a pure CP/SAT solver? </a> in the FAQ.
+ *    </td>
+ * </tr>
  * <tr>
- *    <td>Multicriteria optimization
+ *    <td>Multicriteria optimization</td>
  *    <td>\f{align*}{
  *         \text{min} \quad &(c_1^T x,\ldots,c_k^T x) \\
  *         \text{s.t. } \quad& Ax \geq b \\
  *         &x \in \mathbb{K}^n
  *          \f}
  *          where \f$\mathbb{K}\f$ is either \f$\mathbb{Z}\f$ or \f$\mathbb{R}\f$.
- *     <td colspan="3"> see the <a href="http://polyscip.zib.de/">PolySCIP web page</a>
+ *    </td>
+ *    <td colspan="3"> see the <a href="http://polyscip.zib.de/">PolySCIP web page</a></td>
+ * </tr>
+ * </table>
  *
  *
  */
