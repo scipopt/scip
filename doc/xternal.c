@@ -328,7 +328,6 @@
  *       <th>Problem class</th>
  *       <th>Mathematical problem description</th>
  *       <th>Supported file formats</th>
- *       <th>Example Problems</th>
  *       <th>Recommendations</th>
  *    </tr>
  * <tr>
@@ -348,7 +347,6 @@
  *          <li>\ref reader_zpl.h "ZPL"</li>
  *       </ul>
  *    </td>
- *    <td>check/instances/MIP/</td>
  *    <td>
  *       <ul>
  *          <li>\SCIP requires an external LP solver to solve LP relaxations, which needs to be specified
@@ -357,6 +355,7 @@
  *          <li>Compile with Zimpl support (<code>ZIMPL=true</code>) to read in Zimpl models directly.</li>
  *          <li>\SCIP comes with many different parameters. Use the provided emphasis settings (see \ref SHELL "this tutorial")
  *          to change many parameters at once and boost the performance.</li>
+ *          <li>Test instances are available at <code>check/instances/MIP/</code>.</li>
  *       </ul>
  *    </td>
  * </tr>
@@ -384,7 +383,6 @@
  *          </li>
  *        </ul>
  *    </td>
- *    <td>check/instances/MINLP/</td>
  *    <td>
  *       <ul>
  *          <li>Compile with <code>IPOPT=true</code> for better performance.</li>
@@ -397,6 +395,7 @@
  *                <li>\ref reader_mps.h "MPS".</li>
  *             </ul>
  *          </li>
+ *          <li>Test instances are available at <code>check/instances/MINLP/</code>.</li>
  *       </ul>
  *    </td>
  * </td>
@@ -415,7 +414,6 @@
  *          <li>\ref reader_fzn.h "FlatZinc"</li>
  *       </ul>
  *    </td>
- *    <td>check/instances/CP</td>
  *    <td>
  *       <ul>
  *          <li>\SCIP supports a limited number of general constraints; see \ref CONS "How to add constraint handlers"
@@ -423,18 +421,19 @@
  *          <li>Use the emphasis setting <code>set emphasis cpsolver</code> to completely disable LP solves and
  *          use depth-first search with periodic restarts, see also
  *          <a href="FAQ\FILEEXT#scipascpsolver"> Can I use \SCIP as a pure CP solver? </a> in the FAQ.</li>
+ *          <li>Test instances are available at <code>check/instances/CP</code>.</li>
  *       </ul>
  *    </td>
  * <tr>
  *    <td>Convex MINLP</td>
  *    <td>Like MINLP, \f$f\f$ and all \f$g_i\f$ are \b convex.</td>
  *    <td>see MINLP formats</td>
- *    <td>check/instances/MINLP/circle.cip</td>
  *    <td>
  *       <ul>
  *          <li>See the comments for MINLP.</li>
  *          <li>In addition, use <code>constraints/nonlinear/assumeconvex = TRUE</code> to inform \SCIP about a convex
  *          problem in cases where the automated detection is not strong enough.</li>
+ *          <li>Test instances are available at <code>check/instances/MINLP/circle.cip</code>.</li>
  *       </ul>
  *    </td>
  * </td>
@@ -447,7 +446,6 @@
  *        \f}
  *    </td>
  *    <td>see MIP formats</td>
- *    <td></td>
  *    <td>See <a href="FAQ\FILEEXT#scipaslpsolver">Can I use \SCIP as a pure LP solver</a> in the FAQ.</td>
  * </td>
  * <tr>
@@ -464,8 +462,11 @@
  *          <li>\ref reader_opb.h "OPB"</li>
  *       </ul>
  *    </td>
- *    <td>check/instances/PseudoBoolean/</td>
- *    <td></td>
+ *    <td>
+ *       <ul>
+ *          <li>Test instances are available at <code>check/instances/PseudoBoolean/</code>.</li>
+ *       </ul>
+ *    </td>
  * </tr>
  * <tr>
  *    <td>Satisfiability (SAT) and variants</td>
@@ -480,10 +481,13 @@
  *          <li>\ref reader_cnf.h "CNF"</li>
  *       </ul>
  *    </td>
- *    <td>check/instances/SAT/</td>
- *    <td>Use the emphasis setting <code>set emphasis cpsolver</code> to completely disable LP solves and
+ *    <td>
+ *       <ul>
+ *         <li>Use the emphasis setting <code>set emphasis cpsolver</code> to completely disable LP solves and
  *          use depth-first search with periodic restarts, see also
- *          <a href="FAQ\FILEEXT#scipascpsolver"> Can I use \SCIP as a pure CP/SAT solver? </a> in the FAQ.
+ *          <a href="FAQ\FILEEXT#scipascpsolver"> Can I use \SCIP as a pure CP/SAT solver? </a> in the FAQ.</li>
+ *         <li>Test instances are available at <code>check/instances/SAT/</code>.</li>
+ *       </ul>
  *    </td>
  * </tr>
  * <tr>
