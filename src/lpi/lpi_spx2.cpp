@@ -2621,8 +2621,8 @@ SCIP_RETCODE lpiStrongbranch(
 
    if( error )
    {
-      SCIPdebugMessage("SCIPlpiStrongbranch() returned SoPlex status %d\n", int(status));
-      return SCIP_LPERROR;  /*lint !e644*/
+      SCIPdebugMessage("SCIPlpiStrongbranch() returned SoPlex status %d\n", int(status));  /*lint !e644*/
+      return SCIP_LPERROR;
    }
 
    return SCIP_OKAY;
