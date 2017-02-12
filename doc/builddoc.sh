@@ -7,7 +7,7 @@
 # Optionally, a custom .dxy file can be passed for the doxygen configuration
 #
 
-if [ $1 != "" ]
+if [ "$1" != "" ]
 then
     DOXYFILE=$1
 else
