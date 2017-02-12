@@ -1965,7 +1965,7 @@
  * If you are using pricer data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &pricerdata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &pricerdata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_PricerData afterwards.
  *
@@ -2235,7 +2235,7 @@
  * If you are using presolver data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_PresolData afterwards. For freeing the
  * presolver data, see \ref PRESOLFREE.
@@ -2459,7 +2459,7 @@
  * If you are using separator data, you have to allocate the memory
  * for the data at this point. You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
  * \endcode
  * You also have to initialize the fields in "struct SCIP_SepaData" afterwards. For freeing the
  * separator data, see \ref SEPAFREE.
@@ -2718,7 +2718,7 @@
  * If you are using propagator data, you have to allocate the memory for the data at this point.  You can do this by
  * calling
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &propdata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
  * \endcode
  * You also have to initialize the fields in <code>struct SCIP_PropData</code> afterwards.
  *
@@ -2992,7 +2992,7 @@
  * If you are using branching rule data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_BranchruleData afterwards.
  *
@@ -3272,7 +3272,7 @@
  * If you are using node selector data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &nodeseldata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_NodeselData afterwards.
  *
@@ -3582,7 +3582,7 @@
  * If you are using primal heuristic data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_HeurData afterwards.
  *
@@ -3902,7 +3902,7 @@
  * If you are using relaxation handler data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &relaxdata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &relaxdata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_RelaxData afterwards.
  *
@@ -4121,7 +4121,7 @@
  * If you are using file reader data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &readerdata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_ReaderData afterwards.
  *
@@ -4330,7 +4330,7 @@
  * If you are using dialog data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &dialogdata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &dialogdata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_DialogData afterwards.
  *
@@ -4538,7 +4538,7 @@
  * If you are using display column data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &dispdata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &dispdata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_DispData afterwards.
  *
@@ -4708,7 +4708,7 @@
  * If you are using event handler data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_EventhdlrData afterwards.
  *
@@ -4928,7 +4928,7 @@
  * If you are using NLPI data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &nlpidata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &nlpidata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_NlpiData afterwards. For freeing the
  * NLPI data, see \ref NLPIFREE.
