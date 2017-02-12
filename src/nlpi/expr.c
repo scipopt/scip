@@ -2862,6 +2862,7 @@ SCIP_DECL_EXPREVAL( exprevalPolynomial )
 #ifdef NAN
                *result = NAN;
 #else
+               /* cppcheck-suppress wrongmathcall */
                *result = pow(0.0, -1.0);
 #endif
                return SCIP_OKAY;

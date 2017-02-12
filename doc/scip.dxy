@@ -957,7 +957,7 @@ EXCLUDE_SYMBOLS        = Ipopt \
                          InferInfo \
                          levelGraph \
                          LpInput \
-                         PROBLEM \
+                         Problem \
                          mcfdata \
                          MpsInput \
                          nodepair \

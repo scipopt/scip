@@ -318,14 +318,39 @@
  * every LP is a MIP is an MINLP), the formats for the superclass should always work just as fine, although they
  * may be less common for the class at hand.
  *
- * Please see also the pages on \ref EXAMPLES "\SCIP Examples" and \ref APPLICATIONS "\SCIP Applications" to learn more on how
+ * Please see also the pages on \ref EXAMPLES "SCIP Examples" and \ref APPLICATIONS "SCIP Applications" to learn more on how
  * to extend \SCIP for a particular MIP, MINLP, or CIP application.
- * All examples and applications use the C or C++ APIs of \SCIP. Please have a look at \ref INTERFACES "\SCIP interfaces"
+ * All examples and applications use the C or C++ APIs of \SCIP. Please have a look at \ref INTERFACES "SCIP interfaces"
  * to see how to use \SCIP from within other programming languages.
  *
  * <table>
  * <caption> Some problem classes that can be solved by \SCIP</caption>
  * <tr><th>Problem class<th>Mathematical problem description <th>Supported file formats <th>Example Problems <th>Recommendations
+ * <tr>
+ *    <td>Mixed-integer linear program (MIP)
+ *    <td>\f{align*}{
+ *            \text{min} \quad& c^T x \\
+ *            \text{s.t.} \quad& Ax \geq b \\
+ *            &l_{j} \leq x_{j} \leq u_{j} && \forall j \in \mathcal{N} \\
+ *            &x_{j} \in \mathbb{Z} && \forall j \in \mathcal{I}
+ *        \f}
+ *    <td>
+ *       <ul>
+ *          <li>\ref reader_cip.h "CIP"
+ *          <li>\ref reader_mps.h "MPS"
+ *          <li>\ref reader_lp.h "LP"
+ *          <li>\ref reader_zpl.h "ZPL"
+ *       </li>
+ *    <td>check/instances/MIP/
+ *    <td>
+ *       <ul>
+ *          <li>\SCIP requires an external LP solver to solve LP relaxations, which needs to be specified
+ *          at compilation time. By default, it uses SoPlex (<code>LPS=spx</code>). See \ref MAKE for a
+ *          list of available LP solver interfaces and how to use them inside \SCIP.
+ *          <li>Compile with Zimpl support (<code>ZIMPL=true</code>) to read in Zimpl models directly.
+ *          <li>\SCIP comes with many different parameters. Use the provided emphasis settings (see \ref SHELL "this tutorial")
+ *          to change many parameters at once and boost the performance.
+ *       </ul>
  * <tr>
  *    <td>Mixed-integer nonlinear program (MINLP)
  *    <td>\f{align*}{
@@ -341,13 +366,23 @@
  *          <li>\ref reader_osil.h "OSiL"
  *          <li>\ref reader_pip.h "PIP"
  *          <li>\ref reader_zpl.h "ZPL"
+ *          <li>For MIQCPS:
+ *          <ul>
+ *              <li>\ref reader_lp.h "LP"
+ *              <li>\ref reader_mps.h "MPS"
  *        </ul>
  *    <td>check/instances/MINLP/
  *    <td>
  *       <ul>
  *          <li>Compile with <code>IPOPT=true</code> for better performance
  *          <li>Compile with <code>GAMS=true</code> to read gms-files
- *          <li>see <a href="FAQ\FILEEXT#minlptypes"> Which kind of MINLPs are supported by \SCIP? </a> in the FAQ.
+ *          <li>See <a href="FAQ\FILEEXT#minlptypes"> Which kind of MINLPs are supported by \SCIP? </a> in the FAQ.
+ *          <li>There is an interface for the modelling language AMPL, see \ref INTERFACES.
+ *          <li>Mixed-integer quadratically constrained programs (MIQCP) can also be formulated as
+ *          <ul>
+ *              <li>\ref reader_lp.h "LP"
+ *              <li>\ref reader_mps.h "MPS"
+ *        </ul>
  * <tr>
  *    <td>Constraint Integer Program (CIP)
  *    <td>\f{align*}{
@@ -381,31 +416,6 @@
  *          <li>everything that holds for MINLP
  *          <li>in addition, use <code>constraints/nonlinear/assumeconvex = TRUE</code> to inform \SCIP about a convex
  *          problem in cases where the automated detection is not strong enough.
- *       </ul>
- * <tr>
- *    <td>Mixed-integer linear program (MIP)
- *    <td>\f{align*}{
- *            \text{min} \quad& c^T x \\
- *            \text{s.t.} \quad& Ax \geq b \\
- *            &l_{j} \leq x_{j} \leq u_{j} && \forall j \in \mathcal{N} \\
- *            &x_{j} \in \mathbb{Z} && \forall j \in \mathcal{I}
- *        \f}
- *    <td>
- *       <ul>
- *          <li>\ref reader_cip.h "CIP"
- *          <li>\ref reader_mps.h "MPS"
- *          <li>\ref reader_lp.h "LP"
- *          <li>\ref reader_zpl.h "ZPL"
- *       </li>
- *    <td>check/instances/MIP/
- *    <td>
- *       <ul>
- *          <li>\SCIP requires an external LP solver to solve LP relaxations, which needs to be specified
- *          at compilation time. By default, it uses SoPlex (<code>LPS=spx</code>). See \ref MAKE for a
- *          list of available LP solver interfaces and how to use them inside \SCIP.
- *          <li>Compile with Zimpl support (<code>ZIMPL=true</code>) to read in Zimpl models directly.
- *          <li>\SCIP comes with many different parameters. Use the provided emphasis settings (see \ref SHELL "this tutorial")
- *          to change many parameters at once and boost the performance.
  *       </ul>
  * <tr>
  *    <td>Linear program (LP)
@@ -743,7 +753,7 @@
  * do NOT support creating the doxygen documentation and readline-usage under windows.
  *
  *
- * @section RUN How to run \SCIP after successfully compiling \SCIP
+ * @section RUN How to run SCIP after a successful compilation
  *
  * To run the program, enter <code>bin/scip</code> for the last compiled version. If you have more than one compiled
  * binary (i. e., one in debug and one in optimized mode) and wish to specify the binary, type
@@ -6882,6 +6892,8 @@
  *
  * \verbinclude SCIP-release-notes-3.2.1
  *
+ * Please consult the <a href="nbn-resolving.de/urn:nbn:de:0297-zib-57675">release report</a> that explains many of the new features in detail.
+ *
  * \verbinclude SCIP-release-notes-3.2
  *
  * \verbinclude SCIP-release-notes-3.1
@@ -6929,24 +6941,6 @@
  * \verbinclude parameters.set
  */
 
-/**@page PYTHON_INTERFACE Python interface for the SCIP Optimization Suite
- *
- * This page shows how to install the Python interface that comes with SCIP. A short usage example is shown below.
- *
- * INSTALL:
- * \verbinclude interfaces/python/INSTALL
- *
- * Usage information (README):
- * \verbinclude interfaces/python/README
- */
-
-/**@page JNI_INTERFACE Java native interface for SCIP
- *
- * This page shows how to install and test the Java native interface (JNI) of SCIP.
- *
- * \verbinclude interfaces/jni/README
- */
-
 /**@page INTERFACES Interfaces
   *
   * There are several ways of accessing the \SCIP Optimization Suite from other software packages or programming
@@ -6960,14 +6954,6 @@
   *  \SCIP is capable of reading more than ten different file formats, including formats for nonlinear
   *  problems and constraint programs. This gives researchers from different communities an easy, first access to the
   *  \SCIP Optimization Suite. See also the \ref AVAILABLEFORMATS "list of readable file formats".
-  *
-  *
-  * @section CPLUSPLUS C++ wrapper
-  *
-  * Since \SCIP is written in C, its callable library can be directly accessed from C++. If a user wants to program own
-  * plugins in C++, there are wrapper classes for all different types of plugins available in the <code>src/objscip</code>
-  * directory of the \SCIP standard distribution. See also <a href=annotated.php>Wrapper Classes</a>.
-  *
   *
   * @section MODELLING Modeling languages and Matlab interface
   *
@@ -6985,9 +6971,21 @@
   * <a href="http://users.isy.liu.se/johanl/yalmip/pmwiki.php?n=Main.HomePage">YALMIP</a> by Johan L&ouml;fberg provides a
   * free modeling language.
   *
-  * @section OTHER Python and Java interfaces
   *
-  * With \SCIP 3.1, beta versions of a \ref JNI_INTERFACE "Java native interface" and a \ref PYTHON_INTERFACE "Python interface" have been released.
+  * @section CPLUSPLUS C++ wrapper classes
+  *
+  * Since \SCIP is written in C, its callable library can be directly accessed from C++. If a user wants to program own
+  * plugins in C++, there are wrapper classes for all different types of plugins available in the <code>src/objscip</code>
+  * directory of the \SCIP standard distribution. SCIP provides several examples that were written in C++, see
+  * \ref EXAMPLES "Examples" and select an example written in C++.
+  *
+  *
+  * @section OTHER Interfaces for other programming languages
+  *
+  * Interfaces for other programming languages are developed and maintained independently from the SCIP Optimization Suite
+  * on <a href="https://github.com/SCIP-Interfaces">GitHub</a> in order to provide extensions and patches faster
+  * and to collaborate on them more easily. Besides the popular interfaces for Python and Java, there is also an interface
+  * for Julia available. Contributions to these projects are very welcome.
   *
   * There are also several third-party python interfaces to the \SCIP Optimization Suite, e.g., <a
   * href="http://numberjack.ucc.ie/">NUMBERJACK</a> and <a
