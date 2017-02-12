@@ -6186,7 +6186,6 @@ SCIP_RETCODE createAndAddDualray(
 static
 SCIP_RETCODE tightenSingleVar(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict pool data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_TREE*            tree,               /**< tree data */
@@ -6371,7 +6370,7 @@ SCIP_RETCODE performDualRayAnalysis(
     */
    if( nmirvars == 1 && !diving )
    {
-      SCIP_CALL( tightenSingleVar(conflict, conflictstore, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
+      SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
             branchcand, eventqueue, cliquetable, mirvars[varinds[0]], mirvals[varinds[0]], mirrhs, success) );
    }
    else
@@ -6383,7 +6382,7 @@ SCIP_RETCODE performDualRayAnalysis(
       /* only one variable has a coefficient different to zero, we add this bound change instead of a constraint */
       if( nmirvars == 1 && mirsuccess && !diving )
       {
-         SCIP_CALL( tightenSingleVar(conflict, conflictstore, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
+         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
                branchcand, eventqueue, cliquetable, mirvars[varinds[0]], mirvals[varinds[0]], mirrhs, success) );
       }
       else
