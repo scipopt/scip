@@ -253,7 +253,7 @@ SECTION: General Questions about SCIP
         You can use the <code>SHARED=true</code> option
         when making SCIP. This will generate the libraries of SCIP in shared format. The binary then
         also uses this form. Note that the path to the <code>lib/shared</code> directory of SCIP is used to
-        locate the libraries. If you want to move the libraries, you might to set the
+        locate the libraries. If you want to move the libraries, you might need to set the
         <code>LD_LIBRARY_PATH</code> environment variable to include the new path.
 
         <!--
