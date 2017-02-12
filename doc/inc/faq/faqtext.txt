@@ -186,13 +186,13 @@ SECTION: General Questions about SCIP
     <p>
         Since LPs are only special types of MIPs and CIPs, the principal answer is yes. If you feed a pure LP to SCIP, it
         will first apply presolving and then hand this presolved problem to the underlying LP solver. If the LP is solved to
-        optimality, you can query the optimal solution values as always.
+        optimality, you can query the optimal solution values as always. You can also access the values of an optimal dual
+        solution by using <code>display dualsolution</code>.
     </p>
     <p>
-        However, there are certain limitations to this: Dual multipliers and reduced costs are not accessible. If the LP
-        turns out to be infeasible, you cannot obtain the Farkas proof. Strong LP duality theory does
-        not apply to MIP or CIP and there is no special functionality implemented in SCIP for the case
-        that the solved problem is an LP.
+        However, there are certain limitations to this: Reduced costs are not accessible. If the LP
+        turns out to be infeasible, you cannot currently obtain a Farkas proof. And recall that this approach is only
+        meaningful if the problem is an LP (no integer variables, only linear constraints).
     </p>
     <p>
         Hence, if you need more, "LP specific", information than the primal solution, you are better off using an LP-Solver
