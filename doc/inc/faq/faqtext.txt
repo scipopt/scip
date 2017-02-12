@@ -71,12 +71,12 @@ SECTION: General Questions about SCIP
     </p>
     <ul>
       <li><a href="http://soplex.zib.de/">SoPlex</a></li>
-      <li><a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">ILOG CPLEX</a></li>
+      <li><a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">IBM ILOG CPLEX</a></li>
       <li><a href="http://www.fico.com/en/Products/DMTools/Pages/FICO-Xpress-Optimization-Suite.aspx">FICO XPress</a></li>
-      <li><a href="http://www.gurobi.com/">Gurobi</a> (interface is in beta stage)</li>
-      <li><a href="https://projects.coin-or.org/Clp/">CLP</a> (with some known issues)</li>
+      <li><a href="http://www.gurobi.com/">Gurobi</a> (interface is in beta stage, version at least 7.0.2 required)</li>
+      <li><a href="https://projects.coin-or.org/Clp/">CLP</a> (interface currently sometimes produces wrong results)</li>
       <li><a href="http://www.mosek.com/">Mosek</a> (experimental)</li>
-      <li><a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a> (experimental) for solving exactly over the rational numbers</li>
+      <li><a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a> (experimental)</li>
     </ul>
     <p>
       We also provide some <a href="http://scip.zib.de/#download">precompiled binaries</a>. Besides that,
