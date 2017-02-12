@@ -2447,9 +2447,7 @@ SCIP_RETCODE lpiStrongbranch(
       *iter = 0;
 
    /* set the algorithm type to use dual simplex */
-
    (void) spx->setIntParam(SoPlex::ALGORITHM, SoPlex::ALGORITHM_DUAL);
-
 
    /* down branch */
    newub = EPSCEIL(psol-1.0, lpi->spx->feastol());
@@ -2624,7 +2622,7 @@ SCIP_RETCODE lpiStrongbranch(
    if( error )
    {
       SCIPdebugMessage("SCIPlpiStrongbranch() returned SoPlex status %d\n", int(status));
-      return SCIP_LPERROR;
+      return SCIP_LPERROR;  /*lint !e644*/
    }
 
    return SCIP_OKAY;
