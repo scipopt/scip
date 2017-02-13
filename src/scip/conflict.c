@@ -6049,6 +6049,8 @@ SCIP_RETCODE createAndAddDualray(
    assert(vars != NULL);
    assert(vals != NULL);
 
+   *success = FALSE;
+
    activity = 0.0;
    prod = 0.0;
    normcons = 0.0;
@@ -6086,7 +6088,10 @@ SCIP_RETCODE createAndAddDualray(
 
       normobj += (SCIPvarGetObj(vars[i]) * SCIPvarGetObj(vars[i]));
    }
-   assert(!SCIPsetIsZero(set, normcons));
+
+   /* return if the norm of the constraint coefficient vector is numerical zero */
+   if( SCIPsetIsZero(set, normcons) )
+      return SCIP_OKAY;
 
    /* check whether the constraint proves global infeasibility */
    if( (!SCIPsetIsInfinity(set, -lhs) && SCIPsetIsGT(set, lhs, activity))
