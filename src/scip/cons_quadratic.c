@@ -10118,13 +10118,18 @@ SCIP_RETCODE propagateBoundsCons(
          if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
             continue;
 
+         /* due to large variable bounds and large coefficients, it might happen that the activity of the linear part
+          * exceeds +/-SCIPinfinity() after updating the activities in consdataUpdateLinearActivity{Lb,Ub}Change; in
+          * order to detect this case we need to check whether the value of consdata->{min,max}linactivity is infinite
+          * (see #1433)
+          */
          if( coef > 0.0 )
          {
             if( SCIPintervalGetSup(rhs) < intervalinfty )
             {
                assert(consdata->minlinactivity != SCIP_INVALID);  /*lint !e777 */
                /* try to tighten the upper bound on var x */
-               if( consdata->minlinactivityinf == 0 )
+               if( consdata->minlinactivityinf == 0 && !SCIPisInfinity(scip, -consdata->minlinactivity) )
                {
                   assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
                   /* tighten upper bound on x to (rhs.sup - (minlinactivity - coef * xlb)) / coef */
@@ -10160,7 +10165,7 @@ SCIP_RETCODE propagateBoundsCons(
             {
                assert(consdata->maxlinactivity != SCIP_INVALID);  /*lint !e777 */
                /* try to tighten the lower bound on var x */
-               if( consdata->maxlinactivityinf == 0 )
+               if( consdata->maxlinactivityinf == 0 && !SCIPisInfinity(scip, consdata->maxlinactivity) )
                {
                   assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
                   /* tighten lower bound on x to (rhs.inf - (maxlinactivity - coef * xub)) / coef */
@@ -10199,7 +10204,7 @@ SCIP_RETCODE propagateBoundsCons(
             {
                assert(consdata->maxlinactivity != SCIP_INVALID);  /*lint !e777 */
                /* try to tighten the upper bound on var x */
-               if( consdata->maxlinactivityinf == 0 )
+               if( consdata->maxlinactivityinf == 0  && !SCIPisInfinity(scip, consdata->maxlinactivity) )
                {
                   assert(!SCIPisInfinity(scip, SCIPvarGetLbLocal(var)));
                   /* compute upper bound on x to (maxlinactivity - coef * xlb) - rhs.inf / (-coef) */
@@ -10235,7 +10240,7 @@ SCIP_RETCODE propagateBoundsCons(
             {
                assert(consdata->minlinactivity != SCIP_INVALID);  /*lint !e777 */
                /* try to tighten the lower bound on var x */
-               if( consdata->minlinactivityinf == 0 )
+               if( consdata->minlinactivityinf == 0 && !SCIPisInfinity(scip, -consdata->minlinactivity) )
                {
                   assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
                   /* compute lower bound on x to (minlinactivity - coef * xub) - rhs.sup / (-coef) */
