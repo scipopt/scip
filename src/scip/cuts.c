@@ -1456,7 +1456,12 @@ SCIP_RETCODE cutsTransformMIRRow(
          {
             /* select transformation bound */
             varsol = (sol == NULL ? SCIPvarGetLPSol(var) : SCIPsolGetVal(sol, set, stat, var));
-            if( SCIPsetIsLT(set, varsol, (1.0 - boundswitch) * bestlb + boundswitch * bestub) )
+
+            if( SCIPsetIsInfinity(set, bestub) ) /* if there is no ub, use lb */
+               uselb = TRUE;
+            else if( SCIPsetIsInfinity(set, -bestlb) ) /* if there is no lb, use ub */
+               uselb = FALSE;
+            else if( SCIPsetIsLT(set, varsol, (1.0 - boundswitch) * bestlb + boundswitch * bestub) )
                uselb = TRUE;
             else if( SCIPsetIsGT(set, varsol, (1.0 - boundswitch) * bestlb + boundswitch * bestub) )
                uselb = FALSE;

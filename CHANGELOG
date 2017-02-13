@@ -209,12 +209,14 @@ fixed bugs:
 - ignore lower and upper bound tightenigs beyond +/-infinity during solving
 - fix wrong NLP representation of logic or constraints in the dual value heuristic
 - time limit of SCIP-infinity is converted to LPI-infinity when setting it
+- fix LP activity of a row that has been modified
 
 misc:
 - dropped support for Ipopt < 3.11
 - updated CppAD to 20160000
 
 makefile:
+- Building with SHARED=true automatically generates the combined library libscipsolver.so for easier linking
 - All objective files are now placed in obj/static or obj/shared, depending on SHARED=false or SHARED=true, respectively.
 - All internal and external libraries are placed in lib/static and lib/shared, the include files are in lib/include.
 - External projects (including make.project) can use the makefile variable LINKCXXSCIPALL or LINKCCSCIPALL to link all SCIP libraries.

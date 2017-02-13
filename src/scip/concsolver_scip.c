@@ -189,28 +189,6 @@ SCIP_RETCODE disableConflictingDualReductions(
 
    SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowdualreds", FALSE) );
    return SCIP_OKAY;
-#if 0
-   /* TODO something is still poducing objective cutoffs so I use misc/allowdualreds for now */
-   /* presolvers */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/stuffing/maxrounds", 0) );
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/domcol/maxrounds", 0) );
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/dualcomp/maxrounds", 0) );  /*TODO: ok? */
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/dualinfer/maxrounds", 0) ); /*TODO: probably fine */
-   /* SCIP_CALL( SCIPsetIntParam(scip, "presolving/dualagg/maxrounds", 0) ); TODO: seems to have no copy callback */
-   /* constraint handlers */
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/abspower/dualpresolve", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/and/dualpresolving", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/cumulative/dualpresolve", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/knapsack/dualpresolving", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/linear/dualpresolving", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/setppc/dualpresolving", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/logicor/dualpresolving", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(scip, "constraints/indicator/dualreductions", FALSE) );
-   /* SCIP_CALL( SCIPsetBoolParam(scip, "constraints/orbitope/dualreductions", FALSE) ); TODO add setting and change computeSCTable so that it does not require the triangle to be fixed */
-
-   /* TODO verify genvbounds, dualfix, and rootredcost propagators are fine (probably yes) */
-   return SCIP_OKAY;
-#endif
 }
 
 /** sets the child selection rule based on the index of the concurrent solver */

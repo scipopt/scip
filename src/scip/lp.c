@@ -5395,6 +5395,9 @@ SCIP_RETCODE SCIProwIncCoef(
 
    checkLinks(lp);
 
+   /* invalid the activity */
+   row->validactivitylp = -1;
+
    return SCIP_OKAY;
 }
 
