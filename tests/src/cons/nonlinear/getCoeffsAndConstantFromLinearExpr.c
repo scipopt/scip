@@ -22,7 +22,6 @@
 
 #include "scip/scip.h"
 #include "include/scip_test.h"
-#include "scip/scipdefplugins.h"
 #include "scip/cons_nonlinear.c"
 
 static SCIP* scip;
@@ -32,7 +31,7 @@ static SCIP_VAR* y;
 SCIP_EXPR* expr;
 SCIP_Real scalar = 1.0;
 SCIP_Real constant;
-SCIP_Real* varcoeffs;
+SCIP_Real varcoeffs[10];
 SCIP_Real* varcoeffsdummy = NULL;
 
 
@@ -59,22 +58,20 @@ void setup(void)
    x = SCIPgetVars(scip)[0];
    y = SCIPgetVars(scip)[1];
 
-   /* Allocate buffer to store resulting varcoeffs */
-   SCIPallocBufferArray(scip, &varcoeffs, 10);
 }
 
 static
 void teardown(void)
 {
-   SCIPfreeBufferArray(scip, &varcoeffs);
    SCIPexprFreeDeep(SCIPblkmem(scip), &expr);
    SCIP_CALL( SCIPfree(&scip) );
    cr_assert_null(scip);
    cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
+TestSuite(simple_expressions, .init=setup, .fini = teardown);
 
-Test(simple_expressions, constant, .init = setup, .fini = teardown)
+Test(simple_expressions, constant)
 {
    SCIP_Real exprConstant = 2.0;
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_CONST, exprConstant) );
@@ -83,7 +80,7 @@ Test(simple_expressions, constant, .init = setup, .fini = teardown)
    cr_assert_eq(constant, exprConstant * scalar, "Wrong constant returned for SCIP_EXPR_CONST");
 }
 
-Test(simple_expressions, var, .init = setup, .fini = teardown)
+Test(simple_expressions, var)
 {
    constant = 0.0;
    SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &expr, SCIP_EXPR_VARIDX, 0) );
@@ -92,7 +89,7 @@ Test(simple_expressions, var, .init = setup, .fini = teardown)
    cr_assert_eq(constant, 0.0, "constant should be zero (i.e. untouched)");
 }
 
-Test(simple_expressions, mulA, .init = setup, .fini = teardown)
+Test(simple_expressions, mulA)
 {
    constant = 10;
    scalar = 5.0;
@@ -108,7 +105,7 @@ Test(simple_expressions, mulA, .init = setup, .fini = teardown)
    cr_assert_eq(varcoeffs[0], scalar * constval, "varcoeffs have wrong value");
 }
 
-Test(simple_expressions, mulB, .init = setup, .fini = teardown)
+Test(simple_expressions, mulB)
 {
    constant = 10;
    scalar = 5.0;
@@ -124,7 +121,7 @@ Test(simple_expressions, mulB, .init = setup, .fini = teardown)
    cr_assert_eq(varcoeffs[0], scalar * constval, "varcoeffs have wrong value");
 }
 
-Test(simple_expressions, plus, .init = setup, .fini = teardown)
+Test(simple_expressions, plus)
 {
    constant = 0.0;
    scalar = 5.0;
@@ -141,7 +138,7 @@ Test(simple_expressions, plus, .init = setup, .fini = teardown)
    cr_assert_eq(varcoeffsdummy, NULL, "varcoeffsdummy should be NULL (i.e. untouched)");
 }
 
-Test(simple_expressions, minus, .init = setup, .fini = teardown)
+Test(simple_expressions, minus)
 {
    constant = 0.0;
    scalar = 5.0;
@@ -158,7 +155,7 @@ Test(simple_expressions, minus, .init = setup, .fini = teardown)
    cr_assert_eq(varcoeffsdummy, NULL, "varcoeffsdummy should be NULL (i.e. untouched)");
 }
 
-Test(simple_expressions, linear, .init = setup, .fini = teardown)
+Test(simple_expressions, linear)
 {
    constant = 0.0;
    scalar = 5.0;
