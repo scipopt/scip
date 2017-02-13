@@ -3741,6 +3741,59 @@ SCIP_RETCODE writeOpbConstraints(
    return retcode;
 }
 
+/* write fixed variables (unless already done because they are an and resultant or and variable) */
+static
+SCIP_RETCODE writeOpbFixedVars(
+   SCIP*const            scip,               /**< SCIP data structure */
+   FILE*const            file,               /**< output file, or NULL if standard output should be used */
+   SCIP_VAR**            vars,               /**< array with active (binary) variables */
+   int                   nvars,              /**< number of active variables in the problem */
+   SCIP_HASHTABLE*const  printedfixing       /**< hashmap to store if a fixed variable was already printed */
+   )
+{
+   char linebuffer[OPB_MAX_LINELEN];
+   char buffer[OPB_MAX_LINELEN];
+   int linecnt;
+   int v;
+
+   assert(scip != NULL);
+   assert(file != NULL);
+   assert(vars != NULL || nvars == 0);
+   assert(printedfixing != NULL);
+
+   clearBuffer(linebuffer, &linecnt);
+
+   /* print variables which are fixed */
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_VAR* var;
+      SCIP_Bool neg;
+
+      assert( vars != NULL );
+      var = vars[v];
+
+      /* print fixed and-resultants */
+      if( SCIPvarGetLbLocal(var) > 0.5 || SCIPvarGetUbLocal(var) < 0.5 )
+      {
+         SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &var, &neg) );
+
+         if( SCIPhashtableExists(printedfixing, (void*)var) )
+            continue;
+
+         assert(SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)));
+         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s = %g;\n", neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), SCIPvarGetLbLocal(var));
+         appendBuffer(scip, file, linebuffer, &linecnt, buffer);
+
+         /* add variable to the hashmap */
+         SCIP_CALL( SCIPhashtableInsert(printedfixing, (void*)var) );
+      }
+   }
+
+   writeBuffer(scip, file, linebuffer, &linecnt);
+
+   return SCIP_OKAY;
+}
+
 /* write and constraints of inactive but relevant and-resultants and and variables which are fixed to one */
 static
 SCIP_RETCODE writeOpbRelevantAnds(
@@ -3750,6 +3803,7 @@ SCIP_RETCODE writeOpbRelevantAnds(
    int const             nresvars,           /**< number of resultant variables */
    SCIP_VAR**const*const andvars,            /**< corresponding array of and-variables */
    int const*const       nandvars,           /**< array of numbers of corresponding and-variables */
+   SCIP_HASHTABLE*const  printedfixing,      /**< hashmap to store if a fixed variable was already printed */
    char const*const      multisymbol,        /**< the multiplication symbol to use between coefficient and variable */
    SCIP_Bool const       transformed         /**< TRUE iff problem is the transformed problem */
    )
@@ -3770,7 +3824,8 @@ SCIP_RETCODE writeOpbRelevantAnds(
 
    clearBuffer(linebuffer, &linecnt);
 
-   /* print and-variables which are fixed, maybe doesn't appear and should only be asserted */
+   /* print and-variables which are fixed */
+   /* @todo remove this block here and the hashtable and let writeOpbFixedVars() do the job? */
    for( r = nresvars - 1; r >= 0; --r )
    {
       SCIP_VAR* var;
@@ -3787,6 +3842,9 @@ SCIP_RETCODE writeOpbRelevantAnds(
          assert(SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)));
          (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s = %g;\n", neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), SCIPvarGetLbLocal(var));
          appendBuffer(scip, file, linebuffer, &linecnt, buffer);
+
+         /* add variable to the hashmap */
+         SCIP_CALL( SCIPhashtableInsert(printedfixing, (void*)var) );
       }
 
       assert( andvars != NULL && nandvars != NULL );
@@ -3805,6 +3863,10 @@ SCIP_RETCODE writeOpbRelevantAnds(
             assert(SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)));
             (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s = %g;\n", neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), SCIPvarGetLbLocal(var));
             appendBuffer(scip, file, linebuffer, &linecnt, buffer);
+
+            /* add variable to the hashmap */
+            SCIP_CALL( SCIPhashtableInsert(printedfixing, (void*)var) );
+
          }
       }
    }
@@ -3986,7 +4048,7 @@ SCIP_RETCODE writeOpb(
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**            vars,               /**< array with active (binary) variables */
-   int                   nvars,              /**< number of acitve variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    SCIP_CONS**           conss,              /**< array with constraints of the problem */
    int                   nconss,             /**< number of constraints in the problem */
    SCIP_VAR** const      resvars,            /**< array of resultant variables */
@@ -3999,7 +4061,8 @@ SCIP_RETCODE writeOpb(
    )
 {
    char multisymbol[OPB_MAX_LINELEN];
-   SCIP_Bool usesymbole;
+   SCIP_HASHTABLE* printedfixing;
+   SCIP_Bool usesymbol;
    SCIP_RETCODE retcode;
 
    assert( scip != NULL );
@@ -4008,14 +4071,18 @@ SCIP_RETCODE writeOpb(
    assert( result != NULL );
 
    /* check if should use a multipliers symbol star '*' between coefficients and variables */
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/" READER_NAME "/multisymbol", &usesymbole) );
-   (void) SCIPsnprintf(multisymbol, OPB_MAX_LINELEN, "%s", usesymbole ? " * " : " ");
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/" READER_NAME "/multisymbol", &usesymbol) );
+   (void) SCIPsnprintf(multisymbol, OPB_MAX_LINELEN, "%s", usesymbol ? " * " : " ");
 
    /* print statistics as comment to file */
    SCIPinfoMessage(scip, file, "* SCIP STATISTICS\n");
    SCIPinfoMessage(scip, file, "*   Problem name     : %s\n", name);
    SCIPinfoMessage(scip, file, "*   Variables        : %d (all binary)\n", nvars);
    SCIPinfoMessage(scip, file, "*   Constraints      : %d\n", nconss);
+
+   /* create a hash table */
+   SCIP_CALL( SCIPhashtableCreate(&printedfixing, SCIPblkmem(scip), nvars,
+         SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
 
    /* write objective function */
    SCIP_CALL( writeOpbObjective(scip, file, vars, nvars, resvars, nresvars, andvars, nandvars,
@@ -4029,8 +4096,13 @@ SCIP_RETCODE writeOpb(
    {
       /* write and constraints of inactive but relevant and-resultants and and-variables which are fixed to one
          with no fixed and resultant */
-      SCIP_CALL( writeOpbRelevantAnds(scip, file, resvars, nresvars, andvars, nandvars, multisymbol, transformed) );
+      SCIP_CALL( writeOpbRelevantAnds(scip, file, resvars, nresvars, andvars, nandvars, printedfixing, multisymbol, transformed) );
    }
+
+   /* write fixed variables */
+   SCIP_CALL( writeOpbFixedVars(scip, file, vars, nvars, printedfixing) );
+
+   SCIPhashtableFree(&printedfixing);
 
    *result = SCIP_SUCCESS;
 
