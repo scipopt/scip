@@ -70,6 +70,27 @@ table.doxtable td, table.doxtable th {
 	padding: 3px 7px 2px;
 }
 
+/* "what types" table */
+.types {
+    caption-side: top;
+    border-top: medium solid black;
+    border-bottom: medium solid black;
+    border-collapse: collapse;
+}
+
+.typesheader {
+    border-bottom: medium solid black;
+}
+
+table.types tr {
+    vertical-align: top;
+    border-bottom: medium solid #F0F0F0;
+}
+
+table.types ul {
+    padding-top: 0px;
+    margin-top: 0px;
+}
 
 
 /* menu */

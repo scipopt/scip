@@ -6049,6 +6049,8 @@ SCIP_RETCODE createAndAddDualray(
    assert(vars != NULL);
    assert(vals != NULL);
 
+   *success = FALSE;
+
    activity = 0.0;
    prod = 0.0;
    normcons = 0.0;
@@ -6086,7 +6088,10 @@ SCIP_RETCODE createAndAddDualray(
 
       normobj += (SCIPvarGetObj(vars[i]) * SCIPvarGetObj(vars[i]));
    }
-   assert(!SCIPsetIsZero(set, normcons));
+
+   /* return if the norm of the constraint coefficient vector is numerical zero */
+   if( SCIPsetIsZero(set, normcons) )
+      return SCIP_OKAY;
 
    /* check whether the constraint proves global infeasibility */
    if( (!SCIPsetIsInfinity(set, -lhs) && SCIPsetIsGT(set, lhs, activity))
@@ -6186,7 +6191,6 @@ SCIP_RETCODE createAndAddDualray(
 static
 SCIP_RETCODE tightenSingleVar(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
-   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict pool data */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_TREE*            tree,               /**< tree data */
@@ -6371,7 +6375,7 @@ SCIP_RETCODE performDualRayAnalysis(
     */
    if( nmirvars == 1 && !diving )
    {
-      SCIP_CALL( tightenSingleVar(conflict, conflictstore, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
+      SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
             branchcand, eventqueue, cliquetable, mirvars[varinds[0]], mirvals[varinds[0]], mirrhs, success) );
    }
    else
@@ -6383,7 +6387,7 @@ SCIP_RETCODE performDualRayAnalysis(
       /* only one variable has a coefficient different to zero, we add this bound change instead of a constraint */
       if( nmirvars == 1 && mirsuccess && !diving )
       {
-         SCIP_CALL( tightenSingleVar(conflict, conflictstore, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
+         SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
                branchcand, eventqueue, cliquetable, mirvars[varinds[0]], mirvals[varinds[0]], mirrhs, success) );
       }
       else

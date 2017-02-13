@@ -801,8 +801,6 @@ void consdataUpdateLinearActivityLbChange(
       if( consdata->minlinactivity == SCIP_INVALID )  /*lint !e777 */
          return;
 
-      assert(!SCIPisInfinity(scip, -consdata->minlinactivity));
-
       prevroundmode = SCIPintervalGetRoundingMode();
       SCIPintervalSetRoundingModeDownwards();
 
@@ -838,8 +836,6 @@ void consdataUpdateLinearActivityLbChange(
       /* we have no max activities computed so far, so cannot update */
       if( consdata->maxlinactivity == SCIP_INVALID )  /*lint !e777 */
          return;
-
-      assert(!SCIPisInfinity(scip, consdata->maxlinactivity));
 
       prevroundmode = SCIPintervalGetRoundingMode();
       SCIPintervalSetRoundingModeUpwards();
@@ -904,8 +900,6 @@ void consdataUpdateLinearActivityUbChange(
       if( consdata->maxlinactivity == SCIP_INVALID )  /*lint !e777 */
          return;
 
-      assert(!SCIPisInfinity(scip, consdata->maxlinactivity));
-
       prevroundmode = SCIPintervalGetRoundingMode();
       SCIPintervalSetRoundingModeUpwards();
 
@@ -941,8 +935,6 @@ void consdataUpdateLinearActivityUbChange(
       /* we have no min activities computed so far, so cannot update */
       if( consdata->minlinactivity == SCIP_INVALID )  /*lint !e777 */
          return;
-
-      assert(!SCIPisInfinity(scip, -consdata->minlinactivity));
 
       prevroundmode = SCIPintervalGetRoundingMode();
       SCIPintervalSetRoundingModeDownwards();
@@ -5638,6 +5630,7 @@ SCIP_Bool generateCutLTIfindIntersection(
          SCIP_Real tl1;
          SCIP_Real tl2;
          SCIP_Real denom;
+         SCIP_Real q;
 
          if( b * b - 4.0 * a * (c - wl) < 0.0 )
          {
@@ -5646,9 +5639,12 @@ SCIP_Bool generateCutLTIfindIntersection(
          }
 
          denom = sqrt(b * b - 4.0 * a * (c - wl));
-         tl1 = (-b - denom) / (2.0 * a);
-         tl2 = (-b + denom) / (2.0 * a);
-         tl = (tl1 < 0.0) ? tl2 : tl1;
+         q = -0.5 * (b + copysign(denom, b));
+         tl1 = q / a;
+         tl2 = (c - wl) / q;
+
+         /* choose the smallest non-negative root */
+         tl = (tl1 >= 0.0 && (tl2 < 0.0 || tl1 < tl2)) ? tl1 : tl2;
       }
 
       if( wu != SCIP_INVALID )  /*lint !e777 */
@@ -5656,6 +5652,7 @@ SCIP_Bool generateCutLTIfindIntersection(
          SCIP_Real tu1;
          SCIP_Real tu2;
          SCIP_Real denom;
+         SCIP_Real q;
 
          if( b * b - 4.0 * a * (c - wu) < 0.0 )
          {
@@ -5664,9 +5661,12 @@ SCIP_Bool generateCutLTIfindIntersection(
          }
 
          denom = sqrt(b * b - 4.0 * a * (c - wu));
-         tu1 = (-b - denom) / (2.0 * a);
-         tu2 = (-b + denom) / (2.0 * a);
-         tu = (tu1 < 0.0) ? tu2 : tu1;
+         q = -0.5 * (b + copysign(denom, b));
+         tu1 = q / a;
+         tu2 = (c - wu) / q;
+
+         /* choose the smallest non-negative root */
+         tu = (tu1 >= 0.0 && (tu2 < 0.0 || tu1 < tu2)) ? tu1 : tu2;
       }
    }
    else if( !SCIPisZero(scip, (SCIP_Real)b) )
@@ -10118,13 +10118,18 @@ SCIP_RETCODE propagateBoundsCons(
          if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
             continue;
 
+         /* due to large variable bounds and large coefficients, it might happen that the activity of the linear part
+          * exceeds +/-SCIPinfinity() after updating the activities in consdataUpdateLinearActivity{Lb,Ub}Change; in
+          * order to detect this case we need to check whether the value of consdata->{min,max}linactivity is infinite
+          * (see #1433)
+          */
          if( coef > 0.0 )
          {
             if( SCIPintervalGetSup(rhs) < intervalinfty )
             {
                assert(consdata->minlinactivity != SCIP_INVALID);  /*lint !e777 */
                /* try to tighten the upper bound on var x */
-               if( consdata->minlinactivityinf == 0 )
+               if( consdata->minlinactivityinf == 0 && !SCIPisInfinity(scip, -consdata->minlinactivity) )
                {
                   assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
                   /* tighten upper bound on x to (rhs.sup - (minlinactivity - coef * xlb)) / coef */
@@ -10160,7 +10165,7 @@ SCIP_RETCODE propagateBoundsCons(
             {
                assert(consdata->maxlinactivity != SCIP_INVALID);  /*lint !e777 */
                /* try to tighten the lower bound on var x */
-               if( consdata->maxlinactivityinf == 0 )
+               if( consdata->maxlinactivityinf == 0 && !SCIPisInfinity(scip, consdata->maxlinactivity) )
                {
                   assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
                   /* tighten lower bound on x to (rhs.inf - (maxlinactivity - coef * xub)) / coef */
@@ -10199,7 +10204,7 @@ SCIP_RETCODE propagateBoundsCons(
             {
                assert(consdata->maxlinactivity != SCIP_INVALID);  /*lint !e777 */
                /* try to tighten the upper bound on var x */
-               if( consdata->maxlinactivityinf == 0 )
+               if( consdata->maxlinactivityinf == 0  && !SCIPisInfinity(scip, consdata->maxlinactivity) )
                {
                   assert(!SCIPisInfinity(scip, SCIPvarGetLbLocal(var)));
                   /* compute upper bound on x to (maxlinactivity - coef * xlb) - rhs.inf / (-coef) */
@@ -10235,7 +10240,7 @@ SCIP_RETCODE propagateBoundsCons(
             {
                assert(consdata->minlinactivity != SCIP_INVALID);  /*lint !e777 */
                /* try to tighten the lower bound on var x */
-               if( consdata->minlinactivityinf == 0 )
+               if( consdata->minlinactivityinf == 0 && !SCIPisInfinity(scip, -consdata->minlinactivity) )
                {
                   assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
                   /* compute lower bound on x to (minlinactivity - coef * xub) - rhs.sup / (-coef) */
