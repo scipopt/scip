@@ -5651,7 +5651,8 @@ SCIP_Bool generateCutLTIfindIntersection(
          tl1 = q / a;
          tl2 = (c - wl) / q;
 
-         tl = (tl1 < 0.0) ? tl2 : tl1;
+         /* choose the smallest non-negative root */
+         tl = (tl1 >= 0.0 && (tl2 < 0.0 || tl1 < tl2)) ? tl1 : tl2;
       }
 
       if( wu != SCIP_INVALID )  /*lint !e777 */
@@ -5672,7 +5673,8 @@ SCIP_Bool generateCutLTIfindIntersection(
          tu1 = q / a;
          tu2 = (c - wu) / q;
 
-         tu = (tu1 < 0.0) ? tu2 : tu1;
+         /* choose the smallest non-negative root */
+         tu = (tu1 >= 0.0 && (tu2 < 0.0 || tu1 < tu2)) ? tu1 : tu2;
       }
    }
    else if( !SCIPisZero(scip, (SCIP_Real)b) )
