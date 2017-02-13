@@ -104,22 +104,27 @@ SCIP_RETCODE sepadataClear(
 {
    assert(sepadata != NULL);
 
+   /* nlrowssize gets allocated first and then its decided whether to create the nlpiprob */
+   if( sepadata->nlrowssize > 0 )
+   {
+      SCIPfreeBlockMemoryArray(scip, &sepadata->constraintviolation, sepadata->nlrowssize);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->convexsides, sepadata->nlrowssize);
+      SCIPfreeBlockMemoryArray(scip, &sepadata->nlrows, sepadata->nlrowssize);
+      sepadata->nlrowssize = 0;
+   }
+
    if( sepadata->nlpiprob != NULL )
    {
       assert(sepadata->nlpi != NULL);
 
       SCIPfreeBlockMemoryArray(scip, &sepadata->nlpivars, sepadata->nlpinvars);
 
-      SCIPfreeBlockMemoryArray(scip, &sepadata->nlrows, sepadata->nlrowssize);
-      SCIPfreeBlockMemoryArray(scip, &sepadata->convexsides, sepadata->nlrowssize);
-      SCIPfreeBlockMemoryArray(scip, &sepadata->constraintviolation, sepadata->nlrowssize);
       SCIPhashmapFree(&sepadata->var2nlpiidx);
       SCIP_CALL( SCIPnlpiFreeProblem(sepadata->nlpi, &sepadata->nlpiprob) );
       SCIP_CALL( SCIPexprintFree(&sepadata->exprinterpreter) );
 
       sepadata->nlpinvars = 0;
       sepadata->nnlrows = 0;
-      sepadata->nlrowssize = 0;
    }
    assert(sepadata->nlpinvars == 0);
    assert(sepadata->nnlrows == 0);
