@@ -801,8 +801,6 @@ void consdataUpdateLinearActivityLbChange(
       if( consdata->minlinactivity == SCIP_INVALID )  /*lint !e777 */
          return;
 
-      assert(!SCIPisInfinity(scip, -consdata->minlinactivity));
-
       prevroundmode = SCIPintervalGetRoundingMode();
       SCIPintervalSetRoundingModeDownwards();
 
@@ -838,8 +836,6 @@ void consdataUpdateLinearActivityLbChange(
       /* we have no max activities computed so far, so cannot update */
       if( consdata->maxlinactivity == SCIP_INVALID )  /*lint !e777 */
          return;
-
-      assert(!SCIPisInfinity(scip, consdata->maxlinactivity));
 
       prevroundmode = SCIPintervalGetRoundingMode();
       SCIPintervalSetRoundingModeUpwards();
@@ -904,8 +900,6 @@ void consdataUpdateLinearActivityUbChange(
       if( consdata->maxlinactivity == SCIP_INVALID )  /*lint !e777 */
          return;
 
-      assert(!SCIPisInfinity(scip, consdata->maxlinactivity));
-
       prevroundmode = SCIPintervalGetRoundingMode();
       SCIPintervalSetRoundingModeUpwards();
 
@@ -941,8 +935,6 @@ void consdataUpdateLinearActivityUbChange(
       /* we have no min activities computed so far, so cannot update */
       if( consdata->minlinactivity == SCIP_INVALID )  /*lint !e777 */
          return;
-
-      assert(!SCIPisInfinity(scip, -consdata->minlinactivity));
 
       prevroundmode = SCIPintervalGetRoundingMode();
       SCIPintervalSetRoundingModeDownwards();
