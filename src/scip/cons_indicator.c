@@ -228,7 +228,7 @@
 #define EVENTHDLR_BOUND_DESC       "bound change event handler for indicator constraints"
 
 #define EVENTHDLR_RESTART_NAME     "indicatorrestart"
-#define EVENTHDLR_RESTART_DESC     "force restart if absolute gap is 1"
+#define EVENTHDLR_RESTART_DESC     "force restart if absolute gap is 1 or enough binary variables have been fixed"
 
 
 /* conflict handler properties */
@@ -268,7 +268,7 @@
 #define DEFAULT_DUALREDUCTIONS       TRUE    /**< Should dual reduction steps be performed? */
 #define DEFAULT_ADDOPPOSITE         FALSE    /**< Add opposite inequality in nodes in which the binary variable has been fixed to 0? */
 #define DEFAULT_CONFLICTSUPGRADE    FALSE    /**< Try to upgrade bounddisjunction conflicts by replacing slack variables? */
-#define DEFAULT_FORCERESTART        FALSE    /**< Force restart if we have a max FS instance and gap is 1? */
+#define DEFAULT_FORCERESTART        FALSE    /**< Force restart if absolute gap is 1 or enough binary variables have been fixed? */
 #define DEFAULT_RESTARTFRAC           0.9    /**< fraction of binary variables that need to be fixed before restart occurs (in forcerestart) */
 
 
@@ -362,7 +362,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             sepaalternativelp_; /**< used to store the sepaalternativelp parameter */
    SCIP_Bool             nolinconscont;      /**< decompose problem - do not generate linear constraint if all variables are continuous */
    SCIP_Bool             nolinconscont_;     /**< used to store the nolinconscont parameter */
-   SCIP_Bool             forcerestart;       /**< Force restart if we have a max FS instance and gap is 1? */
+   SCIP_Bool             forcerestart;       /**< Force restart if absolute gap is 1 or enough binary variables have been fixed? */
    SCIP_Bool             forcerestart_;      /**< used to strore the forcerestart parameter */
 };
 
@@ -7243,7 +7243,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/forcerestart",
-         "Force restart if we have a max FS instance and gap is 1?",
+         "Force restart if absolute gap is 1 or enough binary variables have been fixed?",
          &conshdlrdata->forcerestart_, TRUE, DEFAULT_FORCERESTART, paramChangedIndicator, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
