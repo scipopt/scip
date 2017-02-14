@@ -328,8 +328,9 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
             /* multiply by scalar and add constant -> linear expression */
             SCIP_CALL( SCIPexprCreateLinear(tree->blkmem, &replaceexprs[i], 1, &replaceexprs[i], &scalar, constant) );
          }
+         continue;
       }
-      else
+
       {
          SCIP_EXPR** children;
          SCIP_Real*  coefs;
