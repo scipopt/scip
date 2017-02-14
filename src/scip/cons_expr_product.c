@@ -1907,6 +1907,9 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    BMSclearMemory(exprhdlrdata);
 
    /* create/initialize random number generator */
+   /* TODO FIXME: we need an INITSOL callback so that calls like SCIPsolve() SCIPfreeTransform() and then SCIPsolve()
+    * again behave the same; right now, the initial seed is set when SCIP include the plugin, but this happens only once
+    */
    SCIP_CALL( SCIPrandomCreate(&exprhdlrdata->randnumgen, SCIPblkmem(scip),
          SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
