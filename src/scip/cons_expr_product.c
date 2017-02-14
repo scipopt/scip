@@ -39,7 +39,8 @@
 #define PRODUCT_PRECEDENCE  50000
 #define PRODUCT_HASHKEY     SCIPcalcFibHash(54949.0)
 
-#define ADJUSTFACETTOL             1e-6 /**< adjust resulting facets in checkRikun() up to a violation of this value */
+#define ADJUSTFACETFACTOR          1e1 /**< adjust resulting facets in checkRikun() up to a violation of this value *
+                                         lpfeastol */
 #define USEDUALSIMPLEX             TRUE /**< use dual or primal simplex algorithm? */
 
 #define MAXMULTILINSEPALPSIZE      14   /**< maximum size of the multilinear separation LP */
@@ -690,7 +691,7 @@ SCIP_RETCODE computeFacet(
    if( maxfaceterror > 0 )
    {
       /* there seem to be numerical problems if the error is too large; in this case we reject the facet */
-      if( maxfaceterror > ADJUSTFACETTOL )
+      if( maxfaceterror > ADJUSTFACETFACTOR * SCIPlpfeastol(scip) )
       {
          SCIPdebugMsg(scip, "ignoring facet due to instability, it cuts off a vertex by %g.\n", maxfaceterror);
          *violation = -1.0;
@@ -1485,7 +1486,8 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
  * -# If the bounds are not finite, there is no underestimator. Also, \f$ T^{-1}(x^*) \f$ must be in the domain,
  * otherwise the dual is infeasible
  * -# After a facet is computed, we check whether it is a valid facet (i.e. we check \f$ \alpha^T v + \beta \le f(v) \f$
- * for every vertex \f$ v \f$). If we find a violation of at most ADJUSTFACETTOL, then we weaken \f$ \beta \f$ by this
+ *  for every vertex \f$ v \f$). If we find a violation of at most ADJUSTFACETFACTOR * SCIPlpfeastol, then we weaken \f$
+ *  \beta \f$ by this
  * amount, otherwise, we discard the cut.
  * -# If a variable is fixed within tolerances, we replace it with its value and compute the facet of the remaining
  * expression. Note that since we are checking the cut for validity, this will never produce wrong result.
