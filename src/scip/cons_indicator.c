@@ -774,18 +774,17 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
 
 /* ------------------------ parameter handling ---------------------------------*/
 
-/** reset parameter to @p oldvalue if it corresponds to the parameter @p name
+/** check whether we transfer a changed parameter to the given value
  *
- *  This function avoids changing crucial parameters.
  *  @see paramChangedIndicator()
  */
 static
-SCIP_RETCODE checkParam(
+SCIP_RETCODE checkTransferBoolParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
    const char*           name,               /**< parameter name to check */
-   SCIP_Bool             oldvalue,           /**< old value of parameter */
-   SCIP_Bool*            newvalue            /**< new value after call */
+   SCIP_Bool             newvalue,           /**< new value */
+   SCIP_Bool*            value               /**< old and possibly changed value of parameter */
    )
 {
    const char* paramname;
@@ -793,9 +792,12 @@ SCIP_RETCODE checkParam(
    assert( scip != NULL );
    assert( param != NULL );
    assert( name != NULL );
-   assert( newvalue != NULL );
+   assert( value != NULL );
 
-   if ( oldvalue == *newvalue )
+   if ( SCIPparamGetType(param) != SCIP_PARAMTYPE_BOOL )
+      return SCIP_OKAY;
+
+   if ( *value == newvalue )
       return SCIP_OKAY;
 
    paramname = SCIPparamGetName(param);
@@ -804,15 +806,20 @@ SCIP_RETCODE checkParam(
    /* check whether the change parameter corresponds to our name to check */
    if ( strcmp(paramname, name) == 0 )
    {
-      /* check stage */
+      /* check stage and possibly ignore parameter change */
       if ( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
       {
-         SCIPwarningMessage(scip, "Cannot change parameter <%s> stage %d - reset to old value %s.\n", name, SCIPgetStage(scip), oldvalue ? "true" : "false");
-         /* reset parameter (NULL = do not recursively call paramchd function) */
-         SCIP_CALL( SCIPchgBoolParam(scip, param, oldvalue) );
-         *newvalue = oldvalue;
+         SCIPwarningMessage(scip, "Cannot change parameter <%s> stage %d - reset to old value %s.\n", name, SCIPgetStage(scip), *value ? "true" : "false");
+         /* Note that the following command will create a recursive call, but then *value == newvalue above. */
+         SCIP_CALL( SCIPchgBoolParam(scip, param, *value) );
+      }
+      else
+      {
+         /* otherwise copy value */
+         *value = newvalue;
       }
    }
+
    return SCIP_OKAY;
 }
 
@@ -823,7 +830,6 @@ SCIP_DECL_PARAMCHGD(paramChangedIndicator)
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool value;
 
    assert( scip != NULL );
    assert( param != NULL );
@@ -836,17 +842,9 @@ SCIP_DECL_PARAMCHGD(paramChangedIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   value = conshdlrdata->sepaalternativelp_;
-   SCIP_CALL( checkParam(scip, param, "constraints/indicator/sepaalternativelp", conshdlrdata->sepaalternativelp, &value) );
-   conshdlrdata->sepaalternativelp = value;
-
-   value = conshdlrdata->forcerestart_;
-   SCIP_CALL( checkParam(scip, param, "constraints/indicator/forcerestart", conshdlrdata->forcerestart, &value) );
-   conshdlrdata->forcerestart = value;
-
-   value = conshdlrdata->nolinconscont;
-   SCIP_CALL( checkParam(scip, param, "constraints/indicator/nolinconscont", conshdlrdata->nolinconscont, &value) );
-   conshdlrdata->nolinconscont = value;
+   SCIP_CALL( checkTransferBoolParam(scip, param, "constraints/indicator/sepaalternativelp", conshdlrdata->sepaalternativelp_, &conshdlrdata->sepaalternativelp) );
+   SCIP_CALL( checkTransferBoolParam(scip, param, "constraints/indicator/forcerestart", conshdlrdata->forcerestart_, &conshdlrdata->forcerestart) );
+   SCIP_CALL( checkTransferBoolParam(scip, param, "constraints/indicator/nolinconscont", conshdlrdata->nolinconscont_, &conshdlrdata->nolinconscont) );
 
    return SCIP_OKAY;
 }
