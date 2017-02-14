@@ -192,10 +192,10 @@ extern "C" {
 #endif
 
 #ifndef COPYSIGN
-#ifndef _MSC_VER
-#define COPYSIGN copysign
-#else
+#if defined(_MSC_VER) && (_MSC_VER < 1800)
 #define COPYSIGN _copysign
+#else
+#define COPYSIGN copysign
 #endif
 #endif
 
