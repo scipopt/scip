@@ -126,7 +126,7 @@ Test(separation, bilinear, .init = setup, .fini = teardown,
 /* specify parameters of parameterized test */
 ParameterizedTestParameters(separation, multilinearLP)
 {
-   static const int sizes[] = {0,1,2,3,4,5,6,7,8};
+   static const int sizes[] = {1,2,3,4,5,6,7};
 
    /* type of the parameter; the parameter; number of parameters */
    return cr_make_param_array(const int, sizes, sizeof(sizes)/sizeof(int));
@@ -199,7 +199,7 @@ static void testBilinearLP(int lpsize)
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -4.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 1.0) );
 
-   SCIP_CALL( computeFacet(scip, lp, sol, vars, 2, auxvar, 1.5, TRUE /* overestimate */,
+   SCIP_CALL( computeFacet(scip, randnumgen, lp, sol, vars, 2, auxvar, 1.5, TRUE /* overestimate */,
             1.0, (SCIP_INTERVAL){1.0, 1.0}, &violation, facet) );
 
    cr_expect_eq(facet[0], -4.5);
@@ -218,7 +218,7 @@ static void testBilinearLP(int lpsize)
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -4.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -1.0) );
 
-   SCIP_CALL( computeFacet(scip, lp, sol, vars, 2, auxvar, 1.5, FALSE /* underestimate */,
+   SCIP_CALL( computeFacet(scip, randnumgen, lp, sol, vars, 2, auxvar, 1.5, FALSE /* underestimate */,
             1.0, (SCIP_INTERVAL){1.0, 1.0}, &violation, facet) );
 
    cr_expect_eq(facet[0], -9.0);
@@ -276,6 +276,7 @@ Test(separation, bilinear_with_LP, .init = setup, .fini = teardown,
  * violation = (hrepre.A[argmax,:]' * [0.2, -4.0, 1.1, zstar, tstar] - hrepre.b[argmax])/ hrepre.A[argmax,end]
  * */
 
+/* this test needs to create its own data, it doesn't use the fixtures! */
 static
 void testMultilinearLP(int lpsize)
 {
@@ -292,6 +293,9 @@ void testMultilinearLP(int lpsize)
    /* need a problem to create solutions */
    SCIP_CALL( SCIPcreate(&scip) );
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, SCIPblkmem(scip), 1) );
 
    /* build separation LP */
    SCIP_CALL( buildMultilinearSeparationLP(scip, lpsize, &lp) );
@@ -312,7 +316,7 @@ void testMultilinearLP(int lpsize)
     * together with the bounds x,y,w,z \in [-0.2, 0.7], [-10, 8], [1, 1.3], [0.09, 2.1]
     * w <= 63/5000 * (50x + y + 35w + 4550/9 z - 141/2)
     */
-   SCIP_CALL( computeFacet(scip, lp, sol, vars, 4, auxvar, -0.7, TRUE /* overestimate */,
+   SCIP_CALL( computeFacet(scip, randnumgen, lp, sol, vars, 4, auxvar, -0.7, TRUE /* overestimate */,
             1.0, (SCIP_INTERVAL){1.0, 1.0}, &violation, facet) );
 
    SCIP_Real exact_facet1[] = {63.0/100, 63.0/5000, 441.0/1000, 637.0/100, -8883.0/10000};
@@ -332,7 +336,7 @@ void testMultilinearLP(int lpsize)
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -3.4) );
 
    /* compute cut */
-   SCIP_CALL( computeFacet(scip, lp, sol, vars, 3, auxvar, -0.7, FALSE /* underestimate */,
+   SCIP_CALL( computeFacet(scip, randnumgen, lp, sol, vars, 3, auxvar, -0.7, FALSE /* underestimate */,
             1.0, (SCIP_INTERVAL){1.0, 1.0}, &violation, facet) );
 
    SCIP_Real exact_facet2[] = {7.0, -133.0/250, -7.0/5, -98.0/25};
@@ -344,6 +348,7 @@ void testMultilinearLP(int lpsize)
    cr_expect_float_eq(violation, 1.468, SCIPfeastol(scip), "received a violation of %g instead of 1.468", violation);
 
    /* free all */
+   SCIPrandomFree(&randnumgen);
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
    SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
    SCIP_CALL( SCIPreleaseVar(scip, &vars[3]) );
