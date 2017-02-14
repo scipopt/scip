@@ -302,8 +302,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
          SCIP_Real ub = SCIPvarGetUbLocal(subvars[i]);
          SCIP_Real obj = SCIPvarGetObj(subvars[i]);
 
-         if( (SCIPisLT(subscip, obj, 0.0) && SCIPisInfinity(subscip, ub))
-            || (SCIPisGT(subscip, obj, 0.0) && SCIPisInfinity(subscip, -lb)) )
+         if( (SCIPisNegative(subscip, obj) && SCIPisInfinity(subscip, ub))
+            || (SCIPisPositive(subscip, obj) && SCIPisInfinity(subscip, -lb)) )
          {
             /* free local hash map */
             SCIPhashmapFree(&varmapfw);
