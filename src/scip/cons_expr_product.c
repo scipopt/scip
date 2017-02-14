@@ -34,6 +34,8 @@
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_pow.h"
 
+#include "scip/pub_misc.h"
+
 #define PRODUCT_PRECEDENCE  50000
 #define PRODUCT_HASHKEY     SCIPcalcFibHash(54949.0)
 
@@ -41,6 +43,9 @@
 #define USEDUALSIMPLEX             TRUE /**< use dual or primal simplex algorithm? */
 
 #define MAXMULTILINSEPALPSIZE      14   /**< maximum size of the multilinear separation LP */
+
+#define DEFAULT_RANDSEED           101  /**< initial random seed */
+#define MAXPERTURBATION            1e-3 /**< maximum perturbation */
 
 /** first values for 2^n */
 static const int poweroftwo[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
@@ -83,6 +88,8 @@ struct SCIP_ConsExpr_ExprHdlrData
 {
    SCIP_LPI*             multilinearseparationlp; /**< lp to separate product expressions */
    int                   lpsize;             /**< number of rows - 1 of multilinearseparationlp */
+
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
 };
 
 /** node for linked list of expressions */
@@ -466,6 +473,7 @@ SCIP_Real computeMaxFacetError(
 static
 SCIP_RETCODE computeFacet(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator for perturbation */
    SCIP_LPI*             lp,                 /**< lp used to compute facet */
    SCIP_SOL*             sol,                /**< solution representing \f$ (w^*, x^*) \f$ */
    SCIP_VAR**            vars,               /**< variables representing \f$ x_i \f$ */
@@ -483,13 +491,22 @@ SCIP_RETCODE computeFacet(
    SCIP_Real* aux; /* used for settings sides and getting the dual solution */
    SCIP_Real* lb;
    SCIP_Real* ub;
-   SCIP_Real perturbation;
    SCIP_Real maxfaceterror; /* stores violation between facet and function */
    int* inds;
    int ncorners;
    int ncols;
    int nrows;
    int i;
+
+   assert(scip != NULL);
+   assert(randnumgen != NULL);
+   assert(lp != NULL);
+   assert(sol != NULL);
+   assert(vars != NULL);
+   assert(nvars > 0);
+   assert(auxvar != NULL);
+   assert(violation != NULL);
+   assert(facet != NULL);
 
    /* get number of cols and rows of separation lp */
    SCIP_CALL( SCIPlpiGetNCols(lp, &ncols) );
@@ -523,7 +540,6 @@ SCIP_RETCODE computeFacet(
    }
 
    /* compute T^-1(x^*), i.e. T^-1(x^*)_i = (x^*_i - lb_i)/(ub_i - lb_i) */
-   perturbation = 0.001;
    for( i = 0; i < nrows; ++i )
    {
       if( i < nvars )
@@ -543,8 +559,18 @@ SCIP_RETCODE computeFacet(
                (SCIPvarGetUbLocal(vars[i]) - SCIPvarGetLbLocal(vars[i]));
 
          /* perturb point to hopefuly obtain a facet of the convex envelope */
-         aux[i] += aux[i] > perturbation ? -perturbation : perturbation;
-         perturbation /= 1.2;
+         if( aux[i] == 1.0 )
+            aux[i] -= SCIPrandomGetReal(randnumgen, 0.0, MAXPERTURBATION);
+         else if( aux[i] == 0.0 )
+            aux[i] += SCIPrandomGetReal(randnumgen, 0.0, MAXPERTURBATION);
+         else
+         {
+            SCIP_Real perturbation;
+
+            perturbation = MIN( aux[i], 1.0 - aux[i] ) / 2.0;
+            perturbation = MIN( perturbation, MAXPERTURBATION );
+            aux[i] += SCIPrandomGetReal(randnumgen, -perturbation, perturbation);
+         }
          assert(0.0 < aux[i] && aux[i] < 1.0);
       }
       else
@@ -1164,6 +1190,9 @@ SCIP_DECL_CONSEXPR_EXPRFREEHDLR(freehdlrProduct)
    assert((*exprhdlrdata)->lpsize == 0);
    assert((*exprhdlrdata)->multilinearseparationlp == NULL);
 
+   /* free random number generator */
+   SCIPrandomFree(&(*exprhdlrdata)->randnumgen);
+
    SCIPfreeBlockMemory(scip, exprhdlrdata);
    assert(*exprhdlrdata == NULL);
 
@@ -1721,8 +1750,8 @@ SCIP_RETCODE separatePointProduct(
       SCIPdebugMsg(scip, "computing multilinear cut with %d variables, coef %g, midval %g\n", nvars, midval * exprdata->coefficient, midval );
 
       /* compute facet of fixmid * coefficient * \Pi_i vars[i] */
-      SCIP_CALL( computeFacet(scip, exprhdlrdata->multilinearseparationlp, sol, vars, nvars, auxvar, midval *
-               exprdata->coefficient, overestimate, midval, fixedinterval, &violation, facet) );
+      SCIP_CALL( computeFacet(scip, exprhdlrdata->randnumgen, exprhdlrdata->multilinearseparationlp, sol, vars, nvars,
+               auxvar, midval * exprdata->coefficient, overestimate, midval, fixedinterval, &violation, facet) );
 
       /* if we can't separate the point, return */
       if( SCIPisLE(scip, violation, 0.0) )
@@ -1876,6 +1905,10 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
 
    /* initialize all data in exprhdlrdata to 0/NULL */
    BMSclearMemory(exprhdlrdata);
+
+   /* create/initialize random number generator */
+   SCIP_CALL( SCIPrandomCreate(&exprhdlrdata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "prod", "product of children",
             PRODUCT_PRECEDENCE, evalProduct, exprhdlrdata) );
