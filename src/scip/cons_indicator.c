@@ -3622,7 +3622,7 @@ SCIP_RETCODE propIndicator(
    if ( consdata->nfixednonzero == 1 )
    {
       /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
-      if ( !SCIPinRepropagation(scip) )
+      if ( ! SCIPinRepropagation(scip) )
          SCIP_CALL( SCIPincConsAge(scip, cons) );
 
       /* if binvar is fixed to be nonzero */
@@ -3665,9 +3665,6 @@ SCIP_RETCODE propIndicator(
       if ( *nGen > 0 )
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
-      /* delete constraint locally */
-      assert( !SCIPconsIsModifiable(cons) );
-
       /* mark linear constraint to be update-able */
       if ( SCIPgetDepth(scip) == 0 && SCIPconsIsActive(consdata->lincons) )
       {
@@ -3675,6 +3672,8 @@ SCIP_RETCODE propIndicator(
          assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
       }
 
+      /* delete constraint locally */
+      assert( ! SCIPconsIsModifiable(cons) );
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
    }
    else
