@@ -2895,7 +2895,7 @@ SCIP_RETCODE extendToCover(
          norm = 1.0; /*lint !e527*/
       }
 
-      SCIPdebugMsg(scip, "   size: %4d  add %4d with objective value %6g and alt-LP solution value %-8.4g  (IIS size: %4d, eff.: %g).\n",
+      SCIPdebugMsg(scip, "   size: %4d, add var. %4d (obj: %-6g, alt-LP sol: %-8.4f); IIS size: %4d, eff.: %g.\n",
          *size, candidate, candObj, primsol[SCIPconsGetData(conss[candidate])->colindex], sizeIIS, (sum - (SCIP_Real) (sizeIIS - 1))/norm);
 
       /* update new set S */
@@ -5466,7 +5466,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
       if ( conshdlrdata->slackhash != NULL )
       {
 #ifdef SCIP_DEBUG
-         SCIPinfoMessage(scip, NULL, "\nStatistics for slack hash:\n");
+         SCIPinfoMessage(scip, NULL, "\nStatistics for cons_indicator slack hash:\n");
          SCIPhashmapPrintStatistics(conshdlrdata->slackhash, SCIPgetMessagehdlr(scip));
 #endif
          SCIPhashmapFree(&conshdlrdata->slackhash);
@@ -5479,11 +5479,11 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
          assert( conshdlrdata->ubhash != NULL );
 
 #ifdef SCIP_DEBUG
-         SCIPinfoMessage(scip, NULL, "\nStatistics for var hash:\n");
+         SCIPinfoMessage(scip, NULL, "\nStatistics for cons_indicator var hash:\n");
          SCIPhashmapPrintStatistics(conshdlrdata->varhash, SCIPgetMessagehdlr(scip));
-         SCIPinfoMessage(scip, NULL, "\nStatistics for lower bound hash:\n");
+         SCIPinfoMessage(scip, NULL, "\nStatistics for cons_indicator lower bound hash:\n");
          SCIPhashmapPrintStatistics(conshdlrdata->lbhash, SCIPgetMessagehdlr(scip));
-         SCIPinfoMessage(scip, NULL, "\nStatistics for upper bound hash:\n");
+         SCIPinfoMessage(scip, NULL, "\nStatistics for cons_indicator upper bound hash:\n");
          SCIPhashmapPrintStatistics(conshdlrdata->ubhash, SCIPgetMessagehdlr(scip));
 #endif
 

@@ -5639,7 +5639,7 @@ SCIP_Bool generateCutLTIfindIntersection(
          }
 
          denom = sqrt(b * b - 4.0 * a * (c - wl));
-         q = -0.5 * (b + copysign(denom, b));
+         q = -0.5 * (b + COPYSIGN(denom, b));
          tl1 = q / a;
          tl2 = (c - wl) / q;
 

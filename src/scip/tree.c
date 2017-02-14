@@ -2470,6 +2470,14 @@ SCIP_RETCODE SCIPnodePropagateImplics(
                   continue;
             }
 
+            /* @note the implication might affect a fixed variable (after resolving (multi-)aggregations);
+             *       normally, the implication should have been deleted in that case, but this is only possible
+             *       if the implied variable has the reverse implication stored as a variable bound;
+             *       due to numerics, the variable bound may not be present and so the implication is not deleted
+             */
+            if( SCIPvarGetStatus(SCIPvarGetProbvar(implvars[j])) == SCIP_VARSTATUS_FIXED )
+               continue;
+
             /* apply the implication */
             SCIP_CALL( SCIPnodeAddBoundinfer(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
                   eventqueue, cliquetable, implvars[j], implbounds[j], impltypes[j], NULL, NULL, 0, FALSE) );
@@ -2524,6 +2532,9 @@ SCIP_RETCODE SCIPnodePropagateImplics(
                   if( ub < 0.5 )
                      continue;
                }
+
+               if( SCIPvarGetStatus(SCIPvarGetProbvar(vars[k])) == SCIP_VARSTATUS_FIXED )
+                  continue;
 
                /* apply the clique implication */
                SCIP_CALL( SCIPnodeAddBoundinfer(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
