@@ -228,7 +228,7 @@
 #define EVENTHDLR_BOUND_DESC       "bound change event handler for indicator constraints"
 
 #define EVENTHDLR_RESTART_NAME     "indicatorrestart"
-#define EVENTHDLR_RESTART_DESC     "force restart if absolute gap is 1"
+#define EVENTHDLR_RESTART_DESC     "force restart if absolute gap is 1 or enough binary variables have been fixed"
 
 
 /* conflict handler properties */
@@ -268,7 +268,7 @@
 #define DEFAULT_DUALREDUCTIONS       TRUE    /**< Should dual reduction steps be performed? */
 #define DEFAULT_ADDOPPOSITE         FALSE    /**< Add opposite inequality in nodes in which the binary variable has been fixed to 0? */
 #define DEFAULT_CONFLICTSUPGRADE    FALSE    /**< Try to upgrade bounddisjunction conflicts by replacing slack variables? */
-#define DEFAULT_FORCERESTART        FALSE    /**< Force restart if we have a max FS instance and gap is 1? */
+#define DEFAULT_FORCERESTART        FALSE    /**< Force restart if absolute gap is 1 or enough binary variables have been fixed? */
 #define DEFAULT_RESTARTFRAC           0.9    /**< fraction of binary variables that need to be fixed before restart occurs (in forcerestart) */
 
 
@@ -362,7 +362,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             sepaalternativelp_; /**< used to store the sepaalternativelp parameter */
    SCIP_Bool             nolinconscont;      /**< decompose problem - do not generate linear constraint if all variables are continuous */
    SCIP_Bool             nolinconscont_;     /**< used to store the nolinconscont parameter */
-   SCIP_Bool             forcerestart;       /**< Force restart if we have a max FS instance and gap is 1? */
+   SCIP_Bool             forcerestart;       /**< Force restart if absolute gap is 1 or enough binary variables have been fixed? */
    SCIP_Bool             forcerestart_;      /**< used to strore the forcerestart parameter */
 };
 
@@ -774,18 +774,17 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
 
 /* ------------------------ parameter handling ---------------------------------*/
 
-/** reset parameter to @p oldvalue if it corresponds to the parameter @p name
+/** check whether we transfer a changed parameter to the given value
  *
- *  This function avoids changing crucial parameters.
  *  @see paramChangedIndicator()
  */
 static
-SCIP_RETCODE checkParam(
+SCIP_RETCODE checkTransferBoolParam(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PARAM*           param,              /**< parameter */
    const char*           name,               /**< parameter name to check */
-   SCIP_Bool             oldvalue,           /**< old value of parameter */
-   SCIP_Bool*            newvalue            /**< new value after call */
+   SCIP_Bool             newvalue,           /**< new value */
+   SCIP_Bool*            value               /**< old and possibly changed value of parameter */
    )
 {
    const char* paramname;
@@ -793,9 +792,12 @@ SCIP_RETCODE checkParam(
    assert( scip != NULL );
    assert( param != NULL );
    assert( name != NULL );
-   assert( newvalue != NULL );
+   assert( value != NULL );
 
-   if ( oldvalue == *newvalue )
+   if ( SCIPparamGetType(param) != SCIP_PARAMTYPE_BOOL )
+      return SCIP_OKAY;
+
+   if ( *value == newvalue )
       return SCIP_OKAY;
 
    paramname = SCIPparamGetName(param);
@@ -804,15 +806,20 @@ SCIP_RETCODE checkParam(
    /* check whether the change parameter corresponds to our name to check */
    if ( strcmp(paramname, name) == 0 )
    {
-      /* check stage */
+      /* check stage and possibly ignore parameter change */
       if ( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
       {
-         SCIPwarningMessage(scip, "Cannot change parameter <%s> stage %d - reset to old value %s.\n", name, SCIPgetStage(scip), oldvalue ? "true" : "false");
-         /* reset parameter (NULL = do not recursively call paramchd function) */
-         SCIP_CALL( SCIPchgBoolParam(scip, param, oldvalue) );
-         *newvalue = oldvalue;
+         SCIPwarningMessage(scip, "Cannot change parameter <%s> stage %d - reset to old value %s.\n", name, SCIPgetStage(scip), *value ? "true" : "false");
+         /* Note that the following command will create a recursive call, but then *value == newvalue above. */
+         SCIP_CALL( SCIPchgBoolParam(scip, param, *value) );
+      }
+      else
+      {
+         /* otherwise copy value */
+         *value = newvalue;
       }
    }
+
    return SCIP_OKAY;
 }
 
@@ -823,7 +830,6 @@ SCIP_DECL_PARAMCHGD(paramChangedIndicator)
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool value;
 
    assert( scip != NULL );
    assert( param != NULL );
@@ -836,17 +842,9 @@ SCIP_DECL_PARAMCHGD(paramChangedIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   value = conshdlrdata->sepaalternativelp_;
-   SCIP_CALL( checkParam(scip, param, "constraints/indicator/sepaalternativelp", conshdlrdata->sepaalternativelp, &value) );
-   conshdlrdata->sepaalternativelp = value;
-
-   value = conshdlrdata->forcerestart_;
-   SCIP_CALL( checkParam(scip, param, "constraints/indicator/forcerestart", conshdlrdata->forcerestart, &value) );
-   conshdlrdata->forcerestart = value;
-
-   value = conshdlrdata->nolinconscont;
-   SCIP_CALL( checkParam(scip, param, "constraints/indicator/nolinconscont", conshdlrdata->nolinconscont, &value) );
-   conshdlrdata->nolinconscont = value;
+   SCIP_CALL( checkTransferBoolParam(scip, param, "constraints/indicator/sepaalternativelp", conshdlrdata->sepaalternativelp_, &conshdlrdata->sepaalternativelp) );
+   SCIP_CALL( checkTransferBoolParam(scip, param, "constraints/indicator/forcerestart", conshdlrdata->forcerestart_, &conshdlrdata->forcerestart) );
+   SCIP_CALL( checkTransferBoolParam(scip, param, "constraints/indicator/nolinconscont", conshdlrdata->nolinconscont_, &conshdlrdata->nolinconscont) );
 
    return SCIP_OKAY;
 }
@@ -2741,7 +2739,6 @@ SCIP_RETCODE extendToCover(
    SCIP_Bool*            S,                  /**< bitset of variables */
    int*                  size,               /**< size of S */
    SCIP_Real*            value,              /**< objective value of S */
-   SCIP_Bool*            chgupperbound,      /**< Has the upper bound been changed? */
    SCIP_Bool*            error,              /**< output: whether an error occured */
    SCIP_Bool*            cutoff,             /**< whether we detected a cutoff by an infeasible inequality */
    int*                  nGen                /**< number of generated cuts */
@@ -2760,12 +2757,10 @@ SCIP_RETCODE extendToCover(
    assert( S != NULL );
    assert( size != NULL );
    assert( value != NULL );
-   assert( chgupperbound != NULL );
    assert( error != NULL );
    assert( cutoff != NULL );
    assert( nGen != NULL );
 
-   *chgupperbound = FALSE;
    *error = FALSE;
    *cutoff = FALSE;
    *nGen = 0;
@@ -3624,7 +3619,7 @@ SCIP_RETCODE propIndicator(
    if ( consdata->nfixednonzero == 1 )
    {
       /* increase age of constraint; age is reset to zero, if a conflict or a propagation was found */
-      if ( !SCIPinRepropagation(scip) )
+      if ( ! SCIPinRepropagation(scip) )
          SCIP_CALL( SCIPincConsAge(scip, cons) );
 
       /* if binvar is fixed to be nonzero */
@@ -3667,9 +3662,6 @@ SCIP_RETCODE propIndicator(
       if ( *nGen > 0 )
          SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
-      /* delete constraint locally */
-      assert( !SCIPconsIsModifiable(cons) );
-
       /* mark linear constraint to be update-able */
       if ( SCIPgetDepth(scip) == 0 && SCIPconsIsActive(consdata->lincons) )
       {
@@ -3677,6 +3669,8 @@ SCIP_RETCODE propIndicator(
          assert( SCIPconsGetNUpgradeLocks(consdata->lincons) == 0 );
       }
 
+      /* delete constraint locally */
+      assert( ! SCIPconsIsModifiable(cons) );
       SCIP_CALL( SCIPdelConsLocal(scip, cons) );
    }
    else
@@ -3871,7 +3865,6 @@ SCIP_RETCODE enforceCuts(
    SCIP_LPI* lp;
    SCIP_Bool* S;
    SCIP_Real value = 0.0;
-   SCIP_Bool chgupperbound = FALSE;
    SCIP_Bool error;
    int size = 0;
    int nCuts;
@@ -3936,17 +3929,7 @@ SCIP_RETCODE enforceCuts(
 
    /* extend set S to a cover and generate cuts */
    error = FALSE;
-   do
-   {
-      SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, genlogicor, nconss, conss, S, &size, &value, &chgupperbound, &error, cutoff, &nCuts) );
-
-      /* update upper bound */
-      if ( chgupperbound )
-      {
-         SCIP_CALL( updateObjUpperbound(scip, conshdlr, conshdlrdata) );
-      }
-   }
-   while ( chgupperbound && nCuts == 0 && ! error && ! (*cutoff) );
+   SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, genlogicor, nconss, conss, S, &size, &value, &error, cutoff, &nCuts) );
    *nGen = nCuts;
 
    /* return with an error if no cuts have been produced and and error occured in extendToCover() */
@@ -4233,7 +4216,6 @@ SCIP_RETCODE separateIISRounding(
         rounds < conshdlrdata->maxroundingrounds && threshold >= conshdlrdata->roundingminthres && *nGen < maxsepacuts && ! (*cutoff);
         threshold -= conshdlrdata->roundingoffset )
    {
-      SCIP_Bool chgupperbound = FALSE;
       SCIP_Real value = 0.0;
       int size = 0;
       int nCuts = 0;
@@ -4319,7 +4301,7 @@ SCIP_RETCODE separateIISRounding(
       SCIP_CALL( fixAltLPVariables(scip, lp, nconss, conss, S) );
 
       /* extend set S to a cover and generate cuts */
-      SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, conshdlrdata->genlogicor, nconss, conss, S, &size, &value, &chgupperbound, &error, cutoff, &nCuts) );
+      SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, conshdlrdata->genlogicor, nconss, conss, S, &size, &value, &error, cutoff, &nCuts) );
 
       /* we ignore errors in extendToCover */
       if ( nCuts > 0 )
@@ -4335,14 +4317,6 @@ SCIP_RETCODE separateIISRounding(
 
       /* reset bounds */
       SCIP_CALL( unfixAltLPVariables(scip, lp, nconss, conss, S) );
-
-      /* rerun current threshold if upper bound has been updated */
-      if ( chgupperbound )
-      {
-         SCIPdebugMsg(scip, "Rerun current threshold since upper objective bound has been changed.\n");
-         oldsize = -1;
-         threshold += conshdlrdata->roundingoffset;
-      }
    }
    SCIPdebugMsg(scip, "Generated %d IISs.\n", *nGen - nGenOld);
 
@@ -7245,7 +7219,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/forcerestart",
-         "Force restart if we have a max FS instance and gap is 1?",
+         "Force restart if absolute gap is 1 or enough binary variables have been fixed?",
          &conshdlrdata->forcerestart_, TRUE, DEFAULT_FORCERESTART, paramChangedIndicator, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,

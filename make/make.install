@@ -51,7 +51,7 @@ installlibs:	libs
 ifneq ($(INSTALLDIR),)
 		@echo "-> install SCIP libraries into INSTALLDIR <$(INSTALLDIR)>"
 		@-install -m 755 -d $(INSTALLDIR)/$(LIBDIR)/
-		@-install -m 644 -p $(LPILIBFILE) $(NLPILIBFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(INSTALLDIR)/$(LIBDIR)/
+		@-install -m 644 -p $(LPILIBFILE) $(NLPILIBFILE) $(TPILIBFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(INSTALLDIR)/$(LIBDIR)/
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(LPILIBLINK)) && $(LN_s) $(notdir $(LPILIBFILE)) $(notdir $(LPILIBLINK)));
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(LPILIBSHORTLINK)) && $(LN_s) $(notdir $(LPILIBLINK)) $(notdir $(LPILIBSHORTLINK)));
 		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(NLPILIBLINK)) && $(LN_s) $(notdir $(NLPILIBFILE)) $(notdir $(NLPILIBLINK)));

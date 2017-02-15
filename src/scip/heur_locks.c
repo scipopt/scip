@@ -225,6 +225,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    SCIP_Bool haslhs;
    SCIP_Bool hasrhs;
    SCIP_Bool updatelocks;
+   SCIP_Bool lperror;
    int oldnpscands;
    int npscands;
    int lastfixlocks;
@@ -253,6 +254,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       return SCIP_OKAY;
 
    cutoff = FALSE;
+   lperror = FALSE;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -653,8 +655,6 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
    lpstatus = SCIP_LPSOLSTAT_ERROR;
    if( !cutoff )
    {
-      SCIP_Bool lperror;
-
       SCIPdebugMsg(scip, "solve probing LP in LOCKS heuristic: %d unfixed integer variables\n", SCIPgetNPseudoBranchCands(scip));
 
       /* solve LP;
@@ -721,7 +721,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       }
    }
 
-   if( heurdata->usefinalsubmip && !cutoff && lpstatus != SCIP_LPSOLSTAT_INFEASIBLE && lpstatus != SCIP_LPSOLSTAT_OBJLIMIT )
+   if( heurdata->usefinalsubmip && !cutoff && !lperror && lpstatus != SCIP_LPSOLSTAT_INFEASIBLE && lpstatus != SCIP_LPSOLSTAT_OBJLIMIT )
    {
       SCIP* subscip;
       SCIP_VAR** subvars;
