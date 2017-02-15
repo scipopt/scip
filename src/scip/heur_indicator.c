@@ -92,7 +92,7 @@ SCIP_RETCODE tryOneOpt(
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
-   for (i = 0; i < nindconss; ++i)
+   for (i = 0; i < nindconss && ! SCIPisStopped(scip); ++i)
    {
       SCIP_VAR* binvar;
 
