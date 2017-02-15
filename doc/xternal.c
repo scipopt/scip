@@ -7238,6 +7238,13 @@
  *  Below you find a list of available data structures
  */
 
+/** @defgroup UnionFind Union Find
+ *  @ingroup DataStructures
+ *  @brief weighted union find data structure with path compression
+ *
+ *  Weighted Union Find is a data structure to quickly update and query connectivity information
+ *  between nodes of a graph.
+ */
 /**@defgroup MiscellaneousMethods Miscellaneous Methods
  * @ingroup PUBLICCOREAPI
  * @brief commonly used methods from different categories
