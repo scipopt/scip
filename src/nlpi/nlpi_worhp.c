@@ -1201,16 +1201,20 @@ SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveWorhp )
 static
 SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsWorhp )
 {
+#ifdef SCIP_DISABLED_CODE
    const SCIP_Real* oldlbs = SCIPnlpiOracleGetVarLbs(problem->oracle);
    const SCIP_Real* oldubs = SCIPnlpiOracleGetVarUbs(problem->oracle);
    int index;
    int i;
+#endif
 
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
-   /* TODO: So far, Worhp can not handle fixed variables (and fixed variables that have been unfixed) when applying a
+#ifdef SCIP_DISABLED_CODE
+   /* TODO check WORHP version here */
+   /* So far, Worhp can not handle fixed variables (and fixed variables that have been unfixed) when applying a
     * restart. The following code needs to be removed when this has changed.
     */
    for( i = 0; i < nvars; ++i )
@@ -1225,6 +1229,7 @@ SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsWorhp )
          if( REALABS(oldlbs[index] - oldubs[index]) <= problem->feastol )
             problem->firstrun = TRUE;
    }
+#endif
 
    SCIP_CALL( SCIPnlpiOracleChgVarBounds(problem->oracle, nvars, indices, lbs, ubs) );
 
