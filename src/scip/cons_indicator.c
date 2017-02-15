@@ -2817,7 +2817,7 @@ SCIP_RETCODE extendToCover(
                heurindicator = SCIPfindHeur(scip, "indicator");
                if ( heurindicator == NULL )
                {
-                  SCIPerrorMessage("Could not find heuristic \"indictor\".\n");
+                  SCIPerrorMessage("Could not find heuristic \"indicator\".\n");
                   return SCIP_PLUGINNOTFOUND;
                }
 
