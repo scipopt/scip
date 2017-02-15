@@ -109,7 +109,7 @@ SCIP_RETCODE lca(
    SCIP*                 scip,
    const GRAPH*          graph,
    int                   u,
-   UF*                   uf,
+   SCIP_UF*                   uf,
    char*                 nodesmark,
    int*                  steineredges,
    IDX**                 lcalists,
@@ -547,7 +547,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
       IDX** lvledges_start;  /* horizontal edges */
       IDX* lvledges_curr;
       PHNODE** boundpaths;
-      UF uf;  /* union-find*/
+      SCIP_UF uf;  /* union-find*/
       SCIP_Real* memdist;
       SCIP_Real kpcost;
       SCIP_Real mstcost;

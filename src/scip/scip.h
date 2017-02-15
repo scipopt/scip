@@ -22405,6 +22405,29 @@ int SCIPgetPtrarrayMaxIdx(
    );
 
 /**@} */
+
+/**@addtogroup UnionFind
+ *
+ * @{
+ */
+
+/** creates a union-find structure \p uf for \p ncomponents many components (of size one) */
+extern
+SCIP_RETCODE SCIPcreateUnionFind(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_UF**             uf,                 /**< union find data structure */
+   int                   ncomponents         /**< number of components */
+   );
+
+/** frees the union-find data structure */
+extern
+void SCIPfreeUnionfind(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_UF**             uf                  /**< pointer to union find data structure */
+   );
+
+/* @} */
+
 #ifdef __cplusplus
 }
 #endif

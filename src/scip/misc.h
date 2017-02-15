@@ -324,6 +324,21 @@ int SCIPptrarrayGetMaxIdx(
    SCIP_PTRARRAY*        ptrarray            /**< dynamic ptr array */
    );
 
+/** creates a union-find structure \p uf for \p ncomponents many components (of size one) */
+extern
+SCIP_RETCODE SCIPunionfindCreate(
+   SCIP_UF**             uf,                 /**< union find data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   int                   ncomponents         /**< number of components */
+   );
+
+/** frees the union-find data structure */
+extern
+void SCIPunionfindFree(
+   SCIP_UF**             uf,                 /**< pointer to union find data structure */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
 /*
  * Additional math functions
  */

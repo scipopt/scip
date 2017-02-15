@@ -2732,7 +2732,7 @@ void voronoi_repair(
    PATH*                 path,               /**< Voronoi paths data struture */
    int*                  newedge,            /**< the new edge */
    int                   crucnode,           /**< the current crucial node */
-   UF*                   uf                  /**< union find data structure */
+   SCIP_UF*                   uf                  /**< union find data structure */
    )
 {
    int k;
@@ -2810,7 +2810,7 @@ void voronoi_repair_mult(
    int*                  boundedges,         /**< boundary edges */
    int*                  nboundedges,        /**< number of boundary edges */
    char*                 nodesmark,          /**< array to mark temporarily discarded nodes */
-   UF*                   uf,                 /**< union find data structure */
+   SCIP_UF*                   uf,                 /**< union find data structure */
    PATH*                 path                /**< Voronoi paths data structure */
    )
 {

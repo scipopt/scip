@@ -47167,3 +47167,29 @@ int SCIPgetPtrarrayMaxIdx(
 
    return SCIPptrarrayGetMaxIdx(ptrarray);
 }
+
+/** creates a union-find structure \p uf for \p ncomponents many components (of size one) */
+SCIP_RETCODE SCIPcreateUnionFind(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_UF**             uf,                 /**< union find data structure */
+   int                   ncomponents         /**< number of components */
+   )
+{
+   assert(scip != NULL);
+   assert(uf != NULL);
+
+   SCIP_CALL( SCIPunionfindCreate(uf, scip->mem->probmem, ncomponents) );
+
+   return SCIP_OKAY;
+}
+
+/** frees the union-find data structure */
+void SCIPfreeUnionfind(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_UF**             uf                  /**< pointer to union find data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIPunionfindFree(uf, scip->mem->probmem);
+}

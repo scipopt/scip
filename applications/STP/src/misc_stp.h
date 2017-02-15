@@ -38,14 +38,6 @@ typedef struct Graph_Node
    SCIP_Real             dist;               /**< node distance */
 }GNODE;
 
-/** a  weighted-quick-union-path-compression union find structure */
-typedef struct UnionFind_Structure
-{
-   int*                  parent;             /**< parent[i] stores the parent of i                       */
-   int*                  size;               /**< size[i] stores number of nodes in the tree rooted at i */
-   int                   count;              /**< number of components                                   */
-}UF;
-
 /** voronoi list node structure storing distance, incoming edge,base and pointer to next list node */
 typedef struct Vnoi_List_Node
 {
@@ -236,7 +228,7 @@ SCIP_RETCODE SCIPpairheapBuffarr(
 extern
 SCIP_RETCODE SCIPunionfindInit(
    SCIP*                 scip,               /**< SCIP data structure */
-   UF*                   uf,                 /**< union find data structure */
+   SCIP_UF*                   uf,                 /**< union find data structure */
    int                   length              /**< number of components */
    );
 
@@ -244,21 +236,21 @@ SCIP_RETCODE SCIPunionfindInit(
 extern
 void SCIPunionfindClear(
    SCIP*                 scip,               /**< SCIP data structure */
-   UF*                   uf,                 /**< union find data structure */
+   SCIP_UF*                   uf,                 /**< union find data structure */
    int                   length              /**< number of components */
    );
 
 /** finds and returns the component identifier */
 extern
 int SCIPunionfindFind(
-   UF*                   uf,                 /**< union find data structure */
+   SCIP_UF*                   uf,                 /**< union find data structure */
    int                   element             /**< element to be found */
    );
 
 /** merges the components containing p and q respectively */
 extern
 void SCIPunionfindUnion(
-   UF*                   uf,                 /**< union find data structure */
+   SCIP_UF*                   uf,                 /**< union find data structure */
    int                   p,                  /**< first component */
    int                   q,                  /**< second component*/
    SCIP_Bool             compress            /**< compress union find structure? */
@@ -268,7 +260,7 @@ void SCIPunionfindUnion(
 extern
 void SCIPunionfindFree(
    SCIP*                 scip,               /**< SCIP data structure */
-   UF*                   uf                  /**< union find data structure */
+   SCIP_UF*                   uf                  /**< union find data structure */
    );
 
 

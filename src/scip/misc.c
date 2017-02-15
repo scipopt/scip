@@ -9693,3 +9693,143 @@ SCIP_Real SCIPcomputeGap(
       return REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
    }
 }
+
+/*
+ *Union-Find data structure
+ */
+
+/** creates a union-find structure \p uf for \p ncomponents many components (of size one) */
+SCIP_RETCODE SCIPunionfindCreate(
+   SCIP_UF**             uf,                 /**< union find data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   int                   ncomponents         /**< number of components */
+   )
+{
+   assert(uf != NULL);
+   assert(blkmem != NULL);
+
+   /* allocate the necessary memory */
+   assert(ncomponents > 0);
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, uf) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &((*uf)->parents), ncomponents) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &((*uf)->sizes), ncomponents) );
+   (*uf)->size = ncomponents;
+
+   /* clear the data structure */
+   SCIPunionfindClear(*uf);
+
+   return SCIP_OKAY;
+}
+
+/** clears the union-find structure \p uf */
+void SCIPunionfindClear(
+   SCIP_UF*              uf                  /**< union find data structure */
+   )
+{
+   int i;
+   uf->componentcount = uf->size;
+
+   /* reset all components to be unconnected */
+   for( i = 0; i < uf->componentcount; i++ )
+   {
+      uf->parents[i] = i;
+      uf->sizes[i] = 1;
+   }
+}
+
+
+/** finds and returns the component identifier of this \p element */
+int SCIPunionfindFind(
+   SCIP_UF*              uf,                 /**< union find data structure */
+   int                   element             /**< element to be found */
+   )
+{
+   int newelement;
+   int root = element;
+   int* parents = uf->parents;
+
+   /* find root of this element */
+   while( root != parents[root] )
+   {
+      root = parents[root];
+   }
+
+   /* compress the path to make future queries faster */
+   while( element != root )
+   {
+      newelement = parents[element];
+      parents[element] = root;
+      element = newelement;
+   }
+
+   return root;
+}
+
+/** merges the components containing the elements \p p and \p q */
+void SCIPunionfindUnion(
+   SCIP_UF*              uf,                 /**< union find data structure */
+   int                   p,                  /**< first element */
+   int                   q                   /**< second element */
+   )
+{
+   int idp;
+   int idq;
+   int* size = uf->sizes;
+   int* parents = uf->parents;
+
+   assert(uf != NULL);
+   assert(0 <= p);
+   assert(0 <= q);
+   assert(uf->size > p);
+   assert(uf->size > q);
+
+   idp = SCIPunionfindFind(uf, p);
+   idq = SCIPunionfindFind(uf, q);
+
+   /* if p and q lie in the same component, there is nothing to be done */
+   if( idp == idq )
+      return;
+
+   if( size[idp] < size[idq] )
+   {
+      parents[idp] = idq;
+      size[idq] += size[idp];
+   }
+   else
+   {
+      parents[idq] = idp;
+      size[idp] += size[idq];
+   }
+
+   /* one less component */
+   uf->componentcount--;
+}
+
+/** frees the union-find data structure */
+void SCIPunionfindFree(
+   SCIP_UF**             uf,                 /**< pointer to union find data structure */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   SCIP_UF* ufptr;
+
+   assert(uf != NULL);
+   assert(*uf != NULL);
+
+   ufptr = *uf;
+
+   BMSfreeBlockMemoryArray(blkmem, &ufptr->sizes, ufptr->size);
+   BMSfreeBlockMemoryArray(blkmem, &ufptr->parents, ufptr->size);
+
+   BMSfreeBlockMemory(blkmem, uf);
+}
+
+/** returns the number of independent components in this union find data structure */
+int SCIPunionfindGetComponentCount(
+   SCIP_UF*              uf                  /**< union find data structure */
+   )
+{
+   assert(uf != NULL);
+
+   return uf->componentcount;
+}
