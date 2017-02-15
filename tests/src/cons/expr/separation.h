@@ -45,11 +45,16 @@ static SCIP_CONSEXPR_EXPR* xexpr;
 static SCIP_CONSEXPR_EXPR* yexpr;
 static SCIP_CONSEXPR_EXPR* zexpr;
 
+static SCIP_RANDNUMGEN* randnumgen; /* needs it for the multilinear separation */
+
 /* creates scip, problem, includes expression constraint handler, creates  and adds variables */
 static
 void setup(void)
 {
    SCIP_CALL( SCIPcreate(&scip) );
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, SCIPblkmem(scip), 1) );
 
    /* include cons_expr: this adds the operator handlers */
    SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
@@ -87,6 +92,9 @@ void setup(void)
 static
 void teardown(void)
 {
+   /* free random number generator */
+   SCIPrandomFree(&randnumgen);
+
    /* reset stage to PRESOLVED */
    scip->set->stage = SCIP_STAGE_PRESOLVED;
 
