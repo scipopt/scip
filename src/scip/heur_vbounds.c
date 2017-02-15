@@ -714,7 +714,7 @@ SCIP_RETCODE applyVbounds(
    /*************************** END Probing LP Solving ***************************/
 
    /* if no solution has been found --> fix all other variables by subscip if necessary */
-   if( !foundsol && lpstatus != SCIP_LPSOLSTAT_INFEASIBLE && lpstatus != SCIP_LPSOLSTAT_OBJLIMIT && !infeasible )
+   if( !foundsol && !lperror && lpstatus != SCIP_LPSOLSTAT_INFEASIBLE && lpstatus != SCIP_LPSOLSTAT_OBJLIMIT && !infeasible )
    {
       SCIP* subscip;
       SCIP_VAR** subvars;

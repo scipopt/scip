@@ -824,6 +824,8 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       SCIP_CALL( SCIPaddConsNode(scip, SCIPgetCurrentNode(scip), conflictcons, NULL) );
       SCIPdebugPrintCons(scip, conflictcons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &conflictcons) );
+
+      goto TERMINATE;
    }
 
    /*************************** End Conflict ***************************/
@@ -833,7 +835,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    /* if no solution has been found yet and the subproblem is still feasible --> fix all other variables by subscip if
     * necessary
     */
-   if( !allfixsolfound && lpstatus != SCIP_LPSOLSTAT_INFEASIBLE && lpstatus != SCIP_LPSOLSTAT_OBJLIMIT && !backtrackcutoff )
+   if( !allfixsolfound && !lperror )
    {
       SCIP* subscip;
       SCIP_VAR** subvars;
