@@ -7889,6 +7889,41 @@ SCIP_VAR* SCIPgetSlackVarIndicator(
 }
 
 
+/** sets upper bound for slack variable corresponding to indicator constraint
+ *
+ *  Use with care if you know that the maximal violation of the corresponding constraint is at most @p ub. This bound
+ *  might be improved automatically during the solution process.
+ *
+ *  @pre This method should only be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetSlackVarUb(
+   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_CONS*            cons,                /**< indicator constraint */
+   SCIP_Real             ub                   /**< upper bound for slack variable */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert( scip != NULL );
+   assert( cons != NULL );
+   assert( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) == 0 );
+
+   consdata = SCIPconsGetData(cons);
+   assert( consdata != NULL );
+
+   if ( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
+      return SCIP_OKAY;
+
+   assert( consdata->slackvar != NULL );
+   SCIP_CALL( SCIPchgVarUb(scip, consdata->slackvar, ub) );
+
+   return SCIP_OKAY;
+}
+
+
 /** checks whether indicator constraint is violated w.r.t. sol */
 SCIP_Bool SCIPisViolatedIndicator(
    SCIP*                 scip,               /**< SCIP data structure */

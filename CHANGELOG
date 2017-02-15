@@ -1,6 +1,9 @@
 SCIP version NEXT
 ==================
 
+interface:
+- add function SCIPsetSlackVarUb() to control upper bound of slack variable in cons_indicator
+
 
 SCIP version 4.0.0
 ==================
