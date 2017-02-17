@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cmain.c
+/**@file   reader_nl.c
  * @brief  AMPL .nl file reader
  * @author Stefan Vigerske
  *
