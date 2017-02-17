@@ -1206,7 +1206,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                if( !SCIPisInfinity(scip, rhs) )
                   aggrconst = rhs / multiaggcoef;
                else
-                  aggrconst = lhs / multiaggcoef;
+                  aggrconst = SCIPmatrixGetRowLhs(matrix, row) / multiaggcoef;
 
                /* calculate scalars */
                rowpnt = SCIPmatrixGetRowIdxPtr(matrix, row);
