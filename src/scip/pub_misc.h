@@ -1522,7 +1522,8 @@ EXTERN
 void SCIPunionfindUnion(
    SCIP_UF*              uf,                 /**< union find data structure */
    int                   p,                  /**< first element */
-   int                   q                   /**< second element */
+   int                   q,                  /**< second element */
+   SCIP_Bool             forcerepofp         /**< force representative of p to be new representative */
    );
 
 /** returns the number of independent components in this union find data structure */

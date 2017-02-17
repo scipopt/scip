@@ -3131,7 +3131,7 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
             /* connect the node to the last active node index */
             if( lastactiveindex >= 0 )
             {
-               SCIPunionfindUnion(unionfind, lastactiveindex, nodeindex);
+               SCIPunionfindUnion(unionfind, lastactiveindex, nodeindex, FALSE);
             }
 
             /* store this node index as active index for the next union */

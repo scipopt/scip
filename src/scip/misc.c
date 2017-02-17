@@ -9769,19 +9769,21 @@ int SCIPunionfindFind(
 void SCIPunionfindUnion(
    SCIP_UF*              uf,                 /**< union find data structure */
    int                   p,                  /**< first element */
-   int                   q                   /**< second element */
+   int                   q,                  /**< second element */
+   SCIP_Bool             forcerepofp         /**< force representative of p to be new representative */
    )
 {
    int idp;
    int idq;
-   int* size = uf->sizes;
-   int* parents = uf->parents;
+   int* sizes;
+   int* parents;
 
    assert(uf != NULL);
    assert(0 <= p);
    assert(0 <= q);
    assert(uf->size > p);
    assert(uf->size > q);
+
 
    idp = SCIPunionfindFind(uf, p);
    idq = SCIPunionfindFind(uf, q);
@@ -9790,17 +9792,27 @@ void SCIPunionfindUnion(
    if( idp == idq )
       return;
 
-   if( size[idp] < size[idq] )
+   sizes = uf->sizes;
+   parents = uf->parents;
+
+   if( forcerepofp )
    {
-      parents[idp] = idq;
-      size[idq] += size[idp];
+      parents[idq] = idp;
+      sizes[idp] += sizes[idq];
    }
    else
    {
-      parents[idq] = idp;
-      size[idp] += size[idq];
+      if( sizes[idp] < sizes[idq] )
+      {
+         parents[idp] = idq;
+         sizes[idq] += sizes[idp];
+      }
+      else
+      {
+         parents[idq] = idp;
+         sizes[idp] += sizes[idq];
+      }
    }
-
    /* one less component */
    uf->componentcount--;
 }
