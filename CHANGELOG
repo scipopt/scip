@@ -207,6 +207,7 @@ fixed bugs:
 - time limit of SCIP-infinity is converted to LPI-infinity when setting it
 - fix LP activity of a row that has been modified
 - fixed issue in reader_opb concerning writing of fixed variables contained in no constraints
+- fixed bug in heur_indicator: use improvesols parameter now
 
 misc:
 - dropped support for Ipopt < 3.11
