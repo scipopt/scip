@@ -363,7 +363,7 @@ SCIP_DECL_HEURINIT(heurInitIndicator)
    heurdata = SCIPheurGetData(heur);
    assert( heurdata != NULL );
 
-   if ( heurdata->indicatorconshdlr != NULL )
+   if ( heurdata->indicatorconshdlr == NULL )
    {
       heurdata->indicatorconshdlr = SCIPfindConshdlr(scip, "indicator");
       if ( heurdata->indicatorconshdlr == NULL )
