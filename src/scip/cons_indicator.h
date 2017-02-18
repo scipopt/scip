@@ -61,8 +61,6 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
  * This constraint is equivalent to a linear constraint \f$ax - s \leq b\f$ and an SOS1 constraint on
  * \f$z\f$ and \f$s\f$ (at most one should be nonzero). In the indicator context we can, however,
  * separate more inequalities.
- *
- * The name indicator apparently comes from CPLEX.
  */
 
 /** creates and captures an indicator constraint
@@ -103,9 +101,9 @@ SCIP_RETCODE SCIPcreateConsIndicator(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
-/** creates and captures an indicator constraint
- *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
- *  method SCIPcreateConsIndicator(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+/** creates and captures an indicator constraint in its most basic version, i. e., all constraint flags are set to their
+ *  basic value as explained for the method SCIPcreateConsIndicator(); all flags can be set via
+ *  SCIPsetConsFLAGNAME-methods in scip.h
  *
  *  @see SCIPcreateConsIndicator() for information about the basic constraint flag configuration
  *
@@ -255,7 +253,7 @@ SCIP_Bool SCIPisViolatedIndicator(
    SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
    );
 
-/** Based on values of other variables, computes slack and binary variable to turn constraint feasible */
+/** based on values of other variables, computes slack and binary variable to turn constraint feasible */
 EXTERN
 SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -264,7 +262,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
    SCIP_Bool*            changed             /**< pointer to store whether the solution has been changed */
    );
 
-/** Based on values of other variables, computes slack and binary variable to turn all constraints feasible */
+/** based on values of other variables, computes slack and binary variable to turn all constraints feasible */
 EXTERN
 SCIP_RETCODE SCIPmakeIndicatorsFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -273,7 +271,7 @@ SCIP_RETCODE SCIPmakeIndicatorsFeasible(
    SCIP_Bool*            changed             /**< pointer to store whether the solution has been changed */
    );
 
-/** adds additional linear constraint that is not connected by an indicator constraint, but can be used for separation */
+/** adds additional linear constraint that is not connected with an indicator constraint, but can be used for separation */
 EXTERN
 SCIP_RETCODE SCIPaddLinearConsIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -281,7 +279,7 @@ SCIP_RETCODE SCIPaddLinearConsIndicator(
    SCIP_CONS*            lincons             /**< linear constraint */
    );
 
-/** adds additional globally valid row that is not connected by an indicator constraint, but can be used for separation */
+/** adds additional globally valid row that is not connected with an indicator constraint, but can be used for separation */
 EXTERN
 SCIP_RETCODE SCIPaddRowIndicator(
    SCIP*                 scip,               /**< SCIP data structure */

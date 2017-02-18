@@ -7402,7 +7402,7 @@
 
 /**@defgroup BRANCHINGRULES Branching Rules
  * @ingroup PUBLICPLUGINAPI
- * @brief methods and files provided by the default branching rule of \SCIP
+ * @brief methods and files provided by the default branching rules of \SCIP
  *
  * A detailed description what a branching rule does and how to add a branching rule to SCIP can be found
  * \ref BRANCH "here".

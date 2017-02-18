@@ -3160,7 +3160,7 @@ SCIP_Real SCIPhashmapEntryGetImageReal(
    return entry->image.real;
 }
 
-/** removes all entries in a hash map. */ 
+/** removes all entries in a hash map. */
 SCIP_RETCODE SCIPhashmapRemoveAll(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    )
@@ -3635,7 +3635,7 @@ SCIP_RETCODE SCIPintarrayExtend(
    assert(0 <= minidx);
    assert(minidx <= maxidx);
 
-   SCIPdebugMessage("extending intarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
+   SCIPdebugMessage("extending intarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n",
       (void*)intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
@@ -3770,7 +3770,7 @@ SCIP_RETCODE SCIPintarrayClear(
 {
    assert(intarray != NULL);
 
-   SCIPdebugMessage("clearing intarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
+   SCIPdebugMessage("clearing intarray %p (firstidx=%d, size=%d, range=[%d,%d])\n",
       (void*)intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx);
 
    if( intarray->minusedidx <= intarray->maxusedidx )
@@ -3827,7 +3827,7 @@ SCIP_RETCODE SCIPintarraySetVal(
    assert(intarray != NULL);
    assert(idx >= 0);
 
-   SCIPdebugMessage("setting intarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %d\n", 
+   SCIPdebugMessage("setting intarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %d\n",
       (void*)intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx, idx, val);
 
    if( val != 0 )
@@ -3877,7 +3877,7 @@ SCIP_RETCODE SCIPintarraySetVal(
             assert(intarray->minusedidx <= intarray->maxusedidx);
          }
          while( intarray->vals[intarray->maxusedidx - intarray->firstidx] == 0 );
-      }      
+      }
    }
 
    return SCIP_OKAY;
@@ -3949,7 +3949,7 @@ SCIP_RETCODE SCIPboolarrayCopy(
    SCIP_CALL( SCIPboolarrayCreate(boolarray, blkmem) );
    if( sourceboolarray->valssize > 0 )
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*boolarray)->vals, sourceboolarray->vals, 
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*boolarray)->vals, sourceboolarray->vals,
                      sourceboolarray->valssize) );
    }
    (*boolarray)->valssize = sourceboolarray->valssize;
@@ -4001,7 +4001,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
    assert(0 <= minidx);
    assert(minidx <= maxidx);
 
-   SCIPdebugMessage("extending boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
+   SCIPdebugMessage("extending boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n",
       (void*)boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
@@ -4138,7 +4138,7 @@ SCIP_RETCODE SCIPboolarrayClear(
 {
    assert(boolarray != NULL);
 
-   SCIPdebugMessage("clearing boolarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
+   SCIPdebugMessage("clearing boolarray %p (firstidx=%d, size=%d, range=[%d,%d])\n",
       (void*)boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx);
 
    if( boolarray->minusedidx <= boolarray->maxusedidx )
@@ -4195,7 +4195,7 @@ SCIP_RETCODE SCIPboolarraySetVal(
    assert(boolarray != NULL);
    assert(idx >= 0);
 
-   SCIPdebugMessage("setting boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %u\n", 
+   SCIPdebugMessage("setting boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %u\n",
       (void*)boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx, idx, val);
 
    if( val != FALSE )
@@ -4245,7 +4245,7 @@ SCIP_RETCODE SCIPboolarraySetVal(
             assert(boolarray->minusedidx <= boolarray->maxusedidx);
          }
          while( boolarray->vals[boolarray->maxusedidx - boolarray->firstidx] == FALSE );
-      }      
+      }
    }
 
    return SCIP_OKAY;
@@ -4356,7 +4356,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
    assert(0 <= minidx);
    assert(minidx <= maxidx);
 
-   SCIPdebugMessage("extending ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
+   SCIPdebugMessage("extending ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n",
       (void*)ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
@@ -4491,7 +4491,7 @@ SCIP_RETCODE SCIPptrarrayClear(
 {
    assert(ptrarray != NULL);
 
-   SCIPdebugMessage("clearing ptrarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
+   SCIPdebugMessage("clearing ptrarray %p (firstidx=%d, size=%d, range=[%d,%d])\n",
       (void*)ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx);
 
    if( ptrarray->minusedidx <= ptrarray->maxusedidx )
@@ -4548,7 +4548,7 @@ SCIP_RETCODE SCIPptrarraySetVal(
    assert(ptrarray != NULL);
    assert(idx >= 0);
 
-   SCIPdebugMessage("setting ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %p\n", 
+   SCIPdebugMessage("setting ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %p\n",
       (void*)ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx, idx, val);
 
    if( val != NULL )
@@ -4598,7 +4598,7 @@ SCIP_RETCODE SCIPptrarraySetVal(
             assert(ptrarray->minusedidx <= ptrarray->maxusedidx);
          }
          while( ptrarray->vals[ptrarray->maxusedidx - ptrarray->firstidx] == NULL );
-      }      
+      }
    }
 
    return SCIP_OKAY;
@@ -6624,8 +6624,8 @@ void SCIPdigraphFree(
    /* free arrays storing the successor nodes and arc data */
    for( i = digraphptr->nnodes - 1; i >= 0; --i )
    {
-      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->successors[i], digraphptr->successorssize[i]); /*lint !e866*/
-      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->arcdata[i], digraphptr->successorssize[i]); /*lint !e866*/
+      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->successors[i], digraphptr->successorssize[i]);
+      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->arcdata[i], digraphptr->successorssize[i]);
    }
 
    /* free components structure */

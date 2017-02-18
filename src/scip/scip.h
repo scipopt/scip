@@ -112,6 +112,7 @@
  */
 #ifdef NDEBUG
 #include "scip/struct_scip.h"
+#include "scip/struct_stat.h"
 #include "scip/set.h"
 #include "scip/tree.h"
 #include "scip/misc.h"
@@ -21786,7 +21787,7 @@ SCIP_Bool SCIPisUpdateUnreliable(
 
 #define SCIPmarkConsPropagate(scip, cons)         SCIPconsMarkPropagate(cons, (scip)->set)
 #define SCIPgetStage(scip)                        (((scip)->set)->stage)
-#define SCIPhasPerformedPresolve(scip)            ((scip)->stat)->performpresol)
+#define SCIPhasPerformedPresolve(scip)            ((scip)->stat->performpresol)
 #define SCIPisStopped(scip)                       SCIPsolveIsStopped((scip)->set, (scip)->stat, 0)
 
 #endif

@@ -1938,10 +1938,13 @@ SCIP_RETCODE detectImpliedBounds(
 
    SCIPsetDebugMsg(set, "trivially removed %d redundant of %d variables from conflictset (%p)\n", ntrivialredvars, conflictset->nbdchginfos, (void*)conflictset);
    conflictset->nbdchginfos = nbdchginfos;
-   assert(conflictset->nbdchginfos > 0);
+
+   /* all variables where removed, the conflict cannot be fulfilled, i.e., we have an infeasibility proof */
+   if( conflictset->nbdchginfos == 0 )
+      return SCIP_OKAY;
 
    /* do not check to big or trivial conflicts */
-   if( conflictset->nbdchginfos > set->conf_maxvarsdetectimpliedbounds || conflictset->nbdchginfos <= 1 )
+   if( conflictset->nbdchginfos > set->conf_maxvarsdetectimpliedbounds || conflictset->nbdchginfos == 1 )
    {
       *nredvars = ntrivialredvars;
       return SCIP_OKAY;
@@ -2152,6 +2155,10 @@ SCIP_RETCODE conflictAddConflictCons(
       /* find global bound changes which can be derived from the new conflict set */
       SCIP_CALL( detectImpliedBounds(set, transprob, conflictset, &nbdchgs, &nredvars, &redundant) );
 
+      /* all variables where removed, we have an infeasibility proof */
+      if( conflictset->nbdchginfos == 0 )
+         return SCIP_OKAY;
+
       /* debug check for reduced conflict set */
       if( nredvars > 0 )
       {
@@ -2355,8 +2362,24 @@ SCIP_RETCODE SCIPconflictFlushConss(
             SCIP_Bool success;
 
             /* call conflict handlers to create a conflict constraint */
-            SCIP_CALL( conflictAddConflictCons(conflict, blkmem, set, stat, transprob, origprob,
-                  tree, reopt, lp, branchcand, eventqueue, cliquetable, conflictset, conflictset->insertdepth, &success) );
+            SCIP_CALL( conflictAddConflictCons(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
+                  branchcand, eventqueue, cliquetable, conflictset, conflictset->insertdepth, &success) );
+
+            /* if no conflict bounds exist, the node and its sub tree in the conflict set's valid depth can be
+             * cut off completely
+             */
+            if( conflictset->nbdchginfos == 0 )
+            {
+               assert(!success);
+
+               SCIPsetDebugMsg(set, " -> empty conflict set in depth %d cuts off sub tree at depth %d\n",
+                  focusdepth, conflictset->validdepth);
+
+               SCIP_CALL( SCIPnodeCutoff(tree->path[conflictset->validdepth], set, stat, tree, transprob, origprob,
+                     reopt, lp, blkmem) );
+               cutoffdepth = conflictset->validdepth;
+               continue;
+            }
 
             if( success )
             {
@@ -2390,8 +2413,24 @@ SCIP_RETCODE SCIPconflictFlushConss(
             assert(repropconflictset->repropagate);
             assert(repropconflictset->repropdepth == repropdepth);
 
-            SCIP_CALL( conflictAddConflictCons(conflict, blkmem, set, stat, transprob, origprob,
-                  tree, reopt, lp, branchcand, eventqueue, cliquetable, repropconflictset, repropdepth, &success) );
+            SCIP_CALL( conflictAddConflictCons(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
+                  branchcand, eventqueue, cliquetable, repropconflictset, repropdepth, &success) );
+
+            /* if no conflict bounds exist, the node and its sub tree in the conflict set's valid depth can be
+             * cut off completely
+             */
+            if( repropconflictset->nbdchginfos == 0 )
+            {
+               assert(!success);
+
+               SCIPsetDebugMsg(set, " -> empty reprop conflict set in depth %d cuts off sub tree at depth %d\n",
+                  focusdepth, repropconflictset->validdepth);
+
+               SCIP_CALL( SCIPnodeCutoff(tree->path[repropconflictset->validdepth], set, stat, tree, transprob, origprob,
+                     reopt, lp, blkmem) );
+               cutoffdepth = repropconflictset->validdepth;
+            }
+
 #ifdef SCIP_DEBUG
             if( success )
             {
