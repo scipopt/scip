@@ -2718,12 +2718,13 @@ SCIP_RETCODE checkAltLPInfeasible(
 
 /** tries to extend a given set of variables to a cover
  *
- *  At each step we include a variable which covers a new IIS. Ties are broken according to the
- *  number of IISs a variable is contained in.  The corresponding IIS inequalities are added to the
- *  LP, if this not already happened.
+ *  At each step we include a variable which covers a new IIS. The corresponding IIS inequalities are added to the LP,
+ *  if this not already happened.
  *
  *  @pre It is assumed that all parameters for the alternative LP are set and that the variables
  *  corresponding to @a S are fixed. Furthermore @c xVal_ should contain the current LP solution.
+ *
+ *  @todo Improve the choice of the entering variable; currently the first is used.
  */
 static
 SCIP_RETCODE extendToCover(
