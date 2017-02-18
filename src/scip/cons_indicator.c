@@ -237,7 +237,7 @@
 #define CONFLICTHDLR_PRIORITY      200000
 
 /* upgrade properties */
-#define LINCONSUPGD_PRIORITY      +100000     /**< priority of the constraint handler for upgrading of linear constraints */
+#define LINCONSUPGD_PRIORITY      +100000    /**< priority of the constraint handler for upgrading of linear constraints */
 
 /* default values for parameters */
 #define DEFAULT_BRANCHINDICATORS    FALSE    /**< Branch on indicator constraints in enforcing? */
@@ -314,7 +314,7 @@ struct SCIP_ConshdlrData
    int                   nslackvars;         /**< # slack variables */
    int                   niiscutsgen;        /**< number of IIS-cuts generated */
    int                   nperspcutsgen;      /**< number of cuts based on perspective formulation generated */
-   int                   objcutindex;        /**< index of objectice cut in alternative LP (-1 if not added) */
+   int                   objcutindex;        /**< index of objective cut in alternative LP (-1 if not added) */
    SCIP_Real             objupperbound;      /**< best upper bound on objective known */
    SCIP_Real             objaltlpbound;      /**< upper objective bound stored in alternative LP (infinity if not added) */
    int                   maxroundingrounds;  /**< maximal number of rounds that produced cuts in separation */
@@ -363,7 +363,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             nolinconscont;      /**< decompose problem - do not generate linear constraint if all variables are continuous */
    SCIP_Bool             nolinconscont_;     /**< used to store the nolinconscont parameter */
    SCIP_Bool             forcerestart;       /**< Force restart if absolute gap is 1 or enough binary variables have been fixed? */
-   SCIP_Bool             forcerestart_;      /**< used to strore the forcerestart parameter */
+   SCIP_Bool             forcerestart_;      /**< used to store the forcerestart parameter */
 };
 
 
@@ -375,7 +375,7 @@ struct SCIP_ConflicthdlrData
 };
 
 
-/* Macro for parameters */
+/* macro for parameters */
 #define SCIP_CALL_PARAM(x) /*lint -e527 */ do                                                   \
 {                                                                                               \
    SCIP_RETCODE _restat_;                                                                       \
@@ -391,9 +391,9 @@ while ( FALSE )
 
 /* ---------------- Callback methods of event handlers ---------------- */
 
-/* exec the event handler for getting variable bound changes
+/** exec the event handler for getting variable bound changes
  *
- * We update the number of variables fixed to be nonzero
+ *  We update the number of variables fixed to be nonzero.
  */
 static
 SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
@@ -470,14 +470,14 @@ SCIP_DECL_EVENTEXEC(eventExecIndicatorBound)
 }
 
 
-/* exec the event handler for forcing a restart
+/** exec the event handler for forcing a restart
  *
- * There are two case in which we perform a (user) restart:
- * - If we have a max FS instance, i.e., the objective is 1 for indicator variables and 0 otherwise,
- *   we can force a restart if the gap is 1. In this case, the remaining work consists of proving
- *   infeasibility of the non-fixed indicators.
- * - If a large fraction of the binary indicator variables have been globally fixed, it makes sense
- *   to force a restart.
+ *  There are two cases in which we perform a (user) restart:
+ *  - If we have a max FS instance, i.e., the objective is 1 for indicator variables and 0 otherwise,
+ *    we can force a restart if the gap is 1. In this case, the remaining work consists of proving
+ *    infeasibility of the non-fixed indicators.
+ *  - If a large fraction of the binary indicator variables have been globally fixed, it makes sense
+ *    to force a restart.
  */
 static
 SCIP_DECL_EVENTEXEC(eventExecIndicatorRestart)
@@ -628,7 +628,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
       return SCIP_OKAY;
    }
 
-   SCIPdebugMsg(scip, "Indictor conflict handler.\n");
+   SCIPdebugMsg(scip, "Indicator conflict handler.\n");
 
    conflicthdlrdata = SCIPconflicthdlrGetData(conflicthdlr);
    assert( conflicthdlrdata != NULL );
@@ -1349,7 +1349,7 @@ SCIP_RETCODE initAlternativeLP(
 }
 
 
-/** Check whether the bounds int given (alternative) LP are set correctly (for debugging) */
+/** check whether the bounds in given (alternative) LP are set correctly (for debugging) */
 #ifndef NDEBUG
 static
 SCIP_RETCODE checkLPBoundsClean(
@@ -1422,7 +1422,7 @@ SCIP_RETCODE checkLPBoundsClean(
 #endif
 
 
-/** Set the alternative system objective function
+/** set the alternative system objective function
  *
  *  We assume that the objective function coefficients of the variables other than the binary
  *  indicators are always 0 and hence do not have to be changed.
@@ -1481,7 +1481,7 @@ SCIP_RETCODE setAltLPObj(
 }
 
 
-/** Set the alternative system objective function to some small value */
+/** set the alternative system objective function to some small value */
 static
 SCIP_RETCODE setAltLPObjZero(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -1529,7 +1529,7 @@ SCIP_RETCODE setAltLPObjZero(
 }
 
 
-/** Fix variable given by @a S to 0 */
+/** fix variable given by @a S to 0 */
 static
 SCIP_RETCODE fixAltLPVariables(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -1588,7 +1588,7 @@ SCIP_RETCODE fixAltLPVariables(
 }
 
 
-/** Fix variable @a ind to 0 */
+/** fix variable @a ind to 0 */
 static
 SCIP_RETCODE fixAltLPVariable(
    SCIP_LPI*             lp,                 /**< alternative LP */
@@ -1751,7 +1751,6 @@ SCIP_RETCODE updateFirstRowGlobal(
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler */
    )
 {
-
    SCIP_HASHMAP* lbhash;
    SCIP_HASHMAP* ubhash;
    SCIP_VAR** vars;
@@ -1776,22 +1775,23 @@ SCIP_RETCODE updateFirstRowGlobal(
    for (v = 0; v < nvars; ++v)
    {
       SCIP_VAR* var;
+      int col;
+
       var = vars[v];
       if ( SCIPhashmapExists(lbhash, var) )
       {
-         int col;
          col = (int) (size_t) SCIPhashmapGetImage(lbhash, var);
          SCIP_CALL( SCIPlpiChgCoef(altlp, 0, col, -SCIPvarGetLbGlobal(var)) );
          ++cnt;
       }
       if ( SCIPhashmapExists(ubhash, var) )
       {
-         int col;
          col = (int) (size_t) SCIPhashmapGetImage(ubhash, var);
          SCIP_CALL( SCIPlpiChgCoef(altlp, 0, col, SCIPvarGetUbGlobal(var)) );
          ++cnt;
       }
    }
+
    if ( cnt > 0 )
    {
       /* SCIP_CALL( SCIPlpiWriteLP(altlp, "altChg.lp") ); */
@@ -1805,7 +1805,7 @@ SCIP_RETCODE updateFirstRowGlobal(
 }
 
 
-/** Check whether IIS defined by @a vector corresponds to a local cut */
+/** check whether IIS defined by @a vector corresponds to a local cut */
 static
 SCIP_RETCODE checkIISlocal(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -2500,7 +2500,7 @@ SCIP_RETCODE deleteAltLPConstraint(
 }
 
 
-/* update upper bound in alternative LP */
+/** update upper bound in alternative LP */
 static
 SCIP_RETCODE updateObjUpperbound(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -2567,7 +2567,7 @@ SCIP_RETCODE updateObjUpperbound(
 }
 
 
-/** Check whether the given LP is infeasible
+/** check whether the given LP is infeasible
  *
  *  If @a primal is false we assume that the problem is <em>dual feasible</em>, e.g., the problem
  *  was only changed by fixing bounds!
@@ -2584,7 +2584,7 @@ SCIP_RETCODE checkAltLPInfeasible(
    SCIP_Real             maxcondition,       /**< maximal allowed condition of LP solution basis matrix */
    SCIP_Bool             primal,             /**< whether we are using the primal or dual simplex */
    SCIP_Bool*            infeasible,         /**< output: whether the LP is infeasible */
-   SCIP_Bool*            error               /**< output: whether an error occured */
+   SCIP_Bool*            error               /**< output: whether an error occurred */
    )
 {
    SCIP_RETCODE retcode;
@@ -2716,11 +2716,11 @@ SCIP_RETCODE checkAltLPInfeasible(
 }
 
 
-/** Tries to extend a given set of variables to a cover.
+/** tries to extend a given set of variables to a cover
  *
  *  At each step we include a variable which covers a new IIS. Ties are broken according to the
  *  number of IISs a variable is contained in.  The corresponding IIS inequalities are added to the
- *  LP if this not already happened.
+ *  LP, if this not already happened.
  *
  *  @pre It is assumed that all parameters for the alternative LP are set and that the variables
  *  corresponding to @a S are fixed. Furthermore @c xVal_ should contain the current LP solution.
@@ -2739,7 +2739,7 @@ SCIP_RETCODE extendToCover(
    SCIP_Bool*            S,                  /**< bitset of variables */
    int*                  size,               /**< size of S */
    SCIP_Real*            value,              /**< objective value of S */
-   SCIP_Bool*            error,              /**< output: whether an error occured */
+   SCIP_Bool*            error,              /**< output: whether an error occurred */
    SCIP_Bool*            cutoff,             /**< whether we detected a cutoff by an infeasible inequality */
    int*                  nGen                /**< number of generated cuts */
    )
@@ -2804,7 +2804,7 @@ SCIP_RETCODE extendToCover(
          {
             /* Check whether we want to try to construct a feasible solution: there should be no integer/binary variables
              * except the indicator variables. Thus, there should be no integral variables and the number of indicator
-             * variables should at least (actually equal to) the number of binary variables. */
+             * variables should be at least (actually equal to) the number of binary variables. */
             if ( SCIPgetNIntVars(scip) == 0 && nconss >= SCIPgetNBinVars(scip) )
             {
                SCIP_HEUR* heurindicator;
@@ -2812,7 +2812,7 @@ SCIP_RETCODE extendToCover(
                heurindicator = SCIPfindHeur(scip, "indicator");
                if ( heurindicator == NULL )
                {
-                  SCIPerrorMessage("Could not find heuristic \"indictor\".\n");
+                  SCIPerrorMessage("Could not find heuristic \"indicator\".\n");
                   return SCIP_PLUGINNOTFOUND;
                }
 
@@ -2861,7 +2861,7 @@ SCIP_RETCODE extendToCover(
       /* check for error */
       if ( candidate < 0 )
       {
-         /* Because of numerical problem it might happen that the solution primsol above is zero
+         /* Because of numerical problems it might happen that the solution primsol above is zero
           * within the tolerances. In this case we quit. */
          break;
       }
@@ -3549,8 +3549,7 @@ SCIP_RETCODE presolRoundIndicator(
 
    /* Note that because of possible multi-aggregation we cannot simply remove the indicator
     * constraint if the linear constraint is not active or disabled - see the note in @ref
-    * PREPROC.
-    */
+    * PREPROC. */
 
    return SCIP_OKAY;
 }
@@ -3932,7 +3931,7 @@ SCIP_RETCODE enforceCuts(
    SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, genlogicor, nconss, conss, S, &size, &value, &error, cutoff, &nCuts) );
    *nGen = nCuts;
 
-   /* return with an error if no cuts have been produced and and error occured in extendToCover() */
+   /* return with an error if no cuts have been produced and and error occurred in extendToCover() */
    if ( nCuts == 0 && error )
       return SCIP_LPERROR;
 
@@ -4367,7 +4366,7 @@ SCIP_RETCODE separatePerspective(
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           conss,              /**< indicator constraints */
    int                   maxsepacuts,        /**< maximal number of cuts to be generated */
-   int*                  nGen                /**< number of generated cutss */
+   int*                  nGen                /**< number of generated cuts */
    )
 {  /*lint --e{850}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -4565,7 +4564,7 @@ SCIP_RETCODE separateIndicators(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    int                   nconss,             /**< number of constraints */
-   int                   nusefulconss,       /**< number of usefull constraints */
+   int                   nusefulconss,       /**< number of useful constraints */
    SCIP_CONS**           conss,              /**< indicator constraints */
    SCIP_SOL*             sol,                /**< solution to be separated */
    SCIP_RESULT*          result              /**< result */
@@ -5164,7 +5163,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
          logicorconshdlr = SCIPfindConshdlr(scip, "logicor");
          if ( logicorconshdlr == NULL )
          {
-            SCIPerrorMessage("Logicor constraint handler not included, cannto generate constraints.\n");
+            SCIPerrorMessage("Logicor constraint handler not included, cannot generate constraints.\n");
             return SCIP_ERROR;
          }
          logicorsepafreq = SCIPconshdlrGetSepaFreq(logicorconshdlr);
@@ -5401,7 +5400,7 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
       /* if all variables have integral objective and only indicator variables have nonzero objective */
       if ( j >= nvars )
       {
-         /* if there are variables with nonerzo objective */
+         /* if there are variables with nonzero objective */
          if ( conshdlrdata->minabsobj < SCIP_REAL_MAX )
          {
             assert( SCIPisIntegral(scip, conshdlrdata->minabsobj) );
@@ -6641,7 +6640,7 @@ SCIP_DECL_CONSCOPY(consCopyIndicator)
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "could not copy linear constraint <%s>\n", SCIPconsGetName(sourcelincons));
    }
 
-   /* relase copied linear constraint */
+   /* release copied linear constraint */
    if ( targetlincons != NULL )
    {
       SCIP_CALL( SCIPreleaseCons(scip, &targetlincons) );
@@ -6866,6 +6865,7 @@ SCIP_DECL_CONSGETVARS(consGetVarsIndicator)
    return SCIP_OKAY;
 }
 
+
 /** constraint method of constraint handler which returns the number of variables (if possible) */
 static
 SCIP_DECL_CONSGETNVARS(consGetNVarsIndicator)
@@ -6908,6 +6908,7 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsIndicator)
 
    return SCIP_OKAY;
 }
+
 
 /** constraint handler method to suggest dive bound changes during the generic diving algorithm */
 static
@@ -7016,8 +7017,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
 
    /* the following three variables cannot be initialized in the above method, because initConshdlrData() is also called
     * in the CONSINIT callback, but these variables might be used even before the is ccallback is called, so we would
-    * lose the data added before calling this callback
-    */
+    * lose the data added before calling this callback */
    conshdlrdata->addlincons = NULL;
    conshdlrdata->naddlincons = 0;
    conshdlrdata->maxaddlincons = 0;
@@ -7443,9 +7443,9 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    return SCIP_OKAY;
 }
 
-/** creates and captures an indicator constraint
- *  in its most basic version, i. e., all constraint flags are set to their basic value as explained for the
- *  method SCIPcreateConsIndicator(); all flags can be set via SCIPsetConsFLAGNAME-methods in scip.h
+/** creates and captures an indicator constraint in its most basic version, i. e., all constraint flags are set to their
+ *  basic value as explained for the method SCIPcreateConsIndicator(); all flags can be set via
+ *  SCIPsetConsFLAGNAME-methods in scip.h
  *
  *  @see SCIPcreateConsIndicator() for information about the basic constraint flag configuration
  *
@@ -7895,7 +7895,7 @@ SCIP_Bool SCIPisViolatedIndicator(
 }
 
 
-/** Based on values of other variables, computes slack and binary variable to turn constraint feasible 
+/** based on values of other variables, computes slack and binary variable to turn constraint feasible
  *
  *  It will also clean up the solution, i.e., shift slack variable, as follows:
  *
@@ -8076,7 +8076,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
             }
             if ( obj >= 0 )
             {
-               /* setting variable to 0 does not inrease objective -> check whether variable only occurs in the current constraint
+               /* setting variable to 0 does not increase objective -> check whether variable only occurs in the current constraint
                 * note: binary variables are only locked up */
                if ( SCIPvarGetNLocksDown(binvar) <= 0 && ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
                {
@@ -8092,7 +8092,7 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
 }
 
 
-/** Based on values of other variables, computes slack and binary variable to turn all constraints feasible */
+/** based on values of other variables, computes slack and binary variable to turn all constraints feasible */
 SCIP_RETCODE SCIPmakeIndicatorsFeasible(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< indicator constraint handler */
@@ -8168,9 +8168,9 @@ SCIP_RETCODE SCIPaddLinearConsIndicator(
 }
 
 
-/** adds additional row that is not connected by an indicator constraint, but can be used for separation 
+/** adds additional row that is not connected with an indicator constraint, but can be used for separation
  *
- *  @note The row is directly added to the alternative polyhedron and is not stored. 
+ *  @note The row is directly added to the alternative polyhedron and is not stored.
  */
 SCIP_RETCODE SCIPaddRowIndicator(
    SCIP*                 scip,               /**< SCIP data structure */
