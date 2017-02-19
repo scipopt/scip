@@ -8762,9 +8762,7 @@ void SCIPrandomPermuteIntArray(
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    int*                  array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end                 /**< last index that should be subject to shuffling (array size for whole
-                                               *   array)
-                                               */
+   int                   end                 /**< last index that should be subject to shuffling (array size for whole array) */
    )
 {
    int tmp;
@@ -8790,9 +8788,7 @@ void SCIPrandomPermuteArray(
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    void**                array,              /**< array to be shuffled */
    int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end                 /**< last index that should be subject to shuffling (array size for whole
-                                              *   array)
-                                              */
+   int                   end                 /**< last index that should be subject to shuffling (array size for whole array) */
    )
 {
    void* tmp;
