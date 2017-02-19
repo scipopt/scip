@@ -2725,8 +2725,6 @@ SCIP_RETCODE checkAltLPInfeasible(
  *
  *  @pre It is assumed that all parameters for the alternative LP are set and that the variables
  *  corresponding to @a S are fixed. Furthermore @c xVal_ should contain the current LP solution.
- *
- *  @todo Improve the choice of the entering variable; currently the first is used.
  */
 static
 SCIP_RETCODE extendToCover(
@@ -2777,11 +2775,12 @@ SCIP_RETCODE extendToCover(
    {
       SCIP_Bool infeasible;
       SCIP_Real sum = 0.0;
-      SCIP_Real candObj = -1.0;
+      SCIP_Real candobj = -1.0;
+      SCIP_Real candval = 2.0;
       SCIP_Real norm = 1.0;
       int sizeIIS = 0;
       int candidate = -1;
-      int candIndex = -1;
+      int candindex = -1;
       int j;
 
       if ( step == 0 )
@@ -2847,16 +2846,20 @@ SCIP_RETCODE extendToCover(
             /* check support of the solution, i.e., the corresponding IIS */
             if ( ! SCIPisFeasZero(scip, primsol[ind]) )
             {
+               SCIP_Real val;
+
                assert( ! S[j] );
                ++sizeIIS;
-               sum += SCIPgetSolVal(scip, sol, consdata->binvar);
+               val = SCIPgetSolVal(scip, sol, consdata->binvar);
+               sum += val;
 
-               /* take first element */
-               if ( candidate < 0 )
+               /* take element with smallest relaxation value */
+               if ( val < candval )
                {
                   candidate = j;
-                  candIndex = ind;
-                  candObj = varGetObjDelta(consdata->binvar);
+                  candindex = ind;
+                  candval = val;
+                  candobj = varGetObjDelta(consdata->binvar);
                }
             }
          }
@@ -2895,15 +2898,15 @@ SCIP_RETCODE extendToCover(
       }
 
       SCIPdebugMsg(scip, "   size: %4d, add var. %4d (obj: %-6g, alt-LP sol: %-8.4f); IIS size: %4d, eff.: %g.\n",
-         *size, candidate, candObj, primsol[SCIPconsGetData(conss[candidate])->colindex], sizeIIS, (sum - (SCIP_Real) (sizeIIS - 1))/norm);
+         *size, candidate, candobj, primsol[SCIPconsGetData(conss[candidate])->colindex], sizeIIS, (sum - (SCIP_Real) (sizeIIS - 1))/norm);
 
       /* update new set S */
       S[candidate] = TRUE;
       ++(*size);
-      *value += candObj;
+      *value += candobj;
 
       /* fix chosen variable to 0 */
-      SCIP_CALL( fixAltLPVariable(lp, candIndex) );
+      SCIP_CALL( fixAltLPVariable(lp, candindex) );
 
       /* if cut is violated, i.e., sum - sizeIIS + 1 > 0 */
       if ( SCIPisEfficacious(scip, (sum - (SCIP_Real) (sizeIIS - 1))/norm) )
