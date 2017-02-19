@@ -4,6 +4,11 @@ SCIP version NEXT
 interface:
 - add function SCIPsetSlackVarUb() to control upper bound of slack variable in cons_indicator
 
+parameters:
+- new paramter "constraints/indicator/maxsepanonviolated" to stop separation after separation of non violated cuts
+
+performance improvements:
+- stop separation in cons_indicator after maxsepanonviolated many non violated separated cuts
 
 SCIP version 4.0.0
 ==================

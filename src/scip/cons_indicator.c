@@ -251,6 +251,7 @@
 #define DEFAULT_SEPAALTERNATIVELP   FALSE    /**< Separate using the alternative LP? */
 #define DEFAULT_SEPAPERSPECTIVE     FALSE    /**< Separate cuts based on perspective formulation? */
 #define DEFAULT_SEPAPERSPLOCAL       TRUE    /**< Allow to use local bounds in order to separate perspectice cuts? */
+#define DEFAULT_MAXSEPANONVIOLATED      3    /**< maximal number of separated non violated IISs, before separation is stopped */
 #define DEFAULT_TRYSOLFROMCOVER     FALSE    /**< Try to construct a feasible solution from a cover? */
 #define DEFAULT_UPGRADELINEAR       FALSE    /**< Try to upgrade linear constraints to indicator constraints? */
 #define DEFAULT_USEOTHERCONSS       FALSE    /**< Collect other constraints to alternative LP? */
@@ -341,6 +342,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             performedrestart;   /**< whether a restart has been performed already */
    int                   maxsepacuts;        /**< maximal number of cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in root node */
+   int                   maxsepanonviolated; /**< maximal number of separated non violated IISs, before separation is stopped */
    int                   nbinvarszero;       /**< binary variables globally fixed to zero */
    int                   ninitconss;         /**< initial number of indicator constraints (needed in event handlers) */
    SCIP_Real             maxcouplingvalue;   /**< maximum coefficient for binary variable in initial coupling constraint */
@@ -2749,6 +2751,7 @@ SCIP_RETCODE extendToCover(
    char name[SCIP_MAXSTRLEN];
 #endif
    SCIP_Real* primsol;
+   int nnonviolated = 0;
    int step = 0;
    int nCols;
 
@@ -3024,8 +3027,17 @@ SCIP_RETCODE extendToCover(
             SCIP_CALL( SCIPreleaseRow(scip, &row));
             ++(*nGen);
          }
+         nnonviolated = 0;
       }
+      else
+         ++nnonviolated;
       ++step;
+
+      if ( nnonviolated > conshdlrdata->maxsepanonviolated )
+      {
+         SCIPdebugMsg(scip, "Stop separation after %d non violated IISs.\n", nnonviolated);
+         break;
+      }
    }
    while (step < nconss);
 
@@ -7126,6 +7138,11 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
          "constraints/indicator/sepapersplocal",
          "Allow to use local bounds in order to separate perspective cuts?",
          &conshdlrdata->sepapersplocal, TRUE, DEFAULT_SEPAPERSPLOCAL, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/indicator/maxsepanonviolated",
+         "maximal number of separated non violated IISs, before separation is stopped",
+         &conshdlrdata->maxsepanonviolated, FALSE, DEFAULT_MAXSEPANONVIOLATED, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/indicator/updatebounds",
