@@ -40,7 +40,7 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_DURINGLPLOOP
 #define HEUR_USESSUBSCIP      FALSE          /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_ONEOPT        TRUE           /**< whether the one-opt heuristic should be started */
+#define DEFAULT_ONEOPT        FALSE          /**< whether the one-opt heuristic should be started */
 #define DEFAULT_IMPROVESOLS   FALSE          /**< Try to improve other solutions by one-opt? */
 
 
@@ -111,6 +111,9 @@ SCIP_RETCODE tryOneOpt(
       /* return if the we would exceed the depth limit of the tree */
       if( SCIP_MAXTREEDEPTH <= SCIPgetDepth(scip) )
          break;
+
+      if ( solcand[i] )
+         continue;
 
       /* get rid of all bound changes */
       SCIP_CALL( SCIPnewProbingNode(scip) );
