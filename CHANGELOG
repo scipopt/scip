@@ -3,6 +3,7 @@ SCIP version NEXT
 
 interface:
 - add function SCIPsetSlackVarUb() to control upper bound of slack variable in cons_indicator
+- SCIPheurPassIndicator has a new parameter which allows to pass the objective of the solution
 
 parameters:
 - new paramter "constraints/indicator/maxsepanonviolated" to stop separation after separation of non violated cuts

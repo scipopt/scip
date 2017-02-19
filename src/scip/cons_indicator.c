@@ -2819,7 +2819,7 @@ SCIP_RETCODE extendToCover(
                   return SCIP_PLUGINNOTFOUND;
                }
 
-               SCIP_CALL( SCIPheurPassIndicator(scip, heurindicator, nconss, conss, S) );
+               SCIP_CALL( SCIPheurPassIndicator(scip, heurindicator, nconss, conss, S, -*value) );
                SCIPdebugMsg(scip, "Passed feasible solution to indicator heuristic.\n");
             }
          }
