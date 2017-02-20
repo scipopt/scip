@@ -47,7 +47,6 @@ do
                   then
                      shared=`[ $libtype = "shared" ] && echo true || echo false`
                      make OPT=$OPT LPS=none TPI=$TPI EXPRINT=$EXPRINT IPOPT=true SHARED=$shared IPOPTOPT=$ipoptopt nlpidepend
-                     break
                   fi
                done
             done
