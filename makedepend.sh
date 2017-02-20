@@ -39,14 +39,15 @@ do
          then
             make OPT=$OPT LPS=none TPI=$TPI EXPRINT=$EXPRINT IPOPT=false nlpidepend
 
-            for ipoptopt in opt dbg
+            for libtype in shared static
             do
-               for libtype in shared static
+               for ipoptopt in opt dbg
                do
                   if ls lib/$libtype/ipopt.*.$ipoptopt > /dev/null 2>&1;
                   then
                      shared=`[ $libtype = "shared" ] && echo true || echo false`
                      make OPT=$OPT LPS=none TPI=$TPI EXPRINT=$EXPRINT IPOPT=true SHARED=$shared IPOPTOPT=$ipoptopt nlpidepend
+                     break
                   fi
                done
             done
