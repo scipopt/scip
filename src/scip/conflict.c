@@ -2428,7 +2428,6 @@ SCIP_RETCODE SCIPconflictFlushConss(
 
                SCIP_CALL( SCIPnodeCutoff(tree->path[repropconflictset->validdepth], set, stat, tree, transprob, origprob,
                      reopt, lp, blkmem) );
-               cutoffdepth = repropconflictset->validdepth;
             }
 
 #ifdef SCIP_DEBUG
