@@ -8727,16 +8727,18 @@ int SCIPrandomGetInt(
    )
 {
    SCIP_Real randnumber;
+   SCIP_Longint zeromax;
 
    randnumber = (SCIP_Real)randomGetRand(randnumgen)/(UINT32_MAX+1.0);
    assert(randnumber >= 0.0);
    assert(randnumber < 1.0);
 
-   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than INT_MAX
-    * apart. we need to use the floor function to handle negative integers as well because the int cast will truncate
-    * towards 0.
+   /* we need to shift the range to the non-negative integers to handle negative integer values correctly.
+    * we use a long integer to avoid overflows.
     */
-   return (int) floor(minrandval*(1.0 - randnumber) + maxrandval*randnumber + randnumber);
+   zeromax = (SCIP_Longint)maxrandval - (SCIP_Longint)minrandval + 1;
+
+   return (int) ((SCIP_Longint)(zeromax * randnumber) + (SCIP_Longint)minrandval);
 }
 
 /** returns a random real between minrandval and maxrandval */
