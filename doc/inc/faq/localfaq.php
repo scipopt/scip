@@ -5,12 +5,6 @@
 .reveal:hover {
     text-shadow: 1px 1px 1px #777;
 }
-.reveal {
-    color:#06c;
-    padding-top: 1em;
-    cursor: pointer;
-    margin: 5px 0;
-}
 .answer {
     background-color: #fff;
     padding-left:   1em;
@@ -23,14 +17,18 @@
 
 $sectionCounter = 1;
 foreach ($faq as $section) {
-  echo '<h4>'.$section['title'].'</h4>';
+  echo '<h3>'.$section['title'].'</h3>';
   echo '<ol>';
     foreach($section['content'] as $item) {
     $label = $item['label'];
   ?>
   <li>
-    <div id="<?php echo $label ?>" class="reveal">
-      <?php echo $item['question']; ?>
+    <div id="<?php echo $label ?>" class="targetpadding">
+      <div class="reveal_faq">
+        <a href="#<?php echo $label ?>">
+            <?php echo '<h4>'.$item['question'].'</h4>' ?>
+        </a>
+        </div>
     </div>
     <div id="<?php echo $label ?>_ans" class="answer">
        <?php echo $item['answer'];?>
@@ -41,10 +39,10 @@ foreach ($faq as $section) {
   echo "</ol><br/>\n";
 }
 ?>
+<!--WE don't use this stuff because it is uncontrollable
 <script>
-$(".answer").hide();
 $(".reveal").click(function() {
     var questionId = "#"+this.id+"_ans";
     $(questionId).toggle("fast");
 });
-</script>
+</script>-->

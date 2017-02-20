@@ -108,7 +108,7 @@ SCIP_RETCODE SCIPdivesetReset(
    if( diveset->randnumgen != NULL )
       SCIPrandomFree(&diveset->randnumgen);
 
-   SCIP_CALL( SCIPrandomCreate(&diveset->randnumgen, diveset->blkmem, SCIPsetInitializeRandomSeed(set, diveset->initialseed)) );
+   SCIP_CALL( SCIPrandomCreate(&diveset->randnumgen, diveset->blkmem, (unsigned int) SCIPsetInitializeRandomSeed(set, diveset->initialseed)) );
 
    return SCIP_OKAY;
 }
@@ -310,7 +310,7 @@ SCIP_RETCODE SCIPdivesetCreate(
             "more general constraint handler diving variable selection?",
             &(*diveset)->onlylpbranchcands, FALSE, onlylpbranchcands, NULL, NULL) );
 
-   SCIPdivesetReset(*diveset, set);
+   SCIP_CALL( SCIPdivesetReset(*diveset, set) );
 
    return SCIP_OKAY;
 }
@@ -833,7 +833,7 @@ SCIP_RETCODE SCIPheurInit(
    for( d = 0; d < heur->ndivesets; ++d )
    {
       assert(heur->divesets[d] != NULL);
-      SCIPdivesetReset(heur->divesets[d], set);
+      SCIP_CALL( SCIPdivesetReset(heur->divesets[d], set) );
    }
 
    heur->initialized = TRUE;

@@ -3,12 +3,14 @@ SECTION: General Questions about SCIP
     LABEL:whatisscip
     ANSWER:
     <p>
-      SCIP is a solver for Mixed Integer Linear and Nonlinear Problems that allows for an easy integration of arbitrary constraints. It can be used as a framework for <b>branch-cut-and-price</b>
+      SCIP is a solver for Mixed Integer Linear and Nonlinear Problems that allows for an easy integration of arbitrary constraints.
+      It can be used as a framework for <b>branch-cut-and-price</b>
       and contains all necessary plugins to serve as a <b>standalone solver</b> for MIP and MINLP.
     </p>
     <ul>
       <li>You can use the <a href="http://scip.zib.de/#download">precompiled binaries</a>
-          to solve MIPs and MINLPs. Learn more about the <a href="PATHTODOC/group__FILEREADERS.LINKEXT">file formats supported by SCIP</a>, and get <a href="PATHTODOC/WHATPROBLEMS.LINKEXT">an overview</a>
+          to solve MIPs and MINLPs. Learn more about the <a href="PATHTODOC/group__FILEREADERS.LINKEXT">file formats supported by SCIP</a>,
+          and get <a href="PATHTODOC/WHATPROBLEMS.LINKEXT">an overview</a>
           of the supported problem classes and additional recommendations for solving them.
       </li>
       <li>You can use SCIP as a subroutine for solving MINLPs and more general constraint integer programs from your own source code.</li>
@@ -23,9 +25,9 @@ SECTION: General Questions about SCIP
     LABEL:whenusescip
     ANSWER:
     <p>
-      If you are either looking for a fast non-commercial MIP-solver or for a
+      If you are either looking for a fast non-commercial MIP/MINLP-solver or for a
       branch-cut-and-price-framework in which you can directly implement your own methods
-      &mdash; which can even be for more general purposes than MIP.
+      and allows full control of the solving process.
     </p>
 
     QUESTION: I heard something about licenses. Do I have to pay for using SCIP?
@@ -69,12 +71,12 @@ SECTION: General Questions about SCIP
     </p>
     <ul>
       <li><a href="http://soplex.zib.de/">SoPlex</a></li>
-      <li><a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">ILOG CPLEX</a></li>
+      <li><a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">IBM ILOG CPLEX</a></li>
       <li><a href="http://www.fico.com/en/Products/DMTools/Pages/FICO-Xpress-Optimization-Suite.aspx">FICO XPress</a></li>
-      <li><a href="http://www.gurobi.com/">Gurobi</a> (interface is in beta stage)</li>
-      <li><a href="https://projects.coin-or.org/Clp/">CLP</a> (with some known issues)</li>
+      <li><a href="http://www.gurobi.com/">Gurobi</a> (interface is in beta stage, version at least 7.0.2 required)</li>
+      <li><a href="https://projects.coin-or.org/Clp/">CLP</a> (interface currently sometimes produces wrong results)</li>
       <li><a href="http://www.mosek.com/">Mosek</a> (experimental)</li>
-      <li><a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a> (experimental) for solving exactly over the rational numbers</li>
+      <li><a href="http://www2.isye.gatech.edu/~wcook/qsopt/">QSopt</a> (experimental)</li>
     </ul>
     <p>
       We also provide some <a href="http://scip.zib.de/#download">precompiled binaries</a>. Besides that,
@@ -186,13 +188,13 @@ SECTION: General Questions about SCIP
     <p>
         Since LPs are only special types of MIPs and CIPs, the principal answer is yes. If you feed a pure LP to SCIP, it
         will first apply presolving and then hand this presolved problem to the underlying LP solver. If the LP is solved to
-        optimality, you can query the optimal solution values as always.
+        optimality, you can query the optimal solution values as always. You can also access the values of an optimal dual
+        solution by using <code>display dualsolution</code>.
     </p>
     <p>
-        However, there are certain limitations to this: Dual multipliers and reduced costs are not accessible. If the LP
-        turns out to be infeasible, you cannot obtain the Farkas proof. Strong LP duality theory does
-        not apply to MIP or CIP and there is no special functionality implemented in SCIP for the case
-        that the solved problem is an LP.
+        However, there are certain limitations to this: Reduced costs are not accessible. If the LP
+        turns out to be infeasible, you cannot currently obtain a Farkas proof. And recall that this approach is only
+        meaningful if the problem is an LP (no integer variables, only linear constraints).
     </p>
     <p>
         Hence, if you need more, "LP specific", information than the primal solution, you are better off using an LP-Solver
@@ -230,15 +232,18 @@ SECTION: General Questions about SCIP
     LABEL:staticvsshared
     ANSWER:
     <p>
-        When SCIP builds the binary it needs to link with the corresponding libraries of the LP-solver. There are usually
-        two ways to distribute a library. In the first (.a) the library is linked <em>statically</em> to SCIP; this means
-        that all of its information is packed into the binary. In the second way (.so) the library is a <em>shared</em>
-        library. In this case, the code of the library is not inserted into the binary itself, but is loaded at
-        runtime. This has the advantage that the binaries are smaller, but it comes at the cost that you have to make
-        sure that the library is found at runtime (for most systems it suffices to put the path of the library into the
-        <code>LD_LIBRARY_PATH</code> variable).<br/><br/>
-        There are compiler-dependent preferences which libraries should be included of both, a static and a shared version of the same name are available. In order to avoid confusion,
-        SCIP separates shared from static libraries into the directories "lib/static" and "lib/shared".
+        When SCIP builds the binary, it needs to link with the corresponding libraries, i.e., its own libraries and
+        those of an LP-solver. There are usually two ways to distribute a library (on UNIX systems). In the first
+        (with suffix ".a"), the library is linked <em>statically</em> to SCIP; this means that all information is packed
+        into the binary. In the second way (with suffix ".so"), the library is a <em>shared</em> library. In this case,
+        the code of the library is not inserted into the binary itself, but is loaded at runtime. This has the advantage
+        that the binaries are smaller, but it comes at the cost that you have to make sure that the library is found at
+        runtime. (SCIP adds <code>rpath</code> information containing the path to the shared libraries to the binary;
+        this usually allows to find these libraries at runtime. If this does not work, for most systems it suffices to
+        put the path of the library into the <code>LD_LIBRARY_PATH</code> environment variable).<br/><br/>
+        There are compiler-dependent preferences which version should be included if both a static and a shared version
+        of the same library are available. In order to avoid confusion, SCIP separates shared from static libraries into
+        the directories "lib/static" and "lib/shared". Note that some LP-solvers are only shipped with a shared version.
     </p>
 
     QUESTION: Can I compile SCIP as a shared library?
@@ -248,7 +253,7 @@ SECTION: General Questions about SCIP
         You can use the <code>SHARED=true</code> option
         when making SCIP. This will generate the libraries of SCIP in shared format. The binary then
         also uses this form. Note that the path to the <code>lib/shared</code> directory of SCIP is used to
-        locate the libraries. If you want to move the libraries, you might to set the
+        locate the libraries. If you want to move the libraries, you might need to set the
         <code>LD_LIBRARY_PATH</code> environment variable to include the new path.
 
         <!--

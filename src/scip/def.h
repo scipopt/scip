@@ -191,7 +191,13 @@ extern "C" {
 #define MIN3(x,y,z) ((x) <= (y) ? MIN(x,z) : MIN(y,z))  /**< returns minimum of x, y, and z */
 #endif
 
-
+#ifndef COPYSIGN
+#if defined(_MSC_VER) && (_MSC_VER < 1800)
+#define COPYSIGN _copysign
+#else
+#define COPYSIGN copysign
+#endif
+#endif
 
 /*
  * Pointers

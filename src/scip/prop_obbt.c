@@ -718,9 +718,12 @@ SCIP_RETCODE filterExistingLP(
          SCIPvarGetUbLocal(bound->var) : SCIPvarGetLbLocal(bound->var);
       solval = SCIPvarGetLPSol(bound->var);
 
-      /* bound is tight; since this holds for all fixed variables, those are filtered here automatically */
-      if( (bound->boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisFeasGE(scip, solval, boundval))
-         || (bound->boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisFeasLE(scip, solval, boundval)) )
+      /* bound is tight; since this holds for all fixed variables, those are filtered here automatically; if the lp solution
+       * is infinity, then also the bound is tight */
+      if( (bound->boundtype == SCIP_BOUNDTYPE_UPPER &&
+               (SCIPisInfinity(scip, solval) || SCIPisFeasGE(scip, solval, boundval)))
+            || (bound->boundtype == SCIP_BOUNDTYPE_LOWER &&
+               (SCIPisInfinity(scip, -solval) || SCIPisFeasLE(scip, solval, boundval))) )
       {
          SCIP_BASESTAT basestat;
 

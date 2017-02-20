@@ -179,6 +179,7 @@
 -emacro(776,SCIPreallocBlockMemoryArray)
 -emacro(776,SCIPfreeBlockMemoryArrayNull)
 -emacro(776,SCIPduplicateMemoryArray)
+-emacro(776,SCIPallocClearBufferArray)
 
 -ecall(776,SCIPhashmapInsert)
 -ecall(776,SCIPhashmapExists)
