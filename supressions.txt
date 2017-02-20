@@ -9,3 +9,13 @@ variableScope
 
 // information
 ConfigurationNotChecked
+
+// suppressions for specific files
+nullPointer:src/lpi/lpi_qso.c
+
+useClosedFile:src/scip/dialog_default.c
+
+nullPointerRedundantCheck:src/scip/scip.c
+nullPointerRedundantCheck:src/scip/cons_cardinality.c
+nullPointerRedundantCheck:src/scip/cons_linear.c
+nullPointerRedundantCheck:src/scip/var.c
