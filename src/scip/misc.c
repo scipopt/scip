@@ -8733,9 +8733,10 @@ int SCIPrandomGetInt(
    assert(randnumber < 1.0);
 
    /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than INT_MAX
-    * apart
+    * apart. we need to use the floor function to handle negative integers as well because the int cast will truncate
+    * towards 0.
     */
-   return (int) (minrandval*(1.0 - randnumber) + maxrandval*randnumber + randnumber);
+   return (int) floor(minrandval*(1.0 - randnumber) + maxrandval*randnumber + randnumber);
 }
 
 /** returns a random real between minrandval and maxrandval */
