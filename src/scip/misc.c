@@ -8654,7 +8654,7 @@ void randomInitialize(
    return;
 }
 
-/** returns a random number between 0 and INT_MAX
+/** returns a random number between 0 and UINT32_MAX
  *
  *  implementation of KISS random number generator developed by George Marsaglia.
  *  KISS is combination of three different random number generators:
