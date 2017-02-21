@@ -46,9 +46,9 @@ do
             do
                if ls lib/$libtype/ipopt.*.$ipoptopt > /dev/null 2>&1;
                then
-                  shared=`[ $libtype = "shared" ] && echo true || echo false`
+                  [ $libtype = "shared" ] && shared=true || shared=false
                   make OPT=$OPT LPS=none EXPRINT=$EXPRINT IPOPT=true SHARED=$shared IPOPTOPT=$ipoptopt nlpidepend
-                  break
+                  break 2
                fi
             done
          done
