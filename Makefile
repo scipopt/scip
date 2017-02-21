@@ -1089,7 +1089,7 @@ endif
 ifeq ($(LINKER),CPP)
 		$(SHELL) -ec '$(DCXX) $(FLAGS) $(DFLAGS) $(NLPILIBSRC) \
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(LIBOBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
-		| sed '\''s|$(LIBDIR)/ipopt[^ ]*||g'\'' \
+		| sed -e '\''s|$(LIBDIR)/shared/ipopt[^ ]*||g'\'' -e '\''s|$(LIBDIR)/static/ipopt[^ ]*||g'\'' \
 		>$(NLPILIBDEP)'
 endif
 
