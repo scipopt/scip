@@ -14,7 +14,6 @@ features:
 - in case of multiple relaxators the best solution is saved instead of the last one
 - can now separate perspective cuts for indicator constraints
 - added write callback for reader_bnd
-- new target "dll" to build Windows dlls with MSVC
 - added possibility to use a reference value for advanced analysis of the tree search. If a finite reference value
   (an objective value in original objective space) is passed via misc/referencevalue, SCIP keeps track of the
   number of nodes exceeding the reference value and the number of early backtracks -- path switches in the tree when
@@ -223,7 +222,7 @@ makefile:
 - The binaries now contain an rpath to the SCIP directory, such that shared libraries are found.
 - make.project contains the SCIP version as a define (SCIP_VERSION)
 - revise sub-makefiles for MSVC on MinGW
-- fix bug in 'dll' target
+- new target "dll" to build Windows dlls with MSVC
 - make shared libraries aware of their dependencies
 - link binary to shared libs when compiling with SHARED=true
 - 'make install' copies now all header files
