@@ -8,10 +8,6 @@ OPTS=(opt dbg prf opt-gccold)
 TPIS=(omp tny none)
 EXPRINTS=(none cppad)
 
-for TPI in ${TPIS[@]}
-do
-   make OPT=$OPT ZIMPL=false LPS=none TPI=$TPI tpidepend
-done
 for OPT in ${OPTS[@]}
 do
    # dependencies of main SCIP source and objscip library
@@ -53,5 +49,10 @@ do
             done
          done
       fi
+   done
+
+   for TPI in ${TPIS[@]}
+   do
+      make OPT=$OPT ZIMPL=false LPS=none TPI=$TPI tpidepend
    done
 done
