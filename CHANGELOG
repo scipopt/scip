@@ -2,6 +2,11 @@ SCIP version 4.0.0
 ==================
 
 features:
+- new Graph induced neighborhood search (GINS) primal heuristic that uses neighborhoods
+  based on distances in the variable constraint connectivity graph.
+  In addition, the heuristic supports a rolling horizon-like procedure to solve auxiliary problems
+  for neighborhoods with increasing distance from the starting neighborhood.
+- new primal heuristic LP face that tries to find an integer solution inside the optimal LP face.
 - implemented linear time methods for (weighted) median selection for joint arrays of various types
 - new statistic computed: "Root LP Estimate" that shows the root LP best-estimate with every pseudo-cost update
 - new SCIP_REGRESSION data structure in pub_misc.h to incrementally compute a best-fit line through pairs of observations
@@ -86,6 +91,7 @@ parameters:
 - new parameter "presolving/qpkktref/addkktbinary" to allow the presence of binary variables for the KKT update
 
 performance improvements:
+- use connectedness information of the clique table to speed up the clique partitioning algorithm
 - rewrote the propagate-and-cut-and-price loop so that successful propagations with DURINGLPLOOP timing, bound changes found by separation,
   and new primal solutions now trigger a new round of node solving, starting with propagation; improved tuning of propagation and heuristic timings
 - tuned propagation methods of several constraint handlers
