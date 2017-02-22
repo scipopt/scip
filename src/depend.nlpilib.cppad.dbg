@@ -91,14 +91,14 @@ $(LIBOBJDIR)/nlpi/exprinterpret_cppad.o: src/nlpi/exprinterpret_cppad.cpp src/sc
  src/cppad/local/cos_op.hpp src/cppad/local/cosh_op.hpp \
  src/cppad/local/cskip_op.hpp src/cppad/local/csum_op.hpp \
  src/cppad/local/discrete_op.hpp src/cppad/local/div_op.hpp \
- src/cppad/local/erf_op.hpp src/cppad/local/exp_op.hpp \
+ src/cppad/local/erf_op.hpp src/cppad/local/mul_op.hpp \
+ src/cppad/local/sub_op.hpp src/cppad/local/exp_op.hpp \
  src/cppad/local/expm1_op.hpp src/cppad/local/load_op.hpp \
  src/cppad/local/log_op.hpp src/cppad/local/log1p_op.hpp \
- src/cppad/local/mul_op.hpp src/cppad/local/parameter_op.hpp \
- src/cppad/local/pow_op.hpp src/cppad/local/print_op.hpp \
- src/cppad/local/sign_op.hpp src/cppad/local/sin_op.hpp \
- src/cppad/local/sinh_op.hpp src/cppad/local/sqrt_op.hpp \
- src/cppad/local/sub_op.hpp src/cppad/local/sparse_binary_op.hpp \
+ src/cppad/local/parameter_op.hpp src/cppad/local/pow_op.hpp \
+ src/cppad/local/print_op.hpp src/cppad/local/sign_op.hpp \
+ src/cppad/local/sin_op.hpp src/cppad/local/sinh_op.hpp \
+ src/cppad/local/sqrt_op.hpp src/cppad/local/sparse_binary_op.hpp \
  src/cppad/local/sparse_unary_op.hpp src/cppad/local/store_op.hpp \
  src/cppad/local/tan_op.hpp src/cppad/local/tanh_op.hpp \
  src/cppad/local/zmul_op.hpp src/cppad/local/ad_fun.hpp \

@@ -3126,13 +3126,13 @@ SCIP_RETCODE tightenCoefs(
       && SCIPvarGetType(consdata->vbdvar) <= SCIP_VARTYPE_IMPLINT
       && SCIPisIntegral(scip, consdata->vbdcoef) )
    {
-      if( !SCIPisFeasIntegral(scip, consdata->lhs) )
+      if( !SCIPisIntegral(scip, consdata->lhs) )
       {
          consdata->lhs = SCIPfeasCeil(scip, consdata->lhs);
          ++(*nchgsides);
          consdata->changed = TRUE;
       }
-      if( !SCIPisFeasIntegral(scip, consdata->rhs) )
+      if( !SCIPisIntegral(scip, consdata->rhs) )
       {
          consdata->rhs = SCIPfeasFloor(scip, consdata->rhs);
          ++(*nchgsides);
@@ -3209,7 +3209,7 @@ SCIP_RETCODE tightenCoefs(
          consdata->vbdcoef = SCIPfeasFloor(scip, consdata->vbdcoef);
          ++(*nchgcoefs);
 
-         if( !SCIPisFeasIntegral(scip, consdata->rhs) )
+         if( !SCIPisInfinity(scip, consdata->rhs) )
          {
             consdata->rhs = SCIPfeasFloor(scip, consdata->rhs);
             ++(*nchgsides);
@@ -3223,10 +3223,12 @@ SCIP_RETCODE tightenCoefs(
          consdata->vbdcoef = SCIPfeasCeil(scip, consdata->vbdcoef);
          ++(*nchgcoefs);
 
-         if( !SCIPisFeasIntegral(scip, consdata->lhs) )
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
+            if( !SCIPisIntegral(scip, consdata->lhs) )
+               ++(*nchgsides);
+
             consdata->lhs = SCIPfeasCeil(scip, consdata->lhs);
-            ++(*nchgsides);
          }
       }
       /* case 3 */
@@ -3235,15 +3237,19 @@ SCIP_RETCODE tightenCoefs(
          consdata->vbdcoef = SCIPfeasCeil(scip, consdata->vbdcoef);
          ++(*nchgcoefs);
 
-         if( !SCIPisFeasIntegral(scip, consdata->lhs) )
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
+            if( !SCIPisIntegral(scip, consdata->lhs) )
+               ++(*nchgsides);
+
             consdata->lhs = SCIPfeasCeil(scip, consdata->lhs);
-            ++(*nchgsides);
          }
-         if( !SCIPisFeasIntegral(scip, consdata->rhs) )
+         if( !SCIPisInfinity(scip, consdata->rhs) )
          {
+            if( !SCIPisIntegral(scip, consdata->rhs) )
+               ++(*nchgsides);
+
             consdata->rhs = SCIPfeasFloor(scip, consdata->rhs);
-            ++(*nchgsides);
          }
       }
       /* case 4 */
@@ -3252,15 +3258,19 @@ SCIP_RETCODE tightenCoefs(
          consdata->vbdcoef = SCIPfeasFloor(scip, consdata->vbdcoef);
          ++(*nchgcoefs);
 
-         if( !SCIPisFeasIntegral(scip, consdata->lhs) )
+         if( !SCIPisInfinity(scip, -consdata->lhs) )
          {
+            if( !SCIPisIntegral(scip, consdata->lhs) )
+               ++(*nchgsides);
+
             consdata->lhs = SCIPfeasCeil(scip, consdata->lhs);
-            ++(*nchgsides);
          }
-         if( !SCIPisFeasIntegral(scip, consdata->rhs) )
+         if( !SCIPisInfinity(scip, consdata->rhs) )
          {
+            if( !SCIPisIntegral(scip, consdata->rhs) )
+               ++(*nchgsides);
+
             consdata->rhs = SCIPfeasFloor(scip, consdata->rhs);
-            ++(*nchgsides);
          }
       }
       /* case 5 */

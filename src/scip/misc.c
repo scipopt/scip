@@ -8702,7 +8702,7 @@ void randomInitialize(
    return;
 }
 
-/** returns a random number between 0 and INT_MAX
+/** returns a random number between 0 and UINT32_MAX
  *
  *  implementation of KISS random number generator developed by George Marsaglia.
  *  KISS is combination of three different random number generators:
@@ -8775,15 +8775,18 @@ int SCIPrandomGetInt(
    )
 {
    SCIP_Real randnumber;
+   SCIP_Longint zeromax;
 
    randnumber = (SCIP_Real)randomGetRand(randnumgen)/(UINT32_MAX+1.0);
    assert(randnumber >= 0.0);
    assert(randnumber < 1.0);
 
-   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than INT_MAX
-    * apart
+   /* we need to shift the range to the non-negative integers to handle negative integer values correctly.
+    * we use a long integer to avoid overflows.
     */
-   return (int) (minrandval*(1.0 - randnumber) + maxrandval*randnumber + randnumber);
+   zeromax = (SCIP_Longint)maxrandval - (SCIP_Longint)minrandval + 1;
+
+   return (int) ((SCIP_Longint)(zeromax * randnumber) + (SCIP_Longint)minrandval);
 }
 
 /** returns a random real between minrandval and maxrandval */

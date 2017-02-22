@@ -156,7 +156,6 @@ SCIP_RETCODE checkStage(
    SCIP_Bool             freescip            /**< may method be called in the FREE stage? */
    )
 {
-   /* cppcheck-suppress nullPointerRedundantCheck */
    assert(scip != NULL);
    assert(method != NULL);
 
@@ -16988,7 +16987,7 @@ SCIP_Bool SCIPisReoptEnabled(
 }
 
 /** returns the stored solutions corresponding to a given run */
-SCIP_RETCODE SCIPgetReopSolsRun(
+SCIP_RETCODE SCIPgetReoptSolsRun(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   run,                /**< number of the run */
    SCIP_SOL**            sols,               /**< array to store solutions */

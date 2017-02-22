@@ -14,7 +14,7 @@ BASEFILE="check/results/check.$TESTSET"
 
 # evaluate the run and upload it to rubberband
 cd check/
-./evalcheck_cluster.sh -R results/check.$TESTSET.*.eval
+./evalcheck_cluster.sh -R results/check.$TESTSET.*$SETTING*.eval
 cd ..
 
 # check if fail occurs

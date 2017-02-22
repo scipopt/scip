@@ -500,11 +500,17 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
             SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
             if( lastfixval < 0.5 )
             {
-               SCIP_CALL( SCIPfixVarProbing(scip, var, 1.0) );
+               if( SCIPvarGetUbLocal(var) > 0.5 )
+               {
+                  SCIP_CALL( SCIPfixVarProbing(scip, var, 1.0) );
+               }
             }
             else
             {
-               SCIP_CALL( SCIPfixVarProbing(scip, var, 0.0) );
+               if( SCIPvarGetLbLocal(var) < 0.5 )
+               {
+                  SCIP_CALL( SCIPfixVarProbing(scip, var, 0.0) );
+               }
             }
 
             SCIPdebugMsg(scip, "last fixing led to infeasibility trying other bound\n");
