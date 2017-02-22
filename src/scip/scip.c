@@ -156,7 +156,6 @@ SCIP_RETCODE checkStage(
    SCIP_Bool             freescip            /**< may method be called in the FREE stage? */
    )
 {
-   /* cppcheck-suppress nullPointerRedundantCheck */
    assert(scip != NULL);
    assert(method != NULL);
 
