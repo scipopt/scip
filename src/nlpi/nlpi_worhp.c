@@ -1980,11 +1980,6 @@ SCIP_DECL_NLPISETINTPAR( nlpiSetIntParWorhp )
    {
       if( ival == 0 || ival == 1 )
       {
-         SCIP_NLPIDATA* data;
-
-         data = SCIPnlpiGetData(nlpi);
-         assert(data != NULL);
-
          SCIPdebugMessage("from scratch parameter not supported by Worhp interface yet. Ignored.\n");
       }
       else
