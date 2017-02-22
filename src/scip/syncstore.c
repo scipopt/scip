@@ -173,6 +173,15 @@ SCIP_RETCODE SCIPsyncstoreInit(
    SCIP_CALL( SCIPtpiInit(syncstore->nsolvers, INT_MAX, FALSE) );
    SCIP_CALL( SCIPautoselectDisps(scip) );
 
+   if( syncstore->mode == SCIP_PARA_DETERMINISTIC )
+   {
+      /* in deterministic mode use the number of non-zeros and the number of variables to get a good
+       * syncdelay and maximum syncfreq
+       */
+      syncstore->minsyncdelay *= 0.01 * (SCIPgetNNZs(scip) * SCIPgetNVars(scip));
+      syncstore->syncfreqmax *= 0.01 * (SCIPgetNNZs(scip) * SCIPgetNVars(scip));
+   }
+
    return SCIP_OKAY;
 }
 
@@ -211,27 +220,6 @@ SCIP_RETCODE SCIPsyncstoreExit(
    syncstore->stopped = FALSE;
 
    return SCIP_OKAY;
-}
-
-/** initialize the synchronization timing parameters for the first synchronization */
-void SCIPsyncstoreInitSyncTiming(
-   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
-   SCIP_Real             time                /**< the time the solver spent before the first synchronization */
-   )
-{
-   assert(syncstore != NULL);
-   assert(syncstore->initialized);
-   assert(syncstore->syncdata[0].syncnum == 0);
-
-   syncstore->syncdata[0].syncfreq = MAX(syncstore->syncdata[0].syncfreq, time);
-
-   if( syncstore->syncdata[0].syncedcount == syncstore->nsolvers - 1 )
-   {
-      syncstore->minsyncdelay *= syncstore->syncdata[0].syncfreq;
-      syncstore->syncfreqmax *= syncstore->syncdata[0].syncfreq;
-      syncstore->minsyncdelay *= syncstore->syncdata[0].syncfreq;
-      syncstore->syncdata[0].syncfreq *= syncstore->syncfreqinit;
-   }
 }
 
 /** checks whether the solve-is-stopped flag in the syncstore has been set by any thread */
@@ -358,6 +346,7 @@ SCIP_SYNCDATA* SCIPsyncstoreGetSyncdata(
 SCIP_SYNCDATA* SCIPsyncstoreGetNextSyncdata(
    SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
    SCIP_SYNCDATA*        syncdata,           /**< the synchronization data */
+   SCIP_Real             syncfreq,           /**< the current synchronization frequency */
    SCIP_Longint          writenum,           /**< number of synchronizations the solver has written to */
    SCIP_Real*            delay               /**< pointer holding the current synchronization delay */
    )
@@ -365,20 +354,26 @@ SCIP_SYNCDATA* SCIPsyncstoreGetNextSyncdata(
    SCIP_Real newdelay;
    SCIP_Longint nextsyncnum;
 
-   assert(syncdata != NULL);
    assert(syncstore != NULL);
    assert(syncstore->initialized);
    assert(delay != NULL);
 
-   if( syncdata->status != SCIP_STATUS_UNKNOWN )
-      return NULL;
+   if( syncdata == NULL )
+   {
+      nextsyncnum = 0;
+   }
+   else
+   {
+      if( syncdata->status != SCIP_STATUS_UNKNOWN )
+         return NULL;
 
-   nextsyncnum = syncdata->syncnum + 1;
+      nextsyncnum = syncdata->syncnum + 1;
+   }
 
    if( nextsyncnum == writenum )
       return NULL;
 
-   newdelay = *delay - syncdata->syncfreq;
+   newdelay = *delay - syncfreq;
 
    /* if the delay would get too small we dont want to read the next syncdata.
     * But due to the limited length of the syncdata array we might need to

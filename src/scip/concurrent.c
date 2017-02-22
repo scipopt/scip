@@ -199,7 +199,7 @@ SCIP_RETCODE SCIPincrementConcurrentTime(
    {
       scip->concurrent->dettime += val;
 
-      if( scip->concurrent->dettime >= syncfreq && SCIPgetNLPs(mainscip) > 0 )
+      if( scip->concurrent->dettime >= syncfreq  )
       {
          SCIP_EVENT* event;
          SCIPconcsolverSetTimeSinceLastSync(scip->concurrent->concsolver, scip->concurrent->dettime);
@@ -214,7 +214,7 @@ SCIP_RETCODE SCIPincrementConcurrentTime(
       SCIP_Real timesincelastsync;
       timesincelastsync = SCIPgetClockTime(mainscip, wallclock);
 
-      if( timesincelastsync >= syncfreq && SCIPgetNLPs(mainscip) > 0 )
+      if( timesincelastsync >= syncfreq )
       {
          SCIP_EVENT* event;
          SCIPconcsolverSetTimeSinceLastSync(scip->concurrent->concsolver, timesincelastsync);

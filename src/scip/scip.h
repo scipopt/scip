@@ -19303,9 +19303,18 @@ SCIP_Longint SCIPgetNDelayedCutoffs(
  *  @return the total number of LPs solved so far
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
  *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
  */
 EXTERN
 SCIP_Longint SCIPgetNLPs(
@@ -19326,6 +19335,29 @@ EXTERN
 SCIP_Longint SCIPgetNLPIterations(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/** gets number of active non-zeros in the current transformed problem
+ *
+ *  @return the number of active non-zeros in the current transformed problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+SCIP_Longint SCIPgetNNZs(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 
 /** gets total number of iterations used so far in primal and dual simplex and barrier algorithm for the root node
  *
