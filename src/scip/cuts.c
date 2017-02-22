@@ -2740,7 +2740,7 @@ SCIP_RETCODE cutsLpCalcStrongCG(
    /* remove again all nearly-zero coefficients from strong CG row and relax the right hand side correspondingly in order to
     * prevent numerical rounding errors
     */
-   cutsCleanupMIRRow(set, prob, strongcgcoef, &rhs, varused, varinds, &nvarinds, *cutislocal);
+   cutsCleanupMIRRow(set, prob, strongcgcoef, strongcgrhs, varused, varinds, &nvarinds, *cutislocal);
    SCIPdebug(printMIR(set, stat, prob, NULL, strongcgcoef, rhs, FALSE, FALSE));
 
    /* calculate cut activity */
