@@ -19,3 +19,4 @@ nullPointerRedundantCheck:src/scip/scip.c
 nullPointerRedundantCheck:src/scip/cons_cardinality.c
 nullPointerRedundantCheck:src/scip/cons_linear.c
 nullPointerRedundantCheck:src/scip/var.c
+nullPointerRedundantCheck:src/scip/reader_opb.c
