@@ -229,6 +229,17 @@ SCIP_RETCODE evaluateWorhpRun(
       problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
    }
+#if WORHP_MAJOR >= 2
+   case GlobalInfeas:
+#endif
+   {
+      /* infeasible stationary point found */
+      SCIPdebugMessage("Worhp failed because of convergence against infeasible stationary point!\n");
+      invalidateSolution(problem);
+      problem->lastsolstat  = SCIP_NLPSOLSTAT_GLOBINFEASIBLE;
+      problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
+      break;
+   }
 
    case RegularizationFailed:
    {
@@ -241,7 +252,6 @@ SCIP_RETCODE evaluateWorhpRun(
    }
 
    case OptimalSolution:
-   case OptimalSolutionBoxEqual:
    {
       /* everything went fine */
       SCIPdebugMessage("Worhp terminated successfully at a local optimum!\n");
@@ -1537,7 +1547,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    if( status != OK )
       return SCIP_INVALIDCALL;
 
-   par->algorithm = DEFAULT_ALGORITHM;
+   par->Algorithm = DEFAULT_ALGORITHM;
    par->ScaledKKT = DEFAULT_SCALEDKKT;
    par->sKKTOnlyAcceptable = DEFAULT_SCALEDKKT;
 
