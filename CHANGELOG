@@ -59,6 +59,8 @@ features:
 - changed handling of coupling constraints in cons_indicator; the cuts will not be added to the pool, but are separated by default
 - for users of the ampl interface, the display/logfile option has been added to set the name of a
   file to write the SCIP log to (additionally to stdout)
+- next to the number of found solution, also the number of new best solutions is now printed for each heuristic
+  (and relaxation solutions) in the statistics in the "Primal Heuristic" section.
 
 parameters:
 - new parameter "branching/sumadjustweight" to adjust branching scores by adding a sum epsilon in order to keep score differences
@@ -126,16 +128,13 @@ interface:
   enforced
 - new function SCIPgetIntVarXor() to access integer variable of XOR constraints
 - new function SCIPgetLastStrongbranchingLPSolstat() to query the LP statuses after strong branching on a variable
-- next to the number of found solution, also the number of new best solutions is now printed for each heuristic
-  (and relaxation solutions) in the statistics in the "Primal Heuristic" section.
 - CONSINITLP callback now has a new parameter 'infeasible', which is a pointer to store whether infeasibility
   was detected while building the initial LP relaxation
 - new function SCIPisDualSolAvailable() to query the dual solution availability
-- submakefile for CrayXC systems added
 - new method SCIPinitializeRandomSeed()
 - new methods SCIPprintDebugMessage(), SCIPsetPrintDebugMessage(), SCIPstatPrintDebugMessage() that output debug messages and also print the
   subscip depth; the first two output via the message handler; also added macros SCIPdebugMsg(), SCIPsetDebugMsg(), SCIPstatDebugMsg()
-- new functions SCIPdebugMsgPrint()/SCIPsetDebugMsgPrint() that output a message without debug precode via the message handler (compare SCIPdebugPrinf())
+- new functions SCIPdebugMsgPrint()/SCIPsetDebugMsgPrint() that output a message without "[debug]" prefix via the message handler (compare SCIPdebugPrinf())
 - add new parameter to SCIPtrySolFree, SCIPtryCurrentSol, and SCIPcheckSol to check all constraints when printing violations
 - methods SCIPrandomGet{Int,Real}() substitutes SCIPgetRandom{Int,Real}() (marked to be deprecated)
 - methods SCIPrandomPermute{Int}Array() substitutes SCIPpermuteRandom{Int}Array() (marked to be deprecated)
@@ -162,11 +161,11 @@ interface:
 - add SCIPparamIsValidInt() and SCIPparamIsValidReal() to param.c/h
 - in scip.c/h: rename SCIPcheckBoolParam() to SCIPisBoolParamValid(), SCIPcheckLongintParam() to SCIPisLongintParamValid(),
   SCIPcheckCharParam() to SCIPisCharParamValid(), SCIPcheckStringParam() to SCIPisStringParamValid(); the new methods return
-  a bool whether the given value is valid for the parameter instead of printing a warning message and returning an error code
+  a bool indicating whether the given value is valid for the parameter instead of printing a warning message and returning an error code
   if the value is invalid
 - add missing functions SCIPisIntParamValid() and SCIPisRealParamValid() to scip.c/h
-- Setting a parameter to a non-valid value now produces an error message instead of a warning.
-- add SCIPcreateConvexNlp, SCIPupdateConvexNlp, and SCIPaddConvexNlpRows to create and update a convex nonlinear relaxation
+- setting a parameter to a non-valid value now produces an error message instead of a warning
+- add SCIPcreateConvexNlp(), SCIPupdateConvexNlp(), and SCIPaddConvexNlpRows() to create and update a convex nonlinear relaxation
 - the parameters of SCIPlpiChgObj(), SCIPlpiSetBase(), SCIPlpiSetState(), SCIPlpiSetNorms() have been declared as const
 - removed SCIPvarGetLbAtIndex() and added SCIPgetVarLbAtIndex()
 - removed SCIPvarGetUbAtIndex() and added SCIPgetVarUbAtIndex()
@@ -207,7 +206,7 @@ fixed bugs:
 - fixed a few issues within redundant constraint detection of (specialized) linear constraint handlers
 - SCIPisObjIntegral() now works correctly in SCIP_STAGE_PROBLEM
 - ignore lower and upper bound tightenigs beyond +/-infinity during solving
-- fix wrong NLP representation of logic or constraints in the dual value heuristic
+- fix wrong NLP representation of logic-or constraints in the dual value heuristic
 - time limit of SCIP-infinity is converted to LPI-infinity when setting it
 - fix LP activity of a row that has been modified
 - fixed issue in reader_opb concerning writing of fixed variables contained in no constraints
@@ -223,14 +222,15 @@ makefile:
 - All internal and external libraries are placed in lib/static and lib/shared, the include files are in lib/include.
 - External projects (including make.project) can use the makefile variable LINKCXXSCIPALL or LINKCCSCIPALL to link all SCIP libraries.
 - Running "make help" lists all makefile options.
-- All makefiles in examples/ and applications/ are updated.
+- All makefiles in examples/ and applications/ have been updated.
 - The binaries now contain an rpath to the SCIP directory, such that shared libraries are found.
-- make.project contains the SCIP version as a define (SCIP_VERSION)
+- make.project defines a variable SCIP_VERSION containing the SCIP version number
 - revise sub-makefiles for MSVC on MinGW
 - new target "dll" to build Windows dlls with MSVC
 - make shared libraries aware of their dependencies
 - link binary to shared libs when compiling with SHARED=true
 - 'make install' copies now all header files
+- sub-makefile for CrayXC systems added
 
 
 SCIP version 3.2.1
