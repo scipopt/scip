@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -837,7 +837,7 @@ SCIP_RETCODE applyFixings(
       }
    }
 
-#if 0 /* does not work with pseudoboolean constraint handler, need to be fixed */
+#ifdef SCIP_DISABLED_CODE /* does not work with pseudoboolean constraint handler, need to be fixed */
    /* check, if the resultant should be replaced with the active representative */
    if( !SCIPvarIsActive(consdata->resvar) )
    {
@@ -975,6 +975,8 @@ SCIP_RETCODE addRelaxation(
          /* create the n+1 row relaxation */
          SCIP_CALL( createRelaxation(scip, cons) );
       }
+
+      assert(consdata->rows != NULL);
 
       /* add additional row */
       if( !SCIProwIsInLP(consdata->rows[0]) )
@@ -3333,6 +3335,7 @@ SCIP_RETCODE detectRedundantConstraints(
          continue;
 
       consdata0 = SCIPconsGetData(cons0);
+
       /* sort the constraint */
       consdataSort(consdata0);
       assert(consdata0->sorted);
@@ -3350,7 +3353,7 @@ SCIP_RETCODE detectRedundantConstraints(
 
          consdata1 = SCIPconsGetData(cons1);
 
-         assert(consdata0 != NULL && consdata1 != NULL);
+         assert(consdata1 != NULL);
          assert(consdata0->nvars >= 1 && consdata0->nvars == consdata1->nvars);
 
          assert(consdata0->sorted && consdata1->sorted);
@@ -3458,7 +3461,7 @@ SCIP_RETCODE enforceConstraint(
             * initialization sets the relaxation solution value) to 0.0, and this already could lead to no violation of
             * the rows, which then are not seperated into the lp
             */
-#if 0
+#ifdef SCIP_DISABLED_CODE
             assert(consseparated); /* because the solution is integral, the separation always finds a cut */
 #endif
          }
@@ -3512,11 +3515,11 @@ SCIP_RETCODE preprocessConstraintPairs(
    assert(!SCIPconsIsModifiable(cons0));
 
    consdata0 = SCIPconsGetData(cons0);
-   assert(consdata0 != NULL);
-   assert(consdata0->nvars >= 1);
 
    /* sort the constraint */
    consdataSort(consdata0);
+
+   assert(consdata0->nvars >= 1);
    assert(consdata0->sorted);
 
    /* check constraint against all prior constraints */
@@ -3545,7 +3548,7 @@ SCIP_RETCODE preprocessConstraintPairs(
          consdata1 = SCIPconsGetData(cons1);
          assert(consdata1 != NULL);
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
          SCIPdebugMsg(scip, "preprocess AND-constraint pair <%s>[chg:%d] and <%s>[chg:%d]\n",
             SCIPconsGetName(cons0), cons0changed, SCIPconsGetName(cons1), consdata1->changed);
 #endif
@@ -3558,7 +3561,7 @@ SCIP_RETCODE preprocessConstraintPairs(
 
          /* sort the constraint */
          consdataSort(consdata1);
-	 assert(consdata1->sorted);
+         assert(consdata1->sorted);
 
          /* check consdata0 against consdata1:
           * - if they consist of the same operands, the resultants can be aggregated
@@ -4092,7 +4095,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreAnd)
    }
 
    /* write all remaining variables as nodes */
-#if 0
+#ifdef SCIP_DISABLED_CODE
    for( v = nvars - 1; v >= 0; --v )
    {
       activevar = SCIPvarGetProbvar(vars[v]);

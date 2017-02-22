@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1204,9 +1204,9 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
 
                /* we have to distinguished two cases */
                if( !SCIPisInfinity(scip, rhs) )
-                  aggrconst = rhs / multiaggcoef; /*lint !e414*/
+                  aggrconst = rhs / multiaggcoef;
                else
-                  aggrconst = rhs / multiaggcoef; /*lint !e414*/
+                  aggrconst = SCIPmatrixGetRowLhs(matrix, row) / multiaggcoef;
 
                /* calculate scalars */
                rowpnt = SCIPmatrixGetRowIdxPtr(matrix, row);

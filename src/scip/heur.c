@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -82,8 +82,9 @@ SCIP_DECL_PARAMCHGD(paramChgdHeurPriority)
 }
 
 /* resets diving settings counters */
-void SCIPdivesetReset(
-   SCIP_DIVESET*         diveset             /**< diveset to be reset */
+SCIP_RETCODE SCIPdivesetReset(
+   SCIP_DIVESET*         diveset,            /**< diveset to be reset */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(diveset != NULL);
@@ -102,6 +103,14 @@ void SCIPdivesetReset(
    diveset->nbestsolsfound = 0;
    diveset->ncalls = 0;
    diveset->nsolcalls = 0;
+
+   /* create a new random number generator after freeing any previous random number generator */
+   if( diveset->randnumgen != NULL )
+      SCIPrandomFree(&diveset->randnumgen);
+
+   SCIP_CALL( SCIPrandomCreate(&diveset->randnumgen, diveset->blkmem, (unsigned int) SCIPsetInitializeRandomSeed(set, diveset->initialseed)) );
+
+   return SCIP_OKAY;
 }
 
 /** update diveset statistics and global diveset statistics */
@@ -192,6 +201,7 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_Real             lpresolvedomchgquot,/**< percentage of immediate domain changes during probing to trigger LP resolve */
    int                   lpsolvefreq,        /**< LP solve frequency for (0: only if enough domain reductions are found by propagation)*/
    int                   maxlpiterofs,       /**< additional number of allowed LP iterations */
+   unsigned int          initialseed,        /**< initial seed for random number generation */
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
@@ -206,8 +216,15 @@ SCIP_RETCODE SCIPdivesetCreate(
    assert(set != NULL);
    assert(divesetgetscore != NULL);
    assert(heur != NULL);
+   assert(blkmem != NULL);
 
-   SCIP_ALLOC( BMSallocMemory(diveset) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, diveset) );
+   (*diveset)->blkmem = blkmem;
+
+   /* do not allocate random number generator here; we do this in SCIPdivesetReset() */
+   (*diveset)->initialseed = initialseed;
+   (*diveset)->randnumgen = NULL;
+
 
    /* for convenience, the name gets inferred from the heuristic to which the diveset is added if no name is provided */
    divesetname = (name == NULL ? SCIPheurGetName(heur) : name);
@@ -293,7 +310,7 @@ SCIP_RETCODE SCIPdivesetCreate(
             "more general constraint handler diving variable selection?",
             &(*diveset)->onlylpbranchcands, FALSE, onlylpbranchcands, NULL, NULL) );
 
-   SCIPdivesetReset(*diveset);
+   SCIP_CALL( SCIPdivesetReset(*diveset, set) );
 
    return SCIP_OKAY;
 }
@@ -536,6 +553,17 @@ int SCIPdivesetGetLPSolveFreq(
    return diveset->lpsolvefreq;
 }
 
+/** returns the random number generator of this \p diveset for tie-breaking */
+SCIP_RANDNUMGEN* SCIPdivesetGetRandnumgen(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+   assert(diveset->randnumgen != NULL);
+
+   return diveset->randnumgen;
+}
+
 /** returns the domain reduction quotient for triggering an immediate resolve of the diving LP (0.0: always resolve)*/
 SCIP_Real SCIPdivesetGetLPResolveDomChgQuot(
    SCIP_DIVESET*         diveset             /**< diving settings */
@@ -590,16 +618,19 @@ void divesetFree(
 {
    assert(*diveset != NULL);
    assert((*diveset)->name != NULL);
+   assert((*diveset)->blkmem != NULL);
+   assert((*diveset)->randnumgen != NULL);
+
+   SCIPrandomFree(&(*diveset)->randnumgen);
 
    BMSfreeMemoryArray(&(*diveset)->name);
-   BMSfreeMemory(diveset);
+   BMSfreeBlockMemory((*diveset)->blkmem, diveset);
 }
 
 /** get the candidate score and preferred rounding direction for a candidate variable */
 SCIP_RETCODE SCIPdivesetGetScore(
    SCIP_DIVESET*         diveset,            /**< general diving settings */
    SCIP_SET*             set,                /**< SCIP settings */
-   SCIP_HEURDATA*        heurdata,           /**< data of the calling heuristic */
    SCIP_DIVETYPE         divetype,           /**< the type of diving that should be applied */
    SCIP_VAR*             divecand,           /**< the candidate for which the branching direction is requested */
    SCIP_Real             divecandsol,        /**< LP solution value of the candidate */
@@ -614,7 +645,7 @@ SCIP_RETCODE SCIPdivesetGetScore(
    assert(divecand != NULL);
    assert(divetype & diveset->divetypemask);
 
-   SCIP_CALL( diveset->divesetgetscore(set->scip, diveset, heurdata, divetype, divecand, divecandsol, divecandfrac,
+   SCIP_CALL( diveset->divesetgetscore(set->scip, diveset, divetype, divecand, divecandsol, divecandfrac,
          candscore, roundup) );
 
    return SCIP_OKAY;
@@ -802,7 +833,7 @@ SCIP_RETCODE SCIPheurInit(
    for( d = 0; d < heur->ndivesets; ++d )
    {
       assert(heur->divesets[d] != NULL);
-      SCIPdivesetReset(heur->divesets[d]);
+      SCIP_CALL( SCIPdivesetReset(heur->divesets[d], set) );
    }
 
    heur->initialized = TRUE;

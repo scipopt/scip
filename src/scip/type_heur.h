@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -135,7 +135,6 @@ typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all
  *  input:
  *  - scip            : SCIP main data structure
  *  - diveset         : diving settings for scoring
- *  - heurdata        : data of the calling heuristic
  *  - divetype        : represents different methods for a dive set to explore the next children
  *  - cand            : Candidate variable for which the score should be determined
  *  - candsol         : solution value of variable in LP relaxation solution
@@ -145,7 +144,7 @@ typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all
  *
  *  returns SCIP_OKAY if everything worked, otherwise, a suitable error code
  */
-#define SCIP_DECL_DIVESETGETSCORE(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIVESET* diveset, SCIP_HEURDATA* heurdata, \
+#define SCIP_DECL_DIVESETGETSCORE(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIVESET* diveset, \
    SCIP_DIVETYPE divetype, SCIP_VAR* cand, SCIP_Real candsol, SCIP_Real candsfrac, SCIP_Real* score, SCIP_Bool* roundup)
 
 #ifdef __cplusplus

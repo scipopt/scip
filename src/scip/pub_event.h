@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,9 +40,7 @@ extern "C" {
  * Event handler methods
  */
 
-/**@defgroup PublicEventHandlerMethods Event Handler
- * @ingroup PluginManagementMethods
- * @brief  methods for event handlers
+/**@addtogroup PublicEventHandlerMethods
  *
  * @{
  */
@@ -90,14 +88,7 @@ SCIP_Real SCIPeventhdlrGetTime(
  * Event methods
  */
 
-/**@defgroup PublicEventMethods Event Handling
- * @ingroup PublicSolveMethods
- * @brief  methods to create, catch, process, and drop events during the solving process of \SCIP
- *
- * Events can only be caught during the operation on the transformed problem.
- * Events on variables can only be caught for transformed variables.
- * If you want to catch an event for an original variable, you have to get the corresponding transformed variable
- * with a call to SCIPgetTransformedVar() and catch the event on the transformed variable.
+/**@addtogroup PublicEventMethods
  *
  * @{
  */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -285,7 +285,7 @@ SCIP_RETCODE SCIPvisualNewChild(
 
    nodenum = (size_t)stat->ncreatednodesrun;
    assert(nodenum > 0);
-   SCIP_CALL( SCIPhashmapInsert(visual->nodenum, node, (void*)nodenum) );
+   SCIP_CALL( SCIPhashmapSetImage(visual->nodenum, node, (void*)nodenum) );
 
    /* get nodenum of parent node from hash map */
    parentnodenum = (node->parent != NULL ? (size_t)SCIPhashmapGetImage(visual->nodenum, node->parent) : 0);

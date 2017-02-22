@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -234,25 +234,9 @@ SCIP_RETCODE setupSCIPparamsStage3(
    }
 
    /* disable conflict analysis */
-   if( !SCIPisParamFixed(probingscip, "conflict/useprop") )
+   if( !SCIPisParamFixed(probingscip, "conflict/enable") )
    {
-      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/useprop", FALSE) );
-   }
-   if( !SCIPisParamFixed(probingscip, "conflict/useinflp") )
-   {
-      SCIP_CALL( SCIPsetCharParam(probingscip, "conflict/useinflp", 'o') );
-   }
-   if( !SCIPisParamFixed(probingscip, "conflict/useboundlp") )
-   {
-      SCIP_CALL( SCIPsetCharParam(probingscip, "conflict/useboundlp", 'o') );
-   }
-   if( !SCIPisParamFixed(probingscip, "conflict/usesb") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usesb", FALSE) );
-   }
-   if( !SCIPisParamFixed(probingscip, "conflict/usepseudo") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/usepseudo", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(probingscip, "conflict/enable", FALSE) );
    }
 
    return SCIP_OKAY;
@@ -334,7 +318,10 @@ SCIP_RETCODE handle1Cycle(
       if( SCIPisEQ(scip, frac, 0.5) )
       {
          if( SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0 )
+         {
             sign = -1.0;
+            solval = SCIPfeasCeil(scip, solval);
+         }
       }
       else if( frac > 0.5 )
          solval = SCIPfeasFloor(scip, solval);
@@ -390,7 +377,10 @@ SCIP_RETCODE handleCycle(
          if( SCIPisEQ(scip, frac, 0.5) )
          {
             if( SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0 )
+            {
                sign = -1.0;
+               solval = SCIPfeasCeil(scip, solval);
+            }
          }
          if( frac > 0.5 )
             solval = SCIPfeasFloor(scip, solval);

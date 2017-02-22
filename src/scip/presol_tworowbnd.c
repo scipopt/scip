@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -446,7 +446,6 @@ void getActivities(
          if( tmpval <= tmpupperbds[minsortedidx[i]] )
          {
             *minact += coefbaseoverlap[minsortedidx[i]] * tmpval;
-            minlhs -= coefotheroverlap[minsortedidx[i]] * tmpval;
             break;
          }
          else
@@ -517,7 +516,6 @@ void getActivities(
          if( tmpval <= tmpupperbds[maxsortedidx[i]] )
          {
             *maxact += coefbaseoverlap[maxsortedidx[i]] * tmpval;
-            maxlhs -= coefotheroverlap[maxsortedidx[i]] * tmpval;
             break;
          }
          else
@@ -636,7 +634,7 @@ void getActivities(
       SCIP_CALL_ABORT( SCIPincludeDefaultPlugins(subscip) );
       SCIP_CALL_ABORT( SCIPreadProb(subscip, "max.lp", NULL) );
       SCIP_CALL_ABORT( SCIPsetIntParam(subscip,"presolving/maxrounds",0) );
-      SCIP_CALL_ABORT( SCIPsolve(subscip);
+      SCIP_CALL_ABORT( SCIPsolve(subscip) );
       status = SCIPgetStatus(subscip);
       if(SCIP_STATUS_OPTIMAL == status)
       {

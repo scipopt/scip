@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -84,27 +84,6 @@ using CppAD::SCIPInterval;
  */
 #ifndef NPARASCIP
 #include <pthread.h>
-
-#if 0  // this workaround does not compile anymore when updating to CppAD 2016 - is it still necessary?
-/* workaround error message regarding missing implementation of tanh during initialization of static variables (see cppad/local/erf.hpp) */
-namespace CppAD
-{
-template <> SCIPInterval erf_template(
-   const SCIPInterval    &x
-   )
-{
-   CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
-   return SCIPInterval();
-}
-template <> AD<SCIPInterval> erf_template(
-   const AD<SCIPInterval> &x
-   )
-{
-   CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
-   return AD<SCIPInterval>();
-}
-}
-#endif
 
 /** mutex for locking in pthread case */
 static pthread_mutex_t cppadmutex = PTHREAD_MUTEX_INITIALIZER;

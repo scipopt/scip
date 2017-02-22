@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -643,9 +643,14 @@ SCIP_RETCODE SCIPtpiCollectJobs(
 
          /* removing the finished job from finished jobs list */
          if( currjob == _threadpool->finishedjobs->firstjob )
+         {
             _threadpool->finishedjobs->firstjob = currjob->nextjob;
+         }
          else
+         {
+            assert(prevjob != NULL);
             prevjob->nextjob = currjob->nextjob;
+         }
 
          if( currjob == _threadpool->finishedjobs->lastjob )
             _threadpool->finishedjobs->lastjob = prevjob;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2725,11 +2725,11 @@ SCIP_RETCODE extractNodes(
    colisincident = mcfdata->colisincident;
 
    /* allocate temporary local memory */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &arcpattern, narcs) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &bestflowrows, ncommodities) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &bestscores, ncommodities) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &bestinverted, ncommodities) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &rowprocessed, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &arcpattern, narcs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestflowrows, ncommodities) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestscores, ncommodities) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestinverted, ncommodities) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rowprocessed, nrows) );
 
    /* initialize temporary memory */
    for( r = 0; r < nrows; r++ )
@@ -2935,11 +2935,11 @@ SCIP_RETCODE extractNodes(
 
    /* free local temporary memory */
 
-   SCIPfreeMemoryArray(scip, &rowprocessed);
-   SCIPfreeMemoryArray(scip, &bestinverted);
-   SCIPfreeMemoryArray(scip, &bestscores);
-   SCIPfreeMemoryArray(scip, &bestflowrows);
-   SCIPfreeMemoryArray(scip, &arcpattern);
+   SCIPfreeBufferArray(scip, &rowprocessed);
+   SCIPfreeBufferArray(scip, &bestinverted);
+   SCIPfreeBufferArray(scip, &bestscores);
+   SCIPfreeBufferArray(scip, &bestflowrows);
+   SCIPfreeBufferArray(scip, &arcpattern);
 
    return SCIP_OKAY;
 }
@@ -3695,7 +3695,9 @@ SCIP_RETCODE cleanupNetwork(
             }
          }
          mcfdata->nnodes = newnnodes;
+#ifdef MCF_DEBUG
          nnodes = newnnodes;
+#endif
       }
 
       /* free temporary memory */
@@ -4885,7 +4887,7 @@ SCIP_RETCODE nodepairqueueCreate(
 
    assert(nodepairqueue != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, nodepairqueue) );
+   SCIP_CALL( SCIPallocBuffer(scip, nodepairqueue) );
 
    /* create a hash table for all used node pairs
     * hash table is only needed to have unique nodepairs (identify arcs using the same nodepair)
@@ -4896,7 +4898,7 @@ SCIP_RETCODE nodepairqueueCreate(
                                   hashGetKeyNodepairs, hashKeyEqNodepairs, hashKeyValNodepairs, (void*) mcfnetwork) );
 
    /* nodepairs will contain all constructed nodepairs and is used to fill the priority queue */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*nodepairqueue)->nodepairs, mcfnetwork->narcs) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*nodepairqueue)->nodepairs, mcfnetwork->narcs) );
 
    /* initialize hash table of all used node pairs and fill nodepairs */
    nnodepairs = 0;
@@ -5160,8 +5162,8 @@ void nodepairqueueFree(
    assert(*nodepairqueue != NULL);
 
    SCIPpqueueFree(&(*nodepairqueue)->pqueue);
-   SCIPfreeMemoryArray(scip, &(*nodepairqueue)->nodepairs);
-   SCIPfreeMemory(scip, nodepairqueue);
+   SCIPfreeBufferArray(scip, &(*nodepairqueue)->nodepairs);
+   SCIPfreeBuffer(scip, nodepairqueue);
 }
 
 
@@ -5237,11 +5239,11 @@ SCIP_RETCODE nodepartitionCreate(
    assert(mcfnetwork->nnodes >= 1);
 
    /* allocate and initialize memory */
-   SCIP_CALL( SCIPallocMemory(scip, nodepartition) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*nodepartition)->representatives, mcfnetwork->nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*nodepartition)->nodeclusters, mcfnetwork->nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*nodepartition)->clusternodes, mcfnetwork->nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(*nodepartition)->clusterbegin, nclusters+1) );
+   SCIP_CALL( SCIPallocBuffer(scip, nodepartition) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*nodepartition)->representatives, mcfnetwork->nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*nodepartition)->nodeclusters, mcfnetwork->nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*nodepartition)->clusternodes, mcfnetwork->nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*nodepartition)->clusterbegin, nclusters+1) );
    (*nodepartition)->nclusters = 0;
 
    /* we start with each node being in its own cluster */
@@ -5266,7 +5268,7 @@ SCIP_RETCODE nodepartitionCreate(
       assert(nodepair != NULL);
       node1 = nodepair->node1;
       node2 = nodepair->node2;
-      weight  = nodepair->weight;
+      SCIPdebug( weight = nodepair->weight; )
 
       assert(node1 >= 0 && node1 < mcfnetwork->nnodes);
       assert(node2 >= 0 && node2 < mcfnetwork->nnodes);
@@ -5376,11 +5378,11 @@ void nodepartitionFree(
    assert(nodepartition != NULL);
    assert(*nodepartition != NULL);
 
-   SCIPfreeMemoryArray(scip, &(*nodepartition)->representatives);
-   SCIPfreeMemoryArray(scip, &(*nodepartition)->nodeclusters);
-   SCIPfreeMemoryArray(scip, &(*nodepartition)->clusternodes);
-   SCIPfreeMemoryArray(scip, &(*nodepartition)->clusterbegin);
-   SCIPfreeMemory(scip, nodepartition);
+   SCIPfreeBufferArray(scip, &(*nodepartition)->clusterbegin);
+   SCIPfreeBufferArray(scip, &(*nodepartition)->clusternodes);
+   SCIPfreeBufferArray(scip, &(*nodepartition)->nodeclusters);
+   SCIPfreeBufferArray(scip, &(*nodepartition)->representatives);
+   SCIPfreeBuffer(scip, nodepartition);
 }
 
 /** returns whether given node v is in a cluster that belongs to the partition S */
@@ -5949,7 +5951,7 @@ SCIP_RETCODE generateClusterCuts(
     */
 
    deltassize = 16;
-   SCIP_CALL( SCIPallocMemoryArray(scip, &deltas, deltassize) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &deltas, deltassize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rowweights, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &comcutdemands, ncommodities) );
    SCIP_CALL( SCIPallocBufferArray(scip, &comdemands, ncommodities) );
@@ -6239,7 +6241,7 @@ SCIP_RETCODE generateClusterCuts(
                      if( ndeltas == deltassize )
                      {
                         deltassize *= 2;
-                        SCIP_CALL( SCIPreallocMemoryArray(scip, &deltas, deltassize) );
+                        SCIP_CALL( SCIPreallocBufferArray(scip, &deltas, deltassize) );
                      }
                      if( left < ndeltas )
                      {
@@ -6580,7 +6582,7 @@ SCIP_RETCODE generateClusterCuts(
    SCIPfreeBufferArray(scip, &comdemands);
    SCIPfreeBufferArray(scip, &comcutdemands);
    SCIPfreeBufferArray(scip, &rowweights);
-   SCIPfreeMemoryArray(scip, &deltas);
+   SCIPfreeBufferArray(scip, &deltas);
 
    return SCIP_OKAY;
 }

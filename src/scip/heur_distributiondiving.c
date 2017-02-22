@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -60,10 +60,11 @@
 #define DEFAULT_ONLYLPBRANCHCANDS  TRUE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
 
-#define SCOREPARAM_VALUES "lhwvd" /**< the score;largest 'd'ifference, 'l'owest cumulative probability,'h'ighest c.p.,
-                                   *   'v'otes lowest c.p., votes highest c.p.('w'), 'r'evolving */
+#define SCOREPARAM_VALUES "lhwvd"       /**< the score;largest 'd'ifference, 'l'owest cumulative probability,'h'ighest c.p.,
+                                         *   'v'otes lowest c.p., votes highest c.p.('w'), 'r'evolving */
 #define SCOREPARAM_VALUESLEN 5
-#define DEFAULT_SCOREPARAM 'r'    /**< default scoring parameter to guide the diving */
+#define DEFAULT_SCOREPARAM 'r'          /**< default scoring parameter to guide the diving */
+#define DEFAULT_RANDSEED   117          /**< initial seed for random number generation */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
@@ -884,10 +885,12 @@ SCIP_DECL_HEUREXIT(heurExitDistributiondiving) /*lint --e{715}*/
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreDistributiondiving)
 {  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
    SCIP_Real upscore;
    SCIP_Real downscore;
    int varindex;
 
+   heurdata = SCIPheurGetData(SCIPdivesetGetHeur(diveset));
    assert(heurdata != NULL);
 
    /* process pending bound change events */
@@ -1072,7 +1075,7 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
          DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT, DEFAULT_MAXDIVEUBQUOT,
          DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL,
          DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
-         DEFAULT_MAXLPITEROFS, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES,
+         DEFAULT_MAXLPITEROFS, DEFAULT_RANDSEED, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES,
          divesetGetScoreDistributiondiving) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/scoreparam",

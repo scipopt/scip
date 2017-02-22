@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1672,7 +1672,7 @@ SCIP_RETCODE GUBconsCreate(
    assert(gubcons != NULL);
 
    /* allocate memory for GUB constraint data structures */
-   SCIP_CALL( SCIPallocMemory(scip, gubcons) );
+   SCIP_CALL( SCIPallocBuffer(scip, gubcons) );
    (*gubcons)->gubvarssize = GUBCONSGROWVALUE;
    SCIP_CALL( SCIPallocBufferArray(scip, &(*gubcons)->gubvars, (*gubcons)->gubvarssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*gubcons)->gubvarsstatus, (*gubcons)->gubvarssize) );
@@ -1697,7 +1697,7 @@ SCIP_RETCODE GUBconsFree(
    /* free allocated memory */
    SCIPfreeBufferArray(scip, &(*gubcons)->gubvarsstatus);
    SCIPfreeBufferArray(scip, &(*gubcons)->gubvars);
-   SCIPfreeMemory(scip, gubcons);
+   SCIPfreeBuffer(scip, gubcons);
 
    return SCIP_OKAY;
 }
@@ -1924,7 +1924,7 @@ SCIP_RETCODE GUBsetCreate(
    assert(capacity >= 0);
 
    /* allocate memory for GUB set data structures */
-   SCIP_CALL( SCIPallocMemory(scip, gubset) );
+   SCIP_CALL( SCIPallocBuffer(scip, gubset) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*gubset)->gubconss, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*gubset)->gubconsstatus, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*gubset)->gubconssidx, nvars) );
@@ -1983,7 +1983,7 @@ SCIP_RETCODE GUBsetFree(
    SCIPfreeBufferArray( scip, &(*gubset)->gubconssidx );
    SCIPfreeBufferArray( scip, &(*gubset)->gubconsstatus );
    SCIPfreeBufferArray( scip, &(*gubset)->gubconss );
-   SCIPfreeMemory(scip, gubset);
+   SCIPfreeBuffer(scip, gubset);
 
    return SCIP_OKAY;
 }
@@ -2115,7 +2115,6 @@ SCIP_RETCODE GUBsetCalcCliquePartition(
    SCIP_CALL( SCIPduplicateBufferArray(scip, &tmpvars, vars, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varseq, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortkeys, nvars) );
-   ncliquevars = 0;
 
    /* initialize the cliquepartition array with -1 */
    /* initialize the tmpvalues array */
@@ -7362,7 +7361,6 @@ SCIP_RETCODE propagateCons(
 #endif
 
    usenegatedclique = usenegatedclique && consdata->merged;
-   nnegcliques = -1;
 
    /* init for debugging */
    myvars = NULL;
@@ -7545,27 +7543,26 @@ SCIP_RETCODE propagateCons(
          /* check, if weights of fixed variables don't exceeds knapsack capacity */
          if( !(*cutoff) && consdata->capacity >= minweightsum + consdata->onesweightsum )
          {
-            SCIP_Longint maxcliqueweight;
-
-            c = 0;
-            maxcliqueweight = -1;
+            SCIP_Longint maxcliqueweight = -1LL;
 
             /* loop over cliques */
             for( c = 0; c < nnegcliques; ++c )
             {
                SCIP_VAR* maxvar;
                SCIP_Bool maxvarfixed;
-               int endvarposclique = cliqueendposs[c];
-               int startvarposclique = cliquestartposs[c];
+               int endvarposclique;
+               int startvarposclique;
 
                assert(myvars != NULL);
-
-               maxvar = myvars[startvarposclique];
-
                assert(nnegcliques == consdata->nnegcliques);
                assert(myweights != NULL);
                assert(secondmaxweights != NULL);
                assert(cliquestartposs != NULL);
+
+               endvarposclique = cliqueendposs[c];
+               startvarposclique = cliquestartposs[c];
+
+               maxvar = myvars[startvarposclique];
 
                /* no need to process this negated clique because all variables are already fixed (which we detect from a fixed maxvar) */
                if( SCIPvarGetUbLocal(maxvar) - SCIPvarGetLbLocal(maxvar) < 0.5 )
@@ -8923,7 +8920,6 @@ SCIP_RETCODE dualWeightsTightening(
                if( (dualcapacity & 1) == 0 )
                {
                   newweight = dualcapacity / 2;
-                  startv = v;
 
                   /* set all middle coefficients */
                   for( ; v <= end; ++v )
@@ -9112,7 +9108,6 @@ SCIP_RETCODE dualWeightsTightening(
                   if( (dualcapacity & 1) == 0 )
                   {
                      newweight = dualcapacity / 2;
-                     startv = v;
 
                      /* set all middle coefficients */
                      for( ; v <= end; ++v )
@@ -9399,7 +9394,6 @@ SCIP_RETCODE simplifyInequalities(
          return SCIP_OKAY;
    }
 
-   vars = consdata->vars;
    weights = consdata->weights;
    nvars = consdata->nvars;
 
@@ -9441,8 +9435,8 @@ SCIP_RETCODE simplifyInequalities(
    /* 3. start gcd procedure for all variables */
    do
    {
-      oldnchgcoefs = *nchgcoefs;
-      oldnchgsides = *nchgsides;
+      SCIPdebug( oldnchgcoefs = *nchgcoefs; )
+      SCIPdebug( oldnchgsides = *nchgsides; )
 
       vars = consdata->vars;
       weights = consdata->weights;
@@ -10420,7 +10414,8 @@ SCIP_RETCODE tightenWeights(
                backpos = nvars - 2;
             }
             break;
-         case 3:
+         default:
+            assert(k == 3);
             if( sumcoefcase )
             {
                if( weights[nvars - 4] < weights[nvars - 1] + weights[nvars - 2] )
@@ -10440,8 +10435,6 @@ SCIP_RETCODE tightenWeights(
                backpos = nvars - 3;
             }
             break;
-         default:
-            return SCIP_ERROR;
          }
 
          if( backpos <= pos )

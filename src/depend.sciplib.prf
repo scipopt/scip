@@ -33,7 +33,8 @@ $(LIBOBJDIR)/scip/branch_allfullstrong.o: src/scip/branch_allfullstrong.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -71,7 +72,8 @@ $(LIBOBJDIR)/scip/branch_cloud.o: src/scip/branch_cloud.c src/scip/branch_cloud.
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -111,7 +113,8 @@ $(LIBOBJDIR)/scip/branch_distribution.o: src/scip/branch_distribution.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -150,7 +153,8 @@ $(LIBOBJDIR)/scip/branch_fullstrong.o: src/scip/branch_fullstrong.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -189,7 +193,8 @@ $(LIBOBJDIR)/scip/branch_inference.o: src/scip/branch_inference.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -227,7 +232,8 @@ $(LIBOBJDIR)/scip/branch_leastinf.o: src/scip/branch_leastinf.c src/scip/branch_
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -265,7 +271,8 @@ $(LIBOBJDIR)/scip/branch_mostinf.o: src/scip/branch_mostinf.c src/scip/branch_mo
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -303,7 +310,8 @@ $(LIBOBJDIR)/scip/branch_multaggr.o: src/scip/branch_multaggr.c src/scip/branch_
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -343,7 +351,8 @@ $(LIBOBJDIR)/scip/branch_nodereopt.o: src/scip/branch_nodereopt.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -383,7 +392,8 @@ $(LIBOBJDIR)/scip/branch_pscost.o: src/scip/branch_pscost.c src/scip/branch_psco
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -421,7 +431,8 @@ $(LIBOBJDIR)/scip/branch_random.o: src/scip/branch_random.c src/scip/branch_rand
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -460,7 +471,8 @@ $(LIBOBJDIR)/scip/branch_relpscost.o: src/scip/branch_relpscost.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -499,7 +511,8 @@ $(LIBOBJDIR)/scip/cons_abspower.o: src/scip/cons_abspower.c src/scip/cons_abspow
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -541,7 +554,8 @@ $(LIBOBJDIR)/scip/compr_largestrepr.o: src/scip/compr_largestrepr.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -582,7 +596,8 @@ $(LIBOBJDIR)/scip/compr_weakcompr.o: src/scip/compr_weakcompr.c src/scip/mem.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/var.h src/scip/event.h src/scip/struct_event.h \
  src/scip/cons.h src/scip/solve.h src/scip/compr.h src/scip/pub_reopt.h \
@@ -621,7 +636,8 @@ $(LIBOBJDIR)/scip/concsolver_scip.o: src/scip/concsolver_scip.c src/scip/concsol
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -661,7 +677,8 @@ $(LIBOBJDIR)/scip/cons_and.o: src/scip/cons_and.c src/scip/cons_and.h src/scip/s
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -701,7 +718,8 @@ $(LIBOBJDIR)/scip/cons_bivariate.o: src/scip/cons_bivariate.c src/scip/cons_biva
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -743,7 +761,8 @@ $(LIBOBJDIR)/scip/cons_bounddisjunction.o: src/scip/cons_bounddisjunction.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -784,7 +803,8 @@ $(LIBOBJDIR)/scip/cons_cardinality.o: src/scip/cons_cardinality.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -824,7 +844,8 @@ $(LIBOBJDIR)/scip/cons_conjunction.o: src/scip/cons_conjunction.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -862,7 +883,8 @@ $(LIBOBJDIR)/scip/cons_countsols.o: src/scip/cons_countsols.c src/scip/cons_and.
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -904,7 +926,8 @@ $(LIBOBJDIR)/scip/cons_cumulative.o: src/scip/cons_cumulative.c src/tclique/tcli
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -1017,7 +1040,8 @@ $(LIBOBJDIR)/scip/cons_disjunction.o: src/scip/cons_disjunction.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -1055,7 +1079,8 @@ $(LIBOBJDIR)/scip/cons_indicator.o: src/scip/cons_indicator.c src/scip/cons_indi
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -1096,7 +1121,8 @@ $(LIBOBJDIR)/scip/cons_integral.o: src/scip/cons_integral.c src/scip/cons_integr
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -1134,7 +1160,8 @@ $(LIBOBJDIR)/scip/cons_knapsack.o: src/scip/cons_knapsack.c src/scip/cons_knapsa
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -1173,7 +1200,8 @@ $(LIBOBJDIR)/scip/cons_linear.o: src/scip/cons_linear.c src/scip/cons_linear.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -1213,7 +1241,8 @@ $(LIBOBJDIR)/scip/cons_linking.o: src/scip/cons_linking.c src/scip/cons_linear.h
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -1252,7 +1281,8 @@ $(LIBOBJDIR)/scip/cons_logicor.o: src/scip/cons_logicor.c src/scip/cons_logicor.
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -1291,7 +1321,8 @@ $(LIBOBJDIR)/scip/cons_nonlinear.o: src/scip/cons_nonlinear.c src/scip/cons_nonl
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -1331,7 +1362,8 @@ $(LIBOBJDIR)/scip/cons_or.o: src/scip/cons_or.c src/scip/cons_or.h src/scip/scip
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -1370,7 +1402,8 @@ $(LIBOBJDIR)/scip/cons_orbitope.o: src/scip/cons_orbitope.c src/scip/cons_orbito
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -1409,7 +1442,8 @@ $(LIBOBJDIR)/scip/cons_pseudoboolean.o: src/scip/cons_pseudoboolean.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -1450,7 +1484,8 @@ $(LIBOBJDIR)/scip/cons_quadratic.o: src/scip/cons_quadratic.c src/scip/cons_nonl
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -1492,7 +1527,8 @@ $(LIBOBJDIR)/scip/cons_setppc.o: src/scip/cons_setppc.c src/scip/cons_setppc.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -1531,7 +1567,8 @@ $(LIBOBJDIR)/scip/cons_soc.o: src/scip/cons_soc.c src/scip/cons_soc.h src/scip/s
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -1572,7 +1609,8 @@ $(LIBOBJDIR)/scip/cons_sos1.o: src/scip/cons_sos1.c src/scip/cons_sos1.h src/sci
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -1611,7 +1649,8 @@ $(LIBOBJDIR)/scip/cons_sos2.o: src/scip/cons_sos2.c src/scip/cons_sos2.h src/sci
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -1651,7 +1690,8 @@ $(LIBOBJDIR)/scip/cons_superindicator.o: src/scip/cons_superindicator.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -1691,7 +1731,8 @@ $(LIBOBJDIR)/scip/cons_varbound.o: src/scip/cons_varbound.c src/scip/cons_varbou
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -1731,11 +1772,11 @@ $(LIBOBJDIR)/scip/cons_xor.o: src/scip/cons_xor.c src/scip/pub_misc.h src/scip/d
  src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_mem.h src/scip/type_primal.h src/scip/type_pricestore.h \
  src/scip/type_sepastore.h src/scip/type_conflictstore.h \
- src/scip/type_concurrent.h src/scip/set.h src/scip/struct_set.h \
- src/scip/message.h src/scip/debug.h src/scip/tree.h src/scip/misc.h \
- src/scip/var.h src/scip/event.h src/scip/struct_event.h src/scip/cons.h \
- src/scip/solve.h src/scip/cons_setppc.h src/scip/cons_linear.h \
- src/scip/heur_trysol.h
+ src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
+ src/scip/cons_setppc.h src/scip/cons_linear.h src/scip/heur_trysol.h
 $(LIBOBJDIR)/scip/cons_components.o: src/scip/cons_components.c src/scip/cons_components.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -1770,7 +1811,8 @@ $(LIBOBJDIR)/scip/cons_components.o: src/scip/cons_components.c src/scip/cons_co
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -1808,7 +1850,8 @@ $(LIBOBJDIR)/scip/dialog_default.o: src/scip/dialog_default.c src/scip/dialog_de
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h src/nlpi/nlpi.h
@@ -1847,7 +1890,8 @@ $(LIBOBJDIR)/scip/event_softtimelimit.o: src/scip/event_softtimelimit.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -1885,7 +1929,8 @@ $(LIBOBJDIR)/scip/disp_default.o: src/scip/disp_default.c src/scip/disp_default.
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -1925,7 +1970,8 @@ $(LIBOBJDIR)/scip/event_solvingphase.o: src/scip/event_solvingphase.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -1963,7 +2009,8 @@ $(LIBOBJDIR)/scip/prop_sync.o: src/scip/prop_sync.c src/scip/prop_sync.h src/sci
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -2005,7 +2052,8 @@ $(LIBOBJDIR)/scip/event_globalbnd.o: src/scip/event_globalbnd.c src/scip/event_g
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -2044,7 +2092,8 @@ $(LIBOBJDIR)/scip/heur_sync.o: src/scip/heur_sync.c src/scip/heur_sync.h src/sci
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -2083,7 +2132,8 @@ $(LIBOBJDIR)/scip/heur_actconsdiving.o: src/scip/heur_actconsdiving.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -2121,7 +2171,8 @@ $(LIBOBJDIR)/scip/heur_bound.o: src/scip/heur_bound.c src/scip/scip.h src/scip/d
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -2160,7 +2211,8 @@ $(LIBOBJDIR)/scip/heur_clique.o: src/scip/heur_clique.c src/scip/scip.h src/scip
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -2199,7 +2251,8 @@ $(LIBOBJDIR)/scip/heur_coefdiving.o: src/scip/heur_coefdiving.c src/scip/heur_co
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -2238,7 +2291,8 @@ $(LIBOBJDIR)/scip/heur_completesol.o: src/scip/heur_completesol.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -2349,7 +2403,8 @@ $(LIBOBJDIR)/scip/heur_crossover.o: src/scip/heur_crossover.c src/scip/scip.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -2461,7 +2516,8 @@ $(LIBOBJDIR)/scip/heur_dins.o: src/scip/heur_dins.c src/scip/scip.h src/scip/def
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -2501,7 +2557,8 @@ $(LIBOBJDIR)/scip/heur_distributiondiving.o: src/scip/heur_distributiondiving.c 
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -2540,7 +2597,8 @@ $(LIBOBJDIR)/scip/heur_dualval.o: src/scip/heur_dualval.c src/scip/heur_dualval.
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -2582,7 +2640,8 @@ $(LIBOBJDIR)/scip/heur_feaspump.o: src/scip/heur_feaspump.c src/scip/heur_feaspu
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -2694,7 +2753,8 @@ $(LIBOBJDIR)/scip/heur_fixandinfer.o: src/scip/heur_fixandinfer.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -2732,7 +2792,8 @@ $(LIBOBJDIR)/scip/heur_fracdiving.o: src/scip/heur_fracdiving.c src/scip/heur_fr
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -2770,7 +2831,8 @@ $(LIBOBJDIR)/scip/heur_gins.o: src/scip/heur_gins.c src/scip/scip.h src/scip/def
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -2883,7 +2945,8 @@ $(LIBOBJDIR)/scip/heur_guideddiving.o: src/scip/heur_guideddiving.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -2921,7 +2984,8 @@ $(LIBOBJDIR)/scip/heur_indicator.o: src/scip/heur_indicator.c src/scip/scip.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -2960,7 +3024,8 @@ $(LIBOBJDIR)/scip/heur_intdiving.o: src/scip/heur_intdiving.c src/scip/heur_intd
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -2999,7 +3064,8 @@ $(LIBOBJDIR)/scip/heur_intshifting.o: src/scip/heur_intshifting.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -3038,7 +3104,8 @@ $(LIBOBJDIR)/scip/heur_linesearchdiving.o: src/scip/heur_linesearchdiving.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -3076,7 +3143,8 @@ $(LIBOBJDIR)/scip/heur_localbranching.o: src/scip/heur_localbranching.c src/scip
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -3188,7 +3256,8 @@ $(LIBOBJDIR)/scip/heur_lpface.o: src/scip/heur_lpface.c src/scip/scip.h src/scip
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -3300,7 +3369,8 @@ $(LIBOBJDIR)/scip/heur_locks.o: src/scip/heur_locks.c src/scip/heur_locks.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -3338,7 +3408,8 @@ $(LIBOBJDIR)/scip/heur_mutation.o: src/scip/heur_mutation.c src/scip/scip.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -3450,7 +3521,8 @@ $(LIBOBJDIR)/scip/heur_multistart.o: src/scip/heur_multistart.c src/scip/heur_mu
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -3489,7 +3561,8 @@ $(LIBOBJDIR)/scip/heur_nlpdiving.o: src/scip/heur_nlpdiving.c src/scip/heur_nlpd
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -3529,7 +3602,8 @@ $(LIBOBJDIR)/scip/heur_objpscostdiving.o: src/scip/heur_objpscostdiving.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -3567,7 +3641,8 @@ $(LIBOBJDIR)/scip/heur_octane.o: src/scip/heur_octane.c src/scip/heur_octane.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -3605,7 +3680,8 @@ $(LIBOBJDIR)/scip/heur_ofins.o: src/scip/heur_ofins.c src/scip/heur_ofins.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -3717,7 +3793,8 @@ $(LIBOBJDIR)/scip/heur_oneopt.o: src/scip/heur_oneopt.c src/scip/heur_oneopt.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -3755,7 +3832,8 @@ $(LIBOBJDIR)/scip/heur_proximity.o: src/scip/heur_proximity.c src/scip/heur_prox
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -3795,7 +3873,8 @@ $(LIBOBJDIR)/scip/heur_pscostdiving.o: src/scip/heur_pscostdiving.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -3833,7 +3912,8 @@ $(LIBOBJDIR)/scip/heur_reoptsols.o: src/scip/heur_reoptsols.c src/scip/heur_reop
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -3872,7 +3952,8 @@ $(LIBOBJDIR)/scip/heur_repair.o: src/scip/heur_repair.c src/scip/heur_repair.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -3985,7 +4066,8 @@ $(LIBOBJDIR)/scip/heur_randrounding.o: src/scip/heur_randrounding.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -4023,7 +4105,8 @@ $(LIBOBJDIR)/scip/heur_rens.o: src/scip/heur_rens.c src/scip/scip.h src/scip/def
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -4135,7 +4218,8 @@ $(LIBOBJDIR)/scip/heur_rins.o: src/scip/heur_rins.c src/scip/scip.h src/scip/def
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -4248,7 +4332,8 @@ $(LIBOBJDIR)/scip/heur_rootsoldiving.o: src/scip/heur_rootsoldiving.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -4286,7 +4371,8 @@ $(LIBOBJDIR)/scip/heur_rounding.o: src/scip/heur_rounding.c src/scip/heur_roundi
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -4325,10 +4411,10 @@ $(LIBOBJDIR)/scip/heur_shiftandpropagate.o: src/scip/heur_shiftandpropagate.c \
  src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_mem.h src/scip/type_primal.h src/scip/type_pricestore.h \
  src/scip/type_sepastore.h src/scip/type_conflictstore.h \
- src/scip/type_concurrent.h src/scip/set.h src/scip/struct_set.h \
- src/scip/message.h src/scip/debug.h src/scip/tree.h src/scip/misc.h \
- src/scip/var.h src/scip/event.h src/scip/struct_event.h src/scip/cons.h \
- src/scip/solve.h
+ src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
 $(LIBOBJDIR)/scip/heur_shifting.o: src/scip/heur_shifting.c src/scip/heur_shifting.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -4363,7 +4449,8 @@ $(LIBOBJDIR)/scip/heur_shifting.o: src/scip/heur_shifting.c src/scip/heur_shifti
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -4402,7 +4489,8 @@ $(LIBOBJDIR)/scip/heur_simplerounding.o: src/scip/heur_simplerounding.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -4440,7 +4528,8 @@ $(LIBOBJDIR)/scip/heur_subnlp.o: src/scip/heur_subnlp.c src/scip/heur_subnlp.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h src/nlpi/nlpi.h \
@@ -4481,7 +4570,8 @@ $(LIBOBJDIR)/scip/heur_trivial.o: src/scip/heur_trivial.c src/scip/heur_trivial.
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -4520,7 +4610,8 @@ $(LIBOBJDIR)/scip/heur_trivialnegation.o: src/scip/heur_trivialnegation.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -4559,7 +4650,8 @@ $(LIBOBJDIR)/scip/heur_trysol.o: src/scip/heur_trysol.c src/scip/heur_trysol.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -4597,7 +4689,8 @@ $(LIBOBJDIR)/scip/heur_twoopt.o: src/scip/heur_twoopt.c src/scip/heur_twoopt.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -4635,7 +4728,8 @@ $(LIBOBJDIR)/scip/heur_undercover.o: src/scip/heur_undercover.c src/scip/scip.h 
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -4748,7 +4842,8 @@ $(LIBOBJDIR)/scip/heur_vbounds.o: src/scip/heur_vbounds.c src/scip/scip.h src/sc
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -4861,7 +4956,8 @@ $(LIBOBJDIR)/scip/heur_veclendiving.o: src/scip/heur_veclendiving.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -4899,7 +4995,8 @@ $(LIBOBJDIR)/scip/heur_zeroobj.o: src/scip/heur_zeroobj.c src/scip/heur_zeroobj.
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -4938,7 +5035,8 @@ $(LIBOBJDIR)/scip/heur_zirounding.o: src/scip/heur_zirounding.c src/scip/heur_zi
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h src/scip/scip.h
@@ -4979,7 +5077,8 @@ $(LIBOBJDIR)/scip/nodesel_bfs.o: src/scip/nodesel_bfs.c src/scip/nodesel_bfs.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -5018,7 +5117,8 @@ $(LIBOBJDIR)/scip/nodesel_breadthfirst.o: src/scip/nodesel_breadthfirst.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -5056,7 +5156,8 @@ $(LIBOBJDIR)/scip/nodesel_dfs.o: src/scip/nodesel_dfs.c src/scip/nodesel_dfs.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -5095,7 +5196,8 @@ $(LIBOBJDIR)/scip/nodesel_estimate.o: src/scip/nodesel_estimate.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -5134,7 +5236,8 @@ $(LIBOBJDIR)/scip/nodesel_hybridestim.o: src/scip/nodesel_hybridestim.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -5173,7 +5276,8 @@ $(LIBOBJDIR)/scip/nodesel_restartdfs.o: src/scip/nodesel_restartdfs.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -5211,7 +5315,8 @@ $(LIBOBJDIR)/scip/nodesel_uct.o: src/scip/nodesel_uct.c src/scip/nodesel_uct.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -5250,7 +5355,8 @@ $(LIBOBJDIR)/scip/presol_boundshift.o: src/scip/presol_boundshift.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -5289,7 +5395,8 @@ $(LIBOBJDIR)/scip/presol_convertinttobin.o: src/scip/presol_convertinttobin.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -5329,7 +5436,8 @@ $(LIBOBJDIR)/scip/presol_domcol.o: src/scip/presol_domcol.c src/scip/pub_matrix.
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -5369,10 +5477,10 @@ $(LIBOBJDIR)/scip/presol_dualagg.o: src/scip/presol_dualagg.c src/scip/pub_matri
  src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_mem.h src/scip/type_primal.h src/scip/type_pricestore.h \
  src/scip/type_sepastore.h src/scip/type_conflictstore.h \
- src/scip/type_concurrent.h src/scip/set.h src/scip/struct_set.h \
- src/scip/message.h src/scip/debug.h src/scip/tree.h src/scip/misc.h \
- src/scip/var.h src/scip/event.h src/scip/struct_event.h src/scip/cons.h \
- src/scip/solve.h
+ src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
 $(LIBOBJDIR)/scip/presol_dualcomp.o: src/scip/presol_dualcomp.c src/scip/pub_matrix.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
  src/scip/type_message.h src/scip/struct_message.h src/scip/type_var.h \
@@ -5409,10 +5517,10 @@ $(LIBOBJDIR)/scip/presol_dualcomp.o: src/scip/presol_dualcomp.c src/scip/pub_mat
  src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_mem.h src/scip/type_primal.h src/scip/type_pricestore.h \
  src/scip/type_sepastore.h src/scip/type_conflictstore.h \
- src/scip/type_concurrent.h src/scip/set.h src/scip/struct_set.h \
- src/scip/message.h src/scip/debug.h src/scip/tree.h src/scip/misc.h \
- src/scip/var.h src/scip/event.h src/scip/struct_event.h src/scip/cons.h \
- src/scip/solve.h
+ src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
 $(LIBOBJDIR)/scip/presol_dualinfer.o: src/scip/presol_dualinfer.c src/scip/pub_matrix.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
  src/scip/type_message.h src/scip/struct_message.h src/scip/type_var.h \
@@ -5448,7 +5556,8 @@ $(LIBOBJDIR)/scip/presol_dualinfer.o: src/scip/presol_dualinfer.c src/scip/pub_m
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -5488,7 +5597,8 @@ $(LIBOBJDIR)/scip/presol_gateextraction.o: src/scip/presol_gateextraction.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -5529,10 +5639,10 @@ $(LIBOBJDIR)/scip/presol_implfree.o: src/scip/presol_implfree.c src/scip/pub_mat
  src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_mem.h src/scip/type_primal.h src/scip/type_pricestore.h \
  src/scip/type_sepastore.h src/scip/type_conflictstore.h \
- src/scip/type_concurrent.h src/scip/set.h src/scip/struct_set.h \
- src/scip/message.h src/scip/debug.h src/scip/tree.h src/scip/misc.h \
- src/scip/var.h src/scip/event.h src/scip/struct_event.h src/scip/cons.h \
- src/scip/solve.h
+ src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
 $(LIBOBJDIR)/scip/presol_implics.o: src/scip/presol_implics.c src/scip/presol_implics.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -5567,7 +5677,8 @@ $(LIBOBJDIR)/scip/presol_implics.o: src/scip/presol_implics.c src/scip/presol_im
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -5606,7 +5717,8 @@ $(LIBOBJDIR)/scip/presol_inttobinary.o: src/scip/presol_inttobinary.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -5644,7 +5756,8 @@ $(LIBOBJDIR)/scip/presol_qpkktref.o: src/scip/presol_qpkktref.c src/scip/presol_
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -5686,7 +5799,8 @@ $(LIBOBJDIR)/scip/presol_redvub.o: src/scip/presol_redvub.c src/scip/pub_matrix.
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -5724,7 +5838,8 @@ $(LIBOBJDIR)/scip/presol_trivial.o: src/scip/presol_trivial.c src/scip/presol_tr
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -5764,10 +5879,10 @@ $(LIBOBJDIR)/scip/presol_tworowbnd.o: src/scip/presol_tworowbnd.c src/scip/pub_m
  src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_mem.h src/scip/type_primal.h src/scip/type_pricestore.h \
  src/scip/type_sepastore.h src/scip/type_conflictstore.h \
- src/scip/type_concurrent.h src/scip/set.h src/scip/struct_set.h \
- src/scip/message.h src/scip/debug.h src/scip/tree.h src/scip/misc.h \
- src/scip/var.h src/scip/event.h src/scip/struct_event.h src/scip/cons.h \
- src/scip/solve.h
+ src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
 $(LIBOBJDIR)/scip/presol_stuffing.o: src/scip/presol_stuffing.c src/scip/pub_matrix.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
  src/scip/type_message.h src/scip/struct_message.h src/scip/type_var.h \
@@ -5804,10 +5919,10 @@ $(LIBOBJDIR)/scip/presol_stuffing.o: src/scip/presol_stuffing.c src/scip/pub_mat
  src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_mem.h src/scip/type_primal.h src/scip/type_pricestore.h \
  src/scip/type_sepastore.h src/scip/type_conflictstore.h \
- src/scip/type_concurrent.h src/scip/set.h src/scip/struct_set.h \
- src/scip/message.h src/scip/debug.h src/scip/tree.h src/scip/misc.h \
- src/scip/var.h src/scip/event.h src/scip/struct_event.h src/scip/cons.h \
- src/scip/solve.h
+ src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
 $(LIBOBJDIR)/scip/prop_dualfix.o: src/scip/prop_dualfix.c src/scip/prop_dualfix.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -5842,7 +5957,8 @@ $(LIBOBJDIR)/scip/prop_dualfix.o: src/scip/prop_dualfix.c src/scip/prop_dualfix.
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -5880,7 +5996,8 @@ $(LIBOBJDIR)/scip/prop_genvbounds.o: src/scip/prop_genvbounds.c src/scip/prop_ge
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -5919,7 +6036,8 @@ $(LIBOBJDIR)/scip/prop_nlobbt.o: src/scip/prop_nlobbt.c src/scip/prop_nlobbt.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -5958,7 +6076,8 @@ $(LIBOBJDIR)/scip/prop_obbt.o: src/scip/prop_obbt.c src/scip/prop_obbt.h src/sci
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -5999,7 +6118,8 @@ $(LIBOBJDIR)/scip/prop_probing.o: src/scip/prop_probing.c src/scip/prop_probing.
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -6037,7 +6157,8 @@ $(LIBOBJDIR)/scip/prop_pseudoobj.o: src/scip/prop_pseudoobj.c src/scip/prop_pseu
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -6075,7 +6196,8 @@ $(LIBOBJDIR)/scip/prop_redcost.o: src/scip/prop_redcost.c src/scip/prop_redcost.
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -6114,7 +6236,8 @@ $(LIBOBJDIR)/scip/prop_rootredcost.o: src/scip/prop_rootredcost.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -6152,7 +6275,8 @@ $(LIBOBJDIR)/scip/prop_vbounds.o: src/scip/prop_vbounds.c src/scip/prop_vbounds.
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -6190,7 +6314,8 @@ $(LIBOBJDIR)/scip/reader_bnd.o: src/scip/reader_bnd.c src/scip/reader_bnd.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -6228,7 +6353,8 @@ $(LIBOBJDIR)/scip/reader_ccg.o: src/scip/reader_ccg.c src/scip/reader_ccg.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -6268,7 +6394,8 @@ $(LIBOBJDIR)/scip/reader_cip.o: src/scip/reader_cip.c src/scip/reader_cip.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -6307,7 +6434,8 @@ $(LIBOBJDIR)/scip/reader_cnf.o: src/scip/reader_cnf.c src/scip/reader_cnf.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -6346,7 +6474,8 @@ $(LIBOBJDIR)/scip/reader_diff.o: src/scip/reader_diff.c src/scip/reader_diff.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -6384,7 +6513,8 @@ $(LIBOBJDIR)/scip/reader_fix.o: src/scip/reader_fix.c src/scip/reader_fix.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -6422,7 +6552,8 @@ $(LIBOBJDIR)/scip/reader_fzn.o: src/scip/reader_fzn.c src/scip/cons_and.h src/sc
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -6464,7 +6595,8 @@ $(LIBOBJDIR)/scip/reader_gms.o: src/scip/reader_gms.c src/scip/reader_gms.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -6507,7 +6639,8 @@ $(LIBOBJDIR)/scip/reader_lp.o: src/scip/reader_lp.c src/scip/reader_lp.h src/sci
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -6550,7 +6683,8 @@ $(LIBOBJDIR)/scip/reader_mps.o: src/scip/reader_mps.c src/scip/reader_mps.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -6593,7 +6727,8 @@ $(LIBOBJDIR)/scip/reader_mst.o: src/scip/reader_mst.c src/scip/reader_mst.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -6631,7 +6766,8 @@ $(LIBOBJDIR)/scip/reader_opb.o: src/scip/reader_opb.c src/scip/cons_and.h src/sc
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -6673,7 +6809,8 @@ $(LIBOBJDIR)/scip/reader_osil.o: src/scip/reader_osil.c src/scip/reader_osil.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -6714,7 +6851,8 @@ $(LIBOBJDIR)/scip/reader_pip.o: src/scip/reader_pip.c src/scip/reader_pip.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -6756,7 +6894,8 @@ $(LIBOBJDIR)/scip/reader_pbm.o: src/scip/reader_pbm.c src/scip/reader_pbm.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -6796,7 +6935,8 @@ $(LIBOBJDIR)/scip/reader_ppm.o: src/scip/reader_ppm.c src/scip/reader_ppm.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -6836,7 +6976,8 @@ $(LIBOBJDIR)/scip/reader_rlp.o: src/scip/reader_rlp.c src/scip/reader_lp.h src/s
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -6875,7 +7016,8 @@ $(LIBOBJDIR)/scip/reader_sol.o: src/scip/reader_sol.c src/scip/reader_sol.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -6913,7 +7055,8 @@ $(LIBOBJDIR)/scip/reader_wbo.o: src/scip/reader_wbo.c src/scip/reader_opb.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -6952,7 +7095,8 @@ $(LIBOBJDIR)/scip/reader_zpl.o: src/scip/reader_zpl.c src/scip/reader_zpl.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -6990,7 +7134,8 @@ $(LIBOBJDIR)/scip/sepa_cgmip.o: src/scip/sepa_cgmip.c src/scip/sepa_cgmip.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -7101,7 +7246,8 @@ $(LIBOBJDIR)/scip/sepa_clique.o: src/scip/sepa_clique.c src/scip/sepa_clique.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -7140,7 +7286,8 @@ $(LIBOBJDIR)/scip/sepa_closecuts.o: src/scip/sepa_closecuts.c src/scip/sepa_clos
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -7178,7 +7325,8 @@ $(LIBOBJDIR)/scip/sepa_cmir.o: src/scip/sepa_cmir.c src/scip/sepa_cmir.h src/sci
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -7216,7 +7364,8 @@ $(LIBOBJDIR)/scip/sepa_convexproj.o: src/scip/sepa_convexproj.c src/scip/sepa_co
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h src/scip/nlp.h \
@@ -7256,7 +7405,8 @@ $(LIBOBJDIR)/scip/sepa_disjunctive.o: src/scip/sepa_disjunctive.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -7295,7 +7445,8 @@ $(LIBOBJDIR)/scip/sepa_eccuts.o: src/scip/sepa_eccuts.c src/scip/scipdefplugins.
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -7407,7 +7558,8 @@ $(LIBOBJDIR)/scip/sepa_flowcover.o: src/scip/sepa_flowcover.c src/scip/sepa_flow
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -7446,7 +7598,8 @@ $(LIBOBJDIR)/scip/sepa_gauge.o: src/scip/sepa_gauge.c src/scip/sepa_gauge.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -7486,7 +7639,8 @@ $(LIBOBJDIR)/scip/sepa_gomory.o: src/scip/sepa_gomory.c src/scip/sepa_gomory.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -7525,7 +7679,8 @@ $(LIBOBJDIR)/scip/sepa_impliedbounds.o: src/scip/sepa_impliedbounds.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -7563,7 +7718,8 @@ $(LIBOBJDIR)/scip/sepa_intobj.o: src/scip/sepa_intobj.c src/scip/sepa_intobj.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -7601,7 +7757,8 @@ $(LIBOBJDIR)/scip/sepa_mcf.o: src/scip/sepa_mcf.c src/scip/sepa_mcf.h src/scip/s
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -7640,7 +7797,8 @@ $(LIBOBJDIR)/scip/sepa_oddcycle.o: src/scip/sepa_oddcycle.c src/scip/sepa_oddcyc
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -7680,7 +7838,8 @@ $(LIBOBJDIR)/scip/sepa_rapidlearning.o: src/scip/sepa_rapidlearning.c \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -7792,7 +7951,8 @@ $(LIBOBJDIR)/scip/sepa_strongcg.o: src/scip/sepa_strongcg.c src/scip/sepa_strong
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
@@ -7830,7 +7990,8 @@ $(LIBOBJDIR)/scip/sepa_zerohalf.o: src/scip/sepa_zerohalf.c src/scip/sepa_zeroha
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -7944,10 +8105,10 @@ $(LIBOBJDIR)/scip/boundstore.o: src/scip/boundstore.c src/scip/boundstore.h src/
  src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_mem.h src/scip/type_primal.h src/scip/type_pricestore.h \
  src/scip/type_sepastore.h src/scip/type_conflictstore.h \
- src/scip/type_concurrent.h src/scip/set.h src/scip/struct_set.h \
- src/scip/message.h src/scip/debug.h src/scip/tree.h src/scip/misc.h \
- src/scip/var.h src/scip/event.h src/scip/struct_event.h src/scip/cons.h \
- src/scip/solve.h
+ src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/scip/cons.h src/scip/solve.h
 $(LIBOBJDIR)/scip/branch.o: src/scip/branch.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/blockmemshell/memory.h src/scip/set.h src/scip/type_set.h \
@@ -8042,11 +8203,11 @@ $(LIBOBJDIR)/scip/concsolver.o: src/scip/concsolver.c src/scip/concsolver.h src/
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/tree.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/tree.h \
  src/scip/misc.h src/scip/var.h src/scip/event.h src/scip/struct_event.h \
  src/scip/cons.h src/scip/solve.h src/scip/concurrent.h \
- src/scip/struct_concsolver.h src/scip/struct_stat.h \
- src/scip/type_visual.h src/scip/syncstore.h src/scip/clock.h
+ src/scip/struct_concsolver.h src/scip/syncstore.h src/scip/clock.h
 $(LIBOBJDIR)/scip/concurrent.o: src/scip/concurrent.c src/scip/concurrent.h \
  src/scip/type_concurrent.h src/scip/type_scip.h \
  src/scip/type_concsolver.h src/scip/def.h src/scip/type_retcode.h \
@@ -8177,8 +8338,9 @@ $(LIBOBJDIR)/scip/conflictstore.o: src/scip/conflictstore.c src/scip/conflictsto
  src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h src/scip/presolve.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_pricestore.h \
- src/scip/type_concurrent.h src/scip/var.h src/scip/solve.h \
- src/scip/cons_linear.h src/scip/struct_conflictstore.h
+ src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
+ src/scip/var.h src/scip/solve.h src/scip/cons_linear.h \
+ src/scip/struct_conflictstore.h
 $(LIBOBJDIR)/scip/cons.o: src/scip/cons.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/scip/set.h src/blockmemshell/memory.h src/scip/type_set.h \
@@ -8283,8 +8445,8 @@ $(LIBOBJDIR)/scip/cuts.o: src/scip/cuts.c src/scip/def.h src/scip/type_retcode.h
  src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h src/scip/presolve.h \
  src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_mem.h src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_concurrent.h src/scip/tree.h src/scip/misc.h \
- src/scip/cons.h src/scip/solve.h
+ src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
+ src/scip/tree.h src/scip/misc.h src/scip/cons.h src/scip/solve.h
 $(LIBOBJDIR)/scip/debug.o: src/scip/debug.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/blockmemshell/memory.h src/scip/set.h src/scip/type_set.h \
@@ -8322,8 +8484,8 @@ $(LIBOBJDIR)/scip/debug.o: src/scip/debug.c src/scip/def.h src/scip/type_retcode
  src/nlpi/struct_expr.h src/scip/presolve.h src/scip/cuts.h \
  src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_mem.h src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_concurrent.h src/scip/misc.h src/scip/cons.h \
- src/scip/solve.h
+ src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
+ src/scip/misc.h src/scip/cons.h src/scip/solve.h
 $(LIBOBJDIR)/scip/dialog.o: src/scip/dialog.c src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
  src/scip/struct_message.h src/blockmemshell/memory.h \
@@ -8358,7 +8520,8 @@ $(LIBOBJDIR)/scip/dialog.o: src/scip/dialog.c src/scip/scip.h src/scip/def.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -8466,11 +8629,11 @@ $(LIBOBJDIR)/scip/heur.o: src/scip/heur.c src/scip/def.h src/scip/type_retcode.h
  src/nlpi/struct_expr.h src/scip/presolve.h src/scip/cuts.h \
  src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_mem.h src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/tree.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/tree.h \
  src/scip/misc.h src/scip/var.h src/scip/event.h src/scip/struct_event.h \
  src/scip/cons.h src/scip/solve.h src/scip/heur.h src/scip/stat.h \
- src/scip/concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
- src/scip/struct_heur.h
+ src/scip/concurrent.h src/scip/struct_heur.h
 $(LIBOBJDIR)/scip/heuristics.o: src/scip/heuristics.c src/scip/heuristics.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
  src/scip/type_message.h src/scip/struct_message.h \
@@ -8505,10 +8668,11 @@ $(LIBOBJDIR)/scip/heuristics.o: src/scip/heuristics.c src/scip/heuristics.h src/
  src/scip/cuts.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_mem.h src/scip/type_primal.h src/scip/type_pricestore.h \
  src/scip/type_sepastore.h src/scip/type_conflictstore.h \
- src/scip/type_concurrent.h src/scip/set.h src/scip/struct_set.h \
- src/scip/message.h src/scip/debug.h src/scip/tree.h src/scip/misc.h \
- src/scip/var.h src/scip/event.h src/scip/struct_event.h src/scip/cons.h \
- src/scip/solve.h src/scip/cons_linear.h src/scip/scipdefplugins.h \
+ src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
+ src/scip/cons_linear.h src/scip/scipdefplugins.h \
  src/scip/branch_allfullstrong.h src/scip/branch_cloud.h \
  src/scip/branch_distribution.h src/scip/branch_fullstrong.h \
  src/scip/branch_inference.h src/scip/branch_leastinf.h \
@@ -8619,9 +8783,10 @@ $(LIBOBJDIR)/scip/compr.o: src/scip/compr.c src/scip/def.h src/scip/type_retcode
  src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_mem.h src/scip/type_primal.h src/scip/type_pricestore.h \
  src/scip/type_sepastore.h src/scip/type_conflictstore.h \
- src/scip/type_concurrent.h src/scip/tree.h src/scip/misc.h \
- src/scip/var.h src/scip/event.h src/scip/struct_event.h src/scip/cons.h \
- src/scip/solve.h src/scip/compr.h src/scip/reopt.h src/scip/pub_reopt.h \
+ src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
+ src/scip/compr.h src/scip/reopt.h src/scip/pub_reopt.h \
  src/scip/struct_reopt.h src/scip/struct_compr.h
 $(LIBOBJDIR)/scip/history.o: src/scip/history.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
@@ -8738,7 +8903,8 @@ $(LIBOBJDIR)/scip/matrix.o: src/scip/matrix.c src/scip/def.h src/scip/type_retco
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -8862,7 +9028,8 @@ $(LIBOBJDIR)/scip/paramset.o: src/scip/paramset.c src/scip/scip.h src/scip/def.h
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -8903,9 +9070,10 @@ $(LIBOBJDIR)/scip/presol.o: src/scip/presol.c src/scip/def.h src/scip/type_retco
  src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_mem.h src/scip/type_primal.h src/scip/type_pricestore.h \
  src/scip/type_sepastore.h src/scip/type_conflictstore.h \
- src/scip/type_concurrent.h src/scip/tree.h src/scip/misc.h \
- src/scip/var.h src/scip/event.h src/scip/struct_event.h src/scip/cons.h \
- src/scip/solve.h src/scip/presol.h src/scip/struct_presol.h
+ src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
+ src/scip/presol.h src/scip/struct_presol.h
 $(LIBOBJDIR)/scip/presolve.o: src/scip/presolve.c src/scip/mem.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
  src/scip/struct_message.h src/scip/type_mem.h src/scip/struct_mem.h \
@@ -8941,10 +9109,11 @@ $(LIBOBJDIR)/scip/presolve.o: src/scip/presolve.c src/scip/mem.h src/scip/def.h 
  src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_primal.h src/scip/type_pricestore.h \
  src/scip/type_sepastore.h src/scip/type_conflictstore.h \
- src/scip/type_concurrent.h src/scip/set.h src/scip/struct_set.h \
- src/scip/message.h src/scip/debug.h src/scip/tree.h src/scip/misc.h \
- src/scip/var.h src/scip/event.h src/scip/struct_event.h src/scip/cons.h \
- src/scip/solve.h src/scip/prob.h src/scip/struct_prob.h
+ src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/scip/cons.h src/scip/solve.h src/scip/prob.h \
+ src/scip/struct_prob.h
 $(LIBOBJDIR)/scip/pricestore.o: src/scip/pricestore.c src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
  src/scip/struct_message.h src/scip/set.h src/blockmemshell/memory.h \
@@ -9008,9 +9177,10 @@ $(LIBOBJDIR)/scip/pricer.o: src/scip/pricer.c src/scip/def.h src/scip/type_retco
  src/nlpi/struct_expr.h src/scip/presolve.h src/scip/cuts.h \
  src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_mem.h src/scip/type_sepastore.h src/scip/type_concurrent.h \
- src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
- src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
- src/scip/pricer.h src/scip/struct_pricer.h
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/tree.h \
+ src/scip/misc.h src/scip/var.h src/scip/event.h src/scip/struct_event.h \
+ src/scip/cons.h src/scip/solve.h src/scip/pricer.h \
+ src/scip/struct_pricer.h
 $(LIBOBJDIR)/scip/primal.o: src/scip/primal.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \
  src/scip/set.h src/blockmemshell/memory.h src/scip/type_set.h \
@@ -9215,7 +9385,8 @@ $(LIBOBJDIR)/scip/reopt.o: src/scip/reopt.c src/scip/def.h src/scip/type_retcode
  src/nlpi/struct_expr.h src/scip/presolve.h src/scip/cuts.h \
  src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/cons.h \
  src/scip/solve.h src/scip/sol.h src/scip/lp.h src/scip/reopt.h \
@@ -9319,7 +9490,8 @@ $(LIBOBJDIR)/scip/scipdefplugins.o: src/scip/scipdefplugins.c src/scip/scipdefpl
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -9433,7 +9605,8 @@ $(LIBOBJDIR)/scip/scipshell.o: src/scip/scipshell.c src/scip/scip.h src/scip/def
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_primal.h \
  src/scip/type_pricestore.h src/scip/type_sepastore.h \
- src/scip/type_conflictstore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_conflictstore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h \
@@ -9766,7 +9939,8 @@ $(LIBOBJDIR)/scip/syncstore.o: src/scip/syncstore.c src/scip/def.h src/scip/type
  src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h src/scip/presolve.h \
  src/scip/cuts.h src/scip/heuristics.h src/scip/struct_scip.h \
  src/scip/type_interrupt.h src/scip/type_mem.h src/scip/type_pricestore.h \
- src/scip/type_sepastore.h src/scip/type_concurrent.h src/scip/set.h \
+ src/scip/type_sepastore.h src/scip/type_concurrent.h \
+ src/scip/struct_stat.h src/scip/type_visual.h src/scip/set.h \
  src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
  src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
  src/scip/struct_event.h src/scip/cons.h src/scip/solve.h src/tpi/tpi.h \
@@ -9885,12 +10059,12 @@ $(LIBOBJDIR)/scip/visual.o: src/scip/visual.c src/blockmemshell/memory.h src/sci
  src/scip/heuristics.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_mem.h src/scip/type_primal.h src/scip/type_pricestore.h \
  src/scip/type_sepastore.h src/scip/type_conflictstore.h \
- src/scip/type_concurrent.h src/scip/set.h src/scip/struct_set.h \
- src/scip/message.h src/scip/debug.h src/scip/tree.h src/scip/misc.h \
- src/scip/var.h src/scip/event.h src/scip/struct_event.h src/scip/cons.h \
- src/scip/solve.h src/scip/stat.h src/scip/concurrent.h \
- src/scip/struct_stat.h src/scip/type_visual.h src/scip/clock.h \
- src/scip/visual.h src/scip/struct_visual.h
+ src/scip/type_concurrent.h src/scip/struct_stat.h src/scip/type_visual.h \
+ src/scip/set.h src/scip/struct_set.h src/scip/message.h src/scip/debug.h \
+ src/scip/tree.h src/scip/misc.h src/scip/var.h src/scip/event.h \
+ src/scip/struct_event.h src/scip/cons.h src/scip/solve.h src/scip/stat.h \
+ src/scip/concurrent.h src/scip/clock.h src/scip/visual.h \
+ src/scip/struct_visual.h
 $(LIBOBJDIR)/tclique/tclique_branch.o: src/tclique/tclique_branch.c src/tclique/tclique.h \
  src/tclique/tclique_def.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/struct_message.h \

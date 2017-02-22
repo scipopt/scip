@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -130,6 +130,7 @@ SCIP_RETCODE initPropdata(
    propdata->ntotaluseless = 0;
    propdata->nsumuseless = 0;
    propdata->lastnode = -2;
+   propdata->randnumgen = NULL;
 
    return SCIP_OKAY;
 }
@@ -230,13 +231,13 @@ SCIP_RETCODE sortVariables(
 
 #ifndef VARIANT_B
          tmp = -MAX(nlocksdown, nlocksup)
-	    + 10*MIN(nimplzero, nimplone)
-	    + 100*MIN(nclqzero, nclqone);
+	    + 10.0 * MIN(nimplzero, nimplone)
+	    + 100.0 * MIN(nclqzero, nclqone);
 #else
          tmp = - ABS(nlocksdown - nlocksup)
 	    + MIN(nlocksdown, nlocksup)
-	    + 500 * nimplzero + 50 * nimplone
-	    + 50000 * nclqzero + 5000 * nclqone;
+	    + 500.0 * nimplzero + 50.0 * nimplone
+	    + 50000.0 * nclqzero + 5000.0 * nclqone;
 #endif
 
          if( tmp > maxscore )
@@ -287,15 +288,15 @@ SCIP_RETCODE sortVariables(
 #ifndef VARIANT_B
          scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
             - MAX(nlocksdown, nlocksup)
-            + 10*MIN(nimplzero, nimplone)
-            + 100*MIN(nclqzero, nclqone)  /*lint !e790*/
+            + 10.0 * MIN(nimplzero, nimplone)
+            + 100.0 * MIN(nclqzero, nclqone)  /*lint !e790*/
             - randomoffset; /* to break ties randomly */
 #else
          scores[i] = -maxscore * propdata->nprobed[SCIPvarGetIndex(var)]
          - ABS(nlocksdown - nlocksup)
          + MIN(nlocksdown, nlocksup)
-         + 500 * nimplzero + 50 * nimplone  /*lint !e790*/
-         + 50000 * nclqzero + 5000 * nclqone  /*lint !e790*/
+         + 500.0 * nimplzero + 50.0 * nimplone  /*lint !e790*/
+         + 50000.0 * nclqzero + 5000.0 * nclqone  /*lint !e790*/
          - randomoffset; /* to break ties randomly */
 #endif
       }
@@ -725,8 +726,6 @@ SCIP_DECL_PROPFREE(propFreeProbing)
    assert(propdata->nsortedvars == 0);
    assert(propdata->nsortedbinvars == 0);
 
-   /* free random number generator */
-   SCIPrandomFree(&propdata->randnumgen);
 
    SCIPfreeBlockMemory(scip, &propdata);
    SCIPpropSetData(prop, NULL);
@@ -746,6 +745,11 @@ SCIP_DECL_PROPINIT(propInitProbing)
 
    SCIP_CALL( initPropdata(scip, propdata) );
 
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&propdata->randnumgen, SCIPblkmem(scip),
+      SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+
+
    return SCIP_OKAY;
 }
 
@@ -763,6 +767,9 @@ SCIP_DECL_PROPEXIT(propExitProbing)
    assert(propdata->sortedvars == NULL);
    assert(propdata->nsortedvars == 0);
    assert(propdata->nsortedbinvars == 0);
+
+   /* free random number generator */
+   SCIPrandomFree(&propdata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -1057,7 +1064,7 @@ SCIP_DECL_PROPEXEC(propExecProbing)
    naggrvars = 0;
    nchgbds = 0;
    startidx = 0;
-   oldnimplications = propdata->nimplications;
+   SCIPdebug( oldnimplications = propdata->nimplications; )
 
    /* start probing on found variables */
    SCIP_CALL( applyProbing(scip, propdata, binvars, nbinvars, nbinvars, &startidx, &nfixedvars, &naggrvars, &nchgbds, oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
@@ -1107,10 +1114,6 @@ SCIP_RETCODE SCIPincludePropProbing(
    /* create probing propagator data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
    SCIP_CALL( initPropdata(scip, propdata) );
-
-   /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&propdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,

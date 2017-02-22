@@ -1,9 +1,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*                  this file is part of the program and library             */
+/*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*                  2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -111,7 +111,7 @@
  *
  * @section FURTHERINFO Further information
  *
- * @subsection CHG Changes between different versions of \SCIP
+ * @subsection CHG Changes between different versions of SCIP
  * - \ref CHANGELOG    "Change log"
  * - \ref RELEASENOTES "Release notes"
  * - \ref CHG8         "Interface changes between version 3.1 and 3.2"
@@ -123,7 +123,7 @@
  * - \ref CHG2         "Interface changes between version 1.0 and 1.1"
  * - \ref CHG1         "Interface changes between version 0.9 and 1.0"
  *
- * @subsection AUTHORS \SCIP Authors
+ * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
  * @version  4.0.0
@@ -187,7 +187,7 @@
  *  <table>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/CallableLibrary"><b>CallableLibrary</b></a>
+ *  \ref CALLABLELIBRARY_MAIN "Callable Library Example"
  *  </td>
  *  <td>
  *  An example showing how to setup constraints (esp. nonlinear ones) when using \SCIP as callable library.
@@ -259,6 +259,14 @@
  *  </tr>
  *  <tr>
  *  <td>
+ *  <a href="http://scip.zib.de/doc/applications/MinIISC"><b>MinIISC</b></a>
+ *  </td>
+ *  <td>
+ *  A solver that computes irreducible infeasible subsystems using Benders decomposition
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
  *  <a href="http://scip.zib.de/doc/applications/Scheduler"><b>Scheduler</b></a>
  *  </td>
  *  <td>
@@ -275,7 +283,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/applications/Poly\SCIP"><b>PolySCIP</b></a>
+ *  <a href="http://scip.zib.de/doc/applications/PolySCIP"><b>PolySCIP</b></a>
  *  </td>
  *  <td>
  *  A solver for multi-objective optimization problems.
@@ -286,7 +294,8 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@page WHATPROBLEMS What types of optimization problems does \SCIP solve?
+
+/**@page WHATPROBLEMS What types of optimization problems does SCIP solve?
  *
  * As a stand-alone solver, \SCIP can solve mixed-integer nonlinear programs \b (MINLPs), to which it applies
  * an LP based spatial branch-and-cut algorithm. This method is guaranteed to solve bounded MINLPs
@@ -296,9 +305,8 @@
  * As a framework, \SCIP also provides the tools to solve constraint optimization problems defined over
  * integer and continuous variables. Therefore, the design of \SCIP
  * supports the easy integration of constraints of arbitrary type into the solver.
- *
- * Originally, \SCIP could solve constraint integer programs \b (CIPs), which are constraint optimization problems that become
- * linear programs (LPs) after the integer variables are fixed.
+ * More precisely, \SCIP can handle the class of constraint integer programs \b (CIPs), which are constraint optimization problems
+ * that become linear programs (LPs) after the integer variables are fixed.
  *
  * @section PROBLEMCLASSES Some important subclasses of CIP and MINLP
  *
@@ -309,147 +317,197 @@
  * every LP is a MIP is an MINLP), the formats for the superclass should always work just as fine, although they
  * may be less common for the class at hand.
  *
- * Please see also the pages on \ref EXAMPLES "\SCIP Examples" and \ref APPLICATIONS "\SCIP Applications" to learn more on how
+ * Please see also the pages on \ref EXAMPLES "SCIP Examples" and \ref APPLICATIONS "SCIP Applications" to learn more on how
  * to extend \SCIP for a particular MIP, MINLP, or CIP application.
- * All examples and applications use the C or C++ APIs of \SCIP. Please have a look at \ref INTERFACES "\SCIP interfaces"
+ * All examples and applications use the C or C++ APIs of \SCIP. Please have a look at \ref INTERFACES "SCIP interfaces"
  * to see how to use \SCIP from within other programming languages.
  *
- * <table>
- * <caption> Some problem classes that can be solved by \SCIP</caption>
- * <tr><th>Problem class<th>Mathematical problem description <th>Supported file formats <th>Example Problems <th>Recommendations
+ * <table class="types">
+ * <caption align="top">Some problem classes that can be solved by \SCIP</caption>
+ *    <tr style="border-bottom: medium solid black;">
+ *       <th>Problem class</th>
+ *       <th>Mathematical problem description</th>
+ *       <th>Supported file formats</th>
+ *       <th>Recommendations</th>
+ *    </tr>
  * <tr>
- *    <td>Mixed-integer nonlinear program (MINLP)
+ *    <td>Mixed-integer linear program (MIP)</td>
+ *    <td>\f{align*}{
+ *            \text{min} \quad& c^T x \\
+ *            \text{s.t.} \quad& Ax \geq b \\
+ *            &l_{j} \leq x_{j} \leq u_{j} && \forall j \in \mathcal{N} \\
+ *            &x_{j} \in \mathbb{Z} && \forall j \in \mathcal{I}
+ *        \f}
+ *    </td>
+ *    <td>
+ *       <ul>
+ *          <li>\ref reader_cip.h "CIP"</li>
+ *          <li>\ref reader_mps.h "MPS"</li>
+ *          <li>\ref reader_lp.h "LP"</li>
+ *          <li>\ref reader_zpl.h "ZPL"</li>
+ *       </ul>
+ *    </td>
+ *    <td>
+ *       <ul>
+ *          <li>\SCIP requires an external LP solver to solve LP relaxations, which needs to be specified
+ *          at compilation time. By default, it uses SoPlex (<code>LPS=spx</code>). See \ref MAKE for a
+ *          list of available LP solver interfaces and how to use them inside \SCIP.</li>
+ *          <li>Compile with Zimpl support (<code>ZIMPL=true</code>) to read in Zimpl models directly.</li>
+ *          <li>\SCIP comes with many different parameters. Use the provided emphasis settings (see \ref SHELL "this tutorial")
+ *          to change many parameters at once and boost the performance.</li>
+ *          <li>Test instances are available at <code>check/instances/MIP/</code>.</li>
+ *       </ul>
+ *    </td>
+ * </tr>
+ * <tr>
+ *    <td>Mixed-integer nonlinear program (MINLP)</td>
  *    <td>\f{align*}{
  *            \text{min} \quad& f(x) \\
  *            \text{s.t.} \quad& g_{i}(x) \leq 0 && \forall i \in \mathcal{M} \\
  *            &l_{j} \leq x_{j} \leq u_{j} && \forall j \in \mathcal{N} \\
  *            &x_{j} \in \mathbb{Z} && \forall j \in \mathcal{I}
  *        \f}
+ *    </td>
  *    <td>
  *        <ul>
- *          <li>\ref reader_cip.h "CIP"
- *          <li>\ref reader_gms.h "GMS"
- *          <li>\ref reader_osil.h "OSiL"
- *          <li>\ref reader_pip.h "PIP"
- *          <li>\ref reader_zpl.h "ZPL"
+ *          <li>\ref reader_cip.h "CIP"</li>
+ *          <li>\ref reader_gms.h "GMS"</li>
+ *          <li>\ref reader_osil.h "OSiL"</li>
+ *          <li>\ref reader_pip.h "PIP"</li>
+ *          <li>\ref reader_zpl.h "ZPL"</li>
+ *          <li>For MIQCPS:
+ *             <ul>
+ *                <li>\ref reader_lp.h "LP"</li>
+ *                <li>\ref reader_mps.h "MPS"</li>
+ *             </ul>
+ *          </li>
  *        </ul>
- *    <td>check/instances/MINLP/
+ *    </td>
  *    <td>
  *       <ul>
- *          <li>Compile with <code>IPOPT=true</code> for better performance
- *          <li>Compile with <code>GAMS=true</code> to read gms-files
- *          <li>see <a href="FAQ\FILEEXT#minlptypes"> Which kind of MINLPs are supported by \SCIP? </a> in the FAQ.
+ *          <li>Compile with <code>IPOPT=true</code> for better performance.</li>
+ *          <li>Compile with <code>GAMS=true</code> to read gms-files.</li>
+ *          <li>See <a href="FAQ\FILEEXT#minlptypes"> Which kind of MINLPs are supported by \SCIP? </a> in the FAQ.</li>
+ *          <li>There is an interface for the modelling language AMPL, see \ref INTERFACES.</li>
+ *          <li>Mixed-integer quadratically constrained programs (MIQCP) can also be formulated in the file formats
+ *             <ul>
+ *                <li>\ref reader_lp.h "LP", and</li>
+ *                <li>\ref reader_mps.h "MPS".</li>
+ *             </ul>
+ *          </li>
+ *          <li>Test instances are available at <code>check/instances/MINLP/</code>.</li>
+ *       </ul>
+ *    </td>
+ * </td>
  * <tr>
- *    <td>Constraint Integer Program (CIP)
+ *    <td>Constraint Integer Program (CIP)</td>
  *    <td>\f{align*}{
  *            \text{min} \quad& c^T x + d^T y \\
  *            \text{s.t.} \quad& C_i(x,y) = \text{true} && \forall i \in \mathcal{M} \\
  *            & x \in \mathbb{Z}^{p}, y  \in \mathbb{R}^{n - p}
  *        \f}
  *        where \f$\forall i \in\mathcal{M}, \forall x^* \in \mathbb{Z}^{p},\f$ \f$ \{ y : C_i(x^*, y) = \text{true} \} \f$ is a polyhedron.
+ *    </td>
  *    <td>
  *       <ul>
- *          <li>\ref reader_cip.h "CIP"
- *          <li>\ref reader_fzn.h "FlatZinc"
+ *          <li>\ref reader_cip.h "CIP"</li>
+ *          <li>\ref reader_fzn.h "FlatZinc"</li>
  *       </ul>
- *    <td>check/instances/CP
+ *    </td>
  *    <td>
  *       <ul>
- *          <li>\SCIP supports a limited number of arbitrary constraints; see \ref CONS "How to add constraint handlers"
- *          to learn how to extend the \SCIP framework to a given CIP.
+ *          <li>\SCIP supports a limited number of general constraints; see \ref CONS "How to add constraint handlers"
+ *          to learn how to extend the \SCIP framework to a given CIP.</li>
  *          <li>Use the emphasis setting <code>set emphasis cpsolver</code> to completely disable LP solves and
  *          use depth-first search with periodic restarts, see also
- *          <a href="FAQ\FILEEXT#scipascpsolver"> Can I use \SCIP as a pure CP solver? </a> in the FAQ.
+ *          <a href="FAQ\FILEEXT#scipascpsolver"> Can I use \SCIP as a pure CP solver? </a> in the FAQ.</li>
+ *          <li>Test instances are available at <code>check/instances/CP</code>.</li>
  *       </ul>
+ *    </td>
  * <tr>
- *    <td>Convex MINLP
- *    <td>like MINLP, all \f$g_i\f$ are \b convex.
- *    <td> see MINLP formats
- *    <td>
- *       check/instances/MINLP/circle.cip
+ *    <td>Convex MINLP</td>
+ *    <td>Like MINLP, \f$f\f$ and all \f$g_i\f$ are \b convex.</td>
+ *    <td>see MINLP formats</td>
  *    <td>
  *       <ul>
- *          <li>everything that holds for MINLP
- *          <li>in addition, use <code>constraints/nonlinear/assumeconvex = TRUE</code> to inform \SCIP about a convex
- *          problem in cases where the automated detection is not strong enough.
+ *          <li>See the comments for MINLP.</li>
+ *          <li>In addition, use <code>constraints/nonlinear/assumeconvex = TRUE</code> to inform \SCIP about a convex
+ *          problem in cases where the automated detection is not strong enough.</li>
+ *          <li>Test instances are available at <code>check/instances/MINLP/circle.cip</code>.</li>
  *       </ul>
+ *    </td>
+ * </td>
  * <tr>
- *    <td>Mixed-integer linear program (MIP)
- *    <td>\f{align*}{
- *            \text{min} \quad& c^T x \\
- *            \text{s.t.} \quad& Ax \geq b \\
- *            &l_{j} \leq x_{j} \leq u_{j} && \forall j \in \mathcal{N} \\
- *            &x_{j} \in \mathbb{Z} && \forall j \in \mathcal{I}
- *        \f}
- *    <td>
- *       <ul>
- *          <li>\ref reader_cip.h "CIP"
- *          <li>\ref reader_mps.h "MPS"
- *          <li>\ref reader_lp.h "LP"
- *          <li>\ref reader_zpl.h "ZPL"
- *       </li>
- *    <td>check/instances/MIP/
- *    <td>
- *       <ul>
- *          <li>\SCIP requires an external LP solver to solve LP relaxations, which needs to be specified
- *          at compilation time. By default, it uses SoPlex (<code>LPS=spx</code>). See \ref MAKE for a
- *          list of available LP solver interfaces and how to use them inside \SCIP.
- *          <li>Compile with Zimpl support (<code>ZIMPL=true</code>) to read in Zimpl models directly.
- *          <li>\SCIP comes with many different parameters. Use the provided emphasis settings (see \ref SHELL "this tutorial")
- *          to change many parameters at once and boost the performance.
- *       </ul>
- * <tr>
- *    <td>Linear program (LP)
+ *    <td>Linear program (LP)</td>
  *    <td>\f{align*}{
  *            \text{min} \quad& c^T x \\
  *            \text{s.t.} \quad& Ax \geq b \\
  *            & x_{j} \geq 0 && \forall j \in \mathcal{N}
  *        \f}
- *    <td>see MIP formats
- *    <td>
- *    <td>see <a href="FAQ\FILEEXT#scipaslpsolver">Can I use \SCIP as a pure LP solver</a> in the FAQ.
+ *    </td>
+ *    <td>see MIP formats</td>
+ *    <td>See <a href="FAQ\FILEEXT#scipaslpsolver">Can I use \SCIP as a pure LP solver</a> in the FAQ.</td>
+ * </td>
  * <tr>
- *    <td>Pseudoboolean optimization
+ *    <td>Pseudoboolean optimization</td>
  *    <td>\f{align*}{
  *            \text{min} \quad& c^T x \\
  *            \text{s.t.} \quad& \sum_{k=0}^p a_{ik} \cdot \prod_{j \in \mathcal{N}_{ik}} x_j \leq b_i && \forall i \in \mathcal{M} \\
  *            &x_{j} \in \{0,1\} && \forall j \in \mathcal{N}
  *        \f}
+ *    </td>
  *    <td>
  *       <ul>
- *          <li>\ref reader_wbo.h "WBO"
- *          <li>\ref reader_opb.h "OPB"
+ *          <li>\ref reader_wbo.h "WBO"</li>
+ *          <li>\ref reader_opb.h "OPB"</li>
  *       </ul>
- *    <td>check/instances/PseudoBoolean/
+ *    </td>
+ *    <td>
+ *       <ul>
+ *          <li>Test instances are available at <code>check/instances/PseudoBoolean/</code>.</li>
+ *       </ul>
+ *    </td>
+ * </tr>
  * <tr>
- *    <td>Satisfiability (SAT) and variants
+ *    <td>Satisfiability (SAT) and variants</td>
  *    <td>\f{align*}{
  *            \text{min} \quad& 0 \\
  *            \text{s.t.} \quad&\bigvee\limits_{j \in B_i} x_j \vee \bigvee\limits_{j \in \bar{B}_i} \neg x_j = \text{true} && \forall i \in \mathcal{M}\\
  *            &x_{j} \in \{\text{false},\text{true}\} && \forall j \in \mathcal{N}
  *        \f}
+ *    </td>
  *    <td>
  *        <ul>
- *          <li>\ref reader_cnf.h "CNF"
+ *          <li>\ref reader_cnf.h "CNF"</li>
  *       </ul>
- *    <td>check/instances/SAT/
- *    <td>Use the emphasis setting <code>set emphasis cpsolver</code> to completely disable LP solves and
+ *    </td>
+ *    <td>
+ *       <ul>
+ *         <li>Use the emphasis setting <code>set emphasis cpsolver</code> to completely disable LP solves and
  *          use depth-first search with periodic restarts, see also
- *          <a href="FAQ\FILEEXT#scipascpsolver"> Can I use \SCIP as a pure CP/SAT solver? </a> in the FAQ.
+ *          <a href="FAQ\FILEEXT#scipascpsolver"> Can I use \SCIP as a pure CP/SAT solver? </a> in the FAQ.</li>
+ *         <li>Test instances are available at <code>check/instances/SAT/</code>.</li>
+ *       </ul>
+ *    </td>
+ * </tr>
  * <tr>
- *    <td>Multicriteria optimization
+ *    <td>Multicriteria optimization</td>
  *    <td>\f{align*}{
  *         \text{min} \quad &(c_1^T x,\ldots,c_k^T x) \\
  *         \text{s.t. } \quad& Ax \geq b \\
  *         &x \in \mathbb{K}^n
  *          \f}
  *          where \f$\mathbb{K}\f$ is either \f$\mathbb{Z}\f$ or \f$\mathbb{R}\f$.
- *     <td colspan="3"> see the <a href="http://polyscip.zib.de/">PolySCIP web page</a>
+ *    </td>
+ *    <td colspan="3"> see the <a href="http://polyscip.zib.de/">PolySCIP web page</a></td>
+ * </tr>
+ * </table>
  *
  *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page CODE Coding style guidelines
  *
  * We follow the following coding style guidelines and recommend them for all developers.
@@ -496,6 +554,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page MAKE Makefiles / Installation information
  *
  *
@@ -732,7 +791,7 @@
  * do NOT support creating the doxygen documentation and readline-usage under windows.
  *
  *
- * @section RUN How to run \SCIP after successfully compiling \SCIP
+ * @section RUN How to run SCIP after a successful compilation
  *
  * To run the program, enter <code>bin/scip</code> for the last compiled version. If you have more than one compiled
  * binary (i. e., one in debug and one in optimized mode) and wish to specify the binary, type
@@ -742,6 +801,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page START How to start a new project
  *
  * Once you succeeded installing \SCIP together with an LP-solver on your system,
@@ -804,114 +864,50 @@
  *
  * @section TUTORIAL_OPTIMIZE Read and optimize a problem instance
  *
- * First of all, we need a \SCIP binary and an example problem file to work with.  Therefore, you can either download the
+ * First of all, we need a \SCIP binary and an example problem file to work with. Therefore, you can either download the
  * \SCIP standard distribution (which includes problem files) and compile it on your own or you can download a
- * precompiled binary and an example problem separately. \SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, OSiL, and other formats (see \ref FILEREADERS).
+ * precompiled binary and an example problem separately. \SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, OSiL, and
+ * other formats (see \ref FILEREADERS).
  *
  * If you want to download the source code of the \SCIP standard distribution, we recommend to go to the <a
- * href="http://scip.zib.de/#download">SCIP download section</a>, download the latest release (version 3.0 as
+ * href="http://scip.zib.de/#download">SCIP download section</a>, download the latest release (version 4.0.0 as
  * of this writing), inflate the tarball (e.g., with "tar xzf scipoptsuite-[version].tgz"), and follow the instructions
  * in the INSTALL file. The instance stein27, which will serve as an example in this tutorial, can be found under
- * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.mps.
+ * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.fzn.
  *
  * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/#download">SCIP download
  * section</a> and download an appropriate binary for your operating system. The \SCIP source code distribution already comes with
- * the example problem instance used throughout this tutorial. To follow this tutorial with a precompiled binary, we recommend downloading the instance
+ * the example instance used throughout this tutorial. To follow this tutorial with a precompiled binary, we recommend downloading the instance
  * <a href="http://miplib.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
  * the <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> homepage.
  *
  * Now start your binary, without any arguments. This opens the interactive shell, which should look somehow like this:
  *
- * \code
- * SCIP version 2.0.1 [precision: 8 byte] [memory: block] [mode: optimized] [LP solver: SoPlex 1.5.0]
- * Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
- *
- * External codes:
- *   SoPlex 1.5.0         Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)
- *   ZIMPL 3.1.0          Zuse Institute Mathematical Programming Language developed by T. Koch (zimpl.zib.de)
- *
- * user parameter file <scip.set> not found - using default parameters
- *
- * SCIP>
- * \endcode
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetVersion
  *
  * First of all "help" shows you a list of all available shell commands. Brackets indicate a submenu with further options.
- * \code
- * SCIP> help
-
- *  <display>             display information
- *  <set>                 load/save/change parameters
- * ...
- *  read                  read a problem
- * \endcode
  *
- * Okay, let's solve some MIPs... use "read <path/to/file>" to parse a problem file, "optimize" to solve it and "display
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetHelp
+ *
+ * Okay, let's solve the example instance... use "read check/instances/MIP/stein27.fzn" to parse the instance file, "optimize" to solve it and "display
  * solution" to show the nonzero variables of the best found solution.
-
- * \code
- * SCIP> read check/instances/MIP/stein27.fzn
- * original problem has 27 variables (27 bin, 0 int, 0 impl, 0 cont) and 118 constraints
- * SCIP> optimize
  *
- * feasible solution found by trivial heuristic, objective value  2.700000e+01
- * presolving:
- * (round 1) 0 del vars, 0 del conss, 0 chg bounds, 0 chg sides, 0 chg coeffs, 118 upgd conss, 0 impls, 0 clqs
- * presolving (2 rounds):
- *  0 deleted vars, 0 deleted constraints, 0 tightened bounds, 0 added holes, 0 changed sides, 0 changed coefficients
- *  0 implications, 0 cliques
- * presolved problem has 27 variables (27 bin, 0 int, 0 impl, 0 cont) and 118 constraints
- *       1 constraints of type <knapsack>
- *     117 constraints of type <logicor>
- * transformed objective value is always integral (scale: 1)
- * Presolving Time: 0.00
- *
- *  time | node  | left  |LP iter|LP it/n| mem |mdpt |frac |vars |cons |cols |rows |cuts |confs|strbr|  dualbound   | primalbound  |  gap
- * t 0.0s|     1 |     0 |    34 |     - | 337k|   0 |  21 |  27 | 118 |  27 | 118 |   0 |   0 |   0 | 1.300000e+01 | 2.700000e+01 | 107.69%
- * R 0.0s|     1 |     0 |    34 |     - | 338k|   0 |  21 |  27 | 118 |  27 | 118 |   0 |   0 |   0 | 1.300000e+01 | 2.600000e+01 | 100.00%
- * s 0.0s|     1 |     0 |    34 |     - | 339k|   0 |  21 |  27 | 118 |  27 | 118 |   0 |   0 |   0 | 1.300000e+01 | 2.500000e+01 |  92.31%
- *   0.0s|     1 |     0 |    44 |     - | 392k|   0 |  21 |  27 | 118 |  27 | 120 |   2 |   0 |   0 | 1.300000e+01 | 2.500000e+01 |  92.31%
- * b 0.0s|     1 |     0 |    44 |     - | 393k|   0 |  21 |  27 | 118 |  27 | 120 |   2 |   0 |   0 | 1.300000e+01 | 1.900000e+01 |  46.15%
- * ...
- *   0.1s|     1 |     2 |   107 |     - | 920k|   0 |  24 |  27 | 118 |  27 | 131 |  13 |   0 |  24 | 1.300000e+01 | 1.900000e+01 |  46.15%
- * R 0.1s|    14 |    10 |   203 |   7.4 | 935k|  13 |   - |  27 | 118 |  27 | 124 |  13 |   0 | 164 | 1.300000e+01 | 1.800000e+01 |  38.46%
- *   0.1s|   100 |    54 |   688 |   5.9 | 994k|  13 |  20 |  27 | 118 |  27 | 124 |  13 |   0 | 206 | 1.300000e+01 | 1.800000e+01 |  38.46%
- *   0.1s|   200 |    86 |  1195 |   5.5 |1012k|  13 |   - |  27 | 119 |  27 | 124 |  13 |   1 | 207 | 1.300000e+01 | 1.800000e+01 |  38.46%
- *  time | node  | left  |LP iter|LP it/n| mem |mdpt |frac |vars |cons |cols |rows |cuts |confs|strbr|  dualbound   | primalbound  |  gap
- *   0.2s|   300 |   106 |  1686 |   5.3 |1024k|  13 |   - |  27 | 119 |  27 | 124 |  13 |   1 | 207 | 1.350000e+01 | 1.800000e+01 |  33.33%
- * ...
- *   0.7s|  4100 |    50 | 18328 |   4.4 |1033k|  16 |   8 |  27 | 119 |  27 | 124 |  13 |  15 | 207 | 1.650000e+01 | 1.800000e+01 |   9.09%
- *
- * SCIP Status        : problem is solved [optimal solution found]
- * Solving Time (sec) : 0.73
- * Solving Nodes      : 4192
- * Primal Bound       : +1.80000000000000e+01 (283 solutions)
- * Dual Bound         : +1.80000000000000e+01
- * Gap                : 0.00 %
- *
- * SCIP> display solution
- *
- * objective value:                                   18
- * x0001                                               1   (obj:1)
- * x0003                                               1   (obj:1)
- * ...
- * x0027                                               1   (obj:1)
- *
- * SCIP>
- * \endcode
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetOpt1
  *
  * What do we see here? After "optimize", SCIP first goes into presolving. Not much is happening for this instance, just
  * the linear constraints get upgraded to more specific types. Each round of presolving will be displayed in a single
- * line, with a short summary at the end. Here, there has only been one round with actual changes, the second round did
- * not bring any further reductions.  Thus, it is not displayed and presolving is stopped. Then, we see the actual
- * solving process. The first three output lines indicate that new incumbent solutions were found by the primal
- * heuristics with display characters "t", "R", and "s"; see, how the "primalbound" column goes down from 27 to 25. In
- * the fourth line, two "cuts" are added.  Up to here, we needed 44 "LP iter"ations (34 for the first LP and 10 more to
- * resolve after adding cuts). Little later, the root node processing is finished. We see that there are now two open
- * nodes in the "left" column. From now on, we will see an output line every hundredth node or whenever a new incumbent
- * is found (e.g. at node 14 in the above output). After some more nodes, the "dualbound" starts moving, too. At one
- * point, both will be the same, and the solving process terminates, showing us some wrap-up information.
+ * line, with a short summary at the end. Then, we see the actual solving process. The table output of the branch-and-cut
+ * solving process is very detailed during the root node. Afterwards, a new line is displayed every 100th node.
+ * Furthermore, every new incumbent solution triggers a new table row, starting with a character to indicate the
+ * heuristic that found the solution. Which letter represents which heuristic can be seen with the
+ * "display heuristics" command, see \ref TUTORIAL_STATISTICS for an example.
  *
- * The exact performance varies amongst different architectures, operating systems, and so on. Do not be worried if
+ * After some lines the root node processing is finished. From now on, we will see an output line every hundredth node or
+ * whenever a new incumbent is found. After some more nodes, the "dualbound" starts
+ * moving, too. At one point, both will be the same, and the solving process terminates, showing us some wrap-up
+ * information.
+ *
+ * The exact performance may of course vary among different architectures and operating systems. Do not be worried if
  * your installation needs more or less time or nodes to solve. Also, this instance has more than 2000 different optimal
  * solutions. The optimal objective value always has to be 18, but the solution vector may differ. If you are interested
  * in this behavior, which is called "performance variability", you may have a look at the MIPLIB2010 paper.
@@ -921,17 +917,7 @@
  * \SCIP can also write information to files. E.g., we could store the incumbent solution to a file, or output the
  * problem instance in another file format (the LP format is much more human readable than the MPS format, for example).
  *
- * \code
- * SCIP> write solution stein27.sol
- *
- * written solution information to file <stein27.sol>
- *
- * SCIP> write problem stein27.lp
- * written original problem to file <stein27.lp>
- *
- * SCIP> q
- * ...
- * \endcode
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetWriteSolutions
  *
  * Passing starting solutions can increase the solving performance so that \SCIP does not need to construct an initial feasible solution
  * by itself. After reading the problem instance, use the "read" command again, this time with a file containing solution information.
@@ -940,178 +926,70 @@
  *
  * Customized settings are not written or read with the "write" and "read" commands, but with the three commands
  *
- * \code
- * SCIP> set save _settingsfilename_
- * SCIP> set diffsave _settingsfilename_
- * SCIP> set load _settingsfilename_
- * \endcode
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetSaveSettingsOverview
  *
  * See the section on parameters \ref TUTORIAL_PARAMETERS for more information.
  *
  * @section TUTORIAL_STATISTICS Displaying detailed solving statistics
  *
- * We might want to have some more information now. Which were the heuristics that found the solutions? What plugins
- *  were called during the solutions process and how much time did they spend? How did the instance that we were solving
- *  look?  Information on certain plugin types (e.g., heuristics, branching rules, separators) we get by
- *  "display <plugin-type>", information on the solution process, we get by "display statistics", and "display problem"
- *  shows us the current instance.
+ * We might want to have some more information now. Which of the heuristics found solutions? Which plugins
+ * were called during the solutions process and how much time did they spend?
+ * Information on certain plugin types (e.g., heuristics, branching rules, separators) is displayed via
+ * "display <plugin-type>", information on the solution process via "display statistics", and "display problem"
+ * shows the current instance.
  *
-  \code
- * SCIP> display heuristics
- *  primal heuristic     c priority freq ofs  description
- *  ----------------     - -------- ---- ---  -----------
- *  trivial              t    10000    0   0  start heuristic which tries some trivial solutions
- * ...
- *  rounding             R    -1000    1   0  LP rounding heuristic with infeasibility recovering
- *  shifting             s    -5000   10   0  LP rounding heuristic with infeasibility recovering also using continuous variables
- * ...
- * SCIP> display statistics
- * ...
- *   gomory           :       0.02          6          0          0        461          0
- *   cgmip            :       0.00          0          0          0          0          0
- *   strongcg         :       0.01          6          0          0        598          0
- * ...
- *   oneopt           :       0.01          4          1
- *   coefdiving       :       0.02         57          0
- * ...
- *   primal LP        :       0.00          0          0       0.00          -
- *   dual LP          :       0.20       4187      14351       3.43   71755.00
- * ...
- * \endcode
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetDisplayStatistics
  *
- * We see that rounding and shifting were the heuristics producing the solutions in the beginning. Rounding is called at
- * every node, shifting only at every tenth level of the tree. The statistics are quite comprehensive, thus, we just
- * explain a few lines here. We get information for all types of plugins and for the overall solving process. Besides
- * others, we see that in six calls, the gomory cut separator and the strong Chv&aacute;tal-Gomory separator each produced
- * several hundred cuts (of which only a few entered the LP). The oneopt heuristic found one solution in 4 calls,
- * whereas coefdiving failed all 57 times it was called. All the LPs have been solved with the dual simplex algorithm, which
- * took about 0.2 seconds of the 0.7 seconds overall solving time.
+ * The statistics obtained via "display statistics" are quite comprehensive,
+ * thus, we just explain a few lines here. Information is grouped by the plugin type. For the primal heuristics,
+ * the execution time in seconds is shown as well as the number of calls to the heuristic, and its success regarding
+ * the number of (best) solutions found by that heuristic. Appropriate statistics are also shown for presolvers, constraint handlers,
+ * separators, propagators, the search tree, etc. User-written plugins will appear automatically in these statistics,
+ * after they were included into \SCIP.
  *
  * @section TUTORIAL_PARAMETERS Changing parameters from the interactive shell
  *
- * Now, we can start playing around with parameters. Rounding and shifting seem to be quite successful on this instance,
+ * Now, we can start playing around with parameters. The primal heuristics Rounding and shifting seem to be quite successful on this instance,
  * wondering what happens if we disable them? Or what happens, if we are even more rigorous and disable all heuristics?
  * Or if we do the opposite and use aggressive heuristics?
  *
- * \code
- * SCIP> set
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetSetSettings
  *
- *   <branching>           change parameters for branching rules
- *  ...
- *   <heuristics>          change parameters for primal heuristics
- *
- * SCIP/set> heuristics
- *
- *   <actconsdiving>       LP diving heuristic that chooses fixings w.r.t. the active constraints
- *  ...
- *   <shifting>            LP rounding heuristic with infeasibility recovering also using continuous variables
- *  ...
- *
- * SCIP/set/heuristics> shifting
- *
- *   <advanced>            advanced parameters
- *   freq                  frequency for calling primal heuristic <shifting> (-1: never, 0: only at depth freqofs) [10]
- *   freqofs               frequency offset for calling primal heuristic <shifting> [0]
- *
- * SCIP/set/heuristics/shifting> freq
- * current value: 10, new value [-1,2147483647]: -1
- * heuristics/shifting/freq = -1
- *
- * SCIP> se he rou freq -1
- * heuristics/rounding/freq = -1
- *
- * SCIP> re check/instances/MIP/stein27.mps
- * original problem has 27 variables (27 bin, 0 int, 0 impl, 0 cont) and 118 constraints
- * SCIP> o
- *
- * feasible solution found by trivial heuristic, objective value  2.700000e+01
- * ...
- * z 0.1s|     3 |     4 |   140 |  10.5 |1060k|   2 |  22 |  27 | 118 |  27 | 123 |  14 |   0 |  66 | 1.300000e+01 | 1.900000e+01 |  46.15%
- * z 0.1s|     6 |     7 |   176 |  11.4 |1063k|   5 |  18 |  27 | 118 |  27 | 123 |  14 |   0 | 118 | 1.300000e+01 | 1.900000e+01 |  46.15%
- * * 0.1s|    39 |    28 |   386 |   7.0 |1092k|  14 |   - |  27 | 118 |  27 | 123 |  14 |   0 | 199 | 1.300000e+01 | 1.800000e+01 |  38.46%
- * ...
- * SCIP Status        : problem is solved [optimal solution found]
- * Solving Time (sec) : 0.75
- * Solving Nodes      : 4253
- * Primal Bound       : +1.80000000000000e+01 (287 solutions)
- * Dual Bound         : +1.80000000000000e+01
- * Gap                : 0.00 %
- *
- * SCIP>
- * \endcode
- *
- * We can navigate through the menus step-by-step and get a list of available options and submenus. Thus, we select
- * "set" to change settings, "heuristics" to change settings of primal heuristics, "shifting" for that particular
+ * We can navigate through the menus step-by-step and get a list of available options and submenus. Therefore, we select
+ * "set" to change settings, "heuristics" to change settings of primal heuristics, and "shifting" for that particular
  * heuristic. Then we see a list of parameters (and yet another submenu for advanced parameters), and disable this
  * heuristic by setting its calling frequency to -1. If we already know the path to a certain setting, we can directly
  * type it (as for the rounding heuristic in the above example). Note that we do not have to use the full names, but we
  * may use short versions, as long as they are unique.
  *
- * To solve a problem a second time, we have to read it and start the optimization process again.
+ * To solve a problem a second time, we have to read it in again before starting the optimization process.
  *
- * \code
- * SCIP> set default
- * reset parameters to their default values
- * SCIP> set heuristics emphasis
- *
- *   aggressive            sets heuristics <aggressive>
- *   fast                  sets heuristics <fast>
- *   off                   turns <off> all heuristics
- *
- * SCIP/set/heuristics/emphasis> aggr
- * heuristics/veclendiving/freq = 5
- * ...
- * heuristics/crossover/minfixingrate = 0.5
- * SCIP> read check/instances/MIP/stein27.mps
- * original problem has 27 variables (27 bin, 0 int, 0 impl, 0 cont) and 118 constraints
-
- * SCIP> opt
- * ...
- * D 0.1s|     1 |     0 |   107 |     - | 971k|   0 |  24 |  27 | 122 |  27 | 131 |  13 |   4 |   0 | 1.300000e+01 | 1.800000e+01 |  38.46%
- *   0.1s|     1 |     0 |   107 |     - | 971k|   0 |  24 |  27 | 122 |  27 | 131 |  13 |   4 |   0 | 1.300000e+01 | 1.800000e+01 |  38.46%
- *   0.1s|     1 |     0 |   119 |     - |1111k|   0 |  24 |  27 | 122 |  27 | 132 |  14 |   4 |   0 | 1.300000e+01 | 1.800000e+01 |  38.46%
- *   0.1s|     1 |     2 |   119 |     - |1112k|   0 |  24 |  27 | 122 |  27 | 132 |  14 |   4 |  24 | 1.300000e+01 | 1.800000e+01 |  38.46%
- *  time | node  | left  |LP iter|LP it/n| mem |mdpt |frac |vars |cons |cols |rows |cuts |confs|strbr|  dualbound   | primalbound  |  gap
- *   0.2s|   100 |    59 |   698 |   5.8 |1138k|  14 |  11 |  27 | 122 |  27 | 123 |  14 |   4 | 204 | 1.300000e+01 | 1.800000e+01 |  38.46%
- *   0.2s|   200 |    91 |  1226 |   5.6 |1155k|  14 |   - |  27 | 122 |  27 | 123 |  14 |   4 | 207 | 1.300000e+01 | 1.800000e+01 |  38.46%
- * ^Cpressed CTRL-C 1 times (5 times for forcing termination)
- *
- * SCIP Status        : solving was interrupted [user interrupt]
- * Solving Time (sec) : 0.32
- * Solving Nodes      : 216
- * Primal Bound       : +1.80000000000000e+01 (283 solutions)
- * Dual Bound         : +1.30000000000000e+01
- * Gap                : 38.46 %
- *
- * SCIP>
- * \endcode
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetOpt2
  *
  * Okay, what happened here? First, we reset all parameters to their default values, using "set default". Next, we
  * loaded some meta-parameter settings (also see <a href="http://scip.zib.de/#faq">the FAQ</a>), to apply primal heuristics
- * more aggressively. \SCIP shows us, which single parameters it changed therefore. Now, the optimal solution is already
- * found at the root node, by a heuristic which is deactivated by default.  Then, after node 200, the user pressed
- * CTRL-C which interrupts the solving process, We see that now in the short status report, primal and dual bound are
- * different, thus, the problem is not solved yet.  Nevertheless, we could access statistics, see the current incumbent
- * solution, change parameters and so on. Entering "optimize" we continue the solving process from the point on at which
- * it has been interrupted.
+ * more aggressively. \SCIP shows us, which single parameters it changed therefore. Additionally, for pedagogical purposes,
+ * we set the node limit to 200. Now, the optimal solution is already found at the root node, by a heuristic which is
+ * deactivated by default.  Then, after node 200, the user defined node limit is reached which interrupts the solving
+ * process, We see that now in the short status report, primal and dual bound are different, thus, the problem is not solved
+ * yet.  Nevertheless, we could access statistics, see the current incumbent solution, change parameters and so on.
+ * Entering "optimize" we continue the solving process from the point on at which it has been interrupted.
  *
  * Once you found a non-default parameter setting that you wish to save and use in the future, use either the command
- * \code
- * SCIP> set save settingsfile.set
- * \endcode
+ *
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetSaveSettingsFull
+ *
  * to save <b>all</b> parameter values to the specified file, or
- * \code
- * SCIP> set diffsave settingsfile.set
- * \endcode
+ *
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetSaveSettingsDiff
+ *
  * in order to save only the nondefault parameters. The latter has several advantages, you can, e.g., combine parameter
  * settings from multiple settings files stored by the latter command, as long as they only affect mutually exclusive
  * parameter values.
  *
  * For loading a previously stored settings file, use the "load" command:
  *
- * \code
- * SCIP> set load settingsfile.set
- * \endcode
+ * @snippet shelltutorial/shelltutorialannotated.tmp SnippetLoadSettings
  *
  * Special attention should be drawn to the reserved settings file name "scip.set"; whenever the \SCIP interactive shell
  * is started from a working directory that contains a settings file with the name "scip.set", it will be automatically
@@ -1123,9 +1001,11 @@
  *
  * We hope this tutorial gave you an overview of what is possible using the \SCIP interactive shell. Please also read our
  * \ref FAQ, in particular the section <a href="http://scip.zib.de/#faq">Using \SCIP as a standalone MIP/MINLP-Solver</a>.
+ *
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page DOC How to search the documentation for interface methods
  *
  * If you are looking for a method in order to perform a specific task, there are usually two places to look at:
@@ -1150,6 +1030,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page CONS How to add constraint handlers
  *
  * A constraint handler defines the semantics and the algorithms to process constraints of a certain class.  A single
@@ -1964,6 +1845,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page PRICER How to add variable pricers
  *
  * A pricer performs the dynamic generation of new variables in a column generation algorithm.
@@ -2083,7 +1965,7 @@
  * If you are using pricer data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &pricerdata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &pricerdata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_PricerData afterwards.
  *
@@ -2241,6 +2123,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page PRESOL How to add presolvers
  *
  * Presolvers are used to reduce the size of the model by removing irrelevant information like redundant constraints,
@@ -2352,7 +2235,7 @@
  * If you are using presolver data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_PresolData afterwards. For freeing the
  * presolver data, see \ref PRESOLFREE.
@@ -2440,6 +2323,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page SEPA How to add separators
  *
  * Separators are used to generate general purpose cutting planes.
@@ -2575,7 +2459,7 @@
  * If you are using separator data, you have to allocate the memory
  * for the data at this point. You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
  * \endcode
  * You also have to initialize the fields in "struct SCIP_SepaData" afterwards. For freeing the
  * separator data, see \ref SEPAFREE.
@@ -2657,7 +2541,7 @@
  *
  * If you are using separator data (see \ref SEPA_DATA and \ref SEPA_INTERFACE), you have to implement this method
  * in order to free the separator data. This can be done by the following procedure:
- * 
+ *
  * @refsnippet{src/scip/sepa_gomory.c,SnippetSepaFreeGomory}
  *
  * If you have allocated memory for fields in your separator data, remember to free this memory
@@ -2698,6 +2582,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page PROP How to add propagators
  *
  * Propagators are used to tighten the domains of the variables. Like for cutting planes, there are two different types
@@ -2833,7 +2718,7 @@
  * If you are using propagator data, you have to allocate the memory for the data at this point.  You can do this by
  * calling
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &propdata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
  * \endcode
  * You also have to initialize the fields in <code>struct SCIP_PropData</code> afterwards.
  *
@@ -2907,7 +2792,7 @@
  *
  * If you are using propagator data, you have to implement this method in order to free the propagator data.
  * This can be done by the following procedure:
- * 
+ *
  * @refsnippet{src/scip/prop_redcost.c,SnippetPropFreeRedcost}
  *
  * If you have allocated memory for fields in your propagator data, remember to free this memory
@@ -2979,6 +2864,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page BRANCH How to add branching rules
  *
  * Branching rules are used to split the problem at the current node into smaller subproblems. Branching rules can be called at three
@@ -3106,7 +2992,7 @@
  * If you are using branching rule data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_BranchruleData afterwards.
  *
@@ -3286,6 +3172,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page NODESEL How to add node selectors
  *
  * Node selectors are used to decide which of the leaves in the current branching tree is selected as next subproblem
@@ -3385,7 +3272,7 @@
  * If you are using node selector data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &nodeseldata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_NodeselData afterwards.
  *
@@ -3512,6 +3399,7 @@
 
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page HEUR How to add primal heuristics
  *
  * Feasible solutions can be found in two different ways during the traversal of the branch-and-bound tree. On one
@@ -3694,7 +3582,7 @@
  * If you are using primal heuristic data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_HeurData afterwards.
  *
@@ -3785,6 +3673,7 @@
  * The HEUREXITSOL callback is executed before the branch-and-bound process is freed. The primal heuristic should use this
  * call to clean up its branch-and-bound data, which was allocated in HEURINITSOL.
  */
+
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@page DIVINGHEUR How to implement a diving heuristic
@@ -3900,6 +3789,7 @@
  * diveset related methods in \ref type_heur.h, \ref pub_heur.h, \ref heuristics.h, and \ref heur_guideddiving.h or
  * other diving heuristics that implement diving through a diveset.
  */
+
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 /**@page RELAX How to add relaxation handlers
@@ -4012,7 +3902,7 @@
  * If you are using relaxation handler data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &relaxdata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &relaxdata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_RelaxData afterwards.
  *
@@ -4133,6 +4023,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page READER How to add file readers
  *
  * Mainly, file readers are called to parse an input file and generate a constraint integer programming model. They
@@ -4230,7 +4121,7 @@
  * If you are using file reader data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &readerdata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_ReaderData afterwards.
  *
@@ -4329,6 +4220,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page DIALOG How to add dialogs
  *
  * SCIP comes with a command line shell which allows the user to read in problem instances, modify the solver's
@@ -4438,7 +4330,7 @@
  * If you are using dialog data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &dialogdata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &dialogdata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_DialogData afterwards.
  *
@@ -4547,6 +4439,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page DISP How to add display columns
  *
  * While solving a constraint integer program, SCIP displays status information in a column-like fashion. The current
@@ -4645,7 +4538,7 @@
  * If you are using display column data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &dispdata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &dispdata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_DispData afterwards.
  *
@@ -4734,6 +4627,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page EVENT How to add event handler
  *
  * While solving a constraint integer program, SCIP drops thousands of events such as SCIP_EVENTTYPE_VARFIXED (a
@@ -4814,7 +4708,7 @@
  * If you are using event handler data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &eventhdlrdata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_EventhdlrData afterwards.
  *
@@ -4950,6 +4844,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page NLPI How to add interfaces to nonlinear programming solvers
  *
  * NLPIs are used to interface a solver for nonlinear programs (NLP).
@@ -5033,7 +4928,7 @@
  * If you are using NLPI data, you have to allocate the memory for the data at this point.
  * You can do this by calling:
  * \code
- * SCIP_CALL( SCIPallocMemory(scip, &nlpidata) );
+ * SCIP_CALL( SCIPallocBlockMemory(scip, &nlpidata) );
  * \endcode
  * You also have to initialize the fields in struct SCIP_NlpiData afterwards. For freeing the
  * NLPI data, see \ref NLPIFREE.
@@ -5193,6 +5088,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page EXPRINT How to add interfaces to expression interpreters
  *
  * An expression interpreter is a tool to compute point-wise and interval-wise the function values, gradients, and
@@ -5296,6 +5192,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page CONF How to use conflict analysis
  *
  * Conflict analysis is a way to automatically use the information obtained from infeasible nodes
@@ -5402,6 +5299,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page REOPT How to use reoptimization
  *
  * The reoptimization feature of SCIP can be used to solve a sequence of optimization problems \f$(P_{i})_{i \in I}\f$ with
@@ -5469,6 +5367,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page OBJ Creating, capturing, releasing, and adding data objects
  *
  *  Data objects (variables, constraints, rows, ... ) are subject to reference counting
@@ -5497,6 +5396,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page PARAM How to add additional user parameters
  *
  *  Users may add their own parameters to SCIP by calling SCIPaddXyzParam(). Using
@@ -5525,6 +5425,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page MEMORY Using the memory functions of SCIP
  *
  *  SCIP provides three ways for allocating memory:
@@ -5670,6 +5571,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page DEBUG Debugging
  *
  *  If you need to debug your own code that uses SCIP, here are some tips and tricks:
@@ -5741,6 +5643,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page TEST How to run automated tests with SCIP
  *
  *  SCIP comes along with a set of useful tools that allow to perform automated tests. The
@@ -6146,6 +6049,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page CHG1 Interface changes between SCIP 0.9 and SCIP 1.0
  *
  *  @section CHGPARAM New parameters
@@ -6159,6 +6063,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page CHG2 Interface changes between SCIP 1.0 and SCIP 1.1
  *
  * - SCIPcreateChild() has a new last parameter giving an estimate for value of best feasible solution in the subtree to
@@ -6198,6 +6103,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page CHG3 Interface changes between SCIP 1.1 and SCIP 1.2
  *
  *
@@ -6229,6 +6135,7 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page CHG4 Interface changes between SCIP 1.2 and SCIP 2.0
  *
  *
@@ -6898,6 +6805,7 @@
   */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page COUNTER How to use SCIP to count/enumerate feasible solutions
  *
  * SCIP is capable of computing (count or enumerate) the number of feasible solutions of a given constraint integer
@@ -7022,6 +6930,8 @@
  *
  * \verbinclude SCIP-release-notes-3.2.1
  *
+ * Please consult the <a href="nbn-resolving.de/urn:nbn:de:0297-zib-57675">release report</a> that explains many of the new features in detail.
+ *
  * \verbinclude SCIP-release-notes-3.2
  *
  * \verbinclude SCIP-release-notes-3.1
@@ -7053,6 +6963,79 @@
  *
  */
 
+
+
+/**@page PARAMETERS List of all SCIP parameters
+ *
+ * This page list all parameters of the current SCIP version. This list can
+ * easily be generated by SCIP via the interactive shell using the following command:
+ *
+ * <code>SCIP&gt; set save &lt;file name&gt;</code>
+ *
+ * or via the function call:
+ *
+ * <code>SCIP_CALL( SCIPwriteParams(scip, &lt;file name&gt;, TRUE, FALSE) );</code>
+ *
+ * \verbinclude parameters.set
+ */
+
+/**@page INTERFACES Interfaces
+  *
+  * There are several ways of accessing the \SCIP Optimization Suite from other software packages or programming
+  * platforms.
+  *
+  *
+  * @section FILEFORMATS File formats
+  *
+  *  The easiest way to load a problem into SCIP is via an input file, given in a format that SCIP can parse directly,
+  *  see \ref SHELL "the tutorial on how to use the interactive shell".
+  *  \SCIP is capable of reading more than ten different file formats, including formats for nonlinear
+  *  problems and constraint programs. This gives researchers from different communities an easy, first access to the
+  *  \SCIP Optimization Suite. See also the \ref AVAILABLEFORMATS "list of readable file formats".
+  *
+  * @section MODELLING Modeling languages and Matlab interface
+  *
+  * A natural way of formulating an optimization problem is to use a modeling language. Besides ZIMPL there are several
+  * other modeling tools with a direct interface to \SCIP. These include <a href="http://dynadec.com/">Comet</a>, a
+  * modeling language for constraint programming, <a href="http://www.ampl.com/">AMPL</a> and <a
+  * href="http://www.gams.com/">GAMS</a>, which are well-suited for modeling mixed-integer linear and nonlinear
+  * optimization problems, and <a href="https://projects.coin-or.org/Cmpl">CMPL</a> for mixed-integer linear problems.
+  * The AMPL, GAMS, and ZIMPL interfaces are included in the \SCIP distribution, the GAMS interface originated <a
+  * href="https://projects.coin-or.org/GAMSlinks">here</a>.
+  *
+  * With \SCIP 3.0, a first beta version of a functional MATLAB interface has been released.  It supports solving MIPs
+  * and LPs defined by Matlab's matrix and vector types. The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI
+  * project</a> by Jonathan Currie provides an external MATLAB interface for the \SCIP Optimization Suite. On top of this,
+  * <a href="http://users.isy.liu.se/johanl/yalmip/pmwiki.php?n=Main.HomePage">YALMIP</a> by Johan L&ouml;fberg provides a
+  * free modeling language.
+  *
+  *
+  * @section CPLUSPLUS C++ wrapper classes
+  *
+  * Since \SCIP is written in C, its callable library can be directly accessed from C++. If a user wants to program own
+  * plugins in C++, there are wrapper classes for all different types of plugins available in the <code>src/objscip</code>
+  * directory of the \SCIP standard distribution. SCIP provides several examples that were written in C++, see
+  * \ref EXAMPLES "Examples" and select an example written in C++.
+  *
+  *
+  * @section OTHER Interfaces for other programming languages
+  *
+  * Interfaces for other programming languages are developed and maintained independently from the SCIP Optimization Suite
+  * on <a href="https://github.com/SCIP-Interfaces">GitHub</a> in order to provide extensions and patches faster
+  * and to collaborate on them more easily. Besides the popular interfaces for Python and Java, there is also an interface
+  * for Julia available. Contributions to these projects are very welcome.
+  *
+  * There are also several third-party python interfaces to the \SCIP Optimization Suite, e.g., <a
+  * href="http://numberjack.ucc.ie/">NUMBERJACK</a> and <a
+  * href="http://code.google.com/p/python-zibopt/">python-zibopt</a>. <a href="http://numberjack.ucc.ie/">NUMBERJACK</a>
+  * is a constraint programming platform implemented in python. It supports a variety of different solvers, one of them
+  * being the \SCIP Optimization Suite. <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> was developed
+  * by Ryan J. O'Neil and is a python extension of the \SCIP Optimization Suite. <a
+  * href="http://picos.zib.de/">PICOS</a> is a python interface for conic optimization, provided by Guillaume Sagnol.
+  *
+  *
+  */
+
  /**@defgroup PUBLICAPI Public API of SCIP
   * @brief methods and headers of the public C-API of \SCIP
   *
@@ -7079,30 +7062,6 @@
  * In order facilitate the navigation through the core API of \SCIP, it is structured into different modules.
  */
 
- /**@defgroup PUBLICPLUGINAPI Plugin API of SCIP
-  * @ingroup PUBLICAPI
-  * @brief core API extensions provided by the default plugins of \SCIP, includable via scipdefplugins.h.
-  *
-  * All default plugins of \SCIP, especially the default \ref CONSHDLRS "constraint handlers", provide
-  * valuable extensions to the \ref PUBLICCOREAPI "core API" of \SCIP. These methods are made available
-  * by including scipdefplugins.h to user-written extensions.
-  *
-  * For a better overview, this page lists all default plugin headers structured into modules based on their individual
-  * topic.
-  *
-  * All of the modules listed below provide functions that are allowed to be used by user-written extensions of \SCIP.
-  */
-
-
- /**@defgroup INTERNALAPI Internal API of SCIP
-  * @brief internal API methods that should only be used by the core of \SCIP
-  *
-  * This page lists the header files of internal API methods. In contrast to the public API, these internal methods
-  * should not be used by user plugins and extensions of SCIP. Please consult
-  * \ref PUBLICCOREAPI "the Core API" and \ref PUBLICPLUGINAPI "Plugin API" for the complete API available to user plugins.
-  *
-  */
-
 /**@defgroup TYPEDEFINITIONS Type Definitions
  * @ingroup PUBLICCOREAPI
  * @brief type definitions and callback declarations
@@ -7128,6 +7087,37 @@
  *  and can be found in the \ref PUBLICPLUGINAPI.
  */
 
+/**@defgroup GeneralSCIPMethods SCIP
+ * @ingroup PublicProblemMethods
+ * @brief methods to manipulate a SCIP object
+ */
+
+/**@defgroup GlobalProblemMethods Global Problem
+ * @ingroup PublicProblemMethods
+ * @brief methods to create, read and modify a global problem together with its callbacks
+ */
+
+/**@defgroup PublicVariableMethods Problem Variables
+ * @ingroup PublicProblemMethods
+ * @brief public methods for problem variables
+ */
+
+/**@defgroup PublicConstraintMethods Problem Constraints
+ * @ingroup PublicProblemMethods
+ * @brief Public methods for constraints
+ */
+
+/**@defgroup PublicSolutionMethods Primal Solution
+ * @ingroup PublicProblemMethods
+ * @brief  methods to create and change primal solutions of \SCIP
+ */
+
+/**@defgroup CopyMethods Problem Copies
+ * @ingroup PublicProblemMethods
+ * @brief methods to copy problems between a source and a target \SCIP
+ */
+
+
  /**@defgroup PublicSolveMethods Solving Process
  * @ingroup PUBLICCOREAPI
  * @brief  methods to control the solving process of \SCIP
@@ -7139,13 +7129,148 @@
  * -# access relaxation information
  * -# access various solving process statistics
  * -# solve auxiliary relaxations and subproblems using LP/NLP diving or probing mode
- *
- *
  */
 
-/* @} */
+/**@defgroup PublicSolvingStatsMethods Solving Statistics
+ * @ingroup PublicSolveMethods
+ * @brief methods to query statistics about the solving process
+ */
+
+/**@defgroup ParameterMethods Parameter
+ * @ingroup PublicSolveMethods
+ * @brief methods to create, query, and print user parameters
+ */
+
+/**@defgroup PublicEventMethods Event Handling
+ * @ingroup PublicSolveMethods
+ * @brief  methods to create, catch, process, and drop events during the solving process of \SCIP
+ *
+ * Events can only be caught during the operation on the transformed problem.
+ * Events on variables can only be caught for transformed variables.
+ * If you want to catch an event for an original variable, you have to get the corresponding transformed variable
+ * with a call to SCIPgetTransformedVar() and catch the event on the transformed variable.
+ */
+
+/**@defgroup PublicLPMethods LP Relaxation
+ * @ingroup PublicSolveMethods
+ * @brief methods to build and access LP relaxation information
+ * @see methods to interact with \ref PublicColumnMethods "LP columns" and \ref PublicRowMethods "LP rows"
+ */
+
+/**@defgroup PublicColumnMethods LP Column
+ * @ingroup PublicLPMethods
+ * @brief public methods for LP columns
+ */
+
+/**@defgroup PublicRowMethods LP Row
+ * @ingroup PublicLPMethods
+ * @brief methods for LP rows
+ */
+
+/**@defgroup PublicCutMethods Cuts and Cutpools
+ * @ingroup PublicLPMethods
+ * @brief common methods used to manipulate, generate, and strengthen cuts and to organize the cutpool
+ */
+
+/**@defgroup PublicLPDivingMethods LP Diving
+ * @ingroup PublicLPMethods
+ * @brief methods to initiate and conduct LP diving
+ */
+
+/**@defgroup PublicNLPMethods NLP Relaxation
+ * @ingroup PublicSolveMethods
+ * @brief methods for the nonlinear relaxation
+ */
+
+/**@defgroup PublicExpressionTreeMethods Expression (Tree)
+ * @ingroup PublicNLPMethods
+ * @brief methods for expressions and expression trees
+ */
+
+/**@defgroup PublicNLRowMethods Nonlinear Rows
+ * @ingroup PublicNLPMethods
+ * @brief methods for the creation and interaction with rows of the NLP relaxation
+ */
+
+/**@defgroup PublicNLPDiveMethods NLP Diving
+ * @ingroup PublicNLPMethods
+ * @brief methods to initiate and conduct NLP Diving
+ */
+
+/**@defgroup PublicBranchingMethods Branching
+ * @ingroup PublicSolveMethods
+ * @brief methods for branching on LP solutions, relaxation solutions, and pseudo solutions
+ *
+ * @see \ref PublicVariableMethods "Public Variable methods" contains some typical variable branching score functions
+ */
+
+/**@defgroup LocalSubproblemMethods Local Subproblem
+ * @ingroup PublicSolveMethods
+ * @brief methods to query information about or strengthen the problem at the current local search node
+ */
+
+/**@defgroup PublicTreeMethods Search Tree
+ * @ingroup PublicSolveMethods
+ * @brief  methods to query search tree related information
+ * @see \ref PublicNodeMethods "Public methods for nodes"
+ */
+
+/**@defgroup PublicNodeMethods Nodes
+ * @ingroup PublicTreeMethods
+ * @brief  methods for nodes of the search tree of \SCIP
+ */
+
+/**@defgroup PublicProbingMethods Probing
+ * @ingroup PublicSolveMethods
+ * @brief methods to initiate and control the probing mode of \SCIP
+ */
+
+/**@defgroup PublicReoptimizationMethods Reoptimization
+ * @ingroup PublicSolveMethods
+ * @brief methods for reoptimization related tasks
+ */
 
 
+/** @defgroup DataStructures Data Structures
+ *  @ingroup PUBLICCOREAPI
+ *  @brief commonly used data structures
+ *
+ *  Below you find a list of available data structures
+ */
+
+/**@defgroup MiscellaneousMethods Miscellaneous Methods
+ * @ingroup PUBLICCOREAPI
+ * @brief commonly used methods from different categories
+ *
+ * Below you find a list of miscellaneous methods grouped by different categories
+ */
+
+/**@defgroup PublicMemoryMethods Memory Management
+ * @ingroup MiscellaneousMethods
+ * @brief  methods and macros to use the \SCIP memory management
+ *
+ * @see \ref MEMORY  "Using the memory functions of SCIP" for more information
+ */
+
+/**@defgroup PublicNonlinearMethods Nonlinear Data
+ * @ingroup MiscellaneousMethods
+ * @brief methods for nonlinear data
+ */
+
+/**@defgroup PublicTimingMethods Timing
+ * @ingroup MiscellaneousMethods
+ * @brief  methods for timing
+ */
+
+/**@defgroup DebugSolutionMethods Debug Solution
+ * @ingroup PUBLICCOREAPI
+ * @brief methods to control the SCIP debug solution mechanism, see also \ref DEBUG
+ */
+
+/**@defgroup MessageOutputMethods Messaging
+ * @ingroup PUBLICCOREAPI
+ * @brief message output methods
+ */
 
 /**@defgroup PluginManagementMethods Methods for managing plugins
  * @ingroup PUBLICCOREAPI
@@ -7153,9 +7278,131 @@
  *
  */
 
+/**@defgroup PublicBranchRuleMethods Branching Rules
+ * @ingroup PluginManagementMethods
+ * @brief  methods for branching rule plugins
+ */
+
+/**@defgroup PublicCompressionMethods Tree Compression
+ * @ingroup PluginManagementMethods
+ * @brief  public methods for tree compressions
+ */
+
+/**@defgroup PublicConflictMethods Conflict Analysis
+ * @ingroup PluginManagementMethods
+ * @brief public methods related to conflict analysis
+ */
+
+/**@defgroup PublicConshdlrMethods Constraint handlers
+ * @ingroup PluginManagementMethods
+ * @brief methods for constraint handlers
+ */
+
+/**@defgroup PublicDialogMethods Dialogs
+ * @ingroup PluginManagementMethods
+ * @brief public methods for user interface dialogs
+ */
+
+/**@defgroup PublicDisplayMethods Displays
+ * @ingroup PluginManagementMethods
+ * @brief  methods for the inclusion and access of display plugins
+ */
+
+/**@defgroup PublicEventHandlerMethods Event Handler
+ * @ingroup PluginManagementMethods
+ * @brief  methods for event handlers
+ */
+
+/**@defgroup PublicHeuristicMethods Primal Heuristics
+ * @ingroup PluginManagementMethods
+ * @brief  methods for primal heuristic plugins
+ */
+
+/**@defgroup PublicDivesetMethods Dive sets
+ * @ingroup PublicSpecialHeuristicMethods
+ * @brief methods for dive sets to control the generic diving algorithm
+ */
+
+/**@defgroup PublicNodeSelectorMethods Node Selector
+ * @ingroup PluginManagementMethods
+ * @brief  methods for node selector plugin management
+ */
+
+/**@defgroup PublicPresolverMethods Presolver
+ * @ingroup PluginManagementMethods
+ * @brief methods for presolver plugins
+ */
+
+/**@defgroup PublicPricerMethods Pricer
+ * @ingroup PluginManagementMethods
+ * @brief  methods to include and access pricer plugins of \SCIP
+ */
+
+/**@defgroup PublicPropagatorMethods Propagators
+ * @ingroup PluginManagementMethods
+ * @brief  methods for propagator plugins
+ */
+
+/**@defgroup PublicReaderMethods Reader
+ * @ingroup PluginManagementMethods
+ * @brief methods for the inclusion and access to reader plugins of \SCIP
+ */
+
+/**@defgroup PublicRelaxatorMethods Relaxation Handlers
+ * @ingroup PluginManagementMethods
+ * @brief public methods for relaxation handlers
+ */
+
+/**@defgroup PublicSeparatorMethods Separators
+ * @ingroup PluginManagementMethods
+ * @brief methods for separator plugins
+ */
+
+/**@defgroup PublicConcsolverTypeMethods Concurrent Solver Types
+ * @ingroup PluginManagementMethods
+ * @brief methods for concurrent solver type plugins
+ */
+
+/**@defgroup PublicNLPInterfaceMethods NLP interfaces
+ * @ingroup PluginManagementMethods
+ * @brief  methods for the management of NLP interfaces
+ */
+
+/**@defgroup PublicExternalCodeMethods External Codes
+ * @ingroup PluginManagementMethods
+ * @brief methods to access information about external codes used by \SCIP
+ */
+
+/**@defgroup PublicParallelMethods Parallel Interface
+ * @ingroup PUBLICCOREAPI
+ * @brief methods to construct the parallel interface of \SCIP
+ */
+
+ /**@defgroup PUBLICPLUGINAPI Plugin API of SCIP
+  * @ingroup PUBLICAPI
+  * @brief core API extensions provided by the default plugins of \SCIP, includable via scipdefplugins.h.
+  *
+  * All default plugins of \SCIP, especially the default \ref CONSHDLRS "constraint handlers", provide
+  * valuable extensions to the \ref PUBLICCOREAPI "core API" of \SCIP. These methods are made available
+  * by including scipdefplugins.h to user-written extensions.
+  *
+  * For a better overview, this page lists all default plugin headers structured into modules based on their individual
+  * topic.
+  *
+  * All of the modules listed below provide functions that are allowed to be used by user-written extensions of \SCIP.
+  */
+ /**@defgroup INTERNALAPI Internal API of SCIP
+  * @brief internal API methods that should only be used by the core of \SCIP
+  *
+  * This page lists the header files of internal API methods. In contrast to the public API, these internal methods
+  * should not be used by user plugins and extensions of SCIP. Please consult
+  * \ref PUBLICCOREAPI "the Core API" and \ref PUBLICPLUGINAPI "Plugin API" for the complete API available to user plugins.
+  *
+  */
+
 /**@defgroup BRANCHINGRULES Branching Rules
  * @ingroup PUBLICPLUGINAPI
- * @brief This page contains a list of all branching rule which are currently available.
+ * @brief methods and files provided by the default branching rules of \SCIP
  *
  * A detailed description what a branching rule does and how to add a branching rule to SCIP can be found
  * \ref BRANCH "here".
@@ -7173,13 +7420,13 @@
 
 /**@defgroup CONSHDLRS  Constraint Handler
  * @ingroup PUBLICPLUGINAPI
- * @brief This page contains a list of all constraint handlers which are currently available.
+ * @brief methods and files provided by the default constraint handlers of \SCIP
  *
  * A detailed description what a constraint handler does and how to add a constraint handler to SCIP can be found
  * \ref CONS "here".
  */
 
-/**@defgroup ConsHdlrIncludes Inclusion methods
+/**@defgroup ConshdlrIncludes Inclusion methods
  * @ingroup CONSHDLRS
  * @brief methods to include specific constraint handlers into \SCIP
  *
@@ -7191,7 +7438,7 @@
 
 /**@defgroup DIALOGS Dialogs
  * @ingroup PUBLICPLUGINAPI
- * @brief This page contains a list of all dialogs which are currently available.
+ * @brief methods and files provided by the default dialogs of \SCIP
  *
  * A detailed description what a dialog does and how to add a dialog to SCIP can be found
  * \ref DIALOG "here".
@@ -7209,7 +7456,7 @@
 
 /**@defgroup DISPLAYS Displays
  * @ingroup PUBLICPLUGINAPI
- * @brief This page contains a list of all displays (output columns)  which are currently available.
+ * @brief methods and files provided by the default displays (output columns)  of \SCIP
  *
  * A detailed description what a display does and how to add a display to SCIP can be found
  * \ref DISP "here".
@@ -7223,32 +7470,6 @@
  * This module contains methods to include specific displays into \SCIP.
  *
  * @note All default plugins can be included at once (including all default displays) using SCIPincludeDefaultPlugins()
- *
- */
-
- /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
-/**@defgroup PARALLEL Parallel interface methods
- * @ingroup INTERNALAPI
- * @brief headers and methods for the parallel interface of \SCIP
- *
- */
-
-
-/**@defgroup EXPRINTS Expression Interpreter
- * @ingroup PUBLICPLUGINAPI
- * @brief This page contains a list of all expression interpreters which are currently available.
- *
- * A detailed description what a expression interpreter does and how to add a expression interpreter to SCIP can be found
- * \ref EXPRINT "here".
- */
-
-/**@defgroup ExprintIncludes Inclusion methods
- * @ingroup EXPRINTS
- * @brief methods to include specific expression interpreters into \SCIP
- *
- * This module contains methods to include specific expression interpreters into \SCIP.
- *
- * @note All default plugins can be included at once (including all default expression interpreters) using SCIPincludeDefaultPlugins()
  *
  */
 
@@ -7295,14 +7516,48 @@
  *
  */
 
+/**@defgroup PARALLEL Parallel interface methods
+ * @ingroup INTERNALAPI
+ * @brief headers and methods for the parallel interface of \SCIP
+ *
+ */
+
+/**@defgroup EXPRINTS Expression Interpreter
+ * @ingroup PUBLICPLUGINAPI
+ * @brief methods and files provided by the default expression interpreters of \SCIP
+ *
+ * A detailed description what a expression interpreter does and how to add a expression interpreter to SCIP can be found
+ * \ref EXPRINT "here".
+ */
+
+/**@defgroup ExprintIncludes Inclusion methods
+ * @ingroup EXPRINTS
+ * @brief methods to include specific expression interpreters into \SCIP
+ *
+ * This module contains methods to include specific expression interpreters into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default expression interpreters) using SCIPincludeDefaultPlugins()
+ *
+ */
+
+/**@defgroup FileReaderIncludes Inclusion methods
+ * @ingroup FILEREADERS
+ * @brief methods to include specific file readers into \SCIP
+ *
+ * This module contains methods to include specific file readers into \SCIP.
+ *
+ * @note All default plugins can be included at once (including all default file readers) using SCIPincludeDefaultPlugins()
+ *
+ */
+
 /**@defgroup LPIS LP Solver Interfaces
  * @ingroup PUBLICPLUGINLPI
- * @brief This page contains a list of all LP solver interfaces which are currently available.
+ * @brief methods and files provided by the default LP solver interfaces of \SCIP
  */
 
 /**@defgroup NODESELECTORS Node Selectors
  * @ingroup PUBLICPLUGINAPI
- * @brief This page contains a list of all node selectors which are currently available.
+ * @brief methods and files provided by the default node selectors of \SCIP
  *
  * A detailed description what a node selector does and how to add a node selector to SCIP can be found
  * \ref NODESEL "here".
@@ -7320,7 +7575,7 @@
 
 /**@defgroup NLPIS NLP Solver Interfaces
  * @ingroup PUBLICPLUGINAPI
- * @brief This page contains a list of all NLP solver interfaces which are currently available.
+ * @brief methods and files provided by the default NLP solver interfaces of \SCIP
  *
  * A detailed description what a NLP solver interface does and how to add a NLP solver interface to SCIP can be found
  * \ref NLPI "here".
@@ -7338,7 +7593,7 @@
 
 /**@defgroup PRESOLVERS Presolvers
  * @ingroup PUBLICPLUGINAPI
- * @brief This page contains a list of all presolvers which are currently available.
+ * @brief methods and files provided by the default presolvers of \SCIP
  *
  * A detailed description what a presolver does and how to add a presolver to SCIP can be found
  * \ref PRESOL "here".
@@ -7356,7 +7611,7 @@
 
 /**@defgroup PRICERS Pricers
  * @ingroup PUBLICPLUGINAPI
- * @brief This page contains a list of all pricers which are currently available.
+ * @brief methods and files provided by the default pricers of \SCIP
  *
  * Per default there exist no variable pricer. A detailed description what a variable pricer does and how to add a
  * variable pricer to SCIP can be found \ref PRICER "here".
@@ -7375,7 +7630,7 @@
 
 /**@defgroup PRIMALHEURISTICS Primal Heuristics
  * @ingroup PUBLICPLUGINAPI
- * @brief This page contains a list of all primal heuristics which are currently available.
+ * @brief methods and files provided by the default primal heuristics of \SCIP
  *
  * A detailed description what a primal heuristic does and how to add a primal heuristic to SCIP can be found
  * \ref HEUR "here".
@@ -7393,7 +7648,7 @@
 
 /**@defgroup PROPAGATORS Propagators
  * @ingroup PUBLICPLUGINAPI
- * @brief This page contains a list of all propagators which are currently available.
+ * @brief methods and files provided by the default propagators of \SCIP
  *
  * A detailed description what a propagator does and how to add a propagator to SCIP can be found
  * \ref PROP "here".
@@ -7411,7 +7666,7 @@
 
 /**@defgroup RELAXATORS Relaxation Handlers
  * @ingroup PUBLICPLUGINAPI
- * @brief This page contains a list of all relaxation handlers which are currently available.
+ * @brief methods and files provided by the default relaxation handlers of \SCIP
  *
  * A detailed description what a relaxation handler does and how to add a relaxation handler to SCIP can be found
  * \ref RELAX "here". Note that the linear programming relaxation is not implemented via the relaxation handler plugin.
@@ -7421,7 +7676,7 @@
 
 /**@defgroup SEPARATORS Separators
  * @ingroup PUBLICPLUGINAPI
- * @brief This page contains a list of all separators  which are currently available.
+ * @brief methods and files provided by the default separators  of \SCIP
  *
  * A detailed description what a separator does and how to add a separator to SCIP can be found
  * \ref SEPA "here".
@@ -7437,87 +7692,11 @@
  *
  */
 
-/**@page PARAMETERS List of all SCIP parameters
+/**@defgroup PublicToleranceMethods Computations With Tolerances
+ * @ingroup NumericalMethods
+ * @brief  methods used by the majority of operations involving floating-point computations in \SCIP
  *
- * This page list all parameters of the current SCIP version. This list can
- * easily be generated by SCIP via the interactive shell using the following command:
- *
- * <code>SCIP&gt; set save &lt;file name&gt;</code>
- *
- * or via the function call:
- *
- * <code>SCIP_CALL( SCIPwriteParams(scip, &lt;file name&gt;, TRUE, FALSE) );</code>
- *
- * \verbinclude parameters.set
+ * - query the numerical tolerances of \SCIP, as well as special values such as infinity.
+ * - change tolerances inside relaxations
+ * - epsilon-comparison methods for floating point numbers
  */
-
-/**@page PYTHON_INTERFACE Python interface for the SCIP Optimization Suite
- *
- * This page shows how to install the Python interface that comes with SCIP. A short usage example is shown below.
- *
- * INSTALL:
- * \verbinclude interfaces/python/INSTALL
- *
- * Usage information (README):
- * \verbinclude interfaces/python/README
- */
-
-/**@page JNI_INTERFACE Java native interface for SCIP
- *
- * This page shows how to install and test the Java native interface (JNI) of SCIP.
- *
- * \verbinclude interfaces/jni/README
- */
-
-/**@page INTERFACES Interfaces
-  *
-  * There are several ways of accessing the \SCIP Optimization Suite from other software packages or programming
-  * platforms.
-  *
-  *
-  * @section FILEFORMATS File formats
-  *
-  *  The easiest way to load a problem into SCIP is via an input file, given in a format that SCIP can parse directly,
-  *  see \ref SHELL "the tutorial on how to use the interactive shell".
-  *  \SCIP is capable of reading more than ten different file formats, including formats for nonlinear
-  *  problems and constraint programs. This gives researchers from different communities an easy, first access to the
-  *  \SCIP Optimization Suite. See also the \ref AVAILABLEFORMATS "list of readable file formats".
-  *
-  *
-  * @section CPLUSPLUS C++ wrapper
-  *
-  * Since \SCIP is written in C, its callable library can be directly accessed from C++. If a user wants to program own
-  * plugins in C++, there are wrapper classes for all different types of plugins available in the <code>src/objscip</code>
-  * directory of the \SCIP standard distribution. See also <a href=annotated.php>Wrapper Classes</a>.
-  *
-  *
-  * @section MODELLING Modeling languages and Matlab interface
-  *
-  * A natural way of formulating an optimization problem is to use a modeling language. Besides ZIMPL there are several
-  * other modeling tools with a direct interface to \SCIP. These include <a href="http://dynadec.com/">Comet</a>, a
-  * modeling language for constraint programming, <a href="http://www.ampl.com/">AMPL</a> and <a
-  * href="http://www.gams.com/">GAMS</a>, which are well-suited for modeling mixed-integer linear and nonlinear
-  * optimization problems, and <a href="https://projects.coin-or.org/Cmpl">CMPL</a> for mixed-integer linear problems.
-  * The AMPL, GAMS, and ZIMPL interfaces are included in the \SCIP distribution, the GAMS interface originated <a
-  * href="https://projects.coin-or.org/GAMSlinks">here</a>.
-  *
-  * With \SCIP 3.0, a first beta version of a functional MATLAB interface has been released.  It supports solving MIPs
-  * and LPs defined by Matlab's matrix and vector types. The <a href="http://www.i2c2.aut.ac.nz/Wiki/OPTI/index.php">OPTI
-  * project</a> by Jonathan Currie provides an external MATLAB interface for the \SCIP Optimization Suite. On top of this,
-  * <a href="http://users.isy.liu.se/johanl/yalmip/pmwiki.php?n=Main.HomePage">YALMIP</a> by Johan L&ouml;fberg provides a
-  * free modeling language.
-  *
-  * @section OTHER Python and Java interfaces
-  *
-  * With \SCIP 3.1, beta versions of a \ref JNI_INTERFACE "Java native interface" and a \ref PYTHON_INTERFACE "Python interface" have been released.
-  *
-  * There are also several third-party python interfaces to the \SCIP Optimization Suite, e.g., <a
-  * href="http://numberjack.ucc.ie/">NUMBERJACK</a> and <a
-  * href="http://code.google.com/p/python-zibopt/">python-zibopt</a>. <a href="http://numberjack.ucc.ie/">NUMBERJACK</a>
-  * is a constraint programming platform implemented in python. It supports a variety of different solvers, one of them
-  * being the \SCIP Optimization Suite. <a href="http://code.google.com/p/python-zibopt/">python-zibopt</a> was developed
-  * by Ryan J. O'Neil and is a python extension of the \SCIP Optimization Suite. <a
-  * href="http://picos.zib.de/">PICOS</a> is a python interface for conic optimization, provided by Guillaume Sagnol.
-  *
-  *
-  */

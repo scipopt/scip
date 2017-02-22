@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -305,7 +305,7 @@ void updateNActiveConts(
       lb = bestcontlbs[probindex - nintvars];
       ub = bestcontubs[probindex - nintvars];
 
-      if( SCIPisLT(scip, lb, primsol) && SCIPisLT(scip, primsol, ub) )
+      if( !SCIPisInfinity(scip, -lb) && SCIPisLT(scip, lb, primsol) && !SCIPisInfinity(scip, ub) &&  SCIPisLT(scip, primsol, ub) )
          (*nactiveconts) += delta;
    }
 }

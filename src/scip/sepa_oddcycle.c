@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -141,6 +141,14 @@ enum sorttype
 };
 typedef enum sorttype SORTTYPE;
 
+/** auxiliary data structure for passing graphs */
+struct GraphData
+{
+   SCIP_Bool             usegls;             /**< Use GLS algorithm? If true, dijstragraph != NULL should hold, otherwise levelgraph != NULL */
+   LEVELGRAPH*           levelgraph;         /**< level graph when using HP method, NULL otherwise */
+   DIJKSTRA_GRAPH*       dijkstragraph;      /**< Dijkstra graph if using method by GLS, NULL otherwise */
+};
+typedef struct GraphData GRAPHDATA;
 
 /** separator data */
 struct SCIP_SepaData
@@ -159,8 +167,6 @@ struct SCIP_SepaData
    SCIP_Bool             repaircycles;       /**< if a variable and its negated appear in a cycle, we can repair the cycle
                                               *   by removing both and reconnecting the remaining nodes of the cycle */
    SCIP_Bool             includetriangles;   /**< handle triangles found as 3-cycles or repaired larger cycles */
-   LEVELGRAPH*           levelgraph;         /**< level graph when using HP method, NULL otherwise */
-   DIJKSTRA_GRAPH*       dijkstragraph;      /**< Dijkstra graph if using method by GLS, NULL otherwise */
    unsigned int*         mapping;            /**< mapping for getting the index of a variable in the sorted variable array */
    SCIP_Bool             lpliftcoef;         /**< TRUE: choose lifting candidate with highest value of coefficient*lpvalue
                                               *   FALSE: choose lifting candidate with highest coefficient */
@@ -268,7 +274,7 @@ static
 SCIP_Bool isNeighbor(
    SCIP_VAR**            vars,               /**< problem variables */
    unsigned int          nbinvars,           /**< number of binary problem variables */
-   SCIP_SEPADATA*        sepadata,           /**< separator data structure */
+   GRAPHDATA*            graphdata,          /**< graph */
    unsigned int          a,                  /**< node index of first variable */
    unsigned int          b                   /**< node index of second variable */
    )
@@ -277,66 +283,69 @@ SCIP_Bool isNeighbor(
 
    assert(vars != NULL);
    assert(nbinvars > 2);
-   assert(sepadata != NULL);
-   assert(sepadata->levelgraph != NULL || sepadata->usegls);
-   assert(sepadata->dijkstragraph != NULL || ! sepadata->usegls);
+   assert(graphdata != NULL);
+   assert(graphdata->levelgraph != NULL || graphdata->usegls);
+   assert(graphdata->dijkstragraph != NULL || ! graphdata->usegls);
    assert(a < 2*nbinvars);
    assert(b < 2*nbinvars);
    assert(a != b);
 
    /* determine adjacency using the Dijkstra graph */
-   if( sepadata->usegls )
+   if( graphdata->usegls )
    {
-      if( sepadata->dijkstragraph->outcnt[a] == 0 || sepadata->dijkstragraph->outcnt[b] == 0 )
+      DIJKSTRA_GRAPH* dijkstragraph = graphdata->dijkstragraph;
+      if( dijkstragraph->outcnt[a] == 0 || dijkstragraph->outcnt[b] == 0 )
          return FALSE;
 
       /* @todo later: if helpful: sort head and weight list once */
-      for( i = sepadata->dijkstragraph->outbeg[a]; i < sepadata->dijkstragraph->outbeg[a] + sepadata->dijkstragraph->outcnt[a]; ++i )
+      for( i = dijkstragraph->outbeg[a]; i < dijkstragraph->outbeg[a] + dijkstragraph->outcnt[a]; ++i )
       {
-         if( sepadata->dijkstragraph->head[i] == b + 2*nbinvars )
+         if( dijkstragraph->head[i] == b + 2*nbinvars )
             return TRUE;
       }
    }
    else    /* determine adjacency using the level graph */
    {
+      LEVELGRAPH* levelgraph = graphdata->levelgraph;
+
       /* if a and b are contained in the level graph (with their arcs), we can check inside the level graph structure */
-      if( (sepadata->levelgraph->beginForward[a] != -1 || sepadata->levelgraph->beginBackward[a] != -1)
-         && (sepadata->levelgraph->beginForward[b] != -1 || sepadata->levelgraph->beginBackward[b] != -1) )
+      if( (levelgraph->beginForward[a] != -1 || levelgraph->beginBackward[a] != -1)
+         && (levelgraph->beginForward[b] != -1 || levelgraph->beginBackward[b] != -1) )
       {
-         assert(sepadata->levelgraph->level[a] <= sepadata->levelgraph->nlevels);
-         assert(sepadata->levelgraph->level[b] <= sepadata->levelgraph->nlevels);
+         assert(levelgraph->level[a] <= levelgraph->nlevels);
+         assert(levelgraph->level[b] <= levelgraph->nlevels);
 
          /* if a and b are not in neighbored levels or the same level, they cannot be adjacent */
-         if( sepadata->levelgraph->level[a] > sepadata->levelgraph->level[b] + 1
-            || sepadata->levelgraph->level[b] > sepadata->levelgraph->level[a] + 1 )
+         if( levelgraph->level[a] > levelgraph->level[b] + 1
+            || levelgraph->level[b] > levelgraph->level[a] + 1 )
             return FALSE;
 
-         assert(sepadata->levelgraph->level[a] == sepadata->levelgraph->level[b]
-            || sepadata->levelgraph->level[a]+1 == sepadata->levelgraph->level[b]
-            || sepadata->levelgraph->level[a] == sepadata->levelgraph->level[b]+1);
+         assert(levelgraph->level[a] == levelgraph->level[b]
+            || levelgraph->level[a]+1 == levelgraph->level[b]
+            || levelgraph->level[a] == levelgraph->level[b]+1);
 
          /* first case of adjacent level */
-         if( sepadata->levelgraph->level[a] == sepadata->levelgraph->level[b]+1 )
+         if( levelgraph->level[a] == levelgraph->level[b]+1 )
          {
-            if( sepadata->levelgraph->beginBackward[a] >= 0 )
+            if( levelgraph->beginBackward[a] >= 0 )
             {
-               i = (unsigned int) sepadata->levelgraph->beginBackward[a];
-               while( sepadata->levelgraph->targetBackward[i] != -1 )
+               i = (unsigned int) levelgraph->beginBackward[a];
+               while( levelgraph->targetBackward[i] != -1 )
                {
-                  if( sepadata->levelgraph->targetBackward[i] == (int)b )
+                  if( levelgraph->targetBackward[i] == (int)b )
                      return TRUE;
                   ++i;
                }
             }
          }
-         else if( sepadata->levelgraph->level[a] == sepadata->levelgraph->level[b]-1 )    /* second case of adjacent level */
+         else if( levelgraph->level[a] == levelgraph->level[b]-1 )    /* second case of adjacent level */
          {
-            if( sepadata->levelgraph->beginForward[a] >= 0 )
+            if( levelgraph->beginForward[a] >= 0 )
             {
-               i = (unsigned int) sepadata->levelgraph->beginForward[a];
-               while( sepadata->levelgraph->targetForward[i] != -1 )
+               i = (unsigned int) levelgraph->beginForward[a];
+               while( levelgraph->targetForward[i] != -1 )
                {
-                  if( sepadata->levelgraph->targetForward[i] == (int)b )
+                  if( levelgraph->targetForward[i] == (int)b )
                      return TRUE;
                   ++i;
                }
@@ -344,42 +353,42 @@ SCIP_Bool isNeighbor(
          }
          else          /* same level (note that an edge between a and b is stored for a if a < b, otherwise it is stored for b) */
          {
-            assert(sepadata->levelgraph->level[a] == sepadata->levelgraph->level[b]);
-            assert(sepadata->levelgraph->level[a] > 0); /* root has no neighbor in the same level */
+            assert(levelgraph->level[a] == levelgraph->level[b]);
+            assert(levelgraph->level[a] > 0); /* root has no neighbor in the same level */
 
-            if( a < b && sepadata->levelgraph->beginAdj[a] >= 0 )
+            if( a < b && levelgraph->beginAdj[a] >= 0 )
             {
-               i = (unsigned int) sepadata->levelgraph->beginAdj[a];
-               assert(i >= sepadata->levelgraph->levelAdj[sepadata->levelgraph->level[a]]);
+               i = (unsigned int) levelgraph->beginAdj[a];
+               assert(i >= levelgraph->levelAdj[levelgraph->level[a]]);
 
-               while( i < sepadata->levelgraph->levelAdj[sepadata->levelgraph->level[a]+1] && sepadata->levelgraph->sourceAdj[i] == a )
+               while( i < levelgraph->levelAdj[levelgraph->level[a]+1] && levelgraph->sourceAdj[i] == a )
                {
-                  if( sepadata->levelgraph->targetAdj[i] == b )
+                  if( levelgraph->targetAdj[i] == b )
                      return TRUE;
 
                   /* if adjacency list ends we are done and a and b are not adjacent */
-                  if( sepadata->levelgraph->sourceAdj[i] == 0 && sepadata->levelgraph->targetAdj[i] == 0 )
+                  if( levelgraph->sourceAdj[i] == 0 && levelgraph->targetAdj[i] == 0 )
                      return FALSE;
 
-                  assert(sepadata->levelgraph->sourceAdj[i] < sepadata->levelgraph->targetAdj[i]);
+                  assert(levelgraph->sourceAdj[i] < levelgraph->targetAdj[i]);
                   ++i;
                }
             }
-            if( b < a && sepadata->levelgraph->beginAdj[b] >= 0 )
+            if( b < a && levelgraph->beginAdj[b] >= 0 )
             {
-               i = (unsigned int) sepadata->levelgraph->beginAdj[b];
-               assert(i >= sepadata->levelgraph->levelAdj[sepadata->levelgraph->level[b]]);
+               i = (unsigned int) levelgraph->beginAdj[b];
+               assert(i >= levelgraph->levelAdj[levelgraph->level[b]]);
 
-               while( i < sepadata->levelgraph->levelAdj[sepadata->levelgraph->level[b]+1] && sepadata->levelgraph->sourceAdj[i] == b )
+               while( i < levelgraph->levelAdj[levelgraph->level[b]+1] && levelgraph->sourceAdj[i] == b )
                {
-                  if( sepadata->levelgraph->targetAdj[i] == a )
+                  if( levelgraph->targetAdj[i] == a )
                      return TRUE;
 
                   /* if adjacency list ends we are done and a and b are not adjacent */
-                  if( sepadata->levelgraph->sourceAdj[i] == 0 && sepadata->levelgraph->targetAdj[i] == 0 )
+                  if( levelgraph->sourceAdj[i] == 0 && levelgraph->targetAdj[i] == 0 )
                      return FALSE;
 
-                  assert(sepadata->levelgraph->sourceAdj[i] < sepadata->levelgraph->targetAdj[i]);
+                  assert(levelgraph->sourceAdj[i] < levelgraph->targetAdj[i]);
                   ++i;
                }
             }
@@ -486,7 +495,7 @@ void checkBlocking(
    unsigned int          nbinvars,           /**< number of binary problem variables */
    unsigned int*         lifted,             /**< list of lifted nodes */
    unsigned int*         nlifted,            /**< number of lifted nodes */
-   SCIP_SEPADATA*        sepadata,           /**< separator data structure */
+   GRAPHDATA*            graphdata,          /**< graph */
    SCIP_Bool*            myi                 /**< flag array, if cycle node is inner point of a counted chain */
    )
 {
@@ -510,10 +519,10 @@ void checkBlocking(
    {
       /* if all three nodes are adjacent to a node which is already lifted and not adjacent with the
        * current lifting candidate, they cannot be regarded */
-      if( !isNeighbor(vars, nbinvars, sepadata, i, lifted[k])
-         && isNeighbor(vars, nbinvars, sepadata, cycle[a], lifted[k])
-         && isNeighbor(vars, nbinvars, sepadata, cycle[b], lifted[k])
-         && isNeighbor(vars, nbinvars, sepadata, cycle[c], lifted[k]) )
+      if( !isNeighbor(vars, nbinvars, graphdata, i, lifted[k])
+         && isNeighbor(vars, nbinvars, graphdata, cycle[a], lifted[k])
+         && isNeighbor(vars, nbinvars, graphdata, cycle[b], lifted[k])
+         && isNeighbor(vars, nbinvars, graphdata, cycle[c], lifted[k]) )
       {
          myi[a] = FALSE;
          myi[b] = FALSE;
@@ -537,7 +546,7 @@ unsigned int getCoef(
    unsigned int          nbinvars,           /**< number of binary problem variables */
    unsigned int*         lifted,             /**< list of lifted nodes */
    unsigned int*         nlifted,            /**< number of lifted nodes */
-   SCIP_SEPADATA*        sepadata,           /**< separator data structure */
+   GRAPHDATA*            graphdata,          /**< graph data structure */
    SCIP_Bool*            myi                 /**< flag array, if cycle node is inner point of a counted chain */
    )
 {
@@ -562,26 +571,27 @@ unsigned int getCoef(
    /* get inner nodes of adjacent chains in cycle */
    for( j = 1; j < (int)ncyclevars-1; ++j )
    {
-      myi[j] = isNeighbor(vars, nbinvars, sepadata, i, cycle[j-1]) && isNeighbor(vars, nbinvars, sepadata, i, cycle[j])
-         && isNeighbor(vars, nbinvars, sepadata, i, cycle[j+1]);
+      myi[j] = isNeighbor(vars, nbinvars, graphdata, i, cycle[j-1]) && isNeighbor(vars, nbinvars, graphdata, i, cycle[j])
+         && isNeighbor(vars, nbinvars, graphdata, i, cycle[j+1]);
    }
 
    /* the first and last node of the cycle are treated separately */
-   myi[0] = isNeighbor(vars, nbinvars, sepadata, i, cycle[ncyclevars-1]) && isNeighbor(vars, nbinvars, sepadata, i, cycle[0])
-      && isNeighbor(vars, nbinvars, sepadata, i, cycle[1]);
-   myi[ncyclevars-1] = isNeighbor(vars, nbinvars, sepadata, i, cycle[ncyclevars-2])
-      && isNeighbor(vars, nbinvars, sepadata, i, cycle[ncyclevars-1])
-      && isNeighbor(vars, nbinvars, sepadata, i, cycle[0]);
+   myi[0] = isNeighbor(vars, nbinvars, graphdata, i, cycle[ncyclevars-1])
+      && isNeighbor(vars, nbinvars, graphdata, i, cycle[0])
+      && isNeighbor(vars, nbinvars, graphdata, i, cycle[1]);
+   myi[ncyclevars-1] = isNeighbor(vars, nbinvars, graphdata, i, cycle[ncyclevars-2])
+      && isNeighbor(vars, nbinvars, graphdata, i, cycle[ncyclevars-1])
+      && isNeighbor(vars, nbinvars, graphdata, i, cycle[0]);
 
    /* consider already lifted nodes that are not adjacent to current lifting candidate and
     * remove all inner cycle nodes that are adjacent to them
     */
    for( j = 1; j < (int)ncyclevars-1; ++j )
    {
-      checkBlocking((unsigned int) (j-1), (unsigned int) j, (unsigned int) (j+1), i, cycle, ncyclevars, vars, nbinvars, lifted, nlifted, sepadata, myi);
+      checkBlocking((unsigned int) (j-1), (unsigned int) j, (unsigned int) (j+1), i, cycle, ncyclevars, vars, nbinvars, lifted, nlifted, graphdata, myi);
    }
-   checkBlocking(ncyclevars-2, ncyclevars-1, 0, i, cycle, ncyclevars, vars, nbinvars, lifted, nlifted, sepadata, myi);
-   checkBlocking(ncyclevars-1, 0, 1, i, cycle, ncyclevars, vars, nbinvars, lifted, nlifted, sepadata, myi);
+   checkBlocking(ncyclevars-2, ncyclevars-1, 0, i, cycle, ncyclevars, vars, nbinvars, lifted, nlifted, graphdata, myi);
+   checkBlocking(ncyclevars-1, 0, 1, i, cycle, ncyclevars, vars, nbinvars, lifted, nlifted, graphdata, myi);
 
    /* calculate lifting coefficient */
    k = 0;
@@ -670,6 +680,7 @@ SCIP_RETCODE liftOddCycleCut(
    unsigned int*         lifted,             /**< indices of the lifted variables */
    unsigned int*         liftcoef,           /**< lifting coefficients */
    SCIP_SEPADATA*        sepadata,           /**< separator data structure */
+   GRAPHDATA*            graphdata,          /**< graph */
    SCIP_VAR**            vars,               /**< problem variables */
    unsigned int          nbinvars,           /**< number of binary problem variables */
    unsigned int          startnode,          /**< a node of the cycle */
@@ -690,9 +701,9 @@ SCIP_RETCODE liftOddCycleCut(
    SCIP_Bool* myi;
 
    assert(scip != NULL);
-   assert(sepadata != NULL);
-   assert(sepadata->levelgraph != NULL || sepadata->usegls);
-   assert(sepadata->dijkstragraph != NULL || ! sepadata->usegls);
+   assert(graphdata != NULL);
+   assert(graphdata->levelgraph != NULL || graphdata->usegls);
+   assert(graphdata->dijkstragraph != NULL || ! graphdata->usegls);
    assert(vars != NULL);
    assert(nbinvars > 2);
    assert(startnode < 2*nbinvars);
@@ -763,7 +774,7 @@ SCIP_RETCODE liftOddCycleCut(
          {
             if( candList[i] )
             {
-               coef[i] = getCoef(scip, i, cycle, ncyclevars, vars, nbinvars, lifted, nlifted, sepadata, myi);
+               coef[i] = getCoef(scip, i, cycle, ncyclevars, vars, nbinvars, lifted, nlifted, graphdata, myi);
                assert(coef[i] <= (ncyclevars-1)/2);
                if( coef[i] < 1 )
                   candList[i] = FALSE;
@@ -795,7 +806,7 @@ SCIP_RETCODE liftOddCycleCut(
       if( bestcand >= 0 )
       {
          if( !(sepadata->recalcliftcoef) )
-            coef[i] = getCoef(scip, (unsigned int) bestcand, cycle, ncyclevars, vars, nbinvars, lifted, nlifted, sepadata, myi);
+            coef[i] = getCoef(scip, (unsigned int) bestcand, cycle, ncyclevars, vars, nbinvars, lifted, nlifted, graphdata, myi);
          assert(coef[bestcand] <= (ncyclevars-1)/2);
          candList[bestcand] = FALSE;
          if( coef[bestcand] > 0 )
@@ -847,6 +858,7 @@ SCIP_RETCODE generateOddCycleCut(
    unsigned int*         incut,              /**< TRUE iff node is covered already by a cut */
    SCIP_Real*            vals,               /**< values of the variables in the given solution */
    SCIP_SEPADATA*        sepadata,           /**< separator data structure */
+   GRAPHDATA*            graphdata,          /**< graph data structure */
    SCIP_RESULT*          result              /**< pointer to store the result of the separation call */
    )
 {
@@ -870,9 +882,9 @@ SCIP_RETCODE generateOddCycleCut(
    assert(ncyclevars % 2 == 1);
    assert(ncyclevars <= nbinvars);
    assert(incut != NULL);
-   assert(sepadata != NULL);
-   assert(sepadata->levelgraph != NULL || sepadata->usegls);
-   assert(sepadata->dijkstragraph != NULL || ! sepadata->usegls);
+   assert(graphdata != NULL);
+   assert(graphdata->levelgraph != NULL || graphdata->usegls);
+   assert(graphdata->dijkstragraph != NULL || ! graphdata->usegls);
    assert(result != NULL);
 
 #ifdef SCIP_OUTPUT
@@ -914,7 +926,7 @@ SCIP_RETCODE generateOddCycleCut(
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &lifted, (int) (nbinvars - ncyclevars)) );
       SCIP_CALL( SCIPallocBufferArray(scip, &liftcoef, (int) (nbinvars - ncyclevars)) );
-      SCIP_CALL( liftOddCycleCut(scip, &nlifted, lifted, liftcoef, sepadata, vars, nbinvars, startnode, pred, ncyclevars, vals, result) );
+      SCIP_CALL( liftOddCycleCut(scip, &nlifted, lifted, liftcoef, sepadata, graphdata, vars, nbinvars, startnode, pred, ncyclevars, vals, result) );
    }
    /* if we don't try to lift, we generate and add the cut as is */
 
@@ -1773,7 +1785,6 @@ SCIP_RETCODE findShortestPathToRoot(
    startQueue = 0;
    endQueue = 0;
    queue[0] = startnode;
-   v = 0;
 
    /* as long as queue is not empty */
    while( startQueue <= endQueue )
@@ -1965,7 +1976,6 @@ findUnblockedShortestPathToRoot(
    startQueue = 0;
    endQueue = 0;
    queue[0] = startnode;
-   v = 0;
 
    /* as long as queue is not empty */
    while( startQueue <= endQueue )
@@ -2266,7 +2276,7 @@ SCIP_RETCODE separateHeur(
    assert(nscipimplvars >= 0);
 
    nintegral = nscipbinvars + nscipintvars + nscipimplvars;
-   assert(scipvars != NULL || nintegral == 0);
+   assert(scipvars != NULL || ((nscipbinvars == 0) && (nscipintvars == 0) && (nscipimplvars == 0) && (nintegral == 0)));
 
    /* collect binary variables, including implicit binary */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nintegral) );
@@ -2606,14 +2616,18 @@ SCIP_RETCODE separateHeur(
                /* generate cut (if cycle is valid) */
                if(success)
                {
-                  unsigned int oldncuts = sepadata->ncuts;
+                  GRAPHDATA graphdata;
+                  unsigned int oldncuts;
 
-                  sepadata->levelgraph = &graph;
+                  graphdata.usegls = FALSE;
+                  graphdata.levelgraph = &graph;
+                  graphdata.dijkstragraph = NULL;
+
+                  oldncuts = sepadata->ncuts;
+
                   SCIP_CALL( generateOddCycleCut(scip, sepa, sol, vars, nbinvars, graph.targetAdj[j], pred, ncyclevars,
-                        incut, vals, sepadata, result) );
-#ifndef NDEBUG
-                  sepadata->levelgraph = NULL;
-#endif
+                        incut, vals, sepadata, &graphdata, result) );
+
                   if(oldncuts < sepadata->ncuts)
                   {
                      ++ncutsroot;
@@ -2996,7 +3010,7 @@ SCIP_RETCODE separateGLS(
    assert(nscipimplvars >= 0);
 
    nintegral = nscipbinvars + nscipintvars + nscipimplvars;
-   assert(scipvars != NULL || nintegral == 0);
+   assert(scipvars != NULL || ((nscipbinvars == 0) && (nscipintvars == 0) && (nscipimplvars == 0) && (nintegral == 0)));
 
    /* collect binary variables, including implicit binary */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nintegral) );
@@ -3403,12 +3417,14 @@ SCIP_RETCODE separateGLS(
 
       if( success )
       {
+         GRAPHDATA graphdata;
+
          /* generate cut */
-         sepadata->dijkstragraph = &graph;
-         SCIP_CALL( generateOddCycleCut(scip, sepa, sol, vars, nbinvars, startnode, pred2, ncyclevars, incut, vals, sepadata, result) );
-#ifndef NDEBUG
-         sepadata->dijkstragraph = NULL;
-#endif
+         graphdata.usegls = TRUE;
+         graphdata.dijkstragraph = &graph;
+         graphdata.levelgraph = NULL;
+
+         SCIP_CALL( generateOddCycleCut(scip, sepa, sol, vars, nbinvars, startnode, pred2, ncyclevars, incut, vals, sepadata, &graphdata, result) );
       }
    }
 
@@ -3494,8 +3510,6 @@ SCIP_DECL_SEPAINIT(sepaInitOddcycle)
    sepadata->oldncuts = 0;
    sepadata->nliftedcuts = 0;
    sepadata->lastroot = 0;
-   sepadata->levelgraph = NULL;
-   sepadata->dijkstragraph = NULL;
 
    return SCIP_OKAY;
 }
@@ -3556,8 +3570,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
       return SCIP_OKAY;
    }
 
-   /* only call separator if enough implications (but not all implications should come from cliques) are present */
-   if( SCIPgetNImplications(scip) < 1 || SCIPgetNImplications(scip) + SCIPgetNCliques(scip) < 3 )
+   /* only call separator if enough implications and cliques are present */
+   if( SCIPgetNImplications(scip) + SCIPgetNCliques(scip) < 3 )
    {
       SCIPdebugMsg(scip, "skipping separator: not enough implications present\n");
       return SCIP_OKAY;
@@ -3584,7 +3598,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpOddcycle)
 
    *result = SCIP_DIDNOTFIND;
    sepadata->oldncuts = sepadata->ncuts;
-   oldnliftedcuts = sepadata->nliftedcuts;
+   SCIPdebug( oldnliftedcuts = sepadata->nliftedcuts; )
 
    if( depth == 0 )
       sepadata->maxsepacutsround = sepadata->maxsepacutsroot;

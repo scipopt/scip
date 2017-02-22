@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2858,11 +2858,12 @@ SCIP_DECL_EXPREVAL( exprevalPolynomial )
             }
             else if( exponent < 0.0 )
             {
-               /* 0^negative = nan */
+               /* 0^negative = nan (or should it be +inf?, doesn't really matter) */
 #ifdef NAN
                *result = NAN;
 #else
-               *result = 0.0 / 0.0;
+               /* cppcheck-suppress wrongmathcall */
+               *result = pow(0.0, -1.0);
 #endif
                return SCIP_OKAY;
             }
@@ -5552,6 +5553,7 @@ SCIP_RETCODE exprParse(
          if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
          {
             SCIP_CALL( SCIPexprMulConstant(blkmem, expr, arg1, 1.0 / SCIPexprGetOpReal(arg2)) );
+            SCIPexprFreeShallow(blkmem, &arg2);
          }
          else
          {
@@ -7130,7 +7132,6 @@ SCIP_RETCODE SCIPexprCreateUser(
 
    assert(blkmem != NULL);
    assert(expr != NULL);
-   assert(children != NULL || nchildren == 0);
    assert(eval != NULL);
    assert((evalcapability & SCIP_EXPRINTCAPABILITY_FUNCVALUE) != 0);  /* the function evaluation is not optional */
    assert(((evalcapability & SCIP_EXPRINTCAPABILITY_INTFUNCVALUE) == 0) || inteval != NULL);  /* if capability says it can do interval evaluation, then the corresponding callback needs to be provided */
@@ -7158,6 +7159,7 @@ SCIP_RETCODE SCIPexprCreateUser(
       SCIP_CALL( exprCreate(blkmem, expr, SCIP_EXPR_USER, 0, NULL, opdata) );
       return SCIP_OKAY;
    }
+   assert(children != NULL);
 
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &childrencopy, children, nchildren) );
 
@@ -11749,6 +11751,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    case SCIP_EXPR_REALPOWER:
    case SCIP_EXPR_SIGNPOWER:
    {
+      assert(node->nchildren == 1);
       assert(childexprs != NULL);
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0], node->data.dbl) );  /*lint !e613*/
       break;
@@ -11756,6 +11759,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
 
    case SCIP_EXPR_INTPOWER:
    {
+      assert(node->nchildren == 1);
       assert(childexprs != NULL);
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0], node->data.intval) );  /*lint !e613*/
       break;
@@ -11769,6 +11773,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    case SCIP_EXPR_MAX:
    {
       assert(node->nchildren == 2);
+      assert(childexprs != NULL);
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0], childexprs[1]) );  /*lint !e613*/
       break;
    }
@@ -11786,6 +11791,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    case SCIP_EXPR_SIGN:
    {
       assert(node->nchildren == 1);
+      assert(childexprs != NULL);
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0]) );  /*lint !e613*/
       break;
    }

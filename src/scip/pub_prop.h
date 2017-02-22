@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,9 +33,7 @@
 extern "C" {
 #endif
 
-/**@defgroup PublicPropagatorMethods Propagators
- * @ingroup PluginManagementMethods
- * @brief  methods for propagator plugins
+/**@addtogroup PublicPropagatorMethods
  *
  * @{
  */

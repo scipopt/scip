@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -265,6 +265,10 @@ SCIP_RETCODE SCIPconcsolverExec(
    assert(concsolver->type != NULL);
    assert(concsolver->type->concsolverexec != NULL);
 
+   /* set the stopped flag to false */
+   concsolver->stopped = FALSE;
+
+   /* then call the execute callback */
    SCIP_CALL( concsolver->type->concsolverexec(concsolver, &concsolver->solvingtime, &concsolver->nlpiterations, &concsolver->nnodes) );
 
    return SCIP_OKAY;
@@ -294,6 +298,9 @@ SCIP_RETCODE SCIPconcsolverStop(
 
    SCIP_CALL( concsolver->type->concsolverstop(concsolver) );
 
+   /* set the stopped flag to true */
+   concsolver->stopped = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -307,7 +314,6 @@ SCIP_RETCODE SCIPconcsolverSync(
 {
    SCIP_SYNCDATA*   syncdata;
    SCIP_SYNCSTORE*  syncstore;
-   int              nsynced;
    int              nsols;
    int              ntighterintbnds;
    int              ntighterbnds;
@@ -317,6 +323,9 @@ SCIP_RETCODE SCIPconcsolverSync(
    assert(concsolver->type != NULL);
    assert(concsolver->type->concsolversyncwrite != NULL);
    assert(concsolver->type->concsolversyncread != NULL);
+
+   if( concsolver->stopped )
+      return SCIP_OKAY;
 
    SCIP_CALL( SCIPstartClock(set->scip, concsolver->totalsynctime) );
 
@@ -340,20 +349,13 @@ SCIP_RETCODE SCIPconcsolverSync(
 
    if( SCIPsyncdataGetStatus(syncdata) != SCIP_STATUS_UNKNOWN )
    {
-      SCIP_CALL( SCIPsyncstoreFinishSync(syncstore, &syncdata) );
-      ++concsolver->nsyncs;
       SCIP_CALL( SCIPconcsolverStop(concsolver) );
-      SCIP_CALL( SCIPstopClock(set->scip, concsolver->totalsynctime) );
-      return SCIP_OKAY;
    }
-
-   nsynced = SCIPsyncdataGetNSynced(syncdata);
-
-   if( concsolver->nsyncs == 0 )
+   else if( concsolver->nsyncs == 0 )
    {
       SCIPsyncstoreInitSyncTiming(syncstore, concsolver->timesincelastsync);
    }
-   else if( nsynced == SCIPsyncstoreGetNSolvers(syncstore) - 1 )
+   else if( SCIPsyncdataGetNSynced(syncdata) == SCIPsyncstoreGetNSolvers(syncstore) - 1 )
    {
       /* if this is the last concurrent solver that is synchronizing for this synchronization data
        * it will adjust the synchronization frequency using the progress on the gap
@@ -410,7 +412,7 @@ SCIP_RETCODE SCIPconcsolverSync(
 
    if( concsolver->nsyncs == 1 )
    {
-      syncdata = SCIPsyncstoreGetSyncdata(syncstore, 0);
+      syncdata = SCIPsyncstoreGetSyncdata(syncstore, 0LL);
       SCIP_CALL( SCIPsyncstoreEnsureAllSynced(syncstore, syncdata) );
       concsolver->syncdata = syncdata;
       SCIP_CALL( concsolvertype->concsolversyncread(concsolver, syncstore, syncdata, &nsols, &ntighterbnds, &ntighterintbnds) );

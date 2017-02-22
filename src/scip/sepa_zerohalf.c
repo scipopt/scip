@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3562,7 +3562,6 @@ SCIP_RETCODE preprocessColumns(
    nunprocessedcols = nconsideredcols;
    nzerocolsremoved = 0;
    ncolsingletonsremoved = 0;
-   nnonzentries = 0;
    rowofcolsingleton = -1;
    if( removecolsingletons )
       maxnnonzentries = 1;
@@ -5978,7 +5977,6 @@ SCIP_RETCODE dijkstra(
 
    /* initialize */
    nunprocessednodes = 0;
-   mindistance = 1.0;  
    for( v = 0; v < graph->nnodes ; ++v)
    { 
       graph->nodes[v]->distance              =  1.0;

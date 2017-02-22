@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -238,10 +238,10 @@ struct SCIP_Regression
 /** random number generator data */
 struct SCIP_RandNumGen
 {
-   unsigned int          seed;               /**< start seed */
-   unsigned int          xor_seed;           /**< Xorshift seed */
-   unsigned int          mwc_seed;           /**< Multiply-with-carry seed */
-   unsigned int          cst_seed;           /**< constant seed */
+   uint32_t              seed;               /**< start seed */
+   uint32_t              xor_seed;           /**< Xorshift seed */
+   uint32_t              mwc_seed;           /**< Multiply-with-carry seed */
+   uint32_t              cst_seed;           /**< constant seed */
    BMS_BLKMEM*           blkmem;             /**< block memory */
 };
 

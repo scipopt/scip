@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1655,11 +1655,7 @@ SCIP_RETCODE findDominancePairs(
 
          /* do we have a obj constant? */
          if( nrows1 == 0 || nrows2 == 0 )
-         {
-            col1domcol2 = FALSE;
-            col2domcol1 = FALSE;
             continue;
-         }
 
          /* initialize temporary bounds of dominating variable */
          tmpupperbounddominatingcol1 = SCIPinfinity(scip);

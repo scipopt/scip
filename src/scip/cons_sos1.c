@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -7893,7 +7893,6 @@ SCIP_RETCODE getDiveBdChgsSOS1conflictgraph(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
    SCIP_DIVESET*         diveset,            /**< diving settings */
-   SCIP_HEURDATA*        heurdata,           /**< data of the calling heuristic */
    SCIP_SOL*             sol,                /**< solution */
    SCIP_Bool*            success             /**< pointer to store */
    )
@@ -7961,7 +7960,7 @@ SCIP_RETCODE getDiveBdChgsSOS1conflictgraph(
          {
             SCIP_Bool roundup;
 
-            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, heurdata, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval,
+            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval,
                   &score, &roundup) );
 
             fixneigh = roundup;
@@ -8035,7 +8034,6 @@ SCIP_RETCODE getDiveBdChgsSOS1constraints(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
    SCIP_DIVESET*         diveset,            /**< diving settings */
-   SCIP_HEURDATA*        heurdata,           /**< data of the calling heuristic */
    SCIP_SOL*             sol,                /**< solution */
    SCIP_Bool*            success             /**< pointer to store */
    )
@@ -8138,7 +8136,7 @@ SCIP_RETCODE getDiveBdChgsSOS1constraints(
             {
                SCIP_Bool roundup;
 
-               SCIP_CALL( SCIPgetDivesetScore(scip, diveset, heurdata, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval,
+               SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval,
                 &score, &roundup) );
 
                fixcomp = roundup;
@@ -9214,10 +9212,10 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
 
    *result = SCIP_DIDNOTRUN;
 
-   oldnfixedvars = *nfixedvars;
-   oldnchgbds = *nchgbds;
-   oldndelconss = *ndelconss;
-   oldnupgdconss = *nupgdconss;
+   SCIPdebug( oldnfixedvars = *nfixedvars; )
+   SCIPdebug( oldnchgbds = *nchgbds; )
+   SCIPdebug( oldndelconss = *ndelconss; )
+   SCIPdebug( oldnupgdconss = *nupgdconss; )
    nremovedvars = 0;
 
    /* only run if success if possible */
@@ -9308,7 +9306,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
    (*nchgcoefs) += nremovedvars;
 
    SCIPdebugMsg(scip, "presolving fixed %d variables, changed %d bounds, removed %d variables, deleted %d constraints, and upgraded %d constraints.\n",
-		    *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds, nremovedvars, *ndelconss - oldndelconss, *nupgdconss - oldnupgdconss);
+                *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds, nremovedvars, *ndelconss - oldndelconss, *nupgdconss - oldnupgdconss);
 
    return SCIP_OKAY;
 }
@@ -10086,11 +10084,11 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
     * diving candidates) */
    if ( conshdlrdata->switchsos1branch )
    {
-      SCIP_CALL( getDiveBdChgsSOS1constraints(scip, conshdlr, diveset, heurdata, sol, success) );
+      SCIP_CALL( getDiveBdChgsSOS1constraints(scip, conshdlr, diveset, sol, success) );
    }
    else
    {
-      SCIP_CALL( getDiveBdChgsSOS1conflictgraph(scip, conshdlr, diveset, heurdata, sol, success) );
+      SCIP_CALL( getDiveBdChgsSOS1conflictgraph(scip, conshdlr, diveset, sol, success) );
    }
 
    return SCIP_OKAY;

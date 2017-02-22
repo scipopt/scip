@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,9 +32,7 @@
 extern "C" {
 #endif
 
-/**@defgroup PublicCutMethods Cuts and Cutpools
- * @ingroup PublicLPMethods
- * @brief common methods used to manipulate, generate, and strengthen cuts and to organize the cutpool
+/**@addtogroup PublicCutMethods
  *
  * @{
  */

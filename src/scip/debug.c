@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -113,7 +113,7 @@ SCIP_RETCODE readSolfile(
 {
    SCIP_VAR** vars;
    SCIP_Real* solvalues;
-   FILE* file;
+   SCIP_FILE* file;
    SCIP_SOL* debugsol;
    SCIP_Real debugsolval;
    int nonvalues;
@@ -133,7 +133,7 @@ SCIP_RETCODE readSolfile(
    printf("***** debug: reading solution file <%s>\n", solfilename);
 
    /* open solution file */
-   file = fopen(solfilename, "r");
+   file = SCIPfopen(solfilename, "r");
    if( file == NULL )
    {
       SCIPerrorMessage("cannot open solution file <%s> specified in scip/debug.h\n", solfilename);
@@ -146,7 +146,7 @@ SCIP_RETCODE readSolfile(
    *valssize = 0;
    unknownvariablemessage = FALSE;
 
-   while( !feof(file) )
+   while( !SCIPfeof(file) )
    {
       char buf[SCIP_MAXSTRLEN];
       char name[SCIP_MAXSTRLEN];
@@ -156,9 +156,9 @@ SCIP_RETCODE readSolfile(
       SCIP_Real val;
       int nread;
 
-      if( fgets(buf, SCIP_MAXSTRLEN, file) == NULL )
+      if( SCIPfgets(buf, SCIP_MAXSTRLEN, file) == NULL )
       {
-         if( feof(file) )
+         if( SCIPfeof(file) )
             break;
          else
             return SCIP_READERROR;
@@ -178,7 +178,7 @@ SCIP_RETCODE readSolfile(
       if( nread < 2 )
       {
          printf("invalid input line %d in solution file <%s>: <%s>\n", *nvals + nonvalues, SCIP_DEBUG_SOLUTION, name);
-         fclose(file);
+         SCIPfclose(file);
          return SCIP_READERROR;
       }
 
@@ -210,7 +210,7 @@ SCIP_RETCODE readSolfile(
          {
             SCIPerrorMessage("Invalid solution value <%s> for variable <%s> in line %d of solution file <%s>.\n",
                              valuestring, name, *nvals + nonvalues, SCIP_DEBUG_SOLUTION);
-            fclose(file);
+            SCIPfclose(file);
             return SCIP_READERROR;
          }
       }
@@ -287,7 +287,7 @@ SCIP_RETCODE readSolfile(
       *debugsolvalptr = debugsolval;
 
    /* close file */
-   fclose(file);
+   SCIPfclose(file);
 
    printf("***** debug: read %d non-zero entries (%d variables found)\n", *nvals, nfound);
 
@@ -1681,19 +1681,6 @@ SCIP_RETCODE SCIPdebugAddSolVal(
       SCIP_CALL( readSolution(scip->set) );
    }
 
-#if 0
-   if( SCIPvarIsOriginal(var) )
-   {
-      SCIPerrorMessage("adding solution values for original variables is forbidden\n");
-      return SCIP_ERROR;
-   }
-
-   if( SCIPvarIsTransformedOrigvar(var) )
-   {
-      SCIPerrorMessage("adding solution values for variable that are direct counterparts of original variables is forbidden\n");
-      return SCIP_ERROR;
-   }
-#endif
    /* allocate memory */
    if( debugsoldata->nsolvals >= debugsoldata->solsize )
    {

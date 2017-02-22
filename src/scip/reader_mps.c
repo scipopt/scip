@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3519,9 +3519,9 @@ void printBoundSection(
    {
       /* we should print the transformed problem, otherwise no fixed variable should exists */
       assert(transformed);
-      assert(fixvars != NULL);
 
       var = fixvars[v];
+
       assert(var != NULL);
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
 
@@ -3536,8 +3536,8 @@ void printBoundSection(
 
       if( !sectionName )
       {
-	 printBoundSectionName(scip, file);
-	 sectionName = TRUE;
+         printBoundSectionName(scip, file);
+         sectionName = TRUE;
       }
 
       /* print fixed variable */
@@ -4429,6 +4429,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
    if( nfixedvars > 0 )
    {
+      /* cppcheck-suppress nullPointerRedundantCheck */
       assert(fixvars != NULL);
       SCIPfreeBufferArray(scip, &fixvars);
    }

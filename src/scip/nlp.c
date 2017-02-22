@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -257,7 +257,12 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
    SCIP_CALL( SCIPhashmapCreate(&varhash, tree->blkmem, tree->nvars) );
    for( i = 0; i < tree->nvars; ++i )
    {
+      /* it's not possible to add a variable twice to the varhash map */
+      if( SCIPhashmapExists(varhash, tree->vars[i]) )
+         continue;
+
       SCIP_CALL( SCIPhashmapInsert(varhash, tree->vars[i], (void*)(size_t)i) );
+
       if( !SCIPvarIsActive((SCIP_VAR*)tree->vars[i]) )
          havefixedvar = TRUE;
    }
