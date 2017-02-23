@@ -934,7 +934,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGauge)
    /* do not run if SCIP has no way of solving nonlinear problems */
    if( SCIPgetNNlpis(scip) == 0 )
    {
-      SCIPdebugMsg(scip, "SCIP can't solve nonlinear problems without a nlpi\n");
+      SCIPdebugMsg(scip, "Skip gauge separator: no nlpi and SCIP can't solve nonlinear problems without a nlpi\n");
       return SCIP_OKAY;
    }
 
