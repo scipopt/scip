@@ -780,6 +780,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       return SCIP_OKAY;
    }
 
+   /* the separator needs an NLP solver */
+   if( SCIPgetNNlpis(scip) == 0 )
+      return SCIP_OKAY;
+
    /* only call separator up to a maximum depth */
    if( sepadata->maxdepth >= 0 && SCIPgetDepth(scip) > sepadata->maxdepth )
       return SCIP_OKAY;
