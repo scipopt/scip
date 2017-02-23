@@ -62,6 +62,7 @@ struct SCIP_ConcSolver
    SCIP_Longint                        nsyncs;                    /**< total number of synchronizations */
    SCIP_Real                           timesincelastsync;         /**< time since the last synchronization */
    SCIP_Real                           syncdelay;                 /**< current delay of synchronization data */
+   SCIP_Real                           syncfreq;                  /**< current synchronization frequency of the concurrent solver */
    SCIP_Real                           solvingtime;               /**< solving time with wall clock */
    SCIP_Bool                           stopped;                   /**< flag to store if the concurrent solver has been stopped
                                                                    *   through the SCIPconcsolverStop function */
