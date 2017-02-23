@@ -36,7 +36,7 @@
 #define PROP_TIMING            SCIP_PROPTIMING_ALWAYS /**< propagation timing mask */
 
 #define PROP_PRESOL_PRIORITY          +6000000 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
-#define PROP_PRESOLTIMING       SCIP_PRESOLTIMING_MAX /* timing of the presolving method (fast, medium, or exhaustive) */
+#define PROP_PRESOLTIMING       SCIP_PRESOLTIMING_ALWAYS /* timing of the presolving method (fast, medium, or exhaustive) */
 #define PROP_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no
                                          *   limit) */
 
