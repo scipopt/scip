@@ -176,6 +176,7 @@ interface:
 - the CPLEX LPI now also compiles with CPLEX 12.7.0.0
 - major update ot the Gurobi LPI, which supports ranged rows now and several performance improvements, but only works with Gurobi version >= 7.0.2
 - rename method SCIPgetReopSolsRun() to SCIPgetReoptSolsRun()
+- new macro SCIP_CALL_FINALLY to conveniently free ressources after an error return code.
 
 fixed bugs:
 - correct handling of implicit integer variables with fractional solution value in simplerounding heuristic
