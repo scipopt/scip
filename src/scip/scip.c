@@ -19351,7 +19351,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    SCIP_CALL( checkStage(scip, "SCIPgetVarStrongbranchWithPropagation", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    /* check whether propagation should be performed */
-   propagate = (maxproprounds != 0);
+   propagate = (maxproprounds != 0 && maxproprounds != -3);
 
    /* Check, if all existing columns are in LP.
     * If this is not the case, we may still return that the up and down dual bounds are valid, because the branching

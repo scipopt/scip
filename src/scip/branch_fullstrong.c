@@ -296,7 +296,7 @@ SCIP_RETCODE SCIPselectVarStrongBranchingRanking(
    propagate = (maxproprounds != 0);
 
    /* if we don't do propagation, we cannot identify valid bounds in a probing-like fashion */
-   if( !propagate )
+   if( !propagate && maxproprounds > -3 )
       probingbounds = FALSE;
 
    /* create arrays for probing-like bound tightening */
@@ -712,7 +712,7 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/fullstrong/maxproprounds",
          "maximum number of propagation rounds to be performed during strong branching before solving the LP (-1: no limit, -2: parameter settings)",
-         &branchruledata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS, -2, INT_MAX, NULL, NULL) );
+         &branchruledata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS, -3, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "branching/fullstrong/probingbounds",
          "should valid bounds be identified in a probing-like fashion during strong branching (only with propagation)?",
