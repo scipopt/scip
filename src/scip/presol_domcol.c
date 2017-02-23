@@ -1994,6 +1994,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
    if( !SCIPallowDualReds(scip) )
       return SCIP_OKAY;
 
+   /* don't run for pure LPs */
+   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
+      return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
 
    presoldata = SCIPpresolGetData(presol);
