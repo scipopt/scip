@@ -843,7 +843,7 @@ SCIP_RETCODE applyCompletesol(
    }
 
    /* speed up sub-SCIP by not checking dual LP feasibility */
-   SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
 
    SCIP_CALL( SCIPtransformProb(subscip) );
    SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
