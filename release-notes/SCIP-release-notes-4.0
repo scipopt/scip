@@ -15,26 +15,27 @@ Features
 
 - Added adaptive solving behavior of SCIP based on solving phases and heuristic transitions
 
-- New constraint handlers cardinality, components
+- New constraint handlers cardinality and components
 
-- New primal heuristics GINS, LP face, Complete Sol, Locks, Repair, Multistart
+- New primal heuristics GINS, LP face, Complete Sol, Locks, Repair, and Multistart
 
 - Revised pseudo random number generation and introduced central random seed for all plugins
 
-- New presolvers that disaggregate SOC constraints, reformulate QP's by adding KKT conditions
+- New presolvers that disaggregate SOC constraints and reformulate QP's by adding KKT conditions
 
 - New presolving step for variables contained in a single quadratic constraint with proper square coefficients
 
-- New separators for gauge cuts, perspective cuts for indicator constraints
+- New separators for gauge cuts and perspective cuts for indicator constraints
 
-- New propagator nlobbt
+- New propagator for OBBT on convex NLP relaxation
 
 - Extended statistic output displayable via the interactive shell
 
-- Additional IO-functionalities for debugging and logging in SCIP and in the AMPL interface
+- Additional I/O-functionalities for debugging and logging in SCIP and in the AMPL interface
 
-Performance Improvements and Bug Fixes
-======================================
+
+Performance Improvements
+========================
 
 - Improved tuning of propagation and heuristic timings
 
@@ -54,13 +55,11 @@ Performance Improvements and Bug Fixes
 
 - Changed handling of coupling constraints in cons_indicator
 
-- Clique separator always constructs a dense clique table which proved to be faster on the several MIP benchmarks
+- Clique separator always constructs a dense clique table, which proved to be faster on several MIP benchmarks
 
 - 1-opt heuristic is iterated as long as new incumbents are found
 
 - Randomized tie-breaking in different parts of the code to reduce performance variability
-
-- And many bug fixes, see CHANGELOG
 
 
 Additional Notes
@@ -70,7 +69,7 @@ Additional Notes
 
 - SCIP uses the lpi_spx2 interface by default
 
-- Interfaces for Python and Java are, among others, now available via github.com/scip-interfaces
+- Interfaces for Python and Java are, among others, now available via http://www.github.com/scip-interfaces
 
 - Improved Gurobi interface that can handle ranged rows (requires Gurobi >= 7.0.2)
 
@@ -78,3 +77,4 @@ Additional Notes
 
 - Revised documentation of the SCIP C-API to group methods more comprehensively by topics
 
+- Many bug fixes, see CHANGELOG
