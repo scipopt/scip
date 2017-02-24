@@ -1,4 +1,4 @@
-Notes for SCIP Release 4.2
+Notes for SCIP Release 4.0
 
 Features
 ========
@@ -25,7 +25,7 @@ Features
 
 - New presolving step for variables contained in a single quadratic constraint with proper square coefficients
 
-- New separators for gauge cuts and perspective cuts for indicator constraints
+- New separators for gauge cuts, convex projection cuts and perspective cuts for indicator constraints
 
 - New propagator for OBBT on convex NLP relaxation
 
