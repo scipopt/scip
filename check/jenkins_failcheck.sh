@@ -10,27 +10,28 @@ sleep 5
 EMAILFROM="adm_timo <timo-admin@zib.de>"
 EMAILTO="adm_timo <timo-admin@zib.de>"
 
-BASEFILE="check/results/check.$TESTSET"
+# SCIP check files are check.TESTSET.VERSION.otherstuff.SETTING.{out,err,res}
+BASEFILE="check/results/check.$TESTSET.*.$SETTING"
 
 # evaluate the run and upload it to rubberband
 cd check/
-./evalcheck_cluster.sh -R results/check.$TESTSET.*$SETTING*.eval
+./evalcheck_cluster.sh -R results/check.$TESTSET.*.$SETTING.eval
 cd ..
 
 # check if fail occurs
-NFAILS=`grep -c fail $BASEFILE.*res`
+NFAILS=`grep -c fail $BASEFILE.res`
 
 # construct string which shows the destination of the out, err, and res files
 SCIPDIR=`pwd`
-ERRORFILE=`ls $BASEFILE.*.err`
-OUTFILE=`ls $BASEFILE.*.out`
-RESFILE=`ls $BASEFILE.*.res`
+ERRORFILE=`ls $BASEFILE.err`
+OUTFILE=`ls $BASEFILE.out`
+RESFILE=`ls $BASEFILE.res`
 DESTINATION="$SCIPDIR/$OUTFILE \n$SCIPDIR/$ERRORFILE \n$SCIPDIR/$RESFILE"
 
 # if there are fails send email with information
 if [ $NFAILS -gt 0 ];
 then
-  SUBJECT="FAIL [BRANCH: $GITBRANCH] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
-  ERRORINSTANCES=`grep fail $BASEFILE.*.res`
+  SUBJECT="FAIL [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
+  ERRORINSTANCES=`grep fail $BASEFILE.res`
   echo -e "$ERRORINSTANCES \n\nThe files can be found here:\n$DESTINATION\n\nPlease note that the files might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
 fi
