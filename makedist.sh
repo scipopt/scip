@@ -78,6 +78,11 @@ $NAME/applications/PolySCIP/doc/* \
 $NAME/applications/PolySCIP/src/*.cpp $NAME/applications/PolySCIP/src/*.h \
 $NAME/applications/PolySCIP/src/tclap/* $NAME/applications/PolySCIP/src/CMakeLists.txt \
 $NAME/applications/PolySCIP/data/*.mop \
+$NAME/applications/PolySCIP/data/AP_p-3_n-5.dat \
+$NAME/applications/PolySCIP/Makefile \
+$NAME/applications/PolySCIP/mult_zimpl/AP_p-3_n-5.zpl \
+$NAME/applications/PolySCIP/mult_zimpl/README \
+$NAME/applications/PolySCIP/mult_zimpl/tenfelde_podehl.zpl \
 $NAME/applications/PolySCIP/cmake/* $NAME/applications/PolySCIP/mult_zimpl/*.py \
 $NAME/applications/PolySCIP/INSTALL $NAME/applications/PolySCIP/LICENCE \
 $NAME/applications/PolySCIP/README $NAME/applications/PolySCIP/scipmip.set \
