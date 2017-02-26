@@ -606,8 +606,8 @@
  *
  * If you experience any problems during the installation, you will find help in the \ref INSTALL "INSTALL" file.
  *
- * \SCIP contains a makefile system, which allows the individual setting of several parameters. For
- * instance, the following settings are supported:
+ * \SCIP contains a makefile system, which allows the individual setting of several parameters. A detailed list of parameter settings
+ * obtained by <code>make help</code>. For instance, the following settings are supported:
  *
  * - <code>OPT=\<dbg|opt|opt-gccold\></code> Here <code>dbg</code> turns on the debug mode of \SCIP. This enables asserts
  *   and avoids macros for several function in order to ease debugging. The default is <code>opt</code>, which enables
