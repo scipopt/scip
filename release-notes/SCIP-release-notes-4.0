@@ -67,6 +67,10 @@ Additional Notes
 
 - Improved build system, separate directories for shared and static libraries
 
+- New makefile targets LINKCCSCIPALL and LINKCXXSCIPALL to link all SCIP components into an external project
+
+- Add make help command to list all parameters of the SCIP makefile
+
 - SCIP uses the lpi_spx2 interface by default
 
 - Interfaces for Python and Java are, among others, now available via http://www.github.com/scip-interfaces
