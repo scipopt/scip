@@ -5602,8 +5602,8 @@
  *    #define SCIP_DEBUG
  *    \endcode
  *    at the top of SCIP files you want to analyze. This will output messages included in the code using
- *    <code>SCIPdebugMessage()</code> (see \ref EXAMPLE_1).
- *    We recommend to also use <code>SCIPdebugMessage()</code> in your own code for being able to activate
+ *    <code>SCIPdebugMsg(scip, ...)</code> (or <code>SCIPdebugMessage()</code>), see \ref EXAMPLE_1.
+ *    We recommend to also use <code>SCIPdebugMsg(scip, ...)</code> in your own code for being able to activate
  *    debug output in the same way.
  *  - If available on your system, we recommend to use a debugger like <code>gdb</code>
  *    to trace all function calls on the stack,
