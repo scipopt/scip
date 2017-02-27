@@ -12,8 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-
 //#define PRINTNODECONS
 #define SCIP_DEBUG
 
@@ -134,7 +132,18 @@ typedef struct
                                               *   by the LP at that node. */
    int                   ndepthreached;      /**< The number of times the branching was aborted due to a too small depth. */
    int                   ndomredcons;        /**< The number of binary constraints ignored, as they would be dom reds. */
+   int                   ncutoffproofnodes;  /**< The number of nodes needed to proof all found cutoffs. */
+   int                   ndomredproofnodes;  /**< The number of nodes needed to proof all found domreds. */
 } STATISTICS;
+
+/**
+ * Helper struct to store the statistical data needed in a single run.
+ */
+typedef struct
+{
+   int                   ncutoffproofnodes;  /**< The number of nodes needed to proof the current cutoff. */
+   int                   ndomredproofnodes;  /**< The number of nodes needed to proof all current domreds. */
+} LOCALSTATISTICS;
 #endif
 
 /**
@@ -832,6 +841,8 @@ void initStatistics(
    statistics->ndepthreached = 0;
    statistics->ndomred = 0;
    statistics->ndomredcons = 0;
+   statistics->ncutoffproofnodes = 0;
+   statistics->ndomredproofnodes = 0;
 
    for( i = 0; i < 18; i++)
    {
@@ -923,6 +934,29 @@ SCIP_RETCODE copyCurrentSolution(
    SCIP_CALL( SCIPunlinkSol(scip, *lpsol) );
 
    return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE allocateLocalStatistics(
+   SCIP*                 scip,
+   LOCALSTATISTICS**     localstats
+   )
+{
+   SCIP_CALL( SCIPallocBuffer(scip, localstats) );
+
+   (*localstats)->ncutoffproofnodes = 0;
+   (*localstats)->ndomredproofnodes = 0;
+
+   return SCIP_OKAY;
+}
+
+static
+void freeLocalStatistics(
+   SCIP*                 scip,
+   LOCALSTATISTICS**     localstats
+   )
+{
+   SCIPfreeBuffer(scip, localstats);
 }
 
 /**
@@ -1382,6 +1416,7 @@ SCIP_RETCODE selectVarRecursive(
    int                   recursiondepth
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics
+   ,LOCALSTATISTICS*     localstats
 #endif
    )
 {
@@ -1538,15 +1573,18 @@ SCIP_RETCODE selectVarRecursive(
                      STATUS* deeperstatus;
                      PERSISTENTDATA* deeperpersistent = NULL;
                      SCIP_Real deeperlpobjval = SCIPgetLPObjval(scip);
+                     SCIPstatistic( LOCALSTATISTICS* deeperlocalstats; )
 
                      SCIP_CALL( allocateStatus(scip, &deeperstatus) );
 
                      SCIP_CALL( allocateBranchingDecision(scip, &deeperdecision, deeperlpobjval) );
 
+                     SCIPstatistic( SCIP_CALL( allocateLocalStatistics(scip, &deeperlocalstats) ); )
+
    #ifdef SCIP_STATISTIC
                      SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, downdomainreductions, binconsdata,
                            deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1,
-                           statistics) );
+                           statistics, deeperlocalstats) );
    #else
                      SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, downdomainreductions, binconsdata,
                            deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1) );
@@ -1557,8 +1595,18 @@ SCIP_RETCODE selectVarRecursive(
                      assert(SCIPisGE(scip, deeperdecision->provedbound, downbranchingresult->dualbound));
                      downbranchingresult->dualbound = deeperdecision->provedbound;
                      downbranchingresult->dualboundvalid = TRUE;
-                     downbranchingresult->cutoff = deeperstatus->cutoff;
+                     if( deeperstatus->cutoff )
+                     {
+                        /* TODO: set another flag? Rework in general
+                         * upbranchingresult->cutoff is TRUE, if the up child was directly infeasible (so here it is always
+                         * false, as we don't want to branch on an infeasible node)
+                         * deeperstatus->cutoff is TRUE, if any up/down child pair of the up child were cutoff
+                         * */
+                        downbranchingresult->cutoff = deeperstatus->cutoff;
+                        SCIPstatistic( localstats->ncutoffproofnodes += deeperlocalstats->ncutoffproofnodes; )
+                     }
 
+                     SCIPstatistic( freeLocalStatistics(scip, &deeperlocalstats); )
                      freeStatus(scip, &deeperstatus);
                      freeBranchingDecision(scip, &deeperdecision);
                   }
@@ -1630,16 +1678,18 @@ SCIP_RETCODE selectVarRecursive(
                      STATUS* deeperstatus;
                      PERSISTENTDATA* deeperpersistent = NULL;
                      SCIP_Real deeperlpobjval = SCIPgetLPObjval(scip);
+                     SCIPstatistic( LOCALSTATISTICS* deeperlocalstats; )
 
                      SCIP_CALL( allocateStatus(scip, &deeperstatus) );
 
                      SCIP_CALL( allocateBranchingDecision(scip, &deeperdecision, deeperlpobjval) );
 
+                     SCIPstatistic( SCIP_CALL( allocateLocalStatistics(scip, &deeperlocalstats) ); )
 
    #ifdef SCIP_STATISTIC
                      SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, downdomainreductions, binconsdata,
                            deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1,
-                           statistics) );
+                           statistics, deeperlocalstats) );
    #else
                      SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, updomainreductions, binconsdata,
                            deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1) );
@@ -1650,8 +1700,18 @@ SCIP_RETCODE selectVarRecursive(
                      assert(SCIPisGE(scip, deeperdecision->provedbound, upbranchingresult->dualbound));
                      upbranchingresult->dualbound = deeperdecision->provedbound;
                      upbranchingresult->dualboundvalid = TRUE;
-                     upbranchingresult->cutoff = deeperstatus->cutoff;
+                     if( deeperstatus->cutoff )
+                     {
+                        /* TODO: set another flag? Rework in general
+                         * upbranchingresult->cutoff is TRUE, if the up child was directly infeasible (so here it is always
+                         * false, as we don't want to branch on an infeasible node)
+                         * deeperstatus->cutoff is TRUE, if any up/down child pair of the up child were cutoff
+                         * */
+                        upbranchingresult->cutoff = deeperstatus->cutoff;
+                        SCIPstatistic( localstats->ncutoffproofnodes += deeperlocalstats->ncutoffproofnodes; )
+                     }
 
+                     SCIPstatistic( freeLocalStatistics(scip, &deeperlocalstats); )
                      freeStatus(scip, &deeperstatus);
                      freeBranchingDecision(scip, &deeperdecision);
                   }
@@ -1699,6 +1759,7 @@ SCIP_RETCODE selectVarRecursive(
                   status->cutoff = TRUE;
                   SCIPstatistic(
                      statistics->nfullcutoffs[probingdepth]++;
+                     localstats->ncutoffproofnodes += 2;
                   )
                }
                else if( upbranchingresult->cutoff )
@@ -1828,6 +1889,7 @@ SCIP_RETCODE selectVarStart(
    BRANCHINGDECISION*    decision
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics
+   ,LOCALSTATISTICS*     localstats
 #endif
    )
 {
@@ -1877,7 +1939,7 @@ SCIP_RETCODE selectVarStart(
    SCIPenableVarHistory(scip);
 
 #ifdef SCIP_STATISTIC
-   SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, lpcands, lpcandssol, lpcandsfrac, nlpcands, decision, recursiondepth, statistics) );
+   SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, lpcands, lpcandssol, lpcandsfrac, nlpcands, decision, recursiondepth, statistics, localstats) );
 #else
    SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, lpcands, lpcandssol, lpcandsfrac, nlpcands, decision, recursiondepth) );
 #endif
@@ -2052,6 +2114,7 @@ void printStatistics(
    SCIPinfoMessage(scip, NULL, "Depth limit was reached <%i> times.\n", statistics->ndepthreached);
    SCIPinfoMessage(scip, NULL, "Added <%i> binary constraints, of which <%i> where violated by the base LP.\n", statistics->nbinconst, statistics->nbinconstvio);
    SCIPinfoMessage(scip, NULL, "Reduced the domain of <%i> vars, <%i> of them where violated by the base LP.\n", statistics->ndomred, statistics->ndomredvio);
+   SCIPinfoMessage(scip, NULL, "Needed <%i> additional nodes to proof the cutoffs of base nodes\n", statistics->ncutoffproofnodes);
 }
 #endif
 
@@ -2226,20 +2289,25 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       BRANCHINGDECISION* decision;
       STATUS* status;
       SCIP_Real lpobjval = SCIPgetLPObjval(scip);
+      SCIPstatistic( LOCALSTATISTICS* localstats; )
 
       /* get all fractional candidates we can branch on */
       SCIP_CALL( copyLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
 
       SCIPdebugMessage("The base lp has <%i> variables with fractional value.\n", nlpcands);
 
-      /* creating a struct to store the algorithm status */
+      /* create a struct to store the algorithm status */
       SCIP_CALL( allocateStatus(scip, &status) );
-
+      /* create a struct to store the branching decision (in case there is one) */
       SCIP_CALL( allocateBranchingDecision(scip, &decision, lpobjval) );
+      SCIPstatistic(
+         /* create a struct to store the statistics needed for this single run */
+         SCIP_CALL( allocateLocalStatistics(scip, &localstats) );
+      )
 
       /* execute the main logic */
 #ifdef SCIP_STATISTIC
-      SCIP_CALL( selectVarStart(scip, branchruledata, status, decision, branchruledata->statistics) );
+      SCIP_CALL( selectVarStart(scip, branchruledata, status, decision, branchruledata->statistics, localstats) );
 #else
       SCIP_CALL( selectVarStart(scip, branchruledata, status, decision) );
 #endif
@@ -2247,6 +2315,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       if( status->cutoff || status->domredcutoff )
       {
          *result = SCIP_CUTOFF;
+         SCIPstatistic(
+            SCIPdebugMessage("oldproof: <%i>, addproof: <%i>, newproof: <%i>\n", branchruledata->statistics->ncutoffproofnodes, localstats->ncutoffproofnodes, branchruledata->statistics->ncutoffproofnodes + localstats->ncutoffproofnodes);
+
+            branchruledata->statistics->ncutoffproofnodes += localstats->ncutoffproofnodes;
+            branchruledata->statistics->ndomredproofnodes += localstats->ndomredproofnodes;
+         )
       }
       else if( status->addbinconst )
       {
@@ -2316,8 +2390,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          }
       )
 
+      freeLocalStatistics(scip, &localstats);
       freeBranchingDecision(scip, &decision);
-
       freeStatus(scip, &status);
 
       freeLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac);
