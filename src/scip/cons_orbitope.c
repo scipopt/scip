@@ -2406,6 +2406,9 @@ SCIP_RETCODE SCIPcreateConsOrbitope(
             var = vars[i][j];
             assert(var != NULL);
 
+            if ( SCIPvarIsNegated(var) )
+               var = SCIPvarGetNegatedVar(var);
+
             /* all variables need to be binary */
             assert( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY );
 
