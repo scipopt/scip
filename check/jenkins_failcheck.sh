@@ -8,6 +8,7 @@
 sleep 5
 
 DATABASE="/nfs/OPTI/bzfserra/jenkins/known_bugs.txt"
+TMPDATABASE="/nfs/OPTI/bzfserra/jenkins/known_bugs.txt.tmp"
 
 EMAILFROM="adm_timo <timo-admin@zib.de>"
 EMAILTO="adm_timo <timo-admin@zib.de>"
@@ -29,6 +30,34 @@ ERRORFILE=`ls $BASEFILE.err`
 OUTFILE=`ls $BASEFILE.out`
 RESFILE=`ls $BASEFILE.res`
 DESTINATION="$SCIPDIR/$OUTFILE \n$SCIPDIR/$ERRORFILE \n$SCIPDIR/$RESFILE"
+
+# check for fixed instances
+RESOLVEDINSTANCES=`awk '
+NR != FNR {
+  if( $3 == "'$GITBRANCH'" && $4 == "'$TESTSET'" && $5 == "'$SETTING'" && $6 == "'$OPT'" && $7 == "'$LPS'")
+  {
+     if( $0 in bugs == 0 )
+        print "Previously failing instance " $1 " with error " $2 " does not fail anymore"
+     else
+        print $0 >> "'$TMPDATABASE'"
+  }
+  else
+     print $0 >> "'$TMPDATABASE'"
+  next;
+}
+## fail instances for this configuration
+/fail/ {
+  failmsg=$13; for(i=14;i<=NF;i++){failmsg=failmsg"_"$i;}
+  errorstring=$1 " " failmsg " '$GITBRANCH' '$TESTSET' '$SETTING' '$OPT' '$LPS'";
+  bugs[errorstring]
+}' $BASEFILE.res $DATABASE`
+mv $TMPDATABASE $DATABASE
+
+# send email if there are fixed instances
+if [ -n "$RESOLVEDINSTANCES" ]; then
+   SUBJECT="FIX [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
+   echo -e "The following errors have been fixed: $RESOLVEDINSTANCES \n\nCongratulations" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+fi
 
 # if there are fails check for new fails and send email with information if needed
 if [ $NFAILS -gt 0 ]; then
