@@ -105,6 +105,7 @@ SCIP_RETCODE compensateVarLock(
    assert(compensation == COMPENSATE_DOWNLOCK || compensation == COMPENSATE_UPLOCK);
    assert(varstofix != NULL);
    assert(nfixings != NULL);
+   assert(!(SCIPmatrixGetColNNonzs(matrix,col) == 1 && SCIPvarGetType(SCIPmatrixGetVar(matrix,col)) == SCIP_VARTYPE_CONTINUOUS));
 
    /* try lock compensation only if minimum one singleton continuous variable is present */
    singleton = FALSE;
@@ -122,6 +123,7 @@ SCIP_RETCODE compensateVarLock(
 
    if( !singleton )
       return SCIP_OKAY;
+
 
    /* we perform the following transformations afterwards:
     *
@@ -417,33 +419,39 @@ SCIP_RETCODE compensateVarLock(
       {
          if( compensation == COMPENSATE_UPLOCK )
          {
-            varstofix[col] = FIXATUB;
-            (*nfixings)++;
+            if( !SCIPisInfinity(scip,SCIPvarGetUbGlobal(SCIPmatrixGetVar(matrix, col))) )
+            {
+               varstofix[col] = FIXATUB;
+               (*nfixings)++;
 
 #ifdef SCIP_MORE_DEBUG
-            SCIPmatrixPrintRow(scip, matrix, row);
-            SCIPdebugMsg(scip, "%s, bds=[%.2f,%.2f], obj=%.2f, nnonzs=%d, type=%s, fix=ub, %.1f < %.1f\n",
-               SCIPvarGetName(SCIPmatrixGetVar(matrix, col)),SCIPvarGetLbGlobal(SCIPmatrixGetVar(matrix, col)),
-               SCIPvarGetUbGlobal(SCIPmatrixGetVar(matrix, col)), SCIPvarGetObj(SCIPmatrixGetVar(matrix, col)),
-               SCIPmatrixGetColNNonzs(matrix, col),
-               SCIPvarGetType(SCIPmatrixGetVar(matrix, col))==SCIP_VARTYPE_CONTINUOUS ? "con" : "dis",
-               lhs-offset, delta);
+               SCIPmatrixPrintRow(scip, matrix, row);
+               SCIPdebugMsg(scip, "%s, bds=[%.2f,%.2f], obj=%.2f, nnonzs=%d, type=%s, fix=ub, %.1f < %.1f\n",
+                  SCIPvarGetName(SCIPmatrixGetVar(matrix, col)),SCIPvarGetLbGlobal(SCIPmatrixGetVar(matrix, col)),
+                  SCIPvarGetUbGlobal(SCIPmatrixGetVar(matrix, col)), SCIPvarGetObj(SCIPmatrixGetVar(matrix, col)),
+                  SCIPmatrixGetColNNonzs(matrix, col),
+                  SCIPvarGetType(SCIPmatrixGetVar(matrix, col))==SCIP_VARTYPE_CONTINUOUS ? "con" : "dis",
+                  lhs-offset, delta);
 #endif
+            }
          }
          else
          {
-            varstofix[col] = FIXATLB;
-            (*nfixings)++;
+            if( !SCIPisInfinity(scip,-SCIPvarGetLbGlobal(SCIPmatrixGetVar(matrix, col))) )
+            {
+               varstofix[col] = FIXATLB;
+               (*nfixings)++;
 
 #ifdef SCIP_MORE_DEBUG
-            SCIPmatrixPrintRow(scip, matrix, row);
-            SCIPdebugMsg(scip, "%s, bds=[%.2f,%.2f], obj=%.2f, nnonzs=%d, type=%s, fix=lb, %.1f < %.1f\n",
-               SCIPvarGetName(SCIPmatrixGetVar(matrix, col)),SCIPvarGetLbGlobal(SCIPmatrixGetVar(matrix, col)),
-               SCIPvarGetUbGlobal(SCIPmatrixGetVar(matrix, col)), SCIPvarGetObj(SCIPmatrixGetVar(matrix, col)),
-               SCIPmatrixGetColNNonzs(matrix, col),
-               SCIPvarGetType(SCIPmatrixGetVar(matrix, col))==SCIP_VARTYPE_CONTINUOUS ? "con" : "dis",
-               lhs-offset, delta);
+               SCIPmatrixPrintRow(scip, matrix, row);
+               SCIPdebugMsg(scip, "%s, bds=[%.2f,%.2f], obj=%.2f, nnonzs=%d, type=%s, fix=lb, %.1f < %.1f\n",
+                  SCIPvarGetName(SCIPmatrixGetVar(matrix, col)),SCIPvarGetLbGlobal(SCIPmatrixGetVar(matrix, col)),
+                  SCIPvarGetUbGlobal(SCIPmatrixGetVar(matrix, col)), SCIPvarGetObj(SCIPmatrixGetVar(matrix, col)),
+                  SCIPmatrixGetColNNonzs(matrix, col),
+                  SCIPvarGetType(SCIPmatrixGetVar(matrix, col))==SCIP_VARTYPE_CONTINUOUS ? "con" : "dis",
+                  lhs-offset, delta);
 #endif
+            }
          }
       }
    }
@@ -530,14 +538,13 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
              SCIPmatrixGetColNNonzs(matrix, i) == 1 )
             continue;
 
-         twosides = FALSE;
-
          /* cases with exactly one uplock */
          if( SCIPvarGetNLocksUp(var) == 1 && SCIPisLE(scip, SCIPvarGetObj(var), 0.0) )
          {
             row = -1;
             val = 0.0;
             inspect = FALSE;
+            twosides = FALSE;
             colpnt = SCIPmatrixGetColIdxPtr(matrix, i);
             colend = colpnt + SCIPmatrixGetColNNonzs(matrix, i);
             valpnt = SCIPmatrixGetColValPtr(matrix, i);
@@ -574,6 +581,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
                }
             }
 
+            assert(inspect);
+
             if( inspect )
             {
                assert(row >= 0);
@@ -590,6 +599,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
             row = -1;
             val = 0.0;
             inspect = FALSE;
+            twosides = FALSE;
             colpnt = SCIPmatrixGetColIdxPtr(matrix, i);
             colend = colpnt + SCIPmatrixGetColNNonzs(matrix, i);
             valpnt = SCIPmatrixGetColValPtr(matrix, i);
@@ -625,6 +635,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
                   break;
                }
             }
+
+            assert(inspect);
 
             if( inspect )
             {
