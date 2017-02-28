@@ -7,6 +7,8 @@
 
 sleep 5
 
+DATABASE="/nfs/OPTI/bzfserra/jenkins/known_bugs.txt"
+
 EMAILFROM="adm_timo <timo-admin@zib.de>"
 EMAILTO="adm_timo <timo-admin@zib.de>"
 
@@ -28,10 +30,26 @@ OUTFILE=`ls $BASEFILE.out`
 RESFILE=`ls $BASEFILE.res`
 DESTINATION="$SCIPDIR/$OUTFILE \n$SCIPDIR/$ERRORFILE \n$SCIPDIR/$RESFILE"
 
-# if there are fails send email with information
-if [ $NFAILS -gt 0 ];
-then
-  SUBJECT="FAIL [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
-  ERRORINSTANCES=`grep fail $BASEFILE.res`
-  echo -e "$ERRORINSTANCES \n\nThe files can be found here:\n$DESTINATION\n\nPlease note that the files might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+# if there are fails check for new fails and send email with information if needed
+if [ $NFAILS -gt 0 ]; then
+  ERRORINSTANCES=`awk '
+  ## read all known bugs
+  NR == FNR {known_bugs[$0]; next}
+  /fail/ {
+  ## get the fail error and build string with the format of "database"
+  failmsg=$13; for(i=14;i<=NF;i++){failmsg=failmsg"_"$i;}
+  errorstring=$1 " " failmsg " '$GITBRANCH' '$TESTSET' '$SETTING' '$OPT' '$LPS'";
+  ## if error is not in "database", add it and print it in ERRORINSTANCES to send email
+  if( errorstring in known_bugs == 0 )
+  {
+     print errorstring >> "'$DATABASE'";
+     print $0;
+  }
+  }' $DATABASE $BASEFILE.res`
+
+  # check if there are errors (string non empty)
+  if [ -n "$ERRORINSTANCES" ]; then
+     SUBJECT="FAIL [BRANCH: $GITBRANCH] [TESTSET: $TESTSET] [SETTING=$SETTING] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH]"
+     echo -e "$ERRORINSTANCES \n\nThe files can be found here:\n$DESTINATION\n\nPlease note that the files might be deleted soon" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+  fi
 fi
