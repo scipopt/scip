@@ -336,7 +336,7 @@ SCIP_Bool SCIPsparseSolGetNextSol(
 
 
 /** creates a (circular) queue, best used if the size will be fixed or will not be increased that much */
-extern
+EXTERN
 SCIP_RETCODE SCIPqueueCreate(
    SCIP_QUEUE**          queue,              /**< pointer to the new queue */
    int                   initsize,           /**< initial number of available element slots */
@@ -345,44 +345,44 @@ SCIP_RETCODE SCIPqueueCreate(
 
 
 /** frees queue, but not the data elements themselves */
-extern
+EXTERN
 void SCIPqueueFree(
    SCIP_QUEUE**          queue               /**< pointer to a queue */
    );
 
 /** clears the queue, but doesn't free the data elements themselves */
-extern
+EXTERN
 void SCIPqueueClear(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
 /** inserts element at the end of the queue */
-extern
+EXTERN
 SCIP_RETCODE SCIPqueueInsert(
    SCIP_QUEUE*           queue,              /**< queue */
    void*                 elem                /**< element to be inserted */
    );
 
 /** removes and returns the first element of the queue */
-extern
+EXTERN
 void* SCIPqueueRemove(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
 /** returns the first element of the queue without removing it */
-extern
+EXTERN
 void* SCIPqueueFirst(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
 /** returns whether the queue is empty */
-extern
+EXTERN
 SCIP_Bool SCIPqueueIsEmpty(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
 /** returns the number of elements in the queue */
-extern
+EXTERN
 int SCIPqueueNElems(
    SCIP_QUEUE*           queue               /**< queue */
    );
@@ -1663,7 +1663,7 @@ int SCIPgetRandomInt(
 
 
 /** returns a random integer between minrandval and maxrandval */
-extern
+EXTERN
 int SCIPrandomGetInt(
    SCIP_RANDNUMGEN*      randgen,            /**< random number generator data */
    int                   minrandval,         /**< minimal value to return */
@@ -1683,7 +1683,7 @@ SCIP_RETCODE SCIPrandomGetSubset(
    );
 
 /** returns a random real between minrandval and maxrandval */
-extern
+EXTERN
 SCIP_Real SCIPrandomGetReal(
    SCIP_RANDNUMGEN*      randgen,            /**< random number generator data */
    SCIP_Real             minrandval,         /**< minimal value to return */
@@ -1691,7 +1691,7 @@ SCIP_Real SCIPrandomGetReal(
    );
 
 /** creates and initializes a random number generator */
-extern
+EXTERN
 SCIP_RETCODE SCIPrandomCreate(
    SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -1700,7 +1700,7 @@ SCIP_RETCODE SCIPrandomCreate(
 
 
 /** frees a random number generator */
-extern
+EXTERN
 void SCIPrandomFree(
    SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
    );
@@ -1781,7 +1781,7 @@ void SCIPpermuteIntArray(
    );
 
 /** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
-extern
+EXTERN
 void SCIPrandomPermuteIntArray(
    SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
    int*                  array,              /**< array to be shuffled */
@@ -1790,7 +1790,7 @@ void SCIPrandomPermuteIntArray(
    );
 
 /** randomly shuffles parts of an array using the Fisher-Yates algorithm */
-extern
+EXTERN
 void SCIPrandomPermuteArray(
    SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
    void**                array,              /**< array to be shuffled */

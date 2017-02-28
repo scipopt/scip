@@ -414,8 +414,17 @@ LPIINSTMSG	+=	"\n  -> \"$(GAMSDIR)\" is the path to the GAMS system directory"
 endif
 
 ifeq ($(SHARED),true)
-SCIPLIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(ZLIB_LDFLAGS) $(GMP_LDFLAGS) $(READLINE_LDFLAGS) $(ZIMPLLIB) \
-			$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE))
+SCIPLIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE)
+ifeq ($(ZLIB),true)
+SCIPLIBEXTLIBS	+=	$(ZLIB_LDFLAGS)
+endif
+ifeq ($(GMP),true)
+SCIPLIBEXTLIBS	+=	$(GMP_LDFLAGS)
+endif
+ifeq ($(READLINE_LDFLAGS),true)
+SCIPLIBEXTLIBS	+=	$(READLINE_LDFLAGS)
+endif
+SCIPLIBEXTLIBS	+=	$(ZIMPLLIB) $(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE))
 endif
 
 

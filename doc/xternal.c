@@ -5602,8 +5602,8 @@
  *    #define SCIP_DEBUG
  *    \endcode
  *    at the top of SCIP files you want to analyze. This will output messages included in the code using
- *    <code>SCIPdebugMessage()</code> (see \ref EXAMPLE_1).
- *    We recommend to also use <code>SCIPdebugMessage()</code> in your own code for being able to activate
+ *    <code>SCIPdebugMsg(scip, ...)</code> (or <code>SCIPdebugMessage()</code>), see \ref EXAMPLE_1.
+ *    We recommend to also use <code>SCIPdebugMsg(scip, ...)</code> in your own code for being able to activate
  *    debug output in the same way.
  *  - If available on your system, we recommend to use a debugger like <code>gdb</code>
  *    to trace all function calls on the stack,
@@ -6704,6 +6704,7 @@
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
   */
 
+
  /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
  /**@page CHG8 Interface changes between SCIP 3.1 and SCIP 3.2
   *
@@ -6711,9 +6712,9 @@
   * @section CHGCALLBACKS8 New and changed callbacks
   *
   * - <b>Branching Rules</b>:
-  *   - Added paramter "forcestrongbranch" to SCIPselectVarStrongBranching()
-  *   - Added paramter "executebranching" SCIPexecRelpscostBranching()
-  *   - Added paramter "presoltiming" to SCIPpropCumulativeCondition()
+  *   - Added parameter "forcestrongbranch" to SCIPselectVarStrongBranching()
+  *   - Added parameter "executebranching" SCIPexecRelpscostBranching()
+  *   - Added parameter "presoltiming" to SCIPpropCumulativeCondition()
   *
   *   <br>
   * - <b>Domain Propagation</b>:
@@ -6726,7 +6727,7 @@
   *
   *   <br>
   * - <b>Primal Heuristics</b>:
-  *   - Added paramter "freesubscip" to SCIPapplyProximity()
+  *   - Added parameter "freesubscip" to SCIPapplyProximity()
   *
   * <br>
   * @section CHGINTERFUNC8 Changed interface methods
@@ -6787,10 +6788,10 @@
   *   - Added parameter "presoltiming" to SCIPincludePresol()
   *   - Removed parameter "delaypos" from SCIPincludePresolBasic()
   *   - Added parameter "presoltiming" to SCIPincludePresolBasic()
-  *   - Removed paramter "presoldelay" from SCIPincludePresol()
-  *   - Removed paramter "presoltiming" from SCIPincludePresol()
-  *   - Removed paramter "presoldelay" from SCIPsetPropPresol()
-  *   - Removed paramter "presoltiming" from SCIPsetPropPresol()
+  *   - Removed parameter "presoldelay" from SCIPincludePresol()
+  *   - Removed parameter "presoltiming" from SCIPincludePresol()
+  *   - Removed parameter "presoldelay" from SCIPsetPropPresol()
+  *   - Removed parameter "presoltiming" from SCIPsetPropPresol()
   *   - Added parameter "ndomredsdown" to SCIPgetVarStrongbranchWithPropagation()
   *   - Added parameter "ndomredsup" to SCIPgetVarStrongbranchWithPropagation()
   *   - Added parameter "isequation" to SCIPaddClique()
@@ -6800,6 +6801,82 @@
   *   - Removed method SCIPreallocBufferSize()
   *   - Removed method SCIPfreeBufferSize()
   *   - Removed method callback SCIPdialogExecConflictgraph()
+  * <br>
+  * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
+  */
+
+  /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+ /**@page CHG9 Interface changes between SCIP 3.2 and SCIP 4.0
+  *
+  *
+  * @section CHGCALLBACKS9 New and changed callbacks
+  *
+  * - <b>Constraint Handlers</b>:
+  *    - new optional callback CONSENFORELAX to enforce a relaxation solution, see \ref CONS
+  *
+  *   <br>
+  * - <b>Concurrent SCIP</b>:
+  *    - extended interface to support concurrent solving mode
+  *
+  *   <br>
+  * - <b>Message Handler</b>:
+  *
+  *   <br>
+  * - <b>Variable Pricers</b>:
+  *
+  *   <br>
+  * - <b>Primal Heuristics</b>:
+  *
+  * <br>
+  * @section CHGINTERFUNC9 Changed interface methods
+  *
+  *   <br>
+  * - <b>Copying</b>:
+  *   - added arguments "fixedvars", "fixedvals", "nfixedvars" to SCIPcopyVars()
+  *   - added arguments "fixedvars", "fixedvals", "nfixedvars" to SCIPcopyOrigVars()
+  *   - renamed argument "success" to valid in SCIPgetConsCopy()
+  *
+  *   <br>
+  * - <b>Parameters</b>:
+  *   - renamed method SCIPcheckBoolParam() to SCIPisBoolParamValid()
+  *   - renamed method SCIPcheckLongintParam() to SCIPisLongintParamValid()
+  *   - renamed method SCIPcheckRealParam() to SCIPisRealParamValid()
+  *   - renamed method SCIPcheckCharParam() to SCIPisCharParamValid()
+  *   - renamed method SCIPcheckStringParam() to SCIPisStringParamValid()
+  *
+  *   <br>
+  * - <b>Relaxators</b>:
+  *   - added argument "includeslp" to SCIPincludeRelax() and SCIPincludeRelaxBasic()
+  *
+  *   <br>
+  * - <b>Primal Heuristics</b>:
+  *   - introduced new type SCIP_HEURTIMING for primal heuristic timing masks
+  *   - changed type of argument "timingmask" from unsigned int to SCIP_HEURTIMING in SCIPincludeHeur(), SCIPincludeHeurBasic()
+  *   - added argument "initialseed" to SCIPcreateDiveset()
+  *   <br>
+  * - <b>Reoptimization</b>:
+  *   - renamed function SCIPgetReopSolsRun() to SCIPgetReoptSolsRun()
+  *
+  *   <br>
+  * - <b>Variables</b>:
+  *   - Removed method SCIPvarGetNBinImpls()
+  *
+  *   <br>
+  * - <b>Conflict Analysis</b>:
+  *   - added arguments "conftype" and "iscutoffinvolved" to conflict analysis
+  *
+  *   <br>
+  * - <b>Constraint Handlers</b>:
+  *   - added argument "infeasible" to SCIPinitlpCons()
+  *
+  *   <br>
+  * - <b>Nonlinear Relaxation</b>:
+  *   - added argument "curvature" to SCIPcreateNlRow()
+  *
+  *   <br>
+  * - <b>Solutions</b>:
+  *   - added argument "completely" to SCIPtrySol(), SCIPtrySolFree(), SCIPcheckSol()
+  *
   * <br>
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
   */

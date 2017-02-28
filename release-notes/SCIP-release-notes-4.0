@@ -33,6 +33,8 @@ Features
 
 - Additional I/O-functionalities for debugging and logging in SCIP and in the AMPL interface
 
+- Added new debug output function SCIPdebugMsg that outputs the sub-SCIP level; now used within SCIP
+
 
 Performance Improvements
 ========================
