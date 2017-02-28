@@ -36,15 +36,15 @@ if [ $NFAILS -gt 0 ]; then
   ## read all known bugs
   NR == FNR {known_bugs[$0]; next}
   /fail/ {
-  ## get the fail error and build string with the format of "database"
-  failmsg=$13; for(i=14;i<=NF;i++){failmsg=failmsg"_"$i;}
-  errorstring=$1 " " failmsg " '$GITBRANCH' '$TESTSET' '$SETTING' '$OPT' '$LPS'";
-  ## if error is not in "database", add it and print it in ERRORINSTANCES to send email
-  if( errorstring in known_bugs == 0 )
-  {
-     print errorstring >> "'$DATABASE'";
-     print $0;
-  }
+     ## get the fail error and build string with the format of "database"
+     failmsg=$13; for(i=14;i<=NF;i++){failmsg=failmsg"_"$i;}
+     errorstring=$1 " " failmsg " '$GITBRANCH' '$TESTSET' '$SETTING' '$OPT' '$LPS'";
+     ## if error is not in "database", add it and print it in ERRORINSTANCES to send email
+     if( errorstring in known_bugs == 0 )
+     {
+        print errorstring >> "'$DATABASE'";
+        print $0;
+     }
   }' $DATABASE $BASEFILE.res`
 
   # check if there are errors (string non empty)
