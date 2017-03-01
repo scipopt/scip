@@ -166,7 +166,7 @@ Test(propagation, convexnlp, .init = setup, .fini = teardown,
 
    /* create convex NLP relaxation */
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "convex_NLP") );
-   SCIP_CALL( SCIPcreateConvexNlp(scip, nlpi, nlrows, 5, nlpiprob, var2idx, nlscore, -1.5, FALSE) );
+   SCIP_CALL( SCIPcreateNlpiProb(scip, nlpi, nlrows, 5, nlpiprob, var2idx, nlscore, -1.5, FALSE, TRUE) );
    cr_assert(nlpiprob != NULL);
 
    oracle = (SCIP_NLPIORACLE*) SCIPgetNlpiOracleIpopt(nlpiprob);
