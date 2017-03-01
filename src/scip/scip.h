@@ -14907,13 +14907,13 @@ void SCIPaddBilinMcCormick(
    SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
    );
 
-/** creates a convex NLP relaxation and stores it in a given NLPI problem; the function computes for each variable which
- *  the number of non-linearly occurrences and stores it in the nlscore array
+/** creates a NLP relaxation and stores it in a given NLPI problem; the function computes for each variable which the
+ *  number of non-linearly occurrences and stores it in the nlscore array
  *
  *  @note the first row corresponds always to the cutoff row (even if cutoffbound is SCIPinfinity(scip))
  **/
 EXTERN
-SCIP_RETCODE SCIPcreateConvexNlp(
+SCIP_RETCODE SCIPcreateNlpiProb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
    SCIP_NLROW**          nlrows,             /**< nonlinear rows */
@@ -14924,12 +14924,13 @@ SCIP_RETCODE SCIPcreateConvexNlp(
    SCIP_Real*            nlscore,            /**< array to store the score of each nonlinear variable (NULL if not
                                               *   needed) */
    SCIP_Real             cutoffbound,        /**< cutoff bound */
-   SCIP_Bool             setobj              /**< should the objective function be set? */
+   SCIP_Bool             setobj,              /**< should the objective function be set? */
+   SCIP_Bool             onlyconvex          /**< filter only for convex constraints */
    );
 
 /** updates bounds of each variable and the cutoff row in the nlpiproblem */
 EXTERN
-SCIP_RETCODE SCIPupdateConvexNlp(
+SCIP_RETCODE SCIPupdateNlpiProb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
    SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem representing the convex NLP relaxation */
@@ -14939,8 +14940,8 @@ SCIP_RETCODE SCIPupdateConvexNlp(
    SCIP_Real             cutoffbound         /**< new cutoff bound */
    );
 
-/** adds linear rows to the convex NLP relaxation */
-SCIP_RETCODE SCIPaddConvexNlpRows(
+/** adds linear rows to the NLP relaxation */
+SCIP_RETCODE SCIPaddNlpiProbRows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
    SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem */

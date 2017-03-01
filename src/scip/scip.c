@@ -33257,12 +33257,12 @@ void SCIPaddBilinMcCormick(
    *linconstant += constant;
 }
 
-/** creates a convex NLP relaxation and stores it in a given NLPI problem; the function computes for each variable
- *  the number of non-linearly occurrences and stores it in the nlscore array
+/** creates a NLP relaxation and stores it in a given NLPI problem; the function computes for each variable the number
+ *  of non-linearly occurrences and stores it in the nlscore array
  *
  *  @note the first row corresponds always to the cutoff row (even if cutoffbound is SCIPinfinity(scip))
  **/
-SCIP_RETCODE SCIPcreateConvexNlp(
+SCIP_RETCODE SCIPcreateNlpiProb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
    SCIP_NLROW**          nlrows,             /**< nonlinear rows */
@@ -33273,7 +33273,8 @@ SCIP_RETCODE SCIPcreateConvexNlp(
    SCIP_Real*            nlscore,            /**< array to store the score of each nonlinear variable (NULL if not
                                               *   needed) */
    SCIP_Real             cutoffbound,        /**< cutoff bound */
-   SCIP_Bool             setobj              /**< should the objective function be set? */
+   SCIP_Bool             setobj,             /**< should the objective function be set? */
+   SCIP_Bool             onlyconvex          /**< filter only for convex constraints */
    )
 {
    SCIP_EXPRTREE** exprtrees;
@@ -33419,13 +33420,18 @@ SCIP_RETCODE SCIPcreateConvexNlp(
          uselhs = TRUE;
          userhs = TRUE;
       }
-      else if( SCIPnlrowGetCurvature(nlrows[i]) == SCIP_EXPRCURV_CONVEX && !SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrows[i])) )
-         userhs = TRUE;
-      else if( SCIPnlrowGetCurvature(nlrows[i]) == SCIP_EXPRCURV_CONCAVE && !SCIPisInfinity(scip, SCIPnlrowGetLhs(nlrows[i])) )
-         uselhs = TRUE;
       else
+      {
+         if( (!onlyconvex || SCIPnlrowGetCurvature(nlrows[i]) == SCIP_EXPRCURV_CONVEX)
+            && !SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrows[i])) )
+            userhs = TRUE;
+         if( (!onlyconvex || SCIPnlrowGetCurvature(nlrows[i]) == SCIP_EXPRCURV_CONCAVE)
+            && !SCIPisInfinity(scip, SCIPnlrowGetLhs(nlrows[i])) )
+            uselhs = TRUE;
+      }
+
+      if( !uselhs && !userhs )
          continue;
-      assert(uselhs || userhs);
 
       lhss[nconss] = uselhs ? SCIPnlrowGetLhs(nlrows[i]) - SCIPnlrowGetConstant(nlrows[i]) : -SCIPinfinity(scip);
       rhss[nconss] = userhs ? SCIPnlrowGetRhs(nlrows[i]) - SCIPnlrowGetConstant(nlrows[i]) :  SCIPinfinity(scip);
@@ -33572,7 +33578,7 @@ SCIP_RETCODE SCIPcreateConvexNlp(
 }
 
 /** updates bounds of each variable and the cutoff row in the nlpiproblem */
-SCIP_RETCODE SCIPupdateConvexNlp(
+SCIP_RETCODE SCIPupdateNlpiProb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
    SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem representing the convex NLP relaxation */
@@ -33623,8 +33629,8 @@ SCIP_RETCODE SCIPupdateConvexNlp(
    return SCIP_OKAY;
 }
 
-/** adds linear rows to the convex NLP relaxation */
-SCIP_RETCODE SCIPaddConvexNlpRows(
+/** adds linear rows to the NLP relaxation */
+SCIP_RETCODE SCIPaddNlpiProbRows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
    SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem */
