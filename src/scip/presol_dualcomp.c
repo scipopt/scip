@@ -258,6 +258,8 @@ SCIP_RETCODE compensateVarLock(
 
          if( SCIPisLT(scip,coef,0.0) )
          {
+            /* coef < 0 */
+
             if( multrowbyminusone )
             {
                if( SCIPisInfinity(scip, -lb) )
@@ -449,7 +451,7 @@ SCIP_RETCODE compensateVarLock(
 
 #ifdef SCIP_MORE_DEBUG
                SCIPmatrixPrintRow(scip, matrix, row);
-               SCIPdebugMsg(scip, "%s, bds=[%.2f,%.2f], obj=%.2f, nnonzs=%d, type=%s, fix=ub, %.1f < %.1f\n",
+               SCIPdebugMsg(scip, "%s, bds=[%.2f,%.2f], obj=%.2f, nnonzs=%d, type=%s, fix=ub, %.1f <= %.1f\n",
                   SCIPvarGetName(SCIPmatrixGetVar(matrix, col)),SCIPvarGetLbGlobal(SCIPmatrixGetVar(matrix, col)),
                   SCIPvarGetUbGlobal(SCIPmatrixGetVar(matrix, col)), SCIPvarGetObj(SCIPmatrixGetVar(matrix, col)),
                   SCIPmatrixGetColNNonzs(matrix, col),
@@ -467,7 +469,7 @@ SCIP_RETCODE compensateVarLock(
 
 #ifdef SCIP_MORE_DEBUG
                SCIPmatrixPrintRow(scip, matrix, row);
-               SCIPdebugMsg(scip, "%s, bds=[%.2f,%.2f], obj=%.2f, nnonzs=%d, type=%s, fix=lb, %.1f < %.1f\n",
+               SCIPdebugMsg(scip, "%s, bds=[%.2f,%.2f], obj=%.2f, nnonzs=%d, type=%s, fix=lb, %.1f <= %.1f\n",
                   SCIPvarGetName(SCIPmatrixGetVar(matrix, col)),SCIPvarGetLbGlobal(SCIPmatrixGetVar(matrix, col)),
                   SCIPvarGetUbGlobal(SCIPmatrixGetVar(matrix, col)), SCIPvarGetObj(SCIPmatrixGetVar(matrix, col)),
                   SCIPmatrixGetColNNonzs(matrix, col),
@@ -583,6 +585,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
             colend = colpnt + SCIPmatrixGetColNNonzs(matrix, i);
             valpnt = SCIPmatrixGetColValPtr(matrix, i);
 
+            /* search row which causes the uplock */
             for( ; (colpnt < colend); colpnt++, valpnt++ )
             {
                row = *colpnt;
@@ -640,6 +643,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
             colend = colpnt + SCIPmatrixGetColNNonzs(matrix, i);
             valpnt = SCIPmatrixGetColValPtr(matrix, i);
 
+            /* search row which causes the downlock */
             for( ; (colpnt < colend); colpnt++, valpnt++ )
             {
                row = *colpnt;
