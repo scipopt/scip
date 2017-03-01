@@ -33257,8 +33257,8 @@ void SCIPaddBilinMcCormick(
    *linconstant += constant;
 }
 
-/** creates a NLP relaxation and stores it in a given NLPI problem; the function computes for each variable the number
- *  of non-linearly occurrences and stores it in the nlscore array
+/** creates an NLP relaxation and stores it in a given NLPI problem; the function computes for each variable which the
+ *  number of non-linearly occurrences and stores it in the nlscore array
  *
  *  @note the first row corresponds always to the cutoff row (even if cutoffbound is SCIPinfinity(scip))
  **/
