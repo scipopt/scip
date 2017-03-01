@@ -37,13 +37,25 @@
 #define PRESOL_NAME            "dualcomp"
 #define PRESOL_DESC            "compensate single up-/downlocks by singleton continuous variables"
 
-/* because we need singleton continuous variables for the lock compensation,
- * it is presumably a good idea to call this presolver before stuffing, which
+/* we need singleton continuous variables for the lock compensation,
+ * thus it is presumably a good idea to call this presolver before stuffing, which
  * fixes singleton continuous variables
  */
 #define PRESOL_PRIORITY              -50     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
+
+#define DEFAULT_COMP_ONLY_DIS_VARS FALSE     /**< should only discrete variables be compensated? */
+
+/*
+ * Data structures
+ */
+
+/** control parameters */
+struct SCIP_PresolData
+{
+   SCIP_Bool             componlydisvars;    /**< flag indicating if only discrete variables should be compensated */
+};
 
 /** type of fixing direction */
 enum Fixingdirection
@@ -105,6 +117,8 @@ SCIP_RETCODE compensateVarLock(
    assert(compensation == COMPENSATE_DOWNLOCK || compensation == COMPENSATE_UPLOCK);
    assert(varstofix != NULL);
    assert(nfixings != NULL);
+
+   /* the variable for compensation should not be a compensation variable itself */
    assert(!(SCIPmatrixGetColNNonzs(matrix,col) == 1 && SCIPvarGetType(SCIPmatrixGetVar(matrix,col)) == SCIP_VARTYPE_CONTINUOUS));
 
    /* try lock compensation only if minimum one singleton continuous variable is present */
@@ -113,14 +127,21 @@ SCIP_RETCODE compensateVarLock(
    rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix, row);
    for( ; rowpnt < rowend; rowpnt++ )
    {
+      var = SCIPmatrixGetVar(matrix, *rowpnt);
+
       if( SCIPmatrixGetColNNonzs(matrix, *rowpnt) == 1 &&
-          SCIPvarGetType(SCIPmatrixGetVar(matrix,*rowpnt)) == SCIP_VARTYPE_CONTINUOUS )
+         SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS &&
+         SCIPvarGetNLocksUp(var) == SCIPmatrixGetColNUplocks(matrix, *rowpnt) &&
+         SCIPvarGetNLocksDown(var) == SCIPmatrixGetColNDownlocks(matrix, *rowpnt)
+         )
       {
+         /* minimal one valid compensation variable is present in this row */
          singleton = TRUE;
          break;
       }
    }
 
+   /* return if no compensation variable is available */
    if( !singleton )
       return SCIP_OKAY;
 
@@ -227,10 +248,12 @@ SCIP_RETCODE compensateVarLock(
          }
       }
       else if( SCIPmatrixGetColNNonzs(matrix, colidx) == 1 &&
-               SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+         SCIPvarGetNLocksUp(var) == SCIPmatrixGetColNUplocks(matrix, colidx) &&
+         SCIPvarGetNLocksDown(var) == SCIPmatrixGetColNDownlocks(matrix, colidx) &&
+         SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
       {
          /* this is singleton continuous variable and
-          * thus a possible compensation candidate
+          * thus a valid compensation candidate
           */
 
          if( SCIPisLT(scip,coef,0.0) )
@@ -481,6 +504,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyDualcomp)
 static
 SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
 {  /*lint --e{715}*/
+   SCIP_PRESOLDATA* presoldata;
    SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
@@ -494,6 +518,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
    if( SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
+   /* don't run if no compensation variables are present */
    if( SCIPgetNContVars(scip) == 0 )
       return SCIP_OKAY;
 
@@ -501,6 +526,9 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
+
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
 
    matrix = NULL;
    SCIP_CALL( SCIPmatrixCreate(scip, &matrix, &initialized, &complete) );
@@ -535,11 +563,17 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
 
          /* exclude compensation variables itself for compensation */
          if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS &&
-             SCIPmatrixGetColNNonzs(matrix, i) == 1 )
+            SCIPmatrixGetColNNonzs(matrix, i) == 1 )
             continue;
 
-         /* cases with exactly one uplock */
-         if( SCIPvarGetNLocksUp(var) == 1 && SCIPisLE(scip, SCIPvarGetObj(var), 0.0) )
+         /* if requested exclude continuous variables for compensation */
+         if( presoldata->componlydisvars && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+            continue;
+
+         /* verifiy that this variable has one uplock and that the uplocks are consistent */
+         if( SCIPvarGetNLocksUp(var) == 1 &&
+            SCIPmatrixGetColNUplocks(matrix, i) == 1 &&
+            SCIPisLE(scip, SCIPvarGetObj(var), 0.0) )
          {
             row = -1;
             val = 0.0;
@@ -593,8 +627,10 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
                      twosides, COMPENSATE_UPLOCK, varstofix, &nfixings) );
             }
          }
-         /* cases with exactly one downlock */
-         else if( SCIPvarGetNLocksDown(var) == 1 && SCIPisGE(scip, SCIPvarGetObj(var), 0.0) )
+         /* verifiy that this variable has one downlock and that the downlocks are consistent */
+         else if( SCIPvarGetNLocksDown(var) == 1 &&
+            SCIPmatrixGetColNDownlocks(matrix, i) == 1 &&
+            SCIPisGE(scip, SCIPvarGetObj(var), 0.0) )
          {
             row = -1;
             val = 0.0;
@@ -672,13 +708,6 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
             SCIP_Bool fixed;
 
             var = SCIPmatrixGetVar(matrix, v);
-
-            if( SCIPvarGetNLocksUp(var) != SCIPmatrixGetColNUplocks(matrix, v) ||
-               SCIPvarGetNLocksDown(var) != SCIPmatrixGetColNDownlocks(matrix, v) )
-            {
-               /* no fixing, locks not consistent */
-               continue;
-            }
 
             if( varstofix[v] == FIXATLB )
             {
@@ -765,15 +794,24 @@ SCIP_RETCODE SCIPincludePresolDualcomp(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_PRESOLDATA* presoldata;
    SCIP_PRESOL* presol;
+
+   /* create dualcomp presolver data */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
-         PRESOL_TIMING, presolExecDualcomp, NULL) );
+         PRESOL_TIMING, presolExecDualcomp, presoldata) );
 
    assert(presol != NULL);
 
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyDualcomp) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "presolving/dualcomp/componlydisvars",
+         "should only discrete variables be compensated?",
+         &presoldata->componlydisvars, FALSE, DEFAULT_COMP_ONLY_DIS_VARS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
