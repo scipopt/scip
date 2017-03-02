@@ -519,8 +519,8 @@ SCIP_DECL_HEUREXEC(heurExecMpec)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( SCIPgetNIntVars(scip) > 0 || SCIPgetNBinVars(scip) == 0 )
-      /* || SCIPgetNNlpis(scip) == 0 || !SCIPisNLPConstructed(scip) ) */
+   if( SCIPgetNIntVars(scip) > 0 || SCIPgetNBinVars(scip) == 0
+      || SCIPgetNNlpis(scip) == 0 || !SCIPisNLPConstructed(scip) )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
