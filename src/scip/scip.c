@@ -16209,6 +16209,7 @@ SCIP_RETCODE SCIPsolveParallel(
       /* switch stage to solving */
       SCIP_CALL( initSolve(scip, TRUE) );
    }
+
    SCIPclockStart(scip->stat->solvingtime, scip->set);
    retcode = SCIPsolveConcurrent(scip);
    SCIPclockStop(scip->stat->solvingtime, scip->set);
@@ -33256,12 +33257,12 @@ void SCIPaddBilinMcCormick(
    *linconstant += constant;
 }
 
-/** creates a convex NLP relaxation and stores it in a given NLPI problem; the function computes for each variable
- *  the number of non-linearly occurrences and stores it in the nlscore array
+/** creates an NLP relaxation and stores it in a given NLPI problem; the function computes for each variable which the
+ *  number of non-linearly occurrences and stores it in the nlscore array
  *
  *  @note the first row corresponds always to the cutoff row (even if cutoffbound is SCIPinfinity(scip))
  **/
-SCIP_RETCODE SCIPcreateConvexNlp(
+SCIP_RETCODE SCIPcreateNlpiProb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
    SCIP_NLROW**          nlrows,             /**< nonlinear rows */
@@ -33272,7 +33273,8 @@ SCIP_RETCODE SCIPcreateConvexNlp(
    SCIP_Real*            nlscore,            /**< array to store the score of each nonlinear variable (NULL if not
                                               *   needed) */
    SCIP_Real             cutoffbound,        /**< cutoff bound */
-   SCIP_Bool             setobj              /**< should the objective function be set? */
+   SCIP_Bool             setobj,             /**< should the objective function be set? */
+   SCIP_Bool             onlyconvex          /**< filter only for convex constraints */
    )
 {
    SCIP_EXPRTREE** exprtrees;
@@ -33418,13 +33420,18 @@ SCIP_RETCODE SCIPcreateConvexNlp(
          uselhs = TRUE;
          userhs = TRUE;
       }
-      else if( SCIPnlrowGetCurvature(nlrows[i]) == SCIP_EXPRCURV_CONVEX && !SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrows[i])) )
-         userhs = TRUE;
-      else if( SCIPnlrowGetCurvature(nlrows[i]) == SCIP_EXPRCURV_CONCAVE && !SCIPisInfinity(scip, SCIPnlrowGetLhs(nlrows[i])) )
-         uselhs = TRUE;
       else
+      {
+         if( (!onlyconvex || SCIPnlrowGetCurvature(nlrows[i]) == SCIP_EXPRCURV_CONVEX)
+            && !SCIPisInfinity(scip, SCIPnlrowGetRhs(nlrows[i])) )
+            userhs = TRUE;
+         if( (!onlyconvex || SCIPnlrowGetCurvature(nlrows[i]) == SCIP_EXPRCURV_CONCAVE)
+            && !SCIPisInfinity(scip, SCIPnlrowGetLhs(nlrows[i])) )
+            uselhs = TRUE;
+      }
+
+      if( !uselhs && !userhs )
          continue;
-      assert(uselhs || userhs);
 
       lhss[nconss] = uselhs ? SCIPnlrowGetLhs(nlrows[i]) - SCIPnlrowGetConstant(nlrows[i]) : -SCIPinfinity(scip);
       rhss[nconss] = userhs ? SCIPnlrowGetRhs(nlrows[i]) - SCIPnlrowGetConstant(nlrows[i]) :  SCIPinfinity(scip);
@@ -33571,7 +33578,7 @@ SCIP_RETCODE SCIPcreateConvexNlp(
 }
 
 /** updates bounds of each variable and the cutoff row in the nlpiproblem */
-SCIP_RETCODE SCIPupdateConvexNlp(
+SCIP_RETCODE SCIPupdateNlpiProb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
    SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem representing the convex NLP relaxation */
@@ -33622,8 +33629,8 @@ SCIP_RETCODE SCIPupdateConvexNlp(
    return SCIP_OKAY;
 }
 
-/** adds linear rows to the convex NLP relaxation */
-SCIP_RETCODE SCIPaddConvexNlpRows(
+/** adds linear rows to the NLP relaxation */
+SCIP_RETCODE SCIPaddNlpiProbRows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NLPI*            nlpi,               /**< interface to NLP solver */
    SCIP_NLPIPROBLEM*     nlpiprob,           /**< nlpi problem */
@@ -41372,6 +41379,32 @@ SCIP_Longint SCIPgetNLPIterations(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNLPIterations", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return scip->stat->nlpiterations;
+}
+
+/** gets number of active non-zeros in the current transformed problem
+ *
+ *  @return the number of active non-zeros in the current transformed problem
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_Longint SCIPgetNNZs(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNNZs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->stat->nnz;
 }
 
 /** gets total number of iterations used so far in primal and dual simplex and barrier algorithm for the root node

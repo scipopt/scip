@@ -96,6 +96,13 @@
 #undef ___DEBUG
 #endif
 
+/* define snprintf when using a too old MSVC version */
+#if defined(_MSC_VER) && _MSC_VER < 1900
+#ifndef snprintf
+#define snprintf _snprintf
+#endif
+#endif
+
 #define SOPLEX_VERBLEVEL                5    /**< verbosity level for LPINFO */
 
 #include "scip/pub_message.h"

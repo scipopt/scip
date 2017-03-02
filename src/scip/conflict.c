@@ -5877,9 +5877,9 @@ SCIP_RETCODE applyMIR(
       /* the new constraint is tighter and we keep it */
       if( *success && separoot )
       {
-         BMScopyMemoryArray(&vals, copy_vals, transprob->nvars);
-         BMScopyMemoryArray(&varused, copy_varused, transprob->nvars);
-         BMScopyMemoryArray(&varinds, copy_varinds, transprob->nvars);
+         BMScopyMemoryArray(vals, copy_vals, transprob->nvars);
+         BMScopyMemoryArray(varused, copy_varused, transprob->nvars);
+         BMScopyMemoryArray(varinds, copy_varinds, transprob->nvars);
          (*rhs) = copy_rhs;
          (*nvarinds) = copy_nvarinds;
       }

@@ -60,13 +60,6 @@ SCIP_RETCODE SCIPsyncstoreExit(
    SCIP_SYNCSTORE*       syncstore           /**< the synchronization store */
    );
 
-/** initialize the synchronization timing parameters for the first synchronization */
-EXTERN
-void SCIPsyncstoreInitSyncTiming(
-   SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
-   SCIP_Real             time                /**< the time the solver spent before the first synchronization */
-   );
-
 /** checks whether the solve-is-stopped flag in the syncstore has been set by any thread */
 EXTERN
 SCIP_Bool SCIPsyncstoreSolveIsStopped(
@@ -133,6 +126,7 @@ EXTERN
 SCIP_SYNCDATA* SCIPsyncstoreGetNextSyncdata(
    SCIP_SYNCSTORE*       syncstore,          /**< the synchronization store */
    SCIP_SYNCDATA*        syncdata,           /**< the synchronization data */
+   SCIP_Real             syncfreq,           /**< the current synchronization frequency */
    SCIP_Longint          writenum,           /**< number of synchronizations the solver has written to */
    SCIP_Real*            delay               /**< pointer holding the current synchronization delay */
    );

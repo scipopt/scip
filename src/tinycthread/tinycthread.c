@@ -908,7 +908,6 @@ void call_once(once_flag *flag, void (*func)(void))
         if (InterlockedCompareExchange (&(flag->status), 1, 0) == 0) {
           InitializeCriticalSection(&(flag->lock));
           EnterCriticalSection(&(flag->lock));
-          /* cppcheck-suppress redundantAssignment */
           flag->status = 2;
           func();
           flag->status = 3;

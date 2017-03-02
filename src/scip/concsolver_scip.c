@@ -739,7 +739,7 @@ SCIP_RETCODE SCIPincludeConcurrentScipSolvers(
    SCIP_CALL( SCIPallocMemory(scip, &data) );
    data->loademphasis = TRUE;
    data->emphasis = SCIP_PARAMEMPHASIS_FEASIBILITY;
-   SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-feasibility", 0.0, concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
+   SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-feas", 0.0, concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
                                         concsolverScipExec, concsolverGetSolvingData, concsolverScipStop, concsolverScipSyncWrite,
                                         concsolverScipSyncRead, concsolverTypeScipFreeData, data) );
 
@@ -753,7 +753,7 @@ SCIP_RETCODE SCIPincludeConcurrentScipSolvers(
    SCIP_CALL( SCIPallocMemory(scip, &data) );
    data->loademphasis = TRUE;
    data->emphasis = SCIP_PARAMEMPHASIS_OPTIMALITY;
-   SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-optimality", 0.0, concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
+   SCIP_CALL( SCIPincludeConcsolverType(scip, "scip-opti", 0.0, concsolverScipCreateInstance, concsolverScipDestroyInstance, concsolverScipInitSeeds,
                                         concsolverScipExec, concsolverGetSolvingData, concsolverScipStop, concsolverScipSyncWrite,
                                         concsolverScipSyncRead, concsolverTypeScipFreeData, data) );
 
