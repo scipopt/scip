@@ -33492,6 +33492,13 @@ SCIP_RETCODE SCIPcreateNlpiProb(
             quadelems[nconss][k].idx1 = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var1);
             quadelems[nconss][k].idx2 = (int)(size_t)SCIPhashmapGetImage(var2idx, (void*)var2);
 
+            /* expr.c assumes that the indices are ordered */
+            if( quadelems[nconss][k].idx1 > quadelems[nconss][k].idx2 )
+            {
+               SCIPswapInts(&quadelems[nconss][k].idx1, &quadelems[nconss][k].idx2);
+            }
+            assert(quadelems[nconss][k].idx1 <= quadelems[nconss][k].idx2);
+
             /* update nlscore */
             if( nlscore != NULL )
             {
