@@ -793,6 +793,22 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
  * presolver specific interface methods
  */
 
+/** destructor of presolver to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_PRESOLFREE(presolFreeDualcomp)
+{  /*lint --e{715}*/
+   SCIP_PRESOLDATA* presoldata;
+
+   /* free presolver data */
+   presoldata = SCIPpresolGetData(presol);
+   assert(presoldata != NULL);
+
+   SCIPfreeBlockMemory(scip, &presoldata);
+   SCIPpresolSetData(presol, NULL);
+
+   return SCIP_OKAY;
+}
+
 /** creates the dualcomp presolver and includes it in SCIP */
 SCIP_RETCODE SCIPincludePresolDualcomp(
    SCIP*                 scip                /**< SCIP data structure */
@@ -807,10 +823,8 @@ SCIP_RETCODE SCIPincludePresolDualcomp(
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
          PRESOL_TIMING, presolExecDualcomp, presoldata) );
-
-   assert(presol != NULL);
-
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyDualcomp) );
+   SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeDualcomp) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/dualcomp/componlydisvars",
