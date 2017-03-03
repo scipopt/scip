@@ -14,8 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 //#define PRINTNODECONS
 /*
-#define SCIP_DEBUG
 */
+#define SCIP_DEBUG
 #define SCIP_STATISTIC
 
 /**@file   branch_lookahead.c
@@ -63,6 +63,7 @@
 #define DEFAULT_RECURSIONDEPTH               2
 #define DEFAULT_USEDOMAINREDUCTION           TRUE
 #define DEFAULT_ADDNONVIOCONS                FALSE
+#define DEFAULT_DOWNFIRST                    TRUE
 
 /*
  * Data structures
@@ -105,6 +106,7 @@ typedef struct
                                               *   May be used to calculate the score of a single candidate. */
    int                   recursiondepth;     /**< How deep should the recursion go? Default for Lookahead: 2 */
    SCIP_Bool             addnonviocons;      /**< Should constraints be added, that are not violated by the base LP? */
+   SCIP_Bool             downfirst;          /**< Should the down branch be executed first? */
 } CONFIGURATION;
 
 #ifdef SCIP_STATISTIC
@@ -557,6 +559,13 @@ void applyDeeperDomainReductions(
    }
 }
 
+static
+void printStatistics(
+   SCIP*                 scip,
+   STATISTICS*           statistics,
+   int                   recursiondepth
+   );
+
 /**
  * Applies the domain reductions the current node.
  */
@@ -716,6 +725,11 @@ SCIP_RETCODE applyDomainReductions(
 
    SCIPdebugMessage("Truly changed <%d> domains of the problem, <%d> of them are violated by the base lp.\n", nboundsadded,
       nboundsaddedvio);
+
+   printStatistics(scip, statistics, 2);
+
+   /* TODO: copy the behaviour from the bincons to domreds in case we found only non-violating domreds and a branching var.*/
+   /*assert(nboundsadded == nboundsaddedvio);*/
 
    return SCIP_OKAY;
 }
@@ -1544,6 +1558,330 @@ SCIP_RETCODE selectVarRecursive(
    ,STATISTICS*          statistics
    ,LOCALSTATISTICS*     localstats
 #endif
+   );
+
+static
+SCIP_RETCODE executeDownBranchingRecursive(
+   SCIP*                 scip,
+   STATUS*               status,
+   PERSISTENTDATA*       persistent,
+   CONFIGURATION*        config,
+   SCIP_SOL*             baselpsol,
+   SCIP_VAR*             branchvar,
+   SCIP_Real             branchval,
+   SCIP_Real             branchvalfrac,
+   SCIP_Real             localbaselpsolval,
+   int                   probingdepth,
+   int                   recursiondepth,
+   DOMAINREDUCTIONS*     downdomainreductions,
+   BINCONSDATA*          binconsdata,
+   BRANCHINGRESULTDATA*  downbranchingresult,
+   SCIP_Bool*            addeddomainreduction
+#ifdef SCIP_STATISTIC
+   ,STATISTICS*          statistics
+   ,LOCALSTATISTICS*     localstats
+#endif
+   )
+{
+   if( config->usebincons && SCIPvarIsBinary(branchvar) )
+   {
+      /* In case that the branch variable is binary, add the negated var to the list.
+       * This list is used to generate a set packing constraint for cutoff branches which were reached by only using
+       * binary variables.
+       * DownBranching on a binary variable x means: x <= 0
+       * When this cutoff occurs we have that: x >= 1 <=> 1-x <= 0
+       */
+      SCIP_VAR* negbranchvar;
+
+      SCIP_CALL( SCIPgetNegatedVar(scip, branchvar, &negbranchvar) );
+
+      assert(negbranchvar != NULL);
+
+      SCIP_CALL( appendToBinaryVarList(scip, binconsdata->binaryvars, negbranchvar) );
+   }
+
+   SCIPdebugMessage("Depth <%i>, Started down branching on var <%s> with var < <%g>\n", probingdepth, SCIPvarGetName(branchvar), branchval);
+
+   SCIP_CALL( executeDownBranching(scip, branchvar, branchval, downbranchingresult, status) );
+   SCIPstatistic( statistics->nlpssolved[probingdepth]++; )
+
+   SCIPdebug(
+      if( downbranchingresult->cutoff )
+      {
+         SCIPdebugMessage("Depth <%i>, The solved LP was infeasible and as such cutoff\n", probingdepth);
+      }
+   )
+
+   if( config->usebincons && downbranchingresult->cutoff
+         && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
+   {
+#ifdef SCIP_STATISTIC
+      addBinaryConstraint(scip, config, binconsdata, baselpsol, statistics);
+#else
+      addBinaryConstraint(scip, config, binconsdata, baselpsol);
+#endif
+   }
+
+   if( !downbranchingresult->cutoff && !status->lperror && !status->limitreached && recursiondepth > 1 )
+   {
+      /* TODO: maybe reuse these variables in the upbranching case */
+      SCIP_VAR** deeperlpcands;
+      SCIP_Real* deeperlpcandssol;
+      SCIP_Real* deeperlpcandsfrac;
+      int deepernlpcands;
+      SCIP_Real localdowngain;
+
+      localdowngain = MAX(0, downbranchingresult->objval - localbaselpsolval);
+
+      SCIP_CALL( SCIPupdateVarPseudocost(scip, branchvar, 0.0-branchvalfrac, localdowngain, 1.0) );
+
+      SCIP_CALL( copyLPBranchCands(scip, &deeperlpcands, &deeperlpcandssol, &deeperlpcandsfrac, &deepernlpcands) );
+
+      SCIPdebugMessage("Depth <%i>, Downbranching has <%i> candidates.\n", probingdepth, deepernlpcands);
+
+      if( deepernlpcands > 0 )
+      {
+         BRANCHINGDECISION* deeperdecision;
+         STATUS* deeperstatus;
+         PERSISTENTDATA* deeperpersistent = NULL;
+         SCIP_Real deeperlpobjval = SCIPgetLPObjval(scip);
+         SCIPstatistic( LOCALSTATISTICS* deeperlocalstats; )
+
+         SCIP_CALL( allocateStatus(scip, &deeperstatus) );
+
+         SCIP_CALL( allocateBranchingDecision(scip, &deeperdecision, deeperlpobjval) );
+
+         SCIPstatistic( SCIP_CALL( allocateLocalStatistics(scip, &deeperlocalstats) ); )
+
+#ifdef SCIP_STATISTIC
+         SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, downdomainreductions, binconsdata,
+               deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1,
+               statistics, deeperlocalstats) );
+#else
+         SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, downdomainreductions, binconsdata,
+               deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1) );
+#endif
+
+         /* the proved dual bound of the deeper branching cannot be less than the current dual bound, as every deeper
+          * node has more/tighter constraints and as such cannot be better than the base LP. */
+         assert(SCIPisGE(scip, deeperdecision->provedbound, downbranchingresult->dualbound));
+         downbranchingresult->dualbound = deeperdecision->provedbound;
+         downbranchingresult->dualboundvalid = TRUE;
+
+         SCIPstatistic(
+            if( deeperlocalstats->ndomredproofnodes > 0 )
+            {
+               localstats->ndomredproofnodes += deeperlocalstats->ndomredproofnodes;
+               *addeddomainreduction = TRUE;
+            }
+         )
+
+         if( deeperstatus->cutoff )
+         {
+            /* TODO: set another flag? Rework in general
+             * upbranchingresult->cutoff is TRUE, if the up child was directly infeasible (so here it is always
+             * false, as we don't want to branch on an infeasible node)
+             * deeperstatus->cutoff is TRUE, if any up/down child pair of the up child were cutoff
+             * */
+            downbranchingresult->cutoff = deeperstatus->cutoff;
+            SCIPstatistic( localstats->ncutoffproofnodes += deeperlocalstats->ncutoffproofnodes; )
+
+            SCIPdebugMessage("Depth <%i>, Both deeper children were cutoff, so the down branch is cutoff\n", probingdepth);
+         }
+
+         SCIPstatistic( freeLocalStatistics(scip, &deeperlocalstats); )
+         freeStatus(scip, &deeperstatus);
+         freeBranchingDecision(scip, &deeperdecision);
+      }
+      SCIPfreeBufferArray(scip, &deeperlpcandsfrac);
+      SCIPfreeBufferArray(scip, &deeperlpcandssol);
+      SCIPfreeBufferArray(scip, &deeperlpcands);
+   }
+
+   if( config->usebincons && SCIPvarIsBinary(branchvar) )
+   {
+      SCIP_VAR* negbranchvar;
+      SCIP_VAR* droppedelement;
+
+      SCIP_CALL( SCIPgetNegatedVar(scip, branchvar, &negbranchvar) );
+
+      assert(negbranchvar != NULL);
+
+      droppedelement = dropFromBinaryVarList(scip, binconsdata->binaryvars);
+      assert(droppedelement == negbranchvar);
+   }
+
+   /* reset the probing depth to undo the previous branching */
+   SCIPbacktrackProbing(scip, probingdepth);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE executeUpBranchingRecursive(
+   SCIP*                 scip,
+   STATUS*               status,
+   PERSISTENTDATA*       persistent,
+   CONFIGURATION*        config,
+   SCIP_SOL*             baselpsol,
+   SCIP_VAR*             branchvar,
+   SCIP_Real             branchval,
+   SCIP_Real             branchvalfrac,
+   SCIP_Real             localbaselpsolval,
+   int                   probingdepth,
+   int                   recursiondepth,
+   DOMAINREDUCTIONS*     updomainreductions,
+   BINCONSDATA*          binconsdata,
+   BRANCHINGRESULTDATA*  upbranchingresult,
+   SCIP_Bool*            addeddomainreduction
+#ifdef SCIP_STATISTIC
+   ,STATISTICS*          statistics
+   ,LOCALSTATISTICS*     localstats
+#endif
+   )
+{
+   if( config->usebincons && SCIPvarIsBinary(branchvar) )
+   {
+      /* In case that the branch variable is binary, add the var to the list.
+       * This list is used to generate a set packing constraint for cutoff branches which were reached by only using
+       * binary variables.
+       * UpBranching on a binary variable x means: x >= 1
+       * When this cutoff occurs we have that: x <= 0
+       */
+      SCIP_CALL( appendToBinaryVarList(scip, binconsdata->binaryvars, branchvar) );
+   }
+
+   SCIPdebugMessage("Depth <%i>, Started up branching on var <%s> with var > <%g>\n", probingdepth, SCIPvarGetName(branchvar), branchval);
+
+   SCIP_CALL( executeUpBranching(scip, branchvar, branchval, upbranchingresult, status) );
+   SCIPstatistic( statistics->nlpssolved[probingdepth]++; )
+
+   SCIPdebug(
+      if( upbranchingresult->cutoff )
+      {
+         SCIPdebugMessage("Depth <%i>, The solved LP was infeasible and as such cutoff\n", probingdepth);
+      }
+   )
+
+   if( config->usebincons && upbranchingresult->cutoff && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
+   {
+#ifdef SCIP_STATISTIC
+      addBinaryConstraint(scip, config, binconsdata, baselpsol, statistics);
+#else
+      addBinaryConstraint(scip, config, binconsdata, baselpsol);
+#endif
+   }
+
+   if( !upbranchingresult->cutoff && !status->lperror && !status->limitreached && recursiondepth > 1 )
+   {
+      SCIP_VAR** deeperlpcands;
+      SCIP_Real* deeperlpcandssol;
+      SCIP_Real* deeperlpcandsfrac;
+      int deepernlpcands;
+      SCIP_Real localupgain;
+
+      localupgain = MAX(0, upbranchingresult->objval - localbaselpsolval);
+
+      SCIP_CALL( SCIPupdateVarPseudocost(scip, branchvar, 1.0-branchvalfrac, localupgain, 1.0) );
+
+      SCIP_CALL( copyLPBranchCands(scip, &deeperlpcands, &deeperlpcandssol, &deeperlpcandsfrac, &deepernlpcands) );
+
+      SCIPdebugMessage("Depth <%i>, Upbranching has <%i> candidates.\n", probingdepth, deepernlpcands);
+
+      if( deepernlpcands > 0 )
+      {
+         BRANCHINGDECISION* deeperdecision;
+         STATUS* deeperstatus;
+         PERSISTENTDATA* deeperpersistent = NULL;
+         SCIP_Real deeperlpobjval = SCIPgetLPObjval(scip);
+         SCIPstatistic( LOCALSTATISTICS* deeperlocalstats; )
+
+         SCIP_CALL( allocateStatus(scip, &deeperstatus) );
+
+         SCIP_CALL( allocateBranchingDecision(scip, &deeperdecision, deeperlpobjval) );
+
+         SCIPstatistic( SCIP_CALL( allocateLocalStatistics(scip, &deeperlocalstats) ); )
+
+#ifdef SCIP_STATISTIC
+         SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, updomainreductions, binconsdata,
+               deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1,
+               statistics, deeperlocalstats) );
+#else
+         SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, updomainreductions, binconsdata,
+               deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1) );
+#endif
+
+         /* the proved dual bound of the deeper branching cannot be less than the current dual bound, as every deeper
+          * node has more/tighter constraints and as such cannot be better than the base LP. */
+         assert(SCIPisGE(scip, deeperdecision->provedbound, upbranchingresult->dualbound));
+         upbranchingresult->dualbound = deeperdecision->provedbound;
+         upbranchingresult->dualboundvalid = TRUE;
+
+         SCIPstatistic(
+            if( deeperlocalstats->ndomredproofnodes > 0 )
+            {
+               localstats->ndomredproofnodes += deeperlocalstats->ndomredproofnodes;
+               *addeddomainreduction = TRUE;
+            }
+         )
+
+         if( deeperstatus->cutoff )
+         {
+            /* TODO: set another flag? Rework in general
+             * upbranchingresult->cutoff is TRUE, if the up child was directly infeasible (so here it is always
+             * false, as we don't want to branch on an infeasible node)
+             * deeperstatus->cutoff is TRUE, if any up/down child pair of the up child were cutoff
+             * */
+            upbranchingresult->cutoff = deeperstatus->cutoff;
+            SCIPstatistic(
+               localstats->ncutoffproofnodes += deeperlocalstats->ncutoffproofnodes;
+            )
+
+            SCIPdebugMessage("Depth <%i>, Both deeper children were cutoff, so the up branch is cutoff\n", probingdepth);
+         }
+
+         SCIPstatistic( freeLocalStatistics(scip, &deeperlocalstats); )
+         freeStatus(scip, &deeperstatus);
+         freeBranchingDecision(scip, &deeperdecision);
+      }
+      SCIPfreeBufferArray(scip, &deeperlpcandsfrac);
+      SCIPfreeBufferArray(scip, &deeperlpcandssol);
+      SCIPfreeBufferArray(scip, &deeperlpcands);
+   }
+
+   if( config->usebincons && SCIPvarIsBinary(branchvar) )
+   {
+      SCIP_VAR* droppedelement;
+
+      droppedelement = dropFromBinaryVarList(scip, binconsdata->binaryvars);
+      assert(droppedelement == branchvar);
+   }
+
+   /* reset the probing depth to undo the previous branching */
+   SCIPbacktrackProbing(scip, probingdepth);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE selectVarRecursive(
+   SCIP*                 scip,
+   STATUS*               status,
+   PERSISTENTDATA*       persistent,
+   CONFIGURATION*        config,
+   SCIP_SOL*             baselpsol,
+   DOMAINREDUCTIONS*     domainreductions,
+   BINCONSDATA*          binconsdata,
+   SCIP_VAR**            lpcands,            /**< array of fractional variables */
+   SCIP_Real*            lpcandssol,         /**< array of fractional solution values */
+   SCIP_Real*            lpcandsfrac,
+   int                   nlpcands,           /**< number of fractional variables/solution values */
+   BRANCHINGDECISION*    decision,
+   int                   recursiondepth
+#ifdef SCIP_STATISTIC
+   ,STATISTICS*          statistics
+   ,LOCALSTATISTICS*     localstats
+#endif
    )
 {
    int probingdepth;
@@ -1648,256 +1986,46 @@ SCIP_RETCODE selectVarRecursive(
                   SCIP_CALL( allocDomainReductions(scip, &updomainreductions) );
                }
 
-               if( config->usebincons && SCIPvarIsBinary(branchvar) )
-               {
-                  /* In case that the branch variable is binary, add the negated var to the list.
-                   * This list is used to generate a set packing constraint for cutoff branches which were reached by only using
-                   * binary variables.
-                   * DownBranching on a binary variable x means: x <= 0
-                   * When this cutoff occurs we have that: x >= 1 <=> 1-x <= 0
-                   */
-                  SCIP_VAR* negbranchvar;
-
-                  SCIP_CALL( SCIPgetNegatedVar(scip, branchvar, &negbranchvar) );
-
-                  assert(negbranchvar != NULL);
-
-                  SCIP_CALL( appendToBinaryVarList(scip, binconsdata->binaryvars, negbranchvar) );
-               }
-
-               SCIPdebugMessage("Depth <%i>, Started down branching on var <%s> with var < <%g>\n", probingdepth, SCIPvarGetName(branchvar), branchval);
-
-               SCIP_CALL( executeDownBranching(scip, branchvar, branchval, downbranchingresult, status) );
-               SCIPstatistic( statistics->nlpssolved[probingdepth]++; )
-
-               SCIPdebug(
-                  if( downbranchingresult->cutoff )
-                  {
-                     SCIPdebugMessage("Depth <%i>, The solved LP was infeasible and as such cutoff\n", probingdepth);
-                  }
-               )
-
-               if( config->usebincons && downbranchingresult->cutoff
-                     && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
+               if( config->downfirst )
                {
 #ifdef SCIP_STATISTIC
-                  addBinaryConstraint(scip, config, binconsdata, baselpsol, statistics);
+                  SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, branchvar, branchval,
+                     branchvalfrac, localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
+                     downbranchingresult, &addeddomainreduction, statistics, localstats) );
+
+                  SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, branchvar, branchval,
+                     branchvalfrac, localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
+                     upbranchingresult, &addeddomainreduction, statistics, localstats) );
 #else
-                  addBinaryConstraint(scip, config, binconsdata, baselpsol);
+                  SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, branchvar, branchval,
+                     branchvalfrac, localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
+                     downbranchingresult, &addeddomainreduction) );
+
+                  SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, branchvar, branchval,
+                     branchvalfrac, localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
+                     upbranchingresult, &addeddomainreduction) );
 #endif
                }
-
-               if( !downbranchingresult->cutoff && !status->lperror && !status->limitreached && recursiondepth > 1 )
-               {
-                  /* TODO: maybe reuse these variables in the upbranching case */
-                  SCIP_VAR** deeperlpcands;
-                  SCIP_Real* deeperlpcandssol;
-                  SCIP_Real* deeperlpcandsfrac;
-                  int deepernlpcands;
-                  SCIP_Real localdowngain;
-
-                  localdowngain = MAX(0, downbranchingresult->objval - localbaselpsolval);
-
-                  SCIP_CALL( SCIPupdateVarPseudocost(scip, branchvar, 0.0-branchvalfrac, localdowngain, 1.0) );
-
-                  SCIP_CALL( copyLPBranchCands(scip, &deeperlpcands, &deeperlpcandssol, &deeperlpcandsfrac, &deepernlpcands) );
-
-                  SCIPdebugMessage("Depth <%i>, Downbranching has <%i> candidates.\n", probingdepth, deepernlpcands);
-
-                  if( deepernlpcands > 0 )
-                  {
-                     BRANCHINGDECISION* deeperdecision;
-                     STATUS* deeperstatus;
-                     PERSISTENTDATA* deeperpersistent = NULL;
-                     SCIP_Real deeperlpobjval = SCIPgetLPObjval(scip);
-                     SCIPstatistic( LOCALSTATISTICS* deeperlocalstats; )
-
-                     SCIP_CALL( allocateStatus(scip, &deeperstatus) );
-
-                     SCIP_CALL( allocateBranchingDecision(scip, &deeperdecision, deeperlpobjval) );
-
-                     SCIPstatistic( SCIP_CALL( allocateLocalStatistics(scip, &deeperlocalstats) ); )
-
-   #ifdef SCIP_STATISTIC
-                     SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, downdomainreductions, binconsdata,
-                           deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1,
-                           statistics, deeperlocalstats) );
-   #else
-                     SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, downdomainreductions, binconsdata,
-                           deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1) );
-   #endif
-
-                     /* the proved dual bound of the deeper branching cannot be less than the current dual bound, as every deeper
-                      * node has more/tighter constraints and as such cannot be better than the base LP. */
-                     assert(SCIPisGE(scip, deeperdecision->provedbound, downbranchingresult->dualbound));
-                     downbranchingresult->dualbound = deeperdecision->provedbound;
-                     downbranchingresult->dualboundvalid = TRUE;
-
-                     SCIPstatistic(
-                        if( deeperlocalstats->ndomredproofnodes > 0 )
-                        {
-                           localstats->ndomredproofnodes += deeperlocalstats->ndomredproofnodes;
-                           addeddomainreduction = TRUE;
-                        }
-                     )
-
-                     if( deeperstatus->cutoff )
-                     {
-                        /* TODO: set another flag? Rework in general
-                         * upbranchingresult->cutoff is TRUE, if the up child was directly infeasible (so here it is always
-                         * false, as we don't want to branch on an infeasible node)
-                         * deeperstatus->cutoff is TRUE, if any up/down child pair of the up child were cutoff
-                         * */
-                        downbranchingresult->cutoff = deeperstatus->cutoff;
-                        SCIPstatistic( localstats->ncutoffproofnodes += deeperlocalstats->ncutoffproofnodes; )
-
-                        SCIPdebugMessage("Depth <%i>, Both deeper children were cutoff, so the down branch is cutoff\n", probingdepth);
-                     }
-
-                     SCIPstatistic( freeLocalStatistics(scip, &deeperlocalstats); )
-                     freeStatus(scip, &deeperstatus);
-                     freeBranchingDecision(scip, &deeperdecision);
-                  }
-                  SCIPfreeBufferArray(scip, &deeperlpcandsfrac);
-                  SCIPfreeBufferArray(scip, &deeperlpcandssol);
-                  SCIPfreeBufferArray(scip, &deeperlpcands);
-               }
-
-               if( config->usebincons && SCIPvarIsBinary(branchvar) )
-               {
-                  SCIP_VAR* negbranchvar;
-                  SCIP_VAR* droppedelement;
-
-                  SCIP_CALL( SCIPgetNegatedVar(scip, branchvar, &negbranchvar) );
-
-                  assert(negbranchvar != NULL);
-
-                  droppedelement = dropFromBinaryVarList(scip, binconsdata->binaryvars);
-                  assert(droppedelement == negbranchvar);
-               }
-
-               /* reset the probing depth to undo the previous branching */
-               SCIPbacktrackProbing(scip, probingdepth);
-
-               if( config->usebincons && SCIPvarIsBinary(branchvar) )
-               {
-                  /* In case that the branch variable is binary, add the var to the list.
-                   * This list is used to generate a set packing constraint for cutoff branches which were reached by only using
-                   * binary variables.
-                   * UpBranching on a binary variable x means: x >= 1
-                   * When this cutoff occurs we have that: x <= 0
-                   */
-                  SCIP_CALL( appendToBinaryVarList(scip, binconsdata->binaryvars, branchvar) );
-               }
-
-               SCIPdebugMessage("Depth <%i>, Started up branching on var <%s> with var > <%g>\n", probingdepth, SCIPvarGetName(branchvar), branchval);
-
-               SCIP_CALL( executeUpBranching(scip, branchvar, branchval, upbranchingresult, status) );
-               SCIPstatistic( statistics->nlpssolved[probingdepth]++; )
-
-               SCIPdebug(
-                  if( upbranchingresult->cutoff )
-                  {
-                     SCIPdebugMessage("Depth <%i>, The solved LP was infeasible and as such cutoff\n", probingdepth);
-                  }
-               )
-
-               if( config->usebincons && upbranchingresult->cutoff && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
+               else
                {
 #ifdef SCIP_STATISTIC
-                  addBinaryConstraint(scip, config, binconsdata, baselpsol, statistics);
+                  SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, branchvar, branchval,
+                     branchvalfrac, localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
+                     upbranchingresult, &addeddomainreduction, statistics, localstats) );
+
+                  SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, branchvar, branchval,
+                     branchvalfrac, localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
+                     downbranchingresult, &addeddomainreduction, statistics, localstats) );
 #else
-                  addBinaryConstraint(scip, config, binconsdata, baselpsol);
+                  SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, branchvar, branchval,
+                     branchvalfrac, localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
+                     upbranchingresult, &addeddomainreduction) );
+
+                  SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, branchvar, branchval,
+                     branchvalfrac, localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
+                     downbranchingresult, &addeddomainreduction) );
 #endif
                }
-
-               if( !upbranchingresult->cutoff && !status->lperror && !status->limitreached && recursiondepth > 1 )
-               {
-                  SCIP_VAR** deeperlpcands;
-                  SCIP_Real* deeperlpcandssol;
-                  SCIP_Real* deeperlpcandsfrac;
-                  int deepernlpcands;
-                  SCIP_Real localupgain;
-
-                  localupgain = MAX(0, upbranchingresult->objval - localbaselpsolval);
-
-                  SCIP_CALL( SCIPupdateVarPseudocost(scip, branchvar, 1.0-branchvalfrac, localupgain, 1.0) );
-
-                  SCIP_CALL( copyLPBranchCands(scip, &deeperlpcands, &deeperlpcandssol, &deeperlpcandsfrac, &deepernlpcands) );
-
-                  SCIPdebugMessage("Depth <%i>, Upbranching has <%i> candidates.\n", probingdepth, deepernlpcands);
-
-                  if( deepernlpcands > 0 )
-                  {
-                     BRANCHINGDECISION* deeperdecision;
-                     STATUS* deeperstatus;
-                     PERSISTENTDATA* deeperpersistent = NULL;
-                     SCIP_Real deeperlpobjval = SCIPgetLPObjval(scip);
-                     SCIPstatistic( LOCALSTATISTICS* deeperlocalstats; )
-
-                     SCIP_CALL( allocateStatus(scip, &deeperstatus) );
-
-                     SCIP_CALL( allocateBranchingDecision(scip, &deeperdecision, deeperlpobjval) );
-
-                     SCIPstatistic( SCIP_CALL( allocateLocalStatistics(scip, &deeperlocalstats) ); )
-
-   #ifdef SCIP_STATISTIC
-                     SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, updomainreductions, binconsdata,
-                           deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1,
-                           statistics, deeperlocalstats) );
-   #else
-                     SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, updomainreductions, binconsdata,
-                           deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1) );
-   #endif
-
-                     /* the proved dual bound of the deeper branching cannot be less than the current dual bound, as every deeper
-                      * node has more/tighter constraints and as such cannot be better than the base LP. */
-                     assert(SCIPisGE(scip, deeperdecision->provedbound, upbranchingresult->dualbound));
-                     upbranchingresult->dualbound = deeperdecision->provedbound;
-                     upbranchingresult->dualboundvalid = TRUE;
-
-                     SCIPstatistic(
-                        if( deeperlocalstats->ndomredproofnodes > 0 )
-                        {
-                           localstats->ndomredproofnodes += deeperlocalstats->ndomredproofnodes;
-                           addeddomainreduction = TRUE;
-                        }
-                     )
-
-                     if( deeperstatus->cutoff )
-                     {
-                        /* TODO: set another flag? Rework in general
-                         * upbranchingresult->cutoff is TRUE, if the up child was directly infeasible (so here it is always
-                         * false, as we don't want to branch on an infeasible node)
-                         * deeperstatus->cutoff is TRUE, if any up/down child pair of the up child were cutoff
-                         * */
-                        upbranchingresult->cutoff = deeperstatus->cutoff;
-                        SCIPstatistic(
-                           localstats->ncutoffproofnodes += deeperlocalstats->ncutoffproofnodes;
-                        )
-
-                        SCIPdebugMessage("Depth <%i>, Both deeper children were cutoff, so the up branch is cutoff\n", probingdepth);
-                     }
-
-                     SCIPstatistic( freeLocalStatistics(scip, &deeperlocalstats); )
-                     freeStatus(scip, &deeperstatus);
-                     freeBranchingDecision(scip, &deeperdecision);
-                  }
-                  SCIPfreeBufferArray(scip, &deeperlpcandsfrac);
-                  SCIPfreeBufferArray(scip, &deeperlpcandssol);
-                  SCIPfreeBufferArray(scip, &deeperlpcands);
-               }
-
-               if( config->usebincons && SCIPvarIsBinary(branchvar) )
-               {
-                  SCIP_VAR* droppedelement;
-
-                  droppedelement = dropFromBinaryVarList(scip, binconsdata->binaryvars);
-                  assert(droppedelement == branchvar);
-               }
-
-               /* reset the probing depth to undo the previous branching */
-               SCIPbacktrackProbing(scip, probingdepth);
 
                if( persistent != NULL )
                {
@@ -2663,6 +2791,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/addnonviocons",
          "should constraints be added, that are not violated by the base LP?",
          &branchruledata->config->addnonviocons, TRUE, DEFAULT_ADDNONVIOCONS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+            "branching/lookahead/downbranchfirst",
+            "should the down branch be chosen first?",
+            &branchruledata->config->downfirst, TRUE, DEFAULT_DOWNFIRST, NULL, NULL) );
 
    return SCIP_OKAY;
 }
