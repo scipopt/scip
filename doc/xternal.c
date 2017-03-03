@@ -6813,6 +6813,7 @@
   *
   * - <b>Constraint Handlers</b>:
   *    - new optional callback CONSENFORELAX to enforce a relaxation solution, see \ref CONS
+  *    - added argument "infeasible" to CONSINITLP
   *
   *   <br>
   * - <b>Concurrent SCIP</b>:
@@ -6863,7 +6864,7 @@
   *
   *   <br>
   * - <b>Conflict Analysis</b>:
-  *   - added arguments "conftype" and "iscutoffinvolved" to conflict analysis
+  *   - added arguments "conftype" and "iscutoffinvolved" to SCIPinitConflictAnalysis()
   *
   *   <br>
   * - <b>Constraint Handlers</b>:
