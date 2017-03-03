@@ -124,7 +124,7 @@ interface:
 - spx2 is the new default LP solver interface
 - new function SCIPsolveProbingRelax() to solve a relaxation within probing
 - new optional callback CONSENFORELAX for enforcement of relaxation solutions
-- new parameter includeslp for SCIPincludeRelax() and SCIPincludeRelaxBasic() to indicate whether relaxation includes all linear rows and can be
+- new parameter "includeslp" for SCIPincludeRelax() and SCIPincludeRelaxBasic() to indicate whether relaxation includes all linear rows and can be
   enforced
 - new function SCIPgetIntVarXor() to access integer variable of XOR constraints
 - new function SCIPgetLastStrongbranchingLPSolstat() to query the LP statuses after strong branching on a variable
@@ -177,6 +177,9 @@ interface:
 - major update ot the Gurobi LPI, which supports ranged rows now and several performance improvements, but only works with Gurobi version >= 7.0.2
 - rename method SCIPgetReopSolsRun() to SCIPgetReoptSolsRun()
 - new macro SCIP_CALL_FINALLY to conveniently free ressources after an error return code.
+- SCIPcreateNlRow() gets an additional argument "curvature"
+- changed type of argument "timingmask" from unsigned int to SCIP_HEURTIMING in SCIPincludeHeur(), SCIPincludeHeurBasic()
+- added argument "initialseed" to SCIPcreateDiveset()
 
 fixed bugs:
 - correct handling of implicit integer variables with fractional solution value in simplerounding heuristic
