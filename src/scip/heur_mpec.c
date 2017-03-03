@@ -222,7 +222,6 @@ SCIP_RETCODE heurExec(
    int nbinvars = 0;
    int i;
 
-   assert(heurdata != NULL);
    assert(heurdata->nlpiprob != NULL);
    assert(heurdata->var2idx != NULL);
    assert(heurdata->nlpi != NULL);
