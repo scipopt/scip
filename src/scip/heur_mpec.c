@@ -360,7 +360,11 @@ SCIP_RETCODE heurExec(
             SCIP_CALL( SCIPsetSolVal(scip, sol, var, primal[j]) );
          }
 
+#ifdef SCIP_DEBUG
          SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, FALSE, &stored) );
+#else
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, TRUE, FALSE, &stored) );
+#endif
          SCIPdebugMsg(scip, "found a solution (stored = %u)\n", stored);
 
          if( stored )
