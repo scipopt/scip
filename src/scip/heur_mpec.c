@@ -37,8 +37,13 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
-#define HEUR_USESSUBSCIP      TRUE
+#define HEUR_USESSUBSCIP      FALSE
 
+#define DEFAULT_INITTHETA     0.125          /**< default initial regularization right-hand side value (< 0.25) */
+#define DEFAULT_SIGMA         0.7            /**< default regularization update factor (< 1) */
+#define DEFAULT_MAXITER       100            /**< default maximum number of iterations of the MPEC loop */
+#define DEFAULT_MAXNLPITER    500            /**< default maximum number of NLP iterations per solve */
+#define DEFAULT_SUBNLPTRIGGER 1e-3           /**< default maximum integrality violation before triggering a sub-NLP call */
 
 /*
  * Data structures
@@ -47,9 +52,16 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_NLPI* nlpi;
-   SCIP_NLPIPROBLEM* nlpiprob;
-   SCIP_HASHMAP* var2idx;
+   SCIP_NLPI*            nlpi;               /**< nlpi used to create the nlpi problem */
+   SCIP_NLPIPROBLEM*     nlpiprob;           /**< nlpi problem representing the NLP relaxation */
+   SCIP_HASHMAP*         var2idx;            /**< mapping between variables and nlpi indices */
+   SCIP_HEUR*            subnlp;             /**< sub-NLP heuristic */
+
+   SCIP_Real             inittheta;          /**< initial regularization right-hand side value */
+   SCIP_Real             sigma;              /**< regularization update factor */
+   SCIP_Real             subnlptrigger;      /**< maximum number of NLP iterations per solve */
+   int                   maxiter;            /**< maximum number of iterations of the MPEC loop */
+   int                   maxnlpiter;         /**< maximum number of NLP iterations per solve */
 };
 
 
@@ -57,41 +69,42 @@ struct SCIP_HeurData
  * Local methods
  */
 
+/** creates the data structure for generating the current NLP relaxation */
 static
 SCIP_RETCODE createNLP(
-   SCIP* scip,
-   SCIP_HEURDATA* heurdata
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
    assert(heurdata != NULL);
+   assert(heurdata->nlpi != NULL);
 
+   /* NLP has been already created */
    if( heurdata->nlpiprob != NULL )
       return SCIP_OKAY;
 
-   assert(SCIPgetNNlpis(scip) > 0);
-   heurdata->nlpi = SCIPgetNlpis(scip)[0];
-   assert(heurdata->nlpi != NULL);
-
    SCIP_CALL( SCIPnlpiCreateProblem(heurdata->nlpi, &heurdata->nlpiprob, "MPEC-nlp") );
    SCIP_CALL( SCIPhashmapCreate(&heurdata->var2idx, SCIPblkmem(scip), SCIPgetNVars(scip)) );
-
    SCIP_CALL( SCIPcreateNlpiProb(scip, heurdata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
          heurdata->nlpiprob, heurdata->var2idx, NULL, SCIPinfinity(scip), TRUE, FALSE) );
 
    return SCIP_OKAY;
 }
 
+/** frees the data structures for the NLP relaxation */
 static
 SCIP_RETCODE freeNLP(
-   SCIP* scip,
-   SCIP_HEURDATA* heurdata
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
    assert(heurdata != NULL);
 
+   /* NLP has not been created yet */
    if( heurdata->nlpiprob == NULL )
       return SCIP_OKAY;
 
+   assert(heurdata->nlpi != NULL);
    assert(heurdata->var2idx != NULL);
 
    SCIPhashmapFree(&heurdata->var2idx);
@@ -100,14 +113,18 @@ SCIP_RETCODE freeNLP(
    return SCIP_OKAY;
 }
 
+/** add or updates the regularization constraints to the NLP; for a given parameter theta we add for each non-fixed
+ *  binary variable z the constraint z*(1-z) <= theta; if these constraint are already present we update the theta on
+ *  the right-hand side
+ */
 static
 SCIP_RETCODE addRegularScholtes(
-   SCIP* scip,
-   SCIP_HEURDATA* heurdata,
-   SCIP_VAR** binvars,
-   int nbinvars,
-   SCIP_Real theta,
-   SCIP_Bool update
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_VAR**            binvars,            /**< array containing all non-fixed binary variables */
+   int                   nbinvars,           /**< total number of non-fixed binary variables */
+   SCIP_Real             theta,              /**< regularization parameter */
+   SCIP_Bool             update              /**< should the regularization constraints be added or updated? */
    )
 {
    int i;
@@ -182,12 +199,13 @@ SCIP_RETCODE addRegularScholtes(
    return SCIP_OKAY;
 }
 
+/** main execution function of the MPEC heuristic */
 static
 SCIP_RETCODE heurExec(
-   SCIP* scip,
-   SCIP_HEUR* heur,
-   SCIP_HEURDATA* heurdata,
-   SCIP_RESULT* result
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEUR*            heur,               /**< MPEC heuristic */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
    SCIP_NLPSTATISTICS* nlpstatistics = NULL;
@@ -197,14 +215,12 @@ SCIP_RETCODE heurExec(
    SCIP_Real* lbs = NULL;
    int* indices = NULL;
    SCIP_Real timelim;
+   SCIP_Real theta = heurdata->inittheta;
    SCIP_Bool reinit = TRUE;
    SCIP_Bool fixed = FALSE;
    SCIP_Bool subnlpcalled = FALSE;
    int nbinvars = 0;
    int i;
-
-   SCIP_Real theta = 1.0 / 8.0;
-   SCIP_Real sigma = 0.70;
 
    assert(heurdata != NULL);
    assert(heurdata->nlpiprob != NULL);
@@ -252,7 +268,7 @@ SCIP_RETCODE heurExec(
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
 
    /* main loop */
-   for( i = 0; i < 100 && *result != SCIP_FOUNDSOL; ++i )
+   for( i = 0; i < heurdata->maxiter && *result != SCIP_FOUNDSOL; ++i )
    {
       SCIP_Real* primal = NULL;
       SCIP_Real timeleft = SCIPinfinity(scip);
@@ -260,8 +276,7 @@ SCIP_RETCODE heurExec(
       SCIP_Bool regularfeasible;
       SCIP_NLPSOLSTAT solstat;
       SCIP_Real maxviolbin = 0.0;
-      SCIP_Real maxviol = 0.0;
-      int iterleft = 500;
+      SCIP_Real maxviolreg = 0.0;
       int j;
 
       /* add or update regularization */
@@ -278,7 +293,7 @@ SCIP_RETCODE heurExec(
          }
       }
       SCIP_CALL( SCIPnlpiSetRealPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_TILIM, timeleft) );
-      SCIP_CALL( SCIPnlpiSetIntPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_ITLIM, iterleft) );
+      SCIP_CALL( SCIPnlpiSetIntPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_ITLIM, heurdata->maxnlpiter) );
 
       /* solve NLP */
       SCIP_CALL( SCIPnlpiSolve(heurdata->nlpi, heurdata->nlpiprob) );
@@ -295,11 +310,14 @@ SCIP_RETCODE heurExec(
       SCIP_CALL( SCIPnlpiGetSolution(heurdata->nlpi, heurdata->nlpiprob, &primal, NULL, NULL, NULL) );
       assert(primal != NULL);
 
+#ifdef SCIP_DEBUG
+      /* print NLP solution */
       for( j = 0; j < SCIPgetNVars(scip); ++j )
       {
          SCIP_VAR* var = SCIPgetVars(scip)[j];
          SCIPdebugMsg(scip, "NLP sol for %s = %g\n", SCIPvarGetName(var), primal[j]);
       }
+#endif
 
       /* check for binary feasibility */
       binaryfeasible = TRUE;
@@ -310,13 +328,13 @@ SCIP_RETCODE heurExec(
          binaryfeasible = binaryfeasible && SCIPisFeasIntegral(scip, primal[idx]);
          regularfeasible = regularfeasible && SCIPisLE(scip, primal[idx] - SQR(primal[idx]), theta);
 
-         maxviol = MAX(maxviol, primal[idx] - SQR(primal[idx]) - theta);
+         maxviolreg = MAX(maxviolreg, primal[idx] - SQR(primal[idx]) - theta);
          maxviolbin = MAX(maxviolbin, MIN(primal[idx], 1.0-primal[idx]));
       }
-      SCIPdebugMsg(scip, "maxviol-regularization %g maxviol-integrality %g\n", maxviol, maxviolbin);
+      SCIPdebugMsg(scip, "maxviol-regularization %g maxviol-integrality %g\n", maxviolreg, maxviolbin);
 
       /* call sub-NLP heursitic when the maximum binary infeasibility is small enough */
-      if( !subnlpcalled && SCIPisLE(scip, maxviolbin, 1e-3) )
+      if( !subnlpcalled && heurdata->subnlp != NULL && SCIPisLE(scip, maxviolbin, heurdata->subnlptrigger) )
       {
          SCIP_SOL* refpoint;
          SCIP_RESULT subnlpresult;
@@ -331,11 +349,12 @@ SCIP_RETCODE heurExec(
             SCIP_CALL( SCIPsetSolVal(scip, refpoint, var, val) );
          }
 
-         SCIP_CALL( SCIPapplyHeurSubNlp(scip, SCIPfindHeur(scip, "subnlp"), &subnlpresult, refpoint, -1LL, timeleft,
-               0.0, NULL, NULL) );
+         SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->subnlp, &subnlpresult, refpoint, -1LL, timeleft, 0.0, NULL,
+               NULL) );
          SCIP_CALL( SCIPfreeSol(scip, &refpoint) );
          SCIPdebugMsg(scip, "result of sub-NLP call: %d\n", subnlpresult);
 
+         /* stop MPEC heuristic when the sub-NLP heuristic has found a feasible solution */
          if( subnlpresult == SCIP_FOUNDSOL )
          {
             SCIPdebugMsg(scip, "sub-NLP found a feasible solution -> stop!\n");
@@ -377,7 +396,7 @@ SCIP_RETCODE heurExec(
       {
          BMScopyMemoryArray(initguess, primal, SCIPgetNVars(scip));
          SCIP_CALL( SCIPnlpiSetInitialGuess(heurdata->nlpi, heurdata->nlpiprob, primal, NULL, NULL, NULL) );
-         SCIPdebugMsg(scip, "update theta from %g -> %g\n", theta, theta*sigma);
+         SCIPdebugMsg(scip, "update theta from %g -> %g\n", theta, theta*heurdata->sigma);
 
          if( !reinit )
          {
@@ -385,7 +404,7 @@ SCIP_RETCODE heurExec(
             reinit = TRUE;
          }
 
-         theta *= sigma;
+         theta *= heurdata->sigma;
 
          /* unfix binary variables */
          if( fixed )
@@ -500,6 +519,16 @@ SCIP_DECL_HEURFREE(heurFreeMpec)
 static
 SCIP_DECL_HEURINITSOL(heurInitsolMpec)
 {  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata = SCIPheurGetData(heur);
+
+   assert(heurdata != NULL);
+   assert(heurdata->nlpi == NULL);
+
+   if( SCIPgetNNlpis(scip) > 0 )
+   {
+      heurdata->nlpi = SCIPgetNlpis(scip)[0];
+      heurdata->subnlp = SCIPfindHeur(scip, "subnlp");
+   }
 
    return SCIP_OKAY;
 }
@@ -509,6 +538,10 @@ SCIP_DECL_HEURINITSOL(heurInitsolMpec)
 static
 SCIP_DECL_HEUREXITSOL(heurExitsolMpec)
 {  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata = SCIPheurGetData(heur);
+
+   assert(heurdata != NULL);
+   heurdata->nlpi = NULL;
 
    return SCIP_OKAY;
 }
@@ -524,7 +557,7 @@ SCIP_DECL_HEUREXEC(heurExecMpec)
    *result = SCIP_DIDNOTRUN;
 
    if( SCIPgetNIntVars(scip) > 0 || SCIPgetNBinVars(scip) == 0
-      || SCIPgetNNlpis(scip) == 0 || !SCIPisNLPConstructed(scip) )
+      || heurdata->nlpi == NULL || !SCIPisNLPConstructed(scip) )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -571,6 +604,25 @@ SCIP_RETCODE SCIPincludeHeurMpec(
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolMpec) );
 
    /* add mpec primal heuristic parameters */
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/inittheta",
+         "initial regularization right-hand side value",
+         &heurdata->inittheta, FALSE, DEFAULT_INITTHETA, 0.0, 0.25, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/sigma",
+         "regularization update factor",
+         &heurdata->sigma, FALSE, DEFAULT_SIGMA, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/subnlptrigger",
+         "maximum number of NLP iterations per solve",
+         &heurdata->subnlptrigger, FALSE, DEFAULT_SUBNLPTRIGGER, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxiter",
+         "maximum number of iterations of the MPEC loop",
+         &heurdata->maxiter, FALSE, DEFAULT_MAXITER, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxnlpiter",
+         "maximum number of NLP iterations per solve",
+         &heurdata->maxnlpiter, FALSE, DEFAULT_MAXNLPITER, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
