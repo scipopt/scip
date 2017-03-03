@@ -1,6 +1,20 @@
 SCIP version NEXT
 ==================
 
+features:
+
+parameters:
+
+performance improvements:
+- add and use RESTRICT macro for some pointers
+
+interface:
+
+misc:
+
+fixed bugs:
+
+makefile:
 
 SCIP version 4.0.0
 ==================

@@ -207,6 +207,13 @@ extern "C" {
 #define NULL ((void*)0)                 /**< zero pointer */
 #endif
 
+#ifndef RESTRICT
+#if defined(_MSC_VER)
+#define RESTRICT __restrict
+#else
+#define RESTRICT restrict
+#endif
+#endif
 
 /*
  * Strings
