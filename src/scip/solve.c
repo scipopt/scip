@@ -3219,6 +3219,18 @@ SCIP_RETCODE enforceConstraints(
    enforcerelaxsol = (! SCIPsetIsInfinity(set, -1 * SCIPrelaxationGetBestRelaxSolObj(relaxation))) && (!SCIPtreeHasFocusNodeLP(tree)
          || SCIPsetIsGT(set, SCIPrelaxationGetBestRelaxSolObj(relaxation), SCIPlpGetObjval(lp, set, prob)));
 
+   /* check if all constraint handlers implement the enforelax callback, otherwise enforce the LP solution */
+   for( h = 0; h < set->nconshdlrs && enforcerelaxsol; ++h )
+   {
+      if( set->conshdlrs_enfo[h]->consenforelax == NULL && ((! set->conshdlrs_enfo[h]->needscons) ||
+            (set->conshdlrs_enfo[h]->nconss > 0)) )
+      {
+         enforcerelaxsol = FALSE;
+         SCIPsetDebugMsg(set, "Disable enforcement of relaxation solutions since constraint handler %s does not implement"
+               "enforelax-callback\n", SCIPconshdlrGetName(set->conshdlrs_enfo[h]));
+      }
+   }
+
    /* enforce constraints by branching, applying additional cutting planes (if LP is being processed),
     * introducing new constraints, or tighten the domains
     */
@@ -3254,14 +3266,6 @@ SCIP_RETCODE enforceConstraints(
     * have to be enforced themselves
     */
    resolved = FALSE;
-
-   /* check if all constraint handlers implement the enforelax callback, otherwise enforce the LP solution */
-   for( h = 0; h < set->nconshdlrs && enforcerelaxsol; ++h )
-   {
-      if( set->conshdlrs_enfo[h]->consenforelax == NULL && ((! set->conshdlrs_enfo[h]->needscons) ||
-            (set->conshdlrs_enfo[h]->nconss > 0)) )
-         enforcerelaxsol = FALSE;
-   }
 
    for( h = 0; h < set->nconshdlrs && !resolved; ++h )
    {
