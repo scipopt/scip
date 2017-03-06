@@ -25,8 +25,8 @@ do
     PAVFILE=$DIR/$BASE.pav
     
     # define the path to the target file
-    REDRESFILE=$DIR/$BASE.1_normal.res
-    RESFILE=$DIR/$BASE.2_woBranchTime.res
+    RESFILE=$DIR/$BASE.1_normal.res
+    REDRESFILE=$DIR/$BASE.2_woBranchTime.res
 
     awk -f check.awk -v "TEXFILE=$TEXFILE" -v "PAVFILE=$PAVFILE" -v "ERRFILE=$ERRFILE" $OUTFILE | tee $RESFILE
     RESFILES="$RESFILES $RESFILE"
