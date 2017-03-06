@@ -1775,8 +1775,12 @@ EXTERN
 SCIP_DEPRECATED
 void SCIPpermuteIntArray(
    int*                  array,              /**< array to be shuffled */
-   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end,                /**< last index that should be subject to shuffling (array size for whole array) */
+   int                   begin,              /**< first included index that should be subject to shuffling
+                                              *   (0 for first array entry)
+                                              */
+   int                   end,                /**< first excluded index that should not be subject to shuffling
+                                              *   (array size for last array entry)
+                                              */
    unsigned int*         randseed            /**< seed value for the random generator */
    );
 
@@ -1785,8 +1789,12 @@ EXTERN
 void SCIPrandomPermuteIntArray(
    SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
    int*                  array,              /**< array to be shuffled */
-   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end                 /**< last index that should be subject to shuffling (array size for whole array) */
+   int                   begin,              /**< first included index that should be subject to shuffling
+                                              *   (0 for first array entry)
+                                              */
+   int                   end                 /**< first excluded index that should not be subject to shuffling
+                                              *   (array size for last array entry)
+                                              */
    );
 
 /** randomly shuffles parts of an array using the Fisher-Yates algorithm */
@@ -1794,8 +1802,12 @@ EXTERN
 void SCIPrandomPermuteArray(
    SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
    void**                array,              /**< array to be shuffled */
-   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end                 /**< last index that should be subject to shuffling (array size for whole array) */
+   int                   begin,              /**< first included index that should be subject to shuffling
+                                              *   (0 for first array entry)
+                                              */
+   int                   end                 /**< first excluded index that should not be subject to shuffling
+                                              *   (array size for last array entry)
+                                              */
    );
 
 /** randomly shuffles parts of an array using the Fisher-Yates algorithm
@@ -1806,8 +1818,12 @@ EXTERN
 SCIP_DEPRECATED
 void SCIPpermuteArray(
    void**                array,              /**< array to be shuffled */
-   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end,                /**< last index that should be subject to shuffling (array size for whole array) */
+   int                   begin,              /**< first included index that should be subject to shuffling
+                                              *   (0 for first array entry)
+                                              */
+   int                   end,                /**< first excluded index that should not be subject to shuffling
+                                              *   (array size for last array entry)
+                                              */
    unsigned int*         randseed            /**< pointer to seed value for the random generator */
    );
 
