@@ -3173,6 +3173,7 @@ static
 SCIP_RETCODE enforceConstraints(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -3225,9 +3226,24 @@ SCIP_RETCODE enforceConstraints(
       if( set->conshdlrs_enfo[h]->consenforelax == NULL && ((! set->conshdlrs_enfo[h]->needscons) ||
             (set->conshdlrs_enfo[h]->nconss > 0)) )
       {
+         SCIP_VERBLEVEL verblevel;
+
          enforcerelaxsol = FALSE;
-         SCIPsetDebugMsg(set, "Disable enforcement of relaxation solutions since constraint handler %s does not implement"
-               "enforelax-callback\n", SCIPconshdlrGetName(set->conshdlrs_enfo[h]));
+
+         verblevel = SCIP_VERBLEVEL_FULL;
+
+         if( !stat->disableenforelaxmsg && set->disp_verblevel == SCIP_VERBLEVEL_HIGH )
+         {
+            verblevel = SCIP_VERBLEVEL_HIGH;
+
+            /* remember that the disable relaxation enforcement message was posted and only post it again if the
+             * verblevel is SCIP_VERBLEVEL_FULL
+             */
+            stat->disableenforelaxmsg = TRUE;
+         }
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, verblevel, "Disable enforcement of relaxation solutions"
+               " since constraint handler %s does not implement enforelax-callback\n",
+               SCIPconshdlrGetName(set->conshdlrs_enfo[h]));
       }
    }
 
@@ -4204,8 +4220,9 @@ SCIP_RETCODE solveNode(
          }
 
          /* call constraint enforcement */
-         SCIP_CALL( enforceConstraints(blkmem, set, stat, transprob, tree, lp, relaxation, sepastore, branchcand,
-               &branched, cutoff, infeasible, &propagateagain, &solvelpagain, &solverelaxagain, forcedenforcement) );
+         SCIP_CALL( enforceConstraints(blkmem, set, messagehdlr, stat, transprob, tree, lp, relaxation, sepastore,
+               branchcand, &branched, cutoff, infeasible, &propagateagain, &solvelpagain, &solverelaxagain,
+               forcedenforcement) );
          assert(branched == (tree->nchildren > 0));
          assert(!branched || (!(*cutoff) && *infeasible && !propagateagain && !solvelpagain));
          assert(!(*cutoff) || (!branched && *infeasible && !propagateagain && !solvelpagain));
