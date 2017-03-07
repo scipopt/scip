@@ -5376,30 +5376,31 @@
  * In \SCIP 4.0 a new feature has been added that allows to run multiple \SCIP instances with different settings
  * on one problem in parallel. To use this feature \SCIP has to be compiled with an additional make option to
  * enable the threading functionality (e.g. TPI=tny, see \ref MAKE).
- * Then a concurrent solve can be started by using the <code>concurrentopt</code> command instead of the <code>optimize</code> command
+ * Then, a concurrent solve can be started by using the <code>concurrentopt</code> command instead of the <code>optimize</code> command
  * in the \SCIP shell, or by calling the interface function SCIPsolveParallel().
+ * To configure the behavior of the concurrent solving mode there are new parameters in the category <code>concurrent/</code>
+ * and <code>parallel/</code> which will be explained here shortly.
  *
  * @section CONTROLNTHREADS Controlling the number of threads
  *
- * To configure the behavior of the concurrent solving mode there are new parameters in the category <code>concurrent/</code>
- * and <code>parallel/</code> which will be explained here shortly.
  * The parameters <code>parallel/maxnthreads</code> and <code>parallel/minnthreads</code> can be used to configure the number of threads
  * that sould be used for solving. \SCIP will try to use the configured maximum number of threads. If the
  * problem that is currently read is too large \SCIP will automatically use fewer threads, but never
- * at least the configured minimum number of threads.
+ * go below the configured minimum number of threads.
  *
  * @section USEEMPHSETTINGS Using emphasis settings
  *
  * The parameters <code>concurrent/scip.../prefprio</code> configure which concurrent solvers should be used.
  * The concurrent solver <code>scip</code> will use the same settings as the \SCIP instance configured by the user.
  * The other concurrent solvers, e.g. <code>scip-feas</code>, will load the corresponding emphasis setting.
- * The behavior of the prefprio parameter is as follow: If it is set to 1.0 for <code>scip-feas</code> and to 1.0 for
- * <code>scip-opti</code> and to 0.0 for every other concurrent solver, then the threads will be evenly
- * distributed between these two types of concurrent solvers, e.g. if 4 threads are used each of this concurrent
- * solvers will use 2 threads. If the prefprio for one solver is set to 0.33 and the other is set to 1.0, then the former will use 1 threads
- * and the latter will use 3 threads of the 4 threads that are available.
+ * The behavior of the prefprio parameter is as follows: If it is set to 1.0 for <code>scip-feas</code> and
+ * <code>scip-opti</code>, and to 0.0 for every other concurrent solver, then the threads will be evenly
+ * distributed between the two types <code>scip-feas</code> and <code>scip-opti</code>. An example: if 4 threads are used each of these concurrent
+ * solvers will use 2 threads. If the <code>prefprio</code> for one solver is set to 0.33 and the other is set to 1.0, then the former will use 1 thread
+ * and the latter will use 3 threads of the 4 available threads.
  *
  * @section CUSTOMCONCSOLVERS Running custom solvers
+ *
  * To use custom settings for the concurrent solvers there is the parameter <code>concurrent/paramsetprefix</code>. If custom parameters
  * should be loaded by the concurrent solvers, then it must point to the folder where they are located (including a path separator at the end).
  * The parameter settings must be named after the concurrent solvers, e.g. if only the concurrent solver <code>scip</code> is used
