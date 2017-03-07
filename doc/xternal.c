@@ -5989,39 +5989,9 @@
  *  shifted geometric mean of its run times (over 230 instances) of 248.5, for \c S2 it is 217.6. This makes a ratio of
  *  0.88. Still - the null hypothesis is not rejected.
  *
- *  @section SOLVER Testing and Evaluating for other solvers
+ *  @section SOLVER Testing and Evaluating using GAMS
  *
- *  Analogously to the target <code>test</code> there are further targets to run automated tests with other MIP solvers.
- *  These are:
- *  \arg for <a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">cplex</a>
- *  \code
- *  make testcplex
- *  \endcode
- *  \arg for <a href="http://www.gurobi.com/">gurobi</a>
- *  \code
- *  make testgurobi
- *  \endcode
- *  \arg for <a href="https://projects.coin-or.org/Cbc">cbc</a>
- *  \code
- *  make testcbc
- *  \endcode
- *  \arg for <a href="http://www.mosek.com/">mosek</a>
- *  \code
- *  make testmosek
- *  \endcode
- *  \arg for <a href="http://www.gnu.org/software/glpk/">glpk</a>
- *  \code
- *  make testglpk
- *  \endcode
- *  \arg for <a href="https://projects.coin-or.org/SYMPHONY">symphony</a>
- *  \code
- *  make testsymphony
- *  \endcode
- *  \arg for <a href="https://projects.coin-or.org/CHiPPS">blis</a>
- *  \code
- *  make testblis
- *  \endcode
- *  \arg for <a href="http://www.gams.com/">gams</a>
+ *  Analogously to the target <code>test</code> there is another target to run automated tests with <a href="http://www.gams.com/">gams</a>
  *  \code
  *  make testgams GAMSSOLVER=xyz
  *  \endcode
@@ -6036,15 +6006,12 @@
  *
  *  Note: This works only if the referred programs are installed globally on your machine.
  *
- *  The above options like <code>TIME</code> are also available for the other solvers.
- *
- *  For cbc, cplex, gams, and gurobi another advanced option is available:
- *  \arg <code>THREADS</code> - number of threads used in the solution process
+ *  The above options like <code>TIME</code> are also available for gams.
  *
  *  After the testrun there should be an <code>.out</code>, an <code>.err</code> and a <code>.res</code> file
  *  with the same basename as described above.
  *
- *  Furthermore you can also use the script <code>allcmpres.sh</code> for comparing results of different solvers.
+ *  Furthermore you can also use the script <code>allcmpres.sh</code> for comparing results.
  *
  */
 
