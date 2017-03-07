@@ -107,6 +107,7 @@
  *   - \ref TEST    "How to run automated tests with SCIP"
  *   - \ref COUNTER "How to use SCIP to count feasible solutions"
  *   - \ref REOPT   "How to use reoptimization in SCIP"
+ *   - \ref CONCSCIP "How to use the concurrent solving mode in SCIP"
  *
  *
  * @section FURTHERINFO Further information
@@ -5370,30 +5371,40 @@
 
 /**@page CONCSCIP How to use the concurrent solving mode
  *
+ * @section Overview
+ *
  * In \SCIP 4.0 a new feature has been added that allows to run multiple \SCIP instances with different settings
  * on one problem in parallel. To use this feature \SCIP has to be compiled with an additional make option to
  * enable the threading functionality (e.g. TPI=tny, see \ref MAKE).
- * Then a concurrent solve can be started by using the "concurrentopt" command instead of the "optimize" command
- * in the \SCIP shell, or by calling the interface function SCIPsolveParallel.
- * To configure the behavior of the concurrent solving mode there are new parameters in the category "concurrent/"
- * and "parallel/" which will be explained here shortly.
- * The parameters "parallel/maxnthreads and "parallel/minnthreads"" can be used to configure the number of threads
+ * Then a concurrent solve can be started by using the <code>concurrentopt</code> command instead of the <code>optimize</code> command
+ * in the \SCIP shell, or by calling the interface function SCIPsolveParallel().
+ *
+ * @section CONTROLNTHREADS Controlling the number of threads
+ *
+ * To configure the behavior of the concurrent solving mode there are new parameters in the category <code>concurrent/</code>
+ * and <code>parallel/</code> which will be explained here shortly.
+ * The parameters <code>parallel/maxnthreads</code> and <code>parallel/minnthreads</code> can be used to configure the number of threads
  * that sould be used for solving. \SCIP will try to use the configured maximum number of threads. If the
  * problem that is currently read is too large \SCIP will automatically use fewer threads, but never
  * at least the configured minimum number of threads.
- * The parameters "concurrent/scip.../prefprio" configure which concurrent solvers should be used.
- * The concurrent solver "scip" will use the same settings as the \SCIP instance configured by the user.
- * The concurrent other concurrent solvers, e.g. "scip-feas", will load the corresponding emphasis setting.
- * The behavior of the prefprio parameter is as follow: If it is set to 1.0 for "scip-feas" and to 1.0 for
- * "scip-opti" and to 0.0 for every other concurrent solver, then the threads will be evenly
+ *
+ * @section USEEMPHSETTINGS Using emphasis settings
+ *
+ * The parameters <code>concurrent/scip.../prefprio</code> configure which concurrent solvers should be used.
+ * The concurrent solver <code>scip</code> will use the same settings as the \SCIP instance configured by the user.
+ * The other concurrent solvers, e.g. <code>scip-feas</code>, will load the corresponding emphasis setting.
+ * The behavior of the prefprio parameter is as follow: If it is set to 1.0 for <code>scip-feas</code> and to 1.0 for
+ * <code>scip-opti</code> and to 0.0 for every other concurrent solver, then the threads will be evenly
  * distributed between these two types of concurrent solvers, e.g. if 4 threads are used each of this concurrent
  * solvers will use 2 threads. If the prefprio for one solver is set to 0.33 and the other is set to 1.0, then the former will use 1 threads
  * and the latter will use 3 threads of the 4 threads that are available.
- * To use custom settings for the concurrent solvers there is the parameter "concurrent/paramsetprefix". If custom parameters
- * should be loaded by the concurrent solvers, then it must point to the folder where they are located.
- * The parameter settings must be named after the concurrent solvers, e.g. if only the concurrent solver "scip" is used
- * they should be named "scip-1", "scip-2", "scip-3". When different types of concurrent solvers are used the counter
- * starts at one for each of them, e.g. "scip-1" and "scip-feas-1".
+ *
+ * @section CUSTOMCONCSOLVERS Running custom solvers
+ * To use custom settings for the concurrent solvers there is the parameter <code>concurrent/paramsetprefix</code>. If custom parameters
+ * should be loaded by the concurrent solvers, then it must point to the folder where they are located (including a path separator at the end).
+ * The parameter settings must be named after the concurrent solvers, e.g. if only the concurrent solver <code>scip</code> is used
+ * they should be named <code>scip-1</code>, <code>scip-2</code>, <code>scip-3</code>. When different types of concurrent solvers are used the counter
+ * starts at one for each of them, e.g. <code>scip-1</code> and <code>scip-feas-1</code>.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
