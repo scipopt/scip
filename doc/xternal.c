@@ -5368,6 +5368,36 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/**@page CONCSCIP How to use the concurrent solving mode
+ *
+ * In \SCIP 4.0 a new feature has been added that allows to run multiple \SCIP instances with different settings
+ * on one problem in parallel. To use this feature \SCIP has to be compiled with an additional make option to
+ * enable the threading functionality (e.g. TPI=tny, see \ref MAKE).
+ * Then a concurrent solve can be started by using the "concurrentopt" command instead of the "optimize" command
+ * in the \SCIP shell, or by calling the interface function SCIPsolveParallel.
+ * To configure the behavior of the concurrent solving mode there are new parameters in the category "concurrent/"
+ * and "parallel/" which will be explained here shortly.
+ * The parameters "parallel/maxnthreads and "parallel/minnthreads"" can be used to configure the number of threads
+ * that sould be used for solving. \SCIP will try to use the configured maximum number of threads. If the
+ * problem that is currently read is too large \SCIP will automatically use fewer threads, but never
+ * at least the configured minimum number of threads.
+ * The parameters "concurrent/scip.../prefprio" configure which concurrent solvers should be used.
+ * The concurrent solver "scip" will use the same settings as the \SCIP instance configured by the user.
+ * The concurrent other concurrent solvers, e.g. "scip-feas", will load the corresponding emphasis setting.
+ * The behavior of the prefprio parameter is as follow: If it is set to 1.0 for "scip-feas" and to 1.0 for
+ * "scip-opti" and to 0.0 for every other concurrent solver, then the threads will be evenly
+ * distributed between these two types of concurrent solvers, e.g. if 4 threads are used each of this concurrent
+ * solvers will use 2 threads. If the prefprio for one solver is set to 0.33 and the other is set to 1.0, then the former will use 1 threads
+ * and the latter will use 3 threads of the 4 threads that are available.
+ * To use custom settings for the concurrent solvers there is the parameter "concurrent/paramsetprefix". If custom parameters
+ * should be loaded by the concurrent solvers, then it must point to the folder where they are located.
+ * The parameter settings must be named after the concurrent solvers, e.g. if only the concurrent solver "scip" is used
+ * they should be named "scip-1", "scip-2", "scip-3". When different types of concurrent solvers are used the counter
+ * starts at one for each of them, e.g. "scip-1" and "scip-feas-1".
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page OBJ Creating, capturing, releasing, and adding data objects
  *
  *  Data objects (variables, constraints, rows, ... ) are subject to reference counting

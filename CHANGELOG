@@ -61,6 +61,7 @@ features:
   file to write the SCIP log to (additionally to stdout)
 - next to the number of found solution, also the number of new best solutions is now printed for each heuristic
   (and relaxation solutions) in the statistics in the "Primal Heuristic" section.
+- concurrent solving mode that allows to run multiple SCIP instances, that share solutions and global variable bounds, in parallel
 
 parameters:
 - new parameter "branching/sumadjustweight" to adjust branching scores by adding a sum epsilon in order to keep score differences
@@ -91,6 +92,7 @@ parameters:
 - new parameter "presolving/qpkktref/updatequadbounded" to add the KKT conditions to QPs only if all variables are bounded
 - new parameter "presolving/qpkktref/updatequadindef" to add the KKT conditions to QPs only if the quadratic matrix is indefinite
 - new parameter "presolving/qpkktref/addkktbinary" to allow the presence of binary variables for the KKT update
+- several new parameters "concurrent/*" and "parallel/*" for configuring the concurrent solving mode
 
 performance improvements:
 - use connectedness information of the clique table to speed up the clique partitioning algorithm
@@ -180,6 +182,8 @@ interface:
 - SCIPcreateNlRow() gets an additional argument "curvature"
 - changed type of argument "timingmask" from unsigned int to SCIP_HEURTIMING in SCIPincludeHeur(), SCIPincludeHeurBasic()
 - added argument "initialseed" to SCIPcreateDiveset()
+- new function SCIPgetNNZs() to get the number of active non-zeros in the transformed/presolved problem
+- added functions for concurrent solving mode (see concurrent.h, concsolver.h)
 
 fixed bugs:
 - correct handling of implicit integer variables with fractional solution value in simplerounding heuristic
