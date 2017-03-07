@@ -107,6 +107,7 @@
  *   - \ref TEST    "How to run automated tests with SCIP"
  *   - \ref COUNTER "How to use SCIP to count feasible solutions"
  *   - \ref REOPT   "How to use reoptimization in SCIP"
+ *   - \ref CONCSCIP "How to use the concurrent solving mode in SCIP"
  *
  *
  * @section FURTHERINFO Further information
@@ -5368,6 +5369,47 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/**@page CONCSCIP How to use the concurrent solving mode
+ *
+ * @section Overview
+ *
+ * In \SCIP 4.0 a new feature has been added that allows to run multiple \SCIP instances with different settings
+ * on one problem in parallel. To use this feature \SCIP has to be compiled with an additional make option to
+ * enable the threading functionality (e.g. TPI=tny, see \ref MAKE).
+ * Then, a concurrent solve can be started by using the <code>concurrentopt</code> command instead of the <code>optimize</code> command
+ * in the \SCIP shell, or by calling the interface function SCIPsolveParallel().
+ * To configure the behavior of the concurrent solving mode there are new parameters in the category <code>concurrent/</code>
+ * and <code>parallel/</code> which will be explained here shortly.
+ *
+ * @section CONTROLNTHREADS Controlling the number of threads
+ *
+ * The parameters <code>parallel/maxnthreads</code> and <code>parallel/minnthreads</code> can be used to configure the number of threads
+ * that sould be used for solving. \SCIP will try to use the configured maximum number of threads. If the
+ * problem that is currently read is too large \SCIP will automatically use fewer threads, but never
+ * go below the configured minimum number of threads.
+ *
+ * @section USEEMPHSETTINGS Using emphasis settings
+ *
+ * The parameters <code>concurrent/scip.../prefprio</code> configure which concurrent solvers should be used.
+ * The concurrent solver <code>scip</code> will use the same settings as the \SCIP instance configured by the user.
+ * The other concurrent solvers, e.g. <code>scip-feas</code>, will load the corresponding emphasis setting.
+ * The behavior of the prefprio parameter is as follows: If it is set to 1.0 for <code>scip-feas</code> and
+ * <code>scip-opti</code>, and to 0.0 for every other concurrent solver, then the threads will be evenly
+ * distributed between the two types <code>scip-feas</code> and <code>scip-opti</code>. An example: if 4 threads are used each of these concurrent
+ * solvers will use 2 threads. If the <code>prefprio</code> for one solver is set to 0.33 and the other is set to 1.0, then the former will use 1 thread
+ * and the latter will use 3 threads of the 4 available threads.
+ *
+ * @section CUSTOMCONCSOLVERS Running custom solvers
+ *
+ * To use custom settings for the concurrent solvers there is the parameter <code>concurrent/paramsetprefix</code>. If custom parameters
+ * should be loaded by the concurrent solvers, then it must point to the folder where they are located (including a path separator at the end).
+ * The parameter settings must be named after the concurrent solvers, e.g. if only the concurrent solver <code>scip</code> is used
+ * they should be named <code>scip-1</code>, <code>scip-2</code>, <code>scip-3</code>. When different types of concurrent solvers are used the counter
+ * starts at one for each of them, e.g. <code>scip-1</code> and <code>scip-feas-1</code>.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page OBJ Creating, capturing, releasing, and adding data objects
  *
  *  Data objects (variables, constraints, rows, ... ) are subject to reference counting
@@ -5989,39 +6031,9 @@
  *  shifted geometric mean of its run times (over 230 instances) of 248.5, for \c S2 it is 217.6. This makes a ratio of
  *  0.88. Still - the null hypothesis is not rejected.
  *
- *  @section SOLVER Testing and Evaluating for other solvers
+ *  @section SOLVER Testing and Evaluating using GAMS
  *
- *  Analogously to the target <code>test</code> there are further targets to run automated tests with other MIP solvers.
- *  These are:
- *  \arg for <a href="http://www-01.ibm.com/software/integration/optimization/cplex-optimizer/">cplex</a>
- *  \code
- *  make testcplex
- *  \endcode
- *  \arg for <a href="http://www.gurobi.com/">gurobi</a>
- *  \code
- *  make testgurobi
- *  \endcode
- *  \arg for <a href="https://projects.coin-or.org/Cbc">cbc</a>
- *  \code
- *  make testcbc
- *  \endcode
- *  \arg for <a href="http://www.mosek.com/">mosek</a>
- *  \code
- *  make testmosek
- *  \endcode
- *  \arg for <a href="http://www.gnu.org/software/glpk/">glpk</a>
- *  \code
- *  make testglpk
- *  \endcode
- *  \arg for <a href="https://projects.coin-or.org/SYMPHONY">symphony</a>
- *  \code
- *  make testsymphony
- *  \endcode
- *  \arg for <a href="https://projects.coin-or.org/CHiPPS">blis</a>
- *  \code
- *  make testblis
- *  \endcode
- *  \arg for <a href="http://www.gams.com/">gams</a>
+ *  Analogously to the target <code>test</code> there is another target to run automated tests with <a href="http://www.gams.com/">gams</a>
  *  \code
  *  make testgams GAMSSOLVER=xyz
  *  \endcode
@@ -6036,15 +6048,12 @@
  *
  *  Note: This works only if the referred programs are installed globally on your machine.
  *
- *  The above options like <code>TIME</code> are also available for the other solvers.
- *
- *  For cbc, cplex, gams, and gurobi another advanced option is available:
- *  \arg <code>THREADS</code> - number of threads used in the solution process
+ *  The above options like <code>TIME</code> are also available for gams.
  *
  *  After the testrun there should be an <code>.out</code>, an <code>.err</code> and a <code>.res</code> file
  *  with the same basename as described above.
  *
- *  Furthermore you can also use the script <code>allcmpres.sh</code> for comparing results of different solvers.
+ *  Furthermore you can also use the script <code>allcmpres.sh</code> for comparing results.
  *
  */
 

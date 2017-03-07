@@ -139,6 +139,7 @@ SECTION: General Questions about SCIP
         <li> <a href="PATHTODOC/CHG6.LINKEXT">Interface changes between SCIP 2.1 and SCIP 3.0</a></li>
         <li> <a href="PATHTODOC/CHG7.LINKEXT">Interface changes between SCIP 3.0 and SCIP 3.1</a></li>
         <li> <a href="PATHTODOC/CHG8.LINKEXT">Interface changes between SCIP 3.1 and SCIP 3.2</a></li>
+        <li> <a href="PATHTODOC/CHG9.LINKEXT">Interface changes between SCIP 3.2 and SCIP 4.0</a></li>
     </ul>
 
     QUESTION: How can I debug in SCIP?
