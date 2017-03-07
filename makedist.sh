@@ -28,7 +28,7 @@ tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
 $NAME/doc/scip* $NAME/doc/xternal.c $NAME/doc/builddoc.sh \
 $NAME/doc/inc/codestyle/* $NAME/doc/inc/shelltutorial $NAME/doc/inc/debugexamples \
-$NAME/doc/inc/faq/faqtext.txt $NAME/doc/inc/faq/*.py $NAME/doc/inc/faq/localfac.php \
+$NAME/doc/inc/faq/faqtext.txt $NAME/doc/inc/faq/*.py $NAME/doc/inc/faq/localfaq.php \
 $NAME/doc/inc/makeexamples/* $NAME/doc/inc/shelltutorial/commands $NAME/doc/inc/shelltutorial/insertsnippetstutorial.py \
 $NAME/doc/inc/debugexamples/example*.txt \
 $NAME/doc/pictures/miniscippy.png $NAME/doc/pictures/scippy.png \
@@ -92,7 +92,6 @@ $NAME/applications/STP/src/depend.* \
 $NAME/applications/STP/src/*.c $NAME/applications/STP/src/*.h \
 $NAME/applications/STP/check/testset/*.test $NAME/applications/STP/check/testset/*.solu \
 $NAME/applications/STP/data/D/* \
-$NAME/applications/STP/scip-jack.sh \
 $NAME/applications/STP/Makefile $NAME/applications/STP/INSTALL \
 $NAME/examples/xternal_examples.c \
 $NAME/examples/Binpacking/Makefile $NAME/examples/Binpacking/INSTALL \
@@ -117,7 +116,7 @@ $NAME/examples/GMI/check/testset/short.* \
 $NAME/examples/GMI/settings/gmi* $NAME/examples/GMI/src/depend.* \
 $NAME/examples/GMI/src/*.c $NAME/examples/GMI/src/*.h \
 $NAME/examples/LOP/* $NAME/examples/LOP/doc/* $NAME/examples/LOP/data/* \
-$NAME/examples/LOP/check/check.sh $NAME/examples/LOP/check/testset/short.* \
+$NAME/examples/LOP/check/testset/short.* \
 $NAME/examples/LOP/src/depend.* $NAME/examples/LOP/src/Makefile \
 $NAME/examples/LOP/settings/default.set \
 $NAME/examples/LOP/src/*.c $NAME/examples/LOP/src/*.h \
