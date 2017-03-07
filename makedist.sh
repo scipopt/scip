@@ -73,7 +73,7 @@ $NAME/applications/MinIISC/doc/* \
 $NAME/applications/MinIISC/src/* \
 $NAME/applications/MinIISC/data/* \
 $NAME/applications/MinIISC/check/configuration_tmpfile_setup_miniisc.sh $NAME/applications/MinIISC/check/run.sh \
-$NAME/applications/MinIISC/check/run.sh $NAME/applications/MinIISC/check/testset/short.* \
+$NAME/applications/MinIISC/check/testset/short.* \
 $NAME/applications/PolySCIP/doc/* \
 $NAME/applications/PolySCIP/src/*.cpp $NAME/applications/PolySCIP/src/*.h \
 $NAME/applications/PolySCIP/src/tclap/* $NAME/applications/PolySCIP/src/CMakeLists.txt \
