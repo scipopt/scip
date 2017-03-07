@@ -33,7 +33,7 @@
 #define HEUR_DESC             "LNS heuristic that searches the optimal LP face inside a sub-MIP"
 #define HEUR_DISPCHAR         '_'
 #define HEUR_PRIORITY         -1104000
-#define HEUR_FREQ             15
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
