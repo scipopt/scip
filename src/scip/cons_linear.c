@@ -13951,6 +13951,7 @@ SCIP_RETCODE presolStuffing(
       {
          SCIP_Bool tightened = FALSE;
          SCIP_Real bounddelta;
+         SCIP_Real bounddeltafrac;
 
          var = vars[bestindex];
          obj = SCIPvarGetObj(var);
@@ -13964,10 +13965,11 @@ SCIP_RETCODE presolStuffing(
             if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
             {
                bounddelta = SCIPceil(scip, (maxactivity - rhs)/-val);
+               bounddeltafrac = SCIPfrac(scip, (maxactivity - rhs)/-val);
                assert(SCIPisPositive(scip, bounddelta));
                assert(SCIPisNegative(scip, -bounddelta * obj / (maxactivity - rhs)));
 
-               tryfixing = SCIPisGE(scip, -bounddelta * obj / (maxactivity - rhs), secondbestratio);
+               tryfixing = SCIPisGE(scip, bestratio, bounddeltafrac * secondbestratio);
             }
             else
                bounddelta = (maxactivity - rhs)/-val;
@@ -13995,10 +13997,11 @@ SCIP_RETCODE presolStuffing(
             if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
             {
                bounddelta = SCIPceil(scip, (maxactivity - rhs)/val);
+               bounddeltafrac = SCIPfrac(scip, (maxactivity - rhs)/val);
                assert(SCIPisPositive(scip, bounddelta));
                assert(SCIPisNegative(scip, bounddelta * obj / (maxactivity - rhs)));
 
-               tryfixing = SCIPisGE(scip, bounddelta * obj / (maxactivity - rhs), secondbestratio);
+               tryfixing = SCIPisGE(scip, bestratio, bounddeltafrac * secondbestratio);
             }
             else
                bounddelta = (maxactivity - rhs)/val;
