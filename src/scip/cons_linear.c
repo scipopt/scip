@@ -108,7 +108,7 @@
 #define DEFAULT_SIMPLIFYINEQUALITIES TRUE /**< should presolving try to simplify inequalities */
 #define DEFAULT_DUALPRESOLVING       TRUE /**< should dual presolving steps be performed? */
 #define DEFAULT_SINGLETONSTUFFING    TRUE /**< should stuffing of singleton continuous variables be performed? */
-#define DEFAULT_SINGLEVARSTUFFING    TRUE /**< should single variable stuffing be performed, which tries to fulfill
+#define DEFAULT_SINGLEVARSTUFFING   FALSE /**< should single variable stuffing be performed, which tries to fulfill
                                            *   constraints using the cheapest variable? */
 #define DEFAULT_DETECTCUTOFFBOUND    TRUE /**< should presolving try to detect constraints parallel to the objective
                                            *   function defining an upper bound and prevent these constraints from
