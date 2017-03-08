@@ -107,8 +107,9 @@
 #define DEFAULT_AGGREGATEVARIABLES   TRUE /**< should presolving search for redundant variables in equations */
 #define DEFAULT_SIMPLIFYINEQUALITIES TRUE /**< should presolving try to simplify inequalities */
 #define DEFAULT_DUALPRESOLVING       TRUE /**< should dual presolving steps be performed? */
-#define DEFAULT_SINGLETONSTUFFING    TRUE /**< should singleton variable stuffing be performed? */
-#define DEFAULT_SINGLEVARSTUFFING    TRUE /**< should single variable stuffing be performed? */
+#define DEFAULT_SINGLETONSTUFFING    TRUE /**< should stuffing of singleton continuous variables be performed? */
+#define DEFAULT_SINGLEVARSTUFFING    TRUE /**< should single variable stuffing be performed, which tries to fulfill
+                                           *   constraints using the cheapest variable? */
 #define DEFAULT_DETECTCUTOFFBOUND    TRUE /**< should presolving try to detect constraints parallel to the objective
                                            *   function defining an upper bound and prevent these constraints from
                                            *   entering the LP */
@@ -284,8 +285,9 @@ struct SCIP_ConshdlrData
    SCIP_Bool             aggregatevariables; /**< should presolving search for redundant variables in equations */
    SCIP_Bool             simplifyinequalities;/**< should presolving try to cancel down or delete coefficients in inequalities */
    SCIP_Bool             dualpresolving;     /**< should dual presolving steps be performed? */
-   SCIP_Bool             singletonstuffing;  /**< should singleton variable stuffing be performed? */
-   SCIP_Bool             singlevarstuffing;  /**< should single variable stuffing be performed? */
+   SCIP_Bool             singletonstuffing;  /**< should stuffing of singleton continuous variables be performed? */
+   SCIP_Bool             singlevarstuffing;  /**< should single variable stuffing be performed, which tries to fulfill
+                                              *   constraints using the cheapest variable? */
    SCIP_Bool             sortvars;           /**< should binary variables be sorted for faster propagation? */
    SCIP_Bool             checkrelmaxabs;     /**< should the violation for a constraint with side 0.0 be checked relative
                                               *   to 1.0 (FALSE) or to the maximum absolute value in the activity (TRUE)? */
@@ -13508,8 +13510,9 @@ static
 SCIP_RETCODE presolStuffing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
-   SCIP_Bool             singletonstuffing,  /**< should singleton variable stuffing be performed? */
-   SCIP_Bool             singlevarstuffing,  /**< should single variable stuffing be performed? */
+   SCIP_Bool             singletonstuffing,  /**< should stuffing of singleton continuous variables be performed? */
+   SCIP_Bool             singlevarstuffing,  /**< should single variable stuffing be performed, which tries to fulfill
+                                              *   constraints using the cheapest variable? */
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
    int*                  nfixedvars,         /**< pointer to count the total number of fixed variables */
    int*                  nchgbds             /**< pointer to count the total number of tightened bounds */
@@ -13844,9 +13847,14 @@ SCIP_RETCODE presolStuffing(
     * about since we are setting them to the highest possible value. Also, they may be integer or binary, because the
     * computed ratio is still a lower bound on the change in the objective caused by reducing those variable to reach
     * constraint feasibility. On the other hand, uplocks on x_k from other constraint do no interfer with the method.
-    * With a slight adjustment, the procedure even works even for integral x_k. For this, we adjust the ratio by taking
-    * into account the integrality. If c_k * ceil((maxactivity - rhs)/val) / ((maxactivity - rhs)/val) is still a better
-    * ratio than that of all other constraints, the upper bound of x_k is decreased to ub_k - ceil(maxactivity - rhs).
+    * With a slight adjustment, the procedure even works even for integral x_k. If (maxactivity - rhs)/val is integral,
+    * the variable gets an integral value in order to fulfill the constraint tightly, and we can just apply the procedure.
+    * If (maxactivity - rhs)/val is fractional, we need to check, if overfulfilling the constraint by setting x_k to
+    * ceil((maxactivity - rhs)/val) is still better than setting x_k to ceil((maxactivity - rhs)/val) - 1 and
+    * filling the remaining gap in the constraint with the next-best variable. For this, we check that
+    * c_k * ceil((maxactivity - rhs)/val) is still better than
+    * c_k * floor((maxactivity - rhs)/val) + c_j * ((maxactivity - rhs) - (floor((maxactivity - rhs)/val) * val))/a_j.
+    * In this case, the upper bound of x_k is decreased to ub_k - ceil(maxactivity - rhs).
     * If there are variables with a_i < 0 and c_i > 0, they are negated to obtain the above form, variables with same
     * sign of coefficients in constraint and objective prevent the use of this method.
     */
@@ -13951,7 +13959,7 @@ SCIP_RETCODE presolStuffing(
       {
          SCIP_Bool tightened = FALSE;
          SCIP_Real bounddelta;
-         SCIP_Real bounddeltafrac;
+
 
          var = vars[bestindex];
          obj = SCIPvarGetObj(var);
@@ -13962,14 +13970,19 @@ SCIP_RETCODE presolStuffing(
 
          if( val < 0 )
          {
-            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
-            {
-               bounddelta = SCIPceil(scip, (maxactivity - rhs)/-val);
-               bounddeltafrac = SCIPfrac(scip, (maxactivity - rhs)/-val);
-               assert(SCIPisPositive(scip, bounddelta));
-               assert(SCIPisNegative(scip, -bounddelta * obj / (maxactivity - rhs)));
+            assert(!SCIPisNegative(scip, obj));
 
-               tryfixing = SCIPisGE(scip, bestratio, bounddeltafrac * secondbestratio);
+            /* the best variable is integer, and we need to overfulfill the constraint when using just the variable */
+            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS && !SCIPisIntegral(scip, (maxactivity - rhs)/-val) )
+            {
+               SCIP_Real bestvarfloor = SCIPfloor(scip, (maxactivity - rhs)/-val);
+               SCIP_Real activitydelta = (maxactivity - rhs) - (bestvarfloor * -val);
+               assert(SCIPisPositive(scip, activitydelta));
+
+               tryfixing = SCIPisLE(scip, obj, -activitydelta * secondbestratio);
+
+               bounddelta = SCIPceil(scip, (maxactivity - rhs)/-val);
+               assert(SCIPisPositive(scip, bounddelta));
             }
             else
                bounddelta = (maxactivity - rhs)/-val;
@@ -13994,14 +14007,19 @@ SCIP_RETCODE presolStuffing(
          }
          else
          {
-            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS )
-            {
-               bounddelta = SCIPceil(scip, (maxactivity - rhs)/val);
-               bounddeltafrac = SCIPfrac(scip, (maxactivity - rhs)/val);
-               assert(SCIPisPositive(scip, bounddelta));
-               assert(SCIPisNegative(scip, bounddelta * obj / (maxactivity - rhs)));
+            assert(!SCIPisPositive(scip, obj));
 
-               tryfixing = SCIPisGE(scip, bestratio, bounddeltafrac * secondbestratio);
+            /* the best variable is integer, and we need to overfulfill the constraint when using just the variable */
+            if( SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS  && !SCIPisIntegral(scip, (maxactivity - rhs)/val))
+            {
+               SCIP_Real bestvarfloor = SCIPfloor(scip, (maxactivity - rhs)/val);
+               SCIP_Real activitydelta = (maxactivity - rhs) - (bestvarfloor * val);
+               assert(SCIPisPositive(scip, activitydelta));
+
+               tryfixing = SCIPisLE(scip, -obj, activitydelta * secondbestratio);
+
+               bounddelta = SCIPceil(scip, (maxactivity - rhs)/val);
+               assert(SCIPisPositive(scip, bounddelta));
             }
             else
                bounddelta = (maxactivity - rhs)/val;
@@ -16979,11 +16997,11 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/singletonstuffing",
-         "should singleton variable stuffing be performed?",
+         "should stuffing of singleton continuous variables be performed?",
          &conshdlrdata->singletonstuffing, TRUE, DEFAULT_SINGLETONSTUFFING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/singlevarstuffing",
-         "should single variable stuffing be performed?",
+         "should single variable stuffing be performed, which tries to fulfill constraints using the cheapest variable?",
          &conshdlrdata->singlevarstuffing, TRUE, DEFAULT_SINGLEVARSTUFFING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/" CONSHDLR_NAME "/sortvars", "apply binaries sorting in decr. order of coeff abs value?",
