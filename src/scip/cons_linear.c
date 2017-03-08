@@ -13847,7 +13847,7 @@ SCIP_RETCODE presolStuffing(
     * about since we are setting them to the highest possible value. Also, they may be integer or binary, because the
     * computed ratio is still a lower bound on the change in the objective caused by reducing those variable to reach
     * constraint feasibility. On the other hand, uplocks on x_k from other constraint do no interfer with the method.
-    * With a slight adjustment, the procedure even works even for integral x_k. If (maxactivity - rhs)/val is integral,
+    * With a slight adjustment, the procedure even works for integral x_k. If (maxactivity - rhs)/val is integral,
     * the variable gets an integral value in order to fulfill the constraint tightly, and we can just apply the procedure.
     * If (maxactivity - rhs)/val is fractional, we need to check, if overfulfilling the constraint by setting x_k to
     * ceil((maxactivity - rhs)/val) is still better than setting x_k to ceil((maxactivity - rhs)/val) - 1 and
@@ -13959,7 +13959,6 @@ SCIP_RETCODE presolStuffing(
       {
          SCIP_Bool tightened = FALSE;
          SCIP_Real bounddelta;
-
 
          var = vars[bestindex];
          obj = SCIPvarGetObj(var);
