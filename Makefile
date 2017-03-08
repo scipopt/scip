@@ -380,11 +380,7 @@ endif
 FLAGS		+=	-DWITH_ZIMPL -I$(LIBDIR)/include/zimplinc $(ZIMPL_FLAGS)
 DIRECTORIES	+=	$(LIBDIR)/include/zimplinc
 SOFTLINKS	+=	$(LIBDIR)/include/zimplinc/zimpl
-ifeq ($(SHARED),true)
-SOFTLINKS	+=	$(LIBDIR)/shared/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(SHAREDLIBEXT)
-else
-SOFTLINKS	+=	$(LIBDIR)/static/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(STATICLIBEXT)
-endif
+SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(STATICLIBEXT)
 LPIINSTMSG	+=	"\n  -> \"zimplinc\" is a directory containing the path to the ZIMPL \"src\" directory, e.g., \"<ZIMPL-path>/src\".\n"
 LPIINSTMSG	+=	" -> \"libzimpl.*\" is the path to the ZIMPL library, e.g., \"<ZIMPL-path>/lib/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(STATICLIBEXT)\""
 endif
