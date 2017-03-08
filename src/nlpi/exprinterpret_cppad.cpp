@@ -166,7 +166,7 @@ char init_parallel(void)
 #if !defined(_MSC_VER)
 __attribute__ ((unused))
 #endif
-static char c = init_parallel();
+static char init_parallel_return = init_parallel();
 
 #endif // NPARASCIP
 
