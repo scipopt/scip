@@ -105,7 +105,6 @@ test:           $(MAINFILE) $(TESTSETDIR)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);
 ifeq ($(TEST), short)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/instances);
-		@-(cd check/testset && ln -fs ../../$(SCIPDIR)/check/testset/short.test);
 		@-(cd check/testset && ln -fs ../../$(SCIPDIR)/check/testset/short.solu);
 endif
 		cd check; \

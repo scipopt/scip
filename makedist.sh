@@ -126,6 +126,12 @@ $NAME/examples/MIPSolver/src/*.cpp \
 $NAME/examples/Queens/* $NAME/examples/Queens/doc/scip_intro.tex \
 $NAME/examples/Queens/src/depend.* \
 $NAME/examples/Queens/src/*.cpp $NAME/examples/Queens/src/*.hpp \
+$NAME/examples/Relaxator/INSTALL \
+$NAME/examples/Relaxator/Makefile \
+$NAME/examples/Relaxator/check/testset/short.test \
+$NAME/examples/Relaxator/doc/xternal_relaxator.c \
+$NAME/examples/Relaxator/makedepend.sh \
+$NAME/examples/Relaxator/src/* \
 $NAME/examples/TSP/Makefile $NAME/examples/TSP/INSTALL \
 $NAME/examples/TSP/runme.sh $NAME/examples/TSP/runviewer.sh \
 $NAME/examples/TSP/sciptsp.set \
