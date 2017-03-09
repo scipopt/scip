@@ -14,8 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 //#define PRINTNODECONS
 /*
-*/
 #define SCIP_DEBUG
+*/
 #define SCIP_STATISTIC
 
 /**@file   branch_lookahead.c
@@ -288,8 +288,10 @@ SCIP_RETCODE allocDomainReductions(
       (*domreds)->lowerboundset[i] = FALSE;
       (*domreds)->upperboundset[i] = FALSE;
       (*domreds)->baselpviolated[i] = FALSE;
-      (*domreds)->lowerboundnproofs[i] = 0;
-      (*domreds)->upperboundnproofs[i] = 0;
+      SCIPstatistic(
+         (*domreds)->lowerboundnproofs[i] = 0;
+         (*domreds)->upperboundnproofs[i] = 0;
+      )
    }
 
    /* At the start we have no domain reductions for any variable. */
@@ -559,12 +561,14 @@ void applyDeeperDomainReductions(
    }
 }
 
+#ifdef SCIP_STATISTIC
 static
 void printStatistics(
    SCIP*                 scip,
    STATISTICS*           statistics,
    int                   recursiondepth
    );
+#endif
 
 /**
  * Applies the domain reductions the current node.
@@ -726,7 +730,7 @@ SCIP_RETCODE applyDomainReductions(
    SCIPdebugMessage("Truly changed <%d> domains of the problem, <%d> of them are violated by the base lp.\n", nboundsadded,
       nboundsaddedvio);
 
-   printStatistics(scip, statistics, 2);
+   SCIPstatistic( printStatistics(scip, statistics, 2); )
 
    /* TODO: copy the behaviour from the bincons to domreds in case we found only non-violating domreds and a branching var.*/
    /*assert(nboundsadded == nboundsaddedvio);*/
@@ -1701,14 +1705,21 @@ SCIP_RETCODE executeDownBranchingRecursive(
    if( config->usebincons && SCIPvarIsBinary(branchvar) )
    {
       SCIP_VAR* negbranchvar;
-      SCIP_VAR* droppedelement;
 
       SCIP_CALL( SCIPgetNegatedVar(scip, branchvar, &negbranchvar) );
 
       assert(negbranchvar != NULL);
 
-      droppedelement = dropFromBinaryVarList(scip, binconsdata->binaryvars);
-      assert(droppedelement == negbranchvar);
+#ifdef NDEBUG
+      dropFromBinaryVarList(scip, binconsdata->binaryvars);
+#else
+      {
+         SCIP_VAR* droppedelement;
+         droppedelement = dropFromBinaryVarList(scip, binconsdata->binaryvars);
+         assert(droppedelement == negbranchvar);
+      }
+#endif
+
    }
 
    /* reset the probing depth to undo the previous branching */
@@ -1851,10 +1862,17 @@ SCIP_RETCODE executeUpBranchingRecursive(
 
    if( config->usebincons && SCIPvarIsBinary(branchvar) )
    {
-      SCIP_VAR* droppedelement;
 
-      droppedelement = dropFromBinaryVarList(scip, binconsdata->binaryvars);
-      assert(droppedelement == branchvar);
+
+#ifdef NDEBUG
+      dropFromBinaryVarList(scip, binconsdata->binaryvars);
+#else
+      {
+         SCIP_VAR* droppedelement;
+         droppedelement = dropFromBinaryVarList(scip, binconsdata->binaryvars);
+         assert(droppedelement == branchvar);
+      }
+#endif
    }
 
    /* reset the probing depth to undo the previous branching */
@@ -2652,7 +2670,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          /*&& (0 <= bestcand && bestcand < nlpcands)*/ /* no valid candidate index could be found */
          )
       {
-         SCIPdebugMessage(" -> %d candidates, variable <%s> (solval=%g)\n",
+         SCIPinfoMessage(scip, NULL, " -> %d candidates, variable <%s> (solval=%g)\n",
             nlpcands, SCIPvarGetName(decision->bestvar), decision->bestval);
 
          /* execute the branching as a result of the branching logic */
