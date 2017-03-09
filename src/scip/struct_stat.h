@@ -255,6 +255,7 @@ struct SCIP_Stat
    SCIP_Bool             collectvarhistory;  /**< should variable history statistics be collected */
    SCIP_Bool             performpresol;      /**< indicates whether presolving is enabled */
    SCIP_Bool             branchedunbdvar;    /**< indicates whether branching on an unbounded variable has been performed */
+   SCIP_Bool             disableenforelaxmsg;/**< was disable enforelax message printed? */
 };
 
 #ifdef __cplusplus

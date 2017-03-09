@@ -94,7 +94,7 @@ compilation settings:
               "gnu", "intel", "compaq", "sun", "insure", ... (see make/ directory)
 
 - $(OPT):     the optimization level of compilation
-              "dbg", "opt", or "prf" 
+              "dbg", "opt", or "prf"
 
 - $(LPS):     the LP solver to use
               "spx2", "spx", "clp", "cpx", "xprs", "msk", "grb", "qso", "none"
@@ -172,7 +172,7 @@ Here is what you have to do to get SCIP running:
      (b) the library file(s) "lib*.a" or/and "lib*.so"
    You will need either the .a or the .so files and can skip the others by just pressing return.
 
-   On MAC systems, GMP is often not installed in the library and include paths, e.g. in /sw/include 
+   On MAC systems, GMP is often not installed in the library and include paths, e.g. in /sw/include
    and /sw/lib. In this case, you have to add the paths explicitly. In the above example add the settings
    USRFLAGS=-I/sw/include USRCPPFLAGS=-I/sw/include USRCFLAGS=-I/sw/include USRLDFLAGS=-L/sw/lib.
 
@@ -280,7 +280,7 @@ make[1]: Entering directory `/sw/scip'
   -> "ipopt.*" is a directory containing the ipopt installation, i.e., "ipopt.*/include/coin/IpIpoptApplication.hpp", "ipopt.*/lib/libipopt*", ... should exist.
 
 - preparing missing soft-link "lib/clp.linux.x86_64.gnu.opt":
-> Enter soft-link target file or directory for "lib/clp.linux.x86_64.gnu.opt" (return if not needed): 
+> Enter soft-link target file or directory for "lib/clp.linux.x86_64.gnu.opt" (return if not needed):
 > /sw/Clp-1.11/build
 -> creating softlink "lib/clp.linux.x86_64.gnu.opt" -> "/sw/Clp-1.11/build"
 
@@ -311,7 +311,7 @@ make[1]: Leaving directory `/sw/scip'
    If you get an error message of the type
    "make: *** No rule to make target `lib/???', needed by `obj/O.linux.x86.gnu.opt/lib/scip/???.o'.  Stop."
    the corresponding soft-link was not created or points to a wrong location.
-   Check the soft-link targets in the "lib/" subdirectory. Try to delete all soft-links from the "lib/" directory
+   Check the soft-link targets in the "lib/include", "lib/static", "lib/shared" subdirectories. Try to delete all soft-links from those directories
    and call "make links" to generate them again. If this still fails, read step 2 for instructions on manually
    creating the soft-links.
 
@@ -376,57 +376,57 @@ make[1]: Leaving directory `/sw/scip'
 
 3. Instructions for manually creating the soft-links, if the query script fails:
 
-   Create necessary soft-links in the "lib/" subdirectory of SCIP:
+   Create necessary soft-links in the "lib/static" and "lib/include/" subdirectories of SCIP:
 
    (a) to use SOPLEX (Version >= 1.4.0)
-       - ln -s <path to SOPLEX' *.h files> <path to SCIP>/lib/spxinc
-       - ln -s <file libsoplex.[...].a> <path to SCIP>/lib/libsoplex.$(OSTYPE).$(ARCH).$(COMP).a
+       - ln -s <path to SOPLEX' *.h files> <path to SCIP>/lib/include/spxinc
+       - ln -s <file libsoplex.[...].a> <path to SCIP>/lib/static/libsoplex.$(OSTYPE).$(ARCH).$(COMP).a
          for each operating system and architecture to use
-         (e.g. "cd scip; ln -s /soplex/lib/libsoplex.linux.x86.gnu.opt.a lib/libsoplex.linux.x86.gnu.a")
+         (e.g. "cd scip; ln -s ../soplex/lib/libsoplex.linux.x86_64.gnu.opt.a lib/static/libsoplex.linux.x86_64.gnu.a")
          Warning! The ".opt" in the name of the SOPLEX library does not appear in the name of the soft-link.
 
    (b) to use CPLEX (Version >= 10.0)
-       - ln -s <path to directory of cplex.h> <path to SCIP>/lib/cpxinc
-         (e.g. "cd scip; ln -s /cplex121/include/ilcplex lib/cpxinc")
-       - ln -s <file libcplex.a> <path to SCIP>/lib/libcplex.$(OSTYPE).$(ARCH).$(COMP).a
+       - ln -s <path to directory of cplex.h> <path to SCIP>/lib/include/cpxinc
+         (e.g. "cd scip; ln -s /cplex121/include/ilcplex lib/include/cpxinc")
+       - ln -s <file libcplex.a> <path to SCIP>/lib/static/libcplex.$(OSTYPE).$(ARCH).$(COMP).a
          for each operation system and architecture to use
-         (e.g. "cd scip; ln -s /cplex121/lib/x86-64_debian4.0_4.1/static_pic/libcplex.a lib/libcplex.linux.x86.gnu.a")
+         (e.g. "cd scip; ln -s /cplex121/lib/x86-64_debian4.0_4.1/static_pic/libcplex.a lib/static/libcplex.linux.x86.gnu.a")
 
    (c) to use XPRESS
-       - ln -s <path to directory of xprs.h> <path to SCIP>/lib/xprsinc
-         (e.g. "cd scip; ln -s /xpressmp/include lib/xprsinc")
-       - ln -s <file libxprs.a> <path to SCIP>/lib/libxprs.$(OSTYPE).$(ARCH).$(COMP).a
+       - ln -s <path to directory of xprs.h> <path to SCIP>/lib/include/xprsinc
+         (e.g. "cd scip; ln -s /xpressmp/include lib/include/xprsinc")
+       - ln -s <file libxprs.a> <path to SCIP>/lib/static/libxprs.$(OSTYPE).$(ARCH).$(COMP).a
          for each operation system and architecture to use
-         (e.g. "cd scip; ln -s /xpressmp/lib/libxprs.a lib/libxprs.linux.x86.gnu.a")
+         (e.g. "cd scip; ln -s /xpressmp/lib/libxprs.a lib/static/libxprs.linux.x86.gnu.a")
 
    (d) to use MOSEK
-       - ln -s <path to directory of mosek.h> <path to SCIP>/lib/mskinc
-         (e.g. "cd scip; ln -s /mosek/4/tools/platform/linux32x86/h lib/mskinc")
-       - ln -s <file libmosek.so> <path to SCIP>/lib/libmosek.$(OSTYPE).$(ARCH).$(COMP).so
+       - ln -s <path to directory of mosek.h> <path to SCIP>/lib/include/mskinc
+         (e.g. "cd scip; ln -s /mosek/4/tools/platform/linux32x86/h lib/include/mskinc")
+       - ln -s <file libmosek.so> <path to SCIP>/lib/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).so
          for each operation system and architecture to use
-         (e.g. "cd scip; ln -s /mosek/4/tools/platform/linux32x86/bin/libmosek.so lib/libmosek.linux.x86.gnu.so")
-       - since MOSEK is a shared library, make sure your LD_LIBRARY_PATH contains <path to SCIP>/lib
+         (e.g. "cd scip; ln -s /mosek/4/tools/platform/linux32x86/bin/libmosek.so lib/shared/libmosek.linux.x86.gnu.so")
+       - since MOSEK is a shared library, make sure your LD_LIBRARY_PATH contains <path to SCIP>/lib/shared
 
    (e) to use CLP
-       - ln -s <path to Clp main directory> <path to SCIP>/lib/libclp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
+       - ln -s <path to Clp main directory> <path to SCIP>/lib/include/libclp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
          for each operating system and architecture to use
-         (e.g. "cd scip; ln -s /Coin-Clp lib/libclp.linux.x86.gnu.opt")
+         (e.g. "cd scip; ln -s /Coin-Clp lib/include/libclp.linux.x86.gnu.opt")
 
    (f) to use ZIMPL as additional file reader for reading *.zpl files
-       - mkdir <path to SCIP>/lib/zimplinc
-       - ln -s <path to ZIMPL's *.h files> <path to SCIP>/lib/zimplinc/zimpl
-       - ln -s <file libzimpl-<version>.<options>.a> <path to SCIP>/lib/libzimpl.$(OSTYPE).$(ARCH).$(COMP).a
+       - mkdir <path to SCIP>/lib/include/zimplinc
+       - ln -s <path to ZIMPL's *.h files> <path to SCIP>/lib/include/zimplinc/zimpl
+       - ln -s <file libzimpl-<version>.<options>.a> <path to SCIP>/lib/static/libzimpl.$(OSTYPE).$(ARCH).$(COMP).a
        Note that ZIMPL needs the GNU multiprecision library (GMP) to be installed on your system.
 
    (g) to use IPOPT as NLP solver
        - ln -s <path to IPOPT installation> <path to SCIP>/lib/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)
-         (e.g. "cd scip; ln -s /Ipopt lib/ipopt.linux.x86.gnu.opt")
+         (e.g. "cd scip; ln -s /Ipopt lib/shared/ipopt.linux.x86.gnu.opt")
          The path to the IPOPT installation is the path under where the Ipopt build has been installed.
          It should contain the directories include/coin with the Ipopt header files, the directory lib with the Ipopt libraries,
          and the directory share/coin/doc/Ipopt with the ipopt_addlibs_cpp.txt file.
 
    (h) to use GAMS
-       - ln -s <path to GAMS system directory> <path to SCIP>/lib/gams.$(OSTYPE).$(ARCH).$(COMP)
+       - ln -s <path to GAMS system directory> <path to SCIP>/lib/shared/gams.$(OSTYPE).$(ARCH).$(COMP)
 
 4. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
    (e.g. "bin/scip.linux.x86.gnu.opt.spx") or just "bin/scip" for the last compiled version

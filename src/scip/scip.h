@@ -14907,7 +14907,7 @@ void SCIPaddBilinMcCormick(
    SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
    );
 
-/** creates a NLP relaxation and stores it in a given NLPI problem; the function computes for each variable which the
+/** creates an NLP relaxation and stores it in a given NLPI problem; the function computes for each variable which the
  *  number of non-linearly occurrences and stores it in the nlscore array
  *
  *  @note the first row corresponds always to the cutoff row (even if cutoffbound is SCIPinfinity(scip))
