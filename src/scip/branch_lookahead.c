@@ -14,8 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 //#define PRINTNODECONS
 /*
-#define SCIP_DEBUG
 */
+#define SCIP_DEBUG
 #define SCIP_STATISTIC
 
 /**@file   branch_lookahead.c
@@ -210,6 +210,8 @@ typedef struct
    SCIP_Bool*            baselpviolated;     /**< Indicates whether the base lp solution violates the new bounds of a var.*/
    int                   nviolatedvars;      /**< Tracks the number of vars that have a violated (by the base lp) new lower
                                               *   or upper bound. */
+   int                   nchangedvars;       /**< Tracks the number of vars, that have a changed domain. (a change on both,
+                                              *   upper and lower bound, counts as one.) */
 #ifdef SCIP_STATISTIC
    int*                  lowerboundnproofs;  /**< The number of nodes needed to proof the lower bound for each variable. */
    int*                  upperboundnproofs;  /**< The number of nodes needed to proof the upper bound for each variable. */
@@ -296,9 +298,45 @@ SCIP_RETCODE allocDomainReductions(
 
    /* At the start we have no domain reductions for any variable. */
    (*domreds)->nviolatedvars = 0;
+   (*domreds)->nchangedvars = 0;
 
    return SCIP_OKAY;
 }
+
+/*
+static
+void printDomainReductions(
+   SCIP*                 scip,
+   DOMAINREDUCTIONS*     domreds
+   )
+{
+   int ntotalvars;
+   int i;
+   SCIP_VAR** vars;
+
+   assert(scip != NULL);
+   assert(domreds != NULL);
+
+   ntotalvars = SCIPgetNVars(scip);
+   vars = SCIPgetVars(scip);
+
+   for( i = 0; i < ntotalvars; i++)
+   {
+      if( domreds->lowerboundset[i] && domreds->upperboundset[i] )
+      {
+         SCIPinfoMessage(scip, NULL, "%5g <= %s <= %5g\n", domreds->lowerbounds[i], SCIPvarGetName(vars[i]), domreds->upperbounds[i]);
+      }
+      else if( domreds->lowerboundset[i] )
+      {
+         SCIPinfoMessage(scip, NULL, "%5g <= %s\n", domreds->lowerbounds[i], SCIPvarGetName(vars[i]));
+      }
+      else if( domreds->upperboundset[i] )
+      {
+         SCIPinfoMessage(scip, NULL, "         %s <= %5g\n", SCIPvarGetName(vars[i]), domreds->upperbounds[i]);
+      }
+   }
+}
+*/
 
 static
 void addLowerBoundProofNode(
@@ -351,6 +389,11 @@ void addLowerBoundProofNode(
       {
          newlowerbound = lowerbound;
          SCIPstatistic( newnproof = nproofnodes; )
+
+         if( !domainreductions->upperboundset[varindex] )
+         {
+            domainreductions->nchangedvars++;
+         }
       }
    }
    else
@@ -455,7 +498,13 @@ void addUpperBoundProofNode(
    {
       newupperbound = upperbound;
       SCIPstatistic( newnproof = nproofnodes; )
+
+      if( !domainreductions->lowerboundset[varindex] )
+      {
+         domainreductions->nchangedvars++;
+      }
    }
+
    domainreductions->upperbounds[varindex] = newupperbound;
    domainreductions->upperboundset[varindex] = TRUE;
    SCIPstatistic( domainreductions->upperboundnproofs[varindex] = newnproof; )
@@ -654,13 +703,13 @@ SCIP_RETCODE applyDomainReductions(
             /* the lb is now strictly greater than before */
             SCIPdebugMessage("The lower bound of variable <%s> was successfully tightened.\n", SCIPvarGetName(var));
             boundadded = TRUE;
+            *domred = TRUE;
             SCIPstatistic( statistics->ndomredproofnodes += domreds->lowerboundnproofs[i]; )
 
             if( SCIPisLT(scip, baselpval, newlowerbound) )
             {
                SCIPdebugMessage("The lower bound of variable <%s> is violated by the base lp value <%g>.\n",
                   SCIPvarGetName(var), baselpval);
-               *domred = TRUE;
                boundaddedvio = TRUE;
             }
          }
@@ -697,13 +746,13 @@ SCIP_RETCODE applyDomainReductions(
             /* the ub is now strictly smaller than before */
             SCIPdebugMessage("The upper bound of variable <%s> was successfully tightened.\n", SCIPvarGetName(var));
             boundadded = TRUE;
+            *domred = TRUE;
             SCIPstatistic( statistics->ndomredproofnodes += domreds->upperboundnproofs[i]; )
 
             if( SCIPisGT(scip, baselpval, newupperbound) )
             {
                SCIPdebugMessage("The upper bound of variable <%s> is violated by the base lp value <%g>.\n",
                   SCIPvarGetName(var), baselpval);
-               *domred = TRUE;
                boundaddedvio = TRUE;
             }
          }
@@ -729,11 +778,6 @@ SCIP_RETCODE applyDomainReductions(
 
    SCIPdebugMessage("Truly changed <%d> domains of the problem, <%d> of them are violated by the base lp.\n", nboundsadded,
       nboundsaddedvio);
-
-   SCIPstatistic( printStatistics(scip, statistics, 2); )
-
-   /* TODO: copy the behaviour from the bincons to domreds in case we found only non-violating domreds and a branching var.*/
-   /*assert(nboundsadded == nboundsaddedvio);*/
 
    return SCIP_OKAY;
 }
@@ -1616,16 +1660,6 @@ SCIP_RETCODE executeDownBranchingRecursive(
       }
    )
 
-   if( config->usebincons && downbranchingresult->cutoff
-         && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
-   {
-#ifdef SCIP_STATISTIC
-      addBinaryConstraint(scip, config, binconsdata, baselpsol, statistics);
-#else
-      addBinaryConstraint(scip, config, binconsdata, baselpsol);
-#endif
-   }
-
    if( !downbranchingresult->cutoff && !status->lperror && !status->limitreached && recursiondepth > 1 )
    {
       /* TODO: maybe reuse these variables in the upbranching case */
@@ -1702,6 +1736,15 @@ SCIP_RETCODE executeDownBranchingRecursive(
       SCIPfreeBufferArray(scip, &deeperlpcands);
    }
 
+   if( config->usebincons && downbranchingresult->cutoff && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
+   {
+#ifdef SCIP_STATISTIC
+      addBinaryConstraint(scip, config, binconsdata, baselpsol, statistics);
+#else
+      addBinaryConstraint(scip, config, binconsdata, baselpsol);
+#endif
+   }
+
    if( config->usebincons && SCIPvarIsBinary(branchvar) )
    {
       SCIP_VAR* negbranchvar;
@@ -1773,15 +1816,6 @@ SCIP_RETCODE executeUpBranchingRecursive(
          SCIPdebugMessage("Depth <%i>, The solved LP was infeasible and as such cutoff\n", probingdepth);
       }
    )
-
-   if( config->usebincons && upbranchingresult->cutoff && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
-   {
-#ifdef SCIP_STATISTIC
-      addBinaryConstraint(scip, config, binconsdata, baselpsol, statistics);
-#else
-      addBinaryConstraint(scip, config, binconsdata, baselpsol);
-#endif
-   }
 
    if( !upbranchingresult->cutoff && !status->lperror && !status->limitreached && recursiondepth > 1 )
    {
@@ -1858,6 +1892,15 @@ SCIP_RETCODE executeUpBranchingRecursive(
       SCIPfreeBufferArray(scip, &deeperlpcandsfrac);
       SCIPfreeBufferArray(scip, &deeperlpcandssol);
       SCIPfreeBufferArray(scip, &deeperlpcands);
+   }
+
+   if( config->usebincons && upbranchingresult->cutoff && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
+   {
+#ifdef SCIP_STATISTIC
+      addBinaryConstraint(scip, config, binconsdata, baselpsol, statistics);
+#else
+      addBinaryConstraint(scip, config, binconsdata, baselpsol);
+#endif
    }
 
    if( config->usebincons && SCIPvarIsBinary(branchvar) )
@@ -2052,10 +2095,7 @@ SCIP_RETCODE selectVarRecursive(
 
                if( config->usedomainreduction )
                {
-                  if( !useoldbranching )
-                  {
-                     applyDeeperDomainReductions(scip, baselpsol, domainreductions, downdomainreductions, updomainreductions);
-                  }
+                  applyDeeperDomainReductions(scip, baselpsol, domainreductions, downdomainreductions, updomainreductions);
 
                   freeDomainReductions(scip, &updomainreductions);
                   freeDomainReductions(scip, &downdomainreductions);
@@ -2270,6 +2310,14 @@ SCIP_RETCODE selectVarStart(
 
    SCIPendProbing(scip);
 
+   if( (config->usebincons && binconsdata->createdconstraints->nconstraints > 0)
+      || (config->usedomainreduction && domainreductions->nchangedvars > 0) )
+   {
+      SCIP_CALL( SCIPlinkLPSol(scip, persistent->prevbinsolution) );
+      SCIP_CALL( SCIPunlinkSol(scip, persistent->prevbinsolution) );
+
+      copyBranchingDecision(decision, persistent->prevdecision);
+   }
 
    if( config->usebincons )
    {
@@ -2286,14 +2334,6 @@ SCIP_RETCODE selectVarStart(
 #endif
       freeBinConsData(scip, &binconsdata);
 
-      if( status->addbinconst )
-      {
-         /* TODO: maybe only do this, if constraints where actually added? */
-         SCIP_CALL( SCIPlinkLPSol(scip, persistent->prevbinsolution) );
-         SCIP_CALL( SCIPunlinkSol(scip, persistent->prevbinsolution) );
-
-         copyBranchingDecision(decision, persistent->prevdecision);
-      }
    }
 
    if( config->usedomainreduction )
@@ -2348,21 +2388,21 @@ SCIP_Bool isUsePreviousResult(
 static
 SCIP_RETCODE usePreviousResult(
    SCIP*                 scip,               /**< SCIP data structure */
-   PERSISTENTDATA*       persistent,
+   BRANCHINGDECISION*    decision,
    SCIP_Bool*            result              /**< the pointer to the branching result */
    )
 {
    SCIPdebugMessage("Branching based on previous solution.\n");
 
    /* execute the actual branching */
-   SCIP_CALL( branchOnVar(scip, persistent->prevdecision) );
+   SCIP_CALL( branchOnVar(scip, decision) );
    *result = SCIP_BRANCHED;
 
    SCIPdebugMessage("Result: Branched based on previous solution. Variable <%s>\n",
-      SCIPvarGetName(persistent->prevdecision->bestvar));
+      SCIPvarGetName(decision->bestvar));
 
    /* reset the var pointer, as this is our indicator whether we should branch on prev data in the next call */
-   persistent->prevdecision->bestvar = NULL;
+   decision->bestvar = NULL;
 
    return SCIP_OKAY;
 }
@@ -2593,18 +2633,19 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       initBranchruleData(scip, branchruledata);
    }
 
-   if( branchruledata->config->usebincons )
+   if( branchruledata->config->usebincons || branchruledata->config->usedomainreduction )
    {
       /* create a copy of the current lp solution to compare it with a previously  */
       SCIP_CALL( copyCurrentSolution(scip, &baselpsol) );
       SCIPdebugMessage("Created an unlinked copy of the base lp solution.\n");
    }
 
-   if( branchruledata->config->usebincons && isUsePreviousResult(scip, baselpsol, branchruledata->persistent) )
+   if( (branchruledata->config->usebincons || branchruledata->config->usedomainreduction)
+      && isUsePreviousResult(scip, baselpsol, branchruledata->persistent) )
    {
       /* in case we stopped the previous run without a branching decisions we have stored the decision and execute it
        * now */
-      SCIP_CALL( usePreviousResult(scip, branchruledata->persistent, result) );
+      SCIP_CALL( usePreviousResult(scip, branchruledata->persistent->prevdecision, result) );
    }
    else
    {
