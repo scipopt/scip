@@ -7015,11 +7015,12 @@
 
 /**@page RELEASENOTES Release notes
  *
+ * A release report with an in-depth description of many of the new features is available on <a href="http://www.optimization-online.org">Optimization Online</a>.
  * \verbinclude SCIP-release-notes-4.0
  *
- * \verbinclude SCIP-release-notes-3.2.1
+ * Please consult the <a href="http://nbn-resolving.de/urn:nbn:de:0297-zib-57675">release report</a> that explains many of the new features in detail.
  *
- * Please consult the <a href="nbn-resolving.de/urn:nbn:de:0297-zib-57675">release report</a> that explains many of the new features in detail.
+ * \verbinclude SCIP-release-notes-3.2.1
  *
  * \verbinclude SCIP-release-notes-3.2
  *

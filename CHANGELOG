@@ -243,7 +243,7 @@ makefile:
 - link binary to shared libs when compiling with SHARED=true
 - 'make install' copies now all header files
 - sub-makefile for CrayXC systems added
-
+- rename `dll` target to `windowslib`
 
 SCIP version 3.2.1
 ==================
