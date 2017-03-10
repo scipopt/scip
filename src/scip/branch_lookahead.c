@@ -14,8 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 //#define PRINTNODECONS
 /*
-*/
 #define SCIP_DEBUG
+*/
 #define SCIP_STATISTIC
 
 /**@file   branch_lookahead.c
@@ -1100,6 +1100,8 @@ void copyBranchingResultData(
 {
    targetdata->cutoff = sourcedata->cutoff;
    targetdata->objval = sourcedata->objval;
+   targetdata->dualbound = sourcedata->dualbound;
+   targetdata->dualboundvalid = sourcedata->dualboundvalid;
 }
 
 /*
@@ -2033,6 +2035,8 @@ SCIP_RETCODE selectVarRecursive(
                getOldBranching(scip, persistent, branchvar, downbranchingresult, upbranchingresult);
                useoldbranching = TRUE;
                SCIPstatistic( statistics->noldbranchused[probingdepth]++; )
+
+               SCIPdebugMessage("Used old branching results for the up and down branches.\n");
             }
             else
             {
@@ -2207,7 +2211,7 @@ SCIP_RETCODE selectVarRecursive(
                         SCIPdebugMessage("Depth <%i>, Found <%i> violating bound changes.\n", probingdepth, ndomreds);
                      }
 
-                     if( nimpliedbincons + ndomreds >= config->maxnviolatedcons )
+                     if( nimpliedbincons + ndomreds > config->maxnviolatedcons )
                      {
                         status->maxnconsreached = TRUE;
                      }
