@@ -1896,7 +1896,7 @@ SCIP_RETCODE SCIPsolRetransform(
    /* clear the solution and convert it into original space */
    SCIP_CALL( solClearArrays(sol) );
    sol->solorigin = SCIP_SOLORIGIN_ORIGINAL;
-   sol->obj = 0.0;
+   sol->obj = origprob->objoffset;
 
    /* reinsert the values of the original variables */
    for( v = 0; v < nvars; ++v )

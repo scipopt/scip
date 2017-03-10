@@ -24,7 +24,7 @@ echo adjust file modes
 find ./ -type d -exec chmod 750 {} \;
 find ./ -type f -exec chmod 640 {} \;
 find ./ -name "*.sh" -exec chmod 750 {} \;
-chmod 750 bin/* scripts/* interfaces/ampl/get.ASL interfaces/jni/createJniInterface.py check/cmpres.awk check/find_missing_instances.py
+chmod 750 bin/* scripts/* interfaces/ampl/get.ASL check/cmpres.awk
 
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 --exclude="*~" \
@@ -48,8 +48,9 @@ tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
 $NAME/doc/scip* $NAME/doc/xternal.c $NAME/doc/builddoc.sh \
 $NAME/doc/inc/codestyle/* $NAME/doc/inc/shelltutorial $NAME/doc/inc/debugexamples \
-$NAME/doc/inc/faq/faqtext.txt $NAME/doc/inc/faq/*.py $NAME/doc/inc/faq/localdoc.php \
-$NAME/doc/inc/makeexamples/* $NAME/doc/inc/shelltutorial/commands  $NAME/doc/inc/shelltutorial/insertsnippetstutorial.py \
+$NAME/doc/inc/faq/faqtext.txt $NAME/doc/inc/faq/*.py $NAME/doc/inc/faq/localfaq.php \
+$NAME/doc/inc/makeexamples/* $NAME/doc/inc/shelltutorial/commands $NAME/doc/inc/shelltutorial/insertsnippetstutorial.py \
+$NAME/doc/inc/debugexamples/example*.txt \
 $NAME/doc/pictures/miniscippy.png $NAME/doc/pictures/scippy.png \
 $NAME/make/make.* \
 $NAME/release-notes/SCIP-* \
@@ -60,6 +61,7 @@ $NAME/src/nlpi/*.c $NAME/src/nlpi/*.cpp $NAME/src/nlpi/*.h \
 $NAME/src/lpi/*.c $NAME/src/lpi/*.cpp $NAME/src/lpi/*.h \
 $NAME/src/tpi/*.c $NAME/src/tpi/*.h \
 $NAME/src/xml/*.c $NAME/src/xml/*.h \
+$NAME/src/tinycthread/*.c $NAME/src/tinycthread/*.h \
 $NAME/src/dijkstra/*.c $NAME/src/dijkstra/*.h \
 $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.h \
 $NAME/src/tclique/*.c $NAME/src/tclique/*.h \
@@ -80,22 +82,26 @@ $NAME/applications/MinIISC/doc/* \
 $NAME/applications/MinIISC/src/* \
 $NAME/applications/MinIISC/data/* \
 $NAME/applications/MinIISC/check/configuration_tmpfile_setup_miniisc.sh $NAME/applications/MinIISC/check/run.sh \
-$NAME/applications/MinIISC/check/run.sh $NAME/applications/MinIISC/check/testset/short.* \
+$NAME/applications/MinIISC/check/testset/short.* \
 $NAME/applications/PolySCIP/doc/* \
 $NAME/applications/PolySCIP/src/*.cpp $NAME/applications/PolySCIP/src/*.h \
-$NAME/applications/PolySCIP/src/tclap/* $NAME/applications/PolySCIP/src/CMakeLists.txt \
+$NAME/applications/PolySCIP/src/tclap/* \
 $NAME/applications/PolySCIP/data/*.mop \
-$NAME/applications/PolySCIP/cmake/* $NAME/applications/PolySCIP/mult_zimpl/*.py \
+$NAME/applications/PolySCIP/data/AP_p-3_n-5.dat \
+$NAME/applications/PolySCIP/Makefile \
+$NAME/applications/PolySCIP/mult_zimpl/AP_p-3_n-5.zpl \
+$NAME/applications/PolySCIP/mult_zimpl/README \
+$NAME/applications/PolySCIP/mult_zimpl/tenfelde_podehl.zpl \
+$NAME/applications/PolySCIP/mult_zimpl/*.py \
 $NAME/applications/PolySCIP/INSTALL $NAME/applications/PolySCIP/LICENCE \
 $NAME/applications/PolySCIP/README $NAME/applications/PolySCIP/scipmip.set \
-$NAME/applications/PolySCIP/CMakeLists.txt \
 $NAME/applications/STP/doc/* \
 $NAME/applications/STP/src/depend.* \
 $NAME/applications/STP/src/*.c $NAME/applications/STP/src/*.h \
 $NAME/applications/STP/check/testset/*.test $NAME/applications/STP/check/testset/*.solu \
-$NAME/applications/STP/data/D/* \
-$NAME/applications/STP/scip-jack.sh \
+$NAME/applications/STP/data/short/* \
 $NAME/applications/STP/Makefile $NAME/applications/STP/INSTALL \
+$NAME/examples/xternal_examples.c \
 $NAME/examples/Binpacking/Makefile $NAME/examples/Binpacking/INSTALL \
 $NAME/examples/Binpacking/doc/* $NAME/examples/Binpacking/doc/pics/binpacking.png \
 $NAME/examples/Binpacking/check/testset/short.test $NAME/examples/Binpacking/check/testset/short.solu \
@@ -110,21 +116,31 @@ $NAME/examples/Eventhdlr/* $NAME/examples/Eventhdlr/doc/* \
 $NAME/examples/Eventhdlr/src/depend.* \
 $NAME/examples/Eventhdlr/src/*.c $NAME/examples/Eventhdlr/src/*.h \
 $NAME/examples/GMI/Makefile \
+$NAME/examples/GMI/src/Makefile \
+$NAME/examples/GMI/INSTALL \
+$NAME/examples/GMI/settings/scipdefault.set \
 $NAME/examples/GMI/doc/* \
 $NAME/examples/GMI/check/testset/short.* \
 $NAME/examples/GMI/settings/gmi* $NAME/examples/GMI/src/depend.* \
 $NAME/examples/GMI/src/*.c $NAME/examples/GMI/src/*.h \
 $NAME/examples/LOP/* $NAME/examples/LOP/doc/* $NAME/examples/LOP/data/* \
-$NAME/examples/LOP/check/check.sh $NAME/examples/LOP/check/testset/short.* \
-$NAME/examples/LOP/src/depend.* \
+$NAME/examples/LOP/check/testset/short.* \
+$NAME/examples/LOP/src/depend.* $NAME/examples/LOP/src/Makefile \
+$NAME/examples/LOP/settings/default.set \
 $NAME/examples/LOP/src/*.c $NAME/examples/LOP/src/*.h \
-$NAME/examples/MIPSolver/Makefile  $NAME/examples/MIPSolver/INSTALL $NAME/examples/MIPSolver/scipmip.set \
+$NAME/examples/MIPSolver/Makefile $NAME/examples/MIPSolver/INSTALL $NAME/examples/MIPSolver/scipmip.set \
 $NAME/examples/MIPSolver/doc/* \
 $NAME/examples/MIPSolver/src/depend.* \
 $NAME/examples/MIPSolver/src/*.cpp \
 $NAME/examples/Queens/* $NAME/examples/Queens/doc/scip_intro.tex \
 $NAME/examples/Queens/src/depend.* \
 $NAME/examples/Queens/src/*.cpp $NAME/examples/Queens/src/*.hpp \
+$NAME/examples/Relaxator/INSTALL \
+$NAME/examples/Relaxator/Makefile \
+$NAME/examples/Relaxator/check/testset/short.test \
+$NAME/examples/Relaxator/doc/xternal_relaxator.c \
+$NAME/examples/Relaxator/makedepend.sh \
+$NAME/examples/Relaxator/src/* \
 $NAME/examples/TSP/Makefile $NAME/examples/TSP/INSTALL \
 $NAME/examples/TSP/runme.sh $NAME/examples/TSP/runviewer.sh \
 $NAME/examples/TSP/sciptsp.set \
@@ -133,7 +149,7 @@ $NAME/examples/TSP/check/testset/short.* \
 $NAME/examples/TSP/src/depend.* \
 $NAME/examples/TSP/src/*.cpp $NAME/examples/TSP/src/*.h \
 $NAME/examples/TSP/tspviewer/*.java $NAME/examples/TSP/tspdata/*.tsp \
-$NAME/examples/VRP/Makefile  $NAME/examples/VRP/INSTALL  \
+$NAME/examples/VRP/Makefile $NAME/examples/VRP/INSTALL \
 $NAME/examples/VRP/doc/* $NAME/examples/VRP/data/* \
 $NAME/examples/VRP/src/depend.* \
 $NAME/examples/VRP/src/*.cpp $NAME/examples/VRP/src/*.h \
@@ -164,7 +180,34 @@ $NAME/check/instances/PseudoBoolean/*.cip \
 $NAME/check/instances/SAT/*.cnf \
 $NAME/check/instances/SOS/*.lp \
 $NAME/check/instances/Semicontinuous/*.lp \
-$NAME/check/instances/Semicontinuous/*.mps
+$NAME/check/instances/Semicontinuous/*.mps \
+$NAME/tests/Makefile \
+$NAME/tests/README \
+$NAME/tests/include/scip_test.* \
+$NAME/tests/src/bugs/depthlevel.c \
+$NAME/tests/src/cons/cons.c \
+$NAME/tests/src/cons/initlp.c \
+$NAME/tests/src/cons/knapsack/solveknapsackapprox.c \
+$NAME/tests/src/cons/linear/parsing.c \
+$NAME/tests/src/cons/nonlinear/getCoeffsAndConstantFromLinearExpr.c \
+$NAME/tests/src/cons/nonlinear/issue1326.c \
+$NAME/tests/src/cons/nonlinear/issue1326.cip \
+$NAME/tests/src/cons/quadratic/gauge.c \
+$NAME/tests/src/cons/quadratic/projection.c \
+$NAME/tests/src/heur/multistart.c \
+$NAME/tests/src/lpi/bases.c \
+$NAME/tests/src/lpi/boundchg.c \
+$NAME/tests/src/lpi/matrix.c \
+$NAME/tests/src/lpi/solve.c \
+$NAME/tests/src/misc/normaldistribution.c \
+$NAME/tests/src/misc/regression.c \
+$NAME/tests/src/misc/select.c \
+$NAME/tests/src/presol/qpkktref.c \
+$NAME/tests/src/prop/nlobbt.c \
+$NAME/tests/src/sepa/convexproj.c \
+$NAME/tests/src/sepa/gauge.c \
+$NAME/tests/src/test/stages.c
+
 rm -f $NAME
 echo ""
 echo "check version numbers in src/scip/def.h, doc/xternal.c, make.project, Makefile.nmake, and makedist.sh ($VERSION):"

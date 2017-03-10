@@ -316,7 +316,7 @@ SCIP_RETCODE applyOfins(
    }
 
    /* speed up sub-SCIP by not checking dual LP feasibility */
-   SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
 
    /* presolve the subproblem */
    retcode = SCIPpresolve(subscip);
