@@ -18958,6 +18958,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
    assert(valid != NULL ? !(*valid) : TRUE);
 
    *foundsol = FALSE;
+   *cutoff = FALSE;
 
    /* check whether the strong branching child is already infeasible due to the bound change */
    if( down )
