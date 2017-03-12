@@ -2715,7 +2715,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          /*&& (0 <= bestcand && bestcand < nlpcands)*/ /* no valid candidate index could be found */
          )
       {
-         SCIPinfoMessage(scip, NULL, " -> %d candidates, variable <%s> (solval=%g)\n",
+         SCIPdebugMessage(" -> %d candidates, variable <%s> (solval=%g)\n",
             nlpcands, SCIPvarGetName(decision->bestvar), decision->bestval);
 
          /* execute the branching as a result of the branching logic */
