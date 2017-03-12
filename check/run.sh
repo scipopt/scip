@@ -33,6 +33,9 @@ TMPFILE=$SOLVERPATH/results/$BASENAME.tmp
 
 uname -a                            > $OUTFILE
 uname -a                            > $ERRFILE
+echo                                >> $OUTFILE
+top -b -n 1 | head -n 15            >> $OUTFILE
+echo                                >> $OUTFILE
 echo "hard time limit: $HARDTIMELIMIT">>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT" >>$OUTFILE
 echo @01 $FILENAME ===========      >> $OUTFILE
