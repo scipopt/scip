@@ -267,7 +267,7 @@ SCIP_RETCODE heurExec(
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
 
    /* main loop */
-   for( i = 0; i < heurdata->maxiter && *result != SCIP_FOUNDSOL; ++i )
+   for( i = 0; i < heurdata->maxiter && *result != SCIP_FOUNDSOL && !SCIPisStopped(scip); ++i )
    {
       SCIP_Real* primal = NULL;
       SCIP_Real timeleft = SCIPinfinity(scip);
