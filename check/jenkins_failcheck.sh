@@ -51,7 +51,11 @@ NR != FNR {
   errorstring=$1 " " failmsg " '$GITBRANCH' '$TESTSET' '$SETTING' '$OPT' '$LPS'";
   bugs[errorstring]
 }' $BASEFILE.res $DATABASE`
-mv $TMPDATABASE $DATABASE
+
+# for some reason we have a lot of duplicates, so mv $TMPDATABASE $DATABASE is not enough
+# instead, we keep the header line and remove duplicates
+(head -1 $TMPDATABASE && sort -u $TMPDATABASE$) > $DATABASE
+rm $TMPDATABASE
 
 # send email if there are fixed instances
 if [ -n "$RESOLVEDINSTANCES" ]; then
