@@ -142,6 +142,7 @@
 #define SCIP_DEFAULT_CONF_WEIGHTREPROPDEPTH 0.1 /**< weight of the repropagation depth of a conflict used in score calculation */
 #define SCIP_DEFAULT_CONF_WEIGHTVALIDDEPTH  1.0 /**< weight of the valid depth of a conflict used in score calculation */
 #define SCIP_DEFAULT_CONF_MINIMPROVE       0.05 /**< minimal improvement of primal bound to remove conflicts based on a previous incumbent */
+#define SCIP_DEFAULT_CONF_DUALRAYPRESOL       0 /**< which presolving strategy should be used for dualray constraints? (0: no presolving) */
 
 
 /* Conflict Analysis (dual ray) */
@@ -1369,6 +1370,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/weightvaliddepth",
          "weight of the valid depth of a conflict used in score calculation",
          &(*set)->conf_weightvaliddepth, TRUE, SCIP_DEFAULT_CONF_WEIGHTVALIDDEPTH, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "constraints/presolstrategy",
+         "which presolving strategy should be used for dualray constraints? (0: no presolving)",
+         &(*set)->conf_dualraypresolstrat, TRUE, SCIP_DEFAULT_CONF_DUALRAYPRESOL, 0, 2,
+         NULL, NULL) );
 
    /* constraint parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,

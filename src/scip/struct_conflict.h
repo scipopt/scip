@@ -76,6 +76,15 @@ struct SCIP_ConflictSet
    SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP, propagation */
 };
 
+/** set of conflicting bound changes */
+struct SCIP_ProofConsSet
+{
+   SCIP_VAR**            vars;
+   SCIP_Real*            coefs;
+   SCIP_Real             rhs;
+   SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP, propagation */
+};
+
 /** set of LP bound change */
 struct SCIP_LPBdChgs
 {

@@ -5908,17 +5908,22 @@ void debugPrintViolationInfo(
 #define debugPrintViolationInfo(...) /**/
 #endif
 
-/** tighten a given infeasibility proof a^Tx <= b with minact > b wrt local bounds
+/** tighten a given infeasibility proof a^Tx <= b with minact > b w.r.t. local bounds
  *
- *  remove all continuous variables from the proof. we don't care if the proof is locally invalid afterwards
- *  because we have already proven the infeasibility of the current node.
+ *  SCIP_CONFPRES_DISABLED:
+ *    - perform no presolving
  *
- *  Apply the MIR function after each step (if enabled) but use it iff the resulting constraint separated the
- *  root LP solution.
+ *  SCIP_CONFPRES_SIMPLE:
+ *    - remove all variables where the local bound contributing to the activity is equal to the global bound
  *
- *  @todo we may want to always accept the constraint after applying the MIR funtion?!
+ *  SCIP_CONFPRES_EXHAUSTIVE:
+ *    - create a constraint where each variable contributes with a local bound to the activity that which is different
+ *      to the correspding global bound
+ *    - create another constraint where each variable contributes with the global bound to the activity.
+ *      add only a few variables contributing with a local bound to the constraint such that the proof is
+ *      not trivially fulfilled.
  *
- *  @todo if all variables we may want to separate instead of propagate the constraint?!
+ *  @todo implement applying MIR function to the proof constraint(s).
  */
 static
 SCIP_RETCODE tightenDualray(
@@ -5940,6 +5945,12 @@ SCIP_RETCODE tightenDualray(
    int ncontvars;
    int nintvars;
    int i;
+
+   if( set->conf_dualraypresolstrat == SCIP_CONFPRES_DISABLED )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
 
    vars = SCIPprobGetVars(transprob);
    nbinvars = 0;
@@ -5966,7 +5977,7 @@ SCIP_RETCODE tightenDualray(
       }
    }
 
-   SCIPsetDebugMsg(set, "start dualray tightening:\n");
+   SCIPsetDebugMsg(set, "start dualray tightening (strategy: %u):\n", (unsigned int)presolstrat);
    SCIPsetDebugMsg(set, "-> tighten dual ray: nvars=%d (bin=%d, int=%d, cont=%d)",
          (*nvarinds), nbinvars, nintvars, ncontvars);
    debugPrintViolationInfo(set, getMinActivity(vals, varinds, (*nvarinds), curvarlbs, curvarubs), *rhs, NULL);
@@ -5974,7 +5985,7 @@ SCIP_RETCODE tightenDualray(
    /* return if all variables are continuous */
    if( ncontvars == (*nvarinds) )
    {
-      *success = FALSE;
+      printf(">> only contvars");
       return SCIP_OKAY;
    }
 
@@ -5995,6 +6006,8 @@ SCIP_RETCODE tightenDualray(
     */
    for( i = 0; i < *nvarinds; )
    {
+      SCIP_Real glbbd;
+      SCIP_Real locbd;
       int idx = varinds[i];
 
       assert(vars[idx] != NULL);
@@ -6002,43 +6015,32 @@ SCIP_RETCODE tightenDualray(
       assert(!SCIPsetIsZero(set, vals[idx]));
       assert(varused[idx]);
 
-      /* skip integral variables */
-      if( SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_IMPLINT )
+      /* get appropriate global and local bounds */
+      glbbd = (vals[idx] < 0.0 ? SCIPvarGetUbGlobal(vars[idx]) : SCIPvarGetLbGlobal(vars[idx]));
+      locbd = (vals[idx] < 0.0 ? curvarubs[idx] : curvarlbs[idx]);
+
+      /* skip all variables contributing with a local bound */
+      if( presolstrat == SCIP_CONFPRES_SIMPLE && !SCIPsetIsEQ(set, glbbd, locbd) )
       {
          ++i;
          continue;
       }
-      else
-      {
-         SCIP_Real glbbd;
-         SCIP_Real locbd;
 
-         /* get appropriate global and local bounds */
-         glbbd = (vals[idx] < 0.0 ? SCIPvarGetUbGlobal(vars[idx]) : SCIPvarGetLbGlobal(vars[idx]));
-         locbd = (vals[idx] < 0.0 ? curvarubs[idx] : curvarlbs[idx]);
+      SCIPsetDebugMsg(set, "-> remove variable <%s>: glb=[%g,%g], loc=[%g,%g], val=%g\n", SCIPvarGetName(vars[idx]),
+            SCIPvarGetLbGlobal(vars[idx]), SCIPvarGetUbGlobal(vars[idx]), SCIPvarGetLbLocal(vars[idx]),
+            SCIPvarGetUbLocal(vars[idx]), vals[idx]);
 
-         if( !SCIPsetIsEQ(set, glbbd, locbd) )
-         {
-            ++i;
-            continue;
-         }
+      /* update rhs */
+      (*rhs) -= (glbbd * vals[idx]);
 
-         SCIPsetDebugMsg(set, "-> remove continuous variable <%s>: glb=[%g,%g], loc=[%g,%g], val=%g\n", SCIPvarGetName(vars[idx]),
-               SCIPvarGetLbGlobal(vars[idx]), SCIPvarGetUbGlobal(vars[idx]), SCIPvarGetLbLocal(vars[idx]),
-               SCIPvarGetUbLocal(vars[idx]), vals[idx]);
+      debugPrintViolationInfo(set, getMinActivity(vals, varinds, (*nvarinds), curvarlbs, curvarubs), *rhs, " update: ");
 
-         /* update rhs */
-         (*rhs) -= (glbbd * vals[idx]);
+      vals[idx] = 0.0;
+      varused[idx] = FALSE;
 
-         debugPrintViolationInfo(set, getMinActivity(vals, varinds, (*nvarinds), curvarlbs, curvarubs), *rhs, " update: ");
-
-         vals[idx] = 0.0;
-         varused[idx] = FALSE;
-
-         /* do not increase i, update sparsity pattern */
-         varinds[i] = varinds[(*nvarinds)-1];
-         --(*nvarinds);
-      }
+      /* do not increase i, update sparsity pattern */
+      varinds[i] = varinds[(*nvarinds)-1];
+      --(*nvarinds);
    }
 
    /* apply MIR function again */
@@ -6459,7 +6461,7 @@ SCIP_RETCODE performDualRayAnalysis(
          {
             /* create and add the original proof */
             SCIP_CALL( createAndAddDualray(conflict, conflictstore, set, stat, origprob, transprob, tree, reopt, lp,
-                  blkmem, ndualrayvars, mirvars, farkascoefs, farkaslhs, SCIPsetInfinity(set), success) );
+                  blkmem, ndualrayvars, transprob->vars, farkascoefs, farkaslhs, SCIPsetInfinity(set), success) );
          }
       }
    }

@@ -235,6 +235,9 @@ struct SCIP_Set
    SCIP_Real             conf_minimprove;    /**< minimal improvement of primal bound to remove conflicts depending on
                                               *   a previous incumbent.
                                               */
+   int                   conf_dualraypresolstrat; /**< which presolving strategy should be used for dualray constraints?
+                                                   *   (0: no presolving)
+                                                   */
 
    /* constraint settings */
    int                   cons_agelimit;      /**< maximum age an unnecessary constraint can reach before it is deleted
