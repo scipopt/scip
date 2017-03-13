@@ -1,4 +1,3 @@
-#define SCIP_DEBUG
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -41,10 +40,10 @@
 #define HEUR_USESSUBSCIP      FALSE
 
 #define DEFAULT_INITTHETA     0.125          /**< default initial regularization right-hand side value (< 0.25) */
-#define DEFAULT_SIGMA         0.5            /**< default regularization update factor (< 1) */
+#define DEFAULT_SIGMA         0.7            /**< default regularization update factor (< 1) */
 #define DEFAULT_MAXITER       100            /**< default maximum number of iterations of the MPEC loop */
 #define DEFAULT_MAXNLPITER    500            /**< default maximum number of NLP iterations per solve */
-#define DEFAULT_SUBNLPTRIGGER 1e-4           /**< default maximum integrality violation before triggering a sub-NLP call */
+#define DEFAULT_SUBNLPTRIGGER 1e-3           /**< default maximum integrality violation before triggering a sub-NLP call */
 
 /*
  * Data structures
@@ -278,8 +277,6 @@ SCIP_RETCODE heurExec(
       SCIP_Real maxviolbin = 0.0;
       SCIP_Real maxviolreg = 0.0;
       int j;
-
-      SCIPdebugMsg(scip, "main iteration %d\n", i);
 
       /* add or update regularization */
       SCIP_CALL( addRegularScholtes(scip, heurdata, binvars, nbinvars, theta, i > 0) );
@@ -567,7 +564,6 @@ SCIP_DECL_HEUREXEC(heurExecMpec)
    /* create NLP */
    SCIP_CALL( createNLP(scip, heurdata) );
 
-   SCIPdebugMsg(scip, "call MPEC heuristic\n");
    SCIP_CALL( heurExec(scip, heur, heurdata, result) );
 
    /* free NLP */
