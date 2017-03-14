@@ -2640,9 +2640,12 @@ SCIP_RETCODE SCIPconflictCreate(
    SCIP_CALL( SCIPpqueueCreate(&(*conflict)->forcedbdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
          conflictBdchginfoComp) );
    SCIP_CALL( conflictsetCreate(&(*conflict)->conflictset, blkmem) );
+   (*conflict)->proofsets = NULL;
    (*conflict)->conflictsets = NULL;
    (*conflict)->conflictsetscores = NULL;
    (*conflict)->tmpbdchginfos = NULL;
+   (*conflict)->proofsetssize = 0;
+   (*conflict)->nproofsets = 0;
    (*conflict)->conflictsetssize = 0;
    (*conflict)->nconflictsets = 0;
    (*conflict)->tmpbdchginfossize = 0;
@@ -5918,7 +5921,7 @@ void debugPrintViolationInfo(
  *
  *  SCIP_CONFPRES_EXHAUSTIVE:
  *    - create a constraint where each variable contributes with a local bound to the activity that which is different
- *      to the correspding global bound
+ *      to the corresponding global bound
  *    - create another constraint where each variable contributes with the global bound to the activity.
  *      add only a few variables contributing with a local bound to the constraint such that the proof is
  *      not trivially fulfilled.
@@ -5927,7 +5930,9 @@ void debugPrintViolationInfo(
  */
 static
 SCIP_RETCODE tightenDualray(
+   SCIP_CONFLICT*        conflict,
    SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_Real*            vals,               /**< coefficients of the proof constraint */
    SCIP_Real*            rhs,                /**< rhs of the proof constraint */
@@ -5977,7 +5982,7 @@ SCIP_RETCODE tightenDualray(
       }
    }
 
-   SCIPsetDebugMsg(set, "start dualray tightening (strategy: %u):\n", (unsigned int)presolstrat);
+   SCIPsetDebugMsg(set, "start dualray tightening (strategy: %d):\n", set->conf_dualraypresolstrat);
    SCIPsetDebugMsg(set, "-> tighten dual ray: nvars=%d (bin=%d, int=%d, cont=%d)",
          (*nvarinds), nbinvars, nintvars, ncontvars);
    debugPrintViolationInfo(set, getMinActivity(vals, varinds, (*nvarinds), curvarlbs, curvarubs), *rhs, NULL);
@@ -6001,10 +6006,42 @@ SCIP_RETCODE tightenDualray(
    else
       *success = TRUE;
 
-   /* remove all continuous variables that have equal global and local bounds (ub or lb depend on the sign of val )
-    * from the proof
-    */
-   for( i = 0; i < *nvarinds; )
+   /* initialize proofsets */
+   if( conflict->proofsets == NULL )
+   {
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(conflict->proofsets), 2) );
+      conflict->proofsetssize = 2;
+
+      if( set->conf_dualraypresolstrat == SCIP_CONFPRES_SIMPLE )
+      {
+         SCIP_CALL( initProofSet(conflict->proofsets[0]) );
+         conflict->nproofsets = 1;
+      }
+      else
+      {
+         assert(set->conf_dualraypresolstrat == SCIP_CONFPRES_EXHAUSTIVE);
+         SCIP_CALL( initProofSet(conflict->proofsets[0]) );
+         SCIP_CALL( initProofSet(conflict->proofsets[1]) );
+         conflict->nproofsets = 2;
+      }
+   }
+   else if( set->conf_dualraypresolstrat == SCIP_CONFPRES_EXHAUSTIVE && conflict->nproofsets == 1 )
+   {
+      assert(conflict->proofsetssize >= 2);
+      SCIP_CALL( initProofSet(conflict->proofsets[1]) );
+      conflict->nproofsets = 2;
+   }
+#ifndef NDEBUG
+   else
+   {
+      assert(conflict->nproofsets >= 1);
+      assert((conflict->nproofsets == 1 && SCIP_CONFPRES_SIMPLE) || (conflict->nproofsets == 2 && SCIP_CONFPRES_EXHAUSTIVE));
+      assert(conflict->proofsets[0] != NULL);
+   }
+#endif
+
+   /* todo write documentation */
+   for( i = 0; i < *nvarinds; i++ )
    {
       SCIP_Real glbbd;
       SCIP_Real locbd;
@@ -6020,27 +6057,30 @@ SCIP_RETCODE tightenDualray(
       locbd = (vals[idx] < 0.0 ? curvarubs[idx] : curvarlbs[idx]);
 
       /* skip all variables contributing with a local bound */
-      if( presolstrat == SCIP_CONFPRES_SIMPLE && !SCIPsetIsEQ(set, glbbd, locbd) )
+      if( set->conf_dualraypresolstrat == SCIP_CONFPRES_SIMPLE && !SCIPsetIsEQ(set, glbbd, locbd) )
       {
-         ++i;
-         continue;
+         assert(conflict->proofsets[0] != NULL);
+
+         SCIP_CALL( addVarToProofSet(conflict->proofsets[0], vars[idx], vals[idx]) );
       }
+      else
+      {
+         SCIPsetDebugMsg(set, "-> remove variable <%s>: glb=[%g,%g], loc=[%g,%g], val=%g\n", SCIPvarGetName(vars[idx]),
+               SCIPvarGetLbGlobal(vars[idx]), SCIPvarGetUbGlobal(vars[idx]), SCIPvarGetLbLocal(vars[idx]),
+               SCIPvarGetUbLocal(vars[idx]), vals[idx]);
 
-      SCIPsetDebugMsg(set, "-> remove variable <%s>: glb=[%g,%g], loc=[%g,%g], val=%g\n", SCIPvarGetName(vars[idx]),
-            SCIPvarGetLbGlobal(vars[idx]), SCIPvarGetUbGlobal(vars[idx]), SCIPvarGetLbLocal(vars[idx]),
-            SCIPvarGetUbLocal(vars[idx]), vals[idx]);
+         /* update rhs */
+         (*rhs) -= (glbbd * vals[idx]);
 
-      /* update rhs */
-      (*rhs) -= (glbbd * vals[idx]);
+         debugPrintViolationInfo(set, getMinActivity(vals, varinds, (*nvarinds), curvarlbs, curvarubs), *rhs, " update: ");
 
-      debugPrintViolationInfo(set, getMinActivity(vals, varinds, (*nvarinds), curvarlbs, curvarubs), *rhs, " update: ");
+         vals[idx] = 0.0;
+         varused[idx] = FALSE;
 
-      vals[idx] = 0.0;
-      varused[idx] = FALSE;
-
-      /* do not increase i, update sparsity pattern */
-      varinds[i] = varinds[(*nvarinds)-1];
-      --(*nvarinds);
+         /* do not increase i, update sparsity pattern */
+         varinds[i] = varinds[(*nvarinds)-1];
+         --(*nvarinds);
+      }
    }
 
    /* apply MIR function again */

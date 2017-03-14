@@ -39,9 +39,7 @@ extern "C" {
 typedef struct SCIP_Conflicthdlr SCIP_CONFLICTHDLR; /**< conflict handler to process conflict sets */
 typedef struct SCIP_ConflicthdlrData SCIP_CONFLICTHDLRDATA; /**< conflict handler data */
 typedef struct SCIP_ConflictSet SCIP_CONFLICTSET; /**< set of conflicting bound changes */
-typedef struct SCIP_ProofConsSet SCIP_PROOFCONSSET; /**< set of variables and coefficients describing a proof-constraint
-                                                     *   of type a^Tx <= rhs
-                                                     */
+typedef struct SCIP_ProofSet SCIP_PROOFSET;       /**< set of variables and coefficients describing a proof-constraint of type a^Tx <= rhs */
 typedef struct SCIP_LPBdChgs SCIP_LPBDCHGS;       /**< set of LP bound changes */
 typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data structure */
 
