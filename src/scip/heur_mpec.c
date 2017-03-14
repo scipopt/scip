@@ -44,6 +44,7 @@
 #define DEFAULT_MAXITER       100            /**< default maximum number of iterations of the MPEC loop */
 #define DEFAULT_MAXNLPITER    500            /**< default maximum number of NLP iterations per solve */
 #define DEFAULT_SUBNLPTRIGGER 1e-3           /**< default maximum integrality violation before triggering a sub-NLP call */
+#define DEFAULT_MAXNLPCOST    1e+8           /**< default maximum cost available for solving NLPs per call of the heuristic */
 
 /*
  * Data structures
@@ -60,6 +61,7 @@ struct SCIP_HeurData
    SCIP_Real             inittheta;          /**< initial regularization right-hand side value */
    SCIP_Real             sigma;              /**< regularization update factor */
    SCIP_Real             subnlptrigger;      /**< maximum number of NLP iterations per solve */
+   SCIP_Real             maxnlpcost;         /**< maximum cost available for solving NLPs per call of the heuristic */
    int                   maxiter;            /**< maximum number of iterations of the MPEC loop */
    int                   maxnlpiter;         /**< maximum number of NLP iterations per solve */
 };
@@ -199,6 +201,37 @@ SCIP_RETCODE addRegularScholtes(
    return SCIP_OKAY;
 }
 
+/** recursive helper function to count the number of nodes in a sub-tree */
+static
+int getExprSize(
+   SCIP_EXPR*            expr                /**< expression */
+   )
+{
+   int sum;
+   int i;
+
+   assert(expr != NULL);
+
+   sum = 0;
+   for( i = 0; i < SCIPexprGetNChildren(expr); ++i )
+   {
+      SCIP_EXPR* child = SCIPexprGetChildren(expr)[i];
+      sum += getExprSize(child);
+   }
+   return 1 + sum;
+}
+
+/** returns the number of nodes in an expression tree */
+static
+int getExprtreeSize(
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+   )
+{
+   if( tree == NULL )
+      return 0;
+   return getExprSize(SCIPexprtreeGetRoot(tree));
+}
+
 /** main execution function of the MPEC heuristic */
 static
 SCIP_RETCODE heurExec(
@@ -216,6 +249,8 @@ SCIP_RETCODE heurExec(
    int* indices = NULL;
    SCIP_Real timelim;
    SCIP_Real theta = heurdata->inittheta;
+   SCIP_Real nlpcostperiter = 0.0;
+   SCIP_Real nlpcostleft = heurdata->maxnlpcost;
    SCIP_Bool reinit = TRUE;
    SCIP_Bool fixed = FALSE;
    SCIP_Bool subnlpcalled = FALSE;
@@ -249,6 +284,17 @@ SCIP_RETCODE heurExec(
    SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nbinvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &indices, nbinvars) );
 
+   /* compute estimate cost for each NLP iteration */
+   for( i = 0; i < SCIPgetNNLPNlRows(scip); ++i )
+   {
+      SCIP_NLROW* nlrow = SCIPgetNLPNlRows(scip)[i];
+      assert(nlrow != NULL);
+
+      nlpcostperiter += 1.0 * SCIPnlrowGetNLinearVars(nlrow)
+               + 2.0 * SCIPnlrowGetNQuadElems(nlrow)
+               + 3.0 * getExprtreeSize(SCIPnlrowGetExprtree(nlrow));
+   }
+
    /* set initial guess */
    for( i = 0; i < SCIPgetNVars(scip); ++i )
    {
@@ -267,7 +313,7 @@ SCIP_RETCODE heurExec(
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
 
    /* main loop */
-   for( i = 0; i < heurdata->maxiter && *result != SCIP_FOUNDSOL && !SCIPisStopped(scip); ++i )
+   for( i = 0; i < heurdata->maxiter && *result != SCIP_FOUNDSOL && nlpcostleft > 0.0 && !SCIPisStopped(scip); ++i )
    {
       SCIP_Real* primal = NULL;
       SCIP_Real timeleft = SCIPinfinity(scip);
@@ -296,7 +342,6 @@ SCIP_RETCODE heurExec(
 
       /* solve NLP */
       SCIP_CALL( SCIPnlpiSolve(heurdata->nlpi, heurdata->nlpiprob) );
-      SCIP_CALL( SCIPnlpiGetStatistics(heurdata->nlpi, heurdata->nlpiprob, nlpstatistics) );
       solstat = SCIPnlpiGetSolstat(heurdata->nlpi, heurdata->nlpiprob);
 
       /* give up if an error occurred or no primal values are accessible */
@@ -305,6 +350,11 @@ SCIP_RETCODE heurExec(
          SCIPdebugMsg(scip, "error occured during NLP solve -> stop!\n");
          break;
       }
+
+      /* update nlpcostleft */
+      SCIP_CALL( SCIPnlpiGetStatistics(heurdata->nlpi, heurdata->nlpiprob, nlpstatistics) );
+      nlpcostleft -= SCIPnlpStatisticsGetNIterations(nlpstatistics) * nlpcostperiter;
+      SCIPdebugMsg(scip, "nlpcostleft = %e\n", nlpcostleft);
 
       SCIP_CALL( SCIPnlpiGetSolution(heurdata->nlpi, heurdata->nlpiprob, &primal, NULL, NULL, NULL) );
       assert(primal != NULL);
@@ -332,8 +382,11 @@ SCIP_RETCODE heurExec(
       }
       SCIPdebugMsg(scip, "maxviol-regularization %g maxviol-integrality %g\n", maxviolreg, maxviolbin);
 
-      /* call sub-NLP heursitic when the maximum binary infeasibility is small enough */
-      if( !subnlpcalled && heurdata->subnlp != NULL && SCIPisLE(scip, maxviolbin, heurdata->subnlptrigger) )
+      /* call sub-NLP heuristic when the maximum binary infeasibility is small enough (or this is the last iteration
+       * because we reached the nlpcost limit)
+       */
+      if( !subnlpcalled && heurdata->subnlp != NULL && (SCIPisLE(scip, maxviolbin, heurdata->subnlptrigger) || nlpcostleft <= 0.0)
+         && !SCIPisStopped(scip) )
       {
          SCIP_SOL* refpoint;
          SCIP_RESULT subnlpresult;
@@ -564,6 +617,7 @@ SCIP_DECL_HEUREXEC(heurExecMpec)
    /* create NLP */
    SCIP_CALL( createNLP(scip, heurdata) );
 
+   /* call MPEC method */
    SCIP_CALL( heurExec(scip, heur, heurdata, result) );
 
    /* free NLP */
@@ -614,6 +668,10 @@ SCIP_RETCODE SCIPincludeHeurMpec(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/subnlptrigger",
          "maximum number of NLP iterations per solve",
          &heurdata->subnlptrigger, FALSE, DEFAULT_SUBNLPTRIGGER, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxnlpcost",
+         "maximum cost available for solving NLPs per call of the heuristic",
+         &heurdata->maxnlpcost, FALSE, DEFAULT_MAXNLPCOST, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxiter",
          "maximum number of iterations of the MPEC loop",
