@@ -4918,16 +4918,32 @@ SCIP_RETCODE SCIPlpiSetNorms(
 
    /* store dual norms in Gurobi */
    error = GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_VDUALNORM, 0, lpinorms->ncols, lpinorms->colnorm);
+   /* it can fail to set the norms if no basis was previously set, e.g.,
+    * this can happen if flushing an LP did not change anything and
+    * therefore no basis was set, as a result Gurobi has no extra user
+    * warmstart information and cannot set norms */
+#if 0
    if( error )
    {
       SCIPmessagePrintWarning(lpi->messagehdlr, "Warning: setting dual variable norms failed with Gurobi error %d\n", error);
    }
+#else
+   (void)error;
+#endif
 
    error = GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_CDUALNORM, 0, lpinorms->nrows, lpinorms->rownorm);
+   /* it can fail to set the norms if no basis was previously set, e.g.,
+    * this can happen if flushing an LP did not change anything and
+    * therefore no basis was set, as a result Gurobi has no extra user
+    * warmstart information and cannot set norms */
+#if 0
    if( error )
    {
       SCIPmessagePrintWarning(lpi->messagehdlr, "Warning: setting dual constraint norms failed with Gurobi error %d\n", error);
    }
+#else
+   (void)error;
+#endif
 
    return SCIP_OKAY;
 }
