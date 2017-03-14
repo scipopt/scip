@@ -40,7 +40,7 @@
 #define HEUR_USESSUBSCIP      FALSE
 
 #define DEFAULT_INITTHETA     0.125          /**< default initial regularization right-hand side value (< 0.25) */
-#define DEFAULT_SIGMA         0.7            /**< default regularization update factor (< 1) */
+#define DEFAULT_SIGMA         0.5            /**< default regularization update factor (< 1) */
 #define DEFAULT_MAXITER       100            /**< default maximum number of iterations of the MPEC loop */
 #define DEFAULT_MAXNLPITER    500            /**< default maximum number of NLP iterations per solve */
 #define DEFAULT_SUBNLPTRIGGER 1e-3           /**< default maximum integrality violation before triggering a sub-NLP call */
