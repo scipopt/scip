@@ -232,6 +232,27 @@ int getExprtreeSize(
    return getExprSize(SCIPexprtreeGetRoot(tree));
 }
 
+/** returns the available time limit that is left */
+static
+SCIP_RETCODE getTimeLeft(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            timeleft            /**< pointer to store the remaining time limit */
+   )
+{
+   SCIP_Real timelim;
+
+   assert(timeleft != NULL);
+
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
+
+   if( SCIPisInfinity(scip, timelim) )
+      *timeleft = timelim - SCIPgetSolvingTime(scip);
+   else
+      *timeleft = SCIPinfinity(scip);
+
+   return SCIP_OKAY;
+}
+
 /** main execution function of the MPEC heuristic */
 static
 SCIP_RETCODE heurExec(
@@ -247,7 +268,6 @@ SCIP_RETCODE heurExec(
    SCIP_Real* ubs = NULL;
    SCIP_Real* lbs = NULL;
    int* indices = NULL;
-   SCIP_Real timelim;
    SCIP_Real theta = heurdata->inittheta;
    SCIP_Real nlpcostperiter = 0.0;
    SCIP_Real nlpcostleft = heurdata->maxnlpcost;
@@ -276,6 +296,7 @@ SCIP_RETCODE heurExec(
    }
 
    /* all binary variables are fixed */
+   SCIPdebugMsg(scip, "nbinvars %d\n", nbinvars);
    if( nbinvars == 0 )
       goto TERMINATE;
 
@@ -300,7 +321,7 @@ SCIP_RETCODE heurExec(
    {
       SCIP_VAR* var = SCIPgetVars(scip)[i];
       initguess[i] = SCIPgetSolVal(scip, NULL, var);
-      SCIPdebugMsg(scip, "set initial value for %s to %g\n", SCIPvarGetName(var), initguess[i]);
+      /* SCIPdebugMsg(scip, "set initial value for %s to %g\n", SCIPvarGetName(var), initguess[i]); */
    }
    SCIP_CALL( SCIPnlpiSetInitialGuess(heurdata->nlpi, heurdata->nlpiprob, initguess, NULL, NULL, NULL) );
 
@@ -310,7 +331,6 @@ SCIP_RETCODE heurExec(
    SCIP_CALL( SCIPnlpiSetRealPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_RELOBJTOL,
          SCIPdualfeastol(scip) / 10.0) );
    SCIP_CALL( SCIPnlpiSetIntPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, 0) );
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelim) );
 
    /* main loop */
    for( i = 0; i < heurdata->maxiter && *result != SCIP_FOUNDSOL && nlpcostleft > 0.0 && !SCIPisStopped(scip); ++i )
@@ -328,15 +348,13 @@ SCIP_RETCODE heurExec(
       SCIP_CALL( addRegularScholtes(scip, heurdata, binvars, nbinvars, theta, i > 0) );
 
       /* set working limits */
-      if( !SCIPisInfinity(scip, timelim) )
+      SCIP_CALL( getTimeLeft(scip, &timeleft) );
+      if( timeleft <= 0.0 )
       {
-         timeleft = timelim - SCIPgetSolvingTime(scip);
-         if( timeleft <= 0.0 )
-         {
-            SCIPdebugMsg(scip, "skip NLP solve; no time left\n");
-            break;
-         }
+         SCIPdebugMsg(scip, "skip NLP solve; no time left\n");
+         break;
       }
+
       SCIP_CALL( SCIPnlpiSetRealPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_TILIM, timeleft) );
       SCIP_CALL( SCIPnlpiSetIntPar(heurdata->nlpi, heurdata->nlpiprob, SCIP_NLPPAR_ITLIM, heurdata->maxnlpiter) );
 
@@ -401,6 +419,7 @@ SCIP_RETCODE heurExec(
             SCIP_CALL( SCIPsetSolVal(scip, refpoint, var, val) );
          }
 
+         SCIP_CALL( getTimeLeft(scip, &timeleft) );
          SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->subnlp, &subnlpresult, refpoint, -1LL, timeleft, 0.0, NULL,
                NULL) );
          SCIP_CALL( SCIPfreeSol(scip, &refpoint) );
@@ -487,9 +506,18 @@ SCIP_RETCODE heurExec(
 
          SCIPdebugMsg(scip, "NLP solution is not feasible for the NLP and the binary variables\n");
 
+         /* stop if fixing did not resolve the infeasibility */
+         if( fixed )
+         {
+            SCIPdebugMsg(scip, "fixing variables did not resolve infeasibility -> stop!\n");
+            break;
+         }
+
          /* fix variables if reinit is FALSE; otherwise set another initial point */
          if( !reinit )
          {
+            int nfixedvars = 0;
+
             /* fix binary variables */
             for( j = 0; j < nbinvars; ++j )
             {
@@ -505,20 +533,24 @@ SCIP_RETCODE heurExec(
                {
                   lbs[j] = primal[idx] >= 0.5 ? 0.0 : 1.0;
                   ubs[j] = primal[idx] >= 0.5 ? 0.0 : 1.0;
-                  SCIPdebugMsg(scip, "fix binary variable %s = %g\n", SCIPvarGetName(binvars[j]), ubs[j]);
+                  ++nfixedvars;
+                  /* SCIPdebugMsg(scip, "fix binary variable %s = %g\n", SCIPvarGetName(binvars[j]), ubs[j]); */
                }
             }
+            SCIPdebugMsg(scip, "fixed %d binary variables\n", nfixedvars);
             SCIP_CALL( SCIPnlpiChgVarBounds(heurdata->nlpi, heurdata->nlpiprob, nbinvars, indices, lbs, ubs) );
             fixed = TRUE;
          }
          else
          {
+            SCIPdebugMsg(scip, "update initial guess\n");
+
             /* set initial point */
             for( j = 0; j < nbinvars; ++j )
             {
                int idx = (int)(size_t)SCIPhashmapGetImage(heurdata->var2idx, (void*)binvars[j]);
                initguess[idx] = primal[idx] >= 0.5 ? 0.0 : 1.0;
-               SCIPdebugMsg(scip, "update init guess for %s to %g\n", SCIPvarGetName(binvars[j]), initguess[idx]);
+               /* SCIPdebugMsg(scip, "update init guess for %s to %g\n", SCIPvarGetName(binvars[j]), initguess[idx]); */
             }
             SCIP_CALL( SCIPnlpiSetInitialGuess(heurdata->nlpi, heurdata->nlpiprob, initguess, NULL, NULL, NULL) );
             reinit = FALSE;
@@ -598,12 +630,15 @@ SCIP_DECL_HEUREXITSOL(heurExitsolMpec)
    return SCIP_OKAY;
 }
 
-
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecMpec)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata = SCIPheurGetData(heur);
+   SCIP_CONSHDLR* andhdlr = SCIPfindConshdlr(scip, "and");
+   SCIP_CONSHDLR* sosonehdlr = SCIPfindConshdlr(scip, "SOS1");
+   SCIP_CONSHDLR* sostwohdlr = SCIPfindConshdlr(scip, "SOS2");
+
    assert(heurdata != NULL);
 
    *result = SCIP_DIDNOTRUN;
@@ -611,6 +646,14 @@ SCIP_DECL_HEUREXEC(heurExecMpec)
    if( SCIPgetNIntVars(scip) > 0 || SCIPgetNBinVars(scip) == 0
       || heurdata->nlpi == NULL || !SCIPisNLPConstructed(scip) )
       return SCIP_OKAY;
+
+   /* skip heuristic if constraints without a nonlinear representation are present */
+   if( (andhdlr != NULL && SCIPconshdlrGetNConss(andhdlr) > 0) ||
+      (sosonehdlr != NULL && SCIPconshdlrGetNConss(sosonehdlr) > 0) ||
+      (sostwohdlr != NULL && SCIPconshdlrGetNConss(sostwohdlr) > 0) )
+   {
+      return SCIP_OKAY;
+   }
 
    *result = SCIP_DIDNOTFIND;
 
