@@ -1,3 +1,9 @@
+SCIP version ???
+==================
+
+fixed bugs:
+- fix computation of constraint violations for unbounded variables in quadratic constraint handler
+
 SCIP version 4.0.0
 ==================
 

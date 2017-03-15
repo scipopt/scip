@@ -5061,6 +5061,8 @@ SCIP_RETCODE computeViolation(
    SCIP_Real varval2;
    SCIP_VAR* var;
    SCIP_VAR* var2;
+   int ninfposact = 0;
+   int ninfnegact = 0;
    int i;
    int j;
 
@@ -5076,38 +5078,44 @@ SCIP_RETCODE computeViolation(
 
    *solviolbounds = FALSE;
    consdata->activity = 0.0;
+   consdata->lhsviol = 0.0;
+   consdata->rhsviol = 0.0;
 
-   /* @todo Take better care of variables at +/- infinity: e.g., run instance waste in debug mode with a short timelimit (30s). */
-   for( i = 0; i < consdata->nlinvars; ++i )
+   for( i = 0; i < consdata->nlinvars && (ninfposact == 0 || ninfnegact == 0); ++i )
    {
+      SCIP_Real activity;
+
       var = consdata->linvars[i];
       varval = SCIPgetSolVal(scip, sol, var);
+      activity = consdata->lincoefs[i] * varval;
 
+      /* consider the contribution of the variable to be + or - infinity if |varval| = infinity */
       if( SCIPisInfinity(scip, REALABS(varval)) )
       {
-         consdata->activity = SCIPinfinity(scip);
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
-            consdata->lhsviol = SCIPinfinity(scip);
-         if( !SCIPisInfinity(scip,  consdata->rhs) )
-            consdata->rhsviol = SCIPinfinity(scip);
-         return SCIP_OKAY;
+         if( activity > 0.0 )
+            ++ninfposact;
+         else if( activity < 0.0 )
+            ++ninfnegact;
       }
 
-      consdata->activity += consdata->lincoefs[i] * varval;
+      consdata->activity += activity;
    }
 
-   for( j = 0; j < consdata->nquadvars; ++j )
+   for( j = 0; j < consdata->nquadvars && (ninfposact == 0 || ninfnegact == 0); ++j )
    {
+      SCIP_Real activity;
+
       var = consdata->quadvarterms[j].var;
       varval = SCIPgetSolVal(scip, sol, var);
+      activity = (consdata->quadvarterms[j].lincoef + consdata->quadvarterms[j].sqrcoef * varval) * varval;
+
+      /* consider the contribution of the variable to be + or - infinity if |varval| = infinity */
       if( SCIPisInfinity(scip, REALABS(varval)) )
       {
-         consdata->activity = SCIPinfinity(scip);
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
-            consdata->lhsviol = SCIPinfinity(scip);
-         if( !SCIPisInfinity(scip,  consdata->rhs) )
-            consdata->rhsviol = SCIPinfinity(scip);
-         return SCIP_OKAY;
+         if( activity > 0.0 )
+            ++ninfposact;
+         else if( activity < 0.0)
+            ++ninfnegact;
       }
 
       /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
@@ -5120,8 +5128,19 @@ SCIP_RETCODE computeViolation(
             varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
       }
 
-      consdata->activity += (consdata->quadvarterms[j].lincoef + consdata->quadvarterms[j].sqrcoef * varval) * varval;
+      consdata->activity += activity;
    }
+
+   /* check whether there are unbounded linear or quadratic variables that lead to an infinite activity and violate the
+    * corresponding constraint side
+    */
+   if( ninfposact > 0 && !SCIPisInfinity(scip, consdata->rhs) )
+      consdata->rhsviol = SCIPinfinity(scip);
+   if( ninfnegact > 0 && !SCIPisInfinity(scip, -consdata->lhs) )
+      consdata->lhsviol = SCIPinfinity(scip);
+   if( SCIPisInfinity(scip, consdata->lhsviol) || SCIPisInfinity(scip, consdata->rhsviol) )
+      return SCIP_OKAY;
+   assert(ninfposact == 0 || ninfnegact == 0);
 
    for( j = 0; j < consdata->nbilinterms; ++j )
    {
