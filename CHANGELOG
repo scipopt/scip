@@ -2,7 +2,7 @@ SCIP version ???
 ==================
 
 fixed bugs:
-- fix computation of constraint violations for unbounded variables in quadratic constraint handler
+- fix computation of constraint violations for unbounded variables in quadratic and nonlinear constraint handler
 
 SCIP version 4.0.0
 ==================
