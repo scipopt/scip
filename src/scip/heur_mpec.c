@@ -45,6 +45,8 @@
 #define DEFAULT_MAXNLPITER    500            /**< default maximum number of NLP iterations per solve */
 #define DEFAULT_SUBNLPTRIGGER 1e-3           /**< default maximum integrality violation before triggering a sub-NLP call */
 #define DEFAULT_MAXNLPCOST    1e+8           /**< default maximum cost available for solving NLPs per call of the heuristic */
+#define DEFAULT_MINIMPROVE    0.01           /**< default factor by which heuristic should at least improve the incumbent */
+
 
 /*
  * Data structures
@@ -62,6 +64,7 @@ struct SCIP_HeurData
    SCIP_Real             sigma;              /**< regularization update factor */
    SCIP_Real             subnlptrigger;      /**< maximum number of NLP iterations per solve */
    SCIP_Real             maxnlpcost;         /**< maximum cost available for solving NLPs per call of the heuristic */
+   SCIP_Real             minimprove;         /**< factor by which heuristic should at least improve the incumbent */
    int                   maxiter;            /**< maximum number of iterations of the MPEC loop */
    int                   maxnlpiter;         /**< maximum number of NLP iterations per solve */
 };
@@ -78,6 +81,8 @@ SCIP_RETCODE createNLP(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
+   SCIP_Real cutoff = SCIPinfinity(scip);
+
    assert(heurdata != NULL);
    assert(heurdata->nlpi != NULL);
 
@@ -85,10 +90,34 @@ SCIP_RETCODE createNLP(
    if( heurdata->nlpiprob != NULL )
       return SCIP_OKAY;
 
+   /* compute cutoff value to ensure minimum improvement */
+   if( SCIPgetNSols(scip) > 0 )
+   {
+      SCIP_Real upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
+
+      assert( !SCIPisInfinity(scip, SCIPgetUpperbound(scip)) );
+
+      if( !SCIPisInfinity(scip, -SCIPgetLowerbound(scip)) )
+      {
+         cutoff = (1.0 - heurdata->minimprove) * SCIPgetUpperbound(scip)
+            + heurdata->minimprove * SCIPgetLowerbound(scip);
+      }
+      else
+      {
+         if( SCIPgetUpperbound(scip) >= 0.0 )
+            cutoff = ( 1.0 - heurdata->minimprove ) * SCIPgetUpperbound(scip);
+         else
+            cutoff = ( 1.0 + heurdata->minimprove ) * SCIPgetUpperbound(scip);
+      }
+      cutoff = MIN(upperbound, cutoff);
+      SCIPdebugMsg(scip, "set objective limit %g in [%g,%g]\n", cutoff, SCIPgetLowerbound(scip),
+         SCIPgetUpperbound(scip));
+   }
+
    SCIP_CALL( SCIPnlpiCreateProblem(heurdata->nlpi, &heurdata->nlpiprob, "MPEC-nlp") );
    SCIP_CALL( SCIPhashmapCreate(&heurdata->var2idx, SCIPblkmem(scip), SCIPgetNVars(scip)) );
    SCIP_CALL( SCIPcreateNlpiProb(scip, heurdata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
-         heurdata->nlpiprob, heurdata->var2idx, NULL, SCIPgetCutoffbound(scip), TRUE, FALSE) );
+         heurdata->nlpiprob, heurdata->var2idx, NULL, cutoff, TRUE, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -403,7 +432,8 @@ SCIP_RETCODE heurExec(
       /* call sub-NLP heuristic when the maximum binary infeasibility is small enough (or this is the last iteration
        * because we reached the nlpcost limit)
        */
-      if( !subnlpcalled && heurdata->subnlp != NULL && (SCIPisLE(scip, maxviolbin, heurdata->subnlptrigger) || nlpcostleft <= 0.0)
+      if( !subnlpcalled && heurdata->subnlp != NULL
+         && (SCIPisLE(scip, maxviolbin, heurdata->subnlptrigger) || nlpcostleft <= 0.0)
          && !SCIPisStopped(scip) )
       {
          SCIP_SOL* refpoint;
@@ -420,7 +450,8 @@ SCIP_RETCODE heurExec(
          }
 
          SCIP_CALL( getTimeLeft(scip, &timeleft) );
-         SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->subnlp, &subnlpresult, refpoint, -1LL, timeleft, 0.0, NULL,
+         SCIP_CALL( SCIPapplyHeurSubNlp(scip, heurdata->subnlp, &subnlpresult, refpoint, -1LL, timeleft,
+               heurdata->minimprove, NULL,
                NULL) );
          SCIP_CALL( SCIPfreeSol(scip, &refpoint) );
          SCIPdebugMsg(scip, "result of sub-NLP call: %d\n", subnlpresult);
@@ -715,6 +746,10 @@ SCIP_RETCODE SCIPincludeHeurMpec(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxnlpcost",
          "maximum cost available for solving NLPs per call of the heuristic",
          &heurdata->maxnlpcost, FALSE, DEFAULT_MAXNLPCOST, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minimprove",
+         "factor by which heuristic should at least improve the incumbent",
+         &heurdata->minimprove, FALSE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxiter",
          "maximum number of iterations of the MPEC loop",
