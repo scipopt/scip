@@ -1,6 +1,8 @@
 SCIP version NEXT
 ==================
 
+fixed bugs:
+- fixed memory leak in OSiL reader when using SOS constraints
 
 SCIP version 4.0.0
 ==================
