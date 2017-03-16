@@ -46,7 +46,7 @@
 #define DEFAULT_SUBNLPTRIGGER 1e-3           /**< default maximum integrality violation before triggering a sub-NLP call */
 #define DEFAULT_MAXNLPCOST    1e+8           /**< default maximum cost available for solving NLPs per call of the heuristic */
 #define DEFAULT_MINIMPROVE    0.01           /**< default factor by which heuristic should at least improve the incumbent */
-
+#define DEFAULT_MAXNUNSUCC    10             /**< default maximum number of consecutive calls for which the heuristic did not find an improving solution */
 
 /*
  * Data structures
@@ -67,6 +67,10 @@ struct SCIP_HeurData
    SCIP_Real             minimprove;         /**< factor by which heuristic should at least improve the incumbent */
    int                   maxiter;            /**< maximum number of iterations of the MPEC loop */
    int                   maxnlpiter;         /**< maximum number of NLP iterations per solve */
+   int                   nunsucc;             /**< number of consecutive calls for which the heuristic did not find an
+                                              * improving solution */
+   int                   maxnunsucc;         /**< maximum number of consecutive calls for which the heuristic did not
+                                              * find an improving solution */
 };
 
 
@@ -675,6 +679,7 @@ SCIP_DECL_HEUREXEC(heurExecMpec)
    *result = SCIP_DIDNOTRUN;
 
    if( SCIPgetNIntVars(scip) > 0 || SCIPgetNBinVars(scip) == 0
+      || heurdata->nunsucc > heurdata->maxnunsucc
       || heurdata->nlpi == NULL || !SCIPisNLPConstructed(scip) )
       return SCIP_OKAY;
 
@@ -688,14 +693,13 @@ SCIP_DECL_HEUREXEC(heurExecMpec)
 
    *result = SCIP_DIDNOTFIND;
 
-   /* create NLP */
-   SCIP_CALL( createNLP(scip, heurdata) );
-
    /* call MPEC method */
+   SCIP_CALL( createNLP(scip, heurdata) );
    SCIP_CALL( heurExec(scip, heur, heurdata, result) );
-
-   /* free NLP */
    SCIP_CALL( freeNLP(scip, heurdata) );
+
+   /* update number of unsuccessful calls */
+   heurdata->nunsucc = (*result == SCIP_FOUNDSOL) ? 0 : heurdata->nunsucc + 1;
 
    return SCIP_OKAY;
 }
@@ -758,6 +762,10 @@ SCIP_RETCODE SCIPincludeHeurMpec(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxnlpiter",
          "maximum number of NLP iterations per solve",
          &heurdata->maxnlpiter, FALSE, DEFAULT_MAXNLPITER, 0, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxnunsucc",
+         "maximum number of consecutive calls for which the heuristic did not find an improving solution",
+         &heurdata->maxnunsucc, FALSE, DEFAULT_MAXNUNSUCC, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
