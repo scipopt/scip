@@ -3807,6 +3807,7 @@ SCIP_RETCODE computeViolation(
 
    for( i = 0; i < consdata->nexprtrees; ++i )
    {
+      SCIP_Real activity;
       SCIP_Real val;
       int nvars;
 
@@ -3871,7 +3872,8 @@ SCIP_RETCODE computeViolation(
          SCIPfreeBufferArray(scip, &x);
       }
 
-      if( SCIPisInfinity(scip, REALABS(val)) || !SCIPisFinite(val) )
+      /* set the activity to infinity if a function evaluation was not valid (e.g., sqrt(-1) ) */
+      if( !SCIPisFinite(val) )
       {
          consdata->activity = SCIPinfinity(scip);
          if( !SCIPisInfinity(scip, -consdata->lhs) )
@@ -3880,7 +3882,29 @@ SCIP_RETCODE computeViolation(
             consdata->rhsviol = SCIPinfinity(scip);
          return SCIP_OKAY;
       }
-      consdata->activity += consdata->nonlincoefs[i] * val;
+
+      /* the contribution of a variable with |varval| = +inf is +inf when activity > 0.0, -inf when activity < 0.0, and
+       * 0.0 otherwise
+       */
+      activity = consdata->nonlincoefs[i] * val;
+      if( SCIPisInfinity(scip, REALABS(val)) )
+      {
+         if( activity > 0.0 && !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            consdata->activity = SCIPinfinity(scip);
+            consdata->rhsviol = SCIPinfinity(scip);
+            return SCIP_OKAY;
+         }
+
+         if( activity < 0.0  && !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            consdata->activity = -SCIPinfinity(scip);
+            consdata->lhsviol = SCIPinfinity(scip);
+            return SCIP_OKAY;
+         }
+      }
+
+      consdata->activity += activity;
    }
 
    if( consdata->nexprtrees == 0 && consdata->exprgraphnode != NULL )
@@ -3892,7 +3916,8 @@ SCIP_RETCODE computeViolation(
       val = SCIPexprgraphGetNodeVal(consdata->exprgraphnode);
       assert(val != SCIP_INVALID);  /*lint !e777*/
 
-      if( !SCIPisFinite(val) || SCIPisInfinity(scip, REALABS(val)) )
+      /* set the activity to infinity if a function evaluation was not valid (e.g., sqrt(-1) ) */
+      if( !SCIPisFinite(val) )
       {
          consdata->activity = SCIPinfinity(scip);
          if( !SCIPisInfinity(scip, -consdata->lhs) )
@@ -3901,6 +3926,20 @@ SCIP_RETCODE computeViolation(
             consdata->rhsviol = SCIPinfinity(scip);
          return SCIP_OKAY;
       }
+
+      if( SCIPisInfinity(scip, val) && !SCIPisInfinity(scip, consdata->rhs) )
+      {
+         consdata->activity = SCIPinfinity(scip);
+         consdata->rhsviol = SCIPinfinity(scip);
+         return SCIP_OKAY;
+      }
+      else if( SCIPisInfinity(scip, -val) && !SCIPisInfinity(scip, -consdata->lhs) )
+      {
+         consdata->activity = -SCIPinfinity(scip);
+         consdata->lhsviol = SCIPinfinity(scip);
+         return SCIP_OKAY;
+      }
+
       consdata->activity += val;
    }
 
