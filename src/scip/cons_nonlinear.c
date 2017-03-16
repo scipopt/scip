@@ -8488,7 +8488,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
          if( infeasible )
          {
             *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
+            continue;
          }
       }
 
