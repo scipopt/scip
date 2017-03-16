@@ -43,6 +43,7 @@
 #define DEFAULT_SIGMA         0.5            /**< default regularization update factor (< 1) */
 #define DEFAULT_MAXITER       100            /**< default maximum number of iterations of the MPEC loop */
 #define DEFAULT_MAXNLPITER    500            /**< default maximum number of NLP iterations per solve */
+#define DEFAULT_MINGAPLEFT    0.05           /**< default minimum amount of gap left in order to call the heuristic */
 #define DEFAULT_SUBNLPTRIGGER 1e-3           /**< default maximum integrality violation before triggering a sub-NLP call */
 #define DEFAULT_MAXNLPCOST    1e+8           /**< default maximum cost available for solving NLPs per call of the heuristic */
 #define DEFAULT_MINIMPROVE    0.01           /**< default factor by which heuristic should at least improve the incumbent */
@@ -65,6 +66,7 @@ struct SCIP_HeurData
    SCIP_Real             subnlptrigger;      /**< maximum number of NLP iterations per solve */
    SCIP_Real             maxnlpcost;         /**< maximum cost available for solving NLPs per call of the heuristic */
    SCIP_Real             minimprove;         /**< factor by which heuristic should at least improve the incumbent */
+   SCIP_Real             mingapleft;         /**< minimum amount of gap left in order to call the heuristic */
    int                   maxiter;            /**< maximum number of iterations of the MPEC loop */
    int                   maxnlpiter;         /**< maximum number of NLP iterations per solve */
    int                   nunsucc;             /**< number of consecutive calls for which the heuristic did not find an
@@ -679,8 +681,9 @@ SCIP_DECL_HEUREXEC(heurExecMpec)
    *result = SCIP_DIDNOTRUN;
 
    if( SCIPgetNIntVars(scip) > 0 || SCIPgetNBinVars(scip) == 0
-      || heurdata->nunsucc > heurdata->maxnunsucc
-      || heurdata->nlpi == NULL || !SCIPisNLPConstructed(scip) )
+      || heurdata->nlpi == NULL || !SCIPisNLPConstructed(scip)
+      || heurdata->mingapleft > SCIPgetGap(scip)
+      || heurdata->nunsucc > heurdata->maxnunsucc )
       return SCIP_OKAY;
 
    /* skip heuristic if constraints without a nonlinear representation are present */
@@ -754,6 +757,10 @@ SCIP_RETCODE SCIPincludeHeurMpec(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minimprove",
          "factor by which heuristic should at least improve the incumbent",
          &heurdata->minimprove, FALSE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/mingapleft",
+         "minimum amount of gap left in order to call the heuristic",
+         &heurdata->mingapleft, FALSE, DEFAULT_MINGAPLEFT, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxiter",
          "maximum number of iterations of the MPEC loop",
