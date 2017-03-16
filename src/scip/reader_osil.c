@@ -2373,6 +2373,7 @@ SCIP_RETCODE readSOScons(
 
       /* add the SOS constraint */
       SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
    return SCIP_OKAY;
