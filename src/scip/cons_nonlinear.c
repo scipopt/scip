@@ -4162,6 +4162,10 @@ SCIP_RETCODE addLinearization(
             grad[i] *= treecoef;
             constant -= grad[i] * x[i];
 
+            /* try to perturb x if the constant is too large */
+            if( SCIPisInfinity(scip, REALABS(constant)) )
+               break;
+
             /* coefficients smaller than epsilon are rounded to 0.0 when added to row, this can be wrong if variable value is very large (bad numerics)
              * in this case, set gradient to 0.0 here, but modify constant so that cut is still valid (if possible)
              * i.e., estimate grad[i]*x >= grad[i] * bound(x) or grad[i]*x <= grad[i] * bound(x), depending on whether we compute an underestimator (convex) or an overestimator (concave)
