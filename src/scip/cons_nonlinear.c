@@ -1757,7 +1757,8 @@ static
 SCIP_RETCODE splitOffLinearPart(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONS*            cons                /**< nonlinear constraint */
+   SCIP_CONS*            cons,               /**< nonlinear constraint */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the problem is infeasible or not */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -1776,6 +1777,8 @@ SCIP_RETCODE splitOffLinearPart(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   *infeasible = FALSE;
+
    if( consdata->exprgraphnode == NULL )
       return SCIP_OKAY;
 
@@ -1792,7 +1795,25 @@ SCIP_RETCODE splitOffLinearPart(
     * releases expression graph node if not uses otherwise */
    SCIP_CALL( SCIPexprgraphNodeSplitOffLinear(conshdlrdata->exprgraph, &consdata->exprgraphnode, linvarssize, &nlinvars, (void**)linvars, lincoefs, &constant) );
 
-   if( constant != 0.0 )
+   if( SCIPisInfinity(scip, constant) )
+   {
+      consdata->lhs = -SCIPinfinity(scip);
+      if( !SCIPisInfinity(scip, consdata->rhs) )
+      {
+         *infeasible = TRUE;
+         goto TERMINATE;
+      }
+   }
+   else if( SCIPisInfinity(scip, -constant) )
+   {
+      consdata->rhs = SCIPinfinity(scip);
+      if( !SCIPisInfinity(scip, -consdata->lhs) )
+      {
+         *infeasible = TRUE;
+         goto TERMINATE;
+      }
+   }
+   else if( constant != 0.0 )
    {
       if( !SCIPisInfinity(scip, -consdata->lhs) )
       {
@@ -1806,6 +1827,7 @@ SCIP_RETCODE splitOffLinearPart(
       }
    }
 
+TERMINATE:
    for( i = 0; i < nlinvars; ++i )
    {
       SCIP_CALL( addLinearCoef(scip, cons, linvars[i], lincoefs[i]) );
@@ -7570,7 +7592,11 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
 
       if( !consdata->ispresolved || havegraphchange )
       {
-         SCIP_CALL( splitOffLinearPart(scip, conshdlr, conss[c]) );
+         SCIP_Bool infeasible;
+         SCIP_CALL( splitOffLinearPart(scip, conshdlr, conss[c], &infeasible) );
+
+         /* the infeasibility should have been detected during presolve */
+         assert(!infeasible);
       }
 
       SCIP_CALL( mergeAndCleanLinearVars(scip, conss[c]) );
@@ -8455,7 +8481,15 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
 
       if( !consdata->ispresolved || havegraphchange )
       {
-         SCIP_CALL( splitOffLinearPart(scip, conshdlr, conss[c]) );
+         SCIP_Bool infeasible;
+
+         SCIP_CALL( splitOffLinearPart(scip, conshdlr, conss[c], &infeasible) );
+
+         if( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
       }
 
       if( consdata->nlinvars == 0 && consdata->exprgraphnode == NULL )
