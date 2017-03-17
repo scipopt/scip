@@ -1664,7 +1664,6 @@ SCIP_RETCODE executeDownBranchingRecursive(
 
    if( !downbranchingresult->cutoff && !status->lperror && !status->limitreached && recursiondepth > 1 )
    {
-      /* TODO: maybe reuse these variables in the upbranching case */
       SCIP_VAR** deeperlpcands;
       SCIP_Real* deeperlpcandssol;
       SCIP_Real* deeperlpcandsfrac;
@@ -1718,8 +1717,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
 
          if( deeperstatus->cutoff )
          {
-            /* TODO: set another flag? Rework in general
-             * upbranchingresult->cutoff is TRUE, if the up child was directly infeasible (so here it is always
+            /* upbranchingresult->cutoff is TRUE, if the up child was directly infeasible (so here it is always
              * false, as we don't want to branch on an infeasible node)
              * deeperstatus->cutoff is TRUE, if any up/down child pair of the up child were cutoff
              * */
@@ -1874,8 +1872,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
 
          if( deeperstatus->cutoff )
          {
-            /* TODO: set another flag? Rework in general
-             * upbranchingresult->cutoff is TRUE, if the up child was directly infeasible (so here it is always
+            /* upbranchingresult->cutoff is TRUE, if the up child was directly infeasible (so here it is always
              * false, as we don't want to branch on an infeasible node)
              * deeperstatus->cutoff is TRUE, if any up/down child pair of the up child were cutoff
              * */
