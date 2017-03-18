@@ -262,7 +262,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolStoreGraph)
    SCIPdebugMessage("exiting store graph constraint handler\n");
 
    /* free stack */
-   SCIPfreeMemoryArray(scip, &conshdlrData->stack);
+   SCIPfreeBlockMemoryArray(scip, &conshdlrData->stack, conshdlrData->maxstacksize);
 
    return SCIP_OKAY;
 }/*lint !e715*/

@@ -294,7 +294,7 @@
 
 /* Presolving */
 
-#define SCIP_DEFAULT_PRESOL_ABORTFAC      1e-03 /**< abort presolve, if at most this fraction of the problem was changed
+#define SCIP_DEFAULT_PRESOL_ABORTFAC      8e-04 /**< abort presolve, if at most this fraction of the problem was changed
                                                  *   in last presolve round */
 #define SCIP_DEFAULT_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds (-1: unlimited, 0: off) */
 #define SCIP_DEFAULT_PRESOL_MAXRESTARTS      -1 /**< maximal number of restarts (-1: unlimited) */

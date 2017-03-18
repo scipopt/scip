@@ -163,6 +163,9 @@ char init_parallel(void)
  *
  *  The purpose is to make sure that init_parallel() is called before any multithreading is started.
  */
+#if !defined(_MSC_VER)
+__attribute__ ((unused))
+#endif
 static char init_parallel_return = init_parallel();
 
 #endif // NPARASCIP
