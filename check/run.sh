@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -33,8 +33,14 @@ TMPFILE=$SOLVERPATH/results/$BASENAME.tmp
 
 uname -a                            > $OUTFILE
 uname -a                            > $ERRFILE
+echo                                >> $OUTFILE
+top -b -n 1 | head -n 15            >> $OUTFILE
+echo                                >> $OUTFILE
 echo "hard time limit: $HARDTIMELIMIT">>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT" >>$OUTFILE
+echo                                >> $OUTFILE
+echo "SLURM jobID: $SLURM_JOB_ID"   >> $OUTFILE
+echo                                >> $OUTFILE
 echo @01 $FILENAME ===========      >> $OUTFILE
 echo @01 $FILENAME ===========      >> $ERRFILE
 echo -----------------------------  >> $OUTFILE
@@ -43,7 +49,9 @@ date                                >> $ERRFILE
 echo -----------------------------  >> $OUTFILE
 date +"@03 %s"                      >> $OUTFILE
 
-$EXECNAME                < $TMPFILE 2>>$ERRFILE | tee -a $OUTFILE
+#if we use a debugger command, we need to replace the errfile place holder by the actual err-file for logging
+EXECNAME=${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}
+bash -c "$EXECNAME                < $TMPFILE 2>>$ERRFILE"  | tee -a $OUTFILE
 retcode=${PIPESTATUS[0]}
 if test $retcode != 0
 then

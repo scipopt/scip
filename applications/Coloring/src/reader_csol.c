@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -136,7 +136,7 @@ SCIP_DECL_READERREAD(readerReadCsol)
    {
       i++;
    }
-   SCIP_CALL( SCIPallocMemoryArray(scip, &solprobname, i+2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &solprobname, i+2) );
    strncpy(solprobname, &buf[0], (unsigned int) i);
    solprobname[i]= '\0';
 
@@ -295,7 +295,7 @@ SCIP_DECL_READERREAD(readerReadCsol)
    }
    SCIPfreeBufferArray(scip, &setlengths);
    SCIPfreeBufferArray(scip, &sets);
-   SCIPfreeMemoryArray(scip, &solprobname);
+   SCIPfreeBufferArray(scip, &solprobname);
 
    return SCIP_OKAY;
 }

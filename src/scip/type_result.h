@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -46,7 +46,8 @@ enum SCIP_Result
    SCIP_SOLVELP     =  14,            /**< the current node's LP must be solved */
    SCIP_FOUNDSOL    =  15,            /**< the method found a feasible primal solution */
    SCIP_SUSPENDED   =  16,            /**< the method interrupted its execution, but can continue if needed */
-   SCIP_SUCCESS     =  17             /**< the method was successfully executed */  
+   SCIP_SUCCESS     =  17,            /**< the method was successfully executed */
+   SCIP_DELAYNODE   =  18             /**< the processing of the branch-and-bound node should stopped and continued later */
 };
 typedef enum SCIP_Result SCIP_RESULT;           /**< result codes for SCIP callback methods */
 

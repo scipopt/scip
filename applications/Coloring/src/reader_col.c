@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -60,10 +60,10 @@ long getNextNumber(
   return tmp;
 }
 
-/** read LP in "COL File Format" */  
+/** read LP in "COL File Format" */
 static
 SCIP_RETCODE readCol(
-   SCIP*                 scip,               /**< SCIP data structure */   
+   SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< name of the input file */
    )
 {
@@ -81,17 +81,17 @@ SCIP_RETCODE readCol(
    int nduplicateedges;
    SCIP_Bool duplicateedge;
 
-   
+
    assert(scip != NULL);
    assert(filename != NULL);
-   
+
    if (NULL == (fp = SCIPfopen(filename, "r")))
    {
       SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
       perror(filename);
       return SCIP_NOFILE;
    }
-   
+
    /* Get problem name from filename and save it */
    if( SCIPfgets(buf, (int) sizeof(buf), fp) == NULL)
       return SCIP_READERROR;
@@ -127,7 +127,7 @@ SCIP_RETCODE readCol(
    if( j-i-4 <= 0 )
       return SCIP_READERROR;
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &probname, (j-i-4)) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &probname, (j-i-4)) );
    strncpy(probname, &filename[i+1], (j-i-5)); /*lint !e732 !e776*/
    probname[j-i-5]= '\0';
 
@@ -168,16 +168,16 @@ SCIP_RETCODE readCol(
    }
 
    if ( nedges < 0 )
-   {	  
+   {
       SCIPerrorMessage("Number of edges must be nonnegative!\n");
       return SCIP_READERROR;
    }
 
    /* create array for edges */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &edges, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &edges, nedges) );
    for( i = 0; i < nedges; i++)
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(edges[i]), 2) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &(edges[i]), 2) ); /*lint !e866*/
    }
 
    /* fill array for edges */
@@ -189,7 +189,7 @@ SCIP_RETCODE readCol(
       {
          duplicateedge = FALSE;
          char_p = &buf[2];
-         
+
          begin = (int) getNextNumber(&char_p);
          end = (int) getNextNumber(&char_p);
          for ( j = 0; j < i; j++)
@@ -237,10 +237,10 @@ SCIP_RETCODE readCol(
    SCIP_CALL( SCIPsetObjIntegral(scip) );
    for ( i = nedges-1; i >= 0; i--)
    {
-      SCIPfreeMemoryArray(scip, &(edges[i]));
+      SCIPfreeBufferArray(scip, &(edges[i]));
    }
-   SCIPfreeMemoryArray(scip, &edges);
-   SCIPfreeMemoryArray(scip, &probname);
+   SCIPfreeBufferArray(scip, &edges);
+   SCIPfreeBufferArray(scip, &probname);
    SCIPfclose(fp);
 
    return SCIP_OKAY;
@@ -260,7 +260,7 @@ SCIP_DECL_READERCOPY(readerCopyCol)
    assert(scip != NULL);
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
- 
+
    return SCIP_OKAY;
 }
 
@@ -272,11 +272,11 @@ SCIP_DECL_READERREAD(readerReadCol)
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
-   
+
    SCIP_CALL( readCol(scip, filename) );
-   
+
    *result = SCIP_SUCCESS;
-   
+
    return SCIP_OKAY;
 }
 

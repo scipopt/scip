@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -50,10 +50,10 @@
 #define PRICER_DELAY           TRUE     /* only call pricer if all problem variables have non-negative reduced costs */
 
 /* defines for rounding for tclique */
-#define MAXDNOM                1000LL 
-#define MINDELTA               1e-03 
-#define MAXDELTA               1e-09 
-#define MAXSCALE               1000.0 
+#define MAXDNOM                1000LL
+#define MINDELTA               1e-03
+#define MAXDELTA               1e-09
+#define MAXSCALE               1000.0
 
 
 /* default values for parameters */
@@ -82,11 +82,12 @@ struct SCIP_PricerData
    SCIP_CONS**      constraints;             /* array containing all node constraints */
    SCIP_Real        scalefactor;             /* the factor used for scaling the rational values to integers for the tclique-weights */
    SCIP_Real*       pi;                      /* array of the dual solutions */
-   SCIP_Bool        onlybest;                /* determines whether the maxvarsround variables with the best reduced costs should be added 
+   SCIP_Bool        onlybest;                /* determines whether the maxvarsround variables with the best reduced costs should be added
                                                 (onlybest = true) or the first maxvarsround variables which are found are added (false) */
    SCIP_Bool        usegreedy;               /* determines whether a greedy method is used for finding variables with neg. reduced costs */
    SCIP_Bool        usetclique;              /* determines whether the tclique method is used for finding improving variables */
    int**            improvingstablesets;     /* array to store the maxvarsround stable sets with the most negative reduced costs */
+   int              improvingstablesetssize; /* size of each improvingstablesets array */
    int*             nstablesetnodes;         /* array which stores the lengths of the stable sets in improvingstablesets */
    int              actindex;                /* the index at which the current stable set was inserted into improvingstablesets */
    SCIP_NODE*       bbnode;                  /* the current B&B-tree node, used for limiting the number of pricing rounds */
@@ -102,7 +103,7 @@ struct SCIP_PricerData
  * Local methods
  */
 
-/** returns whether the graph has an uncolored node 
+/** returns whether the graph has an uncolored node
  */
 static
 SCIP_Bool hasUncoloredNode(
@@ -142,7 +143,7 @@ SCIP_RETCODE sortNodes(
    assert(weights != NULL);
 
    /* create array with indices and copy the weights-array */
-   SCIP_CALL( SCIPallocBufferArray(scip, &values, nnodes) ); 
+   SCIP_CALL( SCIPallocBufferArray(scip, &values, nnodes) );
    for ( i = 0; i < nnodes; i++)
    {
       sortednodes[i] = i;
@@ -157,7 +158,7 @@ SCIP_RETCODE sortNodes(
 }
 
 /** computes a stable set with a greedy-method.  attention: the weight of the maximum stable set is not computed! */
-static 
+static
 SCIP_RETCODE greedyStableSet(
    SCIP*                 scip,               /**< SCIP data structure */
    TCLIQUE_GRAPH*        graph,              /**< pointer to graph data structure */
@@ -185,7 +186,7 @@ SCIP_RETCODE greedyStableSet(
 
    /* get the  degrees for the nodes in the graph */
    degrees = tcliqueGetDegrees(graph);
-   SCIP_CALL( SCIPallocBufferArray(scip, &values, nnodes) );   
+   SCIP_CALL( SCIPallocBufferArray(scip, &values, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sortednodes, nnodes) );
 
    /* set values to the nodes which are used for sorting them */
@@ -224,8 +225,8 @@ SCIP_RETCODE greedyStableSet(
 
    }
    SCIPfreeBufferArray(scip, &sortednodes);
-   SCIPfreeBufferArray(scip, &values);   
-   
+   SCIPfreeBufferArray(scip, &values);
+
    return SCIP_OKAY;
 }
 
@@ -253,9 +254,9 @@ SCIP_Bool isIntegralScalar(
 }
 
 /** get integral number with error in the bounds which corresponds to given value scaled by a given scalar;
- *  should be used in connection with isIntegralScalar()  
+ *  should be used in connection with isIntegralScalar()
  */
-static 
+static
 SCIP_Longint getIntegralVal(
    SCIP_Real             val,                /**< value that should be scaled to an integral value */
    SCIP_Real             scalar,             /**< scalar that should be tried */
@@ -279,7 +280,7 @@ SCIP_Longint getIntegralVal(
       intval = (SCIP_Longint) upval;
    else
       intval = (SCIP_Longint) downval;
-   
+
    return intval;
 }
 
@@ -313,11 +314,11 @@ TCLIQUE_NEWSOL(tcliqueNewsolPricer)
 
    /* compute the index, at which the new stable set will be stored in the improvingstablesets-array */
    pricerdata->actindex = (pricerdata->actindex+1)%(pricerdata->maxvarsround);
-   
+
    /* found maxvarsround variables */
    if ( pricerdata->nstablesetnodes[pricerdata->actindex] == -1 )
    {
-      /* if we are looking for the best stable sets, continue at the beginning 
+      /* if we are looking for the best stable sets, continue at the beginning
          and overwrite the stable set with least improvement */
       if ( pricerdata->onlybest )
       {
@@ -327,7 +328,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolPricer)
       else
       {
          *stopsolving = TRUE;
-         return;         
+         return;
       }
    }
 
@@ -340,7 +341,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolPricer)
 
    /* accept the solution as new incumbent */
    *acceptsol = TRUE;
-   
+
 }/*lint !e715*/
 
 
@@ -363,20 +364,20 @@ SCIP_DECL_PRICERCOPY(pricerCopyColoring)
 /** destructor of variable pricer to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PRICERFREE(pricerFreeColoring)
-{ 
-   SCIP_PRICERDATA* pricerdata;  
+{
+   SCIP_PRICERDATA* pricerdata;
 
    assert(scip != NULL);
-  
+
    /* get pricerdata */
    pricerdata = SCIPpricerGetData(pricer);
 
    /* free memory for pricerdata*/
    if ( pricerdata != NULL )
    {
-      SCIPfreeMemory(scip, &pricerdata);
+      SCIPfreeBlockMemory(scip, &pricerdata);
    }
-   
+
    SCIPpricerSetData(pricer, NULL);
    return SCIP_OKAY;
 }
@@ -386,7 +387,7 @@ SCIP_DECL_PRICERFREE(pricerFreeColoring)
 /** solving process initialization method of variable pricer (called when branch and bound process is about to begin) */
 static
 SCIP_DECL_PRICERINITSOL(pricerInitsolColoring)
-{  
+{
    SCIP_PRICERDATA* pricerdata;
 
    assert(scip != NULL);
@@ -394,7 +395,7 @@ SCIP_DECL_PRICERINITSOL(pricerInitsolColoring)
 
    pricerdata = SCIPpricerGetData(pricer);
    assert(pricerdata != NULL);
-   
+
    /* set maximal number of variables to be priced in each round */
    SCIP_CALL( SCIPsetIntParam(scip, "pricers/coloring/maxvarsround",
          MAX(5,COLORprobGetNStableSets(scip))*MAX(50,COLORprobGetNNodes(scip))/50) ); /*lint !e666*/
@@ -402,7 +403,7 @@ SCIP_DECL_PRICERINITSOL(pricerInitsolColoring)
    pricerdata->bbnode = NULL;
 
    /* allocate memory */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(pricerdata->pi), COLORprobGetNNodes(scip)) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(pricerdata->pi), COLORprobGetNNodes(scip)) );
 
    return SCIP_OKAY;
 }
@@ -412,7 +413,7 @@ SCIP_DECL_PRICERINITSOL(pricerInitsolColoring)
 /** solving process deinitialization method of variable pricer (called before branch and bound process data is freed) */
 static
 SCIP_DECL_PRICEREXITSOL(pricerExitsolColoring)
-{  
+{
    SCIP_PRICERDATA* pricerdata;
    int i;
 
@@ -425,11 +426,11 @@ SCIP_DECL_PRICEREXITSOL(pricerExitsolColoring)
    /* free memory */
    for ( i = 0; i < pricerdata->maxvarsround; i++ )
    {
-      SCIPfreeMemoryArray(scip, &(pricerdata->improvingstablesets[i]));
+      SCIPfreeBlockMemoryArray(scip, &(pricerdata->improvingstablesets[i]), pricerdata->improvingstablesetssize);
    }
-   SCIPfreeMemoryArray(scip, &(pricerdata->improvingstablesets));
-   SCIPfreeMemoryArray(scip, &(pricerdata->nstablesetnodes));
-   SCIPfreeMemoryArray(scip, &(pricerdata->pi));
+   SCIPfreeBlockMemoryArray(scip, &(pricerdata->improvingstablesets), pricerdata->maxvarsround);
+   SCIPfreeBlockMemoryArray(scip, &(pricerdata->nstablesetnodes), pricerdata->maxvarsround);
+   SCIPfreeBlockMemoryArray(scip, &(pricerdata->pi), COLORprobGetNNodes(scip));
 
    return SCIP_OKAY;
 }
@@ -440,7 +441,7 @@ SCIP_DECL_PRICEREXITSOL(pricerExitsolColoring)
 /** reduced cost pricing method of variable pricer for feasible LPs */
 static
 SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
-{  
+{
    SCIP_PRICERDATA* pricerdata;            /* the data of the pricer */
 
    TCLIQUE_GRAPH*   graph;                 /* the current graph */
@@ -538,7 +539,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
       maxstablesetnodes[0] = sortednodes[0];
       nmaxstablesetnodes = 1;
       maxstablesetweightreal = pricerdata->pi[sortednodes[0]];
-      
+
       for ( i = 1; i < nnodes; i++ )
       {
          /* test if node is independant to nodes in stable set */
@@ -559,14 +560,14 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
             maxstablesetweightreal = maxstablesetweightreal + pricerdata->pi[sortednodes[i]];
          }
       }
-      
-      
+
+
       SCIPdebugMessage("value of the greedy-heuristik: %f \n", maxstablesetweightreal);
       setnumber = -1;
       if ( SCIPisFeasGT(scip, maxstablesetweightreal, 1.0) && COLORprobStableSetIsNew(scip, maxstablesetnodes, nmaxstablesetnodes) )
       {
          SCIP_CALL( COLORprobAddNewStableSet(scip, maxstablesetnodes, nmaxstablesetnodes, &setnumber) );
-         
+
          assert(setnumber >= 0);
          pricerdata->nstablesetnodes[pricerdata->nstablesetsfound] = nmaxstablesetnodes;
          for ( i = 0; i < nmaxstablesetnodes; i++ )
@@ -574,7 +575,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
             pricerdata->improvingstablesets[pricerdata->nstablesetsfound][i] = maxstablesetnodes[i];
          }
          pricerdata->nstablesetsfound += 1;
-         
+
          /* create variable for the stable set and add it to SCIP */
          SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
                TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) ); /*lint !e571*/
@@ -583,7 +584,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
          SCIPvarMarkDeletable(var);
          SCIP_CALL( SCIPaddPricedVar(scip, var, 1.0) );
          SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
-         
+
          /* add variable to the constraints in which it appears */
          for ( i = 0; i < nmaxstablesetnodes; i++ )
          {
@@ -591,15 +592,15 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
             SCIP_CALL( SCIPaddCoefSetppc(scip, pricerdata->constraints[maxstablesetnodes[i]], var) );
          }
       }
-      
+
       SCIPfreeBufferArray(scip, &maxstablesetnodes);
       SCIPfreeBufferArray(scip, &sortednodes);
 
       SCIPdebugMessage("%d vars created via greedy\n", pricerdata->nstablesetsfound);
-   } 
-   
+   }
 
-   /* solve with tclique-algorithm */   
+
+   /* solve with tclique-algorithm */
    /* only use tclique if the greedy found no improving stable set */
    if ( pricerdata->nstablesetsfound == 0 && pricerdata->usetclique )
    {
@@ -613,7 +614,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
       for ( i = 0; i < nnodes; i++ )
       {
          pricerdata->pi[i] = SCIPgetDualsolSetppc(scip, pricerdata->constraints[i]);
-         
+
          if( !isIntegralScalar(pricerdata->pi[i], 1.0, -MINDELTA, MAXDELTA) )
          {
             weightsIntegral = FALSE;
@@ -666,12 +667,12 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
             pricerdata->improvingstablesets[0][i] = maxstablesetnodes[i];
          }
       }
-      
+
       SCIPfreeBufferArray(scip, &maxstablesetnodes);
 
       /* insert all variables in the array improvingstablesets into the LP */
       for ( i = 0; i < pricerdata->maxvarsround; i++ )
-      { 
+      {
          if ( pricerdata->nstablesetnodes[i] > 0 )
          {
             maxstablesetweightreal = 0;
@@ -687,7 +688,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
             {
                setnumber = -1;
                /* insert new variable */
-               SCIP_CALL( COLORprobAddNewStableSet(pricerdata->scip, pricerdata->improvingstablesets[i], 
+               SCIP_CALL( COLORprobAddNewStableSet(pricerdata->scip, pricerdata->improvingstablesets[i],
                      pricerdata->nstablesetnodes[i], &setnumber) );
                /* only insert, if there yet is no variable for this stable set */
                if ( setnumber >= 0  )
@@ -706,7 +707,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
                   for ( j = 0; j < pricerdata->nstablesetnodes[i]; j++ )
                   {
                      /* add variable to node constraints of nodes in the set */
-                     SCIP_CALL( SCIPaddCoefSetppc(pricerdata->scip, 
+                     SCIP_CALL( SCIPaddCoefSetppc(pricerdata->scip,
                            pricerdata->constraints[pricerdata->improvingstablesets[i][j]], var) );
                   }
                }
@@ -774,7 +775,7 @@ SCIP_DECL_PRICERFARKAS(pricerFarkasColoring)
    /* go through all stable sets and set colored to true for nodes in them */
    for ( i = 0; i < nstablesets; i++ )
    {
-      if ( !SCIPisFeasZero(scip, SCIPvarGetUbLocal( COLORprobGetVarForStableSet(scip, i))) 
+      if ( !SCIPisFeasZero(scip, SCIPvarGetUbLocal( COLORprobGetVarForStableSet(scip, i)))
          && (SCIPgetNNodes(scip) == 0 || SCIPvarIsInLP(COLORprobGetVarForStableSet(scip, i))
             || SCIPgetRootNode(scip) == SCIPgetCurrentNode(scip) ) )
       {
@@ -819,7 +820,7 @@ SCIP_DECL_PRICERFARKAS(pricerFarkasColoring)
 /** method to call, when the maximal number of variables priced in each round is changed */
 static
 SCIP_DECL_PARAMCHGD(paramChgdMaxvarsround)
-{  
+{
    SCIP_PARAMDATA* paramdata;
    SCIP_PRICERDATA* pricerdata;
    int i;
@@ -830,8 +831,8 @@ SCIP_DECL_PARAMCHGD(paramChgdMaxvarsround)
 
    if( pricerdata->maxvarsround == pricerdata->oldmaxvarsround )
       return SCIP_OKAY;
-   
-   if ( pricerdata->maxvarsround <= 1 ) 
+
+   if ( pricerdata->maxvarsround <= 1 )
       pricerdata->maxvarsround = 2;
 
    if ( pricerdata->maxvarsround == pricerdata->oldmaxvarsround && pricerdata->nstablesetnodes != NULL )
@@ -843,18 +844,19 @@ SCIP_DECL_PARAMCHGD(paramChgdMaxvarsround)
       /* free memory */
       for ( i = 0; i < pricerdata->oldmaxvarsround; i++ )
       {
-         SCIPfreeMemoryArray(scip, &(pricerdata->improvingstablesets[i]));
+         SCIPfreeBlockMemoryArray(scip, &(pricerdata->improvingstablesets[i]), pricerdata->improvingstablesetssize);
       }
-      SCIPfreeMemoryArray(scip, &(pricerdata->improvingstablesets));
-      SCIPfreeMemoryArray(scip, &(pricerdata->nstablesetnodes));
+      SCIPfreeBlockMemoryArray(scip, &(pricerdata->improvingstablesets), pricerdata->oldmaxvarsround);
+      SCIPfreeBlockMemoryArray(scip, &(pricerdata->nstablesetnodes), pricerdata->oldmaxvarsround);
    }
-   
+
    /* allocate memory of the new size */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(pricerdata->nstablesetnodes), pricerdata->maxvarsround) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(pricerdata->improvingstablesets), pricerdata->maxvarsround) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(pricerdata->nstablesetnodes), pricerdata->maxvarsround) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(pricerdata->improvingstablesets), pricerdata->maxvarsround) );
+   pricerdata->improvingstablesetssize = COLORprobGetNNodes(scip);
    for ( i = 0; i < pricerdata->maxvarsround; i++ )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(pricerdata->improvingstablesets[i]), COLORprobGetNNodes(scip)) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(pricerdata->improvingstablesets[i]), pricerdata->improvingstablesetssize) ); /*lint !e866*/
    }
 
    SCIPdebugMessage("maxvarsround changed from %d to %d\n", pricerdata->oldmaxvarsround, pricerdata->maxvarsround);
@@ -877,7 +879,7 @@ SCIP_RETCODE SCIPincludePricerColoring(
    SCIP_PRICERDATA* pricerdata;
    SCIP_PRICER* pricer;
 
-   SCIP_CALL( SCIPallocMemory(scip, &pricerdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &pricerdata) );
    pricerdata->scip = scip;
 
    pricerdata->maxvarsround = 0;
@@ -889,7 +891,7 @@ SCIP_RETCODE SCIPincludePricerColoring(
    SCIP_CALL( SCIPincludePricerBasic(scip, &pricer, PRICER_NAME, PRICER_DESC, PRICER_PRIORITY, PRICER_DELAY,
          pricerRedcostColoring, pricerFarkasColoring, pricerdata) );
    assert(pricer != NULL);
-   
+
    /* include non-fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetPricerCopy(scip, pricer, pricerCopyColoring) );
    SCIP_CALL( SCIPsetPricerFree(scip, pricer, pricerFreeColoring) );
@@ -906,7 +908,7 @@ SCIP_RETCODE SCIPincludePricerColoring(
          "should the tclique-algorithm be used to solve the pricing-problem to optimality?\n \
              WARNING: computed (optimal) solutions are not necessarily optimal if this is set to FALSE",
          &pricerdata->usetclique, TRUE, DEFAULT_USETCLIQUE, NULL, NULL) );
-   
+
    SCIP_CALL( SCIPaddBoolParam(scip,
          "pricers/coloring/usegreedy",
          "should a greedy method be used to compute improving stable sets before potential use of tclique",

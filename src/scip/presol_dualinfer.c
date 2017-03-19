@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1206,7 +1206,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
                   SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
                   if( infeasible )
                   {
-                     SCIPdebugMessage(" -> infeasible fixing\n");
+                     SCIPdebugMsg(scip, " -> infeasible fixing\n");
                      *result = SCIP_CUTOFF;
                      break;
                   }
@@ -1285,7 +1285,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
 
          if( (nconvarsfixed + nintvarsfixed + nbinvarsfixed) > 0 || npossiblesidechanges > 0)
          {
-            SCIPdebugMessage("### fixed vars [cont: %d, int: %d, bin: %d], changed sides [%d]\n",
+            SCIPdebugMsg(scip, "### fixed vars [cont: %d, int: %d, bin: %d], changed sides [%d]\n",
                nconvarsfixed, nintvarsfixed, nbinvarsfixed, nsideschanged);
          }
       }
@@ -1306,14 +1306,11 @@ SCIP_RETCODE SCIPincludePresolDualinfer(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_PRESOLDATA* presoldata;
    SCIP_PRESOL* presol;
-
-   presoldata = NULL;
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
-         PRESOL_TIMING, presolExecDualinfer, presoldata) );
+         PRESOL_TIMING, presolExecDualinfer, NULL) );
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyDualinfer) );
 
    return SCIP_OKAY;

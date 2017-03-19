@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -80,7 +80,7 @@ SCIP_DECL_NODESELFREE(nodeselFreeRestartdfs)
    /* free user data of node selector */
    nodeseldata = SCIPnodeselGetData(nodesel);
    assert(nodeseldata != NULL);
-   SCIPfreeMemory(scip, &nodeseldata);
+   SCIPfreeBlockMemory(scip, &nodeseldata);
    SCIPnodeselSetData(nodesel, nodeseldata);
 
    return SCIP_OKAY;
@@ -172,7 +172,7 @@ SCIP_RETCODE SCIPincludeNodeselRestartdfs(
    SCIP_NODESEL* nodesel;
 
    /* allocate and initialize node selector data; this has to be freed in the destructor */
-   SCIP_CALL( SCIPallocMemory(scip, &nodeseldata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &nodeseldata) );
    nodeseldata->lastrestart = 0;
    nodeseldata->nprocessedleaves = 0;
    nodeseldata->selectbestfreq = SELECTBESTFREQ;

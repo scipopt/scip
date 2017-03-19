@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -187,7 +187,7 @@ SCIP_RETCODE addAllConss(
 
          if( !SCIPconsIsActive(consdata->conss[i]) )
          {
-            SCIPdebugMessage("adding constraint <%s> from add conjunction <%s>\n",
+            SCIPdebugMsg(scip, "adding constraint <%s> from add conjunction <%s>\n",
                SCIPconsGetName(consdata->conss[i]), SCIPconsGetName(conss[c]));
             SCIP_CALL( SCIPaddConsLocal(scip, consdata->conss[i], NULL) );
             *result = SCIP_CONSADDED;
@@ -344,6 +344,19 @@ SCIP_DECL_CONSENFOLP(consEnfolpConjunction)
 }
 
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxConjunction)
+{  /*lint --e{715}*/
+   *result = SCIP_FEASIBLE;
+
+   /* add all constraints to the current node */
+   SCIP_CALL( addAllConss(scip, conss, nconss, result) );
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsConjunction)
@@ -404,7 +417,7 @@ SCIP_DECL_CONSPRESOL(consPresolConjunction)
          /* add constraint, if it is not active yet */
          if( !SCIPconsIsActive(consdata->conss[i]) )
          {
-            SCIPdebugMessage("adding constraint <%s> from add conjunction <%s>\n",
+            SCIPdebugMsg(scip, "adding constraint <%s> from add conjunction <%s>\n",
                SCIPconsGetName(consdata->conss[i]), SCIPconsGetName(conss[c]));
             SCIP_CALL( SCIPaddCons(scip, consdata->conss[i]) );
             *result = SCIP_SUCCESS;
@@ -492,7 +505,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
    assert(str != NULL);
    assert(name != NULL);
 
-   SCIPdebugMessage("parsing conjunction <%s>\n", name);
+   SCIPdebugMsg(scip, "parsing conjunction <%s>\n", name);
 
    *success = TRUE;
 
@@ -507,7 +520,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
 
    if( saveptr == NULL )
    {
-      SCIPdebugMessage("error parsing conjunctive constraint: \"%s\"\n", str);
+      SCIPdebugMsg(scip, "error parsing conjunctive constraint: \"%s\"\n", str);
       *success = FALSE;
       goto TERMINATE;
    }
@@ -552,7 +565,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
 		  }
 		  else
 		  {
-		     SCIPdebugMessage("error parsing conjunctive constraint: \"%s\"\n", str);
+		     SCIPdebugMsg(scip, "error parsing conjunctive constraint: \"%s\"\n", str);
 		     *success = FALSE;
 		     goto TERMINATE;
 		  }
@@ -583,7 +596,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
 	    SCIP_CALL( SCIPduplicateBufferArray(scip, &token, nexttokenstart, saveptr - nexttokenstart + 1) );
 	    token[saveptr - nexttokenstart] = '\0';
 
-	    SCIPdebugMessage("conjunctive parsing token(constraint): %s\n", token);
+	    SCIPdebugMsg(scip, "conjunctive parsing token(constraint): %s\n", token);
 
 	    /* parsing a constraint, part of the conjunction */
 	    SCIP_CALL( SCIPparseCons(scip, &(conss[nconss]), token, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
@@ -594,7 +607,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
 	       ++nconss;
 	    else
 	    {
-	       SCIPdebugMessage("error parsing conjunctive constraint: \"%s\"\n", str);
+	       SCIPdebugMsg(scip, "error parsing conjunctive constraint: \"%s\"\n", str);
 	       goto TERMINATE;
 	    }
 	    /* skip ',' delimeter */
@@ -613,7 +626,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
 
    if( saveptr == NULL )
    {
-      SCIPdebugMessage("error parsing conjunctive constraint: \"%s\"\n", str);
+      SCIPdebugMsg(scip, "error parsing conjunctive constraint: \"%s\"\n", str);
       *success = FALSE;
       goto TERMINATE;
    }
@@ -633,7 +646,7 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
       SCIP_CALL( SCIPduplicateBufferArray(scip, &token, nexttokenstart, saveptr - nexttokenstart + 1) );
       token[saveptr - nexttokenstart] = '\0';
 
-      SCIPdebugMessage("conjunctive parsing token(constraint): %s\n", token);
+      SCIPdebugMsg(scip, "conjunctive parsing token(constraint): %s\n", token);
 
       /* parsing a constraint, part of the conjunction */
       SCIP_CALL( SCIPparseCons(scip, &(conss[nconss]), token, initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, success) );
@@ -741,16 +754,13 @@ SCIP_RETCODE SCIPincludeConshdlrConjunction(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
-   /* create conjunction constraint handler data */
-   conshdlrdata = NULL;
 
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpConjunction, consEnfopsConjunction, consCheckConjunction, consLockConjunction,
-         conshdlrdata) );
+         NULL) );
 
    assert(conshdlr != NULL);
 
@@ -762,7 +772,7 @@ SCIP_RETCODE SCIPincludeConshdlrConjunction(
          CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintConjunction) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransConjunction) );
-
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxConjunction) );
 
    return SCIP_OKAY;
 }
@@ -861,4 +871,3 @@ SCIP_RETCODE SCIPaddConsElemConjunction(
 
    return SCIP_OKAY;
 }
-

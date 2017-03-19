@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -559,7 +559,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDualagg)
                /* infeasible aggregation */
                if( infeasible )
                {
-                  SCIPdebugMessage(" -> infeasible aggregation\n");
+                  SCIPdebugMsg(scip, " -> infeasible aggregation\n");
                   *result = SCIP_CUTOFF;
                   return SCIP_OKAY;
                }

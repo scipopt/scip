@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -52,7 +52,7 @@ struct SCIP_ComprData
 
    /* statictics */
    SCIP_Real             rate;               /**< rate of compression */
-   int                   score;              /**< score of the best representation found */
+   SCIP_Real             score;              /**< score of the best representation found */
    int                   nnodes;             /**< number of nodes after compressing */
 
    /* parameters */
@@ -117,9 +117,10 @@ SCIP_RETCODE constructCompression(
    SCIP_VAR*** vars;
    SCIP_Real** vals;
    SCIP_BOUNDTYPE** bounds;
+   SCIP_Real* lowerbounds;
    SCIP_Bool* covered;
    const char** varnames;
-   int score;
+   SCIP_Real score;
    int nreps;
    SCIP_Longint* signature0;
    SCIP_Longint* signature1;
@@ -142,17 +143,17 @@ SCIP_RETCODE constructCompression(
    currentnode = NULL;
    nleaveids = SCIPgetNReoptLeaves(scip, currentnode);
 
-   SCIPdebugMessage(">> start <%s> (nleaves: %d)\n", COMPR_NAME, nleaveids);
+   SCIPdebugMsg(scip, ">> start <%s> (nleaves: %d)\n", COMPR_NAME, nleaveids);
 
    if( SCIPcomprGetMinNodes(compr) > nleaveids )
    {
-      SCIPdebugMessage("-> skip compression (min. leaves = %d)\n", SCIPcomprGetMinNodes(compr));
+      SCIPdebugMsg(scip, "-> skip compression (min. leaves = %d)\n", SCIPcomprGetMinNodes(compr));
       return SCIP_OKAY;
    }
 
    *result = SCIP_DIDNOTFIND;
 
-   SCIPdebugMessage("-> try compression with %d node(s)\n", nleaveids);
+   SCIPdebugMsg(scip, "-> try compression with %d node(s)\n", nleaveids);
 
    /* collect the nodes to compress */
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &leaveids, nleaveids) );
@@ -165,6 +166,7 @@ SCIP_RETCODE constructCompression(
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, nleaveids) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bounds, nleaveids) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nvars, nleaveids) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lowerbounds, nleaveids) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varnames, SCIPgetNOrigVars(scip)) );
 
    /* allocate memory to store the signatures */
@@ -189,7 +191,7 @@ SCIP_RETCODE constructCompression(
       /* get the branching path */
       reoptnode = SCIPgetReoptnode(scip, leaveids[k]);
       SCIPgetReoptnodePath(scip, reoptnode, vars[k], vals[k], bounds[k], mem_vars, &nvars2, &nafterdualvars);
-
+      lowerbounds[k] = SCIPreoptnodeGetLowerbound(reoptnode);
       nvars[k] = nvars2 + nafterdualvars;
 
       /* calculate the signature*/
@@ -199,13 +201,14 @@ SCIP_RETCODE constructCompression(
    for( start_id = 0; start_id < nleaveids; start_id++ )
    {
       nreps = -1;
-      score = 0;
+      score = 0.0;
+
+      /* we want to find an intersection that merges at least 3 nodes */
+      if( nvars[start_id] <= comprdata->mincomvars + 1 )
+         continue;
 
       /* initialize the covered-array with FALSE */
-      SCIP_CALL( SCIPallocBufferArray(scip, &covered, nleaveids) );
-
-      for( k = 0; k < nleaveids; k++ )
-         covered[k] = FALSE;
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &covered, nleaveids) );
 
       current_id = start_id;
 
@@ -214,11 +217,10 @@ SCIP_RETCODE constructCompression(
       SCIP_CALL( SCIPallocBufferArray(scip, &repvals, 2+comprdata->niters) );
       SCIP_CALL( SCIPallocBufferArray(scip, &nrepvars, 2+comprdata->niters) );
 
-      SCIPdebugMessage("+---+ start round %d +---+\n", start_id+1);
+      SCIPdebugMsg(scip, "+---+ start round %d +---+\n", start_id + 1);
 
       /* try to find common representatives */
-      while( nreps-1 <= comprdata->niters
-          && (nreps == -1 || (current_id % nleaveids) != start_id) )
+      while( nreps-1 <= comprdata->niters && (nreps == -1 || (current_id % nleaveids) != start_id) )
       {
          int* idx_common_vars;
          int* idx_non_zero;
@@ -248,18 +250,21 @@ SCIP_RETCODE constructCompression(
          covered[current_id] = TRUE;
 
          /* find the next not covered id */
-         next_id = (current_id+1) % nleaveids ;
+         next_id = (current_id + 1) % nleaveids ;
          while( covered[next_id] && next_id != current_id )
-            next_id = (next_id+1) % nleaveids;
+            next_id = (next_id + 1) % nleaveids;
 
          if( next_id == current_id )
             goto TERMINATE;
+
+         /* we want to find an intersection that merges at least 3 nodes */
+         if( nvars[next_id] <= comprdata->mincomvars + 1 )
+            continue;
 
          /* get a clear array of size SCIPgetNOrigVars */
          SCIP_CALL( SCIPallocClearMemoryArray(scip, &common_vars, SCIPgetNOrigVars(scip)) );
 
          /* allocate buffer */
-         ncommon_vars = 0;
          nnon_zero_vars = 0;
          SCIP_CALL( SCIPallocBufferArray(scip, &idx_common_vars, nvars[current_id]) );
          SCIP_CALL( SCIPallocBufferArray(scip, &idx_non_zero, nvars[current_id]) );
@@ -286,7 +291,7 @@ SCIP_RETCODE constructCompression(
             nnon_zero_vars++;
          }
 
-         SCIPdebugMessage("start with ID %u, %d fixed variables\n", leaveids[current_id], nnon_zero_vars);
+         SCIPdebugMsg(scip, "start with ID %u, %d fixed variables\n", leaveids[current_id], nnon_zero_vars);
 
          covered_ids[ncovered] = current_id;
          ncovered++;
@@ -297,11 +302,9 @@ SCIP_RETCODE constructCompression(
             while( covered[next_id % nleaveids] && (next_id % nleaveids) != current_id )
             {
                /* go to the next node if the intersection is empty */
-               if( (signature0[current_id] | signature0[next_id % nleaveids]) != signature0[current_id]
-                || (signature1[current_id] | signature1[next_id % nleaveids]) != signature1[current_id])
-               {
+               if( (signature0[current_id] & signature0[next_id % nleaveids]) == 0
+                  && (signature1[current_id] & signature1[next_id % nleaveids]) == 0 )
                   next_id++;
-               }
                else
                   break;
             }
@@ -316,8 +319,6 @@ SCIP_RETCODE constructCompression(
 
             ncommon_vars = 0;
 
-            /* @todo : ensure that the number of common variables is at least mincomvars */
-
             /* calculate the intersection */
             for( v = 0; v < nvars[next_id]; v++ )
             {
@@ -328,6 +329,7 @@ SCIP_RETCODE constructCompression(
                }
             }
 
+            /* the number of common variables should be at least mincomvars */
             if( ncommon_vars < comprdata->mincomvars )
                goto EMPTY;
 
@@ -360,7 +362,8 @@ SCIP_RETCODE constructCompression(
                covered[next_id] = TRUE;
                nnemptyinters++;
 
-               SCIPdebugMessage("-> found intersection with ID %u, %d common variables\n", leaveids[next_id], nnon_zero_vars);
+               SCIPdebugMessage("-> found intersection with ID %u, %d/%d common variables\n", leaveids[next_id],
+                     nnon_zero_vars, MAX(nvars[current_id], nvars[next_id]));
 
                covered_ids[ncovered] = next_id;
                ncovered++;
@@ -395,36 +398,36 @@ SCIP_RETCODE constructCompression(
          }
          else
          {
-            SCIPdebugMessage("-> did not found a intersection larger than %d\n", comprdata->mincomvars);
+            SCIPdebugMsg(scip, "-> did not found a intersection larger than %d\n", comprdata->mincomvars);
             covered[current_id] = FALSE;
          }
 
          /* calculate the score */
-         score += ncovered * nnon_zero_vars;
+         score += (SCIP_Real) ncovered * nnon_zero_vars;
 
-         SCIPdebugMessage("-> current representation is of size %d with loi = %d\n", nreps, score);
+         SCIPdebugMessage("-> current representation is of size %d with score = %.1f\n", nreps, score);
 
          current_id = (current_id + 1) % nleaveids;
 
          /* free memory */
          SCIPfreeMemoryArray(scip, &common_vars);
-         SCIPfreeBufferArray(scip, &idx_common_vars);
-         SCIPfreeBufferArray(scip, &idx_non_zero);
 
          SCIPfreeBufferArray(scip, &covered_ids);
+         SCIPfreeBufferArray(scip, &idx_non_zero);
+         SCIPfreeBufferArray(scip, &idx_common_vars);
       }
 
      TERMINATE:
 
       /* add the number of variables of uncovered nodes to the loss of information */
-      SCIPdebugMessage("-> final representation is of size %d with score = %d\n", nreps, score);
+      SCIPdebugMessage("-> final representation is of size %d with score = %.1f\n", nreps, score);
 
       /* We found a better representation, i.e., with less loss of information.
        * 1. reset the previous represenation
        * 2. check if we need to reallocate the memory
        * 3. set the new representation
        */
-      if( score > comprdata->score )
+      if( SCIPisSumGT(scip, score, comprdata->score) )
       {
          /* reset the current representation */
          SCIP_CALL( SCIPresetRepresentation(scip, comprdata->representatives, comprdata->nrepresentatives) );
@@ -483,7 +486,7 @@ SCIP_RETCODE constructCompression(
    /* check if we have found a representation and construct the missing constraints */
    if( comprdata->nrepresentatives > 0 )
    {
-      SCIPdebugMessage("best representation found has %d leaf nodes and score = %d\n", comprdata->nrepresentatives, comprdata->score);
+      SCIPdebugMessage("best representation found has %d leaf nodes and score = %g\n", comprdata->nrepresentatives, comprdata->score);
 
       /* iterate over all representatives */
       for( k = 0; k < comprdata->nrepresentatives-1; k++ )
@@ -491,15 +494,19 @@ SCIP_RETCODE constructCompression(
          int r;
 
          /* add a constraint (corresponding to the branching path of k) to all representatives
-          * in the subtree induced by the sibling of k */
-         for( r = k+1; r < comprdata->nrepresentatives; r++ )
+          * in the subtree induced by the sibling of k
+          */
+         for( r = k + 1; r < comprdata->nrepresentatives; r++ )
          {
             SCIP_VAR** pathvars;
             SCIP_Real* pathvals;
             SCIP_BOUNDTYPE* pathboundtypes;
+            SCIP_Real lhs;
+            SCIP_Bool linear;
             int pathvarssize;
             int npathvars;
             int npathafterdualvars;
+            int i;
 
             pathvarssize = SCIPreoptnodeGetNVars(comprdata->representatives[k]);
 
@@ -512,8 +519,41 @@ SCIP_RETCODE constructCompression(
             SCIPgetReoptnodePath(scip, comprdata->representatives[k], pathvars, pathvals, pathboundtypes, pathvarssize,
                   &npathvars, &npathafterdualvars);
 
-            SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[r], pathvars, pathvals, npathvars,
-                  REOPT_CONSTYPE_STRBRANCHED) );
+            lhs = 1.0;
+            linear = TRUE; /* todo: we have to adapt the compression to handle integer variables */
+
+            /* negate the branching path */
+            for( i = 0; i < npathvars; i++ )
+            {
+               assert(SCIPvarIsOriginal(pathvars[i]));
+
+               /* we have to construct a linear constraint that can be upgraded to a logic-or constraint
+                *
+                * each variable i with pathvals[i] == 0 and pathboundtypes[i] == SCIP_BOUNDTYPE_UPPER needs a coefficient
+                * of 1.0, all remaining variables (i.e., pathvals[i] == 1 and pathboundtypes[i] == SCIP_BOUNDTYPE_LOWER)
+                * need a -1.0 and we have to reduce the lhs by -1.0.
+                *
+                *        sum_{i : pathvals[i] == 0.0} x_i + sum_{j : pathvals[j] == 1.0} (1.0-x_{j}) >= 1.0
+                *  <==>  sum_{i : pathvals[i] == 0.0} x_i + sum_{j : pathvals[j] == 1.0}     -x_{j}  >= 1.0 - sum_{j : pathvals[j] == 1.0} 1.0
+                */
+               if( SCIPisEQ(scip, pathvals[i], 0.0) )
+               {
+                  assert(pathboundtypes[i] == SCIP_BOUNDTYPE_UPPER);
+
+                  pathvals[i] = 1.0;
+               }
+               else
+               {
+                  assert(SCIPisEQ(scip, pathvals[i], 1.0));
+                  assert(pathboundtypes[i] == SCIP_BOUNDTYPE_LOWER);
+
+                  pathvals[i] = -1.0;
+                  lhs -= 1.0;
+               }
+            }
+
+            SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[r], pathvars, pathvals, NULL, lhs,
+                  SCIPinfinity(scip), npathvars, REOPT_CONSTYPE_DUALREDS, linear) );
 
             /* free buffer */
             SCIPfreeBufferArray(scip, &pathboundtypes);
@@ -535,6 +575,7 @@ SCIP_RETCODE constructCompression(
    SCIPfreeBufferArray(scip, &signature0);
 
    SCIPfreeBufferArray(scip, &varnames);
+   SCIPfreeBufferArray(scip, &lowerbounds);
    SCIPfreeBufferArray(scip, &nvars);
    SCIPfreeBufferArray(scip, &bounds);
    SCIPfreeBufferArray(scip, &vals);
@@ -567,7 +608,7 @@ SCIP_RETCODE applyCompression(
       return SCIP_OKAY;
 
    /* set references to the root node */
-   for(r = 0; r < comprdata->nrepresentatives; r++)
+   for( r = 0; r < comprdata->nrepresentatives; r++ )
       SCIPreoptnodeSetParentID(comprdata->representatives[r], 0);
 
    success = FALSE;
@@ -611,7 +652,7 @@ SCIP_DECL_COMPRFREE(comprFreeLargestrepr)
    comprdata = SCIPcomprGetData(compr);
    assert(comprdata != NULL);
 
-   SCIPfreeMemory(scip, &comprdata);
+   SCIPfreeBlockMemory(scip, &comprdata);
    SCIPcomprSetData(compr, NULL);
 
    return SCIP_OKAY;
@@ -656,12 +697,12 @@ SCIP_DECL_COMPREXEC(comprExecLargestrepr)
 
    if( !comprdata->initialized )
    {
-      SCIPdebugMessage(">> initializing <%s>\n", COMPR_NAME);
+      SCIPdebugMsg(scip, ">> initializing <%s>\n", COMPR_NAME);
 
       comprdata->representativessize = DEFAUL_MEM_REPR;
       comprdata->nrepresentatives = 0;
       comprdata->rate = 0.0;
-      comprdata->score = 0;
+      comprdata->score = 0.0;
       comprdata->nnodes = 0;
       SCIP_CALL( SCIPallocClearMemoryArray(scip, &comprdata->representatives, comprdata->representativessize) );
 
@@ -684,7 +725,7 @@ SCIP_DECL_COMPREXEC(comprExecLargestrepr)
       SCIP_CALL( applyCompression(scip, compr, comprdata, result) );
       assert(*result == SCIP_DIDNOTRUN || *result == SCIP_SUCCESS);
 
-      SCIPdebugMessage("->%s apply compression.\n", *result == SCIP_DIDNOTRUN ? " did not" : "");
+      SCIPdebugMsg(scip, "->%s apply compression.\n", *result == SCIP_DIDNOTRUN ? " did not" : "");
    }
    else
    {
@@ -707,7 +748,7 @@ SCIP_RETCODE SCIPincludeComprLargestrepr(
    SCIP_COMPR* compr;
 
    /* create largestrepr tree compression data */
-   SCIP_CALL( SCIPallocMemory(scip, &comprdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &comprdata) );
    assert(comprdata != NULL);
    comprdata->initialized = FALSE;
 

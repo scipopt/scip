@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prob.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for storing and manipulating the main problem
  * @author Tobias Achterberg
  */
@@ -39,6 +40,7 @@
 #include "scip/type_reopt.h"
 #include "scip/type_branch.h"
 #include "scip/type_cons.h"
+#include "scip/type_conflictstore.h"
 
 #include "scip/struct_prob.h"
 
@@ -134,6 +136,7 @@ void SCIPprobSetCopy(
 extern
 SCIP_RETCODE SCIPprobFree(
    SCIP_PROB**           prob,               /**< pointer to problem data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -155,6 +158,7 @@ SCIP_RETCODE SCIPprobTransform(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_PROB**           target              /**< pointer to target problem data structure */
    );
 
@@ -470,6 +474,12 @@ void SCIPprobUpdateDualbound(
    SCIP_Real             newbound            /**< new dual bound for the node (if it's tighter than the old one) */
    );
 
+/** invalidates the dual bound */
+extern
+void SCIPprobInvalidateDualbound(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
 /** returns the external value of the given internal objective value */
 extern
 SCIP_Real SCIPprobExternObjval(
@@ -614,6 +624,12 @@ SCIP_VAR** SCIPprobGetVars(
    SCIP_PROB*            prob                /**< problem data */
    );
 
+/** gets number of problem constraints */
+extern
+int SCIPprobGetNConss(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
 /** gets the objective offset */
 extern
 SCIP_Real SCIPprobGetObjoffset(
@@ -660,6 +676,7 @@ void SCIPprobEnableConsCompression(
 #define SCIPprobGetNImplVars(prob)      ((prob)->nimplvars)
 #define SCIPprobGetNContVars(prob)      ((prob)->ncontvars)
 #define SCIPprobGetVars(prob)           ((prob)->vars)
+#define SCIPprobGetNConss(prob)         ((prob)->nconss)
 #define SCIPprobGetObjoffset(prob)      ((prob)->objoffset)
 #define SCIPprobGetObjscale(prob)       ((prob)->objscale)
 #define SCIPprobIsConsCompressionEnabled(prob)  ((prob)->conscompression)

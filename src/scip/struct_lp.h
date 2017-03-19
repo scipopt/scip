@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_lp.h
- * @brief  datastructures for LP management
+ * @ingroup INTERNALAPI
+ * @brief  data structures for LP management
  * @author Tobias Achterberg
  *
  *  In SCIP, the LP is defined as follows:
@@ -323,11 +324,13 @@ struct SCIP_Lp
    int                   lpithreads;         /**< current THREADS setting in LPI */
    int                   lpitiming;          /**< current timing type in LPI */
    int                   lpirandomseed;      /**< current initial random seed in LPI */
+   int                   lpiscaling;         /**< current SCALING setting in LPI */
    SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */
    SCIP_Bool             objsqrnormunreliable;/**< is squared Euclidean norm of objective function vector of problem
                                                *   variables unreliable and need recalculation? */
+   SCIP_Bool             lpisolutionpolishing;/**< LP solution polishing method (0: disabled, 1: enabled) */
    SCIP_Bool             looseobjvalid;      /**< is the loose objective value valid or should it be recomputed from scratch? */
    SCIP_Bool             glbpseudoobjvalid;  /**< is the global pseudo solution value valid or should it be recomputed from scratch? */
    SCIP_Bool             pseudoobjvalid;     /**< is the pseudo solution value valid or should it be recomputed from scratch? */
@@ -335,6 +338,7 @@ struct SCIP_Lp
    SCIP_Bool             flushaddedcols;     /**< have LPI-columns been added in the last lpFlush() call? */
    SCIP_Bool             flushdeletedrows;   /**< have LPI-rows been deleted in the last lpFlush() call? */
    SCIP_Bool             flushaddedrows;     /**< have LPI-rows been added in the last lpFlush() call? */
+   SCIP_Bool             updateintegrality;  /**< does integrality information need to be updated? */
    SCIP_Bool             flushed;            /**< are all cached changes applied to the LP solver? */
    SCIP_Bool             solved;             /**< is current LP solved? */
    SCIP_Bool             primalfeasible;     /**< is current LP solution (rather LPI state) primal feasible? */
@@ -353,7 +357,6 @@ struct SCIP_Lp
    SCIP_Bool             resolvelperror;     /**< an error occured during resolving the LP after diving or probing */
    SCIP_Bool             adjustlpval;        /**< does an infinite LP objective value has been adjusted so far? */
    SCIP_Bool             lpifromscratch;     /**< current FROMSCRATCH setting in LPI */
-   SCIP_Bool             lpiscaling;         /**< current SCALING setting in LPI */
    SCIP_Bool             lpipresolving;      /**< current PRESOLVING setting in LPI */
    SCIP_Bool             lpilpinfo;          /**< current LPINFO setting in LPI */
    SCIP_Bool             lpihasfeastol;      /**< does the LPI support the FEASTOL parameter? */
@@ -363,6 +366,7 @@ struct SCIP_Lp
    SCIP_Bool             lpihasscaling;      /**< does the LPI support the SCALING parameter? */
    SCIP_Bool             lpihaspresolving;   /**< does the LPI support the PRESOLVING parameter? */
    SCIP_Bool             lpihasrowrep;       /**< does the LPI support row representation of a simplex basis? */
+   SCIP_Bool             lpihaspolishing;    /**< does the LPI support solution polishing? */
    SCIP_Real             lpirowrepswitch;    /**< simplex algorithm shall use row representation of the basis
                                               *   if number of rows divided by number of columns exceeds this value */
    SCIP_Bool             divelpwasprimfeas;  /**< primal feasibility when diving started */

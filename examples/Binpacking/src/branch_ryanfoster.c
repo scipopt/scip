@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -19,9 +19,9 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  *
- * This file implements the Ryan/Foster branching rule. For more details see \ref BRANCHING page.
+ * This file implements the Ryan/Foster branching rule. For more details see \ref BINPACKING_BRANCHING page.
  *
- * @page BRANCHING Ryan/Foster branching
+ * @page BINPACKING_BRANCHING Ryan/Foster branching
  *
  * Ryan/Foster branching is a very useful branching rule for the integer program model in use. A
  * standard variable branching has the disadvantage that the zero branch is more or less useless because
@@ -40,7 +40,7 @@
  * -# How do we select the pair of items?
  * -# How do we realize such a branching within \SCIP?
  *
- * @section SELECTION How do we select the pair of items?
+ * @section BINPACKING_SELECTION How do we select the pair of items?
  *
  * To select a pair of items, we have to know for each packing the items which are contained. Since every packing is a
  * variable and each item is a set covering constraint, we have to know for each variable in which set covering
@@ -52,7 +52,7 @@
  * information which items belong to which packing. Therefore, we can use the Ryan/Foster idea to select a pair of
  * items.
  *
- * @section SAMEDIFFBRANCHING How do we realize such a branching within SCIP?
+ * @section BINPACKING_SAMEDIFFBRANCHING How do we realize such a branching within SCIP?
  *
  * After having selected a pair of items to branch on, the question now is how to realize such a branching with \SCIP.
  * Since \SCIP is
@@ -127,7 +127,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(result != NULL);
 
-   SCIPdebugMessage("start branching at node %"SCIP_LONGINT_FORMAT", depth %d\n", SCIPgetNNodes(scip), SCIPgetDepth(scip));
+   SCIPdebugMsg(scip, "start branching at node %"SCIP_LONGINT_FORMAT", depth %d\n", SCIPgetNNodes(scip), SCIPgetDepth(scip));
 
    *result = SCIP_DIDNOTRUN;
 
@@ -210,7 +210,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    }
    SCIPfreeBufferArray(scip, &pairweights);
 
-   SCIPdebugMessage("branch on order pair <%d,%d> with weight <%g>\n",
+   SCIPdebugMsg(scip, "branch on order pair <%d,%d> with weight <%g>\n",
       SCIPprobdataGetIds(probdata)[id1], SCIPprobdataGetIds(probdata)[id2], bestvalue);
 
    /* create the branch-and-bound tree child nodes of the current node */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -45,7 +45,7 @@ void teardown(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    cr_assert_null(scip);
-   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is are memory leak!!");
+   cr_assert_eq(BMSgetMemoryUsed(), 0, "There is a memory leak!!");
 }
 
 TestSuite(stages, .init = setup, .fini = teardown);
@@ -63,7 +63,7 @@ TestSuite(stages, .init = setup, .fini = teardown);
 static
 void gotoStage(SCIP_STAGE stage)
 {
-   SCIP_CALL( TESTscipSetStage(scip, stage) );
+   SCIP_CALL( TESTscipSetStage(scip, stage, FALSE) );
    cr_expect_eq(SCIPgetStage(scip), stage, "got stage %d, expected %d", SCIPgetStage(scip), stage);
 }
 
@@ -90,4 +90,13 @@ Test(stages, solving)
 Test(stages, solved)
 {
    gotoStage(SCIP_STAGE_SOLVED);
+}
+
+Test(stages, solving_with_nlp)
+{
+   SCIP_CALL( TESTscipSetStage(scip, SCIP_STAGE_SOLVING, TRUE) );
+   cr_expect_eq(SCIPgetStage(scip), SCIP_STAGE_SOLVING, "got stage %d, expected %d", SCIPgetStage(scip), SCIP_STAGE_SOLVING);
+
+   /* check that NLP is created */
+   cr_expect(SCIPisNLPConstructed(scip), "NLP is not constructed");
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -57,7 +57,7 @@ SCIP_RETCODE SCIPexprintCreate(
    SCIPdebugMessage("SCIPexprintCreate()\n");
    SCIPdebugMessage("Note that there is no expression interpreter linked to the binary.\n");
 
-   *exprint = (void*)1u;  /* some code checks that a non-NULL pointer is returned here, even though it may not point anywhere */
+   *exprint = (SCIP_EXPRINT*)1u;  /* some code checks that a non-NULL pointer is returned here, even though it may not point anywhere */
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -95,7 +95,7 @@ SCIP_EXPRINTCAPABILITY SCIPexprintGetExprtreeCapability(
    )
 {
    return SCIP_EXPRINTCAPABILITY_NONE;
-}
+} /*lint !e715*/
 
 /** frees interpreter data */
 SCIP_RETCODE SCIPexprintFreeData(

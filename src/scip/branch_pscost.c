@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "scip/branch_pscost.h"
+#include "scip/pub_misc.h"
 
 #define BRANCHRULE_NAME          "pscost"
 #define BRANCHRULE_DESC          "branching on pseudo cost values"
@@ -50,6 +51,8 @@
 /** branching rule data */
 struct SCIP_BranchruleData
 {
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
+
    char                  strategy;           /**< strategy for computing score of external candidates */
    SCIP_Real             scoreminweight;     /**< weight for minimum of scores of a branching candidate */
    SCIP_Real             scoremaxweight;     /**< weight for maximum of scores of a branching candidate */
@@ -61,7 +64,6 @@ struct SCIP_BranchruleData
    int                   narymaxdepth;       /**< maximal depth where to do n-ary branching, -1 to turn off */
    SCIP_Real             naryminwidth;       /**< minimal domain width in children when doing n-ary branching, relative to global bounds */
    SCIP_Real             narywidthfactor;    /**< factor of domain width in n-ary branching */
-   unsigned int          randseed;           /**< seed value for random number generator                              */
 };
 
 /*
@@ -306,7 +308,7 @@ SCIP_RETCODE updateBestCandidate(
       branchscore = SCIPgetBranchScore(scip, cand, pscostdown, pscostup);
       assert(!SCIPisNegative(scip, branchscore));
    }
-   SCIPdebugMessage("branching score variable <%s>[%g,%g] = %g; wscore = %g; type=%d bestbrscore=%g\n",
+   SCIPdebugMsg(scip, "branching score variable <%s>[%g,%g] = %g; wscore = %g; type=%d bestbrscore=%g\n",
       SCIPvarGetName(cand), SCIPvarGetLbLocal(cand), SCIPvarGetUbLocal(cand), branchscore, WEIGHTEDSCORING(branchruledata, candscoremin, candscoremax, candscoresum),
       SCIPvarGetType(cand), *bestscore);
 
@@ -331,7 +333,7 @@ SCIP_RETCODE updateBestCandidate(
    {
       /* best candidate is unbounded -> we prefer to branch on it */
       if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(cand)) && SCIPisInfinity(scip, SCIPvarGetUbLocal(cand)) &&
-          SCIPgetRandomReal(0.0, 1.0, &branchruledata->randseed) <= 0.5
+          SCIPrandomGetReal(branchruledata->randnumgen, 0.0, 1.0) <= 0.5
         )
       {
          /* but if the new candidate is also unbounded (thus as good as best candidate),
@@ -508,7 +510,7 @@ SCIP_RETCODE selectBranchVar(
 
       /* check if new candidate is better than previous candidate (if any) */
       SCIP_CALL( updateBestCandidate(scip, branchruledata, brvar, brpoint, &bestbranchscore, &bestrndscore, cand,
-            scoremin, scoremax, scoresum, SCIPgetRandomReal(0.0, 1.0, &branchruledata->randseed), candsol) );
+            scoremin, scoremax, scoresum, SCIPrandomGetReal(branchruledata->randnumgen, 0.0, 1.0), candsol) );
    }
 
    /* there were candidates, but no variable was selected; this can only happen if the branching points are huge values
@@ -553,9 +555,12 @@ SCIP_DECL_BRANCHFREE(branchFreePscost)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
 
-   /* free branching rule data */
+   /* get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
-   SCIPfreeMemory(scip, &branchruledata);
+   assert(branchruledata != NULL);
+
+   /* free branching rule data */
+   SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
@@ -571,7 +576,25 @@ SCIP_DECL_BRANCHINIT(branchInitPscost)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   branchruledata->randseed = SCIPinitializeRandomSeed(scip, BRANCHRULE_RANDSEED_DEFAULT);
+   /* create a random number generator */
+   SCIP_CALL( SCIPrandomCreate(&branchruledata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, BRANCHRULE_RANDSEED_DEFAULT)) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of branching rule */
+static
+SCIP_DECL_BRANCHEXIT(branchExitPscost)
+{  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   /* get branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   /* free random number generator */
+   SCIPrandomFree(&branchruledata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -593,7 +616,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execlp method of pscost branching\n");
+   SCIPdebugMsg(scip, "Execlp method of pscost branching\n");
 
    /* get branching candidates */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, NULL, &nlpcands, NULL) );
@@ -623,7 +646,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
    assert(!SCIPisFeasIntegral(scip, SCIPvarGetSol(lpcands[bestcand], TRUE)));
 
    /* perform the branching */
-   SCIPdebugMessage(" -> %d cands, selected cand %d: variable <%s> (solval=%g, score=%g)\n",
+   SCIPdebugMsg(scip, " -> %d cands, selected cand %d: variable <%s> (solval=%g, score=%g)\n",
       nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandssol[bestcand], bestscore);
 
    /* perform the branching */
@@ -655,7 +678,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   SCIPdebugMessage("Execext method of pscost branching\n");
+   SCIPdebugMsg(scip, "Execext method of pscost branching\n");
 
    /* get branching candidates */
    SCIP_CALL( SCIPgetExternBranchCands(scip, &externcands, &externcandssol, &externcandsscore, NULL, &nprioexterncands, NULL, NULL, NULL) );
@@ -679,7 +702,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
 
    assert(SCIPvarIsActive(SCIPvarGetProbvar(brvar)));
 
-   SCIPdebugMessage("branching on variable <%s>: new intervals: [%g, %g] and [%g, %g]\n",
+   SCIPdebugMsg(scip, "branching on variable <%s>: new intervals: [%g, %g] and [%g, %g]\n",
       SCIPvarGetName(brvar), SCIPvarGetLbLocal(brvar), SCIPadjustedVarUb(scip, brvar, brpoint), SCIPadjustedVarLb(scip, brvar, brpoint), SCIPvarGetUbLocal(brvar));
 
    if( branchruledata->nchildren > 2 && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) <= branchruledata->narymaxdepth )
@@ -727,7 +750,7 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
    SCIP_BRANCHRULE* branchrule;
 
    /* create pscost branching rule data */
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
 
    /* include allfullstrong branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
@@ -739,6 +762,7 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyPscost) );
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreePscost) );
    SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitPscost) );
+   SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitPscost) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpPscost) );
    SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextPscost) );
 

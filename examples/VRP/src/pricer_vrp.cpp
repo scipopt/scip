@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -215,7 +215,7 @@ SCIP_RETCODE ObjPricerVRP::pricing(
  */
 SCIP_DECL_PRICERREDCOST(ObjPricerVRP::scip_redcost)
 {
-   SCIPdebugMessage("call scip_redcost ...\n");
+   SCIPdebugMsg(scip, "call scip_redcost ...\n");
 
    /* set result pointer, see above */
    *result = SCIP_SUCCESS;
@@ -236,7 +236,7 @@ SCIP_DECL_PRICERREDCOST(ObjPricerVRP::scip_redcost)
  */
 SCIP_DECL_PRICERFARKAS(ObjPricerVRP::scip_farkas)
 {
-   SCIPdebugMessage("call scip_farkas ...\n");
+   SCIPdebugMsg(scip, "call scip_farkas ...\n");
 
    /* call pricing routine */
    SCIP_CALL( pricing(scip, true) );
@@ -260,7 +260,7 @@ SCIP_RETCODE ObjPricerVRP::add_tour_variable(
       strncpy(tmp_name, var_name, 255);
       (void) SCIPsnprintf(var_name, 255, "%s_%d", tmp_name, *it);
    }
-   SCIPdebugMessage("new variable <%s>\n", var_name);
+   SCIPdebugMsg(scip, "new variable <%s>\n", var_name);
 
    /* create the new variable: Use upper bound of infinity such that we do not have to care about
     * the reduced costs of the variable in the pricing. The upper bound of 1 is implicitly satisfied

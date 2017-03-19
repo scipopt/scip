@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,12 +30,19 @@
 extern "C" {
 #endif
 
+/**@addtogroup NLPIS
+ *
+ * @{
+ */
+
 /** create solver interface for Xyz solver */
 extern
 SCIP_RETCODE SCIPcreateNlpSolverXyz(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

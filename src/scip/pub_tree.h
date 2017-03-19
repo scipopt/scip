@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_tree.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for branch and bound tree
  * @author Tobias Achterberg
  */
@@ -40,6 +40,11 @@ extern "C" {
 
 /*
  * Node methods
+ */
+
+/**@addtogroup PublicNodeMethods
+ *
+ * @{
  */
 
 /** node comparator for best lower bound */
@@ -175,7 +180,7 @@ unsigned int SCIPnodeGetReoptID(
 EXTERN
 void SCIPnodeSetReopttype(
    SCIP_NODE*            node,               /**< node */
-   SCIP_REOPTTYPE        type                /**< reoptimization type */
+   SCIP_REOPTTYPE        reopttype           /**< reoptimization type */
    );
 
 /** sets a unique id to identify the node during reoptimization */
@@ -245,6 +250,8 @@ SCIP_CONSSETCHG* SCIPnodeGetConssetchg(
 #define SCIPnodeGetConssetchg(node)    ((node)->conssetchg)
 
 #endif
+
+/* @} */
 
 #ifdef __cplusplus
 }

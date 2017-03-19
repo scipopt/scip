@@ -3,10 +3,10 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
+#*  SCIP is distributed under the terms of the ZIB Academic License.         *
 #*                                                                           *
 #*  You should have received a copy of the ZIB Academic License              *
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
@@ -19,6 +19,16 @@
 #@author  Tobias Achterberg
 #@author  Marc Pfetsch
 #@author  Timo Berthold
+#
+# This file contains the core methods to compile SCIP. When using this
+# makefile for external projects, you need to define the makefile
+# variables SCIPDIR prior to inclusion.
+#
+# The necessary SCIP libraries can be linked by adding
+# $(LINKCXXSCIPALL) or $(LINKCCSCIPALL) to your local linking command,
+# e.g. $(LINKCXX) ... $(LINKCXXSCIPALL) $(LDFLAGS) if you use the C++ interface.
+
+
 
 #-----------------------------------------------------------------------------
 # detect host architecture
@@ -40,19 +50,21 @@ endif
 # default settings
 #-----------------------------------------------------------------------------
 
-#check and testing parameters
+# check and testing parameters
 TIME     	=  	3600
 NODES           =       2100000000
 MEM		=	6144
 THREADS         =       1
 PERMUTE         =       0
+SEEDS           =       0
+GLBSEEDSHIFT    =       0
 DISPFREQ	=	10000
 FEASTOL		=	default
 TEST		=	short
 SETTINGS        =       default
 CONTINUE	=	false
 LOCK		=	false
-VALGRIND	=	false
+DEBUGTOOL	=	none
 CLIENTTMPDIR    =       /tmp
 REOPT		=	false
 OPTCOMMAND	=	optimize
@@ -60,12 +72,16 @@ SETCUTOFF	=	0
 VISUALIZE       =       false
 MAXJOBS         =       1
 
+# set SCIP version here for external projects
+# use underscore to make it compatible with def.h
+SCIP_VERSION	=   	4.0.0.1
 
-#compiling and linking parameters
+# compiling and linking parameters
 VERBOSE		=	false
 OPT		=	opt
 COMP		=	gnu
 LPS		=	spx2
+TPI		=	none
 STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
@@ -75,11 +91,27 @@ NOBLKMEM	=	false
 NOBUFMEM	=	false
 NOBLKBUFMEM	=	false
 
+# if SHARED = true, nevertheless link to static version of external libraries (usefull for mingw)
+LIBEXTFORCESTATIC =	false
+
+#-----------------------------------------------------------------------------
+# load different default for debugtool
+#-----------------------------------------------------------------------------
+-include $(SCIPDIR)/make/local/make.debugtool
+
+ifeq ($(DEBUGTOOL),auto)
+   ifeq ($(OPT),dbg)
+      override DEBUGTOOL   =   gdb
+   else
+      override DEBUGTOOL   =   none
+   endif
+endif
+
 #will this be compiled for parascip, necessary for dbg-builds and cppad to make it threadsafe
 PARASCIP	=	false
 
-#third party compiling parameters
-OPENSOURCE   =         true
+# third party compiling parameters
+OPENSOURCE   	=	true
 READLINE	=	true
 ZLIB		=	true
 GMP		=	true
@@ -89,11 +121,11 @@ EXPRINT 	=	cppad
 LPSOPT		=	opt
 ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
-LPSCHECK        =       false
+LPSCHECK        =	false
 GAMS		=	false
-SPX_LEGACY  	= 	false
+SPX_LEGACY  	=	false
 
-#compiler and linker parameters
+# compiler and linker parameters
 CC		=	gcc
 CC_c		=	-c # the trailing space is important
 CC_o		=	-o # the trailing space is important
@@ -103,6 +135,7 @@ CXX_o		=	-o # the trailing space is important
 LINKCC		=	gcc
 LINKCC_L	=	-L
 LINKCC_l	=	-l
+LINKCC_f	=	-f
 LINKCC_o	=	-o # the trailing space is important
 LINKCXX		=	g++
 LINKCXX_L	=	-L
@@ -119,7 +152,7 @@ LIBBUILD	=	$(AR)
 LIBBUILD_o	=	$(AR_o)
 LIBBUILDFLAGS	=       $(ARFLAGS)
 
-#code check and doxygen
+# code check and doxygen
 LINT		=	flexelint
 DOXY		=	doxygen
 SPLINT		=       splint
@@ -127,7 +160,7 @@ SPLINT		=       splint
 SPLINTFLAGS	=	-UNDEBUG -UWITH_READLINE -UROUNDING_FE -UWITH_GMP -UWITH_ZLIB -which-lib -warn-posix-headers +skip-sys-headers -preproc -formatcode -weak \
 			-redef +export-header +export-local +decl-undef +relaxtypes
 
-#third party testing parameters
+# third party testing parameters
 CPLEX		=	cplex
 CBC		=	cbc
 CBCPARALLEL	=	cbc-parallel
@@ -138,13 +171,13 @@ GLPK            =       glpsol
 SYMPHONY        =       symphony
 BLIS            =       blis
 
-#system parameters
+# system parameters
 SHELL		= 	bash
 READ		=	read -e
 LN_s		= 	ln -s
 LN_sf		=	ln -sf
 
-#initial compiler and linker flags
+# initial compiler and linker flags
 FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -I$(SCIPDIR)/src
 OFLAGS		=
 CFLAGS		=
@@ -163,18 +196,32 @@ GCCWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrit
 			-Wno-unknown-pragmas -Wno-unused-parameter \
 			-Wredundant-decls -Wdisabled-optimization \
 			-Wsign-compare -Wstrict-prototypes \
-			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement
+			-Wmissing-declarations -Wmissing-prototypes -Wdeclaration-after-statement #-Wno-variadic-macros
 
 GXXWARN		=	-pedantic -Wno-long-long -Wall -W -Wpointer-arith -Wcast-align -Wwrite-strings -Wshadow \
 			-Wno-unknown-pragmas -Wno-unused-parameter \
 			-Wredundant-decls -Wdisabled-optimization \
 			-Wctor-dtor-privacy -Wnon-virtual-dtor -Wreorder \
 			-Woverloaded-virtual -Wsign-promo -Wsynth \
-			-Wcast-qual -Wno-unused-parameter -Wno-strict-overflow # -Wold-style-cast -Wshadow -Wundef
+			-Wcast-qual -Wno-unused-parameter -Wno-strict-overflow #-Wno-variadic-macros -Wold-style-cast -Wshadow -Wundef
 
+ifeq ($(SHARED),true)
+LIBTYPE		=	shared
+  ifeq ($(LIBEXTFORCESTATIC),true)
+	LIBEXTTYPE	=	static
+	LIBEXTEXT	=	$(STATICLIBEXT)
+  else
+	LIBEXTTYPE	=	shared
+	LIBEXTEXT	=	$(SHAREDLIBEXT)
+  endif
+else
+LIBTYPE		=	static
+LIBEXTTYPE	=	static
+LIBEXTEXT	=	$(STATICLIBEXT)
+endif
 
 BASE		=	$(OSTYPE).$(ARCH).$(COMP).$(OPT)
-OBJDIR		=	obj/O.$(BASE)
+OBJDIR		=	obj/$(LIBTYPE)/O.$(BASE)
 BINOBJDIR	=	$(OBJDIR)/bin
 LIBOBJDIR	=	$(OBJDIR)/lib
 LIBOBJSUBDIRS	=	$(LIBOBJDIR)/scip \
@@ -182,9 +229,11 @@ LIBOBJSUBDIRS	=	$(LIBOBJDIR)/scip \
 			$(LIBOBJDIR)/blockmemshell \
 			$(LIBOBJDIR)/tclique \
 			$(LIBOBJDIR)/lpi \
+			$(LIBOBJDIR)/tpi \
 			$(LIBOBJDIR)/nlpi \
 			$(LIBOBJDIR)/xml \
-			$(LIBOBJDIR)/dijkstra
+			$(LIBOBJDIR)/dijkstra \
+			$(LIBOBJDIR)/tinycthread
 SRCDIR		=	src
 BINDIR		=	bin
 LIBDIR		=	lib
@@ -204,6 +253,23 @@ ALLSRC		=
 
 
 #-----------------------------------------------------------------------------
+# define path to find SCIP upon execution
+#-----------------------------------------------------------------------------
+
+ifeq ($(SHARED),true)
+ifneq ($(LINKRPATH),)
+ifneq ($(SCIPINTERNAL),true)
+# If this makefile is used to build an external project, we use SCIPREALPATH.
+LDFLAGS		+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)/shared
+else
+# If this makefile is used to build SCIP, we use the variable ORIGIN,
+# which is replaced by the path of the binary at execution time.
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/shared
+endif
+endif
+endif
+
+#-----------------------------------------------------------------------------
 # add user flags
 #-----------------------------------------------------------------------------
 FLAGS		+=	$(USRFLAGS)
@@ -220,13 +286,13 @@ DFLAGS		+=	$(USRDFLAGS)
 #-----------------------------------------------------------------------------
 
 ifeq ($(NOBLKBUFMEM),true)
-     FLAGS		+=	-DBMS_NOBLOCKMEM -DSCIP_NOBUFFERMEM
+	FLAGS		+=	-DBMS_NOBLOCKMEM -DSCIP_NOBUFFERMEM
 else
   ifeq ($(NOBLKMEM),true)
-       FLAGS		+=	-DBMS_NOBLOCKMEM
+	FLAGS		+=	-DBMS_NOBLOCKMEM
   endif
   ifeq ($(NOBUFMEM),true)
-       FLAGS		+=	-DSCIP_NOBUFFERMEM
+	FLAGS		+=	-DSCIP_NOBUFFERMEM
   endif
 endif
 
@@ -245,52 +311,90 @@ endif
 # LP Solver Interface
 #-----------------------------------------------------------------------------
 
+# redefine old LP-solver "spx" by "spx2"
 ifeq ($(LPS),spx)
 override LPS	=	spx2
 endif
 
 LPILIBNAME	=	lpi$(LPS)
 
+#-------------------------------------------------------
+# define flags for CPLEX
 ifeq ($(LPS),cpx)
-LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
-                        $(LINKCC_l)pthread$(LINKLIBSUFFIX) \
-                        $(LINKCC_l)dl$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+			$(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
+LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
 endif
 
+#-------------------------------------------------------
+# define flags for Gurobi
 ifeq ($(LPS),grb)
-LPSLDFLAGS	+=	$(LINKCC_l)gurobi.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
-endif
-
-ifeq ($(LPS),xprs)
-LPSLDFLAGS	+=	$(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)gurobi.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/shared/libgurobi.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
 ifneq ($(LINKRPATH),)
-LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/xprsinc/../lib
+ifneq ($(SCIPINTERNAL),)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/shared
+else
+LDFLAGS		+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)/shared
+endif
 endif
 endif
 
+#-------------------------------------------------------
+# define flags for XPRESS
+ifeq ($(LPS),xprs)
+LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+			$(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
+LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/shared/libxpress.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
+endif
+
+#-------------------------------------------------------
+# define flags for Mosek
 ifeq ($(LPS),msk)
-LPSLDFLAGS	+=	$(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
-			$(LINKCXX_l)iomp5.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/shared $(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
+			$(LINKCC_l)iomp5.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT) \
+			$(SCIPREALPATH)/$(LIBDIR)/shared/libiomp5.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+ifneq ($(LINKRPATH),)
+MOSEKDIR	= 	$(dir $(realpath $(SCIPREALPATH)/$(LIBDIR)/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)))
+LPSLDFLAGS	+=      $(LINKRPATH)$(MOSEKDIR)
+endif
+# correct path for everything that comes after Mosek
+ifneq ($(SHARED),true)
+LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/static
+endif
 endif
 
+#-------------------------------------------------------
+# define flags for SoPlex - old interface spx1
 ifeq ($(LPS),spx1)
-LPSLDFLAGS	+=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCXX_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
 
+# if using the LP-check, also add Cplex flags
 ifeq ($(LPSCHECK),true)
-LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
 endif
 endif
 
+#-------------------------------------------------------
+# define flags for SoPlex - new interface spx2
 ifeq ($(LPS),spx2)
-LPSLDFLAGS	+=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCXX_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
 
+# if using the LP-check, also add Cplex flags
 ifeq ($(LPSCHECK),true)
-LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE) $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libcplex.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
 endif
 endif
 
+#-------------------------------------------------------
+# define flags for Clp
 ifeq ($(LPS),clp)
-CLPDIR		= 	$(SCIPREALPATH)/$(LIBDIR)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
+CLPDIR		= 	$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
 # for newer Clp versions all linker flags are in share/coin/doc/Clp/clp_addlibs.txt
 LPSLDFLAGS	+=	$(shell test -e $(CLPDIR)/share/coin/doc/Clp/clp_addlibs.txt && cat $(CLPDIR)/share/coin/doc/Clp/clp_addlibs.txt)
 # if we could not find clp_addlibs file, try to guess linker flags
@@ -304,19 +408,53 @@ ifneq ($(LINKRPATH),)
 CLPFULLPATH	:=	$(realpath $(CLPDIR))
 LPSLDFLAGS	+=	$(LINKRPATH)$(CLPFULLPATH)/lib
 endif
+LPSLIBFILES	+=      $(CLPDIR)/lib/libClp.$(LIBEXTEXT) $(CLPDIR)/lib/libCoinUtils.$(LIBEXTEXT)
 endif
 
+#-------------------------------------------------------
+# define flags for QSOPT
 ifeq ($(LPS),qso)
-LPSLDFLAGS    	+=      $(LINKCC_l)qsopt.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLDFLAGS    	+=      $(LINKCC_L)$(SCIPREALPATH)/$(LIBDIR)/static $(LINKCC_l)qsopt.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libqsopt.$(OSTYPE).$(ARCH).$(COMP).$(LIBEXTEXT)
 endif
 
+#-------------------------------------------------------
+# define empty flags for "none"
 ifeq ($(LPS),none)
 LPSLDFLAGS	+=
 endif
 
 LPILIB		=	$(LPILIBNAME).$(BASE)
-LPILIBFILE	=	$(SCIPREALPATH)/lib/lib$(LPILIB).$(LIBEXT)
-LPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/lib$(LPILIBNAME).$(LIBEXT)
+LPILIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPILIB).$(LIBEXT)
+LPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(LPILIBNAME).$(LIBEXT)
+
+
+#-----------------------------------------------------------------------------
+# Parallel Interface
+#-----------------------------------------------------------------------------
+
+TPILIBNAME	=	tpi$(TPI)
+
+ifeq ($(TPI),omp)
+ifeq ($(COMP),gnu)
+TPICFLAGS  += $(LINKCC_f)openmp$(LINKLIBSUFFIX)
+TPILDFLAGS  += $(LINKCC_f)openmp$(LINKLIBSUFFIX)
+else ifeq ($(COMP),intel)
+TPICFLAGS  += -openmp$(LINKLIBSUFFIX)
+TPILDFLAGS  += -openmp$(LINKLIBSUFFIX)
+else
+TPICFLAGS  +=
+TPILDFLAGS  +=
+endif
+endif
+
+ifeq ($(TPI),none)
+TPILDFLAGS	+=
+endif
+
+TPILIB		=	$(TPILIBNAME).$(BASE)
+TPILIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIB).$(LIBEXT)
+TPILIBSHORTLINK	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(TPILIBNAME).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -351,6 +489,7 @@ $(error ZIMPL requires the GMP to be linked. Use either ZIMPL=false or GMP=true)
 endif
 ZIMPLLIB	=	$(LINKCC_l)zimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT)$(LINKLIBSUFFIX)
 LDFLAGS		+=	$(ZIMPLLIB) $(ZIMPL_LDFLAGS)
+LPSLIBFILES	+=      $(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).$(LIBEXTEXT)
 endif
 
 ifeq ($(GMP),true)
@@ -367,16 +506,22 @@ FLAGS		+=	-DWITH_READLINE $(READLINE_FLAGS)
 LDFLAGS		+=	$(READLINE_LDFLAGS)
 endif
 
+#-------------------------------------------------------
+# define flags for Ipopt
 ifeq ($(IPOPT),true)
 LINKER		=	CPP
 # we require here Ipopt >= 3.10.0
 # - all linker flags are in share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt
 # - shared libraries are installed into the lib directory, so add this to the rpath
-FLAGS		+=	-I$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin $(IPOPT_FLAGS)
-IPOPTLIBS       =       $(shell cat $(SCIPDIR)/$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt)
+FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin $(IPOPT_FLAGS)
+IPOPTLIBS       =       $(shell cat $(SCIPDIR)/$(LIBDIR)/$(LIBEXTTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/share/coin/doc/Ipopt/ipopt_addlibs_cpp.txt)
 LDFLAGS		+=	$(IPOPTLIBS)
 ifneq ($(LINKRPATH),)
-LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib
+ifneq ($(SCIPINTERNAL),)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/$(LIBEXTTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib
+else
+LDFLAGS		+=	$(LINKRPATH)\$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib
+endif
 endif
 NLPILIBSHORTNAMEIPOPT = .ipopt
 endif
@@ -394,8 +539,11 @@ endif
 # SHARED Libaries
 #-----------------------------------------------------------------------------
 
+# (re)define some variables
 ifeq ($(SHARED),true)
+ifneq ($(COMP),msvc)
 FLAGS		+=	-fPIC
+endif
 LIBEXT		=	$(SHAREDLIBEXT)
 ifeq ($(LINKER),CPP)
 LIBBUILD	=	$(LINKCXX)
@@ -416,9 +564,6 @@ ARFLAGS		=
 RANLIB		=
 endif
 
-ifneq ($(LINKRPATH),)
-LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)
-endif
 
 
 #-----------------------------------------------------------------------------
@@ -427,8 +572,8 @@ endif
 
 SCIPLIBNAME	=	scip
 SCIPLIB		=	$(SCIPLIBNAME).$(BASE)
-SCIPLIBFILE	=	$(SCIPREALPATH)/lib/lib$(SCIPLIB).$(LIBEXT)
-SCIPLIBSHARTLINK=	$(SCIPREALPATH)/lib/lib$(SCIPLIBNAME).$(LIBEXT)
+SCIPLIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(SCIPLIB).$(LIBEXT)
+SCIPLIBSHARTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(SCIPLIBNAME).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -437,8 +582,8 @@ SCIPLIBSHARTLINK=	$(SCIPREALPATH)/lib/lib$(SCIPLIBNAME).$(LIBEXT)
 
 OBJSCIPLIBNAME	=	objscip
 OBJSCIPLIB	=	$(OBJSCIPLIBNAME).$(BASE)
-OBJSCIPLIBFILE	=	$(SCIPREALPATH)/lib/lib$(OBJSCIPLIB).$(LIBEXT)
-OBJSCIPLIBSHORTLINK=	$(SCIPREALPATH)/lib/lib$(OBJSCIPLIBNAME).$(LIBEXT)
+OBJSCIPLIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(OBJSCIPLIB).$(LIBEXT)
+OBJSCIPLIBSHORTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(OBJSCIPLIBNAME).$(LIBEXT)
 
 
 #-----------------------------------------------------------------------------
@@ -447,5 +592,19 @@ OBJSCIPLIBSHORTLINK=	$(SCIPREALPATH)/lib/lib$(OBJSCIPLIBNAME).$(LIBEXT)
 
 NLPILIBNAME	=	nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)
 NLPILIB		=	$(NLPILIBNAME).$(BASE)
-NLPILIBFILE	=	$(SCIPREALPATH)/lib/lib$(NLPILIB).$(LIBEXT)
-NLPILIBSHORTLINK=	$(SCIPREALPATH)/lib/lib$(NLPILIBNAME).$(LIBEXT)
+NLPILIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(NLPILIB).$(LIBEXT)
+NLPILIBSHORTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(NLPILIBNAME).$(LIBEXT)
+
+#-----------------------------------------------------------------------------
+# total linking part for all of SCIP
+#-----------------------------------------------------------------------------
+
+# link SCIP for C projects
+LINKCXXSCIPALL	=	$(LINKCXX_L)$(SCIPDIR)/lib/$(LIBTYPE) $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
+			$(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
+			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS)
+
+# link SCIP for C++ projects (including libobjscip)
+LINKCCSCIPALL	=	$(LINKCC_L)$(SCIPDIR)/lib/$(LIBTYPE) $(LINKCC_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
+			$(LINKCC_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCC_l)$(NLPILIB)$(LINKLIBSUFFIX) \
+			$(LINKCC_l)$(TPILIB)$(LINKLIBSUFFIX) $(OFLAGS) $(LPSLDFLAGS) $(LDFLAGS)

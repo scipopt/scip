@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   disp.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for displaying runtime statistics
  * @author Tobias Achterberg
  */
@@ -133,6 +134,13 @@ SCIP_RETCODE SCIPdispPrintLine(
 extern
 SCIP_RETCODE SCIPdispAutoActivate(
    SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** changes the display column mode */
+extern
+void SCIPdispChgMode(
+   SCIP_DISP*            disp,               /**< display column */
+   SCIP_DISPMODE         mode                /**< the display column mode */
    );
 
 #ifdef __cplusplus

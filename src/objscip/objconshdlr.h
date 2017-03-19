@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,8 +37,8 @@ namespace scip
  *  @brief C++ wrapper for constraint handlers
  *
  *  This class defines the interface for constraint handlers implemented in C++. Note that there are pure virtual
- *  functions (these have to be implemented). These functions are: scip_trans(), scip_enfolp(), scip_enfops(),
- *  scip_check(), and scip_lock().
+ *  functions (these have to be implemented). These functions are: scip_trans(), scip_enfolp(), scip_enforelax(),
+ *  scip_enfops(), scip_check(), and scip_lock().
  *
  *  - \ref CONS "Instructions for implementing a constraint handler"
  *  - \ref CONSHDLRS "List of available constraint handlers"
@@ -257,6 +257,17 @@ public:
     *  @see SCIP_DECL_CONSENFOLP(x) in @ref type_cons.h
     */
    virtual SCIP_DECL_CONSENFOLP(scip_enfolp) = 0;
+
+   /** constraint enforcing method of constraint handler for relaxation solutions
+    *
+    *  @see SCIP_DECL_CONSENFORELAX(x) in @ref type_cons.h
+    */
+   virtual SCIP_DECL_CONSENFORELAX(scip_enforelax)
+   {  /*lint --e{715}*/
+      assert(result != NULL);
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
 
    /** constraint enforcing method of constraint handler for pseudo solutions
     *

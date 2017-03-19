@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -306,7 +306,7 @@ SCIP_Bool getNextLine(
    /* if we previously detected a comment we have to parse the remaining line away if there is something left */
    if( !opbinput->endline && opbinput->comment )
    {
-      SCIPdebugMessage("Throwing rest of comment away.\n");
+      SCIPdebugMsg(scip, "Throwing rest of comment away.\n");
 
       do
       {
@@ -349,12 +349,12 @@ SCIP_Bool getNextLine(
          SCIPwarningMessage(scip, "we read %d character from the file; these might indicates a corrupted input file!",
             OPB_MAX_LINELEN - 2);
          opbinput->linebuf[OPB_MAX_LINELEN-2] = '\0';
-         SCIPdebugMessage("the buffer might be corrupted\n");
+         SCIPdebugMsg(scip, "the buffer might be corrupted\n");
       }
       else
       {
          SCIPfseek(opbinput->file, -(long) strlen(last), SEEK_CUR);
-         SCIPdebugMessage("correct buffer, reread the last %ld characters\n", (long) strlen(last));
+         SCIPdebugMsg(scip, "correct buffer, reread the last %ld characters\n", (long) strlen(last));
          *last = '\0';
       }
    }
@@ -383,7 +383,7 @@ SCIP_Bool getNextLine(
       }
    }
 
-   SCIPdebugMessage("%s\n", opbinput->linebuf);
+   SCIPdebugMsg(scip, "%s\n", opbinput->linebuf);
 
    return TRUE;
 }
@@ -422,7 +422,7 @@ SCIP_Bool getNextToken(
    {
       swapPointers(&opbinput->token, &opbinput->pushedtokens[opbinput->npushedtokens-1]);
       opbinput->npushedtokens--;
-      SCIPdebugMessage("(line %d) read token again: '%s'\n", opbinput->linenumber, opbinput->token);
+      SCIPdebugMsg(scip, "(line %d) read token again: '%s'\n", opbinput->linenumber, opbinput->token);
       return TRUE;
    }
 
@@ -434,7 +434,7 @@ SCIP_Bool getNextToken(
       {
          if( !getNextLine(scip, opbinput) )
          {
-            SCIPdebugMessage("(line %d) end of file\n", opbinput->linenumber);
+            SCIPdebugMsg(scip, "(line %d) end of file\n", opbinput->linenumber);
             return FALSE;
          }
          assert(opbinput->bufpos == 0);
@@ -503,7 +503,7 @@ SCIP_Bool getNextToken(
    assert(tokenlen < OPB_MAX_LINELEN);
    opbinput->token[tokenlen] = '\0';
 
-   SCIPdebugMessage("(line %d) read token: '%s'\n", opbinput->linenumber, opbinput->token);
+   SCIPdebugMsg(scip, "(line %d) read token: '%s'\n", opbinput->linenumber, opbinput->token);
 
    return TRUE;
 }
@@ -701,7 +701,7 @@ SCIP_RETCODE createVariable(
    removable = dynamiccols;
 
    /* create new variable of the given name */
-   SCIPdebugMessage("creating new variable: <%s>\n", name);
+   SCIPdebugMsg(scip, "creating new variable: <%s>\n", name);
 
    SCIP_CALL( SCIPcreateVar(scip, &newvar, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY,
          initial, removable, NULL, NULL, NULL, NULL, NULL) );
@@ -848,7 +848,7 @@ SCIP_RETCODE readCoefficients(
    *isNonlinear = FALSE;
    *issoftcons = FALSE;
 
-   SCIPdebugMessage("read coefficients\n");
+   SCIPdebugMsg(scip, "read coefficients\n");
 
    /* read the first token, which may be the name of the line */
    if( getNextToken(scip, opbinput) )
@@ -865,7 +865,7 @@ SCIP_RETCODE readCoefficients(
 	    (void)SCIPmemccpy(name, opbinput->tokenbuf, '\0', SCIP_MAXSTRLEN);
 
             name[SCIP_MAXSTRLEN-1] = '\0';
-            SCIPdebugMessage("(line %d) read constraint name: '%s'\n", opbinput->linenumber, name);
+            SCIPdebugMsg(scip, "(line %d) read constraint name: '%s'\n", opbinput->linenumber, name);
 
             /* all but the first coefficient need a sign */
             if( strcmp(name, "soft") == 0 && (SCIPgetNVars(scip) > 0 || SCIPgetNConss(scip) > 0) )
@@ -877,7 +877,7 @@ SCIP_RETCODE readCoefficients(
          else
          {
             /* the second token was no colon: push the tokens back onto the token stack and parse them as coefficients */
-            SCIPdebugMessage("(line %d) constraint has no name\n", opbinput->linenumber);
+            SCIPdebugMsg(scip, "(line %d) constraint has no name\n", opbinput->linenumber);
             pushToken(opbinput);
             pushBufferToken(opbinput);
          }
@@ -935,7 +935,7 @@ SCIP_RETCODE readCoefficients(
       /* check if we read a sign */
       if( isSign(opbinput, &coefsign) )
       {
-         SCIPdebugMessage("(line %d) read coefficient sign: %+d\n", opbinput->linenumber, coefsign);
+         SCIPdebugMsg(scip, "(line %d) read coefficient sign: %+d\n", opbinput->linenumber, coefsign);
          havesign = TRUE;
          continue;
       }
@@ -950,7 +950,7 @@ SCIP_RETCODE readCoefficients(
             goto TERMINATE;
          }
 
-         SCIPdebugMessage("(line %d) read coefficient value: %g with sign %+d\n", opbinput->linenumber, coef, coefsign);
+         SCIPdebugMsg(scip, "(line %d) read coefficient value: %g with sign %+d\n", opbinput->linenumber, coef, coefsign);
          if( havevalue )
          {
             syntaxError(scip, opbinput, "two consecutive values");
@@ -984,7 +984,7 @@ SCIP_RETCODE readCoefficients(
       if( *nlincoefs == 0 && *ntermcoefs == 0 && ntmpcoefs == 0 && havevalue && haveweightstart && isEndingSoftConstraintWeight(scip, opbinput) )
       {
          *weight = coefsign * coef;
-         SCIPdebugMessage("(line %d) found soft constraint weight: %g\n", opbinput->linenumber, *weight);
+         SCIPdebugMsg(scip, "(line %d) found soft constraint weight: %g\n", opbinput->linenumber, *weight);
 
          coefsign = +1;
          havesign = FALSE;
@@ -1018,15 +1018,15 @@ SCIP_RETCODE readCoefficients(
          /* insert non-linear term */
          *isNonlinear = TRUE;
 
-         SCIPdebugMessage("(line %d) found linear term: %+g", opbinput->linenumber, coefsign * coef);
+         SCIPdebugMsg(scip, "(line %d) found linear term: %+g", opbinput->linenumber, coefsign * coef);
 #ifndef NDEBUG
          {
             int v;
             for( v = 0; v < ntmpvars; ++v )
             {
-               SCIPdebugPrintf(" %s * ", SCIPvarGetName(tmpvars[v]));
+               SCIPdebugMsgPrint(scip, " %s * ", SCIPvarGetName(tmpvars[v]));
             }
-            SCIPdebugPrintf("\n");
+            SCIPdebugMsgPrint(scip, "\n");
          }
 #endif
          if( !SCIPisZero(scip, coef) )
@@ -1076,7 +1076,7 @@ SCIP_RETCODE readCoefficients(
       {
          assert(ntmpvars == 1);
          /* insert linear term */
-         SCIPdebugMessage("(line %d) found linear term: %+g<%s>\n", opbinput->linenumber, coefsign * coef, SCIPvarGetName(tmpvars[0]));
+         SCIPdebugMsg(scip, "(line %d) found linear term: %+g<%s>\n", opbinput->linenumber, coefsign * coef, SCIPvarGetName(tmpvars[0]));
          if( !SCIPisZero(scip, coef) )
          {
             assert(*nlincoefs <= lincoefssize);
@@ -1425,7 +1425,7 @@ SCIP_RETCODE readConstraints(
             assert(nlincoefs == 1);
             opbinput->topcost = lincoefs[0];
          }
-         SCIPdebugMessage("Weighted Boolean Optimization problem has topcost of %g\n", opbinput->topcost);
+         SCIPdebugMsg(scip, "Weighted Boolean Optimization problem has topcost of %g\n", opbinput->topcost);
       }
       else if( nlincoefs > 0 )
          syntaxError(scip, opbinput, "expected constraint sense '=' or '>='");
@@ -1546,7 +1546,7 @@ SCIP_RETCODE readConstraints(
    }
 
    SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIPdebugMessage("(line %d) created constraint: ", opbinput->linenumber);
+   SCIPdebugMsg(scip, "(line %d) created constraint: ", opbinput->linenumber);
    SCIPdebugPrintCons(scip, cons, NULL);
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -1619,7 +1619,7 @@ SCIP_RETCODE getMaxAndConsDim(
 
                if( pos != NULL )
                {
-                  SCIPdebugMessage("%d products supposed to be in file.\n", atoi(pos));
+                  SCIPdebugMsg(scip, "%d products supposed to be in file.\n", atoi(pos));
                }
 
                pos = strtok (NULL, delimchars);
@@ -1629,7 +1629,7 @@ SCIP_RETCODE getMaxAndConsDim(
                   pos = strtok (NULL, delimchars);
                   if( pos != NULL )
                   {
-                     SCIPdebugMessage("sizeproducts = %d\n", atoi(pos));
+                     SCIPdebugMsg(scip, "sizeproducts = %d\n", atoi(pos));
                   }
                }
 
@@ -1791,7 +1791,7 @@ SCIP_RETCODE getBinVarsRepresentatives(
 
          if( vars[v] == NULL )
          {
-            SCIPdebugMessage("A variable couldn't retransformed to an original variable.\n");
+            SCIPdebugMsg(scip, "A variable couldn't retransformed to an original variable.\n");
             return SCIP_INVALIDDATA;
          }
          if( SCIPisEQ(scip, scalar, -1.0) && SCIPisEQ(scip, constant, 1.0) )
@@ -1802,7 +1802,7 @@ SCIP_RETCODE getBinVarsRepresentatives(
          {
             if( !SCIPisEQ(scip, scalar, 1.0) || !SCIPisZero(scip, constant) )
             {
-               SCIPdebugMessage("A variable couldn't retransformed to an original variable or a negated variable of an original variable (scalar = %g, constant = %g).\n", scalar, constant);
+               SCIPdebugMsg(scip, "A variable couldn't retransformed to an original variable or a negated variable of an original variable (scalar = %g, constant = %g).\n", scalar, constant);
                return SCIP_INVALIDDATA;
             }
          }
@@ -1974,6 +1974,7 @@ SCIP_RETCODE computeAndConstraintInfos(
       /* check that all and-constraints doesn't contain any and-resultants, if they do try to resolve this */
       /* attention: if resolving leads to x = x*y*... , we can't do anything here ( this only means (... >=x and) y >= x, so normally the and-constraint needs to be
          deleted and the inequality from before needs to be added ) */
+      assert(*nandvars != NULL || *nresvars == 0);
       for( r = *nresvars - 1; r >= 0; --r )
       {
          ncontainedands = 0;
@@ -2013,9 +2014,9 @@ SCIP_RETCODE computeAndConstraintInfos(
                      }
                      return SCIP_INVALIDDATA;
                   }
-               SCIPdebugMessage("Another and-constraint contains and-resultant:");
+               SCIPdebugMsg(scip, "Another and-constraint contains and-resultant:");
                SCIPdebug( SCIP_CALL( SCIPprintVar(scip, (*resvars)[pos], NULL) ) );
-               SCIPdebugMessage("Trying to resolve.\n");
+               SCIPdebugMsg(scip, "Trying to resolve.\n");
 
                shouldnotbeinand[ncontainedands] = pos;
                ++ncontainedands;
@@ -2046,7 +2047,7 @@ SCIP_RETCODE computeAndConstraintInfos(
    }
    else
    {
-      SCIPdebugMessage("found no and-constraint-handler\n");
+      SCIPdebugMsg(scip, "found no and-constraint-handler\n");
       *existands = FALSE;
       *existandconshdlr = FALSE;
    }
@@ -2409,7 +2410,7 @@ SCIP_RETCODE writeOpbObjective(
       if( objsense == SCIP_OBJSENSE_MAXIMIZE )
          mult *= -1;
 
-      SCIPdebugMessage("print objective function multiplied with %" SCIP_LONGINT_FORMAT "\n", mult);
+      SCIPdebugMsg(scip, "print objective function multiplied with %" SCIP_LONGINT_FORMAT "\n", mult);
 
       appendBuffer(scip, file, linebuffer, &linecnt, "min:");
 
@@ -3189,7 +3190,6 @@ SCIP_RETCODE printPseudobooleanCons(
    return retcode;
 }
 
-#define HASHTABLESIZE_FACTOR 5
 
 static
 SCIP_RETCODE writeOpbConstraints(
@@ -3247,7 +3247,7 @@ SCIP_RETCODE writeOpbConstraints(
 	    SCIP_CONS* lincons;
 
 	    /* create the linear constraint of indicator constraints hash map */
-	    SCIP_CALL( SCIPhashmapCreate(&linconssofindicatorsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nindconss)) );
+	    SCIP_CALL( SCIPhashmapCreate(&linconssofindicatorsmap, SCIPblkmem(scip), nindconss) );
 	    assert(indconss != NULL);
 
 	    for( c = 0; c < nindconss; ++c )
@@ -3279,7 +3279,7 @@ SCIP_RETCODE writeOpbConstraints(
 	    SCIP_CONS* lincons;
 
 	    /* create the linear constraint of indicator constraints hash map */
-	    SCIP_CALL( SCIPhashmapCreate(&linconssofpbsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * npbconss)) );
+	    SCIP_CALL( SCIPhashmapCreate(&linconssofpbsmap, SCIPblkmem(scip), npbconss) );
 
 	    for( c = 0; c < npbconss; ++c )
 	    {
@@ -3315,7 +3315,7 @@ SCIP_RETCODE writeOpbConstraints(
 	    if( !pbhashmapcreated )
 	    {
 	       /* create the linear constraint of indicator constraints hash map */
-	       SCIP_CALL( SCIPhashmapCreate(&linconssofpbsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nconss)) );
+	       SCIP_CALL( SCIPhashmapCreate(&linconssofpbsmap, SCIPblkmem(scip), nconss) );
 	       pbhashmapcreated = TRUE;
 	    }
 
@@ -3330,7 +3330,7 @@ SCIP_RETCODE writeOpbConstraints(
 	    if( !indhashmapcreated )
 	    {
 	       /* create the linear constraint of indicator constraints hash map */
-	       SCIP_CALL( SCIPhashmapCreate(&linconssofindicatorsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * nconss)) );
+	       SCIP_CALL( SCIPhashmapCreate(&linconssofindicatorsmap, SCIPblkmem(scip), nconss) );
 	       indhashmapcreated = TRUE;
 	    }
 
@@ -3741,6 +3741,59 @@ SCIP_RETCODE writeOpbConstraints(
    return retcode;
 }
 
+/* write fixed variables (unless already done because they are an and resultant or and variable) */
+static
+SCIP_RETCODE writeOpbFixedVars(
+   SCIP*const            scip,               /**< SCIP data structure */
+   FILE*const            file,               /**< output file, or NULL if standard output should be used */
+   SCIP_VAR**            vars,               /**< array with active (binary) variables */
+   int                   nvars,              /**< number of active variables in the problem */
+   SCIP_HASHTABLE*const  printedfixing       /**< hashmap to store if a fixed variable was already printed */
+   )
+{
+   char linebuffer[OPB_MAX_LINELEN];
+   char buffer[OPB_MAX_LINELEN];
+   int linecnt;
+   int v;
+
+   assert(scip != NULL);
+   assert(file != NULL);
+   assert(vars != NULL || nvars == 0);
+   assert(printedfixing != NULL);
+
+   clearBuffer(linebuffer, &linecnt);
+
+   /* print variables which are fixed */
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_VAR* var;
+      SCIP_Bool neg;
+
+      assert( vars != NULL );
+      var = vars[v];
+
+      /* print fixed and-resultants */
+      if( SCIPvarGetLbLocal(var) > 0.5 || SCIPvarGetUbLocal(var) < 0.5 )
+      {
+         SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &var, &neg) );
+
+         if( SCIPhashtableExists(printedfixing, (void*)var) )
+            continue;
+
+         assert(SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)));
+         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s = %g;\n", neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), SCIPvarGetLbLocal(var));
+         appendBuffer(scip, file, linebuffer, &linecnt, buffer);
+
+         /* add variable to the hashmap */
+         SCIP_CALL( SCIPhashtableInsert(printedfixing, (void*)var) );
+      }
+   }
+
+   writeBuffer(scip, file, linebuffer, &linecnt);
+
+   return SCIP_OKAY;
+}
+
 /* write and constraints of inactive but relevant and-resultants and and variables which are fixed to one */
 static
 SCIP_RETCODE writeOpbRelevantAnds(
@@ -3750,6 +3803,7 @@ SCIP_RETCODE writeOpbRelevantAnds(
    int const             nresvars,           /**< number of resultant variables */
    SCIP_VAR**const*const andvars,            /**< corresponding array of and-variables */
    int const*const       nandvars,           /**< array of numbers of corresponding and-variables */
+   SCIP_HASHTABLE*const  printedfixing,      /**< hashmap to store if a fixed variable was already printed */
    char const*const      multisymbol,        /**< the multiplication symbol to use between coefficient and variable */
    SCIP_Bool const       transformed         /**< TRUE iff problem is the transformed problem */
    )
@@ -3770,7 +3824,8 @@ SCIP_RETCODE writeOpbRelevantAnds(
 
    clearBuffer(linebuffer, &linecnt);
 
-   /* print and-variables which are fixed, maybe doesn't appear and should only be asserted */
+   /* print and-variables which are fixed */
+   /* @todo remove this block here and the hashtable and let writeOpbFixedVars() do the job? */
    for( r = nresvars - 1; r >= 0; --r )
    {
       SCIP_VAR* var;
@@ -3787,6 +3842,9 @@ SCIP_RETCODE writeOpbRelevantAnds(
          assert(SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)));
          (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s = %g;\n", neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), SCIPvarGetLbLocal(var));
          appendBuffer(scip, file, linebuffer, &linecnt, buffer);
+
+         /* add variable to the hashmap */
+         SCIP_CALL( SCIPhashtableInsert(printedfixing, (void*)var) );
       }
 
       assert( andvars != NULL && nandvars != NULL );
@@ -3805,6 +3863,10 @@ SCIP_RETCODE writeOpbRelevantAnds(
             assert(SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)));
             (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s = %g;\n", neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), SCIPvarGetLbLocal(var));
             appendBuffer(scip, file, linebuffer, &linecnt, buffer);
+
+            /* add variable to the hashmap */
+            SCIP_CALL( SCIPhashtableInsert(printedfixing, (void*)var) );
+
          }
       }
    }
@@ -3892,7 +3954,7 @@ SCIP_RETCODE writeOpbRelevantAnds(
          for( v = nandvars[r] - 1; v >= 0; --v )
          {
             assert( andvars[r] != NULL );
-	    assert( andvars[r][v] != NULL );
+            assert( andvars[r][v] != NULL );
 
             SCIP_CALL( SCIPgetBinvarRepresentative(scip, andvars[r][v], &var, &neg) ); /*lint !e613 */
 
@@ -3985,7 +4047,7 @@ SCIP_RETCODE writeOpb(
                                               *   extobj = objsense * objscale * (intobj + objoffset) */
    SCIP_Real             objoffset,          /**< objective offset from bound shifting and fixing */
    SCIP_VAR**            vars,               /**< array with active (binary) variables */
-   int                   nvars,              /**< number of acitve variables in the problem */
+   int                   nvars,              /**< number of active variables in the problem */
    SCIP_CONS**           conss,              /**< array with constraints of the problem */
    int                   nconss,             /**< number of constraints in the problem */
    SCIP_VAR** const      resvars,            /**< array of resultant variables */
@@ -3998,7 +4060,8 @@ SCIP_RETCODE writeOpb(
    )
 {
    char multisymbol[OPB_MAX_LINELEN];
-   SCIP_Bool usesymbole;
+   SCIP_HASHTABLE* printedfixing;
+   SCIP_Bool usesymbol;
    SCIP_RETCODE retcode;
 
    assert( scip != NULL );
@@ -4007,14 +4070,18 @@ SCIP_RETCODE writeOpb(
    assert( result != NULL );
 
    /* check if should use a multipliers symbol star '*' between coefficients and variables */
-   SCIP_CALL( SCIPgetBoolParam(scip, "reading/" READER_NAME "/multisymbol", &usesymbole) );
-   (void) SCIPsnprintf(multisymbol, OPB_MAX_LINELEN, "%s", usesymbole ? " * " : " ");
+   SCIP_CALL( SCIPgetBoolParam(scip, "reading/" READER_NAME "/multisymbol", &usesymbol) );
+   (void) SCIPsnprintf(multisymbol, OPB_MAX_LINELEN, "%s", usesymbol ? " * " : " ");
 
    /* print statistics as comment to file */
    SCIPinfoMessage(scip, file, "* SCIP STATISTICS\n");
    SCIPinfoMessage(scip, file, "*   Problem name     : %s\n", name);
    SCIPinfoMessage(scip, file, "*   Variables        : %d (all binary)\n", nvars);
    SCIPinfoMessage(scip, file, "*   Constraints      : %d\n", nconss);
+
+   /* create a hash table */
+   SCIP_CALL( SCIPhashtableCreate(&printedfixing, SCIPblkmem(scip), nvars,
+         SCIPvarGetHashkey, SCIPvarIsHashkeyEq, SCIPvarGetHashkeyVal, NULL) );
 
    /* write objective function */
    SCIP_CALL( writeOpbObjective(scip, file, vars, nvars, resvars, nresvars, andvars, nandvars,
@@ -4028,8 +4095,13 @@ SCIP_RETCODE writeOpb(
    {
       /* write and constraints of inactive but relevant and-resultants and and-variables which are fixed to one
          with no fixed and resultant */
-      SCIP_CALL( writeOpbRelevantAnds(scip, file, resvars, nresvars, andvars, nandvars, multisymbol, transformed) );
+      SCIP_CALL( writeOpbRelevantAnds(scip, file, resvars, nresvars, andvars, nandvars, printedfixing, multisymbol, transformed) );
    }
+
+   /* write fixed variables */
+   SCIP_CALL( writeOpbFixedVars(scip, file, vars, nvars, printedfixing) );
+
+   SCIPhashtableFree(&printedfixing);
 
    *result = SCIP_SUCCESS;
 
@@ -4338,14 +4410,10 @@ SCIP_RETCODE SCIPincludeReaderOpb(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_READERDATA* readerdata;
    SCIP_READER* reader;
 
-   /* create reader data */
-   readerdata = NULL;
-
    /* include reader */
-   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
+   SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, NULL) );
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetReaderCopy(scip, reader, readerCopyOpb) );

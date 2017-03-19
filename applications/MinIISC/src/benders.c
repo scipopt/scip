@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -239,7 +239,10 @@ SCIP_RETCODE runBenders(
    SCIP_CALL( SCIPsetIntParam(masterscip, "display/verblevel", 0) );
 #endif
 
-   SCIP_CALL( SCIPsetRealParam(masterscip, "limits/memory", memlimit) );
+   if ( ! SCIPisInfinity(masterscip, memlimit) )
+   {
+      SCIP_CALL( SCIPsetRealParam(masterscip, "limits/memory", memlimit) );
+   }
 
    if ( dispfreq >= 0 )
       SCIP_CALL( SCIPsetIntParam(masterscip, "display/freq", dispfreq) );

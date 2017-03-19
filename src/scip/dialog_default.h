@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,6 +30,12 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
+/**@addtogroup DIALOGS
+ *
+ * @{
+ */
 
 /** standard menu dialog execution method, that displays it's help screen if the remaining command line is empty */
 EXTERN
@@ -194,6 +200,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecTransform);
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecOptimize);
 
+/** dialog execution method for the parallelopt command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecConcurrentOpt);
+
 /** dialog execution method for the presolve command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecPresolve);
@@ -329,6 +339,13 @@ SCIP_RETCODE SCIPcreateRootDialog(
    SCIP_DIALOG**         root                /**< pointer to store the root dialog */
    );
 
+/* @} */
+
+/**@addtogroup DialogIncludes
+ *
+ * @{
+ */
+
 /** includes or updates the default dialog menus in SCIP */
 EXTERN
 SCIP_RETCODE SCIPincludeDialogDefault(
@@ -346,6 +363,8 @@ EXTERN
 SCIP_RETCODE SCIPincludeDialogDefaultFix(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

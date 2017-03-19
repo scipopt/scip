@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -115,7 +115,7 @@ SCIP_RETCODE performDualfix(
             if( roundbound < SCIPvarGetUbGlobal(var) )
                bound = roundbound;
          }
-         SCIPdebugMessage("fixing variable <%s> with objective 0 to %g\n", SCIPvarGetName(var), bound);
+         SCIPdebugMsg(scip, "fixing variable <%s> with objective 0 to %g\n", SCIPvarGetName(var), bound);
       }
       else
       {
@@ -140,7 +140,7 @@ SCIP_RETCODE performDualfix(
                   continue;
                }
             }
-            SCIPdebugMessage("fixing variable <%s> with objective %g and %d uplocks to lower bound %g\n",
+            SCIPdebugMsg(scip, "fixing variable <%s> with objective %g and %d uplocks to lower bound %g\n",
                SCIPvarGetName(var), SCIPvarGetObj(var), SCIPvarGetNLocksUp(var), bound);
          }
          else if( SCIPvarMayRoundUp(var) && !SCIPisPositive(scip, obj) )
@@ -163,7 +163,7 @@ SCIP_RETCODE performDualfix(
                   continue;
                }
             }
-            SCIPdebugMessage("fixing variable <%s> with objective %g and %d downlocks to upper bound %g\n",
+            SCIPdebugMsg(scip, "fixing variable <%s> with objective %g and %d downlocks to upper bound %g\n",
                SCIPvarGetName(var), SCIPvarGetObj(var), SCIPvarGetNLocksDown(var), bound);
          }
          else
@@ -172,7 +172,7 @@ SCIP_RETCODE performDualfix(
 
       if( SCIPisInfinity(scip, REALABS(bound)) && !SCIPisZero(scip, obj) )
       {
-         SCIPdebugMessage(" -> unbounded fixing\n");
+         SCIPdebugMsg(scip, " -> unbounded fixing\n");
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
             "problem infeasible or unbounded: variable <%s> with objective %.15g can be made infinitely %s\n",
             SCIPvarGetName(var), SCIPvarGetObj(var), bound < 0.0 ? "small" : "large");
@@ -181,12 +181,12 @@ SCIP_RETCODE performDualfix(
       }
 
       /* apply the fixing */
-      SCIPdebugMessage("apply fixing of variable %s to %g\n", SCIPvarGetName(var), bound);
+      SCIPdebugMsg(scip, "apply fixing of variable %s to %g\n", SCIPvarGetName(var), bound);
       SCIP_CALL( SCIPfixVar(scip, var, bound, &infeasible, &fixed) );
 
       if( infeasible )
       {
-         SCIPdebugMessage(" -> infeasible fixing\n");
+         SCIPdebugMsg(scip, " -> infeasible fixing\n");
          *cutoff = TRUE;
          return SCIP_OKAY;
       }
@@ -309,20 +309,14 @@ SCIP_RETCODE SCIPincludePropDualfix(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_PROPDATA* propdata;
    SCIP_PROP* prop;
 
-   /* create dualfix propagator data */
-   propdata = NULL;
-
    /* include propagator */
-   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         propExecDualfix, propdata) );
+   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING, propExecDualfix, NULL) );
    assert(prop != NULL);
 
    SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyDualfix) );
-   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolDualfix, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS,
-         PROP_PRESOLTIMING) );
+   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolDualfix, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOLTIMING) );
 
    return SCIP_OKAY;
 }

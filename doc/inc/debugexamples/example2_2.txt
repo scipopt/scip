@@ -1,0 +1,7 @@
+SCIP> read check/IP/miplib/p0033.mps
+original problem has 33 variables (33 bin, 0 int, 0 impl, 0 cont) and 16 constraints
+SCIP> optimize
+
+presolving:
+***** debug: reading solution file <check/p0033.sol>
+***** debug: read 15 non-zero entries

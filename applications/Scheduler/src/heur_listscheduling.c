@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -58,7 +58,7 @@
 #define HEUR_PRIORITY         10000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
-#define HEUR_MAXDEPTH         100000
+#define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE | SCIP_HEURTIMING_BEFOREPRESOL
 #define HEUR_USESSUBSCIP      FALSE      /**< does the heuristic use a secondary SCIP instance? */
 
@@ -128,14 +128,14 @@ SCIP_RETCODE heurdataInit(
       SCIP_CALL( SCIPdigraphTopoSortComponents(heurdata->precedencegraph) );
       SCIPdebug( SCIPdigraphPrintComponents(heurdata->precedencegraph, SCIPgetMessagehdlr(scip), NULL) );
 
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->capacities, capacities, nresources) );
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->vars, vars, njobs) );
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->durations, durations, njobs) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &heurdata->capacities, capacities, nresources) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &heurdata->vars, vars, njobs) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &heurdata->durations, durations, njobs) );
 
-      SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->resourcedemands, njobs) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->resourcedemands, njobs) );
       for( j = 0; j < njobs; ++j )
       {
-         SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->resourcedemands[j], resourcedemands[j], nresources) );/*lint !e866*/
+         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &heurdata->resourcedemands[j], resourcedemands[j], nresources) );/*lint !e866*/
       }
 
       heurdata->initialized = TRUE;
@@ -164,13 +164,13 @@ SCIP_RETCODE heurdataFree(
 
       for( j = 0; j < njobs; ++j )
       {
-         SCIPfreeMemoryArray(scip, &heurdata->resourcedemands[j]);
+         SCIPfreeBlockMemoryArray(scip, &heurdata->resourcedemands[j], heurdata->nresources);
       }
 
-      SCIPfreeMemoryArray(scip, &heurdata->resourcedemands);
-      SCIPfreeMemoryArray(scip, &heurdata->capacities);
-      SCIPfreeMemoryArray(scip, &heurdata->vars);
-      SCIPfreeMemoryArray(scip, &heurdata->durations);
+      SCIPfreeBlockMemoryArray(scip, &heurdata->resourcedemands, njobs);
+      SCIPfreeBlockMemoryArray(scip, &heurdata->capacities, heurdata->nresources);
+      SCIPfreeBlockMemoryArray(scip, &heurdata->vars, njobs);
+      SCIPfreeBlockMemoryArray(scip, &heurdata->durations, njobs);
       SCIPdigraphFree(&heurdata->precedencegraph);
    }
 
@@ -728,7 +728,7 @@ SCIP_RETCODE executeHeuristic(
 
          SCIP_CALL( constructSolution(scip, sol, vars, starttimes, njobs) );
 
-         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, TRUE, TRUE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
 
          if( stored )
             *result = SCIP_FOUNDSOL;
@@ -766,7 +766,7 @@ SCIP_DECL_HEURFREE(heurFreeListScheduling)
    SCIP_CALL( heurdataFree(scip, heurdata) );
 
    /* free heuristic data */
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -831,16 +831,16 @@ SCIP_RETCODE SCIPincludeHeurListScheduling(
    )
 {
    SCIP_HEURDATA* heurdata;
-   SCIP_HEUR* heur;
+   SCIP_HEUR* heur = NULL;
 
    /* create list scheduling primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
+
    heurdata->resourcedemands = NULL;
    heurdata->vars = NULL;
    heurdata->njobs = 0;
    heurdata->initialized = FALSE;
 
-   heur = NULL;
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur, HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY,
          HEUR_FREQ, HEUR_FREQOFS, HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP,

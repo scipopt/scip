@@ -1,0 +1,86 @@
+Notes for SCIP Release 4.0
+
+Features
+========
+
+- Introduced support for partial or infeasible user solutions, which SCIP tries to complete/repair heuristically
+
+- Many improvements and new example code for custom relaxation handlers
+
+- Improved conflict analysis through central conflict pool and dual ray analysis for primal infeasible LPs
+
+- New solution polishing to improve integrality of LP solutions
+
+- New Concurrent solving mode to launch several SCIPs with different settings in parallel
+
+- Added adaptive solving behavior of SCIP based on solving phases and heuristic transitions
+
+- New constraint handlers cardinality and components
+
+- New primal heuristics GINS, LP face, Complete Sol, Locks, Repair, and Multistart
+
+- Revised pseudo random number generation and introduced central random seed for all plugins
+
+- New presolvers that disaggregate SOC constraints and reformulate QP's by adding KKT conditions
+
+- New presolving step for variables contained in a single quadratic constraint with proper square coefficients
+
+- New separators for gauge cuts, convex projection cuts and perspective cuts for indicator constraints
+
+- New propagator for OBBT on convex NLP relaxation
+
+- Extended statistic output displayable via the interactive shell
+
+- Additional I/O-functionalities for debugging and logging in SCIP and in the AMPL interface
+
+- Added new debug output function SCIPdebugMsg that outputs the sub-SCIP level; now used within SCIP
+
+
+Performance Improvements
+========================
+
+- Improved tuning of propagation and heuristic timings
+
+- Constraint compression reduces memory usage in problem copies used inside primal heuristics
+
+- Linear time methods for (weighted) median selection and inplace partitioning of joint arrays of various types, used for knapsack approximation algorithms
+
+- Improved greedy knapsack solution for the flow cover separation
+
+- Connectedness of the clique table for faster and better clique partitioning
+
+- Extended the presolving timings by an additional timing FINAL for self-contained reductions
+
+- Improved and extended stuffing inside of linear constraint handler
+
+- Tuned propagation methods of several constraint handlers and the absolute-value expression
+
+- Changed handling of coupling constraints in cons_indicator
+
+- Clique separator always constructs a dense clique table, which proved to be faster on several MIP benchmarks
+
+- 1-opt heuristic is iterated as long as new incumbents are found
+
+- Randomized tie-breaking in different parts of the code to reduce performance variability
+
+
+Additional Notes
+================
+
+- Improved build system, separate directories for shared and static libraries
+
+- New makefile targets LINKCCSCIPALL and LINKCXXSCIPALL to link all SCIP components into an external project
+
+- Add make help command to list all parameters of the SCIP makefile
+
+- SCIP uses the lpi_spx2 interface by default
+
+- Interfaces for Python and Java are, among others, now available via http://www.github.com/scip-interfaces
+
+- Improved Gurobi interface that can handle ranged rows (requires Gurobi >= 7.0.2)
+
+- New unit testing system built on the Criterion framework
+
+- Revised documentation of the SCIP C-API to group methods more comprehensively by topics
+
+- Many bug fixes, see CHANGELOG

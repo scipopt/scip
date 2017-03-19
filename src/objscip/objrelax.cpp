@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -210,7 +210,7 @@ SCIP_RETCODE SCIPincludeObjRelax(
 
    /* include relaxator */
    SCIP_CALL( SCIPincludeRelax(scip, objrelax->scip_name_, objrelax->scip_desc_,
-         objrelax->scip_priority_, objrelax->scip_freq_,
+         objrelax->scip_priority_, objrelax->scip_freq_, objrelax->scip_includeslp_,
          relaxCopyObj,
          relaxFreeObj, relaxInitObj, relaxExitObj,
          relaxInitsolObj, relaxExitsolObj, relaxExecObj,

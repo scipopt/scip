@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -58,6 +58,8 @@
 #define DEFAULT_MAXINVCUTS           50 /**< maximal number of cuts investigated per iteration in a branching node */
 #define DEFAULT_MAXINVCUTSROOT      250 /**< maximal number of cuts investigated per iteration in the root node */
 #define DEFAULT_MAXCONFSDELAY    100000 /**< delay separation if number of conflict graph edges is larger than predefined value (-1: no limit) */
+
+#define MAKECONTINTEGRAL          FALSE /**< convert continuous variable to integral variables in SCIPmakeRowIntegral() */
 
 
 /** separator data */
@@ -437,7 +439,7 @@ SCIP_DECL_SEPAFREE(sepaFreeDisjunctive)/*lint --e{715}*/
    sepadata = SCIPsepaGetData(sepa);
    assert( sepadata != NULL );
 
-   SCIPfreeMemory(scip, &sepadata);
+   SCIPfreeBlockMemory(scip, &sepadata);
 
    SCIPsepaSetData(sepa, NULL);
 
@@ -575,6 +577,18 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    for (j = 0; j < ncols; ++j)
    {
       if ( SCIPcolGetBasisStatus(cols[j]) == SCIP_BASESTAT_ZERO )
+         return SCIP_OKAY;
+   }
+
+   /* check accuracy of rows */
+   for (j = 0; j < nrows; ++j)
+   {
+      SCIP_ROW* row;
+
+      row = rows[j];
+
+      if ( ( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_UPPER  && ! SCIPisEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetRhs(row)) )
+           || ( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_LOWER && ! SCIPisEQ(scip, SCIPgetRowLPActivity(scip, row), SCIProwGetLhs(row)) ) )
          return SCIP_OKAY;
    }
 
@@ -776,7 +790,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
          bound2 = SCIPcolGetLb(col);
 
       /* add coefficients to cut */
-      SCIP_CALL( generateDisjCutSOS1(scip, sepa, rows, nrows, cols, ncols, ndisjcuts, TRUE, sepadata->strengthen, cutlhs1, cutlhs2, bound1, bound2, simplexcoefs1, simplexcoefs2, cutcoefs, &row, &madeintegral) );
+      SCIP_CALL( generateDisjCutSOS1(scip, sepa, rows, nrows, cols, ncols, ndisjcuts, MAKECONTINTEGRAL, sepadata->strengthen, cutlhs1, cutlhs2, bound1, bound2, simplexcoefs1, simplexcoefs2, cutcoefs, &row, &madeintegral) );
       if ( row == NULL )
          continue;
 
@@ -824,7 +838,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
          *result = SCIP_DIDNOTFIND;
    }
 
-   SCIPdebugMessage("Number of found disjunctive cuts: %d.\n", ndisjcuts);
+   SCIPdebugMsg(scip, "Number of found disjunctive cuts: %d.\n", ndisjcuts);
 
    /* free buffer arrays */
    SCIPfreeBufferArrayNull(scip, &cutcoefs);
@@ -852,7 +866,7 @@ SCIP_RETCODE SCIPincludeSepaDisjunctive(
    SCIP_SEPA* sepa = NULL;
 
    /* create separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
    sepadata->conshdlr = NULL;
    sepadata->lastncutsfound = 0;
 

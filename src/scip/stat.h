@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   stat.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for problem statistics
  * @author Tobias Achterberg
  */
@@ -32,6 +33,7 @@
 #include "scip/type_stat.h"
 #include "scip/type_mem.h"
 #include "scip/pub_message.h"
+#include "scip/concurrent.h"
 
 #include "scip/struct_stat.h"
 
@@ -152,6 +154,12 @@ void SCIPstatUpdateMemsaveMode(
    SCIP_MEM*             mem                 /**< block memory pools */
    );
 
+/** returns the estimated number of bytes used by extern software, e.g., the LP solver */
+extern
+SCIP_Longint SCIPstatGetMemExternEstim(
+   SCIP_STAT*            stat                /**< dynamic SCIP statistics */
+   );
+
 /** enables or disables all statistic clocks of \p stat concerning LP execution time, strong branching time, etc.
  *
  *  @note: The (pre-)solving time clocks which are relevant for the output during (pre-)solving
@@ -182,6 +190,140 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< variable with changed pseudo costs */
    SCIP_Real             oldrootpscostscore  /**< old minimum pseudo cost score of variable */
+   );
+
+#ifdef TPI_NONE
+/* no TPI included so just update the stats */
+
+#define SCIPstatUpdate(stat, set, field, val) do { \
+  (stat)->field = (val); \
+  } while(0)
+
+#define SCIPstatIncrement(stat, set, field) do { \
+   ++(stat)->field; \
+   } while(0)
+
+#define SCIPstatAdd(stat, set, field, val) do { \
+   (stat)->field += (val); \
+   } while(0)
+
+#else
+/* TPI not none, so increment deterministic time for relevant stats */
+
+#define SCIPupdateDeterministicTimeCount(stat, set, val) do { \
+        (stat)->detertimecnt += (val); \
+        if( (stat)->detertimecnt > 10000.0 ) { \
+           SCIP_CALL_ABORT( SCIPincrementConcurrentTime( (set)->scip, (stat)->detertimecnt ) ); \
+           (stat)->detertimecnt = 0.0;                                  \
+        }\
+    } while(0) \
+
+#define SCIPstatUpdate(stat, set, field, val) do { \
+   switch( offsetof(SCIP_STAT, field) ) \
+   { \
+      default: \
+         break; \
+      case offsetof(SCIP_STAT, nprimalresolvelpiterations): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.00328285264101 * ((val) - (stat)->field) * (stat)->nnz ); \
+         break; \
+      case offsetof(SCIP_STAT, ndualresolvelpiterations): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.00531625104146 * ((val) - (stat)->field) * (stat)->nnz ); \
+         break; \
+      case offsetof(SCIP_STAT, nprobboundchgs): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.000738719124051 * ((val) - (stat)->field) * (stat)->nnz ); \
+         break; \
+      case offsetof(SCIP_STAT, nisstoppedcalls): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.0011123144764 * ((val) - (stat)->field) * (stat)->nnz ); \
+   } \
+   (stat)->field = (val); \
+   } while(0)
+
+
+#define SCIPstatIncrement(stat, set, field) do { \
+   switch( offsetof(SCIP_STAT, field) ) \
+   { \
+      default: \
+         break; \
+      case offsetof(SCIP_STAT, nprimalresolvelpiterations): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.00328285264101 * (stat)->nnz ); \
+         break; \
+      case offsetof(SCIP_STAT, ndualresolvelpiterations): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.00531625104146 * (stat)->nnz ); \
+         break; \
+      case offsetof(SCIP_STAT, nprobboundchgs): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.000738719124051 * (stat)->nnz ); \
+         break; \
+      case offsetof(SCIP_STAT, nisstoppedcalls): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.0011123144764 * (stat)->nnz ); \
+   } \
+   ++(stat)->field; \
+   } while(0)
+
+#define SCIPstatAdd(stat, set, field, val) do { \
+   switch( offsetof(SCIP_STAT, field) ) \
+   { \
+      default: \
+         break; \
+      case offsetof(SCIP_STAT, nprimalresolvelpiterations): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.00328285264101 * (val) * (stat)->nnz); \
+         break; \
+      case offsetof(SCIP_STAT, ndualresolvelpiterations): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.00531625104146 * (val) * (stat)->nnz); \
+         break; \
+      case offsetof(SCIP_STAT, nprobboundchgs): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.000738719124051 * (val) * (stat)->nnz ); \
+         break; \
+      case offsetof(SCIP_STAT, nisstoppedcalls): \
+         SCIPupdateDeterministicTimeCount(stat, set, 0.0011123144764 * (val) * (stat)->nnz ); \
+   } \
+   (stat)->field += (val); \
+   } while(0)
+#endif
+
+
+/* if we have a C99 compiler */
+#ifdef SCIP_HAVE_VARIADIC_MACROS
+
+/** prints a debugging message if SCIP_DEBUG flag is set */
+#ifdef SCIP_DEBUG
+#define SCIPstatDebugMsg(set, ...)      SCIPstatPrintDebugMessage(stat, __FILE__, __LINE__, __VA_ARGS__)
+#define SCIPstatDebugMsgPrint(set, ...) SCIPstatPrintDebugMessagePrint(stat, __VA_ARGS__)
+#else
+#define SCIPstatDebugMsg(set, ...)      while ( FALSE ) SCIPstatPrintDebugMessage(stat, __FILE__, __LINE__, __VA_ARGS__)
+#define SCIPstatDebugMsgPrint(set, ...) while ( FALSE ) SCIPstatPrintDebugMessagePrint(stat, __VA_ARGS__)
+#endif
+
+#else
+/* if we do not have a C99 compiler, use a workaround that prints a message, but not the file and linenumber */
+
+/** prints a debugging message if SCIP_DEBUG flag is set */
+#ifdef SCIP_DEBUG
+#define SCIPstatDebugMsg                printf("debug: "), SCIPstatDebugMessagePrint
+#define SCIPstatDebugMsgPrint           SCIPstatDebugMessagePrint
+#else
+#define SCIPstatDebugMsg                while ( FALSE ) SCIPstatDebugMessagePrint
+#define SCIPstatDebugMsgPrint           while ( FALSE ) SCIPstatDebugMessagePrint
+#endif
+
+#endif
+
+
+/** prints a debug message */
+EXTERN
+void SCIPstatPrintDebugMessage(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline,         /**< line in the source file where the function was called */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   );
+
+/** prints a debug message without precode */
+EXTERN
+void SCIPstatDebugMessagePrint(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
    );
 
 #ifdef __cplusplus

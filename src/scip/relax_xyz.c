@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -29,6 +29,7 @@
 #define RELAX_DESC             "relaxator template"
 #define RELAX_PRIORITY         0
 #define RELAX_FREQ             1
+#define RELAX_INCLUDESLP       FALSE
 
 
 
@@ -188,14 +189,14 @@ SCIP_RETCODE SCIPincludeRelaxXyz(
    /* use SCIPincludeRelax() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
     * new callbacks are added in future SCIP versions
     */
-   SCIP_CALL( SCIPincludeRelax(scip, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ, 
+   SCIP_CALL( SCIPincludeRelax(scip, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ, RELAX_INCLUDESLP,
          relaxCopyXyz, relaxFreeXyz, relaxInitXyz, relaxExitXyz, relaxInitsolXyz, relaxExitsolXyz, relaxExecXyz,
          relaxdata) );
 #else
    /* use SCIPincludeRelaxBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
     */
-   SCIP_CALL( SCIPincludeRelaxBasic(scip, &relax, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ,
+   SCIP_CALL( SCIPincludeRelaxBasic(scip, &relax, RELAX_NAME, RELAX_DESC, RELAX_PRIORITY, RELAX_FREQ, RELAX_INCLUDESLP,
          relaxExecXyz, relaxdata) );
 
    assert(relax != NULL);

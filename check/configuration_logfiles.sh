@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -36,27 +36,35 @@ COUNT=$2     # the instance count as part of the filename
 INSTANCE=$3  # the name of the instance
 BINID=$4     # the ID of the binary to use
 PERMUTE=$5   # the number of permutations to use - 0 for no permutation
-SETNAME=$6   # the name of the setting
-TSTNAME=$7   # the name of the testset
-CONTINUE=$8  # should test continue an existing run
-# optional variables
-QUEUE=$9     # the queue name
-p=${10}         # the index of the current permutation - only needed if permutations are used
-
-if test "$QUEUE" = ""
-then
-    QUEUE=`hostname`
-fi
+SEEDS=$6     # the number of random seeds - 0 only default seeds
+SETNAME=$7   # the name of the setting
+TSTNAME=$8   # the name of the testset
+CONTINUE=$9  # should test continue an existing run
+QUEUE=${10}    # the queue name
+p=${11}      # the index of the current permutation
+s=${12}      # shift of the global random seed
 
 OUTFILE=results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.out
 ERRFILE=results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.err
 
 # if number of permutations is positive, add postfix
-if test $PERMUTE -gt 0
+if test $p -gt 0
 then
-    EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"#p"$p.eval
+    # if number of seeds is positive, add postfix
+    if test $s -gt 0
+    then
+        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"-s"$s"-p"$p.eval
+    else
+        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"-p"$p.eval
+    fi
 else
-    EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
+    # if number of seeds is positive, add postfix
+    if test $s -gt 0
+    then
+        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"-s"$s.eval
+    else
+        EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
+    fi
 fi
 
 if test "$INSTANCE" = "DONE"
@@ -94,13 +102,27 @@ for EXTENSION in .mps .lp .opb .gms .pip .zpl .cip .fzn .osil .wbo .cnf .difflis
 do
     SHORTPROBNAME=`basename $SHORTPROBNAME $EXTENSION`
 done
+NEWSHORTPROBNAME=`echo $SHORTPROBNAME | cut -c1-25`
+SHORTPROBNAME=$NEWSHORTPROBNAME
 
 # if number of permutations is positive, add postfix
-if test $PERMUTE -gt 0
+if test $p -gt 0
 then
-    FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME#"p"$p
+    # if number of seeds is positive, add postfix
+    if test $s -gt 0
+    then
+        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME-"s"$s-"p"$p
+    else
+        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME-"p"$p
+    fi
 else
-    FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME
+    # if number of seeds is positive, add postfix
+    if test $s -gt 0
+    then
+        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME-"s"$s
+    else
+        FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTPROBNAME.$BINID.$QUEUE.$SETNAME
+    fi
 fi
 
 SKIPINSTANCE="false"

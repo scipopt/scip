@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -18,9 +18,9 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  *
- * This file handles the main problem data used in that project. For more details see \ref PROBLEMDATA page.
+ * This file handles the main problem data used in that project. For more details see \ref BINPACKING_PROBLEMDATA page.
  *
- * @page PROBLEMDATA Main problem data
+ * @page BINPACKING_PROBLEMDATA Main problem data
  *
  * The problem data is accessible in all plugins. The function SCIPgetProbData() returns the pointer to that
  * structure. We use this data structure to store all the information of the binpacking problem. Since this structure is
@@ -110,7 +110,7 @@ SCIP_DECL_EVENTEXEC(eventExecAddedVar)
    assert(event != NULL);
    assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_VARADDED);
 
-   SCIPdebugMessage("exec method of event handler for added variable to probdata\n");
+   SCIPdebugMsg(scip, "exec method of event handler for added variable to probdata\n");
 
    /* add new variable to probdata */
    SCIP_CALL( SCIPprobdataAddVar(scip, SCIPgetProbData(scip), SCIPeventGetVar(event)) );
@@ -144,20 +144,20 @@ SCIP_RETCODE probdataCreate(
    assert(probdata != NULL);
 
    /* allocate memory */
-   SCIP_CALL( SCIPallocMemory(scip, probdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, probdata) );
 
    if( nvars > 0 )
    {
       /* copy variable array */
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*probdata)->vars, vars, nvars) );
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*probdata)->vars, vars, nvars) );
    }
    else
       (*probdata)->vars = NULL;
 
    /* duplicate arrays */
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*probdata)->conss, conss, nitems) );
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*probdata)->weights, weights, nitems) );
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*probdata)->ids, ids, nitems) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*probdata)->conss, conss, nitems) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*probdata)->weights, weights, nitems) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*probdata)->ids, ids, nitems) );
 
    (*probdata)->nvars = nvars;
    (*probdata)->varssize = nvars;
@@ -192,13 +192,13 @@ SCIP_RETCODE probdataFree(
    }
 
    /* free memory of arrays */
-   SCIPfreeMemoryArray(scip, &(*probdata)->vars);
-   SCIPfreeMemoryArray(scip, &(*probdata)->conss);
-   SCIPfreeMemoryArray(scip, &(*probdata)->weights);
-   SCIPfreeMemoryArray(scip, &(*probdata)->ids);
+   SCIPfreeBlockMemoryArray(scip, &(*probdata)->vars, (*probdata)->nvars);
+   SCIPfreeBlockMemoryArray(scip, &(*probdata)->conss, (*probdata)->nitems);
+   SCIPfreeBlockMemoryArray(scip, &(*probdata)->weights, (*probdata)->nitems);
+   SCIPfreeBlockMemoryArray(scip, &(*probdata)->ids, (*probdata)->nitems);
 
    /* free probdata */
-   SCIPfreeMemory(scip, probdata);
+   SCIPfreeBlockMemory(scip, probdata);
 
    return SCIP_OKAY;
 }
@@ -233,7 +233,7 @@ SCIP_RETCODE createInitialColumns(
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "item_%d", ids[i]);
 
-      SCIPdebugMessage("create variable for item %d with weight = %"SCIP_LONGINT_FORMAT"\n", ids[i], weights[i]);
+      SCIPdebugMsg(scip, "create variable for item %d with weight = %"SCIP_LONGINT_FORMAT"\n", ids[i], weights[i]);
 
       /* create variable for the packing pattern which contains only this item */
       SCIP_CALL( SCIPcreateVarBinpacking(scip, &var, name, 1.0, TRUE, TRUE, NULL) );
@@ -280,7 +280,7 @@ SCIP_RETCODE createInitialColumns(
 static
 SCIP_DECL_PROBDELORIG(probdelorigBinpacking)
 {
-   SCIPdebugMessage("free original problem data\n");
+   SCIPdebugMsg(scip, "free original problem data\n");
 
    SCIP_CALL( probdataFree(scip, probdata) );
 
@@ -309,7 +309,7 @@ SCIP_DECL_PROBTRANS(probtransBinpacking)
 static
 SCIP_DECL_PROBDELTRANS(probdeltransBinpacking)
 {
-   SCIPdebugMessage("free transformed problem data\n");
+   SCIPdebugMsg(scip, "free transformed problem data\n");
 
    SCIP_CALL( probdataFree(scip, probdata) );
 
@@ -493,8 +493,10 @@ SCIP_RETCODE SCIPprobdataAddVar(
    /* check if enough memory is left */
    if( probdata->varssize == probdata->nvars )
    {
-      probdata->varssize = MAX(100, probdata->varssize * 2);
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &probdata->vars, probdata->varssize) );
+      int newsize;
+      newsize = MAX(100, probdata->varssize * 2);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &probdata->vars, probdata->varssize, newsize) );
+      probdata->varssize = newsize;
    }
 
    /* caputure variables */
@@ -503,7 +505,7 @@ SCIP_RETCODE SCIPprobdataAddVar(
    probdata->vars[probdata->nvars] = var;
    probdata->nvars++;
 
-   SCIPdebugMessage("added variable to probdata; nvars = %d\n", probdata->nvars);
+   SCIPdebugMsg(scip, "added variable to probdata; nvars = %d\n", probdata->nvars);
 
    return SCIP_OKAY;
 }

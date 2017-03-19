@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -55,8 +55,7 @@
 #define READER_DESC             "file reader for MIQPs in IBM's Mathematical Programming System format"
 #define READER_EXTENSION        "mps"
 
-#define DEFAULT_LINEARIZE_ANDS         TRUE  /**< should possible \"and\" constraint be linearized when writing the mps
-                                              *   file? */
+#define DEFAULT_LINEARIZE_ANDS         TRUE  /**< should possible \"and\" constraint be linearized when writing the mps file? */
 #define DEFAULT_AGGRLINEARIZATION_ANDS TRUE  /**< should an aggregated linearization for and constraints be used? */
 
 /*
@@ -148,7 +147,7 @@ SCIP_RETCODE mpsinputCreate(
    assert(mpsi != NULL);
    assert(fp != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, mpsi) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, mpsi) );
 
    (*mpsi)->section     = MPS_NAME;
    (*mpsi)->fp          = fp;
@@ -182,7 +181,7 @@ void mpsinputFree(
    MPSINPUT**            mpsi                /**< mps input structure */
    )
 {
-   SCIPfreeMemory(scip, mpsi);
+   SCIPfreeBlockMemory(scip, mpsi);
 }
 
 /** returns the current section */
@@ -663,7 +662,7 @@ SCIP_RETCODE readName(
 {
    assert(mpsi != NULL);
 
-   SCIPdebugMessage("read problem name\n");
+   SCIPdebugMsg(scip, "read problem name\n");
 
    /* This has to be the Line with the NAME section. */
    if( !mpsinputReadLine(mpsi) || mpsinputField0(mpsi) == NULL || strcmp(mpsinputField0(mpsi), "NAME") )
@@ -710,7 +709,7 @@ SCIP_RETCODE readObjsen(
 {
    assert(mpsi != NULL);
 
-   SCIPdebugMessage("read objective sense\n");
+   SCIPdebugMsg(scip, "read objective sense\n");
 
    /* This has to be the Line with MIN or MAX. */
    if( !mpsinputReadLine(mpsi) || (mpsinputField1(mpsi) == NULL) )
@@ -762,7 +761,7 @@ SCIP_RETCODE readObjname(
 {
    assert(mpsi != NULL);
 
-   SCIPdebugMessage("read objective name\n");
+   SCIPdebugMsg(scip, "read objective name\n");
 
    /* This has to be the Line with the name. */
    if( !mpsinputReadLine(mpsi) || mpsinputField1(mpsi) == NULL )
@@ -798,7 +797,7 @@ SCIP_RETCODE readRows(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIPdebugMessage("read rows\n");
+   SCIPdebugMsg(scip, "read rows\n");
 
    while( mpsinputReadLine(mpsi) )
    {
@@ -891,7 +890,7 @@ SCIP_RETCODE readCols(
    SCIP_VAR*     var;
    SCIP_Real     val;
 
-   SCIPdebugMessage("read columns\n");
+   SCIPdebugMsg(scip, "read columns\n");
 
    var = NULL;
    while( mpsinputReadLine(mpsi) )
@@ -999,7 +998,7 @@ SCIP_RETCODE readRhs(
    SCIP_Real   rhs;
    SCIP_Real   val;
 
-   SCIPdebugMessage("read right hand sides\n");
+   SCIPdebugMsg(scip, "read right hand sides\n");
 
    while( mpsinputReadLine(mpsi) )
    {
@@ -1080,7 +1079,7 @@ SCIP_RETCODE readRhs(
                SCIP_CALL( SCIPchgLhsLinear(scip, cons, val) );
                SCIP_CALL( SCIPchgRhsLinear(scip, cons, val) );
             }
-            SCIPdebugMessage("RHS <%s> lhs: %g  rhs: %g  val: <%22.12g>\n", mpsinputField2(mpsi), lhs, rhs, val);
+            SCIPdebugMsg(scip, "RHS <%s> lhs: %g  rhs: %g  val: <%22.12g>\n", mpsinputField2(mpsi), lhs, rhs, val);
          }
          if( mpsinputField5(mpsi) != NULL )
          {
@@ -1123,7 +1122,7 @@ SCIP_RETCODE readRhs(
                   SCIP_CALL( SCIPchgLhsLinear(scip, cons, val) );
                   SCIP_CALL( SCIPchgRhsLinear(scip, cons, val) );
                }
-               SCIPdebugMessage("RHS <%s> lhs: %g  rhs: %g  val: <%22.12g>\n", mpsinputField4(mpsi), lhs, rhs, val);
+               SCIPdebugMsg(scip, "RHS <%s> lhs: %g  rhs: %g  val: <%22.12g>\n", mpsinputField4(mpsi), lhs, rhs, val);
             }
          }
       }
@@ -1146,7 +1145,7 @@ SCIP_RETCODE readRanges(
    SCIP_Real   rhs;
    SCIP_Real   val;
 
-   SCIPdebugMessage("read ranges\n");
+   SCIPdebugMsg(scip, "read ranges\n");
 
    while( mpsinputReadLine(mpsi) )
    {
@@ -1296,7 +1295,7 @@ SCIP_RETCODE readBounds(
    nsemicont = 0;
    semicontsize = 0;
 
-   SCIPdebugMessage("read bounds\n");
+   SCIPdebugMsg(scip, "read bounds\n");
 
    while( mpsinputReadLine(mpsi) )
    {
@@ -1629,7 +1628,7 @@ SCIP_RETCODE readBounds(
 
          SCIP_CALL( SCIPaddCons(scip, cons) );
 
-         SCIPdebugMessage("add bound disjunction constraint for semi-continuity/-integrality of <%s>:\n\t", SCIPvarGetName(var));
+         SCIPdebugMsg(scip, "add bound disjunction constraint for semi-continuity/-integrality of <%s>:\n\t", SCIPvarGetName(var));
          SCIPdebugPrintCons(scip, cons, NULL);
 
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -1670,7 +1669,7 @@ SCIP_RETCODE readSOS(
    int consType = -1;
    int cnt = 0;
 
-   SCIPdebugMessage("read SOS constraints\n");
+   SCIPdebugMsg(scip, "read SOS constraints\n");
 
    /* standard settings for SOS constraints: */
    initial = mpsi->initialconss;
@@ -1724,7 +1723,7 @@ SCIP_RETCODE readSOS(
          {
             /* add last constraint */
             SCIP_CALL( SCIPaddCons(scip, cons) );
-            SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
+            SCIPdebugMsg(scip, "(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
             SCIPdebugPrintCons(scip, cons, NULL);
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
          }
@@ -1752,7 +1751,7 @@ SCIP_RETCODE readSOS(
                   local, modifiable, dynamic, removable) );
          }
          consType = type;
-         SCIPdebugMessage("created constraint <%s> of type %d.\n", name, type);
+         SCIPdebugMsg(scip, "created constraint <%s> of type %d.\n", name, type);
          /* note: we ignore the priorities! */
       }
       else
@@ -1802,7 +1801,7 @@ SCIP_RETCODE readSOS(
                SCIPABORT();
                return SCIP_INVALIDDATA;  /*lint !e527*/
             }
-            SCIPdebugMessage("added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
+            SCIPdebugMsg(scip, "added variable <%s> with weight %g.\n", SCIPvarGetName(var), weight);
          }
          /* check other fields */
          if( (mpsinputField3(mpsi) != NULL && *mpsinputField3(mpsi) != '\0' ) ||
@@ -1819,7 +1818,7 @@ SCIP_RETCODE readSOS(
    {
       /* add last constraint */
       SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
       SCIPdebugPrintCons(scip, cons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
@@ -1852,7 +1851,7 @@ SCIP_RETCODE readQMatrix(
    int cnt  = 0; /* number of qmatrix elements processed so far */
    int size;     /* size of quad* arrays */
 
-   SCIPdebugMessage("read %s objective\n", isQuadObj ? "QUADOBJ" : "QMATRIX");
+   SCIPdebugMsg(scip, "read %s objective\n", isQuadObj ? "QUADOBJ" : "QMATRIX");
 
    retcode = SCIP_OKAY;
 
@@ -1949,7 +1948,7 @@ SCIP_RETCODE readQMatrix(
                   quadcoefs[cnt] /= 2.0;
                ++cnt;
 
-               SCIPdebugMessage("stored term %g*<%s>*<%s>.\n", coef, SCIPvarGetName(var1), SCIPvarGetName(var2));
+               SCIPdebugMsg(scip, "stored term %g*<%s>*<%s>.\n", coef, SCIPvarGetName(var1), SCIPvarGetName(var2));
             }
 
             if( mpsinputField4(mpsi) == NULL || *mpsinputField4(mpsi) == '\0' )
@@ -2011,7 +2010,7 @@ SCIP_RETCODE readQMatrix(
       if( retcode == SCIP_OKAY )
       {
          SCIP_CALL( SCIPaddCons(scip, cons) );
-         SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
+         SCIPdebugMsg(scip, "(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
          SCIPdebugPrintCons(scip, cons, NULL);
 
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -2063,7 +2062,7 @@ SCIP_RETCODE readQCMatrix(
 
    retcode = SCIP_OKAY;
 
-   SCIPdebugMessage("read QCMATRIX section for row <%s>\n", mpsinputField1(mpsi));
+   SCIPdebugMsg(scip, "read QCMATRIX section for row <%s>\n", mpsinputField1(mpsi));
 
    lincons = SCIPfindCons(scip, mpsinputField1(mpsi));
    if( lincons == NULL )
@@ -2154,7 +2153,7 @@ SCIP_RETCODE readQCMatrix(
             quadcoefs[cnt] = coef;
             ++cnt;
 
-            SCIPdebugMessage("stored term %g*<%s>*<%s>.\n", coef, SCIPvarGetName(var1), SCIPvarGetName(var2));
+            SCIPdebugMsg(scip, "stored term %g*<%s>*<%s>.\n", coef, SCIPvarGetName(var1), SCIPvarGetName(var2));
 
             /* check other fields */
             if( (mpsinputField4(mpsi) != NULL && *mpsinputField4(mpsi) != '\0' ) ||
@@ -2182,7 +2181,7 @@ SCIP_RETCODE readQCMatrix(
          goto TERMINATE;
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIPdebugMessage("(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "(line %d) added constraint <%s>: ", mpsi->lineno, SCIPconsGetName(cons));
       SCIPdebugPrintCons(scip, cons, NULL);
 
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -2195,9 +2194,9 @@ SCIP_RETCODE readQCMatrix(
    }
 
  TERMINATE:
-   SCIPfreeBufferArray(scip, &quadvars1);
-   SCIPfreeBufferArray(scip, &quadvars2);
    SCIPfreeBufferArray(scip, &quadcoefs);
+   SCIPfreeBufferArray(scip, &quadvars2);
+   SCIPfreeBufferArray(scip, &quadvars1);
 
    SCIP_CALL( retcode );
 
@@ -2232,7 +2231,7 @@ SCIP_RETCODE readIndicators(
    SCIP_Bool stickingatnode;
    char name[MPS_MAX_NAMELEN] = { '\0' };
 
-   SCIPdebugMessage("read INDICATORS constraints\n");
+   SCIPdebugMsg(scip, "read INDICATORS constraints\n");
 
    /* standard settings for indicator constraints: */
    initial = mpsi->initialconss;
@@ -2377,7 +2376,7 @@ SCIP_RETCODE readIndicators(
             if( retcode == SCIP_OKAY )
             {
                SCIP_CALL( SCIPaddCons(scip, cons) );
-               SCIPdebugMessage("created indicator constraint <%s>\n", mpsinputField2(mpsi));
+               SCIPdebugMsg(scip, "created indicator constraint <%s>\n", mpsinputField2(mpsi));
                SCIPdebugPrintCons(scip, cons, NULL);
                SCIP_CALL( SCIPreleaseCons(scip, &cons) );
             }
@@ -2427,7 +2426,7 @@ SCIP_RETCODE readIndicators(
             initial, separate, enforce, check, propagate, local, dynamic, removable, stickingatnode) );
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIPdebugMessage("created indicator constraint <%s>", mpsinputField2(mpsi));
+      SCIPdebugMsg(scip, "created indicator constraint <%s>", mpsinputField2(mpsi));
       SCIPdebugPrintCons(scip, cons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
@@ -2545,6 +2544,7 @@ SCIP_RETCODE readMps(
       SCIP_CALL_TERMINATE( retcode, SCIPsetObjsense(scip, mpsinputObjsense(mpsi)), TERMINATE );
    }
 
+ /* cppcheck-suppress unusedLabel */
  TERMINATE:
    mpsinputFree(scip, &mpsi);
 
@@ -2703,12 +2703,11 @@ void printRowType(
    )
 {
    char rowtype[2];
-   assert( scip != NULL );
 
+   assert( scip != NULL );
    assert( !SCIPisInfinity(scip, -lhs) || !SCIPisInfinity(scip, rhs) );
    assert( SCIPisGT(scip, rhs, lhs) || SCIPisEQ(scip, lhs, rhs) );
    assert( name != NULL );
-
 
    if( SCIPisEQ(scip, lhs, rhs) )
       (void) SCIPsnprintf(rowtype, 2, "%s", "E");
@@ -2849,6 +2848,16 @@ SCIP_RETCODE getLinearCoeffs(
       for( v = 0; v < nactivevars; ++v )
       {
          SCIP_CALL( SCIPvarGetOrigvarSum(&activevars[v], &activevals[v], &activeconstant) );
+
+         /* negated variables with an original counterpart may also be returned by SCIPvarGetOrigvarSum();
+          * make sure we get the original variable in that case
+          */
+         if( SCIPvarGetStatus(activevars[v]) == SCIP_VARSTATUS_NEGATED )
+         {
+            activevars[v] = SCIPvarGetNegatedVar(activevars[v]);
+            activevals[v] *= -1.0;
+            activeconstant += 1.0;
+         }
       }
    }
 
@@ -2955,7 +2964,7 @@ SCIP_RETCODE checkVarnames(
    faulty = 0;
 
    /* allocate memory */
-   SCIP_CALL( SCIPhashmapCreate(varnameHashmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(varnameHashmap, SCIPblkmem(scip), nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, varnames, nvars) );
 
    /* check if the variable names are not to long */
@@ -3078,7 +3087,7 @@ SCIP_RETCODE checkConsnames(
 static
 void printColumnSection(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**<  output file, or NULL if standard output should be used */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
    SPARSEMATRIX*         matrix,             /**< sparse matrix containing the entries */
    SCIP_HASHMAP*         varnameHashmap,     /**< map from SCIP_VAR* to variable name */
    SCIP_HASHTABLE*       indicatorSlackHash, /**< hashtable containing slack variables from indicators (or NULL) */
@@ -3131,7 +3140,7 @@ void printColumnSection(
          intSection = TRUE;
       }
 
-      SCIPdebugMessage("create entries for variable <%s>\n", SCIPvarGetName(var));
+      SCIPdebugMsg(scip, "create entries for variable <%s>\n", SCIPvarGetName(var));
 
       /* record count; there are at most two records per line */
       recordcnt = 0;
@@ -3146,7 +3155,7 @@ void printColumnSection(
          value = matrix->values[v];
 
          /* print record to file */
-         printEntry( scip, file, varname, matrix->rows[v], value, &recordcnt, maxnamelen );
+         printEntry(scip, file, varname, matrix->rows[v], value, &recordcnt, maxnamelen);
          v++;
       }
       while( v < matrix->nentries && var == matrix->columns[v] );
@@ -3170,22 +3179,20 @@ void printColumnSection(
 static
 void printRhsSection(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**<  output file, or NULL if standard output should be used */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
    int                   nconss,             /**< number of constraints */
    const char**          consnames,          /**< constraint names */
    SCIP_Real*            rhss,               /**< right hand side array */
    unsigned int          maxnamelen          /**< maximum name length */
    )
 {
-   int recordcnt;
+   int recordcnt = 0;
    int c;
 
    assert( rhss != NULL );
 
    SCIPinfoMessage(scip, file, "RHS\n");
-   SCIPdebugMessage("start printing RHS section\n");
-
-   recordcnt = 0;
+   SCIPdebugMsg(scip, "start printing RHS section\n");
 
    /* take care of the linear constraints */
    for( c = 0; c < nconss; ++c )
@@ -3196,7 +3203,7 @@ void printRhsSection(
 
       assert(consnames[c] != NULL);
 
-      printEntry( scip, file, "RHS", consnames[c], rhss[c], &recordcnt, maxnamelen );
+      printEntry(scip, file, "RHS", consnames[c], rhss[c], &recordcnt, maxnamelen);
    }
 
    if( recordcnt == 1 )
@@ -3208,16 +3215,16 @@ void printRhsSection(
 static
 void printRangeSection(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**<  output file, or NULL if standard output should be used */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
    SCIP_CONS**           conss,              /**< constraint array */
    int                   nconss,             /**< number of constraints */
    const char**          consnames,          /**< constraint names */
    SCIP_Bool             transformed,        /**< TRUE iff problem is the transformed problem */
    unsigned int          maxnamelen          /**< maximum name length */
    )
-{   
+{
    int c;
-   int recordcnt;
+   int recordcnt = 0;
 
    SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
@@ -3226,11 +3233,8 @@ void printRangeSection(
    SCIP_Real lhs;
    SCIP_Real rhs;
 
-
    SCIPinfoMessage(scip, file, "RANGES\n");
-   SCIPdebugMessage("start printing RANGES section\n");
-
-   recordcnt = 0;
+   SCIPdebugMsg(scip, "start printing RANGES section\n");
 
    for( c = 0; c < nconss; ++c  )
    {
@@ -3265,7 +3269,7 @@ void printRangeSection(
       if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) && !SCIPisEQ(scip, rhs, lhs) )
       {
          assert( SCIPisGT(scip, rhs, lhs) );
-         printEntry( scip, file, "RANGE", consnames[c], rhs - lhs, &recordcnt, maxnamelen );
+         printEntry(scip, file, "RANGE", consnames[c], rhs - lhs, &recordcnt, maxnamelen);
       }
    }
    if(recordcnt == 1 )
@@ -3276,18 +3280,18 @@ void printRangeSection(
 static
 void printBoundSectionName(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file                /**<  output file, or NULL if standard output should be used */
+   FILE*                 file                /**< output file, or NULL if standard output should be used */
    )
 {
    SCIPinfoMessage(scip, file, "BOUNDS\n");
-   SCIPdebugMessage("start printing BOUNDS section\n");
+   SCIPdebugMsg(scip, "start printing BOUNDS section\n");
 }
 
 /** output bound section */
 static
 void printBoundSection(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**<  output file, or NULL if standard output should be used */
+   FILE*                 file,               /**< output file, or NULL if standard output should be used */
    SCIP_VAR**            vars,               /**< active variables */
    int                   nvars,              /**< number of active variables */
    SCIP_VAR**            aggvars,            /**< needed aggregated variables */
@@ -3508,9 +3512,9 @@ void printBoundSection(
    {
       /* we should print the transformed problem, otherwise no fixed variable should exists */
       assert(transformed);
-      assert(fixvars != NULL);
 
       var = fixvars[v];
+
       assert(var != NULL);
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED);
 
@@ -3525,8 +3529,8 @@ void printBoundSection(
 
       if( !sectionName )
       {
-	 printBoundSectionName(scip, file);
-	 sectionName = TRUE;
+         printBoundSectionName(scip, file);
+         sectionName = TRUE;
       }
 
       /* print fixed variable */
@@ -3543,6 +3547,7 @@ void printBoundSection(
  */
 
 /** copy method for reader plugins (called when SCIP copies plugins) */
+/**! [SnippetReaderCopyMps] */
 static
 SCIP_DECL_READERCOPY(readerCopyMps)
 {  /*lint --e{715}*/
@@ -3555,8 +3560,10 @@ SCIP_DECL_READERCOPY(readerCopyMps)
 
    return SCIP_OKAY;
 }
+/**! [SnippetReaderCopyMps] */
 
 /** destructor of reader to free user data (called when SCIP is exiting) */
+/**! [SnippetReaderFreeMps] */
 static
 SCIP_DECL_READERFREE(readerFreeMps)
 {
@@ -3565,10 +3572,11 @@ SCIP_DECL_READERFREE(readerFreeMps)
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
-   SCIPfreeMemory(scip, &readerdata);
+   SCIPfreeBlockMemory(scip, &readerdata);
 
    return SCIP_OKAY;
 }
+/**! [SnippetReaderFreeMps] */
 
 /** problem reading method of reader */
 static
@@ -3581,7 +3589,7 @@ SCIP_DECL_READERREAD(readerReadMps)
    assert(scip != NULL);
    assert(result != NULL);
 
-   retcode =  readMps(scip, filename);
+   retcode = readMps(scip, filename);
 
    if( retcode == SCIP_PLUGINNOTFOUND )
       retcode = SCIP_READERROR;
@@ -3710,14 +3718,14 @@ SCIP_DECL_READERWRITE(readerWriteMps)
    /* create hashtable for storing aggregated variables */
    if( nfixedvars > 0 )
    {
-      SCIP_CALL( SCIPhashtableCreate(&varFixedHash, SCIPblkmem(scip), 5 * nfixedvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+      SCIP_CALL( SCIPhashtableCreate(&varFixedHash, SCIPblkmem(scip), nfixedvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
    }
    else
       varFixedHash = NULL;
 
    if( nvars > 0 )
    {
-      SCIP_CALL( SCIPhashtableCreate(&indicatorSlackHash, SCIPblkmem(scip), 5 * nvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
+      SCIP_CALL( SCIPhashtableCreate(&indicatorSlackHash, SCIPblkmem(scip), nvars, hashGetKeyVar, hashKeyEqVar, hashKeyValVar, NULL) );
    }
    else
       indicatorSlackHash = NULL;
@@ -4175,7 +4183,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
                      n = 2;
                   else
                      n = (int) log10((double)v) + 2;
-                  n += l;;
+                  n += l;
 
                   /* assure maximal allowed value */
                   if( n >= MPS_MAX_NAMELEN )
@@ -4248,7 +4256,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
                /* compute column entries */
                SCIP_CALL( getLinearCoeffs(scip, rowname, rowvars, rowvals, nrowvars + 1, transformed, matrix, &rhss[k]) );
 
-               SCIPinfoMessage(scip, file, "%g, %g\n", rowvals[1], rhss[k]);
+               SCIPdebugMsg(scip, "%g, %g\n", rowvals[1], rhss[k]);
                ++k;
             }
 
@@ -4414,6 +4422,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
 
    if( nfixedvars > 0 )
    {
+      /* cppcheck-suppress nullPointerRedundantCheck */
       assert(fixvars != NULL);
       SCIPfreeBufferArray(scip, &fixvars);
    }
@@ -4424,7 +4433,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       SCIP_Real* sosweights;
 
       SCIPinfoMessage(scip, file, "SOS\n");
-      SCIPdebugMessage("start printing SOS section\n");
+      SCIPdebugMsg(scip, "start printing SOS section\n");
 
       SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) );
 
@@ -4498,7 +4507,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       const char* varname2;
       int nbilin;
 
-      SCIPdebugMessage("start printing QCMATRIX sections for quadratic constraints\n");
+      SCIPdebugMsg(scip, "start printing QCMATRIX sections for quadratic constraints\n");
       SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) );
 
       for( c = 0; c < nConsQuadratic; ++c )
@@ -4565,13 +4574,12 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       SCIPfreeBufferArray(scip, &namestr);
    }
 
-
    /* print QCMATRIX sections for second order cone constraints */
    if( nConsSOC > 0 )
    {
       SCIP_Real* coefs;
 
-      SCIPdebugMessage("start printing QCMATRIX sections for soc constraints\n");
+      SCIPdebugMsg(scip, "start printing QCMATRIX sections for soc constraints\n");
       SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) );
 
       for( c = 0; c < nConsSOC; ++c )
@@ -4628,7 +4636,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
       SCIP_CALL( SCIPallocBufferArray(scip, &namestr, MPS_MAX_NAMELEN) );
 
       SCIPinfoMessage(scip, file, "INDICATORS\n");
-      SCIPdebugMessage("start printing INDICATOR section\n");
+      SCIPdebugMsg(scip, "start printing INDICATOR section\n");
 
       /* output each indicator constraint */
       for( c = 0; c < nConsIndicator; ++c )
@@ -4727,7 +4735,7 @@ SCIP_RETCODE SCIPincludeReaderMps(
    SCIP_READER* reader;
 
    /* create reader data */
-   SCIP_CALL( SCIPallocMemory(scip, &readerdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
 
    /* include reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );

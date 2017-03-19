@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -20,12 +20,6 @@
  * @author Kati Wolter
  * @author Michael Winkler
  *
- * This constraint handler handles a special type of linear constraints, namely knapsack constraints.
- * A knapsack constraint has the form
- * \f[
- *   \sum_{i=1}^n a_i x_i \leq b
- * \f]
- * with non-negative integer coefficients \f$a_i\f$, integer right-hand side \f$b\f$, and binary variables \f$x_i\f$.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -39,11 +33,30 @@
 extern "C" {
 #endif
 
-/** creates the handler for knapsack constraints and includes it in SCIP */
+/** creates the handler for knapsack constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrKnapsack(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Knapsack Constraints
+ *
+ * @{
+ *
+ * This constraint handler handles a special type of linear constraints, namely knapsack constraints.
+ * A knapsack constraint has the form
+ * \f[
+ *   \sum_{i=1}^n a_i x_i \leq b
+ * \f]
+ * with non-negative integer coefficients \f$a_i\f$, integer right-hand side \f$b\f$, and binary variables \f$x_i\f$.
+ */
 
 /** creates and captures a knapsack constraint
  *
@@ -189,7 +202,8 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    int*                  nsolitems,          /**< pointer to store number of items in solution, or NULL */
    int*                  nnonsolitems,       /**< pointer to store number of items not in solution, or NULL */
    SCIP_Real*            solval,             /**< pointer to store optimal solution value, or NULL */
-   SCIP_Bool*            success             /**< pointer to store if an error occured during solving (normally a memory problem) */
+   SCIP_Bool*            success             /**< pointer to store if an error occured during solving
+                                              *   (normally a memory problem) */
    );
 
 /** solves knapsack problem in maximization form approximately by solving the LP-relaxation of the problem using Dantzig's
@@ -211,7 +225,7 @@ SCIP_RETCODE SCIPsolveKnapsackApproximately(
    SCIP_Real*            solval              /**< pointer to store optimal solution value, or NULL */
    );
 
-/** separates lifted valid inequalities for given knapsack problem */
+/** separates different classes of valid inequalities for the 0-1 knapsack problem */
 EXTERN
 SCIP_RETCODE SCIPseparateKnapsackCuts(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -221,7 +235,7 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
    int                   nvars,              /**< number of variables in knapsack constraint */
    SCIP_Longint*         weights,            /**< weights of variables in knapsack constraint */
    SCIP_Longint          capacity,           /**< capacity of knapsack */
-   SCIP_SOL*             sol,                /**< primal CIP solution to separate, NULL for current LP solution */
+   SCIP_SOL*             sol,                /**< primal SCIP solution to separate, NULL for current LP solution */
    SCIP_Bool             usegubs,            /**< should GUB information be used for separation? */
    SCIP_Bool*            cutoff,             /**< pointer to store whether a cutoff has been detected */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
@@ -242,6 +256,10 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
    SCIP_Bool*            cutoff,             /**< pointer to store whether a cutoff was found */
    int*                  ncuts               /**< pointer to add up the number of found cuts */
    );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 //*                  This file is part of the program and library             */
 //*         SCIP --- Solving Constraint Integer Programs                      */
 //*                                                                           */
-//*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+//*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 //*                            fuer Informationstechnik Berlin                */
 //*                                                                           */
 //*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -190,3 +190,6 @@ lint/size-options.lnt // This .lnt file should be generated (preferrably
 -esym(1055,*__builtin*)
 -esym(718,*__builtin*)   // The compiler does not need these ...
 -esym(746,*__builtin*)   // declared and it knows their prototypes.
+
+// increase macro size
++macros

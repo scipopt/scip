@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,6 +30,8 @@
 #include "scip/clock.h"
 #include "scip/paramset.h"
 #include "scip/scip.h"
+#include "scip/sol.h"
+#include "scip/var.h"
 #include "scip/relax.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
@@ -77,7 +79,7 @@ SCIP_RETCODE SCIPrelaxCopyInclude(
 
    if( relax->relaxcopy != NULL )
    {
-      SCIPdebugMessage("including relaxation handler %s in subscip %p\n", SCIPrelaxGetName(relax), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including relaxation handler %s in subscip %p\n", SCIPrelaxGetName(relax), (void*)set->scip);
       SCIP_CALL( relax->relaxcopy(set->scip, relax) );
    }
    return SCIP_OKAY;
@@ -93,6 +95,7 @@ SCIP_RETCODE SCIPrelaxCreate(
    const char*           desc,               /**< description of relaxation handler */
    int                   priority,           /**< priority of the relaxation handler (negative: after LP, non-negative: before LP) */
    int                   freq,               /**< frequency for calling relaxation handler */
+   SCIP_Bool             includeslp,         /**< Does the relaxator contain all cuts in the LP? */
    SCIP_DECL_RELAXCOPY   ((*relaxcopy)),     /**< copy method of relaxation handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_RELAXFREE   ((*relaxfree)),     /**< destructor of relaxation handler */
    SCIP_DECL_RELAXINIT   ((*relaxinit)),     /**< initialize relaxation handler */
@@ -130,6 +133,7 @@ SCIP_RETCODE SCIPrelaxCreate(
    (*relax)->ncalls = 0;
    (*relax)->lastsolvednode = -1;
    (*relax)->initialized = FALSE;
+   (*relax)->includeslp = includeslp;
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "relaxing/%s/priority", name);
@@ -140,7 +144,7 @@ SCIP_RETCODE SCIPrelaxCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "relaxing/%s/freq", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling relaxation handler <%s> (-1: never, 0: only in root node)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         &(*relax)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
+         &(*relax)->freq, FALSE, freq, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -315,7 +319,7 @@ SCIP_RETCODE SCIPrelaxExec(
 
    if( (depth == 0 && relax->freq == 0) || (relax->freq > 0 && depth % relax->freq == 0) )
    {
-      SCIPdebugMessage("executing relaxation handler <%s>\n", relax->name);
+      SCIPsetDebugMsg(set, "executing relaxation handler <%s>\n", relax->name);
 
       /* start timing */
       SCIPclockStart(relax->relaxclock, set);
@@ -342,6 +346,7 @@ SCIP_RETCODE SCIPrelaxExec(
       if( *result != SCIP_DIDNOTRUN )
       {
          relax->ncalls++;
+         stat->relaxcount++;
          if( *result == SCIP_SUSPENDED )
             SCIPrelaxMarkUnsolved(relax);
       }
@@ -513,6 +518,27 @@ void SCIPrelaxEnableOrDisableClocks(
    SCIPclockEnableOrDisable(relax->relaxclock, enable);
 }
 
+/** returns whether the relaxation handler contains all LP rows */
+SCIP_Bool SCIPrelaxIncludesLp(
+   SCIP_RELAX*           relax               /**< relaxation handler */
+   )
+{
+   assert(relax != NULL);
+
+   return relax->includeslp;
+}
+
+/** defines whether the relaxation handler contains all LP rows */
+void SCIPrelaxSetIncludesLp(
+   SCIP_RELAX*           relax,              /**< relaxator */
+   SCIP_Bool             includeslp          /**< does the relaxator contain all cuts in the LP? */
+   )
+{
+   assert(relax != NULL);
+
+   relax->includeslp = includeslp;
+}
+
 /** gets time in seconds used in this relaxation handler */
 SCIP_Real SCIPrelaxGetTime(
    SCIP_RELAX*           relax               /**< relaxation handler */
@@ -571,24 +597,42 @@ void SCIPrelaxMarkUnsolved(
 
 /** creates global relaxation data */
 SCIP_RETCODE SCIPrelaxationCreate(
-   SCIP_RELAXATION**     relaxation          /**< global relaxation data */
+   SCIP_RELAXATION**     relaxation,         /**< global relaxation data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_TREE*            tree                /**< branch and bound tree */
    )
 {
    assert(relaxation != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(primal != NULL);
+   assert(tree != NULL);
+
    SCIP_ALLOC( BMSallocMemory(relaxation) );
+
    (*relaxation)->relaxsolobjval = 0.0;
    (*relaxation)->relaxsolvalid = FALSE;
    (*relaxation)->relaxsolzero = TRUE;
+   SCIP_CALL( SCIPsolCreateUnknown(&((*relaxation)->bestrelaxsol), blkmem, set, stat, primal, tree, NULL) );
+   (*relaxation)->bestrelaxsolobj = -SCIPsetInfinity(set);
 
    return SCIP_OKAY;
 }
 
 /** frees global relaxation data */
 SCIP_RETCODE SCIPrelaxationFree(
-   SCIP_RELAXATION**     relaxation          /**< global relaxation data */
+   SCIP_RELAXATION**     relaxation,         /**< global relaxation data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_PRIMAL*          primal              /**< primal data */
    )
 {
    assert(relaxation != NULL);
+
+   SCIP_CALL( SCIPsolFree(&((*relaxation)->bestrelaxsol), blkmem, primal) );
 
    BMSfreeMemory(relaxation);
 
@@ -667,4 +711,55 @@ void SCIPrelaxationSolObjAdd(
    assert(relaxation != NULL);
 
    relaxation->relaxsolobjval += val;
+}
+
+/** gets pointer to best relaxation solution */
+SCIP_SOL* SCIPrelaxationGetBestRelaxSol(
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
+   )
+{
+   assert(relaxation != NULL);
+
+   return relaxation->bestrelaxsol;
+}
+
+/** sets the objective value of the best relaxation solution */
+void SCIPrelaxationSetBestRelaxSolObj(
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_Real             obj                 /**< objective value of best relaxation solution */
+   )
+{
+   assert(relaxation != NULL);
+
+   relaxation->bestrelaxsolobj = obj;
+}
+
+/** returns the objective value of the best relaxation solution (or minus infinity if it should not be enforced) */
+SCIP_Real SCIPrelaxationGetBestRelaxSolObj(
+   SCIP_RELAXATION*      relaxation          /**< global relaxation data */
+   )
+{
+   assert(relaxation != NULL);
+
+   return relaxation->bestrelaxsolobj;
+}
+
+/** updates objective value of current relaxation solution after change of objective coefficient */
+void SCIPrelaxationUpdateVarObj(
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< variable with changed objective coefficient */
+   SCIP_Real             oldobj,             /**< old objective coefficient */
+   SCIP_Real             newobj              /**< new objective coefficient */
+   )
+{
+   SCIP_Real relaxsolval;
+
+   assert(relaxation != NULL);
+   assert(set != NULL);
+   assert(var != NULL);
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+
+   relaxsolval = SCIPvarGetRelaxSol(var, set);
+   relaxation->relaxsolobjval += (newobj - oldobj) * relaxsolval;
 }

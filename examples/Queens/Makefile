@@ -3,10 +3,10 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
+#*  SCIP is distributed under the terms of the ZIB Academic License.         *
 #*                                                                           *
 #*  You should have received a copy of the ZIB Academic License              *
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
@@ -73,14 +73,6 @@ lint:		$(MAINSRC)
 scip:
 		@$(MAKE) -C $(SCIPDIR) libs $^
 
-.PHONY: doc
-doc:
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scip.css);
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
-		cd doc; $(DOXY) $(MAINNAME).dxy
-
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
 		cd $(dir $@) && ln -s $(notdir $(MAINFILE)) $(notdir $@)
@@ -95,7 +87,7 @@ $(BINDIR):
 test: $(MAINFILE)
 		for i in 1 2 4 8 16 ; do \
 			echo ; echo "Testing the n-queens solver with n = $$i" ; \
-			$(MAINFILE) $$i || break 1 ; \
+			$(MAINFILE) $$i || exit $(STATUS) ; \
 			echo ; \
 		done
 
@@ -117,11 +109,7 @@ depend:		$(SCIPDIR)
 
 $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
-		$(LINKCXX) $(MAINOBJFILES) \
-		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-                $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX) $(MAINOBJFILES) $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"

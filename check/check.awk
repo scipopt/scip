@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -154,6 +154,7 @@ BEGIN {
                                 # respecting the previous solu file information and updating it by better solution values for previously unsolved instances
    printsoltimes = 0;           # should the times until first and best solution be shown
    checksol = 1;                # should the solution check of SCIP be parsed and counted as a fail if best solution is not feasible?
+   analyseconf = 0;             # should conflict analysis be reported?
    NEWSOLUFILE = "new_solufile.solu";
    infty = +1e+20;
    headerprinted = 0;
@@ -174,12 +175,14 @@ BEGIN {
    timetobestgeom = 0.0;
    sblpgeom = 0.0;
    conftimegeom = 0.0;
+   confgeom = 0.0;
    basictimegeom = 0.0;
    overheadtimegeom = 0.0;
    shiftednodegeom = nodegeomshift;
    shiftedtimegeom = timegeomshift;
    shiftedsblpgeom = sblpgeomshift;
    shiftedconftimegeom = timegeomshift;
+   shiftedconfgeom = timegeomshift;
    shiftedbasictimegeom = timegeomshift;
    shiftedoverheadtimegeom = timegeomshift;
    shiftedtimetofirstgeom = timegeomshift;
@@ -195,6 +198,7 @@ BEGIN {
    scipversion = "?";
    githash = "?";
    conftottime = 0.0;
+   sumconfs = 0;
    overheadtottime = 0.0;
 
    #initialize paver input file
@@ -294,6 +298,11 @@ BEGIN {
    confclauses = 0;
    confliterals = 0.0;
    conftime = 0.0;
+   conf_prop  = 0;
+   conf_infLP = 0;
+   conf_bndEx = 0;
+   conf_strbr = 0;
+   conf_pseud = 0;
    overheadtime = 0.0;
    aborted = 1;
    readerror = 0;
@@ -420,49 +429,43 @@ BEGIN {
    inconflict = 1;
 }
 /^  propagation      :/ {
-   if( inconflict == 1 )
-   {
-      conftime += $3;
-      #confclauses += $5 + $7;
-      #confliterals += $5 * $6 + $7 * $8;
+   if( inconflict == 1 ) {
+      conftime += $3; #confclauses += $5 + $7; confliterals += $5 * $6 + $7 * $8;
+      conf_prop += $7;
    }
 }
 /^  infeasible LP    :/ {
-   if( inconflict == 1 )
-   {
-      conftime += $4;
-      #confclauses += $6 + $8;
-      #confliterals += $6 * $7 + $8 * $9;
+   if( inconflict == 1 ) {
+      conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
+      conf_infLP += $8;
+   }
+}
+/^  bound exceed. LP :/ {
+   if( inconflict == 1 ) {
+      conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
+      conf_bndEx += $9;
    }
 }
 /^  strong branching :/ {
-   if( inconflict == 1 )
-   {
-      conftime += $4;
-      #confclauses += $6 + $8;
-      #confliterals += $6 * $7 + $8 * $9;
+   if( inconflict == 1 ) {
+      conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
+      conf_strbr += $8;
    }
 }
 /^  pseudo solution  :/ {
-   if( inconflict == 1 )
-   {
-      conftime += $4;
-      #confclauses += $6 + $8;
-      #confliterals += $6 * $7 + $8 * $9;
+   if( inconflict == 1 ) {
+      conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
+      conf_pseud += $8;
    }
 }
 /^  applied globally :/ {
-   if( inconflict == 1 )
-   {
-      confclauses += $7;
-      #confliterals += $7 * $8;
+   if( inconflict == 1 ) {
+      confclauses += $8; confliterals += $8 * $9;
    }
 }
 /^  applied locally  :/ {
-   if( inconflict == 1 )
-   {
-      confclauses += $7;
-      #confliterals += $7 * $8;
+   if( inconflict == 1 ) {
+      confclauses += $8; confliterals += $8 * $9;
    }
 }
 /^Separators         :/ {
@@ -789,6 +792,13 @@ BEGIN {
          tablehead3 = tablehead3"+------+-------+-------+-------+-------+-----------+----------------+----------------+---------+--------+-------+";
       }
 
+      if( analyseconf == 1 )
+      {
+         tablehead1 = tablehead1"---------------Conflict Analysis---------------+";
+         tablehead2 = tablehead2"  inf  |  bnd  |  sbr  |  pro  |  psol |  time |";
+         tablehead3 = tablehead3"-------+-------+-------+-------+---------------+";
+      }
+
       if( printsoltimes == 1 )
       {
          tablehead1 = tablehead1"----------+---------+";
@@ -797,7 +807,7 @@ BEGIN {
       }
 
       tablehead1 = tablehead1"--------\n";
-      tablehead2 = tablehead2"       \n";
+      tablehead2 = tablehead2"        \n";
       tablehead3 = tablehead3"--------\n";
 
       printf(tablehead1);
@@ -807,8 +817,8 @@ BEGIN {
       headerprinted = 1;
    }
 
-   if( (!onlyinsolufile || prob in solstatus || prob in bestdual) &&
-       (!onlyintestfile || intestfile[prob]) )
+   if( (!onlyinsolufile || prob in solstatus) &&
+       (!onlyintestfile || intestfile[prob]) ) #&& conf_prop + conf_infLP + conf_bndEx + conf_pseud + conf_strbr > 0 )
    {
       # if sol file could not be read, fix status to be "unknown"
       if( !(prob in solstatus) )
@@ -957,22 +967,26 @@ BEGIN {
       ssim += simplex;
       ssblp += sblps;
       conftottime += conftime;
+      sumconfs += (conf_infLP + conf_bndEx + conf_prop + conf_pseud + conf_strbr);
       overheadtottime += overheadtime;
       basictime = tottime - conftime - overheadtime;
 
       nodegeom = nodegeom^((nprobs-1)/nprobs) * max(bbnodes, 1.0)^(1.0/nprobs);
       sblpgeom = sblpgeom^((nprobs-1)/nprobs) * max(sblps, 1.0)^(1.0/nprobs);
       timegeom = timegeom^((nprobs-1)/nprobs) * max(tottime, 1.0)^(1.0/nprobs);
-      conftimegeom = conftimegeom^((nprobs-1)/nprobs) * max(conftime, 1.0)^(1.0/nprobs);
       overheadtimegeom = overheadtimegeom^((nprobs-1)/nprobs) * max(overheadtime, 1.0)^(1.0/nprobs);
       basictimegeom = basictimegeom^((nprobs-1)/nprobs) * max(basictime, 1.0)^(1.0/nprobs);
 
       shiftednodegeom = shiftednodegeom^((nprobs-1)/nprobs) * max(bbnodes+nodegeomshift, 1.0)^(1.0/nprobs);
       shiftedsblpgeom = shiftedsblpgeom^((nprobs-1)/nprobs) * max(sblps+sblpgeomshift, 1.0)^(1.0/nprobs);
       shiftedtimegeom = shiftedtimegeom^((nprobs-1)/nprobs) * max(tottime+timegeomshift, 1.0)^(1.0/nprobs);
-      shiftedconftimegeom = shiftedconftimegeom^((nprobs-1)/nprobs) * max(conftime+timegeomshift, 1.0)^(1.0/nprobs);
       shiftedoverheadtimegeom = shiftedoverheadtimegeom^((nprobs-1)/nprobs) * max(overheadtime+timegeomshift, 1.0)^(1.0/nprobs);
       shiftedbasictimegeom = shiftedbasictimegeom^((nprobs-1)/nprobs) * max(basictime+timegeomshift, 1.0)^(1.0/nprobs);
+
+      shiftedconftimegeom = shiftedconftimegeom^((nprobs-1)/nprobs) * max(conftime+timegeomshift, 1.0)^(1.0/nprobs);
+      shiftedconfgeom = shiftedconfgeom^((nprobs-1)/nprobs) * max((conf_infLP + conf_bndEx + conf_prop + conf_pseud + conf_strbr)+timegeomshift, 1.0)^(1.0/nprobs);
+      conftimegeom = conftimegeom^((nprobs-1)/nprobs) * max(conftime, 1.0)^(1.0/nprobs);
+      confgeom = confgeom^((nprobs-1)/nprobs) * max((conf_infLP + conf_bndEx + conf_prop + conf_pseud + conf_strbr), 1.0)^(1.0/nprobs);
 
       timetobestgeom = timetobestgeom^((nprobs-1)/nprobs) * max(timetobest,1.0)^(1.0/nprobs);
       timetofirstgeom = timetofirstgeom^((nprobs-1)/nprobs) * max(timetofirst,1.0)^(1.0/nprobs);
@@ -1019,7 +1033,7 @@ BEGIN {
          {
             setStatusToLimit();
          }
-         else if( (db == -infty || isPrimalDualBoundEqual()) && !isPrimalBoundBetter() )
+         else if( (db == -infty || isPrimalDualBoundEqual()) && !isPrimalBoundBetter() && !isDualBoundBetter() )
          {
             status = "ok";
             pass++;
@@ -1176,7 +1190,12 @@ BEGIN {
                       namelength, pprob, cons, vars, niter, db, pb, markersym, bbnodes, markersym, tottime)  >TEXFILE;
             }
 
-            if( printsoltimes )
+	    if( analyseconf == 1 )
+            {
+               printf(" & %7d & %7d & %7d & %7d & %7d & %7.1f ", conf_infLP, conf_bndEx, conf_strbr, conf_prop, conf_pseud, conftime)  >TEXFILE;
+            }
+
+	    if( printsoltimes )
                printf(" & %7.1f & %7.1f", timetofirst, timetobest) > TEXFILE;
             printf("\\\\\n") > TEXFILE;
          }
@@ -1191,8 +1210,14 @@ BEGIN {
          {
             printf("%-*s  %-5s %7d %7d %7d %7d %11d %16.9g %16.9g %9d %8d %7.1f ",
                    namelength, shortprob, probtype, origcons, origvars, cons, vars, niter, db, pb, simpiters, bbnodes, tottime);
+	 }
+
+	 if( analyseconf == 1 )
+         {
+            printf("%7d %7d %7d %7d %7d %7.1f ", conf_infLP, conf_bndEx, conf_strbr, conf_prop, conf_pseud, conftime);
          }
-         if( printsoltimes )
+
+	 if( printsoltimes )
             printf(" %9.1f %9.1f ", timetofirst, timetobest);
 
          printf("%s\n", status);
@@ -1271,16 +1296,22 @@ END {
       printf("\\midrule\n")                                                 >TEXFILE;
       printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f",
              "Total", nprobs, sbab, stottime) >TEXFILE;
+      if( analyseconf )
+         printf(" & %8.1f & %8.1f", allconfs, conftime) > TEXFILE;
       if( printsoltimes )
          printf(" & %8.1f & %8.1f", stimetofirst, stimetobest) > TEXFILE;
       printf("\\\\\n") > TEXFILE;
       printf("%-14s      &        &        &                &                &        & %9d & %8.1f",
              "Geom. Mean", nodegeom, timegeom) >TEXFILE;
+      if( analyseconf )
+         printf(" & %8.1f & %8.1f", confgeom, conftimegeom) > TEXFILE;
       if( printsoltimes )
          printf(" & %8.1f & %8.1f", timetofirstgeom, timetobestgeom) > TEXFILE;
       printf("\\\\\n") > TEXFILE;
       printf("%-14s      &        &        &                &                &        & %9d & %8.1f ",
              "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
+      if( analyseconf )
+         printf(" & %8.1f & %8.1f", shiftedconfgeom, shiftedconftimegeom) > TEXFILE;
       if( printsoltimes )
          printf(" & %8.1f & %8.1f", shiftedtimetofirstgeom, shiftedtimetobestgeom) > TEXFILE;
       printf("\\\\\n") > TEXFILE;
@@ -1292,11 +1323,17 @@ END {
    tablefooter2 = "  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom.";
    tablefooter3 = "----------------------------------------------------------------";
 
-   if( printsoltimes )
+   if( analyseconf == 1 )
    {
-      tablefooter1 = tablefooter1"--------[ToFirst]-----------[ToLast]-----";
-      tablefooter2 = tablefooter2"     total     geom.     total     geom.";
-      tablefooter3 = tablefooter3"-----------------------------------------";
+      tablebottom1 = tablebottom1"--------[NConf]-----------[ConfTime]-----";
+      tablebottom2 = tablebottom2"     total     geom.     total     geom.";
+      tablebottom3 = tablebottom3"-----------------------------------------";
+   }
+
+   if( printsoltimes ) {
+      tablebottom1 = tablebottom1"--------[ToFirst]-----------[ToLast]-----";
+      tablebottom2 = tablebottom2"     total     geom.     total     geom.";
+      tablebottom3 = tablebottom3"-----------------------------------------";
    }
 
    tablefooter1 = tablefooter1"\n";
@@ -1309,12 +1346,18 @@ END {
 
    printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f ",
           nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
+
+   if( analyseconf == 1 )
+     printf("%9d %9.1f %9.1f %9.1f", sumconfs, confgeom, conftottime, conftimegeom);
+
    if( printsoltimes )
-      printf("%9.1f %9.1f %9.1f %9.1f", stimetofirst, timetofirstgeom, stimetobest, timetobestgeom);
+      printf("%9.1f %9.1f %9.1f %9.1f", stimetofirst, timetofirstgeom, stimetobest, timetobestgeoconftimem);
 
    printf("\n");
    printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f ",
           nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
+   if( analyseconf )
+      printf("          %9.1f           %9.1f ", shiftedconfgeom, shiftedconftimegeom);
    if( printsoltimes )
       printf("          %9.1f           %9.1f ", shiftedtimetofirstgeom, shiftedtimetobestgeom);
    printf("\n");

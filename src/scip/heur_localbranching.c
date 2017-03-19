@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -238,7 +238,7 @@ SCIP_DECL_EVENTEXEC(eventExecLocalbranching)
    /* interrupt solution process of sub-SCIP */
    if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
    {
-      SCIPdebugMessage("interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
+      SCIPdebugMsg(scip, "interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
@@ -278,7 +278,7 @@ SCIP_DECL_HEURFREE(heurFreeLocalbranching)
    assert( heurdata != NULL );
 
    /* free heuristic data */
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -323,10 +323,8 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_SOL* bestsol;                        /* best solution so far                                  */
    SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
 
-   SCIP_Real timelimit;                      /* timelimit for subscip (equals remaining time of scip) */
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem                   */
    SCIP_Real upperbound;
-   SCIP_Real memorylimit;
 
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
    SCIP_VAR** vars;
@@ -335,8 +333,6 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    int i;
 
    SCIP_Bool success;
-
-   SCIP_RETCODE retcode;
 
    assert(heur != NULL);
    assert(scip != NULL);
@@ -408,9 +404,16 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
+   /* check whether there is enough time and memory left */
+   SCIP_CALL( SCIPcheckCopyLimits(scip, &success) );
+
+   /* abort if no time is left or not enough memory to create a copy of SCIP */
+   if( !success )
+      return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
 
-   SCIPdebugMessage("running localbranching heuristic ...\n");
+   SCIPdebugMsg(scip, "running localbranching heuristic ...\n");
 
    /* get the data of the variables and the best solution */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -420,21 +423,25 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_CALL( SCIPcreate(&subscip) );
 
    /* create the variable mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
    success = FALSE;
 
    /* create a problem copy as sub SCIP */
-   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "localbranching", NULL, NULL, 0, heurdata->uselprows, heurdata->copycuts, &success) );
+   SCIP_CALL( SCIPcopyLargeNeighborhoodSearch(scip, subscip, varmapfw, "localbranching", NULL, NULL, 0, heurdata->uselprows,
+         heurdata->copycuts, &success, NULL) );
 
    /* create event handler for LP events */
    eventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecLocalbranching, NULL) );
    if( eventhdlr == NULL )
    {
+      /* free hash map */
+      SCIPhashmapFree(&varmapfw);
+
       SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
       return SCIP_PLUGINNOTFOUND;
    }
-   SCIPdebugMessage("Copying the plugins was %ssuccessful.\n", success ? "" : "not ");
+   SCIPdebugMsg(scip, "Copying the plugins was %ssuccessful.\n", success ? "" : "not ");
 
    for (i = 0; i < nvars; ++i)
       subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
@@ -452,38 +459,22 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
-#ifndef SCIP_DEBUG
-   /* disable output to console */
+#ifdef SCIP_DEBUG
+   /* for debugging, enable full output */
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
+#else
+   /* disable statistic timing inside sub SCIP and output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 #endif
 
-   /* check whether there is enough time and memory left */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-   if( !SCIPisInfinity(scip, timelimit) )
-      timelimit -= SCIPgetSolvingTime(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-
-   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
-   if( !SCIPisInfinity(scip, memorylimit) )
-   {
-      memorylimit -= SCIPgetMemUsed(scip)/1048576.0;
-      memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
-   }
-
-   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
-   if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
-      goto TERMINATE;
-
-   /* disable statistic timing inside sub SCIP */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
-
    /* set limits for the subproblem */
+   SCIP_CALL( SCIPcopyLimits(scip, subscip) );
    heurdata->nodelimit = nsubnodes;
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", MAX(10, nsubnodes/10)) );
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->bestsollimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
    /* forbid recursive call of heuristics and separators solving subMIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
@@ -512,27 +503,18 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
-   /* disable conflict analysis */
-   if( !SCIPisParamFixed(subscip, "conflict/useprop") )
+   /* enable conflict analysis and restrict conflict pool */
+   if( !SCIPisParamFixed(subscip, "conflict/enable") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useprop", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
    }
-   if( !SCIPisParamFixed(subscip, "conflict/useinflp") )
+   if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
    {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useinflp", FALSE) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
    }
-   if( !SCIPisParamFixed(subscip, "conflict/useboundlp") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/useboundlp", FALSE) );
-   }
-   if( !SCIPisParamFixed(subscip, "conflict/usesb") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usesb", FALSE) );
-   }
-   if( !SCIPisParamFixed(subscip, "conflict/usepseudo") )
-   {
-      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/usepseudo", FALSE) );
-   }
+
+   /* speed up sub-SCIP by not checking dual LP feasibility */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
 
    /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
     * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the
@@ -548,7 +530,6 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    SCIP_CALL( addLocalBranchingConstraint(scip, subscip, subvars, heurdata) );
 
    /* add an objective cutoff */
-   cutoff = SCIPinfinity(scip);
    assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
    upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
@@ -576,9 +557,14 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    }
 
    /* solve the subproblem */
-   SCIPdebugMessage("solving local branching subproblem with neighborhoodsize %d and maxnodes %" SCIP_LONGINT_FORMAT "\n",
+   SCIPdebugMsg(scip, "solving local branching subproblem with neighborhoodsize %d and maxnodes %" SCIP_LONGINT_FORMAT "\n",
       heurdata->curneighborhoodsize, nsubnodes);
-   retcode = SCIPsolve(subscip);
+
+
+   /* Errors in solving the subproblem should not kill the overall solving process
+    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
+    */
+   SCIP_CALL_ABORT( SCIPsolve(subscip) );
 
    /* drop LP events of sub-SCIP */
    if( !heurdata->uselprows )
@@ -588,22 +574,11 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       SCIP_CALL( SCIPdropEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, -1) );
    }
 
-   /* Errors in solving the subproblem should not kill the overall solving process
-    * Hence, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-    */
-   if( retcode != SCIP_OKAY )
-   {
-#ifndef NDEBUG
-      SCIP_CALL( retcode );
-#endif
-      SCIPwarningMessage(scip, "Error while solving subproblem in local branching heuristic; sub-SCIP terminated with code <%d>\n",retcode);
-   }
-
    /* print solving statistics of subproblem if we are in SCIP's debug mode */
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
 
    heurdata->usednodes += SCIPgetNNodes(subscip);
-   SCIPdebugMessage("local branching used %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " nodes\n",
+   SCIPdebugMsg(scip, "local branching used %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " nodes\n",
       SCIPgetNNodes(subscip), nsubnodes);
 
    /* check, whether a solution was found */
@@ -624,7 +599,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       }
       if( success )
       {
-         SCIPdebugMessage("-> accepted solution of value %g\n", SCIPgetSolOrigObj(subscip, subsols[i]));
+         SCIPdebugMsg(scip, "-> accepted solution of value %g\n", SCIPgetSolOrigObj(subscip, subsols[i]));
          *result = SCIP_FOUNDSOL;
       }
    }
@@ -635,7 +610,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    case SCIP_STATUS_OPTIMAL:
    case SCIP_STATUS_BESTSOLLIMIT:
       heurdata->callstatus = WAITFORNEWSOL; /* new solution will immediately be installed at next call */
-      SCIPdebugMessage(" -> found new solution\n");
+      SCIPdebugMsg(scip, " -> found new solution\n");
       break;
 
    case SCIP_STATUS_NODELIMIT:
@@ -644,12 +619,12 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       heurdata->callstatus = EXECUTE;
       heurdata->curneighborhoodsize = (heurdata->emptyneighborhoodsize + heurdata->curneighborhoodsize)/2;
       heurdata->curminnodes *= 2;
-      SCIPdebugMessage(" -> node limit reached: reduced neighborhood to %d, increased minnodes to %d\n",
+      SCIPdebugMsg(scip, " -> node limit reached: reduced neighborhood to %d, increased minnodes to %d\n",
          heurdata->curneighborhoodsize, heurdata->curminnodes);
       if( heurdata->curneighborhoodsize <= heurdata->emptyneighborhoodsize )
       {
          heurdata->callstatus = WAITFORNEWSOL;
-         SCIPdebugMessage(" -> new neighborhood was already proven to be empty: wait for new solution\n");
+         SCIPdebugMsg(scip, " -> new neighborhood was already proven to be empty: wait for new solution\n");
       }
       break;
 
@@ -659,7 +634,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
       heurdata->curneighborhoodsize += heurdata->curneighborhoodsize/2;
       heurdata->curneighborhoodsize = MAX(heurdata->curneighborhoodsize, heurdata->emptyneighborhoodsize + 2);
       heurdata->callstatus = EXECUTE;
-      SCIPdebugMessage(" -> neighborhood is empty: increased neighborhood to %d\n", heurdata->curneighborhoodsize);
+      SCIPdebugMsg(scip, " -> neighborhood is empty: increased neighborhood to %d\n", heurdata->curneighborhoodsize);
       break;
 
    case SCIP_STATUS_UNKNOWN:
@@ -672,7 +647,7 @@ SCIP_DECL_HEUREXEC(heurExecLocalbranching)
    case SCIP_STATUS_UNBOUNDED:
    default:
       heurdata->callstatus = WAITFORNEWSOL;
-      SCIPdebugMessage(" -> unexpected sub-MIP status <%d>: waiting for new solution\n", SCIPgetStatus(subscip));
+      SCIPdebugMsg(scip, " -> unexpected sub-MIP status <%d>: waiting for new solution\n", SCIPgetStatus(subscip));
       break;
    }
 
@@ -695,11 +670,10 @@ SCIP_RETCODE SCIPincludeHeurLocalbranching(
    )
 {
    SCIP_HEURDATA* heurdata;
-
    SCIP_HEUR* heur;
 
    /* create Localbranching primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -761,7 +735,6 @@ SCIP_RETCODE SCIPincludeHeurLocalbranching(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
          "should uct node selection be used at the beginning of the search?",
          &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }

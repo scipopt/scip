@@ -1978,11 +1978,11 @@ SCIP_RETCODE selectVarRecursive(
    else
    {
 
-      if( SCIPgetDepthLimit(scip) <= (SCIPgetDepth(scip) + recursiondepth) )
+      if( SCIP_MAXTREEDEPTH <= (SCIPgetDepth(scip) + recursiondepth) )
       {
          /* we need at least 'recursiondepth' space for the branching */
          SCIPdebugMessage("Cannot perform probing in selectVarRecursive, depth limit reached. Current:<%i>, Max:<%i>\n",
-            SCIPgetDepthLimit(scip), SCIPgetDepth(scip) + recursiondepth);
+            SCIP_MAXTREEDEPTH, SCIPgetDepth(scip) + recursiondepth);
          status->depthtoosmall = TRUE;
          SCIPstatistic( statistics->ndepthreached++; )
       }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -531,7 +531,7 @@ SCIP_RETCODE applyOptcumulative(
 
          SCIPdebugMessage("************ try solution <%g>\n", SCIPgetSolOrigObj(scip, sol));
 
-         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, TRUE, &stored) );
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, TRUE, &stored) );
 
          if( stored )
             *result = SCIP_FOUNDSOL;
@@ -610,26 +610,27 @@ SCIP_DECL_HEURFREE(heurFreeOptcumulative)
       SCIPfreeBlockMemoryArray(scip, &(heurdata->machineassignments[m]->nones), heurdata->machineassignments[m]->sassignments);
       SCIPfreeBlockMemoryArray(scip, &(heurdata->machineassignments[m]->keys), heurdata->machineassignments[m]->sassignments);
       SCIPfreeBlockMemoryArray(scip, &(heurdata->machineassignments[m]->feasibles), heurdata->machineassignments[m]->sassignments);
+      SCIPfreeBlockMemoryArray(scip, &(heurdata->machineassignments[m]->solvals), heurdata->machineassignments[m]->sassignments);
       SCIPfreeBlockMemoryArray(scip, &(heurdata->machineassignments[m]->vars), heurdata->machineassignments[m]->sassignments);
       SCIPfreeBlockMemory(scip, &heurdata->machineassignments[m]); /*lint !e866*/
 
-      SCIPfreeMemoryArray(scip, &heurdata->vars[m]);
-      SCIPfreeMemoryArray(scip, &heurdata->binvars[m]);
-      SCIPfreeMemoryArray(scip, &heurdata->durations[m]);
-      SCIPfreeMemoryArray(scip, &heurdata->demands[m]);
+      SCIPfreeBlockMemoryArray(scip, &heurdata->vars[m], heurdata->machines[m]);
+      SCIPfreeBlockMemoryArray(scip, &heurdata->binvars[m], heurdata->machines[m]);
+      SCIPfreeBlockMemoryArray(scip, &heurdata->durations[m], heurdata->machines[m]);
+      SCIPfreeBlockMemoryArray(scip, &heurdata->demands[m], heurdata->machines[m]);
    }
 
    /* free arrays */
-   SCIPfreeMemoryArrayNull(scip, &heurdata->machineassignments);
-   SCIPfreeMemoryArrayNull(scip, &heurdata->demands);
-   SCIPfreeMemoryArrayNull(scip, &heurdata->durations);
-   SCIPfreeMemoryArrayNull(scip, &heurdata->binvars);
-   SCIPfreeMemoryArrayNull(scip, &heurdata->vars);
+   SCIPfreeBlockMemoryArrayNull(scip, &heurdata->machineassignments, heurdata->nmachines);
+   SCIPfreeBlockMemoryArrayNull(scip, &heurdata->demands, heurdata->nmachines);
+   SCIPfreeBlockMemoryArrayNull(scip, &heurdata->durations, heurdata->nmachines);
+   SCIPfreeBlockMemoryArrayNull(scip, &heurdata->binvars, heurdata->nmachines);
+   SCIPfreeBlockMemoryArrayNull(scip, &heurdata->vars, heurdata->nmachines);
 
-   SCIPfreeMemoryArrayNull(scip, &heurdata->capacities);
-   SCIPfreeMemoryArrayNull(scip, &heurdata->machines);
+   SCIPfreeBlockMemoryArrayNull(scip, &heurdata->capacities, heurdata->nmachines);
+   SCIPfreeBlockMemoryArrayNull(scip, &heurdata->machines, heurdata->nmachines);
 
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -694,7 +695,7 @@ SCIP_RETCODE SCIPincludeHeurOptcumulative(
    SCIP_HEURDATA* heurdata;
 
    /* create optcumulative primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    heurdataReset(scip, heurdata);
 
    /* include primal heuristic */
@@ -745,18 +746,18 @@ SCIP_RETCODE SCIPinitHeurOptcumulative(
    assert(heurdata != NULL);
 
    /* copy the problem data */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->vars, nmachines) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->binvars, nmachines) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->durations, nmachines) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->demands, nmachines) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->machineassignments, nmachines) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->vars, nmachines) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->binvars, nmachines) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->durations, nmachines) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->demands, nmachines) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->machineassignments, nmachines) );
 
    for( m = 0; m < nmachines; ++m )
    {
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->vars[m], vars[m], machines[m]) ); /*lint !e866*/
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->binvars[m], binvars[m], machines[m]) ); /*lint !e866*/
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->durations[m], durations[m], machines[m]) ); /*lint !e866*/
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->demands[m], demands[m], machines[m]) ); /*lint !e866*/
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &heurdata->vars[m], vars[m], machines[m]) ); /*lint !e866*/
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &heurdata->binvars[m], binvars[m], machines[m]) ); /*lint !e866*/
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &heurdata->durations[m], durations[m], machines[m]) ); /*lint !e866*/
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &heurdata->demands[m], demands[m], machines[m]) ); /*lint !e866*/
 
       /* sort variable w.r.t. their objective coefficient */
       SCIPsortPtrPtrIntInt((void**)heurdata->binvars[m], (void**)heurdata->vars[m],
@@ -772,8 +773,8 @@ SCIP_RETCODE SCIPinitHeurOptcumulative(
       heurdata->machineassignments[m]->sassignments = njobs;
    }
 
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->machines, machines, nmachines) );
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->capacities, capacities, nmachines) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &heurdata->machines, machines, nmachines) );
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &heurdata->capacities, capacities, nmachines) );
 
    heurdata->nmachines = nmachines;
    heurdata->njobs = njobs;

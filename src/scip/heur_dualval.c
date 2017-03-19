@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -101,6 +101,7 @@ struct SCIP_HeurData
    SCIP_Real             mingap;             /**< don't run the heuristic if the gap is less than mingap */
    SCIP_Real             lambdaslack;        /**< the value added to the objective function */
    SCIP_Real             lambdaobj;          /**< the value the original objective function is scaled with */
+   int                   integervarssize;    /**< size of integervars array */
    int                   nintegervars;       /**< number of integer variables in the original problem */
    int                   heurverblevel;      /**< verblevel, range is 0 to 4 */
    int                   nlpverblevel;       /**< sets verblevel of the included nlp */
@@ -239,30 +240,32 @@ SCIP_RETCODE releaseHashmapEntries(
    SCIP_Bool             isvarmap            /**< are the entries variables or constraints? */
    )
 {
-   SCIP_HASHMAPLIST* list;
-   int nlists;
+   int nentries;
    int i;
 
    assert(scip != NULL);
    assert(hashmap != NULL);
 
-   nlists = SCIPhashmapGetNLists(hashmap);
+   nentries = SCIPhashmapGetNEntries(hashmap);
 
-   for( i = 0; i < nlists; ++i )
+   for( i = 0; i < nentries; ++i )
    {
-      for( list = SCIPhashmapGetList(hashmap, i); list != NULL; list = SCIPhashmapListGetNext(list) )
+      SCIP_HASHMAPENTRY* entry;
+      entry = SCIPhashmapGetEntry(hashmap, i);
+
+      if( entry != NULL )
       {
          if( isvarmap )
          {
             SCIP_VAR* var;
-            var = (SCIP_VAR*) SCIPhashmapListGetImage(list);
+            var = (SCIP_VAR*) SCIPhashmapEntryGetImage(entry);
 
             SCIP_CALL( SCIPreleaseVar(scip, &var) );
          }
          else
          {
             SCIP_CONS* cons;
-            cons = (SCIP_CONS*) SCIPhashmapListGetImage(list);
+            cons = (SCIP_CONS*) SCIPhashmapEntryGetImage(entry);
 
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
          }
@@ -279,21 +282,22 @@ SCIP_RETCODE releaseHashmapNLPRows(
    SCIP_HASHMAP*         hashmap             /**< hashmap */
    )
 {
-   SCIP_HASHMAPLIST* list;
-   int nlists;
+   int nentries;
    int i;
 
    assert(scip != NULL);
    assert(hashmap != NULL);
 
-   nlists = SCIPhashmapGetNLists(hashmap);
+   nentries = SCIPhashmapGetNEntries(hashmap);
 
-   for( i = 0; i < nlists; ++i )
+   for( i = 0; i < nentries; ++i )
    {
-      for( list = SCIPhashmapGetList(hashmap, i); list != NULL; list = SCIPhashmapListGetNext(list) )
+      SCIP_HASHMAPENTRY* entry;
+      entry = SCIPhashmapGetEntry(hashmap, i);
+      if( entry != NULL )
       {
          SCIP_NLROW* nlrow;
-         nlrow = (SCIP_NLROW*) SCIPhashmapListGetImage(list);
+         nlrow = (SCIP_NLROW*) SCIPhashmapEntryGetImage(entry);
 
          SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );
       }
@@ -370,7 +374,8 @@ SCIP_RETCODE addLinearConstraints(
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
             SCIPgetNVarsLinear(scip, conss[i]), SCIPgetVarsLinear(scip, conss[i]), SCIPgetValsLinear(scip, conss[i]),
             0, NULL, 0, NULL, NULL,
-            SCIPgetLhsLinear(scip, conss[i]), SCIPgetRhsLinear(scip, conss[i])) );
+            SCIPgetLhsLinear(scip, conss[i]), SCIPgetRhsLinear(scip, conss[i]),
+            SCIP_EXPRCURV_LINEAR) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPhashmapInsert(heurdata->conss2nlrow, conss[i], nlrow) );
@@ -428,7 +433,8 @@ SCIP_RETCODE addVarboundConstraints(
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
             2, vars, coefs,
             0, NULL, 0, NULL, NULL,
-            SCIPgetLhsVarbound(scip, conss[i]), SCIPgetRhsVarbound(scip, conss[i])) );
+            SCIPgetLhsVarbound(scip, conss[i]), SCIPgetRhsVarbound(scip, conss[i]),
+            SCIP_EXPRCURV_LINEAR) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPhashmapInsert(heurdata->conss2nlrow, conss[i], nlrow) );
@@ -494,7 +500,8 @@ SCIP_RETCODE addLogicOrConstraints(
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
             nvars, SCIPgetVarsLogicor(scip, conss[i]), coefs,
             0, NULL, 0, NULL, NULL,
-            1.0, 1.0) );
+            1.0, SCIPinfinity(scip),
+            SCIP_EXPRCURV_LINEAR) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPhashmapInsert(heurdata->conss2nlrow, conss[i], nlrow) );
@@ -586,7 +593,8 @@ SCIP_RETCODE addSetppcConstraints(
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
             nvars, SCIPgetVarsSetppc(scip, conss[i]), coefs,
             0, NULL, 0, NULL, NULL,
-            lhs, rhs) );
+            lhs, rhs,
+            SCIP_EXPRCURV_LINEAR) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPhashmapInsert(heurdata->conss2nlrow, conss[i], nlrow) );
@@ -657,7 +665,8 @@ SCIP_RETCODE addKnapsackConstraints(
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
             nvars, SCIPgetVarsKnapsack(scip, conss[i]), coefs,
             0, NULL, 0, NULL, NULL,
-            -SCIPinfinity(scip), (SCIP_Real)SCIPgetCapacityKnapsack(scip, conss[i])) );
+            -SCIPinfinity(scip), (SCIP_Real)SCIPgetCapacityKnapsack(scip, conss[i]),
+            SCIP_EXPRCURV_LINEAR) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPhashmapInsert(heurdata->conss2nlrow, conss[i], nlrow) );
@@ -772,7 +781,7 @@ SCIP_RETCODE createSolFromSubScipSol(
          subvar = (SCIP_VAR*) SCIPhashmapGetImage(heurdata->varsciptosubscip, (void*)var);
          if( subvar == NULL )
          {
-            SCIPdebugMessage("return14 : abort building solution since a variable was not in our list\n");
+            SCIPdebugMsg(scip, "return14 : abort building solution since a variable was not in our list\n");
 
             SCIP_CALL( SCIPfreeSol(scip, sol) );
             return SCIP_OKAY;
@@ -823,7 +832,6 @@ SCIP_RETCODE createSubSCIP(
 {
    SCIP_HASHMAP* varsmap;
    SCIP_HASHMAP* conssmap;
-   SCIP_HASHMAPLIST* list;
    SCIP_CONSHDLR*  conshdlrindicator;
    SCIP_CONSHDLR*  conshdlrindi;
    SCIP_CONSHDLR*  conshdlrlin;
@@ -926,10 +934,10 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPcreate(&heurdata->subscip) );
 
    /* create variable hash mapping scip -> subscip */
-   SCIP_CALL( SCIPhashmapCreate(&varsmap, SCIPblkmem(scip), MAX ( nvars, 5 )));
+   SCIP_CALL( SCIPhashmapCreate(&varsmap, SCIPblkmem(scip), nvars) );
 
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->switchedvars, SCIPblkmem(scip), SCIPcalcHashtableSize(heurdata->maxcalls*2)) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->switchedvars2, SCIPblkmem(scip), SCIPcalcHashtableSize(heurdata->maxcalls*2)) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->switchedvars, SCIPblkmem(scip), heurdata->maxcalls) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->switchedvars2, SCIPblkmem(scip), heurdata->maxcalls) );
 
    /* create sub-SCIP copy of CIP, copy interesting plugins */
    success = TRUE;
@@ -938,7 +946,7 @@ SCIP_RETCODE createSubSCIP(
 
    if( success == FALSE )
    {
-      SCIPdebugMessage("In heur_dualval: failed to copy some plugins to sub-SCIP, continue anyway\n");
+      SCIPdebugMsg(scip, "In heur_dualval: failed to copy some plugins to sub-SCIP, continue anyway\n");
    }
 
    /* copy parameter settings */
@@ -956,10 +964,10 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPcopyVars(scip, heurdata->subscip, varsmap, NULL, NULL, NULL, 0, TRUE) );
 
    /* copy as many constraints as possible */
-   SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPcalcHashtableSize(2 * SCIPgetNConss(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&conssmap, SCIPblkmem(scip), SCIPgetNConss(scip)) );
    SCIP_CALL( SCIPcopyConss(scip, heurdata->subscip, varsmap, conssmap, TRUE, FALSE, &heurdata->subscipisvalid) );
 
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->origsubscipConsMap, SCIPblkmem(scip), SCIPcalcHashtableSize(2 * SCIPgetNConss(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->origsubscipConsMap, SCIPblkmem(scip), SCIPgetNConss(scip)) );
 
    nconss = SCIPgetNOrigConss(scip);
    conss = SCIPgetOrigConss(scip);
@@ -977,11 +985,11 @@ SCIP_RETCODE createSubSCIP(
       SCIP_CALL( SCIPhashmapInsert(heurdata->origsubscipConsMap, transcons, subcons) );
    }
 
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->conss2nlrow, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNConss(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->conss2nlrow, SCIPblkmem(scip), SCIPgetNConss(scip)) );
 
    if( !heurdata->subscipisvalid )
    {
-      SCIPdebugMessage("In heur_dualval: failed to copy some constraints to sub-SCIP, continue anyway\n");
+      SCIPdebugMsg(scip, "In heur_dualval: failed to copy some constraints to sub-SCIP, continue anyway\n");
    }
 
    SCIP_CALL( SCIPgetVarsData(heurdata->subscip, &subvars, &heurdata->nsubvars, NULL, NULL, NULL, NULL) );
@@ -990,17 +998,19 @@ SCIP_RETCODE createSubSCIP(
    /* create hashmaps from scip transformed vars to subscip original vars, and vice versa
     * capture variables in SCIP and sub-SCIP
     * catch global bound change events */
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->varsubsciptoscip, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNOrigVars(scip))) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->varsciptosubscip, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNOrigVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->varsubsciptoscip, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->varsciptosubscip, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
 
    /* we need to get all subscip variables, also those which are copies of fixed variables from the main scip,
     * therefore we iterate over the hashmap */
-   for( i = 0; i < SCIPhashmapGetNLists(varsmap); ++i )
+   for( i = 0; i < SCIPhashmapGetNEntries(varsmap); ++i )
    {
-      for( list = SCIPhashmapGetList(varsmap, i); list != NULL; list = SCIPhashmapListGetNext(list) )
+      SCIP_HASHMAPENTRY* entry;
+      entry = SCIPhashmapGetEntry(varsmap, i);
+      if( entry != NULL )
       {
-         var    = (SCIP_VAR*) SCIPhashmapListGetOrigin(list);
-         subvar = (SCIP_VAR*) SCIPhashmapListGetImage(list);
+         var    = (SCIP_VAR*) SCIPhashmapEntryGetOrigin(entry);
+         subvar = (SCIP_VAR*) SCIPhashmapEntryGetImage(entry);
 
          assert( SCIPvarGetProbindex(subvar) >= 0 );
          assert( SCIPvarGetProbindex(subvar) <= heurdata->nsubvars );
@@ -1028,12 +1038,12 @@ SCIP_RETCODE createSubSCIP(
    conshdlrindicator  = SCIPfindConshdlr(scip, "indicator");
    nconsindicator = SCIPconshdlrGetNConss(conshdlrindicator);
 
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->slacktoindivarsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(nconsindicator)) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->indicators, SCIPblkmem(scip), SCIPcalcHashtableSize(nconsindicator)) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->indicopymap, SCIPblkmem(scip), SCIPcalcHashtableSize(nconsindicator)) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->indicopymapback, SCIPblkmem(scip), SCIPcalcHashtableSize(nconsindicator)) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->slackvarlbMap, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNOrigVars(scip))) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->slackvarubMap, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNOrigVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->slacktoindivarsmap, SCIPblkmem(scip), nconsindicator) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->indicators, SCIPblkmem(scip), nconsindicator) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->indicopymap, SCIPblkmem(scip), nconsindicator) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->indicopymapback, SCIPblkmem(scip), nconsindicator) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->slackvarlbMap, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->slackvarubMap, SCIPblkmem(scip), SCIPgetNOrigVars(scip)) );
 
    for( i = 0; i < nconsindicator; i++ )
    {
@@ -1052,15 +1062,16 @@ SCIP_RETCODE createSubSCIP(
 
    /* we introduce slackvariables s+ and s- for each constraint to ensure that the problem is feasible
     * we want to minimize over the sum of these variables, so set the objective to 1 */
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->relaxcons, SCIPblkmem(scip), SCIPcalcHashtableSize(nvars)) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->relaxconsindi, SCIPblkmem(scip), SCIPcalcHashtableSize(nvars)) );
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->slack2var, SCIPblkmem(scip), SCIPcalcHashtableSize(2*nvars)) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->relaxcons, SCIPblkmem(scip), nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->relaxconsindi, SCIPblkmem(scip), nvars) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->slack2var, SCIPblkmem(scip), nvars) );
 
    vars = SCIPgetOrigVars(scip);
    nvars = SCIPgetNOrigVars(scip);
 
-   SCIP_CALL( SCIPallocMemoryArray(heurdata->subscip, &(heurdata->integervars), nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(heurdata->integervars), nvars) );
    BMSclearMemoryArray(heurdata->integervars, nvars);
+   heurdata->integervarssize = nvars;
    j = 0;
 
    /* here we relax the variables (or indicator constraints, since indicator variables cannot be relaxed) */
@@ -1916,7 +1927,7 @@ SCIP_RETCODE storeSolution(
        * (normally then this happens in most ipopt runs that may follow)       */
       SCIPheurSetFreq(heur, -1);
 
-      SCIPdebugMessage("return10 : turn off heuristic, ipopt error\n");
+      SCIPdebugMsg(scip, "return10 : turn off heuristic, ipopt error\n");
 
       if( heurdata->heurverblevel > 1 )
       {
@@ -2030,7 +2041,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
    /* don't use the heuristic, if the gap is small so we don't expect to get better solutions than already found */
    if( SCIPgetGap(scip) * 100 < heurdata->mingap )
    {
-      SCIPdebugMessage("return13 : gap is less than mingap\n");
+      SCIPdebugMsg(scip, "return13 : gap is less than mingap\n");
       return SCIP_OKAY;
    }
 
@@ -2047,7 +2058,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
    /* quit the recursion if we have found a solution */
    if( heurdata->solfound )
    {
-      SCIPdebugMessage("return1 : already found solution \n");
+      SCIPdebugMsg(scip, "return1 : already found solution \n");
       return SCIP_OKAY;
    }
 
@@ -2056,7 +2067,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
    /* not initialized */
    if( heurdata->subscip == NULL )
    {
-      SCIPdebugMessage("return2 : subscip is NULL\n");
+      SCIPdebugMsg(scip, "return2 : subscip is NULL\n");
       return SCIP_OKAY;
    }
 
@@ -2080,7 +2091,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
 
    if( SCIPgetStatus(heurdata->subscip) == SCIP_STATUS_INFEASIBLE )
    {
-      SCIPdebugMessage("return 4 : subscip is infeasible\n");
+      SCIPdebugMsg(scip, "return 4 : subscip is infeasible\n");
 
       *result = SCIP_DIDNOTFIND;
       heurdata->prevInfeasible = TRUE;
@@ -2215,7 +2226,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
    /* if we are infeasible, we can't do anything*/
    if( SCIPgetStatus(heurdata->subscip) == SCIP_STATUS_INFEASIBLE )
    {
-      SCIPdebugMessage("return4 : the subscip is infeasible\n");
+      SCIPdebugMsg(scip, "return4 : the subscip is infeasible\n");
 
       SCIP_CALL( freeMemory(scip, heurdata, transsol, NULL, NULL, NULL, TRUE, TRUE) );
 
@@ -2223,7 +2234,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
    }
 
    maxslack = maximalslack(scip, heurdata);
-   SCIPdebugMessage("origObj: %f\n", SCIPgetSolOrigObj(heurdata->subscip, bestsol));
+   SCIPdebugMsg(scip, "origObj: %f\n", SCIPgetSolOrigObj(heurdata->subscip, bestsol));
    SCIP_CALL( SCIPgetOrigVarsData(heurdata->subscip, &subvars, &nsubvars, &nsubbinvars, &nsubintvars, NULL, NULL) );
    objvalue = 0.0;
    assert(bestsol != NULL);
@@ -2243,7 +2254,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       if( SCIPisGE(scip, SCIPgetSolOrigObj(heurdata->subscip, bestsol) - objvalue, heurdata->prevobjective) && maxslack > 0 )
       {
          heurdata->nonimprovingRounds++;
-         SCIPdebugMessage("nonimpr rounds %d prevobj %f \n", heurdata->nonimprovingRounds, heurdata->prevobjective);
+         SCIPdebugMsg(scip, "nonimpr rounds %d prevobj %f \n", heurdata->nonimprovingRounds, heurdata->prevobjective);
 
          /* leave, if we have not improved some iterations*/
          if( heurdata->nonimprovingRounds > heurdata->maxcalls/8 )
@@ -2260,7 +2271,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
             heurdata->solfound = TRUE;
             heurdata->switchdifferent = TRUE;
 
-            SCIPdebugMessage("return11 : solution did not improve\n");
+            SCIPdebugMsg(scip, "return11 : solution did not improve\n");
 
             return SCIP_OKAY;
          }
@@ -2305,7 +2316,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
    {
       *result = SCIP_DIDNOTFIND;
 
-      SCIPdebugMessage("return12 : equal maxranks\n");
+      SCIPdebugMsg(scip, "return12 : equal maxranks\n");
 
       SCIP_CALL( freeMemory(scip, heurdata, transsol, absranks, ranks, sortedvars, TRUE, TRUE ) );
       return SCIP_OKAY;
@@ -2412,7 +2423,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       /* if we have exceeded our iterations limit give up without any solution */
       if( heurdata->usedcalls >= heurdata->maxcalls )
       {
-         SCIPdebugMessage("return5 : reached iteration limit\n");
+         SCIPdebugMsg(scip, "return5 : reached iteration limit\n");
 
          SCIP_CALL( freeMemory(scip, heurdata, transsol, absranks, ranks, sortedvars, FALSE, TRUE) );
          *result = SCIP_DIDNOTFIND;
@@ -2430,7 +2441,7 @@ SCIP_RETCODE SCIPapplyHeurDualval(
       /* just to go up in the recursion */
       if( *result == SCIP_DIDNOTFIND || heurdata->solfound || heurdata->prevInfeasible )
       {
-         SCIPdebugMessage("return6 : go up\n");
+         SCIPdebugMsg(scip, "return6 : go up\n");
 
          /* here we only go up one step and try another switch (switch the same variables again is forbidden
           * since they are contained in switchedvars) */
@@ -2459,14 +2470,14 @@ SCIP_RETCODE SCIPapplyHeurDualval(
    {
       /* something horrible must have happened that we decided to give up completely on this heuristic */
       *result = SCIP_DIDNOTFIND;
-      SCIPdebugMessage("return7 : subscip was set NULL\n");
+      SCIPdebugMsg(scip, "return7 : subscip was set NULL\n");
 
       SCIP_CALL( freeMemory(scip, heurdata, transsol, absranks, ranks, sortedvars, FALSE, TRUE) );
       return SCIP_OKAY;
    }
    assert(!SCIPisTransformed(heurdata->subscip));
 
-   SCIPdebugMessage("return8 : cannot switch any variable\n");
+   SCIPdebugMsg(scip, "return8 : cannot switch any variable\n");
 
    SCIP_CALL( freeMemory(scip, heurdata, transsol, absranks, ranks, sortedvars, FALSE, TRUE) );
 
@@ -2488,7 +2499,7 @@ SCIP_DECL_HEURFREE(heurFreeDualval)
 
    heurdata = SCIPheurGetData(heur);
 
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
 
    return SCIP_OKAY;
 }
@@ -2525,7 +2536,7 @@ SCIP_DECL_HEURINIT(heurInitDualval)
    if( SCIPheurGetFreqofs(heur) == 0 )
       SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP | HEUR_TIMING);
 
-   SCIP_CALL( SCIPhashmapCreate(&heurdata->dualvalues, SCIPblkmem(scip), 1024) );
+   SCIP_CALL( SCIPhashmapCreate(&heurdata->dualvalues, SCIPblkmem(scip), 512) );
 
    return SCIP_OKAY;
 }
@@ -2546,8 +2557,7 @@ SCIP_DECL_HEUREXIT(heurExitDualval)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   if( heurdata->integervars != NULL )
-      SCIPfreeMemoryArray(heurdata->subscip, &heurdata->integervars);
+   SCIPfreeBlockMemoryArrayNull(scip, &heurdata->integervars, heurdata->integervarssize);
 
    if( heurdata->subscip != NULL)
    {
@@ -2562,39 +2572,79 @@ SCIP_DECL_HEUREXIT(heurExitDualval)
       }
       SCIP_CALL( SCIPhashmapRemoveAll(heurdata->dualvalues) );
       SCIPhashmapFree(&heurdata->dualvalues);
+
+      if( heurdata->varsciptosubscip != NULL )
+      {
+         SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->varsciptosubscip, TRUE) );
+
+         SCIPhashmapFree(&heurdata->varsciptosubscip);
+      }
+      if( heurdata->origsubscipConsMap != NULL )
+      {
+         SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->origsubscipConsMap, FALSE) );
+
+         SCIPhashmapFree(&heurdata->origsubscipConsMap);
+      }
+      if( heurdata->relaxcons != NULL )
+      {
+         SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->relaxcons, FALSE) );
+
+         SCIPhashmapFree(&heurdata->relaxcons);
+      }
+      if( heurdata->conss2nlrow != NULL )
+      {
+         SCIP_CALL( releaseHashmapNLPRows(heurdata->subscip, heurdata->conss2nlrow) );
+
+         SCIPhashmapFree(&heurdata->conss2nlrow);
+      }
+      if( heurdata->slack2var != NULL )
+      {
+         SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->slack2var, TRUE) );
+
+         SCIPhashmapFree(&heurdata->slack2var);
+      }
+      if( heurdata->indicopymap != NULL )
+      {
+         SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->indicopymap, TRUE) );
+
+         SCIPhashmapFree(&heurdata->indicopymap);
+      }
+      if( heurdata->indicopymapback != NULL )
+      {
+         SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->indicopymapback, TRUE) );
+
+         SCIPhashmapFree(&heurdata->indicopymapback);
+      }
+      if( heurdata->relaxconsindi != NULL )
+      {
+         SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->relaxconsindi, FALSE) );
+
+         SCIPhashmapFree(&heurdata->relaxconsindi);
+      }
+      if( heurdata->slackvarlbMap != NULL )
+      {
+         SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->slackvarlbMap, TRUE) );
+
+         SCIPhashmapFree(&heurdata->slackvarlbMap);
+      }
+      if( heurdata->slackvarubMap != NULL )
+      {
+         SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->slackvarubMap, TRUE) );
+
+         SCIPhashmapFree(&heurdata->slackvarubMap);
+      }
+
+      if( heurdata->subscip != NULL )
+      {
+         SCIP_CALL( freeSubSCIP(scip, heurdata) );
+      }
    }
 
-   if( heurdata->varsciptosubscip != NULL )
-   {
-      SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->varsciptosubscip, TRUE) );
-
-      SCIPhashmapFree(&heurdata->varsciptosubscip);
-   }
    if( heurdata->varsubsciptoscip != NULL )
    {
       SCIP_CALL( releaseHashmapEntries(scip, heurdata->varsubsciptoscip, TRUE) );
 
       SCIPhashmapFree(&heurdata->varsubsciptoscip);
-   }
-   if( heurdata->origsubscipConsMap != NULL )
-   {
-      SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->origsubscipConsMap, FALSE) );
-
-      SCIPhashmapFree(&heurdata->origsubscipConsMap);
-   }
-   if( heurdata->switchedvars != NULL )
-   {
-      SCIPhashmapFree(&heurdata->switchedvars);
-   }
-   if( heurdata->switchedvars2 != NULL )
-   {
-      SCIPhashmapFree(&heurdata->switchedvars2);
-   }
-   if( heurdata->relaxcons != NULL )
-   {
-      SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->relaxcons, FALSE) );
-
-      SCIPhashmapFree(&heurdata->relaxcons);
    }
    if( heurdata->slacktoindivarsmap != NULL )
    {
@@ -2608,52 +2658,13 @@ SCIP_DECL_HEUREXIT(heurExitDualval)
 
       SCIPhashmapFree(&heurdata->indicators);
    }
-   if( heurdata->conss2nlrow != NULL )
+   if( heurdata->switchedvars != NULL )
    {
-      SCIP_CALL( releaseHashmapNLPRows(heurdata->subscip, heurdata->conss2nlrow) );
-
-      SCIPhashmapFree(&heurdata->conss2nlrow);
+      SCIPhashmapFree(&heurdata->switchedvars);
    }
-   if( heurdata->slack2var != NULL )
+   if( heurdata->switchedvars2 != NULL )
    {
-      SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->slack2var, TRUE) );
-
-      SCIPhashmapFree(&heurdata->slack2var);
-   }
-   if( heurdata->indicopymap != NULL )
-   {
-      SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->indicopymap, TRUE) );
-
-      SCIPhashmapFree(&heurdata->indicopymap);
-   }
-   if( heurdata->indicopymapback != NULL )
-   {
-      SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->indicopymapback, TRUE) );
-
-      SCIPhashmapFree(&heurdata->indicopymapback);
-   }
-   if( heurdata->relaxconsindi != NULL )
-   {
-      SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->relaxconsindi, FALSE) );
-
-      SCIPhashmapFree(&heurdata->relaxconsindi);
-   }
-   if( heurdata->slackvarlbMap != NULL )
-   {
-      SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->slackvarlbMap, TRUE) );
-
-      SCIPhashmapFree(&heurdata->slackvarlbMap);
-   }
-   if( heurdata->slackvarubMap != NULL )
-   {
-      SCIP_CALL( releaseHashmapEntries(heurdata->subscip, heurdata->slackvarubMap, TRUE) );
-
-      SCIPhashmapFree(&heurdata->slackvarubMap);
-   }
-
-   if( heurdata->subscip != NULL )
-   {
-      SCIP_CALL( freeSubSCIP(scip, heurdata) );
+      SCIPhashmapFree(&heurdata->switchedvars2);
    }
 
    /* reset some flags and counters */
@@ -2759,7 +2770,7 @@ SCIP_RETCODE SCIPincludeHeurDualval(
    SCIP_HEUR* heur = NULL;
 
    /* create dualval primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
    BMSclearMemory(heurdata);
 
    /* include primal heuristic */

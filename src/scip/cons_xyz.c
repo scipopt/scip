@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -102,7 +102,7 @@ SCIP_DECL_LINCONSUPGD(linconsUpgdXyz)
 
    if( upgrade )
    {
-      SCIPdebugMessage("upgrading constraint <%s> to xyz constraint\n", SCIPconsGetName(cons));
+      SCIPdebugMsg(scip, "upgrading constraint <%s> to xyz constraint\n", SCIPconsGetName(cons));
 
       /* create the bin Xyz constraint (an automatically upgraded constraint is always unmodifiable) */
       assert(!SCIPconsIsModifiable(cons));
@@ -321,6 +321,17 @@ SCIP_DECL_CONSSEPASOL(consSepasolXyz)
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpXyz)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+
+
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -601,7 +612,7 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
          consFreeXyz, consInitXyz, consExitXyz,
          consInitpreXyz, consExitpreXyz, consInitsolXyz, consExitsolXyz,
          consDeleteXyz, consTransXyz, consInitlpXyz,
-         consSepalpXyz, consSepasolXyz, consEnfolpXyz, consEnfopsXyz, consCheckXyz,
+         consSepalpXyz, consSepasolXyz, consEnfolpXyz, consEnforelaxXyz, consEnfopsXyz, consCheckXyz,
          consPropXyz, consPresolXyz, consRespropXyz, consLockXyz,
          consActiveXyz, consDeactiveXyz,
          consEnableXyz, consDisableXyz, consDelvarsXyz,
@@ -644,6 +655,8 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropXyz) );
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpXyz, consSepasolXyz, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransXyz) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxXyz) );
+
 #endif
 
 #ifdef LINCONSUPGD_PRIORITY

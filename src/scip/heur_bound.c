@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -127,14 +127,14 @@ SCIP_RETCODE applyBoundHeur(
       if( lower )
       {
          SCIP_CALL( SCIPfixVarProbing(scip, var, SCIPvarGetLbLocal(var)) );
-         SCIPdebugMessage("fixing %d: variable <%s> to lower bound <%g> (%d pseudo cands)\n",
+         SCIPdebugMsg(scip, "fixing %d: variable <%s> to lower bound <%g> (%d pseudo cands)\n",
             v, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPgetNPseudoBranchCands(scip));
       }
       /* fix variable to upper bound */
       else
       {
          SCIP_CALL( SCIPfixVarProbing(scip, var, SCIPvarGetUbLocal(var)) );
-         SCIPdebugMessage("fixing %d: variable <%s> to upper bound <%g> (%d pseudo cands)\n",
+         SCIPdebugMsg(scip, "fixing %d: variable <%s> to upper bound <%g> (%d pseudo cands)\n",
             v, SCIPvarGetName(var), SCIPvarGetUbLocal(var), SCIPgetNPseudoBranchCands(scip));
       }
 
@@ -156,7 +156,7 @@ SCIP_RETCODE applyBoundHeur(
          /* propagate fixings */
          SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, &infeasible, NULL) );
 
-         SCIPdebugMessage("backtracking ended with %sfeasible problem\n", (infeasible ? "in" : ""));
+         SCIPdebugMsg(scip, "backtracking ended with %sfeasible problem\n", (infeasible ? "in" : ""));
 
          if( infeasible )
 #endif
@@ -164,7 +164,7 @@ SCIP_RETCODE applyBoundHeur(
       }
    }
 
-   SCIPdebugMessage("probing ended with %sfeasible problem\n", infeasible ? "in" : "");
+   SCIPdebugMsg(scip, "probing ended with %sfeasible problem\n", infeasible ? "in" : "");
 
    /*************************** Probing LP Solving ***************************/
 
@@ -174,7 +174,7 @@ SCIP_RETCODE applyBoundHeur(
       SCIP_LPSOLSTAT lpstatus;
       SCIP_Bool lperror;
 
-      SCIPdebugMessage("starting solving bound-heur LP at time %g, LP iterations: %" SCIP_LONGINT_FORMAT "\n",
+      SCIPdebugMsg(scip, "starting solving bound-heur LP at time %g, LP iterations: %" SCIP_LONGINT_FORMAT "\n",
          SCIPgetSolvingTime(scip), SCIPgetNLPIterations(scip));
 
       /* solve LP; errors in the LP solver should not kill the overall solving process, if the LP is just needed for a
@@ -194,12 +194,12 @@ SCIP_RETCODE applyBoundHeur(
 #else
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) );
 #endif
-      SCIPdebugMessage("ending solving bound-heur LP at time %g\n", SCIPgetSolvingTime(scip));
+      SCIPdebugMsg(scip, "ending solving bound-heur LP at time %g\n", SCIPgetSolvingTime(scip));
 
       lpstatus = SCIPgetLPSolstat(scip);
 
-      SCIPdebugMessage(" -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
-      SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, lpstatus);
+      SCIPdebugMsg(scip, " -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
+      SCIPdebugMsg(scip, " -> error=%u, status=%d\n", lperror, lpstatus);
 
       /* check if this is a feasible solution */
       if( lpstatus == SCIP_LPSOLSTAT_OPTIMAL && !lperror )
@@ -218,7 +218,7 @@ SCIP_RETCODE applyBoundHeur(
 
          if( success )
          {
-            SCIPdebugMessage("bound heuristic found roundable primal solution: obj=%g\n",
+            SCIPdebugMsg(scip, "bound heuristic found roundable primal solution: obj=%g\n",
                SCIPgetSolOrigObj(scip, newsol));
 
             /* check solution for feasibility, and add it to solution store if possible.
@@ -233,7 +233,7 @@ SCIP_RETCODE applyBoundHeur(
 
             if( stored )
             {
-               SCIPdebugMessage("found feasible solution:\n");
+               SCIPdebugMsg(scip, "found feasible solution:\n");
                *result = SCIP_FOUNDSOL;
             }
          }
@@ -277,7 +277,7 @@ SCIP_DECL_HEURFREE(heurFreeBound)
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
 
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -313,7 +313,7 @@ SCIP_DECL_HEUREXEC(heurExecBound)
    if( SCIPgetBestSol(scip) != NULL && heurdata->onlywithoutsol )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("apply bound heuristic at node %lld\n",
+   SCIPdebugMsg(scip, "apply bound heuristic at node %lld\n",
       SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
    if( !SCIPisLPConstructed(scip) )
@@ -322,9 +322,12 @@ SCIP_DECL_HEUREXEC(heurExecBound)
 
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-      /* return if infeasibility was detected during LP construction */
+      /* manually cut off the node if the LP construction detected infeasibility (heuristics cannot return such a result) */
       if( cutoff )
+      {
+         SCIP_CALL( SCIPcutoffNode(scip, SCIPgetCurrentNode(scip)) );
          return SCIP_OKAY;
+      }
 
       SCIP_CALL( SCIPflushLP(scip) );
    }
@@ -354,7 +357,7 @@ SCIP_RETCODE SCIPincludeHeurBound(
    SCIP_HEUR* heur;
 
    /* create bound primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,

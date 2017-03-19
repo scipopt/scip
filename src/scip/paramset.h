@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   paramset.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for handling parameter settings
  * @author Tobias Achterberg
  * @author Timo Berthold
@@ -435,36 +436,46 @@ SCIP_RETCODE SCIPparamsetCopyParams(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler of target SCIP */
    );
 
-/** checks value of SCIP_Bool parameter; issues a warning message if value is invalid */
+/** checks whether value of SCIP_Bool parameter is valid */
 extern
-SCIP_RETCODE SCIPparamCheckBool(
+SCIP_Bool SCIPparamIsValidBool(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Bool             value               /**< value to check */
    );
 
-/** checks value of string parameter; issues a warning message if value is invalid */
+/** checks whether value of integer parameter is valid */
 extern
-SCIP_RETCODE SCIPparamCheckString(
+SCIP_Bool SCIPparamIsValidInt(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   const char*           value               /**< value to check */
+   int                   value               /**< value to check */
    );
 
-/** checks value of character parameter; issues a warning message if value is invalid */
+/** checks whether value of SCIP_Longint parameter is valid */
 extern
-SCIP_RETCODE SCIPparamCheckChar(
+SCIP_Bool SCIPparamIsValidLongint(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_Longint          value               /**< value to check */
+   );
+
+/** checks whether value of SCIP_Real parameter is valid */
+extern
+SCIP_Bool SCIPparamIsValidReal(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Real             value               /**< value to check */
+   );
+
+/** checks whether value of char parameter is valid */
+extern
+SCIP_Bool SCIPparamIsValidChar(
+   SCIP_PARAM*           param,              /**< parameter */
    const char            value               /**< value to check */
    );
 
-/** checks value of SCIP_Longint parameter; issues a warning message if value is invalid */
+/** checks whether value of string parameter is valid */
 extern
-SCIP_RETCODE SCIPparamCheckLongint(
+SCIP_Bool SCIPparamIsValidString(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Longint          value               /**< value to check */
+   const char*           value               /**< value to check */
    );
 
 /** sets value of SCIP_Bool parameter */
@@ -474,6 +485,7 @@ SCIP_RETCODE SCIPparamSetBool(
    SCIP_SET*             set,                /**< global SCIP settings, or NULL if param change method should not be called */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Bool             value,              /**< new value of the parameter */
+   SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
@@ -484,6 +496,7 @@ SCIP_RETCODE SCIPparamSetInt(
    SCIP_SET*             set,                /**< global SCIP settings, or NULL if param change method should not be called */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    int                   value,              /**< new value of the parameter */
+   SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
@@ -494,6 +507,7 @@ SCIP_RETCODE SCIPparamSetLongint(
    SCIP_SET*             set,                /**< global SCIP settings, or NULL if param change method should not be called */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Longint          value,              /**< new value of the parameter */
+   SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
@@ -504,6 +518,7 @@ SCIP_RETCODE SCIPparamSetReal(
    SCIP_SET*             set,                /**< global SCIP settings, or NULL if param change method should not be called */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_Real             value,              /**< new value of the parameter */
+   SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
@@ -514,6 +529,7 @@ SCIP_RETCODE SCIPparamSetChar(
    SCIP_SET*             set,                /**< global SCIP settings, or NULL if param change method should not be called */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    char                  value,              /**< new value of the parameter */
+   SCIP_Bool             initialize,         /**< is this the initialization of the parameter? */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 

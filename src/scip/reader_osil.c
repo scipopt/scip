@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -20,6 +20,8 @@
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+#define _USE_MATH_DEFINES   /* to get M_PI and M_E on Windows */  /*lint !750 */
 
 #include <assert.h>
 #include <string.h>
@@ -39,15 +41,6 @@
 #define READER_NAME             "osilreader"
 #define READER_DESC             "file reader for OS instance language (OSiL) format"
 #define READER_EXTENSION        "osil"
-
-#ifndef M_PI
-#define M_PI           3.141592653589793238462643
-#endif
-
-#ifndef M_E
-#define M_E            2.7182818284590452354
-#endif
-
 
 /*
  * Data structures
@@ -995,9 +988,9 @@ SCIP_RETCODE readLinearCoefs(
    }
 
  CLEANUP:
-   SCIPfreeBufferArrayNull(scip, &start);
-   SCIPfreeBufferArrayNull(scip, &idx);
    SCIPfreeBufferArrayNull(scip, &val);
+   SCIPfreeBufferArrayNull(scip, &idx);
+   SCIPfreeBufferArrayNull(scip, &start);
 
    return SCIP_OKAY;
 }
@@ -2165,6 +2158,7 @@ SCIP_RETCODE readNonlinearExprs(
 
          *constype = NONLINEAR;
       }
+   /* cppcheck-suppress unusedLabel */
    TERMINATE:
       SCIP_CALL( SCIPexprtreeFree(&exprtree) );
 
@@ -2379,6 +2373,7 @@ SCIP_RETCODE readSOScons(
 
       /* add the SOS constraint */
       SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
    return SCIP_OKAY;

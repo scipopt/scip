@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -125,7 +125,7 @@ SCIP_RETCODE propagateRootRedcostBinvar(
 
       if( rootlpobjval - rootredcost > cutoffbound )
       {
-         SCIPdebugMessage("globally fix binary variable <%s> to 1.0\n", SCIPvarGetName(var));
+         SCIPdebugMsg(scip, "globally fix binary variable <%s> to 1.0\n", SCIPvarGetName(var));
 
          SCIP_CALL( SCIPchgVarLb(scip, var, 1.0) );
          (*nchgbds)++;
@@ -141,7 +141,7 @@ SCIP_RETCODE propagateRootRedcostBinvar(
 
       if( rootlpobjval + rootredcost > cutoffbound )
       {
-         SCIPdebugMessage("globally fix binary variable <%s> to 0.0\n", SCIPvarGetName(var));
+         SCIPdebugMsg(scip, "globally fix binary variable <%s> to 0.0\n", SCIPvarGetName(var));
 
          SCIP_CALL( SCIPchgVarUb(scip, var, 0.0) );
          (*nchgbds)++;
@@ -216,7 +216,7 @@ SCIP_RETCODE propagateRedcostBinvar(
 
       if( redcost > requiredredcost )
       {
-         SCIPdebugMessage("variable <%s>: fixed 0.0 (requiredredcost <%g>, redcost <%g>)\n",
+         SCIPdebugMsg(scip, "variable <%s>: fixed 0.0 (requiredredcost <%g>, redcost <%g>)\n",
             SCIPvarGetName(var), requiredredcost, redcost);
 
          SCIP_CALL( SCIPchgVarUb(scip, var, 0.0) );
@@ -231,7 +231,7 @@ SCIP_RETCODE propagateRedcostBinvar(
 
       if( -redcost > requiredredcost )
       {
-         SCIPdebugMessage("variable <%s>: fixed 1.0 (requiredredcost <%g>, redcost <%g>)\n",
+         SCIPdebugMsg(scip, "variable <%s>: fixed 1.0 (requiredredcost <%g>, redcost <%g>)\n",
             SCIPvarGetName(var), requiredredcost, redcost);
 
          SCIP_CALL( SCIPchgVarLb(scip, var, 1.0) );
@@ -267,14 +267,14 @@ SCIP_RETCODE propagateRedcostBinvar(
 
       if( -lbredcost > requiredredcost && ubredcost > requiredredcost )
       {
-         SCIPdebugMessage("variable <%s>: cutoff (requiredredcost <%g>, lbredcost <%g>, ubredcost <%g>)\n",
+         SCIPdebugMsg(scip, "variable <%s>: cutoff (requiredredcost <%g>, lbredcost <%g>, ubredcost <%g>)\n",
             SCIPvarGetName(var), requiredredcost, lbredcost, ubredcost);
 
          (*cutoff) = TRUE;
       }
       else if( -lbredcost > requiredredcost )
       {
-         SCIPdebugMessage("variable <%s>: fixed 1.0 (requiredredcost <%g>, redcost <%g>, lbredcost <%g>)\n",
+         SCIPdebugMsg(scip, "variable <%s>: fixed 1.0 (requiredredcost <%g>, redcost <%g>, lbredcost <%g>)\n",
             SCIPvarGetName(var), requiredredcost, redcost, lbredcost);
 
          SCIP_CALL( SCIPchgVarLb(scip, var, 1.0) );
@@ -282,7 +282,7 @@ SCIP_RETCODE propagateRedcostBinvar(
       }
       else if( ubredcost > requiredredcost )
       {
-         SCIPdebugMessage("variable <%s>: fixed 0.0 (requiredredcost <%g>, redcost <%g>, ubredcost <%g>)\n",
+         SCIPdebugMsg(scip, "variable <%s>: fixed 0.0 (requiredredcost <%g>, redcost <%g>, ubredcost <%g>)\n",
             SCIPvarGetName(var), requiredredcost, redcost, ubredcost);
 
          SCIP_CALL( SCIPchgVarUb(scip, var, 0.0) );
@@ -349,7 +349,7 @@ SCIP_RETCODE propagateRedcostVar(
             if( strengthen )
             {
                /* strengthen upper bound */
-               SCIPdebugMessage("redcost strengthening upper bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
+               SCIPdebugMsg(scip, "redcost strengthening upper bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
                   SCIPvarGetName(var), oldlb, oldub, oldlb, newub, cutoffbound, lpobjval, redcost);
                SCIP_CALL( SCIPchgVarUb(scip, var, newub) );
                (*nchgbds)++;
@@ -400,7 +400,7 @@ SCIP_RETCODE propagateRedcostVar(
             if( strengthen )
             {
                /* strengthen lower bound */
-               SCIPdebugMessage("redcost strengthening lower bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
+               SCIPdebugMsg(scip, "redcost strengthening lower bound: <%s> [%g,%g] -> [%g,%g] (ub=%g, lb=%g, redcost=%g)\n",
                   SCIPvarGetName(var), oldlb, oldub, newlb, oldub, cutoffbound, lpobjval, redcost);
                SCIP_CALL( SCIPchgVarLb(scip, var, newlb) );
                (*nchgbds)++;
@@ -443,6 +443,7 @@ SCIP_DECL_PROPCOPY(propCopyRedcost)
 }
 
 /** destructor of propagator to free user data (called when SCIP is exiting) */
+/**! [SnippetPropFreeRedcost] */
 static
 SCIP_DECL_PROPFREE(propFreeRedcost)
 {  /*lint --e{715}*/
@@ -452,12 +453,13 @@ SCIP_DECL_PROPFREE(propFreeRedcost)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   SCIPfreeMemory(scip, &propdata);
+   SCIPfreeBlockMemory(scip, &propdata);
 
    SCIPpropSetData(prop, NULL);
 
    return SCIP_OKAY;
 }
+/**! [SnippetPropFreeRedcost] */
 
 /** solving process initialization method of propagator (called when branch and bound process is about to begin) */
 static
@@ -568,7 +570,7 @@ SCIP_DECL_PROPEXEC(propExecRedcost)
    /* compute the required reduced cost which are needed for a binary variable to be fixed */
    requiredredcost = cutoffbound - lpobjval;
 
-   SCIPdebugMessage("lpobjval <%g>, cutoffbound <%g>, max reduced <%g>, propgate binary %u, use implics %u\n",
+   SCIPdebugMsg(scip, "lpobjval <%g>, cutoffbound <%g>, max reduced <%g>, propgate binary %u, use implics %u\n",
       lpobjval, cutoffbound, propdata->maxredcost, propbinvars, propdata->usefullimplics);
 
    /* check reduced costs for non-basic columns */
@@ -606,14 +608,14 @@ SCIP_DECL_PROPEXEC(propExecRedcost)
    {
       *result = SCIP_CUTOFF;
 
-      SCIPdebugMessage("node %" SCIP_LONGINT_FORMAT ": detected cutoff\n",
+      SCIPdebugMsg(scip, "node %" SCIP_LONGINT_FORMAT ": detected cutoff\n",
          SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
    }
    else if( nchgbds > 0 )
    {
       *result = SCIP_REDUCEDDOM;
 
-      SCIPdebugMessage("node %" SCIP_LONGINT_FORMAT ": %d bound changes (max redcost <%g>)\n",
+      SCIPdebugMsg(scip, "node %" SCIP_LONGINT_FORMAT ": %d bound changes (max redcost <%g>)\n",
          SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) , nchgbds, propdata->maxredcost);
    }
 
@@ -636,7 +638,7 @@ SCIP_RETCODE SCIPincludePropRedcost(
    SCIP_PROP* prop;
 
    /* create redcost propagator data */
-   SCIP_CALL( SCIPallocMemory(scip, &propdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &propdata) );
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   def.h
+ * @ingroup INTERNALAPI
  * @brief  common defines and data types used in all packages of SCIP
  * @author Tobias Achterberg
  */
@@ -43,6 +44,13 @@
       + __GNUC_MINOR__ * 10                             \
       + __GNUC_PATCHLEVEL__)
 #endif
+#endif
+
+/*
+ * define whether compiler allows variadic macros
+ */
+#if defined(_MSC_VER) || ( __STDC_VERSION__ >= 199901L )
+#define SCIP_HAVE_VARIADIC_MACROS 1
 #endif
 
 /*
@@ -86,9 +94,9 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                321 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               2 /**< SCIP sub version number */
-#define SCIP_COPYRIGHT   "Copyright (C) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_VERSION                400 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               1 /**< SCIP sub version number */
+#define SCIP_COPYRIGHT   "Copyright (C) 2002-2017 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*
@@ -183,7 +191,13 @@ extern "C" {
 #define MIN3(x,y,z) ((x) <= (y) ? MIN(x,z) : MIN(y,z))  /**< returns minimum of x, y, and z */
 #endif
 
-
+#ifndef COPYSIGN
+#if defined(_MSC_VER) && (_MSC_VER < 1800)
+#define COPYSIGN _copysign
+#else
+#define COPYSIGN copysign
+#endif
+#endif
 
 /*
  * Pointers
@@ -207,17 +221,37 @@ extern "C" {
 /* we use SIZE_MAX / 2 to detect negative sizes which got a very large value when casting to size_t */
 #define SCIP_MAXMEMSIZE              (SIZE_MAX/2) /**< maximum size of allocated memory (array) */
 
-#define SCIP_HASHSIZE_PARAMS         4099 /**< size of hash table in parameter name tables */
-#define SCIP_HASHSIZE_NAMES          131101 /**< size of hash table in name tables */
-#define SCIP_HASHSIZE_CUTPOOLS       131101 /**< size of hash table in cut pools */
-#define SCIP_HASHSIZE_CLIQUES        131101 /**< size of hash table in clique tables */
-#define SCIP_HASHSIZE_NAMES_SMALL    8011   /**< size of hash table in name tables for small problems */
-#define SCIP_HASHSIZE_CUTPOOLS_SMALL 8011   /**< size of hash table in cut pools for small problems */
-#define SCIP_HASHSIZE_CLIQUES_SMALL  8011   /**< size of hash table in clique tables for small problems */
-#define SCIP_HASHSIZE_VBC            131101 /**< size of hash map for node -> nodenum mapping used for VBC output */
+#define SCIP_HASHSIZE_PARAMS        2048 /**< size of hash table in parameter name tables */
+#define SCIP_HASHSIZE_NAMES          500 /**< size of hash table in name tables */
+#define SCIP_HASHSIZE_CUTPOOLS       500 /**< size of hash table in cut pools */
+#define SCIP_HASHSIZE_CLIQUES        500 /**< size of hash table in clique tables */
+#define SCIP_HASHSIZE_NAMES_SMALL    100 /**< size of hash table in name tables for small problems */
+#define SCIP_HASHSIZE_CUTPOOLS_SMALL 100 /**< size of hash table in cut pools for small problems */
+#define SCIP_HASHSIZE_CLIQUES_SMALL  100 /**< size of hash table in clique tables for small problems */
+#define SCIP_HASHSIZE_VBC            500 /**< size of hash map for node -> nodenum mapping used for VBC output */
 
 #define SCIP_DEFAULT_MEM_ARRAYGROWFAC   1.2 /**< memory growing factor for dynamically allocated arrays */
 #define SCIP_DEFAULT_MEM_ARRAYGROWINIT    4 /**< initial size of dynamically allocated arrays */
+
+#define SCIP_MEM_NOLIMIT (SCIP_Longint)SCIP_LONGINT_MAX/1048576.0/**< initial size of dynamically allocated arrays */
+
+/*
+ * Tree settings
+ */
+
+#define SCIP_MAXTREEDEPTH             65534  /**< maximal allowed depth of the branch-and-bound tree */
+
+/*
+ * Probing scoring settings
+ */
+
+#define SCIP_PROBINGSCORE_PENALTYRATIO    2  /**< ratio for penalizing too small fractionalities in diving heuristics.
+                                              *   if the fractional part of a variable is smaller than a given threshold
+                                              *   the corresponding score gets penalized. due to numerical troubles
+                                              *   we will flip a coin whenever SCIPisEQ(scip, fractionality, threshold)
+                                              *   evaluates to true. this parameter defines the chance that this results
+                                              *   in penalizing the score, i.e., there is 1:2 chance for penalizing.
+                                              */
 
 /*
  * Global debugging settings
@@ -235,7 +269,7 @@ extern "C" {
  *  @note In optimized mode this macro has no effect. That means, in case of an error it has to be ensured that code
  *        terminates with an error code or continues safely.
  */
-#define SCIPABORT() assert(FALSE)
+#define SCIPABORT() assert(FALSE) /*lint --e{527} */
 
 #define SCIP_CALL_ABORT_QUIET(x)  do { if( (x) != SCIP_OKAY ) SCIPABORT(); } while( FALSE )
 #define SCIP_CALL_QUIET(x)        do { SCIP_RETCODE _restat_; if( (_restat_ = (x)) != SCIP_OKAY ) return _restat_; } while( FALSE )
@@ -244,7 +278,7 @@ extern "C" {
 
 #define SCIP_CALL_ABORT(x) do                                                                                 \
                        {                                                                                      \
-                          SCIP_RETCODE _restat_;                                                              \
+                          SCIP_RETCODE _restat_; /*lint -e{506,774}*/                                         \
                           if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
                           {                                                                                   \
                              SCIPerrorMessage("Error <%d> in function call\n", _restat_);                     \
@@ -265,7 +299,7 @@ extern "C" {
 
 #define SCIP_CALL(x)   do                                                                                     \
                        {                                                                                      \
-                          SCIP_RETCODE _restat_;                                                              \
+                          SCIP_RETCODE _restat_; /*lint -e{506,774}*/                                         \
                           if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
                           {                                                                                   \
                              SCIPerrorMessage("Error <%d> in function call\n", _restat_);                     \
@@ -305,6 +339,19 @@ extern "C" {
                        }                                                                                      \
                        while( FALSE )
 
+#define SCIP_CALL_FINALLY(x, y)   do                                                                                     \
+                       {                                                                                      \
+                          SCIP_RETCODE _restat_;                                                              \
+                          if( (_restat_ = (x)) != SCIP_OKAY )                                                 \
+                          {                                                                                   \
+                             SCIPerrorMessage("Error <%d> in function call\n", _restat_);                     \
+                             (y);                                                                             \
+                             return _restat_;                                                                 \
+                           }                                                                                  \
+                       }                                                                                      \
+                       while( FALSE )
+
+#define SCIP_UNUSED(x) ((void) (x))
 
 /*
  * Define to mark deprecated API functions

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -251,10 +251,11 @@ SCIPInterval cos(
    const SCIPInterval&   x                   /**< operand */
    )
 {
-   /* @todo implement cosine for intervals */
-   SCIPerrorMessage("Cosine of interval not implemented. Returning trivial interval [-1,1].\n");
+   SCIPInterval resultant;
 
-   return SCIPInterval(-1.0, 1.0);
+   SCIPintervalCos(SCIPInterval::infinity, &resultant, x);
+
+   return resultant;
 }
 
 /** exponential of an interval */
@@ -331,10 +332,11 @@ SCIPInterval sin(
    const SCIPInterval&   x                   /**< operand */
    )
 {
-   /* @todo implement sine for intervals */
-   SCIPerrorMessage("Sine of interval not implemented. Returning trivial interval [-1,1].\n");
+   SCIPInterval resultant;
 
-   return SCIPInterval(-1.0, 1.0);
+   SCIPintervalSin(SCIPInterval::infinity, &resultant, x);
+
+   return resultant;
 }
 
 /** square an interval */

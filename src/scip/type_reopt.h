@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,8 +39,10 @@ typedef struct SCIP_ReoptNode SCIP_REOPTNODE;     /**< nodes of SCIP_REOPTTREE *
 
 typedef struct SCIP_ReoptNode SCIP_REPRESENTATIVE;/**< representatives of the search frontier */
 
-typedef struct LogicOrData LOGICORDATA;           /**< data for constraints to handle dual information \
-                                                    *  within (mixed) binary programs */
+typedef struct SCIP_ReoptConsData SCIP_REOPTCONSDATA; /**< data for constraints to handle dual information \
+                                                        *  within (mixed) binary programs
+                                                        */
+
 /* type of nodes during reoptimization */
 enum SCIP_ReoptType
 {
@@ -57,9 +59,10 @@ typedef enum SCIP_ReoptType SCIP_REOPTTYPE;       /**< type nodes during reoptim
 
 enum Reopt_ConsType
 {
-   REOPT_CONSTYPE_SEPASOLUTION = 0,               /**< constraint separrates a solution */
-   REOPT_CONSTYPE_INFSUBTREE   = 1,               /**< constraint cutoffs an LP infeasible subtree */
-   REOPT_CONSTYPE_STRBRANCHED  = 2                /**< constraint reconstructs dual reductions */
+   REOPT_CONSTYPE_INFSUBTREE   = 0,               /**< constraint cutoffs an LP infeasible subtree */
+   REOPT_CONSTYPE_DUALREDS     = 1,               /**< constraint reconstructs dual reductions */
+   REOPT_CONSTYPE_CUT          = 2,               /**< constraint representing a cut, e.g., to separate a solution */
+   REOPT_CONSTYPE_UNKNOWN      = 3                /**< constraint was added by SCIP, e.g., a (local) conflict */
 };
 typedef enum Reopt_ConsType REOPT_CONSTYPE;       /**< tye of constraunts added during reoptimization */
 

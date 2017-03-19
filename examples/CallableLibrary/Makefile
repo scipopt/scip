@@ -3,10 +3,10 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
+#*  SCIP is distributed under the terms of the ZIB Academic License.         *
 #*                                                                           *
 #*  You should have received a copy of the ZIB Academic License              *
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
@@ -67,14 +67,6 @@ lint:		$(MAINSRC)
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
 
-.PHONY: doc
-doc:		
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scip.css);
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
-		cd doc; $(DOXY) scip.dxy
-
 $(MAINSHORTLINKS):	$(MAINFILES)
 		@rm -f $@
 		cd $(dir $@) && ln -s $(notdir $@.$(BASE).$(LPS)$(EXEEXTENSION)) $(notdir $@)
@@ -108,27 +100,15 @@ depend:		$(SCIPDIR)
 
 $(BINDIR)/string.$(BASE).$(LPS)$(EXEEXTENSION): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(OBJDIR)/string.o
 		@echo "-> linking $@"
-		$(LINKCXX) $(OBJDIR)/string.o \
-		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-                $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX) $(OBJDIR)/string.o $(LINKCXXSCIPALL)	$(LDFLAGS) $(LINKCXX_o)$@
 
 $(BINDIR)/gastrans.$(BASE).$(LPS)$(EXEEXTENSION): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(OBJDIR)/gastrans.o
 		@echo "-> linking $@"
-		$(LINKCXX) $(OBJDIR)/gastrans.o \
-		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-                $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX) $(OBJDIR)/gastrans.o $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
 
 $(BINDIR)/circle.$(BASE).$(LPS)$(EXEEXTENSION): $(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(OBJDIR)/circle.o
 		@echo "-> linking $@"
-		$(LINKCXX) $(OBJDIR)/circle.o \
-		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-                $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$@
+		$(LINKCXX) $(OBJDIR)/circle.o $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
 		@echo "-> compiling $@"

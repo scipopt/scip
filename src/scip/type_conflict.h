@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -42,6 +42,15 @@ typedef struct SCIP_ConflictSet SCIP_CONFLICTSET; /**< set of conflicting bound 
 typedef struct SCIP_LPBdChgs SCIP_LPBDCHGS;       /**< set of LP bound changes */
 typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data structure */
 
+/** types of conflicts */
+enum SCIP_ConflictType
+{
+   SCIP_CONFTYPE_UNKNOWN      = 0,                /**< unknown type */
+   SCIP_CONFTYPE_PROPAGATION  = 1,                /**< conflict results from propagation */
+   SCIP_CONFTYPE_INFEASLP     = 2,                /**< conflict results from an infeasible LP relaxation */
+   SCIP_CONFTYPE_BNDEXCEEDING = 3                 /**< conflict results from a boundexceeding LP relaxation */
+};
+typedef enum SCIP_ConflictType SCIP_CONFTYPE;
 
 /** copy method for conflict handler plugins (called when SCIP copies plugins)
  *
@@ -122,6 +131,7 @@ typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data st
  *  - bdchginfos      : array with bound changes that lead to a conflict
  *  - relaxedbds      : array with relaxed bounds which are efficient to create a valid conflict
  *  - nbdchginfos     : number of bound changes in the conflict set
+ *  -.primalbound     : the current primal bound, or -infininity if the conflict arises from an infeasible LP
  *  - separate        : should the conflict constraint be separated?
  *  - local           : is the conflict set only valid locally, i.e., should the constraint be created as local constraint?
  *  - dynamic         : should the conflict constraint be made subject to aging?
@@ -135,8 +145,9 @@ typedef struct SCIP_Conflict SCIP_CONFLICT;       /**< conflict analysis data st
  *  - SCIP_DIDNOTRUN  : the conflict handler was skipped
  */
 #define SCIP_DECL_CONFLICTEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONFLICTHDLR* conflicthdlr, SCIP_NODE* node, \
-      SCIP_NODE* validnode, SCIP_BDCHGINFO** bdchginfos, SCIP_Real* relaxedbds, int nbdchginfos, \
-      SCIP_Bool separate, SCIP_Bool local, SCIP_Bool dynamic, SCIP_Bool removable, SCIP_Bool resolved, SCIP_RESULT* result)
+      SCIP_NODE* validnode, SCIP_BDCHGINFO** bdchginfos, SCIP_Real* relaxedbds, int nbdchginfos, SCIP_CONFTYPE conftype, \
+      SCIP_Bool cutoffinvolved, SCIP_Bool separate, SCIP_Bool local, SCIP_Bool dynamic, SCIP_Bool removable, \
+      SCIP_Bool resolved, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }

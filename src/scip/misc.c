@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,7 +47,6 @@
  */
 
 #define SQRTOFTWO                  1.4142136 /**< the square root of 2 with sufficient precision */
-#define SQUARED(x) ((x) * (x))
 
 /**< contains all critical values for a one-sided two sample t-test up to 15 degrees of freedom
  *   a critical value represents a threshold for rejecting the null-hypothesis in hypothesis testing at
@@ -322,13 +321,16 @@ void incrementalStatsUpdate(
    assert(meanptr != NULL);
    assert(sumvarptr != NULL);
    assert(nobservations > 0 || add);
-   assert(*sumvarptr >= 0.0);
 
    addfactor = add ? 1.0 : -1.0;
 
    oldmean = *meanptr;
    *meanptr = oldmean + addfactor * (value - oldmean)/(SCIP_Real)nobservations;
    *sumvarptr += addfactor * (value - oldmean) * (value - (*meanptr));
+
+   /* it may happen that *sumvarptr is slightly negative, especially after a series of add/removal operations */
+   assert(*sumvarptr >= -1e-6);
+   *sumvarptr = MAX(0.0, *sumvarptr);
 }
 
 /** removes an observation (x,y) from the regression */
@@ -1341,8 +1343,17 @@ static int primetable[] = {
 };
 static const int primetablesize = sizeof(primetable)/sizeof(int);
 
+/** simple and fast 2-universal hash function using multiply and shift */
+static
+uint32_t hashvalue(
+   uint64_t              input               /**< key value */
+   )
+{
+   return ( (uint32_t) ((0x9e3779b97f4a7c15ULL * input)>>32) ) | 1u;
+}
+
 /** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
-int SCIPcalcHashtableSize(
+int SCIPcalcMultihashSize(
    int                   minsize             /**< minimal size of the hash table */
    )
 {
@@ -1354,42 +1365,42 @@ int SCIPcalcHashtableSize(
    return primetable[pos];
 }
 
-/** appends element to the hash list */
+/** appends element to the multihash list */
 static
-SCIP_RETCODE hashtablelistAppend(
-   SCIP_HASHTABLELIST**  hashtablelist,      /**< pointer to hash list */
+SCIP_RETCODE multihashlistAppend(
+   SCIP_MULTIHASHLIST**  multihashlist,      /**< pointer to hash list */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    void*                 element             /**< element to append to the list */
    )
 {
-   SCIP_HASHTABLELIST* newlist;
+   SCIP_MULTIHASHLIST* newlist;
 
-   assert(hashtablelist != NULL);
+   assert(multihashlist != NULL);
    assert(blkmem != NULL);
    assert(element != NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &newlist) );
    newlist->element = element;
-   newlist->next = *hashtablelist;
-   *hashtablelist = newlist;
+   newlist->next = *multihashlist;
+   *multihashlist = newlist;
 
    return SCIP_OKAY;
 }
 
-/** frees a hash list entry and all its successors */
+/** frees a multihash list entry and all its successors */
 static
-void hashtablelistFree(
-   SCIP_HASHTABLELIST**  hashtablelist,      /**< pointer to hash list to free */
+void multihashlistFree(
+   SCIP_MULTIHASHLIST**  multihashlist,      /**< pointer to multihash list to free */
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   SCIP_HASHTABLELIST* list;
-   SCIP_HASHTABLELIST* nextlist;
+   SCIP_MULTIHASHLIST* list;
+   SCIP_MULTIHASHLIST* nextlist;
 
-   assert(hashtablelist != NULL);
+   assert(multihashlist != NULL);
    assert(blkmem != NULL);
 
-   list = *hashtablelist;
+   list = *multihashlist;
    while( list != NULL )
    {
       nextlist = list->next;
@@ -1397,13 +1408,13 @@ void hashtablelistFree(
       list = nextlist;
    }
 
-   *hashtablelist = NULL;
+   *multihashlist = NULL;
 }
 
-/** finds hash list entry pointing to element with given key in the hash list, returns NULL if not found */
+/** finds multihash list entry pointing to element with given key in the multihash list, returns NULL if not found */
 static
-SCIP_HASHTABLELIST* hashtablelistFind(
-   SCIP_HASHTABLELIST*   hashtablelist,      /**< hash list */
+SCIP_MULTIHASHLIST* multihashlistFind(
+   SCIP_MULTIHASHLIST*   multihashlist,      /**< multihash list */
    SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
    SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
@@ -1418,23 +1429,23 @@ SCIP_HASHTABLELIST* hashtablelistFind(
    assert(hashkeyeq != NULL);
    assert(key != NULL);
 
-   while( hashtablelist != NULL )
+   while( multihashlist != NULL )
    {
-      currentkey = hashgetkey(userptr, hashtablelist->element);
+      currentkey = hashgetkey(userptr, multihashlist->element);
       currentkeyval = hashkeyval(userptr, currentkey);
       if( currentkeyval == keyval && hashkeyeq(userptr, currentkey, key) )
-         return hashtablelist;
+         return multihashlist;
 
-      hashtablelist = hashtablelist->next;
+      multihashlist = multihashlist->next;
    }
 
    return NULL;
 }
 
-/** retrieves element with given key from the hash list, or NULL */
+/** retrieves element with given key from the multihash list, or NULL */
 static
-void* hashtablelistRetrieve(
-   SCIP_HASHTABLELIST*   hashtablelist,      /**< hash list */
+void* multihashlistRetrieve(
+   SCIP_MULTIHASHLIST*   multihashlist,      /**< hash list */
    SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
    SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
@@ -1443,18 +1454,18 @@ void* hashtablelistRetrieve(
    void*                 key                 /**< key to retrieve */
    )
 {
-   SCIP_HASHTABLELIST* h;
+   SCIP_MULTIHASHLIST* h;
 
    /* find hash list entry */
-   h = hashtablelistFind(hashtablelist, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key);
+   h = multihashlistFind(multihashlist, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key);
 
    /* return element */
    if( h != NULL )
    {
 #ifndef NDEBUG
-      SCIP_HASHTABLELIST* h2;
+      SCIP_MULTIHASHLIST* h2;
 
-      h2 = hashtablelistFind(h->next, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key);
+      h2 = multihashlistFind(h->next, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key);
 
       if( h2 != NULL )
       {
@@ -1479,12 +1490,12 @@ void* hashtablelistRetrieve(
 }
 
 
-/** retrieves element with given key from the hash list, or NULL
- *  returns pointer to hash table list entry
+/** retrieves element with given key from the multihash list, or NULL
+ *  returns pointer to multihash table list entry
  */
 static
-void* hashtablelistRetrieveNext(
-   SCIP_HASHTABLELIST**  hashtablelist,      /**< on input: hash list to search; on exit: hash list entry corresponding
+void* multihashlistRetrieveNext(
+   SCIP_MULTIHASHLIST**  multihashlist,      /**< on input: hash list to search; on exit: hash list entry corresponding
                                               *   to element after retrieved one, or NULL */
    SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
@@ -1494,48 +1505,48 @@ void* hashtablelistRetrieveNext(
    void*                 key                 /**< key to retrieve */
    )
 {
-   SCIP_HASHTABLELIST* h;
+   SCIP_MULTIHASHLIST* h;
 
-   assert(hashtablelist != NULL);
+   assert(multihashlist != NULL);
 
    /* find hash list entry */
-   h = hashtablelistFind(*hashtablelist, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key);
+   h = multihashlistFind(*multihashlist, hashgetkey, hashkeyeq, hashkeyval, userptr, keyval, key);
 
    /* return element */
    if( h != NULL )
    {
-      *hashtablelist = h->next;
+      *multihashlist = h->next;
 
       return h->element;
    }
 
-   *hashtablelist = NULL;
+   *multihashlist = NULL;
 
    return NULL;
 }
 
-/** removes element from the hash list */
+/** removes element from the multihash list */
 static
-SCIP_Bool hashtablelistRemove(
-   SCIP_HASHTABLELIST**  hashtablelist,      /**< pointer to hash list */
+SCIP_Bool multihashlistRemove(
+   SCIP_MULTIHASHLIST**  multihashlist,      /**< pointer to hash list */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    void*                 element             /**< element to remove from the list */
    )
 {
-   SCIP_HASHTABLELIST* nextlist;
+   SCIP_MULTIHASHLIST* nextlist;
 
-   assert(hashtablelist != NULL);
+   assert(multihashlist != NULL);
    assert(blkmem != NULL);
    assert(element != NULL);
 
-   while( *hashtablelist != NULL && (*hashtablelist)->element != element )
-      hashtablelist = &(*hashtablelist)->next;
+   while( *multihashlist != NULL && (*multihashlist)->element != element )
+      multihashlist = &(*multihashlist)->next;
 
-   if( *hashtablelist != NULL )
+   if( *multihashlist != NULL )
    {
-      nextlist = (*hashtablelist)->next;
-      BMSfreeBlockMemory(blkmem, hashtablelist);
-      *hashtablelist = nextlist;
+      nextlist = (*multihashlist)->next;
+      BMSfreeBlockMemory(blkmem, multihashlist);
+      *multihashlist = nextlist;
 
       return TRUE;
    }
@@ -1543,71 +1554,71 @@ SCIP_Bool hashtablelistRemove(
    return FALSE;
 }
 
-#define SCIP_HASHTABLE_MAXSIZE 33554431 /* 2^25 - 1*/
-#define SCIP_HASHTABLE_RESIZE_PERCENTAGE 65
-#define SCIP_HASHTABLE_GROW_FACTOR 1.31
+#define SCIP_MULTIHASH_MAXSIZE 33554431 /* 2^25 - 1*/
+#define SCIP_MULTIHASH_RESIZE_PERCENTAGE 65
+#define SCIP_MULTIHASH_GROW_FACTOR 1.31
 
-/** resizing(increasing) the given hashtable */
+/** resizing(increasing) the given multihash */
 static
-SCIP_RETCODE hashtableResize(
-   SCIP_HASHTABLE*       hashtable           /**< hash table */
+SCIP_RETCODE multihashResize(
+   SCIP_MULTIHASH*       multihash           /**< hash table */
    )
 {
-   SCIP_HASHTABLELIST** newlists;
-   SCIP_HASHTABLELIST* hashtablelist;
+   SCIP_MULTIHASHLIST** newlists;
+   SCIP_MULTIHASHLIST* multihashlist;
    SCIP_Longint nelements;
    int nnewlists;
    int l;
 
-   assert(hashtable != NULL);
-   assert(hashtable->lists != NULL);
-   assert(hashtable->nlists > 0);
-   assert(hashtable->hashgetkey != NULL);
-   assert(hashtable->hashkeyeq != NULL);
-   assert(hashtable->hashkeyval != NULL);
+   assert(multihash != NULL);
+   assert(multihash->lists != NULL);
+   assert(multihash->nlists > 0);
+   assert(multihash->hashgetkey != NULL);
+   assert(multihash->hashkeyeq != NULL);
+   assert(multihash->hashkeyval != NULL);
 
    /* get new memeory for hash table lists */
-   nnewlists = (int) MIN((unsigned int)(hashtable->nlists * SCIP_HASHTABLE_GROW_FACTOR), SCIP_HASHTABLE_MAXSIZE);
-   nnewlists = MAX(nnewlists, hashtable->nlists);
+   nnewlists = (int) MIN((unsigned int)(multihash->nlists * SCIP_MULTIHASH_GROW_FACTOR), SCIP_MULTIHASH_MAXSIZE);
+   nnewlists = MAX(nnewlists, multihash->nlists);
 
-   SCIPdebugMessage("load = %g, nelements = %" SCIP_LONGINT_FORMAT ", nlists = %d, nnewlist = %d\n", SCIPhashtableGetLoad(hashtable), hashtable->nelements, hashtable->nlists, nnewlists);
+   SCIPdebugMessage("load = %g, nelements = %" SCIP_LONGINT_FORMAT ", nlists = %d, nnewlist = %d\n", SCIPmultihashGetLoad(multihash), multihash->nelements, multihash->nlists, nnewlists);
 
-   if( nnewlists > hashtable->nlists )
+   if( nnewlists > multihash->nlists )
    {
       SCIP_Bool onlyone;
       void* key;
       unsigned int keyval;
       unsigned int hashval;
 
-      SCIP_ALLOC( BMSallocClearMemoryArray(&newlists, nnewlists) );
+      SCIP_ALLOC( BMSallocClearBlockMemoryArray(multihash->blkmem, &newlists, nnewlists) );
 
       /* move all lists */
-      for( l = hashtable->nlists - 1; l >= 0; --l )
+      for( l = multihash->nlists - 1; l >= 0; --l )
       {
-         hashtablelist = hashtable->lists[l];
+         multihashlist = multihash->lists[l];
          onlyone = TRUE;
 
          /* move all elements frmm the old lists into the new lists */
-         while( hashtablelist != NULL )
+         while( multihashlist != NULL )
          {
             /* get the hash key and its hash value */
-            key = hashtable->hashgetkey(hashtable->userptr, hashtablelist->element);
-            keyval = hashtable->hashkeyval(hashtable->userptr, key);
+            key = multihash->hashgetkey(multihash->userptr, multihashlist->element);
+            keyval = multihash->hashkeyval(multihash->userptr, key);
             hashval = keyval % nnewlists; /*lint !e573*/
 
             /* if the old hash table list consists of only one entry, we still can use this old memory block instead
              * of creating a new one
              */
-            if( hashtablelist->next == NULL && onlyone )
+            if( multihashlist->next == NULL && onlyone )
             {
                /* the new list is also empty, we can directly copy the entry */
                if( newlists[hashval] == NULL )
-                  newlists[hashval] = hashtablelist;
+                  newlists[hashval] = multihashlist;
                /* the new list is not empty, so we need to find the first empty spot */
                else
                {
-                  SCIP_HASHTABLELIST* lastnext = newlists[hashval];
-                  SCIP_HASHTABLELIST* next = lastnext->next;
+                  SCIP_MULTIHASHLIST* lastnext = newlists[hashval];
+                  SCIP_MULTIHASHLIST* next = lastnext->next;
 
                   while( next != NULL )
                   {
@@ -1615,54 +1626,390 @@ SCIP_RETCODE hashtableResize(
                      next = next->next;
                   }
 
-                  lastnext->next = hashtablelist;
+                  lastnext->next = multihashlist;
                }
 
-               hashtable->lists[l] = NULL;
+               multihash->lists[l] = NULL;
             }
             else
             {
                /* append old element to the list at the hash position */
-               SCIP_CALL( hashtablelistAppend(&(newlists[hashval]), hashtable->blkmem, hashtablelist->element) );
+               SCIP_CALL( multihashlistAppend(&(newlists[hashval]), multihash->blkmem, multihashlist->element) );
             }
 
             onlyone = FALSE;
-            hashtablelist = hashtablelist->next;
+            multihashlist = multihashlist->next;
          }
       }
 
       /* remember number of elements */
-      nelements = hashtable->nelements;
+      nelements = multihash->nelements;
       /* clear old lists */
-      SCIPhashtableRemoveAll(hashtable);
+      SCIPmultihashRemoveAll(multihash);
       /* free old lists */
-      BMSfreeMemoryArray(&(hashtable->lists));
+      BMSfreeBlockMemoryArray(multihash->blkmem, &(multihash->lists), multihash->nlists);
 
       /* set new data */
-      hashtable->lists = newlists;
-      hashtable->nlists = nnewlists;
-      hashtable->nelements = nelements;
+      multihash->lists = newlists;
+      multihash->nlists = nnewlists;
+      multihash->nelements = nelements;
 
 #ifdef SCIP_MORE_DEBUG
       {
          SCIP_Longint sumslotsize = 0;
 
-         for( l = 0; l < hashtable->nlists; ++l )
+         for( l = 0; l < multihash->nlists; ++l )
          {
-            hashtablelist = hashtable->lists[l];
-            while( hashtablelist != NULL )
+            multihashlist = multihash->lists[l];
+            while( multihashlist != NULL )
             {
                sumslotsize++;
-               hashtablelist = hashtablelist->next;
+               multihashlist = multihashlist->next;
             }
          }
-         assert(sumslotsize == hashtable->nelements);
+         assert(sumslotsize == multihash->nelements);
       }
 #endif
    }
 
    return SCIP_OKAY;
 }
+
+/** creates a multihash table */
+SCIP_RETCODE SCIPmultihashCreate(
+   SCIP_MULTIHASH**      multihash,          /**< pointer to store the created multihash table */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store multihash table entries */
+   int                   tablesize,          /**< size of the hash table */
+   SCIP_DECL_HASHGETKEY((*hashgetkey)),      /**< gets the key of the given element */
+   SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
+   SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
+   void*                 userptr             /**< user pointer */
+   )
+{
+   /* only assert non negative to catch overflow errors
+    * but not zeros due to integer divison
+    */
+   assert(tablesize >= 0);
+   assert(multihash != NULL);
+   assert(hashgetkey != NULL);
+   assert(hashkeyeq != NULL);
+   assert(hashkeyval != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, multihash) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*multihash)->lists, tablesize) );
+   (*multihash)->blkmem = blkmem;
+   (*multihash)->nlists = tablesize;
+   (*multihash)->hashgetkey = hashgetkey;
+   (*multihash)->hashkeyeq = hashkeyeq;
+   (*multihash)->hashkeyval = hashkeyval;
+   (*multihash)->userptr = userptr;
+   (*multihash)->nelements = 0;
+
+   return SCIP_OKAY;
+}
+
+/** frees the multihash table */
+void SCIPmultihashFree(
+   SCIP_MULTIHASH**      multihash           /**< pointer to the multihash table */
+   )
+{
+   int i;
+   SCIP_MULTIHASH* table;
+   BMS_BLKMEM* blkmem;
+   SCIP_MULTIHASHLIST** lists;
+
+   assert(multihash != NULL);
+   assert(*multihash != NULL);
+
+   table = (*multihash);
+   blkmem = table->blkmem;
+   lists = table->lists;
+
+   /* free hash lists */
+   for( i = table->nlists - 1; i >= 0; --i )
+      multihashlistFree(&lists[i], blkmem);
+
+   /* free main hash table data structure */
+   BMSfreeBlockMemoryArray(blkmem, &table->lists, table->nlists);
+   BMSfreeBlockMemory(blkmem, multihash);
+}
+
+
+/** inserts element in multihash table (multiple inserts of same element possible)
+ *
+ *  @note A pointer to a multihashlist returned by SCIPmultihashRetrieveNext() might get invalid when adding an element
+ *        to the hash table, due to dynamic resizing.
+ */
+SCIP_RETCODE SCIPmultihashInsert(
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
+   void*                 element             /**< element to insert into the table */
+   )
+{
+   void* key;
+   unsigned int keyval;
+   unsigned int hashval;
+
+   assert(multihash != NULL);
+   assert(multihash->lists != NULL);
+   assert(multihash->nlists > 0);
+   assert(multihash->hashgetkey != NULL);
+   assert(multihash->hashkeyeq != NULL);
+   assert(multihash->hashkeyval != NULL);
+   assert(element != NULL);
+
+   /* dynamically resizing the hashtables */
+   if( SCIPmultihashGetLoad(multihash) > SCIP_MULTIHASH_RESIZE_PERCENTAGE )
+   {
+      SCIP_CALL( multihashResize(multihash) );
+   }
+
+   /* get the hash key and its hash value */
+   key = multihash->hashgetkey(multihash->userptr, element);
+   keyval = multihash->hashkeyval(multihash->userptr, key);
+   hashval = keyval % multihash->nlists; /*lint !e573*/
+
+   /* append element to the list at the hash position */
+   SCIP_CALL( multihashlistAppend(&multihash->lists[hashval], multihash->blkmem, element) );
+
+   ++(multihash->nelements);
+
+   return SCIP_OKAY;
+}
+
+/** inserts element in multihash table (multiple insertion of same element is checked and results in an error)
+ *
+ *  @note A pointer to a multihashlist returned by SCIPmultihashRetrieveNext() might get invalid when adding a new
+ *        element to the multihash table, due to dynamic resizing.
+ */
+SCIP_RETCODE SCIPmultihashSafeInsert(
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
+   void*                 element             /**< element to insert into the table */
+   )
+{
+   assert(multihash != NULL);
+   assert(multihash->hashgetkey != NULL);
+
+   /* check, if key is already existing */
+   if( SCIPmultihashRetrieve(multihash, multihash->hashgetkey(multihash->userptr, element)) != NULL )
+      return SCIP_KEYALREADYEXISTING;
+
+   /* insert element in hash table */
+   SCIP_CALL( SCIPmultihashInsert(multihash, element) );
+
+   return SCIP_OKAY;
+}
+
+/** retrieve element with key from multihash table, returns NULL if not existing */
+void* SCIPmultihashRetrieve(
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
+   void*                 key                 /**< key to retrieve */
+   )
+{
+   unsigned int keyval;
+   unsigned int hashval;
+
+   assert(multihash != NULL);
+   assert(multihash->lists != NULL);
+   assert(multihash->nlists > 0);
+   assert(multihash->hashgetkey != NULL);
+   assert(multihash->hashkeyeq != NULL);
+   assert(multihash->hashkeyval != NULL);
+   assert(key != NULL);
+
+   /* get the hash value of the key */
+   keyval = multihash->hashkeyval(multihash->userptr, key);
+   hashval = keyval % multihash->nlists; /*lint !e573*/
+
+   return multihashlistRetrieve(multihash->lists[hashval], multihash->hashgetkey, multihash->hashkeyeq,
+      multihash->hashkeyval, multihash->userptr, keyval, key);
+}
+
+/** retrieve element with key from multihash table, returns NULL if not existing
+ *  can be used to retrieve all entries with the same key (one-by-one)
+ *
+ *  @note The returned multimultihashlist pointer might get invalid when adding a new element to the multihash table.
+ */
+void* SCIPmultihashRetrieveNext(
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
+   SCIP_MULTIHASHLIST**  multihashlist,      /**< input: entry in hash table list from which to start searching, or NULL
+                                              *   output: entry in hash table list corresponding to element after
+                                              *           retrieved one, or NULL */
+   void*                 key                 /**< key to retrieve */
+   )
+{
+   unsigned int keyval;
+
+   assert(multihash != NULL);
+   assert(multihash->lists != NULL);
+   assert(multihash->nlists > 0);
+   assert(multihash->hashgetkey != NULL);
+   assert(multihash->hashkeyeq != NULL);
+   assert(multihash->hashkeyval != NULL);
+   assert(multihashlist != NULL);
+   assert(key != NULL);
+
+   keyval = multihash->hashkeyval(multihash->userptr, key);
+
+   if( *multihashlist == NULL )
+   {
+      unsigned int hashval;
+
+      /* get the hash value of the key */
+      hashval = keyval % multihash->nlists; /*lint !e573*/
+
+      *multihashlist = multihash->lists[hashval];
+   }
+
+   return multihashlistRetrieveNext(multihashlist, multihash->hashgetkey, multihash->hashkeyeq,
+      multihash->hashkeyval, multihash->userptr, keyval, key);
+}
+
+/** returns whether the given element exists in the multihash table */
+SCIP_Bool SCIPmultihashExists(
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
+   void*                 element             /**< element to search in the table */
+   )
+{
+   void* key;
+   unsigned int keyval;
+   unsigned int hashval;
+
+   assert(multihash != NULL);
+   assert(multihash->lists != NULL);
+   assert(multihash->nlists > 0);
+   assert(multihash->hashgetkey != NULL);
+   assert(multihash->hashkeyeq != NULL);
+   assert(multihash->hashkeyval != NULL);
+   assert(element != NULL);
+
+   /* get the hash key and its hash value */
+   key = multihash->hashgetkey(multihash->userptr, element);
+   keyval = multihash->hashkeyval(multihash->userptr, key);
+   hashval = keyval % multihash->nlists; /*lint !e573*/
+
+   return (multihashlistFind(multihash->lists[hashval], multihash->hashgetkey, multihash->hashkeyeq,
+         multihash->hashkeyval, multihash->userptr, keyval, key) != NULL);
+}
+
+/** removes element from the multihash table, if it exists */
+SCIP_RETCODE SCIPmultihashRemove(
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
+   void*                 element             /**< element to remove from the table */
+   )
+{
+   void* key;
+   unsigned int keyval;
+   unsigned int hashval;
+
+   assert(multihash != NULL);
+   assert(multihash->lists != NULL);
+   assert(multihash->nlists > 0);
+   assert(multihash->hashgetkey != NULL);
+   assert(multihash->hashkeyeq != NULL);
+   assert(multihash->hashkeyval != NULL);
+   assert(element != NULL);
+
+   /* get the hash key and its hash value */
+   key = multihash->hashgetkey(multihash->userptr, element);
+   keyval = multihash->hashkeyval(multihash->userptr, key);
+   hashval = keyval % multihash->nlists; /*lint !e573*/
+
+   /* remove element from the list at the hash position */
+   if( multihashlistRemove(&multihash->lists[hashval], multihash->blkmem, element) )
+      --(multihash->nelements);
+
+   return SCIP_OKAY;
+}
+
+/** removes all elements of the multihash table
+ *
+ *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
+ *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
+ */
+void SCIPmultihashRemoveAll(
+   SCIP_MULTIHASH*       multihash           /**< multihash table */
+   )
+{
+   BMS_BLKMEM* blkmem;
+   SCIP_MULTIHASHLIST** lists;
+   int i;
+
+   assert(multihash != NULL);
+
+   blkmem = multihash->blkmem;
+   lists = multihash->lists;
+
+   /* free hash lists */
+   for( i = multihash->nlists - 1; i >= 0; --i )
+      multihashlistFree(&lists[i], blkmem);
+
+   multihash->nelements = 0;
+}
+
+/** returns number of multihash table elements */
+SCIP_Longint SCIPmultihashGetNElements(
+   SCIP_MULTIHASH*       multihash           /**< multihash table */
+   )
+{
+   assert(multihash != NULL);
+
+   return multihash->nelements;
+}
+
+/** returns the load of the given multihash table in percentage */
+SCIP_Real SCIPmultihashGetLoad(
+   SCIP_MULTIHASH*       multihash           /**< multihash table */
+   )
+{
+   assert(multihash != NULL);
+
+   return ((SCIP_Real)(multihash->nelements) / (multihash->nlists) * 100.0);
+}
+
+/** prints statistics about multihash table usage */
+void SCIPmultihashPrintStatistics(
+   SCIP_MULTIHASH*       multihash,          /**< multihash table */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   )
+{
+   SCIP_MULTIHASHLIST* multihashlist;
+   int usedslots;
+   int maxslotsize;
+   int sumslotsize;
+   int slotsize;
+   int i;
+
+   assert(multihash != NULL);
+
+   usedslots = 0;
+   maxslotsize = 0;
+   sumslotsize = 0;
+   for( i = 0; i < multihash->nlists; ++i )
+   {
+      multihashlist = multihash->lists[i];
+      if( multihashlist != NULL )
+      {
+         usedslots++;
+         slotsize = 0;
+         while( multihashlist != NULL )
+         {
+            slotsize++;
+            multihashlist = multihashlist->next;
+         }
+         maxslotsize = MAX(maxslotsize, slotsize);
+         sumslotsize += slotsize;
+      }
+   }
+   assert(sumslotsize == multihash->nelements);
+
+   SCIPmessagePrintInfo(messagehdlr, "%" SCIP_LONGINT_FORMAT " multihash entries, used %d/%d slots (%.1f%%)",
+      multihash->nelements, usedslots, multihash->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(multihash->nlists));
+   if( usedslots > 0 )
+      SCIPmessagePrintInfo(messagehdlr, ", avg. %.1f entries/used slot, max. %d entries in slot",
+         (SCIP_Real)(multihash->nelements)/(SCIP_Real)usedslots, maxslotsize);
+   SCIPmessagePrintInfo(messagehdlr, "\n");
+}
+
 
 /** creates a hash table */
 SCIP_RETCODE SCIPhashtableCreate(
@@ -1675,16 +2022,36 @@ SCIP_RETCODE SCIPhashtableCreate(
    void*                 userptr             /**< user pointer */
    )
 {
+   unsigned int nslots;
+
+   /* only assert non negative to catch overflow errors
+    * but not zeros due to integer divison
+    */
+   assert(tablesize >= 0);
    assert(hashtable != NULL);
-   assert(tablesize > 0);
    assert(hashgetkey != NULL);
    assert(hashkeyeq != NULL);
    assert(hashkeyval != NULL);
+   assert(blkmem != NULL);
 
-   SCIP_ALLOC( BMSallocMemory(hashtable) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*hashtable)->lists, tablesize) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, hashtable) );
+
+   /* dont create too small hashtables, i.e. at least size 32, and increase
+    * the given size by divinding it by 0.9, since then no rebuilding will
+    * be necessary if the given number of elements are inserted. Finally round
+    * to the next power of two.
+    */
+   (*hashtable)->shift = 32;
+   (*hashtable)->shift -= (int)ceil(log(MAX(32.0, tablesize / 0.9)) / log(2.0));
+
+   /* compute size from shift */
+   nslots = 1u << (32 - (*hashtable)->shift);
+
+   /* compute mask to do a fast modulo by nslots using bitwise and */
+   (*hashtable)->mask = nslots - 1;
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*hashtable)->slots, nslots) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*hashtable)->hashes, nslots) );
    (*hashtable)->blkmem = blkmem;
-   (*hashtable)->nlists = tablesize;
    (*hashtable)->hashgetkey = hashgetkey;
    (*hashtable)->hashkeyeq = hashkeyeq;
    (*hashtable)->hashkeyval = hashkeyval;
@@ -1699,25 +2066,45 @@ void SCIPhashtableFree(
    SCIP_HASHTABLE**      hashtable           /**< pointer to the hash table */
    )
 {
-   int i;
+   uint32_t nslots;
    SCIP_HASHTABLE* table;
-   BMS_BLKMEM* blkmem;
-   SCIP_HASHTABLELIST** lists;
 
    assert(hashtable != NULL);
    assert(*hashtable != NULL);
+   table = *hashtable;
+   nslots = (*hashtable)->mask + 1;
+#ifdef SCIP_DEBUG
+   {
+      uint32_t maxprobelen = 0;
+      uint64_t probelensum = 0;
+      uint32_t i;
 
-   table = (*hashtable);
-   blkmem = table->blkmem;
-   lists = table->lists;
+      assert(table != NULL);
 
-   /* free hash lists */
-   for( i = table->nlists - 1; i >= 0; --i )
-      hashtablelistFree(&lists[i], blkmem);
+      for( i = 0; i < nslots; ++i )
+      {
+         if( table->hashes[i] != 0 )
+         {
+            uint32_t probelen = ((i + table->mask + 1 - (table->hashes[i]>>(table->shift))) & table->mask) + 1;
+            probelensum += probelen;
+            maxprobelen = MAX(probelen, maxprobelen);
+         }
+      }
+
+      SCIPdebugMessage("%u hash table entries, used %u/%u slots (%.1f%%)",
+                       (unsigned int)table->nelements, (unsigned int)table->nelements, (unsigned int)nslots,
+                       100.0*(SCIP_Real)table->nelements/(SCIP_Real)(nslots));
+      if( table->nelements > 0 )
+         SCIPdebugMessage(", avg. probe length is %.1f, max. probe length is %u",
+                              (SCIP_Real)(probelensum)/(SCIP_Real)table->nelements, (unsigned int)maxprobelen);
+      SCIPdebugMessage("\n");
+   }
+#endif
 
    /* free main hash table data structure */
-   BMSfreeMemoryArray(&table->lists);
-   BMSfreeMemory(hashtable);
+   BMSfreeBlockMemoryArray((*hashtable)->blkmem, &table->hashes, nslots);
+   BMSfreeBlockMemoryArray((*hashtable)->blkmem, &table->slots, nslots);
+   BMSfreeBlockMemory((*hashtable)->blkmem, hashtable);
 }
 
 /** removes all elements of the hash table
@@ -1731,26 +2118,138 @@ void SCIPhashtableClear(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    )
 {
-   int i;
-   BMS_BLKMEM* blkmem;
-   SCIP_HASHTABLELIST** lists;
-
-   assert(hashtable != NULL);
-
-   blkmem = hashtable->blkmem;
-   lists = hashtable->lists;
-
-   /* free hash lists */
-   for( i = hashtable->nlists - 1; i >= 0; --i )
-      hashtablelistFree(&lists[i], blkmem);
-
-   hashtable->nelements = 0;
+   SCIPhashtableRemoveAll(hashtable);
 }
 
-/** inserts element in hash table (multiple inserts of same element possible)
+/* computes the distance from it's desired position for the element stored at pos */
+#define ELEM_DISTANCE(pos) (((pos) + hashtable->mask + 1 - (hashtable->hashes[(pos)]>>(hashtable->shift))) & hashtable->mask)
+
+/** inserts element in hash table (multiple inserts of same element overrides previous one) */
+static
+SCIP_RETCODE hashtableInsert(
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   void*                 element,            /**< element to insert into the table */
+   void*                 key,                /**< key of element */
+   uint32_t              hashval,            /**< hash value of element */
+   SCIP_Bool             override            /**< should element be overridden or an error be returned if already existing */
+   )
+{
+   uint32_t elemdistance;
+   uint32_t pos;
+
+   assert(hashtable != NULL);
+   assert(hashtable->slots != NULL);
+   assert(hashtable->hashes != NULL);
+   assert(hashtable->mask > 0);
+   assert(hashtable->hashgetkey != NULL);
+   assert(hashtable->hashkeyeq != NULL);
+   assert(hashtable->hashkeyval != NULL);
+   assert(element != NULL);
+
+   pos = hashval>>(hashtable->shift);
+   elemdistance = 0;
+   while( TRUE ) /*lint !e716*/
+   {
+      uint32_t distance;
+
+      /* if position is empty or key equal insert element */
+      if( hashtable->hashes[pos] == 0 )
+      {
+         hashtable->slots[pos] = element;
+         hashtable->hashes[pos] = hashval;
+         ++hashtable->nelements;
+         return SCIP_OKAY;
+      }
+
+      if( hashtable->hashes[pos] == hashval && hashtable->hashkeyeq(hashtable->userptr,
+             hashtable->hashgetkey(hashtable->userptr, hashtable->slots[pos]), key) )
+      {
+         if( override )
+         {
+            hashtable->slots[pos] = element;
+            hashtable->hashes[pos] = hashval;
+            return SCIP_OKAY;
+         }
+         else
+         {
+            return SCIP_KEYALREADYEXISTING;
+         }
+      }
+
+      /* otherwise check if the current element at this position is closer to its hashvalue */
+      distance = ELEM_DISTANCE(pos);
+      if( distance < elemdistance )
+      {
+         uint32_t tmp;
+
+         /* if this is the case we insert the new element here and find a new position for the old one */
+         elemdistance = distance;
+         SCIPswapPointers(&hashtable->slots[pos], &element);
+         tmp = hashval;
+         hashval = hashtable->hashes[pos];
+         hashtable->hashes[pos] = tmp;
+      }
+
+      /* continue until we have found an empty position */
+      pos = (pos + 1) & hashtable->mask;
+      ++elemdistance;
+   }
+}
+
+/** check if the load factor of the hashtable is too high and rebuild if necessary */
+static
+SCIP_RETCODE hashtableCheckLoad(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   )
+{
+   assert(hashtable != NULL);
+   assert(hashtable->shift < 32);
+
+   /* use integer arithmetic to approximately check if load factor is above 90% */
+   if( ((hashtable->nelements<<10)>>(32-hashtable->shift) > 921) )
+   {
+      void** slots;
+      uint32_t* hashes;
+      uint32_t nslots;
+      uint32_t newnslots;
+      uint32_t i;
+
+      /* calculate new size (always power of two) */
+      nslots = hashtable->mask + 1;
+      newnslots = 2*nslots;
+      hashtable->mask = newnslots-1;
+      --hashtable->shift;
+
+      /* reallocate array */
+      SCIP_ALLOC( BMSallocBlockMemoryArray(hashtable->blkmem, &slots, newnslots) );
+      SCIP_ALLOC( BMSallocClearBlockMemoryArray(hashtable->blkmem, &hashes, newnslots) );
+
+      SCIPswapPointers((void**) &slots, (void**) &hashtable->slots);
+      SCIPswapPointers((void**) &hashes, (void**) &hashtable->hashes);
+      hashtable->nelements = 0;
+
+      /* reinsert all elements */
+      for( i = 0; i < nslots; ++i )
+      {
+         /* using SCIP_CALL_ABORT since there are no allocations or duplicates
+          * and thus no bad return codes when inserting the elements
+          */
+         if( hashes[i] != 0 )
+         {
+            SCIP_CALL_ABORT( hashtableInsert(hashtable, slots[i], hashtable->hashgetkey(hashtable->userptr, slots[i]), hashes[i], FALSE) );
+         }
+      }
+      BMSfreeBlockMemoryArray(hashtable->blkmem, &hashes, nslots);
+      BMSfreeBlockMemoryArray(hashtable->blkmem, &slots, nslots);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** inserts element in hash table
  *
- *  @note A pointer to a hashtablelist returned by SCIPhashtableRetrieveNext() might get invalid when adding an element
- *        to the hash table, due to dynamic resizing.
+ *  @note multiple inserts of same element overrides previous one
  */
 SCIP_RETCODE SCIPhashtableInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
@@ -1759,56 +2258,57 @@ SCIP_RETCODE SCIPhashtableInsert(
 {
    void* key;
    unsigned int keyval;
-   unsigned int hashval;
+   uint32_t hashval;
 
    assert(hashtable != NULL);
-   assert(hashtable->lists != NULL);
-   assert(hashtable->nlists > 0);
+   assert(hashtable->slots != NULL);
+   assert(hashtable->hashes != NULL);
+   assert(hashtable->mask > 0);
    assert(hashtable->hashgetkey != NULL);
    assert(hashtable->hashkeyeq != NULL);
    assert(hashtable->hashkeyval != NULL);
    assert(element != NULL);
 
-   /* dynamically resizing the hashtables */
-   if( SCIPhashtableGetLoad(hashtable) > SCIP_HASHTABLE_RESIZE_PERCENTAGE )
-   {
-      SCIP_CALL( hashtableResize(hashtable) );
-   }
+   SCIP_CALL( hashtableCheckLoad(hashtable) );
 
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(hashtable->userptr, element);
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = keyval % hashtable->nlists; /*lint !e573*/
+   hashval = hashvalue((uint64_t) keyval);
 
-   /* append element to the list at the hash position */
-   SCIP_CALL( hashtablelistAppend(&hashtable->lists[hashval], hashtable->blkmem, element) );
-
-   ++(hashtable->nelements);
-
-   return SCIP_OKAY;
+   return hashtableInsert(hashtable, element, key, hashval, TRUE);
 }
 
-/** inserts element in hash table (multiple insertion of same element is checked and results in an error)
+/** inserts element in hash table
  *
- *  @note A pointer to a hashtablelist returned by SCIPhashtableRetrieveNext() might get invalid when adding a new
- *        element to the hash table, due to dynamic resizing.
+ *  @note multiple insertion of same element is checked and results in an error
  */
 SCIP_RETCODE SCIPhashtableSafeInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 element             /**< element to insert into the table */
    )
 {
+   void* key;
+   unsigned int keyval;
+   uint32_t hashval;
+
    assert(hashtable != NULL);
+   assert(hashtable->slots != NULL);
+   assert(hashtable->hashes != NULL);
+   assert(hashtable->mask > 0);
    assert(hashtable->hashgetkey != NULL);
+   assert(hashtable->hashkeyeq != NULL);
+   assert(hashtable->hashkeyval != NULL);
+   assert(element != NULL);
 
-   /* check, if key is already existing */
-   if( SCIPhashtableRetrieve(hashtable, hashtable->hashgetkey(hashtable->userptr, element)) != NULL )
-      return SCIP_KEYALREADYEXISTING;
+   SCIP_CALL( hashtableCheckLoad(hashtable) );
 
-   /* insert element in hash table */
-   SCIP_CALL( SCIPhashtableInsert(hashtable, element) );
+   /* get the hash key and its hash value */
+   key = hashtable->hashgetkey(hashtable->userptr, element);
+   keyval = hashtable->hashkeyval(hashtable->userptr, key);
+   hashval = hashvalue((uint64_t) keyval);
 
-   return SCIP_OKAY;
+   return hashtableInsert(hashtable, element, key, hashval, FALSE);
 }
 
 /** retrieve element with key from hash table, returns NULL if not existing */
@@ -1818,11 +2318,14 @@ void* SCIPhashtableRetrieve(
    )
 {
    unsigned int keyval;
-   unsigned int hashval;
+   uint32_t hashval;
+   uint32_t pos;
+   uint32_t elemdistance;
 
    assert(hashtable != NULL);
-   assert(hashtable->lists != NULL);
-   assert(hashtable->nlists > 0);
+   assert(hashtable->slots != NULL);
+   assert(hashtable->hashes != NULL);
+   assert(hashtable->mask > 0);
    assert(hashtable->hashgetkey != NULL);
    assert(hashtable->hashkeyeq != NULL);
    assert(hashtable->hashkeyval != NULL);
@@ -1830,50 +2333,33 @@ void* SCIPhashtableRetrieve(
 
    /* get the hash value of the key */
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = keyval % hashtable->nlists; /*lint !e573*/
+   hashval = hashvalue((uint64_t) keyval);
 
-   return hashtablelistRetrieve(hashtable->lists[hashval], hashtable->hashgetkey, hashtable->hashkeyeq, 
-      hashtable->hashkeyval, hashtable->userptr, keyval, key);
-}
+   pos = hashval>>(hashtable->shift);
+   elemdistance = 0;
 
-/** retrieve element with key from hash table, returns NULL if not existing
- *  can be used to retrieve all entries with the same key (one-by-one)
- *
- *  @note The returned hashtablelist pointer might get invalid when adding a new element to the hash table.
- */
-void* SCIPhashtableRetrieveNext(
-   SCIP_HASHTABLE*       hashtable,          /**< hash table */
-   SCIP_HASHTABLELIST**  hashtablelist,      /**< input: entry in hash table list from which to start searching, or NULL
-                                              *   output: entry in hash table list corresponding to element after
-                                              *           retrieved one, or NULL */
-   void*                 key                 /**< key to retrieve */
-   )
-{
-   unsigned int keyval;
-
-   assert(hashtable != NULL);
-   assert(hashtable->lists != NULL);
-   assert(hashtable->nlists > 0);
-   assert(hashtable->hashgetkey != NULL);
-   assert(hashtable->hashkeyeq != NULL);
-   assert(hashtable->hashkeyval != NULL);
-   assert(hashtablelist != NULL);
-   assert(key != NULL);
-
-   keyval = hashtable->hashkeyval(hashtable->userptr, key);
-
-   if( *hashtablelist == NULL )
+   while( TRUE ) /*lint !e716*/
    {
-      unsigned int hashval;
+      uint32_t distance;
 
-      /* get the hash value of the key */
-      hashval = keyval % hashtable->nlists; /*lint !e573*/
+      /* slots is empty so element cannot be contained */
+      if( hashtable->hashes[pos] == 0 )
+         return NULL;
 
-      *hashtablelist = hashtable->lists[hashval];
+      distance = ELEM_DISTANCE(pos);
+
+      /* element cannot be contained since otherwise we would have swapped it with this one during insert */
+      if( elemdistance > distance )
+         return NULL;
+
+      /* found element */
+      if( hashtable->hashes[pos] == hashval && hashtable->hashkeyeq(hashtable->userptr,
+             hashtable->hashgetkey(hashtable->userptr, hashtable->slots[pos]), key) )
+         return hashtable->slots[pos];
+
+      pos = (pos + 1) & hashtable->mask;
+      ++elemdistance;
    }
-
-   return hashtablelistRetrieveNext(hashtablelist, hashtable->hashgetkey, hashtable->hashkeyeq, 
-      hashtable->hashkeyval, hashtable->userptr, keyval, key);
 }
 
 /** returns whether the given element exists in the table */
@@ -1882,25 +2368,16 @@ SCIP_Bool SCIPhashtableExists(
    void*                 element             /**< element to search in the table */
    )
 {
-   void* key;
-   unsigned int keyval;
-   unsigned int hashval;
-
    assert(hashtable != NULL);
-   assert(hashtable->lists != NULL);
-   assert(hashtable->nlists > 0);
+   assert(hashtable->slots != NULL);
+   assert(hashtable->hashes != NULL);
+   assert(hashtable->mask > 0);
    assert(hashtable->hashgetkey != NULL);
    assert(hashtable->hashkeyeq != NULL);
    assert(hashtable->hashkeyval != NULL);
    assert(element != NULL);
 
-   /* get the hash key and its hash value */
-   key = hashtable->hashgetkey(hashtable->userptr, element);
-   keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = keyval % hashtable->nlists; /*lint !e573*/
-
-   return (hashtablelistFind(hashtable->lists[hashval], hashtable->hashgetkey, hashtable->hashkeyeq,
-         hashtable->hashkeyval, hashtable->userptr, keyval, key) != NULL);
+   return (SCIPhashtableRetrieve(hashtable, hashtable->hashgetkey(hashtable->userptr, element)) != NULL);
 }
 
 /** removes element from the hash table, if it exists */
@@ -1911,11 +2388,15 @@ SCIP_RETCODE SCIPhashtableRemove(
 {
    void* key;
    unsigned int keyval;
-   unsigned int hashval;
+   uint32_t hashval;
+   uint32_t elemdistance;
+   uint32_t distance;
+   uint32_t pos;
 
    assert(hashtable != NULL);
-   assert(hashtable->lists != NULL);
-   assert(hashtable->nlists > 0);
+   assert(hashtable->slots != NULL);
+   assert(hashtable->hashes != NULL);
+   assert(hashtable->mask > 0);
    assert(hashtable->hashgetkey != NULL);
    assert(hashtable->hashkeyeq != NULL);
    assert(hashtable->hashkeyval != NULL);
@@ -1924,36 +2405,67 @@ SCIP_RETCODE SCIPhashtableRemove(
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(hashtable->userptr, element);
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = keyval % hashtable->nlists; /*lint !e573*/
+   hashval = hashvalue((uint64_t) keyval);
 
-   /* remove element from the list at the hash position */
-   if( hashtablelistRemove(&hashtable->lists[hashval], hashtable->blkmem, element) )
-      --(hashtable->nelements);
+   elemdistance = 0;
+   pos = hashval>>(hashtable->shift);
+   while( TRUE ) /*lint !e716*/
+   {
+      /* slots empty so element not contained */
+      if( hashtable->hashes[pos] == 0 )
+         return SCIP_OKAY;
+
+      distance = ELEM_DISTANCE(pos);
+
+      /* element can not be contained since otherwise we would have swapped it with this one */
+      if( elemdistance > distance )
+         return SCIP_OKAY;
+
+      if( hashtable->hashes[pos] == hashval && hashtable->hashkeyeq(hashtable->userptr,
+             hashtable->hashgetkey(hashtable->userptr, hashtable->slots[pos]), key) )
+      {
+         /* element exists at pos so break out of loop */
+         break;
+      }
+
+      pos = (pos + 1) & hashtable->mask;
+      ++elemdistance;
+   }
+
+   /* remove element */
+   hashtable->hashes[pos] = 0;
+   --hashtable->nelements;
+   while( TRUE ) /*lint !e716*/
+   {
+      uint32_t nextpos = (pos + 1) & hashtable->mask;
+
+      /* nothing to do since there is no chain that needs to be moved */
+      if( hashtable->hashes[nextpos] == 0 )
+         break;
+
+      /* check if the element is the start of a new chain and return if that is the case */
+      if( (hashtable->hashes[nextpos]>>(hashtable->shift)) == nextpos )
+         break;
+
+      /* element should be moved to the left and next element needs to be checked */
+      hashtable->slots[pos] = hashtable->slots[nextpos];
+      hashtable->hashes[pos] = hashtable->hashes[nextpos];
+      hashtable->hashes[nextpos] = 0;
+
+      pos = nextpos;
+   }
 
    return SCIP_OKAY;
 }
 
-/** removes all elements of the hash table
- *
- *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
- *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
- */
+/** removes all elements of the hash table */
 void SCIPhashtableRemoveAll(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    )
 {
-   BMS_BLKMEM* blkmem;
-   SCIP_HASHTABLELIST** lists;
-   int i;
-
    assert(hashtable != NULL);
 
-   blkmem = hashtable->blkmem;
-   lists = hashtable->lists;
-
-   /* free hash lists */
-   for( i = hashtable->nlists - 1; i >= 0; --i )
-      hashtablelistFree(&lists[i], blkmem);
+   BMSclearMemoryArray(hashtable->hashes, hashtable->mask + 1);
 
    hashtable->nelements = 0;
 }
@@ -1975,7 +2487,7 @@ SCIP_Real SCIPhashtableGetLoad(
 {
    assert(hashtable != NULL);
 
-   return ((SCIP_Real)(hashtable->nelements) / (hashtable->nlists) * 100.0);
+   return ((SCIP_Real)(hashtable->nelements) / (hashtable->mask + 1) * 100.0);
 }
 
 /** prints statistics about hash table usage */
@@ -1984,44 +2496,37 @@ void SCIPhashtablePrintStatistics(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
-   SCIP_HASHTABLELIST* hashtablelist;
-   int usedslots;
-   int maxslotsize;
-   int sumslotsize;
-   int slotsize;
-   int i;
+   uint32_t maxprobelen = 0;
+   uint64_t probelensum = 0;
+   uint32_t nslots;
+   uint32_t i;
 
    assert(hashtable != NULL);
 
-   usedslots = 0;
-   maxslotsize = 0;
-   sumslotsize = 0;
-   for( i = 0; i < hashtable->nlists; ++i )
+   nslots = hashtable->mask + 1;
+
+   /* compute the maximum and average probe length */
+   for( i = 0; i < nslots; ++i )
    {
-      hashtablelist = hashtable->lists[i];
-      if( hashtablelist != NULL )
+      if( hashtable->hashes[i] != 0 )
       {
-         usedslots++;
-         slotsize = 0;
-         while( hashtablelist != NULL )
-         {
-            slotsize++;
-            hashtablelist = hashtablelist->next;
-         }
-         maxslotsize = MAX(maxslotsize, slotsize);
-         sumslotsize += slotsize;
+         uint32_t probelen = ELEM_DISTANCE(i) + 1;
+         probelensum += probelen;
+         maxprobelen = MAX(probelen, maxprobelen);
       }
    }
-   assert(sumslotsize == hashtable->nelements);
 
-   SCIPmessagePrintInfo(messagehdlr, "%" SCIP_LONGINT_FORMAT " hash entries, used %d/%d slots (%.1f%%)",
-      hashtable->nelements, usedslots, hashtable->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashtable->nlists));
-   if( usedslots > 0 )
-      SCIPmessagePrintInfo(messagehdlr, ", avg. %.1f entries/used slot, max. %d entries in slot",
-         (SCIP_Real)(hashtable->nelements)/(SCIP_Real)usedslots, maxslotsize);
+   /* print general hash table statistics */
+   SCIPmessagePrintInfo(messagehdlr, "%u hash entries, used %u/%u slots (%.1f%%)",
+                        (unsigned int)hashtable->nelements, (unsigned int)hashtable->nelements,
+                        (unsigned int)nslots, 100.0*(SCIP_Real)hashtable->nelements/(SCIP_Real)(nslots));
+
+   /* if not empty print average and maximum probe length */
+   if( hashtable->nelements > 0 )
+      SCIPmessagePrintInfo(messagehdlr, ", avg. probe length is %.1f, max. probe length is %u",
+         (SCIP_Real)(probelensum)/(SCIP_Real)hashtable->nelements, (unsigned int)maxprobelen);
    SCIPmessagePrintInfo(messagehdlr, "\n");
 }
-
 
 /** returns TRUE iff both keys (i.e. strings) are equal */
 SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqString)
@@ -2068,7 +2573,7 @@ SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqPtr)
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
 {  /*lint --e{715}*/
    /* the key is used as the keyvalue too */
-   return (unsigned int)(size_t) key;
+   return (unsigned int) ((0xd37e9a1ce2148403ULL * (size_t) key)>>32);
 }
 
 
@@ -2077,184 +2582,214 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
  * Hash Map
  */
 
-/** appends origin->image pair to the hash list */
+/* redefine ELEM_DISTANCE macro for hashmap */
+#undef ELEM_DISTANCE
+/* computes the distance from it's desired position for the element stored at pos */
+#define ELEM_DISTANCE(pos) (((pos) + hashmap->mask + 1 - (hashmap->hashes[(pos)]>>(hashmap->shift))) & hashmap->mask)
+
+
+/** inserts element in hash table */
 static
-SCIP_RETCODE hashmaplistAppend(
-   SCIP_HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
-   BMS_BLKMEM*           blkmem,             /**< block memory, or NULL */
-   void*                 origin,             /**< origin of the mapping origin -> image */
-   void*                 image               /**< image of the mapping origin -> image */
+SCIP_RETCODE hashmapInsert(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< element to insert into the table */
+   SCIP_HASHMAPIMAGE     image,              /**< key of element */
+   uint32_t              hashval,            /**< hash value of element */
+   SCIP_Bool             override            /**< should element be overridden or error be returned if already existing */
    )
 {
-   SCIP_HASHMAPLIST* newlist;
+   uint32_t elemdistance;
+   uint32_t pos;
 
-   assert(hashmaplist != NULL);
+   assert(hashmap != NULL);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->hashes != NULL);
+   assert(hashmap->mask > 0);
+   assert(hashval != 0);
 
-   if( blkmem != NULL )
+   pos = hashval>>(hashmap->shift);
+   elemdistance = 0;
+   while( TRUE ) /*lint !e716*/
    {
-      SCIP_ALLOC( BMSallocBlockMemory(blkmem, &newlist) );
-   }
-   else
-   {
-      SCIP_ALLOC( BMSallocMemory(&newlist) );
-   }
+      uint32_t distance;
 
-   newlist->origin = origin;
-   newlist->image = image;
-   newlist->next = *hashmaplist;
-   *hashmaplist = newlist;
-
-   return SCIP_OKAY;
-}
-
-/** frees a hash list entry and all its successors */
-static
-void hashmaplistFree(
-   SCIP_HASHMAPLIST**    hashmaplist,        /**< pointer to hash list to free */
-   BMS_BLKMEM*           blkmem              /**< block memory, or NULL */
-   )
-{
-   SCIP_HASHMAPLIST* list;
-   SCIP_HASHMAPLIST* nextlist;
-
-   assert(hashmaplist != NULL);
-
-   list = *hashmaplist;
-   while( list != NULL )
-   {
-      nextlist = list->next;
-
-      if( blkmem != NULL )
+      /* if position is empty or key equal insert element */
+      if( hashmap->hashes[pos] == 0 )
       {
-         BMSfreeBlockMemory(blkmem, &list);
-      }
-      else
-      {
-         BMSfreeMemory(&list);
+         hashmap->slots[pos].origin = origin;
+         hashmap->slots[pos].image = image;
+         hashmap->hashes[pos] = hashval;
+         ++hashmap->nelements;
+         return SCIP_OKAY;
       }
 
-      list = nextlist;
+      if( hashval == hashmap->hashes[pos] && origin == hashmap->slots[pos].origin )
+      {
+         if( override )
+         {
+            hashmap->slots[pos].origin = origin;
+            hashmap->slots[pos].image = image;
+            hashmap->hashes[pos] = hashval;
+            return SCIP_OKAY;
+         }
+         else
+         {
+            return SCIP_KEYALREADYEXISTING;
+         }
+      }
+
+      /* otherwise check if the current element at this position is closer to its hashvalue */
+      distance = ELEM_DISTANCE(pos);
+      if( distance < elemdistance )
+      {
+         SCIP_HASHMAPIMAGE tmp;
+         uint32_t tmphash;
+
+         /* if this is the case we insert the new element here and find a new position for the old one */
+         elemdistance = distance;
+         tmphash = hashval;
+         hashval = hashmap->hashes[pos];
+         hashmap->hashes[pos] = tmphash;
+         SCIPswapPointers(&hashmap->slots[pos].origin, &origin);
+         tmp = image;
+         image = hashmap->slots[pos].image;
+         hashmap->slots[pos].image = tmp;
+      }
+
+      /* continue until we have found an empty position */
+      pos = (pos + 1) & hashmap->mask;
+      ++elemdistance;
    }
-
-   *hashmaplist = NULL;
 }
 
-/** finds hash list entry pointing to given origin in the hash list, returns NULL if not found */
-static
-SCIP_HASHMAPLIST* hashmaplistFind(
-   SCIP_HASHMAPLIST*     hashmaplist,        /**< hash list */
-   void*                 origin              /**< origin to find */
-   )
-{
-   while( hashmaplist != NULL )
-   {
-      if( hashmaplist->origin == origin )
-         return hashmaplist;
-      hashmaplist = hashmaplist->next;
-   }
-
-   return NULL;
-}
-
-/** retrieves image of given origin from the hash list, or NULL */
-static
-void* hashmaplistGetImage(
-   SCIP_HASHMAPLIST*     hashmaplist,        /**< hash list */
-   void*                 origin              /**< origin to retrieve image for */
-   )
-{
-   SCIP_HASHMAPLIST* h;
-
-   /* find hash list entry */
-   h = hashmaplistFind(hashmaplist, origin);
-
-   /* return image */
-   if( h != NULL )
-      return h->image;
-   else
-      return NULL;
-}
-
-/** sets image for given origin in the hash list, either by modifying existing origin->image pair or by appending a
- *  new origin->image pair
+/** lookup origin in the hashmap. If element is found returns true and the position of the element,
+ *  otherwise returns FALSE.
  */
 static
-SCIP_RETCODE hashmaplistSetImage(
-   SCIP_HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
-   BMS_BLKMEM*           blkmem,             /**< block memory, or NULL */
-   void*                 origin,             /**< origin to set image for */
-   void*                 image               /**< new image for origin */
+SCIP_Bool hashmapLookup(
+   SCIP_HASHMAP*         hashmap,            /**< hash table */
+   void*                 origin,             /**< origin to lookup */
+   uint32_t*             pos                 /**< pointer to store position of element, if exists */
    )
 {
-   SCIP_HASHMAPLIST* h;
+   uint32_t hashval;
+   uint32_t elemdistance;
 
-   /* find hash list entry */
-   h = hashmaplistFind(*hashmaplist, origin);
+   assert(hashmap != NULL);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->hashes != NULL);
+   assert(hashmap->mask > 0);
 
-   /* set image or add origin->image pair */
-   if( h != NULL )
-      h->image = image;
-   else
+   /* get the hash value */
+   hashval = hashvalue((size_t)origin);
+   assert(hashval != 0);
+
+   *pos = hashval>>(hashmap->shift);
+   elemdistance = 0;
+
+   while( TRUE ) /*lint !e716*/
    {
-      SCIP_CALL( hashmaplistAppend(hashmaplist, blkmem, origin, image) );
-   }
+      uint32_t distance;
 
-   return SCIP_OKAY;
+      /* slots is empty so element cannot be contained */
+      if( hashmap->hashes[*pos] == 0 )
+         return FALSE;
+
+      distance = ELEM_DISTANCE(*pos);
+      /* element can not be contained since otherwise we would have swapped it with this one during insert */
+      if( elemdistance > distance )
+         return FALSE;
+
+      /* found element */
+      if( hashmap->hashes[*pos] == hashval && hashmap->slots[*pos].origin == origin )
+         return TRUE;
+
+      *pos = (*pos + 1) & hashmap->mask;
+      ++elemdistance;
+   }
 }
 
-/** removes origin->image pair from the hash list */
+/** check if the load factor of the hashmap is too high and rebuild if necessary */
 static
-SCIP_RETCODE hashmaplistRemove(
-   SCIP_HASHMAPLIST**    hashmaplist,        /**< pointer to hash list */
-   BMS_BLKMEM*           blkmem,             /**< block memory, or NULL */
-   void*                 origin              /**< origin to remove from the list */
-   )
-{
-   SCIP_HASHMAPLIST* nextlist;
-
-   assert(hashmaplist != NULL);
-
-   while( *hashmaplist != NULL && (*hashmaplist)->origin != origin )
-   {
-      hashmaplist = &(*hashmaplist)->next;
-   }
-   if( *hashmaplist != NULL )
-   {
-      nextlist = (*hashmaplist)->next;
-
-      if( blkmem != NULL )
-      {
-         BMSfreeBlockMemory(blkmem, hashmaplist);
-      }
-      else
-      {
-         BMSfreeMemory(hashmaplist);
-      }
-
-      *hashmaplist = nextlist;
-   }
-
-   return SCIP_OKAY;
-}
-
-
-/** creates a hash map mapping pointers to pointers 
- *
- * @note if possible always use a blkmem pointer instead of NULL, otherwise it could slow down the map
- */
-SCIP_RETCODE SCIPhashmapCreate(
-   SCIP_HASHMAP**        hashmap,            /**< pointer to store the created hash map */
-   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash map entries, or NULL */
-   int                   mapsize             /**< size of the hash map */
+SCIP_RETCODE hashmapCheckLoad(
+   SCIP_HASHMAP*         hashmap             /**< hash table */
    )
 {
    assert(hashmap != NULL);
-   assert(mapsize > 0);
+   assert(hashmap->shift < 32);
 
-   SCIP_ALLOC( BMSallocMemory(hashmap) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*hashmap)->lists, mapsize) );
+   /* use integer arithmetic to approximately check if load factor is above 90% */
+   if( ((hashmap->nelements<<10)>>(32-hashmap->shift) > 921) )
+   {
+      SCIP_HASHMAPENTRY* slots;
+      uint32_t* hashes;
+      uint32_t nslots;
+      uint32_t newnslots;
+      uint32_t i;
+
+      /* calculate new size (always power of two) */
+      nslots = hashmap->mask + 1;
+      --hashmap->shift;
+      newnslots = 2*nslots;
+      hashmap->mask = newnslots-1;
+
+      /* reallocate array */
+      SCIP_ALLOC( BMSallocBlockMemoryArray(hashmap->blkmem, &slots, newnslots) );
+      SCIP_ALLOC( BMSallocClearBlockMemoryArray(hashmap->blkmem, &hashes, newnslots) );
+
+      SCIPswapPointers((void**) &slots, (void**) &hashmap->slots);
+      SCIPswapPointers((void**) &hashes, (void**) &hashmap->hashes);
+      hashmap->nelements = 0;
+
+      /* reinsert all elements */
+      for( i = 0; i < nslots; ++i )
+      {
+         /* using SCIP_CALL_ABORT since there are no allocations or duplicates
+          * and thus no bad return codes when inserting the elements
+          */
+         if( hashes[i] != 0 )
+         {
+            SCIP_CALL_ABORT( hashmapInsert(hashmap, slots[i].origin, slots[i].image, hashes[i], FALSE) );
+         }
+      }
+
+      /* free old arrays */
+      BMSfreeBlockMemoryArray(hashmap->blkmem, &hashes, nslots);
+      BMSfreeBlockMemoryArray(hashmap->blkmem, &slots, nslots);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** creates a hash map mapping pointers to pointers */
+SCIP_RETCODE SCIPhashmapCreate(
+   SCIP_HASHMAP**        hashmap,            /**< pointer to store the created hash map */
+   BMS_BLKMEM*           blkmem,             /**< block memory used to store hash map entries */
+   int                   mapsize             /**< size of the hash map */
+   )
+{
+   uint32_t nslots;
+
+   assert(hashmap != NULL);
+   assert(mapsize >= 0);
+   assert(blkmem != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, hashmap) );
+
+   /* dont create too small hashtables, i.e. at least size 32, and increase
+    * the given size by divinding it by 0.9, since then no rebuilding will
+    * be necessary if the given number of elements are inserted. Finally round
+    * to the next power of two.
+    */
+   (*hashmap)->shift = 32;
+   (*hashmap)->shift -= (int)ceil(log(MAX(32, mapsize / 0.9)) / log(2.0));
+   nslots = 1u << (32 - (*hashmap)->shift);
+   (*hashmap)->mask = nslots - 1;
    (*hashmap)->blkmem = blkmem;
-   (*hashmap)->nlists = mapsize;
+   (*hashmap)->nelements = 0;
+
+   SCIP_ALLOC( BMSallocBlockMemoryArray((*hashmap)->blkmem, &(*hashmap)->slots, nslots) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray((*hashmap)->blkmem, &(*hashmap)->hashes, nslots) );
 
    return SCIP_OKAY;
 }
@@ -2264,38 +2799,102 @@ void SCIPhashmapFree(
    SCIP_HASHMAP**        hashmap             /**< pointer to the hash map */
    )
 {
-   int i;
+   uint32_t nslots;
 
    assert(hashmap != NULL);
    assert(*hashmap != NULL);
 
-   /* free hash lists */
-   for( i = 0; i < (*hashmap)->nlists; ++i )
-      hashmaplistFree(&(*hashmap)->lists[i], (*hashmap)->blkmem);
+   nslots = (*hashmap)->mask + 1;
+#ifdef SCIP_DEBUG
+   {
+      uint32_t maxprobelen = 0;
+      uint64_t probelensum = 0;
+      uint32_t i;
+
+      assert(hashmap != NULL);
+
+      for( i = 0; i < nslots; ++i )
+      {
+         if( (*hashmap)->hashes[i] != 0 )
+         {
+            uint32_t probelen = ((i + (*hashmap)->mask + 1 - ((*hashmap)->hashes[i]>>((*hashmap)->shift))) & (*hashmap)->mask) + 1;
+            probelensum += probelen;
+            maxprobelen = MAX(probelen, maxprobelen);
+         }
+      }
+
+      SCIPdebugMessage("%u hash map entries, used %u/%u slots (%.1f%%)",
+                       (unsigned int)(*hashmap)->nelements, (unsigned int)(*hashmap)->nelements, (unsigned int)nslots,
+                       100.0*(SCIP_Real)(*hashmap)->nelements/(SCIP_Real)(nslots));
+      if( (*hashmap)->nelements > 0 )
+         SCIPdebugMessage(", avg. probe length is %.1f, max. probe length is %u",
+                          (SCIP_Real)(probelensum)/(SCIP_Real)(*hashmap)->nelements, (unsigned int)maxprobelen);
+      SCIPdebugMessage("\n");
+   }
+#endif
 
    /* free main hash map data structure */
-   BMSfreeMemoryArray(&(*hashmap)->lists);
-   BMSfreeMemory(hashmap);
+   BMSfreeBlockMemoryArray((*hashmap)->blkmem, &(*hashmap)->hashes, nslots);
+   BMSfreeBlockMemoryArray((*hashmap)->blkmem, &(*hashmap)->slots, nslots);
+   BMSfreeBlockMemory((*hashmap)->blkmem, hashmap);
 }
 
-/** inserts new origin->image pair in hash map (must not be called for already existing origins!) */
+/** inserts new origin->image pair in hash map
+ *
+ *  @note multiple insertion of same element is checked and results in an error
+ */
 SCIP_RETCODE SCIPhashmapInsert(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    void*                 origin,             /**< origin to set image for */
    void*                 image               /**< new image for origin */
    )
 {
-   unsigned int hashval;
+   uint32_t hashval;
+   SCIP_HASHMAPIMAGE img;
 
    assert(hashmap != NULL);
-   assert(hashmap->lists != NULL);
-   assert(hashmap->nlists > 0);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->hashes != NULL);
+   assert(hashmap->mask > 0);
+
+   SCIP_CALL( hashmapCheckLoad(hashmap) );
 
    /* get the hash value */
-   hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
+   hashval = hashvalue((size_t)origin);
 
-   /* append origin->image pair to the list at the hash position */
-   SCIP_CALL( hashmaplistAppend(&hashmap->lists[hashval], hashmap->blkmem, origin, image) );
+   /* append origin->image pair to hash map */
+   img.ptr = image;
+   SCIP_CALL( hashmapInsert(hashmap, origin, img, hashval, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** inserts new origin->image pair in hash map
+ *
+ *  @note multiple insertion of same element is checked and results in an error
+ */
+SCIP_RETCODE SCIPhashmapInsertReal(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   SCIP_Real             image               /**< new image for origin */
+   )
+{
+   uint32_t hashval;
+   SCIP_HASHMAPIMAGE img;
+
+   assert(hashmap != NULL);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->hashes != NULL);
+   assert(hashmap->mask > 0);
+
+   SCIP_CALL( hashmapCheckLoad(hashmap) );
+
+   /* get the hash value */
+   hashval = hashvalue((size_t)origin);
+
+   /* append origin->image pair to hash map */
+   img.real = image;
+   SCIP_CALL( hashmapInsert(hashmap, origin, img, hashval, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -2306,21 +2905,40 @@ void* SCIPhashmapGetImage(
    void*                 origin              /**< origin to retrieve image for */
    )
 {
-   unsigned int hashval;
+   uint32_t pos;
 
    assert(hashmap != NULL);
-   assert(hashmap->lists != NULL);
-   assert(hashmap->nlists > 0);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->hashes != NULL);
+   assert(hashmap->mask > 0);
 
-   /* get the hash value */
-   hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
+   if( hashmapLookup(hashmap, origin, &pos) )
+      return hashmap->slots[pos].image.ptr;
 
-   /* get image for origin from hash list */
-   return hashmaplistGetImage(hashmap->lists[hashval], origin);
+   return NULL;
 }
 
-/** sets image for given origin in the hash map, either by modifying existing origin->image pair or by appending a
- *  new origin->image pair
+/** retrieves image of given origin from the hash map, or NULL if no image exists */
+SCIP_Real SCIPhashmapGetImageReal(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin              /**< origin to retrieve image for */
+   )
+{
+   uint32_t pos;
+
+   assert(hashmap != NULL);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->hashes != NULL);
+   assert(hashmap->mask > 0);
+
+   if( hashmapLookup(hashmap, origin, &pos) )
+      return hashmap->slots[pos].image.real;
+
+   return SCIP_INVALID;
+}
+
+/** sets image for given origin in the hash map, either by modifying existing origin->image pair
+ *  or by appending a new origin->image pair
  */
 SCIP_RETCODE SCIPhashmapSetImage(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
@@ -2328,17 +2946,49 @@ SCIP_RETCODE SCIPhashmapSetImage(
    void*                 image               /**< new image for origin */
    )
 {
-   unsigned int hashval;
+   uint32_t hashval;
+   SCIP_HASHMAPIMAGE img;
 
    assert(hashmap != NULL);
-   assert(hashmap->lists != NULL);
-   assert(hashmap->nlists > 0);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->mask > 0);
+
+   SCIP_CALL( hashmapCheckLoad(hashmap) );
 
    /* get the hash value */
-   hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
+   hashval = hashvalue((size_t)origin);
 
-   /* set image for origin in hash list */
-   SCIP_CALL( hashmaplistSetImage(&hashmap->lists[hashval], hashmap->blkmem, origin, image) );
+   /* append origin->image pair to hash map */
+   img.ptr = image;
+   SCIP_CALL( hashmapInsert(hashmap, origin, img, hashval, TRUE) );
+
+   return SCIP_OKAY;
+}
+
+/** sets image for given origin in the hash map, either by modifying existing origin->image pair
+ *  or by appending a new origin->image pair
+ */
+SCIP_RETCODE SCIPhashmapSetImageReal(
+   SCIP_HASHMAP*         hashmap,            /**< hash map */
+   void*                 origin,             /**< origin to set image for */
+   SCIP_Real             image               /**< new image for origin */
+   )
+{
+   uint32_t hashval;
+   SCIP_HASHMAPIMAGE img;
+
+   assert(hashmap != NULL);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->mask > 0);
+
+   SCIP_CALL( hashmapCheckLoad(hashmap) );
+
+   /* get the hash value */
+   hashval = hashvalue((size_t)origin);
+
+   /* append origin->image pair to hash map */
+   img.real = image;
+   SCIP_CALL( hashmapInsert(hashmap, origin, img, hashval, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -2349,16 +2999,14 @@ SCIP_Bool SCIPhashmapExists(
    void*                 origin              /**< origin to search for */
    )
 {
-   unsigned int hashval;
+   uint32_t pos;
 
    assert(hashmap != NULL);
-   assert(hashmap->lists != NULL);
-   assert(hashmap->nlists > 0);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->hashes != NULL);
+   assert(hashmap->mask > 0);
 
-   /* get the hash value */
-   hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
-
-   return (hashmaplistFind(hashmap->lists[hashval], origin) != NULL);
+   return hashmapLookup(hashmap, origin, &pos);
 }
 
 /** removes origin->image pair from the hash map, if it exists */
@@ -2367,17 +3015,42 @@ SCIP_RETCODE SCIPhashmapRemove(
    void*                 origin              /**< origin to remove from the list */
    )
 {
-   unsigned int hashval;
+   uint32_t pos;
 
    assert(hashmap != NULL);
-   assert(hashmap->lists != NULL);
-   assert(hashmap->nlists > 0);
+   assert(hashmap->slots != NULL);
+   assert(hashmap->mask > 0);
 
-   /* get the hash value */
-   hashval = (unsigned int)((size_t)origin % (unsigned int)hashmap->nlists);
+   assert(origin != NULL);
 
-   /* remove element from the list at the hash position */
-   SCIP_CALL( hashmaplistRemove(&hashmap->lists[hashval], hashmap->blkmem, origin) );
+   if( hashmapLookup(hashmap, origin, &pos) )
+   {
+      /* remove element */
+      hashmap->hashes[pos] = 0;
+      --hashmap->nelements;
+
+      /* move other elements if necessary */
+      while( TRUE ) /*lint !e716*/
+      {
+         uint32_t nextpos = (pos + 1) & hashmap->mask;
+
+         /* nothing to do since there is no chain that needs to be moved */
+         if( hashmap->hashes[nextpos] == 0 )
+            return SCIP_OKAY;
+
+         /* check if the element is the start of a new chain and return if that is the case */
+         if( (hashmap->hashes[nextpos]>>(hashmap->shift)) == nextpos )
+            return SCIP_OKAY;
+
+         /* element should be moved to the left and next element needs to be checked */
+         hashmap->slots[pos].origin = hashmap->slots[nextpos].origin;
+         hashmap->slots[pos].image = hashmap->slots[nextpos].image;
+         hashmap->hashes[pos] = hashmap->hashes[nextpos];
+         hashmap->hashes[nextpos] = 0;
+
+         pos = nextpos;
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -2388,40 +3061,35 @@ void SCIPhashmapPrintStatistics(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
-   SCIP_HASHMAPLIST* hashmaplist;
-   int usedslots;
-   int maxslotsize;
-   int sumslotsize;
-   int slotsize;
-   int i;
+   uint32_t maxprobelen = 0;
+   uint64_t probelensum = 0;
+   uint32_t nslots;
+   uint32_t i;
 
    assert(hashmap != NULL);
 
-   usedslots = 0;
-   maxslotsize = 0;
-   sumslotsize = 0;
-   for( i = 0; i < hashmap->nlists; ++i )
+   nslots = hashmap->mask + 1;
+
+   /* compute the maximum and average probe length */
+   for( i = 0; i < nslots; ++i )
    {
-      hashmaplist = hashmap->lists[i];
-      if( hashmaplist != NULL )
+      if( hashmap->hashes[i] != 0 )
       {
-         usedslots++;
-         slotsize = 0;
-         while( hashmaplist != NULL )
-         {
-            slotsize++;
-            hashmaplist = hashmaplist->next;
-         }
-         maxslotsize = MAX(maxslotsize, slotsize);
-         sumslotsize += slotsize;
+         uint32_t probelen = ELEM_DISTANCE(i) + 1;
+         probelensum += probelen;
+         maxprobelen = MAX(probelen, maxprobelen);
       }
    }
 
-   SCIPmessagePrintInfo(messagehdlr, "%d hash entries, used %d/%d slots (%.1f%%)",
-      sumslotsize, usedslots, hashmap->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashmap->nlists));
-   if( usedslots > 0 )
-      SCIPmessagePrintInfo(messagehdlr, ", avg. %.1f entries/used slot, max. %d entries in slot", 
-         (SCIP_Real)sumslotsize/(SCIP_Real)usedslots, maxslotsize);
+   /* print general hash map statistics */
+   SCIPmessagePrintInfo(messagehdlr, "%u hash entries, used %u/%u slots (%.1f%%)",
+                        (unsigned int)hashmap->nelements, (unsigned int)hashmap->nelements,
+                        (unsigned int)nslots, 100.0*(SCIP_Real)hashmap->nelements/(SCIP_Real)(nslots));
+
+   /* if not empty print average and maximum probe length */
+   if( hashmap->nelements > 0 )
+      SCIPmessagePrintInfo(messagehdlr, ", avg. probe length is %.1f, max. probe length is %u",
+         (SCIP_Real)(probelensum)/(SCIP_Real)hashmap->nelements, (unsigned int)maxprobelen);
    SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
@@ -2430,113 +3098,81 @@ SCIP_Bool SCIPhashmapIsEmpty(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    )
 {
-   int i;
    assert(hashmap != NULL);
 
-   for( i = 0; i < hashmap->nlists; ++i )
-      if( hashmap->lists[i] )
-         return FALSE;
-
-   return TRUE;
+   return hashmap->nelements == 0;
 }
 
-/** gives the number of entries in a hash map */ 
+/** gives the number of elements in a hash map */
+int SCIPhashmapGetNElements(
+   SCIP_HASHMAP*         hashmap             /**< hash map */
+   )
+{
+   return (int) hashmap->nelements;
+}
+
+/** gives the number of entries in the internal arrays of a hash map */
 int SCIPhashmapGetNEntries(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    )
 {
-   int count = 0;
-   int i;
-   assert(hashmap != NULL);
-
-   for( i = 0; i < hashmap->nlists; ++i )
-      count += SCIPhashmapListGetNEntries(hashmap->lists[i]);
-
-   return count;
+   return (int) hashmap->mask + 1;
 }
 
-/** gives the number of lists (buckets) in a hash map */ 
-int SCIPhashmapGetNLists(
-   SCIP_HASHMAP*         hashmap             /**< hash map */
-   )
-{
-   assert(hashmap != NULL);
-
-   return hashmap->nlists;
-}
-
-/** gives a specific list (bucket) in a hash map */
-SCIP_HASHMAPLIST* SCIPhashmapGetList(
+/** gives the hashmap entry at the given index or NULL if entry is empty */
+SCIP_HASHMAPENTRY* SCIPhashmapGetEntry(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
-   int                   listindex           /**< index of hash map list */
+   int                   entryidx            /**< index of hash map entry */
    )
 {
    assert(hashmap != NULL);
-   assert(listindex >= 0);
-   assert(listindex < hashmap->nlists);
 
-   return hashmap->lists[listindex];
+   return hashmap->hashes[entryidx] == 0 ? NULL : &hashmap->slots[entryidx];
 }
 
-/** gives the number of entries in a list of a hash map */ 
-int SCIPhashmapListGetNEntries(
-   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list, can be NULL */
+/** gives the origin of the hashmap entry */
+void* SCIPhashmapEntryGetOrigin(
+   SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
    )
 {
-   int count = 0;
+   assert(entry != NULL);
 
-   for( ; hashmaplist; hashmaplist = hashmaplist->next )
-      ++count;
-
-   return count;
+   return entry->origin;
 }
 
-/** retrieves origin of given entry in a hash map */ 
-void* SCIPhashmapListGetOrigin(
-   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
+/** gives the image of the hashmap entry */
+void* SCIPhashmapEntryGetImage(
+   SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
    )
 {
-   assert(hashmaplist != NULL);
+   assert(entry != NULL);
 
-   return hashmaplist->origin;
+   return entry->image.ptr;
 }
 
-/** retrieves image of given entry in a hash map */ 
-void* SCIPhashmapListGetImage(
-   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
+/** gives the image of the hashmap entry */
+SCIP_Real SCIPhashmapEntryGetImageReal(
+   SCIP_HASHMAPENTRY*    entry               /**< hash map entry */
    )
 {
-   assert(hashmaplist != NULL);
+   assert(entry != NULL);
 
-   return hashmaplist->image;
+   return entry->image.real;
 }
 
-/** retrieves next entry from given entry in a hash map list, or NULL if at end of list. */ 
-SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
-   SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
-   )
-{
-   assert(hashmaplist != NULL);
-
-   return hashmaplist->next;
-}
-
-/** removes all entries in a hash map. */ 
+/** removes all entries in a hash map. */
 SCIP_RETCODE SCIPhashmapRemoveAll(
    SCIP_HASHMAP*         hashmap             /**< hash map */
    )
 {
-   int listidx;
-
    assert(hashmap != NULL);
 
-   /* free hash lists */
-   for( listidx = hashmap->nlists - 1; listidx >= 0; --listidx )
-      hashmaplistFree(&hashmap->lists[listidx], hashmap->blkmem);
+   BMSclearMemoryArray(hashmap->hashes, hashmap->mask + 1);
+
+   hashmap->nelements = 0;
 
    return SCIP_OKAY;
 }
-
 
 
 /*
@@ -2999,7 +3635,7 @@ SCIP_RETCODE SCIPintarrayExtend(
    assert(0 <= minidx);
    assert(minidx <= maxidx);
 
-   SCIPdebugMessage("extending intarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
+   SCIPdebugMessage("extending intarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n",
       (void*)intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
@@ -3134,7 +3770,7 @@ SCIP_RETCODE SCIPintarrayClear(
 {
    assert(intarray != NULL);
 
-   SCIPdebugMessage("clearing intarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
+   SCIPdebugMessage("clearing intarray %p (firstidx=%d, size=%d, range=[%d,%d])\n",
       (void*)intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx);
 
    if( intarray->minusedidx <= intarray->maxusedidx )
@@ -3191,7 +3827,7 @@ SCIP_RETCODE SCIPintarraySetVal(
    assert(intarray != NULL);
    assert(idx >= 0);
 
-   SCIPdebugMessage("setting intarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %d\n", 
+   SCIPdebugMessage("setting intarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %d\n",
       (void*)intarray, intarray->firstidx, intarray->valssize, intarray->minusedidx, intarray->maxusedidx, idx, val);
 
    if( val != 0 )
@@ -3241,7 +3877,7 @@ SCIP_RETCODE SCIPintarraySetVal(
             assert(intarray->minusedidx <= intarray->maxusedidx);
          }
          while( intarray->vals[intarray->maxusedidx - intarray->firstidx] == 0 );
-      }      
+      }
    }
 
    return SCIP_OKAY;
@@ -3313,7 +3949,7 @@ SCIP_RETCODE SCIPboolarrayCopy(
    SCIP_CALL( SCIPboolarrayCreate(boolarray, blkmem) );
    if( sourceboolarray->valssize > 0 )
    {
-      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*boolarray)->vals, sourceboolarray->vals, 
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*boolarray)->vals, sourceboolarray->vals,
                      sourceboolarray->valssize) );
    }
    (*boolarray)->valssize = sourceboolarray->valssize;
@@ -3365,7 +4001,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
    assert(0 <= minidx);
    assert(minidx <= maxidx);
 
-   SCIPdebugMessage("extending boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
+   SCIPdebugMessage("extending boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n",
       (void*)boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
@@ -3502,7 +4138,7 @@ SCIP_RETCODE SCIPboolarrayClear(
 {
    assert(boolarray != NULL);
 
-   SCIPdebugMessage("clearing boolarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
+   SCIPdebugMessage("clearing boolarray %p (firstidx=%d, size=%d, range=[%d,%d])\n",
       (void*)boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx);
 
    if( boolarray->minusedidx <= boolarray->maxusedidx )
@@ -3559,7 +4195,7 @@ SCIP_RETCODE SCIPboolarraySetVal(
    assert(boolarray != NULL);
    assert(idx >= 0);
 
-   SCIPdebugMessage("setting boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %u\n", 
+   SCIPdebugMessage("setting boolarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %u\n",
       (void*)boolarray, boolarray->firstidx, boolarray->valssize, boolarray->minusedidx, boolarray->maxusedidx, idx, val);
 
    if( val != FALSE )
@@ -3609,7 +4245,7 @@ SCIP_RETCODE SCIPboolarraySetVal(
             assert(boolarray->minusedidx <= boolarray->maxusedidx);
          }
          while( boolarray->vals[boolarray->maxusedidx - boolarray->firstidx] == FALSE );
-      }      
+      }
    }
 
    return SCIP_OKAY;
@@ -3720,7 +4356,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
    assert(0 <= minidx);
    assert(minidx <= maxidx);
 
-   SCIPdebugMessage("extending ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n", 
+   SCIPdebugMessage("extending ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) to range [%d,%d]\n",
       (void*)ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx, minidx, maxidx);
 
    /* check, whether we have to allocate additional memory, or shift the array */
@@ -3855,7 +4491,7 @@ SCIP_RETCODE SCIPptrarrayClear(
 {
    assert(ptrarray != NULL);
 
-   SCIPdebugMessage("clearing ptrarray %p (firstidx=%d, size=%d, range=[%d,%d])\n", 
+   SCIPdebugMessage("clearing ptrarray %p (firstidx=%d, size=%d, range=[%d,%d])\n",
       (void*)ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx);
 
    if( ptrarray->minusedidx <= ptrarray->maxusedidx )
@@ -3912,7 +4548,7 @@ SCIP_RETCODE SCIPptrarraySetVal(
    assert(ptrarray != NULL);
    assert(idx >= 0);
 
-   SCIPdebugMessage("setting ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %p\n", 
+   SCIPdebugMessage("setting ptrarray %p (firstidx=%d, size=%d, range=[%d,%d]) index %d to %p\n",
       (void*)ptrarray, ptrarray->firstidx, ptrarray->valssize, ptrarray->minusedidx, ptrarray->maxusedidx, idx, val);
 
    if( val != NULL )
@@ -3962,7 +4598,7 @@ SCIP_RETCODE SCIPptrarraySetVal(
             assert(ptrarray->minusedidx <= ptrarray->maxusedidx);
          }
          while( ptrarray->vals[ptrarray->maxusedidx - ptrarray->firstidx] == NULL );
-      }      
+      }
    }
 
    return SCIP_OKAY;
@@ -4359,6 +4995,13 @@ void SCIPsort(
 #define SORTTPL_NAMEEXT     IntIntLong
 #define SORTTPL_KEYTYPE     int
 #define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  SCIP_Longint
+#include "scip/sorttpl.c" /*lint !e451*/
+
+/* SCIPsortIntRealLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntRealLong
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  SCIP_Longint
 #include "scip/sorttpl.c" /*lint !e451*/
 
@@ -4763,12 +5406,28 @@ void SCIPsortDown(
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortDownRealRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealRealInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortDownRealRealPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownRealRealPtr
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  SCIP_Real
 #define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+/* SCIPsortDownRealRealPtrPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealRealPtrPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  void*
+#define SORTTPL_FIELD3TYPE  void*
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
 
@@ -5783,24 +6442,27 @@ int SCIPprofileGetLatestFeasibleStart(
 /** creates directed graph structure */
 SCIP_RETCODE SCIPdigraphCreate(
    SCIP_DIGRAPH**        digraph,            /**< pointer to store the created directed graph */
+   BMS_BLKMEM*           blkmem,             /**< block memory to store the data */
    int                   nnodes              /**< number of nodes */
    )
 {
    assert(digraph != NULL);
+   assert(blkmem != NULL);
    assert(nnodes > 0);
 
    /* allocate memory for the graph and the arrays storing arcs and data */
-   SCIP_ALLOC( BMSallocMemory(digraph) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->successors, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->arcdata, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->successorssize, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->nsuccessors, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->nodedata, nnodes) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, digraph) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*digraph)->successors, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*digraph)->arcdata, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*digraph)->successorssize, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*digraph)->nsuccessors, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(blkmem, &(*digraph)->nodedata, nnodes) );
 
    /* store number of nodes */
    (*digraph)->nnodes = nnodes;
 
    /* at the beginning, no components are stored */
+   (*digraph)->blkmem = blkmem;
    (*digraph)->ncomponents = 0;
    (*digraph)->componentstartsize = 0;
    (*digraph)->components = NULL;
@@ -5816,17 +6478,19 @@ SCIP_RETCODE SCIPdigraphResize(
    )
 {
    int n;
+   assert(digraph != NULL);
+   assert(digraph->blkmem != NULL);
 
    /* check if the digraph has already a proper size */
    if( nnodes <= digraph->nnodes )
       return SCIP_OKAY;
 
    /* reallocate memory for increasing the arrays storing arcs and data */
-   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors, nnodes) );
-   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdata, nnodes) );
-   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successorssize, nnodes) );
-   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->nsuccessors, nnodes) );
-   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->nodedata, nnodes) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(digraph->blkmem, &digraph->successors, digraph->nnodes, nnodes) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(digraph->blkmem, &digraph->arcdata, digraph->nnodes, nnodes) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(digraph->blkmem, &digraph->successorssize, digraph->nnodes, nnodes) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(digraph->blkmem, &digraph->nsuccessors, digraph->nnodes, nnodes) );
+   SCIP_ALLOC( BMSreallocBlockMemoryArray(digraph->blkmem, &digraph->nodedata, digraph->nnodes, nnodes) );
 
    /* initialize the new node data structures */
    for( n = digraph->nnodes; n < nnodes; ++n )
@@ -5848,24 +6512,36 @@ SCIP_RETCODE SCIPdigraphResize(
  */
 SCIP_RETCODE SCIPdigraphCopy(
    SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
-   SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
+   SCIP_DIGRAPH*         sourcedigraph,      /**< source directed graph */
+   BMS_BLKMEM*           targetblkmem        /**< block memory to store the target block memory, or NULL to use the same
+                                              *   the same block memory as used for the \p sourcedigraph */
    )
 {
    int ncomponents;
    int nnodes;
    int i;
 
-   SCIP_ALLOC( BMSallocMemory(targetdigraph) );
+   assert(sourcedigraph != NULL);
+   assert(targetdigraph != NULL);
+
+   /* use the source digraph block memory if not specified otherwise */
+   if( targetblkmem == NULL )
+      targetblkmem = sourcedigraph->blkmem;
+
+   assert(targetblkmem != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(targetblkmem, targetdigraph) );
 
    nnodes = sourcedigraph->nnodes;
    ncomponents = sourcedigraph->ncomponents;
    (*targetdigraph)->nnodes = nnodes;
    (*targetdigraph)->ncomponents = ncomponents;
+   (*targetdigraph)->blkmem = targetblkmem;
 
    /* copy arcs and data */
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->successors, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->arcdata, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->nodedata, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(targetblkmem, &(*targetdigraph)->successors, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(targetblkmem, &(*targetdigraph)->arcdata, nnodes) );
+   SCIP_ALLOC( BMSallocClearBlockMemoryArray(targetblkmem, &(*targetdigraph)->nodedata, nnodes) );
 
    /* copy lists of successors and arc data */
    for( i = 0; i < nnodes; ++i )
@@ -5874,23 +6550,24 @@ SCIP_RETCODE SCIPdigraphCopy(
       {
          assert(sourcedigraph->successors[i] != NULL);
          assert(sourcedigraph->arcdata[i] != NULL);
-         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->successors[i]),
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &((*targetdigraph)->successors[i]),
                sourcedigraph->successors[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->arcdata[i]),
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &((*targetdigraph)->arcdata[i]),
                sourcedigraph->arcdata[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
       }
       /* copy node data - careful if these are pointers to some information -> need to be copied by hand */
       (*targetdigraph)->nodedata[i] = sourcedigraph->nodedata[i];
    }
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->successorssize, sourcedigraph->nsuccessors, nnodes) );
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->nsuccessors, sourcedigraph->nsuccessors, nnodes) );
+
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->successorssize, sourcedigraph->successorssize, nnodes) );
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->nsuccessors, sourcedigraph->nsuccessors, nnodes) );
 
    /* copy component data */
    if( ncomponents > 0 )
    {
-      SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->components, sourcedigraph->components,
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->components, sourcedigraph->components,
             sourcedigraph->componentstarts[ncomponents]) );
-      SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->componentstarts,
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->componentstarts,
             sourcedigraph->componentstarts,ncomponents + 1) ); /*lint !e776*/
       (*targetdigraph)->componentstartsize = ncomponents + 1;
    }
@@ -5911,14 +6588,16 @@ SCIP_RETCODE SCIPdigraphSetSizes(
    )
 {
    int i;
+   BMS_BLKMEM* blkmem;
 
    assert(digraph != NULL);
    assert(digraph->nnodes > 0);
+   blkmem = digraph->blkmem;
 
    for( i = 0; i < digraph->nnodes; ++i )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[i], sizes[i]) ); /*lint !e866*/
-      SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdata[i], sizes[i]) ); /*lint !e866*/
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->successors[i], sizes[i]) ); /*lint !e866*/
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->arcdata[i], sizes[i]) ); /*lint !e866*/
       digraph->successorssize[i] = sizes[i];
       digraph->nsuccessors[i] = 0;
    }
@@ -5932,32 +6611,38 @@ void SCIPdigraphFree(
    )
 {
    int i;
+   BMS_BLKMEM* blkmem;
+   SCIP_DIGRAPH* digraphptr;
 
    assert(digraph != NULL);
    assert(*digraph != NULL);
+   assert((*digraph)->blkmem != NULL);
+
+   blkmem = (*digraph)->blkmem;
+   digraphptr = *digraph;
 
    /* free arrays storing the successor nodes and arc data */
-   for( i = (*digraph)->nnodes - 1; i >= 0; --i )
+   for( i = digraphptr->nnodes - 1; i >= 0; --i )
    {
-      BMSfreeMemoryArrayNull(&(*digraph)->successors[i]);
-      BMSfreeMemoryArrayNull(&(*digraph)->arcdata[i]);
+      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->successors[i], digraphptr->successorssize[i]);
+      BMSfreeBlockMemoryArrayNull(blkmem, &digraphptr->arcdata[i], digraphptr->successorssize[i]);
    }
 
    /* free components structure */
-   SCIPdigraphFreeComponents(*digraph);
-   assert((*digraph)->ncomponents == 0);
-   assert((*digraph)->componentstartsize == 0);
-   assert((*digraph)->components == NULL);
-   assert((*digraph)->componentstarts == NULL);
+   SCIPdigraphFreeComponents(digraphptr);
+   assert(digraphptr->ncomponents == 0);
+   assert(digraphptr->componentstartsize == 0);
+   assert(digraphptr->components == NULL);
+   assert(digraphptr->componentstarts == NULL);
 
    /* free directed graph data structure */
-   BMSfreeMemoryArray(&(*digraph)->nodedata);
-   BMSfreeMemoryArray(&(*digraph)->successorssize);
-   BMSfreeMemoryArray(&(*digraph)->nsuccessors);
-   BMSfreeMemoryArray(&(*digraph)->successors);
-   BMSfreeMemoryArray(&(*digraph)->arcdata);
+   BMSfreeBlockMemoryArray(blkmem, &digraphptr->nodedata, digraphptr->nnodes);
+   BMSfreeBlockMemoryArray(blkmem, &digraphptr->successorssize, digraphptr->nnodes);
+   BMSfreeBlockMemoryArray(blkmem, &digraphptr->nsuccessors, digraphptr->nnodes);
+   BMSfreeBlockMemoryArray(blkmem, &digraphptr->successors, digraphptr->nnodes);
+   BMSfreeBlockMemoryArray(blkmem, &digraphptr->arcdata, digraphptr->nnodes);
 
-   BMSfreeMemory(digraph);
+   BMSfreeBlockMemory(blkmem, digraph);
 }
 
 #define STARTSUCCESSORSSIZE 5
@@ -5970,27 +6655,39 @@ SCIP_RETCODE ensureSuccessorsSize(
    int                   newsize             /**< needed size */
    )
 {
+   BMS_BLKMEM* blkmem;
+
    assert(digraph != NULL);
+   assert(digraph->blkmem != NULL);
    assert(idx >= 0);
    assert(idx < digraph->nnodes);
    assert(newsize > 0);
+   assert(digraph->successorssize[idx] == 0 || digraph->successors[idx] != NULL);
+   assert(digraph->successorssize[idx] == 0 || digraph->arcdata[idx] != NULL);
+
+   blkmem = digraph->blkmem;
 
    /* check whether array is big enough, and realloc, if needed */
    if( newsize > digraph->successorssize[idx] )
    {
-      if( digraph->successorssize[idx] == 0 )
+      if( digraph->successors[idx] == NULL )
       {
+         assert(digraph->arcdata[idx] == NULL);
          digraph->successorssize[idx] = STARTSUCCESSORSSIZE;
-         SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }
       else
       {
-         digraph->successorssize[idx] = 2 * digraph->successorssize[idx];
-         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         newsize = MAX(newsize, 2 * digraph->successorssize[idx]);
+         assert(digraph->arcdata[idx] != NULL);
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &digraph->successors[idx], digraph->successorssize[idx], newsize) ); /*lint !e866*/
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &digraph->arcdata[idx], digraph->successorssize[idx], newsize) ); /*lint !e866*/
+         digraph->successorssize[idx] = newsize;
       }
    }
+
+   assert(newsize <= digraph->successorssize[idx]);
 
    return SCIP_OKAY;
 }
@@ -6273,6 +6970,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
                                               *   number of components is accessed by SCIPdigraphGetNComponents() */
    )
 {
+   BMS_BLKMEM* blkmem;
    SCIP_Bool* visited;
    int* ndirectedsuccessors;
    int* stackadjvisited;
@@ -6283,8 +6981,13 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    int i;
    int j;
 
+   SCIP_RETCODE retcode = SCIP_OKAY;
+
    assert(digraph != NULL);
    assert(digraph->nnodes > 0);
+   assert(digraph->blkmem != NULL);
+
+   blkmem = digraph->blkmem;
 
    /* first free the old components */
    if( digraph->ncomponents > 0 )
@@ -6295,12 +6998,15 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    digraph->ncomponents = 0;
    digraph->componentstartsize = 10;
 
-   SCIP_ALLOC( BMSallocClearMemoryArray(&visited, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&digraph->components, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&digraph->componentstarts, digraph->componentstartsize) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dfsstack, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&stackadjvisited, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&ndirectedsuccessors, digraph->nnodes) );
+   /* storage to hold components is stored in block memory */
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->components, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &digraph->componentstarts, digraph->componentstartsize) );
+
+   /* allocate temporary arrays */
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocClearMemoryArray(&visited, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&dfsstack, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&stackadjvisited, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&ndirectedsuccessors, digraph->nnodes), TERMINATE );
 
    digraph->componentstarts[0] = 0;
 
@@ -6312,7 +7018,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    {
       for( j = 0; j < ndirectedsuccessors[i]; ++j )
       {
-         SCIP_CALL( SCIPdigraphAddArc(digraph, digraph->successors[i][j], i, NULL) );
+         SCIP_CALL_TERMINATE( retcode, SCIPdigraphAddArc(digraph, digraph->successors[i][j], i, NULL), TERMINATE );
       }
    }
 
@@ -6334,10 +7040,13 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
          /* enlarge componentstartsize array, if needed */
          if( digraph->ncomponents >= digraph->componentstartsize )
          {
-            digraph->componentstartsize = 2 * digraph->componentstartsize;
-            assert(digraph->ncomponents < digraph->componentstartsize);
+            int newsize;
 
-            SCIP_ALLOC( BMSreallocMemoryArray(&digraph->componentstarts, digraph->componentstartsize) );
+            newsize = 2 * digraph->componentstartsize;
+            assert(digraph->ncomponents < newsize);
+
+            SCIP_ALLOC_TERMINATE( retcode, BMSreallocBlockMemoryArray(blkmem, &digraph->componentstarts, digraph->componentstartsize, newsize), TERMINATE );
+            digraph->componentstartsize = newsize;
          }
          digraph->componentstarts[digraph->ncomponents] = compstart + ndfsnodes;
 
@@ -6360,15 +7069,21 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
    if( ncomponents != NULL )
       (*ncomponents) = digraph->ncomponents;
 
-   BMSfreeMemoryArray(&ndirectedsuccessors);
-   BMSfreeMemoryArray(&stackadjvisited);
-   BMSfreeMemoryArray(&dfsstack);
-   BMSfreeMemoryArray(&visited);
+   /* cppcheck-suppress unusedLabel */
+TERMINATE:
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPdigraphFreeComponents(digraph);
+   }
+   BMSfreeMemoryArrayNull(&ndirectedsuccessors);
+   BMSfreeMemoryArrayNull(&stackadjvisited);
+   BMSfreeMemoryArrayNull(&dfsstack);
+   BMSfreeMemoryArrayNull(&visited);
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
-/** Performes an (almost) topological sort on the undirected components of the given directed graph. The undirected
+/** Performs an (almost) topological sort on the undirected components of the given directed graph. The undirected
  *  components should be computed before using SCIPdigraphComputeUndirectedComponents().
  *
  *  @note In general a topological sort is not unique.  Note, that there might be directed cycles, that are randomly
@@ -6660,6 +7375,7 @@ SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
 
    assert(retcode == SCIP_OKAY);
 
+ /* cppcheck-suppress unusedLabel */
  TERMINATE:
    BMSfreeMemoryArrayNull(&lowlink);
    BMSfreeMemoryArrayNull(&dfsidx);
@@ -6675,13 +7391,18 @@ void SCIPdigraphFreeComponents(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
    )
 {
+   BMS_BLKMEM* blkmem;
+
    assert(digraph != NULL);
+   assert(digraph->blkmem != NULL);
+
+   blkmem = digraph->blkmem;
 
    /* free components structure */
    if( digraph->componentstartsize > 0 )
    {
-      BMSfreeMemoryArray(&digraph->componentstarts);
-      BMSfreeMemoryArray(&digraph->components);
+      BMSfreeBlockMemoryArray(blkmem, &digraph->componentstarts, digraph->componentstartsize);
+      BMSfreeBlockMemoryArray(blkmem, &digraph->components, digraph->nnodes);
       digraph->components = NULL;
       digraph->componentstarts = NULL;
       digraph->ncomponents = 0;
@@ -7886,7 +8607,8 @@ int getRand(
 #endif
 
 /** returns a random integer between minrandval and maxrandval */
-int SCIPgetRandomInt(
+static
+int getRandomInt(
    int                   minrandval,         /**< minimal value to return */
    int                   maxrandval,         /**< maximal value to return */
    unsigned int*         seedp               /**< pointer to seed value */
@@ -7905,7 +8627,8 @@ int SCIPgetRandomInt(
 }
 
 /** returns a random real between minrandval and maxrandval */
-SCIP_Real SCIPgetRandomReal(
+static
+SCIP_Real getRandomReal(
    SCIP_Real             minrandval,         /**< minimal value to return */
    SCIP_Real             maxrandval,         /**< maximal value to return */
    unsigned int*         seedp               /**< pointer to seed value */
@@ -7923,6 +8646,283 @@ SCIP_Real SCIPgetRandomReal(
    return minrandval*(1.0 - randnumber) + maxrandval*randnumber;
 }
 
+/** returns a random integer between minrandval and maxrandval
+ *
+ *  @deprecated Please use SCIPrandomGetInt() to request a random integer.
+ */
+int SCIPgetRandomInt(
+   int                   minrandval,         /**< minimal value to return */
+   int                   maxrandval,         /**< maximal value to return */
+   unsigned int*         seedp               /**< pointer to seed value */
+   )
+{
+   return getRandomInt(minrandval, maxrandval, seedp);
+}
+
+/** returns a random real between minrandval and maxrandval
+ *
+ *  @deprecated Please use SCIPrandomGetReal() to request a random real.
+ */
+SCIP_Real SCIPgetRandomReal(
+   SCIP_Real             minrandval,         /**< minimal value to return */
+   SCIP_Real             maxrandval,         /**< maximal value to return */
+   unsigned int*         seedp               /**< pointer to seed value */
+   )
+{
+   return getRandomReal(minrandval, maxrandval, seedp);
+}
+
+
+/* initial seeds for KISS random number generator */
+#define DEFAULT_SEED UINT32_C(123456789)
+#define DEFAULT_XOR  UINT32_C(362436000)
+#define DEFAULT_MWC  UINT32_C(521288629)
+#define DEFAULT_CST  UINT32_C(7654321)
+
+
+/** initialize the random number generator with a given start seed */
+static
+void randomInitialize(
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   unsigned int          initseed            /**< initial random seed */
+   )
+{
+   assert(randnumgen != NULL);
+
+   /* use MAX() to avoid zero after over flowing */
+   randnumgen->seed = MAX(SCIPhashTwo(DEFAULT_SEED, initseed), 1u);
+   randnumgen->xor_seed = MAX(SCIPhashTwo(DEFAULT_XOR, initseed), 1u);
+   randnumgen->mwc_seed = MAX(SCIPhashTwo(DEFAULT_MWC, initseed), 1u);
+   randnumgen->cst_seed = SCIPhashTwo(DEFAULT_CST, initseed);
+
+   assert(randnumgen->seed > 0);
+   assert(randnumgen->xor_seed > 0);
+   assert(randnumgen->mwc_seed > 0);
+
+   return;
+}
+
+/** returns a random number between 0 and UINT32_MAX
+ *
+ *  implementation of KISS random number generator developed by George Marsaglia.
+ *  KISS is combination of three different random number generators:
+ *   - Linear congruential generator
+ *   - Xorshift
+ *   - Lag-1 Multiply-with-carry
+ *
+ *  KISS has a period of 2^123 and passes all statistical test part of BigCrush-Test of TestU01 [1].
+ *
+ *  [1] http://dl.acm.org/citation.cfm?doid=1268776.1268777
+ */
+static
+uint32_t randomGetRand(
+   SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
+   )
+{
+   uint64_t t;
+
+   /* linear congruential */
+   randnumgen->seed = (uint32_t) (randnumgen->seed * UINT64_C(1103515245) + UINT64_C(12345));
+
+   /* Xorshift */
+   randnumgen->xor_seed ^= (randnumgen->xor_seed << 13);
+   randnumgen->xor_seed ^= (randnumgen->xor_seed >> 17);
+   randnumgen->xor_seed ^= (randnumgen->xor_seed << 5);
+
+   /* Multiply-with-carry */
+   t = UINT64_C(698769069) * randnumgen->mwc_seed + randnumgen->cst_seed;
+   randnumgen->cst_seed = (uint32_t) (t >> 32);
+   randnumgen->mwc_seed = (uint32_t) t;
+
+   return randnumgen->seed + randnumgen->xor_seed + randnumgen->mwc_seed;
+}
+
+/** creates and initializes a random number generator */
+SCIP_RETCODE SCIPrandomCreate(
+   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   unsigned int          initialseed         /**< initial random seed */
+   )
+{
+   assert(randnumgen != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, randnumgen) );
+   (*randnumgen)->blkmem = blkmem;
+
+   randomInitialize((*randnumgen), initialseed);
+
+   return SCIP_OKAY;
+}
+
+/** frees a random number generator */
+void SCIPrandomFree(
+   SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
+   )
+{
+   assert(randnumgen != NULL);
+   assert((*randnumgen) != NULL);
+
+   BMSfreeBlockMemory((*randnumgen)->blkmem, randnumgen);
+
+   return;
+}
+
+/** returns a random integer between minrandval and maxrandval */
+int SCIPrandomGetInt(
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   int                   minrandval,         /**< minimal value to return */
+   int                   maxrandval          /**< maximal value to return */
+   )
+{
+   SCIP_Real randnumber;
+   SCIP_Longint zeromax;
+
+   randnumber = (SCIP_Real)randomGetRand(randnumgen)/(UINT32_MAX+1.0);
+   assert(randnumber >= 0.0);
+   assert(randnumber < 1.0);
+
+   /* we need to shift the range to the non-negative integers to handle negative integer values correctly.
+    * we use a long integer to avoid overflows.
+    */
+   zeromax = (SCIP_Longint)maxrandval - (SCIP_Longint)minrandval + 1;
+
+   return (int) ((SCIP_Longint)(zeromax * randnumber) + (SCIP_Longint)minrandval);
+}
+
+/** returns a random real between minrandval and maxrandval */
+SCIP_Real SCIPrandomGetReal(
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   SCIP_Real             minrandval,         /**< minimal value to return */
+   SCIP_Real             maxrandval          /**< maximal value to return */
+   )
+{
+   SCIP_Real randnumber;
+
+   randnumber = (SCIP_Real)randomGetRand(randnumgen)/(SCIP_Real)UINT32_MAX;
+   assert(randnumber >= 0.0);
+   assert(randnumber <= 1.0);
+
+   /* we multiply minrandval and maxrandval separately by randnumber in order to avoid overflow if they are more than
+    * SCIP_REAL_MAX apart
+    */
+   return minrandval*(1.0 - randnumber) + maxrandval*randnumber;
+}
+
+/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
+void SCIPrandomPermuteIntArray(
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   int*                  array,              /**< array to be shuffled */
+   int                   begin,              /**< first included index that should be subject to shuffling
+                                              *   (0 for first array entry)
+                                              */
+   int                   end                 /**< first excluded index that should not be subject to shuffling
+                                              *   (array size for last array entry)
+                                              */
+   )
+{
+   int tmp;
+   int i;
+
+   /* loop backwards through all elements and always swap the current last element to a random position */
+   while( end > begin+1 )
+   {
+      --end;
+
+      /* get a random position into which the last entry should be shuffled */
+      i = SCIPrandomGetInt(randnumgen, begin, end);
+
+      /* swap the last element and the random element */
+      tmp = array[i];
+      array[i] = array[end];
+      array[end] = tmp;
+   }
+}
+
+/** randomly shuffles parts of an array using the Fisher-Yates algorithm */
+void SCIPrandomPermuteArray(
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   void**                array,              /**< array to be shuffled */
+   int                   begin,              /**< first included index that should be subject to shuffling
+                                              *   (0 for first array entry)
+                                              */
+   int                   end                 /**< first excluded index that should not be subject to shuffling
+                                              *   (array size for last array entry)
+                                              */
+   )
+{
+   void* tmp;
+   int i;
+
+   /* loop backwards through all elements and always swap the current last element to a random position */
+   while( end > begin+1 )
+   {
+      end--;
+
+      /* get a random position into which the last entry should be shuffled */
+      i = SCIPrandomGetInt(randnumgen, begin, end);
+
+      /* swap the last element and the random element */
+      tmp = array[i];
+      array[i] = array[end];
+      array[end] = tmp;
+   }
+}
+
+/** draws a random subset of disjoint elements from a given set of disjoint elements;
+ *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
+ */
+SCIP_RETCODE SCIPrandomGetSubset(
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   void**                set,                /**< original set, from which elements should be drawn */
+   int                   nelems,             /**< number of elements in original set */
+   void**                subset,             /**< subset in which drawn elements should be stored */
+   int                   nsubelems           /**< number of elements that should be drawn and stored */
+   )
+{
+   int i;
+   int j;
+
+   /* if both sets are of equal size, we just copy the array */
+   if( nelems == nsubelems)
+   {
+      BMScopyMemoryArray(subset,set,nelems);
+      return SCIP_OKAY;
+   }
+
+   /* abort, if size of subset is too big */
+   if( nsubelems > nelems )
+   {
+      SCIPerrorMessage("Cannot create %d-elementary subset of %d-elementary set.\n", nsubelems, nelems);
+      return SCIP_INVALIDDATA;
+   }
+#ifndef NDEBUG
+   for( i = 0; i < nsubelems; i++ )
+      for( j = 0; j < i; j++ )
+         assert(set[i] != set[j]);
+#endif
+
+   /* draw each element individually */
+   i = 0;
+   while( i < nsubelems )
+   {
+      int r;
+
+      r = SCIPrandomGetInt(randnumgen, 0, nelems-1);
+      subset[i] = set[r];
+
+      /* if we get an element that we already had, we will draw again */
+      for( j = 0; j < i; j++ )
+      {
+         if( subset[i] == subset[j] )
+         {
+            --i;
+            break;
+         }
+      }
+      ++i;
+   }
+   return SCIP_OKAY;
+}
 
 /*
  * Additional math functions
@@ -8017,10 +9017,23 @@ SCIP_Real SCIPnegateReal(
 /** swaps two ints */
 void SCIPswapInts(
    int*                  value1,             /**< pointer to first integer */
-   int*                  value2              /**< pointer ti second integer */
+   int*                  value2              /**< pointer to second integer */
    )
 {
    int tmp;
+
+   tmp = *value1;
+   *value1 = *value2;
+   *value2 = tmp;
+}
+
+/** swaps two real values */
+void SCIPswapReals(
+   SCIP_Real*            value1,             /**< pointer to first real value */
+   SCIP_Real*            value2              /**< pointer to second real value */
+   )
+{
+   SCIP_Real tmp;
 
    tmp = *value1;
    *value1 = *value2;
@@ -8040,13 +9053,18 @@ void SCIPswapPointers(
    *pointer2 = tmp;
 }
 
-/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
+/** randomly shuffles parts of an integer array using the Fisher-Yates algorithm
+ *
+ *  @deprecated Please use SCIPrandomPermuteIntArray()
+ */
 void SCIPpermuteIntArray(
    int*                  array,              /**< array to be shuffled */
-   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end,                /**< last index that should be subject to shuffling (array size for whole
-					      *   array)
-					      */
+   int                   begin,              /**< first included index that should be subject to shuffling
+                                              *   (0 for first array entry)
+                                              */
+   int                   end,                /**< first excluded index that should not be subject to shuffling
+                                              *   (array size for last array entry)
+                                              */
    unsigned int*         randseed            /**< seed value for the random generator */
    )
 {
@@ -8059,7 +9077,7 @@ void SCIPpermuteIntArray(
       --end;
 
       /* get a random position into which the last entry should be shuffled */
-      i = SCIPgetRandomInt(begin, end, randseed);
+      i = getRandomInt(begin, end, randseed);
 
       /* swap the last element and the random element */
       tmp = array[i];
@@ -8069,13 +9087,18 @@ void SCIPpermuteIntArray(
 }
 
 
-/** randomly shuffles parts of an array using the Fisher-Yates algorithm */
+/** randomly shuffles parts of an array using the Fisher-Yates algorithm
+ *
+ *  @deprecated Please use SCIPrandomPermuteArray()
+ */
 void SCIPpermuteArray(
    void**                array,              /**< array to be shuffled */
-   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end,                /**< last index that should be subject to shuffling (array size for whole
-					      *   array)
-					      */
+   int                   begin,              /**< first included index that should be subject to shuffling
+                                              *   (0 for first array entry)
+                                              */
+   int                   end,                /**< first excluded index that should not be subject to shuffling
+                                              *   (array size for last array entry)
+                                              */
    unsigned int*         randseed            /**< seed value for the random generator */
    )
 {
@@ -8088,7 +9111,7 @@ void SCIPpermuteArray(
       end--;
 
       /* get a random position into which the last entry should be shuffled */
-      i = SCIPgetRandomInt(begin, end, randseed);
+      i = getRandomInt(begin, end, randseed);
 
       /* swap the last element and the random element */
       tmp = array[i];
@@ -8099,6 +9122,8 @@ void SCIPpermuteArray(
 
 /** draws a random subset of disjoint elements from a given set of disjoint elements;
  *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
+ *
+ *  @deprecated Please use SCIPrandomGetSubset()
  */
 SCIP_RETCODE SCIPgetRandomSubset(
    void**                set,                /**< original set, from which elements should be drawn */
@@ -8136,13 +9161,13 @@ SCIP_RETCODE SCIPgetRandomSubset(
    {
       int r;
 
-      r = SCIPgetRandomInt(0, nelems-1, &randseed);
+      r = getRandomInt(0, nelems-1, &randseed);
       subset[i] = set[r];
 
       /* if we get an element that we already had, we will draw again */
-      for( j = 0; j < i; j++ ) 
+      for( j = 0; j < i; j++ )
       {
-         if( subset[i] == subset[j] ) 
+         if( subset[i] == subset[j] )
          {
             --i;
             break;
@@ -8625,9 +9650,6 @@ void SCIPsplitFilename(
    }
 }
 
-
-
-
 /*
  * simple functions implemented as defines
  */
@@ -8655,4 +9677,30 @@ SCIP_Real SCIPrelDiff(
    quot = MAX3(1.0, absval1, absval2);
 
    return (val1-val2)/quot;
+}
+
+
+/** computes the gap from the primal and the dual bound */
+SCIP_Real SCIPcomputeGap(
+   SCIP_Real             eps,                /**< the value treated as zero */
+   SCIP_Real             inf,                /**< the value treated as infinity */
+   SCIP_Real             primalbound,        /**< the primal bound */
+   SCIP_Real             dualbound           /**< the dual bound */
+   )
+{
+   if( EPSEQ(primalbound, dualbound, eps) )
+      return 0.0;
+   else if( EPSZ(dualbound, eps) ||
+            EPSZ(primalbound, eps) ||
+            REALABS(primalbound) >= inf ||
+            REALABS(dualbound) >= inf ||
+            primalbound * dualbound < 0.0 )
+      return inf;
+   else
+   {
+      SCIP_Real absdual = REALABS(dualbound);
+      SCIP_Real absprimal = REALABS(primalbound);
+
+      return REALABS((primalbound - dualbound)/MIN(absdual, absprimal));
+   }
 }

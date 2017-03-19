@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_prop.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for propagators
  * @author Tobias Achterberg
  */
@@ -32,6 +32,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup PublicPropagatorMethods
+ *
+ * @{
+ */
 
 /** compares two propagators w. r. to their priority */
 EXTERN
@@ -155,21 +160,9 @@ SCIP_Bool SCIPpropIsDelayed(
    SCIP_PROP*            prop                /**< propagator */
    );
 
-/** should propagator be delayed during presolving, if other propagators found reductions? */
-EXTERN
-SCIP_Bool SCIPpropIsPresolDelayed(
-   SCIP_PROP*            prop                /**< propagator */
-   );
-
 /** was propagator delayed at the last call? */
 EXTERN
 SCIP_Bool SCIPpropWasDelayed(
-   SCIP_PROP*            prop                /**< propagator */
-   );
-
-/** was presolving of propagator delayed at the last call? */
-EXTERN
-SCIP_Bool SCIPpropWasPresolDelayed(
    SCIP_PROP*            prop                /**< propagator */
    );
 
@@ -269,6 +262,8 @@ void SCIPpropSetPresolTiming(
    SCIP_PROP*            prop,               /**< propagator */
    SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

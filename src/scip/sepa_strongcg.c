@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -214,7 +214,7 @@ SCIP_DECL_SEPAFREE(sepaFreeStrongcg)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   SCIPfreeMemory(scip, &sepadata);
+   SCIPfreeBlockMemory(scip, &sepadata);
 
    SCIPsepaSetData(sepa, NULL);
 
@@ -362,7 +362,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    else
       maxsepacuts = sepadata->maxsepacuts;
 
-   SCIPdebugMessage("searching strong CG cuts: %d cols, %d rows, maxdnom=%" SCIP_LONGINT_FORMAT ", maxscale=%g, maxcuts=%d\n",
+   SCIPdebugMsg(scip, "searching strong CG cuts: %d cols, %d rows, maxdnom=%" SCIP_LONGINT_FORMAT ", maxscale=%g, maxcuts=%d\n",
       ncols, nrows, maxdnom, maxscale, maxsepacuts);
 
    /* for all basic columns belonging to integer variables, try to generate a strong CG cut */
@@ -388,7 +388,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 
             if( SCIPfeasFrac(scip, primsol) >= MINFRAC )
             {
-               SCIPdebugMessage("trying strong CG cut for col <%s> [%g]\n", SCIPvarGetName(var), primsol);
+               SCIPdebugMsg(scip, "trying strong CG cut for col <%s> [%g]\n", SCIPvarGetName(var), primsol);
                tryrow = TRUE;
             }
          }
@@ -407,7 +407,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
             primsol = SCIPgetRowActivity(scip, row);
             if( SCIPfeasFrac(scip, primsol) >= MINFRAC )
             {
-               SCIPdebugMessage("trying strong CG cut for row <%s> [%g]\n", SCIProwGetName(row), primsol);
+               SCIPdebugMsg(scip, "trying strong CG cut for row <%s> [%g]\n", SCIProwGetName(row), primsol);
                tryrow = TRUE;
             }
          }
@@ -428,7 +428,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
          SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,
                binvrow, inds, ninds, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
          assert(ALLOWLOCAL || !cutislocal);
-         SCIPdebugMessage(" -> success=%u: %g <= %g\n", success, cutact, cutrhs);
+         SCIPdebugMsg(scip, " -> success=%u: %g <= %g\n", success, cutact, cutrhs);
 
          /* if successful, convert dense cut into sparse row, and add the row as a cut */
          if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
@@ -460,7 +460,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
             SCIP_CALL( storeCutInArrays(scip, nvars, vars, cutcoefs, varsolvals, normtype,
                   cutvars, cutvals, &cutlen, &cutact, &cutnorm) );
 
-            SCIPdebugMessage(" -> strong CG cut for <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d\n",
+            SCIPdebugMsg(scip, " -> strong CG cut for <%s>: act=%f, rhs=%f, norm=%f, eff=%f, rank=%d\n",
                c >= 0 ? SCIPvarGetName(SCIPcolGetVar(cols[c])) : SCIProwGetName(rows[-c-1]),
                cutact, cutrhs, cutnorm, (cutact - cutrhs)/cutnorm, cutrank);
 
@@ -510,7 +510,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                {
                   if( !SCIPisCutEfficacious(scip, NULL, cut) )
                   {
-                     SCIPdebugMessage(" -> strong CG cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
+                     SCIPdebugMsg(scip, " -> strong CG cut <%s> no longer efficacious: act=%f, rhs=%f, norm=%f, eff=%f\n",
                         cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                         SCIPgetCutEfficacy(scip, NULL, cut));
                      /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
@@ -520,7 +520,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                   {
                      SCIP_Bool infeasible;
 
-                     SCIPdebugMessage(" -> found strong CG cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+                     SCIPdebugMsg(scip, " -> found strong CG cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
                         cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                         SCIPgetCutEfficacy(scip, NULL, cut),
                         SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
@@ -542,7 +542,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
                }
                else
                {
-                  SCIPdebugMessage(" -> strong CG cut <%s> couldn't be scaled to integral coefficients: act=%f, rhs=%f, norm=%f, eff=%f\n",
+                  SCIPdebugMsg(scip, " -> strong CG cut <%s> couldn't be scaled to integral coefficients: act=%f, rhs=%f, norm=%f, eff=%f\n",
                      cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, NULL, cut));
                }
 
@@ -564,7 +564,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutcoefs);
 
-   SCIPdebugMessage("end searching strong CG cuts: found %d cuts\n", ncuts);
+   SCIPdebugMsg(scip, "end searching strong CG cuts: found %d cuts\n", ncuts);
 
    sepadata->lastncutsfound = SCIPgetNCutsFound(scip);
 
@@ -585,7 +585,7 @@ SCIP_RETCODE SCIPincludeSepaStrongcg(
    SCIP_SEPA* sepa;
 
    /* create separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
    sepadata->lastncutsfound = 0;
 
    /* include separator */

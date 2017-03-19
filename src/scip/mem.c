@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -90,4 +90,45 @@ SCIP_Longint SCIPmemGetUsed(
 
    return BMSgetBlockMemoryUsed(mem->setmem) + BMSgetBlockMemoryUsed(mem->probmem)
       + BMSgetBufferMemoryUsed(mem->buffer) + BMSgetBufferMemoryUsed(mem->cleanbuffer);
+}
+
+/** returns the total number of bytes in block and buffer memory */
+SCIP_Longint SCIPmemGetTotal(
+   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
+   )
+{
+   assert(mem != NULL);
+
+   return BMSgetBlockMemoryAllocated(mem->setmem) + BMSgetBlockMemoryAllocated(mem->probmem)
+      + BMSgetBufferMemoryUsed(mem->buffer) + BMSgetBufferMemoryUsed(mem->cleanbuffer);
+}
+
+/** returns the maximal number of used bytes in block memory */
+SCIP_Longint SCIPmemGetUsedBlockmemoryMax(
+   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
+   )
+{
+   assert(mem != NULL);
+
+   return BMSgetBlockMemoryUsedMax(mem->setmem) + BMSgetBlockMemoryUsedMax(mem->probmem);
+}
+
+/** returns the maximal number of allocated but not used bytes in block memory */
+SCIP_Longint SCIPmemGetUnusedBlockmemoryMax(
+   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
+   )
+{
+   assert(mem != NULL);
+
+   return BMSgetBlockMemoryUnusedMax(mem->setmem) + BMSgetBlockMemoryUnusedMax(mem->probmem);
+}
+
+/** returns the maximal number of allocated bytes in block memory */
+SCIP_Longint SCIPmemGetAllocatedBlockmemoryMax(
+   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
+   )
+{
+   assert(mem != NULL);
+
+   return BMSgetBlockMemoryAllocatedMax(mem->setmem) + BMSgetBlockMemoryAllocatedMax(mem->probmem);
 }

@@ -7,6 +7,7 @@
 *.so
 *~
 \#*
+backup/
 bin/
 lib/
 obj/
@@ -22,7 +23,10 @@ doc/html/
 doc/html_devel/
 doc/doxygen
 doc/scip.tag
-doc/*.tmp
+doc/inc/faq/faqdata.php
+doc/inc/faq/faq.inc
+doc/inc/parameters.set
+doc/**/*.tmp
 .cproject
 .project
 .settings/
@@ -39,6 +43,7 @@ lint/size-options.lnt
 
 localhooks/
 src/scip/githash.c
+src/scip/buildflags.c
 settings/
 unittests/check/results
 unittests/check/locks
@@ -50,3 +55,5 @@ interfaces/python/include/
 interfaces/python/tests/check
 interfaces/python/pyscipopt/*.c
 interfaces/gams/gams
+examples/*/doc/html
+applications/*/doc/html
