@@ -1484,49 +1484,6 @@ SCIP_Bool areBoundsChanged(
    return SCIPvarGetLbLocal(var) != lowerbound || SCIPvarGetUbLocal(var) != upperbound;
 }
 
-/** get a copy of the fractional candidates we can branch on
- *
- * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-static
-SCIP_RETCODE copyLPBranchCands(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR***           lpcands,            /**< a pointer to store the variables */
-   SCIP_Real**           lpcandssol,         /**< a pointer to store the solution values of the vars */
-   SCIP_Real**           lpcandsfrac,
-   int*                  nlpcands            /**< a pointer to store the number of candidates */
-   )
-{
-   SCIP_VAR** tmplpcands;
-   SCIP_Real* tmplpcandssol;
-   SCIP_Real* tmplpcandsfrac;
-
-   /* get branching candidates and their solution values (integer variables with fractional value in the current LP) */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, nlpcands, NULL, NULL) );
-
-   /* copy LP banching candidates and solution values, because they will be updated w.r.t. the strong branching LP
-    * solution during the second level branchings */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, lpcands, tmplpcands, *nlpcands) );
-   SCIP_CALL( SCIPduplicateBufferArray(scip, lpcandssol, tmplpcandssol, *nlpcands) );
-   SCIP_CALL( SCIPduplicateBufferArray(scip, lpcandsfrac, tmplpcandsfrac, *nlpcands) );
-
-   return SCIP_OKAY;
-}
-
-static
-void freeLPBranchCands(
-   SCIP*                 scip,
-   SCIP_VAR***           lpcands,
-   SCIP_Real**           lpcandssol,
-   SCIP_Real**           lpcandsfrac
-   )
-{
-   SCIPfreeBuffer(scip, lpcandsfrac);
-   SCIPfreeBuffer(scip, lpcandssol);
-   SCIPfreeBuffer(scip, lpcands);
-}
-
 static
 SCIP_Bool isExecuteBranchingLoop(
    STATUS*               status
@@ -2243,6 +2200,18 @@ SCIP_RETCODE selectVarRecursive(
       }
    }
 
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE selectVarExternal(
+   SCIP*                 scip
+   )
+{
+   /* TODO: implement a way to get the scoring of a given set of variables. */
+   /* TODO: hot to call the "selectVarStart" method, esp with SCIP_BRANCHRULEDATA as a parameter?
+    * How can I get/create the LAB Data in my ALAB file? */
+   SCIPABORT();
    return SCIP_OKAY;
 }
 
