@@ -33,7 +33,7 @@
 #define HEUR_DESC             "regularization heuristic for convex and nonconvex MINLPs"
 #define HEUR_DISPCHAR         'W'
 #define HEUR_PRIORITY         -2050000
-#define HEUR_FREQ             0
+#define HEUR_FREQ             100
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
