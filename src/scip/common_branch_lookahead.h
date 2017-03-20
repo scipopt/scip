@@ -60,6 +60,26 @@ void freeBranchingDecision(
 );
 
 
+struct Scoring
+{
+   BRANCHINGDECISION*    decision;
+   SCIP_VAR*             cands;
+   SCIP_Real*            candfracs;
+   SCIP_Real*            candscores;
+   int                   ncands;
+};
+typedef struct Scoring SCORING;
+
+SCIP_RETCODE allocateScoring(
+   SCIP*                 scip,
+   SCORING**             scoring,
+   int                   ncands
+);
+
+void freeScoring(
+   SCIP*                 scip,
+   SCORING**             scoring
+);
 
 /**
  * Executes the branching on a given variable with a given value.

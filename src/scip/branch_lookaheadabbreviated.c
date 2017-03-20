@@ -123,6 +123,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookaheadAbbreviated)
    SCIP_Real* lpcandssol;
    SCIP_Real* lpcandsfrac;
    int nlpcands;
+   int* basisind;
+   int nrows;
+   int i;
 
    assert( scip != NULL );
    assert( branchrule != NULL );
@@ -132,9 +135,17 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookaheadAbbreviated)
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    SCIP_CALL( copyLPBranchCands(scip, &branchvars, &lpcandssol, &lpcandsfrac, &nlpcands) );
+   SCIP_CALL( SCIPgetLPRowsData(scip, NULL, &nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
 
+   SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
 
+   for( i = 0; i < nrows; i++)
+   {
+      SCIPdebugMessage("Element %i = %i\n", i, basisind[i]);
+   }
 
+   SCIPfreeBufferArray(scip, &basisind);
    freeLPBranchCands(scip, &branchvars, &lpcandssol, &lpcandsfrac);
 
    SCIPdebugMessage("--- Finished Abbreviated Lookahead Branching\n");

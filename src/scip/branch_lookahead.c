@@ -576,7 +576,9 @@ void applyDeeperDomainReductions(
       if( downdomreds->lowerboundset[i] && updomreds->lowerboundset[i] )
       {
          SCIP_Real newlowerbound;
-         SCIPstatistic( int newnproofs; )
+#ifdef SCIP_STATISTIC
+         int newnproofs;
+#endif
 
          /* If both child branches have a lower bound for a var, the MIN of both values represents a valid lower bound */
          newlowerbound = MIN(downdomreds->lowerbounds[i], updomreds->lowerbounds[i]);
@@ -594,7 +596,9 @@ void applyDeeperDomainReductions(
       if( downdomreds->upperboundset[i] && updomreds->upperboundset[i] )
       {
          SCIP_Real newupperbound;
-         SCIPstatistic( int newnproofs; )
+#ifdef SCIP_STATISTIC
+         int newnproofs;
+#endif
 
          /* If both child branches have an upper bound for a var, the MAX of both values represents a valid upper bound */
          newupperbound = MAX(downdomreds->upperbounds[i], updomreds->upperbounds[i]);
@@ -1641,15 +1645,16 @@ SCIP_RETCODE executeDownBranchingRecursive(
          STATUS* deeperstatus;
          PERSISTENTDATA* deeperpersistent = NULL;
          SCIP_Real deeperlpobjval = SCIPgetLPObjval(scip);
-         SCIPstatistic( LOCALSTATISTICS* deeperlocalstats; )
+#ifdef SCIP_STATISTIC
+         LOCALSTATISTICS* deeperlocalstats;
+#endif
 
          SCIP_CALL( allocateStatus(scip, &deeperstatus) );
 
          SCIP_CALL( allocateBranchingDecision(scip, &deeperdecision, deeperlpobjval) );
 
-         SCIPstatistic( SCIP_CALL( allocateLocalStatistics(scip, &deeperlocalstats) ); )
-
 #ifdef SCIP_STATISTIC
+         SCIP_CALL( allocateLocalStatistics(scip, &deeperlocalstats) );
          SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, downdomainreductions, binconsdata,
                deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1,
                statistics, deeperlocalstats) );
@@ -1684,7 +1689,9 @@ SCIP_RETCODE executeDownBranchingRecursive(
             SCIPdebugMessage("Depth <%i>, Both deeper children were cutoff, so the down branch is cutoff\n", probingdepth);
          }
 
-         SCIPstatistic( freeLocalStatistics(scip, &deeperlocalstats); )
+#ifdef SCIP_STATISTIC
+         freeLocalStatistics(scip, &deeperlocalstats);
+#endif
          freeStatus(scip, &deeperstatus);
          freeBranchingDecision(scip, &deeperdecision);
       }
@@ -1796,15 +1803,16 @@ SCIP_RETCODE executeUpBranchingRecursive(
          STATUS* deeperstatus;
          PERSISTENTDATA* deeperpersistent = NULL;
          SCIP_Real deeperlpobjval = SCIPgetLPObjval(scip);
-         SCIPstatistic( LOCALSTATISTICS* deeperlocalstats; )
+#ifdef SCIP_STATISTIC
+         LOCALSTATISTICS* deeperlocalstats;
+#endif
 
          SCIP_CALL( allocateStatus(scip, &deeperstatus) );
 
          SCIP_CALL( allocateBranchingDecision(scip, &deeperdecision, deeperlpobjval) );
 
-         SCIPstatistic( SCIP_CALL( allocateLocalStatistics(scip, &deeperlocalstats) ); )
-
 #ifdef SCIP_STATISTIC
+         SCIP_CALL( allocateLocalStatistics(scip, &deeperlocalstats) );
          SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, updomainreductions, binconsdata,
                deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperdecision, recursiondepth - 1,
                statistics, deeperlocalstats) );
@@ -1841,7 +1849,9 @@ SCIP_RETCODE executeUpBranchingRecursive(
             SCIPdebugMessage("Depth <%i>, Both deeper children were cutoff, so the up branch is cutoff\n", probingdepth);
          }
 
-         SCIPstatistic( freeLocalStatistics(scip, &deeperlocalstats); )
+#ifdef SCIP_STATISTIC
+         freeLocalStatistics(scip, &deeperlocalstats);
+#endif
          freeStatus(scip, &deeperstatus);
          freeBranchingDecision(scip, &deeperdecision);
       }
@@ -2205,7 +2215,15 @@ SCIP_RETCODE selectVarRecursive(
 
 static
 SCIP_RETCODE selectVarExternal(
-   SCIP*                 scip
+   SCIP*                 scip,
+   CONFIGURATION*        config,
+   PERSISTENTDATA*       persistent,
+   STATUS*               status,
+   SCORING*              decision
+#ifdef SCIP_STATISTIC
+   ,STATISTICS*          statistics
+   ,LOCALSTATISTICS*     localstats
+#endif
    )
 {
    /* TODO: implement a way to get the scoring of a given set of variables. */
@@ -2218,7 +2236,8 @@ SCIP_RETCODE selectVarExternal(
 static
 SCIP_RETCODE selectVarStart(
    SCIP*                 scip,
-   SCIP_BRANCHRULEDATA*  branchruledata,
+   CONFIGURATION*        config,
+   PERSISTENTDATA*       persistent,
    STATUS*               status,
    BRANCHINGDECISION*    decision
 #ifdef SCIP_STATISTIC
@@ -2227,8 +2246,6 @@ SCIP_RETCODE selectVarStart(
 #endif
    )
 {
-   CONFIGURATION* config;
-   PERSISTENTDATA* persistent;
    int recursiondepth;
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandssol;
@@ -2239,15 +2256,11 @@ SCIP_RETCODE selectVarStart(
    SCIP_SOL* baselpsol = NULL;
 
    assert(scip != NULL);
-   assert(branchruledata != NULL);
+   assert(config != NULL);
+   assert(persistent != NULL);
    assert(status != NULL);
    assert(decision != NULL);
    SCIPstatistic( assert(statistics != NULL); )
-
-   config = branchruledata->config;
-   persistent = branchruledata->persistent;
-   assert(config != NULL);
-   assert(persistent != NULL);
 
    recursiondepth = config->recursiondepth;
    assert(recursiondepth > 0);
@@ -2626,7 +2639,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       BRANCHINGDECISION* decision;
       STATUS* status;
       SCIP_Real lpobjval = SCIPgetLPObjval(scip);
-      SCIPstatistic( LOCALSTATISTICS* localstats; )
+#ifdef SCIP_STATISTIC
+      LOCALSTATISTICS* localstats;
+#endif
 
       /* get all fractional candidates we can branch on */
       SCIP_CALL( copyLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
@@ -2637,16 +2652,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       SCIP_CALL( allocateStatus(scip, &status) );
       /* create a struct to store the branching decision (in case there is one) */
       SCIP_CALL( allocateBranchingDecision(scip, &decision, lpobjval) );
-      SCIPstatistic(
-         /* create a struct to store the statistics needed for this single run */
-         SCIP_CALL( allocateLocalStatistics(scip, &localstats) );
-      )
 
       /* execute the main logic */
 #ifdef SCIP_STATISTIC
-      SCIP_CALL( selectVarStart(scip, branchruledata, status, decision, branchruledata->statistics, localstats) );
+      /* create a struct to store the statistics needed for this single run */
+      SCIP_CALL( allocateLocalStatistics(scip, &localstats) );
+      SCIP_CALL( selectVarStart(scip, branchruledata->config, branchruledata->persistent, status, decision, branchruledata->statistics, localstats) );
 #else
-      SCIP_CALL( selectVarStart(scip, branchruledata, status, decision) );
+      SCIP_CALL( selectVarStart(scip, branchruledata->config, branchruledata->persistent, status, decision) );
 #endif
 
       if( status->cutoff || status->domredcutoff )
@@ -2724,7 +2737,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          }
       )
 
-      SCIPstatistic( freeLocalStatistics(scip, &localstats); )
+#ifdef SCIP_STATISTIC
+      freeLocalStatistics(scip, &localstats);
+#endif
       freeBranchingDecision(scip, &decision);
       freeStatus(scip, &status);
 
@@ -2776,8 +2791,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyLookahead) );
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeLookahead) );
-   SCIPstatistic(SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitLookahead) ));
-   SCIPstatistic(SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitLookahead) ));
+#ifdef SCIP_STATISTIC
+   SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitLookahead) );
+   SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitLookahead) );
+#endif
    SCIP_CALL( SCIPsetBranchruleExitsol(scip, branchrule, branchExitSolLookahead) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpLookahead) );
 
