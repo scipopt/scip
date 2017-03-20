@@ -3905,7 +3905,7 @@ SCIP_RETCODE computeViolation(
          return SCIP_OKAY;
       }
 
-      /* the contribution of a variable with |varval| = +inf is +inf when activity > 0.0, -inf when activity < 0.0, and
+      /* the contribution of an expression with |val| = +inf is +inf when its coefficient is > 0.0, -inf when its coefficient is < 0.0, and
        * 0.0 otherwise
        */
       activity = consdata->nonlincoefs[i] * val;
