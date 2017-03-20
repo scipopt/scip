@@ -412,15 +412,6 @@ SCIP_RETCODE heurExec(
       SCIP_CALL( SCIPnlpiGetSolution(heurdata->nlpi, heurdata->nlpiprob, &primal, NULL, NULL, NULL) );
       assert(primal != NULL);
 
-#ifdef SCIP_DEBUG
-      /* print NLP solution */
-      for( j = 0; j < SCIPgetNVars(scip); ++j )
-      {
-         SCIP_VAR* var = SCIPgetVars(scip)[j];
-         SCIPdebugMsg(scip, "NLP sol for %s = %g\n", SCIPvarGetName(var), primal[j]);
-      }
-#endif
-
       /* check for binary feasibility */
       binaryfeasible = TRUE;
       regularfeasible = TRUE;
