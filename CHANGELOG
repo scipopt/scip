@@ -3,6 +3,7 @@ SCIP version ???
 
 fixed bugs:
 - fixed memory leak in OSiL reader when using SOS constraints
+- fixed issue related to SCIPcreateFiniteSolCopy not being able to remove all infinite fixings
 
 SCIP version 4.0.0
 ==================
