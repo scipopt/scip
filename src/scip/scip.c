@@ -4054,6 +4054,33 @@ SCIP_RETCODE getCopyTimelimit(
    return SCIP_OKAY;
 }
 
+/** set updated time limit for a sub-SCIP */
+static
+SCIP_RETCODE copySofttimelimit(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip          /**< target SCIP data structure */
+   )
+{
+   if( SCIPgetParam(targetscip, "limits/softtime") == NULL )
+      return SCIP_OKAY;
+   else
+   {
+      SCIP_Real timelimit = -1.0;
+
+#ifdef COPYSOFTTIME
+      SCIP_CALL( SCIPgetRealParam(sourcescip, "limits/softtime", &timelimit) );
+      if( !SCIPisNegative(sourcescip, timelimit) )
+      {
+         timelimit -= SCIPgetSolvingTime(sourcescip);
+         timelimit = MAX(0.0, timelimit);
+      }
+#endif
+
+      SCIP_CALL( SCIPsetRealParam(targetscip, "limits/softtime", timelimit) );
+   }
+   return SCIP_OKAY;
+}
+
 /** return updated memory limit for a sub-SCIP */
 static
 SCIP_RETCODE getCopyMemlimit(
@@ -4144,6 +4171,9 @@ SCIP_RETCODE SCIPcopyLimits(
    SCIP_CALL( SCIPsetRealParam(targetscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(targetscip, "limits/memory", memorylimit) );
 
+   /* copy and adjust soft time limit (or disable it) */
+   SCIP_CALL( copySofttimelimit(sourcescip, targetscip) );
+
    /* disable all other limits */
    SCIP_CALL( SCIPsetRealParam(targetscip, "limits/absgap", 0.0) );
    SCIP_CALL( SCIPsetIntParam(targetscip, "limits/bestsol", -1) );
@@ -4153,12 +4183,6 @@ SCIP_RETCODE SCIPcopyLimits(
    SCIP_CALL( SCIPsetIntParam(targetscip, "limits/solutions", -1) );
    SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/stallnodes", -1LL) );
    SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1LL) );
-
-   /* the soft time limit event handler might not be included so we need to check if the parameter exists */
-   if( SCIPgetParam(targetscip, "limits/softtime") != NULL )
-   {
-      SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1LL) );
-   }
 
    return SCIP_OKAY;
 }
