@@ -495,6 +495,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_linesearchdiving.o \
 			scip/heur_localbranching.o \
 			scip/heur_lpface.o \
+			scip/heur_lns.o \
 			scip/heur_locks.o \
 			scip/heur_mutation.o \
 			scip/heur_multistart.o \
