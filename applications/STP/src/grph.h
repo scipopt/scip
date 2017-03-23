@@ -73,11 +73,11 @@ typedef struct
                                              /**< to mark nodes for inclusion in the shortest         */
                                              /**< path / minimum spanning tree routine                */
    int*                  grad;               /**< Array [0..nodes-1] with degree of knot [i]          */
-   int*                  inpbeg;             /**< Array [0..nodes-1] with starting slot index         */
+   int* RESTRICT         inpbeg;             /**< Array [0..nodes-1] with starting slot index         */
                                              /**< for the ieat array, -1 if not used                  */
-   int*                  outbeg;             /**< Array [0..nodes-1] with starting slot index         */
+   int* RESTRICT         outbeg;             /**< Array [0..nodes-1] with starting slot index         */
                                              /**< for the oeat array, -1 if not used                  */
-   int*                  maxdeg;             /**< Array [0..nodes-1] containing the maximal degrees
+   int* RESTRICT         maxdeg;             /**< Array [0..nodes-1] containing the maximal degrees
                                                    of all nodes (only used for HCDSTPs)               */
    /* Edges */
    IDX*                  fixedges;           /**< list of fixed edges*/
@@ -101,20 +101,20 @@ typedef struct
    int*                  oeat;               /**< Array [0..edges-1], outgoing edge allocation table          */
 
    /* Data for min cut computation */
-   int*                  mincut_dist;        /**< dist[i] : Distance-label of node i          */
-   int*                  mincut_head;        /**< head[i] : Head of active queue with label i */
-   int*                  mincut_head_inact;  /**< head[i] : Head of inactive queue with label i */
-   int*                  mincut_numb;        /**< numb[i] : numb[i] nodes with label i        */
-   int*                  mincut_prev;
-   int*                  mincut_next;
-   int*                  mincut_temp;
-   int*                  mincut_e;           /**< e[i] : Excess of node i                     */
-   int*                  mincut_x;           /**< x[k] : Actual flow on arc k                 */
-   int*                  mincut_r;           /**< r[k] : residual capacity of arc k                    */
+   int* RESTRICT         mincut_dist;        /**< dist[i] : Distance-label of node i          */
+   int* RESTRICT         mincut_head;        /**< head[i] : Head of active queue with label i */
+   int* RESTRICT         mincut_head_inact;  /**< head[i] : Head of inactive queue with label i */
+   int* RESTRICT         mincut_numb;        /**< numb[i] : numb[i] nodes with label i        */
+   int* RESTRICT         mincut_prev;
+   int* RESTRICT         mincut_next;
+   int* RESTRICT         mincut_temp;
+   int* RESTRICT         mincut_e;           /**< e[i] : Excess of node i                     */
+   int* RESTRICT         mincut_x;           /**< x[k] : Actual flow on arc k                 */
+   int* RESTRICT         mincut_r;           /**< r[k] : residual capacity of arc k                    */
 
    /* data for math and mst computation */
-   int*                  path_heap;
-   int*                  path_state;
+   int* RESTRICT         path_heap;
+   int* RESTRICT         path_state;
 
    /* Data for grid problems */
    int                   grid_dim;
@@ -261,7 +261,7 @@ extern void   graph_mincut_exec(GRAPH*, int, int, int, const int*, int*, const i
 extern SCIP_RETCODE   graph_mincut_init(SCIP*, GRAPH*);
 #else
 extern void   graph_mincut_exit(SCIP*, GRAPH*);
-extern void   graph_mincut_exec(const GRAPH*, const int, const int, const int, const int, const int, const int*, const int*, int*, const int*, const int*, const int*, const SCIP_Bool);
+extern void   graph_mincut_exec(const GRAPH*, const int, const int, const int, const int, const int, const int*, const int*, int* RESTRICT, const int*, const int*, const int*, const SCIP_Bool);
 extern SCIP_RETCODE   graph_mincut_init(SCIP*, GRAPH*);
 #endif
 

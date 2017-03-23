@@ -1487,18 +1487,18 @@ SCIP_RETCODE SCIPcreateConsStp(
 SCIP_RETCODE SCIPdualAscentStp(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   SCIP_Real*            redcost,            /**< array to store reduced costs or NULL */
-   SCIP_Real*            nodearrreal,        /**< real vertices array for internal computations or NULL */
+   SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs or NULL */
+   SCIP_Real* RESTRICT   nodearrreal,        /**< real vertices array for internal computations or NULL */
    SCIP_Real*            objval,             /**< pointer to store objective value */
    SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
    SCIP_Bool             ascendandprune,     /**< should the ascent-and-prune heuristic be executed? */
    GNODE**               gnodearrterms,      /**< gnode terminals array for internal computations or NULL */
-   int*                  edgearrint,         /**< int edges array for internal computations or NULL */
-   int*                  nodearrint,         /**< int vertices array for internal computations or NULL */
+   int* RESTRICT         edgearrint,         /**< int edges array for internal computations or NULL */
+   int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
    int                   root,               /**< the root */
    int                   nruns,              /**< number of dual ascent runs */
-   char*                 edgearrchar,        /**< char edges array for internal computations or NULL */
-   char*                 nodearrchar         /**< char vertices array for internal computations or NULL */
+   char* RESTRICT        edgearrchar,        /**< char edges array for internal computations or NULL */
+   char* RESTRICT        nodearrchar         /**< char vertices array for internal computations or NULL */
    )
 {
 #if 0
@@ -1970,19 +1970,19 @@ SCIP_RETCODE SCIPdualAscentStp(
 SCIP_RETCODE SCIPdualAscentStpSol(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   SCIP_Real*            redcost,            /**< array to store reduced costs or NULL */
-   SCIP_Real*            nodearrreal,        /**< real vertices array for internal computations or NULL */
+   SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs or NULL */
+   SCIP_Real* RESTRICT   nodearrreal,        /**< real vertices array for internal computations or NULL */
    SCIP_Real*            objval,             /**< pointer to store objective value */
    SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
    SCIP_Bool             ascendandprune,     /**< should the ascent-and-prune heuristic be executed? */
    GNODE**               gnodearrterms,      /**< gnode terminals array for internal computations or NULL */
-   int*                  result,             /**< solution array (solution needs to be provided) */
-   int*                  edgearrint,         /**< int edges array for internal computations or NULL */
-   int*                  nodearrint,         /**< int vertices array for internal computations or NULL */
+   int* RESTRICT         result,             /**< solution array (solution needs to be provided) */
+   int* RESTRICT         edgearrint,         /**< int edges array for internal computations or NULL */
+   int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
    int                   root,               /**< the root */
    int                   nruns,              /**< number of dual ascent runs */
-   char*                 edgearrchar,        /**< char edges array for internal computations or NULL */
-   char*                 nodearrchar         /**< char vertices array for internal computations or NULL */
+   char* RESTRICT        edgearrchar,        /**< char edges array for internal computations or NULL */
+   char* RESTRICT        nodearrchar         /**< char vertices array for internal computations or NULL */
    )
 {
 #if 0
