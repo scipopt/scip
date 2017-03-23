@@ -60,25 +60,37 @@ void freeBranchingDecision(
 );
 
 
-struct Scoring
+struct BranchRuleResult
 {
    BRANCHINGDECISION*    decision;
-   SCIP_VAR*             cands;
-   SCIP_Real*            candfracs;
    SCIP_Real*            candscores;
-   int                   ncands;
+   SCIP_Real*            candslpvalue;
+   SCIP_VAR**            candswithscore;
+   int                   ncandscores;
 };
-typedef struct Scoring SCORING;
+typedef struct BranchRuleResult BRANCHRULERESULT;
 
-SCIP_RETCODE allocateScoring(
+SCIP_RETCODE allocateBranchRuleResultFull(
    SCIP*                 scip,
-   SCORING**             scoring,
+   BRANCHRULERESULT**    branchruleresult,
+   SCIP_Real             lpobjval,
    int                   ncands
 );
 
-void freeScoring(
+SCIP_RETCODE allocateBranchRuleResultReduced(
    SCIP*                 scip,
-   SCORING**             scoring
+   BRANCHRULERESULT**    branchruleresult,
+   SCIP_Real             lpobjval
+);
+
+void freeBranchRuleResultFull(
+   SCIP*                 scip,
+   BRANCHRULERESULT**    branchruleresult
+);
+
+void freeBranchRuleResultReduced(
+   SCIP*                 scip,
+   BRANCHRULERESULT**    branchruleresult
 );
 
 /**

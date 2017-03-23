@@ -110,6 +110,70 @@ void freeBranchingDecision(
    SCIPfreeBuffer(scip, decision);
 }
 
+SCIP_RETCODE allocateBranchRuleResultFull(
+   SCIP*                 scip,
+   BRANCHRULERESULT**    branchruleresult,
+   SCIP_Real             lpobjval,
+   int                   ncands
+   )
+{
+   int i;
+
+   SCIP_CALL( allocateBranchRuleResultReduced(scip, branchruleresult, lpobjval) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candscores, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candswithscore, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candslpvalue, ncands) );
+   (*branchruleresult)->ncandscores = ncands;
+
+   for( i = 0; i < ncands; i++ )
+   {
+      (*branchruleresult)->candscores[i] = -1;
+      (*branchruleresult)->candswithscore[i] = NULL;
+   }
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE allocateBranchRuleResultReduced(
+   SCIP*                 scip,
+   BRANCHRULERESULT**    branchruleresult,
+   SCIP_Real             lpobjval
+)
+{
+   SCIP_CALL( SCIPallocBuffer(scip, branchruleresult) );
+   SCIP_CALL( allocateBranchingDecision(scip, &(*branchruleresult)->decision, lpobjval) );
+   (*branchruleresult)->candscores = NULL;
+   (*branchruleresult)->candswithscore = NULL;
+   (*branchruleresult)->candslpvalue = NULL;
+   (*branchruleresult)->ncandscores = -1;
+
+   return SCIP_OKAY;
+}
+
+void freeBranchRuleResultFull(
+   SCIP*                 scip,
+   BRANCHRULERESULT**    branchruleresult
+   )
+{
+   assert(&(*branchruleresult)->candslpvalue != NULL);
+   assert(&(*branchruleresult)->candswithscore != NULL);
+   assert(&(*branchruleresult)->candscores != NULL);
+
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->candslpvalue);
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->candswithscore);
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->candscores);
+   freeBranchRuleResultReduced(scip, branchruleresult);
+}
+
+void freeBranchRuleResultReduced(
+   SCIP*                 scip,
+   BRANCHRULERESULT**    branchruleresult
+   )
+{
+   freeBranchingDecision(scip, &(*branchruleresult)->decision);
+   SCIPfreeBuffer(scip, branchruleresult);
+}
+
 /** get a copy of the fractional candidates we can branch on
  *
  * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
