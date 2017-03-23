@@ -1689,6 +1689,9 @@ SCIP_RETCODE getBestCandidates(
          SCIP_VAR* var = branchruleresult->candswithscore[sortedindex];
          SCIP_Real score = branchruleresult->candscores[sortedindex];
 
+         assert(var != NULL);
+         /* TODO: why should this be NULL? */
+
          SCIPdebugMessage("Index %2i: Var %s Score %g\n", i, SCIPvarGetName(var), score);
       }
    )
