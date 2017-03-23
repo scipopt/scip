@@ -1757,7 +1757,8 @@ static
 SCIP_RETCODE splitOffLinearPart(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_CONS*            cons                /**< nonlinear constraint */
+   SCIP_CONS*            cons,               /**< nonlinear constraint */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the problem is infeasible or not */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -1776,6 +1777,8 @@ SCIP_RETCODE splitOffLinearPart(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   *infeasible = FALSE;
+
    if( consdata->exprgraphnode == NULL )
       return SCIP_OKAY;
 
@@ -1792,7 +1795,82 @@ SCIP_RETCODE splitOffLinearPart(
     * releases expression graph node if not uses otherwise */
    SCIP_CALL( SCIPexprgraphNodeSplitOffLinear(conshdlrdata->exprgraph, &consdata->exprgraphnode, linvarssize, &nlinvars, (void**)linvars, lincoefs, &constant) );
 
-   if( constant != 0.0 )
+   if( SCIPisInfinity(scip, constant) )
+   {
+      if( !SCIPisInfinity(scip, -consdata->lhs) )
+      {
+         /* setting constraint lhs to -infinity; this may change linear variable locks and events */
+         for( i = 0; i < consdata->nlinvars; ++i )
+         {
+            if( SCIPconsIsLocked(cons) )
+            {
+               SCIP_CALL( unlockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
+            }
+            if( SCIPconsIsEnabled(cons) )
+            {
+               SCIP_CALL( dropLinearVarEvents(scip, cons, i) );
+            }
+         }
+
+         consdata->lhs = -SCIPinfinity(scip);
+
+         for( i = 0; i < consdata->nlinvars; ++i )
+         {
+            if( SCIPconsIsEnabled(cons) )
+            {
+               SCIP_CALL( catchLinearVarEvents(scip, cons, i) );
+            }
+            if( SCIPconsIsLocked(cons) )
+            {
+               SCIP_CALL( lockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
+            }
+         }
+      }
+
+      if( !SCIPisInfinity(scip, consdata->rhs) )
+      {
+         *infeasible = TRUE;
+         goto TERMINATE;
+      }
+   }
+   else if( SCIPisInfinity(scip, -constant) )
+   {
+      if( !SCIPisInfinity(scip, consdata->rhs) )
+      {
+         /* setting constraint rhs to infinity; this may change linear variable locks and events */
+         for( i = 0; i < consdata->nlinvars; ++i )
+         {
+            if( SCIPconsIsLocked(cons) )
+            {
+               SCIP_CALL( unlockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
+            }
+            if( SCIPconsIsEnabled(cons) )
+            {
+               SCIP_CALL( dropLinearVarEvents(scip, cons, i) );
+            }
+         }
+
+         consdata->rhs = SCIPinfinity(scip);
+
+         for( i = 0; i < consdata->nlinvars; ++i )
+         {
+            if( SCIPconsIsEnabled(cons) )
+            {
+               SCIP_CALL( catchLinearVarEvents(scip, cons, i) );
+            }
+            if( SCIPconsIsLocked(cons) )
+            {
+               SCIP_CALL( lockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
+            }
+         }
+      }
+      if( !SCIPisInfinity(scip, -consdata->lhs) )
+      {
+         *infeasible = TRUE;
+         goto TERMINATE;
+      }
+   }
+   else if( constant != 0.0 )
    {
       if( !SCIPisInfinity(scip, -consdata->lhs) )
       {
@@ -1806,6 +1884,7 @@ SCIP_RETCODE splitOffLinearPart(
       }
    }
 
+TERMINATE:
    for( i = 0; i < nlinvars; ++i )
    {
       SCIP_CALL( addLinearCoef(scip, cons, linvars[i], lincoefs[i]) );
@@ -3757,21 +3836,37 @@ SCIP_RETCODE computeViolation(
    assert(consdata != NULL);
 
    consdata->activity = 0.0;
+   consdata->lhsviol = 0.0;
+   consdata->rhsviol = 0.0;
    varval = 0.0;
    *solviolbounds = FALSE;
 
    for( i = 0; i < consdata->nlinvars; ++i )
    {
+      SCIP_Real activity;
+
       var = consdata->linvars[i];
       varval = SCIPgetSolVal(scip, sol, var);
+      activity = consdata->lincoefs[i] * varval;
+
+      /* the contribution of a variable with |varval| = +inf is +inf when activity > 0.0, -inf when activity < 0.0, and
+       * 0.0 otherwise
+       */
       if( SCIPisInfinity(scip, REALABS(varval)) )
       {
-         consdata->activity = SCIPinfinity(scip);
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
-            consdata->lhsviol = SCIPinfinity(scip);
-         if( !SCIPisInfinity(scip,  consdata->rhs) )
+         if( activity > 0.0 && !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            consdata->activity = SCIPinfinity(scip);
             consdata->rhsviol = SCIPinfinity(scip);
-         return SCIP_OKAY;
+            return SCIP_OKAY;
+         }
+
+         if( activity < 0.0 && !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            consdata->activity = -SCIPinfinity(scip);
+            consdata->lhsviol = SCIPinfinity(scip);
+            return SCIP_OKAY;
+         }
       }
 
       /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
@@ -3786,11 +3881,12 @@ SCIP_RETCODE computeViolation(
          varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
       }
 
-      consdata->activity += consdata->lincoefs[i] * varval;
+      consdata->activity += activity;
    }
 
    for( i = 0; i < consdata->nexprtrees; ++i )
    {
+      SCIP_Real activity;
       SCIP_Real val;
       int nvars;
 
@@ -3855,7 +3951,8 @@ SCIP_RETCODE computeViolation(
          SCIPfreeBufferArray(scip, &x);
       }
 
-      if( SCIPisInfinity(scip, REALABS(val)) || !SCIPisFinite(val) )
+      /* set the activity to infinity if a function evaluation was not valid (e.g., sqrt(-1) ) */
+      if( !SCIPisFinite(val) )
       {
          consdata->activity = SCIPinfinity(scip);
          if( !SCIPisInfinity(scip, -consdata->lhs) )
@@ -3864,7 +3961,29 @@ SCIP_RETCODE computeViolation(
             consdata->rhsviol = SCIPinfinity(scip);
          return SCIP_OKAY;
       }
-      consdata->activity += consdata->nonlincoefs[i] * val;
+
+      /* the contribution of an expression with |val| = +inf is +inf when its coefficient is > 0.0, -inf when its coefficient is < 0.0, and
+       * 0.0 otherwise
+       */
+      activity = consdata->nonlincoefs[i] * val;
+      if( SCIPisInfinity(scip, REALABS(val)) )
+      {
+         if( activity > 0.0 && !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            consdata->activity = SCIPinfinity(scip);
+            consdata->rhsviol = SCIPinfinity(scip);
+            return SCIP_OKAY;
+         }
+
+         if( activity < 0.0  && !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            consdata->activity = -SCIPinfinity(scip);
+            consdata->lhsviol = SCIPinfinity(scip);
+            return SCIP_OKAY;
+         }
+      }
+
+      consdata->activity += activity;
    }
 
    if( consdata->nexprtrees == 0 && consdata->exprgraphnode != NULL )
@@ -3876,7 +3995,8 @@ SCIP_RETCODE computeViolation(
       val = SCIPexprgraphGetNodeVal(consdata->exprgraphnode);
       assert(val != SCIP_INVALID);  /*lint !e777*/
 
-      if( !SCIPisFinite(val) || SCIPisInfinity(scip, REALABS(val)) )
+      /* set the activity to infinity if a function evaluation was not valid (e.g., sqrt(-1) ) */
+      if( !SCIPisFinite(val) )
       {
          consdata->activity = SCIPinfinity(scip);
          if( !SCIPisInfinity(scip, -consdata->lhs) )
@@ -3885,6 +4005,20 @@ SCIP_RETCODE computeViolation(
             consdata->rhsviol = SCIPinfinity(scip);
          return SCIP_OKAY;
       }
+
+      if( SCIPisInfinity(scip, val) && !SCIPisInfinity(scip, consdata->rhs) )
+      {
+         consdata->activity = SCIPinfinity(scip);
+         consdata->rhsviol = SCIPinfinity(scip);
+         return SCIP_OKAY;
+      }
+      else if( SCIPisInfinity(scip, -val) && !SCIPisInfinity(scip, -consdata->lhs) )
+      {
+         consdata->activity = -SCIPinfinity(scip);
+         consdata->lhsviol = SCIPinfinity(scip);
+         return SCIP_OKAY;
+      }
+
       consdata->activity += val;
    }
 
@@ -4084,6 +4218,10 @@ SCIP_RETCODE addLinearization(
 
             grad[i] *= treecoef;
             constant -= grad[i] * x[i];
+
+            /* try to perturb x if the constant is too large */
+            if( SCIPisInfinity(scip, REALABS(constant)) )
+               break;
 
             /* coefficients smaller than epsilon are rounded to 0.0 when added to row, this can be wrong if variable value is very large (bad numerics)
              * in this case, set gradient to 0.0 here, but modify constant so that cut is still valid (if possible)
@@ -7515,7 +7653,11 @@ SCIP_DECL_CONSEXITPRE(consExitpreNonlinear)
 
       if( !consdata->ispresolved || havegraphchange )
       {
-         SCIP_CALL( splitOffLinearPart(scip, conshdlr, conss[c]) );
+         SCIP_Bool infeasible;
+         SCIP_CALL( splitOffLinearPart(scip, conshdlr, conss[c], &infeasible) );
+
+         /* the infeasibility should have been detected during presolve */
+         assert(!infeasible);
       }
 
       SCIP_CALL( mergeAndCleanLinearVars(scip, conss[c]) );
@@ -8400,7 +8542,15 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
 
       if( !consdata->ispresolved || havegraphchange )
       {
-         SCIP_CALL( splitOffLinearPart(scip, conshdlr, conss[c]) );
+         SCIP_Bool infeasible;
+
+         SCIP_CALL( splitOffLinearPart(scip, conshdlr, conss[c], &infeasible) );
+
+         if( infeasible )
+         {
+            *result = SCIP_CUTOFF;
+            continue;
+         }
       }
 
       if( consdata->nlinvars == 0 && consdata->exprgraphnode == NULL )
