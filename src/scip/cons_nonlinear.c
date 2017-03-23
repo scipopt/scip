@@ -1797,7 +1797,36 @@ SCIP_RETCODE splitOffLinearPart(
 
    if( SCIPisInfinity(scip, constant) )
    {
-      consdata->lhs = -SCIPinfinity(scip);
+      if( !SCIPisInfinity(scip, -consdata->lhs) )
+      {
+         /* setting constraint lhs to -infinity; this may change linear variable locks and events */
+         for( i = 0; i < consdata->nlinvars; ++i )
+         {
+            if( SCIPconsIsLocked(cons) )
+            {
+               SCIP_CALL( unlockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
+            }
+            if( SCIPconsIsEnabled(cons) )
+            {
+               SCIP_CALL( dropLinearVarEvents(scip, cons, i) );
+            }
+         }
+
+         consdata->lhs = -SCIPinfinity(scip);
+
+         for( i = 0; i < consdata->nlinvars; ++i )
+         {
+            if( SCIPconsIsEnabled(cons) )
+            {
+               SCIP_CALL( catchLinearVarEvents(scip, cons, i) );
+            }
+            if( SCIPconsIsLocked(cons) )
+            {
+               SCIP_CALL( lockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
+            }
+         }
+      }
+
       if( !SCIPisInfinity(scip, consdata->rhs) )
       {
          *infeasible = TRUE;
@@ -1806,7 +1835,35 @@ SCIP_RETCODE splitOffLinearPart(
    }
    else if( SCIPisInfinity(scip, -constant) )
    {
-      consdata->rhs = SCIPinfinity(scip);
+      if( !SCIPisInfinity(scip, consdata->rhs) )
+      {
+         /* setting constraint rhs to infinity; this may change linear variable locks and events */
+         for( i = 0; i < consdata->nlinvars; ++i )
+         {
+            if( SCIPconsIsLocked(cons) )
+            {
+               SCIP_CALL( unlockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
+            }
+            if( SCIPconsIsEnabled(cons) )
+            {
+               SCIP_CALL( dropLinearVarEvents(scip, cons, i) );
+            }
+         }
+
+         consdata->rhs = SCIPinfinity(scip);
+
+         for( i = 0; i < consdata->nlinvars; ++i )
+         {
+            if( SCIPconsIsEnabled(cons) )
+            {
+               SCIP_CALL( catchLinearVarEvents(scip, cons, i) );
+            }
+            if( SCIPconsIsLocked(cons) )
+            {
+               SCIP_CALL( lockLinearVariable(scip, cons, consdata->linvars[i], consdata->lincoefs[i]) );
+            }
+         }
+      }
       if( !SCIPisInfinity(scip, -consdata->lhs) )
       {
          *infeasible = TRUE;
