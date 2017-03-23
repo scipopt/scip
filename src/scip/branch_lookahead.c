@@ -63,6 +63,7 @@
 #define DEFAULT_USEDOMAINREDUCTION           TRUE
 #define DEFAULT_ADDNONVIOCONS                FALSE
 #define DEFAULT_DOWNFIRST                    TRUE
+#define DEFAULT_ABBREVIATED                  FALSE
 
 /*
  * Data structures
@@ -97,6 +98,7 @@ SCIP_RETCODE allocConfiguration(
    (*config)->stopbranching = DEFAULT_STOPBRANCHING;
    (*config)->usebincons = DEFAULT_USEIMPLIEDBINARYCONSTRAINTS;
    (*config)->usedomainreduction = DEFAULT_USEDOMAINREDUCTION;
+   (*config)->abbreviated = DEFAULT_ABBREVIATED;
    return SCIP_OKAY;
 }
 
@@ -163,6 +165,80 @@ typedef struct
    BINARYVARLIST*        binaryvars;         /**< The current binary vars, used to created the constraints. */
    CONSTRAINTLIST*       createdconstraints; /**< The created constraints. */
 } BINCONSDATA;
+
+typedef struct
+{
+   SCIP_VAR*             branchvar;
+   SCIP_Real             branchval;
+   SCIP_Real             fracval;
+   /* TODO: add the lp basis etc. here for re-usage? */
+} CANDIDATE;
+
+typedef struct
+{
+   CANDIDATE**           candidates;
+   int                   ncandidates;
+} CANDIDATELIST;
+
+static
+SCIP_RETCODE allocCandidate(
+   SCIP*                 scip,
+   CANDIDATE**           candidate
+   )
+{
+   SCIP_CALL( SCIPallocBuffer(scip, candidate) );
+
+   return SCIP_OKAY;
+}
+
+static
+void freeCandidate(
+   SCIP*                 scip,
+   CANDIDATE**           candidate
+   )
+{
+   SCIPfreeBuffer(scip, candidate);
+}
+
+static
+SCIP_RETCODE allocCandidateList(
+   SCIP*                 scip,
+   CANDIDATELIST**       list,
+   int                   ncandidates
+   )
+{
+   int i;
+
+   /* TODO: remove the ncdandidates from here and init it later, when the real number of candidates is known*/
+
+   SCIP_CALL( SCIPallocBuffer(scip, list) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*list)->candidates, ncandidates) );
+   (*list)->ncandidates = ncandidates;
+
+   for( i = 0; i < ncandidates; i++ )
+   {
+      SCIP_CALL( allocCandidate(scip, &(*list)->candidates[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+void freeCandidateList(
+   SCIP*                 scip,
+   CANDIDATELIST**       list
+   )
+{
+   int i;
+
+   for( i = (*list)->ncandidates-1; i >= 0; i-- )
+   {
+      freeCandidate(scip, &(*list)->candidates[i]);
+   }
+
+   SCIPfreeBufferArray(scip, &(*list)->candidates);
+   SCIPfreeBuffer(scip, list);
+}
 
 /**
  * allocate the struct on the Buffer and initialize it with the default values
@@ -1517,6 +1593,175 @@ void updateOldBranching(
    persistent->lastbranchnlps[varindex] = SCIPgetNNodeLPs(scip);
 }
 
+static
+SCIP_RETCODE getFSBResult(
+   SCIP*                 scip,
+   BRANCHRULERESULT*     branchruleresult
+   )
+{
+   CONFIGURATION* config;
+   STATUS* status;
+   STATISTICS* statistics;
+   LOCALSTATISTICS* localstats;
+
+   SCIP_CALL( allocConfiguration(scip, &config) );
+   SCIP_CALL( allocateStatus(scip, &status) );
+   SCIP_CALL( allocStatistics(scip, &statistics, 1) );
+   SCIP_CALL( allocateLocalStatistics(scip, &localstats) );
+
+   config->usebincons = FALSE;
+   config->usedomainreduction = FALSE;
+   config->recursiondepth = 1;
+
+   SCIP_CALL( selectVarStart(scip, config, NULL, status, branchruleresult, statistics, localstats) );
+
+   freeLocalStatistics(scip, &localstats);
+   freeStatistics(scip, &statistics);
+   freeStatus(scip, &status);
+   freeConfiguration(scip, &config);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_SORTINDCOMP(branchRuleScoreComp)
+{  /*lint --e{715}*/
+   BRANCHRULERESULT* branchruleresult = (BRANCHRULERESULT*)dataptr;
+   SCIP_Real score1;
+   SCIP_Real score2;
+
+   assert(branchruleresult != NULL);
+   assert(0 <= ind1 && ind1 < branchruleresult->ncandscores);
+   assert(0 <= ind2 && ind2 < branchruleresult->ncandscores);
+
+   score1 = branchruleresult->candscores[ind1];
+   score2 = branchruleresult->candscores[ind2];
+
+   /* TODO: replace with the scip internal comparisons (containing an eps)*/
+   if( score1 == score2 )
+   {
+      return 0;
+   }
+   else if( score1 < score2 )
+   {
+      return -1;
+   }
+   else
+   {
+      return 1;
+   }
+}
+
+static
+SCIP_RETCODE getBestCandidates(
+   SCIP*                 scip,
+   CANDIDATELIST*        candidates
+   )
+{
+   BRANCHRULERESULT* branchruleresult;
+   SCIP_Real lpobjval;
+   int ncands;
+   int* permutation;
+   int i;
+
+   assert(scip != NULL);
+   assert(candidates != NULL);
+
+   SCIP_CALL( SCIPgetLPBranchCands(scip, NULL, NULL, NULL, &ncands, NULL, NULL) );
+   lpobjval = SCIPgetLPObjval(scip);
+
+   assert(candidates->ncandidates > 0);
+   assert(candidates->ncandidates <= ncands);
+
+   SCIP_CALL( allocateBranchRuleResultFull(scip, &branchruleresult, lpobjval, ncands) );
+
+   SCIP_CALL( getFSBResult(scip, branchruleresult) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &permutation, branchruleresult->ncandscores) );
+
+   SCIPsortDown(permutation, branchRuleScoreComp, branchruleresult, branchruleresult->ncandscores);
+
+   SCIPdebug(
+      SCIPdebugMessage("After sort:\n");
+      for( i = 0; i < branchruleresult->ncandscores; i++ )
+      {
+         int sortedindex = permutation[i];
+         SCIP_VAR* var = branchruleresult->candswithscore[sortedindex];
+         SCIP_Real score = branchruleresult->candscores[sortedindex];
+
+         SCIPdebugMessage("Index %2i: Var %s Score %g\n", i, SCIPvarGetName(var), score);
+      }
+   )
+
+   SCIPdebugMessage("Selection:\n");
+   for( i = 0; i < candidates->ncandidates; i++)
+   {
+      int sortedindex = permutation[i];
+      CANDIDATE* candidate = candidates->candidates[i];
+
+      candidate->branchvar = branchruleresult->candswithscore[sortedindex];
+      candidate->branchval = branchruleresult->candslpvalue[sortedindex];
+
+      SCIPdebugMessage("Index %i: Var %s Val %g\n", i, SCIPvarGetName(candidate->branchvar), candidate->branchval);
+   }
+
+   SCIPfreeBufferArray(scip, &permutation);
+   freeBranchRuleResultFull(scip, &branchruleresult);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE getAllCandidates(
+   SCIP*                 scip,
+   CANDIDATELIST*        candidates
+   )
+{
+   SCIP_VAR** lpcands;
+   SCIP_Real* lpcandssol;
+   SCIP_Real* lpcandsfrac;
+   int nlpcands;
+   int i;
+
+   assert(scip != NULL);
+   assert(candidates != NULL);
+
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
+
+   assert(nlpcands == candidates->ncandidates);
+
+   for( i = 0; i < nlpcands; i++ )
+   {
+      CANDIDATE* candidate = candidates->candidates[i];
+
+      candidate->branchvar = lpcands[i];
+      candidate->branchval = lpcandssol[i];
+      candidate->fracval = lpcandsfrac[i];
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE getCandidates(
+   SCIP*                 scip,
+   CONFIGURATION*        config,
+   CANDIDATELIST*        candidates
+   )
+{
+   if( config->abbreviated )
+   {
+      /* call LAB with depth 1 to get the best (w.r.t. FSB score) candidates */
+      SCIP_CALL( getBestCandidates(scip, candidates) );
+   }
+   else
+   {
+      /* get all candidates for the current node lp solution */
+      SCIP_CALL( getAllCandidates(scip, candidates) );
+   }
+
+   return SCIP_OKAY;
+}
 
 static
 SCIP_RETCODE selectVarRecursive(
@@ -1527,10 +1772,7 @@ SCIP_RETCODE selectVarRecursive(
    SCIP_SOL*             baselpsol,
    DOMAINREDUCTIONS*     domainreductions,
    BINCONSDATA*          binconsdata,
-   SCIP_VAR**            lpcands,            /**< array of fractional variables */
-   SCIP_Real*            lpcandssol,         /**< array of fractional solution values */
-   SCIP_Real*            lpcandsfrac,
-   int                   nlpcands,           /**< number of fractional variables/solution values */
+   CANDIDATELIST*        candidates,
    BRANCHRULERESULT*     branchruleresult,
    int                   recursiondepth
 #ifdef SCIP_STATISTIC
@@ -1593,9 +1835,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
 
    if( !downbranchingresult->cutoff && !status->lperror && !status->limitreached && recursiondepth > 1 )
    {
-      SCIP_VAR** deeperlpcands;
-      SCIP_Real* deeperlpcandssol;
-      SCIP_Real* deeperlpcandsfrac;
+      CANDIDATELIST* candidates;
       int deepernlpcands;
       SCIP_Real localdowngain;
 
@@ -1603,7 +1843,11 @@ SCIP_RETCODE executeDownBranchingRecursive(
 
       SCIP_CALL( SCIPupdateVarPseudocost(scip, branchvar, 0.0-branchvalfrac, localdowngain, 1.0) );
 
-      SCIP_CALL( copyLPBranchCands(scip, &deeperlpcands, &deeperlpcandssol, &deeperlpcandsfrac, &deepernlpcands) );
+      SCIP_CALL( SCIPgetLPBranchCands(scip, NULL, NULL, NULL, &deepernlpcands, NULL, NULL) );
+
+      SCIP_CALL( allocCandidateList(scip, &candidates, deepernlpcands) );
+
+      SCIP_CALL( getCandidates(scip, config, candidates) );
 
       SCIPdebugMessage("Depth <%i>, Downbranching has <%i> candidates.\n", probingdepth, deepernlpcands);
 
@@ -1624,11 +1868,11 @@ SCIP_RETCODE executeDownBranchingRecursive(
 #ifdef SCIP_STATISTIC
          SCIP_CALL( allocateLocalStatistics(scip, &deeperlocalstats) );
          SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, downdomainreductions, binconsdata,
-               deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperbranchrulereslt, recursiondepth - 1,
+               candidates, deeperbranchrulereslt, recursiondepth - 1,
                statistics, deeperlocalstats) );
 #else
          SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, downdomainreductions, binconsdata,
-               deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperbranchrulereslt, recursiondepth - 1) );
+               candidates, deeperbranchrulereslt, recursiondepth - 1) );
 #endif
 
          /* the proved dual bound of the deeper branching cannot be less than the current dual bound, as every deeper
@@ -1663,9 +1907,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
          freeStatus(scip, &deeperstatus);
          freeBranchRuleResultReduced(scip, &deeperbranchrulereslt);
       }
-      SCIPfreeBufferArray(scip, &deeperlpcandsfrac);
-      SCIPfreeBufferArray(scip, &deeperlpcandssol);
-      SCIPfreeBufferArray(scip, &deeperlpcands);
+      freeCandidateList(scip, &candidates);
    }
 
    if( config->usebincons && downbranchingresult->cutoff && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
@@ -1751,9 +1993,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
 
    if( !upbranchingresult->cutoff && !status->lperror && !status->limitreached && recursiondepth > 1 )
    {
-      SCIP_VAR** deeperlpcands;
-      SCIP_Real* deeperlpcandssol;
-      SCIP_Real* deeperlpcandsfrac;
+      CANDIDATELIST* candidates;
       int deepernlpcands;
       SCIP_Real localupgain;
 
@@ -1761,7 +2001,11 @@ SCIP_RETCODE executeUpBranchingRecursive(
 
       SCIP_CALL( SCIPupdateVarPseudocost(scip, branchvar, 1.0-branchvalfrac, localupgain, 1.0) );
 
-      SCIP_CALL( copyLPBranchCands(scip, &deeperlpcands, &deeperlpcandssol, &deeperlpcandsfrac, &deepernlpcands) );
+      SCIP_CALL( SCIPgetLPBranchCands(scip, NULL, NULL, NULL, &deepernlpcands, NULL, NULL) );
+
+      SCIP_CALL( allocCandidateList(scip, &candidates, deepernlpcands) );
+
+      SCIP_CALL( getCandidates(scip, config, candidates) );
 
       SCIPdebugMessage("Depth <%i>, Upbranching has <%i> candidates.\n", probingdepth, deepernlpcands);
 
@@ -1782,11 +2026,11 @@ SCIP_RETCODE executeUpBranchingRecursive(
 #ifdef SCIP_STATISTIC
          SCIP_CALL( allocateLocalStatistics(scip, &deeperlocalstats) );
          SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, updomainreductions, binconsdata,
-               deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperbranchrulereslt, recursiondepth - 1,
+               candidates, deeperbranchrulereslt, recursiondepth - 1,
                statistics, deeperlocalstats) );
 #else
          SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, updomainreductions, binconsdata,
-               deeperlpcands, deeperlpcandssol, deeperlpcandsfrac, deepernlpcands, deeperbranchrulereslt, recursiondepth - 1) );
+               candidates, deeperbranchrulereslt, recursiondepth - 1) );
 #endif
 
          /* the proved dual bound of the deeper branching cannot be less than the current dual bound, as every deeper
@@ -1823,9 +2067,8 @@ SCIP_RETCODE executeUpBranchingRecursive(
          freeStatus(scip, &deeperstatus);
          freeBranchRuleResultReduced(scip, &deeperbranchrulereslt);
       }
-      SCIPfreeBufferArray(scip, &deeperlpcandsfrac);
-      SCIPfreeBufferArray(scip, &deeperlpcandssol);
-      SCIPfreeBufferArray(scip, &deeperlpcands);
+
+      freeCandidateList(scip, &candidates);
    }
 
    if( config->usebincons && upbranchingresult->cutoff && binconsdata->binaryvars->nbinaryvars == (probingdepth + 1) )
@@ -1867,10 +2110,7 @@ SCIP_RETCODE selectVarRecursive(
    SCIP_SOL*             baselpsol,
    DOMAINREDUCTIONS*     domainreductions,
    BINCONSDATA*          binconsdata,
-   SCIP_VAR**            lpcands,            /**< array of fractional variables */
-   SCIP_Real*            lpcandssol,         /**< array of fractional solution values */
-   SCIP_Real*            lpcandsfrac,
-   int                   nlpcands,           /**< number of fractional variables/solution values */
+   CANDIDATELIST*        candidates,
    BRANCHRULERESULT*     branchruleresult,
    int                   recursiondepth
 #ifdef SCIP_STATISTIC
@@ -1879,29 +2119,29 @@ SCIP_RETCODE selectVarRecursive(
 #endif
    )
 {
-   int probingdepth;
    BRANCHINGDECISION* decision;
+   int nlpcands;
+   int probingdepth;
 
    assert(scip != NULL);
    assert(status != NULL);
    assert(config != NULL);
    assert(!config->usedomainreduction || domainreductions != NULL);
    assert(!config->usebincons || binconsdata != NULL);
-   assert(lpcands != NULL);
-   assert(lpcandssol != NULL);
-   assert(lpcandsfrac != NULL);
-   assert(nlpcands > 0);
+   assert(candidates != NULL);
+   assert(candidates->ncandidates > 0);
    assert(branchruleresult != NULL);
    assert(branchruleresult->decision != NULL);
    assert(recursiondepth >= 1);
    SCIPstatistic( assert(statistics != NULL) );
 
-   probingdepth = SCIPgetProbingDepth(scip);
    decision = branchruleresult->decision;
+   nlpcands = candidates->ncandidates;
+   probingdepth = SCIPgetProbingDepth(scip);
 
    /* init default decision */
-   decision->bestvar = lpcands[0];
-   decision->bestval = lpcandssol[0];
+   decision->bestvar = candidates->candidates[0]->branchvar;
+   decision->bestval = candidates->candidates[0]->branchval;;
    decision->bestdown = SCIPgetLPObjval(scip);
    decision->bestdownvalid = FALSE;
    decision->bestup = SCIPgetLPObjval(scip);
@@ -1910,7 +2150,7 @@ SCIP_RETCODE selectVarRecursive(
 
    if( !config->forcebranching && nlpcands == 1 )
    {
-      SCIPdebugMessage("Only one candidate (<%s>) is given. This one is chosen without calculations.\n", SCIPvarGetName(lpcands[0]));
+      SCIPdebugMessage("Only one candidate (<%s>) is given. This one is chosen without calculations.\n", SCIPvarGetName(decision->bestvar));
       SCIPstatistic( statistics->nsinglecandidate[probingdepth]++; )
    }
    else
@@ -1942,6 +2182,7 @@ SCIP_RETCODE selectVarRecursive(
          {
             SCIP_Bool useoldbranching = FALSE;
             SCIP_Bool addeddomainreduction = FALSE;
+            CANDIDATE* candidate;
             SCIP_VAR* branchvar;
             SCIP_Real branchval;
             SCIP_Real branchvalfrac;
@@ -1950,9 +2191,13 @@ SCIP_RETCODE selectVarRecursive(
 
             c = c % nlpcands;
 
-            branchvar = lpcands[c];
-            branchval = lpcandssol[c];
-            branchvalfrac = lpcandsfrac[c];
+            candidate = candidates->candidates[c];
+
+            assert(candidate != NULL);
+
+            branchvar = candidate->branchvar;
+            branchval = candidate->branchval;
+            branchvalfrac = candidate->fracval;
 
             assert(branchvar != NULL);
 
@@ -2215,10 +2460,8 @@ SCIP_RETCODE selectVarStart(
    )
 {
    int recursiondepth;
-   SCIP_VAR** lpcands;
-   SCIP_Real* lpcandssol;
-   SCIP_Real* lpcandsfrac;
    int nlpcands;
+   CANDIDATELIST* candidates;
    DOMAINREDUCTIONS* domainreductions = NULL;
    BINCONSDATA* binconsdata = NULL;
    SCIP_SOL* baselpsol = NULL;
@@ -2233,7 +2476,11 @@ SCIP_RETCODE selectVarStart(
    recursiondepth = config->recursiondepth;
    assert(recursiondepth > 0);
 
-   SCIP_CALL( copyLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, NULL, NULL, NULL, &nlpcands, NULL, NULL) );
+
+   SCIP_CALL( allocCandidateList(scip, &candidates, nlpcands) );
+
+   SCIP_CALL( getCandidates(scip, config, candidates) );
 
    if( config->usedomainreduction || config->usebincons )
    {
@@ -2254,9 +2501,9 @@ SCIP_RETCODE selectVarStart(
    SCIPenableVarHistory(scip);
 
 #ifdef SCIP_STATISTIC
-   SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, lpcands, lpcandssol, lpcandsfrac, nlpcands, branchruleresult, recursiondepth, statistics, localstats) );
+   SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, candidates, branchruleresult, recursiondepth, statistics, localstats) );
 #else
-   SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, lpcands, lpcandssol, lpcandsfrac, nlpcands, branchruleresult, recursiondepth) );
+   SCIP_CALL( selectVarRecursive(scip, status, persistent, config, baselpsol, domainreductions, binconsdata, candidates, branchruleresult, recursiondepth) );
 #endif
 
    SCIPendProbing(scip);
@@ -2305,7 +2552,7 @@ SCIP_RETCODE selectVarStart(
       SCIP_CALL( SCIPfreeSol(scip, &baselpsol) );
    }
 
-   freeLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac);
+   freeCandidateList(scip, &candidates);
 
    return SCIP_OKAY;
 }
@@ -2769,9 +3016,13 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "should constraints be added, that are not violated by the base LP?",
          &branchruledata->config->addnonviocons, TRUE, DEFAULT_ADDNONVIOCONS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-            "branching/lookahead/downbranchfirst",
-            "should the down branch be chosen first?",
-            &branchruledata->config->downfirst, TRUE, DEFAULT_DOWNFIRST, NULL, NULL) );
+         "branching/lookahead/downbranchfirst",
+         "should the down branch be chosen first?",
+         &branchruledata->config->downfirst, TRUE, DEFAULT_DOWNFIRST, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/abbreviated",
+         "should the abbreviated version of the LAB be used?",
+         &branchruledata->config->abbreviated, TRUE, DEFAULT_ABBREVIATED, NULL, NULL) );
 
    return SCIP_OKAY;
 }

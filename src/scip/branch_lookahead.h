@@ -53,6 +53,7 @@ struct Configuration
    int                   recursiondepth;     /**< How deep should the recursion go? Default for Lookahead: 2 */
    SCIP_Bool             addnonviocons;      /**< Should constraints be added, that are not violated by the base LP? */
    SCIP_Bool             downfirst;          /**< Should the down branch be executed first? */
+   SCIP_Bool             abbreviated;        /**< Should the abbreviated version be used? */
 };
 typedef struct Configuration CONFIGURATION;
 
