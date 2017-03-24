@@ -36,7 +36,7 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define NNEIGHBORHOODS 1
+#define NNEIGHBORHOODS 3
 #define DEFAULT_NODESQUOT 0.05
 #define DEFAULT_NODESOFFSET 500
 #define DEFAULT_NSOLSLIM 3
@@ -45,6 +45,8 @@
 #define DEFAULT_MAXNODES 5000
 #define LPLIMFAC 2.0
 #define DEFAULT_INITSEED 113
+#define MUTATIONSEED 121
+#define DEFAULT_BESTSOLWEIGHT 3
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Lns"
@@ -55,7 +57,13 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary primal heuristic data */
+/* additional crossover data structure */
+typedef struct data_crossover DATA_CROSSOVER;
+typedef struct data_mutation DATA_MUTATION;
+typedef struct EpsGreedy EPSGREEDY;
+typedef struct NH_FixingRate NH_FIXINGRATE;
+typedef struct NH_Stats NH_STATS;
+typedef struct Nh NH;
 
 /** callback to let the neighborhood write its suggested variable fixings into a buffer data structure
  *
@@ -63,6 +71,7 @@
  */
  #define DECL_VARFIXINGS(x) SCIP_RETCODE x ( \
    SCIP*                 scip,               \
+   NH*                   neighborhood,       \
    SCIP_VAR**            varbuf,             \
    SCIP_Real*            valbuf,             \
    int*                  nfixings,           \
@@ -83,6 +92,22 @@
    SCIP_Bool*            success             \
    )
 
+/** initialization callback for neighborhoods when a new problem is read
+ *
+ */
+#define DECL_NHINIT(x) SCIP_RETCODE x ( \
+   SCIP*                 scip,               \
+   NH*                   neighborhood        \
+   )
+
+/** deinitialization callback for neighborhoods when exiting a problem
+ *
+ */
+#define DECL_NHEXIT(x) SCIP_RETCODE x ( \
+   SCIP*                 scip,               \
+   NH*                   neighborhood        \
+   )
+
 /** callback function for special sub-SCIP settings
  *
  * todo comments
@@ -92,29 +117,24 @@
    SCIP*                 targetscip          \
 )
 
-/* additional crossover data structure */
-typedef struct data_crossover DATA_CROSSOVER;
-typedef struct EpsGreedy EPSGREEDY;
-typedef struct NH_FixingRate NH_FIXINGRATE;
-typedef struct NH_Stats NH_STATS;
-typedef struct Nh NH;
 
 
 /** statistics for a neighborhood */
 struct NH_Stats
 {
-   int                   nruns;
-   int                   nsolsfound;
-   int                   nbestsolsfound;
    SCIP_Longint          usednodes;
    SCIP_Longint          lpiterations;
+   SCIP_Real             totalgapclosed;
+   int                   nruns;
+   int                   nrunsbestsol;
+   int                   nsolsfound;
+   int                   nbestsolsfound;
    int                   presolrounds;
    int                   totalnbinfixings;
    int                   totalnintfixings;
    int                   totalnimplintfixings;
    int                   totalncontfixings;
    int                   totalnfixings;
-   SCIP_Real             totalgapclosed;
 };
 
 /** fixing rate that can be automatically adjusted */
@@ -128,13 +148,26 @@ struct NH_FixingRate
 /** neighborhood data structure with callbacks, statistics, fixingrate */
 struct Nh
 {
-   const char*           name;
+   char*                 name;
    NH_FIXINGRATE*        fixingrate;
    NH_STATS              stats;
    DECL_VARFIXINGS       ((*varfixings));
    DECL_CHANGESUBSCIP    ((*changesubscip));
    DECL_SETUPSUBSCIP     ((*setupsubscip));
+   DECL_NHINIT           ((*nhinit));
+   DECL_NHEXIT           ((*nhexit));
    SCIP_Bool             active;
+   union
+   {
+      DATA_MUTATION*     mutation;
+      DATA_CROSSOVER*    crossover;
+   }                     data;
+};
+
+/** mutation neighborhood data structure */
+struct data_mutation
+{
+   SCIP_RANDNUMGEN*      rng;
 };
 
 /** current, unnormalized reward for item i */
@@ -270,6 +303,7 @@ void neighborhoodStatsReset(
    stats->lpiterations = 0l;
    stats->nbestsolsfound = 0;
    stats->nruns = 0;
+   stats->nrunsbestsol = 0;
    stats->nsolsfound = 0;
    stats->presolrounds = 0;
    stats->totalgapclosed = 0;
@@ -298,10 +332,11 @@ SCIP_RETCODE lnsIncludeNeighborhood(
    const char*          name,                /**< name to distinguish this neighborhood */
    DECL_VARFIXINGS      ((*varfixings)),     /**< variable fixing callback for this neighborhood, or NULL */
    DECL_CHANGESUBSCIP   ((*changesubscip)),  /**< subscip changes callback for this neighborhood, or NULL */
-   DECL_SETUPSUBSCIP    ((*setupsubscip))    /**< setup callback for this neighborhood, or NULL */
+   DECL_SETUPSUBSCIP    ((*setupsubscip)),   /**< setup callback for this neighborhood, or NULL */
+   DECL_NHINIT          ((*nhinit)),         /**< initialization callback for neighborhood, or NULL */
+   DECL_NHEXIT          ((*nhexit))          /**< deinitialization callback for neighborhood, or NULL */
    )
 {
-   NH* neighborhoodptr;
 
    assert(scip != NULL);
    assert(heurdata != NULL);
@@ -310,20 +345,21 @@ SCIP_RETCODE lnsIncludeNeighborhood(
 
    SCIP_CALL( SCIPallocBlockMemory(scip, neighborhood) );
    assert(*neighborhood != NULL);
-   neighborhoodptr = *neighborhood;
 
-   SCIP_ALLOC( BMSduplicateMemoryArray(&neighborhoodptr->name, name, strlen(name) + 1) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&(*neighborhood)->name, name, strlen(name)+1) );
 
    /* fixing rate are only created here, but reset in the heurInit callback */
-   SCIP_CALL( fixingRateCreate(scip, &neighborhoodptr->fixingrate) );
+   SCIP_CALL( fixingRateCreate(scip, &(*neighborhood)->fixingrate) );
 
-   neighborhoodptr->changesubscip = changesubscip;
-   neighborhoodptr->varfixings = varfixings;
-   neighborhoodptr->setupsubscip = setupsubscip;
+   (*neighborhood)->changesubscip = changesubscip;
+   (*neighborhood)->varfixings = varfixings;
+   (*neighborhood)->setupsubscip = setupsubscip;
+   (*neighborhood)->nhinit = nhinit;
+   (*neighborhood)->nhexit = nhexit;
 
    /* author bzfhende: TODO add parameters for this neighborhood */
 
-   heurdata->neighborhoods[heurdata->nneighborhoods++] = neighborhoodptr;
+   heurdata->neighborhoods[heurdata->nneighborhoods++] = (*neighborhood);
 
    return SCIP_OKAY;
 }
@@ -348,6 +384,42 @@ void lnsFreeNeighborhood(
 
    SCIPfreeBlockMemory(scip, neighborhood);
    *neighborhood = NULL;
+}
+
+/** todo initialize neighborhood specific data */
+static
+SCIP_RETCODE neighborhoodInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   NH*                   neighborhood        /**< neighborhood to initialize */
+   )
+{
+   assert(scip != NULL);
+   assert(neighborhood != NULL);
+
+   if( neighborhood->nhinit != NULL )
+   {
+      SCIP_CALL( neighborhood->nhinit(scip, neighborhood) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** todo deinitialize neighborhood specific data */
+static
+SCIP_RETCODE neighborhoodExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   NH*                   neighborhood        /**< neighborhood to initialize */
+   )
+{
+   assert(scip != NULL);
+   assert(neighborhood != NULL);
+
+   if( neighborhood->nhexit != NULL )
+   {
+      SCIP_CALL( neighborhood->nhexit(scip, neighborhood) );
+   }
+
+   return SCIP_OKAY;
 }
 
 /** create an epsilon greedy selector with the necessary callbacks */
@@ -429,6 +501,7 @@ SCIP_RETCODE epsGreedySelect(
    /** roll the dice to check if the best element should be picked, or an element at random */
    rand = SCIPrandomGetReal(epsgreedy->rng, 0.0, 1.0);
 
+   /* todo make epsilon decrease over time */
    if( rand <= epsgreedy->eps )
    {
       /** pick the element with the largest reward */
@@ -449,37 +522,8 @@ SCIP_RETCODE epsGreedySelect(
    }
    else
    {
-      int j;
-      SCIP_Real* rewards;
-      SCIP_Real lastreward = 0.0;
-      SCIP_Real selectedreward;
-
-      SCIP_CALL( SCIPallocBufferArray(scip, &rewards, nchoices) );
-
-      /* collect rewards and sum them up */
-      for( j = 0; j < nchoices; ++j )
-      {
-         rewards[j] = epsgreedy->epsreward(scip, epsgreedy, j) + lastreward;
-         lastreward = rewards[j];
-      }
-
-      /* draw a new random number */
-      rand = SCIPrandomGetReal(epsgreedy->rng, 0.0, 1.0);
-      selectedreward = lastreward * rand;
-
-      assert(lastreward >= selectedreward);
-      /* loop over collected rewards and stop at the selected reward */
-      for( j = 0; j < nchoices; ++j )
-      {
-         if( selectedreward <= rewards[j] )
-         {
-            *i = j;
-            break;
-         }
-      }
-
-      SCIPfreeBufferArray(scip, &rewards);
-
+      /* play one of the other arms at random */
+      *i = SCIPrandomGetInt(epsgreedy->rng, 0, nchoices - 1);
    }
 
    return SCIP_OKAY;
@@ -498,11 +542,11 @@ DECL_EPSREWARD(epsRewardLns)
    SCIP_Real numerator;
    SCIP_Real denominator;
    SCIP_HEURDATA* heurdata = (SCIP_HEURDATA*)(epsgreedy->userptr);
-   assert(i < heurdata->nneighborhoods);
    NH* neighborhood = heurdata->neighborhoods[i];
+   assert(i < heurdata->nneighborhoods);
 
-   numerator = 3 * neighborhood->stats.nbestsolsfound + neighborhood->stats.nsolsfound + 1.0;
-   denominator = neighborhood->stats.usednodes + 1.0;
+   numerator = neighborhood->stats.nrunsbestsol;
+   denominator = MAX(1.0, neighborhood->stats.nruns * DEFAULT_BESTSOLWEIGHT);
    return numerator / denominator;
 }
 
@@ -624,6 +668,12 @@ void updateNeighborhoodStats(
    stats->lpiterations += SCIPgetNLPIterations(subscip);
    stats->nbestsolsfound += SCIPgetNBestSolsFound(scip);
    stats->nsolsfound += SCIPgetNSolsFound(scip);
+
+   if( SCIPgetNBestSolsFound(subscip) > 0 )
+      stats->nrunsbestsol += DEFAULT_BESTSOLWEIGHT;
+   else if( SCIPgetNSolsFound(subscip) > 0 )
+      stats->nrunsbestsol++;
+
    stats->usednodes += SCIPgetNNodes(subscip);
    stats->nruns += 1;
 }
@@ -702,7 +752,7 @@ SCIP_RETCODE neighborhoodFixVariables(
    *success = FALSE;
    if( neighborhood->varfixings != NULL )
    {
-      SCIP_CALL( neighborhood->varfixings(scip, varbuf, valbuf, nfixings, success) );
+      SCIP_CALL( neighborhood->varfixings(scip, neighborhood, varbuf, valbuf, nfixings, success) );
    }
    else
    {
@@ -711,7 +761,7 @@ SCIP_RETCODE neighborhoodFixVariables(
 
    /** todo if too few fixings, use a strategy to select more variable fixings: randomized, LP graph, ReducedCost/Ps-Cost based, mix */
 
-   if( success && (*nfixings >= neighborhood->fixingrate->targetfixingrate * SCIPgetNVars(scip)) )
+   if( *success && (*nfixings >= neighborhood->fixingrate->targetfixingrate * SCIPgetNVars(scip)) )
       *success = TRUE;
 
    return SCIP_OKAY;
@@ -893,6 +943,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
    SCIP_VAR** subvars;
    int nfixings;
    int nvars;
+   int neighborhoodidx;
    NH* neighborhood;
    SOLVELIMITS solvelimits;
    SCIP_Bool success;
@@ -903,6 +954,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
 
    *result = SCIP_DELAYED;
 
+   run = TRUE;
    /** check if budget allows a run of the next selected neighborhood */
    SCIP_CALL( determineLimits(scip, heur, &solvelimits, &run) );
    SCIPdebugMsg(scip, "Budget check: %s\n", run ? "passed" : "must wait");
@@ -915,10 +967,13 @@ SCIP_DECL_HEUREXEC(heurExecLns)
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    /** todo select the next neighborhood to run based on epsilon greedy bandit mechanism */
-   /** todo check if the selected neighborhood can run at this node */
-   neighborhood = heurdata->neighborhoods[0];
-   SCIPdebugMsg(scip, "Using Neighborhood: %s\n", neighborhood->name);
+   SCIP_CALL( epsGreedySelect(scip, heurdata->epsgreedynh, &neighborhoodidx) );
+   assert(neighborhoodidx >= 0);
+   assert(heurdata->nneighborhoods > neighborhoodidx);
+   neighborhood = heurdata->neighborhoods[neighborhoodidx];
+   SCIPdebugMsg(scip, "Selected '%s' neighborhood %d\n", neighborhood->name, neighborhoodidx);
 
+   /** todo check if the selected neighborhood can run at this node */
    SCIP_CALL( SCIPallocBufferArray(scip, &varbuf, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &valbuf, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
@@ -1022,9 +1077,6 @@ DECL_VARFIXINGS(varFixingsRens)
    assert(nfixings != NULL);
    assert(valbuf != NULL);
 
-   *success = FALSE;
-   *nfixings = 0;
-
    if( ! SCIPhasCurrentNodeLP(scip) )
       return SCIP_OKAY;
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
@@ -1096,6 +1148,162 @@ DECL_CHANGESUBSCIP(changeSubscipRens)
    return SCIP_OKAY;
 }
 
+static
+DECL_VARFIXINGS(varFixingsRins)
+{
+   int nbinvars;
+   int nintvars;
+   SCIP_VAR** vars;
+   int i;
+   SCIP_SOL* incumbent;
+   assert(scip != NULL);
+   assert(varbuf != NULL);
+   assert(nfixings != NULL);
+   assert(valbuf != NULL);
+
+   if( ! SCIPhasCurrentNodeLP(scip) )
+      return SCIP_OKAY;
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   incumbent = SCIPgetBestSol(scip);
+   if( incumbent == NULL )
+      return SCIP_OKAY;
+
+   if( SCIPsolGetOrigin(incumbent) == SCIP_SOLORIGIN_ORIGINAL )
+      return SCIP_OKAY;
+
+   /* get variable information */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
+
+   /* return if no binary or integer variables are present */
+   if( nbinvars + nintvars == 0 )
+      return SCIP_OKAY;
+
+   /* loop over binary and integer variables; determine those that should be fixed in the sub-SCIP */
+   for( i = 0; i < nbinvars + nintvars; ++i )
+   {
+      SCIP_VAR* var = vars[i];
+      SCIP_Real lpsolval = SCIPgetSolVal(scip, NULL, var);
+      SCIP_Real incumbentsolval = SCIPgetSolVal(scip, incumbent, var);
+      assert((i < nbinvars && SCIPvarIsBinary(var)) || (i >= nbinvars && SCIPvarIsIntegral(var)));
+
+      /* fix all binary and integer variables with integer LP solution value */
+      if( SCIPisEQ(scip, lpsolval, incumbentsolval) )
+      {
+         assert(SCIPisIntegral(scip, incumbentsolval));
+         varbuf[*nfixings] = var;
+         valbuf[*nfixings] = incumbentsolval;
+         ++(*nfixings);
+      }
+   }
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_NHINIT(nhInitMutation)
+{
+   DATA_MUTATION* data;
+   assert(scip != NULL);
+   assert(neighborhood != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, &neighborhood->data.mutation) );
+
+   data = neighborhood->data.mutation;
+   assert(data != NULL);
+
+   SCIP_CALL( SCIPrandomCreate(&data->rng, SCIPblkmem(scip), MUTATIONSEED) );
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_NHEXIT(nhExitMutation)
+{
+   DATA_MUTATION* data;
+   assert(scip != NULL);
+   assert(neighborhood != NULL);
+   data = neighborhood->data.mutation;
+   assert(data != NULL);
+
+   SCIPrandomFree(&data->rng);
+
+   SCIPfreeBlockMemory(scip, &neighborhood->data.mutation);
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_VARFIXINGS(varFixingsMutation)
+{
+   SCIP_RANDNUMGEN* rng;
+
+   SCIP_VAR** vars;
+   SCIP_VAR** varscpy;
+   int i;
+   int nvars;
+   int nbinvars;
+   int nintvars;
+   int nbinintvars;
+   int ntargetfixings;
+   SCIP_SOL* incumbentsol;
+   SCIP_Real targetfixingrate;
+
+   assert(scip != NULL);
+   assert(neighborhood != NULL);
+   assert(neighborhood->data.mutation != NULL);
+   assert(neighborhood->data.mutation->rng != NULL);
+   rng = neighborhood->data.mutation->rng;
+
+   /* get the problem variables */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+
+   nbinintvars = nbinvars + nintvars;
+   if( nbinintvars == 0 )
+      return SCIP_OKAY;
+
+   incumbentsol = SCIPgetBestSol(scip);
+   if( incumbentsol == NULL )
+      return SCIP_OKAY;
+
+   targetfixingrate = neighborhood->fixingrate->targetfixingrate;
+   ntargetfixings = (int)(targetfixingrate * nvars) + 1;
+
+   /* don't continue if number of discrete variables is too small to reach target fixing rate */
+   /* author bzfhende: TODO change target fixing rate to account for discrete variables specifically */
+   if( nbinintvars <= ntargetfixings )
+      return SCIP_OKAY;
+
+   /* copy variables into a buffer array */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &varscpy, vars, nbinvars + nintvars) );
+
+   /* partially perturb the array until the number of target fixings are reached */
+   for( i = 0; i < ntargetfixings; ++i )
+   {
+      int rand = SCIPrandomGetInt(rng, i, nbinintvars - 1);
+      assert(rand < nbinintvars);
+
+      if( rand > i )
+      {
+         SCIPswapPointers((void**)&vars[i], (void**)&vars[rand]);
+      }
+      /* copy the selected variables and their solution values into the buffer */
+      varbuf[i] = vars[i];
+      valbuf[i] = SCIPgetSolVal(scip, incumbentsol, vars[i]);
+      assert(SCIPisIntegral(scip, valbuf[i]));
+   }
+
+   *nfixings = ntargetfixings;
+
+   /* free the buffer array */
+   SCIPfreeBufferArray(scip, &varscpy);
+
+   return SCIP_OKAY;
+}
+
 
 
 /** include all neighborhoods */
@@ -1106,18 +1314,21 @@ SCIP_RETCODE includeNeighborhoods(
    )
 {
    NH* rens;
+   NH* rins;
+   NH* mutation;
 
    heurdata->nneighborhoods = 0;
 
-   /* author bzfhende: TODO include the RENS neighborhood */
-   SCIP_CALL( lnsIncludeNeighborhood(scip, heurdata, &rens, "rens", varFixingsRens, changeSubscipRens, NULL) );
+   /* include the RENS neighborhood */
+   SCIP_CALL( lnsIncludeNeighborhood(scip, heurdata, &rens, "rens", varFixingsRens, changeSubscipRens, NULL, NULL, NULL) );
 
-
-   /* author bzfhende: TODO include the RINS neighborhood */
+   /* include the RINS neighborhood */
+   SCIP_CALL( lnsIncludeNeighborhood(scip, heurdata, &rins, "rins", varFixingsRins, NULL, NULL, NULL, NULL) );
 
    /* author bzfhende: TODO include the crossover neighborhood */
 
-   /* author bzfhende: TODO include the mutation neighborhood/filter */
+   /* include the mutation neighborhood/filter */
+   SCIP_CALL( lnsIncludeNeighborhood(scip, heurdata, &mutation, "muta", varFixingsMutation, NULL, NULL, nhInitMutation, nhExitMutation) );
 
    /* author bzfhende: TODO include the Proximity neighborhood */
 
@@ -1151,6 +1362,8 @@ SCIP_DECL_HEURINIT(heurInitLns)
    {
       NH* neighborhood = heurdata->neighborhoods[i];
 
+      SCIP_CALL( neighborhoodInit(scip, neighborhood) );
+
       SCIP_CALL( fixingRateReset(scip, neighborhood->fixingrate) );
 
       neighborhoodStatsReset(scip, &neighborhood->stats);
@@ -1169,6 +1382,7 @@ SCIP_DECL_HEUREXIT(heurExitLns)
 {  /*lint --e{715}*/
 
    SCIP_HEURDATA* heurdata;
+   int i;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -1178,6 +1392,14 @@ SCIP_DECL_HEUREXIT(heurExitLns)
    assert(heurdata->epsgreedynh != NULL);
 
    epsGreedyFree(scip, &heurdata->epsgreedynh);
+
+   /* free neighborhood specific data */
+   for( i = 0; i < heurdata->nneighborhoods; ++i )
+   {
+      NH* neighborhood = heurdata->neighborhoods[i];
+
+      SCIP_CALL( neighborhoodExit(scip, neighborhood) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1226,6 +1448,7 @@ SCIP_RETCODE SCIPincludeHeurLns(
 
    /* author bzfhende: TODO make this a user parameter? */
    heurdata->lplimfac = LPLIMFAC;
+   heurdata->epsgreedynh = NULL;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->neighborhoods, NNEIGHBORHOODS) );
 
