@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1545,9 +1545,6 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
    assert(SCIPvarIsActive(var) || SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
 
-   if( set->reopt_enable )
-      return SCIP_OKAY;
-
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
 
@@ -2289,7 +2286,6 @@ SCIP_RETCODE varParse(
    assert(vartype != NULL);
    assert(lazylb != NULL);
    assert(lazyub != NULL);
-   assert(endptr != NULL);
    assert(success != NULL);
 
    (*success) = TRUE;
@@ -2360,6 +2356,10 @@ SCIP_RETCODE varParse(
 
       /* parse global bounds */
       SCIP_CALL( parseBounds(set, strptr, token, &parsedlb, &parsedub, endptr) );
+
+      /* stop if parsing of bounds failed */
+      if( *endptr == NULL )
+         break;
 
       if( strncmp(token, "local", 5) == 0 && local )
       {
@@ -3781,7 +3781,6 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
    assert(set != NULL);
    assert(nvars != NULL);
-   assert(vars != NULL || *nvars == 0);
    assert(scalars != NULL || *nvars == 0);
    assert(constant != NULL);
    assert(requiredsize != NULL);
@@ -3810,7 +3809,6 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
    tmpvarssize = *nvars;
 
    tmpvarssize2 = 1;
-   ntmpvars2 = 0;
 
    /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &tmpvars2, tmpvarssize2) );
@@ -4455,6 +4453,7 @@ SCIP_RETCODE SCIPvarAggregate(
    int j;
 
    assert(var != NULL);
+   assert(aggvar != NULL);
    assert(var->scip == set->scip);
    assert(var->glbdom.lb == var->locdom.lb); /*lint !e777*/
    assert(var->glbdom.ub == var->locdom.ub); /*lint !e777*/
@@ -4487,7 +4486,6 @@ SCIP_RETCODE SCIPvarAggregate(
    if( SCIPvarGetHolelistGlobal(var) != NULL )
       return SCIP_OKAY;
 
-   assert(aggvar != NULL);
    assert(aggvar->glbdom.lb == aggvar->locdom.lb); /*lint !e777*/
    assert(aggvar->glbdom.ub == aggvar->locdom.ub); /*lint !e777*/
    assert(SCIPvarGetStatus(aggvar) == SCIP_VARSTATUS_LOOSE);
@@ -4994,8 +4992,8 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       return SCIP_OKAY;
 
    /* prefer aggregating the variable of more general type (preferred aggregation variable is varx) */
-   if( SCIPvarGetType(vary) > SCIPvarGetType(varx) || (SCIPvarGetType(vary) == SCIPvarGetType(varx) &&
-         SCIPvarIsBinary(varx) && !SCIPvarIsBinary(vary)) )
+   if( SCIPvarGetType(vary) > SCIPvarGetType(varx) ||
+         (SCIPvarGetType(vary) == SCIPvarGetType(varx) && !SCIPvarIsBinary(vary) && SCIPvarIsBinary(varx))  )
    {
       SCIP_VAR* var;
       SCIP_Real scalar;
@@ -5008,6 +5006,11 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
       scalary = scalarx;
       scalarx = scalar;
    }
+
+   /* don't aggregate if the aggregation would lead to a binary variable aggregated to a non-binary variable */
+   if( SCIPvarIsBinary(varx) && !SCIPvarIsBinary(vary) )
+      return SCIP_OKAY;
+
    assert(SCIPvarGetType(varx) >= SCIPvarGetType(vary));
 
    /* figure out, which variable should be aggregated */
@@ -5823,7 +5826,7 @@ SCIP_RETCODE SCIPvarChgObj(
             assert(SCIPprobIsTransformed(prob));
 
             SCIP_CALL( SCIPvarChgObj(var->data.original.transvar, blkmem, set, prob, primal, lp, eventqueue,
-                  prob->objsense * newobj/prob->objscale) );
+                  (SCIP_Real) prob->objsense * newobj/prob->objscale) );
          }
          else
             assert(set->stage == SCIP_STAGE_PROBLEM);
@@ -5902,7 +5905,7 @@ SCIP_RETCODE SCIPvarAddObj(
          if( var->data.original.transvar != NULL )
          {
             SCIP_CALL( SCIPvarAddObj(var->data.original.transvar, blkmem, set, stat, transprob, origprob, primal, tree,
-                  reopt, lp, eventqueue, transprob->objsense * addobj/transprob->objscale) );
+                  reopt, lp, eventqueue, (SCIP_Real) transprob->objsense * addobj/transprob->objscale) );
          }
          else
             assert(set->stage == SCIP_STAGE_PROBLEM);
@@ -6453,7 +6456,8 @@ SCIP_RETCODE varProcessChgLbGlobal(
    }
 
    /* remove redundant implications and variable bounds */
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+   if( (SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE)
+      && (!set->reopt_enable || set->stage == SCIP_STAGE_PRESOLVING) )
    {
       SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, TRUE, TRUE) );
    }
@@ -6627,7 +6631,8 @@ SCIP_RETCODE varProcessChgUbGlobal(
    }
 
    /* remove redundant implications and variable bounds */
-   if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
+   if( (SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE)
+      && (!set->reopt_enable || set->stage == SCIP_STAGE_PRESOLVING) )
    {
       SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, TRUE, TRUE) );
    }
@@ -8656,9 +8661,10 @@ SCIP_RETCODE SCIPvarAddHoleLocal(
    SCIP_Real childnewleft;
    SCIP_Real childnewright;
 
+   assert(var != NULL);
+
    SCIPsetDebugMsg(set, "adding local hole (%g,%g) to <%s>\n", left, right, var->name);
 
-   assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
    assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
@@ -14095,9 +14101,6 @@ SCIP_Bool SCIPvarIsPscostRelerrorReliable(
    upsize = SCIPvarGetPseudocostCountCurrentRun(var, SCIP_BRANCHDIR_UPWARDS);
    size = MIN(downsize, upsize);
 
-   relerrordown = 0.0;
-   relerrorup = 0.0;
-
    /* Pseudo costs relative error can only be reliable if both directions have been tried at least twice */
    if( size <= 1.9 )
       return FALSE;
@@ -16722,8 +16725,8 @@ SCIP_VARTYPE SCIPvarGetType(
 /** returns TRUE if the variable is of binary type; this is the case if:
  *  (1) variable type is binary
  *  (2) variable type is integer or implicit integer and 
- *      (i)  the lazy lower bound or the global lower bound is greater or equal to zero
- *      (ii) the lazy upper bound or the global upper bound is less tor equal to one 
+ *      (i)  the lazy lower bound or the global lower bound is greater than or equal to zero
+ *      (ii) the lazy upper bound or the global upper bound is less than or equal to one
  */
 SCIP_Bool SCIPvarIsBinary(
    SCIP_VAR*             var                 /**< problem variable */

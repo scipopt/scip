@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -70,7 +70,7 @@ SCIP_RETCODE SCIPcreateConcurrent(
    scip->concurrent->solidx = 0;
    scip->stat->subscipdepth = 0;
 
-   if( scip->set->parallel_mode == SCIP_PARA_DETERMINISTIC )
+   if( scip->set->parallel_mode == (int) SCIP_PARA_DETERMINISTIC )
    {
       scip->concurrent->dettime = 0.0;
       scip->concurrent->wallclock = NULL;
@@ -199,7 +199,7 @@ SCIP_RETCODE SCIPincrementConcurrentTime(
    {
       scip->concurrent->dettime += val;
 
-      if( scip->concurrent->dettime >= syncfreq && SCIPgetNLPs(mainscip) > 0 )
+      if( scip->concurrent->dettime >= syncfreq  )
       {
          SCIP_EVENT* event;
          SCIPconcsolverSetTimeSinceLastSync(scip->concurrent->concsolver, scip->concurrent->dettime);
@@ -214,7 +214,7 @@ SCIP_RETCODE SCIPincrementConcurrentTime(
       SCIP_Real timesincelastsync;
       timesincelastsync = SCIPgetClockTime(mainscip, wallclock);
 
-      if( timesincelastsync >= syncfreq && SCIPgetNLPs(mainscip) > 0 )
+      if( timesincelastsync >= syncfreq )
       {
          SCIP_EVENT* event;
          SCIPconcsolverSetTimeSinceLastSync(scip->concurrent->concsolver, timesincelastsync);
@@ -279,12 +279,17 @@ SCIP_Longint SCIPgetConcurrentMemTotal(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_Longint memtotal = SCIPgetMemTotal(scip);
+
    assert(scip != NULL);
 
    if( scip->concurrent == NULL || scip->concurrent->mainscip != scip || scip->concurrent->concsolver == NULL )
-      return SCIPgetMemTotal(scip);
+      return memtotal;
    else
-      return MAX(SCIPgetMemTotal(scip), SCIPconcsolverGetMemTotal(scip->concurrent->concsolver));
+   {
+      SCIP_Longint concmemtotal = SCIPconcsolverGetMemTotal(scip->concurrent->concsolver);
+      return MAX(memtotal, concmemtotal);
+   }
 }
 
 /** gets the dualbound in the last synchronization */

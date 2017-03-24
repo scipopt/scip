@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,6 +35,11 @@
 #define PROP_DELAY                              FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define PROP_TIMING            SCIP_PROPTIMING_ALWAYS /**< propagation timing mask */
 
+#define PROP_PRESOL_PRIORITY          (INT_MAX/4) /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
+#define PROP_PRESOLTIMING       SCIP_PRESOLTIMING_ALWAYS /* timing of the presolving method (fast, medium, or exhaustive) */
+#define PROP_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no
+                                         *   limit) */
+
 /*
  * Data structures
  */
@@ -57,6 +62,67 @@ struct SCIP_PropData
  */
 
 /* put your local methods here, and declare them static */
+
+static
+SCIP_RETCODE applyBoundChanges(
+   SCIP*                 scip,
+   SCIP_PROPDATA*        data,
+   SCIP_RESULT*          result,
+   int*                  ntightened,
+   int*                  ntightenedint
+   )
+{
+   int             i;
+
+   assert(data != NULL);
+   assert(ntightened != NULL);
+   assert(ntightenedint  != NULL);
+
+   *ntightened = 0;
+   *ntightenedint = 0;
+
+   SCIPdisableConcurrentBoundStorage(scip);
+   *result = SCIP_DIDNOTFIND;
+
+   for( i = 0; i < data->nbnds; ++i )
+   {
+      SCIP_Bool infeas, tightened;
+      SCIP_CALL( SCIPvarGetProbvarBound(&data->bndvar[i], &data->bndval[i], &data->bndtype[i]) );
+
+      /* cannot change bounds of multi-aggregated variables so skip this bound-change */
+      if( SCIPvarGetStatus(data->bndvar[i]) == SCIP_VARSTATUS_MULTAGGR )
+         continue;
+
+      if( data->bndtype[i] == SCIP_BOUNDTYPE_LOWER )
+      {
+         SCIP_CALL( SCIPtightenVarLbGlobal(scip, data->bndvar[i], data->bndval[i], FALSE, &infeas, &tightened) );
+      }
+      else
+      {
+         assert(data->bndtype[i] == SCIP_BOUNDTYPE_UPPER);
+         SCIP_CALL( SCIPtightenVarUbGlobal(scip, data->bndvar[i], data->bndval[i], FALSE, &infeas, &tightened) );
+      }
+      if( tightened )
+      {
+         ++(*ntightened);
+         if( SCIPvarGetType(data->bndvar[i]) <= SCIP_VARTYPE_INTEGER )
+            ++(*ntightenedint);
+      }
+      if( infeas )
+      {
+#ifndef NDEBUG
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "sync propagator found cutoff in thread %i\n", SCIPtpiGetThreadNum());
+#endif
+         *result = SCIP_CUTOFF;
+         break;
+      }
+   }
+
+   data->nbnds = 0;
+   SCIPenableConcurrentBoundStorage(scip);
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -124,12 +190,48 @@ SCIP_DECL_PROPEXIT(propExitSync)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_PROPPRESOL(propPresolSync)
+{
+   SCIP_PROPDATA*  data;
+   int             ntightened;
+   int             ntightenedint;
+
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   data = SCIPpropGetData(prop);
+   assert(data != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( data->nbnds == 0 || SCIPinProbing(scip) )
+      return SCIP_OKAY;
+
+   /* remember number of tightened bounds before applying new bound tightenings */
+
+   SCIP_CALL( applyBoundChanges(scip, data, result, &ntightened, &ntightenedint) );
+
+   /* add number of tightened bounds to the total number of presolving boundchanges */
+   if( ntightened > 0 )
+   {
+      *nchgbds += ntightened;
+      data->ntightened += ntightened;
+      data->ntightenedint += ntightened;
+      if( *result != SCIP_CUTOFF )
+         *result = SCIP_SUCCESS;
+   }
+
+   SCIPpropSetFreq(prop, -1);
+
+   return SCIP_OKAY;
+}
+
 /** execution method of propagator */
 static
 SCIP_DECL_PROPEXEC(propExecSync)
 {  /*lint --e{715}*/
    SCIP_PROPDATA*  data;
-   int             i;
    int             ntightened;
    int             ntightenedint;
 
@@ -144,57 +246,18 @@ SCIP_DECL_PROPEXEC(propExecSync)
    data = SCIPpropGetData(prop);
    assert(data != NULL);
 
-   SCIPdisableConcurrentBoundStorage(scip);
-   *result = SCIP_DIDNOTFIND;
-   ntightened = 0;
-   ntightenedint = 0;
+   SCIP_CALL( applyBoundChanges(scip, data, result, &ntightened, &ntightenedint) );
 
-   for( i = 0; i < data->nbnds; ++i )
-   {
-      SCIP_Bool infeas, tightened;
-      SCIP_CALL( SCIPvarGetProbvarBound(&data->bndvar[i], &data->bndval[i], &data->bndtype[i]) );
-
-      /* cannot change bounds of multi-aggregated variables so skip this bound-change */
-      if( SCIPvarGetStatus(data->bndvar[i]) == SCIP_VARSTATUS_MULTAGGR )
-         continue;
-
-      if( data->bndtype[i] == SCIP_BOUNDTYPE_LOWER )
-      {
-         SCIP_CALL( SCIPtightenVarLbGlobal(scip, data->bndvar[i], data->bndval[i], FALSE, &infeas, &tightened) );
-      }
-      else
-      {
-         assert(data->bndtype[i] == SCIP_BOUNDTYPE_UPPER);
-         SCIP_CALL( SCIPtightenVarUbGlobal(scip, data->bndvar[i], data->bndval[i], FALSE, &infeas, &tightened) );
-      }
-      if( tightened )
-      {
-         ++ntightened;
-         if( SCIPvarGetType(data->bndvar[i]) <= SCIP_VARTYPE_INTEGER )
-            ++ntightenedint;
-      }
-      if( infeas )
-      {
-#ifndef NDEBUG
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "sync propagator found cutoff in thread %i\n", SCIPtpiGetThreadNum());
-#endif
-         data->ntightened += ntightened;
-         data->ntightenedint += ntightenedint;
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
-      }
-   }
-
-   data->nbnds = 0;
-   SCIPenableConcurrentBoundStorage(scip);
-   SCIPpropSetFreq(prop, -1);
    if( ntightened > 0 )
    {
       data->ntightened += ntightened;
       data->ntightenedint += ntightenedint;
-      *result = SCIP_REDUCEDDOM;
-      SCIPdebugMsg(scip, "tightened %i var bounds in thread %i of which %i where integral vars\n", ntightened, SCIPtpiGetThreadNum(), ntightenedint);
+      if( *result != SCIP_CUTOFF )
+         *result = SCIP_REDUCEDDOM;
    }
+
+   SCIPpropSetFreq(prop, -1);
+
    return SCIP_OKAY;
 }
 
@@ -231,6 +294,7 @@ SCIP_RETCODE SCIPincludePropSync(
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeSync) );
    SCIP_CALL( SCIPsetPropInit(scip, prop, propInitSync) );
    SCIP_CALL( SCIPsetPropExit(scip, prop, propExitSync) );
+   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolSync, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, PROP_PRESOLTIMING) );
 
    return SCIP_OKAY;
 }

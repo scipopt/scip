@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,11 +35,19 @@
 extern "C" {
 #endif
 
-/** includes the FlatZinc file reader into SCIP */
+/** includes the FlatZinc file reader into SCIP
+ *
+ *  @ingroup FileReaderIncludes
+ */
 EXTERN
 SCIP_RETCODE SCIPincludeReaderFzn(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup FILEREADERS
+ *
+ * @{
+ */
 
 /** print given solution in Flatzinc format w.r.t. the output annotation */
 EXTERN
@@ -48,6 +56,8 @@ SCIP_RETCODE SCIPprintSolReaderFzn(
    SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

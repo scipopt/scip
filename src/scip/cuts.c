@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,9 +16,8 @@
 /**@file   cuts.c
  * @brief  Methods used to generate and strengthen cuts
  * @author Jakob Witzig
- *
  */
-//#define SCIP_DEBUG
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include "scip/def.h"
@@ -376,13 +375,12 @@ SCIP_Real getMIRMinActivity(
    SCIP_Real*            mircoef,            /**< array to store MIR coefficients: must be of size nvars */
    int*                  varinds,            /**< sparsity pattern of non-zero MIR coefficients */
    int                   nvarinds,           /**< number of non-zero MIR coefficients */
-   SCIP_Bool             islocal
+   SCIP_Bool             islocal             /**< whether local bounds should be used */
    )
 {
-   SCIP_Real act;
+   SCIP_Real act = 0.0;
    int i;
 
-   act = 0.0;
    for( i = 0; i < nvarinds; i++ )
    {
       int v;
@@ -393,11 +391,11 @@ SCIP_Real getMIRMinActivity(
 
       if( mircoef[v] > 0.0 )
       {
-            act += mircoef[v] * (islocal ? SCIPvarGetLbLocal(prob->vars[v]) : SCIPvarGetLbGlobal(prob->vars[v]));
+         act += mircoef[v] * (islocal ? SCIPvarGetLbLocal(prob->vars[v]) : SCIPvarGetLbGlobal(prob->vars[v]));
       }
       else
       {
-            act += mircoef[v] * (islocal ? SCIPvarGetUbLocal(prob->vars[v]) : SCIPvarGetUbGlobal(prob->vars[v]));
+         act += mircoef[v] * (islocal ? SCIPvarGetUbLocal(prob->vars[v]) : SCIPvarGetUbGlobal(prob->vars[v]));
       }
    }
 
@@ -1458,7 +1456,12 @@ SCIP_RETCODE cutsTransformMIRRow(
          {
             /* select transformation bound */
             varsol = (sol == NULL ? SCIPvarGetLPSol(var) : SCIPsolGetVal(sol, set, stat, var));
-            if( SCIPsetIsLT(set, varsol, (1.0 - boundswitch) * bestlb + boundswitch * bestub) )
+
+            if( SCIPsetIsInfinity(set, bestub) ) /* if there is no ub, use lb */
+               uselb = TRUE;
+            else if( SCIPsetIsInfinity(set, -bestlb) ) /* if there is no lb, use ub */
+               uselb = FALSE;
+            else if( SCIPsetIsLT(set, varsol, (1.0 - boundswitch) * bestlb + boundswitch * bestub) )
                uselb = TRUE;
             else if( SCIPsetIsGT(set, varsol, (1.0 - boundswitch) * bestlb + boundswitch * bestub) )
                uselb = FALSE;
@@ -2737,7 +2740,7 @@ SCIP_RETCODE cutsLpCalcStrongCG(
    /* remove again all nearly-zero coefficients from strong CG row and relax the right hand side correspondingly in order to
     * prevent numerical rounding errors
     */
-   cutsCleanupMIRRow(set, prob, strongcgcoef, &rhs, varused, varinds, &nvarinds, *cutislocal);
+   cutsCleanupMIRRow(set, prob, strongcgcoef, strongcgrhs, varused, varinds, &nvarinds, *cutislocal);
    SCIPdebug(printMIR(set, stat, prob, NULL, strongcgcoef, rhs, FALSE, FALSE));
 
    /* calculate cut activity */

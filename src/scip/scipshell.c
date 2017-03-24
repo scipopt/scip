@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -247,7 +247,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
                   (void)SCIPfgets(buffer, (int) sizeof(buffer), file);
                   if( buffer[0] != '\0' )
                   {
-                     SCIP_CALL( SCIPaddDialogInputLine(scip, buffer) );
+                     SCIP_CALL_FINALLY( SCIPaddDialogInputLine(scip, buffer), SCIPfclose(file) );
                   }
                }
                SCIPfclose(file);

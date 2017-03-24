@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -718,9 +718,12 @@ SCIP_RETCODE filterExistingLP(
          SCIPvarGetUbLocal(bound->var) : SCIPvarGetLbLocal(bound->var);
       solval = SCIPvarGetLPSol(bound->var);
 
-      /* bound is tight; since this holds for all fixed variables, those are filtered here automatically */
-      if( (bound->boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisFeasGE(scip, solval, boundval))
-         || (bound->boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisFeasLE(scip, solval, boundval)) )
+      /* bound is tight; since this holds for all fixed variables, those are filtered here automatically; if the lp solution
+       * is infinity, then also the bound is tight */
+      if( (bound->boundtype == SCIP_BOUNDTYPE_UPPER &&
+               (SCIPisInfinity(scip, solval) || SCIPisFeasGE(scip, solval, boundval)))
+            || (bound->boundtype == SCIP_BOUNDTYPE_LOWER &&
+               (SCIPisInfinity(scip, -solval) || SCIPisFeasLE(scip, solval, boundval))) )
       {
          SCIP_BASESTAT basestat;
 
@@ -1392,9 +1395,9 @@ SCIP_RETCODE applySeparation(
       /* apply cuts and resolve LP */
       SCIP_CALL( SCIPapplyCutsProbing(scip, &cutoff) );
       assert(SCIPgetNCuts(scip) == 0);
-      nlpiter = SCIPgetNLPIterations(scip);
+      SCIPdebug( nlpiter = SCIPgetNLPIterations(scip); )
       SCIP_CALL( solveLP(scip, (int) *nleftiterations, &error, &optimal) );
-      nlpiter = SCIPgetNLPIterations(scip) - nlpiter;
+      SCIPdebug( nlpiter = SCIPgetNLPIterations(scip) - nlpiter; )
       SCIPdebugMsg(scip, "applySeparation() - optimal=%u error=%u lpiter=%" SCIP_LONGINT_FORMAT "\n", optimal, error, nlpiter);
       SCIPdebugMsg(scip, "oldval = %e newval = %e\n", oldval, SCIPvarGetLPSol(currbound->var));
 

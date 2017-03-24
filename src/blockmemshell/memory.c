@@ -3,7 +3,7 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  BMS is distributed under the terms of the ZIB Academic License.          */
@@ -905,7 +905,7 @@ void checkChkmem(
    assert(chkmem->storesize == storesize);
    assert(chkmem->eagerfreesize == eagerfreesize);
 
-   assert((chkmem->eagerfreesize == 0) ^ (chkmem->firsteager != NULL));
+   assert(((unsigned int) (chkmem->eagerfreesize == 0)) ^ ( (unsigned int) (chkmem->firsteager != NULL)));
 
    if( chkmem->firsteager != NULL )
       assert(chkmem->firsteager->preveager == NULL);

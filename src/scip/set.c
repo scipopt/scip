@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -238,7 +238,6 @@
                                                  *   for LP resolve (-1.0: unlimited) */
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
 #define SCIP_DEFAULT_LP_SOLUTIONPOLISHING     0 /**< LP solution polishing method (0: disabled, 1: only root, 2: always) */
-#define SCIP_DEFAULT_LP_PERSISTENTSCALING  TRUE /**< use persistent LP scaling during branch and bound */
 
 /* NLP */
 
@@ -282,7 +281,7 @@
 
 /* Randomization */
 #define SCIP_DEFAULT_RANDOM_RANDSEEDSHIFT     0 /**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
-#define SCIP_DEFAULT_RANDOM_PERMUTATIONSEED   0 /**< seed value for permuting the problem after the problem was transformed (0: no permutation) */
+#define SCIP_DEFAULT_RANDOM_PERMUTATIONSEED   0 /**< seed value for permuting the problem after reading/transformation (0: no permutation) */
 #define SCIP_DEFAULT_RANDOM_LPSEED            0 /**< random seed for LP solver, e.g. for perturbations in the simplex (0: LP default) */
 #define SCIP_DEFAULT_RANDOM_PERMUTECONSS   TRUE /**< should order of constraints be permuted (depends on permutationseed)? */
 #define SCIP_DEFAULT_RANDOM_PERMUTEVARS   FALSE /**< should order of variables be permuted (depends on permutationseed)? */
@@ -296,7 +295,7 @@
 
 /* Presolving */
 
-#define SCIP_DEFAULT_PRESOL_ABORTFAC      1e-03 /**< abort presolve, if at most this fraction of the problem was changed
+#define SCIP_DEFAULT_PRESOL_ABORTFAC      8e-04 /**< abort presolve, if at most this fraction of the problem was changed
                                                  *   in last presolve round */
 #define SCIP_DEFAULT_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds (-1: unlimited, 0: off) */
 #define SCIP_DEFAULT_PRESOL_MAXRESTARTS      -1 /**< maximal number of restarts (-1: unlimited) */
@@ -420,17 +419,17 @@
 #define SCIP_DEFAULT_CONCURRENT_COMMVARBNDS     TRUE /**< should the concurrent solvers communicate variable bounds? */
 #define SCIP_DEFAULT_CONCURRENT_PRESOLVEBEFORE  TRUE /**< should the problem be presolved before it is copied to the concurrent solvers? */
 #define SCIP_DEFAULT_CONCURRENT_INITSEED     5131912 /**< the seed used to initialize the random seeds for the concurrent solvers */
-#define SCIP_DEFAULT_CONCURRENT_FREQINIT         0.5 /**< initial frequency of synchronization with other threads
+#define SCIP_DEFAULT_CONCURRENT_FREQINIT        10.0 /**< initial frequency of synchronization with other threads
                                                       *   (fraction of time required for solving the root LP) */
-#define SCIP_DEFAULT_CONCURRENT_FREQMAX         20.0 /**< maximal frequency of synchronization with other threads
+#define SCIP_DEFAULT_CONCURRENT_FREQMAX         10.0 /**< maximal frequency of synchronization with other threads
                                                       *   (fraction of time required for solving the root LP) */
 #define SCIP_DEFAULT_CONCURRENT_FREQFACTOR       1.5 /**< factor by which the frequency of synchronization is changed */
-#define SCIP_DEFAULT_CONCURRENT_TARGETPROGRESS 0.005 /**< when adapting the synchronization frequency this value is the targeted
+#define SCIP_DEFAULT_CONCURRENT_TARGETPROGRESS 0.001 /**< when adapting the synchronization frequency this value is the targeted
                                                        *   relative difference by which the absolute gap decreases per synchronization */
-#define SCIP_DEFAULT_CONCURRENT_MAXNSOLS           1 /**< maximum number of solutions that will be shared in a single synchronization */
-#define SCIP_DEFAULT_CONCURRENT_MAXNSYNCDELAY      3 /**< maximum number of synchronizations before reading is enforced regardless of delay */
-#define SCIP_DEFAULT_CONCURRENT_MINSYNCDELAY     2.0 /**< minimum delay before synchronization data is read */
-#define SCIP_DEFAULT_CONCURRENT_NBESTSOLS          1 /**< how many of the N best solutions should be considered for synchronization */
+#define SCIP_DEFAULT_CONCURRENT_MAXNSOLS           3 /**< maximum number of solutions that will be shared in a single synchronization */
+#define SCIP_DEFAULT_CONCURRENT_MAXNSYNCDELAY      7 /**< maximum number of synchronizations before reading is enforced regardless of delay */
+#define SCIP_DEFAULT_CONCURRENT_MINSYNCDELAY    10.0 /**< minimum delay before synchronization data is read */
+#define SCIP_DEFAULT_CONCURRENT_NBESTSOLS         10 /**< how many of the N best solutions should be considered for synchronization */
 #define SCIP_DEFAULT_CONCURRENT_PARAMSETPREFIX    "" /**< path prefix for parameter setting files of concurrent solvers */
 
 
@@ -1674,12 +1673,6 @@ SCIP_RETCODE SCIPsetCreate(
          "minimum number of iterations that are allowed for LP resolve",
          &(*set)->lp_resolveitermin, TRUE, SCIP_DEFAULT_LP_RESOLVEITERMIN, 1, INT_MAX,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "lp/persistentscaling",
-         "use persistent LP scaling during branch and bound",
-         &(*set)->lp_persistentscaling, TRUE, SCIP_DEFAULT_LP_PERSISTENTSCALING,
-         NULL, NULL) );
-
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/solutionpolishing",
@@ -1844,7 +1837,7 @@ SCIP_RETCODE SCIPsetCreate(
 
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "randomization/permutationseed",
-         "seed value for permuting the problem after the problem was transformed (0: no permutation)",
+         "seed value for permuting the problem after reading/transformation (0: no permutation)",
          &(*set)->random_permutationseed, FALSE, SCIP_DEFAULT_RANDOM_PERMUTATIONSEED, 0, INT_MAX,
          NULL, NULL) );
 

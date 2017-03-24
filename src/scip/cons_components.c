@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -327,7 +327,7 @@ SCIP_RETCODE componentSetupWorkingSol(
 
       for( v = 0; v < nsourcevars; ++v )
       {
-         subvar = SCIPhashmapGetImage(varmap, sourcevars[v]);
+         subvar = (SCIP_VAR*)SCIPhashmapGetImage(varmap, sourcevars[v]);
          if( subvar != NULL && SCIPvarGetIndex(subvar) >= nvars )
          {
             /* the variable is either locally fixed or could be an inactive variable present in a constraint

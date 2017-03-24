@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heuristics.h
+ * @ingroup PUBLICCOREAPI
  * @brief  methods commonly used by primal heuristics
  * @author Gregor Hendel
  */
@@ -29,6 +30,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@defgroup PublicSpecialHeuristicMethods Special Methods
+ * @ingroup PublicHeuristicMethods
+ * @brief  methods commonly used by primal heuristics
+ *
+ * @{
+ */
 
 /** performs a diving within the limits of the diveset parameters
  *
@@ -82,6 +90,8 @@ SCIP_RETCODE SCIPcopyLargeNeighborhoodSearch(
    SCIP_Bool*            success,            /**< was the copying successful? */
    SCIP_Bool*            valid               /**< pointer to store whether the copying was valid, or NULL */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

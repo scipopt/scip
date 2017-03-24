@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -347,8 +347,8 @@ SCIP_RETCODE createNewSol(
    int        nvars;
    SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
    SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
-   SCIP_Bool printreason = FALSE;
-   SCIP_Bool completely = FALSE;
+   SCIP_Bool printreason;
+   SCIP_Bool completely;
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -378,6 +378,9 @@ SCIP_RETCODE createNewSol(
    completely = TRUE;
    SCIPdebugMsg(scip, "trying to transfer LP face solution with solution value %16.9g to main problem\n",
       SCIPretransformObj(scip, SCIPgetSolTransObj(scip, newsol)));
+#else
+   printreason = FALSE;
+   completely = FALSE;
 #endif
 
    /* try to add new solution to scip and free it immediately */
@@ -540,6 +543,16 @@ SCIP_RETCODE setSubscipParameters(
    if( SCIPfindConshdlr(subscip, "quadratic") != NULL && ! SCIPisParamFixed(subscip, "constraints/quadratic/enfolplimit") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "constraints/quadratic/enfolplimit", 500) );
+   }
+
+   /* enable conflict analysis and restrict conflict pool */
+   if( !SCIPisParamFixed(subscip, "conflict/enable") )
+   {
+      SCIP_CALL( SCIPsetBoolParam(subscip, "conflict/enable", TRUE) );
+   }
+   if( !SCIPisParamFixed(subscip, "conflict/maxstoresize") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "conflict/maxstoresize", 100) );
    }
 
    return SCIP_OKAY;
@@ -1050,7 +1063,7 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       SCIP_CALL( SCIPcreate(&subscip) );
 
       /* create the variable hash map */
-      SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+      SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
       success = FALSE;
 
       eventhdlr = NULL;

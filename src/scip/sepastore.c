@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -626,7 +626,7 @@ SCIP_RETCODE sepastoreApplyLb(
          else
          {
             /* we are done with solving since a global bound change is infeasible */
-            SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, stat, tree, reopt, lp, blkmem) );
+            SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
             *cutoff = TRUE;
          }
 
@@ -711,7 +711,7 @@ SCIP_RETCODE sepastoreApplyUb(
          else
          {
             /* we are done with solving since a global bound change is infeasible */
-            SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, stat, tree, reopt, lp, blkmem) );
+            SCIP_CALL( SCIPnodeCutoff(SCIPtreeGetRootNode(tree), set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
             *cutoff = TRUE;
          }
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -92,8 +92,7 @@ typedef struct HashData HASHDATA;
 /** presolver data */
 struct SCIP_PresolData
 {
-   HASHDATA**            setppchashdatas;    /**< setppc-hashdata array pointing to the storage */
-   HASHDATA*             setppchashdatastore;/**< setppc-hashdata storage */
+   HASHDATA*             setppchashdatas;    /**< setppc-hashdata storage */
    SCIP_HASHTABLE*       hashdatatable;      /**< setppc-hashdata hashtable for usable setppc constraints */
    SCIP_HASHTABLE*       setppchashtable;    /**< setppc hashtable for usable setppc constraints */
    SCIP_HASHTABLE*       logicorhashtable;   /**< logicor hashtable for usable logicor constraints */
@@ -372,44 +371,42 @@ SCIP_RETCODE createPresoldata(
          presoldata->ssetppchashdatas = nusefulconss;
 
          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->setppchashdatas), nusefulconss) );
-         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(presoldata->setppchashdatastore), nusefulconss) );
 
          h = 0;
          for( c = 0; c < nusefulconss; ++c )
          {
             assert(SCIPconsIsActive(usefulconss[c]));
             assert(SCIPgetNVarsSetppc(scip, usefulconss[c]) == 2);
-            presoldata->setppchashdatas[h] = &(presoldata->setppchashdatastore[h]);
 
-            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(presoldata->setppchashdatas[h]->vars), SCIPgetVarsSetppc(scip, usefulconss[c]), 2) );
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(presoldata->setppchashdatas[h].vars), SCIPgetVarsSetppc(scip, usefulconss[c]), 2) );
 
-            SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[h]->vars[0], &(presoldata->setppchashdatas[h]->vars[0]), &(negated[0])) );
-            SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[h]->vars[1], &(presoldata->setppchashdatas[h]->vars[1]), &(negated[1])) );
+            SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[h].vars[0], &(presoldata->setppchashdatas[h].vars[0]), &(negated[0])) );
+            SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[h].vars[1], &(presoldata->setppchashdatas[h].vars[1]), &(negated[1])) );
 
-            if( SCIPvarGetStatus(presoldata->setppchashdatas[h]->vars[0]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(presoldata->setppchashdatas[h]->vars[0]) == SCIP_VARSTATUS_MULTAGGR
-                  || SCIPvarGetStatus(presoldata->setppchashdatas[h]->vars[1]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(presoldata->setppchashdatas[h]->vars[1]) == SCIP_VARSTATUS_MULTAGGR )
+            if( SCIPvarGetStatus(presoldata->setppchashdatas[h].vars[0]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(presoldata->setppchashdatas[h].vars[0]) == SCIP_VARSTATUS_MULTAGGR
+                  || SCIPvarGetStatus(presoldata->setppchashdatas[h].vars[1]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(presoldata->setppchashdatas[h].vars[1]) == SCIP_VARSTATUS_MULTAGGR )
             {
-               SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatas[h]->vars), 2);
+               SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatas[h].vars), 2);
                continue;
             }
 
-            presoldata->setppchashdatas[h]->nvars = 2;
+            presoldata->setppchashdatas[h].nvars = 2;
 
             /* capture variables */
-            SCIP_CALL( SCIPcaptureVar(scip, presoldata->setppchashdatas[h]->vars[0]) );
-            SCIP_CALL( SCIPcaptureVar(scip, presoldata->setppchashdatas[h]->vars[1]) );
+            SCIP_CALL( SCIPcaptureVar(scip, presoldata->setppchashdatas[h].vars[0]) );
+            SCIP_CALL( SCIPcaptureVar(scip, presoldata->setppchashdatas[h].vars[1]) );
 
             /* order the variables after their index */
-            if( SCIPvarGetIndex(presoldata->setppchashdatas[h]->vars[0]) > SCIPvarGetIndex(presoldata->setppchashdatas[h]->vars[1]) )
+            if( SCIPvarGetIndex(presoldata->setppchashdatas[h].vars[0]) > SCIPvarGetIndex(presoldata->setppchashdatas[h].vars[1]) )
             {
-               SCIP_VAR* tmp = presoldata->setppchashdatas[h]->vars[0];
-               presoldata->setppchashdatas[h]->vars[0] = presoldata->setppchashdatas[h]->vars[1];
-               presoldata->setppchashdatas[h]->vars[1] = tmp;
+               SCIP_VAR* tmp = presoldata->setppchashdatas[h].vars[0];
+               presoldata->setppchashdatas[h].vars[0] = presoldata->setppchashdatas[h].vars[1];
+               presoldata->setppchashdatas[h].vars[1] = tmp;
             }
 
-            presoldata->setppchashdatas[h]->cons = usefulconss[c];
+            presoldata->setppchashdatas[h].cons = usefulconss[c];
 
-            SCIP_CALL( SCIPhashtableInsert(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[h]) );
+            SCIP_CALL( SCIPhashtableInsert(presoldata->hashdatatable, (void*) &presoldata->setppchashdatas[h]) );
             SCIP_CALL( SCIPcaptureCons(scip, usefulconss[c]) );
 
             ++h;
@@ -483,11 +480,10 @@ SCIP_RETCODE cleanupHashDatas(
       {
          SCIP_Bool removeentry = FALSE;
 
-         assert(presoldata->setppchashdatas[c] != NULL);
-         assert(presoldata->setppchashdatas[c]->cons != NULL);
+         assert(presoldata->setppchashdatas[c].cons != NULL);
 
-         if( SCIPconsIsDeleted(presoldata->setppchashdatas[c]->cons) || SCIPconsIsModifiable(presoldata->setppchashdatas[c]->cons)
-               || SCIPgetTypeSetppc(scip, presoldata->setppchashdatas[c]->cons) != SCIP_SETPPCTYPE_PACKING || SCIPgetNVarsSetppc(scip, presoldata->setppchashdatas[c]->cons) != 2 )
+         if( SCIPconsIsDeleted(presoldata->setppchashdatas[c].cons) || SCIPconsIsModifiable(presoldata->setppchashdatas[c].cons)
+               || SCIPgetTypeSetppc(scip, presoldata->setppchashdatas[c].cons) != SCIP_SETPPCTYPE_PACKING || SCIPgetNVarsSetppc(scip, presoldata->setppchashdatas[c].cons) != 2 )
          {
             removeentry = TRUE;
          }
@@ -496,12 +492,12 @@ SCIP_RETCODE cleanupHashDatas(
             SCIP_VAR* vars[2];
             SCIP_Bool negated[2];
 
-            SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[c]->vars[0], &(vars[0]), &(negated[0])) );
-            SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[c]->vars[1], &(vars[1]), &(negated[1])) );
+            SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[c].vars[0], &(vars[0]), &(negated[0])) );
+            SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[c].vars[1], &(vars[1]), &(negated[1])) );
 
             if( SCIPvarGetStatus(vars[0]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(vars[0]) == SCIP_VARSTATUS_MULTAGGR
                   || SCIPvarGetStatus(vars[1]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(vars[1]) == SCIP_VARSTATUS_MULTAGGR
-                  || presoldata->setppchashdatas[c]->vars[0] != vars[0] || presoldata->setppchashdatas[c]->vars[1] != vars[1] )
+                  || presoldata->setppchashdatas[c].vars[0] != vars[0] || presoldata->setppchashdatas[c].vars[1] != vars[1] )
             {
                removeentry = TRUE;
             }
@@ -510,37 +506,37 @@ SCIP_RETCODE cleanupHashDatas(
          if( removeentry )
          {
             /* remove constraint from setppc-hashtable */
-            assert(SCIPhashtableExists(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c]->cons));
-            SCIP_CALL( SCIPhashtableRemove(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c]->cons) );
+            assert(SCIPhashtableExists(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c].cons));
+            SCIP_CALL( SCIPhashtableRemove(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c].cons) );
 
             /* remove hashdata entry from hashtable */
-            SCIP_CALL( SCIPhashtableRemove(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[c]) );
+            SCIP_CALL( SCIPhashtableRemove(presoldata->hashdatatable, (void*) &presoldata->setppchashdatas[c]) );
 
             /* release old constraints */
-            SCIP_CALL( SCIPreleaseCons(scip, &(presoldata->setppchashdatas[c]->cons)) );
+            SCIP_CALL( SCIPreleaseCons(scip, &(presoldata->setppchashdatas[c].cons)) );
 
             /* release variables */
-            SCIP_CALL( SCIPreleaseVar(scip, &(presoldata->setppchashdatas[c]->vars[0])) );
-            SCIP_CALL( SCIPreleaseVar(scip, &(presoldata->setppchashdatas[c]->vars[1])) );
+            SCIP_CALL( SCIPreleaseVar(scip, &(presoldata->setppchashdatas[c].vars[0])) );
+            SCIP_CALL( SCIPreleaseVar(scip, &(presoldata->setppchashdatas[c].vars[1])) );
 
             /* free memory for variables */
-            SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatas[c]->vars), 2);
+            SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatas[c].vars), 2);
 
             if( c < presoldata->nsetppchashdatas - 1 )
             {
                /* remove old hashdata entry from hashtable */
-               SCIP_CALL( SCIPhashtableRemove(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[presoldata->nsetppchashdatas - 1]) );
+               SCIP_CALL( SCIPhashtableRemove(presoldata->hashdatatable, (void*) &presoldata->setppchashdatas[presoldata->nsetppchashdatas - 1]) );
             }
 
             /* move last content to free position */
-            presoldata->setppchashdatas[c]->cons = presoldata->setppchashdatas[presoldata->nsetppchashdatas - 1]->cons;
-            presoldata->setppchashdatas[c]->vars = presoldata->setppchashdatas[presoldata->nsetppchashdatas - 1]->vars;
-            presoldata->setppchashdatas[c]->nvars = presoldata->setppchashdatas[presoldata->nsetppchashdatas - 1]->nvars;
+            presoldata->setppchashdatas[c].cons = presoldata->setppchashdatas[presoldata->nsetppchashdatas - 1].cons;
+            presoldata->setppchashdatas[c].vars = presoldata->setppchashdatas[presoldata->nsetppchashdatas - 1].vars;
+            presoldata->setppchashdatas[c].nvars = presoldata->setppchashdatas[presoldata->nsetppchashdatas - 1].nvars;
 
             if( c < presoldata->nsetppchashdatas - 1 )
             {
                /* add new hashdata entry from hashtable */
-               SCIP_CALL( SCIPhashtableInsert(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[c]) );
+               SCIP_CALL( SCIPhashtableInsert(presoldata->hashdatatable, (void*) &presoldata->setppchashdatas[c]) );
             }
             --(presoldata->nsetppchashdatas);
          }
@@ -549,15 +545,14 @@ SCIP_RETCODE cleanupHashDatas(
 #ifndef NDEBUG
       for( c = presoldata->nsetppchashdatas - 1; c >= 0; --c )
       {
-         assert(presoldata->setppchashdatas[c] != NULL);
-         assert(presoldata->setppchashdatas[c]->nvars == 2);
-         assert(presoldata->setppchashdatas[c]->vars != NULL);
-         assert(presoldata->setppchashdatas[c]->vars[0] != NULL);
-         assert(presoldata->setppchashdatas[c]->vars[1] != NULL);
-         assert(presoldata->setppchashdatas[c]->cons != NULL);
-         assert(SCIPconsIsActive(presoldata->setppchashdatas[c]->cons));
-         assert(SCIPhashtableExists(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[c]));
-         assert(SCIPhashtableExists(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c]->cons));
+         assert(presoldata->setppchashdatas[c].nvars == 2);
+         assert(presoldata->setppchashdatas[c].vars != NULL);
+         assert(presoldata->setppchashdatas[c].vars[0] != NULL);
+         assert(presoldata->setppchashdatas[c].vars[1] != NULL);
+         assert(presoldata->setppchashdatas[c].cons != NULL);
+         assert(SCIPconsIsActive(presoldata->setppchashdatas[c].cons));
+         assert(SCIPhashtableExists(presoldata->hashdatatable, (void*) &presoldata->setppchashdatas[c]));
+         assert(SCIPhashtableExists(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c].cons));
       }
 #endif
    }
@@ -651,16 +646,12 @@ SCIP_RETCODE correctPresoldata(
                SCIPhashtableRemoveAll(presoldata->hashdatatable);
 
                SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(presoldata->setppchashdatas), presoldata->ssetppchashdatas, newsize) );
-               SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(presoldata->setppchashdatastore), presoldata->ssetppchashdatas, newsize) );
                presoldata->ssetppchashdatas = newsize;
 
-               /* correct pointers in array, to point to the new storage, due to allocation, and add all elements to the
-                * hashtable again
-                */
+               /* add all elements to the hashtable again */
                for( d = presoldata->nsetppchashdatas - 1; d >= 0; --d )
                {
-                  presoldata->setppchashdatas[d] = &(presoldata->setppchashdatastore[d]);
-                  SCIP_CALL( SCIPhashtableInsert(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[d]) );
+                  SCIP_CALL( SCIPhashtableInsert(presoldata->hashdatatable, (void*) &presoldata->setppchashdatas[d]) );
                }
             }
 
@@ -668,36 +659,35 @@ SCIP_RETCODE correctPresoldata(
             SCIP_CALL( SCIPhashtableInsert(presoldata->setppchashtable, (void*) setppcs[c]) );
 
             assert(SCIPgetNVarsSetppc(scip, setppcs[c]) == 2);
-            presoldata->setppchashdatas[presoldata->nsetppchashdatas] = &(presoldata->setppchashdatastore[presoldata->nsetppchashdatas]);
 
-            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars), SCIPgetVarsSetppc(scip, setppcs[c]), 2) );
-            SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0], &(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0]), &(negated[0])) );
-            SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1], &(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1]), &(negated[1])) );
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars), SCIPgetVarsSetppc(scip, setppcs[c]), 2) );
+            SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[0], &(presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[0]), &(negated[0])) );
+            SCIP_CALL( SCIPgetBinvarRepresentative(scip, presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[1], &(presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[1]), &(negated[1])) );
 
-            if( SCIPvarGetStatus(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0]) == SCIP_VARSTATUS_MULTAGGR
-                  || SCIPvarGetStatus(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1]) == SCIP_VARSTATUS_MULTAGGR )
+            if( SCIPvarGetStatus(presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[0]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[0]) == SCIP_VARSTATUS_MULTAGGR
+                  || SCIPvarGetStatus(presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[1]) == SCIP_VARSTATUS_FIXED || SCIPvarGetStatus(presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[1]) == SCIP_VARSTATUS_MULTAGGR )
             {
-               SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars), 2);
+               SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars), 2);
                continue;
             }
 
-            presoldata->setppchashdatas[presoldata->nsetppchashdatas]->nvars = 2;
+            presoldata->setppchashdatas[presoldata->nsetppchashdatas].nvars = 2;
 
             /* capture variables */
-            SCIP_CALL( SCIPcaptureVar(scip, presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0]) );
-            SCIP_CALL( SCIPcaptureVar(scip, presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1]) );
+            SCIP_CALL( SCIPcaptureVar(scip, presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[0]) );
+            SCIP_CALL( SCIPcaptureVar(scip, presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[1]) );
 
             /* order the variables after their index */
-            if( SCIPvarGetIndex(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0]) > SCIPvarGetIndex(presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1]) )
+            if( SCIPvarGetIndex(presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[0]) > SCIPvarGetIndex(presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[1]) )
             {
-               SCIP_VAR* tmp = presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0];
-               presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[0] = presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1];
-               presoldata->setppchashdatas[presoldata->nsetppchashdatas]->vars[1] = tmp;
+               SCIP_VAR* tmp = presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[0];
+               presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[0] = presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[1];
+               presoldata->setppchashdatas[presoldata->nsetppchashdatas].vars[1] = tmp;
             }
 
-            presoldata->setppchashdatas[presoldata->nsetppchashdatas]->cons = setppcs[c];
+            presoldata->setppchashdatas[presoldata->nsetppchashdatas].cons = setppcs[c];
 
-            SCIP_CALL( SCIPhashtableInsert(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[presoldata->nsetppchashdatas]) );
+            SCIP_CALL( SCIPhashtableInsert(presoldata->hashdatatable, (void*) &presoldata->setppchashdatas[presoldata->nsetppchashdatas]) );
             SCIP_CALL( SCIPcaptureCons(scip, setppcs[c]) );
 
             ++(presoldata->nsetppchashdatas);
@@ -798,7 +788,6 @@ SCIP_RETCODE extractGates(
    )
 {
    SCIP_VAR** logicorvars;
-   SCIP_VAR* tmpvars[2];
    HASHDATA* hashmaphashdata;
    SCIP_CONS* logicor;
    SCIP_Bool negated;
@@ -815,6 +804,7 @@ SCIP_RETCODE extractGates(
    assert(activevars != NULL);
    assert(posresultants != NULL);
    assert(hashdata != NULL);
+   assert(hashdata->vars != NULL);
    assert(hashdata->nvars == 2);
    assert(hashdata->cons == NULL);
    assert(ndelconss != NULL);
@@ -918,15 +908,14 @@ SCIP_RETCODE extractGates(
          /* variables need to be sorted */
          if( SCIPvarCompare(posresultants[d], activevars[v]) > 0 )
          {
-            tmpvars[0] = activevars[v];
-            tmpvars[1] = posresultants[d];
+            hashdata->vars[0] = activevars[v];
+            hashdata->vars[1] = posresultants[d];
          }
          else
          {
-            tmpvars[0] = posresultants[d];
-            tmpvars[1] = activevars[v];
+            hashdata->vars[0] = posresultants[d];
+            hashdata->vars[1] = activevars[v];
          }
-         hashdata->vars = tmpvars;
 
          hashmaphashdata = (HASHDATA*) SCIPhashtableRetrieve(presoldata->hashdatatable, (void*) hashdata);
 
@@ -951,21 +940,20 @@ SCIP_RETCODE extractGates(
 
       if( activevars[0] == posresultants[d] )
       {
-         tmpvars[0] = activevars[1];
-         tmpvars[1] = activevars[2];
+         hashdata->vars[0] = activevars[1];
+         hashdata->vars[1] = activevars[2];
       }
       else if( activevars[1] == posresultants[d] )
       {
-         tmpvars[0] = activevars[0];
-         tmpvars[1] = activevars[2];
+         hashdata->vars[0] = activevars[0];
+         hashdata->vars[1] = activevars[2];
       }
       else
       {
          assert(activevars[2] == posresultants[d]);
-         tmpvars[0] = activevars[0];
-         tmpvars[1] = activevars[1];
+         hashdata->vars[0] = activevars[0];
+         hashdata->vars[1] = activevars[1];
       }
-      hashdata->vars = tmpvars;
 
       hashmaphashdata = (HASHDATA*) SCIPhashtableRetrieve(presoldata->hashdatatable, (void*) hashdata);
       assert(hashmaphashdata == NULL || hashmaphashdata->cons != NULL);
@@ -1186,30 +1174,28 @@ SCIP_DECL_PRESOLEXIT(presolExitGateextraction)
       assert(presoldata->setppchashdatas != NULL || presoldata->nsetppchashdatas == 0);
       for( c = presoldata->nsetppchashdatas - 1; c >= 0; --c )
       {
-         assert(presoldata->setppchashdatas[c] != NULL);
-         assert(presoldata->setppchashdatas[c]->cons != NULL);
-         assert(presoldata->setppchashdatas[c]->vars != NULL);
+         assert(presoldata->setppchashdatas[c].cons != NULL);
+         assert(presoldata->setppchashdatas[c].vars != NULL);
 
          /* remove constraint from setppc-hashtable */
-         assert(SCIPhashtableExists(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c]->cons));
-         SCIP_CALL( SCIPhashtableRemove(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c]->cons) );
+         assert(SCIPhashtableExists(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c].cons));
+         SCIP_CALL( SCIPhashtableRemove(presoldata->setppchashtable, (void*) presoldata->setppchashdatas[c].cons) );
 
 
          /* remove hashdata entry from hashtable */
-         SCIP_CALL( SCIPhashtableRemove(presoldata->hashdatatable, (void*) presoldata->setppchashdatas[c]) );
+         SCIP_CALL( SCIPhashtableRemove(presoldata->hashdatatable, (void*) &presoldata->setppchashdatas[c]) );
 
          /* release old constraints */
-         SCIP_CALL( SCIPreleaseCons(scip, &(presoldata->setppchashdatas[c]->cons)) );
+         SCIP_CALL( SCIPreleaseCons(scip, &(presoldata->setppchashdatas[c].cons)) );
 
          /* release variables */
-         SCIP_CALL( SCIPreleaseVar(scip, &(presoldata->setppchashdatas[c]->vars[0])) );
-         SCIP_CALL( SCIPreleaseVar(scip, &(presoldata->setppchashdatas[c]->vars[1])) );
+         SCIP_CALL( SCIPreleaseVar(scip, &(presoldata->setppchashdatas[c].vars[0])) );
+         SCIP_CALL( SCIPreleaseVar(scip, &(presoldata->setppchashdatas[c].vars[1])) );
 
          /* free memory for variables */
-         SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatas[c]->vars), 2);
+         SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatas[c].vars), 2);
       }
 
-      SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatastore), presoldata->ssetppchashdatas);
       SCIPfreeBlockMemoryArray(scip, &(presoldata->setppchashdatas), presoldata->ssetppchashdatas);
    }
 
@@ -1261,7 +1247,8 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 {  /*lint --e{715}*/
    SCIP_PRESOLDATA* presoldata;
    SCIP_HASHMAP* varmap;
-   HASHDATA* hashdata;
+   HASHDATA  hashdata;
+   SCIP_VAR* tmpvars[2];
    SCIP_CONSHDLR* conshdlrsetppc;
    SCIP_CONSHDLR* conshdlrlogicor;
    SCIP_CONSHDLR* conshdlrand;
@@ -1422,13 +1409,13 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
 
       for( c = presoldata->nusefullogicor - 1; c >= 0; --c )
       {
-	 lengths[c] = SCIPgetNVarsLogicor(scip, presoldata->usefullogicor[c]);
+         lengths[c] = SCIPgetNVarsLogicor(scip, presoldata->usefullogicor[c]);
       }
 
       if( presoldata->sorting == -1 )
-	 SCIPsortDownIntPtr(lengths, (void**)presoldata->usefullogicor, presoldata->nusefullogicor);
+         SCIPsortDownIntPtr(lengths, (void**)presoldata->usefullogicor, presoldata->nusefullogicor);
       else
-	 SCIPsortIntPtr(lengths, (void**)presoldata->usefullogicor, presoldata->nusefullogicor);
+         SCIPsortIntPtr(lengths, (void**)presoldata->usefullogicor, presoldata->nusefullogicor);
 
       SCIPfreeBufferArray(scip, &lengths);
    }
@@ -1474,11 +1461,7 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
       SCIP_CALL( SCIPallocBufferArray(scip, &activevarssetppc, size) );
       SCIP_CALL( SCIPallocBufferArray(scip, &activevarslogicor, size) );
 
-      /* allocate memory for the temporary hashdata object to search for a corresponding set-packing/-partitioning
-       * constraint
-       */
-      SCIP_CALL( SCIPallocBuffer(scip, &hashdata) );
-      hashdata->cons = NULL;
+      hashdata.cons = NULL;
 
       nsetppchashdatas = 0;
 
@@ -1591,10 +1574,10 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
             /* need sorting to be able to find the correct hashdata element */
             SCIPsortPtr((void**)activevarslogicor, SCIPvarComp, nlogicorvars);
 
-            hashdata->nvars = nlogicorvars;
-            hashdata->vars = activevarslogicor;
+            hashdata.nvars = nlogicorvars;
+            hashdata.vars = activevarslogicor;
 
-            hashmaphashdata = (HASHDATA*) SCIPhashtableRetrieve(setppchashdatatable, (void*) hashdata);
+            hashmaphashdata = (HASHDATA*) SCIPhashtableRetrieve(setppchashdatatable, (void*) &hashdata);
             assert(hashmaphashdata == NULL || hashmaphashdata->cons != NULL);
 
             if( hashmaphashdata != NULL && !SCIPconsIsDeleted(hashmaphashdata->cons) )
@@ -1693,7 +1676,6 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
       SCIPhashtableFree(&setppchashdatatable);
 
       /* free all temporary memory */
-      SCIPfreeBuffer(scip, &hashdata);
       SCIPfreeBufferArray(scip, &activevarslogicor);
       SCIPfreeBufferArray(scip, &activevarssetppc);
       SCIPfreeBlockMemoryArray(scip, &setppchashdatas, nsetppcconss);
@@ -1730,10 +1712,11 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
       SCIP_CALL( SCIPallocBufferArray(scip, &gateconss, presoldata->maxnvarslogicor) );
       SCIP_CALL( SCIPallocBufferArray(scip, &activevars, presoldata->maxnvarslogicor) );
       SCIP_CALL( SCIPallocBufferArray(scip, &posresultants, presoldata->maxnvarslogicor) );
-      SCIP_CALL( SCIPallocBuffer(scip, &hashdata) );
 
-      hashdata->nvars = 2;
-      hashdata->cons = NULL;
+      hashdata.nvars = 2;
+      hashdata.cons = NULL;
+      /* assign array of two variables as temporary storage to hashdata */
+      hashdata.vars = tmpvars;
 
       /* check all (new) logicors against all set-packing constraints, to extract and-constraints with two or more
        * operands or set-partitioning constraints three or more variables
@@ -1752,9 +1735,9 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
           *
           * - these four constraints are aquivalent to: x + y + z = 1
           */
-         SCIP_CALL( extractGates(scip, presoldata, c, varmap, gateconss, activevars, posresultants, hashdata, ndelconss, naddconss) );
+         SCIP_CALL( extractGates(scip, presoldata, c, varmap, gateconss, activevars, posresultants, &hashdata, ndelconss, naddconss) );
       }
-      SCIPfreeBuffer(scip, &hashdata);
+
       SCIPfreeBufferArray(scip, &posresultants);
       SCIPfreeBufferArray(scip, &activevars);
       SCIPfreeBufferArray(scip, &gateconss);

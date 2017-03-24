@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -801,8 +801,6 @@ void consdataUpdateLinearActivityLbChange(
       if( consdata->minlinactivity == SCIP_INVALID )  /*lint !e777 */
          return;
 
-      assert(!SCIPisInfinity(scip, -consdata->minlinactivity));
-
       prevroundmode = SCIPintervalGetRoundingMode();
       SCIPintervalSetRoundingModeDownwards();
 
@@ -838,8 +836,6 @@ void consdataUpdateLinearActivityLbChange(
       /* we have no max activities computed so far, so cannot update */
       if( consdata->maxlinactivity == SCIP_INVALID )  /*lint !e777 */
          return;
-
-      assert(!SCIPisInfinity(scip, consdata->maxlinactivity));
 
       prevroundmode = SCIPintervalGetRoundingMode();
       SCIPintervalSetRoundingModeUpwards();
@@ -904,8 +900,6 @@ void consdataUpdateLinearActivityUbChange(
       if( consdata->maxlinactivity == SCIP_INVALID )  /*lint !e777 */
          return;
 
-      assert(!SCIPisInfinity(scip, consdata->maxlinactivity));
-
       prevroundmode = SCIPintervalGetRoundingMode();
       SCIPintervalSetRoundingModeUpwards();
 
@@ -941,8 +935,6 @@ void consdataUpdateLinearActivityUbChange(
       /* we have no min activities computed so far, so cannot update */
       if( consdata->minlinactivity == SCIP_INVALID )  /*lint !e777 */
          return;
-
-      assert(!SCIPisInfinity(scip, -consdata->minlinactivity));
 
       prevroundmode = SCIPintervalGetRoundingMode();
       SCIPintervalSetRoundingModeDownwards();
@@ -5638,12 +5630,21 @@ SCIP_Bool generateCutLTIfindIntersection(
          SCIP_Real tl1;
          SCIP_Real tl2;
          SCIP_Real denom;
+         SCIP_Real q;
 
-         assert(b * b - 4.0 * a * (c - wl) >= 0.0);
+         if( b * b - 4.0 * a * (c - wl) < 0.0 )
+         {
+            SCIPdebugMsg(scip, "probable numerical difficulties, give up\n");
+            return TRUE;
+         }
+
          denom = sqrt(b * b - 4.0 * a * (c - wl));
-         tl1 = (-b - denom) / (2.0 * a);
-         tl2 = (-b + denom) / (2.0 * a);
-         tl = (tl1 < 0.0) ? tl2 : tl1;
+         q = -0.5 * (b + COPYSIGN(denom, b));
+         tl1 = q / a;
+         tl2 = (c - wl) / q;
+
+         /* choose the smallest non-negative root */
+         tl = (tl1 >= 0.0 && (tl2 < 0.0 || tl1 < tl2)) ? tl1 : tl2;
       }
 
       if( wu != SCIP_INVALID )  /*lint !e777 */
@@ -5651,12 +5652,21 @@ SCIP_Bool generateCutLTIfindIntersection(
          SCIP_Real tu1;
          SCIP_Real tu2;
          SCIP_Real denom;
+         SCIP_Real q;
 
-         assert(b * b - 4.0 * a * (c - wu) >= 0.0);
+         if( b * b - 4.0 * a * (c - wu) < 0.0 )
+         {
+            SCIPdebugMsg(scip, "probable numerical difficulties, give up\n");
+            return TRUE;
+         }
+
          denom = sqrt(b * b - 4.0 * a * (c - wu));
-         tu1 = (-b - denom) / (2.0 * a);
-         tu2 = (-b + denom) / (2.0 * a);
-         tu = (tu1 < 0.0) ? tu2 : tu1;
+         q = -0.5 * (b + COPYSIGN(denom, b));
+         tu1 = q / a;
+         tu2 = (c - wu) / q;
+
+         /* choose the smallest non-negative root */
+         tu = (tu1 >= 0.0 && (tu2 < 0.0 || tu1 < tu2)) ? tu1 : tu2;
       }
    }
    else if( !SCIPisZero(scip, (SCIP_Real)b) )
@@ -6699,7 +6709,6 @@ SCIP_RETCODE generateCut(
    /* check if range of cut coefficients is ok
     * compute cut activity and violation in sol
     */
-   mincoef = 0.0; /* only for lint */
    maxcoef = 0.0; /* only for compiler */
    viol = 0.0;    /* only for compiler */
    if( success )
@@ -7031,7 +7040,7 @@ SCIP_RETCODE computeED(
    BMSclearMemoryArray(matrix, nn);
 
    /* @todo if we are called in solving stage (or late from initsol), we can avoid the hashmap by using sepabilinvar2pos */
-   SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * n)) );
+   SCIP_CALL( SCIPhashmapCreate(&var2index, SCIPblkmem(scip), n) );
 
    for( i = 0; i < n; ++i )
    {
@@ -10109,13 +10118,18 @@ SCIP_RETCODE propagateBoundsCons(
          if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
             continue;
 
+         /* due to large variable bounds and large coefficients, it might happen that the activity of the linear part
+          * exceeds +/-SCIPinfinity() after updating the activities in consdataUpdateLinearActivity{Lb,Ub}Change; in
+          * order to detect this case we need to check whether the value of consdata->{min,max}linactivity is infinite
+          * (see #1433)
+          */
          if( coef > 0.0 )
          {
             if( SCIPintervalGetSup(rhs) < intervalinfty )
             {
                assert(consdata->minlinactivity != SCIP_INVALID);  /*lint !e777 */
                /* try to tighten the upper bound on var x */
-               if( consdata->minlinactivityinf == 0 )
+               if( consdata->minlinactivityinf == 0 && !SCIPisInfinity(scip, -consdata->minlinactivity) )
                {
                   assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
                   /* tighten upper bound on x to (rhs.sup - (minlinactivity - coef * xlb)) / coef */
@@ -10151,7 +10165,7 @@ SCIP_RETCODE propagateBoundsCons(
             {
                assert(consdata->maxlinactivity != SCIP_INVALID);  /*lint !e777 */
                /* try to tighten the lower bound on var x */
-               if( consdata->maxlinactivityinf == 0 )
+               if( consdata->maxlinactivityinf == 0 && !SCIPisInfinity(scip, consdata->maxlinactivity) )
                {
                   assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
                   /* tighten lower bound on x to (rhs.inf - (maxlinactivity - coef * xub)) / coef */
@@ -10190,7 +10204,7 @@ SCIP_RETCODE propagateBoundsCons(
             {
                assert(consdata->maxlinactivity != SCIP_INVALID);  /*lint !e777 */
                /* try to tighten the upper bound on var x */
-               if( consdata->maxlinactivityinf == 0 )
+               if( consdata->maxlinactivityinf == 0  && !SCIPisInfinity(scip, consdata->maxlinactivity) )
                {
                   assert(!SCIPisInfinity(scip, SCIPvarGetLbLocal(var)));
                   /* compute upper bound on x to (maxlinactivity - coef * xlb) - rhs.inf / (-coef) */
@@ -10226,7 +10240,7 @@ SCIP_RETCODE propagateBoundsCons(
             {
                assert(consdata->minlinactivity != SCIP_INVALID);  /*lint !e777 */
                /* try to tighten the lower bound on var x */
-               if( consdata->minlinactivityinf == 0 )
+               if( consdata->minlinactivityinf == 0 && !SCIPisInfinity(scip, -consdata->minlinactivity) )
                {
                   assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
                   /* compute lower bound on x to (minlinactivity - coef * xub) - rhs.sup / (-coef) */
@@ -11233,9 +11247,9 @@ SCIP_DECL_CONSFREE(consFreeQuadratic)
    for( i = 0; i < conshdlrdata->nquadconsupgrades; ++i )
    {
       assert(conshdlrdata->quadconsupgrades[i] != NULL);
-      SCIPfreeMemory(scip, &conshdlrdata->quadconsupgrades[i]);
+      SCIPfreeBlockMemory(scip, &conshdlrdata->quadconsupgrades[i]); /*lint !e866*/
    }
-   SCIPfreeMemoryArrayNull(scip, &conshdlrdata->quadconsupgrades);
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->quadconsupgrades, conshdlrdata->quadconsupgradessize);
 
    SCIPfreeBlockMemory(scip, &conshdlrdata);
 
@@ -12438,7 +12452,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
                   assert(SCIPvarGetType(var) != SCIP_VARTYPE_BINARY);
                   SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_BINARY, &infeasible) );
-                  havechange = TRUE;
 
                   if( infeasible )
                   {
@@ -13376,7 +13389,7 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
    if( !conshdlrdataHasUpgrade(scip, conshdlrdata, quadconsupgd, conshdlrname) )
    {
       /* create a quadratic constraint upgrade data object */
-      SCIP_CALL( SCIPallocMemory(scip, &quadconsupgrade) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &quadconsupgrade) );
       quadconsupgrade->quadconsupgd = quadconsupgd;
       quadconsupgrade->priority     = priority;
       quadconsupgrade->active       = active;
@@ -13388,7 +13401,7 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
          int newsize;
 
          newsize = SCIPcalcMemGrowSize(scip, conshdlrdata->nquadconsupgrades+1);
-         SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->quadconsupgrades, newsize) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &conshdlrdata->quadconsupgrades, conshdlrdata->quadconsupgradessize, newsize) );
          conshdlrdata->quadconsupgradessize = newsize;
       }
       assert(conshdlrdata->nquadconsupgrades+1 <= conshdlrdata->quadconsupgradessize);

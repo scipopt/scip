@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_misc.h
+ * @ingroup PUBLICCOREAPI
  * @brief  public data structures and miscellaneous methods
  * @author Tobias Achterberg
  * @author Gerald Gamrath
@@ -61,7 +62,11 @@ extern "C" {
  * methods for statistical tests
  */
 
-/**@defgroup STATISTICALTESTS Methods for statistical tests
+/**@defgroup STATISTICALTESTS Statistical tests
+ * @ingroup MiscellaneousMethods
+ * @brief public methods for statistical tests
+ *
+ * Below are the public methods for statistical tests inside of \SCIP
  *
  * @{
  */
@@ -116,7 +121,11 @@ SCIP_Real SCIPnormalCDF(
 
 /**@} */
 
-/**@defgroup Regression Regression methods for linear regression
+/**@defgroup Regression Linear Regression
+ * @ingroup MiscellaneousMethods
+ * @brief methods for linear regression
+ *
+ * Below are the public methods for incremental linear regression of observations pairs \f$(X_i,Y_i), i=1\dots,n\f$
  *
  * @{
  */
@@ -176,11 +185,13 @@ void SCIPregressionFree(
 /**@} */
 
 /*
- * GML graphical printing methods
- * For a detailed format decription see http://docs.yworks.com/yfiles/doc/developers-guide/gml.html
  */
 
-/**@defgroup GMLgraph GML graphical printing
+/**@defgroup GMLgraph GML Graphical Printing
+ * @ingroup MiscellaneousMethods
+ * @brief GML graph printing methods
+ *
+ * For a detailed format decription see http://docs.yworks.com/yfiles/doc/developers-guide/gml.html
  *
  * @{
  */
@@ -244,20 +255,12 @@ void SCIPgmlWriteClosing(
 
 /**@} */
 
-
-/** @defgroup DataStructures Data Structures
- *
- *  Below you find a list of available data structures
- *
- * @{
- */
-
-
 /*
  * Sparse solution
  */
 
-/**@defgroup SparseSol Sparse solution
+/**@defgroup SparseSol Sparse Solution
+ * @brief sparse storage for multiple integer solutions
  *
  * @{
  */
@@ -325,13 +328,15 @@ SCIP_Bool SCIPsparseSolGetNextSol(
  */
 
 /**@defgroup Queue Queue
+ * @ingroup DataStructures
+ * @brief circular FIFO queue
  *
  * @{
  */
 
 
 /** creates a (circular) queue, best used if the size will be fixed or will not be increased that much */
-extern
+EXTERN
 SCIP_RETCODE SCIPqueueCreate(
    SCIP_QUEUE**          queue,              /**< pointer to the new queue */
    int                   initsize,           /**< initial number of available element slots */
@@ -340,44 +345,44 @@ SCIP_RETCODE SCIPqueueCreate(
 
 
 /** frees queue, but not the data elements themselves */
-extern
+EXTERN
 void SCIPqueueFree(
    SCIP_QUEUE**          queue               /**< pointer to a queue */
    );
 
 /** clears the queue, but doesn't free the data elements themselves */
-extern
+EXTERN
 void SCIPqueueClear(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
 /** inserts element at the end of the queue */
-extern
+EXTERN
 SCIP_RETCODE SCIPqueueInsert(
    SCIP_QUEUE*           queue,              /**< queue */
    void*                 elem                /**< element to be inserted */
    );
 
 /** removes and returns the first element of the queue */
-extern
+EXTERN
 void* SCIPqueueRemove(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
 /** returns the first element of the queue without removing it */
-extern
+EXTERN
 void* SCIPqueueFirst(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
 /** returns whether the queue is empty */
-extern
+EXTERN
 SCIP_Bool SCIPqueueIsEmpty(
    SCIP_QUEUE*           queue               /**< queue */
    );
 
 /** returns the number of elements in the queue */
-extern
+EXTERN
 int SCIPqueueNElems(
    SCIP_QUEUE*           queue               /**< queue */
    );
@@ -389,6 +394,8 @@ int SCIPqueueNElems(
  */
 
 /**@defgroup PriorityQueue Priority Queue
+ * @ingroup DataStructures
+ * @brief priority queue with O(1) access to the minimum element
  *
  * @{
  */
@@ -453,15 +460,18 @@ void** SCIPpqueueElems(
  */
 
 /**@defgroup HashTable Hash Table
+ * @ingroup DataStructures
+ * @brief hash table that resolves conflicts by probing
  *
  *@{
  */
 
 /* fast 2-universal hash functions for two and four elements */
-#define SCIPhashTwo(a, b)                   ((uint32_t)((((uint64_t)(a) + 0xd37e9a1ce2148403ull) * ((uint64_t)(b) + 0xe5fcc163aef32782ull) )>>32))
+#define SCIPhashSignature64(a)              ((uint64_t)(UINT64_C(1) << ((a) % 64)))
+#define SCIPhashTwo(a, b)                   ((uint32_t)((((uint64_t)(a) + 0xd37e9a1ce2148403ULL) * ((uint64_t)(b) + 0xe5fcc163aef32782ULL) )>>32))
 
-#define SCIPhashFour(a, b, c, d)            ((uint32_t)((((uint64_t)(a) + 0xbd5c89185f082658ull) * ((uint64_t)(b) + 0xe5fcc163aef32782ull) + \
-                                                         ((uint64_t)(c) + 0xd37e9a1ce2148403ull) * ((uint64_t)(d) + 0x926f2d4dc4a67218ull))>>32 ))
+#define SCIPhashFour(a, b, c, d)            ((uint32_t)((((uint64_t)(a) + 0xbd5c89185f082658ULL) * ((uint64_t)(b) + 0xe5fcc163aef32782ULL) + \
+                                                         ((uint64_t)(c) + 0xd37e9a1ce2148403ULL) * ((uint64_t)(d) + 0x926f2d4dc4a67218ULL))>>32 ))
 
 /* helpers to use above hashfuncions */
 #define SCIPcombineTwoInt(a, b)             (((uint64_t) (a) << 32) | (uint64_t) (b) )
@@ -475,12 +485,6 @@ void** SCIPpqueueElems(
 
 #define SCIPpositiveRealHashCode(x, n)      ( (x)*(1<<n) >= UINT64_MAX ? UINT64_MAX : (uint64_t)((x)*(1<<n)) )
 
-
-/** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
-EXTERN
-int SCIPcalcHashtableSize(
-   int                   minsize             /**< minimal size of the hash table */
-   );
 
 /** creates a hash table */
 EXTERN
@@ -513,22 +517,14 @@ void SCIPhashtableClear(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    );
 
-/** inserts element in hash table (multiple inserts of same element possible)
- *
- *  @note A pointer to a multihashlist returned by SCIPhashtableRetrieveNext() might get invalid when adding an element
- *        to the hash table, due to dynamic resizing.
- */
+/** inserts element in hash table (multiple inserts of same element override the previous entry) */
 EXTERN
 SCIP_RETCODE SCIPhashtableInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    void*                 element             /**< element to insert into the table */
    );
 
-/** inserts element in hash table (multiple insertion of same element is checked and results in an error)
- *
- *  @note A pointer to a multihashlist returned by SCIPhashtableRetrieveNext() might get invalid when adding a new
- *        element to the hash table, due to dynamic resizing.
- */
+/** inserts element in hash table (multiple insertion of same element is checked and results in an error) */
 EXTERN
 SCIP_RETCODE SCIPhashtableSafeInsert(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
@@ -539,20 +535,6 @@ SCIP_RETCODE SCIPhashtableSafeInsert(
 EXTERN
 void* SCIPhashtableRetrieve(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
-   void*                 key                 /**< key to retrieve */
-   );
-
-/** retrieve element with key from hash table, returns NULL if not existing
- *  can be used to retrieve all entries with the same key (one-by-one)
- *
- *  @note The returned multihashlist pointer might get invalid when adding a new element to the hash table.
- */
-EXTERN
-void* SCIPhashtableRetrieveNext(
-   SCIP_HASHTABLE*       hashtable,          /**< hash table */
-   SCIP_MULTIHASHLIST**  multihashlist,      /**< input: entry in hash table list from which to start searching, or NULL
-                                              *   output: entry in hash table list corresponding to element after
-                                              *           retrieved one, or NULL */
    void*                 key                 /**< key to retrieve */
    );
 
@@ -570,11 +552,7 @@ SCIP_RETCODE SCIPhashtableRemove(
    void*                 element             /**< element to remove from the table */
    );
 
-/** removes all elements of the hash table
- *
- *  @note From a performance point of view you should not fill and clear a hash table too often since the clearing can
- *        be expensive. Clearing is done by looping over all buckets and removing the hash table lists one-by-one.
- */
+/** removes all elements of the hash table */
 EXTERN
 void SCIPhashtableRemoveAll(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
@@ -597,6 +575,25 @@ EXTERN
 void SCIPhashtablePrintStatistics(
    SCIP_HASHTABLE*       hashtable,          /**< hash table */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   );
+
+/**@} */
+
+/*
+ * MultiHash Table
+ */
+
+/**@defgroup MultiHash Multi Hash table
+ * @ingroup DataStructures
+ * @brief hash table that resolves conflicts by queueing, thereby allowing for duplicate entries
+ *
+ *@{
+ */
+
+/** returns a reasonable hash table size (a prime number) that is at least as large as the specified value */
+EXTERN
+int SCIPcalcMultihashSize(
+   int                   minsize             /**< minimal size of the hash table */
    );
 
 /** creates a multihash table */
@@ -731,8 +728,10 @@ SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr);
  */
 
 /**@defgroup HashMap Hash Map
+ * @ingroup DataStructures
+ * @brief hash map to store key-value pairs (called \p origin and \p image)
  *
- *@{
+ * @{
  */
 
 /** creates a hash map mapping pointers to pointers */
@@ -877,9 +876,11 @@ SCIP_RETCODE SCIPhashmapRemoveAll(
  * Activity
  */
 
-/**@defgroup ResourceActivity Resource activity
+/**@defgroup ResourceActivity Resource Activity
+ * @ingroup DataStructures
+ * @brief ressource activity data structure
  *
- *@{
+ * @{
  */
 
 /** create a resource activity */
@@ -940,8 +941,10 @@ int SCIPactivityGetEnergy(
  */
 
 /**@defgroup ResourceProfile Resource Profile
+ * @ingroup DataStructures
+ * @brief ressource profile data structure
  *
- *@{
+ * @{
  */
 
 /** creates resource profile */
@@ -1068,8 +1071,10 @@ int SCIPprofileGetLatestFeasibleStart(
  */
 
 /**@defgroup DirectedGraph Directed Graph
+ * @ingroup DataStructures
+ * @brief graph structure with common algorithms for directed and undirected graphs
  *
- *@{
+ * @{
  */
 
 /** creates directed graph structure */
@@ -1292,8 +1297,9 @@ void SCIPdigraphPrintComponents(
  * Binary search tree
  */
 
-/**@defgroup BinaryTree Binary Tree
- *
+/**@defgroup BinaryTree Binary Search Tree
+ * @ingroup DataStructures
+ * @brief binary search tree data structure
  *@{
  */
 
@@ -1486,22 +1492,15 @@ void SCIPbtSetRoot(
 
 /**@} */
 
-/**@} */
-
-
-/**@defgroup MiscellaneousMethods Miscellaneous Methods
- *
- * Below you find a list of miscellaneous methods grouped by different categories
- *@{
- */
-
 /*
  * Numerical methods
  */
 
 /**@defgroup NumericalMethods Numerical Methods
+ * @ingroup MiscellaneousMethods
+ * @brief commonly used numerical methods
  *
- *@{
+ * @{
  */
 
 /** returns the machine epsilon: the smallest number eps > 0, for which 1.0 + eps > 1.0 */
@@ -1522,6 +1521,16 @@ EXTERN
 SCIP_Longint SCIPcalcSmaComMul(
    SCIP_Longint          val1,               /**< first value of smallest common multiple calculation */
    SCIP_Longint          val2                /**< second value of smallest common multiple calculation */
+   );
+
+/** calculates a binomial coefficient n over m, choose m elements out of n, maximal value will be 33 over 16 (because
+ *  the n=33 is the last line in the Pascal's triangle where each entry fits in a 4 byte value), an error occurs due to
+ *  big numbers or an negative value m (and m < n) and -1 will be returned
+ */
+EXTERN
+SCIP_Longint SCIPcalcBinomCoef(
+   int                   n,                  /**< number of different elements */
+   int                   m                   /**< number to choose out of the above */
    );
 
 /** converts a real number into a (approximate) rational representation, and returns TRUE iff the conversion was
@@ -1631,6 +1640,8 @@ SCIP_Real SCIPcomputeGap(
  */
 
 /**@defgroup RandomNumbers Random Numbers
+ * @ingroup MiscellaneousMethods
+ * @brief structures and methods for pseudo random number generation
  *
  *@{
  */
@@ -1649,11 +1660,46 @@ int SCIPgetRandomInt(
 
 
 /** returns a random integer between minrandval and maxrandval */
-extern
+EXTERN
 int SCIPrandomGetInt(
    SCIP_RANDNUMGEN*      randgen,            /**< random number generator data */
    int                   minrandval,         /**< minimal value to return */
    int                   maxrandval          /**< maximal value to return */
+   );
+
+/** draws a random subset of disjoint elements from a given set of disjoint elements;
+ *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
+ */
+EXTERN
+SCIP_RETCODE SCIPrandomGetSubset(
+   SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
+   void**                set,                /**< original set, from which elements should be drawn */
+   int                   nelems,             /**< number of elements in original set */
+   void**                subset,             /**< subset in which drawn elements should be stored */
+   int                   nsubelems           /**< number of elements that should be drawn and stored */
+   );
+
+/** returns a random real between minrandval and maxrandval */
+EXTERN
+SCIP_Real SCIPrandomGetReal(
+   SCIP_RANDNUMGEN*      randgen,            /**< random number generator data */
+   SCIP_Real             minrandval,         /**< minimal value to return */
+   SCIP_Real             maxrandval          /**< maximal value to return */
+   );
+
+/** creates and initializes a random number generator */
+EXTERN
+SCIP_RETCODE SCIPrandomCreate(
+   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   unsigned int          initialseed         /**< initial random seed */
+   );
+
+
+/** frees a random number generator */
+EXTERN
+void SCIPrandomFree(
+   SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
    );
 
 /** returns a random real between minrandval and maxrandval
@@ -1668,78 +1714,21 @@ SCIP_Real SCIPgetRandomReal(
    unsigned int*         seedp               /**< pointer to seed value */
    );
 
-/** returns a random real between minrandval and maxrandval */
-extern
-SCIP_Real SCIPrandomGetReal(
-   SCIP_RANDNUMGEN*      randgen,            /**< random number generator data */
-   SCIP_Real             minrandval,         /**< minimal value to return */
-   SCIP_Real             maxrandval          /**< maximal value to return */
-   );
-
-/** creates and initializes a random number generator */
-extern
-SCIP_RETCODE SCIPrandomCreate(
-   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   unsigned int          initialseed         /**< initial random seed (> 0) */
-   );
-
-
-/** frees a random number generator */
-extern
-void SCIPrandomFree(
-   SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
-   );
-
-/**@} */
-
-/*
- * Additional math functions
- */
-
-/**@defgroup AdditionalMathFunctions Additional math functions
+/** draws a random subset of disjoint elements from a given set of disjoint elements;
+ *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
  *
- *@{
- */
-
-/** calculates a binomial coefficient n over m, choose m elements out of n, maximal value will be 33 over 16 (because
- *  the n=33 is the last line in the Pascal's triangle where each entry fits in a 4 byte value), an error occurs due to
- *  big numbers or an negative value m (and m < n) and -1 will be returned
+ *  @deprecated Please use SCIPrandomGetSubset()
  */
 EXTERN
-SCIP_Longint SCIPcalcBinomCoef(
-   int                   n,                  /**< number of different elements */
-   int                   m                   /**< number to choose out of the above */
+SCIP_DEPRECATED
+SCIP_RETCODE SCIPgetRandomSubset(
+   void**                set,                /**< original set, from which elements should be drawn */
+   int                   nelems,             /**< number of elements in original set */
+   void**                subset,             /**< subset in which drawn elements should be stored */
+   int                   nsubelems,          /**< number of elements that should be drawn and stored */
+   unsigned int          randseed            /**< seed value for random generator */
    );
 
-/** indirectly sorts a given keys array by permuting its indices, thereby yielding a partition of the indices into keys
- *  that are larger, equal, and smaller than the weighted median
- *
- *  in a sorting key_1 > key_2 > ... > key_n, the weighted median is the element key_m at position m that satisfies
- *  sum_{i < m} weight_i < capacity, but sum_{i <= m} weight_i >= capacity.
- *
- *  If the keys are not unique, then the median is not necessarily unique, which is why the algorithm returns a range of indices for the median.
- *
- *  As a result of applying this method, the indices are partially sorted. Looping over the indices 0,...,leftmedianidx - 1
- *  yields all elements with a key strictly larger than the weighted median. Looping over the indices rightmedianidx + 1, ..., nkeys
- *  contains only elements that are smaller than the median.
- *
- *  A special case is that all keys are unique, and all weights are equal to 1. In this case, the algorithm can be used to select the k-th
- *  largest element by using a capacity k.
- *
- *  If no weights-array is passed, the algorithm assumes weights equal to 1.
- */
-EXTERN
-void SCIPselectWeightedMedian(
-   SCIP_Real*            keys,               /**< array of key values, indexed by indices, for which we compute the weighted median */
-   int*                  indices,            /**< indices array that should be partially sorted inplace */
-   SCIP_Real*            weights,            /**< (optional), nonnegative weights array for weighted median, or NULL (all weights are equal to 1) */
-   int                   nkeys,              /**< the number of keys and indices (indices range from 0 to nkeys - 1) */
-   SCIP_Real             capacity,           /**< (positive) capacity for the weights */
-   SCIP_Real*            median,             /**< pointer to store the weighted median */
-   int*                  leftmedianidx,      /**< pointer to store the leftmost occurence of median */
-   int*                  rightmedianidx      /**< pointer to store the rightmost occurence of median */
-   );
 
 /**@} */
 
@@ -1748,8 +1737,10 @@ void SCIPselectWeightedMedian(
  */
 
 /**@defgroup PermutationsShuffling Permutations Shuffling
+ * @ingroup MiscellaneousMethods
+ * @brief methods for shuffling arrays
  *
- *@{
+ * @{
  */
 
 /** swaps two ints */
@@ -1781,22 +1772,39 @@ EXTERN
 SCIP_DEPRECATED
 void SCIPpermuteIntArray(
    int*                  array,              /**< array to be shuffled */
-   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end,                /**< last index that should be subject to shuffling (array size for whole
-                                              *   array)
+   int                   begin,              /**< first included index that should be subject to shuffling
+                                              *   (0 for first array entry)
+                                              */
+   int                   end,                /**< first excluded index that should not be subject to shuffling
+                                              *   (array size for last array entry)
                                               */
    unsigned int*         randseed            /**< seed value for the random generator */
    );
 
 /** randomly shuffles parts of an integer array using the Fisher-Yates algorithm */
-extern
+EXTERN
 void SCIPrandomPermuteIntArray(
    SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
    int*                  array,              /**< array to be shuffled */
-   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end                 /**< last index that should be subject to shuffling (array size for whole
-                                               *   array)
-                                               */
+   int                   begin,              /**< first included index that should be subject to shuffling
+                                              *   (0 for first array entry)
+                                              */
+   int                   end                 /**< first excluded index that should not be subject to shuffling
+                                              *   (array size for last array entry)
+                                              */
+   );
+
+/** randomly shuffles parts of an array using the Fisher-Yates algorithm */
+EXTERN
+void SCIPrandomPermuteArray(
+   SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
+   void**                array,              /**< array to be shuffled */
+   int                   begin,              /**< first included index that should be subject to shuffling
+                                              *   (0 for first array entry)
+                                              */
+   int                   end                 /**< first excluded index that should not be subject to shuffling
+                                              *   (array size for last array entry)
+                                              */
    );
 
 /** randomly shuffles parts of an array using the Fisher-Yates algorithm
@@ -1807,50 +1815,13 @@ EXTERN
 SCIP_DEPRECATED
 void SCIPpermuteArray(
    void**                array,              /**< array to be shuffled */
-   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end,                /**< last index that should be subject to shuffling (array size for whole
-                                              *   array)
+   int                   begin,              /**< first included index that should be subject to shuffling
+                                              *   (0 for first array entry)
+                                              */
+   int                   end,                /**< first excluded index that should not be subject to shuffling
+                                              *   (array size for last array entry)
                                               */
    unsigned int*         randseed            /**< pointer to seed value for the random generator */
-   );
-
-/** randomly shuffles parts of an array using the Fisher-Yates algorithm */
-extern
-void SCIPrandomPermuteArray(
-   SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
-   void**                array,              /**< array to be shuffled */
-   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end                 /**< last index that should be subject to shuffling (array size for whole
-                                              *   array)
-                                              */
-   );
-
-/** draws a random subset of disjoint elements from a given set of disjoint elements;
- *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
- *
- *  @deprecated Please use SCIPrandomGetSubset()
- */
-EXTERN
-SCIP_DEPRECATED
-SCIP_RETCODE SCIPgetRandomSubset(
-   void**                set,                /**< original set, from which elements should be drawn */
-   int                   nelems,             /**< number of elements in original set */
-   void**                subset,             /**< subset in which drawn elements should be stored */
-   int                   nsubelems,          /**< number of elements that should be drawn and stored */
-   unsigned int          randseed            /**< seed value for random generator */
-   );
-
-
-/** draws a random subset of disjoint elements from a given set of disjoint elements;
- *  this implementation is suited for the case that nsubelems is considerably smaller then nelems
- */
-extern
-SCIP_RETCODE SCIPrandomGetSubset(
-   SCIP_RANDNUMGEN*      randgen,            /**< random number generator */
-   void**                set,                /**< original set, from which elements should be drawn */
-   int                   nelems,             /**< number of elements in original set */
-   void**                subset,             /**< subset in which drawn elements should be stored */
-   int                   nsubelems           /**< number of elements that should be drawn and stored */
    );
 
 /**@} */
@@ -1861,8 +1832,10 @@ SCIP_RETCODE SCIPrandomGetSubset(
  */
 
 /**@defgroup Arrays Arrays
+ * @ingroup MiscellaneousMethods
+ * @brief miscellaneous methods for arrays
  *
- *@{
+ * @{
  */
 
 
@@ -1892,7 +1865,6 @@ SCIP_RETCODE SCIPcomputeArraysSetminus(
                                               *   (note: it is possible to use narray1 for this input argument) */
    );
 
-
 /**@} */
 
 
@@ -1901,6 +1873,8 @@ SCIP_RETCODE SCIPcomputeArraysSetminus(
  */
 
 /**@defgroup StringMethods String Methods
+ * @ingroup MiscellaneousMethods
+ * @brief commonly used methods for strings
  *
  *@{
  */
@@ -1995,8 +1969,10 @@ void SCIPstrCopySection(
  */
 
 /**@defgroup FileMethods File Methods
+ * @ingroup MiscellaneousMethods
+ * @brief commonly used file methods
  *
- *@{
+ * @{
  */
 
 /** returns, whether the given file exists */
@@ -2014,8 +1990,6 @@ void SCIPsplitFilename(
    char**                extension,          /**< pointer to store extension, or NULL if not needed */
    char**                compression         /**< pointer to store compression extension, or NULL if not needed */
    );
-
-/**@} */
 
 /**@} */
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -49,7 +49,7 @@
 /** PPM reading data */
 struct SCIP_ReaderData
 {
-   SCIP_Bool             rgb_relativ;
+   SCIP_Bool             rgb_relative;
    SCIP_Bool             rgb_ascii;
    int                   rgb_limit;
    int                   coef_limit;
@@ -67,7 +67,7 @@ void initReaderdata(
 {
    assert(readerdata != NULL);
 
-   readerdata->rgb_relativ = DEFAULT_PPM_RGB_RELATIVE;
+   readerdata->rgb_relative = DEFAULT_PPM_RGB_RELATIVE;
    readerdata->rgb_ascii = DEFAULT_PPM_RGB_ASCII;
    readerdata->rgb_limit = DEFAULT_PPM_RGB_LIMIT;
    readerdata->coef_limit = DEFAULT_PPM_COEF_LIMIT;
@@ -157,8 +157,7 @@ void endLine(
    }
 }
 
-/** appends extension to line and prints it to the give file stream if the line exceeded
-    PPM_PRINTLEN */
+/** appends extension to line and prints it to the give file stream if the line exceeded PPM_PRINTLEN */
 static
 void appendLine(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -188,7 +187,7 @@ static
 void calcColorValue(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_READERDATA*      readerdata,         /**< information for reader */
-   SCIP_Real             coef,               /**< Coefficient to scale */
+   SCIP_Real             coef,               /**< coefficient to scale */
    int*                  red,                /**< red part */
    int*                  green,              /**< green part */
    int*                  blue,               /**< blue part */
@@ -204,10 +203,10 @@ void calcColorValue(
 
    coeflog = SCIPfloor(scip, log10(coef));
 
-   if(!(readerdata->rgb_relativ))
+   if( !(readerdata->rgb_relative) )
    {
       (*red) = 255;
-      (*blue) = ((readerdata->rgb_limit) - (unsigned short) (coef/scale*(readerdata->rgb_limit)));
+      (*blue) = readerdata->rgb_limit - (int) (unsigned short) (coef/scale * readerdata->rgb_limit);
       (*green) = *blue;
    }
    else
@@ -215,14 +214,14 @@ void calcColorValue(
       if( coeflog >= 0 )
       {
          (*red) = 255;
-         if( coeflog >= (readerdata->coef_limit) )
+         if( coeflog >= readerdata->coef_limit )
          {
             (*blue) = 0;
             (*green) = 0;
          }
          else
          {
-            (*blue) = (readerdata->rgb_limit) - (unsigned short) ((readerdata->rgb_limit)*coeflog/(readerdata->coef_limit));
+            (*blue) = readerdata->rgb_limit - (int) (unsigned short) (readerdata->rgb_limit * coeflog/readerdata->coef_limit);
             (*green) = *blue;
          }
       }
@@ -230,14 +229,14 @@ void calcColorValue(
       {
          (*blue) = 255;
          coeflog = -1.0*coeflog;
-         if( coeflog >= (readerdata->coef_limit) )
+         if( coeflog >= readerdata->coef_limit )
          {
             (*red) = 0;
             (*green) = 0;
          }
          else
          {
-            (*red) = (readerdata->rgb_limit) - (unsigned short) ((readerdata->rgb_limit)*coeflog/(readerdata->coef_limit));
+            (*red) = (readerdata->rgb_limit) - (int) (unsigned short) ((readerdata->rgb_limit)*coeflog/(readerdata->coef_limit));
             (*green) = *red;
          }
       }
@@ -291,10 +290,9 @@ void printRow(
    /* calculate maximum index of the variables in this constraint */
    for( v = 0; v < nvars; ++v )
    {
-      if(maxvarindex < SCIPvarGetProbindex(vars[v]))
+      if( maxvarindex < SCIPvarGetProbindex(vars[v]) )
          maxvarindex = SCIPvarGetProbindex(vars[v]);
    }
-
    assert(maxvarindex < ntotalvars);
 
    /* print coefficients */
@@ -320,13 +318,15 @@ void printRow(
             appendLine(scip, file, readerdata, linebuffer, &linecnt, " 255 255 255 ");
       }
 
-
       calcColorValue(scip, readerdata, REALABS(vals[indexvar]), &red, &green, &blue, maxcoef);
-      if(readerdata->rgb_ascii)
+      if( readerdata->rgb_ascii )
       {
-         if(red == 35 || red == 0) red++;
-         if(green==35 || green == 0) green++;
-         if(blue==35 || blue == 0) blue++;
+         if( red == 35 || red == 0 )
+            red++;
+         if( green==35 || green == 0 )
+            green++;
+         if( blue==35 || blue == 0 )
+            blue++;
          (void) SCIPsnprintf(buffer, PPM_MAX_LINELEN, "%c%c%c", (unsigned char)red, (unsigned char)green, (unsigned char)blue);
       }
       else
@@ -393,14 +393,16 @@ SCIP_RETCODE printLinearCons(
    /* retransform given variables to active variables */
    SCIP_CALL( getActiveVariables(scip, activevars, activevals, &nactivevars, &activeconstant, transformed) );
 
-   if(!readerdata->rgb_relativ)
+   if( ! readerdata->rgb_relative )
    {
-      if(!printbool)
+      if( ! printbool )
+      {
          for(v = 0; v < nactivevars; ++v)
          {
             if( REALABS(activevals[v]) > *maxcoef)
                *maxcoef = REALABS(activevals[v]);
          }
+      }
       else
       {
          assert (*maxcoef > 0);
@@ -500,7 +502,7 @@ SCIP_RETCODE SCIPincludeReaderPpm(
    /* add ppm reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/ppmreader/rgbrelativ", "should the coloring values be relativ or absolute",
-         &readerdata->rgb_relativ, FALSE, DEFAULT_PPM_RGB_RELATIVE, NULL, NULL) );
+         &readerdata->rgb_relative, FALSE, DEFAULT_PPM_RGB_RELATIVE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "reading/ppmreader/rgbascii", "should the output format be binary(P6) (otherwise plain(P3) format)",
          &readerdata->rgb_ascii, FALSE, DEFAULT_PPM_RGB_ASCII, NULL, NULL) );
@@ -563,115 +565,112 @@ SCIP_RETCODE SCIPwritePpm(
 
    clearLine(linebuffer, &linecnt);
 
-   if(!(readerdata->rgb_relativ))
-   {
+   if( ! readerdata->rgb_relative )
       i_max = 2;
-   }
 
    for(i = 0; i < i_max; ++i)
    {
-      if(i)
+      if( i )
       {
          printbool = TRUE;
          SCIPdebugMsgPrint(scip, "Maximal coefficient = %g\n", maxcoef);
       }
 
+      for(c = 0; c < nconss; ++c)
+      {
+         cons = conss[c];
+         assert( cons != NULL);
 
-     for(c = 0; c < nconss; ++c)
-     {
-        cons = conss[c];
-        assert( cons != NULL);
+         /* in case the transformed is written only constraint are posted which are enabled in the current node */
+         assert(!transformed || SCIPconsIsEnabled(cons));
 
-        /* in case the transformed is written only constraint are posted which are enabled in the current node */
-        assert(!transformed || SCIPconsIsEnabled(cons));
+         conshdlr = SCIPconsGetHdlr(cons);
+         assert( conshdlr != NULL );
 
-        conshdlr = SCIPconsGetHdlr(cons);
-        assert( conshdlr != NULL );
+         conshdlrname = SCIPconshdlrGetName(conshdlr);
+         assert( transformed == SCIPconsIsTransformed(cons) );
 
-        conshdlrname = SCIPconshdlrGetName(conshdlr);
-        assert( transformed == SCIPconsIsTransformed(cons) );
+         if( strcmp(conshdlrname, "linear") == 0 )
+         {
+            consvars = SCIPgetVarsLinear(scip, cons);
+            nconsvars = SCIPgetNVarsLinear(scip, cons);
+            assert( consvars != NULL || nconsvars == 0 );
 
-        if( strcmp(conshdlrname, "linear") == 0 )
-        {
-           consvars = SCIPgetVarsLinear(scip, cons);
-           nconsvars = SCIPgetNVarsLinear(scip, cons);
-           assert( consvars != NULL || nconsvars == 0 );
+            if( nconsvars > 0 )
+            {
+               SCIP_CALL( printLinearCons(scip, file, readerdata, consvars, SCIPgetValsLinear(scip, cons),
+                     nconsvars, nvars, transformed, &maxcoef, printbool) );
+            }
+         }
+         else if( strcmp(conshdlrname, "setppc") == 0 )
+         {
+            consvars = SCIPgetVarsSetppc(scip, cons);
+            nconsvars = SCIPgetNVarsSetppc(scip, cons);
+            assert( consvars != NULL || nconsvars == 0 );
 
-           if( nconsvars > 0 )
-           {
-              SCIP_CALL( printLinearCons(scip, file, readerdata, consvars, SCIPgetValsLinear(scip, cons),
-                    nconsvars, nvars, transformed, &maxcoef, printbool) );
-           }
-        }
-        else if( strcmp(conshdlrname, "setppc") == 0 )
-        {
-           consvars = SCIPgetVarsSetppc(scip, cons);
-           nconsvars = SCIPgetNVarsSetppc(scip, cons);
-           assert( consvars != NULL || nconsvars == 0 );
+            if( nconsvars > 0 )
+            {
+               SCIP_CALL( printLinearCons(scip, file, readerdata, consvars, NULL,
+                     nconsvars, nvars, transformed, &maxcoef, printbool) );
+            }
+         }
+         else if( strcmp(conshdlrname, "logicor") == 0 )
+         {
+            consvars = SCIPgetVarsLogicor(scip, cons);
+            nconsvars = SCIPgetNVarsLogicor(scip, cons);
+            assert( consvars != NULL || nconsvars == 0 );
 
-           if( nconsvars > 0 )
-           {
-              SCIP_CALL( printLinearCons(scip, file, readerdata, consvars, NULL,
-                    nconsvars, nvars, transformed, &maxcoef, printbool) );
-           }
-        }
-        else if( strcmp(conshdlrname, "logicor") == 0 )
-        {
-           consvars = SCIPgetVarsLogicor(scip, cons);
-           nconsvars = SCIPgetNVarsLogicor(scip, cons);
-           assert( consvars != NULL || nconsvars == 0 );
+            if( nconsvars > 0 )
+            {
+               SCIP_CALL( printLinearCons(scip, file, readerdata, consvars, NULL,
+                     nconsvars, nvars, transformed, &maxcoef, printbool) );
+            }
+         }
+         else if( strcmp(conshdlrname, "knapsack") == 0 )
+         {
+            SCIP_Longint* weights;
 
-           if( nconsvars > 0 )
-           {
-              SCIP_CALL( printLinearCons(scip, file, readerdata, consvars, NULL,
-                    nconsvars, nvars, transformed, &maxcoef, printbool) );
-           }
-        }
-        else if( strcmp(conshdlrname, "knapsack") == 0 )
-        {
-           SCIP_Longint* weights;
+            consvars = SCIPgetVarsKnapsack(scip, cons);
+            nconsvars = SCIPgetNVarsKnapsack(scip, cons);
+            assert( consvars != NULL || nconsvars == 0 );
 
-           consvars = SCIPgetVarsKnapsack(scip, cons);
-           nconsvars = SCIPgetNVarsKnapsack(scip, cons);
-           assert( consvars != NULL || nconsvars == 0 );
+            /* copy Longint array to SCIP_Real array */
+            weights = SCIPgetWeightsKnapsack(scip, cons);
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
+            for( v = 0; v < nconsvars; ++v )
+               consvals[v] = (SCIP_Real)weights[v];
 
-           /* copy Longint array to SCIP_Real array */
-           weights = SCIPgetWeightsKnapsack(scip, cons);
-           SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nconsvars) );
-           for( v = 0; v < nconsvars; ++v )
-              consvals[v] = (SCIP_Real)weights[v];
+            if( nconsvars > 0 )
+            {
+               SCIP_CALL( printLinearCons(scip, file, readerdata, consvars, consvals, nconsvars, nvars, transformed, &maxcoef, printbool) );
+            }
 
-           if( nconsvars > 0 )
-           {
-              SCIP_CALL( printLinearCons(scip, file, readerdata, consvars, consvals, nconsvars, nvars, transformed, &maxcoef, printbool) );
-           }
+            SCIPfreeBufferArray(scip, &consvals);
+         }
+         else if( strcmp(conshdlrname, "varbound") == 0 )
+         {
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );
 
-           SCIPfreeBufferArray(scip, &consvals);
-        }
-        else if( strcmp(conshdlrname, "varbound") == 0 )
-        {
-           SCIP_CALL( SCIPallocBufferArray(scip, &consvars, 2) );
-           SCIP_CALL( SCIPallocBufferArray(scip, &consvals, 2) );
+            consvars[0] = SCIPgetVarVarbound(scip, cons);
+            consvars[1] = SCIPgetVbdvarVarbound(scip, cons);
 
-           consvars[0] = SCIPgetVarVarbound(scip, cons);
-           consvars[1] = SCIPgetVbdvarVarbound(scip, cons);
+            consvals[0] = 1.0;
+            consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
 
-           consvals[0] = 1.0;
-           consvals[1] = SCIPgetVbdcoefVarbound(scip, cons);
+            SCIP_CALL( printLinearCons(scip, file, readerdata, consvars, consvals, 2, nvars, transformed, &maxcoef, printbool) );
 
-           SCIP_CALL( printLinearCons(scip, file, readerdata, consvars, consvals, 2, nvars, transformed, &maxcoef, printbool) );
-
-           SCIPfreeBufferArray(scip, &consvars);
-           SCIPfreeBufferArray(scip, &consvals);
-        }
-        else
-        {
-           SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
-           SCIPinfoMessage(scip, file, "\\ ");
-           SCIP_CALL( SCIPprintCons(scip, cons, file) );
-           SCIPinfoMessage(scip, file, ";\n");
-        }
-     }
+            SCIPfreeBufferArray(scip, &consvars);
+            SCIPfreeBufferArray(scip, &consvals);
+         }
+         else
+         {
+            SCIPwarningMessage(scip, "constraint handler <%s> cannot print requested format\n", conshdlrname );
+            SCIPinfoMessage(scip, file, "\\ ");
+            SCIP_CALL( SCIPprintCons(scip, cons, file) );
+            SCIPinfoMessage(scip, file, ";\n");
+         }
+      }
    }
 
    *result = SCIP_SUCCESS;

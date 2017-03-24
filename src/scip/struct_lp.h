@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_lp.h
- * @brief  datastructures for LP management
+ * @ingroup INTERNALAPI
+ * @brief  data structures for LP management
  * @author Tobias Achterberg
  *
  *  In SCIP, the LP is defined as follows:
@@ -368,7 +369,6 @@ struct SCIP_Lp
    SCIP_Bool             lpihaspolishing;    /**< does the LPI support solution polishing? */
    SCIP_Real             lpirowrepswitch;    /**< simplex algorithm shall use row representation of the basis
                                               *   if number of rows divided by number of columns exceeds this value */
-   SCIP_Bool             lpipersistentscaling;/**< use persistent LP scaling during branch and bound */
    SCIP_Bool             divelpwasprimfeas;  /**< primal feasibility when diving started */
    SCIP_Bool             divelpwasdualfeas;  /**< dual feasibility when diving started */
 };

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_misc_select.h
+ * @ingroup PUBLICCOREAPI
  * @brief  methods for selecting (weighted) k-medians
  * @author Gregor Hendel
  *
@@ -36,7 +37,9 @@ extern "C" {
  * Selection and weighted selection algorithms
  */
 
-/**@defgroup SelectionAlgorithms Selection and weighted selection algorithms
+/**@defgroup SelectionAlgorithms Algorithms for (Weighted) Median Selection
+ * @ingroup MiscellaneousMethods
+ * @brief public methods for the selection of (weighted) k-median.
  *
  * The methods in this group perform a selection of the (weighted)  \f$ k \f$-median from an unsorted array of elements.
  * The necessary element swaps are performed in-place on the array of keys.

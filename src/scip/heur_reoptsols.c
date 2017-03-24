@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -203,12 +203,15 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
       else
          sim = SCIPgetReoptSimilarity(scip, run, SCIPgetNReoptRuns(scip)-1);
 
+      if( sim == SCIP_INVALID ) /*lint !e777*/
+         return SCIP_INVALIDRESULT;
+
       if( sim >= objsimsol )
       {
          int s;
 
          /* get solutions of a specific run */
-         SCIP_CALL( SCIPgetReopSolsRun(scip, run, sols, allocmem, &nsols) );
+         SCIP_CALL( SCIPgetReoptSolsRun(scip, run, sols, allocmem, &nsols) );
 
          /* check memory and reallocate */
          if( nsols >= allocmem )
@@ -216,7 +219,7 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
             allocmem = nsols;
             SCIP_CALL( SCIPreallocBufferArray(scip, &sols, allocmem) );
 
-            SCIP_CALL( SCIPgetReopSolsRun(scip, run, sols, allocmem, &nsols) );
+            SCIP_CALL( SCIPgetReoptSolsRun(scip, run, sols, allocmem, &nsols) );
          }
          assert(nsols <= allocmem);
 

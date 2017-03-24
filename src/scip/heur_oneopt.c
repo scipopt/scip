@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -137,7 +137,6 @@ SCIP_Real calcShiftVal(
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
    obj = SCIPvarGetObj(var);
-   shiftval = 0.0;
    shiftdown = TRUE;
 
    /* determine shifting direction and maximal possible shifting w.r.t. corresponding bound */
@@ -512,7 +511,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIP_CALL( SCIPsetBoolParam(subscip, "heuristics/oneopt/beforepresol", FALSE) );
 
       /* speed up sub-SCIP by not checking dual LP feasibility */
-      SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
 
       if( valid )
       {

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -56,8 +56,8 @@ struct SCIP_ConsData
 {
    SCIP_CONS**           conss;              /**< constraints in disjunction */
    SCIP_CONS*            relaxcons;          /**< a conjunction constraint containing the linear relaxation of the
-					      *   disjunction constraint, or NULL
-					      */
+                                              *   disjunction constraint, or NULL
+                                              */
    int                   consssize;          /**< size of conss array */
    int                   nconss;             /**< number of constraints in disjunction */
 };
@@ -104,7 +104,7 @@ SCIP_RETCODE consdataCreate(
          SCIP_CALL( SCIPtransformConss(scip, nconss, (*consdata)->conss, (*consdata)->conss) );
 
          if( (*consdata)->relaxcons != NULL )
-	 {
+         {
             SCIP_CALL( SCIPtransformCons(scip, (*consdata)->relaxcons, &(*consdata)->relaxcons) );
          }
       }
@@ -121,7 +121,7 @@ SCIP_RETCODE consdataCreate(
          if( (*consdata)->relaxcons != NULL )
          {
             SCIP_CALL( SCIPcaptureCons(scip, relaxcons) );
-	 }
+         }
       }
    }
    else
@@ -242,7 +242,7 @@ SCIP_RETCODE branchCons(
       /* if disjunctive constraint needs to be checked, the upgraded constraint also needs to be checked */
       if( SCIPconsIsChecked(cons) )
       {
-	 SCIP_CALL( SCIPsetConsChecked(scip, conss[i], TRUE) );
+         SCIP_CALL( SCIPsetConsChecked(scip, conss[i], TRUE) );
       }
 
       /* add constraints to nodes */
@@ -341,17 +341,17 @@ SCIP_RETCODE propagateCons(
        */
       if( SCIPconsIsActive(conss[c]) )
       {
-	 /* if we can globally delete the whole disjunctive constraint, because one constraint is already active, we
-	  * might need to update the check stage
-	  */
-	 if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || SCIPgetNNodes(scip) == 0 )
-	 {
-	    /* if disjunctive constraint needs to be checked, the upgraded constraint also needs to be checked */
-	    if( SCIPconsIsChecked(cons) )
-	    {
-	       SCIP_CALL( SCIPsetConsChecked(scip, conss[c], TRUE) );
-	    }
-	 }
+         /* if we can globally delete the whole disjunctive constraint, because one constraint is already active, we
+          * might need to update the check stage
+          */
+         if( SCIPgetStage(scip) == SCIP_STAGE_PRESOLVING || SCIPgetNNodes(scip) == 0 )
+         {
+            /* if disjunctive constraint needs to be checked, the upgraded constraint also needs to be checked */
+            if( SCIPconsIsChecked(cons) )
+            {
+             SCIP_CALL( SCIPsetConsChecked(scip, conss[c], TRUE) );
+            }
+         }
 
          (*ndelconss)++;
          SCIP_CALL( SCIPdelConsLocal(scip, cons) );
@@ -573,8 +573,8 @@ SCIP_DECL_CONSPROP(consPropDisjunction)
    {
       for( c = 0; c < nconss; ++c )
       {
-	 /* propagate constraint */
-	 SCIP_CALL( propagateCons(scip, conss[c], &ndelconss) );
+         /* propagate constraint */
+         SCIP_CALL( propagateCons(scip, conss[c], &ndelconss) );
       }
    }
 
@@ -612,13 +612,13 @@ SCIP_DECL_CONSPRESOL(consPresolDisjunction)
          /* add constraint to the problem */
          if( !SCIPconsIsActive(consdata->conss[0]) )
          {
-	    SCIP_CONS* subcons = consdata->conss[0];
+            SCIP_CONS* subcons = consdata->conss[0];
 
-	    /* if disjunctive constraint needs to be checked, the upgraded constraint also needs to be checked */
-	    if( SCIPconsIsChecked(conss[c]) )
-	    {
-	       SCIP_CALL( SCIPsetConsChecked(scip, subcons, TRUE) );
-	    }
+            /* if disjunctive constraint needs to be checked, the upgraded constraint also needs to be checked */
+            if( SCIPconsIsChecked(conss[c]) )
+            {
+               SCIP_CALL( SCIPsetConsChecked(scip, subcons, TRUE) );
+            }
 
             SCIP_CALL( SCIPaddCons(scip, subcons) );
          }
@@ -628,7 +628,7 @@ SCIP_DECL_CONSPRESOL(consPresolDisjunction)
 
          *result = SCIP_SUCCESS;
 
-	 continue;
+         continue;
       }
 
       /* propagate constraint */
@@ -752,95 +752,95 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
    {
       do
       {
-	 int bracketcounter = 0;
+         int bracketcounter = 0;
 
-	 if( *saveptr == '(' )
-	 {
-	    do
-	    {
-	       ++bracketcounter;
-	       ++saveptr;
+         if( *saveptr == '(' )
+         {
+            do
+            {
+               ++bracketcounter;
+               ++saveptr;
 
-	       /* find last ending bracket */
-	       while( bracketcounter > 0 )
-	       {
-		  saveptr = strpbrk(saveptr, "()");
+               /* find last ending bracket */
+               while( bracketcounter > 0 )
+               {
+                  saveptr = strpbrk(saveptr, "()");
 
-		  if( saveptr != NULL )
-		  {
-		     if( *saveptr == '(' )
-			++bracketcounter;
-		     else
-			--bracketcounter;
+                  if( saveptr != NULL )
+                  {
+                     if( *saveptr == '(' )
+                        ++bracketcounter;
+                     else
+                        --bracketcounter;
 
-		     ++saveptr;
-		  }
-		  else
-		  {
-		     SCIPdebugMsg(scip, "error parsing disjunctive constraint: \"%s\"\n", str);
-		     *success = FALSE;
-		     goto TERMINATE;
-		  }
-	       }
+                     ++saveptr;
+                  }
+                  else
+                  {
+                     SCIPdebugMsg(scip, "error parsing disjunctive constraint: \"%s\"\n", str);
+                     *success = FALSE;
+                     goto TERMINATE;
+                  }
+               }
 
-	       saveptr = strpbrk(saveptr, "(,");
-	    }
-	    while( saveptr != NULL && *saveptr == '(' );
-	 }
+               saveptr = strpbrk(saveptr, "(,");
+            }
+            while( saveptr != NULL && *saveptr == '(' );
+         }
 
-	 /* we found a ',' so the end of the first sub-constraint is determined */
-	 if( saveptr != NULL )
-	 {
-	    assert(*saveptr == ',');
+         /* we found a ',' so the end of the first sub-constraint is determined */
+         if( saveptr != NULL )
+         {
+          assert(*saveptr == ',');
 
-	    /* resize constraint array if necessary */
-	    if( nconss == sconss )
-	    {
-	       sconss = SCIPcalcMemGrowSize(scip, nconss+1);
-	       assert(nconss < sconss);
+          /* resize constraint array if necessary */
+          if( nconss == sconss )
+          {
+             sconss = SCIPcalcMemGrowSize(scip, nconss+1);
+             assert(nconss < sconss);
 
-	       SCIP_CALL( SCIPreallocBufferArray(scip, &conss, sconss) );
-	    }
+             SCIP_CALL( SCIPreallocBufferArray(scip, &conss, sconss) );
+          }
 
-	    assert(saveptr > nexttokenstart);
+          assert(saveptr > nexttokenstart);
 
-	    /* extract token for parsing */
-	    SCIP_CALL( SCIPduplicateBufferArray(scip, &token, nexttokenstart, saveptr - nexttokenstart + 1) );
-	    token[saveptr - nexttokenstart] = '\0';
+          /* extract token for parsing */
+          SCIP_CALL( SCIPduplicateBufferArray(scip, &token, nexttokenstart, saveptr - nexttokenstart + 1) );
+          token[saveptr - nexttokenstart] = '\0';
 
-	    SCIPdebugMsg(scip, "disjunctive parsing token(constraint): %s\n", token);
+          SCIPdebugMsg(scip, "disjunctive parsing token(constraint): %s\n", token);
 
-	    /* parsing a constraint, part of the disjunction */
-	    SCIP_CALL( SCIPparseCons(scip, &(conss[nconss]), token, initial, separate, enforce, FALSE, propagate, TRUE, modifiable, dynamic, removable, stickingatnode, success) );
+          /* parsing a constraint, part of the disjunction */
+          SCIP_CALL( SCIPparseCons(scip, &(conss[nconss]), token, initial, separate, enforce, FALSE, propagate, TRUE, modifiable, dynamic, removable, stickingatnode, success) );
 
-	    SCIPfreeBufferArray(scip, &token);
+          SCIPfreeBufferArray(scip, &token);
 
-	    if( *success )
-	       ++nconss;
-	    else
-	    {
-	       SCIPdebugMsg(scip, "error parsing disjunctive constraint: \"%s\"\n", str);
-	       goto TERMINATE;
-	    }
-	    /* skip ',' delimeter */
-	    ++saveptr;
-	    /* remember token start position */
-	    nexttokenstart = saveptr;
+          if( *success )
+             ++nconss;
+          else
+          {
+             SCIPdebugMsg(scip, "error parsing disjunctive constraint: \"%s\"\n", str);
+             goto TERMINATE;
+          }
+          /* skip ',' delimeter */
+          ++saveptr;
+          /* remember token start position */
+          nexttokenstart = saveptr;
 
-	    /* check if we found the last constraint, which is a conjunctive relaxation of the disjunction, and in the
-	     * CIP format marked by two consecutive ','
-	     */
-	    if( *nexttokenstart == ',' )
-	    {
-	       /* remember token start position */
-	       nexttokenstart = saveptr+1;
+          /* check if we found the last constraint, which is a conjunctive relaxation of the disjunction, and in the
+           * CIP format marked by two consecutive ','
+           */
+          if( *nexttokenstart == ',' )
+          {
+             /* remember token start position */
+             nexttokenstart = saveptr+1;
 
-	       relaxed = TRUE;
-	       break;
-	    }
+             relaxed = TRUE;
+             break;
+          }
 
-	    saveptr = strpbrk(saveptr, "(,");
-	 }
+          saveptr = strpbrk(saveptr, "(,");
+         }
       }
       while( saveptr != NULL );
    }
@@ -860,8 +860,8 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
       /* resize constraint array if necessary */
       if( nconss == sconss )
       {
-	 ++sconss;
-	 SCIP_CALL( SCIPreallocBufferArray(scip, &conss, sconss) );
+         ++sconss;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &conss, sconss) );
       }
 
       assert(saveptr > nexttokenstart);
@@ -876,7 +876,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
       SCIP_CALL( SCIPparseCons(scip, &(conss[nconss]), token, initial, separate, enforce, FALSE, propagate, TRUE, modifiable, dynamic, removable, stickingatnode, success) );
 
       if( *success )
-	 ++nconss;
+         ++nconss;
 
       SCIPfreeBufferArray(scip, &token);
    }
@@ -887,7 +887,7 @@ SCIP_DECL_CONSPARSE(consParseDisjunction)
    {
       /* create disjunctive constraint */
       SCIP_CALL( SCIPcreateConsDisjunction(scip, cons, name, relaxed ? nconss - 1: nconss, conss, relaxed ? conss[nconss - 1] : NULL,
-	    initial, enforce, check, local, modifiable, dynamic) );
+         initial, enforce, check, local, modifiable, dynamic) );
    }
 
    /* free parsed constraints */

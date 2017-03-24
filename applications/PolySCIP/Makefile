@@ -3,10 +3,10 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
+#*  SCIP is distributed under the terms of the ZIB Academic License.         *
 #*                                                                           *
 #*  You should have received a copy of the ZIB Academic License              *
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
@@ -83,7 +83,6 @@ scip:
 
 .PHONY: doc
 doc:
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scip.css);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
@@ -98,19 +97,6 @@ $(OBJDIR):
 
 $(BINDIR):
 		@-mkdir -p $(BINDIR)
-
-.PHONY: test
-test:           $(MAINFILE)
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck_cluster.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_set.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_logfiles.sh);
-		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_tmpfile_setup_scip.sh);
-		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-			$(CONTINUE) $(LOCK) "appl" $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE);
 
 .PHONY: clean
 clean:		$(OBJDIR)

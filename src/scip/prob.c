@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -973,6 +973,12 @@ SCIP_RETCODE SCIPprobAddVar(
 
       /* update the number of variables with non-zero objective coefficient */
       SCIPprobUpdateNObjVars(prob, set, 0.0, SCIPvarGetObj(var));
+
+      /* set varlocks to ensure that no dual reduction can be performed */
+      if( set->reopt_enable || !set->misc_allowdualreds )
+      {
+         SCIP_CALL( SCIPvarAddLocks(var, blkmem, set, eventqueue, 1, 1) );
+      }
 
       /* SCIP assumes that the status of objisintegral does not change after transformation. Thus, the objective of all
        * new variables beyond that stage has to be compatible. */

@@ -1,4 +1,9 @@
-check/
+check/*.sh
+check/*.awk
+check/instances
+check/locks/
+check/results/
+check/testset/short.solu
 doc/html/
 doc/footer.html
 doc/miniscippy.png

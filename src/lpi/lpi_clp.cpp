@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -98,7 +98,6 @@ struct SCIP_LPi
    int                   cstatsize;                  /**< size of cstat array */
    int                   rstatsize;                  /**< size of rstat array */
    bool                  startscratch;               /**< start from scratch? */
-   bool                  presolving;                 /**< preform preprocessing? */
    SCIP_PRICING          pricing;                    /**< SCIP pricing setting  */
    bool                  validFactorization;         /**< whether we have a valid factorization in clp */
    SCIP_Bool             solved;                     /**< was the current LP solved? */

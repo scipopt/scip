@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -96,12 +96,11 @@ SCIP_DECL_RELAXEXEC(relaxExecNlp)
    assert(nlpi != NULL);
 
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &nlpiprob, "relax-NLP") );
-   SCIP_CALL( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip),
-         SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&var2idx, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
-   SCIP_CALL( SCIPcreateConvexNlp(scip, nlpi, nlrows, nnlrows, nlpiprob, var2idx, NULL, SCIPgetCutoffbound(scip),
-         TRUE) );
-   SCIP_CALL( SCIPaddConvexNlpRows(scip, nlpi, nlpiprob, var2idx, SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
+   SCIP_CALL( SCIPcreateNlpiProb(scip, nlpi, nlrows, nnlrows, nlpiprob, var2idx, NULL, SCIPgetCutoffbound(scip),
+         TRUE, TRUE) );
+   SCIP_CALL( SCIPaddNlpiProbRows(scip, nlpi, nlpiprob, var2idx, SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
 
    /* set working limits */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -632,20 +632,7 @@ SCIP_RETCODE sepadataCreate(
    assert(sepadata != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, sepadata) );
-
-   (*sepadata)->nlrowaggrs = NULL;
-   (*sepadata)->nnlrowaggrs = 0;
-   (*sepadata)->searchedforaggr = FALSE;
-   (*sepadata)->maxecsize = 0;
-
-   (*sepadata)->lpi = NULL;
-   (*sepadata)->lpisize = 0;
-
-#ifdef SCIP_STATISTIC
-   (*sepadata)->aggrsearchtime = 0.0;
-   (*sepadata)->nrhsnlrowaggrs = 0;
-   (*sepadata)->nlhsnlrowaggrs = 0;
-#endif
+   BMSclearMemory(*sepadata);
 
    return SCIP_OKAY;
 }
@@ -674,6 +661,7 @@ SCIP_RETCODE sepadataFreeNlrows(
 
       sepadata->nlrowaggrs = NULL;
       sepadata->nnlrowaggrs = 0;
+      sepadata->nlrowaggrssize = 0;
    }
 
    return SCIP_OKAY;

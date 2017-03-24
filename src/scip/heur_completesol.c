@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -49,7 +49,7 @@
 #define DEFAULT_LPLIMFAC      2.0       /**< factor by which the limit on the number of LP depends on the node limit */
 #define DEFAULT_OBJWEIGHT     1.0       /**< weight of the original objective function (1: only original objective) */
 #define DEFAULT_BOUNDWIDENING 0.1       /**< bound widening factor applied to continuous variables
-                                         *   (0: fix variables to given solution values, 1: relax to global bounds)
+                                         *   (0: round bounds to next integer, 1: relax to global bounds)
                                          */
 #define DEFAULT_MINIMPROVE    0.01      /**< factor by which the incumbent should be improved at least */
 #define DEFAULT_MINOBJWEIGHT 1e-3       /**< minimal weight for original objective function (zero could lead to infinite solutions) */
@@ -144,7 +144,6 @@ SCIP_RETCODE createSubproblem(
    /* if there is already a solution, add an objective cutoff */
    if( SCIPgetNSols(scip) > 0 )
    {
-      cutoff = SCIPinfinity(scip);
       assert(!SCIPisInfinity(scip, SCIPgetUpperbound(scip)));
 
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
@@ -361,7 +360,8 @@ SCIP_RETCODE chgProbingBound(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             newval,             /**< new bound */
-   SCIP_BRANCHDIR        branchdir           /**< bound change direction */
+   SCIP_BRANCHDIR        branchdir,          /**< bound change direction */
+   SCIP_Bool*            success             /**< pointer to store whether the bound could be tightened */
    )
 {
    SCIP_Real ub;
@@ -369,6 +369,8 @@ SCIP_RETCODE chgProbingBound(
 
    assert(scip != NULL);
    assert(var != NULL);
+
+   (*success) = FALSE;
 
    ub = SCIPvarGetUbLocal(var);
    lb = SCIPvarGetLbLocal(var);
@@ -378,18 +380,21 @@ SCIP_RETCODE chgProbingBound(
       if( SCIPisLT(scip, newval, ub) && SCIPisGE(scip, newval, lb) )
       {
          SCIP_CALL( SCIPchgVarUbProbing(scip, var, newval) );
+         (*success) = TRUE;
       }
       break;
    case SCIP_BRANCHDIR_UPWARDS:
       if( SCIPisLE(scip, newval, ub) && SCIPisGT(scip, newval, lb) )
       {
          SCIP_CALL( SCIPchgVarLbProbing(scip, var, newval) );
+         (*success) = TRUE;
       }
       break;
    case SCIP_BRANCHDIR_FIXED:
       if( SCIPisLE(scip, newval, ub) && SCIPisGE(scip, newval, lb) )
       {
          SCIP_CALL( SCIPfixVarProbing(scip, var, newval) );
+         (*success) = TRUE;
       }
       break;
    default:
@@ -413,7 +418,9 @@ SCIP_RETCODE tightenVariables(
 #ifndef NDEBUG
    SCIP_Bool incontsection;
 #endif
+   SCIP_Bool abortearly;
    SCIP_Bool cutoff;
+   SCIP_Bool success;
    SCIP_Longint ndomreds;
    SCIP_Longint ndomredssum;
    int nbndtightenings;
@@ -430,6 +437,7 @@ SCIP_RETCODE tightenVariables(
 
    SCIPdebugMsg(scip, "> start probing along the solution values\n");
 
+   abortearly = FALSE;
    nbndtightenings = 0;
    ndomredssum = 0;
 #ifndef NDEBUG
@@ -442,11 +450,14 @@ SCIP_RETCODE tightenVariables(
       SCIP_CALL( SCIPnewProbingNode(scip) );
    }
 
-   for( v = 0; v < nvars; v++ )
+   for( v = 0; v < nvars && !abortearly; v++ )
    {
       SCIP_Real solval;
 
       assert(SCIPvarIsActive(vars[v]));
+
+      cutoff = FALSE;
+      ndomreds = 0;
 
 #ifndef NDEBUG
       incontsection |= (!SCIPvarIsIntegral(vars[v])); /*lint !e514*/
@@ -468,16 +479,13 @@ SCIP_RETCODE tightenVariables(
          continue;
       assert(!SCIPisInfinity(scip, solval) && !SCIPisInfinity(scip, -solval));
 
-      cutoff = FALSE;
-      ndomreds = 0;
-
       /* variable is binary or integer */
       if( SCIPvarIsIntegral(vars[v]) )
       {
          /* the solution value is integral, try to fix them */
          if( SCIPisIntegral(scip, solval) )
          {
-            SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_FIXED) );
+            SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_FIXED, &success) );
             tightened[SCIPvarGetProbindex(vars[v])] = TRUE;
             ++nbndtightenings;
 
@@ -494,7 +502,7 @@ SCIP_RETCODE tightenVariables(
             /* try tightening of upper bound */
             if( SCIPisLT(scip, ub, SCIPvarGetUbLocal(vars[v])) )
             {
-               SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_DOWNWARDS) );
+               SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_DOWNWARDS, &success) );
                tightened[SCIPvarGetProbindex(vars[v])] = TRUE;
                ++nbndtightenings;
 
@@ -507,7 +515,7 @@ SCIP_RETCODE tightenVariables(
             /* try tightening of lower bound */
             if( SCIPisGT(scip, lb, SCIPvarGetLbLocal(vars[v])) )
             {
-               SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_UPWARDS) );
+               SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_UPWARDS, &success) );
                tightened[SCIPvarGetProbindex(vars[v])] = TRUE;
                ++nbndtightenings;
 
@@ -525,108 +533,157 @@ SCIP_RETCODE tightenVariables(
          if( SCIPisEQ(scip, solval, SCIPvarGetLbLocal(vars[v])) || SCIPisEQ(scip, solval, SCIPvarGetUbLocal(vars[v])) )
          {
             /* open a new probing node */
-            if( SCIPgetProbingDepth(scip) < SCIP_MAXTREEDEPTH - 1 )
+            if( SCIPgetProbingDepth(scip) < SCIP_MAXTREEDEPTH-10 )
             {
                SCIP_CALL( SCIPnewProbingNode(scip) );
-            }
-            SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_FIXED) );
 
-            SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &cutoff, &ndomreds) );
+               SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_FIXED, &success) );
 
-            if( cutoff || ndomreds == 0 )
-            {
-               SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
+               /* skip propagation if the bound could not be changed, e.g., already tightened due to previous
+                * domain propagation
+                */
+               if( success )
+               {
+                  SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &cutoff, &ndomreds) );
+               }
+
+               if( cutoff )
+               {
+                  ndomreds = 0;
+                  SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
+               }
+               else
+               {
+                  assert(SCIPvarGetProbindex(vars[v]) >= 0);
+                  tightened[SCIPvarGetProbindex(vars[v])] = TRUE;
+                  ++nbndtightenings;
+#ifdef SCIP_MORE_DEBUG
+                  SCIPdebugMsg(scip, "> fix variable <%s> = [%g,%g] to %g (ndomreds=%lld)\n", SCIPvarGetName(vars[v]),
+                        SCIPvarGetLbGlobal(vars[v]), SCIPvarGetUbGlobal(vars[v]), solval, ndomreds);
+#endif
+               }
             }
             else
-            {
-               assert(SCIPvarGetProbindex(vars[v]) >= 0);
-               tightened[SCIPvarGetProbindex(vars[v])] = TRUE;
-               ++nbndtightenings;
-#ifdef SCIP_MORE_DEBUG
-               SCIPdebugMsg(scip, "> fix variable <%s> = [%g,%g] to %g (ndomreds=%lld)\n", SCIPvarGetName(vars[v]),
-                     SCIPvarGetLbGlobal(vars[v]), SCIPvarGetUbGlobal(vars[v]), solval, ndomreds);
-#endif
-            }
+               /* abort probing */
+               abortearly = TRUE;
          }
          else
          {
             SCIP_Real offset;
-            SCIP_Real ub = SCIPvarGetUbGlobal(vars[v]);
-            SCIP_Real lb = SCIPvarGetLbGlobal(vars[v]);
+            SCIP_Real newub = SCIPvarGetUbGlobal(vars[v]);
+            SCIP_Real newlb = SCIPvarGetLbGlobal(vars[v]);
 
             /* both bound are finite */
-            if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
-               offset = REALABS(heurdata->boundwidening * (ub-lb));
+            if( !SCIPisInfinity(scip, -newlb) && !SCIPisInfinity(scip, newub) )
+               offset = REALABS(heurdata->boundwidening * (newub-newlb));
             else
             {
                /* if one bound is finite, widen bound w.r.t. solution value and finite bound */
-               if( !SCIPisInfinity(scip, -lb) )
-                  offset = REALABS(heurdata->boundwidening * (solval-lb));
+               if( !SCIPisInfinity(scip, -newlb) )
+                  offset = REALABS(heurdata->boundwidening * (solval-newlb));
                else
                {
-                  assert(!SCIPisInfinity(scip, ub));
-                  offset = REALABS(heurdata->boundwidening * (ub-solval));
+                  assert(!SCIPisInfinity(scip, newub));
+                  offset = REALABS(heurdata->boundwidening * (newub-solval));
                }
             }
 
             /* update bounds */
-            ub = SCIPceil(scip, solval) + offset;
-            lb = SCIPfloor(scip, solval) - offset;
+            newub = SCIPceil(scip, solval) + offset;
+            newlb = SCIPfloor(scip, solval) - offset;
 
             /* try tightening of upper bound */
-            if( SCIPisLT(scip, ub, SCIPvarGetUbLocal(vars[v])) )
+            if( SCIPisLT(scip, newub, SCIPvarGetUbLocal(vars[v])) )
             {
                /* open a new probing node */
                if( SCIPgetProbingDepth(scip) < SCIP_MAXTREEDEPTH-10 )
                {
                   SCIP_CALL( SCIPnewProbingNode(scip) );
-               }
-               SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_DOWNWARDS) );
+                  SCIP_CALL( chgProbingBound(scip, vars[v], newub, SCIP_BRANCHDIR_DOWNWARDS, &success) );
 
-               SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &cutoff, &ndomreds) );
+                  /* skip propagation if the bound could not be changed, e.g., already tightened due to previous
+                   * domain propagation
+                   */
+                  if( success )
+                  {
+                     SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &cutoff, &ndomreds) );
+                  }
 
-               if( cutoff || ndomreds == 0 )
-               {
-                  SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
+                  if( cutoff )
+                  {
+                     ndomreds = 0;
+
+                     /* backtrack to last feasible probing node */
+                     SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
+
+                     /* we can tighten the lower bound by newub */
+                     SCIP_CALL( chgProbingBound(scip, vars[v], newub, SCIP_BRANCHDIR_UPWARDS, &success) );
+#ifdef SCIP_MORE_DEBUG
+                     SCIPdebugMsg(scip, "> tighten lower bound of variable <%s>: %g to %g\n",
+                           SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]), newub);
+#endif
+                  }
+                  else
+                  {
+                     assert(SCIPvarGetProbindex(vars[v]) >= 0);
+                     tightened[SCIPvarGetProbindex(vars[v])] = TRUE;
+                     ++nbndtightenings;
+#ifdef SCIP_MORE_DEBUG
+                     SCIPdebugMsg(scip, "> tighten upper bound of variable <%s>: %g to %g (ndomreds=%lld)\n",
+                           SCIPvarGetName(vars[v]), SCIPvarGetUbGlobal(vars[v]), newub, ndomreds);
+#endif
+                  }
                }
                else
-               {
-                  assert(SCIPvarGetProbindex(vars[v]) >= 0);
-                  tightened[SCIPvarGetProbindex(vars[v])] = TRUE;
-                  ++nbndtightenings;
-#ifdef SCIP_MORE_DEBUG
-                  SCIPdebugMsg(scip, "> tighten upper bound of variable <%s>: %g to %g (ndomreds=%lld)\n",
-                        SCIPvarGetName(vars[v]), SCIPvarGetUbGlobal(vars[v]), ub, ndomreds);
-#endif
-               }
+                  /* abort probing */
+                  abortearly = TRUE;
             }
 
             /* try tightening of lower bound */
-            if( SCIPisGT(scip, lb, SCIPvarGetLbLocal(vars[v])) )
+            if( SCIPisGT(scip, newlb, SCIPvarGetLbLocal(vars[v])) )
             {
                /* open a new probing node */
                if( SCIPgetProbingDepth(scip) < SCIP_MAXTREEDEPTH-10 )
                {
                   SCIP_CALL( SCIPnewProbingNode(scip) );
-               }
-               SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_UPWARDS) );
+                  SCIP_CALL( chgProbingBound(scip, vars[v], newlb, SCIP_BRANCHDIR_UPWARDS, &success) );
 
-               SCIP_CALL( SCIPpropagateProbing(scip, -1, &cutoff, &ndomreds) );
+                  /* skip propagation if the bound could not be changed, e.g., already tightened due to previous
+                   * domain propagation
+                   */
+                  if( success )
+                  {
+                     SCIP_CALL( SCIPpropagateProbing(scip, -1, &cutoff, &ndomreds) );
+                  }
 
-               if( cutoff || ndomreds == 0 )
-               {
-                  SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
+                  if( cutoff )
+                  {
+                     ndomreds = 0;
+
+                     /* backtrack to last feasible probing node */
+                     SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
+
+                     /* we can tighten the upper bound by newlb */
+                     SCIP_CALL( chgProbingBound(scip, vars[v], newlb, SCIP_BRANCHDIR_DOWNWARDS, &success) );
+#ifdef SCIP_MORE_DEBUG
+                     SCIPdebugMsg(scip, "> tighten upper bound of variable <%s>: %g to %g\n",
+                           SCIPvarGetName(vars[v]), SCIPvarGetUbGlobal(vars[v]), newlb);
+#endif
+                  }
+                  else
+                  {
+                     assert(SCIPvarGetProbindex(vars[v]) >= 0);
+                     tightened[SCIPvarGetProbindex(vars[v])] = TRUE;
+                     ++nbndtightenings;
+#ifdef SCIP_MORE_DEBUG
+                     SCIPdebugMsg(scip, "> tighten lower bound of variable <%s>: %g to %g (ndomreds=%lld)\n",
+                           SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]), newlb, ndomreds);
+#endif
+                  }
                }
                else
-               {
-                  assert(SCIPvarGetProbindex(vars[v]) >= 0);
-                  tightened[SCIPvarGetProbindex(vars[v])] = TRUE;
-                  ++nbndtightenings;
-#ifdef SCIP_MORE_DEBUG
-                  SCIPdebugMsg(scip, "> tighten lower bound of variable <%s>: %g to %g (ndomreds=%lld)\n",
-                        SCIPvarGetName(vars[v]), SCIPvarGetLbGlobal(vars[v]), lb, ndomreds);
-#endif
-               }
+                  /* abort probing */
+                  abortearly = TRUE;
             }
          }
       }
@@ -634,7 +691,8 @@ SCIP_RETCODE tightenVariables(
       ndomredssum += ndomreds;
    }
 
-   SCIPdebugMsg(scip, "> found %d bound tightenings and %lld induced domain reductions.\n", nbndtightenings, ndomredssum);
+   SCIPdebugMsg(scip, "> found %d bound tightenings and %lld induced domain reductions (abort=%u).\n", nbndtightenings,
+         ndomredssum, abortearly);
 
    return SCIP_OKAY;
 }
@@ -746,7 +804,7 @@ SCIP_RETCODE applyCompletesol(
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", -1) );
 #else
    /* disable statistic timing inside sub SCIP and output to console */
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", SCIP_VERBLEVEL_NONE) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", (int) SCIP_VERBLEVEL_NONE) );
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 #endif
 
@@ -785,7 +843,7 @@ SCIP_RETCODE applyCompletesol(
    }
 
    /* speed up sub-SCIP by not checking dual LP feasibility */
-   SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
 
    SCIP_CALL( SCIPtransformProb(subscip) );
    SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
@@ -935,7 +993,6 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
    }
 
    /* check the number of variables with unknown value and continuous variables with fractional value */
-   nunknown = 0;
    nfracints = 0;
 
    /* get all partial sols */
