@@ -141,6 +141,7 @@ void freeCandidateList(
 static
 SCIP_RETCODE getFSBResult(
    SCIP*                 scip,
+   SCIP_Real             lpobjval,
    BRANCHRULERESULT*     branchruleresult
    )
 {
@@ -158,7 +159,7 @@ SCIP_RETCODE getFSBResult(
    config->usedomainreduction = FALSE;
    config->recursiondepth = 1;
 
-   SCIP_CALL( selectVarStart(scip, config, NULL, status, branchruleresult, statistics, localstats) );
+   SCIP_CALL( selectVarStart(scip, config, NULL, status, branchruleresult, lpobjval, statistics, localstats) );
 
    freeLocalStatistics(scip, &localstats);
    freeStatistics(scip, &statistics);
@@ -308,7 +309,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookaheadAbbreviated)
 
    SCIP_CALL( allocateBranchRuleResultFull(scip, &branchruleresult, lpobjval, ncands) );
 
-   SCIP_CALL( getFSBResult(scip, branchruleresult) );
+   SCIP_CALL( getFSBResult(scip, lpobjval, branchruleresult) );
 
    SCIP_CALL( allocCandidateList(scip, &candidates, 4));
 
@@ -318,8 +319,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookaheadAbbreviated)
 
    for( i = 0; i < candidates->ncandidates; i++ )
    {
-      SCIP_VAR* branchvar = candidates->candidates[i]->branchvar;
-      SCIP_Real branchval = candidates->candidates[i]->branchval;
+      /*SCIP_VAR* branchvar = candidates->candidates[i]->branchvar;
+      SCIP_Real branchval = candidates->candidates[i]->branchval;*/
 
       /* TODO: down branching */
 

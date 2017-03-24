@@ -123,6 +123,7 @@ SCIP_RETCODE allocateBranchRuleResultFull(
    SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candscores, ncands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candswithscore, ncands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candslpvalue, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candsvalfrac, ncands) );
    (*branchruleresult)->ncandscores = ncands;
 
    for( i = 0; i < ncands; i++ )
@@ -145,6 +146,7 @@ SCIP_RETCODE allocateBranchRuleResultReduced(
    (*branchruleresult)->candscores = NULL;
    (*branchruleresult)->candswithscore = NULL;
    (*branchruleresult)->candslpvalue = NULL;
+   (*branchruleresult)->candsvalfrac = NULL;
    (*branchruleresult)->ncandscores = -1;
 
    return SCIP_OKAY;
@@ -159,6 +161,7 @@ void freeBranchRuleResultFull(
    assert(&(*branchruleresult)->candswithscore != NULL);
    assert(&(*branchruleresult)->candscores != NULL);
 
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->candsvalfrac);
    SCIPfreeBufferArray(scip, &(*branchruleresult)->candslpvalue);
    SCIPfreeBufferArray(scip, &(*branchruleresult)->candswithscore);
    SCIPfreeBufferArray(scip, &(*branchruleresult)->candscores);

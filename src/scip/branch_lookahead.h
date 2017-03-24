@@ -54,6 +54,9 @@ struct Configuration
    SCIP_Bool             addnonviocons;      /**< Should constraints be added, that are not violated by the base LP? */
    SCIP_Bool             downfirst;          /**< Should the down branch be executed first? */
    SCIP_Bool             abbreviated;        /**< Should the abbreviated version be used? */
+   int                   maxncands;          /**< If abbreviated == TRUE, at most how many candidates should be handled? */
+   SCIP_Bool             stopaftercutoff;    /**< Should a branching loop be stopped, if the cutoff of a variable is
+                                              *   detected? */
 };
 typedef struct Configuration CONFIGURATION;
 
@@ -204,7 +207,8 @@ SCIP_RETCODE selectVarStart(
    CONFIGURATION*        config,
    PERSISTENTDATA*       persistent,
    STATUS*               status,
-   BRANCHRULERESULT*     branchruleresult
+   BRANCHRULERESULT*     branchruleresult,
+   SCIP_Real             lpobjval
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics
    ,LOCALSTATISTICS*     localstats

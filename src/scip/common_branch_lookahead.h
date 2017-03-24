@@ -65,6 +65,7 @@ struct BranchRuleResult
    BRANCHINGDECISION*    decision;
    SCIP_Real*            candscores;
    SCIP_Real*            candslpvalue;
+   SCIP_Real*            candsvalfrac;
    SCIP_VAR**            candswithscore;
    int                   ncandscores;
 };
