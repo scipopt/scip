@@ -8,14 +8,16 @@ interface:
 parameters:
 - new paramter "constraints/indicator/maxsepanonviolated" to stop separation after separation of non violated cuts
 
+fixed bugs:
+- fixed memory leak in OSiL reader when using SOS constraints
+- fixed issue related to SCIPcreateFiniteSolCopy not being able to remove all infinite fixings
+- improved handling of infinite values in a primal solution in quadratic and nonlinear constraints
+
 performance improvements:
 - stop separation in cons_indicator after maxsepanonviolated many non violated separated cuts
 - improve choice of variable to enter support in separation of cons_indicator
 - only accept passed improving solutions in heur_indicator
 - add and use RESTRICT macro for some pointers
-
-fixed bugs:
-- fixed memory leak in OSiL reader when using SOS constraints
 
 
 SCIP version 4.0.0
@@ -108,6 +110,7 @@ parameters:
   projection of the point onto the region described by the constraint, which is supporting
 - parameters "conflict/useinflp" and "conflict/useboundlp" are now of type char (before bool)
 - add maximum branch-and-bound tree depth constant SCIP_MAXTREEDEPTH (replaces SCIPgetDepthLimit and SCIPtreeGetDepthLimit)
+- all parameters of the components presolver (starting with "presolving/components/") are now parameters of the components
   constraint handler (starting with "constraints/components/")
 - new parameter "presolving/qpkktref/updatequadbounded" to add the KKT conditions to QPs only if all variables are bounded
 - new parameter "presolving/qpkktref/updatequadindef" to add the KKT conditions to QPs only if the quadratic matrix is indefinite
