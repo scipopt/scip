@@ -1228,7 +1228,7 @@ SCIP_RETCODE executeDownBranching(
 
    oldupperbound = SCIPvarGetUbLocal(branchvar);
    oldlowerbound = SCIPvarGetLbLocal(branchvar);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "DownBranching: Var=<%s>, Proposed upper bound=<%g>, old bounds=[<%g>..<%g>], new bounds=[<%g>..<%g>]\n",
+   SCIPdebugMessage("DownBranching: Var=<%s>, Proposed upper bound=<%g>, old bounds=[<%g>..<%g>], new bounds=[<%g>..<%g>]\n",
       SCIPvarGetName(branchvar), newupperbound, oldlowerbound, oldupperbound, oldlowerbound, newupperbound);
 
    if( SCIPisFeasLT(scip, newupperbound, oldlowerbound) )
@@ -1307,7 +1307,7 @@ SCIP_RETCODE executeUpBranching(
 
    oldlowerbound = SCIPvarGetLbLocal(branchvar);
    oldupperbound = SCIPvarGetUbLocal(branchvar);
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "UpBranching: Var=<%s>, Proposed lower bound=<%g>, old bounds=[<%g>..<%g>], new bounds=[<%g>..<%g>]\n",
+   SCIPdebugMessage("UpBranching: Var=<%s>, Proposed lower bound=<%g>, old bounds=[<%g>..<%g>], new bounds=[<%g>..<%g>]\n",
       SCIPvarGetName(branchvar), newlowerbound, oldlowerbound, oldupperbound, newlowerbound, oldupperbound);
 
    if( SCIPisFeasGT(scip, newlowerbound, oldupperbound) )
