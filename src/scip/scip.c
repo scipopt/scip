@@ -37464,6 +37464,8 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
             SCIPdebugMsg(scip, "--> var <%s> is fixed to infinite value %g in the original problem, stop making solution finite\n",
                SCIPvarGetName(var), SCIPvarGetLbOriginal(var));
 
+            *success = FALSE;
+
             goto TERMINATE;
          }
       }
