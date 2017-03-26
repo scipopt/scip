@@ -3173,6 +3173,7 @@ static
 SCIP_RETCODE enforceConstraints(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -3219,6 +3220,33 @@ SCIP_RETCODE enforceConstraints(
    enforcerelaxsol = (! SCIPsetIsInfinity(set, -1 * SCIPrelaxationGetBestRelaxSolObj(relaxation))) && (!SCIPtreeHasFocusNodeLP(tree)
          || SCIPsetIsGT(set, SCIPrelaxationGetBestRelaxSolObj(relaxation), SCIPlpGetObjval(lp, set, prob)));
 
+   /* check if all constraint handlers implement the enforelax callback, otherwise enforce the LP solution */
+   for( h = 0; h < set->nconshdlrs && enforcerelaxsol; ++h )
+   {
+      if( set->conshdlrs_enfo[h]->consenforelax == NULL && ((! set->conshdlrs_enfo[h]->needscons) ||
+            (set->conshdlrs_enfo[h]->nconss > 0)) )
+      {
+         SCIP_VERBLEVEL verblevel;
+
+         enforcerelaxsol = FALSE;
+
+         verblevel = SCIP_VERBLEVEL_FULL;
+
+         if( !stat->disableenforelaxmsg && set->disp_verblevel == SCIP_VERBLEVEL_HIGH )
+         {
+            verblevel = SCIP_VERBLEVEL_HIGH;
+
+            /* remember that the disable relaxation enforcement message was posted and only post it again if the
+             * verblevel is SCIP_VERBLEVEL_FULL
+             */
+            stat->disableenforelaxmsg = TRUE;
+         }
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, verblevel, "Disable enforcement of relaxation solutions"
+               " since constraint handler %s does not implement enforelax-callback\n",
+               SCIPconshdlrGetName(set->conshdlrs_enfo[h]));
+      }
+   }
+
    /* enforce constraints by branching, applying additional cutting planes (if LP is being processed),
     * introducing new constraints, or tighten the domains
     */
@@ -3254,14 +3282,6 @@ SCIP_RETCODE enforceConstraints(
     * have to be enforced themselves
     */
    resolved = FALSE;
-
-   /* check if all constraint handlers implement the enforelax callback, otherwise enforce the LP solution */
-   for( h = 0; h < set->nconshdlrs && enforcerelaxsol; ++h )
-   {
-      if( set->conshdlrs_enfo[h]->consenforelax == NULL && ((! set->conshdlrs_enfo[h]->needscons) ||
-            (set->conshdlrs_enfo[h]->nconss > 0)) )
-         enforcerelaxsol = FALSE;
-   }
 
    for( h = 0; h < set->nconshdlrs && !resolved; ++h )
    {
@@ -4200,8 +4220,9 @@ SCIP_RETCODE solveNode(
          }
 
          /* call constraint enforcement */
-         SCIP_CALL( enforceConstraints(blkmem, set, stat, transprob, tree, lp, relaxation, sepastore, branchcand,
-               &branched, cutoff, infeasible, &propagateagain, &solvelpagain, &solverelaxagain, forcedenforcement) );
+         SCIP_CALL( enforceConstraints(blkmem, set, messagehdlr, stat, transprob, tree, lp, relaxation, sepastore,
+               branchcand, &branched, cutoff, infeasible, &propagateagain, &solvelpagain, &solverelaxagain,
+               forcedenforcement) );
          assert(branched == (tree->nchildren > 0));
          assert(!branched || (!(*cutoff) && *infeasible && !propagateagain && !solvelpagain));
          assert(!(*cutoff) || (!branched && *infeasible && !propagateagain && !solvelpagain));
@@ -4340,8 +4361,8 @@ SCIP_RETCODE solveNode(
             {
                SCIP_VAR* var = stat->lastbranchvar;
 
-               if( var != NULL && !stat->branchedunbdvar && (SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var))
-                     || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var))) )
+               if( var != NULL && !stat->branchedunbdvar && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
+                     && (SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)) || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var))) )
                {
                   SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
                      "Starting spatial branch-and-bound on unbounded variable <%s> ([%g,%g]) - cannot guarantee finite termination.\n",

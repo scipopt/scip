@@ -211,7 +211,7 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
          int s;
 
          /* get solutions of a specific run */
-         SCIP_CALL( SCIPgetReopSolsRun(scip, run, sols, allocmem, &nsols) );
+         SCIP_CALL( SCIPgetReoptSolsRun(scip, run, sols, allocmem, &nsols) );
 
          /* check memory and reallocate */
          if( nsols >= allocmem )
@@ -219,7 +219,7 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
             allocmem = nsols;
             SCIP_CALL( SCIPreallocBufferArray(scip, &sols, allocmem) );
 
-            SCIP_CALL( SCIPgetReopSolsRun(scip, run, sols, allocmem, &nsols) );
+            SCIP_CALL( SCIPgetReoptSolsRun(scip, run, sols, allocmem, &nsols) );
          }
          assert(nsols <= allocmem);
 

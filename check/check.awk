@@ -1033,7 +1033,7 @@ BEGIN {
          {
             setStatusToLimit();
          }
-         else if( (db == -infty || isPrimalDualBoundEqual()) && !isPrimalBoundBetter() )
+         else if( (db == -infty || isPrimalDualBoundEqual()) && !isPrimalBoundBetter() && !isDualBoundBetter() )
          {
             status = "ok";
             pass++;

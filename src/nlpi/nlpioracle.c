@@ -819,8 +819,8 @@ SCIP_RETCODE evalFunctionGradient(
    SCIP_NLPIORACLECONS*  cons,               /**< oracle constraint */
    const SCIP_Real*      x,                  /**< the point where to evaluate */
    SCIP_Bool             isnewx,             /**< has the point x changed since the last call to some evaluation function? */
-   SCIP_Real*            val,                /**< pointer to store function value */
-   SCIP_Real*            grad                /**< pointer to store function gradient */
+   SCIP_Real* RESTRICT   val,                /**< pointer to store function value */
+   SCIP_Real* RESTRICT   grad                /**< pointer to store function gradient */
    )
 {  /*lint --e{715}*/
    assert(oracle != NULL);

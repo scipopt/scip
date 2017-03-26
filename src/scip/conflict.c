@@ -2428,7 +2428,6 @@ SCIP_RETCODE SCIPconflictFlushConss(
 
                SCIP_CALL( SCIPnodeCutoff(tree->path[repropconflictset->validdepth], set, stat, tree, transprob, origprob,
                      reopt, lp, blkmem) );
-               cutoffdepth = repropconflictset->validdepth;
             }
 
 #ifdef SCIP_DEBUG
@@ -5683,10 +5682,7 @@ SCIP_RETCODE getFarkasProof(
       var = vars[v];
       assert(SCIPvarGetProbindex(var) == v);
 
-      /* ignore coefficients close to 0.0 */
-      if( SCIPsetIsZero(set, farkascoefs[v]) )
-         farkascoefs[v] = 0.0;
-      else if( farkascoefs[v] > 0.0 )
+      if( farkascoefs[v] > 0.0 )
       {
          assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN && SCIPcolGetLPPos(SCIPvarGetCol(var)) >= 0)
             || !SCIPsetIsPositive(set, SCIPvarGetUbLP(var, set)));
@@ -5695,11 +5691,20 @@ SCIP_RETCODE getFarkasProof(
             (*valid) = FALSE;
             goto TERMINATE;
          }
-         (*farkasact) += farkascoefs[v] * curvarubs[v];
+
+         /* ignore coefficients close to 0.0 */
+         if( SCIPsetIsZero(set, farkascoefs[v]) )
+         {
+            (*farkaslhs) -= farkascoefs[v] * SCIPvarGetUbGlobal(var);
+            farkascoefs[v] = 0.0;
+         }
+         else
+            (*farkasact) += farkascoefs[v] * curvarubs[v];
+
          SCIPdebugMessage(" -> farkasact: %g<%s>[%g,%g] -> %g\n", farkascoefs[v], SCIPvarGetName(var),
             curvarlbs[v], curvarubs[v], (*farkasact));
       }
-      else
+      else if( farkascoefs[v] < 0.0 )
       {
          assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN && SCIPcolGetLPPos(SCIPvarGetCol(var)) >= 0)
             || !SCIPsetIsNegative(set, SCIPvarGetLbLP(var, set)));
@@ -5708,7 +5713,16 @@ SCIP_RETCODE getFarkasProof(
             (*valid) = FALSE;
             goto TERMINATE;
          }
-         (*farkasact) += farkascoefs[v] * curvarlbs[v];
+
+         /* ignore coefficients close to 0.0 */
+         if( SCIPsetIsZero(set, farkascoefs[v]) )
+         {
+            (*farkaslhs) -= farkascoefs[v] * SCIPvarGetLbGlobal(var);
+            farkascoefs[v] = 0.0;
+         }
+         else
+            (*farkasact) += farkascoefs[v] * curvarlbs[v];
+
          SCIPdebugMessage(" -> farkasact: %g<%s>[%g,%g] -> %g\n", farkascoefs[v], SCIPvarGetName(var),
             curvarlbs[v], curvarubs[v], (*farkasact));
       }
@@ -5863,9 +5877,9 @@ SCIP_RETCODE applyMIR(
       /* the new constraint is tighter and we keep it */
       if( *success && separoot )
       {
-         BMScopyMemoryArray(&vals, copy_vals, transprob->nvars);
-         BMScopyMemoryArray(&varused, copy_varused, transprob->nvars);
-         BMScopyMemoryArray(&varinds, copy_varinds, transprob->nvars);
+         BMScopyMemoryArray(vals, copy_vals, transprob->nvars);
+         BMScopyMemoryArray(varused, copy_varused, transprob->nvars);
+         BMScopyMemoryArray(varinds, copy_varinds, transprob->nvars);
          (*rhs) = copy_rhs;
          (*nvarinds) = copy_nvarinds;
       }
