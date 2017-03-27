@@ -680,8 +680,6 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 #else
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
 #endif
-      assert(nvars == nbinvars ? (SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL || cutoff) : TRUE);
-
       lpstatus = SCIPgetLPSolstat(scip);
 
       SCIPdebugMsg(scip, " -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
