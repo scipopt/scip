@@ -281,7 +281,7 @@ SCIP_RETCODE SCIPsgtrieInsert(
          break;
 
       /* continue search for the correct leaf in proper subtree */
-      if( signature & (ISOLATE_LSB(signature)>>1) )
+      if( signature & (ISOLATE_LSB(currnode->mask)>>1) )
          currnode = currnode->data.inner.right;
       else
          currnode = currnode->data.inner.left;
