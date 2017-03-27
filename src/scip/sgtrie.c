@@ -154,6 +154,12 @@ SCIP_Bool signatureIsEqual(
    return ((a ^ b) & mask) == 0;
 }
 
+int SCIPsgtrieGetNElems(
+   SCIP_SGTRIE*          sgtrie
+   )
+{
+   return sgtrie->nelements;
+}
 
 SCIP_RETCODE SCIPsgtrieCreate(
    SCIP_SGTRIE**         sgtrie,
