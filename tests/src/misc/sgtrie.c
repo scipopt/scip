@@ -55,104 +55,6 @@ typedef struct IntSet
 } INTSET;
 
 static
-SCIP_DECL_SUBSET(isSubset)
-{
-   INTSET* x;
-   INTSET* y;
-   int i,j;
-
-   x = (INTSET*) a;
-   y = (INTSET*) b;
-
-   i = 0;
-   j = 0;
-
-   if( x->nelems > y->nelems )
-      return FALSE;
-
-   while( i < x->nelems && j < y->nelems )
-   {
-      if( x->elems[i] < y->elems[j] )
-         return FALSE;
-      else if( x->elems[i] > y->elems[j] )
-         ++j;
-      else
-      {
-         ++i;
-         ++j;
-      }
-   }
-
-   if( i < x->nelems )
-      return FALSE;
-
-   return TRUE;
-}
-
-static
-SCIP_DECL_SETEQ(isEqual)
-{
-   INTSET* x;
-   INTSET* y;
-   int i,j;
-
-   x = (INTSET*) a;
-   y = (INTSET*) b;
-
-   i = 0;
-   j = 0;
-
-   if( x->nelems != y->nelems )
-      return FALSE;
-
-   while( i < x->nelems && j < y->nelems )
-   {
-      if( x->elems[i++] != y->elems[j++] )
-         return FALSE;
-   }
-
-   return TRUE;
-}
-
-static
-SCIP_DECL_SETDISTANCE(getDistance)
-{
-   INTSET* x;
-   INTSET* y;
-   int i,j;
-   int dist;
-
-   x = (INTSET*) a;
-   y = (INTSET*) b;
-
-   i = 0;
-   j = 0;
-   dist = 0;
-
-   while( i < x->nelems && j < y->nelems )
-   {
-      if( x->elems[i] < y->elems[j] )
-      {
-         ++dist;
-         ++i;
-      }
-      else if( x->elems[i] > y->elems[j] )
-      {
-         ++dist;
-         ++j;
-      }
-      else
-      {
-         ++i;
-         ++j;
-      }
-   }
-
-   return dist + (x->nelems - i) + (y->nelems - j);
-}
-
-
-static
 void printSet(INTSET* set)
 {
    int i;
@@ -232,12 +134,6 @@ Test(sgtrie, first_test, .description = "tests basic functionality of sgtrie")
 
    for( i = 0; i < 7; ++i )
    {
-      uint64_t signature;
-      int k;
-      signature = 0;
-      for( k = 0; k < sets[i]->nelems; ++k )
-         UPDATE_SIGNATURE(signature, sets[i]->elems[k]);
-
       SCIP_CALL( SCIPsgtrieInsert(sgtrie, getSignature(sets[i]), sets[i]) );
    }
 
@@ -251,6 +147,15 @@ Test(sgtrie, first_test, .description = "tests basic functionality of sgtrie")
       printf("queryset: ");
       printSet(sets[i]);
       printf("subset candidates:\n");
+      for( k = 0; k < nmatches; ++k )
+      {
+         printf("  ");
+         printSet(matches[k]);
+      }
+
+      SCIPsgtrieFindSubsetPlusOneCands(sgtrie, getSignature(sets[i]), (void**) matches, &nmatches);
+
+      printf("subset plus one candidates:\n");
       for( k = 0; k < nmatches; ++k )
       {
          printf("  ");

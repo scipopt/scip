@@ -448,7 +448,7 @@ SCIP_RETCODE SCIPsgtrieFindSubsetCands(
    *nmatches = 0;
    while( node != NULL )
    {
-      if( signatureIsSubset(signature, node->prefix, node->mask) )
+      if( signatureIsSubset(node->prefix, signature, node->mask) )
       {
          /* if the node is a leaf node we check all elements if they
           * are a subset and store the matches
@@ -456,6 +456,7 @@ SCIP_RETCODE SCIPsgtrieFindSubsetCands(
          if( IS_LEAF(node) )
          {
             LEAFNODEDATA* leafdata;
+
             /* iterate all elements in this leaf node */
             leafdata = &node->data.leaf;
             do {
@@ -463,7 +464,6 @@ SCIP_RETCODE SCIPsgtrieFindSubsetCands(
                 * and add it to the matches if it is
                 */
                matches[(*nmatches)++] = leafdata->element;
-
                leafdata = leafdata->next;
             } while(leafdata != NULL);
          }
@@ -473,6 +473,10 @@ SCIP_RETCODE SCIPsgtrieFindSubsetCands(
              * at the split index
              */
             STACK_PUT(sgtrie->bufmem, candnodes, node->data.inner.left);
+
+            assert(((ISOLATE_LSB(node->mask)>>1) & node->mask) == 0);
+            assert(populationCount((ISOLATE_LSB(node->mask)>>1)) == 1);
+            assert((ISOLATE_LSB(node->mask)) & node->mask);
 
             /* if the signature has a one at the split index we must also check the right subtree */
             if( signature & (ISOLATE_LSB(node->mask)>>1) )
@@ -516,7 +520,7 @@ SCIP_RETCODE SCIPsgtrieFindSubsetPlusOneCands(
 
    while( current.node != NULL )
    {
-      uint64_t subsetmask = current.node->mask & ( signature & ~current.node->prefix );
+      uint64_t subsetmask = current.node->mask & ( current.node->prefix & ~signature );
       current.distance += populationCount(subsetmask);
 
       if( current.distance <= 1 )
