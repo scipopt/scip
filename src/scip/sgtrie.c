@@ -514,7 +514,7 @@ SCIP_RETCODE SCIPsgtrieFindSubsetPlusOneCands(
 
    *nmatches = 0;
 
-   while( current.node  != NULL )
+   while( current.node != NULL )
    {
       uint64_t subsetmask = current.node->mask & ( signature & ~current.node->prefix );
       current.distance += populationCount(subsetmask);

@@ -32,7 +32,7 @@ extern "C" {
 
 /* macro to update a signature with a given element identifier */
 #define UPDATE_SIGNATURE(signature, elemid) do { \
-   (signature) |= (UINT64_C(0x8000000000000000)>>((UINT32_C(0x9e3779b9) * ((uint32_t)(elemid)))>>26)) } while(0)
+   (signature) |= (UINT64_C(0x8000000000000000)>>((UINT32_C(0x9e3779b9) * ((uint32_t)(elemid)))>>26)); } while(0)
 
 SCIP_RETCODE SCIPsgtrieInsert(
    SCIP_SGTRIE*          sgtrie,

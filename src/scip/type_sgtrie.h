@@ -31,7 +31,6 @@ extern "C" {
 
 typedef struct SCIP_SgTrie SCIP_SGTRIE;
 typedef struct SCIP_SgTrieNode SCIP_SGTRIENODE;
-typedef struct SCIP_SgTrieQuery SCIP_SGTRIEQUERY;
 
 #ifdef __cplusplus
 }
