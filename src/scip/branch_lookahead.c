@@ -1623,17 +1623,19 @@ SCIP_RETCODE getFSBResult(
    config->abbreviated = FALSE;
    /* We want to get the scores for all variables, so we don't want to stop after a cutoff is found. */
    config->stopaftercutoff = FALSE;
-   /* Even for one candidate we want to get the corresponding values */
+   /* Even for one single candidate we want to get the corresponding values */
    config->forcebranching = TRUE;
 
    SCIP_CALL( selectVarStart(scip, config, NULL, status, branchruleresult, lpobjval, statistics, localstats) );
 
-   for( i = 0; i < branchruleresult->ncandscores; i++ )
-   {
-      SCIP_VAR* var = branchruleresult->candswithscore[i];
-      assert( var != NULL );
-      SCIPdebugMessage("%i: %s\n", i, SCIPvarGetName(branchruleresult->candswithscore[i]));
-   }
+   SCIPdebug(
+      for( i = 0; i < branchruleresult->ncandscores; i++ )
+      {
+         SCIP_VAR* var = branchruleresult->candswithscore[i];
+         assert( var != NULL );
+         SCIPdebugMessage("%i: %s\n", i, SCIPvarGetName(branchruleresult->candswithscore[i]));
+      }
+   )
 
    freeLocalStatistics(scip, &localstats);
    freeStatistics(scip, &statistics);
@@ -1688,25 +1690,31 @@ SCIP_RETCODE getBestCandidates(
    assert(candidates != NULL);
 
    SCIP_CALL( SCIPgetLPBranchCands(scip, NULL, NULL, NULL, &ncands, NULL, NULL) );
-   lpobjval = SCIPgetLPObjval(scip);
 
+   assert(ncands > 0);
    assert(candidates->ncandidates > 0);
    assert(candidates->ncandidates <= ncands);
 
+   lpobjval = SCIPgetLPObjval(scip);
+
+   /* allocate the result struct to collect the FSB scores of all branching candidates */
    SCIP_CALL( allocateBranchRuleResultFull(scip, &branchruleresult, lpobjval, ncands) );
 
-   SCIPdebugMessage("Calculating the FSB result to get a score for all candidates.\n");
+   assert(branchruleresult->ncandscores == ncands);
+
+   SCIPdebugMessage("Calculating the FSB result to get a score for all candidates.\n")
+   /* Calculate all FSB scores and collect it in the result */;
    SCIP_CALL( getFSBResult(scip, lpobjval, branchruleresult) );
 
+   /* allocate the permutation array that will contain the sorted indices (permutation[i] will contain the i-th index) */
    SCIP_CALL( SCIPallocBufferArray(scip, &permutation, branchruleresult->ncandscores) );
 
    SCIPdebugMessage("Sorting the candidates w.r.t. their FSB score.\n");
+   /* sort the branching candidates according to their FSB score contained in the result struct */
    SCIPsortDown(permutation, branchRuleScoreComp, branchruleresult, branchruleresult->ncandscores);
 
-   SCIPdebugMessage("ncands: <%i>, ncandscores: <%i>\n", ncands, branchruleresult->ncandscores);
-
-   //SCIPdebug(
-      SCIPdebugMessage("After sort:\n");
+   SCIPdebug(
+      SCIPdebugMessage("All %i candidates, sorted by their FSB score:\n", branchruleresult->ncandscores);
       for( i = 0; i < branchruleresult->ncandscores; i++ )
       {
          int sortedindex = permutation[i];
@@ -1715,27 +1723,30 @@ SCIP_RETCODE getBestCandidates(
 
          assert(var != NULL);
 
-         SCIPdebugMessage("Index %2i: Var %s Score %g\n", i, SCIPvarGetName(var), score);
+         SCIPdebugMessage(" Index %2i: Var %s Score %g\n", i, SCIPvarGetName(var), score);
       }
-   //)
+   )
 
-   SCIPdebugMessage("Selection:\n");
+   SCIPdebugMessage("Best %i candidates used for the lookahead branching:\n", candidates->ncandidates);
    for( i = 0; i < candidates->ncandidates; i++)
    {
-      int sortedindex = permutation[i];
       CANDIDATE* candidate = candidates->candidates[i];
+      int sortedindex = permutation[i];
 
+      assert(branchruleresult->candswithscore[sortedindex] != NULL);
       assert(candidate != NULL);
 
+      /* set the branching information, such that we can re-use it in the lookahead branching */
       candidate->branchvar = branchruleresult->candswithscore[sortedindex];
       candidate->branchval = branchruleresult->candslpvalue[sortedindex];
       candidate->fracval = branchruleresult->candsvalfrac[sortedindex];
 
       assert(candidate->branchvar != NULL);
 
-      SCIPdebugMessage("Index %i: Var %s Val %g\n", i, SCIPvarGetName(candidate->branchvar), candidate->branchval);
+      SCIPdebugMessage(" Index %2i: Var %s Val %g\n", i, SCIPvarGetName(candidate->branchvar), candidate->branchval);
    }
 
+   /* free the allocated resources */
    SCIPfreeBufferArray(scip, &permutation);
    freeBranchRuleResultFull(scip, &branchruleresult);
 
@@ -1759,6 +1770,11 @@ SCIP_RETCODE getAllCandidates(
 
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
 
+   assert(lpcands != NULL);
+   assert(lpcandssol != NULL);
+   assert(lpcandsfrac != NULL);
+   assert(nlpcands != NULL);
+   assert(nlpcands > 0);
    assert(nlpcands == candidates->ncandidates);
 
    for( i = 0; i < nlpcands; i++ )
@@ -2541,6 +2557,7 @@ SCIP_RETCODE selectVarStart(
 
    inprobing = SCIPinProbing(scip);
    recursiondepth = config->recursiondepth;
+
    assert(recursiondepth > 0);
 
    SCIP_CALL( SCIPgetLPBranchCands(scip, NULL, NULL, NULL, &nlpcands, NULL, NULL) );
