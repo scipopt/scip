@@ -648,6 +648,7 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/sepa.o \
 			scip/sepastore.o \
 			scip/set.o \
+			scip/sgtrie.o \
 			scip/sol.o \
 			scip/solve.o \
 			scip/stat.o \
