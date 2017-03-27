@@ -58,6 +58,13 @@ SCIP_RETCODE SCIPsgtrieFindSubsetCands(
    int*                  nmatches            /**< pointer to store how many matches where found */
    );
 
+SCIP_RETCODE SCIPsgtrieFindSubsetPlusOneCands(
+   SCIP_SGTRIE*          sgtrie,
+   uint64_t              signature,
+   void**                matches,            /**< buffer to store matches, must be big enough to hold all elements currently stored in the sgtrie */
+   int*                  nmatches            /**< pointer to store how many matches where found */
+   );
+
 void* SCIPsgtrieFindEq(
    SCIP_SGTRIE*          sgtrie,
    uint64_t              signature,

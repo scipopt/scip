@@ -488,6 +488,80 @@ SCIP_RETCODE SCIPsgtrieFindSubsetCands(
 }
 
 
+typedef struct
+{
+   SCIP_SGTRIENODE*      node;
+   int                   distance;
+}  NODEDISTPAIR;
+
+SCIP_RETCODE SCIPsgtrieFindSubsetPlusOneCands(
+   SCIP_SGTRIE*          sgtrie,
+   uint64_t              signature,
+   void**                matches,            /**< buffer to store matches, must be big enough to hold all elements currently stored in the sgtrie */
+   int*                  nmatches            /**< pointer to store how many matches where found */
+   )
+{
+   NODEDISTPAIR current;
+   NEW_STACK(NODEDISTPAIR, stack);
+
+   /* put null node on the stack to mark the end */
+   current.node = NULL;
+   STACK_PUT(sgtrie->bufmem, stack, current);
+
+   /* start with root */
+   current.node = sgtrie->root;
+   current.distance = 0;
+
+   *nmatches = 0;
+
+   while( current.node  != NULL )
+   {
+      uint64_t subsetmask = current.node->mask & ( signature & ~current.node->prefix );
+      current.distance += populationCount(subsetmask);
+
+      if( current.distance <= 1 )
+      {
+         /* if the node is a leaf node all elements are candidates for being a subset plus one extra element
+          */
+         if( IS_LEAF(current.node) )
+         {
+            LEAFNODEDATA* leafdata;
+            /* iterate all elements in this leaf node */
+            leafdata = &current.node->data.leaf;
+            do {
+               /* call user callback to check if element is a subset
+                * and add it to the matches if it is
+                */
+               matches[(*nmatches)++] = leafdata->element;
+
+               leafdata = leafdata->next;
+            } while(leafdata != NULL);
+         }
+         else
+         {
+            /* add the left and the right node to the stack with the current distance */
+            SCIP_SGTRIENODE* node;
+
+            node = current.node;
+
+            /* the left subtree can always contain a subset regardless of the bit value
+             * at the split index
+             */
+            current.node = node->data.inner.left;
+            STACK_PUT(sgtrie->bufmem, stack, current);
+
+            current.node = node->data.inner.right;
+            STACK_PUT(sgtrie->bufmem, stack, current);
+         }
+      }
+
+      current = STACK_POP(stack);
+   }
+
+   DESTROY_STACK(sgtrie->bufmem, stack);
+
+   return SCIP_OKAY;
+}
 
 void* SCIPsgtrieFindEq(
    SCIP_SGTRIE*          sgtrie,
