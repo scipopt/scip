@@ -42,10 +42,7 @@
 #define STACK_SIZE(stack) ( (stack).nelems )
 #define DESTROY_STACK(bufmem, stack) BMSfreeBufferMemoryArrayNull((bufmem), &(stack).elems)
 
-/* TODO: make portable defines that work for other compilers */
-#define POPCNT(x)  __builtin_popcountll((unsigned long long)(x))
 #define ISOLATE_LSB(x)   ((x) & (~(x)+1u))
-
 #define IS_LEAF(node)  ((node)->mask & UINT64_C(0x1))
 
 /** calculate memory size for dynamically allocated arrays (copied from scip/set.c) */
@@ -105,6 +102,27 @@ uint64_t getMaskFromDiff(
    x |= x >> 1;
 
    return x;
+}
+
+/** returns the number of bits set to one in the given integer */
+static
+int populationCount(
+   uint64_t x
+   )
+{
+#if defined(__GNUC__) && defined(__x86_64__)
+   /* for gcc in 64bit mode use the intrinsic since it will compile to a single pop count instruction */
+   return __builtin_popcountll(x);
+#else
+   /* otherwise use a software implementation (see https://en.wikipedia.org/wiki/Hamming_weight) */
+   x -= (x >> 1) & UINT64_C(0x5555555555555555);
+   x = (x & UINT64_C(0x3333333333333333)) + ((x >> 2) & UINT64_C(0x3333333333333333));
+   x = (x + (x >> 4)) & UINT64_C(0x0f0f0f0f0f0f0f0f);
+   x += x >> 8;
+   x += x >> 16;
+   x += x >> 32;
+   return (int) (x & 0x7fu);
+#endif
 }
 
 static
