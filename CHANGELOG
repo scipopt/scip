@@ -5,6 +5,7 @@ fixed bugs:
 - fixed memory leak in OSiL reader when using SOS constraints
 - fixed issue related to SCIPcreateFiniteSolCopy not being able to remove all infinite fixings
 - fixed issue in SCIPcopyLimits() w.r.t. soft time limit
+- improved handling of infinite values in a primal solution in quadratic and nonlinear constraints
 
 SCIP version 4.0.0
 ==================
