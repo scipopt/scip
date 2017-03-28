@@ -67,6 +67,8 @@ struct BranchRuleResult
    SCIP_Real*            candslpvalue;
    SCIP_Real*            candsvalfrac;
    SCIP_VAR**            candswithscore;
+   SCIP_LPISTATE**       lpistates;
+   SCIP_LPINORMS**       lpinorms;
    int                   ncandscores;
 };
 typedef struct BranchRuleResult BRANCHRULERESULT;

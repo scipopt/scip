@@ -28,6 +28,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include "lpi/lpi.h"
 #include "scip/branch_lookahead.h"
 #include "scip/clock.h"
 #include "scip/common_branch_lookahead.h"
@@ -2228,9 +2229,12 @@ SCIP_RETCODE selectVarRecursive(
          SCIP_Real bestscorelowerbound;
          SCIP_Real bestscoreupperbound;
          SCIP_Real localbaselpsolval = SCIPgetLPObjval(scip);
+         SCIP_LPI* lpi;
 
          bestscorelowerbound = SCIPvarGetLbLocal(decision->bestvar);
          bestscoreupperbound = SCIPvarGetUbLocal(decision->bestvar);
+
+         SCIP_CALL( SCIPgetLPI(scip, &lpi) );
 
          SCIPdebugMessage("Started selectVarRecursive with <%i> candidates.\n", nlpcands);
 
@@ -2433,9 +2437,23 @@ SCIP_RETCODE selectVarRecursive(
 
                   if( branchruleresult->candscores != NULL )
                   {
+                     BMS_BLKMEM* blkmem;
+                     SCIP_LPISTATE* lpistate;
+                     SCIP_LPINORMS* lpinorms;
+
+                     blkmem = SCIPblkmem(scip);
+                     SCIPlpiGetState(lpi, blkmem, &lpistate);
+                     SCIPlpiGetNorms(lpi, blkmem, &lpinorms);
+
                      branchruleresult->candscores[i] = score;
                      branchruleresult->candswithscore[i] = branchvar;
                      branchruleresult->candslpvalue[i] = branchval;
+                     branchruleresult->lpistates[i] = lpistate;
+                     branchruleresult->lpinorms[i] = lpinorms;
+
+                     /* TODO: move this to a better fitting location, as we want to keep the lpistate/lpinorms for further usage*/
+                     SCIPlpiFreeNorms(lpi, blkmem, &lpinorms);
+                     SCIPlpiFreeState(lpi, blkmem, &lpistate);
                   }
 
                   if( SCIPisGT(scip, score, bestscore) )
