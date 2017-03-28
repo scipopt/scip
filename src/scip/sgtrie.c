@@ -182,7 +182,9 @@ int SCIPsgtrieGetNElems(
 SCIP_RETCODE SCIPsgtrieCreate(
    SCIP_SGTRIE**         sgtrie,
    BMS_BLKMEM*           blkmem,
-   BMS_BUFMEM*           bufmem
+   BMS_BUFMEM*           bufmem,
+   SCIP_DECL_GETSIGNATURE ((*getsignature)),
+   SCIP_DECL_SETCMP      ((*setcmp))
    )
 {
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, sgtrie) );
@@ -190,6 +192,8 @@ SCIP_RETCODE SCIPsgtrieCreate(
    /* init other fields */
    (*sgtrie)->blkmem = blkmem;
    (*sgtrie)->bufmem = bufmem;
+   (*sgtrie)->setcmp = setcmp;
+   (*sgtrie)->getsignature = getsignature;
    (*sgtrie)->root = NULL;
    (*sgtrie)->nelements = 0;
 
@@ -237,20 +241,20 @@ void SCIPsgtrieFree(
 
 SCIP_RETCODE SCIPsgtrieInsert(
    SCIP_SGTRIE*           sgtrie,
-   uint64_t               signature,
-   void*                  data
+   void*                  elem
    )
 {
+   uint64_t         signature;
    SCIP_SGTRIENODE* currnode;
    LEAFNODEDATA*    leafdata;
    LEAFNODEDATA*    prevleafdata;
 
    currnode = sgtrie->root;
-
+   signature = sgtrie->getsignature(elem);
    if( currnode == NULL )
    {
       SCIP_CALL( allocNode(sgtrie, &currnode, signature, UINT64_C(0xFFFFFFFFFFFFFFFF)) );
-      currnode->data.leaf.element = data;
+      currnode->data.leaf.element = elem;
       currnode->data.leaf.next = NULL;
       sgtrie->root = currnode;
       return SCIP_OKAY;
@@ -278,7 +282,7 @@ SCIP_RETCODE SCIPsgtrieInsert(
          SCIP_CALL( allocNode(sgtrie, &newsuffix, signature, newsuffixmask) );
 
          /* set data in the new node */
-         newsuffix->data.leaf.element = data;
+         newsuffix->data.leaf.element = elem;
          newsuffix->data.leaf.next = NULL;
 
          /* copy data from old node */
@@ -315,7 +319,7 @@ SCIP_RETCODE SCIPsgtrieInsert(
    prevleafdata = NULL;
    do
    {
-      if( data == leafdata->element )
+      if( elem == leafdata->element || (sgtrie->setcmp != NULL && sgtrie->setcmp(SCIP_SGTRIE_SETEQ, elem, leafdata->element)) )
          return SCIP_KEYALREADYEXISTING;
 
       prevleafdata = leafdata;
@@ -324,7 +328,7 @@ SCIP_RETCODE SCIPsgtrieInsert(
 
    /* create new data element and link it to the end */
    BMSallocBlockMemory(sgtrie->blkmem, &prevleafdata->next);
-   prevleafdata->next->element = data;
+   prevleafdata->next->element = elem;
    prevleafdata->next->next = NULL;
    ++sgtrie->nelements;
 
@@ -333,10 +337,10 @@ SCIP_RETCODE SCIPsgtrieInsert(
 
 SCIP_RETCODE SCIPsgtrieRemove(
    SCIP_SGTRIE*           sgtrie,
-   uint64_t               signature,
-   void*                  data
+   void*                  elem
    )
 {
+   uint64_t          signature;
    SCIP_SGTRIENODE** prevnode;
    SCIP_SGTRIENODE** currnode;
    LEAFNODEDATA*     leafdata;
@@ -344,6 +348,7 @@ SCIP_RETCODE SCIPsgtrieRemove(
 
    prevnode = NULL;
    currnode = &sgtrie->root;
+   signature = sgtrie->getsignature(elem);
 
    /* find the correct leaf and store the parent in prevnode */
    while( ! IS_LEAF(*currnode) )
@@ -360,7 +365,7 @@ SCIP_RETCODE SCIPsgtrieRemove(
    prevleafdata = NULL;
    while( leafdata != NULL )
    {
-      if( leafdata->element == data )
+      if( leafdata->element == elem )
          break;
       prevleafdata = leafdata;
       leafdata = leafdata->next;
@@ -432,13 +437,14 @@ SCIP_RETCODE SCIPsgtrieRemove(
    return SCIP_OKAY;
 }
 
-SCIP_RETCODE SCIPsgtrieFindSubsetCands(
+SCIP_RETCODE SCIPsgtrieFindSubsets(
    SCIP_SGTRIE*          sgtrie,
-   uint64_t              signature,
+   void*                 elem,
    void**                matches,            /**< buffer to store matches, must be big enough to hold all elements currently stored in the sgtrie */
    int*                  nmatches            /**< pointer to store how many matches where found */
    )
 {
+   uint64_t signature;
    SCIP_SGTRIENODE* node;
    NEW_STACK(SCIP_SGTRIENODE*, candnodes);
 
@@ -446,6 +452,7 @@ SCIP_RETCODE SCIPsgtrieFindSubsetCands(
    STACK_PUT(sgtrie->bufmem, candnodes, NULL);
 
    *nmatches = 0;
+   signature = sgtrie->getsignature(elem);
    while( node != NULL )
    {
       if( signatureIsSubset(node->prefix, signature, node->mask) )
@@ -463,7 +470,9 @@ SCIP_RETCODE SCIPsgtrieFindSubsetCands(
                /* call user callback to check if element is a subset
                 * and add it to the matches if it is
                 */
-               matches[(*nmatches)++] = leafdata->element;
+               if( sgtrie->setcmp == NULL || sgtrie->setcmp(SCIP_SGTRIE_SUBSET, leafdata->element, elem) )
+                  matches[(*nmatches)++] = leafdata->element;
+
                leafdata = leafdata->next;
             } while(leafdata != NULL);
          }
@@ -498,13 +507,14 @@ typedef struct
    int                   distance;
 }  NODEDISTPAIR;
 
-SCIP_RETCODE SCIPsgtrieFindSubsetPlusOneCands(
+SCIP_RETCODE SCIPsgtrieFindSubsetsPlusOne(
    SCIP_SGTRIE*          sgtrie,
-   uint64_t              signature,
+   void*                 elem,
    void**                matches,            /**< buffer to store matches, must be big enough to hold all elements currently stored in the sgtrie */
    int*                  nmatches            /**< pointer to store how many matches where found */
    )
 {
+   uint64_t signature;
    NODEDISTPAIR current;
    NEW_STACK(NODEDISTPAIR, stack);
 
@@ -517,7 +527,7 @@ SCIP_RETCODE SCIPsgtrieFindSubsetPlusOneCands(
    current.distance = 0;
 
    *nmatches = 0;
-
+   signature = sgtrie->getsignature(elem);
    while( current.node != NULL )
    {
       uint64_t subsetmask = current.node->mask & ( current.node->prefix & ~signature );
@@ -536,7 +546,144 @@ SCIP_RETCODE SCIPsgtrieFindSubsetPlusOneCands(
                /* call user callback to check if element is a subset
                 * and add it to the matches if it is
                 */
-               matches[(*nmatches)++] = leafdata->element;
+
+               if( sgtrie->setcmp == NULL || sgtrie->setcmp(SCIP_SGTRIE_SUBSETPLUSONE, leafdata->element, elem) )
+                  matches[(*nmatches)++] = leafdata->element;
+
+               leafdata = leafdata->next;
+            } while(leafdata != NULL);
+         }
+         else
+         {
+            /* add the left and the right node to the stack with the current distance */
+            SCIP_SGTRIENODE* node;
+
+            node = current.node;
+
+            /* the left subtree can always contain a subset regardless of the bit value
+             * at the split index
+             */
+            current.node = node->data.inner.left;
+            STACK_PUT(sgtrie->bufmem, stack, current);
+
+            current.node = node->data.inner.right;
+            STACK_PUT(sgtrie->bufmem, stack, current);
+         }
+      }
+
+      current = STACK_POP(stack);
+   }
+
+   DESTROY_STACK(sgtrie->bufmem, stack);
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPsgtrieFindSupersets(
+   SCIP_SGTRIE*          sgtrie,
+   void*                 elem,
+   void**                matches,            /**< buffer to store matches, must be big enough to hold all elements currently stored in the sgtrie */
+   int*                  nmatches            /**< pointer to store how many matches where found */
+   )
+{
+   uint64_t signature;
+   SCIP_SGTRIENODE* node;
+   NEW_STACK(SCIP_SGTRIENODE*, candnodes);
+
+   node = sgtrie->root;
+   STACK_PUT(sgtrie->bufmem, candnodes, NULL);
+
+   *nmatches = 0;
+   signature = sgtrie->getsignature(elem);
+   while( node != NULL )
+   {
+      if( signatureIsSubset(signature, node->prefix, node->mask) )
+      {
+         /* if the node is a leaf node we check all elements if they
+          * are a subset and store the matches
+          */
+         if( IS_LEAF(node) )
+         {
+            LEAFNODEDATA* leafdata;
+
+            /* iterate all elements in this leaf node */
+            leafdata = &node->data.leaf;
+            do {
+               /* call user callback to check if element is a subset
+                * and add it to the matches if it is
+                */
+               if( sgtrie->setcmp == NULL || sgtrie->setcmp(SCIP_SGTRIE_SUBSET, elem, leafdata->element) )
+                  matches[(*nmatches)++] = leafdata->element;
+
+               leafdata = leafdata->next;
+            } while(leafdata != NULL);
+         }
+         else
+         {
+            /* the right subtree can always contain a superset regardless of the bit value
+             * at the split index
+             */
+            STACK_PUT(sgtrie->bufmem, candnodes, node->data.inner.right);
+
+            assert(((ISOLATE_LSB(node->mask)>>1) & node->mask) == 0);
+            assert(populationCount((ISOLATE_LSB(node->mask)>>1)) == 1);
+            assert((ISOLATE_LSB(node->mask)) & node->mask);
+
+            /* if the signature has a zero at the split index we must also check the left subtree */
+            if( ! (signature & (ISOLATE_LSB(node->mask)>>1)) )
+               STACK_PUT(sgtrie->bufmem, candnodes, node->data.inner.left);
+         }
+      }
+      node = STACK_POP(candnodes);
+   }
+
+   DESTROY_STACK(sgtrie->bufmem, candnodes);
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPsgtrieFindSupersetsPlusOne(
+   SCIP_SGTRIE*          sgtrie,
+   void*                 elem,
+   void**                matches,            /**< buffer to store matches, must be big enough to hold all elements currently stored in the sgtrie */
+   int*                  nmatches            /**< pointer to store how many matches where found */
+   )
+{
+   uint64_t signature;
+   NODEDISTPAIR current;
+   NEW_STACK(NODEDISTPAIR, stack);
+
+   /* put null node on the stack to mark the end */
+   current.node = NULL;
+   STACK_PUT(sgtrie->bufmem, stack, current);
+
+   /* start with root */
+   current.node = sgtrie->root;
+   current.distance = 0;
+
+   *nmatches = 0;
+   signature = sgtrie->getsignature(elem);
+   while( current.node != NULL )
+   {
+      uint64_t subsetmask = current.node->mask & ( signature & ~current.node->prefix );
+      current.distance += populationCount(subsetmask);
+
+      if( current.distance <= 1 )
+      {
+         /* if the node is a leaf node all elements are candidates for being a subset plus one extra element
+          */
+         if( IS_LEAF(current.node) )
+         {
+            LEAFNODEDATA* leafdata;
+            /* iterate all elements in this leaf node */
+            leafdata = &current.node->data.leaf;
+            do {
+               /* call user callback to check if element is a subset
+                * and add it to the matches if it is
+                */
+
+               if( sgtrie->setcmp == NULL || sgtrie->setcmp(SCIP_SGTRIE_SUBSETPLUSONE, elem, leafdata->element) )
+                  matches[(*nmatches)++] = leafdata->element;
 
                leafdata = leafdata->next;
             } while(leafdata != NULL);
@@ -569,17 +716,18 @@ SCIP_RETCODE SCIPsgtrieFindSubsetPlusOneCands(
 
 void* SCIPsgtrieFindEq(
    SCIP_SGTRIE*          sgtrie,
-   uint64_t              signature,
-   void*                 data
+   void*                 elem
    )
 {
+   uint64_t signature;
    SCIP_SGTRIENODE* currnode;
 
    /* start with the root node and distance zero */
    currnode = sgtrie->root;
-
    if( currnode == NULL )
       return NULL;
+
+   signature = sgtrie->getsignature(elem);
 
    while( TRUE )
    {
@@ -595,7 +743,7 @@ void* SCIPsgtrieFindEq(
             /* call user callback to check if element is a subset
              * and add it to the matches if it is
              */
-            if( data == leafdata->element )
+            if( elem == leafdata->element || (sgtrie->setcmp != NULL && sgtrie->setcmp(SCIP_SGTRIE_SETEQ, elem, leafdata->element)) )
                return leafdata->element;
 
             leafdata = leafdata->next;

@@ -36,13 +36,11 @@ extern "C" {
 
 SCIP_RETCODE SCIPsgtrieInsert(
    SCIP_SGTRIE*          sgtrie,
-   uint64_t              signature,
    void*                 data
    );
 
 SCIP_RETCODE SCIPsgtrieRemove(
    SCIP_SGTRIE*          sgtrie,
-   uint64_t              signature,
    void*                 data
    );
 
@@ -51,30 +49,45 @@ int SCIPsgtrieGetNElems(
    SCIP_SGTRIE*          sgtrie
    );
 
-SCIP_RETCODE SCIPsgtrieFindSubsetCands(
+SCIP_RETCODE SCIPsgtrieFindSubsets(
    SCIP_SGTRIE*          sgtrie,
-   uint64_t              signature,
+   void*                 elem,
    void**                matches,            /**< buffer to store matches, must be big enough to hold all elements currently stored in the sgtrie */
    int*                  nmatches            /**< pointer to store how many matches where found */
    );
 
-SCIP_RETCODE SCIPsgtrieFindSubsetPlusOneCands(
+SCIP_RETCODE SCIPsgtrieFindSubsetsPlusOne(
    SCIP_SGTRIE*          sgtrie,
-   uint64_t              signature,
+   void*                 elem,
+   void**                matches,            /**< buffer to store matches, must be big enough to hold all elements currently stored in the sgtrie */
+   int*                  nmatches            /**< pointer to store how many matches where found */
+   );
+
+SCIP_RETCODE SCIPsgtrieFindSupersets(
+   SCIP_SGTRIE*          sgtrie,
+   void*                 elem,
+   void**                matches,            /**< buffer to store matches, must be big enough to hold all elements currently stored in the sgtrie */
+   int*                  nmatches            /**< pointer to store how many matches where found */
+   );
+
+SCIP_RETCODE SCIPsgtrieFindSupersetsPlusOne(
+   SCIP_SGTRIE*          sgtrie,
+   void*                 elem,
    void**                matches,            /**< buffer to store matches, must be big enough to hold all elements currently stored in the sgtrie */
    int*                  nmatches            /**< pointer to store how many matches where found */
    );
 
 void* SCIPsgtrieFindEq(
    SCIP_SGTRIE*          sgtrie,
-   uint64_t              signature,
-   void*                 data
+   void*                 elem
    );
 
 SCIP_RETCODE SCIPsgtrieCreate(
    SCIP_SGTRIE**         sgtrie,
    BMS_BLKMEM*           blkmem,
-   BMS_BUFMEM*           bufmem
+   BMS_BUFMEM*           bufmem,
+   SCIP_DECL_GETSIGNATURE ((*getsignature)),
+   SCIP_DECL_SETCMP      ((*setcmp))
    );
 
 void SCIPsgtrieFree(

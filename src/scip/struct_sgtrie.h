@@ -25,6 +25,7 @@
 
 #include "scip/type_sgtrie.h"
 #include "scip/def.h"
+#include "blockmemshell/memory.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,6 +41,8 @@ struct SCIP_SgTrie
    SCIP_SGTRIENODE*      root;
    BMS_BLKMEM*           blkmem;
    BMS_BUFMEM*           bufmem;
+   SCIP_DECL_SETCMP      ((*setcmp));
+   SCIP_DECL_GETSIGNATURE ((*getsignature));
 };
 
 struct InnerNodeData

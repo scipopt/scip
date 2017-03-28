@@ -71,10 +71,102 @@ void printSet(INTSET* set)
 }
 
 static
-uint64_t getSignature(INTSET* set)
+SCIP_DECL_SETCMP(cmpSets)
 {
+   INTSET* x;
+   INTSET* y;
+   int i,j;
+
+   x = (INTSET*) a;
+   y = (INTSET*) b;
+
+   i = 0;
+   j = 0;
+   switch(op)
+   {
+      case SCIP_SGTRIE_SETEQ:
+         if( x->nelems != y->nelems )
+            return FALSE;
+
+         while( i < x->nelems && j < y->nelems )
+         {
+            if( x->elems[i++] != y->elems[j++] )
+               return FALSE;
+         }
+
+         return TRUE;
+      case SCIP_SGTRIE_SUBSET:
+         if( x->nelems > y->nelems )
+            return FALSE;
+
+         while( i < x->nelems && j < y->nelems )
+         {
+            if( x->elems[i] < y->elems[j] )
+               return FALSE;
+            else if( x->elems[i] > y->elems[j] )
+               ++j;
+            else
+            {
+               ++i;
+               ++j;
+            }
+         }
+
+         if( i < x->nelems )
+            return FALSE;
+
+         return TRUE;
+      case SCIP_SGTRIE_SUBSETPLUSONE:
+      {
+         int distance;
+
+         if( x->nelems > y->nelems + 1 )
+            return FALSE;
+
+         distance = 0;
+
+         while( i < x->nelems && j < y->nelems )
+         {
+            if( x->elems[i] < y->elems[j] )
+            {
+               ++distance;
+               if( distance > 1 )
+                  return FALSE;
+               ++i;
+            }
+            else if( x->elems[i] > y->elems[j] )
+               ++j;
+            else
+            {
+               ++i;
+               ++j;
+            }
+         }
+
+         while( i < x->nelems )
+         {
+            ++distance;
+            if( distance > 1 )
+               return FALSE;
+            ++i;
+         }
+
+         return TRUE;
+      }
+   }
+
+   assert(FALSE);
+   return FALSE;
+}
+
+static
+SCIP_DECL_GETSIGNATURE(getSignature)
+{
+   INTSET* set;
    int k;
    uint64_t signature = 0;
+
+   set = (INTSET*) a;
 
    for( k = 0; k < set->nelems; ++k )
    {
@@ -130,19 +222,18 @@ Test(sgtrie, first_test, .description = "tests basic functionality of sgtrie")
    g.elems[1] = 4;
    g.elems[2] = 5;
 
-   SCIP_CALL( SCIPsgtrieCreate(&sgtrie, SCIPblkmem(scip), SCIPbuffer(scip)) );
+   SCIP_CALL( SCIPsgtrieCreate(&sgtrie, SCIPblkmem(scip), SCIPbuffer(scip), getSignature, cmpSets) );
 
    for( i = 0; i < 7; ++i )
    {
-      SCIP_CALL( SCIPsgtrieInsert(sgtrie, getSignature(sets[i]), sets[i]) );
+      SCIP_CALL( SCIPsgtrieInsert(sgtrie, sets[i]) );
    }
-
 
    for( i = 0; i < 7; ++i )
    {
       int k;
 
-      SCIP_CALL( SCIPsgtrieFindSubsetCands(sgtrie, getSignature(sets[i]), (void**) matches, &nmatches) );
+      SCIP_CALL( SCIPsgtrieFindSubsets(sgtrie, sets[i], (void**) matches, &nmatches) );
 
       printf("queryset: ");
       printSet(sets[i]);
@@ -153,7 +244,7 @@ Test(sgtrie, first_test, .description = "tests basic functionality of sgtrie")
          printSet(matches[k]);
       }
 
-      SCIP_CALL( SCIPsgtrieFindSubsetPlusOneCands(sgtrie, getSignature(sets[i]), (void**) matches, &nmatches) );
+      SCIP_CALL( SCIPsgtrieFindSubsetsPlusOne(sgtrie, sets[i], (void**) matches, &nmatches) );
 
       printf("subset plus one candidates:\n");
       for( k = 0; k < nmatches; ++k )
