@@ -2,9 +2,34 @@
 
 export LANG=C
 
-FILES=$@
+# if called from another directory, change to the directory of this script
+# this is needed to find the awk scripts used
+cd $(dirname $0)
+
+# first parameter is the directory into which the .res files shoule be written
+TARGET_DIR=$1
+# all other parameters are handled as problem files
+FILES=${@:2}
+
 RESFILES=""
 REDRESFILES=""
+
+VERSION=""
+
+for FILE in $FILES
+do
+    echo "File '$FILE'"
+    NEXT_VERSION=$(echo "$FILE" | rev | cut -d. -f10-11 | rev) # separated by '.', the version is on the 10th and 11th place from the end
+    if [[ $VERSION = "" ]]
+    then
+        VERSION=$NEXT_VERSION
+    elif [[ $NEXT_VERSION != $VERSION ]]
+    then
+        echo "ERROR: File '$FILE' has not the same version as the previous files. Expected: $VERSION, Was: $NEXT_VERSION"
+        exit 1
+    fi
+    echo
+done
 
 for FILE in $FILES
 do
@@ -35,8 +60,5 @@ do
     REDRESFILES="$REDRESFILES $REDRESFILE"
 done
 
-echo $RESFILES
-echo $REDRESFILES
-
-./allcmpres.sh $RESFILES | tee $DIR/comparisonStandard
-./allcmpres.sh $REDRESFILES | tee $DIR/comparisonWOBranchTime
+./allcmpres.sh $RESFILES | tee $TARGET_DIR/$VERSION.normal.cmpres
+./allcmpres.sh $REDRESFILES | tee $TARGET_DIR/$VERSION.woBranchTime.cmpres
