@@ -112,6 +112,10 @@ depend:		$(SCIPDIR)
 		| sed '\''s|$(GAMSIODIR).*h||g'\'' \
 		>$(MAINDEP)'
 
+.PHONY: test
+test:
+		./test.sh $(MAINFILE)
+
 -include	$(MAINDEP)
 
 $(MAINFILE):	$(LIBDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
