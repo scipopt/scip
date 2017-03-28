@@ -1487,25 +1487,19 @@ SCIP_RETCODE cutsTransformMIRRow(
                uselb = TRUE;
             else if( SCIPsetIsInfinity(set, -bestlb) ) /* if there is no lb, use ub */
                uselb = FALSE;
-            else if( mircoef[v] > 0.0 )
+            else if( mircoef[v] > 0.0 && bestlbtype >= -1 )
             {
-               if( !SCIPsetIsNegative(set, glblb) ) /* choosing lb decreases rhs */
-                  uselb = TRUE;
-               else if( !SCIPsetIsPositive(set, glbub) ) /* choosing ub decreases rhs */
-                  uselb = FALSE;
-               else
-                  uselb = (REALABS(glblb) < REALABS(glbub)); /* choose side that increase rhs as less as possible */
+               assert(!SCIPsetIsInfinity(set, glblb));
+               uselb = TRUE; /* lower bound contributes to minimal activity */
+            }
+            else if( mircoef[v] < 0.0 && bestubtype >= -1 )
+            {
+               assert(!SCIPsetIsInfinity(set, glbub));
+               uselb = FALSE; /* upper bound contributes to minimal activity */
             }
             else
             {
-               assert(mircoef[v] < 0.0);
-
-               if( !SCIPsetIsPositive(set, glblb) ) /* choosing lb decreases rhs */
-                  uselb = TRUE;
-               else if( !SCIPsetIsNegative(set, glbub) ) /* choosing ub decreases rhs */
-                  uselb = FALSE;
-               else
-                  uselb = (REALABS(glblb) < REALABS(glbub)); /* choose side that increase rhs as less as possible */
+               uselb = (SCIPvarGetLbLocal(var) - glblb < glbub - SCIPvarGetUbLocal(var));
             }
          }
       }
