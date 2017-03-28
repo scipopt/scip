@@ -802,9 +802,19 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
 static
 SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsIpopt)
 {
+   int i;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+
+   /* If some variable is fixed or unfixed, then better don't reoptimize the NLP in the next solve.
+    * Calling Optimize instead of ReOptimize should remove fixed variables from the problem that is solved by Ipopt.
+    * This way, the variable fixing is satisfied exactly in a solution, see also #1254.
+    */
+   for( i = 0; i < nvars && !problem->firstrun; ++i )
+      if( (SCIPnlpiOracleGetVarLbs(problem->oracle)[indices[i]] == SCIPnlpiOracleGetVarUbs(problem->oracle)[indices[i]]) != (lbs[i] == ubs[i]) )
+         problem->firstrun = TRUE;
 
    SCIP_CALL( SCIPnlpiOracleChgVarBounds(problem->oracle, nvars, indices, lbs, ubs) );
 
