@@ -130,7 +130,7 @@ Test(sgtrie, first_test, .description = "tests basic functionality of sgtrie")
    g.elems[1] = 4;
    g.elems[2] = 5;
 
-   SCIPsgtrieCreate(&sgtrie, SCIPblkmem(scip), SCIPbuffer(scip));
+   SCIP_CALL( SCIPsgtrieCreate(&sgtrie, SCIPblkmem(scip), SCIPbuffer(scip)) );
 
    for( i = 0; i < 7; ++i )
    {
@@ -142,7 +142,7 @@ Test(sgtrie, first_test, .description = "tests basic functionality of sgtrie")
    {
       int k;
 
-      SCIPsgtrieFindSubsetCands(sgtrie, getSignature(sets[i]), (void**) matches, &nmatches);
+      SCIP_CALL( SCIPsgtrieFindSubsetCands(sgtrie, getSignature(sets[i]), (void**) matches, &nmatches) );
 
       printf("queryset: ");
       printSet(sets[i]);
@@ -153,7 +153,7 @@ Test(sgtrie, first_test, .description = "tests basic functionality of sgtrie")
          printSet(matches[k]);
       }
 
-      SCIPsgtrieFindSubsetPlusOneCands(sgtrie, getSignature(sets[i]), (void**) matches, &nmatches);
+      SCIP_CALL( SCIPsgtrieFindSubsetPlusOneCands(sgtrie, getSignature(sets[i]), (void**) matches, &nmatches) );
 
       printf("subset plus one candidates:\n");
       for( k = 0; k < nmatches; ++k )
