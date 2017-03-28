@@ -4067,14 +4067,12 @@ SCIP_RETCODE copySofttimelimit(
    {
       SCIP_Real timelimit = -1.0;
 
-#ifdef COPYSOFTTIME
       SCIP_CALL( SCIPgetRealParam(sourcescip, "limits/softtime", &timelimit) );
       if( !SCIPisNegative(sourcescip, timelimit) )
       {
          timelimit -= SCIPgetSolvingTime(sourcescip);
          timelimit = MAX(0.0, timelimit);
       }
-#endif
 
       SCIP_CALL( SCIPsetRealParam(targetscip, "limits/softtime", timelimit) );
    }
