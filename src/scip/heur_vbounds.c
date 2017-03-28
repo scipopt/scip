@@ -623,7 +623,7 @@ SCIP_RETCODE applyVbounds(
 
          if( SCIPisInfinity(scip, newbound) )
          {
-            newbound = SCIPceil(scip, SCIPvarGetLbLocal(lastfixedvar) + 0.5);
+            newbound = SCIPvarGetLbLocal(lastfixedvar) + 1.0;
 
             /* increase lower bound */
             SCIP_CALL( SCIPchgVarLbProbing(scip, lastfixedvar, newbound) );
@@ -640,7 +640,7 @@ SCIP_RETCODE applyVbounds(
 
          if( SCIPisInfinity(scip, -newbound) )
          {
-            newbound = SCIPfloor(scip, SCIPvarGetUbLocal(lastfixedvar) - 0.5);
+            newbound = SCIPvarGetUbLocal(lastfixedvar) - 1.0;
 
             /* decrease lower bound */
             SCIP_CALL( SCIPchgVarUbProbing(scip, lastfixedvar, newbound) );
