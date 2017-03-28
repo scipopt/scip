@@ -142,8 +142,18 @@
 #define SCIP_DEFAULT_CONF_WEIGHTREPROPDEPTH 0.1 /**< weight of the repropagation depth of a conflict used in score calculation */
 #define SCIP_DEFAULT_CONF_WEIGHTVALIDDEPTH  1.0 /**< weight of the valid depth of a conflict used in score calculation */
 #define SCIP_DEFAULT_CONF_MINIMPROVE       0.05 /**< minimal improvement of primal bound to remove conflicts based on a previous incumbent */
-#define SCIP_DEFAULT_CONF_DUALRAYPRESOL       0 /**< which presolving strategy should be used for dualray constraints? (0: no presolving) */
-
+#define SCIP_DEFAULT_CONF_DUALRAYPRESOL       0 /**< which presolving strategy should be used for dualray constraints?
+                                                 *   (0: no presolving,
+                                                 *    1: keep variables contributing with its local bound
+                                                 *    2: keep variables contributing with its global bound
+                                                 *    3: keep variables contributing with its global bound and add a few
+                                                 *       variables contributing with its local bound such that the
+                                                 *       constraint is not globally redundant
+                                                 */
+#define SCIP_DEFAULT_CONF_REMOVECONTS       'd' /**< try to sparsify the dualray proof by removing continuous variables
+                                                 *   ([d]on't remove, remove [a]ll, variables with active [l]ocal or [g]lobal bound)
+                                                 */
+#define SCIP_DEFAULT_CONF_SEPAKNAPSACK    FALSE /**< separate knapsack covers from dualray proof */
 
 /* Conflict Analysis (dual ray) */
 
@@ -1371,9 +1381,19 @@ SCIP_RETCODE SCIPsetCreate(
          "weight of the valid depth of a conflict used in score calculation",
          &(*set)->conf_weightvaliddepth, TRUE, SCIP_DEFAULT_CONF_WEIGHTVALIDDEPTH, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "constraints/presolstrategy",
-         "which presolving strategy should be used for dualray constraints? (0: no presolving)",
-         &(*set)->conf_dualraypresolstrat, TRUE, SCIP_DEFAULT_CONF_DUALRAYPRESOL, 0, 2,
+         "conflict/presolstrategy",
+         "0: no presolving, 1: keep only local bounds, 2: keep only global bounds, 3: remove as many local bounds such that the proof is locally valid.",
+         &(*set)->conf_dualraypresolstrat, TRUE, SCIP_DEFAULT_CONF_DUALRAYPRESOL, 0, 3,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
+         "conflict/removeconts",
+         "try to sparsify the dualray proof by removing continuous variables ([d]on't remove, remove [a]ll, variables with active [l]ocal or [g]lobal bound)",
+         &(*set)->conf_removecont, TRUE, SCIP_DEFAULT_CONF_REMOVECONTS, "dalg",
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/sepaknapsack",
+         "separate knapsack covers from dualray proof",
+         &(*set)->conf_sepaknapsack, FALSE, SCIP_DEFAULT_CONF_SEPAKNAPSACK,
          NULL, NULL) );
 
    /* constraint parameters */

@@ -69,20 +69,23 @@ struct SCIP_ConflictSet
    int                   insertdepth;        /**< depth level where constraint should be added */
    int                   conflictdepth;      /**< depth in the tree where the conflict set yields a conflict */
    int                   repropdepth;        /**< depth at which the conflict set triggers a deduction */
+   SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP, propagation */
    unsigned int          repropagate:1;      /**< should the conflict constraint trigger a repropagation? */
    unsigned int          depthcalced:1;      /**< are the conflict and repropagation depth calculated? */
    unsigned int          sorted:1;           /**< is the conflict set sorted */
    unsigned int          usescutoffbound:1;  /**< is the conflict based on the cutoff bound? */
-   SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP, propagation */
 };
 
 /** set of conflicting bound changes */
 struct SCIP_ProofSet
 {
-   SCIP_VAR**            vars;
-   SCIP_Real*            coefs;
-   SCIP_Real             rhs;
-   SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP, propagation */
+   SCIP_VAR**            vars;               /**< variables on the proofset */
+   SCIP_Real*            coefs;              /**< coefficients within the proof constraint */
+   SCIP_Real*            scores;             /**< scores of the variables */
+   SCIP_Real             rhs;                /**< right-hand side of the proof */
+   int                   nvars;              /**< number of variables in the proofset */
+   int                   varssize;           /**< size of vars, confs, and scores arrays */
+   SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP */
 };
 
 /** set of LP bound change */
@@ -161,15 +164,16 @@ struct SCIP_Conflict
    SCIP_CLOCK*           pseudoanalyzetime;  /**< time used for pseudo solution conflict analysis */
    SCIP_PQUEUE*          bdchgqueue;         /**< unprocessed conflict bound changes */
    SCIP_PQUEUE*          forcedbdchgqueue;   /**< unprocessed conflict bound changes that must be resolved */
+   SCIP_PROOFSET*        proofset;           /**< proof sets found at the current node */
    SCIP_PROOFSET**       proofsets;          /**< proof sets found at the current node */
    SCIP_CONFLICTSET*     conflictset;        /**< bound changes resembling the current conflict set */
    SCIP_CONFLICTSET**    conflictsets;       /**< conflict sets found at the current node */
    SCIP_Real*            conflictsetscores;  /**< score values of the conflict sets found at the current node */
    SCIP_BDCHGINFO**      tmpbdchginfos;      /**< temporarily created bound change information data */
-   int                   proofsetssize;      /**< size of proofsets array */
-   int                   nproofsets;         /**< number of available proof sets (used slots in proofsets array) */
    int                   conflictsetssize;   /**< size of conflictsets array */
    int                   nconflictsets;      /**< number of available conflict sets (used slots in conflictsets array) */
+   int                   proofsetssize;      /**< size of proofsets array */
+   int                   nproofsets;         /**< number of available proof sets (used slots in proofsets array) */
    int                   tmpbdchginfossize;  /**< size of tmpbdchginfos array */
    int                   ntmpbdchginfos;     /**< number of temporary created bound change information data */
    int                   count;              /**< conflict set counter to label binary conflict variables with */

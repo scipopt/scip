@@ -1480,28 +1480,32 @@ SCIP_RETCODE cutsTransformMIRRow(
          {
             SCIP_Real glbub = SCIPvarGetUbGlobal(var);
             SCIP_Real glblb = SCIPvarGetLbGlobal(var);
-            SCIP_Real distlb = REALABS(glblb - bestlb);
-            SCIP_Real distub = REALABS(glbub - bestub);
 
             assert(!SCIPsetIsInfinity(set, -bestlb) || !SCIPsetIsInfinity(set, bestub));
 
-            if( SCIPsetIsInfinity(set, -bestlb) )
+            if( SCIPsetIsInfinity(set, bestub) ) /* if there is no ub, use lb */
+               uselb = TRUE;
+            else if( SCIPsetIsInfinity(set, -bestlb) ) /* if there is no lb, use ub */
                uselb = FALSE;
-            else if( !SCIPsetIsNegative(set, bestlb) )
+            else if( mircoef[v] > 0.0 )
             {
-               if( SCIPsetIsInfinity(set, bestub) )
+               if( !SCIPsetIsNegative(set, glblb) ) /* choosing lb decreases rhs */
                   uselb = TRUE;
-               else if( SCIPsetIsZero(set, glblb) )
-                  uselb = TRUE;
-               else if( SCIPsetIsLE(set, distlb, distub) )
-                  uselb = TRUE;
-               else
+               else if( !SCIPsetIsPositive(set, glbub) ) /* choosing ub decreases rhs */
                   uselb = FALSE;
+               else
+                  uselb = (REALABS(glblb) < REALABS(glbub)); /* choose side that increase rhs as less as possible */
             }
             else
             {
-               assert(!SCIPsetIsInfinity(set, -bestlb));
-               uselb = TRUE;
+               assert(mircoef[v] < 0.0);
+
+               if( !SCIPsetIsPositive(set, glblb) ) /* choosing lb decreases rhs */
+                  uselb = TRUE;
+               else if( !SCIPsetIsNegative(set, glbub) ) /* choosing ub decreases rhs */
+                  uselb = FALSE;
+               else
+                  uselb = (REALABS(glblb) < REALABS(glbub)); /* choose side that increase rhs as less as possible */
             }
          }
       }

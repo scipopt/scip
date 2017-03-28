@@ -57,8 +57,12 @@ typedef enum SCIP_ConflictType SCIP_CONFTYPE;
 enum SCIP_ConflictPresolStrat
 {
    SCIP_CONFPRES_DISABLED     = 0,                /**< no presolving */
-   SCIP_CONFPRES_SIMPLE       = 1,                /**< remove all variables contributing with its global bound */
-   SCIP_CONFPRES_EXHAUSTIVE   = 2                 /**< split into two constraints */
+   SCIP_CONFPRES_ONLYLOCAL    = 1,                /**< keep variables contributing with its local bound */
+   SCIP_CONFPRES_ONLYGLOBAL   = 2,                /**< keep variables contributing with its global bound */
+   SCIP_CONFPRES_BOTH         = 3                 /**< keep variables contributing with its global bound and add a few
+                                                   *   variables contributing with its local bound such that the
+                                                   *   constraint is not globally redundant
+                                                   */
 };
 typedef enum SCIP_ConflictPresolStrat SCIP_CONFPRES;
 
