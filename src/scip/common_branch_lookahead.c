@@ -120,8 +120,10 @@ SCIP_RETCODE allocateBranchRuleResultFull(
    int i;
 
    SCIP_CALL( allocateBranchRuleResultReduced(scip, branchruleresult, lpobjval) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->lpinorms, ncands) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->lpistates, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->downlpinorms, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->downlpistates, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->uplpinorms, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->uplpistates, ncands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candscores, ncands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candswithscore, ncands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candslpvalue, ncands) );
@@ -149,8 +151,10 @@ SCIP_RETCODE allocateBranchRuleResultReduced(
    (*branchruleresult)->candswithscore = NULL;
    (*branchruleresult)->candslpvalue = NULL;
    (*branchruleresult)->candsvalfrac = NULL;
-   (*branchruleresult)->lpistates = NULL;
-   (*branchruleresult)->lpinorms = NULL;
+   (*branchruleresult)->uplpistates = NULL;
+   (*branchruleresult)->uplpinorms = NULL;
+   (*branchruleresult)->downlpistates = NULL;
+   (*branchruleresult)->downlpinorms = NULL;
    (*branchruleresult)->ncandscores = -1;
 
    return SCIP_OKAY;
@@ -169,8 +173,10 @@ void freeBranchRuleResultFull(
    SCIPfreeBufferArray(scip, &(*branchruleresult)->candslpvalue);
    SCIPfreeBufferArray(scip, &(*branchruleresult)->candswithscore);
    SCIPfreeBufferArray(scip, &(*branchruleresult)->candscores);
-   SCIPfreeBufferArray(scip, &(*branchruleresult)->lpistates);
-   SCIPfreeBufferArray(scip, &(*branchruleresult)->lpinorms);
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->uplpistates);
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->uplpinorms);
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->downlpistates);
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->downlpinorms);
    freeBranchRuleResultReduced(scip, branchruleresult);
 }
 

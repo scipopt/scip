@@ -174,7 +174,7 @@ typedef struct
    SCIP_VAR*             branchvar;
    SCIP_Real             branchval;
    SCIP_Real             fracval;
-   /* TODO: add the lp basis etc. here for re-usage? */
+   /* TODO: add the up/down lp basis etc. here for re-usage? */
 } CANDIDATE;
 
 typedef struct
@@ -1207,9 +1207,7 @@ void freeLocalStatistics(
 static
 SCIP_RETCODE executeDownBranching(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             branchvar,          /**< variable to branch on */
-   SCIP_Real             branchvarsolval,    /**< Current (fractional) solution value of the variable. This value
-                                              *   rounded down will be the upper bound of the new node. */
+   CANDIDATE*            candidate,
    BRANCHINGRESULTDATA*  resultdata,         /**< pointer to the result data which gets filled with the status */
    STATUS*               status
    )
@@ -1218,14 +1216,16 @@ SCIP_RETCODE executeDownBranching(
    SCIP_Real oldlowerbound;
    SCIP_Real newupperbound;
    SCIP_LPSOLSTAT solstat;
+   SCIP_VAR* branchvar = candidate->branchvar;
+   SCIP_Real branchval = candidate->branchval;
 
    assert(scip != NULL);
    assert(branchvar != NULL);
-   assert(!SCIPisFeasIntegral(scip, branchvarsolval));
+   assert(!SCIPisFeasIntegral(scip, branchval));
    assert(resultdata != NULL);
 
    /* round the given value down, so that it can be used as the new upper bound */
-   newupperbound = SCIPfeasFloor(scip, branchvarsolval);
+   newupperbound = SCIPfeasFloor(scip, branchval);
 
    oldupperbound = SCIPvarGetUbLocal(branchvar);
    oldlowerbound = SCIPvarGetLbLocal(branchvar);
@@ -1286,9 +1286,7 @@ SCIP_RETCODE executeDownBranching(
 static
 SCIP_RETCODE executeUpBranching(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             branchvar,          /**< variable to branch on */
-   SCIP_Real             branchvarsolval,    /**< Current (fractional) solution value of the variable. This value
-                                              *   rounded up will be the lower bound of the new node. */
+   CANDIDATE*            candidate,
    BRANCHINGRESULTDATA*  resultdata,         /**< pointer to the result data which gets filled with the status */
    STATUS*               status
    )
@@ -1297,14 +1295,16 @@ SCIP_RETCODE executeUpBranching(
    SCIP_Real oldupperbound;
    SCIP_Real newlowerbound;
    SCIP_LPSOLSTAT solstat;
+   SCIP_VAR* branchvar = candidate->branchvar;
+   SCIP_Real branchval = candidate->branchval;
 
    assert(scip != NULL );
    assert(branchvar != NULL );
-   assert(!SCIPisFeasIntegral(scip, branchvarsolval));
+   assert(!SCIPisFeasIntegral(scip, branchval));
    assert(resultdata != NULL );
 
    /* round the given value up, so that it can be used as the new lower bound */
-   newlowerbound = SCIPfeasCeil(scip, branchvarsolval);
+   newlowerbound = SCIPfeasCeil(scip, branchval);
 
    oldlowerbound = SCIPvarGetLbLocal(branchvar);
    oldupperbound = SCIPvarGetUbLocal(branchvar);
@@ -1774,7 +1774,6 @@ SCIP_RETCODE getAllCandidates(
    assert(lpcands != NULL);
    assert(lpcandssol != NULL);
    assert(lpcandsfrac != NULL);
-   assert(nlpcands != NULL);
    assert(nlpcands > 0);
    assert(nlpcands == candidates->ncandidates);
 
@@ -1839,9 +1838,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
    PERSISTENTDATA*       persistent,
    CONFIGURATION*        config,
    SCIP_SOL*             baselpsol,
-   SCIP_VAR*             branchvar,
-   SCIP_Real             branchval,
-   SCIP_Real             branchvalfrac,
+   CANDIDATE*            candidate,
    SCIP_Real             localbaselpsolval,
    int                   probingdepth,
    int                   recursiondepth,
@@ -1855,6 +1852,10 @@ SCIP_RETCODE executeDownBranchingRecursive(
 #endif
    )
 {
+   SCIP_VAR* branchvar = candidate->branchvar;
+   SCIP_Real branchval = candidate->branchval;
+   SCIP_Real branchvalfrac = candidate->fracval;
+
    if( config->usebincons && SCIPvarIsBinary(branchvar) )
    {
       /* In case that the branch variable is binary, add the negated var to the list.
@@ -1874,7 +1875,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
 
    SCIPdebugMessage("Depth <%i>, Started down branching on var <%s> with var < <%g>\n", probingdepth, SCIPvarGetName(branchvar), branchval);
 
-   SCIP_CALL( executeDownBranching(scip, branchvar, branchval, downbranchingresult, status) );
+   SCIP_CALL( executeDownBranching(scip, candidate, downbranchingresult, status) );
    SCIPstatistic( statistics->nlpssolved[probingdepth]++; )
 
    SCIPdebug(
@@ -2003,9 +2004,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
    PERSISTENTDATA*       persistent,
    CONFIGURATION*        config,
    SCIP_SOL*             baselpsol,
-   SCIP_VAR*             branchvar,
-   SCIP_Real             branchval,
-   SCIP_Real             branchvalfrac,
+   CANDIDATE*            candidate,
    SCIP_Real             localbaselpsolval,
    int                   probingdepth,
    int                   recursiondepth,
@@ -2019,6 +2018,10 @@ SCIP_RETCODE executeUpBranchingRecursive(
 #endif
    )
 {
+   SCIP_VAR* branchvar = candidate->branchvar;
+   SCIP_Real branchval = candidate->branchval;
+   SCIP_Real branchvalfrac = candidate->fracval;
+
    if( config->usebincons && SCIPvarIsBinary(branchvar) )
    {
       /* In case that the branch variable is binary, add the var to the list.
@@ -2032,7 +2035,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
 
    SCIPdebugMessage("Depth <%i>, Started up branching on var <%s> with var > <%g>\n", probingdepth, SCIPvarGetName(branchvar), branchval);
 
-   SCIP_CALL( executeUpBranching(scip, branchvar, branchval, upbranchingresult, status) );
+   SCIP_CALL( executeUpBranching(scip, candidate, upbranchingresult, status) );
    SCIPstatistic( statistics->nlpssolved[probingdepth]++; )
 
    SCIPdebug(
@@ -2294,40 +2297,40 @@ SCIP_RETCODE selectVarRecursive(
                if( config->downfirst )
                {
 #ifdef SCIP_STATISTIC
-                  SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, branchvar, branchval,
-                     branchvalfrac, localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
+                  SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
+                     localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
                      downbranchingresult, &addeddomainreduction, statistics, localstats) );
 
-                  SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, branchvar, branchval,
-                     branchvalfrac, localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
+                  SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
+                     localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
                      upbranchingresult, &addeddomainreduction, statistics, localstats) );
 #else
-                  SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, branchvar, branchval,
-                     branchvalfrac, localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
+                  SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
+                     localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
                      downbranchingresult, &addeddomainreduction) );
 
-                  SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, branchvar, branchval,
-                     branchvalfrac, localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
+                  SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
+                     localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
                      upbranchingresult, &addeddomainreduction) );
 #endif
                }
                else
                {
 #ifdef SCIP_STATISTIC
-                  SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, branchvar, branchval,
-                     branchvalfrac, localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
+                  SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
+                     localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
                      upbranchingresult, &addeddomainreduction, statistics, localstats) );
 
-                  SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, branchvar, branchval,
-                     branchvalfrac, localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
+                  SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
+                     localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
                      downbranchingresult, &addeddomainreduction, statistics, localstats) );
 #else
-                  SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, branchvar, branchval,
-                     branchvalfrac, localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
+                  SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
+                     localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
                      upbranchingresult, &addeddomainreduction) );
 
-                  SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, branchvar, branchval,
-                     branchvalfrac, localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
+                  SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
+                     localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
                      downbranchingresult, &addeddomainreduction) );
 #endif
                }
@@ -2437,23 +2440,10 @@ SCIP_RETCODE selectVarRecursive(
 
                   if( branchruleresult->candscores != NULL )
                   {
-                     BMS_BLKMEM* blkmem;
-                     SCIP_LPISTATE* lpistate;
-                     SCIP_LPINORMS* lpinorms;
-
-                     blkmem = SCIPblkmem(scip);
-                     SCIPlpiGetState(lpi, blkmem, &lpistate);
-                     SCIPlpiGetNorms(lpi, blkmem, &lpinorms);
-
                      branchruleresult->candscores[i] = score;
                      branchruleresult->candswithscore[i] = branchvar;
                      branchruleresult->candslpvalue[i] = branchval;
-                     branchruleresult->lpistates[i] = lpistate;
-                     branchruleresult->lpinorms[i] = lpinorms;
-
-                     /* TODO: move this to a better fitting location, as we want to keep the lpistate/lpinorms for further usage*/
-                     SCIPlpiFreeNorms(lpi, blkmem, &lpinorms);
-                     SCIPlpiFreeState(lpi, blkmem, &lpistate);
+                     branchruleresult->candsvalfrac[i] = branchvalfrac;
                   }
 
                   if( SCIPisGT(scip, score, bestscore) )
