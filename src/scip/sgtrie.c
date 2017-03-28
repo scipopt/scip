@@ -179,12 +179,14 @@ int SCIPsgtrieGetNElems(
    return sgtrie->nelements;
 }
 
+/** creates the signature trie datastructure */
 SCIP_RETCODE SCIPsgtrieCreate(
-   SCIP_SGTRIE**         sgtrie,
-   BMS_BLKMEM*           blkmem,
-   BMS_BUFMEM*           bufmem,
-   SCIP_DECL_GETSIGNATURE ((*getsignature)),
-   SCIP_DECL_SETCMP      ((*setcmp))
+   SCIP_SGTRIE**         sgtrie,             /**< pointer to return the signature trie datastructure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   BMS_BUFMEM*           bufmem,             /**< buffer memory */
+   SCIP_DECL_GETSIGNATURE ((*getsignature)), /**< callback to retrieve the signature of a set */
+   SCIP_DECL_SETCMP      ((*setcmp))         /**< callback to perform different comparison operations on two sets, may be NULL
+                                              *   if FALSE positives are acceptable */
    )
 {
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, sgtrie) );
@@ -200,8 +202,9 @@ SCIP_RETCODE SCIPsgtrieCreate(
    return SCIP_OKAY;
 }
 
+/** frees the signature trie datastructure, does not free the elements contained in the signature trie */
 void SCIPsgtrieFree(
-   SCIP_SGTRIE**         sgtrie
+   SCIP_SGTRIE**         sgtrie              /**< pointer to the signature trie datastructure */
    )
 {
    SCIP_SGTRIENODE* node;
@@ -239,9 +242,10 @@ void SCIPsgtrieFree(
    BMSfreeBlockMemory((*sgtrie)->blkmem, sgtrie);
 }
 
+/** inserts a set into the signature trie data structure */
 SCIP_RETCODE SCIPsgtrieInsert(
-   SCIP_SGTRIE*           sgtrie,
-   void*                  elem
+   SCIP_SGTRIE*          sgtrie,             /**< the signature trie data structure */
+   void*                 set                 /**< the set */
    )
 {
    uint64_t         signature;
@@ -250,11 +254,11 @@ SCIP_RETCODE SCIPsgtrieInsert(
    LEAFNODEDATA*    prevleafdata;
 
    currnode = sgtrie->root;
-   signature = sgtrie->getsignature(elem);
+   signature = sgtrie->getsignature(set);
    if( currnode == NULL )
    {
       SCIP_CALL( allocNode(sgtrie, &currnode, signature, UINT64_C(0xFFFFFFFFFFFFFFFF)) );
-      currnode->data.leaf.element = elem;
+      currnode->data.leaf.element = set;
       currnode->data.leaf.next = NULL;
       sgtrie->root = currnode;
       return SCIP_OKAY;
@@ -282,7 +286,7 @@ SCIP_RETCODE SCIPsgtrieInsert(
          SCIP_CALL( allocNode(sgtrie, &newsuffix, signature, newsuffixmask) );
 
          /* set data in the new node */
-         newsuffix->data.leaf.element = elem;
+         newsuffix->data.leaf.element = set;
          newsuffix->data.leaf.next = NULL;
 
          /* copy data from old node */
@@ -319,7 +323,7 @@ SCIP_RETCODE SCIPsgtrieInsert(
    prevleafdata = NULL;
    do
    {
-      if( elem == leafdata->element || (sgtrie->setcmp != NULL && sgtrie->setcmp(SCIP_SGTRIE_SETEQ, elem, leafdata->element)) )
+      if( set == leafdata->element || (sgtrie->setcmp != NULL && sgtrie->setcmp(SCIP_SGTRIE_SETEQ, set, leafdata->element)) )
          return SCIP_KEYALREADYEXISTING;
 
       prevleafdata = leafdata;
@@ -328,16 +332,17 @@ SCIP_RETCODE SCIPsgtrieInsert(
 
    /* create new data element and link it to the end */
    BMSallocBlockMemory(sgtrie->blkmem, &prevleafdata->next);
-   prevleafdata->next->element = elem;
+   prevleafdata->next->element = set;
    prevleafdata->next->next = NULL;
    ++sgtrie->nelements;
 
    return SCIP_OKAY;
 }
 
+/** removes a set from the signature trie data structure */
 SCIP_RETCODE SCIPsgtrieRemove(
-   SCIP_SGTRIE*           sgtrie,
-   void*                  elem
+   SCIP_SGTRIE*          sgtrie,             /**< the signature trie data structure */
+   void*                 set                 /**< the set */
    )
 {
    uint64_t          signature;
@@ -348,7 +353,7 @@ SCIP_RETCODE SCIPsgtrieRemove(
 
    prevnode = NULL;
    currnode = &sgtrie->root;
-   signature = sgtrie->getsignature(elem);
+   signature = sgtrie->getsignature(set);
 
    /* find the correct leaf and store the parent in prevnode */
    while( ! IS_LEAF(*currnode) )
@@ -365,7 +370,7 @@ SCIP_RETCODE SCIPsgtrieRemove(
    prevleafdata = NULL;
    while( leafdata != NULL )
    {
-      if( leafdata->element == elem )
+      if( leafdata->element == set )
          break;
       prevleafdata = leafdata;
       leafdata = leafdata->next;
@@ -437,9 +442,13 @@ SCIP_RETCODE SCIPsgtrieRemove(
    return SCIP_OKAY;
 }
 
+/** finds all subsets of a given set that are stored in the signature trie datastructure.
+ *  If the setcmp callback given upon creation of the signature trie was NULL, the matches
+ *  may contain false positives.
+ */
 SCIP_RETCODE SCIPsgtrieFindSubsets(
-   SCIP_SGTRIE*          sgtrie,
-   void*                 elem,
+   SCIP_SGTRIE*          sgtrie,             /**< the signature trie data structure */
+   void*                 set,                /**< the set */
    void**                matches,            /**< buffer to store matches, must be big enough to hold all elements currently stored in the sgtrie */
    int*                  nmatches            /**< pointer to store how many matches where found */
    )
@@ -452,7 +461,7 @@ SCIP_RETCODE SCIPsgtrieFindSubsets(
    STACK_PUT(sgtrie->bufmem, candnodes, NULL);
 
    *nmatches = 0;
-   signature = sgtrie->getsignature(elem);
+   signature = sgtrie->getsignature(set);
    while( node != NULL )
    {
       if( signatureIsSubset(node->prefix, signature, node->mask) )
@@ -470,7 +479,7 @@ SCIP_RETCODE SCIPsgtrieFindSubsets(
                /* call user callback to check if element is a subset
                 * and add it to the matches if it is
                 */
-               if( sgtrie->setcmp == NULL || sgtrie->setcmp(SCIP_SGTRIE_SUBSET, leafdata->element, elem) )
+               if( sgtrie->setcmp == NULL || sgtrie->setcmp(SCIP_SGTRIE_SUBSET, leafdata->element, set) )
                   matches[(*nmatches)++] = leafdata->element;
 
                leafdata = leafdata->next;
@@ -507,9 +516,14 @@ typedef struct
    int                   distance;
 }  NODEDISTPAIR;
 
+/** finds all sets stored in the signature trie datastructure that are subsets of a given set
+ *  after removing at most one element.
+ *  If the setcmp callback was set to NULL upon creation of the signature trie, the matches
+ *  may contain false positives.
+ */
 SCIP_RETCODE SCIPsgtrieFindSubsetsPlusOne(
-   SCIP_SGTRIE*          sgtrie,
-   void*                 elem,
+   SCIP_SGTRIE*          sgtrie,             /**< the signature trie data structure */
+   void*                 set,                /**< the set */
    void**                matches,            /**< buffer to store matches, must be big enough to hold all elements currently stored in the sgtrie */
    int*                  nmatches            /**< pointer to store how many matches where found */
    )
@@ -527,7 +541,7 @@ SCIP_RETCODE SCIPsgtrieFindSubsetsPlusOne(
    current.distance = 0;
 
    *nmatches = 0;
-   signature = sgtrie->getsignature(elem);
+   signature = sgtrie->getsignature(set);
    while( current.node != NULL )
    {
       uint64_t subsetmask = current.node->mask & ( current.node->prefix & ~signature );
@@ -547,7 +561,7 @@ SCIP_RETCODE SCIPsgtrieFindSubsetsPlusOne(
                 * and add it to the matches if it is
                 */
 
-               if( sgtrie->setcmp == NULL || sgtrie->setcmp(SCIP_SGTRIE_SUBSETPLUSONE, leafdata->element, elem) )
+               if( sgtrie->setcmp == NULL || sgtrie->setcmp(SCIP_SGTRIE_SUBSETPLUSONE, leafdata->element, set) )
                   matches[(*nmatches)++] = leafdata->element;
 
                leafdata = leafdata->next;
@@ -579,9 +593,13 @@ SCIP_RETCODE SCIPsgtrieFindSubsetsPlusOne(
    return SCIP_OKAY;
 }
 
+/** finds all supersets of a given set that are stored in the signature trie datastructure.
+ *  If the setcmp callback given upon creation of the signature trie was NULL, the matches
+ *  may contain false positives.
+ */
 SCIP_RETCODE SCIPsgtrieFindSupersets(
-   SCIP_SGTRIE*          sgtrie,
-   void*                 elem,
+   SCIP_SGTRIE*          sgtrie,             /**< the signature trie data structure */
+   void*                 set,                /**< the set */
    void**                matches,            /**< buffer to store matches, must be big enough to hold all elements currently stored in the sgtrie */
    int*                  nmatches            /**< pointer to store how many matches where found */
    )
@@ -594,7 +612,7 @@ SCIP_RETCODE SCIPsgtrieFindSupersets(
    STACK_PUT(sgtrie->bufmem, candnodes, NULL);
 
    *nmatches = 0;
-   signature = sgtrie->getsignature(elem);
+   signature = sgtrie->getsignature(set);
    while( node != NULL )
    {
       if( signatureIsSubset(signature, node->prefix, node->mask) )
@@ -612,7 +630,7 @@ SCIP_RETCODE SCIPsgtrieFindSupersets(
                /* call user callback to check if element is a subset
                 * and add it to the matches if it is
                 */
-               if( sgtrie->setcmp == NULL || sgtrie->setcmp(SCIP_SGTRIE_SUBSET, elem, leafdata->element) )
+               if( sgtrie->setcmp == NULL || sgtrie->setcmp(SCIP_SGTRIE_SUBSET, set, leafdata->element) )
                   matches[(*nmatches)++] = leafdata->element;
 
                leafdata = leafdata->next;
@@ -642,9 +660,14 @@ SCIP_RETCODE SCIPsgtrieFindSupersets(
    return SCIP_OKAY;
 }
 
+/** finds all sets stored in the signature trie datastructure that are supersets of a given set
+ *  after removing at most one element.
+ *  If the setcmp callback was set to NULL upon creation of the signature trie, the matches
+ *  may contain false positives.
+ */
 SCIP_RETCODE SCIPsgtrieFindSupersetsPlusOne(
-   SCIP_SGTRIE*          sgtrie,
-   void*                 elem,
+   SCIP_SGTRIE*          sgtrie,             /**< the signature trie data structure */
+   void*                 set,                /**< the set */
    void**                matches,            /**< buffer to store matches, must be big enough to hold all elements currently stored in the sgtrie */
    int*                  nmatches            /**< pointer to store how many matches where found */
    )
@@ -662,7 +685,7 @@ SCIP_RETCODE SCIPsgtrieFindSupersetsPlusOne(
    current.distance = 0;
 
    *nmatches = 0;
-   signature = sgtrie->getsignature(elem);
+   signature = sgtrie->getsignature(set);
    while( current.node != NULL )
    {
       uint64_t subsetmask = current.node->mask & ( signature & ~current.node->prefix );
@@ -682,7 +705,7 @@ SCIP_RETCODE SCIPsgtrieFindSupersetsPlusOne(
                 * and add it to the matches if it is
                 */
 
-               if( sgtrie->setcmp == NULL || sgtrie->setcmp(SCIP_SGTRIE_SUBSETPLUSONE, elem, leafdata->element) )
+               if( sgtrie->setcmp == NULL || sgtrie->setcmp(SCIP_SGTRIE_SUBSETPLUSONE, set, leafdata->element) )
                   matches[(*nmatches)++] = leafdata->element;
 
                leafdata = leafdata->next;
@@ -714,9 +737,13 @@ SCIP_RETCODE SCIPsgtrieFindSupersetsPlusOne(
    return SCIP_OKAY;
 }
 
+/** searches for a set stored in the signature trie datastructure that is equal to a given set.
+ *  If the setcmp callback was set to NULL upon creation of the signature trie, the match
+ *  may be a false positives.
+ */
 void* SCIPsgtrieFindEq(
-   SCIP_SGTRIE*          sgtrie,
-   void*                 elem
+   SCIP_SGTRIE*          sgtrie,             /**< the signature trie data structure */
+   void*                 set                 /**< the set */
    )
 {
    uint64_t signature;
@@ -727,7 +754,7 @@ void* SCIPsgtrieFindEq(
    if( currnode == NULL )
       return NULL;
 
-   signature = sgtrie->getsignature(elem);
+   signature = sgtrie->getsignature(set);
 
    while( TRUE )
    {
@@ -743,7 +770,7 @@ void* SCIPsgtrieFindEq(
             /* call user callback to check if element is a subset
              * and add it to the matches if it is
              */
-            if( elem == leafdata->element || (sgtrie->setcmp != NULL && sgtrie->setcmp(SCIP_SGTRIE_SETEQ, elem, leafdata->element)) )
+            if( set == leafdata->element || (sgtrie->setcmp != NULL && sgtrie->setcmp(SCIP_SGTRIE_SETEQ, set, leafdata->element)) )
                return leafdata->element;
 
             leafdata = leafdata->next;
