@@ -47,6 +47,7 @@
 #define DEFAULT_INITSEED 113
 #define MUTATIONSEED 121
 #define DEFAULT_BESTSOLWEIGHT 3
+#define DEFAULT_BANDITALGO 'e' /**< the default bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Lns"
@@ -61,6 +62,7 @@
 typedef struct data_crossover DATA_CROSSOVER;
 typedef struct data_mutation DATA_MUTATION;
 typedef struct EpsGreedy EPSGREEDY;
+typedef struct expThree EXPTHREE;
 typedef struct NH_FixingRate NH_FIXINGRATE;
 typedef struct NH_Stats NH_STATS;
 typedef struct Nh NH;
@@ -116,8 +118,6 @@ typedef struct Nh NH;
    SCIP*                 sourcescip,         \
    SCIP*                 targetscip          \
 )
-
-
 
 /** statistics for a neighborhood */
 struct NH_Stats
@@ -183,6 +183,17 @@ struct data_mutation
    EPSGREEDY*            epsgreedy         \
    )
 
+/** structure that represents the adversarial bandit algorithm exp3 */
+struct expThree
+{
+   int                   nactions;           /**< the number of actions to select from */
+   int                   ndraws;             /**< the total number of draws for all arms */
+   SCIP_Real*            probabilities;      /**< probability for each arm  */
+   SCIP_Real*            cumulativegain;     /**< the cumulative gain for each arm */
+   SCIP_RANDNUMGEN*      rng;                /**< random number generator */
+   unsigned int          initseed;           /**< initial seed for the exp3 algorithm */
+};
+
 struct EpsGreedy
 {
    SCIP_Real             eps;                /**< epsilon parameter (between 0 and 1) to control epsilon greedy */
@@ -198,7 +209,9 @@ struct EpsGreedy
 struct SCIP_HeurData
 {
    NH**                  neighborhoods;      /**< array of neighborhoods with the best one at the first position */
+   char                  banditalgo;         /**< the bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
    EPSGREEDY*            epsgreedynh;        /**< epsilon greedy selector for a neighborhood */
+   EXPTHREE*             exp3;               /**< exp3 bandit algorithm */
    EPSGREEDY*            epsgreedyfilter;    /**< epsilon greedy selector for a filter strategy */
    SCIP_Longint          nodesoffset;        /**< offset added to the nodes budget */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes in a single sub-SCIP */
@@ -548,6 +561,149 @@ DECL_EPSREWARD(epsRewardLns)
    numerator = neighborhood->stats.nrunsbestsol;
    denominator = MAX(1.0, neighborhood->stats.nruns * DEFAULT_BESTSOLWEIGHT);
    return numerator / denominator;
+}
+
+
+/** todo reset an exp3 bandit algorithm */
+static
+SCIP_RETCODE expThreeReset(
+   SCIP*                 scip,               /**< SCIP data structure */
+   EXPTHREE*             exp3                /**< the exp3 algorithm */
+   )
+{
+   int i;
+   SCIP_Real uniform;
+   assert(exp3->nactions > 0);
+
+   /* author bzfhende: TODO initialize probabilities */
+   exp3->ndraws = 0;
+   uniform = 1 / (SCIP_Real)exp3->nactions;
+   /* initialize uniform distribution */
+   for( i = 0; i < exp3->nactions; ++i )
+   {
+      exp3->probabilities[i] = uniform;
+      exp3->cumulativegain[i] = 0.0;
+   }
+
+
+   /* author bzfhende: TODO reset random number generator */
+   if( exp3->rng != NULL )
+   {
+      SCIPrandomFree(&exp3->rng);
+   }
+
+   SCIP_CALL( SCIPrandomCreate(&exp3->rng, SCIPblkmem(scip), exp3->initseed) );
+
+   return SCIP_OKAY;
+}
+
+/** todo create an exp3 bandit algorithm */
+static
+SCIP_RETCODE expThreeCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   EXPTHREE**            exp3,               /**< pointer to store the exp3 algorithm */
+   unsigned int          initseed,           /**< initial seed for the exp3 algorithm */
+   int                   nactions            /**< the number of actions */
+   )
+{
+   assert(scip != NULL);
+   assert(exp3 != NULL);
+   assert(nactions > 0);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, exp3) );
+
+   (*exp3)->initseed = SCIPinitializeRandomSeed(scip, DEFAULT_INITSEED);
+   (*exp3)->nactions = nactions;
+   (*exp3)->rng = NULL;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, (*exp3)->probabilities, nactions) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, (*exp3)->cumulativegain, nactions) );
+
+   SCIP_CALL( expThreeReset(scip, *exp3) );
+
+   return SCIP_OKAY;
+}
+
+/** free an exp3 bandit algorithm */
+static
+void expThreeFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   EXPTHREE**            exp3                /**< pointer to the exp3 algorithm */
+   )
+{
+   assert(scip != NULL);
+   assert(exp3 != NULL);
+   assert(*exp3 != NULL);
+
+   SCIPfreeBlockMemoryArray(scip, &(*exp3)->probabilities, (*exp3)->nactions);
+   SCIPfreeBlockMemoryArray(scip, &(*exp3)->cumulativegain, (*exp3)->nactions);
+
+   SCIPrandomFree(&(*exp3)->rng);
+
+   SCIPfreeBlockMemory(scip, exp3);
+}
+
+/** todo draw the next action */
+static
+SCIP_RETCODE expThreeSelectAction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   EXPTHREE*             exp3,               /**< exp3 bandit algorithm */
+   int*                  action              /**< the index of the selected action, between 0 and nactions - 1 */
+   )
+{
+   SCIP_Real rand;
+   SCIP_Real psum;
+   int i;
+
+   assert(scip != NULL);
+   assert(exp3 != NULL);
+   assert(action != NULL);
+
+   /* author bzfhende: TODO draw from the current probability distribution */
+   rand = SCIPrandomGetReal(exp3->rng, 0, 1);
+   psum = 0.0;
+
+   /* loop over probability distribution until rand is reached */
+   for( i = 0; i < exp3->nactions; ++i )
+   {
+      psum += exp3->probabilities[i];
+      if( rand <= psum )
+         break;
+   }
+
+   *action = i;
+   exp3->ndraws++;
+
+   return SCIP_OKAY;
+}
+
+/** todo update the exp3 probability distribution after observing a gain */
+static
+SCIP_RETCODE expThreeUpdate(
+   SCIP*                scip,               /**< SCIP data structure */
+   EXPTHREE*            exp3,               /**< exp3 bandit algorithm */
+   SCIP_Real            gain,               /**< the gain that has been observed for action i */
+   int                  i                   /**< the last selected action, for which the gain has been observed */
+   )
+{
+   SCIP_Real eta;
+   SCIP_Real factor;
+   assert(scip != NULL);
+   assert(exp3 != NULL);
+   assert(gain != NULL);
+   assert(i >= 0);
+   assert(i < exp3->nactions);
+   assert(exp3->ndraws > 0);
+
+   eta = SQRT(1 / (SCIP_Real)exp3->ndraws);
+   factor = logf(exp3->nactions);
+   factor /= (SCIP_Real)exp3->nactions;
+   factor = SQRT(factor);
+
+   exp3->cumulativegain[i] += gain;
+
+
+   return SCIP_OKAY;
 }
 
 /** creates a new solution for the original problem by copying the solution of the subproblem */
@@ -1371,6 +1527,15 @@ SCIP_DECL_HEURINIT(heurInitLns)
 
    SCIP_CALL( epsGreedyCreate(scip, &heurdata->epsgreedynh, DEFAULT_INITSEED, (void*)heurdata, epsNChoicesLns, epsRewardLns) );
 
+   if( heurdata->exp3 == NULL )
+   {
+      SCIP_CALL( expThreeCreate(scip, &heurdata->exp3, DEFAULT_INITSEED, heurdata->nneighborhoods) );
+   }
+   else
+   {
+      SCIP_CALL( expThreeReset(scip, heurdata->exp3) );
+   }
+
    heurdata->usednodes = 0;
 
    return SCIP_OKAY;
@@ -1449,6 +1614,8 @@ SCIP_RETCODE SCIPincludeHeurLns(
    /* author bzfhende: TODO make this a user parameter? */
    heurdata->lplimfac = LPLIMFAC;
    heurdata->epsgreedynh = NULL;
+   heurdata->epsgreedyfilter = NULL;
+   heurdata->exp3 = NULL;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->neighborhoods, NNEIGHBORHOODS) );
 
@@ -1494,6 +1661,10 @@ SCIP_RETCODE SCIPincludeHeurLns(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/nsolslim",
          "limit on the number of improving solutions in a sub-SCIP call",
          &heurdata->nsolslim, FALSE, DEFAULT_NSOLSLIM, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/banditalgo",
+         "the bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy",
+         &heurdata->banditalgo, TRUE, DEFAULT_BANDITALGO, "ueg", NULL, NULL) );
 
 
    return SCIP_OKAY;
