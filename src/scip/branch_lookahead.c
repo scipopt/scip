@@ -31,7 +31,6 @@
 #include "lpi/lpi.h"
 #include "scip/branch_lookahead.h"
 #include "scip/clock.h"
-#include "scip/common_branch_lookahead.h"
 #include "scip/cons_setppc.h"
 #include "scip/cons_logicor.h"
 #include "scip/def.h"
@@ -72,19 +71,155 @@
  * Data structures
  */
 
-/**
- * branching rule data
- */
-struct SCIP_BranchruleData
-{
-   SCIP_Bool             isinitialized;      /**< indicates whether the fields in this struct are initialized */
-   CONFIGURATION*        config;             /**< the parameter that influence the behaviour of the lookahead branching */
-   PERSISTENTDATA*       persistent;         /**< the data that persists over multiple branching decisions */
-#ifdef SCIP_STATISTIC
-   STATISTICS*           statistics;         /**< statistical data container */
-#endif
-};
 
+typedef struct
+{
+   SCIP_VAR*             bestvar;
+   SCIP_Real             bestval;
+   SCIP_Real             bestdown;
+   SCIP_Bool             bestdownvalid;
+   SCIP_Real             bestup;
+   SCIP_Bool             bestupvalid;
+   SCIP_Real             provedbound;
+} BRANCHINGDECISION;
+
+static
+SCIP_RETCODE allocateBranchingDecision(
+   SCIP*                 scip,
+   BRANCHINGDECISION**   decision,
+   SCIP_Real             lpobjval
+   )
+{
+   SCIPallocBuffer(scip, decision);
+   (*decision)->bestvar = NULL;
+   (*decision)->bestdownvalid = FALSE;
+   (*decision)->bestupvalid = FALSE;
+   (*decision)->provedbound = lpobjval;
+
+   return SCIP_OKAY;
+}
+
+static
+void copyBranchingDecision(
+   BRANCHINGDECISION*    sourcedecision,
+   BRANCHINGDECISION*    targetdecision
+   )
+{
+   targetdecision->bestvar = sourcedecision->bestvar;
+   targetdecision->bestval = sourcedecision->bestval;
+   targetdecision->bestdown = sourcedecision->bestdown;
+   targetdecision->bestdownvalid = sourcedecision->bestdownvalid;
+   targetdecision->bestup = sourcedecision->bestup;
+   targetdecision->bestupvalid = sourcedecision->bestupvalid;
+   targetdecision->provedbound = sourcedecision->provedbound;
+}
+
+static
+SCIP_Bool isBranchingDecisionValid(
+   SCIP*                 scip,
+   BRANCHINGDECISION*    decision
+   )
+{
+   return decision->bestvar != NULL;
+}
+
+static
+void freeBranchingDecision(
+   SCIP*                 scip,
+   BRANCHINGDECISION**   decision
+   )
+{
+   SCIPfreeBuffer(scip, decision);
+}
+
+/**
+ * A container to hold the result of a branching.
+ */
+typedef struct
+{
+   SCIP_Real             objval;             /**< The objective value of the solved lp. Only contains meaningful data, if
+                                              *   cutoff == FALSE. */
+   SCIP_Bool             cutoff;             /**< Indicates whether the node was infeasible and was cutoff. */
+   SCIP_Bool             dualboundvalid;     /**< Us the value of the dual bound valid? That means, was the according LP
+                                              *   or the sub problems solved to optimality? */
+   SCIP_Real             dualbound;          /**< The best dual bound for this branching, may be changed by lower level
+                                              *   branchings. */
+} BRANCHINGRESULTDATA;
+
+/**
+ * Initiates the BranchingResultData struct.
+ */
+static
+void initBranchingResultData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   BRANCHINGRESULTDATA*  resultdata          /**< The struct to be initiated. */
+   )
+{
+   resultdata->objval = -SCIPinfinity(scip);
+   resultdata->dualbound = -SCIPinfinity(scip);
+   resultdata->cutoff = FALSE;
+   resultdata->dualboundvalid = FALSE;
+}
+
+static
+void copyBranchingResultData(
+   BRANCHINGRESULTDATA*  sourcedata,
+   BRANCHINGRESULTDATA*  targetdata
+   )
+{
+   targetdata->cutoff = sourcedata->cutoff;
+   targetdata->objval = sourcedata->objval;
+   targetdata->dualbound = sourcedata->dualbound;
+   targetdata->dualboundvalid = sourcedata->dualboundvalid;
+}
+
+/**
+ * The data that is preserved over multiple runs of the branching rule.
+ */
+typedef struct
+{
+   SCIP_SOL*             prevbinsolution;    /**< The previous solution for the case that in the previous run only
+                                              *   non-violating implied binary constraints were added. */
+   BRANCHINGDECISION*    prevdecision;       /**< The previous decision that gets used for the case that in the previous run
+                                              *   only non-violating implied binary constraints were added.*/
+   int                   restartindex;       /**< The index at which the iteration over the number of candidates starts. */
+   SCIP_Longint*         lastbranchid;       /**< The node id at which the var was last branched on (for a given branching
+                                              *   var). */
+   SCIP_Longint*         lastbranchnlps;     /**< The number of (non-probing) LPs that where solved when the var was last
+                                              *   branched on. */
+   BRANCHINGRESULTDATA** lastbranchupres;    /**< The result of the last up branching for a given var. */
+   BRANCHINGRESULTDATA** lastbranchdownres;  /**< The result of the last down branching for a given var. */
+} PERSISTENTDATA;
+
+
+/**
+ * The parameter that can be changed by the user/caller and alter the behaviour of the lookahead branching.
+ */
+typedef struct
+{
+   SCIP_Bool             usedomainreduction; /**< indicates whether the data for domain reductions should be gathered and
+                                              *   used. */
+   SCIP_Bool             usebincons;         /**< indicates whether the data for the implied binary constraints should
+                                              *   be gathered and used */
+   SCIP_Bool             addbinconsrow;      /**< Add the implied binary constraints as a row to the problem matrix */
+   SCIP_Bool             stopbranching;      /**< indicates whether we should stop the first level branching after finding
+                                              *   an infeasible first branch */
+   SCIP_Longint          reevalage;          /**< The number of "normal" (not probing) lps that may have been solved before
+                                              *   we stop using old data and start recalculating new first level data. */
+   int                   maxnviolatedcons;   /**< The number of constraints we want to gather before restarting the run. Set
+                                              *   to -1 for an unbounded list. */
+   SCIP_Bool             forcebranching;     /**< Execute the lookahead logic even if only one branching candidate is given.
+                                              *   May be used to calculate the score of a single candidate. */
+   int                   recursiondepth;     /**< How deep should the recursion go? Default for Lookahead: 2 */
+   SCIP_Bool             addnonviocons;      /**< Should constraints be added, that are not violated by the base LP? */
+   SCIP_Bool             downfirst;          /**< Should the down branch be executed first? */
+   SCIP_Bool             abbreviated;        /**< Should the abbreviated version be used? */
+   int                   maxncands;          /**< If abbreviated == TRUE, at most how many candidates should be handled? */
+   SCIP_Bool             stopaftercutoff;    /**< Should a branching loop be stopped, if the cutoff of a variable is
+                                              *   detected? */
+} CONFIGURATION;
+
+static
 SCIP_RETCODE allocConfiguration(
    SCIP*                 scip,
    CONFIGURATION**       config
@@ -105,6 +240,7 @@ SCIP_RETCODE allocConfiguration(
    return SCIP_OKAY;
 }
 
+static
 void freeConfiguration(
    SCIP*                 scip,
    CONFIGURATION**       config
@@ -113,25 +249,202 @@ void freeConfiguration(
    SCIPfreeBuffer(scip, config);
 }
 
+
+#ifdef SCIP_STATISTIC
 /**
- * all domain reductions found through cutoff of branches
+ * The data used for some statistical analysis.
  */
 typedef struct
 {
-   SCIP_Real*            lowerbounds;        /**< The new lower bounds found for each variable in the problem. */
-   SCIP_Bool*            lowerboundset;      /**< Indicates whether the lower bound may be added to the base node. */
-   SCIP_Real*            upperbounds;        /**< The new upper bounds found for each variable in the problem. */
-   SCIP_Bool*            upperboundset;      /**< Indicates whether the upper bound may be added to the base node. */
-   SCIP_Bool*            baselpviolated;     /**< Indicates whether the base lp solution violates the new bounds of a var.*/
-   int                   nviolatedvars;      /**< Tracks the number of vars that have a violated (by the base lp) new lower
-                                              *   or upper bound. */
-   int                   nchangedvars;       /**< Tracks the number of vars, that have a changed domain. (a change on both,
-                                              *   upper and lower bound, counts as one.) */
-#ifdef SCIP_STATISTIC
-   int*                  lowerboundnproofs;  /**< The number of nodes needed to proof the lower bound for each variable. */
-   int*                  upperboundnproofs;  /**< The number of nodes needed to proof the upper bound for each variable. */
+   int                   ntotalresults;      /**< The total sum of the entries in nresults. */
+   int*                  nresults;           /**< Array of counters for each result state the lookahead branching finished.
+                                              *   The first (0) entry is unused, as the result states are indexed 1-based
+                                              *   and we use this index as our array index. */
+   int*                  nsinglecutoffs;     /**< The number of single cutoffs on a (probing) node per probingdepth. */
+   int*                  nfullcutoffs;       /**< The number of double cutoffs on a (probing) node per probingdepth. */
+   int*                  nlpssolved;         /**< The number of lps solved for a given probingdepth. */
+   int*                  npropdomred;        /**< The number of domain reductions based on domain propagation per
+                                              *   progingdepth. */
+   int*                  nsinglecandidate;   /**< The number of times a single candidate was given to the recursion routine
+                                              *   per probingdepth. */
+   int*                  noldbranchused;     /**< The number of times old branching data is used (see the reevalage
+                                              *   parameter in the CONFIGURATION struct) */
+   int                   nbinconst;          /**< The number of binary constraints added to the base node. */
+   int                   nbinconstvio;       /**< The number of binary constraints added to the base node, that are violated
+                                              *   by the LP at that node. */
+   int                   ndomred;            /**< The number of domain reductions added to the base node. */
+   int                   ndomredvio;         /**< The number of domain reductions added to the base node, that are violated
+                                              *   by the LP at that node. */
+   int                   ndepthreached;      /**< The number of times the branching was aborted due to a too small depth. */
+   int                   ndomredcons;        /**< The number of binary constraints ignored, as they would be dom reds. */
+   int                   ncutoffproofnodes;  /**< The number of nodes needed to proof all found cutoffs. */
+   int                   ndomredproofnodes;  /**< The number of nodes needed to proof all found domreds. */
+} STATISTICS;
+
+static
+void initStatistics(
+   SCIP*                 scip,
+   STATISTICS*           statistics,
+   int                   recursiondepth
+   )
+{
+   int i;
+
+   statistics->ntotalresults = 0;
+   statistics->nbinconst = 0;
+   statistics->nbinconstvio = 0;
+   statistics->ndomredvio = 0;
+   statistics->ndepthreached = 0;
+   statistics->ndomred = 0;
+   statistics->ndomredcons = 0;
+   statistics->ncutoffproofnodes = 0;
+   statistics->ndomredproofnodes = 0;
+
+   for( i = 0; i < 18; i++)
+   {
+      statistics->nresults[i] = 0;
+   }
+
+   for( i = 0; i < recursiondepth; i++ )
+   {
+      statistics->noldbranchused[i] = 0;
+      statistics->nsinglecandidate[i] = 0;
+      statistics->npropdomred[i] = 0;
+      statistics->nfullcutoffs[i] = 0;
+      statistics->nlpssolved[i] = 0;
+      statistics->nsinglecutoffs[i] = 0;
+   }
+}
+
+static
+SCIP_RETCODE allocStatistics(
+   SCIP*                 scip,
+   STATISTICS**          statistics,
+   int                   recursiondepth
+   )
+{
+   SCIP_CALL( SCIPallocBuffer(scip, statistics) );
+   /* 17 current number of possible result values and the index is 1 based, so 17 + 1 as array size with unused 0 element */
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nresults, 17 + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nsinglecutoffs, recursiondepth) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nfullcutoffs, recursiondepth) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nlpssolved, recursiondepth) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->npropdomred, recursiondepth) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nsinglecandidate, recursiondepth) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->noldbranchused, recursiondepth) );
+
+   initStatistics(scip, *statistics, recursiondepth);
+   return SCIP_OKAY;
+}
+
+static const char* names[18] = { "", "SCIP_DIDNOTRUN", "SCIP_DELAYED", "SCIP_DIDNOTFIND", "SCIP_FEASIBLE", "SCIP_INFEASIBLE",
+   "SCIP_UNBOUNDED", "SCIP_CUTOFF", "SCIP_SEPARATED", "SCIP_NEWROUND", "SCIP_REDUCEDDOM", "SCIP_CONSADDED",
+   "SCIP_CONSCHANGED", "SCIP_BRANCHED", "SCIP_SOLVELP", "SCIP_FOUNDSOL", "SCIP_SUSPENDED", "SCIP_SUCCESS" };
+
+static
+const char* getStatusString(
+   SCIP_RESULT           result
+)
+{
+   return names[result];
+}
+
+static
+void printStatistics(
+   SCIP*                 scip,
+   STATISTICS*           statistics,
+   int                   recursiondepth
+   )
+{
+   if( statistics->ntotalresults > 0 )
+   {
+      int i;
+
+      SCIPinfoMessage(scip, NULL, "Lookahead Branching was called <%i> times.\n", statistics->ntotalresults);
+      for( i = 1; i < 18; i++ )
+      {
+         /* see type_result.h for the id <-> enum mapping */
+         SCIPinfoMessage(scip, NULL, "Result <%s> was chosen <%i> times\n", getStatusString(i), statistics->nresults[i]);
+      }
+
+      for( i = 0; i < recursiondepth; i++ ) {
+         SCIPinfoMessage(scip, NULL, "In depth <%i>, <%i> fullcutoffs and <%i> single cutoffs were found.\n", i, statistics->nfullcutoffs[i], statistics->nsinglecutoffs[i]);
+         SCIPinfoMessage(scip, NULL, "In depth <%i>, <%i> LPs were solved.\n", i, statistics->nlpssolved[i]);
+         SCIPinfoMessage(scip, NULL, "In depth <%i>, a decision was discarded <%i> times due to domain reduction because of propagation.\n", i, statistics->npropdomred[i]);
+         SCIPinfoMessage(scip, NULL, "In depth <%i>, only one branching candidate was given <%i> times.\n", i, statistics->nsinglecandidate[i]);
+         SCIPinfoMessage(scip, NULL, "In depth <%i>, old branching results were used in <%i> cases.\n", i, statistics->noldbranchused[i]);
+      }
+
+      SCIPinfoMessage(scip, NULL, "Depth limit was reached <%i> times.\n", statistics->ndepthreached);
+      SCIPinfoMessage(scip, NULL, "Ignored <%i> binary constraints, that would be domain reductions.\n", statistics->ndomredcons);
+      SCIPinfoMessage(scip, NULL, "Added <%i> binary constraints, of which <%i> where violated by the base LP.\n", statistics->nbinconst, statistics->nbinconstvio);
+      SCIPinfoMessage(scip, NULL, "Reduced the domain of <%i> vars, <%i> of them where violated by the base LP.\n", statistics->ndomred, statistics->ndomredvio);
+      SCIPinfoMessage(scip, NULL, "Needed <%i> additional nodes to proof the cutoffs of base nodes\n", statistics->ncutoffproofnodes);
+      SCIPinfoMessage(scip, NULL, "Needed <%i> additional nodes to proof the domain reductions\n", statistics->ndomredproofnodes);
+   }
+}
+
+static
+void freeStatistics(
+   SCIP*                 scip,
+   STATISTICS**          statistics
+   )
+{
+   SCIPfreeBufferArray(scip, &(*statistics)->noldbranchused);
+   SCIPfreeBufferArray(scip, &(*statistics)->nsinglecandidate);
+   SCIPfreeBufferArray(scip, &(*statistics)->npropdomred);
+   SCIPfreeBufferArray(scip, &(*statistics)->nlpssolved);
+   SCIPfreeBufferArray(scip, &(*statistics)->nfullcutoffs);
+   SCIPfreeBufferArray(scip, &(*statistics)->nsinglecutoffs);
+   SCIPfreeBufferArray(scip, &(*statistics)->nresults);
+   SCIPfreeBuffer(scip, statistics);
+}
+
+/**
+ * Helper struct to store the statistical data needed in a single run.
+ */
+typedef struct
+{
+   int                   ncutoffproofnodes;  /**< The number of nodes needed to proof the current cutoff. */
+   int                   ndomredproofnodes;  /**< The number of nodes needed to proof all current domreds. */
+} LOCALSTATISTICS;
+
+static
+SCIP_RETCODE allocateLocalStatistics(
+   SCIP*                 scip,
+   LOCALSTATISTICS**     localstats
+   )
+{
+   SCIP_CALL( SCIPallocBuffer(scip, localstats) );
+
+   (*localstats)->ncutoffproofnodes = 0;
+   (*localstats)->ndomredproofnodes = 0;
+
+   return SCIP_OKAY;
+}
+
+static
+void freeLocalStatistics(
+   SCIP*                 scip,
+   LOCALSTATISTICS**     localstats
+   )
+{
+   SCIPfreeBuffer(scip, localstats);
+}
 #endif
-} DOMAINREDUCTIONS;
+
+/**
+ * branching rule data
+ */
+struct SCIP_BranchruleData
+{
+   SCIP_Bool             isinitialized;      /**< indicates whether the fields in this struct are initialized */
+   CONFIGURATION*        config;             /**< the parameter that influence the behaviour of the lookahead branching */
+   PERSISTENTDATA*       persistent;         /**< the data that persists over multiple branching decisions */
+#ifdef SCIP_STATISTIC
+   STATISTICS*           statistics;         /**< statistical data container */
+#endif
+};
 
 /**
  * all constraints that were created and may be added to the base node
@@ -244,6 +557,26 @@ void freeCandidateList(
 }
 
 /**
+ * all domain reductions found through cutoff of branches
+ */
+typedef struct
+{
+   SCIP_Real*            lowerbounds;        /**< The new lower bounds found for each variable in the problem. */
+   SCIP_Bool*            lowerboundset;      /**< Indicates whether the lower bound may be added to the base node. */
+   SCIP_Real*            upperbounds;        /**< The new upper bounds found for each variable in the problem. */
+   SCIP_Bool*            upperboundset;      /**< Indicates whether the upper bound may be added to the base node. */
+   SCIP_Bool*            baselpviolated;     /**< Indicates whether the base lp solution violates the new bounds of a var.*/
+   int                   nviolatedvars;      /**< Tracks the number of vars that have a violated (by the base lp) new lower
+                                              *   or upper bound. */
+   int                   nchangedvars;       /**< Tracks the number of vars, that have a changed domain. (a change on both,
+                                              *   upper and lower bound, counts as one.) */
+#ifdef SCIP_STATISTIC
+   int*                  lowerboundnproofs;  /**< The number of nodes needed to proof the lower bound for each variable. */
+   int*                  upperboundnproofs;  /**< The number of nodes needed to proof the upper bound for each variable. */
+#endif
+} DOMAINREDUCTIONS;
+
+/**
  * allocate the struct on the Buffer and initialize it with the default values
  */
 static
@@ -291,41 +624,6 @@ SCIP_RETCODE allocDomainReductions(
 
    return SCIP_OKAY;
 }
-
-/*
-static
-void printDomainReductions(
-   SCIP*                 scip,
-   DOMAINREDUCTIONS*     domreds
-   )
-{
-   int ntotalvars;
-   int i;
-   SCIP_VAR** vars;
-
-   assert(scip != NULL);
-   assert(domreds != NULL);
-
-   ntotalvars = SCIPgetNVars(scip);
-   vars = SCIPgetVars(scip);
-
-   for( i = 0; i < ntotalvars; i++)
-   {
-      if( domreds->lowerboundset[i] && domreds->upperboundset[i] )
-      {
-         SCIPinfoMessage(scip, NULL, "%5g <= %s <= %5g\n", domreds->lowerbounds[i], SCIPvarGetName(vars[i]), domreds->upperbounds[i]);
-      }
-      else if( domreds->lowerboundset[i] )
-      {
-         SCIPinfoMessage(scip, NULL, "%5g <= %s\n", domreds->lowerbounds[i], SCIPvarGetName(vars[i]));
-      }
-      else if( domreds->upperboundset[i] )
-      {
-         SCIPinfoMessage(scip, NULL, "         %s <= %5g\n", SCIPvarGetName(vars[i]), domreds->upperbounds[i]);
-      }
-   }
-}
-*/
 
 static
 void addLowerBoundProofNode(
@@ -994,112 +1292,24 @@ void freeBinConsData(
    SCIPfreeBuffer(scip, consdata);
 }
 
-#ifdef SCIP_STATISTIC
+/**
+ * information about the current status of the branching
+ */
+typedef struct
+{
+   SCIP_Bool             addbinconst;        /**< Was a binary constraint added? */
+   SCIP_Bool             depthtoosmall;      /**< Was the remaining depth too small to branch on? */
+   SCIP_Bool             lperror;            /**< Resulted a LP solving in an error? */
+   SCIP_Bool             cutoff;             /**< Was the current node cutoff? */
+   SCIP_Bool             domredcutoff;       /**< Was the current node cutoff due to domain reductions? */
+   SCIP_Bool             domred;             /**< Were domain reductions added due to information obtained through
+                                              *   branching? */
+   SCIP_Bool             propagationdomred;  /**< Were domain reductions added due to domain propagation? */
+   SCIP_Bool             limitreached;       /**< Was a limit (time, node, user, ...) reached? */
+   SCIP_Bool             maxnconsreached;    /**< Was the max number of constraints(bin const and dom red) reached? */
+} STATUS;
+
 static
-void initStatistics(
-   SCIP*                 scip,
-   STATISTICS*           statistics,
-   int                   recursiondepth
-   )
-{
-   int i;
-
-   statistics->ntotalresults = 0;
-   statistics->nbinconst = 0;
-   statistics->nbinconstvio = 0;
-   statistics->ndomredvio = 0;
-   statistics->ndepthreached = 0;
-   statistics->ndomred = 0;
-   statistics->ndomredcons = 0;
-   statistics->ncutoffproofnodes = 0;
-   statistics->ndomredproofnodes = 0;
-
-   for( i = 0; i < 18; i++)
-   {
-      statistics->nresults[i] = 0;
-   }
-
-   for( i = 0; i < recursiondepth; i++ )
-   {
-      statistics->noldbranchused[i] = 0;
-      statistics->nsinglecandidate[i] = 0;
-      statistics->npropdomred[i] = 0;
-      statistics->nfullcutoffs[i] = 0;
-      statistics->nlpssolved[i] = 0;
-      statistics->nsinglecutoffs[i] = 0;
-   }
-}
-
-SCIP_RETCODE allocStatistics(
-   SCIP*                 scip,
-   STATISTICS**          statistics,
-   int                   recursiondepth
-   )
-{
-   SCIP_CALL( SCIPallocBuffer(scip, statistics) );
-   /* 17 current number of possible result values and the index is 1 based, so 17 + 1 as array size with unused 0 element */
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nresults, 17 + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nsinglecutoffs, recursiondepth) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nfullcutoffs, recursiondepth) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nlpssolved, recursiondepth) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->npropdomred, recursiondepth) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nsinglecandidate, recursiondepth) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->noldbranchused, recursiondepth) );
-
-   initStatistics(scip, *statistics, recursiondepth);
-   return SCIP_OKAY;
-}
-
-void printStatistics(
-   SCIP*                 scip,
-   STATISTICS*           statistics,
-   int                   recursiondepth
-   )
-{
-   if( statistics->ntotalresults > 0 )
-   {
-      int i;
-
-      SCIPinfoMessage(scip, NULL, "Lookahead Branching was called <%i> times.\n", statistics->ntotalresults);
-      for( i = 1; i < 18; i++ )
-      {
-         /* see type_result.h for the id <-> enum mapping */
-         SCIPinfoMessage(scip, NULL, "Result <%s> was chosen <%i> times\n", getStatusString(i), statistics->nresults[i]);
-      }
-
-      for( i = 0; i < recursiondepth; i++ ) {
-         SCIPinfoMessage(scip, NULL, "In depth <%i>, <%i> fullcutoffs and <%i> single cutoffs were found.\n", i, statistics->nfullcutoffs[i], statistics->nsinglecutoffs[i]);
-         SCIPinfoMessage(scip, NULL, "In depth <%i>, <%i> LPs were solved.\n", i, statistics->nlpssolved[i]);
-         SCIPinfoMessage(scip, NULL, "In depth <%i>, a decision was discarded <%i> times due to domain reduction because of propagation.\n", i, statistics->npropdomred[i]);
-         SCIPinfoMessage(scip, NULL, "In depth <%i>, only one branching candidate was given <%i> times.\n", i, statistics->nsinglecandidate[i]);
-         SCIPinfoMessage(scip, NULL, "In depth <%i>, old branching results were used in <%i> cases.\n", i, statistics->noldbranchused[i]);
-      }
-
-      SCIPinfoMessage(scip, NULL, "Depth limit was reached <%i> times.\n", statistics->ndepthreached);
-      SCIPinfoMessage(scip, NULL, "Ignored <%i> binary constraints, that would be domain reductions.\n", statistics->ndomredcons);
-      SCIPinfoMessage(scip, NULL, "Added <%i> binary constraints, of which <%i> where violated by the base LP.\n", statistics->nbinconst, statistics->nbinconstvio);
-      SCIPinfoMessage(scip, NULL, "Reduced the domain of <%i> vars, <%i> of them where violated by the base LP.\n", statistics->ndomred, statistics->ndomredvio);
-      SCIPinfoMessage(scip, NULL, "Needed <%i> additional nodes to proof the cutoffs of base nodes\n", statistics->ncutoffproofnodes);
-      SCIPinfoMessage(scip, NULL, "Needed <%i> additional nodes to proof the domain reductions\n", statistics->ndomredproofnodes);
-   }
-}
-
-void freeStatistics(
-   SCIP*                 scip,
-   STATISTICS**          statistics
-   )
-{
-   SCIPfreeBufferArray(scip, &(*statistics)->noldbranchused);
-   SCIPfreeBufferArray(scip, &(*statistics)->nsinglecandidate);
-   SCIPfreeBufferArray(scip, &(*statistics)->npropdomred);
-   SCIPfreeBufferArray(scip, &(*statistics)->nlpssolved);
-   SCIPfreeBufferArray(scip, &(*statistics)->nfullcutoffs);
-   SCIPfreeBufferArray(scip, &(*statistics)->nsinglecutoffs);
-   SCIPfreeBufferArray(scip, &(*statistics)->nresults);
-   SCIPfreeBuffer(scip, statistics);
-}
-#endif
-
 SCIP_RETCODE allocateStatus(
    SCIP*                 scip,               /**< SCIP data structure */
    STATUS**              status              /**< the status to be allocated */
@@ -1120,6 +1330,7 @@ SCIP_RETCODE allocateStatus(
    return SCIP_OKAY;
 }
 
+static
 void freeStatus(
    SCIP*                 scip,               /**< SCIP data structure */
    STATUS**              status              /**< the status to be freed */
@@ -1128,36 +1339,142 @@ void freeStatus(
    SCIPfreeBuffer(scip, status);
 }
 
-/**
- * Initiates the BranchingResultData struct.
- */
-static
-void initBranchingResultData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   BRANCHINGRESULTDATA*  resultdata          /**< The struct to be initiated. */
-   )
+typedef struct
 {
-   resultdata->objval = -SCIPinfinity(scip);
-   resultdata->dualbound = -SCIPinfinity(scip);
-   resultdata->cutoff = FALSE;
-   resultdata->dualboundvalid = FALSE;
+   BRANCHINGDECISION*    decision;
+   SCIP_Real*            candscores;
+   SCIP_Real*            candslpvalue;
+   SCIP_Real*            candsvalfrac;
+   SCIP_VAR**            candswithscore;
+   SCIP_LPISTATE**       downlpistates;
+   SCIP_LPINORMS**       downlpinorms;
+   SCIP_LPISTATE**       uplpistates;
+   SCIP_LPINORMS**       uplpinorms;
+   int                   ncandscores;
+} BRANCHRULERESULT;
+
+static
+SCIP_RETCODE allocateBranchRuleResultReduced(
+   SCIP*                 scip,
+   BRANCHRULERESULT**    branchruleresult,
+   SCIP_Real             lpobjval
+)
+{
+   SCIP_CALL( SCIPallocBuffer(scip, branchruleresult) );
+   SCIP_CALL( allocateBranchingDecision(scip, &(*branchruleresult)->decision, lpobjval) );
+   (*branchruleresult)->candscores = NULL;
+   (*branchruleresult)->candswithscore = NULL;
+   (*branchruleresult)->candslpvalue = NULL;
+   (*branchruleresult)->candsvalfrac = NULL;
+   (*branchruleresult)->uplpistates = NULL;
+   (*branchruleresult)->uplpinorms = NULL;
+   (*branchruleresult)->downlpistates = NULL;
+   (*branchruleresult)->downlpinorms = NULL;
+   (*branchruleresult)->ncandscores = -1;
+
+   return SCIP_OKAY;
 }
 
 static
-void copyBranchingResultData(
-   BRANCHINGRESULTDATA*  sourcedata,
-   BRANCHINGRESULTDATA*  targetdata
+SCIP_RETCODE allocateBranchRuleResultFull(
+   SCIP*                 scip,
+   BRANCHRULERESULT**    branchruleresult,
+   SCIP_Real             lpobjval,
+   int                   ncands
    )
 {
-   targetdata->cutoff = sourcedata->cutoff;
-   targetdata->objval = sourcedata->objval;
-   targetdata->dualbound = sourcedata->dualbound;
-   targetdata->dualboundvalid = sourcedata->dualboundvalid;
+   int i;
+
+   SCIP_CALL( allocateBranchRuleResultReduced(scip, branchruleresult, lpobjval) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->downlpinorms, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->downlpistates, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->uplpinorms, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->uplpistates, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candscores, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candswithscore, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candslpvalue, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candsvalfrac, ncands) );
+   (*branchruleresult)->ncandscores = ncands;
+
+   for( i = 0; i < ncands; i++ )
+   {
+      (*branchruleresult)->candscores[i] = -1;
+      (*branchruleresult)->candswithscore[i] = NULL;
+   }
+
+   return SCIP_OKAY;
 }
+
+static
+void freeBranchRuleResultReduced(
+   SCIP*                 scip,
+   BRANCHRULERESULT**    branchruleresult
+   )
+{
+   freeBranchingDecision(scip, &(*branchruleresult)->decision);
+   SCIPfreeBuffer(scip, branchruleresult);
+}
+
+static
+void freeBranchRuleResultFull(
+   SCIP*                 scip,
+   BRANCHRULERESULT**    branchruleresult
+   )
+{
+   assert(&(*branchruleresult)->candslpvalue != NULL);
+   assert(&(*branchruleresult)->candswithscore != NULL);
+   assert(&(*branchruleresult)->candscores != NULL);
+
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->candsvalfrac);
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->candslpvalue);
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->candswithscore);
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->candscores);
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->uplpistates);
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->uplpinorms);
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->downlpistates);
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->downlpinorms);
+   freeBranchRuleResultReduced(scip, branchruleresult);
+}
+
+
+
 
 /*
  * Local methods for the logic
  */
+static
+SCIP_RETCODE selectVarRecursive(
+   SCIP*                 scip,
+   STATUS*               status,
+   PERSISTENTDATA*       persistent,
+   CONFIGURATION*        config,
+   SCIP_SOL*             baselpsol,
+   DOMAINREDUCTIONS*     domainreductions,
+   BINCONSDATA*          binconsdata,
+   CANDIDATELIST*        candidates,
+   BRANCHRULERESULT*     branchruleresult,
+   int                   recursiondepth,
+   SCIP_Real             lpobjval
+#ifdef SCIP_STATISTIC
+   ,STATISTICS*          statistics
+   ,LOCALSTATISTICS*     localstats
+#endif
+);
+
+static
+SCIP_RETCODE selectVarStart(
+   SCIP*                 scip,
+   CONFIGURATION*        config,
+   PERSISTENTDATA*       persistent,
+   STATUS*               status,
+   BRANCHRULERESULT*     branchruleresult,
+   SCIP_Real             lpobjval
+#ifdef SCIP_STATISTIC
+   ,STATISTICS*          statistics
+   ,LOCALSTATISTICS*     localstats
+#endif
+);
+
 
 static
 SCIP_RETCODE copyCurrentSolution(
@@ -1175,28 +1492,54 @@ SCIP_RETCODE copyCurrentSolution(
    return SCIP_OKAY;
 }
 
-#ifdef SCIP_STATISTIC
-SCIP_RETCODE allocateLocalStatistics(
-   SCIP*                 scip,
-   LOCALSTATISTICS**     localstats
-   )
+/**
+ * Executes the branching on a given variable with a given value.
+ *
+ * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+static
+SCIP_RETCODE branchOnVar(
+   SCIP*                 scip                /**< SCIP data structure */,
+   BRANCHINGDECISION*    decision
+)
 {
-   SCIP_CALL( SCIPallocBuffer(scip, localstats) );
+   SCIP_VAR* bestvar = decision->bestvar;
+   SCIP_Real bestval = decision->bestval;
 
-   (*localstats)->ncutoffproofnodes = 0;
-   (*localstats)->ndomredproofnodes = 0;
+   SCIP_NODE* downchild = NULL;
+   SCIP_NODE* upchild = NULL;
+
+   assert(!SCIPisIntegral(scip, bestval));
+
+   SCIPdebugMessage("Effective branching on var <%s> with value <%g>. Old domain: [%g..%g].\n",
+      SCIPvarGetName(bestvar), bestval, SCIPvarGetLbLocal(bestvar), SCIPvarGetUbLocal(bestvar));
+
+   SCIP_CALL( SCIPbranchVarVal(scip, bestvar, bestval, &downchild, NULL, &upchild) );
+
+   assert(downchild != NULL);
+   assert(upchild != NULL);
+
+   /* update the lower bounds in the children; we must not do this if columns are missing in the LP
+    * (e.g., because we are doing branch-and-price) or the problem should be solved exactly
+    */
+   if( SCIPallColsInLP(scip) && !SCIPisExactSolve(scip) )
+   {
+      SCIP_Real bestdown = decision->bestdown;
+      SCIP_Bool bestdownvalid = decision->bestdownvalid;
+      SCIP_Real bestup = decision->bestup;
+      SCIP_Bool bestupvalid = decision->bestupvalid;
+      SCIP_Real provedbound = decision->provedbound;
+
+      SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdownvalid ? MAX(bestdown, provedbound) : provedbound) );
+      SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestupvalid ? MAX(bestup, provedbound) : provedbound) );
+   }
+   SCIPdebugMessage(" -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
+   SCIPdebugMessage(" -> up child's lowerbound: %g\n", SCIPnodeGetLowerbound(upchild));
 
    return SCIP_OKAY;
 }
 
-void freeLocalStatistics(
-   SCIP*                 scip,
-   LOCALSTATISTICS**     localstats
-   )
-{
-   SCIPfreeBuffer(scip, localstats);
-}
-#endif
 
 /**
  * Executes the branching on the current probing node by adding a probing node with a new upper bound.
@@ -1608,7 +1951,6 @@ SCIP_RETCODE getFSBResult(
    STATUS* status;
    STATISTICS* statistics;
    LOCALSTATISTICS* localstats;
-   int i;
 
    SCIP_CALL( allocConfiguration(scip, &config) );
    SCIP_CALL( allocateStatus(scip, &status) );
@@ -1630,12 +1972,15 @@ SCIP_RETCODE getFSBResult(
    SCIP_CALL( selectVarStart(scip, config, NULL, status, branchruleresult, lpobjval, statistics, localstats) );
 
    SCIPdebug(
+   {
+      int i;
       for( i = 0; i < branchruleresult->ncandscores; i++ )
       {
          SCIP_VAR* var = branchruleresult->candswithscore[i];
          assert( var != NULL );
          SCIPdebugMessage("%i: %s\n", i, SCIPvarGetName(branchruleresult->candswithscore[i]));
       }
+   }
    )
 
    freeLocalStatistics(scip, &localstats);
@@ -1811,25 +2156,6 @@ SCIP_RETCODE getCandidates(
 
    return SCIP_OKAY;
 }
-
-static
-SCIP_RETCODE selectVarRecursive(
-   SCIP*                 scip,
-   STATUS*               status,
-   PERSISTENTDATA*       persistent,
-   CONFIGURATION*        config,
-   SCIP_SOL*             baselpsol,
-   DOMAINREDUCTIONS*     domainreductions,
-   BINCONSDATA*          binconsdata,
-   CANDIDATELIST*        candidates,
-   BRANCHRULERESULT*     branchruleresult,
-   int                   recursiondepth,
-   SCIP_Real             lpobjval
-#ifdef SCIP_STATISTIC
-   ,STATISTICS*          statistics
-   ,LOCALSTATISTICS*     localstats
-#endif
-);
 
 static
 SCIP_RETCODE executeDownBranchingRecursive(
@@ -2535,6 +2861,7 @@ SCIP_RETCODE selectVarRecursive(
    return SCIP_OKAY;
 }
 
+static
 SCIP_RETCODE selectVarStart(
    SCIP*                 scip,
    CONFIGURATION*        config,

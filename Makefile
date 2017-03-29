@@ -436,9 +436,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_fullstrong.o \
 			scip/branch_inference.o \
 			scip/branch_leastinf.o \
-			scip/common_branch_lookahead.o \
 			scip/branch_lookahead.o \
-			scip/branch_lookaheadabbreviated.o \
 			scip/branch_mostinf.o \
 			scip/branch_multaggr.o \
 			scip/branch_nodereopt.o \

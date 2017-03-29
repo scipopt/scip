@@ -36,7 +36,6 @@
 #include "scip/branch_inference.h"
 #include "scip/branch_leastinf.h"
 #include "scip/branch_lookahead.h"
-#include "scip/branch_lookaheadabbreviated.h"
 #include "scip/branch_mostinf.h"
 #include "scip/branch_multaggr.h"
 #include "scip/branch_nodereopt.h"

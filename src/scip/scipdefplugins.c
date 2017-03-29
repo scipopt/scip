@@ -107,7 +107,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchruleInference(scip) );
    SCIP_CALL( SCIPincludeBranchruleLeastinf(scip) );
    SCIP_CALL( SCIPincludeBranchruleLookahead(scip) );
-   SCIP_CALL( SCIPincludeBranchruleLookaheadAbbreviated(scip) );
    SCIP_CALL( SCIPincludeBranchruleMostinf(scip) );
    SCIP_CALL( SCIPincludeBranchruleMultAggr(scip) );
    SCIP_CALL( SCIPincludeBranchruleNodereopt(scip) );
