@@ -1032,6 +1032,42 @@ SCIP_RETCODE neighborhoodFixVariables(
    return SCIP_OKAY;
 }
 
+/** todo change the sub-SCIP by restricting variable domains, changing objective coefficients, or adding constraints */
+static
+SCIP_RETCODE neighborhoodChangeSubscip(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   NH*                   neighborhood,       /**< neighborhood */
+   SCIP_VAR**            targetvars,         /**< array of target SCIP variables aligned with source SCIP variables */
+   int*                  ndomchgs,
+   int*                  nchgobjs,
+   int*                  naddedconss,
+   SCIP_Bool*            success
+   )
+{
+   assert(sourcescip != NULL);
+   assert(targetscip != NULL);
+   assert(neighborhood != NULL);
+   assert(targetvars != NULL);
+   assert(ndomchgs != NULL);
+   assert(nchgobjs != NULL);
+   assert(naddedconss != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+   *ndomchgs = 0;
+   *nchgobjs = 0;
+   *naddedconss = 0;
+
+   /* call the change sub-SCIP callback of the neighborhood */
+   if( neighborhood->changesubscip != NULL )
+   {
+      SCIP_CALL( neighborhood->changesubscip(sourcescip, targetscip, targetvars, ndomchgs, nchgobjs, naddedconss, success) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** set sub-SCIP solving limits */
 static
 SCIP_RETCODE setLimits(
@@ -1321,6 +1357,9 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       SCIP_HASHMAP* varmapf;
       SCIP_EVENTHDLR* eventhdlr;
       SCIP_EVENTDATA eventdata;
+      int ndomchgs;
+      int nchgobjs;
+      int naddedconss;
       int v;
 
       subscipstatus = SCIP_STATUS_INFEASIBLE;
@@ -1357,7 +1396,11 @@ SCIP_DECL_HEUREXEC(heurExecLns)
 
       SCIPhashmapFree(&varmapf);
 
-      /** todo let the neighborhood add additional constraints, or restrict domains */
+      /** let the neighborhood add additional constraints, or restrict domains */
+      SCIP_CALL( neighborhoodChangeSubscip(scip, subscip, neighborhood, subvars, &ndomchgs, &nchgobjs, &naddedconss, &success) );
+
+      /* set up sub-SCIP parameters */
+      /* todo do not add an objective cutoff if nchgobjs > 0 */
       SCIP_CALL( setupSubScip(scip, subscip, &solvelimits, heur) );
 
       /* copy the necessary data into the event data to create new solutions */
@@ -1485,6 +1528,8 @@ DECL_CHANGESUBSCIP(changeSubscipRens)
          }
       }
    }
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
