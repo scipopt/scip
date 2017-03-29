@@ -142,6 +142,13 @@
 #define SCIP_DEFAULT_CONF_WEIGHTREPROPDEPTH 0.1 /**< weight of the repropagation depth of a conflict used in score calculation */
 #define SCIP_DEFAULT_CONF_WEIGHTVALIDDEPTH  1.0 /**< weight of the valid depth of a conflict used in score calculation */
 #define SCIP_DEFAULT_CONF_MINIMPROVE       0.05 /**< minimal improvement of primal bound to remove conflicts based on a previous incumbent */
+
+/* Conflict Analysis (dual ray) */
+
+#define SCIP_DEFAULT_CONF_APPLYMIR        FALSE /**< apply MIR function to dual rays */
+#define SCIP_DEFAULT_CONF_PREFERMIR        TRUE /**< prefer a ray after applying the MIR function if the proof is still
+                                                 *   valid, use both rays otherwise
+                                                 */
 #define SCIP_DEFAULT_CONF_DUALRAYPRESOL       0 /**< which presolving strategy should be used for dualray constraints?
                                                  *   (0: no presolving,
                                                  *    1: keep variables contributing with its local bound
@@ -154,12 +161,6 @@
                                                  *   ([d]on't remove, remove [a]ll, variables with active [l]ocal or [g]lobal bound)
                                                  */
 #define SCIP_DEFAULT_CONF_SEPAKNAPSACK    FALSE /**< separate knapsack covers from dualray proof */
-
-/* Conflict Analysis (dual ray) */
-
-#define SCIP_DEFAULT_CONF_APPLYMIR        FALSE /**< apply MIR function to dual rays */
-#define SCIP_DEFAULT_CONF_PREFERMIR        TRUE /**< prefer a ray after applying the MIR function if the proof is still
-                                                  *   valid, use both rays otherwise */
 
 /* Constraints */
 

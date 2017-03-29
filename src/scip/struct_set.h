@@ -236,7 +236,6 @@ struct SCIP_Set
    SCIP_Real             conf_minimprove;    /**< minimal improvement of primal bound to remove conflicts depending on
                                               *   a previous incumbent.
                                               */
-   SCIP_Bool             conf_sepaknapsack;  /**< separate knapsack covers from dualray proofs */
    int                   conf_dualraypresolstrat; /**< which presolving strategy should be used for dualray constraints?
                                                    *   (0: no presolving)
                                                    */

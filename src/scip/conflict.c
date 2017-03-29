@@ -2572,7 +2572,7 @@ SCIP_RETCODE createAndAddProofcons(
    else
       return SCIP_INVALIDCALL;
 
-   local = (SCIPtreeGetFocusDepth(tree) < SCIPtreeGetCurrentDepth(tree) && tree->focusnode != tree->root );
+   local = (!cover && SCIPtreeGetFocusDepth(tree) < SCIPtreeGetCurrentDepth(tree) && SCIPtreeGetFocusDepth(tree) > SCIPtreeGetEffectiveRootDepth(tree) );
 
    SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, proofset->nvars, proofset->vars, proofset->coefs,
          -SCIPsetInfinity(set), proofset->rhs, FALSE, FALSE, FALSE, FALSE, TRUE, local, FALSE, TRUE, TRUE, FALSE) );
@@ -2670,7 +2670,7 @@ SCIP_RETCODE conflictFlushProofset(
    {
       /* create and add the original proof */
       SCIP_CALL( createAndAddProofcons(conflict, conflictstore, conflict->proofset, set, stat, origprob, transprob,
-            tree, reopt, lp, blkmem, TRUE) );
+            tree, reopt, lp, blkmem, FALSE) );
    }
 
    /* clear the proof set anyway */
@@ -2695,7 +2695,7 @@ SCIP_RETCODE conflictFlushProofset(
          {
             /* create and add proof constraint */
             SCIP_CALL( createAndAddProofcons(conflict, conflictstore, conflict->proofsets[i], set, stat, origprob,
-                  transprob, tree, reopt, lp, blkmem, FALSE) );
+                  transprob, tree, reopt, lp, blkmem, TRUE) );
          }
       }
 
@@ -6568,18 +6568,9 @@ void debugPrintViolationInfo(
 
 /** tighten a given infeasibility proof a^Tx <= b with minact > b w.r.t. local bounds
  *
- *  SCIP_CONFPRES_DISABLED:
- *    - perform no presolving
- *
- *  SCIP_CONFPRES_SIMPLE:
- *    - remove all variables where the local bound contributing to the activity is equal to the global bound
- *
- *  SCIP_CONFPRES_EXHAUSTIVE:
- *    - create a constraint where each variable contributes with a local bound to the activity that which is different
- *      to the corresponding global bound
- *    - create another constraint where each variable contributes with the global bound to the activity.
- *      add only a few variables contributing with a local bound to the constraint such that the proof is
- *      not trivially fulfilled.
+ *  1) Check whether we want to separate knapsack cover cuts from the proof constraint (only for pure binary problems)
+ *  2) Remove continuous variables
+ *  3) Try to sparsify the proof
  *
  *  @todo implement applying MIR function to the proof constraint(s).
  */
@@ -6603,6 +6594,8 @@ SCIP_RETCODE tightenDualray(
    )
 {/*lint --e{715}*/
    SCIP_VAR** vars;
+   SCIP_Real tmprhs;
+   SCIP_Real minactivity;
    int nbinvars;
    int ncontvars;
    int nintvars;
@@ -6615,6 +6608,8 @@ SCIP_RETCODE tightenDualray(
    nbinvars = 0;
    nintvars = 0;
    ncontvars = 0;
+   minactivity = 0.0;
+   tmprhs = *rhs;
 
    /* initialize proof set */
    proofsetAddRhs(conflict->proofset, *rhs);
@@ -6624,26 +6619,26 @@ SCIP_RETCODE tightenDualray(
       int idx = varinds[i];
       SCIP_CALL( proofsetAddVar(conflict->proofset, set, blkmem, vars[idx], vals[idx], curvarlbs[idx], curvarubs[idx]) );
 
-      /* count number of binary, integer, and continuous variables */
-      switch( SCIPvarGetType(vars[idx]) ) {
-      case SCIP_VARTYPE_BINARY:
+      /* calculate minimal activity */
+      if( vals[idx] < 0.0 )
+         minactivity += vals[idx] * curvarubs[idx];
+      else
+         minactivity += vals[idx] * curvarlbs[idx];
+
+      /* count number of binary, (implicit) integer, and continuous variables */
+      if( SCIPvarIsBinary(vars[idx]) )
          ++nbinvars;
-         break;
-      case SCIP_VARTYPE_INTEGER:
-         ++nintvars;
-         break;
-      case SCIP_VARTYPE_CONTINUOUS:
-      case SCIP_VARTYPE_IMPLINT:
+      else if( SCIPvarGetType(vars[idx]) )
          ++ncontvars;
-         break;
-      default:
-         SCIPsetDebugMsg(set, "unexpected type %u for variable <%s>.\n", SCIPvarGetType(vars[idx]), SCIPvarGetName(vars[idx]));
-         return SCIP_INVALIDDATA;
+      else
+      {
+         assert(SCIPvarGetType(vars[idx]) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(vars[idx]) == SCIP_VARTYPE_IMPLINT);
+         ++nintvars;
       }
    }
 
-   SCIPsetDebugMsg(set, "start dualray tightening (strategy: %d):\n", set->conf_dualraypresolstrat);
-   SCIPsetDebugMsg(set, "-> tighten dual ray: nvars=%d (bin=%d, int=%d, cont=%d), rhs=%g\n",
+   SCIPsetDebugMsg(set, "start dualray tightening (strategy: %d, separate: %d):\n", set->conf_dualraypresolstrat, set->conf_sepaknapsack);
+   SCIPsetDebugMsg(set, "-> tighten dual ray: nvars=%d (bin=%d, int=%d, cont=%d), minact=%.12f rhs=%.12f\n",
          (*nvarinds), nbinvars, nintvars, ncontvars, *rhs);
    debugPrintViolationInfo(set, getMinActivity(vals, varinds, (*nvarinds), curvarlbs, curvarubs), *rhs, NULL);
 
@@ -6777,7 +6772,7 @@ SCIP_RETCODE tightenDualray(
    }
 
    /* remove continuous variables from the proof */
-   if( set->conf_dualraypresolstrat == SCIP_CONFPRES_DISABLED && set->conf_removecont != 'd' && ncontvars > 0 )
+   if( set->conf_removecont != 'd' && ncontvars > 0 )
    {
       /* sort variable indices in increasing order of scores, i.e., start with variables having the smallest weighted
        * difference between active global and local bound.
@@ -6822,8 +6817,12 @@ SCIP_RETCODE tightenDualray(
             continue;
 
          /* remove continuous variables if the resulting proof is still valid */
-         if( conflict->proofset->minactivity - conflict->proofset->rhs > conflict->proofset->coefs[i] * (locbd - glbbd) )
+         if( minactivity - tmprhs > conflict->proofset->coefs[i] * (locbd - glbbd) )
+         {
             proofsetRemoveVar(conflict->proofset, set, i);
+            minactivity -= (conflict->proofset->coefs[i] * locbd);
+            tmprhs -= (conflict->proofset->coefs[i] * glbbd);
+         }
       }
 
       proofsetCleanUp(conflict->proofset);
@@ -6835,67 +6834,59 @@ SCIP_RETCODE tightenDualray(
 
    *success = TRUE;
 
-   /* remove continuous variables */
-   if( set->conf_dualraypresolstrat <= SCIP_CONFPRES_BOTH )
+   /* sort variable indices in increasing order of scores, i.e., start with variables having the smallest weighted
+    * difference between active global and local bound.
+    */
+   SCIPsortDownRealRealPtr(conflict->proofset->scores, conflict->proofset->coefs, (void**)conflict->proofset->vars, conflict->proofset->nvars);
+   assert(SCIPsetIsGE(set, conflict->proofset->scores[0], conflict->proofset->scores[conflict->proofset->nvars-1]));
+
+   /* presolve proof set */
+   for( i = 0; i < conflict->proofset->nvars; i++ )
    {
-      /* sort variable indices in increasing order of scores, i.e., start with variables having the smallest weighted
-       * difference between active global and local bound.
-       */
-      SCIPsortDownRealRealPtr(conflict->proofset->scores, conflict->proofset->coefs, (void**)conflict->proofset->vars, conflict->proofset->nvars);
-      assert(SCIPsetIsGE(set, conflict->proofset->scores[0], conflict->proofset->scores[conflict->proofset->nvars-1]));
+      SCIP_VAR* var;
+      SCIP_Real coef;
+      SCIP_Real glbbd;
+      SCIP_Real locbd;
+      int idx;
 
-      /* presolve proof set */
-      for( i = 0; i < conflict->proofset->nvars; i++ )
+      coef = conflict->proofset->coefs[i];
+      var = conflict->proofset->vars[i];
+      assert(var != NULL);
+      assert(SCIPvarIsActive(var));
+      assert(!SCIPsetIsZero(set, coef));
+
+      idx = SCIPvarGetProbindex(var);
+      assert(idx >= 0);
+
+      /* get appropriate global and local bounds */
+      glbbd = (coef < 0.0 ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var));
+      locbd = (coef < 0.0 ? curvarubs[idx] : curvarlbs[idx]);
+
+      /* cannot remove variables which infinite global bound */
+      if( SCIPsetIsInfinity(set, REALABS(glbbd)) )
+         continue;
+
+      /* remove all variables contributing with its global bound */
+      if( set->conf_dualraypresolstrat == SCIP_CONFPRES_ONLYLOCAL && SCIPsetIsEQ(set, glbbd, locbd) )
       {
-         SCIP_VAR* var;
-         SCIP_Real coef;
-         SCIP_Real glbbd;
-         SCIP_Real locbd;
-         int idx;
-
-         coef = conflict->proofset->coefs[i];
-         var = conflict->proofset->vars[i];
-         assert(var != NULL);
-         assert(SCIPvarIsActive(var));
-         assert(!SCIPsetIsZero(set, coef));
-
-         idx = SCIPvarGetProbindex(var);
-         assert(idx >= 0);
-
-         /* get appropriate global and local bounds */
-         glbbd = (coef < 0.0 ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var));
-         locbd = (coef < 0.0 ? curvarubs[idx] : curvarlbs[idx]);
-
-         /* cannot remove variables which infinite global bound */
-         if( SCIPsetIsInfinity(set, REALABS(glbbd)) )
-            continue;
-
-         /* remove all variables contributing with its global bound */
-         if( set->conf_dualraypresolstrat == SCIP_CONFPRES_ONLYLOCAL && SCIPsetIsEQ(set, glbbd, locbd) )
+         proofsetRemoveVar(conflict->proofset, set, i);
+      }
+      /* A) SCIP_CONFPRES_ONLYGLOBAL: remove all variables contributing with its local bound
+       * B) SCIP_CONFPRES_BOTH      : remove as many variables contributing with its local bound such that the local
+       *                              infeasibility proof is preserved.
+       */
+      else if( !SCIPsetIsEQ(set, glbbd, locbd) )
+      {
+         if( set->conf_dualraypresolstrat == SCIP_CONFPRES_ONLYGLOBAL )
          {
             proofsetRemoveVar(conflict->proofset, set, i);
          }
-         /* A) SCIP_CONFPRES_ONLYGLOBAL: remove all variables contributing with its local bound
-          * B) SCIP_CONFPRES_BOTH      : remove as many variables contributing with its local bound such that the local
-          *                              infeasibility proof is preserved.
-          */
-         else if( !SCIPsetIsEQ(set, glbbd, locbd) )
+         else if( set->conf_dualraypresolstrat == SCIP_CONFPRES_BOTH
+               && minactivity - tmprhs > conflict->proofset->coefs[i] * (locbd - glbbd) )
          {
-            if( set->conf_dualraypresolstrat == SCIP_CONFPRES_ONLYGLOBAL )
-            {
-               proofsetRemoveVar(conflict->proofset, set, i);
-            }
-            else if( set->conf_dualraypresolstrat == SCIP_CONFPRES_BOTH )
-            {
-               SCIP_Real residaalact;
-               SCIP_Real residualrhs;
-
-               residaalact = conflict->proofset->minactivity - (conflict->proofset->coefs[i] * locbd);
-               residualrhs = conflict->proofset->rhs - (conflict->proofset->coefs[i] * glbbd);
-
-               if( residaalact > residualrhs )
-                  proofsetRemoveVar(conflict->proofset, set, i);
-            }
+            proofsetRemoveVar(conflict->proofset, set, i);
+            minactivity -= (conflict->proofset->coefs[i] * locbd);
+            tmprhs -= (conflict->proofset->coefs[i] * glbbd);
          }
       }
    }
