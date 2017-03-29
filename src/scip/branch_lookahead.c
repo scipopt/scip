@@ -14,8 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 //#define PRINTNODECONS
 /*
-#define SCIP_DEBUG
 */
+#define SCIP_DEBUG
 #define SCIP_STATISTIC
 
 /**@file   branch_lookahead.c
@@ -84,7 +84,7 @@ typedef struct
 } BRANCHINGDECISION;
 
 static
-SCIP_RETCODE allocateBranchingDecision(
+SCIP_RETCODE branchingDecisionAllocate(
    SCIP*                 scip,
    BRANCHINGDECISION**   decision,
    SCIP_Real             lpobjval
@@ -100,7 +100,7 @@ SCIP_RETCODE allocateBranchingDecision(
 }
 
 static
-void copyBranchingDecision(
+void branchingDecisionCopy(
    BRANCHINGDECISION*    sourcedecision,
    BRANCHINGDECISION*    targetdecision
    )
@@ -115,7 +115,7 @@ void copyBranchingDecision(
 }
 
 static
-SCIP_Bool isBranchingDecisionValid(
+SCIP_Bool branchingDecisionIsValid(
    SCIP*                 scip,
    BRANCHINGDECISION*    decision
    )
@@ -124,7 +124,7 @@ SCIP_Bool isBranchingDecisionValid(
 }
 
 static
-void freeBranchingDecision(
+void branchingDecisionFree(
    SCIP*                 scip,
    BRANCHINGDECISION**   decision
    )
@@ -146,11 +146,21 @@ typedef struct
                                               *   branchings. */
 } BRANCHINGRESULTDATA;
 
+static
+SCIP_RETCODE branchingResultDataAllocate(
+   SCIP*                 scip,
+   BRANCHINGRESULTDATA** resultdata
+   )
+{
+   SCIP_CALL( SCIPallocBuffer(scip, resultdata) );
+   return SCIP_OKAY;
+}
+
 /**
  * Initiates the BranchingResultData struct.
  */
 static
-void initBranchingResultData(
+void branchingResultDataInit(
    SCIP*                 scip,               /**< SCIP data structure */
    BRANCHINGRESULTDATA*  resultdata          /**< The struct to be initiated. */
    )
@@ -162,7 +172,7 @@ void initBranchingResultData(
 }
 
 static
-void copyBranchingResultData(
+void branchingResultDataCopy(
    BRANCHINGRESULTDATA*  sourcedata,
    BRANCHINGRESULTDATA*  targetdata
    )
@@ -171,6 +181,15 @@ void copyBranchingResultData(
    targetdata->objval = sourcedata->objval;
    targetdata->dualbound = sourcedata->dualbound;
    targetdata->dualboundvalid = sourcedata->dualboundvalid;
+}
+
+static
+void branchingResultDataFree(
+   SCIP*                 scip,
+   BRANCHINGRESULTDATA** resultdata
+   )
+{
+   SCIPfreeBuffer(scip, resultdata);
 }
 
 /**
@@ -220,7 +239,7 @@ typedef struct
 } CONFIGURATION;
 
 static
-SCIP_RETCODE allocConfiguration(
+SCIP_RETCODE configurationAllocate(
    SCIP*                 scip,
    CONFIGURATION**       config
    )
@@ -241,7 +260,7 @@ SCIP_RETCODE allocConfiguration(
 }
 
 static
-void freeConfiguration(
+void configurationFree(
    SCIP*                 scip,
    CONFIGURATION**       config
    )
@@ -282,7 +301,7 @@ typedef struct
 } STATISTICS;
 
 static
-void initStatistics(
+void statisticsInit(
    SCIP*                 scip,
    STATISTICS*           statistics,
    int                   recursiondepth
@@ -317,7 +336,7 @@ void initStatistics(
 }
 
 static
-SCIP_RETCODE allocStatistics(
+SCIP_RETCODE statisticsAllocate(
    SCIP*                 scip,
    STATISTICS**          statistics,
    int                   recursiondepth
@@ -333,7 +352,7 @@ SCIP_RETCODE allocStatistics(
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->nsinglecandidate, recursiondepth) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*statistics)->noldbranchused, recursiondepth) );
 
-   initStatistics(scip, *statistics, recursiondepth);
+   statisticsInit(scip, *statistics, recursiondepth);
    return SCIP_OKAY;
 }
 
@@ -350,7 +369,7 @@ const char* getStatusString(
 }
 
 static
-void printStatistics(
+void statisticsPrint(
    SCIP*                 scip,
    STATISTICS*           statistics,
    int                   recursiondepth
@@ -385,7 +404,7 @@ void printStatistics(
 }
 
 static
-void freeStatistics(
+void statisticsFree(
    SCIP*                 scip,
    STATISTICS**          statistics
    )
@@ -410,7 +429,7 @@ typedef struct
 } LOCALSTATISTICS;
 
 static
-SCIP_RETCODE allocateLocalStatistics(
+SCIP_RETCODE localStatisticsAllocate(
    SCIP*                 scip,
    LOCALSTATISTICS**     localstats
    )
@@ -424,7 +443,7 @@ SCIP_RETCODE allocateLocalStatistics(
 }
 
 static
-void freeLocalStatistics(
+void localStatisticsFree(
    SCIP*                 scip,
    LOCALSTATISTICS**     localstats
    )
@@ -460,6 +479,77 @@ typedef struct
 } CONSTRAINTLIST;
 
 /**
+ * Allocate and initialize the list holding the constraints.
+ */
+static
+SCIP_RETCODE constraintListAllocate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CONSTRAINTLIST**      conslist,           /**< Pointer to the list to be allocated and initialized. */
+   int                   startsize           /**< The number of entries the list initially can hold. */
+   )
+{
+   assert(scip != NULL);
+   assert(conslist != NULL);
+   assert(startsize > 0);
+
+   SCIP_CALL( SCIPallocBuffer(scip, conslist) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*conslist)->constraints, startsize) );
+
+   /* We start without any constraints */
+   (*conslist)->nconstraints = 0;
+   (*conslist)->memorysize = startsize;
+   (*conslist)->nviolatedcons = 0;
+
+   return SCIP_OKAY;
+}
+
+/**
+ * Append an element to the end of the list of constraints.
+ */
+static
+SCIP_RETCODE constraintListAppend(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CONSTRAINTLIST*       list,               /**< The list to add the element to. */
+   SCIP_CONS*            constoadd           /**< The element to add to the list. */
+   )
+{
+   assert(scip != NULL);
+   assert(list != NULL);
+   assert(constoadd != NULL);
+
+   /* In case the list tries to hold more elements than it has space, reallocate  */
+   if( list->memorysize == list->nconstraints )
+   {
+      /* resize the array, such that it can hold the new element */
+      int newmemsize = SCIPcalcMemGrowSize(scip, list->memorysize + 1);
+      SCIP_CALL( SCIPreallocBufferArray(scip, &list->constraints, newmemsize) );
+      list->memorysize = newmemsize;
+   }
+
+   /* Set the new var at the first unused place, which is the length used as index */
+   list->constraints[list->nconstraints] = constoadd;
+   list->nconstraints++;
+
+   return SCIP_OKAY;
+}
+
+/**
+ * Free all resources of a constraint list in opposite order to the allocation.
+ */
+static
+void constraintListFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CONSTRAINTLIST**      conslist            /**< Pointer to the list to be freed. */
+   )
+{
+   assert(scip != NULL);
+   assert(conslist != NULL);
+
+   SCIPfreeBufferArray(scip, &(*conslist)->constraints);
+   SCIPfreeBuffer(scip, conslist);
+}
+
+/**
  * list of binary variables currently branched on
  * a down branching (x <= 0) is saved as the negated variable (1-x)
  * an up branching (x >= 1) is saved as the original variable (x)
@@ -474,6 +564,99 @@ typedef struct
 } BINARYVARLIST;
 
 /**
+ * Allocates and initializes the BINARYVARLIST struct.
+ */
+static
+SCIP_RETCODE binaryVarListAllocate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   BINARYVARLIST**       list,               /**< Pointer to the list to be allocated and initialized. */
+   int                   startsize           /**< The number of entries the list initially can hold. */
+   )
+{
+   SCIP_CALL( SCIPallocBuffer(scip, list) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*list)->binaryvars, startsize) );
+
+   /* We start with no entries and the (current) max length */
+   (*list)->nbinaryvars = 0;
+   (*list)->memorysize = startsize;
+
+   return SCIP_OKAY;
+}
+
+/**
+ * Appends a binary variable to the list, reallocating the list if necessary.
+ */
+static
+SCIP_RETCODE binaryVarListAppend(
+   SCIP*                 scip,               /**< SCIP data structure */
+   BINARYVARLIST*        list,               /**< The list to add the var to. */
+   SCIP_VAR*             vartoadd            /**< The binary var to add to the list. */
+   )
+{
+   assert(list != NULL);
+   assert(vartoadd != NULL);
+   assert(SCIPvarIsBinary(vartoadd));
+
+   /* In case the list tries to hold more elements than it has space, reallocate  */
+   if( list->memorysize == list->nbinaryvars )
+   {
+      /* resize the array, such that it can hold at least the new element */
+      int newmemsize = SCIPcalcMemGrowSize(scip, list->memorysize + 1);
+      SCIP_CALL( SCIPreallocBufferArray(scip, &list->binaryvars, newmemsize) );
+      list->memorysize = newmemsize;
+   }
+
+   /* Set the new var at the first unused place, which is the length used as index */
+   list->binaryvars[list->nbinaryvars] = vartoadd;
+   list->nbinaryvars++;
+
+   return SCIP_OKAY;
+}
+
+/**
+ * Remove and return the last element from the list.
+ */
+static
+SCIP_VAR* binaryVarListDrop(
+   SCIP*                 scip,               /**< SCIP data structure */
+   BINARYVARLIST*        list                /**< The list to remove the last element from. */
+   )
+{
+   SCIP_VAR* lastelement;
+
+   assert(list != NULL);
+   assert(list->nbinaryvars > 0);
+   assert(list->binaryvars[list->nbinaryvars-1] != NULL);
+
+   /* get the last element and set the last pointer to NULL (maybe unnecessary, but feels cleaner) */
+   lastelement = list->binaryvars[list->nbinaryvars-1];
+   list->binaryvars[list->nbinaryvars-1] = NULL;
+
+   assert(lastelement != NULL);
+
+   /* decrement the number of entries */
+   list->nbinaryvars--;
+
+   return lastelement;
+}
+
+/**
+ * Frees all resources allocated by a BINARYVARLIST in opposite order of allocation.
+ */
+static
+void binaryVarListFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   BINARYVARLIST**       list                /**< Pointer to the list to free */
+   )
+{
+   assert(scip != NULL);
+   assert(list != NULL);
+
+   SCIPfreeBufferArray(scip, &(*list)->binaryvars);
+   SCIPfreeBuffer(scip, list);
+}
+
+/**
  * struct holding the relevant data for handling binary constraints
  */
 typedef struct
@@ -482,13 +665,117 @@ typedef struct
    CONSTRAINTLIST*       createdconstraints; /**< The created constraints. */
 } BINCONSDATA;
 
+/**
+ * Allocate and initialize the BINCONSDATA struct.
+ */
+static
+SCIP_RETCODE binConsDataAllocate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   BINCONSDATA**         consdata,           /**< Pointer to the struct to be allocated and initialized. */
+   int                   maxdepth,           /**< The depth of the recursion as an upper bound of branch vars to hold. */
+   int                   nstartcons          /**< The start size of the array containing the constraints. */
+   )
+{
+   assert(scip != NULL);
+   assert(consdata != NULL);
+   assert(maxdepth > 0);
+   assert(nstartcons > 0);
+
+   SCIP_CALL( SCIPallocBuffer(scip, consdata) );
+   SCIP_CALL( binaryVarListAllocate(scip, &(*consdata)->binaryvars, maxdepth) );
+   SCIP_CALL( constraintListAllocate(scip, &(*consdata)->createdconstraints, nstartcons) );
+
+   return SCIP_OKAY;
+}
+
+/**
+ * Free all resources in a BINCONSDATA in opposite order of allocation.
+ */
+static
+void binConsDataFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   BINCONSDATA**         consdata            /**< Pointer to he struct to be freed. */
+   )
+{
+   assert(scip != NULL);
+   assert(consdata != NULL);
+
+   constraintListFree(scip, &(*consdata)->createdconstraints);
+   binaryVarListFree(scip, &(*consdata)->binaryvars);
+   SCIPfreeBuffer(scip, consdata);
+}
+
+typedef struct
+{
+   SCIP_LPISTATE*        lpistate;
+   SCIP_LPINORMS*        lpinorms;
+} LPIMEMORY;
+
+static
+SCIP_RETCODE lpiMemoryAllocate(
+   SCIP*                 scip,
+   LPIMEMORY**           lpimemory
+   )
+{
+   SCIP_CALL( SCIPallocBuffer(scip, lpimemory) );
+   (*lpimemory)->lpistate = NULL;
+   (*lpimemory)->lpinorms = NULL;
+   return SCIP_OKAY;
+}
+
+static
+void lpiMemoryShallowCopy(
+   LPIMEMORY*            source,
+   LPIMEMORY*            target
+   )
+{
+   target->lpinorms = source->lpinorms;
+   target->lpistate = source->lpistate;
+}
+
+static
+void lpiMemoryFree(
+   SCIP*                 scip,
+   LPIMEMORY**           lpimemory
+   )
+{
+   SCIPfreeBuffer(scip, lpimemory);
+}
+
 typedef struct
 {
    SCIP_VAR*             branchvar;
    SCIP_Real             branchval;
    SCIP_Real             fracval;
+   LPIMEMORY*            downlpimemory;
+   LPIMEMORY*            uplpimemory;
    /* TODO: add the up/down lp basis etc. here for re-usage? */
 } CANDIDATE;
+
+static
+SCIP_RETCODE candidateAllocate(
+   SCIP*                 scip,
+   CANDIDATE**           candidate
+   )
+{
+   SCIP_CALL( SCIPallocBuffer(scip, candidate) );
+   SCIP_CALL( lpiMemoryAllocate(scip, &(*candidate)->downlpimemory) );
+   SCIP_CALL( lpiMemoryAllocate(scip, &(*candidate)->uplpimemory) );
+   (*candidate)->branchvar = NULL;
+
+   return SCIP_OKAY;
+}
+
+static
+void candidateFree(
+   SCIP*                 scip,
+   CANDIDATE**           candidate
+   )
+{
+   lpiMemoryFree(scip, &(*candidate)->uplpimemory);
+   lpiMemoryFree(scip, &(*candidate)->downlpimemory);
+   SCIPfreeBuffer(scip, candidate);
+}
 
 typedef struct
 {
@@ -497,27 +784,7 @@ typedef struct
 } CANDIDATELIST;
 
 static
-SCIP_RETCODE allocCandidate(
-   SCIP*                 scip,
-   CANDIDATE**           candidate
-   )
-{
-   SCIP_CALL( SCIPallocBuffer(scip, candidate) );
-
-   return SCIP_OKAY;
-}
-
-static
-void freeCandidate(
-   SCIP*                 scip,
-   CANDIDATE**           candidate
-   )
-{
-   SCIPfreeBuffer(scip, candidate);
-}
-
-static
-SCIP_RETCODE allocCandidateList(
+SCIP_RETCODE candidateListAllocate(
    SCIP*                 scip,
    CANDIDATELIST**       list,
    int                   ncandidates
@@ -533,14 +800,14 @@ SCIP_RETCODE allocCandidateList(
 
    for( i = 0; i < ncandidates; i++ )
    {
-      SCIP_CALL( allocCandidate(scip, &(*list)->candidates[i]) );
+      SCIP_CALL( candidateAllocate(scip, &(*list)->candidates[i]) );
    }
 
    return SCIP_OKAY;
 }
 
 static
-void freeCandidateList(
+void candidateListFree(
    SCIP*                 scip,
    CANDIDATELIST**       list
    )
@@ -549,7 +816,7 @@ void freeCandidateList(
 
    for( i = (*list)->ncandidates-1; i >= 0; i-- )
    {
-      freeCandidate(scip, &(*list)->candidates[i]);
+      candidateFree(scip, &(*list)->candidates[i]);
    }
 
    SCIPfreeBufferArray(scip, &(*list)->candidates);
@@ -580,7 +847,7 @@ typedef struct
  * allocate the struct on the Buffer and initialize it with the default values
  */
 static
-SCIP_RETCODE allocDomainReductions(
+SCIP_RETCODE domainReductionsAllocate(
    SCIP*                 scip,               /**< SCIP data structure */
    DOMAINREDUCTIONS**    domreds             /**< The struct that has to be allocated and initialized. */
    )
@@ -624,6 +891,215 @@ SCIP_RETCODE allocDomainReductions(
 
    return SCIP_OKAY;
 }
+
+/**
+ * frees the given DOMAINREDUCTIONS and all contained Arrays in the opposite order of allocation
+ */
+static
+void domainReductionsFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   DOMAINREDUCTIONS**    domreds             /**< Pointer to the struct to be freed. */
+   )
+{
+   assert(scip != NULL);
+   assert(domreds != NULL);
+
+   SCIPstatistic(
+      SCIPfreeBufferArray(scip, &(*domreds)->upperboundnproofs);
+      SCIPfreeBufferArray(scip, &(*domreds)->lowerboundnproofs);
+   )
+   SCIPfreeBufferArray(scip, &(*domreds)->baselpviolated);
+   SCIPfreeBufferArray(scip, &(*domreds)->upperboundset);
+   SCIPfreeBufferArray(scip, &(*domreds)->lowerboundset);
+   SCIPfreeBufferArray(scip, &(*domreds)->upperbounds);
+   SCIPfreeBufferArray(scip, &(*domreds)->lowerbounds);
+   SCIPfreeBuffer(scip, domreds);
+}
+
+/**
+ * information about the current status of the branching
+ */
+typedef struct
+{
+   SCIP_Bool             addbinconst;        /**< Was a binary constraint added? */
+   SCIP_Bool             depthtoosmall;      /**< Was the remaining depth too small to branch on? */
+   SCIP_Bool             lperror;            /**< Resulted a LP solving in an error? */
+   SCIP_Bool             cutoff;             /**< Was the current node cutoff? */
+   SCIP_Bool             domredcutoff;       /**< Was the current node cutoff due to domain reductions? */
+   SCIP_Bool             domred;             /**< Were domain reductions added due to information obtained through
+                                              *   branching? */
+   SCIP_Bool             propagationdomred;  /**< Were domain reductions added due to domain propagation? */
+   SCIP_Bool             limitreached;       /**< Was a limit (time, node, user, ...) reached? */
+   SCIP_Bool             maxnconsreached;    /**< Was the max number of constraints(bin const and dom red) reached? */
+} STATUS;
+
+static
+SCIP_RETCODE statusAllocate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   STATUS**              status              /**< the status to be allocated */
+   )
+{
+   SCIP_CALL( SCIPallocBuffer(scip, status) );
+
+   (*status)->addbinconst = FALSE;
+   (*status)->depthtoosmall = FALSE;
+   (*status)->lperror = FALSE;
+   (*status)->cutoff = FALSE;
+   (*status)->domred = FALSE;
+   (*status)->domredcutoff = FALSE;
+   (*status)->propagationdomred = FALSE;
+   (*status)->limitreached = FALSE;
+   (*status)->maxnconsreached = FALSE;
+
+   return SCIP_OKAY;
+}
+
+static
+void statusFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   STATUS**              status              /**< the status to be freed */
+   )
+{
+   SCIPfreeBuffer(scip, status);
+}
+
+typedef struct
+{
+   BRANCHINGDECISION*    decision;
+   SCIP_Real*            candscores;
+   SCIP_Real*            candslpvalue;
+   SCIP_Real*            candsvalfrac;
+   SCIP_VAR**            candswithscore;
+   LPIMEMORY**           downlpimemories;
+   LPIMEMORY**           uplpimemories;
+   int                   ncandscores;
+} BRANCHRULERESULT;
+
+static
+SCIP_RETCODE branchRuleResultAllocateReduced(
+   SCIP*                 scip,
+   BRANCHRULERESULT**    branchruleresult,
+   SCIP_Real             lpobjval
+)
+{
+   SCIP_CALL( SCIPallocBuffer(scip, branchruleresult) );
+   SCIP_CALL( branchingDecisionAllocate(scip, &(*branchruleresult)->decision, lpobjval) );
+   (*branchruleresult)->candscores = NULL;
+   (*branchruleresult)->candswithscore = NULL;
+   (*branchruleresult)->candslpvalue = NULL;
+   (*branchruleresult)->candsvalfrac = NULL;
+   (*branchruleresult)->uplpimemories = NULL;
+   (*branchruleresult)->downlpimemories = NULL;
+   (*branchruleresult)->ncandscores = -1;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE branchRuleResultAllocateFull(
+   SCIP*                 scip,
+   BRANCHRULERESULT**    branchruleresult,
+   SCIP_Real             lpobjval,
+   int                   ncands
+   )
+{
+   int i;
+
+   SCIP_CALL( branchRuleResultAllocateReduced(scip, branchruleresult, lpobjval) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->downlpimemories, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->uplpimemories, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candscores, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candswithscore, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candslpvalue, ncands) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candsvalfrac, ncands) );
+   (*branchruleresult)->ncandscores = ncands;
+
+   for( i = 0; i < ncands; i++ )
+   {
+      (*branchruleresult)->candscores[i] = -1;
+      (*branchruleresult)->candswithscore[i] = NULL;
+      SCIP_CALL( lpiMemoryAllocate(scip, &(*branchruleresult)->downlpimemories[i]) );
+      SCIP_CALL( lpiMemoryAllocate(scip, &(*branchruleresult)->uplpimemories[i]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+void branchRuleResultFreeReduced(
+   SCIP*                 scip,
+   BRANCHRULERESULT**    branchruleresult
+   )
+{
+   branchingDecisionFree(scip, &(*branchruleresult)->decision);
+   SCIPfreeBuffer(scip, branchruleresult);
+}
+
+static
+void branchRuleResultFreeFull(
+   SCIP*                 scip,
+   BRANCHRULERESULT**    branchruleresult
+   )
+{
+   int i;
+
+   assert(&(*branchruleresult)->candslpvalue != NULL);
+   assert(&(*branchruleresult)->candswithscore != NULL);
+   assert(&(*branchruleresult)->candscores != NULL);
+
+   for( i = (*branchruleresult)->ncandscores-1; i >= 0; i-- )
+   {
+      lpiMemoryFree(scip, &(*branchruleresult)->uplpimemories[i]);
+      lpiMemoryFree(scip, &(*branchruleresult)->downlpimemories[i]);
+   }
+
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->candsvalfrac);
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->candslpvalue);
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->candswithscore);
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->candscores);
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->uplpimemories);
+   SCIPfreeBufferArray(scip, &(*branchruleresult)->downlpimemories);
+   branchRuleResultFreeReduced(scip, branchruleresult);
+}
+
+
+
+
+/*
+ * Local methods for the logic
+ */
+static
+SCIP_RETCODE selectVarRecursive(
+   SCIP*                 scip,
+   STATUS*               status,
+   PERSISTENTDATA*       persistent,
+   CONFIGURATION*        config,
+   SCIP_SOL*             baselpsol,
+   DOMAINREDUCTIONS*     domainreductions,
+   BINCONSDATA*          binconsdata,
+   CANDIDATELIST*        candidates,
+   BRANCHRULERESULT*     branchruleresult,
+   int                   recursiondepth,
+   SCIP_Real             lpobjval
+#ifdef SCIP_STATISTIC
+   ,STATISTICS*          statistics
+   ,LOCALSTATISTICS*     localstats
+#endif
+);
+
+static
+SCIP_RETCODE selectVarStart(
+   SCIP*                 scip,
+   CONFIGURATION*        config,
+   PERSISTENTDATA*       persistent,
+   STATUS*               status,
+   BRANCHRULERESULT*     branchruleresult,
+   SCIP_Real             lpobjval
+#ifdef SCIP_STATISTIC
+   ,STATISTICS*          statistics
+   ,LOCALSTATISTICS*     localstats
+#endif
+);
 
 static
 void addLowerBoundProofNode(
@@ -1064,418 +1540,6 @@ SCIP_RETCODE applyDomainReductions(
    return SCIP_OKAY;
 }
 
-/**
- * frees the given DOMAINREDUCTIONS and all contained Arrays in the opposite order of allocation
- */
-static
-void freeDomainReductions(
-   SCIP*                 scip,               /**< SCIP data structure */
-   DOMAINREDUCTIONS**    domreds             /**< Pointer to the struct to be freed. */
-   )
-{
-   assert(scip != NULL);
-   assert(domreds != NULL);
-
-   SCIPstatistic(
-      SCIPfreeBufferArray(scip, &(*domreds)->upperboundnproofs);
-      SCIPfreeBufferArray(scip, &(*domreds)->lowerboundnproofs);
-   )
-   SCIPfreeBufferArray(scip, &(*domreds)->baselpviolated);
-   SCIPfreeBufferArray(scip, &(*domreds)->upperboundset);
-   SCIPfreeBufferArray(scip, &(*domreds)->lowerboundset);
-   SCIPfreeBufferArray(scip, &(*domreds)->upperbounds);
-   SCIPfreeBufferArray(scip, &(*domreds)->lowerbounds);
-   SCIPfreeBuffer(scip, domreds);
-}
-
-/**
- * Allocates and initializes the BINARYVARLIST struct.
- */
-static
-SCIP_RETCODE allocBinaryVarList(
-   SCIP*                 scip,               /**< SCIP data structure */
-   BINARYVARLIST**       list,               /**< Pointer to the list to be allocated and initialized. */
-   int                   startsize           /**< The number of entries the list initially can hold. */
-   )
-{
-   SCIP_CALL( SCIPallocBuffer(scip, list) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*list)->binaryvars, startsize) );
-
-   /* We start with no entries and the (current) max length */
-   (*list)->nbinaryvars = 0;
-   (*list)->memorysize = startsize;
-
-   return SCIP_OKAY;
-}
-
-/**
- * Appends a binary variable to the list, reallocating the list if necessary.
- */
-static
-SCIP_RETCODE appendToBinaryVarList(
-   SCIP*                 scip,               /**< SCIP data structure */
-   BINARYVARLIST*        list,               /**< The list to add the var to. */
-   SCIP_VAR*             vartoadd            /**< The binary var to add to the list. */
-   )
-{
-   assert(list != NULL);
-   assert(vartoadd != NULL);
-   assert(SCIPvarIsBinary(vartoadd));
-
-   /* In case the list tries to hold more elements than it has space, reallocate  */
-   if( list->memorysize == list->nbinaryvars )
-   {
-      /* resize the array, such that it can hold at least the new element */
-      int newmemsize = SCIPcalcMemGrowSize(scip, list->memorysize + 1);
-      SCIP_CALL( SCIPreallocBufferArray(scip, &list->binaryvars, newmemsize) );
-      list->memorysize = newmemsize;
-   }
-
-   /* Set the new var at the first unused place, which is the length used as index */
-   list->binaryvars[list->nbinaryvars] = vartoadd;
-   list->nbinaryvars++;
-
-   return SCIP_OKAY;
-}
-
-/**
- * Remove and return the last element from the list.
- */
-static
-SCIP_VAR* dropFromBinaryVarList(
-   SCIP*                 scip,               /**< SCIP data structure */
-   BINARYVARLIST*        list                /**< The list to remove the last element from. */
-   )
-{
-   SCIP_VAR* lastelement;
-
-   assert(list != NULL);
-   assert(list->nbinaryvars > 0);
-   assert(list->binaryvars[list->nbinaryvars-1] != NULL);
-
-   /* get the last element and set the last pointer to NULL (maybe unnecessary, but feels cleaner) */
-   lastelement = list->binaryvars[list->nbinaryvars-1];
-   list->binaryvars[list->nbinaryvars-1] = NULL;
-
-   assert(lastelement != NULL);
-
-   /* decrement the number of entries */
-   list->nbinaryvars--;
-
-   return lastelement;
-}
-
-/**
- * Frees all resources allocated by a BINARYVARLIST in opposite order of allocation.
- */
-static
-void freeBinaryVarList(
-   SCIP*                 scip,               /**< SCIP data structure */
-   BINARYVARLIST**       list                /**< Pointer to the list to free */
-   )
-{
-   assert(scip != NULL);
-   assert(list != NULL);
-
-   SCIPfreeBufferArray(scip, &(*list)->binaryvars);
-   SCIPfreeBuffer(scip, list);
-}
-
-/**
- * Allocate and initialize the list holding the constraints.
- */
-static
-SCIP_RETCODE allocConstraintList(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CONSTRAINTLIST**      conslist,           /**< Pointer to the list to be allocated and initialized. */
-   int                   startsize           /**< The number of entries the list initially can hold. */
-   )
-{
-   assert(scip != NULL);
-   assert(conslist != NULL);
-   assert(startsize > 0);
-
-   SCIP_CALL( SCIPallocBuffer(scip, conslist) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*conslist)->constraints, startsize) );
-
-   /* We start without any constraints */
-   (*conslist)->nconstraints = 0;
-   (*conslist)->memorysize = startsize;
-   (*conslist)->nviolatedcons = 0;
-
-   return SCIP_OKAY;
-}
-
-/**
- * Append an element to the end of the list of constraints.
- */
-static
-SCIP_RETCODE appendToConstraintList(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CONSTRAINTLIST*       list,               /**< The list to add the element to. */
-   SCIP_CONS*            constoadd           /**< The element to add to the list. */
-   )
-{
-   assert(scip != NULL);
-   assert(list != NULL);
-   assert(constoadd != NULL);
-
-   /* In case the list tries to hold more elements than it has space, reallocate  */
-   if( list->memorysize == list->nconstraints )
-   {
-      /* resize the array, such that it can hold the new element */
-      int newmemsize = SCIPcalcMemGrowSize(scip, list->memorysize + 1);
-      SCIP_CALL( SCIPreallocBufferArray(scip, &list->constraints, newmemsize) );
-      list->memorysize = newmemsize;
-   }
-
-   /* Set the new var at the first unused place, which is the length used as index */
-   list->constraints[list->nconstraints] = constoadd;
-   list->nconstraints++;
-
-   return SCIP_OKAY;
-}
-
-/**
- * Free all resources of a constraint list in opposite order to the allocation.
- */
-static
-void freeConstraintList(
-   SCIP*                 scip,               /**< SCIP data structure */
-   CONSTRAINTLIST**      conslist            /**< Pointer to the list to be freed. */
-   )
-{
-   assert(scip != NULL);
-   assert(conslist != NULL);
-
-   SCIPfreeBufferArray(scip, &(*conslist)->constraints);
-   SCIPfreeBuffer(scip, conslist);
-}
-
-/**
- * Allocate and initialize the BINCONSDATA struct.
- */
-static
-SCIP_RETCODE allocBinConsData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   BINCONSDATA**         consdata,           /**< Pointer to the struct to be allocated and initialized. */
-   int                   maxdepth,           /**< The depth of the recursion as an upper bound of branch vars to hold. */
-   int                   nstartcons          /**< The start size of the array containing the constraints. */
-   )
-{
-   assert(scip != NULL);
-   assert(consdata != NULL);
-   assert(maxdepth > 0);
-   assert(nstartcons > 0);
-
-   SCIP_CALL( SCIPallocBuffer(scip, consdata) );
-   SCIP_CALL( allocBinaryVarList(scip, &(*consdata)->binaryvars, maxdepth) );
-   SCIP_CALL( allocConstraintList(scip, &(*consdata)->createdconstraints, nstartcons) );
-
-   return SCIP_OKAY;
-}
-
-/**
- * Free all resources in a BINCONSDATA in opposite order of allocation.
- */
-static
-void freeBinConsData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   BINCONSDATA**         consdata            /**< Pointer to he struct to be freed. */
-   )
-{
-   assert(scip != NULL);
-   assert(consdata != NULL);
-
-   freeConstraintList(scip, &(*consdata)->createdconstraints);
-   freeBinaryVarList(scip, &(*consdata)->binaryvars);
-   SCIPfreeBuffer(scip, consdata);
-}
-
-/**
- * information about the current status of the branching
- */
-typedef struct
-{
-   SCIP_Bool             addbinconst;        /**< Was a binary constraint added? */
-   SCIP_Bool             depthtoosmall;      /**< Was the remaining depth too small to branch on? */
-   SCIP_Bool             lperror;            /**< Resulted a LP solving in an error? */
-   SCIP_Bool             cutoff;             /**< Was the current node cutoff? */
-   SCIP_Bool             domredcutoff;       /**< Was the current node cutoff due to domain reductions? */
-   SCIP_Bool             domred;             /**< Were domain reductions added due to information obtained through
-                                              *   branching? */
-   SCIP_Bool             propagationdomred;  /**< Were domain reductions added due to domain propagation? */
-   SCIP_Bool             limitreached;       /**< Was a limit (time, node, user, ...) reached? */
-   SCIP_Bool             maxnconsreached;    /**< Was the max number of constraints(bin const and dom red) reached? */
-} STATUS;
-
-static
-SCIP_RETCODE allocateStatus(
-   SCIP*                 scip,               /**< SCIP data structure */
-   STATUS**              status              /**< the status to be allocated */
-   )
-{
-   SCIP_CALL( SCIPallocBuffer(scip, status) );
-
-   (*status)->addbinconst = FALSE;
-   (*status)->depthtoosmall = FALSE;
-   (*status)->lperror = FALSE;
-   (*status)->cutoff = FALSE;
-   (*status)->domred = FALSE;
-   (*status)->domredcutoff = FALSE;
-   (*status)->propagationdomred = FALSE;
-   (*status)->limitreached = FALSE;
-   (*status)->maxnconsreached = FALSE;
-
-   return SCIP_OKAY;
-}
-
-static
-void freeStatus(
-   SCIP*                 scip,               /**< SCIP data structure */
-   STATUS**              status              /**< the status to be freed */
-   )
-{
-   SCIPfreeBuffer(scip, status);
-}
-
-typedef struct
-{
-   BRANCHINGDECISION*    decision;
-   SCIP_Real*            candscores;
-   SCIP_Real*            candslpvalue;
-   SCIP_Real*            candsvalfrac;
-   SCIP_VAR**            candswithscore;
-   SCIP_LPISTATE**       downlpistates;
-   SCIP_LPINORMS**       downlpinorms;
-   SCIP_LPISTATE**       uplpistates;
-   SCIP_LPINORMS**       uplpinorms;
-   int                   ncandscores;
-} BRANCHRULERESULT;
-
-static
-SCIP_RETCODE allocateBranchRuleResultReduced(
-   SCIP*                 scip,
-   BRANCHRULERESULT**    branchruleresult,
-   SCIP_Real             lpobjval
-)
-{
-   SCIP_CALL( SCIPallocBuffer(scip, branchruleresult) );
-   SCIP_CALL( allocateBranchingDecision(scip, &(*branchruleresult)->decision, lpobjval) );
-   (*branchruleresult)->candscores = NULL;
-   (*branchruleresult)->candswithscore = NULL;
-   (*branchruleresult)->candslpvalue = NULL;
-   (*branchruleresult)->candsvalfrac = NULL;
-   (*branchruleresult)->uplpistates = NULL;
-   (*branchruleresult)->uplpinorms = NULL;
-   (*branchruleresult)->downlpistates = NULL;
-   (*branchruleresult)->downlpinorms = NULL;
-   (*branchruleresult)->ncandscores = -1;
-
-   return SCIP_OKAY;
-}
-
-static
-SCIP_RETCODE allocateBranchRuleResultFull(
-   SCIP*                 scip,
-   BRANCHRULERESULT**    branchruleresult,
-   SCIP_Real             lpobjval,
-   int                   ncands
-   )
-{
-   int i;
-
-   SCIP_CALL( allocateBranchRuleResultReduced(scip, branchruleresult, lpobjval) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->downlpinorms, ncands) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->downlpistates, ncands) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->uplpinorms, ncands) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->uplpistates, ncands) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candscores, ncands) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candswithscore, ncands) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candslpvalue, ncands) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &(*branchruleresult)->candsvalfrac, ncands) );
-   (*branchruleresult)->ncandscores = ncands;
-
-   for( i = 0; i < ncands; i++ )
-   {
-      (*branchruleresult)->candscores[i] = -1;
-      (*branchruleresult)->candswithscore[i] = NULL;
-   }
-
-   return SCIP_OKAY;
-}
-
-static
-void freeBranchRuleResultReduced(
-   SCIP*                 scip,
-   BRANCHRULERESULT**    branchruleresult
-   )
-{
-   freeBranchingDecision(scip, &(*branchruleresult)->decision);
-   SCIPfreeBuffer(scip, branchruleresult);
-}
-
-static
-void freeBranchRuleResultFull(
-   SCIP*                 scip,
-   BRANCHRULERESULT**    branchruleresult
-   )
-{
-   assert(&(*branchruleresult)->candslpvalue != NULL);
-   assert(&(*branchruleresult)->candswithscore != NULL);
-   assert(&(*branchruleresult)->candscores != NULL);
-
-   SCIPfreeBufferArray(scip, &(*branchruleresult)->candsvalfrac);
-   SCIPfreeBufferArray(scip, &(*branchruleresult)->candslpvalue);
-   SCIPfreeBufferArray(scip, &(*branchruleresult)->candswithscore);
-   SCIPfreeBufferArray(scip, &(*branchruleresult)->candscores);
-   SCIPfreeBufferArray(scip, &(*branchruleresult)->uplpistates);
-   SCIPfreeBufferArray(scip, &(*branchruleresult)->uplpinorms);
-   SCIPfreeBufferArray(scip, &(*branchruleresult)->downlpistates);
-   SCIPfreeBufferArray(scip, &(*branchruleresult)->downlpinorms);
-   freeBranchRuleResultReduced(scip, branchruleresult);
-}
-
-
-
-
-/*
- * Local methods for the logic
- */
-static
-SCIP_RETCODE selectVarRecursive(
-   SCIP*                 scip,
-   STATUS*               status,
-   PERSISTENTDATA*       persistent,
-   CONFIGURATION*        config,
-   SCIP_SOL*             baselpsol,
-   DOMAINREDUCTIONS*     domainreductions,
-   BINCONSDATA*          binconsdata,
-   CANDIDATELIST*        candidates,
-   BRANCHRULERESULT*     branchruleresult,
-   int                   recursiondepth,
-   SCIP_Real             lpobjval
-#ifdef SCIP_STATISTIC
-   ,STATISTICS*          statistics
-   ,LOCALSTATISTICS*     localstats
-#endif
-);
-
-static
-SCIP_RETCODE selectVarStart(
-   SCIP*                 scip,
-   CONFIGURATION*        config,
-   PERSISTENTDATA*       persistent,
-   STATUS*               status,
-   BRANCHRULERESULT*     branchruleresult,
-   SCIP_Real             lpobjval
-#ifdef SCIP_STATISTIC
-   ,STATISTICS*          statistics
-   ,LOCALSTATISTICS*     localstats
-#endif
-);
-
-
 static
 SCIP_RETCODE copyCurrentSolution(
    SCIP*                 scip,
@@ -1541,6 +1605,85 @@ SCIP_RETCODE branchOnVar(
 }
 
 
+static
+SCIP_RETCODE storeInLPIMemory(
+   SCIP*                 scip,
+   LPIMEMORY*            lpimemory
+   )
+{
+   SCIP_LPI* lpi;
+   BMS_BLKMEM* blkmem;
+
+   assert(scip != NULL);
+   assert(lpimemory != NULL);
+   assert(lpimemory->lpistate == NULL);
+   assert(lpimemory->lpinorms == NULL);
+
+   SCIP_CALL( SCIPgetLPI(scip, &lpi) );
+   blkmem = SCIPblkmem(scip);
+
+   SCIP_CALL( SCIPlpiGetState(lpi, blkmem, &lpimemory->lpistate) );
+   SCIP_CALL( SCIPlpiGetNorms(lpi, blkmem, &lpimemory->lpinorms) );
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE restoreFromLPIMemory(
+   SCIP*                 scip,
+   LPIMEMORY*            lpimemory
+   )
+{
+   SCIP_LPI* lpi;
+   BMS_BLKMEM* blkmem;
+
+   assert(scip != NULL);
+   assert(lpimemory != NULL);
+   assert(lpimemory->lpistate != NULL || lpimemory->lpinorms != NULL);
+
+   SCIP_CALL( SCIPgetLPI(scip, &lpi) );
+   blkmem = SCIPblkmem(scip);
+
+   if( lpimemory->lpistate != NULL )
+   {
+      SCIP_CALL( SCIPlpiSetState(lpi, blkmem, lpimemory->lpistate) );
+   }
+   if( lpimemory->lpinorms != NULL )
+   {
+      SCIP_CALL( SCIPlpiSetNorms(lpi, blkmem, lpimemory->lpinorms) );
+   }
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE clearLPIMemory(
+   SCIP*                 scip,
+   LPIMEMORY*            lpimemory
+   )
+{
+   SCIP_LPI* lpi;
+   BMS_BLKMEM* blkmem;
+
+   assert(scip != NULL);
+   assert(lpimemory != NULL);
+   assert(lpimemory->lpistate != NULL || lpimemory->lpinorms != NULL);
+
+   SCIP_CALL( SCIPgetLPI(scip, &lpi) );
+   blkmem = SCIPblkmem(scip);
+
+   if( lpimemory->lpistate != NULL )
+   {
+      SCIP_CALL( SCIPlpiFreeState(lpi, blkmem, &lpimemory->lpistate) );
+      lpimemory->lpistate = NULL;
+   }
+   if( lpimemory->lpinorms != NULL )
+   {
+      SCIP_CALL( SCIPlpiFreeNorms(lpi, blkmem, &lpimemory->lpinorms) );
+      lpimemory->lpinorms = NULL;
+   }
+   return SCIP_OKAY;
+}
+
 /**
  * Executes the branching on the current probing node by adding a probing node with a new upper bound.
  *
@@ -1591,8 +1734,15 @@ SCIP_RETCODE executeDownBranching(
          SCIP_CALL( SCIPchgVarUbProbing(scip, branchvar, newupperbound) );
       }
 
+      if( candidate->downlpimemory != NULL )
+      {
+         /* restore the stored LP data (e.g. the basis) from a previous run */
+         SCIP_CALL( restoreFromLPIMemory(scip, candidate->downlpimemory) );
+         /* clear the memory, as it is no longer needed */
+         SCIP_CALL( clearLPIMemory(scip, candidate->downlpimemory) );
+      }
+
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &status->lperror, &resultdata->cutoff) );
-      /*SCIP_CALL( printCurrentSolution(scip) );*/
 
       solstat = SCIPgetLPSolstat(scip);
       assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
@@ -1668,6 +1818,14 @@ SCIP_RETCODE executeUpBranching(
           * lesser than (or equal to) the old upper bound we set the new lower bound.
           * oldLowerBound < newLowerBound <= oldUpperBound */
          SCIP_CALL( SCIPchgVarLbProbing(scip, branchvar, newlowerbound) );
+      }
+
+      if( candidate->uplpimemory != NULL )
+      {
+         /* restore the stored LP data (e.g. the basis) from a previous run */
+         SCIP_CALL( restoreFromLPIMemory(scip, candidate->uplpimemory) );
+         /* clear the memory, as it is no longer needed */
+         SCIP_CALL( clearLPIMemory(scip, candidate->uplpimemory) );
       }
 
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &status->lperror, &resultdata->cutoff) );
@@ -1801,7 +1959,7 @@ SCIP_RETCODE addBinaryConstraint(
          SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
-         SCIP_CALL( appendToConstraintList(scip, binconsdata->createdconstraints, constraint) );
+         SCIP_CALL( constraintListAppend(scip, binconsdata->createdconstraints, constraint) );
       }
 
       /* the constraint we are building is a logic or: we have a list of binary variables that were
@@ -1918,8 +2076,8 @@ void getOldBranching(
 {
    int varindex = SCIPvarGetProbindex(branchvar);
 
-   copyBranchingResultData(persistent->lastbranchdownres[varindex], downbranchingresult);
-   copyBranchingResultData(persistent->lastbranchupres[varindex], upbranchingresult);
+   branchingResultDataCopy(persistent->lastbranchdownres[varindex], downbranchingresult);
+   branchingResultDataCopy(persistent->lastbranchupres[varindex], upbranchingresult);
 }
 
 static
@@ -1933,8 +2091,8 @@ void updateOldBranching(
 {
    int varindex = SCIPvarGetProbindex(branchvar);
 
-   copyBranchingResultData(downbranchingresult, persistent->lastbranchdownres[varindex]);
-   copyBranchingResultData(upbranchingresult, persistent->lastbranchupres[varindex]);
+   branchingResultDataCopy(downbranchingresult, persistent->lastbranchdownres[varindex]);
+   branchingResultDataCopy(upbranchingresult, persistent->lastbranchupres[varindex]);
 
    persistent->lastbranchid[varindex] = SCIPgetNNodes(scip);
    persistent->lastbranchnlps[varindex] = SCIPgetNNodeLPs(scip);
@@ -1952,10 +2110,10 @@ SCIP_RETCODE getFSBResult(
    STATISTICS* statistics;
    LOCALSTATISTICS* localstats;
 
-   SCIP_CALL( allocConfiguration(scip, &config) );
-   SCIP_CALL( allocateStatus(scip, &status) );
-   SCIP_CALL( allocStatistics(scip, &statistics, 1) );
-   SCIP_CALL( allocateLocalStatistics(scip, &localstats) );
+   SCIP_CALL( configurationAllocate(scip, &config) );
+   SCIP_CALL( statusAllocate(scip, &status) );
+   SCIP_CALL( statisticsAllocate(scip, &statistics, 1) );
+   SCIP_CALL( localStatisticsAllocate(scip, &localstats) );
 
    /* We don't want any constraints to be added or domains to be reduced, as we are just interested in the score. */
    config->usebincons = FALSE;
@@ -1983,10 +2141,10 @@ SCIP_RETCODE getFSBResult(
    }
    )
 
-   freeLocalStatistics(scip, &localstats);
-   freeStatistics(scip, &statistics);
-   freeStatus(scip, &status);
-   freeConfiguration(scip, &config);
+   localStatisticsFree(scip, &localstats);
+   statisticsFree(scip, &statistics);
+   statusFree(scip, &status);
+   configurationFree(scip, &config);
 
    return SCIP_OKAY;
 }
@@ -2044,7 +2202,7 @@ SCIP_RETCODE getBestCandidates(
    lpobjval = SCIPgetLPObjval(scip);
 
    /* allocate the result struct to collect the FSB scores of all branching candidates */
-   SCIP_CALL( allocateBranchRuleResultFull(scip, &branchruleresult, lpobjval, ncands) );
+   SCIP_CALL( branchRuleResultAllocateFull(scip, &branchruleresult, lpobjval, ncands) );
 
    assert(branchruleresult->ncandscores == ncands);
 
@@ -2087,6 +2245,9 @@ SCIP_RETCODE getBestCandidates(
       candidate->branchval = branchruleresult->candslpvalue[sortedindex];
       candidate->fracval = branchruleresult->candsvalfrac[sortedindex];
 
+      lpiMemoryShallowCopy(branchruleresult->downlpimemories[sortedindex], candidate->downlpimemory);
+      lpiMemoryShallowCopy(branchruleresult->uplpimemories[sortedindex], candidate->uplpimemory);
+
       assert(candidate->branchvar != NULL);
 
       SCIPdebugMessage(" Index %2i: Var %s Val %g\n", i, SCIPvarGetName(candidate->branchvar), candidate->branchval);
@@ -2094,7 +2255,7 @@ SCIP_RETCODE getBestCandidates(
 
    /* free the allocated resources */
    SCIPfreeBufferArray(scip, &permutation);
-   freeBranchRuleResultFull(scip, &branchruleresult);
+   branchRuleResultFreeFull(scip, &branchruleresult);
 
    return SCIP_OKAY;
 }
@@ -2171,6 +2332,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
    DOMAINREDUCTIONS*     downdomainreductions,
    BINCONSDATA*          binconsdata,
    BRANCHINGRESULTDATA*  downbranchingresult,
+   LPIMEMORY*            lpimemory,
    SCIP_Bool*            addeddomainreduction
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics
@@ -2196,7 +2358,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
 
       assert(negbranchvar != NULL);
 
-      SCIP_CALL( appendToBinaryVarList(scip, binconsdata->binaryvars, negbranchvar) );
+      SCIP_CALL( binaryVarListAppend(scip, binconsdata->binaryvars, negbranchvar) );
    }
 
    SCIPdebugMessage("Depth <%i>, Started down branching on var <%s> with var < <%g>\n", probingdepth, SCIPvarGetName(branchvar), branchval);
@@ -2211,80 +2373,89 @@ SCIP_RETCODE executeDownBranchingRecursive(
       }
    )
 
-   if( !downbranchingresult->cutoff && !status->lperror && !status->limitreached && recursiondepth > 1 )
+   if( !downbranchingresult->cutoff && !status->lperror && !status->limitreached )
    {
       int deepernlpcands;
       SCIP_Real localdowngain;
+
+      if( lpimemory != NULL )
+      {
+         SCIP_CALL( storeInLPIMemory(scip, lpimemory) );
+         SCIPdebugMessage("Stored smth in LPIMemory after downbranching on var %s\n", SCIPvarGetName(branchvar));
+      }
 
       localdowngain = MAX(0, downbranchingresult->objval - localbaselpsolval);
 
       SCIP_CALL( SCIPupdateVarPseudocost(scip, branchvar, 0.0-branchvalfrac, localdowngain, 1.0) );
 
-      SCIP_CALL( SCIPgetLPBranchCands(scip, NULL, NULL, NULL, &deepernlpcands, NULL, NULL) );
-
-      SCIPdebugMessage("Depth <%i>, Downbranching has <%i> candidates.\n", probingdepth, deepernlpcands);
-
-      if( deepernlpcands > 0 )
+      if( recursiondepth > 1 )
       {
-         CANDIDATELIST* candidates;
-         BRANCHRULERESULT* deeperbranchruleresult;
-         STATUS* deeperstatus;
-         PERSISTENTDATA* deeperpersistent = NULL;
-         SCIP_Real deeperlpobjval = downbranchingresult->objval;
-#ifdef SCIP_STATISTIC
-         LOCALSTATISTICS* deeperlocalstats;
-#endif
+         SCIP_CALL( SCIPgetLPBranchCands(scip, NULL, NULL, NULL, &deepernlpcands, NULL, NULL) );
 
-         SCIP_CALL( allocCandidateList(scip, &candidates, deepernlpcands) );
+         SCIPdebugMessage("Depth <%i>, Downbranching has <%i> candidates.\n", probingdepth, deepernlpcands);
 
-         SCIP_CALL( getCandidates(scip, config, candidates) );
-
-         SCIP_CALL( allocateStatus(scip, &deeperstatus) );
-
-         SCIP_CALL( allocateBranchRuleResultReduced(scip, &deeperbranchruleresult, deeperlpobjval) );
-
-#ifdef SCIP_STATISTIC
-         SCIP_CALL( allocateLocalStatistics(scip, &deeperlocalstats) );
-         SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, downdomainreductions, binconsdata,
-               candidates, deeperbranchruleresult, recursiondepth - 1, deeperlpobjval,
-               statistics, deeperlocalstats) );
-#else
-         SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, downdomainreductions, binconsdata,
-               candidates, deeperbranchruleresult, recursiondepth - 1, deeperlpobjval) );
-#endif
-
-         /* the proved dual bound of the deeper branching cannot be less than the current dual bound, as every deeper
-          * node has more/tighter constraints and as such cannot be better than the base LP. */
-         assert(SCIPisGE(scip, deeperbranchruleresult->decision->provedbound, downbranchingresult->dualbound));
-         downbranchingresult->dualbound = deeperbranchruleresult->decision->provedbound;
-         downbranchingresult->dualboundvalid = TRUE;
-
-         SCIPstatistic(
-            if( deeperlocalstats->ndomredproofnodes > 0 )
-            {
-               localstats->ndomredproofnodes += deeperlocalstats->ndomredproofnodes;
-               *addeddomainreduction = TRUE;
-            }
-         )
-
-         if( deeperstatus->cutoff )
+         if( deepernlpcands > 0 )
          {
-            /* upbranchingresult->cutoff is TRUE, if the up child was directly infeasible (so here it is always
-             * false, as we don't want to branch on an infeasible node)
-             * deeperstatus->cutoff is TRUE, if any up/down child pair of the up child were cutoff
-             * */
-            downbranchingresult->cutoff = deeperstatus->cutoff;
-            SCIPstatistic( localstats->ncutoffproofnodes += deeperlocalstats->ncutoffproofnodes; )
+            CANDIDATELIST* candidates;
+            BRANCHRULERESULT* deeperbranchruleresult;
+            STATUS* deeperstatus;
+            PERSISTENTDATA* deeperpersistent = NULL;
+            SCIP_Real deeperlpobjval = downbranchingresult->objval;
+#ifdef SCIP_STATISTIC
+            LOCALSTATISTICS* deeperlocalstats;
+#endif
 
-            SCIPdebugMessage("Depth <%i>, Both deeper children were cutoff, so the down branch is cutoff\n", probingdepth);
-         }
+            SCIP_CALL( candidateListAllocate(scip, &candidates, deepernlpcands) );
+
+            SCIP_CALL( getCandidates(scip, config, candidates) );
+
+            SCIP_CALL( statusAllocate(scip, &deeperstatus) );
+
+            SCIP_CALL( branchRuleResultAllocateReduced(scip, &deeperbranchruleresult, deeperlpobjval) );
 
 #ifdef SCIP_STATISTIC
-         freeLocalStatistics(scip, &deeperlocalstats);
+            SCIP_CALL( localStatisticsAllocate(scip, &deeperlocalstats) );
+            SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, downdomainreductions, binconsdata,
+                  candidates, deeperbranchruleresult, recursiondepth - 1, deeperlpobjval,
+                  statistics, deeperlocalstats) );
+#else
+            SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, downdomainreductions, binconsdata,
+                  candidates, deeperbranchruleresult, recursiondepth - 1, deeperlpobjval) );
 #endif
-         freeStatus(scip, &deeperstatus);
-         freeBranchRuleResultReduced(scip, &deeperbranchruleresult);
-         freeCandidateList(scip, &candidates);
+
+            /* the proved dual bound of the deeper branching cannot be less than the current dual bound, as every deeper
+             * node has more/tighter constraints and as such cannot be better than the base LP. */
+            assert(SCIPisGE(scip, deeperbranchruleresult->decision->provedbound, downbranchingresult->dualbound));
+            downbranchingresult->dualbound = deeperbranchruleresult->decision->provedbound;
+            downbranchingresult->dualboundvalid = TRUE;
+
+            SCIPstatistic(
+               if( deeperlocalstats->ndomredproofnodes > 0 )
+               {
+                  localstats->ndomredproofnodes += deeperlocalstats->ndomredproofnodes;
+                  *addeddomainreduction = TRUE;
+               }
+            )
+
+            if( deeperstatus->cutoff )
+            {
+               /* upbranchingresult->cutoff is TRUE, if the up child was directly infeasible (so here it is always
+                * false, as we don't want to branch on an infeasible node)
+                * deeperstatus->cutoff is TRUE, if any up/down child pair of the up child were cutoff
+                * */
+               downbranchingresult->cutoff = deeperstatus->cutoff;
+               SCIPstatistic( localstats->ncutoffproofnodes += deeperlocalstats->ncutoffproofnodes; )
+
+               SCIPdebugMessage("Depth <%i>, Both deeper children were cutoff, so the down branch is cutoff\n", probingdepth);
+            }
+
+#ifdef SCIP_STATISTIC
+            localStatisticsFree(scip, &deeperlocalstats);
+#endif
+            statusFree(scip, &deeperstatus);
+            branchRuleResultFreeReduced(scip, &deeperbranchruleresult);
+            candidateListFree(scip, &candidates);
+         }
       }
    }
 
@@ -2306,11 +2477,11 @@ SCIP_RETCODE executeDownBranchingRecursive(
       assert(negbranchvar != NULL);
 
 #ifdef NDEBUG
-      dropFromBinaryVarList(scip, binconsdata->binaryvars);
+      binaryVarListDrop(scip, binconsdata->binaryvars);
 #else
       {
          SCIP_VAR* droppedelement;
-         droppedelement = dropFromBinaryVarList(scip, binconsdata->binaryvars);
+         droppedelement = binaryVarListDrop(scip, binconsdata->binaryvars);
          assert(droppedelement == negbranchvar);
       }
 #endif
@@ -2325,7 +2496,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
 
 static
 SCIP_RETCODE executeUpBranchingRecursive(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< SCIP data structure */
    STATUS*               status,
    PERSISTENTDATA*       persistent,
    CONFIGURATION*        config,
@@ -2337,6 +2508,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
    DOMAINREDUCTIONS*     updomainreductions,
    BINCONSDATA*          binconsdata,
    BRANCHINGRESULTDATA*  upbranchingresult,
+   LPIMEMORY*            lpimemory,          /**< The memory to store the lpi data in. May be NULL. */
    SCIP_Bool*            addeddomainreduction
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics
@@ -2356,7 +2528,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
        * UpBranching on a binary variable x means: x >= 1
        * When this cutoff occurs we have that: x <= 0
        */
-      SCIP_CALL( appendToBinaryVarList(scip, binconsdata->binaryvars, branchvar) );
+      SCIP_CALL( binaryVarListAppend(scip, binconsdata->binaryvars, branchvar) );
    }
 
    SCIPdebugMessage("Depth <%i>, Started up branching on var <%s> with var > <%g>\n", probingdepth, SCIPvarGetName(branchvar), branchval);
@@ -2375,84 +2547,93 @@ SCIP_RETCODE executeUpBranchingRecursive(
       }
    )
 
-   if( !upbranchingresult->cutoff && !status->lperror && !status->limitreached && recursiondepth > 1 )
+   if( !upbranchingresult->cutoff && !status->lperror && !status->limitreached )
    {
       int deepernlpcands;
       SCIP_Real localupgain;
+
+      if( lpimemory != NULL )
+      {
+         SCIP_CALL( storeInLPIMemory(scip, lpimemory) );
+         SCIPdebugMessage("Stored smth in LPIMemory after upbranching on var %s\n", SCIPvarGetName(branchvar));
+      }
 
       localupgain = MAX(0, upbranchingresult->objval - localbaselpsolval);
 
       SCIP_CALL( SCIPupdateVarPseudocost(scip, branchvar, 1.0-branchvalfrac, localupgain, 1.0) );
 
-      SCIP_CALL( SCIPgetLPBranchCands(scip, NULL, NULL, NULL, &deepernlpcands, NULL, NULL) );
-
-      SCIPdebugMessage("Depth <%i>, Upbranching has <%i> candidates.\n", probingdepth, deepernlpcands);
-
-      if( deepernlpcands > 0 )
+      if( recursiondepth > 1 )
       {
-         CANDIDATELIST* candidates;
-         BRANCHRULERESULT* deeperbranchruleresult;
-         STATUS* deeperstatus;
-         PERSISTENTDATA* deeperpersistent = NULL;
-         SCIP_Real deeperlpobjval = upbranchingresult->objval;
-#ifdef SCIP_STATISTIC
-         LOCALSTATISTICS* deeperlocalstats;
-#endif
+         SCIP_CALL( SCIPgetLPBranchCands(scip, NULL, NULL, NULL, &deepernlpcands, NULL, NULL) );
 
-         SCIP_CALL( allocCandidateList(scip, &candidates, deepernlpcands) );
+         SCIPdebugMessage("Depth <%i>, Upbranching has <%i> candidates.\n", probingdepth, deepernlpcands);
 
-         SCIP_CALL( getCandidates(scip, config, candidates) );
-
-         SCIPdebugMessage("Now the objval is <%g> or <%g>\n", upbranchingresult->objval, SCIPgetLPObjval(scip));
-
-         SCIP_CALL( allocateStatus(scip, &deeperstatus) );
-
-         SCIP_CALL( allocateBranchRuleResultReduced(scip, &deeperbranchruleresult, deeperlpobjval) );
-
-#ifdef SCIP_STATISTIC
-         SCIP_CALL( allocateLocalStatistics(scip, &deeperlocalstats) );
-         SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, updomainreductions, binconsdata,
-               candidates, deeperbranchruleresult, recursiondepth - 1, deeperlpobjval,
-               statistics, deeperlocalstats) );
-#else
-         SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, updomainreductions, binconsdata,
-               candidates, deeperbranchruleresult, recursiondepth - 1, deeperlpobjval) );
-#endif
-
-         /* the proved dual bound of the deeper branching cannot be less than the current dual bound, as every deeper
-          * node has more/tighter constraints and as such cannot be better than the base LP. */
-         assert(SCIPisGE(scip, deeperbranchruleresult->decision->provedbound, upbranchingresult->dualbound));
-         upbranchingresult->dualbound = deeperbranchruleresult->decision->provedbound;
-         upbranchingresult->dualboundvalid = TRUE;
-
-         SCIPstatistic(
-            if( deeperlocalstats->ndomredproofnodes > 0 )
-            {
-               localstats->ndomredproofnodes += deeperlocalstats->ndomredproofnodes;
-               *addeddomainreduction = TRUE;
-            }
-         )
-
-         if( deeperstatus->cutoff )
+         if( deepernlpcands > 0 )
          {
-            /* upbranchingresult->cutoff is TRUE, if the up child was directly infeasible (so here it is always
-             * false, as we don't want to branch on an infeasible node)
-             * deeperstatus->cutoff is TRUE, if any up/down child pair of the up child were cutoff
-             * */
-            upbranchingresult->cutoff = deeperstatus->cutoff;
+            CANDIDATELIST* candidates;
+            BRANCHRULERESULT* deeperbranchruleresult;
+            STATUS* deeperstatus;
+            PERSISTENTDATA* deeperpersistent = NULL;
+            SCIP_Real deeperlpobjval = upbranchingresult->objval;
+#ifdef SCIP_STATISTIC
+            LOCALSTATISTICS* deeperlocalstats;
+#endif
+
+            SCIP_CALL( candidateListAllocate(scip, &candidates, deepernlpcands) );
+
+            SCIP_CALL( getCandidates(scip, config, candidates) );
+
+            SCIPdebugMessage("Now the objval is <%g> or <%g>\n", upbranchingresult->objval, SCIPgetLPObjval(scip));
+
+            SCIP_CALL( statusAllocate(scip, &deeperstatus) );
+
+            SCIP_CALL( branchRuleResultAllocateReduced(scip, &deeperbranchruleresult, deeperlpobjval) );
+
+#ifdef SCIP_STATISTIC
+            SCIP_CALL( localStatisticsAllocate(scip, &deeperlocalstats) );
+            SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, updomainreductions, binconsdata,
+                  candidates, deeperbranchruleresult, recursiondepth - 1, deeperlpobjval,
+                  statistics, deeperlocalstats) );
+#else
+            SCIP_CALL( selectVarRecursive(scip, deeperstatus, deeperpersistent, config, baselpsol, updomainreductions, binconsdata,
+                  candidates, deeperbranchruleresult, recursiondepth - 1, deeperlpobjval) );
+#endif
+
+            /* the proved dual bound of the deeper branching cannot be less than the current dual bound, as every deeper
+             * node has more/tighter constraints and as such cannot be better than the base LP. */
+            assert(SCIPisGE(scip, deeperbranchruleresult->decision->provedbound, upbranchingresult->dualbound));
+            upbranchingresult->dualbound = deeperbranchruleresult->decision->provedbound;
+            upbranchingresult->dualboundvalid = TRUE;
+
             SCIPstatistic(
-               localstats->ncutoffproofnodes += deeperlocalstats->ncutoffproofnodes;
+               if( deeperlocalstats->ndomredproofnodes > 0 )
+               {
+                  localstats->ndomredproofnodes += deeperlocalstats->ndomredproofnodes;
+                  *addeddomainreduction = TRUE;
+               }
             )
 
-            SCIPdebugMessage("Depth <%i>, Both deeper children were cutoff, so the up branch is cutoff\n", probingdepth);
-         }
+            if( deeperstatus->cutoff )
+            {
+               /* upbranchingresult->cutoff is TRUE, if the up child was directly infeasible (so here it is always
+                * false, as we don't want to branch on an infeasible node)
+                * deeperstatus->cutoff is TRUE, if any up/down child pair of the up child were cutoff
+                * */
+               upbranchingresult->cutoff = deeperstatus->cutoff;
+               SCIPstatistic(
+                  localstats->ncutoffproofnodes += deeperlocalstats->ncutoffproofnodes;
+               )
+
+               SCIPdebugMessage("Depth <%i>, Both deeper children were cutoff, so the up branch is cutoff\n", probingdepth);
+            }
 
 #ifdef SCIP_STATISTIC
-         freeLocalStatistics(scip, &deeperlocalstats);
+            localStatisticsFree(scip, &deeperlocalstats);
 #endif
-         freeStatus(scip, &deeperstatus);
-         freeBranchRuleResultReduced(scip, &deeperbranchruleresult);
-         freeCandidateList(scip, &candidates);
+            statusFree(scip, &deeperstatus);
+            branchRuleResultFreeReduced(scip, &deeperbranchruleresult);
+            candidateListFree(scip, &candidates);
+         }
       }
    }
 
@@ -2470,11 +2651,11 @@ SCIP_RETCODE executeUpBranchingRecursive(
 
 
 #ifdef NDEBUG
-      dropFromBinaryVarList(scip, binconsdata->binaryvars);
+      binaryVarListDrop(scip, binconsdata->binaryvars);
 #else
       {
          SCIP_VAR* droppedelement;
-         droppedelement = dropFromBinaryVarList(scip, binconsdata->binaryvars);
+         droppedelement = binaryVarListDrop(scip, binconsdata->binaryvars);
          assert(droppedelement == branchvar);
       }
 #endif
@@ -2559,9 +2740,14 @@ SCIP_RETCODE selectVarRecursive(
          SCIP_Real bestscoreupperbound;
          SCIP_Real localbaselpsolval = SCIPgetLPObjval(scip);
          SCIP_LPI* lpi;
+         BRANCHINGRESULTDATA* downbranchingresult;
+         BRANCHINGRESULTDATA* upbranchingresult;
 
          bestscorelowerbound = SCIPvarGetLbLocal(decision->bestvar);
          bestscoreupperbound = SCIPvarGetUbLocal(decision->bestvar);
+
+         SCIP_CALL( branchingResultDataAllocate(scip, &downbranchingresult) );
+         SCIP_CALL( branchingResultDataAllocate(scip, &upbranchingresult) );
 
          SCIP_CALL( SCIPgetLPI(scip, &lpi) );
 
@@ -2575,8 +2761,6 @@ SCIP_RETCODE selectVarRecursive(
             SCIP_VAR* branchvar;
             SCIP_Real branchval;
             SCIP_Real branchvalfrac;
-            BRANCHINGRESULTDATA* downbranchingresult;
-            BRANCHINGRESULTDATA* upbranchingresult;
 
             c = c % nlpcands;
 
@@ -2594,11 +2778,8 @@ SCIP_RETCODE selectVarRecursive(
              * cutoff, as we didn't break the loop) is not relevant for the min total sum of proof nodes. */
             SCIPstatistic( localstats->ncutoffproofnodes = 0; )
 
-            SCIP_CALL( SCIPallocBuffer(scip, &downbranchingresult) );
-            SCIP_CALL( SCIPallocBuffer(scip, &upbranchingresult) );
-
-            initBranchingResultData(scip, downbranchingresult);
-            initBranchingResultData(scip, upbranchingresult);
+            branchingResultDataInit(scip, downbranchingresult);
+            branchingResultDataInit(scip, upbranchingresult);
 
             if( persistent != NULL && isUseOldBranching(scip, config, persistent, branchvar) ){
                getOldBranching(scip, persistent, branchvar, downbranchingresult, upbranchingresult);
@@ -2612,12 +2793,21 @@ SCIP_RETCODE selectVarRecursive(
                DOMAINREDUCTIONS* downdomainreductions;
                DOMAINREDUCTIONS* updomainreductions;
 
+               LPIMEMORY* downlpimemory = NULL;
+               LPIMEMORY* uplpimemory = NULL;
+
                SCIPdebugMessage("Depth <%i>, Started branching on var <%s>\n", probingdepth, SCIPvarGetName(branchvar));
 
                if( config->usedomainreduction )
                {
-                  SCIP_CALL( allocDomainReductions(scip, &downdomainreductions) );
-                  SCIP_CALL( allocDomainReductions(scip, &updomainreductions) );
+                  SCIP_CALL( domainReductionsAllocate(scip, &downdomainreductions) );
+                  SCIP_CALL( domainReductionsAllocate(scip, &updomainreductions) );
+               }
+
+               if( branchruleresult->downlpimemories != NULL && branchruleresult->uplpimemories != NULL )
+               {
+                  downlpimemory = branchruleresult->downlpimemories[i];
+                  uplpimemory = branchruleresult->uplpimemories[i];
                }
 
                if( config->downfirst )
@@ -2625,19 +2815,19 @@ SCIP_RETCODE selectVarRecursive(
 #ifdef SCIP_STATISTIC
                   SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
                      localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
-                     downbranchingresult, &addeddomainreduction, statistics, localstats) );
+                     downbranchingresult, downlpimemory, &addeddomainreduction, statistics, localstats) );
 
                   SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
                      localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
-                     upbranchingresult, &addeddomainreduction, statistics, localstats) );
+                     upbranchingresult, uplpimemory, &addeddomainreduction, statistics, localstats) );
 #else
                   SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
                      localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
-                     downbranchingresult, &addeddomainreduction) );
+                     downbranchingresult, downlpimemory, &addeddomainreduction) );
 
                   SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
                      localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
-                     upbranchingresult, &addeddomainreduction) );
+                     upbranchingresult, uplpimemory, &addeddomainreduction) );
 #endif
                }
                else
@@ -2645,19 +2835,19 @@ SCIP_RETCODE selectVarRecursive(
 #ifdef SCIP_STATISTIC
                   SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
                      localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
-                     upbranchingresult, &addeddomainreduction, statistics, localstats) );
+                     upbranchingresult, uplpimemory, &addeddomainreduction, statistics, localstats) );
 
                   SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
                      localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
-                     downbranchingresult, &addeddomainreduction, statistics, localstats) );
+                     downbranchingresult, downlpimemory, &addeddomainreduction, statistics, localstats) );
 #else
                   SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
                      localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
-                     upbranchingresult, &addeddomainreduction) );
+                     upbranchingresult, uplpimemory, &addeddomainreduction) );
 
                   SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
                      localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
-                     downbranchingresult, &addeddomainreduction) );
+                     downbranchingresult, downlpimemory, &addeddomainreduction) );
 #endif
                }
 
@@ -2670,8 +2860,8 @@ SCIP_RETCODE selectVarRecursive(
                {
                   applyDeeperDomainReductions(scip, baselpsol, domainreductions, downdomainreductions, updomainreductions);
 
-                  freeDomainReductions(scip, &updomainreductions);
-                  freeDomainReductions(scip, &downdomainreductions);
+                  domainReductionsFree(scip, &updomainreductions);
+                  domainReductionsFree(scip, &downdomainreductions);
                }
             }
 
@@ -2837,9 +3027,6 @@ SCIP_RETCODE selectVarRecursive(
                )
             }
 
-            SCIPfreeBuffer(scip, &upbranchingresult);
-            SCIPfreeBuffer(scip, &downbranchingresult);
-
             if( areBoundsChanged(scip, decision->bestvar, bestscorelowerbound, bestscoreupperbound) )
             {
                /* in case the bounds of the current highest scored solution have changed due to domain propagation during the
@@ -2850,6 +3037,9 @@ SCIP_RETCODE selectVarRecursive(
                SCIPdebugMessage("Depth <%i>, Found a domain reduction via the domain propagation of SCIP.\n", probingdepth);
             }
          }
+
+         branchingResultDataFree(scip, &upbranchingresult);
+         branchingResultDataFree(scip, &downbranchingresult);
 
          if( persistent != NULL && !config->abbreviated )
          {
@@ -2904,7 +3094,7 @@ SCIP_RETCODE selectVarStart(
       SCIPdebugMessage("New nlpcands: %i\n", nlpcands);
    }
 
-   SCIP_CALL( allocCandidateList(scip, &candidates, nlpcands) );
+   SCIP_CALL( candidateListAllocate(scip, &candidates, nlpcands) );
 
    SCIP_CALL( getCandidates(scip, config, candidates) );
 
@@ -2915,12 +3105,12 @@ SCIP_RETCODE selectVarStart(
 
    if( config->usedomainreduction )
    {
-      SCIP_CALL( allocDomainReductions(scip, &domainreductions) );
+      SCIP_CALL( domainReductionsAllocate(scip, &domainreductions) );
    }
 
    if( config->usebincons )
    {
-      SCIP_CALL( allocBinConsData(scip, &binconsdata, recursiondepth, SCIPceil(scip, 0.5*nlpcands)) );
+      SCIP_CALL( binConsDataAllocate(scip, &binconsdata, recursiondepth, SCIPceil(scip, 0.5*nlpcands)) );
    }
 
    if( !inprobing )
@@ -2950,7 +3140,7 @@ SCIP_RETCODE selectVarStart(
       SCIP_CALL( SCIPlinkLPSol(scip, persistent->prevbinsolution) );
       SCIP_CALL( SCIPunlinkSol(scip, persistent->prevbinsolution) );
 
-      copyBranchingDecision(branchruleresult->decision, persistent->prevdecision);
+      branchingDecisionCopy(branchruleresult->decision, persistent->prevdecision);
    }
 
    if( config->usebincons )
@@ -2966,7 +3156,7 @@ SCIP_RETCODE selectVarStart(
 #else
       SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->createdconstraints, &status->addbinconst) );
 #endif
-      freeBinConsData(scip, &binconsdata);
+      binConsDataFree(scip, &binconsdata);
 
    }
 
@@ -2980,7 +3170,7 @@ SCIP_RETCODE selectVarStart(
          SCIP_CALL( applyDomainReductions(scip, baselpsol, domainreductions, &status->domredcutoff, &status->domred) );
 #endif
       }
-      freeDomainReductions(scip, &domainreductions);
+      domainReductionsFree(scip, &domainreductions);
    }
 
    if( config->usedomainreduction || config->usebincons )
@@ -2988,7 +3178,7 @@ SCIP_RETCODE selectVarStart(
       SCIP_CALL( SCIPfreeSol(scip, &baselpsol) );
    }
 
-   freeCandidateList(scip, &candidates);
+   candidateListFree(scip, &candidates);
 
    return SCIP_OKAY;
 }
@@ -3006,7 +3196,7 @@ SCIP_Bool isUsePreviousResult(
    PERSISTENTDATA*       persistent
    )
 {
-   return isBranchingDecisionValid(scip, persistent->prevdecision)
+   return branchingDecisionIsValid(scip, persistent->prevdecision)
       && SCIPareSolsEqual(scip, currentsol, persistent->prevbinsolution);
 }
 
@@ -3137,7 +3327,7 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
    SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->nsinglecandidate, recursiondepth) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->noldbranchused, recursiondepth) );
 
-   initStatistics(scip, branchruledata->statistics, recursiondepth);
+   statisticsInit(scip, branchruledata->statistics, recursiondepth);
 
    return SCIP_OKAY;
 }
@@ -3156,7 +3346,7 @@ SCIP_DECL_BRANCHEXIT(branchExitLookahead)
    statistics = branchruledata->statistics;
    recursiondepth = branchruledata->config->recursiondepth;
 
-   printStatistics(scip, statistics, recursiondepth);
+   statisticsPrint(scip, statistics, recursiondepth);
 
    SCIPfreeMemoryArray(scip, &statistics->noldbranchused);
    SCIPfreeMemoryArray(scip, &statistics->nsinglecandidate);
@@ -3260,14 +3450,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       SCIPdebugMessage("The base lp has <%i> variables with fractional value.\n", nlpcands);
 
       /* create a struct to store the algorithm status */
-      SCIP_CALL( allocateStatus(scip, &status) );
+      SCIP_CALL( statusAllocate(scip, &status) );
       /* create a struct to store the branching decision (in case there is one) */
-      SCIP_CALL( allocateBranchRuleResultReduced(scip, &branchruleresult, lpobjval) );
+      SCIP_CALL( branchRuleResultAllocateReduced(scip, &branchruleresult, lpobjval) );
 
       /* execute the main logic */
 #ifdef SCIP_STATISTIC
       /* create a struct to store the statistics needed for this single run */
-      SCIP_CALL( allocateLocalStatistics(scip, &localstats) );
+      SCIP_CALL( localStatisticsAllocate(scip, &localstats) );
       SCIP_CALL( selectVarStart(scip, branchruledata->config, branchruledata->persistent, status, branchruleresult, lpobjval, branchruledata->statistics, localstats) );
 #else
       SCIP_CALL( selectVarStart(scip, branchruledata->config, branchruledata->persistent, status, branchruleresult, lpobjval) );
@@ -3303,7 +3493,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          && *result != SCIP_CONSADDED /* implied binary constraints were already added */
          && *result != SCIP_DIDNOTFIND /* an lp error occurred on the way */
          && !status->depthtoosmall /* branching depth wasn't high enough */
-         && isBranchingDecisionValid(scip, branchruleresult->decision)
+         && branchingDecisionIsValid(scip, branchruleresult->decision)
          /*&& (0 <= bestcand && bestcand < nlpcands)*/ /* no valid candidate index could be found */
          )
       {
@@ -3353,10 +3543,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       )
 
 #ifdef SCIP_STATISTIC
-      freeLocalStatistics(scip, &localstats);
+      localStatisticsFree(scip, &localstats);
 #endif
-      freeBranchRuleResultReduced(scip, &branchruleresult);
-      freeStatus(scip, &status);
+      branchRuleResultFreeReduced(scip, &branchruleresult);
+      statusFree(scip, &status);
    }
 
    if( branchruledata->config->usebincons )
