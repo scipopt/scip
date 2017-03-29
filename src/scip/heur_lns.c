@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <string.h>
 #include "scip/heur_lns.h"
+#include "scipdefplugins.h"
 
 #define HEUR_NAME             "lns"
 #define HEUR_DESC             "primal heuristic template"
@@ -34,7 +35,7 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define NNEIGHBORHOODS 3
+#define NNEIGHBORHOODS 4
 #define DEFAULT_NODESQUOT 0.05
 #define DEFAULT_NODESOFFSET 500
 #define DEFAULT_NSOLSLIM 3
@@ -485,11 +486,12 @@ SCIP_RETCODE epsGreedyCreate(
    SCIP_CALL( SCIPallocBlockMemory(scip, epsgreedy) );
 
    /* create random number generator for the selector */
-   SCIP_CALL( SCIPrandomCreate(&(*epsgreedy)->rng, SCIPblkmem(scip), initseed) );
+   SCIP_CALL( SCIPrandomCreate(&(*epsgreedy)->rng, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, initseed)) );
 
    (*epsgreedy)->epsnchoices = epsnchoices;
    (*epsgreedy)->epsreward = epsreward;
    (*epsgreedy)->userptr = userptr;
+   (*epsgreedy)->eps = 0.33;
 
    return SCIP_OKAY;
 }
@@ -1192,7 +1194,16 @@ SCIP_RETCODE updateBanditAlgorithms(
    else
       gain = 0.0;
 
-   SCIP_CALL( expThreeUpdate(scip, heurdata->exp3, gain, neighborhoodidx) );
+   switch (heurdata->banditalgo) {
+      case 'g':
+      case 'u':
+         break;
+      case 'e':
+         SCIP_CALL( expThreeUpdate(scip, heurdata->exp3, gain, neighborhoodidx) );
+         break;
+      default:
+         break;
+   }
 
    return SCIP_OKAY;
 }
@@ -1692,6 +1703,58 @@ DECL_VARFIXINGS(varFixingsMutation)
    return SCIP_OKAY;
 }
 
+static
+DECL_CHANGESUBSCIP(changeSubscipLocalbranching)
+{
+
+   int nbinvars;
+   int i;
+   SCIP_SOL* referencesol;
+   SCIP_CONS* localbranchcons;
+   SCIP_VAR** vars;
+   SCIP_Real* consvals;
+   SCIP_Real rhs;
+
+   nbinvars = SCIPgetNBinVars(sourcescip);
+   vars = SCIPgetVars(sourcescip);
+
+   if( nbinvars <= 3 )
+      return SCIP_OKAY;
+
+   referencesol = SCIPgetBestSol(sourcescip);
+   if( referencesol == NULL )
+      return SCIP_OKAY;
+
+   rhs = nbinvars * 0.2;
+   rhs = MAX(rhs, 2.0);
+
+
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &consvals, nbinvars) );
+
+   /* loop over binary variables and fill the local branching constraint */
+   for( i = 0; i < nbinvars; ++i )
+   {
+      if( SCIPisEQ(sourcescip, SCIPgetSolVal(sourcescip, referencesol, vars[i]), 0.0) )
+         consvals[i] = 1.0;
+      else
+      {
+         consvals[i] = -1.0;
+         rhs -= 1.0;
+      }
+   }
+
+   /* create the local branching constraint in the target scip */
+   SCIP_CALL( SCIPcreateConsBasicLinear(targetscip, &localbranchcons, "localbranch", nbinvars, subvars, consvals, -SCIPinfinity(sourcescip), rhs) );
+   SCIP_CALL( SCIPaddCons(targetscip, localbranchcons) );
+   SCIP_CALL( SCIPreleaseCons(targetscip, &localbranchcons) );
+   *naddedconss = 1;
+   *success = TRUE;
+
+   SCIPfreeBufferArray(sourcescip, &consvals);
+
+   return SCIP_OKAY;
+}
+
 
 
 /** include all neighborhoods */
@@ -1704,24 +1767,29 @@ SCIP_RETCODE includeNeighborhoods(
    NH* rens;
    NH* rins;
    NH* mutation;
-
+   NH* localbranching;
    heurdata->nneighborhoods = 0;
 
    /* include the RENS neighborhood */
    SCIP_CALL( lnsIncludeNeighborhood(scip, heurdata, &rens, "rens",
-         DEFAULT_MINFIXINGRATE_RENS, DEFAULT_MAXFIXINGRATE_RENS, varFixingsRens, changeSubscipRens, NULL, NULL, NULL) );
+         DEFAULT_MINFIXINGRATE_RENS, DEFAULT_MAXFIXINGRATE_RENS,
+         varFixingsRens, changeSubscipRens, NULL, NULL, NULL) );
 
    /* include the RINS neighborhood */
    SCIP_CALL( lnsIncludeNeighborhood(scip, heurdata, &rins, "rins",
-         DEFAULT_MINFIXINGRATE_RINS, DEFAULT_MAXFIXINGRATE_RINS, varFixingsRins, NULL, NULL, NULL, NULL) );
-
+         DEFAULT_MINFIXINGRATE_RINS, DEFAULT_MAXFIXINGRATE_RINS,
+         varFixingsRins, NULL, NULL, NULL, NULL) );
 
    /* include the mutation neighborhood */
    SCIP_CALL( lnsIncludeNeighborhood(scip, heurdata, &mutation, "mutation",
-         DEFAULT_MINFIXINGRATE_MUTATION, DEFAULT_MAXFIXINGRATE_MUTATION, varFixingsMutation, NULL, NULL, nhInitMutation, nhExitMutation) );
-
+         DEFAULT_MINFIXINGRATE_MUTATION, DEFAULT_MAXFIXINGRATE_MUTATION,
+         varFixingsMutation, NULL, NULL, nhInitMutation, nhExitMutation) );
 
    /* TODO include the local branching neighborhood */
+   SCIP_CALL( lnsIncludeNeighborhood(scip, heurdata, &localbranching, "localbranching",
+         DEFAULT_MINFIXINGRATE_LOCALBRANCHING, DEFAULT_MAXFIXINGRATE_LOCALBRANCHING,
+         NULL, changeSubscipLocalbranching, NULL, NULL, NULL) );
+
 
    /* author bzfhende: TODO include the crossover neighborhood */
 
@@ -1767,12 +1835,12 @@ SCIP_DECL_HEURINIT(heurInitLns)
    }
 
    /* create epsilon greedy bandit algorithm */
-   SCIP_CALL( epsGreedyCreate(scip, &heurdata->epsgreedynh, DEFAULT_INITSEED, (void*)heurdata, epsNChoicesLns, epsRewardLns) );
+   SCIP_CALL( epsGreedyCreate(scip, &heurdata->epsgreedynh, DEFAULT_INITSEED + SCIPgetNVars(scip), (void*)heurdata, epsNChoicesLns, epsRewardLns) );
 
    /* create an exp3 bandit algorithm */
    if( heurdata->exp3 == NULL )
    {
-      SCIP_CALL( expThreeCreate(scip, &heurdata->exp3, DEFAULT_INITSEED, heurdata->nneighborhoods, heurdata->gamma, heurdata->beta) );
+      SCIP_CALL( expThreeCreate(scip, &heurdata->exp3, DEFAULT_INITSEED + SCIPgetNVars(scip), heurdata->nneighborhoods, heurdata->gamma, heurdata->beta) );
    }
    else
    {
