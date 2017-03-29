@@ -31,6 +31,14 @@ GAMSDIR		=	gams
 
 include $(SCIPDIR)/make/make.project
 
+ifneq ($(SHARED), true)
+$(error Please compile SCIP and this interface with SHARED=true)
+endif
+
+ifneq ($(READLINE), false)
+$(error Please compile SCIP and this interface with READLINE=false)
+endif
+
 GAMSIODIR	=	$(GAMSDIR)/apifiles/C/api
 
 #-----------------------------------------------------------------------------
