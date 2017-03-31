@@ -3120,6 +3120,7 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
             weights, -1.0, NULL, -1, -1, NULL, 1.0, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
             &(cutdata->success), &(cutdata->islocal), &(cutdata->cutrank)) );
 
+      /*TODO this is a bug since the coefficients with delta = 1 are getting overwritten */
       if( sepadata->trynegscaling )
       {
          SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS,
