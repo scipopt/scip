@@ -1,4 +1,4 @@
-SCIP version ???
+SCIP version 4.0.1
 ==================
 
 fixed bugs:
@@ -6,6 +6,7 @@ fixed bugs:
 - fixed issue related to SCIPcreateFiniteSolCopy not being able to remove all infinite fixings
 - fixed issue in SCIPcopyLimits() w.r.t. soft time limit
 - improved handling of infinite values in a primal solution in quadratic and nonlinear constraints
+- fixed bug in dynamic resizing of hashtables and hashmaps
 
 SCIP version 4.0.0
 ==================
