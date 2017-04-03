@@ -11622,10 +11622,10 @@ SCIP_RETCODE exprgraphNodeSimplify(
          SCIP_CALL( exprgraphNodeRemoveParent(exprgraph, &node->children[i], node) );
          node->children[i] = NULL;
       }
-
-      /* simplify current polynomial again */
-      polynomialdataMergeMonomials(blkmem, polynomialdata, eps, TRUE);
    }
+
+   /* simplify current polynomial again */
+   polynomialdataMergeMonomials(blkmem, polynomialdata, eps, TRUE);
 
    BMSfreeBlockMemoryArrayNull(blkmem, &childmap, childmapsize);
 

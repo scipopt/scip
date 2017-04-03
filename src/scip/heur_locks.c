@@ -675,6 +675,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          {
             SCIPwarningMessage(scip, "Error while solving LP in LOCKS heuristic; LP solve terminated with code <%d>\n",
                retstat);
+            goto TERMINATE;
          }
       }
 #else
