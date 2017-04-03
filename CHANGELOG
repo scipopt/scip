@@ -1,9 +1,6 @@
 SCIP version ???
 ==================
 
-parameters:
-- fixed typo: heuristics/completesol/maxunkownrate has changed to heuristics/completesol/maxunknownrate
-
 fixed bugs:
 - fixed memory leak in OSiL reader when using SOS constraints
 - fixed issue related to SCIPcreateFiniteSolCopy not being able to remove all infinite fixings
