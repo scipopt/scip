@@ -9291,7 +9291,7 @@ SCIP_RETCODE exprgraphNodeAddParent(
    ++node->nparents;
 
    /* update sorted flag */
-   node->parentssorted = (node->nparents <= 1) || (node->parentssorted && (node->parents[node->nparents-2] <= parent));
+   node->parentssorted = (node->nparents <= 1) || (node->parentssorted && (exprgraphnodecomp((void*)node->parents[node->nparents-2], (void*)parent) <= 0));
 
    return SCIP_OKAY;
 }
