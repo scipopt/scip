@@ -49,6 +49,12 @@
 #define STP_GSTP                     11
 #define STP_RMWCSP                   12
 
+#if 1
+    typedef unsigned int STP_Bool;
+#else
+    typedef unsigned char STP_BOOL
+#endif
+
 #include "scip/scip.h"
 #include "misc_stp.h"
 
@@ -67,12 +73,12 @@ typedef struct
                                              /**< in network [i]                                      */
    int*                  source;             /**< Array [0..layers-1] of knot number of the           */
                                              /**< root of network [i], -1 if unknown                  */
-   int*                  term;               /**< Array [0..nodes-1] of networknumber for             */
+   int* RESTRICT         term;               /**< Array [0..nodes-1] of networknumber for             */
                                              /**< knot [i], -1 if [i] is never a terminal             */
-   int*                  mark;               /**< Array [0..nodes-1], normally TRUE or FALSE          */
+   int* RESTRICT         mark;               /**< Array [0..nodes-1], normally TRUE or FALSE          */
                                              /**< to mark nodes for inclusion in the shortest         */
                                              /**< path / minimum spanning tree routine                */
-   int*                  grad;               /**< Array [0..nodes-1] with degree of knot [i]          */
+   int* RESTRICT         grad;               /**< Array [0..nodes-1] with degree of knot [i]          */
    int* RESTRICT         inpbeg;             /**< Array [0..nodes-1] with starting slot index         */
                                              /**< for the ieat array, -1 if not used                  */
    int* RESTRICT         outbeg;             /**< Array [0..nodes-1] with starting slot index         */
@@ -89,16 +95,16 @@ typedef struct
    int                   esize;              /**< Count of allocated edge slots                                             */
    int                   edges;              /**< Count of edges in the graph                                               */
    int                   orgedges;
-   SCIP_Real*            cost;               /**< Array [0..edges-1] of positive edge costs                                  */
-   SCIP_Real*            prize;              /**< Array [0..nodes-1] of positive node costs                                  */
-   int*                  tail;               /**< Array [0..edges-1] of node-number of tail of edge [i]                     */
-   int*                  head;               /**< Array [0..edges-1] of node-number of head of edge [i]                     */
-   int*                  orgtail;            /**< Array [0..edges-1] of node-number of tail of edge [i] prior to reduction  */
-   int*                  orghead;            /**< Array [0..edges-1] of node-number of head of edge [i] prior to reduction  */
+   SCIP_Real* RESTRICT   cost;               /**< Array [0..edges-1] of positive edge costs                                  */
+   SCIP_Real* RESTRICT   prize;              /**< Array [0..nodes-1] of positive node costs                                  */
+   int* RESTRICT         tail;               /**< Array [0..edges-1] of node-number of tail of edge [i]                     */
+   int* RESTRICT         head;               /**< Array [0..edges-1] of node-number of head of edge [i]                     */
+   int* RESTRICT         orgtail;            /**< Array [0..edges-1] of node-number of tail of edge [i] prior to reduction  */
+   int* RESTRICT         orghead;            /**< Array [0..edges-1] of node-number of head of edge [i] prior to reduction  */
 
    /* Nodes/Edges */
-   int*                  ieat;               /**< Array [0..edges-1], incoming edge allocation table          */
-   int*                  oeat;               /**< Array [0..edges-1], outgoing edge allocation table          */
+   int* RESTRICT         ieat;               /**< Array [0..edges-1], incoming edge allocation table          */
+   int* RESTRICT         oeat;               /**< Array [0..edges-1], outgoing edge allocation table          */
 
    /* Data for min cut computation */
    int* RESTRICT         mincut_dist;        /**< dist[i] : Distance-label of node i          */

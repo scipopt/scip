@@ -4020,32 +4020,39 @@ SCIP_RETCODE ansReduction(
    return SCIP_OKAY;
 }
 
+#define VERTEX_CONNECT 0
+#define VERTEX_TEMPNEIGHBOR 1
+#define VERTEX_NEIGHBOR 2
+#define VERTEX_OTHER 3
 
 
-/** advanced connected neighbourhood subset reduction test for the MWCSP */
+/** advanced connected neighborhood subset reduction test for the MWCSP */
 SCIP_RETCODE cnsAdvReduction(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   int*                  marked,             /**< nodes array */
+   int*                  marked,             /**< nodes array for internal use */
+ //  int*                  marked,             /**< nodes array for internal use */
    int*                  count               /**< pointer to number of reductions */
    )
 {
    SCIP_Real min;
    SCIP_Real kprize;
-   int* neighbarr;
-   int* neighbarr2;
+   int neighbarr[CNSNN + 1];
+   int neighbarr2[CNSNN + 1];
    int k;
    int j;
    int e;
    int k2;
    int e2;
    int l;
-   int run;
    int nn;
    int nn2;
    int k2grad;
    int nnodes;
    int maxgrad;
+
+   int* adjverts;
+   SCIP_CALL( SCIPallocMemoryArray(scip, &adjverts, g->knots) );
 
    assert(scip   != NULL);
    assert(g      != NULL);
@@ -4056,159 +4063,249 @@ SCIP_RETCODE cnsAdvReduction(
    k2grad = 0;
    *count = 0;
    nnodes = g->knots;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &neighbarr, CNSNN + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &neighbarr2, CNSNN + 1) );
-
+printf("XX %d \n", 0);
    /* unmark all nodes */
    for( k = 0; k < nnodes; k++ )
-      marked[k] = 0;
+      marked[k] = VERTEX_OTHER;
 
-   /* first run: consider node plus adjacent terminals; second run: consider the same plus an additional (non-positive) vertex  */
-   for( run = 0; run < 2; run++ )
+   /* first run: consider node plus adjacent terminals */
+
+   /* check neighborhood of all nodes */
+   for( k = 0; k < nnodes; k++ )
    {
-      /* check neighbourhood of all nodes */
-      for( k = 0; k < nnodes; k++ )
+      if( !(g->mark[k]) || (g->grad[k] < 2) )
+         continue;
+
+      nn = 0;
+      k2 = UNKNOWN;
+      nn2 = 0;
+      kprize = g->prize[k];
+      maxgrad = g->grad[k];
+
+      /* mark adjacent vertices and k */
+      for (e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e])
       {
-         if( (!(g->mark[k])) || (g->grad[k] < 2) )
+         j = g->head[e];
+
+         if( !g->mark[j] )
             continue;
 
-         if( run == 1 && Is_term(g->term[k]) )
-            continue;
-         nn = 0;
-         k2 = UNKNOWN;
-         nn2 = 0;
-         kprize = g->prize[k];
-         maxgrad = g->grad[k];
+         if( SCIPisGE(scip, g->prize[j], 0.0) && nn < CNSNN - 1 )
+         {
+            neighbarr[nn++] = j;
+            marked[j] = VERTEX_CONNECT;
+         }
+         else
+         {
+            marked[j] = VERTEX_NEIGHBOR;
+         }
+      }
 
-         /* mark adjacent vertices and k */
-         for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      marked[k] = VERTEX_CONNECT;
+
+      /* traverse all connected non-negative nodes and mark their neighbors */
+      for (l = 0; l < nn; l++)
+      {
+         for (e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e])
          {
             j = g->head[e];
-
             if( !g->mark[j] )
                continue;
 
-            if( SCIPisGE(scip, g->prize[j], 0.0) && nn < CNSNN - 1 )
+            if( marked[j] == VERTEX_OTHER )
+               marked[j] = VERTEX_NEIGHBOR;
+         }
+         maxgrad += g->grad[neighbarr[l]] - 1;
+      }
+
+      if( Is_term(g->term[k]) )
+         min = 0.0;
+      else
+         min = g->prize[k];
+
+      /* traverse all vertices (main loop) */
+      for (j = 0; j < nnodes; j++)
+      {
+         /* vertex part of the current connected subset? Or terminal? Or belonging to the extension of the graph? */
+         if( marked[j] != VERTEX_CONNECT && g->mark[j] && !Is_term(g->term[j])
+               &&
+               /* valid candidate? */
+               g->grad[j] <= maxgrad && SCIPisLE(scip, g->prize[j], min) )
+         {
+            for (e2 = g->outbeg[j]; e2 != EAT_LAST; e2 = g->oeat[e2])
+               if( marked[g->head[e2]] == VERTEX_OTHER )
+                  break;
+
+            /* neighbors of j subset of those of k? */
+            if( e2 == EAT_LAST )
             {
-               neighbarr[nn++] = j;
-               marked[j] = 3;
+               /* yes, delete vertex */
+               while (g->outbeg[j] != EAT_LAST)
+               {
+                  e2 = g->outbeg[j];
+                  (*count)++;
+                  graph_edge_del(scip, g, e2, TRUE);
+               }
+               g->mark[j] = FALSE;
+               marked[j] = VERTEX_OTHER;
             }
-            else if( (run == 1) &&
-               ((SCIPisGT(scip, g->prize[j], kprize) && nn2 < CNSNN) || (SCIPisGE(scip, g->prize[j], kprize) && j > k && nn2 < 3))  )
+         }
+      }
+
+      for (e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e])
+         marked[g->head[e]] = VERTEX_OTHER;
+
+      for (l = 0; l < nn; l++)
+         for (e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e])
+            marked[g->head[e]] = VERTEX_OTHER;
+
+      marked[k] = VERTEX_OTHER;
+
+#ifdef DEBUG
+      for( l = 0; l < nnodes; l++ )
+      assert(marked[l] == VERTEX_OTHER);
+#endif
+
+   }
+    /* second run: consider the same plus an additional (non-positive) vertex  */
+
+   for (k = 0; k < nnodes; k++)
+   {
+      if( !(g->mark[k]) || g->grad[k] < 2 || Is_term(g->term[k]) )
+         continue;
+
+      nn = 0;
+      k2 = UNKNOWN;
+      nn2 = 0;
+      kprize = g->prize[k];
+      maxgrad = g->grad[k];
+
+      /* mark adjacent vertices and k */
+      for (e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e])
+      {
+         j = g->head[e];
+
+         if( !g->mark[j] )
+            continue;
+
+         if( SCIPisGE(scip, g->prize[j], 0.0) && nn < CNSNN - 1 )
+         {
+            neighbarr[nn++] = j;
+            marked[j] = VERTEX_CONNECT;
+         }
+         else if( (SCIPisGT(scip, g->prize[j], kprize) && nn2 < CNSNN)
+               || (SCIPisGE(scip, g->prize[j], kprize) && j > k && nn2 < 3) )
+         {
+            neighbarr2[nn2++] = j;
+            marked[j] = VERTEX_NEIGHBOR;
+         }
+         else
+         {
+            marked[j] = VERTEX_NEIGHBOR;
+         }
+      }
+
+      marked[k] = VERTEX_CONNECT;
+
+      /* traverse all connected non-negative nodes and mark their neighbors */
+      for (l = 0; l < nn; l++)
+      {
+         for (e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e])
+         {
+            j = g->head[e];
+            if( !g->mark[j] )
+               continue;
+
+            if( marked[j] == VERTEX_OTHER && nn2 < CNSNN
+                  && (SCIPisGT(scip, g->prize[j], kprize)
+                        || (SCIPisGE(scip, g->prize[j], kprize) && j > k
+                              && nn2 < 3)) )
             {
                neighbarr2[nn2++] = j;
-               marked[j] = 3;
+               marked[j] = VERTEX_NEIGHBOR;
             }
-            else
+            else if( marked[j] == VERTEX_OTHER )
             {
-               marked[j] = 2;
+               marked[j] = VERTEX_NEIGHBOR;
             }
          }
+         maxgrad += g->grad[neighbarr[l]] - 1;
+      }
 
+      if( Is_term(g->term[k]) )
+         min = 0.0;
+      else
+         min = g->prize[k];
 
-         for( l = 0; l < nn; l++ )
+      for (l = 0; l < nn2; l++)
+      {
+         k2 = neighbarr2[l];
+
+         if( !g->mark[k2] )
+            continue;
+
+         for (e = g->outbeg[k2]; e != EAT_LAST; e = g->oeat[e])
+            if( marked[g->head[e]] == VERTEX_OTHER && g->mark[g->head[e]] )
+               marked[g->head[e]] = VERTEX_TEMPNEIGHBOR;
+         min += g->prize[k2];
+         k2grad = g->grad[k2];
+         maxgrad += k2grad - 1;
+         assert(SCIPisLE(scip, g->prize[k2], 0.0));
+
+         /* traverse all vertices (main loop) */
+         for (j = 0; j < nnodes; j++)
          {
-            for( e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e] )
+            /* vertex part of the current connected subset? Or terminal? Or belonging to the extension of the graph? */
+            if( marked[j] != VERTEX_CONNECT && g->mark[j]
+                  && !Is_term(g->term[j]) &&
+                  /* valid candidate? */
+                  g->grad[j] <= maxgrad && SCIPisLE(scip, g->prize[j], min) )
             {
-               j = g->head[e];
-               if( !g->mark[j] )
-                  continue;
-               if( run == 1 && SCIPisGT(scip, g->prize[j], kprize) && nn2 < CNSNN )
+               for (e2 = g->outbeg[j]; e2 != EAT_LAST; e2 = g->oeat[e2])
+                  if( marked[g->head[e2]] == VERTEX_OTHER )
+                     break;
+
+               /* neighbors of j subset of those of k? */
+               if( e2 == EAT_LAST )
                {
-                  neighbarr2[nn2++] = j;
-                  marked[j] = 3;
-               }
-               else if( marked[j] == 0 )
-               {
-                  marked[j] = 2;
-               }
-            }
-            maxgrad += g->grad[neighbarr[l]];
-         }
-
-
-         marked[k] = 3;
-
-         if( Is_term(g->term[k]) )
-            min = 0.0;
-         else
-            min = g->prize[k];
-
-         for( l = 0; l < nn2 + 1 - run; l++ )
-         {
-            if( run == 1 )
-            {
-               k2 = neighbarr2[l];
-               for( e = g->outbeg[k2]; e != EAT_LAST; e = g->oeat[e] )
-                  if( marked[g->head[e]] < 2 && g->mark[g->head[e]] )
-                     marked[g->head[e]] = 1;
-               min += g->prize[k2];
-               k2grad = g->grad[k2];
-               maxgrad += k2grad;
-               assert(SCIPisLE(scip, g->prize[k2], 0.0));
-
-            }
-
-            /* traverse all vertices */
-            for( j = 0; j < nnodes; j++ )
-            {
-               /* vertex part of the current connected subset? Or terminal? Or belonging to the extension of the graph? */
-               if( marked[j] == 3 || Is_term(g->term[j]) || !(g->mark[j]) )
-                  continue;
-
-               /* valid candidate? */
-               if( g->grad[j] <= maxgrad && SCIPisLE(scip, g->prize[j], min) )
-               {
-                  for( e2 = g->outbeg[j]; e2 != EAT_LAST; e2 = g->oeat[e2] )
-                     if( marked[g->head[e2]] == 0 )
-                        break;
-
-                  /* neighbours of j subset of those of k? */
-                  if( e2 == EAT_LAST )
+                  /* yes, delete vertex */
+                  while (g->outbeg[j] != EAT_LAST)
                   {
-                     while( g->outbeg[j] != EAT_LAST )
-                     {
-                        e2 = g->outbeg[j];
-                        (*count)++;
-                        graph_edge_del(scip, g, e2, TRUE);
-                     }
-                     g->mark[j] = FALSE;
-                     marked[j] = 0;
-
+                     e2 = g->outbeg[j];
+                     (*count)++;
+                     graph_edge_del(scip, g, e2, TRUE);
                   }
+                  g->mark[j] = FALSE;
+                  marked[j] = VERTEX_OTHER;
                }
             }
-            if( run == 1 )
-            {
-               for( e = g->outbeg[k2]; e != EAT_LAST; e = g->oeat[e] )
-                  if( marked[g->head[e]] == 1 && g->mark[g->head[e]] )
-                     marked[g->head[e]] = 0;
-               min -= g->prize[k2];
-               maxgrad -= k2grad;
-            }
-         }
-         for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
-         {
-            marked[g->head[e]] = 0;
 
          }
-
-         for( l = 0; l < nn; l++ )
-            for( e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e] )
-               marked[g->head[e]] = 0;
-
-
-         marked[k] = 0;
-
-         for( l = 0; l < nnodes; l++ )
-            assert(marked[l] == 0);
+         for (e = g->outbeg[k2]; e != EAT_LAST; e = g->oeat[e])
+            if( marked[g->head[e]] == VERTEX_TEMPNEIGHBOR
+                  && g->mark[g->head[e]] )
+               marked[g->head[e]] = VERTEX_OTHER;
+         min -= g->prize[k2];
+         maxgrad -= k2grad - 1;
 
       }
+      for (e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e])
+         marked[g->head[e]] = VERTEX_OTHER;
+
+      for (l = 0; l < nn; l++)
+         for (e = g->outbeg[neighbarr[l]]; e != EAT_LAST; e = g->oeat[e])
+            marked[g->head[e]] = VERTEX_OTHER;
+
+      marked[k] = VERTEX_OTHER;
+#ifdef DEBUG
+      for( l = 0; l < nnodes; l++ )
+      assert(marked[l] == VERTEX_OTHER);
+#endif
    }
 
-   SCIPfreeBufferArray(scip, &neighbarr2);
-   SCIPfreeBufferArray(scip, &neighbarr);
+SCIPfreeMemoryArray(scip, &adjverts);
+
+printf("deleted %d \n", *count);
    return SCIP_OKAY;
 }
 

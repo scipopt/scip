@@ -3300,7 +3300,7 @@ SCIP_Bool graph_sol_valid(
 {
    SCIP_QUEUE* queue;
 
-   char* terminal;
+   STP_Bool* terminal;
    int* pnode;
    int e;
    int i;
@@ -3348,6 +3348,26 @@ SCIP_Bool graph_sol_valid(
          }
       }
    }
+
+#if 0
+   if(termcount != graph->terms)
+   {
+      for( i = 0; i < nnodes; i++ )
+      {
+         if( Is_term(graph->term[i]) && !terminal[i] )
+         {
+            printf("root %d \n", root);
+            printf("fail %d grad %d\n", i, graph->grad[i]);
+            for( e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
+            {
+               printf("tail %d %d \n", graph->tail[e], graph->term[graph->tail[e]]);
+            }
+         }
+      }
+   }
+#endif
+
+
 
    SCIPqueueFree(&queue);
    SCIPfreeBufferArray(scip, &terminal);

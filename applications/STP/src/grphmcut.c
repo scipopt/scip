@@ -39,7 +39,7 @@
 
 #define DEBUG        0        /* 0 = No, 1 = Validation, 2 = Show flow       */
 #define STATIST      0
-#define CHECK        1
+#define CHECK        0
 
 #ifdef NDEBUG
 #undef STATIST

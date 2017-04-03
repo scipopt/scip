@@ -71,6 +71,25 @@ SCIP_RETCODE SCIPdualAscentStp(
 
 /** dual ascent heuristic */
 extern
+SCIP_RETCODE SCIPdualAscentStpOld(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            redcost,            /**< array to store reduced costs or NULL */
+   SCIP_Real*            nodearrreal,        /**< real vertices array for internal computations or NULL */
+   SCIP_Real*            objval,             /**< pointer to store objective value */
+   SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
+   SCIP_Bool             ascendandprune,     /**< should the ascent-and-prune heuristic be executed? */
+   GNODE**               gnodearrterms,      /**< gnode terminals array for internal computations or NULL */
+   int*                  edgearrint,         /**< int edges array for internal computations or NULL */
+   int*                  nodearrint,         /**< int vertices array for internal computations or NULL */
+   int                   root,               /**< the root */
+   int                   nruns,              /**< number of dual ascent runs */
+   char*                 edgearrchar,        /**< char edges array for internal computations or NULL */
+   char*                 nodearrchar         /**< char vertices array for internal computations or NULL */
+   );
+
+/** dual ascent heuristic */
+extern
 SCIP_RETCODE SCIPdualAscentStpSol(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */

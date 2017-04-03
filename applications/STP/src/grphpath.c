@@ -791,7 +791,6 @@ void graph_path_st(
    int   nnodes;
    int*  heap;
    int*  state;
-   char cgt;
 
    assert(randnumgen != NULL);
    assert(pathdist   != NULL);
@@ -864,25 +863,32 @@ void graph_path_st(
                break;
          }
 
-         z = (k + z) % nnodes;
-         cgt = (z > hnnodes);
-
-         /* update adjacent vertices */
-         for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         if( z > hnnodes )
          {
-            m = g->head[e];
+            /* update adjacent vertices */
+            for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+            {
+               m = g->head[e];
 
-	    /* is m not connected, allowed and closer (as close)? */
-	    if( cgt || (state[m]) )
-	    {
-	       if( !connected[m] && g->mark[m] && SCIPisGT(scip, pathdist[m], (pathdist[k] + cost[e])) )
+               assert(state[m]);
+
+               /* is m not connected, allowed and closer (as close)? */
+               if( !connected[m] && g->mark[m] && SCIPisGT(scip, pathdist[m], (pathdist[k] + cost[e])) )
                   correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
-	    }
-	    else
-	    {
+            }
+         }
+         else
+         {
+            for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+            {
+               m = g->head[e];
+
+               assert(state[m]);
+
+               /* is m not connected, allowed and closer (as close)? */
                if( !connected[m] && g->mark[m] && SCIPisGE(scip, pathdist[m], (pathdist[k] + cost[e])) )
                   correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
-	    }
+            }
          }
       }
    }
@@ -905,7 +911,6 @@ void graph_path_st_rpc(
    )
 {
    SCIP_Real maxprize;
-   int   z;
    int   k;
    int   m;
    int   e;
@@ -914,7 +919,6 @@ void graph_path_st_rpc(
    int   nnodes;
    int*  heap;
    int*  state;
-   char cgt;
 
    assert(randnumgen != NULL);
    assert(pathdist   != NULL);
@@ -959,9 +963,7 @@ void graph_path_st_rpc(
    {
       int node;
       int nterms = 0;
-      int hnnodes = nnodes / 2;
 
-      z = SCIPrandomGetInt(randnumgen, 0, nnodes - 1);
       count       = 1;
       heap[count] = k;
       state[k]    = count;
@@ -979,7 +981,6 @@ void graph_path_st_rpc(
             connected[k] = TRUE;
             pathdist[k] = 0.0;
             node = k;
-            z = SCIPrandomGetInt(randnumgen, 0, nnodes - 1);
 
             if( k != start )
             {
@@ -1001,25 +1002,16 @@ void graph_path_st_rpc(
             break;
          }
 
-         z = (k + z) % nnodes;
-         cgt = (z > hnnodes);
-
          /* update adjacent vertices */
          for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          {
             m = g->head[e];
 
+            assert(state[m]);
+
             /* is m not connected, allowed and closer (as close)? */
-            if( cgt || (state[m]) )
-            {
-               if( !connected[m] && g->mark[m] && SCIPisGT(scip, pathdist[m], (pathdist[k] + cost[e])) )
-                  correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
-            }
-            else
-            {
-               if( !connected[m] && g->mark[m] && SCIPisGE(scip, pathdist[m], (pathdist[k] + cost[e])) )
-                  correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
-            }
+            if( !connected[m] && g->mark[m] && SCIPisGT(scip, pathdist[m], (pathdist[k] + cost[e])) )
+               correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
          }
       }
    }
@@ -1042,7 +1034,6 @@ void graph_path_st_pcmw(
    )
 {
    SCIP_Real maxprize;
-   int   z;
    int   k;
    int   m;
    int   e;
@@ -1050,7 +1041,6 @@ void graph_path_st_pcmw(
    int   nnodes;
    int*  heap;
    int*  state;
-   char cgt;
 
    assert(randnumgen != NULL);
    assert(pathdist   != NULL);
@@ -1091,9 +1081,7 @@ void graph_path_st_pcmw(
    {
       int node;
       int nterms = 0;
-      int hnnodes = nnodes / 2;
 
-      z = SCIPrandomGetInt(randnumgen, 0, nnodes - 1);
       count       = 1;
       heap[count] = k;
       state[k]    = count;
@@ -1106,12 +1094,11 @@ void graph_path_st_pcmw(
          state[k] = UNKNOWN;
 
          /* if k is positive vertex and close enough, connect its path to current subtree */
-         if( Is_pterm(g->term[k]) && SCIPisGE(scip, g->prize[k], pathdist[k]) && !connected[k] )
+         if( !connected[k] && Is_pterm(g->term[k]) && SCIPisGE(scip, g->prize[k], pathdist[k]) )
          {
             connected[k] = TRUE;
             pathdist[k] = 0.0;
             node = k;
-            z = SCIPrandomGetInt(randnumgen, 0, nnodes - 1);
 
             if( k != start )
             {
@@ -1122,6 +1109,7 @@ void graph_path_st_pcmw(
                   assert(pathedge[node] != - 1);
                   connected[node] = TRUE;
                   resetX(scip, pathdist, heap, state, &count, node);
+                  assert(state[node]);
                }
             }
             /* have all terminals been reached? */
@@ -1133,25 +1121,16 @@ void graph_path_st_pcmw(
             break;
          }
 
-         z = (k + z) % nnodes;
-         cgt = (z > hnnodes);
-
          /* update adjacent vertices */
          for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          {
             m = g->head[e];
 
+            assert(state[m]);
             /* is m not connected, allowed and closer (as close)? */
-            if( cgt || (state[m]) )
-            {
+
                if( !connected[m] && g->mark[m] && SCIPisGT(scip, pathdist[m], (pathdist[k] + cost[e])) )
                   correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
-            }
-            else
-            {
-               if( !connected[m] && g->mark[m] && SCIPisGE(scip, pathdist[m], (pathdist[k] + cost[e])) )
-                  correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
-            }
          }
       }
    }
@@ -1174,7 +1153,6 @@ void graph_path_st_rmw(
    )
 {
    SCIP_Real maxprize;
-   int   z;
    int   k;
    int   m;
    int   e;
@@ -1184,7 +1162,6 @@ void graph_path_st_rmw(
    int   nnodes;
    int*  heap;
    int*  state;
-   char cgt;
 
    assert(randnumgen != NULL);
    assert(pathdist   != NULL);
@@ -1232,6 +1209,7 @@ void graph_path_st_rmw(
             maxprize = g->prize[k];
    }
 
+
    /* add start vertex to heap */
    k            = start;
    pathdist[k] = 0.0;
@@ -1243,9 +1221,7 @@ void graph_path_st_rmw(
       int nterms = g->terms;
       int termscount = 0;
       int rtermscount = 0;
-      int hnnodes = nnodes / 2;
 
-      z = SCIPrandomGetInt(randnumgen, 0, nnodes - 1);
       count       = 1;
       heap[count] = k;
       state[k]    = count;
@@ -1264,15 +1240,14 @@ void graph_path_st_rmw(
             connected[k] = TRUE;
             pathdist[k] = 0.0;
             node = k;
-            z = SCIPrandomGetInt(randnumgen, 0, nnodes - 1);
 
             if( k != start )
             {
                assert(pathedge[k] != - 1);
-
                while( !connected[node = g->tail[pathedge[node]]] )
                {
                   assert(pathedge[node] != - 1);
+
                   connected[node] = TRUE;
                   resetX(scip, pathdist, heap, state, &count, node);
                }
@@ -1280,34 +1255,25 @@ void graph_path_st_rmw(
 
             /* have all terminals been reached? */
             if( ++termscount == nterms )
+            {
                break;
+            }
          }
          else if( SCIPisGT(scip, pathdist[k], maxprize) && rtermscount >= nrterms )
          {
             break;
          }
 
-         z = (k + z) % nnodes;
-         cgt = (z > hnnodes);
-
          /* update adjacent vertices */
          for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          {
             m = g->head[e];
-            if( !(g->mark[m]) || connected[m] )
-               continue;
+
+            assert(state[m]);
 
             /* is m not connected, allowed and closer (as close)? */
-            if( cgt || (state[m]) )
-            {
-               if( SCIPisGT(scip, pathdist[m], (pathdist[k] + cost[e])) )
-                  correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
-            }
-            else
-            {
-               if( SCIPisGE(scip, pathdist[m], (pathdist[k] + cost[e])) )
-                  correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
-            }
+            if( !connected[m] && g->mark[m] && SCIPisGT(scip, pathdist[m], (pathdist[k] + cost[e])) )
+               correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
          }
       }
    }

@@ -438,6 +438,7 @@ SCIP_RETCODE SCIPheurPrunePCSteinerTree(
       }
    }
    while( count > 0 );
+
    assert(graph_sol_valid(scip, g, result));
    SCIPfreeBufferArray(scip, &mst);
 
@@ -812,23 +813,14 @@ SCIP_RETCODE prune(
    nedges = g->edges;
    if( g->stp_type != STP_DHCSTP )
    {
-      for( e = nedges - 1; e >= 0 ; e-- )
-      {
+      for( e = 0; e < nedges; e++ )
          result[e] = UNKNOWN;
-
-         if( SCIPisLT(scip, cost[e], BLOCKED) )
-            cost[e] = g->cost[e];
-      }
    }
 
    if( g->stp_type == STP_MWCSP || g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP )
-      SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, g, cost, result, connected) );
+      SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, g, g->cost, result, connected) );
    else
-      SCIP_CALL( SCIPheurPruneSteinerTree(scip, g, cost, 0, result, connected) );
-
-   if( g->stp_type != STP_DHCSTP )
-      for( e = nedges - 1; e >= 0 ; e-- )
-         cost[e] = costrev[flipedge(e)];
+      SCIP_CALL( SCIPheurPruneSteinerTree(scip, g, (g->stp_type != STP_DHCSTP) ? g->cost : cost, 0, result, connected) );
 
    return SCIP_OKAY;
 }
