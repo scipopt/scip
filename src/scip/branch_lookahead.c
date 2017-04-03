@@ -14,8 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 //#define PRINTNODECONS
 /*
-*/
 #define SCIP_DEBUG
+*/
 #define SCIP_STATISTIC
 
 /**@file   branch_lookahead.c
@@ -66,6 +66,7 @@
 #define DEFAULT_ABBREVIATED                  FALSE
 #define DEFAULT_MAXNCANDS                    4
 #define DEFAULT_STOPAFTERCUTOFF              TRUE
+#define DEFAULT_REUSEBASIS                   TRUE
 
 /*
  * Data structures
@@ -236,6 +237,8 @@ typedef struct
    int                   maxncands;          /**< If abbreviated == TRUE, at most how many candidates should be handled? */
    SCIP_Bool             stopaftercutoff;    /**< Should a branching loop be stopped, if the cutoff of a variable is
                                               *   detected? */
+   SCIP_Bool             reusebasis;         /**< If abbreviated == TRUE, should the solution lp-basis of the FSB run be
+                                              *   used in the first abbreviated level?  */
 } CONFIGURATION;
 
 static
@@ -734,6 +737,48 @@ void lpiMemoryShallowCopy(
 }
 
 static
+SCIP_Bool lpiMemoryIsUsable(
+   LPIMEMORY*            memory,
+   CONFIGURATION*        config
+   )
+{
+   assert(memory != NULL);
+
+   /* the lpinorms may be NULL */
+   return memory->lpistate != NULL && config->reusebasis;
+}
+
+static
+SCIP_RETCODE lpiMemoryClear(
+   SCIP*                 scip,
+   LPIMEMORY*            lpimemory
+   )
+{
+   SCIP_LPI* lpi;
+   BMS_BLKMEM* blkmem;
+
+   assert(scip != NULL);
+   assert(lpimemory != NULL);
+
+   SCIP_CALL( SCIPgetLPI(scip, &lpi) );
+   blkmem = SCIPblkmem(scip);
+
+   if( lpimemory->lpistate != NULL )
+   {
+      SCIP_CALL( SCIPlpiFreeState(lpi, blkmem, &lpimemory->lpistate) );
+      lpimemory->lpistate = NULL;
+   }
+
+   if( lpimemory->lpinorms != NULL )
+   {
+      SCIP_CALL( SCIPlpiFreeNorms(lpi, blkmem, &lpimemory->lpinorms) );
+      lpimemory->lpinorms = NULL;
+   }
+
+   return SCIP_OKAY;
+}
+
+static
 void lpiMemoryFree(
    SCIP*                 scip,
    LPIMEMORY**           lpimemory
@@ -749,7 +794,6 @@ typedef struct
    SCIP_Real             fracval;
    LPIMEMORY*            downlpimemory;
    LPIMEMORY*            uplpimemory;
-   /* TODO: add the up/down lp basis etc. here for re-usage? */
 } CANDIDATE;
 
 static
@@ -767,14 +811,19 @@ SCIP_RETCODE candidateAllocate(
 }
 
 static
-void candidateFree(
+SCIP_RETCODE candidateFree(
    SCIP*                 scip,
    CANDIDATE**           candidate
    )
 {
+   /* if a candidate is freed, we no longer need the content of the lpi memory */
+   SCIP_CALL( lpiMemoryClear(scip, (*candidate)->uplpimemory) );
+   SCIP_CALL( lpiMemoryClear(scip, (*candidate)->downlpimemory) );
+
    lpiMemoryFree(scip, &(*candidate)->uplpimemory);
    lpiMemoryFree(scip, &(*candidate)->downlpimemory);
    SCIPfreeBuffer(scip, candidate);
+   return SCIP_OKAY;
 }
 
 typedef struct
@@ -807,7 +856,7 @@ SCIP_RETCODE candidateListAllocate(
 }
 
 static
-void candidateListFree(
+SCIP_RETCODE candidateListFree(
    SCIP*                 scip,
    CANDIDATELIST**       list
    )
@@ -816,11 +865,12 @@ void candidateListFree(
 
    for( i = (*list)->ncandidates-1; i >= 0; i-- )
    {
-      candidateFree(scip, &(*list)->candidates[i]);
+      SCIP_CALL( candidateFree(scip, &(*list)->candidates[i]) );
    }
 
    SCIPfreeBufferArray(scip, &(*list)->candidates);
    SCIPfreeBuffer(scip, list);
+   return SCIP_OKAY;
 }
 
 /**
@@ -1036,7 +1086,7 @@ void branchRuleResultFreeReduced(
 }
 
 static
-void branchRuleResultFreeFull(
+SCIP_RETCODE branchRuleResultFreeFull(
    SCIP*                 scip,
    BRANCHRULERESULT**    branchruleresult
    )
@@ -1060,6 +1110,8 @@ void branchRuleResultFreeFull(
    SCIPfreeBufferArray(scip, &(*branchruleresult)->uplpimemories);
    SCIPfreeBufferArray(scip, &(*branchruleresult)->downlpimemories);
    branchRuleResultFreeReduced(scip, branchruleresult);
+
+   return SCIP_OKAY;
 }
 
 
@@ -1625,6 +1677,9 @@ SCIP_RETCODE storeInLPIMemory(
    SCIP_CALL( SCIPlpiGetState(lpi, blkmem, &lpimemory->lpistate) );
    SCIP_CALL( SCIPlpiGetNorms(lpi, blkmem, &lpimemory->lpinorms) );
 
+   assert(lpimemory->lpistate != NULL);
+   /* the norms may be NULL */
+
    return SCIP_OKAY;
 }
 
@@ -1639,48 +1694,17 @@ SCIP_RETCODE restoreFromLPIMemory(
 
    assert(scip != NULL);
    assert(lpimemory != NULL);
-   assert(lpimemory->lpistate != NULL || lpimemory->lpinorms != NULL);
+   assert(lpimemory->lpistate != NULL);
 
    SCIP_CALL( SCIPgetLPI(scip, &lpi) );
    blkmem = SCIPblkmem(scip);
 
-   if( lpimemory->lpistate != NULL )
-   {
-      SCIP_CALL( SCIPlpiSetState(lpi, blkmem, lpimemory->lpistate) );
-   }
+   SCIP_CALL( SCIPlpiSetState(lpi, blkmem, lpimemory->lpistate) );
    if( lpimemory->lpinorms != NULL )
    {
       SCIP_CALL( SCIPlpiSetNorms(lpi, blkmem, lpimemory->lpinorms) );
    }
-   return SCIP_OKAY;
-}
 
-static
-SCIP_RETCODE clearLPIMemory(
-   SCIP*                 scip,
-   LPIMEMORY*            lpimemory
-   )
-{
-   SCIP_LPI* lpi;
-   BMS_BLKMEM* blkmem;
-
-   assert(scip != NULL);
-   assert(lpimemory != NULL);
-   assert(lpimemory->lpistate != NULL || lpimemory->lpinorms != NULL);
-
-   SCIP_CALL( SCIPgetLPI(scip, &lpi) );
-   blkmem = SCIPblkmem(scip);
-
-   if( lpimemory->lpistate != NULL )
-   {
-      SCIP_CALL( SCIPlpiFreeState(lpi, blkmem, &lpimemory->lpistate) );
-      lpimemory->lpistate = NULL;
-   }
-   if( lpimemory->lpinorms != NULL )
-   {
-      SCIP_CALL( SCIPlpiFreeNorms(lpi, blkmem, &lpimemory->lpinorms) );
-      lpimemory->lpinorms = NULL;
-   }
    return SCIP_OKAY;
 }
 
@@ -1693,6 +1717,7 @@ SCIP_RETCODE clearLPIMemory(
 static
 SCIP_RETCODE executeDownBranching(
    SCIP*                 scip,               /**< SCIP data structure */
+   CONFIGURATION*        config,
    CANDIDATE*            candidate,
    BRANCHINGRESULTDATA*  resultdata,         /**< pointer to the result data which gets filled with the status */
    STATUS*               status
@@ -1734,12 +1759,12 @@ SCIP_RETCODE executeDownBranching(
          SCIP_CALL( SCIPchgVarUbProbing(scip, branchvar, newupperbound) );
       }
 
-      if( candidate->downlpimemory != NULL )
+      if( lpiMemoryIsUsable(candidate->downlpimemory, config) )
       {
          /* restore the stored LP data (e.g. the basis) from a previous run */
          SCIP_CALL( restoreFromLPIMemory(scip, candidate->downlpimemory) );
          /* clear the memory, as it is no longer needed */
-         SCIP_CALL( clearLPIMemory(scip, candidate->downlpimemory) );
+         SCIP_CALL( lpiMemoryClear(scip, candidate->downlpimemory) );
       }
 
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &status->lperror, &resultdata->cutoff) );
@@ -1779,6 +1804,7 @@ SCIP_RETCODE executeDownBranching(
 static
 SCIP_RETCODE executeUpBranching(
    SCIP*                 scip,               /**< SCIP data structure */
+   CONFIGURATION*        config,
    CANDIDATE*            candidate,
    BRANCHINGRESULTDATA*  resultdata,         /**< pointer to the result data which gets filled with the status */
    STATUS*               status
@@ -1820,12 +1846,12 @@ SCIP_RETCODE executeUpBranching(
          SCIP_CALL( SCIPchgVarLbProbing(scip, branchvar, newlowerbound) );
       }
 
-      if( candidate->uplpimemory != NULL )
+      if( lpiMemoryIsUsable(candidate->uplpimemory, config) )
       {
          /* restore the stored LP data (e.g. the basis) from a previous run */
          SCIP_CALL( restoreFromLPIMemory(scip, candidate->uplpimemory) );
          /* clear the memory, as it is no longer needed */
-         SCIP_CALL( clearLPIMemory(scip, candidate->uplpimemory) );
+         SCIP_CALL( lpiMemoryClear(scip, candidate->uplpimemory) );
       }
 
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &status->lperror, &resultdata->cutoff) );
@@ -2129,18 +2155,6 @@ SCIP_RETCODE getFSBResult(
 
    SCIP_CALL( selectVarStart(scip, config, NULL, status, branchruleresult, lpobjval, statistics, localstats) );
 
-   SCIPdebug(
-   {
-      int i;
-      for( i = 0; i < branchruleresult->ncandscores; i++ )
-      {
-         SCIP_VAR* var = branchruleresult->candswithscore[i];
-         assert( var != NULL );
-         SCIPdebugMessage("%i: %s\n", i, SCIPvarGetName(branchruleresult->candswithscore[i]));
-      }
-   }
-   )
-
    localStatisticsFree(scip, &localstats);
    statisticsFree(scip, &statistics);
    statusFree(scip, &status);
@@ -2248,14 +2262,20 @@ SCIP_RETCODE getBestCandidates(
       lpiMemoryShallowCopy(branchruleresult->downlpimemories[sortedindex], candidate->downlpimemory);
       lpiMemoryShallowCopy(branchruleresult->uplpimemories[sortedindex], candidate->uplpimemory);
 
-      assert(candidate->branchvar != NULL);
-
       SCIPdebugMessage(" Index %2i: Var %s Val %g\n", i, SCIPvarGetName(candidate->branchvar), candidate->branchval);
+   }
+
+   for( i = candidates->ncandidates; i < ncands; i++ )
+   {
+      int sortedindex = permutation[i];
+
+      SCIP_CALL( lpiMemoryClear(scip, branchruleresult->downlpimemories[sortedindex]) );
+      SCIP_CALL( lpiMemoryClear(scip, branchruleresult->uplpimemories[sortedindex]) );
    }
 
    /* free the allocated resources */
    SCIPfreeBufferArray(scip, &permutation);
-   branchRuleResultFreeFull(scip, &branchruleresult);
+   SCIP_CALL( branchRuleResultFreeFull(scip, &branchruleresult) );
 
    return SCIP_OKAY;
 }
@@ -2363,7 +2383,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
 
    SCIPdebugMessage("Depth <%i>, Started down branching on var <%s> with var < <%g>\n", probingdepth, SCIPvarGetName(branchvar), branchval);
 
-   SCIP_CALL( executeDownBranching(scip, candidate, downbranchingresult, status) );
+   SCIP_CALL( executeDownBranching(scip, config, candidate, downbranchingresult, status) );
    SCIPstatistic( statistics->nlpssolved[probingdepth]++; )
 
    SCIPdebug(
@@ -2454,7 +2474,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
 #endif
             statusFree(scip, &deeperstatus);
             branchRuleResultFreeReduced(scip, &deeperbranchruleresult);
-            candidateListFree(scip, &candidates);
+            SCIP_CALL( candidateListFree(scip, &candidates) );
          }
       }
    }
@@ -2533,7 +2553,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
 
    SCIPdebugMessage("Depth <%i>, Started up branching on var <%s> with var > <%g>\n", probingdepth, SCIPvarGetName(branchvar), branchval);
 
-   SCIP_CALL( executeUpBranching(scip, candidate, upbranchingresult, status) );
+   SCIP_CALL( executeUpBranching(scip, config, candidate, upbranchingresult, status) );
    SCIPstatistic( statistics->nlpssolved[probingdepth]++; )
 
    SCIPdebug(
@@ -2632,7 +2652,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
 #endif
             statusFree(scip, &deeperstatus);
             branchRuleResultFreeReduced(scip, &deeperbranchruleresult);
-            candidateListFree(scip, &candidates);
+            SCIP_CALL( candidateListFree(scip, &candidates) );
          }
       }
    }
@@ -3178,7 +3198,7 @@ SCIP_RETCODE selectVarStart(
       SCIP_CALL( SCIPfreeSol(scip, &baselpsol) );
    }
 
-   candidateListFree(scip, &candidates);
+   SCIP_CALL( candidateListFree(scip, &candidates) );
 
    return SCIP_OKAY;
 }
@@ -3651,6 +3671,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/stopaftercutoff",
          "Should a branching loop be stopped, if a cutoff of one variable is detected?",
          &branchruledata->config->stopaftercutoff, TRUE, DEFAULT_STOPAFTERCUTOFF, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/reusebasis",
+         "If abbreviated, should an optimal FSB basis be reused in the first ALAB level?",
+         &branchruledata->config->reusebasis, TRUE, DEFAULT_REUSEBASIS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
