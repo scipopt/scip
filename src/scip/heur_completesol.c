@@ -1168,9 +1168,9 @@ SCIP_RETCODE SCIPincludeHeurCompletesol(
          "minimum number of nodes required to start the subproblem",
          &heurdata->minnodes, TRUE, DEFAULT_MINNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxunknownrate",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxunkownrate",
          "maximal rate of unknown solution values",
-         &heurdata->maxunkownrate, FALSE, DEFAULT_MAXUNKRATE, 0.0, 1.0, NULL, NULL) );
+         &heurdata->maxunknownrate, FALSE, DEFAULT_MAXUNKRATE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/addallsols",
          "should all subproblem solutions be added to the original SCIP?",
