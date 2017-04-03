@@ -119,7 +119,8 @@ int calcGrowSize(
 
 /** expression graph nodes comparison to use in sorting methods
  *
- * the nodes need to have been added to the expression graph (depth,pos >= 0)
+ * The nodes need to have been added to the expression graph (depth,pos >= 0).
+ * The better node is the one with the lower depth and lower position, if depth is equal.
  */
 static
 SCIP_DECL_SORTPTRCOMP(exprgraphnodecomp)
@@ -11973,7 +11974,7 @@ void exprgraphNodeCheckSeparabilityComponent(
 /**@name Expression graph private methods */
 /**@{ */
 
-/** assert that expression tree has at least a given depth */
+/** assert that expression graph has at least a given depth */
 static
 SCIP_RETCODE exprgraphEnsureDepth(
    SCIP_EXPRGRAPH*       exprgraph,          /**< buffer to store pointer to expression graph */
@@ -12107,11 +12108,19 @@ SCIP_RETCODE exprgraphMoveNode(
    exprgraph->nodes[newdepth][node->pos] = node;
    ++exprgraph->nnodes[newdepth];
 
+   /* by moving the node to a new depth, the parents array in all its childrens may not be sorted anymore (parents order depends on depth) */
+   for( i = 0; i < node->nchildren; ++i )
+      node->children[i]->parentssorted = FALSE;
+
    /* move last node at previous depth to previous position, if it wasn't last */
    if( oldpos < exprgraph->nnodes[olddepth]-1 )
    {
       exprgraph->nodes[olddepth][oldpos] = exprgraph->nodes[olddepth][exprgraph->nnodes[olddepth]-1];
       exprgraph->nodes[olddepth][oldpos]->pos = oldpos;
+
+      /* by moving the node to a new position, the parents array in all its children may not be sorted anymore (parents order depends on depth) */
+      for( i = 0; i < exprgraph->nodes[olddepth][oldpos]->nchildren; ++i )
+         exprgraph->nodes[olddepth][oldpos]->children[i]->parentssorted = FALSE;
    }
    --exprgraph->nnodes[olddepth];
 
@@ -14410,6 +14419,10 @@ SCIP_RETCODE SCIPexprgraphReleaseNode(
       /* move last node at depth of *node to position of *node */
       exprgraph->nodes[(*node)->depth][(*node)->pos] = exprgraph->nodes[(*node)->depth][exprgraph->nnodes[(*node)->depth]-1];
       exprgraph->nodes[(*node)->depth][(*node)->pos]->pos = (*node)->pos;
+
+      /* moving the node may change the order in the parents array of each child */
+      for( i = 0; i < exprgraph->nodes[(*node)->depth][(*node)->pos]->nchildren; ++i )
+         exprgraph->nodes[(*node)->depth][(*node)->pos]->children[i]->parentssorted = FALSE;
    }
    --exprgraph->nnodes[(*node)->depth];
 
