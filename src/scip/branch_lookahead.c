@@ -742,10 +742,8 @@ SCIP_Bool lpiMemoryIsUsable(
    CONFIGURATION*        config
    )
 {
-   assert(memory != NULL);
-
    /* the lpinorms may be NULL */
-   return memory->lpistate != NULL && config->reusebasis;
+   return memory != NULL && memory->lpistate != NULL && config->reusebasis;
 }
 
 static
@@ -2127,6 +2125,7 @@ void updateOldBranching(
 static
 SCIP_RETCODE getFSBResult(
    SCIP*                 scip,
+   CONFIGURATION*        parentconfig,
    SCIP_Real             lpobjval,
    BRANCHRULERESULT*     branchruleresult
    )
@@ -2152,6 +2151,8 @@ SCIP_RETCODE getFSBResult(
    config->stopaftercutoff = FALSE;
    /* Even for one single candidate we want to get the corresponding values */
    config->forcebranching = TRUE;
+   /* Use the user setting, as we don't want to unnecessarily gather the lpi memory data. */
+   config->reusebasis = parentconfig->reusebasis;
 
    SCIP_CALL( selectVarStart(scip, config, NULL, status, branchruleresult, lpobjval, statistics, localstats) );
 
@@ -2195,6 +2196,7 @@ SCIP_DECL_SORTINDCOMP(branchRuleScoreComp)
 static
 SCIP_RETCODE getBestCandidates(
    SCIP*                 scip,
+   CONFIGURATION*        config,
    CANDIDATELIST*        candidates
    )
 {
@@ -2222,7 +2224,7 @@ SCIP_RETCODE getBestCandidates(
 
    SCIPdebugMessage("Calculating the FSB result to get a score for all candidates.\n")
    /* Calculate all FSB scores and collect it in the result */;
-   SCIP_CALL( getFSBResult(scip, lpobjval, branchruleresult) );
+   SCIP_CALL( getFSBResult(scip, config, lpobjval, branchruleresult) );
 
    /* allocate the permutation array that will contain the sorted indices (permutation[i] will contain the i-th index) */
    SCIP_CALL( SCIPallocBufferArray(scip, &permutation, branchruleresult->ncandscores) );
@@ -2259,18 +2261,24 @@ SCIP_RETCODE getBestCandidates(
       candidate->branchval = branchruleresult->candslpvalue[sortedindex];
       candidate->fracval = branchruleresult->candsvalfrac[sortedindex];
 
-      lpiMemoryShallowCopy(branchruleresult->downlpimemories[sortedindex], candidate->downlpimemory);
-      lpiMemoryShallowCopy(branchruleresult->uplpimemories[sortedindex], candidate->uplpimemory);
+      if( config->reusebasis )
+      {
+         lpiMemoryShallowCopy(branchruleresult->downlpimemories[sortedindex], candidate->downlpimemory);
+         lpiMemoryShallowCopy(branchruleresult->uplpimemories[sortedindex], candidate->uplpimemory);
+      }
 
       SCIPdebugMessage(" Index %2i: Var %s Val %g\n", i, SCIPvarGetName(candidate->branchvar), candidate->branchval);
    }
 
-   for( i = candidates->ncandidates; i < ncands; i++ )
+   if( config->reusebasis )
    {
-      int sortedindex = permutation[i];
+      for( i = candidates->ncandidates; i < ncands; i++ )
+      {
+         int sortedindex = permutation[i];
 
-      SCIP_CALL( lpiMemoryClear(scip, branchruleresult->downlpimemories[sortedindex]) );
-      SCIP_CALL( lpiMemoryClear(scip, branchruleresult->uplpimemories[sortedindex]) );
+         SCIP_CALL( lpiMemoryClear(scip, branchruleresult->downlpimemories[sortedindex]) );
+         SCIP_CALL( lpiMemoryClear(scip, branchruleresult->uplpimemories[sortedindex]) );
+      }
    }
 
    /* free the allocated resources */
@@ -2326,7 +2334,7 @@ SCIP_RETCODE getCandidates(
    {
       /* call LAB with depth 1 to get the best (w.r.t. FSB score) candidates */
       SCIPdebugMessage("Getting the branching candidates by selecting the best %i candidates\n", candidates->ncandidates);
-      SCIP_CALL( getBestCandidates(scip, candidates) );
+      SCIP_CALL( getBestCandidates(scip, config, candidates) );
    }
    else
    {
@@ -2398,7 +2406,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
       int deepernlpcands;
       SCIP_Real localdowngain;
 
-      if( lpimemory != NULL )
+      if( lpiMemoryIsUsable(lpimemory, config) )
       {
          SCIP_CALL( storeInLPIMemory(scip, lpimemory) );
          SCIPdebugMessage("Stored smth in LPIMemory after downbranching on var %s\n", SCIPvarGetName(branchvar));
@@ -2572,7 +2580,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
       int deepernlpcands;
       SCIP_Real localupgain;
 
-      if( lpimemory != NULL )
+      if( lpiMemoryIsUsable(lpimemory, config) )
       {
          SCIP_CALL( storeInLPIMemory(scip, lpimemory) );
          SCIPdebugMessage("Stored smth in LPIMemory after upbranching on var %s\n", SCIPvarGetName(branchvar));
