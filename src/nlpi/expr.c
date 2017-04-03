@@ -117,15 +117,30 @@ int calcGrowSize(
    return size;
 }
 
-/** pointer comparison to use in sorting methods */
+/** expression graph nodes comparison to use in sorting methods
+ *
+ * the nodes need to have been added to the expression graph (depth,pos >= 0)
+ */
 static
-SCIP_DECL_SORTPTRCOMP(ptrcomp)
+SCIP_DECL_SORTPTRCOMP(exprgraphnodecomp)
 {
-   if( elem1 > elem2 )
-      return 1;
-   if( elem1 < elem2 )
-      return -1;
-   return 0;
+   SCIP_EXPRGRAPHNODE* node1 = (SCIP_EXPRGRAPHNODE*)elem1;
+   SCIP_EXPRGRAPHNODE* node2 = (SCIP_EXPRGRAPHNODE*)elem2;
+
+   assert(node1 != NULL);
+   assert(node2 != NULL);
+   assert(node1->depth >= 0);
+   assert(node1->pos >= 0);
+   assert(node2->depth >= 0);
+   assert(node2->pos >= 0);
+
+   if( node1->depth != node2->depth )
+      return node1->depth - node2->depth;
+
+   /* there should be no two nodes on the same position */
+   assert((node1->pos != node2->pos) || (node1 == node2));
+
+   return node1->pos - node2->pos;
 }
 
 /** checks if a given new lower bound is tighter (w.r.t. given bound strengthening epsilon) than the old one (copied from scip/set.c) */
@@ -9294,12 +9309,12 @@ void exprgraphNodeSortParents(
 #ifndef NDEBUG
       int i;
       for( i = 1; i < node->nparents; ++i )
-         assert(ptrcomp((void*)node->parents[i-1], (void*)node->parents[i]) <= 0);
+         assert(exprgraphnodecomp((void*)node->parents[i-1], (void*)node->parents[i]) <= 0);
 #endif
       return;
    }
 
-   SCIPsortPtr((void**)node->parents, ptrcomp, node->nparents);
+   SCIPsortPtr((void**)node->parents, exprgraphnodecomp, node->nparents);
 
    node->parentssorted = TRUE;
 }
@@ -9331,7 +9346,7 @@ SCIP_RETCODE exprgraphNodeRemoveParent(
 
    /* find parent */
    exprgraphNodeSortParents(*node);
-   (void) SCIPsortedvecFindPtr((void**)(*node)->parents, ptrcomp, (void*)parent, (*node)->nparents, &pos);
+   (void) SCIPsortedvecFindPtr((void**)(*node)->parents, exprgraphnodecomp, (void*)parent, (*node)->nparents, &pos);
    assert(pos >= 0);
    assert(pos < (*node)->nparents);
    assert((*node)->parents[pos] == parent);
@@ -9378,7 +9393,7 @@ SCIP_Bool exprgraphNodeIsParent(
    /* ensure parents array is sorted */
    exprgraphNodeSortParents(node);
 
-   return SCIPsortedvecFindPtr((void**)node->parents, ptrcomp, (void*)parent, node->nparents, &pos);
+   return SCIPsortedvecFindPtr((void**)node->parents, exprgraphnodecomp, (void*)parent, node->nparents, &pos);
 }
 
 /** adds expression graph nodes to the array of children of a sum, product, linear, quadratic, or polynomial expression
@@ -12231,7 +12246,7 @@ SCIP_RETCODE exprgraphFindParentByOperator(
    {
       /* sort childnodes, if needed for later */
       if( nchildren > 2 )
-         SCIPsortPtr((void**)children, ptrcomp, nchildren);
+         SCIPsortPtr((void**)children, exprgraphnodecomp, nchildren);
       for( p = 0; p < nparentcands; ++p )
       {
          assert(parentcands[p]->op        == op);        /* that was the first  criterium for adding a node to parentcands */
@@ -12262,7 +12277,7 @@ SCIP_RETCODE exprgraphFindParentByOperator(
             /* as in the case for two nodes, we need to check whether parentcands[p]->children and children are equal up to permutation */
 
             /* sort children of parent candidate */
-            SCIPsortPtr((void**)parentcands[p]->children, ptrcomp, nchildren);
+            SCIPsortPtr((void**)parentcands[p]->children, exprgraphnodecomp, nchildren);
 
             /* check if childnodes and parentcands[p]->children are the same */
             for( i = 0; i < nchildren; ++i )
@@ -12337,9 +12352,9 @@ SCIP_RETCODE exprgraphFindParentByOperator(
       exprcoef = (SCIP_Real*)opdata.data;
       /* sort childnodes, take care that children in expression are sorted the same way if given (so we don't mess up assignment of coefficients) */
       if( exprchildren != NULL )
-         SCIPsortPtrPtrReal((void**)children, (void**)exprchildren, exprcoef, ptrcomp, nchildren);
+         SCIPsortPtrPtrReal((void**)children, (void**)exprchildren, exprcoef, exprgraphnodecomp, nchildren);
       else
-         SCIPsortPtrReal((void**)children, exprcoef, ptrcomp, nchildren);
+         SCIPsortPtrReal((void**)children, exprcoef, exprgraphnodecomp, nchildren);
       for( p = 0; p < nparentcands; ++p )
       {
          assert(parentcands[p]->op        == op);        /* that was the first  criterium for adding a node to parentcands */
@@ -12349,7 +12364,7 @@ SCIP_RETCODE exprgraphFindParentByOperator(
          assert(exprcoef[nchildren] == candcoef[nchildren]); /* that was a criterium for adding a node to parentcands */  /*lint !e777*/
 
          /* sort children of parent candidate */
-         SCIPsortPtrReal((void**)parentcands[p]->children, candcoef, ptrcomp, nchildren);
+         SCIPsortPtrReal((void**)parentcands[p]->children, candcoef, exprgraphnodecomp, nchildren);
 
          /* check if children and coefficients in parent candidate and expression are the same */
          for( i = 0; i < nchildren; ++i )
@@ -12392,14 +12407,14 @@ SCIP_RETCODE exprgraphFindParentByOperator(
 
       if( exprlincoef != NULL )
          if( exprchildren != NULL )
-            SCIPsortPtrPtrRealInt((void**)children, (void**)exprchildren, exprlincoef, invperm, ptrcomp, nchildren);
+            SCIPsortPtrPtrRealInt((void**)children, (void**)exprchildren, exprlincoef, invperm, exprgraphnodecomp, nchildren);
          else
-            SCIPsortPtrRealInt((void**)children, exprlincoef, invperm, ptrcomp, nchildren);
+            SCIPsortPtrRealInt((void**)children, exprlincoef, invperm, exprgraphnodecomp, nchildren);
       else
          if( exprchildren != NULL )
-            SCIPsortPtrPtrInt((void**)children, (void**)exprchildren, invperm, ptrcomp, nchildren);
+            SCIPsortPtrPtrInt((void**)children, (void**)exprchildren, invperm, exprgraphnodecomp, nchildren);
          else
-            SCIPsortPtrInt((void**)children, invperm, ptrcomp, nchildren);
+            SCIPsortPtrInt((void**)children, invperm, exprgraphnodecomp, nchildren);
 
       /* compute permutation from its inverse */
       for( i = 0; i < nchildren; ++i )
@@ -12436,9 +12451,9 @@ SCIP_RETCODE exprgraphFindParentByOperator(
             invperm[i] = i;
 
          if( candlincoef != NULL )
-            SCIPsortPtrRealInt((void**)parentcands[p]->children, candlincoef, invperm, ptrcomp, parentcands[p]->nchildren);
+            SCIPsortPtrRealInt((void**)parentcands[p]->children, candlincoef, invperm, exprgraphnodecomp, parentcands[p]->nchildren);
          else
-            SCIPsortPtrInt((void**)parentcands[p]->children, invperm, ptrcomp, nchildren);
+            SCIPsortPtrInt((void**)parentcands[p]->children, invperm, exprgraphnodecomp, nchildren);
 
          /* compute permutation from its inverse */
          for( i = 0; i < nchildren; ++i )
@@ -12512,9 +12527,9 @@ SCIP_RETCODE exprgraphFindParentByOperator(
          invperm[i] = i;  /*lint !e644*/
 
       if( exprchildren != NULL )
-         SCIPsortPtrPtrInt((void**)children, (void**)exprchildren, invperm, ptrcomp, nchildren);
+         SCIPsortPtrPtrInt((void**)children, (void**)exprchildren, invperm, exprgraphnodecomp, nchildren);
       else
-         SCIPsortPtrInt((void**)children, invperm, ptrcomp, nchildren);
+         SCIPsortPtrInt((void**)children, invperm, exprgraphnodecomp, nchildren);
 
       /* compute permutation from its inverse */
       for( i = 0; i < nchildren; ++i )
@@ -12537,7 +12552,7 @@ SCIP_RETCODE exprgraphFindParentByOperator(
          for( i = 0; i < nchildren; ++i )
             invperm[i] = i;
 
-         SCIPsortPtrInt((void**)parentcands[p]->children, invperm, ptrcomp, nchildren);
+         SCIPsortPtrInt((void**)parentcands[p]->children, invperm, exprgraphnodecomp, nchildren);
 
          /* compute permutation from its inverse */
          for( i = 0; i < nchildren; ++i )
