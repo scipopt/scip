@@ -1,5 +1,4 @@
-SCIP version NEXT
-==================
+SCIP version 4.0.1
 
 features:
 - added macros to do computations with a higher precision by using double double arithmetic
@@ -7,7 +6,9 @@ features:
 fixed bugs:
 - fixed memory leak in OSiL reader when using SOS constraints
 - fixed issue related to SCIPcreateFiniteSolCopy not being able to remove all infinite fixings
+- fixed issue in SCIPcopyLimits() w.r.t. soft time limit
 - improved handling of infinite values in a primal solution in quadratic and nonlinear constraints
+- fixed bug in dynamic resizing of hashtables and hashmaps
 
 performance improvements:
 - add and use RESTRICT macro for some pointers
