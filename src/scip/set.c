@@ -277,6 +277,7 @@
 #define SCIP_DEFAULT_MISC_ALLOWDUALREDS    TRUE /**< should dual reductions in propagation methods and presolver be allowed? */
 #define SCIP_DEFAULT_MISC_ALLOWOBJPROP     TRUE /**< should propagation to the current objective be allowed in propagation methods? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
+#define SCIP_DEFAULT_MISC_DEBUGSOLUTION     "-" /**< path to a debug solution */
 
 /* Randomization */
 #define SCIP_DEFAULT_RANDOM_RANDSEEDSHIFT     0 /**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
@@ -1089,6 +1090,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
    (*set)->sepa_primfeastol = SCIP_INVALID;
+   (*set)->misc_debugsol = NULL;
 
    /* the default time limit is infinite */
    (*set)->istimelimitfinite = FALSE;
@@ -1821,7 +1823,13 @@ SCIP_RETCODE SCIPsetCreate(
          "objective value for reference purposes",
          &(*set)->misc_referencevalue, FALSE, SCIP_DEFAULT_MISC_REFERENCEVALUE, SCIP_REAL_MIN, SCIP_REAL_MAX,
          NULL, NULL) );
-
+#ifdef WITH_DEBUG_SOLUTION
+   SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
+         "misc/debugsol",
+         "path to a debug solution",
+         &(*set)->misc_debugsol, FALSE, SCIP_DEFAULT_MISC_DEBUGSOLUTION,
+         NULL, NULL) );
+#endif
    /* randomization parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "randomization/randomseedshift",
