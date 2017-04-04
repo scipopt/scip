@@ -59,7 +59,7 @@ struct SCIP_DebugSolData
    SCIP_Bool             solisachieved;      /**< means if current best solution is better than the given debug solution */
    SCIP_Real             debugsolval;        /**< objective value for debug solution */
    SCIP_Bool             debugsoldisabled;   /**< flag indicating if debugging of solution was disabled or not */
-   SCIP_Bool             warningprinted;
+   SCIP_Bool             warningprinted;     /**< flag indicating if a warning was already printed */
 };
 
 
@@ -116,7 +116,7 @@ SCIP_Bool debugSolutionAvailable(
        if( !debugsoldata->warningprinted )
        {
           SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "SCIP is compiled with 'DEBUGSOL=true' but no debug solution is given:\n ");
-          SCIPmessagePrintInfo(SCIPgetMessagehdlr(set->scip), "*** Please set the parameter 'misc/debugsol' and reload the problem again ***\n\n");
+          SCIPmessagePrintWarning(SCIPgetMessagehdlr(set->scip), "*** Please set the parameter 'misc/debugsol' and reload the problem again to use the debugging-mechanism ***\n\n");
           debugsoldata->warningprinted = TRUE;
        }
        return FALSE;
@@ -373,6 +373,10 @@ SCIP_RETCODE getSolutionValue(
    assert(var != NULL);
    assert(val != NULL);
 
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
+      return SCIP_OKAY;
+
    debugsoldata = SCIPsetGetDebugSolData(set);
    assert(debugsoldata != NULL);
 
@@ -473,8 +477,11 @@ SCIP_RETCODE SCIPdebugGetSol(
    assert(scip != NULL);
    assert(sol != NULL);
 
-   SCIP_CALL( readSolution(scip->set) );
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(scip->set) )
+      return SCIP_OKAY;
 
+   SCIP_CALL( readSolution(scip->set) );
 
    if( debugsoldata->debugsol == NULL )
    {
@@ -511,6 +518,10 @@ SCIP_Bool debugSolIsAchieved(
    SCIP_SOL* bestsol;
    SCIP* scip;
    SCIP_DEBUGSOLDATA* debugsoldata;
+
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
+      return SCIP_OKAY;
 
    assert(set != NULL);
    debugsoldata = SCIPsetGetDebugSolData(set);
@@ -565,6 +576,9 @@ SCIP_RETCODE isSolutionInNode(
    assert(node != NULL);
    assert(solcontained != NULL);
 
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
+      return SCIP_OKAY;
 
    debugsoldata = SCIPsetGetDebugSolData(set);
    assert(debugsoldata != NULL);
@@ -743,6 +757,10 @@ SCIP_RETCODE SCIPdebugCheckConss(
    if( ! SCIPdebugSolIsEnabled(scip) )
       return SCIP_OKAY;
 
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(scip->set) )
+      return SCIP_OKAY;
+
    debugsoldata = SCIPsetGetDebugSolData(scip->set);
 
    assert(conss != NULL || nconss == 0);
@@ -815,6 +833,10 @@ SCIP_RETCODE SCIPdebugCheckRow(
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
+      return SCIP_OKAY;
+
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
@@ -998,6 +1020,10 @@ SCIP_RETCODE SCIPdebugCheckInference(
    if( debugsoldata->debugsoldisabled )
       return SCIP_OKAY;
 
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
+      return SCIP_OKAY;
+
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
    if( debugSolIsAchieved(set) )
       return SCIP_OKAY;
@@ -1043,6 +1069,10 @@ SCIP_RETCODE SCIPdebugRemoveNode(
 
    debugsoldata = SCIPsetGetDebugSolData(set);
    assert(debugsoldata != NULL);
+
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
+      return SCIP_OKAY;
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
@@ -1099,6 +1129,10 @@ SCIP_RETCODE SCIPdebugCheckVbound(
    debugsoldata = SCIPsetGetDebugSolData(set);
    assert(debugsoldata != NULL);
 
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
+      return SCIP_OKAY;
+
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
       return SCIP_OKAY;
@@ -1147,6 +1181,10 @@ SCIP_RETCODE SCIPdebugCheckImplic(
 
    debugsoldata = SCIPsetGetDebugSolData(set);
    assert(debugsoldata != NULL);
+
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
+      return SCIP_OKAY;
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
@@ -1213,6 +1251,10 @@ SCIP_RETCODE SCIPdebugCheckClique(
    debugsoldata = SCIPsetGetDebugSolData(set);
    assert(debugsoldata != NULL);
 
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
+      return SCIP_OKAY;
+
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
       return SCIP_OKAY;
@@ -1278,6 +1320,9 @@ SCIP_Bool debugCheckBdchginfos(
    SCIP_Real solval;
    int i;
 
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
+      return SCIP_OKAY;
 
    assert(SCIPdebugSolIsEnabled(set->scip));
 
@@ -1350,6 +1395,10 @@ SCIP_RETCODE printBdchginfo(
 {
    SCIP_Real solval;
 
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
+      return SCIP_OKAY;
+
    /* get solution value within the debug solution */
    SCIP_CALL( getSolutionValue(set, SCIPbdchginfoGetVar(bdchginfo), &solval) );
 
@@ -1371,6 +1420,10 @@ SCIP_RETCODE printBdchginfos(
    )
 {
    int i;
+
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
+      return SCIP_OKAY;
 
    for( i = 0; i < nbdchginfos; ++i )
    {
@@ -1405,6 +1458,10 @@ SCIP_RETCODE SCIPdebugCheckConflict(
 
    debugsoldata = SCIPsetGetDebugSolData(set);
    assert(debugsoldata != NULL);
+
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
+      return SCIP_OKAY;
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
@@ -1461,6 +1518,10 @@ SCIP_RETCODE SCIPdebugCheckConflictFrontier(
 
    debugsoldata = SCIPsetGetDebugSolData(set);
    assert(debugsoldata != NULL);
+
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(set) )
+      return SCIP_OKAY;
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
@@ -1536,6 +1597,10 @@ SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
 
    debugsoldata = SCIPsetGetDebugSolData(scip->set);
    assert(debugsoldata != NULL);
+
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(scip->set) )
+      return SCIP_OKAY;
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
@@ -1629,6 +1694,10 @@ SCIP_DECL_PROPEXEC(propExecDebug)
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(scip->set) )
+      return SCIP_OKAY;
+
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
    if( debugSolIsAchieved(scip->set) )
       return SCIP_OKAY;
@@ -1710,6 +1779,10 @@ SCIP_RETCODE SCIPdebugAddSolVal(
 
    debugsoldata = SCIPsetGetDebugSolData(scip->set);
    assert(debugsoldata != NULL);
+
+   /* check whether a debug solution is available */
+   if( !debugSolutionAvailable(scip->set) )
+      return SCIP_OKAY;
 
    /* assert that we are in the SCIP instance that we are debugging and not some different (subSCIP, auxiliary CIP, ...) */
    if( !SCIPdebugSolIsEnabled(scip) )
