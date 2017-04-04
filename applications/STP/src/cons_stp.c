@@ -87,6 +87,10 @@
 
 #define DEFAULT_DAMAXDEVIATION 0.25  /**< max deviation for dual ascent */
 
+#ifndef RESTRICT
+#define RESTRICT restrict
+#endif
+
 /* *
 #define FLOW_FACTOR     100000
 #define CREEP_VALUE     1         this is the original value todo check what is better
@@ -1481,7 +1485,7 @@ SCIP_RETCODE SCIPcreateConsStp(
    return SCIP_OKAY;
 }
 
-/** dual ascent heuristic for the STP todo: char to int */
+/** dual ascent heuristic for the STP */
 SCIP_RETCODE SCIPdualAscentStp(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
@@ -1542,7 +1546,7 @@ SCIP_RETCODE SCIPdualAscentStp(
    int* cutverts;
    int* unsatarcs;
    char firstrun;
-   SCIP_Bool* sat;
+   char* sat;
    char* active;
 
    assert(g != NULL);
@@ -1594,13 +1598,13 @@ SCIP_RETCODE SCIPdualAscentStp(
       rescap = redcost;
    }
 
-   if( 1 || edgearrchar == NULL )
+   if( edgearrchar == NULL )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &sat, nedges) );
    }
    else
    {
-    //  sat = edgearrchar;
+      sat = edgearrchar;
    }
 
    if( nodearrchar == NULL )
@@ -1644,7 +1648,6 @@ SCIP_RETCODE SCIPdualAscentStp(
    }
 
    SCIP_CALL( SCIPpqueueCreate(&pqueue, nterms, 2.0, GNODECmpByDist) );
-
 
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearr, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tailarr, nedges) );
@@ -1755,10 +1758,16 @@ SCIP_RETCODE SCIPdualAscentStp(
               stackarr[stacklength++] = s;
             }
          }
-
+#ifdef DFS
          while( stacklength > 0 )
          {
             node = stackarr[--stacklength];
+#else
+         for( int n = 0; n < stacklength; n++ )
+         {
+            assert(n < nnodes);
+            node = stackarr[n];
+#endif
 
             /* traverse incoming arcs */
             for( i = start[node], end = start[node + 1]; i != end; i++ )
@@ -1791,6 +1800,9 @@ SCIP_RETCODE SCIPdualAscentStp(
                }
             }
          }
+#ifndef DFS
+         stacklength = 0;
+#endif
 
          currscore = degsum - (ncutverts - 1);
          assert(SCIPisGE(scip, currscore, prio1));
@@ -1972,18 +1984,11 @@ SCIP_RETCODE SCIPdualAscentStp(
    SCIPfreeBufferArray(scip, &edgebuffer);
 #endif
 
+   SCIPfreeBufferArray(scip, &stackarr);
+
    SCIPfreeBufferArray(scip, &start);
    SCIPfreeBufferArray(scip, &tailarr);
    SCIPfreeBufferArray(scip, &edgearr);
-
-   /* call Ascend-And-Prune? */
-   if( ascendandprune )
-   {
-       SCIP_Bool success;
-       SCIP_CALL( SCIPheurAscendAndPrune(scip, NULL, g, rescap, unsatarcs, cutverts, root, active, &success, TRUE, TRUE) );
-   }
-
-   /* free memory */
 
    SCIPpqueueFree(&pqueue);
 
@@ -1992,6 +1997,13 @@ SCIP_RETCODE SCIPdualAscentStp(
       for( i = nterms - 2; i >= 0; i-- )
          SCIPfreeBuffer(scip, &gnodearr[i]);
       SCIPfreeBufferArray(scip, &gnodearr);
+   }
+
+   /* call Ascend-And-Prune? */
+   if( ascendandprune )
+   {
+       SCIP_Bool success;
+       SCIP_CALL( SCIPheurAscendAndPrune(scip, NULL, g, rescap, unsatarcs, cutverts, root, active, &success, TRUE, TRUE) );
    }
 
    if( edgearrint == NULL )
@@ -2003,14 +2015,11 @@ SCIP_RETCODE SCIPdualAscentStp(
    if( nodearrchar == NULL )
       SCIPfreeBufferArray(scip, &active);
 
-   if( 1 || edgearrchar == NULL )
+   if( edgearrchar == NULL )
       SCIPfreeBufferArray(scip, &sat);
 
    if( redcost == NULL )
       SCIPfreeBufferArray(scip, &rescap);
-
-   SCIPfreeBufferArray(scip, &stackarr);
-
 
    return SCIP_OKAY;
 }
@@ -2070,6 +2079,7 @@ SCIP_RETCODE SCIPdualAscentStpSol(
    int nsolarcs;
    int ncutverts;
    int nunsatarcs;
+   int nnewedges;
    int stacklength;
    int norgcutverts;
    int node;
@@ -2121,9 +2131,72 @@ SCIP_RETCODE SCIPdualAscentStpSol(
    if( !Is_term(g->term[root]) )
       root = g->source[0];
 
+   if( redcost == NULL )
+     {
+        SCIP_CALL( SCIPallocBufferArray(scip, &rescap, nedges) );
+     }
+     else
+     {
+        rescap = redcost;
+     }
+
+     if( edgearrchar == NULL )
+     {
+        SCIP_CALL( SCIPallocBufferArray(scip, &sat, nedges) );
+     }
+     else
+     {
+        sat = edgearrchar;
+     }
+
+     if( nodearrchar == NULL )
+     {
+        SCIP_CALL( SCIPallocBufferArray(scip, &active, nnodes) );
+     }
+     else
+     {
+        active = nodearrchar;
+     }
+
+     if( nodearrint == NULL )
+     {
+        SCIP_CALL( SCIPallocBufferArray(scip, &cutverts, nnodes) );
+     }
+     else
+     {
+        cutverts = nodearrint;
+     }
+
+     if( edgearrint == NULL )
+     {
+        SCIP_CALL( SCIPallocBufferArray(scip, &unsatarcs, nedges) );
+     }
+     else
+     {
+        unsatarcs = edgearrint;
+     }
+
+     if( gnodearrterms == NULL )
+     {
+        SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
+        for( i = 0; i < nterms - 1; i++ )
+        {
+           SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[i]) ); /*lint !e866*/
+        }
+     }
+     else
+     {
+        gnodearr = gnodearrterms;
+     }
+
+   SCIP_CALL( SCIPpqueueCreate(&pqueue, nterms, 2.0, GNODECmpByDist) );
+
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearr, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &tailarr, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &start, nnodes + 1) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &stackarr, nnodes) );
+   stacklength = 0;
 
    /* fill auxiliary adjacent vertex/edges arrays */
 
@@ -2137,71 +2210,8 @@ SCIP_RETCODE SCIPdualAscentStpSol(
          tailarr[i++] = g->tail[e];
       }
    }
+   nnewedges = i;
    start[nnodes] = i;
-
-   /* allocate memory if not available */
-   stacklength = 0;
-   SCIP_CALL( SCIPallocBufferArray(scip, &stackarr, nnodes) );
-
-   if( redcost == NULL )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &rescap, nedges) );
-   }
-   else
-   {
-      rescap = redcost;
-   }
-
-   if( edgearrchar == NULL )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &sat, nedges) );
-   }
-   else
-   {
-      sat = edgearrchar;
-   }
-
-   if( nodearrchar == NULL )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &active, nnodes) );
-   }
-   else
-   {
-      active = nodearrchar;
-   }
-
-   if( nodearrint == NULL )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &cutverts, nnodes) );
-   }
-   else
-   {
-      cutverts = nodearrint;
-   }
-
-   if( edgearrint == NULL )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &unsatarcs, nedges) );
-   }
-   else
-   {
-      unsatarcs = edgearrint;
-   }
-
-   if( gnodearrterms == NULL )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
-      for( i = 0; i < nterms - 1; i++ )
-      {
-         SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[i]) ); /*lint !e866*/
-      }
-   }
-   else
-   {
-      gnodearr = gnodearrterms;
-   }
-
-   SCIP_CALL( SCIPpqueueCreate(&pqueue, nterms, 2.0, GNODECmpByDist) );
 
    k = 0;
 
@@ -2243,13 +2253,10 @@ SCIP_RETCODE SCIPdualAscentStpSol(
    }
 
    /* set residual capacities and mark whether an arc is satisfied (has capacity 0) */
-   for( i = 0; i < nedges; i++ )
+   for( i = 0; i < nnewedges; i++ )
    {
-      rescap[i] = g->cost[i];
-      if( SCIPisZero(scip, rescap[i]) )
-         sat[i] = TRUE;
-      else
-         sat[i] = FALSE;
+      rescap[i] = g->cost[edgearr[i]];
+      sat[i] = SCIPisZero(scip, rescap[i]);
    }
 
    /* (main) dual ascent loop */
@@ -2259,81 +2266,6 @@ SCIP_RETCODE SCIPdualAscentStpSol(
       gnodeact = (GNODE*) SCIPpqueueRemove(pqueue);
 
       v = gnodeact->number;
-#if 0
-      /* last component? */
-      if( SCIPpqueueNElems(pqueue) == 0 && !addcuts && 0 )
-      {
-         SCIP_Real diff;
-         SCIP_Real taildist;
-         SCIP_Real headdist;
-         SCIP_Real* nodedist;
-
-         if( nodearrreal == NULL )
-         {
-            SCIP_CALL( SCIPallocBufferArray(scip, &nodedist, nnodes) );
-         }
-         else
-         {
-            nodedist = nodearrreal;
-         }
-
-         for( i = nnodes - 1; i >= 0 ; i-- )
-            g->mark[i] = (g->grad[i] > 0);
-
-         if( v == g->source[0] )
-            return SCIP_ERROR;
-
-         /* perform Dijkstra on incoming arcs until root is reached, starting from terminal of last connected component */
-         graph_path_invroot(scip, g, v, rescap, nodedist, cutverts);
-
-         min = nodedist[g->source[0]];
-
-         if( SCIPisZero(scip, min) )
-            return SCIP_ERROR;
-
-         /* update objective */
-         dualobj += min;
-
-         /* adjust reduced costs */
-
-         for( i = nnodes - 1; i >= 0 ; i-- )
-         {
-            if( SCIPisGE(scip, nodedist[i], FARAWAY) )
-               continue;
-            if( SCIPisGT(scip, nodedist[i], min) )
-               nodedist[i] = min;
-         }
-
-         for( i = nedges - 1; i >= 0; i-- )
-         {
-            if( g->ieat[i] == EAT_FREE )
-               continue;
-
-
-            taildist = nodedist[g->tail[i]];
-            headdist = nodedist[g->head[i]];
-
-            assert(g->mark[g->tail[i]]);
-            assert(g->mark[g->head[i]]);
-
-            if( SCIPisGE(scip, taildist, FARAWAY) || SCIPisGE(scip, headdist, FARAWAY) )
-               continue;
-
-            diff = taildist - headdist;
-
-            if( SCIPisLE(scip, diff, 0.0) )
-               continue;
-
-            rescap[i] -= diff;
-
-            assert(SCIPisGE(scip, rescap[i], 0.0));
-         }
-
-         if( nodearrreal == NULL )
-            SCIPfreeBufferArray(scip, &nodedist);
-      }
-      else
-#endif
       prio1 = gnodeact->dist;
       firstrun = TRUE;
 
@@ -2373,24 +2305,22 @@ SCIP_RETCODE SCIPdualAscentStpSol(
             }
          }
 
+#ifdef DFS
          while( stacklength > 0 )
          {
             node = stackarr[--stacklength];
-
+#else
+         for( int n = 0; n < stacklength; n++ )
+         {
+            assert(n < nnodes);
+            node = stackarr[n];
+#endif
             /* traverse incoming arcs */
-#if 1
             for( i = start[node], end = start[node + 1]; i != end; i++ )
-#else
-            for( a = g->inpbeg[node]; a != EAT_LAST; a = g->ieat[a] )
-#endif
             {
-#if 0
-               tail = g->tail[a];
-#else
-               a = edgearr[i];
                tail = tailarr[i];
-#endif
-               if( sat[a] )
+
+               if( sat[i] )
                {
                   if( !g->mark[tail] )
                   {
@@ -2410,11 +2340,13 @@ SCIP_RETCODE SCIPdualAscentStpSol(
                }
                else if( !g->mark[tail] )
                {
-                  unsatarcs[nunsatarcs++] = a;
+                  unsatarcs[nunsatarcs++] = i;
                }
             }
          }
-
+#ifndef DFS
+         stacklength = 0;
+#endif
 
          /* 2. step: get minimum residual capacity among cut-arcs */
 
@@ -2426,7 +2358,7 @@ SCIP_RETCODE SCIPdualAscentStpSol(
          for( i = 0; i < nunsatarcs; i++ )
          {
             a = unsatarcs[i];
-            if( g->mark[g->tail[a]] )
+            if( g->mark[tailarr[a]] )
             {
                shift++;
             }
@@ -2434,7 +2366,7 @@ SCIP_RETCODE SCIPdualAscentStpSol(
             {
                assert(!sat[a]);
 
-               if( result[a] == CONNECT )
+               if( result[edgearr[a]] == CONNECT )
                   nsolarcs++;
 
                if( SCIPisLT(scip, rescap[a], min) )
@@ -2507,9 +2439,9 @@ SCIP_RETCODE SCIPdualAscentStpSol(
                if( SCIPisEQ(scip, rescap[a], 0.0) )
                {
                   sat[a] = TRUE;
-                  if( !(g->mark[g->tail[a]]) )
+                  tail = tailarr[a];
+                  if( !(g->mark[tail]) )
                   {
-                     tail = g->tail[a];
                      degsum += g->grad[tail];
                      g->mark[tail] = TRUE;
                      cutverts[ncutverts++] = tail;
@@ -2548,14 +2480,66 @@ SCIP_RETCODE SCIPdualAscentStpSol(
    SCIPdebugMessage("DA: dualglobal: %f \n", dualobj);
    *objval = dualobj;
 
-   /* call Ascend-And-Prune? */
-   if( ascendandprune )
-   {
-       SCIP_Bool success;
-       SCIP_CALL( SCIPheurAscendAndPrune(scip, NULL, g, rescap, unsatarcs, cutverts, root, active, &success, TRUE, TRUE) );
-   }
 
-   /* free memory */
+
+
+   // todo
+   #if 1
+      SCIP_Real* edgebuffer;
+      SCIP_CALL( SCIPallocBufferArray(scip, &edgebuffer, nedges) );
+
+      BMScopyMemoryArray(edgebuffer, g->cost, nedges);
+
+      for( i = 0; i < nnewedges; i++ )
+         edgebuffer[edgearr[i]] = rescap[i];
+   #endif
+
+      for( i = nnewedges; i < nedges; i++ )
+      {
+         edgearr[i] = i;
+         rescap[i] = g->cost[i];
+      }
+
+      /* re-extend rescap array */
+      for( i = 0; i < nnewedges; i++ )
+      {
+         if( edgearr[i] != i  )
+         {
+            SCIP_Real bufferedval = rescap[i];
+            rescap[i] = g->cost[i];
+            a = i;
+            while( edgearr[a] != a )
+            {
+               shift = edgearr[a];
+
+               min = rescap[shift];
+               rescap[shift] = bufferedval;
+               bufferedval = min;
+               edgearr[a] = a;
+               a = shift;
+            }
+         }
+      }
+   #if 1
+      for( i = 0; i < nedges; i++ )
+         if( !SCIPisEQ(scip, edgebuffer[i], rescap[i]) )
+         {
+            printf("err %d %d %f %f %f\n", i, nnewedges, edgebuffer[i], rescap[i], g->cost[i]);
+            return SCIP_ERROR;
+         }
+      //memcmp
+
+
+      SCIPfreeBufferArray(scip, &edgebuffer);
+   #endif
+
+
+   /*** free memory (1) ***/
+
+   SCIPfreeBufferArray(scip, &stackarr);
+   SCIPfreeBufferArray(scip, &start);
+   SCIPfreeBufferArray(scip, &tailarr);
+   SCIPfreeBufferArray(scip, &edgearr);
 
    SCIPpqueueFree(&pqueue);
 
@@ -2565,6 +2549,15 @@ SCIP_RETCODE SCIPdualAscentStpSol(
          SCIPfreeBuffer(scip, &gnodearr[i]);
       SCIPfreeBufferArray(scip, &gnodearr);
    }
+
+   /* call Ascend-And-Prune? */
+   if( ascendandprune )
+   {
+       SCIP_Bool success;
+       SCIP_CALL( SCIPheurAscendAndPrune(scip, NULL, g, rescap, unsatarcs, cutverts, root, active, &success, TRUE, TRUE) );
+   }
+
+   /*** free memory (2) ***/
 
    if( edgearrint == NULL )
       SCIPfreeBufferArray(scip, &unsatarcs);
@@ -2580,11 +2573,6 @@ SCIP_RETCODE SCIPdualAscentStpSol(
 
    if( redcost == NULL )
       SCIPfreeBufferArray(scip, &rescap);
-
-   SCIPfreeBufferArray(scip, &stackarr);
-   SCIPfreeBufferArray(scip, &start);
-   SCIPfreeBufferArray(scip, &tailarr);
-   SCIPfreeBufferArray(scip, &edgearr);
 
    return SCIP_OKAY;
 }

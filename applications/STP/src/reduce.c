@@ -1754,7 +1754,9 @@ SCIP_RETCODE redLoopMw(
          int cnsadvelims = 0;
 
          SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+#if 0
          SCIP_CALL( cnsAdvReduction(scip, g, nodearrint2, &cnsadvelims) );
+#endif
          SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, TRUE, FALSE, FALSE) );
 
          if( cnsadvelims + daelims >= redbound || (extensive && (cnsadvelims + daelims > 0))  )

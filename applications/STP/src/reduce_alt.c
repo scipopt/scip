@@ -4050,9 +4050,10 @@ SCIP_RETCODE cnsAdvReduction(
    int k2grad;
    int nnodes;
    int maxgrad;
-
+#if 0
    int* adjverts;
    SCIP_CALL( SCIPallocMemoryArray(scip, &adjverts, g->knots) );
+#endif
 
    assert(scip   != NULL);
    assert(g      != NULL);
@@ -4063,7 +4064,7 @@ SCIP_RETCODE cnsAdvReduction(
    k2grad = 0;
    *count = 0;
    nnodes = g->knots;
-printf("XX %d \n", 0);
+
    /* unmark all nodes */
    for( k = 0; k < nnodes; k++ )
       marked[k] = VERTEX_OTHER;
@@ -4302,8 +4303,9 @@ printf("XX %d \n", 0);
       assert(marked[l] == VERTEX_OTHER);
 #endif
    }
-
+#if 0
 SCIPfreeMemoryArray(scip, &adjverts);
+#endif
 
 printf("deleted %d \n", *count);
    return SCIP_OKAY;

@@ -41,6 +41,10 @@
 #define STATIST      0
 #define CHECK        0
 
+#ifndef RESTRICT
+#define RESTRICT restrict
+#endif
+
 #ifdef NDEBUG
 #undef STATIST
 #undef DEBUG
