@@ -348,8 +348,6 @@ SCIP_RETCODE readSolution(
          &debugsoldata->debugsolstage, &(debugsoldata->solnames), &(debugsoldata->solvals), &(debugsoldata->nsolvals),
          &(debugsoldata->solsize)) );
 
-   debugsoldata->warningprinted = FALSE;
-
    return SCIP_OKAY;
 }
 
