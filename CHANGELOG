@@ -8,6 +8,10 @@ fixed bugs:
 - improved handling of infinite values in a primal solution in quadratic and nonlinear constraints
 - fixed bug in dynamic resizing of hashtables and hashmaps
 
+performance improvements:
+- widened a bottleneck in simplifying long signomial sums in a nonlinear constraint
+- sorting of parents and children for some expression types is now independent of memory layout
+
 SCIP version 4.0.0
 ==================
 
