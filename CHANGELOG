@@ -1,8 +1,19 @@
-SCIP version 4.0.1
+SCIP version NEXT
 ==================
 
 features:
 - added macros to do computations with a higher precision by using double double arithmetic
+
+parameters:
+- fixed typo: heuristics/completesol/maxunkownrate has changed to heuristics/completesol/maxunknownrate
+- new parameters: beforepresol, maxlpiter, and maxcontvars in heur_completesol.c
+
+performance improvements:
+- add and use RESTRICT macro for some pointers
+
+SCIP version 4.0.1
+==================
+
 
 parameters:
 - fixed typo: heuristics/completesol/maxunkownrate has changed to heuristics/completesol/maxunknownrate
@@ -18,7 +29,6 @@ fixed bugs:
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint
 - sorting of parents and children for some expression types is now independent of memory layout
-- add and use RESTRICT macro for some pointers
 
 SCIP version 4.0.0
 ==================
