@@ -1,5 +1,5 @@
 SCIP version NEXT
-==================
+=================
 
 features:
 - added macros to do computations with a higher precision by using double double arithmetic
@@ -13,11 +13,6 @@ performance improvements:
 
 SCIP version 4.0.1
 ==================
-
-
-parameters:
-- fixed typo: heuristics/completesol/maxunkownrate has changed to heuristics/completesol/maxunknownrate
-- new parameters: beforepresol, maxlpiter, and maxcontvars in heur_completesol.c
 
 fixed bugs:
 - fixed memory leak in OSiL reader when using SOS constraints
