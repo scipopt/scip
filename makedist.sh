@@ -201,10 +201,9 @@ $NAME/tests/src/test/stages.c
 
 rm -f $NAME
 echo ""
-echo "check version numbers in src/scip/def.h, doc/xternal.c, make.project, Makefile.nmake, and makedist.sh ($VERSION):"
+echo "check version numbers in src/scip/def.h, doc/xternal.c, make.project, and makedist.sh ($VERSION):"
 grep -H "SCIP_VERSION" src/scip/def.h
 grep -H "@version" doc/xternal.c
 grep -H "^SCIP_VERSION" make/make.project
-grep -H "^VERSION" Makefile.nmake
 echo ""
 tail src/scip/githash.c

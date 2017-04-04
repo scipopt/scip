@@ -3600,9 +3600,7 @@ SCIP_RETCODE doCopy(
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
 
-   /* in case there are active pricers and pricing is disabled the target SCIP will not be a valid copy of the source
-    * SCIP
-    */
+   /* in case there are active pricers and pricing is disabled, targetscip will not be a valid copy of sourcescip */
    if( ! enablepricing && SCIPgetNActivePricers(sourcescip) > 0 )
       localvalid = FALSE;
 
@@ -3635,6 +3633,7 @@ SCIP_RETCODE doCopy(
 
    /* explicitly suppress output when copying parameters */
    SCIPsetMessagehdlrQuiet(targetscip, TRUE);
+
    /* copy all settings */
    SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
 
@@ -3654,9 +3653,7 @@ SCIP_RETCODE doCopy(
    /* copy original or transformed variables and perform fixings if needed */
    SCIP_CALL( copyVars(sourcescip, targetscip, localvarmap, localconsmap, fixedvars, fixedvals, nfixedvars, original, global) );
 
-   /* if fixed variables are directly specified or inferred from local bounds,
-    * enable constraint compression
-    */
+   /* if fixed variables are directly specified or inferred from local bounds, enable constraint compression */
    if( useconscompression && (nfixedvars > 0 || !global) )
    {
       SCIP_CALL( SCIPenableConsCompression(targetscip) );
@@ -3782,8 +3779,8 @@ SCIP_RETCODE SCIPcopy(
    assert(suffix != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopyConsCompression", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( checkStage(targetscip, "SCIPcopyConsCompression", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopy", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
    /* copy source SCIP data into target SCIP data structure */
    SCIP_CALL( doCopy(sourcescip, targetscip, varmap, consmap, suffix, fixedvars, fixedvals, nfixedvars,
