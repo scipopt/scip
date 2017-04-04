@@ -101,7 +101,7 @@ SCIP_DECL_SORTPTRCOMP(sortVarsAfterNames)
 /* checks whether the parameter is specified */
 static
 SCIP_Bool debugSolutionAvailable(
-   SCIP_SET*             set
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    SCIP_DEBUGSOLDATA* debugsoldata;
