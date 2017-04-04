@@ -17812,20 +17812,6 @@ SCIP_RETCODE SCIPreadSol(
    const char*           filename            /**< name of the input file */
    );
 
-/** reads a given debug solution file
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- */
-EXTERN
-SCIP_RETCODE SCIPreadDebugSolutionFile(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< name of the input file */
-   );
-
 /** reads a given solution file and store the solution values in the given solution pointer
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
