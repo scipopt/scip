@@ -155,6 +155,8 @@ SCIP_RETCODE SCIPprocessShellArguments(
    char* probname = NULL;
    char* settingsname = NULL;
    char* logname = NULL;
+   unsigned int randomseed;
+   SCIP_Bool randomseedread;
    SCIP_Bool quiet;
    SCIP_Bool paramerror;
    SCIP_Bool interactive;
@@ -169,6 +171,8 @@ SCIP_RETCODE SCIPprocessShellArguments(
    paramerror = FALSE;
    interactive = FALSE;
    onlyversion = FALSE;
+   randomseedread = FALSE;
+
    for( i = 1; i < argc; ++i )
    {
       if( strcmp(argv[i], "-l") == 0 )
@@ -260,6 +264,21 @@ SCIP_RETCODE SCIPprocessShellArguments(
             paramerror = TRUE;
          }
       }
+      else if( strcmp(argv[i], "-r") == 0 )
+      {
+         /*read a random seed from the command line */
+         i++;
+         if( i < argc && isdigit(argv[i][0]) )
+         {
+            randomseed = atoi(argv[i]);
+            randomseedread = TRUE;
+         }
+         else
+         {
+            printf("Random seed parameter '-r' followed by something that is not an integer\n");
+            paramerror = TRUE;
+         }
+      }
       else
       {
          printf("invalid parameter <%s>\n", argv[i]);
@@ -318,6 +337,14 @@ SCIP_RETCODE SCIPprocessShellArguments(
          SCIP_CALL( readParams(scip, defaultsetname) );
       }
 
+      /************************************
+       * Change random seed, if specified *
+       ***********************************/
+      if( randomseedread )
+      {
+         SCIP_CALL( SCIPsetIntParam(scip, "randomization/randomseedshift", randomseed) );
+      }
+
       /**************
        * Start SCIP *
        **************/
@@ -334,13 +361,15 @@ SCIP_RETCODE SCIPprocessShellArguments(
    }
    else
    {
-      printf("\nsyntax: %s [-l <logfile>] [-q] [-s <settings>] [-f <problem>] [-b <batchfile>] [-c \"command\"]\n"
+      printf("\nsyntax: %s [-l <logfile>] [-q] [-s <settings>] [-r <randomseed>] [-f <problem>] [-b <batchfile>] [-c \"command\"]\n"
          "  -v, --version : print version and build options\n"
          "  -l <logfile>  : copy output into log file\n"
          "  -q            : suppress screen messages\n"
          "  -s <settings> : load parameter settings (.set) file\n"
          "  -f <problem>  : load and solve problem file\n"
          "  -b <batchfile>: load and execute dialog command batch file (can be used multiple times)\n"
+         "  -r <randomseed>: nonnegative integer to be used as random seed. "
+         "Has priority over random seed specified through parameter settings (.set) file\n"
          "  -c \"command\"  : execute single line of dialog commands (can be used multiple times)\n\n",
          argv[0]);
    }
