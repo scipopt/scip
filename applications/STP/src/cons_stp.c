@@ -52,6 +52,9 @@
 #define ADDCUTSTOPOOL FALSE
 #define Q_NULL     -1         /* NULL element of queue/list */
 
+#ifndef RESTRICT
+#define RESTRICT restrict
+#endif
 
 /**@name Constraint handler properties
  *
@@ -87,9 +90,6 @@
 
 #define DEFAULT_DAMAXDEVIATION 0.25  /**< max deviation for dual ascent */
 
-#ifndef RESTRICT
-#define RESTRICT restrict
-#endif
 
 /* *
 #define FLOW_FACTOR     100000
@@ -1489,18 +1489,18 @@ SCIP_RETCODE SCIPcreateConsStp(
 SCIP_RETCODE SCIPdualAscentStp(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
-   SCIP_Real*            redcost,            /**< array to store reduced costs or NULL */
-   SCIP_Real*            nodearrreal,        /**< real vertices array for internal computations or NULL */
+   SCIP_Real* RESTRICT   redcost,            /**< array to store reduced costs or NULL */
+   SCIP_Real* RESTRICT   nodearrreal,        /**< real vertices array for internal computations or NULL */
    SCIP_Real*            objval,             /**< pointer to store objective value */
    SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
    SCIP_Bool             ascendandprune,     /**< should the ascent-and-prune heuristic be executed? */
    GNODE**               gnodearrterms,      /**< gnode terminals array for internal computations or NULL */
-   int*                  edgearrint,         /**< int edges array for internal computations or NULL */
-   int*                  nodearrint,         /**< int vertices array for internal computations or NULL */
+   int* RESTRICT         edgearrint,         /**< int edges array for internal computations or NULL */
+   int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
    int                   root,               /**< the root */
    int                   nruns,              /**< number of dual ascent runs */
-   char*                 edgearrchar,        /**< char edges array for internal computations or NULL */
-   char*                 nodearrchar         /**< char vertices array for internal computations or NULL */
+   char* RESTRICT        edgearrchar,        /**< char edges array for internal computations or NULL */
+   char* RESTRICT        nodearrchar         /**< char vertices array for internal computations or NULL */
    )
 {
 #if 0
@@ -1514,7 +1514,7 @@ SCIP_RETCODE SCIPdualAscentStp(
    SCIP_Real dualobj;
    SCIP_Real currscore;
    SCIP_Real maxdeviation;
-   SCIP_Real* rescap;
+   SCIP_Real* RESTRICT rescap;
 #if 0
    SCIP_Bool infeasible;
 #endif
@@ -1538,16 +1538,17 @@ SCIP_RETCODE SCIPdualAscentStp(
    int nunsatarcs;
    int norgcutverts;
    int stacklength;
-   int* gmark;
-   int* edgearr;
-   int* tailarr;
-   int* start;
-   int* stackarr;
-   int* cutverts;
-   int* unsatarcs;
+   int* RESTRICT gmark;
+   int* RESTRICT edgearr;
+   int* RESTRICT tailarr;
+   int* RESTRICT start;
+   int* RESTRICT stackarr;
+   int* RESTRICT cutverts;
+   int* RESTRICT unsatarcs;
+   int* RESTRICT unsattails;
    char firstrun;
-   char* sat;
-   char* active;
+   char* RESTRICT sat;
+   char* RESTRICT active;
 
    assert(g != NULL);
    assert(scip != NULL);
@@ -1588,6 +1589,8 @@ SCIP_RETCODE SCIPdualAscentStp(
       root = g->source[0];
 
    stacklength = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &unsattails, nedges) );
 
    if( redcost == NULL )
    {
@@ -1768,7 +1771,6 @@ SCIP_RETCODE SCIPdualAscentStp(
             assert(n < nnodes);
             node = stackarr[n];
 #endif
-
             /* traverse incoming arcs */
             for( i = start[node], end = start[node + 1]; i != end; i++ )
             {
@@ -1796,6 +1798,7 @@ SCIP_RETCODE SCIPdualAscentStp(
                }
                else if( !gmark[tail] )
                {
+                  unsattails[nunsatarcs] = tail;
                   unsatarcs[nunsatarcs++] = i;
                }
             }
@@ -1823,9 +1826,9 @@ SCIP_RETCODE SCIPdualAscentStp(
 
             for( i = 0; i < nunsatarcs; i++ )
             {
-               // todo: save tail in arr!
+               tail = unsattails[i];
                a = unsatarcs[i];
-               if( gmark[tailarr[a]] )
+               if( gmark[tail] )
                {
                   shift++;
                }
@@ -1835,7 +1838,10 @@ SCIP_RETCODE SCIPdualAscentStp(
                   if( SCIPisLT(scip, rescap[a], min) )
                      min = rescap[a];
                   if( shift > 0 )
+                  {
+                     unsattails[i - shift] = tail;
                      unsatarcs[i - shift] = a;
+                  }
                }
             }
 
@@ -1884,7 +1890,7 @@ SCIP_RETCODE SCIPdualAscentStp(
                if( SCIPisEQ(scip, rescap[a], 0.0) )
                {
                   sat[a] = TRUE;
-                  tail = tailarr[a];
+                  tail = unsattails[i];
 
                   if( !(gmark[tail]) )
                   {
@@ -1896,6 +1902,7 @@ SCIP_RETCODE SCIPdualAscentStp(
                }
                else if( shift > 0 )
                {
+                  unsattails[i - shift] = unsattails[i];
                   unsatarcs[i - shift] = a;
                }
             }
@@ -2021,6 +2028,8 @@ SCIP_RETCODE SCIPdualAscentStp(
    if( redcost == NULL )
       SCIPfreeBufferArray(scip, &rescap);
 
+   SCIPfreeBufferArray(scip, &unsattails);
+
    return SCIP_OKAY;
 }
 
@@ -2038,7 +2047,7 @@ SCIP_RETCODE SCIPdualAscentStpSol(
    SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
    SCIP_Bool             ascendandprune,     /**< should the ascent-and-prune heuristic be executed? */
    GNODE**               gnodearrterms,      /**< gnode terminals array for internal computations or NULL */
-   int* RESTRICT         result,             /**< solution array (solution needs to be provided) */
+   const int*            result,             /**< solution array (solution needs to be provided) */
    int* RESTRICT         edgearrint,         /**< int edges array for internal computations or NULL */
    int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
    int                   root,               /**< the root */
