@@ -1090,7 +1090,9 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
    (*set)->sepa_primfeastol = SCIP_INVALID;
+#ifdef WITH_DEBUG_SOLUTION
    (*set)->misc_debugsol = NULL;
+#endif
 
    /* the default time limit is infinite */
    (*set)->istimelimitfinite = FALSE;
@@ -1830,6 +1832,7 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->misc_debugsol, FALSE, SCIP_DEFAULT_MISC_DEBUGSOLUTION,
          NULL, NULL) );
 #endif
+
    /* randomization parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "randomization/randomseedshift",

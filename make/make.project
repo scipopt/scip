@@ -110,6 +110,9 @@ endif
 #will this be compiled for parascip, necessary for dbg-builds and cppad to make it threadsafe
 PARASCIP	=	false
 
+# enable debug-solution mechanism
+DEBUGSOL =  false
+
 # third party compiling parameters
 OPENSOURCE   	=	true
 READLINE	=	true
@@ -305,7 +308,6 @@ FLAGS		+=	-DNPARASCIP
 else
 LDFLAGS 	+=	-lpthread
 endif
-
 
 #-----------------------------------------------------------------------------
 # LP Solver Interface
