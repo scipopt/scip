@@ -1257,6 +1257,9 @@ endif
 ifneq ($(GAMS),$(LAST_GAMS))
 		@-touch $(GAMSSRC)
 endif
+ifneq ($(DEBUGSOL),$(LAST_DEBUGSOL))
+		@-touch $(ALLSRC)
+endif
 ifneq ($(LPSCHECK),$(LAST_LPSCHECK))
 		@-touch $(LPSCHECKSRC)
 endif
@@ -1305,6 +1308,7 @@ endif
 		@echo "LAST_ZIMPL=$(ZIMPL)" >> $(LASTSETTINGS)
 		@echo "LAST_GAMS=$(GAMS)" >> $(LASTSETTINGS)
 		@echo "LAST_PARASCIP=$(PARASCIP)" >> $(LASTSETTINGS)
+		@echo "LAST_DEBUGSOL=$(DEBUGSOL)" >> $(LASTSETTINGS)
 		@echo "LAST_LPSCHECK=$(LPSCHECK)" >> $(LASTSETTINGS)
 		@echo "LAST_USRFLAGS=$(USRFLAGS)" >> $(LASTSETTINGS)
 		@echo "LAST_USROFLAGS=$(USROFLAGS)" >> $(LASTSETTINGS)

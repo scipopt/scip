@@ -1090,7 +1090,9 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
    (*set)->sepa_primfeastol = SCIP_INVALID;
+#ifdef WITH_DEBUG_SOLUTION
    (*set)->misc_debugsol = NULL;
+#endif
 
    /* the default time limit is infinite */
    (*set)->istimelimitfinite = FALSE;
@@ -1823,12 +1825,13 @@ SCIP_RETCODE SCIPsetCreate(
          "objective value for reference purposes",
          &(*set)->misc_referencevalue, FALSE, SCIP_DEFAULT_MISC_REFERENCEVALUE, SCIP_REAL_MIN, SCIP_REAL_MAX,
          NULL, NULL) );
-
+#ifdef WITH_DEBUG_SOLUTION
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
          "misc/debugsol",
          "path to a debug solution",
          &(*set)->misc_debugsol, FALSE, SCIP_DEFAULT_MISC_DEBUGSOLUTION,
          NULL, NULL) );
+#endif
 
    /* randomization parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
