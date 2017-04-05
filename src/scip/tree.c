@@ -6389,13 +6389,17 @@ SCIP_RETCODE SCIPtreeCreateProbingNode(
    return SCIP_OKAY;
 }
 
-/** sets the LP state for the current probing node */
+/** sets the LP state for the current probing node
+ *
+ *  @note state and norms are stored at the node and later released by SCIP; therefore, the pointers are set
+ *        to NULL by the method
+ */
 SCIP_RETCODE SCIPtreeSetProbingLPState(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_LPISTATE*        lpistate,           /**< LP state information (like basis information) */
-   SCIP_LPINORMS*        lpinorms,           /**< LP pricing norms information */
+   SCIP_LPISTATE**       lpistate,           /**< pointer to LP state information (like basis information) */
+   SCIP_LPINORMS**       lpinorms,           /**< pointer to LP pricing norms information */
    SCIP_Bool             primalfeas,         /**< primal feasibility when LP state information was stored */
    SCIP_Bool             dualfeas            /**< dual feasibility when LP state information was stored */
    )
@@ -6404,6 +6408,8 @@ SCIP_RETCODE SCIPtreeSetProbingLPState(
 
    assert(tree != NULL);
    assert(SCIPtreeProbing(tree));
+   assert(lpistate != NULL);
+   assert(lpinorms != NULL);
 
    /* get the current probing node */
    node = SCIPtreeGetCurrentNode(tree);
@@ -6422,10 +6428,14 @@ SCIP_RETCODE SCIPtreeSetProbingLPState(
       SCIP_CALL( SCIPlpFreeNorms(lp, blkmem, &(node->data.probingnode->lpinorms)) );
    }
 
-   node->data.probingnode->lpistate = lpistate;
-   node->data.probingnode->lpinorms = lpinorms;
+   node->data.probingnode->lpistate = *lpistate;
+   node->data.probingnode->lpinorms = *lpinorms;
    node->data.probingnode->lpwasprimfeas = primalfeas;
    node->data.probingnode->lpwasdualfeas = dualfeas;
+
+   /* set the pointers to NULL to avoid that they are still used and modified by the caller */
+   *lpistate = NULL;
+   *lpinorms = NULL;
 
    tree->probingloadlpistate = TRUE;
 
