@@ -57,8 +57,8 @@ int reducePcMw(
    SCIP_Real*            pathdist,           /**< distance array from shortest path calculations */
    SCIP_Real             minpathcost,        /**< the required reduced path cost to be surpassed */
    int*                  result,             /**< int array */
-   char*                 marked,             /**< edge array to mark which (directed) edge can be removed */
-   char*                 nodearrchar,        /**< node array storing solution vertices */
+   STP_Bool*                 marked,             /**< edge array to mark which (directed) edge can be removed */
+   STP_Bool*                 nodearrchar,        /**< node array storing solution vertices */
    SCIP_Bool             solgiven            /**< is sol given? */
 )
 {
@@ -191,7 +191,7 @@ SCIP_RETCODE da_reduce(
    int*                  pathedge,           /**< array for predecessor edge on a path */
    int*                  nodearrint,         /**< int nnodes array for internal computations */
    int*                  heursources,        /**< array to store starting points of TM heuristic */
-   char*                 nodearrchar,        /**< char node array for internal computations */
+   STP_Bool*                 nodearrchar,        /**< STP_Bool node array for internal computations */
    int*                  nelims,             /**< pointer to store number of reduced edges */
    int                   prevrounds,         /**< number of reduction rounds that have been performed already */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
@@ -235,7 +235,7 @@ SCIP_RETCODE da_reduce(
    int nnodes;
    int nfixed;
    int best_start;
-   char* marked;
+   STP_Bool* marked;
    SCIP_Bool externsol;
    SCIP_Bool deletable;
    SCIP_Bool checkstate;
@@ -911,8 +911,8 @@ SCIP_RETCODE da_reduceSlackPrune(
    int*                  pathedge,           /**< array for predecessor edge on a path */
    int*                  state,              /**< int 4 * nnodes array for internal computations */
    int*                  solnode,            /**< array of nodes of current solution that is not to be destroyed */
-   char*                 nodearrchar,        /**< char node array for internal computations  */
-   char*                 edgearrchar,        /**< char edge array for internal computations  */
+   STP_Bool*                 nodearrchar,        /**< STP_Bool node array for internal computations  */
+   STP_Bool*                 edgearrchar,        /**< STP_Bool edge array for internal computations  */
    int*                  nelims,             /**< pointer to store number of reduced edges */
    int                   minelims,           /**< minimum number of edges to eliminate */
    SCIP_Bool             solgiven            /**< solution provided? */
@@ -948,7 +948,7 @@ SCIP_RETCODE da_reduceSlackPrune(
    int nnodes;
    int nfixed;
    int redrounds;
-   char* marked;
+   STP_Bool* marked;
 
    assert(scip != NULL);
    assert(cost != NULL);
@@ -1430,7 +1430,7 @@ SCIP_RETCODE da_reducePcMw(
    int*                  pathedge,           /**< shortest path incoming edge array for shortest path calculations */
    int*                  edgearrint,         /**< int edges array for internal computations or NULL */
    int*                  state,              /**< int 4 * vertices array  */
-   char*                 nodearrchar,        /**< char node array for internal computations */
+   STP_Bool*                 nodearrchar,        /**< STP_Bool node array for internal computations */
    int*                  nelims,             /**< pointer to store number of reduced edges */
    SCIP_Bool             solbasedda,         /**< rerun Da based on best primal solution */
    SCIP_Bool             varyroot,           /**< vary root for DA if possible */
@@ -1474,7 +1474,7 @@ SCIP_RETCODE da_reducePcMw(
    int nusedroots;
    int transnnodes;
    int transnedges;
-   char* marked;
+   STP_Bool* marked;
 
    assert(scip != NULL);
    assert(graph != NULL);
@@ -2022,7 +2022,7 @@ SCIP_RETCODE da_reduceSlackPruneMw(
    int*                  soledge,            /**< edge solution array (CONNECT/UNKNOWN) or NULL; needs to contain solution if solgiven == TRUE */
    int*                  state,              /**< int 4 * vertices array */
    int*                  solnode,            /**< array of nodes of current solution that is not to be destroyed */
-   char*                 nodearrchar,        /**< char node array for internal computations */
+   STP_Bool*                 nodearrchar,        /**< STP_Bool node array for internal computations */
    int*                  nelims,             /**< pointer to store number of reduced edges */
    int                   minelims,           /**< minimum number of edges to eliminate */
    SCIP_Bool             solgiven            /**< solution provided? */
@@ -2063,7 +2063,7 @@ SCIP_RETCODE da_reduceSlackPruneMw(
    int best_start;
    int transnnodes;
    int transnedges;
-   char* marked;
+   STP_Bool* marked;
 
    assert(scip != NULL);
    assert(graph != NULL);
@@ -2535,7 +2535,7 @@ SCIP_RETCODE bound_reduce(
    int nnodes;
    int nedges;
    int best_start;
-   char* stnode;
+   STP_Bool* stnode;
    SCIP_Bool ub;
    SCIP_Bool pc;
    SCIP_Bool mw;

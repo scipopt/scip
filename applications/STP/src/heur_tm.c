@@ -122,12 +122,12 @@ SCIP_RETCODE printGraph(
    int*                  result
    )
 {
-   char label[SCIP_MAXSTRLEN];
+   char                label[SCIP_MAXSTRLEN];
    FILE* file;
    int e;
    int n;
    int m;
-   char* stnodes;
+   STP_Bool* stnodes;
    SCIP_CALL( SCIPallocBufferArray(scip, &stnodes, graph->knots ) );
 
    assert(graph != NULL);
@@ -254,7 +254,7 @@ SCIP_RETCODE SCIPheurPrunePCSteinerTree(
    const GRAPH*          g,                  /**< graph structure */
    const SCIP_Real*      cost,               /**< edge costs */
    int*                  result,             /**< ST edges */
-   char*                 connected           /**< ST nodes */
+   STP_Bool*             connected           /**< ST nodes */
    )
 {
    PATH*  mst;
@@ -627,7 +627,7 @@ SCIP_RETCODE SCIPheurPruneSteinerTree(
    const SCIP_Real*      cost,               /**< edge costs */
    int                   layer,              /**< layer (usually 0) */
    int*                  result,             /**< ST edges, which need to be set to UNKNOWN */
-   char*                 connected           /**< ST nodes */
+   STP_Bool*             connected           /**< ST nodes */
    )
 {
    PATH*  mst;
@@ -804,7 +804,7 @@ SCIP_RETCODE prune(
    SCIP_Real*            cost,               /**< edge costs */
    SCIP_Real*            costrev,            /**< reversed edge costs */
    int*                  result,             /**< ST edges */
-   char*                 connected           /**< ST nodes */
+   STP_Bool*             connected           /**< ST nodes */
    )
 {
    int e;
@@ -830,7 +830,7 @@ SCIP_RETCODE SCIPheurPruneDegConsSteinerTree(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    int*                  result,             /**< ST edges */
-   char*                 connected           /**< ST nodes (to be set) */
+   STP_Bool*             connected           /**< ST nodes (to be set) */
    )
 {
    SCIP_QUEUE* queue;
@@ -929,7 +929,7 @@ SCIP_RETCODE computeSteinerTreeDijk(
    int*                  dijkedge,           /**< predecessor edge array */
    int                   start,              /**< start vertex*/
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
-   char*                 connected           /**< array marking all solution vertices*/
+   STP_Bool*             connected           /**< array marking all solution vertices*/
    )
 {
    int k;
@@ -961,7 +961,7 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
    int*                  dijkedge,           /**< predecessor edge array */
    int                   start,              /**< start vertex */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
-   char*                 connected           /**< array marking all solution vertices*/
+   STP_Bool*             connected           /**< array marking all solution vertices*/
    )
 {
    if( g->stp_type == STP_RMWCSP )
@@ -989,7 +989,7 @@ SCIP_RETCODE computeSteinerTree(
    int*                  result,             /**< solution array (on edges) */
    int*                  cluster,            /**< array used to store current vertices of each subtree during construction */
    int**                 pathedge,           /**< predecessor edge array */
-   char*                 connected,          /**< array marking all solution vertices */
+   STP_Bool*             connected,          /**< array marking all solution vertices */
    SCIP_RANDNUMGEN*      randnumgen          /**< random number generator */
    )
 {
@@ -1130,8 +1130,8 @@ SCIP_RETCODE computeDegConsTree(
    int*                  cluster,            /**< array for internal computations */
    int**                 pathedge,           /**< ancestor edges for shortest paths from each terminal to all nodes */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
-   char*                 connected,          /**< array to indicate whether a vertex is in the solution */
-   char*                 solfound            /**< pointer to store whether a solution has been found */
+   STP_Bool*             connected,          /**< array to indicate whether a vertex is in the solution */
+   STP_Bool*             solfound            /**< pointer to store whether a solution has been found */
    )
 {
    SCIP_Real min;
@@ -1387,8 +1387,8 @@ SCIP_RETCODE computeSteinerTreeVnoi(
    int*                  nodenterms,         /**< internal array */
    int**                 node_base,          /**< internal array */
    int**                 node_edge,          /**< internal array */
-   char                  firstrun,           /**< method called for the first time? (during one heuristic round) */
-   char*                 connected           /**< array to indicate whether a vertex is in the solution */
+   STP_Bool              firstrun,           /**< method called for the first time? (during one heuristic round) */
+   STP_Bool*             connected           /**< array to indicate whether a vertex is in the solution */
    )
 {
    int    k;
@@ -1428,8 +1428,8 @@ SCIP_RETCODE computeSteinerTreeVnoi(
       int*  terms;
       int*  tovisit;
       int*  reachednodes;
-      char* termsmark;
-      char* visited;
+      STP_Bool* termsmark;
+      STP_Bool* visited;
       int e;
       /* PHASE I: */
       for( i = 0; i < nnodes; i++ )
@@ -1791,7 +1791,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
    int** pathedge = NULL;
    int** node_base = NULL;
    int** node_edge = NULL;
-   char* connected;
+   STP_Bool* connected;
 
    assert(scip != NULL);
    assert(cost != NULL);
@@ -2172,7 +2172,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
    {
       SCIP_Real* orgcost = NULL;
       int edgecount;
-      char solfound = FALSE;
+      STP_Bool solfound = FALSE;
 
       if( SCIPisLE(scip, maxcost, 0.0) )
          maxcost = 1.0;

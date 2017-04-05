@@ -137,8 +137,8 @@ static
 void updateorgsol(
    GRAPH*                graph,              /**< graph data structure */
    IDX*                  curr,               /**< head of solution edge list */
-   char*                 orgnodes,           /**< array to mark whether a node is part of the original solution */
-   char*                 orgedges,           /**< array to mark whether an edge is part of the original solution */
+   STP_Bool*             orgnodes,           /**< array to mark whether a node is part of the original solution */
+   STP_Bool*             orgedges,           /**< array to mark whether an edge is part of the original solution */
    int*                  nsolnodes,          /**< pointer to store the number of nodes in the original solution */
    int*                  nsoledges           /**< pointer to store the number of edges in the original solution */
 )
@@ -2708,8 +2708,8 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    int  norgnodes;
    int  nsolnodes;
    int  nsoledges;
-   char* orgedges;
-   char* orgnodes;
+   STP_Bool* orgedges;
+   STP_Bool* orgnodes;
 
    assert(scip != NULL);
 

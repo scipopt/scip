@@ -60,7 +60,7 @@ SCIP_RETCODE extendSteinerTreePcMw(
    SCIP_Real*            costrev,            /**< reversed edge costs array */
    int*                  vbase,              /**< array to store Voronoi bases to each vertex */
    int*                  stedge,             /**< array to indicate whether an edge is part of the Steiner tree */
-   char*                 stvertex,           /**< uninitialized array to indicate whether an edge is part of the Steiner tree */
+   STP_Bool*             stvertex,           /**< uninitialized array to indicate whether an edge is part of the Steiner tree */
    int*                  adds                /**< pointer to store number of added vertices */
 );
 

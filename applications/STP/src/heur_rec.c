@@ -206,7 +206,7 @@ SCIP_RETCODE selectdiffsols(
    int nusedsols;                            /* number of solutions to use in rec     */
    int* perm;
    int* solselected;
-   char* soledges;
+   STP_Bool* soledges;
    assert(selection != NULL);
    assert(graph != NULL);
    assert(vars != NULL);
@@ -520,8 +520,8 @@ SCIP_RETCODE buildsolgraph(
    int*   dnodemap;
    int*   solselection;          /* pool of solutions rec will use */
    SCIP_Bool pcmw;
-   char*  solnode;               /* marks nodes contained in at least one solution */
-   char*  soledge;               /* marks edges contained in at least one solution */
+   STP_Bool*  solnode;               /* marks nodes contained in at least one solution */
+   STP_Bool*  soledge;               /* marks edges contained in at least one solution */
 
    assert(scip != NULL);
    assert(graph != NULL);
@@ -903,7 +903,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    int* edgeweight;
    int* orgresults;
    int* edgeancestor;
-   char* stnodes;
+   STP_Bool* stnodes;
 
    assert(heur != NULL);
    assert(scip != NULL);

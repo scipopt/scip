@@ -110,7 +110,7 @@ SCIP_RETCODE lca(
    const GRAPH*          graph,
    int                   u,
    UF*                   uf,
-   char*                 nodesmark,
+   STP_Bool*             nodesmark,
    int*                  steineredges,
    IDX**                 lcalists,
    PHNODE**              boundpaths,
@@ -167,7 +167,7 @@ SCIP_RETCODE lca(
 
 /** checks whether node is crucial, i.e. a terminal or a vertex with degree at least 3 (w.r.t. the steinertree) */
 static
-char nodeIsCrucial(
+STP_Bool nodeIsCrucial(
    const GRAPH* graph,
    int* steineredges,
    int node
@@ -220,10 +220,10 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
    int nedges;
    int probtype;
    int newnverts;
-   char* steinertree;
-   char pc;
-   char mw;
-   char mwpc;
+   STP_Bool* steinertree;
+   STP_Bool pc;
+   STP_Bool mw;
+   STP_Bool mwpc;
 
    assert(graph != NULL);
    assert(cost != NULL);
@@ -583,9 +583,9 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
       int nsupernodes;
       int nboundedges;
       int rootpathstart;
-      char* pinned;
-      char* scanned;
-      char* nodesmark;
+      STP_Bool* pinned;
+      STP_Bool* scanned;
+      STP_Bool* nodesmark;
 
 #ifdef printDebug
       obj = 0.0;
@@ -1675,7 +1675,7 @@ SCIP_RETCODE extendSteinerTreePcMw(
    SCIP_Real*            costrev,            /**< reversed edge cost array*/
    int*                  vbase,              /**< array to store Voronoi bases to each vertex */
    int*                  stedge,             /**< array to indicate whether an edge is part of the Steiner tree */
-   char*                 stvertex,           /**< uninitialized array to indicate whether an edge is part of the Steiner tree */
+   STP_Bool*             stvertex,           /**< uninitialized array to indicate whether an edge is part of the Steiner tree */
    int*                  adds                /**< pointer to store number of added vertices */
    )
 {
@@ -2048,7 +2048,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
          strcmp(SCIPheurGetName(SCIPsolGetHeur(newsol)), "TM") == 0) )
    {
       int nnodes = graph->knots;
-      char* steinertree;
+      STP_Bool* steinertree;
       SCIP_CALL( SCIPallocBufferArray(scip, &steinertree, nnodes) );
       assert(graph_sol_valid(scip, graph, results));
 

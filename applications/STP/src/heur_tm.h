@@ -80,7 +80,7 @@ extern "C" {
       const SCIP_Real*      cost,               /**< edge costs */
       int                   layer,              /**< layer, @note: should be set to 0 */
       int*                  result,             /**< ST edges */
-      char*                 connected           /**< ST nodes */
+      STP_Bool*             connected           /**< ST nodes */
       );
 
    /** prune the (rooted) prize collecting Steiner tree in such a way that all leaves are terminals */
@@ -90,7 +90,7 @@ extern "C" {
       const GRAPH*          g,                  /**< graph structure */
       const SCIP_Real*      cost,               /**< edge costs */
       int*                  result,             /**< ST edges */
-      char*                 connected           /**< ST nodes */
+      STP_Bool*             connected           /**< ST nodes */
       );
 
    /** build (rooted) prize collecting Steiner tree in such a way that all leaves are positive-weight vertices */
@@ -119,7 +119,7 @@ extern "C" {
       SCIP*                 scip,               /**< SCIP data structure */
       const GRAPH*          g,                  /**< graph structure */
       int*                  result,             /**< ST edges */
-      char*                 connected           /**< ST nodes */
+      STP_Bool*             connected           /**< ST nodes */
       );
 
 #ifdef __cplusplus

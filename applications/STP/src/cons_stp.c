@@ -56,6 +56,8 @@
 #define RESTRICT restrict
 #endif
 
+#define RESTRICT2
+
 /**@name Constraint handler properties
  *
  * @{
@@ -1499,8 +1501,8 @@ SCIP_RETCODE SCIPdualAscentStp(
    int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
    int                   root,               /**< the root */
    int                   nruns,              /**< number of dual ascent runs */
-   char* RESTRICT        edgearrchar,        /**< char edges array for internal computations or NULL */
-   char* RESTRICT        nodearrchar         /**< char vertices array for internal computations or NULL */
+   STP_Bool* RESTRICT        edgearrchar,        /**< STP_Bool edges array for internal computations or NULL */
+   STP_Bool* RESTRICT        nodearrchar         /**< STP_Bool vertices array for internal computations or NULL */
    )
 {
 #if 0
@@ -1525,8 +1527,6 @@ SCIP_RETCODE SCIPdualAscentStp(
    int k;
    int v;
    int a;
-   int s;
-   int end;
    int tail;
    int shift;
    int node;
@@ -1546,9 +1546,9 @@ SCIP_RETCODE SCIPdualAscentStp(
    int* RESTRICT cutverts;
    int* RESTRICT unsatarcs;
    int* RESTRICT unsattails;
-   char firstrun;
-   char* RESTRICT sat;
-   char* RESTRICT active;
+   STP_Bool firstrun;
+   STP_Bool* RESTRICT sat;
+   STP_Bool* RESTRICT active;
 
    assert(g != NULL);
    assert(scip != NULL);
@@ -1749,7 +1749,7 @@ SCIP_RETCODE SCIPdualAscentStp(
          {
             for( i = norgcutverts; i < ncutverts; i++ )
             {
-               s = cutverts[i];
+               int s = cutverts[i];
                assert(gmark[s]);
                if( active[s] )
                {
@@ -1764,14 +1764,18 @@ SCIP_RETCODE SCIPdualAscentStp(
 #ifdef DFS
          while( stacklength > 0 )
          {
+            int end;
             node = stackarr[--stacklength];
 #else
          for( int n = 0; n < stacklength; n++ )
          {
+            int end;
+
             assert(n < nnodes);
             node = stackarr[n];
 #endif
             /* traverse incoming arcs */
+
             for( i = start[node], end = start[node + 1]; i != end; i++ )
             {
                tail = tailarr[i];
@@ -1837,7 +1841,7 @@ SCIP_RETCODE SCIPdualAscentStp(
                   assert(!sat[a]);
                   if( SCIPisLT(scip, rescap[a], min) )
                      min = rescap[a];
-                  if( shift > 0 )
+                  if( shift )
                   {
                      unsattails[i - shift] = tail;
                      unsatarcs[i - shift] = a;
@@ -1900,7 +1904,7 @@ SCIP_RETCODE SCIPdualAscentStp(
                   }
                   shift++;
                }
-               else if( shift > 0 )
+               else if( shift )
                {
                   unsattails[i - shift] = unsattails[i];
                   unsatarcs[i - shift] = a;
@@ -2052,8 +2056,8 @@ SCIP_RETCODE SCIPdualAscentStpSol(
    int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
    int                   root,               /**< the root */
    int                   nruns,              /**< number of dual ascent runs */
-   char* RESTRICT        edgearrchar,        /**< char edges array for internal computations or NULL */
-   char* RESTRICT        nodearrchar         /**< char vertices array for internal computations or NULL */
+   STP_Bool* RESTRICT        edgearrchar,        /**< STP_Bool edges array for internal computations or NULL */
+   STP_Bool* RESTRICT        nodearrchar         /**< STP_Bool vertices array for internal computations or NULL */
    )
 {
 #if 0
@@ -2077,7 +2081,6 @@ SCIP_RETCODE SCIPdualAscentStpSol(
    int k;
    int v;
    int a;
-   int s;
    int e;
    int end;
    int tail;
@@ -2098,9 +2101,9 @@ SCIP_RETCODE SCIPdualAscentStpSol(
    int* stackarr;
    int* cutverts;
    int* unsatarcs;
-   char firstrun;
-   char* sat;
-   char* active;
+   STP_Bool firstrun;
+   STP_Bool* sat;
+   STP_Bool* active;
 
    assert(g != NULL);
    assert(scip != NULL);
@@ -2244,7 +2247,7 @@ SCIP_RETCODE SCIPdualAscentStpSol(
 
                if( a != EAT_LAST )
                {
-                  s = g->tail[a];
+                  int s = g->tail[a];
                   gnodearr[k]->dist += g->grad[s] - 1;
                }
 
@@ -2301,7 +2304,7 @@ SCIP_RETCODE SCIPdualAscentStpSol(
          {
             for( i = norgcutverts; i < ncutverts; i++ )
             {
-               s = cutverts[i];
+               int s = cutverts[i];
                assert(g->mark[s]);
                if( active[s] )
                {
@@ -2381,7 +2384,7 @@ SCIP_RETCODE SCIPdualAscentStpSol(
                if( SCIPisLT(scip, rescap[a], min) )
                   min = rescap[a];
 
-               if( shift != 0 )
+               if( shift )
                   unsatarcs[i - shift] = a;
             }
          }
@@ -2389,8 +2392,7 @@ SCIP_RETCODE SCIPdualAscentStpSol(
          assert(SCIPisLT(scip, min, FARAWAY));
          nunsatarcs -= shift;
 
-         if( nunsatarcs > 0)
-            assert(!g->mark[g->tail[unsatarcs[nunsatarcs-1]]]);
+         assert(nunsatarcs == 0 || !g->mark[tailarr[unsatarcs[nunsatarcs-1]]]);
 
          norgcutverts = ncutverts;
 
@@ -2631,11 +2633,11 @@ SCIP_RETCODE SCIPdualAscentPcStp(
    int norgcutverts;
    int* cutverts;
    int* stackarr;
-   char* origedge;
+   STP_Bool* origedge;
    int* unsatarcs;
-   char firstrun;
-   char* sat;
-   char* active;
+   STP_Bool firstrun;
+   STP_Bool* sat;
+   STP_Bool* active;
 
    assert(g != NULL);
    assert(scip != NULL);
@@ -3089,8 +3091,8 @@ SCIP_RETCODE SCIPdualAscentAddCutsStp(
    int* degs;
    int* nodearrint;
    int* edgearrint;
-   char* edgearrchar;
-   char* nodearrchar;
+   STP_Bool* edgearrchar;
+   STP_Bool* nodearrchar;
 
    assert(scip != NULL);
    assert(g != NULL);

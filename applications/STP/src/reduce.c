@@ -46,10 +46,14 @@
 #include "probdata_stp.h"
 #include "prop_stp.h"
 
-/** set entries of (char) array to FALSE */
+#ifndef RESTRICT
+#define RESTRICT restrict
+#endif
+
+/** set entries of (STP_Bool) array to FALSE */
 static
 void setTrue(
-   char**                arr,
+   STP_Bool**                arr,
    int                   arrsize
    )
 {
@@ -80,7 +84,7 @@ SCIP_RETCODE nvsl_reduction(
    int*                  neighb,
    int*                  distnode,
    int*                  solnode,
-   char*                 visited,
+   STP_Bool*              visited,
    int*                  nelims,
    int                   minelims
    )
@@ -550,7 +554,7 @@ static int le_reduction(
    GRAPH* g)
 {
    PATH** path;
-   char*  used;
+   STP_Bool*  used;
    int*   term;
    int    terms;
    int    i;
@@ -574,7 +578,7 @@ static int le_reduction(
 
    assert(term != NULL);
 
-   used = malloc((size_t)(g->edges / 2) * sizeof(char));
+   used = malloc((size_t)(g->edges / 2) * sizeof(STP_Bool));
 
    assert(used != NULL);
 
@@ -848,7 +852,7 @@ SCIP_RETCODE reduceStp(
    int     nedges;
    int     nterms;
    int     reductbound;
-   char* nodearrchar;
+   STP_Bool* nodearrchar;
 
    SCIP_Bool    bred = FALSE;
 
@@ -940,7 +944,7 @@ SCIP_RETCODE reducePc(
    GRAPH**               graph,              /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    int                   minelims,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   char                  dualascent          /**< perform dual ascent reductions? */
+   STP_Bool              dualascent          /**< perform dual ascent reductions? */
    )
 {
    PATH* vnoi;
@@ -963,7 +967,7 @@ SCIP_RETCODE reducePc(
    int     nedges;
    int     extnedges;
    int     reductbound;
-   char*   nodearrchar;
+   STP_Bool*   nodearrchar;
    SCIP_Bool    bred = FALSE;
 
    assert(scip != NULL);
@@ -1060,7 +1064,7 @@ SCIP_RETCODE reduceMw(
    GRAPH**               graph,              /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    int                   minelims,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   char                  advanced            /**< perform advanced reductions? */
+   STP_Bool              advanced            /**< perform advanced reductions? */
    )
 {
    GRAPH* g = *graph;
@@ -1082,8 +1086,8 @@ SCIP_RETCODE reduceMw(
    int nedges;
    int redbound;
    int extnedges;
-   char* nodearrchar;
-   char bred = FALSE;
+   STP_Bool* nodearrchar;
+   STP_Bool bred = FALSE;
 
    assert(scip != NULL);
    assert(g != NULL);
@@ -1195,15 +1199,15 @@ SCIP_RETCODE reduceHc(
    int     hbrednelims;
    int     hcrnelims;
    int     hcrcnelims;
-   char*   nodearrchar;
+   STP_Bool*   nodearrchar;
 #if 0
    DOES NOT WORK for HC!
-      char    da = !TRUE;
+      STP_Bool    da = !TRUE;
 #endif
-   char    bred = TRUE;
-   char    hbred = TRUE;
-   char    rbred = TRUE;
-   char    rcbred = TRUE;
+   STP_Bool    bred = TRUE;
+   STP_Bool    hbred = TRUE;
+   STP_Bool    rbred = TRUE;
+   STP_Bool    rcbred = TRUE;
 
    assert(scip != NULL);
    assert(g != NULL);
@@ -1318,10 +1322,10 @@ SCIP_RETCODE reduceSap(
    int     rptnelims;
    int     degtnelims;
    int     redbound;
-   char    da = TRUE;
-   char    sd = !TRUE;
-   char* nodearrchar;
-   char    rpt = TRUE;
+   STP_Bool    da = TRUE;
+   STP_Bool    sd = !TRUE;
+   STP_Bool* nodearrchar;
+   STP_Bool    rpt = TRUE;
    SCIP_RANDNUMGEN* randnumgen;
 
    /* create random number generator */
@@ -1447,8 +1451,8 @@ SCIP_RETCODE reduceNw(
    int     nterms;
    int     danelims;
    int     redbound;
-   char*   nodearrchar;
-   char    da = TRUE;
+   STP_Bool*   nodearrchar;
+   STP_Bool    da = TRUE;
    SCIP_RANDNUMGEN* randnumgen;
 
    /* create random number generator */
@@ -1532,11 +1536,11 @@ SCIP_RETCODE redLoopMw(
    int*                  nodearrint2,
    int*                  nodearrint3,
    int*                  solnode,            /**< array to indicate whether a node is part of the current solution (==CONNECT) */
-   char*                 nodearrchar,
+   STP_Bool*              nodearrchar,
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
-   char                  advanced,
-   char                  bred,
-   char                  tryrmw,             /**< try to convert problem to RMWCSP? Only possible if advanced = TRUE */
+   STP_Bool              advanced,
+   STP_Bool              bred,
+   STP_Bool              tryrmw,             /**< try to convert problem to RMWCSP? Only possible if advanced = TRUE */
    int                   redbound            /**< minimal number of edges to be eliminated in order to reiterate reductions */
    )
 {
@@ -1551,16 +1555,16 @@ SCIP_RETCODE redLoopMw(
    int ansad2elims;
    int chain2elims;
 
-   char da = advanced;
-   char ans = TRUE;
-   char nnp = TRUE;
-   char npv = TRUE;
-   char rerun = TRUE;
-   char ansad = TRUE;
-   char ansad2 = TRUE;
-   char chain2 = TRUE;
-   char* boolarr[16];
-   char extensive = EXTENSIVE;
+   STP_Bool da = advanced;
+   STP_Bool ans = TRUE;
+   STP_Bool nnp = TRUE;
+   STP_Bool npv = TRUE;
+   STP_Bool rerun = TRUE;
+   STP_Bool ansad = TRUE;
+   STP_Bool ansad2 = TRUE;
+   STP_Bool chain2 = TRUE;
+   STP_Bool* boolarr[16];
+   STP_Bool extensive = EXTENSIVE;
 
    assert(scip != NULL);
    assert(g != NULL);
@@ -1818,10 +1822,10 @@ SCIP_RETCODE redLoopMw(
    int*                  nodearrint2,
    int*                  nodearrint3,
    int*                  solnode,            /**< array to indicate whether a node is part of the current solution (==CONNECT) */
-   char*                 nodearrchar,
+   STP_Bool*              nodearrchar,
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
-   char                  advanced,
-   char                  bred,
+   STP_Bool              advanced,
+   STP_Bool              bred,
    int                   redbound            /**< minimal number of edges to be eliminated in order to reiterate reductions */
    )
 {
@@ -1837,16 +1841,16 @@ SCIP_RETCODE redLoopMw(
    int ansad2elims;
    int chain2elims;
 
-   char da = advanced;
-   char ans = TRUE;
-   char nnp = TRUE;
-   char npv = TRUE;
-   char rerun = TRUE;
-   char ansad = TRUE;
-   char ansad2 = TRUE;
-   char chain2 = TRUE;
-   char* boolarr[16];
-   char extensive = EXTENSIVE;
+   STP_Bool da = advanced;
+   STP_Bool ans = TRUE;
+   STP_Bool nnp = TRUE;
+   STP_Bool npv = TRUE;
+   STP_Bool rerun = TRUE;
+   STP_Bool ansad = TRUE;
+   STP_Bool ansad2 = TRUE;
+   STP_Bool chain2 = TRUE;
+   STP_Bool* boolarr[16];
+   STP_Bool extensive = EXTENSIVE;
 
    assert(scip != NULL);
    assert(g != NULL);
@@ -2135,7 +2139,7 @@ SCIP_RETCODE redLoopPc(
    int*                  edgearrint,
    int*                  nodearrint2,
    int*                  solnode,
-   char*                 nodearrchar,
+   STP_Bool*              nodearrchar,
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    SCIP_Bool             dualascent,
    SCIP_Bool             bred,
@@ -2400,7 +2404,7 @@ SCIP_RETCODE redLoopStp(
    int* RESTRICT         edgearrint,
    int* RESTRICT         nodearrint2,
    int* RESTRICT         solnode,
-   char* RESTRICT        nodearrchar,
+   STP_Bool* RESTRICT        nodearrchar,
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    SCIP_Real             upperbound,
    SCIP_Bool             da,

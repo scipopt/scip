@@ -35,7 +35,7 @@
 static void show(
    GRAPH*  g,
    int     vars,
-   char*   state,
+   STP_Bool*   state,
    double* xval)
 {
    int i;
@@ -105,7 +105,7 @@ static void trail(
    int           i,
    const double* xval,
    int           tail,
-   char*         connected,
+   STP_Bool*         connected,
    int           hop,
    int           max_hops)
 {
@@ -138,7 +138,7 @@ static void trail2(
    const GRAPH*  g,
    int           layer,
    const double* xval,
-   char*         connected,
+   STP_Bool*         connected,
    int           max_hops)
 {
    int* stackstart = malloc((size_t)g->knots * sizeof(int));
@@ -210,7 +210,7 @@ SCIP_RETCODE SCIPvalidateStpSol(
    SCIP_Bool*    feasible
 		     )
 {
-   char* connected;
+   STP_Bool* connected;
    int   ret       = TRUE;
    int   i;
    int   layer;
@@ -233,7 +233,7 @@ SCIP_RETCODE SCIPvalidateStpSol(
    {
 #if 0
       if (layer > 0)
-         memset(connected, 0, (size_t)g->knots * sizeof(char));
+         memset(connected, 0, (size_t)g->knots * sizeof(STP_Bool));
 #endif
 #if 1
       trail(g, g->source[layer], xval + layer * g->edges, -1,

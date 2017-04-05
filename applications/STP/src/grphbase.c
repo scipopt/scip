@@ -3378,7 +3378,7 @@ SCIP_Bool graph_sol_valid(
 /** mark endpoints of edges in given list */
 void graph_listSetSolNode(
    const GRAPH*          g,              /**< graph data structure */
-   char*                 solnode,        /**< solution nodes array (TRUE/FALSE) */
+   STP_Bool*             solnode,        /**< solution nodes array (TRUE/FALSE) */
    IDX*                  listnode        /**< edge list */
    )
 {

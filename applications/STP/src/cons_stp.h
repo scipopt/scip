@@ -70,8 +70,8 @@ SCIP_RETCODE SCIPdualAscentStp(
    int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
    int                   root,               /**< the root */
    int                   nruns,              /**< number of dual ascent runs */
-   char* RESTRICT        edgearrchar,        /**< char edges array for internal computations or NULL */
-   char* RESTRICT        nodearrchar         /**< char vertices array for internal computations or NULL */
+   STP_Bool* RESTRICT    edgearrchar,        /**< char edges array for internal computations or NULL */
+   STP_Bool* RESTRICT    nodearrchar         /**< char vertices array for internal computations or NULL */
    );
 
 
@@ -91,8 +91,8 @@ SCIP_RETCODE SCIPdualAscentStpSol(
    int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
    int                   root,               /**< the root */
    int                   nruns,              /**< number of dual ascent runs */
-   char* RESTRICT        edgearrchar,        /**< char edges array for internal computations or NULL */
-   char* RESTRICT        nodearrchar         /**< char vertices array for internal computations or NULL */
+   STP_Bool* RESTRICT    edgearrchar,        /**< char edges array for internal computations or NULL */
+   STP_Bool* RESTRICT    nodearrchar         /**< char vertices array for internal computations or NULL */
    );
 
 /** dual ascent heuristic for the PCSPG and the MWCSP */

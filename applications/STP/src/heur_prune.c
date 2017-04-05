@@ -205,7 +205,7 @@ SCIP_RETCODE printGraph(
    int e;
    int n;
    int m;
-   char* stnodes;
+   STP_Bool* stnodes;
    SCIP_CALL( SCIPallocBufferArray(scip, &stnodes, graph->knots ) );
 
    assert(graph != NULL);
@@ -449,12 +449,6 @@ SCIP_DECL_HEUREXEC(heurExecPrune)
       /* has solution been added? */
       if( success )
       {
-         /*
-
-           const char base[] = "Prune";
-           char filename [ FILENAME_MAX ];
-           sprintf(filename, "%s%d.gml", base, counter++);
-           SCIP_CALL( printGraph(scip, graph, filename, soledge) );*/
 #if PRINTDEBUG
          printf("solution added by PRUNE \n  \n");
 #endif
@@ -543,7 +537,7 @@ SCIP_RETCODE SCIPheurPrune(
    int*     nodearrint;
    int*     edgearrint;
    int*     nodearrint2;
-   char* nodearrchar;
+   STP_Bool* nodearrchar;
 
    assert(g != NULL);
    assert(scip != NULL);

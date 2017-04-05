@@ -780,7 +780,7 @@ void graph_path_st(
    int*                  pathedge,           /**< predecessor edge array (on vertices) */
    int                   start,              /**< start vertex */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
-   char*                 connected           /**< array to mark whether a vertex is part of computed Steiner tree */
+   STP_Bool*             connected           /**< array to mark whether a vertex is part of computed Steiner tree */
    )
 {
    int   z;
@@ -907,7 +907,7 @@ void graph_path_st_rpc(
    int*                  pathedge,           /**< predecessor edge array (on vertices) */
    int                   start,              /**< start vertex */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
-   char*                 connected           /**< array to mark whether a vertex is part of computed Steiner tree */
+   STP_Bool*             connected           /**< array to mark whether a vertex is part of computed Steiner tree */
    )
 {
    SCIP_Real maxprize;
@@ -1030,7 +1030,7 @@ void graph_path_st_pcmw(
    int*                  pathedge,           /**< predecessor edge array (on vertices) */
    int                   start,              /**< start vertex */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
-   char*                 connected           /**< array to mark whether a vertex is part of computed Steiner tree */
+   STP_Bool*             connected           /**< array to mark whether a vertex is part of computed Steiner tree */
    )
 {
    SCIP_Real maxprize;
@@ -1149,7 +1149,7 @@ void graph_path_st_rmw(
    int*                  pathedge,           /**< predecessor edge array (on vertices) */
    int                   start,              /**< start vertex */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
-   char*                 connected           /**< array to mark whether a vertex is part of computed Steiner tree */
+   STP_Bool*             connected           /**< array to mark whether a vertex is part of computed Steiner tree */
    )
 {
    SCIP_Real maxprize;
@@ -1289,7 +1289,7 @@ SCIP_RETCODE voronoi_extend(
    SCIP_Real**           distarr,            /**< array to store distance from each node to its base */
    int**                 basearr,            /**< array to store the bases */
    int**                 edgearr,            /**< array to store the ancestor edge */
-   char*                 termsmark,          /**< array to mark terminal */
+   STP_Bool*             termsmark,          /**< array to mark terminal */
    int*                  reachednodes,       /**< array to mark reached nodes */
    int*                  nreachednodes,      /**< pointer to number of reached nodes */
    int*                  nodenterms,         /**< array to store number of terimals to each node */
@@ -1366,7 +1366,7 @@ void voronoi(
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real*            cost,               /**< edge costs */
    SCIP_Real*            costrev,            /**< reversed edge costs */
-   char*                 base,               /**< array to indicate whether a vertex is a Voronoi base */
+   STP_Bool*             base,               /**< array to indicate whether a vertex is a Voronoi base */
    int*                  vbase,              /**< voronoi base to each vertex */
    PATH*                 path                /**< path data struture (leading to respective Voronoi base) */
    )
@@ -1454,7 +1454,7 @@ void voronoiSteinerTreeExt(
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real*            costrev,            /**< edge costs */
    int*                  vbase,              /**< Voronoi base to each vertex */
-   char*                 stvertex,           /**< array to indicate whether a vertex is a Voronoi base */
+   STP_Bool*             stvertex,           /**< array to indicate whether a vertex is a Voronoi base */
    PATH*                 path                /**< path data strcuture (leading to respective Voronoi base) */
    )
 {
@@ -2350,8 +2350,8 @@ SCIP_RETCODE voronoi_radius(
    int count = 0;
    int nnodes;
    int nterms = 0;
-   char pc;
-   char mw;
+   STP_Bool pc;
+   STP_Bool mw;
 
    assert(graph != NULL);
    assert(heap   != NULL);
@@ -2775,7 +2775,7 @@ void voronoi_repair_mult(
    int*                  vbase,              /**< array containing Voronoi base of each node */
    int*                  boundedges,         /**< boundary edges */
    int*                  nboundedges,        /**< number of boundary edges */
-   char*                 nodesmark,          /**< array to mark temporarily discarded nodes */
+   STP_Bool*             nodesmark,          /**< array to mark temporarily discarded nodes */
    UF*                   uf,                 /**< union find data structure */
    PATH*                 path                /**< Voronoi paths data structure */
    )

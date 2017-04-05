@@ -190,7 +190,7 @@ static
 SCIP_RETCODE printGraph(
    SCIP* scip,
    const GRAPH*          graph,              /**< Graph to be printed */
-   const char*           filename,           /**< Name of the output file */
+   const char           filename,           /**< Name of the output file */
    int*                  result
    )
 {
@@ -199,7 +199,7 @@ SCIP_RETCODE printGraph(
    int e;
    int n;
    int m;
-   char* stnodes;
+   STP_Bool* stnodes;
    SCIP_CALL( SCIPallocBufferArray(scip, &stnodes, graph->knots ) );
 
    assert(graph != NULL);
@@ -559,8 +559,8 @@ SCIP_RETCODE SCIPheurSlackPrune(
    int*     edgearrint2;
    int*     nodearrint;
    int*     nodearrint2;
-   char*     nodearrchar;
-   char*     edgearrchar;
+   STP_Bool*     nodearrchar;
+   STP_Bool*     edgearrchar;
 
    assert(g != NULL);
    assert(scip != NULL);
@@ -988,7 +988,7 @@ SCIP_RETCODE SCIPheurSlackPrunePcMw(
    int*     nodearrint;
    int*     nodearrint2;
    int*     nodearrint3;
-   char*     nodearrchar;
+   STP_Bool*     nodearrchar;
 
    assert(g != NULL);
    assert(scip != NULL);

@@ -2797,7 +2797,7 @@ SCIP_RETCODE nv_reduction_optimal(
    int     minhops;
    int     shortarc;
    int     shortarctail;
-   char    antiedgeexists;
+   STP_Bool    antiedgeexists;
    int     knotoffset;
 
    SCIPdebugMessage("NSV-Reduction: ");
@@ -3077,7 +3077,7 @@ SCIP_RETCODE sl_reduction(
    int*                  state,
    int*                  vbase,
    int*                  vrnodes,
-   char*                 visited,
+   STP_Bool*                 visited,
    int*                  solnode,            /**< node array to mark whether an node is part of a given solution (CONNECT),
                                                   or NULL */
    int*                  nelims
@@ -3103,8 +3103,8 @@ SCIP_RETCODE sl_reduction(
    int     vrcount;
    int     minedge;
    int*    qnode;
-   char    contract;
-   char*   forbidden;
+   STP_Bool    contract;
+   STP_Bool*   forbidden;
    SCIP_Bool pc;
 
    assert(g != NULL);
@@ -3741,7 +3741,7 @@ SCIP_RETCODE ledge_reduction(
    int* nodesid;
    int* edgeorg;
    SCIP_Bool checkstate = (edgestate != NULL);
-   char* blocked;
+   STP_Bool* blocked;
 
    assert(g != NULL);
    assert(vnoi != NULL);
@@ -5005,7 +5005,7 @@ SCIP_RETCODE nnpReduction(
    int*                  visited,            /**< nodes array */
    int*                  count,              /**< pointer to number of reductions */
    int                   maxniter,           /**< max number of edges to check */
-   char*                 positive            /**< nodes array */
+   STP_Bool*                 positive            /**< nodes array */
    )
 {
    SCIP_QUEUE* queue;

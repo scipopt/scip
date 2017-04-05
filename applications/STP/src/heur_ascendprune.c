@@ -165,7 +165,7 @@ SCIP_DECL_HEUREXEC(heurExecAscendPrune)
    int       probtype;
    int*      edgearrint;
    int*      nodearrint;
-   char*     nodearrchar;
+   STP_Bool*     nodearrchar;
 
    assert(heur != NULL);
    assert(scip != NULL);
@@ -302,7 +302,7 @@ SCIP_RETCODE SCIPheurAscendAndPrune(
    int*                  edgearrint,         /**< int edges array to store solution */
    int*                  nodearrint,         /**< int vertices array for internal computations */
    int                   root,               /**< the root (used for dual ascent) */
-   char*                 nodearrchar,        /**< char vertices array for internal computations */
+   STP_Bool*                 nodearrchar,        /**< STP_Bool vertices array for internal computations */
    SCIP_Bool*            solfound,           /**< has a solution been found? */
    SCIP_Bool             dualascredcosts,    /**< reduced costs from dual ascent? */
    SCIP_Bool             addsol              /**< should the solution be added to SCIP by this method? */
@@ -840,7 +840,7 @@ SCIP_RETCODE SCIPheurAscendAndPrunePcMw(
    int*                  edgearrint,         /**< int edges array to store solution */
    int*                  nodearrint,         /**< int vertices array for internal computations */
    int                   root,               /**< the root (used for dual ascent) */
-   char*                 nodearrchar,        /**< char vertices array for internal computations */
+   STP_Bool*             nodearrchar,        /**< STP_Bool vertices array for internal computations */
    SCIP_Bool*            solfound,           /**< has a solution been found? */
    SCIP_Bool             dualascredcosts,    /**< reduced costs from dual ascent? */
    SCIP_Bool             addsol              /**< should the solution be added to SCIP by this method? */
