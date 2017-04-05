@@ -74,7 +74,7 @@ MAXJOBS         =       1
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=   	4.0.0.1
+SCIP_VERSION	=	4.0.0.1
 
 # compiling and linking parameters
 VERBOSE		=	false

@@ -8,6 +8,10 @@ features:
 parameters:
 - new parameter misc/debugsol to specify a debug solution that should be checked during the solve
 
+parameters:
+- fixed typo: heuristics/completesol/maxunkownrate has changed to heuristics/completesol/maxunknownrate
+- new parameters: beforepresol, maxlpiter, and maxcontvars in heur_completesol.c
+
 performance improvements:
 - add and use RESTRICT macro for some pointers
 
