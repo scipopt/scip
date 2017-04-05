@@ -101,6 +101,9 @@
 #define FLOW_FACTOR     1000000
 #define CREEP_VALUE     10
 
+/* do depth-first search */
+#define DFS
+
 /**@} */
 
 /*
@@ -1945,17 +1948,6 @@ SCIP_RETCODE SCIPdualAscentStp(
    SCIPdebugMessage("DA: dualglobal: %f \n", dualobj);
    *objval = dualobj;
 
-// todo
-#if 1
-   SCIP_Real* edgebuffer;
-   SCIP_CALL( SCIPallocBufferArray(scip, &edgebuffer, nedges) );
-
-   BMScopyMemoryArray(edgebuffer, g->cost, nedges);
-
-   for( i = 0; i < nnewedges; i++ )
-      edgebuffer[edgearr[i]] = rescap[i];
-#endif
-
    for( i = nnewedges; i < nedges; i++ )
    {
       edgearr[i] = i;
@@ -1982,18 +1974,6 @@ SCIP_RETCODE SCIPdualAscentStp(
          }
       }
    }
-#if 1
-   for( i = 0; i < nedges; i++ )
-      if( !SCIPisEQ(scip, edgebuffer[i], rescap[i]) )
-      {
-         printf("err %d %d %f %f %f\n", i, nnewedges, edgebuffer[i], rescap[i], g->cost[i]);
-         return SCIP_ERROR;
-      }
-   //memcmp
-
-
-   SCIPfreeBufferArray(scip, &edgebuffer);
-#endif
 
    SCIPfreeBufferArray(scip, &stackarr);
 
@@ -2491,59 +2471,32 @@ SCIP_RETCODE SCIPdualAscentStpSol(
    SCIPdebugMessage("DA: dualglobal: %f \n", dualobj);
    *objval = dualobj;
 
+   for (i = nnewedges; i < nedges; i++)
+   {
+      edgearr[i] = i;
+      rescap[i] = g->cost[i];
+   }
 
-
-
-   // todo
-   #if 1
-      SCIP_Real* edgebuffer;
-      SCIP_CALL( SCIPallocBufferArray(scip, &edgebuffer, nedges) );
-
-      BMScopyMemoryArray(edgebuffer, g->cost, nedges);
-
-      for( i = 0; i < nnewedges; i++ )
-         edgebuffer[edgearr[i]] = rescap[i];
-   #endif
-
-      for( i = nnewedges; i < nedges; i++ )
+   /* re-extend rescap array */
+   for (i = 0; i < nnewedges; i++)
+   {
+      if( edgearr[i] != i )
       {
-         edgearr[i] = i;
+         SCIP_Real bufferedval = rescap[i];
          rescap[i] = g->cost[i];
-      }
-
-      /* re-extend rescap array */
-      for( i = 0; i < nnewedges; i++ )
-      {
-         if( edgearr[i] != i  )
+         a = i;
+         while (edgearr[a] != a)
          {
-            SCIP_Real bufferedval = rescap[i];
-            rescap[i] = g->cost[i];
-            a = i;
-            while( edgearr[a] != a )
-            {
-               shift = edgearr[a];
+            shift = edgearr[a];
 
-               min = rescap[shift];
-               rescap[shift] = bufferedval;
-               bufferedval = min;
-               edgearr[a] = a;
-               a = shift;
-            }
+            min = rescap[shift];
+            rescap[shift] = bufferedval;
+            bufferedval = min;
+            edgearr[a] = a;
+            a = shift;
          }
       }
-   #if 1
-      for( i = 0; i < nedges; i++ )
-         if( !SCIPisEQ(scip, edgebuffer[i], rescap[i]) )
-         {
-            printf("err %d %d %f %f %f\n", i, nnewedges, edgebuffer[i], rescap[i], g->cost[i]);
-            return SCIP_ERROR;
-         }
-      //memcmp
-
-
-      SCIPfreeBufferArray(scip, &edgebuffer);
-   #endif
-
+   }
 
    /*** free memory (1) ***/
 
