@@ -296,6 +296,7 @@ SCIP_RETCODE probingnodeCreate(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, probingnode) );
 
    (*probingnode)->lpistate = NULL;
+   (*probingnode)->lpinorms = NULL;
    (*probingnode)->ninitialcols = SCIPlpGetNCols(lp);
    (*probingnode)->ninitialrows = SCIPlpGetNRows(lp);
    (*probingnode)->ncols = (*probingnode)->ninitialcols;
@@ -318,6 +319,8 @@ SCIP_RETCODE probingnodeUpdate(
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
+   SCIP_Bool storenorms = FALSE;
+
    assert(probingnode != NULL);
    assert(SCIPtreeIsPathComplete(tree));
    assert(lp != NULL);
@@ -327,11 +330,24 @@ SCIP_RETCODE probingnodeUpdate(
    {
       SCIP_CALL( SCIPlpFreeState(lp, blkmem, &probingnode->lpistate) );
    }
+   /* free old LP norms */
+   if( probingnode->lpinorms != NULL )
+   {
+      SCIP_CALL( SCIPlpFreeNorms(lp, blkmem, &probingnode->lpinorms) );
+      probingnode->lpinorms = NULL;
+      storenorms = TRUE;
+   }
 
    /* get current LP state */
    if( lp->flushed && lp->solved )
    {
       SCIP_CALL( SCIPlpGetState(lp, blkmem, &probingnode->lpistate) );
+
+      /* if LP norms were stored at this node before, store the new ones */
+      if( storenorms )
+      {
+         SCIP_CALL( SCIPlpGetNorms(lp, blkmem, &probingnode->lpinorms) );
+      }
       probingnode->lpwasprimfeas = lp->primalfeasible;
       probingnode->lpwasdualfeas = lp->dualfeasible;
    }
@@ -361,6 +377,11 @@ SCIP_RETCODE probingnodeFree(
    if( (*probingnode)->lpistate != NULL )
    {
       SCIP_CALL( SCIPlpFreeState(lp, blkmem, &(*probingnode)->lpistate) );
+   }
+   /* free the associated LP norms */
+   if( (*probingnode)->lpinorms != NULL )
+   {
+      SCIP_CALL( SCIPlpFreeNorms(lp, blkmem, &(*probingnode)->lpinorms) );
    }
 
    /* free objective information */
@@ -6368,6 +6389,49 @@ SCIP_RETCODE SCIPtreeCreateProbingNode(
    return SCIP_OKAY;
 }
 
+/** sets the LP state for the current probing node */
+SCIP_RETCODE SCIPtreeSetProbingLPState(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_LPISTATE*        lpistate,           /**< LP state information (like basis information) */
+   SCIP_LPINORMS*        lpinorms,           /**< LP pricing norms information */
+   SCIP_Bool             primalfeas,         /**< primal feasibility when LP state information was stored */
+   SCIP_Bool             dualfeas            /**< dual feasibility when LP state information was stored */
+   )
+{
+   SCIP_NODE* node;
+
+   assert(tree != NULL);
+   assert(SCIPtreeProbing(tree));
+
+   /* get the current probing node */
+   node = SCIPtreeGetCurrentNode(tree);
+   assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
+   assert(node->data.probingnode != NULL);
+
+   /* free already present LP state */
+   if( node->data.probingnode->lpistate != NULL )
+   {
+      SCIP_CALL( SCIPlpFreeState(lp, blkmem, &(node->data.probingnode->lpistate)) );
+   }
+
+   /* free already present LP pricing norms */
+   if( node->data.probingnode->lpinorms != NULL )
+   {
+      SCIP_CALL( SCIPlpFreeNorms(lp, blkmem, &(node->data.probingnode->lpinorms)) );
+   }
+
+   node->data.probingnode->lpistate = lpistate;
+   node->data.probingnode->lpinorms = lpinorms;
+   node->data.probingnode->lpwasprimfeas = primalfeas;
+   node->data.probingnode->lpwasdualfeas = dualfeas;
+
+   tree->probingloadlpistate = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** loads the LP state for the current probing node */
 SCIP_RETCODE SCIPtreeLoadProbingLPState(
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -6403,6 +6467,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
          if( node->data.probingnode->lpistate != NULL )
          {
             lpistate = node->data.probingnode->lpistate;
+            lpinorms = node->data.probingnode->lpinorms;
             lpwasprimfeas = node->data.probingnode->lpwasprimfeas;
             lpwasdualfeas = node->data.probingnode->lpwasdualfeas;
             break;
