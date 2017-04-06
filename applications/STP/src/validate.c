@@ -105,13 +105,11 @@ static void trail(
    int           i,
    const double* xval,
    int           tail,
-   STP_Bool*         connected,
+   int*          connected,
    int           hop,
    int           max_hops)
 {
    int k;
-
-   assert(connected[i] >= 0);
 
    if( connected[i] < 2 )
    {
@@ -210,7 +208,7 @@ SCIP_RETCODE SCIPvalidateStpSol(
    SCIP_Bool*    feasible
 		     )
 {
-   STP_Bool* connected;
+   int* connected;
    int   ret       = TRUE;
    int   i;
    int   layer;

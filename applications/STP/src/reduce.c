@@ -945,6 +945,7 @@ SCIP_RETCODE redLoopMw(
 
    SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
 
+   // todo delete
 #if 0
    if( advanced )
    {

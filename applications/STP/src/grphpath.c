@@ -1040,7 +1040,120 @@ void graph_path_st_pcmw(
    int*  heap;
    int*  state;
 
-   assert(randnumgen != NULL);
+   assert(pathdist   != NULL);
+   assert(pathedge   != NULL);
+   assert(g      != NULL);
+   assert(start  >= 0);
+   assert(start  <  g->knots);
+   assert(cost   != NULL);
+   assert(connected != NULL);
+
+   maxprize = 0.0;
+   count = 0;
+   nnodes = g->knots;
+   heap = g->path_heap;
+   state = g->path_state;
+
+   /* initialize */
+   for( k = nnodes - 1; k >= 0; --k )
+   {
+      g->mark[k] = ((g->grad[k] > 0) && !Is_term(g->term[k]));
+      state[k]     = UNKNOWN;
+      pathdist[k] = FARAWAY;
+      pathedge[k] = -1;
+      connected[k] = FALSE;
+
+      if( Is_pterm(g->term[k]) && SCIPisGT(scip, g->prize[k], maxprize) && k != start )
+      {
+         maxprize = g->prize[k];
+      }
+   }
+
+   /* add start vertex to heap */
+   k            = start;
+   pathdist[k] = 0.0;
+   connected[k] = TRUE;
+
+   if( nnodes > 1 )
+   {
+      int node;
+      int nterms = 0;
+
+      count       = 1;
+      heap[count] = k;
+      state[k]    = count;
+
+      /* repeat until heap is empty */
+      while( count > 0 )
+      {
+         /* get closest node */
+         k = nearestX(heap, state, &count, pathdist);
+         state[k] = UNKNOWN;
+
+         /* if k is positive vertex and close enough, connect its path to current subtree */
+         if( !connected[k] && Is_pterm(g->term[k]) && SCIPisGE(scip, g->prize[k], pathdist[k]) )
+         {
+            connected[k] = TRUE;
+            pathdist[k] = 0.0;
+            node = k;
+
+            if( k != start )
+            {
+               assert(pathedge[k] != - 1);
+
+               while( !connected[node = g->tail[pathedge[node]]] )
+               {
+                  assert(pathedge[node] != - 1);
+                  connected[node] = TRUE;
+                  resetX(scip, pathdist, heap, state, &count, node);
+                  assert(state[node]);
+               }
+            }
+            /* have all terminals been reached? */
+            if( ++nterms == g->terms - 1 )
+               break;
+         }
+         else if( SCIPisGT(scip, pathdist[k], maxprize) )
+         {
+            break;
+         }
+
+         /* update adjacent vertices */
+         for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         {
+            m = g->head[e];
+
+            assert(state[m]);
+            /* is m not connected, allowed and closer (as close)? */
+
+               if( !connected[m] && g->mark[m] && SCIPisGT(scip, pathdist[m], (pathdist[k] + cost[e])) )
+                  correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
+         }
+      }
+   }
+}
+
+
+void graph_path_st_pcmw_extend(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      cost,               /**< edge costs */
+   SCIP_Real*            pathdist,           /**< distance array (on vertices) */
+   int*                  pathedge,           /**< predecessor edge array (on vertices) */
+   int                   start,              /**< start vertex */
+   const STP_Bool*       initialvert,        /**< mark vertices to initially be part of the solution, or NULL */
+   STP_Bool*             connected           /**< array to mark whether a vertex is part of computed Steiner tree */
+   )
+{
+   SCIP_Real maxprize;
+   int   k;
+   int   m;
+   int   e;
+   int   count;
+   int   nnodes;
+   int*  heap;
+   int*  state;
+
    assert(pathdist   != NULL);
    assert(pathedge   != NULL);
    assert(g      != NULL);
