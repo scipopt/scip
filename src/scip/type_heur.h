@@ -50,6 +50,8 @@ typedef unsigned int SCIP_DIVETYPE;
 typedef struct SCIP_Heur SCIP_HEUR;               /**< primal heuristic */
 typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal heuristic data */
 typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all diving heuristics */
+typedef struct VariableGraph VARIABLEGRAPH;       /**< variable graph data structure to determine breadth-first
+                                                    *  distances between variables */
 
 /** copy method for heuristic plugins (called when SCIP copies plugins)
  *

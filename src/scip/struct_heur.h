@@ -106,6 +106,20 @@ struct SCIP_Heur
    char                  dispchar;           /**< display character of primal heuristic */
 };
 
+/** variable graph data structure to determine breadth-first distances between variables
+ *
+ *  the variable graph internally stores a mapping from the variables to the constraints in which they appear.
+ *
+ *  @see PublicVariableGraphMethods for available methods
+ */
+struct VariableGraph
+{
+   SCIP_CONS***          varconss;           /**< constraints of each variable */
+   SCIP_HASHTABLE*       visitedconss;       /**< hash table that keeps a record of visited constraints during breadth-first search */
+   int*                  nvarconss;          /**< number of constraints for each variable */
+   int*                  varconssize;        /**< size array for every varconss entry */
+};
+
 #ifdef __cplusplus
 }
 #endif
