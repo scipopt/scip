@@ -70,6 +70,37 @@ typedef struct IntSet
    int                   memsize;            /**< size of allocated memory */
 } INTSET;
 
+
+/* EXAMPLE: the struct and the getSignature callback for rows of the matrix could look like this */
+typedef struct MatrixRow
+{
+   int                   nnonz;
+   int*                  rowinds;
+   SCIP_Real*            rowvals;
+   int                   rowidx;
+} MATRIXROW;
+
+/** signature function */
+static
+SCIP_DECL_GETSIGNATURE(matrixrowGetSignature)
+{
+   MATRIXROW* row;
+   int k;
+   uint64_t signature = 0;
+
+   row = (MATRIXROW*) a;
+
+   /* update the signature with each column index in the row */
+   for( k = 0; k < row->nnonz; ++k )
+   {
+      UPDATE_SIGNATURE(signature, row->rowinds[k]);
+   }
+
+   return signature;
+}
+
+/* TODO the setcmp callback for the matrixrow is not yet implemented */
+
 /*
  * Local methods
  */
