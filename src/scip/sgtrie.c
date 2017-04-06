@@ -547,7 +547,7 @@ SCIP_RETCODE SCIPsgtrieFindSubsetsPlusOne(
       uint64_t subsetmask = current.node->mask & ( current.node->prefix & ~signature );
       current.distance += populationCount(subsetmask);
 
-      if( current.distance <= 1 )
+      if( current.distance <= NHASHES )
       {
          /* if the node is a leaf node all elements are candidates for being a subset plus one extra element
           */
@@ -691,7 +691,7 @@ SCIP_RETCODE SCIPsgtrieFindSupersetsPlusOne(
       uint64_t subsetmask = current.node->mask & ( signature & ~current.node->prefix );
       current.distance += populationCount(subsetmask);
 
-      if( current.distance <= 1 )
+      if( current.distance <= NHASHES )
       {
          /* if the node is a leaf node all elements are candidates for being a subset plus one extra element
           */

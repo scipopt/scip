@@ -30,10 +30,28 @@
 extern "C" {
 #endif
 
+#define NHASHES 2
+
+
+#if NHASHES == 2
+
+/* macro to update a signature with a given element identifier */
+#define UPDATE_SIGNATURE(signature, elemid) do { \
+   (signature) |= (UINT64_C(0x8000000000000000)>>((UINT32_C(0x9e3779b9) * ((uint32_t)(elemid)))>>26)); \
+   (signature) |= (UINT64_C(0x8000000000000000)>>((UINT32_C(0x3d3ca41b) * ((uint32_t)(elemid)))>>26)); \
+} while(0)
+
+#elif NHASHES == 1
+
 /* macro to update a signature with a given element identifier */
 #define UPDATE_SIGNATURE(signature, elemid) do { \
    (signature) |= (UINT64_C(0x8000000000000000)>>((UINT32_C(0x9e3779b9) * ((uint32_t)(elemid)))>>26)); } while(0)
 
+#else
+
+#error Only 1 or 2 supported for NHASHES
+
+#endif
 /** creates the signature trie datastructure */
 extern
 SCIP_RETCODE SCIPsgtrieCreate(
