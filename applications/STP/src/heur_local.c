@@ -1801,6 +1801,151 @@ SCIP_RETCODE extendSteinerTreePcMw(
    return SCIP_OKAY;
 }
 
+
+
+
+#if 0
+/** Greedy Extension local heuristic for (R)PC and MW */
+SCIP_RETCODE greedyExtensionPcMw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real*      edgecost,           /**< edge cost array*/
+   PATH*                 path,               /**< shortest data structure array */
+   int*                  stedge,             /**< initialized array to indicate whether an edge is part of the Steiner tree */
+   STP_Bool*             stvertex,           /**< uninitialized array to indicate whether an edge is part of the Steiner tree */
+   int*                  adds                /**< pointer to store number of added vertices */
+   )
+{
+   int e;
+   int i;
+   int k;
+   int nedges;
+   int nnodes;
+   int newnverts;
+
+   assert(adds != NULL);
+   assert(scip != NULL);
+   assert(path != NULL);
+   assert(graph != NULL);
+   assert(stedge != NULL);
+   assert(edgecost != NULL);
+   assert(stvertex != NULL);
+
+   *adds = -1;
+   nnodes = graph->knots;
+   nedges = graph->edges;
+   newnverts = 1;
+
+   /* init solution vertex array with FALSE */
+   BMSclearMemoryArray(stvertex, nnodes);
+
+// todo delete
+   for( i = 0; i < nnodes; i++ )
+      assert(stvertex[i] == FALSE);
+
+
+   stvertex[graph->source[0]] = TRUE;
+
+   for( e = 0; e < nedges; e++ )
+      if( stedge[e] == CONNECT )
+         stvertex[graph->head[e]] = TRUE;
+
+   /* main loop */
+   while( newnverts > 0)
+   {
+      if( graph->stp_type != STP_MWCSP )
+      {
+          for( i = 0; i < nnodes; i++ )
+          {
+             if( Is_pterm(graph->term[i]) && !stvertex[i] )
+             {
+                for( e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
+                {
+                  if( stvertex[graph->head[e]]
+                        && !Is_term(graph->term[graph->head[e]])
+                        && SCIPisLT(scip, graph->cost[e], graph->prize[i]) )
+                  {
+                     stvertex[i] = TRUE;
+                     newnverts++;
+                     SCIPdebugMessage("add terminal  %d  %f < %f \n\n", i,
+                           graph->cost[e], graph->prize[i]);
+                     break;
+                  }
+               }
+            }
+         }
+      }
+      else
+      {
+          for( i = 0; i < nnodes; i++ )
+          {
+             if( Is_pterm(graph->term[i]) && !stvertex[i] )
+             {
+                for( e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
+                {
+                  if( stvertex[graph->head[e]]
+                        && !Is_term(graph->term[graph->head[e]]) )
+                  {
+                     stvertex[i] = TRUE;
+                     newnverts++;
+                     SCIPdebugMessage("add terminal %d  %f head %d:  \n\n", i,
+                           graph->prize[i], graph->head[e]);
+                     break;
+                  }
+               }
+            }
+         }
+      }
+
+      voronoiSteinerTreeExt(scip, graph, costrev, vbase, stvertex, vnoi);
+
+      for( i = 0; i < nnodes; i++ )
+      {
+         if( stvertex[i] && vbase[i] != UNKNOWN && vbase[i] != i && !Is_term(graph->term[i]) )
+         {
+            assert(Is_pterm(graph->term[vbase[i]]));
+
+            if( !stvertex[vbase[i]] && SCIPisLT(scip, vnoi[i].dist, 0.0) )
+            {
+               k = i;
+
+               while( k != vbase[i] )
+               {
+                  e = vnoi[k].edge;
+                  k = graph->tail[e];
+                  if( !stvertex[k] )
+                  {
+                     stvertex[k] = TRUE;
+                     newnverts++;
+
+                     SCIPdebugMessage("add vertex %d (vbase: %d, cost: %f \n", k, i, graph->prize[k]);
+                  }
+               }
+            }
+         }
+      }
+
+      *adds += newnverts;
+      newnverts = 0;
+   }
+
+   /* have vertices been added? */
+   if( *adds > 0  )
+   {
+      SCIPdebugMessage("\n vertices added! \n");
+      for( e = 0; e < nedges; e++ )
+         stedge[e] = UNKNOWN;
+      SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, graph->cost, stedge, stvertex) );
+   }
+
+   return SCIP_OKAY;
+}
+#endif
+
+
+
+
+
 /*
  * Callback methods of primal heuristic
  */

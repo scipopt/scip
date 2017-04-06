@@ -902,11 +902,10 @@ void graph_path_st(
 void graph_path_st_rpc(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
-   SCIP_Real*            cost,               /**< edge costs */
+   const SCIP_Real*      cost,               /**< edge costs */
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
    int*                  pathedge,           /**< predecessor edge array (on vertices) */
    int                   start,              /**< start vertex */
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    STP_Bool*             connected           /**< array to mark whether a vertex is part of computed Steiner tree */
    )
 {
@@ -920,7 +919,6 @@ void graph_path_st_rpc(
    int*  heap;
    int*  state;
 
-   assert(randnumgen != NULL);
    assert(pathdist   != NULL);
    assert(pathedge   != NULL);
    assert(g      != NULL);
@@ -1025,11 +1023,11 @@ void graph_path_st_rpc(
 void graph_path_st_pcmw(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
-   SCIP_Real*            cost,               /**< edge costs */
+   const SCIP_Real*      cost,               /**< edge costs */
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
    int*                  pathedge,           /**< predecessor edge array (on vertices) */
    int                   start,              /**< start vertex */
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   const STP_Bool*       initialvert,        /**< mark vertices to initially be part of the solution, or NULL */
    STP_Bool*             connected           /**< array to mark whether a vertex is part of computed Steiner tree */
    )
 {
@@ -1144,17 +1142,16 @@ void graph_path_st_pcmw(
 void graph_path_st_rmw(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
-   SCIP_Real*            cost,               /**< edge costs */
+   const SCIP_Real*      cost,               /**< edge costs */
    SCIP_Real*            pathdist,           /**< distance array (on vertices) */
    int*                  pathedge,           /**< predecessor edge array (on vertices) */
    int                   start,              /**< start vertex */
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   const STP_Bool*       initialvert,        /**< mark vertices to initially be part of the solution, or NULL */
    STP_Bool*             connected           /**< array to mark whether a vertex is part of computed Steiner tree */
    )
 {
    SCIP_Real maxprize;
    int   k;
-   int   m;
    int   e;
    int   root;
    int   count;
@@ -1163,7 +1160,6 @@ void graph_path_st_rmw(
    int*  heap;
    int*  state;
 
-   assert(randnumgen != NULL);
    assert(pathdist   != NULL);
    assert(pathedge   != NULL);
    assert(g      != NULL);
@@ -1180,7 +1176,7 @@ void graph_path_st_rmw(
    nnodes = g->knots;
    maxprize = 0.0;
 
-   for( k = nnodes - 1; k >= 0; --k )
+   for( k = 0; k < nnodes; k++ )
       g->mark[k] = (g->grad[k] > 0);
 
    for( e = g->outbeg[root]; e != EAT_LAST; e = g->oeat[e] )
@@ -1193,8 +1189,7 @@ void graph_path_st_rmw(
       }
    }
 
-   /* initialize */
-   for( k = nnodes - 1; k >= 0; --k )
+   for( k = 0; k < nnodes; k++ )
    {
       state[k]     = UNKNOWN;
       pathdist[k] = FARAWAY;
@@ -1208,7 +1203,6 @@ void graph_path_st_rmw(
          if( SCIPisGT(scip, g->prize[k], maxprize) && k != start )
             maxprize = g->prize[k];
    }
-
 
    /* add start vertex to heap */
    k            = start;
@@ -1267,7 +1261,7 @@ void graph_path_st_rmw(
          /* update adjacent vertices */
          for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
          {
-            m = g->head[e];
+            int m = g->head[e];
 
             assert(state[m]);
 

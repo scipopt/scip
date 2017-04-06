@@ -134,9 +134,9 @@ typedef struct
 
 typedef struct presolve_info
 {
-   double fixed;
-   double upper;
-   double lower;
+   SCIP_Real fixed;
+   SCIP_Real upper;
+   SCIP_Real lower;
    int    time;
 } PRESOL;
 
@@ -144,7 +144,7 @@ typedef struct presolve_info
  */
 typedef struct shortest_path
 {
-   double                dist;               /* Distance to the end of the path             */
+   SCIP_Real             dist;               /* Distance to the end of the path             */
    signed int            edge;               /* Incoming edge to go along                   */
 } PATH;
 
@@ -231,9 +231,9 @@ extern void   graph_path_exec(SCIP*, const GRAPH*, const int, int, const SCIP_Re
 extern void   graph_path_execX(SCIP*, const GRAPH*, int, const SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_invroot(SCIP*, const GRAPH*, int, const SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_st(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, int*, int, SCIP_RANDNUMGEN*, STP_Bool*);
-extern void   graph_path_st_rmw(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, int*, int, SCIP_RANDNUMGEN*, STP_Bool*);
-extern void   graph_path_st_pcmw(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, int*, int, SCIP_RANDNUMGEN*, STP_Bool*);
-extern void   graph_path_st_rpc(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, int*, int, SCIP_RANDNUMGEN*, STP_Bool*);
+extern void   graph_path_st_rmw(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, const STP_Bool*, STP_Bool*);
+extern void   graph_path_st_pcmw(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, const STP_Bool*, STP_Bool*);
+extern void   graph_path_st_rpc(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
 extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, STP_Bool*, int*, PATH*);
 extern void   get2next(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*, int*);
 extern void   get3next(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*, int*);

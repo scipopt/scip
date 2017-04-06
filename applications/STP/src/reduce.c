@@ -2139,7 +2139,7 @@ SCIP_RETCODE redLoopPc(
    int*                  edgearrint,
    int*                  nodearrint2,
    int*                  solnode,
-   STP_Bool*              nodearrchar,
+   STP_Bool*             nodearrchar,
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    SCIP_Bool             dualascent,
    SCIP_Bool             bred,
@@ -2404,7 +2404,7 @@ SCIP_RETCODE redLoopStp(
    int* RESTRICT         edgearrint,
    int* RESTRICT         nodearrint2,
    int* RESTRICT         solnode,
-   STP_Bool* RESTRICT        nodearrchar,
+   STP_Bool* RESTRICT    nodearrchar,
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    SCIP_Real             upperbound,
    SCIP_Bool             da,

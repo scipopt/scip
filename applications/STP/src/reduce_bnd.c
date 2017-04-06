@@ -1430,7 +1430,7 @@ SCIP_RETCODE da_reducePcMw(
    int*                  pathedge,           /**< shortest path incoming edge array for shortest path calculations */
    int*                  edgearrint,         /**< int edges array for internal computations or NULL */
    int*                  state,              /**< int 4 * vertices array  */
-   STP_Bool*                 nodearrchar,        /**< STP_Bool node array for internal computations */
+   STP_Bool*             nodearrchar,        /**< STP_Bool node array for internal computations */
    int*                  nelims,             /**< pointer to store number of reduced edges */
    SCIP_Bool             solbasedda,         /**< rerun Da based on best primal solution */
    SCIP_Bool             varyroot,           /**< vary root for DA if possible */

@@ -960,16 +960,15 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
    int*                  result,             /**< solution array (on edges) */
    int*                  dijkedge,           /**< predecessor edge array */
    int                   start,              /**< start vertex */
-   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    STP_Bool*             connected           /**< array marking all solution vertices*/
    )
 {
    if( g->stp_type == STP_RMWCSP )
-      graph_path_st_rmw(scip, g, cost, dijkdist, dijkedge, start, randnumgen, connected);
+      graph_path_st_rmw(scip, g, cost, dijkdist, dijkedge, start, NULL, connected);
    else if( g->stp_type == STP_RPCSPG )
-      graph_path_st_rpc(scip, g, cost, dijkdist, dijkedge, start, randnumgen, connected);
+      graph_path_st_rpc(scip, g, cost, dijkdist, dijkedge, start, connected);
    else
-      graph_path_st_pcmw(scip, g, cost, dijkdist, dijkedge, start, randnumgen, connected);
+      graph_path_st_pcmw(scip, g, cost, dijkdist, dijkedge, start, NULL, connected);
 
    SCIP_CALL(prune(scip, g, cost, costrev, result, connected));
 
@@ -2140,7 +2139,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
       {
          k = terminalperm[r];
 
-         SCIP_CALL( computeSteinerTreeDijkPcMw(scip, graph, cost, costrev, dijkdist, result, dijkedge, k, heurdata->randnumgen, connected) );
+         SCIP_CALL( computeSteinerTreeDijkPcMw(scip, graph, cost, costrev, dijkdist, result, dijkedge, k, connected) );
 
          if( SCIPisStopped(scip) )
             break;
