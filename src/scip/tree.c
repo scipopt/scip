@@ -6394,6 +6394,9 @@ SCIP_RETCODE SCIPtreeCreateProbingNode(
  *
  *  @note state and norms are stored at the node and later released by SCIP; therefore, the pointers are set
  *        to NULL by the method
+ *
+ *  @note the pointers to state and norms must not be NULL; however, they may point to a NULL pointer if the
+ *        respective information should not be set
  */
 SCIP_RETCODE SCIPtreeSetProbingLPState(
    SCIP_TREE*            tree,               /**< branch and bound tree */
