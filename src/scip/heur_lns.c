@@ -37,20 +37,28 @@
 
 #define NNEIGHBORHOODS 8
 #define DEFAULT_NODESQUOT 0.05
-#define DEFAULT_NODESOFFSET 500
+#define DEFAULT_NODESOFFSET 500LL
 #define DEFAULT_NSOLSLIM 3
 #define DEFAULT_MINNODES 10LL
 #define DEFAULT_MINIMPROVE 0.02
-#define DEFAULT_MAXNODES 5000
+#define DEFAULT_MAXNODES 5000LL
 #define LPLIMFAC 2.0
 #define DEFAULT_INITSEED 113
 #define MUTATIONSEED 121
+#define CROSSOVERSEED 321
 #define DEFAULT_BESTSOLWEIGHT 3
 #define DEFAULT_BANDITALGO 'e' /**< the default bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
 #define DEFAULT_GAMMA 0.0      /**< default weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3 */
 #define DEFAULT_BETA 0.0       /**< default gain offset between 0 and 1 at every observation for exp3 */
 #define DEFAULT_USEREDCOST TRUE /**< should reduced cost scores be used for variable priorization? */
 #define DEFAULT_USEDISTANCES FALSE  /**< should distances from fixed variables be used for variable priorization */
+#define DEFAULT_DOMOREFIXINGS FALSE /**< should the LNS heuristic do more fixings by itself based on variable prioritization
+                                      *  until the target fixing is reached? */
+#define DEFAULT_ADJUSTFIXINGRATE FALSE   /**< should the heuristic adjust the target fixing rate based on the success? */
+#define DEFAULT_USESUBSCIPHEURS  FALSE   /**< should the heuristic activate other sub-SCIP heuristics during its search?  */
+#define DEFAULT_GAINMEASURE      'w'/**< measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean,
+                                      *  'e'ffort based? */
+#define GAINMEASURES "bwe"
 
 #define FIXINGRATE_DECAY 0.75  /**< geometric decay for fixing rate adjustments */
 #define FIXINGRATE_STARTINC 0.2 /**< initial increment value for fixing rate */
@@ -70,6 +78,7 @@
 #define DEFAULT_MAXFIXINGRATE_CROSSOVER 0.8
 #define DEFAULT_MINFIXINGRATE_ZEROOBJECTIVE 0.5
 #define DEFAULT_MAXFIXINGRATE_ZEROOBJECTIVE 0.8
+
 
 
 #define DEFAULT_NSOLS_CROSSOVER 2 /**< parameter for the number of solutions that crossover should combine */
@@ -163,8 +172,8 @@ struct NH_Stats
    SCIP_Real             totalgapclosed;
    int                   nruns;
    int                   nrunsbestsol;
-   int                   nsolsfound;
-   int                   nbestsolsfound;
+   SCIP_Longint          nsolsfound;
+   SCIP_Longint          nbestsolsfound;
    int                   presolrounds;
    int                   totalnbinfixings;
    int                   totalnintfixings;
@@ -255,7 +264,6 @@ struct SCIP_HeurData
    char                  banditalgo;         /**< the bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
    EPSGREEDY*            epsgreedynh;        /**< epsilon greedy selector for a neighborhood */
    EXPTHREE*             exp3;               /**< exp3 bandit algorithm */
-   EPSGREEDY*            epsgreedyfilter;    /**< epsilon greedy selector for a filter strategy */
    SCIP_Longint          nodesoffset;        /**< offset added to the nodes budget */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes in a single sub-SCIP */
    SCIP_Longint          minnodes;           /**< minimum number of nodes required to start a sub-SCIP */
@@ -267,8 +275,14 @@ struct SCIP_HeurData
    SCIP_Real             beta;               /**< gain offset between 0 and 1 at every observation for exp3 */
    int                   nneighborhoods;     /**< number of neighborhoods */
    int                   nsolslim;           /**< limit on the number of improving solutions in a sub-SCIP call */
-   unsigned int          useredcost;         /**< should reduced cost scores be used for variable prioritization? */
-   unsigned int          usedistances;       /**< should distances from fixed variables be used for variable prioritization */
+   SCIP_Bool             useredcost;         /**< should reduced cost scores be used for variable prioritization? */
+   SCIP_Bool             usedistances;       /**< should distances from fixed variables be used for variable prioritization */
+   SCIP_Bool             domorefixings;      /**< should the LNS heuristic do more fixings by itself based on variable prioritization
+                                               *  until the target fixing is reached? */
+   SCIP_Bool             adjustfixingrate;   /**< should the heuristic adjust the target fixing rate based on the success? */
+   SCIP_Bool             usesubscipheurs;    /**< should the heuristic activate other sub-SCIP heuristics during its search?  */
+   char                  gainmeasure;        /**< measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean,
+                                               *  'e'ffort based? */
 };
 
 /** event handler data */
@@ -315,7 +329,7 @@ SCIP_RETCODE resetFixingRate(
 {
    assert(scip != NULL);
    assert(fixingrate != NULL);
-   fixingrate->increment = 0.2;
+   fixingrate->increment = FIXINGRATE_STARTINC;
 
    /* use the middle between the minimum and the maximum fixing rate */
    fixingrate->targetfixingrate = 0.5 * (fixingrate->minfixingrate + fixingrate->maxfixingrate);
@@ -362,9 +376,9 @@ void decreaseFixingRate(
    updateFixingRateIncrement(fx);
 }
 
-/** todo update fixing rate */
+/** update fixing rate based on the results of the current run */
 static
-SCIP_RETCODE updateFixingRate(
+void updateFixingRate(
    SCIP*                scip,               /**< SCIP data structure */
    NH*                  neighborhood,       /**< neighborhood */
    SCIP_STATUS          subscipstatus,      /**< status of the sub-SCIP run */
@@ -388,13 +402,11 @@ SCIP_RETCODE updateFixingRate(
             increaseFixingRate(fx);
          break;
       case SCIP_STATUS_SOLLIMIT:
-         increaseFixingRate(fx);
+         decreaseFixingRate(fx);
          break;
       default:
          break;
    }
-
-   return SCIP_OKAY;
 }
 
 /** Reset neighborhood statistics */
@@ -407,7 +419,7 @@ SCIP_RETCODE neighborhoodStatsReset(
    assert(scip != NULL);
    assert(stats != NULL);
 
-   stats->lpiterations = 0l;
+   stats->lpiterations = 0L;
    stats->nbestsolsfound = 0;
    stats->nruns = 0;
    stats->nrunsbestsol = 0;
@@ -418,7 +430,7 @@ SCIP_RETCODE neighborhoodStatsReset(
    stats->totalncontfixings = 0;
    stats->totalnimplintfixings = 0;
    stats->totalnfixings = 0;
-   stats->usednodes = 0l;
+   stats->usednodes = 0L;
 
    SCIP_CALL( SCIPresetClock(scip, stats->setupclock) );
    SCIP_CALL( SCIPresetClock(scip, stats->submipclock) );
@@ -564,7 +576,7 @@ SCIP_RETCODE epsGreedyCreate(
    SCIP_CALL( SCIPallocBlockMemory(scip, epsgreedy) );
 
    /* create random number generator for the selector */
-   SCIP_CALL( SCIPrandomCreate(&(*epsgreedy)->rng, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, initseed)) );
+   SCIP_CALL( SCIPrandomCreate(&(*epsgreedy)->rng, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, (int)initseed)) );
 
    (*epsgreedy)->epsnchoices = epsnchoices;
    (*epsgreedy)->epsreward = epsreward;
@@ -609,7 +621,7 @@ SCIP_RETCODE epsGreedySelect(
    )
 {
    int nchoices;
-   SCIP_Real rand;
+   SCIP_Real randnr;
 
    assert(i != NULL);
    assert(scip != NULL);
@@ -623,10 +635,10 @@ SCIP_RETCODE epsGreedySelect(
       return SCIP_OKAY;
    }
    /** roll the dice to check if the best element should be picked, or an element at random */
-   rand = SCIPrandomGetReal(epsgreedy->rng, 0.0, 1.0);
+   randnr = SCIPrandomGetReal(epsgreedy->rng, 0.0, 1.0);
 
    /* todo make epsilon decrease over time */
-   if( rand <= epsgreedy->eps )
+   if( randnr <= epsgreedy->eps )
    {
       /** pick the element with the largest reward */
       int j;
@@ -664,14 +676,14 @@ static
 DECL_EPSREWARD(epsRewardLns)
 {
    SCIP_Real numerator;
-   SCIP_Real denominator;
+   int denominator;
    SCIP_HEURDATA* heurdata = (SCIP_HEURDATA*)(epsgreedy->userptr);
    NH* neighborhood = heurdata->neighborhoods[i];
    assert(i < heurdata->nneighborhoods);
 
    numerator = neighborhood->stats.nrunsbestsol;
-   denominator = MAX(1.0, neighborhood->stats.nruns * DEFAULT_BESTSOLWEIGHT);
-   return numerator / denominator;
+   denominator = MAX(1, neighborhood->stats.nruns * DEFAULT_BESTSOLWEIGHT);
+   return numerator / (SCIP_Real)denominator;
 }
 
 
@@ -703,7 +715,7 @@ SCIP_RETCODE expThreeReset(
       SCIPrandomFree(&exp3->rng);
    }
 
-   SCIP_CALL( SCIPrandomCreate(&exp3->rng, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, randseed)) );
+   SCIP_CALL( SCIPrandomCreate(&exp3->rng, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, (int)randseed)) );
 
    return SCIP_OKAY;
 }
@@ -715,7 +727,7 @@ SCIP_RETCODE expThreeCreate(
    EXPTHREE**            exp3,               /**< pointer to store the exp3 algorithm */
    unsigned int          initseed,           /**< initial seed for the exp3 algorithm */
    int                   nactions,           /**< the number of actions */
-   SCIP_Real             gamma,              /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution */
+   SCIP_Real             gammaparam,         /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution */
    SCIP_Real             beta                /**< gain offset between 0 and 1 at every observation */
    )
 {
@@ -727,7 +739,7 @@ SCIP_RETCODE expThreeCreate(
 
    (*exp3)->nactions = nactions;
    (*exp3)->rng = NULL;
-   (*exp3)->gamma = gamma;
+   (*exp3)->gamma = gammaparam;
    (*exp3)->beta = beta;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*exp3)->weights, nactions) );
@@ -765,7 +777,7 @@ SCIP_RETCODE expThreeSelectAction(
    int*                  action              /**< the index of the selected action, between 0 and nactions - 1 */
    )
 {
-   SCIP_Real rand;
+   SCIP_Real randnr;
    SCIP_Real psum;
    SCIP_Real gammaoverk;
    SCIP_Real oneminusgamma;
@@ -778,7 +790,7 @@ SCIP_RETCODE expThreeSelectAction(
    assert(action != NULL);
 
    /* draw a random number between 0 and 1 */
-   rand = SCIPrandomGetReal(exp3->rng, 0, 1);
+   randnr = SCIPrandomGetReal(exp3->rng, 0.0, 1.0);
 
    /* initialize some local variables to speed up probability computations */
    oneminusgamma = 1 - exp3->gamma;
@@ -801,7 +813,7 @@ SCIP_RETCODE expThreeSelectAction(
       psum += prob;
 
       /* break and select element if target probability is reached */
-      if( rand <= psum )
+      if( randnr <= psum )
          break;
    }
 
@@ -983,8 +995,9 @@ void initRunStats(
 {
    stats->nbestsolsfound = -SCIPgetNBestSolsFound(scip);
    stats->nsolsfound = -SCIPgetNSolsFound(scip);
-   stats->lpiterations = 0l;
-   stats->usednodes = 0l;
+   stats->lpiterations = 0L;
+   stats->usednodes = 0L;
+   stats->totalnfixings = 0;
 }
 
 /** update run stats after the sub SCIP was solved */
@@ -995,10 +1008,14 @@ void updateRunStats(
    SCIP*                 subscip             /**< sub-SCIP instance, or NULL */
    )
 {
+   /* treat an untransformed subscip as if none was created */
+   if( subscip != NULL && !SCIPisTransformed(subscip) )
+      subscip = NULL;
+
    stats->nbestsolsfound += SCIPgetNBestSolsFound(scip);
    stats->nsolsfound += SCIPgetNSolsFound(scip);
-   stats->lpiterations = subscip != NULL ? SCIPgetNLPIterations(subscip) : 0l;
-   stats->usednodes = subscip != NULL ? SCIPgetNNodes(subscip) : 0l;
+   stats->lpiterations = subscip != NULL ? SCIPgetNLPIterations(subscip) : 0L;
+   stats->usednodes = subscip != NULL ? SCIPgetNNodes(subscip) : 0L;
 }
 
 /** update the statistics of the neighborhood based on the sub-SCIP run */
@@ -1212,11 +1229,16 @@ SCIP_RETCODE lnsFixMoreVariables(
    assert(success != NULL);
    assert(heurdata != NULL);
 
+   *success = FALSE;
+
+   /* if the user parameter forbids more fixings, return immediately */
+   if( ! heurdata->domorefixings )
+      return SCIP_OKAY;
+
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
 
    nbinintvars = nbinvars + nintvars;
 
-   *success = TRUE;
    if( ntargetfixings >= nbinintvars )
       return SCIP_OKAY;
 
@@ -1299,6 +1321,8 @@ SCIP_RETCODE lnsFixMoreVariables(
       ++(*nfixings);
    }
 
+   *success = TRUE;
+
    /* loop over perm array and pick the first variables as additional fixings */
    SCIPfreeBufferArray(scip, &solvals);
    SCIPfreeBufferArray(scip, &redcostscores);
@@ -1342,8 +1366,8 @@ SCIP_RETCODE neighborhoodFixVariables(
       *success = TRUE;
    }
 
-   /** todo if too few fixings, use a strategy to select more variable fixings: randomized, LP graph, ReducedCost/Ps-Cost based, mix */
-   ntargetfixings = neighborhood->fixingrate.targetfixingrate * (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip));
+   /** if too few fixings, use a strategy to select more variable fixings: randomized, LP graph, ReducedCost/Ps-Cost based, mix */
+   ntargetfixings = (int)(neighborhood->fixingrate.targetfixingrate * (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)));
 
    if( *success && (*nfixings < ntargetfixings) )
    {
@@ -1507,13 +1531,44 @@ SCIP_RETCODE updateBanditAlgorithms(
    assert(neighborhoodidx >= 0);
    assert(neighborhoodidx < heurdata->nneighborhoods);
 
+   gain = 0.0;
    /* compute the gain for this run based on the runstats */
-   if( runstats->nbestsolsfound > 0 )
-      gain = 1.0;
-   else if( runstats->nsolsfound > 0 )
-      gain = 1.0 / DEFAULT_BESTSOLWEIGHT;
-   else
-      gain = 0.0;
+   switch( heurdata->gainmeasure )
+   {
+      case 'b':
+         if( runstats->nbestsolsfound > 0 )
+            gain = 1.0;
+         break;
+      case 'w':
+         if( runstats->nbestsolsfound > 0 )
+            gain = 1.0;
+         else if( runstats->nsolsfound > 0 )
+            gain = 1.0 / DEFAULT_BESTSOLWEIGHT;
+         break;
+      case 'e':
+
+         if( runstats->nbestsolsfound > 0 )
+         {
+            SCIP_Real effort;
+            assert(runstats->totalnfixings >= 0);
+            assert(runstats->usednodes >= 0);
+
+            /* just add one node to avoid division by zero */
+            effort = (SCIP_Real)runstats->usednodes + 1.0;
+
+            /* assume that every fixed variable linearly reduces the subproblem complexity */
+            effort = (1.0 - (runstats->totalnfixings / (SCIP_Real)SCIPgetNVars(scip))) * effort;
+
+            /* gain can be larger than 1.0 if a best solution was found within 0 nodes  */
+            gain = 1.0 / effort;
+            gain = MIN(1.0, gain);
+         }
+         break;
+      default:
+         SCIPerrorMessage("Error, passed unknown character '%c' (only know \"%s\") for measuring gains\n", heurdata->gainmeasure, GAINMEASURES);
+         SCIP_CALL( SCIP_INVALIDDATA );
+         break;
+   }
 
    switch (heurdata->banditalgo) {
       case 'g':
@@ -1561,7 +1616,10 @@ SCIP_RETCODE setupSubScip(
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->nsolslim) );
 
    /* forbid recursive call of heuristics and separators solving subMIPs */
-   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
+   if( ! heurdata->usesubscipheurs )
+   {
+      SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
+   }
 
    /* disable cutting plane separation */
    SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
@@ -1742,6 +1800,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       *result = SCIP_DIDNOTFIND;
 
       neighborhood->stats.totalnfixings += nfixings;
+      runstats.totalnfixings = nfixings;
 
       SCIP_CALL( SCIPcreate(&subscip) );
       SCIP_CALL( SCIPhashmapCreate(&varmapf, SCIPblkmem(scip), nvars) );
@@ -1761,9 +1820,14 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       /** let the neighborhood add additional constraints, or restrict domains */
       SCIP_CALL( neighborhoodChangeSubscip(scip, subscip, neighborhood, subvars, &ndomchgs, &nchgobjs, &naddedconss, &success) );
 
-      /* set up sub-SCIP parameters */
+      if( ! success )
+      {
+         SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.setupclock) );
+         updateRunStats(scip, &runstats, subscip);
+         break;
+      }
 
-      /* todo do not add an objective cutoff if nchgobjs > 0 */
+      /* set up sub-SCIP parameters */
       SCIP_CALL( setupSubScip(scip, subscip, subvars, &solvelimits, heur, nchgobjs > 0) );
 
       /* copy the necessary data into the event data to create new solutions */
@@ -1800,9 +1864,13 @@ SCIP_DECL_HEUREXEC(heurExecLns)
    }
    while( FALSE );
 
-   /** todo determine the success of this neighborhood, and the target fixing rate for the next time */
+   /** determine the success of this neighborhood, and update the target fixing rate for the next time */
    updateNeighborhoodStats(scip, &runstats, neighborhood);
-   updateFixingRate(scip, neighborhood, subscipstatus, &runstats);
+
+   if( heurdata->adjustfixingrate )
+      updateFixingRate(scip, neighborhood, subscipstatus, &runstats);
+
+   /* update the bandit algorithms by the measured gain */
    SCIP_CALL( updateBanditAlgorithms(scip, heurdata, &runstats, neighborhoodidx) );
 
    SCIPfreeBufferArray(scip, &subvars);
@@ -1818,7 +1886,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
  */
 static
 DECL_VARFIXINGS(varFixingsRens)
-{
+{  /*lint --e{715}*/
    int nbinvars;
    int nintvars;
    SCIP_VAR** vars;
@@ -1863,7 +1931,7 @@ DECL_VARFIXINGS(varFixingsRens)
 
 static
 DECL_CHANGESUBSCIP(changeSubscipRens)
-{
+{  /*lint --e{715}*/
    SCIP_VAR** vars;
    int nintvars;
    int nbinvars;
@@ -1969,6 +2037,7 @@ SCIP_RETCODE fixMatchingSolutionValues(
 static
 DECL_VARFIXINGS(varFixingsRins)
 {
+   /*lint --e{715}*/
    int nbinvars;
    int nintvars;
    SCIP_VAR** vars;
@@ -2010,7 +2079,7 @@ DECL_VARFIXINGS(varFixingsRins)
 
 static
 DECL_NHINIT(nhInitCrossover)
-{
+{  /*lint --e{715}*/
    DATA_CROSSOVER* data;
 
    data = neighborhood->data.crossover;
@@ -2019,14 +2088,14 @@ DECL_NHINIT(nhInitCrossover)
    if( data->rng != NULL )
       SCIPrandomFree(&data->rng);
 
-   SCIP_CALL( SCIPrandomCreate(&data->rng, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, DEFAULT_INITSEED + SCIPgetNVars(scip))));
+   SCIP_CALL( SCIPrandomCreate(&data->rng, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, CROSSOVERSEED + SCIPgetNVars(scip))));
 
    return SCIP_OKAY;
 }
 
 static
 DECL_NHEXIT(nhExitCrossover)
-{
+{  /*lint --e{715}*/
    DATA_CROSSOVER* data;
    data = neighborhood->data.crossover;
 
@@ -2040,7 +2109,7 @@ DECL_NHEXIT(nhExitCrossover)
 
 static
 DECL_NHFREE(nhFreeCrossover)
-{
+{  /*lint --e{715}*/
    assert(neighborhood->data.crossover != NULL);
    SCIPfreeBlockMemory(scip, &neighborhood->data.crossover);
 
@@ -2051,7 +2120,7 @@ DECL_NHFREE(nhFreeCrossover)
 
 static
 DECL_VARFIXINGS(varFixingsCrossover)
-{
+{  /*lint --e{715}*/
    DATA_CROSSOVER* data;
    SCIP_RANDNUMGEN* rng;
    SCIP_SOL** sols;
@@ -2120,7 +2189,7 @@ DECL_VARFIXINGS(varFixingsCrossover)
 
 static
 DECL_NHINIT(nhInitMutation)
-{
+{  /*lint --e{715}*/
    DATA_MUTATION* data;
    assert(scip != NULL);
    assert(neighborhood != NULL);
@@ -2137,7 +2206,7 @@ DECL_NHINIT(nhInitMutation)
 
 static
 DECL_NHEXIT(nhExitMutation)
-{
+{  /*lint --e{715}*/
    DATA_MUTATION* data;
    assert(scip != NULL);
    assert(neighborhood != NULL);
@@ -2153,7 +2222,7 @@ DECL_NHEXIT(nhExitMutation)
 
 static
 DECL_VARFIXINGS(varFixingsMutation)
-{
+{  /*lint --e{715}*/
    SCIP_RANDNUMGEN* rng;
 
    SCIP_VAR** vars;
@@ -2198,12 +2267,12 @@ DECL_VARFIXINGS(varFixingsMutation)
    /* partially perturb the array until the number of target fixings are reached */
    for( i = 0; i < ntargetfixings; ++i )
    {
-      int rand = SCIPrandomGetInt(rng, i, nbinintvars - 1);
-      assert(rand < nbinintvars);
+      int randint = SCIPrandomGetInt(rng, i, nbinintvars - 1);
+      assert(randint < nbinintvars);
 
-      if( rand > i )
+      if( randint > i )
       {
-         SCIPswapPointers((void**)&varscpy[i], (void**)&varscpy[rand]);
+         SCIPswapPointers((void**)&varscpy[i], (void**)&varscpy[randint]);
       }
       /* copy the selected variables and their solution values into the buffer */
       varbuf[i] = varscpy[i];
@@ -2222,8 +2291,7 @@ DECL_VARFIXINGS(varFixingsMutation)
 
 static
 DECL_CHANGESUBSCIP(changeSubscipLocalbranching)
-{
-
+{  /*lint --e{715}*/
    int nbinvars;
    int i;
    SCIP_SOL* referencesol;
@@ -2274,7 +2342,7 @@ DECL_CHANGESUBSCIP(changeSubscipLocalbranching)
 
 static
 DECL_CHANGESUBSCIP(changeSubscipProximity)
-{
+{  /*lint --e{715}*/
    SCIP_SOL* referencesol;
    SCIP_VAR** vars;
    int nbinvars;
@@ -2316,7 +2384,7 @@ DECL_CHANGESUBSCIP(changeSubscipProximity)
 
 static
 DECL_CHANGESUBSCIP(changeSubscipZeroobjective)
-{
+{  /*lint --e{715}*/
    SCIP_VAR** vars;
    int nvars;
    int i;
@@ -2429,16 +2497,16 @@ SCIP_DECL_HEURINIT(heurInitLns)
    }
 
    /* create epsilon greedy bandit algorithm */
-   SCIP_CALL( epsGreedyCreate(scip, &heurdata->epsgreedynh, DEFAULT_INITSEED + SCIPgetNVars(scip), (void*)heurdata, epsNChoicesLns, epsRewardLns) );
+   SCIP_CALL( epsGreedyCreate(scip, &heurdata->epsgreedynh, (unsigned int)(DEFAULT_INITSEED + SCIPgetNVars(scip)), (void*)heurdata, epsNChoicesLns, epsRewardLns) );
 
    /* create an exp3 bandit algorithm */
    if( heurdata->exp3 == NULL )
    {
-      SCIP_CALL( expThreeCreate(scip, &heurdata->exp3, DEFAULT_INITSEED + SCIPgetNVars(scip), heurdata->nneighborhoods, heurdata->gamma, heurdata->beta) );
+      SCIP_CALL( expThreeCreate(scip, &heurdata->exp3, (unsigned int)(DEFAULT_INITSEED + SCIPgetNVars(scip)), heurdata->nneighborhoods, heurdata->gamma, heurdata->beta) );
    }
    else
    {
-      SCIP_CALL( expThreeReset(scip, heurdata->exp3, DEFAULT_INITSEED + SCIPgetNVars(scip)) );
+      SCIP_CALL( expThreeReset(scip, heurdata->exp3, (unsigned int)(DEFAULT_INITSEED + SCIPgetNVars(scip))) );
    }
 
    heurdata->usednodes = 0;
@@ -2555,7 +2623,6 @@ SCIP_RETCODE SCIPincludeHeurLns(
    /* author bzfhende: TODO make this a user parameter? */
    heurdata->lplimfac = LPLIMFAC;
    heurdata->epsgreedynh = NULL;
-   heurdata->epsgreedyfilter = NULL;
    heurdata->exp3 = NULL;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->neighborhoods, NNEIGHBORHOODS) );
@@ -2614,12 +2681,31 @@ SCIP_RETCODE SCIPincludeHeurLns(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/beta",
          "gain offset between 0 and 1 at every observation for exp3",
          &heurdata->beta, TRUE, DEFAULT_BETA, 0.0, 1.0, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usedistances",
          "distances from fixed variables be used for variable prioritization",
          &heurdata->usedistances, TRUE, DEFAULT_USEDISTANCES, NULL, NULL) );
+
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useredcost",
          "should reduced cost scores be used for variable prioritization?",
          &heurdata->useredcost, TRUE, DEFAULT_USEREDCOST, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/domorefixings",
+         "should the LNS heuristic do more fixings by itself based on variable prioritization"
+         "until the target fixing is reached?",
+         &heurdata->domorefixings, TRUE, DEFAULT_DOMOREFIXINGS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/adjustfixingrate",
+         "should the heuristic adjust the target fixing rate based on the success?",
+         &heurdata->adjustfixingrate, TRUE, DEFAULT_ADJUSTFIXINGRATE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usesubscipheurs",
+         "should the heuristic activate other sub-SCIP heuristics during its search?",
+         &heurdata->usesubscipheurs, TRUE, DEFAULT_USESUBSCIPHEURS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/gainmeasure",
+         "measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean, 'e'ffort based?",
+         &heurdata->gainmeasure, TRUE, DEFAULT_GAINMEASURE, "bwe", NULL, NULL) );
 
    return SCIP_OKAY;
 }
