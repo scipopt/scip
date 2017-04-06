@@ -35804,7 +35804,6 @@ SCIP_RETCODE SCIPsetProbingLPState(
    return SCIP_OKAY;
 }
 
-
 /** adds a row to the LP in the current probing node
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

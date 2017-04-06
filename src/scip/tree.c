@@ -330,6 +330,7 @@ SCIP_RETCODE probingnodeUpdate(
    {
       SCIP_CALL( SCIPlpFreeState(lp, blkmem, &probingnode->lpistate) );
    }
+
    /* free old LP norms */
    if( probingnode->lpinorms != NULL )
    {
