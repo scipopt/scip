@@ -115,6 +115,7 @@
  * @subsection CHG Changes between different versions of SCIP
  * - \ref CHANGELOG    "Change log"
  * - \ref RELEASENOTES "Release notes"
+ * - \ref CHG9         "Interface changes between version 3.2 and 4.0"
  * - \ref CHG8         "Interface changes between version 3.1 and 3.2"
  * - \ref CHG7         "Interface changes between version 3.0 and 3.1"
  * - \ref CHG6         "Interface changes between version 2.1 and 3.0"
@@ -5676,9 +5677,8 @@
  * The optimal solution can now be written to a file:
  * \include debugexamples/example2_1.txt
  *
- * If we afterwards use
- * <code>\#define SCIP_DEBUG_SOLUTION "check/p0033.sol"</code> in debug.h, recompile and run SCIP,
- * it will output:
+ * If we afterwards recompile SCIP with the additional compiler flag <code>DEBUGSOL=true</code>,
+ * set the parameter <code>misc/debugsol = check/p0033.sol</code>, and run SCIP again it will output:
  * \include debugexamples/example2_2.txt
  * Further debug output would only appear, if the solution was cut off in the solving process.
  * Of course, this is not the case! Hopefully...otherwise, please send a bug report ;-)

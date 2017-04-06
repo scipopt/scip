@@ -1246,7 +1246,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayFiniteSolution)
       }
 
       /* free solution copy */
-      if( retcode == SCIP_OKAY )
+      if( retcode == SCIP_OKAY && sol != NULL )
       {
          SCIP_CALL( SCIPfreeSol(scip, &sol) );
       }
@@ -3210,11 +3210,19 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteFiniteSolution)
 
             SCIP_CALL_FINALLY( SCIPgetBoolParam(scip, "write/printzeros", &printzeros), fclose(file) );
 
-            SCIP_CALL_FINALLY( SCIPprintSol(scip, sol, file, printzeros), fclose(file) );
+            if( sol != NULL )
+            {
+               SCIP_CALL_FINALLY( SCIPprintSol(scip, sol, file, printzeros), fclose(file) );
 
-            SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
+               SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
 
-            SCIP_CALL_FINALLY( SCIPfreeSol(scip, &sol), fclose(file) );
+               SCIP_CALL_FINALLY( SCIPfreeSol(scip, &sol), fclose(file) );
+            }
+            else
+            {
+               SCIPmessageFPrintInfo(SCIPgetMessagehdlr(scip), file, "finite solution could not be created\n");
+               SCIPdialogMessage(scip, NULL, "finite solution could not be created\n", filename);
+            }
          }
          else
          {

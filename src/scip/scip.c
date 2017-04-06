@@ -3600,9 +3600,7 @@ SCIP_RETCODE doCopy(
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
 
-   /* in case there are active pricers and pricing is disabled the target SCIP will not be a valid copy of the source
-    * SCIP
-    */
+   /* in case there are active pricers and pricing is disabled, targetscip will not be a valid copy of sourcescip */
    if( ! enablepricing && SCIPgetNActivePricers(sourcescip) > 0 )
       localvalid = FALSE;
 
@@ -3635,6 +3633,7 @@ SCIP_RETCODE doCopy(
 
    /* explicitly suppress output when copying parameters */
    SCIPsetMessagehdlrQuiet(targetscip, TRUE);
+
    /* copy all settings */
    SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
 
@@ -3654,9 +3653,7 @@ SCIP_RETCODE doCopy(
    /* copy original or transformed variables and perform fixings if needed */
    SCIP_CALL( copyVars(sourcescip, targetscip, localvarmap, localconsmap, fixedvars, fixedvals, nfixedvars, original, global) );
 
-   /* if fixed variables are directly specified or inferred from local bounds,
-    * enable constraint compression
-    */
+   /* if fixed variables are directly specified or inferred from local bounds, enable constraint compression */
    if( useconscompression && (nfixedvars > 0 || !global) )
    {
       SCIP_CALL( SCIPenableConsCompression(targetscip) );
@@ -3782,8 +3779,8 @@ SCIP_RETCODE SCIPcopy(
    assert(suffix != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopyConsCompression", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( checkStage(targetscip, "SCIPcopyConsCompression", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopy", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
    /* copy source SCIP data into target SCIP data structure */
    SCIP_CALL( doCopy(sourcescip, targetscip, varmap, consmap, suffix, fixedvars, fixedvals, nfixedvars,
@@ -4054,6 +4051,31 @@ SCIP_RETCODE getCopyTimelimit(
    return SCIP_OKAY;
 }
 
+/** set updated time limit for a sub-SCIP */
+static
+SCIP_RETCODE copySofttimelimit(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip          /**< target SCIP data structure */
+   )
+{
+   if( SCIPgetParam(targetscip, "limits/softtime") == NULL )
+      return SCIP_OKAY;
+   else
+   {
+      SCIP_Real timelimit = -1.0;
+
+      SCIP_CALL( SCIPgetRealParam(sourcescip, "limits/softtime", &timelimit) );
+      if( !SCIPisNegative(sourcescip, timelimit) )
+      {
+         timelimit -= SCIPgetSolvingTime(sourcescip);
+         timelimit = MAX(0.0, timelimit);
+      }
+
+      SCIP_CALL( SCIPsetRealParam(targetscip, "limits/softtime", timelimit) );
+   }
+   return SCIP_OKAY;
+}
+
 /** return updated memory limit for a sub-SCIP */
 static
 SCIP_RETCODE getCopyMemlimit(
@@ -4144,6 +4166,9 @@ SCIP_RETCODE SCIPcopyLimits(
    SCIP_CALL( SCIPsetRealParam(targetscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(targetscip, "limits/memory", memorylimit) );
 
+   /* copy and adjust soft time limit (or disable it) */
+   SCIP_CALL( copySofttimelimit(sourcescip, targetscip) );
+
    /* disable all other limits */
    SCIP_CALL( SCIPsetRealParam(targetscip, "limits/absgap", 0.0) );
    SCIP_CALL( SCIPsetIntParam(targetscip, "limits/bestsol", -1) );
@@ -4153,12 +4178,6 @@ SCIP_RETCODE SCIPcopyLimits(
    SCIP_CALL( SCIPsetIntParam(targetscip, "limits/solutions", -1) );
    SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/stallnodes", -1LL) );
    SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1LL) );
-
-   /* the soft time limit event handler might not be included so we need to check if the parameter exists */
-   if( SCIPgetParam(targetscip, "limits/softtime") != NULL )
-   {
-      SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1LL) );
-   }
 
    return SCIP_OKAY;
 }
@@ -35753,6 +35772,42 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
    return SCIP_OKAY;
 }
 
+/** sets the LP state for the current probing node
+ *
+ *  @note state and norms are stored at the node and later released by SCIP; therefore, the pointers are set
+ *        to NULL by the method
+ *
+ *  @note the pointers to state and norms must not be NULL; however, they may point to a NULL pointer if the
+ *        respective information should not be set
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPsetProbingLPState(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LPISTATE**       lpistate,           /**< pointer to LP state information (like basis information) */
+   SCIP_LPINORMS**       lpinorms,           /**< pointer to LP pricing norms information */
+   SCIP_Bool             primalfeas,         /**< primal feasibility when LP state information was stored */
+   SCIP_Bool             dualfeas            /**< dual feasibility when LP state information was stored */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetProbingLPState", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPtreeProbing(scip->tree) )
+   {
+      SCIPerrorMessage("not in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPtreeSetProbingLPState(scip->tree, scip->mem->probmem, scip->lp, lpistate, lpinorms, primalfeas, dualfeas) );
+
+   return SCIP_OKAY;
+}
+
 /** adds a row to the LP in the current probing node
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -37464,6 +37519,8 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
 
             SCIPdebugMsg(scip, "--> var <%s> is fixed to infinite value %g in the original problem, stop making solution finite\n",
                SCIPvarGetName(var), SCIPvarGetLbOriginal(var));
+
+            *success = FALSE;
 
             goto TERMINATE;
          }

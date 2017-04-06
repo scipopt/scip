@@ -72,6 +72,7 @@ TOUCHLINKS	=	false
 #-----------------------------------------------------------------------------
 BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		COMP=$(COMP)\\n\
+		DEBUGSOL=$(DEBUGSOL)\\n\
 		EXPRINT=$(EXPRINT)\\n\
 		GAMS=$(GAMS)\\n\
 		GMP=$(GMP)\\n\
@@ -214,6 +215,10 @@ LPIINSTMSG	+=	"  -> \"cpxinc\" is the path to the CPLEX \"include\" directory, e
 LPIINSTMSG	+=	" -> \"libcplex.*.a\" is the path to the CPLEX library, e.g., \"<CPLEX-path>/lib/x86_rhel4.0_3.4/static_pic/libcplex.a\"\n"
 LPIINSTMSG	+=	" -> \"libcplex.*.so\" is the path to the CPLEX library, e.g., \"<CPLEX-path>/bin/x86-64_linux/libcplex1263.so\""
 endif
+endif
+
+ifeq ($(DEBUGSOL),true)
+FLAGS		+=	-DWITH_DEBUG_SOLUTION
 endif
 
 LPSOPTIONS	+=	clp
@@ -1292,6 +1297,9 @@ endif
 ifneq ($(TPI),$(LAST_TPI))
 		@-touch -c $(ALLSRC)
 endif
+ifneq ($(DEBUGSOL),$(LAST_DEBUGSOL))
+		@-touch -c $(ALLSRC)
+endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_BUILDFLAGS=\"$(BUILDFLAGS)\"" >> $(LASTSETTINGS)
 		@echo "LAST_SCIPGITHASH=$(SCIPGITHASH)" >> $(LASTSETTINGS)
@@ -1314,6 +1322,7 @@ endif
 		@echo "LAST_NOBLKBUFMEM=$(NOBLKBUFMEM)" >> $(LASTSETTINGS)
 		@echo "LAST_SANITIZE=$(SANITIZE)" >> $(LASTSETTINGS)
 		@echo "LAST_TPI=$(TPI)" >> $(LASTSETTINGS)
+		@echo "LAST_DEBUGSOL=$(DEBUGSOL)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links

@@ -2206,7 +2206,7 @@ SCIP_RETCODE hashtableCheckLoad(
    assert(hashtable->shift < 32);
 
    /* use integer arithmetic to approximately check if load factor is above 90% */
-   if( ((hashtable->nelements<<10)>>(32-hashtable->shift) > 921) )
+   if( ((((uint64_t)hashtable->nelements)<<10)>>(32-hashtable->shift) > 921) )
    {
       void** slots;
       uint32_t* hashes;
@@ -2719,7 +2719,7 @@ SCIP_RETCODE hashmapCheckLoad(
    assert(hashmap->shift < 32);
 
    /* use integer arithmetic to approximately check if load factor is above 90% */
-   if( ((hashmap->nelements<<10)>>(32-hashmap->shift) > 921) )
+   if( ((((uint64_t)hashmap->nelements)<<10)>>(32-hashmap->shift) > 921) )
    {
       SCIP_HASHMAPENTRY* slots;
       uint32_t* hashes;
