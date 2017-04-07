@@ -79,6 +79,10 @@
 #ifndef SOPLEX_SUBVERSION
 #define SOPLEX_SUBVERSION 0
 #endif
+/* define API version for versions <= 3.0.0 */
+#ifndef SOPLEX_APIVERSION
+#define SOPLEX_APIVERSION 0
+#endif
 
 /* check version */
 #if (SOPLEX_VERSION < 133)
