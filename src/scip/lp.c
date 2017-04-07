@@ -3130,6 +3130,30 @@ SCIP_RETCODE lpSetSolutionPolishing(
    return SCIP_OKAY;
 }
 
+/** sets the LP refactorization interval */
+static
+SCIP_RETCODE lpSetRefactorInterval(
+   SCIP_LP*              lp,                 /**< current LP data */
+   int                   refactor,           /**< LP refactorization interval (0: automatic) */
+   SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
+   )
+{
+   assert(lp != NULL);
+   assert(success != NULL);
+
+   if( refactor != lp->lpirefactorinterval )
+   {
+      SCIP_CALL( lpSetIntpar(lp, SCIP_LPPAR_REFACTOR, refactor, success) );
+      if( *success )
+         lp->lpirefactorinterval = refactor;
+   }
+   else
+      *success = FALSE;
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Column methods
  */
@@ -8904,6 +8928,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpilpinfo = set->disp_lpinfo;
    (*lp)->lpirowrepswitch = set->lp_rowrepswitch;
    (*lp)->lpisolutionpolishing = (set->lp_solutionpolishing > 0);
+   (*lp)->lpirefactorinterval = set->lp_refactorinterval;
    (*lp)->lpiconditionlimit = set->lp_conditionlimit;
    (*lp)->lpiitlim = INT_MAX;
    (*lp)->lpipricing = SCIP_PRICING_AUTO;
@@ -9015,6 +9040,14 @@ SCIP_RETCODE SCIPlpCreate(
    {
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: solution polishing not available -- SCIP parameter lp/solutionpolishing has no effect\n",
+         SCIPlpiGetSolverName());
+   }
+   SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_REFACTOR, (*lp)->lpirefactorinterval, &success) );
+   (*lp)->lpihasrefactor = success;
+   if( !success )
+   {
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver <%s>: refactorization interval not available -- SCIP parameter lp/refactorinterval has no effect\n",
          SCIPlpiGetSolverName());
    }
    SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_CONDITIONLIMIT, (*lp)->lpiconditionlimit, &success) );
@@ -11142,6 +11175,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetTiming(lp, set->time_clocktype, set->time_enabled, &success) );
    SCIP_CALL( lpSetRandomseed(lp, SCIPsetInitializeRandomSeed(set, set->random_randomseed), &success) );
    SCIP_CALL( lpSetSolutionPolishing(lp, usepolishing, &success) );
+   SCIP_CALL( lpSetRefactorInterval(lp, set->lp_refactorinterval, &success) );
    SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
 
