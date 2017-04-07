@@ -30,7 +30,7 @@
 extern "C" {
 #endif
 
-#define NHASHES 2
+#define NHASHES 1
 
 
 #if NHASHES == 2
