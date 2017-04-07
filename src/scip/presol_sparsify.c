@@ -39,12 +39,12 @@
 
 #define PRESOL_NAME            "sparsify"
 #define PRESOL_DESC            "eliminate non-zero coefficients"
-#define PRESOL_PRIORITY           -24000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
-#define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_PRIORITY            -24000    /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_MAXROUNDS               -1    /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
-#define MIN_EQS_NONZEROS 3                   /**< minimal number of non-zeros of the equalities */
-#define UPSHOT_INTERVAL  50000               /**< number of observed equalities after which the success is verified */
+#define MIN_EQS_NONZEROS                3    /**< minimal number of non-zeros of the equalities */
+#define UPSHOT_INTERVAL             50000    /**< number of observed equalities after which the success is verified */
 #define HIT_THRESHOLD    ((SCIP_Real)0.0001) /**< minimal ratio of non-zero cancellation per observed equalities */
 #define DEFAULT_MAX_SUPERSET_MISSES     1    /**< default value for the maximal number of superset misses */
 
@@ -69,6 +69,10 @@ typedef struct MatrixRow
 } MATRIXROW;
 
 
+/*
+ * Local methods
+ */
+
 /** signature function */
 static
 SCIP_DECL_GETSIGNATURE(matrixrowGetSignature)
@@ -81,86 +85,82 @@ SCIP_DECL_GETSIGNATURE(matrixrowGetSignature)
 
    /* update the signature with each column index in the row */
    for( k = 0; k < row->cnt; ++k )
-   {
       UPDATE_SIGNATURE(signature, row->ind[k]);
-   }
 
    return signature;
 }
 
-/* TODO the setcmp callback for the matrixrow is not yet implemented */
 
-/*
- * Local methods
- */
-
-#if 0
-/** compare function for two sets */
+/* setcmp callback for the matrixrow */
 static
-SCIP_DECL_SETCMP(cmpSets)
+SCIP_DECL_SETCMP(cmpMatrixrow)
 {
-   INTSET* x;
-   INTSET* y;
+   MATRIXROW* x;
+   MATRIXROW* y;
    int i,j;
 
-   x = (INTSET*) a;
-   y = (INTSET*) b;
+   x = (MATRIXROW*) a;
+   y = (MATRIXROW*) b;
 
    i = 0;
    j = 0;
+
    switch(op)
    {
-      case SCIP_SGTRIE_SETEQ:
-         if( x->nelems != y->nelems )
-            return FALSE;
+   case SCIP_SGTRIE_SETEQ:
+      /* x and y should be equal */
+      if( x->cnt != y->cnt )
+         return FALSE;
 
-         while( i < x->nelems && j < y->nelems )
-         {
-            if( x->elems[i++] != y->elems[j++] )
-               return FALSE;
-         }
-
-         return TRUE;
-      case SCIP_SGTRIE_SUBSET:
-         if( x->nelems > y->nelems )
-            return FALSE;
-
-         while( i < x->nelems && j < y->nelems )
-         {
-            if( x->elems[i] < y->elems[j] )
-               return FALSE;
-            else if( x->elems[i] > y->elems[j] )
-               ++j;
-            else
-            {
-               ++i;
-               ++j;
-            }
-         }
-
-         if( i < x->nelems )
-            return FALSE;
-
-         return TRUE;
-      case SCIP_SGTRIE_SUBSETPLUSONE:
+      while( i < x->cnt && j < y->cnt )
       {
+         if( x->ind[i++] != y->ind[j++] )
+            return FALSE;
+      }
+
+      return TRUE;
+   case SCIP_SGTRIE_SUBSET:
+      /* x should be subset of y */
+      if( x->cnt > y->cnt )
+         return FALSE;
+
+      while( i < x->cnt && j < y->cnt )
+      {
+         if( x->ind[i] < y->ind[j] )
+            return FALSE;
+         else if( x->ind[i] > y->ind[j] )
+            ++j;
+         else
+         {
+            ++i;
+            ++j;
+         }
+      }
+
+      if( i < x->cnt )
+         return FALSE;
+
+      return TRUE;
+   case SCIP_SGTRIE_SUBSETPLUSONE:
+      {
+         /* x should be subset of y except one entry */
          int distance;
 
-         if( x->nelems > y->nelems + 1 )
+         if( x->cnt > y->cnt + 1 )
             return FALSE;
 
          distance = 0;
 
-         while( i < x->nelems && j < y->nelems )
+         while( i < x->cnt && j < y->cnt )
          {
-            if( x->elems[i] < y->elems[j] )
+            if( x->ind[i] < y->ind[j] )
             {
                ++distance;
                if( distance > 1 )
                   return FALSE;
                ++i;
             }
-            else if( x->elems[i] > y->elems[j] )
+            else if( x->ind[i] > y->ind[j] )
                ++j;
             else
             {
@@ -169,7 +169,7 @@ SCIP_DECL_SETCMP(cmpSets)
             }
          }
 
-         while( i < x->nelems )
+         while( i < x->cnt )
          {
             ++distance;
             if( distance > 1 )
@@ -184,7 +184,7 @@ SCIP_DECL_SETCMP(cmpSets)
    assert(FALSE);
    return FALSE;
 }
-#endif
+
 
 /** add the scaled equality to the constraint for sparsification */
 static
@@ -437,10 +437,10 @@ SCIP_Real getScalefac(
    SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   otherrow,           /**< index of the other constraint */
    int                   equality,           /**< index of the equality */
-   int                   numoverlap,
-   int*                  overlapidxs,
-   SCIP_Real*            ratios,
-   int*                  nonzcancellations
+   int                   numoverlap,         /**< number of overlapping coefficients */
+   int*                  overlapidxs,        /**< indexes of overlapping columns */
+   SCIP_Real*            ratios,             /**< ratios of overlapping columns */
+   int*                  nonzcancellations   /**< number of possible non-zeros cancellations */
    )
 {
    SCIP_VAR* var;
@@ -546,13 +546,14 @@ void rescattering(
 }
 
 
-
-
+/** fill matrix data into sets for sgtrie */
 static
 void getMatrixRowSets(
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
-   MATRIXROW*            msets               /**< matrix row sets */
+   MATRIXROW*            msets,              /**< matrix row sets */
+   int*                  mindensity,         /**< minimal number of non-zeros in constraint */
+   int*                  maxdensity          /**< maximal number of non-zeros in constraint */
    )
 {
    int nrows;
@@ -561,8 +562,12 @@ void getMatrixRowSets(
    assert(scip != NULL);
    assert(matrix != NULL);
    assert(msets != NULL);
+   assert(mindensity != NULL);
+   assert(maxdensity != NULL);
 
    nrows = SCIPmatrixGetNRows(matrix);
+   *mindensity = nrows + 1;
+   *maxdensity = -1;
 
    for( r = 0; r < nrows; r++ )
    {
@@ -570,8 +575,15 @@ void getMatrixRowSets(
       msets[r].ind = SCIPmatrixGetRowIdxPtr(matrix, r);
       msets[r].cnt = SCIPmatrixGetRowNNonzs(matrix, r);
       msets[r].idx = r;
+
+      if( SCIPmatrixGetRowNNonzs(matrix, r) < *mindensity )
+         *mindensity = SCIPmatrixGetRowNNonzs(matrix, r);
+
+      if( *maxdensity < SCIPmatrixGetRowNNonzs(matrix, r) )
+         *maxdensity = SCIPmatrixGetRowNNonzs(matrix, r);
    }
 }
+
 
 /** execution method of presolver */
 static
@@ -637,12 +649,16 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       int rowidx;
       int missfails;
       int scalefails;
+      int mindensity;
+      int maxdensity;
 
       numcancel = 0;
       numchangedcoefs = 0;
       numobservedequalities = 0;
       missfails = 0;
       scalefails = 0;
+      mindensity = 0;
+      maxdensity = 0;
 
       nrows = SCIPmatrixGetNRows(matrix);
       ncols = SCIPmatrixGetNColumns(matrix);
@@ -669,25 +685,28 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       BMSclearMemoryArray(nonzerosequality, ncols);
 
       SCIP_CALL( SCIPallocBufferArray(scip, &overlapidxs, ncols) );
-
       SCIP_CALL( SCIPallocBufferArray(scip, &msets, nrows) );
-
       SCIP_CALL( SCIPallocBufferArray(scip, &matches, nrows));
 
-      SCIP_CALL( SCIPsgtrieCreate(&sgtrie, SCIPblkmem(scip), SCIPbuffer(scip), matrixrowGetSignature, NULL/*implement!*/) );
+      SCIP_CALL( SCIPsgtrieCreate(&sgtrie, SCIPblkmem(scip), SCIPbuffer(scip), matrixrowGetSignature, cmpMatrixrow) );
 
-      getMatrixRowSets(scip, matrix, msets);
+      getMatrixRowSets(scip, matrix, msets, &mindensity, &maxdensity);
 
-      /* insert sets into signature tree */
+      /* insert rows into signature trie */
       for( r = 0; r < nrows; r++ )
       {
          SCIP_RETCODE rc;
          rc = SCIPsgtrieInsert(sgtrie, &msets[r]);
-
+#ifdef SCIP_DEBUG
          if( rc == SCIP_KEYALREADYEXISTING )
          {
-            fprintf(stderr,"### key already present\n");
+            MATRIXROW* tmpset;
+            tmpset = SCIPsgtrieFindEq(sgtrie, &msets[r]);
+            SCIPdebugMsg(scip, "### Warning: key already present in sgtrie!\n");
+            SCIPmatrixPrintRow(scip, matrix, msets[r].idx);
+            SCIPmatrixPrintRow(scip, matrix, tmpset->idx);
          }
+#endif
       }
 
       /* collect equalities and their number of non-zeros */
@@ -715,13 +734,13 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
          eqprocessed = FALSE;
          numobservedequalities++;
 
-         /* use signature tree to retrieve matching row candidates */
+         /* use signature trie to retrieve matching row candidates */
          if( presoldata->maxsupersetmisses == 1 )
             SCIP_CALL( SCIPsgtrieFindSupersetsPlusOne(sgtrie, (void*)&msets[eqidxs[r]], (void**)matches, &nmatches) );
          else
             SCIP_CALL( SCIPsgtrieFindSupersets(sgtrie, (void*)&msets[eqidxs[r]], (void**)matches, &nmatches) );
 
-         /* loop over all signature tree matches */
+         /* loop over all signature trie matches */
          for( i = 0; i < nmatches; i++ )
          {
             rowidx = matches[i]->idx;
@@ -805,8 +824,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
 
 #ifdef SCIP_DEBUG
       /* print out number of changed coefficients and non-zero cancellations */
-      SCIPdebugMsg(scip, "### nrows=%d, eqs=%d, mfails=%d, sfails=%d, chgcoefs=%d, nzcancel=%d\n",
-         nrows, numeqs, missfails, scalefails, numchangedcoefs, numcancel);
+      SCIPdebugMsg(scip, "### nrows=%d, eqs=%d, mfails=%d, sfails=%d, mindensity=%d, maxdensity=%d, chgcoefs=%d, nzcancel=%d\n",
+         nrows, numeqs, missfails, scalefails, mindensity, maxdensity, numchangedcoefs, numcancel);
 #endif
    }
 
