@@ -43,9 +43,9 @@
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to start aggregation with per round in the root node
                                          *   (-1: unlimited) */
-#define DEFAULT_MAXFAILS             20 /**< maximal number of consecutive unsuccessful aggregation tries (-1: unlimited) */
-#define DEFAULT_MAXFAILSROOT         -1 /**< maximal number of consecutive unsuccessful aggregation tries in the root node
-                                         *   (-1: unlimited) */
+#define DEFAULT_MAXFAILS           0.02 /**< maximal number of consecutive unsuccessful aggregation tries (relative to number of rows) */
+#define DEFAULT_MAXFAILSROOT        0.1 /**< maximal number of consecutive unsuccessful aggregation tries in the root node
+                                         *   (relative to number of rows) */
 #define DEFAULT_MAXAGGRS              3 /**< maximal number of aggregations for each row per separation round */
 #define DEFAULT_MAXAGGRSROOT          6 /**< maximal number of aggregations for each row per round in the root node */
 #define DEFAULT_MAXSEPACUTS         100 /**< maximal number of cmir cuts separated per separation round */
@@ -92,6 +92,9 @@ struct SCIP_SepaData
    SCIP_Real             maxaggdensity;      /**< maximal density of aggregated row */
    SCIP_Real             maxrowdensity;      /**< maximal density of row to be used in aggregation */
    SCIP_Real             maxrowfac;          /**< maximal row aggregation factor */
+   SCIP_Real             maxfails;           /**< maximal number of consecutive unsuccessful aggregation tries (relative to number of rows) */
+   SCIP_Real             maxfailsroot;       /**< maximal number of consecutive unsuccessful aggregation tries in the root node
+                                              *   (relative to number of rows) */
    SCIP_Real             aggrtol;            /**< tolerance for bound distance used in aggregation heuristic */
    int                   maxrounds;          /**< maximal number of cmir separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
@@ -99,10 +102,6 @@ struct SCIP_SepaData
                                               *   (-1: unlimited) */
    int                   maxtriesroot;       /**< maximal number of rows to start aggregation with per round in the root node
                                               *   (-1: unlimited) */
-   int                   maxfails;           /**< maximal number of consecutive unsuccessful aggregation tries
-                                              *   (-1: unlimited) */
-   int                   maxfailsroot;       /**< maximal number of consecutive unsuccessful aggregation tries in the root
-                                              *   node (-1: unlimited) */
    int                   maxaggrs;           /**< maximal number of aggregations for each row per separation round */
    int                   maxaggrsroot;       /**< maximal number of aggregations for each row per round in the root node */
    int                   maxsepacuts;        /**< maximal number of cmir cuts separated per separation round */
@@ -1157,7 +1156,7 @@ SCIP_RETCODE separateCuts(
    if( depth == 0 )
    {
       maxtries = sepadata->maxtriesroot;
-      maxfails = sepadata->maxfailsroot;
+      maxfails = sepadata->maxfailsroot * nrows;
       maxaggrs = sepadata->maxaggrsroot;
       maxsepacuts = sepadata->maxsepacutsroot;
       maxslack = sepadata->maxslackroot;
@@ -1166,7 +1165,7 @@ SCIP_RETCODE separateCuts(
    else
    {
       maxtries = sepadata->maxtries;
-      maxfails = sepadata->maxfails;
+      maxfails = sepadata->maxfails * nrows;
       maxaggrs = sepadata->maxaggrs;
       maxsepacuts = sepadata->maxsepacuts;
       maxslack = sepadata->maxslack;
@@ -1458,14 +1457,14 @@ SCIP_RETCODE SCIPincludeSepaCmir(
          "separating/cmir/maxtriesroot",
          "maximal number of rows to start aggregation with per separation round in the root node (-1: unlimited)",
          &sepadata->maxtriesroot, TRUE, DEFAULT_MAXTRIESROOT, -1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
+   SCIP_CALL( SCIPaddRealParam(scip,
          "separating/cmir/maxfails",
-         "maximal number of consecutive unsuccessful aggregation tries (-1: unlimited)",
-         &sepadata->maxfails, TRUE, DEFAULT_MAXFAILS, -1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
+         "maximal number of consecutive unsuccessful aggregation tries (relative to number of rows)",
+         &sepadata->maxfails, TRUE, DEFAULT_MAXFAILS, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
          "separating/cmir/maxfailsroot",
-         "maximal number of consecutive unsuccessful aggregation tries in the root node (-1: unlimited)",
-         &sepadata->maxfailsroot, TRUE, DEFAULT_MAXFAILSROOT, -1, INT_MAX, NULL, NULL) );
+         "maximal number of consecutive unsuccessful aggregation tries in the root node (relative to number of rows)",
+         &sepadata->maxfailsroot, TRUE, DEFAULT_MAXFAILSROOT, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxaggrs",
          "maximal number of aggregations for each row per separation round",
