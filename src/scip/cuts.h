@@ -72,7 +72,7 @@ SCIP_RETCODE SCIPaggrRowAddRow(
 
 /** removes all zero entries in the aggregation row */
 extern
-SCIP_RETCODE SCIPaggrRowRemoveZeros(
+void SCIPaggrRowRemoveZeros(
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_Real             epsilon             /**< value to consider zero */
    );
@@ -173,6 +173,8 @@ SCIP_RETCODE SCIPcalcMIR(
    int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */
    int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut */
    SCIP_Real*            cutefficacy,        /**< pointer to store the efficacy of the cut, or NULL */
+   int*                  cutrank,            /**< pointer to return rank of generated cut */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
    SCIP_Bool*            success             /**< pointer to store whether the returned coefficients are a valid MIR cut */
    );
 
@@ -214,6 +216,8 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut */
    SCIP_Real*            cutefficacy,        /**< pointer to store efficacy of best cut; only cuts that are strictly better than the value of
                                               *   this efficacy on input to this function are returned */
+   int*                  cutrank,            /**< pointer to return rank of generated cut */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
    SCIP_Bool*            success             /**< pointer to store whether a valid and efficacious cut was returned */
    );
 
@@ -245,6 +249,8 @@ SCIP_RETCODE SCIPcalcFlowCover(
    int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */
    int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut */
    SCIP_Real*            cutefficacy,        /**< pointer to store the efficacy of the cut, or NULL */
+   int*                  cutrank,            /**< pointer to return rank of generated cut */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
    SCIP_Bool*            success             /**< pointer to store whether a valid cut was returned */
    );
 
@@ -275,6 +281,8 @@ SCIP_RETCODE SCIPcalcStrongCG(
    int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */
    int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut */
    SCIP_Real*            cutefficacy,        /**< pointer to store the efficacy of the cut, or NULL */
+   int*                  cutrank,            /**< pointer to return rank of generated cut */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
    SCIP_Bool*            success             /**< pointer to store whether a valid cut was returned */
    );
 

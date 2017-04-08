@@ -614,7 +614,6 @@ SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/conflictstore.o \
 			scip/cons.o \
 			scip/cutpool.o \
-			scip/cutrow.o \
 			scip/cuts.o \
 			scip/debug.o \
 			scip/dialog.o \
