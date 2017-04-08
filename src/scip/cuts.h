@@ -70,12 +70,31 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    int                   sidetype            /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
    );
 
-/** removes almost zero entries and relaxes the sides of the aggregation row accordingly */
+/** removes all zero entries in the aggregation row */
 extern
-void SCIPaggrRowCleanup(
-   SCIP*                 scip,               /**< SCIP datastructure */
-   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
-  );
+SCIP_RETCODE SCIPaggrRowRemoveZeros(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Real             epsilon             /**< value to consider zero */
+   );
+
+/** checks whether a given row has been added to the aggregation row */
+extern
+SCIP_Bool SCIPaggrRowHasRowBeenAdded(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_ROW*             row                 /**< row for which it is checked whether it has been added to the aggregation */
+   );
+
+/** gets the range of the absolute values of weights that have been used to aggregate a row into this aggregation row;
+ *  must not be called for aggregation rows for which no row has been added
+ */
+extern
+void SCIPaggrRowGetAbsWeightRange(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Real*            minabsrowweight,    /**< pointer to store smallest absolute value of weights used for rows aggregated
+                                              *   into the given aggregation row */
+   SCIP_Real*            maxabsrowweight     /**< pointer to store largest absolute value of weights used for rows aggregated
+                                              *   into the given aggregation row */
+   );
 
 /** gets the array of corresponding variable problem indices for each non-zero in the aggregation row */
 extern

@@ -383,6 +383,80 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    return SCIP_OKAY;
 }
 
+/** removes all zero entries in the aggregation row */
+void SCIPaggrRowRemoveZeros(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Real             epsilon             /**< value to consider zero */
+   )
+{
+   int i;
+
+   assert(aggrrow != NULL);
+
+   for( i = 0; i < aggrrow->nnz; )
+   {
+      if( EPSZ(aggrrow->vals[i], epsilon) )
+      {
+         --aggrrow->nnz;
+         if( i < aggrrow->nnz )
+         {
+            aggrrow->vals[i] = aggrrow->vals[aggrrow->nnz];
+            aggrrow->inds[i] = aggrrow->inds[aggrrow->nnz];
+         }
+      }
+      else
+         ++i;
+   }
+}
+
+/** checks whether a given row has been added to the aggregation row */
+SCIP_Bool SCIPaggrRowHasRowBeenAdded(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_ROW*             row                 /**< row for which it is checked whether it has been added to the aggregation */
+   )
+{
+   int i;
+   int rowind;
+
+   assert(aggrrow != NULL);
+   assert(row != NULL);
+
+   rowind = SCIProwGetLPPos(row);
+
+   for( i = 0; i < aggrrow->nrows; ++i )
+      if( aggrrow->rowsinds[i] == rowind )
+         return TRUE;
+
+   return FALSE;
+}
+
+/** gets the range of the absolute values of weights that have been used to aggregate a row into this aggregation row */
+void SCIPaggrRowGetAbsWeightRange(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Real*            minabsrowweight,    /**< pointer to store smallest absolute value of weights used for rows aggregated
+                                              *   into the given aggregation row */
+   SCIP_Real*            maxabsrowweight     /**< pointer to store largest absolute value of weights used for rows aggregated
+                                              *   into the given aggregation row */
+   )
+{
+   int i;
+
+   assert(aggrrow != NULL);
+   assert(aggrrow->nrows > 0);
+
+   *minabsrowweight = REALABS(aggrrow->rowweights[0]);
+   *maxabsrowweight = *minabsrowweight;
+
+   for( i = 1; i < aggrrow->nrows; ++i )
+   {
+      SCIP_Real absweight = REALABS(aggrrow->rowweights[i]);
+      if( absweight < *minabsrowweight )
+         *minabsrowweight = absweight;
+      else if( absweight > *maxabsrowweight )
+         *maxabsrowweight = absweight;
+   }
+}
+
 /** removes almost zero entries and relaxes the sides of the row accordingly */
 static
 void cleanupCut(
