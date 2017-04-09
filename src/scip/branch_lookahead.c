@@ -1348,6 +1348,7 @@ SCIP_RETCODE selectVarStart(
 #endif
 );
 
+/** Adds the given lower bound to the container struct. */
 static
 void addLowerBoundProofNode(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1370,12 +1371,10 @@ void addLowerBoundProofNode(
    assert(var != NULL);
    assert(baselpsol != NULL);
    assert(domainreductions != NULL);
+   SCIPstatistic(assert(nproofnodes >= 0));
 
    /* The arrays inside DOMAINREDUCTIONS are indexed via the problem index. */
    varindex = SCIPvarGetProbindex(var);
-
-   /* We get the solution value to check whether the domain reduction is violated in the base LP */
-   basesolutionval = SCIPgetSolVal(scip, baselpsol, var);
 
    /* If we have an old lower bound we take the stronger one, so the MAX is taken. Otherwise we use the new lower bound
     * directly. */
@@ -1383,37 +1382,48 @@ void addLowerBoundProofNode(
    {
       if( SCIPisGE(scip, domainreductions->lowerbounds[varindex], lowerbound) )
       {
+         /* the old lower bound is stronger (greater) than or equal to the given one, so we keep the older */
          newlowerbound = domainreductions->lowerbounds[varindex];
          SCIPstatistic(
             if( SCIPisEQ(scip, domainreductions->lowerbounds[varindex], lowerbound) )
             {
+               /* if the given lower bound is equal to the old one we take the smaller number of proof nodes */
                newnproof = MIN(domainreductions->lowerboundnproofs[varindex], nproofnodes);
             }
             else
             {
+               /* if the old bound is stronger (greater) we keep the old number of proof nodes */
                newnproof = domainreductions->lowerboundnproofs[varindex];
             }
          )
       }
       else
       {
+         /* the new lower bound is stronger (greater) than the old one, so we update the bound and number of proof nodes */
          newlowerbound = lowerbound;
          SCIPstatistic( newnproof = nproofnodes; )
-
-         if( !domainreductions->upperboundset[varindex] )
-         {
-            domainreductions->nchangedvars++;
-         }
       }
    }
    else
    {
+      /* we have no old lower bound, so we can directly take the new one together with the number of proof nodes */
       newlowerbound = lowerbound;
       SCIPstatistic( newnproof = nproofnodes; )
+
+      if( !domainreductions->upperboundset[varindex] )
+      {
+         /* if we had no lower and upper bound set we now have a changed variable */
+         domainreductions->nchangedvars++;
+      }
    }
+
+   /* set the calculated values */
    domainreductions->lowerbounds[varindex] = newlowerbound;
    domainreductions->lowerboundset[varindex] = TRUE;
    SCIPstatistic( domainreductions->lowerboundnproofs[varindex] = newnproof; )
+
+   /* We get the solution value to check whether the domain reduction is violated in the base LP */
+   basesolutionval = SCIPgetSolVal(scip, baselpsol, var);
 
    /* In case the new lower bound is greater than the base solution val and the base solution val is not violated by a
     * previously found bound, we increment the nviolatedvars counter and set the baselpviolated flag.  */
@@ -1424,9 +1434,7 @@ void addLowerBoundProofNode(
    }
 }
 
-/**
- * add a lower bound to the DOMAINREDUCTIONS struct
- */
+/** Add a lower bound to the DOMAINREDUCTIONS struct. This is used as a wrapper to the 'addLowerBoundProofNode' method. */
 static
 void addLowerBound(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1437,7 +1445,7 @@ void addLowerBound(
    DOMAINREDUCTIONS*     domainreductions    /**< The struct the domain reduction should be added to. */
    )
 {
-   /* We add the lower bound with number of proof nodes2, as this method is only called from the recursion directly. There it
+   /* We add the lower bound with number of proof nodes 2, as this method is only called from the recursion directly. There it
     * is called in case that only one child node is cutoff. As proof nodes we count the cutoff node as well as the valid
     * node, as we need both to proof, that this domain reduction is valid. */
 #ifdef SCIP_STATISTIC
@@ -1447,9 +1455,7 @@ void addLowerBound(
 #endif
 }
 
-/**
- * add an upper bound to the DOMAINREDUCTIONS struct
- */
+/** Adds the given upper bound to the container struct. */
 static
 void addUpperBoundProofNode(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1472,52 +1478,59 @@ void addUpperBoundProofNode(
    assert(var != NULL);
    assert(baselpsol != NULL);
    assert(domainreductions != NULL);
+   SCIPstatistic(assert(nproofnodes >= 0));
 
    /* The arrays inside DOMAINREDUCTIONS are indexed via the problem index. */
    varindex = SCIPvarGetProbindex(var);
 
-   /* We get the solution value to check whether the domain reduction is violated in the base LP */
-   basesolutionval = SCIPgetSolVal(scip, baselpsol, var);
-
-   /* If we hava an old upper bound we take the stronger one, so the MIN is taken. Otherwise we use the new upper bound
+   /* If we have an old upper bound we take the stronger one, so the MIN is taken. Otherwise we use the new upper bound
     * directly. */
    if( domainreductions->upperboundset[varindex] )
    {
       if( SCIPisLE(scip, domainreductions->upperbounds[varindex], upperbound) )
       {
+         /* the old upper bound is stronger (smaller) than or equal to the given one, so we keep the older */
          newupperbound = domainreductions->upperbounds[varindex];
-
          SCIPstatistic(
             if( SCIPisEQ(scip, domainreductions->upperbounds[varindex], upperbound) )
             {
+               /* if the given upper bound is equal to the old one we take the smaller number of proof nodes */
                newnproof = MIN(domainreductions->upperboundnproofs[varindex], nproofnodes);
             }
             else
             {
+               /* if the old bound is stronger (smaller) we keep the old number of proof nodes */
                newnproof = domainreductions->upperboundnproofs[varindex];
             }
          )
       }
       else
       {
+         /* the new upper bound is stronger (smaller) than the old one, so we update the bound and number of proof nodes */
          newupperbound = upperbound;
          SCIPstatistic( newnproof = nproofnodes; )
       }
    }
    else
    {
+      /* we have no old upper bound, so we can directly take the new one together with the number of proof nodes */
       newupperbound = upperbound;
       SCIPstatistic( newnproof = nproofnodes; )
 
       if( !domainreductions->lowerboundset[varindex] )
       {
+         /* if we had no lower and upper bound set we now have a changed variable */
          domainreductions->nchangedvars++;
       }
    }
 
+   /* set the calculated values */
    domainreductions->upperbounds[varindex] = newupperbound;
    domainreductions->upperboundset[varindex] = TRUE;
    SCIPstatistic( domainreductions->upperboundnproofs[varindex] = newnproof; )
+
+   /* We get the solution value to check whether the domain reduction is violated in the base LP */
+   basesolutionval = SCIPgetSolVal(scip, baselpsol, var);
 
    /* In case the new upper bound is lesser than the base solution val and the base solution val is not violated by a
     * previously found bound, we increment the nviolatedvars counter and set the baselpviolated flag.  */
@@ -1528,6 +1541,7 @@ void addUpperBoundProofNode(
    }
 }
 
+/** Add a lower bound to the DOMAINREDUCTIONS struct. This is used as a wrapper to the 'addUpperBoundProofNode' method. */
 static
 void addUpperBound(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1624,9 +1638,7 @@ void applyDeeperDomainReductions(
    }
 }
 
-/**
- * Applies the domain reductions the current node.
- */
+/** Applies the domain reductions to the current node. */
 static
 SCIP_RETCODE applyDomainReductions(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1679,6 +1691,7 @@ SCIP_RETCODE applyDomainReductions(
 
       if( !*domredcutoff && domreds->lowerboundset[i] )
       {
+         /* if we have a lower bound for the current var, apply it */
          SCIP_Bool infeasible;
          SCIP_Bool tightened;
          SCIP_Real oldlowerbound;
@@ -1787,10 +1800,11 @@ SCIP_RETCODE applyDomainReductions(
    return SCIP_OKAY;
 }
 
+/** Copies the current LP solution into the given pointer. Needs to be freed after usage! */
 static
 SCIP_RETCODE copyCurrentSolution(
-   SCIP*                 scip,
-   SCIP_SOL**            lpsol
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            lpsol               /**< pointer to store the solution into */
    )
 {
    /* create temporary solution */
@@ -1803,17 +1817,12 @@ SCIP_RETCODE copyCurrentSolution(
    return SCIP_OKAY;
 }
 
-/**
- * Executes the branching on a given variable with a given value.
- *
- * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
+/** Executes the branching on a given variable with a given value. */
 static
 SCIP_RETCODE branchOnVar(
    SCIP*                 scip                /**< SCIP data structure */,
    BRANCHINGDECISION*    decision            /**< the decision with all the needed data */
-)
+   )
 {
    SCIP_VAR* bestvar = decision->var;
    SCIP_Real bestval = decision->val;
@@ -1821,19 +1830,19 @@ SCIP_RETCODE branchOnVar(
    SCIP_NODE* downchild = NULL;
    SCIP_NODE* upchild = NULL;
 
-   assert(!SCIPisIntegral(scip, bestval));
-
    SCIPdebugMessage("Effective branching on var <%s> with value <%g>. Old domain: [%g..%g].\n",
       SCIPvarGetName(bestvar), bestval, SCIPvarGetLbLocal(bestvar), SCIPvarGetUbLocal(bestvar));
 
+   assert(!SCIPisIntegral(scip, bestval));
+
+   /* branch on the given variable */
    SCIP_CALL( SCIPbranchVarVal(scip, bestvar, bestval, &downchild, NULL, &upchild) );
 
    assert(downchild != NULL);
    assert(upchild != NULL);
 
    /* update the lower bounds in the children; we must not do this if columns are missing in the LP
-    * (e.g., because we are doing branch-and-price) or the problem should be solved exactly
-    */
+    * (e.g. because we are doing branch-and-price) or the problem should be solved exactly */
    if( SCIPallColsInLP(scip) && !SCIPisExactSolve(scip) )
    {
       SCIP_Real bestdown = decision->downdb;
@@ -1842,6 +1851,7 @@ SCIP_RETCODE branchOnVar(
       SCIP_Bool bestupvalid = decision->updbvalid;
       SCIP_Real provedbound = decision->proveddb;
 
+      /* update the lower bound for the LPs for further children of both created nodes */
       SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdownvalid ? MAX(bestdown, provedbound) : provedbound) );
       SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestupvalid ? MAX(bestup, provedbound) : provedbound) );
    }
@@ -1905,188 +1915,182 @@ SCIP_RETCODE restoreFromLPIMemory(
    return SCIP_OKAY;
 }
 
-/**
- * Executes the branching on the current probing node by adding a probing node with a new upper bound.
- *
- * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
+/** Creates a new probing node with a new bound for the given candidate. */
+static
+SCIP_RETCODE executeBranching(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CONFIGURATION*        config,             /**< configuration containing flags changing the behavior */
+   SCIP_Bool             downbranching,      /**< the branching direction */
+   CANDIDATE*            candidate,          /**< the candidate to branch on */
+   BRANCHINGRESULTDATA*  resultdata,         /**< pointer to the result data which gets filled with the status */
+   STATUS*               status              /**< status will contain updated lperror and limit fields */
+   )
+{
+   SCIP_Real oldupperbound;
+   SCIP_Real oldlowerbound;
+   SCIP_Real newbound;
+   SCIP_LPSOLSTAT solstat;
+   SCIP_VAR* branchvar;
+   SCIP_Real branchval;
+
+   assert(scip != NULL);
+   assert(config != NULL);
+   assert(candidate != NULL);
+   assert(resultdata != NULL);
+   assert(status != NULL);
+
+   branchvar = candidate->branchvar;
+   branchval = candidate->branchval;
+
+   assert(branchvar != NULL);
+   assert(!SCIPisFeasIntegral(scip, branchval));
+
+   if( downbranching )
+   {
+      /* round the given value down, so that it can be used as the new upper bound */
+      newbound = SCIPfeasFloor(scip, branchval);
+   }
+   else
+   {
+      /* round the given value up, so that it can be used as the new lower bound */
+      newbound = SCIPfeasCeil(scip, branchval);
+   }
+
+   oldupperbound = SCIPvarGetUbLocal(branchvar);
+   oldlowerbound = SCIPvarGetLbLocal(branchvar);
+
+#ifdef SCIP_DEBUG
+   if( downbranching )
+   {
+      SCIPdebugMessage("DownBranching: Var=<%s>, Proposed upper bound=<%g>, old bounds=[<%g>..<%g>], new bounds=[<%g>..<%g>]\n",
+         SCIPvarGetName(branchvar), newbound, oldlowerbound, oldupperbound, oldlowerbound, newbound);
+   }
+   else
+   {
+      SCIPdebugMessage("UpBranching: Var=<%s>, Proposed lower bound=<%g>, old bounds=[<%g>..<%g>], new bounds=[<%g>..<%g>]\n",
+         SCIPvarGetName(branchvar), newbound, oldlowerbound, oldupperbound, newbound, newbound);
+   }
+#endif
+
+   if( (downbranching && SCIPisFeasLT(scip, newbound, oldlowerbound)) || (!downbranching && SCIPisFeasGT(scip, newbound, oldupperbound)) )
+   {
+      /* if lb > ub we can cutoff this node */
+      resultdata->cutoff = TRUE;
+   }
+   else
+   {
+      SCIP_CALL( SCIPnewProbingNode(scip) );
+
+      if( downbranching )
+      {
+         /* down branching preparations */
+         if( SCIPisFeasLT(scip, newbound, oldupperbound) )
+         {
+            /* if the new upper bound is lesser than the old upper bound and also
+             * greater than (or equal to) the old lower bound we set the new upper bound.
+             * oldLowerBound <= newUpperBound < oldUpperBound */
+            SCIP_CALL( SCIPchgVarUbProbing(scip, branchvar, newbound) );
+         }
+
+         if( lpiMemoryIsReadable(candidate->downlpimemory, config) )
+         {
+            /* restore the stored LP data (e.g. the basis) from a previous run */
+            SCIP_CALL( restoreFromLPIMemory(scip, candidate->downlpimemory) );
+         }
+      }
+      else
+      {
+         /* up branching preparations */
+         if( SCIPisFeasGT(scip, newbound, oldlowerbound) )
+         {
+            /* if the new lower bound is greater than the old lower bound and also
+             * lesser than (or equal to) the old upper bound we set the new lower bound.
+             * oldLowerBound < newLowerBound <= oldUpperBound */
+            SCIP_CALL( SCIPchgVarLbProbing(scip, branchvar, newbound) );
+         }
+
+         if( lpiMemoryIsReadable(candidate->uplpimemory, config) )
+         {
+            /* restore the stored LP data (e.g. the basis) from a previous run */
+            SCIP_CALL( restoreFromLPIMemory(scip, candidate->uplpimemory) );
+         }
+      }
+
+      /* solve the prepared probing LP */
+      SCIP_CALL( SCIPsolveProbingLP(scip, -1, &status->lperror, &resultdata->cutoff) );
+
+      solstat = SCIPgetLPSolstat(scip);
+      assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+
+      /* for us an error occurred, if an error during the solving occurred, or the lp could not be solved but was not
+       * cutoff, or if the iter or time limit was reached. */
+      status->lperror = status->lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && resultdata->cutoff == FALSE);
+
+      /* if we seem to have reached a {time, node, ...}-limit or the user cancelled the execution we want to stop further
+       * calculations and instead return the current calculation state */
+      status->limitreached = SCIPisStopped(scip);
+
+      if( !status->limitreached && !status->lperror )
+      {
+         /* if we have no error, we save the new objective value and the cutoff decision in the resultdata */
+         resultdata->objval = SCIPgetLPObjval(scip);
+         resultdata->dualbound = SCIPgetLPObjval(scip);
+         resultdata->dualboundvalid = TRUE;
+
+         resultdata->cutoff = resultdata->cutoff || SCIPisGE(scip, resultdata->objval, SCIPgetCutoffbound(scip));
+         assert(solstat != SCIP_LPSOLSTAT_INFEASIBLE || resultdata->cutoff);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** Executes the branching on the current probing node by adding a probing node with a new upper bound. */
 static
 SCIP_RETCODE executeDownBranching(
    SCIP*                 scip,               /**< SCIP data structure */
-   CONFIGURATION*        config,
-   CANDIDATE*            candidate,
+   CONFIGURATION*        config,             /**< configuration containing flags changing the behavior */
+   CANDIDATE*            candidate,          /**< the branching direction */
    BRANCHINGRESULTDATA*  resultdata,         /**< pointer to the result data which gets filled with the status */
-   STATUS*               status
+   STATUS*               status              /**< status will contain updated lperror and limit fields */
    )
 {
-   SCIP_Real oldupperbound;
-   SCIP_Real oldlowerbound;
-   SCIP_Real newupperbound;
-   SCIP_LPSOLSTAT solstat;
-   SCIP_VAR* branchvar = candidate->branchvar;
-   SCIP_Real branchval = candidate->branchval;
-
-   assert(scip != NULL);
-   assert(branchvar != NULL);
-   assert(!SCIPisFeasIntegral(scip, branchval));
-   assert(resultdata != NULL);
-
-   /* round the given value down, so that it can be used as the new upper bound */
-   newupperbound = SCIPfeasFloor(scip, branchval);
-
-   oldupperbound = SCIPvarGetUbLocal(branchvar);
-   oldlowerbound = SCIPvarGetLbLocal(branchvar);
-   SCIPdebugMessage("DownBranching: Var=<%s>, Proposed upper bound=<%g>, old bounds=[<%g>..<%g>], new bounds=[<%g>..<%g>]\n",
-      SCIPvarGetName(branchvar), newupperbound, oldlowerbound, oldupperbound, oldlowerbound, newupperbound);
-
-   if( SCIPisFeasLT(scip, newupperbound, oldlowerbound) )
-   {
-      /* if lb > ub we can cutoff this node */
-      resultdata->cutoff = TRUE;
-   }
-   else
-   {
-      SCIP_CALL( SCIPnewProbingNode(scip) );
-      if( SCIPisFeasLT(scip, newupperbound, oldupperbound) )
-      {
-         /* if the new upper bound is lesser than the old upper bound and also
-          * greater than (or equal to) the old lower bound we set the new upper bound.
-          * oldLowerBound <= newUpperBound < oldUpperBound */
-         SCIP_CALL( SCIPchgVarUbProbing(scip, branchvar, newupperbound) );
-      }
-
-      if( lpiMemoryIsReadable(candidate->downlpimemory, config) )
-      {
-         /* restore the stored LP data (e.g. the basis) from a previous run */
-         SCIP_CALL( restoreFromLPIMemory(scip, candidate->downlpimemory) );
-      }
-
-      SCIP_CALL( SCIPsolveProbingLP(scip, -1, &status->lperror, &resultdata->cutoff) );
-
-      solstat = SCIPgetLPSolstat(scip);
-      assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-
-      /* for us an error occurred, if an error during the solving occurred, or the lp could not be solved but was not
-       * cutoff, or if the iter or time limit was reached. */
-      status->lperror = status->lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && resultdata->cutoff == FALSE);
-
-      /* if we seem to have reached a {time, node, ...}-limit or the user cancelled the execution we want to stop further
-       * calculations and instead return the current calculation state */
-      status->limitreached = SCIPisStopped(scip);
-
-      if( !status->limitreached && !status->lperror )
-      {
-         /* if we have no error, we save the new objective value and the cutoff decision in the resultdata */
-         resultdata->objval = SCIPgetLPObjval(scip);
-         resultdata->dualbound = SCIPgetLPObjval(scip);
-         resultdata->dualboundvalid = TRUE;
-
-         resultdata->cutoff = resultdata->cutoff || SCIPisGE(scip, resultdata->objval, SCIPgetCutoffbound(scip));
-         assert(solstat != SCIP_LPSOLSTAT_INFEASIBLE || resultdata->cutoff);
-      }
-   }
-
+   SCIP_CALL( executeBranching(scip, config, TRUE, candidate, resultdata, status) );
    return SCIP_OKAY;
 }
 
-/**
- * Executes the branching on the current probing node by adding a probing node with a new lower bound.
- *
- * @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
+/** Executes the branching on the current probing node by adding a probing node with a new lower bound. */
 static
 SCIP_RETCODE executeUpBranching(
    SCIP*                 scip,               /**< SCIP data structure */
-   CONFIGURATION*        config,
-   CANDIDATE*            candidate,
+   CONFIGURATION*        config,             /**< configuration containing flags changing the behavior */
+   CANDIDATE*            candidate,          /**< the branching direction */
    BRANCHINGRESULTDATA*  resultdata,         /**< pointer to the result data which gets filled with the status */
-   STATUS*               status
+   STATUS*               status              /**< status will contain updated lperror and limit fields */
    )
 {
-   SCIP_Real oldlowerbound;
-   SCIP_Real oldupperbound;
-   SCIP_Real newlowerbound;
-   SCIP_LPSOLSTAT solstat;
-   SCIP_VAR* branchvar = candidate->branchvar;
-   SCIP_Real branchval = candidate->branchval;
-
-   assert(scip != NULL );
-   assert(branchvar != NULL );
-   assert(!SCIPisFeasIntegral(scip, branchval));
-   assert(resultdata != NULL );
-
-   /* round the given value up, so that it can be used as the new lower bound */
-   newlowerbound = SCIPfeasCeil(scip, branchval);
-
-   oldlowerbound = SCIPvarGetLbLocal(branchvar);
-   oldupperbound = SCIPvarGetUbLocal(branchvar);
-   SCIPdebugMessage("UpBranching: Var=<%s>, Proposed lower bound=<%g>, old bounds=[<%g>..<%g>], new bounds=[<%g>..<%g>]\n",
-      SCIPvarGetName(branchvar), newlowerbound, oldlowerbound, oldupperbound, newlowerbound, oldupperbound);
-
-   if( SCIPisFeasGT(scip, newlowerbound, oldupperbound) )
-   {
-      /* if lb > ub we can cutoff this node */
-      resultdata->cutoff = TRUE;
-   }
-   else
-   {
-      SCIP_CALL( SCIPnewProbingNode(scip) );
-      if( SCIPisFeasGT(scip, newlowerbound, oldlowerbound) )
-      {
-         /* if the new lower bound is greater than the old lower bound and also
-          * lesser than (or equal to) the old upper bound we set the new lower bound.
-          * oldLowerBound < newLowerBound <= oldUpperBound */
-         SCIP_CALL( SCIPchgVarLbProbing(scip, branchvar, newlowerbound) );
-      }
-
-      if( lpiMemoryIsReadable(candidate->uplpimemory, config) )
-      {
-         /* restore the stored LP data (e.g. the basis) from a previous run */
-         SCIP_CALL( restoreFromLPIMemory(scip, candidate->uplpimemory) );
-      }
-
-      SCIP_CALL( SCIPsolveProbingLP(scip, -1, &status->lperror, &resultdata->cutoff) );
-      /*SCIP_CALL( printCurrentSolution(scip) );*/
-
-      solstat = SCIPgetLPSolstat(scip);
-      assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-
-      /* for us an error occurred, if an error during the solving occurred, or the lp could not be solved but was not
-       * cutoff, or if the iter or time limit was reached. */
-      status->lperror = status->lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && resultdata->cutoff == FALSE);
-
-      /* if we seem to have reached a {time, node, ...}-limit or the user cancelled the execution we want to stop further
-       * calculations and instead return the current calculation state */
-      status->limitreached = SCIPisStopped(scip);
-
-      if( !status->limitreached && !status->lperror )
-      {
-         /* if we have no error, we save the new objective value and the cutoff decision in the resultdata */
-         resultdata->objval = SCIPgetLPObjval(scip);
-         resultdata->dualbound = SCIPgetLPObjval(scip);
-         resultdata->dualboundvalid = TRUE;
-         resultdata->cutoff = resultdata->cutoff || SCIPisGE(scip, resultdata->objval, SCIPgetCutoffbound(scip));
-         assert(solstat != SCIP_LPSOLSTAT_INFEASIBLE || resultdata->cutoff);
-      }
-   }
-
+   SCIP_CALL( executeBranching(scip, config, FALSE, candidate, resultdata, status) );
    return SCIP_OKAY;
 }
 
+/** Creates a logic or constraint based on the given 'consvars'. This array has to consist of the negated
+ * versions of the variables present on a cutoff "path" (path means all variables from the root directly
+ * to the cutoff node).
+ * Let x_1, ..., x_n be the variables on a path to a cutoff with the branchings x_i <= 1 for all i.
+ * Summed up the constraints would look like x_1 + ... x_n <= n-1.
+ * Let y_i = 1 - x_i. Then we have y_1 + ... + y_n >= 1 which is a logic or constraint.  */
 static
 SCIP_RETCODE createBinaryConstraint(
    SCIP*                 scip,               /**< SCIP data structure */
-   CONFIGURATION*        config,
+   CONFIGURATION*        config,             /**< configuration containing flags changing the behavior */
    SCIP_CONS**           constraint,         /**< Pointer to store the created constraint in */
    char*                 constraintname,     /**< name of the new constraint */
-   SCIP_VAR**            consvars,
-   int                   nconsvars
+   SCIP_VAR**            consvars,           /**< array containing the negated binary vars */
+   int                   nconsvars           /**< the number of elements in 'consvars' */
    )
 {
-   SCIP_Bool initial = config->addbinconsrow;
-   SCIP_Bool separate = config->addbinconsrow;
+   SCIP_Bool initial;
+   SCIP_Bool separate;
    SCIP_Bool enforce = FALSE;
    SCIP_Bool check = FALSE;
    SCIP_Bool propagate = TRUE;
@@ -2096,6 +2100,18 @@ SCIP_RETCODE createBinaryConstraint(
    SCIP_Bool removable = FALSE;
    SCIP_Bool stickingatnode = FALSE;
 
+   assert(scip != NULL);
+   assert(config != NULL);
+   assert(constraint != NULL);
+   assert(constraintname != NULL);
+   assert(consvars != NULL);
+   assert(nconsvars > 0);
+
+   initial = config->addbinconsrow;
+   separate = config->addbinconsrow;
+
+   /* creating a logic or constraint based on the list of vars in 'consvars'.
+    * A logic or constraints looks like that: y_1 + ... + y_n >= 1. */
    SCIP_CALL( SCIPcreateConsLogicor(scip, constraint, constraintname, nconsvars, consvars, initial, separate, enforce,
          check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    return SCIP_OKAY;
@@ -2107,10 +2123,9 @@ SCIP_RETCODE createBinaryConstraint(
 static
 void createBinaryConstraintName(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR**            binaryvars,
-   int                   nbinaryvars,
+   SCIP_VAR**            binaryvars,         /**< the variables contained in the constraint */
+   int                   nbinaryvars,        /**< the number of elements in 'binaryvars' */
    char*                 constraintname      /**< the char pointer to store the name in */
-
    )
 {
    int i;
@@ -2127,6 +2142,7 @@ void createBinaryConstraintName(
       SCIP_VAR* var = binaryvars[i];
       const char* varname = SCIPvarGetName(var);
 
+      /* TODO: probably rework */
       sprintf(constraintname, "%s_%s", constraintname, varname);
    }
 }
@@ -2159,9 +2175,14 @@ SCIP_RETCODE addBinaryConstraint(
       SCIPdebugMessage("Adding binary constraint for <%i> vars.\n", binconsdata->binaryvars->nbinaryvars);
 
       SCIP_CALL( SCIPallocBufferArray(scip, &negatedvars, binconsdata->binaryvars->nbinaryvars) );
+
       for( i = 0; i < binconsdata->binaryvars->nbinaryvars; i++ )
       {
-         SCIP_CALL( SCIPgetNegatedVar(scip, binconsdata->binaryvars->binaryvars[i], &negatedvars[i]) );
+         SCIP_VAR* var = binconsdata->binaryvars->binaryvars[i];
+
+         assert(SCIPvarIsBinary(var));
+
+         SCIP_CALL( SCIPgetNegatedVar(scip, var, &negatedvars[i]) );
          lhssum += SCIPgetSolVal(scip, baselpsol, negatedvars[i]);
       }
 
@@ -2169,7 +2190,7 @@ SCIP_RETCODE addBinaryConstraint(
       {
          /* create a name for the new constraint */
          createBinaryConstraintName(scip, negatedvars, binconsdata->binaryvars->nbinaryvars, constraintname);
-         /* create the constraint with the frehsly created name */
+         /* create the constraint with the freshly created name */
          SCIP_CALL( createBinaryConstraint(scip, config, &constraint, constraintname, negatedvars, binconsdata->binaryvars->nbinaryvars) );
 
 #ifdef PRINTNODECONS
@@ -2179,15 +2200,14 @@ SCIP_RETCODE addBinaryConstraint(
 #endif
 
          SCIP_CALL( constraintListAppend(scip, binconsdata->createdconstraints, constraint) );
-      }
-
-      /* the constraint we are building is a logic or: we have a list of binary variables that were
-       * cutoff while we branched on with >= 1. So we have the constraint: x_1 + ... + x_n <= n-1.
-       * Let y = (1-x), then we have an equivalent formulation: y_1 + ... + y_n >= 1. If the base lp
-       * is violating this constraint we count this for our number of violated constraitns and bounds. */
-      if( lhssum < 1 )
-      {
-         binconsdata->createdconstraints->nviolatedcons++;
+         /* the constraint we are building is a logic or: we have a list of binary variables that were
+          * cutoff while we branched on with >= 1. So we have the constraint: x_1 + ... + x_n <= n-1.
+          * Let y = (1-x), then we have an equivalent formulation: y_1 + ... + y_n >= 1. If the base lp
+          * is violating this constraint we count this for our number of violated constraints and bounds. */
+         if( lhssum < 1 )
+         {
+            binconsdata->createdconstraints->nviolatedcons++;
+         }
       }
 
       SCIPfreeBufferArray(scip, &negatedvars);
