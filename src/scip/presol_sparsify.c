@@ -44,8 +44,8 @@
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define MIN_EQS_NONZEROS                3    /**< minimal number of non-zeros of the equalities */
-#define UPSHOT_INTERVAL             50000    /**< number of observed equalities after which the success is verified */
-#define HIT_THRESHOLD    ((SCIP_Real)0.0001) /**< minimal ratio of non-zero cancellation per observed equalities */
+#define CHECK_INTERVAL               1000    /**< number of observed row pairs after which the success is verified */
+#define THRESHOLD        ((SCIP_Real)0.02)   /**< minimal ratio of non-zero cancellation per observed row pairs */
 #define DEFAULT_MAX_SUPERSET_MISSES     1    /**< default value for the maximal number of superset misses */
 
 /*
@@ -548,7 +548,7 @@ void rescattering(
 
 /** fill matrix data into sets for sgtrie */
 static
-void getMatrixRowSets(
+void prepareMatrixRows(
    SCIP*                 scip,               /**< SCIP main data structure */
    SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    MATRIXROW*            msets,              /**< matrix row sets */
@@ -557,7 +557,9 @@ void getMatrixRowSets(
    )
 {
    int nrows;
-   int r;
+   int i;
+   int* rowpnt;
+   SCIP_Real* valpnt;
 
    assert(scip != NULL);
    assert(matrix != NULL);
@@ -569,21 +571,57 @@ void getMatrixRowSets(
    *mindensity = nrows + 1;
    *maxdensity = -1;
 
-   for( r = 0; r < nrows; r++ )
+   /* sort rows of row major format by variable index */
+   for( i = 0; i < nrows; i++ )
    {
-      msets[r].val = SCIPmatrixGetRowValPtr(matrix, r);
-      msets[r].ind = SCIPmatrixGetRowIdxPtr(matrix, r);
-      msets[r].cnt = SCIPmatrixGetRowNNonzs(matrix, r);
-      msets[r].idx = r;
+      rowpnt = SCIPmatrixGetRowIdxPtr(matrix, i);
+      valpnt = SCIPmatrixGetRowValPtr(matrix, i);
+      SCIPsortIntReal(rowpnt, valpnt, SCIPmatrixGetRowNNonzs(matrix, i));
+   }
 
-      if( SCIPmatrixGetRowNNonzs(matrix, r) < *mindensity )
-         *mindensity = SCIPmatrixGetRowNNonzs(matrix, r);
+   /* fill rows into structure for sgtrie */
+   for( i = 0; i < nrows; i++ )
+   {
+      msets[i].val = SCIPmatrixGetRowValPtr(matrix, i);
+      msets[i].ind = SCIPmatrixGetRowIdxPtr(matrix, i);
+      msets[i].cnt = SCIPmatrixGetRowNNonzs(matrix, i);
+      msets[i].idx = i;
 
-      if( *maxdensity < SCIPmatrixGetRowNNonzs(matrix, r) )
-         *maxdensity = SCIPmatrixGetRowNNonzs(matrix, r);
+      if( SCIPmatrixGetRowNNonzs(matrix, i) < *mindensity )
+         *mindensity = SCIPmatrixGetRowNNonzs(matrix, i);
+
+      if( *maxdensity < SCIPmatrixGetRowNNonzs(matrix, i) )
+         *maxdensity = SCIPmatrixGetRowNNonzs(matrix, i);
    }
 }
 
+#if 0
+/** debugging purpose */
+static void
+checkRowIdxsConsecutive(
+   SCIP*                 scip,               /**< SCIP main data structure */
+   SCIP_MATRIX*          matrix              /**< matrix containing the constraints */
+   )
+{
+   int lastcolidx = -1;
+   int* rowpnt;
+   int* rowend;
+   int r;
+
+   for( r = 0; r < SCIPmatrixGetNRows(matrix); r++ )
+   {
+      rowpnt = SCIPmatrixGetRowIdxPtr(matrix, r);
+      rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix, r);
+      for( ; (rowpnt < rowend); rowpnt++ )
+      {
+         if( ! (lastcolidx < *rowpnt) )
+            assert(0);
+         lastcolidx = *rowpnt;
+      }
+      lastcolidx = -1;
+   }
+}
+#endif
 
 /** execution method of presolver */
 static
@@ -619,6 +657,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       int r;
       int i;
       int numcancel;
+      int numcancelcurrent;
+      int numcancellast;
       int numchangedcoefs;
       SCIP_VAR** consvars;
       SCIP_Real* consvals;
@@ -626,7 +666,6 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       int* eqidxs;
       int numeqs;
       SCIP_Bool* rowsparsified;
-      SCIP_Bool eqprocessed;
       int nmisses;
       SCIP_Real* ratios;
       SCIP_Bool* nonzerosotherrow;
@@ -641,7 +680,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       int* overlapidxs;
       SCIP_Real scalefac;
       int minnonzcancellations;
-      int numobservedequalities;
+      int numobservedrowpairs;
       MATRIXROW* msets;
       SCIP_SGTRIE* sgtrie;
       MATRIXROW** matches;
@@ -651,14 +690,18 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       int scalefails;
       int mindensity;
       int maxdensity;
+      int multiplekeyspresent;
 
       numcancel = 0;
+      numcancellast = 0;
+      numcancelcurrent = 0;
       numchangedcoefs = 0;
-      numobservedequalities = 0;
+      numobservedrowpairs = 0;
       missfails = 0;
       scalefails = 0;
       mindensity = 0;
       maxdensity = 0;
+      multiplekeyspresent = 0;
 
       nrows = SCIPmatrixGetNRows(matrix);
       ncols = SCIPmatrixGetNColumns(matrix);
@@ -688,25 +731,28 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       SCIP_CALL( SCIPallocBufferArray(scip, &msets, nrows) );
       SCIP_CALL( SCIPallocBufferArray(scip, &matches, nrows));
 
-      SCIP_CALL( SCIPsgtrieCreate(&sgtrie, SCIPblkmem(scip), SCIPbuffer(scip), matrixrowGetSignature, cmpMatrixrow) );
+      SCIP_CALL( SCIPsgtrieCreate(&sgtrie, SCIPblkmem(scip), SCIPbuffer(scip), matrixrowGetSignature, cmpMatrixrow/*NULL*/) );
 
-      getMatrixRowSets(scip, matrix, msets, &mindensity, &maxdensity);
+      /* prepare matrix rows for insertion to signature trie */
+      prepareMatrixRows(scip, matrix, msets, &mindensity, &maxdensity);
 
       /* insert rows into signature trie */
       for( r = 0; r < nrows; r++ )
       {
          SCIP_RETCODE rc;
          rc = SCIPsgtrieInsert(sgtrie, &msets[r]);
-#ifdef SCIP_DEBUG
+
          if( rc == SCIP_KEYALREADYEXISTING )
          {
+#ifdef SCIP_MORE_DEBUG
             MATRIXROW* tmpset;
             tmpset = SCIPsgtrieFindEq(sgtrie, &msets[r]);
-            SCIPdebugMsg(scip, "### Warning: key already present in sgtrie!\n");
+            SCIPdebugMsg(scip, "### Warning: key already present in signature trie!\n");
             SCIPmatrixPrintRow(scip, matrix, msets[r].idx);
             SCIPmatrixPrintRow(scip, matrix, tmpset->idx);
-         }
 #endif
+            multiplekeyspresent = 1;
+         }
       }
 
       /* collect equalities and their number of non-zeros */
@@ -731,9 +777,6 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       /* loop over the equalities by increasing number of non-zeros */
       for( r = 0; r < numeqs; r++ )
       {
-         eqprocessed = FALSE;
-         numobservedequalities++;
-
          /* use signature trie to retrieve matching row candidates */
          if( presoldata->maxsupersetmisses == 1 )
             SCIP_CALL( SCIPsgtrieFindSupersetsPlusOne(sgtrie, (void*)&msets[eqidxs[r]], (void**)matches, &nmatches) );
@@ -744,6 +787,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
          for( i = 0; i < nmatches; i++ )
          {
             rowidx = matches[i]->idx;
+            numobservedrowpairs++;
 
             /* we treat only different constraint pairs and rows which are not already sparsified */
             if( rowidx != eqidxs[r] && !rowsparsified[rowidx] && !rowsparsified[eqidxs[r]] )
@@ -769,10 +813,6 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
                            &numcancel, &numchangedcoefs) );
 
                      rowsparsified[rowidx] = TRUE;
-
-                     /* if full search is not required, treat next equality */
-                     if( !presoldata->fullsearch )
-                        eqprocessed = TRUE;
                   }
                   else
                      scalefails++;
@@ -784,17 +824,23 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
                rescattering(nonzerosotherrow, scatterotherrow, &numscatterotherrow);
                rescattering(nonzerosequality, scatterequality, &numscatterequality);
             }
-
-            if( eqprocessed )
-               break;
          }
 
          if( !presoldata->fullsearch )
          {
-            /* check success of this presolver */
-            if( !(numobservedequalities % UPSHOT_INTERVAL) )
-               if( (SCIP_Real)numcancel/(SCIP_Real)numobservedequalities < HIT_THRESHOLD )
+            /* check success of this presolver, stop otherwise */
+            if( !(numobservedrowpairs % CHECK_INTERVAL) )
+            {
+               numcancellast = numcancel - numcancelcurrent;
+               numcancelcurrent = numcancel;
+#ifdef SCIP_MORE_DEBUG
+               SCIPdebugMsg(scip, "### cancellast=%d, sucratio=%.6f\n",numcancellast,(SCIP_Real)numcancellast/(SCIP_Real)CHECK_INTERVAL);
+#endif
+               if( ((SCIP_Real)numcancellast/(SCIP_Real)CHECK_INTERVAL) < THRESHOLD )
                   break;
+
+               numcancellast = 0;
+            }
          }
       }
 
@@ -824,8 +870,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
 
 #ifdef SCIP_DEBUG
       /* print out number of changed coefficients and non-zero cancellations */
-      SCIPdebugMsg(scip, "### nrows=%d, eqs=%d, mfails=%d, sfails=%d, mindensity=%d, maxdensity=%d, chgcoefs=%d, nzcancel=%d\n",
-         nrows, numeqs, missfails, scalefails, mindensity, maxdensity, numchangedcoefs, numcancel);
+      SCIPdebugMsg(scip, "### nrows=%d, eqs=%d, mfails=%d, sfails=%d, mindensity=%d, maxdensity=%d, multkeys=%d, sucratio=%.4f, chgcoefs=%d, nzcancel=%d\n",
+         nrows, numeqs, missfails, scalefails, mindensity, maxdensity, multiplekeyspresent, (SCIP_Real)numcancel/(SCIP_Real)numobservedrowpairs, numchangedcoefs, numcancel);
 #endif
    }
 
