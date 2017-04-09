@@ -38,13 +38,13 @@
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define DEFAULT_MAXROUNDS             3 /**< maximal number of cmir separation rounds per node (-1: unlimited) */
-#define DEFAULT_MAXROUNDSROOT        -1 /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
+#define DEFAULT_MAXROUNDSROOT        60 /**< maximal number of cmir separation rounds in the root node (-1: unlimited) */
 #define DEFAULT_MAXTRIES            100 /**< maximal number of rows to start aggregation with per separation round
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXTRIESROOT         -1 /**< maximal number of rows to start aggregation with per round in the root node
                                          *   (-1: unlimited) */
-#define DEFAULT_MAXFAILS           0.02 /**< maximal number of consecutive unsuccessful aggregation tries (relative to number of rows) */
-#define DEFAULT_MAXFAILSROOT        0.1 /**< maximal number of consecutive unsuccessful aggregation tries in the root node
+#define DEFAULT_MAXFAILS           0.05 /**< maximal number of consecutive unsuccessful aggregation tries (relative to number of rows) */
+#define DEFAULT_MAXFAILSROOT        0.3 /**< maximal number of consecutive unsuccessful aggregation tries in the root node
                                          *   (relative to number of rows) */
 #define DEFAULT_MAXAGGRS              3 /**< maximal number of aggregations for each row per separation round */
 #define DEFAULT_MAXAGGRSROOT          6 /**< maximal number of aggregations for each row per round in the root node */
@@ -120,52 +120,6 @@ struct SCIP_SepaData
  * Local methods
  */
 
-/** stores nonzero elements of dense coefficient vector as sparse vector, and calculates activity and norm */
-static
-SCIP_RETCODE storeCutInArrays(
-   SCIP*                 scip,               /**< SCIP data structure */
-   int                   nvars,              /**< number of problem variables */
-   SCIP_VAR**            vars,               /**< problem variables */
-   SCIP_Real*            cutcoefs,           /**< dense coefficient vector */
-   SCIP_Real*            varsolvals,         /**< dense variable LP solution vector */
-   SCIP_VAR**            cutvars,            /**< array to store variables of sparse cut vector */
-   SCIP_Real*            cutvals,            /**< array to store coefficients of sparse cut vector */
-   int*                  cutlen,             /**< pointer to store number of nonzero entries in cut */
-   SCIP_Real*            cutact              /**< pointer to store activity of cut */
-   )
-{
-   SCIP_Real act;
-   int len;
-   int v;
-
-   assert(nvars == 0 || cutcoefs != NULL);
-   assert(nvars == 0 || varsolvals != NULL);
-   assert(cutvars != NULL);
-   assert(cutvals != NULL);
-   assert(cutlen != NULL);
-   assert(cutact != NULL);
-
-   len = 0;
-   act = 0.0;
-   for( v = 0; v < nvars; ++v )
-   {
-      SCIP_Real val;
-
-      val = cutcoefs[v];
-      if( !SCIPisZero(scip, val) )
-      {
-         act += val * varsolvals[v];
-         cutvars[len] = vars[v];
-         cutvals[len] = val;
-         len++;
-      }
-   }
-
-   *cutlen = len;
-   *cutact = act;
-
-   return SCIP_OKAY;
-}
 
 /** adds given cut to LP if violated */
 static
@@ -262,10 +216,11 @@ SCIP_RETCODE addCut(
    return SCIP_OKAY;   
 }
 
+#if 0
 /** decreases the score of a row in order to not aggregate it again too soon */
 static
 void decreaseRowScore(
-   SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            rowlhsscores,       /**< aggregation scores for left hand sides of row */
    SCIP_Real*            rowrhsscores,       /**< aggregation scores for right hand sides of row */
    int                   rowidx              /**< index of row to decrease score for */
@@ -280,7 +235,6 @@ void decreaseRowScore(
    rowrhsscores[rowidx] *= 0.9;
 }
 
-#if 0
 /** returns whether the variable should be tried to be aggregated out */
 static
 SCIP_Bool varIsContinuous(
@@ -499,7 +453,6 @@ SCIP_RETCODE setupAggregationData(
             aggrdata->bounddist[i] = -aggrdata->bounddist[i];
          }
          aggrdata->ngoodaggrrows[i] = ngoodrows;
-//          aggrdata->ngoodaggrrows[i] = 0;
          beg = end;
       }
    }
@@ -772,33 +725,17 @@ SCIP_RETCODE aggregateNextRow(
             SCIP_Real rowscore;
             int rowside;
 
-            if( (rowlhsscores[lppos] != 0.0 && rowrhsscores[lppos] != 0.0) ||
-               (rowlhsscores[lppos] == 0.0 && rowrhsscores[lppos] == 0.0) )
+            /* either both or none of the rowscores are 0.0 so use the one which gives a positive slack */
+            if( (rowaggrfac < 0.0 && !SCIPisInfinity(scip, -SCIProwGetLhs(candrows[k]))) ||
+                  SCIPisInfinity(scip, SCIProwGetRhs(candrows[k])) )
             {
-               /* either both or none of the rowscores are 0.0 so use the one which gives a positive slack */
-               if( (rowaggrfac < 0.0 && !SCIPisInfinity(scip, -SCIProwGetLhs(candrows[k]))) ||
-                   SCIPisInfinity(scip, SCIProwGetRhs(candrows[k])) )
-               {
-                  rowscore = rowlhsscores[lppos];
-                  rowside = -1;
-               }
-               else
-               {
-                  rowscore = rowrhsscores[lppos];
-                  rowside = 1;
-               }
-            }
-            else if( rowlhsscores[lppos] == 0.0 && !SCIPisInfinity(scip, SCIProwGetRhs(candrows[k])))
-            {
-               /* only left hand side score is zero, so use the right hand side, even if it gives a negative slack */
-               rowscore = rowrhsscores[lppos];
-               rowside = 1;
+               rowscore = rowlhsscores[lppos];
+               rowside = -1;
             }
             else
             {
-               /* only right hand side score is zero, so use the left hand side, even if it gives a negative slack */
-               rowscore = rowlhsscores[lppos];
-               rowside = -1;
+               rowscore = rowrhsscores[lppos];
+               rowside = 1;
             }
 
             /* if this rows score is better than the currently best score, remember it */
@@ -953,7 +890,6 @@ SCIP_RETCODE aggregation(
 
       flowcoverefficacy =  -SCIPinfinity(scip);
       SCIP_CALL( SCIPcalcFlowCover(scip, sol, BOUNDSWITCH, ALLOWLOCAL, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &flowcoverefficacy, &cutrank, &cutislocal, &flowcoversuccess) );
-
 
       cutefficacy = flowcoverefficacy;
       SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, NULL, NULL, MINFRAC, MAXFRAC, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &cmirsuccess) );
@@ -1295,11 +1231,12 @@ SCIP_RETCODE separateCuts(
       SCIP_CALL( aggregation(scip, &aggrdata, sepa, sepadata, sol, varsolvals, rowlhsscores, rowrhsscores,
                              roworder[r], maxaggrs, maxconts, &wastried, &cutoff, cutinds, cutcoefs, FALSE, &ncuts) );
 
-      if( sepadata->trynegscaling )
+      if( sepadata->trynegscaling && oldncuts == ncuts && !cutoff )
       {
          SCIP_CALL( aggregation(scip, &aggrdata, sepa, sepadata, sol, varsolvals, rowlhsscores, rowrhsscores,
                              roworder[r], maxaggrs, maxconts, &wastried, &cutoff, cutinds, cutcoefs, TRUE, &ncuts) );
       }
+
       if ( cutoff )
          break;
 
