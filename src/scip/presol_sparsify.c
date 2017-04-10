@@ -512,8 +512,9 @@ SCIP_Real getScalefac(
       }
    }
 
-   /* we prefer cancelling of coefficients with infinite variable bounds */
-   if( bestbndcancelled > 1 )
+   /* we prefer cancelling of coefficients of variables with infinite variable bounds
+    * if there are not at least twice as much other cancellings */
+   if( bestbndcancelled > 1 && (2 * bestallcancelled) >= bestbndcancelled )
    {
       assert(!SCIPisZero(scip, bestbndscalefac));
       scalefac = bestbndscalefac;
@@ -595,33 +596,6 @@ void prepareMatrixRows(
    }
 }
 
-#if 0
-/** debugging purpose */
-static void
-checkRowIdxsConsecutive(
-   SCIP*                 scip,               /**< SCIP main data structure */
-   SCIP_MATRIX*          matrix              /**< matrix containing the constraints */
-   )
-{
-   int lastcolidx = -1;
-   int* rowpnt;
-   int* rowend;
-   int r;
-
-   for( r = 0; r < SCIPmatrixGetNRows(matrix); r++ )
-   {
-      rowpnt = SCIPmatrixGetRowIdxPtr(matrix, r);
-      rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix, r);
-      for( ; (rowpnt < rowend); rowpnt++ )
-      {
-         if( ! (lastcolidx < *rowpnt) )
-            assert(0);
-         lastcolidx = *rowpnt;
-      }
-      lastcolidx = -1;
-   }
-}
-#endif
 
 /** execution method of presolver */
 static
@@ -870,7 +844,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
 
 #ifdef SCIP_DEBUG
       /* print out number of changed coefficients and non-zero cancellations */
-      SCIPdebugMsg(scip, "### nrows=%d, eqs=%d, mfails=%d, sfails=%d, mindensity=%d, maxdensity=%d, multkeys=%d, sucratio=%.4f, chgcoefs=%d, nzcancel=%d\n",
+      SCIPdebugMsg(scip, "### nrows=%d, eqs=%d, mfails=%d, sfails=%d, minrowdensity=%d, maxrowdensity=%d, sgmultkeys=%d, sucratio=%.4f, chgcoefs=%d, nzcancel=%d\n",
          nrows, numeqs, missfails, scalefails, mindensity, maxdensity, multiplekeyspresent, (SCIP_Real)numcancel/(SCIP_Real)numobservedrowpairs, numchangedcoefs, numcancel);
 #endif
    }
