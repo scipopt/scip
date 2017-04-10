@@ -940,10 +940,10 @@ SCIP_RETCODE cutsTransformMIR(
                                               *   NULL for using closest bound for all variables */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
-   SCIP_Real*            cutcoefs,           /**< aggrrow to transform */
-   SCIP_Real*            cutrhs,             /**< aggrrow to transform */
-   int*                  cutinds,            /**< aggrrow to transform */
-   int*                  nnz,                /**< aggrrow to transform */
+   SCIP_Real*            cutcoefs,           /**< array of coefficients of cut */
+   SCIP_Real*            cutrhs,             /**< pointer to right hand side of cut */
+   int*                  cutinds,            /**< array of variables problem indices for non-zero coefficients in cut */
+   int*                  nnz,                /**< number of non-zeros in cut */
    int*                  varsign,            /**< stores the sign of the transformed variable in summation */
    int*                  boundtype,          /**< stores the bound used for transformed variable:
                                               *   vlb/vub_idx, or -1 for global lb/ub, or -2 for local lb/ub */
@@ -1379,10 +1379,10 @@ SCIP_RETCODE cutsTransformMIR(
 static
 SCIP_RETCODE cutsRoundMIR(
    SCIP*                 scip,               /**< SCIP datastructure */
-   SCIP_Real*            cutcoefs,
-   SCIP_Real*            cutrhs,
-   int*                  cutinds,
-   int*                  nnz,
+   SCIP_Real*            cutcoefs,           /**< array of coefficients of cut */
+   SCIP_Real*            cutrhs,             /**< pointer to right hand side of cut */
+   int*                  cutinds,            /**< array of variables problem indices for non-zero coefficients in cut */
+   int*                  nnz,                /**< number of non-zeros in cut */
    int*                  varsign,            /**< stores the sign of the transformed variable in summation */
    int*                  boundtype,          /**< stores the bound used for transformed variable (vlb/vub_idx or -1 for lb/ub) */
    SCIP_Real             f0                  /**< fractional value of rhs */
@@ -1689,16 +1689,16 @@ SCIP_RETCODE cutsRoundMIR(
  */
 static
 SCIP_RETCODE cutsSubstituteMIR(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_Real*            weights,            /**< row weights in row summation */
    int*                  slacksign,          /**< stores the sign of the row's slack variable in summation */
    int*                  rowinds,            /**< sparsity pattern of used rows */
    int                   nrowinds,           /**< number of used rows */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
-   SCIP_Real*            cutcoefs,
-   SCIP_Real*            cutrhs,
-   int*                  cutinds,
-   int*                  nnz,
+   SCIP_Real*            cutcoefs,           /**< array of coefficients of cut */
+   SCIP_Real*            cutrhs,             /**< pointer to right hand side of cut */
+   int*                  cutinds,            /**< array of variables problem indices for non-zero coefficients in cut */
+   int*                  nnz,                /**< number of non-zeros in cut */
    SCIP_Real             f0                  /**< fractional value of rhs */
    )
 {  /*lint --e{715}*/
@@ -2916,9 +2916,9 @@ SCIP_RETCODE constructSNFRelaxation(
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real*            rowcoefs,           /**< array of coefficients of row */
-   SCIP_Real*            rowrhs,             /**< pointer to right hand side of row */
+   SCIP_Real             rowrhs,             /**< pointer to right hand side of row */
    int*                  rowinds,            /**< array of variables problem indices for non-zero coefficients in row */
-   int*                  nnz,                /**< number of non-zeros in row */
+   int                   nnz,                /**< number of non-zeros in row */
    SNF_RELAXATION*       snf,                /**< stores the sign of the transformed variable in summation */
    SCIP_Bool*            success,            /**< stores whether the transformation was valid */
    SCIP_Bool*            localbdsused        /**< pointer to store whether local bounds were used in transformation */
