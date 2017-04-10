@@ -3847,6 +3847,18 @@ SCIP_RETCODE computeViolation(
 
       var = consdata->linvars[i];
       varval = SCIPgetSolVal(scip, sol, var);
+
+      /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
+      if( sol == NULL )
+      {
+         /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
+         if( !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)) || !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)) )
+         {
+            *solviolbounds = TRUE;
+            return SCIP_OKAY;
+         }
+         varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
+      }
       activity = consdata->lincoefs[i] * varval;
 
       /* the contribution of a variable with |varval| = +inf is +inf when activity > 0.0, -inf when activity < 0.0, and
@@ -3867,18 +3879,6 @@ SCIP_RETCODE computeViolation(
             consdata->lhsviol = SCIPinfinity(scip);
             return SCIP_OKAY;
          }
-      }
-
-      /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
-      if( sol == NULL )
-      {
-         /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
-         if( !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)) || !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)) )
-         {
-            *solviolbounds = TRUE;
-            return SCIP_OKAY;
-         }
-         varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
       }
 
       consdata->activity += activity;
