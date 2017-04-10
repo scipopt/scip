@@ -1192,9 +1192,46 @@ SCIP_Real getVariableRedcostScore(
    return score;
 }
 
-/** todo fix additional variables if the ones that the neighborhood found were not enough
+/** add variable and solution value to buffer data structure for variable fixings. The method checks if
+ *  the value still lies within the variable bounds. The value stays unfixed otherwise.
+ */
+static
+void add2variableBuffer(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< (source) SCIP variable that should be added to the buffer */
+   SCIP_Real             val,                /**< fixing value for this variable */
+   SCIP_VAR**            varbuf,             /**< variable buffer to store variables that should be fixed */
+   SCIP_Real*            valbuf,             /**< value buffer to store fixing values */
+   int*                  nfixings,           /**< pointer to number of fixed buffer variables, will be increased by 1 */
+   SCIP_Bool             integer             /**< is this an integer variable? */
+   )
+{
+   assert(SCIPisFeasIntegral(scip, val) || ! SCIPvarIsIntegral(var));
+   assert(*nfixings < SCIPgetNVars(scip));
+
+   /* round the value to its nearest integer */
+   if( integer )
+      val = SCIPfloor(scip, val + 0.5);
+
+   /* only add fixing if it is still valid within the global variable bounds. Invalidity
+    * of this solution value may come from a dual reduction that was performed after the solution from which
+    * this value originated was found
+    */
+   if( SCIPvarGetLbGlobal(var) <= val && val <= SCIPvarGetUbGlobal(var) )
+   {
+      varbuf[*nfixings] = var;
+      valbuf[*nfixings] = val;
+      ++(*nfixings);
+   }
+}
+
+/** fix additional variables if the ones that the neighborhood found were not enough
  *
  *  todo use not always the best solution for the values, but a reference solution provided by the neighborhood itself
+ *
+ *  @note it may happen that the target fixing rate is not completely reached. This is the case if intermediate,
+ *  dual reductions render the solution values of the incumbent solution (reference solution) infeasible for
+ *  the current, global variable bounds.
  */
 static
 SCIP_RETCODE lnsFixMoreVariables(
@@ -1311,14 +1348,10 @@ SCIP_RETCODE lnsFixMoreVariables(
    for( b = 0; b < nvarstoadd; ++b )
    {
       int permindex = perm[b];
-      SCIP_VAR* var;
       assert(permindex >= 0);
       assert(permindex < nbinintvars);
 
-      var = vars[permindex];
-      varbuf[*nfixings] = var;
-      valbuf[*nfixings] = solvals[permindex];
-      ++(*nfixings);
+      add2variableBuffer(scip, vars[permindex], solvals[permindex], varbuf, valbuf, nfixings, TRUE);
    }
 
    *success = TRUE;
@@ -1372,7 +1405,6 @@ SCIP_RETCODE neighborhoodFixVariables(
    if( *success && (*nfixings < ntargetfixings) )
    {
       SCIP_CALL( lnsFixMoreVariables(scip, heurdata, varbuf, valbuf, nfixings, ntargetfixings, success) );
-      assert(!(*success) || *nfixings >= ntargetfixings);
    }
 
 
@@ -1730,6 +1762,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
    SCIP_VAR** subvars;
    NH_STATS runstats;
    SCIP_STATUS subscipstatus;
+   SCIP* subscip = NULL;
 
    int nfixings;
    int nvars;
@@ -1772,7 +1805,6 @@ SCIP_DECL_HEUREXEC(heurExecLns)
    initRunStats(scip, &runstats);
    do
    {
-      SCIP* subscip = NULL;
       SCIP_HASHMAP* varmapf;
       SCIP_EVENTHDLR* eventhdlr;
       SCIP_EVENTDATA eventdata;
@@ -1860,9 +1892,17 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       subscipstatus = SCIPgetStatus(subscip);
       heurdata->usednodes += SCIPgetNNodes(subscip);
 
-      SCIP_CALL( SCIPfree(&subscip) );
    }
    while( FALSE );
+
+   if( subscip != NULL )
+   {
+      SCIP_CALL( SCIPfree(&subscip) );
+   }
+
+   SCIPfreeBufferArray(scip, &subvars);
+   SCIPfreeBufferArray(scip, &valbuf);
+   SCIPfreeBufferArray(scip, &varbuf);
 
    /** determine the success of this neighborhood, and update the target fixing rate for the next time */
    updateNeighborhoodStats(scip, &runstats, neighborhood);
@@ -1873,13 +1913,9 @@ SCIP_DECL_HEUREXEC(heurExecLns)
    /* update the bandit algorithms by the measured gain */
    SCIP_CALL( updateBanditAlgorithms(scip, heurdata, &runstats, neighborhoodidx) );
 
-   SCIPfreeBufferArray(scip, &subvars);
-   SCIPfreeBufferArray(scip, &valbuf);
-   SCIPfreeBufferArray(scip, &varbuf);
 
    return SCIP_OKAY;
 }
-
 
 /*
  * primal heuristic specific interface methods
@@ -1916,12 +1952,8 @@ DECL_VARFIXINGS(varFixingsRens)
       assert((i < nbinvars && SCIPvarIsBinary(var)) || (i >= nbinvars && SCIPvarIsIntegral(var)));
 
       /* fix all binary and integer variables with integer LP solution value */
-      if( SCIPisIntegral(scip, lpsolval) )
-      {
-         varbuf[*nfixings] = var;
-         valbuf[*nfixings] = lpsolval;
-         ++(*nfixings);
-      }
+      if( SCIPisFeasIntegral(scip, lpsolval) )
+         add2variableBuffer(scip, var, lpsolval, varbuf, valbuf, nfixings, TRUE);
    }
 
    *success = TRUE;
@@ -1949,7 +1981,7 @@ DECL_CHANGESUBSCIP(changeSubscipRens)
       SCIP_VAR* var = vars[i];
       SCIP_Real lpsolval = SCIPgetSolVal(sourcescip, NULL, var);
 
-      if( ! SCIPisIntegral(sourcescip, lpsolval) )
+      if( ! SCIPisFeasIntegral(sourcescip, lpsolval) )
       {
          SCIP_Real newlb = SCIPfloor(sourcescip, lpsolval);
          SCIP_Real newub = newlb + 1.0;
@@ -2017,17 +2049,14 @@ SCIP_RETCODE fixMatchingSolutionValues(
       for( s = 1; s < nsols; ++s )
       {
          SCIP_Real solval2 = SCIPgetSolVal(scip, sols[s], var);
-         if( ! SCIPisEQ(scip, solval, solval2) )
+         if( ! SCIPisFeasEQ(scip, solval, solval2) )
             break;
       }
 
       /* if we did not break early, all solutions agree on the solution value of this variables */
       if( s == nsols )
       {
-         assert(SCIPisFeasIntegral(scip, solval));
-         varbuf[*nfixings] = var;
-         valbuf[*nfixings] = SCIPfloor(scip, solval + 0.5);
-         (*nfixings)++;
+         add2variableBuffer(scip, var, solval, varbuf, valbuf, nfixings, TRUE);
       }
    }
 
@@ -2257,15 +2286,14 @@ DECL_VARFIXINGS(varFixingsMutation)
    ntargetfixings = (int)(targetfixingrate * nbinintvars) + 1;
 
    /* don't continue if number of discrete variables is too small to reach target fixing rate */
-   /* author bzfhende: TODO change target fixing rate to account for discrete variables specifically */
    if( nbinintvars <= ntargetfixings )
       return SCIP_OKAY;
 
    /* copy variables into a buffer array */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &varscpy, vars, nbinvars + nintvars) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &varscpy, vars, nbinintvars) );
 
-   /* partially perturb the array until the number of target fixings are reached */
-   for( i = 0; i < ntargetfixings; ++i )
+   /* partially perturb the array until the number of target fixings is reached */
+   for( i = 0; *nfixings < ntargetfixings && i < nbinintvars; ++i )
    {
       int randint = SCIPrandomGetInt(rng, i, nbinintvars - 1);
       assert(randint < nbinintvars);
@@ -2275,13 +2303,17 @@ DECL_VARFIXINGS(varFixingsMutation)
          SCIPswapPointers((void**)&varscpy[i], (void**)&varscpy[randint]);
       }
       /* copy the selected variables and their solution values into the buffer */
-      varbuf[i] = varscpy[i];
-      valbuf[i] = SCIPgetSolVal(scip, incumbentsol, varscpy[i]);
-      assert(SCIPisIntegral(scip, valbuf[i]));
+      add2variableBuffer(scip, varscpy[i], SCIPgetSolVal(scip, incumbentsol, varscpy[i]), varbuf, valbuf, nfixings, TRUE);
    }
 
-   *nfixings = ntargetfixings;
-   *success = TRUE;
+   assert(i == nbinintvars || *nfixings == ntargetfixings);
+
+   /* Not reaching the number of target fixings means that there is a significant fraction (at least 1 - targetfixingrate)
+    * of variables for which the incumbent solution value does not lie within the global bounds anymore. This is a nonsuccess
+    * for the neighborhood (additional fixings are not possible), which is okay because the incumbent solution is
+    * significantly outdated
+    */
+   *success = (*nfixings == ntargetfixings);
 
    /* free the buffer array */
    SCIPfreeBufferArray(scip, &varscpy);
