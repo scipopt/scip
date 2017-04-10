@@ -78,10 +78,12 @@
 #define DEFAULT_MAXFIXINGRATE_CROSSOVER 0.8
 #define DEFAULT_MINFIXINGRATE_ZEROOBJECTIVE 0.5
 #define DEFAULT_MAXFIXINGRATE_ZEROOBJECTIVE 0.8
-
+#define DEFAULT_MINFIXINGRATE_DINS 0.1
+#define DEFAULT_MAXFIXINGRATE_DINS 0.4
 
 
 #define DEFAULT_NSOLS_CROSSOVER 2 /**< parameter for the number of solutions that crossover should combine */
+#define DEFAULT_NPOOLSOLS_DINS 5 /**< number of pool solutions where binary solution values must agree */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Lns"
@@ -95,6 +97,7 @@
 /* additional crossover data structure */
 typedef struct data_crossover DATA_CROSSOVER;
 typedef struct data_mutation DATA_MUTATION;
+typedef struct data_dins DATA_DINS;
 typedef struct EpsGreedy EPSGREEDY;
 typedef struct expThree EXPTHREE;
 typedef struct NH_FixingRate NH_FIXINGRATE;
@@ -208,6 +211,7 @@ struct Nh
    {
       DATA_MUTATION*     mutation;           /**< mutation data */
       DATA_CROSSOVER*    crossover;          /**< crossover data */
+      DATA_DINS*         dins;               /**< dins data */
    }                     data;               /**< data object for neighborhood specific data */
 };
 
@@ -221,6 +225,11 @@ struct data_crossover
 {
    int                   nsols;              /**< parameter for the number of solutions that crossover should combine */
    SCIP_RANDNUMGEN*      rng;                /**< random number generator to draw from the solution pool */
+};
+
+struct data_dins
+{
+   int                   npoolsols;          /**< number of pool solutions where binary solution values must agree */
 };
 /** current, unnormalized reward for item i */
 #define DECL_EPSREWARD(x) SCIP_Real x ( \
@@ -2001,19 +2010,22 @@ DECL_CHANGESUBSCIP(changeSubscipRens)
    return SCIP_OKAY;
 }
 
-/** todo collect all binary integer variables with matching solution values in a collection of solutions */
+/** collect fixings by matching solution values in a collection of solutions for all binary and integer variables,
+ *  or for a custom set of variables
+ */
 static
 SCIP_RETCODE fixMatchingSolutionValues(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sols,               /**< array of 2 or more solutions. It is okay for the array to contain one element
                                                *  equal to NULL to represent the current LP solution */
    int                   nsols,              /**< number of solutions in the array */
+   SCIP_VAR**            vars,               /**< variable array for which solution values must agree */
+   int                   nvars,              /**< number of variables, or -1 for all binary and integer variables */
    SCIP_VAR**            varbuf,             /**< buffer storage for variable fixings */
    SCIP_Real*            valbuf,             /**< buffer storage for fixing values */
    int*                  nfixings            /**< pointer to store the number of fixings */
    )
 {
-   SCIP_VAR** vars;
    int v;
    int nbinvars;
    int nintvars;
@@ -2028,14 +2040,18 @@ SCIP_RETCODE fixMatchingSolutionValues(
    assert(nfixings != NULL);
    assert(*nfixings == 0);
 
-
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
-   nbinintvars = nbinvars + nintvars;
+   if( nvars == -1 || vars == NULL )
+   {
+      SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
+      nbinintvars = nbinvars + nintvars;
+      nvars = nbinintvars;
+   }
    firstsol = sols[0];
+   assert(nvars > 0);
 
    /* loop over integer and  binary variables and check if their solution values match in all solutions */
    /* comment */
-   for( v = 0; v < nbinintvars; ++v )
+   for( v = 0; v < nvars; ++v )
    {
       SCIP_Real solval;
       SCIP_VAR* var;
@@ -2053,7 +2069,7 @@ SCIP_RETCODE fixMatchingSolutionValues(
             break;
       }
 
-      /* if we did not break early, all solutions agree on the solution value of this variables */
+      /* if we did not break early, all solutions agree on the solution value of this variable */
       if( s == nsols )
       {
          add2variableBuffer(scip, var, solval, varbuf, valbuf, nfixings, TRUE);
@@ -2099,7 +2115,7 @@ DECL_VARFIXINGS(varFixingsRins)
    sols[0] = NULL;
    sols[1] = incumbent;
 
-   SCIP_CALL( fixMatchingSolutionValues(scip, sols, 2, varbuf, valbuf, nfixings) );
+   SCIP_CALL( fixMatchingSolutionValues(scip, sols, 2, vars, nbinvars + nintvars, varbuf, valbuf, nfixings) );
 
    *success = TRUE;
 
@@ -2207,7 +2223,7 @@ DECL_VARFIXINGS(varFixingsCrossover)
       }
    }
 
-   SCIP_CALL( fixMatchingSolutionValues(scip, sols, data->nsols, varbuf, valbuf, nfixings) );
+   SCIP_CALL( fixMatchingSolutionValues(scip, sols, data->nsols, NULL, -1, varbuf, valbuf, nfixings) );
 
    *success = TRUE;
 
@@ -2321,9 +2337,17 @@ DECL_VARFIXINGS(varFixingsMutation)
    return SCIP_OKAY;
 }
 
+/** todo add local branching constraint */
 static
-DECL_CHANGESUBSCIP(changeSubscipLocalbranching)
-{  /*lint --e{715}*/
+SCIP_RETCODE addLocalBranchingConstraint(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_VAR**            subvars,            /**< array of sub SCIP variables in same order as source SCIP variables */
+   int                   distance,           /**< right hand side of the local branching constraint */
+   SCIP_Bool*            success,            /**< pointer to store of a local branching constraint has been successfully added */
+   int*                  naddedconss         /**< pointer to increase the number of added constraints */
+   )
+{
    int nbinvars;
    int i;
    SCIP_SOL* referencesol;
@@ -2331,6 +2355,9 @@ DECL_CHANGESUBSCIP(changeSubscipLocalbranching)
    SCIP_VAR** vars;
    SCIP_Real* consvals;
    SCIP_Real rhs;
+
+   assert(sourcescip != NULL);
+
 
    nbinvars = SCIPgetNBinVars(sourcescip);
    vars = SCIPgetVars(sourcescip);
@@ -2342,7 +2369,7 @@ DECL_CHANGESUBSCIP(changeSubscipLocalbranching)
    if( referencesol == NULL )
       return SCIP_OKAY;
 
-   rhs = nbinvars * 0.2;
+   rhs = (SCIP_Real)distance;
    rhs = MAX(rhs, 2.0);
 
 
@@ -2364,10 +2391,20 @@ DECL_CHANGESUBSCIP(changeSubscipLocalbranching)
    SCIP_CALL( SCIPcreateConsBasicLinear(targetscip, &localbranchcons, "localbranch", nbinvars, subvars, consvals, -SCIPinfinity(sourcescip), rhs) );
    SCIP_CALL( SCIPaddCons(targetscip, localbranchcons) );
    SCIP_CALL( SCIPreleaseCons(targetscip, &localbranchcons) );
+
    *naddedconss = 1;
    *success = TRUE;
 
    SCIPfreeBufferArray(sourcescip, &consvals);
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_CHANGESUBSCIP(changeSubscipLocalbranching)
+{  /*lint --e{715}*/
+
+   SCIP_CALL( addLocalBranchingConstraint(sourcescip, targetscip, subvars, (int)(0.2 * SCIPgetNBinVars(sourcescip)), success, naddedconss) );
 
    return SCIP_OKAY;
 }
@@ -2435,6 +2472,198 @@ DECL_CHANGESUBSCIP(changeSubscipZeroobjective)
    return SCIP_OKAY;
 }
 
+/** compute tightened bounds for integer variables depending on how much the LP and the incumbent solution values differ */
+static
+void computeIntegerVariableBoundsDins(
+   SCIP*                 scip,               /**< SCIP data structure of the original problem */
+   SCIP_VAR*             var,                /**< the variable for which bounds should be computed */
+   SCIP_Real*            lbptr,              /**< pointer to store the lower bound in the DINS sub-SCIP */
+   SCIP_Real*            ubptr               /**< pointer to store the upper bound in the DINS sub-SCIP */
+   )
+{
+   SCIP_Real mipsol;
+   SCIP_Real lpsol;
+
+   SCIP_Real lbglobal;
+   SCIP_Real ubglobal;
+   SCIP_SOL* bestsol;
+
+   /* get the bounds for each variable */
+   lbglobal = SCIPvarGetLbGlobal(var);
+   ubglobal = SCIPvarGetUbGlobal(var);
+
+   assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
+   /* get the current LP solution for each variable */
+   lpsol = SCIPvarGetLPSol(var);
+
+   /* get the current MIP solution for each variable */
+   bestsol = SCIPgetBestSol(scip);
+   mipsol = SCIPgetSolVal(scip, bestsol, var);
+
+
+   /* if the solution values differ by 0.5 or more, the variable is rebounded, otherwise it is just copied */
+   if( REALABS(lpsol - mipsol) >= 0.5 )
+   {
+      SCIP_Real range;
+
+      *lbptr = lbglobal;
+      *ubptr = ubglobal;
+
+      /* create a equally sized range around lpsol for general integers: bounds are lpsol +- (mipsol-lpsol) */
+      range = 2*lpsol-mipsol;
+
+      if( mipsol >= lpsol )
+      {
+         range = SCIPfeasCeil(scip, range);
+         *lbptr = MAX(*lbptr, range);
+
+         /* when the bound new upper bound is equal to the current MIP solution, we set both bounds to the integral bound (without eps) */
+         if( SCIPisFeasEQ(scip, mipsol, *lbptr) )
+            *ubptr = *lbptr;
+         else
+            *ubptr = mipsol;
+      }
+      else
+      {
+         range = SCIPfeasFloor(scip, range);
+         *ubptr = MIN(*ubptr, range);
+
+         /* when the bound new upper bound is equal to the current MIP solution, we set both bounds to the integral bound (without eps) */
+         if( SCIPisFeasEQ(scip, mipsol, *ubptr) )
+            *lbptr = *ubptr;
+         else
+            *lbptr = mipsol;
+      }
+
+      /* the global domain of variables might have been reduced since incumbent was found: adjust lb and ub accordingly */
+      *lbptr = MAX(*lbptr, lbglobal);
+      *ubptr = MIN(*ubptr, ubglobal);
+   }
+   else
+   {
+      /* the global domain of variables might have been reduced since incumbent was found: adjust it accordingly */
+      *lbptr = MAX(mipsol, lbglobal);
+      *ubptr = MIN(mipsol, ubglobal);
+   }
+}
+
+static
+DECL_VARFIXINGS(varFixingsDins)
+{
+   DATA_DINS* data;
+   SCIP_SOL* rootlpsol;
+   SCIP_SOL** sols;
+   int nsols;
+   int nbinvars;
+   int nintvars;
+   SCIP_VAR** vars;
+   int v;
+
+   data = neighborhood->data.dins;
+   assert(data != NULL);
+   nsols = data->npoolsols;
+   nsols = MIN(nsols, SCIPgetNSols(scip));
+
+   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      return SCIP_OKAY;
+
+   if( SCIPgetBestSol(scip) == NULL )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
+
+   if( nbinvars + nintvars == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPcreateSol(scip, &rootlpsol, NULL) );
+
+   /* save root solution LP values in solution */
+   for( v = 0; v < nbinvars + nintvars; ++v )
+   {
+      SCIP_CALL( SCIPsetSolVal(scip, rootlpsol, vars[v], SCIPvarGetRootSol(vars[v])) );
+   }
+
+   /* add the node and the root LP solution */
+   nsols += 2;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &sols, nsols) );
+   sols[0] = NULL; /* node LP solution */
+   sols[1] = rootlpsol;
+
+   /* copy the remaining MIP solutions after the LP solutions */
+   BMScopyMemoryArray(&sols[2], SCIPgetSols(scip), nsols - 2);
+
+   /* 1. Binary variables are fixed if their values agree in all the solutions */
+   if( nbinvars > 0 )
+   {
+      SCIP_CALL( fixMatchingSolutionValues(scip, sols, nsols, vars, nbinvars, varbuf, valbuf, nfixings) );
+   }
+
+   /* 2. Integer variables are fixed if they have a very low distance between the incumbent and the root LP solution */
+   for( v = nbinvars; v < nintvars; ++v )
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+      computeIntegerVariableBoundsDins(scip, vars[v], &lb, &ub);
+
+      if( ub - lb < 0.5 )
+      {
+         assert(SCIPisFeasIntegral(scip, lb));
+         add2variableBuffer(scip, vars[v], lb, varbuf, valbuf, nfixings, TRUE);
+
+      }
+   }
+
+   *success = TRUE;
+
+   SCIPfreeBufferArray(scip, &sols);
+
+   SCIPfreeSol(scip, &rootlpsol);
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_CHANGESUBSCIP(changeSubscipDins)
+{
+   SCIP_VAR** vars;
+   int nintvars;
+   int nbinvars;
+   int v;
+
+   SCIP_CALL( SCIPgetVarsData(sourcescip, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
+
+   /* 1. loop over integer variables and tighten the bounds */
+   for( v = nbinvars; v < nintvars; ++v )
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+
+      computeIntegerVariableBoundsDins(sourcescip, vars[v], &lb, &ub);
+
+      SCIP_CALL( SCIPchgVarLbGlobal(targetscip, subvars[v], lb) );
+      SCIP_CALL( SCIPchgVarUbGlobal(targetscip, subvars[v], ub) );
+      ++(*ndomchgs);
+   }
+
+   /* 2. add local branching constraint for binary variables */
+   addLocalBranchingConstraint(sourcescip, targetscip, subvars, (int)(0.1 * SCIPgetNBinVars(sourcescip)), success, naddedconss );
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
+static
+DECL_NHFREE(nhFreeDins)
+{
+   assert(neighborhood->data.dins != NULL);
+
+   SCIPfreeBlockMemory(scip, &neighborhood->data.dins);
+
+   return SCIP_OKAY;
+}
+
 
 
 /** include all neighborhoods */
@@ -2451,6 +2680,7 @@ SCIP_RETCODE includeNeighborhoods(
    NH* crossover;
    NH* proximity;
    NH* zeroobjective;
+   NH* dins;
 
    heurdata->nneighborhoods = 0;
 
@@ -2493,11 +2723,19 @@ SCIP_RETCODE includeNeighborhoods(
          DEFAULT_MINFIXINGRATE_ZEROOBJECTIVE, DEFAULT_MAXFIXINGRATE_ZEROOBJECTIVE, NULL, changeSubscipZeroobjective,
          NULL, NULL, NULL, NULL) );
 
+   /* include the DINS neighborhood */
+   SCIP_CALL( lnsIncludeNeighborhood(scip, heurdata, &dins, "dins",
+         DEFAULT_MINFIXINGRATE_DINS, DEFAULT_MAXFIXINGRATE_DINS,
+         varFixingsDins, changeSubscipDins, NULL, NULL, NULL, nhFreeDins) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &dins->data.dins) );
 
+   /* add DINS neighborhood parameters  */
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/lns/dins/npoolsols",
+         "number of pool solutions where binary solution values must agree",
+         &dins->data.dins->npoolsols, TRUE, DEFAULT_NPOOLSOLS_DINS, 1, 100, NULL, NULL) );
 
    /* author bzfhende: TODO include the GINS neighborhood */
 
-   /* TODO include the DINS neighborhood */
    return SCIP_OKAY;
 }
 
@@ -2554,8 +2792,8 @@ void printNeighborhoodStatistics(
    )
 {
    int i;
-   SCIPinfoMessage(scip, NULL, "Neighborhoods      :%11s %11s %11s %11s %11s %11s %11s\n",
-            "Calls", "SetupTime", "SubmipTime", "Sols", "Best", "Exp3", "TgtFixRate");
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Neighborhoods      :%11s %11s %11s %11s %11s %11s %11s %11s\n",
+            "Calls", "SetupTime", "SubmipTime", "SubmipNodes", "Sols", "Best", "Exp3", "TgtFixRate");
 
    /* todo loop over neighborhoods and fill in statistics */
    for( i = 0; i < heurdata->nneighborhoods; ++i )
@@ -2563,17 +2801,18 @@ void printNeighborhoodStatistics(
       NH* neighborhood;
       SCIP_Real proba;
       neighborhood = heurdata->neighborhoods[i];
-      SCIPinfoMessage(scip, NULL, "  %-17s:", neighborhood->name);
-      SCIPinfoMessage(scip, NULL, "%11d", neighborhood->stats.nruns);
-      SCIPinfoMessage(scip, NULL, " %11.2f", SCIPgetClockTime(scip, neighborhood->stats.setupclock) );
-      SCIPinfoMessage(scip, NULL, " %11.2f", SCIPgetClockTime(scip, neighborhood->stats.submipclock) );
-      SCIPinfoMessage(scip, NULL, " %11d", neighborhood->stats.nsolsfound);
-      SCIPinfoMessage(scip, NULL, " %11d", neighborhood->stats.nbestsolsfound);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "  %-17s:", neighborhood->name);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%11d", neighborhood->stats.nruns);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %11.2f", SCIPgetClockTime(scip, neighborhood->stats.setupclock) );
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %11.2f", SCIPgetClockTime(scip, neighborhood->stats.submipclock) );
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %11" SCIP_LONGINT_FORMAT, neighborhood->stats.usednodes );
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %11d", neighborhood->stats.nsolsfound);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %11d", neighborhood->stats.nbestsolsfound);
 
       proba = (1 - heurdata->exp3->gamma) * heurdata->exp3->weights[i] / heurdata->exp3->weightsum + heurdata->exp3->gamma / heurdata->nneighborhoods;
-      SCIPinfoMessage(scip, NULL, " %11.5f", proba);
-      SCIPinfoMessage(scip, NULL, " %11.3f", neighborhood->fixingrate.targetfixingrate);
-      SCIPinfoMessage(scip, NULL, "\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %11.5f", proba);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %11.3f", neighborhood->fixingrate.targetfixingrate);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "\n");
    }
 }
 
