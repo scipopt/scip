@@ -4003,76 +4003,79 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
             }
          }
 
-         /* sort all variables to combine equal variables easily */
-         SCIPsortPtrReal((void**)tmpvars2, tmpscalars2, SCIPvarComp, ntmpvars2);
-         pos = 0;
-         for( v = 1; v < ntmpvars2; ++v )
+         if( ntmpvars2 > 0 )
          {
-            /* combine same variables */
-            if( SCIPvarCompare(tmpvars2[v], tmpvars2[pos]) == 0 )
+            /* sort all variables to combine equal variables easily */
+            SCIPsortPtrReal((void**)tmpvars2, tmpscalars2, SCIPvarComp, ntmpvars2);
+            pos = 0;
+            for( v = 1; v < ntmpvars2; ++v )
             {
-               tmpscalars2[pos] += tmpscalars2[v];
-            }
-            else
-            {
-               ++pos;
-               if( v > pos )
+               /* combine same variables */
+               if( SCIPvarCompare(tmpvars2[v], tmpvars2[pos]) == 0 )
                {
-                  tmpscalars2[pos] = tmpscalars2[v];
-                  tmpvars2[pos] = tmpvars2[v];
+                  tmpscalars2[pos] += tmpscalars2[v];
+               }
+               else
+               {
+                  ++pos;
+                  if( v > pos )
+                  {
+                     tmpscalars2[pos] = tmpscalars2[v];
+                     tmpvars2[pos] = tmpvars2[v];
+                  }
                }
             }
-         }
-         ntmpvars2 = pos + 1;
+            ntmpvars2 = pos + 1;
 #ifdef SCIP_MORE_DEBUG
-         for( v = 1; v < ntmpvars2; ++v )
-         {
-            assert(SCIPvarCompare(tmpvars2[v], tmpvars2[v-1]) > 0);
-         }
-         for( v = 1; v < ntmpvars; ++v )
-         {
-            assert(SCIPvarCompare(tmpvars[v], tmpvars[v-1]) > 0);
-         }
-#endif
-         v = ntmpvars - 1;
-         k = ntmpvars2 - 1;
-         pos = ntmpvars + ntmpvars2 - 1;
-         ntmpvars += ntmpvars2;
-         ntmpvars2 = 0;
-         while( v >= 0 && k >= 0 )
-         {
-            assert(pos >= 0);
-            assert(SCIPvarCompare(tmpvars[v], tmpvars2[k]) != 0);
-            if( SCIPvarCompare(tmpvars[v], tmpvars2[k]) >= 0 )
+            for( v = 1; v < ntmpvars2; ++v )
             {
+               assert(SCIPvarCompare(tmpvars2[v], tmpvars2[v-1]) > 0);
+            }
+            for( v = 1; v < ntmpvars; ++v )
+            {
+               assert(SCIPvarCompare(tmpvars[v], tmpvars[v-1]) > 0);
+            }
+#endif
+            v = ntmpvars - 1;
+            k = ntmpvars2 - 1;
+            pos = ntmpvars + ntmpvars2 - 1;
+            ntmpvars += ntmpvars2;
+            ntmpvars2 = 0;
+            while( v >= 0 && k >= 0 )
+            {
+               assert(pos >= 0);
+               assert(SCIPvarCompare(tmpvars[v], tmpvars2[k]) != 0);
+               if( SCIPvarCompare(tmpvars[v], tmpvars2[k]) >= 0 )
+               {
+                  tmpvars[pos] = tmpvars[v];
+                  tmpscalars[pos] = tmpscalars[v];
+                  --v;
+               }
+               else
+               {
+                  tmpvars[pos] = tmpvars2[k];
+                  tmpscalars[pos] = tmpscalars2[k];
+                  --k;
+               }
+               --pos;
+               assert(pos >= 0);
+            }
+            while( v >= 0 )
+            {
+               assert(pos >= 0);
                tmpvars[pos] = tmpvars[v];
                tmpscalars[pos] = tmpscalars[v];
                --v;
+               --pos;
             }
-            else
+            while( k >= 0 )
             {
+               assert(pos >= 0);
                tmpvars[pos] = tmpvars2[k];
                tmpscalars[pos] = tmpscalars2[k];
                --k;
+               --pos;
             }
-            --pos;
-            assert(pos >= 0);
-         }
-         while( v >= 0 )
-         {
-            assert(pos >= 0);
-            tmpvars[pos] = tmpvars[v];
-            tmpscalars[pos] = tmpscalars[v];
-            --v;
-            --pos;
-         }
-         while( k >= 0 )
-         {
-            assert(pos >= 0);
-            tmpvars[pos] = tmpvars2[k];
-            tmpscalars[pos] = tmpscalars2[k];
-            --k;
-            --pos;
          }
 #ifdef SCIP_MORE_DEBUG
          for( v = 1; v < ntmpvars; ++v )
