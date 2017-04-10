@@ -736,7 +736,7 @@ SCIP_RETCODE determineBestBounds(
 
    v = SCIPvarGetProbindex(var);
 
-      /* check if the user specified a bound to be used */
+   /* check if the user specified a bound to be used */
    if( boundsfortrans != NULL && boundsfortrans[v] > -3 )
    {
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS || ( boundsfortrans[v] == -2 || boundsfortrans[v] == -1 ));
@@ -999,14 +999,17 @@ SCIP_RETCODE cutsTransformMIR(
          goto TERMINATE;
    }
 
+   /* remember start of integer variables in the aggrrow */
+   aggrrowintstart = i;
+
    /* remember positions of integral variables */
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &varpos, firstcontvar) );
 
-   for( i = (*nnz) - 1; i >= 0 && cutinds[i] < firstcontvar; --i )
+   for( i = (*nnz) - 1; i >= aggrrowintstart; --i )
       varpos[cutinds[i]] = i + 1;
 
    /* perform bound substitution for continuous variables */
-   for( i = 0; i < *nnz && cutinds[i] >= firstcontvar; ++i )
+   for( i = 0; i < aggrrowintstart; ++i )
    {
       SCIP_VAR* var = vars[cutinds[i]];
       if( selectedbounds[i] == SCIP_BOUNDTYPE_LOWER )
@@ -1117,9 +1120,9 @@ SCIP_RETCODE cutsTransformMIR(
       }
    }
 
-   /* remember start of integer variables in the aggrrow */
-   aggrrowintstart = i;
-
+   /* remove integral variables that now have a zero coefficient due to variable bound usage of continuous variables
+    * and determine the bound to use for the integer variables that are left
+    */
    while( i < *nnz )
    {
       assert(cutinds[i] < firstcontvar);
@@ -1375,7 +1378,7 @@ SCIP_RETCODE cutsTransformMIR(
  */
 static
 SCIP_RETCODE cutsRoundMIR(
-   SCIP*                 scip,               /**< global SCIP settings */
+   SCIP*                 scip,               /**< SCIP datastructure */
    SCIP_Real*            cutcoefs,
    SCIP_Real*            cutrhs,
    int*                  cutinds,
@@ -1393,6 +1396,11 @@ SCIP_RETCODE cutsRoundMIR(
    int ndelcontvars;
    int aggrrowlastcontvar;
 
+   assert(cutrhs != NULL);
+   assert(cutcoefs != NULL);
+   assert(cutinds != NULL);
+   assert(nnz != NULL);
+   assert(boundtype != NULL);
    assert(varsign != NULL);
    assert(0.0 < f0 && f0 < 1.0);
 
@@ -1400,7 +1408,7 @@ SCIP_RETCODE cutsRoundMIR(
 
    /* Loop backwards to process integral variables first and be able to delete coefficients of integral variables
     * without destroying the ordering of the aggrrow's non-zeros.
-    * (due to sorting in cutsTransformMIRRow the ordering is continuous before integral)
+    * (due to sorting in cutsTransformMIR the ordering is continuous before integral)
     */
 
    firstcontvar = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
@@ -1996,8 +2004,6 @@ SCIP_RETCODE SCIPcalcMIR(
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &boundtype);
    SCIPfreeBufferArray(scip, &varsign);
-
-   /**@todo pass the sparsity pattern to the calling method in order to speed up the calling method's loops */
 
    return SCIP_OKAY;
 }
@@ -2909,10 +2915,10 @@ SCIP_RETCODE constructSNFRelaxation(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
-   SCIP_Real*            rowcoefs,           /**< aggrrow to transform */
-   SCIP_Real             rowrhs,             /**< aggrrow to transform */
-   int*                  rowinds,            /**< aggrrow to transform */
-   int                   nnz,                /**< aggrrow to transform */
+   SCIP_Real*            rowcoefs,           /**< array of coefficients of row */
+   SCIP_Real*            rowrhs,             /**< pointer to right hand side of row */
+   int*                  rowinds,            /**< array of variables problem indices for non-zero coefficients in row */
+   int*                  nnz,                /**< number of non-zeros in row */
    SNF_RELAXATION*       snf,                /**< stores the sign of the transformed variable in summation */
    SCIP_Bool*            success,            /**< stores whether the transformation was valid */
    SCIP_Bool*            localbdsused        /**< pointer to store whether local bounds were used in transformation */
@@ -4274,10 +4280,10 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
    SCIP_AGGRROW*         aggrrow,            /**< aggrrow used to construct SNF relaxation */
    int*                  flowcoverstatus,    /**< pointer to store whether variable is in flow cover (+1) or not (-1) */
    SCIP_Real             lambda,             /**< lambda */
-   SCIP_Real*            cutcoefs,           /**< aggrrow to transform */
-   SCIP_Real*            cutrhs,             /**< aggrrow to transform */
-   int*                  cutinds,            /**< aggrrow to transform */
-   int*                  nnz,                /**< aggrrow to transform */
+   SCIP_Real*            cutcoefs,           /**< array of coefficients of cut */
+   SCIP_Real*            cutrhs,             /**< pointer to right hand side of cut */
+   int*                  cutinds,            /**< array of variables problem indices for non-zero coefficients in cut */
+   int*                  nnz,                /**< number of non-zeros in cut */
    SCIP_Bool*            success             /**< was the cut successfully generated */
    )
 {
@@ -4464,9 +4470,12 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
             }
             *cutrhs -= aggrrow->rowweights[i] * lhs;
          }
-
       }
    }
+
+     /* set rhs to zero, if it's very close to */
+   if( SCIPisZero(scip, *cutrhs) )
+      *cutrhs = 0.0;
 
    return SCIP_OKAY;
 }
@@ -4561,6 +4570,644 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/* =========================================== strongcg =========================================== */
+
+/** Transform equation \f$ a \cdot x = b; lb \leq x \leq ub \f$ into standard form
+ *    \f$ a^\prime \cdot x^\prime = b,\; 0 \leq x^\prime \leq ub' \f$.
+ *
+ *  Transform variables (lb or ub):
+ *  \f[
+ *  \begin{array}{llll}
+ *    x^\prime_j := x_j - lb_j,&   x_j = x^\prime_j + lb_j,&   a^\prime_j =  a_j,&   \mbox{if lb is used in transformation}\\
+ *    x^\prime_j := ub_j - x_j,&   x_j = ub_j - x^\prime_j,&   a^\prime_j = -a_j,&   \mbox{if ub is used in transformation}
+ *  \end{array}
+ *  \f]
+ *  and move the constant terms \f$ a_j\, lb_j \f$ or \f$ a_j\, ub_j \f$ to the rhs.
+ *
+ *  Transform variables (vlb or vub):
+ *  \f[
+ *  \begin{array}{llll}
+ *    x^\prime_j := x_j - (bl_j\, zl_j + dl_j),&   x_j = x^\prime_j + (bl_j\, zl_j + dl_j),&   a^\prime_j =  a_j,&   \mbox{if vlb is used in transf.} \\
+ *    x^\prime_j := (bu_j\, zu_j + du_j) - x_j,&   x_j = (bu_j\, zu_j + du_j) - x^\prime_j,&   a^\prime_j = -a_j,&   \mbox{if vub is used in transf.}
+ *  \end{array}
+ *  \f]
+ *  move the constant terms \f$ a_j\, dl_j \f$ or \f$ a_j\, du_j \f$ to the rhs, and update the coefficient of the VLB variable:
+ *  \f[
+ *  \begin{array}{ll}
+ *    a_{zl_j} := a_{zl_j} + a_j\, bl_j,& \mbox{or} \\
+ *    a_{zu_j} := a_{zu_j} + a_j\, bu_j &
+ *  \end{array}
+ *  \f]
+ */
+static
+SCIP_RETCODE cutsTransformStrongCG(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
+   SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
+   SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
+   SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   SCIP_Real*            cutcoefs,           /**< array of coefficients of cut */
+   SCIP_Real*            cutrhs,             /**< pointer to right hand side of cut */
+   int*                  cutinds,            /**< array of variables problem indices for non-zero coefficients in cut */
+   int*                  nnz,                /**< number of non-zeros in cut */
+   int*                  varsign,            /**< stores the sign of the transformed variable in summation */
+   int*                  boundtype,          /**< stores the bound used for transformed variable:
+                                              *   vlb/vub_idx, or -1 for global lb/ub, or -2 for local lb/ub */
+   SCIP_Bool*            freevariable,       /**< stores whether a free variable was found in MIR row -> invalid summation */
+   SCIP_Bool*            localbdsused        /**< pointer to store whether local bounds were used in transformation */
+   )
+{
+   SCIP_Real* bestbds;
+   int* varpos;
+   int i;
+   int aggrrowintstart;
+   int nvars;
+   int firstcontvar;
+   SCIP_VAR** vars;
+
+   assert(varsign != NULL);
+   assert(boundtype != NULL);
+   assert(freevariable != NULL);
+   assert(localbdsused != NULL);
+
+   *freevariable = FALSE;
+   *localbdsused = FALSE;
+
+   /* allocate temporary memory to store best bounds and bound types */
+   SCIP_CALL( SCIPallocBufferArray(scip, &bestbds, 2*(*nnz)) );
+
+   /* start with continuous variables, because using variable bounds can affect the untransformed integral
+    * variables, and these changes have to be incorporated in the transformation of the integral variables
+    * (continuous variables have largest problem indices!)
+    */
+   SCIPsortDownIntReal(cutinds, cutcoefs, *nnz);
+
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+   firstcontvar = nvars - SCIPgetNContVars(scip);
+
+   /* determine best bounds for the continous variables such that they will have a positive coefficient in the transformation */
+   for( i = 0; i < *nnz && cutinds[i] >= firstcontvar; ++i )
+   {
+      if( cutcoefs[i] > 0.0 )
+      {
+         /* find closest lower bound in standard lower bound or variable lower bound for continuous variable so that it will have a positive coefficient */
+         SCIP_CALL( findBestLb(scip, vars[cutinds[i]], sol, usevbds, allowlocal, bestbds + i, boundtype + i) );
+
+         /* cannot create transformation for strongcg cut */
+         if( SCIPisInfinity(scip, -bestbds[i]) )
+            goto TERMINATE;
+
+         varsign[i] = +1;
+      }
+      else if( cutcoefs[i] < 0.0 )
+      {
+         /* find closest upper bound in standard upper bound or variable upper bound for continuous variable so that it will have a positive coefficient */
+         SCIP_CALL( findBestUb(scip, vars[cutinds[i]], sol, usevbds, allowlocal, bestbds + i, boundtype + i) );
+
+          /* cannot create transformation for strongcg cut */
+         if( SCIPisInfinity(scip, bestbds[i]) )
+            goto TERMINATE;
+
+         varsign[i] = -1;
+      }
+   }
+
+   /* remember start of integer variables in the aggrrow */
+   aggrrowintstart = i;
+
+   /* remember positions of integral variables */
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &varpos, firstcontvar) );
+
+   for( i = (*nnz) - 1; i >= aggrrowintstart; --i )
+      varpos[cutinds[i]] = i + 1;
+
+   /* perform bound substitution for continuous variables */
+   for( i = 0; i < aggrrowintstart; ++i )
+   {
+      SCIP_VAR* var = vars[cutinds[i]];
+      assert(!SCIPisInfinity(scip, -varsign[i] * bestbds[i]));
+
+      /* standard (bestlbtype < 0) or variable (bestlbtype >= 0) lower bound? */
+      if( boundtype[i] < 0 )
+      {
+         *cutrhs -= cutcoefs[i] * bestbds[i];
+         *localbdsused = *localbdsused || (boundtype[i] == -2);
+      }
+      else
+      {
+         SCIP_VAR** vbdvars;
+         SCIP_Real* vbdcoefs;
+         SCIP_Real* vbdconsts;
+         int zidx;
+         int k;
+
+         if( varsign[i] == +1 )
+         {
+            vbdvars = SCIPvarGetVlbVars(var);
+            vbdcoefs = SCIPvarGetVlbCoefs(var);
+            vbdconsts = SCIPvarGetVlbConstants(var);
+         }
+         else
+         {
+            vbdvars = SCIPvarGetVubVars(var);
+            vbdcoefs = SCIPvarGetVubCoefs(var);
+            vbdconsts = SCIPvarGetVubConstants(var);
+         }
+
+         assert(vbdvars != NULL);
+         assert(vbdcoefs != NULL);
+         assert(vbdconsts != NULL);
+         assert(0 <= boundtype[i] && boundtype[i] < SCIPvarGetNVlbs(var));
+         assert(SCIPvarIsActive(vbdvars[boundtype[i]]));
+
+         zidx = SCIPvarGetProbindex(vbdvars[boundtype[i]]);
+         assert(0 <= zidx && zidx < firstcontvar);
+
+         *cutrhs -= cutcoefs[i] * vbdconsts[boundtype[i]];
+
+         /* check if integral variable already exists in the row */
+         k = varpos[zidx];
+         if( k == 0 )
+         {
+            /* if not add it to the end */
+            k = (*nnz)++;
+            varpos[zidx] = *nnz;
+            cutinds[k] = zidx;
+            cutcoefs[k] = cutcoefs[i] * vbdcoefs[boundtype[i]];
+         }
+         else
+         {
+            /* if it is update the coefficient */
+            cutcoefs[k - 1] += cutcoefs[i] * vbdcoefs[boundtype[i]];
+         }
+      }
+   }
+
+   /* remove integral variables that now have a zero coefficient due to variable bound usage of continuous variables
+    * and perform the bound substitution for the integer variables that are left using simple bounds
+    */
+   while( i < *nnz )
+   {
+      SCIP_Real bestlb;
+      SCIP_Real bestub;
+      int bestlbtype;
+      int bestubtype;
+      SCIP_BOUNDTYPE selectedbound;
+
+      assert(cutinds[i] < firstcontvar);
+
+      /* clean the varpos array for each integral variable */
+      varpos[cutinds[i]] = 0;
+
+      /* due to variable bound usage for the continous variables cancellation may have occurred */
+      if( SCIPisZero(scip, cutcoefs[i]) )
+      {
+         --(*nnz);
+         if( i < *nnz )
+         {
+            cutcoefs[i] = cutcoefs[*nnz];
+            cutinds[i] = cutinds[*nnz];
+         }
+         /* do not increase i, since last element is copied to the i-th position */
+         continue;
+      }
+
+      /** determine the best bounds for the integral variable, usevbd can be set to FALSE here as vbds are only used for continous variables */
+      SCIP_CALL( determineBestBounds(scip, vars[cutinds[i]], sol, boundswitch, FALSE, allowlocal, FALSE, FALSE, NULL, NULL,
+                                     &bestlb, &bestub, &bestlbtype, &bestubtype, &selectedbound, freevariable) );
+
+      /* check if we have an unbounded integral variable */
+      if( *freevariable )
+      {
+         /* clean varpos array for remainging variables and terminate */
+         while( ++i < *nnz )
+            varpos[cutinds[i]] = 0;
+
+         SCIPfreeCleanBufferArray(scip, &varpos);
+         goto TERMINATE;
+      }
+
+      /* perform bound substitution */
+      if( selectedbound == SCIP_BOUNDTYPE_LOWER )
+      {
+         boundtype[i] = bestlbtype;
+         varsign[i] = +1;
+         *cutrhs -= cutcoefs[i] * bestlb;
+      }
+      else
+      {
+         assert(selectedbound == SCIP_BOUNDTYPE_UPPER);
+         boundtype[i] = bestubtype;
+         varsign[i] = -1;
+         *cutrhs -= cutcoefs[i] * bestub;
+      }
+
+      assert(boundtype[i] == -1 || boundtype[i] == -2);
+      *localbdsused = *localbdsused || (boundtype[i] == -2);
+
+      /* increase i */
+      ++i;
+   }
+
+   /* varpos array is not needed any more and has been cleaned in the previous loop */
+   SCIPfreeCleanBufferArray(scip, &varpos);
+
+ TERMINATE:
+
+   /*free temporary memory */
+   SCIPfreeBufferArray(scip, &bestbds);
+
+   return SCIP_OKAY;
+}
+
+/** Calculate fractionalities \f$ f_0 := b - down(b) \f$, \f$ f_j := a^\prime_j - down(a^\prime_j) \f$ and
+ *   integer \f$ k >= 1 \f$ with \f$ 1/(k + 1) <= f_0 < 1/k \f$ and \f$ (=> k = up(1/f_0) + 1) \f$
+ *   integer \f$ 1 <= p_j <= k \f$ with \f$ f_0 + ((p_j - 1) * (1 - f_0)/k) < f_j <= f_0 + (p_j * (1 - f_0)/k)\f$ \f$ (=> p_j = up( k*(f_j - f_0)/(1 - f_0) )) \f$
+ * and derive strong CG cut \f$ \tilde{a}*x^\prime <= down(b) \f$
+ * \f[
+ * \begin{array}{rll}
+ * integers : &  \tilde{a}_j = down(a^\prime_j)                &, if \qquad f_j <= f_0 \\
+ *            &  \tilde{a}_j = down(a^\prime_j) + p_j/(k + 1)  &, if \qquad f_j >  f_0 \\
+ * continuous:&  \tilde{a}_j = 0                               &, if \qquad a^\prime_j >= 0 \\
+ *            &  \mbox{no strong CG cut found}                 &, if \qquad a^\prime_j <  0
+ * \end{array}
+ * \f]
+ *
+ * Transform inequality back to \f$ \hat{a}*x <= rhs \f$:
+ *
+ *  (lb or ub):
+ * \f[
+ * \begin{array}{lllll}
+ *    x^\prime_j := x_j - lb_j,&   x_j == x^\prime_j + lb_j,&   a^\prime_j ==  a_j,&   \hat{a}_j :=  \tilde{a}_j,&   \mbox{if lb was used in transformation} \\
+ *    x^\prime_j := ub_j - x_j,&   x_j == ub_j - x^\prime_j,&   a^\prime_j == -a_j,&   \hat{a}_j := -\tilde{a}_j,&   \mbox{if ub was used in transformation}
+ * \end{array}
+ * \f]
+ * \f[
+ *  and move the constant terms
+ * \begin{array}{rl}
+ *    -\tilde{a}_j * lb_j == -\hat{a}_j * lb_j, & \mbox{or} \\
+ *     \tilde{a}_j * ub_j == -\hat{a}_j * ub_j &
+ * \end{array}
+ * \f]
+ *  to the rhs.
+ *
+ *  (vlb or vub):
+ * \f[
+ * \begin{array}{lllll}
+ *    x^\prime_j := x_j - (bl_j * zl_j + dl_j),&   x_j == x^\prime_j + (bl_j * zl_j + dl_j),&   a^\prime_j ==  a_j,&   \hat{a}_j :=  \tilde{a}_j,&   \mbox{(vlb)} \\
+ *    x^\prime_j := (bu_j * zu_j + du_j) - x_j,&   x_j == (bu_j * zu_j + du_j) - x^\prime_j,&   a^\prime_j == -a_j,&   \hat{a}_j := -\tilde{a}_j,&   \mbox{(vub)}
+ * \end{array}
+ * \f]
+ *  move the constant terms
+ * \f[
+ * \begin{array}{rl}
+ *    -\tilde{a}_j * dl_j == -\hat{a}_j * dl_j,& \mbox{or} \\
+ *     \tilde{a}_j * du_j == -\hat{a}_j * du_j &
+ * \end{array}
+ * \f]
+ *  to the rhs, and update the VB variable coefficients:
+ * \f[
+ * \begin{array}{ll}
+ *    \hat{a}_{zl_j} := \hat{a}_{zl_j} - \tilde{a}_j * bl_j == \hat{a}_{zl_j} - \hat{a}_j * bl_j,& \mbox{or} \\
+ *    \hat{a}_{zu_j} := \hat{a}_{zu_j} + \tilde{a}_j * bu_j == \hat{a}_{zu_j} - \hat{a}_j * bu_j &
+ * \end{array}
+ * \f]
+ */
+static
+SCIP_RETCODE cutsRoundStrongCG(
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_Real*            cutcoefs,           /**< array of coefficients of cut */
+   SCIP_Real*            cutrhs,             /**< pointer to right hand side of cut */
+   int*                  cutinds,            /**< array of variables problem indices for non-zero coefficients in cut */
+   int*                  nnz,                /**< number of non-zeros in cut */
+   int*                  varsign,            /**< stores the sign of the transformed variable in summation */
+   int*                  boundtype,          /**< stores the bound used for transformed variable (vlb/vub_idx or -1 for lb/ub)*/
+   SCIP_Real             f0,                 /**< fractional value of rhs */
+   SCIP_Real             k                   /**< factor to strengthen strongcg cut */
+   )
+{
+   SCIP_Real onedivoneminusf0;
+   int i;
+   int firstcontvar;
+   SCIP_VAR** vars;
+   int aggrrowintstart;
+
+   assert(cutrhs != NULL);
+   assert(cutcoefs != NULL);
+   assert(cutinds != NULL);
+   assert(nnz != NULL);
+   assert(boundtype != NULL);
+   assert(varsign != NULL);
+   assert(0.0 < f0 && f0 < 1.0);
+
+   onedivoneminusf0 = 1.0 / (1.0 - f0);
+
+   /* Loop backwards to process integral variables first and be able to delete coefficients of integral variables
+    * without destroying the ordering of the aggrrow's non-zeros.
+    * (due to sorting in cutsTransformStrongCG the ordering is continuous before integral)
+    */
+
+   firstcontvar = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   vars = SCIPgetVars(scip);
+#ifndef NDEBUG
+   /*in debug mode check, that all continuous variables of the aggrrow come before the integral variables */
+   i = 0;
+   while( i < *nnz && cutinds[i] >= firstcontvar )
+      ++i;
+
+   while( i < *nnz )
+   {
+      assert(cutinds[i] < firstcontvar);
+      ++i;
+   }
+#endif
+
+   /* integer variables */
+   for( i = *nnz - 1; i >= 0 && cutinds[i] < firstcontvar; --i )
+   {
+      SCIP_VAR* var;
+      SCIP_Real aj;
+      SCIP_Real downaj;
+      SCIP_Real cutaj;
+      SCIP_Real fj;
+      int v;
+
+      v = cutinds[i];
+      assert(0 <= v && v < SCIPgetNVars(scip));
+
+      var = vars[v];
+      assert(var != NULL);
+      assert(SCIPvarGetProbindex(var) == v);
+      assert(boundtype[v] == -1 || boundtype[v] == -2);
+      assert(varsign[v] == +1 || varsign[v] == -1);
+
+      /* calculate the coefficient in the retransformed cut */
+      aj = varsign[i] * cutcoefs[i]; /* a'_j */
+      downaj = SCIPfloor(scip, aj);
+      fj = aj - downaj;
+
+      if( SCIPisSumLE(scip, fj, f0) )
+         cutaj = varsign[v] * downaj; /* a^_j */
+      else
+      {
+         SCIP_Real pj;
+
+         pj = SCIPceil(scip, k * (fj - f0) * onedivoneminusf0);
+         assert(pj >= 0); /* should be >= 1, but due to rounding bias can be 0 if fj almost equal to f0 */
+         assert(pj <= k);
+         cutaj = varsign[v] * (downaj + pj / (k + 1)); /* a^_j */
+      }
+
+      /* remove zero cut coefficients from cut */
+      if( SCIPisZero(scip, cutaj) )
+      {
+         --*nnz;
+         if( i < *nnz )
+         {
+            cutinds[i] = cutinds[*nnz];
+            cutcoefs[i] = cutcoefs[*nnz];
+         }
+         continue;
+      }
+
+      cutcoefs[i] = cutaj;
+
+       /* integral var uses standard bound */
+      assert(boundtype[i] < 0);
+
+      /* move the constant term  -a~_j * lb_j == -a^_j * lb_j , or  a~_j * ub_j == -a^_j * ub_j  to the rhs */
+      if( varsign[v] == +1 )
+      {
+         /* lower bound was used */
+         if( boundtype[v] == -1 )
+         {
+            assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
+            *cutrhs += cutaj * SCIPvarGetLbGlobal(var);
+         }
+         else
+         {
+            assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
+            *cutrhs += cutaj * SCIPvarGetLbLocal(var);
+         }
+      }
+      else
+      {
+          /* upper bound was used */
+         if( boundtype[i] == -1 )
+         {
+            assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
+            *cutrhs += cutaj * SCIPvarGetUbGlobal(var);
+         }
+         else
+         {
+            assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
+            *cutrhs += cutaj * SCIPvarGetUbLocal(var);
+         }
+      }
+   }
+
+   /* now process the continuous variables; postpone deletetion of zeros till all continuous variables have been processed */
+   aggrrowintstart = i + 1;
+
+#ifndef NDEBUG
+      /* in a strong CG cut, cut coefficients of continuous variables are always zero; check this in debug mode */
+   for( i = 0; i < aggrrowintstart; ++i )
+   {
+      int v;
+
+      v = cutinds[i];
+      assert(firstcontvar <= v && v < SCIPgetNVars(scip));
+
+      {
+         SCIP_VAR* var;
+         SCIP_Real aj;
+
+         var = vars[v];
+         assert(var != NULL);
+         assert(!SCIPvarIsIntegral(var));
+         assert(SCIPvarGetProbindex(var) == v);
+         assert(varsign[v] == +1 || varsign[v] == -1);
+
+         /* calculate the coefficient in the retransformed cut */
+         aj = varsign[i] * cutcoefs[i]; /* a'_j */
+         assert(aj >= 0.0);
+      }
+   }
+#endif
+
+   /* move integer variables to the empty position of the continuous variables */
+   if( aggrrowintstart > 0 )
+   {
+      assert(aggrrowintstart <= *nnz);
+      *nnz -= aggrrowintstart;
+      if( *nnz < aggrrowintstart )
+      {
+         BMScopyMemoryArray(cutcoefs, cutcoefs + aggrrowintstart, *nnz);
+         BMScopyMemoryArray(cutinds, cutinds + aggrrowintstart, *nnz);
+      }
+      else
+      {
+         BMScopyMemoryArray(cutcoefs, cutcoefs + *nnz, aggrrowintstart);
+         BMScopyMemoryArray(cutinds, cutinds + *nnz, aggrrowintstart);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** substitute aggregated slack variables:
+ *
+ *  The coefficient of the slack variable s_r is equal to the row's weight times the slack's sign, because the slack
+ *  variable only appears in its own row: \f$ a^\prime_r = scale * weight[r] * slacksign[r] \f$.
+ *
+ *  Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
+ * \f[
+ * \begin{array}{rll}
+ *    integers:  & \hat{a}_r = \tilde{a}_r = down(a^\prime_r)                  &, if \qquad f_r <= f0 \\
+ *               & \hat{a}_r = \tilde{a}_r = down(a^\prime_r) + p_r/(k + 1)    &, if \qquad f_r >  f0 \\
+ *    continuous:& \hat{a}_r = \tilde{a}_r = 0                                 &, if \qquad a^\prime_r >= 0 \\
+ *               & \mbox{no strong CG cut found}                               &, if \qquad a^\prime_r <  0
+ * \end{array}
+ * \f]
+ *
+ *  Substitute \f$ \hat{a}_r * s_r \f$ by adding \f$ \hat{a}_r \f$ times the slack's definition to the cut.
+ */
+static
+SCIP_RETCODE cutsSubstituteStrongCG(
+   SCIP*                 scip,
+   SCIP_Real*            weights,            /**< row weights in row summation */
+   int*                  slacksign,          /**< stores the sign of the row's slack variable in summation */
+   int*                  rowinds,            /**< sparsity pattern of used rows */
+   int                   nrowinds,           /**< number of used rows */
+   SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
+   SCIP_Real*            cutcoefs,           /**< array of coefficients of cut */
+   SCIP_Real*            cutrhs,             /**< pointer to right hand side of cut */
+   int*                  cutinds,            /**< array of variables problem indices for non-zero coefficients in cut */
+   int*                  nnz,                /**< number of non-zeros in cut */
+   SCIP_Real             f0,                 /**< fractional value of rhs */
+   SCIP_Real             k                   /**< factor to strengthen strongcg cut */
+   )
+{  /*lint --e{715}*/
+   SCIP_ROW** rows;
+   SCIP_Real onedivoneminusf0;
+   int i;
+
+   assert(scip != NULL);
+   assert(weights != NULL);
+   assert(slacksign != NULL);
+   assert(rowinds != NULL);
+   assert(SCIPisPositive(scip, scale));
+   assert(cutcoefs != NULL);
+   assert(cutrhs != NULL);
+   assert(cutinds != NULL);
+   assert(nnz != NULL);
+   assert(0.0 < f0 && f0 < 1.0);
+
+   onedivoneminusf0 = 1.0 / (1.0 - f0);
+
+   rows = SCIPgetLPRows(scip);
+   for( i = 0; i < nrowinds; i++ )
+   {
+      SCIP_ROW* row;
+      SCIP_Real pr;
+      SCIP_Real ar;
+      SCIP_Real downar;
+      SCIP_Real cutar;
+      SCIP_Real fr;
+      SCIP_Real mul;
+      int r;
+
+      r = rowinds[i];
+      assert(0 <= r && r < SCIPgetNLPRows(scip));
+      assert(slacksign[i] == -1 || slacksign[i] == +1);
+      assert(!SCIPisZero(scip, weights[i]));
+
+      row = rows[r];
+      assert(row != NULL);
+      assert(row->len == 0 || row->cols != NULL);
+      assert(row->len == 0 || row->cols_index != NULL);
+      assert(row->len == 0 || row->vals != NULL);
+
+      /* get the slack's coefficient a'_r in the aggregated row */
+      ar = slacksign[i] * scale * weights[i];
+
+      /* calculate slack variable's coefficient a^_r in the cut */
+      if( row->integral )
+      {
+         /* slack variable is always integral: */
+         downar = SCIPfloor(scip, ar);
+         fr = ar - downar;
+
+         if( SCIPisLE(scip, fr, f0) )
+            cutar = downar;
+         else
+         {
+            pr = SCIPceil(scip, k * (fr - f0) * onedivoneminusf0);
+            assert(pr >= 0); /* should be >= 1, but due to rounding bias can be 0 if fr almost equal to f0 */
+            assert(pr <= k);
+            cutar = downar + pr / (k + 1);
+         }
+      }
+      else
+      {
+         /* slack variable is continuous: */
+         assert(ar >= 0.0);
+         continue; /* slack can be ignored, because its coefficient is reduced to 0.0 */
+      }
+
+      /* if the coefficient was reduced to zero, ignore the slack variable */
+      if( SCIPisZero(scip, cutar) )
+         continue;
+
+      /* depending on the slack's sign, we have
+       *   a*x + c + s == rhs  =>  s == - a*x - c + rhs,  or  a*x + c - s == lhs  =>  s == a*x + c - lhs
+       * substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
+       */
+      mul = -slacksign[i] * cutar;
+
+      /* add the slack's definition multiplied with a^_j to the cut */
+      SCIP_CALL( varVecAddScaledRowCoefs(scip, &cutinds, &cutcoefs, nnz, NULL, row, mul) );
+
+      /* move slack's constant to the right hand side */
+      if( slacksign[i] == +1 )
+      {
+         SCIP_Real rhs;
+
+         /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a^_r * (rhs - c) to the right hand side */
+         assert(!SCIPisInfinity(scip, row->rhs));
+         rhs = row->rhs - row->constant;
+         if( row->integral )
+         {
+            /* the right hand side was implicitly rounded down in row aggregation */
+            rhs = SCIPfeasFloor(scip, rhs);
+         }
+         *cutrhs -= cutar * rhs;
+      }
+      else
+      {
+         SCIP_Real lhs;
+
+         /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a^_r * (c - lhs) to the right hand side */
+         assert(!SCIPisInfinity(scip, -row->lhs));
+         lhs = row->lhs - row->constant;
+         if( row->integral )
+         {
+            /* the left hand side was implicitly rounded up in row aggregation */
+            lhs = SCIPfeasCeil(scip, lhs);
+         }
+         *cutrhs += cutar * lhs;
+      }
+   }
+
+   /* set rhs to zero, if it's very close to */
+   if( SCIPisZero(scip, *cutrhs) )
+      *cutrhs = 0.0;
+
+   return SCIP_OKAY;
+}
+
+
 /** calculates a strong CG cut out of the weighted sum of LP rows given by an aggregation row; the
  *  aggregation row must not contain non-zero weights for modifiable rows, because these rows cannot
  *  participate in a strongcg cut
@@ -4577,6 +5224,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
+   SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */
@@ -4587,9 +5235,163 @@ SCIP_RETCODE SCIPcalcStrongCG(
    int*                  cutinds,            /**< array to store the problem indices of variables with a non-zero coefficient in the cut */
    int*                  cutnnz,             /**< pointer to store the number of non-zeros in the cut */
    SCIP_Real*            cutefficacy,        /**< pointer to store the efficacy of the cut, or NULL */
+   int*                  cutrank,            /**< pointer to return rank of generated cut */
+   SCIP_Bool*            cutislocal,         /**< pointer to store whether the generated cut is only valid locally */
    SCIP_Bool*            success             /**< pointer to store whether a valid cut was returned */
    )
 {
-   /* TODO adapt from old cuts.c */
+   int i;
+   int* varsign;
+   int* boundtype;
+   SCIP_Real downrhs;
+   SCIP_Real f0;
+   SCIP_Real k;
+   SCIP_Bool freevariable;
+   SCIP_Bool localbdsused;
+
+   assert(scip != NULL);
+   assert(aggrrow != NULL);
+   assert(SCIPisPositive(scip, scale));
+   assert(cutefficacy != NULL);
+   assert(cutcoefs != NULL);
+   assert(cutrhs != NULL);
+   assert(cutinds != NULL);
+   assert(success != NULL);
+   assert(cutislocal != NULL);
+
+   SCIPdebugMessage("calculating strong CG cut (scale: %g)\n", scale);
+
+   *success = FALSE;
+   *cutislocal = FALSE;
+
+   /* allocate temporary memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &varsign, 2*aggrrow->nnz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &boundtype, 2*aggrrow->nnz) );
+
+   /* initialize cut with aggregation */
+   *cutnnz = aggrrow->nnz;
+
+   BMScopyMemoryArray(cutinds, aggrrow->inds, *cutnnz);
+   if( scale != 1.0 )
+   {
+      *cutrhs = scale * aggrrow->rhs;
+      for( i = 0; i < *cutnnz; ++i )
+         cutcoefs[i] = aggrrow->vals[i] * scale;
+   }
+   else
+   {
+      *cutrhs = aggrrow->rhs;
+      BMScopyMemoryArray(cutcoefs, aggrrow->vals, *cutnnz);
+   }
+
+   *cutislocal = aggrrow->local;
+
+   cleanupCut(scip, aggrrow->local, cutinds, cutcoefs, cutnnz, cutrhs);
+
+
+   /* Transform equation  a*x == b, lb <= x <= ub  into standard form
+    *   a'*x' == b, 0 <= x' <= ub'.
+    *
+    * Transform variables (lb or ub):
+    *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   if lb is used in transformation
+    *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   if ub is used in transformation
+    * and move the constant terms "a_j * lb_j" or "a_j * ub_j" to the rhs.
+    *
+    * Transform variables (vlb or vub):
+    *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   if vlb is used in transf.
+    *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   if vub is used in transf.
+    * move the constant terms "a_j * dl_j" or "a_j * du_j" to the rhs, and update the coefficient of the VLB variable:
+    *   a_{zl_j} := a_{zl_j} + a_j * bl_j, or
+    *   a_{zu_j} := a_{zu_j} + a_j * bu_j
+    */
+   SCIP_CALL( cutsTransformStrongCG(scip, sol, boundswitch, usevbds, allowlocal,
+      cutcoefs, cutrhs, cutinds, cutnnz, varsign, boundtype, &freevariable, &localbdsused) );
+   assert(allowlocal || !localbdsused);
+   *cutislocal = *cutislocal || localbdsused;
+   if( freevariable )
+      goto TERMINATE;
+   SCIPdebug(printMIR(set, stat, prob, NULL, strongcgcoef, rhs, FALSE, FALSE));
+
+   /* Calculate
+    *  - fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j)
+    *  - integer k >= 1 with 1/(k + 1) <= f_0 < 1/k
+    *    (=> k = up(1/f_0) + 1)
+    *  - integer 1 <= p_j <= k with f_0 + ((p_j - 1) * (1 - f_0)/k) < f_j <= f_0 + (p_j * (1 - f_0)/k)
+    *    (=> p_j = up( (f_j - f_0)/((1 - f_0)/k) ))
+    * and derive strong CG cut
+    *   a~*x' <= (k+1) * down(b)
+    * integers :  a~_j = down(a'_j)                , if f_j <= f_0
+    *             a~_j = down(a'_j) + p_j/(k + 1)  , if f_j >  f_0
+    * continuous: a~_j = 0                         , if a'_j >= 0
+    *             no strong CG cut found          , if a'_j <  0
+    *
+    * Transform inequality back to a^*x <= rhs:
+    *
+    * (lb or ub):
+    *   x'_j := x_j - lb_j,   x_j == x'_j + lb_j,   a'_j ==  a_j,   a^_j :=  a~_j,   if lb was used in transformation
+    *   x'_j := ub_j - x_j,   x_j == ub_j - x'_j,   a'_j == -a_j,   a^_j := -a~_j,   if ub was used in transformation
+    * and move the constant terms
+    *   -a~_j * lb_j == -a^_j * lb_j, or
+    *    a~_j * ub_j == -a^_j * ub_j
+    * to the rhs.
+    *
+    * (vlb or vub):
+    *   x'_j := x_j - (bl_j * zl_j + dl_j),   x_j == x'_j + (bl_j * zl_j + dl_j),   a'_j ==  a_j,   a^_j :=  a~_j,   (vlb)
+    *   x'_j := (bu_j * zu_j + du_j) - x_j,   x_j == (bu_j * zu_j + du_j) - x'_j,   a'_j == -a_j,   a^_j := -a~_j,   (vub)
+    * move the constant terms
+    *   -a~_j * dl_j == -a^_j * dl_j, or
+    *    a~_j * du_j == -a^_j * du_j
+    * to the rhs, and update the VB variable coefficients:
+    *   a^_{zl_j} := a^_{zl_j} - a~_j * bl_j == a^_{zl_j} - a^_j * bl_j, or
+    *   a^_{zu_j} := a^_{zu_j} + a~_j * bu_j == a^_{zu_j} - a^_j * bu_j
+    */
+   downrhs = SCIPfloor(scip, *cutrhs);
+   f0 = *cutrhs - downrhs;
+   if( f0 < minfrac || f0 > maxfrac )
+      goto TERMINATE;
+   k = SCIPceil(scip, 1.0 / f0) - 1;
+
+   *cutrhs = downrhs;
+   SCIP_CALL( cutsRoundStrongCG(scip, cutcoefs, cutrhs, cutinds, cutnnz, varsign, boundtype, f0, k) );
+   SCIPdebug(printCut(scip, sol, cutcoefs, *cutrhs, cutinds, *cutnnz, FALSE, FALSE));
+
+   /* substitute aggregated slack variables:
+    *
+    * The coefficient of the slack variable s_r is equal to the row's weight times the slack's sign, because the slack
+    * variable only appears in its own row:
+    *    a'_r = scale * weight[r] * slacksign[r].
+    *
+    * Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
+    *   integers :  a^_r = a~_r = (k + 1) * down(a'_r)        , if f_r <= f0
+    *               a^_r = a~_r = (k + 1) * down(a'_r) + p_r  , if f_r >  f0
+    *   continuous: a^_r = a~_r = 0                           , if a'_r >= 0
+    *               a^_r = a~_r = a'_r/(1 - f0)               , if a'_r <  0
+    *
+    * Substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
+    */
+   SCIP_CALL( cutsSubstituteStrongCG(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
+                          aggrrow->nrows, scale, cutcoefs, cutrhs, cutinds, cutnnz, f0, k) );
+   SCIPdebug(printCut(scip, sol, cutcoefs, *cutrhs, cutinds, *cutnnz, FALSE, FALSE));
+
+   /* remove again all nearly-zero coefficients from strong CG row and relax the right hand side correspondingly in order to
+    * prevent numerical rounding errors
+    */
+   cleanupCut(scip, *cutislocal, cutinds, cutcoefs, cutnnz, cutrhs);
+   SCIPdebug(printCut(scip, sol, cutcoefs, *cutrhs, cutinds, *cutnnz, FALSE, FALSE));
+
+   *success = TRUE;
+
+   if( cutefficacy != NULL )
+      *cutefficacy = calcEfficacy(scip, sol, cutcoefs, *cutrhs, cutinds, *cutnnz);
+
+   if( cutrank != NULL )
+      *cutrank = aggrrow->rank + 1;
+   *success = TRUE;
+
+ TERMINATE:
+    /* free temporary memory */
+   SCIPfreeBufferArray(scip, &boundtype);
+   SCIPfreeBufferArray(scip, &varsign);
+
    return SCIP_OKAY;
 }
