@@ -14,8 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 //#define PRINTNODECONS
 /*
-#define SCIP_DEBUG
 */
+#define SCIP_DEBUG
 #define SCIP_STATISTIC
 
 /**@file   branch_lookahead.c
@@ -848,6 +848,8 @@ void lpiMemoryShallowCopy(
 {
    assert(source != NULL);
    assert(target != NULL);
+   assert(target->lpinorms == NULL);
+   assert(source->lpinorms == NULL);
 
    target->lpinorms = source->lpinorms;
    target->lpistate = source->lpistate;
@@ -894,6 +896,7 @@ SCIP_RETCODE lpiMemoryClear(
 
    assert(scip != NULL);
    assert(lpimemory != NULL);
+   assert(lpimemory->lpinorms == NULL);
 
    SCIP_CALL( SCIPgetLPI(scip, &lpi) );
    blkmem = SCIPblkmem(scip);
@@ -953,6 +956,25 @@ SCIP_RETCODE candidateAllocate(
    (*candidate)->branchvar = NULL;
 
    return SCIP_OKAY;
+}
+
+/** Copies the data contained in source into target. The lpi memories are copies as well to prevent memory leaks. */
+static
+void candidateCopy(
+   CANDIDATE*            source,             /**< the candidate to take the data from */
+   CANDIDATE*            target              /**< the candidate to put the data into */
+   )
+{
+   assert(source != NULL);
+   assert(target != NULL);
+
+   target->branchval = source->branchval;
+   target->branchvar = source->branchvar;
+   target->fracval = source->fracval;
+
+   /* each candidate has its own up/down lpi memory, so we don't want to change the pointer, but the content */
+   lpiMemoryShallowCopy(source->downlpimemory, target->downlpimemory);
+   lpiMemoryShallowCopy(source->uplpimemory, target->uplpimemory);
 }
 
 /** Frees the allocated buffer memory of the candidate and clears the contained lpi memories. */
@@ -1023,11 +1045,77 @@ SCIP_RETCODE candidateListInit(
    return SCIP_OKAY;
 }
 
+/** Allocates the given list and fills it with all fractional candidates of the current LP solution. */
+static
+SCIP_RETCODE candidateListGetAllFractionalCandidates(
+   SCIP*                 scip,               /**< SCIP data structure */
+   CANDIDATELIST**       candidatelist       /**< the list to allocate and fill */
+   )
+{
+   SCIP_VAR** lpcands;
+   SCIP_Real* lpcandssol;
+   SCIP_Real* lpcandsfrac;
+   int nlpcands;
+   int i;
+
+   assert(scip != NULL);
+   assert(candidatelist != NULL);
+
+   SCIP_CALL( candidateListAllocate(scip, candidatelist) );
+
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
+
+   if( nlpcands > 0 )
+   {
+      assert(lpcands != NULL);
+      assert(lpcandssol != NULL);
+      assert(lpcandsfrac != NULL);
+
+      SCIP_CALL( candidateListInit(scip, *candidatelist, nlpcands) );
+
+      for( i = 0; i < nlpcands; i++ )
+      {
+         CANDIDATE* candidate = (*candidatelist)->candidates[i];
+
+         candidate->branchvar = lpcands[i];
+         candidate->branchval = lpcandssol[i];
+         candidate->fracval = lpcandsfrac[i];
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** Copies the candidates from the source list into the target list. */
+static
+void candidateListCopy(
+   CANDIDATELIST*        source,             /**< the list to take the data from */
+   CANDIDATELIST*        target              /**< the list to put the data into */
+   )
+{
+   int i;
+
+   assert(source != NULL);
+   assert(target != NULL);
+   assert(source->ncandidates == target->ncandidates);
+
+   for( i = 0; i < source->ncandidates; i++)
+   {
+      CANDIDATE* sourcecandidate = source->candidates[i];
+      CANDIDATE* targetcandidate = target->candidates[i];
+
+      assert(sourcecandidate != NULL);
+      assert(targetcandidate != NULL);
+
+      candidateCopy(sourcecandidate, targetcandidate);
+   }
+}
+
 /** Frees the allocated buffer memory of the candidate list and frees the contained candidates. */
 static
 SCIP_RETCODE candidateListFree(
-   SCIP*                 scip,
-   CANDIDATELIST**       list
+   SCIP*                 scip,               /**< SCIP data structure */
+   CANDIDATELIST**       list                /**< the list to be freed */
    )
 {
    int i;
@@ -1313,6 +1401,9 @@ SCIP_RETCODE branchRuleResultFreeFull(
 typedef struct
 {
    SCIP_Real*            scores;             /**< the scores for each problem variable */
+   int*                  sourcedepth;        /**< the probing depth, in which the score was calculated */
+   LPIMEMORY**           downlpimemories;    /**< the lpi memories of the down branches obtained during FSB */
+   LPIMEMORY**           uplpimemories;      /**< the lpi memories of the up branches obtained during FSB */
 } SCORECONTAINER;
 
 static
@@ -1332,10 +1423,16 @@ SCIP_RETCODE scoreContainerAllocate(
 
    SCIP_CALL( SCIPallocBuffer(scip, scorecontainer) );
    SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->scores, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->sourcedepth, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->downlpimemories, ntotalvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &(*scorecontainer)->uplpimemories, ntotalvars) );
 
    for( i = 0; i < ntotalvars; i++ )
    {
       (*scorecontainer)->scores[i] = -1;
+      (*scorecontainer)->sourcedepth[i] = -1;
+      SCIP_CALL( lpiMemoryAllocate(scip, &(*scorecontainer)->downlpimemories[i]) );
+      SCIP_CALL( lpiMemoryAllocate(scip, &(*scorecontainer)->uplpimemories[i]) );
    }
 
    return SCIP_OKAY;
@@ -1343,32 +1440,66 @@ SCIP_RETCODE scoreContainerAllocate(
 
 static
 void scoreContainerSetScore(
+   SCIP*                 scip,
    SCORECONTAINER*       scorecontainer,
    SCIP_VAR*             var,
-   SCIP_Real             score
+   SCIP_Real             score,
+   LPIMEMORY*            downlpimemory,
+   LPIMEMORY*            uplpimemory
    )
 {
    int probindex;
+   int currentprobingdepth;
+   int previousprobingdepth;
 
+   assert(scip != NULL);
    assert(scorecontainer != NULL);
    assert(var != NULL);
    assert(score >= 0);
 
    probindex = SCIPvarGetProbindex(var);
+   currentprobingdepth = SCIPgetProbingDepth(scip);
+   previousprobingdepth = scorecontainer->sourcedepth[probindex];
 
-   assert(scorecontainer->scores[probindex] == -1);
+   if( previousprobingdepth == -1 || currentprobingdepth < previousprobingdepth )
+   {
+      /* we don't want to override the scores of lower probing depths */
+      scorecontainer->scores[probindex] = score;
+      scorecontainer->sourcedepth[probindex] = currentprobingdepth;
+      lpiMemoryShallowCopy(downlpimemory, scorecontainer->downlpimemories[probindex]);
+      lpiMemoryShallowCopy(uplpimemory, scorecontainer->uplpimemories[probindex]);
 
-   scorecontainer->scores[probindex] = score;
+      SCIPdebugMessage("Stored score <%g> for var <%s> in depth <%i>.\n", score, SCIPvarGetName(var), currentprobingdepth);
+   }
 }
 
 static
-void scoreContainerFree(
+SCIP_RETCODE scoreContainerFree(
    SCIP*                 scip,
    SCORECONTAINER**      scorecontainer
    )
 {
+   int ntotalvars;
+   int i;
+
+   /* The container saves the score for all variables in the problem via the ProbIndex. See SCIPvarGetProbindex() */
+   ntotalvars = SCIPgetNVars(scip);
+
+   for( i = ntotalvars-1; i >= 0; i-- )
+   {
+      SCIP_CALL( lpiMemoryClear(scip, (*scorecontainer)->uplpimemories[i]) );
+      SCIP_CALL( lpiMemoryClear(scip, (*scorecontainer)->downlpimemories[i]) );
+      lpiMemoryFree(scip, &(*scorecontainer)->uplpimemories[i]);
+      lpiMemoryFree(scip, &(*scorecontainer)->downlpimemories[i]);
+   }
+
+   SCIPfreeBufferArray(scip, &(*scorecontainer)->uplpimemories);
+   SCIPfreeBufferArray(scip, &(*scorecontainer)->downlpimemories);
+   SCIPfreeBufferArray(scip, &(*scorecontainer)->sourcedepth);
    SCIPfreeBufferArray(scip, &(*scorecontainer)->scores);
    SCIPfreeBuffer(scip, scorecontainer);
+
+   return SCIP_OKAY;
 }
 
 
@@ -1386,6 +1517,7 @@ SCIP_RETCODE selectVarRecursive(
    BINCONSDATA*          binconsdata,
    CANDIDATELIST*        candidates,
    BRANCHRULERESULT*     branchruleresult,
+   SCORECONTAINER*       scorecontainer,
    int                   recursiondepth,
    SCIP_Real             lpobjval
 #ifdef SCIP_STATISTIC
@@ -1401,6 +1533,8 @@ SCIP_RETCODE selectVarStart(
    PERSISTENTDATA*       persistent,
    STATUS*               status,
    BRANCHRULERESULT*     branchruleresult,
+   SCORECONTAINER*       scorecontainer,
+   CANDIDATELIST*        candidates,
    SCIP_Real             lpobjval
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics
@@ -1931,6 +2065,8 @@ SCIP_RETCODE storeInLPIMemory(
    SCIP_LPI* lpi;
    BMS_BLKMEM* blkmem;
 
+   SCIPdebugMessage("Entering storeInLPIMemory\n");
+
    assert(scip != NULL);
    assert(lpimemory != NULL);
    assert(lpimemory->lpistate == NULL);
@@ -1945,7 +2081,10 @@ SCIP_RETCODE storeInLPIMemory(
    lpimemory->dualfeas = SCIPlpiIsDualFeasible(lpi);
 
    assert(lpimemory->lpistate != NULL);
+   assert(lpimemory->lpinorms == NULL);
    /* the norms may be NULL */
+
+   SCIPdebugMessage("Exiting storeInLPIMemory\n");
 
    return SCIP_OKAY;
 }
@@ -1957,9 +2096,12 @@ SCIP_RETCODE restoreFromLPIMemory(
    LPIMEMORY*            lpimemory           /**< the lpi memory containing the stored data */
    )
 {
+   SCIPdebugMessage("Entering restoreFromLPIMemory\n");
+
    assert(scip != NULL);
    assert(lpimemory != NULL);
    assert(lpimemory->lpistate != NULL);
+   assert(lpimemory->lpinorms == NULL);
 
    /* as we solved the very same LP some time earlier and stored the state (the basis) and the norms we can now set those in
     * the LP solver, such that the solution does not (in best case) need any further calculation.
@@ -1971,6 +2113,8 @@ SCIP_RETCODE restoreFromLPIMemory(
     * free them on my own. */
    assert(lpimemory->lpistate == NULL);
    assert(lpimemory->lpinorms == NULL);
+
+   SCIPdebugMessage("Exiting restoreFromLPIMemory\n");
 
    return SCIP_OKAY;
 }
@@ -2424,6 +2568,7 @@ SCIP_RETCODE getFSBResult(
    CONFIGURATION*        parentconfig,
    SCIP_Real             lpobjval,
    BRANCHRULERESULT*     branchruleresult,
+   CANDIDATELIST*        candidates,
    SCORECONTAINER*       scorecontainer
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          parentstatistics
@@ -2455,7 +2600,11 @@ SCIP_RETCODE getFSBResult(
    /* Even for one single candidate we want to get the corresponding values */
    config->forcebranching = TRUE;
 
-   SCIP_CALL( selectVarStart(scip, config, NULL, status, branchruleresult, scorecontainer, lpobjval, statistics, localstats) );
+#ifdef SCIP_STATISTIC
+   SCIP_CALL( selectVarStart(scip, config, NULL, status, branchruleresult, scorecontainer, candidates, lpobjval, statistics, localstats) );
+#else
+   SCIP_CALL( selectVarStart(scip, config, NULL, status, branchruleresult, scorecontainer, candidates, lpobjval) );
+#endif
 
    mergeFSBStatistics(parentstatistics, statistics);
 
@@ -2468,6 +2617,7 @@ SCIP_RETCODE getFSBResult(
 }
 
 /** Comparator used to order the candidates in a BRANCHRULERESULT by their FSB score. */
+#if 0
 static
 SCIP_DECL_SORTINDCOMP(branchRuleScoreComp)
 {  /*lint --e{715}*/
@@ -2495,93 +2645,169 @@ SCIP_DECL_SORTINDCOMP(branchRuleScoreComp)
       return 1;
    }
 }
+#endif
+
+
+typedef struct
+{
+   SCORECONTAINER*       scorecontainer;
+   CANDIDATELIST*        candidatelist;
+} SCORESORTCONTAINER;
+
+/** Comparator used to order the candidates by their score. */
+static
+SCIP_DECL_SORTINDCOMP(scoreSortContainerScoreComp)
+{  /*lint --e{715}*/
+   SCORESORTCONTAINER* container = (SCORESORTCONTAINER*)dataptr;
+   SCIP_VAR* var1;
+   SCIP_VAR* var2;
+   int probindex1;
+   int probindex2;
+   SCIP_Real score1;
+   SCIP_Real score2;
+
+   assert(container != NULL);
+   assert(0 <= ind1 && ind1 < container->candidatelist->ncandidates);
+   assert(0 <= ind2 && ind2 < container->candidatelist->ncandidates);
+
+   var1 = container->candidatelist->candidates[ind1]->branchvar;
+   var2 = container->candidatelist->candidates[ind2]->branchvar;
+   probindex1 = SCIPvarGetProbindex(var1);
+   probindex2 = SCIPvarGetProbindex(var2);
+   score1 = container->scorecontainer->scores[probindex1];
+   score2 = container->scorecontainer->scores[probindex2];
+
+   if( score1 == score2 )
+   {
+      return 0;
+   }
+   else if( score1 < score2 )
+   {
+      return -1;
+   }
+   else
+   {
+      return 1;
+   }
+}
 
 static
 SCIP_RETCODE getBestCandidates(
    SCIP*                 scip,
    CONFIGURATION*        config,
-   CANDIDATELIST*        candidates,
+   CANDIDATELIST*        possiblecandidates,
+   CANDIDATELIST*        bestcandidates,
    SCORECONTAINER*       scorecontainer
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics
 #endif
    )
 {
-   BRANCHRULERESULT* branchruleresult;
    SCIP_Real lpobjval;
-   int nallcands;
+   int probingdepth;
    int nusedcands;
    int* permutation;
    int i;
 
    assert(scip != NULL);
-   assert(candidates != NULL);
+   assert(config != NULL);
+   assert(possiblecandidates != NULL);
+   assert(possiblecandidates->ncandidates > 0);
+   assert(bestcandidates != NULL);
+   assert(scorecontainer != NULL);
+   SCIPstatistic(assert(statistics != NULL));
 
-   SCIP_CALL( SCIPgetLPBranchCands(scip, NULL, NULL, NULL, &nallcands, NULL, NULL) );
-   assert(nallcands > 0);
-
-   SCIPdebugMessage("All nlpcands: %i\n", nallcands);
-   nusedcands = MIN(config->maxncands, nallcands);
+   SCIPdebugMessage("All nlpcands: %i\n", possiblecandidates->ncandidates);
+   nusedcands = MIN(config->maxncands, possiblecandidates->ncandidates);
    SCIPdebugMessage("Used nlpcands: %i\n", nusedcands);
 
-   SCIP_CALL( candidateListInit(scip, candidates, nusedcands) );
+   probingdepth = SCIPinProbing(scip) ? SCIPgetProbingDepth(scip) : 0;
 
-   /* allocate the result struct to collect the FSB scores of all branching candidates */
-   SCIP_CALL( branchRuleResultAllocateFull(scip, &branchruleresult, nallcands) );
-
-   assert(branchruleresult->ncandscores == nallcands);
+   /* needs to be the first method containing buffer allocations in this method (for the free order of the candidates) */
+   SCIP_CALL( candidateListInit(scip, bestcandidates, nusedcands) );
 
    lpobjval = SCIPgetLPObjval(scip);
 
-   /* TODO: filter the "candidates" based on the presence of a score in the 'scorecontainer'.
-    * Only those without a score need a new one. */
+   /* filter the "candidates" based on the presence of a score in the 'scorecontainer'. Only those without a score need a
+    * new one. */
    {
-      int i;
-      SCIP_VAR** lpcands;
-      SCIP_Real* lpcandssol;
-      SCIP_Real* lpcandsfrac;
-      int nlpcands;
-
-      SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
-
-      for( i = 0; i < nlpcands; i++ )
+      int nunscoredcandidates = 0;
+      for( i = 0; i < possiblecandidates->ncandidates; i++ )
       {
-         SCIP_VAR* lpcand = lpcands[i];
-         int probindex = SCIPvarGetProbindex(lpcand);
-         int knownscore scorecontainer->scores[probindex];
-
-         /* TODO: should I also store the lpimemory? */
+         CANDIDATE* lpcand = possiblecandidates->candidates[i];
+         int probindex = SCIPvarGetProbindex(lpcand->branchvar);
+         int knownscore = scorecontainer->scores[probindex];
 
          if( knownscore == -1 )
          {
             /* score is unknown and needs to be calculated */
+            nunscoredcandidates++;
          }
-         else
+      }
+
+
+      if( nunscoredcandidates > 0 )
+      {
+         BRANCHRULERESULT* branchruleresult;
+         CANDIDATELIST* unscoredcandidates;
+         int counter = 0;
+
+         /* allocate the result struct to collect the FSB scores of all branching candidates */
+         SCIP_CALL( branchRuleResultAllocateFull(scip, &branchruleresult, possiblecandidates->ncandidates) );
+
+         assert(branchruleresult->ncandscores == possiblecandidates->ncandidates);
+
+         /* allocate the list of candidates without any score (gets updated further on) */
+         SCIP_CALL( candidateListAllocate(scip, &unscoredcandidates) );
+         SCIP_CALL( candidateListInit(scip, unscoredcandidates, nunscoredcandidates) );
+
+         for( i = 0; i < possiblecandidates->ncandidates; i++ )
          {
-            /* score is known */
+            CANDIDATE* lpcand = possiblecandidates->candidates[i];
+            int probindex = SCIPvarGetProbindex(lpcand->branchvar);
+            int knownscore = scorecontainer->scores[probindex];
+
+            if( knownscore == -1 )
+            {
+               candidateCopy(lpcand, unscoredcandidates->candidates[counter]);
+               counter++;
+            }
          }
+
+         SCIPdebugMessage("Calculating the FSB result to get a score for the remaining candidates.\n")
+         /* Calculate all FSB scores and collect it in the result */;
+         SCIP_CALL( getFSBResult(scip, config, lpobjval, branchruleresult, unscoredcandidates, scorecontainer, statistics) );
+
+         SCIP_CALL( candidateListFree(scip, &unscoredcandidates) );
+         SCIP_CALL( branchRuleResultFreeFull(scip, &branchruleresult) );
       }
    }
 
 
-   SCIPdebugMessage("Calculating the FSB result to get a score for all candidates.\n")
-   /* Calculate all FSB scores and collect it in the result */;
-   SCIP_CALL( getFSBResult(scip, config, lpobjval, branchruleresult, statistics) );
 
    /* allocate the permutation array that will contain the sorted indices (permutation[i] will contain the i-th index) */
-   SCIP_CALL( SCIPallocBufferArray(scip, &permutation, branchruleresult->ncandscores) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &permutation, possiblecandidates->ncandidates) );
 
-   SCIPdebugMessage("Sorting the candidates w.r.t. their FSB score.\n");
-   /* sort the branching candidates according to their FSB score contained in the result struct */
-   SCIPsortDown(permutation, branchRuleScoreComp, branchruleresult, branchruleresult->ncandscores);
+   {
+      SCORESORTCONTAINER* container;
+      SCIP_CALL( SCIPallocBuffer(scip, &container) );
+      container->candidatelist = possiblecandidates;
+      container->scorecontainer = scorecontainer;
+
+      SCIPdebugMessage("Sorting the candidates w.r.t. their FSB score.\n");
+      /* sort the branching candidates according to their FSB score contained in the result struct */
+      SCIPsortDown(permutation, scoreSortContainerScoreComp, container, possiblecandidates->ncandidates);
+
+      SCIPfreeBuffer(scip, &container);
+   }
 
    SCIPdebug(
-      SCIPdebugMessage("All %i candidates, sorted by their FSB score:\n", branchruleresult->ncandscores);
-      for( i = 0; i < branchruleresult->ncandscores; i++ )
+      SCIPdebugMessage("All %i candidates, sorted by their FSB score:\n", possiblecandidates->ncandidates);
+      for( i = 0; i < possiblecandidates->ncandidates; i++ )
       {
          int sortedindex = permutation[i];
-         SCIP_VAR* var = branchruleresult->candswithscore[sortedindex];
-         SCIP_Real score = branchruleresult->candscores[sortedindex];
+         SCIP_VAR* var = possiblecandidates->candidates[sortedindex]->branchvar;
+         SCIP_Real score = scorecontainer->scores[SCIPvarGetProbindex(var)];
 
          assert(var != NULL);
 
@@ -2589,45 +2815,33 @@ SCIP_RETCODE getBestCandidates(
       }
    )
 
-   SCIPdebugMessage("Best %i candidates used for the lookahead branching:\n", candidates->ncandidates);
+   SCIPdebugMessage("Best %i candidates used for the lookahead branching:\n", bestcandidates->ncandidates);
    for( i = 0; i < nusedcands; i++)
    {
-      CANDIDATE* candidate = candidates->candidates[i];
+      CANDIDATE* candidate = bestcandidates->candidates[i];
       int sortedindex = permutation[i];
+      CANDIDATE* candidatepattern = possiblecandidates->candidates[sortedindex];
       int probindex;
-      SCIP_Real score;
 
-      assert(branchruleresult->candswithscore[sortedindex] != NULL);
       assert(candidate != NULL);
+      assert(candidatepattern != NULL);
+
+      probindex = SCIPvarGetProbindex(candidatepattern->branchvar);
 
       /* set the branching information, such that we can re-use it in the lookahead branching */
-      candidate->branchvar = branchruleresult->candswithscore[sortedindex];
-      candidate->branchval = branchruleresult->candslpvalue[sortedindex];
-      candidate->fracval = branchruleresult->candsvalfrac[sortedindex];
+      candidateCopy(candidatepattern, candidate);
 
-      if( config->reusebasis )
+      if( config->reusebasis && scorecontainer->sourcedepth[probindex] == probingdepth )
       {
-         lpiMemoryShallowCopy(branchruleresult->downlpimemories[sortedindex], candidate->downlpimemory);
-         lpiMemoryShallowCopy(branchruleresult->uplpimemories[sortedindex], candidate->uplpimemory);
+         lpiMemoryShallowCopy(scorecontainer->downlpimemories[probindex], candidate->downlpimemory);
+         lpiMemoryShallowCopy(scorecontainer->uplpimemories[probindex], candidate->uplpimemory);
       }
 
       SCIPdebugMessage(" Index %2i: Var %s Val %g\n", i, SCIPvarGetName(candidate->branchvar), candidate->branchval);
    }
 
-   if( config->reusebasis )
-   {
-      for( i = candidates->ncandidates; i < nallcands; i++ )
-      {
-         int sortedindex = permutation[i];
-
-         SCIP_CALL( lpiMemoryClear(scip, branchruleresult->downlpimemories[sortedindex]) );
-         SCIP_CALL( lpiMemoryClear(scip, branchruleresult->uplpimemories[sortedindex]) );
-      }
-   }
-
    /* free the allocated resources */
    SCIPfreeBufferArray(scip, &permutation);
-   SCIP_CALL( branchRuleResultFreeFull(scip, &branchruleresult) );
 
    return SCIP_OKAY;
 }
@@ -2635,37 +2849,15 @@ SCIP_RETCODE getBestCandidates(
 static
 SCIP_RETCODE getAllCandidates(
    SCIP*                 scip,
+   CANDIDATELIST*        possiblecandidates,
    CANDIDATELIST*        candidates
    )
 {
-   SCIP_VAR** lpcands;
-   SCIP_Real* lpcandssol;
-   SCIP_Real* lpcandsfrac;
-   int nlpcands;
-   int i;
-
-   assert(scip != NULL);
+   assert(possiblecandidates != NULL);
    assert(candidates != NULL);
 
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
-
-   assert(lpcands != NULL);
-   assert(lpcandssol != NULL);
-   assert(lpcandsfrac != NULL);
-   assert(nlpcands > 0);
-
-   SCIP_CALL( candidateListInit(scip, candidates, nlpcands) );
-
-   assert(nlpcands == candidates->ncandidates);
-
-   for( i = 0; i < nlpcands; i++ )
-   {
-      CANDIDATE* candidate = candidates->candidates[i];
-
-      candidate->branchvar = lpcands[i];
-      candidate->branchval = lpcandssol[i];
-      candidate->fracval = lpcandsfrac[i];
-   }
+   candidateListInit(scip, candidates, possiblecandidates->ncandidates);
+   candidateListCopy(possiblecandidates, candidates);
 
    return SCIP_OKAY;
 }
@@ -2674,6 +2866,8 @@ static
 SCIP_RETCODE getCandidates(
    SCIP*                 scip,
    CONFIGURATION*        config,
+   SCORECONTAINER*       scorecontainer,
+   CANDIDATELIST*        possiblecandidates,
    CANDIDATELIST*        candidates
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics
@@ -2681,17 +2875,17 @@ SCIP_RETCODE getCandidates(
    )
 {
    /* we want to take the abbreviated list of candidates only on the first probing level */
-   if( config->abbreviated && (!SCIPinProbing(scip) || SCIPgetProbingDepth(scip) == 0) )
+   if( config->abbreviated /*&& (!SCIPinProbing(scip) || SCIPgetProbingDepth(scip) == 0)*/ )
    {
       /* call LAB with depth 1 to get the best (w.r.t. FSB score) candidates */
-      SCIPdebugMessage("Getting the branching candidates by selecting the best %i candidates\n", candidates->ncandidates);
-      SCIP_CALL( getBestCandidates(scip, config, candidates, statistics) );
+      SCIPdebugMessage("Getting the branching candidates by selecting the best (at most) %i candidates\n", config->maxncands);
+      SCIP_CALL( getBestCandidates(scip, config, possiblecandidates, candidates, scorecontainer, statistics) );
    }
    else
    {
       /* get all candidates for the current node lp solution */
       SCIPdebugMessage("Getting the branching candidates by selecting all candidates.\n");
-      SCIP_CALL( getAllCandidates(scip, candidates) );
+      SCIP_CALL( getAllCandidates(scip, possiblecandidates, candidates) );
    }
 
    return SCIP_OKAY;
@@ -2742,7 +2936,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
       SCIP_CALL( binaryVarListAppend(scip, binconsdata->binaryvars, negbranchvar) );
    }
 
-   SCIPdebugMessage("Depth <%i>, Started down branching on var <%s> with var < <%g>\n", probingdepth, SCIPvarGetName(branchvar), branchval);
+   SCIPdebugMessage("Depth <%i>, Started down branching on var <%s> with 'val < %g'\n", probingdepth, SCIPvarGetName(branchvar), branchval);
 
    niterations = SCIPgetNLPIterations(scip);
    SCIP_CALL( executeDownBranching(scip, config, candidate, downbranchingresult, status) );
@@ -2750,23 +2944,27 @@ SCIP_RETCODE executeDownBranchingRecursive(
       statistics->nlpssolved[probingdepth]++;
       statistics->nlpiterations[probingdepth] += SCIPgetNLPIterations(scip)-niterations;
    )
+   SCIPdebugMessage("Solving the LP took %"SCIP_LONGINT_FORMAT" iterations.\n", (SCIPgetNLPIterations(scip)-niterations));
 
    SCIPdebug(
       if( downbranchingresult->cutoff )
       {
-         SCIPdebugMessage("Depth <%i>, The solved LP was infeasible and as such cutoff\n", probingdepth);
+         SCIPdebugMessage("Depth <%i>, The solved LP was infeasible and as such is cutoff\n", probingdepth);
+      }
+      else
+      {
+         SCIPdebugMessage("Depth <%i>, The solved LP was feasible and has an objval <%g>\n", probingdepth,
+            downbranchingresult->objval);
       }
    )
 
    if( !downbranchingresult->cutoff && !status->lperror && !status->limitreached )
    {
-      int deepernlpcands;
       SCIP_Real localdowngain;
 
       if( lpiMemoryIsWritable(lpimemory, config) )
       {
          SCIP_CALL( storeInLPIMemory(scip, lpimemory) );
-         SCIPdebugMessage("Stored smth in LPIMemory after downbranching on var %s\n", SCIPvarGetName(branchvar));
       }
 
       localdowngain = MAX(0, downbranchingresult->objval - localbaselpsolval);
@@ -2775,11 +2973,13 @@ SCIP_RETCODE executeDownBranchingRecursive(
 
       if( recursiondepth > 1 )
       {
-         SCIP_CALL( SCIPgetLPBranchCands(scip, NULL, NULL, NULL, &deepernlpcands, NULL, NULL) );
+         CANDIDATELIST* deepercandidates;
 
-         SCIPdebugMessage("Depth <%i>, Downbranching has <%i> candidates.\n", probingdepth, deepernlpcands);
+         SCIP_CALL( candidateListGetAllFractionalCandidates(scip, &deepercandidates) );
 
-         if( deepernlpcands > 0 )
+         SCIPdebugMessage("Depth <%i>, Downbranching has <%i> candidates.\n", probingdepth, deepercandidates->ncandidates);
+
+         if( deepercandidates->ncandidates > 0 )
          {
             CANDIDATELIST* candidates;
             BRANCHRULERESULT* deeperbranchruleresult;
@@ -2793,9 +2993,9 @@ SCIP_RETCODE executeDownBranchingRecursive(
             SCIP_CALL( candidateListAllocate(scip, &candidates) );
 
 #ifdef SCIP_STATISTIC
-            SCIP_CALL( getCandidates(scip, config, candidates, statistics) );
+            SCIP_CALL( getCandidates(scip, config, scorecontainer, deepercandidates, candidates, statistics) );
 #else
-            SCIP_CALL( getCandidates(scip, config, candidates) );
+            SCIP_CALL( getCandidates(scip, config, scorecontainer, deepercandidates, candidates) );
 #endif
 
             SCIP_CALL( statusAllocate(scip, &deeperstatus) );
@@ -2922,7 +3122,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
       SCIP_CALL( binaryVarListAppend(scip, binconsdata->binaryvars, branchvar) );
    }
 
-   SCIPdebugMessage("Depth <%i>, Started up branching on var <%s> with var > <%g>\n", probingdepth, SCIPvarGetName(branchvar), branchval);
+   SCIPdebugMessage("Depth <%i>, Started up branching on var <%s> with 'val > %g'\n", probingdepth, SCIPvarGetName(branchvar), branchval);
 
    niterations = SCIPgetNLPIterations(scip);
    SCIP_CALL( executeUpBranching(scip, config, candidate, upbranchingresult, status) );
@@ -2930,6 +3130,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
       statistics->nlpssolved[probingdepth]++;
       statistics->nlpiterations[probingdepth] += SCIPgetNLPIterations(scip)-niterations;
    )
+   SCIPdebugMessage("Solving the LP took %"SCIP_LONGINT_FORMAT" iterations.\n", (SCIPgetNLPIterations(scip)-niterations));
 
    SCIPdebug(
       if( upbranchingresult->cutoff )
@@ -2938,19 +3139,18 @@ SCIP_RETCODE executeUpBranchingRecursive(
       }
       else
       {
-         SCIPdebugMessage("Depth <%i>, The solved LP feasible and has an objval <%g> or <%g>\n", probingdepth, upbranchingresult->objval, SCIPgetLPObjval(scip));
+         SCIPdebugMessage("Depth <%i>, The solved LP feasible and has an objval <%g>\n", probingdepth,
+            upbranchingresult->objval);
       }
    )
 
    if( !upbranchingresult->cutoff && !status->lperror && !status->limitreached )
    {
-      int deepernlpcands;
       SCIP_Real localupgain;
 
       if( lpiMemoryIsWritable(lpimemory, config) )
       {
          SCIP_CALL( storeInLPIMemory(scip, lpimemory) );
-         SCIPdebugMessage("Stored smth in LPIMemory after upbranching on var %s\n", SCIPvarGetName(branchvar));
       }
 
       localupgain = MAX(0, upbranchingresult->objval - localbaselpsolval);
@@ -2959,11 +3159,13 @@ SCIP_RETCODE executeUpBranchingRecursive(
 
       if( recursiondepth > 1 )
       {
-         SCIP_CALL( SCIPgetLPBranchCands(scip, NULL, NULL, NULL, &deepernlpcands, NULL, NULL) );
+         CANDIDATELIST* deepercandidates;
 
-         SCIPdebugMessage("Depth <%i>, Upbranching has <%i> candidates.\n", probingdepth, deepernlpcands);
+         SCIP_CALL( candidateListGetAllFractionalCandidates(scip, &deepercandidates) );
 
-         if( deepernlpcands > 0 )
+         SCIPdebugMessage("Depth <%i>, Upbranching has <%i> candidates.\n", probingdepth, deepercandidates->ncandidates);
+
+         if( deepercandidates->ncandidates > 0 )
          {
             CANDIDATELIST* candidates;
             BRANCHRULERESULT* deeperbranchruleresult;
@@ -2977,12 +3179,12 @@ SCIP_RETCODE executeUpBranchingRecursive(
             SCIP_CALL( candidateListAllocate(scip, &candidates) );
 
 #ifdef SCIP_STATISTIC
-            SCIP_CALL( getCandidates(scip, config, candidates, statistics) );
+            SCIP_CALL( getCandidates(scip, config, scorecontainer, deepercandidates, candidates, statistics) );
 #else
-            SCIP_CALL( getCandidates(scip, config, candidates) );
+            SCIP_CALL( getCandidates(scip, config, scorecontainer, deepercandidates, candidates) );
 #endif
 
-            SCIPdebugMessage("Now the objval is <%g> or <%g>\n", upbranchingresult->objval, SCIPgetLPObjval(scip));
+            SCIPdebugMessage("Now the objval is <%g>\n", upbranchingresult->objval);
 
             SCIP_CALL( statusAllocate(scip, &deeperstatus) );
 
@@ -3033,6 +3235,8 @@ SCIP_RETCODE executeUpBranchingRecursive(
             branchRuleResultFreeReduced(scip, &deeperbranchruleresult);
             SCIP_CALL( candidateListFree(scip, &candidates) );
          }
+
+         candidateListFree(scip, &deepercandidates);
       }
    }
 
@@ -3151,7 +3355,19 @@ SCIP_RETCODE selectVarRecursive(
 
          SCIP_CALL( SCIPgetLPI(scip, &lpi) );
 
-         SCIPdebugMessage("Started selectVarRecursive with <%i> candidates.\n", nlpcands);
+         SCIPdebugMessage("Started selectVarRecursive with <%i> candidates: [", nlpcands);
+         SCIPdebug(
+            for( i = 0; i < nlpcands; i++ )
+            {
+
+               SCIPinfoMessage(scip, NULL, "%s", SCIPvarGetName(candidates->candidates[i]->branchvar));
+               if(i != nlpcands-1)
+               {
+                  SCIPinfoMessage(scip, NULL, ", ");
+               }
+            }
+            SCIPinfoMessage(scip, NULL, "]\n");
+         )
 
          for( i = 0, c = persistent ? persistent->restartindex : 0; i < nlpcands && isExecuteBranchingLoop(status, config) && !SCIPisStopped(scip); i++, c++ )
          {
@@ -3270,6 +3486,8 @@ SCIP_RETCODE selectVarRecursive(
 
                if( upbranchingresult->cutoff && downbranchingresult->cutoff )
                {
+                  SCIP_Real score = SCIPinfinity(scip);
+
                   SCIPdebugMessage("Depth <%i>, Both branches cutoff\n", probingdepth);
 
                   /* in a higher level this cutoff may be transferred as a domain reduction/valid bound */
@@ -3281,12 +3499,20 @@ SCIP_RETCODE selectVarRecursive(
 
                   if( scorecontainer != NULL )
                   {
-                     scoreContainerSetScore(scorecontainer, branchvar, SCIPinfinity(scip));
+                     LPIMEMORY* downlpimemory = NULL;
+                     LPIMEMORY* uplpimemory = NULL;
+                     if( branchruleresult->downlpimemories != NULL && branchruleresult->uplpimemories != NULL )
+                     {
+                        downlpimemory = branchruleresult->downlpimemories[i];
+                        uplpimemory = branchruleresult->uplpimemories[i];
+                     }
+                     scoreContainerSetScore(scip, scorecontainer, branchvar, score, downlpimemory, uplpimemory);
                   }
 
                   if( branchruleresult->candscores != NULL )
                   {
-                     branchruleresult->candscores[i] = SCIPinfinity(scip);
+                     /* TODO: extract scoring into an own method */
+                     branchruleresult->candscores[i] = score;
                      branchruleresult->candswithscore[i] = branchvar;
                      branchruleresult->candslpvalue[i] = branchval;
                      branchruleresult->candsvalfrac[i] = branchvalfrac;
@@ -3294,8 +3520,10 @@ SCIP_RETCODE selectVarRecursive(
                }
                else if( upbranchingresult->cutoff )
                {
-                  /* TODO: rework scoring with one sided cutoff, see no cutoff case */
-                  SCIP_Real score = downbranchingresult->dualboundvalid ? downbranchingresult->dualbound : downbranchingresult->objval;
+                  /* TODO: extract scoring into an own method */
+                  SCIP_Real downdualbound = downbranchingresult->dualboundvalid ? downbranchingresult->dualbound :
+                     downbranchingresult->objval;
+                  SCIP_Real score = MAX(0, downdualbound - lpobjval);
 
                   SCIPdebugMessage("Depth <%i>, Up branch cutoff\n", probingdepth);
 
@@ -3316,7 +3544,14 @@ SCIP_RETCODE selectVarRecursive(
 
                   if( scorecontainer != NULL )
                   {
-                     scoreContainerSetScore(scorecontainer, branchvar, score)
+                     LPIMEMORY* downlpimemory = NULL;
+                     LPIMEMORY* uplpimemory = NULL;
+                     if( branchruleresult->downlpimemories != NULL && branchruleresult->uplpimemories != NULL )
+                     {
+                        downlpimemory = branchruleresult->downlpimemories[i];
+                        uplpimemory = branchruleresult->uplpimemories[i];
+                     }
+                     scoreContainerSetScore(scip, scorecontainer, branchvar, score, downlpimemory, uplpimemory);
                   }
 
                   if( branchruleresult->candscores != NULL )
@@ -3329,8 +3564,11 @@ SCIP_RETCODE selectVarRecursive(
                }
                else if( downbranchingresult->cutoff )
                {
-                  /* TODO: rework scoring with one sided cutoff, see no cutoff case */
-                  SCIP_Real score = upbranchingresult->dualboundvalid ? upbranchingresult->dualbound : upbranchingresult->objval;
+                  /* TODO: extract scoring into an own method */
+                  SCIP_Real updualbound = upbranchingresult->dualboundvalid ? upbranchingresult->dualbound :
+                     upbranchingresult->objval;
+                  SCIP_Real score = MAX(0, updualbound - lpobjval);
+
                   SCIPdebugMessage("Depth <%i>, Up branch cutoff\n", probingdepth);
 
                   SCIPstatistic(
@@ -3349,7 +3587,14 @@ SCIP_RETCODE selectVarRecursive(
 
                   if( scorecontainer != NULL )
                   {
-                     scoreContainerSetScore(scorecontainer, branchvar, score)
+                     LPIMEMORY* downlpimemory = NULL;
+                     LPIMEMORY* uplpimemory = NULL;
+                     if( branchruleresult->downlpimemories != NULL && branchruleresult->uplpimemories != NULL )
+                     {
+                        downlpimemory = branchruleresult->downlpimemories[i];
+                        uplpimemory = branchruleresult->uplpimemories[i];
+                     }
+                     scoreContainerSetScore(scip, scorecontainer, branchvar, score, downlpimemory, uplpimemory);
                   }
 
                   if( branchruleresult->candscores != NULL )
@@ -3370,7 +3615,7 @@ SCIP_RETCODE selectVarRecursive(
 
                   SCIPdebugMessage("Depth <%i>, Neither branch is cutoff and no limit reached.\n", probingdepth);
 
-                  /* TODO: currently scoring function is best dual bound. Maybe make it more generic? */
+                  /* TODO: currently scoring function is best gain. Maybe make it more generic? */
                   /* TODO: what if the dualbounds are not valid? Can this happen here? */
                   downdualbound = downbranchingresult->dualbound;
                   updualbound = upbranchingresult->dualbound;
@@ -3378,11 +3623,19 @@ SCIP_RETCODE selectVarRecursive(
                   downgain = MAX(0, downdualbound - lpobjval);
                   upgain = MAX(0, updualbound - lpobjval);
 
+                  /* TODO: extract scoring into an own method */
                   score = MIN(downgain, upgain);
 
                   if( scorecontainer != NULL )
                   {
-                     scoreContainerSetScore(scorecontainer, branchvar, score);
+                     LPIMEMORY* downlpimemory = NULL;
+                     LPIMEMORY* uplpimemory = NULL;
+                     if( branchruleresult->downlpimemories != NULL && branchruleresult->uplpimemories != NULL )
+                     {
+                        downlpimemory = branchruleresult->downlpimemories[i];
+                        uplpimemory = branchruleresult->uplpimemories[i];
+                     }
+                     scoreContainerSetScore(scip, scorecontainer, branchvar, score, downlpimemory, uplpimemory);
                   }
 
                   if( branchruleresult->candscores != NULL )
@@ -3484,12 +3737,13 @@ SCIP_RETCODE selectVarRecursive(
 
 static
 SCIP_RETCODE selectVarStart(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< SCIP data structure */
    CONFIGURATION*        config,
    PERSISTENTDATA*       persistent,
    STATUS*               status,
    BRANCHRULERESULT*     branchruleresult,
    SCORECONTAINER*       scorecontainer,
+   CANDIDATELIST*        possiblecandidates, /**< the list of candidates for branching */
    SCIP_Real             lpobjval
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics
@@ -3519,9 +3773,9 @@ SCIP_RETCODE selectVarStart(
    SCIP_CALL( candidateListAllocate(scip, &candidates) );
 
 #ifdef SCIP_STATISTIC
-   SCIP_CALL( getCandidates(scip, config, candidates, statistics) );
+   SCIP_CALL( getCandidates(scip, config, scorecontainer, possiblecandidates, candidates, statistics) );
 #else
-   SCIP_CALL( getCandidates(scip, config, candidates) );
+   SCIP_CALL( getCandidates(scip, config, scorecontainer, possiblecandidates, candidates) );
 #endif
 
    assert(candidates->ncandidates > 0);
@@ -3870,25 +4124,23 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    }
    else
    {
-      int nlpcands;
       BRANCHRULERESULT* branchruleresult;
       SCORECONTAINER* scorecontainer = NULL;
+      CANDIDATELIST* allcandidates;
       STATUS* status;
       SCIP_Real lpobjval;
 #ifdef SCIP_STATISTIC
       LOCALSTATISTICS* localstats;
 #endif
 
-      /* get all fractional candidates we can branch on */
-      SCIP_CALL( SCIPgetLPBranchCands(scip, NULL, NULL, NULL, &nlpcands, NULL, NULL) );
-
-      SCIPdebugMessage("The base lp has <%i> variables with fractional value.\n", nlpcands);
-
       /* create a struct to store the algorithm status */
       SCIP_CALL( statusAllocate(scip, &status) );
       /* create a struct to store the branching decision (in case there is one) */
       SCIP_CALL( branchRuleResultAllocateReduced(scip, &branchruleresult) );
       SCIP_CALL( scoreContainerAllocate(scip, &scorecontainer) );
+      SCIP_CALL( candidateListGetAllFractionalCandidates(scip, &allcandidates) );
+
+      SCIPdebugMessage("The base lp has <%i> variables with fractional value.\n", allcandidates->ncandidates);
 
       lpobjval = SCIPgetLPObjval(scip);
 
@@ -3896,9 +4148,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 #ifdef SCIP_STATISTIC
       /* create a struct to store the statistics needed for this single run */
       SCIP_CALL( localStatisticsAllocate(scip, &localstats) );
-      SCIP_CALL( selectVarStart(scip, branchruledata->config, branchruledata->persistent, status, branchruleresult, scorecontainer, lpobjval, branchruledata->statistics, localstats) );
+      SCIP_CALL( selectVarStart(scip, branchruledata->config, branchruledata->persistent, status, branchruleresult,
+            scorecontainer, allcandidates, lpobjval, branchruledata->statistics, localstats) );
 #else
-      SCIP_CALL( selectVarStart(scip, branchruledata->config, branchruledata->persistent, status, branchruleresult, scorecontainer, lpobjval) );
+      SCIP_CALL( selectVarStart(scip, branchruledata->config, branchruledata->persistent, status, branchruleresult,
+            scorecontainer, allcandidates, lpobjval) );
 #endif
 
       if( status->cutoff || status->domredcutoff )
@@ -3938,7 +4192,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          BRANCHINGDECISION* decision = branchruleresult->decision;
 
          SCIPdebugMessage(" -> %d candidates, variable <%s> (solval=%g)\n",
-            nlpcands, SCIPvarGetName(decision->var), decision->val);
+            allcandidates->ncandidates, SCIPvarGetName(decision->var), decision->val);
 
          /* execute the branching as a result of the branching logic */
          SCIP_CALL( branchOnVar(scip, decision) );
@@ -3983,7 +4237,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 #ifdef SCIP_STATISTIC
       localStatisticsFree(scip, &localstats);
 #endif
-      scoreContainerFree(scip, &scorecontainer);
+      candidateListFree(scip, &allcandidates);
+      SCIP_CALL( scoreContainerFree(scip, &scorecontainer) );
       branchRuleResultFreeReduced(scip, &branchruleresult);
       statusFree(scip, &status);
    }
