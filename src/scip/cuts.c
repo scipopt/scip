@@ -2033,6 +2033,7 @@ SCIP_RETCODE tryDelta(
    int*                  bestcutnnz,         /**< number of non-zeros for currently best cut */
    SCIP_Real*            bestcutefficacy,    /**< efficacy of currently best cut */
    SCIP_Real*            bestcutdelta,       /**< delta used for currently best cut */
+   SCIP_Real             minefficacy,        /**< minimal efficacy for storing cut in arrays */
    int*                  tmpboundtype,       /**< temporary working array for testing the given delta */
    int*                  tmpvarsign,         /**< temporary working array for testing the given delta */
    SCIP_Real*            tmpcutcoefs,        /**< temporary working array for testing the given delta */
@@ -2107,7 +2108,7 @@ SCIP_RETCODE tryDelta(
       *bestcutdelta = delta;
 
       /* only copy cut if it is efficacious */
-      if( SCIPisEfficacious(scip, cutefficacy) )
+      if( cutefficacy > minefficacy )
       {
          BMScopyMemoryArray(bestcutinds, tmpcutinds, tmpcutnnz);
          BMScopyMemoryArray(bestcutcoefs, tmpcutcoefs, tmpcutnnz);
@@ -2178,6 +2179,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_VAR** vars;
    SCIP_Bool freevariable;
    SCIP_Bool localbdsused;
+   SCIP_Real bestmirefficacy;
 
    assert(aggrrow != NULL);
    assert(aggrrow->nrows >= 1);
@@ -2338,12 +2340,13 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
     */
 
    bestdelta = SCIP_INVALID;
+   bestmirefficacy = -SCIPinfinity(scip);
 
    /* try all candidates for delta  */
    for( i = 0; i < ndeltacands; ++i )
    {
       SCIP_CALL( tryDelta(scip, sol, aggrrow, minfrac, maxfrac, *cutislocal, mksetcoefs, mksetrhs, mksetinds, mksetnnz,
-         boundtype, varsign, cutcoefs, cutrhs, cutinds, cutnnz, cutefficacy, &bestdelta,
+         boundtype, varsign, cutcoefs, cutrhs, cutinds, cutnnz, &bestmirefficacy, &bestdelta, *cutefficacy,
          tmpboundtype, tmpvarsign, tmpcutcoefs, tmpcutinds, deltacands[i], success) );
    }
 
@@ -2355,7 +2358,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    for( i = 2; i <= 8 ; i *= 2 )
    {
       SCIP_CALL( tryDelta(scip, sol, aggrrow, minfrac, maxfrac, *cutislocal, mksetcoefs, mksetrhs, mksetinds, mksetnnz,
-         boundtype, varsign, cutcoefs, cutrhs, cutinds, cutnnz, cutefficacy, &bestdelta,
+         boundtype, varsign, cutcoefs, cutrhs, cutinds, cutnnz, &bestmirefficacy, &bestdelta, *cutefficacy,
          tmpboundtype, tmpvarsign, tmpcutcoefs, tmpcutinds, bestdelta / i, success) );
    }
 
@@ -2408,14 +2411,14 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       }
       localbdsused = localbdsused || (boundtype[k] == -2);
 
-      oldbestefficacy = *cutefficacy;
+      oldbestefficacy = bestmirefficacy;
 
       SCIP_CALL( tryDelta(scip, sol, aggrrow, minfrac, maxfrac, *cutislocal, mksetcoefs, mksetrhs, mksetinds, mksetnnz,
-         boundtype, varsign, cutcoefs, cutrhs, cutinds, cutnnz, cutefficacy, &bestdelta,
+         boundtype, varsign, cutcoefs, cutrhs, cutinds, cutnnz, &bestmirefficacy, &bestdelta, *cutefficacy,
          tmpboundtype, tmpvarsign, tmpcutcoefs, tmpcutinds, bestdelta, success) );
 
       /* undo the change in complementation if efficacy was not increased */
-      if( oldbestefficacy == *cutefficacy )
+      if( oldbestefficacy == bestmirefficacy )
       {
          boundtype[k] = oldboundtype;
          varsign[k] = oldvarsign;
@@ -2426,6 +2429,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
    if( *success )
    {
+      *cutefficacy = bestmirefficacy;
       *cutislocal = *cutislocal || localbdsused;
 
       if( cutrank != NULL )

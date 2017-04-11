@@ -542,9 +542,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          {
             if( cutnnz == 0 )
             {
-               assert(SCIPisFeasNegative(scip, cutrhs));
                SCIPdebugMsg(scip, " -> gomory cut detected infeasibility with cut 0 <= %f\n", cutrhs);
-               cutoff = TRUE;
+               /* TODO this was an assert before but leads to cutoff now. What changed? */
+               if( SCIPisFeasNegative(scip, cutrhs) )
+                  cutoff = TRUE;
             }
             else if( SCIPisEfficacious(scip, cutefficacy) )
             {
@@ -636,6 +637,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                SCIP_CALL( SCIPreleaseRow(scip, &cut) );
             }
          }
+
+         SCIPaggrRowFree(scip, &aggrrow);
       }
    }
 
