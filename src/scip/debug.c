@@ -538,7 +538,7 @@ SCIP_Bool debugSolIsAchieved(
 
    bestsol = SCIPgetBestSol(scip);
 
-   if( bestsol != NULL )
+   if( bestsol != NULL && !SCIPinProbing(scip))
    {
       SCIP_Real solvalue;
 
