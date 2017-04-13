@@ -12,12 +12,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define PRINTNODECONS
 /*
+#define PRINTNODECONS
 #define LAB_PRINT_BUFFER
-#define SCIP_DEBUG
-*/
 #define SCIP_STATISTIC
+*/
+#define SCIP_DEBUG
 
 /**@file   branch_lookahead.c
  * @brief  lookahead branching rule
@@ -68,16 +68,19 @@
 #define DEFAULT_STOPAFTERCUTOFF              TRUE
 #define DEFAULT_REUSEBASIS                   TRUE
 
+/* TODO: cleanup the macros */
 #ifdef LAB_PRINT_BUFFER
 #define LABallocBuffer(scip,ptr,name)           do                                                                        \
                                                 {                                                                         \
                                                    SCIP_CALL( SCIPallocBuffer(scip, ptr) );                               \
-                                                   SCIPinfoMessage(scip, NULL, "+ Alloc %s in %p in line %i\n", name, (void*)*ptr, __LINE__);  \
+                                                   SCIPinfoMessage(scip, NULL, "+ Alloc %s in %p in line %i\n", \
+                                                      name, (void*)*ptr, __LINE__);  \
                                                 }                                                                         \
                                                 while( FALSE )
 #define LABfreeBuffer(scip,ptr,name)            do\
                                                 {\
-                                                   SCIPinfoMessage(scip, NULL, "- Free %s in %p in line %i\n", name, (void*)*ptr,__LINE__);\
+                                                   SCIPinfoMessage(scip, NULL, "- Free %s in %p in line %i\n", \
+                                                      name, (void*)*ptr,__LINE__);\
                                                    SCIPfreeBuffer(scip, ptr);\
                                                 }\
                                                 while( FALSE )
@@ -102,20 +105,10 @@
 #define LABfreeBufferArray(scip,ptr,name)       SCIPfreeBufferArray(scip, ptr)
 #endif
 
-/* TODO: handle Blockmemory problems with the completeLAB run.
-[src/blockmemshell/memory.c:2503] ERROR: 3280 bytes (41 elements of size 80) not freed. First Allocator: src/scip/cons_pseudoboolean.c:424
-[src/blockmemshell/memory.c:2503] ERROR: 3120 bytes (65 elements of size 48) not freed. First Allocator: src/scip/branch_fullstrong.c:690
-[src/blockmemshell/memory.c:2503] ERROR: 41240 bytes (1031 elements of size 40) not freed. First Allocator: src/scip/misc.c:2777
-[src/blockmemshell/memory.c:2503] ERROR: 1600 bytes (50 elements of size 32) not freed. First Allocator: src/nlpi/expr.c:11993
-[src/blockmemshell/memory.c:2503] ERROR: 50424 bytes (2101 elements of size 24) not freed. First Allocator: src/scip/cons_nonlinear.c:9613
-[src/blockmemshell/memory.c:2521] ERROR: 99664 bytes not freed in total.
- * */
-
 
 /*
  * Data structures
  */
-
 
 /** Holds the information needed for branching on a variable. */
 typedef struct
@@ -374,6 +367,14 @@ void configurationFree(
    assert(config != NULL);
 
    LABfreeBuffer(scip, config, "CONFIGURATION");
+}
+
+static
+SCIP_Bool isReuseLPIInformation(
+   CONFIGURATION*        config
+   )
+{
+   return config->abbreviated && config->reusebasis;
 }
 
 /* An array containing all human readable names of the possible results. */
@@ -916,7 +917,7 @@ SCIP_Bool lpiMemoryIsReadable(
    assert(config != NULL);
 
    /* the lpinorms may be NULL */
-   return memory != NULL && memory->lpistate != NULL && config->reusebasis;
+   return memory != NULL && memory->lpistate != NULL && isReuseLPIInformation(config);
 }
 
 /** Checks that the lpi memory can be written to with previous data from the lp solver. */
@@ -929,7 +930,7 @@ SCIP_Bool lpiMemoryIsWritable(
    assert(config != NULL);
 
    /* the lpinorms may be NULL */
-   return memory != NULL && config->reusebasis;
+   return memory != NULL && isReuseLPIInformation(config);
 }
 
 /** Frees the data contained in the given lpi memory. */
@@ -1050,8 +1051,6 @@ SCIP_RETCODE candidateFree(
    CANDIDATE**           candidate           /**< the candidate to free */
    )
 {
-   SCIPdebugMessage("Entered candidateFree\n");
-
    assert(scip != NULL);
    assert(candidate != NULL);
 
@@ -1066,8 +1065,6 @@ SCIP_RETCODE candidateFree(
    }
 
    LABfreeBuffer(scip, candidate, "CANDIDATE");
-
-   SCIPdebugMessage("Exited candidateFree\n");
    return SCIP_OKAY;
 }
 
@@ -1197,8 +1194,6 @@ SCIP_RETCODE candidateListFree(
 {
    int i;
 
-   SCIPdebugMessage("Entered candidateListFree\n");
-
    assert(scip != NULL);
    assert(list != NULL);
 
@@ -1209,8 +1204,6 @@ SCIP_RETCODE candidateListFree(
 
    LABfreeBufferArray(scip, &(*list)->candidates, "CANDIDATELIST->candidates");
    LABfreeBuffer(scip, list, "CANDIDATELIST");
-
-   SCIPdebugMessage("Exited candidateListFree\n");
 
    return SCIP_OKAY;
 }
@@ -2065,7 +2058,6 @@ SCIP_RETCODE storeInLPIMemory(
    assert(lpimemory->lpistate != NULL);
    /* the norms may be NULL */
 
-
    return SCIP_OKAY;
 }
 
@@ -2437,7 +2429,6 @@ SCIP_RETCODE applyBinaryConstraints(
       statistics->nbinconstvio += conslist->nviolatedcons;
    );
 
-
    return SCIP_OKAY;
 }
 
@@ -2590,7 +2581,6 @@ SCIP_RETCODE getFSBResult(
    SCIP_CALL( selectVarStart(scip, config, NULL, status, decision, scorecontainer, candidates, lpobjval) );
 #endif
 
-
    branchingDecisionFree(scip, &decision);
    statusFree(scip, &status);
    configurationFree(scip, &config);
@@ -2628,7 +2618,6 @@ SCIP_DECL_SORTINDCOMP(branchRuleScoreComp)
    }
 }
 #endif
-
 
 typedef struct
 {
@@ -2691,8 +2680,6 @@ SCIP_RETCODE getBestCandidates(
    int* permutation;
    int i;
 
-   SCIPdebugMessage("Entered getBestCandidates\n");
-
    assert(scip != NULL);
    assert(config != NULL);
    assert(possiblecandidates != NULL);
@@ -2708,16 +2695,15 @@ SCIP_RETCODE getBestCandidates(
    probingdepth = SCIPinProbing(scip) ? SCIPgetProbingDepth(scip) : 0;
 
    /* needs to be the first method containing buffer allocations in this method (for the free order of the candidates) */
-   SCIP_CALL( candidateListInit(scip, bestcandidates, nusedcands, config->reusebasis) );
+   SCIP_CALL( candidateListInit(scip, bestcandidates, nusedcands, isReuseLPIInformation(config)) );
 
    lpobjval = SCIPgetLPObjval(scip);
 
    /* filter the "candidates" based on the presence of a score in the 'scorecontainer'. Only those without a score need a
     * new one. */
    {
+      /* TODO: cleanup*/
       int nunscoredcandidates = 0;
-
-      SCIPdebugMessage("Entered getBestCandidates filter candidates block\n");
 
       for( i = 0; i < possiblecandidates->ncandidates; i++ )
       {
@@ -2732,7 +2718,6 @@ SCIP_RETCODE getBestCandidates(
          }
       }
 
-
       if( nunscoredcandidates > 0 )
       {
          CANDIDATELIST* unscoredcandidates;
@@ -2740,7 +2725,7 @@ SCIP_RETCODE getBestCandidates(
 
          /* allocate the list of candidates without any score (gets updated further on) */
          SCIP_CALL( candidateListAllocate(scip, &unscoredcandidates) );
-         SCIP_CALL( candidateListInit(scip, unscoredcandidates, nunscoredcandidates, config->reusebasis) );
+         SCIP_CALL( candidateListInit(scip, unscoredcandidates, nunscoredcandidates, isReuseLPIInformation(config)) );
 
          for( i = 0; i < possiblecandidates->ncandidates; i++ )
          {
@@ -2766,10 +2751,7 @@ SCIP_RETCODE getBestCandidates(
          SCIP_CALL( candidateListFree(scip, &unscoredcandidates) );
       }
 
-      SCIPdebugMessage("Exited getBestCandidates filter candidates block\n");
    }
-
-
 
    /* allocate the permutation array that will contain the sorted indices (permutation[i] will contain the i-th index) */
    LABallocBufferArray(scip, &permutation, possiblecandidates->ncandidates, "PERMUTATIONS");
@@ -2817,7 +2799,7 @@ SCIP_RETCODE getBestCandidates(
       /* set the branching information, such that we can re-use it in the lookahead branching */
       candidateCopy(scip, candidatepattern, candidate);
 
-      if( config->reusebasis && scorecontainer->sourcedepth[probindex] == probingdepth )
+      if( isReuseLPIInformation(config) && scorecontainer->sourcedepth[probindex] == probingdepth )
       {
          lpiMemoryShallowCopy(scip, scorecontainer->downlpimemories[probindex], candidate->downlpimemory);
          lpiMemoryShallowCopy(scip, scorecontainer->uplpimemories[probindex], candidate->uplpimemory);
@@ -2828,8 +2810,6 @@ SCIP_RETCODE getBestCandidates(
 
    /* free the allocated resources */
    LABfreeBufferArray(scip, &permutation, "PERMUTATIONS");
-
-   SCIPdebugMessage("Exited getBestCandidates\n");
 
    return SCIP_OKAY;
 }
@@ -2878,7 +2858,7 @@ SCIP_RETCODE getCandidates(
    {
       /* get all candidates for the current node lp solution */
       SCIPdebugMessage("Getting the branching candidates by selecting all candidates.\n");
-      SCIP_CALL( copyCandidates(scip, possiblecandidates, candidates, config->reusebasis) );
+      SCIP_CALL( copyCandidates(scip, possiblecandidates, candidates, isReuseLPIInformation(config)) );
    }
 
    return SCIP_OKAY;
@@ -2968,7 +2948,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
       {
          CANDIDATELIST* deepercandidates;
 
-         SCIP_CALL( candidateListGetAllFractionalCandidates(scip, &deepercandidates, config->reusebasis) );
+         SCIP_CALL( candidateListGetAllFractionalCandidates(scip, &deepercandidates, isReuseLPIInformation(config)) );
 
          SCIPdebugMessage("Depth <%i>, Downbranching has <%i> candidates.\n", probingdepth, deepercandidates->ncandidates);
 
@@ -3155,7 +3135,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
       {
          CANDIDATELIST* deepercandidates;
 
-         SCIP_CALL( candidateListGetAllFractionalCandidates(scip, &deepercandidates, config->reusebasis) );
+         SCIP_CALL( candidateListGetAllFractionalCandidates(scip, &deepercandidates, isReuseLPIInformation(config)) );
 
          SCIPdebugMessage("Depth <%i>, Upbranching has <%i> candidates.\n", probingdepth, deepercandidates->ncandidates);
 
@@ -3244,7 +3224,6 @@ SCIP_RETCODE executeUpBranchingRecursive(
 
    if( config->usebincons && SCIPvarIsBinary(branchvar) )
    {
-
 
 #ifdef NDEBUG
       binaryVarListDrop(scip, binconsdata->binaryvars);
@@ -3387,7 +3366,7 @@ SCIP_RETCODE selectVarRecursive(
             branchingResultDataInit(scip, downbranchingresult);
             branchingResultDataInit(scip, upbranchingresult);
 
-            if( config->reusebasis )
+            if( isReuseLPIInformation(config) )
             {
                SCIP_CALL( lpiMemoryAllocate(scip, &downlpimemory) );
                SCIP_CALL( lpiMemoryAllocate(scip, &uplpimemory) );
@@ -3642,7 +3621,7 @@ SCIP_RETCODE selectVarRecursive(
                )
             }
 
-            if( config->reusebasis )
+            if( isReuseLPIInformation(config) )
             {
                SCIP_CALL( lpiMemoryFree(scip, &uplpimemory) );
                SCIP_CALL( lpiMemoryFree(scip, &downlpimemory) );
@@ -4017,7 +3996,6 @@ SCIP_DECL_BRANCHEXITSOL(branchExitSolLookahead)
       branchruledata->isinitialized = FALSE;
    }
 
-
    return SCIP_OKAY;
 }
 
@@ -4073,8 +4051,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       SCIP_CALL( statusAllocate(scip, &status) );
       /* create a struct to store the branching decision (in case there is one) */
       SCIP_CALL( branchingDecisionAllocate(scip, &decision) );
-      SCIP_CALL( scoreContainerAllocate(scip, &scorecontainer, branchruledata->config->reusebasis) );
-      SCIP_CALL( candidateListGetAllFractionalCandidates(scip, &allcandidates, branchruledata->config->reusebasis) );
+      SCIP_CALL( scoreContainerAllocate(scip, &scorecontainer, isReuseLPIInformation(branchruledata->config)) );
+      SCIP_CALL( candidateListGetAllFractionalCandidates(scip, &allcandidates, isReuseLPIInformation(branchruledata->config)) );
 
       SCIPdebugMessage("The base lp has <%i> variables with fractional value.\n", allcandidates->ncandidates);
 
