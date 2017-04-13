@@ -665,6 +665,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       int mindensity;
       int maxdensity;
       int multiplekeyspresent;
+      SCIP_Bool stop;
 
       numcancel = 0;
       numcancellast = 0;
@@ -676,6 +677,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       mindensity = 0;
       maxdensity = 0;
       multiplekeyspresent = 0;
+      stop = FALSE;
 
       nrows = SCIPmatrixGetNRows(matrix);
       ncols = SCIPmatrixGetNColumns(matrix);
@@ -798,24 +800,30 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
                rescattering(nonzerosotherrow, scatterotherrow, &numscatterotherrow);
                rescattering(nonzerosequality, scatterequality, &numscatterequality);
             }
-         }
 
-         if( !presoldata->fullsearch )
-         {
-            /* check success of this presolver, stop otherwise */
-            if( !(numobservedrowpairs % CHECK_INTERVAL) )
+            if( !presoldata->fullsearch )
             {
-               numcancellast = numcancel - numcancelcurrent;
-               numcancelcurrent = numcancel;
+               /* check success of this presolver, stop otherwise */
+               if( !(numobservedrowpairs % CHECK_INTERVAL) )
+               {
+                  numcancellast = numcancel - numcancelcurrent;
+                  numcancelcurrent = numcancel;
 #ifdef SCIP_MORE_DEBUG
-               SCIPdebugMsg(scip, "### cancellast=%d, sucratio=%.6f\n",numcancellast,(SCIP_Real)numcancellast/(SCIP_Real)CHECK_INTERVAL);
+                  SCIPdebugMsg(scip, "### cancellast=%d, sucratio=%.6f\n",numcancellast,(SCIP_Real)numcancellast/(SCIP_Real)CHECK_INTERVAL);
 #endif
-               if( ((SCIP_Real)numcancellast/(SCIP_Real)CHECK_INTERVAL) < THRESHOLD )
-                  break;
+                  if( ((SCIP_Real)numcancellast/(SCIP_Real)CHECK_INTERVAL) < THRESHOLD )
+                  {
+                     stop = TRUE;
+                     break;
+                  }
 
-               numcancellast = 0;
+                  numcancellast = 0;
+               }
             }
          }
+
+         if( stop )
+            break;
       }
 
       /* free local memory */
