@@ -602,6 +602,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 
 SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/branch.o \
+			scip/benders.o \
 			scip/clock.o \
 			scip/concsolver.o \
 			scip/concurrent.o \

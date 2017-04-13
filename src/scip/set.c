@@ -51,6 +51,7 @@
 #include "scip/relax.h"
 #include "scip/sepa.h"
 #include "scip/prop.h"
+#include "scip/benders.h"
 #include "nlpi/nlpi.h"
 #include "scip/struct_scip.h" /* for SCIPsetPrintDebugMessage() */
 
@@ -1015,6 +1016,11 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->conflicthdlrssize = 0;
    (*set)->conflicthdlrssorted = FALSE;
    (*set)->conflicthdlrsnamesorted = FALSE;
+   (*set)->benders = NULL;
+   (*set)->nbenders = 0;
+   (*set)->benderssize = 0;
+   (*set)->benderssorted = FALSE;
+   (*set)->bendersnamesorted = FALSE;
 
    (*set)->debugsoldata = NULL;
    SCIP_CALL( SCIPdebugSolDataCreate(&(*set)->debugsoldata) ); /*lint !e506 !e774*/
@@ -3415,6 +3421,79 @@ void SCIPsetSortPricersName(
       SCIPsortPtr((void**)set->pricers, SCIPpricerCompName, set->npricers);
       set->pricerssorted = FALSE;
       set->pricersnamesorted = TRUE;
+   }
+}
+
+/** inserts variable benders in variable benders list */
+SCIP_RETCODE SCIPsetIncludeBenders(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition structure */
+   )
+{
+   assert(set != NULL);
+   assert(benders != NULL);
+
+   if( set->nbenders >= set->benderssize )
+   {
+      set->benderssize = SCIPsetCalcMemGrowSize(set, set->nbenders+1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&set->benders, set->benderssize) );
+   }
+   assert(set->nbenders < set->benderssize);
+
+   set->benders[set->nbenders] = benders;
+   set->nbenders++;
+   set->benderssorted = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** returns the variable benders of the given name, or NULL if not existing */
+SCIP_BENDERS* SCIPsetFindBenders(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of the Benders' decomposition */
+   )
+{
+   int i;
+
+   assert(set != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < set->nbenders; ++i )
+   {
+      if( strcmp(SCIPbendersGetName(set->benders[i]), name) == 0 )
+         return set->benders[i];
+   }
+
+   return NULL;
+}
+
+/** sorts benders by priorities */
+void SCIPsetSortBenders(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->benderssorted )
+   {
+      SCIPsortPtr((void**)set->benders, SCIPbendersComp, set->nbenders);
+      set->benderssorted = TRUE;
+      set->bendersnamesorted = FALSE;
+   }
+}
+
+/** sorts benders by name */
+void SCIPsetSortBendersName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   if( !set->bendersnamesorted )
+   {
+      SCIPsortPtr((void**)set->benders, SCIPbendersCompName, set->nbenders);
+      set->benderssorted = FALSE;
+      set->bendersnamesorted = TRUE;
    }
 }
 

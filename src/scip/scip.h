@@ -66,6 +66,7 @@
 #include "nlpi/type_nlpi.h"
 #include "scip/type_concsolver.h"
 #include "scip/type_syncstore.h"
+#include "scip/type_benders.h"
 
 /* include public interfaces, s.t. the user only needs to include scip.h */
 #include "scip/pub_branch.h"
@@ -2631,6 +2632,231 @@ EXTERN
 SCIP_RETCODE SCIPdeactivatePricer(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRICER*          pricer              /**< variable pricer */
+   );
+
+/* @} */
+
+/**@addtogroup PublicBendersMethods
+ *
+ * @{
+ */
+
+/** creates a variable benders and includes it in SCIP
+ *  To use the variable benders for solving a problem, it first has to be activated with a call to SCIPactivateBenders().
+ *  This should be done during the problem creation stage.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note method has all benders callbacks as arguments and is thus changed every time a new callback is added
+ *        in future releases; consider using SCIPincludeBendersBasic() and setter functions
+ *        if you seek for a method which is less likely to change in future releases
+ */
+EXTERN
+SCIP_RETCODE SCIPincludeBenders(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name,               /**< name of variable benders */
+   const char*           desc,               /**< description of variable benders */
+   int                   priority,           /**< priority of the variable benders */
+   int                   nsubproblems,       /**< the number subproblems used in this decomposition */
+   SCIP_DECL_BENDERSCOPY ((*benderscopy)),   /**< copy method of variable benders or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_BENDERSFREE ((*bendersfree)),   /**< destructor of variable benders */
+   SCIP_DECL_BENDERSINIT ((*bendersinit)),   /**< initialize variable benders */
+   SCIP_DECL_BENDERSEXIT ((*bendersexit)),   /**< deinitialize variable benders */
+   SCIP_DECL_BENDERSINITSOL((*bendersinitsol)),/**< solving process initialization method of variable benders */
+   SCIP_DECL_BENDERSEXITSOL((*bendersexitsol)),/**< solving process deinitialization method of variable benders */
+   SCIP_DECL_BENDERSGETMASTERVAR((*bendersgetmastervar)),/**< returns the master variable for a given subproblem variable */
+   SCIP_DECL_BENDERSEXEC ((*bendersexec)),   /**< the execution method of the Benders' decomposition algorithm */
+   SCIP_BENDERSDATA*     bendersdata         /**< variable benders data */
+   );
+
+/** creates a variable benders and includes it in SCIP with all non-fundamental callbacks set to NULL;
+ *  if needed, these can be added afterwards via setter functions SCIPsetBendersCopy(), SCIPsetBendersFree(),
+ *  SCIPsetBendersInity(), SCIPsetBendersExit(), SCIPsetBendersInitsol(), SCIPsetBendersExitsol(),
+ *  SCIPsetBendersFarkas();
+ *
+ *  To use the variable benders for solving a problem, it first has to be activated with a call to SCIPactivateBenders().
+ *  This should be done during the problem creation stage.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *
+ *  @note if you want to set all callbacks with a single method call, consider using SCIPincludeBenders() instead
+ */
+EXTERN
+SCIP_RETCODE SCIPincludeBendersBasic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS**        bendersptr,         /**< reference to a benders, or NULL */
+   const char*           name,               /**< name of variable benders */
+   const char*           desc,               /**< description of variable benders */
+   int                   priority,           /**< priority of the variable benders */
+   int                   nsubproblems,       /**< the number subproblems used in this decomposition */
+   SCIP_DECL_BENDERSGETMASTERVAR((*bendersgetmastervar)),/**< returns the master variable for a given subproblem variable */
+   SCIP_DECL_BENDERSEXEC ((*bendersexec)),   /**< the execution method of the Benders' decomposition algorithm */
+   SCIP_BENDERSDATA*     bendersdata         /**< variable benders data */
+   );
+
+/** sets copy method of benders
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetBendersCopy(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_DECL_BENDERSCOPY((*benderscopy))     /**< copy method of benders or NULL if you don't want to copy your plugin into sub-SCIPs */
+   );
+
+/** sets destructor method of benders
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetBendersFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_DECL_BENDERSFREE((*bendersfree))     /**< destructor of benders */
+   );
+
+/** sets initialization method of benders
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetBendersInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_DECL_BENDERSINIT ((*bendersinit))    /**< initialize benders */
+   );
+
+/** sets deinitialization method of benders
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetBendersExit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_DECL_BENDERSEXIT ((*bendersexit))    /**< deinitialize benders */
+   );
+
+/** sets solving process initialization method of benders
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetBendersInitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_DECL_BENDERSINITSOL((*bendersinitsol))/**< solving process initialization method of benders */
+   );
+
+/** sets solving process deinitialization method of benders
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetBendersExitsol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_DECL_BENDERSEXITSOL((*bendersexitsol))/**< solving process deinitialization method of benders */
+   );
+
+/** sets variable mapping function between the master problem and the subproblems for the Benders' decomposition
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetBendersGetmastervar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_DECL_BENDERSGETMASTERVAR((*bendersgetmastervar))/**< mapping function between master and subvars for Benders' decomposition */
+   );
+
+/** sets the execution method for solving the subproblems of the Benders' decomposition
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetBendersExec(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_DECL_BENDERSEXEC ((*bendersexec))    /**< the subproblem solving method for Benders' decomposition */
+   );
+
+/** returns the variable benders of the given name, or NULL if not existing */
+EXTERN
+SCIP_BENDERS* SCIPfindBenders(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           name                /**< name of variable benders */
+   );
+
+/** returns the array of currently available variable benders; active benders are in the first slots of the array */
+EXTERN
+SCIP_BENDERS** SCIPgetBenders(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently available variable benders */
+EXTERN
+int SCIPgetNBenders(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** sets the priority of a variable benders */
+EXTERN
+SCIP_RETCODE SCIPsetBendersPriority(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< variable benders */
+   int                   priority            /**< new priority of the variable benders */
    );
 
 /* @} */

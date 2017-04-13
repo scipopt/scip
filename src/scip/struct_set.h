@@ -48,6 +48,7 @@
 #include "scip/type_prop.h"
 #include "nlpi/type_nlpi.h"
 #include "scip/type_concsolver.h"
+#include "scip/type_benders.h"
 #include "scip/debug.h"
 
 #ifdef __cplusplus
@@ -85,6 +86,7 @@ struct SCIP_Set
    SCIP_NLPI**           nlpis;              /**< interfaces to NLP solvers */
    SCIP_CONCSOLVERTYPE** concsolvertypes;    /**< concurrent solver types */
    SCIP_CONCSOLVER**     concsolvers;        /**< the concurrent solvers used for solving */
+   SCIP_BENDERS**        benders;            /**< the data structures managing the Benders' decomposition algorithm */
    SCIP_DEBUGSOLDATA*    debugsoldata;       /**< data for debug solutions */
    char**                extcodenames;       /**< names of externals codes */
    char**                extcodedescs;       /**< descriptions of external codes */
@@ -125,6 +127,8 @@ struct SCIP_Set
    int                   concsolvertypessize;/**< size of concurrent solver types array */
    int                   nconcsolvers;       /**< number of concurrent solvers used for solving */
    int                   concsolverssize;    /**< size of concurrent solvers array */
+   int                   nbenders;           /**< number of Benders' decomposition algorithms are used */
+   int                   benderssize;        /**< size of Benders' decomposition algorithms array */
    int                   nextcodes;          /**< number of external codes */
    int                   extcodessize;       /**< size of external code arrays */
    SCIP_Bool             pricerssorted;      /**< are the pricers sorted by activity and priority? */
@@ -147,6 +151,8 @@ struct SCIP_Set
    SCIP_Bool             branchrulessorted;  /**< are the branching rules sorted by priority? */
    SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
    SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */
+   SCIP_Bool             benderssorted;      /**< are the Benders' algorithms sorted by activity and priority? */
+   SCIP_Bool             bendersnamesorted;  /**< are the Benders' algorithms sorted by name? */
    SCIP_Bool             limitchanged;       /**< marks whether any of the limit parameters was changed */
 
    /* branching settings */
