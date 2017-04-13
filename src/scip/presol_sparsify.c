@@ -615,6 +615,10 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    if( SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
+   /* we do no sparsification for a large number of constraints or variables */
+   if( SCIPgetNVars(scip) >= 1000000 || SCIPgetNConss(scip) >= 500000 )
+      return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
 
    presoldata = SCIPpresolGetData(presol);
@@ -866,20 +870,6 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
  * presolver specific interface methods
  */
 
-/** copy method for constraint handler plugins (called when SCIP copies plugins) */
-static
-SCIP_DECL_PRESOLCOPY(presolCopySparsify)
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(presol != NULL);
-   assert(strcmp(SCIPpresolGetName(presol), PRESOL_NAME) == 0);
-
-   /* call inclusion method of presolver */
-   SCIP_CALL( SCIPincludePresolSparsify(scip) );
-
-   return SCIP_OKAY;
-}
-
 /** destructor of presolver to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PRESOLFREE(presolFreeSparsify)
@@ -911,7 +901,6 @@ SCIP_RETCODE SCIPincludePresolSparsify(
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
          PRESOL_TIMING, presolExecSparsify, presoldata) );
 
-   SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopySparsify) );
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeSparsify) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
