@@ -7,7 +7,7 @@ fixed bugs:
 - fixed issue in SCIPcopyLimits() w.r.t. soft time limit
 - improved handling of infinite values in a primal solution in quadratic and nonlinear constraints
 - fixed bug in dynamic resizing of hashtables and hashmaps
-- fixed bug in computing violation of certain nonlinear constraints when solution is slightly out of bounds
+- fixed bug in computing violation and cut for certain nonlinear constraints when LP solution is slightly out of bounds
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint

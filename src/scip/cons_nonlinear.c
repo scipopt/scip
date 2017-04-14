@@ -7372,7 +7372,7 @@ SCIP_RETCODE enforceConstraint(
     */
    minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
    minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, minefficacy, TRUE, &separateresult, &sepaefficacy) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, TRUE /* because computeviolation projects point onto box */, minefficacy, TRUE, &separateresult, &sepaefficacy) );
    if( separateresult == SCIP_CUTOFF )
    {
       SCIPdebugMsg(scip, "separation found cutoff\n");
@@ -8023,7 +8023,6 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
-   SCIP_Bool          newsol;
    SCIP_Bool          solviolbounds;
 
    assert(scip != NULL);
@@ -8045,8 +8044,6 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
    /* nothing violated -> nothing to separate */
    if( maxviolcon == NULL )
       return SCIP_OKAY;
-
-   newsol = FALSE;
 
    /* at root, check if we want to solve the NLP relaxation and use its solutions as reference point
     * if there is something convex, then linearizing in the solution of the NLP relaxation can be very useful
@@ -8149,7 +8146,6 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
          }
 
          SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, conshdlrdata->mincutefficacysepa) );
-         newsol = TRUE;
 
          SCIP_CALL( SCIPfreeSol(scip, &nlpsol) );
 
@@ -8168,7 +8164,7 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
     * or separating with NLP solution as reference point failed, then try (again) with LP solution as reference point
     */
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, newsol, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, TRUE, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -8202,6 +8198,9 @@ SCIP_DECL_CONSSEPASOL(consSepasolNonlinear)
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
+   /* computeViolations already evaluated all constraints, so can pass newsol = FALSE here
+    * in contrast to Sepalp, a sol != NULL is not projected onto the box in computeViolation
+    */
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
 
    return SCIP_OKAY;
