@@ -4110,7 +4110,8 @@ SCIP_Real evaluateLiftingFunction(
       if( SCIPisLT(scip, liftingdata->M[i] + liftingdata->ml + p, xpluslambda) )
          return i * liftingdata->lambda;
 
-      assert(liftingdata->M[i] <= xpluslambda && xpluslambda <= liftingdata->M[i] + liftingdata->ml + p);
+      assert(SCIPisLE(scip, liftingdata->M[i], xpluslambda) &&
+             SCIPisLE(scip, xpluslambda, liftingdata->M[i] + liftingdata->ml + p));
 
       return  x - liftingdata->M[i] + i * liftingdata->lambda;
    }

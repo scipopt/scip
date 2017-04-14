@@ -1135,6 +1135,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    /* calculate minimal cut orthogonality */
    mincutorthogonality = (root ? set->sepa_minorthoroot : set->sepa_minortho);
    mincutorthogonality = MAX(mincutorthogonality, set->num_epsilon);
+   mincutorthogonality = mincutorthogonality + (1.0 - mincutorthogonality) * stat->nseparounds * 0.1;
 
    /* Compute scores for all non-forced cuts and initialize orthogonalities - make sure all cuts are initialized again for the current LP solution */
    for( pos = sepastore->nforcedcuts; pos < sepastore->ncuts; pos++ )
@@ -1166,7 +1167,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
          /* add cut to the LP and update orthogonalities */
          SCIPsetDebugMsg(set, " -> applying forced cut <%s>\n", SCIProwGetName(cut));
          /*SCIPdebug( SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
-         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, mincutorthogonality + (1.0 - mincutorthogonality) * ((SCIP_Real)ncutsapplied/(SCIP_Real)(sepastore->ncuts + 1)), depth, efficiacychoice, &ncutsapplied) );
+         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, mincutorthogonality, depth, efficiacychoice, &ncutsapplied) );
       }
    }
 
@@ -1203,7 +1204,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       if( SCIPsetIsFeasPositive(set, sepastore->efficacies[bestpos]) )
       {
          /* add cut to the LP and update orthogonalities */
-         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, mincutorthogonality + (1.0 - mincutorthogonality) * ((SCIP_Real)ncutsapplied/(SCIP_Real)(sepastore->ncuts + 1)), depth, efficiacychoice, &ncutsapplied) );
+         SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, mincutorthogonality, depth, efficiacychoice, &ncutsapplied) );
       }
 
       /* release cut */
