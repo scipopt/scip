@@ -1281,7 +1281,6 @@ SCIP_RETCODE separateCuts(
       if( ncuts == oldncuts )
       {
          nfails++;
-         ntotalfails++;
          if( nfails >= maxfails )
          {
             break;
