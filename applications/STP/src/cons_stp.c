@@ -104,6 +104,15 @@
 /* do depth-first search */
 #define DFS
 
+
+#ifdef BITFIELDSARRAY
+#define ARRLENGTH 32
+#define SetBit(Arr, pos)     ( Arr[(pos/ARRLENGTH)] |= (1 << (pos%ARRLENGTH)) )
+#define CleanBit(Arr, pos)   ( Arr[(pos/ARRLENGTH)] &= ~(1 << (pos%ARRLENGTH)) )
+#define BitTrue(Arr, pos)    ( Arr[(pos/ARRLENGTH)] & (1 << (pos%ARRLENGTH)) )
+#endif
+
+
 /**@} */
 
 /*
@@ -1504,8 +1513,8 @@ SCIP_RETCODE SCIPdualAscentStp(
    int* RESTRICT         nodearrint,         /**< int vertices array for internal computations or NULL */
    int                   root,               /**< the root */
    int                   nruns,              /**< number of dual ascent runs */
-   STP_Bool* RESTRICT        edgearrchar,        /**< STP_Bool edges array for internal computations or NULL */
-   STP_Bool* RESTRICT        nodearrchar         /**< STP_Bool vertices array for internal computations or NULL */
+   STP_Bool* RESTRICT    edgearrchar,        /**< STP_Bool edges array for internal computations or NULL */
+   STP_Bool* RESTRICT    nodearrchar         /**< STP_Bool vertices array for internal computations or NULL */
    )
 {
 #if 0
@@ -1590,6 +1599,11 @@ SCIP_RETCODE SCIPdualAscentStp(
    /* if specified root is not a terminal, take default root */
    if( !Is_term(g->term[root]) )
       root = g->source[0];
+
+#ifdef BITFIELDSARRAY
+   u_int32_t* bitarr;
+   SCIP_CALL( SCIPallocBufferArray(scip, &bitarr, nedges / ARRLENGTH + 1) );
+#endif
 
    stacklength = 0;
 
@@ -1716,7 +1730,15 @@ SCIP_RETCODE SCIPdualAscentStp(
    for( i = 0; i < nnewedges; i++ )
    {
       rescap[i] = g->cost[edgearr[i]];
+#ifdef BITFIELDSARRAY
+      if( SCIPisZero(scip, rescap[i]) )
+         SetBit(bitarr, i);
+      else
+         CleanBit(bitarr, i);
+#else
       sat[i] = SCIPisZero(scip, rescap[i]);
+#endif
+
    }
 
    /* (main) dual ascent loop */
@@ -1782,8 +1804,11 @@ SCIP_RETCODE SCIPdualAscentStp(
             for( i = start[node], end = start[node + 1]; i != end; i++ )
             {
                tail = tailarr[i];
-
+#ifdef BITFIELDSARRAY
+               if( BitTrue(bitarr, i) )
+#else
                if( sat[i] )
+#endif
                {
                   if( !gmark[tail] )
                   {
@@ -1841,7 +1866,9 @@ SCIP_RETCODE SCIPdualAscentStp(
                }
                else
                {
+#ifndef BITFIELDSARRAY
                   assert(!sat[a]);
+#endif
                   if( SCIPisLT(scip, rescap[a], min) )
                      min = rescap[a];
                   if( shift )
@@ -1896,7 +1923,12 @@ SCIP_RETCODE SCIPdualAscentStp(
 
                if( SCIPisEQ(scip, rescap[a], 0.0) )
                {
+#ifdef BITFIELDSARRAY
+                  SetBit(bitarr, a);
+#else
                   sat[a] = TRUE;
+#endif
+
                   tail = unsattails[i];
 
                   if( !(gmark[tail]) )
@@ -1974,6 +2006,9 @@ SCIP_RETCODE SCIPdualAscentStp(
          }
       }
    }
+#ifdef BITFIELDSARRAY
+   SCIPfreeBufferArray(scip, &bitarr);
+#endif
 
    SCIPfreeBufferArray(scip, &stackarr);
 

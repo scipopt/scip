@@ -57,8 +57,8 @@ int reducePcMw(
    SCIP_Real*            pathdist,           /**< distance array from shortest path calculations */
    SCIP_Real             minpathcost,        /**< the required reduced path cost to be surpassed */
    int*                  result,             /**< int array */
-   STP_Bool*                 marked,             /**< edge array to mark which (directed) edge can be removed */
-   STP_Bool*                 nodearrchar,        /**< node array storing solution vertices */
+   STP_Bool*             marked,             /**< edge array to mark which (directed) edge can be removed */
+   STP_Bool*             nodearrchar,        /**< node array storing solution vertices */
    SCIP_Bool             solgiven            /**< is sol given? */
 )
 {
@@ -191,7 +191,7 @@ SCIP_RETCODE da_reduce(
    int*                  pathedge,           /**< array for predecessor edge on a path */
    int*                  nodearrint,         /**< int nnodes array for internal computations */
    int*                  heursources,        /**< array to store starting points of TM heuristic */
-   STP_Bool*                 nodearrchar,        /**< STP_Bool node array for internal computations */
+   STP_Bool*             nodearrchar,        /**< STP_Bool node array for internal computations */
    int*                  nelims,             /**< pointer to store number of reduced edges */
    int                   prevrounds,         /**< number of reduction rounds that have been performed already */
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
@@ -1452,6 +1452,7 @@ SCIP_RETCODE da_reducePcMw(
    SCIP_Real upperbound;
    SCIP_Real minpathcost;
    SCIP_Bool apsol;
+   SCIP_Bool tmp;
    int* roots;
    int* result;
    int* adjvert;
@@ -1560,7 +1561,18 @@ SCIP_RETCODE da_reducePcMw(
    /* compute Steiner tree to obtain upper bound */
    SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, graph, NULL, &best_start, result, runs, root, cost, costrev, &hopfactor, NULL, 0.0, &success) );
 
-   SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, result, nodearrchar, &e) );
+
+   //SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, result, nodearrchar, &e) );
+   // todo
+   ub = graph_computeSolVal(graph->cost, result, 0.0, nedges);
+   printf("ub2 before: %f \n", ub);
+
+
+   SCIP_CALL( greedyExtensionPcMw(scip, graph, graph->cost, vnoi, result, nodearrchar, &tmp) );
+
+   ub = graph_computeSolVal(graph->cost, result, 0.0, nedges);
+   printf("ub2 after: %f ext: %d \n", ub, e);
+
 
    /* restore original graph */
    SCIP_CALL( pcgraphorg(scip, graph) );
@@ -1600,7 +1612,15 @@ SCIP_RETCODE da_reducePcMw(
    SCIP_CALL( SCIPheurAscendAndPrunePcMw(scip, NULL, graph, cost, transresult, vbase, root, nodearrchar, &success, TRUE, FALSE) );
 
 #if 1
-   SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, transresult, nodearrchar, &e) );
+   ub = graph_computeSolVal(graph->cost, transresult, 0.0, nedges);
+   printf("ub before: %f \n", ub);
+
+ //  SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, transresult, nodearrchar, &e) );
+
+   SCIP_CALL( greedyExtensionPcMw(scip, graph, graph->cost, vnoi, transresult, nodearrchar, &tmp) );
+
+   ub = graph_computeSolVal(graph->cost, transresult, 0.0, nedges);
+   printf("ub after: %f ext: %d \n", ub, e);
 #endif
 
    assert(graph_sol_valid(scip, graph, transresult));
@@ -1690,7 +1710,17 @@ SCIP_RETCODE da_reducePcMw(
 
          SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, graph, NULL, &best_start, result, runs, root, cost, costrev, &hopfactor, NULL, 0.0, &success) );
 
-         SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, result, nodearrchar, &e) );
+
+         // todo
+         ub = graph_computeSolVal(graph->cost, transresult, 0.0, nedges);
+         printf("ub2 before: %f \n", ub);
+
+       //  SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, transresult, nodearrchar, &e) );
+
+         SCIP_CALL( greedyExtensionPcMw(scip, graph, graph->cost, vnoi, transresult, nodearrchar, &tmp) );
+
+         ub = graph_computeSolVal(graph->cost, transresult, 0.0, nedges);
+         printf("ub2 after: %f ext: %d \n", ub, e);
 
          assert(graph_valid(transgraph));
       }
@@ -1731,7 +1761,25 @@ SCIP_RETCODE da_reducePcMw(
       SCIP_CALL( SCIPheurAscendAndPrunePcMw(scip, NULL, graph, cost, transresult, vbase, root, nodearrchar, &success, TRUE, FALSE) );
 
 #if 1
-      SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, transresult, nodearrchar, &e) );
+      //SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, transresult, nodearrchar, &e) );
+
+
+
+
+//todo
+      ub = graph_computeSolVal(graph->cost, transresult, 0.0, nedges);
+      printf("ub3 before: %f \n", ub);
+
+
+      SCIP_CALL( greedyExtensionPcMw(scip, graph, graph->cost, vnoi, transresult, nodearrchar, &tmp) );
+
+      ub = graph_computeSolVal(graph->cost, transresult, 0.0, nedges);
+      printf("ub3 after: %f ext: %d \n", ub, e);
+
+
+
+
+
 #endif
       assert(graph_sol_valid(scip, graph, transresult));
 

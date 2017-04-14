@@ -49,11 +49,7 @@
 #define STP_GSTP                     11
 #define STP_RMWCSP                   12
 
-#if 0
-    typedef unsigned int STP_Bool;
-#else
-    typedef unsigned char STP_Bool;
-#endif
+typedef unsigned char STP_Bool;
 
 #include "scip/scip.h"
 #include "misc_stp.h"
@@ -233,7 +229,9 @@ extern void   graph_path_invroot(SCIP*, const GRAPH*, int, const SCIP_Real*, SCI
 extern void   graph_path_st(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, int*, int, SCIP_RANDNUMGEN*, STP_Bool*);
 extern void   graph_path_st_rmw(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, const STP_Bool*, STP_Bool*);
 extern void   graph_path_st_pcmw(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, const STP_Bool*, STP_Bool*);
+extern void   graph_path_st_pcmw_extend(SCIP*, const GRAPH*, const SCIP_Real*, PATH*, STP_Bool*, SCIP_Bool*);
 extern void   graph_path_st_rpc(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
+extern SCIP_RETCODE   greedyExtensionPcMw(SCIP*, const GRAPH*, const SCIP_Real*, PATH*, int*, STP_Bool*, SCIP_Bool*);
 extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, STP_Bool*, int*, PATH*);
 extern void   get2next(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*, int*);
 extern void   get3next(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*, int*);

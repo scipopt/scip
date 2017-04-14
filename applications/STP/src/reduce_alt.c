@@ -502,12 +502,12 @@ SCIP_RETCODE sd_red(
 {
    GRAPH* netgraph;
    PATH* mst;
-   SCIP_Real* termdist1;
-   SCIP_Real* termdist2;
+   SCIP_Real termdist1[4];
+   SCIP_Real termdist2[4];
    SCIP_Real ecost;
    SCIP_Real dist;
-   int* neighbterms1;
-   int* neighbterms2;
+   int neighbterms1[4];
+   int neighbterms2[4];
    int e;
    int i;
    int j;
@@ -552,11 +552,6 @@ SCIP_RETCODE sd_red(
    /* only one terminal left? */
    if( nterms == 1 )
       return SCIP_OKAY;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &termdist1, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &termdist2, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &neighbterms1, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &neighbterms2, 4) );
 
    /* compute nearest four terminals to all non-terminals */
    getnext4terms(scip, g, g->cost, g->cost, vnoi, vbase, heap, state);
@@ -876,10 +871,6 @@ SCIP_RETCODE sd_red(
    SCIPfreeBufferArray(scip, &mst);
    graph_path_exit(scip, netgraph);
    graph_free(scip, netgraph, TRUE);
-   SCIPfreeBufferArray(scip, &neighbterms2);
-   SCIPfreeBufferArray(scip, &neighbterms1);
-   SCIPfreeBufferArray(scip, &termdist2);
-   SCIPfreeBufferArray(scip, &termdist1);
 
    return SCIP_OKAY;
 }
@@ -900,14 +891,14 @@ SCIP_RETCODE sdpc_reduction(
    )
 {
    GRAPH* netgraph;
-   SCIP_Real* termdist1;
-   SCIP_Real* termdist2;
+   SCIP_Real termdist1[4];
+   SCIP_Real termdist2[4];
    SCIP_Real ecost;
    SCIP_Real necost;
    SCIP_Longint edges;
    SCIP_Longint termsq;
-   int* neighbterms1;
-   int* neighbterms2;
+   int neighbterms1[4];
+   int neighbterms2[4];
    int e;
    int e2;
    int i;
@@ -955,11 +946,6 @@ SCIP_RETCODE sdpc_reduction(
       maxnedges = nedges;
    else
       maxnedges = ((nterms - 1) * nterms);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &termdist1, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &termdist2, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &neighbterms1, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &neighbterms2, 4) );
 
    /* compute nearest four terminals to each non-terminal */
    getnext4terms(scip, g, g->cost, g->cost, vnoi, vbase, heap, state);
@@ -1215,10 +1201,6 @@ SCIP_RETCODE sdpc_reduction(
    }
 
    graph_free(scip, netgraph, TRUE);
-   SCIPfreeBufferArray(scip, &neighbterms2);
-   SCIPfreeBufferArray(scip, &neighbterms1);
-   SCIPfreeBufferArray(scip, &termdist2);
-   SCIPfreeBufferArray(scip, &termdist1);
    return SCIP_OKAY;
 }
 

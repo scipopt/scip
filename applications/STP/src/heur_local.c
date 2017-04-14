@@ -55,6 +55,9 @@
 #define DEFAULT_NBESTSOLS     2
 #define DEFAULT_MINNBESTSOLS  2
 
+#define GREEDY_MAXRESTARTS  3  /**< Max number of restarts for greedy PC/MW heuristic if improving solution has been found. */
+#define GREEDY_EXTENSIONS 15 /**< Number of extensions for greedy PC/MW heuristic. */
+
 
 /*
  * Data structures
@@ -1802,145 +1805,235 @@ SCIP_RETCODE extendSteinerTreePcMw(
 }
 
 
-
-
-#if 0
-/** Greedy Extension local heuristic for (R)PC and MW */
+/** Greedy Extension local heuristic for (R)PC and MW todo: currently only works for MW */
 SCIP_RETCODE greedyExtensionPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
-   const SCIP_Real*      edgecost,           /**< edge cost array*/
+   const SCIP_Real*      cost,               /**< edge cost array*/
    PATH*                 path,               /**< shortest data structure array */
    int*                  stedge,             /**< initialized array to indicate whether an edge is part of the Steiner tree */
    STP_Bool*             stvertex,           /**< uninitialized array to indicate whether an edge is part of the Steiner tree */
-   int*                  adds                /**< pointer to store number of added vertices */
+   SCIP_Bool*            extensions          /**< pointer to store whether extensions have been made */
    )
 {
-   int e;
+   GNODE candidates[GREEDY_EXTENSIONS];
+   int candidatesup[GREEDY_EXTENSIONS];
+
+   SCIP_PQUEUE* pqueue;
+   SCIP_Real bestsolval;
+   int* pred;
    int i;
-   int k;
    int nedges;
    int nnodes;
-   int newnverts;
+   int nextensions;
+   STP_Bool* stvertextmp;
 
-   assert(adds != NULL);
    assert(scip != NULL);
    assert(path != NULL);
    assert(graph != NULL);
    assert(stedge != NULL);
-   assert(edgecost != NULL);
+   assert(cost != NULL);
    assert(stvertex != NULL);
 
-   *adds = -1;
    nnodes = graph->knots;
    nedges = graph->edges;
-   newnverts = 1;
 
-   /* init solution vertex array with FALSE */
+   SCIP_CALL( SCIPallocBufferArray(scip, &pred, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &stvertextmp, nnodes) );
+
+   /* initialize solution vertex array with FALSE */
    BMSclearMemoryArray(stvertex, nnodes);
-
-// todo delete
-   for( i = 0; i < nnodes; i++ )
-      assert(stvertex[i] == FALSE);
-
 
    stvertex[graph->source[0]] = TRUE;
 
-   for( e = 0; e < nedges; e++ )
+   for( int e = 0; e < nedges; e++ )
       if( stedge[e] == CONNECT )
          stvertex[graph->head[e]] = TRUE;
 
-   /* main loop */
-   while( newnverts > 0)
+
+
+   SCIP_Real t = 0.0;
+   for( int e = 0; e < nedges; e++ )
+           if( stedge[e] == CONNECT )
+              t += graph->cost[e];
+
+printf("init real cost %f \n\n", t);
+
+
+   graph_path_st_pcmw_extend(scip, graph, cost, path, stvertex, extensions);
+
+   /*** compute solution value and save GREEDY_EXTENSIONS many best unconnected nodes  ***/
+
+   SCIP_CALL( SCIPpqueueCreate(&pqueue, GREEDY_EXTENSIONS, 2.0, GNODECmpByDist) );
+
+   bestsolval = 0.0;
+   nextensions = 0;
+   for( i = 0; i < nnodes; i++ )
    {
-      if( graph->stp_type != STP_MWCSP )
+      pred[i] = path[i].edge;
+      if( stvertex[i] )
       {
-          for( i = 0; i < nnodes; i++ )
-          {
-             if( Is_pterm(graph->term[i]) && !stvertex[i] )
-             {
-                for( e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
-                {
-                  if( stvertex[graph->head[e]]
-                        && !Is_term(graph->term[graph->head[e]])
-                        && SCIPisLT(scip, graph->cost[e], graph->prize[i]) )
-                  {
-                     stvertex[i] = TRUE;
-                     newnverts++;
-                     SCIPdebugMessage("add terminal  %d  %f < %f \n\n", i,
-                           graph->cost[e], graph->prize[i]);
-                     break;
-                  }
-               }
-            }
-         }
+        if( !Is_term(graph->term[i]) )
+           bestsolval += graph->prize[i];
       }
-      else
+      else if( Is_pterm(graph->term[i]) && pred[i] != UNKNOWN )
       {
-          for( i = 0; i < nnodes; i++ )
-          {
-             if( Is_pterm(graph->term[i]) && !stvertex[i] )
-             {
-                for( e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
-                {
-                  if( stvertex[graph->head[e]]
-                        && !Is_term(graph->term[graph->head[e]]) )
-                  {
-                     stvertex[i] = TRUE;
-                     newnverts++;
-                     SCIPdebugMessage("add terminal %d  %f head %d:  \n\n", i,
-                           graph->prize[i], graph->head[e]);
-                     break;
-                  }
-               }
-            }
-         }
-      }
-
-      voronoiSteinerTreeExt(scip, graph, costrev, vbase, stvertex, vnoi);
-
-      for( i = 0; i < nnodes; i++ )
-      {
-         if( stvertex[i] && vbase[i] != UNKNOWN && vbase[i] != i && !Is_term(graph->term[i]) )
+         if( nextensions < GREEDY_EXTENSIONS )
          {
-            assert(Is_pterm(graph->term[vbase[i]]));
+            candidates[nextensions].dist = graph->prize[i] - path[i].dist;
+            candidates[nextensions].number = i;
 
-            if( !stvertex[vbase[i]] && SCIPisLT(scip, vnoi[i].dist, 0.0) )
+            SCIP_CALL( SCIPpqueueInsert(pqueue, &(candidates[nextensions++])) );
+         }
+         else
+         {
+            /* get candidate vertex of minimum value */
+            GNODE* min = (GNODE*) SCIPpqueueFirst(pqueue);
+            if( SCIPisLT(scip, min->dist, graph->prize[i] - path[i].dist) )
             {
-               k = i;
-
-               while( k != vbase[i] )
-               {
-                  e = vnoi[k].edge;
-                  k = graph->tail[e];
-                  if( !stvertex[k] )
-                  {
-                     stvertex[k] = TRUE;
-                     newnverts++;
-
-                     SCIPdebugMessage("add vertex %d (vbase: %d, cost: %f \n", k, i, graph->prize[k]);
-                  }
-               }
+               min = (GNODE*) SCIPpqueueRemove(pqueue);
+               min->dist = graph->prize[i] - path[i].dist;
+               min->number = i;
+               SCIP_CALL( SCIPpqueueInsert(pqueue, min) );
             }
          }
       }
-
-      *adds += newnverts;
-      newnverts = 0;
    }
+
+   printf("n possible extensions %d \n", nextensions);
+   printf("solval %f \n", bestsolval);
+
+   for( int restartcount = 0; restartcount < GREEDY_MAXRESTARTS; restartcount++ )
+   {
+      int l = 0;
+      SCIP_Bool extensionstmp = FALSE;
+
+      printf("runnumber %d \n", restartcount);
+
+      i = nextensions;
+
+      /* write extension candidates into array, from max to min */
+      while( SCIPpqueueNElems(pqueue) > 0 )
+      {
+         GNODE* min = (GNODE*) SCIPpqueueRemove(pqueue);
+         assert(i > 0);
+         candidatesup[--i] = min->number;
+      }
+      assert(i == 0);
+
+      /* iteratively insert new subpaths and try to improve solution */
+      for( ; l < nextensions; l++ )
+      {
+         i = candidatesup[l];
+         if( !stvertex[i] )
+         {
+            SCIP_Real newsolval = 0.0;
+            int k = i;
+
+            BMScopyMemoryArray(stvertextmp, stvertex, nnodes);
+
+            /* add new extension */
+            while( !stvertextmp[k] )
+            {
+               stvertextmp[k] = TRUE;
+               // todo
+               if( pred[k] == UNKNOWN)
+               {
+                  printf("unknwon %d %d\n", k, graph->term[k]);
+                  return SCIP_ERROR;
+               }
+               assert(pred[k] != UNKNOWN);
+               k = graph->tail[pred[k]];
+            }
+
+            graph_path_st_pcmw_extend(scip, graph, cost, path, stvertextmp, &extensionstmp);
+
+            for( int j = 0; j < nnodes; j++ )
+               if( stvertextmp[j] && !Is_term(graph->term[j]) )
+                  newsolval += graph->prize[j];
+
+            printf("newsolval %f \n", newsolval);
+
+            /* new solution value better than old one? */
+            if( SCIPisGT(scip, newsolval, bestsolval) )
+            {
+               assert(*extensionstmp);
+               *extensions = TRUE;
+
+               bestsolval = newsolval;
+               BMScopyMemoryArray(stvertex, stvertextmp, nnodes);
+
+               //todo
+               printf("got better \n\n");
+
+               /* save GREEDY_EXTENSIONS many best unconnected nodes  */
+               nextensions = 0;
+
+               for( int j = 0; j < nnodes; j++ )
+               {
+                  pred[j] = path[j].edge;
+                  if( !stvertex[j] && Is_pterm(graph->term[j]) && pred[j] != UNKNOWN )
+                  {
+                     if( nextensions < GREEDY_EXTENSIONS )
+                     {
+                        candidates[nextensions].dist = graph->prize[j] - path[j].dist;
+                        candidates[nextensions].number = j;
+
+                        SCIP_CALL( SCIPpqueueInsert(pqueue, &(candidates[nextensions++])) );
+                     }
+                     else
+                     {
+                        /* get candidate vertex of minimum value */
+                        GNODE* min = (GNODE*) SCIPpqueueFirst(pqueue);
+                        if( SCIPisLT(scip, min->dist, graph->prize[j] - path[j].dist) )
+                        {
+                           min = (GNODE*) SCIPpqueueRemove(pqueue);
+                           min->dist = graph->prize[j] - path[j].dist;
+                           min->number = j;
+                           SCIP_CALL( SCIPpqueueInsert(pqueue, min) );
+                        }
+                     }
+                  }
+               }
+
+               break;
+            } /* if new solution value better than old one? */
+         } /* if !stvertex[i] */
+      } /* for l < nextension */
+      /* no more extensions performed? */
+      if( l == nextensions )
+         break;
+   } /* main loop */
+
 
    /* have vertices been added? */
-   if( *adds > 0  )
+   if( *extensions )
    {
-      SCIPdebugMessage("\n vertices added! \n");
-      for( e = 0; e < nedges; e++ )
+      SCIPdebugMessage("greedyExtensionPcMw found extensions \n");
+      for( int e = 0; e < nedges; e++ )
          stedge[e] = UNKNOWN;
-      SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, graph->cost, stedge, stvertex) );
+      SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, cost, stedge, stvertex) );
    }
+
+   SCIPpqueueFree(&pqueue);
+   SCIPfreeBufferArray(scip, &stvertextmp);
+   SCIPfreeBufferArray(scip, &pred);
+
+
+// todo
+   t = 0.0;
+      for( int e = 0; e < nedges; e++ )
+              if( stedge[e] == CONNECT )
+                 t += graph->cost[e];
+
+   printf("exit real cost %f \n\n", t);
+
+
+
 
    return SCIP_OKAY;
 }
-#endif
+
 
 
 
