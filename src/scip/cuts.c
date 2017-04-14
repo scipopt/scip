@@ -579,16 +579,6 @@ SCIP_Real SCIPaggrRowGetRhs(
    return aggrrow->rhs;
 }
 
-/** computes an upper bound for the number of non-zeros of cuts computed from this aggregation row; the arrays
- *  for returning a cut passed to any of the functions in this file must have at least this size. */
-int SCIPaggrRowGetCutsMaxNNz(
-   SCIP*                 scip,               /**< SCIP datastructure */
-   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
-   )
-{
-   return MIN(2 * aggrrow->nnz, SCIPgetNVars(scip));
-}
-
 /* =========================================== c-MIR =========================================== */
 
 #define MAXCMIRSCALE               1e+6 /**< maximal scaling (scale/(1-f0)) allowed in c-MIR calculations */
@@ -1861,6 +1851,7 @@ SCIP_RETCODE SCIPcalcMIR(
    )
 {
    int i;
+   int nvars;
    int* varsign;
    int* boundtype;
 
@@ -1879,8 +1870,9 @@ SCIP_RETCODE SCIPcalcMIR(
    *success = FALSE;
 
    /* allocate temporary memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &varsign, 2*aggrrow->nnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &boundtype, 2*aggrrow->nnz) );
+   nvars = SCIPgetNVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &varsign, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &boundtype, nvars) );
 
    /* initialize cut with aggregation */
    *cutnnz = aggrrow->nnz;
@@ -2159,6 +2151,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 {
    int i;
    int firstcontvar;
+   int nvars;
    int* varsign;
    int* boundtype;
    int* mksetinds;
@@ -2186,30 +2179,27 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    assert(success != NULL);
 
    *success = FALSE;
-   firstcontvar = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   nvars = SCIPgetNVars(scip);
+   firstcontvar = nvars - SCIPgetNContVars(scip);
    vars = SCIPgetVars(scip);
 
    /* allocate temporary memory */
 
-   /* for each variable at most one extra variable can be added to the row
-    * if a variable bound is used. Thus 2*aggrrow->nnz can never be exceeded in the
-    * mixed knapsack set and the cut
-    */
-   SCIP_CALL( SCIPallocBufferArray(scip, &varsign, 2*aggrrow->nnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &boundtype, 2*aggrrow->nnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &tmpvarsign, 2*aggrrow->nnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &tmpboundtype, 2*aggrrow->nnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &mksetcoefs, 2*aggrrow->nnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &mksetinds, 2*aggrrow->nnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &tmpcutcoefs, 2*aggrrow->nnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &tmpcutinds, 2*aggrrow->nnz) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &varsign, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &boundtype, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpvarsign, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpboundtype, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &mksetcoefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &mksetinds, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpcutcoefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpcutinds, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &deltacands, nvars) );
    /* each variable is either integral or a variable bound with an integral variable is used
     * so the max number of integral variables that are strictly between it's bounds is
     * aggrrow->nnz
     */
    SCIP_CALL( SCIPallocBufferArray(scip, &bounddist, aggrrow->nnz) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bounddistpos, aggrrow->nnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &deltacands, aggrrow->nnz) );
 
    /* initialize mkset with aggregation */
    mksetnnz = aggrrow->nnz;
@@ -2438,9 +2428,9 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
  TERMINATE:
    /* free temporary memory */
-   SCIPfreeBufferArray(scip, &deltacands);
    SCIPfreeBufferArray(scip, &bounddistpos);
    SCIPfreeBufferArray(scip, &bounddist);
+   SCIPfreeBufferArray(scip, &deltacands);
    SCIPfreeBufferArray(scip, &tmpcutinds);
    SCIPfreeBufferArray(scip, &tmpcutcoefs);
    SCIPfreeBufferArray(scip, &mksetinds);
@@ -5249,6 +5239,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    )
 {
    int i;
+   int nvars;
    int* varsign;
    int* boundtype;
    SCIP_Real downrhs;
@@ -5273,8 +5264,9 @@ SCIP_RETCODE SCIPcalcStrongCG(
    *cutislocal = FALSE;
 
    /* allocate temporary memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &varsign, 2*aggrrow->nnz) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &boundtype, 2*aggrrow->nnz) );
+   nvars = SCIPgetNVars(scip);
+   SCIP_CALL( SCIPallocBufferArray(scip, &varsign, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &boundtype, nvars) );
 
    /* initialize cut with aggregation */
    *cutnnz = aggrrow->nnz;

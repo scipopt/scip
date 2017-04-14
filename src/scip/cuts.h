@@ -132,14 +132,6 @@ SCIP_Real SCIPaggrRowGetRhs(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    );
 
-/** computes an upper bound for the number of non-zeros of cuts computed from this aggregation row; the arrays
- *  for returning a cut passed to any of the functions in this file must have at least this size. */
-extern
-int SCIPaggrRowGetCutsMaxNNz(
-   SCIP*                 scip,               /**< SCIP datastructure */
-   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
-   );
-
 /** calculates an MIR cut out of the weighted sum of LP rows given by an aggregation row; the
  *  aggregation row must not contain non-zero weights for modifiable rows, because these rows cannot
  *  participate in an MIR cut.
