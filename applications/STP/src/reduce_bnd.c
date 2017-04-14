@@ -42,8 +42,8 @@
 #include "heur_slackprune.h"
 
 #define DEFAULT_HEURRUNS 100                 /**< number of runs of constructive heuristic */
-#define DEFAULT_DARUNS     6                 /**< number of runs for dual ascent heuristic */
-#define DEFAULT_NMAXROOTS  15                /**< max number of roots to use for new graph in dual ascent heuristic */
+#define DEFAULT_DARUNS     5                 /**< number of runs for dual ascent heuristic */
+#define DEFAULT_NMAXROOTS  10                /**< max number of roots to use for new graph in dual ascent heuristic */
 
 
 /** reduce PCSTP or MWCS graph based on information from dual ascent and given upper bound  */
@@ -1439,11 +1439,7 @@ SCIP_RETCODE da_reducePcMw(
    )
 {
    SCIP_HEURDATA* tmheurdata;
-   IDX** ancestors;
-   IDX** revancestors;
    GRAPH* transgraph;
-   SCIP_Real* sd;
-   SCIP_Real* ecost;
    SCIP_Real ub;
    SCIP_Real offset;
    SCIP_Bool success;
@@ -1455,9 +1451,6 @@ SCIP_RETCODE da_reducePcMw(
    SCIP_Bool tmp;
    int* roots;
    int* result;
-   int* adjvert;
-   int* incedge;
-   int* reinsert;
    int* transresult;
    int i;
    int k;
@@ -1491,7 +1484,7 @@ SCIP_RETCODE da_reducePcMw(
    hopfactor = DEFAULT_HOPFACTOR;
 
    /* not more than two terminals? */
-   if( graph->terms <= 3 )
+   if( graph->terms <= 1 )
       return SCIP_OKAY;
 
    /* allocate memory */
@@ -1506,23 +1499,6 @@ SCIP_RETCODE da_reducePcMw(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &transresult, nedges + 2 * (graph->terms - 1)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &marked, nedges + 2 * (graph->terms - 1)) );
-
-   /* allocate length-4 buffer memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &sd, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &ancestors, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &revancestors, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &ecost, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &adjvert, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &reinsert, 4) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &incedge, 4) );
-
-   for( i = 0; i < 4; i++ )
-   {
-      sd[i] = 0.0;
-      ancestors[i] = NULL;
-      revancestors[i] = NULL;
-   }
-
 
    /* 1. step: compute upper bound */
 
@@ -2032,19 +2008,6 @@ SCIP_RETCODE da_reducePcMw(
    /* free memory */
    SCIPfreeBufferArrayNull(scip, &roots);
 
-   for( k = 0; k < 4; k++ )
-   {
-      SCIPintListNodeFree(scip, &(ancestors[k]));
-      SCIPintListNodeFree(scip, &(revancestors[k]));
-   }
-
-   SCIPfreeBufferArray(scip, &incedge);
-   SCIPfreeBufferArray(scip, &reinsert);
-   SCIPfreeBufferArray(scip, &adjvert);
-   SCIPfreeBufferArray(scip, &ecost);
-   SCIPfreeBufferArray(scip, &revancestors);
-   SCIPfreeBufferArray(scip, &ancestors);
-   SCIPfreeBufferArray(scip, &sd);
    SCIPfreeBufferArray(scip, &marked);
    SCIPfreeBufferArray(scip, &transresult);
 
