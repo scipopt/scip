@@ -514,9 +514,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
          if( success )
          {
+            int nnz;
             SCIPaggrRowRemoveZeros(aggrrow, SCIPepsilon(scip));
 
-            if( SCIPaggrRowGetNNz(aggrrow) > (int) MAXAGGRLEN(nvars) )
+            nnz = SCIPaggrRowGetNNz(aggrrow);
+            if( nnz == 0 || nnz > (int) MAXAGGRLEN(nvars) )
                success = FALSE;
          }
 
@@ -540,7 +542,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          /* if successful, convert dense cut into sparse row, and add the row as a cut */
          if( success )
          {
-            if( cutnnz == 0 )
+            if( cutnnz == 0 && SCIPisFeasNegative(scip, cutrhs) )
             {
                SCIPdebugMsg(scip, " -> gomory cut detected infeasibility with cut 0 <= %f\n", cutrhs);
                /* TODO this was an assert before but leads to cutoff now. What changed? */
@@ -577,7 +579,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                {
                   SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cutinds[v]], cutcoefs[v]) );
                }
-
 
                if( cutnnz == 1 )
                {

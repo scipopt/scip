@@ -1379,12 +1379,12 @@ SCIP_RETCODE cutsTransformMIR(
 static
 SCIP_RETCODE cutsRoundMIR(
    SCIP*                 scip,               /**< SCIP datastructure */
-   SCIP_Real*            cutcoefs,           /**< array of coefficients of cut */
-   SCIP_Real*            cutrhs,             /**< pointer to right hand side of cut */
-   int*                  cutinds,            /**< array of variables problem indices for non-zero coefficients in cut */
-   int*                  nnz,                /**< number of non-zeros in cut */
-   int*                  varsign,            /**< stores the sign of the transformed variable in summation */
-   int*                  boundtype,          /**< stores the bound used for transformed variable (vlb/vub_idx or -1 for lb/ub) */
+   SCIP_Real*RESTRICT    cutcoefs,           /**< array of coefficients of cut */
+   SCIP_Real*RESTRICT    cutrhs,             /**< pointer to right hand side of cut */
+   int*RESTRICT          cutinds,            /**< array of variables problem indices for non-zero coefficients in cut */
+   int*RESTRICT          nnz,                /**< number of non-zeros in cut */
+   int*RESTRICT          varsign,            /**< stores the sign of the transformed variable in summation */
+   int*RESTRICT          boundtype,          /**< stores the bound used for transformed variable (vlb/vub_idx or -1 for lb/ub) */
    SCIP_Real             f0                  /**< fractional value of rhs */
    )
 {
@@ -1392,7 +1392,7 @@ SCIP_RETCODE cutsRoundMIR(
    int i;
    int firstcontvar;
    SCIP_VAR** vars;
-   int* varpos;
+   int*RESTRICT varpos;
    int ndelcontvars;
    int aggrrowlastcontvar;
 
@@ -4107,7 +4107,7 @@ SCIP_Real evaluateLiftingFunction(
       p = liftingdata->m[i] - (liftingdata->mp - liftingdata->lambda) - liftingdata->ml;
       p = MAX(0.0, p);
 
-      if( SCIPisLE(scip, liftingdata->M[i] + liftingdata->ml + p, xpluslambda) )
+      if( SCIPisLT(scip, liftingdata->M[i] + liftingdata->ml + p, xpluslambda) )
          return i * liftingdata->lambda;
 
       assert(liftingdata->M[i] <= xpluslambda && xpluslambda <= liftingdata->M[i] + liftingdata->ml + p);
@@ -4558,8 +4558,11 @@ SCIP_RETCODE SCIPcalcFlowCover(
 
    SCIP_CALL( generateLiftedFlowCoverCut(scip, &snf, aggrrow, transvarflowcoverstatus, lambda, cutcoefs, cutrhs, cutinds, cutnnz, success) );
 
+
    if( *success )
    {
+      cleanupCut(scip, *cutislocal, cutinds, cutcoefs, cutnnz, cutrhs);
+
       if( cutefficacy != NULL )
          *cutefficacy = calcEfficacy(scip, sol, cutcoefs, *cutrhs, cutinds, *cutnnz);
 

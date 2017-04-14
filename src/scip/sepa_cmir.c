@@ -976,7 +976,7 @@ SCIP_RETCODE separateCuts(
    SCIP_Real* bestcontlbs;
    SCIP_Real* bestcontubs;
    SCIP_Real* fractionalities;
-   SCIP_ROW** rows;     
+   SCIP_ROW** rows;
    SCIP_Real* rowlhsscores;
    SCIP_Real* rowrhsscores;
    SCIP_Real* rowscores;
