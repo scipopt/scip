@@ -56,8 +56,8 @@ void SCIPaggrRowFree(
 extern
 SCIP_RETCODE SCIPaggrRowCopy(
    SCIP*                 scip,               /**< SCIP datastructure */
-    SCIP_AGGRROW**         aggrrow,             /**< pointer to return the aggregation row */
-    SCIP_AGGRROW*          source              /**< source the aggregation row */
+   SCIP_AGGRROW**         aggrrow,             /**< pointer to return the aggregation row */
+   SCIP_AGGRROW*          source              /**< source the aggregation row */
    );
 
 /** add scaled row to the aggregation row */
@@ -68,6 +68,26 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    SCIP_ROW*             row,                /**< row to add to the aggregation row */
    SCIP_Real             scale,              /**< scale for adding given row to the aggregation row */
    int                   sidetype            /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
+   );
+
+/** aggregate rows using the given weights; the current content of the aggregation
+ *  row gets overwritten
+ */
+extern
+SCIP_RETCODE SCIPaggrRowSumRows(
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Real*            weights,            /**< row weights in row summation */
+   int*                  rowinds,            /**< array to store indices of non-zero entries of the weights array, or
+                                              *   NULL */
+   int                   nrowinds,           /**< number of non-zero entries in weights array, -1 if rowinds is NULL */
+   SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
+   SCIP_Real             minallowedweight,   /**< minimum magnitude of weight for rows that are used in the summation */
+   SCIP_Bool             sidetypebasis,      /**< choose sidetypes of row (lhs/rhs) based on basis information? */
+   SCIP_Bool             allowlocal,         /**< should local rows allowed to be used? */
+   int                   negslack,           /**< should negative slack variables allowed to be used? (0: no, 1: only for integral rows, 2: yes) */
+   int                   maxaggrlen,         /**< maximal length of aggregation row */
+   SCIP_Bool*            valid               /**< is the aggregation valid */
    );
 
 /** removes all zero entries in the aggregation row */

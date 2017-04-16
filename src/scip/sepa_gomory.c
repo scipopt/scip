@@ -204,6 +204,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_VAR** vars;
    SCIP_COL** cols;
    SCIP_ROW** rows;
+   SCIP_AGGRROW* aggrrow;
    SCIP_Real* binvrow;
    SCIP_Real* cutcoefs;
    SCIP_Real maxscale;
@@ -211,6 +212,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_Real maxfrac;
    SCIP_Longint maxdnom;
    SCIP_Bool cutoff;
+   int* sidetypes = NULL;
    int* basisind;
    int* inds;
    int* cutinds;
@@ -322,6 +324,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &inds, nrows) );
+   SCIP_CALL( SCIPaggrRowCreate(scip, &aggrrow) );
 
    /* get basis indices */
    SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
@@ -393,142 +396,22 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          SCIP_Real cutefficacy;
          SCIP_Bool success;
          SCIP_Bool cutislocal;
-         SCIP_Real minabsweight;
-         SCIP_Real maxabsweight;
          int cutnnz;
          int cutrank;
-         SCIP_AGGRROW* aggrrow;
-         int k;
 
          /* get the row of B^-1 for this basic integer variable with fractional solution value */
-         success = TRUE;
          ninds = -1;
          SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow, inds, &ninds) );
-         SCIP_CALL( SCIPaggrRowCreate(scip, &aggrrow) );
-         minabsweight = SCIPinfinity(scip);
-         maxabsweight = -SCIPinfinity(scip);
 
-         if( inds != NULL && ninds > -1 )
-         {
-            for( k = 0; k < ninds; ++k )
-            {
-               SCIP_ROW* row;
-               int sidetype;
-               SCIP_Real absweight;
 
-               row = rows[inds[k]];
-               sidetype = 0;
-               absweight = REALABS(binvrow[inds[k]]);
-
-               if( SCIProwIsModifiable(row) ||
-                  (SCIProwIsLocal(row) && !ALLOWLOCAL) ||
-                   absweight > sepadata->maxweightrange * minabsweight ||
-                   maxabsweight > sepadata->maxweightrange * absweight ||
-                   absweight <= SCIPsumepsilon(scip)
-                  )
-               {
-                  continue;
-               }
-
-               minabsweight = MIN(minabsweight, absweight);
-               maxabsweight = MAX(maxabsweight, absweight);
-
-               if( sepadata->sidetypebasis && !SCIPisEQ(scip, SCIProwGetLhs(row), SCIProwGetRhs(row)) )
-               {
-                  SCIP_BASESTAT stat = SCIProwGetBasisStatus(row);
-
-                  if( stat == SCIP_BASESTAT_LOWER )
-                  {
-                     assert( ! SCIPisInfinity(scip, -SCIProwGetLhs(row)) );
-                     sidetype= -1;
-                  }
-                  else if( stat == SCIP_BASESTAT_UPPER )
-                  {
-                      assert( ! SCIPisInfinity(scip, SCIProwGetRhs(row)) );
-                     sidetype = +1;
-                  }
-               }
-
-               SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, row, binvrow[inds[k]], sidetype) );
-
-               if( SCIPaggrRowGetNNz(aggrrow)/4 > (int) MAXAGGRLEN(nvars) )
-               {
-                  success = FALSE;
-                  break;
-               }
-            }
-         }
-         else
-         {
-            for( k = 0; k < nrows; ++k )
-            {
-               SCIP_ROW* row;
-               int sidetype;
-               SCIP_Real absweight;
-
-               if( SCIPisZero(scip, binvrow[k]) )
-                  continue;
-
-               row = rows[k];
-               sidetype = 0;
-               absweight = REALABS(binvrow[k]);
-
-               if( SCIProwIsModifiable(row) ||
-                  (SCIProwIsLocal(row) && !ALLOWLOCAL) ||
-                   absweight > sepadata->maxweightrange * minabsweight ||
-                   maxabsweight > sepadata->maxweightrange * absweight ||
-                   absweight <= SCIPsumepsilon(scip)
-                  )
-               {
-                  continue;
-               }
-
-               minabsweight = MIN(minabsweight, absweight);
-               maxabsweight = MAX(maxabsweight, absweight);
-
-               if( sepadata->sidetypebasis && !SCIPisEQ(scip, SCIProwGetLhs(row), SCIProwGetRhs(row)) )
-               {
-                  SCIP_BASESTAT stat = SCIProwGetBasisStatus(row);
-
-                  if( stat == SCIP_BASESTAT_LOWER )
-                  {
-                     assert( ! SCIPisInfinity(scip, -SCIProwGetLhs(row)) );
-                     sidetype= -1;
-                  }
-                  else if( stat == SCIP_BASESTAT_UPPER )
-                  {
-                      assert( ! SCIPisInfinity(scip, SCIProwGetRhs(row)) );
-                     sidetype = +1;
-                  }
-               }
-
-               SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, row, binvrow[k], sidetype) );
-
-               if( SCIPaggrRowGetNNz(aggrrow)/4 > (int) MAXAGGRLEN(nvars) )
-               {
-                  success = FALSE;
-                  break;
-               }
-            }
-         }
-
-         if( success )
-         {
-            int nnz;
-            SCIPaggrRowRemoveZeros(aggrrow, SCIPepsilon(scip));
-
-            nnz = SCIPaggrRowGetNNz(aggrrow);
-            if( nnz == 0 || nnz > (int) MAXAGGRLEN(nvars) )
-               success = FALSE;
-         }
+         SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, binvrow, inds, ninds, sepadata->maxweightrange, SCIPsumepsilon(scip),
+                                       sepadata->sidetypebasis, ALLOWLOCAL, 2, (int) MAXAGGRLEN(nvars), &success) );
 
          if( !success )
             continue;
 
-         cutefficacy = -SCIPinfinity(scip);
-
          SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL, minfrac, maxfrac, 1.0,
-                     aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+                                aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
 
          assert(ALLOWLOCAL || !cutislocal);
 
@@ -537,7 +420,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
           *       leads to cut a of the form \sum a_i x_i \geq 1. Rumor has it that these cuts are better.
           */
 
-         SCIPdebugMsg(scip, " -> success=%u: efficacy: %g\n", success, cutefficacy);
+         SCIPdebugMsg(scip, " -> success=%u, rhs=%g, efficacy=%g\n", success, cutrhs, cutefficacy);
 
          /* if successful, convert dense cut into sparse row, and add the row as a cut */
          if( success )
@@ -545,9 +428,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             if( cutnnz == 0 && SCIPisFeasNegative(scip, cutrhs) )
             {
                SCIPdebugMsg(scip, " -> gomory cut detected infeasibility with cut 0 <= %f\n", cutrhs);
-               /* TODO this was an assert before but leads to cutoff now. What changed? */
-               if( SCIPisFeasNegative(scip, cutrhs) )
-                  cutoff = TRUE;
+               cutoff = TRUE;
             }
             else if( SCIPisEfficacious(scip, cutefficacy) )
             {
@@ -638,8 +519,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                SCIP_CALL( SCIPreleaseRow(scip, &cut) );
             }
          }
-
-         SCIPaggrRowFree(scip, &aggrrow);
       }
    }
 
@@ -649,6 +528,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);
+   SCIPaggrRowFree(scip, &aggrrow);
 
    SCIPdebugMsg(scip, "end searching gomory cuts: found %d cuts\n", naddedcuts);
 

@@ -383,6 +383,263 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE addOneRow(
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_ROW*             row,                /**< the row to add */
+   SCIP_Real             weight,             /**< weight of row to add */
+   SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
+   SCIP_Real             minallowedweight,   /**< minimum magnitude of weight for rows that are used in the summation */
+   SCIP_Bool             sidetypebasis,      /**< choose sidetypes of row (lhs/rhs) based on basis information? */
+   SCIP_Bool             allowlocal,         /**< should local rows allowed to be used? */
+   int                   negslack,           /**< should negative slack variables allowed to be used? (0: no, 1: only for integral rows, 2: yes) */
+   int                   maxaggrlen,         /**< maximal length of aggregation row */
+   SCIP_Real*            minabsweight,       /**< pointer to update minabsweight */
+   SCIP_Real*            maxabsweight,       /**< pointer to update maxabsweight */
+   int*                  varpos,             /**< array with positions of variables in current aggregation row */
+   SCIP_Bool*            rowtoolong          /**< is the aggregated row too long */
+   )
+{
+   SCIP_Real absweight;
+   SCIP_Real sideval;
+   SCIP_Bool uselhs;
+   int i;
+
+   *rowtoolong = FALSE;
+   absweight = REALABS(weight);
+
+   if( SCIProwIsModifiable(row) ||
+       (SCIProwIsLocal(row) && !allowlocal) ||
+       absweight > maxweightrange * (*minabsweight) ||
+       (*maxabsweight) > maxweightrange * absweight ||
+       absweight < minallowedweight
+      )
+   {
+      return SCIP_OKAY;
+   }
+
+   *minabsweight = MIN(*minabsweight, absweight);
+   *maxabsweight = MAX(*maxabsweight, absweight);
+
+   if( sidetypebasis && !SCIPisEQ(scip, SCIProwGetLhs(row), SCIProwGetRhs(row)) )
+   {
+      SCIP_BASESTAT stat = SCIProwGetBasisStatus(row);
+
+      if( stat == SCIP_BASESTAT_LOWER )
+      {
+         assert( ! SCIPisInfinity(scip, -SCIProwGetLhs(row)) );
+         uselhs = TRUE;
+      }
+      else if( stat == SCIP_BASESTAT_UPPER )
+      {
+         assert( ! SCIPisInfinity(scip, SCIProwGetRhs(row)) );
+         uselhs = FALSE;
+      }
+      else if( weight < 0.0 && !SCIPisInfinity(scip, -row->lhs) )
+      {
+         uselhs = TRUE;
+      }
+      else
+      {
+         uselhs = FALSE;
+      }
+   }
+   else if( weight < 0.0 && !SCIPisInfinity(scip, -row->lhs) )
+   {
+      uselhs = TRUE;
+   }
+   else
+   {
+      uselhs = FALSE;
+   }
+
+   if( uselhs )
+   {
+      if( weight > 0.0 && ((negslack == 0) || (negslack == 1 && !row->integral)) )
+         return SCIP_OKAY;
+
+      sideval = row->lhs - row->constant;
+      /* row is integral? round left hand side up */
+      if( row->integral )
+         sideval = SCIPfeasCeil(scip, sideval);
+   }
+   else
+   {
+      if( weight < 0.0 && ((negslack == 0) || (negslack == 1 && !row->integral)) )
+         return SCIP_OKAY;
+
+      sideval = row->rhs - row->constant;
+      /* row is integral? round right hand side down */
+      if( row->integral )
+         sideval = SCIPfeasFloor(scip, sideval);
+   }
+
+   /* add right hand side, update rank and local flag */
+   aggrrow->rhs += sideval * weight;
+   aggrrow->rank = MAX(aggrrow->rank, row->rank);
+   aggrrow->local = aggrrow->local || row->local;
+
+   /* ensure the array for storing the row information is large enough */
+   i = aggrrow->nrows++;
+   if( aggrrow->nrows > aggrrow->rowssize )
+   {
+      int newsize = SCIPcalcMemGrowSize(scip, aggrrow->nrows);
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->rowsinds, aggrrow->rowssize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->slacksign, aggrrow->rowssize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->rowweights, aggrrow->rowssize, newsize) );
+      aggrrow->rowssize = newsize;
+   }
+
+   /* add information of addditional row */
+   aggrrow->rowsinds[i] = row->lppos;
+   aggrrow->rowweights[i] = weight;
+   aggrrow->slacksign[i] = uselhs ? -1 : 1;
+
+   /* ensure the aggregation row can hold all non-zero entries from the additional row */
+   {
+      int newsize = aggrrow->nnz + row->len;
+      if( newsize > aggrrow->valssize )
+      {
+         newsize = SCIPcalcMemGrowSize(scip, newsize);
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->vals, aggrrow->valssize, newsize) );
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->inds, aggrrow->valssize, newsize) );
+         aggrrow->valssize = newsize;
+      }
+   }
+
+   /* add coefficients */
+   for( i = 0; i < row->len; ++i )
+   {
+      int k = varpos[row->cols[i]->var_probindex];
+      if( k == 0 )
+      {
+         k = aggrrow->nnz++;
+         aggrrow->vals[k] = weight * row->vals[i];
+         aggrrow->inds[k] = row->cols[i]->var_probindex;
+         varpos[aggrrow->inds[k]] = k + 1;
+      }
+      else
+      {
+         aggrrow->vals[k - 1] += weight * row->vals[i];
+      }
+   }
+
+   /* check if row is too long now */
+   if( aggrrow->nnz > maxaggrlen )
+      *rowtoolong = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
+/** aggregate rows using the given weights; the current content of the aggregation
+ *  row gets overwritten
+ */
+SCIP_RETCODE SCIPaggrRowSumRows(
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Real*            weights,            /**< row weights in row summation */
+   int*                  rowinds,            /**< array to store indices of non-zero entries of the weights array, or
+                                              *   NULL */
+   int                   nrowinds,           /**< number of non-zero entries in weights array, -1 if rowinds is NULL */
+   SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
+   SCIP_Real             minallowedweight,   /**< minimum magnitude of weight for rows that are used in the summation */
+   SCIP_Bool             sidetypebasis,      /**< choose sidetypes of row (lhs/rhs) based on basis information? */
+   SCIP_Bool             allowlocal,         /**< should local rows allowed to be used? */
+   int                   negslack,           /**< should negative slack variables allowed to be used? (0: no, 1: only for integral rows, 2: yes) */
+   int                   maxaggrlen,         /**< maximal length of aggregation row */
+   SCIP_Bool*            valid               /**< is the aggregation valid */
+   )
+{
+   SCIP_ROW** rows;
+   SCIP_VAR** vars;
+   int nrows;
+   int* varpos;
+   int nvars;
+   int k;
+   SCIP_Bool rowtoolong;
+   SCIP_Real minabsweight;
+   SCIP_Real maxabsweight;
+
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &varpos, nvars) );
+
+   minabsweight = SCIPinfinity(scip);
+   maxabsweight = -SCIPinfinity(scip);
+
+   aggrrow->nnz = 0;
+   aggrrow->nrows = 0;
+   aggrrow->rank = 0;
+   aggrrow->rhs = 0.0;
+   aggrrow->local = FALSE;
+
+   if( rowinds != NULL && nrowinds > -1 )
+   {
+      for( k = 0; k < nrowinds; ++k )
+      {
+         SCIP_CALL( addOneRow(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], maxweightrange, minallowedweight, sidetypebasis, allowlocal,
+                              negslack, maxaggrlen, &minabsweight, &maxabsweight, varpos, &rowtoolong) );
+
+         if( rowtoolong )
+         {
+            *valid = FALSE;
+            goto TERMINATE;
+         }
+      }
+   }
+   else
+   {
+      for( k = 0; k < nrows; ++k )
+      {
+         SCIP_CALL( addOneRow(scip, aggrrow, rows[k], weights[k], maxweightrange, minallowedweight, sidetypebasis, allowlocal,
+                              negslack, maxaggrlen, &minabsweight, &maxabsweight, varpos, &rowtoolong) );
+
+         if( rowtoolong )
+         {
+            *valid = FALSE;
+            goto TERMINATE;
+         }
+      }
+   }
+
+   *valid = aggrrow->nnz > 0;
+
+TERMINATE:
+
+   if( *valid )
+   {
+      k = 0;
+      while( k < aggrrow->nnz )
+      {
+         varpos[aggrrow->inds[k]] = 0;
+         if( SCIPisZero(scip, aggrrow->vals[k]) )
+         {
+            /* remove zero entry */
+            --aggrrow->nnz;
+            if( k < aggrrow->nnz )
+            {
+               aggrrow->vals[k] = aggrrow->vals[aggrrow->nnz];
+               aggrrow->inds[k] = aggrrow->inds[aggrrow->nnz];
+            }
+         }
+         else
+            ++k;
+      }
+   }
+   else
+   {
+      for( k = 0; k < aggrrow->nnz; ++k )
+         varpos[aggrrow->inds[k]] = 0;
+   }
+
+   SCIPfreeCleanBufferArray(scip, &varpos);
+
+   return SCIP_OKAY;
+}
+
 /** removes all zero entries in the aggregation row */
 void SCIPaggrRowRemoveZeros(
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
@@ -4654,7 +4911,10 @@ SCIP_RETCODE cutsTransformStrongCG(
 
          /* cannot create transformation for strongcg cut */
          if( SCIPisInfinity(scip, -bestbds[i]) )
+         {
+            *freevariable = TRUE;
             goto TERMINATE;
+         }
 
          varsign[i] = +1;
       }
@@ -4665,7 +4925,10 @@ SCIP_RETCODE cutsTransformStrongCG(
 
           /* cannot create transformation for strongcg cut */
          if( SCIPisInfinity(scip, bestbds[i]) )
+         {
+            *freevariable = TRUE;
             goto TERMINATE;
+         }
 
          varsign[i] = -1;
       }
@@ -4705,18 +4968,19 @@ SCIP_RETCODE cutsTransformStrongCG(
             vbdvars = SCIPvarGetVlbVars(var);
             vbdcoefs = SCIPvarGetVlbCoefs(var);
             vbdconsts = SCIPvarGetVlbConstants(var);
+            assert(0 <= boundtype[i] && boundtype[i] < SCIPvarGetNVlbs(var));
          }
          else
          {
             vbdvars = SCIPvarGetVubVars(var);
             vbdcoefs = SCIPvarGetVubCoefs(var);
             vbdconsts = SCIPvarGetVubConstants(var);
+            assert(0 <= boundtype[i] && boundtype[i] < SCIPvarGetNVubs(var));
          }
 
          assert(vbdvars != NULL);
          assert(vbdcoefs != NULL);
          assert(vbdconsts != NULL);
-         assert(0 <= boundtype[i] && boundtype[i] < SCIPvarGetNVlbs(var));
          assert(SCIPvarIsActive(vbdvars[boundtype[i]]));
 
          zidx = SCIPvarGetProbindex(vbdvars[boundtype[i]]);
@@ -4737,10 +5001,13 @@ SCIP_RETCODE cutsTransformStrongCG(
          else
          {
             /* if it is update the coefficient */
+            assert(cutinds[k - 1] == zidx);
             cutcoefs[k - 1] += cutcoefs[i] * vbdcoefs[boundtype[i]];
          }
       }
    }
+
+   assert(i == aggrrowintstart);
 
    /* remove integral variables that now have a zero coefficient due to variable bound usage of continuous variables
     * and perform the bound substitution for the integer variables that are left using simple bounds
@@ -4937,8 +5204,8 @@ SCIP_RETCODE cutsRoundStrongCG(
       var = vars[v];
       assert(var != NULL);
       assert(SCIPvarGetProbindex(var) == v);
-      assert(boundtype[v] == -1 || boundtype[v] == -2);
-      assert(varsign[v] == +1 || varsign[v] == -1);
+      assert(boundtype[i] == -1 || boundtype[i] == -2);
+      assert(varsign[i] == +1 || varsign[i] == -1);
 
       /* calculate the coefficient in the retransformed cut */
       aj = varsign[i] * cutcoefs[i]; /* a'_j */
@@ -4946,7 +5213,7 @@ SCIP_RETCODE cutsRoundStrongCG(
       fj = aj - downaj;
 
       if( SCIPisSumLE(scip, fj, f0) )
-         cutaj = varsign[v] * downaj; /* a^_j */
+         cutaj = varsign[i] * downaj; /* a^_j */
       else
       {
          SCIP_Real pj;
@@ -4954,7 +5221,7 @@ SCIP_RETCODE cutsRoundStrongCG(
          pj = SCIPceil(scip, k * (fj - f0) * onedivoneminusf0);
          assert(pj >= 0); /* should be >= 1, but due to rounding bias can be 0 if fj almost equal to f0 */
          assert(pj <= k);
-         cutaj = varsign[v] * (downaj + pj / (k + 1)); /* a^_j */
+         cutaj = varsign[i] * (downaj + pj / (k + 1)); /* a^_j */
       }
 
       /* remove zero cut coefficients from cut */
@@ -4975,10 +5242,10 @@ SCIP_RETCODE cutsRoundStrongCG(
       assert(boundtype[i] < 0);
 
       /* move the constant term  -a~_j * lb_j == -a^_j * lb_j , or  a~_j * ub_j == -a^_j * ub_j  to the rhs */
-      if( varsign[v] == +1 )
+      if( varsign[i] == +1 )
       {
          /* lower bound was used */
-         if( boundtype[v] == -1 )
+         if( boundtype[i] == -1 )
          {
             assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
             *cutrhs += cutaj * SCIPvarGetLbGlobal(var);
@@ -5025,7 +5292,7 @@ SCIP_RETCODE cutsRoundStrongCG(
          assert(var != NULL);
          assert(!SCIPvarIsIntegral(var));
          assert(SCIPvarGetProbindex(var) == v);
-         assert(varsign[v] == +1 || varsign[v] == -1);
+         assert(varsign[i] == +1 || varsign[i] == -1);
 
          /* calculate the coefficient in the retransformed cut */
          aj = varsign[i] * cutcoefs[i]; /* a'_j */
@@ -5287,7 +5554,6 @@ SCIP_RETCODE SCIPcalcStrongCG(
    *cutislocal = aggrrow->local;
 
    cleanupCut(scip, aggrrow->local, cutinds, cutcoefs, cutnnz, cutrhs);
-
 
    /* Transform equation  a*x == b, lb <= x <= ub  into standard form
     *   a'*x' == b, 0 <= x' <= ub'.
