@@ -5761,6 +5761,8 @@ SCIP_RETCODE addCut(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real*            cutcoefs,           /**< coefficients of active variables in cut */
    SCIP_Real             cutrhs,             /**< right hand side of cut */
+   int*                  cutinds,            /**< problem indices of variables with non-zero coefficient */
+   int                   cutnnz,             /**< number of non-zeros in cut */
    SCIP_Bool             cutislocal,         /**< is the cut only locally valid? */
    int                   cutrank,            /**< rank of the cut */
    int*                  ncuts,              /**< pointer to count the number of added cuts */
@@ -5771,11 +5773,10 @@ SCIP_RETCODE addCut(
    char cutname[SCIP_MAXSTRLEN];
    SCIP_VAR** vars;
    int nvars;
-   int v;
+   int i;
 
-/* variables for knapsack cover separation */
-   SCIP_VAR** cutvars = NULL;
-   SCIP_Real* cutvals = NULL;
+   /* variables for knapsack cover separation */
+   SCIP_VAR** cutvars;
    int ncutvars;
 
    assert(scip != NULL);
@@ -5791,11 +5792,11 @@ SCIP_RETCODE addCut(
    ncutvars = 0;
    *cutoff = FALSE;
 
-   if( sepadata->separateknapsack )
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutvars, cutnnz) );
+
+   for( i = 0; i < cutnnz; ++i )
    {
-      /* allocate temporary memory */
-      SCIP_CALL( SCIPallocBufferArray(scip, &cutvars, nvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &cutvals, nvars) );
+      cutvars[i] = vars[cutinds[i]];
    }
 
    /* create the cut */
@@ -5803,43 +5804,24 @@ SCIP_RETCODE addCut(
    SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs,
                                  cutislocal, FALSE, sepadata->dynamiccuts) );
 
-   /* add coefficients */
-   SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
-   for( v = 0; v < nvars; v++ )
-   {
-      if( SCIPisZero(scip, cutcoefs[v]) )
-         continue;
-
-      SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[v], cutcoefs[v]) );
-
-      if( sepadata->separateknapsack )
-      {
-         assert(cutvars != NULL && cutvals != NULL);
-         cutvars[ncutvars] = vars[v];
-         cutvals[ncutvars] = cutcoefs[v];
-         ncutvars++;
-      }
-
-   }
-   SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+   SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutnnz, cutvars, cutcoefs) );
 
    /* set cut rank */
    SCIProwChgRank(cut, cutrank);
 
    /* check efficacy */
-   if( SCIPisCutEfficacious(scip, sol, cut) )
-   {
-      SCIPdebugMsg(scip, " -> found MCF cut <%s>: rhs=%f, act=%f eff=%f rank=%d\n",
-                       cutname, cutrhs, SCIPgetRowSolActivity(scip, cut, sol), SCIPgetCutEfficacy(scip, sol, cut), SCIProwGetRank(cut));
-      /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
-      SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
+   assert(SCIPisCutEfficacious(scip, sol, cut));
 
-      if( !(*cutoff) && !cutislocal )
-      {
-         SCIP_CALL( SCIPaddPoolCut(scip, cut) );
-      }
-      (*ncuts)++;
+   SCIPdebugMsg(scip, " -> found MCF cut <%s>: rhs=%f, act=%f eff=%f rank=%d\n",
+                cutname, cutrhs, SCIPgetRowSolActivity(scip, cut, sol), SCIPgetCutEfficacy(scip, sol, cut), SCIProwGetRank(cut));
+   /*SCIPdebug( SCIP_CALL(SCIPprintRow(scip, cut, NULL)) );*/
+   SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
+
+   if( !(*cutoff) && !cutislocal )
+   {
+      SCIP_CALL( SCIPaddPoolCut(scip, cut) );
    }
+   (*ncuts)++;
 
    /* release the row */
    SCIP_CALL( SCIPreleaseRow(scip, &cut) );
@@ -5847,12 +5829,9 @@ SCIP_RETCODE addCut(
    if( !(*cutoff) && sepadata->separateknapsack)
    {
       /* relax cut to knapsack row and separate lifted cover cuts */
-      SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, NULL, sepa, ncutvars, cutvars, cutvals, +1.0, cutrhs, sol, cutoff, ncuts) );
-
-      /* free temporary memory */
-      SCIPfreeBufferArray(scip, &cutvals);
-      SCIPfreeBufferArray(scip, &cutvars);
+      SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, NULL, sepa, ncutvars, cutvars, cutcoefs, +1.0, cutrhs, sol, cutoff, ncuts) );
    }
+   SCIPfreeBufferArray(scip, &cutvars);
 
    return SCIP_OKAY;
 }
@@ -5890,8 +5869,10 @@ SCIP_RETCODE generateClusterCuts(
    int nrows;
    int nvars;
 
+   SCIP_AGGRROW* aggrrow;
    SCIP_Real* cutcoefs;
    SCIP_Real* deltas;
+   int* cutinds;
    int deltassize;
    int ndeltas;
    SCIP_Real* rowweights;
@@ -5928,7 +5909,6 @@ SCIP_RETCODE generateClusterCuts(
    else if( effortlevel == MCFEFFORTLEVEL_AGGRESSIVE )
       maxtestdelta *= 2;
 
-
    /* Our system has the following form:
     *  (1)  \sum_{a \in \delta^+(v)} f_a^k  - \sum_{a \in \delta^-(v)} f_a^k  <=  -d_v^k   for all v \in V and k \in K
     *  (2)  \sum_{k \in K} f_a^k - c_a x_a                                    <=  0        for all a \in A
@@ -5956,6 +5936,10 @@ SCIP_RETCODE generateClusterCuts(
    SCIP_CALL( SCIPallocBufferArray(scip, &comcutdemands, ncommodities) );
    SCIP_CALL( SCIPallocBufferArray(scip, &comdemands, ncommodities) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutinds, nvars) );
+
+   /* create empty aggregation row */
+   SCIP_CALL( SCIPaggrRowCreate(scip, &aggrrow) );
 
    if( nodepartition == NULL )
    {
@@ -5993,7 +5977,7 @@ SCIP_RETCODE generateClusterCuts(
       /* variables for flowcutset separation */
       SCIP_Real baserhs;
       SCIP_Real bestdelta = 1.0;
-      SCIP_Real bestrelviolation;
+      SCIP_Real bestefficacy;
       SCIP_Real f0;
 
 
@@ -6349,7 +6333,7 @@ SCIP_RETCODE generateClusterCuts(
          /** @todo use only the best delta instead of generating all cuts ?? */
 
          /* use best delta for flowcutset separation */
-         bestrelviolation = SCIP_REAL_MIN;
+         bestefficacy = SCIP_REAL_MIN;
 
          if( sepadata->separateflowcutset )
          {
@@ -6359,17 +6343,22 @@ SCIP_RETCODE generateClusterCuts(
 
          oldncuts = *ncuts; /* save number of cuts */
 
+         {
+            SCIP_Bool success;
+            SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, rowweights, NULL, -1, sepadata->maxweightrange, SCIPsumepsilon(scip),
+                                          FALSE, ALLOWLOCAL, 2, (int)MAXAGGRLEN(nvars), &success) );
+         }
+
          SCIPdebugMsg(scip, " -> found %d different deltas to try\n", ndeltas);
          for( d = ndeltas-1; d >= 0 && d >= ndeltas-maxtestdelta; d-- )
          {
             SCIP_Real cutrhs = 0.0;
-            SCIP_Real cutact = 0.0;
+            SCIP_Real cutefficacy = 0.0;
             SCIP_Bool success = FALSE;
             SCIP_Bool cutislocal = FALSE;
             /* variables for flowcutset separation */
-            SCIP_Real abscutrhs = 0.0;
-            SCIP_Real relviolation = 0.0;
             int cutrank;
+            int cutnnz;
 
             /* we should not have too small deltas */
             assert( !SCIPisFeasZero(scip, deltas[d]) );
@@ -6377,9 +6366,8 @@ SCIP_RETCODE generateClusterCuts(
             assert( !SCIPisZero(scip, 1.0/deltas[d]) );
 
             SCIPdebugMsg(scip, "applying MIR with delta = %g\n", deltas[d]);
-            SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
-                  (int)MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, -1.0, NULL, -1, -1,
-                  NULL, 1.0/deltas[d], NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
+            SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL, MINFRAC, MAXFRAC,
+                                   1.0/deltas[d], aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
             assert(ALLOWLOCAL || !cutislocal);
 
             /* // no success means row was too long or empty, there is a free
@@ -6390,19 +6378,17 @@ SCIP_RETCODE generateClusterCuts(
 
             if( sepadata->separateflowcutset )
             {
-               abscutrhs = REALABS(cutrhs);
-               relviolation = (cutact - cutrhs) / MAX( abscutrhs , 1.0 );
-               if( relviolation > bestrelviolation )
+               if( cutefficacy > bestefficacy )
                {
                   bestdelta = deltas[d];
-                  bestrelviolation = relviolation;
+                  bestefficacy = cutefficacy;
                }
             }
 
-            if( SCIPisFeasGT(scip, cutact, cutrhs) )
+            if( SCIPisEfficacious(scip, cutefficacy) )
             {
-               SCIPdebugMsg(scip, "success -> delta = %g  -> rhs: %g, act: %g\n", deltas[d], cutrhs, cutact);
-               SCIP_CALL( addCut(scip, sepa, sepadata, sol, cutcoefs, cutrhs, cutislocal, cutrank, ncuts, cutoff) );
+               SCIPdebugMsg(scip, "success -> delta = %g  -> rhs: %g, efficacy: %g\n", deltas[d], cutrhs, cutefficacy);
+               SCIP_CALL( addCut(scip, sepa, sepadata, sol, cutcoefs, cutrhs, cutinds, cutnnz, cutislocal, cutrank, ncuts, cutoff) );
                if( *cutoff )
                   break;
 
@@ -6550,9 +6536,10 @@ SCIP_RETCODE generateClusterCuts(
                if( totalviolationdelta > 0.0 )
                {
                   SCIP_Real cutrhs;
-                  SCIP_Real cutact;
+                  SCIP_Real cutefficacy;
                   SCIP_Bool success;
                   SCIP_Bool cutislocal;
+                  int cutnnz;
                   int cutrank;
 
                   /* we should not have too small deltas */
@@ -6561,15 +6548,19 @@ SCIP_RETCODE generateClusterCuts(
                   assert( !SCIPisZero(scip, 1.0/bestdelta) );
 
                   SCIPdebugMsg(scip, "applying MIR with delta = %g to flowcut inequality (violation improvement: %g)\n", bestdelta, totalviolationdelta);
-                  SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL,
-                        (int)MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC, rowweights, -1.0, NULL, -1, -1,
-                        NULL, 1.0/bestdelta, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
+
+                  SCIP_CALL( SCIPaggrRowSumRows(scip, aggrrow, rowweights, NULL, -1, sepadata->maxweightrange, SCIPsumepsilon(scip),
+                                                FALSE, ALLOWLOCAL, 2, (int)MAXAGGRLEN(nvars), &success) );
+
+                  SCIP_CALL( SCIPcalcMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, NULL, NULL, MINFRAC, MAXFRAC,
+                                   1.0/bestdelta, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &success) );
+
                   assert(ALLOWLOCAL || !cutislocal);
 
-                  if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
+                  if( success && SCIPisEfficacious(scip, cutefficacy) )
                   {
-                     SCIPdebugMsg(scip, " -> delta = %g  -> rhs: %g, act: %g\n", bestdelta, cutrhs, cutact);
-                     SCIP_CALL( addCut(scip, sepa, sepadata, sol, cutcoefs, cutrhs, cutislocal, cutrank, ncuts, cutoff) );
+                     SCIPdebugMsg(scip, " -> delta = %g  -> rhs: %g, efficacy: %g\n", bestdelta, cutrhs, cutefficacy);
+                     SCIP_CALL( addCut(scip, sepa, sepadata, sol, cutcoefs, cutrhs, cutinds, cutnnz, cutislocal, cutrank, ncuts, cutoff) );
                   }
                }
             }
@@ -6578,6 +6569,8 @@ SCIP_RETCODE generateClusterCuts(
    }
 
    /* free local memory */
+   SCIPaggrRowFree(scip, &aggrrow);
+   SCIPfreeBufferArray(scip, &cutinds);
    SCIPfreeBufferArray(scip, &cutcoefs);
    SCIPfreeBufferArray(scip, &comdemands);
    SCIPfreeBufferArray(scip, &comcutdemands);
