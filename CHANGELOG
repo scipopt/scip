@@ -9,6 +9,7 @@ parameters:
 - new parameter misc/debugsol to specify a debug solution that should be checked during the solve
 - fixed typo: heuristics/completesol/maxunkownrate has changed to heuristics/completesol/maxunknownrate
 - new parameters: beforepresol, maxlpiter, and maxcontvars in heur_completesol.c
+- new parameter: lp/refactorinterval to change the refactorization interval of the LP solver
 
 interface:
 - added method SCIPsetProbingLPState() to install given LP state and/or norms at the current probing node
