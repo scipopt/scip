@@ -15,8 +15,8 @@
 /*
 #define PRINTNODECONS
 #define SCIP_STATISTIC
-*/
 #define LAB_PRINT_BUFFER
+*/
 #define SCIP_DEBUG
 
 /**@file   branch_lookahead.c
@@ -72,9 +72,9 @@
 #ifdef SCIP_DEBUG
 #define LABdebugMessage(scip,lvl,...)        do                                                                        \
                                              {                                                                         \
-                                                SCIP_Bool inprobing = SCIPinProbing(scip);\
-                                                SCIPverbMessage(scip, lvl, NULL, "[%s:%4d] ", __FILE__, __LINE__);\
-                                                if( inprobing )\
+                                                SCIP_Bool __inprobing = SCIPinProbing(scip);\
+                                                SCIPverbMessage(scip, lvl, NULL, "[%s:%-4d] ", __FILE__, __LINE__);\
+                                                if( __inprobing )\
                                                 {\
                                                    SCIPverbMessage(scip, lvl, NULL, "Depth %i: ", SCIPgetProbingDepth(scip));\
                                                 }\
@@ -85,8 +85,14 @@
                                                 SCIPverbMessage(scip, lvl, NULL, __VA_ARGS__);\
                                              }\
                                              while( FALSE )
+#define LABdebugMessageCont(scip,lvl,...)    do\
+                                             {\
+                                                SCIPverbMessage(scip, lvl, NULL, __VA_ARGS__);\
+                                             }\
+                                             while( FALSE )
 #else
-#define LABdebugMessage(scip,lvl,msg,...)
+#define LABdebugMessage(scip,lvl,...)        /**/
+#define LABdebugMessageCont(scip,lvl,...)    /**/
 #endif
 #if 0
 enum SCIP_VerbLevel
@@ -106,28 +112,28 @@ typedef enum SCIP_VerbLevel SCIP_VERBLEVEL;
 #define LABallocBuffer(scip,ptr,name)           do                                                                        \
                                                 {                                                                         \
                                                    SCIP_CALL( SCIPallocBuffer(scip, ptr) );                               \
-                                                   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "+ Alloc %s in %p in line %i\n",           \
-                                                      name, (void*)*ptr, __LINE__);                                       \
+                                                   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL,                             \
+                                                      "+ Alloc %s in %p in line %i\n", name, (void*)*ptr, __LINE__);      \
                                                 }                                                                         \
                                                 while( FALSE )
 #define LABfreeBuffer(scip,ptr,name)            do                                                                        \
                                                 {                                                                         \
-                                                   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "- Free %s in %p in line %i\n",            \
-                                                      name, (void*)*ptr,__LINE__);                                        \
+                                                   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL,                             \
+                                                      "- Free %s in %p in line %i\n", name, (void*)*ptr,__LINE__);        \
                                                    SCIPfreeBuffer(scip, ptr);                                             \
                                                 }                                                                         \
                                                 while( FALSE )
 #define LABallocBufferArray(scip,ptr,size,name) do                                                                        \
                                                 {                                                                         \
                                                    SCIP_CALL( SCIPallocBufferArray(scip, ptr,size) );                     \
-                                                   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "+ Alloc array %s in %p in line %i\n",     \
-                                                      name, (void*)*ptr, size, __LINE__);                                 \
+                                                   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL,                             \
+                                                      "+ Alloc array %s in %p in line %i\n", name, (void*)*ptr, __LINE__);\
                                                 }                                                                         \
                                                 while( FALSE )
 #define LABfreeBufferArray(scip,ptr,name)       do                                                                        \
                                                 {                                                                         \
-                                                   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "- Free array %s in %p in line %i\n",      \
-                                                      name, (void*)*ptr, __LINE__);                                       \
+                                                   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL,                             \
+                                                      "- Free array %s in %p in line %i\n", name, (void*)*ptr, __LINE__); \
                                                    SCIPfreeBufferArray(scip, ptr);                                        \
                                                 }                                                                         \
                                                 while( FALSE )
@@ -1479,7 +1485,7 @@ void scoreContainerSetScore(
          lpiMemoryShallowCopy(scip, uplpimemory, scorecontainer->uplpimemories[probindex]);
       }
 
-      SCIPdebugMessage("Stored score <%g> for var <%s> in depth <%i>.\n", score, SCIPvarGetName(var), currentprobingdepth);
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Stored score <%g> for var <%s>.\n", score, SCIPvarGetName(var));
    }
 }
 
@@ -1911,27 +1917,27 @@ SCIP_RETCODE applyDomainReductions(
          SCIP_CALL( SCIPtightenVarLb(scip, var, proposedlowerbound, FALSE, &infeasible, &tightened) );
 
          newlowerbound = SCIPvarGetLbLocal(var);
-         SCIPdebugMessage("Variable <%s>, old lower bound <%g>, proposed lower bound <%g>, new lower bound <%g>\n",
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Variable <%s>, old lower bound <%g>, proposed lower bound <%g>, new lower bound <%g>\n",
             SCIPvarGetName(var), oldlowerbound, proposedlowerbound, newlowerbound);
 
          if( infeasible )
          {
             /* the domain reduction may result in an empty model (ub < lb) */
             *domredcutoff = TRUE;
-            SCIPdebugMessage("The domain reduction of variable <%s> resulted in an empty model.\n",
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The domain reduction of variable <%s> resulted in an empty model.\n",
                SCIPvarGetName(var));
          }
          else if( tightened )
          {
             /* the lb is now strictly greater than before */
-            SCIPdebugMessage("The lower bound of variable <%s> was successfully tightened.\n", SCIPvarGetName(var));
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The lower bound of variable <%s> was successfully tightened.\n", SCIPvarGetName(var));
             boundadded = TRUE;
             *domred = TRUE;
             SCIPstatistic( statistics->ndomredproofnodes += domreds->lowerboundnproofs[i]; )
 
             if( SCIPisLT(scip, baselpval, newlowerbound) )
             {
-               SCIPdebugMessage("The lower bound of variable <%s> is violated by the base lp value <%g>.\n",
+               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The lower bound of variable <%s> is violated by the base lp value <%g>.\n",
                   SCIPvarGetName(var), baselpval);
                boundaddedvio = TRUE;
             }
@@ -1954,27 +1960,27 @@ SCIP_RETCODE applyDomainReductions(
          SCIP_CALL( SCIPtightenVarUb(scip, var, proposedupperbound, FALSE, &infeasible, &tightened) );
 
          newupperbound = SCIPvarGetUbLocal(var);
-         SCIPdebugMessage("Variable <%s>, old upper bound <%g>, proposed upper bound <%g>, new upper bound <%g>\n",
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Variable <%s>, old upper bound <%g>, proposed upper bound <%g>, new upper bound <%g>\n",
             SCIPvarGetName(var), oldupperbound, proposedupperbound, newupperbound);
 
          if( infeasible )
          {
             /* the domain reduction may result in an empty model (ub < lb) */
             *domredcutoff = TRUE;
-            SCIPdebugMessage("The domain reduction of variable <%s> resulted in an empty model.\n",
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The domain reduction of variable <%s> resulted in an empty model.\n",
                SCIPvarGetName(var));
          }
          else if( tightened )
          {
             /* the ub is now strictly smaller than before */
-            SCIPdebugMessage("The upper bound of variable <%s> was successfully tightened.\n", SCIPvarGetName(var));
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The upper bound of variable <%s> was successfully tightened.\n", SCIPvarGetName(var));
             boundadded = TRUE;
             *domred = TRUE;
             SCIPstatistic( statistics->ndomredproofnodes += domreds->upperboundnproofs[i]; )
 
             if( SCIPisGT(scip, baselpval, newupperbound) )
             {
-               SCIPdebugMessage("The upper bound of variable <%s> is violated by the base lp value <%g>.\n",
+               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The upper bound of variable <%s> is violated by the base lp value <%g>.\n",
                   SCIPvarGetName(var), baselpval);
                boundaddedvio = TRUE;
             }
@@ -1999,7 +2005,7 @@ SCIP_RETCODE applyDomainReductions(
       statistics->ndomredvio += nboundsaddedvio;
    )
 
-   SCIPdebugMessage("Truly changed <%d> domains of the problem, <%d> of them are violated by the base lp.\n", nboundsadded,
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Truly changed <%d> domains of the problem, <%d> of them are violated by the base lp.\n", nboundsadded,
       nboundsaddedvio);
 
    return SCIP_OKAY;
@@ -2035,7 +2041,7 @@ SCIP_RETCODE branchOnVar(
    SCIP_NODE* downchild = NULL;
    SCIP_NODE* upchild = NULL;
 
-   SCIPdebugMessage("Effective branching on var <%s> with value <%g>. Old domain: [%g..%g].\n",
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Effective branching on var <%s> with value <%g>. Old domain: [%g..%g].\n",
       SCIPvarGetName(bestvar), bestval, SCIPvarGetLbLocal(bestvar), SCIPvarGetUbLocal(bestvar));
 
    assert(!SCIPisIntegral(scip, bestval));
@@ -2060,8 +2066,8 @@ SCIP_RETCODE branchOnVar(
       SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestdownvalid ? MAX(bestdown, provedbound) : provedbound) );
       SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestupvalid ? MAX(bestup, provedbound) : provedbound) );
    }
-   SCIPdebugMessage(" -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
-   SCIPdebugMessage(" -> up child's lowerbound: %g\n", SCIPnodeGetLowerbound(upchild));
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " -> up child's lowerbound: %g\n", SCIPnodeGetLowerbound(upchild));
 
    return SCIP_OKAY;
 }
@@ -2169,12 +2175,12 @@ SCIP_RETCODE executeBranching(
 #ifdef SCIP_DEBUG
    if( downbranching )
    {
-      SCIPdebugMessage("DownBranching: Var=<%s>, Proposed upper bound=<%g>, old bounds=[<%g>..<%g>], new bounds=[<%g>..<%g>]\n",
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "DownBranching: Var=<%s>, Proposed upper bound=<%g>, old bounds=[<%g>..<%g>], new bounds=[<%g>..<%g>]\n",
          SCIPvarGetName(branchvar), newbound, oldlowerbound, oldupperbound, oldlowerbound, newbound);
    }
    else
    {
-      SCIPdebugMessage("UpBranching: Var=<%s>, Proposed lower bound=<%g>, old bounds=[<%g>..<%g>], new bounds=[<%g>..<%g>]\n",
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "UpBranching: Var=<%s>, Proposed lower bound=<%g>, old bounds=[<%g>..<%g>], new bounds=[<%g>..<%g>]\n",
          SCIPvarGetName(branchvar), newbound, oldlowerbound, oldupperbound, newbound, oldupperbound);
    }
 #endif
@@ -2379,7 +2385,7 @@ SCIP_RETCODE addBinaryConstraint(
       SCIP_VAR** negatedvars;
       SCIP_Real lhssum = 0;
 
-      SCIPdebugMessage("Adding binary constraint for <%i> vars.\n", binconsdata->binaryvars->nbinaryvars);
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Adding binary constraint for <%i> vars.\n", binconsdata->binaryvars->nbinaryvars);
 
       LABallocBufferArray(scip, &negatedvars, binconsdata->binaryvars->nbinaryvars, "NEGATED_VARS");
 
@@ -2440,7 +2446,7 @@ SCIP_RETCODE applyBinaryConstraints(
 {
    int i;
 
-   SCIPdebugMessage("Adding <%i> binary constraints.\n", conslist->nconstraints);
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Adding <%i> binary constraints.\n", conslist->nconstraints);
 
    /* backwards to release the constraints in the reverse order of their creation. TODO: needed? */
    for( i = conslist->nconstraints-1; i >= 0; i-- )
@@ -2476,7 +2482,6 @@ SCIP_Bool areBoundsChanged(
    SCIP_Real             upperbound
    )
 {
-   //SCIPdebugMessage("Bound change? Var: %s, SCIP LB: %g, My LB: %g, SCIP UB: %g, My UB: %g\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), lowerbound, SCIPvarGetUbLocal(var), upperbound);
    return SCIPvarGetLbLocal(var) != lowerbound || SCIPvarGetUbLocal(var) != upperbound;
 }
 
@@ -2726,9 +2731,9 @@ SCIP_RETCODE getBestCandidates(
    assert(scorecontainer != NULL);
    SCIPstatistic(assert(statistics != NULL));
 
-   SCIPdebugMessage("All nlpcands: %i\n", possiblecandidates->ncandidates);
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "All nlpcands: %i\n", possiblecandidates->ncandidates);
    nusedcands = MIN(config->maxncands, possiblecandidates->ncandidates);
-   SCIPdebugMessage("Used nlpcands: %i\n", nusedcands);
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Used nlpcands: %i\n", nusedcands);
 
    probingdepth = SCIPinProbing(scip) ? SCIPgetProbingDepth(scip) : 0;
 
@@ -2778,7 +2783,7 @@ SCIP_RETCODE getBestCandidates(
             }
          }
 
-         SCIPdebugMessage("Calculating the FSB result to get a score for the remaining candidates.\n")
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Calculating the FSB result to get a score for the remaining candidates.\n")
          /* Calculate all FSB scores and collect it in the result */;
 #ifdef SCIP_STATISTIC
          SCIP_CALL( getFSBResult(scip, config, lpobjval, unscoredcandidates, status, scorecontainer, statistics) );
@@ -2800,7 +2805,7 @@ SCIP_RETCODE getBestCandidates(
       container->candidatelist = possiblecandidates;
       container->scorecontainer = scorecontainer;
 
-      SCIPdebugMessage("Sorting the candidates w.r.t. their FSB score.\n");
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Sorting the candidates w.r.t. their FSB score.\n");
       /* sort the branching candidates according to their FSB score contained in the result struct */
       SCIPsortDown(permutation, scoreSortContainerScoreComp, container, possiblecandidates->ncandidates);
 
@@ -2808,7 +2813,7 @@ SCIP_RETCODE getBestCandidates(
    }
 
    SCIPdebug(
-      SCIPdebugMessage("All %i candidates, sorted by their FSB score:\n", possiblecandidates->ncandidates);
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "All %i candidates, sorted by their FSB score:\n", possiblecandidates->ncandidates);
       for( i = 0; i < possiblecandidates->ncandidates; i++ )
       {
          int sortedindex = permutation[i];
@@ -2817,11 +2822,11 @@ SCIP_RETCODE getBestCandidates(
 
          assert(var != NULL);
 
-         SCIPdebugMessage(" Index %2i: Var %s Score %g\n", i, SCIPvarGetName(var), score);
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " Index %2i: Var %s Score %g\n", i, SCIPvarGetName(var), score);
       }
    )
 
-   SCIPdebugMessage("Best %i candidates used for the lookahead branching:\n", bestcandidates->ncandidates);
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Best %i candidates used for the lookahead branching:\n", bestcandidates->ncandidates);
    for( i = 0; i < nusedcands; i++)
    {
       CANDIDATE* candidate = bestcandidates->candidates[i];
@@ -2843,7 +2848,7 @@ SCIP_RETCODE getBestCandidates(
          lpiMemoryShallowCopy(scip, scorecontainer->uplpimemories[probindex], candidate->uplpimemory);
       }
 
-      SCIPdebugMessage(" Index %2i: Var %s Val %g\n", i, SCIPvarGetName(candidate->branchvar), candidate->branchval);
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " Index %2i: Var %s Val %g\n", i, SCIPvarGetName(candidate->branchvar), candidate->branchval);
    }
 
    /* free the allocated resources */
@@ -2886,7 +2891,7 @@ SCIP_RETCODE getCandidates(
    if( config->abbreviated /*&& (!SCIPinProbing(scip) || SCIPgetProbingDepth(scip) == 0)*/ )
    {
       /* call LAB with depth 1 to get the best (w.r.t. FSB score) candidates */
-      SCIPdebugMessage("Getting the branching candidates by selecting the best (at most) %i candidates\n", config->maxncands);
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Getting the branching candidates by selecting the best (at most) %i candidates\n", config->maxncands);
 #ifdef SCIP_STATISTIC
       SCIP_CALL( getBestCandidates(scip, config, status, possiblecandidates, candidates, scorecontainer, statistics) );
 #else
@@ -2896,7 +2901,7 @@ SCIP_RETCODE getCandidates(
    else
    {
       /* get all candidates for the current node lp solution */
-      SCIPdebugMessage("Getting the branching candidates by selecting all candidates.\n");
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Getting the branching candidates by selecting all candidates.\n");
       SCIP_CALL( copyCandidates(scip, possiblecandidates, candidates, isReuseLPIInformation(config)) );
    }
 
@@ -2948,7 +2953,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
       SCIP_CALL( binaryVarListAppend(scip, binconsdata->binaryvars, negbranchvar) );
    }
 
-   SCIPdebugMessage("Depth <%i>, Started down branching on var <%s> with 'val < %g' and bounds [<%g>..<%g>]\n", probingdepth, SCIPvarGetName(branchvar), branchval,
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Started down branching on var <%s> with 'val < %g' and bounds [<%g>..<%g>]\n", SCIPvarGetName(branchvar), branchval,
       SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar));
 
    niterations = SCIPgetNLPIterations(scip);
@@ -2957,16 +2962,16 @@ SCIP_RETCODE executeDownBranchingRecursive(
       statistics->nlpssolved[probingdepth]++;
       statistics->nlpiterations[probingdepth] += SCIPgetNLPIterations(scip)-niterations;
    )
-   SCIPdebugMessage("Solving the LP took %"SCIP_LONGINT_FORMAT" iterations.\n", (SCIPgetNLPIterations(scip)-niterations));
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Solving the LP took %"SCIP_LONGINT_FORMAT" iterations.\n", (SCIPgetNLPIterations(scip)-niterations));
 
    SCIPdebug(
       if( downbranchingresult->cutoff )
       {
-         SCIPdebugMessage("Depth <%i>, The solved LP was infeasible and as such is cutoff\n", probingdepth);
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The solved LP was infeasible and as such is cutoff\n");
       }
       else
       {
-         SCIPdebugMessage("Depth <%i>, The solved LP was feasible and has an objval <%g>\n", probingdepth,
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The solved LP was feasible and has an objval <%g>\n",
             downbranchingresult->objval);
       }
    )
@@ -2990,7 +2995,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
 
          SCIP_CALL( candidateListGetAllFractionalCandidates(scip, &deepercandidates, isReuseLPIInformation(config)) );
 
-         SCIPdebugMessage("Depth <%i>, Downbranching has <%i> candidates.\n", probingdepth, deepercandidates->ncandidates);
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Downbranching has <%i> candidates.\n", deepercandidates->ncandidates);
 
          if( deepercandidates->ncandidates > 0 )
          {
@@ -3051,7 +3056,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
                   downbranchingresult->cutoff = deeperstatus->cutoff;
                   SCIPstatistic( localstats->ncutoffproofnodes += deeperlocalstats->ncutoffproofnodes; )
 
-                  SCIPdebugMessage("Depth <%i>, Both deeper children were cutoff, so the down branch is cutoff\n", probingdepth);
+                  LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Both deeper children were cutoff, so the down branch is cutoff\n", probingdepth);
                }
 
 #ifdef SCIP_STATISTIC
@@ -3140,7 +3145,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
       SCIP_CALL( binaryVarListAppend(scip, binconsdata->binaryvars, branchvar) );
    }
 
-   SCIPdebugMessage("Depth <%i>, Started up branching on var <%s> with 'val > %g' and bounds [<%g>..<%g>]\n", probingdepth, SCIPvarGetName(branchvar), branchval,
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Started up branching on var <%s> with 'val > %g' and bounds [<%g>..<%g>]\n", SCIPvarGetName(branchvar), branchval,
       SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar));
 
    niterations = SCIPgetNLPIterations(scip);
@@ -3149,16 +3154,16 @@ SCIP_RETCODE executeUpBranchingRecursive(
       statistics->nlpssolved[probingdepth]++;
       statistics->nlpiterations[probingdepth] += SCIPgetNLPIterations(scip)-niterations;
    )
-   SCIPdebugMessage("Solving the LP took %"SCIP_LONGINT_FORMAT" iterations.\n", (SCIPgetNLPIterations(scip)-niterations));
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Solving the LP took %"SCIP_LONGINT_FORMAT" iterations.\n", (SCIPgetNLPIterations(scip)-niterations));
 
    SCIPdebug(
       if( upbranchingresult->cutoff )
       {
-         SCIPdebugMessage("Depth <%i>, The solved LP was infeasible and as such cutoff\n", probingdepth);
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The solved LP was infeasible and as such cutoff\n", probingdepth);
       }
       else
       {
-         SCIPdebugMessage("Depth <%i>, The solved LP feasible and has an objval <%g>\n", probingdepth,
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The solved LP feasible and has an objval <%g>\n",
             upbranchingresult->objval);
       }
    )
@@ -3182,7 +3187,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
 
          SCIP_CALL( candidateListGetAllFractionalCandidates(scip, &deepercandidates, isReuseLPIInformation(config)) );
 
-         SCIPdebugMessage("Depth <%i>, Upbranching has <%i> candidates.\n", probingdepth, deepercandidates->ncandidates);
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Upbranching has <%i> candidates.\n", deepercandidates->ncandidates);
 
          if( deepercandidates->ncandidates > 0 )
          {
@@ -3205,7 +3210,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
             /* the status may have changed because of FSB to get the best candidates */
             if( isBranchFurther(status, config) )
             {
-               SCIPdebugMessage("Now the objval is <%g>\n", upbranchingresult->objval);
+               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Now the objval is <%g>\n", upbranchingresult->objval);
 
                SCIP_CALL( statusAllocate(scip, &deeperstatus) );
 
@@ -3246,7 +3251,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
                      localstats->ncutoffproofnodes += deeperlocalstats->ncutoffproofnodes;
                   )
 
-                  SCIPdebugMessage("Depth <%i>, Both deeper children were cutoff, so the up branch is cutoff\n", probingdepth);
+                  LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Both deeper children were cutoff, so the up branch is cutoff\n", probingdepth);
                }
 
 #ifdef SCIP_STATISTIC
@@ -3338,7 +3343,7 @@ SCIP_RETCODE selectVarRecursive(
 
    if( !config->forcebranching && nlpcands == 1 )
    {
-      SCIPdebugMessage("Only one candidate (<%s>) is given. This one is chosen without calculations.\n", SCIPvarGetName(decision->var));
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Only one candidate (<%s>) is given. This one is chosen without calculations.\n", SCIPvarGetName(decision->var));
       SCIPstatistic( statistics->nsinglecandidate[probingdepth]++; )
    }
    else
@@ -3347,7 +3352,7 @@ SCIP_RETCODE selectVarRecursive(
       if( SCIP_MAXTREEDEPTH <= (SCIPgetDepth(scip) + recursiondepth) )
       {
          /* we need at least 'recursiondepth' space for the branching */
-         SCIPdebugMessage("Cannot perform probing in selectVarRecursive, depth limit reached. Current:<%i>, Max:<%i>\n",
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Cannot perform probing in selectVarRecursive, depth limit reached. Current:<%i>, Max:<%i>\n",
             SCIP_MAXTREEDEPTH, SCIPgetDepth(scip) + recursiondepth);
          status->depthtoosmall = TRUE;
          SCIPstatistic( statistics->ndepthreached++; )
@@ -3372,18 +3377,17 @@ SCIP_RETCODE selectVarRecursive(
 
          SCIP_CALL( SCIPgetLPI(scip, &lpi) );
 
-         SCIPdebugMessage("Started selectVarRecursive with <%i> candidates: [", nlpcands);
          SCIPdebug(
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Started selectVarRecursive with <%i> candidates: [", nlpcands);
             for( i = 0; i < nlpcands; i++ )
             {
-
-               SCIPinfoMessage(scip, NULL, "%s", SCIPvarGetName(candidates->candidates[i]->branchvar));
+               LABdebugMessageCont(scip, SCIP_VERBLEVEL_HIGH, "%s", SCIPvarGetName(candidates->candidates[i]->branchvar));
                if(i != nlpcands-1)
                {
-                  SCIPinfoMessage(scip, NULL, ", ");
+                  LABdebugMessageCont(scip, SCIP_VERBLEVEL_HIGH, ", ");
                }
             }
-            SCIPinfoMessage(scip, NULL, "]\n");
+            LABdebugMessageCont(scip, SCIP_VERBLEVEL_HIGH, "]\n");
          )
 
          for( i = 0, c = persistent ? persistent->restartindex : 0; i < nlpcands && isBranchFurther(status, config) && !SCIPisStopped(scip); i++, c++ )
@@ -3425,14 +3429,14 @@ SCIP_RETCODE selectVarRecursive(
                useoldbranching = TRUE;
                SCIPstatistic( statistics->noldbranchused[probingdepth]++; )
 
-               SCIPdebugMessage("Depth <%i>, Used old branching results for the up and down branches of <%s>.\n", probingdepth, SCIPvarGetName(branchvar));
+               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Used old branching results for the up and down branches of <%s>.\n", SCIPvarGetName(branchvar));
             }
             else
             {
                DOMAINREDUCTIONS* downdomainreductions;
                DOMAINREDUCTIONS* updomainreductions;
 
-               SCIPdebugMessage("Depth <%i>, Started branching on var <%s> with val <%g> and bounds [<%g>..<%g>]\n", probingdepth, SCIPvarGetName(branchvar), branchval,
+               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Started branching on var <%s> with val <%g> and bounds [<%g>..<%g>]\n", SCIPvarGetName(branchvar), branchval,
                   SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar));
 
                if( SCIPvarGetLbLocal(branchvar) > branchval || SCIPvarGetUbLocal(branchvar) < branchval )
@@ -3508,7 +3512,7 @@ SCIP_RETCODE selectVarRecursive(
                {
                   SCIP_Real score = SCIPinfinity(scip);
 
-                  SCIPdebugMessage("Depth <%i>, Both branches cutoff\n", probingdepth);
+                  LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Both branches cutoff\n");
 
                   /* in a higher level this cutoff may be transferred as a domain reduction/valid bound */
                   status->cutoff = TRUE;
@@ -3531,7 +3535,7 @@ SCIP_RETCODE selectVarRecursive(
                      downbranchingresult->objval;
                   SCIP_Real score = MAX(0, downdualbound - lpobjval);
 
-                  SCIPdebugMessage("Depth <%i>, Up branch cutoff\n", probingdepth);
+                  LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Up branch cutoff\n");
 
                   SCIPstatistic(
                      statistics->nsinglecutoffs[probingdepth]++;
@@ -3561,7 +3565,7 @@ SCIP_RETCODE selectVarRecursive(
                      upbranchingresult->objval;
                   SCIP_Real score = MAX(0, updualbound - lpobjval);
 
-                  SCIPdebugMessage("Depth <%i>, Up branch cutoff\n", probingdepth);
+                  LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Up branch cutoff\n");
 
                   SCIPstatistic(
                      statistics->nsinglecutoffs[probingdepth]++;
@@ -3591,7 +3595,7 @@ SCIP_RETCODE selectVarRecursive(
                   SCIP_Real upgain;
                   SCIP_Real score;
 
-                  SCIPdebugMessage("Depth <%i>, Neither branch is cutoff and no limit reached.\n", probingdepth);
+                  LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Neither branch is cutoff and no limit reached.\n");
 
                   /* TODO: currently scoring function is best gain. Maybe make it more generic? */
                   /* TODO: what if the dualbounds are not valid? Can this happen here? */
@@ -3612,7 +3616,7 @@ SCIP_RETCODE selectVarRecursive(
 
                   if( SCIPisGT(scip, score, bestscore) )
                   {
-                     SCIPdebugMessage("Depth <%i>, Old best var <%s> with LB <%g> and UB <%g>\n", probingdepth, SCIPvarGetName(decision->var), bestscorelowerbound, bestscoreupperbound);
+                     LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Old best var <%s> with LB <%g> and UB <%g>\n", SCIPvarGetName(decision->var), bestscorelowerbound, bestscoreupperbound);
 
                      bestscore = score;
 
@@ -3626,7 +3630,7 @@ SCIP_RETCODE selectVarRecursive(
                      bestscorelowerbound = SCIPvarGetLbLocal(decision->var);
                      bestscoreupperbound = SCIPvarGetUbLocal(decision->var);
 
-                     SCIPdebugMessage("Depth <%i>, New best var <%s> with LB <%g> and UB <%g>\n", probingdepth, SCIPvarGetName(decision->var), bestscorelowerbound, bestscoreupperbound);
+                     LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "New best var <%s> with LB <%g> and UB <%g>\n", SCIPvarGetName(decision->var), bestscorelowerbound, bestscoreupperbound);
                   }
 
                   if( upbranchingresult->dualboundvalid && downbranchingresult->dualboundvalid )
@@ -3650,13 +3654,13 @@ SCIP_RETCODE selectVarRecursive(
                      if( config->usebincons )
                      {
                         nimpliedbincons = binconsdata->createdconstraints->nviolatedcons;
-                        SCIPdebugMessage("Depth <%i>, Found <%i> violating binary constraints.\n", probingdepth, nimpliedbincons);
+                        LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found <%i> violating binary constraints.\n", nimpliedbincons);
                      }
 
                      if( config->usedomainreduction )
                      {
                         ndomreds = domainreductions->nviolatedvars;
-                        SCIPdebugMessage("Depth <%i>, Found <%i> violating bound changes.\n", probingdepth, ndomreds);
+                        LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found <%i> violating bound changes.\n", ndomreds);
                      }
 
                      if( nimpliedbincons + ndomreds > config->maxnviolatedcons )
@@ -3688,7 +3692,7 @@ SCIP_RETCODE selectVarRecursive(
                status->propagationdomred = TRUE;
                SCIPstatistic( statistics->npropdomred[probingdepth]++; )
 
-               SCIPdebugMessage("Depth <%i>, Found a domain reduction via the domain propagation of SCIP.\n", probingdepth);
+               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found a domain reduction via the domain propagation of SCIP.\n");
             }
          }
 
@@ -3771,7 +3775,7 @@ SCIP_RETCODE selectVarStart(
             SCIP_CALL( binConsDataAllocate(scip, &binconsdata, recursiondepth, SCIPceil(scip, 0.5*candidates->ncandidates)) );
          }
 
-         SCIPdebugMessage("About to start probing.\n");
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "About to start probing.\n");
          SCIPstartProbing(scip);
          SCIPenableVarHistory(scip);
       }
@@ -3787,9 +3791,9 @@ SCIP_RETCODE selectVarStart(
       if( !inprobing )
       {
          SCIPendProbing(scip);
-         SCIPdebugMessage("Ended probing.\n");
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Ended probing.\n");
 
-         SCIPdebugMessage("Applying found data to the base node.\n");
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applying found data to the base node.\n");
 
          if( persistent != NULL && config->storeunviolatedsol && (
             (config->usebincons && binconsdata->createdconstraints->nconstraints > 0 && binconsdata->createdconstraints->nviolatedcons == 0)
@@ -3805,7 +3809,7 @@ SCIP_RETCODE selectVarStart(
          {
             SCIP_NODE* basenode;
 
-            SCIPdebugMessage("Applying binary constraints to the base node.\n");
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applying binary constraints to the base node.\n");
 
             assert(binconsdata->binaryvars->nbinaryvars == 0);
 
@@ -3824,7 +3828,7 @@ SCIP_RETCODE selectVarStart(
          {
             if( !status->lperror && !status->depthtoosmall && !status->cutoff )
             {
-               SCIPdebugMessage("Applying domain reductions to the base node.\n");
+               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applying domain reductions to the base node.\n");
 #ifdef SCIP_STATISTIC
                SCIP_CALL( applyDomainReductions(scip, baselpsol, domainreductions, &status->domredcutoff, &status->domred, statistics) );
 #else
@@ -3835,7 +3839,7 @@ SCIP_RETCODE selectVarStart(
          }
       }
 
-      SCIPdebugMessage("Applied found data to the base node.\n");
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applied found data to the base node.\n");
    }
 
    SCIP_CALL( candidateListFree(scip, &candidates) );
@@ -3881,13 +3885,13 @@ SCIP_RETCODE usePreviousResult(
    SCIP_Bool*            result              /**< the pointer to the branching result */
    )
 {
-   SCIPdebugMessage("Branching based on previous solution.\n");
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Branching based on previous solution.\n");
 
    /* execute the actual branching */
    SCIP_CALL( branchOnVar(scip, decision) );
    *result = SCIP_BRANCHED;
 
-   SCIPdebugMessage("Result: Branched based on previous solution. Variable <%s>\n",
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Branched based on previous solution. Variable <%s>\n",
       SCIPvarGetName(decision->var));
 
    /* reset the var pointer, as this is our indicator whether we should branch on prev data in the next call */
@@ -4075,12 +4079,15 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_SOL* baselpsol = NULL;
 
+   /* TODO: fix this, broken in src/scip/heur_rens.c:488 */
+   SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", 5) );
+
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Entering branchExeclpLookahead.\n");
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Entering branchExeclpLookahead.\n");
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
@@ -4094,7 +4101,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    {
       /* create a copy of the current lp solution to compare it with a previously  */
       SCIP_CALL( copyCurrentSolution(scip, &baselpsol) );
-      SCIPdebugMessage("Created an unlinked copy of the base lp solution.\n");
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Created an unlinked copy of the base lp solution.\n");
    }
 
    if( branchruledata->config->storeunviolatedsol && (branchruledata->config->usebincons || branchruledata->config->usedomainreduction)
@@ -4122,7 +4129,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       SCIP_CALL( scoreContainerAllocate(scip, &scorecontainer, isReuseLPIInformation(branchruledata->config)) );
       SCIP_CALL( candidateListGetAllFractionalCandidates(scip, &allcandidates, isReuseLPIInformation(branchruledata->config)) );
 
-      SCIPdebugMessage("The base lp has <%i> variables with fractional value.\n", allcandidates->ncandidates);
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The base lp has <%i> variables with fractional value.\n", allcandidates->ncandidates);
 
       lpobjval = SCIPgetLPObjval(scip);
 
@@ -4150,8 +4157,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       }
       else if( status->domred || status->propagationdomred )
       {
-         SCIPdebugMessage("domred: %s\n", status->domred ? "true" : "false");
-         SCIPdebugMessage("propagationdomred: %s\n", status->propagationdomred ? "true" : "false");
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "domred: %s\n", status->domred ? "true" : "false");
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "propagationdomred: %s\n", status->propagationdomred ? "true" : "false");
          *result = SCIP_REDUCEDDOM;
       }
       else if( status->lperror )
@@ -4159,7 +4166,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          *result = SCIP_DIDNOTFIND;
       }
 
-      SCIPdebugMessage("Result before branching is %s\n", getStatusString(*result));
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result before branching is %s\n", getStatusString(*result));
 
       if( *result != SCIP_CUTOFF /* a variable could not be branched in any direction or any of the calculated domain
                                   * reductions was infeasible */
@@ -4171,7 +4178,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          /*&& (0 <= bestcand && bestcand < nlpcands)*/ /* no valid candidate index could be found */
          )
       {
-         SCIPdebugMessage(" -> %d candidates, variable <%s> (solval=%g)\n",
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " -> %d candidates, variable <%s> (solval=%g)\n",
             allcandidates->ncandidates, SCIPvarGetName(decision->var), decision->val);
 
          /* execute the branching as a result of the branching logic */
@@ -4180,36 +4187,36 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          *result = SCIP_BRANCHED;
       }
 
-      SCIPdebugMessage("Result after branching is %s\n", getStatusString(*result));
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result after branching is %s\n", getStatusString(*result));
 
       SCIPstatistic(
          if( *result == SCIP_BRANCHED )
          {
-            SCIPdebugMessage("Result: Finished LookaheadBranching by branching.\n");
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Finished LookaheadBranching by branching.\n");
          }
          else if( *result == SCIP_REDUCEDDOM )
          {
-            SCIPdebugMessage("Result: Finished LookaheadBranching by reducing domains.\n");
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Finished LookaheadBranching by reducing domains.\n");
          }
          else if( *result == SCIP_CUTOFF )
          {
-            SCIPdebugMessage("Result: Finished LookaheadBranching by cutting of, as the current problem is infeasible.\n");
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Finished LookaheadBranching by cutting of, as the current problem is infeasible.\n");
          }
          else if( *result == SCIP_CONSADDED )
          {
-            SCIPdebugMessage("Result: Finished LookaheadBranching by adding constraints.\n");
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Finished LookaheadBranching by adding constraints.\n");
          }
          else if( *result == SCIP_DIDNOTFIND )
          {
-            SCIPdebugMessage("Result: An error occurred during the solving of one of the lps.\n");
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: An error occurred during the solving of one of the lps.\n");
          }
          else if( status->depthtoosmall )
          {
-            SCIPdebugMessage("Result: The branching depth wasn't high enough for a 2 level branching.\n");
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: The branching depth wasn't high enough for a 2 level branching.\n");
          }
          else
          {
-            SCIPdebugMessage("Result: Could not find any variable to branch on.\n");
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result: Could not find any variable to branch on.\n");
             SCIPABORT();
          }
       )
@@ -4233,7 +4240,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       branchruledata->statistics->nresults[*result]++;
    )
 
-   SCIPdebugMessage("Exiting branchExeclpLookahead.\n");
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Exiting branchExeclpLookahead.\n");
 
    return SCIP_OKAY;
 }
