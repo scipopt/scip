@@ -70,6 +70,12 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    int                   sidetype            /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
    );
 
+/** clear all entries int the aggregation row but don't free memory */
+extern
+void SCIPaggrRowClear(
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
 /** aggregate rows using the given weights; the current content of the aggregation
  *  row gets overwritten
  */

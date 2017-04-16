@@ -383,6 +383,22 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    return SCIP_OKAY;
 }
 
+/** clear all entries int the aggregation row but don't free memory */
+void SCIPaggrRowClear(
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   )
+{
+   aggrrow->nnz = 0;
+   aggrrow->nrows = 0;
+   aggrrow->rank = 0;
+   aggrrow->rhs = 0.0;
+   aggrrow->local = FALSE;
+}
+
+/* static function to add one row without clearing the varpos array
+ * so that multiple rows can be added using the same varpos array
+ * which is only cleared in the end
+ */
 static
 SCIP_RETCODE addOneRow(
    SCIP*                 scip,               /**< SCIP datastructure */
@@ -570,11 +586,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    minabsweight = SCIPinfinity(scip);
    maxabsweight = -SCIPinfinity(scip);
 
-   aggrrow->nnz = 0;
-   aggrrow->nrows = 0;
-   aggrrow->rank = 0;
-   aggrrow->rhs = 0.0;
-   aggrrow->local = FALSE;
+   SCIPaggrRowClear(aggrrow);
 
    if( rowinds != NULL && nrowinds > -1 )
    {

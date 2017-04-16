@@ -305,7 +305,8 @@ struct AggregationData {
    int                   naggrrows;          /**< occupied positions in aggrrows array */
    int*                  aggrrowsstart;      /**< array with start positions of suitable rows for substitution for each continous variable with non-zero bound distance */
    int*                  ngoodaggrrows;      /**< array with number of rows suitable for substitution that only contain one continuous variable that is not at it's bound */
-   int*                  nbadvarsinrow;
+   int*                  nbadvarsinrow;      /**< number of continuous variables that are not at their bounds for each row */
+   SCIP_AGGRROW*         aggrrow;            /**< store aggregation row here so that it can be reused */
 } AGGREGATIONDATA;
 
 static
@@ -330,6 +331,7 @@ SCIP_RETCODE setupAggregationData(
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->ngoodaggrrows, ncontvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->aggrrowsstart, ncontvars + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->nbadvarsinrow, nrows) );
+   SCIP_CALL( SCIPaggrRowCreate(scip, &aggrdata->aggrrow) );
    BMSclearMemoryArray(aggrdata->nbadvarsinrow, nrows);
 
    aggrdata->nbounddistvars = 0;
@@ -467,6 +469,7 @@ void destroyAggregationData(
    AGGREGATIONDATA*      aggrdata
    )
 {
+   SCIPaggrRowFree(scip, &aggrdata->aggrrow);
    SCIPfreeBufferArrayNull(scip, &aggrdata->aggrrowscoef);
    SCIPfreeBufferArrayNull(scip, &aggrdata->aggrrows);
    SCIPfreeBufferArray(scip, &aggrdata->nbadvarsinrow);
@@ -789,7 +792,6 @@ SCIP_RETCODE aggregation(
    int*                  ncuts               /**< pointer to count the number of generated cuts */
    )
 {
-   SCIP_AGGRROW* aggrrow;
    SCIP_COL** cols;
    SCIP_VAR** vars;
    SCIP_ROW** rows;
@@ -841,8 +843,6 @@ SCIP_RETCODE aggregation(
    /* calculate maximal number of non-zeros in aggregated row */
    maxaggrnonzs = (int)(sepadata->maxaggdensity * ncols) + sepadata->densityoffset;
 
-   SCIP_CALL( SCIPaggrRowCreate(scip, &aggrrow) );
-
    startrowact = SCIPgetRowSolActivity(scip, rows[startrow], sol);
    {
 
@@ -851,7 +851,7 @@ SCIP_RETCODE aggregation(
       else
          startweight = 1.0;
 
-      SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, rows[startrow], negate ? -startweight : startweight, 0) );
+      SCIP_CALL( SCIPaggrRowAddRow(scip, aggrdata->aggrrow, rows[startrow], negate ? -startweight : startweight, 0) );
    }
 
    /* decrease score of startrow in order to not aggregate it again too soon */
@@ -878,10 +878,10 @@ SCIP_RETCODE aggregation(
        */
 
       flowcoverefficacy =  -SCIPinfinity(scip);
-      SCIP_CALL( SCIPcalcFlowCover(scip, sol, BOUNDSWITCH, ALLOWLOCAL, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &flowcoverefficacy, &cutrank, &cutislocal, &flowcoversuccess) );
+      SCIP_CALL( SCIPcalcFlowCover(scip, sol, BOUNDSWITCH, ALLOWLOCAL, aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &flowcoverefficacy, &cutrank, &cutislocal, &flowcoversuccess) );
 
       cutefficacy = flowcoverefficacy;
-      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, NULL, NULL, MINFRAC, MAXFRAC, aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &cmirsuccess) );
+      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, NULL, NULL, MINFRAC, MAXFRAC, aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &cmirsuccess) );
 
       oldncuts = *ncuts;
 
@@ -916,10 +916,10 @@ SCIP_RETCODE aggregation(
          break;
       }
 
-      SCIP_CALL( aggregateNextRow(scip, sepadata, maxconts, rowlhsscores, rowrhsscores, aggrdata, aggrrow, &naggrs, &aggrsuccess) );
+      SCIP_CALL( aggregateNextRow(scip, sepadata, maxconts, rowlhsscores, rowrhsscores, aggrdata, aggrdata->aggrrow, &naggrs, &aggrsuccess) );
 
       /* no suitable aggregation was found or number of non-zeros is now too large so abort */
-      if( ! aggrsuccess || SCIPaggrRowGetNNz(aggrrow) > maxaggrnonzs || SCIPaggrRowGetNNz(aggrrow) == 0 )
+      if( ! aggrsuccess || SCIPaggrRowGetNNz(aggrdata->aggrrow) > maxaggrnonzs || SCIPaggrRowGetNNz(aggrdata->aggrrow) == 0 )
       {
          break;
       }
@@ -928,7 +928,7 @@ SCIP_RETCODE aggregation(
          naggrcontnonzs, nactiveconts, maxconts, naggrcontnonzs + naggrintnonzs, maxaggrnonzs, naggrs, maxaggrs);
    }
 
-   SCIPaggrRowFree(scip, &aggrrow);
+   SCIPaggrRowClear(aggrdata->aggrrow);
 
    return SCIP_OKAY;
 }
