@@ -74,7 +74,7 @@ MAXJOBS         =       1
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=   	4.0.0.1
+SCIP_VERSION	=	4.0.0.1
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -109,6 +109,9 @@ endif
 
 #will this be compiled for parascip, necessary for dbg-builds and cppad to make it threadsafe
 PARASCIP	=	false
+
+# enable debug-solution mechanism
+DEBUGSOL =  false
 
 # third party compiling parameters
 OPENSOURCE   	=	true
@@ -305,7 +308,6 @@ FLAGS		+=	-DNPARASCIP
 else
 LDFLAGS 	+=	-lpthread
 endif
-
 
 #-----------------------------------------------------------------------------
 # LP Solver Interface

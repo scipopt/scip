@@ -3877,7 +3877,7 @@ SCIP_RETCODE copyConsPseudoboolean(
             oldcons = consanddata->cons;
             assert(oldcons != NULL);
 
-            targetandresultant = SCIPhashmapGetImage(varmap, SCIPgetResultantAnd(sourcescip, oldcons));
+            targetandresultant = (SCIP_VAR*) SCIPhashmapGetImage(varmap, SCIPgetResultantAnd(sourcescip, oldcons));
             assert(targetandresultant != NULL);
 
             /* if compressed copying is active, the resultant might not have been copied by the linear

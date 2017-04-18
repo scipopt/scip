@@ -3233,7 +3233,7 @@ SCIP_RETCODE propagateLowerbound(
 #endif
 
    /* if the maximum pseudo objective activity is smaller than the lower bound the problem is infeasible */
-   if( SCIPisLT(scip, maxpseudoobjact, lowerbound) )
+   if( SCIPisDualfeasLT(scip, maxpseudoobjact, lowerbound) )
       cutoff = TRUE;
    else
    {
