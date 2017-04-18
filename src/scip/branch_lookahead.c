@@ -2699,6 +2699,7 @@ SCIP_DECL_SORTINDCOMP(scoreSortContainerScoreComp)
    }
 }
 
+#ifdef SCIP_DEBUG
 static
 void printCandidates(
    SCIP*                 scip,
@@ -2726,6 +2727,7 @@ void printCandidates(
    }
    LABdebugMessageCont(scip, lvl, "]\n");
 }
+#endif
 
 static
 SCIP_RETCODE getBestCandidates(
