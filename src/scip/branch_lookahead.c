@@ -13,11 +13,11 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*
-#define PRINTNODECONS
 #define LAB_PRINT_BUFFER
 #define SCIP_DEBUG
-*/
 #define SCIP_STATISTIC
+#define PRINTNODECONS
+*/
 
 /**@file   branch_lookahead.c
  * @brief  lookahead branching rule
@@ -151,7 +151,6 @@ typedef struct
                                               *   branching occurred or the value was determined by an LP not solved to
                                               *   optimality. */
    SCIP_Real             proveddb;           /**< the highest dual bound found with optimally solved LPs */
-   SCIP_Real             score;              /**< the score of this decision */
 } BRANCHINGDECISION;
 
 /** Allocates a branching decision in the buffer and initiates it with default values. */
@@ -171,7 +170,6 @@ SCIP_RETCODE branchingDecisionAllocate(
    (*decision)->updb = -SCIPinfinity(scip);
    (*decision)->updbvalid = FALSE;
    (*decision)->proveddb = -SCIPinfinity(scip);
-   (*decision)->score = -SCIPinfinity(scip);
 
    return SCIP_OKAY;
 }
@@ -193,7 +191,6 @@ void branchingDecisionCopy(
    targetdecision->updb = sourcedecision->updb;
    targetdecision->updbvalid = sourcedecision->updbvalid;
    targetdecision->proveddb = sourcedecision->proveddb;
-   targetdecision->score = sourcedecision->score;
 }
 
 /** Checks whether the given branching decision can be used to branch on. */
@@ -382,9 +379,10 @@ void configurationFree(
 
 #if defined(SCIP_DEBUG) || defined(SCIP_STATISTIC)
 /* An array containing all human readable names of the possible results. */
-static const char* names[18] = { "", "SCIP_DIDNOTRUN", "SCIP_DELAYED", "SCIP_DIDNOTFIND", "SCIP_FEASIBLE", "SCIP_INFEASIBLE",
-   "SCIP_UNBOUNDED", "SCIP_CUTOFF", "SCIP_SEPARATED", "SCIP_NEWROUND", "SCIP_REDUCEDDOM", "SCIP_CONSADDED",
-   "SCIP_CONSCHANGED", "SCIP_BRANCHED", "SCIP_SOLVELP", "SCIP_FOUNDSOL", "SCIP_SUSPENDED", "SCIP_SUCCESS" };
+static const char* names[18] = { "", "SCIP_DIDNOTRUN", "SCIP_DELAYED", "SCIP_DIDNOTFIND", "SCIP_FEASIBLE",
+   "SCIP_INFEASIBLE", "SCIP_UNBOUNDED", "SCIP_CUTOFF", "SCIP_SEPARATED", "SCIP_NEWROUND", "SCIP_REDUCEDDOM",
+   "SCIP_CONSADDED", "SCIP_CONSCHANGED", "SCIP_BRANCHED", "SCIP_SOLVELP", "SCIP_FOUNDSOL", "SCIP_SUSPENDED", "SCIP_SUCCESS"
+};
 
 /** Returns a human readable name for the given result enum value. */
 static
@@ -891,7 +889,6 @@ SCIP_RETCODE lpiMemoryAllocate(
 /** Copies the fields from the source to the target lpi memory and resets the source struct afterwards */
 static
 void lpiMemoryShallowCopyWithSourceReset(
-   SCIP*                 scip,
    LPIMEMORY*            source,             /**< the source struct for the copy procedure */
    LPIMEMORY*            target              /**< the target struct for the copy procedure */
    )
@@ -1017,10 +1014,10 @@ SCIP_RETCODE candidateAllocate(
    return SCIP_OKAY;
 }
 
-/** Copies the data contained in source into target. The lpi memories are copies as well to prevent memory leaks. */
+/** Copies the data contained in source into target. The lpi memories are copies as well to prevent memory leaks. The lpi
+ * information contained in the source are reset, to prevent multiple release calls. */
 static
 void candidateCopy(
-   SCIP*                 scip,
    CANDIDATE*            source,             /**< the candidate to take the data from */
    CANDIDATE*            target              /**< the candidate to put the data into */
    )
@@ -1035,11 +1032,11 @@ void candidateCopy(
    /* each candidate has its own up/down lpi memory, so we don't want to change the pointer, but the content */
    if( source->downlpimemory != NULL && target->downlpimemory != NULL )
    {
-      lpiMemoryShallowCopyWithSourceReset(scip, source->downlpimemory, target->downlpimemory);
+      lpiMemoryShallowCopyWithSourceReset(source->downlpimemory, target->downlpimemory);
    }
    if( source->uplpimemory != NULL && target->uplpimemory != NULL )
    {
-      lpiMemoryShallowCopyWithSourceReset(scip, source->uplpimemory, target->uplpimemory);
+      lpiMemoryShallowCopyWithSourceReset(source->uplpimemory, target->uplpimemory);
    }
 }
 
@@ -1095,8 +1092,8 @@ static
 SCIP_RETCODE candidateListInit(
    SCIP*                 scip,               /**< SCIP data structure */
    CANDIDATELIST*        list,               /**< the candidate list to initialize */
-   int                   ncandidates,         /**< the number of candidates the list must hold */
-   SCIP_Bool             full
+   int                   ncandidates,        /**< the number of candidates the list must hold */
+   SCIP_Bool             full                /**< indicates, whether the candidates can hold lpi information */
    )
 {
    int i;
@@ -1160,10 +1157,10 @@ SCIP_RETCODE candidateListGetAllFractionalCandidates(
    return SCIP_OKAY;
 }
 
-/** Copies the candidates from the source list into the target list. */
+/** Copies the candidates from the source list into the target list. The lpi information in the source candidates is reset,
+ * to prevent multiple release calls. */
 static
 void candidateListCopy(
-   SCIP*                 scip,
    CANDIDATELIST*        source,             /**< the list to take the data from */
    CANDIDATELIST*        target              /**< the list to put the data into */
    )
@@ -1182,7 +1179,7 @@ void candidateListCopy(
       assert(sourcecandidate != NULL);
       assert(targetcandidate != NULL);
 
-      candidateCopy(scip, sourcecandidate, targetcandidate);
+      candidateCopy(sourcecandidate, targetcandidate);
    }
 }
 
@@ -1259,10 +1256,10 @@ SCIP_RETCODE domainReductionsAllocate(
    LABallocBufferArray(scip, &(*domreds)->lowerboundset, ntotalvars, "DOMAINREDUCTIONS->lowerboundset");
    LABallocBufferArray(scip, &(*domreds)->upperboundset, ntotalvars, "DOMAINREDUCTIONS->upperboundset");
    LABallocBufferArray(scip, &(*domreds)->baselpviolated, ntotalvars, "DOMAINREDUCTIONS->baselpviolated");
-   SCIPstatistic(
-      LABallocBufferArray(scip, &(*domreds)->lowerboundnproofs, ntotalvars, "DOMAINREDUCTIONS->lowerboundnproofs");
-      LABallocBufferArray(scip, &(*domreds)->upperboundnproofs, ntotalvars, "DOMAINREDUCTIONS->upperboundnproofs");
-   )
+#ifdef SCIP_STATISTIC
+   LABallocBufferArray(scip, &(*domreds)->lowerboundnproofs, ntotalvars, "DOMAINREDUCTIONS->lowerboundnproofs");
+   LABallocBufferArray(scip, &(*domreds)->upperboundnproofs, ntotalvars, "DOMAINREDUCTIONS->upperboundnproofs");
+#endif
 
    /* Initialize the validity arrays to FALSE, such that the (undefined) starting values are not used. */
    for( i = 0; i < ntotalvars; i++ )
@@ -1270,10 +1267,10 @@ SCIP_RETCODE domainReductionsAllocate(
       (*domreds)->lowerboundset[i] = FALSE;
       (*domreds)->upperboundset[i] = FALSE;
       (*domreds)->baselpviolated[i] = FALSE;
-      SCIPstatistic(
-         (*domreds)->lowerboundnproofs[i] = 0;
-         (*domreds)->upperboundnproofs[i] = 0;
-      )
+#ifdef SCIP_STATISTIC
+      (*domreds)->lowerboundnproofs[i] = 0;
+      (*domreds)->upperboundnproofs[i] = 0;
+#endif
    }
 
    /* At the start we have no domain reductions for any variable. */
@@ -1295,10 +1292,10 @@ void domainReductionsFree(
    assert(scip != NULL);
    assert(domreds != NULL);
 
-   SCIPstatistic(
-      LABfreeBufferArray(scip, &(*domreds)->upperboundnproofs, "DOMAINREDUCTIONS->upperboundnproofs");
-      LABfreeBufferArray(scip, &(*domreds)->lowerboundnproofs, "DOMAINREDUCTIONS->lowerboundnproofs");
-   )
+#ifdef SCIP_STATISTIC
+   LABfreeBufferArray(scip, &(*domreds)->upperboundnproofs, "DOMAINREDUCTIONS->upperboundnproofs");
+   LABfreeBufferArray(scip, &(*domreds)->lowerboundnproofs, "DOMAINREDUCTIONS->lowerboundnproofs");
+#endif
    LABfreeBufferArray(scip, &(*domreds)->baselpviolated, "DOMAINREDUCTIONS->baselpviolated");
    LABfreeBufferArray(scip, &(*domreds)->upperboundset, "DOMAINREDUCTIONS->upperboundset");
    LABfreeBufferArray(scip, &(*domreds)->lowerboundset, "DOMAINREDUCTIONS->lowerboundset");
@@ -1384,6 +1381,7 @@ typedef struct
    SCIP_Bool             lpimemorywritable;  /**< indicates that the lpi memory arrays can be changed */
 } SCORECONTAINER;
 
+/**  */
 static
 SCIP_RETCODE scoreContainerAllocate(
    SCIP*                 scip,
@@ -1465,8 +1463,8 @@ void scoreContainerSetScore(
       if( scorecontainer->downlpimemories != NULL && downlpimemory != NULL && scorecontainer->uplpimemories != NULL
          && uplpimemory != NULL)
       {
-         lpiMemoryShallowCopyWithSourceReset(scip, downlpimemory, scorecontainer->downlpimemories[probindex]);
-         lpiMemoryShallowCopyWithSourceReset(scip, uplpimemory, scorecontainer->uplpimemories[probindex]);
+         lpiMemoryShallowCopyWithSourceReset(downlpimemory, scorecontainer->downlpimemories[probindex]);
+         lpiMemoryShallowCopyWithSourceReset(uplpimemory, scorecontainer->uplpimemories[probindex]);
       }
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Stored score <%g> for var <%s>.\n", score, SCIPvarGetName(var));
@@ -2231,11 +2229,9 @@ SCIP_RETCODE executeBranching(
        * cutoff, or if the iter or time limit was reached. */
       status->lperror = status->lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && resultdata->cutoff == FALSE);
 
-      /* if we seem to have reached a {time, node, ...}-limit or the user cancelled the execution we want to stop further
+      /* if we seem to have reached a {time, iteration}-limit or the user cancelled the execution we want to stop further
        * calculations and instead return the current calculation state */
-      status->limitreached = /*solstat == SCIP_LPSOLSTAT_OBJLIMIT ||*/
-         solstat == SCIP_LPSOLSTAT_ITERLIMIT ||
-         solstat == SCIP_LPSOLSTAT_TIMELIMIT;
+      status->limitreached = solstat == SCIP_LPSOLSTAT_ITERLIMIT || solstat == SCIP_LPSOLSTAT_TIMELIMIT;
 
       if( !status->limitreached && !status->lperror )
       {
@@ -2346,9 +2342,13 @@ void createBinaryConstraintName(
    {
       SCIP_VAR* var = binaryvars[i];
       const char* varname = SCIPvarGetName(var);
+      char prevconstraintname[SCIP_MAXSTRLEN];
 
-      /* TODO: probably rework */
-      sprintf(constraintname, "%s_%s", constraintname, varname);
+      /* we need to store the constraint name built till this point, as 'sprintf''s behaviour is undefined, if one of
+       * the format params is also the target string */
+      strcpy(prevconstraintname, constraintname);
+
+      sprintf(constraintname, "%s_%s", prevconstraintname, varname);
    }
 }
 
@@ -2440,8 +2440,7 @@ SCIP_RETCODE applyBinaryConstraints(
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Adding <%i> binary constraints.\n", conslist->nconstraints);
 
-   /* backwards to release the constraints in the reverse order of their creation. TODO: needed? */
-   for( i = conslist->nconstraints-1; i >= 0; i-- )
+   for( i = 0; i < conslist->nconstraints; i++ )
    {
       SCIP_CONS* constraint = conslist->constraints[i];
 
@@ -2574,7 +2573,6 @@ SCIP_RETCODE getFSBResult(
 #endif
    )
 {
-   /* TODO: create a new status to use in selectVarStart, transfer some of the fields (not cutoff?) */
    CONFIGURATION* config;
    BRANCHINGDECISION* decision;
    SCIP_Bool inprobing;
@@ -2730,6 +2728,27 @@ void printCandidates(
 #endif
 
 static
+SCIP_RETCODE sortCandidatesByScore(
+   SCIP*                 scip,
+   CANDIDATELIST*        candidates,
+   SCORECONTAINER*       scorecontainer,
+   int*                  permutation
+   )
+{
+   SCORESORTCONTAINER* container;
+   LABallocBuffer(scip, &container, "SCORESORTCONTAINER");
+   container->candidatelist = candidates;
+   container->scorecontainer = scorecontainer;
+
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Sorting the candidates w.r.t. their FSB score.\n");
+   /* sort the branching candidates according to their FSB score contained in the result struct */
+   SCIPsortDown(permutation, scoreSortContainerScoreComp, container, candidates->ncandidates);
+
+   LABfreeBuffer(scip, &container, "SCORESORTCONTAINER");
+   return SCIP_OKAY;
+}
+
+static
 SCIP_RETCODE getBestCandidates(
    SCIP*                 scip,
    CONFIGURATION*        config,
@@ -2759,7 +2778,7 @@ SCIP_RETCODE getBestCandidates(
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Getting the best (at most) %i of the given %i candidates: ", config->maxncands,
       allcandidates->ncandidates);
-   printCandidates(scip, SCIP_VERBLEVEL_HIGH, allcandidates);
+   SCIPdebug( printCandidates(scip, SCIP_VERBLEVEL_HIGH, allcandidates) );
 
    nusedcands = MIN(config->maxncands, allcandidates->ncandidates);
 
@@ -2803,14 +2822,14 @@ SCIP_RETCODE getBestCandidates(
 
             if( knownscore == -1 )
             {
-               candidateCopy(scip, lpcand, unscoredcandidates->candidates[counter]);
+               candidateCopy(lpcand, unscoredcandidates->candidates[counter]);
                counter++;
             }
          }
 
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Of the given %i candidates, %i have no score: ",
             allcandidates->ncandidates, nunscoredcandidates);
-         printCandidates(scip, SCIP_VERBLEVEL_HIGH, unscoredcandidates);
+         SCIPdebug( printCandidates(scip, SCIP_VERBLEVEL_HIGH, unscoredcandidates) );
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Calculating the FSB result to get a score for the remaining candidates.\n")
 
          /* Calculate all FSB scores and collect it in the result */;
@@ -2837,32 +2856,21 @@ SCIP_RETCODE getBestCandidates(
       /* allocate the permutation array that will contain the sorted indices (permutation[i] will contain the i-th index) */
       LABallocBufferArray(scip, &permutation, allcandidates->ncandidates, "PERMUTATIONS");
 
+      SCIP_CALL( sortCandidatesByScore(scip, allcandidates, scorecontainer, permutation) );
+
+#ifdef SCIP_DEBUG
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "All %i candidates, sorted by their FSB score:\n", allcandidates->ncandidates);
+      for( i = 0; i < allcandidates->ncandidates; i++ )
       {
-         SCORESORTCONTAINER* container;
-         LABallocBuffer(scip, &container, "SCORESORTCONTAINER");
-         container->candidatelist = allcandidates;
-         container->scorecontainer = scorecontainer;
+         int sortedindex = permutation[i];
+         SCIP_VAR* var = allcandidates->candidates[sortedindex]->branchvar;
+         SCIP_Real score = scorecontainer->scores[SCIPvarGetProbindex(var)];
 
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Sorting the candidates w.r.t. their FSB score.\n");
-         /* sort the branching candidates according to their FSB score contained in the result struct */
-         SCIPsortDown(permutation, scoreSortContainerScoreComp, container, allcandidates->ncandidates);
+         assert(var != NULL);
 
-         LABfreeBuffer(scip, &container, "SCORESORTCONTAINER");
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " Index %2i: Var %s Score %g\n", i, SCIPvarGetName(var), score);
       }
-
-      SCIPdebug(
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "All %i candidates, sorted by their FSB score:\n", allcandidates->ncandidates);
-         for( i = 0; i < allcandidates->ncandidates; i++ )
-         {
-            int sortedindex = permutation[i];
-            SCIP_VAR* var = allcandidates->candidates[sortedindex]->branchvar;
-            SCIP_Real score = scorecontainer->scores[SCIPvarGetProbindex(var)];
-
-            assert(var != NULL);
-
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " Index %2i: Var %s Score %g\n", i, SCIPvarGetName(var), score);
-         }
-      )
+#endif
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Best %i candidates used for the lookahead branching:\n", bestcandidates->ncandidates);
       for( i = 0; i < nusedcands; i++)
@@ -2878,12 +2886,12 @@ SCIP_RETCODE getBestCandidates(
          probindex = SCIPvarGetProbindex(candidatepattern->branchvar);
 
          /* set the branching information, such that we can re-use it in the lookahead branching */
-         candidateCopy(scip, candidatepattern, candidate);
+         candidateCopy(candidatepattern, candidate);
 
          if( config->reusebasis && scorecontainer->sourcedepth[probindex] == probingdepth )
          {
-            lpiMemoryShallowCopyWithSourceReset(scip, scorecontainer->downlpimemories[probindex], candidate->downlpimemory);
-            lpiMemoryShallowCopyWithSourceReset(scip, scorecontainer->uplpimemories[probindex], candidate->uplpimemory);
+            lpiMemoryShallowCopyWithSourceReset(scorecontainer->downlpimemories[probindex], candidate->downlpimemory);
+            lpiMemoryShallowCopyWithSourceReset(scorecontainer->uplpimemories[probindex], candidate->uplpimemory);
          }
 
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " Index %2i: Var %s Val %g\n", i, SCIPvarGetName(candidate->branchvar), candidate->branchval);
@@ -2927,7 +2935,7 @@ SCIP_RETCODE getCandidates(
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Getting the branching candidates by selecting all candidates.\n");
       /* get all candidates for the current node lp solution */
       candidateListInit(scip, candidates, possiblecandidates->ncandidates, lpmemoryinit);
-      candidateListCopy(scip, possiblecandidates, candidates);
+      candidateListCopy(possiblecandidates, candidates);
    }
 
    return SCIP_OKAY;
@@ -3632,7 +3640,7 @@ SCIP_RETCODE selectVarRecursive(
                      decision->proveddb = MAX(decision->proveddb, upbranchingresult->dualbound);
                   }
                }
-               else if( !status->limitreached ) /* TODO: maybe remove the condition? */
+               else
                {
                   SCIP_Real downdualbound = downbranchingresult->dualboundvalid ? downbranchingresult->dualbound :
                      downbranchingresult->objval;
@@ -4113,10 +4121,10 @@ SCIP_DECL_BRANCHEXITSOL(branchExitSolLookahead)
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 {  /*lint --e{715}*/
-   /* TODO CS: handle the allowaddcons flag! */
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_SOL* baselpsol = NULL;
    int oldverblevel;
+   SCIP_Bool userusebincons;
 
    /* TODO: fix this, broken in src/scip/heur_rens.c:488 */
    SCIP_CALL( SCIPgetIntParam(scip, "display/verblevel", &oldverblevel) );
@@ -4131,6 +4139,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
+
+   /* we are only allowed to add binary constraints, if the corresponding flag is given */
+   userusebincons = branchruledata->config->usebincons;
+   branchruledata->config->usebincons = branchruledata->config->usebincons && allowaddcons;
 
    if( !branchruledata->isinitialized )
    {
@@ -4289,8 +4301,10 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       branchruledata->statistics->nresults[*result]++;
    )
 
+   branchruledata->config->usebincons = userusebincons;
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Exiting branchExeclpLookahead.\n");
 
+   /* TODO: remove, see start of the method */
    SCIPsetIntParam(scip, "display/verblevel", oldverblevel);
 
    return SCIP_OKAY;
