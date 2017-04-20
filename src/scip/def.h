@@ -153,8 +153,8 @@ extern "C" {
 #define SCIP_DEFAULT_HUGEVAL          1e+15  /**< values larger than this are considered huge and should be handled separately (e.g., in activity computation) */
 #define SCIP_MAXEPSILON               1e-03  /**< maximum value for any numerical epsilon */
 #define SCIP_MINEPSILON               1e-20  /**< minimum value for any numerical epsilon */
-#define SCIP_INVALID                  1e+99  /**< floating point value is not valid */
-#define SCIP_UNKNOWN                  1e+98  /**< floating point value is not known (in primal solution) */
+#define SCIP_INVALID          (double)1e+99  /**< floating point value is not valid */
+#define SCIP_UNKNOWN          (double)1e+98  /**< floating point value is not known (in primal solution) */
 
 
 #define REALABS(x)        (fabs(x))
