@@ -69,6 +69,25 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined variabl
  */
 #define SCIP_DECL_BENDERSEXIT(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
+/** presolving initialization method of constraint handler (called when presolving is about to begin)
+ *
+ *  This function is called immediately after the auxiliary variables are created in the master problem. The callback
+ *  provides the user an opportunity to add variable data to the auxiliary variables.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - benders          : the variable benders itself
+ */
+#define SCIP_DECL_BENDERSINITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
+
+/** presolving deinitialization method of constraint handler (called after presolving has been finished)
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - benders          : the variable benders itself
+ */
+#define SCIP_DECL_BENDERSEXITPRE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
+
 /** solving process initialization method of variable benders (called when branch and bound process is about to begin)
  *
  *  This method is called when the presolving was finished and the branch and bound process is about to begin.
@@ -91,20 +110,64 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined variabl
  */
 #define SCIP_DECL_BENDERSEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
-/** the solving method for a single Benders' decomposition subproblem. The solving methods are separated so that they
- *  can be called in parallel.
- *
- *  NOTE: The solving methods must be thread safe.
+/** the execution method for Benders' decomposition. The execution method is called by the constraint handler and then
+ *  solves each of the subproblems.
  *
  *  This method is called to verify a given solution with the Benders' decomposition subproblems.
  *
  *  input:
  *  - scip            : SCIP main data structure
  *  - benders         : the Benders' decomposition data structure
- *  - probnum         : the subproblem problem number
+ *  - sol             : the solution that will be checked in the subproblem. Can be NULL.
  *  TODO: Need to update the parameters for this callback
  */
-#define SCIP_DECL_BENDERSEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, int probnum)
+#define SCIP_DECL_BENDERSEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
+
+/** the solving method for a single Benders' decomposition subproblem. The solving methods are separated so that they
+ *  can be called in parallel.
+ *
+ *  NOTE: The solving methods must be thread safe.
+ *
+ *  This method is called from within the execution method.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - benders         : the Benders' decomposition data structure
+ *  - sol             : the solution that will be checked in the subproblem. Can be NULL.
+ *  - probnumber      : the subproblem problem number
+ *  - infeasible      : pointer to store whether the problem is infeasible
+ *  TODO: Need to update the parameters for this callback
+ */
+#define SCIP_DECL_BENDERSSOLVESUB(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_SOL* sol, int probnumber,\
+  SCIP_Bool* infeasible)
+
+/** the post-solve method for Benders' decomposition. The post-solve method is called after the subproblems have
+ * been solved but before they are freed.
+ *
+ * This provides the opportunity for the user to clean up and data structures
+ * that should not exist beyond the current iteration. Also, the user has full access to the master and subproblems. So
+ * it is possible to construct solution for the master problem in the method.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - benders         : the Benders' decomposition data structure
+ *  - infeasible      : indicates whether at least one subproblem is infeasible
+ *  TODO: Need to update the parameters for this callback
+ */
+#define SCIP_DECL_BENDERSPOSTSOLVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_Bool infeasible)
+
+/** frees the subproblem so that it can be resolved in the next iteration. In the SCIP case, this involves freeing the
+ *  transformed problem using SCIPfreeTransform()
+ *
+ *  NOTE: The freeing methods must be thread safe.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - benders         : the Benders' decomposition data structure
+ *  - probnumber      : the subproblem problem number
+ *  TODO: Need to update the parameters for this callback
+ */
+#define SCIP_DECL_BENDERSFREESUB(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, int probnumber)
 
 /** the variable mapping from the subproblem to the master problem.
  *
@@ -117,7 +180,6 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined variabl
  *  - var             : the variable of the pricing problem that is a copy of the master variable
  */
 #define SCIP_DECL_BENDERSGETMASTERVAR(x) SCIP_VAR* x (SCIP* scip, SCIP_BENDERS* benders, SCIP_VAR* var)
-
 
 #ifdef __cplusplus
 }

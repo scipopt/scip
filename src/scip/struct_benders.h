@@ -28,6 +28,7 @@
 #include "scip/def.h"
 #include "scip/type_clock.h"
 #include "scip/type_benders.h"
+#include "scip/type_benderscut.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,10 +43,15 @@ struct SCIP_Benders
    SCIP_DECL_BENDERSFREE ((*bendersfree));   /**< destructor of variable benders */
    SCIP_DECL_BENDERSINIT ((*bendersinit));   /**< initialize variable benders */
    SCIP_DECL_BENDERSEXIT ((*bendersexit));   /**< deinitialize variable benders */
+   SCIP_DECL_BENDERSINITPRE((*bendersinitpre));/**< presolving initialization method for Benders' decomposition */
+   SCIP_DECL_BENDERSEXITPRE((*bendersexitpre));/**< presolving deinitialization method for Benders' decomposition */
    SCIP_DECL_BENDERSINITSOL((*bendersinitsol));/**< solving process initialization method of variable benders */
    SCIP_DECL_BENDERSEXITSOL((*bendersexitsol));/**< solving process deinitialization method of variable benders */
    SCIP_DECL_BENDERSGETMASTERVAR((*bendersgetmastervar));/**< returns the master variable for the given subproblem variable*/
-   SCIP_DECL_BENDERSEXEC ((*bendersexec));   /**< executes the solve method for the Benders' decomposition subproblems */
+   SCIP_DECL_BENDERSEXEC ((*bendersexec));   /**< executes the solve method for Benders' decomposition */
+   SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub));/**< the solving method for the Benders' decomposition subproblems */
+   SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve));/**< called after the subproblems are solved. */
+   SCIP_DECL_BENDERSFREESUB((*bendersfreesub));/**< the freeing method for the Benders' decomposition subproblems */
    SCIP_BENDERSDATA*     bendersdata;        /**< variable benderss local data */
    SCIP_CLOCK*           setuptime;          /**< time spend for setting up this benders for the next stages */
    SCIP_CLOCK*           bendersclock;       /**< benders execution time */
@@ -54,9 +60,22 @@ struct SCIP_Benders
    int                   noptcutsfound;      /**< number of optimality cuts found by the Benders' decomposition */
    int                   nfeascutsfound;     /**< number of feasibility cuts found by the Benders' decomposition */
    SCIP_Bool             initialized;        /**< is Benders' decomposition initialized? */
+   SCIP_Bool             cutlp;              /**< should Benders' cuts be generated for LP solutions? */
+   SCIP_Bool             cutpseudo;          /**< should Benders' cuts be generated for pseudo solutions? */
+   SCIP_Bool             cutrelax;           /**< should Benders' cuts be generated for relaxation solutions? */
 
    /* the subproblem information */
+   SCIP**                subproblems;        /**< the Benders' decomposition subproblems */
+   SCIP_VAR**            auxiliaryvars;      /**< the auxiliary variables for the Benders' optimality cuts */
+   int                   addedsubprobs;      /**< subproblems added to the Benders' decomposition data */
    int                   nsubproblems;       /**< number of subproblems */
+
+   /* Bender's cut information */
+   SCIP_BENDERSCUT**     benderscuts;        /**< the available Benders' cut algorithms */
+   int                   nbenderscuts;       /**< the number of Benders' cut algorithms */
+   int                   benderscutssize;    /**< the size of the Benders' cuts algorithms array */
+   SCIP_Bool             benderscutssorted;  /**< are the Benders' cuts algorithms sorted by priority */
+   SCIP_Bool             benderscutsnamessorted;/**< are the Benders' cuts algorithms sorted by name */
 };
 
 #ifdef __cplusplus

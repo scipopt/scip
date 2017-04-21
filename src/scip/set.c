@@ -775,6 +775,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copydisplays,       /**< should the display columns be copied */
    SCIP_Bool             copydialogs,        /**< should the dialogs be copied */
    SCIP_Bool             copynlpis,          /**< should the NLP interfaces be copied */
+   SCIP_Bool             copybenders,        /**< should the Benders' decomposition algorithms be copied */
    SCIP_Bool*            allvalid            /**< pointer to store whether all plugins were validly copied */
    )
 {
@@ -953,6 +954,18 @@ SCIP_RETCODE SCIPsetCopyPlugins(
 
          SCIP_CALL( SCIPnlpiCopy(SCIPblkmem(targetset->scip), sourceset->nlpis[p], &nlpicopy) );
          SCIP_CALL( SCIPincludeNlpi(targetset->scip, nlpicopy) );
+      }
+   }
+
+   /* copy all Benders' decomposition algorithms */
+   /* TODO: If the benders is not copied, then the cons_benders needs to be deactivated. */
+   if( copybenders && sourceset->benders != NULL )
+   {
+      for( p = sourceset->nbenders - 1; p >= 0; --p )
+      {
+         valid = FALSE;
+         SCIP_CALL( SCIPbendersCopyInclude(sourceset->benders[p], targetset, &valid) );
+         *allvalid = *allvalid && valid;
       }
    }
 
@@ -2476,6 +2489,13 @@ SCIP_RETCODE SCIPsetFree(
       SCIP_CALL( SCIPpricerFree(&(*set)->pricers[i], *set) );
    }
    BMSfreeMemoryArrayNull(&(*set)->pricers);
+
+   /* free Benders' decomposition */
+   for( i = 0; i < (*set)->nbenders; ++i )
+   {
+      SCIP_CALL( SCIPbendersFree(&(*set)->benders[i], *set) );
+   }
+   BMSfreeMemoryArrayNull(&(*set)->benders);
 
    /* free constraint handlers */
    for( i = 0; i < (*set)->nconshdlrs; ++i )
@@ -4704,6 +4724,13 @@ SCIP_RETCODE SCIPsetInitPlugins(
       SCIP_CALL( SCIPpricerInit(set->pricers[i], set) );
    }
 
+   /* Benders' decomposition algorithm */
+   SCIPsetSortBenders(set);
+   for( i = 0; i < set->nbenders; ++i )
+   {
+      SCIP_CALL( SCIPbendersInit(set->benders[i], set) );
+   }
+
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
@@ -4796,6 +4823,13 @@ SCIP_RETCODE SCIPsetExitPlugins(
    for( i = 0; i < set->nactivepricers; ++i )
    {
       SCIP_CALL( SCIPpricerExit(set->pricers[i], set) );
+   }
+
+   /* Benders' decomposition */
+   SCIPsetSortBenders(set);
+   for( i = 0; i < set->nbenders; ++i )
+   {
+      SCIP_CALL( SCIPbendersExit(set->benders[i], set) );
    }
 
    /* constraint handlers */
@@ -4955,6 +4989,13 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
       SCIP_CALL( SCIPpricerInitsol(set->pricers[i], set) );
    }
 
+   /* Benders' decomposition */
+   SCIPsetSortBenders(set);
+   for( i = 0; i < set->nbenders; ++i )
+   {
+      SCIP_CALL( SCIPbendersInitsol(set->benders[i], set) );
+   }
+
    /* constraint handlers */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
@@ -5038,6 +5079,13 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    for( i = 0; i < set->nactivepricers; ++i )
    {
       SCIP_CALL( SCIPpricerExitsol(set->pricers[i], set) );
+   }
+
+   /* Benders' decomposition */
+   SCIPsetSortBenders(set);
+   for( i = 0; i < set->nbenders; ++i )
+   {
+      SCIP_CALL( SCIPbendersExitsol(set->benders[i], set) );
    }
 
    /* constraint handlers */

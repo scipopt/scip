@@ -36,6 +36,40 @@
 #include "scip/pub_misc.h"
 
 #include "scip/struct_benders.h"
+#include "scip/struct_benderscut.h"
+
+#include "scip/benderscut.h"
+
+/* Local methods */
+
+/** adds the auxiliary variables to the Benders' decomposition master problem */
+static
+SCIP_RETCODE addAuxiliaryVariablesToMaster(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders             /**< benders */
+   )
+{
+   SCIP_VAR* auxiliaryvar;
+   char varname[SCIP_MAXSTRLEN];    /* the name of the auxiliary variable */
+   int i;
+
+   for( i = 0; i < SCIPbendersGetNSubproblems(benders); i++ )
+   {
+      /* if no optimality cuts have been added for this subproblem, then the auxiliary variable will be created and
+       * added */
+      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "auxiliaryvar_%d", i );
+      SCIP_CALL( SCIPcreateVarBasic(scip, &auxiliaryvar, varname, -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
+            SCIP_VARTYPE_CONTINUOUS) );
+
+      SCIP_CALL( SCIPaddVar(scip, auxiliaryvar) );
+
+      benders->auxiliaryvars[i] = auxiliaryvar;
+
+      SCIP_CALL( SCIPreleaseVar(scip, &auxiliaryvar) );
+   }
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -73,6 +107,8 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    SCIP_Bool*            valid               /**< was the copying process valid? */
    )
 {
+   int i;
+
    assert(benders != NULL);
    assert(set != NULL);
    assert(valid != NULL);
@@ -83,30 +119,46 @@ SCIP_RETCODE SCIPbendersCopyInclude(
       SCIPsetDebugMsg(set, "including benders %s in subscip %p\n", SCIPbendersGetName(benders), (void*)set->scip);
       SCIP_CALL( benders->benderscopy(set->scip, benders, valid) );
    }
+
+   /* calling the copy method for the Benders' cuts */
+   SCIPbendersSortBenderscuts(benders);
+   for( i = 0; i < benders->nbenderscuts; i++ )
+   {
+      SCIP_CALL( SCIPbenderscutCopyInclude(benders->benderscuts[i], set) );
+   }
+
    return SCIP_OKAY;
 }
 
-/** creates a variable benders
- *  To use the variable benders for solving a problem, it first has to be activated with a call to SCIPactivateBenders().
+/** creates a Benders' decomposition structure
+ *  To use the Benders' decomposition for solving a problem, it first has to be activated with a call to SCIPactivateBenders().
  */
 SCIP_RETCODE SCIPbendersCreate(
-   SCIP_BENDERS**        benders,            /**< pointer to variable benders data structure */
+   SCIP_BENDERS**        benders,            /**< pointer to Benders' decomposition data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
-   const char*           name,               /**< name of variable benders */
-   const char*           desc,               /**< description of variable benders */
-   int                   priority,           /**< priority of the variable benders */
+   const char*           name,               /**< name of Benders' decomposition */
+   const char*           desc,               /**< description of Benders' decomposition */
+   int                   priority,           /**< priority of the Benders' decomposition */
    int                   nsubproblems,       /**< the number subproblems used in this decomposition */
+   SCIP_Bool             cutlp,              /**< should Benders' cuts be generated for LP solutions */
+   SCIP_Bool             cutpseudo,          /**< should Benders' cuts be generated for pseudo solutions */
+   SCIP_Bool             cutrelax,           /**< should Benders' cuts be generated for relaxation solutions */
    SCIP_DECL_BENDERSCOPY ((*benderscopy)),   /**< copy method of benders or NULL if you don't want to copy your plugin into sub-SCIPs */
-   SCIP_DECL_BENDERSFREE ((*bendersfree)),   /**< destructor of variable benders */
-   SCIP_DECL_BENDERSINIT ((*bendersinit)),   /**< initialize variable benders */
-   SCIP_DECL_BENDERSEXIT ((*bendersexit)),   /**< deinitialize variable benders */
-   SCIP_DECL_BENDERSINITSOL((*bendersinitsol)),/**< solving process initialization method of variable benders */
-   SCIP_DECL_BENDERSEXITSOL((*bendersexitsol)),/**< solving process deinitialization method of variable benders */
+   SCIP_DECL_BENDERSFREE ((*bendersfree)),   /**< destructor of Benders' decomposition */
+   SCIP_DECL_BENDERSINIT ((*bendersinit)),   /**< initialize Benders' decomposition */
+   SCIP_DECL_BENDERSEXIT ((*bendersexit)),   /**< deinitialize Benders' decomposition */
+   SCIP_DECL_BENDERSINITPRE((*bendersinitpre)),/**< presolving initialization method for Benders' decomposition */
+   SCIP_DECL_BENDERSEXITPRE((*bendersexitpre)),/**< presolving deinitialization method for Benders' decomposition */
+   SCIP_DECL_BENDERSINITSOL((*bendersinitsol)),/**< solving process initialization method of Benders' decomposition */
+   SCIP_DECL_BENDERSEXITSOL((*bendersexitsol)),/**< solving process deinitialization method of Benders' decomposition */
    SCIP_DECL_BENDERSGETMASTERVAR((*bendersgetmastervar)),/**< returns the master variable for a given subproblem variable */
    SCIP_DECL_BENDERSEXEC ((*bendersexec)),   /**< the execution method of the Benders' decomposition algorithm */
-   SCIP_BENDERSDATA*     bendersdata         /**< variable benders data */
+   SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub)),/**< the solving method for the Benders' decomposition subproblems */
+   SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve)),/**< called after the subproblems are solved. */
+   SCIP_DECL_BENDERSFREESUB((*bendersfreesub)),/**< the freeing method for the Benders' decomposition subproblems */
+   SCIP_BENDERSDATA*     bendersdata         /**< Benders' decomposition data */
    )
 {
    char paramname[SCIP_MAXSTRLEN];
@@ -120,14 +172,23 @@ SCIP_RETCODE SCIPbendersCreate(
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*benders)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*benders)->desc, desc, strlen(desc)+1) );
    (*benders)->priority = priority;
+   (*benders)->nsubproblems = nsubproblems;
+   (*benders)->cutlp = cutlp;
+   (*benders)->cutpseudo = cutpseudo;
+   (*benders)->cutrelax = cutrelax;
    (*benders)->benderscopy = benderscopy;
    (*benders)->bendersfree = bendersfree;
    (*benders)->bendersinit = bendersinit;
    (*benders)->bendersexit = bendersexit;
+   (*benders)->bendersinitpre = bendersinitpre;
+   (*benders)->bendersexitpre = bendersexitpre;
    (*benders)->bendersinitsol = bendersinitsol;
    (*benders)->bendersexitsol = bendersexitsol;
    (*benders)->bendersgetmastervar = bendersgetmastervar;
    (*benders)->bendersexec = bendersexec;
+   (*benders)->benderssolvesub = benderssolvesub;
+   (*benders)->benderspostsolve = benderspostsolve;
+   (*benders)->bendersfreesub = bendersfreesub;
    (*benders)->bendersdata = bendersdata;
    SCIP_CALL( SCIPclockCreate(&(*benders)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*benders)->bendersclock, SCIP_CLOCKTYPE_DEFAULT) );
@@ -135,6 +196,19 @@ SCIP_RETCODE SCIPbendersCreate(
    (*benders)->noptcutsfound = 0;
    (*benders)->nfeascutsfound = 0;
    (*benders)->initialized = FALSE;
+   (*benders)->addedsubprobs = 0;
+
+   (*benders)->benderscuts = NULL;
+   (*benders)->nbenderscuts = 0;
+   (*benders)->benderscutssize = 0;
+   (*benders)->benderscutssorted = FALSE;
+   (*benders)->benderscutsnamessorted = FALSE;
+
+   /* allocating memory for the subproblems array */
+   SCIP_ALLOC( BMSallocMemoryArray(&(*benders)->subproblems, (*benders)->nsubproblems) );
+
+   /* allocating memory for the auxiliary variables array */
+   SCIP_ALLOC( BMSallocMemoryArray(&(*benders)->auxiliaryvars, (*benders)->nsubproblems) );
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/priority", name);
@@ -143,25 +217,53 @@ SCIP_RETCODE SCIPbendersCreate(
                   &(*benders)->priority, FALSE, priority, INT_MIN/4, INT_MAX/4,
                   paramChgdBendersPriority, (SCIP_PARAMDATA*)(*benders)) ); /*lint !e740*/
 
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/cutlp", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "should Benders' cuts be generated for LP solutions?");
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
+                  &(*benders)->cutlp, FALSE, cutlp, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/cutpseudo", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "should Benders' cuts be generated for pseudo solutions?");
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
+                  &(*benders)->cutpseudo, FALSE, cutpseudo, NULL, NULL) ); /*lint !e740*/
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/cutrelax", name);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "should Benders' cuts be generated for relaxation solutions?");
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem, paramname, paramdesc,
+                  &(*benders)->cutrelax, FALSE, cutrelax, NULL, NULL) ); /*lint !e740*/
+
    return SCIP_OKAY;
 }
 
-/** calls destructor and frees memory of variable benders */
+/** calls destructor and frees memory of Benders' decomposition */
 SCIP_RETCODE SCIPbendersFree(
-   SCIP_BENDERS**        benders,            /**< pointer to variable benders data structure */
+   SCIP_BENDERS**        benders,            /**< pointer to Benders' decomposition data structure */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   int i;
+
    assert(benders != NULL);
    assert(*benders != NULL);
    assert(!(*benders)->initialized);
    assert(set != NULL);
 
-   /* call destructor of variable benders */
+   /* call destructor of Benders' decomposition */
    if( (*benders)->bendersfree != NULL )
    {
       SCIP_CALL( (*benders)->bendersfree(set->scip, *benders) );
    }
+
+   /* freeing the Benders' cuts */
+   for( i = 0; i < (*benders)->nbenderscuts; i++ )
+   {
+      SCIP_CALL( SCIPbenderscutFree(&((*benders)->benderscuts[i]), set) );
+   }
+   BMSfreeMemoryArrayNull(&(*benders)->benderscuts);
+
+
+   BMSfreeMemoryArray(&(*benders)->auxiliaryvars);
+   BMSfreeMemoryArray(&(*benders)->subproblems);
 
    SCIPclockFree(&(*benders)->bendersclock);
    SCIPclockFree(&(*benders)->setuptime);
@@ -172,18 +274,20 @@ SCIP_RETCODE SCIPbendersFree(
    return SCIP_OKAY;
 }
 
-/** initializes variable benders */
+/** initializes Benders' decomposition */
 SCIP_RETCODE SCIPbendersInit(
-   SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   int i;
+
    assert(benders != NULL);
    assert(set != NULL);
 
    if( benders->initialized )
    {
-      SCIPerrorMessage("variable benders <%s> already initialized\n", benders->name);
+      SCIPerrorMessage("Benders' decomposition <%s> already initialized\n", benders->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -207,23 +311,33 @@ SCIP_RETCODE SCIPbendersInit(
       /* stop timing */
       SCIPclockStop(benders->setuptime, set);
    }
+
+   /* initialising the Benders' cuts */
+   SCIPbendersSortBenderscuts(benders);
+   for( i = 0; i < benders->nbenderscuts; i++ )
+   {
+      SCIP_CALL( SCIPbenderscutInit(benders->benderscuts[i], set) );
+   }
+
    benders->initialized = TRUE;
 
    return SCIP_OKAY;
 }
 
-/** calls exit method of variable benders */
+/** calls exit method of Benders' decomposition */
 SCIP_RETCODE SCIPbendersExit(
-   SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   int i;
+
    assert(benders != NULL);
    assert(set != NULL);
 
    if( !benders->initialized )
    {
-      SCIPerrorMessage("variable benders <%s> not initialized\n", benders->name);
+      SCIPerrorMessage("Benders' decomposition <%s> not initialized\n", benders->name);
       return SCIP_INVALIDCALL;
    }
 
@@ -237,21 +351,89 @@ SCIP_RETCODE SCIPbendersExit(
       /* stop timing */
       SCIPclockStop(benders->setuptime, set);
    }
+
+   /* calling the exit method for the Benders' cuts */
+   SCIPbendersSortBenderscuts(benders);
+   for( i = 0; i < benders->nbenderscuts; i++ )
+   {
+      SCIP_CALL( SCIPbenderscutExit(benders->benderscuts[i], set) );
+   }
+
    benders->initialized = FALSE;
 
    return SCIP_OKAY;
 }
 
-/** informs variable benders that the branch and bound process is being started */
-SCIP_RETCODE SCIPbendersInitsol(
-   SCIP_BENDERS*         benders,            /**< variable benders */
-   SCIP_SET*             set                 /**< global SCIP settings */
+/** informs the Benders' decomposition that the presolving process is being started */
+SCIP_RETCODE SCIPbendersInitpre(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
    )
 {
    assert(benders != NULL);
    assert(set != NULL);
+   assert(stat != NULL);
 
-   /* call solving process initialization method of variable benders */
+   /* adding the auxiliary variables to the master problem */
+   SCIP_CALL( addAuxiliaryVariablesToMaster(set->scip, benders) );
+
+   /* call presolving initialization method of Benders' decomposition */
+   if( benders->bendersinitpre != NULL )
+   {
+      /* start timing */
+      SCIPclockStart(benders->setuptime, set);
+
+      SCIP_CALL( benders->bendersinitpre(set->scip, benders) );
+
+      /* stop timing */
+      SCIPclockStop(benders->setuptime, set);
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** informs the Benders' decomposition that the presolving process has completed */
+SCIP_RETCODE SCIPbendersExitpre(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat                /**< dynamic problem statistics */
+   )
+{
+   assert(benders != NULL);
+   assert(set != NULL);
+   assert(stat != NULL);
+
+   /* call presolving  deinitialization method of Benders' decomposition */
+   if( benders->bendersexitpre != NULL )
+   {
+      /* start timing */
+      SCIPclockStart(benders->setuptime, set);
+
+      SCIP_CALL( benders->bendersexitpre(set->scip, benders) );
+
+      /* stop timing */
+      SCIPclockStop(benders->setuptime, set);
+   }
+
+
+
+   return SCIP_OKAY;
+}
+
+/** informs Benders' decomposition that the branch and bound process is being started */
+SCIP_RETCODE SCIPbendersInitsol(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   int i;
+
+   assert(benders != NULL);
+   assert(set != NULL);
+
+   /* call solving process initialization method of Benders' decomposition */
    if( benders->bendersinitsol != NULL )
    {
       /* start timing */
@@ -263,19 +445,28 @@ SCIP_RETCODE SCIPbendersInitsol(
       SCIPclockStop(benders->setuptime, set);
    }
 
+   /* calling the initsol method for the Benders' cuts */
+   SCIPbendersSortBenderscuts(benders);
+   for( i = 0; i < benders->nbenderscuts; i++ )
+   {
+      SCIP_CALL( SCIPbenderscutInitsol(benders->benderscuts[i], set) );
+   }
+
    return SCIP_OKAY;
 }
 
-/** informs variable benders that the branch and bound process data is being freed */
+/** informs Benders' decomposition that the branch and bound process data is being freed */
 SCIP_RETCODE SCIPbendersExitsol(
-   SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   int i;
+
    assert(benders != NULL);
    assert(set != NULL);
 
-   /* call solving process deinitialization method of variable benders */
+   /* call solving process deinitialization method of Benders' decomposition */
    if( benders->bendersexitsol != NULL )
    {
       /* start timing */
@@ -287,29 +478,139 @@ SCIP_RETCODE SCIPbendersExitsol(
       SCIPclockStop(benders->setuptime, set);
    }
 
+   /* calling the exitsol method for the Benders' cuts */
+   SCIPbendersSortBenderscuts(benders);
+   for( i = 0; i < benders->nbenderscuts; i++ )
+   {
+      SCIP_CALL( SCIPbenderscutExitsol(benders->benderscuts[i], set) );
+   }
+
    return SCIP_OKAY;
 }
 
 /** solves the subproblem using the current master problem solution. */
+/*  TODO: consider allowing the possibility to pass solution information back from the subproblems instead of the scip
+ *  instance. This would allow the use of different solvers for the subproblems, more importantly allowing the use of an
+ *  LP solver for LP subproblems. */
 SCIP_RETCODE SCIPbendersExec(
-   SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_RESULT*          result              /**< result of the pricing process */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_RESULT*          result,             /**< result of the pricing process */
+   SCIP_Bool             check               /**< is the execution method called as a check. i.e. no cuts are required */
    )
 {
+   SCIP_BENDERSCUT** benderscuts;
+   int nsubproblems;
+   int nbenderscuts;
    int i;
+   int j;
+   SCIP_Bool infeasible = FALSE;
 
    assert(benders != NULL);
    assert(result != NULL);
    assert(benders->bendersexec != NULL);
 
+   nsubproblems = SCIPbendersGetNSubproblems(benders);
+
+   SCIP_CALL( benders->bendersexec(set->scip, benders) );
+
    *result = SCIP_DIDNOTRUN;
    /* solving each of the subproblems for Benders decomposition */
    /* TODO: ensure that the each of the subproblems solve and update the parameters with the correct return values */
-   for( i = 0; i < benders->nsubproblems; i++ )
-      SCIP_CALL( benders->bendersexec(set->scip, benders, i) );
+   for( i = 0; i < nsubproblems; i++ )
+   {
+      SCIP_Bool subinfeas = FALSE;
 
-   /* TODO: generate cuts. A call back may be useful here. */
+      SCIP_CALL( SCIPbendersSolveSubproblem(benders, set, sol, i, &subinfeas) );
+
+      infeasible = infeasible || subinfeas;
+
+      /* if the subproblems are being solved as part of the conscheck, then we break once an infeasibility is found. The
+       * result pointer is set to infeasible and the execution is halted. */
+      if( check && infeasible )
+      {
+         (*result) = SCIP_INFEASIBLE;
+         return SCIP_OKAY;
+      }
+   }
+
+   if( check )
+   {
+      /* if the subproblems are being solved as part of conscheck, then the results flag must be returned after the solving
+       * has completed. No cut is generated during conscheck. */
+      if( infeasible )
+         (*result) = SCIP_INFEASIBLE;
+      else
+         (*result) = SCIP_FEASIBLE;
+   }
+   else
+   {
+      /* the result flag is set to FEASIBLE as default. If a cut is added, then this is changed to CONS_ADDED */
+      (*result) = SCIP_FEASIBLE;
+
+      /* Generating cuts for the subproblems. */
+      benderscuts = SCIPbendersGetBenderscuts(benders);
+      nbenderscuts = SCIPbendersGetNBenderscuts(benders);
+
+      /* This is done in two loops. The first is by subproblem and the second is by cut type. */
+      for( i = 0; i < nsubproblems; i++ )
+      {
+         for( j = 0; j < nbenderscuts; j++ )
+         {
+            assert(benderscuts[j] != NULL);
+
+            SCIP_CALL( SCIPbenderscutExec(benderscuts[j], set, benders, i, result) );
+         }
+      }
+   }
+
+   /* calling the post-solve call back for the Benders' decomposition algorithm. This allows the user to work directly
+    * with the solved subproblems and the master problem */
+   if( benders->benderspostsolve != NULL )
+      SCIP_CALL( benders->benderspostsolve(set->scip, benders, infeasible) );
+
+   /* freeing the subproblems after the cuts are generated */
+   for( i = 0; i < benders->nsubproblems; i++ )
+      SCIP_CALL( SCIPbendersFreeSubproblem(benders, set, i) );
+
+   /* increment the number of calls to the Benders' decomposition subproblem solve */
+   benders->ncalls++;
+
+   return SCIP_OKAY;
+}
+
+/** solves the subproblems. */
+extern
+SCIP_RETCODE SCIPbendersSolveSubproblem(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   int                   probnum,            /**< the subproblem number */
+   SCIP_Bool*            infeasible          /**< returns whether the current subproblem is infeasible */
+   )
+{
+   assert(benders != NULL);
+   assert(benders->benderssolvesub != NULL);
+   assert(probnum >= 0 && probnum < benders->nsubproblems);
+
+   SCIP_CALL( benders->benderssolvesub(set->scip, benders, sol, probnum, infeasible) );
+
+   return SCIP_OKAY;
+}
+
+/** frees the subproblems. */
+SCIP_RETCODE SCIPbendersFreeSubproblem(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   probnum             /**< the subproblem number */
+   )
+{
+   assert(benders != NULL);
+   assert(benders->bendersfreesub != NULL);
+   assert(probnum >= 0 && probnum < benders->nsubproblems);
+
+   SCIP_CALL( benders->bendersfreesub(set->scip, benders, probnum) );
 
    return SCIP_OKAY;
 }
@@ -317,7 +618,7 @@ SCIP_RETCODE SCIPbendersExec(
 /** returns the variable for the given variable of the subproblem. This provides a call back for the mapping between the
  * master and subproblems */
 SCIP_VAR* SCIPbendersGetMasterVar(
-   SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< the copy of the master variable in the subproblem */
    )
@@ -330,9 +631,9 @@ SCIP_VAR* SCIPbendersGetMasterVar(
    return benders->bendersgetmastervar(set->scip, benders, var);
 }
 
-/** gets user data of variable benders */
+/** gets user data of Benders' decomposition */
 SCIP_BENDERSDATA* SCIPbendersGetData(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -340,10 +641,10 @@ SCIP_BENDERSDATA* SCIPbendersGetData(
    return benders->bendersdata;
 }
 
-/** sets user data of variable benders; user has to free old data in advance! */
+/** sets user data of Benders' decomposition; user has to free old data in advance! */
 void SCIPbendersSetData(
-   SCIP_BENDERS*         benders,            /**< variable benders */
-   SCIP_BENDERSDATA*     bendersdata         /**< new variable benders user data */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_BENDERSDATA*     bendersdata         /**< new Benders' decomposition user data */
    )
 {
    assert(benders != NULL);
@@ -353,7 +654,7 @@ void SCIPbendersSetData(
 
 /** sets copy callback of benders */
 void SCIPbendersSetCopy(
-   SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_DECL_BENDERSCOPY ((*benderscopy))    /**< copy callback of benders */
    )
 {
@@ -395,6 +696,28 @@ void SCIPbendersSetExit(
    benders->bendersexit = bendersexit;
 }
 
+/** sets presolving initialization callback of benders */
+void SCIPbendersSetInitpre(
+   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_DECL_BENDERSINITPRE((*bendersinitpre))     /**< initialize benders */
+   )
+{
+   assert(benders != NULL);
+
+   benders->bendersinitpre = bendersinitpre;
+}
+
+/** sets presolving deinitialization callback of benders */
+void SCIPbendersSetExitpre(
+   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_DECL_BENDERSEXITPRE((*bendersexitpre))     /**< deinitialize benders */
+   )
+{
+   assert(benders != NULL);
+
+   benders->bendersexitpre = bendersexitpre;
+}
+
 /** sets solving process initialization callback of benders */
 void SCIPbendersSetInitsol(
    SCIP_BENDERS*         benders,            /**< benders */
@@ -417,31 +740,20 @@ void SCIPbendersSetExitsol(
    benders->bendersexitsol = bendersexitsol;
 }
 
-/** sets master variables mapping function callback of the Benders' decomposition algorithm */
-void SCIPbendersSetGetmastervar(
+/** sets post-solve callback of benders */
+void SCIPbendersSetPostsolve(
    SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSGETMASTERVAR((*bendersgetmastervar))/**< the master variable to subproblem var mapping function */
+   SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve))/**< solving process deinitialization callback of benders */
    )
 {
    assert(benders != NULL);
 
-   benders->bendersgetmastervar = bendersgetmastervar;
+   benders->benderspostsolve = benderspostsolve;
 }
 
-/** sets the subproblem solving callback of the Benders' decomposition algorithm */
-void SCIPbendersSetExec(
-   SCIP_BENDERS*         benders,            /**< benders */
-   SCIP_DECL_BENDERSEXEC ((*bendersexec))    /**< the subproblem solving method of the Benders' decomposition algorithm */
-   )
-{
-   assert(benders != NULL);
-
-   benders->bendersexec = bendersexec;
-}
-
-/** gets name of variable benders */
+/** gets name of Benders' decomposition */
 const char* SCIPbendersGetName(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -449,9 +761,9 @@ const char* SCIPbendersGetName(
    return benders->name;
 }
 
-/** gets description of variable benders */
+/** gets description of Benders' decomposition */
 const char* SCIPbendersGetDesc(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -459,9 +771,9 @@ const char* SCIPbendersGetDesc(
    return benders->desc;
 }
 
-/** gets priority of variable benders */
+/** gets priority of Benders' decomposition */
 int SCIPbendersGetPriority(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -469,11 +781,11 @@ int SCIPbendersGetPriority(
    return benders->priority;
 }
 
-/** sets priority of variable benders */
+/** sets priority of Benders' decomposition */
 void SCIPbendersSetPriority(
-   SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
-   int                   priority            /**< new priority of the variable benders */
+   int                   priority            /**< new priority of the Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -483,9 +795,31 @@ void SCIPbendersSetPriority(
    set->benderssorted = FALSE;
 }
 
+/** gets the number of subproblems for the Benders' decomposition */
+int SCIPbendersGetNSubproblems(
+   SCIP_BENDERS*         benders             /**< the Benders' decomposition data structure */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->nsubproblems;
+}
+
+/** returns the SCIP instance for a given subproblem */
+SCIP* SCIPbendersSubproblem(
+   SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < benders->nsubproblems);
+
+   return benders->subproblems[probnumber];
+}
+
 /** gets the number of times, the benders was called and tried to find a variable with negative reduced costs */
 int SCIPbendersGetNCalls(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -495,7 +829,7 @@ int SCIPbendersGetNCalls(
 
 /** gets the number of optimality cuts found by the collection of Benders' decomposition subproblems */
 int SCIPbendersGetNOptCutsFound(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -505,7 +839,7 @@ int SCIPbendersGetNOptCutsFound(
 
 /** gets the number of feasibility cuts found by the collection of Benders' decomposition subproblems */
 int SCIPbendersGetNFeasCutsFound(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -515,7 +849,7 @@ int SCIPbendersGetNFeasCutsFound(
 
 /** gets time in seconds used in this benders for setting up for next stages */
 SCIP_Real SCIPbendersGetSetupTime(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -525,7 +859,7 @@ SCIP_Real SCIPbendersGetSetupTime(
 
 /** gets time in seconds used in this benders */
 SCIP_Real SCIPbendersGetTime(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -545,9 +879,9 @@ void SCIPbendersEnableOrDisableClocks(
    SCIPclockEnableOrDisable(benders->bendersclock, enable);
 }
 
-/** is variable benders initialized? */
+/** is Benders' decomposition initialized? */
 SCIP_Bool SCIPbendersIsInitialized(
-   SCIP_BENDERS*         benders             /**< variable benders */
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    )
 {
    assert(benders != NULL);
@@ -555,4 +889,189 @@ SCIP_Bool SCIPbendersIsInitialized(
    return benders->initialized;
 }
 
+/** are Benders' cuts generated from the LP solutions? */
+SCIP_Bool SCIPbendersCutLP(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
 
+   return benders->cutlp;
+}
+
+/** are Benders' cuts generated from the pseudo solutions? */
+SCIP_Bool SCIPbendersCutPseudo(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->cutpseudo;
+}
+
+/** are Benders' cuts generated from the relaxation solutions? */
+SCIP_Bool SCIPbendersCutRelaxation(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->cutrelax;
+}
+
+/** Adds a subproblem to the Benders' decomposition data */
+void SCIPbendersAddSubproblem(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP*                 subproblem          /**< subproblem to be added to the data storage */
+   )
+{
+   assert(benders != NULL);
+   assert(subproblem != NULL);
+   assert(benders->subproblems != NULL);
+   assert(benders->addedsubprobs + 1 <= benders->nsubproblems);
+
+   benders->subproblems[benders->addedsubprobs] = subproblem;
+
+   benders->addedsubprobs++;
+}
+
+/** returns the auxiliary variable for the given subproblem */
+SCIP_VAR* SCIPbendersGetAuxiliaryVar(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   return benders->auxiliaryvars[probnumber];
+}
+
+/** sets the sorted flags in the Benders' decomposition */
+void SCIPbendersSetBenderscutsSorted(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition structure */
+   SCIP_Bool             sorted              /**< the value to set the sorted flag to */
+   )
+{
+   assert(benders != NULL);
+
+   benders->benderscutssorted = sorted;
+   benders->benderscutsnamessorted = sorted;
+}
+
+/** inserts a Benders' cut into the Benders' cuts list */
+SCIP_RETCODE SCIPbendersIncludeBenderscut(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' cut */
+   )
+{
+   assert(benders != NULL);
+   assert(benderscut != NULL);
+
+   if( benders->nbenderscuts >= benders->benderscutssize )
+   {
+      benders->benderscutssize = SCIPsetCalcMemGrowSize(set, benders->nbenderscuts+1);
+      SCIP_ALLOC( BMSreallocMemoryArray(&benders->benderscuts, benders->benderscutssize) );
+   }
+   assert(benders->nbenderscuts < benders->benderscutssize);
+
+   benders->benderscuts[benders->nbenderscuts] = benderscut;
+   benders->nbenderscuts++;
+   benders->benderscutssorted = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** returns the Benders' cut of the given name, or NULL if not existing */
+SCIP_BENDERSCUT* SCIPfindBenderscut(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   const char*           name                /**< name of Benderscut' decomposition */
+   )
+{
+   int i;
+
+   assert(benders != NULL);
+   assert(name != NULL);
+
+   for( i = 0; i < benders->nbenderscuts; i++ )
+   {
+      if( strcmp(SCIPbenderscutGetName(benders->benderscuts[i]), name) == 0 )
+         return benders->benderscuts[i];
+   }
+
+   return NULL;
+}
+
+/** returns the array of currently available Benders' cuts; active benders are in the first slots of the array */
+SCIP_BENDERSCUT** SCIPbendersGetBenderscuts(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   if( !benders->benderscutssorted )
+   {
+      SCIPsortPtr((void**)benders->benderscuts, SCIPbenderscutComp, benders->nbenderscuts);
+      benders->benderscutssorted = TRUE;
+      benders->benderscutsnamessorted = FALSE;
+   }
+
+   return benders->benderscuts;
+}
+
+/** returns the number of currently available Benders' cuts */
+int SCIPbendersGetNBenderscuts(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+
+   return benders->nbenderscuts;
+}
+
+/** sets the priority of a Benders' decomposition */
+SCIP_RETCODE SCIPbendersSetBenderscutPriority(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' cut */
+   int                   priority            /**< new priority of the Benders' decomposition */
+   )
+{
+   assert(benders != NULL);
+   assert(benderscut != NULL);
+
+   benderscut->priority = priority;
+   benders->benderscutssorted = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** sorts benders cuts by priorities */
+void SCIPbendersSortBenderscuts(
+   SCIP_BENDERS*         benders             /**< benders */
+   )
+{
+   assert(benders != NULL);
+
+   if( !benders->benderscutssorted )
+   {
+      SCIPsortPtr((void**)benders->benderscuts, SCIPbenderscutComp, benders->nbenderscuts);
+      benders->benderscutssorted = TRUE;
+      benders->benderscutsnamessorted = FALSE;
+   }
+}
+
+/** sorts benders cuts by name */
+void SCIPbendersSortBenderscutsName(
+   SCIP_BENDERS*         benders             /**< benders */
+   )
+{
+   assert(benders != NULL);
+
+   if( !benders->benderscutsnamessorted )
+   {
+      SCIPsortPtr((void**)benders->benderscuts, SCIPbenderscutCompName, benders->nbenderscuts);
+      benders->benderscutssorted = FALSE;
+      benders->benderscutsnamessorted = TRUE;
+   }
+}
