@@ -67,6 +67,7 @@ struct SCIP_Benders
    /* the subproblem information */
    SCIP**                subproblems;        /**< the Benders' decomposition subproblems */
    SCIP_VAR**            auxiliaryvars;      /**< the auxiliary variables for the Benders' optimality cuts */
+   SCIP_Real*            subprobobjval;      /**< the objective value of the subproblem in the current iteration */
    int                   addedsubprobs;      /**< subproblems added to the Benders' decomposition data */
    int                   nsubproblems;       /**< number of subproblems */
 

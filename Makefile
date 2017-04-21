@@ -447,6 +447,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/compr_weakcompr.o \
 			scip/concsolver_scip.o \
 			scip/cons_and.o \
+			scip/cons_benders.o \
 			scip/cons_bivariate.o \
 			scip/cons_bounddisjunction.o \
 			scip/cons_cardinality.o \
@@ -598,12 +599,16 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_oddcycle.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_strongcg.o \
-			scip/sepa_zerohalf.o
+			scip/sepa_zerohalf.o \
+			scip/benderscut_opt.o \
+			scip/benderscut_feas.o \
+			scip/misc_benders.o
 
 SCIPLIBOBJ	=	scip/boundstore.o \
 			scip/branch.o \
 			scip/benders.o \
 			scip/benderscut.o \
+			scip/bendersdefcuts.o \
 			scip/clock.o \
 			scip/concsolver.o \
 			scip/concurrent.o \

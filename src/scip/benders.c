@@ -42,6 +42,12 @@
 
 /* Local methods */
 
+/* A workaround for GCG. This is a temp vardata that is set for the auxiliary variables */
+struct SCIP_VarData
+{
+   int vartype;
+};
+
 /** adds the auxiliary variables to the Benders' decomposition master problem */
 static
 SCIP_RETCODE addAuxiliaryVariablesToMaster(
@@ -50,8 +56,13 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
    )
 {
    SCIP_VAR* auxiliaryvar;
+   SCIP_VARDATA* vardata;
    char varname[SCIP_MAXSTRLEN];    /* the name of the auxiliary variable */
    int i;
+
+   /* this is a workaround for GCG. GCG expects that the variable has vardata when added. So a dummy vardata is created */
+   SCIP_CALL( SCIPallocBlockMemory(scip, &vardata) );
+   vardata->vartype = -1;
 
    for( i = 0; i < SCIPbendersGetNSubproblems(benders); i++ )
    {
@@ -61,6 +72,8 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       SCIP_CALL( SCIPcreateVarBasic(scip, &auxiliaryvar, varname, -SCIPinfinity(scip), SCIPinfinity(scip), 1.0,
             SCIP_VARTYPE_CONTINUOUS) );
 
+      SCIPvarSetData(auxiliaryvar, vardata);
+
       SCIP_CALL( SCIPaddVar(scip, auxiliaryvar) );
 
       benders->auxiliaryvars[i] = auxiliaryvar;
@@ -68,7 +81,30 @@ SCIP_RETCODE addAuxiliaryVariablesToMaster(
       SCIP_CALL( SCIPreleaseVar(scip, &auxiliaryvar) );
    }
 
+   SCIPfreeBlockMemory(scip, &vardata);
+
    return SCIP_OKAY;
+}
+
+/* sets the subproblem objective value array to -infinity */
+static
+void resetSubproblemObjectiveValue(
+   SCIP_BENDERS*         benders             /**< the Benders' decomposition structure */
+   )
+{
+   SCIP* subproblem;
+   int nsubproblems;
+   int i;
+
+   assert(benders != NULL);
+
+   nsubproblems = SCIPbendersGetNSubproblems(benders);
+
+   for( i = 0; i < nsubproblems; i++ )
+   {
+      subproblem = SCIPbendersSubproblem(benders, i);
+      SCIPbendersSetSubprobObjval(benders, SCIPinfinity(subproblem), i);
+   }
 }
 
 
@@ -204,11 +240,10 @@ SCIP_RETCODE SCIPbendersCreate(
    (*benders)->benderscutssorted = FALSE;
    (*benders)->benderscutsnamessorted = FALSE;
 
-   /* allocating memory for the subproblems array */
+   /* allocating memory for the subproblems arrays */
    SCIP_ALLOC( BMSallocMemoryArray(&(*benders)->subproblems, (*benders)->nsubproblems) );
-
-   /* allocating memory for the auxiliary variables array */
    SCIP_ALLOC( BMSallocMemoryArray(&(*benders)->auxiliaryvars, (*benders)->nsubproblems) );
+   SCIP_ALLOC( BMSallocMemoryArray(&(*benders)->subprobobjval, (*benders)->nsubproblems) );
 
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "benders/%s/priority", name);
@@ -262,6 +297,7 @@ SCIP_RETCODE SCIPbendersFree(
    BMSfreeMemoryArrayNull(&(*benders)->benderscuts);
 
 
+   BMSfreeMemoryArray(&(*benders)->subprobobjval);
    BMSfreeMemoryArray(&(*benders)->auxiliaryvars);
    BMSfreeMemoryArray(&(*benders)->subproblems);
 
@@ -511,7 +547,12 @@ SCIP_RETCODE SCIPbendersExec(
    assert(result != NULL);
    assert(benders->bendersexec != NULL);
 
+   SCIP_CALL( SCIPprintSol(set->scip, sol, NULL, FALSE) );
+
    nsubproblems = SCIPbendersGetNSubproblems(benders);
+
+   /* sets the stored objective function values of the subproblems to infinity */
+   resetSubproblemObjectiveValue(benders);
 
    SCIP_CALL( benders->bendersexec(set->scip, benders) );
 
@@ -529,10 +570,7 @@ SCIP_RETCODE SCIPbendersExec(
       /* if the subproblems are being solved as part of the conscheck, then we break once an infeasibility is found. The
        * result pointer is set to infeasible and the execution is halted. */
       if( check && infeasible )
-      {
-         (*result) = SCIP_INFEASIBLE;
-         return SCIP_OKAY;
-      }
+         break;
    }
 
    if( check )
@@ -590,11 +628,25 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    SCIP_Bool*            infeasible          /**< returns whether the current subproblem is infeasible */
    )
 {
+   SCIP* subproblem;
+   SCIP_SOL* bestsol;
+
    assert(benders != NULL);
    assert(benders->benderssolvesub != NULL);
    assert(probnum >= 0 && probnum < benders->nsubproblems);
 
    SCIP_CALL( benders->benderssolvesub(set->scip, benders, sol, probnum, infeasible) );
+
+   subproblem = SCIPbendersSubproblem(benders, probnum);
+
+   bestsol = SCIPgetBestSol(subproblem);
+
+   if( SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL )
+      SCIPbendersSetSubprobObjval(benders, SCIPgetSolTransObj(subproblem, bestsol), probnum);
+   else if( SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE )
+      SCIPbendersSetSubprobObjval(benders, SCIPinfinity(set->scip), probnum);
+   else
+      assert(FALSE);
 
    return SCIP_OKAY;
 }
@@ -947,6 +999,30 @@ SCIP_VAR* SCIPbendersGetAuxiliaryVar(
    return benders->auxiliaryvars[probnumber];
 }
 
+/** stores the objective function value of the subproblem for use in cut generation */
+void SCIPbendersSetSubprobObjval(
+   SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP_Real             objval,             /**< the objective function value for the subproblem */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   benders->subprobobjval[probnumber] = objval;
+}
+
+/** returns the objective function value of the subproblem for use in cut generation */
+SCIP_Real SCIPbendersGetSubprobObjval(
+   SCIP_BENDERS*         benders,            /**< variable benders */
+   int                   probnumber          /**< the subproblem number */
+   )
+{
+   assert(benders != NULL);
+   assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
+
+   return benders->subprobobjval[probnumber];
+}
 /** sets the sorted flags in the Benders' decomposition */
 void SCIPbendersSetBenderscutsSorted(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition structure */

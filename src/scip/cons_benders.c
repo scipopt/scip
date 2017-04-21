@@ -23,14 +23,14 @@
 #include <assert.h>
 #include "scip/scip.h"
 
-#include "cons_benders.h"
+#include "scip/cons_benders.h"
 
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "benders"
 #define CONSHDLR_DESC          "constraint handler to execute Benders' Decomposition"
-#define CONSHDLR_ENFOPRIORITY    10000 /**< priority of the constraint handler for constraint enforcing */
-#define CONSHDLR_CHECKPRIORITY   10000 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_ENFOPRIORITY     10000 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_CHECKPRIORITY    10000 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
@@ -49,32 +49,6 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 
 
-#define DEFAULT_USEHEURSOLVING           FALSE      /**< should heuristic solving be used */
-#define DEFAULT_ABORTSOLVINGBOUND        FALSE      /**< should the subproblem solve be aborted when exceeding the upper bound */
-#define DEFAULT_DISPINFOS                FALSE      /**< should additional information be displayed */
-#define DEFAULT_DISABLECUTOFF            2          /**< should the cutoffbound be applied in master LP solving? (0: on, 1:off, 2:auto) */
-#define DEFAULT_SORTING                  2          /**< default sorting method for pricing mips
-                                                     *    0 :   order of pricing problems
-                                                     *    1 :   according to dual solution of convexity constraint
-                                                     *    2 :   according to reliability from previous round)
-                                                     */
-#define DEFAULT_THREADS                  0          /**< number of threads (0 is OpenMP default) */
-#define DEFAULT_EAGERFREQ                10         /**< frequency at which all pricingproblems should be solved (0 to disable) */
-
-
-/* TODO: (optional) enable linear or nonlinear constraint upgrading */
-#if 0
-#include "scip/cons_linear.h"
-#include "scip/cons_nonlinear.h"
-#define LINCONSUPGD_PRIORITY          0 /**< priority of the constraint handler for upgrading of linear constraints */
-#define NONLINCONSUPGD_PRIORITY       0 /**< priority of the constraint handler for upgrading of nonlinear constraints */
-#endif
-
-#define SUBPROBLEM_STAT_ARRAYLEN_TIME 1024                /**< length of the array for Time histogram representation */
-#define SUBPROBLEM_STAT_BUCKETSIZE_TIME 10                /**< size of the buckets for Time histogram representation */
-#define SUBPROBLEM_STAT_ARRAYLEN_CUTS 1024                /**< length of the array for foundVars histogram representation */
-#define SUBPROBLEM_STAT_BUCKETSIZE_CUTS 1                 /**< size of the buckets for foundVars histogram representation */
-
 /*
  * Data structures
  */
@@ -89,21 +63,7 @@
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   SCIP_BENDERS**        benders;            /**< the Benders' decomposition structures */
-   int                   nbenders;           /**< the number of Benders' decomposition structures */
-   //SCIP_VAR**            auxiliaryvars;      /**< the auxiliary variables added to the master problem */
    int                   ncalls;             /**< the number of calls to the constraint handler. */
-
-   //SCIP_SOL**            subproblemsols;     /**< the solutions from the subproblem. Used to create an original problem solution */
-
-   /** parameter values */
-   SCIP_Bool             dispinfos;          /**< should subproblem solving information be displayed? */
-   int                   disablecutoff;      /**< should the cutoffbound be applied in master LP solving (0: on, 1:off, 2:auto)? */
-   int                   eagerfreq;          /**< frequency at which all pricingproblems should be solved */
-   int                   threads;            /**< the number of threads used to solve the subproblems */
-
-   /** statistics */
-   int                   eagerage;           /**< iterations since last eager iteration */
 };
 
 
@@ -243,38 +203,33 @@ SCIP_DECL_CONSEXITPRE(consExitpreBenders)
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+#if 0
 static
 SCIP_DECL_CONSINITSOL(consInitsolBenders)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-
-   assert(conshdlr != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert(conshdlrdata != NULL);
-
-   conshdlrdata->ncalls = 0;
-   conshdlrdata->eagerage = 0;
+   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
+#else
+#define consInitsolBenders NULL
+#endif
 
 
-#define SCIP_DECL_CONSEXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_Bool restart)
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
+#if 0
 static
 SCIP_DECL_CONSEXITSOL(consExitsolBenders)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   int i;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
+#else
+#define consExitsolBenders NULL
+#endif
 
 
 /** frees specific constraint data */
@@ -352,16 +307,14 @@ SCIP_DECL_CONSSEPASOL(consSepasolBenders)
 #endif
 
 
-//#define SCIP_DECL_CONSENFOLP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
-      //SCIP_Bool solinfeasible, SCIP_RESULT* result)
 /** constraint enforcing method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSENFOLP(consEnfolpBenders)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_BENDERS** benders;
+   int nbenders;
    int i;
-
-   SCIP_Bool infeasible;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -371,28 +324,31 @@ SCIP_DECL_CONSENFOLP(consEnfolpBenders)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
-   for( i = 0; i < conshdlrdata->nbenders; i++ )
+   benders = SCIPgetBenders(scip);
+   nbenders = SCIPgetNBenders(scip);
+
+   for( i = 0; i < nbenders; i++ )
    {
-      if( SCIPbendersCutLP(conshdlrdata->benders[i]) )
+      if( SCIPbendersCutLP(benders[i]) )
       {
-         SCIP_CALL( SCIPsolveBendersSubproblems(scip, conshdlrdata->benders[i], NULL, result, FALSE) );
+         SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, FALSE) );
       }
    }
+
+   conshdlrdata->ncalls++;
 
    return SCIP_OKAY;
 }
 
 
-//#define SCIP_DECL_CONSENFORELAX(x) SCIP_RETCODE x (SCIP* scip, SCIP_SOL* sol, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
-      //SCIP_Bool solinfeasible, SCIP_RESULT* result)
 /** constraint enforcing method of constraint handler for relaxation solutions */
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxBenders)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_BENDERS** benders;
+   int nbenders;
    int i;
-
-   SCIP_Bool infeasible;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -402,28 +358,31 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxBenders)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
-   for( i = 0; i < conshdlrdata->nbenders; i++ )
+   benders = SCIPgetBenders(scip);
+   nbenders = SCIPgetNBenders(scip);
+
+   for( i = 0; i < nbenders; i++ )
    {
-      if( SCIPbendersCutLP(conshdlrdata->benders[i]) )
+      if( SCIPbendersCutLP(benders[i]) )
       {
-         SCIP_CALL( SCIPsolveBendersSubproblems(scip, conshdlrdata->benders[i], NULL, result, FALSE) );
+         SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, FALSE) );
       }
    }
+
+   conshdlrdata->ncalls++;
 
    return SCIP_OKAY;
 }
 
 
-//#define SCIP_DECL_CONSENFOPS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
-      //SCIP_Bool solinfeasible, SCIP_Bool objinfeasible, SCIP_RESULT* result)
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsBenders)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_BENDERS** benders;
+   int nbenders;
    int i;
-
-   SCIP_Bool infeasible;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -433,31 +392,32 @@ SCIP_DECL_CONSENFOPS(consEnfopsBenders)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
-   for( i = 0; i < conshdlrdata->nbenders; i++ )
+   benders = SCIPgetBenders(scip);
+   nbenders = SCIPgetNBenders(scip);
+
+   for( i = 0; i < nbenders; i++ )
    {
-      if( SCIPbendersCutLP(conshdlrdata->benders[i]) )
+      if( SCIPbendersCutLP(benders[i]) )
       {
-         SCIP_CALL( SCIPsolveBendersSubproblems(scip, conshdlrdata->benders[i], NULL, result, FALSE) );
+         SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, FALSE) );
       }
    }
+
+   conshdlrdata->ncalls++;
 
    return SCIP_OKAY;
 }
 
 
 /* The define is kept as a comment so I know what is being passed to this function */
-#if 0
-#define SCIP_DECL_CONSCHECK(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_SOL* sol, \
-      SCIP_Bool checkintegrality, SCIP_Bool checklprows, SCIP_Bool printreason, SCIP_RESULT* result)
-#endif
 /** feasibility check method of constraint handler for integral solutions */
 static
 SCIP_DECL_CONSCHECK(consCheckBenders)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_BENDERS** benders;
+   int nbenders;
    int i;
-
-   SCIP_Bool infeasible;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -467,17 +427,22 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
-   for( i = 0; i < conshdlrdata->nbenders; i++ )
+   benders = SCIPgetBenders(scip);
+   nbenders = SCIPgetNBenders(scip);
+
+   for( i = 0; i < nbenders; i++ )
    {
-      if( SCIPbendersCutLP(conshdlrdata->benders[i]) )
+      if( SCIPbendersCutLP(benders[i]) )
       {
-         SCIP_CALL( SCIPsolveBendersSubproblems(scip, conshdlrdata->benders[i], NULL, result, TRUE) );
+         SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, TRUE) );
       }
 
       /* if the result is infeasible, it is not necessary to check any more subproblems. */
       if( (*result) == SCIP_INFEASIBLE )
          break;
    }
+
+   conshdlrdata->ncalls++;
 
    return SCIP_OKAY;
 }
@@ -718,12 +683,7 @@ SCIP_RETCODE SCIPincludeConshdlrBenders(
    conshdlrdata = NULL;
 
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
-   conshdlrdata->origprob = origprob;
-   conshdlrdata->solvers = NULL;
-   conshdlrdata->nsolvers = 0;
-   conshdlrdata->nodetimehist = NULL;
-   conshdlrdata->optimalitycutshist = NULL;
-   conshdlrdata->feasibilitycutshist = NULL;
+   conshdlrdata->ncalls = 0;
 
    conshdlr = NULL;
 
@@ -788,36 +748,6 @@ SCIP_RETCODE SCIPincludeConshdlrBenders(
 
 #endif
 
-
-   /* parameters for the Benders' decomposition constraint handler */
-   SCIP_CALL( SCIPaddBoolParam(origprob, "benders/subproblem/useheursolving",
-         "should subproblem solving be performed heuristically before solving the LPs to optimality?",
-         &conshdlrdata->useheursolving, TRUE, DEFAULT_USEHEURSOLVING, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(origprob, "benders/subproblem/abortsolvingbound",
-         "should solving be aborted when the objective function is less than the current upper bound?",
-         &conshdlrdata->abortsolvebound, TRUE, DEFAULT_ABORTSOLVINGBOUND, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(origprob, "benders/subproblem/dispinfos",
-         "should additional informations concerning the subproblem solving process be displayed?",
-         &conshdlrdata->dispinfos, FALSE, DEFAULT_DISPINFOS, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(origprob, "benders/subproblem/sorting",
-         "which sorting method should be used to sort the subproblems problems (0 = order of pricing problems, 1 = according to dual solution of convexity constraint, 2 = according to reliability from previous round)",
-         &conshdlrdata->sorting, FALSE, DEFAULT_SORTING, 0, 5, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(origprob, "benders/subproblem/threads",
-         "how many threads should be used to concurrently solve the subprolems (0 to guess threads by OpenMP)",
-         &conshdlrdata->threads, FALSE, DEFAULT_THREADS, 0, 4096, NULL, NULL) );
-
-   //SCIP_CALL( SCIPsetIntParam(scip, "lp/disablecutoff", DEFAULT_DISABLECUTOFF) );
-   //SCIP_CALL( SCIPaddIntParam(origprob, "benders/subproblem/disablecutoff",
-         //"should the cutoffbound be applied in master LP solving (0: on, 1:off, 2:auto)?",
-         //&conshdlrdata->disablecutoff, FALSE, DEFAULT_DISABLECUTOFF, 0, 2, paramChgdDisablecutoff, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(origprob, "benders/subproblem/eagerfreq",
-            "frequency at which all subproblems should be solved (0 to disable)",
-            &conshdlrdata->eagerfreq, FALSE, DEFAULT_EAGERFREQ, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

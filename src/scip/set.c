@@ -4918,22 +4918,28 @@ SCIP_RETCODE SCIPsetInitprePlugins(
 
    assert(set != NULL);
 
-   /* inform presolvers that the presolving is abound to begin */
+   /* inform presolvers that the presolving is about to begin */
    for( i = 0; i < set->npresols; ++i )
    {
       SCIP_CALL( SCIPpresolInitpre(set->presols[i], set) );
    }
 
-   /* inform propagators that the presolving is abound to begin */
+   /* inform propagators that the presolving is about to begin */
    for( i = 0; i < set->nprops; ++i )
    {
       SCIP_CALL( SCIPpropInitpre(set->props[i], set) );
    }
 
-   /* inform constraint handlers that the presolving is abound to begin */
+   /* inform constraint handlers that the presolving is about to begin */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
       SCIP_CALL( SCIPconshdlrInitpre(set->conshdlrs[i], blkmem, set, stat) );
+   }
+
+   /* inform Benders' decomposition that the presolving is about to begin */
+   for( i = 0; i < set->nbenders; ++i )
+   {
+      SCIP_CALL( SCIPbendersInitpre(set->benders[i], set, stat) );
    }
 
    return SCIP_OKAY;
@@ -4950,22 +4956,28 @@ SCIP_RETCODE SCIPsetExitprePlugins(
 
    assert(set != NULL);
 
-   /* inform presolvers that the presolving is abound to begin */
+   /* inform presolvers that the presolving is about to end */
    for( i = 0; i < set->npresols; ++i )
    {
       SCIP_CALL( SCIPpresolExitpre(set->presols[i], set) );
    }
 
-   /* inform propagators that the presolving is abound to begin */
+   /* inform propagators that the presolving is about to end */
    for( i = 0; i < set->nprops; ++i )
    {
       SCIP_CALL( SCIPpropExitpre(set->props[i], set) );
    }
 
-   /* inform constraint handlers that the presolving is abound to begin */
+   /* inform constraint handlers that the presolving is about to end */
    for( i = 0; i < set->nconshdlrs; ++i )
    {
       SCIP_CALL( SCIPconshdlrExitpre(set->conshdlrs[i], blkmem, set, stat) );
+   }
+
+   /* inform Benders' decomposition that the presolving is about to end */
+   for( i = 0; i < set->nbenders; ++i )
+   {
+      SCIP_CALL( SCIPbendersExitpre(set->benders[i], set, stat) );
    }
 
    return SCIP_OKAY;

@@ -135,7 +135,7 @@ SCIP_RETCODE SCIPbenderscutCreate(
    (*benderscut)->initialized = FALSE;
    (*benderscut)->nsubproblems = nsubproblems;
 
-   SCIP_ALLOC( BMSallocMemoryArray(&(*benderscut)->nfound, nsubproblems));
+   SCIP_ALLOC( BMSallocMemoryArray(&(*benderscut)->nfound, nsubproblems) );
    for( i = 0; i < nsubproblems; i++ )
       (*benderscut)->nfound[i] = 0;
 
@@ -182,6 +182,8 @@ SCIP_RETCODE SCIPbenderscutInit(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
+   int i;
+
    assert(benderscut != NULL);
    assert(set != NULL);
 
@@ -197,7 +199,8 @@ SCIP_RETCODE SCIPbenderscutInit(
       SCIPclockReset(benderscut->benderscutclock);
 
       benderscut->ncalls = 0;
-      benderscut->nfound = 0;
+      for( i = 0; i < benderscut->nsubproblems; i++ )
+         benderscut->nfound[i] = 0;
    }
 
    if( benderscut->benderscutinit != NULL )

@@ -158,6 +158,21 @@ SCIP_VAR* SCIPbendersGetAuxiliaryVar(
    int                   probnumber          /**< the subproblem number */
    );
 
+/** stores the objective function value of the subproblem for use in cut generation */
+EXTERN
+void SCIPbendersSetSubprobObjval(
+   SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP_Real             objval,             /**< the objective function value for the subproblem */
+   int                   probnumber          /**< the subproblem number */
+   );
+
+/** returns the objective function value of the subproblem for use in cut generation */
+EXTERN
+SCIP_Real SCIPbendersGetSubprobObjval(
+   SCIP_BENDERS*         benders,            /**< variable benders */
+   int                   probnumber          /**< the subproblem number */
+   );
+
 /** Public functions associated with Benders' cuts */
 
 /** inserts a Benders' cut into the Benders' cuts list */
