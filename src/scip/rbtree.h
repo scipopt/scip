@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -34,9 +34,8 @@ struct SCIP_RBTreeNode
    SCIP_RBTREENODE*      child[2];
 };
 
-/* macro to make any structure a node in a rbtree and
- * declare some field the key. It is very important that this
- * is the first member of the structure.
+/* macro to make any structure a node in a rbtree.
+ * It is very important that this is the first member of the structure.
  *
  * Example usage:
  * struct SomeStruct
@@ -49,7 +48,7 @@ struct SCIP_RBTreeNode
  */
 #define SCIP_RBTREE_HOOKS SCIP_RBTREENODE _rbtreenode
 
-/* convenient macros that automtically cast the given arguments */
+/* convenience macros that automtically cast the given arguments to SCIP_RBTREENODE */
 #define SCIPrbtreeFirst(root)  SCIPrbtreeFirst_call((SCIP_RBTREENODE*)(root))
 #define SCIPrbtreeLast(root)  SCIPrbtreeLast_call((SCIP_RBTREENODE*)(root))
 #define SCIPrbtreeSuccessor(x)  SCIPrbtreeSuccessor_call((SCIP_RBTREENODE*)(x))
@@ -147,7 +146,8 @@ void SCIPrbtreeDelete_call(
 
 /** insert node into the tree given by it's root. Requires the
  *  future parent and the position of the parent as returned by
- *  SCIPrbtreeFind...().
+ *  the tree's find function defined using the SCIP_DEF_RBTREE_FIND
+ *  macro.
  */
 EXTERN
 void SCIPrbtreeInsert_call(

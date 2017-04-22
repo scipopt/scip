@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,12 +36,14 @@
 #define SET_PARENT(n, p) do { (n)->parent = (uintptr_t)(p) | COLOR(n); } while(0)
 #define SET_COLOR(n, c)  do { if( c == RED ) { MAKE_RED(n); } else { MAKE_BLACK(n); } } while(0)
 
+/* functions for red black tree management; see Cormen, Thomas H. Introduction to algorithms. MIT press, 2009. */
 
+/** rotate the tree in the given direction */
 static
 void rbRotate(
-   SCIP_RBTREENODE**     root,
-   SCIP_RBTREENODE*      x,
-   int                   dir
+   SCIP_RBTREENODE**     root,               /**< pointer to store new root of the tree */
+   SCIP_RBTREENODE*      x,                  /**< node to perform rotation for */
+   int                   dir                 /**< direction of rotation */
    )
 {
    SCIP_RBTREENODE* p;
@@ -66,10 +68,11 @@ void rbRotate(
    SET_PARENT(x, y);
 }
 
+/** restores the red-black tree property after an insert */
 static
 void rbInsertFixup(
-   SCIP_RBTREENODE**     root,
-   SCIP_RBTREENODE*      z
+   SCIP_RBTREENODE**     root,               /**< pointer to store new root of the tree */
+   SCIP_RBTREENODE*      z                   /**< inserted node */
    )
 {
    SCIP_RBTREENODE* p;
@@ -113,11 +116,12 @@ void rbInsertFixup(
    MAKE_BLACK(*root);
 }
 
+/** restores the red-black tree property after an insert */
 static
 void rbDeleteFixup(
-   SCIP_RBTREENODE**     root,
-   SCIP_RBTREENODE*      x,
-   SCIP_RBTREENODE*      nil
+   SCIP_RBTREENODE**     root,               /**< pointer to store new root of the tree */
+   SCIP_RBTREENODE*      x,                  /**< start node for fixup */
+   SCIP_RBTREENODE*      nil                 /**< fake node representing NULL to properly reassemble the tree */
    )
 {
    while( x != *root && IS_BLACK(x) )
@@ -168,12 +172,13 @@ void rbDeleteFixup(
    }
 }
 
+/** replaces the subtree rooted at node u with the subtree rooted at node v */
 static
 void rbTransplant(
-   SCIP_RBTREENODE**     root,             /**< chunk block */
-   SCIP_RBTREENODE*      u,
-   SCIP_RBTREENODE*      v,
-   SCIP_RBTREENODE*      nil
+   SCIP_RBTREENODE**     root,             /**< pointer to store the new root */
+   SCIP_RBTREENODE*      u,                /**< node u */
+   SCIP_RBTREENODE*      v,                /**< node v */
+   SCIP_RBTREENODE*      nil               /**< fake node representing NULL to properly reassemble the tree */
    )
 {
    SCIP_RBTREENODE* up;
@@ -193,8 +198,9 @@ void rbTransplant(
    SET_PARENT(v, up);
 }
 
+/** get first element in tree with respect to sorting key */
 SCIP_RBTREENODE* SCIPrbtreeFirst_call(
-   SCIP_RBTREENODE*      root
+   SCIP_RBTREENODE*      root                /**< root of the tree */
    )
 {
    if( root == NULL )
@@ -206,8 +212,9 @@ SCIP_RBTREENODE* SCIPrbtreeFirst_call(
    return root;
 }
 
+/** get last element in tree with respect to sorting key */
 SCIP_RBTREENODE* SCIPrbtreeLast_call(
-   SCIP_RBTREENODE*      root
+   SCIP_RBTREENODE*      root                /**< root of the tree */
    )
 {
    if( root == NULL )
@@ -219,8 +226,9 @@ SCIP_RBTREENODE* SCIPrbtreeLast_call(
    return root;
 }
 
+/** get successor of given element in the tree */
 SCIP_RBTREENODE* SCIPrbtreeSuccessor_call(
-   SCIP_RBTREENODE* x
+   SCIP_RBTREENODE*      x                   /**< element to get successor for */
    )
 {
    SCIP_RBTREENODE* y;
@@ -238,8 +246,9 @@ SCIP_RBTREENODE* SCIPrbtreeSuccessor_call(
    return y;
 }
 
+/** get predecessor of given element in the tree */
 SCIP_RBTREENODE* SCIPrbtreePredecessor_call(
-   SCIP_RBTREENODE* x
+   SCIP_RBTREENODE*      x                   /**< element to get predecessor for */
    )
 {
    SCIP_RBTREENODE* y;
@@ -257,9 +266,12 @@ SCIP_RBTREENODE* SCIPrbtreePredecessor_call(
    return y;
 }
 
+/** delete the given node from the tree given by it's root node.
+ *  The node must be contained in the tree rooted at root.
+ */
 void SCIPrbtreeDelete_call(
-   SCIP_RBTREENODE**     root,
-   SCIP_RBTREENODE*      node
+   SCIP_RBTREENODE**     root,               /**< root of the tree */
+   SCIP_RBTREENODE*      node                /**< node to delete from tree */
    )
 {
    SCIP_RBTREENODE nil;
@@ -305,11 +317,19 @@ void SCIPrbtreeDelete_call(
       rbDeleteFixup(root, x, &nil);
 }
 
+/** insert node into the tree given by it's root. Requires the
+ *  future parent and the position of the parent as returned by
+ *  the tree's find function defined using the SCIP_DEF_RBTREE_FIND
+ *  macro.
+ */
 void SCIPrbtreeInsert_call(
-   SCIP_RBTREENODE**     root,
-   SCIP_RBTREENODE*      parent,
-   int                   pos,
-   SCIP_RBTREENODE*      node
+   SCIP_RBTREENODE**     root,               /**< root of the tree */
+   SCIP_RBTREENODE*      parent,             /**< future parent of node to be inserted */
+   int                   pos,                /**< position of parent with respect to node, i.e.
+                                              *   -1 if the parent's key comes before node and 1
+                                              *   if the parent's key comes after the node
+                                              */
+   SCIP_RBTREENODE*      node                /**< node to insert into the tree */
    )
 {
    SET_PARENT(node, parent);
