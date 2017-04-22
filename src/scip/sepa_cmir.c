@@ -867,9 +867,10 @@ SCIP_RETCODE aggregation(
       int oldncuts;
       SCIP_Bool aggrsuccess;
       SCIP_Bool cmirsuccess;
+      SCIP_Bool cmircutislocal;
       SCIP_Bool flowcoversuccess;
       SCIP_Real flowcoverefficacy;
-      SCIP_Bool cutislocal;
+      SCIP_Bool flowcovercutislocal;
 
       *wastried = TRUE;
 
@@ -878,20 +879,20 @@ SCIP_RETCODE aggregation(
        */
 
       flowcoverefficacy =  -SCIPinfinity(scip);
-      SCIP_CALL( SCIPcalcFlowCover(scip, sol, BOUNDSWITCH, ALLOWLOCAL, aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &flowcoverefficacy, &cutrank, &cutislocal, &flowcoversuccess) );
+      SCIP_CALL( SCIPcalcFlowCover(scip, sol, BOUNDSWITCH, ALLOWLOCAL, aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &flowcoverefficacy, &cutrank, &flowcovercutislocal, &flowcoversuccess) );
 
       cutefficacy = flowcoverefficacy;
-      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, NULL, NULL, MINFRAC, MAXFRAC, aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cutislocal, &cmirsuccess) );
+      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(scip, sol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, NULL, NULL, MINFRAC, MAXFRAC, aggrdata->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, &cutrank, &cmircutislocal, &cmirsuccess) );
 
       oldncuts = *ncuts;
 
       if( cmirsuccess )
       {
-         SCIP_CALL( addCut(scip, sol, sepa, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, cutislocal, sepadata->dynamiccuts, cutrank, "cmir", cutoff, ncuts) );
+         SCIP_CALL( addCut(scip, sol, sepa, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, cmircutislocal, sepadata->dynamiccuts, cutrank, "cmir", cutoff, ncuts) );
       }
       else if ( flowcoversuccess )
       {
-         SCIP_CALL( addCut(scip, sol, sepa, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, cutislocal, sepadata->dynamiccuts, cutrank, "flowcover", cutoff, ncuts) );
+         SCIP_CALL( addCut(scip, sol, sepa, cutcoefs, cutinds, cutnnz, cutrhs, cutefficacy, flowcovercutislocal, sepadata->dynamiccuts, cutrank, "flowcover", cutoff, ncuts) );
       }
 
       if ( *cutoff )

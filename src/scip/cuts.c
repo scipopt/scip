@@ -1211,6 +1211,8 @@ SCIP_RETCODE cutsTransformMIR(
    SCIP_Bool*            localbdsused        /**< pointer to store whether local bounds were used in transformation */
    )
 {
+   SCIP_Real DBLDBL(tmp);
+   SCIP_Real DBLDBL(rhs);
    SCIP_Real* bestlbs;
    SCIP_Real* bestubs;
    int* bestlbtypes;
@@ -1268,6 +1270,8 @@ SCIP_RETCODE cutsTransformMIR(
    for( i = (*nnz) - 1; i >= aggrrowintstart; --i )
       varpos[cutinds[i]] = i + 1;
 
+   DBLDBL_ASSIGN(rhs, *cutrhs);
+
    /* perform bound substitution for continuous variables */
    for( i = 0; i < aggrrowintstart; ++i )
    {
@@ -1283,7 +1287,8 @@ SCIP_RETCODE cutsTransformMIR(
          /* standard (bestlbtype < 0) or variable (bestlbtype >= 0) lower bound? */
          if( bestlbtypes[i] < 0 )
          {
-            *cutrhs -= cutcoefs[i] * bestlbs[i];
+            SCIPdbldblProd_DBLDBL(tmp, cutcoefs[i], bestlbs[i]);
+            SCIPdbldblSum22_DBLDBL(rhs, rhs, -tmp);
             *localbdsused = *localbdsused || (bestlbtypes[i] == -2);
          }
          else
@@ -1306,7 +1311,8 @@ SCIP_RETCODE cutsTransformMIR(
             zidx = SCIPvarGetProbindex(vlbvars[bestlbtypes[i]]);
             assert(0 <= zidx && zidx < firstcontvar);
 
-            *cutrhs -= cutcoefs[i] * vlbconsts[bestlbtypes[i]];
+            SCIPdbldblProd_DBLDBL(tmp, cutcoefs[i], vlbconsts[bestlbtypes[i]]);
+            SCIPdbldblSum22_DBLDBL(rhs, rhs, -tmp);
 
             /* check if integral variable already exists in the row */
             k = varpos[zidx];
@@ -1336,7 +1342,8 @@ SCIP_RETCODE cutsTransformMIR(
          /* standard (bestubtype < 0) or variable (bestubtype >= 0) upper bound? */
          if( bestubtypes[i] < 0 )
          {
-            *cutrhs -= cutcoefs[i] * bestubs[i];
+            SCIPdbldblProd_DBLDBL(tmp, cutcoefs[i], bestubs[i]);
+            SCIPdbldblSum22_DBLDBL(rhs, rhs, -tmp);
             *localbdsused = *localbdsused || (bestubtypes[i] == -2);
          }
          else
@@ -1359,7 +1366,8 @@ SCIP_RETCODE cutsTransformMIR(
             zidx = SCIPvarGetProbindex(vubvars[bestubtypes[i]]);
             assert(zidx >= 0);
 
-            *cutrhs -= cutcoefs[i] * vubconsts[bestubtypes[i]];
+            SCIPdbldblProd_DBLDBL(tmp, cutcoefs[i], vubconsts[bestubtypes[i]]);
+            SCIPdbldblSum22_DBLDBL(rhs, rhs, -tmp);
 
             /* check if integral variable already exists in the row */
             k = varpos[zidx];
@@ -1441,7 +1449,8 @@ SCIP_RETCODE cutsTransformMIR(
          varsign[i] = +1;
 
          /* standard (bestlbtype < 0) or variable (bestlbtype >= 0) lower bound? */
-         *cutrhs -= cutcoefs[i] * bestlbs[i];
+         SCIPdbldblProd_DBLDBL(tmp, cutcoefs[i], bestlbs[i]);
+         SCIPdbldblSum22_DBLDBL(rhs, rhs, -tmp);
          *localbdsused = *localbdsused || (bestlbtypes[i] == -2);
       }
       else
@@ -1454,11 +1463,13 @@ SCIP_RETCODE cutsTransformMIR(
          varsign[i] = -1;
 
          /* standard (bestubtype < 0) or variable (bestubtype >= 0) upper bound? */
-         *cutrhs -= cutcoefs[i] * bestubs[i];
+         SCIPdbldblProd_DBLDBL(tmp, cutcoefs[i], bestubs[i]);
+         SCIPdbldblSum22_DBLDBL(rhs, rhs, -tmp);
          *localbdsused = *localbdsused || (bestubtypes[i] == -2);
       }
    }
 
+   *cutrhs = DBLDBL_ROUND(rhs);
    if( fixintegralrhs )
    {
       SCIP_Real f0;
@@ -1554,7 +1565,11 @@ SCIP_RETCODE cutsTransformMIR(
             assert(!SCIPisInfinity(scip, bestubs[besti]));
 
             /* switch the complementation of this variable */
-            *cutrhs += varsign[besti] * cutcoefs[besti] * (bestlbs[besti] - bestubs[besti]);
+            SCIPdbldblSum_DBLDBL(tmp, bestlbs[besti], - bestubs[besti]);
+            SCIPdbldblProd21_DBLDBL(tmp, tmp, varsign[besti] * cutcoefs[besti]);
+            SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
+            *cutrhs = DBLDBL_ROUND(rhs);
+
             if( varsign[besti] == +1 )
             {
                /* switch to upper bound */
@@ -1648,7 +1663,9 @@ SCIP_RETCODE cutsRoundMIR(
    SCIP_Real             f0                  /**< fractional value of rhs */
    )
 {
-   SCIP_Real onedivoneminusf0;
+   SCIP_Real DBLDBL(tmp);
+   SCIP_Real DBLDBL(rhs);
+   SCIP_Real DBLDBL(onedivoneminusf0);
    int i;
    int firstcontvar;
    SCIP_VAR** vars;
@@ -1664,7 +1681,9 @@ SCIP_RETCODE cutsRoundMIR(
    assert(varsign != NULL);
    assert(0.0 < f0 && f0 < 1.0);
 
-   onedivoneminusf0 = 1.0 / (1.0 - f0);
+
+   SCIPdbldblSum_DBLDBL(onedivoneminusf0, 1.0, -f0);
+   SCIPdbldblDiv12_DBLDBL(onedivoneminusf0, 1.0, onedivoneminusf0);
 
    /* Loop backwards to process integral variables first and be able to delete coefficients of integral variables
     * without destroying the ordering of the aggrrow's non-zeros.
@@ -1688,10 +1707,12 @@ SCIP_RETCODE cutsRoundMIR(
 
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &varpos, firstcontvar) );
 
+   DBLDBL_ASSIGN(rhs, *cutrhs);
+
    for( i = *nnz - 1; i >= 0 && cutinds[i] < firstcontvar; --i )
    {
       SCIP_VAR* var;
-      SCIP_Real cutaj;
+      SCIP_Real DBLDBL(cutaj);
       int v;
 
       v = cutinds[i];
@@ -1706,20 +1727,29 @@ SCIP_RETCODE cutsRoundMIR(
       {
          SCIP_Real aj;
          SCIP_Real downaj;
-         SCIP_Real fj;
+         SCIP_Real DBLDBL(fj);
 
          aj = varsign[i] * cutcoefs[i]; /* a'_j */
          downaj = SCIPfloor(scip, aj);
-         fj = aj - downaj;
+         SCIPdbldblSum_DBLDBL(fj, aj, -downaj);
 
-         if( SCIPisSumLE(scip, fj, f0) )
-            cutaj = varsign[i] * downaj; /* a^_j */
+         if( SCIPisSumLE(scip, DBLDBL_ROUND(fj), f0) )
+         {
+            DBLDBL_ASSIGN(cutaj, varsign[i] * downaj);
+         }
          else
-            cutaj = varsign[i] * (downaj + (fj - f0) * onedivoneminusf0); /* a^_j */
+         {
+            SCIPdbldblSum21_DBLDBL(tmp, fj, -f0);
+            SCIPdbldblProd22_DBLDBL(tmp, tmp, onedivoneminusf0);
+            SCIPdbldblSum21_DBLDBL(tmp, tmp, downaj);
+
+            DBL_HI(cutaj) = DBL_HI(tmp) * varsign[i];
+            DBL_LO(cutaj) = DBL_LO(tmp) * varsign[i];
+         }
       }
 
       /* remove zero cut coefficients from cut */
-      if( SCIPisZero(scip, cutaj) )
+      if( SCIPisZero(scip, DBLDBL_ROUND(cutaj)) )
       {
          --*nnz;
          if( i < *nnz )
@@ -1732,7 +1762,7 @@ SCIP_RETCODE cutsRoundMIR(
       }
 
       varpos[v] = i + 1;
-      cutcoefs[i] = cutaj;
+      cutcoefs[i] = DBLDBL_ROUND(cutaj);
 
       /* integral var uses standard bound */
       assert(boundtype[i] < 0);
@@ -1744,12 +1774,14 @@ SCIP_RETCODE cutsRoundMIR(
          if( boundtype[i] == -1 )
          {
             assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
-            *cutrhs += cutaj * SCIPvarGetLbGlobal(var);
+            SCIPdbldblProd21_DBLDBL(tmp, cutaj, SCIPvarGetLbGlobal(var));
+            SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
          }
          else
          {
             assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
-            *cutrhs += cutaj * SCIPvarGetLbLocal(var);
+            SCIPdbldblProd21_DBLDBL(tmp, cutaj, SCIPvarGetLbLocal(var));
+            SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
          }
       }
       else
@@ -1758,12 +1790,14 @@ SCIP_RETCODE cutsRoundMIR(
          if( boundtype[i] == -1 )
          {
             assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
-            *cutrhs += cutaj * SCIPvarGetUbGlobal(var);
+            SCIPdbldblProd21_DBLDBL(tmp, cutaj, SCIPvarGetUbGlobal(var));
+            SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
          }
          else
          {
             assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
-            *cutrhs += cutaj * SCIPvarGetUbLocal(var);
+            SCIPdbldblProd21_DBLDBL(tmp, cutaj, SCIPvarGetUbLocal(var));
+            SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
          }
       }
    }
@@ -1774,7 +1808,7 @@ SCIP_RETCODE cutsRoundMIR(
    while( i >= ndelcontvars )
    {
       SCIP_VAR* var;
-      SCIP_Real cutaj;
+      SCIP_Real DBLDBL(cutaj);
       int v;
 
       v = cutinds[i];
@@ -1792,16 +1826,16 @@ SCIP_RETCODE cutsRoundMIR(
 
          aj = varsign[i] * cutcoefs[i]; /* a'_j */
          if( aj >= 0.0 )
-            cutaj = 0.0;
+            DBLDBL_ASSIGN(cutaj, 0.0);
          else
-            cutaj = varsign[i] * aj * onedivoneminusf0; /* a^_j */
+            SCIPdbldblProd21_DBLDBL(cutaj, onedivoneminusf0, cutcoefs[i]); /* cutaj = varsign[i] * aj * onedivoneminusf0; // a^_j */
       }
 
       /* remove zero cut coefficients from cut; move a continuous var from the beginning
        * to the current position, so that all integral variables stay behind the continuous
        * variables
        */
-      if( SCIPisZero(scip, cutaj) )
+      if( SCIPisZero(scip, DBLDBL_ROUND(cutaj)) )
       {
          if( i > ndelcontvars )
          {
@@ -1814,7 +1848,7 @@ SCIP_RETCODE cutsRoundMIR(
          continue;
       }
 
-      cutcoefs[i] = cutaj;
+      cutcoefs[i] = DBLDBL_ROUND(cutaj);
 
       /* check for variable bound use */
       if( boundtype[i] < 0 )
@@ -1828,12 +1862,14 @@ SCIP_RETCODE cutsRoundMIR(
             if( boundtype[i] == -1 )
             {
                assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
-               *cutrhs += cutaj * SCIPvarGetLbGlobal(var);
+               SCIPdbldblProd21_DBLDBL(tmp, cutaj, SCIPvarGetLbGlobal(var));
+               SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
             }
             else
             {
                assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
-               *cutrhs += cutaj * SCIPvarGetLbLocal(var);
+               SCIPdbldblProd21_DBLDBL(tmp, cutaj, SCIPvarGetLbLocal(var));
+               SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
             }
          }
          else
@@ -1842,12 +1878,14 @@ SCIP_RETCODE cutsRoundMIR(
             if( boundtype[i] == -1 )
             {
                assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
-               *cutrhs += cutaj * SCIPvarGetUbGlobal(var);
+               SCIPdbldblProd21_DBLDBL(tmp, cutaj, SCIPvarGetUbGlobal(var));
+               SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
             }
             else
             {
                assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
-               *cutrhs += cutaj * SCIPvarGetUbLocal(var);
+               SCIPdbldblProd21_DBLDBL(tmp, cutaj, SCIPvarGetUbLocal(var));
+               SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
             }
          }
       }
@@ -1884,25 +1922,30 @@ SCIP_RETCODE cutsRoundMIR(
          zidx = SCIPvarGetProbindex(vbz[vbidx]);
          assert(0 <= zidx && zidx < firstcontvar);
 
-         *cutrhs += cutaj * vbd[vbidx];
+         SCIPdbldblProd21_DBLDBL(tmp, cutaj, vbd[vbidx]);
+         SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
 
          k = varpos[zidx];
+
+         SCIPdbldblProd21_DBLDBL(tmp, cutaj, vbb[vbidx]);
 
          /* add variable to sparsity pattern */
          if( k == 0 )
          {
             k = (*nnz)++;
             varpos[zidx] = *nnz;
-            cutcoefs[k] = - cutaj * vbb[vbidx];
+            cutcoefs[k] = - DBLDBL_ROUND(tmp);
             cutinds[k] = zidx;
          }
          else
-            cutcoefs[k - 1] -= cutaj * vbb[vbidx];
+            cutcoefs[k - 1] -= DBLDBL_ROUND(tmp);
       }
 
       /* advance to next variable */
       --i;
    }
+
+   *cutrhs = DBLDBL_ROUND(rhs);
 
    /* clear the array with the variable positions of the integral variables in the cut */
    for( i = *nnz - 1; i > aggrrowlastcontvar; --i )
@@ -1963,7 +2006,8 @@ SCIP_RETCODE cutsSubstituteMIR(
    )
 {  /*lint --e{715}*/
    SCIP_ROW** rows;
-   SCIP_Real onedivoneminusf0;
+   SCIP_Real DBLDBL(rhs);
+   SCIP_Real DBLDBL(onedivoneminusf0);
    int i;
 
    assert(scip != NULL);
@@ -1977,7 +2021,9 @@ SCIP_RETCODE cutsSubstituteMIR(
    assert(nnz != NULL);
    assert(0.0 < f0 && f0 < 1.0);
 
-   onedivoneminusf0 = 1.0 / (1.0 - f0);
+   SCIPdbldblSum_DBLDBL(onedivoneminusf0, 1.0, -f0);
+   SCIPdbldblDiv12_DBLDBL(onedivoneminusf0, 1.0, onedivoneminusf0);
+   DBLDBL_ASSIGN(rhs, *cutrhs);
 
    rows = SCIPgetLPRows(scip);
    for( i = 0; i < nrowinds; i++ )
@@ -1985,8 +2031,9 @@ SCIP_RETCODE cutsSubstituteMIR(
       SCIP_ROW* row;
       SCIP_Real ar;
       SCIP_Real downar;
-      SCIP_Real cutar;
-      SCIP_Real fr;
+      SCIP_Real DBLDBL(cutar);
+      SCIP_Real DBLDBL(fr);
+      SCIP_Real DBLDBL(tmp);
       SCIP_Real mul;
       int r;
 
@@ -2014,11 +2061,15 @@ SCIP_RETCODE cutsSubstituteMIR(
           *    a^_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
           */
          downar = SCIPfloor(scip, ar);
-         fr = ar - downar;
-         if( SCIPisLE(scip, fr, f0) )
-            cutar = downar;
+         SCIPdbldblSum_DBLDBL(fr, ar, -downar);
+         if( SCIPisLE(scip, DBLDBL_ROUND(fr), f0) )
+            DBLDBL_ASSIGN(cutar, downar);
          else
-            cutar = downar + (fr - f0) * onedivoneminusf0;
+         {
+            SCIPdbldblSum21_DBLDBL(cutar, fr, -f0);
+            SCIPdbldblProd22_DBLDBL(cutar, cutar, onedivoneminusf0);
+            SCIPdbldblSum21_DBLDBL(cutar, cutar, downar);
+         }
       }
       else
       {
@@ -2029,18 +2080,19 @@ SCIP_RETCODE cutsSubstituteMIR(
          if( ar >= 0.0 )
             continue; /* slack can be ignored, because its coefficient is reduced to 0.0 */
          else
-            cutar = ar * onedivoneminusf0;
+            SCIPdbldblProd21_DBLDBL(cutar, onedivoneminusf0, ar);
+
       }
 
       /* if the coefficient was reduced to zero, ignore the slack variable */
-      if( SCIPisZero(scip, cutar) )
+      if( SCIPisZero(scip, DBLDBL_ROUND(cutar)) )
          continue;
 
       /* depending on the slack's sign, we have
        *   a*x + c + s == rhs  =>  s == - a*x - c + rhs,  or  a*x + c - s == lhs  =>  s == a*x + c - lhs
        * substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
        */
-      mul = -slacksign[i] * cutar;
+      mul = -slacksign[i] * DBLDBL_ROUND(cutar);
 
       /* add the slack's definition multiplied with a^_j to the cut */
       SCIP_CALL( varVecAddScaledRowCoefs(scip, &cutinds, &cutcoefs, nnz, NULL, row, mul) );
@@ -2048,33 +2100,37 @@ SCIP_RETCODE cutsSubstituteMIR(
       /* move slack's constant to the right hand side */
       if( slacksign[i] == +1 )
       {
-         SCIP_Real rhs;
+         SCIP_Real DBLDBL(rowrhs);
 
          /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a^_r * (rhs - c) to the right hand side */
          assert(!SCIPisInfinity(scip, row->rhs));
-         rhs = row->rhs - row->constant;
+         SCIPdbldblSum_DBLDBL(rowrhs, row->rhs, -row->constant);
          if( row->integral )
          {
             /* the right hand side was implicitly rounded down in row aggregation */
-            rhs = SCIPfeasFloor(scip, rhs);
+            DBLDBL_ASSIGN(rowrhs, SCIPfeasFloor(scip, DBLDBL_ROUND(rowrhs)));
          }
-         *cutrhs -= cutar * rhs;
+         SCIPdbldblProd22_DBLDBL(tmp, cutar, rowrhs);
+         SCIPdbldblSum22_DBLDBL(rhs, rhs, -tmp);
       }
       else
       {
-         SCIP_Real lhs;
+         SCIP_Real DBLDBL(rowlhs);
 
          /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a^_r * (c - lhs) to the right hand side */
          assert(!SCIPisInfinity(scip, -row->lhs));
-         lhs = row->lhs - row->constant;
+         SCIPdbldblSum_DBLDBL(rowlhs, row->lhs, -row->constant);
          if( row->integral )
          {
             /* the left hand side was implicitly rounded up in row aggregation */
-            lhs = SCIPfeasCeil(scip, lhs);
+            DBLDBL_ASSIGN(rowlhs, SCIPfeasCeil(scip, DBLDBL_ROUND(rowlhs)));
          }
-         *cutrhs += cutar * lhs;
+         SCIPdbldblProd22_DBLDBL(tmp, cutar, rowlhs);
+         SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
       }
    }
+
+   *cutrhs = DBLDBL_ROUND(rhs);
 
    /* set rhs to zero, if it's very close to */
    if( SCIPisZero(scip, *cutrhs) )
@@ -3055,7 +3111,7 @@ SCIP_RETCODE determineBoundForSNF(
    solval = SCIPgetSolVal(scip, sol, var);
 
    SCIPdebugMsg(scip, "  %d: %g <%s, idx=%d, lp=%g, [%g(%d),%g(%d)]>:\n", varposinrow, rowcoef, SCIPvarGetName(var), probidx,
-      solval, bestslb, bestslbtype, bestsub, bestsubtype);
+      solval, bestslb[varposinrow], bestslbtype[varposinrow], bestsub[varposinrow], bestsubtype[varposinrow]);
 
    /* mixed integer set cannot be relaxed to 0-1 single node flow set because both simple bounds are -infinity
       * and infinity, respectively
@@ -4351,7 +4407,7 @@ SCIP_RETCODE getFlowCover(
             SCIPdebugMsg(scip, "     C2: - y_%d [u_%d = %g]\n", j, j, snf->transvarvubcoefs[j]);
          }
       }
-      SCIPdebugMsg(scip, "     flowcoverweight(%g) = rhs(%g) + lambda(%g)\n", flowcoverweight, snf->transrhs, *lambda);
+      SCIPdebugMsg(scip, "     flowcoverweight(%g) = rhs(%g) + lambda(%g)\n", DBLDBL_ROUND(flowcoverweight), snf->transrhs, *lambda);
    }
 #endif
 
@@ -4424,7 +4480,8 @@ SCIP_Real evaluateLiftingFunction(
          return i * liftingdata->lambda;
 
       assert(SCIPisLE(scip, liftingdata->M[i], xpluslambda) &&
-             SCIPisLE(scip, xpluslambda, liftingdata->M[i] + liftingdata->ml + p));
+             SCIPisLE(scip, xpluslambda, liftingdata->M[i] + liftingdata->ml +
+             MAX(0.0, liftingdata->m[i] - (liftingdata->mp - liftingdata->lambda) - liftingdata->ml)));
 
       SCIPdbldblProd_DBLDBL(tmp, i, liftingdata->lambda);
       SCIPdbldblSum21_DBLDBL(tmp, tmp, x);
@@ -4826,7 +4883,7 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
 
 /** calculates a lifted simple generalized flow cover cut out of the weighted sum of LP rows given by an aggregation row; the
  *  aggregation row must not contain non-zero weights for modifiable rows, because these rows cannot
- *  participate in an MIR cut.
+ *  participate in the cut.
  *  For further details we refer to:
  *
  *  Gu, Z., Nemhauser, G. L., & Savelsbergh, M. W. (1999). Lifted flow cover inequalities for mixed 0-1 integer programs.
@@ -5668,7 +5725,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
    *cutislocal = *cutislocal || localbdsused;
    if( freevariable )
       goto TERMINATE;
-   SCIPdebug(printMIR(set, stat, prob, NULL, strongcgcoef, rhs, FALSE, FALSE));
+   SCIPdebug(printCut(scip, NULL, cutcoefs, *cutrhs, cutinds, *cutnnz, FALSE, FALSE));
 
    /* Calculate
     *  - fractionalities  f_0 := b - down(b), f_j := a'_j - down(a'_j)
