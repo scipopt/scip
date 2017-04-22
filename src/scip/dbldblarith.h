@@ -26,6 +26,31 @@
 
 #include "math.h"
 
+/* convenience macros for nicer usage of double double arithmetic */
+#define DBL_HI(x)  x ## hi
+#define DBL_LO(x)  x ## lo
+#define DBLDBL(x) DBL_HI(x), DBL_LO(x)
+#define DBLDBL_ROUND(x) ( DBL_HI(x) + DBL_LO(x) )
+#define DBLDBL_ASSIGN(a, constant)  do { DBL_HI(a) = constant; DBL_LO(a) = 0.0; } while(0)
+#define DBLDBL_ASSIGN2(a, b)  do { DBL_HI(a) = DBL_HI(b); DBL_LO(a) = DBL_LO(b); } while(0)
+
+/* define all the SCIPdbldbl... macros once with _DBLDBL suffix to have a version that expands arguments using the above macros */
+#define SCIPdbldblProd_DBLDBL(r, a, b)  SCIPdbldblProd(DBL_HI(r), DBL_LO(r), a, b)
+#define SCIPdbldblSquare_DBLDBL(r, a) SCIPdbldblSquare(DBL_HI(r), DBL_LO(r), a)
+#define SCIPdbldblSum_DBLDBL(r, a, b) SCIPdbldblSum(DBL_HI(r), DBL_LO(r), a, b)
+#define SCIPdbldblDiv_DBLDBL(r, a, b) SCIPdbldblDiv(DBL_HI(r), DBL_LO(r), a, b)
+#define SCIPdbldblSum21_DBLDBL(r, a, b) SCIPdbldblSum21(DBL_HI(r), DBL_LO(r), DBL_HI(a), DBL_LO(a), b)
+#define SCIPdbldblProd21_DBLDBL(r, a, b) SCIPdbldblProd21(DBL_HI(r), DBL_LO(r), DBL_HI(a), DBL_LO(a), b)
+#define SCIPdbldblDiv12_DBLDBL(r, a, b) SCIPdbldblDiv12(DBL_HI(r), DBL_LO(r), a, DBL_HI(b), DBL_LO(b))
+#define SCIPdbldblDiv21_DBLDBL(r, a, b) SCIPdbldblDiv21(DBL_HI(r), DBL_LO(r), DBL_HI(a), DBL_LO(a), b)
+#define SCIPdbldblProd22_DBLDBL(r, a, b) SCIPdbldblProd22(DBL_HI(r), DBL_LO(r), DBL_HI(a), DBL_LO(a), DBL_HI(b), DBL_LO(b))
+#define SCIPdbldblSum22_DBLDBL(r, a, b) SCIPdbldblSum22(DBL_HI(r), DBL_LO(r), DBL_HI(a), DBL_LO(a), DBL_HI(b), DBL_LO(b))
+#define SCIPdbldblSquare2_DBLDBL(r, a) SCIPdbldblSquare2(DBL_HI(r), DBL_LO(r), DBL_HI(a), DBL_LO(a))
+#define SCIPdbldblDiv22_DBLDBL(r, a, b) SCIPdbldblDiv22(DBL_HI(r), DBL_LO(r), DBL_HI(a), DBL_LO(a), DBL_HI(b), DBL_LO(b))
+#define SCIPdbldblSqrt_DBLDBL(r, a) SCIPdbldblSqrt(DBL_HI(r), DBL_LO(r), a)
+#define SCIPdbldblSqrt2_DBLDBL(r, a) SCIPdbldblSqrt2(DBL_HI(r), DBL_LO(r), DBL_HI(a), DBL_LO(a))
+#define SCIPdbldblAbs2_DBLDBL(r, a) SCIPdbldblAbs2(DBL_HI(r), DBL_LO(r), DBL_HI(a), DBL_LO(a))
+
 #define __SCIPdbldblSplit(rhi, rlo, x) \
     do { \
        const double __tmp_split_dbl = 134217729.0 * (x); \

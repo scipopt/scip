@@ -32,7 +32,7 @@
 #define SEPA_NAME              "cmir"
 #define SEPA_DESC              "complemented mixed integer rounding cuts separator (Marchand's version)"
 #define SEPA_PRIORITY             -3000
-#define SEPA_FREQ                     1
+#define SEPA_FREQ                     0
 #define SEPA_MAXBOUNDDIST           0.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
