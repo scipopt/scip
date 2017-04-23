@@ -16,6 +16,7 @@ interface:
 
 performance improvements:
 - add and use RESTRICT macro for some pointers
+- improved the implementation of SCIPvarGetActiveRepresentatives
 
 SCIP version 4.0.1
 ==================
