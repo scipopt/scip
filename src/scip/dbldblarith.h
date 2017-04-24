@@ -26,30 +26,64 @@
 
 #include "math.h"
 
-/* convenience macros for nicer usage of double double arithmetic */
-#define DBL_HI(x)  x ## hi
-#define DBL_LO(x)  x ## lo
-#define DBLDBL(x) DBL_HI(x), DBL_LO(x)
-#define DBLDBL_ROUND(x) ( DBL_HI(x) + DBL_LO(x) )
-#define DBLDBL_ASSIGN(a, constant)  do { DBL_HI(a) = constant; DBL_LO(a) = 0.0; } while(0)
-#define DBLDBL_ASSIGN2(a, b)  do { DBL_HI(a) = DBL_HI(b); DBL_LO(a) = DBL_LO(b); } while(0)
 
-/* define all the SCIPdbldbl... macros once with _DBLDBL suffix to have a version that expands arguments using the above macros */
-#define SCIPdbldblProd_DBLDBL(r, a, b)  SCIPdbldblProd(DBL_HI(r), DBL_LO(r), a, b)
-#define SCIPdbldblSquare_DBLDBL(r, a) SCIPdbldblSquare(DBL_HI(r), DBL_LO(r), a)
-#define SCIPdbldblSum_DBLDBL(r, a, b) SCIPdbldblSum(DBL_HI(r), DBL_LO(r), a, b)
-#define SCIPdbldblDiv_DBLDBL(r, a, b) SCIPdbldblDiv(DBL_HI(r), DBL_LO(r), a, b)
-#define SCIPdbldblSum21_DBLDBL(r, a, b) SCIPdbldblSum21(DBL_HI(r), DBL_LO(r), DBL_HI(a), DBL_LO(a), b)
-#define SCIPdbldblProd21_DBLDBL(r, a, b) SCIPdbldblProd21(DBL_HI(r), DBL_LO(r), DBL_HI(a), DBL_LO(a), b)
-#define SCIPdbldblDiv12_DBLDBL(r, a, b) SCIPdbldblDiv12(DBL_HI(r), DBL_LO(r), a, DBL_HI(b), DBL_LO(b))
-#define SCIPdbldblDiv21_DBLDBL(r, a, b) SCIPdbldblDiv21(DBL_HI(r), DBL_LO(r), DBL_HI(a), DBL_LO(a), b)
-#define SCIPdbldblProd22_DBLDBL(r, a, b) SCIPdbldblProd22(DBL_HI(r), DBL_LO(r), DBL_HI(a), DBL_LO(a), DBL_HI(b), DBL_LO(b))
-#define SCIPdbldblSum22_DBLDBL(r, a, b) SCIPdbldblSum22(DBL_HI(r), DBL_LO(r), DBL_HI(a), DBL_LO(a), DBL_HI(b), DBL_LO(b))
-#define SCIPdbldblSquare2_DBLDBL(r, a) SCIPdbldblSquare2(DBL_HI(r), DBL_LO(r), DBL_HI(a), DBL_LO(a))
-#define SCIPdbldblDiv22_DBLDBL(r, a, b) SCIPdbldblDiv22(DBL_HI(r), DBL_LO(r), DBL_HI(a), DBL_LO(a), DBL_HI(b), DBL_LO(b))
-#define SCIPdbldblSqrt_DBLDBL(r, a) SCIPdbldblSqrt(DBL_HI(r), DBL_LO(r), a)
-#define SCIPdbldblSqrt2_DBLDBL(r, a) SCIPdbldblSqrt2(DBL_HI(r), DBL_LO(r), DBL_HI(a), DBL_LO(a))
-#define SCIPdbldblAbs2_DBLDBL(r, a) SCIPdbldblAbs2(DBL_HI(r), DBL_LO(r), DBL_HI(a), DBL_LO(a))
+#ifndef DISABLE_QUADPREC
+
+/* convenience macros for nicer usage of double double arithmetic */
+#define QUAD_HI(x)  x ## hi
+#define QUAD_LO(x)  x ## lo
+#define QUAD(x) QUAD_HI(x), QUAD_LO(x)
+#define QUAD_ROUND(x) ( QUAD_HI(x) + QUAD_LO(x) )
+#define QUAD_SCALE(x, a) do { QUAD_HI(x) *= (a); QUAD_LO(x) *= (a); } while(0)
+#define QUAD_ASSIGN(a, constant)  do { QUAD_HI(a) = constant; QUAD_LO(a) = 0.0; } while(0)
+#define QUAD_ASSIGN_Q(a, b)  do { QUAD_HI(a) = QUAD_HI(b); QUAD_LO(a) = QUAD_LO(b); } while(0)
+
+/* define all the SCIPquadprec... macros such that they use the SCIPdbldbl... macros that expands the quad precision arguments using the above macros */
+#define SCIPquadprecProdDD(r, a, b)  SCIPdbldblProd(QUAD_HI(r), QUAD_LO(r), a, b)
+#define SCIPquadprecSquareD(r, a) SCIPdbldblSquare(QUAD_HI(r), QUAD_LO(r), a)
+#define SCIPquadprecSumDD(r, a, b) SCIPdbldblSum(QUAD_HI(r), QUAD_LO(r), a, b)
+#define SCIPquadprecDivDD(r, a, b) SCIPdbldblDiv(QUAD_HI(r), QUAD_LO(r), a, b)
+#define SCIPquadprecSumQD(r, a, b) SCIPdbldblSum21(QUAD_HI(r), QUAD_LO(r), QUAD_HI(a), QUAD_LO(a), b)
+#define SCIPquadprecProdQD(r, a, b) SCIPdbldblProd21(QUAD_HI(r), QUAD_LO(r), QUAD_HI(a), QUAD_LO(a), b)
+#define SCIPquadprecDivDQ(r, a, b) SCIPdbldblDiv12(QUAD_HI(r), QUAD_LO(r), a, QUAD_HI(b), QUAD_LO(b))
+#define SCIPquadprecDivQD(r, a, b) SCIPdbldblDiv21(QUAD_HI(r), QUAD_LO(r), QUAD_HI(a), QUAD_LO(a), b)
+#define SCIPquadprecProdQQ(r, a, b) SCIPdbldblProd22(QUAD_HI(r), QUAD_LO(r), QUAD_HI(a), QUAD_LO(a), QUAD_HI(b), QUAD_LO(b))
+#define SCIPquadprecSumQQ(r, a, b) SCIPdbldblSum22(QUAD_HI(r), QUAD_LO(r), QUAD_HI(a), QUAD_LO(a), QUAD_HI(b), QUAD_LO(b))
+#define SCIPquadprecSquareQ(r, a) SCIPdbldblSquare2(QUAD_HI(r), QUAD_LO(r), QUAD_HI(a), QUAD_LO(a))
+#define SCIPquadprecDivQQ(r, a, b) SCIPdbldblDiv22(QUAD_HI(r), QUAD_LO(r), QUAD_HI(a), QUAD_LO(a), QUAD_HI(b), QUAD_LO(b))
+#define SCIPquadprecSqrtD(r, a) SCIPdbldblSqrt(QUAD_HI(r), QUAD_LO(r), a)
+#define SCIPquadprecSqrtQ(r, a) SCIPdbldblSqrt2(QUAD_HI(r), QUAD_LO(r), QUAD_HI(a), QUAD_LO(a))
+#define SCIPquadprecAbsQ(r, a) SCIPdbldblAbs2(QUAD_HI(r), QUAD_LO(r), QUAD_HI(a), QUAD_LO(a))
+
+#else
+
+/* convenience macros for nicer usage of double double arithmetic */
+#define QUAD_HI(x)  x
+#define QUAD_LO(x)  0.0
+#define QUAD(x)     x
+#define QUAD_ROUND(x) (x)
+#define QUAD_SCALE(x, a) do { (x) *= (a); } while(0)
+#define QUAD_ASSIGN(a, constant)  do { (a) = constant; } while(0)
+#define QUAD_ASSIGN_Q(a, b)  do { (a) = (b); } while(0)
+
+/* define all the SCIPquadprec... macros such that they use the SCIPdbldbl... macros that expands the quad precision arguments using the above macros */
+#define SCIPquadprecProdDD(r, a, b)  do { (r) = (a) * (b); } while(0)
+#define SCIPquadprecSquareD(r, a)    do { (r) = (a) * (a); } while(0)
+#define SCIPquadprecSumDD(r, a, b)   do { (r) = (a) + (b); } while(0)
+#define SCIPquadprecDivDD(r, a, b)   do { (r) = (a) / (b); } while(0)
+#define SCIPquadprecSumQD(r, a, b)   do { (r) = (a) + (b); } while(0)
+#define SCIPquadprecProdQD(r, a, b)  do { (r) = (a) * (b); } while(0)
+#define SCIPquadprecDivDQ(r, a, b)   do { (r) = (a) / (b); } while(0)
+#define SCIPquadprecDivQD(r, a, b)   do { (r) = (a) / (b); } while(0)
+#define SCIPquadprecProdQQ(r, a, b)  do { (r) = (a) * (b); } while(0)
+#define SCIPquadprecSumQQ(r, a, b)   do { (r) = (a) + (b); } while(0)
+#define SCIPquadprecSquareQ(r, a)    do { (r) = (a) * (a); } while(0)
+#define SCIPquadprecDivQQ(r, a, b)   do { (r) = (a) / (b); } while(0)
+#define SCIPquadprecSqrtD(r, a)      do { (r) = sqrt(a); } while(0)
+#define SCIPquadprecSqrtQ(r, a)      do { (r) = sqrt(a); } while(0)
+#define SCIPquadprecAbsQ(r, a)       do { (r) = fabs(a); } while(0)
+
+#endif
 
 #define __SCIPdbldblSplit(rhi, rlo, x) \
     do { \

@@ -1211,8 +1211,8 @@ SCIP_RETCODE cutsTransformMIR(
    SCIP_Bool*            localbdsused        /**< pointer to store whether local bounds were used in transformation */
    )
 {
-   SCIP_Real DBLDBL(tmp);
-   SCIP_Real DBLDBL(rhs);
+   SCIP_Real QUAD(tmp);
+   SCIP_Real QUAD(rhs);
    SCIP_Real* bestlbs;
    SCIP_Real* bestubs;
    int* bestlbtypes;
@@ -1270,7 +1270,7 @@ SCIP_RETCODE cutsTransformMIR(
    for( i = (*nnz) - 1; i >= aggrrowintstart; --i )
       varpos[cutinds[i]] = i + 1;
 
-   DBLDBL_ASSIGN(rhs, *cutrhs);
+   QUAD_ASSIGN(rhs, *cutrhs);
 
    /* perform bound substitution for continuous variables */
    for( i = 0; i < aggrrowintstart; ++i )
@@ -1287,8 +1287,8 @@ SCIP_RETCODE cutsTransformMIR(
          /* standard (bestlbtype < 0) or variable (bestlbtype >= 0) lower bound? */
          if( bestlbtypes[i] < 0 )
          {
-            SCIPdbldblProd_DBLDBL(tmp, cutcoefs[i], bestlbs[i]);
-            SCIPdbldblSum22_DBLDBL(rhs, rhs, -tmp);
+            SCIPquadprecProdDD(tmp, cutcoefs[i], bestlbs[i]);
+            SCIPquadprecSumQQ(rhs, rhs, -tmp);
             *localbdsused = *localbdsused || (bestlbtypes[i] == -2);
          }
          else
@@ -1311,8 +1311,8 @@ SCIP_RETCODE cutsTransformMIR(
             zidx = SCIPvarGetProbindex(vlbvars[bestlbtypes[i]]);
             assert(0 <= zidx && zidx < firstcontvar);
 
-            SCIPdbldblProd_DBLDBL(tmp, cutcoefs[i], vlbconsts[bestlbtypes[i]]);
-            SCIPdbldblSum22_DBLDBL(rhs, rhs, -tmp);
+            SCIPquadprecProdDD(tmp, cutcoefs[i], vlbconsts[bestlbtypes[i]]);
+            SCIPquadprecSumQQ(rhs, rhs, -tmp);
 
             /* check if integral variable already exists in the row */
             k = varpos[zidx];
@@ -1342,8 +1342,8 @@ SCIP_RETCODE cutsTransformMIR(
          /* standard (bestubtype < 0) or variable (bestubtype >= 0) upper bound? */
          if( bestubtypes[i] < 0 )
          {
-            SCIPdbldblProd_DBLDBL(tmp, cutcoefs[i], bestubs[i]);
-            SCIPdbldblSum22_DBLDBL(rhs, rhs, -tmp);
+            SCIPquadprecProdDD(tmp, cutcoefs[i], bestubs[i]);
+            SCIPquadprecSumQQ(rhs, rhs, -tmp);
             *localbdsused = *localbdsused || (bestubtypes[i] == -2);
          }
          else
@@ -1366,8 +1366,8 @@ SCIP_RETCODE cutsTransformMIR(
             zidx = SCIPvarGetProbindex(vubvars[bestubtypes[i]]);
             assert(zidx >= 0);
 
-            SCIPdbldblProd_DBLDBL(tmp, cutcoefs[i], vubconsts[bestubtypes[i]]);
-            SCIPdbldblSum22_DBLDBL(rhs, rhs, -tmp);
+            SCIPquadprecProdDD(tmp, cutcoefs[i], vubconsts[bestubtypes[i]]);
+            SCIPquadprecSumQQ(rhs, rhs, -tmp);
 
             /* check if integral variable already exists in the row */
             k = varpos[zidx];
@@ -1449,8 +1449,8 @@ SCIP_RETCODE cutsTransformMIR(
          varsign[i] = +1;
 
          /* standard (bestlbtype < 0) or variable (bestlbtype >= 0) lower bound? */
-         SCIPdbldblProd_DBLDBL(tmp, cutcoefs[i], bestlbs[i]);
-         SCIPdbldblSum22_DBLDBL(rhs, rhs, -tmp);
+         SCIPquadprecProdDD(tmp, cutcoefs[i], bestlbs[i]);
+         SCIPquadprecSumQQ(rhs, rhs, -tmp);
          *localbdsused = *localbdsused || (bestlbtypes[i] == -2);
       }
       else
@@ -1463,13 +1463,13 @@ SCIP_RETCODE cutsTransformMIR(
          varsign[i] = -1;
 
          /* standard (bestubtype < 0) or variable (bestubtype >= 0) upper bound? */
-         SCIPdbldblProd_DBLDBL(tmp, cutcoefs[i], bestubs[i]);
-         SCIPdbldblSum22_DBLDBL(rhs, rhs, -tmp);
+         SCIPquadprecProdDD(tmp, cutcoefs[i], bestubs[i]);
+         SCIPquadprecSumQQ(rhs, rhs, -tmp);
          *localbdsused = *localbdsused || (bestubtypes[i] == -2);
       }
    }
 
-   *cutrhs = DBLDBL_ROUND(rhs);
+   *cutrhs = QUAD_ROUND(rhs);
    if( fixintegralrhs )
    {
       SCIP_Real f0;
@@ -1565,10 +1565,10 @@ SCIP_RETCODE cutsTransformMIR(
             assert(!SCIPisInfinity(scip, bestubs[besti]));
 
             /* switch the complementation of this variable */
-            SCIPdbldblSum_DBLDBL(tmp, bestlbs[besti], - bestubs[besti]);
-            SCIPdbldblProd21_DBLDBL(tmp, tmp, varsign[besti] * cutcoefs[besti]);
-            SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
-            *cutrhs = DBLDBL_ROUND(rhs);
+            SCIPquadprecSumDD(tmp, bestlbs[besti], - bestubs[besti]);
+            SCIPquadprecProdQD(tmp, tmp, varsign[besti] * cutcoefs[besti]);
+            SCIPquadprecSumQQ(rhs, rhs, tmp);
+            *cutrhs = QUAD_ROUND(rhs);
 
             if( varsign[besti] == +1 )
             {
@@ -1663,9 +1663,9 @@ SCIP_RETCODE cutsRoundMIR(
    SCIP_Real             f0                  /**< fractional value of rhs */
    )
 {
-   SCIP_Real DBLDBL(tmp);
-   SCIP_Real DBLDBL(rhs);
-   SCIP_Real DBLDBL(onedivoneminusf0);
+   SCIP_Real QUAD(tmp);
+   SCIP_Real QUAD(rhs);
+   SCIP_Real QUAD(onedivoneminusf0);
    int i;
    int firstcontvar;
    SCIP_VAR** vars;
@@ -1682,8 +1682,8 @@ SCIP_RETCODE cutsRoundMIR(
    assert(0.0 < f0 && f0 < 1.0);
 
 
-   SCIPdbldblSum_DBLDBL(onedivoneminusf0, 1.0, -f0);
-   SCIPdbldblDiv12_DBLDBL(onedivoneminusf0, 1.0, onedivoneminusf0);
+   SCIPquadprecSumDD(onedivoneminusf0, 1.0, -f0);
+   SCIPquadprecDivDQ(onedivoneminusf0, 1.0, onedivoneminusf0);
 
    /* Loop backwards to process integral variables first and be able to delete coefficients of integral variables
     * without destroying the ordering of the aggrrow's non-zeros.
@@ -1707,12 +1707,12 @@ SCIP_RETCODE cutsRoundMIR(
 
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &varpos, firstcontvar) );
 
-   DBLDBL_ASSIGN(rhs, *cutrhs);
+   QUAD_ASSIGN(rhs, *cutrhs);
 
    for( i = *nnz - 1; i >= 0 && cutinds[i] < firstcontvar; --i )
    {
       SCIP_VAR* var;
-      SCIP_Real DBLDBL(cutaj);
+      SCIP_Real QUAD(cutaj);
       int v;
 
       v = cutinds[i];
@@ -1727,29 +1727,27 @@ SCIP_RETCODE cutsRoundMIR(
       {
          SCIP_Real aj;
          SCIP_Real downaj;
-         SCIP_Real DBLDBL(fj);
+         SCIP_Real QUAD(fj);
 
          aj = varsign[i] * cutcoefs[i]; /* a'_j */
          downaj = SCIPfloor(scip, aj);
-         SCIPdbldblSum_DBLDBL(fj, aj, -downaj);
+         SCIPquadprecSumDD(fj, aj, -downaj);
 
-         if( SCIPisSumLE(scip, DBLDBL_ROUND(fj), f0) )
+         if( SCIPisSumLE(scip, QUAD_ROUND(fj), f0) )
          {
-            DBLDBL_ASSIGN(cutaj, varsign[i] * downaj);
+            QUAD_ASSIGN(cutaj, varsign[i] * downaj);
          }
          else
          {
-            SCIPdbldblSum21_DBLDBL(tmp, fj, -f0);
-            SCIPdbldblProd22_DBLDBL(tmp, tmp, onedivoneminusf0);
-            SCIPdbldblSum21_DBLDBL(tmp, tmp, downaj);
-
-            DBL_HI(cutaj) = DBL_HI(tmp) * varsign[i];
-            DBL_LO(cutaj) = DBL_LO(tmp) * varsign[i];
+            SCIPquadprecSumQD(tmp, fj, -f0);
+            SCIPquadprecProdQQ(tmp, tmp, onedivoneminusf0);
+            SCIPquadprecSumQD(cutaj, tmp, downaj);
+            QUAD_SCALE(cutaj, varsign[i]);
          }
       }
 
       /* remove zero cut coefficients from cut */
-      if( SCIPisZero(scip, DBLDBL_ROUND(cutaj)) )
+      if( SCIPisZero(scip, QUAD_ROUND(cutaj)) )
       {
          --*nnz;
          if( i < *nnz )
@@ -1762,7 +1760,7 @@ SCIP_RETCODE cutsRoundMIR(
       }
 
       varpos[v] = i + 1;
-      cutcoefs[i] = DBLDBL_ROUND(cutaj);
+      cutcoefs[i] = QUAD_ROUND(cutaj);
 
       /* integral var uses standard bound */
       assert(boundtype[i] < 0);
@@ -1774,14 +1772,14 @@ SCIP_RETCODE cutsRoundMIR(
          if( boundtype[i] == -1 )
          {
             assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
-            SCIPdbldblProd21_DBLDBL(tmp, cutaj, SCIPvarGetLbGlobal(var));
-            SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
+            SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetLbGlobal(var));
+            SCIPquadprecSumQQ(rhs, rhs, tmp);
          }
          else
          {
             assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
-            SCIPdbldblProd21_DBLDBL(tmp, cutaj, SCIPvarGetLbLocal(var));
-            SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
+            SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetLbLocal(var));
+            SCIPquadprecSumQQ(rhs, rhs, tmp);
          }
       }
       else
@@ -1790,14 +1788,14 @@ SCIP_RETCODE cutsRoundMIR(
          if( boundtype[i] == -1 )
          {
             assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
-            SCIPdbldblProd21_DBLDBL(tmp, cutaj, SCIPvarGetUbGlobal(var));
-            SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
+            SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetUbGlobal(var));
+            SCIPquadprecSumQQ(rhs, rhs, tmp);
          }
          else
          {
             assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
-            SCIPdbldblProd21_DBLDBL(tmp, cutaj, SCIPvarGetUbLocal(var));
-            SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
+            SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetUbLocal(var));
+            SCIPquadprecSumQQ(rhs, rhs, tmp);
          }
       }
    }
@@ -1808,7 +1806,7 @@ SCIP_RETCODE cutsRoundMIR(
    while( i >= ndelcontvars )
    {
       SCIP_VAR* var;
-      SCIP_Real DBLDBL(cutaj);
+      SCIP_Real QUAD(cutaj);
       int v;
 
       v = cutinds[i];
@@ -1826,16 +1824,16 @@ SCIP_RETCODE cutsRoundMIR(
 
          aj = varsign[i] * cutcoefs[i]; /* a'_j */
          if( aj >= 0.0 )
-            DBLDBL_ASSIGN(cutaj, 0.0);
+            QUAD_ASSIGN(cutaj, 0.0);
          else
-            SCIPdbldblProd21_DBLDBL(cutaj, onedivoneminusf0, cutcoefs[i]); /* cutaj = varsign[i] * aj * onedivoneminusf0; // a^_j */
+            SCIPquadprecProdQD(cutaj, onedivoneminusf0, cutcoefs[i]); /* cutaj = varsign[i] * aj * onedivoneminusf0; // a^_j */
       }
 
       /* remove zero cut coefficients from cut; move a continuous var from the beginning
        * to the current position, so that all integral variables stay behind the continuous
        * variables
        */
-      if( SCIPisZero(scip, DBLDBL_ROUND(cutaj)) )
+      if( SCIPisZero(scip, QUAD_ROUND(cutaj)) )
       {
          if( i > ndelcontvars )
          {
@@ -1848,7 +1846,7 @@ SCIP_RETCODE cutsRoundMIR(
          continue;
       }
 
-      cutcoefs[i] = DBLDBL_ROUND(cutaj);
+      cutcoefs[i] = QUAD_ROUND(cutaj);
 
       /* check for variable bound use */
       if( boundtype[i] < 0 )
@@ -1862,14 +1860,14 @@ SCIP_RETCODE cutsRoundMIR(
             if( boundtype[i] == -1 )
             {
                assert(!SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)));
-               SCIPdbldblProd21_DBLDBL(tmp, cutaj, SCIPvarGetLbGlobal(var));
-               SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
+               SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetLbGlobal(var));
+               SCIPquadprecSumQQ(rhs, rhs, tmp);
             }
             else
             {
                assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
-               SCIPdbldblProd21_DBLDBL(tmp, cutaj, SCIPvarGetLbLocal(var));
-               SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
+               SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetLbLocal(var));
+               SCIPquadprecSumQQ(rhs, rhs, tmp);
             }
          }
          else
@@ -1878,14 +1876,14 @@ SCIP_RETCODE cutsRoundMIR(
             if( boundtype[i] == -1 )
             {
                assert(!SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)));
-               SCIPdbldblProd21_DBLDBL(tmp, cutaj, SCIPvarGetUbGlobal(var));
-               SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
+               SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetUbGlobal(var));
+               SCIPquadprecSumQQ(rhs, rhs, tmp);
             }
             else
             {
                assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
-               SCIPdbldblProd21_DBLDBL(tmp, cutaj, SCIPvarGetUbLocal(var));
-               SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
+               SCIPquadprecProdQD(tmp, cutaj, SCIPvarGetUbLocal(var));
+               SCIPquadprecSumQQ(rhs, rhs, tmp);
             }
          }
       }
@@ -1922,30 +1920,30 @@ SCIP_RETCODE cutsRoundMIR(
          zidx = SCIPvarGetProbindex(vbz[vbidx]);
          assert(0 <= zidx && zidx < firstcontvar);
 
-         SCIPdbldblProd21_DBLDBL(tmp, cutaj, vbd[vbidx]);
-         SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
+         SCIPquadprecProdQD(tmp, cutaj, vbd[vbidx]);
+         SCIPquadprecSumQQ(rhs, rhs, tmp);
 
          k = varpos[zidx];
 
-         SCIPdbldblProd21_DBLDBL(tmp, cutaj, vbb[vbidx]);
+         SCIPquadprecProdQD(tmp, cutaj, vbb[vbidx]);
 
          /* add variable to sparsity pattern */
          if( k == 0 )
          {
             k = (*nnz)++;
             varpos[zidx] = *nnz;
-            cutcoefs[k] = - DBLDBL_ROUND(tmp);
+            cutcoefs[k] = - QUAD_ROUND(tmp);
             cutinds[k] = zidx;
          }
          else
-            cutcoefs[k - 1] -= DBLDBL_ROUND(tmp);
+            cutcoefs[k - 1] -= QUAD_ROUND(tmp);
       }
 
       /* advance to next variable */
       --i;
    }
 
-   *cutrhs = DBLDBL_ROUND(rhs);
+   *cutrhs = QUAD_ROUND(rhs);
 
    /* clear the array with the variable positions of the integral variables in the cut */
    for( i = *nnz - 1; i > aggrrowlastcontvar; --i )
@@ -2006,8 +2004,8 @@ SCIP_RETCODE cutsSubstituteMIR(
    )
 {  /*lint --e{715}*/
    SCIP_ROW** rows;
-   SCIP_Real DBLDBL(rhs);
-   SCIP_Real DBLDBL(onedivoneminusf0);
+   SCIP_Real QUAD(rhs);
+   SCIP_Real QUAD(onedivoneminusf0);
    int i;
 
    assert(scip != NULL);
@@ -2021,9 +2019,9 @@ SCIP_RETCODE cutsSubstituteMIR(
    assert(nnz != NULL);
    assert(0.0 < f0 && f0 < 1.0);
 
-   SCIPdbldblSum_DBLDBL(onedivoneminusf0, 1.0, -f0);
-   SCIPdbldblDiv12_DBLDBL(onedivoneminusf0, 1.0, onedivoneminusf0);
-   DBLDBL_ASSIGN(rhs, *cutrhs);
+   SCIPquadprecSumDD(onedivoneminusf0, 1.0, -f0);
+   SCIPquadprecDivDQ(onedivoneminusf0, 1.0, onedivoneminusf0);
+   QUAD_ASSIGN(rhs, *cutrhs);
 
    rows = SCIPgetLPRows(scip);
    for( i = 0; i < nrowinds; i++ )
@@ -2031,9 +2029,9 @@ SCIP_RETCODE cutsSubstituteMIR(
       SCIP_ROW* row;
       SCIP_Real ar;
       SCIP_Real downar;
-      SCIP_Real DBLDBL(cutar);
-      SCIP_Real DBLDBL(fr);
-      SCIP_Real DBLDBL(tmp);
+      SCIP_Real QUAD(cutar);
+      SCIP_Real QUAD(fr);
+      SCIP_Real QUAD(tmp);
       SCIP_Real mul;
       int r;
 
@@ -2061,14 +2059,14 @@ SCIP_RETCODE cutsSubstituteMIR(
           *    a^_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
           */
          downar = SCIPfloor(scip, ar);
-         SCIPdbldblSum_DBLDBL(fr, ar, -downar);
-         if( SCIPisLE(scip, DBLDBL_ROUND(fr), f0) )
-            DBLDBL_ASSIGN(cutar, downar);
+         SCIPquadprecSumDD(fr, ar, -downar);
+         if( SCIPisLE(scip, QUAD_ROUND(fr), f0) )
+            QUAD_ASSIGN(cutar, downar);
          else
          {
-            SCIPdbldblSum21_DBLDBL(cutar, fr, -f0);
-            SCIPdbldblProd22_DBLDBL(cutar, cutar, onedivoneminusf0);
-            SCIPdbldblSum21_DBLDBL(cutar, cutar, downar);
+            SCIPquadprecSumQD(cutar, fr, -f0);
+            SCIPquadprecProdQQ(cutar, cutar, onedivoneminusf0);
+            SCIPquadprecSumQD(cutar, cutar, downar);
          }
       }
       else
@@ -2080,19 +2078,19 @@ SCIP_RETCODE cutsSubstituteMIR(
          if( ar >= 0.0 )
             continue; /* slack can be ignored, because its coefficient is reduced to 0.0 */
          else
-            SCIPdbldblProd21_DBLDBL(cutar, onedivoneminusf0, ar);
+            SCIPquadprecProdQD(cutar, onedivoneminusf0, ar);
 
       }
 
       /* if the coefficient was reduced to zero, ignore the slack variable */
-      if( SCIPisZero(scip, DBLDBL_ROUND(cutar)) )
+      if( SCIPisZero(scip, QUAD_ROUND(cutar)) )
          continue;
 
       /* depending on the slack's sign, we have
        *   a*x + c + s == rhs  =>  s == - a*x - c + rhs,  or  a*x + c - s == lhs  =>  s == a*x + c - lhs
        * substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
        */
-      mul = -slacksign[i] * DBLDBL_ROUND(cutar);
+      mul = -slacksign[i] * QUAD_ROUND(cutar);
 
       /* add the slack's definition multiplied with a^_j to the cut */
       SCIP_CALL( varVecAddScaledRowCoefs(scip, &cutinds, &cutcoefs, nnz, NULL, row, mul) );
@@ -2100,37 +2098,37 @@ SCIP_RETCODE cutsSubstituteMIR(
       /* move slack's constant to the right hand side */
       if( slacksign[i] == +1 )
       {
-         SCIP_Real DBLDBL(rowrhs);
+         SCIP_Real QUAD(rowrhs);
 
          /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a^_r * (rhs - c) to the right hand side */
          assert(!SCIPisInfinity(scip, row->rhs));
-         SCIPdbldblSum_DBLDBL(rowrhs, row->rhs, -row->constant);
+         SCIPquadprecSumDD(rowrhs, row->rhs, -row->constant);
          if( row->integral )
          {
             /* the right hand side was implicitly rounded down in row aggregation */
-            DBLDBL_ASSIGN(rowrhs, SCIPfeasFloor(scip, DBLDBL_ROUND(rowrhs)));
+            QUAD_ASSIGN(rowrhs, SCIPfeasFloor(scip, QUAD_ROUND(rowrhs)));
          }
-         SCIPdbldblProd22_DBLDBL(tmp, cutar, rowrhs);
-         SCIPdbldblSum22_DBLDBL(rhs, rhs, -tmp);
+         SCIPquadprecProdQQ(tmp, cutar, rowrhs);
+         SCIPquadprecSumQQ(rhs, rhs, -tmp);
       }
       else
       {
-         SCIP_Real DBLDBL(rowlhs);
+         SCIP_Real QUAD(rowlhs);
 
          /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a^_r * (c - lhs) to the right hand side */
          assert(!SCIPisInfinity(scip, -row->lhs));
-         SCIPdbldblSum_DBLDBL(rowlhs, row->lhs, -row->constant);
+         SCIPquadprecSumDD(rowlhs, row->lhs, -row->constant);
          if( row->integral )
          {
             /* the left hand side was implicitly rounded up in row aggregation */
-            DBLDBL_ASSIGN(rowlhs, SCIPfeasCeil(scip, DBLDBL_ROUND(rowlhs)));
+            QUAD_ASSIGN(rowlhs, SCIPfeasCeil(scip, QUAD_ROUND(rowlhs)));
          }
-         SCIPdbldblProd22_DBLDBL(tmp, cutar, rowlhs);
-         SCIPdbldblSum22_DBLDBL(rhs, rhs, tmp);
+         SCIPquadprecProdQQ(tmp, cutar, rowlhs);
+         SCIPquadprecSumQQ(rhs, rhs, tmp);
       }
    }
 
-   *cutrhs = DBLDBL_ROUND(rhs);
+   *cutrhs = QUAD_ROUND(rhs);
 
    /* set rhs to zero, if it's very close to */
    if( SCIPisZero(scip, *cutrhs) )
@@ -3249,7 +3247,7 @@ SCIP_RETCODE constructSNFRelaxation(
    int nnonbinvarsrow;
    int* binvarpos;
    int nbinvars;
-   SCIP_Real DBLDBL(transrhs);
+   SCIP_Real QUAD(transrhs);
 
    /* arrays to store the selected bound for each non-binary variable in the row */
    SCIP_Real* bestlb;
@@ -3329,7 +3327,7 @@ SCIP_RETCODE constructSNFRelaxation(
    }
 
    *localbdsused = FALSE;
-   DBLDBL_ASSIGN(transrhs, rowrhs);
+   QUAD_ASSIGN(transrhs, rowrhs);
    snf->ntransvars = 0;
 
    /* transform non-binary variables */
@@ -3361,9 +3359,9 @@ SCIP_RETCODE constructSNFRelaxation(
 
          if( bestlbtype[i] < 0 )
          {
-            SCIP_Real DBLDBL(val);
-            SCIP_Real DBLDBL(contsolval);
-            SCIP_Real DBLDBL(rowcoeftimesbestsub);
+            SCIP_Real QUAD(val);
+            SCIP_Real QUAD(contsolval);
+            SCIP_Real QUAD(rowcoeftimesbestsub);
 
             /* use simple lower bound in bestlb = l_j <= y_j <= u_j = bestsub to define
              *   y'_j = - a_j ( y_j - u_j ) with 0 <= y'_j <=   a_j ( u_j - l_j ) x_j and x_j = 1    if a_j > 0
@@ -3374,15 +3372,15 @@ SCIP_RETCODE constructSNFRelaxation(
              * and update the right hand side of the constraint in the relaxation
              *   rhs = rhs - a_j u_j
              */
-            SCIPdbldblSum_DBLDBL(val, bestsub[i], -bestlb[i]);
-            SCIPdbldblProd21_DBLDBL(val, val, rowcoef);
-            SCIPdbldblSum_DBLDBL(contsolval, solval, -bestsub[i]);
-            SCIPdbldblProd21_DBLDBL(contsolval, contsolval, rowcoef);
+            SCIPquadprecSumDD(val, bestsub[i], -bestlb[i]);
+            SCIPquadprecProdQD(val, val, rowcoef);
+            SCIPquadprecSumDD(contsolval, solval, -bestsub[i]);
+            SCIPquadprecProdQD(contsolval, contsolval, rowcoef);
 
             if( bestlbtype[i] == -2 || bestsubtype[i] == -2 )
                *localbdsused = TRUE;
 
-            SCIPdbldblProd_DBLDBL(rowcoeftimesbestsub, rowcoef, bestsub[i]);
+            SCIPquadprecProdDD(rowcoeftimesbestsub, rowcoef, bestsub[i]);
 
             /* store aggregation information for y'_j for transforming cuts for the SNF relaxation back to the problem variables later */
             snf->origbinvars[snf->ntransvars] = -1;
@@ -3391,39 +3389,39 @@ SCIP_RETCODE constructSNFRelaxation(
             if( SCIPisPositive(scip, rowcoef) )
             {
                snf->transvarcoefs[snf->ntransvars] = - 1;
-               snf->transvarvubcoefs[snf->ntransvars] = DBLDBL_ROUND(val);
+               snf->transvarvubcoefs[snf->ntransvars] = QUAD_ROUND(val);
                snf->transbinvarsolvals[snf->ntransvars] = 1.0;
-               snf->transcontvarsolvals[snf->ntransvars] = - DBLDBL_ROUND(contsolval);
+               snf->transcontvarsolvals[snf->ntransvars] = - QUAD_ROUND(contsolval);
 
                /* aggregation information for y'_j */
-               snf->aggrconstants[snf->ntransvars] = DBLDBL_ROUND(rowcoeftimesbestsub);
+               snf->aggrconstants[snf->ntransvars] = QUAD_ROUND(rowcoeftimesbestsub);
                snf->aggrcoefscont[snf->ntransvars] = - rowcoef;
             }
             else
             {
                assert(SCIPisNegative(scip, rowcoef));
                snf->transvarcoefs[snf->ntransvars] = 1;
-               snf->transvarvubcoefs[snf->ntransvars] = - DBLDBL_ROUND(val);
+               snf->transvarvubcoefs[snf->ntransvars] = - QUAD_ROUND(val);
                snf->transbinvarsolvals[snf->ntransvars] = 1.0;
-               snf->transcontvarsolvals[snf->ntransvars] = DBLDBL_ROUND(contsolval);
+               snf->transcontvarsolvals[snf->ntransvars] = QUAD_ROUND(contsolval);
 
                /* aggregation information for y'_j */
-               snf->aggrconstants[snf->ntransvars] = - DBLDBL_ROUND(rowcoeftimesbestsub);
+               snf->aggrconstants[snf->ntransvars] = - QUAD_ROUND(rowcoeftimesbestsub);
                snf->aggrcoefscont[snf->ntransvars] = rowcoef;
             }
-            SCIPdbldblSum22_DBLDBL(transrhs, transrhs, -rowcoeftimesbestsub);
+            SCIPquadprecSumQQ(transrhs, transrhs, -rowcoeftimesbestsub);
 
             SCIPdebugMsg(scip, "    --> bestlb used for trans: ... %s y'_%d + ..., y'_%d <= %g x_%d (=1), rhs=%g-(%g*%g)=%g\n",
                          snf->transvarcoefs[snf->ntransvars] == 1 ? "+" : "-", snf->ntransvars, snf->ntransvars, snf->transvarvubcoefs[snf->ntransvars],
-                         snf->ntransvars, DBLDBL_ROUND(transrhs) + DBLDBL_ROUND(rowcoeftimesbestsub), rowcoef, bestsub, DBLDBL_ROUND(transrhs));
+                         snf->ntransvars, QUAD_ROUND(transrhs) + QUAD_ROUND(rowcoeftimesbestsub), rowcoef, bestsub, QUAD_ROUND(transrhs));
          }
          else
          {
             SCIP_Real rowcoefbinary;
             SCIP_Real varsolvalbinary;
-            SCIP_Real DBLDBL(val);
-            SCIP_Real DBLDBL(contsolval);
-            SCIP_Real DBLDBL(rowcoeftimesvlbconst);
+            SCIP_Real QUAD(val);
+            SCIP_Real QUAD(contsolval);
+            SCIP_Real QUAD(rowcoeftimesvlbconst);
             int vlbvarprobidx;
 
             SCIP_VAR** vlbvars = SCIPvarGetVlbVars(var);
@@ -3452,18 +3450,18 @@ SCIP_RETCODE constructSNFRelaxation(
             rowcoefbinary = binvarpos[vlbvarprobidx] == -1 ? 0.0 : rowcoefs[-binvarpos[vlbvarprobidx] - 1];
             varsolvalbinary = SCIPgetSolVal(scip, sol, vlbvars[bestlbtype[i]]);
 
-            SCIPdbldblProd_DBLDBL(val, rowcoef, vlbcoefs[bestlbtype[i]]);
-            SCIPdbldblSum21_DBLDBL(val, val, rowcoefbinary);
+            SCIPquadprecProdDD(val, rowcoef, vlbcoefs[bestlbtype[i]]);
+            SCIPquadprecSumQD(val, val, rowcoefbinary);
             {
-               SCIP_Real DBLDBL(tmp);
+               SCIP_Real QUAD(tmp);
 
-               SCIPdbldblProd_DBLDBL(tmp, rowcoefbinary, varsolvalbinary);
-               SCIPdbldblSum_DBLDBL(contsolval, solval, - vlbconsts[bestlbtype[i]]);
-               SCIPdbldblProd21_DBLDBL(contsolval, contsolval, rowcoef);
-               SCIPdbldblSum22_DBLDBL(contsolval, contsolval, tmp);
+               SCIPquadprecProdDD(tmp, rowcoefbinary, varsolvalbinary);
+               SCIPquadprecSumDD(contsolval, solval, - vlbconsts[bestlbtype[i]]);
+               SCIPquadprecProdQD(contsolval, contsolval, rowcoef);
+               SCIPquadprecSumQQ(contsolval, contsolval, tmp);
             }
 
-            SCIPdbldblProd_DBLDBL(rowcoeftimesvlbconst, rowcoef, vlbconsts[bestlbtype[i]]);
+            SCIPquadprecProdDD(rowcoeftimesvlbconst, rowcoef, vlbconsts[bestlbtype[i]]);
 
             /* clear the binvarpos array, since the variable has been processed */
             binvarpos[vlbvarprobidx] = 0;
@@ -3474,33 +3472,33 @@ SCIP_RETCODE constructSNFRelaxation(
             if( SCIPisPositive(scip, rowcoef) )
             {
                snf->transvarcoefs[snf->ntransvars] = - 1;
-               snf->transvarvubcoefs[snf->ntransvars] = - DBLDBL_ROUND(val);
+               snf->transvarvubcoefs[snf->ntransvars] = - QUAD_ROUND(val);
                snf->transbinvarsolvals[snf->ntransvars] = varsolvalbinary;
-               snf->transcontvarsolvals[snf->ntransvars] = - DBLDBL_ROUND(contsolval);
+               snf->transcontvarsolvals[snf->ntransvars] = - QUAD_ROUND(contsolval);
 
                /* aggregation information for y'_j */
                snf->aggrcoefsbin[snf->ntransvars] = - rowcoefbinary;
                snf->aggrcoefscont[snf->ntransvars] = - rowcoef;
-               snf->aggrconstants[snf->ntransvars] = DBLDBL_ROUND(rowcoeftimesvlbconst);
+               snf->aggrconstants[snf->ntransvars] = QUAD_ROUND(rowcoeftimesvlbconst);
             }
             else
             {
                assert(SCIPisNegative(scip, rowcoef));
                snf->transvarcoefs[snf->ntransvars] = 1;
-               snf->transvarvubcoefs[snf->ntransvars] = DBLDBL_ROUND(val);
+               snf->transvarvubcoefs[snf->ntransvars] = QUAD_ROUND(val);
                snf->transbinvarsolvals[snf->ntransvars] = varsolvalbinary;
-               snf->transcontvarsolvals[snf->ntransvars] = DBLDBL_ROUND(contsolval);
+               snf->transcontvarsolvals[snf->ntransvars] = QUAD_ROUND(contsolval);
 
                /* aggregation information for y'_j */
                snf->aggrcoefsbin[snf->ntransvars] = rowcoefbinary;
                snf->aggrcoefscont[snf->ntransvars] = rowcoef;
-               snf->aggrconstants[snf->ntransvars] = - DBLDBL_ROUND(rowcoeftimesvlbconst);
+               snf->aggrconstants[snf->ntransvars] = - QUAD_ROUND(rowcoeftimesvlbconst);
             }
-            SCIPdbldblSum22_DBLDBL(transrhs, transrhs, -rowcoeftimesvlbconst);
+            SCIPquadprecSumQQ(transrhs, transrhs, -rowcoeftimesvlbconst);
 
             SCIPdebugMsg(scip, "    --> bestlb used for trans: ... %s y'_%d + ..., y'_%d <= %g x_%d (=%s), rhs=%g-(%g*%g)=%g\n",
                          snf->transvarcoefs[snf->ntransvars] == 1 ? "+" : "-", snf->ntransvars, snf->ntransvars, snf->transvarvubcoefs[snf->ntransvars],
-                         snf->ntransvars, SCIPvarGetName(vlbvars[bestlbtype[i]]), DBLDBL_ROUND(transrhs) + DBLDBL_ROUND(rowcoeftimesvlbconst), rowcoef,
+                         snf->ntransvars, SCIPvarGetName(vlbvars[bestlbtype[i]]), QUAD_ROUND(transrhs) + QUAD_ROUND(rowcoeftimesvlbconst), rowcoef,
                          vlbconsts[bestlbtype[i]], snf->transrhs );
          }
       }
@@ -3520,9 +3518,9 @@ SCIP_RETCODE constructSNFRelaxation(
 
          if( bestubtype[i] < 0 )
          {
-            SCIP_Real DBLDBL(val);
-            SCIP_Real DBLDBL(contsolval);
-            SCIP_Real DBLDBL(rowcoeftimesbestslb);
+            SCIP_Real QUAD(val);
+            SCIP_Real QUAD(contsolval);
+            SCIP_Real QUAD(rowcoeftimesbestslb);
 
             /* use simple upper bound in bestslb = l_j <= y_j <= u_j = bestub to define
              *   y'_j =   a_j ( y_j - l_j ) with 0 <= y'_j <=   a_j ( u_j - l_j ) x_j and x_j = 1    if a_j > 0
@@ -3533,15 +3531,15 @@ SCIP_RETCODE constructSNFRelaxation(
              * and update the right hand side of the constraint in the relaxation
              *   rhs = rhs - a_j l_j
              */
-            SCIPdbldblSum_DBLDBL(val, bestub[i], - bestslb[i]);
-            SCIPdbldblProd21_DBLDBL(val, val, rowcoef);
-            SCIPdbldblSum_DBLDBL(contsolval, solval, - bestslb[i]);
-            SCIPdbldblProd21_DBLDBL(contsolval, contsolval, rowcoef);
+            SCIPquadprecSumDD(val, bestub[i], - bestslb[i]);
+            SCIPquadprecProdQD(val, val, rowcoef);
+            SCIPquadprecSumDD(contsolval, solval, - bestslb[i]);
+            SCIPquadprecProdQD(contsolval, contsolval, rowcoef);
 
             if( bestubtype[i] == -2 || bestslbtype[i] == -2 )
                *localbdsused = TRUE;
 
-            SCIPdbldblProd_DBLDBL(rowcoeftimesbestslb, rowcoef, bestslb[i]);
+            SCIPquadprecProdDD(rowcoeftimesbestslb, rowcoef, bestslb[i]);
 
             /* store aggregation information for y'_j for transforming cuts for the SNF relaxation back to the problem variables later */
             snf->origbinvars[snf->ntransvars] = -1;
@@ -3550,39 +3548,39 @@ SCIP_RETCODE constructSNFRelaxation(
             if( SCIPisPositive(scip, rowcoef) )
             {
                snf->transvarcoefs[snf->ntransvars] = 1;
-               snf->transvarvubcoefs[snf->ntransvars] = DBLDBL_ROUND(val);
+               snf->transvarvubcoefs[snf->ntransvars] = QUAD_ROUND(val);
                snf->transbinvarsolvals[snf->ntransvars] = 1.0;
-               snf->transcontvarsolvals[snf->ntransvars] = DBLDBL_ROUND(contsolval);
+               snf->transcontvarsolvals[snf->ntransvars] = QUAD_ROUND(contsolval);
 
                /* aggregation information for y'_j */
                snf->aggrcoefscont[snf->ntransvars] = rowcoef;
-               snf->aggrconstants[snf->ntransvars] = - DBLDBL_ROUND(rowcoeftimesbestslb);
+               snf->aggrconstants[snf->ntransvars] = - QUAD_ROUND(rowcoeftimesbestslb);
             }
             else
             {
                assert(SCIPisNegative(scip, rowcoef));
                snf->transvarcoefs[snf->ntransvars] = - 1;
-               snf->transvarvubcoefs[snf->ntransvars] = - DBLDBL_ROUND(val);
+               snf->transvarvubcoefs[snf->ntransvars] = - QUAD_ROUND(val);
                snf->transbinvarsolvals[snf->ntransvars] = 1.0;
-               snf->transcontvarsolvals[snf->ntransvars] = - DBLDBL_ROUND(contsolval);
+               snf->transcontvarsolvals[snf->ntransvars] = - QUAD_ROUND(contsolval);
 
                /* aggregation information for y'_j */
                snf->aggrcoefscont[snf->ntransvars] = - rowcoef;
-               snf->aggrconstants[snf->ntransvars] = DBLDBL_ROUND(rowcoeftimesbestslb);
+               snf->aggrconstants[snf->ntransvars] = QUAD_ROUND(rowcoeftimesbestslb);
             }
-            SCIPdbldblSum22_DBLDBL(transrhs, transrhs, -rowcoeftimesbestslb);
+            SCIPquadprecSumQQ(transrhs, transrhs, -rowcoeftimesbestslb);
 
             SCIPdebugMsg(scip, "    --> bestub used for trans: ... %s y'_%d + ..., Y'_%d <= %g x_%d (=1), rhs=%g-(%g*%g)=%g\n",
                          snf->transvarcoefs[snf->ntransvars] == 1 ? "+" : "-", snf->ntransvars, snf->ntransvars, snf->transvarvubcoefs[snf->ntransvars],
-                         snf->ntransvars, DBLDBL_ROUND(transrhs) + DBLDBL_ROUND(rowcoeftimesbestslb), rowcoef, bestslb[i], DBLDBL_ROUND(transrhs));
+                         snf->ntransvars, QUAD_ROUND(transrhs) + QUAD_ROUND(rowcoeftimesbestslb), rowcoef, bestslb[i], QUAD_ROUND(transrhs));
          }
          else
          {
             SCIP_Real rowcoefbinary;
             SCIP_Real varsolvalbinary;
-            SCIP_Real DBLDBL(val);
-            SCIP_Real DBLDBL(contsolval);
-            SCIP_Real DBLDBL(rowcoeftimesvubconst);
+            SCIP_Real QUAD(val);
+            SCIP_Real QUAD(contsolval);
+            SCIP_Real QUAD(rowcoeftimesvubconst);
             int vubvarprobidx;
 
             SCIP_VAR** vubvars = SCIPvarGetVubVars(var);
@@ -3615,60 +3613,60 @@ SCIP_RETCODE constructSNFRelaxation(
             /* clear the binvarpos array, since the variable has been processed */
             binvarpos[vubvarprobidx] = 0;
 
-            SCIPdbldblProd_DBLDBL(val, rowcoef, vubcoefs[bestubtype[i]]);
-            SCIPdbldblSum21_DBLDBL(val, val, rowcoefbinary);
+            SCIPquadprecProdDD(val, rowcoef, vubcoefs[bestubtype[i]]);
+            SCIPquadprecSumQD(val, val, rowcoefbinary);
             {
-               SCIP_Real DBLDBL(tmp);
-               SCIPdbldblProd_DBLDBL(tmp, rowcoefbinary, varsolvalbinary);
-               SCIPdbldblSum_DBLDBL(contsolval, solval, - vubconsts[bestubtype[i]]);
-               SCIPdbldblProd21_DBLDBL(contsolval, contsolval, rowcoef);
-               SCIPdbldblSum22_DBLDBL(contsolval, contsolval, tmp);
+               SCIP_Real QUAD(tmp);
+               SCIPquadprecProdDD(tmp, rowcoefbinary, varsolvalbinary);
+               SCIPquadprecSumDD(contsolval, solval, - vubconsts[bestubtype[i]]);
+               SCIPquadprecProdQD(contsolval, contsolval, rowcoef);
+               SCIPquadprecSumQQ(contsolval, contsolval, tmp);
             }
 
-            SCIPdbldblProd_DBLDBL(rowcoeftimesvubconst, rowcoef, vubconsts[bestubtype[i]]);
+            SCIPquadprecProdDD(rowcoeftimesvubconst, rowcoef, vubconsts[bestubtype[i]]);
             /* store aggregation information for y'_j for transforming cuts for the SNF relaxation back to the problem variables later */
             snf->origbinvars[snf->ntransvars] = vubvarprobidx;
 
             if( SCIPisPositive(scip, rowcoef) )
             {
                snf->transvarcoefs[snf->ntransvars] = 1;
-               snf->transvarvubcoefs[snf->ntransvars] = DBLDBL_ROUND(val);
+               snf->transvarvubcoefs[snf->ntransvars] = QUAD_ROUND(val);
                snf->transbinvarsolvals[snf->ntransvars] = varsolvalbinary;
-               snf->transcontvarsolvals[snf->ntransvars] = DBLDBL_ROUND(contsolval);
+               snf->transcontvarsolvals[snf->ntransvars] = QUAD_ROUND(contsolval);
 
                /* aggregation information for y'_j */
                snf->aggrcoefsbin[snf->ntransvars] = rowcoefbinary;
                snf->aggrcoefscont[snf->ntransvars] = rowcoef;
-               snf->aggrconstants[snf->ntransvars] = - DBLDBL_ROUND(rowcoeftimesvubconst);
+               snf->aggrconstants[snf->ntransvars] = - QUAD_ROUND(rowcoeftimesvubconst);
             }
             else
             {
                assert(SCIPisNegative(scip, rowcoef));
                snf->transvarcoefs[snf->ntransvars] = - 1;
-               snf->transvarvubcoefs[snf->ntransvars] = - DBLDBL_ROUND(val);
+               snf->transvarvubcoefs[snf->ntransvars] = - QUAD_ROUND(val);
                snf->transbinvarsolvals[snf->ntransvars] = varsolvalbinary;
-               snf->transcontvarsolvals[snf->ntransvars] = - DBLDBL_ROUND(contsolval);
+               snf->transcontvarsolvals[snf->ntransvars] = - QUAD_ROUND(contsolval);
 
                /* aggregation information for y'_j */
                snf->aggrcoefsbin[snf->ntransvars] = - rowcoefbinary;
                snf->aggrcoefscont[snf->ntransvars] = - rowcoef;
-               snf->aggrconstants[snf->ntransvars] = DBLDBL_ROUND(rowcoeftimesvubconst);
+               snf->aggrconstants[snf->ntransvars] = QUAD_ROUND(rowcoeftimesvubconst);
             }
-            SCIPdbldblSum22_DBLDBL(transrhs, transrhs, -rowcoeftimesvubconst);
+            SCIPquadprecSumQQ(transrhs, transrhs, -rowcoeftimesvubconst);
 
             /* store for x_j that y'_j is the associated real variable in the 0-1 single node flow relaxation */
 
             SCIPdebugMsg(scip, "    --> bestub used for trans: ... %s y'_%d + ..., y'_%d <= %g x_%d (=%s), rhs=%g-(%g*%g)=%g\n",
                          snf->transvarcoefs[snf->ntransvars] == 1 ? "+" : "-", snf->ntransvars, snf->ntransvars, snf->transvarvubcoefs[snf->ntransvars],
-                         snf->ntransvars, SCIPvarGetName(vubvars[bestubtype[i]]), DBLDBL_ROUND(transrhs) + DBLDBL_ROUND(rowcoeftimesvubconst), rowcoef,
-                         vubconsts[bestubtype[i]], DBLDBL_ROUND(transrhs));
+                         snf->ntransvars, SCIPvarGetName(vubvars[bestubtype[i]]), QUAD_ROUND(transrhs) + QUAD_ROUND(rowcoeftimesvubconst), rowcoef,
+                         vubconsts[bestubtype[i]], QUAD_ROUND(transrhs));
          }
       }
 
       ++snf->ntransvars;
    }
 
-   snf->transrhs = DBLDBL_ROUND(transrhs);
+   snf->transrhs = QUAD_ROUND(transrhs);
 
    /* transform remaining binary variables of row */
    for( i = nnonbinvarsrow; i < nnz; ++i )
@@ -3981,12 +3979,12 @@ void buildFlowCover(
    int*                  nflowcovervars,     /**< pointer to store number of variables in flow cover */
    int*                  nnonflowcovervars,  /**< pointer to store number of variables not in flow cover */
    int*                  flowcoverstatus,    /**< pointer to store whether variable is in flow cover (+1) or not (-1) */
-   DBLDBL(SCIP_Real*     flowcoverweight),   /**< pointer to store weight of flow cover */
+   QUAD(SCIP_Real*     flowcoverweight),   /**< pointer to store weight of flow cover */
    SCIP_Real*            lambda              /**< pointer to store lambda */
    )
 {
    int j;
-   SCIP_Real DBLDBL(tmp);
+   SCIP_Real QUAD(tmp);
 
    assert(scip != NULL);
    assert(coefs != NULL);
@@ -3998,8 +3996,7 @@ void buildFlowCover(
    assert(nflowcovervars != NULL && *nflowcovervars >= 0);
    assert(nnonflowcovervars != NULL && *nnonflowcovervars >= 0);
    assert(flowcoverstatus != NULL);
-   assert(DBL_HI(flowcoverweight) != NULL);
-   assert(DBL_LO(flowcoverweight) != NULL);
+   assert(QUAD_HI(flowcoverweight) != NULL);
    assert(lambda != NULL);
 
    /* get flowcover status for each item */
@@ -4017,7 +4014,7 @@ void buildFlowCover(
          assert(coefs[solitems[j]] == -1);
          flowcoverstatus[solitems[j]] = 1;
          (*nflowcovervars)++;
-         SCIPdbldblSum21_DBLDBL(*flowcoverweight, *flowcoverweight, -vubcoefs[solitems[j]]);
+         SCIPquadprecSumQD(*flowcoverweight, *flowcoverweight, -vubcoefs[solitems[j]]);
       }
    }
    for( j = 0; j < nnonsolitems; j++ )
@@ -4027,7 +4024,7 @@ void buildFlowCover(
       {
          flowcoverstatus[nonsolitems[j]] = 1;
          (*nflowcovervars)++;
-         SCIPdbldblSum21_DBLDBL(*flowcoverweight, *flowcoverweight, vubcoefs[nonsolitems[j]]);
+         SCIPquadprecSumQD(*flowcoverweight, *flowcoverweight, vubcoefs[nonsolitems[j]]);
       }
       /* j in N2 with z_j = 0 => j in N2\C2 */
       else
@@ -4039,8 +4036,8 @@ void buildFlowCover(
    }
 
    /* get lambda = sum_{j in C1} u_j - sum_{j in C2} u_j - rhs */
-   SCIPdbldblSum21_DBLDBL(tmp, *flowcoverweight, -rhs);
-   *lambda = DBLDBL_ROUND(tmp);
+   SCIPquadprecSumQD(tmp, *flowcoverweight, -rhs);
+   *lambda = QUAD_ROUND(tmp);
 }
 
 /** get a flow cover (C1, C2) for a given 0-1 single node flow set
@@ -4066,8 +4063,8 @@ SCIP_RETCODE getFlowCover(
    int* itemsint;
    int* nonsolitems;
    int* solitems;
-   SCIP_Real DBLDBL(flowcoverweight);
-   SCIP_Real DBLDBL(flowcoverweightafterfix);
+   SCIP_Real QUAD(flowcoverweight);
+   SCIP_Real QUAD(flowcoverweightafterfix);
    SCIP_Real n1itemsweight;
    SCIP_Real n2itemsminweight;
    SCIP_Real scalar;
@@ -4114,10 +4111,10 @@ SCIP_RETCODE getFlowCover(
    *nflowcovervars = 0;
    *nnonflowcovervars = 0;
 
-   DBLDBL_ASSIGN(flowcoverweight, 0.0);
+   QUAD_ASSIGN(flowcoverweight, 0.0);
    nflowcovervarsafterfix = 0;
    nnonflowcovervarsafterfix = 0;
-   DBLDBL_ASSIGN(flowcoverweightafterfix, 0.0);
+   QUAD_ASSIGN(flowcoverweightafterfix, 0.0);
 #if !defined(NDEBUG) || defined(SCIP_DEBUG)
    kpexact = FALSE;
 #endif
@@ -4173,7 +4170,7 @@ SCIP_RETCODE getFlowCover(
       {
          flowcoverstatus[j] = 1;
          (*nflowcovervars)++;
-         SCIPdbldblSum21_DBLDBL(flowcoverweight, flowcoverweight, snf->transvarvubcoefs[j]);
+         SCIPquadprecSumQD(flowcoverweight, flowcoverweight, snf->transvarvubcoefs[j]);
          SCIPdebugMsg(scip, "     <%d>: in C1\n", j);
       }
       /* j is in N2 and x*_j = 1 */
@@ -4181,7 +4178,7 @@ SCIP_RETCODE getFlowCover(
       {
          flowcoverstatus[j] = 1;
          (*nflowcovervars)++;
-         SCIPdbldblSum21_DBLDBL(flowcoverweight, flowcoverweight, -snf->transvarvubcoefs[j]);
+         SCIPquadprecSumQD(flowcoverweight, flowcoverweight, -snf->transvarvubcoefs[j]);
          SCIPdebugMsg(scip, "     <%d>: in C2\n", j);
       }
       /* j is in N2 and x*_j = 0 */
@@ -4249,9 +4246,9 @@ SCIP_RETCODE getFlowCover(
       }
    }
    /* get capacity of knapsack constraint in KP^SNF_rat */
-   transcapacityreal = - snf->transrhs + DBLDBL_ROUND(flowcoverweight) + n1itemsweight;
+   transcapacityreal = - snf->transrhs + QUAD_ROUND(flowcoverweight) + n1itemsweight;
    SCIPdebugMsg(scip, "     transcapacity = -rhs(%g) + flowcoverweight(%g) + n1itemsweight(%g) = %g\n",
-      snf->transrhs, DBLDBL_ROUND(flowcoverweight), n1itemsweight, transcapacityreal);
+      snf->transrhs, QUAD_ROUND(flowcoverweight), n1itemsweight, transcapacityreal);
 
    /* there exists no flow cover if the capacity of knapsack constraint in KP^SNF_rat after fixing
     * is less than or equal to zero
@@ -4267,8 +4264,8 @@ SCIP_RETCODE getFlowCover(
    if( nitems == 0)
    {
       /* get lambda = sum_{j in C1} u_j - sum_{j in C2} u_j - rhs */
-      SCIPdbldblSum21_DBLDBL(flowcoverweight, flowcoverweight, -snf->transrhs);
-      *lambda = DBLDBL_ROUND(flowcoverweight);
+      SCIPquadprecSumQD(flowcoverweight, flowcoverweight, -snf->transrhs);
+      *lambda = QUAD_ROUND(flowcoverweight);
       *found = TRUE;
       goto TERMINATE;
    }
@@ -4318,7 +4315,7 @@ SCIP_RETCODE getFlowCover(
          transcapacityint = (SCIP_Longint) (transcapacityreal * scalar);
       nflowcovervarsafterfix = *nflowcovervars;
       nnonflowcovervarsafterfix = *nnonflowcovervars;
-      DBLDBL_ASSIGN2(flowcoverweightafterfix, flowcoverweight);
+      QUAD_ASSIGN_Q(flowcoverweightafterfix, flowcoverweight);
 
       tmp1 = (SCIP_Real) (nitems + 1);
       tmp2 = (SCIP_Real) ((transcapacityint) + 1);
@@ -4363,7 +4360,7 @@ SCIP_RETCODE getFlowCover(
    /* build the flow cover from the solution of KP^SNF_rat and KP^SNF_int, respectively and the fixing */
    assert(*nflowcovervars + *nnonflowcovervars + nsolitems + nnonsolitems == snf->ntransvars);
    buildFlowCover(scip, snf->transvarcoefs, snf->transvarvubcoefs, snf->transrhs, solitems, nonsolitems, nsolitems, nnonsolitems, nflowcovervars,
-      nnonflowcovervars, flowcoverstatus, DBLDBL(&flowcoverweight), lambda);
+      nnonflowcovervars, flowcoverstatus, QUAD(&flowcoverweight), lambda);
    assert(*nflowcovervars + *nnonflowcovervars == snf->ntransvars);
 
    /* if the found structure is not a flow cover, because of scaling, solve KP^SNF_rat approximately */
@@ -4381,11 +4378,11 @@ SCIP_RETCODE getFlowCover(
       /* build the flow cover from the solution of KP^SNF_rat and the fixing */
       *nflowcovervars = nflowcovervarsafterfix;
       *nnonflowcovervars = nnonflowcovervarsafterfix;
-      DBLDBL_ASSIGN2(flowcoverweight, flowcoverweightafterfix);
+      QUAD_ASSIGN_Q(flowcoverweight, flowcoverweightafterfix);
 
       assert(*nflowcovervars + *nnonflowcovervars + nsolitems + nnonsolitems == snf->ntransvars);
       buildFlowCover(scip, snf->transvarcoefs, snf->transvarvubcoefs, snf->transrhs, solitems, nonsolitems, nsolitems, nnonsolitems, nflowcovervars,
-         nnonflowcovervars, flowcoverstatus, DBLDBL(&flowcoverweight), lambda);
+         nnonflowcovervars, flowcoverstatus, QUAD(&flowcoverweight), lambda);
       assert(*nflowcovervars + *nnonflowcovervars == snf->ntransvars);
    }
    *found = TRUE;
@@ -4407,7 +4404,7 @@ SCIP_RETCODE getFlowCover(
             SCIPdebugMsg(scip, "     C2: - y_%d [u_%d = %g]\n", j, j, snf->transvarvubcoefs[j]);
          }
       }
-      SCIPdebugMsg(scip, "     flowcoverweight(%g) = rhs(%g) + lambda(%g)\n", DBLDBL_ROUND(flowcoverweight), snf->transrhs, *lambda);
+      SCIPdebugMsg(scip, "     flowcoverweight(%g) = rhs(%g) + lambda(%g)\n", QUAD_ROUND(flowcoverweight), snf->transrhs, *lambda);
    }
 #endif
 
@@ -4431,7 +4428,7 @@ SCIP_Real evaluateLiftingFunction(
    SCIP_Real             x
    )
 {
-   SCIP_Real DBLDBL(tmp);
+   SCIP_Real QUAD(tmp);
    SCIP_Real xpluslambda;
    int i;
 
@@ -4452,10 +4449,10 @@ SCIP_Real evaluateLiftingFunction(
       assert(i > 0 && SCIPisLE(scip, liftingdata->M[i], xpluslambda) && x <= liftingdata->M[i]);
 
       /* return x - liftingdata->M[i] + i * liftingdata->lambda */
-      SCIPdbldblProd_DBLDBL(tmp, i, liftingdata->lambda);
-      SCIPdbldblSum21_DBLDBL(tmp, tmp, x);
-      SCIPdbldblSum21_DBLDBL(tmp, tmp, -liftingdata->M[i]);
-      return DBLDBL_ROUND(tmp);
+      SCIPquadprecProdDD(tmp, i, liftingdata->lambda);
+      SCIPquadprecSumQD(tmp, tmp, x);
+      SCIPquadprecSumQD(tmp, tmp, -liftingdata->M[i]);
+      return QUAD_ROUND(tmp);
    }
 
    if( i < liftingdata->r )
@@ -4463,38 +4460,38 @@ SCIP_Real evaluateLiftingFunction(
       assert(!SCIPisInfinity(scip, liftingdata->mp));
 
       /* p = liftingdata->m[i] - (liftingdata->mp - liftingdata->lambda) - liftingdata->ml; */
-      SCIPdbldblSum_DBLDBL(tmp, liftingdata->m[i], -liftingdata->mp);
-      SCIPdbldblSum21_DBLDBL(tmp, tmp, -liftingdata->ml);
-      SCIPdbldblSum21_DBLDBL(tmp, tmp, liftingdata->lambda);
+      SCIPquadprecSumDD(tmp, liftingdata->m[i], -liftingdata->mp);
+      SCIPquadprecSumQD(tmp, tmp, -liftingdata->ml);
+      SCIPquadprecSumQD(tmp, tmp, liftingdata->lambda);
 
       /* p = MAX(0.0, p); */
-      if( DBL_HI(tmp) < 0.0 )
+      if( QUAD_HI(tmp) < 0.0 )
       {
-         DBLDBL_ASSIGN(tmp, 0.0);
+         QUAD_ASSIGN(tmp, 0.0);
       }
 
-      SCIPdbldblSum21_DBLDBL(tmp, tmp, liftingdata->M[i]);
-      SCIPdbldblSum21_DBLDBL(tmp, tmp, liftingdata->ml);
+      SCIPquadprecSumQD(tmp, tmp, liftingdata->M[i]);
+      SCIPquadprecSumQD(tmp, tmp, liftingdata->ml);
 
-      if( SCIPisLT(scip, DBLDBL_ROUND(tmp), xpluslambda) )
+      if( SCIPisLT(scip, QUAD_ROUND(tmp), xpluslambda) )
          return i * liftingdata->lambda;
 
       assert(SCIPisLE(scip, liftingdata->M[i], xpluslambda) &&
              SCIPisLE(scip, xpluslambda, liftingdata->M[i] + liftingdata->ml +
              MAX(0.0, liftingdata->m[i] - (liftingdata->mp - liftingdata->lambda) - liftingdata->ml)));
 
-      SCIPdbldblProd_DBLDBL(tmp, i, liftingdata->lambda);
-      SCIPdbldblSum21_DBLDBL(tmp, tmp, x);
-      SCIPdbldblSum21_DBLDBL(tmp, tmp, - liftingdata->M[i]);
-      return DBLDBL_ROUND(tmp);
+      SCIPquadprecProdDD(tmp, i, liftingdata->lambda);
+      SCIPquadprecSumQD(tmp, tmp, x);
+      SCIPquadprecSumQD(tmp, tmp, - liftingdata->M[i]);
+      return QUAD_ROUND(tmp);
    }
 
    assert(i == liftingdata->r && SCIPisLE(scip, liftingdata->M[liftingdata->r], xpluslambda));
 
-   SCIPdbldblProd_DBLDBL(tmp, liftingdata->r, liftingdata->lambda);
-   SCIPdbldblSum21_DBLDBL(tmp, tmp, x);
-   SCIPdbldblSum21_DBLDBL(tmp, tmp, - liftingdata->M[liftingdata->r]);
-   return DBLDBL_ROUND(tmp);
+   SCIPquadprecProdDD(tmp, liftingdata->r, liftingdata->lambda);
+   SCIPquadprecSumQD(tmp, tmp, x);
+   SCIPquadprecSumQD(tmp, tmp, - liftingdata->M[liftingdata->r]);
+   return QUAD_ROUND(tmp);
 }
 
 static
@@ -4517,12 +4514,12 @@ void getAlphaAndBeta(
 
    if( SCIPisLT(scip, vubcoef, liftingdata->M[i]) )
    {
-      SCIP_Real DBLDBL(tmp);
+      SCIP_Real QUAD(tmp);
       assert(liftingdata->M[i] < vubcoefpluslambda);
       *alpha = 1;
-      SCIPdbldblProd_DBLDBL(tmp, -i, liftingdata->lambda);
-      SCIPdbldblSum21_DBLDBL(tmp, tmp, liftingdata->M[i]);
-      *beta = DBLDBL_ROUND(tmp);
+      SCIPquadprecProdDD(tmp, -i, liftingdata->lambda);
+      SCIPquadprecSumQD(tmp, tmp, liftingdata->M[i]);
+      *beta = QUAD_ROUND(tmp);
    }
    else
    {
@@ -4544,19 +4541,19 @@ SCIP_RETCODE computeLiftingData(
    )
 {
    int i;
-   SCIP_Real DBLDBL(tmp);
-   SCIP_Real DBLDBL(sumN2mC2LE);
-   SCIP_Real DBLDBL(sumN2mC2GT);
-   SCIP_Real DBLDBL(sumC1LE);
-   SCIP_Real DBLDBL(sumC2);
+   SCIP_Real QUAD(tmp);
+   SCIP_Real QUAD(sumN2mC2LE);
+   SCIP_Real QUAD(sumN2mC2GT);
+   SCIP_Real QUAD(sumC1LE);
+   SCIP_Real QUAD(sumC2);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &liftingdata->m, snf->ntransvars) );
 
    liftingdata->r = 0;
-   DBLDBL_ASSIGN(sumN2mC2LE, 0.0);
-   DBLDBL_ASSIGN(sumC1LE, 0.0);
-   DBLDBL_ASSIGN(sumN2mC2GT, 0.0);
-   DBLDBL_ASSIGN(sumC2, 0.0);
+   QUAD_ASSIGN(sumN2mC2LE, 0.0);
+   QUAD_ASSIGN(sumC1LE, 0.0);
+   QUAD_ASSIGN(sumN2mC2GT, 0.0);
+   QUAD_ASSIGN(sumC2, 0.0);
 
    liftingdata->mp = SCIPinfinity(scip);
 
@@ -4574,19 +4571,19 @@ SCIP_RETCODE computeLiftingData(
 
             if( SCIPisGT(scip, snf->transvarvubcoefs[i], lambda) )
             {
-               SCIPdbldblSum21_DBLDBL(sumN2mC2GT, sumN2mC2GT, snf->transvarvubcoefs[i]);
+               SCIPquadprecSumQD(sumN2mC2GT, sumN2mC2GT, snf->transvarvubcoefs[i]);
                liftingdata->m[liftingdata->r++] = snf->transvarvubcoefs[i];
             }
             else
             {
-               SCIPdbldblSum21_DBLDBL(sumN2mC2LE, sumN2mC2LE, snf->transvarvubcoefs[i]);
+               SCIPquadprecSumQD(sumN2mC2LE, sumN2mC2LE, snf->transvarvubcoefs[i]);
             }
             break;
          case 1: /* var is in C2 */
             assert(snf->transvarvubcoefs[i] > 0.0);
             assert(snf->transvarcoefs[i] == -1 && transvarflowcoverstatus[i] == 1);
 
-            SCIPdbldblSum21_DBLDBL(sumC2, sumC2, snf->transvarvubcoefs[i]);
+            SCIPquadprecSumQD(sumC2, sumC2, snf->transvarvubcoefs[i]);
             break;
          case 3: /* var is in C1 */
             assert(snf->transvarcoefs[i] == 1 && transvarflowcoverstatus[i] == 1);
@@ -4599,7 +4596,7 @@ SCIP_RETCODE computeLiftingData(
             }
             else
             {
-               SCIPdbldblSum21_DBLDBL(sumC1LE, sumC1LE, snf->transvarvubcoefs[i]);
+               SCIPquadprecSumQD(sumC1LE, sumC1LE, snf->transvarvubcoefs[i]);
             }
             break;
       }
@@ -4615,25 +4612,25 @@ SCIP_RETCODE computeLiftingData(
 
    *valid = TRUE;
 
-   SCIPdbldblSum22_DBLDBL(tmp, sumC1LE, sumN2mC2LE);
-   liftingdata->ml = MIN(lambda, DBLDBL_ROUND(tmp));
-   SCIPdbldblSum21_DBLDBL(tmp, sumC2, snf->transrhs);
-   liftingdata->d1 = DBLDBL_ROUND(tmp);
-   SCIPdbldblSum22_DBLDBL(tmp, tmp, sumN2mC2GT);
-   SCIPdbldblSum22_DBLDBL(tmp, tmp, sumN2mC2LE);
-   liftingdata->d2 = DBLDBL_ROUND(tmp);
+   SCIPquadprecSumQQ(tmp, sumC1LE, sumN2mC2LE);
+   liftingdata->ml = MIN(lambda, QUAD_ROUND(tmp));
+   SCIPquadprecSumQD(tmp, sumC2, snf->transrhs);
+   liftingdata->d1 = QUAD_ROUND(tmp);
+   SCIPquadprecSumQQ(tmp, tmp, sumN2mC2GT);
+   SCIPquadprecSumQQ(tmp, tmp, sumN2mC2LE);
+   liftingdata->d2 = QUAD_ROUND(tmp);
 
    SCIPsortDownReal(liftingdata->m, liftingdata->r);
 
    /* compute M[i] = sum_{i \in [1,r]} m[i] where m[*] is sorted decreasingly and M[0] = 0 */
-   DBLDBL_ASSIGN(tmp, 0.0);
+   QUAD_ASSIGN(tmp, 0.0);
    for( i = 0; i < liftingdata->r; ++i)
    {
-      liftingdata->M[i] = DBLDBL_ROUND(tmp);
-      SCIPdbldblSum21_DBLDBL(tmp, tmp, liftingdata->m[i]);
+      liftingdata->M[i] = QUAD_ROUND(tmp);
+      SCIPquadprecSumQD(tmp, tmp, liftingdata->m[i]);
    }
 
-   liftingdata->M[liftingdata->r] = DBLDBL_ROUND(tmp);
+   liftingdata->M[liftingdata->r] = QUAD_ROUND(tmp);
 
    SCIP_UNUSED( SCIPsortedvecFindDownReal(liftingdata->m, liftingdata->mp, liftingdata->r, &liftingdata->t) );
    assert(liftingdata->m[liftingdata->t] == liftingdata->mp || SCIPisInfinity(scip, liftingdata->mp));
@@ -4674,7 +4671,7 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
    SCIP_Bool*            success             /**< was the cut successfully generated */
    )
 {
-   SCIP_Real DBLDBL(rhs);
+   SCIP_Real QUAD(rhs);
    LIFTINGDATA liftingdata;
    int i;
 
@@ -4682,7 +4679,7 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
    if( ! *success )
       return SCIP_OKAY;
 
-   DBLDBL_ASSIGN(rhs, liftingdata.d1);
+   QUAD_ASSIGN(rhs, liftingdata.d1);
    *nnz = 0;
 
    for( i = 0; i < snf->ntransvars; ++i )
@@ -4703,7 +4700,7 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
                }
                else
                {
-                  SCIPdbldblSum21_DBLDBL(rhs, rhs, lambda);
+                  SCIPquadprecSumQD(rhs, rhs, lambda);
                }
             }
             else
@@ -4723,7 +4720,7 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
                   ++(*nnz);
                }
 
-               SCIPdbldblSum21_DBLDBL(rhs, rhs, snf->aggrconstants[i]);
+               SCIPquadprecSumQD(rhs, rhs, snf->aggrconstants[i]);
             }
             break;
          case 1: /* var is in C2 */
@@ -4737,7 +4734,7 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
                cutinds[*nnz] = snf->origbinvars[i];
                cutcoefs[*nnz] = -liftedbincoef;
                ++(*nnz);
-               SCIPdbldblSum21_DBLDBL(rhs, rhs, -liftedbincoef);
+               SCIPquadprecSumQD(rhs, rhs, -liftedbincoef);
             }
             break;
          }
@@ -4753,7 +4750,7 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
 
             if( alpha == 1 )
             {
-               SCIP_Real DBLDBL(binvarcoef);
+               SCIP_Real QUAD(binvarcoef);
                assert(beta > 0.0);
 
                if( snf->origcontvars[i] != -1 )
@@ -4763,19 +4760,19 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
                   ++(*nnz);
                }
 
-               SCIPdbldblSum_DBLDBL(binvarcoef, snf->aggrcoefsbin[i], -beta);
+               SCIPquadprecSumDD(binvarcoef, snf->aggrcoefsbin[i], -beta);
                if( snf->origbinvars[i] != -1 )
                {
                   cutinds[*nnz] = snf->origbinvars[i];
-                  cutcoefs[*nnz] = DBLDBL_ROUND(binvarcoef);
+                  cutcoefs[*nnz] = QUAD_ROUND(binvarcoef);
                   ++(*nnz);
                }
                else
                {
-                  SCIPdbldblSum22_DBLDBL(rhs, rhs, -binvarcoef);
+                  SCIPquadprecSumQQ(rhs, rhs, -binvarcoef);
                }
 
-               SCIPdbldblSum21_DBLDBL(rhs, rhs, -snf->aggrconstants[i]);
+               SCIPquadprecSumQD(rhs, rhs, -snf->aggrconstants[i]);
             }
             break;
          }
@@ -4787,16 +4784,16 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
             if( snf->origbinvars[i] != -1 && SCIPisGT(scip, snf->transvarvubcoefs[i], lambda) )
             {
                /* var is in C++ */
-               SCIP_Real DBLDBL(tmp);
-               SCIP_Real DBLDBL(tmp2);
+               SCIP_Real QUAD(tmp);
+               SCIP_Real QUAD(tmp2);
 
-               SCIPdbldblSum_DBLDBL(tmp, snf->transvarvubcoefs[i], -lambda);
+               SCIPquadprecSumDD(tmp, snf->transvarvubcoefs[i], -lambda);
 
-               SCIPdbldblSum21_DBLDBL(tmp2, tmp, constant);
-               constant = DBLDBL_ROUND(tmp2);
+               SCIPquadprecSumQD(tmp2, tmp, constant);
+               constant = QUAD_ROUND(tmp2);
 
-               SCIPdbldblSum21_DBLDBL(tmp2, tmp, -bincoef);
-               bincoef = -DBLDBL_ROUND(tmp2);
+               SCIPquadprecSumQD(tmp2, tmp, -bincoef);
+               bincoef = -QUAD_ROUND(tmp2);
             }
 
             if( snf->origbinvars[i] != -1 )
@@ -4813,7 +4810,7 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
                ++(*nnz);
             }
 
-            SCIPdbldblSum21_DBLDBL(rhs, rhs, -constant);
+            SCIPquadprecSumQD(rhs, rhs, -constant);
 
             break;
          }
@@ -4842,38 +4839,38 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
          /* move slack's constant to the right hand side */
          if( aggrrow->slacksign[i] == +1 )
          {
-            SCIP_Real DBLDBL(rowrhs);
+            SCIP_Real QUAD(rowrhs);
 
             /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a^_r * (rhs - c) to the right hand side */
             assert(!SCIPisInfinity(scip, row->rhs));
-            SCIPdbldblSum_DBLDBL(rowrhs, row->rhs, - row->constant);
+            SCIPquadprecSumDD(rowrhs, row->rhs, - row->constant);
             if( row->integral )
             {
                /* the right hand side was implicitly rounded down in row aggregation */
-               DBLDBL_ASSIGN(rowrhs, SCIPfeasFloor(scip, DBLDBL_ROUND(rowrhs)));
+               QUAD_ASSIGN(rowrhs, SCIPfeasFloor(scip, QUAD_ROUND(rowrhs)));
             }
-            SCIPdbldblProd21_DBLDBL(rowrhs, rowrhs, -aggrrow->rowweights[i]);
-            SCIPdbldblSum22_DBLDBL(rhs, rhs, rowrhs);
+            SCIPquadprecProdQD(rowrhs, rowrhs, -aggrrow->rowweights[i]);
+            SCIPquadprecSumQQ(rhs, rhs, rowrhs);
          }
          else
          {
-            SCIP_Real DBLDBL(rowlhs);
+            SCIP_Real QUAD(rowlhs);
 
             /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a^_r * (c - lhs) to the right hand side */
             assert(!SCIPisInfinity(scip, -row->lhs));
-            SCIPdbldblSum_DBLDBL(rowlhs, row->lhs, - row->constant);
+            SCIPquadprecSumDD(rowlhs, row->lhs, - row->constant);
             if( row->integral )
             {
                /* the left hand side was implicitly rounded up in row aggregation */
-               DBLDBL_ASSIGN(rowlhs, SCIPfeasCeil(scip, DBLDBL_ROUND(rowlhs)));
+               QUAD_ASSIGN(rowlhs, SCIPfeasCeil(scip, QUAD_ROUND(rowlhs)));
             }
-            SCIPdbldblProd21_DBLDBL(rowlhs, rowlhs, -aggrrow->rowweights[i]);
-            SCIPdbldblSum22_DBLDBL(rhs, rhs, rowlhs);
+            SCIPquadprecProdQD(rowlhs, rowlhs, -aggrrow->rowweights[i]);
+            SCIPquadprecSumQQ(rhs, rhs, rowlhs);
          }
       }
    }
 
-   *cutrhs = DBLDBL_ROUND(rhs);
+   *cutrhs = QUAD_ROUND(rhs);
      /* set rhs to zero, if it's very close to */
    if( SCIPisZero(scip, *cutrhs) )
       *cutrhs = 0.0;
