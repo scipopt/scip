@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="4.0.0"
+VERSION="4.0.0.1"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -73,25 +73,24 @@ $NAME/applications/MinIISC/doc/* \
 $NAME/applications/MinIISC/src/* \
 $NAME/applications/MinIISC/data/* \
 $NAME/applications/MinIISC/check/configuration_tmpfile_setup_miniisc.sh $NAME/applications/MinIISC/check/run.sh \
-$NAME/applications/MinIISC/check/run.sh $NAME/applications/MinIISC/check/testset/short.* \
+$NAME/applications/MinIISC/check/testset/short.* \
 $NAME/applications/PolySCIP/doc/* \
 $NAME/applications/PolySCIP/src/*.cpp $NAME/applications/PolySCIP/src/*.h \
-$NAME/applications/PolySCIP/src/tclap/* $NAME/applications/PolySCIP/src/CMakeLists.txt \
+$NAME/applications/PolySCIP/src/tclap/* \
 $NAME/applications/PolySCIP/data/*.mop \
 $NAME/applications/PolySCIP/data/AP_p-3_n-5.dat \
 $NAME/applications/PolySCIP/Makefile \
 $NAME/applications/PolySCIP/mult_zimpl/AP_p-3_n-5.zpl \
 $NAME/applications/PolySCIP/mult_zimpl/README \
 $NAME/applications/PolySCIP/mult_zimpl/tenfelde_podehl.zpl \
-$NAME/applications/PolySCIP/cmake/* $NAME/applications/PolySCIP/mult_zimpl/*.py \
+$NAME/applications/PolySCIP/mult_zimpl/*.py \
 $NAME/applications/PolySCIP/INSTALL $NAME/applications/PolySCIP/LICENCE \
 $NAME/applications/PolySCIP/README $NAME/applications/PolySCIP/scipmip.set \
-$NAME/applications/PolySCIP/CMakeLists.txt \
 $NAME/applications/STP/doc/* \
 $NAME/applications/STP/src/depend.* \
 $NAME/applications/STP/src/*.c $NAME/applications/STP/src/*.h \
 $NAME/applications/STP/check/testset/*.test $NAME/applications/STP/check/testset/*.solu \
-$NAME/applications/STP/data/D/* \
+$NAME/applications/STP/data/short/* \
 $NAME/applications/STP/Makefile $NAME/applications/STP/INSTALL \
 $NAME/examples/xternal_examples.c \
 $NAME/examples/Binpacking/Makefile $NAME/examples/Binpacking/INSTALL \
@@ -129,6 +128,7 @@ $NAME/examples/Queens/src/depend.* \
 $NAME/examples/Queens/src/*.cpp $NAME/examples/Queens/src/*.hpp \
 $NAME/examples/Relaxator/INSTALL \
 $NAME/examples/Relaxator/Makefile \
+$NAME/examples/Relaxator/check/testset/short.test \
 $NAME/examples/Relaxator/doc/xternal_relaxator.c \
 $NAME/examples/Relaxator/makedepend.sh \
 $NAME/examples/Relaxator/src/* \
@@ -153,7 +153,7 @@ $NAME/interfaces/ampl/check/instances/MINLP/*.row $NAME/interfaces/ampl/check/in
 $NAME/interfaces/ampl/check/instances/SOS/*.col $NAME/interfaces/ampl/check/instances/SOS/*.row \
 $NAME/interfaces/ampl/check/instances/SOS/*.nl $NAME/interfaces/ampl/check/testset/short.solu \
 $NAME/interfaces/gams/Makefile $NAME/interfaces/gams/INSTALL $NAME/interfaces/gams/gamsinst.sh \
-$NAME/interfaces/gams/src/* \
+$NAME/interfaces/gams/test.sh $NAME/interfaces/gams/src/* \
 $NAME/check/instances/CP/*.cip \
 $NAME/check/instances/Indicator/*.lp \
 $NAME/check/instances/MIP/*.fzn \
@@ -201,10 +201,9 @@ $NAME/tests/src/test/stages.c
 
 rm -f $NAME
 echo ""
-echo "check version numbers in src/scip/def.h, doc/xternal.c, make.project, Makefile.nmake, and makedist.sh ($VERSION):"
+echo "check version numbers in src/scip/def.h, doc/xternal.c, make.project, and makedist.sh ($VERSION):"
 grep -H "SCIP_VERSION" src/scip/def.h
 grep -H "@version" doc/xternal.c
 grep -H "^SCIP_VERSION" make/make.project
-grep -H "^VERSION" Makefile.nmake
 echo ""
 tail src/scip/githash.c

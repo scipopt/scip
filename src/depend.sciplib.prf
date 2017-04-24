@@ -8207,7 +8207,8 @@ $(LIBOBJDIR)/scip/concsolver.o: src/scip/concsolver.c src/scip/concsolver.h src/
  src/scip/struct_stat.h src/scip/type_visual.h src/scip/tree.h \
  src/scip/misc.h src/scip/var.h src/scip/event.h src/scip/struct_event.h \
  src/scip/cons.h src/scip/solve.h src/scip/concurrent.h \
- src/scip/struct_concsolver.h src/scip/syncstore.h src/scip/clock.h
+ src/scip/struct_concsolver.h src/scip/syncstore.h src/scip/boundstore.h \
+ src/scip/clock.h
 $(LIBOBJDIR)/scip/concurrent.o: src/scip/concurrent.c src/scip/concurrent.h \
  src/scip/type_concurrent.h src/scip/type_scip.h \
  src/scip/type_concsolver.h src/scip/def.h src/scip/type_retcode.h \

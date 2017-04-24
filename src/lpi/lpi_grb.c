@@ -1431,6 +1431,9 @@ SCIP_RETCODE SCIPlpiLoadColLP(
 
    SCIP_CALL( ensureSidechgMem(lpi, nrows) );
 
+   /* convert objective sense */
+   objsen = SCIP_OBJSEN_MINIMIZE ? GRB_MINIMIZE : GRB_MAXIMIZE;
+
    /* convert lhs/rhs into sen/rhs/range tuples */
    SCIP_CALL( convertSides(lpi, nrows, lhs, rhs, &rngcount) );
 
@@ -2148,6 +2151,9 @@ SCIP_RETCODE SCIPlpiChgObjsen(
    assert(lpi != NULL);
    assert(lpi->grbmodel != NULL);
    assert(objsen == SCIP_OBJSEN_MAXIMIZE || objsen == SCIP_OBJSEN_MINIMIZE);
+
+   /* convert objective sense */
+   objsen = SCIP_OBJSEN_MINIMIZE ? GRB_MINIMIZE : GRB_MAXIMIZE;
 
    SCIPdebugMessage("changing objective sense in Gurobi to %d\n", objsen);
 
@@ -3110,7 +3116,6 @@ SCIP_RETCODE lpiStrongbranch(
    SCIP_Real olditlim;
    SCIP_Bool error = FALSE;
    SCIP_Bool success;
-   int objsen;
    int it;
 
    assert( lpi != NULL );
@@ -3129,8 +3134,6 @@ SCIP_RETCODE lpiStrongbranch(
    *upvalid = FALSE;
    if( iter != NULL )
       *iter = 0;
-
-   CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
 
    /* save current LP basis and bounds*/
    SCIP_CALL( getBase(lpi, &success) );
@@ -4915,16 +4918,32 @@ SCIP_RETCODE SCIPlpiSetNorms(
 
    /* store dual norms in Gurobi */
    error = GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_VDUALNORM, 0, lpinorms->ncols, lpinorms->colnorm);
+   /* it can fail to set the norms if no basis was previously set, e.g.,
+    * this can happen if flushing an LP did not change anything and
+    * therefore no basis was set, as a result Gurobi has no extra user
+    * warmstart information and cannot set norms */
+#if 0
    if( error )
    {
       SCIPmessagePrintWarning(lpi->messagehdlr, "Warning: setting dual variable norms failed with Gurobi error %d\n", error);
    }
+#else
+   (void)error;
+#endif
 
    error = GRBsetdblattrarray(lpi->grbmodel, GRB_DBL_ATTR_CDUALNORM, 0, lpinorms->nrows, lpinorms->rownorm);
+   /* it can fail to set the norms if no basis was previously set, e.g.,
+    * this can happen if flushing an LP did not change anything and
+    * therefore no basis was set, as a result Gurobi has no extra user
+    * warmstart information and cannot set norms */
+#if 0
    if( error )
    {
       SCIPmessagePrintWarning(lpi->messagehdlr, "Warning: setting dual constraint norms failed with Gurobi error %d\n", error);
    }
+#else
+   (void)error;
+#endif
 
    return SCIP_OKAY;
 }
@@ -5126,14 +5145,14 @@ SCIP_RETCODE SCIPlpiGetRealpar(
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_LOBJLIM:
       CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
-      if( objsen == 1 )
+      if( objsen == GRB_MAXIMIZE )
          SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       else
          return SCIP_PARAMETERUNKNOWN;
       break;
    case SCIP_LPPAR_UOBJLIM:
       CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
-      if( objsen == 0 )
+      if( objsen == GRB_MINIMIZE )
          SCIP_CALL( getDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       else
          return SCIP_PARAMETERUNKNOWN;
@@ -5177,15 +5196,17 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_LOBJLIM:
       CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
-      if( objsen == 1 )
+      if( objsen == GRB_MAXIMIZE )
          SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
       else
          return SCIP_PARAMETERUNKNOWN;
       break;
    case SCIP_LPPAR_UOBJLIM:
       CHECK_ZERO( lpi->messagehdlr, GRBgetintattr(lpi->grbmodel, GRB_INT_ATTR_MODELSENSE, &objsen) );
-      if( objsen == 0 )
+      if( objsen == GRB_MINIMIZE )
+      {
          SCIP_CALL( setDblParam(lpi, GRB_DBL_PAR_CUTOFF, dval) );
+      }
       else
          return SCIP_PARAMETERUNKNOWN;
       break;

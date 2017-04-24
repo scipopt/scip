@@ -64,7 +64,7 @@ TEST		=	short
 SETTINGS        =       default
 CONTINUE	=	false
 LOCK		=	false
-DEBUGTOOL	=	auto
+DEBUGTOOL	=	none
 CLIENTTMPDIR    =       /tmp
 REOPT		=	false
 OPTCOMMAND	=	optimize
@@ -74,7 +74,7 @@ MAXJOBS         =       1
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=   	4.0.0
+SCIP_VERSION	=	4.0.0.1
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -94,6 +94,11 @@ NOBLKBUFMEM	=	false
 # if SHARED = true, nevertheless link to static version of external libraries (usefull for mingw)
 LIBEXTFORCESTATIC =	false
 
+#-----------------------------------------------------------------------------
+# load different default for debugtool
+#-----------------------------------------------------------------------------
+-include $(SCIPDIR)/make/local/make.debugtool
+
 ifeq ($(DEBUGTOOL),auto)
    ifeq ($(OPT),dbg)
       override DEBUGTOOL   =   gdb
@@ -104,6 +109,9 @@ endif
 
 #will this be compiled for parascip, necessary for dbg-builds and cppad to make it threadsafe
 PARASCIP	=	false
+
+# enable debug-solution mechanism
+DEBUGSOL =  false
 
 # third party compiling parameters
 OPENSOURCE   	=	true
@@ -300,7 +308,6 @@ FLAGS		+=	-DNPARASCIP
 else
 LDFLAGS 	+=	-lpthread
 endif
-
 
 #-----------------------------------------------------------------------------
 # LP Solver Interface
