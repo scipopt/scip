@@ -57,7 +57,7 @@
 
 #else
 
-/* convenience macros for nicer usage of double double arithmetic */
+/* dummy macros that use normal arithmetic */
 #define QUAD_HI(x)  x
 #define QUAD_LO(x)  0.0
 #define QUAD(x)     x
@@ -66,7 +66,6 @@
 #define QUAD_ASSIGN(a, constant)  do { (a) = constant; } while(0)
 #define QUAD_ASSIGN_Q(a, b)  do { (a) = (b); } while(0)
 
-/* define all the SCIPquadprec... macros such that they use the SCIPdbldbl... macros that expands the quad precision arguments using the above macros */
 #define SCIPquadprecProdDD(r, a, b)  do { (r) = (a) * (b); } while(0)
 #define SCIPquadprecSquareD(r, a)    do { (r) = (a) * (a); } while(0)
 #define SCIPquadprecSumDD(r, a, b)   do { (r) = (a) + (b); } while(0)
