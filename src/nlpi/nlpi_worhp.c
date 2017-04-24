@@ -130,8 +130,7 @@ void invalidateSolution(
 /** evaluate last Worhp run */
 static
 SCIP_RETCODE evaluateWorhpRun(
-   SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler (might be NULL) */
+   SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
    )
 {
    int i;
@@ -242,9 +241,9 @@ SCIP_RETCODE evaluateWorhpRun(
       problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
    }
+
 #if WORHP_MAJOR >= 2
    case GlobalInfeas:
-#endif
    {
       /* infeasible stationary point found */
       SCIPdebugMessage("Worhp failed because of convergence against infeasible stationary point!\n");
@@ -253,6 +252,7 @@ SCIP_RETCODE evaluateWorhpRun(
       problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
    }
+#endif
 
    case RegularizationFailed:
    {
@@ -631,7 +631,8 @@ static void noprint(
    int                    mode,              /**< the mode */
    const char             s[]                /**< a string */
    )
-{ }
+{ /*lint --e{715}*/
+}
 
 /** initialize Worhp data */
 static
@@ -1728,7 +1729,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveWorhp )
    }
    else
    {
-      SCIP_CALL( evaluateWorhpRun(problem, nlpidata->messagehdlr) );
+      SCIP_CALL( evaluateWorhpRun(problem) );
    }
 
    /* prints a status message with information about the current solver status */
@@ -2363,7 +2364,7 @@ SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    nlpidata->infinity = SCIP_DEFAULT_INFINITY;
 
    /* disable Worhp's keyboard handler, not useful here and not threadsafe */
-   setenv("WORHP_DISABLE_KEYBOARD_HANDLER", "1", 0);
+   (void) setenv("WORHP_DISABLE_KEYBOARD_HANDLER", "1", 0);
 
 #if DEFAULT_VERBLEVEL == 0
    /* disable Worhp output by default */
