@@ -3201,6 +3201,7 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
 #undef SCIPcliqueGetVars
 #undef SCIPcliqueGetValues
 #undef SCIPcliqueGetId
+#undef SCIPcliqueGetIndex
 #undef SCIPcliqueIsCleanedUp
 #undef SCIPcliqueIsEquation
 #undef SCIPcliquelistGetNCliques
@@ -3332,6 +3333,16 @@ int SCIPcliqueGetId(
    assert(clique != NULL);
 
    return (int) clique->id;
+}
+
+/** gets index of the clique in the clique table */
+int SCIPcliqueGetIndex(
+   SCIP_CLIQUE*          clique              /**< clique data structure */
+   )
+{
+   assert(clique != NULL);
+
+   return clique->index;
 }
 
 /** gets unique identifier of the clique */

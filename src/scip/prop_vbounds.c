@@ -84,6 +84,10 @@
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 
+#define PROP_PRESOL_PRIORITY    -90000 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
+#define PROP_PRESOLTIMING       SCIP_PRESOLTIMING_MEDIUM /* timing of the presolving method (fast, medium, or exhaustive) */
+#define PROP_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no
+                                         *   limit) */
 /**@} */
 
 /**@name Event handler properties
@@ -2103,6 +2107,416 @@ SCIP_DECL_PROPEXITSOL(propExitsolVbounds)
    return SCIP_OKAY;
 }
 
+
+
+
+/** performs Tarjan's algorithm for strongly connected components the implicitly given directed graph from the given start index */
+static
+SCIP_RETCODE tarjan(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   startnode,          /**< node to start the depth-first-search */
+   int*                  nodeonstack,        /**< array to store the whether a each node is on the stack */
+   int*                  nodeindex,          /**< array to store the dfs index for each node */
+   int*                  nodelowlink,        /**< array to store the lowlink for each node */
+   int*                  predstackidx,
+   int*                  dfsstack,           /**< array of size number of nodes to store the stack;
+                                              *   only needed for performance reasons */
+   int*                  stacknextclique,      /**< array of size number of nodes to store the next edge to be visited in
+                                              *   dfs for all nodes on the stack/in the current path; only needed for
+                                              *   performance reasons */
+   int*                  stacknextcliquevar, /**< array of size number of nodes to store the next edge to be visited in
+                                              *   dfs for all nodes on the stack/in the current path; only needed for
+                                              *   performance reasons */
+   int*                  stackcliquemin,
+   int*                  cliqueminidx,
+   int*                  cliquevarleft,
+   int*                  sccvars,
+   int*                  sccstarts,
+   int*                  nsccs,
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_VAR* startvar;
+   SCIP_Bool lower;
+   int index = 1;
+   int stacksize;
+   int currstackidx;
+   int curridx;
+   int idx;
+
+   assert(startnode >= 0);
+   assert(startnode < 2 * (SCIPgetNVars(scip) - SCIPgetNContVars(scip)));
+   assert(nodeindex != NULL);
+   assert(nodeindex[startnode] == 0);
+   assert(nodelowlink != NULL);
+   assert(nodelowlink[startnode] == 0);
+   assert(dfsstack != NULL);
+   assert(stacknextclique != NULL);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
+
+   vars = SCIPgetVars(scip);
+
+   /* put start node on the stack */
+   dfsstack[0] = startnode;
+   stacknextclique[0] = 0;
+   stacknextcliquevar[0] = 0;
+   stackcliquemin[0] = INT_MAX;
+   predstackidx[0] = -1;
+   stacksize = 1;
+   idx = -1;
+   currstackidx = 0;
+
+   //printf("put %s(%s) on stack[%d]\n", indexGetBoundString(dfsstack[stacksize-1]), SCIPvarGetName(vars[getVarIndex(dfsstack[stacksize-1])]), stacksize-1);
+
+   /* we run until no more bounds indices are on the stack, i.e. all changed bounds were propagated */
+   while( stacksize > 0 )
+   {
+      /* get next node from stack */
+      curridx = dfsstack[currstackidx];
+      assert(nodelowlink[curridx] <= nodeindex[curridx]);
+
+      /* mark current node as visited */
+      //assert((nodeindex[curridx] != 0) == (stacknextclique[currstackidx] != -1));
+      if( nodeindex[curridx] == 0 )
+      {
+         assert(stacknextclique[currstackidx] == 0);
+         assert(stacknextcliquevar[currstackidx] == 0);
+         nodeonstack[curridx] = TRUE;
+         nodeindex[curridx] = index;
+         nodelowlink[curridx] = index;
+         ++index;
+      }
+      else
+      {
+         assert(stacknextclique[currstackidx] > 0 || stacknextcliquevar[currstackidx] > 0);
+         assert(nodeindex[curridx] < index);
+      }
+
+      startvar = vars[getVarIndex(curridx)];
+      lower = isIndexLowerbound(curridx);
+
+      /* stacknextclique is negative, if the last visited edge from the current node belongs to a clique;
+       * the index of the clique in the variable's clique list equals abs(stacknextclique) - 1
+       */
+      if( stacknextclique[currstackidx] >= 0 )
+      {
+         SCIP_CLIQUE** cliques;
+         int ncliques;
+         int j;
+         int i;
+         SCIP_Bool found;
+
+         ncliques = SCIPvarGetNCliques(startvar, lower);
+         cliques = SCIPvarGetCliques(startvar, lower);
+         found = FALSE;
+
+         assert(stacknextclique[currstackidx] == 0 || stacknextclique[currstackidx] < ncliques);
+
+         /* iterate over all not yet handled cliques and search for an unvisited node */
+         for( j = stacknextclique[currstackidx]; j < ncliques; ++j )
+         {
+            SCIP_VAR** cliquevars;
+            SCIP_Bool* cliquevals;
+            int ncliquevars;
+            int clqidx = SCIPcliqueGetIndex(cliques[j]);
+
+#if 0
+            if( cliqueminidx[clqidx] > 0 )
+            {
+               if( cliquevarleft[clqidx] > 0 )
+               {
+                  idx = cliquevarleft[clqidx] - 1;
+                  found = TRUE;
+                  cliquevarleft[clqidx] = 0;
+
+                  /* mark current clique as processed? */
+                  break;
+               }
+               else
+               {
+                  stackcliquemin[currstackidx] = INT_MAX;
+                  continue;
+               }
+            }
+#endif
+            cliquevars = SCIPcliqueGetVars(cliques[j]);
+            cliquevals = SCIPcliqueGetValues(cliques[j]);
+            ncliquevars = SCIPcliqueGetNVars(cliques[j]);
+
+            for( i = stacknextcliquevar[currstackidx]; i < ncliquevars; ++i )
+            {
+               if( cliquevars[i] == startvar )
+                  continue;
+
+               if( !SCIPvarIsActive(cliquevars[i]) )
+                  continue;
+
+               if( cliquevals[i] )
+                  idx = getUbIndex(SCIPvarGetProbindex(cliquevars[i]));
+               else
+                  idx = getLbIndex(SCIPvarGetProbindex(cliquevars[i]));
+               assert(idx >= 0);
+
+               /* break when the first unvisited node is reached */
+               if( nodeindex[idx] == 0 )
+               {
+                  stacknextcliquevar[currstackidx] = i + 1;
+                  found = TRUE;
+                  break;
+               }
+               else if( nodeonstack[idx] && nodeindex[idx] < nodelowlink[curridx] )
+               {
+                  nodelowlink[curridx] = nodeindex[idx];
+               }
+            }
+            if( found )
+            {
+               assert(i < ncliquevars);
+               break;
+            }
+#if 0
+            if( i == ncliquevars )
+            {
+               assert(cliqueminidx[clqidx] == 0);
+               assert(cliquevarleft[clqidx] == 0);
+               cliqueminidx[clqidx] = stackcliquemin[currstackidx];
+               cliquevarleft[clqidx] = getOtherBoundIndex(curridx) + 1;
+               stackcliquemin[currstackidx] = INT_MAX;
+            }
+#endif
+         }
+         assert(found || j == ncliques);
+
+         /* we stopped because we found an unhandled node and not because we reached the end of the list */
+         if( found )
+         {
+            assert(idx >= 0);
+            assert(!nodeonstack[idx]);
+            assert(j < ncliques);
+
+            SCIPdebugMsg(scip, "clique: %s(%s) -> %s(%s)\n", getBoundString(lower), SCIPvarGetName(startvar),
+               indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));
+
+            /* put the adjacent node onto the stack */
+            dfsstack[stacksize] = idx;
+            stacknextclique[stacksize] = 0;
+            stacknextcliquevar[stacksize] = 0;
+            stacknextclique[currstackidx] = j;
+            predstackidx[stacksize] = currstackidx;
+            currstackidx = stacksize;
+            stacksize++;
+            assert(stacksize <= 2 * (SCIPgetNVars(scip) - SCIPgetNContVars(scip)));
+
+            //printf("put %s(%s) on stack[%d]\n", indexGetBoundString(dfsstack[stacksize-1]), SCIPvarGetName(vars[getVarIndex(dfsstack[stacksize-1])]), stacksize-1);
+
+            /* restart while loop, get next index from stack */
+            continue;
+         }
+         else
+         {
+            stacknextclique[currstackidx] = -1;
+         }
+      }
+      assert(stacknextclique[currstackidx] < 0);
+
+      if( nodelowlink[curridx] == nodeindex[curridx] )
+      {
+         if( dfsstack[stacksize-1] != curridx )
+         {
+            int sccvarspos = sccstarts[*nsccs];
+            printf("SCC:");
+            do{
+               stacksize--;
+               //printf("remove %s(%s) from stack[%d]\n", indexGetBoundString(dfsstack[stacksize]), SCIPvarGetName(vars[getVarIndex(dfsstack[stacksize])]), stacksize);
+               idx = dfsstack[stacksize];
+               nodeonstack[idx] = FALSE;
+               printf(" %s(%s)", indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));
+               sccvars[sccvarspos] = idx;
+               ++sccvarspos;
+            }
+            while( idx != curridx );
+            printf("\n");
+            ++(*nsccs);
+            sccstarts[*nsccs] = sccvarspos;
+         }
+         else
+         {
+            stacksize--;
+            //printf("remove %s(%s) from stack[%d]\n", indexGetBoundString(dfsstack[stacksize]), SCIPvarGetName(vars[getVarIndex(dfsstack[stacksize])]), stacksize);
+            idx = dfsstack[stacksize];
+            nodeonstack[idx] = FALSE;
+            assert(nodeindex[idx] > 0);
+         }
+      }
+
+      /* the current node was handled */
+      if( stacksize > 0 )
+      {
+         idx = dfsstack[predstackidx[currstackidx]];
+         nodelowlink[idx] = MIN(nodelowlink[idx], nodelowlink[curridx]);
+#if 0
+         if( nodeonstack[curridx] )
+         {
+            stackcliquemin[idx] = MIN(stackcliquemin[idx], nodeindex[curridx]);
+         }
+#endif
+         currstackidx = predstackidx[currstackidx];
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** presolving method of propagator */
+static
+SCIP_DECL_PROPPRESOL(propPresolVbounds)
+{  /*lint --e{715}*/
+   SCIP_VAR** vars;
+   int* dfsstack;
+   int* stacknextclique;
+   int* stacknextcliquevar;
+   int* visited;
+   int* nodeindex;
+   int* nodelowlink;
+   int* predstackidx;
+   int* cliqueminidx;
+   int* cliquevarleft;
+   int* stackcliquemin;
+   int* sccvars;
+   int* sccstarts;
+   int nsccs;
+   int nbounds;
+   int ncliques;
+   int i;
+   SCIP_Bool infeasible = FALSE;
+
+   assert(scip != NULL);
+
+   nbounds = 2 * (SCIPgetNVars(scip) - SCIPgetNContVars(scip));
+   ncliques = SCIPgetNCliques(scip);
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( ncliques < 2 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nbounds/2) );
+
+   *result = SCIP_DIDNOTFIND;
+
+   // printf("propPresolVbounds: ncliques=%d\n", SCIPgetNCliques(scip));
+   // for( int c = 0; c < ncliques; ++c )
+   // {
+   //    SCIP_VAR** cliquevars;
+   //    SCIP_Bool* cliquevals;
+   //    int ncliquevars;
+
+   //    cliquevars = SCIPcliqueGetVars(SCIPgetCliques(scip)[c]);
+   //    cliquevals = SCIPcliqueGetValues(SCIPgetCliques(scip)[c]);
+   //    ncliquevars = SCIPcliqueGetNVars(SCIPgetCliques(scip)[c]);
+
+   //    printf("clique %d (%d vars):", c, ncliquevars);
+   //    for( int v = 0; v < ncliquevars; ++v )
+   //       printf(" %s<%s>", cliquevals[v] ? "" : "~", SCIPvarGetName(cliquevars[v]));
+   //    printf("\n");
+   // }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &dfsstack, nbounds) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &stacknextclique, nbounds) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &stacknextcliquevar, nbounds) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &predstackidx, nbounds) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &stackcliquemin, nbounds) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sccvars, nbounds) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sccstarts, nbounds/2) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &visited, nbounds) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nodeindex, nbounds) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nodelowlink, nbounds) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &cliqueminidx, ncliques) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &cliquevarleft, ncliques) );
+   sccstarts[0] = 0;
+   nsccs = 0;
+
+   /* while there are unvisited nodes, run dfs starting from one of these nodes; the dfs orders are stored in the
+    * topoorder array, later dfs calls are just appended after the stacks of previous dfs calls, which gives us a
+    * reverse topological order
+    */
+   for( i = 0; i < nbounds && !infeasible; i += 2 )
+   {
+      if( nodeindex[i] == 0 && nodeindex[i+1] == 0 )
+      {
+         SCIP_CALL( tarjan(scip, i, visited, nodeindex, nodelowlink, predstackidx, dfsstack, stacknextclique, stacknextcliquevar, stackcliquemin, cliqueminidx, cliquevarleft, sccvars, sccstarts, &nsccs, &infeasible) );
+      }
+   }
+
+   if( !infeasible && nsccs > 0 )
+   {
+      for( i = 0; i < nsccs; ++i )
+      {
+         SCIP_VAR* startvar;
+         SCIP_Bool lower;
+         SCIP_Bool aggregated;
+         SCIP_Bool redundant;
+         int v;
+
+         assert(sccstarts[i] < sccstarts[i+1] - 1);
+
+         startvar = vars[getVarIndex(sccvars[sccstarts[i]])];
+         lower = isIndexLowerbound(sccvars[sccstarts[i]]);
+
+         for( v = sccstarts[i] + 1; v < sccstarts[i+1]; ++v )
+         {
+            SCIP_CALL( SCIPaggregateVars(scip, startvar, vars[getVarIndex(sccvars[v])], 1.0,
+                  lower == isIndexLowerbound(sccvars[v]) ? -1.0 : 1.0,
+                  lower == isIndexLowerbound(sccvars[v]) ? 0.0 : 1.0,
+                  &infeasible, &redundant, &aggregated) );
+
+            printf("aggregate <%s> + %g <%s> = %g: inf=%d, red=%d, aggr=%d\n",
+               SCIPvarGetName(startvar),
+               lower == isIndexLowerbound(sccvars[v]) ? -1.0 : 1.0,
+               SCIPvarGetName(vars[getVarIndex(sccvars[v])]),
+               lower == isIndexLowerbound(sccvars[v]) ? 0.0 : 1.0,
+               infeasible, redundant, aggregated);
+
+            if( infeasible )
+               goto TERMINATE;
+
+            if( aggregated )
+            {
+               ++(*naggrvars);
+               *result = SCIP_SUCCESS;
+            }
+         }
+      }
+   }
+
+ TERMINATE:
+   if( infeasible )
+      *result = SCIP_CUTOFF;
+
+   SCIPfreeBufferArray(scip, &cliquevarleft);
+   SCIPfreeBufferArray(scip, &cliqueminidx);
+
+   SCIPfreeBufferArray(scip, &nodelowlink);
+   SCIPfreeBufferArray(scip, &nodeindex);
+   SCIPfreeBufferArray(scip, &visited);
+   SCIPfreeBufferArray(scip, &sccstarts);
+   SCIPfreeBufferArray(scip, &sccvars);
+   SCIPfreeBufferArray(scip, &stackcliquemin);
+   SCIPfreeBufferArray(scip, &predstackidx);
+   SCIPfreeBufferArray(scip, &stacknextcliquevar);
+   SCIPfreeBufferArray(scip, &stacknextclique);
+   SCIPfreeBufferArray(scip, &dfsstack);
+   SCIPfreeBufferArray(scip, &vars);
+
+   return SCIP_OKAY;
+}
+
+
+
 /** execution method of propagator */
 static
 SCIP_DECL_PROPEXEC(propExecVbounds)
@@ -2271,6 +2685,8 @@ SCIP_RETCODE SCIPincludePropVbounds(
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeVbounds) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolVbounds) );
    SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropVbounds) );
+   SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolVbounds, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS,
+         PROP_PRESOLTIMING) );
 
    /* include event handler for bound change events */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &propdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
