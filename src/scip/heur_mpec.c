@@ -37,7 +37,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPNODE
-#define HEUR_USESSUBSCIP      FALSE
+#define HEUR_USESSUBSCIP      TRUE           /**< disable the heuristic in sub-SCIPs, even though it does not use any */
 
 #define DEFAULT_INITTHETA     0.125          /**< default initial regularization right-hand side value (< 0.25) */
 #define DEFAULT_SIGMA         0.5            /**< default regularization update factor (< 1) */
