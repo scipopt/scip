@@ -4,6 +4,7 @@ SCIP version NEXT
 features:
 - added macros to do computations with a higher precision by using double double arithmetic
 - new compiler flag DEBUGSOL={true,false} to enable an internal debugging mechanism to check against a user given debug solution
+- add new heuristic MPEC for mixed-binary nonlinear problems
 
 parameters:
 - new parameter misc/debugsol to specify a debug solution that should be checked during the solve
