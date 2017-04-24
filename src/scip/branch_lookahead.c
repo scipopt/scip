@@ -12,12 +12,12 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/*
-#define LAB_PRINT_BUFFER
+
+//#define LAB_PRINT_BUFFER
 #define SCIP_DEBUG
+//#define PRINTNODECONS
+
 #define SCIP_STATISTIC
-#define PRINTNODECONS
-*/
 
 /**@file   branch_lookahead.c
  * @brief  lookahead branching rule
@@ -56,7 +56,7 @@
 #define DEFAULT_USEBINARYCONSTRAINTS         TRUE
 #define DEFAULT_USEDOMAINREDUCTION           TRUE
 #define DEFAULT_ADDBINCONSROW                FALSE
-#define DEFAULT_MAXNUMBERVIOLATEDCONS        10000
+#define DEFAULT_MAXNUMBERVIOLATEDCONS        1
 #define DEFAULT_REEVALAGE                    10LL
 #define DEFAULT_STOPBRANCHING                TRUE
 #define DEFAULT_FORCEBRANCHING               FALSE
@@ -503,6 +503,42 @@ SCIP_RETCODE statisticsAllocate(
    statisticsInit(scip, *statistics);
    return SCIP_OKAY;
 }
+
+static
+void mergeFSBStatistics(
+   STATISTICS*           parentstatistics,
+   STATISTICS*           fsbstatistics
+   )
+{
+   int i;
+
+   assert(parentstatistics->recursiondepth == fsbstatistics->recursiondepth);
+
+   parentstatistics->ntotalresults += fsbstatistics->ntotalresults;
+   parentstatistics->nbinconst += fsbstatistics->nbinconst;
+   parentstatistics->nbinconstvio += fsbstatistics->nbinconstvio;
+   parentstatistics->ndomredvio += fsbstatistics->ndomredvio;
+   parentstatistics->ndepthreached += fsbstatistics->ndepthreached;
+   parentstatistics->ndomred += fsbstatistics->ndomred;
+   parentstatistics->ndomredcons += fsbstatistics->ndomredcons;
+   parentstatistics->ncutoffproofnodes += fsbstatistics->ncutoffproofnodes;
+   parentstatistics->ndomredproofnodes += fsbstatistics->ndomredproofnodes;
+
+   for( i = 0; i < parentstatistics->recursiondepth; i++ )
+   {
+      parentstatistics->nresults[i] += fsbstatistics->nresults[i];
+      parentstatistics->nsinglecutoffs[i] += fsbstatistics->nsinglecutoffs[i];
+      parentstatistics->nfullcutoffs[i] += fsbstatistics->nfullcutoffs[i];
+      parentstatistics->nlpssolved[i] += fsbstatistics->nlpssolved[i];
+      parentstatistics->nlpssolvedfsb[i] += fsbstatistics->nlpssolved[i];
+      parentstatistics->nlpiterations[i] += fsbstatistics->nlpiterations[i];
+      parentstatistics->nlpiterationsfsb[i] += fsbstatistics->nlpiterations[i];
+      parentstatistics->npropdomred[i] += fsbstatistics->npropdomred[i];
+      parentstatistics->nsinglecandidate[i] += fsbstatistics->nsinglecandidate[i];
+      parentstatistics->noldbranchused[i] += fsbstatistics->noldbranchused[i];
+   }
+}
+
 
 /** Prints the content of the statistics to stdout.  */
 static
@@ -1569,6 +1605,8 @@ void addLowerBoundProofNode(
    /* The arrays inside DOMAINREDUCTIONS are indexed via the problem index. */
    varindex = SCIPvarGetProbindex(var);
 
+   lowerbound = SCIPadjustedVarLb(scip, var, lowerbound);
+
    /* If we have an old lower bound we take the stronger one, so the MAX is taken. Otherwise we use the new lower bound
     * directly. */
    if( domainreductions->lowerboundset[varindex] )
@@ -1676,6 +1714,8 @@ void addUpperBoundProofNode(
    /* The arrays inside DOMAINREDUCTIONS are indexed via the problem index. */
    varindex = SCIPvarGetProbindex(var);
 
+   upperbound = SCIPadjustedVarUb(scip, var, upperbound);
+
    /* If we have an old upper bound we take the stronger one, so the MIN is taken. Otherwise we use the new upper bound
     * directly. */
    if( domainreductions->upperboundset[varindex] )
@@ -1724,6 +1764,9 @@ void addUpperBoundProofNode(
 
    /* We get the solution value to check whether the domain reduction is violated in the base LP */
    basesolutionval = SCIPgetSolVal(scip, baselpsol, var);
+
+   printf("newupper: %g, basesolval: %g, baslpviolated: %d\n", newupperbound, basesolutionval,
+      domainreductions->baselpviolated[varindex]);
 
    /* In case the new upper bound is lesser than the base solution val and the base solution val is not violated by a
     * previously found bound, we increment the nviolatedvars counter and set the baselpviolated flag.  */
@@ -2539,27 +2582,6 @@ void updateOldBranching(
    persistent->lastbranchnlps[varindex] = SCIPgetNNodeLPs(scip);
 }
 
-#ifdef SCIP_STATISTIC
-static
-void mergeFSBStatistics(
-   STATISTICS*           parentstatistics,
-   STATISTICS*           fsbstatistics
-   )
-{
-   int i;
-
-   assert(parentstatistics->recursiondepth == fsbstatistics->recursiondepth);
-
-   for( i = 0; i < parentstatistics->recursiondepth; i++ )
-   {
-      parentstatistics->nlpssolved[i] += fsbstatistics->nlpssolved[i];
-      parentstatistics->nlpssolvedfsb[i] += fsbstatistics->nlpssolved[i];
-      parentstatistics->nlpiterations[i] += fsbstatistics->nlpiterations[i];
-      parentstatistics->nlpiterationsfsb[i] += fsbstatistics->nlpiterations[i];
-   }
-}
-#endif
-
 static
 SCIP_RETCODE getFSBResult(
    SCIP*                 scip,
@@ -2792,9 +2814,54 @@ SCIP_RETCODE getBestCandidates(
       /* TODO: cleanup*/
       int nunscoredcandidates = 0;
 
+
       for( i = 0; i < allcandidates->ncandidates; i++ )
       {
          CANDIDATE* lpcand = allcandidates->candidates[i];
+
+#if 0
+         {
+            /* TODO: start for reliability LAB */
+            SCIP_VAR* branchvar = lpcand->branchvar;
+            SCIP_Real size;
+            int downsize;
+            int upsize;
+            SCIP_Real prio;
+            SCIP_Real reliable;
+            SCIP_Longint nodenum;
+            SCIP_Longint nlpiterationsquot;
+            SCIP_Longint nsblpiterations;
+            SCIP_Longint maxnsblpiterations;
+            int maxninitcands;
+            /* a new parameter ? */
+            SCIP_Real minreliable = 1.0;
+            SCIP_Real maxreliable = 5.0;
+
+            /* calculate maximal number of strong branching LP iterations; if we used too many, don't apply strong branching
+             * any more
+             */
+            nlpiterationsquot = (SCIP_Longint)(/*branchruledata->sbiterquot **/ SCIPgetNNodeLPIterations(scip));
+            maxnsblpiterations = nlpiterationsquot + /*branchruledata->sbiterofs +*/ SCIPgetNRootStrongbranchLPIterations(scip);
+            nsblpiterations = SCIPgetNStrongbranchLPIterations(scip);
+            if( nsblpiterations > maxnsblpiterations )
+               maxninitcands = 0;
+
+            /* calculate value used as reliability */
+            prio = (maxnsblpiterations - nsblpiterations)/(nsblpiterations + 1.0);
+            prio = MIN(prio, 1.0);
+            prio = MAX(prio, (nlpiterationsquot - nsblpiterations)/(nsblpiterations + 1.0));
+            reliable = (1.0-prio) * minreliable + prio * maxreliable;
+
+            /* check, if the pseudo cost score of the variable is reliable */
+            downsize = SCIPgetVarPseudocostCountCurrentRun(scip, branchvar, SCIP_BRANCHDIR_DOWNWARDS);
+            upsize = SCIPgetVarPseudocostCountCurrentRun(scip, branchvar, SCIP_BRANCHDIR_UPWARDS);
+            size = MIN(downsize, upsize);
+
+            SCIP_Real downpseudocost = SCIPgetVarPseudocostVal(scip, branchvar, 0-lpcand->fracval);
+            SCIP_Real uppseudocost = SCIPgetVarPseudocostVal(scip, branchvar, 1-lpcand->fracval);
+         }
+#endif
+
          int probindex = SCIPvarGetProbindex(lpcand->branchvar);
          SCIP_Real knownscore = scorecontainer->scores[probindex];
 
@@ -3529,43 +3596,39 @@ SCIP_RETCODE selectVarRecursive(
 
                if( config->downfirst )
                {
+                  SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
+                     localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
+                     downbranchingresult, scorecontainer, downlpimemory, &addeddomainreduction
 #ifdef SCIP_STATISTIC
-                  SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
-                     localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
-                     downbranchingresult, scorecontainer, downlpimemory, &addeddomainreduction, statistics, localstats) );
-
-                  SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
-                     localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
-                     upbranchingresult, scorecontainer, uplpimemory, &addeddomainreduction, statistics, localstats) );
-#else
-                  SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
-                     localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
-                     downbranchingresult, scorecontainer, downlpimemory, &addeddomainreduction) );
-
-                  SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
-                     localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
-                     upbranchingresult, scorecontainer, uplpimemory, &addeddomainreduction) );
+                     , statistics, localstats
 #endif
+                     ) );
+
+                  SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
+                     localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
+                     upbranchingresult, scorecontainer, uplpimemory, &addeddomainreduction
+#ifdef SCIP_STATISTIC
+                     , statistics, localstats
+#endif
+                     ) );
                }
                else
                {
+                  SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
+                     localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
+                     upbranchingresult, scorecontainer, uplpimemory, &addeddomainreduction
 #ifdef SCIP_STATISTIC
-                  SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
-                     localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
-                     upbranchingresult, scorecontainer, uplpimemory, &addeddomainreduction, statistics, localstats) );
-
-                  SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
-                     localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
-                     downbranchingresult, scorecontainer, downlpimemory, &addeddomainreduction, statistics, localstats) );
-#else
-                  SCIP_CALL( executeUpBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
-                     localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
-                     upbranchingresult, scorecontainer, uplpimemory, &addeddomainreduction) );
-
-                  SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
-                     localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
-                     downbranchingresult, scorecontainer, downlpimemory, &addeddomainreduction) );
+                     , statistics, localstats
 #endif
+                  ) );
+
+                  SCIP_CALL( executeDownBranchingRecursive(scip, status, persistent, config, baselpsol, candidate,
+                     localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
+                     downbranchingresult, scorecontainer, downlpimemory, &addeddomainreduction
+#ifdef SCIP_STATISTIC
+                     , statistics, localstats
+#endif
+                     ) );
                }
 
                if( persistent != NULL )
@@ -3710,7 +3773,7 @@ SCIP_RETCODE selectVarRecursive(
                      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found <%i> violating bound changes.\n", ndomreds);
                   }
 
-                  if( nimpliedbincons + ndomreds > config->maxnviolatedcons )
+                  if( nimpliedbincons + ndomreds >= config->maxnviolatedcons )
                   {
                      status->maxnconsreached = TRUE;
                   }
