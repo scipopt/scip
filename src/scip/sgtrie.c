@@ -232,6 +232,7 @@ SCIP_RETCODE SCIPsgtrieInsert(
    )
 {
    uint64_t         signature;
+   uint64_t         splitbitmask;
    SCIP_SGTRIENODE* currnode;
    LEAFNODEDATA*    leafdata;
    LEAFNODEDATA*    prevleafdata;
@@ -246,6 +247,12 @@ SCIP_RETCODE SCIPsgtrieInsert(
       sgtrie->root = currnode;
       return SCIP_OKAY;
    }
+
+   /* at the root node the mask can be zero, then an overflow can happen and the mask for
+    * testing the split bit mask gets zero too.
+    * Instead it must be the mask with the most significant bit set
+    */
+   splitbitmask = currnode->mask == 0 ? UINT64_C(0x8000000000000000) : (ISOLATE_LSB(currnode->mask)>>1);
 
    while( TRUE )
    {
@@ -277,7 +284,9 @@ SCIP_RETCODE SCIPsgtrieInsert(
 
          /* update mask and links for current node */
          currnode->mask = prefixmask;
-         if( signature & (ISOLATE_LSB(prefixmask)>>1) )
+         splitbitmask = prefixmask == 0 ? UINT64_C(0x8000000000000000) : (ISOLATE_LSB(prefixmask)>>1);
+
+         if( signature & splitbitmask )
          {
             currnode->data.inner.left = oldsuffix;
             currnode->data.inner.right = newsuffix;
@@ -296,10 +305,12 @@ SCIP_RETCODE SCIPsgtrieInsert(
          break;
 
       /* continue search for the correct leaf in proper subtree */
-      if( signature & (ISOLATE_LSB(currnode->mask)>>1) )
+      if( signature & splitbitmask )
          currnode = currnode->data.inner.right;
       else
          currnode = currnode->data.inner.left;
+
+      splitbitmask = (ISOLATE_LSB(currnode->mask)>>1);
    }
 
    leafdata = &currnode->data.leaf;
@@ -329,6 +340,7 @@ SCIP_RETCODE SCIPsgtrieRemove(
    )
 {
    uint64_t          signature;
+   uint64_t          splitbitmask;
    SCIP_SGTRIENODE** prevnode;
    SCIP_SGTRIENODE** currnode;
    LEAFNODEDATA*     leafdata;
@@ -338,14 +350,22 @@ SCIP_RETCODE SCIPsgtrieRemove(
    currnode = &sgtrie->root;
    signature = sgtrie->getsignature(set);
 
+   /* at the root node the mask can be zero, then an overflow can happen and the mask for
+    * testing the split bit mask gets zero too.
+    * Instead it must be the mask with the most significant bit set
+    */
+   splitbitmask = (*currnode)->mask == 0 ? UINT64_C(0x8000000000000000) : (ISOLATE_LSB((*currnode)->mask)>>1);
+
    /* find the correct leaf and store the parent in prevnode */
    while( ! IS_LEAF(*currnode) )
    {
       prevnode = currnode;
-      if( signature & (ISOLATE_LSB((*currnode)->mask)>>1) )
+      if( signature & splitbitmask )
          currnode = &(*prevnode)->data.inner.right;
       else
          currnode = &(*prevnode)->data.inner.left;
+
+      splitbitmask = (ISOLATE_LSB((*currnode)->mask)>>1);
    }
 
    /* find the leafnodedata that contains the element */
@@ -359,7 +379,7 @@ SCIP_RETCODE SCIPsgtrieRemove(
       leafdata = leafdata->next;
    }
 
-   /* element is must be contained in the trie */
+   /* element must be contained in the trie */
    assert(leafdata != NULL);
 
    /* element is contained and will now be removed */
