@@ -37,12 +37,13 @@ typedef union NodeData NODEDATA;
 
 struct SCIP_SgTrie
 {
-   int                   nelements;
-   SCIP_SGTRIENODE*      root;
-   BMS_BLKMEM*           blkmem;
-   BMS_BUFMEM*           bufmem;
-   SCIP_DECL_SETCMP      ((*setcmp));
-   SCIP_DECL_GETSIGNATURE ((*getsignature));
+   int                   nelements;          /**< number of elements stored in the trie */
+   SCIP_SGTRIENODE*      root;               /**< root node of the trie */
+   BMS_BLKMEM*           blkmem;             /**< blockmemory used for trie nodes */
+   BMS_BUFMEM*           bufmem;             /**< buffer memory for maintaing a stack of nodes in internal functions */
+   SCIP_DECL_ISSETEQ     ((*seteq));         /**< call back for comparing sets for equality */
+   SCIP_DECL_ISSUBSET    ((*subset));        /**< call back for checking if a set is a subset of another set */
+   SCIP_DECL_GETSIGNATURE ((*getsignature)); /**< call back for computing signature of set */
 };
 
 struct InnerNodeData

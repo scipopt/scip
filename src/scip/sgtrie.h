@@ -52,6 +52,7 @@ extern "C" {
 #error Only 1 or 2 supported for NHASHES
 
 #endif
+
 /** creates the signature trie datastructure */
 extern
 SCIP_RETCODE SCIPsgtrieCreate(
@@ -59,7 +60,9 @@ SCIP_RETCODE SCIPsgtrieCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    BMS_BUFMEM*           bufmem,             /**< buffer memory */
    SCIP_DECL_GETSIGNATURE ((*getsignature)), /**< callback to retrieve the signature of a set */
-   SCIP_DECL_SETCMP      ((*setcmp))         /**< callback to perform different comparison operations on two sets, may be NULL
+   SCIP_DECL_ISSETEQ     ((*seteq)),         /**< call back for comparing sets for equality; may be NULL
+                                              *   if FALSE positives are acceptable */
+   SCIP_DECL_ISSUBSET    ((*subset))         /**< call back for checking if a set is a subset of another set; may be NULL
                                               *   if FALSE positives are acceptable */
    );
 
@@ -89,64 +92,23 @@ int SCIPsgtrieGetNElems(
    SCIP_SGTRIE*          sgtrie              /**< the signature trie data structure */
    );
 
-/** finds all subsets of a given set that are stored in the signature trie datastructure.
- *  If the setcmp callback given upon creation of the signature trie was NULL, the matches
- *  may contain false positives.
- */
-extern
-SCIP_RETCODE SCIPsgtrieFindSubsets(
-   SCIP_SGTRIE*          sgtrie,             /**< the signature trie data structure */
-   void*                 set,                /**< the set */
-   void**                matches,            /**< buffer to store matches, must be big enough to hold all elements currently stored in the sgtrie */
-   int*                  nmatches            /**< pointer to store how many matches where found */
-   );
-
-/** finds all sets stored in the signature trie datastructure that are subsets of a given set
- *  after removing at most one element.
+/** finds all sets stored in the signature trie datastructure that have the property
+ *  of either being subsets, supersets, or equal to the given set depending on the querytype.
+ *  Additionally the desired property may be violated by a given maximal distance.
+ *  E.g. if searcing for supersets with maxdistance=1 then also supersets where one element
+ *  is missing are returned.
  *  If the setcmp callback was set to NULL upon creation of the signature trie, the matches
  *  may contain false positives.
  */
 extern
-SCIP_RETCODE SCIPsgtrieFindSubsetsPlusOne(
+SCIP_RETCODE SCIPsgtrieFind(
    SCIP_SGTRIE*          sgtrie,             /**< the signature trie data structure */
    void*                 set,                /**< the set */
+   SCIP_SGTRIE_QUERYTYPE querytype,          /**< type of query in the sgtrie, i.e. whether to search for subsets, supersets or equal sets */
+   int                   maxdistance,        /**< maximal hamming distance for given query type, e.g. 0 for exact queries or k if
+                                              *   up to k elements are allowed to violate the desired property */
    void**                matches,            /**< buffer to store matches, must be big enough to hold all elements currently stored in the sgtrie */
    int*                  nmatches            /**< pointer to store how many matches where found */
-   );
-
-/** finds all supersets of a given set that are stored in the signature trie datastructure.
- *  If the setcmp callback given upon creation of the signature trie was NULL, the matches
- *  may contain false positives.
- */
-extern
-SCIP_RETCODE SCIPsgtrieFindSupersets(
-   SCIP_SGTRIE*          sgtrie,             /**< the signature trie data structure */
-   void*                 set,                /**< the set */
-   void**                matches,            /**< buffer to store matches, must be big enough to hold all elements currently stored in the sgtrie */
-   int*                  nmatches            /**< pointer to store how many matches where found */
-   );
-
-/** finds all sets stored in the signature trie datastructure that are supersets of a given set
- *  after removing at most one element.
- *  If the setcmp callback was set to NULL upon creation of the signature trie, the matches
- *  may contain false positives.
- */
-extern
-SCIP_RETCODE SCIPsgtrieFindSupersetsPlusOne(
-   SCIP_SGTRIE*          sgtrie,             /**< the signature trie data structure */
-   void*                 set,                /**< the set */
-   void**                matches,            /**< buffer to store matches, must be big enough to hold all elements currently stored in the sgtrie */
-   int*                  nmatches            /**< pointer to store how many matches where found */
-   );
-
-/** searches for a set stored in the signature trie datastructure that is equal to a given set.
- *  If the setcmp callback was set to NULL upon creation of the signature trie, the match
- *  may be a false positives.
- */
-extern
-void* SCIPsgtrieFindEq(
-   SCIP_SGTRIE*          sgtrie,             /**< the signature trie data structure */
-   void*                 set                 /**< the set */
    );
 
 #ifdef __cplusplus

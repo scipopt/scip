@@ -90,14 +90,48 @@ SCIP_DECL_GETSIGNATURE(matrixrowGetSignature)
    return signature;
 }
 
-
 /* setcmp callback for the matrixrow */
 static
-SCIP_DECL_SETCMP(cmpMatrixrow)
+SCIP_DECL_ISSETEQ(matrixRowEq)
 {
    MATRIXROW* x;
    MATRIXROW* y;
-   int i,j;
+   int i,j,dist;
+
+   x = (MATRIXROW*) a;
+   y = (MATRIXROW*) b;
+
+   if( x->cnt > y->cnt )
+      SCIPswapPointers((void**) &x, (void**) &y);
+
+   i = 0;
+   j = 0;
+   dist = 0;
+
+   /* x and y should be equal (with maxdist error) */
+   if( x->cnt + maxdist < y->cnt )
+      return FALSE;
+
+   while( i < x->cnt && j < y->cnt )
+   {
+      if( x->ind[i++] != y->ind[j++] )
+      {
+         ++dist;
+         if( dist > maxdist )
+            return FALSE;
+      }
+   }
+
+   return TRUE;
+}
+
+/* setcmp callback for the matrixrow */
+static
+SCIP_DECL_ISSETEQ(matrixRowSubset)
+{
+   MATRIXROW* x;
+   MATRIXROW* y;
+   int i,j,dist;
 
    x = (MATRIXROW*) a;
    y = (MATRIXROW*) b;
@@ -105,84 +139,39 @@ SCIP_DECL_SETCMP(cmpMatrixrow)
    i = 0;
    j = 0;
 
-   switch(op)
+   /* x should be subset of y except one entry */
+   if( x->cnt > y->cnt + maxdist )
+      return FALSE;
+
+   dist = 0;
+
+   while( i < x->cnt && j < y->cnt )
    {
-   case SCIP_SGTRIE_SETEQ:
-      /* x and y should be equal */
-      if( x->cnt != y->cnt )
-         return FALSE;
-
-      while( i < x->cnt && j < y->cnt )
+      if( x->ind[i] < y->ind[j] )
       {
-         if( x->ind[i++] != y->ind[j++] )
+         ++dist;
+         if( dist > maxdist )
             return FALSE;
+         ++i;
       }
-
-      return TRUE;
-   case SCIP_SGTRIE_SUBSET:
-      /* x should be subset of y */
-      if( x->cnt > y->cnt )
-         return FALSE;
-
-      while( i < x->cnt && j < y->cnt )
+      else if( x->ind[i] > y->ind[j] )
+         ++j;
+      else
       {
-         if( x->ind[i] < y->ind[j] )
-            return FALSE;
-         else if( x->ind[i] > y->ind[j] )
-            ++j;
-         else
-         {
-            ++i;
-            ++j;
-         }
-      }
-
-      if( i < x->cnt )
-         return FALSE;
-
-      return TRUE;
-   case SCIP_SGTRIE_SUBSETPLUSONE:
-      {
-         /* x should be subset of y except one entry */
-         int distance;
-
-         if( x->cnt > y->cnt + 1 )
-            return FALSE;
-
-         distance = 0;
-
-         while( i < x->cnt && j < y->cnt )
-         {
-            if( x->ind[i] < y->ind[j] )
-            {
-               ++distance;
-               if( distance > 1 )
-                  return FALSE;
-               ++i;
-            }
-            else if( x->ind[i] > y->ind[j] )
-               ++j;
-            else
-            {
-               ++i;
-               ++j;
-            }
-         }
-
-         while( i < x->cnt )
-         {
-            ++distance;
-            if( distance > 1 )
-               return FALSE;
-            ++i;
-         }
-
-         return TRUE;
+         ++i;
+         ++j;
       }
    }
 
-   assert(FALSE);
-   return FALSE;
+   while( i < x->cnt )
+   {
+      ++dist;
+      if( dist > maxdist )
+         return FALSE;
+      ++i;
+   }
+
+   return TRUE;
 }
 
 
@@ -711,7 +700,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       SCIP_CALL( SCIPallocBufferArray(scip, &msets, nrows) );
       SCIP_CALL( SCIPallocBufferArray(scip, &matches, nrows));
 
-      SCIP_CALL( SCIPsgtrieCreate(&sgtrie, SCIPblkmem(scip), SCIPbuffer(scip), matrixrowGetSignature, cmpMatrixrow/*NULL*/) );
+      SCIP_CALL( SCIPsgtrieCreate(&sgtrie, SCIPblkmem(scip), SCIPbuffer(scip), matrixrowGetSignature, matrixRowEq /*NULL*/, matrixRowSubset  /*NULL*/) );
 
       /* prepare matrix rows for insertion to signature trie */
       prepareMatrixRows(scip, matrix, msets, &mindensity, &maxdensity);
@@ -758,10 +747,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       for( r = 0; r < numeqs; r++ )
       {
          /* use signature trie to retrieve matching row candidates */
-         if( presoldata->maxsupersetmisses == 1 )
-            SCIP_CALL( SCIPsgtrieFindSupersetsPlusOne(sgtrie, (void*)&msets[eqidxs[r]], (void**)matches, &nmatches) );
-         else
-            SCIP_CALL( SCIPsgtrieFindSupersets(sgtrie, (void*)&msets[eqidxs[r]], (void**)matches, &nmatches) );
+         SCIP_CALL( SCIPsgtrieFind(sgtrie, (void*)&msets[eqidxs[r]], SCIP_SGTRIE_SUPERSET, presoldata->maxsupersetmisses, (void**)matches, &nmatches) );
 
          /* loop over all signature trie matches */
          for( i = 0; i < nmatches; i++ )

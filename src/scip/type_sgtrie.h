@@ -33,12 +33,13 @@ typedef struct SCIP_SgTrie SCIP_SGTRIE;
 typedef struct SCIP_SgTrieNode SCIP_SGTRIENODE;
 
 typedef enum {
-   SCIP_SGTRIE_SETEQ,
+   SCIP_SGTRIE_EQUAL,
    SCIP_SGTRIE_SUBSET,
-   SCIP_SGTRIE_SUBSETPLUSONE
-} SCIP_SGTRIE_SETOP;
+   SCIP_SGTRIE_SUPERSET
+} SCIP_SGTRIE_QUERYTYPE;
 
-#define SCIP_DECL_SETCMP(x) SCIP_Bool x (SCIP_SGTRIE_SETOP op, void* a, void* b)
+#define SCIP_DECL_ISSETEQ(x) SCIP_Bool x (void* a, void* b, int maxdist)
+#define SCIP_DECL_ISSUBSET(x) SCIP_Bool x (void* a, void* b, int maxdist)
 #define SCIP_DECL_GETSIGNATURE(x) uint64_t x (void* a)
 
 #ifdef __cplusplus
