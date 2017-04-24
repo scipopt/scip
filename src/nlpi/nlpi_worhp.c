@@ -532,7 +532,6 @@ SCIP_RETCODE userDG(
 {
    SCIP_RETCODE retcode;
    SCIP_Real* jacvals;
-   int i;
 
    assert(problem != NULL);
    assert(problem->oracle != NULL);
@@ -547,6 +546,8 @@ SCIP_RETCODE userDG(
 
    if( retcode == SCIP_OKAY )
    {
+      int i;
+
       /* map values with DG indices */
       for( i = 0; i < problem->wsp->DG.nnz; ++i )
       {
@@ -578,7 +579,6 @@ SCIP_RETCODE userHM(
    SCIP_Real* hessianvals;
    SCIP_RETCODE retcode;
    int nnonz;
-   int i;
 
    assert(problem != NULL);
    assert(problem->oracle != NULL);
@@ -599,6 +599,8 @@ SCIP_RETCODE userHM(
 
    if( retcode == SCIP_OKAY )
    {
+      int i;
+
       assert(problem->wsp->HM.nnz >= nnonz);
       for( i = 0; i < problem->wsp->HM.nnz; ++i )
       {
@@ -638,11 +640,10 @@ SCIP_RETCODE initWorhp(
    SCIP_NLPIPROBLEM*     problem             /**< pointer to problem data structure */
    )
 {
-   Workspace* wsp = problem->wsp;
-   Control* cnt = problem->cnt;
-   OptVar* opt = problem->opt;
-   Params* par = problem->par;
-
+   Workspace* wsp;
+   Control* cnt;
+   OptVar* opt;
+   Params* par;
    const SCIP_Real* lbs;
    const SCIP_Real* ubs;
    const int* offset;
@@ -658,6 +659,11 @@ SCIP_RETCODE initWorhp(
    assert(problem->par != NULL);
    assert(problem->opt != NULL);
    assert(problem->firstrun);
+
+   wsp = problem->wsp;
+   cnt = problem->cnt;
+   opt = problem->opt;
+   par = problem->par;
 
    nlpidata = SCIPnlpiGetData(nlpi);
    assert(nlpidata != NULL);
@@ -1227,7 +1233,6 @@ SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsWorhp )
 #ifdef SCIP_DISABLED_CODE
    const SCIP_Real* oldlbs = SCIPnlpiOracleGetVarLbs(problem->oracle);
    const SCIP_Real* oldubs = SCIPnlpiOracleGetVarUbs(problem->oracle);
-   int index;
    int i;
 #endif
 
@@ -1242,7 +1247,7 @@ SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsWorhp )
     */
    for( i = 0; i < nvars; ++i )
    {
-      index = indices[i];
+      int index = indices[i];
       SCIPdebugMessage("change bounds of %d from [%g,%g] -> [%g,%g]\n", index, oldlbs[index], oldubs[index],
          lbs[i], ubs[i]);
 
@@ -1282,12 +1287,11 @@ SCIP_DECL_NLPICHGCONSSIDES( nlpiChgConsSidesWorhp )
    {
       SCIP_Real oldlhs;
       SCIP_Real oldrhs;
-      int index;
       int i;
 
       for( i = 0; i < nconss; ++i )
       {
-         index = indices[i];
+         int index = indices[i];
          oldlhs = SCIPnlpiOracleGetConstraintLhs(problem->oracle, index);
          oldrhs = SCIPnlpiOracleGetConstraintRhs(problem->oracle, index);
          SCIPdebugMessage("change constraint side of %d from [%g,%g] -> [%g,%g]\n", index, oldlhs, oldrhs, lhss[i], rhss[i]);
@@ -2350,7 +2354,7 @@ SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    assert(nlpi   != NULL);
 
    /* create Worhp solver interface data */
-   BMSallocMemory(&nlpidata);
+   SCIP_ALLOC( BMSallocMemory(&nlpidata) );
    BMSclearMemory(nlpidata);
 
    nlpidata->blkmem = blkmem;
