@@ -1489,7 +1489,7 @@ SCIP_RETCODE sortGenVBounds(
    SCIPdebugMsg(scip, "(re-)sort genvbounds topologically\n");
 
    /* create digraph */
-   SCIP_CALL( SCIPdigraphCreate(&graph, propdata->ngenvbounds) );
+   SCIP_CALL( SCIPdigraphCreate(&graph, SCIPblkmem(scip), propdata->ngenvbounds) );
 
    /* add outgoing arcs for each genvbound */
    for( i = 0; i < propdata->ngenvbounds; i++ )
@@ -2346,7 +2346,14 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
       }
 
       /* if the resulting genvbound is trivial, remove it */
-      if( genvbound->ncoefs == 0 && SCIPisZero(scip, genvbound->cutoffcoef) )
+      /* we remove all genvbounds with an aggregated or multi-aggregated genvbound->var; tightening aggregated variables
+       * might lead to some asserts in tree.c if the active variable has been already tightened (see !398);
+       *
+       * @todo replace aggregated variable by their active part
+       */
+      if( (genvbound->ncoefs == 0 && SCIPisZero(scip, genvbound->cutoffcoef))
+         || SCIPvarGetStatus(genvbound->var) == SCIP_VARSTATUS_MULTAGGR
+         || SCIPvarGetStatus(genvbound->var) == SCIP_VARSTATUS_AGGREGATED )
       {
          SCIP_HASHMAP* hashmap;
 

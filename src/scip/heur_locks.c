@@ -681,8 +681,6 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 #else
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
 #endif
-      assert(nvars == nbinvars ? (SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL || cutoff) : TRUE);
-
       lpstatus = SCIPgetLPSolstat(scip);
 
       SCIPdebugMsg(scip, " -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
@@ -820,7 +818,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       }
 
       /* speed up sub-SCIP by not checking dual LP feasibility */
-      SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
 
       /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
        * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the

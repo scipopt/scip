@@ -95,7 +95,8 @@ extern "C" {
 
 
 #define SCIP_VERSION                400 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               0 /**< SCIP sub version number */
+#define SCIP_SUBVERSION               2 /**< SCIP sub version number */
+#define SCIP_APIVERSION               5 /**< SCIP API version number */
 #define SCIP_COPYRIGHT   "Copyright (C) 2002-2017 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
@@ -207,6 +208,17 @@ extern "C" {
 #define NULL ((void*)0)                 /**< zero pointer */
 #endif
 
+#ifndef RESTRICT
+#if defined(_MSC_VER)
+#define RESTRICT __restrict
+#else
+#ifdef __cplusplus
+#define RESTRICT __restrict__
+#else
+#define RESTRICT restrict
+#endif
+#endif
+#endif
 
 /*
  * Strings

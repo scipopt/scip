@@ -79,6 +79,10 @@
 #ifndef SOPLEX_SUBVERSION
 #define SOPLEX_SUBVERSION 0
 #endif
+/* define API version for versions <= 3.0.0 */
+#ifndef SOPLEX_APIVERSION
+#define SOPLEX_APIVERSION 0
+#endif
 
 /* check version */
 #if (SOPLEX_VERSION < 133)
@@ -112,6 +116,13 @@
 #ifdef ___DEBUG
 #define SCIP_DEBUG
 #undef ___DEBUG
+#endif
+
+/* define snprintf when using a too old MSVC version */
+#if defined(_MSC_VER) && _MSC_VER < 1900
+#ifndef snprintf
+#define snprintf _snprintf
+#endif
 #endif
 
 #define SOPLEX_VERBLEVEL                5    /**< verbosity level for LPINFO */
