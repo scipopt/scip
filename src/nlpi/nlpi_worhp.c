@@ -37,6 +37,10 @@
 
 #include "worhp/worhp.h"
 
+#if WORHP_MAJOR < 2
+#error "Require at least Worhp 2.x"
+#endif
+
 #define NLPI_NAME              "worhp"                      /**< short concise name of solver */
 #define NLPI_DESC              "Worhp interface"            /**< description of solver */
 #define NLPI_PRIORITY          1                            /**< priority of NLP solver */
@@ -216,7 +220,6 @@ SCIP_RETCODE evaluateWorhpRun(
       break;
    }
 
-#if WORHP_MAJOR >= 2
    case DivergingPrimal:
    case DivergingDual:
    {
@@ -227,12 +230,9 @@ SCIP_RETCODE evaluateWorhpRun(
       problem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
       break;
    }
-#endif
 
    case LocalInfeas:
-#if WORHP_MAJOR >= 2
    case LocalInfeasOptimal:
-#endif
    {
       /* infeasible stationary point found */
       SCIPdebugMessage("Worhp failed because of convergence against infeasible stationary point!\n");
@@ -242,7 +242,6 @@ SCIP_RETCODE evaluateWorhpRun(
       break;
    }
 
-#if WORHP_MAJOR >= 2
    case GlobalInfeas:
    {
       /* infeasible stationary point found */
@@ -252,7 +251,6 @@ SCIP_RETCODE evaluateWorhpRun(
       problem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
    }
-#endif
 
    case RegularizationFailed:
    {
@@ -283,10 +281,8 @@ SCIP_RETCODE evaluateWorhpRun(
    }
 
    case AcceptableSolutionSKKT:
-#if WORHP_MAJOR >= 2
    case AcceptableSolutionScaled:
    case AcceptablePreviousScaled:
-#endif
    {
       /* feasible point but KKT conditions are violated in unscaled space */
       SCIPdebugMessage("Worhp terminated successfully with a feasible point but KKT are violated in unscaled space!\n");
