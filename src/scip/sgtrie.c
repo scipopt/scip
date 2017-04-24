@@ -520,6 +520,8 @@ SCIP_RETCODE SCIPsgtrieFind(
                 */
                switch( querytype )
                {
+                  default:
+                     SCIPABORT();
                   case SCIP_SGTRIE_EQUAL:
                      if( sgtrie->seteq == NULL || sgtrie->seteq(set, leafdata->element, maxdistance) )
                         matches[(*nmatches)++] = leafdata->element;
