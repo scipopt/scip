@@ -3847,6 +3847,19 @@ SCIP_RETCODE computeViolation(
 
       var = consdata->linvars[i];
       varval = SCIPgetSolVal(scip, sol, var);
+
+      /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
+      if( sol == NULL )
+      {
+         /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
+         if( (!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) && !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var))) ||
+             (!SCIPisInfinity(scip,  SCIPvarGetUbLocal(var)) && !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var))) )
+         {
+            *solviolbounds = TRUE;
+            return SCIP_OKAY;
+         }
+         varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
+      }
       activity = consdata->lincoefs[i] * varval;
 
       /* the contribution of a variable with |varval| = +inf is +inf when activity > 0.0, -inf when activity < 0.0, and
@@ -3867,18 +3880,6 @@ SCIP_RETCODE computeViolation(
             consdata->lhsviol = SCIPinfinity(scip);
             return SCIP_OKAY;
          }
-      }
-
-      /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
-      if( sol == NULL )
-      {
-         /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
-         if( !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)) || !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)) )
-         {
-            *solviolbounds = TRUE;
-            return SCIP_OKAY;
-         }
-         varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
       }
 
       consdata->activity += activity;
@@ -3908,7 +3909,8 @@ SCIP_RETCODE computeViolation(
          if( sol == NULL )
          {
             /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
-            if( !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)) || !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)) )
+            if( (!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) && !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var))) ||
+                (!SCIPisInfinity(scip,  SCIPvarGetUbLocal(var)) && !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var))) )
             {
                *solviolbounds = TRUE;
                return SCIP_OKAY;
@@ -3934,7 +3936,8 @@ SCIP_RETCODE computeViolation(
             if( sol == NULL )
             {
                /* with non-initial columns, this might fail because variables can shortly be a column variable before entering the LP and have value 0.0 in this case */
-               if( !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)) || !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)) )
+               if( (!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) && !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var))) ||
+                   (!SCIPisInfinity(scip,  SCIPvarGetUbLocal(var)) && !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var))) )
                {
                   *solviolbounds = TRUE;
                   SCIPfreeBufferArray(scip, &x);
@@ -7311,6 +7314,10 @@ SCIP_RETCODE enforceConstraint(
        * see also issue #627
        */
       assert(solinfeasible);
+      /* however, if solinfeasible is actually not TRUE, then better cut off the node to avoid that SCIP
+       * stops because infeasible cannot be resolved */
+      if( !solinfeasible )
+         *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
 
@@ -7372,7 +7379,7 @@ SCIP_RETCODE enforceConstraint(
     */
    minefficacy = MIN(0.75*maxviol, conshdlrdata->mincutefficacyenfofac * SCIPfeastol(scip));  /*lint !e666*/
    minefficacy = MAX(minefficacy, SCIPfeastol(scip));  /*lint !e666*/
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, minefficacy, TRUE, &separateresult, &sepaefficacy) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, TRUE /* because computeviolation projects point onto box */, minefficacy, TRUE, &separateresult, &sepaefficacy) );
    if( separateresult == SCIP_CUTOFF )
    {
       SCIPdebugMsg(scip, "separation found cutoff\n");
@@ -8023,7 +8030,6 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONS*         maxviolcon;
-   SCIP_Bool          newsol;
    SCIP_Bool          solviolbounds;
 
    assert(scip != NULL);
@@ -8045,8 +8051,6 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
    /* nothing violated -> nothing to separate */
    if( maxviolcon == NULL )
       return SCIP_OKAY;
-
-   newsol = FALSE;
 
    /* at root, check if we want to solve the NLP relaxation and use its solutions as reference point
     * if there is something convex, then linearizing in the solution of the NLP relaxation can be very useful
@@ -8149,7 +8153,6 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
          }
 
          SCIP_CALL( addLinearizationCuts(scip, conshdlr, conss, nconss, nlpsol, &lpsolseparated, conshdlrdata->mincutefficacysepa) );
-         newsol = TRUE;
 
          SCIP_CALL( SCIPfreeSol(scip, &nlpsol) );
 
@@ -8168,7 +8171,7 @@ SCIP_DECL_CONSSEPALP(consSepalpNonlinear)
     * or separating with NLP solution as reference point failed, then try (again) with LP solution as reference point
     */
 
-   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, newsol, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
+   SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, NULL, TRUE, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
 
    return SCIP_OKAY;
 }
@@ -8202,6 +8205,9 @@ SCIP_DECL_CONSSEPASOL(consSepasolNonlinear)
    if( maxviolcon == NULL )
       return SCIP_OKAY;
 
+   /* computeViolations already evaluated all constraints, so can pass newsol = FALSE here
+    * in contrast to Sepalp, a sol != NULL is not projected onto the box in computeViolation
+    */
    SCIP_CALL( separatePoint(scip, conshdlr, conss, nconss, nusefulconss, sol, FALSE, conshdlrdata->mincutefficacysepa, FALSE, result, NULL) );
 
    return SCIP_OKAY;

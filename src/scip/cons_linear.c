@@ -9826,11 +9826,13 @@ SCIP_RETCODE convertLongEquality(
                return SCIP_OKAY;
             }
 
-            if( aggregated )
-               (*naggrvars)++;
-
             /* release implicit variable */
             SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
+
+            if( aggregated )
+               (*naggrvars)++;
+            else
+               return SCIP_OKAY;
          }
 
          /* we do not have any event on vartype changes, so we need to manually force this constraint to be presolved
