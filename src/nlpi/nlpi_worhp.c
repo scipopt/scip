@@ -2407,7 +2407,7 @@ const char* SCIPgetSolverDescWorhp(
    void
    )
 {
-   return "Sequential Quadratic Programming developed at Research Institute Steinbeis (www.worhp.de)";
+   return "Nonlinear programming solver developed at Research Institute Steinbeis (www.worhp.de)";
 }
 
 /** returns whether Worhp is available, i.e., whether it has been linked in */
