@@ -2224,7 +2224,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    /* restore previous value for presolving */
    if( CPXgetnumrows(lpi->cpxenv, lpi->cpxlp) == 0 )
    {
-      CPXsetintparam(lpi->cpxenv, CPX_PARAM_PREIND, CPX_ON);
+      CPXsetintparam(lpi->cpxenv, CPX_PARAM_PREIND, presolving);
    }
 #endif
 
