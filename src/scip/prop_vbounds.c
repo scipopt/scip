@@ -2115,6 +2115,7 @@ static
 SCIP_RETCODE tarjan(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   startnode,          /**< node to start the depth-first-search */
+   int*                  startindex,         /**< start index */
    int*                  nodeonstack,        /**< array to store the whether a each node is on the stack */
    int*                  nodeindex,          /**< array to store the dfs index for each node */
    int*                  nodelowlink,        /**< array to store the lowlink for each node */
@@ -2246,6 +2247,50 @@ SCIP_RETCODE tarjan(
             cliquevals = SCIPcliqueGetValues(cliques[j]);
             ncliquevars = SCIPcliqueGetNVars(cliques[j]);
 
+            if( stacknextcliquevar[currstackidx] == 0 )
+            {
+               if( cliqueminidx[clqidx] == 0 )
+               {
+                  cliqueminidx[clqidx] = curridx + 1;
+               }
+               else
+               {
+                  if( cliqueminidx[clqidx] > 0 )
+                  {
+                     assert(cliqueminidx[clqidx] != curridx + 1);
+
+                     if( nodeonstack[cliqueminidx[clqidx] - 1] )
+                        printf("infeasible assignment (1): %s(%s)\n", indexGetBoundString(cliqueminidx[clqidx] - 1),
+                           SCIPvarGetName(vars[getVarIndex(cliqueminidx[clqidx] - 1)]));
+                     else if( nodeindex[cliqueminidx[clqidx] - 1] >= *startindex )
+                        printf("infeasible assignment (2): %s(%s)\n", indexGetBoundString(startnode),
+                           SCIPvarGetName(vars[getVarIndex(startnode)]));
+                     else
+                     {
+                        printf("entering clique %d a second time\n", clqidx);
+
+                        idx = getOtherBoundIndex(cliqueminidx[clqidx] - 1);
+
+                        if( nodeindex[idx] == 0 )
+                        {
+                           found = TRUE;
+                        }
+                        else if( nodeonstack[idx] && nodeindex[idx] < nodelowlink[curridx] )
+                        {
+                           nodelowlink[curridx] = nodeindex[idx];
+                        }
+
+                        cliqueminidx[clqidx] = -1;
+                     }
+                  }
+                  else
+                  {
+                     printf("skip clique %d: visited more than twice already!\n", clqidx);
+                  }
+                  stacknextcliquevar[currstackidx] = ncliquevars;
+               }
+            }
+
             for( i = stacknextcliquevar[currstackidx]; i < ncliquevars; ++i )
             {
                if( cliquevars[i] == startvar )
@@ -2274,7 +2319,6 @@ SCIP_RETCODE tarjan(
             }
             if( found )
             {
-               assert(i < ncliquevars);
                break;
             }
 #if 0
@@ -2367,6 +2411,8 @@ SCIP_RETCODE tarjan(
       }
    }
 
+   *startindex = index;
+
    return SCIP_OKAY;
 }
 
@@ -2391,6 +2437,7 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    int nsccs;
    int nbounds;
    int ncliques;
+   int startindex = 1;
    int i;
    SCIP_Bool infeasible = FALSE;
 
@@ -2440,15 +2487,16 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    sccstarts[0] = 0;
    nsccs = 0;
 
-   /* while there are unvisited nodes, run dfs starting from one of these nodes; the dfs orders are stored in the
-    * topoorder array, later dfs calls are just appended after the stacks of previous dfs calls, which gives us a
-    * reverse topological order
-    */
-   for( i = 0; i < nbounds && !infeasible; i += 2 )
+   /* while there are unvisited nodes, run Tarjan's algorithm starting from one of these nodes */
+   for( i = 0; i < nbounds && !infeasible; i += 1 )
    {
-      if( nodeindex[i] == 0 && nodeindex[i+1] == 0 )
+      if( nodeindex[i] == 0 )//&& nodeindex[i+1] == 0 )
       {
-         SCIP_CALL( tarjan(scip, i, visited, nodeindex, nodelowlink, predstackidx, dfsstack, stacknextclique, stacknextcliquevar, stackcliquemin, cliqueminidx, cliquevarleft, sccvars, sccstarts, &nsccs, &infeasible) );
+         SCIP_CALL( tarjan(scip, i, &startindex, visited, nodeindex, nodelowlink, predstackidx, dfsstack, stacknextclique,
+               stacknextcliquevar, stackcliquemin, cliqueminidx, cliquevarleft, sccvars, sccstarts, &nsccs, &infeasible) );
+
+            for( int j = 0; j < nbounds; ++j )
+               assert(!visited[j]);
       }
    }
 
