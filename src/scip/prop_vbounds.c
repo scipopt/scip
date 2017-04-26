@@ -2134,13 +2134,15 @@ SCIP_RETCODE tarjan(
    int*                  sccvars,
    int*                  sccstarts,
    int*                  nsccs,
+   int*                  infeasnodes,
+   int*                  ninfeasnodes,
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    )
 {
    SCIP_VAR** vars;
    SCIP_VAR* startvar;
    SCIP_Bool lower;
-   int index = 1;
+   int index = *startindex;
    int stacksize;
    int currstackidx;
    int curridx;
@@ -2260,11 +2262,19 @@ SCIP_RETCODE tarjan(
                      assert(cliqueminidx[clqidx] != curridx + 1);
 
                      if( nodeonstack[cliqueminidx[clqidx] - 1] )
+                     {
                         printf("infeasible assignment (1): %s(%s)\n", indexGetBoundString(cliqueminidx[clqidx] - 1),
                            SCIPvarGetName(vars[getVarIndex(cliqueminidx[clqidx] - 1)]));
+                        infeasnodes[*ninfeasnodes] = cliqueminidx[clqidx] - 1;
+                        ++(*ninfeasnodes);
+                     }
                      else if( nodeindex[cliqueminidx[clqidx] - 1] >= *startindex )
+                     {
                         printf("infeasible assignment (2): %s(%s)\n", indexGetBoundString(startnode),
                            SCIPvarGetName(vars[getVarIndex(startnode)]));
+                        infeasnodes[*ninfeasnodes] = startnode;
+                        ++(*ninfeasnodes);
+                     }
                      else
                      {
                         printf("entering clique %d a second time\n", clqidx);
@@ -2434,6 +2444,8 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    int* stackcliquemin;
    int* sccvars;
    int* sccstarts;
+   int* infeasnodes;
+   int ninfeasnodes;
    int nsccs;
    int nbounds;
    int ncliques;
@@ -2479,6 +2491,7 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    SCIP_CALL( SCIPallocBufferArray(scip, &stackcliquemin, nbounds) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sccvars, nbounds) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sccstarts, nbounds/2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &infeasnodes, nbounds/2) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &visited, nbounds) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &nodeindex, nbounds) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &nodelowlink, nbounds) );
@@ -2486,6 +2499,7 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    SCIP_CALL( SCIPallocClearBufferArray(scip, &cliquevarleft, ncliques) );
    sccstarts[0] = 0;
    nsccs = 0;
+   ninfeasnodes = 0;
 
    /* while there are unvisited nodes, run Tarjan's algorithm starting from one of these nodes */
    for( i = 0; i < nbounds && !infeasible; i += 1 )
@@ -2493,15 +2507,38 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
       if( nodeindex[i] == 0 )//&& nodeindex[i+1] == 0 )
       {
          SCIP_CALL( tarjan(scip, i, &startindex, visited, nodeindex, nodelowlink, predstackidx, dfsstack, stacknextclique,
-               stacknextcliquevar, stackcliquemin, cliqueminidx, cliquevarleft, sccvars, sccstarts, &nsccs, &infeasible) );
+               stacknextcliquevar, stackcliquemin, cliqueminidx, cliquevarleft, sccvars, sccstarts, &nsccs, infeasnodes, &ninfeasnodes, &infeasible) );
 
             for( int j = 0; j < nbounds; ++j )
                assert(!visited[j]);
       }
    }
 
-   if( !infeasible && nsccs > 0 )
+   if( !infeasible )
    {
+      for( i = 0; i < ninfeasnodes; ++i )
+      {
+         SCIP_VAR* var = vars[getVarIndex(infeasnodes[i])];
+         SCIP_Bool lower = isIndexLowerbound(infeasnodes[i]);
+         SCIP_Bool fixed;
+
+         SCIP_CALL( SCIPfixVar(scip, var, lower ? 0.0 : 1.0, &infeasible, &fixed) );
+
+         printf("fix <%s> to %g: inf=%d, fixed=%d\n",
+               SCIPvarGetName(var),
+               lower ? 0.0 : 1.0,
+               infeasible, fixed);
+
+         if( fixed )
+         {
+            *result = SCIP_SUCCESS;
+            ++(*nfixedvars);
+         }
+
+         if( infeasible )
+            goto TERMINATE;
+      }
+
       for( i = 0; i < nsccs; ++i )
       {
          SCIP_VAR* startvar;
@@ -2551,6 +2588,7 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    SCIPfreeBufferArray(scip, &nodelowlink);
    SCIPfreeBufferArray(scip, &nodeindex);
    SCIPfreeBufferArray(scip, &visited);
+   SCIPfreeBufferArray(scip, &infeasnodes);
    SCIPfreeBufferArray(scip, &sccstarts);
    SCIPfreeBufferArray(scip, &sccvars);
    SCIPfreeBufferArray(scip, &stackcliquemin);
