@@ -190,6 +190,7 @@ SCIP_RETCODE evaluateWorhpRun(
    case QPerror:
    case MinimumStepsize:
    case TooBig:
+   case LinearSolverFailed:
    {
       /* numerical errors during solution of NLP */
       SCIPdebugMessage("Worhp failed because of a numerical error during optimization!\n");
