@@ -3304,7 +3304,7 @@ SCIP_RETCODE constructSNFRelaxation(
          int j;
          /* clear binvarpos at indices of the rows binary variables */
          for( j = nnz - 1; j >= nnonbinvarsrow; --j )
-            binvarpos[rowinds[i]] = 0;
+            binvarpos[rowinds[j]] = 0;
 
          /* clear binvarpos at indices of selected variable bounds */
          for( j = 0; j <= i; ++j )
