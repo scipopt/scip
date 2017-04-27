@@ -550,6 +550,7 @@ else
 LDFLAGS		+=	$(LINKRPATH)\$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/lib
 endif
 endif
+endif
 
 ifeq ($(EXPRINT),cppad)
 LINKER		=	CPP

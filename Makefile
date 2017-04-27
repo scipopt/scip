@@ -340,7 +340,7 @@ NLPILIBCOBJ	+= 	nlpi/nlpi_ipopt_dummy.o
 endif
 
 ifeq ($(FILTERSQP),true)
-NLPILIBCXXOBJ	+= nlpi/nlpi_filtersqp.o
+NLPILIBCOBJ	+= nlpi/nlpi_filtersqp.o
 else
 NLPILIBCOBJ	+= nlpi/nlpi_filtersqp_dummy.o
 endif
