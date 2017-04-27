@@ -35,8 +35,6 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary NLP solver interface data */
-
 struct SCIP_NlpiData
 {
    BMS_BLKMEM*                 blkmem;       /**< block memory */
@@ -44,8 +42,6 @@ struct SCIP_NlpiData
    SCIP_Real                   infinity;     /**< initial value for infinity */
 
 };
-
-/* TODO: fill in the necessary NLP problem instance data */
 
 struct SCIP_NlpiProblem
 {
@@ -919,7 +915,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    memset(istat, 0, sizeof(istat));
    memset(rstat, 0, sizeof(rstat));
 
-   SCIP_ALLOC( BMSduplicateMemoryArray(&x, problem->initguess, n) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&x, problem->initguess, n) ); /* TODO initguess can be NULL */
    SCIP_ALLOC( BMSallocMemoryArray(&c, m) );
    SCIP_ALLOC( BMSallocMemoryArray(&bl, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&bu, n+m) );
@@ -959,8 +955,17 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       iuser, &maxiter, istat,
       rstat, cstype_len);
 
-
-   /* TODO free mem */
+   BMSfreeMemoryArray(&a);
+   BMSfreeMemoryArray(&la);
+   BMSfreeMemoryArray(&cstype);
+   BMSfreeMemoryArray(&lam);
+   BMSfreeMemoryArray(&lws);
+   BMSfreeMemoryArray(&ws);
+   BMSfreeMemoryArray(&s);
+   BMSfreeMemoryArray(&bu);
+   BMSfreeMemoryArray(&bl);
+   BMSfreeMemoryArray(&c);
+   BMSfreeMemoryArray(&x);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
