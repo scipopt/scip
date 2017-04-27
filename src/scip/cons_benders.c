@@ -672,8 +672,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsBenders)
 
 /** creates the handler for benders constraints and includes it in SCIP */
 SCIP_RETCODE SCIPincludeConshdlrBenders(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP*                 origprob            /**< SCIP data structure of the original problem */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata = NULL;

@@ -145,7 +145,8 @@ SCIP_RETCODE computeStandardOptimalityCut(
       {
          SCIP_Real coef;
 
-         coef = -1.0*(SCIPvarGetObj(var) + redcost);
+         //coef = -1.0*(SCIPvarGetObj(var) + redcost);
+         coef = 1.0*(SCIPvarGetObj(var) + redcost);
 
 #ifndef NDEBUG
          verifyobj -= SCIPvarGetObj(var)*SCIPvarGetSol(var, TRUE);

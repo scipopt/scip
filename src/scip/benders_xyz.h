@@ -26,7 +26,6 @@
 
 
 #include "scip/scip.h"
-#include "scip/bendersdefcuts.h"
 
 #ifdef __cplusplus
 extern "C" {

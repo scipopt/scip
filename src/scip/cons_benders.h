@@ -38,8 +38,7 @@ extern "C" {
  * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrBenders(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP*                 origprob            /**< SCIP data structure of the original problem */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /**@addtogroup CONSHDLRS

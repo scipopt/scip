@@ -23,6 +23,8 @@
 #include <assert.h>
 
 #include "scip/benders_xyz.h"
+#include "scip/pub_benders.h"
+#include "scip/bendersdefcuts.h"
 
 
 #define BENDERS_NAME            "xyz"

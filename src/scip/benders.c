@@ -547,8 +547,6 @@ SCIP_RETCODE SCIPbendersExec(
    assert(result != NULL);
    assert(benders->bendersexec != NULL);
 
-   SCIP_CALL( SCIPprintSol(set->scip, sol, NULL, FALSE) );
-
    nsubproblems = SCIPbendersGetNSubproblems(benders);
 
    /* sets the stored objective function values of the subproblems to infinity */
@@ -557,20 +555,28 @@ SCIP_RETCODE SCIPbendersExec(
    SCIP_CALL( benders->bendersexec(set->scip, benders) );
 
    *result = SCIP_DIDNOTRUN;
-   /* solving each of the subproblems for Benders decomposition */
-   /* TODO: ensure that the each of the subproblems solve and update the parameters with the correct return values */
-   for( i = 0; i < nsubproblems; i++ )
+
+   if( check && sol == NULL )
    {
-      SCIP_Bool subinfeas = FALSE;
+      infeasible = TRUE;
+   }
+   else
+   {
+      /* solving each of the subproblems for Benders decomposition */
+      /* TODO: ensure that the each of the subproblems solve and update the parameters with the correct return values */
+      for( i = 0; i < nsubproblems; i++ )
+      {
+         SCIP_Bool subinfeas = FALSE;
 
-      SCIP_CALL( SCIPbendersSolveSubproblem(benders, set, sol, i, &subinfeas) );
+         SCIP_CALL( SCIPbendersSolveSubproblem(benders, set, sol, i, &subinfeas) );
 
-      infeasible = infeasible || subinfeas;
+         infeasible = infeasible || subinfeas;
 
-      /* if the subproblems are being solved as part of the conscheck, then we break once an infeasibility is found. The
-       * result pointer is set to infeasible and the execution is halted. */
-      if( check && infeasible )
-         break;
+         /* if the subproblems are being solved as part of the conscheck, then we break once an infeasibility is found. The
+          * result pointer is set to infeasible and the execution is halted. */
+         if( check && infeasible )
+            break;
+      }
    }
 
    if( check )

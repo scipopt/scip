@@ -25,6 +25,7 @@
 #define __SCIP_PUB_BENDERS_H__
 
 
+#include "scip/scip.h"
 #include "scip/def.h"
 #include "scip/type_misc.h"
 #include "scip/type_benders.h"

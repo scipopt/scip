@@ -1487,7 +1487,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
       return SCIP_OKAY;
 
    /* if there exist unknown variables, we cannot conclude that the objective value is always integral */
-   if( set->nactivepricers != 0 )
+   if( set->nactivepricers != 0 || set->nbenders != 0 )
       return SCIP_OKAY;
 
    /* if the objective value offset is fractional, the value itself is possibly fractional */
@@ -1600,7 +1600,7 @@ SCIP_RETCODE SCIPprobScaleObj(
    assert(set != NULL);
 
    /* do not change objective if there are pricers involved */
-   if( set->nactivepricers != 0 )
+   if( set->nactivepricers != 0 || set->nbenders != 0 )
       return SCIP_OKAY;
 
    nints = transprob->nvars - transprob->ncontvars;
