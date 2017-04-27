@@ -66,7 +66,7 @@ struct SCIP_NlpiProblem
 # define F77_FUNC_(name,NAME) NAME
 #else
 # define F77_FUNC(name,NAME) name ## _
-# define F77_FUNC_(name,NAME) name ## __
+# define F77_FUNC_(name,NAME) name ## _
 #endif
 
 typedef int fint;
@@ -894,6 +894,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    fint istat[14];
    real rstat[7];
    ftnlen cstype_len = 1;
+   int i;
 
    n = SCIPnlpiOracleGetNVars(problem->oracle);
    m = SCIPnlpiOracleGetNConstraints(problem->oracle);
@@ -918,15 +919,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    memset(istat, 0, sizeof(istat));
    memset(rstat, 0, sizeof(rstat));
 
-   /* TODO setup
-   bl
-   bu
-   s
-   lam
-   cstype
-   */
-
-   SCIP_ALLOC( BMSallocMemoryArray(&x, n) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&x, problem->initguess, n) );
    SCIP_ALLOC( BMSallocMemoryArray(&c, m) );
    SCIP_ALLOC( BMSallocMemoryArray(&bl, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&bu, n+m) );
@@ -936,11 +929,25 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    SCIP_ALLOC( BMSallocMemoryArray(&lam, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&cstype, m) );
 
+   /* allocate la, a and initialize la and maxa */
    SCIP_CALL( setupGradients(problem->oracle, &la, &a, &maxa) );
+
+   /* setup variable bounds, constraint sides, and constraint types */
+   BMScopyMemoryArray(bl, SCIPnlpiOracleGetVarLbs(problem->oracle), n);
+   BMScopyMemoryArray(bu, SCIPnlpiOracleGetVarLbs(problem->oracle), n);
+   for( i = 0; i < m; ++i )
+   {
+      bl[n+i] = SCIPnlpiOracleGetConstraintLhs(problem->oracle, i);
+      bu[n+i] = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
+      cstype[i] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, i) <= 1 ? 'L' : 'N';
+   }
 
    /* TODO from here on we are not thread-safe: maybe add some mutex here if PARASCIP=true? */
    nlpiSolved = nlpi;
    nlpiProblemSolved = problem;
+
+   /* store our value for infinity in filtersqps global variable for that purpose */
+   F77_FUNC_(nlp_eps_inf,NLP_EPS_INF).infty = SCIPnlpiOracleGetInfinity(problem->oracle);
 
    F77_FUNC(filtersqp,FILTERSQP)(
       &n, &m, &kmax, &maxa,
