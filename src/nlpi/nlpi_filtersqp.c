@@ -1167,10 +1167,83 @@ SCIP_DECL_NLPISETWARMSTARTMEMO( nlpiSetWarmstartMemoFilterSQP )
 static
 SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(ival != NULL);
+   assert(problem != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   switch( type )
+   {
+   case SCIP_NLPPAR_FROMSCRATCH:
+   {
+      *ival = 1;
+      break;
+   }
+
+   case SCIP_NLPPAR_VERBLEVEL:
+   {
+      /* TODO */
+      *ival = 1;
+      break;
+   }
+
+   case SCIP_NLPPAR_FEASTOL:
+   {
+      SCIPerrorMessage("feasibility tolerance parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_RELOBJTOL:
+   {
+      SCIPerrorMessage("relative objective tolerance parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_LOBJLIM:
+   {
+      SCIPerrorMessage("objective limit parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_INFINITY:
+   {
+      SCIPerrorMessage("infinity parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_ITLIM:
+   {
+      /* TODO */
+      *ival = 1000;
+      break;
+   }
+
+   case SCIP_NLPPAR_TILIM:
+   {
+      SCIPerrorMessage("time limit parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_OPTFILE:
+   {
+      SCIPerrorMessage("optfile parameter is of type string.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_FASTFAIL:
+   {
+      /* TODO? */
+      *ival = 0;
+      break;
+   }
+
+   default:
+   {
+      SCIPerrorMessage("Parameter %d not known to Ipopt interface.\n", type);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   }
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** sets integer parameter of NLP
@@ -1184,10 +1257,116 @@ SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParFilterSQP )
 static
 SCIP_DECL_NLPISETINTPAR( nlpiSetIntParFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   switch( type )
+   {
+   case SCIP_NLPPAR_FROMSCRATCH:
+   {
+      if( ival == 0 || ival == 1 )
+      {
+         SCIP_NLPIDATA* data;
+
+         data = SCIPnlpiGetData(nlpi);
+         assert(data != NULL);
+
+         SCIPmessagePrintWarning(data->messagehdlr, "from scratch parameter not supported by FilterSQP interface yet. Ignored.\n");
+      }
+      else
+      {
+         SCIPerrorMessage("Value %d for parameter from scratch out of range {0, 1}\n", ival);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+      break;
+   }
+
+   case SCIP_NLPPAR_VERBLEVEL:
+   {
+      if( ival >= 0 )
+      {
+         /* TODO */
+      }
+      else
+      {
+         SCIPerrorMessage("Value %d for parameter from verbosity level out of range\n", ival);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+      break;
+   }
+
+   case SCIP_NLPPAR_FEASTOL:
+   {
+      SCIPerrorMessage("feasibility tolerance parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_RELOBJTOL:
+   {
+      SCIPerrorMessage("relative objective tolerance parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_LOBJLIM:
+   {
+      SCIPerrorMessage("objective limit parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_INFINITY:
+   {
+      SCIPerrorMessage("infinity parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_ITLIM:
+   {
+      if( ival >= 0 )
+      {
+         /* TODO */
+      }
+      else
+      {
+         SCIPerrorMessage("Value %d for parameter iteration limit is negative\n", ival);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+      break;
+   }
+
+   case SCIP_NLPPAR_TILIM:
+   {
+      SCIPerrorMessage("time limit parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_OPTFILE:
+   {
+      SCIPerrorMessage("optfile parameter is of type string.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_FASTFAIL:
+   {
+      if( ival == 0 || ival == 1 )
+      {
+         SCIPmessagePrintWarning(SCIPnlpiGetData(nlpi)->messagehdlr, "from scratch parameter not supported by FilterSQP interface yet. Ignored.\n");
+      }
+      else
+      {
+         SCIPerrorMessage("Value %d for parameter fastfail out of range {0, 1}\n", ival);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+      break;
+   }
+
+   default:
+   {
+      SCIPerrorMessage("Parameter %d not known to FilterSQP interface.\n", type);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   }
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** gets floating point parameter of NLP
@@ -1204,10 +1383,92 @@ SCIP_DECL_NLPISETINTPAR( nlpiSetIntParFilterSQP )
 static
 SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(dval != NULL);
+   assert(type == SCIP_NLPPAR_INFINITY || problem != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   switch( type )
+   {
+   case SCIP_NLPPAR_FROMSCRATCH:
+   {
+      SCIPerrorMessage("from scratch parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_VERBLEVEL:
+   {
+      SCIPerrorMessage("verbosity level parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_FEASTOL:
+   {
+      /* TODO */
+      *dval = 1e-6;
+      break;
+   }
+
+   case SCIP_NLPPAR_RELOBJTOL:
+   {
+      /* TODO */
+      *dval = 1e-6;
+      break;
+   }
+
+   case SCIP_NLPPAR_LOBJLIM:
+   {
+      *dval = -SCIPnlpiOracleGetInfinity(problem->oracle);
+      break;
+   }
+
+   case SCIP_NLPPAR_INFINITY:
+   {
+      if( problem )
+      {
+         *dval = SCIPnlpiOracleGetInfinity(problem->oracle);
+      }
+      else
+      {
+         SCIP_NLPIDATA* data = SCIPnlpiGetData(nlpi);
+         assert(data != NULL);
+         *dval = data->infinity;
+      }
+      break;
+   }
+
+   case SCIP_NLPPAR_ITLIM:
+   {
+      SCIPerrorMessage("iteration limit parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_TILIM:
+   {
+      /* TODO */
+      *dval = 1000.0;
+      break;
+   }
+
+   case SCIP_NLPPAR_OPTFILE:
+   {
+      SCIPerrorMessage("option file parameter is of type string.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_FASTFAIL:
+   {
+      SCIPerrorMessage("fastfail parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   default:
+   {
+      SCIPerrorMessage("Parameter %d not known to FilterSQP interface.\n", type);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   }
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** sets floating point parameter of NLP
@@ -1221,10 +1482,119 @@ SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParFilterSQP )
 static
 SCIP_DECL_NLPISETREALPAR( nlpiSetRealParFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(type == SCIP_NLPPAR_INFINITY || problem != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   switch( type )
+   {
+   case SCIP_NLPPAR_FROMSCRATCH:
+   {
+      SCIPerrorMessage("from scratch parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_VERBLEVEL:
+   {
+      SCIPerrorMessage("verbosity level parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_FEASTOL:
+   {
+      if( dval >= 0 )
+      {
+         /* TODO */
+      }
+      else
+      {
+         SCIPerrorMessage("Value %g for parameter feasibility tolerance is negative\n", dval);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+      break;
+   }
+
+   case SCIP_NLPPAR_RELOBJTOL:
+   {
+      if( dval >= 0 )
+      {
+         /* TODO */
+      }
+      else
+      {
+         SCIPerrorMessage("Value %g for parameter relative objective tolerance is negative\n", dval);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+      break;
+   }
+
+   case SCIP_NLPPAR_LOBJLIM:
+   {
+      SCIP_NLPIDATA* data;
+
+      data = SCIPnlpiGetData(nlpi);
+      assert(data != NULL);
+
+      SCIPmessagePrintWarning(data->messagehdlr, "Parameter lower objective limit not supported by FilterSQP interface yet. Ignored.\n");
+      break;
+   }
+
+   case SCIP_NLPPAR_INFINITY:
+   {
+      if( dval < 0.0 )
+         return SCIP_PARAMETERWRONGVAL;
+      if( problem )
+      {
+         SCIPnlpiOracleSetInfinity(problem->oracle, dval);
+      }
+      else
+      {
+         SCIP_NLPIDATA* data = SCIPnlpiGetData(nlpi);
+         assert(data != NULL);
+         data->infinity = dval;
+      }
+      break;
+   }
+
+   case SCIP_NLPPAR_ITLIM:
+   {
+      SCIPerrorMessage("iteration limit parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_TILIM:
+   {
+      if( dval >= 0 )
+      {
+         /* TODO */
+      }
+      else
+      {
+         SCIPerrorMessage("Value %g for parameter time limit is negative\n", dval);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+      break;
+   }
+
+   case SCIP_NLPPAR_OPTFILE:
+   {
+      SCIPerrorMessage("option file parameter is of type string.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_FASTFAIL:
+   {
+      SCIPerrorMessage("fastfail parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   default:
+   {
+      SCIPerrorMessage("Parameter %d not known to FilterSQP interface.\n", type);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   }
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** gets string parameter of NLP
@@ -1241,10 +1611,79 @@ SCIP_DECL_NLPISETREALPAR( nlpiSetRealParFilterSQP )
 static
 SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   switch( type )
+   {
+   case SCIP_NLPPAR_FROMSCRATCH:
+   {
+      SCIPerrorMessage("from scratch parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_VERBLEVEL:
+   {
+      SCIPerrorMessage("verbosity level parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_FEASTOL:
+   {
+      SCIPerrorMessage("feasibility tolerance parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_RELOBJTOL:
+   {
+      SCIPerrorMessage("objective tolerance parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_LOBJLIM:
+   {
+      SCIPerrorMessage("objective limit parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_INFINITY:
+   {
+      SCIPerrorMessage("infinity parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_ITLIM:
+   {
+      SCIPerrorMessage("iteration limit parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_TILIM:
+   {
+      SCIPerrorMessage("time limit parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_OPTFILE:
+   {
+      *sval = NULL;
+      return SCIP_OKAY;
+   }
+
+   case SCIP_NLPPAR_FASTFAIL:
+   {
+      SCIPerrorMessage("fastfail parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   default:
+   {
+      SCIPerrorMessage("Parameter %d not known to FilterSQP interface.\n", type);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   }
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** sets string parameter of NLP
@@ -1258,10 +1697,79 @@ SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParFilterSQP )
 static
 SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(nlpi != NULL);
+   assert(problem != NULL);
 
-   return SCIP_OKAY;  /*lint !e527*/
+   switch( type )
+   {
+   case SCIP_NLPPAR_FROMSCRATCH:
+   {
+      SCIPerrorMessage("from scratch parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_VERBLEVEL:
+   {
+      SCIPerrorMessage("verbosity level parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_FEASTOL:
+   {
+      SCIPerrorMessage("feasibility tolerance parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_RELOBJTOL:
+   {
+      SCIPerrorMessage("objective tolerance parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_LOBJLIM:
+   {
+      SCIPerrorMessage("objective limit parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_INFINITY:
+   {
+      SCIPerrorMessage("infinity parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_ITLIM:
+   {
+      SCIPerrorMessage("iteration limit parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_TILIM:
+   {
+      SCIPerrorMessage("time limit parameter is of type real.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   case SCIP_NLPPAR_OPTFILE:
+   {
+      SCIPmessagePrintWarning(SCIPnlpiGetData(nlpi)->messagehdlr, "Parameter optfile not supported by FilterSQP interface. Ignored.\n");
+      return SCIP_OKAY;
+   }
+
+   case SCIP_NLPPAR_FASTFAIL:
+   {
+      SCIPerrorMessage("fastfail parameter is of type int.\n");
+      return SCIP_PARAMETERWRONGTYPE;
+   }
+
+   default:
+   {
+      SCIPerrorMessage("Parameter %d not known to Ipopt interface.\n", type);
+      return SCIP_PARAMETERUNKNOWN;
+   }
+   }
+
+   return SCIP_OKAY;
 }  /*lint !e715*/
 
 /** sets message handler for message output
