@@ -1,0 +1,203 @@
+\documentclass{article}
+\usepackage{tikz}
+\pagestyle{empty}
+\begin{document}
+\usetikzlibrary{arrows}
+\usetikzlibrary{shapes}
+\usetikzlibrary{snakes}
+\usetikzlibrary{patterns}
+
+\definecolor{background}{HTML}{FFFFE6}
+
+% tikz styles
+\definecolor{matheonblue}{rgb}{0.15,0.35,0.65}
+\tikzstyle{bin} = [thick]
+\tikzstyle{item} = [thick]
+\tikzstyle{color0} = [item, fill=red]
+\tikzstyle{color1} = [item, fill=green]
+\tikzstyle{color2} = [item, fill=yellow]
+\tikzstyle{color3} = [item, fill=orange]
+\tikzstyle{color4} = [item, fill=blue]
+\tikzstyle{color5} = [item, fill=black]
+\tikzstyle{color6} = [item, fill=red!50]
+\tikzstyle{color7} = [item, fill=blue!50]
+\tikzstyle{color8} = [item, fill=black!50]
+\tikzstyle{color9} = [item, fill=green!50]
+\tikzstyle{highlight} = [fill=blue, fill opacity=0.3, rounded corners]
+
+
+\newcounter{xpos}
+\newcounter{ypos}
+
+% \newcommand{\bin}[2]{
+%   \draw[bin] (#1/2,0) -- (#1/2+0.4,0);
+%   \draw[bin] (#1/2,0) -- (#1/2,#2);
+%   \draw[bin] (#1/2+0.4,0) -- (#1/2+0.4,#2);
+% }
+
+\newcommand{\bin}[3]{
+  \draw[bin] (#1/2,0) -- (#1/2+0.4,0);
+  \draw[bin] (#1/2,0) -- (#1/2,#2);
+  \draw[bin] (#1/2+0.4,0) -- (#1/2+0.4,#2);
+  % \draw[pattern color=darkred,pattern=north east lines] (#1/2,0) rectangle (#1/2+.4,#2);
+  % \node[below] at (#1/2+0.2,0) {#3};
+}
+
+\newcommand{\assignment}[2]{
+  \begin{scope}
+    \setcounter{ypos}{0}
+    \foreach \y in {#2}
+    {
+      \stepcounter{ypos}
+      \ifnum \y=0
+      \node[inner sep=0,above] at (#1/2+0.2,\theypos/2+4) (\y) {\y};
+      \fi
+      \ifnum \y=1
+      \node[inner sep=0,above,red] at (#1/2+0.2,\theypos/2+4) (\y) {\y};
+      \fi
+    }
+  \end{scope}
+}
+
+
+\newcommand{\binitem}[4]{
+  \ifnum #4=0
+  \draw[color0] (#1/2,#2) rectangle (#1/2+0.4,#2+#3);
+  \fi
+  \ifnum #4=1
+  \draw[color1] (#1/2,#2) rectangle (#1/2+0.4,#2+#3);
+  \fi
+  \ifnum #4=2
+  \draw[color2] (#1/2,#2) rectangle (#1/2+0.4,#2+#3);
+  \fi
+  \ifnum #4=3
+  \draw[color3] (#1/2,#2) rectangle (#1/2+0.4,#2+#3);
+  \fi
+  \ifnum #4=4
+  \draw[color4] (#1/2,#2) rectangle (#1/2+0.4,#2+#3);
+  \fi
+  \ifnum #4=5
+  \draw[color5] (#1/2,#2) rectangle (#1/2+0.4,#2+#3);
+  \fi
+  \ifnum #4=6
+  \draw[color6] (#1/2,#2) rectangle (#1/2+0.4,#2+#3);
+  \fi
+  \ifnum #4=7
+  \draw[color7] (#1/2,#2) rectangle (#1/2+0.4,#2+#3);
+  \fi
+  \ifnum #4=8
+  \draw[color8] (#1/2,#2) rectangle (#1/2+0.4,#2+#3);
+  \fi
+  \ifnum #4=9
+  \draw[color9] (#1/2,#2) rectangle (#1/2+0.4,#2+#3);
+  \fi
+
+  \foreach \y in {1,...,#3}
+  {
+    \draw (#1/2,#2+\y) -- (#1/2+0.4,#2+\y);
+  }
+}
+
+\newcommand{\binitemquer}[4]{
+  \ifnum #4=0
+  \draw[color0] (#2,#1/2) rectangle (#2-#3,#1/2+0.4);
+  \fi
+  \ifnum #4=1
+  \draw[color1] (#2,#1/2) rectangle (#2-#3,#1/2+0.4);
+  \fi
+  \ifnum #4=2
+  \draw[color2] (#2,#1/2) rectangle (#2-#3,#1/2+0.4);
+  \fi
+  \ifnum #4=3
+  \draw[color3] (#2,#1/2) rectangle (#2-#3,#1/2+0.4);
+  \fi
+  \ifnum #4=4
+  \draw[color4] (#2,#1/2) rectangle (#2-#3,#1/2+0.4);
+  \fi
+  \ifnum #4=5
+  \draw[color5] (#2,#1/2) rectangle (#2-#3,#1/2+0.4);
+  \fi
+  \ifnum #4=6
+  \draw[color6] (#2,#1/2) rectangle (#2-#3,#1/2+0.4);
+  \fi
+  \ifnum #4=7
+  \draw[color7] (#2,#1/2) rectangle (#2-#3,#1/2+0.4);
+  \fi
+  \ifnum #4=8
+  \draw[color8] (#2,#1/2) rectangle (#2-#3,#1/2+0.4);
+  \fi
+  \ifnum #4=9
+  \draw[color9] (#2,#1/2) rectangle (#2-#3,#1/2+0.4);
+  \fi
+
+  \foreach \y in {1,...,#3}
+  {
+    \draw (#2-\y,#1/2) -- (#2-\y,#1/2+0.4);
+  }
+}
+
+\newcommand{\varcolumn}[2]{
+  \draw[#1] (#2/2,0) rectangle (#2/2+.3,3);
+}
+
+
+\begin{tikzpicture}
+  \draw[background,fill=background] (-4.5,-.5) rectangle (9,5.5);
+
+  \begin{scope}[rotate=-90,xshift=-1cm,yshift=-4cm]
+    \foreach \pos/\size/\color in {
+      1/2/0,
+      2/1/1,
+      3/2/2,
+      4/1/3,
+      5/1/4,
+      6/2/5,
+      7/3/6,
+      8/2/7,
+      9/1/8
+    }
+    {
+      \binitemquer{\pos}{0}{\size}{\color}
+    }
+
+    % size axis
+    \draw[thick,->] (0,0) -- (-3,0);
+    \foreach \x in {1,2,3}
+    \draw[thick] (-\x+1,0) -- +(0,0.10) (-\x+.5,0) +(0mm,-0.2mm) node[anchor=west] {\footnotesize\x};
+
+    \node[left] at (1,3.5){Items};
+  \end{scope}
+
+  \begin{scope}[yshift=3cm, xshift=1.5cm]
+    \draw[thick,->] (0,0) --  node[above] {bin capacity $4$} (3,0);
+  \end{scope}
+
+  \begin{scope}[yshift=1cm, xshift=6cm]
+    \setcounter{xpos}{0}
+    \bin{\thexpos}{4}{1}
+    \binitem{\thexpos}{0}{2}{0}
+    \binitem{\thexpos}{2}{1}{1}
+
+    \stepcounter{xpos}
+    \bin{\thexpos}{4}{0}
+    \binitem{\thexpos}{0}{2}{2}
+    \binitem{\thexpos}{2}{1}{3}
+    \binitem{\thexpos}{3}{1}{4}
+
+    \stepcounter{xpos}
+    \bin{\thexpos}{4}{2}
+    \binitem{\thexpos}{0}{2}{5}
+
+    \stepcounter{xpos}
+    \bin{\thexpos}{4}{1}
+    \binitem{\thexpos}{0}{3}{6}
+
+    \stepcounter{xpos}
+    \bin{\thexpos}{4}{1}
+    \binitem{\thexpos}{0}{2}{7}
+    \binitem{\thexpos}{2}{1}{8}
+
+    \node[right] at (-.25,-1) {Assignment};
+  \end{scope}
+\end{tikzpicture}
+\end{document}
