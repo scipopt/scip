@@ -16,9 +16,9 @@
 /*
 #define PRINTNODECONS
 #define LAB_PRINT_BUFFER
+#define SCIP_DEBUG
 */
 #define SCIP_STATISTIC
-#define SCIP_DEBUG
 
 
 /**@file   branch_lookahead.c
@@ -432,6 +432,16 @@ typedef struct
    int                   ndomredcons;        /**< The number of binary constraints ignored, as they would be dom reds. */
    int                   ncutoffproofnodes;  /**< The number of nodes needed to proof all found cutoffs. */
    int                   ndomredproofnodes;  /**< The number of nodes needed to proof all found domreds. */
+   int                   stopafterfsb;       /**< If abbreviated, this is the number of times the rule was stopped after
+                                              *   scoring candidates by FSB, e.g. by adding constraints or domreds. */
+   int                   cutoffafterfsb;     /**< If abbreviated, this is the number of times the rule was stopped after
+                                              *   scoring candidates by FSB because of a found cutoff. */
+   int                   domredafterfsb;     /**< If abbreviated, this is the number of times the rule was stopped after
+                                              *   scoring candidates by FSB because of a found domain reduction. */
+   int*                  chosenfsbcand;      /**< If abbreviated, this is the number of times each candidate was finally
+                                              *   chosen by the following LAB */
+   int                   maxnbestcands;      /**< If abbreviated, this is the maximum number of candidates the method
+                                              *   getBestCandidates will return. */
    int                   recursiondepth;     /**< The recursiondepth of the LAB. Can be used to access the depth-dependent
                                               *   arrays contained in the statistics. */
 } STATISTICS;
@@ -458,6 +468,9 @@ void statisticsInit(
    statistics->ndomredcons = 0;
    statistics->ncutoffproofnodes = 0;
    statistics->ndomredproofnodes = 0;
+   statistics->stopafterfsb = 0;
+   statistics->cutoffafterfsb = 0;
+   statistics->domredafterfsb = 0;
 
    for( i = 0; i < 18; i++)
    {
@@ -476,6 +489,11 @@ void statisticsInit(
       statistics->nlpiterationsfsb[i] = 0;
       statistics->nsinglecutoffs[i] = 0;
    }
+
+   for( i = 0; i < statistics->maxnbestcands; i++ )
+   {
+      statistics->chosenfsbcand[i] = 0;
+   }
 }
 
 /** Allocates a static in the buffer and initiates it with the default values. */
@@ -483,7 +501,8 @@ static
 SCIP_RETCODE statisticsAllocate(
    SCIP*                 scip,               /**< SCIP data structure */
    STATISTICS**          statistics,         /**< pointer to the statistics to be allocated */
-   int                   recursiondepth      /**< the LAB recursion depth */
+   int                   recursiondepth,     /**< the LAB recursion depth */
+   int                   maxncands
    )
 {
 
@@ -503,8 +522,10 @@ SCIP_RETCODE statisticsAllocate(
    LABallocBufferArray(scip, &(*statistics)->npropdomred, recursiondepth, "STATISTICS->npropdomred");
    LABallocBufferArray(scip, &(*statistics)->nsinglecandidate, recursiondepth, "STATISTICS->nsinglecandidate");
    LABallocBufferArray(scip, &(*statistics)->noldbranchused, recursiondepth, "STATISTICS->noldbranchused");
+   LABallocBufferArray(scip, &(*statistics)->chosenfsbcand, maxncands, "STATISTICS->chosenfsbcand");
 
    (*statistics)->recursiondepth = recursiondepth;
+   (*statistics)->maxnbestcands = maxncands;
 
    statisticsInit(scip, *statistics);
    return SCIP_OKAY;
@@ -542,6 +563,7 @@ void mergeFSBStatistics(
       parentstatistics->npropdomred[i] += fsbstatistics->npropdomred[i];
       parentstatistics->nsinglecandidate[i] += fsbstatistics->nsinglecandidate[i];
       parentstatistics->noldbranchused[i] += fsbstatistics->noldbranchused[i];
+      parentstatistics->chosenfsbcand[i] += fsbstatistics->chosenfsbcand[i];
    }
 }
 
@@ -568,6 +590,16 @@ void statisticsPrint(
       {
          /* see type_result.h for the id <-> enum mapping */
          SCIPinfoMessage(scip, NULL, "Result <%s> was chosen <%i> times\n", getStatusString(i), statistics->nresults[i]);
+      }
+
+      SCIPinfoMessage(scip, NULL, "Branching was stopped after the scoring FSB %i times. That was:\n", statistics->stopafterfsb);
+      SCIPinfoMessage(scip, NULL, " %i times because of a cutoff.\n", statistics->cutoffafterfsb);
+      SCIPinfoMessage(scip, NULL, " %i times because of a domain reduction.\n", statistics->domredafterfsb);
+
+      for( i = 0; i < statistics->maxnbestcands; i++ )
+      {
+         SCIPinfoMessage(scip, NULL, "The %i. variable (w.r.t. the FSB score) was chosen as the final result %i times.\n",
+            i+1, statistics->chosenfsbcand[i]);
       }
 
       for( i = 0; i < statistics->recursiondepth; i++ )
@@ -611,6 +643,7 @@ void statisticsFree(
    assert(scip != NULL);
    assert(statistics != NULL);
 
+   LABfreeBufferArray(scip, &(*statistics)->chosenfsbcand, "STATISTICS->chosenfsbcand");
    LABfreeBufferArray(scip, &(*statistics)->noldbranchused, "STATISTICS->noldbranchused");
    LABfreeBufferArray(scip, &(*statistics)->nsinglecandidate, "STATISTICS->nsinglecandidate");
    LABfreeBufferArray(scip, &(*statistics)->npropdomred, "STATISTICS->npropdomred");
@@ -1388,6 +1421,7 @@ SCIP_RETCODE statusAllocate(
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DEBUG
 static
 void statusPrint(
    SCIP*                 scip,
@@ -1400,6 +1434,7 @@ void statusPrint(
       Bool(status->domredcutoff), Bool(status->addbinconst), Bool(status->maxnconsreached), Bool(status->depthtoosmall),
       Bool(status->propagationdomred));
 }
+#endif
 
 /** Frees the allocated buffer memory of the status. */
 static
@@ -1960,7 +1995,7 @@ SCIP_RETCODE applyDomainReductions(
          proposedlowerbound = domreds->lowerbounds[i];
 
          /* add the new bound */
-         SCIP_CALL( SCIPtightenVarLb(scip, var, proposedlowerbound, FALSE, &infeasible, &tightened) );
+         SCIP_CALL( SCIPtightenVarLb(scip, var, proposedlowerbound, TRUE, &infeasible, &tightened) );
 
          newlowerbound = SCIPvarGetLbLocal(var);
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Variable <%s>, old lower bound <%g>, proposed lower bound <%g>, new lower bound <%g>\n",
@@ -2007,7 +2042,7 @@ SCIP_RETCODE applyDomainReductions(
          proposedupperbound = domreds->upperbounds[i];
 
          /* add the new bound */
-         SCIP_CALL( SCIPtightenVarUb(scip, var, proposedupperbound, FALSE, &infeasible, &tightened) );
+         SCIP_CALL( SCIPtightenVarUb(scip, var, proposedupperbound, TRUE, &infeasible, &tightened) );
 
          newupperbound = SCIPvarGetUbLocal(var);
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Variable <%s>, old upper bound <%g>, proposed upper bound <%g>, new upper bound <%g>\n",
@@ -2643,7 +2678,7 @@ SCIP_RETCODE getFSBResult(
    config->forcebranching = inprobing || config->forcebranching;
 
 #ifdef SCIP_STATISTIC
-   SCIP_CALL( statisticsAllocate(scip, &statistics, parentconfig->recursiondepth) );
+   SCIP_CALL( statisticsAllocate(scip, &statistics, parentconfig->recursiondepth, parentconfig->maxncands) );
    SCIP_CALL( localStatisticsAllocate(scip, &localstats) );
 
    SCIP_CALL( selectVarStart(scip, config, NULL, status, decision, scorecontainer, candidates, lpobjval, statistics, localstats) );
@@ -2846,17 +2881,13 @@ SCIP_RETCODE sortCandidatesByScore(
    return SCIP_OKAY;
 }
 
+/* TODO: understand and use. Copied from branch_relpscost.c */
+#if 0
 static
-SCIP_Bool isCandidateReliable(
-   SCIP*                 scip,
-   CANDIDATE*            lpcand
+SCIP_Real getReliabilityThreshold(
+   SCIP*                 scip
    )
 {
-   /* TODO: start for reliability LAB */
-   SCIP_VAR* branchvar = lpcand->branchvar;
-   SCIP_Real size;
-   int downsize;
-   int upsize;
    SCIP_Real prio;
    SCIP_Real reliable;
    SCIP_Longint nodenum;
@@ -2881,12 +2912,32 @@ SCIP_Bool isCandidateReliable(
    prio = MAX(prio, (nlpiterationsquot - nsblpiterations)/(nsblpiterations + 1.0));
    reliable = (1.0-prio) * minreliable + prio * maxreliable;
 
+   return reliable;
+}
+#endif
+
+static
+SCIP_Bool isCandidateReliable(
+   SCIP*                 scip,
+   CANDIDATE*            lpcand
+   )
+{
+   /* TODO: start for reliability LAB */
+   SCIP_VAR* branchvar = lpcand->branchvar;
+   SCIP_Real size;
+   int downsize;
+   int upsize;
+   SCIP_Real reliable;
+
+   /* TODO: readd if fully understoodg */
+   reliable = 5; /*getReliabilityThreshold(scip);*/
+
    /* check, if the pseudo cost score of the variable is reliable */
    downsize = SCIPgetVarPseudocostCountCurrentRun(scip, branchvar, SCIP_BRANCHDIR_DOWNWARDS);
    upsize = SCIPgetVarPseudocostCountCurrentRun(scip, branchvar, SCIP_BRANCHDIR_UPWARDS);
    size = MIN(downsize, upsize);
 
-   return size >= 5;
+   return size >= reliable;
 }
 
 static
@@ -3007,8 +3058,6 @@ SCIP_RETCODE getBestCandidates(
 #endif
 
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Calculated the scores for the remaining candidates\n");
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Status after calculating the FSB score: ");
-         statusPrint(scip, SCIP_VERBLEVEL_HIGH, status);
 
          SCIP_CALL( candidateListFree(scip, &unscoredcandidates) );
       }
@@ -3069,6 +3118,19 @@ SCIP_RETCODE getBestCandidates(
       /* free the allocated resources */
       LABfreeBufferArray(scip, &permutation, "PERMUTATIONS");
    }
+
+#ifdef SCIP_DEBUG
+   if( isBranchFurther(status, config) )
+   {
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Strong Branching would branch on variable <%s>\n",
+         SCIPvarGetName(bestcandidates->candidates[0]->branchvar));
+   }
+   else
+   {
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Strong Branching would have stopped. Status after calculating the FSB score: ");
+      statusPrint(scip, SCIP_VERBLEVEL_HIGH, status);
+   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -4029,7 +4091,79 @@ SCIP_RETCODE selectVarStart(
          }
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Applied found data to the base node.\n");
       }
+
+#ifdef SCIP_STATISTIC
+      if( config->abbreviated )
+      {
+         if( candidates->ncandidates > 0 )
+         {
+            int i;
+
+            assert(candidates->ncandidates <= statistics->maxnbestcands);
+
+            /* find the "fsb-index" of the decision */
+            for( i = 0; i < candidates->ncandidates; i++ )
+            {
+               SCIP_VAR* var = candidates->candidates[i]->branchvar;
+
+               if( decision->var == var )
+               {
+                  statistics->chosenfsbcand[i] += 1;
+                  break;
+               }
+            }
+         }
+      }
+#endif
    }
+
+#ifdef SCIP_STATISTIC
+   else
+   {
+      statistics->stopafterfsb++;
+
+      if( status->cutoff )
+      {
+         statistics->cutoffafterfsb++;
+      }
+      else
+      {
+         statistics->domredafterfsb++;
+      }
+   }
+#endif
+
+#ifdef SCIP_DEBUG
+      if( config->abbreviated )
+      {
+         if( candidates->ncandidates > 0 )
+         {
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Strong Branching would branch on variable <%s>\n",
+               SCIPvarGetName(candidates->candidates[0]->branchvar));
+
+            if( isBranchFurther(status, config) && branchingDecisionIsValid(decision) )
+            {
+               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Lookahead Branching would branch on variable <%s>\n",
+                  SCIPvarGetName(decision->var));
+            }
+
+         }
+         else if( status->domred )
+         {
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Strong Branching has added domain reductions. LAB restarts.\n");
+         }
+         else if( status->cutoff )
+         {
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Strong Branching cutoff this node. LAB restarts.\n");
+         }
+         else
+         {
+            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Something unexpected happened. Status: ");
+            statusPrint(scip, SCIP_VERBLEVEL_FULL, status);
+            SCIPABORT();
+         }
+      }
+#endif
 
    SCIP_CALL( candidateListFree(scip, &candidates) );
 
@@ -4037,6 +4171,7 @@ SCIP_RETCODE selectVarStart(
    {
       SCIP_CALL( SCIPfreeSol(scip, &baselpsol) );
    }
+
 
    return SCIP_OKAY;
 }
@@ -4171,9 +4306,11 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
    int recursiondepth;
+   int maxncands;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    recursiondepth = branchruledata->config->recursiondepth;
+   maxncands = branchruledata->config->maxncands;
 
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata->statistics) );
    /* 17 current number of possible result values and the index is 1 based, so 17 + 1 as array size with unused 0 element */
@@ -4187,8 +4324,10 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
    SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->npropdomred, recursiondepth) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->nsinglecandidate, recursiondepth) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->noldbranchused, recursiondepth) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->statistics->chosenfsbcand, maxncands) );
 
    branchruledata->statistics->recursiondepth = recursiondepth;
+   branchruledata->statistics->maxnbestcands = maxncands;
 
    statisticsInit(scip, branchruledata->statistics);
 
@@ -4209,6 +4348,7 @@ SCIP_DECL_BRANCHEXIT(branchExitLookahead)
 
    statisticsPrint(scip, statistics);
 
+   SCIPfreeMemoryArray(scip, &statistics->chosenfsbcand);
    SCIPfreeMemoryArray(scip, &statistics->noldbranchused);
    SCIPfreeMemoryArray(scip, &statistics->nsinglecandidate);
    SCIPfreeMemoryArray(scip, &statistics->npropdomred);
@@ -4358,8 +4498,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       }
       else if( status->domred || status->propagationdomred )
       {
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "domred: %s\n", status->domred ? "true" : "false");
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "propagationdomred: %s\n", status->propagationdomred ? "true" : "false");
          *result = SCIP_REDUCEDDOM;
       }
       else if( status->lperror )
