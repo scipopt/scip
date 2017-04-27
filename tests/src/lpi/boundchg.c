@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cmain.c
+/**@file   boundchg.c
  * @brief  unit test for checking bound changes
  * @author Marc Pfetsch
  *
@@ -68,6 +68,24 @@ void teardown(void)
 TestSuite(boundchg, .init = setup, .fini = teardown);
 
 /** TESTS **/
+Test(boundchg, simple_bound_test)
+{
+   SCIP_Real lb = 1.0;
+   SCIP_Real ub = 2.0;
+   SCIP_Real lbnew;
+   SCIP_Real ubnew;
+   int ind = 0;
+
+   /* change bounds to some value */
+   SCIP_CALL( SCIPlpiChgBounds(lpi, 1, &ind, &lb, &ub) );
+
+   /* get bounds and compare */
+   SCIP_CALL( SCIPlpiGetBounds(lpi, 0, 0, &lbnew, &ubnew) );
+
+   cr_assert_float_eq(lb, lbnew, EPS, "Violation of lower bounds: %g != %g\n", lb, lbnew);
+   cr_assert_float_eq(ub, ubnew, EPS, "Violation of upper bounds: %g != %g\n", ub, ubnew);
+}
+
 Test(boundchg, change_bound_by_small_value)
 {
    SCIP_Real lb;
@@ -88,22 +106,19 @@ Test(boundchg, change_bound_by_small_value)
    cr_assert_float_eq(ub, ubnew, EPS, "Violation of upper bounds: %g != %g\n", ub, ubnew);
 }
 
-Test(boundchg, fix_to_infinity, .disabled = true)
+Test(boundchg, fix_to_infinity)
 {
+   SCIP_RETCODE retcode;
    SCIP_Real lb;
    SCIP_Real ub;
-   SCIP_Real lbnew;
-   SCIP_Real ubnew;
    int ind = 0;
 
-   /* fix variables to infinity */
+   /* try to fix variables to infinity */
    lb = SCIPlpiInfinity(lpi);
    ub = SCIPlpiInfinity(lpi);
-   SCIP_CALL( SCIPlpiChgBounds(lpi, 1, &ind, &lb, &ub) );
 
-   /* get bounds and compare */
-   SCIP_CALL( SCIPlpiGetBounds(lpi, 0, 0, &lbnew, &ubnew) );
+   /* calling should return an LPERROR */
+   retcode = SCIPlpiChgBounds(lpi, 1, &ind, &lb, &ub);
 
-   cr_assert(SCIPlpiIsInfinity(lpi, lbnew), "Could not set lower bound to infinity");
-   cr_assert(SCIPlpiIsInfinity(lpi, ubnew), "Could not set upper bound to infinity");
+   cr_assert(retcode == SCIP_LPERROR, "Fixing variables to infinity does not return an error.");
 }

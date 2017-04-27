@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -18,13 +18,6 @@
  * @brief  constraint handler for pseudoboolean constraints
  * @author Stefan Heinz
  * @author Michael Winkler
- *
- * The constraint handler deals with pseudo boolean constraints. These are constraints of the form
- * \f[
- * \mbox{lhs} \leq \sum_{k=0}^m c_k \cdot x_k  +  \sum_{i=0}^n c_i \cdot \prod_{j \in I_i} x_j \leq \mbox{rhs}
- * \f]
- * where all \f$x\f$ are binary and all \f$c\f$ are integer.
- *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -40,6 +33,32 @@ extern "C" {
 #endif
 
 #define ARTIFICIALVARNAMEPREFIX "andresultant_"
+
+
+
+/** creates the handler for pseudoboolean constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
+EXTERN
+SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Pseudoboolean Constraints
+ *
+ * @{
+ *
+ * The constraint handler deals with pseudo boolean constraints. These are constraints of the form
+ * \f[
+ * \mbox{lhs} \leq \sum_{k=0}^m c_k \cdot x_k  +  \sum_{i=0}^n c_i \cdot \prod_{j \in I_i} x_j \leq \mbox{rhs}
+ * \f]
+ * where all \f$x\f$ are binary and all \f$c\f$ are integer.
+ */
 
 /** solution status after solving LP */
 enum SCIP_LinearConsType
@@ -57,13 +76,6 @@ enum SCIP_LinearConsType
 };
 typedef enum SCIP_LinearConsType SCIP_LINEARCONSTYPE;
 
-
-/** creates the handler for pseudoboolean constraints and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** creates and captures a pseudoboolean constraint, with given linear and and-constraints */
 EXTERN
 SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
@@ -78,9 +90,9 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
    SCIP_VAR*             indvar,             /**< indicator variable if it's a soft constraint, or NULL */
    SCIP_Real             weight,             /**< weight of the soft constraint, if it is one */
    SCIP_Bool             issoftcons,         /**< is this a soft constraint */
-   SCIP_VAR*             intvar,             /**< a artificial variable which was added only for the objective function,
+   SCIP_VAR*             intvar,             /**< an artificial variable which was added only for the objective function,
                                               *   if this variable is not NULL this constraint (without this integer
-                                              *   variable) describes the objective funktion */
+                                              *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -135,7 +147,7 @@ SCIP_RETCODE SCIPcreateConsPseudoboolean(
    SCIP_VAR*             indvar,             /**< indicator variable if it's a soft constraint, or NULL */
    SCIP_Real             weight,             /**< weight of the soft constraint, if it is one */
    SCIP_Bool             issoftcons,         /**< is this a soft constraint */
-   SCIP_VAR*             intvar,             /**< a artificial variable which was added only for the objective function,
+   SCIP_VAR*             intvar,             /**< an artificial variable which was added only for the objective function,
                                               *   if this variable is not NULL this constraint (without this integer
                                               *   variable) describes the objective function */
    SCIP_Real             lhs,                /**< left hand side of constraint */
@@ -324,6 +336,10 @@ SCIP_Real SCIPgetRhsPseudoboolean(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons                /**< pseudoboolean constraint */
    );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -678,7 +678,7 @@ SCIP_DECL_BRANCHFREE(branchFreeStrongcoloring)
 
    /* free branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
-   SCIPfreeMemory(scip, &branchruledata);
+   SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
@@ -687,7 +687,7 @@ SCIP_DECL_BRANCHFREE(branchFreeStrongcoloring)
 /** initialization method of branching rule (called after problem was transformed) */
 static
 SCIP_DECL_BRANCHINIT(branchInitStrongcoloring)
-{  
+{
    SCIP_BRANCHRULEDATA* branchruledata;
 
    /* get branching rule data */
@@ -696,10 +696,10 @@ SCIP_DECL_BRANCHINIT(branchInitStrongcoloring)
 
    /* get memory for the arrays */
    branchruledata->length = (COLORprobGetNNodes(scip)*(COLORprobGetNNodes(scip)-1))/2;
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(branchruledata->samevalue), branchruledata->length) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(branchruledata->differvalue), branchruledata->length) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(branchruledata->combinedvalue), branchruledata->length) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(branchruledata->permutation), branchruledata->length) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(branchruledata->samevalue), branchruledata->length) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(branchruledata->differvalue), branchruledata->length) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(branchruledata->combinedvalue), branchruledata->length) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(branchruledata->permutation), branchruledata->length) );
 
    return SCIP_OKAY;
 }
@@ -707,7 +707,7 @@ SCIP_DECL_BRANCHINIT(branchInitStrongcoloring)
 /** deinitialization method of branching rule (called before transformed problem is freed) */
 static
 SCIP_DECL_BRANCHEXIT(branchExitStrongcoloring)
-{  
+{
    SCIP_BRANCHRULEDATA* branchruledata;
 
    /* get branching rule data */
@@ -715,11 +715,11 @@ SCIP_DECL_BRANCHEXIT(branchExitStrongcoloring)
    assert(branchruledata != NULL);
 
    /* free arrays */
-   SCIPfreeMemoryArray(scip, &(branchruledata->samevalue));
-   SCIPfreeMemoryArray(scip, &(branchruledata->differvalue));
-   SCIPfreeMemoryArray(scip, &(branchruledata->combinedvalue));
-   SCIPfreeMemoryArray(scip, &(branchruledata->permutation));
-   
+   SCIPfreeBlockMemoryArray(scip, &(branchruledata->samevalue), branchruledata->length);
+   SCIPfreeBlockMemoryArray(scip, &(branchruledata->differvalue), branchruledata->length);
+   SCIPfreeBlockMemoryArray(scip, &(branchruledata->combinedvalue), branchruledata->length);
+   SCIPfreeBlockMemoryArray(scip, &(branchruledata->permutation), branchruledata->length);
+
    return SCIP_OKAY;
 }
 
@@ -738,7 +738,7 @@ SCIP_RETCODE SCIPincludeBranchruleStrongcoloring(
    assert(scip != NULL);
 
    /* create branching rule data */
-   SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &branchruledata) );
 
    branchrule = NULL;
    /* include branching rule */

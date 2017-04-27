@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -101,6 +101,18 @@ void* SCIPlpiGetSolverPointer(
 {  /*lint --e{715}*/
    return (void*) NULL;
 }
+
+/** pass integrality information to LP solver */
+SCIP_RETCODE SCIPlpiSetIntegralityInformation(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   ncols,              /**< length of integrality array */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   )
+{
+   SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
+   return SCIP_LPERROR;
+}
+
 /**@} */
 
 
@@ -203,6 +215,23 @@ SCIP_RETCODE SCIPlpiAddCols(
 {  /*lint --e{715}*/
    assert( lpi != NULL );
    assert( lpi->ncols >= 0 );
+   assert(obj != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
+   assert(nnonz >= 0);
+   assert(ncols >= 0);
+
+#ifndef NDEBUG
+   {
+      /* perform check that no new rows are added - this is forbidden */
+      int j;
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < lpi->nrows );
+   }
+#endif
 
    lpi->ncols += ncols;
 
@@ -271,6 +300,15 @@ SCIP_RETCODE SCIPlpiAddRows(
 {  /*lint --e{715}*/
    assert( lpi != NULL );
    assert( lpi->nrows >= 0 );
+
+#ifndef NDEBUG
+   /* perform check that no new columns are added - this is forbidden */
+   {
+      int j;
+      for (j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < lpi->ncols );
+   }
+#endif
 
    lpi->nrows += nrows;
 
@@ -348,6 +386,24 @@ SCIP_RETCODE SCIPlpiChgBounds(
    const SCIP_Real*      ub                  /**< values for the new upper bounds */
    )
 {  /*lint --e{715}*/
+   int j;
+
+   assert(ncols == 0 || (ind != NULL && lb != NULL && ub != NULL));
+
+   for (j = 0; j < ncols; ++j)
+   {
+      if ( SCIPlpiIsInfinity(lpi, lb[j]) )
+      {
+         SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[j]);
+         return SCIP_LPERROR;
+      }
+      if ( SCIPlpiIsInfinity(lpi, -ub[j]) )
+      {
+         SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[j]);
+         return SCIP_LPERROR;
+      }
+   }
+
    return SCIP_OKAY;
 }
 
@@ -387,8 +443,8 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 SCIP_RETCODE SCIPlpiChgObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
-   int*                  ind,                /**< column indices to change objective value for */
-   SCIP_Real*            obj                 /**< new objective values for columns */
+   const int*            ind,                /**< column indices to change objective value for */
+   const SCIP_Real*      obj                 /**< new objective values for columns */
    )
 {  /*lint --e{715}*/
    return SCIP_OKAY;
@@ -1054,8 +1110,8 @@ SCIP_RETCODE SCIPlpiGetBase(
 /** sets current basis status for columns and rows */
 SCIP_RETCODE SCIPlpiSetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  cstat,              /**< array with column basis status */
-   int*                  rstat               /**< array with row basis status */
+   const int*            cstat,              /**< array with column basis status */
+   const int*            rstat               /**< array with row basis status */
    )
 {  /*lint --e{715}*/
    assert(cstat != NULL);
@@ -1186,7 +1242,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
    )
 {  /*lint --e{715}*/
    assert(blkmem != NULL);
@@ -1274,7 +1330,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
 {  /*lint --e{715}*/
    errorMessage();

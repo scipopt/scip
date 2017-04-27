@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -22,8 +22,11 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#define _USE_MATH_DEFINES   /* to get M_PI on Windows */  /*lint !750 */
+
 #include <stdlib.h>
 #include <assert.h>
+#include <math.h>
 
 #include "scip/def.h"
 #include "scip/intervalarith.h"
@@ -301,9 +304,13 @@ double nextafter(double x, double y)
    unsigned lx;
    unsigned ly;
 
+   /* cppcheck-suppress invalidPointerCast */
    hx = __HI(x);     /* high word of x */
+   /* cppcheck-suppress invalidPointerCast */
    lx = __LO(x);     /* low  word of x */
+   /* cppcheck-suppress invalidPointerCast */
    hy = __HI(y);     /* high word of y */
+   /* cppcheck-suppress invalidPointerCast */
    ly = __LO(y);     /* low  word of y */
    ix = hx&0x7fffffff;     /* |x| */
    iy = hy&0x7fffffff;     /* |y| */
@@ -320,7 +327,9 @@ double nextafter(double x, double y)
    if( (ix|lx) == 0 )
    {
       /* return +-minsubnormal */
+      /* cppcheck-suppress invalidPointerCast */
       __HI(x) = hy&0x80000000;
+      /* cppcheck-suppress invalidPointerCast */
       __LO(x) = 1;
       y = x * x;
       if ( y == x )
@@ -375,12 +384,16 @@ double nextafter(double x, double y)
       if( y != x )
       {
          /* raise underflow flag */
+         /* cppcheck-suppress invalidPointerCast */
          __HI(y) = hx;
+         /* cppcheck-suppress invalidPointerCast */
          __LO(y) = lx;
          return y;
       }
    }
+   /* cppcheck-suppress invalidPointerCast */
    __HI(x) = hx;
+   /* cppcheck-suppress invalidPointerCast */
    __LO(x) = lx;
    return x;
 }
@@ -2525,7 +2538,10 @@ void SCIPintervalLog(
    assert(resultant != NULL);
    assert(!SCIPintervalIsEmpty(infinity, operand));
 
-   if( operand.sup < 0.0 )
+   /* if operand.sup == 0.0, we could return -inf in resultant->sup, but that
+    * seems of little use and just creates problems somewhere else, e.g., #1230
+    */
+   if( operand.sup <= 0.0 )
    {
       SCIPintervalSetEmpty(resultant);
       return;
@@ -2533,12 +2549,7 @@ void SCIPintervalLog(
 
    if( operand.inf == operand.sup )  /*lint !e777 */
    {
-      if( operand.sup <= 0.0 )
-      {
-         resultant->inf = -infinity;
-         resultant->sup = -infinity;
-      }
-      else if( operand.sup == 1.0 )
+      if( operand.sup == 1.0 )
       {
          resultant->inf = 0.0;
          resultant->sup = 0.0;
@@ -2577,10 +2588,6 @@ void SCIPintervalLog(
    else if( operand.sup == 1.0 )
    {
       resultant->sup = 0.0;
-   }
-   else if( operand.sup == 0.0 )
-   {
-      resultant->sup = -infinity;
    }
    else
    {
@@ -2645,6 +2652,178 @@ void SCIPintervalAbs(
       resultant->inf = -operand.sup;
       resultant->sup = -operand.inf;
    }
+}
+
+/** stores sine value of operand in resultant
+ * NOTE: the operations are not applied rounding-safe here
+ */
+void SCIPintervalSin(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   )
+{
+   SCIP_Real intervallen;
+   SCIP_Real modinf;
+   SCIP_Real modsup;
+   SCIP_Real finf;
+   SCIP_Real fsup;
+   int a;
+   int b;
+   int nbetween;
+   /* first one is 1 so even indices are the maximum points */
+   static SCIP_Real extremepoints[] = {0.5*M_PI, 1.5*M_PI, 2.5*M_PI, 3.5*M_PI};
+
+   assert(resultant != NULL);
+   assert(!SCIPintervalIsEmpty(infinity, operand));
+
+   intervallen = operand.sup - operand.inf;
+   if( intervallen >= 2*M_PI )
+   {
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
+      return;
+   }
+
+   modinf = fmod(operand.inf, 2*M_PI);
+   if( modinf < 0.0 )
+      modinf += 2*M_PI;
+   modsup = modinf + intervallen;
+
+   for( b = 0; ; ++b )
+   {
+      if( modinf <= extremepoints[b] )
+      {
+         a = b;
+         break;
+      }
+   }
+   for( ; b < 4; ++b )
+   {
+      if( modsup <= extremepoints[b] )
+         break;
+   }
+
+   nbetween = b-a;
+
+   if( nbetween > 1 )
+   {
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
+      return;
+   }
+
+   finf = sin(operand.inf);
+   fsup = sin(operand.sup);
+
+   if( nbetween == 0 )
+   {
+      if( a & 1 ) /* next extremepoint is minimum -> decreasing -> finf < fsup */
+         SCIPintervalSetBounds(resultant, fsup, finf);
+      else
+         SCIPintervalSetBounds(resultant, finf, fsup);
+   }
+   else /* 1 extremepoint in between */
+   {
+       if( a & 1 ) /* extremepoint is minimum */
+          SCIPintervalSetBounds(resultant, -1.0, MAX(finf,fsup));
+       else
+          SCIPintervalSetBounds(resultant, MIN(finf,fsup), 1.0);
+   }
+
+   /* above operations did not take outward rounding into account,
+    * so extend the computed interval slightly to increase the chance that it will contain the complete sin(operand)
+    */
+   if( resultant->inf > -1.0 )
+      resultant->inf = MAX(-1.0, resultant->inf - 1e-10 * REALABS(resultant->inf));  /*lint !e666*/
+   if( resultant->sup <  1.0 )
+      resultant->sup = MIN( 1.0, resultant->sup + 1e-10 * REALABS(resultant->sup));  /*lint !e666*/
+
+   assert(resultant->inf <= resultant->sup);
+}
+
+/** stores cosine value of operand in resultant
+ * NOTE: the operations are not applied rounding-safe here
+ */
+void SCIPintervalCos(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   )
+{
+   SCIP_Real intervallen;
+   SCIP_Real modinf;
+   SCIP_Real modsup;
+   SCIP_Real finf;
+   SCIP_Real fsup;
+   int a;
+   int b;
+   int nbetween;
+   /* first one is -1 so even indices are the minimum points */
+   static SCIP_Real extremepoints[] = {M_PI, 2*M_PI, 3*M_PI};
+
+   assert(resultant != NULL);
+   assert(!SCIPintervalIsEmpty(infinity, operand));
+
+   intervallen = operand.sup - operand.inf;
+   if( intervallen >= 2*M_PI )
+   {
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
+      return;
+   }
+
+   modinf = fmod(operand.inf, 2*M_PI);
+   if( modinf < 0.0 )
+      modinf += 2*M_PI;
+   modsup = modinf + intervallen;
+
+   for( b = 0; ; ++b )
+   {
+      if( modinf <= extremepoints[b] )
+      {
+         a = b;
+         break;
+      }
+   }
+   for( ; b < 3; ++b )
+   {
+      if( modsup <= extremepoints[b] )
+         break;
+   }
+
+   nbetween = b-a;
+
+   if( nbetween > 1 )
+   {
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
+      return;
+   }
+
+   finf = cos(operand.inf);
+   fsup = cos(operand.sup);
+
+   if( nbetween == 0 )
+   {
+      if( a & 1 ) /* next extremepoint is maximum -> increasing -> finf < fsup */
+         SCIPintervalSetBounds(resultant, finf, fsup);
+      else
+         SCIPintervalSetBounds(resultant, fsup, finf);
+   }
+   else /* 1 extremepoint in between */
+   {
+       if( a & 1 ) /* extremepoint is maximum */
+          SCIPintervalSetBounds(resultant, MIN(finf,fsup), 1.0);
+       else
+          SCIPintervalSetBounds(resultant, -1.0, MAX(finf,fsup));
+   }
+
+   /* above operations did not take outward rounding into account,
+    * so extend the computed interval slightly to increase the chance that it will contain the complete cos(operand)
+    */
+   if( resultant->inf > -1.0 )
+      resultant->inf = MAX(-1.0, resultant->inf - 1e-10 * REALABS(resultant->inf));  /*lint !e666*/
+   if( resultant->sup <  1.0 )
+      resultant->sup = MIN( 1.0, resultant->sup + 1e-10 * REALABS(resultant->sup));  /*lint !e666*/
+
+   assert(resultant->inf <= resultant->sup);
 }
 
 /** stores sign of operand in resultant */

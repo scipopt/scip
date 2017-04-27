@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_disp.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for displaying runtime statistics
  * @author Tobias Achterberg
  */
@@ -34,6 +34,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup PublicDisplayMethods
+ *
+ * @{
+ */
 
 /** gets user data of display column */
 EXTERN
@@ -122,6 +127,8 @@ void SCIPdispTime(
    SCIP_Real             val,                /**< value in seconds to display */
    int                   width               /**< width to fit into */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

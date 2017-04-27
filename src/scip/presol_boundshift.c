@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -94,6 +94,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyBoundshift)
 
 
 /** destructor of presolver to free user data (called when SCIP is exiting) */
+/**! [SnippetPresolFreeBoundshift] */
 static
 SCIP_DECL_PRESOLFREE(presolFreeBoundshift)
 {  /*lint --e{715}*/   
@@ -103,11 +104,12 @@ SCIP_DECL_PRESOLFREE(presolFreeBoundshift)
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
 
-   SCIPfreeMemory(scip, &presoldata);
+   SCIPfreeBlockMemory(scip, &presoldata);
    SCIPpresolSetData(presol, NULL);
 
    return SCIP_OKAY;
 }
+/**! [SnippetPresolFreeBoundshift] */
 
 
 /** presolving execution method */
@@ -184,7 +186,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
          SCIP_Bool redundant;
          SCIP_Bool aggregated;
 
-         SCIPdebugMessage("convert range <%s>[%g,%g] to [%g,%g]\n", SCIPvarGetName(var), lb, ub, 0.0, (ub - lb) );
+         SCIPdebugMsg(scip, "convert range <%s>[%g,%g] to [%g,%g]\n", SCIPvarGetName(var), lb, ub, 0.0, (ub - lb) );
 
          /* create new variable */
          (void) SCIPsnprintf(newvarname, SCIP_MAXSTRLEN, "%s_shift", SCIPvarGetName(var));
@@ -212,7 +214,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
          assert(!infeasible);
          assert(redundant);
          assert(aggregated);
-         SCIPdebugMessage("var <%s> with bounds [%f,%f] has obj %f\n",
+         SCIPdebugMsg(scip, "var <%s> with bounds [%f,%f] has obj %f\n",
             SCIPvarGetName(newvar),SCIPvarGetLbGlobal(newvar),SCIPvarGetUbGlobal(newvar),SCIPvarGetObj(newvar));
 
          /* release variable */
@@ -244,7 +246,7 @@ SCIP_RETCODE SCIPincludePresolBoundshift(
    SCIP_PRESOL* presolptr;
 
    /* create boundshift presolver data */
-   SCIP_CALL( SCIPallocMemory(scip, &presoldata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &presoldata) );
    initPresoldata(presoldata);
 
    /* include presolver */

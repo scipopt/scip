@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -430,7 +430,7 @@ SCIP_RETCODE conshdlrdataCreate(
    assert(eventhdlrbinvars != NULL);
    assert(eventhdlrintvars != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, conshdlrdata) );
 
    (*conshdlrdata)->eventhdlrbinvars = eventhdlrbinvars;
    (*conshdlrdata)->eventhdlrintvars = eventhdlrintvars;
@@ -449,7 +449,7 @@ SCIP_RETCODE conshdlrdataFree(
    assert(conshdlrdata != NULL);
    assert(*conshdlrdata != NULL);
 
-   SCIPfreeMemory(scip, conshdlrdata);
+   SCIPfreeBlockMemory(scip, conshdlrdata);
 
    return SCIP_OKAY;
 }
@@ -1597,7 +1597,7 @@ SCIP_RETCODE solveSubproblem(
 
          /**@todo try to shrink the initial explanation */
 
-         SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+         SCIP_CALL( SCIPinitConflictAnalysis(scip, SCIP_CONFTYPE_PROPAGATION, FALSE) );
 
          for( v = 0; v < nvars; ++v )
          {
@@ -3050,6 +3050,8 @@ SCIP_DECL_CONSINITPRE(consInitpreOptcumulative)
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #define consInitsolOptcumulative NULL
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+#define consEnforelaxOptcomulative NULL
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 static
@@ -4010,7 +4012,7 @@ SCIP_RETCODE SCIPincludeConshdlrOptcumulative(
          consFreeOptcumulative, consInitOptcumulative, consExitOptcumulative,
          consInitpreOptcumulative, consExitpreOptcumulative, consInitsolOptcumulative, consExitsolOptcumulative,
          consDeleteOptcumulative, consTransOptcumulative, consInitlpOptcumulative,
-         consSepalpOptcumulative, consSepasolOptcumulative, consEnfolpOptcumulative, consEnfopsOptcumulative, consCheckOptcumulative,
+         consSepalpOptcumulative, consSepasolOptcumulative, consEnfolpOptcumulative, consEnforelaxOptcomulative, consEnfopsOptcumulative, consCheckOptcumulative,
          consPropOptcumulative, consPresolOptcumulative, consRespropOptcumulative, consLockOptcumulative,
          consActiveOptcumulative, consDeactiveOptcumulative,
          consEnableOptcumulative, consDisableOptcumulative,

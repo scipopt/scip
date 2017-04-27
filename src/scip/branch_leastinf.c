@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -237,7 +237,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLeastinf)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execlp method of leastinf branching\n");
+   SCIPdebugMsg(scip, "Execlp method of leastinf branching\n");
 
    /* get branching candidates */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, NULL, &nlpcands, NULL) );
@@ -267,7 +267,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLeastinf)
    }
    assert(bestcand >= 0);
 
-   SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s> (frac=%g, obj=%g, factor=%g, score=%g)\n",
+   SCIPdebugMsg(scip, " -> %d candidates, selected candidate %d: variable <%s> (frac=%g, obj=%g, factor=%g, score=%g)\n",
       nlpcands, bestcand, SCIPvarGetName(lpcands[bestcand]), lpcandsfrac[bestcand], bestobj,
       SCIPvarGetBranchFactor(lpcands[bestcand]), bestscore);
 
@@ -302,7 +302,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextLeastinf)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execext method of leastinf branching\n");
+   SCIPdebugMsg(scip, "Execext method of leastinf branching\n");
 
    /* get branching candidates */
    SCIP_CALL( SCIPgetExternBranchCands(scip, &externcands, &externcandssol, &externcandsscore, NULL, &nexterncands, NULL, NULL, NULL) );
@@ -327,7 +327,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextLeastinf)
 
    brpoint = SCIPgetBranchingPoint(scip, bestcand, bestsol);
 
-   SCIPdebugMessage(" -> %d candidates, selected variable <%s> (infeas=%g, obj=%g, factor=%g, score=%g), branching point=%g\n",
+   SCIPdebugMsg(scip, " -> %d candidates, selected variable <%s> (infeas=%g, obj=%g, factor=%g, score=%g), branching point=%g\n",
       nexterncands, SCIPvarGetName(bestcand), bestsol, bestobj,
       SCIPvarGetBranchFactor(bestcand), bestscore, brpoint);
 

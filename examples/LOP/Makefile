@@ -3,10 +3,10 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
+#*  SCIP is distributed under the terms of the ZIB Academic License.         *
 #*                                                                           *
 #*  You should have received a copy of the ZIB Academic License              *
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
@@ -35,7 +35,7 @@ include $(SCIPDIR)/make/make.project
 #-----------------------------------------------------------------------------
 
 MAINNAME	=	lop
-MAINOBJ		=	cmain.o probdata_lop.o cons_linearordering.o
+MAINOBJ		=	cmain.o cons_lop.o reader_lop.o
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))
 MAINDEP		=	$(SRCDIR)/depend.cmain.$(OPT)
 
@@ -69,14 +69,6 @@ lint:		$(MAINSRC)
 scip:
 		@$(MAKE) -C $(SCIPDIR) libs $^
 
-.PHONY: doc
-doc:
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scip.css);
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
-		cd doc; $(DOXY) $(MAINNAME).dxy
-
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
 		cd $(dir $@) && ln -s $(notdir $(MAINFILE)) $(notdir $@)
@@ -98,6 +90,7 @@ endif
 
 .PHONY: test
 test:           $(MAINFILE)
+		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/evalcheck_cluster.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
@@ -107,7 +100,8 @@ test:           $(MAINFILE)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/configuration_tmpfile_setup_scip.sh);
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(OPTCOMMAND);
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
+			$(CONTINUE) $(LOCK) "example" $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) $(SEEDS);
 
 .PHONY: tags
 tags:
@@ -125,20 +119,7 @@ depend:		$(SCIPDIR)
 # main target
 $(MAINFILE):	$(BINDIR) $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(MAINOBJFILES)
 		@echo "-> linking $@"
-ifeq ($(VERBOSE),true)
-		$(LINKCXX) $(MAINOBJFILES) \
-		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-                $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$@
-else
-		@$(LINKCXX) $(MAINOBJFILES) \
-		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
-                $(OFLAGS) $(LPSLDFLAGS) \
-		$(LDFLAGS) $(LINKCXX_o)$@
-endif
-
+		$(LINKCXX) $(MAINOBJFILES) $(LINKCXXSCIPALL) $(LDFLAGS) $(LINKCXX_o)$@
 
 # target for generating random instances
 genRandomLOPInstance: $(BINDIR)/genRandomLOPInstance

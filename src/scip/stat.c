@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,6 +37,7 @@
 #include "scip/mem.h"
 #include "scip/var.h"
 #include "scip/history.h"
+#include "scip/concsolver.h"
 
 
 
@@ -67,6 +68,7 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->strongbranchtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->conflictlptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->lpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->relaxsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->pseudosoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->sbsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->nodeactivationtime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -93,7 +95,10 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->inrestart = FALSE;
    (*stat)->collectvarhistory = TRUE;
    (*stat)->performpresol = FALSE;
+   (*stat)->branchedunbdvar = FALSE;
+   (*stat)->disableenforelaxmsg = FALSE;
    (*stat)->subscipdepth = 0;
+   (*stat)->detertimecnt = 0.0;
    (*stat)->nreoptruns = 0;
 
    SCIPstatReset(*stat, set, transprob, origprob);
@@ -122,6 +127,7 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->strongbranchtime);
    SCIPclockFree(&(*stat)->conflictlptime);
    SCIPclockFree(&(*stat)->lpsoltime);
+   SCIPclockFree(&(*stat)->relaxsoltime);
    SCIPclockFree(&(*stat)->pseudosoltime);
    SCIPclockFree(&(*stat)->sbsoltime);
    SCIPclockFree(&(*stat)->nodeactivationtime);
@@ -196,6 +202,7 @@ void SCIPstatReset(
    SCIPclockReset(stat->strongbranchtime);
    SCIPclockReset(stat->conflictlptime);
    SCIPclockReset(stat->lpsoltime);
+   SCIPclockReset(stat->relaxsoltime);
    SCIPclockReset(stat->pseudosoltime);
    SCIPclockReset(stat->sbsoltime);
    SCIPclockReset(stat->nodeactivationtime);
@@ -228,11 +235,14 @@ void SCIPstatReset(
    stat->nconflictlpiterations = 0;
    stat->ntotalnodes = 0;
    stat->ntotalinternalnodes = 0;
+   stat->ntotalnodesmerged = 0;
    stat->ncreatednodes = 0;
    stat->nlpsolsfound = 0;
+   stat->nrelaxsolsfound = 0;
    stat->npssolsfound = 0;
    stat->nsbsolsfound = 0;
    stat->nlpbestsolsfound = 0;
+   stat->nrelaxbestsolsfound = 0;
    stat->npsbestsolsfound = 0;
    stat->nsbbestsolsfound = 0;
    stat->nexternalsolsfound = 0;
@@ -251,7 +261,10 @@ void SCIPstatReset(
    stat->nvaridx = stat->marked_nvaridx;
    stat->ncolidx = stat->marked_ncolidx;
    stat->nrowidx = stat->marked_nrowidx;
+   stat->nnz = 0;
+   stat->avgnnz = 0;
    stat->lpcount = 0;
+   stat->relaxcount = 0;
    stat->nlps = 0;
    stat->nrootlps = 0;
    stat->nprimallps = 0;
@@ -280,6 +293,7 @@ void SCIPstatReset(
    stat->memsavemode = FALSE;
    stat->nnodesbeforefirst = -1;
    stat->ninitconssadded = 0;
+   stat->externmemestim = 0;
    stat->nrunsbeforefirst = -1;
    stat->firstprimalheur = NULL;
    stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
@@ -298,6 +312,7 @@ void SCIPstatReset(
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
+   stat->branchedunbdvar = FALSE;
 
    stat->ndivesetlpiterations = 0;
    stat->ndivesetcalls = 0;
@@ -502,6 +517,7 @@ void SCIPstatResetCurrentRun(
    stat->nobjleaves = 0;
    stat->ninfeasleaves = 0;
    stat->nfeasleaves = 0;
+   stat->branchedunbdvar = FALSE;
 
    stat->nearlybacktracks = 0;
    stat->nnodesaboverefbound = 0;
@@ -584,6 +600,14 @@ void SCIPstatUpdateMemsaveMode(
       stat->memsavemode = FALSE;
 }
 
+/** returns the estimated number of bytes used by extern software, e.g., the LP solver */
+SCIP_Longint SCIPstatGetMemExternEstim(
+   SCIP_STAT*            stat                /**< dynamic SCIP statistics */
+   )
+{
+   return stat->externmemestim;
+}
+
 /** enables or disables all statistic clocks of \p stat concerning LP execution time, strong branching time, etc.
  *
  *  @note: The (pre-)solving time clocks which are relevant for the output during (pre-)solving
@@ -606,6 +630,7 @@ void SCIPstatEnableOrDisableStatClocks(
    SCIPclockEnableOrDisable(stat->strongbranchtime, enable);
    SCIPclockEnableOrDisable(stat->conflictlptime, enable);
    SCIPclockEnableOrDisable(stat->lpsoltime, enable);
+   SCIPclockEnableOrDisable(stat->relaxsoltime, enable);
    SCIPclockEnableOrDisable(stat->pseudosoltime, enable);
    SCIPclockEnableOrDisable(stat->sbsoltime, enable);
    SCIPclockEnableOrDisable(stat->nodeactivationtime, enable);
@@ -641,7 +666,7 @@ void SCIPstatComputeRootLPBestEstimate(
       assert(varminpseudoscore >= 0);
       stat->rootlpbestestimate += varminpseudoscore;
 
-      SCIPdebugMessage("Root LP Estimate initialization: <%s> + %15.9f\n", SCIPvarGetName(vars[v]), varminpseudoscore);
+      SCIPstatDebugMsg(stat, "Root LP Estimate initialization: <%s> + %15.9f\n", SCIPvarGetName(vars[v]), varminpseudoscore);
    }
 }
 
@@ -675,7 +700,46 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
    assert(varminpseudoscore >= 0.0);
    stat->rootlpbestestimate += varminpseudoscore;
 
-   SCIPdebugMessage("Root LP estimate update: <%s> - %15.9f + %15.9f\n", SCIPvarGetName(var), oldrootpscostscore, varminpseudoscore);
+   SCIPstatDebugMsg(stat, "Root LP estimate update: <%s> - %15.9f + %15.9f\n", SCIPvarGetName(var), oldrootpscostscore, varminpseudoscore);
 
    return SCIP_OKAY;
+}
+
+/** prints a debug message */
+void SCIPstatPrintDebugMessage(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   const char*           sourcefile,         /**< name of the source file that called the function */
+   int                   sourceline,         /**< line in the source file where the function was called */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{
+   va_list ap;
+
+   assert( sourcefile != NULL );
+   assert( stat != NULL );
+
+   if ( stat->subscipdepth > 0 )
+      printf("%d: [%s:%d] debug: ", stat->subscipdepth, sourcefile, sourceline);
+   else
+      printf("[%s:%d] debug: ", sourcefile, sourceline);
+
+   va_start(ap, formatstr); /*lint !e838*/
+   printf(formatstr, ap);
+   va_end(ap);
+}
+
+/** prints a debug message without precode */
+EXTERN
+void SCIPstatDebugMessagePrint(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   const char*           formatstr,          /**< format string like in printf() function */
+   ...                                       /**< format arguments line in printf() function */
+   )
+{  /*lint --e{715}*/
+   va_list ap;
+
+   va_start(ap, formatstr); /*lint !e838*/
+   printf(formatstr, ap);
+   va_end(ap);
 }

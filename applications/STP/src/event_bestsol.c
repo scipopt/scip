@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -82,7 +82,7 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
    SCIP_Real solvalue;
    SCIP_Real factor = 1.0;
 
-   if( SCIPprobdataGetType(scip) == STP_MAX_NODE_WEIGHT )
+   if( SCIPprobdataGetType(scip) == STP_MWCSP )
       factor = -1.0;
 
    assert(eventhdlr != NULL);
@@ -103,7 +103,7 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
 
 #if 0
    /* perform bound-based reduction tests to fix variables */
-   if( SCIPprobdataGetType(scip) == STP_HOP_CONS )
+   if( SCIPprobdataGetType(scip) == STP_DHCSTP )
    {
       SCIP_PROBDATA* probdata;
       GRAPH* g;
@@ -128,7 +128,7 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
       /* get graph */
       g = SCIPprobdataGetGraph(probdata);
       assert(g != NULL);
-      assert(g->stp_type == STP_HOP_CONS);
+      assert(g->stp_type == STP_DHCSTP);
 
       offset = SCIPprobdataGetOffset(scip);
       primalobj = SCIPgetPrimalbound(scip);

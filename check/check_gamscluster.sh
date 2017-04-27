@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -380,8 +380,12 @@ do
 
     case $QUEUETYPE in
       srun )
+        # slurm prefers to have a memory limit set
+        # we add 10% to the hard memory limit and additional 100MB to the memory limit
+        HARDMEMLIMIT=`expr \`expr $MEMLIMIT + 100\` + \`expr $MEMLIMIT / 10\``
+
         # hard timelimit could be set via --time=0:${HARDTIMELIMIT}
-        sbatchret=`sbatch --job-name=$SHORTFILENAME -p $CLUSTERQUEUE -A $ACCOUNT ${EXCLUSIVE} ${NICE} --output=/dev/null rungamscluster.sh`
+        sbatchret=`sbatch --job-name=$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT ${EXCLUSIVE} ${NICE} --output=/dev/null rungamscluster.sh`
         echo $sbatchret
         FINISHDEPEND=$FINISHDEPEND:`echo $sbatchret | cut -d " " -f 4`
         ;;
@@ -404,7 +408,7 @@ done
 #TODO call finishgamscluster also in qsub runs
 case $QUEUETYPE in
   srun )
-    sbatch --job-name=GAMSFINISH -p $CLUSTERQUEUE -A $ACCOUNT --output=/dev/null -d $FINISHDEPEND finishgamscluster.sh
+    sbatch --job-name=GAMSFINISH --mem=1000 -p $CLUSTERQUEUE -A $ACCOUNT --output=/dev/null -d $FINISHDEPEND finishgamscluster.sh
     echo
     squeue -p $CLUSTERQUEUE
     ;;

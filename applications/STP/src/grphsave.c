@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -57,39 +57,39 @@ void SCIPwriteStp(
    fprintf(fp, "Name ");
    switch( g->stp_type )
    {
-      case STP_UNDIRECTED:
+      case STP_SPG:
          fprintf(fp, "\"%s\"\n", "SPG");
          break;
 
-      case STP_PRIZE_COLLECTING:
+      case STP_PCSPG:
          fprintf(fp, "\"%s\"\n", "UNKNOWN");
          break;
 
-      case STP_ROOTED_PRIZE_COLLECTING:
+      case STP_RPCSPG:
          fprintf(fp, "\"%s\"\n", "RPCST");
          break;
 
-      case STP_NODE_WEIGHTS:
+      case STP_NWSPG:
          fprintf(fp, "\"%s\"\n", "NWSPG");
          break;
 
-      case STP_DEG_CONS:
+      case STP_DCSTP:
          fprintf(fp, "\"%s\"\n", "UNKNOWN");
          break;
 
-      case STP_GRID:
+      case STP_RSMT:
          fprintf(fp, "\"%s\"\n", "RSMT");
          break;
 
-      case STP_OBSTACLES_GRID:
+      case STP_OARSMT:
          fprintf(fp, "\"%s\"\n", "OARSMT");
          break;
 
-      case STP_MAX_NODE_WEIGHT:
+      case STP_MWCSP:
          fprintf(fp, "\"%s\"\n", "UNKNOWN");
          break;
 
-      case STP_HOP_CONS:
+      case STP_DHCSTP:
          fprintf(fp, "\"%s\"\n", "UNKNOWN");
          break;
 
@@ -116,16 +116,16 @@ void SCIPwriteStp(
       {
          assert(g->oeat[i] != EAT_FREE);
 
-         if( g->stp_type == STP_UNDIRECTED || g->stp_type == STP_DEG_CONS || g->stp_type == STP_GRID
-           || g->stp_type == STP_OBSTACLES_GRID )
+         if( g->stp_type == STP_SPG || g->stp_type == STP_DCSTP || g->stp_type == STP_RSMT
+           || g->stp_type == STP_OARSMT )
             fprintf(fp, "E ");
          else
             fprintf(fp, "AA ");
 
          fprintf(fp, "%d %d ", g->tail[i] + 1, g->head[i] + 1);
 
-         if( g->stp_type == STP_UNDIRECTED || g->stp_type == STP_DEG_CONS || g->stp_type == STP_GRID
-           || g->stp_type == STP_OBSTACLES_GRID )
+         if( g->stp_type == STP_SPG || g->stp_type == STP_DCSTP || g->stp_type == STP_RSMT
+           || g->stp_type == STP_OARSMT )
             fprintf(fp, "%f\n", g->cost[i]);
          else
             fprintf(fp, "%f %f\n", g->cost[i], g->cost[Edge_anti(i)]);
@@ -135,12 +135,12 @@ void SCIPwriteStp(
    fprintf(fp, "Section Terminals\n");
    fprintf(fp, "Terminals %d\n", g->terms);
 
-   if( g->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+   if( g->stp_type == STP_RPCSPG )
       fprintf(fp, "Root %d\n", g->source[0] + 1);
 
    for(i = 0; i < g->knots; i++)
    {
-      if (Is_term(g->term[i]) && (g->stp_type != STP_ROOTED_PRIZE_COLLECTING || i != g->source[0]))
+      if (Is_term(g->term[i]) && (g->stp_type != STP_RPCSPG || i != g->source[0]))
          fprintf(fp, "T %d\n", i + 1);
    }
    fprintf(fp, "End\n\n");
@@ -156,7 +156,7 @@ void SCIPwriteStp(
    }
 */
    /* Hop-Constrained STP */
-   if( g->stp_type == STP_HOP_CONS )
+   if( g->stp_type == STP_DHCSTP )
    {
       fprintf(fp, "Section Hop Constraint\n");
       fprintf(fp, "limit %d\n", g->hoplimit);
@@ -171,14 +171,14 @@ void SCIPwriteStp(
 
    /* Degree-Constrained STP */
    /* It is just enough to know that the degree constraint is required */
-   if( g->stp_type == STP_DEG_CONS )
+   if( g->stp_type == STP_DCSTP )
    {
       fprintf(fp, "Section Degree Constraint\n");
       fprintf(fp, "End\n\n");
    }
 
 	 /* PRIZECOLLECTING STP */
-   if( g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_MAX_NODE_WEIGHT )
+   if( g->stp_type == STP_PCSPG || g->stp_type == STP_MWCSP )
    {
       fprintf(fp, "Section Prize Collecting Constraint\n");
 

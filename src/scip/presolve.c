@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -121,9 +121,17 @@ void collectNonBinaryVBoundData(
             countnonzeros[*ncountnonzeros] = varidx;
             ++(*ncountnonzeros);
             newbounds[varidx] = bounds[pos];
+            lastbounds[*nimplidx] = SCIP_INVALID;
          }
          else if( newbounds[varidx] > bounds[pos] )
+         {
+            lastbounds[*nimplidx] = newbounds[varidx];
             newbounds[varidx] = bounds[pos];
+         }
+         else
+         {
+            lastbounds[*nimplidx] = SCIP_INVALID;
+         }
 
          *foundnonbin = MIN(*foundnonbin, varidx);
 
@@ -170,7 +178,7 @@ void collectNonBinaryVBoundData(
                       */
                      if( issetvar[idx] > 0 )
                      {
-                        SCIPdebugMessage("set variable <%s> %s %g implies other set variable <%s> %s %g\n",
+                        SCIPdebugMsg(scip, "set variable <%s> %s %g implies other set variable <%s> %s %g\n",
                            SCIPvarGetName(var), ">=", bounds[pos], SCIPvarGetName(implvars[w]), "<=", 0.0);
 
                         issetvar[varidx] = -1;
@@ -207,7 +215,7 @@ void collectNonBinaryVBoundData(
                    */
                   if( issetvar[idx] > 0 && newub <= bounds[issetvar[idx] - 1] )
                   {
-                     SCIPdebugMessage("set variable <%s> %s %g implies other set variable <%s> %s %g (%g)\n",
+                     SCIPdebugMsg(scip, "set variable <%s> %s %g implies other set variable <%s> %s %g (%g)\n",
                         SCIPvarGetName(var), ">=", bounds[pos], SCIPvarGetName(implvars[w]), "<=", newub, bounds[issetvar[idx] - 1] );
 
                      issetvar[varidx] = -1;
@@ -262,7 +270,7 @@ void collectNonBinaryVBoundData(
                       */
                      if( issetvar[idx] > 0 )
                      {
-                        SCIPdebugMessage("set variable <%s> %s %g implies other set variable <%s> %s %g\n",
+                        SCIPdebugMsg(scip, "set variable <%s> %s %g implies other set variable <%s> %s %g\n",
                            SCIPvarGetName(var), ">=", bounds[pos], SCIPvarGetName(implvars[w]), ">=", 1.0);
 
                         issetvar[varidx] = -1;
@@ -299,7 +307,7 @@ void collectNonBinaryVBoundData(
                    */
                   if( issetvar[idx] > 0 && newlb >= bounds[issetvar[idx] - 1] )
                   {
-                     SCIPdebugMessage("set variable <%s> %s %g implies other set variable <%s> %s %g (%g)\n",
+                     SCIPdebugMsg(scip, "set variable <%s> %s %g implies other set variable <%s> %s %g (%g)\n",
                         SCIPvarGetName(var), ">=", bounds[pos], SCIPvarGetName(implvars[w]), ">=", newlb, bounds[issetvar[idx] - 1] );
 
                      issetvar[varidx] = -1;
@@ -351,9 +359,17 @@ void collectNonBinaryVBoundData(
             countnonzeros[*ncountnonzeros] = varidx;
             ++(*ncountnonzeros);
             newbounds[varidx] = bounds[pos];
+            lastbounds[*nimplidx] = SCIP_INVALID;
          }
          else if( newbounds[varidx] < bounds[pos] )
+         {
+            lastbounds[*nimplidx] = newbounds[varidx];
             newbounds[varidx] = bounds[pos];
+         }
+         else
+         {
+            lastbounds[*nimplidx] = SCIP_INVALID;
+         }
 
          *foundnonbin = MIN(*foundnonbin, varidx);
 
@@ -397,7 +413,7 @@ void collectNonBinaryVBoundData(
                   {
                      if( issetvar[idx] > 0 )
                      {
-                        SCIPdebugMessage("set variable <%s> %s %g implies other set variable <%s> %s %g\n",
+                        SCIPdebugMsg(scip, "set variable <%s> %s %g implies other set variable <%s> %s %g\n",
                            SCIPvarGetName(var), "<=", bounds[pos], SCIPvarGetName(implvars[w]), ">=", 1.0);
 
                         issetvar[varidx] = -1;
@@ -431,7 +447,7 @@ void collectNonBinaryVBoundData(
 
                   if( issetvar[idx] > 0 && newlb >= bounds[issetvar[idx] - 1] )
                   {
-                     SCIPdebugMessage("set variable <%s> %s %g implies other set variable <%s> %s %g (%g)\n",
+                     SCIPdebugMsg(scip, "set variable <%s> %s %g implies other set variable <%s> %s %g (%g)\n",
                         SCIPvarGetName(var), "<=", bounds[pos], SCIPvarGetName(implvars[w]), ">=",  newlb, bounds[issetvar[idx] - 1]);
 
                      issetvar[varidx] = -1;
@@ -485,7 +501,7 @@ void collectNonBinaryVBoundData(
                   {
                      if( issetvar[idx] > 0 )
                      {
-                        SCIPdebugMessage("set variable <%s> %s %g implies other set variable <%s> %s %g\n",
+                        SCIPdebugMsg(scip, "set variable <%s> %s %g implies other set variable <%s> %s %g\n",
                            SCIPvarGetName(var), "<=", bounds[pos], SCIPvarGetName(implvars[w]), "<=", 0.0);
 
                         issetvar[varidx] = -1;
@@ -519,7 +535,7 @@ void collectNonBinaryVBoundData(
 
                   if( issetvar[idx] > 0 && newub <= bounds[issetvar[idx] - 1] )
                   {
-                     SCIPdebugMessage("set variable <%s> %s %g implies other set variable <%s> %s %g (%g)\n",
+                     SCIPdebugMsg(scip, "set variable <%s> %s %g implies other set variable <%s> %s %g (%g)\n",
                         SCIPvarGetName(var), "<=", bounds[pos], SCIPvarGetName(implvars[w]), "<=",  newub, bounds[issetvar[idx] - 1]);
 
                      issetvar[varidx] = -1;
@@ -661,7 +677,7 @@ void collectNonBinaryImplicationData(
              */
             if( issetvar[idx] > 0 && bounds[issetvar[idx] - 1] >= implbounds[w] )
             {
-               SCIPdebugMessage("set variable <%s> %s %g implies other set variable <%s> %s %g (%g)\n",
+               SCIPdebugMsg(scip, "set variable <%s> %s %g implies other set variable <%s> %s %g (%g)\n",
                   SCIPvarGetName(var), boundtypes[pos] ? "<=" : ">=", bounds[pos], SCIPvarGetName(implvars[w]),
                   "<=", implbounds[w], bounds[issetvar[idx] - 1]);
 
@@ -726,7 +742,7 @@ void collectNonBinaryImplicationData(
              */
             if( issetvar[idx] > 0 && bounds[issetvar[idx] - 1] <= implbounds[w] )
             {
-               SCIPdebugMessage("set variable <%s> %s %g implies other set variable <%s> %s %g (%g)\n",
+               SCIPdebugMsg(scip, "set variable <%s> %s %g implies other set variable <%s> %s %g (%g)\n",
                   SCIPvarGetName(var), boundtypes[pos] ? "<=" : ">=", bounds[pos], SCIPvarGetName(implvars[w]),
                   ">=", implbounds[w], bounds[issetvar[idx] - 1]);
 
@@ -1122,7 +1138,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
       {
          SCIP_VAR** probvars;
 
-         SCIPdebugMessage("marked variable <%s> as redundant variable in variable set\n", SCIPvarGetName(var));
+         SCIPdebugMsg(scip, "marked variable <%s> as redundant variable in variable set\n", SCIPvarGetName(var));
 
          probvars = SCIPprobGetVars(scip->transprob);
          assert(probvars != NULL);
@@ -1218,7 +1234,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
          /* if set variable was marked to be redundant remove it */
          if( issetvar[varidx] < 0 )
          {
-            SCIPdebugMessage("mark redundant variable <%s> to be removed from variable set\n", SCIPvarGetName(var));
+            SCIPdebugMsg(scip, "mark redundant variable <%s> to be removed from variable set\n", SCIPvarGetName(var));
 
             redundants[v] = TRUE;
 #ifndef NDEBUG
@@ -1235,7 +1251,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
       SCIP_VAR** probvars;
       SCIP_VAR* probvar;
 
-      SCIPdebugMessage("variable set led to global reductions (in %s)\n", SCIPprobGetName(scip->transprob));
+      SCIPdebugMsg(scip, "variable set led to global reductions (in %s)\n", SCIPprobGetName(scip->transprob));
 
       probvars = SCIPprobGetVars(scip->transprob);
       assert(probvars != NULL);
@@ -1255,7 +1271,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
          {
             if( SCIPvarIsBinary(probvar) )
             {
-               SCIPdebugMessage("can fix variable %s [%g, %g] to 1.0\n", SCIPvarGetName(probvar),
+               SCIPdebugMsg(scip, "can fix variable %s [%g, %g] to 1.0\n", SCIPvarGetName(probvar),
                   SCIPvarGetLbGlobal(probvar), SCIPvarGetUbGlobal(probvar));
 
                if( SCIPvarGetLbGlobal(probvar) < 0.5 )
@@ -1274,13 +1290,13 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
             }
             else
             {
-               SCIPdebugMessage("can tighten lower bound variable %s [%g, %g] to %g\n", SCIPvarGetName(probvar),
+               SCIPdebugMsg(scip, "can tighten lower bound variable %s [%g, %g] to %g\n", SCIPvarGetName(probvar),
                   SCIPvarGetLbGlobal(probvar), SCIPvarGetUbGlobal(probvar), newbounds[v]);
 
                /* the new lower bound is greater than the global upper bound => the problem is global infeasible */
                if( SCIPisLT(scip, SCIPvarGetUbGlobal(probvar), newbounds[v]) )
                {
-                  SCIPdebugMessage("-> global infeasibility proven.\n");
+                  SCIPdebugMsg(scip, "-> global infeasibility proven.\n");
 
                   SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
                   *glbinfeas = TRUE;
@@ -1304,7 +1320,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
          {
             if( SCIPvarIsBinary(probvar) )
             {
-               SCIPdebugMessage("can fix variable %s [%g, %g] to 0.0\n", SCIPvarGetName(probvar),
+               SCIPdebugMsg(scip, "can fix variable %s [%g, %g] to 0.0\n", SCIPvarGetName(probvar),
                   SCIPvarGetLbGlobal(probvar), SCIPvarGetUbGlobal(probvar));
 
                if( SCIPvarGetUbGlobal(probvar) > 0.5 )
@@ -1325,13 +1341,13 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
             {
                int idx = nprobvars + v;
 
-               SCIPdebugMessage("can tighten upper bound variable %s [%g, %g] to %g\n", SCIPvarGetName(probvar),
+               SCIPdebugMsg(scip, "can tighten upper bound variable %s [%g, %g] to %g\n", SCIPvarGetName(probvar),
                   SCIPvarGetLbGlobal(probvar), SCIPvarGetUbGlobal(probvar), newbounds[idx]);
 
                /* the new upper bound is small than the global upper bound => the problem is global infeasible */
                if( SCIPisGT(scip, SCIPvarGetLbGlobal(probvar), newbounds[idx]) )
                {
-                  SCIPdebugMessage("-> global infeasibility proven.\n");
+                  SCIPdebugMsg(scip, "-> global infeasibility proven.\n");
 
                   SCIP_CALL( SCIPcutoffNode(scip, SCIPgetRootNode(scip)) );
                   *glbinfeas = TRUE;

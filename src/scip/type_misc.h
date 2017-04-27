@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -68,17 +68,23 @@ typedef struct SCIP_PQueue SCIP_PQUEUE;
  */
 typedef struct SCIP_HashTable SCIP_HASHTABLE;
 
-/** Hash table element list to store single elements of a hash table */
-typedef struct SCIP_HashTableList SCIP_HASHTABLELIST;
+/** Hash table data structure which allows multiple occurences of an element
+ *
+ *  - \ref MultiHash "List of all available methods"
+ */
+typedef struct SCIP_MultiHash SCIP_MULTIHASH;
+
+/** Hash table element list to store single elements of a multi hash table */
+typedef struct SCIP_MultiHashList SCIP_MULTIHASHLIST;
+
+/** Hash map entry */
+typedef struct SCIP_HashMapEntry SCIP_HASHMAPENTRY;
 
 /** Hash map data structure
  *
  *  - \ref HashMap "List of all available methods"
  */
 typedef struct SCIP_HashMap SCIP_HASHMAP;
-
-/** Hash map  element list to store single mappings of a hash map */
-typedef struct SCIP_HashMapList SCIP_HASHMAPLIST;
 
 /** dynamic array for storing SCIP_Real values */
 typedef struct SCIP_RealArray SCIP_REALARRAY;
@@ -91,6 +97,9 @@ typedef struct SCIP_BoolArray SCIP_BOOLARRAY;
 
 /** dynamic array for storing pointers */
 typedef struct SCIP_PtrArray SCIP_PTRARRAY;
+
+/** random number generator */
+typedef struct SCIP_RandNumGen SCIP_RANDNUMGEN;
 
 /** Resource activity data structure
  *
@@ -149,6 +158,7 @@ typedef struct SCIP_Regression SCIP_REGRESSION;
 
 /** returns the hash value of the key */
 #define SCIP_DECL_HASHKEYVAL(x) unsigned int x (void* userptr, void* key)
+
 
 #ifdef __cplusplus
 }

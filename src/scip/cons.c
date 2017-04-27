@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,9 +32,11 @@
 #include "scip/var.h"
 #include "scip/prob.h"
 #include "scip/tree.h"
+#include "scip/scip.h"
 #include "scip/sepastore.h"
 #include "scip/cons.h"
 #include "scip/branch.h"
+#include "scip/reopt.h"
 #include "scip/pub_misc.h"
 
 #ifndef NDEBUG
@@ -303,6 +305,7 @@ void checkConssArrays(
       assert(conshdlr->propconss[c]->markpropagate == (c < conshdlr->nmarkedpropconss));
       assert(conshdlr->propconss[c]->markpropagate || (conshdlr->propconss[c]->obsolete == (c >= conshdlr->nusefulpropconss)));
    }
+   assert(conshdlr->nmarkedpropconss <= conshdlr->npropconss);
 }
 #endif
 #endif
@@ -453,6 +456,8 @@ SCIP_RETCODE conshdlrMarkConsObsolete(
             conshdlr->lastenfolplpcount = -1;
             conshdlr->lastenfolpdomchgcount = -1;
             conshdlr->lastenfopsdomchgcount = -1;
+            conshdlr->lastenforelaxdomchgcount = -1;
+            conshdlr->lastenforelaxrelaxcount = -1;
             conshdlr->lastenfolpnode = -1;
             conshdlr->lastenfopsnode = -1;
          }
@@ -667,6 +672,7 @@ void conshdlrMarkConsPropagate(
    cons->propconsspos = conshdlr->nmarkedpropconss;
 
    conshdlr->nmarkedpropconss++;
+   assert(conshdlr->nmarkedpropconss <= conshdlr->npropconss);
 
    checkConssArrays(conshdlr);
 }
@@ -1001,6 +1007,8 @@ SCIP_RETCODE conshdlrAddEnfocons(
       conshdlr->lastenfolplpcount = -1;
       conshdlr->lastenfolpdomchgcount = -1;
       conshdlr->lastenfopsdomchgcount = -1;
+      conshdlr->lastenforelaxdomchgcount = -1;
+      conshdlr->lastenforelaxrelaxcount = -1;
       conshdlr->lastenfolpnode = -1;
       conshdlr->lastenfopsnode = -1;
    }
@@ -1258,6 +1266,7 @@ void conshdlrDelPropcons(
    }
    conshdlr->npropconss--;
    cons->propconsspos = -1;
+   assert(conshdlr->nmarkedpropconss <= conshdlr->npropconss);
 
    checkConssArrays(conshdlr);
 }
@@ -1279,7 +1288,7 @@ SCIP_RETCODE conshdlrEnableConsSeparation(
    assert(set != NULL);
    assert(cons->scip == set->scip);
 
-   SCIPdebugMessage("enable separation of constraint <%s> in constraint handler <%s>\n", cons->name, conshdlr->name);
+   SCIPsetDebugMsg(set, "enable separation of constraint <%s> in constraint handler <%s>\n", cons->name, conshdlr->name);
 
    /* enable separation of constraint */
    cons->sepaenabled = TRUE;
@@ -1339,7 +1348,7 @@ SCIP_RETCODE conshdlrEnableConsPropagation(
    assert(set != NULL);
    assert(cons->scip == set->scip);
 
-   SCIPdebugMessage("enable propagation of constraint <%s> in constraint handler <%s>\n", cons->name, conshdlr->name);
+   SCIPsetDebugMsg(set, "enable propagation of constraint <%s> in constraint handler <%s>\n", cons->name, conshdlr->name);
 
    /* enable propagation of constraint */
    cons->propenabled = TRUE;
@@ -1408,7 +1417,7 @@ SCIP_RETCODE conshdlrEnableCons(
    assert(cons->enfoconsspos == -1);
    assert(cons->propconsspos == -1);
 
-   SCIPdebugMessage("enable constraint <%s> in constraint handler <%s>\n", cons->name, conshdlr->name);
+   SCIPsetDebugMsg(set, "enable constraint <%s> in constraint handler <%s>\n", cons->name, conshdlr->name);
 
    /* enable constraint */
    cons->enabled = TRUE;
@@ -1470,7 +1479,7 @@ SCIP_RETCODE conshdlrDisableCons(
    assert(cons->enforce == (cons->enfoconsspos != -1));
    assert((cons->propagate && cons->propenabled) == (cons->propconsspos != -1));
 
-   SCIPdebugMessage("disable constraint <%s> in constraint handler <%s>\n", cons->name, conshdlr->name);
+   SCIPsetDebugMsg(set, "disable constraint <%s> in constraint handler <%s>\n", cons->name, conshdlr->name);
 
    /* call constraint handler's disabling notification method */
    if( conshdlr->consdisable != NULL )
@@ -1543,7 +1552,7 @@ SCIP_RETCODE conshdlrActivateCons(
    assert(cons->propconsspos == -1);
    assert(depth >= -1);
 
-   SCIPdebugMessage("activate constraint <%s> in constraint handler <%s> (depth %d, focus=%u)\n",
+   SCIPsetDebugMsg(set, "activate constraint <%s> in constraint handler <%s> (depth %d, focus=%u)\n",
       cons->name, conshdlr->name, depth, focusnode);
 
    /* activate constraint, switch positions with first inactive constraint */
@@ -1610,7 +1619,7 @@ SCIP_RETCODE conshdlrDeactivateCons(
    assert(conshdlr->conss[cons->consspos] == cons);
    assert(cons->check == (cons->checkconsspos != -1));
 
-   SCIPdebugMessage("deactivate constraint <%s> in constraint handler <%s>\n", cons->name, conshdlr->name);
+   SCIPsetDebugMsg(set, "deactivate constraint <%s> in constraint handler <%s>\n", cons->name, conshdlr->name);
 
    /* disable constraint */
    if( cons->enabled )
@@ -1686,7 +1695,7 @@ SCIP_RETCODE conshdlrProcessUpdates(
    assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
    assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
 
-   SCIPdebugMessage("processing %d constraints that have to be updated in constraint handler <%s>\n",
+   SCIPsetDebugMsg(set, "processing %d constraints that have to be updated in constraint handler <%s>\n",
       conshdlr->nupdateconss, conshdlr->name);
 
    for( i = conshdlr->nupdateconss - 1; i >= 0; --i )
@@ -1702,7 +1711,7 @@ SCIP_RETCODE conshdlrProcessUpdates(
          || cons->updateobsolete || cons->updatefree
          || cons->updatemarkpropagate || cons->updateunmarkpropagate);
 
-      SCIPdebugMessage(" -> constraint <%s>: insert=%u, activate=%u, deactivate=%u, enable=%u, disable=%u, sepaenable=%u, sepadisable=%u, propenable=%u, propdisable=%u, obsolete=%u, free=%u (consdata=%p)\n",
+      SCIPsetDebugMsg(set, " -> constraint <%s>: insert=%u, activate=%u, deactivate=%u, enable=%u, disable=%u, sepaenable=%u, sepadisable=%u, propenable=%u, propdisable=%u, obsolete=%u, free=%u (consdata=%p)\n",
          cons->name, cons->updateinsert, cons->updateactivate, cons->updatedeactivate, 
          cons->updateenable, cons->updatedisable,
          cons->updatesepaenable, cons->updatesepadisable, 
@@ -1889,7 +1898,7 @@ SCIP_RETCODE conshdlrForceUpdates(
    assert(conshdlr != NULL);
    assert(conshdlrAreUpdatesDelayed(conshdlr));
 
-   SCIPdebugMessage("constraint updates of constraint handler <%s> will be processed immediately (count:%d)\n",
+   SCIPsetDebugMsg(set, "constraint updates of constraint handler <%s> will be processed immediately (count:%d)\n",
       conshdlr->name, conshdlr->delayupdatecount);
    conshdlr->delayupdatecount--;
 
@@ -1918,7 +1927,7 @@ SCIP_RETCODE conshdlrAddUpdateCons(
 
    if( !cons->update )
    {
-      SCIPdebugMessage("constraint <%s> of age %g has to be updated in constraint handler <%s> (consdata=%p)\n",
+      SCIPsetDebugMsg(set, "constraint <%s> of age %g has to be updated in constraint handler <%s> (consdata=%p)\n",
          cons->name, cons->age, conshdlr->name, (void*)cons->consdata);
 
       /* add constraint to the updateconss array */
@@ -1967,7 +1976,7 @@ SCIP_RETCODE SCIPconshdlrCopyInclude(
 
    if( conshdlr->conshdlrcopy != NULL )
    {
-      SCIPdebugMessage("including constraint handler %s in subscip %p\n", SCIPconshdlrGetName(conshdlr), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including constraint handler %s in subscip %p\n", SCIPconshdlrGetName(conshdlr), (void*)set->scip);
       SCIP_CALL( conshdlr->conshdlrcopy(set->scip, conshdlr, valid) );
    }
 
@@ -2009,6 +2018,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSSEPALP  ((*conssepalp)),    /**< separate cutting planes for LP solution */
    SCIP_DECL_CONSSEPASOL ((*conssepasol)),   /**< separate cutting planes for arbitrary primal solution */
    SCIP_DECL_CONSENFOLP  ((*consenfolp)),    /**< enforcing constraints for LP solutions */
+   SCIP_DECL_CONSENFORELAX ((*consenforelax)), /**< enforcing constraints for relaxation solutions */
    SCIP_DECL_CONSENFOPS  ((*consenfops)),    /**< enforcing constraints for pseudo solutions */
    SCIP_DECL_CONSCHECK   ((*conscheck)),     /**< check feasibility of primal solution */
    SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
@@ -2043,7 +2053,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
     * error message
     */
-   if( presoltiming < SCIP_PRESOLTIMING_NONE || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
+   if( presoltiming < SCIP_PRESOLTIMING_NONE || presoltiming > SCIP_PRESOLTIMING_MAX )
    {
       SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
          "'SCIP_PRESOLTIMING' for <%s> constraint handler instead.\n", name);
@@ -2078,6 +2088,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->conssepalp = conssepalp;
    (*conshdlr)->conssepasol = conssepasol;
    (*conshdlr)->consenfolp = consenfolp;
+   (*conshdlr)->consenforelax = consenforelax;
    (*conshdlr)->consenfops = consenfops;
    (*conshdlr)->conscheck = conscheck;
    (*conshdlr)->consprop = consprop;
@@ -2141,6 +2152,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->sepatime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->enfolptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->enfopstime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*conshdlr)->enforelaxtime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->proptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->sbproptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conshdlr)->checktime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -2149,6 +2161,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->nsepacalls = 0;
    (*conshdlr)->nenfolpcalls = 0;
    (*conshdlr)->nenfopscalls = 0;
+   (*conshdlr)->nenforelaxcalls = 0;
    (*conshdlr)->npropcalls = 0;
    (*conshdlr)->ncheckcalls = 0;
    (*conshdlr)->nrespropcalls = 0;
@@ -2163,10 +2176,13 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->lastenfolplpcount = -1;
    (*conshdlr)->lastenfolpdomchgcount = -1;
    (*conshdlr)->lastenfopsdomchgcount = -1;
+   (*conshdlr)->lastenforelaxdomchgcount = -1;
+   (*conshdlr)->lastenforelaxrelaxcount = -1;
    (*conshdlr)->lastenfolpnode = -1;
    (*conshdlr)->lastenfopsnode = -1;
    (*conshdlr)->lastenfolpresult = SCIP_DIDNOTRUN;
    (*conshdlr)->lastenfopsresult = SCIP_DIDNOTRUN;
+   (*conshdlr)->lastenforelaxresult = SCIP_DIDNOTRUN;
    (*conshdlr)->lastnfixedvars = 0;
    (*conshdlr)->lastnaggrvars = 0;
    (*conshdlr)->lastnchgvartypes = 0;
@@ -2198,19 +2214,16 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->duringprop = FALSE;
    (*conshdlr)->initialized = FALSE;
 
-   (*conshdlr)->pendingconss = NULL;
-   SCIP_CALL( SCIPqueueCreate( &((*conshdlr)->pendingconss), 100, 1.5 ) );
-
    /* add parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/sepafreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
          "frequency for separating cuts (-1: never, 0: only in root node)",
-         &(*conshdlr)->sepafreq, FALSE, sepafreq, -1, INT_MAX, NULL, NULL) );
+         &(*conshdlr)->sepafreq, FALSE, sepafreq, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/propfreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
          "frequency for propagating domains (-1: never, 0: only in root node)",
-         &(*conshdlr)->propfreq, FALSE, propfreq, -1, INT_MAX, NULL, NULL) );
+         &(*conshdlr)->propfreq, FALSE, propfreq, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/proptiming", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when constraint propagation should be called (%u:BEFORELP, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:ALWAYS)", SCIP_PROPTIMING_BEFORELP, SCIP_PROPTIMING_DURINGLPLOOP, SCIP_PROPTIMING_AFTERLPLOOP, SCIP_PROPTIMING_ALWAYS);
@@ -2220,7 +2233,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/eagerfreq", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
          "frequency for using all instead of only the useful constraints in separation, propagation and enforcement (-1: never, 0: only in first evaluation)",
-         &(*conshdlr)->eagerfreq, TRUE, eagerfreq, -1, INT_MAX, NULL, NULL) );
+         &(*conshdlr)->eagerfreq, TRUE, eagerfreq, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/maxprerounds", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname,
@@ -2238,10 +2251,10 @@ SCIP_RETCODE SCIPconshdlrCreate(
          &(*conshdlr)->delayprop, TRUE, delayprop, NULL, NULL) ); /*lint !e740*/
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/%s/presoltiming", name);
-   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing mask of the constraint handler's presolving method (%u:FAST, %u:MEDIUM, %u:EXHAUSTIVE)",
-      SCIP_PRESOLTIMING_FAST, SCIP_PRESOLTIMING_MEDIUM, SCIP_PRESOLTIMING_EXHAUSTIVE);
+   (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing mask of the constraint handler's presolving method (%u:FAST, %u:MEDIUM, %u:EXHAUSTIVE, %u:FINAL)",
+      SCIP_PRESOLTIMING_FAST, SCIP_PRESOLTIMING_MEDIUM, SCIP_PRESOLTIMING_EXHAUSTIVE, SCIP_PRESOLTIMING_FINAL);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         (int*)&(*conshdlr)->presoltiming, TRUE, presoltiming, (int) SCIP_PRESOLTIMING_FAST, (int) SCIP_PRESOLTIMING_ALWAYS, NULL, NULL) ); /*lint !e740 !e713*/
+         (int*)&(*conshdlr)->presoltiming, TRUE, presoltiming, (int) SCIP_PRESOLTIMING_FAST, (int) SCIP_PRESOLTIMING_MAX, NULL, NULL) ); /*lint !e740 !e713*/
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -2258,8 +2271,6 @@ SCIP_RETCODE SCIPconshdlrFree(
    assert((*conshdlr)->nconss == 0);
    assert(set != NULL);
 
-   SCIPqueueFree( &((*conshdlr)->pendingconss) );
-
    /* call destructor of constraint handler */
    if( (*conshdlr)->consfree != NULL )
    {
@@ -2270,6 +2281,7 @@ SCIP_RETCODE SCIPconshdlrFree(
    SCIPclockFree(&(*conshdlr)->checktime);
    SCIPclockFree(&(*conshdlr)->sbproptime);
    SCIPclockFree(&(*conshdlr)->proptime);
+   SCIPclockFree(&(*conshdlr)->enforelaxtime);
    SCIPclockFree(&(*conshdlr)->enfopstime);
    SCIPclockFree(&(*conshdlr)->enfolptime);
    SCIPclockFree(&(*conshdlr)->sepatime);
@@ -2315,6 +2327,7 @@ SCIP_RETCODE SCIPconshdlrInit(
       SCIPclockReset(conshdlr->sepatime);
       SCIPclockReset(conshdlr->enfolptime);
       SCIPclockReset(conshdlr->enfopstime);
+      SCIPclockReset(conshdlr->enforelaxtime);
       SCIPclockReset(conshdlr->proptime);
       SCIPclockReset(conshdlr->sbproptime);
       SCIPclockReset(conshdlr->checktime);
@@ -2323,6 +2336,7 @@ SCIP_RETCODE SCIPconshdlrInit(
       conshdlr->nsepacalls = 0;
       conshdlr->nenfolpcalls = 0;
       conshdlr->nenfopscalls = 0;
+      conshdlr->nenforelaxcalls = 0;
       conshdlr->npropcalls = 0;
       conshdlr->ncheckcalls = 0;
       conshdlr->nrespropcalls = 0;
@@ -2335,6 +2349,8 @@ SCIP_RETCODE SCIPconshdlrInit(
       conshdlr->lastpropdomchgcount = -1;
       conshdlr->lastenfolpdomchgcount = -1;
       conshdlr->lastenfopsdomchgcount = -1;
+      conshdlr->lastenforelaxdomchgcount = -1;
+      conshdlr->lastenforelaxrelaxcount = -1;
       conshdlr->lastenfolpnode = -1;
       conshdlr->lastenfopsnode = -1;
       conshdlr->lastenfolpresult = SCIP_DIDNOTRUN;
@@ -2417,11 +2433,6 @@ SCIP_RETCODE SCIPconshdlrExit(
       return SCIP_INVALIDCALL;
    }
 
-   while( !SCIPqueueIsEmpty(conshdlr->pendingconss) )
-   {
-      SCIP_CALL( SCIPconshdlrPopProp(conshdlr, blkmem, set) );
-   }
-
    /* call deinitialization method of constraint handler */
    if( conshdlr->consexit != NULL )
    {
@@ -2463,10 +2474,13 @@ SCIP_RETCODE SCIPconshdlrInitpre(
    conshdlr->lastpropdomchgcount = -1;
    conshdlr->lastenfolpdomchgcount = -1;
    conshdlr->lastenfopsdomchgcount = -1;
+   conshdlr->lastenforelaxdomchgcount = -1;
+   conshdlr->lastenforelaxrelaxcount = -1;
    conshdlr->lastenfolpnode = -1;
    conshdlr->lastenfopsnode = -1;
    conshdlr->lastenfolpresult = SCIP_DIDNOTRUN;
    conshdlr->lastenfopsresult = SCIP_DIDNOTRUN;
+   conshdlr->lastenforelaxresult = SCIP_DIDNOTRUN;
    conshdlr->maxnactiveconss = conshdlr->nactiveconss;
    conshdlr->startnactiveconss = 0;
    conshdlr->lastsepalpcount = -1;
@@ -2556,12 +2570,6 @@ SCIP_RETCODE SCIPconshdlrExitpre(
 {
    assert(conshdlr != NULL);
    assert(set != NULL);
-
-   /* empty the queue: the solving process will use a new one in any case */
-   while( !SCIPqueueIsEmpty(conshdlr->pendingconss) )
-   {
-      SCIP_CALL( SCIPconshdlrPopProp(conshdlr, blkmem, set) );
-   }
 
    /* call presolving deinitialization method of constraint handler */
    if( conshdlr->consexitpre != NULL )
@@ -2696,12 +2704,12 @@ SCIP_RETCODE SCIPconshdlrInitLP(
       int oldninitconss;
       int c;
 
-      SCIPdebugMessage("initializing LP with %d initial constraints of handler <%s> (ninitconss=%d, kept=%d, initkept=%u)\n",
+      SCIPsetDebugMsg(set, "initializing LP with %d initial constraints of handler <%s> (ninitconss=%d, kept=%d, initkept=%u)\n",
          initkeptconss ? conshdlr->ninitconss : conshdlr->ninitconss - conshdlr->ninitconsskept, conshdlr->name,
          conshdlr->ninitconss, conshdlr->ninitconsskept, initkeptconss);
 
       /* no constraints to initialize (or only kept constraints which do not need to be initialized this time) -> return */
-      if( conshdlr->ninitconss == 0 || (!initkeptconss && conshdlr->ninitconss == conshdlr->ninitconsskept) )
+      if( conshdlr->needscons && (conshdlr->ninitconss == 0 || (!initkeptconss && conshdlr->ninitconss == conshdlr->ninitconsskept)) )
          return SCIP_OKAY;
 
       /* because during constraint processing, constraints of this handler may be deleted, activated, deactivated,
@@ -2845,7 +2853,7 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
             int oldnactiveconss;
             int lastnusefulsepaconss;
 
-            SCIPdebugMessage("separating constraints %d to %d of %d constraints of handler <%s> (%s LP solution)\n",
+            SCIPsetDebugMsg(set, "separating constraints %d to %d of %d constraints of handler <%s> (%s LP solution)\n",
                firstcons, firstcons + nconss - 1, conshdlr->nsepaconss, conshdlr->name,
                conshdlr->lastsepalpcount == stat->lpcount ? "old" : "new");
 
@@ -2878,7 +2886,7 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
 
             /* call external method */
             SCIP_CALL( conshdlr->conssepalp(set->scip, conshdlr, conss, nconss, nusefulconss, result) );
-            SCIPdebugMessage(" -> separating LP returned result <%d>\n", *result);
+            SCIPsetDebugMsg(set, " -> separating LP returned result <%d>\n", *result);
 
             /* stop timing */
             SCIPclockStop(conshdlr->sepatime, set);
@@ -2922,7 +2930,7 @@ SCIP_RETCODE SCIPconshdlrSeparateLP(
       }
       else
       {
-         SCIPdebugMessage("LP separation method of constraint handler <%s> was delayed\n", conshdlr->name);
+         SCIPsetDebugMsg(set, "LP separation method of constraint handler <%s> was delayed\n", conshdlr->name);
          *result = SCIP_DELAYED;
       }
 
@@ -2981,7 +2989,7 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
             int oldncuts;
             int oldnactiveconss;
 
-            SCIPdebugMessage("separating %d constraints of handler <%s> (primal solution %p)\n",
+            SCIPsetDebugMsg(set, "separating %d constraints of handler <%s> (primal solution %p)\n",
                nconss, conshdlr->name, (void*)sol);
 
             /* get the array of the constraints to be processed */
@@ -3009,7 +3017,7 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
 
             /* call external method */
             SCIP_CALL( conshdlr->conssepasol(set->scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
-            SCIPdebugMessage(" -> separating sol returned result <%d>\n", *result);
+            SCIPsetDebugMsg(set, " -> separating sol returned result <%d>\n", *result);
 
             /* stop timing */
             SCIPclockStop(conshdlr->sepatime, set);
@@ -3049,12 +3057,211 @@ SCIP_RETCODE SCIPconshdlrSeparateSol(
       }
       else
       {
-         SCIPdebugMessage("SOL separation method of constraint handler <%s> was delayed\n", conshdlr->name);
+         SCIPsetDebugMsg(set, "SOL separation method of constraint handler <%s> was delayed\n", conshdlr->name);
          *result = SCIP_DELAYED;
       }
 
       /* remember whether separation method was delayed */
       conshdlr->sepasolwasdelayed = (*result == SCIP_DELAYED);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** calls enforcing method of constraint handler for a relaxation solution for all constraints added after last
+ *  conshdlrResetEnfo() call
+ */
+SCIP_RETCODE SCIPconshdlrEnforceRelaxSol(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_SOL*             relaxsol,           /**< solution to be enforced */
+   SCIP_Bool             solinfeasible,      /**< was the solution already found out to be infeasible? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   int nconss;
+   int nusefulconss;
+   int firstcons;
+   SCIP_Bool relaxchanged;
+   SCIP_Bool lastinfeasible;
+
+   assert(conshdlr != NULL);
+   assert(conshdlr->nusefulsepaconss <= conshdlr->nsepaconss);
+   assert(conshdlr->nusefulenfoconss <= conshdlr->nenfoconss);
+   assert(conshdlr->nusefulcheckconss <= conshdlr->ncheckconss);
+   assert(conshdlr->nusefulpropconss <= conshdlr->npropconss);
+   assert(stat != NULL);
+   assert(conshdlr->lastenfopsdomchgcount != stat->domchgcount
+      || conshdlr->lastenfopsnode != stat->nnodes
+      || (0 <= conshdlr->lastnusefulenfoconss && conshdlr->lastnusefulenfoconss <= conshdlr->nusefulenfoconss));
+   assert(set != NULL);
+   assert(tree != NULL);
+   assert(tree->nchildren == 0);
+   assert(relaxsol != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_FEASIBLE;
+
+   /* check, if this relaxation solution was already enforced at this node
+    * the integrality constraint handler always needs to be enforced for all constraints since external branching
+    * candidates are cleared before each resolve
+    */
+   if( conshdlr->lastenforelaxrelaxcount == stat->relaxcount
+      && conshdlr->lastenforelaxdomchgcount == stat->domchgcount
+      && conshdlr->lastenforelaxnode == stat->nnodes
+      && conshdlr->lastenforelaxresult != SCIP_CONSADDED
+      && conshdlr->lastenforelaxresult != SCIP_SOLVELP
+      && ( strcmp(conshdlr->name, "integral") != 0 )
+      )
+   {
+      assert(conshdlr->lastenforelaxresult != SCIP_CUTOFF);
+      assert(conshdlr->lastenforelaxresult != SCIP_BRANCHED);
+      assert(conshdlr->lastenforelaxresult != SCIP_REDUCEDDOM);
+      assert(conshdlr->lastenforelaxresult != SCIP_DIDNOTRUN);
+
+      /* if we already enforced the same relaxation solution at this node, we will only enforce new constraints in the
+       * following; however, the result of the last call for the old constraint is still valid and we have to ensure
+       * that an infeasibility in the last call is not lost because we only enforce new constraints
+       */
+      if( conshdlr->lastenforelaxresult == SCIP_INFEASIBLE )
+      {
+         *result = SCIP_INFEASIBLE;
+         lastinfeasible = TRUE;
+      }
+      else
+         lastinfeasible = FALSE;
+
+      /* all constraints that were not yet enforced on the new relaxation solution must be useful constraints, which means,
+       * that the new constraints are the last constraints of the useful ones
+       */
+      nconss = conshdlr->nusefulenfoconss - conshdlr->lastnusefulenfoconss;
+      nusefulconss = nconss;
+      firstcons = conshdlr->lastnusefulenfoconss;
+      relaxchanged = FALSE;
+   }
+   else
+   {
+      /* on a new relaxation solution or a new node, we want to enforce all constraints */
+      nconss = conshdlr->nenfoconss;
+      nusefulconss = conshdlr->nusefulenfoconss;
+      firstcons = 0;
+      relaxchanged = TRUE;
+      lastinfeasible = FALSE;
+   }
+   assert(firstcons >= 0);
+   assert(firstcons + nconss <= conshdlr->nenfoconss);
+   assert(nusefulconss <= nconss);
+
+   /* constraint handlers without constraints should only be called once */
+   if( nconss > 0 || (!conshdlr->needscons && relaxchanged) )
+   {
+      SCIP_CONS** conss;
+      SCIP_Longint oldndomchgs;
+      SCIP_Longint oldnprobdomchgs;
+      int oldncuts;
+      int oldnactiveconss;
+
+      assert(conshdlr->consenforelax != NULL);
+
+      SCIPdebugMessage("enforcing constraints %d to %d of %d constraints of handler <%s> (%s relaxation solution)\n",
+         firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name, relaxchanged ? "new" : "old");
+
+      /* remember the number of processed constraints on the current relaxation solution */
+      conshdlr->lastenforelaxrelaxcount = stat->relaxcount;
+      conshdlr->lastenforelaxdomchgcount = stat->domchgcount;
+      conshdlr->lastenforelaxnode = stat->nnodes;
+      conshdlr->lastnusefulenfoconss = conshdlr->nusefulenfoconss;
+
+      /* get the array of the constraints to be processed */
+      conss = &(conshdlr->enfoconss[firstcons]);
+
+      oldncuts = SCIPsepastoreGetNCuts(sepastore);
+      oldnactiveconss = stat->nactiveconss;
+      oldndomchgs = stat->nboundchgs + stat->nholechgs;
+      oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
+
+      /* check, if we want to use eager evaluation */
+      if( (conshdlr->eagerfreq == 0 && conshdlr->nenforelaxcalls == 0)
+         || (conshdlr->eagerfreq > 0 && conshdlr->nenforelaxcalls % conshdlr->eagerfreq == 0) )
+         nusefulconss = nconss;
+
+      /* because during constraint processing, constraints of this handler may be deleted, activated, deactivated,
+       * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
+       * external method; to avoid this, these changes will be buffered and processed after the method call
+       */
+      conshdlrDelayUpdates(conshdlr);
+
+      /* start timing */
+      SCIPclockStart(conshdlr->enforelaxtime, set);
+
+      /* call external method */
+      SCIP_CALL( conshdlr->consenforelax(set->scip, relaxsol, conshdlr, conss, nconss, nusefulconss, solinfeasible, result) );
+      SCIPdebugMessage(" -> enforcing returned result <%d>\n", *result);
+
+      /* stop timing */
+      SCIPclockStop(conshdlr->enforelaxtime, set);
+
+      /* perform the cached constraint updates */
+      SCIP_CALL( conshdlrForceUpdates(conshdlr, blkmem, set, stat) );
+
+      /* update statistics */
+      if( *result != SCIP_DIDNOTRUN )
+         conshdlr->nenforelaxcalls++;
+      else
+      {
+         SCIPerrorMessage("enforcing method of constraint handler <%s> for relaxation returned an invalid result %d\n",
+            conshdlr->name, *result);
+         conshdlr->lastenforelaxresult = *result;
+
+         return SCIP_INVALIDRESULT;
+      }
+
+      if( *result == SCIP_CUTOFF )
+         conshdlr->ncutoffs++;
+      conshdlr->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
+      conshdlr->nconssfound += MAX(stat->nactiveconss - oldnactiveconss, 0); /*lint !e776*/
+
+      if( *result != SCIP_BRANCHED )
+      {
+         assert(tree->nchildren == 0);
+
+         /* update domain reductions; therefore remove the domain
+          * reduction counts which were generated in probing mode */
+         conshdlr->ndomredsfound += stat->nboundchgs + stat->nholechgs - oldndomchgs;
+         conshdlr->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
+      }
+      else
+         conshdlr->nchildren += tree->nchildren;
+
+      /* remember the result of the enforcement call */
+      conshdlr->lastenforelaxresult = *result;
+
+      /* evaluate result */
+      if( *result != SCIP_CUTOFF
+         && *result != SCIP_CONSADDED
+         && *result != SCIP_REDUCEDDOM
+         && *result != SCIP_SEPARATED
+         && *result != SCIP_BRANCHED
+         && *result != SCIP_SOLVELP
+         && *result != SCIP_INFEASIBLE
+         && *result != SCIP_FEASIBLE
+         && *result != SCIP_DIDNOTRUN )
+      {
+         SCIPerrorMessage("enforcing method of constraint handler <%s> for relaxation solutions returned invalid result <%d>\n",
+            conshdlr->name, *result);
+         return SCIP_INVALIDRESULT;
+      }
+
+      /* if the same relaxation solution was already enforced at this node, we only enforced new constraints this time;
+       * if the enforelax call returns feasible now, the solution is only feasible w.r.t. the new constraints, if the
+       * last call detected infeasibility for the old constraints, we have to change the result to infeasible
+       */
+      if( lastinfeasible && *result == SCIP_FEASIBLE )
+         *result = SCIP_INFEASIBLE;
    }
 
    return SCIP_OKAY;
@@ -3151,7 +3358,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
          int oldncuts;
          int oldnactiveconss;
 
-         SCIPdebugMessage("enforcing constraints %d to %d of %d constraints of handler <%s> (%s LP solution)\n",
+         SCIPsetDebugMsg(set, "enforcing constraints %d to %d of %d constraints of handler <%s> (%s LP solution)\n",
             firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name, lpchanged ? "new" : "old");
 
          /* remember the number of processed constraints on the current LP solution */
@@ -3184,7 +3391,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
 
          /* call external method */
          SCIP_CALL( conshdlr->consenfolp(set->scip, conshdlr, conss, nconss, nusefulconss, solinfeasible, result) );
-         SCIPdebugMessage(" -> enforcing returned result <%d>\n", *result);
+         SCIPsetDebugMsg(set, " -> enforcing returned result <%d>\n", *result);
 
          /* stop timing */
          SCIPclockStop(conshdlr->enfolptime, set);
@@ -3363,7 +3570,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
 
-         SCIPdebugMessage("enforcing constraints %d to %d of %d constraints of handler <%s> (%s pseudo solution, objinfeasible=%u)\n",
+         SCIPsetDebugMsg(set, "enforcing constraints %d to %d of %d constraints of handler <%s> (%s pseudo solution, objinfeasible=%u)\n",
             firstcons, firstcons + nconss - 1, conshdlr->nenfoconss, conshdlr->name, pschanged ? "new" : "old", objinfeasible);
 
          /* remember the number of processed constraints on the current pseudo solution */
@@ -3393,7 +3600,7 @@ SCIP_RETCODE SCIPconshdlrEnforcePseudoSol(
 
          /* call external method */
          SCIP_CALL( conshdlr->consenfops(set->scip, conshdlr, conss, nconss, nusefulconss, solinfeasible, objinfeasible, result) );
-         SCIPdebugMessage(" -> enforcing returned result <%d>\n", *result);
+         SCIPsetDebugMsg(set, " -> enforcing returned result <%d>\n", *result);
 
          /* stop timing */
          SCIPclockStop(conshdlr->enfopstime, set);
@@ -3473,6 +3680,7 @@ SCIP_RETCODE SCIPconshdlrCheck(
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
@@ -3488,7 +3696,7 @@ SCIP_RETCODE SCIPconshdlrCheck(
 
    if( conshdlr->conscheck != NULL && (!conshdlr->needscons || conshdlr->ncheckconss > 0) )
    {
-      SCIPdebugMessage("checking %d constraints of handler <%s>\n", conshdlr->ncheckconss, conshdlr->name);
+      SCIPsetDebugMsg(set, "checking %d constraints of handler <%s>\n", conshdlr->ncheckconss, conshdlr->name);
 
       /* because during constraint processing, constraints of this handler may be deleted, activated, deactivated,
        * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
@@ -3500,9 +3708,9 @@ SCIP_RETCODE SCIPconshdlrCheck(
       SCIPclockStart(conshdlr->checktime, set);
 
       /* call external method */
-      SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, conshdlr->checkconss, conshdlr->ncheckconss, 
-            sol, checkintegrality, checklprows, printreason, result) );
-      SCIPdebugMessage(" -> checking returned result <%d>\n", *result);
+      SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, conshdlr->checkconss, conshdlr->ncheckconss,
+            sol, checkintegrality, checklprows, printreason, completely, result) );
+      SCIPsetDebugMsg(set, " -> checking returned result <%d>\n", *result);
 
       /* stop timing */
       SCIPclockStop(conshdlr->checktime, set);
@@ -3566,8 +3774,6 @@ SCIP_RETCODE SCIPconshdlrPropagate(
          int nmarkedpropconss;
          int firstcons;
 
-         nmarkedpropconss = conshdlr->nmarkedpropconss;
-
          /* check, if the current domains were already propagated */
          if( !fullpropagation && conshdlr->lastpropdomchgcount == stat->domchgcount )
          {
@@ -3589,6 +3795,8 @@ SCIP_RETCODE SCIPconshdlrPropagate(
          assert(firstcons + nconss <= conshdlr->npropconss);
          assert(nusefulconss <= nconss);
 
+         nmarkedpropconss = conshdlr->nmarkedpropconss - firstcons;
+
          /* constraint handlers without constraints should only be called once */
          if( nconss > 0 || fullpropagation
             || (!conshdlr->needscons && conshdlr->lastpropdomchgcount != stat->domchgcount) )
@@ -3599,7 +3807,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
             SCIP_Longint lastpropdomchgcount;
             int lastnusefulpropconss;
 
-            SCIPdebugMessage("propagating constraints %d to %d of %d constraints of handler <%s> (%s pseudo solution, %d useful)\n",
+            SCIPsetDebugMsg(set, "propagating constraints %d to %d of %d constraints of handler <%s> (%s pseudo solution, %d useful)\n",
                firstcons, firstcons + nconss - 1, conshdlr->npropconss, conshdlr->name,
                !fullpropagation && conshdlr->lastpropdomchgcount == stat->domchgcount ? "old" : "new", nusefulconss);
 
@@ -3631,9 +3839,12 @@ SCIP_RETCODE SCIPconshdlrPropagate(
             else
                SCIPclockStart(conshdlr->proptime, set);
 
+            assert(nusefulconss <= nconss);
+            assert(nmarkedpropconss <= nconss);
+
             /* call external method */
             SCIP_CALL( conshdlr->consprop(set->scip, conshdlr, conss, nconss, nusefulconss, nmarkedpropconss, proptiming, result) );
-            SCIPdebugMessage(" -> propagation returned result <%d>\n", *result);
+            SCIPsetDebugMsg(set, " -> propagation returned result <%d>\n", *result);
 
             /* stop timing */
             if( instrongbranching )
@@ -3670,9 +3881,10 @@ SCIP_RETCODE SCIPconshdlrPropagate(
                && *result != SCIP_REDUCEDDOM
                && *result != SCIP_DIDNOTFIND
                && *result != SCIP_DIDNOTRUN
-               && *result != SCIP_DELAYED )
+               && *result != SCIP_DELAYED
+               && *result != SCIP_DELAYNODE )
             {
-               SCIPerrorMessage("propagation method of constraint handler <%s> returned invalid result <%d>\n", 
+               SCIPerrorMessage("propagation method of constraint handler <%s> returned invalid result <%d>\n",
                   conshdlr->name, *result);
                return SCIP_INVALIDRESULT;
             }
@@ -3680,7 +3892,7 @@ SCIP_RETCODE SCIPconshdlrPropagate(
       }
       else
       {
-         SCIPdebugMessage("propagation method of constraint handler <%s> was delayed\n", conshdlr->name);
+         SCIPsetDebugMsg(set, "propagation method of constraint handler <%s> was delayed\n", conshdlr->name);
          *result = SCIP_DELAYED;
       }
 
@@ -3736,7 +3948,7 @@ SCIP_RETCODE SCIPconshdlrPresolve(
       && (!conshdlr->needscons || conshdlr->nactiveconss > 0)
       && (conshdlr->maxprerounds == -1 || nrounds < conshdlr->maxprerounds ) )
    {
-      SCIPdebugMessage("presolving %d constraints of handler <%s>\n", conshdlr->nactiveconss, conshdlr->name);
+      SCIPsetDebugMsg(set, "presolving %d constraints of handler <%s>\n", conshdlr->nactiveconss, conshdlr->name);
 
       /* check, if presolving method should be executed for the current timing */
       if( timing & conshdlr->presoltiming )
@@ -3828,7 +4040,7 @@ SCIP_RETCODE SCIPconshdlrPresolve(
             ++(conshdlr->npresolcalls);
       }
 
-      SCIPdebugMessage("after presolving %d constraints left of handler <%s>\n", conshdlr->nactiveconss, conshdlr->name);
+      SCIPsetDebugMsg(set, "after presolving %d constraints left of handler <%s>\n", conshdlr->nactiveconss, conshdlr->name);
    }
 
    return SCIP_OKAY;
@@ -3847,7 +4059,7 @@ SCIP_RETCODE SCIPconshdlrDelVars(
 
    if( conshdlr->consdelvars != NULL )
    {
-      SCIPdebugMessage("deleting variables in constraints of handler <%s>\n", conshdlr->name);
+      SCIPsetDebugMsg(set, "deleting variables in constraints of handler <%s>\n", conshdlr->name);
 
       /* during constraint processing, constraints of this handler may be deleted, activated, deactivated,
        * enabled, disabled, marked obsolete or useful, which would change the conss array given to the
@@ -3977,6 +4189,17 @@ void SCIPconshdlrSetProp(
 }
 
 /** sets copy method of both the constraint handler and each associated constraint */
+void SCIPconshdlrSetEnforelax(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSENFORELAX ((*consenforelax)) /**< constraint copying method */
+   )
+{
+   assert(conshdlr != NULL);
+
+   conshdlr->consenforelax = consenforelax;
+}
+
+/** sets copy method of both the constraint handler and each associated constraint */
 void SCIPconshdlrSetCopy(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into sub-SCIPs */
@@ -4084,7 +4307,7 @@ SCIP_RETCODE SCIPconshdlrSetPresol(
    /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
     * error message
     */
-   if( presoltiming < SCIP_PRESOLTIMING_FAST || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
+   if( presoltiming < SCIP_PRESOLTIMING_FAST || presoltiming > SCIP_PRESOLTIMING_MAX )
    {
       SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
          "'SCIP_PRESOLTIMING' for <%s> constraint handler instead.\n", conshdlr->name);
@@ -4352,6 +4575,7 @@ void SCIPconshdlrEnableOrDisableClocks(
    SCIPclockEnableOrDisable(conshdlr->checktime, enable);
    SCIPclockEnableOrDisable(conshdlr->enfolptime, enable);
    SCIPclockEnableOrDisable(conshdlr->enfopstime, enable);
+   SCIPclockEnableOrDisable(conshdlr->enforelaxtime, enable);
    SCIPclockEnableOrDisable(conshdlr->presoltime, enable);
    SCIPclockEnableOrDisable(conshdlr->proptime, enable);
    SCIPclockEnableOrDisable(conshdlr->resproptime, enable);
@@ -4407,6 +4631,16 @@ SCIP_Real SCIPconshdlrGetEnfoPSTime(
    assert(conshdlr != NULL);
 
    return SCIPclockGetTime(conshdlr->enfopstime);
+}
+
+/** gets time in seconds used for relaxation enforcement in this constraint handler */
+SCIP_Real SCIPconshdlrGetEnfoRelaxTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return SCIPclockGetTime(conshdlr->enforelaxtime);
 }
 
 /** gets time in seconds used for propagation in this constraint handler */
@@ -4477,6 +4711,16 @@ SCIP_Longint SCIPconshdlrGetNEnfoPSCalls(
    assert(conshdlr != NULL);
 
    return conshdlr->nenfopscalls;
+}
+
+/** gets number of calls to the constraint handler's relaxation enforcing method */
+SCIP_Longint SCIPconshdlrGetNEnfoRelaxCalls(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return conshdlr->nenforelaxcalls;
 }
 
 /** gets number of calls to the constraint handler's propagation method */
@@ -5135,7 +5379,7 @@ SCIP_RETCODE conssetchgDelAddedCons(
    cons = conssetchg->addedconss[arraypos];
    assert(cons != NULL);
 
-   SCIPdebugMessage("delete added constraint <%s> at position %d from constraint set change data\n", cons->name, arraypos);
+   SCIPsetDebugMsg(set, "delete added constraint <%s> at position %d from constraint set change data\n", cons->name, arraypos);
 
    /* remove the link to the constraint set change data */
    if( cons->addconssetchg == conssetchg )
@@ -5176,7 +5420,7 @@ SCIP_RETCODE conssetchgDelDisabledCons(
    assert(0 <= arraypos && arraypos < conssetchg->ndisabledconss);
    assert(conssetchg->disabledconss[arraypos] != NULL);
 
-   SCIPdebugMessage("delete disabled constraint <%s> at position %d from constraint set change data\n",
+   SCIPsetDebugMsg(set, "delete disabled constraint <%s> at position %d from constraint set change data\n",
       conssetchg->disabledconss[arraypos]->name, arraypos);
 
    /* release constraint */
@@ -5223,7 +5467,7 @@ SCIP_RETCODE SCIPconssetchgApply(
    if( conssetchg == NULL )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("applying constraint set changes at %p: %d constraint additions, %d constraint disablings\n", 
+   SCIPsetDebugMsg(set, "applying constraint set changes at %p: %d constraint additions, %d constraint disablings\n",
       (void*)conssetchg, conssetchg->naddedconss, conssetchg->ndisabledconss);
 
    /* apply constraint additions */
@@ -5271,7 +5515,7 @@ SCIP_RETCODE SCIPconssetchgApply(
       /* if the constraint is disabled, we can permanently remove it from the disabledconss array */
       if( !cons->enabled )
       {
-         SCIPdebugMessage("constraint <%s> of handler <%s> was deactivated -> remove it from disabledconss array\n",
+         SCIPsetDebugMsg(set, "constraint <%s> of handler <%s> was deactivated -> remove it from disabledconss array\n",
             cons->name, cons->conshdlr->name);
 
          /* release and remove constraint from the disabledconss array, the empty slot is now used by the next constraint
@@ -5308,7 +5552,7 @@ SCIP_RETCODE SCIPconssetchgUndo(
    if( conssetchg == NULL )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("undoing constraint set changes at %p: %d constraint additions, %d constraint disablings\n", 
+   SCIPsetDebugMsg(set, "undoing constraint set changes at %p: %d constraint additions, %d constraint disablings\n",
       (void*)conssetchg, conssetchg->naddedconss, conssetchg->ndisabledconss);
 
    /* undo constraint disablings */
@@ -5331,7 +5575,7 @@ SCIP_RETCODE SCIPconssetchgUndo(
        */
       if( !cons->active )
       {
-         SCIPdebugMessage("constraint <%s> of handler <%s> was deactivated -> remove it from disabledconss array\n",
+         SCIPsetDebugMsg(set, "constraint <%s> of handler <%s> was deactivated -> remove it from disabledconss array\n",
             cons->name, cons->conshdlr->name);
 
          /* release and remove constraint from the disabledconss array */
@@ -5342,9 +5586,9 @@ SCIP_RETCODE SCIPconssetchgUndo(
          assert(cons->addarraypos >= 0);
          assert(!cons->deleted); /* deleted constraints must not be active! */
          SCIP_CALL( SCIPconsEnable(cons, set, stat) );
+         assert(!cons->update);
+         assert(!cons->active || cons->enabled);
       }
-      assert(!cons->update);
-      assert(!cons->active || cons->enabled);
    }
 
    /* undo constraint additions */
@@ -5386,7 +5630,8 @@ SCIP_RETCODE SCIPconssetchgMakeGlobal(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    )
 {
    SCIP_CONS* cons;
@@ -5398,7 +5643,7 @@ SCIP_RETCODE SCIPconssetchgMakeGlobal(
    if( *conssetchg == NULL )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("moving constraint set changes at %p to global problem: %d constraint additions, %d constraint disablings\n", 
+   SCIPsetDebugMsg(set, "moving constraint set changes at %p to global problem: %d constraint additions, %d constraint disablings\n",
       (void*)*conssetchg, (*conssetchg)->naddedconss, (*conssetchg)->ndisabledconss);
 
    /* apply constraint additions to the global problem (loop backwards, because then conssetchgDelAddedCons() is
@@ -5445,7 +5690,7 @@ SCIP_RETCODE SCIPconssetchgMakeGlobal(
          /* globally delete constraint */
          if( !cons->deleted )
          {
-            SCIP_CALL( SCIPconsDelete(cons, blkmem, set, stat, prob) );
+            SCIP_CALL( SCIPconsDelete(cons, blkmem, set, stat, prob, reopt) );
          }
 
          /* release and remove constraint from the disabledconss array */
@@ -5499,7 +5744,7 @@ SCIP_RETCODE SCIPconsCreate(
                                               *   Usually set to FALSE. In column generation applications, set to TRUE if pricing
                                               *   adds coefficients to this constraint. */
    SCIP_Bool             dynamic,            /**< is constraint subject to aging?
-                                              *   Usually set to FALSE. Set to TRUE for own cuts which 
+                                              *   Usually set to FALSE. Set to TRUE for own cuts which
                                               *   are separated as constraints. */
    SCIP_Bool             removable,          /**< should the relaxation be removed from the LP due to aging or cleanup?
                                               *   Usually set to FALSE. Set to TRUE for 'lazy constraints' and 'user cuts'. */
@@ -5516,14 +5761,6 @@ SCIP_RETCODE SCIPconsCreate(
    assert(name != NULL);
    assert(conshdlr != NULL);
    assert(!original || deleteconsdata);
-
-   /* constraints of constraint handlers that don't need constraints cannot be created */
-   if( !conshdlr->needscons )
-   {
-      SCIPerrorMessage("cannot create constraint <%s> of type [%s] - constraint handler does not need constraints\n",
-         name, conshdlr->name);
-      return SCIP_INVALIDCALL;
-   }
 
    /* create constraint data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, cons) );
@@ -5547,7 +5784,6 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->age = 0.0;
    (*cons)->nlockspos = 0;
    (*cons)->nlocksneg = 0;
-   (*cons)->markedprop = FALSE;
    (*cons)->nuses = 0;
    (*cons)->nupgradelocks = 0;
    (*cons)->initial = initial;
@@ -5565,9 +5801,10 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->original = original;
    (*cons)->deleteconsdata = deleteconsdata;
    (*cons)->active = FALSE;
+   (*cons)->conflict = FALSE;
    (*cons)->enabled = FALSE;
    (*cons)->obsolete = FALSE;
-   (*cons)->markpropagate = FALSE;
+   (*cons)->markpropagate = TRUE;
    (*cons)->deleted = FALSE;
    (*cons)->update = FALSE;
    (*cons)->updateinsert = FALSE;
@@ -5594,7 +5831,7 @@ SCIP_RETCODE SCIPconsCreate(
       /* check, if inserting constraint should be delayed */
       if( conshdlrAreUpdatesDelayed(conshdlr) )
       {
-         SCIPdebugMessage(" -> delaying insertion of constraint <%s>\n", (*cons)->name);
+         SCIPsetDebugMsg(set, " -> delaying insertion of constraint <%s>\n", (*cons)->name);
          (*cons)->updateinsert = TRUE;
          SCIP_CALL( conshdlrAddUpdateCons((*cons)->conshdlr, set, *cons) );
          assert((*cons)->update);
@@ -5615,7 +5852,7 @@ SCIP_RETCODE SCIPconsCreate(
  *  mapping the variables of the source SCIP to the variables of the target SCIP; if the copying process was successful
  *  a constraint is created and captured;
  *
- *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
+ *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, an LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
@@ -5643,7 +5880,7 @@ SCIP_RETCODE SCIPconsCopy(
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    )
 {
    assert(cons != NULL);
@@ -5653,15 +5890,15 @@ SCIP_RETCODE SCIPconsCopy(
    assert(sourcecons != NULL);
    assert(varmap != NULL);
    assert(consmap != NULL);
-   assert(success != NULL);
+   assert(valid != NULL);
 
    /* if constraint handler does not support copying, success will return false. Constraints handlers have to actively set this to true. */
-   (*success) = FALSE;
+   (*valid) = FALSE;
 
    if( sourceconshdlr->conscopy != NULL )
    {
       SCIP_CALL( sourceconshdlr->conscopy(set->scip, cons, name, sourcescip, sourceconshdlr, sourcecons, varmap, consmap,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, success) );
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, valid) );
    }
 
    return SCIP_OKAY;
@@ -5726,7 +5963,7 @@ SCIP_RETCODE SCIPconsParse(
       return SCIP_OKAY;
    }
    assert(endptr != NULL);
-   SCIPdebugMessage("constraint handler name <%s>\n", conshdlrname);
+   SCIPsetDebugMsg(set, "constraint handler name <%s>\n", conshdlrname);
 
    /* scan constraint name */
    SCIPstrCopySection(endptr, '<', '>', consname, SCIP_MAXSTRLEN, &endptr);
@@ -5736,7 +5973,7 @@ SCIP_RETCODE SCIPconsParse(
       return SCIP_OKAY;
    }
    assert(endptr != NULL);
-   SCIPdebugMessage("constraint name <%s>\n", consname);
+   SCIPsetDebugMsg(set, "constraint name <%s>\n", consname);
 
    str = endptr;
 
@@ -5820,7 +6057,7 @@ SCIP_RETCODE SCIPconsFree(
    assert(set != NULL);
    assert((*cons)->scip == set->scip);
 
-   SCIPdebugMessage("freeing constraint <%s> at conss pos %d of handler <%s>\n",
+   SCIPsetDebugMsg(set, "freeing constraint <%s> at conss pos %d of handler <%s>\n",
       (*cons)->name, (*cons)->consspos, (*cons)->conshdlr->name);
 
    /* free constraint data */
@@ -5884,7 +6121,7 @@ SCIP_RETCODE SCIPconsRelease(
    assert(set != NULL);
    assert((*cons)->scip == set->scip);
 
-   SCIPdebugMessage("release constraint <%s> with nuses=%d, cons pointer %p\n", (*cons)->name, (*cons)->nuses, (void*)(*cons));
+   SCIPsetDebugMsg(set, "release constraint <%s> with nuses=%d, cons pointer %p\n", (*cons)->name, (*cons)->nuses, (void*)(*cons));
    (*cons)->nuses--;
    if( (*cons)->nuses == 0 )
    {
@@ -5893,7 +6130,7 @@ SCIP_RETCODE SCIPconsRelease(
       /* check, if freeing constraint should be delayed */
       if( conshdlrAreUpdatesDelayed((*cons)->conshdlr) )
       {
-         SCIPdebugMessage(" -> delaying freeing constraint <%s>\n", (*cons)->name);
+         SCIPsetDebugMsg(set, " -> delaying freeing constraint <%s>\n", (*cons)->name);
          (*cons)->updatefree = TRUE;
          SCIP_CALL( conshdlrAddUpdateCons((*cons)->conshdlr, set, *cons) );
          assert((*cons)->update);
@@ -6022,7 +6259,8 @@ SCIP_RETCODE SCIPconsDelete(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    )
 {
    assert(cons != NULL);
@@ -6031,7 +6269,7 @@ SCIP_RETCODE SCIPconsDelete(
    assert(set != NULL);
    assert(cons->scip == set->scip);
 
-   SCIPdebugMessage("globally deleting constraint <%s> (delay updates: %d)\n", 
+   SCIPsetDebugMsg(set, "globally deleting constraint <%s> (delay updates: %d)\n",
       cons->name, cons->conshdlr->delayupdatecount);
 
    /* deactivate constraint, if it is currently active */
@@ -6041,6 +6279,9 @@ SCIP_RETCODE SCIPconsDelete(
    }
    else
       cons->updateactivate = FALSE;
+
+   if( set->reopt_enable && !SCIPreoptConsCanBeDeleted(reopt, cons) )
+      return SCIP_OKAY;
 
    assert(!cons->active || cons->updatedeactivate);
    assert(!cons->enabled || cons->updatedeactivate);
@@ -6416,7 +6657,7 @@ SCIP_RETCODE SCIPconsActivate(
 
    if( conshdlrAreUpdatesDelayed(cons->conshdlr) )
    {
-      SCIPdebugMessage("delayed activation of constraint <%s> in constraint handler <%s> (depth %d)\n", 
+      SCIPsetDebugMsg(set, "delayed activation of constraint <%s> in constraint handler <%s> (depth %d)\n",
          cons->name, cons->conshdlr->name, depth);
       cons->updateactivate = TRUE;
       cons->activedepth = depth;
@@ -6452,7 +6693,7 @@ SCIP_RETCODE SCIPconsDeactivate(
 
    if( conshdlrAreUpdatesDelayed(cons->conshdlr) )
    {
-      SCIPdebugMessage("delayed deactivation of constraint <%s> in constraint handler <%s>\n", 
+      SCIPsetDebugMsg(set, "delayed deactivation of constraint <%s> in constraint handler <%s>\n",
          cons->name, cons->conshdlr->name);
       cons->updatedeactivate = TRUE;
       cons->activedepth = -2;
@@ -6653,6 +6894,16 @@ SCIP_RETCODE SCIPconsDisablePropagation(
    return SCIP_OKAY;
 }
 
+/** marks the constraint to be a conflict */
+void SCIPconsMarkConflict(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   cons->conflict = TRUE;
+}
+
 /** marks the constraint to be propagated (update might be delayed) */
 SCIP_RETCODE SCIPconsMarkPropagate(
    SCIP_CONS*            cons,               /**< constraint */
@@ -6728,7 +6979,8 @@ SCIP_RETCODE SCIPconsAddAge(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< problem data */
-   SCIP_Real             deltaage            /**< value to add to the constraint's age */
+   SCIP_Real             deltaage,           /**< value to add to the constraint's age */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    )
 {
    assert(cons != NULL);
@@ -6741,7 +6993,7 @@ SCIP_RETCODE SCIPconsAddAge(
    if( set->stage == SCIP_STAGE_PRESOLVING )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("adding %g to age (%g) of constraint <%s> of handler <%s>\n",
+   SCIPsetDebugMsg(set, "adding %g to age (%g) of constraint <%s> of handler <%s>\n",
       deltaage, cons->age, cons->name, cons->conshdlr->name);
 
    cons->age += deltaage;
@@ -6751,7 +7003,7 @@ SCIP_RETCODE SCIPconsAddAge(
    {
       if( !cons->check && consExceedsAgelimit(cons, set) )
       {
-         SCIP_CALL( SCIPconsDelete(cons, blkmem, set, stat, prob) );
+         SCIP_CALL( SCIPconsDelete(cons, blkmem, set, stat, prob, reopt) );
       }
       else if( !cons->obsolete && consExceedsObsoleteage(cons, set) )
       {
@@ -6785,10 +7037,11 @@ SCIP_RETCODE SCIPconsIncAge(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PROB*            prob                /**< problem data */
+   SCIP_PROB*            prob,               /**< problem data */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    )
 {
-   SCIP_CALL( SCIPconsAddAge(cons, blkmem, set, stat, prob, 1.0) );
+   SCIP_CALL( SCIPconsAddAge(cons, blkmem, set, stat, prob, 1.0, reopt) );
 
    return SCIP_OKAY;
 }
@@ -6811,7 +7064,7 @@ SCIP_RETCODE SCIPconsResetAge(
    assert(set != NULL);
    assert(cons->scip == set->scip);
 
-   SCIPdebugMessage("resetting age %g of constraint <%s> of handler <%s>\n", cons->age, cons->name, cons->conshdlr->name);
+   SCIPsetDebugMsg(set, "resetting age %g of constraint <%s> of handler <%s>\n", cons->age, cons->name, cons->conshdlr->name);
 
    conshdlrUpdateAgeresetavg(cons->conshdlr, cons->age);
    cons->age = 0.0;
@@ -6835,68 +7088,6 @@ SCIP_RETCODE SCIPconsResetAge(
    return SCIP_OKAY;
 }
 
-/** adds an active constraint to the propagation queue(if not already marked for propagation) of corresponding
- *  constraint handler and marks the constraint to be propagated in the next propagation round
- *
- *  @note if constraint is added to the queue it will be captured
- */
-SCIP_RETCODE SCIPconsPushProp(
-   SCIP_CONS*            cons                /**< constraint */
-   )
-{
-   assert(cons != NULL);
-   assert(cons->conshdlr != NULL);
-
-   if( !SCIPconsIsActive(cons) )
-      return SCIP_OKAY;
-
-   if( !cons->markedprop )
-   {
-      SCIP_CALL( SCIPqueueInsert(cons->conshdlr->pendingconss, (void*)cons) );
-      SCIPconsCapture(cons);
-      cons->markedprop = TRUE;
-   }
-   assert(cons->markedprop);
-
-   return SCIP_OKAY;
-}
-
-/** returns first constraint from propagation queue(if not empty) of given constraint handler */
-SCIP_CONS* SCIPconshdlrFrontProp(
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-   )
-{
-   if( SCIPqueueIsEmpty(conshdlr->pendingconss) )
-      return NULL;
-
-   return (SCIP_CONS*)SCIPqueueFirst(conshdlr->pendingconss);
-}
-
-/** removes constraint from propagation queue(if not empty) of given constraint handler and unmarks constraint to be
- *  propagated in the next propagation round
- *
- *  @note if constraint is removed from the queue it will be released
- */
-SCIP_RETCODE SCIPconshdlrPopProp(
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set                 /**< global SCIP settings */
-   )
-{
-   SCIP_CONS* cons;
-
-   if( SCIPqueueIsEmpty(conshdlr->pendingconss) )
-      return SCIP_OKAY;
-
-   cons = (SCIP_CONS*)SCIPqueueRemove(conshdlr->pendingconss);
-   assert(cons != NULL);
-
-   cons->markedprop = FALSE;
-   SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
-
-   return SCIP_OKAY;
-}
-
 /** resolves the given conflicting bound, that was deduced by the given constraint, by putting all "reason" bounds
  *  leading to the deduction into the conflict queue with calls to SCIPaddConflictLb(), SCIPaddConflictUb(), SCIPaddConflictBd(),
  *  SCIPaddConflictRelaxedLb(), SCIPaddConflictRelaxedUb(), SCIPaddConflictRelaxedBd(), or SCIPaddConflictBinvar();
@@ -6916,13 +7107,13 @@ SCIP_RETCODE SCIPconsResolvePropagation(
 {
    SCIP_CONSHDLR* conshdlr;
 
+   assert(set != NULL);
    assert(cons != NULL);
    assert((inferboundtype == SCIP_BOUNDTYPE_LOWER
-         && SCIPvarGetLbAtIndex(infervar, bdchgidx, TRUE) > SCIPvarGetLbGlobal(infervar))
+         && SCIPgetVarLbAtIndex(set->scip, infervar, bdchgidx, TRUE) > SCIPvarGetLbGlobal(infervar))
       || (inferboundtype == SCIP_BOUNDTYPE_UPPER
-         && SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < SCIPvarGetUbGlobal(infervar)));
+         && SCIPgetVarUbAtIndex(set->scip, infervar, bdchgidx, TRUE) < SCIPvarGetUbGlobal(infervar)));
    assert(result != NULL);
-   assert(set != NULL);
    assert(cons->scip == set->scip);
 
    *result = SCIP_DIDNOTRUN;
@@ -7030,8 +7221,9 @@ SCIP_RETCODE SCIPconsCheck(
    /* call external method */
    assert(conshdlr->conscheck != NULL);
 
-   SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, &cons, 1, sol, checkintegrality, checklprows, printreason, result) );
-   SCIPdebugMessage(" -> checking returned result <%d>\n", *result);
+   SCIP_CALL( conshdlr->conscheck(set->scip, conshdlr, &cons, 1, sol, checkintegrality, checklprows, printreason,
+         FALSE, result) );
+   SCIPsetDebugMsg(set, " -> checking returned result <%d>\n", *result);
 
    if( *result != SCIP_INFEASIBLE && *result != SCIP_FEASIBLE )
    {
@@ -7066,7 +7258,7 @@ SCIP_RETCODE SCIPconsEnfops(
    assert(conshdlr->consenfops != NULL);
 
    SCIP_CALL( conshdlr->consenfops(set->scip, conshdlr, &cons, 1, 1, solinfeasible, objinfeasible, result) );
-   SCIPdebugMessage(" -> enfops returned result <%d>\n", *result);
+   SCIPsetDebugMsg(set, " -> enfops returned result <%d>\n", *result);
 
    if( *result != SCIP_CUTOFF
       && *result != SCIP_CONSADDED
@@ -7109,7 +7301,7 @@ SCIP_RETCODE SCIPconsEnfolp(
    assert(conshdlr->consenfolp != NULL);
 
    SCIP_CALL( conshdlr->consenfolp(set->scip, conshdlr, &cons, 1, 1, solinfeasible, result) );
-   SCIPdebugMessage(" -> enfolp returned result <%d>\n", *result);
+   SCIPsetDebugMsg(set, " -> enfolp returned result <%d>\n", *result);
 
    if( *result != SCIP_CUTOFF
       && *result != SCIP_CONSADDED
@@ -7129,6 +7321,49 @@ SCIP_RETCODE SCIPconsEnfolp(
    return SCIP_OKAY;
 }
 
+/** enforces single constraint for a given relaxation solution */
+SCIP_RETCODE SCIPconsEnforelax(
+   SCIP_CONS*            cons,               /**< constraint to enforce */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< solution to be enforced */
+   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
+   SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   assert(cons != NULL);
+   assert(set != NULL);
+   assert(cons->scip == set->scip);
+   assert(sol != NULL);
+   assert(result != NULL);
+
+   conshdlr = cons->conshdlr;
+   assert(conshdlr != NULL);
+
+   /* call external method */
+   assert(conshdlr->consenfolp != NULL);
+
+   SCIP_CALL( conshdlr->consenforelax(set->scip, sol, conshdlr, &cons, 1, 1, solinfeasible, result) );
+   SCIPdebugMessage(" -> enforelax returned result <%d>\n", *result);
+
+   if( *result != SCIP_CUTOFF
+      && *result != SCIP_CONSADDED
+      && *result != SCIP_REDUCEDDOM
+      && *result != SCIP_BRANCHED
+      && *result != SCIP_SEPARATED
+      && *result != SCIP_INFEASIBLE
+      && *result != SCIP_FEASIBLE)
+   {
+      SCIPerrorMessage("enforcing method of constraint handler <%s> for relaxation returned invalid result <%d>\n",
+         conshdlr->name, *result);
+      return SCIP_INVALIDRESULT;
+   }
+
+   /* do not update statistics */
+
+   return SCIP_OKAY;
+}
 
 /** calls LP initialization method for single constraint */
 SCIP_RETCODE SCIPconsInitlp(
@@ -7177,7 +7412,7 @@ SCIP_RETCODE SCIPconsSepalp(
    if( conshdlr->conssepalp != NULL )
    {
       SCIP_CALL( conshdlr->conssepalp(set->scip, conshdlr, &cons, 1, 1, result) );
-      SCIPdebugMessage(" -> sepalp returned result <%d>\n", *result);
+      SCIPsetDebugMsg(set, " -> sepalp returned result <%d>\n", *result);
 
       if( *result != SCIP_CUTOFF
          && *result != SCIP_CONSADDED
@@ -7220,7 +7455,7 @@ SCIP_RETCODE SCIPconsSepasol(
    if( conshdlr->conssepasol != NULL )
    {
       SCIP_CALL( conshdlr->conssepasol(set->scip, conshdlr, &cons, 1, 1, sol, result) );
-      SCIPdebugMessage(" -> sepasol returned result <%d>\n", *result);
+      SCIPsetDebugMsg(set, " -> sepasol returned result <%d>\n", *result);
 
       if( *result != SCIP_CUTOFF
          && *result != SCIP_CONSADDED
@@ -7262,7 +7497,7 @@ SCIP_RETCODE SCIPconsProp(
    if( conshdlr->consprop != NULL )
    {
       SCIP_CALL( conshdlr->consprop(set->scip, conshdlr, &cons, 1, 1, 1, proptiming, result) );
-      SCIPdebugMessage(" -> prop returned result <%d>\n", *result);
+      SCIPsetDebugMsg(set, " -> prop returned result <%d>\n", *result);
 
       if( *result != SCIP_CUTOFF
          && *result != SCIP_CONSADDED
@@ -7308,7 +7543,7 @@ SCIP_RETCODE SCIPconsResprop(
    if( conshdlr->consresprop != NULL )
    {
       SCIP_CALL( conshdlr->consresprop(set->scip, conshdlr, cons, infervar, inferinfo, boundtype, bdchgidx, relaxedbd, result) );
-      SCIPdebugMessage(" -> resprop returned result <%d>\n", *result);
+      SCIPsetDebugMsg(set, " -> resprop returned result <%d>\n", *result);
 
       if( *result != SCIP_SUCCESS
          && *result != SCIP_DIDNOTFIND )
@@ -7378,7 +7613,7 @@ SCIP_RETCODE SCIPconsPresol(
             nnewfixedvars, nnewaggrvars, nnewchgvartypes, nnewchgbds, nnewholes,  nnewdelconss, nnewaddconss,
             nnewupgdconss, nnewchgcoefs, nnewchgsides, nfixedvars, naggrvars, nchgvartypes,
             nchgbds, naddholes, ndelconss, naddconss, nupgdconss, nchgcoefs, nchgsides, result) );
-      SCIPdebugMessage(" -> presol returned result <%d>\n", *result);
+      SCIPsetDebugMsg(set, " -> presol returned result <%d>\n", *result);
 
       if( *result != SCIP_UNBOUNDED
          && *result != SCIP_CUTOFF
@@ -7521,9 +7756,8 @@ SCIP_RETCODE SCIPconshdlrsStorePropagationStatus(
          for( v = conshdlr->storednmarkedpropconss - 1; v >= 0; --v )
          {
             SCIPconsCapture(conshdlr->storedpropconss[v]);
-            SCIP_CALL( SCIPconsUnmarkPropagate(conshdlr->storedpropconss[v], set) );
          }
-         assert(conshdlr->nmarkedpropconss == 0);
+         /* assert(conshdlr->nmarkedpropconss == 0); this assert does not hold if updates are delayed */
       }
    }
 
@@ -7557,8 +7791,13 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 #endif
          int v;
 
+         for( v = conshdlr->nmarkedpropconss - 1; v >= 0; --v )
+         {
+            SCIP_CALL( SCIPconsUnmarkPropagate(conshdlr->propconss[v], set) );
+         }
+
          /* mark all previously marked constraint, which were marked before probing */
-         for( v = conshdlr->storednmarkedpropconss - 1; v >= 0; --v )
+         for( v = 0; v < conshdlr->storednmarkedpropconss; ++v )
          {
             SCIP_CONS* cons = conshdlr->storedpropconss[v];
             assert(cons != NULL);
@@ -7573,6 +7812,7 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 #endif
             SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
          }
+
          assert(conshdlr->storednmarkedpropconss - ndisabled <= conshdlr->npropconss);
          assert(conshdlr->nmarkedpropconss + ndisabled >= conshdlr->storednmarkedpropconss || (conshdlrAreUpdatesDelayed(conshdlr) && conshdlr->nupdateconss + ndisabled >= conshdlr->storednmarkedpropconss));
 
@@ -7607,6 +7847,7 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 #undef SCIPconsIsPropagationEnabled
 #undef SCIPconsIsDeleted
 #undef SCIPconsIsObsolete
+#undef SCIPconsIsConflict
 #undef SCIPconsGetAge
 #undef SCIPconsIsInitial
 #undef SCIPconsIsSeparated
@@ -7705,6 +7946,16 @@ SCIP_Bool SCIPconsIsActive(
    return cons->updateactivate || (cons->active && !cons->updatedeactivate);
 }
 
+/** returns TRUE iff constraint is active in the current node */
+SCIP_Bool SCIPconsIsUpdatedeactivate(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->updatedeactivate;
+}
+
 /** returns the depth in the tree at which the constraint is valid; returns INT_MAX, if the constraint is local
  *  and currently not active
  */
@@ -7773,6 +8024,16 @@ SCIP_Bool SCIPconsIsObsolete(
    return cons->updateobsolete || cons->obsolete;
 }
 
+/** returns TRUE iff constraint is marked as a conflict */
+SCIP_Bool SCIPconsIsConflict(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->conflict;
+}
+
 /** gets age of constraint */
 SCIP_Real SCIPconsGetAge(
    SCIP_CONS*            cons                /**< constraint */
@@ -7830,7 +8091,7 @@ SCIP_Bool SCIPconsIsMarkedPropagate(
 {
    assert(cons != NULL);
 
-   return cons->markpropagate;
+   return (cons->updatemarkpropagate || (cons->markpropagate && !cons->updateunmarkpropagate));
 }
 
 /** returns TRUE iff constraint should be propagated during node processing */
@@ -8001,7 +8262,7 @@ void SCIPconsAddUpgradeLocks(
 {
    assert(cons != NULL);
 
-   assert(cons->nupgradelocks < (1 << 29) - nlocks); /*lint !e574*/
+   assert(cons->nupgradelocks < (1 << 28) - nlocks); /*lint !e574*/
    cons->nupgradelocks += (unsigned int) nlocks;
 }
 

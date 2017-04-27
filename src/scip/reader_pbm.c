@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -405,7 +405,7 @@ SCIP_DECL_READERFREE(readerFreePbm)
    readerdata = SCIPreaderGetData(reader);
    assert(readerdata != NULL);
 
-   SCIPfreeMemory(scip, &readerdata);
+   SCIPfreeBlockMemory(scip, &readerdata);
 
    return SCIP_OKAY;
 }
@@ -442,7 +442,7 @@ SCIP_RETCODE SCIPincludeReaderPbm(
    SCIP_READERDATA* readerdata;
 
    /* create pbm reader data */
-   SCIP_CALL( SCIPallocMemory(scip, &readerdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &readerdata) );
 
    /* include pbm reader */
    SCIP_CALL( SCIPincludeReader(scip, READER_NAME, READER_DESC, READER_EXTENSION,

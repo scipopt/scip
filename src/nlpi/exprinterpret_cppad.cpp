@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -85,25 +85,6 @@ using CppAD::SCIPInterval;
 #ifndef NPARASCIP
 #include <pthread.h>
 
-/* workaround error message regarding missing implementation of tanh during initialization of static variables (see cppad/local/erf.hpp) */
-namespace CppAD
-{
-template <> SCIPInterval erf_template(
-   const SCIPInterval    &x
-   )
-{
-   CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
-   return SCIPInterval();
-}
-template <> AD<SCIPInterval> erf_template(
-   const AD<SCIPInterval> &x
-   )
-{
-   CPPAD_ASSERT_FIRST_CALL_NOT_PARALLEL;
-   return AD<SCIPInterval>();
-}
-}
-
 /** mutex for locking in pthread case */
 static pthread_mutex_t cppadmutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -178,10 +159,13 @@ char init_parallel(void)
    return 0;
 }
 
-/** a dummy variable that can is initialized to the result of init_parallel
+/** a dummy variable that is initialized to the result of init_parallel
  *
  *  The purpose is to make sure that init_parallel() is called before any multithreading is started.
  */
+#if !defined(_MSC_VER)
+__attribute__ ((unused))
+#endif
 static char init_parallel_return = init_parallel();
 
 #endif // NPARASCIP
@@ -201,16 +185,6 @@ SCIPInterval CondExpOp(
       );
 
    return SCIPInterval();
-}
-
-/** another function that returns whether two intervals are the same (required by CppAD) */
-inline
-bool EqualOpSeq(
-   const SCIPInterval&   x,                  /**< first operand */
-   const SCIPInterval&   y                   /**< second operand */
-   )
-{
-   return x == y;
 }
 
 /** another function required by CppAD */

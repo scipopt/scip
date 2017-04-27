@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -116,6 +116,12 @@ int SCIPprobdataGetRoot(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns numer of original edges */
+extern
+int SCIPprobdataGetNorgEdges(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** returns the number of edges */
 extern
 int SCIPprobdataGetNEdges(
@@ -208,6 +214,18 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
    SCIP_Bool*            success             /**< denotes whether the new solution has been successfully added */
    );
 
+#if 0
+/** add new solution */
+extern
+SCIP_RETCODE SCIPprobdataAddNewSol2(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA* probdata,
+   SCIP_Real*            nval,               /**< array [0..nvars], nval[v] = 1 if node v is in the solution, nval[v] = 0 if not */
+   SCIP_SOL*             sol,                /**< the new solution */
+   SCIP_HEUR*            heur,               /**< heuristic data */
+   SCIP_Bool*            success             /**< denotes whether the new solution has been successfully added */
+   );
+#endif
 /** set dual bound by ug */
 extern
 void SCIPprobdataSetDualBound(

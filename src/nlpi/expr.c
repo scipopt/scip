@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,6 +37,7 @@
 
 
 #define SCIP_EXPRESSION_MAXCHILDEST 16       /**< estimate on maximal number of children */
+#define DEFAULT_RANDSEED            73       /**< initial random seed */
 
 /** sign of a value (-1 or +1)
  *
@@ -116,15 +117,31 @@ int calcGrowSize(
    return size;
 }
 
-/** pointer comparison to use in sorting methods */
+/** expression graph nodes comparison to use in sorting methods
+ *
+ * The nodes need to have been added to the expression graph (depth,pos >= 0).
+ * The better node is the one with the lower depth and lower position, if depth is equal.
+ */
 static
-SCIP_DECL_SORTPTRCOMP(ptrcomp)
+SCIP_DECL_SORTPTRCOMP(exprgraphnodecomp)
 {
-   if( elem1 > elem2 )
-      return 1;
-   if( elem1 < elem2 )
-      return -1;
-   return 0;
+   SCIP_EXPRGRAPHNODE* node1 = (SCIP_EXPRGRAPHNODE*)elem1;
+   SCIP_EXPRGRAPHNODE* node2 = (SCIP_EXPRGRAPHNODE*)elem2;
+
+   assert(node1 != NULL);
+   assert(node2 != NULL);
+   assert(node1->depth >= 0);
+   assert(node1->pos >= 0);
+   assert(node2->depth >= 0);
+   assert(node2->pos >= 0);
+
+   if( node1->depth != node2->depth )
+      return node1->depth - node2->depth;
+
+   /* there should be no two nodes on the same position */
+   assert((node1->pos != node2->pos) || (node1 == node2));
+
+   return node1->pos - node2->pos;
 }
 
 /** checks if a given new lower bound is tighter (w.r.t. given bound strengthening epsilon) than the old one (copied from scip/set.c) */
@@ -893,8 +910,8 @@ void polynomialdataMergeMonomials(
    }
 
 #ifndef NDEBUG
-   while( i < polynomialdata->nmonomials )
-      assert(polynomialdata->monomials[i++] == NULL);
+   for( ; i < polynomialdata->nmonomials; ++i )
+      assert(polynomialdata->monomials[i] == NULL);
 #endif
 
    polynomialdata->nmonomials -= offset;
@@ -1631,7 +1648,7 @@ SCIP_DECL_EXPRCURV( exprcurvMult )
 
 /** point evaluation for EXPR_DIV */
 static
-#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
 __attribute__((no_sanitize_undefined))
 #endif
 SCIP_DECL_EXPREVAL( exprevalDiv )
@@ -1819,6 +1836,9 @@ SCIP_DECL_EXPRCURV( exprcurvRealPower )
 
 /** point evaluation for EXPR_INTPOWER */
 static
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 SCIP_DECL_EXPREVAL( exprevalIntPower )
 {   /*lint --e{715}*/
    assert(result  != NULL);
@@ -2044,12 +2064,11 @@ SCIP_DECL_EXPREVAL( exprevalSin )
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntSin )
 {   /*lint --e{715}*/
-   assert(result  != NULL);
+   assert(result != NULL);
    assert(argvals != NULL);
+   assert(nargs == 1);
 
-   /* @todo implement SCIPintervalSin */
-   SCIPerrorMessage("exprevalSinInt gives only trivial bounds so far\n");
-   SCIPintervalSetBounds(result, -1.0, 1.0);
+   SCIPintervalSin(infinity, result, *argvals);
 
    return SCIP_OKAY;
 }
@@ -2073,12 +2092,11 @@ SCIP_DECL_EXPREVAL( exprevalCos )
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntCos )
 {   /*lint --e{715}*/
-   assert(result  != NULL);
+   assert(result != NULL);
    assert(argvals != NULL);
+   assert(nargs == 1);
 
-   /* @todo implement SCIPintervalCos */
-   SCIPerrorMessage("exprevalCosInt gives only trivial bounds so far\n");
-   SCIPintervalSetBounds(result, -1.0, 1.0);
+   SCIPintervalCos(infinity, result, *argvals);
 
    return SCIP_OKAY;
 }
@@ -2553,7 +2571,7 @@ SCIP_DECL_EXPREVAL( exprevalQuadratic )
    quadelems  = quaddata->quadelems;
 
    assert(quadelems != NULL || nquadelems == 0);
-   assert(argvals != NULL   || nargs == 0);
+   assert(argvals != NULL || nquadelems == 0);
 
    *result = quaddata->constant;
 
@@ -2856,8 +2874,13 @@ SCIP_DECL_EXPREVAL( exprevalPolynomial )
             }
             else if( exponent < 0.0 )
             {
-               /* 0^negative = nan */
-               *result = log(-1.0);
+               /* 0^negative = nan (or should it be +inf?, doesn't really matter) */
+#ifdef NAN
+               *result = NAN;
+#else
+               /* cppcheck-suppress wrongmathcall */
+               *result = pow(0.0, -1.0);
+#endif
                return SCIP_OKAY;
             }
             /* 0^0 == 1 */
@@ -3986,11 +4009,13 @@ SCIP_RETCODE exprUnconvertPolynomial(
    {
       /* polynomial is product of children */
       monomial = polynomialdata->monomials[0];
+      assert(monomial->nfactors == nchildren);
 
       if( monomial->nfactors == 1 )
       {
          /* polynomial is x^k for some k */
          assert(monomial->exponents[0] != 1.0); /* should have been handled before */
+         assert(monomial->childidxs[0] == 0);
 
          if( monomial->exponents[0] == 2.0 )
          {
@@ -4075,6 +4100,8 @@ SCIP_RETCODE exprUnconvertPolynomial(
       if( monomial->nfactors == 2 && monomial->exponents[0] == 1.0 && monomial->exponents[1] == -1.0 )
       {
          /* polynomial is x/y, so turn into SCIP_EXPR_DIV */
+         assert(monomial->childidxs[0] == 0);
+         assert(monomial->childidxs[1] == 1);
 
          polynomialdataFree(blkmem, &polynomialdata);
          data->data = NULL;
@@ -4088,6 +4115,9 @@ SCIP_RETCODE exprUnconvertPolynomial(
       {
          /* polynomial is y/x, so turn into SCIP_EXPR_DIV */
          void* tmp;
+
+         assert(monomial->childidxs[0] == 0);
+         assert(monomial->childidxs[1] == 1);
 
          polynomialdataFree(blkmem, &polynomialdata);
          data->data = NULL;
@@ -5158,10 +5188,17 @@ SCIP_RETCODE exprParse(
       SCIP_CALL( exprParse(blkmem, messagehdlr, expr, subexpptr, subexplength, subexpendptr, nvars, varnames, vartable, recursiondepth + 1) );
       ++str;
    }
-   else if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
+   else if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+')
+         && (isdigit((unsigned char)str[1]) || str[1] == ' ')) )
    {
-      /* there is a number coming */
-      if( !SCIPstrToRealValue(str, &number, &nonconstendptr) )
+      /* check if there is a lonely minus coming, indicating a -1.0 */
+      if( str[0] == '-'  && str[1] == ' ' )
+      {
+         number = -1.0;
+         nonconstendptr = (char*) str + 1;
+      }
+      /* check if there is a number coming */
+      else if( !SCIPstrToRealValue(str, &number, &nonconstendptr) )
       {
          SCIPerrorMessage("error parsing number from <%s>\n", str);
          return SCIP_READERROR;
@@ -5172,7 +5209,7 @@ SCIP_RETCODE exprParse(
       while( isspace((unsigned char)*str) && str != lastchar )
          ++str;
 
-      if( str[0] != '*' && str[0] != '/' && str[0] != '+' && str[0] != '-' && str[0] != '/' && str[0] != '^' )
+      if( str[0] != '*' && str[0] != '/' && str[0] != '+' && str[0] != '-' && str[0] != '^' )
       {
          if( str < lastchar )
          {
@@ -5205,7 +5242,7 @@ SCIP_RETCODE exprParse(
 
       SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_SQRT, arg1) );
    }
-   /* three character operators */
+   /* three character operators with 1 argument */
    else if(
       strncmp(str, "abs", 3) == 0 ||
       strncmp(str, "cos", 3) == 0 ||
@@ -5251,6 +5288,38 @@ SCIP_RETCODE exprParse(
          assert(strncmp(opname, "tan", 3) == 0);
          SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_TAN, arg1) );
       }
+   }
+   /* three character operators with 2 arguments */
+   else if(
+      strncmp(str, "max", 3) == 0 ||
+      strncmp(str, "min", 3) == 0 )
+   {
+      /* we have a string of the form "min(...,...)" or "max(...,...)"
+       * first find the closing parenthesis, then the comma
+       */
+      const char* comma;
+      SCIP_EXPROP op;
+
+      op = (str[1] == 'a' ? SCIP_EXPR_MAX : SCIP_EXPR_MIN);
+
+      str += 3;
+      SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length) );
+
+      SCIP_CALL( exprparseFindSeparatingComma(str+1, &comma, endptr - str - 1) );
+
+      /* parse first argument [str+1..comma-1] */
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str + 1, comma - str - 1, comma - 1, nvars, varnames, vartable, recursiondepth + 1) );
+
+      /* parse second argument [comma+1..endptr] */
+      ++comma;
+      while( comma < endptr && *comma == ' ' )
+         ++comma;
+
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg2, comma, endptr - comma, endptr - 1, nvars, varnames, vartable, recursiondepth + 1) );
+
+      SCIP_CALL( SCIPexprCreate(blkmem, expr, op, arg1, arg2) );
+
+      str = endptr + 1;
    }
    else if( strncmp(str, "power", 5) == 0 )
    {
@@ -5381,24 +5450,15 @@ SCIP_RETCODE exprParse(
 
    if( str[0] == '^' )
    {
-      /* a '^' behind the found expression indicates a constant power */
+      /* a '^' behind the found expression indicates a power */
       SCIP_Real constant;
 
       arg1 = *expr;
       ++str;
+      while( isspace((unsigned char)*str) && str != lastchar + 1 )
+         ++str;
 
-      if( str[0] == '(' )
-      {
-         /* we use exprParse to evaluate the bracketed argument */
-         SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length) );
-         SCIP_CALL( exprParse(blkmem, messagehdlr, &arg2, str + 1, endptr - str - 1, endptr -1, nvars, varnames, vartable, recursiondepth + 1) );
-
-         /* everything else should be written as (int|real|sign)power(a,b)... */
-         assert(SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST);
-
-         str = endptr + 1;
-      }
-      else if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
+      if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
       {
          /* there is a number coming */
          if( !SCIPstrToRealValue(str, &number, &nonconstendptr) )
@@ -5409,23 +5469,54 @@ SCIP_RETCODE exprParse(
 
          SCIP_CALL( SCIPexprCreate(blkmem, &arg2, SCIP_EXPR_CONST, number) );
          str = nonconstendptr;
+
+         constant = SCIPexprGetOpReal(arg2);
+         SCIPexprFreeDeep(blkmem, &arg2);
+
+         /* expr^number is intpower or realpower */
+         if( EPSISINT(constant, 0.0) ) /*lint !e835*/
+         {
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_INTPOWER, arg1, (int)constant) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_REALPOWER, arg1, constant) );
+         }
+      }
+      else if( str[0] == '(' )
+      {
+         /* we use exprParse to evaluate the exponent */
+
+         SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length) );
+         SCIP_CALL( exprParse(blkmem, messagehdlr, &arg2, str + 1, endptr - str - 1, endptr -1, nvars, varnames, vartable, recursiondepth + 1) );
+
+         if( SCIPexprGetOperator(arg2) != SCIP_EXPR_CONST )
+         {
+            /* reformulate arg1^arg2 as exp(arg2 * log(arg1)) */
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_LOG, arg1) );
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_MUL, *expr, arg2) );
+            SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_EXP, *expr) );
+         }
+         else
+         {
+            /* expr^number is intpower or realpower */
+            constant = SCIPexprGetOpReal(arg2);
+            SCIPexprFreeDeep(blkmem, &arg2);
+            if( EPSISINT(constant, 0.0) ) /*lint !e835*/
+            {
+               SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_INTPOWER, arg1, (int)constant) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_REALPOWER, arg1, constant) );
+            }
+         }
+         str = endptr + 1;
       }
       else
       {
          SCIPerrorMessage("unexpected string following ^ in  %.*s\n", length, str);
          return SCIP_READERROR;
-      }
-
-      constant = SCIPexprGetOpReal(arg2);
-
-      /* expr^number is intpower or realpower */
-      if( EPSISINT(constant, 0.0) ) /*lint !e835*/
-      {
-         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_INTPOWER, arg1, (int)SCIPexprGetOpReal(arg2)) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_REALPOWER, arg1, SCIPexprGetOpReal(arg2)) );
       }
 
       /* ignore whitespace */
@@ -5434,7 +5525,7 @@ SCIP_RETCODE exprParse(
    }
 
    /* check for a two argument operator that is not a multiplication */
-   if( str[0] == '+' || str[0] == '-' || str[0] == '/' || str[0] == '^' )
+   if( str <= lastchar && (str[0] == '+' || str[0] == '-' || str[0] == '/') )
    {
       char op;
 
@@ -5478,6 +5569,7 @@ SCIP_RETCODE exprParse(
          if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
          {
             SCIP_CALL( SCIPexprMulConstant(blkmem, expr, arg1, 1.0 / SCIPexprGetOpReal(arg2)) );
+            SCIPexprFreeShallow(blkmem, &arg2);
          }
          else
          {
@@ -5491,7 +5583,7 @@ SCIP_RETCODE exprParse(
       ++str;
 
    /* we are either done or we have a multiplication? */
-   if( str >= lastchar + 1)
+   if( str >= lastchar + 1 )
    {
       SCIPdebugMessage("exprParse (%i): returns expression ", recursiondepth);
       SCIPdebug( SCIPexprPrint(*expr, messagehdlr, NULL, NULL, NULL, NULL) );
@@ -5518,10 +5610,12 @@ SCIP_RETCODE exprParse(
    if( SCIPexprGetOperator(arg1) == SCIP_EXPR_CONST )
    {
       SCIP_CALL( SCIPexprMulConstant(blkmem, expr, arg2, SCIPexprGetOpReal(arg1)) );
+      SCIPexprFreeDeep(blkmem, &arg1);
    }
    else if( SCIPexprGetOperator(arg2) == SCIP_EXPR_CONST )
    {
       SCIP_CALL( SCIPexprMulConstant(blkmem, expr, arg1, SCIPexprGetOpReal(arg2)) );
+      SCIPexprFreeDeep(blkmem, &arg2);
    }
    else
    {
@@ -6888,8 +6982,8 @@ void SCIPexprMergeMonomialFactors(
    }
 
 #ifndef NDEBUG
-   while( i < monomial->nfactors )
-      assert(monomial->childidxs[i++] == -1);
+   for( ; i < monomial->nfactors; ++i )
+      assert(monomial->childidxs[i] == -1);
 #endif
 
    monomial->nfactors -= offset;
@@ -7044,7 +7138,8 @@ SCIP_RETCODE SCIPexprCreateUser(
    SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function, or NULL if not implemented */
    SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function, or NULL if convex, concave, or not implemented */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
-   SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRFREEDATA ((*freedata)), /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRPRINT ((*print))        /**< expression print function, or NULL for default string "user" */
    )
 {
    SCIP_EXPROPDATA opdata;
@@ -7053,7 +7148,6 @@ SCIP_RETCODE SCIPexprCreateUser(
 
    assert(blkmem != NULL);
    assert(expr != NULL);
-   assert(children != NULL || nchildren == 0);
    assert(eval != NULL);
    assert((evalcapability & SCIP_EXPRINTCAPABILITY_FUNCVALUE) != 0);  /* the function evaluation is not optional */
    assert(((evalcapability & SCIP_EXPRINTCAPABILITY_INTFUNCVALUE) == 0) || inteval != NULL);  /* if capability says it can do interval evaluation, then the corresponding callback needs to be provided */
@@ -7072,6 +7166,7 @@ SCIP_RETCODE SCIPexprCreateUser(
    userexprdata->estimate = estimate;
    userexprdata->copydata = copydata;
    userexprdata->freedata = freedata;
+   userexprdata->print = print;
 
    opdata.data = (void*) userexprdata;
 
@@ -7080,6 +7175,7 @@ SCIP_RETCODE SCIPexprCreateUser(
       SCIP_CALL( exprCreate(blkmem, expr, SCIP_EXPR_USER, 0, NULL, opdata) );
       return SCIP_OKAY;
    }
+   assert(children != NULL);
 
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &childrencopy, children, nchildren) );
 
@@ -7581,11 +7677,17 @@ SCIP_Bool SCIPexprAreEqual(
       if( data1->lincoefs != NULL || data2->lincoefs != NULL )
          for( i = 0; i < expr1->nchildren; ++i )
          {
-            if( data1->lincoefs == NULL && !EPSZ(data2->lincoefs[i], eps) )
-               return FALSE;
-            if( data2->lincoefs == NULL && !EPSZ(data1->lincoefs[i], eps) )
-               return FALSE;
-            if( !EPSEQ(data1->lincoefs[i], data2->lincoefs[i], eps) )
+            if( data1->lincoefs == NULL )
+            {
+               if( !EPSZ(data2->lincoefs[i], eps) )
+                  return FALSE;
+            }
+            else if( data2->lincoefs == NULL )
+            {
+               if( !EPSZ(data1->lincoefs[i], eps) )
+                  return FALSE;
+            }
+            else if( !EPSEQ(data1->lincoefs[i], data2->lincoefs[i], eps) )
                return FALSE;
          }
 
@@ -8118,9 +8220,9 @@ void SCIPexprPrint(
 
    case SCIP_EXPR_CONST:
       if (expr->data.dbl < 0.0 )
-         SCIPmessageFPrintInfo(messagehdlr, file, "(%lf)", expr->data.dbl );
+         SCIPmessageFPrintInfo(messagehdlr, file, "(%g)", expr->data.dbl );
       else
-         SCIPmessageFPrintInfo(messagehdlr, file, "%lf", expr->data.dbl );
+         SCIPmessageFPrintInfo(messagehdlr, file, "%g", expr->data.dbl );
       break;
 
    case SCIP_EXPR_PLUS:
@@ -8345,20 +8447,22 @@ void SCIPexprPrint(
 
    case SCIP_EXPR_USER:
    {
-      /*  @todo allow for user printing callback
       SCIP_EXPRDATA_USER* exprdata;
+      int i;
 
       exprdata = (SCIP_EXPRDATA_USER*)expr->data.data;
       assert(exprdata != NULL);
 
       if( exprdata->print != NULL )
       {
-         exprdata->print(messagehdlr, file, )
+         exprdata->print(exprdata->userdata, messagehdlr, file);
       }
-      */
-      int i;
+      else
+      {
+         SCIPmessageFPrintInfo(messagehdlr, file, "user");
+      }
 
-      SCIPmessageFPrintInfo(messagehdlr, file, "user(");
+      SCIPmessageFPrintInfo(messagehdlr, file, "(");
       for( i = 0; i < expr->nchildren; ++i )
       {
          if( i > 0 )
@@ -8777,21 +8881,24 @@ SCIP_RETCODE SCIPexprtreeSimplify(
    )
 {
 #ifndef NDEBUG
+   SCIP_RANDNUMGEN* randnumgen;
    SCIP_Real* testx;
    SCIP_Real testval_before;
    SCIP_Real testval_after;
    int i;
-   unsigned int seed;
 #endif
 
    assert(tree != NULL);
 
 #ifndef NDEBUG
-   seed = 42;
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, tree->blkmem, 42) );
+
    SCIP_ALLOC( BMSallocMemoryArray(&testx, SCIPexprtreeGetNVars(tree)) );  /*lint !e666*/
    for( i = 0; i < SCIPexprtreeGetNVars(tree); ++i )
-      testx[i] = SCIPgetRandomReal(-100.0, 100.0, &seed);  /*lint !e644*/
+      testx[i] = SCIPrandomGetReal(randnumgen, -100.0, 100.0);  /*lint !e644*/
    SCIP_CALL( SCIPexprtreeEval(tree, testx, &testval_before) );
+
+   SCIPrandomFree(&randnumgen);
 #endif
 
    /* we should be careful about declaring numbers close to zero as zero, so take eps^2 as tolerance */
@@ -9185,7 +9292,7 @@ SCIP_RETCODE exprgraphNodeAddParent(
    ++node->nparents;
 
    /* update sorted flag */
-   node->parentssorted = (node->nparents <= 1) || (node->parentssorted && (node->parents[node->nparents-2] <= parent));
+   node->parentssorted = (node->nparents <= 1) || (node->parentssorted && (exprgraphnodecomp((void*)node->parents[node->nparents-2], (void*)parent) <= 0));
 
    return SCIP_OKAY;
 }
@@ -9203,12 +9310,12 @@ void exprgraphNodeSortParents(
 #ifndef NDEBUG
       int i;
       for( i = 1; i < node->nparents; ++i )
-         assert(ptrcomp((void*)node->parents[i-1], (void*)node->parents[i]) <= 0);
+         assert(exprgraphnodecomp((void*)node->parents[i-1], (void*)node->parents[i]) <= 0);
 #endif
       return;
    }
 
-   SCIPsortPtr((void**)node->parents, ptrcomp, node->nparents);
+   SCIPsortPtr((void**)node->parents, exprgraphnodecomp, node->nparents);
 
    node->parentssorted = TRUE;
 }
@@ -9240,7 +9347,7 @@ SCIP_RETCODE exprgraphNodeRemoveParent(
 
    /* find parent */
    exprgraphNodeSortParents(*node);
-   (void) SCIPsortedvecFindPtr((void**)(*node)->parents, ptrcomp, (void*)parent, (*node)->nparents, &pos);
+   (void) SCIPsortedvecFindPtr((void**)(*node)->parents, exprgraphnodecomp, (void*)parent, (*node)->nparents, &pos);
    assert(pos >= 0);
    assert(pos < (*node)->nparents);
    assert((*node)->parents[pos] == parent);
@@ -9287,7 +9394,7 @@ SCIP_Bool exprgraphNodeIsParent(
    /* ensure parents array is sorted */
    exprgraphNodeSortParents(node);
 
-   return SCIPsortedvecFindPtr((void**)node->parents, ptrcomp, (void*)parent, node->nparents, &pos);
+   return SCIPsortedvecFindPtr((void**)node->parents, exprgraphnodecomp, (void*)parent, node->nparents, &pos);
 }
 
 /** adds expression graph nodes to the array of children of a sum, product, linear, quadratic, or polynomial expression
@@ -9993,6 +10100,7 @@ SCIP_RETCODE exprgraphNodeUpdateBounds(
 
    /* call interval evaluation function for this operand */
    assert( exprOpTable[node->op].inteval != NULL );
+   SCIPintervalSet(&newbounds, 0.0);
    SCIP_CALL( exprOpTable[node->op].inteval(infinity, node->data, node->nchildren, childbounds, NULL, NULL, &newbounds) );
 
    /* free memory, if allocated before */
@@ -11038,12 +11146,31 @@ void exprgraphNodePropagateBounds(
             }
 
             if( abc_flag == 'a' )
+            {
                SCIPintervalAdd(infinity, &a, a, monomialcoef);
+               /* if monomialcoef is such that a exceeds value for infinity, then stop */
+               if( a.inf >= infinity || a.sup <= -infinity )
+                  break;
+            }
             else if( abc_flag == 'b' )
+            {
                SCIPintervalAdd(infinity, &b, b, monomialcoef);
+               /* if monomialcoef is such that b exceeds value for infinity, then stop */
+               if( b.inf >= infinity || b.sup <= -infinity )
+                  break;
+            }
             else
+            {
                SCIPintervalSub(infinity, &c, c, monomialcoef);
+               /* if monomialcoef is such that c exceeds value for infinity, then stop */
+               if( c.inf >= infinity || c.sup <= -infinity )
+                  break;
+            }
          }
+
+         /* if we run out of numbers (within -infinity,infinity) above, then stop */
+         if( j < nmonomials )
+            continue;
 
          /* now have equation a*child^(2n) + b*child^n = c
           * solve a*y^2 + b*y = c, then child^n = y
@@ -11511,10 +11638,10 @@ SCIP_RETCODE exprgraphNodeSimplify(
          SCIP_CALL( exprgraphNodeRemoveParent(exprgraph, &node->children[i], node) );
          node->children[i] = NULL;
       }
-
-      /* simplify current polynomial again */
-      polynomialdataMergeMonomials(blkmem, polynomialdata, eps, TRUE);
    }
+
+   /* simplify current polynomial again */
+   polynomialdataMergeMonomials(blkmem, polynomialdata, eps, TRUE);
 
    BMSfreeBlockMemoryArrayNull(blkmem, &childmap, childmapsize);
 
@@ -11640,6 +11767,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    case SCIP_EXPR_REALPOWER:
    case SCIP_EXPR_SIGNPOWER:
    {
+      assert(node->nchildren == 1);
       assert(childexprs != NULL);
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0], node->data.dbl) );  /*lint !e613*/
       break;
@@ -11647,6 +11775,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
 
    case SCIP_EXPR_INTPOWER:
    {
+      assert(node->nchildren == 1);
       assert(childexprs != NULL);
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0], node->data.intval) );  /*lint !e613*/
       break;
@@ -11660,6 +11789,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    case SCIP_EXPR_MAX:
    {
       assert(node->nchildren == 2);
+      assert(childexprs != NULL);
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0], childexprs[1]) );  /*lint !e613*/
       break;
    }
@@ -11677,6 +11807,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
    case SCIP_EXPR_SIGN:
    {
       assert(node->nchildren == 1);
+      assert(childexprs != NULL);
       SCIP_CALL( SCIPexprCreate(exprgraph->blkmem, expr, node->op, childexprs[0]) );  /*lint !e613*/
       break;
    }
@@ -11737,7 +11868,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
          userdata = exprdata->userdata;
 
       SCIP_CALL( SCIPexprCreateUser(exprgraph->blkmem, expr, node->nchildren, childexprs,
-         userdata, exprdata->evalcapability, exprdata->eval, exprdata->inteval, exprdata->curv, exprdata->prop, exprdata->estimate, exprdata->copydata, exprdata->freedata) );
+         userdata, exprdata->evalcapability, exprdata->eval, exprdata->inteval, exprdata->curv, exprdata->prop, exprdata->estimate, exprdata->copydata, exprdata->freedata, exprdata->print) );
 
       break;
    }
@@ -11843,7 +11974,7 @@ void exprgraphNodeCheckSeparabilityComponent(
 /**@name Expression graph private methods */
 /**@{ */
 
-/** assert that expression tree has at least a given depth */
+/** assert that expression graph has at least a given depth */
 static
 SCIP_RETCODE exprgraphEnsureDepth(
    SCIP_EXPRGRAPH*       exprgraph,          /**< buffer to store pointer to expression graph */
@@ -11977,11 +12108,19 @@ SCIP_RETCODE exprgraphMoveNode(
    exprgraph->nodes[newdepth][node->pos] = node;
    ++exprgraph->nnodes[newdepth];
 
+   /* by moving the node to a new depth, the parents array in all its childrens may not be sorted anymore (parents order depends on depth) */
+   for( i = 0; i < node->nchildren; ++i )
+      node->children[i]->parentssorted = FALSE;
+
    /* move last node at previous depth to previous position, if it wasn't last */
    if( oldpos < exprgraph->nnodes[olddepth]-1 )
    {
       exprgraph->nodes[olddepth][oldpos] = exprgraph->nodes[olddepth][exprgraph->nnodes[olddepth]-1];
       exprgraph->nodes[olddepth][oldpos]->pos = oldpos;
+
+      /* by moving the node to a new position, the parents array in all its children may not be sorted anymore (parents order depends on depth) */
+      for( i = 0; i < exprgraph->nodes[olddepth][oldpos]->nchildren; ++i )
+         exprgraph->nodes[olddepth][oldpos]->children[i]->parentssorted = FALSE;
    }
    --exprgraph->nnodes[olddepth];
 
@@ -12116,7 +12255,7 @@ SCIP_RETCODE exprgraphFindParentByOperator(
    {
       /* sort childnodes, if needed for later */
       if( nchildren > 2 )
-         SCIPsortPtr((void**)children, ptrcomp, nchildren);
+         SCIPsortPtr((void**)children, exprgraphnodecomp, nchildren);
       for( p = 0; p < nparentcands; ++p )
       {
          assert(parentcands[p]->op        == op);        /* that was the first  criterium for adding a node to parentcands */
@@ -12147,7 +12286,7 @@ SCIP_RETCODE exprgraphFindParentByOperator(
             /* as in the case for two nodes, we need to check whether parentcands[p]->children and children are equal up to permutation */
 
             /* sort children of parent candidate */
-            SCIPsortPtr((void**)parentcands[p]->children, ptrcomp, nchildren);
+            SCIPsortPtr((void**)parentcands[p]->children, exprgraphnodecomp, nchildren);
 
             /* check if childnodes and parentcands[p]->children are the same */
             for( i = 0; i < nchildren; ++i )
@@ -12222,9 +12361,9 @@ SCIP_RETCODE exprgraphFindParentByOperator(
       exprcoef = (SCIP_Real*)opdata.data;
       /* sort childnodes, take care that children in expression are sorted the same way if given (so we don't mess up assignment of coefficients) */
       if( exprchildren != NULL )
-         SCIPsortPtrPtrReal((void**)children, (void**)exprchildren, exprcoef, ptrcomp, nchildren);
+         SCIPsortPtrPtrReal((void**)children, (void**)exprchildren, exprcoef, exprgraphnodecomp, nchildren);
       else
-         SCIPsortPtrReal((void**)children, exprcoef, ptrcomp, nchildren);
+         SCIPsortPtrReal((void**)children, exprcoef, exprgraphnodecomp, nchildren);
       for( p = 0; p < nparentcands; ++p )
       {
          assert(parentcands[p]->op        == op);        /* that was the first  criterium for adding a node to parentcands */
@@ -12234,7 +12373,7 @@ SCIP_RETCODE exprgraphFindParentByOperator(
          assert(exprcoef[nchildren] == candcoef[nchildren]); /* that was a criterium for adding a node to parentcands */  /*lint !e777*/
 
          /* sort children of parent candidate */
-         SCIPsortPtrReal((void**)parentcands[p]->children, candcoef, ptrcomp, nchildren);
+         SCIPsortPtrReal((void**)parentcands[p]->children, candcoef, exprgraphnodecomp, nchildren);
 
          /* check if children and coefficients in parent candidate and expression are the same */
          for( i = 0; i < nchildren; ++i )
@@ -12277,14 +12416,14 @@ SCIP_RETCODE exprgraphFindParentByOperator(
 
       if( exprlincoef != NULL )
          if( exprchildren != NULL )
-            SCIPsortPtrPtrRealInt((void**)children, (void**)exprchildren, exprlincoef, invperm, ptrcomp, nchildren);
+            SCIPsortPtrPtrRealInt((void**)children, (void**)exprchildren, exprlincoef, invperm, exprgraphnodecomp, nchildren);
          else
-            SCIPsortPtrRealInt((void**)children, exprlincoef, invperm, ptrcomp, nchildren);
+            SCIPsortPtrRealInt((void**)children, exprlincoef, invperm, exprgraphnodecomp, nchildren);
       else
          if( exprchildren != NULL )
-            SCIPsortPtrPtrInt((void**)children, (void**)exprchildren, invperm, ptrcomp, nchildren);
+            SCIPsortPtrPtrInt((void**)children, (void**)exprchildren, invperm, exprgraphnodecomp, nchildren);
          else
-            SCIPsortPtrInt((void**)children, invperm, ptrcomp, nchildren);
+            SCIPsortPtrInt((void**)children, invperm, exprgraphnodecomp, nchildren);
 
       /* compute permutation from its inverse */
       for( i = 0; i < nchildren; ++i )
@@ -12321,9 +12460,9 @@ SCIP_RETCODE exprgraphFindParentByOperator(
             invperm[i] = i;
 
          if( candlincoef != NULL )
-            SCIPsortPtrRealInt((void**)parentcands[p]->children, candlincoef, invperm, ptrcomp, parentcands[p]->nchildren);
+            SCIPsortPtrRealInt((void**)parentcands[p]->children, candlincoef, invperm, exprgraphnodecomp, parentcands[p]->nchildren);
          else
-            SCIPsortPtrInt((void**)parentcands[p]->children, invperm, ptrcomp, nchildren);
+            SCIPsortPtrInt((void**)parentcands[p]->children, invperm, exprgraphnodecomp, nchildren);
 
          /* compute permutation from its inverse */
          for( i = 0; i < nchildren; ++i )
@@ -12397,9 +12536,9 @@ SCIP_RETCODE exprgraphFindParentByOperator(
          invperm[i] = i;  /*lint !e644*/
 
       if( exprchildren != NULL )
-         SCIPsortPtrPtrInt((void**)children, (void**)exprchildren, invperm, ptrcomp, nchildren);
+         SCIPsortPtrPtrInt((void**)children, (void**)exprchildren, invperm, exprgraphnodecomp, nchildren);
       else
-         SCIPsortPtrInt((void**)children, invperm, ptrcomp, nchildren);
+         SCIPsortPtrInt((void**)children, invperm, exprgraphnodecomp, nchildren);
 
       /* compute permutation from its inverse */
       for( i = 0; i < nchildren; ++i )
@@ -12422,7 +12561,7 @@ SCIP_RETCODE exprgraphFindParentByOperator(
          for( i = 0; i < nchildren; ++i )
             invperm[i] = i;
 
-         SCIPsortPtrInt((void**)parentcands[p]->children, invperm, ptrcomp, nchildren);
+         SCIPsortPtrInt((void**)parentcands[p]->children, invperm, exprgraphnodecomp, nchildren);
 
          /* compute permutation from its inverse */
          for( i = 0; i < nchildren; ++i )
@@ -13320,7 +13459,8 @@ SCIP_RETCODE SCIPexprgraphCreateNodeUser(
    SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function */
    SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function, or NULL if convex, concave, or not implemented */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
-   SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRFREEDATA ((*freedata)), /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRPRINT ((*print))        /**< expression print function, or NULL for default string "user" */
    )
 {
    SCIP_EXPROPDATA opdata;
@@ -13345,6 +13485,7 @@ SCIP_RETCODE SCIPexprgraphCreateNodeUser(
    exprdata->prop = prop;
    exprdata->copydata = copydata;
    exprdata->freedata = freedata;
+   exprdata->print = print;
 
    opdata.data = (void*) exprdata;
 
@@ -14278,6 +14419,10 @@ SCIP_RETCODE SCIPexprgraphReleaseNode(
       /* move last node at depth of *node to position of *node */
       exprgraph->nodes[(*node)->depth][(*node)->pos] = exprgraph->nodes[(*node)->depth][exprgraph->nnodes[(*node)->depth]-1];
       exprgraph->nodes[(*node)->depth][(*node)->pos]->pos = (*node)->pos;
+
+      /* moving the node may change the order in the parents array of each child */
+      for( i = 0; i < exprgraph->nodes[(*node)->depth][(*node)->pos]->nchildren; ++i )
+         exprgraph->nodes[(*node)->depth][(*node)->pos]->children[i]->parentssorted = FALSE;
    }
    --exprgraph->nnodes[(*node)->depth];
 
@@ -14360,6 +14505,13 @@ void SCIPexprgraphDisableNode(
    assert(node->pos >= 0);
 
    if( !node->enabled )
+      return;
+
+   /* workaround: don't disable nodes if there could be more users than the one who is disabling the node
+    * otherwise, if there are several nonlinear constraints using the same expression graph node as root node,
+    * we might get enabled constraints with disabled node
+    */
+   if( node->nuses > 1 )
       return;
 
    /* if all parents of node are disabled, then also node can be disabled */
@@ -14874,7 +15026,7 @@ SCIP_RETCODE SCIPexprgraphCreate(
 
    /* create var's arrays and hashmap */
    ensureBlockMemoryArraySize3((*exprgraph)->blkmem, &(*exprgraph)->varnodes, &(*exprgraph)->vars, &(*exprgraph)->varbounds, &(*exprgraph)->varssize, varssizeinit);
-   SCIP_CALL( SCIPhashmapCreate(&(*exprgraph)->varidxs, (*exprgraph)->blkmem, SCIPcalcHashtableSize(5 * (*exprgraph)->varssize)) );
+   SCIP_CALL( SCIPhashmapCreate(&(*exprgraph)->varidxs, (*exprgraph)->blkmem, (*exprgraph)->varssize) );
 
    /* empty array of constants is sorted */
    (*exprgraph)->constssorted = TRUE;
@@ -15520,10 +15672,10 @@ SCIP_Bool SCIPexprgraphFindConstNode(
          break;
       }
    }
-   assert(left == right+1 || *constnode != NULL);
    if( left == right+1 )
       return FALSE;
 
+   assert(*constnode != NULL);
    assert((*constnode)->op == SCIP_EXPR_CONST);
    assert((*constnode)->data.dbl == constant);  /*lint !e777*/
 
@@ -15750,9 +15902,9 @@ SCIP_RETCODE SCIPexprgraphSimplify(
    SCIP_Real* testx;
    SCIP_HASHMAP* testvalidx;
    SCIP_Real* testvals;
+   SCIP_RANDNUMGEN* randnumgen;
    int testvalssize;
    int ntestvals;
-   unsigned int seed;
 #endif
 
    assert(exprgraph != NULL);
@@ -15761,7 +15913,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
    assert(domainerror != NULL);
 
 #ifndef NDEBUG
-   seed = 42;
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, exprgraph->blkmem, DEFAULT_RANDSEED) );
    SCIP_CALL( SCIPhashmapCreate(&testvalidx, exprgraph->blkmem, 1000) );
    testvals = NULL;
    ntestvals = 0;
@@ -15769,7 +15921,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
 
    SCIP_ALLOC( BMSallocMemoryArray(&testx, exprgraph->nvars) );
    for( i = 0; i < exprgraph->nvars; ++i )
-      testx[i] = SCIPgetRandomReal(-100.0, 100.0, &seed);  /*lint !e644*/
+      testx[i] = SCIPrandomGetReal(randnumgen, -100.0, 100.0);  /*lint !e644*/
    SCIP_CALL( SCIPexprgraphEval(exprgraph, testx) );
    for( d = 1; d < exprgraph->depth; ++d )
       for( i = 0; i < exprgraph->nnodes[d]; ++i )
@@ -15786,6 +15938,8 @@ SCIP_RETCODE SCIPexprgraphSimplify(
             ++ntestvals;
          }
       }
+
+   SCIPrandomFree(&randnumgen);
 #endif
 
 #ifdef SCIP_OUTPUT
@@ -15835,9 +15989,9 @@ SCIP_RETCODE SCIPexprgraphSimplify(
          {
             SCIP_EXPRGRAPHNODE* constnode;
 
-            if( node->value != node->value )  /*lint !e777*/
+            if( !SCIPisFinite(node->value) )  /*lint !e777*/
             {
-               SCIPdebugMessage("Expression graph simplify turned node into NaN.\n");
+               SCIPdebugMessage("Expression graph simplify turned node into NaN or inf.\n");
                *domainerror = TRUE;
                break;
             }

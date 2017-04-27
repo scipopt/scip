@@ -35,6 +35,9 @@ and the argument \a parameter is not used.
 */
 
 template <class Base>
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 inline void forward_divvv_op(
 	size_t        p           ,
 	size_t        q           ,
@@ -81,6 +84,9 @@ and the argument \a parameter is not used.
 */
 
 template <class Base>
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 inline void forward_divvv_op_dir(
 	size_t        q           ,
 	size_t        r           ,
@@ -130,7 +136,7 @@ and the argument \a parameter is not used.
 */
 
 template <class Base>
-#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
 __attribute__((no_sanitize_undefined))
 #endif
 inline void forward_divvv_op_0(
@@ -167,6 +173,9 @@ and the argument \a parameter is not used.
 */
 
 template <class Base>
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 inline void reverse_divvv_op(
 	size_t        d           ,
 	size_t        i_z         ,
@@ -228,6 +237,9 @@ this operations is for the case where x is a parameter and y is a variable.
 */
 
 template <class Base>
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 inline void forward_divpv_op(
 	size_t        p           ,
 	size_t        q           ,
@@ -278,6 +290,9 @@ this operations is for the case where x is a parameter and y is a variable.
 */
 
 template <class Base>
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 inline void forward_divpv_op_dir(
 	size_t        q           ,
 	size_t        r           ,
@@ -323,6 +338,9 @@ this operations is for the case where x is a parameter and y is a variable.
 */
 
 template <class Base>
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 inline void forward_divpv_op_0(
 	size_t        i_z         ,
 	const addr_t* arg         ,
@@ -358,6 +376,9 @@ this operations is for the case where x is a parameter and y is a variable.
 */
 
 template <class Base>
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 inline void reverse_divpv_op(
 	size_t        d           ,
 	size_t        i_z         ,
@@ -418,6 +439,9 @@ this operations is for the case where x is a variable and y is a parameter.
 */
 
 template <class Base>
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 inline void forward_divvp_op(
 	size_t        p           ,
 	size_t        q           ,
@@ -459,6 +483,9 @@ this operations is for the case where x is a variable and y is a parameter.
 */
 
 template <class Base>
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 inline void forward_divvp_op_dir(
 	size_t        q           ,
 	size_t        r           ,
@@ -504,6 +531,9 @@ this operations is for the case where x is a variable and y is a parameter.
 */
 
 template <class Base>
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 inline void forward_divvp_op_0(
 	size_t        i_z         ,
 	const addr_t* arg         ,
@@ -539,6 +569,9 @@ this operations is for the case where x is a variable and y is a parameter.
 */
 
 template <class Base>
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
+__attribute__((no_sanitize_undefined))
+#endif
 inline void reverse_divvp_op(
 	size_t        d           ,
 	size_t        i_z         ,

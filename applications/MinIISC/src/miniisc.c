@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -667,7 +667,7 @@ SCIP_RETCODE solveMinIISC(
    SCIP_Real lhs = -1.0;
    SCIP_Real rhs = -1.0;
    SCIP_VAR** origvars;
-   SCIP_Real obj = 1.0;
+   SCIP_Real obj = 0.0;
    SCIP_Real lb = 0.0;
    SCIP_Real ub;
    int norigvars;
@@ -791,7 +791,6 @@ SCIP_RETCODE solveMinIISC(
    SCIP_CALL( SCIPlpiGetNCols(lp, &m) );
 
    /* add columns for bounds */
-   obj = 0.0;
    ub = SCIPlpiInfinity(lp);
    for (v = 0; v < norigvars; ++v)
    {
@@ -852,6 +851,7 @@ SCIP_RETCODE solveMinIISC(
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "y%d", v);
       SCIP_CALL( SCIPcreateVar(masterscip, &var, name, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(masterscip, var) );
+      SCIP_CALL( SCIPreleaseVar(masterscip, &var) );
    }
 
    /* run Benders algorithm */

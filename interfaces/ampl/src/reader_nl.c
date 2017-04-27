@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cmain.c
+/**@file   reader_nl.c
  * @brief  AMPL .nl file reader
  * @author Stefan Vigerske
  *
@@ -1201,7 +1201,7 @@ SCIP_RETCODE setupConstraints(
             SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_INTFUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_INTGRADIENT,
             SCIPuserexprEvalAmpl, SCIPuserexprIntEvalAmpl,
             SCIPuserexprCurvAmpl, NULL, NULL,
-            SCIPuserexprCopyAmpl, SCIPuserexprFreeAmpl) );
+               SCIPuserexprCopyAmpl, SCIPuserexprFreeAmpl, NULL) );
 
          SCIPfreeBufferArray(scip, &childexprs);
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,6 +37,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrAnd(scip) );
    SCIP_CALL( SCIPincludeConshdlrBivariate(scip) ); /* bivariate needs to be after quadratic and nonlinear due to constraint upgrading */
    SCIP_CALL( SCIPincludeConshdlrBounddisjunction(scip) );
+   SCIP_CALL( SCIPincludeConshdlrCardinality(scip) );
    SCIP_CALL( SCIPincludeConshdlrConjunction(scip) );
    SCIP_CALL( SCIPincludeConshdlrCountsols(scip) );
    SCIP_CALL( SCIPincludeConshdlrCumulative(scip) );
@@ -56,6 +57,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrSuperindicator(scip) );
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
    SCIP_CALL( SCIPincludeConshdlrXor(scip) );
+   SCIP_CALL( SCIPincludeConshdlrComponents(scip) );
    SCIP_CALL( SCIPincludeReaderBnd(scip) );
    SCIP_CALL( SCIPincludeReaderCcg(scip) );
    SCIP_CALL( SCIPincludeReaderCip(scip) );
@@ -77,7 +79,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeReaderWbo(scip) );
    SCIP_CALL( SCIPincludeReaderZpl(scip) );
    SCIP_CALL( SCIPincludePresolBoundshift(scip) );
-   SCIP_CALL( SCIPincludePresolComponents(scip) );
    SCIP_CALL( SCIPincludePresolConvertinttobin(scip) );
    SCIP_CALL( SCIPincludePresolDomcol(scip) );
    SCIP_CALL( SCIPincludePresolImplfree(scip) );
@@ -87,6 +88,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolGateextraction(scip) );
    SCIP_CALL( SCIPincludePresolImplics(scip) );
    SCIP_CALL( SCIPincludePresolInttobinary(scip) );
+   SCIP_CALL( SCIPincludePresolQPKKTref(scip) );
    SCIP_CALL( SCIPincludePresolRedvub(scip) );
    SCIP_CALL( SCIPincludePresolTrivial(scip) );
    SCIP_CALL( SCIPincludePresolTworowbnd(scip) );
@@ -125,6 +127,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurFeaspump(scip) );
    SCIP_CALL( SCIPincludeHeurFixandinfer(scip) );
    SCIP_CALL( SCIPincludeHeurFracdiving(scip) );
+   SCIP_CALL( SCIPincludeHeurGins(scip) );
    SCIP_CALL( SCIPincludeHeurGuideddiving(scip) );
    SCIP_CALL( SCIPincludeHeurZeroobj(scip) );
    SCIP_CALL( SCIPincludeHeurIndicator(scip) );
@@ -132,8 +135,11 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurIntshifting(scip) );
    SCIP_CALL( SCIPincludeHeurLinesearchdiving(scip) );
    SCIP_CALL( SCIPincludeHeurLocalbranching(scip) );
+   SCIP_CALL( SCIPincludeHeurLocks(scip) );
+   SCIP_CALL( SCIPincludeHeurLpface(scip) );
    SCIP_CALL( SCIPincludeHeurNlpdiving(scip) );
    SCIP_CALL( SCIPincludeHeurMutation(scip) );
+   SCIP_CALL( SCIPincludeHeurMultistart(scip) );
    SCIP_CALL( SCIPincludeHeurObjpscostdiving(scip) );
    SCIP_CALL( SCIPincludeHeurOctane(scip) );
    SCIP_CALL( SCIPincludeHeurOfins(scip) );
@@ -143,6 +149,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurRandrounding(scip) );
    SCIP_CALL( SCIPincludeHeurRens(scip) );
    SCIP_CALL( SCIPincludeHeurReoptsols(scip) );
+   SCIP_CALL( SCIPincludeHeurRepair(scip) );
    SCIP_CALL( SCIPincludeHeurRins(scip) );
    SCIP_CALL( SCIPincludeHeurRootsoldiving(scip) );
    SCIP_CALL( SCIPincludeHeurRounding(scip) );
@@ -161,6 +168,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePropDualfix(scip) );
    SCIP_CALL( SCIPincludePropGenvbounds(scip) );
    SCIP_CALL( SCIPincludePropObbt(scip) );
+   SCIP_CALL( SCIPincludePropNlobbt(scip) );
    SCIP_CALL( SCIPincludePropProbing(scip) );
    SCIP_CALL( SCIPincludePropPseudoobj(scip) );
    SCIP_CALL( SCIPincludePropRedcost(scip) );
@@ -170,9 +178,11 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaClique(scip) );
    SCIP_CALL( SCIPincludeSepaClosecuts(scip) );
    SCIP_CALL( SCIPincludeSepaCmir(scip) );
+   SCIP_CALL( SCIPincludeSepaConvexproj(scip) );
    SCIP_CALL( SCIPincludeSepaEccuts(scip) );
    SCIP_CALL( SCIPincludeSepaDisjunctive(scip) );
    SCIP_CALL( SCIPincludeSepaFlowcover(scip) );
+   SCIP_CALL( SCIPincludeSepaGauge(scip) );
    SCIP_CALL( SCIPincludeSepaGomory(scip) );
    SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );
    SCIP_CALL( SCIPincludeSepaIntobj(scip) );
@@ -183,6 +193,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaZerohalf(scip) );
    SCIP_CALL( SCIPincludeDispDefault(scip) );
    SCIP_CALL( SCIPincludeEventHdlrSofttimelimit(scip) );
+   SCIP_CALL( SCIPincludeConcurrentScipSolvers(scip) );
 
    /* include NLPI's, if available */
    SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
@@ -197,6 +208,17 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
       SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameFilterSQP(), SCIPgetSolverDescFilterSQP()) );
    }
+
+   SCIP_CALL( SCIPcreateNlpSolverWorhp(SCIPblkmem(scip), &nlpi) );
+   if( nlpi != NULL )
+   {
+      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
+      SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameWorhp(), SCIPgetSolverDescWorhp()) );
+   }
+
+#ifdef TPI_TNYC
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "TinyCThread", "Small, portable implementation of the C11 threads API (tinycthread.github.io)") );
+#endif
 
    SCIP_CALL( SCIPdebugIncludeProp(scip) ); /*lint !e506 !e774*/
 

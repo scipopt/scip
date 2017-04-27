@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -304,6 +304,23 @@ SCIP_DECL_CONSENFOLP(consEnfolpObj)
 }
 
 
+/** constraint enforcing method of constraint handler for relaxation solutions */
+static
+SCIP_DECL_CONSENFORELAX(consEnforelaxObj)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->objconshdlr != NULL);
+
+   /* call virtual method of conshdlr object */
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_enforelax(scip, sol, conshdlr, conss, nconss, nusefulconss, solinfeasible, result) );
+
+   return SCIP_OKAY;
+}
+
+
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
 SCIP_DECL_CONSENFOPS(consEnfopsObj)
@@ -334,7 +351,7 @@ SCIP_DECL_CONSCHECK(consCheckObj)
 
    /* call virtual method of conshdlr object */
    SCIP_CALL( conshdlrdata->objconshdlr->scip_check(scip, conshdlr, conss, nconss, sol,
-         checkintegrality, checklprows, printreason, result) );
+         checkintegrality, checklprows, printreason, completely, result) );
 
    return SCIP_OKAY;
 }
@@ -629,7 +646,7 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
          consFreeObj, consInitObj, consExitObj,
          consInitpreObj, consExitpreObj, consInitsolObj, consExitsolObj,
          consDeleteObj, consTransObj, consInitlpObj,
-         consSepalpObj, consSepasolObj, consEnfolpObj, consEnfopsObj, consCheckObj,
+         consSepalpObj, consSepasolObj, consEnfolpObj, consEnforelaxObj, consEnfopsObj, consCheckObj,
          consPropObj, consPresolObj, consRespropObj, consLockObj,
          consActiveObj, consDeactiveObj,
          consEnableObj, consDisableObj, consDelVarsObj,

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_reopt.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for reoptimization
  * @author Jakob Witzig
  */
@@ -92,7 +92,8 @@ EXTERN
 void SCIPreoptnodeGetConss(
    SCIP_REOPTNODE*       reoptnode,          /**< reoptimization data structure */
    SCIP_VAR***           vars,               /**< 2-dim array of variables */
-   SCIP_Real**           vals,               /**< 2-dim array of values */
+   SCIP_Real**           bounds,             /**< 2-dim array of bounds */
+   SCIP_BOUNDTYPE**      boundtypes,         /**< 2-dim array of boundtypes */
    int                   mem,                /**< allocated memory for constraints */
    int*                  nconss,             /**< pointer to store the number of constraints */
    int*                  nvars               /**< pointer to store the number of variables */
@@ -185,12 +186,6 @@ int SCIPreoptGetNTotalInfNodes(
    SCIP_REOPT*           reopt               /*< reoptimization data structure */
    );
 
-/** returns the number of found infeasible subtrees */
-EXTERN
-int SCIPreoptGetNInfSubtrees(
-   SCIP_REOPT*           reopt               /*< reoptimization data structure */
-   );
-
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -217,7 +212,6 @@ int SCIPreoptGetNInfSubtrees(
 #define SCIPreoptGetNTotalCutoffReoptnodes(reopt) (reopt->reopttree->ntotalcutoffreoptnodes)
 #define SCIPreoptGetNInfNodes(reopt)              (reopt->reopttree->ninfsubtrees)
 #define SCIPreoptGetNTotalInfNodes(reopt)         (reopt->reopttree->ntotalinfnodes)
-#define SCIPreoptGetNInfSubtrees(reopt)           (reopt->reopttree->ninfsubtrees)
 
 #endif
 

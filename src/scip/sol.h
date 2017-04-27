@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sol.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for storing primal CIP solutions
  * @author Tobias Achterberg
  */
@@ -350,7 +351,12 @@ SCIP_RETCODE SCIPsolMarkPartial(
    int                   nvars               /**< number of problem variables */
    );
 
-/** checks primal CIP solution for feasibility */
+/** checks primal CIP solution for feasibility
+ *
+ *  @note The difference between SCIPsolCheck() and SCIPcheckSolOrig() is that modifiable constraints are handled
+ *        differently. There might be some variables which do not have an original counter part (e.g. in
+ *        branch-and-price). Therefore, modifiable constraints can not be double-checked in the original space.
+ */
 extern
 SCIP_RETCODE SCIPsolCheck(
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -360,6 +366,7 @@ SCIP_RETCODE SCIPsolCheck(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem data */
    SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             completely,         /**< Should all violations be checked? */
    SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
@@ -431,6 +438,7 @@ SCIP_RETCODE SCIPsolPrint(
    SCIP_PROB*            prob,               /**< problem data (original or transformed) */
    SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
    FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             mipstart,           /**< should only discrete variables be printed? */
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
 

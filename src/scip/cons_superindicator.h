@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -19,12 +19,6 @@
  * @author Ambros Gleixner
  * @author Frederic Pythoud
  *
- * Superindicator constraints are constraints of the form
- * \f[
- *    x_i = 1 \Rightarrow C(x)
- * \f]
- * where \f$ x_i \f$ is a binary variable and \f$ C(\dot) \f$ a constraint.  The superindicator constraint is satisfied
- * if and only if x_i is zero or C is satisfied.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -45,11 +39,30 @@ extern "C" {
  *  constraint-specific interface methods
  */
 
-/** creates the handler for superindicator constraints and includes it in SCIP */
+/** creates the handler for superindicator constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Superindicator Constraints
+ *
+ * @{
+ *
+ * Superindicator constraints are constraints of the form
+ * \f[
+ *    x_i = 1 \Rightarrow C(x)
+ * \f]
+ * where \f$ x_i \f$ is a binary variable and \f$ C(\dot) \f$ a constraint.  The superindicator constraint is satisfied
+ * if and only if x_i is zero or C is satisfied.
+ */
 
 /** creates and captures a superindicator constraint
  *
@@ -137,6 +150,10 @@ SCIP_RETCODE SCIPtransformMinUC(
 /** dialog execution method for the SCIPtransformMinUC() command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeMinUC);
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

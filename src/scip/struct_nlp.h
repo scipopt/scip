@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_nlp.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for NLP management
  * @author Thorsten Gellermann
  * @author Stefan Vigerske
@@ -101,6 +102,7 @@ struct SCIP_NlRow
    int                   nlpindex;           /**< index of this row in NLP, or -1 if not added */
    int                   nlpiindex;          /**< index of this row in NLPI problem, or -1 if not in there */
    SCIP_Real             dualsol;            /**< dual value associated with row in last NLP solve */
+   SCIP_EXPRCURV         curvature;          /**< curvature of the nonlinear row */
 };
 
 /** current NLP data */

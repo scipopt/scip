@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,6 +40,13 @@
 extern "C" {
 #endif
 
+   /** compute starting points among marked (w.r.t. g->mark) vertices for constructive heuristics */
+   void compTMstarts(
+      GRAPH*                graph,              /**< graph data structure */
+      int*                  starts,             /**< starting points array */
+      int*                  runs                /**< pointer to number of runs */
+      );
+
    /** creates the TM primal heuristic and includes it in SCIP */
    extern
    SCIP_RETCODE SCIPincludeHeurTM(
@@ -70,7 +77,7 @@ extern "C" {
    SCIP_RETCODE SCIPheurPruneSteinerTree(
       SCIP*                 scip,               /**< SCIP data structure */
       const GRAPH*          g,                  /**< graph structure */
-      SCIP_Real*            cost,               /**< edge costs */
+      const SCIP_Real*      cost,               /**< edge costs */
       int                   layer,              /**< layer, @note: should be set to 0 */
       int*                  result,             /**< ST edges */
       char*                 connected           /**< ST nodes */
@@ -81,9 +88,29 @@ extern "C" {
    SCIP_RETCODE SCIPheurPrunePCSteinerTree(
       SCIP*                 scip,               /**< SCIP data structure */
       const GRAPH*          g,                  /**< graph structure */
-      SCIP_Real*            cost,               /**< edge costs */
+      const SCIP_Real*      cost,               /**< edge costs */
       int*                  result,             /**< ST edges */
       char*                 connected           /**< ST nodes */
+      );
+
+   /** build (rooted) prize collecting Steiner tree in such a way that all leaves are positive-weight vertices */
+   SCIP_RETCODE SCIPheurBuildTreePcMw(
+      SCIP*                 scip,               /**< SCIP data structure */
+      const GRAPH*          g,                  /**< graph structure */
+      PATH*                 mst,                /**< path data structure array */
+      const SCIP_Real*      cost,               /**< edge costs */
+      SCIP_Real*            objresult,          /**< pointer to store objective value of result */
+      int*                  connected           /**< CONNECT/UNKNOWN */
+      );
+
+   /** build Steiner tree in such a way that all leaves are terminals */
+   SCIP_RETCODE SCIPheurBuildTree(
+      SCIP*                 scip,               /**< SCIP data structure */
+      const GRAPH*          g,                  /**< graph structure */
+      PATH*                 mst,                /**< path data structure array */
+      const SCIP_Real*      cost,               /**< edge costs */
+      SCIP_Real*            objresult,          /**< pointer to store objective value of result */
+      int*                  connected           /**< CONNECT/UNKNOWN */
       );
 
    /** prune a degree constrained Steiner tree in such a way that all leaves are terminals */

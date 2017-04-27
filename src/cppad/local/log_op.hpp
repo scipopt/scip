@@ -30,7 +30,7 @@ The C++ source code corresponding to this operation is
 \copydetails forward_unary1_op
 */
 template <class Base>
-#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
 __attribute__((no_sanitize_undefined))
 #endif
 inline void forward_log_op(
@@ -156,7 +156,7 @@ The C++ source code corresponding to this operation is
 */
 
 template <class Base>
-#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490 && !defined(__INTEL_COMPILER)
 __attribute__((no_sanitize_undefined))
 #endif
 inline void reverse_log_op(

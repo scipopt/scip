@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_presol.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for presolvers
  * @author Tobias Achterberg
  */
@@ -32,6 +32,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup PublicPresolverMethods
+ *
+ * @{
+ */
 
 /** compares two presolvers w. r. to their priority */
 EXTERN
@@ -89,18 +94,6 @@ EXTERN
 void SCIPpresolSetTiming(
    SCIP_PRESOL*          presol,             /**< presolver */
    SCIP_PRESOLTIMING     timing              /**< timing mask of the presolver */
-   );
-
-/** should presolver be delayed, if other presolvers found reductions? */
-EXTERN
-SCIP_Bool SCIPpresolIsDelayed(
-   SCIP_PRESOL*          presol              /**< presolver */
-   );
-
-/** was presolver delayed at the last call? */
-EXTERN
-SCIP_Bool SCIPpresolWasDelayed(
-   SCIP_PRESOL*          presol              /**< presolver */
    );
 
 /** is presolver initialized? */
@@ -186,6 +179,8 @@ EXTERN
 int SCIPpresolGetNCalls(
    SCIP_PRESOL*          presol              /**< presolver */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

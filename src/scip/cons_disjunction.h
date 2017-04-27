@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -19,11 +19,6 @@
  * @author Stefan Heinz
  * @author Michael Winkler
  *
- * A disjunction constraint \f$ C \f$ is a constraint of the form
- * \f[
- *   C = C_1 \vee \dots \vee C_n
- * \f]
- *  where all the \f$ C_i \f$ are individual constraints themselves.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -38,11 +33,29 @@
 extern "C" {
 #endif
 
-/** creates the handler for disjunction constraints and includes it in SCIP */
+/** creates the handler for disjunction constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrDisjunction(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Disjunction Constraints
+ *
+ * @{
+ *
+ * A disjunction constraint \f$ C \f$ is a constraint of the form
+ * \f[
+ *   C = C_1 \vee \dots \vee C_n
+ * \f]
+ *  where all the \f$ C_i \f$ are individual constraints themselves.
+ */
 
 /** creates and captures a disjunction constraint
  *
@@ -97,6 +110,10 @@ SCIP_RETCODE SCIPaddConsElemDisjunction(
    SCIP_CONS*            cons,               /**< disjunction constraint */
    SCIP_CONS*            addcons             /**< additional constraint in disjunction */
    );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

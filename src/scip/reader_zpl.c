@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -931,14 +931,14 @@ SCIP_RETCODE addVar(
       /* if the number is unknown we have no valid primal solution candidate */
       if( numb_equal(startval, numb_unknown()) )
       {
-         SCIPdebugMessage("primal solution candidate contains an unknown value for variable <%s>(%g)\n",
+         SCIPdebugMsg(scip, "primal solution candidate contains an unknown value for variable <%s>(%g)\n",
             SCIPvarGetName(var), (SCIP_Real)numb_todbl(startval));
          readerdata->valid = FALSE;
       }
       else
       {
          assert(readerdata->sol != NULL);
-         SCIPdebugMessage("change solution solution <%p>: <%s> = <%g>\n", 
+         SCIPdebugMsg(scip, "change solution solution <%p>: <%s> = <%g>\n",
             (void*)readerdata->sol, SCIPvarGetName(var), (SCIP_Real)numb_todbl(startval));
 
          /* set value within the primal solution candidate */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -79,6 +79,10 @@
 #ifndef SOPLEX_SUBVERSION
 #define SOPLEX_SUBVERSION 0
 #endif
+/* define API version for versions <= 3.0.0 */
+#ifndef SOPLEX_APIVERSION
+#define SOPLEX_APIVERSION 0
+#endif
 
 /* check version */
 #if (SOPLEX_VERSION < 133)
@@ -112,6 +116,13 @@
 #ifdef ___DEBUG
 #define SCIP_DEBUG
 #undef ___DEBUG
+#endif
+
+/* define snprintf when using a too old MSVC version */
+#if defined(_MSC_VER) && _MSC_VER < 1900
+#ifndef snprintf
+#define snprintf _snprintf
+#endif
 #endif
 
 #define SOPLEX_VERBLEVEL                5    /**< verbosity level for LPINFO */
@@ -217,7 +228,6 @@ class SPxSCIP : public SPxSolver
 #endif
    char*                 m_probname;         /**< problem name */
    bool                  m_fromscratch;      /**< use old basis indicator */
-   bool                  m_scaling;          /**< use lp scaling */
    bool                  m_presolving;       /**< use lp presolving */
    Real                  m_lpifeastol;       /**< feastol set by SCIPlpiSetRealpar() */
    Real                  m_lpiopttol;        /**< opttol set by SCIPlpiSetRealpar() */
@@ -228,8 +238,9 @@ class SPxSCIP : public SPxSolver
    bool                  m_autopricing;      /**< is automatic pricing selected? */
    int                   m_itlim;            /**< iteration limit (-1 for unbounded) */
    int                   m_itused;           /**< number of iterations spent in phase one of auto pricing */
-   SPxSolver::VarStatus* m_rowstat;          /**< basis status of rows before starting strong branching (if available, 0 otherwise) */
-   SPxSolver::VarStatus* m_colstat;          /**< basis status of columns before starting strong branching (if available, 0 otherwise) */
+   int                   m_scaling;          /**< LP scaling (0: none, 1: normal, 2: aggressive) */
+   DataArray<SPxSolver::VarStatus> m_rowstat; /**< basis status of rows before starting strong branching (if available, 0 otherwise) */
+   DataArray<SPxSolver::VarStatus> m_colstat; /**< basis status of columns before starting strong branching (if available, 0 otherwise) */
    NameSet*              m_rownames;         /**< row names */
    NameSet*              m_colnames;         /**< column names */
 
@@ -253,7 +264,6 @@ public:
       : SPxSolver(LEAVE, COLUMN),
         m_probname(0),
         m_fromscratch(false),
-        m_scaling(true),
         m_presolving(true),
         m_objLoLimit(-soplex::infinity),
         m_objUpLimit(soplex::infinity),
@@ -262,8 +272,9 @@ public:
         m_autopricing(true),
         m_itlim(-1),
         m_itused(0),
-        m_rowstat(NULL),
-        m_colstat(NULL),
+        m_scaling(1),
+        m_rowstat(0),
+        m_colstat(0),
         m_rownames(0),
         m_colnames(0),
         m_messagehdlr(messagehdlr)
@@ -273,7 +284,11 @@ public:
 #endif
       m_sense = sense();
       setSense(SPxLP::MINIMIZE);
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION == 4)
+      setBasisSolver(&m_slu); /*lint !e1506*/
+#else
       setSolver(&m_slu); /*lint !e1506*/
+#endif
       setTester(&m_ratio); /*lint !e1506*/
       setPricer(&m_price_steep); /*lint !e1506*/
       /* no starter */
@@ -317,10 +332,6 @@ public:
          m_colnames->~NameSet(); /*lint !e1551*/
          spx_free(m_colnames); /*lint !e1551*/
       }
-      if( m_colstat != NULL )
-         spx_free(m_colstat); /*lint !e1551*/
-      if( m_rowstat != NULL )
-         spx_free(m_rowstat); /*lint !e1551*/
 
 #ifdef WITH_LPSCHECK
       (void) CPXfreeprob(m_cpxenv, &m_cpxlp);
@@ -434,12 +445,12 @@ public:
       m_fromscratch = fs;
    }
 
-   bool getScaling() const
+   int getScaling() const
    {
       return m_scaling;
    }
 
-   void setScaling(bool s)
+   void setScaling(int s)
    {
       m_scaling = s;
    }
@@ -887,7 +898,7 @@ public:
       assert(!getFromScratch() || getBasisStatus() == SPxBasis::NO_PROBLEM);
 
       /* use scaler and simplifier if no basis is loaded, i.e., if solving for the first time or from scratch */
-      if( SPxSolver::getBasisStatus() == SPxBasis::NO_PROBLEM && getScaling() && nCols() > 0 && nRows() > 0 )
+      if( SPxSolver::getBasisStatus() == SPxBasis::NO_PROBLEM && (getScaling() > 0) && nCols() > 0 && nRows() > 0 )
       {
          spx_alloc(scaler, 1);
          scaler = new (scaler) SPxEquiliSC();
@@ -907,6 +918,8 @@ public:
       /* store original lp */
       if( scaler != NULL || simplifier != NULL )
          origlp = SPxLP(*this);
+
+      m_itused = 0;
 
    SOLVEAGAIN:
       /* perform scaling and presolving */
@@ -962,7 +975,6 @@ public:
       }
 
       /* solve */
-      m_itused = 0;
       if( result != SPxSimplifier::VANISHED )
       {
          /* we have to deactivate the objective limit, since we do not know the transformed value */
@@ -1119,15 +1131,12 @@ public:
    /** save the current basis */
    void savePreStrongbranchingBasis()
    {
-      assert(m_rowstat == NULL);
-      assert(m_colstat == NULL);
-
-      spx_alloc(m_rowstat, nRows());
-      spx_alloc(m_colstat, nCols());
+      m_rowstat.reSize(nRows());
+      m_colstat.reSize(nCols());
 
       try
       {
-         m_stat = getBasis(m_rowstat, m_colstat);
+         m_stat = getBasis(m_rowstat.get_ptr(), m_colstat.get_ptr());
       }
 #ifndef NDEBUG
       catch( const SPxException& x )
@@ -1151,12 +1160,12 @@ public:
    /** restore basis */
    void restorePreStrongbranchingBasis()
    {
-      assert(m_rowstat != NULL);
-      assert(m_colstat != NULL);
+      assert(m_rowstat.size() == nRows());
+      assert(m_colstat.size() == nCols());
 
       try
       {
-         setBasis(m_rowstat, m_colstat);
+         setBasis(m_rowstat.get_const_ptr(), m_colstat.get_const_ptr());
       }
 #ifndef NDEBUG
       catch( const SPxException& x )
@@ -1180,16 +1189,26 @@ public:
    /** if basis is in store, delete it without restoring it */
    void freePreStrongbranchingBasis()
    {
-      if( m_rowstat != NULL )
-         spx_free(m_rowstat);
-      if( m_colstat != NULL )
-         spx_free(m_colstat);
+      m_rowstat.clear();
+      m_colstat.clear();
    }
 
    /** is pre-strong-branching basis freed? */
    bool preStrongbranchingBasisFreed() const
    {
-      return ((m_rowstat == NULL ) && (m_colstat == NULL));
+      return ((m_rowstat.size() == 0 ) && (m_colstat.size() == 0));
+   }
+
+   /** provides access for temporary storage of basis status of rows */
+   DataArray<SPxSolver::VarStatus>& rowStat()
+   {
+      return m_rowstat;
+   }
+
+   /** provides access for temporary storage of basis status or columns */
+   DataArray<SPxSolver::VarStatus>& colStat()
+   {
+      return m_colstat;
    }
 
    Status getStatus() const
@@ -1603,9 +1622,9 @@ const char* SCIPlpiGetSolverName(
    SCIPdebugMessage("calling SCIPlpiGetSolverName()\n");
 
 #if (SOPLEX_SUBVERSION > 0)
-   sprintf(spxname, "SoPlex1 %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778*/
+   snprintf(spxname, 100, "SoPlex1 %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778*/
 #else
-   sprintf(spxname, "SoPlex1 %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778*/
+   snprintf(spxname, 100, "SoPlex1 %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778*/
 #endif
    return spxname;
 }
@@ -1615,12 +1634,18 @@ const char* SCIPlpiGetSolverDesc(
    void
    )
 {
-   sprintf(spxdesc, "%s", "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)");
 #if (SOPLEX_VERSION >= 160)
-   sprintf(spxdesc, "%s [GitHash: %s]", spxdesc, getGitHash());
-#endif
+   snprintf(spxdesc, 200, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de) [GitHash: %s]"
 #ifdef WITH_LPSCHECK
-   sprintf(spxdesc, "%s %s", spxdesc, "- including CPLEX double check");
+     " - including CPLEX double check"
+#endif
+   , getGitHash());
+#else
+   snprintf(spxdesc, 200, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)"
+#ifdef WITH_LPSCHECK
+     " - including CPLEX double check"
+#endif
+   );
 #endif
    return spxdesc;
 }
@@ -1632,6 +1657,24 @@ void* SCIPlpiGetSolverPointer(
 {
    return (void*) lpi->spx;
 }
+
+/** pass integrality information about variables to the solver */
+SCIP_RETCODE SCIPlpiSetIntegralityInformation(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   ncols,              /**< length of integrality array */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
+   )
+{
+#if (SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 3))
+   assert(ncols == lpi->spx->nCols() || (ncols == 0 && intInfo == NULL));
+   lpi->spx->setIntegralityInformation(ncols, intInfo);
+   return SCIP_OKAY;
+#else
+   SCIPerrorMessage("SCIPlpiSetIntegralityInformation() has not been implemented yet.\n");
+   return SCIP_LPERROR;
+#endif
+}
+
 /**@} */
 
 
@@ -1803,10 +1846,22 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert(nnonz == 0 || beg != NULL);
    assert(nnonz == 0 || ind != NULL);
    assert(nnonz == 0 || val != NULL);
+   assert(nnonz >= 0);
+   assert(ncols >= 0);
 
    invalidateSolution(lpi);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
+
+#ifndef NDEBUG
+   if ( nnonz > 0 )
+   {
+      /* perform check that no new rows are added - this is likely to be a mistake */
+      int nrows = lpi->spx->nRows();
+      for (int j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < nrows );
+   }
+#endif
 
    SPxSCIP* spx = lpi->spx;
    try
@@ -1925,6 +1980,16 @@ SCIP_RETCODE SCIPlpiAddRows(
    invalidateSolution(lpi);
 
    assert( lpi->spx->preStrongbranchingBasisFreed() );
+
+#ifndef NDEBUG
+   if ( nnonz > 0 )
+   {
+      /* perform check that no new columns are added - this is likely to be a mistake */
+      int ncols = lpi->spx->nCols();
+      for (int j = 0; j < nnonz; ++j)
+         assert( 0 <= ind[j] && ind[j] < ncols );
+   }
+#endif
 
    try
    {
@@ -2063,6 +2128,18 @@ SCIP_RETCODE SCIPlpiChgBounds(
       for( i = 0; i < ncols; ++i )
       {
          assert(0 <= ind[i] && ind[i] < lpi->spx->nCols());
+
+         if ( SCIPlpiIsInfinity(lpi, lb[i]) )
+         {
+            SCIPerrorMessage("LP Error: fixing lower bound for variable %d to infinity.\n", ind[i]);
+            return SCIP_LPERROR;
+         }
+         if ( SCIPlpiIsInfinity(lpi, -ub[i]) )
+         {
+            SCIPerrorMessage("LP Error: fixing upper bound for variable %d to -infinity.\n", ind[i]);
+            return SCIP_LPERROR;
+         }
+
          lpi->spx->changeBounds(ind[i], lb[i], ub[i]);
          assert(lpi->spx->lower(ind[i]) <= lpi->spx->upper(ind[i]) + Param::epsilon());
       }
@@ -2177,8 +2254,8 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 SCIP_RETCODE SCIPlpiChgObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
-   int*                  ind,                /**< column indices to change objective value for */
-   SCIP_Real*            obj                 /**< new objective values for columns */
+   const int*            ind,                /**< column indices to change objective value for */
+   const SCIP_Real*      obj                 /**< new objective values for columns */
    )
 {
    int i;
@@ -3979,8 +4056,8 @@ SCIP_RETCODE SCIPlpiGetBase(
 /** sets current basis status for columns and rows */
 SCIP_RETCODE SCIPlpiSetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  cstat,              /**< array with column basis status */
-   int*                  rstat               /**< array with row basis status */
+   const int*            cstat,              /**< array with column basis status */
+   const int*            rstat               /**< array with row basis status */
    )
 {
    int i;
@@ -3997,10 +4074,11 @@ SCIP_RETCODE SCIPlpiSetBase(
    assert( lpi->spx->preStrongbranchingBasisFreed() );
    invalidateSolution(lpi);
 
-   SPxSolver::VarStatus* spxcstat = NULL;
-   SPxSolver::VarStatus* spxrstat = NULL;
-   SCIP_ALLOC( BMSallocMemoryArray(&spxcstat, nCols) );
-   SCIP_ALLOC( BMSallocMemoryArray(&spxrstat, nRows) );
+   DataArray<SPxSolver::VarStatus>& m_colstat = lpi->spx->colStat();
+   DataArray<SPxSolver::VarStatus>& m_rowstat = lpi->spx->rowStat();
+
+   m_colstat.reSize(nCols);
+   m_rowstat.reSize(nRows);
 
    for( i = 0; i < nRows; ++i )
    {
@@ -4008,23 +4086,19 @@ SCIP_RETCODE SCIPlpiSetBase(
       switch( rstat[i] )
       {
       case SCIP_BASESTAT_LOWER:
-         spxrstat[i] = SPxSolver::ON_LOWER;
+         m_rowstat[i] = SPxSolver::ON_LOWER;
          break;
       case SCIP_BASESTAT_BASIC:
-         spxrstat[i] = SPxSolver::BASIC;
+         m_rowstat[i] = SPxSolver::BASIC;
          break;
       case SCIP_BASESTAT_UPPER:
-         spxrstat[i] = SPxSolver::ON_UPPER;
+         m_rowstat[i] = SPxSolver::ON_UPPER;
          break;
       case SCIP_BASESTAT_ZERO:
          SCIPerrorMessage("slack variable has basis status ZERO (should not occur)\n");
-         BMSfreeMemoryArrayNull(&spxcstat);
-         BMSfreeMemoryArrayNull(&spxrstat);
          return SCIP_LPERROR; /*lint !e429*/
       default:
          SCIPerrorMessage("invalid basis status\n");
-         BMSfreeMemoryArrayNull(&spxcstat);
-         BMSfreeMemoryArrayNull(&spxrstat);
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
@@ -4036,31 +4110,28 @@ SCIP_RETCODE SCIPlpiSetBase(
       switch( cstat[i] )
       {
       case SCIP_BASESTAT_LOWER:
-         spxcstat[i] = SPxSolver::ON_LOWER;
+         m_colstat[i] = SPxSolver::ON_LOWER;
          break;
       case SCIP_BASESTAT_BASIC:
-         spxcstat[i] = SPxSolver::BASIC;
+         m_colstat[i] = SPxSolver::BASIC;
          break;
       case SCIP_BASESTAT_UPPER:
-         spxcstat[i] = SPxSolver::ON_UPPER;
+         m_colstat[i] = SPxSolver::ON_UPPER;
          break;
       case SCIP_BASESTAT_ZERO:
-         spxcstat[i] = SPxSolver::ZERO;
+         m_colstat[i] = SPxSolver::ZERO;
          break;
       default:
          SCIPerrorMessage("invalid basis status\n");
-         BMSfreeMemoryArrayNull(&spxcstat);
-         BMSfreeMemoryArrayNull(&spxrstat);
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
    }
 
-   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(spxrstat, spxcstat) );
+   SOPLEX_TRY( lpi->messagehdlr, lpi->spx->setBasis(m_rowstat.get_const_ptr(), m_colstat.get_const_ptr()) );
    (void) lpi->spx->updateStatus();
 
-   BMSfreeMemoryArrayNull(&spxcstat);
-   BMSfreeMemoryArrayNull(&spxrstat);
+   lpi->spx->freePreStrongbranchingBasis();
 
    return SCIP_OKAY;
 }
@@ -4697,7 +4768,7 @@ SCIP_RETCODE SCIPlpiGetState(
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           /*blkmem*/,         /**< block memory */
-   SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
    )
 {
    int lpncols;
@@ -4914,7 +4985,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    )
 {
 #if ((SOPLEX_VERSION == 201 && SOPLEX_SUBVERSION >= 3) || SOPLEX_VERSION > 201)
@@ -4933,7 +5004,7 @@ SCIP_RETCODE SCIPlpiSetNorms(
       return SCIP_OKAY;
 
    SCIPdebugMessage("loading LPi simplex norms %p (%d rows, %d cols) into SoPlex LP with %d rows and %d cols\n",
-      (void *) lpinorms, lpinorms->nrows, lpinorms->ncols, lpi->spx->nRows(), lpi->spx->nCols());
+      (const void *) lpinorms, lpinorms->nrows, lpinorms->ncols, lpi->spx->nRows(), lpi->spx->nCols());
 
    if( !lpi->spx->setDualNorms(lpinorms->nrows, lpinorms->ncols, lpinorms->norms) )
       SCIPdebugMessage("loading of LPi norms failed\n");
@@ -5084,7 +5155,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_SCALING:
       assert(ival == TRUE || ival == FALSE);
-      lpi->spx->setScaling(bool(ival));
+      lpi->spx->setScaling(ival);
       break;
 #if SOPLEX_VERSION >= 201
    case SCIP_LPPAR_TIMING:
@@ -5092,9 +5163,15 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->spx->setTiming((Timer::TYPE) ival);
       break;
 #endif
-#if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 220 && SOPLEX_SUBVERSION >= 3)
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 220 && SOPLEX_SUBVERSION >= 2)
    case SCIP_LPPAR_RANDOMSEED:
       lpi->spx->random.setSeed((unsigned int) ival);
+      break;
+#endif
+#if SOPLEX_VERSION > 221 || (SOPLEX_VERSION == 221 && SOPLEX_SUBVERSION >= 3)
+   case SCIP_LPPAR_POLISHING:
+      assert(ival >= 0 && ival < 3);
+      lpi->spx->setSolutionPolishing((SPxSolver::SolutionPolish) ival);
       break;
 #endif
 

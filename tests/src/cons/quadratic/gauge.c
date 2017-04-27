@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   unittest-cons_quadratic.c
+/**@file   gauge.c
  * @brief  unit test for cons_quadratic methods
  */
 
@@ -33,7 +33,6 @@ static SCIP* scip;
 static SCIP_NLPI* nlpi;
 
 /* creates scip, problem, includes nonlinear and quadratic cons handlers, and includes NLP */
-
 static
 void setup(void)
 {

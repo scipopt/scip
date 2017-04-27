@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_implics.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for implications, variable bounds, and cliques
  * @author Tobias Achterberg
  */
@@ -94,7 +95,9 @@ struct SCIP_CliqueTable
    int                   ncleanupfixedvars;  /**< number of fixed variables when the last cleanup was performed */
    int                   ncleanupaggrvars;   /**< number of aggregated variables when the last cleanup was performed */
    int                   ndirtycliques;      /**< number of cliques stored when the last cleanup was performed */
+   int                   ncliquecomponents;  /**< number of connected components in clique graph */
    SCIP_Bool             incleanup;          /**< is this clique table currently performing cleanup? */
+   SCIP_Bool             componentupdate;    /**< must the connected components of the clique graph be updated? */
 };
 
 #ifdef __cplusplus

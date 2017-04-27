@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -176,6 +176,13 @@ void SCIPeventhdlrEnableOrDisableClocks(
 /*
  * Event methods
  */
+
+/** creates a synchronization event */
+extern
+SCIP_RETCODE SCIPeventCreateSync(
+   SCIP_EVENT**          event,              /**< pointer to store the event */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
 
 /** creates an event for an addition of a variable to the problem */
 extern
@@ -520,6 +527,16 @@ extern
 SCIP_Bool SCIPeventqueueIsDelayed(
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    );
+
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPeventqueueIsDelayed(eventqueue)       ((eventqueue)->delayevents)
+
+#endif
 
 #ifdef __cplusplus
 }

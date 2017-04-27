@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -49,6 +49,7 @@
                                          *   (-1: no limit) */
 #define DEFAULT_DEPTHFAC            0.5 /**< maximal diving depth: number of binary/integer variables times depthfac */
 #define DEFAULT_DEPTHFACNOSOL       2.0 /**< maximal diving depth factor if no feasible solution was found yet */
+#define DEFAULT_RANDSEED            139 /**< initial random seed */
 
 #define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
 
@@ -57,6 +58,7 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Real             minreldepth;        /**< minimal relative depth to start diving */
    SCIP_Real             maxreldepth;        /**< maximal relative depth to start diving */
    SCIP_Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to total iteration number */
@@ -77,6 +79,7 @@ struct SCIP_HeurData
 static
 void calcPscostQuot(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             primsol,            /**< primal solution of variable */
    SCIP_Real             frac,               /**< fractionality of variable */
@@ -88,6 +91,7 @@ void calcPscostQuot(
    SCIP_Real pscostdown;
    SCIP_Real pscostup;
 
+   assert(heurdata != NULL);
    assert(pscostquot != NULL);
    assert(roundup != NULL);
 
@@ -100,20 +104,27 @@ void calcPscostQuot(
    pscostup = SCIPgetVarPseudocostVal(scip, var, 1.0-frac);
    assert(pscostdown >= 0.0 && pscostup >= 0.0);
 
-   /* choose rounding direction */
+   /* choose rounding direction
+    *
+    * to avoid performance variability caused by numerics we use random numbers to decide whether we want to roundup or
+    * round down if the values to compare are equal within tolerances.
+    */
    if( rounddir == -1 )
       *roundup = FALSE;
    else if( rounddir == +1 )
       *roundup = TRUE;
-   else if( frac < 0.3 )
+   else if( SCIPisLT(scip, frac, 0.3) || (SCIPisEQ(scip, frac, 0.3) && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0) )
       *roundup = FALSE;
-   else if( frac > 0.7 )
+   else if( SCIPisGT(scip, frac, 0.7) || (SCIPisEQ(scip, frac, 0.7) && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0) )
       *roundup = TRUE;
-   else if( primsol < SCIPvarGetRootSol(var) - 0.4 )
+   else if( SCIPisLT(scip, primsol, SCIPvarGetRootSol(var) - 0.4)
+         || (SCIPisEQ(scip, primsol, SCIPvarGetRootSol(var) - 0.4) && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0) )
       *roundup = FALSE;
-   else if( primsol > SCIPvarGetRootSol(var) + 0.4 )
+   else if( SCIPisGT(scip, primsol, SCIPvarGetRootSol(var) + 0.4)
+         || (SCIPisEQ(scip, primsol, SCIPvarGetRootSol(var) + 0.4) && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0) )
       *roundup = TRUE;
-   else if( pscostdown < pscostup )
+   else if( SCIPisLT(scip, pscostdown, pscostup)
+         || (SCIPisEQ(scip, pscostdown, pscostup) && SCIPrandomGetInt(heurdata->randnumgen, 0, 1) == 0) )
       *roundup = FALSE;
    else
       *roundup = TRUE;
@@ -161,7 +172,7 @@ SCIP_DECL_HEURFREE(heurFreeObjpscostdiving) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIPfreeMemory(scip, &heurdata);
+   SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
    return SCIP_OKAY;
@@ -184,6 +195,9 @@ SCIP_DECL_HEURINIT(heurInitObjpscostdiving) /*lint --e{715}*/
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+
    /* initialize data */
    heurdata->nlpiterations = 0;
    heurdata->nsuccess = 0;
@@ -204,6 +218,9 @@ SCIP_DECL_HEUREXIT(heurExitObjpscostdiving) /*lint --e{715}*/
    /* get heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+
+   /* free random number generator */
+   SCIPrandomFree(&heurdata->randnumgen);
 
    /* free working solution */
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
@@ -336,7 +353,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    /* start diving */
    SCIP_CALL( SCIPstartDive(scip) );
 
-   SCIPdebugMessage("(node %" SCIP_LONGINT_FORMAT ") executing objpscostdiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%" SCIP_LONGINT_FORMAT ", maxdivedepth=%d\n",
+   SCIPdebugMsg(scip, "(node %" SCIP_LONGINT_FORMAT ") executing objpscostdiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%" SCIP_LONGINT_FORMAT ", maxdivedepth=%d\n",
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), maxnlpiterations, maxdivedepth);
 
    /* dive as long we are in the given diving depth and iteration limits and fractional variables exist, but
@@ -347,8 +364,6 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    lperror = FALSE;
    lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
    divedepth = 0;
-   bestcandmayrounddown = FALSE;
-   bestcandmayroundup = FALSE;
    startnlpcands = nlpcands;
    while( !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
       && (divedepth < 10
@@ -390,11 +405,11 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
                 */
                roundup = FALSE;
                if( mayrounddown && mayroundup )
-                  calcPscostQuot(scip, var, primsol, frac, 0, &pscostquot, &roundup);
+                  calcPscostQuot(scip, heurdata, var, primsol, frac, 0, &pscostquot, &roundup);
                else if( mayrounddown )
-                  calcPscostQuot(scip, var, primsol, frac, +1, &pscostquot, &roundup);
+                  calcPscostQuot(scip, heurdata, var, primsol, frac, +1, &pscostquot, &roundup);
                else
-                  calcPscostQuot(scip, var, primsol, frac, -1, &pscostquot, &roundup);
+                  calcPscostQuot(scip, heurdata, var, primsol, frac, -1, &pscostquot, &roundup);
 
                /* prefer variables, that have already been soft rounded but failed to get integral */
                varidx = SCIPvarGetProbindex(var);
@@ -416,7 +431,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
          else
          {
             /* the candidate may not be rounded: calculate pseudo cost quotient and preferred direction */
-            calcPscostQuot(scip, var, primsol, frac, 0, &pscostquot, &roundup);
+            calcPscostQuot(scip, heurdata, var, primsol, frac, 0, &pscostquot, &roundup);
 
             /* prefer variables, that have already been soft rounded but failed to get integral */
             varidx = SCIPvarGetProbindex(var);
@@ -448,16 +463,16 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
 
          if( success )
          {
-            SCIPdebugMessage("objpscostdiving found roundable primal solution: obj=%g\n",
+            SCIPdebugMsg(scip, "objpscostdiving found roundable primal solution: obj=%g\n",
                SCIPgetSolOrigObj(scip, heurdata->sol));
 
             /* try to add solution to SCIP */
-            SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
 
             /* check, if solution was feasible and good enough */
             if( success )
             {
-               SCIPdebugMessage(" -> solution was feasible and good enough\n");
+               SCIPdebugMsg(scip, " -> solution was feasible and good enough\n");
                *result = SCIP_FOUNDSOL;
             }
          }
@@ -472,7 +487,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       {
          /* variable was already soft rounded upwards: hard round it downwards */
          SCIP_CALL( SCIPchgVarUbDive(scip, var, SCIPfeasFloor(scip, lpcandssol[bestcand])) );
-         SCIPdebugMessage("  dive %d/%d: var <%s>, round=%u/%u, sol=%g, was already soft rounded upwards -> bounds=[%g,%g]\n",
+         SCIPdebugMsg(scip, "  dive %d/%d: var <%s>, round=%u/%u, sol=%g, was already soft rounded upwards -> bounds=[%g,%g]\n",
             divedepth, maxdivedepth, SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var));
       }
@@ -480,7 +495,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
       {
          /* variable was already soft rounded downwards: hard round it upwards */
          SCIP_CALL( SCIPchgVarLbDive(scip, var, SCIPfeasCeil(scip, lpcandssol[bestcand])) );
-         SCIPdebugMessage("  dive %d/%d: var <%s>, round=%u/%u, sol=%g, was already soft rounded downwards -> bounds=[%g,%g]\n",
+         SCIPdebugMsg(scip, "  dive %d/%d: var <%s>, round=%u/%u, sol=%g, was already soft rounded downwards -> bounds=[%g,%g]\n",
             divedepth, maxdivedepth, SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var));
       }
@@ -516,7 +531,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
             roundings[varidx] = -1;
          }
          SCIP_CALL( SCIPchgVarObjDive(scip, var, newobj) );
-         SCIPdebugMessage("  dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ": var <%s>, round=%u/%u, sol=%g, bounds=[%g,%g], obj=%g, newobj=%g\n",
+         SCIPdebugMsg(scip, "  dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ": var <%s>, round=%u/%u, sol=%g, bounds=[%g,%g], obj=%g, newobj=%g\n",
             divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
             SCIPvarGetName(var), bestcandmayrounddown, bestcandmayroundup,
             lpcandssol[bestcand], SCIPgetVarLbDive(scip, var), SCIPgetVarUbDive(scip, var), oldobj, newobj);
@@ -554,7 +569,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
          /* get new fractional variables */
          SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
       }
-      SCIPdebugMessage("   -> lpsolstat=%d, nfrac=%d\n", lpsolstat, nlpcands);
+      SCIPdebugMsg(scip, "   -> lpsolstat=%d, nfrac=%d\n", lpsolstat, nlpcands);
    }
 
    /* check if a solution has been found */
@@ -564,15 +579,15 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
 
       /* create solution from diving LP */
       SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
-      SCIPdebugMessage("objpscostdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
+      SCIPdebugMsg(scip, "objpscostdiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
 
       /* try to add solution to SCIP */
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
+      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
 
       /* check, if solution was feasible and good enough */
       if( success )
       {
-         SCIPdebugMessage(" -> solution was feasible and good enough\n");
+         SCIPdebugMsg(scip, " -> solution was feasible and good enough\n");
          *result = SCIP_FOUNDSOL;
       }
    }
@@ -586,7 +601,7 @@ SCIP_DECL_HEUREXEC(heurExecObjpscostdiving) /*lint --e{715}*/
    /* free temporary memory for remembering the current soft roundings */
    SCIPfreeBufferArray(scip, &roundings);
 
-   SCIPdebugMessage("objpscostdiving heuristic finished\n");
+   SCIPdebugMsg(scip, "objpscostdiving heuristic finished\n");
 
    return SCIP_OKAY;
 }
@@ -605,7 +620,7 @@ SCIP_RETCODE SCIPincludeHeurObjpscostdiving(
    SCIP_HEUR* heur;
 
    /* create Objpscostdiving primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &heurdata) );
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,

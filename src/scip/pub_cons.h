@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_cons.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for managing constraints
  * @author Tobias Achterberg
  */
@@ -39,6 +39,11 @@ extern "C" {
 
 /*
  * Constraint handler methods
+ */
+
+/**@addtogroup PublicConshdlrMethods
+ *
+ * @{
  */
 
 /** compares two constraint handlers w. r. to their separation priority */
@@ -97,6 +102,13 @@ void SCIPconshdlrSetProp(
    int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
    SCIP_PROPTIMING       timingmask          /**< positions in the node solving loop where propagators should be executed */
+   );
+
+/** sets the relaxation enforcement method of the constraint handler */
+EXTERN
+void SCIPconshdlrSetEnforelax(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSENFORELAX ((*consenforelax)) /**< constraint copying method */
    );
 
 /** gets array with constraints of constraint handler; the first SCIPconshdlrGetNActiveConss() entries are the active
@@ -186,6 +198,12 @@ SCIP_Real SCIPconshdlrGetEnfoPSTime(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** gets time in seconds used for relaxation enforcement in this constraint handler */
+EXTERN
+SCIP_Real SCIPconshdlrGetEnfoRelaxTime(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
 /** gets time in seconds used for propagation in this constraint handler */
 EXTERN
 SCIP_Real SCIPconshdlrGetPropTime(
@@ -225,6 +243,12 @@ SCIP_Longint SCIPconshdlrGetNEnfoLPCalls(
 /** gets number of calls to the constraint handler's pseudo enforcing method */
 EXTERN
 SCIP_Longint SCIPconshdlrGetNEnfoPSCalls(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** gets number of calls to the constraint handler's relaxation enforcing method */
+EXTERN
+SCIP_Longint SCIPconshdlrGetNEnfoRelaxCalls(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
@@ -488,9 +512,17 @@ void SCIPconshdlrSetPresolTiming(
    SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */
    );
 
+/* @} */
+
 /*
  * Constraint methods
  */
+
+/**@addtogroup PublicConstraintMethods
+ *
+ * @{
+ */
+
 
 /** returns the name of the constraint 
  *
@@ -545,6 +577,12 @@ SCIP_Bool SCIPconsIsActive(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** returns TRUE iff constraint has to be deactivated in update phase */
+EXTERN
+SCIP_Bool SCIPconsIsUpdatedeactivate(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** returns TRUE iff constraint is enabled in the current node */
 EXTERN
 SCIP_Bool SCIPconsIsEnabled(
@@ -572,6 +610,12 @@ SCIP_Bool SCIPconsIsDeleted(
 /** returns TRUE iff constraint is marked obsolete */
 EXTERN
 SCIP_Bool SCIPconsIsObsolete(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
+/** returns TRUE iff constraint is marked as a conflict */
+EXTERN
+SCIP_Bool SCIPconsIsConflict(
    SCIP_CONS*            cons                /**< constraint */
    );
 
@@ -744,12 +788,13 @@ int SCIPconsGetNUpgradeLocks(
    (SCIPconsIsEnabled(cons) && ((cons)->updatepropenable || ((cons)->propenabled && !(cons)->updatepropdisable)))
 #define SCIPconsIsDeleted(cons)         ((cons)->deleted)
 #define SCIPconsIsObsolete(cons)        ((cons)->updateobsolete || (cons)->obsolete)
+#define SCIPconsIsConflict(cons)        ((cons)->conflict)
 #define SCIPconsGetAge(cons)            (cons)->age
 #define SCIPconsIsInitial(cons)         (cons)->initial
 #define SCIPconsIsSeparated(cons)       (cons)->separate
 #define SCIPconsIsEnforced(cons)        (cons)->enforce
 #define SCIPconsIsChecked(cons)         (cons)->check
-#define SCIPconsIsMarkedPropagate(cons) (cons)->markpropagate
+#define SCIPconsIsMarkedPropagate(cons) ((cons)->updatemarkpropagate || ((cons)->markpropagate && !(cons)->updateunmarkpropagate))
 #define SCIPconsIsPropagated(cons)      (cons)->propagate
 #define SCIPconsIsGlobal(cons)          !(cons)->local
 #define SCIPconsIsLocal(cons)           (cons)->local
@@ -769,6 +814,8 @@ int SCIPconsGetNUpgradeLocks(
 #define SCIPconsGetNUpgradeLocks(cons)  ((cons)->nupgradelocks)
 
 #endif
+
+/* @} */
 
 #ifdef __cplusplus
 }

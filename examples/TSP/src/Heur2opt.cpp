@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -88,7 +88,7 @@ SCIP_DECL_HEURINITSOL(Heur2opt::scip_initsol)
 
    ncalls_ = 0;
    sol_ = NULL;
-   SCIP_CALL( SCIPallocMemoryArray(scip, &tour_, graph_->nnodes) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &tour_, graph_->nnodes) );
    
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -101,8 +101,11 @@ SCIP_DECL_HEURINITSOL(Heur2opt::scip_initsol)
  */
 SCIP_DECL_HEUREXITSOL(Heur2opt::scip_exitsol)
 {
+   assert( graph_ != 0 );
+   assert( tour_ != 0 );
+
+   SCIPfreeBlockMemoryArray(scip, &tour_, graph_->nnodes);
    release_graph(&graph_);
-   SCIPfreeMemoryArray(scip, &tour_);
 
    return SCIP_OKAY;
 } /*lint !e715*/

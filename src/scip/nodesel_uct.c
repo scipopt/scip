@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -335,7 +335,7 @@ SCIP_RETCODE ensureMemorySize(
       int newcapacity;
       newcapacity = MIN(2 * nodeseldata->sizenodevisits, 2 * nodeseldata->nodelimit);
 
-      SCIPdebugMessage("Resizing node visits array, old capacity: %d new capacity : %d\n", nodeseldata->sizenodevisits, newcapacity);
+      SCIPdebugMsg(scip, "Resizing node visits array, old capacity: %d new capacity : %d\n", nodeseldata->sizenodevisits, newcapacity);
       assert(newcapacity > nodeseldata->sizenodevisits);
 
       SCIP_CALL( SCIPreallocMemoryArray(scip, &nodeseldata->nodevisits, newcapacity) );
@@ -481,7 +481,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectUct)
    else
    {
       /* trigger update of visits along the path from the selected node to the root node */
-      SCIPdebugMessage("updating node visits from node number %" SCIP_LONGINT_FORMAT "\n", SCIPnodeGetNumber(*selnode));
+      SCIPdebugMsg(scip, "updating node visits from node number %" SCIP_LONGINT_FORMAT "\n", SCIPnodeGetNumber(*selnode));
       updateVisits(nodeseldata, *selnode);
    }
 

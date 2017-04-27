@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   event_bestsol.c
+/**@file   examples/Eventhdlr/src/event_bestsol.c
  * @brief  eventhdlr for best solution found
  * @author Stefan Heinz
  * @author Michael Winkler
@@ -83,7 +83,7 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
    assert(scip != NULL);
    assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND);
 
-   SCIPdebugMessage("exec method of event handler for best solution found\n");
+   SCIPdebugMsg(scip, "exec method of event handler for best solution found\n");
    
    bestsol = SCIPgetBestSol(scip);
    assert(bestsol != NULL);

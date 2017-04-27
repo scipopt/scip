@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -213,7 +213,7 @@ void SCIPhistoryUpdatePseudocost(
    history->pscostweightedmean[dir] += weight * olddelta / history->pscostcount[dir];
    history->pscostvariance[dir] = history->pscostvariance[dir] + weight * olddelta * (sumcontribution - history->pscostweightedmean[dir]);
 
-   SCIPdebugMessage("updated pseudo costs of history %p: dir=%d, distance=%g, objdelta=%g, weight=%g  ->  %g/%g\n",
+   SCIPsetDebugMsg(set, "updated pseudo costs of history %p: dir=%d, distance=%g, objdelta=%g, weight=%g  ->  %g/%g\n",
       (void*)history, dir, distance, objdelta, weight, history->pscostcount[dir], history->pscostweightedmean[dir]);
 }
 

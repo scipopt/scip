@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,6 +47,17 @@ struct SCIP_MessagehdlrData
 
 extern "C"
 {
+/** error message print method of message handler */
+static
+SCIP_DECL_ERRORPRINTING(messagehdlrErrorObj)
+{
+   assert( data != 0 );
+
+   scip::ObjMessagehdlr* objmessagehdlr = static_cast<scip::ObjMessagehdlr*>(data);
+
+   objmessagehdlr->scip_error(0, file, msg);
+}
+
 /** warning message print method of message handler */
 static
 SCIP_DECL_MESSAGEWARNING(messagehdlrWarningObj)
@@ -168,3 +179,12 @@ scip::ObjMessagehdlr* SCIPgetObjMessagehdlr(
    return messagehdlrdata->objmessagehdlr;
 }
 
+/** set static error output function to the corresponding function of message handler */
+void SCIPsetStaticErrorPrintingMessagehdlr(
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   )
+{
+   assert( messagehdlr != NULL );
+
+   SCIPmessageSetErrorPrinting(messagehdlrErrorObj, (void*) SCIPgetObjMessagehdlr(messagehdlr));
+}

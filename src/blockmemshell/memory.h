@@ -3,7 +3,7 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  BMS is distributed under the terms of the ZIB Academic License.          */
@@ -424,7 +424,12 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSfreeBlockMemorySizeNull(mem,ptr,size) BMSfreeBlockMemory_call( (mem), (void**)(ptr), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ )
 
 #define BMSgarbagecollectBlockMemory(mem)     BMSgarbagecollectBlockMemory_call(mem)
+#define BMSgetBlockMemoryAllocated(mem)       BMSgetBlockMemoryAllocated_call(mem)
 #define BMSgetBlockMemoryUsed(mem)            BMSgetBlockMemoryUsed_call(mem)
+#define BMSgetBlockMemoryUnused(mem)          BMSgetBlockMemoryUnused_call(mem)
+#define BMSgetBlockMemoryUsedMax(mem)         BMSgetBlockMemoryUsedMax_call(mem)
+#define BMSgetBlockMemoryUnusedMax(mem)       BMSgetBlockMemoryUnusedMax_call(mem)
+#define BMSgetBlockMemoryAllocatedMax(mem)    BMSgetBlockMemoryAllocatedMax_call(mem)
 #define BMSgetBlockPointerSize(mem,ptr)       BMSgetBlockPointerSize_call((mem), (ptr))
 #define BMSdisplayBlockMemory(mem)            BMSdisplayBlockMemory_call(mem)
 #define BMSblockMemoryCheckEmpty(mem)         BMScheckEmptyBlockMemory_call(mem)
@@ -433,30 +438,35 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 
 /* block memory management mapped to standard memory management */
 
-#define BMScreateBlockMemory(csz,gbf)                        (void*)(0x01) /* dummy to not return a NULL pointer */
-#define BMSclearBlockMemory(mem)                             /**/
-#define BMSclearBlockMemoryNull(mem)                         /**/
-#define BMSdestroyBlockMemory(mem)                           /**/
-#define BMSdestroyBlockMemoryNull(mem)                       /**/
-#define BMSallocBlockMemory(mem,ptr)                         BMSallocMemory(ptr)
-#define BMSallocBlockMemoryArray(mem,ptr,num)                BMSallocMemoryArray(ptr,num)
-#define BMSallocClearBlockMemoryArray(mem,ptr,num)           BMSallocClearMemoryArray(ptr,num)
-#define BMSallocBlockMemorySize(mem,ptr,size)                BMSallocMemorySize(ptr,size)
-#define BMSreallocBlockMemoryArray(mem,ptr,oldnum,newnum)    BMSreallocMemoryArray(ptr,newnum)
-#define BMSreallocBlockMemorySize(mem,ptr,oldsize,newsize)   BMSreallocMemorySize(ptr,newsize)
-#define BMSduplicateBlockMemory(mem, ptr, source)            BMSduplicateMemory(ptr,source)
-#define BMSduplicateBlockMemoryArray(mem, ptr, source, num)  BMSduplicateMemoryArray(ptr,source,num)
-#define BMSfreeBlockMemory(mem,ptr)                          BMSfreeMemory(ptr)
-#define BMSfreeBlockMemoryNull(mem,ptr)                      BMSfreeMemoryNull(ptr)
-#define BMSfreeBlockMemoryArray(mem,ptr,num)                 BMSfreeMemoryArray(ptr)
-#define BMSfreeBlockMemoryArrayNull(mem,ptr,num)             BMSfreeMemoryArrayNull(ptr)
-#define BMSfreeBlockMemorySize(mem,ptr,size)                 BMSfreeMemory(ptr)
-#define BMSfreeBlockMemorySizeNull(mem,ptr,size)             BMSfreeMemoryNull(ptr)
-#define BMSgarbagecollectBlockMemory(mem)                    /**/
-#define BMSgetBlockMemoryUsed(mem)                           0LL
-#define BMSgetBlockPointerSize(mem,ptr)                      0
-#define BMSdisplayBlockMemory(mem)                           /**/
-#define BMSblockMemoryCheckEmpty(mem)                        0LL
+#define BMScreateBlockMemory(csz,gbf)                        (SCIP_UNUSED(csz), SCIP_UNUSED(gbf), (void*)(0x01)) /* dummy to not return a NULL pointer */
+#define BMSclearBlockMemory(mem)                             SCIP_UNUSED(mem)
+#define BMSclearBlockMemoryNull(mem)                         SCIP_UNUSED(mem)
+#define BMSdestroyBlockMemory(mem)                           SCIP_UNUSED(mem)
+#define BMSdestroyBlockMemoryNull(mem)                       SCIP_UNUSED(mem)
+#define BMSallocBlockMemory(mem,ptr)                         (SCIP_UNUSED(mem), BMSallocMemory(ptr))
+#define BMSallocBlockMemoryArray(mem,ptr,num)                (SCIP_UNUSED(mem), BMSallocMemoryArray(ptr,num))
+#define BMSallocClearBlockMemoryArray(mem,ptr,num)           (SCIP_UNUSED(mem), BMSallocClearMemoryArray(ptr,num))
+#define BMSallocBlockMemorySize(mem,ptr,size)                (SCIP_UNUSED(mem), BMSallocMemorySize(ptr,size))
+#define BMSreallocBlockMemoryArray(mem,ptr,oldnum,newnum)    (SCIP_UNUSED(mem), SCIP_UNUSED(oldnum), BMSreallocMemoryArray(ptr,newnum))
+#define BMSreallocBlockMemorySize(mem,ptr,oldsize,newsize)   (SCIP_UNUSED(mem), SCIP_UNUSED(oldsize), BMSreallocMemorySize(ptr,newsize))
+#define BMSduplicateBlockMemory(mem, ptr, source)            (SCIP_UNUSED(mem), BMSduplicateMemory(ptr,source))
+#define BMSduplicateBlockMemoryArray(mem, ptr, source, num)  (SCIP_UNUSED(mem), BMSduplicateMemoryArray(ptr,source,num))
+#define BMSfreeBlockMemory(mem,ptr)                          (SCIP_UNUSED(mem), BMSfreeMemory(ptr))
+#define BMSfreeBlockMemoryNull(mem,ptr)                      (SCIP_UNUSED(mem), BMSfreeMemoryNull(ptr))
+#define BMSfreeBlockMemoryArray(mem,ptr,num)                 (SCIP_UNUSED(mem), SCIP_UNUSED(num), BMSfreeMemoryArray(ptr))
+#define BMSfreeBlockMemoryArrayNull(mem,ptr,num)             (SCIP_UNUSED(mem), SCIP_UNUSED(num), BMSfreeMemoryArrayNull(ptr))
+#define BMSfreeBlockMemorySize(mem,ptr,size)                 (SCIP_UNUSED(mem), SCIP_UNUSED(size), BMSfreeMemory(ptr))
+#define BMSfreeBlockMemorySizeNull(mem,ptr,size)             (SCIP_UNUSED(mem), SCIP_UNUSED(size), BMSfreeMemoryNull(ptr))
+#define BMSgarbagecollectBlockMemory(mem)                    SCIP_UNUSED(mem)
+#define BMSgetBlockMemoryAllocated(mem)                      (SCIP_UNUSED(mem), 0LL)
+#define BMSgetBlockMemoryUsed(mem)                           (SCIP_UNUSED(mem), 0LL)
+#define BMSgetBlockMemoryUnused(mem)                         (SCIP_UNUSED(mem), 0LL)
+#define BMSgetBlockMemoryUsedMax(mem)                        (SCIP_UNUSED(mem), 0LL)
+#define BMSgetBlockMemoryUnusedMax(mem)                      (SCIP_UNUSED(mem), 0LL)
+#define BMSgetBlockMemoryAllocatedMax(mem)                   (SCIP_UNUSED(mem), 0LL)
+#define BMSgetBlockPointerSize(mem,ptr)                      (SCIP_UNUSED(mem), SCIP_UNUSED(ptr), 0)
+#define BMSdisplayBlockMemory(mem)                           SCIP_UNUSED(mem)
+#define BMSblockMemoryCheckEmpty(mem)                        (SCIP_UNUSED(mem), 0LL)
 
 #endif
 
@@ -590,7 +600,36 @@ void BMSgarbagecollectBlockMemory_call(
 
 /** returns the number of allocated bytes in the block memory */
 EXTERN
+long long BMSgetBlockMemoryAllocated_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   );
+
+/** returns the number of used bytes in the block memory */
+EXTERN
 long long BMSgetBlockMemoryUsed_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   );
+
+/** returns the number of allocated but not used bytes in the block memory */
+EXTERN
+long long BMSgetBlockMemoryUnused_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   );
+
+/** returns the maximal number of used bytes in the block memory */
+EXTERN
+long long BMSgetBlockMemoryUsedMax_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   );
+
+/** returns the maximal number of allocated but not used bytes in the block memory */
+EXTERN
+long long BMSgetBlockMemoryUnusedMax_call(
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   );
+
+/** returns the maximal number of allocated bytes in the block memory */
+long long BMSgetBlockMemoryAllocatedMax_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 

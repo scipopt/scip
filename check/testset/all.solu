@@ -1418,7 +1418,7 @@
 =opt=        ex7_3_4                              6.274634337
 =best=       ex7_3_5                              1.20687143
 =bestdual=   ex7_3_5                              1.20570859
-=bestdual=   ex7_3_6                              inf
+=inf=        ex7_3_6
 =best=       ex8_1_1                              -2.021806783
 =best=       ex8_1_2                              -1.070861019
 =best=       ex8_1_3                              3.0
@@ -1851,8 +1851,8 @@
 =opt=        gastrans582_cool12_95                0.0
 =opt=        gastrans582_cool14                   0.0
 =opt=        gastrans582_cool14_95                0.0
-=bestdual=   gastrans582_freezing27               inf
-=bestdual=   gastrans582_freezing27_95            inf
+=inf=        gastrans582_freezing27
+=inf=        gastrans582_freezing27_95
 =opt=        gastrans582_freezing30               0.0
 =opt=        gastrans582_freezing30_95            0.0
 =opt=        gastrans582_mild10                   0.0
@@ -5300,8 +5300,8 @@
 =opt=        pcascade_univariate_sos2_0.1         0.1851
 =opt=        pckInstMip_0_cpx                     361.5
 =opt=        pckInstMip_0_scip                    361.5
-=opt=        pcu_0.01                             0.1675
-=opt=        pcu_0.1                              0.1851
+=opt=        pcu_0.01                             0.167527525
+=opt=        pcu_0.1                              0.185145653
 =opt=        pedabox-2-m                          390.0
 =opt=        pg                                   -8674.3426
 =opt=        pg5_34                               -14339.3534

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -796,6 +796,7 @@ SCIP_RETCODE evalFunctionValue(
       for( i = 0; i < nvars; ++i )
       {
          assert(cons->exprvaridxs[i] >= 0);
+         assert(cons->exprvaridxs[i] < oracle->nvars);
          xx[i] = x[cons->exprvaridxs[i]];  /*lint !e613 !e644*/
       }
 
@@ -818,8 +819,8 @@ SCIP_RETCODE evalFunctionGradient(
    SCIP_NLPIORACLECONS*  cons,               /**< oracle constraint */
    const SCIP_Real*      x,                  /**< the point where to evaluate */
    SCIP_Bool             isnewx,             /**< has the point x changed since the last call to some evaluation function? */
-   SCIP_Real*            val,                /**< pointer to store function value */
-   SCIP_Real*            grad                /**< pointer to store function gradient */
+   SCIP_Real* RESTRICT   val,                /**< pointer to store function value */
+   SCIP_Real* RESTRICT   grad                /**< pointer to store function gradient */
    )
 {  /*lint --e{715}*/
    assert(oracle != NULL);
@@ -892,6 +893,7 @@ SCIP_RETCODE evalFunctionGradient(
          for( i = 0; i < nvars; ++i )
          {
             assert(cons->exprvaridxs[i] >= 0);
+            assert(cons->exprvaridxs[i] < oracle->nvars);
             xx[i] = x[cons->exprvaridxs[i]];  /*lint !e613*/
          }
       }
@@ -914,7 +916,7 @@ SCIP_RETCODE evalFunctionGradient(
       {
          *val += nlval;
          for( i = 0; i < nvars; ++i )
-            if( g[i] != g[i] )  /*lint !e777*/
+            if( !SCIPisFinite(g[i]) )  /*lint !e777*/
             {
                SCIPdebugMessage("gradient evaluation yield invalid gradient value %g\n", g[i]);
                BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
@@ -1153,7 +1155,7 @@ SCIP_RETCODE hessLagAddExprtree(
          if( !*hh )
             continue;
 
-         if( *hh != *hh )  /*lint !e777*/
+         if( !SCIPisFinite(*hh) )  /*lint !e777*/
          {
             SCIPdebugMessage("hessian evaluation yield invalid hessian value %g\n", *hh);
             BMSfreeBlockMemoryArrayNull(oracle->blkmem, &xx, nvars);
@@ -1225,7 +1227,6 @@ SCIP_RETCODE printFunction(
    )
 {  /*lint --e{715}*/
    int i;
-   int j;
    char namebuf[70];
 
    SCIPdebugMessage("%p print function\n", (void*)oracle);
@@ -1242,11 +1243,10 @@ SCIP_RETCODE printFunction(
          SCIPmessageFPrintInfo(messagehdlr, file, "\n");
    }
 
-   j = 0;
    for( i = 0; i < cons->nquadelems; ++i )
    {
       printName(namebuf, oracle->varnames != NULL ? oracle->varnames[cons->quadelems[i].idx1] : NULL, cons->quadelems[i].idx1, 'x', NULL, longvarnames);
-      SCIPmessageFPrintInfo(messagehdlr, file, "%+.20g*%s", cons->quadelems[j].coef, namebuf);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%+.20g*%s", cons->quadelems[i].coef, namebuf);
       printName(namebuf, oracle->varnames != NULL ? oracle->varnames[cons->quadelems[i].idx2] : NULL, cons->quadelems[i].idx2, 'x', NULL, longvarnames);
       SCIPmessageFPrintInfo(messagehdlr, file, "*%s", namebuf);
       if( i % 10 == 9 )
@@ -2730,7 +2730,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
                for( l = 0; l < nvars; ++l )
                {
                   assert(oracle->jaccols[j+l] == cons->exprvaridxs[l]);
-                  if( grad[l] != grad[l] )  /*lint !e777*/
+                  if( !SCIPisFinite(grad[l]) )  /*lint !e777*/
                   {
                      SCIPdebugMessage("gradient evaluation yield invalid gradient value %g\n", grad[l]);
                      retcode = SCIP_INVALIDDATA; /* indicate that the function could not be evaluated at given point */

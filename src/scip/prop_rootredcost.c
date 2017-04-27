@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -143,7 +143,7 @@ SCIP_RETCODE propdataCreate(
    SCIP_PROPDATA**       propdata            /**< pointer to store the created propagator data */
    )
 {
-   SCIP_CALL( SCIPallocMemory(scip, propdata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, propdata) );
 
    propdataReset(scip, *propdata);
 
@@ -194,7 +194,7 @@ SCIP_RETCODE propdataExit(
    }
 
    /* free memory for non-zero reduced cost variables */
-   SCIPfreeMemoryArrayNull(scip, &propdata->redcostvars);
+   SCIPfreeBlockMemoryArrayNull(scip, &propdata->redcostvars, propdata->nredcostvars);
 
    propdataReset(scip, propdata);
 
@@ -229,7 +229,7 @@ SCIP_RETCODE propdataInit(
 
    /* count binary variables with non-zero root reduced cost */
    nredcostbinvars = countNonZeroRootRedcostVars(scip, vars, nbinvars);
-   SCIPdebugMessage("There are %d (poor) binary variables with non-zero root reduced cost <%s>.\n", nredcostbinvars, SCIPgetProbName(scip));
+   SCIPdebugMsg(scip, "There are %d (poor) binary variables with non-zero root reduced cost <%s>.\n", nredcostbinvars, SCIPgetProbName(scip));
 
    /* count non-binary variables with non-zero root reduced cost */
    nredcostvars = countNonZeroRootRedcostVars(scip, &vars[nbinvars], nvars - nbinvars);
@@ -242,9 +242,9 @@ SCIP_RETCODE propdataInit(
       int k;
 
       k = 0;
-      SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->redcostvars, nredcostvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->redcostvars, nredcostvars) );
 
-      SCIPdebugMessage("Store non-zero root reduced cost variables at address <%p>.\n", (void*)propdata->redcostvars);
+      SCIPdebugMsg(scip, "Store non-zero root reduced cost variables at address <%p>.\n", (void*)propdata->redcostvars);
 
       for( v = 0; v < nvars; ++v )
       {
@@ -289,7 +289,7 @@ SCIP_RETCODE propdataInit(
 
       assert(k == nredcostvars);
 
-      SCIPdebugMessage("variables with non-zero redcostective coefficient: %d binaries, %d non-binaries\n", nredcostbinvars, nredcostvars - nredcostbinvars);
+      SCIPdebugMsg(scip, "variables with non-zero redcostective coefficient: %d binaries, %d non-binaries\n", nredcostbinvars, nredcostvars - nredcostbinvars);
    }
 
    propdata->nredcostvars = nredcostvars;
@@ -367,13 +367,13 @@ SCIP_RETCODE propagateBinaryBestRootRedcost(
    assert(redcostvars != NULL);
 
 #ifndef NDEBUG
-   /* check that the binary variables are correct sorted
+   /* check that the binary variables are correctly sorted
     *
     * @note In case the assertion fails it indicates that a new LP root solving arose after we initialized the
     *       propagator; The new LP solution destroyed the sorting of the binary variables since the reduced cost of the
-    *       variables changed. This could lead to potentially miss a domain reductions. Currently, it is not possible to
-    *       check if a new LP root changing the root reduced costs. This case, however, should not happen in the current
-    *       SCIP version.
+    *       variables changed. This could lead to potentially missing a domain reductions. Currently, it is not possible to
+    *       check if a new root LP was solved, changing the root reduced costs. This case, however, should not happen in the
+    *       current SCIP version.
     */
    for( v = 1; v < propdata->nredcostbinvars; ++v )
       assert(varCompRedcost(redcostvars[v-1], redcostvars[v]) == 1);
@@ -414,7 +414,7 @@ SCIP_RETCODE propagateBinaryBestRootRedcost(
           */
          assert(!(*cutoff));
 
-         SCIPdebugMessage("globally fixed binary variable <%s> [%g,%g] bestroot sol <%g>, redcost <%g>, lpobj <%g>\n",
+         SCIPdebugMsg(scip, "globally fixed binary variable <%s> [%g,%g] bestroot sol <%g>, redcost <%g>, lpobj <%g>\n",
             SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
             SCIPvarGetBestRootSol(var), SCIPvarGetBestRootRedcost(var), SCIPvarGetBestRootLPObjval(var) );
 
@@ -439,12 +439,12 @@ SCIP_RETCODE propagateBinaryBestRootRedcost(
           * the reduced cost are positive and the upper bound if the reduced cost are negative. For binary variables
           * that is 0 for the lower bound and 1 for the upper bound.
           */
-         SCIPdebugMessage("interrupt propagation for binary variables after %d from %d binary variables\n",
+         SCIPdebugMsg(scip, "interrupt propagation for binary variables after %d from %d binary variables\n",
             v, propdata->nredcostbinvars);
 
          if( *cutoff )
          {
-            SCIPdebugMessage("detected cutoff: binary variable <%s> [%g,%g], redcost <%g>, rootsol <%g>, rootlpobjval <%g>\n",
+            SCIPdebugMsg(scip, "detected cutoff: binary variable <%s> [%g,%g], redcost <%g>, rootsol <%g>, rootlpobjval <%g>\n",
                SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var),
                SCIPvarGetBestRootRedcost(var), SCIPvarGetBestRootSol(var), SCIPvarGetBestRootLPObjval(var));
          }
@@ -517,7 +517,7 @@ SCIP_DECL_PROPFREE(propFreeRootredcost)
    assert(propdata != NULL);
    assert(propdata->redcostvars == NULL);
 
-   SCIPfreeMemory(scip, &propdata);
+   SCIPfreeBlockMemory(scip, &propdata);
    SCIPpropSetData(prop, NULL);
 
    return SCIP_OKAY;
@@ -561,7 +561,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
-   /* the propagator should run in all nodes except the root node; for the root node the poor redcost propagator does
+   /* the propagator should run in all nodes except the root node; for the root node the redcost propagator does
     * the job already
     */
    if( SCIPgetDepth(scip) < 1 )
@@ -572,7 +572,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
    if( lpobjval == SCIP_INVALID ) /*lint !e777*/
       return SCIP_OKAY;
 
-   /* do not run in probing mode since this propagator chnages globally variable bounds */
+   /* do not run in probing mode since this propagator changes global variable bounds */
    if( SCIPinProbing(scip) )
       return SCIP_OKAY;
 
@@ -615,9 +615,9 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
     */
    propdata->lastcutoffbound = cutoffbound;
 
-   SCIPdebugMessage("searching for root reduced cost fixings\n");
-   SCIPdebugMessage("-> cutoffbound <%g>\n", cutoffbound);
-   SCIPdebugMessage("-> LP objective value <%g>\n", lpobjval);
+   SCIPdebugMsg(scip, "searching for root reduced cost fixings\n");
+   SCIPdebugMsg(scip, "-> cutoffbound <%g>\n", cutoffbound);
+   SCIPdebugMsg(scip, "-> LP objective value <%g>\n", lpobjval);
 
    *result = SCIP_DIDNOTFIND;
    nchgbds = 0;
@@ -655,7 +655,7 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
    else if( nchgbds > 0 )
       (*result) = SCIP_REDUCEDDOM;
 
-   SCIPdebugMessage("tightened %d variable domains (%u cutoff)\n", nchgbds, cutoff);
+   SCIPdebugMsg(scip, "tightened %d variable domains (%u cutoff)\n", nchgbds, cutoff);
 
    return SCIP_OKAY;
 }

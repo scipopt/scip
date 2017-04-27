@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -51,17 +51,17 @@ typedef struct SCIP_ConsData SCIP_CONSDATA;       /**< locally defined constrain
 typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and removals of the set of active constraints */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins)
- * 
- *  If the copy process was one to one, the valid pointer can set to TRUE. Otherwise, you have to set this pointer to
- *  FALSE. In case all problem defining objects (constraint handlers and variable pricers) return a TRUE valid for all
- *  their copying calls, SCIP assumes that it is a overall one to one copy of the original instance. In this case any
+ *
+ *  If the copy process was one to one, the valid pointer can be set to TRUE. Otherwise, this pointer has to be set to
+ *  FALSE. If all problem defining objects (constraint handlers and variable pricers) return valid = TRUE for all
+ *  their copying calls, SCIP assumes that it is an overall one to one copy of the original instance. In this case any
  *  reductions made in the copied SCIP instance can be transfered to the original SCIP instance. If the valid pointer is
  *  set to TRUE and it was not a one to one copy, it might happen that optimal solutions are cut off.
- *  
+ *
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
- *  - valid           : was the copying process valid? 
+ *  - valid           : was the copying process valid?
  */
 #define SCIP_DECL_CONSHDLRCOPY(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_Bool* valid)
 
@@ -201,6 +201,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  Puts the LP relaxations of all "initial" constraints into the LP. The method should put a canonic LP relaxation
  *  of all given constraints to the LP with calls to SCIPaddCut().
  *
+ *  @warning It is not guaranteed that the problem is going to be declared infeasible if the infeasible pointer is set
+ *           to TRUE. Therefore, it is recommended that users do not end this method prematurely when an infeasiblity
+ *           is detected.
+ *
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
@@ -316,6 +320,32 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 #define SCIP_DECL_CONSENFOLP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
       SCIP_Bool solinfeasible, SCIP_RESULT* result)
 
+/** constraint enforcing method of constraint handler for relaxation solutions
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - sol             : relaxation solution
+ *  - conshdlr        : the constraint handler itself
+ *  - conss           : array of constraints to process
+ *  - nconss          : number of constraints to process
+ *  - nusefulconss    : number of useful (non-obsolete) constraints to process
+ *  - solinfeasible   : was the solution already declared infeasible by a constraint handler?
+ *  - result          : pointer to store the result of the enforcing call
+ *
+ *  possible return values for *result (if more than one applies, the first in the list should be used):
+ *  - SCIP_CUTOFF     : the node is infeasible in the variable's bounds and can be cut off
+ *  - SCIP_CONSADDED  : an additional constraint was generated
+ *  - SCIP_REDUCEDDOM : a variable's domain was reduced
+ *  - SCIP_SEPARATED  : a cutting plane was generated
+ *  - SCIP_BRANCHED   : no changes were made to the problem, but a branching was applied to resolve an infeasibility
+ *  - SCIP_SOLVELP    : at least one constraint is infeasible, and this can only be resolved by solving the LP
+ *  - SCIP_INFEASIBLE : at least one constraint is infeasible, but it was not resolved
+ *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
+ *  - SCIP_DIDNOTRUN  : the enforcement was skipped (only possible, if objinfeasible is true)
+ */
+#define SCIP_DECL_CONSENFORELAX(x) SCIP_RETCODE x (SCIP* scip, SCIP_SOL* sol, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
+      SCIP_Bool solinfeasible, SCIP_RESULT* result)
+
 /** constraint enforcing method of constraint handler for pseudo solutions
  *
  *  The method is called at the end of the node processing loop for a node where the LP was not solved.
@@ -385,6 +415,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - checkintegrality: Has integrality to be checked?
  *  - checklprows     : Do constraints represented by rows in the current LP have to be checked?
  *  - printreason     : Should the reason for the violation be printed?
+ *  - completely      : Should all violations be checked?
  *  - result          : pointer to store the result of the feasibility checking call
  *
  *  possible return values for *result:
@@ -392,7 +423,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
 #define SCIP_DECL_CONSCHECK(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, SCIP_SOL* sol, \
-      SCIP_Bool checkintegrality, SCIP_Bool checklprows, SCIP_Bool printreason, SCIP_RESULT* result)
+      SCIP_Bool checkintegrality, SCIP_Bool checklprows, SCIP_Bool printreason, SCIP_Bool completely, SCIP_RESULT* result)
 
 /** domain propagation method of constraint handler
  *
@@ -420,9 +451,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - SCIP_DIDNOTFIND : the propagator searched but did not find any domain reductions
  *  - SCIP_DIDNOTRUN  : the propagator was skipped
  *  - SCIP_DELAYED    : the propagator was skipped, but should be called again
+ *  - SCIP_DELAYNODE  : the current node should be postponed (return value only valid for BEFORELP propagation)
  */
-#define SCIP_DECL_CONSPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, int nmarkedconss, \
-      SCIP_PROPTIMING proptiming, SCIP_RESULT* result)
+#define SCIP_DECL_CONSPROP(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nusefulconss, \
+      int nmarkedconss, SCIP_PROPTIMING proptiming, SCIP_RESULT* result)
 
 /** presolving method of constraint handler
  *
@@ -503,7 +535,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  constraint handler and is set to 0).
  *  In the conflict analysis, the constraint handler may be asked to resolve the lower bound change on z with
  *  constraint c, that was applied at a time given by a bound change index "bdchgidx".
- *  With a call to SCIPvarGetLbAtIndex(z, bdchgidx, TRUE), the handler can find out, that the lower bound of
+ *  With a call to SCIPgetVarLbAtIndex(scip, z, bdchgidx, TRUE), the handler can find out, that the lower bound of
  *  variable z was set to 1.0 at the given point of time, and should call SCIPaddConflictUb(scip, x, bdchgidx) and
  *  SCIPaddConflictUb(scip, y, bdchgidx) to tell SCIP, that the upper bounds of x and y at this point of time were
  *  the reason for the deduction of the lower bound of z.

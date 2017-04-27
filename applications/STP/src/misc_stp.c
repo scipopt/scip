@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -76,62 +76,102 @@ SCIP_RETCODE SCIPintListNodeInsert(
 SCIP_RETCODE SCIPintListNodeAppendCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    IDX**                 node1,              /**< pointer to the last node of list to be enlarged */
-   IDX*                  node2               /**< pointer to the last node of source list */
+   IDX*                  node2,              /**< pointer to the last node of source list */
+   SCIP_Bool*            conflict            /**< pointer to store whether a conflict has been detected by the method */
    )
 {
+   IDX* new;
    IDX* curr1;
    IDX* curr2;
-   IDX* curr3 = NULL;
-   IDX* last = NULL;
-   IDX* new = NULL;
+   int curr2idx;
+   SCIP_Bool checkconflict;
 
+   assert(scip != NULL);
+
+   if( node2 == NULL )
+      return SCIP_OKAY;
+
+   if( conflict != NULL )
+   {
+      *conflict = FALSE;
+      checkconflict = TRUE;
+   }
+   else
+   {
+      checkconflict = FALSE;
+   }
+
+   new = NULL;
    curr1 = *node1;
+   curr2 = node2;
+
    if( curr1 != NULL )
    {
-      while( curr1->parent != NULL )
+      int* pointer;
+      int* hasharr;
+      int i;
+      int nelems = 0;
+      int maxlength;
+
+      /* todo fix this hack */
+      maxlength = SCIPprobdataGetNorgEdges(scip);
+
+      assert(maxlength > 0);
+
+      SCIP_CALL( SCIPallocCleanBufferArray(scip, &hasharr, maxlength) );
+      SCIP_CALL( SCIPallocCleanBufferArray(scip, &pointer, maxlength) );
+      while( curr1 != NULL )
+      {
+         i = curr1->index;
+         assert(i < maxlength && nelems < maxlength);
+         pointer[nelems++] = i;
+         hasharr[i] = 1;
          curr1 = curr1->parent;
-      last = curr1;
-   }
+      }
 
-   curr2 = node2;
-   while( curr2 != NULL )
+      curr1 = *node1;
+      while( curr2 != NULL )
+      {
+         curr2idx = curr2->index;
+
+         if( hasharr[curr2idx] == 0 )
+         {
+            SCIP_CALL(SCIPallocMemory(scip, &new));
+            new->index = curr2idx;
+            new->parent = curr1;
+            curr1 = new;
+         }
+         else if( checkconflict )
+         {
+            (*conflict) = TRUE;
+         }
+
+         curr2 = curr2->parent;
+      }
+
+      for( i = 0; i < nelems; i++ )
+      {
+         hasharr[pointer[i]] = 0;
+         pointer[i] = 0;
+      }
+      SCIPfreeCleanBufferArray(scip, &pointer);
+      SCIPfreeCleanBufferArray(scip, &hasharr);
+   }
+   else
    {
-      if( curr1 != NULL )
+      while( curr2 != NULL )
       {
-         curr3 = *node1;
-         assert(curr3 != NULL);
-
-         while( curr3 != last )
-         {
-            if( curr3->index == curr2->index )
-               break;
-            curr3 = curr3->parent;
-            assert(curr3 != NULL);
-         }
-         if( curr3 == last && curr3->index != curr2->index  )
-         {
-            curr3 = NULL;
-            SCIP_CALL( SCIPallocMemory(scip, &new) );
-            curr1->parent = new;
-         }
-      }
-      else
-      {
-         curr3 = NULL;
-         SCIP_CALL( SCIPallocMemory(scip, node1) );
-         new = *node1;
-         last = *node1;
-      }
-      if( curr3 == NULL )
-      {
-         assert(new != NULL);
+         SCIP_CALL(SCIPallocMemory(scip, &new));
          new->index = curr2->index;
+         new->parent = curr1;
          curr1 = new;
+
+         curr2 = curr2->parent;
       }
-      curr2 = curr2->parent;
    }
+
    if( new != NULL )
-      new->parent = NULL;
+      *node1 = new;
 
    return SCIP_OKAY;
 }
@@ -613,6 +653,25 @@ SCIP_RETCODE SCIPunionfindInit(
    }
 
    return SCIP_OKAY;
+}
+
+/** clears the union-find structure 'uf'*/
+void SCIPunionfindClear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   UF*                   uf,                 /**< union find data structure */
+   int                   length              /**< number of components */
+   )
+{
+   int i;
+   uf->count = length;
+
+   for( i = 0; i < length; i++ )
+   {
+      uf->parent[i] = i;
+      uf->size[i] = 1;
+   }
+
+   return;
 }
 
 

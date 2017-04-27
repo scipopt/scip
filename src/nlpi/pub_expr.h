@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -586,7 +586,8 @@ SCIP_RETCODE SCIPexprCreateUser(
    SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function, or NULL if not implemented */
    SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function, or NULL if convex, concave, or not implemented */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
-   SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRFREEDATA ((*freedata)), /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRPRINT ((*print))        /**< expression print function, or NULL for default string "user" */
    );
 
 /** indicates whether the expression contains a SCIP_EXPR_PARAM */
@@ -1309,7 +1310,8 @@ SCIP_RETCODE SCIPexprgraphCreateNodeUser(
    SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function */
    SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function, or NULL if convex, concave, or not implemented */
    SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
-   SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRFREEDATA ((*freedata)), /**< expression data free function, or NULL if nothing to free */
+   SCIP_DECL_USEREXPRPRINT ((*print))        /**< expression print function, or NULL for default string "user" */
    );
 
 /** given a node of an expression graph, splitup a linear part which variables are not used somewhere else in the same expression

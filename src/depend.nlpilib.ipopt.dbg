@@ -5,6 +5,7 @@ $(LIBOBJDIR)/nlpi/nlpi.o: src/nlpi/nlpi.c src/scip/pub_message.h src/scip/def.h 
 $(LIBOBJDIR)/nlpi/nlpioracle.o: src/nlpi/nlpioracle.c src/scip/pub_message.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/type_message.h src/scip/pub_misc.h \
  src/blockmemshell/memory.h src/scip/type_misc.h src/scip/type_var.h \
+ src/scip/pub_misc_select.h src/scip/type_misc.h src/scip/pub_misc_sort.h \
  src/nlpi/nlpioracle.h src/nlpi/type_nlpi.h src/nlpi/type_expr.h \
  src/nlpi/type_exprinterpret.h src/nlpi/pub_expr.h \
  src/scip/intervalarith.h src/nlpi/exprinterpret.h
@@ -13,12 +14,17 @@ $(LIBOBJDIR)/nlpi/expr.o: src/nlpi/expr.c src/nlpi/pub_expr.h src/scip/def.h \
  src/scip/intervalarith.h src/blockmemshell/memory.h src/nlpi/type_expr.h \
  src/nlpi/type_exprinterpret.h src/nlpi/struct_expr.h \
  src/scip/type_misc.h src/nlpi/exprinterpret.h src/scip/pub_misc.h \
- src/scip/type_var.h
+ src/scip/type_var.h src/scip/pub_misc_select.h src/scip/type_misc.h \
+ src/scip/pub_misc_sort.h
 $(LIBOBJDIR)/nlpi/exprinterpret_none.o: src/nlpi/exprinterpret_none.c \
  src/scip/pub_message.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/type_message.h src/nlpi/exprinterpret.h \
  src/blockmemshell/memory.h src/nlpi/type_expr.h \
  src/nlpi/type_exprinterpret.h src/scip/intervalarith.h
+$(LIBOBJDIR)/nlpi/nlpi_worhp_dummy.o: src/nlpi/nlpi_worhp_dummy.c src/nlpi/nlpi_worhp.h \
+ src/nlpi/type_nlpi.h src/scip/def.h src/scip/type_retcode.h \
+ src/scip/pub_message.h src/scip/type_message.h \
+ src/blockmemshell/memory.h src/nlpi/type_expr.h
 $(LIBOBJDIR)/nlpi/intervalarithext.o: src/nlpi/intervalarithext.cpp src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
  src/nlpi/intervalarithext.h src/scip/intervalarith.h
@@ -29,6 +35,7 @@ $(LIBOBJDIR)/nlpi/nlpi_ipopt.o: src/nlpi/nlpi_ipopt.cpp src/nlpi/nlpi_ipopt.h \
  src/scip/type_misc.h src/nlpi/nlpioracle.h src/nlpi/type_exprinterpret.h \
  src/nlpi/exprinterpret.h src/scip/intervalarith.h src/scip/interrupt.h \
  src/scip/type_interrupt.h src/scip/pub_misc.h src/scip/type_var.h \
+ src/scip/pub_misc_select.h src/scip/type_misc.h src/scip/pub_misc_sort.h \
   \
   \
   \

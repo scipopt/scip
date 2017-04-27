@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_var.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for problem variables
  * @author Tobias Achterberg
  */
@@ -243,6 +244,8 @@ struct SCIP_Var
    SCIP_HISTORY*         historycrun;        /**< branching and inference history information for current run */
    SCIP_VALUEHISTORY*    valuehistory;       /**< branching and inference history information which are value based, or NULL if not used */
    SCIP_Longint          closestvblpcount;   /**< LP count for which the closestvlbidx/closestvubidx entries are valid */
+   int                   clqcomponentidx;    /**< index of clique graph's connected component that the variable belongs to,
+                                              *   or -1 if not computed */
    int                   index;              /**< consecutively numbered variable identifier */
    int                   probindex;          /**< array position in problems vars array, or -1 if not assigned to a problem */
    int                   pseudocandindex;    /**< array position in pseudo branching candidates array, or -1 */

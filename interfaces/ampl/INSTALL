@@ -3,7 +3,7 @@
 *                  This file is part of the program and library             *
 *         SCIP --- Solving Constraint Integer Programs                      *
 *                                                                           *
-*    Copyright (C) 2002-2012 Konrad-Zuse-Zentrum                            *
+*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 *                            fuer Informationstechnik Berlin                *
 *                                                                           *
 *  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -13,13 +13,13 @@
 *                                                                           *
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-This is a beta-version of an AMPL interface for SCIP
+This is an AMPL interface for SCIP.
 
 Currently not supported, but planned for future versions:
  - setting user parameters in SCIP from AMPL (AMPL solver options)
 
 Please let us know (e-mail to scip@zib.de mailing list), if you are missing any of these or any other features.
-Please let us know if you find any bugs, unexpected behavior, or compatibility problems (report via http://scip.zib.de/bugs.shtml)
+Please let us know if you find any bugs, unexpected behavior, or compatibility problems (report via http://scip.zib.de/#contact)
 
 To use SCIP from AMPL, you have to do the following:
  - execute the ./get.ASL script to download the AMPL solver library sources;
@@ -30,9 +30,9 @@ To use SCIP from AMPL, you have to do the following:
  - build SCIP (see ../../INSTALL)
  - build the SCIP-AMPL binary with the same OPT/LPS/ZIMPL/IPOPT/... flags as the SCIP binary in this directory, e.g.,
    make LPS=spx ZIMPL=false IPOPT=true  (ignore the compiler warnings...)
-   If that does not work out of the box, it may be required to adapt the "ASL library" section in Makefile! 
+   If that does not work out of the box, it may be required to adapt the "ASL library" section in Makefile!
  - the latter should creates a link ./bin/scipampl that points to a binary that expects an AMPL .nl file as command line argument and,
-   if given, attempts to read this instance into SCIP and tries to solve it 
+   if given, attempts to read this instance into SCIP and tries to solve it
  - call make test (with the same flags for OPT/LPS/ZIMPL/IPOPT/... as before) to check if the binary is working
 
 To get help on command line parameters, call the scipampl binary without arguments.
@@ -40,4 +40,4 @@ To get help on command line parameters, call the scipampl binary without argumen
 WARNINGS: The executable has only been tested on the command line when running with a .nl file, not within AMPL.
           We have tested only "simple" .nl files, fancy stuff like defined variables may not work.
 
-Further Reading: http://www.zverovich.net/2012/08/using-scip-with-ampl.html
+Further Reading: http://zverovich.net/2012/08/07/using-scip-with-ampl.html

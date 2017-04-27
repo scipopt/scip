@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -82,8 +82,9 @@ SCIP_DECL_PARAMCHGD(paramChgdHeurPriority)
 }
 
 /* resets diving settings counters */
-void SCIPdivesetReset(
-   SCIP_DIVESET*         diveset             /**< diveset to be reset */
+SCIP_RETCODE SCIPdivesetReset(
+   SCIP_DIVESET*         diveset,            /**< diveset to be reset */
+   SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
    assert(diveset != NULL);
@@ -102,6 +103,14 @@ void SCIPdivesetReset(
    diveset->nbestsolsfound = 0;
    diveset->ncalls = 0;
    diveset->nsolcalls = 0;
+
+   /* create a new random number generator after freeing any previous random number generator */
+   if( diveset->randnumgen != NULL )
+      SCIPrandomFree(&diveset->randnumgen);
+
+   SCIP_CALL( SCIPrandomCreate(&diveset->randnumgen, diveset->blkmem, (unsigned int) SCIPsetInitializeRandomSeed(set, diveset->initialseed)) );
+
+   return SCIP_OKAY;
 }
 
 /** update diveset statistics and global diveset statistics */
@@ -192,6 +201,7 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_Real             lpresolvedomchgquot,/**< percentage of immediate domain changes during probing to trigger LP resolve */
    int                   lpsolvefreq,        /**< LP solve frequency for (0: only if enough domain reductions are found by propagation)*/
    int                   maxlpiterofs,       /**< additional number of allowed LP iterations */
+   unsigned int          initialseed,        /**< initial seed for random number generation */
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
@@ -206,8 +216,15 @@ SCIP_RETCODE SCIPdivesetCreate(
    assert(set != NULL);
    assert(divesetgetscore != NULL);
    assert(heur != NULL);
+   assert(blkmem != NULL);
 
-   SCIP_ALLOC( BMSallocMemory(diveset) );
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, diveset) );
+   (*diveset)->blkmem = blkmem;
+
+   /* do not allocate random number generator here; we do this in SCIPdivesetReset() */
+   (*diveset)->initialseed = initialseed;
+   (*diveset)->randnumgen = NULL;
+
 
    /* for convenience, the name gets inferred from the heuristic to which the diveset is added if no name is provided */
    divesetname = (name == NULL ? SCIPheurGetName(heur) : name);
@@ -293,7 +310,7 @@ SCIP_RETCODE SCIPdivesetCreate(
             "more general constraint handler diving variable selection?",
             &(*diveset)->onlylpbranchcands, FALSE, onlylpbranchcands, NULL, NULL) );
 
-   SCIPdivesetReset(*diveset);
+   SCIP_CALL( SCIPdivesetReset(*diveset, set) );
 
    return SCIP_OKAY;
 }
@@ -536,6 +553,17 @@ int SCIPdivesetGetLPSolveFreq(
    return diveset->lpsolvefreq;
 }
 
+/** returns the random number generator of this \p diveset for tie-breaking */
+SCIP_RANDNUMGEN* SCIPdivesetGetRandnumgen(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+   assert(diveset->randnumgen != NULL);
+
+   return diveset->randnumgen;
+}
+
 /** returns the domain reduction quotient for triggering an immediate resolve of the diving LP (0.0: always resolve)*/
 SCIP_Real SCIPdivesetGetLPResolveDomChgQuot(
    SCIP_DIVESET*         diveset             /**< diving settings */
@@ -590,9 +618,13 @@ void divesetFree(
 {
    assert(*diveset != NULL);
    assert((*diveset)->name != NULL);
+   assert((*diveset)->blkmem != NULL);
+   assert((*diveset)->randnumgen != NULL);
+
+   SCIPrandomFree(&(*diveset)->randnumgen);
 
    BMSfreeMemoryArray(&(*diveset)->name);
-   BMSfreeMemory(diveset);
+   BMSfreeBlockMemory((*diveset)->blkmem, diveset);
 }
 
 /** get the candidate score and preferred rounding direction for a candidate variable */
@@ -613,7 +645,8 @@ SCIP_RETCODE SCIPdivesetGetScore(
    assert(divecand != NULL);
    assert(divetype & diveset->divetypemask);
 
-   SCIP_CALL( diveset->divesetgetscore(set->scip, diveset, divetype, divecand, divecandsol, divecandfrac, candscore, roundup) );
+   SCIP_CALL( diveset->divesetgetscore(set->scip, diveset, divetype, divecand, divecandsol, divecandfrac,
+         candscore, roundup) );
 
    return SCIP_OKAY;
 }
@@ -632,7 +665,7 @@ SCIP_RETCODE SCIPheurCopyInclude(
 
    if( heur->heurcopy != NULL )
    {
-      SCIPdebugMessage("including heur %s in subscip %p\n", SCIPheurGetName(heur), (void*)set->scip);
+      SCIPsetDebugMsg(set, "including heur %s in subscip %p\n", SCIPheurGetName(heur), (void*)set->scip);
       SCIP_CALL( heur->heurcopy(set->scip, heur) );
    }
 
@@ -711,15 +744,15 @@ SCIP_RETCODE SCIPheurCreate(
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freq", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency for calling primal heuristic <%s> (-1: never, 0: only at depth freqofs)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*heur)->freq, FALSE, freq, -1, INT_MAX, NULL, NULL) );
+                  &(*heur)->freq, FALSE, freq, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/freqofs", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "frequency offset for calling primal heuristic <%s>", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*heur)->freqofs, FALSE, freqofs, 0, INT_MAX, NULL, NULL) );
+                  &(*heur)->freqofs, FALSE, freqofs, 0, SCIP_MAXTREEDEPTH, NULL, NULL) );
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdepth", name);
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "maximal depth level to call primal heuristic <%s> (-1: no limit)", name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-                  &(*heur)->maxdepth, TRUE, maxdepth, -1, INT_MAX, NULL, NULL) );
+                  &(*heur)->maxdepth, TRUE, maxdepth, -1, SCIP_MAXTREEDEPTH, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -800,7 +833,7 @@ SCIP_RETCODE SCIPheurInit(
    for( d = 0; d < heur->ndivesets; ++d )
    {
       assert(heur->divesets[d] != NULL);
-      SCIPdivesetReset(heur->divesets[d]);
+      SCIP_CALL( SCIPdivesetReset(heur->divesets[d], set) );
    }
 
    heur->initialized = TRUE;
@@ -998,7 +1031,7 @@ SCIP_RETCODE SCIPheurExec(
       SCIP_Longint oldnsolsfound;
       SCIP_Longint oldnbestsolsfound;
 
-      SCIPdebugMessage("executing primal heuristic <%s> in depth %d (delaypos: %d)\n", heur->name, depth, heur->delaypos);
+      SCIPsetDebugMsg(set, "executing primal heuristic <%s> in depth %d (delaypos: %d)\n", heur->name, depth, heur->delaypos);
 
       oldnsolsfound = primal->nsolsfound;
       oldnbestsolsfound = primal->nbestsolsfound;
@@ -1016,7 +1049,8 @@ SCIP_RETCODE SCIPheurExec(
       if( *result != SCIP_FOUNDSOL
          && *result != SCIP_DIDNOTFIND
          && *result != SCIP_DIDNOTRUN
-         && *result != SCIP_DELAYED )
+         && *result != SCIP_DELAYED
+         && *result != SCIP_UNBOUNDED )
       {
          SCIPerrorMessage("execution method of primal heuristic <%s> returned invalid result <%d>\n", 
             heur->name, *result);
@@ -1034,12 +1068,12 @@ SCIP_RETCODE SCIPheurExec(
          set->heurssorted = FALSE;
       }
    }
-   assert(*result == SCIP_DIDNOTRUN || *result == SCIP_DELAYED || heur->delaypos == -1);
+   assert(*result == SCIP_DIDNOTRUN || *result == SCIP_DELAYED || *result == SCIP_UNBOUNDED || heur->delaypos == -1);
 
    /* check if the heuristic was (still) delayed */
    if( *result == SCIP_DELAYED || heur->delaypos >= 0 )
    {
-      SCIPdebugMessage("delaying execution of primal heuristic <%s> in depth %d (delaypos: %d), heur was%s delayed before, had delaypos %d\n",
+      SCIPsetDebugMsg(set, "delaying execution of primal heuristic <%s> in depth %d (delaypos: %d), heur was%s delayed before, had delaypos %d\n",
          heur->name, depth, *ndelayedheurs, heur->delaypos >= 0 ? "" : " not", heur->delaypos);
 
       /* mark the heuristic delayed */

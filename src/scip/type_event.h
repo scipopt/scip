@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,7 @@
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for managing events
  * @author Tobias Achterberg
+ * @author Robert Lion Gottwald
  *
  *  This file defines the interface for event handler implemented in C.
  *
@@ -32,6 +33,15 @@
 #include "scip/type_retcode.h"
 #include "scip/type_scip.h"
 
+#if !defined(_MSC_VER) || _MSC_VER > 1600
+#ifdef __cplusplus
+#define __STDC_FORMAT_MACROS
+#endif
+#include <inttypes.h>
+#else
+#define PRIx64 "llx"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -40,53 +50,54 @@ extern "C" {
  * event types
  */
 
-#define SCIP_EVENTTYPE_DISABLED       0x00000000u /**< the event was disabled and has no effect any longer */
+#define SCIP_EVENTTYPE_DISABLED         UINT64_C(0x00000000)  /**< the event was disabled and has no effect any longer */
 
 /* variable events */
-#define SCIP_EVENTTYPE_VARADDED       0x00000001u /**< a variable has been added to the transformed problem */
-#define SCIP_EVENTTYPE_VARDELETED     0x00000002u /**< a variable will be deleted from the transformed problem */
-#define SCIP_EVENTTYPE_VARFIXED       0x00000004u /**< a variable has been fixed, aggregated, or multi-aggregated */
-#define SCIP_EVENTTYPE_VARUNLOCKED    0x00000008u /**< the number of rounding locks of a variable was reduced to zero or
-                                                   *   one */
-#define SCIP_EVENTTYPE_OBJCHANGED     0x00000010u /**< the objective value of a variable has been changed */
-#define SCIP_EVENTTYPE_GLBCHANGED     0x00000020u /**< the global lower bound of a variable has been changed */
-#define SCIP_EVENTTYPE_GUBCHANGED     0x00000040u /**< the global upper bound of a variable has been changed */
-#define SCIP_EVENTTYPE_LBTIGHTENED    0x00000080u /**< the local lower bound of a variable has been increased */
-#define SCIP_EVENTTYPE_LBRELAXED      0x00000100u /**< the local lower bound of a variable has been decreased */
-#define SCIP_EVENTTYPE_UBTIGHTENED    0x00000200u /**< the local upper bound of a variable has been decreased */
-#define SCIP_EVENTTYPE_UBRELAXED      0x00000400u /**< the local upper bound of a variable has been increased */
-#define SCIP_EVENTTYPE_GHOLEADDED     0x00000800u /**< a global hole has been added to the hole list of a variable's domain */
-#define SCIP_EVENTTYPE_GHOLEREMOVED   0x00001000u /**< a global hole has been removed from the hole list of a variable's domain */
-#define SCIP_EVENTTYPE_LHOLEADDED     0x00002000u /**< a local hole has been added to the hole list of a variable's domain */
-#define SCIP_EVENTTYPE_LHOLEREMOVED   0x00004000u /**< a local hole has been removed from the hole list of a variable's domain */
-#define SCIP_EVENTTYPE_IMPLADDED      0x00008000u /**< the variable's implication list, variable bound or clique information
-                                                   *   was extended */
+#define SCIP_EVENTTYPE_VARADDED         UINT64_C(0x00000001)  /**< a variable has been added to the transformed problem */
+#define SCIP_EVENTTYPE_VARDELETED       UINT64_C(0x00000002)  /**< a variable will be deleted from the transformed problem */
+#define SCIP_EVENTTYPE_VARFIXED         UINT64_C(0x00000004)  /**< a variable has been fixed, aggregated, or multi-aggregated */
+#define SCIP_EVENTTYPE_VARUNLOCKED      UINT64_C(0x00000008)  /**< the number of rounding locks of a variable was reduced to zero or one */
+#define SCIP_EVENTTYPE_OBJCHANGED       UINT64_C(0x00000010)  /**< the objective value of a variable has been changed */
+#define SCIP_EVENTTYPE_GLBCHANGED       UINT64_C(0x00000020)  /**< the global lower bound of a variable has been changed */
+#define SCIP_EVENTTYPE_GUBCHANGED       UINT64_C(0x00000040)  /**< the global upper bound of a variable has been changed */
+#define SCIP_EVENTTYPE_LBTIGHTENED      UINT64_C(0x00000080)  /**< the local lower bound of a variable has been increased */
+#define SCIP_EVENTTYPE_LBRELAXED        UINT64_C(0x00000100)  /**< the local lower bound of a variable has been decreased */
+#define SCIP_EVENTTYPE_UBTIGHTENED      UINT64_C(0x00000200)  /**< the local upper bound of a variable has been decreased */
+#define SCIP_EVENTTYPE_UBRELAXED        UINT64_C(0x00000400)  /**< the local upper bound of a variable has been increased */
+#define SCIP_EVENTTYPE_GHOLEADDED       UINT64_C(0x00000800)  /**< a global hole has been added to the hole list of a variable's domain */
+#define SCIP_EVENTTYPE_GHOLEREMOVED     UINT64_C(0x00001000)  /**< a global hole has been removed from the hole list of a variable's domain */
+#define SCIP_EVENTTYPE_LHOLEADDED       UINT64_C(0x00002000)  /**< a local hole has been added to the hole list of a variable's domain */
+#define SCIP_EVENTTYPE_LHOLEREMOVED     UINT64_C(0x00004000)  /**< a local hole has been removed from the hole list of a variable's domain */
+#define SCIP_EVENTTYPE_IMPLADDED        UINT64_C(0x00008000)  /**< the variable's implication list, variable bound or clique information was extended */
 
 /* presolving events */
-#define SCIP_EVENTTYPE_PRESOLVEROUND  0x00010000u /**< a presolving round has been finished */
+#define SCIP_EVENTTYPE_PRESOLVEROUND    UINT64_C(0x00010000)  /**< a presolving round has been finished */
 
 /* node events */
-#define SCIP_EVENTTYPE_NODEFOCUSED    0x00020000u /**< a node has been focused and is now the focus node */
-#define SCIP_EVENTTYPE_NODEFEASIBLE   0x00040000u /**< the LP/pseudo solution of the node was feasible */
-#define SCIP_EVENTTYPE_NODEINFEASIBLE 0x00080000u /**< the focus node has been proven to be infeasible or was bounded */
-#define SCIP_EVENTTYPE_NODEBRANCHED   0x00100000u /**< the focus node has been solved by branching */
+#define SCIP_EVENTTYPE_NODEFOCUSED      UINT64_C(0x00020000)  /**< a node has been focused and is now the focus node */
+#define SCIP_EVENTTYPE_NODEFEASIBLE     UINT64_C(0x00040000)  /**< the LP/pseudo solution of the node was feasible */
+#define SCIP_EVENTTYPE_NODEINFEASIBLE   UINT64_C(0x00080000)  /**< the focus node has been proven to be infeasible or was bounded */
+#define SCIP_EVENTTYPE_NODEBRANCHED     UINT64_C(0x00100000)  /**< the focus node has been solved by branching */
 
 /* LP events */
-#define SCIP_EVENTTYPE_FIRSTLPSOLVED  0x00200000u /**< the node's initial LP was solved */
-#define SCIP_EVENTTYPE_LPSOLVED       0x00400000u /**< the node's LP was completely solved with cut & price */
+#define SCIP_EVENTTYPE_FIRSTLPSOLVED    UINT64_C(0x00200000)  /**< the node's initial LP was solved */
+#define SCIP_EVENTTYPE_LPSOLVED         UINT64_C(0x00400000)  /**< the node's LP was completely solved with cut & price */
 
 /* primal solution events */
-#define SCIP_EVENTTYPE_POORSOLFOUND   0x00800000u /**< a good enough primal feasible (but not new best) solution was found */
-#define SCIP_EVENTTYPE_BESTSOLFOUND   0x01000000u /**< a new best primal feasible solution was found */
+#define SCIP_EVENTTYPE_POORSOLFOUND     UINT64_C(0x00800000)  /**< a good enough primal feasible (but not new best) solution was found */
+#define SCIP_EVENTTYPE_BESTSOLFOUND     UINT64_C(0x01000000)  /**< a new best primal feasible solution was found */
 
 /* linear row events */
-#define SCIP_EVENTTYPE_ROWADDEDSEPA   0x02000000u /**< a row has been added to SCIP's separation storage */
-#define SCIP_EVENTTYPE_ROWDELETEDSEPA 0x04000000u /**< a row has been removed from SCIP's separation storage */
-#define SCIP_EVENTTYPE_ROWADDEDLP     0x08000000u /**< a row has been added to the LP */
-#define SCIP_EVENTTYPE_ROWDELETEDLP   0x10000000u /**< a row has been removed from the LP */
-#define SCIP_EVENTTYPE_ROWCOEFCHANGED 0x20000000u /**< a coefficient of a row has been changed (row specific event) */
-#define SCIP_EVENTTYPE_ROWCONSTCHANGED 0x40000000u/**< the constant of a row has been changed (row specific event) */
-#define SCIP_EVENTTYPE_ROWSIDECHANGED 0x80000000u /**< a side of a row has been changed (row specific event) */
+#define SCIP_EVENTTYPE_ROWADDEDSEPA     UINT64_C(0x02000000)  /**< a row has been added to SCIP's separation storage */
+#define SCIP_EVENTTYPE_ROWDELETEDSEPA   UINT64_C(0x04000000)  /**< a row has been removed from SCIP's separation storage */
+#define SCIP_EVENTTYPE_ROWADDEDLP       UINT64_C(0x08000000)  /**< a row has been added to the LP */
+#define SCIP_EVENTTYPE_ROWDELETEDLP     UINT64_C(0x10000000)  /**< a row has been removed from the LP */
+#define SCIP_EVENTTYPE_ROWCOEFCHANGED   UINT64_C(0x20000000)  /**< a coefficient of a row has been changed (row specific event) */
+#define SCIP_EVENTTYPE_ROWCONSTCHANGED  UINT64_C(0x40000000)  /**< the constant of a row has been changed (row specific event) */
+#define SCIP_EVENTTYPE_ROWSIDECHANGED   UINT64_C(0x80000000)  /**< a side of a row has been changed (row specific event) */
+
+/* sync event */
+#define SCIP_EVENTTYPE_SYNC             UINT64_C(0x100000000) /**< synchronization event */
 
 /* event masks for variable events */
 #define SCIP_EVENTTYPE_GBDCHANGED     (SCIP_EVENTTYPE_GLBCHANGED | SCIP_EVENTTYPE_GUBCHANGED)
@@ -120,8 +131,8 @@ extern "C" {
 #define SCIP_EVENTTYPE_ROWCHANGED     (SCIP_EVENTTYPE_ROWCOEFCHANGED | SCIP_EVENTTYPE_ROWCONSTCHANGED | SCIP_EVENTTYPE_ROWSIDECHANGED)
 #define SCIP_EVENTTYPE_ROWEVENT       (SCIP_EVENTTYPE_ROWADDEDSEPA | SCIP_EVENTTYPE_ROWDELETEDSEPA | SCIP_EVENTTYPE_ROWADDEDLP | SCIP_EVENTTYPE_ROWDELETEDLP | SCIP_EVENTTYPE_ROWCHANGED)
 
-typedef unsigned int SCIP_EVENTTYPE;         /**< type of event (bit field) */
-
+typedef uint64_t SCIP_EVENTTYPE;                  /**< type of event (bit field) */
+#define SCIP_EVENTTYPE_FORMAT PRIx64
 
 typedef struct SCIP_Eventhdlr SCIP_EVENTHDLR;     /**< event handler for a specific events */
 typedef struct SCIP_EventhdlrData SCIP_EVENTHDLRDATA; /**< event handler data */

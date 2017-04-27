@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,6 +33,7 @@
 #define REDUCE_C
 #define SDSP_BOUND    400          /**< visited edges bound for SDSP test  */
 #define BD3_BOUND     400          /**< visited edges bound for BD3 test  */
+#define EXTENSIVE FALSE
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -78,6 +79,7 @@ SCIP_RETCODE nvsl_reduction(
    int*                  vbase,
    int*                  neighb,
    int*                  distnode,
+   int*                  solnode,
    char*                 visited,
    int*                  nelims,
    int                   minelims
@@ -107,13 +109,13 @@ SCIP_RETCODE nvsl_reduction(
       degelims = 0;
 
       /* NV-reduction */
-      SCIP_CALL( nv_reductionAdv(scip, g, vnoi, nodearrreal, fixed, edgearrint, heap, state, vbase, neighb, distnode, &nvelims) );
+      SCIP_CALL( nv_reductionAdv(scip, g, vnoi, nodearrreal, fixed, edgearrint, heap, state, vbase, neighb, distnode, solnode, &nvelims) );
       elims += nvelims;
 
       SCIPdebugMessage("NV-reduction (in NVSL): %d \n", nvelims);
 
       /* SL-reduction */
-      SCIP_CALL( sl_reduction(scip, g, vnoi, fixed, heap, state, vbase, neighb, visited, &slelims) );
+      SCIP_CALL( sl_reduction(scip, g, vnoi, fixed, heap, state, vbase, neighb, visited, solnode, &slelims) );
       elims += slelims;
 
       SCIPdebugMessage("SL-reduction (in NVSL): %d \n", slelims);
@@ -121,10 +123,10 @@ SCIP_RETCODE nvsl_reduction(
       /* trivial reductions */
       if( elims > 0 )
       {
-         if( g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_ROOTED_PRIZE_COLLECTING )
-            SCIP_CALL( degree_test_pc(scip, g, fixed, &degelims) );
+         if( g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG )
+            SCIP_CALL( degree_test_pc(scip, g, fixed, &degelims, solnode, FALSE) );
          else
-            SCIP_CALL( degree_test(scip, g, fixed, &degelims) );
+            SCIP_CALL( degree_test(scip, g, fixed, solnode, &degelims, NULL) );
       }
       else
       {
@@ -407,8 +409,7 @@ static int czv_reduction(
       }
       /* Da ja Grad > 1 war muesste es die Kanten geben
        */
-      if( e2 < 0 )
-         printf("Error in czv_reduction (will be ignored) \n");
+
       assert(e1 >= 0);
       assert(e2 >= 0);
       assert(e1 != e2);
@@ -788,20 +789,24 @@ static int hops_test(
 }
 #endif
 
-void level0(
+SCIP_RETCODE level0(
    SCIP* scip,
    GRAPH* g)
 {
    int k;
+   int nnodes;
+
    assert(scip != NULL);
    assert(g != NULL);
 
-   for( k = 0; k < g->knots; k++ )
+   nnodes = g->knots;
+
+   for( k = nnodes - 1; k >= 0 ; k-- )
       g->mark[k] = FALSE;
 
-   graph_trail(g, g->source[0]);
+   SCIP_CALL( graph_trail_arr(scip, g, g->source[0]) );
 
-   for( k = 0; k < g->knots; k++ )
+   for( k = nnodes - 1; k >= 0 ; k-- )
    {
       if( !g->mark[k] && (g->grad[k] > 0) )
       {
@@ -811,31 +816,27 @@ void level0(
             graph_edge_del(scip, g, g->inpbeg[k], TRUE);
       }
    }
+   return SCIP_OKAY;
 }
 
 /** basic reduction package for the STP */
-static
 SCIP_RETCODE reduceStp(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH**               graph,              /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    int                   minelims,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   SCIP_Bool             dualascent          /**< perform dualascent reductions? */
+   SCIP_Bool             dualascent,         /**< perform dualascent reductions? */
+   SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
+   int*                  edgestate           /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
    )
 {
    PATH* vnoi;
    PATH* path;
-   SCIP_Real timelimit;
-   GRAPH* g = *graph;
+   GRAPH* g;
    GNODE** gnodearr;
    SCIP_Real*  nodearrreal;
-#if 0
-   SCIP_Real*  nodearrreal2;
-   SCIP_Real*  nodearrreal3;
-#endif
    SCIP_Real*  edgearrreal;
    SCIP_Real*  edgearrreal2;
-   SCIP_Real   upperbound;
    int*    heap;
    int*    state;
    int*    vbase;
@@ -846,52 +847,26 @@ SCIP_RETCODE reduceStp(
    int     nnodes;
    int     nedges;
    int     nterms;
-   int     danelims;
-   int     sdnelims;
-   int     lenelims;
-   int     sdcnelims;
-   int     bd3nelims;
-   int     nvslnelims;
-   int     brednelims;
-   int     degtnelims;
    int     reductbound;
    char* nodearrchar;
 
-   SCIP_Bool    le = TRUE;
-   SCIP_Bool    sd = TRUE;
-   SCIP_Bool    da = dualascent;
-   SCIP_Bool    sdc = TRUE;
-   SCIP_Bool    bd3 = TRUE;
-   SCIP_Bool    nvsl = TRUE;
    SCIP_Bool    bred = FALSE;
-   SCIP_Bool    rerun = TRUE;
 
    assert(scip != NULL);
-   assert(g != NULL);
+   assert(graph != NULL);
+   assert(*graph != NULL);
    assert(minelims >= 0);
+
+   g = *graph;
 
    nterms = g->terms;
    nnodes = g->knots;
    nedges = g->edges;
-   degtnelims = 0;
 
-   if( SCIPisLE(scip, (double) g->terms / (double) nnodes, 0.03 ) )
+   if( SCIPisLE(scip, (double) nterms / (double) nnodes, 0.03) )
       bred = TRUE;
 
-#if 0
-da = FALSE
-bd3 = FALSE;
-sdc = FALSE;
-
-le = FALSE;
-nvsl = FALSE;
-bred = FALSE;
-#endif
-
-   /* get timelimit parameter */
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
-
-   if( da )
+   if( dualascent )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
       for( i = 0; i < nterms - 1; i++ )
@@ -910,10 +885,6 @@ bred = FALSE;
    SCIP_CALL( SCIPallocBufferArray(scip, &heap, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &state, 4 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrreal, nnodes) );
-#if 0
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrreal2, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrreal3, nnodes) );
-#endif
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearrreal, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, 4 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes) );
@@ -921,167 +892,20 @@ bred = FALSE;
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 4 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
 
-   if( bred || da )
+   if( bred || dualascent )
    {
-        SCIP_CALL( SCIPallocBufferArray(scip, &edgearrreal2, nedges) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &edgearrreal2, nedges) );
    }
    else
    {
-        edgearrreal2 = NULL;
+      edgearrreal2 = NULL;
    }
 
-   /* define minimal number of edge/node eliminations for a reduction test to be continued */
-   reductbound = MAX(nnodes / 1000, minelims);
+   reductbound = MAX(nedges / 1000, minelims);
 
-   SCIP_CALL( degree_test(scip, g, fixed, &degtnelims) );
-
-   while( rerun && !SCIPisStopped(scip) )
-   {
-      if( SCIPgetTotalTime(scip) > timelimit )
-         break;
-
-      danelims = 0;
-      lenelims = 0;
-      sdnelims = 0;
-      sdcnelims = 0;
-      bd3nelims = 0;
-      nvslnelims = 0;
-      degtnelims = 0;
-      brednelims = 0;
-      upperbound = -1.0;
-
-      if( le )
-      {
-         SCIP_CALL( ledge_reduction(scip, g, vnoi, heap, state, vbase, &lenelims) );
-
-         if( lenelims <= reductbound )
-            le = FALSE;
-         else
-            SCIP_CALL( degree_test(scip, g, fixed, &degtnelims) );
-
-         SCIPdebugMessage("le: %d \n", lenelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      if( sd )
-      {
-         SCIP_CALL( sd_red(scip, g, vnoi, edgearrreal, nodearrreal, heap, state, vbase, nodearrint, nodearrint2, edgearrint, &sdnelims) );
-
-         if( sdnelims <= reductbound )
-            sd = FALSE;
-
-         SCIPdebugMessage("sd: %d, \n", sdnelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      if( sdc )
-      {
-         SCIP_CALL( sdsp_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims, SDSP_BOUND) );
-
-         if( sdcnelims <= reductbound )
-            sdc = FALSE;
-
-	 SCIPdebugMessage("sdsp: %d \n", sdcnelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      if( sd || sdc )
-         SCIP_CALL( degree_test(scip, g, fixed, &degtnelims) );
-
-      if( bd3 )
-      {
-         SCIP_CALL( bd3_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, BD3_BOUND) );
-         if( bd3nelims <= reductbound )
-            bd3 = FALSE;
-         else
-            SCIP_CALL( degree_test(scip, g, fixed, &degtnelims) );
-
-         SCIPdebugMessage("bd3: %d \n", bd3nelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      if( nvsl )
-      {
-         SCIP_CALL( nvsl_reduction(scip, g, vnoi, nodearrreal, fixed, edgearrint, heap, state, vbase, nodearrint, NULL, nodearrchar, &nvslnelims, reductbound) );
-
-         if( nvslnelims <= reductbound )
-            nvsl = FALSE;
-
-         SCIPdebugMessage("nvsl: %d \n", nvslnelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      if( bred )
-      {
-         SCIP_CALL( bound_reduce(scip, g, vnoi, edgearrreal, NULL, nodearrreal, edgearrreal2, fixed, &upperbound, heap, state, vbase, &brednelims) );
-
-	 if( brednelims <= 2 * reductbound )
-            bred = FALSE;
-
-         SCIPdebugMessage("bnd: %d \n", brednelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      if( da )
-      {
-         SCIP_CALL( da_reduce(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, edgearrint, vbase, heap, state, nodearrint2, nodearrchar, &danelims) );
-
-	 if( danelims <= 5 * reductbound )
-            da = FALSE;
-
-         SCIPdebugMessage("da: %d \n", danelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      SCIP_CALL( degree_test(scip, g, fixed, &degtnelims) );
-
-      if( (danelims + sdnelims + bd3nelims + nvslnelims + lenelims + brednelims + sdcnelims) <= 2 * reductbound  )
-      {
-         rerun = FALSE;
-#if 0
-         if( advanced )
-         {
-            int     nelims;
-                     int     runnum;
-   unsigned int seed;
-      seed = 0;
-   runnum = 0;
-            advanced = FALSE;
-            sdnelims = 0;
-            for( i = 0; i < nnodes; i++ )
-               nodearrint[i] = -1;
-            for( i = 0; i < 5; i++ )
-            {
-               SCIP_CALL( sd_reduction(scip, g, nodearrreal, nodearrreal2, nodearrreal3, edgearrreal, edgearrreal2, heap, state, nodearrint, &nelims, runnum, &seed) );
-               runnum++;
-               sdnelims += nelims;
-               if( nelims <= 5 * reductbound )
-                  break;
-               SCIP_CALL( degree_test(scip, g, fixed, &degtnelims) );
-            }
-
-            printf("final sd: %d, \n", sdnelims);
-            if( sdnelims > 5 * reductbound )
-            {
-               rerun = TRUE;
-               le = TRUE;
-               sd = TRUE;
-               sdc = TRUE;
-               bd3 = TRUE;
-               nvsl = TRUE;
-	       da = TRUE;
-            }
-         }
-#endif
-      }
-   }
+   /* reduction loop */
+   SCIP_CALL( redLoopStp(scip, g, vnoi, path, gnodearr, nodearrreal, edgearrreal, edgearrreal2, heap, state,
+         vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, fixed, -1.0, dualascent, bred, nodereplacing, reductbound, edgestate) );
 
    SCIPdebugMessage("Reduction Level 1: Fixed Cost = %.12e\n", *fixed);
 
@@ -1093,10 +917,6 @@ bred = FALSE;
    SCIPfreeBufferArray(scip, &nodearrint);
    SCIPfreeBufferArray(scip, &vbase);
    SCIPfreeBufferArray(scip, &edgearrreal);
-#if 0
-   SCIPfreeBufferArray(scip, &nodearrreal3);
-   SCIPfreeBufferArray(scip, &nodearrreal2);
-#endif
    SCIPfreeBufferArray(scip, &nodearrreal);
    SCIPfreeBufferArray(scip, &state);
    SCIPfreeBufferArray(scip, &heap);
@@ -1131,7 +951,6 @@ SCIP_RETCODE reducePc(
    SCIP_Real* nodearrreal;
    SCIP_Real* exedgearrreal2;
    SCIP_Real timelimit;
-   SCIP_Real upperbound;
    int*    heap;
    int*    state;
    int*    vbase;
@@ -1139,27 +958,13 @@ SCIP_RETCODE reducePc(
    int*    edgearrint;
    int*    nodearrint2;
    int     i;
-   int     nelims;
    int     nnodes;
    int     nterms;
    int     nedges;
-   int     danelims;
-   int     sdnelims;
    int     extnedges;
-   int     sdcnelims;
-   int     bd3nelims;
-   int     degnelims;
-   int     nvslnelims;
-   int     brednelims;
    int     reductbound;
    char*   nodearrchar;
-   char    sd = TRUE;
-   char    da = dualascent;
-   char    sdc = TRUE;
-   char    bd3 = TRUE;
-   char    nvsl = TRUE;
-   char    bred = FALSE;
-   char    rerun = TRUE;
+   SCIP_Bool    bred = FALSE;
 
    assert(scip != NULL);
    assert(g != NULL);
@@ -1170,7 +975,7 @@ SCIP_RETCODE reducePc(
    nedges = g->edges;
 
    /* for PCSPG more memory is necessary */
-   if( g->stp_type == STP_ROOTED_PRIZE_COLLECTING || !da )
+   if( g->stp_type == STP_RPCSPG || !dualascent )
       extnedges = nedges;
    else
       extnedges = nedges + 2 * (g->terms - 1);
@@ -1181,7 +986,7 @@ SCIP_RETCODE reducePc(
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &heap, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &state, 4 * nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrreal, nnodes + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrreal, nnodes + 2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &exedgearrreal, extnedges ) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, 4 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 4 * nnodes) );
@@ -1190,19 +995,19 @@ SCIP_RETCODE reducePc(
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint2, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes + 1) );
 
-   if( SCIPisLE(scip, (double) g->terms / (double) nnodes, 0.03) )
+   if( SCIPisLE(scip, (double) nterms / (double) nnodes, 0.03) )
       bred = TRUE;
 
-   if( bred || da )
+   if( bred || dualascent )
    {
-        SCIP_CALL( SCIPallocBufferArray(scip, &exedgearrreal2, extnedges) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &exedgearrreal2, extnedges) );
    }
    else
    {
-        exedgearrreal2 = NULL;
+      exedgearrreal2 = NULL;
    }
 
-   if( da )
+   if( dualascent )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, extnedges) );
       SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
@@ -1217,111 +1022,12 @@ SCIP_RETCODE reducePc(
       SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, nedges) );
    }
 
-
    /* define minimal number of edge/node eliminations for a reduction test to be continued */
    reductbound = MAX(nnodes / 1000, minelims);
 
-   SCIP_CALL( pcgraphorg(scip, g) );
-
-   SCIP_CALL( degree_test_pc(scip, g, fixed, &degnelims) );
-
-   while( rerun && !SCIPisStopped(scip) )
-   {
-      if( SCIPgetTotalTime(scip) > timelimit )
-         break;
-
-      danelims = 0;
-      sdnelims = 0;
-      sdcnelims = 0;
-      bd3nelims = 0;
-      nvslnelims = 0;
-      degnelims = 0;
-      brednelims = 0;
-      upperbound = -1.0;
-
-      if( sdc )
-      {
-         SCIP_CALL( sdsp_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims, SDSP_BOUND) );
-
-         if( sdcnelims <= reductbound )
-            sdc = FALSE;
-
-         SCIPdebugMessage("SDsp: %d \n", sdcnelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      if( sd )
-      {
-         SCIP_CALL( sdpc_reduction(scip, g, vnoi, exedgearrreal, heap, state, vbase, nodearrint, nodearrint2, &sdnelims) );
-         if( sdnelims <= reductbound )
-            sd = FALSE;
-
-         SCIPdebugMessage("SDpc: %d \n", sdnelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      SCIP_CALL( degree_test_pc(scip, g, fixed, &nelims) );
-      degnelims += nelims;
-
-      if( bd3 )
-      {
-         SCIP_CALL( bd3_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, BD3_BOUND) );
-         if( bd3nelims <= reductbound )
-            bd3 = FALSE;
-
-         SCIPdebugMessage("bd3: %d, ", bd3nelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      if( nvsl )
-      {
-         SCIP_CALL( nvsl_reduction(scip, g, vnoi, nodearrreal, fixed, edgearrint, heap, state, vbase, nodearrint, nodearrint2, nodearrchar, &nvslnelims, reductbound) );
-
-         if( nvslnelims <= 0.5 * reductbound )
-            nvsl = FALSE;
-
-         SCIPdebugMessage("nvsl: %d \n", nvslnelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      if( bred )
-      {
-         SCIP_CALL( bound_reduce(scip, g, vnoi, exedgearrreal, g->prize, nodearrreal, exedgearrreal2, fixed, &upperbound, heap, state, vbase, &brednelims) );
-         if( brednelims <= reductbound )
-	    bred = FALSE;
-
-         SCIPdebugMessage("bnd %d \n", brednelims);
-	 if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      if( da )
-      {
-	 if( g->stp_type == STP_ROOTED_PRIZE_COLLECTING )
-	 {
-            SCIP_CALL( da_reduce(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, edgearrint, vbase, heap, state, nodearrint2, nodearrchar, &danelims) );
-	 }
-	 else
-	 {
-	    SCIP_CALL( daPc_reduce(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint, state, nodearrchar, &danelims) );
-	 }
-
-	 if( danelims <= 2 * reductbound )
-            da = FALSE;
-
-         SCIPdebugMessage("da: %d \n", danelims);
-      }
-
-      if( degnelims + sdnelims + sdcnelims + bd3nelims + danelims + brednelims + nvslnelims <= reductbound )
-         rerun = FALSE;
-   }
-
-   SCIP_CALL( pcgraphtrans(scip, g) );
-   SCIPdebugMessage("Reduction Level PC 1: Fixed Cost = %.12e\n", *fixed);
+   /* reduction loop */
+   SCIP_CALL( redLoopPc(scip, g, vnoi, path, gnodearr, nodearrreal, exedgearrreal, exedgearrreal2, heap, state,
+         vbase, nodearrint, edgearrint, nodearrint2, NULL, nodearrchar, fixed, dualascent, bred, reductbound) );
 
    /* free memory */
 
@@ -1349,23 +1055,21 @@ SCIP_RETCODE reducePc(
 
 /** reduction package for the MWCSP */
 static
-SCIP_RETCODE reduceMwcs(
+SCIP_RETCODE reduceMw(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH**               graph,              /**< graph data structure */
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    int                   minelims,           /**< minimal number of edges to be eliminated in order to reiterate reductions */
-   char                  dualascent          /**< perform dual ascent reductions? */
+   char                  advanced            /**< perform advanced reductions? */
    )
 {
    GRAPH* g = *graph;
    PATH* vnoi;
    PATH* path;
    GNODE** gnodearr;
-   SCIP_Real*  nodearrreal;
+   SCIP_Real* nodearrreal;
    SCIP_Real* edgearrreal;
    SCIP_Real* edgearrreal2;
-   SCIP_Real timelimit;
-   SCIP_Real upperbound;
    int* state;
    int* vbase;
    int* edgearrint;
@@ -1376,51 +1080,25 @@ SCIP_RETCODE reduceMwcs(
    int nterms;
    int nnodes;
    int nedges;
-   int daelims;
-   int anselims;
-   int nnpelims;
-   int degelims;
-   int npvelims;
    int redbound;
    int extnedges;
-   int bredelims;
-   int ansadelims;
-   int ansad2elims;
-   int chain2elims;
    char* nodearrchar;
-   char da = dualascent;
-   char ans = TRUE;
-   char nnp = TRUE;
-   char npv = TRUE;
-   char bred = TRUE;
-   char rerun = TRUE;
-   char ansad = TRUE;
-   char ansad2 = TRUE;
-   char chain2 = TRUE;
-   char* boolarr[16];
+   char bred = FALSE;
 
    assert(scip != NULL);
    assert(g != NULL);
    assert(fixed != NULL);
-
-   boolarr[0] = &ans;
-   boolarr[1] = &nnp;
-   boolarr[2] = &npv;
-   boolarr[3] = &bred;
-   boolarr[4] = &ansad;
-   boolarr[5] = &ansad2;
-   boolarr[6] = &chain2;
-   boolarr[7] = &da;
-
    nnodes = g->knots;
    nedges = g->edges;
    nterms = g->terms;
    redbound = MAX(nnodes / 1000, minelims);
 
-   if( da )
+   if( SCIPisLE(scip, (double) nterms / (double) nnodes, 0.1) )
+      bred = TRUE;
+
+   if( advanced )
    {
       extnedges = nedges + 2 * (g->terms - 1);
-
 
       SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
       for( i = 0; i < nterms - 1; i++ )
@@ -1435,218 +1113,32 @@ SCIP_RETCODE reduceMwcs(
       edgearrint = NULL;
       gnodearr = NULL;
    }
-   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes + 1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint2, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint3, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint2, nnodes + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint3, nnodes + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &state, 3 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, 3 * nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 3 * nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes + 1) );
 
-   if( bred || da )
+   if( bred || advanced )
    {
-           SCIP_CALL( SCIPallocBufferArray(scip, &nodearrreal, nnodes + 1) );
-       SCIP_CALL( SCIPallocBufferArray(scip, &edgearrreal, extnedges) );
-        SCIP_CALL( SCIPallocBufferArray(scip, &edgearrreal2, extnedges) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &nodearrreal, nnodes + 2) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &edgearrreal, extnedges) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &edgearrreal2, extnedges) );
    }
    else
    {
-        nodearrreal = NULL;
-        edgearrreal = NULL;
-        edgearrreal2 = NULL;
+      nodearrreal = NULL;
+      edgearrreal = NULL;
+      edgearrreal2 = NULL;
    }
 
-
-   SCIP_CALL( pcgraphorg(scip, g) );
-
-   degelims = 0;
-
-   SCIP_CALL( degree_test_mw(scip, g, fixed, &degelims) );
-
-   while( rerun && !SCIPisStopped(scip) )
-   {
-      daelims = 0;
-      anselims = 0;
-      nnpelims = 0;
-      degelims = 0;
-      npvelims = 0;
-      bredelims = 0;
-      ansadelims = 0;
-      ansad2elims = 0;
-      chain2elims = 0;
-
-      upperbound = -1.0;
-
-      if( SCIPgetTotalTime(scip) > timelimit )
-         break;
-#if 0
-      if( chain2 )
-      {
-         SCIP_CALL( chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 300) );
-
-         if( chain2elims <= redbound )
-            chain2 = FALSE;
-
-         printf("chain2 delete: %d \n", chain2elims);
-      }
-
-      if( npv )
-      {
-         SCIP_CALL( npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400) );
-
-         if( npvelims <= redbound )
-            npv = FALSE;
-
-         printf("npv delete: %d \n", npvelims);
-      }
-#endif
-
-      if( ans )
-      {
-         SCIP_CALL( ansReduction(scip, g, fixed, nodearrint2, &anselims) );
-
-         if( anselims <= redbound )
-            ans = FALSE;
-
-         SCIPdebugMessage("ans deleted: %d \n", anselims);
-      }
-
-      if( ansad )
-      {
-         SCIP_CALL( ansadvReduction(scip, g, fixed, nodearrint2, &ansadelims) );
-
-	 if( ansadelims <= redbound )
-            ansad = FALSE;
-
-         SCIPdebugMessage("ans advanced deleted: %d \n", ansadelims);
-      }
-#if 0
-      if( ansad2 )
-      {
-         SCIP_CALL( ansadv2Reduction(scip, g, fixed, nodearrint2, &ansad2elims) );
-
-         if( ansad2elims <= redbound )
-            ansad2 = FALSE;
-	 else
-	    SCIP_CALL( degree_test_mw(scip, g, fixed, &degelims) );
-
-         printf("ans advanced 2 deleted: %d \n", degelims);
-      }
-#endif
-      if( ans || ansad )
-	 SCIP_CALL( degree_test_mw(scip, g, fixed, &degelims) );
-
-#if 1
-      if( chain2 )
-      {
-         SCIP_CALL( chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 300) );
-
-         if( chain2elims <= redbound )
-            chain2 = FALSE;
-
-         SCIPdebugMessage("chain2 delete: %d \n", chain2elims);
-      }
-
-      if( npv )
-      {
-         SCIP_CALL( npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400) );
-
-         if( npvelims <= redbound )
-            npv = FALSE;
-
-         SCIPdebugMessage("npv delete: %d \n", npvelims);
-      }
-#endif
-#if 1 /* org */
-      if( nnp )
-      {
-         SCIP_CALL( nnpReduction(scip, g, fixed, nodearrint, nodearrint2, nodearrint3, &nnpelims, 300, nodearrchar) );
-
-         if( nnpelims <= redbound )
-            nnp = FALSE;
-
-         SCIPdebugMessage("nnp deleted: %d \n", nnpelims);
-      }
-#endif
-      if( nnp )
-      {
-         SCIP_CALL( chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 500) );
-
-         if( chain2elims <= redbound )
-            chain2 = FALSE;
-
-         SCIPdebugMessage("chain2 delete: %d \n", chain2elims);
-
-	 if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      SCIP_CALL( degree_test_mw(scip, g, fixed, &degelims) );
-#if 1 /* org */
-      if( ansad2 )
-      {
-         SCIP_CALL( ansadv2Reduction(scip, g, fixed, nodearrint2, &ansad2elims) );
-
-         if( ansad2elims <= redbound )
-            ansad2 = FALSE;
-	 else
-	    SCIP_CALL( degree_test_mw(scip, g, fixed, &degelims) );
-
-         SCIPdebugMessage("ans advanced 2 deleted: %d \n", degelims);
-      }
-#endif
-
-      if( bred )
-      {
-         SCIP_CALL( bound_reduce(scip, g, vnoi, edgearrreal, g->prize, nodearrreal, edgearrreal2, fixed, &upperbound, nodearrint, state, vbase, &bredelims) );
-
-	 if( bredelims <= redbound )
-            bred = FALSE;
-         else
-            SCIP_CALL( degree_test_mw(scip, g, fixed, &degelims) );
-
-         SCIPdebugMessage("bound_reduce: %d \n", bredelims);
-      }
-
-      if( da )
-      {
-         SCIP_CALL( daPc_reduce(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, nodearrint2, nodearrchar, &daelims) );
-
-         if( daelims <= 2 * redbound )
-            da = FALSE;
-         else
-            SCIP_CALL( degree_test_mw(scip, g, fixed, &degelims) );
-      }
-
-      if( anselims + nnpelims + chain2elims + bredelims + npvelims + ansadelims + ansad2elims + daelims <= redbound )
-	 rerun = FALSE;
-
-      if( !rerun && dualascent )
-      {
-	 int cnsadvelims = 0;
-	 SCIP_CALL( degree_test_mw(scip, g, fixed, &degelims) );
-	 SCIP_CALL( cnsAdvReduction(scip, g, nodearrint2, &cnsadvelims) );
-
-         if( cnsadvelims > 2 * redbound )
-	 {
-            setTrue(boolarr, 8);
-            rerun = TRUE;
-            dualascent = FALSE;
-            SCIP_CALL( degree_test_mw(scip, g, fixed, &degelims) );
-            SCIPdebugMessage("RELAOD! %d\n\n ", cnsadvelims);
-	 }
-      }
-   }
-
-   SCIP_CALL( degree_test_mw(scip, g, fixed, &degelims) );
-
-   /* go back to the extended graph */
-   SCIP_CALL( pcgraphtrans(scip, g) );
-
-   level0(scip, g);
+   /* reduction loop */
+   SCIP_CALL( redLoopMw(scip, g, vnoi, path, gnodearr, nodearrreal, edgearrreal, edgearrreal2, state,
+         vbase, nodearrint, edgearrint, nodearrint2, nodearrint3, NULL, nodearrchar, fixed, advanced, bred, TRUE, redbound) );
 
    /* free memory */
    SCIPfreeBufferArrayNull(scip, &edgearrreal2);
@@ -1742,6 +1234,8 @@ SCIP_RETCODE reduceHc(
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
 
+      upperbound = -1.0;
+
       if( rbred )
       {
          SCIP_CALL( hcrbound_reduce(scip, g, vnoi, cost, costrev, radius, heap, state, vbase, &hcrnelims, pathedge) );
@@ -1771,18 +1265,9 @@ SCIP_RETCODE reduceHc(
          SCIP_CALL( hopbound_reduce(scip, g, vnoi, cost, radius, costrev, heap, state, vbase, &hbrednelims) );
          if( hbrednelims <= redbound )
             hbred = FALSE;
-	 if( SCIPgetTotalTime(scip) > timelimit )
+         if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
-#if 0
-      if( da )
-      {
-	 SCIP_CALL( da_reduce(scip, g, vnoi, gnodarr, cost, costrev, radius, vbase, heap, state, pathedge, nodearrchar, &danelims) );
-	 if( danelims <= 2 * redbound )
-	    da = FALSE;
-
-      }
-#endif
    }
 
    /* free memory */
@@ -1799,7 +1284,7 @@ SCIP_RETCODE reduceHc(
    return SCIP_OKAY;
 }
 
-/** basic reduction package for the SAP (@todo under construction) */
+/** basic reduction package for the SAP */
 static
 SCIP_RETCODE reduceSap(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1810,41 +1295,74 @@ SCIP_RETCODE reduceSap(
 {
    PATH*   vnoi;
    PATH*   path;
+   SCIP_Real ub = FARAWAY;
    SCIP_Real timelimit;
+   SCIP_Real*  nodearrreal;
+   SCIP_Real*  edgearrreal;
+   SCIP_Real*  edgearrreal2;
    GRAPH*  g = *graph;
+   GNODE** gnodearr;
    int*    heap;
    int*    state;
    int*    vbase;
    int*    nodearrint;
+   int*    edgearrint;
    int*    nodearrint2;
    int     e;
+   int     i;
    int     nnodes;
+   int     nedges;
+   int     nterms;
+   int     danelims;
    int     sdnelims;
    int     rptnelims;
    int     degtnelims;
    int     redbound;
+   char    da = TRUE;
    char    sd = !TRUE;
+   char* nodearrchar;
    char    rpt = TRUE;
+   SCIP_RANDNUMGEN* randnumgen;
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, 1)) );
 
    nnodes = g->knots;
+   nedges = g->edges;
+   nterms = g->terms;
+
    redbound = MAX(nnodes / 1000, minelims);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &heap, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
+   for( i = 0; i < nterms - 1; i++ )
+   {
+      SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[i]) ); /*lint !e866*/
+   }
+
+   /* allocate memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &heap, nnodes + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &state, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrreal, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgearrreal, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint2, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgearrreal2, nedges) );
 
    /* @todo change .stp file format for SAP! */
    for( e = 0; e < g->edges; e++ )
       if( SCIPisEQ(scip, g->cost[e], 20000.0) )
-	 g->cost[e] = FARAWAY;
+         g->cost[e] = FARAWAY;
 
-   /* @todo: add additional tests */
-   while( (sd || rpt) && !SCIPisStopped(scip) )
+   SCIP_CALL( degree_test_sap(scip, g, fixed, &degtnelims) );
+
+   /* main loop */
+   while( (sd || rpt || da) && !SCIPisStopped(scip) )
    {
       if( SCIPgetTotalTime(scip) > timelimit )
          break;
@@ -1854,10 +1372,7 @@ SCIP_RETCODE reduceSap(
          SCIP_CALL( sdsp_sap_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdnelims, 300) );
          if( sdnelims <= redbound )
             sd = FALSE;
-	 sd = FALSE;
       }
-
-      SCIP_CALL( degree_test_sap(scip, g, fixed, &degtnelims) );
 
       if( rpt )
       {
@@ -1867,16 +1382,1186 @@ SCIP_RETCODE reduceSap(
       }
 
       SCIP_CALL( degree_test_sap(scip, g, fixed, &degtnelims) );
+
+      if( da )
+      {
+         SCIP_CALL( da_reduce(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, fixed, edgearrint, vbase, state, heap, nodearrint,
+               nodearrint2, nodearrchar, &danelims, 0, randnumgen, TRUE, NULL) );
+
+         if( danelims <= 2 * redbound )
+            da = FALSE;
+      }
+   }
+
+   SCIP_CALL( degree_test_sap(scip, g, fixed, &degtnelims) );
+
+   SCIPfreeBufferArray(scip, &edgearrreal2);
+   SCIPfreeBufferArray(scip, &path);
+   SCIPfreeBufferArray(scip, &vnoi);
+   SCIPfreeBufferArray(scip, &nodearrint2);
+   SCIPfreeBufferArray(scip, &nodearrint);
+   SCIPfreeBufferArray(scip, &vbase);
+   SCIPfreeBufferArray(scip, &edgearrreal);
+   SCIPfreeBufferArray(scip, &nodearrreal);
+   SCIPfreeBufferArray(scip, &state);
+   SCIPfreeBufferArray(scip, &heap);
+   SCIPfreeBufferArray(scip, &nodearrchar);
+   SCIPfreeBufferArray(scip, &edgearrint);
+
+   for( i = nterms - 2; i >= 0; i-- )
+      SCIPfreeBuffer(scip, &gnodearr[i]);
+   SCIPfreeBufferArray(scip, &gnodearr);
+
+   /* free random number generator */
+   SCIPrandomFree(&randnumgen);
+
+   return SCIP_OKAY;
+}
+
+
+static
+SCIP_RETCODE reduceNw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH**               graph,              /**< graph data structure */
+   SCIP_Real*            fixed,              /**< pointer to store the offset value */
+   int                   minelims            /**< minimal number of edges to be eliminated in order to reiterate reductions */
+   )
+{
+   PATH*   vnoi;
+   SCIP_Real*  nodearrreal;
+   SCIP_Real*  edgearrreal;
+   SCIP_Real*  edgearrreal2;
+   SCIP_Real   ub = FARAWAY;
+   SCIP_Real   timelimit;
+   GRAPH*  g = *graph;
+   GNODE** gnodearr;
+   int*    heap;
+   int*    state;
+   int*    vbase;
+   int*    nodearrint;
+   int*    edgearrint;
+   int*    nodearrint2;
+   int     i;
+   int     nnodes;
+   int     nedges;
+   int     nterms;
+   int     danelims;
+   int     redbound;
+   char*   nodearrchar;
+   char    da = TRUE;
+   SCIP_RANDNUMGEN* randnumgen;
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, 1)) );
+
+   nnodes = g->knots;
+   nedges = g->edges;
+   nterms = g->terms;
+
+   redbound = MAX(nnodes / 1000, minelims);
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
+   for( i = 0; i < nterms - 1; i++ )
+   {
+      SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[i]) ); /*lint !e866*/
+   }
+
+   /* allocate memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &heap, nnodes + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &state, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrreal, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgearrreal, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vbase, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint2, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgearrreal2, nedges) );
+
+   while( (da) && !SCIPisStopped(scip) )
+   {
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
+      SCIP_CALL( da_reduce(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, fixed, edgearrint, vbase, state, heap, nodearrint,
+            nodearrint2, nodearrchar, &danelims, 0, randnumgen, TRUE, NULL) );
+
+      if( danelims <= 2 * redbound )
+         da = FALSE;
+   }
+
+   SCIPfreeBufferArray(scip, &edgearrreal2);
+   SCIPfreeBufferArray(scip, &vnoi);
+   SCIPfreeBufferArray(scip, &nodearrint2);
+   SCIPfreeBufferArray(scip, &nodearrint);
+   SCIPfreeBufferArray(scip, &vbase);
+   SCIPfreeBufferArray(scip, &edgearrreal);
+   SCIPfreeBufferArray(scip, &nodearrreal);
+   SCIPfreeBufferArray(scip, &state);
+   SCIPfreeBufferArray(scip, &heap);
+   SCIPfreeBufferArray(scip, &nodearrchar);
+   SCIPfreeBufferArray(scip, &edgearrint);
+
+   for( i = nterms - 2; i >= 0; i-- )
+      SCIPfreeBuffer(scip, &gnodearr[i]);
+   SCIPfreeBufferArray(scip, &gnodearr);
+
+   /* free random number generator */
+   SCIPrandomFree(&randnumgen);
+
+   return SCIP_OKAY;
+}
+
+#if 1
+/** MWCS loop */
+SCIP_RETCODE redLoopMw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   PATH*                 vnoi,
+   PATH*                 path,
+   GNODE**               gnodearr,
+   SCIP_Real*            nodearrreal,
+   SCIP_Real*            edgearrreal,
+   SCIP_Real*            edgearrreal2,
+   int*                  state,
+   int*                  vbase,
+   int*                  nodearrint,
+   int*                  edgearrint,
+   int*                  nodearrint2,
+   int*                  nodearrint3,
+   int*                  solnode,            /**< array to indicate whether a node is part of the current solution (==CONNECT) */
+   char*                 nodearrchar,
+   SCIP_Real*            fixed,              /**< pointer to store the offset value */
+   char                  advanced,
+   char                  bred,
+   char                  tryrmw,             /**< try to convert problem to RMWCSP? Only possible if advanced = TRUE */
+   int                   redbound            /**< minimal number of edges to be eliminated in order to reiterate reductions */
+   )
+{
+   SCIP_Real timelimit;
+   int daelims;
+   int anselims;
+   int nnpelims;
+   int degelims;
+   int npvelims;
+   int bredelims;
+   int ansadelims;
+   int ansad2elims;
+   int chain2elims;
+
+   char da = advanced;
+   char ans = TRUE;
+   char nnp = TRUE;
+   char npv = TRUE;
+   char rerun = TRUE;
+   char ansad = TRUE;
+   char ansad2 = TRUE;
+   char chain2 = TRUE;
+   char* boolarr[16];
+   char extensive = EXTENSIVE;
+
+   assert(scip != NULL);
+   assert(g != NULL);
+   assert(fixed != NULL);
+   assert(advanced || !tryrmw);
+
+   boolarr[0] = &ans;
+   boolarr[1] = &nnp;
+   boolarr[2] = &npv;
+   boolarr[3] = &bred;
+   boolarr[4] = &ansad;
+   boolarr[5] = &ansad2;
+   boolarr[6] = &chain2;
+   boolarr[7] = &da;
+
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
+   SCIP_CALL( pcgraphorg(scip, g) );
+
+   degelims = 0;
+
+   SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+
+#if 0
+   if( advanced )
+   {
+      int k;
+      int l = 0;
+      int l4 = 0;
+      int l5 = 0;
+
+      for (k = 0; k < g->knots; ++k)
+      {
+         if( g->grad[k] <= 3 )
+            l++;
+         if( g->grad[k] == 4 )
+            l4++;
+         if( g->grad[k] >= 5 )
+            l5++;
+
+      }
+      printf("l <= 3 %d \n", l);
+      printf("l == 4 %d \n", l4);
+      printf("l >= 5 %d \n", l5);
+      printf("terms %d \n", g->terms);
+   }
+#endif
+
+   while( rerun && !SCIPisStopped(scip) )
+   {
+      daelims = 0;
+      anselims = 0;
+      nnpelims = 0;
+      degelims = 0;
+      npvelims = 0;
+      bredelims = 0;
+      ansadelims = 0;
+      ansad2elims = 0;
+      chain2elims = 0;
+
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
+      if( ans || extensive )
+      {
+         SCIP_CALL( ansReduction(scip, g, fixed, nodearrint2, &anselims) );
+
+         if( anselims <= redbound )
+            ans = FALSE;
+
+         SCIPdebugMessage("ans deleted: %d \n", anselims);
+      }
+
+      if( ansad || extensive )
+      {
+         SCIP_CALL( ansadvReduction(scip, g, fixed, nodearrint2, &ansadelims) );
+
+         if( ansadelims <= redbound )
+            ansad = FALSE;
+
+         SCIPdebugMessage("ans advanced deleted: %d \n", ansadelims);
+      }
+
+#if 1
+      if( npv || extensive )
+       {
+          SCIP_CALL( npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400) );
+
+          if( npvelims <= redbound )
+             npv = FALSE;
+
+          SCIPdebugMessage("npv delete: %d \n", npvelims);
+       }
+#endif
+
+      if( (da || (advanced && extensive)) )
+      {
+
+         SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, FALSE, FALSE, FALSE) );
+
+         if( daelims <= 2 * redbound )
+         {
+            da = FALSE;
+         }
+         else
+         {
+            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+         }
+
+         SCIPdebugMessage("da elims: %d \n", daelims);
+      }
+
+      if( ans || ansad || extensive )
+      {
+         SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+      }
+      SCIPdebugMessage("chain2: %d \n", 0);
+
+      if( chain2 || extensive )
+      {
+         SCIP_CALL( chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 300) );
+
+         if( chain2elims <= redbound )
+            chain2 = FALSE;
+
+         SCIPdebugMessage("chain2 delete: %d \n", chain2elims);
+      }
+
+      if( nnp )
+      {
+         SCIP_CALL( nnpReduction(scip, g, fixed, nodearrint, nodearrint2, nodearrint3, &nnpelims, 300, nodearrchar) );
+
+         if( nnpelims <= redbound )
+            nnp = FALSE;
+
+         SCIPdebugMessage("nnp deleted: %d \n", nnpelims);
+      }
+
+      if( nnp || extensive )
+      {
+         SCIP_CALL( chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 500) );
+
+         if( chain2elims <= redbound )
+            chain2 = FALSE;
+
+         SCIPdebugMessage("chain2 delete: %d \n", chain2elims);
+
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+      SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+
+      if( ansad2 || extensive )
+      {
+         SCIP_CALL( ansadv2Reduction(scip, g, fixed, nodearrint2, &ansad2elims) );
+
+         if( ansad2elims <= redbound )
+         {
+            ansad2 = FALSE;
+         }
+         else
+         {
+            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+         }
+
+         SCIPdebugMessage("ans advanced 2 deleted: %d \n", degelims);
+      }
+
+      if( bred )
+      {
+         SCIP_CALL( bound_reduceMw(scip, g, vnoi, path, edgearrreal, nodearrreal, edgearrreal2, fixed, nodearrint, state, vbase, NULL, &bredelims) );
+
+         if( bredelims <= redbound )
+         {
+            bred = FALSE;
+         }
+         else
+         {
+            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+         }
+
+         SCIPdebugMessage("bound_reduce: %d \n", bredelims);
+      }
+
+      if( anselims + nnpelims + chain2elims + bredelims + npvelims + ansadelims + ansad2elims + daelims <= redbound )
+         rerun = FALSE;
+
+      if( !rerun && advanced && g->terms > 2 )
+      {
+         int cnsadvelims = 0;
+
+         SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+         SCIP_CALL( cnsAdvReduction(scip, g, nodearrint2, &cnsadvelims) );
+         SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, TRUE, FALSE, FALSE) );
+
+         if( cnsadvelims + daelims >= redbound || (extensive && (cnsadvelims + daelims > 0))  )
+         {
+            setTrue(boolarr, 8);
+            rerun = TRUE;
+            advanced = FALSE;
+            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+            da = FALSE;
+            SCIPdebugMessage("Restarting reduction loop! %d \n\n ", cnsadvelims);
+            if( extensive )
+               advanced = TRUE;
+         }
+      }
+   }
+
+   SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+
+   if( tryrmw )
+   {
+      SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, FALSE, FALSE, TRUE) );
+
+      npvelims = 0;
+      anselims = 0;
+      ansadelims = 0;
+      SCIP_CALL( npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400) );
+      SCIP_CALL( ansReduction(scip, g, fixed, nodearrint2, &anselims) );
+      SCIP_CALL( ansadvReduction(scip, g, fixed, nodearrint2, &ansadelims) );
    }
 
 
-   SCIPfreeBufferArray(scip, &vnoi);
-   SCIPfreeBufferArray(scip, &path);
-   SCIPfreeBufferArray(scip, &heap);
-   SCIPfreeBufferArray(scip, &state);
-   SCIPfreeBufferArray(scip, &vbase);
-   SCIPfreeBufferArray(scip, &nodearrint);
-   SCIPfreeBufferArray(scip, &nodearrint2);
+   /* go back to the extended graph */
+   SCIP_CALL( pcgraphtrans(scip, g) );
+
+   SCIP_CALL( level0(scip, g) );
+
+   if( tryrmw )
+   {
+      SCIP_CALL( graph_MwToRmw(scip, g) );
+   }
+
+   return SCIP_OKAY;
+}
+#else
+/** MWCS loop */
+SCIP_RETCODE redLoopMw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   PATH*                 vnoi,
+   PATH*                 path,
+   GNODE**               gnodearr,
+   SCIP_Real*            nodearrreal,
+   SCIP_Real*            edgearrreal,
+   SCIP_Real*            edgearrreal2,
+   int*                  state,
+   int*                  vbase,
+   int*                  nodearrint,
+   int*                  edgearrint,
+   int*                  nodearrint2,
+   int*                  nodearrint3,
+   int*                  solnode,            /**< array to indicate whether a node is part of the current solution (==CONNECT) */
+   char*                 nodearrchar,
+   SCIP_Real*            fixed,              /**< pointer to store the offset value */
+   char                  advanced,
+   char                  bred,
+   int                   redbound            /**< minimal number of edges to be eliminated in order to reiterate reductions */
+   )
+{
+   SCIP_Real timelimit;
+   SCIP_Real upperbound;
+   int daelims;
+   int anselims;
+   int nnpelims;
+   int degelims;
+   int npvelims;
+   int bredelims;
+   int ansadelims;
+   int ansad2elims;
+   int chain2elims;
+
+   char da = advanced;
+   char ans = TRUE;
+   char nnp = TRUE;
+   char npv = TRUE;
+   char rerun = TRUE;
+   char ansad = TRUE;
+   char ansad2 = TRUE;
+   char chain2 = TRUE;
+   char* boolarr[16];
+   char extensive = EXTENSIVE;
+
+   assert(scip != NULL);
+   assert(g != NULL);
+   assert(fixed != NULL);
+
+   boolarr[0] = &ans;
+   boolarr[1] = &nnp;
+   boolarr[2] = &npv;
+   boolarr[3] = &bred;
+   boolarr[4] = &ansad;
+   boolarr[5] = &ansad2;
+   boolarr[6] = &chain2;
+   boolarr[7] = &da;
+
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
+   SCIP_CALL( pcgraphorg(scip, g) );
+
+#if 0
+   if( da )
+   {
+      do
+      {
+         ansadelims = 0;
+         anselims= 0;
+         nnpelims = 0;
+         chain2elims = 0;
+         npvelims = 0;
+         daelims = 0;
+         upperbound = -1.0;
+         SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, nodearrint2, nodearrchar, &daelims, FALSE, FALSE) );
+
+
+      }while( (daelims) > 0 );
+   }
+   /* go back to the extended graph */
+   SCIP_CALL( pcgraphtrans(scip, g) );
+   return SCIP_OKAY;
+#endif
+   degelims = 0;
+#if 0
+   while( da && !SCIPisStopped(scip) )
+   {
+      daelims = 0;
+      upperbound = -1.0;
+      SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, nodearrint2, nodearrchar, &daelims, TRUE, TRUE, FALSE) );
+
+      if( daelims <= 1 )
+      {
+         da = FALSE;
+      }
+   }
+
+   SCIP_CALL( pcgraphtrans(scip, g) );
+   return SCIP_OKAY;
+#endif
+
+   SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+
+   while( rerun && !SCIPisStopped(scip) )
+   {
+      daelims = 0;
+      anselims = 0;
+      nnpelims = 0;
+      degelims = 0;
+      npvelims = 0;
+      bredelims = 0;
+      ansadelims = 0;
+      ansad2elims = 0;
+      chain2elims = 0;
+
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+#if 0
+      if( chain2 )
+      {
+         SCIP_CALL( chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 300) );
+
+         if( chain2elims <= redbound )
+            chain2 = FALSE;
+
+         printf("chain2 delete: %d \n", chain2elims);
+      }
+
+      if( npv )
+      {
+         SCIP_CALL( npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400) );
+
+         if( npvelims <= redbound )
+            npv = FALSE;
+
+         printf("npv delete: %d \n", npvelims);
+      }
+#endif
+
+      if( ans || extensive )
+      {
+         SCIP_CALL( ansReduction(scip, g, fixed, nodearrint2, &anselims) );
+
+         if( anselims <= redbound )
+            ans = FALSE;
+
+         SCIPdebugMessage("ans deleted: %d \n", anselims);
+      }
+
+      if( ansad || extensive )
+      {
+         SCIP_CALL( ansadvReduction(scip, g, fixed, nodearrint2, &ansadelims) );
+
+         if( ansadelims <= redbound )
+            ansad = FALSE;
+
+         SCIPdebugMessage("ans advanced deleted: %d \n", ansadelims);
+      }
+
+      if( da || (advanced && extensive) )
+      {
+         upperbound = -1.0;
+         SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, nodearrint2, nodearrchar, &daelims, TRUE, TRUE, FALSE) );
+
+         if( daelims <= 2 * redbound )
+         {
+            da = FALSE;
+         }
+         else
+         {
+            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+         }
+      }
+#if 0
+      if( ansad2 )
+      {
+         SCIP_CALL( ansadv2Reduction(scip, g, fixed, nodearrint2, &ansad2elims) );
+
+         if( ansad2elims <= redbound )
+            ansad2 = FALSE;
+         else
+            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+
+         printf("ans advanced 2 deleted: %d \n", degelims);
+      }
+#endif
+      if( ans || ansad || extensive )
+      {
+         SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+      }
+
+#if 1
+      if( chain2 || extensive )
+      {
+         SCIP_CALL( chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 300) );
+
+         if( chain2elims <= redbound )
+            chain2 = FALSE;
+
+         SCIPdebugMessage("chain2 delete: %d \n", chain2elims);
+      }
+
+      if( npv || extensive )
+      {
+         SCIP_CALL( npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400) );
+
+         if( npvelims <= redbound )
+            npv = FALSE;
+
+         SCIPdebugMessage("npv delete: %d \n", npvelims);
+      }
+#endif
+#if 1 /* org */
+      if( nnp )
+      {
+         SCIP_CALL( nnpReduction(scip, g, fixed, nodearrint, nodearrint2, nodearrint3, &nnpelims, 300, nodearrchar) );
+
+         if( nnpelims <= redbound )
+            nnp = FALSE;
+
+         SCIPdebugMessage("nnp deleted: %d \n", nnpelims);
+      }
+#endif
+      if( nnp || extensive )
+      {
+         SCIP_CALL( chain2Reduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &chain2elims, 500) );
+
+         if( chain2elims <= redbound )
+            chain2 = FALSE;
+
+         SCIPdebugMessage("chain2 delete: %d \n", chain2elims);
+
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+      SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+
+#if 1 /* org */
+      if( ansad2 || extensive )
+      {
+         SCIP_CALL( ansadv2Reduction(scip, g, fixed, nodearrint2, &ansad2elims) );
+
+         if( ansad2elims <= redbound )
+         {
+            ansad2 = FALSE;
+         }
+         else
+         {
+            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+         }
+
+         SCIPdebugMessage("ans advanced 2 deleted: %d \n", degelims);
+      }
+#endif
+
+      if( bred )
+      {
+         upperbound = -1.0;
+         SCIP_CALL( bound_reduce(scip, g, vnoi, edgearrreal, g->prize, nodearrreal, edgearrreal2, fixed, &upperbound, nodearrint, state, vbase, &bredelims) );
+
+         if( bredelims <= redbound )
+         {
+            bred = FALSE;
+         }
+         else
+         {
+            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+         }
+
+         SCIPdebugMessage("bound_reduce: %d \n", bredelims);
+      }
+
+      if( anselims + nnpelims + chain2elims + bredelims + npvelims + ansadelims + ansad2elims + daelims <= redbound )
+         rerun = FALSE;
+
+      if( !rerun && advanced && g->terms > 2 )
+      {
+         int cnsadvelims = 0;
+         SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+         SCIP_CALL( cnsAdvReduction(scip, g, nodearrint2, &cnsadvelims) );
+         SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, nodearrint2, nodearrchar, &daelims, TRUE, TRUE, FALSE) );
+
+         if( cnsadvelims + daelims >= redbound || (extensive && cnsadvelims + daelims > 0)  )
+         {
+            setTrue(boolarr, 8);
+            rerun = TRUE;
+            advanced = FALSE;
+            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+            da = FALSE;
+            SCIPdebugMessage("RELAOD! %d\n\n ", cnsadvelims);
+       if( extensive )
+         advanced = TRUE;
+         }
+      }
+   }
+#if 0
+   int k;
+   printf("FINAL %d \n", 0);
+   for( k = 0; k < g->knots; k++ )
+   {
+      if( !Is_gterm(g->term[k]) && g->grad[k] >= 2 &&  g->grad[k] <= 5 )
+         printf("k %d grad %d\n", k, g->grad[k]);
+   }
+#endif
+   SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+
+   /* go back to the extended graph */
+   SCIP_CALL( pcgraphtrans(scip, g) );
+
+   SCIP_CALL( level0(scip, g) );
+
+   return SCIP_OKAY;
+}
+#endif
+/** (R)PC loop */
+SCIP_RETCODE redLoopPc(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   PATH*                 vnoi,
+   PATH*                 path,
+   GNODE**               gnodearr,
+   SCIP_Real*            nodearrreal,
+   SCIP_Real*            exedgearrreal,
+   SCIP_Real*            exedgearrreal2,
+   int*                  heap,
+   int*                  state,
+   int*                  vbase,
+   int*                  nodearrint,
+   int*                  edgearrint,
+   int*                  nodearrint2,
+   int*                  solnode,
+   char*                 nodearrchar,
+   SCIP_Real*            fixed,              /**< pointer to store the offset value */
+   SCIP_Bool             dualascent,
+   SCIP_Bool             bred,
+   int                   reductbound         /**< minimal number of edges to be eliminated in order to reiterate reductions */
+   )
+{
+   SCIP_Real ub;
+   SCIP_Real fix;
+   SCIP_Real timelimit;
+   SCIP_Real rootprize = 0.0;
+   SCIP_Bool rpc;
+   int nelims;
+   int danelims;
+   int sdnelims;
+   int sdcnelims;
+   int bd3nelims;
+   int degnelims;
+   int nvslnelims;
+   int brednelims;
+   SCIP_Bool da = dualascent;
+   SCIP_Bool sd = TRUE;
+   SCIP_Bool sdc = TRUE;
+   SCIP_Bool bd3 = TRUE;
+   SCIP_Bool nvsl = TRUE;
+   SCIP_Bool rerun = TRUE;
+   SCIP_Bool extensive = EXTENSIVE;
+   SCIP_Bool advancedrun = dualascent;
+   SCIP_RANDNUMGEN* randnumgen;
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, 1)) );
+
+   rpc = (g->stp_type == STP_RPCSPG);
+
+   if( rpc )
+   {
+      rootprize = g->prize[g->source[0]];
+      g->prize[g->source[0]] = FARAWAY;
+   }
+
+   ub = -1.0;
+   fix = 0.0;
+
+   SCIP_CALL( pcgraphorg(scip, g) );
+
+   SCIP_CALL( degree_test_pc(scip, g, &fix, &degnelims, solnode, FALSE) );
+
+   /* get timelimit parameter */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
+   while( rerun && !SCIPisStopped(scip) )
+   {
+#if 0 /* debug*/
+      int i;
+
+      for (i = 0; i < g->knots; i++)
+      {
+         if( Is_pterm(g->term[i]) && i != g->source[0] )
+         {
+            if( g->grad[i] != 2 )
+            {
+               printf("root %d \n", g->source[0]);
+               printf("probtype %d \n", g->stp_type);
+               printf("fail %d \n", i);
+               return SCIP_ERROR;
+            }
+         }
+         if( Is_term(g->term[i]) && i != g->source[0] )
+         {
+            if( g->grad[i] < 2 )
+            {
+               printf("root %d \n", g->source[0]);
+               printf("probtype %d \n", g->stp_type);
+               printf("2fail %d grad %d \n", i, g->grad[i]);
+               return SCIP_ERROR;
+            }
+         }
+      }
+#endif
+
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
+      nelims = 0;
+      danelims = 0;
+      sdnelims = 0;
+      sdcnelims = 0;
+      bd3nelims = 0;
+      nvslnelims = 0;
+      degnelims = 0;
+      brednelims = 0;
+
+      if( sdc || extensive )
+      {
+         SCIP_CALL( sdsp_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims, SDSP_BOUND, NULL) );
+
+         if( sdcnelims <= reductbound )
+            sdc = FALSE;
+
+         SCIPdebugMessage("SDsp: %d \n", sdcnelims);
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+      if( sd || extensive )
+      {
+         SCIP_CALL( sdpc_reduction(scip, g, vnoi, exedgearrreal, heap, state, vbase, nodearrint, nodearrint2, &sdnelims) );
+         if( sdnelims <= reductbound )
+            sd = FALSE;
+
+         SCIPdebugMessage("SDpc: %d \n", sdnelims);
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+      SCIP_CALL( degree_test_pc(scip, g, &fix, &nelims, solnode, FALSE) );
+
+      degnelims += nelims;
+
+      if( bd3 && dualascent )
+      {
+         SCIP_CALL( bd3_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, BD3_BOUND) );
+         if( bd3nelims <= reductbound )
+         {
+            bd3 = FALSE;
+         }
+         else if( !rpc )
+         {
+            SCIP_CALL( sdpc_reduction(scip, g, vnoi, exedgearrreal, heap, state, vbase, nodearrint, nodearrint2, &sdnelims) );
+            SCIP_CALL( sdsp_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims, SDSP_BOUND, NULL) );
+         }
+
+         SCIPdebugMessage("bd3: %d, ", bd3nelims);
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+      if( nvsl || extensive )
+      {
+         SCIP_CALL( nvsl_reduction(scip, g, vnoi, nodearrreal, &fix, edgearrint, heap, state, vbase, nodearrint, nodearrint2, solnode, nodearrchar, &nvslnelims, reductbound) );
+
+         if( nvslnelims <= 0.5 * reductbound )
+            nvsl = FALSE;
+
+         SCIPdebugMessage("nvsl: %d \n", nvslnelims);
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+      if( bred )
+      {
+         ub = -1.0;
+         SCIP_CALL( bound_reduce(scip, g, vnoi, exedgearrreal, g->prize, nodearrreal, exedgearrreal2, &fix, &ub, heap, state, vbase, &brednelims) );
+         if( brednelims <= reductbound )
+            bred = FALSE;
+
+         SCIPdebugMessage("bndelims %d \n", brednelims);
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+      ub = -1.0;
+
+      if( da || (dualascent && extensive) )
+      {
+         if( rpc )
+         {
+            SCIP_CALL( da_reduce(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
+                  nodearrint, nodearrint2, nodearrchar, &danelims, 0, randnumgen, TRUE, NULL) );
+         }
+         else
+         {
+            SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint, state, nodearrchar, &danelims, TRUE, FALSE, FALSE, FALSE) );
+         }
+
+         if( danelims <= reductbound )
+            da = FALSE;
+
+         SCIPdebugMessage("da: %d \n", danelims);
+      }
+
+      SCIP_CALL( degree_test_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
+
+      if( SCIPisPositive(scip, ub) )
+      {
+         SCIP_CALL( bound_reduce(scip, g, vnoi, exedgearrreal, g->prize, nodearrreal, exedgearrreal2, &fix, &ub, heap, state, vbase, &brednelims) );
+         if( brednelims <= reductbound )
+            bred = FALSE;
+
+         assert(brednelims == 0);
+         SCIPdebugMessage("bndelims %d \n", brednelims);
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+      if( degnelims + sdnelims + sdcnelims + bd3nelims + danelims + brednelims + nvslnelims <= reductbound )
+         rerun = FALSE;
+
+      if( !rerun && advancedrun && g->terms > 2 )
+      {
+         rerun = TRUE;
+         danelims = 0;
+         degnelims = 0;
+         advancedrun = FALSE;
+         if( rpc )
+         {
+            SCIP_CALL( da_reduce(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
+                  nodearrint, nodearrint2, nodearrchar, &danelims, 0, randnumgen, TRUE, NULL) );
+         }
+         else
+         {
+            SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, exedgearrreal, exedgearrreal2, nodearrreal, vbase, heap, edgearrint, state, nodearrchar, &danelims, TRUE, TRUE, FALSE, FALSE) );
+         }
+         SCIP_CALL( degree_test_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
+         if( danelims + degnelims > reductbound || (extensive && danelims + degnelims > 0) )
+         {
+            da = dualascent;
+            sd = TRUE;
+            sdc = TRUE;
+            bd3 = TRUE;
+            nvsl = TRUE;
+            if( extensive )
+               advancedrun = TRUE;
+         }
+         else
+         {
+            rerun = FALSE;
+         }
+      }
+   }
+
+   SCIP_CALL( degree_test_pc(scip, g, &fix, &degnelims, solnode, TRUE) );
+
+   if( rpc )
+      g->prize[g->source[0]] = rootprize;
+
+   SCIP_CALL( pcgraphtrans(scip, g) );
+
+   /* free random number generator */
+   SCIPrandomFree(&randnumgen);
+
+   *fixed += fix;
+
+   SCIPdebugMessage("Reduction Level PC 1: Fixed Cost = %.12e\n", *fixed);
+   return SCIP_OKAY;
+}
+
+/** STP loop */
+SCIP_RETCODE redLoopStp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   PATH*                 vnoi,
+   PATH*                 path,
+   GNODE**               gnodearr,
+   SCIP_Real*            nodearrreal,
+   SCIP_Real*            edgearrreal,
+   SCIP_Real*            edgearrreal2,
+   int*                  heap,
+   int*                  state,
+   int*                  vbase,
+   int*                  nodearrint,
+   int*                  edgearrint,
+   int*                  nodearrint2,
+   int*                  solnode,
+   char*                 nodearrchar,
+   SCIP_Real*            fixed,              /**< pointer to store the offset value */
+   SCIP_Real             upperbound,
+   SCIP_Bool             da,
+   SCIP_Bool             bred,
+   SCIP_Bool             nodereplacing,      /**< should node replacement (by edges) be performed? */
+   int                   reductbound,        /**< minimal number of edges to be eliminated in order to reiterate reductions */
+   int*                  edgestate           /**< array to store status of (directed) edge (for propagation, can otherwise be set to NULL) */
+   )
+{
+   SCIP_Real    ub;
+   SCIP_Real    fix;
+   SCIP_Real    timelimit;
+   SCIP_Bool    le = TRUE;
+   SCIP_Bool    sd = TRUE;
+   SCIP_Bool    sdc = TRUE;
+   SCIP_Bool    bd3 = nodereplacing;
+   SCIP_Bool    nvsl = nodereplacing;
+   SCIP_Bool    rerun = TRUE;
+   int i = 0;
+   int rounds = 0;
+   SCIP_RANDNUMGEN* randnumgen;
+
+   assert(graph_valid(g));
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, 1)) );
+
+   ub = upperbound;
+   fix = 0.0;
+
+   SCIP_CALL( contractZeroEdges(scip, g) );
+
+   SCIP_CALL( degree_test(scip, g, &fix, solnode, &i, edgestate) );
+
+   /* get timelimit parameter */
+   SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
+
+   while( rerun && !SCIPisStopped(scip) )
+   {
+      int danelims = 0;
+      int lenelims = 0;
+      int sdnelims = 0;
+      int sdcnelims = 0;
+      int bd3nelims = 0;
+      int nvslnelims = 0;
+      int brednelims = 0;
+      int degtnelims = 0;
+
+      if( SCIPgetTotalTime(scip) > timelimit )
+         break;
+
+      if( le )
+      {
+         SCIP_CALL( ledge_reduction(scip, g, vnoi, heap, state, vbase, &lenelims, edgestate) );
+
+         if( lenelims <= reductbound )
+            le = FALSE;
+         else
+            SCIP_CALL( degree_test(scip, g, &fix, solnode, &degtnelims, edgestate) );
+
+         SCIPdebugMessage("le: %d \n", lenelims);
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+      if( sd )
+      {
+         SCIP_CALL( sd_red(scip, g, vnoi, edgearrreal, nodearrreal, heap, state, vbase, nodearrint, nodearrint2, edgearrint, &sdnelims, nodereplacing, edgestate) );
+
+         if( sdnelims <= reductbound )
+            sd = FALSE;
+
+         SCIPdebugMessage("sd: %d, \n", sdnelims);
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+      if( sdc )
+      {
+         SCIP_CALL( sdsp_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sdcnelims, SDSP_BOUND, edgestate) );
+
+         if( sdcnelims <= reductbound )
+            sdc = FALSE;
+
+         SCIPdebugMessage("sdsp: %d \n", sdcnelims);
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+      if( sd || sdc )
+         SCIP_CALL( degree_test(scip, g, &fix, solnode, &degtnelims, edgestate) );
+
+      if( bd3 )
+      {
+         SCIP_CALL( bd3_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &bd3nelims, BD3_BOUND) );
+         if( bd3nelims <= reductbound )
+            bd3 = FALSE;
+         else
+         {
+            SCIP_CALL( degree_test(scip, g, &fix, solnode, &degtnelims, edgestate) );
+         }
+
+         SCIPdebugMessage("bd3: %d \n", bd3nelims);
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+
+
+      }
+
+      if( nvsl )
+      {
+         SCIP_CALL( nvsl_reduction(scip, g, vnoi, nodearrreal, &fix, edgearrint, heap, state, vbase, nodearrint, NULL, solnode, nodearrchar, &nvslnelims, reductbound) );
+
+         if( nvslnelims <= reductbound )
+            nvsl = FALSE;
+
+         SCIPdebugMessage("nvsl: %d \n", nvslnelims);
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+      ub = -1.0;
+
+      if( da )
+      {
+         SCIP_CALL( da_reduce(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, &ub, &fix, edgearrint, vbase, state, heap,
+               nodearrint, nodearrint2, nodearrchar, &danelims, rounds, randnumgen, nodereplacing, edgestate) );
+
+         if( danelims <= 5 * reductbound )
+            da = FALSE;
+
+         SCIPdebugMessage("da: %d \n", danelims);
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+
+      if( bred && nodereplacing )
+      {
+         SCIP_CALL( bound_reduce(scip, g, vnoi, edgearrreal, NULL, nodearrreal, edgearrreal2, &fix, &ub, heap, state, vbase, &brednelims) );
+
+         SCIP_CALL( level0(scip, g) );
+
+         if( brednelims <= 2 * reductbound )
+            bred = FALSE;
+
+         SCIPdebugMessage("bnd: %d \n\n", brednelims);
+         if( SCIPgetTotalTime(scip) > timelimit )
+            break;
+      }
+      SCIP_CALL( level0(scip, g) );
+      SCIP_CALL( degree_test(scip, g, &fix, solnode, &degtnelims, edgestate) );
+
+      if( (danelims + sdnelims + bd3nelims + nvslnelims + lenelims + brednelims + sdcnelims) <= 2 * reductbound  )
+      {
+         rerun = FALSE;
+      }
+      rounds++;
+   }
+
+   /* free random number generator */
+   SCIPrandomFree(&randnumgen);
+
+   *fixed += fix;
 
    return SCIP_OKAY;
 }
@@ -1909,37 +2594,88 @@ SCIP_RETCODE reduce(
    /* initialise shortest path algorithms */
    SCIP_CALL( graph_path_init(scip, (*graph)) );
 
-   level0(scip, (*graph));
+   SCIP_CALL( level0(scip, (*graph)) );
 
    /* if no reduction methods available, return */
-   if( (*graph)->stp_type == STP_DEG_CONS )
+   if( (*graph)->stp_type == STP_DCSTP || (*graph)->stp_type == STP_RMWCSP )
+   {
+      graph_path_exit(scip, (*graph));
       return SCIP_OKAY;
+   }
+#if 1
+   if( level == 0 )
+   {
+      int n = 0;
+      if( stp_type == STP_MWCSP )
+      {
+         SCIP_CALL( pcgraphorg(scip, *graph) );
+         SCIP_CALL( degree_test_mw(scip, *graph, NULL, offset, &n) );
+         SCIP_CALL( pcgraphtrans(scip, *graph) );
+      }
+      else if( stp_type == STP_PCSPG || stp_type == STP_RPCSPG )
+      {
+         SCIP_CALL( pcgraphorg(scip, *graph) );
+         SCIP_CALL( degree_test_pc(scip, *graph, offset, &n, NULL, FALSE) );
+         SCIP_CALL( pcgraphtrans(scip, *graph) );
+      }
+
+      level0(scip, (*graph));
+   }
+#endif
 
    if( level == 1 )
    {
-      if( stp_type == STP_PRIZE_COLLECTING || stp_type == STP_ROOTED_PRIZE_COLLECTING )
+      if( stp_type == STP_PCSPG || stp_type == STP_RPCSPG )
+      {
          SCIP_CALL( reducePc(scip, (graph), offset, minelims, FALSE) );
-      else if( stp_type == STP_MAX_NODE_WEIGHT )
-         SCIP_CALL( reduceMwcs(scip, (graph), offset, minelims, FALSE) );
-      else if( stp_type == STP_HOP_CONS )
+      }
+      else if( stp_type == STP_MWCSP )
+      {
+         SCIP_CALL( reduceMw(scip, (graph), offset, minelims, FALSE) );
+      }
+      else if( stp_type == STP_DHCSTP )
+      {
          SCIP_CALL( reduceHc(scip, (graph), offset, minelims) );
-      else if( stp_type == STP_DIRECTED || stp_type == STP_NODE_WEIGHTS )
+      }
+      else if( stp_type == STP_SAP )
+      {
          SCIP_CALL( reduceSap(scip, (graph), offset, minelims) );
+      }
+      else if( stp_type == STP_NWSPG )
+      {
+         SCIP_CALL( reduceNw(scip, (graph), offset, minelims) );
+      }
       else
-         SCIP_CALL( reduceStp(scip, (graph), offset, minelims, FALSE) );
+      {
+         SCIP_CALL( reduceStp(scip, (graph), offset, minelims, FALSE, TRUE, NULL) );
+      }
    }
    else if( level == 2 )
    {
-      if( stp_type == STP_PRIZE_COLLECTING || stp_type == STP_ROOTED_PRIZE_COLLECTING )
+      if( stp_type == STP_PCSPG || stp_type == STP_RPCSPG )
+      {
          SCIP_CALL( reducePc(scip, (graph), offset, minelims, TRUE) );
-      else if( stp_type == STP_MAX_NODE_WEIGHT )
-         SCIP_CALL( reduceMwcs(scip, (graph), offset, minelims, TRUE) );
-      else if( stp_type == STP_HOP_CONS )
+      }
+      else if( stp_type == STP_MWCSP )
+      {
+         SCIP_CALL( reduceMw(scip, (graph), offset, minelims, TRUE) );
+      }
+      else if( stp_type == STP_DHCSTP )
+      {
          SCIP_CALL( reduceHc(scip, (graph), offset, minelims) );
-      else if( stp_type == STP_DIRECTED || stp_type == STP_NODE_WEIGHTS )
+      }
+      else if( stp_type == STP_SAP )
+      {
          SCIP_CALL( reduceSap(scip, (graph), offset, minelims) );
+      }
+      else if( stp_type == STP_NWSPG )
+      {
+         SCIP_CALL( reduceNw(scip, (graph), offset, minelims) );
+      }
       else
-         SCIP_CALL( reduceStp(scip, (graph), offset, minelims, TRUE) );
+      {
+         SCIP_CALL( reduceStp(scip, (graph), offset, minelims, TRUE, TRUE, NULL) );
+      }
    }
    SCIPdebugMessage("offset : %f \n", *offset);
 

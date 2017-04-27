@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -19,9 +19,9 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  *
- * This file implements the Ryan/Foster branching rule. For more details see \ref BRANCHING page.
+ * This file implements the Ryan/Foster branching rule. For more details see \ref BINPACKING_BRANCHING page.
  *
- * @page BRANCHING Ryan/Foster branching
+ * @page BINPACKING_BRANCHING Ryan/Foster branching
  *
  * Ryan/Foster branching is a very useful branching rule for the integer program model in use. A
  * standard variable branching has the disadvantage that the zero branch is more or less useless because
@@ -40,7 +40,7 @@
  * -# How do we select the pair of items?
  * -# How do we realize such a branching within \SCIP?
  *
- * @section SELECTION How do we select the pair of items?
+ * @section BINPACKING_SELECTION How do we select the pair of items?
  *
  * To select a pair of items, we have to know for each packing the items which are contained. Since every packing is a
  * variable and each item is a set covering constraint, we have to know for each variable in which set covering
@@ -52,7 +52,7 @@
  * information which items belong to which packing. Therefore, we can use the Ryan/Foster idea to select a pair of
  * items.
  *
- * @section SAMEDIFFBRANCHING How do we realize such a branching within SCIP?
+ * @section BINPACKING_SAMEDIFFBRANCHING How do we realize such a branching within SCIP?
  *
  * After having selected a pair of items to branch on, the question now is how to realize such a branching with \SCIP.
  * Since \SCIP is
@@ -96,9 +96,7 @@ static
 SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
 {  /*lint --e{715}*/
    SCIP_PROBDATA* probdata;
-
    SCIP_Real** pairweights;
-
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandsfrac;
    int nlpcands;
@@ -127,7 +125,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(result != NULL);
 
-   SCIPdebugMessage("start branching at node %"SCIP_LONGINT_FORMAT", depth %d\n", SCIPgetNNodes(scip), SCIPgetDepth(scip));
+   SCIPdebugMsg(scip, "start branching at node %"SCIP_LONGINT_FORMAT", depth %d\n", SCIPgetNNodes(scip), SCIPgetDepth(scip));
 
    *result = SCIP_DIDNOTRUN;
 
@@ -140,20 +138,21 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    SCIP_CALL( SCIPallocBufferArray(scip, &pairweights, nitems) );
    for( i = 0; i < nitems; ++i )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &pairweights[i], nitems) ); /*lint !e866 */
-
-      for( j = 0; j < nitems; ++j )
-         pairweights[i][j] = 0.0;
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &pairweights[i], i+1) ); /*lint !e866 */
    }
 
    /* get fractional LP candidates */
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, NULL, &lpcandsfrac, NULL, &nlpcands, NULL) );
    assert(nlpcands > 0);
 
-   /* compute weigthts for each order pair */
+   /* compute weights for each order pair */
    for( v = 0; v < nlpcands; ++v )
    {
+      SCIP_Real solval;
+
       assert(lpcands[v] != NULL);
+
+      solval = lpcandsfrac[v];
 
       /* get variable data which contains the information to which constraints/items the variable belongs */
       vardata = SCIPvarGetData(lpcands[v]);
@@ -166,14 +165,18 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
       for( i = 0; i < nconsids; ++i )
       {
          id1 = consids[i];
+
+         /* store the LP sum for single items in the diagonal */
+         pairweights[id1][id1] += solval;
+
+         /* update LP sums for all pairs of items */
          for( j = i+1; j < nconsids; ++j )
          {
             id2 = consids[j];
             assert(id1 < id2);
 
-            pairweights[id2][id1] += lpcandsfrac[v];
+            pairweights[id2][id1] += solval;
 
-            assert( SCIPisFeasLE(scip, pairweights[id2][id1], 1.0) );
             assert( SCIPisFeasGE(scip, pairweights[id2][id1], 0.0) );
          }
       }
@@ -186,12 +189,17 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
 
    for( i = 0; i < nitems; ++i )
    {
-      for( j = 0; j < i+1; ++j )
+      for( j = 0; j < i; ++j )
       {
          value = MIN(pairweights[i][j], 1-pairweights[i][j]);
 
          if( bestvalue < value )
          {
+            /* there is no variable with (fractional) LP value > 0 that contains exactly one of the items */
+            if( SCIPisEQ(scip, pairweights[i][j], pairweights[i][i])
+               && SCIPisEQ(scip, pairweights[i][j], pairweights[j][j]) )
+               continue;
+
             bestvalue = value;
             id1 = j;
             id2 = i;
@@ -210,7 +218,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    }
    SCIPfreeBufferArray(scip, &pairweights);
 
-   SCIPdebugMessage("branch on order pair <%d,%d> with weight <%g>\n",
+   SCIPdebugMsg(scip, "branch on order pair <%d,%d> with weight <%g>\n",
       SCIPprobdataGetIds(probdata)[id1], SCIPprobdataGetIds(probdata)[id2], bestvalue);
 
    /* create the branch-and-bound tree child nodes of the current node */

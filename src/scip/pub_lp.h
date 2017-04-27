@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_lp.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for LP management
  * @author Tobias Achterberg
  */
@@ -47,7 +47,7 @@ extern "C" {
 #endif
 
 
-/**@defgroup ColumnMethods Column methods
+/**@addtogroup PublicColumnMethods
  *
  * @{
  */
@@ -235,7 +235,7 @@ SCIP_BOUNDTYPE SCIPboundtypeOpposite(
 
 
 
-/**@defgroup RowMethods Row methods
+/**@addtogroup PublicRowMethods
  *
  * @{
  */
@@ -518,13 +518,6 @@ void SCIProwChgRank(
 #define SCIProwChgRank(row, cutrank)    ((row)->rank = (cutrank))
 
 #endif
-
-/**@} */
-
-/**@defgroup LPMethods LP methods
- *
- * @{
- */
 
 /**@} */
 

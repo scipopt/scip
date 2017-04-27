@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   var.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for problem variables
  * @author Tobias Achterberg
  */
@@ -1289,6 +1290,16 @@ void SCIPvarMergeHistories(
    SCIP_STAT*            stat                /**< problem statistics */
    );
 
+/** sets the history of a variable; this method is typacally used within reoptimization to keep and update the variable
+ *  history over several iteraions
+ */
+extern
+void SCIPvarSetHistory(
+   SCIP_VAR*             var,                /**< variable */
+   SCIP_HISTORY*         history,            /**< the history which is to set */
+   SCIP_STAT*            stat                /**< problem statistics */
+   );
+
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of
  *  "solvaldelta" in the variable's solution value and resulting change of "objdelta" in the in the LP's objective value
  */
@@ -1643,6 +1654,13 @@ SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
    SCIP_Bool             irrelevantvar,      /**< has the variable become irrelevant? */
    SCIP_Bool             onlyredundant,      /**< should only the redundant implications and variable bounds be removed? */
    SCIP_Bool             removefromvar       /**< should the implications and variable bounds be removed from the var itself? */
+   );
+
+/** sets the index of the connected component of the clique graph that the variable belongs to, or -1 if not computed */
+extern
+void SCIPvarSetCliqueComponentIdx(
+   SCIP_VAR*             var,                /**< problem variable */
+   int                   idx                 /**< clique component index of this variable */
    );
 
 #ifdef NDEBUG

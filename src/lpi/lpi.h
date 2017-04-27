@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   lpi.h
- * @ingroup PUBLICMETHODS
+ * @ingroup INTERNALAPI
  * @brief  interface methods for specific LP solvers
  * @author Tobias Achterberg
  * @author Marc Pfetsch
@@ -47,6 +47,10 @@
  * submatrix of (A,I), where m is the number of rows and I is the identity matrix. This means that if, internally, the
  * LP solver uses coefficients -1 for some of the slack variables, then rows associated with slacks variables whose
  * coefficient is -1 should be negated in order to return the result in terms of the LP interface definition.
+ *
+ * The creation of a new LP should always be done in the following ways: Either one can use SCIPlpiLoadColLP() or one
+ * first adds empty columns or rows. Then the matrix entries can be added by adding columns and rows, respectively. It
+ * is an error, if matrix entries are added for rows or columns that have not been added before.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -92,6 +96,14 @@ const char* SCIPlpiGetSolverDesc(
 EXTERN
 void* SCIPlpiGetSolverPointer(
    SCIP_LPI*             lpi                 /**< pointer to an LP interface structure */
+   );
+
+/** pass integrality information about variables to the solver */
+EXTERN
+SCIP_RETCODE SCIPlpiSetIntegralityInformation(
+   SCIP_LPI*             lpi,                /**< pointer to an LP interface structure */
+   int                   ncols,              /**< length of integrality array */
+   int*                  intInfo             /**< integrality array (0: continuous, 1: integer) */
    );
 
 /**@} */
@@ -269,8 +281,8 @@ EXTERN
 SCIP_RETCODE SCIPlpiChgObj(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   ncols,              /**< number of columns to change objective value for */
-   int*                  ind,                /**< column indices to change objective value for */
-   SCIP_Real*            obj                 /**< new objective values for columns */
+   const int*            ind,                /**< column indices to change objective value for */
+   const SCIP_Real*      obj                 /**< new objective values for columns */
    );
 
 /** multiplies a row with a non-zero scalar; for negative scalars, the row's sense is switched accordingly */
@@ -746,8 +758,8 @@ SCIP_RETCODE SCIPlpiGetBase(
 EXTERN
 SCIP_RETCODE SCIPlpiSetBase(
    SCIP_LPI*             lpi,                /**< LP interface structure */
-   int*                  cstat,              /**< array with column basis status */
-   int*                  rstat               /**< array with row basis status */
+   const int*            cstat,              /**< array with column basis status */
+   const int*            rstat               /**< array with row basis status */
    );
 
 /** returns the indices of the basic columns and rows; basic column n gives value n, basic row m gives value -1-m */
@@ -854,7 +866,7 @@ EXTERN
 SCIP_RETCODE SCIPlpiSetState(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPISTATE*        lpistate            /**< LPi state information (like basis information) */
+   const SCIP_LPISTATE*  lpistate            /**< LPi state information (like basis information) */
    );
 
 /** clears current LPi state (like basis information) of the solver */
@@ -917,7 +929,7 @@ extern
 SCIP_RETCODE SCIPlpiSetNorms(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
+   const SCIP_LPINORMS*  lpinorms            /**< LPi pricing norms information */
    );
 
 /** frees LPi pricing norms information */

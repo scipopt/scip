@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_sepa.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for separators
  * @author Tobias Achterberg
  */
@@ -32,6 +32,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@addtogroup PublicSeparatorMethods
+ *
+ * @{
+ */
+
 
 /** compares two separators w. r. to their priority */
 EXTERN
@@ -180,6 +187,8 @@ EXTERN
 SCIP_Bool SCIPsepaIsInitialized(
    SCIP_SEPA*            sepa                /**< separator */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

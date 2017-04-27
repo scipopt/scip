@@ -1,0 +1,21 @@
+// errors
+// it is possible to call va_copy() first
+va_list_usedBeforeStarted:src/scip/message.c
+nullPointer:src/lpi/lpi_qso.c
+useClosedFile:src/scip/dialog_default.c
+
+nullPointerRedundantCheck:src/scip/scip.c
+nullPointerRedundantCheck:src/scip/cons_cardinality.c
+nullPointerRedundantCheck:src/scip/cons_linear.c
+nullPointerRedundantCheck:src/scip/var.c
+nullPointerRedundantCheck:src/scip/reader_opb.c
+
+// style
+// unusedFunction doesn't work for libraries
+unusedFunction
+variableScope
+redundantAssignment:src/tinycthread/tinycthread.c
+
+
+// information
+ConfigurationNotChecked

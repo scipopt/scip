@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,11 +13,10 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   unittest-cons.c
+/**@file   cons.c
  * @brief  unit test for checking setters on scip.c
- *
+ * @author Felipe Serrano
  */
-
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -25,14 +24,14 @@
 #include "scip/scipdefplugins.h"
 #include <string.h>
 
-/** UNIT TEST CONSHDLR **/
+/* UNIT TEST CONSHDLR */
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "unittest"
 #define CONSHDLR_DESC          "constraint handler template"
 #define CONSHDLR_ENFOPRIORITY         0 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY        0 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
-                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+                                         *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
@@ -41,7 +40,7 @@
 
 #define CONSHDLR_PROPFREQ            -1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP/**< propagation timing mask of the constraint handler*/
+#define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler*/
 
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
@@ -55,13 +54,13 @@
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   int nenfolp;   /* store the number of nenfolp calls */
-   int ncheck;    /* store the number of check calls */
-   int nsepalp;   /* store the number of sepalp calls */
-   int nenfopslp; /* store the number of enfopslp calls */
-   int nprop;     /* store the number of prop calls */
-   int nresprop;  /* store the number of resprop calls */
-   int npresol;   /* store the number of presol calls */
+   int                   nenfolp;            /**< store the number of nenfolp calls */
+   int                   ncheck;             /**< store the number of check calls */
+   int                   nsepalp;            /**< store the number of sepalp calls */
+   int                   nenfopslp;          /**< store the number of enfopslp calls */
+   int                   nprop;              /**< store the number of prop calls */
+   int                   nresprop;           /**< store the number of resprop calls */
+   int                   npresol;            /**< store the number of presol calls */
 };
 
 
@@ -73,8 +72,8 @@ struct SCIP_ConshdlrData
 static
 SCIP_DECL_CONSFREE(consFreeUnittest)
 {
-
    SCIP_CONSHDLRDATA* conshdlrdata;
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
@@ -83,6 +82,7 @@ SCIP_DECL_CONSFREE(consFreeUnittest)
 
    return SCIP_OKAY;
 }
+
 
 /** separation method of constraint handler for LP solutions */
 static
@@ -103,12 +103,15 @@ SCIP_DECL_CONSSEPALP(consSepalpUnittest)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpUnittest)
 {
-
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_VAR** vars;
    SCIP_ROW *row;
    SCIP_Bool infeasible;
    char s[SCIP_MAXSTRLEN];
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( result != NULL );
 
    /* count this function call in the hdlr data */
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -156,6 +159,10 @@ SCIP_DECL_CONSCHECK(consCheckUnittest)
    SCIP_Real val;
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_VAR** vars;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( result != NULL );
 
    vars = SCIPgetVars(scip);
 
@@ -211,11 +218,11 @@ SCIP_DECL_CONSPRESOL(consPresolUnittest)
    return SCIP_OKAY;
 }
 
+
 /** propagation conflict resolving method of constraint handler */
 static
 SCIP_DECL_CONSRESPROP(consRespropUnittest)
 {
-
    SCIP_CONSHDLRDATA* conshdlrdata;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -246,7 +253,7 @@ SCIP_RETCODE includeConshdlrUnittest(
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLR* conshdlr = NULL;
 
    /* create unittest constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
@@ -259,12 +266,7 @@ SCIP_RETCODE includeConshdlrUnittest(
    conshdlrdata->nresprop = 0;
    conshdlrdata->npresol = 0;
 
-   conshdlr = NULL;
-
    /* include constraint handler */
-   /* use SCIPincludeConshdlrBasic() plus setter functions if you want to set callbacks one-by-one and your code should
-    * compile independent of new callbacks being added in future SCIP versions
-    */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
          consEnfolpUnittest, consEnfopsUnittest, consCheckUnittest, consLockUnittest,
@@ -274,13 +276,9 @@ SCIP_RETCODE includeConshdlrUnittest(
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeUnittest) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolUnittest, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropUnittest, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
-         CONSHDLR_PROP_TIMING) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropUnittest, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropUnittest) );
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpUnittest, NULL, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
-
-   /* add unittest constraint handler parameters */
-   /* TODO: (optional) add constraint handler specific parameters with SCIPaddTypeParam() here */
 
    return SCIP_OKAY;
 }
@@ -324,10 +322,8 @@ SCIP_RETCODE createConsUnittest(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
-
    SCIP_CONSHDLR* conshdlr;
-   SCIP_CONSDATA* consdata;
-
+   SCIP_CONSDATA* consdata = NULL;
 
    /* find the unittest constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -337,10 +333,6 @@ SCIP_RETCODE createConsUnittest(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   /* create constraint data */
-   consdata = NULL;
-   /* TODO: create and store constraint specific data here */
-
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
@@ -348,10 +340,10 @@ SCIP_RETCODE createConsUnittest(
    return SCIP_OKAY;
 }
 
+
 /*
  * Interface methods of constraint handler
  */
-
 
 /** gets nenfolp from the conshdlrdata */
 static
@@ -383,7 +375,7 @@ int getNcheckUnittest(
    return conshdlrdata->ncheck;
 }
 
-/* gets nsepalp from the conshdlrdata */
+/** gets nsepalp from the conshdlrdata */
 static
 int getNsepalpUnittest(
    SCIP*                 scip                /**< SCIP data structure */
@@ -398,7 +390,7 @@ int getNsepalpUnittest(
    return conshdlrdata->nsepalp;
 }
 
-/* gets nenfopslp from the conshdlrdata */
+/** gets nenfopslp from the conshdlrdata */
 static
 int getNenfopslpUnittest(
    SCIP*                 scip                /**< SCIP data structure */
@@ -413,7 +405,7 @@ int getNenfopslpUnittest(
    return conshdlrdata->nenfopslp;
 }
 
-/* gets nprop from the conshdlrdata */
+/** gets nprop from the conshdlrdata */
 static
 int getNpropUnittest(
    SCIP*                 scip                /**< SCIP data structure */
@@ -428,7 +420,7 @@ int getNpropUnittest(
    return conshdlrdata->nprop;
 }
 
-/* gets nresprop from the conshdlrdata */
+/** gets nresprop from the conshdlrdata */
 static
 int getNrespropUnittest(
    SCIP*                 scip                /**< SCIP data structure */
@@ -443,7 +435,7 @@ int getNrespropUnittest(
    return conshdlrdata->nresprop;
 }
 
-/* gets npresol from the conshdlrdata */
+/** gets npresol from the conshdlrdata */
 static
 int getNpresolUnittest(
    SCIP*                 scip                /**< SCIP data structure */
@@ -539,14 +531,19 @@ SCIPconshdlrGetPresolTiming
 SCIPconshdlrSetPresolTiming
 */
 
-/** GLOBAL VARIABLES **/
+/* GLOBAL VARIABLES */
 static SCIP_CONSHDLR* conshdlr;
 static SCIP* scip;
 
-/** TEST SUITES **/
+/* TEST SUITES */
+
+/** setup of test run */
 static
 void setup(void)
 {
+   SCIP_VAR* xvar;
+   SCIP_VAR* yvar;
+   SCIP_CONS* cons;
 
    scip = NULL;
 
@@ -561,28 +558,23 @@ void setup(void)
 
    /* create a problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "problem") );
-   {
-      SCIP_VAR* xvar;
-      SCIP_VAR* yvar;
-      SCIP_CONS* cons;
 
-      /* create variables */
-      SCIP_CALL( SCIPcreateVarBasic(scip, &xvar, "x", 0, 2, -1.0, SCIP_VARTYPE_INTEGER) );
-      SCIP_CALL( SCIPcreateVarBasic(scip, &yvar, "y", 0, 2, -1.0, SCIP_VARTYPE_INTEGER) );
+   /* create variables */
+   SCIP_CALL( SCIPcreateVarBasic(scip, &xvar, "x", 0, 2, -1.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &yvar, "y", 0, 2, -1.0, SCIP_VARTYPE_INTEGER) );
 
-      SCIP_CALL( SCIPaddVar(scip, xvar) );
-      SCIP_CALL( SCIPaddVar(scip, yvar) );
+   SCIP_CALL( SCIPaddVar(scip, xvar) );
+   SCIP_CALL( SCIPaddVar(scip, yvar) );
 
-      SCIP_CALL( SCIPreleaseVar(scip, &xvar) );
-      SCIP_CALL( SCIPreleaseVar(scip, &yvar) );
+   SCIP_CALL( SCIPreleaseVar(scip, &xvar) );
+   SCIP_CALL( SCIPreleaseVar(scip, &yvar) );
 
-      /* create a constraint of the unittesthandler: it just adds the constraint x + y <= 2 */
-      SCIP_CALL( createConsUnittest(scip, &cons, "UC", 2, NULL, NULL, 0, 2, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE,
-               FALSE, FALSE, FALSE, FALSE));
+   /* create a constraint of the unittesthandler: it just adds the constraint x + y <= 2 */
+   SCIP_CALL( createConsUnittest(scip, &cons, "UC", 2, NULL, NULL, 0, 2, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE,
+         FALSE, FALSE, FALSE, FALSE));
 
-      SCIP_CALL( SCIPaddCons(scip, cons) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   }
+   SCIP_CALL( SCIPaddCons(scip, cons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    /* set the msghdlr off */
    SCIPsetMessagehdlrQuiet(scip, TRUE);
@@ -591,6 +583,7 @@ void setup(void)
    conshdlr = SCIPfindConshdlr(scip, "unittest");
 }
 
+/** setup solving test */
 static
 void setup_solve(void)
 {
@@ -600,6 +593,7 @@ void setup_solve(void)
    SCIP_CALL( SCIPsolve(scip) );
 }
 
+/** deinitialization method */
 static
 void teardown(void)
 {
@@ -613,7 +607,8 @@ TestSuite(cons, .init = setup, .fini = teardown);
 TestSuite(cons_solve, .init = setup_solve, .fini = teardown);
 
 
-/** TESTS **/
+/* TESTS */
+
 /* We only count a call of the feasibility check method of a constraint handler if we check all constraints of a handler.
  * We want to compare this against SCIPconshdlrGetNCheckCalls(), but SCIP might call the check method of the constraint
  * handler to check a single constraint. In this case the counter for the number of check calls does not increase (for SCIP).

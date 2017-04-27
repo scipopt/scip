@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_misc.h
+ * @ingroup INTERNALAPI
  * @brief  miscellaneous datastructures
  * @author Tobias Achterberg
  */
@@ -69,13 +70,6 @@ struct SCIP_PQueue
    int                   size;               /**< total number of available element slots */
 };
 
-/** element list to store single elements of a hash table */
-struct SCIP_HashTableList
-{
-   void*                 element;            /**< this element */
-   SCIP_HASHTABLELIST*   next;               /**< rest of the hash table list */
-};
-
 /** hash table data structure */
 struct SCIP_HashTable
 {
@@ -83,26 +77,55 @@ struct SCIP_HashTable
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq));       /**< returns TRUE iff both keys are equal */
    SCIP_DECL_HASHKEYVAL((*hashkeyval));      /**< returns the hash value of the key */
    BMS_BLKMEM*           blkmem;             /**< block memory used to store hash map entries */
-   SCIP_HASHTABLELIST**  lists;              /**< hash table lists of the hash table */
+   void*                 userptr;            /**< user pointer */
+   void**                slots;              /**< slots of the hash table */
+   uint32_t*             hashes;             /**< hash values of elements stored in slots */
+   uint32_t              shift;              /**< power such that 2^(32-shift) == nslots */
+   uint32_t              mask;               /**< mask used for fast modulo, i.e. nslots - 1 */
+   uint32_t              nelements;          /**< number of elements in the hashtable */
+};
+
+/** element list to store single elements of a hash table */
+struct SCIP_MultiHashList
+{
+   void*                 element;            /**< this element */
+   SCIP_MULTIHASHLIST*   next;               /**< rest of the hash table list */
+};
+
+/** multihash table data structure */
+struct SCIP_MultiHash
+{
+   SCIP_DECL_HASHGETKEY((*hashgetkey));      /**< gets the key of the given element */
+   SCIP_DECL_HASHKEYEQ ((*hashkeyeq));       /**< returns TRUE iff both keys are equal */
+   SCIP_DECL_HASHKEYVAL((*hashkeyval));      /**< returns the hash value of the key */
+   BMS_BLKMEM*           blkmem;             /**< block memory used to store hash map entries */
+   SCIP_MULTIHASHLIST**  lists;              /**< multihash table lists of the hash table */
    int                   nlists;             /**< number of lists stored in the hash table */
    void*                 userptr;            /**< user pointer */
    SCIP_Longint          nelements;          /**< number of elements in the hashtable */
 };
 
-/** element list to store single mappings of a hash map */
-struct SCIP_HashMapList
+typedef union {
+   void*                 ptr;                /**< pointer image */
+   SCIP_Real             real;               /**< real image */
+} SCIP_HASHMAPIMAGE;
+
+/** hash map entry */
+struct SCIP_HashMapEntry
 {
-   void*                 origin;             /**< origin of the mapping origin -> image */
-   void*                 image;              /**< image of the mapping origin -> image */
-   SCIP_HASHMAPLIST*     next;               /**< rest of the hash map list */
+   void*                 origin;             /**< origin of element */
+   SCIP_HASHMAPIMAGE     image;              /**< image of element */
 };
 
 /** hash map data structure to map pointers on pointers */
 struct SCIP_HashMap
 {
    BMS_BLKMEM*           blkmem;             /**< block memory used to store hash map entries */
-   SCIP_HASHMAPLIST**    lists;              /**< hash map lists of the hash map */
-   int                   nlists;             /**< number of lists stored in the hash map */
+   SCIP_HASHMAPENTRY*    slots;              /**< buffer for hashmap entries */
+   uint32_t*             hashes;             /**< hashes of elements */
+   uint32_t              shift;              /**< power such that 2^(32-shift) == nslots */
+   uint32_t              mask;               /**< mask used for fast modulo, i.e. nslots - 1 */
+   uint32_t              nelements;          /**< number of elements in the hashtable */
 };
 
 /** dynamic array for storing real values */
@@ -170,6 +193,7 @@ struct SCIP_Profile
 /** digraph structure to store and handle graphs */
 struct SCIP_Digraph
 {
+   BMS_BLKMEM*           blkmem;             /**< block memory pointer to store the data */
    int**                 successors;         /**< adjacency list: for each node (first dimension) list of all successors */
    void***               arcdata;            /**< arc data corresponding to the arcs to successors given by the successors array  */
    void**                nodedata;           /**< data for each node of graph */
@@ -210,6 +234,16 @@ struct SCIP_Regression
    SCIP_Real             variancesumy;       /**< incremental variance term for Y observations */
    SCIP_Real             corrcoef;           /**< correlation coefficient of X and Y */
    int                   nobservations;      /**< number of observations so far */
+};
+
+/** random number generator data */
+struct SCIP_RandNumGen
+{
+   uint32_t              seed;               /**< start seed */
+   uint32_t              xor_seed;           /**< Xorshift seed */
+   uint32_t              mwc_seed;           /**< Multiply-with-carry seed */
+   uint32_t              cst_seed;           /**< constant seed */
+   BMS_BLKMEM*           blkmem;             /**< block memory */
 };
 
 #ifdef __cplusplus

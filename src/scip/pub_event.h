@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_event.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for managing events
  * @author Tobias Achterberg
  */
@@ -38,6 +38,11 @@ extern "C" {
 
 /*
  * Event handler methods
+ */
+
+/**@addtogroup PublicEventHandlerMethods
+ *
+ * @{
  */
 
 /** gets name of event handler */
@@ -77,9 +82,15 @@ SCIP_Real SCIPeventhdlrGetTime(
    SCIP_EVENTHDLR*       eventhdlr           /**< event handler */
    );
 
+/* @} */
 
 /*
  * Event methods
+ */
+
+/**@addtogroup PublicEventMethods
+ *
+ * @{
  */
 
 /** gets type of event */
@@ -196,6 +207,32 @@ EXTERN
 SCIP_Real SCIPeventGetRowNewSideVal(
    SCIP_EVENT*           event               /**< event */
    );
+
+#ifdef NDEBUG
+
+/* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
+ * speed up the algorithms.
+ */
+
+#define SCIPeventGetType(event)                   ((event)->eventtype)
+#define SCIPeventGetOldobj(event)                 ((event)->data.eventobjchg.oldobj)
+#define SCIPeventGetNewobj(event)                 ((event)->data.eventobjchg.newobj)
+#define SCIPeventGetOldbound(event)               ((event)->data.eventbdchg.oldbound)
+#define SCIPeventGetNewbound(event)               ((event)->data.eventbdchg.newbound)
+#define SCIPeventGetNode(event)                   ((event)->data.node)
+#define SCIPeventGetSol(event)                    ((event)->data.sol)
+#define SCIPeventGetRowCol(event)                 ((event)->data.eventrowcoefchanged.col)
+#define SCIPeventGetRowOldCoefVal(event)          ((event)->data.eventrowcoefchanged.oldval)
+#define SCIPeventGetRowNewCoefVal(event)          ((event)->data.eventrowcoefchanged.newval)
+#define SCIPeventGetRowOldConstVal(event)         ((event)->data.eventrowconstchanged.oldval)
+#define SCIPeventGetRowNewConstVal(event)         ((event)->data.eventrowconstchanged.newval)
+#define SCIPeventGetRowSide(event)                ((event)->data.eventrowsidechanged.side)
+#define SCIPeventGetRowOldSideVal(event)          ((event)->data.eventrowsidechanged.oldval)
+#define SCIPeventGetRowNewSideVal(event)          ((event)->data.eventrowsidechanged.newval)
+
+#endif
+
+/* @} */
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -75,6 +75,7 @@
 #define DEFAULT_SEPARATEROWS       TRUE /**< separate rows with integral slack */
 #define DEFAULT_DELAYEDCUTS        TRUE /**< should cuts be added to the delayed cut pool? */
 #define DEFAULT_SIDETYPEBASIS     FALSE /**< choose side types of row (lhs/rhs) based on basis information? */
+#define DEFAULT_RANDSEED             53 /**< initial random seed */
 
 #define BOUNDSWITCH              0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
 #define USEVBDS                    TRUE /**< use variable bounds - see SCIPcalcMIR() */
@@ -88,6 +89,7 @@
 /** separator data */
 struct SCIP_SepaData
 {
+   SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
    SCIP_Real             maxweightrange;     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             away;               /**< minimal integrality violation of a basis variable in order to try Gomory cut */
    int                   maxrounds;          /**< maximal number of gomory separation rounds per node (-1: unlimited) */
@@ -170,6 +172,7 @@ SCIP_DECL_SEPACOPY(sepaCopyGomory)
 }
 
 /** destructor of separator to free user data (called when SCIP is exiting) */
+/**! [SnippetSepaFreeGomory] */
 static
 SCIP_DECL_SEPAFREE(sepaFreeGomory)
 {  /*lint --e{715}*/
@@ -181,12 +184,16 @@ SCIP_DECL_SEPAFREE(sepaFreeGomory)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   SCIPfreeMemory(scip, &sepadata);
+   /* free random number generator */
+   SCIPrandomFree(&sepadata->randnumgen);
+
+   SCIPfreeBlockMemory(scip, &sepadata);
 
    SCIPsepaSetData(sepa, NULL);
 
    return SCIP_OKAY;
 }
+/**! [SnippetSepaFreeGomory] */
 
 
 /** LP solution separation method of separator */
@@ -322,13 +329,16 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    /* get basis indices */
    SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
 
+   /* permute basis indices to reduce performance variability */
+   SCIPrandomPermuteIntArray(sepadata->randnumgen, basisind, 0, nrows);
+
    /* get the maximal number of cuts allowed in a separation round */
    if( depth == 0 )
       maxsepacuts = sepadata->maxsepacutsroot;
    else
       maxsepacuts = sepadata->maxsepacuts;
 
-   SCIPdebugMessage("searching gomory cuts: %d cols, %d rows, maxdnom=%" SCIP_LONGINT_FORMAT ", maxscale=%g, maxcuts=%d\n",
+   SCIPdebugMsg(scip, "searching gomory cuts: %d cols, %d rows, maxdnom=%" SCIP_LONGINT_FORMAT ", maxscale=%g, maxcuts=%d\n",
       ncols, nrows, maxdnom, maxscale, maxsepacuts);
 
    cutoff = FALSE;
@@ -356,7 +366,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
             if( SCIPfeasFrac(scip, primsol) >= minfrac )
             {
-               SCIPdebugMessage("trying gomory cut for col <%s> [%g]\n", SCIPvarGetName(var), primsol);
+               SCIPdebugMsg(scip, "trying gomory cut for col <%s> [%g]\n", SCIPvarGetName(var), primsol);
                tryrow = TRUE;
             }
          }
@@ -374,7 +384,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             primsol = SCIPgetRowActivity(scip, row);
             if( SCIPfeasFrac(scip, primsol) >= minfrac )
             {
-               SCIPdebugMessage("trying gomory cut for row <%s> [%g]\n", SCIProwGetName(row), primsol);
+               SCIPdebugMsg(scip, "trying gomory cut for row <%s> [%g]\n", SCIProwGetName(row), primsol);
                tryrow = TRUE;
             }
          }
@@ -455,7 +465,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
           *       leads to cut a of the form \sum a_i x_i \geq 1. Rumor has it that these cuts are better.
           */
 
-         SCIPdebugMessage(" -> success=%u: %g <= %g\n", success, cutact, cutrhs);
+         SCIPdebugMsg(scip, " -> success=%u: %g <= %g\n", success, cutact, cutrhs);
 
          /* if successful, convert dense cut into sparse row, and add the row as a cut */
          if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
@@ -492,7 +502,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
             if( SCIProwGetNNonz(cut) == 0 )
             {
                assert(SCIPisFeasNegative(scip, cutrhs));
-               SCIPdebugMessage(" -> gomory cut detected infeasibility with cut 0 <= %f\n", cutrhs);
+               SCIPdebugMsg(scip, " -> gomory cut detected infeasibility with cut 0 <= %f\n", cutrhs);
                cutoff = TRUE;
             }
             else if( SCIProwGetNNonz(cut) == 1 )
@@ -516,7 +526,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
                   assert(SCIPisInfinity(scip, -SCIProwGetLhs(cut)));
                   assert(!SCIPisInfinity(scip, SCIProwGetRhs(cut)));
 
-                  SCIPdebugMessage(" -> gomory cut for <%s>: act=%f, rhs=%f, eff=%f\n",
+                  SCIPdebugMsg(scip, " -> gomory cut for <%s>: act=%f, rhs=%f, eff=%f\n",
                      c >= 0 ? SCIPvarGetName(SCIPcolGetVar(cols[c])) : SCIProwGetName(rows[-c-1]),
                      cutact, cutrhs, SCIPgetCutEfficacy(scip, NULL, cut));
 
@@ -524,7 +534,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
 
                   if( useful )
                   {
-                     SCIPdebugMessage(" -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
+                     SCIPdebugMsg(scip, " -> found gomory cut <%s>: act=%f, rhs=%f, norm=%f, eff=%f, min=%f, max=%f (range=%f)\n",
                         cutname, SCIPgetRowLPActivity(scip, cut), SCIProwGetRhs(cut), SCIProwGetNorm(cut),
                         SCIPgetCutEfficacy(scip, NULL, cut),
                         SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
@@ -572,7 +582,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutcoefs);
 
-   SCIPdebugMessage("end searching gomory cuts: found %d cuts\n", naddedcuts);
+   SCIPdebugMsg(scip, "end searching gomory cuts: found %d cuts\n", naddedcuts);
 
    sepadata->lastncutsfound = SCIPgetNCutsFound(scip);
 
@@ -601,8 +611,12 @@ SCIP_RETCODE SCIPincludeSepaGomory(
    SCIP_SEPA* sepa;
 
    /* create separator data */
-   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
    sepadata->lastncutsfound = 0;
+
+   /* create random number generator */
+   SCIP_CALL( SCIPrandomCreate(&sepadata->randnumgen, SCIPblkmem(scip),
+         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,

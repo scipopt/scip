@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -89,7 +89,8 @@ extern
 SCIP_RETCODE SCIPintListNodeAppendCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    IDX**                 node1,              /**< pointer to the last node of list to be enlarged */
-   IDX*                  node2               /**< pointer to the last node of source list */
+   IDX*                  node2,              /**< pointer to the last node of source list */
+   SCIP_Bool*            conflict            /**< pointer to store whether a conflict has been detected by the method */
    );
 
 /** insert a new node */
@@ -234,6 +235,14 @@ SCIP_RETCODE SCIPpairheapBuffarr(
 /** initializes the union-find structure 'uf' with 'length' many components (of size one) */
 extern
 SCIP_RETCODE SCIPunionfindInit(
+   SCIP*                 scip,               /**< SCIP data structure */
+   UF*                   uf,                 /**< union find data structure */
+   int                   length              /**< number of components */
+   );
+
+/** clears the union-find structure 'uf'*/
+extern
+void SCIPunionfindClear(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf,                 /**< union find data structure */
    int                   length              /**< number of components */

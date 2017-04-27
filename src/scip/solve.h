@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   solve.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for main solving loop and node processing
  * @author Tobias Achterberg
  */
@@ -41,6 +42,7 @@
 #include "scip/type_sepastore.h"
 #include "scip/type_cutpool.h"
 #include "scip/type_conflict.h"
+#include "scip/type_conflictstore.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,7 +58,7 @@ SCIP_Bool SCIPsolveIsStopped(
    SCIP_Bool             checknodelimits     /**< should the node limits be involved in the check? */
    );
 
-/** applies domain propagation on current node and flushes the conflict storage afterwards */
+/** applies domain propagation on current node and flushes the conflict store afterwards */
 extern
 SCIP_RETCODE SCIPpropagateDomains(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
@@ -84,6 +86,7 @@ SCIP_RETCODE SCIPinitConssLP(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_CUTPOOL*         cutpool,            /**< global cutpool */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
@@ -112,6 +115,7 @@ SCIP_RETCODE SCIPconstructCurrentLP(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_CUTPOOL*         cutpool,            /**< global cutpool */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
@@ -133,7 +137,8 @@ SCIP_RETCODE SCIPprimalHeuristics(
                                               *   (only needed when calling after node heuristics) */
    SCIP_HEURTIMING       heurtiming,         /**< current point in the node solving process */
    SCIP_Bool             nodeinfeasible,     /**< was the current node already detected to be infeasible? */
-   SCIP_Bool*            foundsol            /**< pointer to store whether a solution has been found */
+   SCIP_Bool*            foundsol,           /**< pointer to store whether a solution has been found */
+   SCIP_Bool*            unbounded           /**< pointer to store whether an unbounded ray was found in the LP */
    );
 
 /** applies one round of separation on the given primal solution or on the LP solution */
@@ -172,6 +177,7 @@ SCIP_RETCODE SCIPpriceLoop(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_PRICESTORE*      pricestore,         /**< pricing storage */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   SCIP_CUTPOOL*         cutpool,            /**< global cutpool */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
@@ -208,6 +214,7 @@ SCIP_RETCODE SCIPsolveCIP(
    SCIP_CUTPOOL*         delayedcutpool,     /**< global delayed cut pool */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
