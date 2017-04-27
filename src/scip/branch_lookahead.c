@@ -16,8 +16,8 @@
 /*
 #define PRINTNODECONS
 #define LAB_PRINT_BUFFER
-#define SCIP_DEBUG
 */
+#define SCIP_DEBUG
 #define SCIP_STATISTIC
 
 
@@ -1610,8 +1610,7 @@ SCIP_RETCODE selectVarStart(
    STATUS*               status,
    BRANCHINGDECISION*    decision,
    SCORECONTAINER*       scorecontainer,
-   CANDIDATELIST*        candidates,
-   SCIP_Real             lpobjval
+   CANDIDATELIST*        candidates
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics
    ,LOCALSTATISTICS*     localstats
@@ -2638,7 +2637,6 @@ static
 SCIP_RETCODE getFSBResult(
    SCIP*                 scip,
    CONFIGURATION*        parentconfig,
-   SCIP_Real             lpobjval,
    CANDIDATELIST*        candidates,
    STATUS*               status,
    SCORECONTAINER*       scorecontainer
@@ -2681,14 +2679,14 @@ SCIP_RETCODE getFSBResult(
    SCIP_CALL( statisticsAllocate(scip, &statistics, parentconfig->recursiondepth, parentconfig->maxncands) );
    SCIP_CALL( localStatisticsAllocate(scip, &localstats) );
 
-   SCIP_CALL( selectVarStart(scip, config, NULL, status, decision, scorecontainer, candidates, lpobjval, statistics, localstats) );
+   SCIP_CALL( selectVarStart(scip, config, NULL, status, decision, scorecontainer, candidates, statistics, localstats) );
 
    mergeFSBStatistics(parentstatistics, statistics);
 
    localStatisticsFree(scip, &localstats);
    statisticsFree(scip, &statistics);
 #else
-   SCIP_CALL( selectVarStart(scip, config, NULL, status, decision, scorecontainer, candidates, lpobjval) );
+   SCIP_CALL( selectVarStart(scip, config, NULL, status, decision, scorecontainer, candidates) );
 #endif
 
    branchingDecisionFree(scip, &decision);
@@ -2953,7 +2951,6 @@ SCIP_RETCODE getBestCandidates(
 #endif
    )
 {
-   SCIP_Real lpobjval;
    int probingdepth;
    int nusedcands;
    int* permutation;
@@ -2975,8 +2972,6 @@ SCIP_RETCODE getBestCandidates(
    nusedcands = MIN(config->maxncands, allcandidates->ncandidates);
 
    probingdepth = SCIPinProbing(scip) ? SCIPgetProbingDepth(scip) : 0;
-
-   lpobjval = SCIPgetLPObjval(scip);
 
    /* filter the "candidates" based on the presence of a score in the 'scorecontainer'. Only those without a score need a
     * new one. */
@@ -3052,9 +3047,9 @@ SCIP_RETCODE getBestCandidates(
 
          /* Calculate all FSB scores and collect it in the result */;
 #ifdef SCIP_STATISTIC
-         SCIP_CALL( getFSBResult(scip, config, lpobjval, unscoredcandidates, status, scorecontainer, statistics) );
+         SCIP_CALL( getFSBResult(scip, config, unscoredcandidates, status, scorecontainer, statistics) );
 #else
-         SCIP_CALL( getFSBResult(scip, config, lpobjval, unscoredcandidates, status, scorecontainer) );
+         SCIP_CALL( getFSBResult(scip, config, unscoredcandidates, status, scorecontainer) );
 #endif
 
          LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Calculated the scores for the remaining candidates\n");
@@ -3621,9 +3616,7 @@ SCIP_RETCODE selectVarRecursive(
    /* init default decision */
    decision->var = candidates->candidates[0]->branchvar;
    decision->val = candidates->candidates[0]->branchval;
-   decision->downdb = lpobjval;
    decision->downdbvalid = FALSE;
-   decision->updb = lpobjval;
    decision->updbvalid = FALSE;
    decision->proveddb = lpobjval;
 
@@ -3968,8 +3961,7 @@ SCIP_RETCODE selectVarStart(
    STATUS*               status,
    BRANCHINGDECISION*    decision,
    SCORECONTAINER*       scorecontainer,
-   CANDIDATELIST*        possiblecandidates, /**< the list of candidates for branching */
-   SCIP_Real             lpobjval
+   CANDIDATELIST*        possiblecandidates  /**< the list of candidates for branching */
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics
    ,LOCALSTATISTICS*     localstats
@@ -3982,6 +3974,7 @@ SCIP_RETCODE selectVarStart(
    BINCONSDATA* binconsdata = NULL;
    SCIP_SOL* baselpsol = NULL;
    SCIP_Bool inprobing;
+   SCIP_Real lpobjval;
 
    assert(scip != NULL);
    assert(config != NULL);
@@ -3993,6 +3986,9 @@ SCIP_RETCODE selectVarStart(
    recursiondepth = config->recursiondepth;
 
    assert(recursiondepth > 0);
+
+   lpobjval = SCIPgetLPObjval(scip);
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The objective value of the base lp is <%g>\n", lpobjval);
 
    if( config->usedomainreduction || config->usebincons )
    {
@@ -4116,7 +4112,6 @@ SCIP_RETCODE selectVarStart(
       }
 #endif
    }
-
 #ifdef SCIP_STATISTIC
    else
    {
@@ -4452,7 +4447,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
       SCORECONTAINER* scorecontainer = NULL;
       CANDIDATELIST* allcandidates;
       STATUS* status;
-      SCIP_Real lpobjval;
 #ifdef SCIP_STATISTIC
       LOCALSTATISTICS* localstats;
 #endif
@@ -4470,19 +4464,15 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 
       LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The base lp has <%i> variables with fractional value.\n", allcandidates->ncandidates);
 
-      lpobjval = SCIPgetLPObjval(scip);
-
-      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "The objective value of the base lp is <%g>\n", lpobjval);
-
       /* execute the main logic */
 #ifdef SCIP_STATISTIC
       /* create a struct to store the statistics needed for this single run */
       SCIP_CALL( localStatisticsAllocate(scip, &localstats) );
       SCIP_CALL( selectVarStart(scip, branchruledata->config, branchruledata->persistent, status, decision,
-            scorecontainer, allcandidates, lpobjval, branchruledata->statistics, localstats) );
+            scorecontainer, allcandidates, branchruledata->statistics, localstats) );
 #else
       SCIP_CALL( selectVarStart(scip, branchruledata->config, branchruledata->persistent, status, decision,
-            scorecontainer, allcandidates, lpobjval) );
+            scorecontainer, allcandidates) );
 #endif
 
       if( status->cutoff || status->domredcutoff )
