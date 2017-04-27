@@ -942,8 +942,12 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    nlpiSolved = nlpi;
    nlpiProblemSolved = problem;
 
-   /* store our value for infinity in filtersqps global variable for that purpose */
+   /* initialize global variables from filtersqp */
+   F77_FUNC_(nlp_eps_inf,NLP_EPS_INF).eps = 1e-8;
    F77_FUNC_(nlp_eps_inf,NLP_EPS_INF).infty = SCIPnlpiOracleGetInfinity(problem->oracle);
+   F77_FUNC(ubdc,UBDC).ubd = 100.0;
+   F77_FUNC(ubdc,UBDC).tt = 1.25;
+   F77_FUNC(scalec,SCALEC).scale_mode = 0;
 
    F77_FUNC(filtersqp,FILTERSQP)(
       &n, &m, &kmax, &maxa,
