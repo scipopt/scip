@@ -304,21 +304,23 @@ SCIP_RETCODE setupGradients(
     * where n = nvars and m = ncons
     */
 
-   /* need space for column indices and rowstarts and la(0) */
-   SCIP_ALLOC( BMSallocMemoryArray(la, 1 + (nvars+nnz) + 1+ncons) );
+   /* need space for la(0) and column indices and rowstarts (1+ncons+1 for objective, constraints, and end (offsets[ncons])) */
+   SCIP_ALLOC( BMSallocMemoryArray(la, 1 + (nvars+nnz) + 1+ncons + 1) );
 
    (*la)[0] = nvars+nnz+1;
 
    /* the objective gradient is stored in sparse form */
    for( i = 0; i < nvars; ++i )
-      (*la)[1+i] = i;
-   (*la)[(*la)[0]] = 0;  /* objective entries start at the beginning in a */
+      (*la)[1+i] = 1+i;  /* shift by 1 for Fortran */
+   (*la)[(*la)[0]] = 1;  /* objective entries start at the beginning in a, shift by 1 for Fortran */
 
+   /* column indicies are as given by col */
    for( i = 0; i < nnz; ++i )
-      (*la)[1+nvars+i] = col[i];
+      (*la)[1+nvars+i] = col[i] + 1;  /* shift by 1 for Fortran */
 
+   /* rowstarts are as given by offset, plus extra for objective gradient */
    for( c = 0; c <= ncons; ++c )
-      (*la)[(*la)[0]+1+c] = offset[c];
+      (*la)[(*la)[0]+1+c] = offset[c] + nvars + 1;  /* shift by nvars for objective, shift by 1 for Fortran */
 
    /* maximal number entries in a: need space for objective gradient (dense) and Jacobian nonzeros */
    *maxa = nvars + nnz;
@@ -345,7 +347,9 @@ void F77_FUNC(objgrad,OBJGRAD)(
    )
 */
 void F77_FUNC(objgrad,OBJGRAD)(void)
-{ }
+{
+   SCIPerrorMessage("Objgrad not implemented. Should not be called.\n");
+}
 
 /** Hessian of the Lagrangian evaluation
  *
@@ -370,6 +374,7 @@ F77_FUNC(hessian,HESSIAN)(
    fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
    )
 {
+   SCIPerrorMessage("Hessian not implemented. Should not be called.\n");
    *errflag = 1;
 }
 
@@ -933,11 +938,16 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    kmax = n;    /* maximal nullspace dimension */
    maxf = 100;  /* maximal filter length */
    mlp = 100;   /* maximum level of degeneracy */
-   mxwk = 21*n + 8*m + mlp + 8*maxf + kmax*(kmax+9)/2 + 20*n;  /* initial guess of integer workspace size */
-   /* Bonmin additional adds lh1 = nnz_h+8+2*n+m to mxwk and mxiwk */
+   /* initial guess of real workspace size */
+   /* FilterSQP manual: mxwk = 21*n + 8*m + mlp + 8*maxf + kmax*(kmax+9)/2 + 20*n */
+   /* Bonmin:           mxwk = 21*n + 8*m + mlp + 8*maxf + lh1 + kmax*(kmax+9)/2 + mxwk0,
+    *                      with lh1 = nnz_h+8+2*n+m and mxwk0 = 2000000 (parameter) */
+   mxwk = 21*n + 8*m + mlp + 8*maxf + kmax*(kmax+9)/2 + 20*n;
 
-   mxiwk = 13*n + 4*m + mlp + 100 + kmax;  /* initial real workspace size */
-   /* Bonmin uses mxiwk = 13*n + 4*m + mlp + lh1 + kmax + 113 + mxiwk0 */
+   /* initial guess of integer workspace size */
+   /* FilterSQP manual: mxiwk = 13*n + 4*m + mlp + 100 + kmax */
+   /* Bonmin:           mxiwk = 13*n + 4*m + mlp + lh1 + kmax + 113 + mxiwk0, with mxiwk0 = 500000 (parameter) */
+   mxiwk = 13*n + 4*m + mlp + 100 + kmax + 113;
 
    iprint = 1;  /* print level */
    nout = 6;   /* output to screen (for now?) */
@@ -958,7 +968,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    SCIP_ALLOC( BMSallocMemoryArray(&s, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&ws, mxwk) );
    SCIP_ALLOC( BMSallocMemoryArray(&lws, mxiwk) );
-   SCIP_ALLOC( BMSallocMemoryArray(&lam, n+m) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&lam, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&cstype, m) );
 
    /* allocate la, a and initialize la and maxa */
@@ -966,7 +976,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 
    /* setup variable bounds, constraint sides, and constraint types */
    BMScopyMemoryArray(bl, SCIPnlpiOracleGetVarLbs(problem->oracle), n);
-   BMScopyMemoryArray(bu, SCIPnlpiOracleGetVarLbs(problem->oracle), n);
+   BMScopyMemoryArray(bu, SCIPnlpiOracleGetVarUbs(problem->oracle), n);
    for( i = 0; i < m; ++i )
    {
       bl[n+i] = SCIPnlpiOracleGetConstraintLhs(problem->oracle, i);
@@ -991,7 +1001,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    F77_FUNC(ubdc,UBDC).ubd = 100.0;
    F77_FUNC(ubdc,UBDC).tt = 1.25;
    F77_FUNC(scalec,SCALEC).scale_mode = 0;
-   F77_FUNC(hessc,HESSC).phl = 0; /* no Hessian yet, is it? */
+   F77_FUNC(hessc,HESSC).phl = 0; /* no Hessian yet, is it? doesn't seem to work*/
 
    F77_FUNC(filtersqp,FILTERSQP)(
       &n, &m, &kmax, &maxa,
