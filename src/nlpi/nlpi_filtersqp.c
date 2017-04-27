@@ -17,12 +17,17 @@
  * @ingroup NLPIS
  * @brief   filterSQP NLP interface
  * @author  Stefan Vigerske
+ *
+ * @todo warm starts
+ * @todo hessian
+ * @todo scaling
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string.h>
 
+#include "scip/pub_misc.h"
 #include "nlpi/nlpi_filtersqp.h"
 #include "nlpi/nlpi.h"
 #include "nlpi/nlpioracle.h"
@@ -195,7 +200,14 @@ void F77_FUNC(objfun,OBJFUN)(
    fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
    )
 {
+   SCIP_NLPIPROBLEM* problem;
+
+   problem = (SCIP_NLPIPROBLEM*)iuser;
+   assert(problem != NULL);
+
    *errflag = 1;
+   if( SCIPnlpiOracleEvalObjectiveValue(problem->oracle, x, f) == SCIP_OKAY )
+      *errflag = !SCIPisFinite(*f);
 }
 
 /** Constraint functions evaluation */
@@ -211,7 +223,52 @@ void F77_FUNC(confun,CONFUN)(
    fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
    )
 {
-   *errflag = 1;
+   SCIP_NLPIPROBLEM* problem;
+   int j;
+
+   problem = (SCIP_NLPIPROBLEM*)iuser;
+   assert(problem != NULL);
+
+   *errflag = 0;
+   for( j = 0; j < *m; ++j )
+   {
+      if( SCIPnlpiOracleEvalConstraintValue(problem->oracle, j, x, c+j) != SCIP_OKAY || !SCIPisFinite(c[j]) )
+      {
+         *errflag = 1;
+         break;
+      }
+   }
+}
+
+/** Objective gradient and Jacobian evaluation
+ *
+ * \note If an arithmetic exception occurred, then the gradients must not be modified.
+ */
+void
+F77_FUNC(gradient,GRADIENT)(
+   fint*                 n,                  /**< number of variables */
+   fint*                 m,                  /**< number of constraints */
+   fint*                 mxa,                /**< actual number of entries in a */
+   real*                 x,                  /**< value of current variables (array of length n) */
+   real*                 a,                  /**< Jacobian matrix entries */
+   fint*                 la,                 /**< Jacobian index information: column indices and pointers to start of each row */
+   fint*                 maxa,               /**< maximal size of a */
+   real*                 user,               /**< user real workspace */
+   fint*                 iuser,              /**< user integer workspace */
+   fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
+   )
+{
+   SCIP_NLPIPROBLEM* problem;
+   SCIP_Real dummy;
+
+   problem = (SCIP_NLPIPROBLEM*)iuser;
+   assert(problem != NULL);
+
+   *errflag = 0;
+
+   /* TODO handle arithmetic exception, in which case we must not modify a */
+   SCIPnlpiOracleEvalObjectiveGradient(problem->oracle, x, TRUE, &dummy, a);
+   SCIPnlpiOracleEvalJacobian(problem->oracle, x, TRUE, NULL, a+*n);
 }
 
 static
@@ -289,27 +346,6 @@ void F77_FUNC(objgrad,OBJGRAD)(
 */
 void F77_FUNC(objgrad,OBJGRAD)(void)
 { }
-
-/** Objective gradient and Jacobian evaluation
- *
- * \note If an arithmetic exception occurred, then the gradients must not be modified.
- */
-void
-F77_FUNC(gradient,GRADIENT)(
-   fint*                 n,                  /**< number of variables */
-   fint*                 m,                  /**< number of constraints */
-   fint*                 mxa,                /**< actual number of entries in a */
-   real*                 x,                  /**< value of current variables (array of length n) */
-   real*                 a,                  /**< Jacobian matrix entries */
-   fint*                 la,                 /**< Jacobian index information: column indices and pointers to start of each row */
-   fint*                 maxa,               /**< maximal size of a */
-   real*                 user,               /**< user real workspace */
-   fint*                 iuser,              /**< user integer workspace */
-   fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
-   )
-{
-   *errflag = 1;
-}
 
 /** Hessian of the Lagrangian evaluation
  *
@@ -955,6 +991,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    F77_FUNC(ubdc,UBDC).ubd = 100.0;
    F77_FUNC(ubdc,UBDC).tt = 1.25;
    F77_FUNC(scalec,SCALEC).scale_mode = 0;
+   F77_FUNC(hessc,HESSC).phl = 0; /* no Hessian yet, is it? */
 
    F77_FUNC(filtersqp,FILTERSQP)(
       &n, &m, &kmax, &maxa,
