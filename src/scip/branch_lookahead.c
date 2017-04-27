@@ -2673,7 +2673,7 @@ SCIP_RETCODE getFSBResult(
    /* We want the FSB score over all candidates, otherwise we get end in an endless loop. */
    config->abbreviated = FALSE;
    /* Even for one single candidate we want to get the corresponding values */
-   config->forcebranching = inprobing || config->forcebranching;
+   config->forcebranching = TRUE;
 
 #ifdef SCIP_STATISTIC
    SCIP_CALL( statisticsAllocate(scip, &statistics, parentconfig->recursiondepth, parentconfig->maxncands) );
@@ -2821,7 +2821,6 @@ SCIP_Real calculcateScoreFromResult(
    SCIP_Real downgain = 0;
    SCIP_Real upgain = 0;
 
-   /* TODO: currently scoring function is best gain. Maybe make it more generic? */
    if( downbranchingresult != NULL )
    {
       SCIP_Real downdualbound = downbranchingresult->dualboundvalid ? downbranchingresult->dualbound :
@@ -2920,7 +2919,6 @@ SCIP_Bool isCandidateReliable(
    CANDIDATE*            lpcand
    )
 {
-   /* TODO: start for reliability LAB */
    SCIP_VAR* branchvar = lpcand->branchvar;
    SCIP_Real size;
    int downsize;
@@ -2987,7 +2985,6 @@ SCIP_RETCODE getBestCandidates(
       {
          CANDIDATE* lpcand = allcandidates->candidates[i];
 
-         /* TODO: replace by a new parameter */
          if( config->abbrevpseudo )
          {
             if( !isCandidateReliable(scip, lpcand) )
@@ -4401,12 +4398,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 {  /*lint --e{715}*/
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_SOL* baselpsol = NULL;
-   int oldverblevel;
+   /*int oldverblevel;*/
    SCIP_Bool userusebincons;
-
-   /* TODO: fix this, broken in src/scip/heur_rens.c:488 */
-   SCIP_CALL( SCIPgetIntParam(scip, "display/verblevel", &oldverblevel) );
-   SCIP_CALL( SCIPsetIntParam(scip, "display/verblevel", 5) );
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
@@ -4574,9 +4567,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 
    branchruledata->config->usebincons = userusebincons;
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Exiting branchExeclpLookahead.\n");
-
-   /* TODO: remove, see start of the method */
-   SCIPsetIntParam(scip, "display/verblevel", oldverblevel);
 
    return SCIP_OKAY;
 }
