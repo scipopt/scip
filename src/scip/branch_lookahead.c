@@ -16,8 +16,8 @@
 /*
 #define PRINTNODECONS
 #define LAB_PRINT_BUFFER
-*/
 #define SCIP_DEBUG
+*/
 #define SCIP_STATISTIC
 
 

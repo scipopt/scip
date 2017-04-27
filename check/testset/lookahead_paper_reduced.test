@@ -1,6 +1,6 @@
 IP/miplib2003/aflow30a.mps.gz
-#IP/miplib2003/aflow40b.mps.gz#noOpt
-#IP/miplib2003/danoint.mps.gz#noOpt
+IP/miplib2003/aflow40b.mps.gz
+IP/miplib2003/danoint.mps.gz
 IP/miplib3/l152lav.mps.gz
 IP/miplib3/misc07.mps.gz
 IP/miplib3/modglob.mps.gz
@@ -12,5 +12,5 @@ IP/miplib3/pp08a.mps.gz
 IP/miplib3/qiu.mps.gz
 #IP/miplib3/rgn.mps.gz#preSolved
 IP/miplib3/stein45.mps.gz
-#IP/miplib3/swath.mps.gz#noOpt
+IP/miplib3/swath.mps.gz
 IP/miplib3/vpm2.mps.gz
