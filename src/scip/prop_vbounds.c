@@ -2295,14 +2295,14 @@ SCIP_RETCODE tarjan(
                   }
                   else
                   {
-                     if( nodeonstack[-cliquefirstentry[clqidx] + 1] )
+                     if( nodeonstack[-cliquefirstentry[clqidx] - 1] )
                      {
-                        printf("infeasible assignment (1a): %s(%s)\n", indexGetBoundString(-cliquefirstentry[clqidx] + 1),
-                           SCIPvarGetName(vars[getVarIndex(-cliquefirstentry[clqidx] + 1)]));
-                        infeasnodes[*ninfeasnodes] = -cliquefirstentry[clqidx] + 1;
+                        printf("infeasible assignment (1a): %s(%s)\n", indexGetBoundString(-cliquefirstentry[clqidx] - 1),
+                           SCIPvarGetName(vars[getVarIndex(-cliquefirstentry[clqidx] - 1)]));
+                        infeasnodes[*ninfeasnodes] = -cliquefirstentry[clqidx] - 1;
                         ++(*ninfeasnodes);
                      }
-                     else if( nodeindex[-cliquefirstentry[clqidx] + 1] >= *startindex )
+                     else if( nodeindex[-cliquefirstentry[clqidx] - 1] >= *startindex )
                      {
                         printf("infeasible assignment (2a): %s(%s)\n", indexGetBoundString(startnode),
                            SCIPvarGetName(vars[getVarIndex(startnode)]));
