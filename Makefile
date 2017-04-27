@@ -340,7 +340,7 @@ NLPILIBCOBJ	+= 	nlpi/nlpi_ipopt_dummy.o
 endif
 
 ifeq ($(WORHP),true)
-NLPILIBCXXOBJ	+= 	nlpi/nlpi_worhp.o
+NLPILIBCOBJ	+= 	nlpi/nlpi_worhp.o
 else
 NLPILIBCOBJ	+= 	nlpi/nlpi_worhp_dummy.o
 endif
