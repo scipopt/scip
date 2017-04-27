@@ -2262,8 +2262,7 @@ SCIP_RETCODE tarjan(
                         infeasnodes[*ninfeasnodes] = cliquefirstentry[clqidx] - 1;
                         ++(*ninfeasnodes);
 
-                        assert(nodeonstack[cliquecurrentexit[clqidx]]);
-                        if( nodeindex[cliquecurrentexit[clqidx]] < nodelowlink[curridx] )
+                        if( nodeonstack[cliquecurrentexit[clqidx]] && nodeindex[cliquecurrentexit[clqidx]] < nodelowlink[curridx] )
                         {
                            nodelowlink[curridx] = nodeindex[cliquecurrentexit[clqidx]];
                         }
