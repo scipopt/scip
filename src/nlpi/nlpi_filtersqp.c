@@ -915,7 +915,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    memset(istat, 0, sizeof(istat));
    memset(rstat, 0, sizeof(rstat));
 
-   SCIP_ALLOC( BMSduplicateMemoryArray(&x, problem->initguess, n) ); /* TODO initguess can be NULL */
+   SCIP_ALLOC( BMSallocMemoryArray(&x, n) );
    SCIP_ALLOC( BMSallocMemoryArray(&c, m) );
    SCIP_ALLOC( BMSallocMemoryArray(&bl, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&bu, n+m) );
@@ -937,6 +937,13 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       bu[n+i] = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
       cstype[i] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, i) <= 1 ? 'L' : 'N';
    }
+
+   /* setup starting point */
+   if( problem->initguess != NULL )
+      BMScopyMemoryArray(x, problem->initguess, n);
+   else
+      for( i = 0; i < n; ++i )
+         x[i] = MIN(MAX(0.0, bl[i]), bu[i]);  /* TODO nlpi_ipopt avoids to start exactly at 0.0 or bounds */
 
    /* TODO from here on we are not thread-safe: maybe add some mutex here if PARASCIP=true? */
    nlpiSolved = nlpi;
