@@ -218,6 +218,64 @@ void F77_FUNC(confun,CONFUN)(
    *errflag = 1;
 }
 
+static
+SCIP_RETCODE setupGradients(
+   SCIP_NLPIORACLE*      oracle,
+   fint**                la,
+   real**                a,
+   fint*                 maxa
+)
+{
+   const int* offset;
+   const int* col;
+   int nnz;  /* number of nonzeros in Jacobian */
+   int nvars;
+   int ncons;
+   int i;
+   int c;
+
+   nvars = SCIPnlpiOracleGetNVars(oracle);
+   ncons = SCIPnlpiOracleGetNConstraints(oracle);
+
+   /* get jacobian sparsity in oracle format: offset are rowstarts in col and col are column indices */
+   SCIP_CALL( SCIPnlpiOracleGetJacobianSparsity(oracle, &offset, &col) );
+   nnz = offset[ncons];
+
+   /* la stores both column indices (first) and rowstarts (at the end) of the objective gradient and Jacobian
+    * For the objective gradient, always n entries are taken, the Jacobian is stored sparse
+    * la(0) = n+nnz+1 position where rowstarts start in la
+    * la(j) column index of objective gradient or Jacobian row, rowwise
+    * la(la(0)) position of first nonzero element for objective gradient in a()
+    * la(la(0)+i) position of first nonzero element for constraint i gradient in a(), i=1..m
+    * la(la(0)+m+1) = n+nnz first unused position in a
+    * where n = nvars and m = ncons
+    */
+
+   /* need space for column indices and rowstarts and la(0) */
+   SCIP_ALLOC( BMSallocMemoryArray(la, 1 + (nvars+nnz) + 1+ncons) );
+
+   (*la)[0] = nvars+nnz+1;
+
+   /* the objective gradient is stored in sparse form */
+   for( i = 0; i < nvars; ++i )
+      (*la)[1+i] = i;
+   (*la)[(*la)[0]] = 0;  /* objective entries start at the beginning in a */
+
+   for( i = 0; i < nnz; ++i )
+      (*la)[1+nvars+i] = col[i];
+
+   for( c = 0; c <= ncons; ++c )
+      (*la)[(*la)[0]+1+c] = offset[c];
+
+   /* maximal number entries in a: need space for objective gradient (dense) and Jacobian nonzeros */
+   *maxa = nvars + nnz;
+
+   SCIP_ALLOC( BMSallocMemoryArray(a, *maxa) );
+
+   return SCIP_OKAY;
+}
+
+
 /* Objective gradient evaluation */
 /*
 void F77_FUNC(objgrad,OBJGRAD)(
@@ -845,7 +903,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    mxwk = 21*n + 8*m + mlp + 8*maxf + kmax*(kmax+9)/2 + 20*n;  /* initial guess of integer workspace size */
    /* Bonmin additional adds lh1 = nnz_h+8+2*n+m to mxwk and mxiwk */
 
-   mxiwk = 4*n + 3*m + mlp + 100 + kmax + 9*n*m;  /* initial real workspace size */
+   mxiwk = 13*n + 4*m + mlp + 100 + kmax;  /* initial real workspace size */
    /* Bonmin uses mxiwk = 13*n + 4*m + mlp + lh1 + kmax + 113 + mxiwk0 */
 
    iprint = 1;  /* print level */
@@ -861,12 +919,10 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    memset(rstat, 0, sizeof(rstat));
 
    /* TODO setup
-   maxa = maximal size of A
    bl
    bu
    s
-   a
-   la
+   lam
    cstype
    */
 
@@ -875,12 +931,12 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    SCIP_ALLOC( BMSallocMemoryArray(&bl, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&bu, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&s, n+m) );
-   SCIP_ALLOC( BMSallocMemoryArray(&a, maxa) );  /* FIXME */
-   SCIP_ALLOC( BMSallocMemoryArray(&la, maxa) ); /* FIXME */
    SCIP_ALLOC( BMSallocMemoryArray(&ws, mxwk) );
    SCIP_ALLOC( BMSallocMemoryArray(&lws, mxiwk) );
    SCIP_ALLOC( BMSallocMemoryArray(&lam, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&cstype, m) );
+
+   SCIP_CALL( setupGradients(problem->oracle, &la, &a, &maxa) );
 
    /* TODO from here on we are not thread-safe: maybe add some mutex here if PARASCIP=true? */
    nlpiSolved = nlpi;
