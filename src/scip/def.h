@@ -84,15 +84,6 @@
 #endif
 #endif
 
-/* define INLINE */
-#ifndef INLINE
-#if defined(_WIN32) || defined(_WIN64) || defined(__STDC__)
-#define INLINE                 __inline
-#else
-#define INLINE                 inline
-#endif
-#endif
-
 
 
 #include "scip/type_retcode.h"

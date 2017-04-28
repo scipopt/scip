@@ -233,6 +233,7 @@ static
 SCIP_DECL_HASHKEYVAL(hashKeyValCut)
 {  /*lint --e{715}*/
    SCIP_ROW* row;
+   unsigned int keyval;
    SCIP_Real maxval;
    SCIP_Real minval;
    SCIP_SET* set;
@@ -247,9 +248,14 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    assert(row->numminval > 0);
    assert(row->validminmaxidx);
 
-   return SCIPhashTwo(SCIPcombineTwoInt(SCIPrealHashCode(minval), SCIPrealHashCode(maxval)),
-                      SCIPcombineThreeInt(row->len, row->minidx, row->maxidx));
+   keyval = SCIPhashFour(SCIPpositiveRealHashCode(maxval, 8),
+                         SCIPpositiveRealHashCode(minval, 12),
+                         SCIPcombineThreeInt(row->maxidx, row->len, row->minidx),
+                         SCIPcombineTwoInt(row->nummaxval, row->numminval));
+
+   return keyval;
 }
+
 
 
 /*
