@@ -12637,8 +12637,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
    SCIP* scip;
    SCIP_CONSDATA* consdata1;
    SCIP_CONSDATA* consdata2;
-   SCIP_Bool coefsequal;
-   SCIP_Bool coefsnegated;
+   SCIP_Real cons2scale;
    int i;
 
    assert(key1 != NULL);
@@ -12655,33 +12654,34 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqLinearcons)
    if( consdata1->nvars != consdata2->nvars )
       return FALSE;
 
-   coefsequal = TRUE;
-   coefsnegated = TRUE;
-
-   for( i = 0; i < consdata1->nvars && (coefsequal || coefsnegated); ++i )
+   /* tests if variables are equal */
+   for( i = 0; i < consdata1->nvars; ++i )
    {
-      SCIP_Real val1;
-      SCIP_Real val2;
-
-      /* tests if variables are equal */
       if( consdata1->vars[i] != consdata2->vars[i] )
       {
          assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 1 ||
             SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == -1);
-         coefsequal = FALSE;
-         coefsnegated = FALSE;
-         break;
+         return FALSE;
       }
       assert(SCIPvarCompare(consdata1->vars[i], consdata2->vars[i]) == 0);
-
-      /* tests if coefficients are either equal or negated */
-      val1 = consdata1->vals[i];
-      val2 = consdata2->vals[i];
-      coefsequal = coefsequal && SCIPisEQ(scip, val1, val2);
-      coefsnegated = coefsnegated && SCIPisEQ(scip, val1, -val2);
    }
 
-   return (coefsequal || coefsnegated);
+   cons2scale = consdata1->vals[0] / consdata2->vals[0];
+
+   /* tests if coefficients are equal with the computed scale */
+   for( i = 1; i < consdata1->nvars; ++i )
+   {
+      SCIP_Real val1;
+      SCIP_Real val2;
+
+      val1 = consdata1->vals[i];
+      val2 = consdata2->vals[i] * cons2scale;
+
+      if( !SCIPisEQ(scip, val1, val2) )
+         return FALSE;
+   }
+
+   return TRUE;
 }
 
 /** returns the hash value of the key */
@@ -12692,6 +12692,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    int minidx;
    int mididx;
    int maxidx;
+   SCIP_Real scale;
 #ifndef NDEBUG
    SCIP* scip;
 
@@ -12710,12 +12711,13 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    mididx = SCIPvarGetIndex(consdata->vars[consdata->nvars / 2]);
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
+   scale = COPYSIGN(1.0/consdata->maxabsval, consdata->vals[0]);
 
    /* using only the variable indices as hash, since the values are compared by epsilon */
-   return SCIPhashFour(SCIPcombineFourInt(consdata->nvars, minidx, mididx, maxidx),
-                       SCIPrealHashCode(consdata->vals[0], 8),
-                       SCIPrealHashCode(consdata->vals[consdata->nvars / 2], 8),
-                       SCIPrealHashCode(consdata->vals[consdata->nvars - 1], 8));
+   return SCIPhashFour(consdata->nvars,
+                       SCIPcombineTwoInt(minidx, SCIPrealHashCode(consdata->vals[0] * scale)),
+                       SCIPcombineTwoInt(mididx, SCIPrealHashCode(consdata->vals[consdata->nvars / 2] * scale)),
+                       SCIPcombineTwoInt(maxidx, SCIPrealHashCode(consdata->vals[consdata->nvars - 1] * scale)));
 }
 
 /** compares each constraint with all other constraints for possible redundancy and removes or changes constraint 
@@ -12785,6 +12787,7 @@ SCIP_RETCODE detectRedundantConstraints(
          SCIP_CONSDATA* consdatadel;
          SCIP_CONSDATA* consdata1;
 
+         SCIP_Real scale;
          SCIP_Real lhs;
          SCIP_Real rhs;
 
@@ -12802,58 +12805,10 @@ SCIP_RETCODE detectRedundantConstraints(
          assert(consdata1->sorted);
          assert(consdata0->vars[0] == consdata1->vars[0]);
 
-         if( SCIPisEQ(scip, consdata0->vals[0], consdata1->vals[0]) )
-         {
-            /* the coefficients of both constraints are equal */
-            assert(consdata0->nvars < 2 || SCIPisEQ(scip, consdata0->vals[1], consdata1->vals[1]));
-            SCIPdebugMsg(scip, "aggregate linear constraints <%s> and <%s> with equal coefficients into single ranged row\n",
-               SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-            SCIPdebugPrintCons(scip, cons0, NULL);
-            SCIPdebugPrintCons(scip, cons1, NULL);
-
-            lhs = MAX(consdata1->lhs, consdata0->lhs);
-            rhs = MIN(consdata1->rhs, consdata0->rhs);
-         }
-         else
-         {
-            /* the coefficients of both rows are negations */
-            assert(SCIPisEQ(scip, consdata0->vals[0], -(consdata1->vals[0])));
-            assert(consdata0->nvars < 2 || SCIPisEQ(scip, consdata0->vals[1], -(consdata1->vals[1])));
-            SCIPdebugMsg(scip, "aggregate linear constraints <%s> and <%s> with negated coefficients into single ranged row\n",
-               SCIPconsGetName(cons0), SCIPconsGetName(cons1));
-            SCIPdebugPrintCons(scip, cons0, NULL);
-            SCIPdebugPrintCons(scip, cons1, NULL);
-
-            lhs = MAX(consdata1->lhs, -consdata0->rhs);
-            rhs = MIN(consdata1->rhs, -consdata0->lhs);
-         }
-
-         if( SCIPisFeasLT(scip, rhs, lhs) )
-         {
-            SCIPdebugMsg(scip, "aggregated linear constraint <%s> is infeasible\n", SCIPconsGetName(cons1));
-            *cutoff = TRUE;
-            break;
-         }
-
-         /* ensure that lhs <= rhs holds without tolerances as we only allow such rows to enter the LP */
-         if( lhs > rhs )
-         {
-            rhs = (lhs + rhs)/2;
-            lhs = rhs;
-         }
-
          /* check which constraint has to stay;
           * changes applied to an upgraded constraint will not be considered in the instance */
          if( consdata1->upgraded && !consdata0->upgraded )
          {
-            /* the coefficients of both rows are negations, we need to switch lhs and rhs and multiply them with -1 */
-            if( !SCIPisEQ(scip, consdata0->vals[0], consdata1->vals[0]) )
-            {
-               SCIP_Real tmp = lhs;
-               lhs = -rhs;
-               rhs = -tmp;
-            }
-
             consstay = cons0;
             consdatastay = consdata0;
             consdel = cons1;
@@ -12869,6 +12824,49 @@ SCIP_RETCODE detectRedundantConstraints(
             consdatastay = consdata1;
             consdel = cons0;
             consdatadel = consdata0;
+         }
+
+         scale = consdatastay->vals[0] / consdatadel->vals[0];
+         assert(scale != 0.0);
+
+         if( scale > 0.0 )
+         {
+            /* the coefficients of both constraints are parallel with a positive scale */
+            assert(consdata0->nvars < 2 || SCIPisEQ(scip, consdata0->vals[1], consdata1->vals[1]));
+            SCIPdebugMsg(scip, "aggregate linear constraints <%s> and <%s> with equal coefficients into single ranged row\n",
+               SCIPconsGetName(cons0), SCIPconsGetName(cons1));
+            SCIPdebugPrintCons(scip, cons0, NULL);
+            SCIPdebugPrintCons(scip, cons1, NULL);
+
+            lhs = MAX(scale * consdatadel->lhs, consdatastay->lhs);
+            rhs = MIN(scale * consdatadel->rhs, consdatastay->rhs);
+         }
+         else
+         {
+            /* the coefficients of both rows are negations */
+            assert(SCIPisEQ(scip, consdata0->vals[0], -(consdata1->vals[0])));
+            assert(consdata0->nvars < 2 || SCIPisEQ(scip, consdata0->vals[1], -(consdata1->vals[1])));
+            SCIPdebugMsg(scip, "aggregate linear constraints <%s> and <%s> with negated coefficients into single ranged row\n",
+               SCIPconsGetName(cons0), SCIPconsGetName(cons1));
+            SCIPdebugPrintCons(scip, cons0, NULL);
+            SCIPdebugPrintCons(scip, cons1, NULL);
+
+            lhs = MAX(scale * consdatadel->rhs, consdatastay->lhs);
+            rhs = MIN(scale * consdatadel->lhs, consdatastay->rhs);
+         }
+
+         if( SCIPisFeasLT(scip, rhs, lhs) )
+         {
+            SCIPdebugMsg(scip, "aggregated linear constraint <%s> is infeasible\n", SCIPconsGetName(cons1));
+            *cutoff = TRUE;
+            break;
+         }
+
+         /* ensure that lhs <= rhs holds without tolerances as we only allow such rows to enter the LP */
+         if( lhs > rhs )
+         {
+            rhs = (lhs + rhs)/2;
+            lhs = rhs;
          }
 
          /* update lhs and rhs of consstay */
