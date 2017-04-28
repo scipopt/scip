@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define DEBUG_TARJAN
+#define DEBUG_TARJAN
 /**@file   prop_vbounds.c
  * @brief  variable upper and lower bound propagator
  * @author Stefan Heinz
@@ -2129,7 +2129,6 @@ SCIP_RETCODE tarjan(
    int*                  stacknextcliquevar, /**< array of size number of nodes to store the next edge to be visited in
                                               *   dfs for all nodes on the stack/in the current path; only needed for
                                               *   performance reasons */
-   int*                  stackcliquemin,
    int*                  cliquefirstentry,
    int*                  cliquecurrentexit,
    int*                  sccvars,
@@ -2169,7 +2168,6 @@ SCIP_RETCODE tarjan(
    dfsstack[0] = startnode;
    stacknextclique[0] = 0;
    stacknextcliquevar[0] = 0;
-   stackcliquemin[0] = INT_MAX;
    predstackidx[0] = -1;
    stacksize = 1;
    idx = -1;
@@ -2185,6 +2183,9 @@ SCIP_RETCODE tarjan(
       curridx = dfsstack[currstackidx];
       assert(nodelowlink[curridx] <= nodeindex[curridx]);
 
+      startvar = vars[getVarIndex(curridx)];
+      lower = isIndexLowerbound(curridx);
+
       /* mark current node as visited */
       //assert((nodeindex[curridx] != 0) == (stacknextclique[currstackidx] != -1));
       if( nodeindex[curridx] == 0 )
@@ -2196,15 +2197,46 @@ SCIP_RETCODE tarjan(
          nodeindex[curridx] = index;
          nodelowlink[curridx] = index;
          ++index;
+
+#ifdef DEBUG_TARJAN
+         {
+            SCIP_CLIQUE** cliques;
+            int clqidx;
+            int ncliques;
+            int j;
+
+            ncliques = SCIPvarGetNCliques(startvar, lower);
+            cliques = SCIPvarGetCliques(startvar, lower);
+
+            printf("variable %s(%s) has %d cliques\n", indexGetBoundString(curridx), SCIPvarGetName(startvar),
+               ncliques);
+            for( j = 0; j < ncliques; ++j )
+            {
+               SCIP_VAR** cliquevars;
+               SCIP_Bool* cliquevals;
+               int ncliquevars;
+
+               clqidx = SCIPcliqueGetIndex(cliques[j]);
+               cliquevars = SCIPcliqueGetVars(cliques[j]);
+               cliquevals = SCIPcliqueGetValues(cliques[j]);
+               ncliquevars = SCIPcliqueGetNVars(cliques[j]);
+
+               if( stacknextcliquevar[currstackidx] == 0 )
+               {
+                  printf("clique %d [%d vars, stacksize: %d]...\n", clqidx, ncliquevars, stacksize);
+                  for( int v = 0; v < ncliquevars; ++v )
+                     printf(" %s<%s>", cliquevals[v] ? "" : "~", SCIPvarGetName(cliquevars[v]));
+                  printf("\n");
+               }
+            }
+         }
+#endif
       }
       else
       {
          assert(stacknextclique[currstackidx] > 0 || stacknextcliquevar[currstackidx] > 0);
          assert(nodeindex[curridx] < index);
       }
-
-      startvar = vars[getVarIndex(curridx)];
-      lower = isIndexLowerbound(curridx);
 
       /* stacknextclique is negative, if the last visited edge from the current node belongs to a clique;
        * the index of the clique in the variable's clique list equals abs(stacknextclique) - 1
@@ -2276,8 +2308,9 @@ SCIP_RETCODE tarjan(
                      }
                      else
                      {
-                        //printf("entering clique %d a second time\n", clqidx);
-
+#ifdef DEBUG_TARJAN
+                        printf("entering clique %d a second time\n", clqidx);
+#endif
                         idx = getOtherBoundIndex(cliquefirstentry[clqidx] - 1);
 
                         if( nodeindex[idx] == 0 )
@@ -2348,6 +2381,11 @@ SCIP_RETCODE tarjan(
             if( found )
             {
                break;
+            }
+            else
+            {
+               assert(i == ncliquevars);
+               stacknextcliquevar[currstackidx] = 0;
             }
          }
          assert(found || j == ncliques);
@@ -2477,7 +2515,6 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    int* predstackidx;
    int* cliquefirstentry;
    int* cliquecurrentexit;
-   int* stackcliquemin;
    int* topoorder;
    int* sccvars;
    int* sccstarts;
@@ -2534,7 +2571,6 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    SCIP_CALL( SCIPallocBufferArray(scip, &stacknextclique, nbounds) );
    SCIP_CALL( SCIPallocBufferArray(scip, &stacknextcliquevar, nbounds) );
    SCIP_CALL( SCIPallocBufferArray(scip, &predstackidx, nbounds) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &stackcliquemin, nbounds) );
    SCIP_CALL( SCIPallocBufferArray(scip, &topoorder, nbounds) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sccvars, nbounds) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sccstarts, nbounds/2) );
@@ -2554,7 +2590,7 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
       if( nodeindex[i] == 0 )
       {
          SCIP_CALL( tarjan(scip, i, &startindex, visited, nodeindex, nodelowlink, predstackidx, dfsstack, stacknextclique,
-               stacknextcliquevar, stackcliquemin, cliquefirstentry, cliquecurrentexit, sccvars, sccstarts, &nsccs,
+               stacknextcliquevar, cliquefirstentry, cliquecurrentexit, sccvars, sccstarts, &nsccs,
                infeasnodes, &ninfeasnodes, topoorder, &nordered, &infeasible) );
       }
    }
@@ -2675,7 +2711,7 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
             if( nodeindex[startpos] == 0 )
             {
                SCIP_CALL( tarjan(scip, startpos, &startindex, visited, nodeindex, nodelowlink, predstackidx, dfsstack, stacknextclique,
-                     stacknextcliquevar, stackcliquemin, cliquefirstentry, cliquecurrentexit, sccvars, sccstarts, &nsccs,
+                     stacknextcliquevar, cliquefirstentry, cliquecurrentexit, sccvars, sccstarts, &nsccs,
                      infeasnodes, &ninfeasnodes, topoorder2, &nordered2, &infeasible) );
             }
          }
@@ -2745,6 +2781,8 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
                }
             }
          }
+         if( nsccs == 1 )
+            assert(0);
       }
 
    TERMINATE2:
@@ -2767,7 +2805,6 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    SCIPfreeBufferArray(scip, &sccstarts);
    SCIPfreeBufferArray(scip, &sccvars);
    SCIPfreeBufferArray(scip, &topoorder);
-   SCIPfreeBufferArray(scip, &stackcliquemin);
    SCIPfreeBufferArray(scip, &predstackidx);
    SCIPfreeBufferArray(scip, &stacknextcliquevar);
    SCIPfreeBufferArray(scip, &stacknextclique);
