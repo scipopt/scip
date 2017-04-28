@@ -2221,13 +2221,10 @@ SCIP_RETCODE tarjan(
                cliquevals = SCIPcliqueGetValues(cliques[j]);
                ncliquevars = SCIPcliqueGetNVars(cliques[j]);
 
-               if( stacknextcliquevar[currstackidx] == 0 )
-               {
-                  printf("clique %d [%d vars, stacksize: %d]...\n", clqidx, ncliquevars, stacksize);
-                  for( int v = 0; v < ncliquevars; ++v )
-                     printf(" %s<%s>", cliquevals[v] ? "" : "~", SCIPvarGetName(cliquevars[v]));
-                  printf("\n");
-               }
+               printf("clique %d [%d vars, stacksize: %d]...\n", clqidx, ncliquevars, stacksize);
+               for( int v = 0; v < ncliquevars; ++v )
+                  printf(" %s<%s>", cliquevals[v] ? "" : "~", SCIPvarGetName(cliquevars[v]));
+               printf("\n");
             }
          }
 #endif
@@ -2385,6 +2382,7 @@ SCIP_RETCODE tarjan(
             else
             {
                assert(i == ncliquevars);
+               stacknextclique[currstackidx] = j + 1;
                stacknextcliquevar[currstackidx] = 0;
             }
          }
