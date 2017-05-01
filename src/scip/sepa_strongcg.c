@@ -312,7 +312,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 
 #ifdef SCIP_DEBUG
          /* initialize variables, that might not have been initialized in SCIPcalcMIR if success == FALSE */
-         cutact = 0.0;
+         cutefficacy = 0.0;
          cutrhs = SCIPinfinity(scip);
 #endif
 

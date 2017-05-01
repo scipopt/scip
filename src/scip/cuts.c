@@ -462,7 +462,7 @@ SCIP_RETCODE addOneRow(
          uselhs = FALSE;
       }
    }
-   else if( weight < 0.0 && !SCIPisInfinity(scip, -row->lhs) )
+   else if( (weight < 0.0 && !SCIPisInfinity(scip, -row->lhs)) || SCIPisInfinity(scip, row->rhs) )
    {
       uselhs = TRUE;
    }
