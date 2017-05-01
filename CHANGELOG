@@ -4,6 +4,7 @@ SCIP version NEXT
 features:
 - added macros to do computations with a higher precision by using double double arithmetic
 - new compiler flag DEBUGSOL={true,false} to enable an internal debugging mechanism to check against a user given debug solution
+- added interface to the NLP solver WORHP; set WORHP=true in order to link to WORHP
 
 parameters:
 - new parameter misc/debugsol to specify a debug solution that should be checked during the solve
@@ -27,6 +28,9 @@ fixed bugs:
 - fixed issue in SCIPcopyLimits() w.r.t. soft time limit
 - improved handling of infinite values in a primal solution in quadratic and nonlinear constraints
 - fixed bug in dynamic resizing of hashtables and hashmaps
+- fixed bug in computing violation and cut for certain nonlinear constraints when LP solution is slightly out of bounds
+- fixed bug in binpacking example that might have led to doing the same branching several times
+- fixed memory issue in binpacking example
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint

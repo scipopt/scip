@@ -23,7 +23,6 @@ EOF
 for m in ${!OPTVAL[@]}
 do
    echo "Running model $m"
-   
    echo "* Trace Record Definition" > $m.trc
    echo "* GamsSolve" >> $m.trc
    echo "* ModelStatus SolverStatus ObjectiveValue ObjectiveValueEstimate" >> $m.trc
@@ -39,7 +38,7 @@ for m in ${!OPTVAL[@]}
 do
    result=(`tail -1 $m.trc`)
    echo "Model $m (optval ${OPTVAL[$m]}): model status ${result[0]}, solve status ${result[1]}, primal bound ${result[2]}, dual bound ${result[3]}"
-   
+
    if [[ ${result[0]} != 1 ]] ; then
       echo "Unexpected model status ${result[0]}, should be 1"
       (( fail++ )) || true
