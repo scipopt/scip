@@ -2391,7 +2391,7 @@ SCIP_RETCODE SCIPhashtableRemove(
    )
 {
    void* key;
-   unsigned int keyval;
+   uint64_t keyval;
    uint32_t hashval;
    uint32_t elemdistance;
    uint32_t distance;
@@ -2409,7 +2409,7 @@ SCIP_RETCODE SCIPhashtableRemove(
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(hashtable->userptr, element);
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = hashvalue((uint64_t) keyval);
+   hashval = hashvalue(keyval);
 
    elemdistance = 0;
    pos = hashval>>(hashtable->shift);
