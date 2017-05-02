@@ -1039,12 +1039,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    oldnrows = mod2matrix.nrows;
    oldncols = mod2matrix.ncols;
 
-   for( k = 0; k < 2; ++k )
+   for( k = 0; k < 3; ++k )
    {
-      SCIP_CALL( mod2matrixPreprocessColumns(scip, &mod2matrix) );
-
-      SCIPdebugMsg(scip, "preprocessed columns (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
-
       SCIP_CALL( mod2matrixPreprocessRows(scip, &mod2matrix, sepa, sepadata) );
 
       if( sepadata->infeasible )
@@ -1054,6 +1050,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       }
 
       SCIPdebugMsg(scip, "preprocessed rows (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
+
+      SCIP_CALL( mod2matrixPreprocessColumns(scip, &mod2matrix) );
+
+      SCIPdebugMsg(scip, "preprocessed columns (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
 
       SCIPsortPtr((void**) mod2matrix.rows, compareRowSlack, mod2matrix.nrows);
 
