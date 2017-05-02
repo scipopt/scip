@@ -2589,7 +2589,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       newdelta = TRUE;
       for( k = 0; k < ndeltacands; ++k )
       {
-         if( SCIPisEQ(scip, deltacands[k], absmksetcoef) )
+         if( SCIPisSumEQ(scip, deltacands[k], absmksetcoef) )
          {
             newdelta = FALSE;
             break;
@@ -2610,7 +2610,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       newdelta = TRUE;
       for( k = 0; k < ndeltacands; ++k )
       {
-         if( SCIPisEQ(scip, deltacands[k], deltacand) )
+         if( SCIPisSumEQ(scip, deltacands[k], deltacand) )
          {
             newdelta = FALSE;
             break;
