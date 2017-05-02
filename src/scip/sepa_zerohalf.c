@@ -161,6 +161,7 @@ struct SCIP_SepaData
 {
    SCIP_AGGRROW* aggrrow;
    int ncuts;
+   int nreductions;
    SCIP_Bool infeasible;
 };
 
@@ -621,7 +622,8 @@ void mod2matrixRemoveCol(
 static
 SCIP_RETCODE mod2matrixPreprocessColumns(
    SCIP*                 scip,
-   MOD2_MATRIX*          mod2matrix
+   MOD2_MATRIX*          mod2matrix,
+   SCIP_SEPADATA*        sepadata
    )
 {
    int i;
@@ -644,6 +646,7 @@ SCIP_RETCODE mod2matrixPreprocessColumns(
          col->nonzrows[0]->slack += col->solval;
 
          mod2matrixRemoveCol(scip, mod2matrix, col);
+         ++sepadata->nreductions;
       }
       else
       {
@@ -791,6 +794,8 @@ SCIP_RETCODE mod2matrixPreprocessRows(
       if( (row->nnonzcols == 0 && row->rhs == 0) || SCIPisGE(scip, row->slack, 1.0) )
       {
          mod2matrixRemoveRow(scip, mod2matrix, row);
+         if( row->nnonzcols > 0 )
+            ++sepadata->nreductions;
       }
       else if( row->nnonzcols > 0 )
       {
@@ -1022,9 +1027,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 {
    int i;
    int k;
-   int oldnrows;
-   int oldncols;
-   int oldncuts;
    SCIP_SEPADATA* sepadata;
    MOD2_MATRIX mod2matrix;
 
@@ -1037,12 +1039,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
    SCIPdebugMsg(scip, "built mod2 matrix (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
 
-   oldnrows = mod2matrix.nrows;
-   oldncols = mod2matrix.ncols;
-   oldncuts = 0;
-
-   for( k = 0; k < 3; ++k )
+   for( k = 0; k < 5; ++k )
    {
+      sepadata->nreductions = 0;
       SCIP_CALL( mod2matrixPreprocessRows(scip, &mod2matrix, sepa, sepadata) );
 
       if( sepadata->infeasible )
@@ -1051,9 +1050,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          goto TERMINATE;
       }
 
-      SCIPdebugMsg(scip, "preprocessed rows (%i rows, %i cols) found %i cuts \n", mod2matrix.nrows, mod2matrix.ncols, sepadata->ncuts - oldncuts);
+      SCIPdebugMsg(scip, "preprocessed rows (%i rows, %i cols, %i cuts) \n", mod2matrix.nrows, mod2matrix.ncols, sepadata->ncuts);
 
-      SCIP_CALL( mod2matrixPreprocessColumns(scip, &mod2matrix) );
+      SCIP_CALL( mod2matrixPreprocessColumns(scip, &mod2matrix, sepadata) );
 
       SCIPdebugMsg(scip, "preprocessed columns (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
 
@@ -1078,6 +1077,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
          if( col != NULL )
          {
+            ++sepadata->nreductions;
             for( j = 0; j < col->nnonzrows; )
             {
                if( col->nonzrows[j] == row )
@@ -1096,15 +1096,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
       SCIPdebugMsg(scip, "applied proposition five (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
 
-      if( oldncols == mod2matrix.ncols && oldnrows <= mod2matrix.nrows + sepadata->ncuts )
+      if( sepadata->nreductions == 0 )
       {
          SCIPdebugMsg(scip, "no change stopping (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
          break;
       }
-
-      oldnrows = mod2matrix.nrows;
-      oldncols = mod2matrix.ncols;
-      oldncuts = sepadata->ncuts;
    }
 
    for( i = 0; i < mod2matrix.nrows; ++i )
