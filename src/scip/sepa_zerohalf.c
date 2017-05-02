@@ -1024,6 +1024,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
    int k;
    int oldnrows;
    int oldncols;
+   int oldncuts;
    SCIP_SEPADATA* sepadata;
    MOD2_MATRIX mod2matrix;
 
@@ -1038,6 +1039,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
    oldnrows = mod2matrix.nrows;
    oldncols = mod2matrix.ncols;
+   oldncuts = 0;
 
    for( k = 0; k < 3; ++k )
    {
@@ -1049,7 +1051,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
          goto TERMINATE;
       }
 
-      SCIPdebugMsg(scip, "preprocessed rows (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
+      SCIPdebugMsg(scip, "preprocessed rows (%i rows, %i cols) found %i cuts \n", mod2matrix.nrows, mod2matrix.ncols, sepadata->ncuts - oldncuts);
 
       SCIP_CALL( mod2matrixPreprocessColumns(scip, &mod2matrix) );
 
@@ -1094,7 +1096,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
       SCIPdebugMsg(scip, "applied proposition five (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
 
-      if( oldncols == mod2matrix.ncols && oldnrows == mod2matrix.nrows )
+      if( oldncols == mod2matrix.ncols && oldnrows <= mod2matrix.nrows + sepadata->ncuts )
       {
          SCIPdebugMsg(scip, "no change stopping (%i rows, %i cols)\n", mod2matrix.nrows, mod2matrix.ncols);
          break;
@@ -1102,6 +1104,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
       oldnrows = mod2matrix.nrows;
       oldncols = mod2matrix.ncols;
+      oldncuts = sepadata->ncuts;
    }
 
    for( i = 0; i < mod2matrix.nrows; ++i )
@@ -1123,6 +1126,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
       }
    }
 
+   SCIPdebugMsg(scip, "total number of cuts found: %i\n", sepadata->ncuts);
    if( sepadata->ncuts > 0  )
       *result = SCIP_SEPARATED;
 
