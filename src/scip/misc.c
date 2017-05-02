@@ -2594,7 +2594,6 @@ SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqPtr)
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
 {  /*lint --e{715}*/
    /* the key is used as the keyvalue too */
-
    return (uint64_t) key;
 }
 
