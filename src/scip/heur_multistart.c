@@ -149,7 +149,7 @@ SCIP_RETCODE sampleRandomPoints(
          lb = MIN(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])); /*lint !e666*/
          ub = MAX(SCIPvarGetLbLocal(vars[i]), SCIPvarGetUbLocal(vars[i])); /*lint !e666*/
 
-         if( SCIPisEQ(scip, lb, ub) )
+         if( SCIPisFeasEQ(scip, lb, ub) )
             val = (lb + ub) / 2.0;
          /* use a smaller domain for unbounded variables */
          else if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
@@ -163,7 +163,7 @@ SCIP_RETCODE sampleRandomPoints(
             assert(SCIPisInfinity(scip, -lb) && SCIPisInfinity(scip, ub));
             val = SCIPrandomGetReal(randnumgen, -0.5*maxboundsize, 0.5*maxboundsize);
          }
-         assert(SCIPisGE(scip, val, lb) && SCIPisLE(scip, val, ub));
+         assert(SCIPisFeasGE(scip, val, lb) && SCIPisFeasLE(scip, val, ub));
 
          /* set solution value; round the sampled point for integer variables */
          if( SCIPvarGetType(vars[i]) < SCIP_VARTYPE_CONTINUOUS )

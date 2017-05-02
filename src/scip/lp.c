@@ -3130,6 +3130,30 @@ SCIP_RETCODE lpSetSolutionPolishing(
    return SCIP_OKAY;
 }
 
+/** sets the LP refactorization interval */
+static
+SCIP_RETCODE lpSetRefactorInterval(
+   SCIP_LP*              lp,                 /**< current LP data */
+   int                   refactor,           /**< LP refactorization interval (0: automatic) */
+   SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
+   )
+{
+   assert(lp != NULL);
+   assert(success != NULL);
+
+   if( refactor != lp->lpirefactorinterval )
+   {
+      SCIP_CALL( lpSetIntpar(lp, SCIP_LPPAR_REFACTOR, refactor, success) );
+      if( *success )
+         lp->lpirefactorinterval = refactor;
+   }
+   else
+      *success = FALSE;
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Column methods
  */
@@ -8904,6 +8928,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lpilpinfo = set->disp_lpinfo;
    (*lp)->lpirowrepswitch = set->lp_rowrepswitch;
    (*lp)->lpisolutionpolishing = (set->lp_solutionpolishing > 0);
+   (*lp)->lpirefactorinterval = set->lp_refactorinterval;
    (*lp)->lpiconditionlimit = set->lp_conditionlimit;
    (*lp)->lpiitlim = INT_MAX;
    (*lp)->lpipricing = SCIP_PRICING_AUTO;
@@ -9015,6 +9040,14 @@ SCIP_RETCODE SCIPlpCreate(
    {
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: solution polishing not available -- SCIP parameter lp/solutionpolishing has no effect\n",
+         SCIPlpiGetSolverName());
+   }
+   SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_REFACTOR, (*lp)->lpirefactorinterval, &success) );
+   (*lp)->lpihasrefactor = success;
+   if( !success )
+   {
+      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+         "LP Solver <%s>: refactorization interval not available -- SCIP parameter lp/refactorinterval has no effect\n",
          SCIPlpiGetSolverName());
    }
    SCIP_CALL( lpSetRealpar(*lp, SCIP_LPPAR_CONDITIONLIMIT, (*lp)->lpiconditionlimit, &success) );
@@ -9943,13 +9976,13 @@ SCIP_RETCODE lpPrimalSimplex(
 
    *lperror = FALSE;
 
-#if 0 /* for debugging: write all node LP's */
+#if 0 /* for debugging: write all root node LP's */
    if( stat->nnodes == 1 && !lp->diving && !lp->probing )
    {
       char fname[SCIP_MAXSTRLEN];
       (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%" SCIP_LONGINT_FORMAT "_%" SCIP_LONGINT_FORMAT ".lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPmessagePrintInfo("wrote LP to file <%s> (primal simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+      SCIPsetDebugMsg("wrote LP to file <%s> (primal simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n",
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol,
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
@@ -10084,13 +10117,13 @@ SCIP_RETCODE lpDualSimplex(
 
    *lperror = FALSE;
 
-#if 0 /* for debugging: write all node LP's */
+#if 0 /* for debugging: write all root node LP's */
    if( stat->nnodes == 1 && !lp->diving && !lp->probing )
    {
       char fname[SCIP_MAXSTRLEN];
       (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%" SCIP_LONGINT_FORMAT "_%" SCIP_LONGINT_FORMAT ".lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPmessagePrintInfo("wrote LP to file <%s> (dual simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+      SCIPsetDebugMsg("wrote LP to file <%s> (dual simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n",
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, 
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
@@ -10857,13 +10890,13 @@ SCIP_RETCODE lpBarrier(
 
    *lperror = FALSE;
 
-#if 0 /* for debugging: write all node LP's */
+#if 0 /* for debugging: write all root node LP's */
    if( stat->nnodes == 1 && !lp->diving && !lp->probing )
    {
       char fname[SCIP_MAXSTRLEN];
       (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%" SCIP_LONGINT_FORMAT "_%" SCIP_LONGINT_FORMAT ".lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPmessagePrintInfo("wrote LP to file <%s> (barrier, uobjlim=%.15g, feastol=%.15g/%.15g, convtol=%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+      SCIPsetDebugMsg("wrote LP to file <%s> (barrier, uobjlim=%.15g, feastol=%.15g/%.15g, convtol=%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n",
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, lp->lpibarrierconvtol,
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
@@ -11142,6 +11175,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetTiming(lp, set->time_clocktype, set->time_enabled, &success) );
    SCIP_CALL( lpSetRandomseed(lp, SCIPsetInitializeRandomSeed(set, set->random_randomseed), &success) );
    SCIP_CALL( lpSetSolutionPolishing(lp, usepolishing, &success) );
+   SCIP_CALL( lpSetRefactorInterval(lp, set->lp_refactorinterval, &success) );
    SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
 

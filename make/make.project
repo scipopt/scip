@@ -74,7 +74,7 @@ MAXJOBS         =       1
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h
-SCIP_VERSION	=   	4.0.0.1
+SCIP_VERSION	=	4.0.0.2
 
 # compiling and linking parameters
 VERBOSE		=	false
@@ -110,6 +110,9 @@ endif
 #will this be compiled for parascip, necessary for dbg-builds and cppad to make it threadsafe
 PARASCIP	=	false
 
+# enable debug-solution mechanism
+DEBUGSOL =  false
+
 # third party compiling parameters
 OPENSOURCE   	=	true
 READLINE	=	true
@@ -117,10 +120,12 @@ ZLIB		=	true
 GMP		=	true
 ZIMPL		=	auto
 IPOPT		=	false
+WORHP		=	false
 EXPRINT 	=	cppad
 LPSOPT		=	opt
 ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
+WORHPOPT	=	opt
 LPSCHECK        =	false
 GAMS		=	false
 SPX_LEGACY  	=	false
@@ -305,7 +310,6 @@ FLAGS		+=	-DNPARASCIP
 else
 LDFLAGS 	+=	-lpthread
 endif
-
 
 #-----------------------------------------------------------------------------
 # LP Solver Interface
@@ -524,6 +528,20 @@ LDFLAGS		+=	$(LINKRPATH)\$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/ipopt.$(OSTYPE)
 endif
 endif
 NLPILIBSHORTNAMEIPOPT = .ipopt
+endif
+
+# define flags for WORHP
+ifeq ($(WORHP),true)
+FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/include
+LDFLAGS  += $(LINKCC_l)worhp
+LDFLAGS  += $(LINKCC_L)$(SCIPDIR)/$(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/lib
+ifneq ($(LINKRPATH),)
+ifneq ($(SCIPINTERNAL),)
+LDFLAGS		+=	$(LINKRPATH)\$$ORIGIN/../$(LIBDIR)/$(LIBEXTTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/lib
+else
+LDFLAGS		+=	$(LINKRPATH)\$(SCIPREALPATH)/$(LIBDIR)/$(LIBEXTTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/lib
+endif
+endif
 endif
 
 ifeq ($(EXPRINT),cppad)
