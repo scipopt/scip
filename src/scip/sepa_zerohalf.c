@@ -58,7 +58,7 @@
 #define SEPA_PRIORITY             -6000
 #define SEPA_FREQ                     0
 #define SEPA_MAXBOUNDDIST           0.0
-#define SEPA_USESSUBSCIP           TRUE
+#define SEPA_USESSUBSCIP          FALSE
 #define SEPA_DELAY                FALSE
 
 #define DEFAULT_MAXROUNDS             5 /**< maximal number of zerohalf separation rounds per node (-1: unlimited) */
@@ -66,48 +66,18 @@
 #define DEFAULT_MAXSEPACUTS          50 /**< maximal number of {0,1/2}-cuts separated per separation round */
 #define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of {0,1/2}-cuts separated per separation round in root node */
 #define DEFAULT_DYNAMICCUTS        TRUE /**< should generated cuts be removed from the LP if they are no longer tight? */
-#define DEFAULT_DECOMPOSEPROBLEM  FALSE /**< should problem be decomposed into subproblems (if possible)? */
 #define DEFAULT_MAXDEPTH             -1 /**< separating cuts only if depth <= maxdepth (-1: unlimited) */
-#define DEFAULT_MINVIOLATION       0.30 /**< minimal violation of a {0,1/2}-cut to be separated */
-#define DEFAULT_FORCECUTSTOLP     FALSE /**< should the cuts be forced to enter the LP? (bypassing SCIPefficacy criteria) */
-#define DEFAULT_FORCECUTSTOSEPASTORE FALSE /**< should the cuts be forced to enter SCIP's sepastore?
-                                            *   (bypassing SCIPefficicacy criteria, if no other cut is found) */
 #define DEFAULT_MAXCUTS             100 /**< maximal number of {0,1/2}-cuts determined per separation round
                                          *  (this includes separated but inefficacious cuts) */
 #define DEFAULT_MAXCUTSROOT        1000 /**< maximal number of {0,1/2}-cuts determined per separation round
                                          *   in the root node (this includes separated but inefficacious cuts) */
-#define DEFAULT_SUBSCIPOBJECTIVE    'v' /**< auxiliary IP objective function type */
-#define DEFAULT_RELAXCONTVARS     FALSE /**< should continuous variables be relaxed by adding variable bounds? */
-#define DEFAULT_SCALEFRACCOEFFS    TRUE /**< should rows be scaled to make fractional coefficients integer? */
-#define DEFAULT_SUBSCIPSETTINGS     "-" /**< optional settings file of the auxiliary IP (-: none) */
-#define DEFAULT_SUBSCIPSOLLIMIT      -1 /**< limits/solutions setting of the auxiliary IP */
-#define DEFAULT_SUBSCIPUSEALLSOLS  TRUE /**< should all (proper) solutions of the auxiliary IP be used to generate
-                                         *   cuts instead of using only the best? */
-#define DEFAULT_PPDELTA           0.500 /**< value of delta parameter used in preprocessing method 'd' */
-#define DEFAULT_SUBSCIPOBJPEN     0.001 /**< penalty factor used with objective function 'p' of auxiliary IP */
-
-#define DEFAULT_PPMETHODS      "CXGXIM" /**< preprocessing methods and ordering */
-#define DEFAULT_SEPAMETHODS        "2g" /**< preprocessing methods and ordering */
-#define DEFAULT_MAXNCALLS          -1LL /**< maximal number of calls (-1: unlimited) */
-#define DEFAULT_IGNOREPREVIOUSZHCUTS FALSE /**< should zerohalf cuts found in previous callbacks be ignored? */
-#define DEFAULT_ONLYORIGROWS      FALSE /**< should only original LP rows be considered (i.e. ignore previously added LP rows)? */
-#define DEFAULT_USEZHCUTPOOL       TRUE /**< should zerohalf cuts be filtered using a cutpool */
-#define DEFAULT_DELAYEDCUTS        TRUE /**< should cuts be added to the delayed cut pool? */
-#define DEFAULT_MAXTESTDELTA         10 /**< maximal number of different deltas to try for cmir (-1: unlimited, 0: delta=1) */
-#define DEFAULT_TRYNEGSCALING      TRUE /**< should negative values also be tested in scaling for cmir? */
-
-/* cut pool management */
-#define ORTHOFUNC                   'e'
-#define MINORTHO                    0.5
 
 /* SCIPcalcMIR parameters */
-#define NNONZOFFSET                 500
 
 #define BOUNDSWITCH              0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
 #define USEVBDS                    TRUE /**< use variable bounds - see SCIPcalcMIR() */
 #define ALLOWLOCAL                 TRUE /**< allow to generate local cuts - see SCIPcalcMIR() */
 #define FIXINTEGRALRHS            FALSE /**< try to generate an integral rhs - see SCIPcalcMIR() */
-
 #define BOUNDSFORTRANS             NULL
 #define BOUNDTYPESFORTRANS         NULL
 #define MAXWEIGHTRANGE         10000.00
@@ -117,9 +87,6 @@
 /* SCIPcalcRowIntegralScalar parameters */
 #define MAXDNOM                    1000
 #define MAXSCALE                 1000.0
-
-/* should variable bounds be used for substituting continuous variables */
-#define USEVARBOUNDS               TRUE
 
 typedef struct Mod2Col MOD2_COL;
 typedef struct Mod2Row MOD2_ROW;
@@ -164,6 +131,57 @@ struct SCIP_SepaData
    int nreductions;
    SCIP_Bool infeasible;
 };
+
+static
+SCIP_DECL_SORTPTRCOMP(compareRowSlack)
+{
+   MOD2_ROW* row1;
+   MOD2_ROW* row2;
+
+   row1 = (MOD2_ROW*) elem1;
+   row2 = (MOD2_ROW*) elem2;
+
+   if( row1->slack < row2->slack )
+      return -1;
+   if( row2->slack < row1->slack )
+      return 1;
+
+   return 0;
+}
+
+static
+SCIP_DECL_SORTPTRCOMP(compareRowIndex)
+{
+   MOD2_ROW* row1;
+   MOD2_ROW* row2;
+
+   row1 = (MOD2_ROW*) elem1;
+   row2 = (MOD2_ROW*) elem2;
+
+   if( row1->index < row2->index )
+      return -1;
+   if( row2->index < row1->index )
+      return 1;
+
+   return 0;
+}
+
+static
+SCIP_DECL_SORTPTRCOMP(compareColIndex)
+{
+   MOD2_COL* col1;
+   MOD2_COL* col2;
+
+   col1 = (MOD2_COL*) elem1;
+   col2 = (MOD2_COL*) elem2;
+
+   if( col1->index < col2->index )
+      return -1;
+   if( col2->index < col1->index )
+      return 1;
+
+   return 0;
+}
 
 static
 uint8_t mod2(
@@ -417,16 +435,13 @@ SCIP_RETCODE mod2colLinkRow(
 {
    int i;
 
-   i = col->nnonzrows++;
-   SCIP_CALL( SCIPensureBlockMemoryArray(scip, &col->nonzrows, &col->nonzrowssize, col->nnonzrows) );
+   SCIP_UNUSED( SCIPsortedvecFindPtr((void**)col->nonzrows, compareRowIndex, row, col->nnonzrows, &i) );
+
+   SCIP_CALL( SCIPensureBlockMemoryArray(scip, &col->nonzrows, &col->nonzrowssize, col->nnonzrows + 1) );
+   BMSmoveMemoryArray(col->nonzrows + i + 1, col->nonzrows + i, col->nnonzrows - i);
 
    col->nonzrows[i] = row;
-
-   while( i > 0 && col->nonzrows[i-1]->index > row->index )
-   {
-      SCIPswapPointers((void**) &col->nonzrows[i-1], (void**)&col->nonzrows[i]);
-      --i;
-   }
+   ++col->nnonzrows;
 
    return SCIP_OKAY;
 }
@@ -439,19 +454,12 @@ void mod2colUnlinkRow(
 {
    int i;
 
-   for( i = 0; i < col->nnonzrows; ++i )
-   {
-      if( col->nonzrows[i] == row )
-         break;
-   }
+   SCIP_UNUSED( SCIPsortedvecFindPtr((void**)col->nonzrows, compareRowIndex, row, col->nnonzrows, &i) );
 
    assert(col->nonzrows[i] == row);
 
    --col->nnonzrows;
-   for( ; i < col->nnonzrows; ++i )
-   {
-      col->nonzrows[i] = col->nonzrows[i+1];
-   }
+   BMSmoveMemoryArray(col->nonzrows + i, col->nonzrows + i + 1, col->nnonzrows - i);
 }
 
 static
@@ -464,21 +472,11 @@ void mod2rowUnlinkCol(
 
    assert(row->nnonzcols == 0 || row->nonzcols != NULL);
 
-   for( i = 0; i < row->nnonzcols; ++i )
-   {
-      if( row->nonzcols[i] == col )
-         break;
-   }
-
+   SCIP_UNUSED( SCIPsortedvecFindPtr((void**) row->nonzcols, compareColIndex, col, row->nnonzcols, &i) );
    assert(row->nonzcols[i] == col);
 
    --row->nnonzcols;
-   for( ; i < row->nnonzcols; ++i )
-   {
-      row->nonzcols[i] = row->nonzcols[i+1];
-   }
-
-   assert(row->nnonzcols == 0 || row->nonzcols != NULL);
+   BMSmoveMemoryArray(row->nonzcols + i, row->nonzcols + i + 1, row->nnonzcols - i);
 }
 
 static
@@ -966,23 +964,6 @@ SCIP_RETCODE mod2rowAddRow(
    assert(row->nnonzcols == 0 || row->nonzcols != NULL);
 
    return SCIP_OKAY;
-}
-
-static
-SCIP_DECL_SORTPTRCOMP(compareRowSlack)
-{
-   MOD2_ROW* row1;
-   MOD2_ROW* row2;
-
-   row1 = (MOD2_ROW*) elem1;
-   row2 = (MOD2_ROW*) elem2;
-
-   if( row1->slack < row2->slack )
-      return -1;
-   if( row2->slack < row1->slack )
-      return 1;
-
-   return 0;
 }
 
 /* --------------------------------------------------------------------------------------------------------------------
