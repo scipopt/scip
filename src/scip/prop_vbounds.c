@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define DEBUG_TARJAN
+//#define DEBUG_TARJAN
 /**@file   prop_vbounds.c
  * @brief  variable upper and lower bound propagator
  * @author Stefan Heinz
@@ -2107,17 +2107,13 @@ SCIP_DECL_PROPEXITSOL(propExitsolVbounds)
    return SCIP_OKAY;
 }
 
-#define NOTONSTACK 0
-#define ONSTACK 1
-#define ACTIVE 2
-
 /** performs Tarjan's algorithm for strongly connected components the implicitly given directed graph from the given start index */
 static
 SCIP_RETCODE tarjan(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   startnode,          /**< node to start the depth-first-search */
    int*                  startindex,         /**< start index */
-   int*                  nodeonstack,        /**< array to store the whether a each node is on the stack */
+   uint8_t*              nodeonstack,        /**< array to store the whether a each node is on the stack */
    int*                  nodeindex,          /**< array to store the dfs index for each node */
    int*                  nodelowlink,        /**< array to store the lowlink for each node */
    int*                  predstackidx,
@@ -2136,6 +2132,7 @@ SCIP_RETCODE tarjan(
    int*                  nsccs,
    int*                  infeasnodes,
    int*                  ninfeasnodes,
+   uint8_t*              nodeinfeasible,
    int*                  topoorder,
    int*                  nordered,
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
@@ -2190,10 +2187,10 @@ SCIP_RETCODE tarjan(
       //assert((nodeindex[curridx] != 0) == (stacknextclique[currstackidx] != -1));
       if( nodeindex[curridx] == 0 )
       {
-         assert(nodeonstack[curridx] == NOTONSTACK);
+         assert(!nodeonstack[curridx]);
          assert(stacknextclique[currstackidx] == 0);
          assert(stacknextcliquevar[currstackidx] == 0);
-         nodeonstack[curridx] = ACTIVE;
+         nodeonstack[curridx] = 1;
          nodeindex[curridx] = index;
          nodelowlink[curridx] = index;
          ++index;
@@ -2284,23 +2281,38 @@ SCIP_RETCODE tarjan(
                   {
                      assert(cliquefirstentry[clqidx] != curridx + 1);
 
-                     if( nodeonstack[cliquefirstentry[clqidx] - 1] )
+                     if( nodeonstack[cliquefirstentry[clqidx] - 1] && !nodeinfeasible[cliquefirstentry[clqidx] - 1] )
                      {
                         printf("infeasible assignment (1): %s(%s)\n", indexGetBoundString(cliquefirstentry[clqidx] - 1),
                            SCIPvarGetName(vars[getVarIndex(cliquefirstentry[clqidx] - 1)]));
+                        if( nodeinfeasible[getOtherBoundIndex(cliquefirstentry[clqidx] - 1)] )
+                        {
+                           *infeasible = TRUE;
+                           return SCIP_OKAY;
+                        }
                         infeasnodes[*ninfeasnodes] = cliquefirstentry[clqidx] - 1;
+                        nodeinfeasible[cliquefirstentry[clqidx] - 1] = TRUE;
                         ++(*ninfeasnodes);
 
-                        if( nodeonstack[cliquecurrentexit[clqidx]] && nodeindex[cliquecurrentexit[clqidx]] < nodelowlink[curridx] )
+                        if( cliquecurrentexit[clqidx] > 0
+                           && curridx != getOtherBoundIndex(cliquecurrentexit[clqidx] - 1)
+                           && nodeonstack[cliquecurrentexit[clqidx] - 1]
+                           && nodeindex[cliquecurrentexit[clqidx] - 1] < nodelowlink[curridx] )
                         {
-                           nodelowlink[curridx] = nodeindex[cliquecurrentexit[clqidx]];
+                           nodelowlink[curridx] = nodeindex[cliquecurrentexit[clqidx] - 1];
                         }
                      }
-                     else if( nodeindex[cliquefirstentry[clqidx] - 1] >= *startindex )
+                     else if( nodeindex[cliquefirstentry[clqidx] - 1] >= *startindex && !nodeinfeasible[startnode] )
                      {
                         printf("infeasible assignment (2): %s(%s)\n", indexGetBoundString(startnode),
                            SCIPvarGetName(vars[getVarIndex(startnode)]));
+                        if( nodeinfeasible[getOtherBoundIndex(startnode)] )
+                        {
+                           *infeasible = TRUE;
+                           return SCIP_OKAY;
+                        }
                         infeasnodes[*ninfeasnodes] = startnode;
+                        nodeinfeasible[startnode] = TRUE;
                         ++(*ninfeasnodes);
                      }
                      else
@@ -2324,18 +2336,30 @@ SCIP_RETCODE tarjan(
                   }
                   else
                   {
-                     if( nodeonstack[-cliquefirstentry[clqidx] - 1] )
+                     if( nodeonstack[-cliquefirstentry[clqidx] - 1] && !nodeinfeasible[-cliquefirstentry[clqidx] - 1] )
                      {
                         printf("infeasible assignment (1a): %s(%s)\n", indexGetBoundString(-cliquefirstentry[clqidx] - 1),
                            SCIPvarGetName(vars[getVarIndex(-cliquefirstentry[clqidx] - 1)]));
+                        if( nodeinfeasible[getOtherBoundIndex(-cliquefirstentry[clqidx] - 1)] )
+                        {
+                           *infeasible = TRUE;
+                           return SCIP_OKAY;
+                        }
                         infeasnodes[*ninfeasnodes] = -cliquefirstentry[clqidx] - 1;
+                        nodeinfeasible[-cliquefirstentry[clqidx] - 1] = TRUE;
                         ++(*ninfeasnodes);
                      }
-                     else if( nodeindex[-cliquefirstentry[clqidx] - 1] >= *startindex )
+                     else if( nodeindex[-cliquefirstentry[clqidx] - 1] >= *startindex && !nodeinfeasible[startnode] )
                      {
                         printf("infeasible assignment (2a): %s(%s)\n", indexGetBoundString(startnode),
                            SCIPvarGetName(vars[getVarIndex(startnode)]));
+                        if( nodeinfeasible[getOtherBoundIndex(startnode)] )
+                        {
+                           *infeasible = TRUE;
+                           return SCIP_OKAY;
+                        }
                         infeasnodes[*ninfeasnodes] = startnode;
+                        nodeinfeasible[startnode] = TRUE;
                         ++(*ninfeasnodes);
                      }
                      else
@@ -2366,6 +2390,7 @@ SCIP_RETCODE tarjan(
                /* break when the first unvisited node is reached */
                if( nodeindex[idx] == 0 )
                {
+                  assert(!nodeonstack[idx]);
                   stacknextcliquevar[currstackidx] = i + 1;
                   found = TRUE;
                   break;
@@ -2394,24 +2419,36 @@ SCIP_RETCODE tarjan(
             int otheridx = getOtherBoundIndex(idx);
 
             assert(idx >= 0);
-            assert(nodeonstack[idx] == NOTONSTACK);
+            assert(!nodeonstack[idx]);
             assert(j < ncliques);
 
-            if( nodeonstack[otheridx] )
+            if( nodeonstack[otheridx] && !nodeinfeasible[otheridx] )
             {
                printf("infeasible assignment (3): %s(%s)\n", indexGetBoundString(otheridx),
                   SCIPvarGetName(vars[getVarIndex(otheridx)]));
+               if( nodeinfeasible[getOtherBoundIndex(otheridx)] )
+               {
+                  *infeasible = TRUE;
+                  return SCIP_OKAY;
+               }
                infeasnodes[*ninfeasnodes] = otheridx;
+               nodeinfeasible[otheridx] = TRUE;
                ++(*ninfeasnodes);
-               continue;
+               //continue;
             }
-            else if( nodeindex[otheridx] >= *startindex )
+            else if( nodeindex[otheridx] >= *startindex && !nodeinfeasible[startnode] )
             {
                printf("infeasible assignment (4): %s(%s)\n", indexGetBoundString(startnode),
                   SCIPvarGetName(vars[getVarIndex(startnode)]));
+               if( nodeinfeasible[getOtherBoundIndex(startnode)] )
+               {
+                  *infeasible = TRUE;
+                  return SCIP_OKAY;
+               }
                infeasnodes[*ninfeasnodes] = startnode;
+               nodeinfeasible[startnode] = TRUE;
                ++(*ninfeasnodes);
-               continue;
+               //continue;
             }
 
             SCIPdebugMsg(scip, "clique: %s(%s) -> %s(%s)\n", getBoundString(lower), SCIPvarGetName(startvar),
@@ -2422,7 +2459,7 @@ SCIP_RETCODE tarjan(
             stacknextclique[stacksize] = 0;
             stacknextcliquevar[stacksize] = 0;
             stacknextclique[currstackidx] = j;
-            cliquecurrentexit[clqidx] = idx;
+            cliquecurrentexit[clqidx] = idx + 1;
             predstackidx[stacksize] = currstackidx;
             currstackidx = stacksize;
             stacksize++;
@@ -2446,6 +2483,7 @@ SCIP_RETCODE tarjan(
          if( dfsstack[stacksize-1] != curridx )
          {
             int sccvarspos = sccstarts[*nsccs];
+
             printf("SCC:");
             do{
                stacksize--;
@@ -2453,7 +2491,7 @@ SCIP_RETCODE tarjan(
                printf("remove %s(%s) from stack[%d]\n", indexGetBoundString(dfsstack[stacksize]), SCIPvarGetName(vars[getVarIndex(dfsstack[stacksize])]), stacksize);
 #endif
                idx = dfsstack[stacksize];
-               nodeonstack[idx] = NOTONSTACK;
+               nodeonstack[idx] = 0;
                printf(" %s(%s)", indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));
                sccvars[sccvarspos] = idx;
                ++sccvarspos;
@@ -2462,6 +2500,41 @@ SCIP_RETCODE tarjan(
             printf("\n");
             ++(*nsccs);
             sccstarts[*nsccs] = sccvarspos;
+
+#if 0
+            {
+               int* conncountin;
+               int* conncountout;
+               int k, l;
+
+               SCIP_CALL( SCIPallocClearBufferArray(scip, &conncountin, sccvarspos - sccstarts[*nsccs - 1]) );
+               SCIP_CALL( SCIPallocClearBufferArray(scip, &conncountout, sccvarspos - sccstarts[*nsccs - 1]) );
+
+               for( k = sccstarts[*nsccs - 1]; k < sccvarspos; ++k )
+               {
+                  for( l = sccstarts[*nsccs - 1]; l < sccvarspos; ++l )
+                  {
+                     if( l != k && SCIPvarsHaveCommonClique(vars[getVarIndex(sccvars[k])], isIndexLowerbound(sccvars[k]),
+                           vars[getVarIndex(sccvars[l])], !isIndexLowerbound(sccvars[l]), FALSE) )
+                     {
+                        ++conncountout[k - sccstarts[*nsccs - 1]];
+                        ++conncountin[l - sccstarts[*nsccs - 1]];
+                     }
+                  }
+               }
+               for( k = sccstarts[*nsccs - 1]; k < sccvarspos; ++k )
+               {
+                  idx = sccvars[k];
+                  printf("%s(%s): in=%d, out=%d\n", indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]),
+                     conncountin[k - sccstarts[*nsccs - 1]], conncountout[k - sccstarts[*nsccs - 1]]);
+                  assert(conncountin[k - sccstarts[*nsccs - 1]] >= 1);
+                  assert(conncountout[k - sccstarts[*nsccs - 1]] >= 1);
+               }
+
+               SCIPfreeBufferArray(scip, &conncountout);
+               SCIPfreeBufferArray(scip, &conncountin);
+            }
+#endif
          }
          else
          {
@@ -2470,13 +2543,9 @@ SCIP_RETCODE tarjan(
             printf("remove %s(%s) from stack[%d]\n", indexGetBoundString(dfsstack[stacksize]), SCIPvarGetName(vars[getVarIndex(dfsstack[stacksize])]), stacksize);
 #endif
             idx = dfsstack[stacksize];
-            nodeonstack[idx] = NOTONSTACK;
+            nodeonstack[idx] = 0;
             assert(nodeindex[idx] > 0);
          }
-      }
-      else
-      {
-         nodeonstack[curridx] = ONSTACK;
       }
       if( stacksize > 0 || index > *startindex + 1 )
       {
@@ -2507,7 +2576,8 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    int* dfsstack;
    int* stacknextclique;
    int* stacknextcliquevar;
-   int* visited;
+   uint8_t* nodeonstack;
+   uint8_t* nodeinfeasible;
    int* nodeindex;
    int* nodelowlink;
    int* predstackidx;
@@ -2520,15 +2590,16 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    int ninfeasnodes;
    int nsccs;
    int nbounds;
+   int nbinvars;
    int ncliques;
    int startindex = 1;
    int nordered = 0;
    int i;
+   int j;
    SCIP_Bool infeasible = FALSE;
 
    assert(scip != NULL);
 
-   nbounds = 2 * (SCIPgetNVars(scip) - SCIPgetNContVars(scip));
    ncliques = SCIPgetNCliques(scip);
 
    *result = SCIP_DIDNOTRUN;
@@ -2536,6 +2607,12 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    if( ncliques < 2 )
       return SCIP_OKAY;
 
+   *result = SCIP_DIDNOTFIND;
+
+   nbinvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
+   nbounds = 2 * nbinvars;
+
+   /* cleanup cliques, stop if this proved infeasibility already */
    SCIP_CALL( SCIPcleanupCliques(scip, &infeasible) );
 
    if( infeasible )
@@ -2544,26 +2621,8 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nbounds/2) );
-
-   *result = SCIP_DIDNOTFIND;
-
-   // printf("propPresolVbounds: ncliques=%d\n", SCIPgetNCliques(scip));
-   // for( int c = 0; c < ncliques; ++c )
-   // {
-   //    SCIP_VAR** cliquevars;
-   //    SCIP_Bool* cliquevals;
-   //    int ncliquevars;
-
-   //    cliquevars = SCIPcliqueGetVars(SCIPgetCliques(scip)[c]);
-   //    cliquevals = SCIPcliqueGetValues(SCIPgetCliques(scip)[c]);
-   //    ncliquevars = SCIPcliqueGetNVars(SCIPgetCliques(scip)[c]);
-
-   //    printf("clique %d (%d vars):", c, ncliquevars);
-   //    for( int v = 0; v < ncliquevars; ++v )
-   //       printf(" %s<%s>", cliquevals[v] ? "" : "~", SCIPvarGetName(cliquevars[v]));
-   //    printf("\n");
-   // }
+   /* duplicate variable array; needed for get the fixings right later */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nbinvars) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &dfsstack, nbounds) );
    SCIP_CALL( SCIPallocBufferArray(scip, &stacknextclique, nbounds) );
@@ -2571,13 +2630,14 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    SCIP_CALL( SCIPallocBufferArray(scip, &predstackidx, nbounds) );
    SCIP_CALL( SCIPallocBufferArray(scip, &topoorder, nbounds) );
    SCIP_CALL( SCIPallocBufferArray(scip, &sccvars, nbounds) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &sccstarts, nbounds/2) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &infeasnodes, nbounds/2) );
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &visited, nbounds) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &sccstarts, nbinvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &infeasnodes, nbounds) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &nodeindex, nbounds) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &nodelowlink, nbounds) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &cliquefirstentry, ncliques) );
    SCIP_CALL( SCIPallocClearBufferArray(scip, &cliquecurrentexit, ncliques) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &nodeonstack, nbounds) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &nodeinfeasible, nbounds) );
    sccstarts[0] = 0;
    nsccs = 0;
    ninfeasnodes = 0;
@@ -2587,27 +2647,30 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    {
       if( nodeindex[i] == 0 )
       {
-         SCIP_CALL( tarjan(scip, i, &startindex, visited, nodeindex, nodelowlink, predstackidx, dfsstack, stacknextclique,
+         SCIP_CALL( tarjan(scip, i, &startindex, nodeonstack, nodeindex, nodelowlink, predstackidx, dfsstack, stacknextclique,
                stacknextcliquevar, cliquefirstentry, cliquecurrentexit, sccvars, sccstarts, &nsccs,
-               infeasnodes, &ninfeasnodes, topoorder, &nordered, &infeasible) );
+               infeasnodes, &ninfeasnodes, nodeinfeasible, topoorder, &nordered, &infeasible) );
       }
    }
    assert(nordered <= nbounds);
+   i = 0;
 
-   if( !infeasible )
+   if( !infeasible && (ninfeasnodes > 0 || nsccs > 0) )
    {
+      /* for all infeasible node: fix variable to the other bound */
       for( i = 0; i < ninfeasnodes; ++i )
       {
          SCIP_VAR* var = vars[getVarIndex(infeasnodes[i])];
          SCIP_Bool lower = isIndexLowerbound(infeasnodes[i]);
          SCIP_Bool fixed;
 
+         assert(nodeinfeasible[infeasnodes[i]]);
+         nodeinfeasible[infeasnodes[i]] = FALSE;
+
          SCIP_CALL( SCIPfixVar(scip, var, lower ? 0.0 : 1.0, &infeasible, &fixed) );
 
-         printf("fix <%s> to %g: inf=%d, fixed=%d\n",
-               SCIPvarGetName(var),
-               lower ? 0.0 : 1.0,
-               infeasible, fixed);
+         SCIPdebugMsg(scip, "fix <%s>[%d] to %g: inf=%d, fixed=%d\n",
+            SCIPvarGetName(var), infeasnodes[i], lower ? 0.0 : 1.0, infeasible, fixed);
 
          if( fixed )
          {
@@ -2616,10 +2679,17 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
          }
 
          if( infeasible )
+         {
+            for( ++i ; i < ninfeasnodes; ++i )
+            {
+               assert(nodeinfeasible[infeasnodes[i]]);
+               nodeinfeasible[infeasnodes[i]] = FALSE;
+            }
             goto TERMINATE;
+         }
       }
 
-      for( i = 0; i < nsccs; ++i )
+      for( j = 0; j < nsccs; ++j )
       {
          SCIP_VAR* startvar;
          SCIP_Bool lower;
@@ -2627,12 +2697,12 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
          SCIP_Bool redundant;
          int v;
 
-         assert(sccstarts[i] < sccstarts[i+1] - 1);
+         assert(sccstarts[j] < sccstarts[j+1] - 1);
 
-         startvar = vars[getVarIndex(sccvars[sccstarts[i]])];
-         lower = isIndexLowerbound(sccvars[sccstarts[i]]);
+         startvar = vars[getVarIndex(sccvars[sccstarts[j]])];
+         lower = isIndexLowerbound(sccvars[sccstarts[j]]);
 
-         for( v = sccstarts[i] + 1; v < sccstarts[i+1]; ++v )
+         for( v = sccstarts[j] + 1; v < sccstarts[j+1]; ++v )
          {
             SCIP_CALL( SCIPaggregateVars(scip, startvar, vars[getVarIndex(sccvars[v])], 1.0,
                   lower == isIndexLowerbound(sccvars[v]) ? -1.0 : 1.0,
@@ -2657,9 +2727,15 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
          }
       }
    }
+   /* clear clean buffer array (if we did not enter the block above or stopped early due to an infeasibility) */
+   for( ; i < ninfeasnodes; ++i )
+   {
+      assert(nodeinfeasible[infeasnodes[i]]);
+      nodeinfeasible[infeasnodes[i]] = FALSE;
+   }
 
    /* second round, now with topological order! */
-   if( nordered > 0 )
+   if( !infeasible && nordered > 0 )
    {
       SCIP_VAR** oldvars;
       int* topoorder2;
@@ -2683,7 +2759,7 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
 
       SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, SCIPgetVars(scip), nbounds/2) );
 
-      BMSclearMemoryArray(visited, nbounds);
+      BMSclearMemoryArray(nodeonstack, nbounds);
       BMSclearMemoryArray(nodeindex, nbounds);
       BMSclearMemoryArray(nodelowlink, nbounds);
       BMSclearMemoryArray(cliquefirstentry, ncliques);
@@ -2708,9 +2784,9 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
             startpos = isIndexLowerbound(topoorder[i]) ? getLbIndex(varindex) : getUbIndex(varindex);
             if( nodeindex[startpos] == 0 )
             {
-               SCIP_CALL( tarjan(scip, startpos, &startindex, visited, nodeindex, nodelowlink, predstackidx, dfsstack, stacknextclique,
+               SCIP_CALL( tarjan(scip, startpos, &startindex, nodeonstack, nodeindex, nodelowlink, predstackidx, dfsstack, stacknextclique,
                      stacknextcliquevar, cliquefirstentry, cliquecurrentexit, sccvars, sccstarts, &nsccs,
-                     infeasnodes, &ninfeasnodes, topoorder2, &nordered2, &infeasible) );
+                     infeasnodes, &ninfeasnodes, nodeinfeasible, topoorder2, &nordered2, &infeasible) );
             }
          }
       }
@@ -2725,10 +2801,12 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
             SCIP_Bool lower = isIndexLowerbound(infeasnodes[i]);
             SCIP_Bool fixed;
 
+            nodeinfeasible[infeasnodes[i]] = FALSE;
+
             SCIP_CALL( SCIPfixVar(scip, var, lower ? 0.0 : 1.0, &infeasible, &fixed) );
 
-            printf("fix <%s> to %g: inf=%d, fixed=%d\n",
-               SCIPvarGetName(var),
+            printf("fix <%s>[%d] to %g: inf=%d, fixed=%d\n",
+               SCIPvarGetName(var), infeasnodes[i],
                lower ? 0.0 : 1.0,
                infeasible, fixed);
 
@@ -2739,7 +2817,14 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
             }
 
             if( infeasible )
+            {
+               for( ++i ; i < ninfeasnodes; ++i )
+               {
+                  assert(nodeinfeasible[infeasnodes[i]]);
+                  nodeinfeasible[infeasnodes[i]] = FALSE;
+               }
                goto TERMINATE2;
+            }
          }
 
          for( i = 0; i < nsccs; ++i )
@@ -2782,6 +2867,15 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
          if( nsccs == 1 )
             assert(0);
       }
+      else
+      {
+         for( i = 0; i < ninfeasnodes; ++i )
+         {
+            assert(nodeinfeasible[infeasnodes[i]]);
+            nodeinfeasible[infeasnodes[i]] = FALSE;
+         }
+      }
+
 
    TERMINATE2:
       SCIPfreeBufferArray(scip, &topoorder2);
@@ -2792,13 +2886,20 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
  TERMINATE:
    if( infeasible )
       *result = SCIP_CUTOFF;
+#ifndef NDEBUG
+   for( i = 0; i < nbounds; ++i )
+   {
+      assert(nodeinfeasible[i] == FALSE);
+   }
+#endif
+   SCIPfreeCleanBufferArray(scip, &nodeinfeasible);
 
    SCIPfreeBufferArray(scip, &cliquecurrentexit);
    SCIPfreeBufferArray(scip, &cliquefirstentry);
 
    SCIPfreeBufferArray(scip, &nodelowlink);
    SCIPfreeBufferArray(scip, &nodeindex);
-   SCIPfreeBufferArray(scip, &visited);
+   SCIPfreeBufferArray(scip, &nodeonstack);
    SCIPfreeBufferArray(scip, &infeasnodes);
    SCIPfreeBufferArray(scip, &sccstarts);
    SCIPfreeBufferArray(scip, &sccvars);
