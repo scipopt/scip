@@ -2687,6 +2687,7 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    SCIP_Bool             initkeptconss,      /**< Also initialize constraints which are valid at a more global node,
                                               *   but were not activated there? Should be FALSE for repeated calls at
                                               *   one node or if the current focusnode is a child of the former one */
+   SCIP_Bool             rememberinitconss,
    SCIP_Bool*            cutoff              /**< pointer to store whether infeasibility was detected while building the LP */
    )
 {
@@ -2752,7 +2753,7 @@ SCIP_RETCODE SCIPconshdlrInitLP(
       assert(currentdepth >= 0);
 
       /* clear the initconss array */
-      for( c = conshdlr->ninitconsskept; c < oldninitconss; ++c )
+      for( c = conshdlr->ninitconsskept; c < oldninitconss && !rememberinitconss; ++c )
       {
          assert(SCIPconsGetActiveDepth(conshdlr->initconss[c]) >= -1);
          assert(SCIPconsGetActiveDepth(conshdlr->initconss[c]) <= currentdepth);
@@ -2763,16 +2764,19 @@ SCIP_RETCODE SCIPconshdlrInitLP(
          {
             conshdlr->initconss[conshdlr->ninitconsskept] = conshdlr->initconss[c];
             conshdlr->initconss[conshdlr->ninitconsskept]->initconsspos = conshdlr->ninitconsskept;
+            assert(conshdlr->initconss[conshdlr->ninitconsskept]->initconsspos == conshdlr->ninitconsskept);
             ++(conshdlr->ninitconsskept);
          }
          else
             conshdlr->initconss[c]->initconsspos = -1;
       }
 #ifndef NDEBUG
-      for( ; c < conshdlr->ninitconss; ++c )
+      for( ; c < conshdlr->ninitconss && !rememberinitconss; ++c )
          assert(conshdlr->initconss[c]->initconsspos < conshdlr->ninitconsskept);
 #endif
-      conshdlr->ninitconss = conshdlr->ninitconsskept;
+
+      if( !rememberinitconss )
+         conshdlr->ninitconss = conshdlr->ninitconsskept;
 
       if( conshdlr->ninitconss == 0 )
       {

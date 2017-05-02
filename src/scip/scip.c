@@ -28849,7 +28849,7 @@ SCIP_RETCODE SCIPconstructLP(
 
    SCIP_CALL( SCIPconstructCurrentLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
          scip->tree, scip->reopt, scip->lp, scip->pricestore, scip->sepastore, scip->cutpool, scip->branchcand,
-         scip->eventqueue, scip->eventfilter, scip->cliquetable, FALSE, cutoff) );
+         scip->eventqueue, scip->eventfilter, scip->cliquetable, FALSE, TRUE, cutoff) );
 
    return SCIP_OKAY;
 }
@@ -29612,7 +29612,7 @@ SCIP_RETCODE SCIPwriteLP(
    {
       SCIP_CALL( SCIPconstructCurrentLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
             scip->tree, scip->reopt, scip->lp, scip->pricestore, scip->sepastore, scip->cutpool, scip->branchcand,
-            scip->eventqueue, scip->eventfilter, scip->cliquetable, FALSE, &cutoff) );
+            scip->eventqueue, scip->eventfilter, scip->cliquetable, FALSE, FALSE, &cutoff) );
    }
 
    /* we need a flushed lp to write the current lp */
@@ -35660,7 +35660,7 @@ SCIP_RETCODE solveProbingLP(
 
    SCIP_CALL( SCIPinitConssLP(scip->mem->probmem, scip->set, scip->sepastore, scip->cutpool, scip->stat, scip->transprob,
          scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
-         scip->cliquetable, FALSE, FALSE, &initcutoff) );
+         scip->cliquetable, FALSE, FALSE, FALSE, &initcutoff) );
 
    if( initcutoff )
    {
