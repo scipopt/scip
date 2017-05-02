@@ -2010,7 +2010,7 @@ SCIP_RETCODE computeViolation(
       ub = SCIPvarGetUbLocal(consdata->x);
 
       /* with non-initial columns, variables can shortly be a column variable before entering the LP and have value 0.0 in this case, which might be outside bounds */
-      if( !SCIPisFeasGE(scip, xval, lb) || !SCIPisFeasLE(scip, xval, ub) )
+      if( (!SCIPisInfinity(scip, -lb) && !SCIPisFeasGE(scip, xval, lb)) || (!SCIPisInfinity(scip, ub) && !SCIPisFeasLE(scip, xval, ub)) )
          *solviolbounds = TRUE;
       else
          xval = MAX(lb, MIN(ub, xval));  /* project x onto local box if just slightly outside (or even not outside) */
@@ -5218,6 +5218,10 @@ SCIP_RETCODE enforceConstraint(
        * see also issue #627
        */
       assert(solinfeasible);
+      /* however, if solinfeasible is actually not TRUE, then better cut off the node to avoid that SCIP
+       * stops because infeasible cannot be resolved */
+      if( !solinfeasible )
+         *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
 
