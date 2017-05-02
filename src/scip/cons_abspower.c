@@ -357,7 +357,7 @@ SCIP_DECL_HASHKEYVAL(presolveFindDuplicatesKeyVal)
    assert(consdata != NULL);
 
    return SCIPhashTwo(SCIPvarGetIndex(consdata->x),
-                      SCIPpositiveRealHashCode(consdata->exponent, 7));
+                      SCIPrealHashCode(consdata->exponent));
 }  /*lint !e715*/
 
 /** checks if two constraints have the same z variable and the same exponent */
@@ -391,7 +391,7 @@ SCIP_DECL_HASHKEYVAL(presolveFindDuplicatesKeyVal2)
    assert(consdata != NULL);
 
    return SCIPhashTwo(SCIPvarGetIndex(consdata->z),
-                      SCIPpositiveRealHashCode(consdata->exponent, 7));
+                      SCIPrealHashCode(consdata->exponent));
 }  /*lint !e715*/
 
 /** upgrades a signpower constraint to a linear constraint if a second signpower constraint with same nonlinear term is available */
