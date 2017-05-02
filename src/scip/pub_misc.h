@@ -571,6 +571,19 @@ SCIP_Longint SCIPhashtableGetNElements(
    SCIP_HASHTABLE*       hashtable           /**< hash table */
    );
 
+/** gives the number of entries in the internal arrays of a hash table */
+EXTERN
+int SCIPhashtableGetNEntries(
+   SCIP_HASHTABLE*       hashtable           /**< hash table */
+   );
+
+/** gives the element at the given index or NULL if entry at that index has no element */
+EXTERN
+void* SCIPhashtableGetEntry(
+   SCIP_HASHTABLE*       hashtable,          /**< hash table */
+   int                   entryidx            /**< index of hash table entry */
+   );
+
 /** returns the load of the given hash table in percentage */
 EXTERN
 SCIP_Real SCIPhashtableGetLoad(
