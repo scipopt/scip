@@ -47,6 +47,7 @@
 #define CHECK_INTERVAL               1000    /**< number of observed row pairs after which the success is verified */
 #define THRESHOLD        ((SCIP_Real)0.02)   /**< minimal ratio of non-zero cancellation per observed row pairs */
 #define DEFAULT_MAX_SUPERSET_MISSES     1    /**< default value for the maximal number of superset misses */
+#define DEFAULT_FULL_SEARCH             1    /**< default value for full search */
 
 /*
  * Data structures
@@ -585,6 +586,77 @@ void prepareMatrixRows(
    }
 }
 
+#if 0
+/** count the number of arcs of the digraph represented by the constraint matrix */
+static
+int getNumberDigraphArcs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_MATRIX*          matrix              /**< matrix containing the constraints */
+   )
+{
+   int nrows;
+   int r;
+   int narcs;
+
+   narcs = 0;
+
+   nrows = SCIPmatrixGetNRows(matrix);
+   for( r = 0; r < nrows; r++ )
+      narcs += SCIPmatrixGetRowNNonzs(matrix, r);
+
+   narcs -= nrows;
+
+   return narcs;
+}
+#endif
+
+/** loop over constraints and fill directed graph */
+static
+SCIP_RETCODE fillDigraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int*                  firstvaridxperrow   /**< array to store for each row the index of the first variable */
+   )
+{
+   int nrows;
+   int r;
+   int* rowpnt;
+   int* rowend;
+   int lastcolidx;
+   int colidx;
+
+   assert(scip != NULL);
+   assert(matrix != NULL);
+   assert(digraph != NULL);
+   assert(firstvaridxperrow != NULL);
+
+   nrows = SCIPmatrixGetNRows(matrix);
+
+   for( r = 0; r < nrows; r++ )
+   {
+      lastcolidx = -1;
+
+      rowpnt = SCIPmatrixGetRowIdxPtr(matrix, r);
+      rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix, r);
+      assert(SCIPmatrixGetRowNNonzs(matrix, r) > 0);
+
+      for( ; (rowpnt < rowend); rowpnt++ )
+      {
+         colidx = *rowpnt;
+         assert(colidx >= 0);
+
+         if( lastcolidx == -1 )
+            firstvaridxperrow[r] = colidx;
+         else
+            SCIP_CALL( SCIPdigraphAddArc(digraph, lastcolidx, colidx, NULL) );
+
+         lastcolidx = colidx;
+      }
+   }
+
+   return SCIP_OKAY;
+}
 
 /** execution method of presolver */
 static
@@ -623,6 +695,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       int nrows;
       int r;
       int i;
+      int c;
       int numcancel;
       int numcancelcurrent;
       int numcancellast;
@@ -659,6 +732,17 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       int maxdensity;
       int multiplekeyspresent;
       SCIP_Bool stop;
+      SCIP_DIGRAPH* digraph;
+      int* firstvaridxpercons;
+      int* varlocks;
+      int* components;
+      int ncomponents;
+      int* rowtocomp;
+      int* rowindexes;
+      int* rowscomp;
+      int nrowscomp;
+      int compnumber;
+      int rowcnt;
 
       numcancel = 0;
       numcancellast = 0;
@@ -700,124 +784,184 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       SCIP_CALL( SCIPallocBufferArray(scip, &msets, nrows) );
       SCIP_CALL( SCIPallocBufferArray(scip, &matches, nrows));
 
-      SCIP_CALL( SCIPsgtrieCreate(&sgtrie, SCIPblkmem(scip), SCIPbuffer(scip), matrixrowGetSignature, matrixRowEq /*NULL*/, matrixRowSubset  /*NULL*/) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &varlocks, ncols) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &firstvaridxpercons, nrows) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &components, ncols) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &rowtocomp, nrows) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &rowindexes, nrows) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &rowscomp, nrows) );
 
-      /* prepare matrix rows for insertion to signature trie */
+      /* prepare matrix rows for insertion to signature trie(s) */
       prepareMatrixRows(scip, matrix, msets, &mindensity, &maxdensity);
 
-      /* insert rows into signature trie */
+      /* create and fill digraph */
+      SCIP_CALL( SCIPdigraphCreate(&digraph, SCIPblkmem(scip), ncols) );
+      for( i = 0; i < ncols; i++ )
+      {
+         varlocks[i] = 4 * (SCIPmatrixGetColNUplocks(matrix, i) + SCIPmatrixGetColNDownlocks(matrix, i));
+      }
+      SCIP_CALL( SCIPdigraphSetSizes(digraph, varlocks) );
+      SCIP_CALL( fillDigraph(scip, matrix, digraph, firstvaridxpercons) );
+
+      /* compute independent components */
+      SCIP_CALL( SCIPdigraphComputeUndirectedComponents(digraph, 1, components, &ncomponents) );
+      assert(ncomponents >= 1);
+
+      /* assign row to component */
       for( r = 0; r < nrows; r++ )
       {
-         SCIP_RETCODE rc;
-         rc = SCIPsgtrieInsert(sgtrie, &msets[r]);
-
-         if( rc == SCIP_KEYALREADYEXISTING )
-         {
-#ifdef SCIP_MORE_DEBUG
-            MATRIXROW* tmpset;
-            tmpset = SCIPsgtrieFindEq(sgtrie, &msets[r]);
-            SCIPdebugMsg(scip, "### Warning: key already present in signature trie!\n");
-            SCIPmatrixPrintRow(scip, matrix, msets[r].idx);
-            SCIPmatrixPrintRow(scip, matrix, tmpset->idx);
-#endif
-            multiplekeyspresent = 1;
-         }
+         rowtocomp[r] = components[firstvaridxpercons[r]];
+         rowindexes[r] = r;
       }
 
-      /* collect equalities and their number of non-zeros */
-      numeqs = 0;
-      for( r = 0; r < nrows; r++ )
-      {
-         /* we do not consider equalities with too less non-zeros if full search is not required */
-         if( !presoldata->fullsearch && SCIPmatrixGetRowNNonzs(matrix, r) < MIN_EQS_NONZEROS )
-            continue;
+      /* sort row indexes by the component number */
+      SCIPsortIntInt(rowtocomp, rowindexes, nrows);
 
-         if( SCIPisEQ(scip, SCIPmatrixGetRowRhs(matrix,r), SCIPmatrixGetRowLhs(matrix,r)) )
+      /* loop over all independent components */
+      rowcnt = 0;
+      for( c = 0; c < ncomponents; c++ )
+      {
+         compnumber = rowtocomp[rowcnt];
+         nrowscomp = 0;
+         while( rowtocomp[rowcnt] == compnumber && rowcnt < nrows )
          {
-            eqnonzs[numeqs] = SCIPmatrixGetRowNNonzs(matrix, r);
-            eqidxs[numeqs] = r;
-            numeqs++;
+            rowscomp[nrowscomp] = rowindexes[rowcnt];
+            rowcnt++;
+            nrowscomp++;
          }
-      }
 
-      /* sort the equalities by their number of non-zeros */
-      SCIPsortIntInt(eqnonzs, eqidxs, numeqs);
+         /* create signature trie for one component */
+         SCIP_CALL( SCIPsgtrieCreate(&sgtrie, SCIPblkmem(scip), SCIPbuffer(scip),
+         matrixrowGetSignature, matrixRowEq /*NULL*/, matrixRowSubset /*NULL*/) );
 
-      /* loop over the equalities by increasing number of non-zeros */
-      for( r = 0; r < numeqs; r++ )
-      {
-         /* use signature trie to retrieve matching row candidates */
-         SCIP_CALL( SCIPsgtrieFind(sgtrie, (void*)&msets[eqidxs[r]], SCIP_SGTRIE_SUPERSET, presoldata->maxsupersetmisses, (void**)matches, &nmatches) );
-
-         /* loop over all signature trie matches */
-         for( i = 0; i < nmatches; i++ )
+         /* insert rows of one component into signature trie */
+         for( r = 0; r < nrowscomp; r++ )
          {
-            rowidx = matches[i]->idx;
-            numobservedrowpairs++;
+            SCIP_RETCODE rc;
+            rc = SCIPsgtrieInsert(sgtrie, &msets[rowscomp[r]]);
 
-            /* we treat only different constraint pairs and rows which are not already sparsified */
-            if( rowidx != eqidxs[r] && !rowsparsified[rowidx] && !rowsparsified[eqidxs[r]] )
+            if( rc == SCIP_KEYALREADYEXISTING )
             {
-               /* calculate exact number of non-zero misses */
-               nmisses = getMinNumSupersetMisses(scip, matrix, rowidx, eqidxs[r],
-                  nonzerosotherrow, scatterotherrow, &numscatterotherrow, coefsotherrow,
-                  nonzerosequality, scatterequality, &numscatterequality, coefsequality,
-                  &numoverlap, overlapidxs, ratios);
+#ifdef SCIP_MORE_DEBUG
+               MATRIXROW* tmpset;
+               tmpset = SCIPsgtrieFindEq(sgtrie, &msets[rowscomp[r]]);
+               SCIPdebugMsg(scip, "### Warning: key already present in signature trie!\n");
+               SCIPmatrixPrintRow(scip, matrix, msets[rowscomp[r]].idx);
+               SCIPmatrixPrintRow(scip, matrix, tmpset->idx);
+#endif
+               multiplekeyspresent = 1;
+            }
+         }
 
-               if( nmisses <= 1 )
+         /* collect equalities and their number of non-zeros */
+         numeqs = 0;
+         for( r = 0; r < nrowscomp; r++ )
+         {
+            /* we do not consider equalities with too less non-zeros if full search is not required */
+            if( !presoldata->fullsearch && SCIPmatrixGetRowNNonzs(matrix, rowscomp[r]) < MIN_EQS_NONZEROS )
+               continue;
+
+            if( SCIPisEQ(scip, SCIPmatrixGetRowRhs(matrix,rowscomp[r]), SCIPmatrixGetRowLhs(matrix,rowscomp[r])) )
+            {
+               eqnonzs[numeqs] = SCIPmatrixGetRowNNonzs(matrix, rowscomp[r]);
+               eqidxs[numeqs] = rowscomp[r];
+               numeqs++;
+            }
+         }
+
+         /* sort the equalities by their number of non-zeros */
+         /* TODO: check if we actually need this sorting */
+         SCIPsortIntInt(eqnonzs, eqidxs, numeqs);
+
+         /* loop over the equalities by increasing number of non-zeros */
+         for( r = 0; r < numeqs; r++ )
+         {
+            /* use signature trie to retrieve matching row candidates */
+            SCIP_CALL( SCIPsgtrieFind(sgtrie, (void*)&msets[eqidxs[r]], SCIP_SGTRIE_SUPERSET, presoldata->maxsupersetmisses, (void**)matches, &nmatches) );
+
+            /* loop over all signature trie matches */
+            for( i = 0; i < nmatches; i++ )
+            {
+               rowidx = matches[i]->idx;
+               numobservedrowpairs++;
+
+               /* we treat only different constraint pairs and rows which are not already sparsified */
+               if( rowidx != eqidxs[r] && !rowsparsified[rowidx] && !rowsparsified[eqidxs[r]] )
                {
-                  /* determine scalefac which removes minimal one non-zero */
-                  scalefac = getScalefac(scip, matrix, rowidx, eqidxs[r], numoverlap, overlapidxs, ratios, &minnonzcancellations);
-                  assert(minnonzcancellations > 0);
+                  /* calculate exact number of non-zero misses */
+                  nmisses = getMinNumSupersetMisses(scip, matrix, rowidx, eqidxs[r],
+                     nonzerosotherrow, scatterotherrow, &numscatterotherrow, coefsotherrow,
+                     nonzerosequality, scatterequality, &numscatterequality, coefsequality,
+                     &numoverlap, overlapidxs, ratios);
 
-                  /* process row only if no fill-in occur */
-                  if( minnonzcancellations > nmisses )
+                  if( nmisses <= 1 )
                   {
-                     SCIP_CALL( sparsifyCons(scip, matrix, rowidx, eqidxs[r], scalefac, consvars, consvals,
-                           nonzerosotherrow, scatterotherrow, numscatterotherrow, coefsotherrow,
-                           nonzerosequality, scatterequality, numscatterequality, coefsequality,
-                           &numcancel, &numchangedcoefs) );
+                     /* determine scalefac which removes minimal one non-zero */
+                     scalefac = getScalefac(scip, matrix, rowidx, eqidxs[r], numoverlap, overlapidxs, ratios, &minnonzcancellations);
+                     assert(minnonzcancellations > 0);
 
-                     rowsparsified[rowidx] = TRUE;
+                     /* process row only if no fill-in occur */
+                     if( minnonzcancellations > nmisses )
+                     {
+                        SCIP_CALL( sparsifyCons(scip, matrix, rowidx, eqidxs[r], scalefac, consvars, consvals,
+                              nonzerosotherrow, scatterotherrow, numscatterotherrow, coefsotherrow,
+                              nonzerosequality, scatterequality, numscatterequality, coefsequality,
+                              &numcancel, &numchangedcoefs) );
+
+                        rowsparsified[rowidx] = TRUE;
+                     }
+                     else
+                        scalefails++;
                   }
                   else
-                     scalefails++;
+                     missfails++;
+
+                  /* clear scatter arrays */
+                  rescattering(nonzerosotherrow, scatterotherrow, &numscatterotherrow);
+                  rescattering(nonzerosequality, scatterequality, &numscatterequality);
                }
-               else
-                  missfails++;
 
-               /* clear scatter arrays */
-               rescattering(nonzerosotherrow, scatterotherrow, &numscatterotherrow);
-               rescattering(nonzerosequality, scatterequality, &numscatterequality);
-            }
-
-            if( !presoldata->fullsearch )
-            {
-               /* check success of this presolver, stop otherwise */
-               if( !(numobservedrowpairs % CHECK_INTERVAL) )
+               if( !presoldata->fullsearch )
                {
-                  numcancellast = numcancel - numcancelcurrent;
-                  numcancelcurrent = numcancel;
-#ifdef SCIP_MORE_DEBUG
-                  SCIPdebugMsg(scip, "### cancellast=%d, sucratio=%.6f\n",numcancellast,(SCIP_Real)numcancellast/(SCIP_Real)CHECK_INTERVAL);
-#endif
-                  if( ((SCIP_Real)numcancellast/(SCIP_Real)CHECK_INTERVAL) < THRESHOLD )
+                  /* check success of this presolver, stop otherwise */
+                  if( !(numobservedrowpairs % CHECK_INTERVAL) )
                   {
-                     stop = TRUE;
-                     break;
-                  }
+                     numcancellast = numcancel - numcancelcurrent;
+                     numcancelcurrent = numcancel;
+#ifdef SCIP_MORE_DEBUG
+                     SCIPdebugMsg(scip, "### cancellast=%d, sucratio=%.6f\n",numcancellast,(SCIP_Real)numcancellast/(SCIP_Real)CHECK_INTERVAL);
+#endif
+                     if( ((SCIP_Real)numcancellast/(SCIP_Real)CHECK_INTERVAL) < THRESHOLD )
+                     {
+                        stop = TRUE;
+                        break;
+                     }
 
-                  numcancellast = 0;
+                     numcancellast = 0;
+                  }
                }
             }
+
+            if( stop )
+               break;
          }
+
+         /* free signature trie */
+         SCIPsgtrieFree(&sgtrie);
 
          if( stop )
             break;
       }
 
+
       /* free local memory */
-      SCIPsgtrieFree(&sgtrie);
+      SCIPdigraphFree(&digraph);
+      SCIPfreeBufferArray(scip, &rowscomp);
+      SCIPfreeBufferArray(scip, &rowindexes);
+      SCIPfreeBufferArray(scip, &rowtocomp);
+      SCIPfreeBufferArray(scip, &components);
+      SCIPfreeBufferArray(scip, &firstvaridxpercons);
+      SCIPfreeBufferArray(scip, &varlocks);
       SCIPfreeBufferArray(scip, &matches);
       SCIPfreeBufferArray(scip, &msets);
       SCIPfreeBufferArray(scip, &overlapidxs);
@@ -842,8 +986,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
 
 #ifdef SCIP_DEBUG
       /* print out number of changed coefficients and non-zero cancellations */
-      SCIPdebugMsg(scip, "### nrows=%d, eqs=%d, mfails=%d, sfails=%d, minrowdensity=%d, maxrowdensity=%d, sgmultkeys=%d, sucratio=%.4f, chgcoefs=%d, nzcancel=%d\n",
-         nrows, numeqs, missfails, scalefails, mindensity, maxdensity, multiplekeyspresent, (SCIP_Real)numcancel/(SCIP_Real)numobservedrowpairs, numchangedcoefs, numcancel);
+      SCIPdebugMsg(scip, "### nrows=%d, ntries=%d, mfails=%d, sfails=%d, minrowdensity=%d, maxrowdensity=%d, sgmultkeys=%d, sucratio=%.4f, chgcoefs=%d, nzcancel=%d\n",
+         nrows, ncomponents, missfails, scalefails, mindensity, maxdensity, multiplekeyspresent, (SCIP_Real)numcancel/(SCIP_Real)numobservedrowpairs, numchangedcoefs, numcancel);
 #endif
    }
 
@@ -897,7 +1041,7 @@ SCIP_RETCODE SCIPincludePresolSparsify(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/sparsify/fullsearch",
          "require full search for sparsification",
-         &presoldata->fullsearch, TRUE, FALSE, NULL, NULL) );
+         &presoldata->fullsearch, TRUE, DEFAULT_FULL_SEARCH, NULL, NULL) );
 
    return SCIP_OKAY;
 }
