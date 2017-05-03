@@ -5142,7 +5142,8 @@ SCIP_RETCODE computeViolation(
       if( sol == NULL )
       {
          /* with non-initial columns, variables can shortly be a column variable before entering the LP and have value 0.0 in this case, which might violated the variable bounds */
-         if( !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)) || !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)) )
+         if( (!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) && !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var))) ||
+             (!SCIPisInfinity(scip,  SCIPvarGetUbLocal(var)) && !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var))) )
             *solviolbounds = TRUE;
          else
             varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
@@ -5164,13 +5165,15 @@ SCIP_RETCODE computeViolation(
       if( sol == NULL )
       {
          /* with non-initial columns, variables can shortly be a column variable before entering the LP and have value 0.0 in this case, which might violated the variable bounds */
-         if( !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)) || !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)) )
+         if( (!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) && !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var))) ||
+             (!SCIPisInfinity(scip,  SCIPvarGetUbLocal(var)) && !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var))) )
             *solviolbounds = TRUE;
          else
             varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
 
          /* with non-initial columns, variables can shortly be a column variable before entering the LP and have value 0.0 in this case, which might violated the variable bounds */
-         if( !SCIPisFeasGE(scip, varval2, SCIPvarGetLbLocal(var2)) || !SCIPisFeasLE(scip, varval2, SCIPvarGetUbLocal(var2)) )
+         if( (!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var2)) && !SCIPisFeasGE(scip, varval2, SCIPvarGetLbLocal(var2))) ||
+             (!SCIPisInfinity(scip,  SCIPvarGetUbLocal(var2)) && !SCIPisFeasLE(scip, varval2, SCIPvarGetUbLocal(var2))) )
             *solviolbounds = TRUE;
          else
             varval2 = MAX(SCIPvarGetLbLocal(var2), MIN(SCIPvarGetUbLocal(var2), varval2));
@@ -10927,6 +10930,10 @@ SCIP_RETCODE enforceConstraint(
        * see also issue #627
        */
       assert(solinfeasible);
+      /* however, if solinfeasible is actually not TRUE, then better cut off the node to avoid that SCIP
+       * stops because infeasible cannot be resolved */
+      if( !solinfeasible )
+         *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
 

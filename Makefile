@@ -120,7 +120,7 @@ LPSCHECKSRC	:=	$(shell cat $(LPSCHECKDEP))
 LPSOPTIONS	+=	cpx
 ifeq ($(LPS),cpx)
 FLAGS		+=	-I$(LIBDIR)/include/cpxinc
-LPILIBOBJ	=	lpi/lpi_cpx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ	=	lpi/lpi_cpx.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/include/cpxinc
 ifeq ($(SHARED),true)
@@ -137,7 +137,7 @@ endif
 LPSOPTIONS	+=	xprs
 ifeq ($(LPS),xprs)
 FLAGS		+=	-I$(LIBDIR)/include/xprsinc
-LPILIBOBJ	=	lpi/lpi_xprs.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ	=	lpi/lpi_xprs.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/include/xprsinc
 SOFTLINKS	+=	$(LIBDIR)/shared/libxpress.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
@@ -149,7 +149,7 @@ endif
 LPSOPTIONS	+=	msk
 ifeq ($(LPS),msk)
 FLAGS		+=	-I$(LIBDIR)/include/mskinc
-LPILIBOBJ	=	lpi/lpi_msk.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ	=	lpi/lpi_msk.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/include/mskinc
 SOFTLINKS	+=	$(LIBDIR)/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
@@ -167,7 +167,7 @@ ifeq ($(SPX_LEGACY),true)
 CFLAGS		+= 	-DSOPLEX_LEGACY
 CXXFLAGS	+= 	-DSOPLEX_LEGACY
 endif
-LPILIBOBJ	=	lpi/lpi_spx1.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ	=	lpi/lpi_spx1.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx1.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/include/spxinc
 ifeq ($(SHARED),true)
@@ -195,7 +195,7 @@ LPSOPTIONS	+=	spx ( = spx2)
 ifeq ($(LPS),spx2)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/include/spxinc
-LPILIBOBJ	=	lpi/lpi_spx2.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ	=	lpi/lpi_spx2.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx2.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/include/spxinc
 ifeq ($(SHARED),true)
@@ -227,7 +227,7 @@ LPSOPTIONS	+=	clp
 ifeq ($(LPS),clp)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)/include/coin
-LPILIBOBJ	=	lpi/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ	=	lpi/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
 LPIINSTMSG	=	"  -> \"clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)\" is the path to the Clp installation directory, i.e., \"<Clp-path>/include/coin/ClpModel.hpp\" should exist.\n"
@@ -236,7 +236,7 @@ endif
 LPSOPTIONS	+=	qso
 ifeq ($(LPS),qso)
 FLAGS         	+=      -I$(LIBDIR)/include/qsinc
-LPILIBOBJ     	= 	lpi/lpi_qso.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ     	= 	lpi/lpi_qso.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC     	=       $(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS     	+=      $(LIBDIR)/include/qsinc
 SOFTLINKS     	+=      $(LIBDIR)/static/libqsopt.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
@@ -248,7 +248,7 @@ endif
 LPSOPTIONS	+=	grb
 ifeq ($(LPS),grb)
 FLAGS		+=	-I$(LIBDIR)/include/grbinc
-LPILIBOBJ	=	lpi/lpi_grb.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ	=	lpi/lpi_grb.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/include/grbinc
 SOFTLINKS	+=	$(LIBDIR)/shared/libgurobi.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
@@ -258,7 +258,7 @@ endif
 
 LPSOPTIONS	+=	none
 ifeq ($(LPS),none)
-LPILIBOBJ	=	lpi/lpi_none.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ	=	lpi/lpi_none.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 endif
 
@@ -324,7 +324,8 @@ NLPILIBSCIPOBJ	= 	blockmemshell/memory.o \
 			scip/misc.o \
 			scip/intervalarith.o \
 			scip/interrupt.o \
-			scip/message.o
+			scip/message.o \
+			scip/rbtree.o
 
 ifeq ($(EXPRINT),none)
 NLPILIBCOBJ 	+=	nlpi/exprinterpret_none.o
@@ -867,7 +868,7 @@ testcount:
 
 .PHONY: tags
 tags:
-		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/; sed 's!\#undef .*!!g' TAGS > tags; mv tags TAGS
+		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/; sed -i 's!\#undef .*!!g' TAGS
 
 # include target to detect the current git hash
 -include make/local/make.detectgithash

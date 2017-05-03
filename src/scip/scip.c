@@ -13921,6 +13921,11 @@ SCIP_RETCODE initPresolve(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+#ifndef NDEBUG
+   size_t nusedbuffers;
+   size_t nusedcleanbuffers;
+#endif
+
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->set != NULL);
@@ -13950,10 +13955,19 @@ SCIP_RETCODE initPresolve(
          scip->stat, scip->transprob, scip->origprob, scip->primal, scip->lp, scip->branchcand, scip->conflict,
          scip->conflictstore, scip->eventfilter, scip->eventqueue, scip->cliquetable) );
 
+   /* GCG wants to perform presolving during the reading process of a file reader;
+    * hence the number of used buffers does not need to be zero, however, it should not
+    * change by calling SCIPsetInitprePlugins()
+    */
+#ifndef NDEBUG
+   nusedbuffers = BMSgetNUsedBufferMemory(SCIPbuffer(scip));
+   nusedcleanbuffers = BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip));
+#endif
+
    /* inform plugins that the presolving is abound to begin */
    SCIP_CALL( SCIPsetInitprePlugins(scip->set, scip->mem->probmem, scip->stat) );
-   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
    /* delete the variables from the problems that were marked to be deleted */
    SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->cliquetable, scip->lp, scip->branchcand) );
@@ -14149,6 +14163,10 @@ SCIP_RETCODE presolveRound(
    int i;
    int j;
    int k;
+#ifndef NDEBUG
+   size_t nusedbuffers;
+   size_t nusedcleanbuffers;
+#endif
 
    assert(scip != NULL);
    assert(scip->set != NULL);
@@ -14166,6 +14184,16 @@ SCIP_RETCODE presolveRound(
    aborted = FALSE;
 
    assert( scip->set->propspresolsorted );
+
+   /* GCG wants to perform presolving during the reading process of a file reader;
+    * hence the number of used buffers does not need to be zero, however, it should not
+    * change by calling the presolving callbacks
+    */
+#ifndef NDEBUG
+   nusedbuffers = BMSgetNUsedBufferMemory(SCIPbuffer(scip));
+   nusedcleanbuffers = BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip));
+#endif
+
 
    if( *timing == SCIP_PRESOLTIMING_EXHAUSTIVE )
    {
@@ -14234,8 +14262,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
                &scip->stat->npresolchgsides, &result) );
-         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
          lastranpresol = FALSE;
          ++j;
@@ -14253,8 +14281,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
                &scip->stat->npresolchgsides, &result) );
-         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
          lastranpresol = TRUE;
          ++i;
@@ -14321,8 +14349,8 @@ SCIP_RETCODE presolveRound(
             &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
             &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
             &scip->stat->npresolchgsides, &result) );
-      assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-      assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+      assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+      assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
       ++k;
 
@@ -14384,8 +14412,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
                &scip->stat->npresolchgsides, &result) );
-         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
          lastranpresol = FALSE;
          ++j;
@@ -14400,8 +14428,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
                &scip->stat->npresolchgsides, &result) );
-         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
          lastranpresol = TRUE;
          ++i;
@@ -14573,6 +14601,10 @@ SCIP_RETCODE presolve(
    int presolstart = 0;
    int propstart = 0;
    int consstart = 0;
+#ifndef NDEBUG
+   size_t nusedbuffers;
+   size_t nusedcleanbuffers;
+#endif
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -14585,6 +14617,16 @@ SCIP_RETCODE presolve(
    assert(infeasible != NULL);
 
    *unbounded = FALSE;
+
+   /* GCG wants to perform presolving during the reading process of a file reader;
+    * hence the number of used buffers does not need to be zero, however, it should
+    * be the same again after presolve is finished
+    */
+#ifndef NDEBUG
+   nusedbuffers = BMSgetNUsedBufferMemory(SCIPbuffer(scip));
+   nusedcleanbuffers = BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip));
+#endif
+
 
    /* switch status to unknown */
    scip->stat->status = SCIP_STATUS_UNKNOWN;
@@ -14769,8 +14811,8 @@ SCIP_RETCODE presolve(
          approxchecknonzeros ? "more than " : "", nchecknonzeros, nchecknonzeros/maxnonzeros * 100);
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
    }
-   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
    /* stop presolving time */
    SCIPclockStop(scip->stat->presolvingtime, scip->set);
