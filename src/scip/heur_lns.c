@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+
 /**@file   heur_lns.c
  * @brief  lns primal heuristic
  * @author Gregor Hendel
@@ -1507,6 +1507,7 @@ SCIP_RETCODE determineLimits(
    )
 {
    SCIP_HEURDATA* heurdata;
+   SCIP_Real initfactor;
    assert(scip != NULL);
    assert(heur != NULL);
    assert(solvelimits != NULL);
@@ -1536,7 +1537,11 @@ SCIP_RETCODE determineLimits(
    solvelimits->nodelimit += heurdata->nodesoffset;
    solvelimits->nodelimit -= heurdata->usednodes;
    solvelimits->nodelimit -= 100 * SCIPheurGetNCalls(heur);
-   solvelimits->nodelimit
+
+   /* use a smaller budget if not all neighborhoods have been initialized yet */
+   assert(heurdata->ninitneighborhoods >= 0);
+   initfactor = (heurdata->nneighborhoods - heurdata->ninitneighborhoods + 1.0) / (heurdata->nneighborhoods + 1.0);
+   solvelimits->nodelimit = (SCIP_Longint)(solvelimits->nodelimit * initfactor);
 
    /* check whether we have enough nodes left to call subproblem solving */
    if( solvelimits->nodelimit < heurdata->minnodes )
@@ -1824,10 +1829,12 @@ SCIP_DECL_HEUREXEC(heurExecLns)
    if( heurdata->currneighborhood >= 0 )
    {
       neighborhoodidx = heurdata->currneighborhood;
+      SCIPdebugMsg(scip, "Select delayed neighborhood %d (was delayed %d times)\n", neighborhoodidx, heurdata->ndelayedcalls);
    }
    else
    {
       SCIP_CALL( selectNeighborhood(scip, heurdata, &neighborhoodidx) );
+      SCIPdebugMsg(scip, "Selected neighborhood %d with bandit algorithm", neighborhoodidx);
    }
    assert(neighborhoodidx >= 0);
    assert(heurdata->nneighborhoods > neighborhoodidx);
@@ -1994,6 +2001,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
 
    if( *result != SCIP_DELAYED )
    {
+      /* decrease the number of neighborhoods that have not been initialized */
       if( neighborhood->stats.nruns == 0 )
          --heurdata->ninitneighborhoods;
 
