@@ -172,6 +172,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
    interactive = FALSE;
    onlyversion = FALSE;
    randomseedread = FALSE;
+   randomseed = 0;
 
    for( i = 1; i < argc; ++i )
    {
