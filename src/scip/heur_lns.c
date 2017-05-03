@@ -55,16 +55,16 @@
 #define DEFAULT_MINIMPROVEHIGH 0.1
 #define MINIMPROVEFAC          1.5
 #define DEFAULT_STARTMINIMPROVE 0.05
-#define DEFAULT_ADJUSTMINIMPROVE FALSE
+#define DEFAULT_ADJUSTMINIMPROVE TRUE
 
 /*
  * bandit algorithm parameters
  */
 #define DEFAULT_BESTSOLWEIGHT 3
-#define DEFAULT_BANDITALGO 'e' /**< the default bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
-#define DEFAULT_GAMMA 0.0      /**< default weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3 */
-#define DEFAULT_BETA 0.0       /**< default gain offset between 0 and 1 at every observation for exp3 */
-#define DEFAULT_GAINMEASURE      'w'/**< measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean,
+#define DEFAULT_BANDITALGO 'e'    /**< the default bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
+#define DEFAULT_GAMMA 0.2         /**< default weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3 */
+#define DEFAULT_BETA 0.1          /**< default gain offset between 0 and 1 at every observation for exp3 */
+#define DEFAULT_GAINMEASURE      'e'/**< measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean,
                                       *  'e'ffort based? */
 #define GAINMEASURES "bwe"
 
@@ -72,10 +72,10 @@
  * parameters to control variable fixing
  */
 #define DEFAULT_USEREDCOST TRUE /**< should reduced cost scores be used for variable priorization? */
-#define DEFAULT_USEDISTANCES FALSE  /**< should distances from fixed variables be used for variable priorization */
-#define DEFAULT_DOMOREFIXINGS FALSE /**< should the LNS heuristic do more fixings by itself based on variable prioritization
+#define DEFAULT_USEDISTANCES TRUE  /**< should distances from fixed variables be used for variable priorization */
+#define DEFAULT_DOMOREFIXINGS TRUE /**< should the LNS heuristic do more fixings by itself based on variable prioritization
                                       *  until the target fixing is reached? */
-#define DEFAULT_ADJUSTFIXINGRATE FALSE   /**< should the heuristic adjust the target fixing rate based on the success? */
+#define DEFAULT_ADJUSTFIXINGRATE TRUE   /**< should the heuristic adjust the target fixing rate based on the success? */
 #define FIXINGRATE_DECAY 0.75  /**< geometric decay for fixing rate adjustments */
 #define FIXINGRATE_STARTINC 0.2 /**< initial increment value for fixing rate */
 #define DEFAULT_USESUBSCIPHEURS  FALSE   /**< should the heuristic activate other sub-SCIP heuristics during its search?  */
