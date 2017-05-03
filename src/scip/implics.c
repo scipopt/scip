@@ -3435,6 +3435,16 @@ int SCIPcliquetableGetNCliques(
    return cliquetable->ncliques;
 }
 
+/** gets the number of cliques created so far by the clique table */
+int SCIPcliquetableGetNCliquesCreated(
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   )
+{
+   assert(cliquetable != NULL);
+
+   return cliquetable->ncreatedcliques;
+}
+
 /** gets the array of cliques stored in the clique table */
 SCIP_CLIQUE** SCIPcliquetableGetCliques(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
