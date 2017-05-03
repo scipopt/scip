@@ -676,10 +676,6 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    if( SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
-   /* we do no sparsification for a large number of constraints or variables */
-   if( SCIPgetNVars(scip) >= 1000000 || SCIPgetNConss(scip) >= 500000 )
-      return SCIP_OKAY;
-
    *result = SCIP_DIDNOTFIND;
 
    presoldata = SCIPpresolGetData(presol);
@@ -829,6 +825,10 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
             rowcnt++;
             nrowscomp++;
          }
+
+         /* do no sparsification for large components */
+         if( nrowscomp >= 500000 )
+            continue;
 
          /* create signature trie for one component */
          SCIP_CALL( SCIPsgtrieCreate(&sgtrie, SCIPblkmem(scip), SCIPbuffer(scip),
