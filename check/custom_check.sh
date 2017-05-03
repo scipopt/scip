@@ -62,3 +62,7 @@ done
 
 ./allcmpres.sh $RESFILES | tee $TARGET_DIR/$VERSION.normal.cmpres
 ./allcmpres.sh $REDRESFILES | tee $TARGET_DIR/$VERSION.woBranchTime.cmpres
+
+# clean up afterwards, as those res files are not needed anymore
+rm $RESFILES
+rm $REDRESFILES
