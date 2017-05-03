@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #define SCIP_DEBUG
 /**@file   heur_lns.c
- * @brief  lns primal heuristic
+ * @brief  "Large neighborhood search heuristic that orchestrates the popular neighborhoods Local Branching, RINS, RENS, DINS etc."
  * @author Gregor Hendel
  */
 
@@ -26,7 +26,7 @@
 #include "scipdefplugins.h"
 
 #define HEUR_NAME             "lns"
-#define HEUR_DESC             "primal heuristic template"
+#define HEUR_DESC             "Large neighborhood search heuristic that orchestrates the popular neighborhoods Local Branching, RINS, RENS, DINS etc."
 #define HEUR_DISPCHAR         'L'
 #define HEUR_PRIORITY         -1000000
 #define HEUR_FREQ             20
@@ -44,7 +44,7 @@
 #define DEFAULT_NODESQUOT 0.1
 #define DEFAULT_NODESOFFSET 500LL
 #define DEFAULT_NSOLSLIM 3
-#define DEFAULT_MINNODES 100LL
+#define DEFAULT_MINNODES 50LL
 #define DEFAULT_MAXNODES 5000LL
 #define LPLIMFAC 4.0
 
