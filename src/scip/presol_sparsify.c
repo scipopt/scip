@@ -826,9 +826,12 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
             nrowscomp++;
          }
 
-         /* do no sparsification for large components */
-         if( nrowscomp >= 500000 )
-            continue;
+         if( !presoldata->fullsearch )
+         {
+            /* do no sparsification for large components */
+            if( nrowscomp >= 500000 )
+               continue;
+         }
 
          /* create signature trie for one component */
          SCIP_CALL( SCIPsgtrieCreate(&sgtrie, SCIPblkmem(scip), SCIPbuffer(scip),
@@ -857,8 +860,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
          numeqs = 0;
          for( r = 0; r < nrowscomp; r++ )
          {
-            /* we do not consider equalities with too less non-zeros if full search is not required */
-            if( !presoldata->fullsearch && SCIPmatrixGetRowNNonzs(matrix, rowscomp[r]) < MIN_EQS_NONZEROS )
+            /* we do not consider equalities with too less non-zeros */
+            if( SCIPmatrixGetRowNNonzs(matrix, rowscomp[r]) < MIN_EQS_NONZEROS )
                continue;
 
             if( SCIPisEQ(scip, SCIPmatrixGetRowRhs(matrix,rowscomp[r]), SCIPmatrixGetRowLhs(matrix,rowscomp[r])) )
