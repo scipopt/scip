@@ -47,7 +47,7 @@
 #define CHECK_INTERVAL               1000    /**< number of observed row pairs after which the success is verified */
 #define THRESHOLD        ((SCIP_Real)0.02)   /**< minimal ratio of non-zero cancellation per observed row pairs */
 #define DEFAULT_MAX_SUPERSET_MISSES     1    /**< default value for the maximal number of superset misses */
-#define DEFAULT_FULL_SEARCH             1    /**< default value for full search */
+#define DEFAULT_FULL_SEARCH             0    /**< default value for full search */
 
 /*
  * Data structures
