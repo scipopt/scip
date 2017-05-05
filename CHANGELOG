@@ -2,6 +2,7 @@ SCIP version 4.0.1
 ==================
 
 fixed bugs:
+- fixed bug in genvbounds propagator when applying a restart after the root node
 - fixed uninitialized values in SCIP's digraph data structure after calling SCIPdigraphResize()
 - fixed memory leak in OSiL reader when using SOS constraints
 - fixed issue related to SCIPcreateFiniteSolCopy not being able to remove all infinite fixings
