@@ -101,11 +101,11 @@
 #define DEFAULT_ACTIVE_GINS TRUE
 
 #define DEFAULT_MINFIXINGRATE_LOCALBRANCHING 0.0
-#define DEFAULT_MAXFIXINGRATE_LOCALBRANCHING 0.0
+#define DEFAULT_MAXFIXINGRATE_LOCALBRANCHING 0.9
 #define DEFAULT_ACTIVE_LOCALBRANCHING TRUE
 
 #define DEFAULT_MINFIXINGRATE_PROXIMITY 0.0
-#define DEFAULT_MAXFIXINGRATE_PROXIMITY 0.0
+#define DEFAULT_MAXFIXINGRATE_PROXIMITY 0.9
 #define DEFAULT_ACTIVE_PROXIMITY TRUE
 
 #define DEFAULT_MINFIXINGRATE_CROSSOVER 0.4
@@ -113,13 +113,12 @@
 #define DEFAULT_ACTIVE_CROSSOVER TRUE
 
 #define DEFAULT_MINFIXINGRATE_ZEROOBJECTIVE 0.0
-#define DEFAULT_MAXFIXINGRATE_ZEROOBJECTIVE 0.0
+#define DEFAULT_MAXFIXINGRATE_ZEROOBJECTIVE 0.9
 #define DEFAULT_ACTIVE_ZEROOBJECTIVE TRUE
 
 #define DEFAULT_MINFIXINGRATE_DINS 0.1
 #define DEFAULT_MAXFIXINGRATE_DINS 0.5
 #define DEFAULT_ACTIVE_DINS TRUE
-
 
 #define DEFAULT_NSOLS_CROSSOVER 2 /**< parameter for the number of solutions that crossover should combine */
 #define DEFAULT_NPOOLSOLS_DINS 5 /**< number of pool solutions where binary solution values must agree */
@@ -1592,6 +1591,8 @@ SCIP_RETCODE neighborhoodFixVariables(
    /** if too few fixings, use a strategy to select more variable fixings: randomized, LP graph, ReducedCost/Ps-Cost based, mix */
    ntargetfixings = (int)(neighborhood->fixingrate.targetfixingrate * (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)));
 
+   SCIPdebugMsg(scip, "Neighborhood Fixings/Target: %d / %d\n",*nfixings, ntargetfixings);
+
    if( *result == SCIP_SUCCESS && (*nfixings < ntargetfixings) )
    {
       SCIP_Bool success;
@@ -1601,6 +1602,12 @@ SCIP_RETCODE neighborhoodFixVariables(
          *result = SCIP_SUCCESS;
       else
          *result = SCIP_DIDNOTFIND;
+
+      SCIPdebugMsg(scip, "After additional fixings: %d / %d\n",*nfixings, ntargetfixings);
+   }
+   else
+   {
+      SCIPdebugMsg(scip, "No additional fixings performed\n");
    }
 
    return SCIP_OKAY;
@@ -1844,12 +1851,16 @@ SCIP_RETCODE setupSubScip(
 
    /* disable output to console unless we are in debug mode */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
-#ifdef SCIP_DEBUG
-   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
-#endif
 
    /* disable statistic timing inside sub SCIP */
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+
+#ifdef LNS_SUBSCIPOUTPUT
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1) );
+   /* enable statistic timing inside sub SCIP */
+      SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+#endif
 
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->nsolslim) );
 
@@ -1919,10 +1930,15 @@ SCIP_RETCODE setupSubScip(
       }
       cutoff = MIN(upperbound, cutoff);
 
+      SCIPdebugMsg(scip, "Sub-SCIP cutoff: %15.9" SCIP_REAL_FORMAT " (%15.9" SCIP_REAL_FORMAT " in original space)\n",
+         cutoff, SCIPretransformObj(scip, cutoff));
+
       /* if the objective changed between the source and the target SCIP, encode the cutoff as a constraint */
       if( !objchgd )
       {
          SCIP_CALL(SCIPsetObjlimit(subscip, cutoff));
+
+         SCIPdebugMsg(scip, "Cutoff added as Objective Limit\n");
       }
       else
       {
@@ -1945,6 +1961,8 @@ SCIP_RETCODE setupSubScip(
          }
          SCIP_CALL( SCIPaddCons(subscip, objcons) );
          SCIP_CALL( SCIPreleaseCons(subscip, &objcons) );
+
+         SCIPdebugMsg(scip, "Cutoff added as constraint\n");
       }
    }
 
@@ -2055,6 +2073,8 @@ SCIP_DECL_HEUREXEC(heurExecLns)
             if( heurdata->ndelayedcalls > (SCIPheurGetFreq(heur) / 4 + 1) )
             {
                resetCurrentNeighborhood(heurdata);
+
+               /* use SCIP_DIDNOTFIND to penalize the neighborhood with a bad reward */
                fixresult = SCIP_DIDNOTFIND;
             }
             else if( heurdata->currneighborhood == -1 )
@@ -2079,6 +2099,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
                ntries++;
                tryagain = TRUE;
 
+               SCIPdebugMsg(scip, "Neighborhood cannot run -> try next neighborhood %d\n", neighborhoodidx);
                continue;
             }
             else
