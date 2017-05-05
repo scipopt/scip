@@ -72,7 +72,7 @@
 #define DEFAULT_MAXCUTSROOT        1000 /**< maximal number of {0,1/2}-cuts determined per separation round
                                          *   in the root node (this includes separated but inefficacious cuts) */
 
-#define MAXSLACK              (1.0/3.0)
+#define MAXSLACK                    0.5
 
 /* SCIPcalcMIR parameters */
 #define BOUNDSWITCH              0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
