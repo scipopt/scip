@@ -72,8 +72,9 @@
 #define DEFAULT_MAXCUTSROOT        1000 /**< maximal number of {0,1/2}-cuts determined per separation round
                                          *   in the root node (this includes separated but inefficacious cuts) */
 
-/* SCIPcalcMIR parameters */
+#define MAXSLACK              (1.0/3.0)
 
+/* SCIPcalcMIR parameters */
 #define BOUNDSWITCH              0.9999 /**< threshold for bound switching - see SCIPcalcMIR() */
 #define USEVBDS                    TRUE /**< use variable bounds - see SCIPcalcMIR() */
 #define ALLOWLOCAL                 TRUE /**< allow to generate local cuts - see SCIPcalcMIR() */
@@ -394,7 +395,7 @@ SCIP_RETCODE buildMod2Matrix(
             rhsmod2 = mod2(scip, SCIProwGetRhs(rows[i]));
          }
 
-         if( SCIPisLT(scip, rhsslack, 1.0) && SCIPisLT(scip, lhsslack, 1.0) )
+         if( rhsslack <= MAXSLACK && lhsslack <= MAXSLACK )
          {
             if( lhsmod2 == rhsmod2 )
             {
@@ -416,12 +417,12 @@ SCIP_RETCODE buildMod2Matrix(
                SCIP_CALL( mod2MatrixAddRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, 1, rhsmod2) );
             }
          }
-         else if( SCIPisLT(scip, rhsslack, 1.0) )
+         else if( rhsslack <= MAXSLACK )
          {
             /* use rhs */
             SCIP_CALL( mod2MatrixAddRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, 1, rhsmod2) );
          }
-         else if( SCIPisLT(scip, lhsslack, 1.0) )
+         else if( lhsslack <= MAXSLACK )
          {
             /* use lhs */
             SCIP_CALL( mod2MatrixAddRow(scip, mod2matrix, origcol2col, rows[i], lhsslack, -1, lhsmod2) );
@@ -1038,11 +1039,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
          if( col != NULL )
          {
+            int colentries;
             int nnonzrows;
+
             ++sepadata->nreductions;
 
             nnonzrows = 0;
-            int colentries = SCIPhashtableGetNEntries(col->nonzrows);
+            colentries = SCIPhashtableGetNEntries(col->nonzrows);
 
             for( j = 0; j < colentries; ++j )
             {
@@ -1099,7 +1102,6 @@ TERMINATE:
    SCIPaggrRowFree(scip, &sepadata->aggrrow);
 
    destroyMod2Matrix(scip, &mod2matrix);
-
 
    return SCIP_OKAY;
 }
