@@ -186,11 +186,11 @@ SCIP_RETCODE sparsifyCons(
    SCIP_Real             scalefac,           /**< scalefactor for sparsification */
    SCIP_VAR**            consvars,           /**< helper array for constraint variables */
    SCIP_Real*            consvals,           /**< helper array for constraint coefficients */
-   SCIP_Bool*            nonzerosotherrow,   /**< mask of non-zero entries of the other constraint */
+   uint8_t*              nonzerosotherrow,   /**< mask of non-zero entries of the other constraint */
    int*                  scatterotherrow,    /**< scatter array holding cleaning information of the other constraint */
    int                   numscatterotherrow, /**< number of entries in scatter array of the other constraint */
    SCIP_Real*            coefsotherrow,      /**< coefficients of the other constraint */
-   SCIP_Bool*            nonzerosequality,   /**< mask of non-zero entries of the equality */
+   uint8_t*              nonzerosequality,   /**< mask of non-zero entries of the equality */
    int*                  scatterequality,    /**< scatter array holding cleaning information of the equality */
    int                   numscatterequality, /**< number of entries in scatter array of the equality */
    SCIP_Real*            coefsequality,      /**< coefficients of the equality */
@@ -328,11 +328,11 @@ int getMinNumSupersetMisses(
    SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   otherrow,           /**< index of the other constraint */
    int                   equality,           /**< index of the equality */
-   SCIP_Bool*            nonzerosotherrow,   /**< mask of non-zero entries of the other constraint */
+   uint8_t*              nonzerosotherrow,   /**< mask of non-zero entries of the other constraint */
    int*                  scatterotherrow,    /**< scatter array holding cleaning information of the other constraint */
    int*                  numscatterotherrow, /**< number of entries in scatter array of the other constraint */
    SCIP_Real*            coefsotherrow,      /**< coefficients of the other constraint */
-   SCIP_Bool*            nonzerosequality,   /**< mask of non-zero entries of the equality */
+   uint8_t*              nonzerosequality,   /**< mask of non-zero entries of the equality */
    int*                  scatterequality,    /**< scatter array holding cleaning information of the equality */
    int*                  numscatterequality, /**< number of entries in scatter array of the equality */
    SCIP_Real*            coefsequality,      /**< coefficients of the equality */
@@ -524,7 +524,7 @@ SCIP_Real getScalefac(
 /** clean non-zeros entries in scatter array */
 static
 void rescattering(
-   SCIP_Bool*            nonzerosrow,        /**< non-zero indexes */
+   uint8_t*              nonzerosrow,        /**< non-zero indexes */
    int*                  scatterrow,         /**< cleaning information */
    int*                  numscatterrow       /**< number of scatter entries */
    )
@@ -701,14 +701,14 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       int* eqnonzs;
       int* eqidxs;
       int numeqs;
-      SCIP_Bool* rowsparsified;
+      uint8_t* rowsparsified;
       int nmisses;
       SCIP_Real* ratios;
-      SCIP_Bool* nonzerosotherrow;
+      uint8_t* nonzerosotherrow;
       int* scatterotherrow;
       int numscatterotherrow;
       SCIP_Real* coefsotherrow;
-      SCIP_Bool* nonzerosequality;
+      uint8_t* nonzerosequality;
       int* scatterequality;
       int numscatterequality;
       SCIP_Real* coefsequality;
