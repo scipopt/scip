@@ -22461,8 +22461,12 @@ int SCIPgetPtrarrayMaxIdx(
  *
  *  - checking if the primal and dual bounds computed by SCIP agree with the given primal and dual reference bounds
  *
+ *  All refererence bounds are considered respecting the original problem space and the original objective sense.
+ *
  *  For infeasible problems, +/-SCIPinfinity() should be passed as reference bounds. If the problem is a minimization problem,
  *  the correct primal and dual reference bounds should be +infinity.
+ *
+ *
  *
  */
 EXTERN
@@ -22474,8 +22478,10 @@ SCIP_RETCODE SCIPverifySolve(
    SCIP_Bool             quiet,              /**< TRUE if no status line should be printed */
    SCIP_Bool*            feasible,           /**< pointer to store if the best solution is feasible in the original problem,
                                                *  or NULL */
-   SCIP_Bool*            primalrefviol,      /**< is the primal reference value violated? */
-   SCIP_Bool*            dualrefviol         /**< is the dual reference value violated? */
+   SCIP_Bool*            primalboundcheck,   /**< pointer to store if the primal bound respects the given dual reference
+                                               *  value, or NULL */
+   SCIP_Bool*            dualboundcheck      /**< pointer to store if the dual bound respects the given primal reference
+                                               *  value, or NULL */
    );
 
 /* @} */
