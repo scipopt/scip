@@ -35,6 +35,9 @@
 #define NLPI_DESC              "Sequential Quadratic Programming trust region solver by R. Fletcher and S. Leyffer" /* description of solver */
 #define NLPI_PRIORITY          -10000                     /* priority of NLP solver */
 
+#define RANDSEED               26051979      /**< initial random seed */
+#define MAXPERTURB             0.01          /**< maximal perturbation of bounds in starting point heuristic */
+
 /*
  * Data structures
  */
@@ -48,7 +51,7 @@ struct SCIP_NlpiData
    BMS_BLKMEM*                 blkmem;       /**< block memory */
    SCIP_MESSAGEHDLR*           messagehdlr;  /**< message handler */
    SCIP_Real                   infinity;     /**< initial value for infinity */
-
+   SCIP_RANDNUMGEN*            randnumgen;   /**< random number generator, if we have to make up a starting point */
 };
 
 struct SCIP_NlpiProblem
@@ -328,6 +331,11 @@ SCIP_RETCODE setupGradients(
 
    SCIP_ALLOC( BMSallocMemoryArray(a, *maxa) );
 
+#if 0  /* enable for debugging Jacobian */
+   for( i = 0; i < 1 + (nvars+nnz) + 1+ncons + 1; ++i )
+      printf("la[%2d] = %2d\n", i, (*la)[i]);
+#endif
+
    return SCIP_OKAY;
 }
 
@@ -377,6 +385,11 @@ SCIP_RETCODE setupHessian(
       (*la)[(*la)[0]+v] = offset[v] + 1;  /* shift by 1 for Fortran */
 
    F77_FUNC(hessc,HESSC).phl = 1;
+
+#if 0 /* enable for debugging Hessian */
+   for( i = 0; i < 1 + nnz + nvars + 1; ++i )
+      printf("lw[%2d] = %2d\n", i, (*la)[i]);
+#endif
 
    return SCIP_OKAY;
 }
@@ -503,6 +516,11 @@ SCIP_DECL_NLPIFREE( nlpiFreeFilterSQP )
 
    data = SCIPnlpiGetData(nlpi);
    assert(data != NULL);
+
+   if( data->randnumgen != NULL )
+   {
+      SCIPrandomFree(&data->randnumgen);
+   }
 
    BMSfreeBlockMemory(data->blkmem, &data);
    assert(data == NULL);
@@ -974,6 +992,7 @@ SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessFilterSQP )
 static
 SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 {
+   SCIP_NLPIDATA* data;
    fint n;
    fint m;
    fint kmax;
@@ -1006,6 +1025,9 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    real rstat[7];
    ftnlen cstype_len = 1;
    int i;
+
+   data = SCIPnlpiGetData(nlpi);
+   assert(data != NULL);
 
    n = SCIPnlpiOracleGetNVars(problem->oracle);
    m = SCIPnlpiOracleGetNConstraints(problem->oracle);
@@ -1063,10 +1085,33 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 
    /* setup starting point */
    if( problem->initguess != NULL )
+   {
       BMScopyMemoryArray(x, problem->initguess, n);
+   }
    else
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+
+      SCIPdebugMessage("FilterSQP started without intial primal values; make up something by projecting 0 onto variable bounds and perturb\n");
+
+      if( data->randnumgen == NULL )
+      {
+         SCIP_CALL( SCIPrandomCreate(&data->randnumgen, data->blkmem, RANDSEED) );
+      }
+
       for( i = 0; i < n; ++i )
-         x[i] = MIN(MAX(0.0, bl[i]), bu[i]);  /* TODO nlpi_ipopt avoids to start exactly at 0.0 or bounds */
+      {
+         lb = SCIPnlpiOracleGetVarLbs(problem->oracle)[i];
+         ub = SCIPnlpiOracleGetVarUbs(problem->oracle)[i];
+         if( lb > 0.0 )
+            x[i] = SCIPrandomGetReal(data->randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
+         else if( ub < 0.0 )
+            x[i] = SCIPrandomGetReal(data->randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
+         else
+            x[i] = SCIPrandomGetReal(data->randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
+      }
+   }
 
    /* TODO from here on we are not thread-safe: maybe add some mutex here if PARASCIP=true? */
    nlpiSolved = nlpi;
@@ -1901,6 +1946,7 @@ SCIP_RETCODE SCIPcreateNlpSolverFilterSQP(
    nlpidata->blkmem = blkmem;
    nlpidata->messagehdlr = NULL;
    nlpidata->infinity = SCIP_DEFAULT_INFINITY;
+   nlpidata->randnumgen = NULL;
 
    /* create solver interface */
    SCIP_CALL( SCIPnlpiCreate(nlpi,
