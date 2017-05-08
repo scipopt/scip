@@ -19,7 +19,6 @@
  * @author  Stefan Vigerske
  *
  * @todo warm starts
- * @todo hessian
  * @todo scaling
  */
 
@@ -40,6 +39,10 @@
  * Data structures
  */
 
+typedef int fint;
+typedef double real;
+typedef long ftnlen;
+
 struct SCIP_NlpiData
 {
    BMS_BLKMEM*                 blkmem;       /**< block memory */
@@ -54,6 +57,8 @@ struct SCIP_NlpiProblem
 
    SCIP_Bool                   firstrun;     /**< whether the next NLP solve will be the first one (with the current problem structure) */
    SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known */
+
+   fint*                       hessiannz;    /**< nonzero information about Hessian */
 };
 
 
@@ -69,10 +74,6 @@ struct SCIP_NlpiProblem
 # define F77_FUNC(name,NAME) name ## _
 # define F77_FUNC_(name,NAME) name ## _
 #endif
-
-typedef int fint;
-typedef double real;
-typedef long ftnlen;
 
 /** FilterSQP main routine.
  *
@@ -330,6 +331,55 @@ SCIP_RETCODE setupGradients(
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE setupHessian(
+   SCIP_NLPIORACLE*      oracle,
+   fint**                la
+)
+{
+   const int* offset;
+   const int* col;
+   int nnz;  /* number of nonzeros in Jacobian */
+   int nvars;
+   int i;
+   int v;
+
+   nvars = SCIPnlpiOracleGetNVars(oracle);
+
+   /* get Hessian sparsity in oracle format: offset are rowstarts in col and col are column indices */
+   SCIP_CALL( SCIPnlpiOracleGetHessianLagSparsity(oracle, &offset, &col) );
+   nnz = offset[nvars];
+
+   /* la stores both column indices (first) and rowstarts (at the end) of the (sparse) Hessian
+    * la(0) = nnz+1 position where rowstarts start in la
+    * la(j) column index of Hessian row, rowwise
+    * la(la(0)+i) position of first nonzero element for row i, i = 0..n-1
+    * la(la(0)+n) = nnz first unused position in Hessian
+    * where n = nvars
+    */
+
+   /* need space for la(0) and column indices and rowstarts
+    * 1 for la(0)
+    * nnz for column indices
+    * nvars for rowstarts
+    * 1 for first unused position
+    */
+   SCIP_ALLOC( BMSallocMemoryArray(la, 1 + nnz + nvars + 1) );
+
+   (*la)[0] = nnz+1;
+
+   /* column indicies are as given by col */
+   for( i = 0; i < nnz; ++i )
+      (*la)[1+i] = col[i] + 1;  /* shift by 1 for Fortran */
+
+   /* rowstarts are as given by offset */
+   for( v = 0; v <= nvars; ++v )
+      (*la)[(*la)[0]+v] = offset[v] + 1;  /* shift by 1 for Fortran */
+
+   F77_FUNC(hessc,HESSC).phl = 1;
+
+   return SCIP_OKAY;
+}
 
 /* Objective gradient evaluation */
 /*
@@ -374,8 +424,32 @@ F77_FUNC(hessian,HESSIAN)(
    fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
    )
 {
-   SCIPerrorMessage("Hessian not implemented. Should not be called.\n");
-   *errflag = 1;
+   SCIP_NLPIPROBLEM* problem;
+   SCIP_Real* lambda;
+   int nnz;
+   int i;
+
+   problem = (SCIP_NLPIPROBLEM*)iuser;
+   assert(problem != NULL);
+
+   *errflag = 0;
+
+   /* copy the complete problem->hessiannz into lws */
+   nnz = problem->hessiannz[0]-1;
+   for( i = 0; i < nnz + *n + 2; ++i )
+      lws[i] = problem->hessiannz[i];
+   *li_hess = nnz + *n + 2;
+
+   /* initialize lambda to -lam */
+   BMSallocMemoryArray(&lambda, *m);
+   for( i = 0; i < *m; ++i )
+      lambda[i] = -lam[*n+i];
+
+   /* TODO handle arithmetic exception, in which case we must not modify ws */
+   SCIPnlpiOracleEvalHessianLag(problem->oracle, x, TRUE, (*phase == 1) ? 0.0 : 1.0, lambda, ws);
+   *l_hess = nnz;
+
+   BMSfreeMemoryArray(&lambda);
 }
 
 
@@ -971,8 +1045,11 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    SCIP_ALLOC( BMSallocClearMemoryArray(&lam, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&cstype, m) );
 
-   /* allocate la, a and initialize la and maxa */
+   /* allocate la, a and initialize la and maxa for Objective Gradient and Jacobian */
    SCIP_CALL( setupGradients(problem->oracle, &la, &a, &maxa) );
+
+   /* allocate and initialize problem->hessiannz for Hessian */
+   SCIP_CALL( setupHessian(problem->oracle, &problem->hessiannz) );
 
    /* setup variable bounds, constraint sides, and constraint types */
    BMScopyMemoryArray(bl, SCIPnlpiOracleGetVarLbs(problem->oracle), n);
@@ -1001,7 +1078,6 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    F77_FUNC(ubdc,UBDC).ubd = 100.0;
    F77_FUNC(ubdc,UBDC).tt = 1.25;
    F77_FUNC(scalec,SCALEC).scale_mode = 0;
-   F77_FUNC(hessc,HESSC).phl = 0; /* no Hessian yet, is it? doesn't seem to work*/
 
    F77_FUNC(filtersqp,FILTERSQP)(
       &n, &m, &kmax, &maxa,
@@ -1024,6 +1100,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    BMSfreeMemoryArray(&bl);
    BMSfreeMemoryArray(&c);
    BMSfreeMemoryArray(&x);
+   BMSfreeMemoryArray(&problem->hessiannz);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
