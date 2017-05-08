@@ -379,6 +379,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
          "  -q            : suppress screen messages\n"
          "  -s <settings> : load parameter settings (.set) file\n"
          "  -f <problem>  : load and solve problem file\n"
+         "  -p <primref> <dualref> : pass primal and dual reference value for verification at the end of the solve"
          "  -b <batchfile>: load and execute dialog command batch file (can be used multiple times)\n"
          "  -c \"command\"  : execute single line of dialog commands (can be used multiple times)\n\n",
          argv[0]);
