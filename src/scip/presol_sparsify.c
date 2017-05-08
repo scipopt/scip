@@ -49,6 +49,8 @@
 #define DEFAULT_MAX_SUPERSET_MISSES     1    /**< default value for the maximal number of superset misses */
 #define DEFAULT_FULL_SEARCH             0    /**< default value for full search */
 
+
+#define MAXCONSIDEREDNONZEROS 70
 /*
  * Data structures
   */
@@ -125,6 +127,7 @@ SCIP_RETCODE cancelRow(
    SCIP_Real cancellhs;
    SCIP_Real cancelrhs;
    int* tmpinds;
+   int* locks;
    SCIP_Real* tmpvals;
    int cancelrowlen;
    int nchgcoef;
@@ -135,6 +138,7 @@ SCIP_RETCODE cancelRow(
    SCIPduplicateBufferArray(scip, &cancelrowvals, SCIPmatrixGetRowValPtr(matrix, rowidx), cancelrowlen);
    SCIPallocBufferArray(scip, &tmpinds, cancelrowlen);
    SCIPallocBufferArray(scip, &tmpvals, cancelrowlen);
+   SCIPallocBufferArray(scip, &locks, cancelrowlen);
 
    cancellhs = SCIPmatrixGetRowLhs(matrix, rowidx);
    cancelrhs = SCIPmatrixGetRowRhs(matrix, rowidx);
@@ -149,10 +153,21 @@ SCIP_RETCODE cancelRow(
       int i;
       int j;
       ROWVARPAIR rowvarpair;
+      int maxlen;
 
       for( i = 0; i < cancelrowlen; ++i )
       {
-         for( j = i + 1; j < cancelrowlen; ++j )
+         tmpinds[i] = i;
+         locks[i] = SCIPmatrixGetColNDownlocks(matrix, cancelrowinds[i]) + SCIPmatrixGetColNUplocks(matrix, cancelrowinds[i]);
+      }
+
+      SCIPsortDownIntInt(locks, tmpinds, cancelrowlen);
+
+      maxlen = MIN(cancelrowlen, MAXCONSIDEREDNONZEROS);
+
+      for( i = 0; i < maxlen; ++i )
+      {
+         for( j = i + 1; j < maxlen; ++j )
          {
             int a,b;
             int ncancel;
@@ -162,13 +177,27 @@ SCIP_RETCODE cancelRow(
             SCIP_Real* eqrowvals;
             int* eqrowinds;
             SCIP_Real scale;
+            int i1,i2;
+
+            i1 = tmpinds[i];
+            i2 = tmpinds[j];
 
             assert(cancelrowinds[i] < cancelrowinds[j]);
 
-            rowvarpair.varindex1 = cancelrowinds[i];
-            rowvarpair.varindex2 = cancelrowinds[j];
-            rowvarpair.varcoef1 = cancelrowvals[i];
-            rowvarpair.varcoef2 = cancelrowvals[j];
+            if( cancelrowinds[i1] < cancelrowinds[i2] )
+            {
+               rowvarpair.varindex1 = cancelrowinds[i1];
+               rowvarpair.varindex2 = cancelrowinds[i2];
+               rowvarpair.varcoef1 = cancelrowvals[i1];
+               rowvarpair.varcoef2 = cancelrowvals[i2];
+            }
+            else
+            {
+               rowvarpair.varindex1 = cancelrowinds[i2];
+               rowvarpair.varindex2 = cancelrowinds[i1];
+               rowvarpair.varcoef1 = cancelrowvals[i2];
+               rowvarpair.varcoef2 = cancelrowvals[i1];
+            }
 
             eqrowvarpair = SCIPhashtableRetrieve(pairtable, (void*) &rowvarpair);
 
@@ -336,6 +365,7 @@ SCIP_RETCODE cancelRow(
       SCIPfreeBufferArray(scip, &consvars);
    }
 
+   SCIPfreeBufferArray(scip, &locks);
    SCIPfreeBufferArray(scip, &tmpvals);
    SCIPfreeBufferArray(scip, &tmpinds);
    SCIPfreeBufferArray(scip, &cancelrowvals);
@@ -356,6 +386,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
    int i;
    int j;
    int numcancel;
+   int* locks;
+   int* perm;
    SCIP_HASHTABLE* pairtable;
    ROWVARPAIR* varpairs;
    int nvarpairs;
@@ -388,6 +420,9 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
          SCIPsortIntReal(rowpnt, valpnt, SCIPmatrixGetRowNNonzs(matrix, i));
       }
 
+      SCIPallocBufferArray(scip, &locks, SCIPmatrixGetNColumns(matrix));
+      SCIPallocBufferArray(scip, &perm, SCIPmatrixGetNColumns(matrix));
+
       /* loop over all rows and create var pairs */
       numcancel = 0;
       varpairssize = 0;
@@ -408,6 +443,16 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
             rowinds = SCIPmatrixGetRowIdxPtr(matrix, r);
             rowvals = SCIPmatrixGetRowValPtr(matrix, r);
 
+            for( i = 0; i < nnonz; ++i )
+            {
+               perm[i] = i;
+               locks[i] = SCIPmatrixGetColNDownlocks(matrix, rowinds[i]) + SCIPmatrixGetColNUplocks(matrix, rowinds[i]);
+            }
+
+            SCIPsortDownIntInt(locks, perm, nnonz);
+
+            nnonz = MIN(nnonz, MAXCONSIDEREDNONZEROS);
+
             npairs = (nnonz * (nnonz - 1)) / 2;
 
             if( nvarpairs + npairs > varpairssize )
@@ -421,12 +466,27 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
             {
                for( j = i + 1; j < nnonz; ++j )
                {
+                  int i1,i2;
                   assert(nvarpairs < varpairssize);
+
+                  i1 = perm[i];
+                  i2 = perm[j];
                   varpairs[nvarpairs].rowindex = r;
-                  varpairs[nvarpairs].varindex1 = rowinds[i];
-                  varpairs[nvarpairs].varindex2 = rowinds[j];
-                  varpairs[nvarpairs].varcoef1 = rowvals[i];
-                  varpairs[nvarpairs].varcoef2 = rowvals[j];
+
+                  if( rowinds[i1] < rowinds[i2])
+                  {
+                     varpairs[nvarpairs].varindex1 = rowinds[i1];
+                     varpairs[nvarpairs].varindex2 = rowinds[i2];
+                     varpairs[nvarpairs].varcoef1 = rowvals[i1];
+                     varpairs[nvarpairs].varcoef2 = rowvals[i2];
+                  }
+                  else
+                  {
+                     varpairs[nvarpairs].varindex1 = rowinds[i2];
+                     varpairs[nvarpairs].varindex2 = rowinds[i1];
+                     varpairs[nvarpairs].varcoef1 = rowvals[i2];
+                     varpairs[nvarpairs].varcoef2 = rowvals[i1];
+                  }
                   ++nvarpairs;
                }
             }
@@ -457,6 +517,9 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
 
       SCIPhashtableFree(&pairtable);
       SCIPfreeBufferArrayNull(scip, &varpairs);
+
+      SCIPfreeBufferArray(scip, &perm);
+      SCIPfreeBufferArray(scip, &locks);
 
       {
          SCIP_Real percentagenzcancelled = 100 * numcancel / (SCIP_Real)SCIPmatrixGetNNonzs(matrix);
