@@ -70,6 +70,7 @@
 #define DEFAULT_REUSEBASIS                   TRUE
 #define DEFAULT_STOREUNVIOLATEDSOL           TRUE
 #define DEFAULT_ABBREVPSEUDO                 FALSE
+#define DEFAULT_ADDCLIQUE                    FALSE
 
 #ifdef SCIP_DEBUG
 #define LABdebugMessage(scip,lvl,...)        do                                                                            \
@@ -343,6 +344,7 @@ typedef struct
                                               *   after adding the constraints/domreds? */
    SCIP_Bool             abbrevpseudo;       /**< If abbreviated == TRUE, should pseudocost values be used, to approximate
                                               *   the scoring? */
+   SCIP_Bool             addclique;          /**< Should binary constraints found in the root node be added as cliques? */
 } CONFIGURATION;
 
 /** Allocates a configuration in the buffer and initiates it with the default values. */
@@ -374,6 +376,7 @@ SCIP_RETCODE configurationAllocate(
    (*config)->reusebasis = copysource->reusebasis;
    (*config)->storeunviolatedsol = copysource->storeunviolatedsol;
    (*config)->abbrevpseudo = copysource->abbrevpseudo;
+   (*config)->addclique = copysource->addclique;
 
    return SCIP_OKAY;
 }
@@ -448,6 +451,7 @@ typedef struct
                                               *   scoring candidates by FSB because of a found domain reduction. */
    int*                  chosenfsbcand;      /**< If abbreviated, this is the number of times each candidate was finally
                                               *   chosen by the following LAB */
+   int                   ncliquesadded;      /**< The number of cliques added in the root node. */
    int                   maxnbestcands;      /**< If abbreviated, this is the maximum number of candidates the method
                                               *   getBestCandidates will return. */
    int                   recursiondepth;     /**< The recursiondepth of the LAB. Can be used to access the depth-dependent
@@ -479,6 +483,7 @@ void statisticsInit(
    statistics->stopafterfsb = 0;
    statistics->cutoffafterfsb = 0;
    statistics->domredafterfsb = 0;
+   statistics->ncliquesadded = 0;
 
    for( i = 0; i < 18; i++)
    {
@@ -633,6 +638,8 @@ void statisticsPrint(
          statistics->nbinconst, statistics->nbinconstvio);
       SCIPinfoMessage(scip, NULL, "Reduced the domain of <%i> vars, <%i> of them where violated by the base LP.\n",
          statistics->ndomred, statistics->ndomredvio);
+      SCIPinfoMessage(scip, NULL, "Added <%i> cliques found as binary constraint in the root node\n",
+         statistics->ncliquesadded);
       SCIPinfoMessage(scip, NULL, "Needed <%i> additional nodes to proof the cutoffs of base nodes\n",
          statistics->ncutoffproofnodes);
       SCIPinfoMessage(scip, NULL, "Needed <%i> additional nodes to proof the domain reductions\n",
@@ -2336,7 +2343,7 @@ SCIP_RETCODE executeBranching(
        * calculations and instead return the current calculation state */
       status->limitreached = solstat == SCIP_LPSOLSTAT_ITERLIMIT || solstat == SCIP_LPSOLSTAT_TIMELIMIT;
 
-      if( !status->limitreached && !status->lperror )
+      if( !status->limitreached && !status->lperror && !resultdata->cutoff )
       {
          /* if we have no error, we save the new objective value and the cutoff decision in the resultdata */
          resultdata->objval = SCIPgetLPObjval(scip);
@@ -2552,7 +2559,10 @@ SCIP_RETCODE applyBinaryConstraints(
    SCIP*                 scip,
    SCIP_NODE*            basenode,
    CONSTRAINTLIST*       conslist,
-   SCIP_Bool*            consadded
+   CONFIGURATION*        config,
+   SCIP_Bool*            consadded,
+   SCIP_Bool*            cutoff,
+   SCIP_Bool*            boundchange
 #ifdef SCIP_STATISTIC
    ,STATISTICS*          statistics
 #endif
@@ -2573,6 +2583,62 @@ SCIP_RETCODE applyBinaryConstraints(
 
       /* add the constraint to the given node */
       SCIP_CALL( SCIPaddConsNode(scip, basenode, constraint, NULL) );
+
+      /* only add cliques for the root node */
+      if( config->addclique && SCIPgetNNodes(scip) == 1 )
+      {
+         int nvars;
+         SCIP_Bool success;
+
+         /* get the number of contained variables, used to add a clique in the */
+         SCIP_CALL( SCIPgetConsNVars(scip, constraint, &nvars, &success) );
+
+         if( success )
+         {
+            SCIP_VAR** vars;
+
+            LABallocBufferArray(scip, &vars, nvars, "CONSVARS");
+
+            SCIP_CALL( SCIPgetConsVars(scip, constraint, vars, nvars, &success) );
+
+            if( success )
+            {
+               SCIP_Bool* values;
+               int j;
+               SCIP_Bool infeasible;
+               int nbdchgs;
+
+               LABallocBufferArray(scip, &values, nvars, "CONSVARS_VALUES");
+               for( j = 0; j < nvars; j++ )
+               {
+                  values[j] = FALSE;
+               }
+               /* a two-variable logicor constraint x + y >= 1 yields the implication x == 0 -> y == 1, and is represented
+                * by the clique inequality ~x + ~y <= 1
+                */
+               SCIP_CALL( SCIPaddClique(scip, vars, values, nvars, FALSE, &infeasible, &nbdchgs) );
+
+#ifdef SCIP_STATISTIC
+               statistics->ncliquesadded++;
+#endif
+
+               if( infeasible )
+               {
+                  *cutoff = TRUE;
+               }
+
+               if( nbdchgs > 0 )
+               {
+                  *boundchange = TRUE;
+               }
+
+               LABfreeBufferArray(scip, &values, "CONSVARS_VALUES");
+            }
+
+            LABfreeBufferArray(scip, &vars, "CONSVARS");
+         }
+      }
+
       /* release the constraint, as it is no longer needed */
       SCIP_CALL( SCIPreleaseCons(scip, &constraint) );
 
@@ -4124,9 +4190,9 @@ SCIP_RETCODE selectVarStart(
             basenode = SCIPgetCurrentNode(scip);
 
 #ifdef SCIP_STATISTIC
-            SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->createdconstraints, &status->addbinconst, statistics) );
+            SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->createdconstraints, config, &status->addbinconst, &status->cutoff, &status->domred, statistics) );
 #else
-            SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->createdconstraints, &status->addbinconst) );
+            SCIP_CALL( applyBinaryConstraints(scip, basenode, binconsdata->createdconstraints, config, &status->addbinconst, &status->cutoff, &status->domred) );
 #endif
             binConsDataFree(scip, &binconsdata);
 
@@ -4739,6 +4805,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/abbrevpseudo",
          "If abbreviated, should pseudocost be used to approximate scores?",
          &branchruledata->config->abbrevpseudo, TRUE, DEFAULT_ABBREVPSEUDO, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/addclique",
+         "Should binary constraints found in the root node be added as cliques?",
+         &branchruledata->config->addclique, TRUE, DEFAULT_ADDCLIQUE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
