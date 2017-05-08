@@ -383,6 +383,33 @@ SCIP_RETCODE SCIPaggrRowAddData(
    return SCIP_OKAY;
 }
 
+/** deletes variable at position @pos and updates mapping between variable indices and sparsity pattern */
+void SCIPaggrRowDelCoef(
+   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
+   int                   pos,                /**< position that should be removed */
+   int*                  positions           /**< mapping between variable indices and sparsity pattern (or NULL) */
+   )
+{
+   assert(aggrrow != NULL);
+   assert(pos >= 0);
+   assert(pos < aggrrow->nnz);
+   assert(aggrrow->inds[pos] >= 0);
+
+   aggrrow->vals[pos] = aggrrow->vals[aggrrow->nnz - 1];
+   aggrrow->inds[pos] = aggrrow->inds[aggrrow->nnz - 1];
+
+   if( positions != NULL )
+   {
+      positions[aggrrow->inds[pos]] = 0;
+
+      /* mapping should be shifted by +1 */
+      assert(positions[aggrrow->inds[aggrrow->nnz - 1]] == aggrrow->nnz);
+      positions[aggrrow->inds[aggrrow->nnz - 1]] = pos+1;
+   }
+
+   --aggrrow->nnz;
+}
+
 /** adds given value to the right-hand side of the aggregation row */
 void SCIPaggrRowAddRhs(
    SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
@@ -2967,7 +2994,7 @@ SCIP_RETCODE getClosestVlb(
          int aggrrowidxbinvar;
 
          /* use only variable lower bounds l~_i * x_i + d_i with x_i binary which are active */
-         if( !SCIPvarIsBinary(vlbvars[i])  || !SCIPvarIsActive(vlbvars[i]) )
+         if( !SCIPvarIsBinary(vlbvars[i])  || !SCIPvarIsActive(vlbvars[i]) || SCIPvarGetProbindex(vlbvars[i]) >= SCIPgetNBinVars(scip) )
             continue;
 
          /* check if current variable lower bound l~_i * x_i + d_i imposed on y_j meets the following criteria:
@@ -3092,7 +3119,7 @@ SCIP_RETCODE getClosestVub(
          int aggrrowidxbinvar;
 
          /* use only variable upper bound u~_i * x_i + d_i with x_i binary and which are active */
-         if( !SCIPvarIsBinary(vubvars[i]) || !SCIPvarIsActive(vubvars[i]))
+         if( !SCIPvarIsBinary(vubvars[i]) || !SCIPvarIsActive(vubvars[i]) || SCIPvarGetProbindex(vubvars[i]) >= SCIPgetNBinVars(scip) )
             continue;
 
          /* checks if current variable upper bound u~_i * x_i + d_i meets the following criteria

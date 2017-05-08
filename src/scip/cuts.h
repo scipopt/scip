@@ -91,6 +91,14 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    int                   sidetype            /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
    );
 
+/** deletes variable at position @pos and updates mapping between variable indices and sparsity pattern */
+extern
+void SCIPaggrRowDelCoef(
+   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
+   int                   pos,                /**< position that should be removed */
+   int*                  positions           /**< mapping between variable indices and sparsity pattern (or NULL) */
+   );
+
 /** change the right-hand side of the aggregation row */
 extern
 void SCIPaggrRowAddRhs(

@@ -5777,7 +5777,6 @@ SCIP_RETCODE addCut(
 
    /* variables for knapsack cover separation */
    SCIP_VAR** cutvars;
-   int ncutvars;
 
    assert(scip != NULL);
    assert(sepadata != NULL);
@@ -5789,7 +5788,6 @@ SCIP_RETCODE addCut(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
    assert(nvars == 0 || vars != NULL);
 
-   ncutvars = 0;
    *cutoff = FALSE;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cutvars, cutnnz) );
@@ -5801,8 +5799,8 @@ SCIP_RETCODE addCut(
 
    /* create the cut */
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "mcf%d_%d", SCIPgetNLPs(scip), *ncuts);
-   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs,
-                                 cutislocal, FALSE, sepadata->dynamiccuts) );
+   SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, cutislocal, FALSE,
+         sepadata->dynamiccuts) );
 
    SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutnnz, cutvars, cutcoefs) );
 
@@ -5829,7 +5827,7 @@ SCIP_RETCODE addCut(
    if( !(*cutoff) && sepadata->separateknapsack)
    {
       /* relax cut to knapsack row and separate lifted cover cuts */
-      SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, NULL, sepa, ncutvars, cutvars, cutcoefs, +1.0, cutrhs, sol, cutoff, ncuts) );
+      SCIP_CALL( SCIPseparateRelaxedKnapsack(scip, NULL, sepa, cutnnz, cutvars, cutcoefs, +1.0, cutrhs, sol, cutoff, ncuts) );
    }
    SCIPfreeBufferArray(scip, &cutvars);
 

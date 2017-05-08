@@ -544,10 +544,11 @@ SCIP_RETCODE aggregateNextRow(
    SCIP_Real aggrfac;
    int bestrowside;
 
-   *success = FALSE;
    int nnz = SCIPaggrRowGetNNz(aggrrow);
    SCIP_Real* vals = SCIPaggrRowGetVals(aggrrow);
    int* inds = SCIPaggrRowGetInds(aggrrow);
+
+   *success = FALSE;
 
    {
       int nvars;
