@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//#define DEBUG_TARJAN
+
 /**@file   prop_vbounds.c
  * @brief  variable upper and lower bound propagator
  * @author Stefan Heinz
@@ -2132,7 +2132,7 @@ SCIP_DECL_PROPEXITSOL(propExitsolVbounds)
  *  Each clique x_1 + ... + x_k <= 1 is represented by k(k-1) arcs (lb(x_i),ub(x_j)), j != i.
  *  This quadratic number can blow up the running time of Tarjan's algorithm, which is linear in the number of
  *  nodes and arcs of the graph. However, it suffices to consider only k of these arcs during the course of the algorithm.
- *  To this end, when we first come to a node lb(x_i) of the clique, traverse all arcs (lb(x_i),ub(x_j)) for this fixed i,
+ *  To this end, when we first come to a node lb(x_i) of the clique, traverse all arcs (lb(x_i),ub(x_j)) for this particular i,
  *  and store that we entered the clique via lb(x_i). Next time we come to any node lb(x_i') of the clique, we know
  *  that the only arc pointing to an unvisited node is (lb(x_i'),ub(x_i)), all other edges can be disregarded.
  *  After that, we can disregard the clique for the further search.
@@ -2208,6 +2208,13 @@ SCIP_RETCODE tarjan(
    /* we run until no more bounds indices are on the stack, i.e., no further nodes are connected to the startnode */
    while( stacksize > 0 )
    {
+      SCIP_CLIQUE** cliques;
+      int ncliques;
+      SCIP_Bool found;
+      int clqidx;
+      int j;
+      int i;
+
       /* get next node from stack */
       curridx = dfsstack[currstackidx];
       assert(nodelowlink[curridx] <= nodeindex[curridx]);
@@ -2228,11 +2235,6 @@ SCIP_RETCODE tarjan(
 
 #ifdef DEBUG_TARJAN
          {
-            SCIP_CLIQUE** cliques;
-            int clqidx;
-            int ncliques;
-            int j;
-
             ncliques = SCIPvarGetNCliques(startvar, lower);
             cliques = SCIPvarGetCliques(startvar, lower);
 
@@ -2257,316 +2259,273 @@ SCIP_RETCODE tarjan(
          }
 #endif
       }
+      /* we just did a backtrack and still need to investigate some outgoing edges of the node;
+       * however, we should have investigated some of the outgoing edges before
+       */
       else
       {
          assert(stacknextclique[currstackidx] > 0 || stacknextcliquevar[currstackidx] > 0);
          assert(nodeindex[curridx] < index);
       }
+      assert(stacknextclique[currstackidx] >= 0);
 
-      /* stacknextclique is negative, if the last visited edge from the current node belongs to a clique;
-       * the index of the clique in the variable's clique list equals abs(stacknextclique) - 1
-       */
-      if( stacknextclique[currstackidx] >= 0 )
+      ncliques = SCIPvarGetNCliques(startvar, lower);
+      cliques = SCIPvarGetCliques(startvar, lower);
+      found = FALSE;
+
+      /* iterate over all not yet handled cliques and search for an unvisited node */
+      for( j = stacknextclique[currstackidx]; j < ncliques; ++j )
       {
-         SCIP_CLIQUE** cliques;
-         int ncliques;
-         int j;
-         int i;
-         SCIP_Bool found;
-         int clqidx;
+         SCIP_VAR** cliquevars;
+         SCIP_Bool* cliquevals;
+         int ncliquevars;
 
-         ncliques = SCIPvarGetNCliques(startvar, lower);
-         cliques = SCIPvarGetCliques(startvar, lower);
-         found = FALSE;
+         clqidx = SCIPcliqueGetIndex(cliques[j]);
+         cliquevars = SCIPcliqueGetVars(cliques[j]);
+         cliquevals = SCIPcliqueGetValues(cliques[j]);
+         ncliquevars = SCIPcliqueGetNVars(cliques[j]);
 
-         assert(stacknextclique[currstackidx] == 0 || stacknextclique[currstackidx] < ncliques);
-
-         /* iterate over all not yet handled cliques and search for an unvisited node */
-         for( j = stacknextclique[currstackidx]; j < ncliques; ++j )
+         /* we did not look at this clique before from the current node, i.e., we did not backtrack now from another
+          * node which was reached via this clique
+          */
+         if( stacknextcliquevar[currstackidx] == 0 )
          {
-            SCIP_VAR** cliquevars;
-            SCIP_Bool* cliquevals;
-            int ncliquevars;
-
-            clqidx = SCIPcliqueGetIndex(cliques[j]);
-            cliquevars = SCIPcliqueGetVars(cliques[j]);
-            cliquevals = SCIPcliqueGetValues(cliques[j]);
-            ncliquevars = SCIPcliqueGetNVars(cliques[j]);
-
-            if( stacknextcliquevar[currstackidx] == 0 )
-            {
 #ifdef DEBUG_TARJAN
-               SCIPdebugMsg(scip, "clique %d [%d vars, stacksize: %d]...\n", clqidx, ncliquevars, stacksize);
-               for( int v = 0; v < ncliquevars; ++v )
-                  SCIPdebugMsgPrint(scip, " %s<%s>", cliquevals[v] ? "" : "~", SCIPvarGetName(cliquevars[v]));
-               SCIPdebugMsgPrint(scip, "\n");
+            SCIPdebugMsg(scip, "clique %d [%d vars, stacksize: %d]...\n", clqidx, ncliquevars, stacksize);
+            for( int v = 0; v < ncliquevars; ++v )
+               SCIPdebugMsgPrint(scip, " %s<%s>", cliquevals[v] ? "" : "~", SCIPvarGetName(cliquevars[v]));
+            SCIPdebugMsgPrint(scip, "\n");
 #endif
-
-               if( cliquefirstentry[clqidx] == 0 )
-               {
-                  cliquefirstentry[clqidx] = curridx + 1;
-               }
-               else
-               {
-                  if( cliquefirstentry[clqidx] > 0 )
-                  {
-                     assert(cliquefirstentry[clqidx] != curridx + 1);
-
-                     if( nodeonstack[cliquefirstentry[clqidx] - 1] && !nodeinfeasible[cliquefirstentry[clqidx] - 1] )
-                     {
-                        SCIPdebugMsg(scip, "infeasible assignment (1): %s(%s)\n", indexGetBoundString(cliquefirstentry[clqidx] - 1),
-                           SCIPvarGetName(vars[getVarIndex(cliquefirstentry[clqidx] - 1)]));
-                        if( nodeinfeasible[getOtherBoundIndex(cliquefirstentry[clqidx] - 1)] )
-                        {
-                           *infeasible = TRUE;
-                           return SCIP_OKAY;
-                        }
-                        infeasnodes[*ninfeasnodes] = cliquefirstentry[clqidx] - 1;
-                        nodeinfeasible[cliquefirstentry[clqidx] - 1] = TRUE;
-                        ++(*ninfeasnodes);
-
-                        if( cliquecurrentexit[clqidx] > 0
-                           && curridx != getOtherBoundIndex(cliquecurrentexit[clqidx] - 1)
-                           && nodeonstack[cliquecurrentexit[clqidx] - 1]
-                           && nodeindex[cliquecurrentexit[clqidx] - 1] < nodelowlink[curridx] )
-                        {
-                           nodelowlink[curridx] = nodeindex[cliquecurrentexit[clqidx] - 1];
-                        }
-                     }
-                     else if( nodeindex[cliquefirstentry[clqidx] - 1] >= *startindex && !nodeinfeasible[startnode] )
-                     {
-                        SCIPdebugMsg(scip, "infeasible assignment (2): %s(%s)\n", indexGetBoundString(startnode),
-                           SCIPvarGetName(vars[getVarIndex(startnode)]));
-                        if( nodeinfeasible[getOtherBoundIndex(startnode)] )
-                        {
-                           *infeasible = TRUE;
-                           return SCIP_OKAY;
-                        }
-                        infeasnodes[*ninfeasnodes] = startnode;
-                        nodeinfeasible[startnode] = TRUE;
-                        ++(*ninfeasnodes);
-                     }
-                     else
-                     {
-#ifdef DEBUG_TARJAN
-                        SCIPdebugMsg(scip, "entering clique %d a second time\n", clqidx);
-#endif
-                        idx = getOtherBoundIndex(cliquefirstentry[clqidx] - 1);
-
-                        if( nodeindex[idx] == 0 )
-                        {
-                           found = TRUE;
-                        }
-                        else if( nodeonstack[idx] && nodeindex[idx] < nodelowlink[curridx] )
-                        {
-                           nodelowlink[curridx] = nodeindex[idx];
-                        }
-
-                        cliquefirstentry[clqidx] = -cliquefirstentry[clqidx];
-                     }
-                  }
-                  else
-                  {
-                     if( nodeonstack[-cliquefirstentry[clqidx] - 1] && !nodeinfeasible[-cliquefirstentry[clqidx] - 1] )
-                     {
-                        SCIPdebugMsg(scip, "infeasible assignment (1a): %s(%s)\n", indexGetBoundString(-cliquefirstentry[clqidx] - 1),
-                           SCIPvarGetName(vars[getVarIndex(-cliquefirstentry[clqidx] - 1)]));
-                        if( nodeinfeasible[getOtherBoundIndex(-cliquefirstentry[clqidx] - 1)] )
-                        {
-                           *infeasible = TRUE;
-                           return SCIP_OKAY;
-                        }
-                        infeasnodes[*ninfeasnodes] = -cliquefirstentry[clqidx] - 1;
-                        nodeinfeasible[-cliquefirstentry[clqidx] - 1] = TRUE;
-                        ++(*ninfeasnodes);
-                     }
-                     else if( nodeindex[-cliquefirstentry[clqidx] - 1] >= *startindex && !nodeinfeasible[startnode] )
-                     {
-                        SCIPdebugMsg(scip, "infeasible assignment (2a): %s(%s)\n", indexGetBoundString(startnode),
-                           SCIPvarGetName(vars[getVarIndex(startnode)]));
-                        if( nodeinfeasible[getOtherBoundIndex(startnode)] )
-                        {
-                           *infeasible = TRUE;
-                           return SCIP_OKAY;
-                        }
-                        infeasnodes[*ninfeasnodes] = startnode;
-                        nodeinfeasible[startnode] = TRUE;
-                        ++(*ninfeasnodes);
-                     }
-                     else
-                     {
-#ifdef DEBUG_TARJAN
-                        SCIPdebugMsg(scip, "skip clique %d: visited more than twice already!\n", clqidx);
-#endif
-                     }
-                  }
-                  stacknextcliquevar[currstackidx] = ncliquevars;
-               }
-            }
-
-            for( i = stacknextcliquevar[currstackidx]; i < ncliquevars; ++i )
+            /* the clique was not entered before, remember that we first entered it from curridx
+             * (add 1 to distinguish it from 0 initialization)
+             */
+            if( cliquefirstentry[clqidx] == 0 )
             {
-               if( cliquevars[i] == startvar )
-                  continue;
-
-               if( !SCIPvarIsActive(cliquevars[i]) )
-                  continue;
-
-               if( cliquevals[i] )
-                  idx = getUbIndex(SCIPvarGetProbindex(cliquevars[i]));
-               else
-                  idx = getLbIndex(SCIPvarGetProbindex(cliquevars[i]));
-               assert(idx >= 0);
-
-               /* break when the first unvisited node is reached */
-               if( nodeindex[idx] == 0 )
-               {
-                  assert(!nodeonstack[idx]);
-                  stacknextcliquevar[currstackidx] = i + 1;
-                  found = TRUE;
-                  break;
-               }
-               else if( nodeonstack[idx] && nodeindex[idx] < nodelowlink[curridx] )
-               {
-                  nodelowlink[curridx] = nodeindex[idx];
-               }
-            }
-            if( found )
-            {
-               break;
+               cliquefirstentry[clqidx] = curridx + 1;
             }
             else
             {
-               assert(i == ncliquevars);
+               int cliquefirstentryidx = (cliquefirstentry[clqidx] > 0 ? cliquefirstentry[clqidx] : -cliquefirstentry[clqidx]) - 1;
+               int infeasnode = -1;
+               assert(cliquefirstentryidx != curridx);
+
+               /* The node by which we entered the clique the first time is still on the stack, so there is a
+                * way from that node to the node by which we are entering the clique right now.
+                * Since these two assignments together violate the clique and the second assignment is implied by the first,
+                * the first one is infeasible
+                */
+               if( nodeonstack[cliquefirstentryidx] && !nodeinfeasible[cliquefirstentryidx] )
+               {
+                  SCIPdebugMsg(scip, "infeasible assignment (1): %s(%s)\n", indexGetBoundString(cliquefirstentryidx),
+                     SCIPvarGetName(vars[getVarIndex(cliquefirstentryidx)]));
+                  infeasnode = cliquefirstentryidx;
+               }
+               /* the first entry point of the clique was also implied by the current startnode, so this node implies
+                * two variables in the clique and is therefore infeasible
+                */
+               else if( nodeindex[cliquefirstentryidx] >= *startindex && !nodeinfeasible[startnode] )
+               {
+                  SCIPdebugMsg(scip, "infeasible assignment (2): %s(%s)\n", indexGetBoundString(startnode),
+                     SCIPvarGetName(vars[getVarIndex(startnode)]));
+                  infeasnode = startnode;
+               }
+
+               /* we identified an infeasibility */
+               if( infeasnode >= 0 )
+               {
+                  /* both values are invalid for the variable, the whole problem is infeasible */
+                  if( nodeinfeasible[getOtherBoundIndex(infeasnode)] )
+                  {
+                     *infeasible = TRUE;
+                     return SCIP_OKAY;
+                  }
+                  infeasnodes[*ninfeasnodes] = infeasnode;
+                  nodeinfeasible[infeasnode] = TRUE;
+                  ++(*ninfeasnodes);
+
+                  /* the last node by which the clique was exited is not the negation of the current node and still on
+                   * the stack: update the lowlink of the current node
+                   */
+                  if( cliquecurrentexit[clqidx] > 0
+                     && curridx != getOtherBoundIndex(cliquecurrentexit[clqidx] - 1)
+                     && nodeonstack[cliquecurrentexit[clqidx] - 1]
+                     && nodeindex[cliquecurrentexit[clqidx] - 1] < nodelowlink[curridx] )
+                  {
+                     nodelowlink[curridx] = nodeindex[cliquecurrentexit[clqidx] - 1];
+                  }
+               }
+               /* clique is entered for the second time; there is only one edge left to investigate, namely the edge to
+                * the negation of the first entry point
+                */
+               else if( cliquefirstentry[clqidx] > 0 )
+               {
+#ifdef DEBUG_TARJAN
+                  SCIPdebugMsg(scip, "entering clique %d a second time\n", clqidx);
+#endif
+                  idx = getOtherBoundIndex(cliquefirstentry[clqidx] - 1);
+
+                  /* node was not investigated yet, we found the next node to process */
+                  if( nodeindex[idx] == 0 )
+                     found = TRUE;
+                  /* update lowlink if the node is on the stack */
+                  else if( nodeonstack[idx] && nodeindex[idx] < nodelowlink[curridx] )
+                     nodelowlink[curridx] = nodeindex[idx];
+
+                  /* cliquefirstentry[clqidx] < 0 means that we entered the clique at least two times already */
+                  cliquefirstentry[clqidx] = -cliquefirstentry[clqidx];
+               }
+               else
+               {
+#ifdef DEBUG_TARJAN
+                  SCIPdebugMsg(scip, "skip clique %d: visited more than twice already!\n", clqidx);
+#endif
+               }
+               stacknextcliquevar[currstackidx] = ncliquevars;
+            }
+         }
+
+         /* iterate over variables in the clique; start where we stopped last time */
+         for( i = stacknextcliquevar[currstackidx]; i < ncliquevars; ++i )
+         {
+            if( cliquevars[i] == startvar )
+               continue;
+
+            if( !SCIPvarIsActive(cliquevars[i]) )
+               continue;
+
+            if( cliquevals[i] )
+               idx = getUbIndex(SCIPvarGetProbindex(cliquevars[i]));
+            else
+               idx = getLbIndex(SCIPvarGetProbindex(cliquevars[i]));
+            assert(idx >= 0);
+
+            /* break when the first unvisited node is reached */
+            if( nodeindex[idx] == 0 )
+            {
+               assert(!nodeonstack[idx]);
+               stacknextcliquevar[currstackidx] = i + 1;
+               found = TRUE;
+               break;
+            }
+            else if( nodeonstack[idx] && nodeindex[idx] < nodelowlink[curridx] )
+            {
+               nodelowlink[curridx] = nodeindex[idx];
+            }
+         }
+         if( found )
+         {
+            if( stacknextcliquevar[currstackidx] < ncliquevars )
+               stacknextclique[currstackidx] = j;
+            else
+            {
                stacknextclique[currstackidx] = j + 1;
                stacknextcliquevar[currstackidx] = 0;
             }
-         }
-         assert(found || j == ncliques);
-
-         /* we stopped because we found an unhandled node and not because we reached the end of the list */
-         if( found )
-         {
-            int otheridx = getOtherBoundIndex(idx);
-
-            assert(idx >= 0);
-            assert(!nodeonstack[idx]);
-            assert(j < ncliques);
-
-            if( nodeonstack[otheridx] && !nodeinfeasible[otheridx] )
-            {
-               SCIPdebugMsg(scip, "infeasible assignment (3): %s(%s)\n", indexGetBoundString(otheridx),
-                  SCIPvarGetName(vars[getVarIndex(otheridx)]));
-               if( nodeinfeasible[getOtherBoundIndex(otheridx)] )
-               {
-                  *infeasible = TRUE;
-                  return SCIP_OKAY;
-               }
-               infeasnodes[*ninfeasnodes] = otheridx;
-               nodeinfeasible[otheridx] = TRUE;
-               ++(*ninfeasnodes);
-               //continue;
-            }
-            else if( nodeindex[otheridx] >= *startindex && !nodeinfeasible[startnode] )
-            {
-               SCIPdebugMsg(scip, "infeasible assignment (4): %s(%s)\n", indexGetBoundString(startnode),
-                  SCIPvarGetName(vars[getVarIndex(startnode)]));
-               if( nodeinfeasible[getOtherBoundIndex(startnode)] )
-               {
-                  *infeasible = TRUE;
-                  return SCIP_OKAY;
-               }
-               infeasnodes[*ninfeasnodes] = startnode;
-               nodeinfeasible[startnode] = TRUE;
-               ++(*ninfeasnodes);
-               //continue;
-            }
-
-            SCIPdebugMsg(scip, "clique: %s(%s) -> %s(%s)\n", getBoundString(lower), SCIPvarGetName(startvar),
-               indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));
-
-            /* put the adjacent node onto the stack */
-            dfsstack[stacksize] = idx;
-            stacknextclique[stacksize] = 0;
-            stacknextcliquevar[stacksize] = 0;
-            stacknextclique[currstackidx] = j;
-            cliquecurrentexit[clqidx] = idx + 1;
-            predstackidx[stacksize] = currstackidx;
-            currstackidx = stacksize;
-            stacksize++;
-            assert(stacksize <= 2 * (SCIPgetNVars(scip) - SCIPgetNContVars(scip)));
-
-#ifdef DEBUG_TARJAN
-            SCIPdebugMsg(scip, "put %s(%s) on stack[%d]\n", indexGetBoundString(dfsstack[stacksize-1]), SCIPvarGetName(vars[getVarIndex(dfsstack[stacksize-1])]), stacksize-1);
-#endif
-            /* restart while loop, get next index from stack */
-            continue;
+            break;
          }
          else
          {
-            stacknextclique[currstackidx] = -1;
+            assert(i == ncliquevars);
+            stacknextclique[currstackidx] = j + 1;
+            stacknextcliquevar[currstackidx] = 0;
          }
       }
-      assert(stacknextclique[currstackidx] < 0);
+      assert(found || j == ncliques);
+      assert(found || stacknextclique[currstackidx] == ncliques);
 
+      /* we stopped because we found an unhandled node and not because we reached the end of the list */
+      if( found )
+      {
+         int otheridx = getOtherBoundIndex(idx);
+         int infeasnode = -1;
+
+         assert(idx >= 0);
+         assert(!nodeonstack[idx]);
+         assert(j < ncliques);
+
+         /* the negated node corresponding to the next node is already on the stack -> the negated assignment is
+          * infeasible
+          */
+         if( nodeonstack[otheridx] && !nodeinfeasible[otheridx] )
+         {
+            SCIPdebugMsg(scip, "infeasible assignment (3): %s(%s)\n", indexGetBoundString(otheridx),
+               SCIPvarGetName(vars[getVarIndex(otheridx)]));
+            infeasnode = otheridx;
+         }
+         /* the negated node corresponding to the next node was reached from the same startnode -> the startnode is
+          * infeasible
+          */
+         else if( nodeindex[otheridx] >= *startindex && !nodeinfeasible[startnode] )
+         {
+            SCIPdebugMsg(scip, "infeasible assignment (4): %s(%s)\n", indexGetBoundString(startnode),
+               SCIPvarGetName(vars[getVarIndex(startnode)]));
+            infeasnode = startnode;
+         }
+         /* treat infeasible case */
+         if( infeasnode >= 0 )
+         {
+            if( nodeinfeasible[getOtherBoundIndex(infeasnode)] )
+            {
+               *infeasible = TRUE;
+               return SCIP_OKAY;
+            }
+            infeasnodes[*ninfeasnodes] = infeasnode;
+            nodeinfeasible[infeasnode] = TRUE;
+            ++(*ninfeasnodes);
+         }
+
+         SCIPdebugMsg(scip, "clique: %s(%s) -> %s(%s)\n", getBoundString(lower), SCIPvarGetName(startvar),
+            indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));
+
+         /* put the adjacent node onto the stack */
+         dfsstack[stacksize] = idx;
+         stacknextclique[stacksize] = 0;
+         stacknextcliquevar[stacksize] = 0;
+         cliquecurrentexit[clqidx] = idx + 1;
+         predstackidx[stacksize] = currstackidx;
+         currstackidx = stacksize;
+         stacksize++;
+         assert(stacksize <= 2 * (SCIPgetNVars(scip) - SCIPgetNContVars(scip)));
+
+#ifdef DEBUG_TARJAN
+         SCIPdebugMsg(scip, "put %s(%s) on stack[%d]\n", indexGetBoundString(dfsstack[stacksize-1]), SCIPvarGetName(vars[getVarIndex(dfsstack[stacksize-1])]), stacksize-1);
+#endif
+         /* restart while loop, get next index from stack */
+         continue;
+      }
+      assert(stacknextclique[currstackidx] == ncliques);
+
+      /* no node with a smaller index can be reached from this node -> it is the root of a SCC,
+       * consisting of all nodes above it on the stack, including the node itself
+       */
       if( nodelowlink[curridx] == nodeindex[curridx] )
       {
+         /* we are only interested in SCCs with more than one node */
          if( dfsstack[stacksize-1] != curridx )
          {
             int sccvarspos = sccstarts[*nsccs];
 
             SCIPdebugMsg(scip, "SCC:");
+
+            /* store the SCC in sccvars */
             do{
                stacksize--;
+               idx = dfsstack[stacksize];
+               nodeonstack[idx] = 0;
+               sccvars[sccvarspos] = idx;
+               ++sccvarspos;
+               SCIPdebugMsgPrint(scip, " %s(%s)", indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));
 #ifdef DEBUG_TARJAN
                SCIPdebugMsg(scip, "remove %s(%s) from stack[%d]\n", indexGetBoundString(dfsstack[stacksize]), SCIPvarGetName(vars[getVarIndex(dfsstack[stacksize])]), stacksize);
 #endif
-               idx = dfsstack[stacksize];
-               nodeonstack[idx] = 0;
-               SCIPdebugMsgPrint(scip, " %s(%s)", indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));
-               sccvars[sccvarspos] = idx;
-               ++sccvarspos;
+
             }
             while( idx != curridx );
             SCIPdebugMsgPrint(scip, "\n");
             ++(*nsccs);
             sccstarts[*nsccs] = sccvarspos;
-
-#if 0
-            {
-               int* conncountin;
-               int* conncountout;
-               int k, l;
-
-               SCIP_CALL( SCIPallocClearBufferArray(scip, &conncountin, sccvarspos - sccstarts[*nsccs - 1]) );
-               SCIP_CALL( SCIPallocClearBufferArray(scip, &conncountout, sccvarspos - sccstarts[*nsccs - 1]) );
-
-               for( k = sccstarts[*nsccs - 1]; k < sccvarspos; ++k )
-               {
-                  for( l = sccstarts[*nsccs - 1]; l < sccvarspos; ++l )
-                  {
-                     if( l != k && SCIPvarsHaveCommonClique(vars[getVarIndex(sccvars[k])], isIndexLowerbound(sccvars[k]),
-                           vars[getVarIndex(sccvars[l])], !isIndexLowerbound(sccvars[l]), FALSE) )
-                     {
-                        ++conncountout[k - sccstarts[*nsccs - 1]];
-                        ++conncountin[l - sccstarts[*nsccs - 1]];
-                     }
-                  }
-               }
-               for( k = sccstarts[*nsccs - 1]; k < sccvarspos; ++k )
-               {
-                  idx = sccvars[k];
-                  SCIPdebugMsg(scip, "%s(%s): in=%d, out=%d\n", indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]),
-                     conncountin[k - sccstarts[*nsccs - 1]], conncountout[k - sccstarts[*nsccs - 1]]);
-                  assert(conncountin[k - sccstarts[*nsccs - 1]] >= 1);
-                  assert(conncountout[k - sccstarts[*nsccs - 1]] >= 1);
-               }
-
-               SCIPfreeBufferArray(scip, &conncountout);
-               SCIPfreeBufferArray(scip, &conncountin);
-            }
-#endif
          }
+         /* trivial SCC: remove the single node from the stack, but don't store it as a SCC */
          else
          {
             stacksize--;
@@ -2578,13 +2537,14 @@ SCIP_RETCODE tarjan(
             assert(nodeindex[idx] > 0);
          }
       }
+      /* in a pure dfs, the node would now leave the stack, add it to the array of nodes in reverse topological order */
       if( topoorder != NULL && (stacksize > 0 || index > *startindex + 1) )
       {
          topoorder[*nordered] = curridx;
          ++(*nordered);
       }
 
-      /* the current node was handled */
+      /* the current node was handled, backtrack */
       if( stacksize > 0 )
       {
          idx = dfsstack[predstackidx[currstackidx]];
