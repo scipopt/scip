@@ -16,6 +16,7 @@
 /**@file   aggrrow.h
  * @ingroup PUBLICCOREAPI
  * @brief  methods for the aggregation rows
+ * @author Jakob Witzig
  * @author Robert Lion Gottwald
  *
  */
@@ -41,33 +42,60 @@ extern "C" {
 /** create an empty the aggregation row */
 extern
 SCIP_RETCODE SCIPaggrRowCreate(
-   SCIP*                 scip,               /**< SCIP datastructure */
-   SCIP_AGGRROW**        aggrrow              /**< pointer to return the aggregation row */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW**        aggrrow             /**< pointer to return the aggregation row */
    );
 
 /** free a the aggregation row */
 extern
 void SCIPaggrRowFree(
-   SCIP*                 scip,               /**< SCIP datastructure */
-   SCIP_AGGRROW**        aggrrow              /**< pointer to the aggregation row that should be freed */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW**        aggrrow             /**< pointer to the aggregation row that should be freed */
+   );
+
+/** output aggregation row to file stream */
+extern
+void SCIPaggrRowPrint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< pointer to return aggregation row */
+   FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
 /** copy a the aggregation row */
 extern
 SCIP_RETCODE SCIPaggrRowCopy(
-   SCIP*                 scip,               /**< SCIP datastructure */
-   SCIP_AGGRROW**         aggrrow,             /**< pointer to return the aggregation row */
-   SCIP_AGGRROW*          source              /**< source the aggregation row */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW**         aggrrow,           /**< pointer to return the aggregation row */
+   SCIP_AGGRROW*          source             /**< source the aggregation row */
+   );
+
+/** adds given value to the right-hand side of the aggregation row */
+extern
+SCIP_RETCODE SCIPaggrRowAddData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
+   SCIP_VAR**            vars,               /**< variable array */
+   SCIP_Real*            coefs,              /**< variable coefficients */
+   int                   nvars,              /**< size of variable and coefficient array */
+   SCIP_Real             rhs,                /**< right-hand side of the row */
+   SCIP_Real             scale               /**< scalar to apply */
    );
 
 /** add scaled row to the aggregation row */
 extern
 SCIP_RETCODE SCIPaggrRowAddRow(
-   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_ROW*             row,                /**< row to add to the aggregation row */
    SCIP_Real             scale,              /**< scale for adding given row to the aggregation row */
    int                   sidetype            /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
+   );
+
+/** change the right-hand side of the aggregation row */
+extern
+void SCIPaggrRowAddRhs(
+   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
+   SCIP_Real             value               /**< value to add to the right-hand side */
    );
 
 /** clear all entries int the aggregation row but don't free memory */
@@ -81,7 +109,7 @@ void SCIPaggrRowClear(
  */
 extern
 SCIP_RETCODE SCIPaggrRowSumRows(
-   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_Real*            weights,            /**< row weights in row summation */
    int*                  rowinds,            /**< array to store indices of non-zero entries of the weights array, or
@@ -103,6 +131,13 @@ void SCIPaggrRowRemoveZeros(
    SCIP_Real             epsilon             /**< value to consider zero */
    );
 
+/** removes all zero entries in the aggregation row */
+extern
+void SCIPaggrRowCleanup(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
 /** checks whether a given row has been added to the aggregation row */
 extern
 SCIP_Bool SCIPaggrRowHasRowBeenAdded(
@@ -116,10 +151,10 @@ SCIP_Bool SCIPaggrRowHasRowBeenAdded(
 extern
 void SCIPaggrRowGetAbsWeightRange(
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
-   SCIP_Real*            minabsrowweight,    /**< pointer to store smallest absolute value of weights used for rows aggregated
-                                              *   into the given aggregation row */
-   SCIP_Real*            maxabsrowweight     /**< pointer to store largest absolute value of weights used for rows aggregated
-                                              *   into the given aggregation row */
+   SCIP_Real*            minabsrowweight,    /**< pointer to store smallest absolute value of weights used for rows
+                                              *   aggregated into the given aggregation row */
+   SCIP_Real*            maxabsrowweight     /**< pointer to store largest absolute value of weights used for rows
+                                              *   aggregated into the given aggregation row */
    );
 
 /** gets the array of corresponding variable problem indices for each non-zero in the aggregation row */

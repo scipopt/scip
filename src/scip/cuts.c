@@ -16,8 +16,8 @@
 /**@file   cuts.c
  * @brief  methods for aggregation of rows
  *
- * @author Robert Lion Gottwald
  * @author Jakob Witzig
+ * @author Robert Lion Gottwald
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -35,7 +35,7 @@
 #ifdef SCIP_DEBUG
 static
 void printCut(
-   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real*            cutcoefs,           /**< non-zero coefficients of cut */
    SCIP_Real             cutrhs,             /**< right hand side of the MIR row */
@@ -76,9 +76,10 @@ void printCut(
 }
 #endif
 
+/** @bzfgottwa write comment */
 static
 SCIP_RETCODE varVecAddScaledRowCoefs(
-   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP*                 scip,               /**< SCIP data structure */
    int**                 indsptr,            /**< pointer to array with variable problem indices of non-zeros in variable vector */
    SCIP_Real**           valsptr,            /**< pointer to array with non-zeros values of variable vector */
    int*                  nnz,                /**< number of non-zeros coefficients of variable vector */
@@ -200,7 +201,7 @@ SCIP_RETCODE varVecAddScaledRowCoefs(
 /* calculates the cuts efficacy for the given solution */
 static
 SCIP_Real calcEfficacy(
-   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< solution to calculate the efficacy for (NULL for LP solution) */
    SCIP_Real*            cutcoefs,           /**< array of the non-zero coefficients in the cut */
    SCIP_Real             cutrhs,             /**< the right hand side of the cut */
@@ -231,8 +232,8 @@ SCIP_Real calcEfficacy(
 
 /** create an empty aggregation row */
 SCIP_RETCODE SCIPaggrRowCreate(
-   SCIP*                 scip,               /**< SCIP datastructure */
-    SCIP_AGGRROW**         aggrrow              /**< pointer to return aggregation row */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW**        aggrrow             /**< pointer to return aggregation row */
    )
 {
    assert(scip != NULL);
@@ -258,8 +259,8 @@ SCIP_RETCODE SCIPaggrRowCreate(
 
 /** free a aggregation row */
 void SCIPaggrRowFree(
-   SCIP*                 scip,               /**< SCIP datastructure */
-    SCIP_AGGRROW**         aggrrow              /**< pointer to aggregation row that should be freed */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW**        aggrrow             /**< pointer to aggregation row that should be freed */
    )
 {
    assert(scip != NULL);
@@ -273,12 +274,45 @@ void SCIPaggrRowFree(
    SCIPfreeBlockMemory(scip, aggrrow);
 }
 
+/** output aggregation row to file stream */
+void SCIPaggrRowPrint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< pointer to return aggregation row */
+   FILE*                 file                /**< output file (or NULL for standard output) */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_MESSAGEHDLR* messagehdlr;
+   int i;
+
+   assert(scip != NULL);
+   assert(aggrrow != NULL);
+
+   vars = SCIPgetVars(scip);
+   assert(vars != NULL);
+
+   messagehdlr = SCIPgetMessagehdlr(scip);
+   assert(messagehdlr);
+
+   /* print coefficients */
+   if( aggrrow->nnz == 0 )
+      SCIPmessageFPrintInfo(messagehdlr, file, "0 ");
+
+   for( i = 0; i < aggrrow->nnz; ++i )
+   {
+      assert(SCIPvarGetProbindex(vars[aggrrow->inds[i]]) == aggrrow->inds[i]);
+      SCIPmessageFPrintInfo(messagehdlr, file, "%+.15g<%s> ", aggrrow->vals[i], SCIPvarGetName(vars[aggrrow->inds[i]]));
+   }
+
+   /* print right hand side */
+   SCIPmessageFPrintInfo(messagehdlr, file, "<= %.15g\n", aggrrow->rhs);
+}
 
 /** copy a aggregation row */
 SCIP_RETCODE SCIPaggrRowCopy(
-   SCIP*                 scip,               /**< SCIP datastructure */
-    SCIP_AGGRROW**         aggrrow,             /**< pointer to return aggregation row */
-    SCIP_AGGRROW*          source              /**< source aggregation row */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW**        aggrrow,            /**< pointer to return aggregation row */
+   SCIP_AGGRROW*         source              /**< source aggregation row */
    )
 {
    assert(scip != NULL);
@@ -303,10 +337,66 @@ SCIP_RETCODE SCIPaggrRowCopy(
    return SCIP_OKAY;
 }
 
+/** adds given value to the right-hand side of the aggregation row */
+SCIP_RETCODE SCIPaggrRowAddData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
+   SCIP_VAR**            vars,               /**< variable array */
+   SCIP_Real*            coefs,              /**< variable coefficients */
+   int                   nvars,              /**< size of variable and coefficient array */
+   SCIP_Real             rhs,                /**< right-hand side of the row */
+   SCIP_Real             scale               /**< scalar to apply */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(aggrrow != NULL);
+   assert(!SCIPisInfinity(scip, REALABS(scale)));
+
+   /* nothing needs to be done */
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   assert(vars != NULL);
+   assert(coefs != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &aggrrow->vals, nvars) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &aggrrow->inds, nvars) );
+   aggrrow->valssize = nvars;
+   aggrrow->rhs = rhs * scale;
+
+   for( i = 0; i < nvars; i++ )
+   {
+      /* skip all variables with zero coefficient */
+      if( coefs[i] == 0.0 )
+         continue;
+
+      assert(vars[i] != NULL);
+
+      assert(!SCIPisInfinity(scip, REALABS(coefs[i] * scale)));
+      aggrrow->vals[aggrrow->nnz] = coefs[i] * scale;
+      aggrrow->inds[aggrrow->nnz] = SCIPvarGetProbindex(vars[i]);
+      ++aggrrow->nnz;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** adds given value to the right-hand side of the aggregation row */
+void SCIPaggrRowAddRhs(
+   SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
+   SCIP_Real             value               /**< value to add to the right-hand side */
+   )
+{
+   assert(aggrrow != NULL);
+
+   aggrrow->rhs += value;
+}
 
 /** add scaled row to aggregation row */
 SCIP_RETCODE SCIPaggrRowAddRow(
-   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
    SCIP_ROW*             row,                /**< row to add to aggregation row */
    SCIP_Real             scale,              /**< scale for adding given row to aggregation row */
@@ -396,13 +486,12 @@ void SCIPaggrRowClear(
    aggrrow->local = FALSE;
 }
 
-/* static function to add one row without clearing the varpos array
- * so that multiple rows can be added using the same varpos array
- * which is only cleared in the end
+/* static function to add one row without clearing the varpos array so that multiple rows can be added using the same
+ * varpos array which is only cleared in the end
  */
 static
 SCIP_RETCODE addOneRow(
-   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_ROW*             row,                /**< the row to add */
    SCIP_Real             weight,             /**< weight of row to add */
@@ -549,12 +638,9 @@ SCIP_RETCODE addOneRow(
    return SCIP_OKAY;
 }
 
-
-/** aggregate rows using the given weights; the current content of the aggregation
- *  row gets overwritten
- */
+/** aggregate rows using the given weights; the current content of the aggregation row gets overwritten */
 SCIP_RETCODE SCIPaggrRowSumRows(
-   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_Real*            weights,            /**< row weights in row summation */
    int*                  rowinds,            /**< array to store indices of non-zero entries of the weights array, or
@@ -620,7 +706,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
 
    *valid = aggrrow->nnz > 0;
 
-TERMINATE:
+  TERMINATE:
 
    if( *valid )
    {
@@ -679,58 +765,10 @@ void SCIPaggrRowRemoveZeros(
    }
 }
 
-/** checks whether a given row has been added to the aggregation row */
-SCIP_Bool SCIPaggrRowHasRowBeenAdded(
-   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
-   SCIP_ROW*             row                 /**< row for which it is checked whether it has been added to the aggregation */
-   )
-{
-   int i;
-   int rowind;
-
-   assert(aggrrow != NULL);
-   assert(row != NULL);
-
-   rowind = SCIProwGetLPPos(row);
-
-   for( i = 0; i < aggrrow->nrows; ++i )
-      if( aggrrow->rowsinds[i] == rowind )
-         return TRUE;
-
-   return FALSE;
-}
-
-/** gets the range of the absolute values of weights that have been used to aggregate a row into this aggregation row */
-void SCIPaggrRowGetAbsWeightRange(
-   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
-   SCIP_Real*            minabsrowweight,    /**< pointer to store smallest absolute value of weights used for rows aggregated
-                                              *   into the given aggregation row */
-   SCIP_Real*            maxabsrowweight     /**< pointer to store largest absolute value of weights used for rows aggregated
-                                              *   into the given aggregation row */
-   )
-{
-   int i;
-
-   assert(aggrrow != NULL);
-   assert(aggrrow->nrows > 0);
-
-   *minabsrowweight = REALABS(aggrrow->rowweights[0]);
-   *maxabsrowweight = *minabsrowweight;
-
-   for( i = 1; i < aggrrow->nrows; ++i )
-   {
-      SCIP_Real absweight = REALABS(aggrrow->rowweights[i]);
-      if( absweight < *minabsrowweight )
-         *minabsrowweight = absweight;
-      else if( absweight > *maxabsrowweight )
-         *maxabsrowweight = absweight;
-   }
-}
-
 /** removes almost zero entries and relaxes the sides of the row accordingly */
 static
 void cleanupCut(
-   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             cutislocal,         /**< is the cut a local cut */
    int*                  cutinds,            /**< variable problem indices of non-zeros in cut */
    SCIP_Real*            cutcoefs,           /**< non-zeros coefficients of cut */
@@ -786,6 +824,66 @@ void cleanupCut(
       }
       else
          ++i;
+   }
+}
+
+/** removes all zero entries in the aggregation row */
+void SCIPaggrRowCleanup(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   )
+{
+   assert(scip != NULL);
+   assert(aggrrow != NULL);
+
+   cleanupCut(scip, aggrrow->local, aggrrow->inds, aggrrow->vals, &aggrrow->nnz, &aggrrow->rhs);
+}
+
+/** checks whether a given row has been added to the aggregation row */
+SCIP_Bool SCIPaggrRowHasRowBeenAdded(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_ROW*             row                 /**< row for which it is checked whether it has been added to the aggregation */
+   )
+{
+   int i;
+   int rowind;
+
+   assert(aggrrow != NULL);
+   assert(row != NULL);
+
+   rowind = SCIProwGetLPPos(row);
+
+   for( i = 0; i < aggrrow->nrows; ++i )
+      if( aggrrow->rowsinds[i] == rowind )
+         return TRUE;
+
+   return FALSE;
+}
+
+/** gets the range of the absolute values of weights that have been used to aggregate a row into this aggregation row */
+void SCIPaggrRowGetAbsWeightRange(
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Real*            minabsrowweight,    /**< pointer to store smallest absolute value of weights used for rows
+                                              *   aggregated into the given aggregation row */
+   SCIP_Real*            maxabsrowweight     /**< pointer to store largest absolute value of weights used for rows
+                                              *   aggregated into the given aggregation row */
+   )
+{
+   int i;
+
+   assert(aggrrow != NULL);
+   assert(aggrrow->nrows > 0);
+
+   *minabsrowweight = REALABS(aggrrow->rowweights[0]);
+   *maxabsrowweight = *minabsrowweight;
+
+   for( i = 1; i < aggrrow->nrows; ++i )
+   {
+      SCIP_Real absweight = REALABS(aggrrow->rowweights[i]);
+      if( absweight < *minabsrowweight )
+         *minabsrowweight = absweight;
+      else if( absweight > *maxabsrowweight )
+         *maxabsrowweight = absweight;
    }
 }
 
@@ -914,7 +1012,7 @@ SCIP_RETCODE findBestLb(
 /** finds the best upper bound of the variable to use for MIR transformation */
 static
 SCIP_RETCODE findBestUb(
-   SCIP*                 scip,
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
@@ -969,6 +1067,7 @@ SCIP_RETCODE findBestUb(
    return SCIP_OKAY;
 }
 
+/* @bzfgottwa write comment */
 static
 SCIP_RETCODE determineBestBounds(
    SCIP*                 scip,
@@ -1589,7 +1688,7 @@ SCIP_RETCODE cutsTransformMIR(
       }
    }
 
- TERMINATE:
+  TERMINATE:
 
    /*free temporary memory */
    SCIPfreeBufferArray(scip, &selectedbounds);
@@ -1653,7 +1752,7 @@ SCIP_RETCODE cutsTransformMIR(
  */
 static
 SCIP_RETCODE cutsRoundMIR(
-   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*RESTRICT    cutcoefs,           /**< array of coefficients of cut */
    SCIP_Real*RESTRICT    cutrhs,             /**< pointer to right hand side of cut */
    int*RESTRICT          cutinds,            /**< array of variables problem indices for non-zero coefficients in cut */
@@ -1990,7 +2089,7 @@ SCIP_RETCODE cutsRoundMIR(
  */
 static
 SCIP_RETCODE cutsSubstituteMIR(
-   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            weights,            /**< row weights in row summation */
    int*                  slacksign,          /**< stores the sign of the row's slack variable in summation */
    int*                  rowinds,            /**< sparsity pattern of used rows */
@@ -2316,7 +2415,7 @@ SCIP_RETCODE SCIPcalcMIR(
    if( cutrank != NULL )
       *cutrank = aggrrow->rank + 1;
 
- TERMINATE:
+  TERMINATE:
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &boundtype);
    SCIPfreeBufferArray(scip, &varsign);
@@ -2750,7 +2849,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
          *cutrank = aggrrow->rank + 1;
    }
 
- TERMINATE:
+  TERMINATE:
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &bounddistpos);
    SCIPfreeBufferArray(scip, &bounddist);
@@ -2783,7 +2882,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 typedef
 struct LiftingData
 {
-   SCIP_Real*            M;
+   SCIP_Real*            M;                  /**< @bzfgottwa write comments */
    SCIP_Real*            m;
    int                   r;
    int                   t;
@@ -3061,6 +3160,7 @@ SCIP_RETCODE getClosestVub(
    return SCIP_OKAY;
 }
 
+/** @bzfgottwa write comments */
 static
 SCIP_RETCODE determineBoundForSNF(
    SCIP*                 scip,
@@ -3763,7 +3863,7 @@ SCIP_RETCODE constructSNFRelaxation(
    SCIPdebugMsgPrint(scip, "<= %g\n", snf->transrhs);
 #endif
 
-TERMINATE:
+  TERMINATE:
    SCIPfreeCleanBufferArray(scip, &binvarpos);
 
    SCIPfreeBufferArray(scip, &selectedbounds);
@@ -3779,6 +3879,7 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/** @bzfgottwa write comments */
 static
 SCIP_RETCODE allocSNFRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3799,6 +3900,7 @@ SCIP_RETCODE allocSNFRelaxation(
    return SCIP_OKAY;
 }
 
+/** @bzfgottwa write comments */
 static
 void destroySNFRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3979,7 +4081,7 @@ void buildFlowCover(
    int*                  nflowcovervars,     /**< pointer to store number of variables in flow cover */
    int*                  nnonflowcovervars,  /**< pointer to store number of variables not in flow cover */
    int*                  flowcoverstatus,    /**< pointer to store whether variable is in flow cover (+1) or not (-1) */
-   QUAD(SCIP_Real*     flowcoverweight),   /**< pointer to store weight of flow cover */
+   QUAD(SCIP_Real*       flowcoverweight),   /**< pointer to store weight of flow cover */
    SCIP_Real*            lambda              /**< pointer to store lambda */
    )
 {
@@ -4047,7 +4149,7 @@ void buildFlowCover(
 static
 SCIP_RETCODE getFlowCover(
    SCIP*                 scip,               /**< SCIP data structure */
-   SNF_RELAXATION*       snf,
+   SNF_RELAXATION*       snf,                /**< @bzfgottwa write comment */
    int*                  nflowcovervars,     /**< pointer to store number of variables in flow cover */
    int*                  nnonflowcovervars,  /**< pointer to store number of variables not in flow cover */
    int*                  flowcoverstatus,    /**< pointer to store whether variable is in flow cover (+1) or not (-1) */
@@ -4387,7 +4489,7 @@ SCIP_RETCODE getFlowCover(
    }
    *found = TRUE;
 
- TERMINATE:
+  TERMINATE:
    assert((!*found) || SCIPisFeasGT(scip, *lambda, 0.0));
 #ifdef SCIP_DEBUG
    if( *found )
@@ -4421,6 +4523,7 @@ SCIP_RETCODE getFlowCover(
    return SCIP_OKAY;
 }
 
+/** @bzfgottwa write comments */
 static
 SCIP_Real evaluateLiftingFunction(
    SCIP*                 scip,
@@ -4494,6 +4597,7 @@ SCIP_Real evaluateLiftingFunction(
    return QUAD_ROUND(tmp);
 }
 
+/** @bzfgottwa write comment */
 static
 void getAlphaAndBeta(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4530,6 +4634,7 @@ void getAlphaAndBeta(
    }
 }
 
+/** @bzfgottwa write comment */
 static
 SCIP_RETCODE computeLiftingData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4647,6 +4752,7 @@ SCIP_RETCODE computeLiftingData(
    return SCIP_OKAY;
 }
 
+/** @bzfgottwa write comment */
 static
 void destroyLiftingData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4657,6 +4763,7 @@ void destroyLiftingData(
    SCIPfreeBufferArray(scip, &liftingdata->m);
 }
 
+/** @bzfgottwa write comment */
 static
 SCIP_RETCODE generateLiftedFlowCoverCut(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4964,7 +5071,7 @@ SCIP_RETCODE SCIPcalcFlowCover(
          *cutrank = aggrrow->rank + 1;
    }
 
-TERMINATE:
+  TERMINATE:
    destroySNFRelaxation(scip, &snf);
    SCIPfreeBufferArray(scip, &transvarflowcoverstatus);
 
@@ -5224,8 +5331,7 @@ SCIP_RETCODE cutsTransformStrongCG(
    /* varpos array is not needed any more and has been cleaned in the previous loop */
    SCIPfreeCleanBufferArray(scip, &varpos);
 
- TERMINATE:
-
+  TERMINATE:
    /*free temporary memory */
    SCIPfreeBufferArray(scip, &bestbds);
 
@@ -5287,7 +5393,7 @@ SCIP_RETCODE cutsTransformStrongCG(
  */
 static
 SCIP_RETCODE cutsRoundStrongCG(
-   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            cutcoefs,           /**< array of coefficients of cut */
    SCIP_Real*            cutrhs,             /**< pointer to right hand side of cut */
    int*                  cutinds,            /**< array of variables problem indices for non-zero coefficients in cut */
@@ -5800,8 +5906,8 @@ SCIP_RETCODE SCIPcalcStrongCG(
       *cutrank = aggrrow->rank + 1;
    *success = TRUE;
 
- TERMINATE:
-    /* free temporary memory */
+  TERMINATE:
+   /* free temporary memory */
    SCIPfreeBufferArray(scip, &boundtype);
    SCIPfreeBufferArray(scip, &varsign);
 
