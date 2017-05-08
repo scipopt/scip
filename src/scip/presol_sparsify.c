@@ -524,7 +524,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
       {
          SCIP_Real percentagenzcancelled = 100 * numcancel / (SCIP_Real)SCIPmatrixGetNNonzs(matrix);
          if( percentagenzcancelled >= 0.1 )
-            SCIPinfoMessage(scip, NULL, "cancelled %.1f%% non-zeros\n", 100 * numcancel / (SCIP_Real)SCIPmatrixGetNNonzs(matrix));
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "cancelled %.1f%% non-zeros\n", 100 * numcancel / (SCIP_Real)SCIPmatrixGetNNonzs(matrix));
       }
 
       /* update result */
