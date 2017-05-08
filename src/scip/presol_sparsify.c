@@ -658,6 +658,287 @@ SCIP_RETCODE fillDigraph(
    return SCIP_OKAY;
 }
 
+struct RowVarPair
+{
+   int rowindex;
+   int varindex1;
+   int varindex2;
+   SCIP_Real varcoef1;
+   SCIP_Real varcoef2;
+};
+
+typedef struct RowVarPair ROWVARPAIR;
+
+static
+SCIP_DECL_HASHKEYEQ(varPairsEqual)
+{
+   ROWVARPAIR* varpair1;
+   ROWVARPAIR* varpair2;
+   SCIP_Real scale;
+
+   varpair1 = (ROWVARPAIR*) key1;
+   varpair2 = (ROWVARPAIR*) key2;
+
+   if( varpair1->varindex1 != varpair2->varindex1 )
+      return FALSE;
+
+   if( varpair1->varindex2 != varpair2->varindex2 )
+      return FALSE;
+
+   scale = varpair1->varcoef1 / varpair2->varcoef1;
+
+   if( !EPSEQ(varpair1->varcoef2, scale * varpair2->varcoef2, SCIP_DEFAULT_EPSILON) )
+      return FALSE;
+
+   return TRUE;
+}
+
+static
+SCIP_DECL_HASHKEYVAL(varPairHashval)
+{
+   ROWVARPAIR* varpair;
+
+   varpair = (ROWVARPAIR*) key;
+
+   return SCIPhashTwo(SCIPcombineTwoInt(varpair->varindex1, varpair->varindex2),
+                      SCIPrealHashCode(varpair->varcoef2 / varpair->varcoef1));
+}
+
+static
+SCIP_RETCODE cancelRow(
+   SCIP*                 scip,
+   SCIP_MATRIX*          matrix,
+   SCIP_HASHTABLE*       pairtable,
+   int                   rowidx,
+   int*                  nchgcoefs,
+   int*                  ncanceled
+   )
+{
+   int* cancelrowinds;
+   SCIP_Real* cancelrowvals;
+   SCIP_Real cancellhs;
+   SCIP_Real cancelrhs;
+   int* tmpinds;
+   SCIP_Real* tmpvals;
+   int cancelrowlen;
+   int nchgcoef;
+
+   cancelrowlen = SCIPmatrixGetRowNNonzs(matrix, rowidx);
+
+   SCIPduplicateBufferArray(scip, &cancelrowinds, SCIPmatrixGetRowIdxPtr(matrix, rowidx), cancelrowlen);
+   SCIPduplicateBufferArray(scip, &cancelrowvals, SCIPmatrixGetRowValPtr(matrix, rowidx), cancelrowlen);
+   SCIPallocBufferArray(scip, &tmpinds, cancelrowlen);
+   SCIPallocBufferArray(scip, &tmpvals, cancelrowlen);
+
+   cancellhs = SCIPmatrixGetRowLhs(matrix, rowidx);
+   cancelrhs = SCIPmatrixGetRowRhs(matrix, rowidx);
+
+   nchgcoef = 0;
+   while(TRUE)
+   {
+      SCIP_Real bestscale;
+      int bestcand = -1;
+      int bestncancel = 0;
+      int bestnfillin = 0;
+      int i;
+      int j;
+      ROWVARPAIR rowvarpair;
+
+      for( i = 0; i < cancelrowlen; ++i )
+      {
+         for( j = i + 1; j < cancelrowlen; ++j )
+         {
+            int a,b;
+            int ncancel;
+            int nfillin;
+            int eqrowlen;
+            ROWVARPAIR* eqrowvarpair;
+            SCIP_Real* eqrowvals;
+            int* eqrowinds;
+            SCIP_Real scale;
+
+            assert(cancelrowinds[i] < cancelrowinds[j]);
+
+            rowvarpair.varindex1 = cancelrowinds[i];
+            rowvarpair.varindex2 = cancelrowinds[j];
+            rowvarpair.varcoef1 = cancelrowvals[i];
+            rowvarpair.varcoef2 = cancelrowvals[j];
+
+            eqrowvarpair = SCIPhashtableRetrieve(pairtable, (void*) &rowvarpair);
+
+            if( eqrowvarpair == NULL || eqrowvarpair->rowindex == rowidx )
+               continue;
+
+            eqrowvals = SCIPmatrixGetRowValPtr(matrix, eqrowvarpair->rowindex);
+            eqrowinds = SCIPmatrixGetRowIdxPtr(matrix, eqrowvarpair->rowindex);
+            eqrowlen = SCIPmatrixGetRowNNonzs(matrix, eqrowvarpair->rowindex);
+
+            scale = -rowvarpair.varcoef1 / eqrowvarpair->varcoef1;
+
+            a = 0;
+            b = 0;
+            ncancel = 0;
+            nfillin = 0;
+            while( a < cancelrowlen && b < eqrowlen )
+            {
+               if( cancelrowinds[a] == eqrowinds[b] )
+               {
+                  if( SCIPisZero(scip, cancelrowvals[a] + scale * eqrowvals[b]) )
+                     ++ncancel;
+
+                  ++a;
+                  ++b;
+               }
+               else if( cancelrowinds[a] < eqrowinds[b] )
+               {
+                  ++a;
+               }
+               else
+               {
+                  ++nfillin;
+                  ++b;
+               }
+            }
+
+            nfillin += (eqrowlen - b);
+
+            if( (ncancel - nfillin) > (bestncancel - bestnfillin) ||
+               ((ncancel - nfillin) == (bestncancel - bestnfillin) && nfillin < bestnfillin) )
+            {
+               bestncancel = ncancel;
+               bestnfillin = nfillin;
+               bestcand = eqrowvarpair->rowindex;
+               bestscale = scale;
+            }
+
+            ++i;
+         }
+      }
+
+      if( bestcand != -1 )
+      {
+         int a,b;
+         SCIP_Real* eqrowvals;
+         int* eqrowinds;
+         int eqrowlen;
+         int tmprowlen;
+         SCIP_Real eqrhs;
+
+         eqrowvals = SCIPmatrixGetRowValPtr(matrix, bestcand);
+         eqrowinds = SCIPmatrixGetRowIdxPtr(matrix, bestcand);
+         eqrowlen = SCIPmatrixGetRowNNonzs(matrix, bestcand);
+         eqrhs = SCIPmatrixGetRowRhs(matrix, bestcand);
+
+         a = 0;
+         b = 0;
+         tmprowlen = 0;
+
+         if( !SCIPisZero(scip, eqrhs) )
+         {
+            if( !SCIPisInfinity(scip, -cancellhs) )
+               cancellhs += bestscale * eqrhs;
+            if( !SCIPisInfinity(scip, cancelrhs) )
+               cancelrhs += bestscale * eqrhs;
+         }
+
+         while( a < cancelrowlen && b < eqrowlen )
+         {
+            if( cancelrowinds[a] == eqrowinds[b] )
+            {
+               SCIP_Real val = cancelrowvals[a] + bestscale * eqrowvals[b];
+
+               if( !SCIPisZero(scip, val) )
+               {
+                  tmpinds[tmprowlen] = cancelrowinds[a];
+                  tmpvals[tmprowlen] = val;
+                  ++tmprowlen;
+               }
+               ++nchgcoef;
+
+               ++a;
+               ++b;
+            }
+            else if( cancelrowinds[a] < eqrowinds[b] )
+            {
+               tmpinds[tmprowlen] = cancelrowinds[a];
+               tmpvals[tmprowlen] = cancelrowvals[a];
+               ++tmprowlen;
+               ++a;
+            }
+            else
+            {
+               tmpinds[tmprowlen] = eqrowinds[b];
+               tmpvals[tmprowlen] = eqrowvals[b] * bestscale;
+               ++nchgcoef;
+               ++tmprowlen;
+               ++b;
+            }
+         }
+
+         while( a < cancelrowlen )
+         {
+            tmpinds[tmprowlen] = cancelrowinds[a];
+            tmpvals[tmprowlen] = cancelrowvals[a];
+            ++tmprowlen;
+            ++a;
+         }
+
+         while( b < eqrowlen )
+         {
+            tmpinds[tmprowlen] = eqrowinds[b];
+            tmpvals[tmprowlen] = eqrowvals[b] * bestscale;
+            ++nchgcoef;
+            ++tmprowlen;
+            ++b;
+         }
+
+         SCIPswapPointers((void**) &tmpinds, (void**) &cancelrowinds);
+         SCIPswapPointers((void**) &tmpvals, (void**) &cancelrowvals);
+         cancelrowlen = tmprowlen;
+      }
+      else
+         break;
+   }
+
+
+   if( nchgcoef != 0 )
+   {
+      SCIP_CONS* cons;
+      SCIP_VAR** consvars;
+
+      int i;
+
+      SCIPallocBufferArray(scip, &consvars, cancelrowlen);
+
+      for( i = 0; i < cancelrowlen; ++i )
+         consvars[i] = SCIPmatrixGetVar(matrix, cancelrowinds[i]);
+
+   /* create sparsified constraint and add it to scip */
+      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, SCIPmatrixGetRowName(matrix, rowidx), cancelrowlen, consvars, cancelrowvals,
+                                      cancellhs, cancelrhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPdelCons(scip, SCIPmatrixGetCons(matrix, rowidx)) );
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      #ifdef SCIP_MORE_DEBUG
+      SCIPdebugPrintCons(scip, cons, NULL);
+      SCIPdebugMsg(scip, "########\n");
+      #endif
+
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+      *nchgcoefs += nchgcoef;
+      *ncanceled += SCIPmatrixGetRowNNonzs(matrix, rowidx) - cancelrowlen;
+
+      SCIPfreeBufferArray(scip, &consvars);
+   }
+
+   SCIPfreeBufferArray(scip, &tmpvals);
+   SCIPfreeBufferArray(scip, &tmpinds);
+   SCIPfreeBufferArray(scip, &cancelrowvals);
+   SCIPfreeBufferArray(scip, &cancelrowinds);
+
+   return SCIP_OKAY;
+}
+
 /** execution method of presolver */
 static
 SCIP_DECL_PRESOLEXEC(presolExecSparsify)
@@ -815,6 +1096,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
 
       /* loop over all independent components */
       rowcnt = 0;
+      int nhashcancel;
+      nhashcancel = 0;
       for( c = 0; c < ncomponents; c++ )
       {
          compnumber = rowtocomp[rowcnt];
@@ -837,6 +1120,7 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
          SCIP_CALL( SCIPsgtrieCreate(&sgtrie, SCIPblkmem(scip), SCIPbuffer(scip),
          matrixrowGetSignature, matrixRowEq /*NULL*/, matrixRowSubset /*NULL*/) );
 
+#if 0
          /* insert rows of one component into signature trie */
          for( r = 0; r < nrowscomp; r++ )
          {
@@ -855,63 +1139,121 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
                multiplekeyspresent = 1;
             }
          }
+#endif
 
+         {
+            SCIP_HASHTABLE* pairtable;
+            ROWVARPAIR* varpairs;
+            int nvarpairs;
+            int varpairssize;
+            varpairssize = 0;
+            nvarpairs = 0;
+            varpairs = NULL;
+            SCIP_CALL( SCIPhashtableCreate(&pairtable, SCIPblkmem(scip), 1, SCIPhashGetKeyStandard, varPairsEqual, varPairHashval, NULL) );
          /* collect equalities and their number of non-zeros */
          numeqs = 0;
          for( r = 0; r < nrowscomp; r++ )
          {
-            /* we do not consider equalities with too less non-zeros */
-            if( SCIPmatrixGetRowNNonzs(matrix, rowscomp[r]) < MIN_EQS_NONZEROS )
-               continue;
-
             if( SCIPisEQ(scip, SCIPmatrixGetRowRhs(matrix,rowscomp[r]), SCIPmatrixGetRowLhs(matrix,rowscomp[r])) )
             {
-               eqnonzs[numeqs] = SCIPmatrixGetRowNNonzs(matrix, rowscomp[r]);
-               eqidxs[numeqs] = rowscomp[r];
-               numeqs++;
+               int* rowinds;
+               SCIP_Real* rowvals;
+               int i,j;
+               int nnonz;
+               int npairs;
+
+               nnonz = SCIPmatrixGetRowNNonzs(matrix, rowscomp[r]);
+               rowinds = SCIPmatrixGetRowIdxPtr(matrix, rowscomp[r]);
+               rowvals = SCIPmatrixGetRowValPtr(matrix, rowscomp[r]);
+
+               npairs = (nnonz * (nnonz - 1)) / 2;
+
+               if( nvarpairs + npairs > varpairssize )
+               {
+                  int newsize = SCIPcalcMemGrowSize(scip, nvarpairs + npairs);
+                  SCIPreallocBufferArray(scip, &varpairs, newsize);
+                  varpairssize = newsize;
+               }
+
+               for( i = 0; i < nnonz; ++i )
+               {
+                  for( j = i + 1; j < nnonz; ++j )
+                  {
+                     assert(nvarpairs < varpairssize);
+                     varpairs[nvarpairs].rowindex = rowscomp[r];
+                     varpairs[nvarpairs].varindex1 = rowinds[i];
+                     varpairs[nvarpairs].varindex2 = rowinds[j];
+                     varpairs[nvarpairs].varcoef1 = rowvals[i];
+                     varpairs[nvarpairs].varcoef2 = rowvals[j];
+                     ++nvarpairs;
+                  }
+               }
             }
+         }
+
+         for( r = 0; r < nvarpairs; ++r )
+         {
+            ROWVARPAIR* othervarpair;
+
+            othervarpair = SCIPhashtableRetrieve(pairtable, (void*) &varpairs[r]);
+
+            if( othervarpair != NULL )
+            {
+               if( SCIPmatrixGetRowNNonzs(matrix, othervarpair->rowindex) <= SCIPmatrixGetRowNNonzs(matrix, varpairs[r].rowindex) )
+                  continue;
+            }
+
+            SCIP_CALL( SCIPhashtableInsert(pairtable, (void*) &varpairs[r]) );
          }
 
          /* sort the equalities by their number of non-zeros */
          /* TODO: check if we actually need this sorting */
-         SCIPsortIntInt(eqnonzs, eqidxs, numeqs);
+//          SCIPsortIntInt(eqnonzs, eqidxs, numeqs);
 
-         /* loop over the equalities by increasing number of non-zeros */
-         for( r = 0; r < numeqs; r++ )
+         /* loop over the rows of the component */
+
+         for( r = 0; r < nrowscomp; r++ )
          {
-            /* use signature trie to retrieve matching row candidates */
-            SCIP_CALL( SCIPsgtrieFind(sgtrie, (void*)&msets[eqidxs[r]], SCIP_SGTRIE_SUPERSET, presoldata->maxsupersetmisses, (void**)matches, &nmatches) );
 
-            /* loop over all signature trie matches */
-            for( i = 0; i < nmatches; i++ )
+            SCIP_CALL( cancelRow(scip, matrix, pairtable, rowscomp[r], nchgcoefs, &nhashcancel) );
+            continue;
+
+            /* use signature trie to retrieve matching equality row candidates */
+#if 0
+            SCIP_CALL( SCIPsgtrieFind(sgtrie, (void*)&msets[rowscomp[r]], SCIP_SGTRIE_SUBSET, presoldata->maxsupersetmisses, (void**)matches, &nmatches) );
+#else
+            nmatches = 0;
+#endif
+            /* loop over all signature trie matches until the row is sparsified */
+            for( i = 0; i < nmatches && !rowsparsified[rowscomp[r]]; i++ )
             {
                rowidx = matches[i]->idx;
                numobservedrowpairs++;
 
                /* we treat only different constraint pairs and rows which are not already sparsified */
-               if( rowidx != eqidxs[r] && !rowsparsified[rowidx] && !rowsparsified[eqidxs[r]] )
+               if( rowidx != rowscomp[r] && !rowsparsified[rowidx] )//&& !rowsparsified[eqidxs[r]] )
                {
                   /* calculate exact number of non-zero misses */
-                  nmisses = getMinNumSupersetMisses(scip, matrix, rowidx, eqidxs[r],
+                  nmisses = getMinNumSupersetMisses(scip, matrix, rowscomp[r], rowidx,
                      nonzerosotherrow, scatterotherrow, &numscatterotherrow, coefsotherrow,
                      nonzerosequality, scatterequality, &numscatterequality, coefsequality,
                      &numoverlap, overlapidxs, ratios);
 
-                  if( nmisses <= 1 )
+                  if( nmisses <= presoldata->maxsupersetmisses )
                   {
                      /* determine scalefac which removes minimal one non-zero */
-                     scalefac = getScalefac(scip, matrix, rowidx, eqidxs[r], numoverlap, overlapidxs, ratios, &minnonzcancellations);
+                     scalefac = getScalefac(scip, matrix, rowscomp[r], rowidx, numoverlap, overlapidxs, ratios, &minnonzcancellations);
                      assert(minnonzcancellations > 0);
 
                      /* process row only if no fill-in occur */
                      if( minnonzcancellations > nmisses )
                      {
-                        SCIP_CALL( sparsifyCons(scip, matrix, rowidx, eqidxs[r], scalefac, consvars, consvals,
+                        SCIP_CALL( sparsifyCons(scip, matrix, rowscomp[r], rowidx, scalefac, consvars, consvals,
                               nonzerosotherrow, scatterotherrow, numscatterotherrow, coefsotherrow,
                               nonzerosequality, scatterequality, numscatterequality, coefsequality,
                               &numcancel, &numchangedcoefs) );
 
-                        rowsparsified[rowidx] = TRUE;
+                        rowsparsified[rowscomp[r]] = TRUE;
                      }
                      else
                         scalefails++;
@@ -949,6 +1291,10 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
                break;
          }
 
+
+         SCIPhashtableFree(&pairtable);
+         SCIPfreeBufferArrayNull(scip, &varpairs);
+         }
          /* free signature trie */
          SCIPsgtrieFree(&sgtrie);
 
@@ -956,6 +1302,11 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
             break;
       }
 
+      {
+         SCIP_Real percentagenzcancelled = 100 * nhashcancel / (SCIP_Real)SCIPmatrixGetNNonzs(matrix);
+         if( percentagenzcancelled >= 0.1 )
+            SCIPinfoMessage(scip, NULL, "cancelled %.1f%% non-zeros\n", 100 * nhashcancel / (SCIP_Real)SCIPmatrixGetNNonzs(matrix));
+      }
 
       /* free local memory */
       SCIPdigraphFree(&digraph);
@@ -989,8 +1340,8 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
 
 #ifdef SCIP_DEBUG
       /* print out number of changed coefficients and non-zero cancellations */
-      SCIPdebugMsg(scip, "### nrows=%d, ntries=%d, mfails=%d, sfails=%d, minrowdensity=%d, maxrowdensity=%d, sgmultkeys=%d, sucratio=%.4f, chgcoefs=%d, nzcancel=%d\n",
-         nrows, ncomponents, missfails, scalefails, mindensity, maxdensity, multiplekeyspresent, (SCIP_Real)numcancel/(SCIP_Real)numobservedrowpairs, numchangedcoefs, numcancel);
+//       SCIPdebugMsg(scip, "### nrows=%d, ntries=%d, mfails=%d, sfails=%d, minrowdensity=%d, maxrowdensity=%d, sgmultkeys=%d, sucratio=%.4f, chgcoefs=%d, nzcancel=%d\n",
+//          nrows, ncomponents, missfails, scalefails, mindensity, maxdensity, multiplekeyspresent, (SCIP_Real)numcancel/(SCIP_Real)numobservedrowpairs, numchangedcoefs, numcancel);
 #endif
    }
 
