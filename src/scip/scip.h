@@ -22445,6 +22445,41 @@ int SCIPgetPtrarrayMaxIdx(
    );
 
 /**@} */
+
+/**@defgroup PublicVerificationMethods Verification
+ * @ingroup PUBLICCOREAPI
+ * @brief  methods for verifying the correctness of the run
+ *
+ * @{
+ */
+
+/** verify the correctness of the solve by checking solutions and reference bounds
+ *
+ *  verify the correctness by
+ *
+ *  - checking the feasibility of the incumbent solution in the original problem (using SCIPcheckSolOrig()) if it exists
+ *
+ *  - checking if the primal and dual bounds computed by SCIP agree with the given primal and dual reference bounds
+ *
+ *  For infeasible problems, +/-SCIPinfinity() should be passed as reference bounds. If the problem is a minimization problem,
+ *  the correct primal and dual reference bounds should be +infinity.
+ *
+ */
+EXTERN
+SCIP_RETCODE SCIPverifySolve(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             primalreference,    /**< primal reference value for the problem, or SCIP_UNKNOWN */
+   SCIP_Real             dualreference,      /**< dual reference value for the problem, or SCIP_UNKNOWN */
+   SCIP_Real             reftol,             /**< relative tolerance for acceptable violation of reference values */
+   SCIP_Bool             quiet,              /**< TRUE if no status line should be printed */
+   SCIP_Bool*            feasible,           /**< pointer to store if the best solution is feasible in the original problem,
+                                               *  or NULL */
+   SCIP_Bool*            primalrefviol,      /**< is the primal reference value violated? */
+   SCIP_Bool*            dualrefviol         /**< is the dual reference value violated? */
+   );
+
+/* @} */
+
 #ifdef __cplusplus
 }
 #endif
