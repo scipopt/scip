@@ -327,6 +327,7 @@ struct SCIP_Set
                                               *   for LP resolve (-1: unlimited) */
    int                   lp_resolveitermin;  /**< minimum number of iterations that are allowed for LP resolve */
    int                   lp_solutionpolishing;/**< LP solution polishing method (0: disabled, 1: only root, 2: always) */
+   int                   lp_refactorinterval;/**< LP refactorization interval (0: automatic) */
 
    /* NLP settings */
    SCIP_Bool             nlp_disable;        /**< should the NLP be disabled even if a constraint handler enabled it? */
@@ -363,6 +364,9 @@ struct SCIP_Set
    SCIP_Bool             misc_allowdualreds; /**< should dual reductions in propagation methods and presolver be allowed? */
    SCIP_Bool             misc_allowobjprop;  /**< should propagation to the current objective be allowed in propagation methods? */
    SCIP_Real             misc_referencevalue;/**< objective value for reference purposes */
+#ifdef WITH_DEBUG_SOLUTION
+   char*                 misc_debugsol;      /**< path to a debug solution */
+#endif
 
    /* randomization parameters */
    int                   random_randomseedshift;/**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */

@@ -72,11 +72,14 @@ TOUCHLINKS	=	false
 #-----------------------------------------------------------------------------
 BUILDFLAGS =	" ARCH=$(ARCH)\\n\
 		COMP=$(COMP)\\n\
+		DEBUGSOL=$(DEBUGSOL)\\n\
 		EXPRINT=$(EXPRINT)\\n\
 		GAMS=$(GAMS)\\n\
 		GMP=$(GMP)\\n\
 		IPOPT=$(IPOPT)\\n\
 		IPOPTOPT=$(IPOPTOPT)\\n\
+		WORHP=$(WORHP)\\n\
+		WORHPOPT=$(WORHPOPT)\\n\
 		LPS=$(LPS)\\n\
 		LPSCHECK=$(LPSCHECK)\\n\
 		LPSOPT=$(LPSOPT)\\n\
@@ -117,7 +120,7 @@ LPSCHECKSRC	:=	$(shell cat $(LPSCHECKDEP))
 LPSOPTIONS	+=	cpx
 ifeq ($(LPS),cpx)
 FLAGS		+=	-I$(LIBDIR)/include/cpxinc
-LPILIBOBJ	=	lpi/lpi_cpx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ	=	lpi/lpi_cpx.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/include/cpxinc
 ifeq ($(SHARED),true)
@@ -134,7 +137,7 @@ endif
 LPSOPTIONS	+=	xprs
 ifeq ($(LPS),xprs)
 FLAGS		+=	-I$(LIBDIR)/include/xprsinc
-LPILIBOBJ	=	lpi/lpi_xprs.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ	=	lpi/lpi_xprs.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/include/xprsinc
 SOFTLINKS	+=	$(LIBDIR)/shared/libxpress.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
@@ -146,7 +149,7 @@ endif
 LPSOPTIONS	+=	msk
 ifeq ($(LPS),msk)
 FLAGS		+=	-I$(LIBDIR)/include/mskinc
-LPILIBOBJ	=	lpi/lpi_msk.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ	=	lpi/lpi_msk.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/include/mskinc
 SOFTLINKS	+=	$(LIBDIR)/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
@@ -164,7 +167,7 @@ ifeq ($(SPX_LEGACY),true)
 CFLAGS		+= 	-DSOPLEX_LEGACY
 CXXFLAGS	+= 	-DSOPLEX_LEGACY
 endif
-LPILIBOBJ	=	lpi/lpi_spx1.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ	=	lpi/lpi_spx1.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx1.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/include/spxinc
 ifeq ($(SHARED),true)
@@ -192,7 +195,7 @@ LPSOPTIONS	+=	spx ( = spx2)
 ifeq ($(LPS),spx2)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/include/spxinc
-LPILIBOBJ	=	lpi/lpi_spx2.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ	=	lpi/lpi_spx2.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx2.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/include/spxinc
 ifeq ($(SHARED),true)
@@ -216,11 +219,15 @@ LPIINSTMSG	+=	" -> \"libcplex.*.so\" is the path to the CPLEX library, e.g., \"<
 endif
 endif
 
+ifeq ($(DEBUGSOL),true)
+FLAGS		+=	-DWITH_DEBUG_SOLUTION
+endif
+
 LPSOPTIONS	+=	clp
 ifeq ($(LPS),clp)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)/include/coin
-LPILIBOBJ	=	lpi/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ	=	lpi/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
 LPIINSTMSG	=	"  -> \"clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)\" is the path to the Clp installation directory, i.e., \"<Clp-path>/include/coin/ClpModel.hpp\" should exist.\n"
@@ -229,7 +236,7 @@ endif
 LPSOPTIONS	+=	qso
 ifeq ($(LPS),qso)
 FLAGS         	+=      -I$(LIBDIR)/include/qsinc
-LPILIBOBJ     	= 	lpi/lpi_qso.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ     	= 	lpi/lpi_qso.o scip/bitencode.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC     	=       $(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS     	+=      $(LIBDIR)/include/qsinc
 SOFTLINKS     	+=      $(LIBDIR)/static/libqsopt.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
@@ -241,7 +248,7 @@ endif
 LPSOPTIONS	+=	grb
 ifeq ($(LPS),grb)
 FLAGS		+=	-I$(LIBDIR)/include/grbinc
-LPILIBOBJ	=	lpi/lpi_grb.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ	=	lpi/lpi_grb.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 SOFTLINKS	+=	$(LIBDIR)/include/grbinc
 SOFTLINKS	+=	$(LIBDIR)/shared/libgurobi.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
@@ -251,7 +258,7 @@ endif
 
 LPSOPTIONS	+=	none
 ifeq ($(LPS),none)
-LPILIBOBJ	=	lpi/lpi_none.o blockmemshell/memory.o scip/message.o
+LPILIBOBJ	=	lpi/lpi_none.o blockmemshell/memory.o scip/rbtree.o scip/message.o
 LPILIBSRC  	=	$(addprefix $(SRCDIR)/,$(LPILIBOBJ:.o=.c))
 endif
 
@@ -317,7 +324,8 @@ NLPILIBSCIPOBJ	= 	blockmemshell/memory.o \
 			scip/misc.o \
 			scip/intervalarith.o \
 			scip/interrupt.o \
-			scip/message.o
+			scip/message.o \
+			scip/rbtree.o
 
 ifeq ($(EXPRINT),none)
 NLPILIBCOBJ 	+=	nlpi/exprinterpret_none.o
@@ -327,10 +335,15 @@ NLPILIBCXXOBJ 	+= 	nlpi/exprinterpret_cppad.o
 endif
 
 ifeq ($(IPOPT),true)
-NLPILIBSHORTNAME = $(NLPILIBSHORTNAME).ipopt
 NLPILIBCXXOBJ	+= 	nlpi/nlpi_ipopt.o
 else
 NLPILIBCOBJ	+= 	nlpi/nlpi_ipopt_dummy.o
+endif
+
+ifeq ($(WORHP),true)
+NLPILIBCOBJ	+= 	nlpi/nlpi_worhp.o
+else
+NLPILIBCOBJ	+= 	nlpi/nlpi_worhp_dummy.o
 endif
 
 NLPILIBSHORTNAME= 	nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)
@@ -347,7 +360,8 @@ ALLSRC		+=	$(NLPILIBSRC)
 
 ifeq ($(SHARED),true)
 NLPILIBEXTLIBS	=	$(LIBBUILD_L)$(LIBDIR)/$(LIBTYPE) $(IPOPTLIBS) \
-			$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib)
+			$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib) \
+			$(LINKRPATH)$(realpath $(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/lib)
 endif
 
 
@@ -399,6 +413,12 @@ endif
 ifeq ($(IPOPT),true)
 SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)
 LPIINSTMSG	+=	"\n  -> \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)\" is a directory containing the ipopt installation, i.e., \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/include/coin/IpIpoptApplication.hpp\", \"ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)/lib/libipopt*\", ... should exist.\n"
+endif
+
+# WORHP provides only shared libraries
+ifeq ($(WORHP),true)
+SOFTLINKS	+=	$(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)
+LPIINSTMSG	+=	"\n  -> \"worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)\" is a directory containing the WORHP installation, i.e., \"worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/include/worhp/worhp.h\" should exist.\n"
 endif
 
 ifeq ($(GAMS),true)
@@ -848,7 +868,7 @@ testcount:
 
 .PHONY: tags
 tags:
-		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/; sed 's!\#undef .*!!g' TAGS > tags; mv tags TAGS
+		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/; sed -i 's!\#undef .*!!g' TAGS
 
 # include target to detect the current git hash
 -include make/local/make.detectgithash
@@ -1249,6 +1269,12 @@ endif
 ifneq ($(ZIMPL),$(LAST_ZIMPL))
 		@-touch $(ZIMPLSRC)
 endif
+ifneq ($(IPOPT),$(LAST_IPOPT))
+		@-touch $(NLPILIBSRC)
+endif
+ifneq ($(WORHP),$(LAST_WORHP))
+		@-touch $(NLPILIBSRC)
+endif
 ifneq ($(GAMS),$(LAST_GAMS))
 		@-touch $(GAMSSRC)
 endif
@@ -1291,6 +1317,9 @@ endif
 ifneq ($(TPI),$(LAST_TPI))
 		@-touch -c $(ALLSRC)
 endif
+ifneq ($(DEBUGSOL),$(LAST_DEBUGSOL))
+		@-touch -c $(ALLSRC)
+endif
 		@-rm -f $(LASTSETTINGS)
 		@echo "LAST_BUILDFLAGS=\"$(BUILDFLAGS)\"" >> $(LASTSETTINGS)
 		@echo "LAST_SCIPGITHASH=$(SCIPGITHASH)" >> $(LASTSETTINGS)
@@ -1298,6 +1327,8 @@ endif
 		@echo "LAST_GMP=$(GMP)" >> $(LASTSETTINGS)
 		@echo "LAST_READLINE=$(READLINE)" >> $(LASTSETTINGS)
 		@echo "LAST_ZIMPL=$(ZIMPL)" >> $(LASTSETTINGS)
+		@echo "LAST_IPOPT=$(IPOPT)" >> $(LASTSETTINGS)
+		@echo "LAST_WORHP=$(WORHP)" >> $(LASTSETTINGS)
 		@echo "LAST_GAMS=$(GAMS)" >> $(LASTSETTINGS)
 		@echo "LAST_PARASCIP=$(PARASCIP)" >> $(LASTSETTINGS)
 		@echo "LAST_LPSCHECK=$(LPSCHECK)" >> $(LASTSETTINGS)
@@ -1313,6 +1344,7 @@ endif
 		@echo "LAST_NOBLKBUFMEM=$(NOBLKBUFMEM)" >> $(LASTSETTINGS)
 		@echo "LAST_SANITIZE=$(SANITIZE)" >> $(LASTSETTINGS)
 		@echo "LAST_TPI=$(TPI)" >> $(LASTSETTINGS)
+		@echo "LAST_DEBUGSOL=$(DEBUGSOL)" >> $(LASTSETTINGS)
 
 $(LINKSMARKERFILE):
 		@$(MAKE) links
@@ -1325,7 +1357,7 @@ links:		| $(LIBDIR)/static $(LIBDIR)/shared $(LIBDIR)/include $(DIRECTORIES) ech
 .PHONY: echosoftlinks
 echosoftlinks:
 		@echo
-		@echo "- Current settings: LPS=$(LPS) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SHARED=$(SHARED) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL) ZIMPLOPT=$(ZIMPLOPT) IPOPT=$(IPOPT) IPOPTOPT=$(IPOPTOPT) EXPRINT=$(EXPRINT) GAMS=$(GAMS)"
+		@echo "- Current settings: LPS=$(LPS) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SHARED=$(SHARED) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL) ZIMPLOPT=$(ZIMPLOPT) IPOPT=$(IPOPT) IPOPTOPT=$(IPOPTOPT) WORHP=$(WORHP) WORHPOPT=$(WORHPOPT) EXPRINT=$(EXPRINT) GAMS=$(GAMS)"
 		@echo
 		@echo "* SCIP needs some softlinks to external programs, in particular, LP-solvers."
 		@echo "* Please insert the paths to the corresponding directories/libraries below."
@@ -1409,6 +1441,11 @@ endif
 ifneq ($(IPOPT),true)
 ifneq ($(IPOPT),false)
 		$(error invalid IPOPT flag selected: IPOPT=$(IPOPT). Possible options are: true false)
+endif
+endif
+ifneq ($(WORHP),true)
+ifneq ($(WORHP),false)
+		$(error invalid WORHP flag selected: IPOPT=$(IPOPT). Possible options are: true false)
 endif
 endif
 ifneq ($(READLINE),true)

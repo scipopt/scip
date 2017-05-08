@@ -1626,6 +1626,7 @@ SCIP_RETCODE copyProb(
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
    assert(!original || global);
+   assert(original || SCIPisTransformed(sourcescip));
 
    /* free old problem */
    SCIP_CALL( SCIPfreeProb(targetscip) );
@@ -1653,10 +1654,10 @@ SCIP_RETCODE copyProb(
    /* switch stage to PROBLEM */
    targetscip->set->stage = SCIP_STAGE_PROBLEM;
 
-   if( !original && SCIPisTransformed(sourcescip) )
-      sourceprob = sourcescip->transprob;
-   else
+   if( original )
       sourceprob = sourcescip->origprob;
+   else
+      sourceprob = sourcescip->transprob;
 
    /* create the statistics data structure */
    SCIP_CALL( SCIPstatCreate(&targetscip->stat, targetscip->mem->probmem, targetscip->set, targetscip->transprob, targetscip->origprob, targetscip->messagehdlr) );
@@ -3588,6 +3589,12 @@ SCIP_RETCODE doCopy(
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
    assert(suffix != NULL);
+
+   /* copy the original problem if we are in SCIP_STAGE_PROBLEM stage */
+   if( SCIPgetStage(sourcescip) == SCIP_STAGE_PROBLEM )
+      original = TRUE;
+
+   /* global must be TRUE for the original problem */
    assert(global || !original);
 
    /* get time before start of copy procedure */
@@ -3600,9 +3607,7 @@ SCIP_RETCODE doCopy(
    SCIP_CALL( SCIPcopyPlugins(sourcescip, targetscip, TRUE, enablepricing, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, passmessagehdlr, &localvalid) );
 
-   /* in case there are active pricers and pricing is disabled the target SCIP will not be a valid copy of the source
-    * SCIP
-    */
+   /* in case there are active pricers and pricing is disabled, targetscip will not be a valid copy of sourcescip */
    if( ! enablepricing && SCIPgetNActivePricers(sourcescip) > 0 )
       localvalid = FALSE;
 
@@ -3635,6 +3640,7 @@ SCIP_RETCODE doCopy(
 
    /* explicitly suppress output when copying parameters */
    SCIPsetMessagehdlrQuiet(targetscip, TRUE);
+
    /* copy all settings */
    SCIP_CALL( SCIPcopyParamSettings(sourcescip, targetscip) );
 
@@ -3654,9 +3660,7 @@ SCIP_RETCODE doCopy(
    /* copy original or transformed variables and perform fixings if needed */
    SCIP_CALL( copyVars(sourcescip, targetscip, localvarmap, localconsmap, fixedvars, fixedvals, nfixedvars, original, global) );
 
-   /* if fixed variables are directly specified or inferred from local bounds,
-    * enable constraint compression
-    */
+   /* if fixed variables are directly specified or inferred from local bounds, enable constraint compression */
    if( useconscompression && (nfixedvars > 0 || !global) )
    {
       SCIP_CALL( SCIPenableConsCompression(targetscip) );
@@ -3724,6 +3728,9 @@ SCIP_RETCODE doCopy(
  *  4) copy all active variables
  *  5) copy all constraints
  *
+ *  The source problem depends on the stage of the \p sourcescip - In SCIP_STAGE_PROBLEM, the original problem is copied,
+ *  otherwise, the transformed problem is copied. For an explicit copy of the original problem, use SCIPcopyOrig().
+ *
  *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
@@ -3782,8 +3789,8 @@ SCIP_RETCODE SCIPcopy(
    assert(suffix != NULL);
 
    /* check stages for both, the source and the target SCIP data structure */
-   SCIP_CALL( checkStage(sourcescip, "SCIPcopyConsCompression", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-   SCIP_CALL( checkStage(targetscip, "SCIPcopyConsCompression", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+   SCIP_CALL( checkStage(sourcescip, "SCIPcopy", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(targetscip, "SCIPcopy", TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
    /* copy source SCIP data into target SCIP data structure */
    SCIP_CALL( doCopy(sourcescip, targetscip, varmap, consmap, suffix, fixedvars, fixedvals, nfixedvars,
@@ -3807,8 +3814,11 @@ SCIP_RETCODE SCIPcopy(
  *     b) enable constraint compression
  *  5) copy all constraints
  *
+ * The source problem depends on the stage of the \p sourcescip - In SCIP_STAGE_PROBLEM, the original problem is copied,
+ * otherwise, the transformed problem is copied. For an explicit copy of the original problem, use SCIPcopyOrigConsCompression().
+ *
  *  @note: in case that a combination of local bounds and explicit fixing values should be used,
- *         the fixing value of a variable is prefered if local bounds and fixing value disagree.
+ *         the fixing value of a variable is preferred if local bounds and fixing value disagree.
  *
  *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
  *
@@ -4054,6 +4064,31 @@ SCIP_RETCODE getCopyTimelimit(
    return SCIP_OKAY;
 }
 
+/** set updated time limit for a sub-SCIP */
+static
+SCIP_RETCODE copySofttimelimit(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip          /**< target SCIP data structure */
+   )
+{
+   if( SCIPgetParam(targetscip, "limits/softtime") == NULL )
+      return SCIP_OKAY;
+   else
+   {
+      SCIP_Real timelimit = -1.0;
+
+      SCIP_CALL( SCIPgetRealParam(sourcescip, "limits/softtime", &timelimit) );
+      if( !SCIPisNegative(sourcescip, timelimit) )
+      {
+         timelimit -= SCIPgetSolvingTime(sourcescip);
+         timelimit = MAX(0.0, timelimit);
+      }
+
+      SCIP_CALL( SCIPsetRealParam(targetscip, "limits/softtime", timelimit) );
+   }
+   return SCIP_OKAY;
+}
+
 /** return updated memory limit for a sub-SCIP */
 static
 SCIP_RETCODE getCopyMemlimit(
@@ -4144,6 +4179,9 @@ SCIP_RETCODE SCIPcopyLimits(
    SCIP_CALL( SCIPsetRealParam(targetscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(targetscip, "limits/memory", memorylimit) );
 
+   /* copy and adjust soft time limit (or disable it) */
+   SCIP_CALL( copySofttimelimit(sourcescip, targetscip) );
+
    /* disable all other limits */
    SCIP_CALL( SCIPsetRealParam(targetscip, "limits/absgap", 0.0) );
    SCIP_CALL( SCIPsetIntParam(targetscip, "limits/bestsol", -1) );
@@ -4153,12 +4191,6 @@ SCIP_RETCODE SCIPcopyLimits(
    SCIP_CALL( SCIPsetIntParam(targetscip, "limits/solutions", -1) );
    SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/stallnodes", -1LL) );
    SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1LL) );
-
-   /* the soft time limit event handler might not be included so we need to check if the parameter exists */
-   if( SCIPgetParam(targetscip, "limits/softtime") != NULL )
-   {
-      SCIP_CALL( SCIPsetLongintParam(targetscip, "limits/totalnodes", -1LL) );
-   }
 
    return SCIP_OKAY;
 }
@@ -12546,6 +12578,7 @@ SCIP_CONS* SCIPfindOrigCons(
    {
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
@@ -13888,6 +13921,11 @@ SCIP_RETCODE initPresolve(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+#ifndef NDEBUG
+   size_t nusedbuffers;
+   size_t nusedcleanbuffers;
+#endif
+
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->set != NULL);
@@ -13917,10 +13955,19 @@ SCIP_RETCODE initPresolve(
          scip->stat, scip->transprob, scip->origprob, scip->primal, scip->lp, scip->branchcand, scip->conflict,
          scip->conflictstore, scip->eventfilter, scip->eventqueue, scip->cliquetable) );
 
+   /* GCG wants to perform presolving during the reading process of a file reader;
+    * hence the number of used buffers does not need to be zero, however, it should not
+    * change by calling SCIPsetInitprePlugins()
+    */
+#ifndef NDEBUG
+   nusedbuffers = BMSgetNUsedBufferMemory(SCIPbuffer(scip));
+   nusedcleanbuffers = BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip));
+#endif
+
    /* inform plugins that the presolving is abound to begin */
    SCIP_CALL( SCIPsetInitprePlugins(scip->set, scip->mem->probmem, scip->stat) );
-   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
    /* delete the variables from the problems that were marked to be deleted */
    SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->cliquetable, scip->lp, scip->branchcand) );
@@ -14116,6 +14163,10 @@ SCIP_RETCODE presolveRound(
    int i;
    int j;
    int k;
+#ifndef NDEBUG
+   size_t nusedbuffers;
+   size_t nusedcleanbuffers;
+#endif
 
    assert(scip != NULL);
    assert(scip->set != NULL);
@@ -14133,6 +14184,16 @@ SCIP_RETCODE presolveRound(
    aborted = FALSE;
 
    assert( scip->set->propspresolsorted );
+
+   /* GCG wants to perform presolving during the reading process of a file reader;
+    * hence the number of used buffers does not need to be zero, however, it should not
+    * change by calling the presolving callbacks
+    */
+#ifndef NDEBUG
+   nusedbuffers = BMSgetNUsedBufferMemory(SCIPbuffer(scip));
+   nusedcleanbuffers = BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip));
+#endif
+
 
    if( *timing == SCIP_PRESOLTIMING_EXHAUSTIVE )
    {
@@ -14201,8 +14262,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
                &scip->stat->npresolchgsides, &result) );
-         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
          lastranpresol = FALSE;
          ++j;
@@ -14220,8 +14281,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
                &scip->stat->npresolchgsides, &result) );
-         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
          lastranpresol = TRUE;
          ++i;
@@ -14288,8 +14349,8 @@ SCIP_RETCODE presolveRound(
             &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
             &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
             &scip->stat->npresolchgsides, &result) );
-      assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-      assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+      assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+      assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
       ++k;
 
@@ -14351,8 +14412,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
                &scip->stat->npresolchgsides, &result) );
-         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
          lastranpresol = FALSE;
          ++j;
@@ -14367,8 +14428,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
                &scip->stat->npresolchgsides, &result) );
-         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
          lastranpresol = TRUE;
          ++i;
@@ -14540,6 +14601,10 @@ SCIP_RETCODE presolve(
    int presolstart = 0;
    int propstart = 0;
    int consstart = 0;
+#ifndef NDEBUG
+   size_t nusedbuffers;
+   size_t nusedcleanbuffers;
+#endif
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -14552,6 +14617,16 @@ SCIP_RETCODE presolve(
    assert(infeasible != NULL);
 
    *unbounded = FALSE;
+
+   /* GCG wants to perform presolving during the reading process of a file reader;
+    * hence the number of used buffers does not need to be zero, however, it should
+    * be the same again after presolve is finished
+    */
+#ifndef NDEBUG
+   nusedbuffers = BMSgetNUsedBufferMemory(SCIPbuffer(scip));
+   nusedcleanbuffers = BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip));
+#endif
+
 
    /* switch status to unknown */
    scip->stat->status = SCIP_STATUS_UNKNOWN;
@@ -14736,8 +14811,8 @@ SCIP_RETCODE presolve(
          approxchecknonzeros ? "more than " : "", nchecknonzeros, nchecknonzeros/maxnonzeros * 100);
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
    }
-   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
    /* stop presolving time */
    SCIPclockStop(scip->stat->presolvingtime, scip->set);
@@ -28816,7 +28891,7 @@ SCIP_RETCODE SCIPconstructLP(
 
    SCIP_CALL( SCIPconstructCurrentLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
          scip->tree, scip->reopt, scip->lp, scip->pricestore, scip->sepastore, scip->cutpool, scip->branchcand,
-         scip->eventqueue, scip->eventfilter, scip->cliquetable, FALSE, cutoff) );
+         scip->eventqueue, scip->eventfilter, scip->cliquetable, FALSE, TRUE, cutoff) );
 
    return SCIP_OKAY;
 }
@@ -29579,7 +29654,7 @@ SCIP_RETCODE SCIPwriteLP(
    {
       SCIP_CALL( SCIPconstructCurrentLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
             scip->tree, scip->reopt, scip->lp, scip->pricestore, scip->sepastore, scip->cutpool, scip->branchcand,
-            scip->eventqueue, scip->eventfilter, scip->cliquetable, FALSE, &cutoff) );
+            scip->eventqueue, scip->eventfilter, scip->cliquetable, FALSE, FALSE, &cutoff) );
    }
 
    /* we need a flushed lp to write the current lp */
@@ -35627,7 +35702,7 @@ SCIP_RETCODE solveProbingLP(
 
    SCIP_CALL( SCIPinitConssLP(scip->mem->probmem, scip->set, scip->sepastore, scip->cutpool, scip->stat, scip->transprob,
          scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter,
-         scip->cliquetable, FALSE, FALSE, &initcutoff) );
+         scip->cliquetable, FALSE, FALSE, FALSE, &initcutoff) );
 
    if( initcutoff )
    {
@@ -35748,6 +35823,42 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
    SCIP_CALL( checkStage(scip, "SCIPsolveProbingLPWithPricing", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( solveProbingLP(scip, -1, TRUE, pretendroot, displayinfo, maxpricerounds, lperror, cutoff) );
+
+   return SCIP_OKAY;
+}
+
+/** sets the LP state for the current probing node
+ *
+ *  @note state and norms are stored at the node and later released by SCIP; therefore, the pointers are set
+ *        to NULL by the method
+ *
+ *  @note the pointers to state and norms must not be NULL; however, they may point to a NULL pointer if the
+ *        respective information should not be set
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPsetProbingLPState(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LPISTATE**       lpistate,           /**< pointer to LP state information (like basis information) */
+   SCIP_LPINORMS**       lpinorms,           /**< pointer to LP pricing norms information */
+   SCIP_Bool             primalfeas,         /**< primal feasibility when LP state information was stored */
+   SCIP_Bool             dualfeas            /**< dual feasibility when LP state information was stored */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetProbingLPState", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPtreeProbing(scip->tree) )
+   {
+      SCIPerrorMessage("not in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPtreeSetProbingLPState(scip->tree, scip->mem->probmem, scip->lp, lpistate, lpinorms, primalfeas, dualfeas) );
 
    return SCIP_OKAY;
 }
@@ -37463,6 +37574,8 @@ SCIP_RETCODE SCIPcreateFiniteSolCopy(
 
             SCIPdebugMsg(scip, "--> var <%s> is fixed to infinite value %g in the original problem, stop making solution finite\n",
                SCIPvarGetName(var), SCIPvarGetLbOriginal(var));
+
+            *success = FALSE;
 
             goto TERMINATE;
          }

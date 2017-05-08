@@ -325,6 +325,7 @@ struct SCIP_Lp
    int                   lpitiming;          /**< current timing type in LPI */
    int                   lpirandomseed;      /**< current initial random seed in LPI */
    int                   lpiscaling;         /**< current SCALING setting in LPI */
+   int                   lpirefactorinterval;/**< current refactorization interval */
    SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */
@@ -367,6 +368,7 @@ struct SCIP_Lp
    SCIP_Bool             lpihaspresolving;   /**< does the LPI support the PRESOLVING parameter? */
    SCIP_Bool             lpihasrowrep;       /**< does the LPI support row representation of a simplex basis? */
    SCIP_Bool             lpihaspolishing;    /**< does the LPI support solution polishing? */
+   SCIP_Bool             lpihasrefactor;     /**< does the LPI support changing the refactorization interval? */
    SCIP_Real             lpirowrepswitch;    /**< simplex algorithm shall use row representation of the basis
                                               *   if number of rows divided by number of columns exceeds this value */
    SCIP_Bool             divelpwasprimfeas;  /**< primal feasibility when diving started */

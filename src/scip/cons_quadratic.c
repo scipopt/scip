@@ -5076,55 +5076,86 @@ SCIP_RETCODE computeViolation(
 
    *solviolbounds = FALSE;
    consdata->activity = 0.0;
+   consdata->lhsviol = 0.0;
+   consdata->rhsviol = 0.0;
 
-   /* @todo Take better care of variables at +/- infinity: e.g., run instance waste in debug mode with a short timelimit (30s). */
    for( i = 0; i < consdata->nlinvars; ++i )
    {
+      SCIP_Real activity;
+
       var = consdata->linvars[i];
       varval = SCIPgetSolVal(scip, sol, var);
+      activity = consdata->lincoefs[i] * varval;
 
+      /* the contribution of a variable with |varval| = +inf is +inf when activity > 0.0, -inf when activity < 0.0, and
+       * 0.0 otherwise
+       */
       if( SCIPisInfinity(scip, REALABS(varval)) )
       {
-         consdata->activity = SCIPinfinity(scip);
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
-            consdata->lhsviol = SCIPinfinity(scip);
-         if( !SCIPisInfinity(scip,  consdata->rhs) )
+         if( activity > 0.0 && !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            consdata->activity = SCIPinfinity(scip);
             consdata->rhsviol = SCIPinfinity(scip);
-         return SCIP_OKAY;
+            return SCIP_OKAY;
+         }
+
+         if( activity < 0.0 && !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            consdata->activity = -SCIPinfinity(scip);
+            consdata->lhsviol = SCIPinfinity(scip);
+            return SCIP_OKAY;
+         }
       }
 
-      consdata->activity += consdata->lincoefs[i] * varval;
+      consdata->activity += activity;
    }
 
    for( j = 0; j < consdata->nquadvars; ++j )
    {
+      SCIP_Real activity;
+
       var = consdata->quadvarterms[j].var;
       varval = SCIPgetSolVal(scip, sol, var);
+      activity = (consdata->quadvarterms[j].lincoef + consdata->quadvarterms[j].sqrcoef * varval) * varval;
+
+      /* the contribution of a variable with |varval| = +inf is +inf when activity > 0.0, -inf when activity < 0.0, and
+       * 0.0 otherwise
+       */
       if( SCIPisInfinity(scip, REALABS(varval)) )
       {
-         consdata->activity = SCIPinfinity(scip);
-         if( !SCIPisInfinity(scip, -consdata->lhs) )
-            consdata->lhsviol = SCIPinfinity(scip);
-         if( !SCIPisInfinity(scip,  consdata->rhs) )
+         if( activity > 0.0 && !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            consdata->activity = SCIPinfinity(scip);
             consdata->rhsviol = SCIPinfinity(scip);
-         return SCIP_OKAY;
+            return SCIP_OKAY;
+         }
+
+         if( activity < 0.0 && !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            consdata->activity = -SCIPinfinity(scip);
+            consdata->lhsviol = SCIPinfinity(scip);
+            return SCIP_OKAY;
+         }
       }
 
       /* project onto local box, in case the LP solution is slightly outside the bounds (which is not our job to enforce) */
       if( sol == NULL )
       {
          /* with non-initial columns, variables can shortly be a column variable before entering the LP and have value 0.0 in this case, which might violated the variable bounds */
-         if( !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)) || !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)) )
+         if( (!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) && !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var))) ||
+             (!SCIPisInfinity(scip,  SCIPvarGetUbLocal(var)) && !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var))) )
             *solviolbounds = TRUE;
          else
             varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
       }
 
-      consdata->activity += (consdata->quadvarterms[j].lincoef + consdata->quadvarterms[j].sqrcoef * varval) * varval;
+      consdata->activity += activity;
    }
 
    for( j = 0; j < consdata->nbilinterms; ++j )
    {
+      SCIP_Real activity;
+
       var = consdata->bilinterms[j].var1;
       var2 = consdata->bilinterms[j].var2;
       varval = SCIPgetSolVal(scip, sol, var);
@@ -5134,19 +5165,41 @@ SCIP_RETCODE computeViolation(
       if( sol == NULL )
       {
          /* with non-initial columns, variables can shortly be a column variable before entering the LP and have value 0.0 in this case, which might violated the variable bounds */
-         if( !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var)) || !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var)) )
+         if( (!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) && !SCIPisFeasGE(scip, varval, SCIPvarGetLbLocal(var))) ||
+             (!SCIPisInfinity(scip,  SCIPvarGetUbLocal(var)) && !SCIPisFeasLE(scip, varval, SCIPvarGetUbLocal(var))) )
             *solviolbounds = TRUE;
          else
             varval = MAX(SCIPvarGetLbLocal(var), MIN(SCIPvarGetUbLocal(var), varval));
 
          /* with non-initial columns, variables can shortly be a column variable before entering the LP and have value 0.0 in this case, which might violated the variable bounds */
-         if( !SCIPisFeasGE(scip, varval2, SCIPvarGetLbLocal(var2)) || !SCIPisFeasLE(scip, varval2, SCIPvarGetUbLocal(var2)) )
+         if( (!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var2)) && !SCIPisFeasGE(scip, varval2, SCIPvarGetLbLocal(var2))) ||
+             (!SCIPisInfinity(scip,  SCIPvarGetUbLocal(var2)) && !SCIPisFeasLE(scip, varval2, SCIPvarGetUbLocal(var2))) )
             *solviolbounds = TRUE;
          else
             varval2 = MAX(SCIPvarGetLbLocal(var2), MIN(SCIPvarGetUbLocal(var2), varval2));
       }
 
-      consdata->activity += consdata->bilinterms[j].coef * varval * varval2;
+      activity = consdata->bilinterms[j].coef * varval * varval2;
+
+      /* consider var*var2 as a new variable and handle it as it would appear linearly */
+      if( SCIPisInfinity(scip, REALABS(varval*varval2)) )
+      {
+         if( activity > 0.0 && !SCIPisInfinity(scip, consdata->rhs) )
+         {
+            consdata->activity = SCIPinfinity(scip);
+            consdata->rhsviol = SCIPinfinity(scip);
+            return SCIP_OKAY;
+         }
+
+         if( activity < 0.0 && !SCIPisInfinity(scip, -consdata->lhs) )
+         {
+            consdata->activity = -SCIPinfinity(scip);
+            consdata->lhsviol = SCIPinfinity(scip);
+            return SCIP_OKAY;
+         }
+      }
+
+      consdata->activity += activity;
    }
 
    /* compute absolute violation left hand side */
@@ -10877,6 +10930,10 @@ SCIP_RETCODE enforceConstraint(
        * see also issue #627
        */
       assert(solinfeasible);
+      /* however, if solinfeasible is actually not TRUE, then better cut off the node to avoid that SCIP
+       * stops because infeasible cannot be resolved */
+      if( !solinfeasible )
+         *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
 

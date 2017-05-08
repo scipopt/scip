@@ -1348,7 +1348,7 @@ int cliquesSearchClique(
    return -1;
 }
 
-#ifndef NDEBUG
+#ifdef SCIP_MORE_DEBUG
 /** checks whether clique appears in all clique lists of the involved variables */
 static
 void cliqueCheck(
@@ -1702,7 +1702,7 @@ void SCIPcliquelistRemoveFromCliques(
             if( irrelevantvar )
                clique->equation = FALSE;
 
-#ifndef NDEBUG
+#ifdef SCIP_MORE_DEBUG
             /* during the cleanup step, we skip the consistency check because clique may be temporarily inconsistent */
             if( ! cliquetable->incleanup || clique->index > 0 )
             {
