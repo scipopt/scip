@@ -20,6 +20,7 @@
  *
  * @todo warm starts
  * @todo scaling
+ * @todo reset problem->x, problem->lam, and problem->ifail when problem size changes (see initguess handling)
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -62,6 +63,11 @@ struct SCIP_NlpiProblem
    SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known */
 
    fint*                       hessiannz;    /**< nonzero information about Hessian */
+   real*                       x;            /**< primal variable values communicated with FilterSQP */
+   real*                       lam;          /**< dual values communicated with FilterSQP */
+   fint                        ifail;        /**< return status from last FilterSQP call, or -1 if not called */
+   fint                        istat[14];    /**< integer solution statistics from last FilterSQP call */
+   real                        rstat[7];     /**< real solution statistics from last FilterSQP call */
 };
 
 
@@ -569,6 +575,9 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
 
    (*problem)->firstrun = TRUE;
    (*problem)->initguess = NULL;
+   (*problem)->x = NULL;
+   (*problem)->lam = NULL;
+   (*problem)->ifail = -1;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -597,6 +606,8 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemFilterSQP)
    }
 
    BMSfreeMemoryArrayNull(&(*problem)->initguess);
+   BMSfreeMemoryArrayNull(&(*problem)->x);
+   BMSfreeMemoryArrayNull(&(*problem)->lam);
 
    BMSfreeBlockMemory(data->blkmem, problem);
    assert(*problem == NULL);
@@ -1003,9 +1014,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    fint mxiwk;
    fint iprint;
    fint nout;
-   fint ifail;
    real rho;
-   real* x;
    real* c;
    real f;
    real fmin;
@@ -1016,13 +1025,10 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    fint* la;
    real* ws;
    fint* lws;
-   real* lam;
    char* cstype;
    real* user;
    fint* iuser;
    fint maxiter;
-   fint istat[14];
-   real rstat[7];
    ftnlen cstype_len = 1;
    int i;
 
@@ -1047,24 +1053,31 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 
    iprint = 1;  /* print level */
    nout = 6;   /* output to screen (for now?) */
-   ifail = 0;  /* set to -1 for warmstart */
+   problem->ifail = 0;  /* set to -1 for warmstart */
    rho = 10.0; /* initial trust-region radius */
    fmin = -1e100; /* lower bound on objective */
 
    user = (real*)nlpi;
    iuser = (fint*)problem;
    maxiter = 1000;  /* iteration limit */
-   memset(istat, 0, sizeof(istat));
-   memset(rstat, 0, sizeof(rstat));
+   memset(problem->istat, 0, sizeof(problem->istat));
+   memset(problem->rstat, 0, sizeof(problem->rstat));
 
-   SCIP_ALLOC( BMSallocMemoryArray(&x, n) );
+   if( problem->x == NULL )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&problem->x, n) );
+   }
+   if( problem->lam == NULL )
+   {
+      SCIP_ALLOC( BMSallocClearMemoryArray(&problem->lam, n+m) );
+   }
+
    SCIP_ALLOC( BMSallocMemoryArray(&c, m) );
    SCIP_ALLOC( BMSallocMemoryArray(&bl, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&bu, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&s, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&ws, mxwk) );
    SCIP_ALLOC( BMSallocMemoryArray(&lws, mxiwk) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&lam, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&cstype, m) );
 
    /* allocate la, a and initialize la and maxa for Objective Gradient and Jacobian */
@@ -1086,7 +1099,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    /* setup starting point */
    if( problem->initguess != NULL )
    {
-      BMScopyMemoryArray(x, problem->initguess, n);
+      BMScopyMemoryArray(problem->x, problem->initguess, n);
    }
    else
    {
@@ -1105,11 +1118,11 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
          lb = SCIPnlpiOracleGetVarLbs(problem->oracle)[i];
          ub = SCIPnlpiOracleGetVarUbs(problem->oracle)[i];
          if( lb > 0.0 )
-            x[i] = SCIPrandomGetReal(data->randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
+            problem->x[i] = SCIPrandomGetReal(data->randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
          else if( ub < 0.0 )
-            x[i] = SCIPrandomGetReal(data->randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
+            problem->x[i] = SCIPrandomGetReal(data->randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
          else
-            x[i] = SCIPrandomGetReal(data->randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
+            problem->x[i] = SCIPrandomGetReal(data->randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
       }
    }
 
@@ -1127,24 +1140,22 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    F77_FUNC(filtersqp,FILTERSQP)(
       &n, &m, &kmax, &maxa,
       &maxf, &mlp, &mxwk, &mxiwk,
-      &iprint, &nout, &ifail, &rho,
-      x, c, &f, &fmin, bl,
+      &iprint, &nout, &problem->ifail, &rho,
+      problem->x, c, &f, &fmin, bl,
       bu, s, a, la, ws,
-      lws, lam, cstype, user,
-      iuser, &maxiter, istat,
-      rstat, cstype_len);
+      lws, problem->lam, cstype, user,
+      iuser, &maxiter, problem->istat,
+      problem->rstat, cstype_len);
 
    BMSfreeMemoryArray(&a);
    BMSfreeMemoryArray(&la);
    BMSfreeMemoryArray(&cstype);
-   BMSfreeMemoryArray(&lam);
    BMSfreeMemoryArray(&lws);
    BMSfreeMemoryArray(&ws);
    BMSfreeMemoryArray(&s);
    BMSfreeMemoryArray(&bu);
    BMSfreeMemoryArray(&bl);
    BMSfreeMemoryArray(&c);
-   BMSfreeMemoryArray(&x);
    BMSfreeMemoryArray(&problem->hessiannz);
 
    return SCIP_OKAY;  /*lint !e527*/
@@ -1161,10 +1172,33 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 static
 SCIP_DECL_NLPIGETSOLSTAT( nlpiGetSolstatFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   switch( problem->ifail )
+   {
+      case 0: /* successful run, solution found */
+         return SCIP_NLPSOLSTAT_LOCOPT;
+      case 1: /* unbounded, feasible point with f(x) <= fmin */
+         return SCIP_NLPSOLSTAT_UNBOUNDED;
+      case 2: /* linear constraints are inconsistent */
+         return SCIP_NLPSOLSTAT_GLOBINFEASIBLE;
+      case 3: /* (locally) nonlinear infeasible, minimal-infeasible solution found */
+         return SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+      case 4: /* terminate at point with h(x) <= eps (constraint violation below epsilon) but QP infeasible */
+         return SCIP_NLPSOLSTAT_FEASIBLE;
+      case 5: /* termination with rho < eps (trust region radius below epsilon) */
+         return SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+      case 6: /* termination with iter > max_iter */
+         return SCIP_NLPSOLSTAT_LOCINFEASIBLE;  /* TODO check if feasible */
+      case 7: /* crash in user routine (IEEE error) could not be resolved */
+         return SCIP_NLPSOLSTAT_LOCINFEASIBLE;  /* TODO check if feasible */
+      case 8: /* unexpect ifail from QP solver */
+         return SCIP_NLPSOLSTAT_LOCINFEASIBLE;  /* TODO check if feasible */
+      case 9: /* not enough REAL workspace */
+         return SCIP_NLPSOLSTAT_UNKNOWN;
+      case 10: /* not enough INTEGER workspace */
+         return SCIP_NLPSOLSTAT_UNKNOWN;
+   }
 
-   return SCIP_NLPSOLSTAT_UNKNOWN;  /*lint !e527*/
+   return SCIP_NLPSOLSTAT_UNKNOWN;
 }  /*lint !e715*/
 
 /** gives termination reason
@@ -1178,10 +1212,33 @@ SCIP_DECL_NLPIGETSOLSTAT( nlpiGetSolstatFilterSQP )
 static
 SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   switch( problem->ifail )
+   {
+      case 0: /* successful run, solution found */
+         return SCIP_NLPTERMSTAT_OKAY;
+      case 1: /* unbounded, feasible point with f(x) <= fmin */
+         return SCIP_NLPTERMSTAT_LOBJLIM;  /* TODO should be OKAY if no limit was set */
+      case 2: /* linear constraints are inconsistent */
+         return SCIP_NLPTERMSTAT_OKAY;
+      case 3: /* (locally) nonlinear infeasible, minimal-infeasible solution found */
+         return SCIP_NLPTERMSTAT_OKAY;
+      case 4: /* terminate at point with h(x) <= eps (constraint violation below epsilon) but QP infeasible */
+         return SCIP_NLPTERMSTAT_OKAY;
+      case 5: /* termination with rho < eps (trust region radius below epsilon) */
+         return SCIP_NLPTERMSTAT_OKAY;
+      case 6: /* termination with iter > max_iter */
+         return SCIP_NLPTERMSTAT_ITLIM;
+      case 7: /* crash in user routine (IEEE error) could not be resolved */
+         return SCIP_NLPTERMSTAT_EVALERR;
+      case 8: /* unexpect ifail from QP solver */
+         return SCIP_NLPTERMSTAT_OTHER;
+      case 9: /* not enough REAL workspace */
+         return SCIP_NLPTERMSTAT_MEMERR;
+      case 10: /* not enough INTEGER workspace */
+         return SCIP_NLPTERMSTAT_MEMERR;
+   }
 
-   return SCIP_NLPTERMSTAT_OTHER;  /*lint !e527*/
+   return SCIP_NLPTERMSTAT_OTHER;
 }  /*lint !e715*/
 
 /** gives primal and dual solution values
@@ -1202,8 +1259,21 @@ SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatFilterSQP )
 static
 SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(problem != NULL);
+   assert(problem->ifail >= 0);
+   assert(problem->x != NULL);
+
+   if( primalvalues != NULL )
+      *primalvalues = problem->x;
+
+   if( consdualvalues != NULL )
+      *consdualvalues = problem->lam + SCIPnlpiOracleGetNVars(problem->oracle);  /* TODO needs to be negated? */
+
+   if( varlbdualvalues != NULL )
+      *varlbdualvalues = problem->lam; /* TODO */
+
+   if( varubdualvalues != NULL )
+      *varubdualvalues = problem->lam; /* TODO */
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -1221,8 +1291,11 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionFilterSQP )
 static
 SCIP_DECL_NLPIGETSTATISTICS( nlpiGetStatisticsFilterSQP )
 {
-   SCIPerrorMessage("method of filtersqp nonlinear solver is not implemented\n");
-   SCIPABORT();
+   assert(problem != NULL);
+   assert(problem->ifail >= 0);  /* FilterSQP must have been called to report statistics */
+
+   SCIPnlpStatisticsSetNIterations(statistics, problem->istat[1]);
+   SCIPnlpStatisticsSetTotalTime(statistics, 1.0); /* TODO */
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
