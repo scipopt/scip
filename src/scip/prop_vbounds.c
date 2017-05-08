@@ -63,6 +63,10 @@
  *    information is used to deduce tigther bounds for other variables and change the bounds, if a tighter one is found.
  *    These bound changes trigger an event that will lead to adding the corresponding bound to the priority queue,
  *    if it is not contained, yet. The process is iterated until the priority queue contains no more bounds.
+ *
+ * Additionally, the propagator analyzes the conflict/clique graph during presolving. It uses Tarjan's algorithm to
+ * search for strongly connected components, for each of which all variables can be aggregated to one. Additionally,
+ * it may detect invalid assignments of binary variables and fix the variable to the only possible value left.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -112,6 +116,11 @@
 #define DEFAULT_DOTOPOSORT         TRUE      /**< should the bounds be topologically sorted in advance? */
 #define DEFAULT_SORTCLIQUES        FALSE     /**< should cliques be regarded for the topological sort? */
 #define DEFAULT_DETECTCYCLES       FALSE     /**< should cycles in the variable bound graph be identified? */
+#define DEFAULT_MINNEWCLIQUES      0.1       /**< minimum number of new cliques to trigger another clique table analysis */
+#define DEFAULT_MAXCLIQUESMEDIUM   50.0      /**< maximum number of cliques per variable to run clique table analysis in
+                                              *   medium presolving */
+#define DEFAULT_MAXCLIQUESEXHAUSTIVE 100.0   /**< maximum number of cliques per variable to run clique table analysis in
+                                              *   exhaustive presolving */
 
 /**@} */
 
@@ -170,6 +179,9 @@ struct SCIP_PropData
    SCIP_PQUEUE*          propqueue;          /**< priority queue to handle the bounds of variables that were changed and have to be propagated */
    SCIP_Bool*            inqueue;            /**< boolean array to store whether a bound of a variable is already contained in propqueue */
    SCIP_Bool             initialized;        /**< was the data for propagation already initialized? */
+   SCIP_Real             minnewcliques;      /**< minimum percentage of new cliques to trigger another clique table analysis */
+   SCIP_Real             maxcliquesmedium;   /**< maximum number of cliques per variable to run clique table analysis in medium presolving */
+   SCIP_Real             maxcliquesexhaustive;/**< maximum number of cliques per variable to run clique table analysis in exhaustive presolving */
    SCIP_Bool             usebdwidening;      /**< should bound widening be used to initialize conflict analysis? */
    SCIP_Bool             useimplics;         /**< should implications be propagated? */
    SCIP_Bool             usecliques;         /**< should cliques be propagated? */
@@ -2673,7 +2685,12 @@ SCIP_RETCODE applyFixingsAndAggregations(
 
 
 
-/** presolving method of propagator */
+/** presolving method of propagator: search for strongly connected components in the implication graph and
+ *  aggregate all variables within a component; additionally, identifies infeasible variable assignments
+ *  as a side product if a path from x=1 to x=0 (or vice versa) is found or x=1 implies both y=0 and y=1
+ *  The identification of such assignments depends on the order in which variable bounds are processed;
+ *  therefore, we are doing a second run with the bounds processed in (almost) topological order.
+ */
 static
 SCIP_DECL_PROPPRESOL(propPresolVbounds)
 {  /*lint --e{715}*/
@@ -2682,8 +2699,6 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    int* dfsstack;
    int* stacknextclique;
    int* stacknextcliquevar;
-   uint8_t* nodeonstack;
-   uint8_t* nodeinfeasible;
    int* nodeindex;
    int* nodelowlink;
    int* predstackidx;
@@ -2693,6 +2708,8 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    int* sccvars;
    int* sccstarts;
    int* infeasnodes;
+   uint8_t* nodeonstack;
+   uint8_t* nodeinfeasible;
    int ninfeasnodes;
    int nsccs;
    int nbounds;
@@ -2715,15 +2732,16 @@ SCIP_DECL_PROPPRESOL(propPresolVbounds)
    if( ncliques < 2 )
       return SCIP_OKAY;
 
-   if( SCIPgetNCliquesCreated(scip) < propdata->lastpresolncliques + 0.01 * ncliques )
+   /* too many cliques for medium presolving */
+   if( presoltiming == SCIP_PRESOLTIMING_MEDIUM && ncliques > propdata->maxcliquesmedium * SCIPgetNBinVars(scip) )
       return SCIP_OKAY;
 
    /* too many cliques for medium presolving */
-   if( ncliques > 50 * SCIPgetNBinVars(scip) && presoltiming == SCIP_PRESOLTIMING_MEDIUM )
+   if( ncliques > propdata->maxcliquesexhaustive * SCIPgetNBinVars(scip) )
       return SCIP_OKAY;
 
-   /* too many cliques for medium presolving */
-   if( ncliques > 100 * SCIPgetNBinVars(scip) )
+   /* only run if enough new cliques were created since the last successful call */
+   if( SCIPgetNCliquesCreated(scip) >= (1.0 + propdata->minnewcliques) * propdata->lastpresolncliques )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
@@ -3079,6 +3097,15 @@ SCIP_RETCODE SCIPincludePropVbounds(
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/detectcycles", "should cycles in the variable bound graph be identified?",
          &propdata->detectcycles, FALSE, DEFAULT_DETECTCYCLES, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "propagating/" PROP_NAME "/minnewcliques", "minimum percentage of new cliques to trigger another clique table analysis",
+         &propdata->minnewcliques, FALSE, DEFAULT_MINNEWCLIQUES, 0.0, 1.0, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/" PROP_NAME "/maxcliquesmedium",
+         "maximum number of cliques per variable to run clique table analysis in medium presolving",
+         &propdata->maxcliquesmedium, FALSE, DEFAULT_MAXCLIQUESMEDIUM, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/" PROP_NAME "/maxcliquesexhaustive",
+         "maximum number of cliques per variable to run clique table analysis in exhaustive presolving",
+         &propdata->maxcliquesexhaustive, FALSE, DEFAULT_MAXCLIQUESEXHAUSTIVE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
