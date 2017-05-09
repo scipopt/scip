@@ -22,7 +22,12 @@ performance improvements:
 SCIP version 4.0.1
 ==================
 
+features
+- added parsing functionality to cardinality constraint handler for CIP format
+
 fixed bugs:
+- fixed unintended behavior of interrupt signal handler inside SCIP copies
+- fixed uninitialized values in SCIP's digraph data structure after calling SCIPdigraphResize()
 - fixed memory leak in OSiL reader when using SOS constraints
 - fixed issue related to SCIPcreateFiniteSolCopy not being able to remove all infinite fixings
 - fixed issue in SCIPcopyLimits() w.r.t. soft time limit
