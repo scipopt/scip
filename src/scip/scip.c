@@ -47265,26 +47265,23 @@ int SCIPgetPtrarrayMaxIdx(
    return SCIPptrarrayGetMaxIdx(ptrarray);
 }
 
-/** verify the correctness of the solve by checking solutions and reference bounds
+/** perform a sanity check of the solve
  *
- *  verify the correctness by
+ *  the sanity check includes
  *
- *  - checking the feasibility of the incumbent solution in the original problem (using SCIPcheckSolOrig()) if it exists
+ *  - checking the feasibility of the incumbent solution in the original problem (using SCIPcheckSolOrig())
  *
- *  - checking if the primal and dual bounds computed by SCIP agree with the given primal and dual reference bounds
+ *  - checking if the objective bounds computed by SCIP agree with external primal and dual reference bounds.
  *
- *  All refererence bounds are considered respecting the original problem space and the original objective sense.
+ *  All external reference bounds the original problem space and the original objective sense.
  *
- *  For infeasible problems, +/-SCIPinfinity() should be passed as reference bounds. If the problem is a minimization problem,
- *  the correct primal and dual reference bounds should be +infinity.
- *
- *
- *
+ *  For infeasible problems, +/-SCIPinfinity() should be passed as reference bounds depending on the objective sense
+ *  of the original problem.
  */
-SCIP_RETCODE SCIPverifySolve(
+SCIP_RETCODE SCIPsanityCheck(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             primalreference,    /**< primal reference value for the problem, or SCIP_UNKNOWN */
-   SCIP_Real             dualreference,      /**< dual reference value for the problem, or SCIP_UNKNOWN */
+   SCIP_Real             primalreference,    /**< external primal reference value for the problem, or SCIP_UNKNOWN */
+   SCIP_Real             dualreference,      /**< external dual reference value for the problem, or SCIP_UNKNOWN */
    SCIP_Real             reftol,             /**< relative tolerance for acceptable violation of reference values */
    SCIP_Bool             quiet,              /**< TRUE if no status line should be printed */
    SCIP_Bool*            feasible,           /**< pointer to store if the best solution is feasible in the original problem,
@@ -47350,17 +47347,16 @@ SCIP_RETCODE SCIPverifySolve(
          if( primalreference != SCIP_UNKNOWN )
             dualviol = SCIPrelDiff(primalreference, db);
       }
+      primviol = MAX(primviol, 0.0);
+      dualviol = MAX(dualviol, 0.0);
+
+      localprimalboundcheck = EPSP(reftol, primviol);
+      localdualboundcheck = EPSP(reftol, dualviol);
    }
-
-   primviol = MAX(primviol, 0.0);
-   dualviol = MAX(dualviol, 0.0);
-
-   localprimalboundcheck = EPSP(reftol, primviol);
-   localdualboundcheck = EPSP(reftol, dualviol);
 
    if( !quiet )
    {
-      SCIPinfoMessage(scip, NULL, "VERIFICATION       : ");
+      SCIPinfoMessage(scip, NULL, "SANITY CHECK       : ");
       if( ! localfeasible )
          SCIPinfoMessage(scip, NULL, "FAIL (infeasible)");
       else if( ! localprimalboundcheck )

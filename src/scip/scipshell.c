@@ -267,11 +267,11 @@ SCIP_RETCODE SCIPprocessShellArguments(
             paramerror = TRUE;
          }
       }
-      else if( strcmp(argv[i], "-p") == 0 )
+      else if( strcmp(argv[i], "-o") == 0 )
       {
          if( i >= argc - 2 )
          {
-            printf("wrong usage of reference bound parameter '-p': -p [primalreference] [dualreference]\n");
+            printf("wrong usage of reference objective parameter '-o': -o <primref> <dualref>\n");
             paramerror = TRUE;
          }
          else
@@ -358,12 +358,13 @@ SCIP_RETCODE SCIPprocessShellArguments(
             }
             else
             {
-               printf("Verification: %16.9g %16.9g\n", primalreference, dualreference);
+               printf("reference objective interval for sanity Check : %16.9g %16.9g\n", primalreference, dualreference);
             }
          }
          SCIP_CALL( fromCommandLine(scip, probname) );
 
-         SCIP_CALL( SCIPverifySolve(scip, primalreference, dualreference, SCIPfeastol(scip), FALSE, NULL, NULL, NULL) );
+         /* call the sanity check */
+         SCIP_CALL( SCIPsanityCheck(scip, primalreference, dualreference, SCIPfeastol(scip), FALSE, NULL, NULL, NULL) );
       }
       else
       {
@@ -379,7 +380,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
          "  -q            : suppress screen messages\n"
          "  -s <settings> : load parameter settings (.set) file\n"
          "  -f <problem>  : load and solve problem file\n"
-         "  -p <primref> <dualref> : pass primal and dual reference value for verification at the end of the solve"
+         "  -o <primref> <dualref> : pass primal and dual objective reference values for sanity check at the end of the solve"
          "  -b <batchfile>: load and execute dialog command batch file (can be used multiple times)\n"
          "  -c \"command\"  : execute single line of dialog commands (can be used multiple times)\n\n",
          argv[0]);
