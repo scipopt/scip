@@ -131,6 +131,9 @@ SCIP_RETCODE cancelRow(
    SCIP_Real* tmpvals;
    int cancelrowlen;
    int nchgcoef;
+   SCIP_Bool rowiseq;
+
+   rowiseq = SCIPisEQ(scip, SCIPmatrixGetRowLhs(matrix, rowidx), SCIPmatrixGetRowRhs(matrix, rowidx));
 
    cancelrowlen = SCIPmatrixGetRowNNonzs(matrix, rowidx);
 
@@ -201,12 +204,19 @@ SCIP_RETCODE cancelRow(
 
             eqrowvarpair = SCIPhashtableRetrieve(pairtable, (void*) &rowvarpair);
 
+            /* if the row we want to cancel is an equality, we will only use equalities
+             * with less non-zeros and if the number of non-zeros is equal we use the
+             * rowindex as tie-breaker to avoid cyclic non-zero cancellation
+             */
             if( eqrowvarpair == NULL || eqrowvarpair->rowindex == rowidx )
+               continue;
+
+            eqrowlen = SCIPmatrixGetRowNNonzs(matrix, eqrowvarpair->rowindex);
+            if( rowiseq && (cancelrowlen < eqrowlen || (cancelrowlen == eqrowlen && rowidx < eqrowvarpair->rowindex)) )
                continue;
 
             eqrowvals = SCIPmatrixGetRowValPtr(matrix, eqrowvarpair->rowindex);
             eqrowinds = SCIPmatrixGetRowIdxPtr(matrix, eqrowvarpair->rowindex);
-            eqrowlen = SCIPmatrixGetRowNNonzs(matrix, eqrowvarpair->rowindex);
 
             scale = -rowvarpair.varcoef1 / eqrowvarpair->varcoef1;
 
@@ -502,7 +512,22 @@ SCIP_DECL_PRESOLEXEC(presolExecSparsify)
 
          if( othervarpair != NULL )
          {
-            if( SCIPmatrixGetRowNNonzs(matrix, othervarpair->rowindex) <= SCIPmatrixGetRowNNonzs(matrix, varpairs[r].rowindex) )
+            int thisvarpairlocks;
+            int othervarpairlocks;
+
+            thisvarpairlocks = SCIPmatrixGetColNDownlocks(matrix, varpairs[r].varindex1) +
+                               SCIPmatrixGetColNDownlocks(matrix, varpairs[r].varindex2) +
+                               SCIPmatrixGetColNUplocks(matrix, varpairs[r].varindex1) +
+                               SCIPmatrixGetColNUplocks(matrix, varpairs[r].varindex2);
+
+            othervarpairlocks = SCIPmatrixGetColNDownlocks(matrix, othervarpair->varindex1) +
+                                SCIPmatrixGetColNDownlocks(matrix, othervarpair->varindex2) +
+                                SCIPmatrixGetColNUplocks(matrix, othervarpair->varindex1) +
+                                SCIPmatrixGetColNUplocks(matrix, othervarpair->varindex2);
+
+            /* only override old var pair if this one has more locks or if it has the same number of locks but its row is sparser */
+            if( othervarpairlocks < thisvarpairlocks || (othervarpairlocks == thisvarpairlocks &&
+               SCIPmatrixGetRowNNonzs(matrix, othervarpair->rowindex) <= SCIPmatrixGetRowNNonzs(matrix, varpairs[r].rowindex)) )
                continue;
          }
 
