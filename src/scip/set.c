@@ -158,9 +158,9 @@
                                                  *       constraint is not globally redundant
                                                  */
 #define SCIP_DEFAULT_CONF_REMOVECONTS       'd' /**< try to sparsify the dualray proof by removing continuous variables
-                                                 *   ([d]on't remove, remove [a]ll, variables with active [l]ocal or [g]lobal bound)
+                                                 *   ([d]on't remove, remove [g]reedy, use [n]on-zero-cancellation)
                                                  */
-#define SCIP_DEFAULT_CONF_SEPAKNAPSACK    FALSE /**< separate knapsack covers from dualray proof */
+#define SCIP_DEFAULT_CONF_SEPACUTS       FALSE /**< separate valid inequalities */
 
 /* Constraints */
 
@@ -1386,20 +1386,15 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/weightvaliddepth",
          "weight of the valid depth of a conflict used in score calculation",
          &(*set)->conf_weightvaliddepth, TRUE, SCIP_DEFAULT_CONF_WEIGHTVALIDDEPTH, 0.0, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "conflict/presolstrategy",
-         "0: no presolving, 1: keep only local bounds, 2: keep only global bounds, 3: remove as many local bounds such that the proof is locally valid.",
-         &(*set)->conf_dualraypresolstrat, TRUE, SCIP_DEFAULT_CONF_DUALRAYPRESOL, 0, 3,
-         NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "conflict/removeconts",
          "try to sparsify the dualray proof by removing continuous variables ([d]on't remove, remove [a]ll, variables with active [l]ocal or [g]lobal bound)",
          &(*set)->conf_removecont, TRUE, SCIP_DEFAULT_CONF_REMOVECONTS, "dalg",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "conflict/sepaknapsack",
-         "separate knapsack covers from dualray proof",
-         &(*set)->conf_sepaknapsack, FALSE, SCIP_DEFAULT_CONF_SEPAKNAPSACK,
+         "conflict/sepacuts",
+         "separate valid inequalities from dualray proofs",
+         &(*set)->conf_sepacuts, FALSE, SCIP_DEFAULT_CONF_SEPACUTS,
          NULL, NULL) );
 
    /* constraint parameters */

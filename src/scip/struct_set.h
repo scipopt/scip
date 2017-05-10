@@ -232,13 +232,10 @@ struct SCIP_Set
    SCIP_Bool             conf_prefermir;     /**< prefer a ray after applying the MIR function if the proof is still
                                               *   valid, use both rays otherwise
                                               */
-   SCIP_Bool             conf_sepaknapsack;  /**< separate knapsack covers from dualray proofs */
+   SCIP_Bool             conf_sepacuts;      /**< separate valid inequalities from dualray proofs */
    SCIP_Real             conf_minimprove;    /**< minimal improvement of primal bound to remove conflicts depending on
                                               *   a previous incumbent.
                                               */
-   int                   conf_dualraypresolstrat; /**< which presolving strategy should be used for dualray constraints?
-                                                   *   (0: no presolving)
-                                                   */
    char                  conf_removecont;    /**< how should continuous variables be treated? remove [n]one, [a]ll,
                                               *   active at [g]lobal bound */
 

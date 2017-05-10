@@ -3222,9 +3222,9 @@ SCIP_RETCODE createCGCutCMIR(
    /* create a MIR cut using the above calculated weights */
    cutact = -1.0;
    cutrhs = -1.0;
-   SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, FIXINTEGRALRHS, boundsfortrans,
-         boundtypesfortrans, (int) MAXAGGRLEN(nvars), MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
-         weights, -1.0, NULL, -1, -1, NULL, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
+//   SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, FIXINTEGRALRHS, boundsfortrans,
+//         boundtypesfortrans, (int) MAXAGGRLEN(nvars), MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
+//         weights, -1.0, NULL, -1, -1, NULL, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
    assert( sepadata->allowlocal || !cutislocal );
    SCIPdebugMsg(scip, "CMIR: success = %u, cut is%sviolated (cutact: %g, cutrhs: %g)\n", success,
       SCIPisFeasGT(scip, cutact, cutrhs) ? " " : " not ", cutact, cutrhs);
@@ -3453,8 +3453,8 @@ SCIP_RETCODE createCGCutStrongCG(
    /* create a strong CG cut out of the weighted LP rows using the B^-1 row as weights */
    cutact = -1.0;
    cutrhs = -1.0;
-   SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, (int) MAXAGGRLEN(nvars), MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
-         weights, NULL, -1, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
+//   SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, sepadata->allowlocal, (int) MAXAGGRLEN(nvars), MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
+//         weights, NULL, -1, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
    assert( sepadata->allowlocal || !cutislocal );
    SCIPdebugMsg(scip, "Strong-CG: success = %u, cut is%sviolated (cutact: %g, cutrhs: %g)\n", success,
       SCIPisFeasGT(scip, cutact, cutrhs) ? " " : " not ", cutact, cutrhs);

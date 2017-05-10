@@ -79,12 +79,7 @@ struct SCIP_ConflictSet
 /** set of conflicting bound changes */
 struct SCIP_ProofSet
 {
-   SCIP_VAR**            vars;               /**< variables on the proofset */
-   SCIP_Real*            coefs;              /**< coefficients within the proof constraint */
-   SCIP_Real*            scores;             /**< scores of the variables */
-   SCIP_Real             rhs;                /**< right-hand side of the proof */
-   int                   nvars;              /**< number of variables in the proofset */
-   int                   varssize;           /**< size of vars, confs, and scores arrays */
+   SCIP_AGGRROW*         aggrrow;            /**< aggregation row representing the proof */
    SCIP_CONFTYPE         conflicttype;       /**< conflict type: unknown, infeasible LP, bound exceeding LP */
 };
 

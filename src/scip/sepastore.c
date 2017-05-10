@@ -1135,6 +1135,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    /* calculate minimal cut orthogonality */
    mincutorthogonality = (root ? set->sepa_minorthoroot : set->sepa_minortho);
    mincutorthogonality = MAX(mincutorthogonality, set->num_epsilon);
+   mincutorthogonality = mincutorthogonality + (1.0 - mincutorthogonality) * stat->nseparounds * 0.1;
 
    /* Compute scores for all non-forced cuts and initialize orthogonalities - make sure all cuts are initialized again for the current LP solution */
    for( pos = sepastore->nforcedcuts; pos < sepastore->ncuts; pos++ )

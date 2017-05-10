@@ -205,6 +205,7 @@ SCIP_RETCODE SCIPconflictCreate(
 extern
 SCIP_RETCODE SCIPconflictFree(
    SCIP_CONFLICT**       conflict,           /**< pointer to conflict analysis data */
+   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem              /**< block memory of transformed problem */
    );
 
