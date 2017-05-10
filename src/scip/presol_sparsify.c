@@ -12,10 +12,10 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
 /**@file   presol_sparsify.c
  * @brief  cancel non-zeros of the constraint matrix
  * @author Dieter Weninger
+ * @author Robert Lion Gottwald
  *
  * This presolver attempts to cancel non-zero entries of the constraint
  * matrix by adding equalities to other constraints.
@@ -34,8 +34,7 @@
 
 #include "scip/pub_matrix.h"
 #include "scip/cons_linear.h"
-#include "scip/sgtrie.h"
-#include "presol_sparsify.h"
+#include "scip/presol_sparsify.h"
 
 #define PRESOL_NAME            "sparsify"
 #define PRESOL_DESC            "eliminate non-zero coefficients"
