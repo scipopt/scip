@@ -2596,6 +2596,9 @@ SCIP_RETCODE cliqueCleanup(
                (!clique->values[v] && SCIPvarGetLbGlobal(clique->vars[v]) > 0.5) ||
                SCIPvarIsMarkedDeleteGlobalStructures(clique->vars[v]) )
          {
+            if( clique->equation && SCIPvarIsMarkedDeleteGlobalStructures(clique->vars[v]) )
+               clique->equation = FALSE;
+
             /* the variable will be overwritten by subsequent active variables */
             continue;
          }

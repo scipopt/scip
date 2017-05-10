@@ -6517,6 +6517,8 @@ SCIP_RETCODE SCIPdigraphResize(
    for( n = digraph->nnodes; n < nnodes; ++n )
    {
       digraph->nodedata[n] = NULL;
+      digraph->arcdata[n] = NULL;
+      digraph->successors[n] = NULL;
       digraph->successorssize[n] = 0;
       digraph->nsuccessors[n] = 0;
    }
