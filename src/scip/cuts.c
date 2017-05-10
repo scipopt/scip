@@ -530,7 +530,6 @@ SCIP_RETCODE addOneRow(
    int                   maxaggrlen,         /**< maximal length of aggregation row */
    SCIP_Real*            minabsweight,       /**< pointer to update minabsweight */
    SCIP_Real*            maxabsweight,       /**< pointer to update maxabsweight */
-   int*                  varpos,             /**< array with positions of variables in current aggregation row */
    SCIP_Bool*            rowtoolong          /**< is the aggregated row too long */
    )
 {
@@ -629,34 +628,8 @@ SCIP_RETCODE addOneRow(
    aggrrow->rowweights[i] = weight;
    aggrrow->slacksign[i] = uselhs ? -1 : 1;
 
-   /* ensure the aggregation row can hold all non-zero entries from the additional row */
-   {
-      int newsize = aggrrow->nnz + row->len;
-      if( newsize > aggrrow->valssize )
-      {
-         newsize = SCIPcalcMemGrowSize(scip, newsize);
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->vals, aggrrow->valssize, newsize) );
-         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->inds, aggrrow->valssize, newsize) );
-         aggrrow->valssize = newsize;
-      }
-   }
-
-   /* add coefficients */
-   for( i = 0; i < row->len; ++i )
-   {
-      int k = varpos[row->cols[i]->var_probindex];
-      if( k == 0 )
-      {
-         k = aggrrow->nnz++;
-         aggrrow->vals[k] = weight * row->vals[i];
-         aggrrow->inds[k] = row->cols[i]->var_probindex;
-         varpos[aggrrow->inds[k]] = k + 1;
-      }
-      else
-      {
-         aggrrow->vals[k - 1] += weight * row->vals[i];
-      }
-   }
+   /* add up coefficients */
+   SCIP_CALL( varVecAddScaledRowCoefs(scip, &aggrrow->inds, &aggrrow->vals, &aggrrow->nnz, &aggrrow->valssize, row, weight) );
 
    /* check if row is too long now */
    if( aggrrow->nnz > maxaggrlen )
@@ -685,7 +658,6 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    SCIP_ROW** rows;
    SCIP_VAR** vars;
    int nrows;
-   int* varpos;
    int nvars;
    int k;
    SCIP_Bool rowtoolong;
@@ -695,25 +667,21 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
 
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &varpos, nvars) );
-
    minabsweight = SCIPinfinity(scip);
    maxabsweight = -SCIPinfinity(scip);
 
    SCIPaggrRowClear(aggrrow);
+   *valid = FALSE;
 
    if( rowinds != NULL && nrowinds > -1 )
    {
       for( k = 0; k < nrowinds; ++k )
       {
          SCIP_CALL( addOneRow(scip, aggrrow, rows[rowinds[k]], weights[rowinds[k]], maxweightrange, minallowedweight, sidetypebasis, allowlocal,
-                              negslack, maxaggrlen, &minabsweight, &maxabsweight, varpos, &rowtoolong) );
+                              negslack, maxaggrlen, &minabsweight, &maxabsweight, &rowtoolong) );
 
          if( rowtoolong )
-         {
-            *valid = FALSE;
-            goto TERMINATE;
-         }
+            return SCIP_OKAY;
       }
    }
    else
@@ -721,47 +689,14 @@ SCIP_RETCODE SCIPaggrRowSumRows(
       for( k = 0; k < nrows; ++k )
       {
          SCIP_CALL( addOneRow(scip, aggrrow, rows[k], weights[k], maxweightrange, minallowedweight, sidetypebasis, allowlocal,
-                              negslack, maxaggrlen, &minabsweight, &maxabsweight, varpos, &rowtoolong) );
+                              negslack, maxaggrlen, &minabsweight, &maxabsweight, &rowtoolong) );
 
          if( rowtoolong )
-         {
-            *valid = FALSE;
-            goto TERMINATE;
-         }
+            return SCIP_OKAY;
       }
    }
 
    *valid = aggrrow->nnz > 0;
-
-  TERMINATE:
-
-   if( *valid )
-   {
-      k = 0;
-      while( k < aggrrow->nnz )
-      {
-         varpos[aggrrow->inds[k]] = 0;
-         if( SCIPisZero(scip, aggrrow->vals[k]) )
-         {
-            /* remove zero entry */
-            --aggrrow->nnz;
-            if( k < aggrrow->nnz )
-            {
-               aggrrow->vals[k] = aggrrow->vals[aggrrow->nnz];
-               aggrrow->inds[k] = aggrrow->inds[aggrrow->nnz];
-            }
-         }
-         else
-            ++k;
-      }
-   }
-   else
-   {
-      for( k = 0; k < aggrrow->nnz; ++k )
-         varpos[aggrrow->inds[k]] = 0;
-   }
-
-   SCIPfreeCleanBufferArray(scip, &varpos);
 
    return SCIP_OKAY;
 }
