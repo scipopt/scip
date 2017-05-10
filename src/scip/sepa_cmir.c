@@ -588,6 +588,9 @@ SCIP_RETCODE aggregateNextRow(
    SCIPsortDownRealInt(badvarbddist, badvarinds, nbadvars);
 
    aggrfac = 0.0;
+   bestrowscore = 0.0;
+   minbddist = 0.0;
+   bestrow = NULL;
 
    /* because the "good" bad variables have a negative bound distance,
     * they are at the end
@@ -805,8 +808,6 @@ SCIP_RETCODE aggregation(
    int naggrs;
    int nactiveconts;
    int nvars;
-   int nintvars;
-   int ncontvars;
    int ncols;
    int nrows;
 
@@ -827,12 +828,8 @@ SCIP_RETCODE aggregation(
    *cutoff = FALSE;
    *wastried = FALSE;
 
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, &ncontvars) );
-#ifdef IMPLINTSARECONT
-   ncontvars += SCIPgetNImplVars(scip); /* also aggregate out implicit integers */
-#endif
-   nintvars = nvars - ncontvars;
-   assert((nvars == 0 && nintvars == 0 && ncontvars == 0) || vars != NULL);
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
    SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
    assert(ncols == 0 || cols != NULL);
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
@@ -845,18 +842,13 @@ SCIP_RETCODE aggregation(
    maxaggrnonzs = (int)(sepadata->maxaggdensity * ncols) + sepadata->densityoffset;
 
    startrowact = SCIPgetRowSolActivity(scip, rows[startrow], sol);
-   {
 
-      if( startrowact <= 0.5 * SCIProwGetLhs(rows[startrow]) + 0.5 * SCIProwGetRhs(rows[startrow]) )
-         startweight = -1.0;
-      else
-         startweight = 1.0;
+   if( startrowact <= 0.5 * SCIProwGetLhs(rows[startrow]) + 0.5 * SCIProwGetRhs(rows[startrow]) )
+      startweight = -1.0;
+   else
+      startweight = 1.0;
 
-      SCIP_CALL( SCIPaggrRowAddRow(scip, aggrdata->aggrrow, rows[startrow], negate ? -startweight : startweight, 0) );
-   }
-
-   /* decrease score of startrow in order to not aggregate it again too soon */
-//    decreaseRowScore(scip, rowlhsscores, rowrhsscores, startrow);
+   SCIP_CALL( SCIPaggrRowAddRow(scip, aggrdata->aggrrow, rows[startrow], negate ? -startweight : startweight, 0) );
 
    /* try to generate cut from the current aggregated row 
     * add cut if found, otherwise add another row to aggregated row 

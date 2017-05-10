@@ -212,7 +212,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_Real maxfrac;
    SCIP_Longint maxdnom;
    SCIP_Bool cutoff;
-   int* sidetypes = NULL;
    int* basisind;
    int* inds;
    int* cutinds;
