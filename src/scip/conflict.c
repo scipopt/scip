@@ -5909,7 +5909,7 @@ SCIP_RETCODE tightenDualray(
 
       assert(SCIPvarGetProbindex(vars[idx]) == idx);
       assert(SCIPvarIsActive(vars[idx]));
-      assert(!SCIPsetIsDualfeasZero(set, vals[i]));
+      assert(!SCIPsetIsZero(set, vals[i]));
 
       /* skip integral variables */
       if( SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_IMPLINT )
@@ -5952,8 +5952,6 @@ SCIP_RETCODE tightenDualray(
          assert(inds[i] == oldind);
 
          debugPrintViolationInfo(set, getMinActivity(transprob, vals, inds, nnz, curvarlbs, curvarubs), rhs, " update: ");
-
-         vals[i] = 0.0;
       }
    }
 
