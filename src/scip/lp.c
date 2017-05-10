@@ -4099,7 +4099,7 @@ void SCIPcolSetStrongbranchData(
 
    col->sblpobjval = lpobjval;
    col->sbsolval = primsol;
-   col->validsblp = stat->lpcount - stat->nsbdivinglps;
+   col->validsblp = stat->nlps;
    col->sbnode = stat->nnodes;
 
    col->sbitlim = itlim;
@@ -4199,9 +4199,9 @@ SCIP_RETCODE SCIPcolGetStrongbranch(
 
    *lperror = FALSE;
 
-   if( col->validsblp != stat->lpcount - stat->nsbdivinglps || itlim > col->sbitlim )
+   if( col->validsblp != stat->nlps || itlim > col->sbitlim )
    {
-      col->validsblp = stat->lpcount - stat->nsbdivinglps;
+      col->validsblp = stat->nlps;
       col->sbsolval = col->primsol;
       col->sblpobjval = SCIPlpGetObjval(lp, set, prob);
       col->sbnode = stat->nnodes;
@@ -4392,9 +4392,9 @@ SCIP_RETCODE SCIPcolGetStrongbranches(
       assert(col->lpipos >= 0);
       assert(col->lppos >= 0);
 
-      if( col->validsblp != stat->lpcount - stat->nsbdivinglps || itlim > col->sbitlim )
+      if( col->validsblp != stat->nlps || itlim > col->sbitlim )
       {
-         col->validsblp = stat->lpcount - stat->nsbdivinglps;
+         col->validsblp = stat->nlps;
          col->sbsolval = col->primsol;
          col->sblpobjval = SCIPlpGetObjval(lp, set, prob);
          col->sbnode = stat->nnodes;
@@ -4590,7 +4590,7 @@ SCIP_Longint SCIPcolGetStrongbranchLPAge(
    assert(col != NULL);
    assert(stat != NULL);
 
-   return (col->sbnode != stat->nnodes ? SCIP_LONGINT_MAX : stat->lpcount - stat->nsbdivinglps - col->validsblp);
+   return (col->sbnode != stat->nnodes ? SCIP_LONGINT_MAX : stat->nlps - col->validsblp);
 }
 
 /** marks a column to be not removable from the LP in the current node because it became obsolete */

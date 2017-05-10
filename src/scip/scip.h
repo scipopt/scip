@@ -8384,6 +8384,43 @@ SCIP_RETCODE SCIPgetVarStrongbranchLast(
    SCIP_Real*            lpobjval            /**< stores LP objective value at last strong branching call, or NULL */
    );
 
+/** sets strong branching information for a column variable
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPsetVarStrongbranchData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to set last strong branching values for */
+   SCIP_Real             lpobjval,           /**< objective value of the current LP */
+   SCIP_Real             primsol,            /**< primal solution value of the column in the current LP */
+   SCIP_Real             down,               /**< dual bound after branching column down */
+   SCIP_Real             up,                 /**< dual bound after branching column up */
+   SCIP_Bool             downvalid,          /**< is the returned down value a valid dual bound? */
+   SCIP_Bool             upvalid,            /**< is the returned up value a valid dual bound? */
+   SCIP_Longint          iter,               /**< total number of strong branching iterations */
+   int                   itlim               /**< iteration limit applied to the strong branching call */
+   );
+
+/** rounds the current solution and tries it afterwards; if feasible, adds it to storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPtryStrongbranchLPSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            foundsol,           /**< stores whether solution was feasible and good enough to keep */
+   SCIP_Bool*            cutoff              /**< stores whether solution was cutoff due to exceeding the cutoffbound */
+   );
+
 /** gets node number of the last node in current branch and bound run, where strong branching was used on the
  *  given variable, or -1 if strong branching was never applied to the variable in current run
  *

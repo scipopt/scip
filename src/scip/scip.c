@@ -20290,7 +20290,6 @@ SCIP_RETCODE performStrongbranchWithPropagation(
          {
          case SCIP_LPSOLSTAT_OPTIMAL:
          {
-            SCIP_Longint oldnbestsolsfound = scip->primal->nbestsolsfound;
             *value = SCIPgetLPObjval(scip);
             assert(SCIPisLT(scip, *value, SCIPgetCutoffbound(scip)));
 
@@ -20300,51 +20299,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
                *valid = TRUE;
 
             /* check the strong branching LP solution for feasibility */
-            if( scip->set->branch_checksbsol )
-            {
-               SCIP_SOL* sol;
-               SCIP_Bool rounded = TRUE;
-
-               /* start clock for strong branching solutions */
-               SCIPclockStart(scip->stat->sbsoltime, scip->set);
-
-               SCIP_CALL( SCIPcreateLPSol(scip, &sol, NULL) );
-
-               /* try to round the strong branching solution */
-               if( scip->set->branch_roundsbsol )
-               {
-                  SCIP_CALL( SCIProundSol(scip, sol, &rounded) );
-               }
-
-               /* check the solution for feasibility if rounding worked well (or was not tried) */
-               if( rounded )
-               {
-                  SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, TRUE, FALSE, foundsol) );
-               }
-               else
-               {
-                  SCIP_CALL( SCIPfreeSol(scip, &sol) );
-               }
-
-               if( *foundsol )
-               {
-                  SCIPdebugMsg(scip, "found new solution in strong branching\n");
-
-                  scip->stat->nsbsolsfound++;
-
-                  if( scip->primal->nbestsolsfound != oldnbestsolsfound )
-                  {
-                     scip->stat->nsbbestsolsfound++;
-                  }
-
-                  if( SCIPisGE(scip, *value, SCIPgetCutoffbound(scip)) )
-                     *cutoff = TRUE;
-               }
-
-               /* stop clock for strong branching solutions */
-               SCIPclockStop(scip->stat->sbsoltime, scip->set);
-            }
-
+            SCIP_CALL( SCIPtryStrongbranchLPSol(scip, foundsol, cutoff) );
             break;
          }
          case SCIP_LPSOLSTAT_ITERLIMIT:
@@ -21154,6 +21109,111 @@ SCIP_RETCODE SCIPgetVarStrongbranchLast(
 
    return SCIP_OKAY;
 }
+
+/** sets strong branching information for a column variable
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPsetVarStrongbranchData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to set last strong branching values for */
+   SCIP_Real             lpobjval,           /**< objective value of the current LP */
+   SCIP_Real             primsol,            /**< primal solution value of the column in the current LP */
+   SCIP_Real             down,               /**< dual bound after branching column down */
+   SCIP_Real             up,                 /**< dual bound after branching column up */
+   SCIP_Bool             downvalid,          /**< is the returned down value a valid dual bound? */
+   SCIP_Bool             upvalid,            /**< is the returned up value a valid dual bound? */
+   SCIP_Longint          iter,               /**< total number of strong branching iterations */
+   int                   itlim               /**< iteration limit applied to the strong branching call */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPsetVarStrongbranchData", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+   {
+      SCIPerrorMessage("cannot set strong branching information on non-COLUMN variable\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   SCIPcolSetStrongbranchData(SCIPvarGetCol(var), scip->set, scip->stat, scip->lp, lpobjval, primsol,
+      down, up, downvalid, upvalid, iter, itlim);
+
+   return SCIP_OKAY;
+}
+
+/** rounds the current solution and tries it afterwards; if feasible, adds it to storage
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPtryStrongbranchLPSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            foundsol,           /**< stores whether solution was feasible and good enough to keep */
+   SCIP_Bool*            cutoff              /**< stores whether solution was cutoff due to exceeding the cutoffbound */
+   )
+{
+   assert(scip != NULL);
+   assert(foundsol != NULL);
+   assert(cutoff != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPsetVarStrongbranchData", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( scip->set->branch_checksbsol )
+   {
+      SCIP_SOL* sol;
+      SCIP_Bool rounded = TRUE;
+      SCIP_Real value = SCIPgetLPObjval(scip);
+      SCIP_Longint oldnbestsolsfound = scip->primal->nbestsolsfound;
+
+      /* start clock for strong branching solutions */
+      SCIPclockStart(scip->stat->sbsoltime, scip->set);
+
+      SCIP_CALL( SCIPcreateLPSol(scip, &sol, NULL) );
+
+      /* try to round the strong branching solution */
+      if( scip->set->branch_roundsbsol )
+      {
+         SCIP_CALL( SCIProundSol(scip, sol, &rounded) );
+      }
+
+      /* check the solution for feasibility if rounding worked well (or was not tried) */
+      if( rounded )
+      {
+         SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, TRUE, FALSE, foundsol) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPfreeSol(scip, &sol) );
+      }
+
+      if( *foundsol )
+      {
+         SCIPdebugMsg(scip, "found new solution in strong branching\n");
+
+         scip->stat->nsbsolsfound++;
+
+         if( scip->primal->nbestsolsfound != oldnbestsolsfound )
+         {
+            scip->stat->nsbbestsolsfound++;
+         }
+
+         if( SCIPisGE(scip, value, SCIPgetCutoffbound(scip)) )
+            *cutoff = TRUE;
+      }
+
+      /* stop clock for strong branching solutions */
+      SCIPclockStop(scip->stat->sbsoltime, scip->set);
+   }
+   return SCIP_OKAY;
+}
+
 
 /** gets node number of the last node in current branch and bound run, where strong branching was used on the
  *  given variable, or -1 if strong branching was never applied to the variable in current run

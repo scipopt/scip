@@ -400,6 +400,16 @@ SCIP_RETCODE SCIPselectVarStrongBranchingRanking(
          assert(downinf || !downconflict);
          assert(upinf || !upconflict);
 
+         /* update pseudo cost values */
+         if( !downinf && downvalid )
+         {
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[c], 0.0-lpcandsfrac[c], downgain, 1.0) );
+         }
+         if( !upinf && upvalid )
+         {
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
+         }
+
          /* check if there are infeasible roundings */
          if( downinf || upinf )
          {
@@ -507,12 +517,6 @@ SCIP_RETCODE SCIPselectVarStrongBranchingRanking(
                }
             }
          }
-
-         /* update pseudo cost values */
-         assert(!downinf); /* otherwise, we would have terminated the initialization loop */
-         assert(!upinf);
-         SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[c], 0.0-lpcandsfrac[c], downgain, 1.0) );
-         SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[c], 1.0-lpcandsfrac[c], upgain, 1.0) );
       }
 
       /* check for a better score, if we are within the maximum priority candidates */
