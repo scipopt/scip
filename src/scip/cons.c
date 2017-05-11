@@ -2763,19 +2763,16 @@ SCIP_RETCODE SCIPconshdlrInitLP(
          {
             conshdlr->initconss[conshdlr->ninitconsskept] = conshdlr->initconss[c];
             conshdlr->initconss[conshdlr->ninitconsskept]->initconsspos = conshdlr->ninitconsskept;
-            assert(conshdlr->initconss[conshdlr->ninitconsskept]->initconsspos == conshdlr->ninitconsskept);
             ++(conshdlr->ninitconsskept);
          }
          else
             conshdlr->initconss[c]->initconsspos = -1;
       }
 #ifndef NDEBUG
-      for( ; c < conshdlr->ninitconss && !rememberinitconss; ++c )
+      for( ; c < conshdlr->ninitconss; ++c )
          assert(conshdlr->initconss[c]->initconsspos < conshdlr->ninitconsskept);
 #endif
-
-      if( !rememberinitconss )
-         conshdlr->ninitconss = conshdlr->ninitconsskept;
+      conshdlr->ninitconss = conshdlr->ninitconsskept;
 
       if( conshdlr->ninitconss == 0 )
       {

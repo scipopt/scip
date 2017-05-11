@@ -1093,7 +1093,6 @@ SCIP_RETCODE SCIPinitConssLP(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             root,               /**< is this the initial root LP? */
    SCIP_Bool             firstsubtreeinit,   /**< is this the first call in the current subtree after jumping through the tree? */
-   SCIP_Bool             rememberinitconss,
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
@@ -1112,7 +1111,7 @@ SCIP_RETCODE SCIPinitConssLP(
    SCIPsetDebugMsg(set, "init LP: initial rows\n");
    for( h = 0; h < set->nconshdlrs && !(*cutoff); ++h )
    {
-      SCIP_CALL( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat, tree, firstsubtreeinit, root ? rememberinitconss : FALSE, cutoff) );
+      SCIP_CALL( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat, tree, firstsubtreeinit, cutoff) );
    }
 
    if( set->reopt_enable && set->reopt_usecuts && firstsubtreeinit && !(*cutoff) )
@@ -1160,7 +1159,6 @@ SCIP_RETCODE initLP(
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             root,               /**< is this the initial root LP? */
-   SCIP_Bool             rememberinitconss,
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
@@ -1214,7 +1212,7 @@ SCIP_RETCODE initLP(
    /* put all initial constraints into the LP */
    /* @todo check whether we jumped through the tree */
    SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, cutpool, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
-         eventfilter, cliquetable, root, TRUE, rememberinitconss, cutoff) );
+         eventfilter, cliquetable, root, TRUE, cutoff) );
 
    return SCIP_OKAY;
 }
@@ -1237,7 +1235,6 @@ SCIP_RETCODE SCIPconstructCurrentLP(
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             newinitconss,       /**< do we have to add new initial constraints? */
-   SCIP_Bool             rememberinitconss,
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    )
 {
@@ -1256,20 +1253,14 @@ SCIP_RETCODE SCIPconstructCurrentLP(
       assert(initroot || SCIPnodeGetDepth(SCIPtreeGetFocusNode(tree)) > 0);
       assert(SCIPtreeIsFocusNodeLPConstructed(tree));
 
-//      if( initroot )
-//      {
-//         /* clear the LP */
-//         SCIP_CALL( SCIPlpClear(lp, blkmem, set, eventqueue, eventfilter) );
-//      }
-
       /* setup initial LP relaxation of node */
       SCIP_CALL( initLP(blkmem, set, stat, transprob, origprob, tree, reopt, lp, pricestore, sepastore, cutpool, branchcand,
-            eventqueue, eventfilter, cliquetable, initroot, rememberinitconss, cutoff) );
+            eventqueue, eventfilter, cliquetable, initroot, cutoff) );
    }
    else if( newinitconss )
    {
       SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, cutpool, stat, transprob,
-            origprob, tree, reopt, lp, branchcand, eventqueue, eventfilter, cliquetable, FALSE, FALSE, rememberinitconss,
+            origprob, tree, reopt, lp, branchcand, eventqueue, eventfilter, cliquetable, FALSE, FALSE,
             cutoff) );
    }
 
@@ -1387,16 +1378,9 @@ SCIP_RETCODE solveNodeInitialLP(
    *cutoff = FALSE;
    *lperror = FALSE;
 
-   /* reset the inital LP */
-   if( tree->focusnode == tree->root )
-   {
-      SCIP_CALL( SCIPlpClear(lp, blkmem, set, eventqueue, eventfilter) );
-      tree->focuslpconstructed = FALSE;
-   }
-
    /* load the LP into the solver */
    SCIP_CALL( SCIPconstructCurrentLP(blkmem, set, stat, transprob, origprob, tree, reopt, lp, pricestore, sepastore, cutpool,
-         branchcand, eventqueue, eventfilter, cliquetable, newinitconss, FALSE, cutoff) );
+         branchcand, eventqueue, eventfilter, cliquetable, newinitconss, cutoff) );
 
    if( *cutoff )
       return SCIP_OKAY;
@@ -2081,7 +2065,7 @@ SCIP_RETCODE SCIPpriceLoop(
 
       /* put all initial constraints into the LP */
       SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, cutpool, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
-            eventfilter, cliquetable, FALSE, FALSE, FALSE, &cutoff) );
+            eventfilter, cliquetable, FALSE, FALSE, &cutoff) );
       assert(cutoff == FALSE);
 
       mustprice = mustprice || !lp->flushed || (transprob->ncolvars != *npricedcolvars);
@@ -2358,7 +2342,7 @@ SCIP_RETCODE priceAndCutLoop(
                   SCIPsetDebugMsg(set, "new initial constraints added during propagation: old=%" SCIP_LONGINT_FORMAT ", new=%" SCIP_LONGINT_FORMAT "\n", oldninitconssadded, stat->ninitconssadded);
 
                   SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, cutpool, stat, transprob, origprob, tree, reopt, lp,
-                        branchcand, eventqueue, eventfilter, cliquetable, FALSE, FALSE, FALSE, cutoff) );
+                        branchcand, eventqueue, eventfilter, cliquetable, FALSE, FALSE, cutoff) );
                }
 
                if( !(*cutoff) && !(*unbounded) )
@@ -2579,7 +2563,7 @@ SCIP_RETCODE priceAndCutLoop(
                         oldninitconssadded, stat->ninitconssadded);
 
                   SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, cutpool, stat, transprob, origprob, tree, reopt, lp,
-                        branchcand, eventqueue, eventfilter, cliquetable, FALSE, FALSE, FALSE, cutoff) );
+                        branchcand, eventqueue, eventfilter, cliquetable, FALSE, FALSE, cutoff) );
                }
 
                if( !(*cutoff) )
@@ -2957,7 +2941,7 @@ SCIP_RETCODE solveNodeLP(
    else
    {
       SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, cutpool, stat, transprob,
-            origprob, tree, reopt, lp, branchcand, eventqueue, eventfilter, cliquetable, FALSE, FALSE, FALSE,
+            origprob, tree, reopt, lp, branchcand, eventqueue, eventfilter, cliquetable, FALSE, FALSE,
             cutoff) );
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
