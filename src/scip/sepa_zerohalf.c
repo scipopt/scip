@@ -770,8 +770,7 @@ SCIP_RETCODE mod2matrixPreprocessRows(
       if( (row->nnonzcols == 0 && row->rhs == 0) || SCIPisGE(scip, row->slack, 1.0) )
       {
          mod2matrixRemoveRow(scip, mod2matrix, row);
-         if( row->nnonzcols > 0 )
-            ++sepadata->nreductions;
+         sepadata->nreductions += row->nnonzcols;
       }
       else if( row->nnonzcols > 0 )
       {
@@ -1001,7 +1000,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpZerohalf)
 
    SCIPallocBufferArray(scip, &nonzrows, mod2matrix.nrows);
 
-   for( k = 0; k < 5; ++k )
+   for( k = 0; k < 10; ++k )
    {
       sepadata->nreductions = 0;
       SCIP_CALL( mod2matrixPreprocessRows(scip, &mod2matrix, sepa, sepadata) );
