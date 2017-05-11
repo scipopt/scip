@@ -2687,7 +2687,6 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    SCIP_Bool             initkeptconss,      /**< Also initialize constraints which are valid at a more global node,
                                               *   but were not activated there? Should be FALSE for repeated calls at
                                               *   one node or if the current focusnode is a child of the former one */
-   SCIP_Bool             rememberinitconss,
    SCIP_Bool*            cutoff              /**< pointer to store whether infeasibility was detected while building the LP */
    )
 {
@@ -2753,7 +2752,7 @@ SCIP_RETCODE SCIPconshdlrInitLP(
       assert(currentdepth >= 0);
 
       /* clear the initconss array */
-      for( c = conshdlr->ninitconsskept; c < oldninitconss && !rememberinitconss; ++c )
+      for( c = conshdlr->ninitconsskept; c < oldninitconss; ++c )
       {
          assert(SCIPconsGetActiveDepth(conshdlr->initconss[c]) >= -1);
          assert(SCIPconsGetActiveDepth(conshdlr->initconss[c]) <= currentdepth);

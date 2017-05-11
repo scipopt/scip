@@ -2661,9 +2661,9 @@ SCIP_RETCODE conflictFlushProofset(
             SCIP_Real rhs;
 
             vars = SCIPprobGetVars(transprob);
-            inds = proofsetGetInds(conflict->proofset);
-            coefs = proofsetGetCoefs(conflict->proofset);
-            rhs = proofsetGetRhs(conflict->proofset);
+            inds = proofsetGetInds(conflict->proofsets[i]);
+            coefs = proofsetGetCoefs(conflict->proofsets[i]);
+            rhs = proofsetGetRhs(conflict->proofsets[i]);
 
             SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
                   branchcand, eventqueue, cliquetable, vars[inds[0]], coefs[0], rhs) );
@@ -6136,8 +6136,6 @@ SCIP_RETCODE getFarkasProof(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPI*             lpi,                /**< LPI data */
    SCIP_AGGRROW*         farkasrow,
-   SCIP_Real*            farkascoefs,        /**< coefficients in the proof constraint */
-   SCIP_Real*            farkaslhs,          /**< lhs of the proof constraint */
    SCIP_Real*            farkasact,          /**< maximal activity of the proof constraint */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
@@ -6185,7 +6183,6 @@ SCIP_RETCODE getFarkasProof(
    SCIP_CALL( SCIPlpiGetDualfarkas(lpi, dualfarkas) );
 
    /* calculate the Farkas row */
-   (*farkaslhs) = 0.0;
    (*valid) = TRUE;
    for( r = 0; r < nrows; ++r )
    {
@@ -6226,8 +6223,6 @@ SCIP_RETCODE getFarkasProof(
             }
 
             SCIP_CALL( SCIPaggrRowAddRow(set->scip, farkasrow, row, -dualfarkas[r], -1) );
-
-//            (*farkaslhs) += dualfarkas[r] * (row->lhs - row->constant);
          }
          else
          {
@@ -6243,8 +6238,6 @@ SCIP_RETCODE getFarkasProof(
             }
 
             SCIP_CALL( SCIPaggrRowAddRow(set->scip, farkasrow, row, -dualfarkas[r], +1) );
-
-//            (*farkaslhs) += dualfarkas[r] * (row->rhs - row->constant);
          }
          SCIPdebugMessage(" -> farkasrhs: %g<%s>[%g,%g] -> %g\n", dualfarkas[r], SCIProwGetName(row),
             row->lhs - row->constant, row->rhs - row->constant, SCIPaggrRowGetRhs(farkasrow));
@@ -6255,14 +6248,6 @@ SCIP_RETCODE getFarkasProof(
             (*valid) = FALSE;
             goto TERMINATE;
          }
-
-//         /* add row coefficients to Farkas row */
-//         for( i = 0; i < row->len; ++i )
-//         {
-//            v = SCIPvarGetProbindex(SCIPcolGetVar(row->cols[i]));
-//            assert(0 <= v && v < nvars);
-//            farkascoefs[v] += dualfarkas[r] * row->vals[i];
-//         }
       }
 #ifdef SCIP_DEBUG
       else if( !SCIPsetIsZero(set, dualfarkas[r]) )
@@ -6281,59 +6266,6 @@ SCIP_RETCODE getFarkasProof(
    *farkasact = getMinActivity(prob, SCIPaggrRowGetVals(farkasrow), SCIPaggrRowGetInds(farkasrow),
          SCIPaggrRowGetNNz(farkasrow), curvarlbs, curvarubs);
 
-//   (*farkasact) = 0.0;
-//   for( v = 0; v < nvars; ++v )
-//   {
-//      var = vars[v];
-//      assert(SCIPvarGetProbindex(var) == v);
-//
-////      if( farkascoefs[v] > 0.0 )
-//      if( farkascoefs[v] < 0.0 )
-//      {
-//         assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN && SCIPcolGetLPPos(SCIPvarGetCol(var)) >= 0)
-//            || !SCIPsetIsPositive(set, SCIPvarGetUbLP(var, set)));
-//         if( SCIPsetIsInfinity(set, curvarubs[v]) )
-//         {
-//            (*valid) = FALSE;
-//            goto TERMINATE;
-//         }
-//
-////         /* ignore coefficients close to 0.0 */
-////         if( SCIPsetIsZero(set, farkascoefs[v]) )
-////         {
-////            (*farkaslhs) -= farkascoefs[v] * SCIPvarGetUbGlobal(var);
-////            farkascoefs[v] = 0.0;
-////         }
-////         else
-//         (*farkasact) += farkascoefs[v] * curvarubs[v];
-//
-//         SCIPdebugMessage(" -> farkasact: %g<%s>[%g,%g] -> %g\n", farkascoefs[v], SCIPvarGetName(var),
-//            curvarlbs[v], curvarubs[v], (*farkasact));
-//      }
-////      else if( farkascoefs[v] < 0.0 )
-//      else if( farkascoefs[v] > 0.0 )
-//      {
-//         assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN && SCIPcolGetLPPos(SCIPvarGetCol(var)) >= 0)
-//            || !SCIPsetIsNegative(set, SCIPvarGetLbLP(var, set)));
-//         if( SCIPsetIsInfinity(set, -curvarlbs[v]) )
-//         {
-//            (*valid) = FALSE;
-//            goto TERMINATE;
-//         }
-//
-//         /* ignore coefficients close to 0.0 */
-//         if( SCIPsetIsZero(set, farkascoefs[v]) )
-//         {
-//            (*farkaslhs) -= farkascoefs[v] * SCIPvarGetLbGlobal(var);
-//            farkascoefs[v] = 0.0;
-//         }
-//         else
-//            (*farkasact) += farkascoefs[v] * curvarlbs[v];
-//
-//         SCIPdebugMessage(" -> farkasact: %g<%s>[%g,%g] -> %g\n", farkascoefs[v], SCIPvarGetName(var),
-//            curvarlbs[v], curvarubs[v], (*farkasact));
-//      }
-//   }
    SCIPdebugMessage(" -> farkasact=%g farkasrhs=%g, \n", (*farkasact), SCIPaggrRowGetRhs(farkasrow));
 
    /* the constructed proof is not valid, this can happen due to numerical reasons,
@@ -6580,12 +6512,10 @@ SCIP_RETCODE tightenDualray(
 
          success |= cutsuccess;
 
-         if( success && !islocal && SCIPsetIsPositive(set, cutefficacy)
+         if( success && !islocal && !SCIPsetIsNegative(set, cutefficacy)
             && (proofsetGetNVars(conflict->proofset) != cutnnz || !SCIPsetIsEQ(set, proofsetGetRhs(conflict->proofset), cutrhs)) )
          {
             SCIP_PROOFSET* proofset;
-
-            printf("efficacy: %g\n", cutefficacy);
 
             SCIP_CALL( proofsetCreate(&proofset, blkmem) );
             proofset->conflicttype = SCIP_CONFTYPE_INFEASLP;
@@ -6652,8 +6582,6 @@ SCIP_RETCODE conflictAnalyzeDualray(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table */
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
    SCIP_AGGRROW*         farkasrow,
-   SCIP_Real*            farkascoefs,        /**< coefficients in the proof constraint */
-   SCIP_Real             farkaslhs,          /**< lhs of the proof constraint */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
    int*                  lbchginfoposs,      /**< positions of currently active lower bound change information in variables' arrays */
@@ -6672,12 +6600,6 @@ SCIP_RETCODE conflictAnalyzeDualray(
 
    assert(set != NULL);
    assert(transprob != NULL);
-   assert(farkascoefs != NULL);
-   assert(!SCIPsetIsInfinity(set, -farkaslhs));
-
-   /* within the dual ray analysis we will use aggregation rows */
-//   SCIP_CALL( SCIPaggrRowCreate(set->scip, &farkasrow) );
-//   SCIP_CALL( SCIPaggrRowAddData(set->scip, farkasrow, SCIPprobGetVars(transprob), farkascoefs, SCIPprobGetNVars(transprob), farkaslhs, -1.0) );
 
    /* get sparse data */
    nnz = SCIPaggrRowGetNNz(farkasrow);
@@ -6948,6 +6870,7 @@ SCIP_RETCODE runBoundHeuristic(
             /* undo additional bound changes */
             if( SCIPlpiIsPrimalInfeasible(lpi) )
             {
+               SCIP_VAR** vars;
                SCIP_AGGRROW* farkasrow;
                SCIP_Real* vals;
                int* inds;
@@ -6957,8 +6880,7 @@ SCIP_RETCODE runBoundHeuristic(
                SCIP_CALL( SCIPaggrRowCreate(set->scip, &farkasrow) );
 
                /* the original LP exceeds the current cutoff bound, thus, we have not constructed the farkas proof */
-               SCIP_CALL( getFarkasProof(set, transprob, lp, lpi, farkasrow, farkascoefs, farkaslhs, farkasactivity,
-                     curvarlbs, curvarubs, valid) );
+               SCIP_CALL( getFarkasProof(set, transprob, lp, lpi, farkasrow, farkasactivity, curvarlbs, curvarubs, valid) );
 
                /* the constructed Farkas proof is not valid, we need to break here */
                if( !(*valid) )
@@ -6972,8 +6894,8 @@ SCIP_RETCODE runBoundHeuristic(
                   conflict->conflictset->conflicttype = SCIP_CONFTYPE_INFEASLP;
 
                   /* start dual ray analysis */
-                  SCIP_CALL( conflictAnalyzeDualray(conflict, set, stat, blkmem, origprob, transprob, tree, reopt, lp, branchcand,
-                        eventqueue, cliquetable, conflictstore, NULL, farkascoefs, (*farkaslhs), curvarlbs, curvarubs,
+                  SCIP_CALL( conflictAnalyzeDualray(conflict, set, stat, blkmem, origprob, transprob, tree, reopt, lp,
+                        branchcand, eventqueue, cliquetable, conflictstore, farkasrow, curvarlbs, curvarubs,
                         lbchginfoposs, ubchginfoposs, diving, &globalinfeasible, dualraysuccess) );
 
                   conflict->conflictset->conflicttype = oldconftype;
@@ -6982,7 +6904,12 @@ SCIP_RETCODE runBoundHeuristic(
                if( globalinfeasible )
                   goto FREEBUFFER;
 
+               vars = SCIPprobGetVars(transprob);
+
+               BMSclearMemoryArray(farkascoefs, SCIPprobGetNVars(transprob));
                (*farkaslhs) = -SCIPaggrRowGetRhs(farkasrow);
+               (*farkasactivity) = -(*farkasactivity);
+
                vals = SCIPaggrRowGetVals(farkasrow);
                inds = SCIPaggrRowGetInds(farkasrow);
                nnz = SCIPaggrRowGetNNz(farkasrow);
@@ -6993,7 +6920,7 @@ SCIP_RETCODE runBoundHeuristic(
 
                   assert(SCIPvarGetProbindex(vars[i]) == inds[v]);
 
-                  farkascoefs[i] = vals[v];
+                  farkascoefs[i] = -vals[v];
                }
 
                SCIP_CALL( undoBdchgsDualfarkas(set, transprob, lp, currentdepth, curvarlbs, curvarubs,
@@ -7110,8 +7037,6 @@ SCIP_RETCODE conflictAnalyzeLP(
    int v;
    SCIP_Real* curvarlbs;
    SCIP_Real* curvarubs;
-   SCIP_Real* farkascoefs;
-   SCIP_Real farkaslhs;
    SCIP_Real farkasactivity;
 
    assert(conflict != NULL);
@@ -7228,11 +7153,8 @@ SCIP_RETCODE conflictAnalyzeLP(
    SCIP_CALL( SCIPaggrRowCreate(set->scip, &farkasrow) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &lbchginfoposs, transprob->nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &ubchginfoposs, transprob->nvars) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &farkascoefs, SCIPprobGetNVars(transprob)) );
-   BMSclearMemoryArray(farkascoefs, SCIPprobGetNVars(transprob));
 
    farkasactivity = 0.0;
-   farkaslhs = 0.0;
 
    /* get temporary memory for remembering variables' current bounds and corresponding bound change information
     * positions in variable's bound change information arrays
@@ -7289,8 +7211,7 @@ SCIP_RETCODE conflictAnalyzeLP(
 
    if( SCIPlpiIsPrimalInfeasible(lpi) )
    {
-      SCIP_CALL( getFarkasProof(set, transprob, lp, lpi, farkasrow, farkascoefs, &farkaslhs, &farkasactivity, curvarlbs,
-            curvarubs, &valid) );
+      SCIP_CALL( getFarkasProof(set, transprob, lp, lpi, farkasrow, &farkasactivity, curvarlbs, curvarubs, &valid) );
    }
 
    if( !valid )
@@ -7304,14 +7225,16 @@ SCIP_RETCODE conflictAnalyzeLP(
    {
       /* start dual ray analysis */
       SCIP_CALL( conflictAnalyzeDualray(conflict, set, stat, blkmem, origprob, transprob, tree, reopt, lp, branchcand,
-            eventqueue, cliquetable, conflictstore, farkasrow, farkascoefs, farkaslhs, curvarlbs, curvarubs, lbchginfoposs,
-            ubchginfoposs, diving, &globalinfeasible, dualraysuccess) );
+            eventqueue, cliquetable, conflictstore, farkasrow, curvarlbs, curvarubs, lbchginfoposs, ubchginfoposs,
+            diving, &globalinfeasible, dualraysuccess) );
    }
 
    assert(valid);
 
    if( !globalinfeasible && (set->conf_useinflp == 'c' || set->conf_useinflp == 'b') )
    {
+      SCIP_Real* farkascoefs;
+      SCIP_Real farkaslhs;
       SCIP_Real* vals;
       int* inds;
       int nnz;
@@ -7327,7 +7250,12 @@ SCIP_RETCODE conflictAnalyzeLP(
       }
 #endif
 
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &farkascoefs, SCIPprobGetNVars(transprob)) );
+      BMSclearMemoryArray(farkascoefs, SCIPprobGetNVars(transprob));
+
       farkaslhs = -SCIPaggrRowGetRhs(farkasrow);
+      farkasactivity = -farkasactivity;
+
       vals = SCIPaggrRowGetVals(farkasrow);
       inds = SCIPaggrRowGetInds(farkasrow);
       nnz = SCIPaggrRowGetNNz(farkasrow);
@@ -7338,12 +7266,14 @@ SCIP_RETCODE conflictAnalyzeLP(
 
          assert(SCIPvarGetProbindex(vars[i]) == inds[v]);
 
-         farkascoefs[i] = vals[v];
+         farkascoefs[i] = -vals[v];
       }
 
       SCIP_CALL( runBoundHeuristic(conflict, set, stat, origprob, transprob, tree, reopt, lp, lpi, branchcand,
             eventqueue, cliquetable, conflictstore, blkmem, farkascoefs, &farkaslhs, &farkasactivity, curvarlbs,
             curvarubs, lbchginfoposs, ubchginfoposs, iterations, diving, marklpunsolved, dualraysuccess, &valid) );
+
+      SCIPsetFreeBufferArray(set, &farkascoefs);
 
       if( !valid )
          goto TERMINATE;
@@ -7368,7 +7298,6 @@ SCIP_RETCODE conflictAnalyzeLP(
   TERMINATE:
    SCIPsetFreeBufferArray(set, &curvarubs);
    SCIPsetFreeBufferArray(set, &curvarlbs);
-   SCIPsetFreeBufferArray(set, &farkascoefs);
    SCIPsetFreeBufferArray(set, &ubchginfoposs);
    SCIPsetFreeBufferArray(set, &lbchginfoposs);
    SCIPaggrRowFree(set->scip, &farkasrow);
