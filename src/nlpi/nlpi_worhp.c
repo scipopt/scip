@@ -37,8 +37,8 @@
 
 #include "worhp/worhp.h"
 
-#if WORHP_MAJOR < 2
-#error "Require at least Worhp 2.x"
+#if WORHP_MAJOR < 2 && WORHP_MINOR < 10
+#error "Require at least Worhp 1.10"
 #endif
 
 #define NLPI_NAME              "worhp"                      /**< short concise name of solver */
