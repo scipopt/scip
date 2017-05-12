@@ -10817,7 +10817,6 @@ SCIP_RETCODE SCIPchgReoptObjective(
    )
 {
    SCIP_VAR** origvars;
-   SCIP_Real objscalar;
    int norigvars;
    int i;
 
@@ -10847,26 +10846,25 @@ SCIP_RETCODE SCIPchgReoptObjective(
       SCIP_CALL( SCIPchgVarObj(scip, origvars[i], 0.0) );
    }
 
-   /* since we are not allowed to change the objective sense in SCIP_STAGE_PPRESOLVED, we multiply all coefficients
-    * with -1.0 if the objective sense needs to be changed
-    */
-   if( scip->origprob->objsense != objsense )
-      objscalar = -1.0;
-   else
-      objscalar = 1.0;
-
-   /* reset objective data */
+   /* reset objective data of original problem */
    scip->origprob->objscale = 1.0;
+   scip->origprob->objsense = objsense;
    scip->origprob->objoffset = 0.0;
    scip->origprob->objisintegral = FALSE;
 
-#ifndef NDEBUG
-   if( scip->set->stage == SCIP_STAGE_PRESOLVED )
+   if( scip->set->stage >= SCIP_STAGE_TRANSFORMED )
    {
+      /* reset objective data of transformed problem */
+      scip->transprob->objscale = 1.0;
+      scip->transprob->objsense = objsense;
+      scip->transprob->objoffset = 0.0;
+      scip->transprob->objisintegral = FALSE;
+
+#ifndef NDEBUG
       for( i = 0; i < scip->transprob->nvars; i++ )
          assert(SCIPvarGetObj(scip->transprob->vars[i]) == 0.0);
-   }
 #endif
+   }
 
    /* set new objective values */
    for( i = 0; i < nvars; ++i )
@@ -10878,7 +10876,7 @@ SCIP_RETCODE SCIPchgReoptObjective(
          return SCIP_INVALIDDATA;
       }
 
-      SCIP_CALL( SCIPaddVarObj(scip, vars[i], objscalar * coefs[i]) );
+      SCIP_CALL( SCIPaddVarObj(scip, vars[i], coefs[i]) );
    }
 
 #ifdef SCIP_MORE_DEBUG
