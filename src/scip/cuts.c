@@ -24,6 +24,7 @@
 
 #include "scip/scip.h"
 #include "scip/cuts.h"
+#include "scip/misc.h"
 #include "scip/struct_lp.h"
 #include "scip/lp.h"
 #include "scip/struct_cuts.h"
@@ -350,6 +351,25 @@ SCIP_RETCODE SCIPaggrRowCopy(
 
    return SCIP_OKAY;
 }
+
+/* sort data of the aggregation row based on indices in increasing order */
+void SCIPaggrRowSort(
+   SCIP_AGGRROW*         aggrrow             /**< aggregation row */
+   )
+{
+   assert(aggrrow != NULL);
+
+   SCIPsortIntReal(aggrrow->inds, aggrrow->vals, aggrrow->nnz);
+
+#ifndef NDEBUG
+   {
+      int i;
+      for( i = 0; i < aggrrow->nnz-1; i++ )
+         assert(aggrrow->inds[i] < aggrrow->inds[i+1]);
+   }
+#endif
+}
+
 
 /** adds given data to the aggregation row */
 SCIP_RETCODE SCIPaggrRowAddData(

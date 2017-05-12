@@ -2306,29 +2306,6 @@ SCIP_RETCODE detectImpliedBounds(
    return SCIP_OKAY;
 }
 
-/** returns true if the given constraint (a^Tx <= b) separates the root LP solution */
-static
-SCIP_Bool isSeparatingRootLPSol(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_VAR**            vars,               /**< array of problem variables */
-   SCIP_Real*            vals,               /**< array of variable coefficients */
-   SCIP_Real             side,               /**< side (lhs/rhs) of the constraint */
-   int                   nvars               /**< number of variables */
-   )
-{
-   SCIP_Real activity;
-   int i;
-
-   activity = 0.0;
-   for( i = 0; i < nvars; i++ )
-   {
-      assert(vars[i] != NULL);
-      activity += (vals[i] * SCIPvarGetRootSol(vars[i]));
-   }
-
-   return SCIPsetIsFeasGT(set, activity, side);
-}
-
 /** tighten the bound of a singleton variable in a constraint
  *
  *  if the bound is contradicting with a global bound we cannot tighten the bound directly.
@@ -2547,6 +2524,11 @@ SCIP_RETCODE createAndAddProofcons(
          SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
          cons = upgdcons;
       }
+      else if( cover )
+      {
+         SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
+         return SCIP_OKAY;
+      }
    }
 
    /* mark constraint to be a conflict */
@@ -2584,10 +2566,6 @@ SCIP_RETCODE createAndAddProofcons(
 
    /* release the constraint */
    SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
-
-   /* check whether the constraint separates the root solution */
-//   if( isSeparatingRootLPSol(set, proofset->vars, proofset->coefs, proofset->rhs, proofset->nvars) )
-//      ++conflict->ndualrayinfseparoot;
 
   UPDATESTATISTICS:
    /* update statistics */
@@ -6283,6 +6261,125 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/** gets the key of the given element */
+static
+SCIP_DECL_HASHGETKEY(hashGetKeyConflict)
+{  /*lint --e{715}*/
+   /* the key is the element itself */
+   return elem;
+}
+
+/** returns TRUE iff both keys are equal; two conflicts are equal if they have the same variables and the
+ * coefficients are either equal or negated
+ */
+static
+SCIP_DECL_HASHKEYEQ(hashKeyEqConflict)
+{
+   SCIP* scip;
+   SCIP_VAR** vars;
+   SCIP_PROOFSET* proofset1;
+   SCIP_PROOFSET* proofset2;
+   SCIP_Real conf2scale;
+   SCIP_Real* vals1;
+   SCIP_Real* vals2;
+   int* inds1;
+   int* inds2;
+   int nnz1;
+   int i;
+
+   assert(key1 != NULL);
+   assert(key2 != NULL);
+   proofset1 = (SCIP_PROOFSET*)key1;
+   proofset2 = (SCIP_PROOFSET*)key2;
+   assert(proofset1 != NULL);
+   assert(proofset2 != NULL);
+   assert(proofset1->aggrrow != NULL);
+   assert(proofset2->aggrrow != NULL);
+
+   scip = (SCIP*)userptr;
+   assert(scip != NULL);
+
+   /* checks trivial cases */
+   if( proofset1 == proofset2 )
+      return TRUE;
+
+   if( SCIPaggrRowGetNNz(proofset1->aggrrow) != SCIPaggrRowGetNNz(proofset2->aggrrow) )
+      return FALSE;
+
+   /* get data */
+   vars = SCIPgetVars(scip);
+   nnz1 = SCIPaggrRowGetNNz(proofset1->aggrrow);
+   vals1 = SCIPaggrRowGetVals(proofset1->aggrrow);
+   vals2 = SCIPaggrRowGetVals(proofset2->aggrrow);
+   inds1 = SCIPaggrRowGetInds(proofset1->aggrrow);
+   inds2 = SCIPaggrRowGetInds(proofset2->aggrrow);
+
+   /* tests if variables are equal */
+   for( i = 0; i < nnz1; ++i )
+   {
+      if( inds1[i] != inds2[i] )
+      {
+         assert(SCIPvarCompare(vars[inds1[i]], vars[inds2[i]]) == 1
+             || SCIPvarCompare(vars[inds1[i]], vars[inds2[i]]) == -1);
+         return FALSE;
+      }
+      assert(SCIPvarCompare(vars[inds1[i]], vars[inds2[i]]) == 0);
+   }
+
+   conf2scale = vals1[0] / vals2[0];
+
+   /* tests if coefficients are equal with the computed scale */
+   for( i = 1; i < nnz1; ++i )
+   {
+      SCIP_Real val1;
+      SCIP_Real val2;
+
+      val1 = vals1[i];
+      val2 = vals2[i] * conf2scale;
+
+      if( !SCIPisEQ(scip, val1, val2) )
+         return FALSE;
+   }
+
+   return TRUE;
+}
+
+/** returns the hash value of the key */
+static
+SCIP_DECL_HASHKEYVAL(hashKeyValConflict)
+{
+   SCIP_PROOFSET* proofset;
+   SCIP_Real* vals;
+   int* inds;
+   int nnz;
+   int minidx;
+   int mididx;
+   int maxidx;
+   SCIP_Real scale;
+
+   assert(key != NULL);
+   proofset = (SCIP_PROOFSET*)key;
+   assert(proofset != NULL);
+   assert(proofset->aggrrow != NULL);
+   assert(SCIPaggrRowGetNNz(proofset->aggrrow) > 0);
+
+   nnz = SCIPaggrRowGetNNz(proofset->aggrrow);
+   vals = SCIPaggrRowGetVals(proofset->aggrrow);
+   inds = SCIPaggrRowGetInds(proofset->aggrrow);
+
+   minidx = inds[0];
+   mididx = inds[nnz / 2];
+   maxidx = inds[nnz - 1];
+   assert(minidx >= 0 && minidx <= maxidx);
+   scale = 1.0/vals[0];
+
+   /* using only the variable indices as hash, since the values are compared by epsilon */
+   return SCIPhashFour(nnz,
+                       SCIPcombineTwoInt(minidx, SCIPrealHashCode(vals[0] * scale)),
+                       SCIPcombineTwoInt(mididx, SCIPrealHashCode(vals[nnz / 2] * scale)),
+                       SCIPcombineTwoInt(maxidx, SCIPrealHashCode(vals[nnz - 1] * scale)));
+}
+
 #if 0
 static
 SCIP_RETCODE proofsetApplyMIR(
@@ -6408,6 +6505,8 @@ SCIP_RETCODE tightenDualray(
    int ncontvars;
    int nintvars;
    int i;
+   SCIP_HASHTABLE* hashtable;
+   SCIP_RETCODE retcode;
 
    assert(conflict->proofset != NULL);
 
@@ -6447,6 +6546,19 @@ SCIP_RETCODE tightenDualray(
    SCIP_CALL( proofsetAddAggrrow(conflict->proofset, set, farkasrow) );
    conflict->proofset->conflicttype = SCIP_CONFTYPE_INFEASLP;
 
+   //SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, 3, hashGetKeyConflict, hashKeyEqConflict, hashKeyValConflict,
+   //      (void*)set->scip) );
+
+   /* sort and add to hashtable */
+   //SCIPaggrRowSort(conflict->proofset->aggrrow);
+   //retcode = SCIPhashtableSafeInsert(hashtable, (void*) conflict->proofset);
+
+   /* get sorted data */
+   vals = SCIPaggrRowGetVals(farkasrow);
+   inds = SCIPaggrRowGetInds(farkasrow);
+   rhs = SCIPaggrRowGetRhs(farkasrow);
+   nnz = SCIPaggrRowGetNNz(farkasrow);
+
    /* don't remove continuous variable but separate valid inequalities */
    if( set->conf_removecont == 'd' && set->conf_sepacuts )
    {
@@ -6470,13 +6582,13 @@ SCIP_RETCODE tightenDualray(
          {
             for( i = 0; i < nnz; i++ )
             {
-               if( vals[i] > 0.0 )
+               if( vals[i] < 0.0 )
                {
-                  SCIP_CALL( SCIPsolSetVal(rootsol, set, stat, tree, vars[i], SCIPvarGetUbLocal(vars[inds[i]])) );
+                  SCIP_CALL( SCIPsolSetVal(rootsol, set, stat, tree, vars[inds[i]], SCIPvarGetUbLocal(vars[inds[i]])) );
                }
                else
                {
-                  SCIP_CALL( SCIPsolSetVal(rootsol, set, stat, tree, vars[i], SCIPvarGetLbLocal(vars[inds[i]])) );
+                  SCIP_CALL( SCIPsolSetVal(rootsol, set, stat, tree, vars[inds[i]], SCIPvarGetLbLocal(vars[inds[i]])) );
                }
             }
          }
@@ -6512,8 +6624,9 @@ SCIP_RETCODE tightenDualray(
 
          success |= cutsuccess;
 
-         if( success && !islocal && !SCIPsetIsNegative(set, cutefficacy)
-            && (proofsetGetNVars(conflict->proofset) != cutnnz || !SCIPsetIsEQ(set, proofsetGetRhs(conflict->proofset), cutrhs)) )
+         if( success && !islocal && SCIPsetIsPositive(set, cutefficacy)
+            && (proofsetGetNVars(conflict->proofset) != cutnnz
+                  || !SCIPsetIsEQ(set, proofsetGetRhs(conflict->proofset), cutrhs)) )
          {
             SCIP_PROOFSET* proofset;
 
@@ -6522,7 +6635,17 @@ SCIP_RETCODE tightenDualray(
 
             SCIP_CALL( proofsetAddSparseData(proofset, set, cutcoefs, cutinds, cutnnz, cutrhs) );
 
-            SCIP_CALL( conflictInsertProofset(conflict, set, blkmem, proofset) );
+            //SCIPaggrRowSort(proofset->aggrrow);
+
+            //if( !SCIPhashtableExists(hashtable, (void*)proofset) )
+            //{
+            //   SCIP_CALL( SCIPhashtableInsert(hashtable, (void*)proofset) );
+               SCIP_CALL( conflictInsertProofset(conflict, set, blkmem, proofset) );
+            //}
+            //else
+            //{
+            //   proofsetFree(&proofset, set, blkmem);
+            //}
          }
 
          SCIPsetFreeBufferArray(set, &cutinds);
@@ -6535,6 +6658,8 @@ SCIP_RETCODE tightenDualray(
    {
       // TODO: implement cancellation
    }
+
+   //SCIPhashtableFree(&hashtable);
 
    /*
     * TODO: implement removing cont. vars and separating valid inequalities
