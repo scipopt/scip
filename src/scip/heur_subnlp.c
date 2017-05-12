@@ -299,19 +299,17 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/time") );
    SCIP_CALL( SCIPresetParam(heurdata->subscip, "limits/totalnodes") );
 
-   /* disable conflict analysis and separation 
-    * keep normal presolving, but disable probing and restarts
-    * disable LP solve
-    * set nodelimit to 0
+   /* disable restarts (not sure they could be triggered on continuous problems anyway)
+    * keep normal presolving, but disable components presolver
     * heuristics and separators were not copied into subscip, so should not need to switch off
     */
    if( !SCIPisParamFixed(heurdata->subscip, "presolving/maxrounds") )
    {
       SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "presolving/maxrounds", heurdata->maxpresolverounds) );
    }
-   if( !SCIPisParamFixed(heurdata->subscip, "propagating/probing/maxprerounds") )
+   if( !SCIPisParamFixed(heurdata->subscip, "constraints/components/maxprerounds") )
    {
-      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "propagating/probing/maxprerounds", 0) );
+      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "constraints/components/maxprerounds", 0) );
    }
    if( !SCIPisParamFixed(heurdata->subscip, "presolving/maxrestarts") )
    {
