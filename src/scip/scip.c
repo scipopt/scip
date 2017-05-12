@@ -10843,7 +10843,7 @@ SCIP_RETCODE SCIPchgReoptObjective(
     */
    for( i = 0; i < norigvars; i++ )
    {
-      SCIP_CALL( SCIPchgVarObj(scip, origvars[i], 0.0) );
+      SCIP_CALL( SCIPaddVarObj(scip, origvars[i], -SCIPvarGetObj(origvars[i])) );
    }
 
    /* reset objective data of original problem */
