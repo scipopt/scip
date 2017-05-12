@@ -152,7 +152,7 @@ Here is what you have to do to get SCIP running:
    - "IPOPT=true"      to enable IPOPT interface (needs IPOPT >= 3.11)
    - "IPOPT=false"     to disable IPOPT interface (default)
 
-   - "WORHP=true"      to enable WORHP interface (needs WORHP >= 2.0)
+   - "WORHP=true"      to enable WORHP interface (needs WORHP >= 1.10)
    - "WORHP=false"     to disable WORHP interface (default)
 
    - "EXPRINT=cppad"   to use CppAD as expressions interpreter (default)
