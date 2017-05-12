@@ -15210,13 +15210,24 @@ SCIP_RETCODE freeTransform(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_Bool reducedfree;
+
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->stat != NULL);
-   assert(scip->set->stage == SCIP_STAGE_TRANSFORMED || scip->set->stage == SCIP_STAGE_PRESOLVING);
+   assert(scip->set->stage == SCIP_STAGE_TRANSFORMED || scip->set->stage == SCIP_STAGE_PRESOLVING ||
+         (scip->set->stage == SCIP_STAGE_PRESOLVED && scip->set->reopt_enable));
 
-   /* call exit methods of plugins */
-   SCIP_CALL( SCIPsetExitPlugins(scip->set, scip->mem->probmem, scip->stat) );
+   /* if SCIPfreeReoptSolve() was have already called the exit-callbacks of the plugins.
+    * this can happen of a new objective function was installed but the solve was not started.
+    */
+   reducedfree = (scip->set->stage == SCIP_STAGE_PRESOLVED && scip->set->reopt_enable);
+
+   if( !reducedfree )
+   {
+      /* call exit methods of plugins */
+      SCIP_CALL( SCIPsetExitPlugins(scip->set, scip->mem->probmem, scip->stat) );
+   }
 
    /* copy best primal solutions to original solution candidate list */
    if( !scip->set->reopt_enable && scip->set->limit_maxorigsol > 0 && scip->set->misc_transsolsorig )
@@ -15319,18 +15330,26 @@ SCIP_RETCODE freeTransform(
       }
    }
 
-   /* clean the conflict store
-    *
-    * since the conflict store can contain transformed constraints we need to remove them. the store will be finally
-    * freed in SCIPfreeProb().
-    */
-   SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
+   if( !reducedfree )
+   {
+      /* clean the conflict store
+       *
+       * since the conflict store can contain transformed constraints we need to remove them. the store will be finally
+       * freed in SCIPfreeProb().
+       */
+      SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
+
+   }
 
    /* free transformed problem data structures */
    SCIP_CALL( SCIPprobFree(&scip->transprob, scip->messagehdlr, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
    SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->mem->probmem) );
-   SCIP_CALL( SCIPrelaxationFree(&scip->relaxation, scip->mem->probmem, scip->primal) );
+
+   if( !reducedfree )
+   {
+      SCIP_CALL( SCIPrelaxationFree(&scip->relaxation, scip->mem->probmem, scip->primal) );
+   }
    SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
 
    /* free the debug solution which might live in transformed primal data structure */
@@ -15342,7 +15361,7 @@ SCIP_RETCODE freeTransform(
    SCIP_CALL( SCIPeventfilterFree(&scip->eventfilter, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPeventqueueFree(&scip->eventqueue) );
 
-   if( scip->set->misc_resetstat )
+   if( scip->set->misc_resetstat && !reducedfree )
    {
       /* reset statistics to the point before the problem was transformed */
       SCIPstatReset(scip->stat, scip->set, scip->transprob, scip->origprob);
@@ -16933,10 +16952,13 @@ SCIP_RETCODE SCIPfreeTransform(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
-      /* free solution process data */
-      SCIP_CALL( SCIPfreeSolve(scip, FALSE) );
-      assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
-
+      /* the solve was already freed, we directly go to freeTransform() */
+      if( !scip->set->reopt_enable || scip->set->stage != SCIP_STAGE_PRESOLVED )
+      {
+         /* free solution process data */
+         SCIP_CALL( SCIPfreeSolve(scip, FALSE) );
+         assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
+      }
       /*lint -fallthrough*/
 
    case SCIP_STAGE_TRANSFORMED:
