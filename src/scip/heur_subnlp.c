@@ -970,15 +970,15 @@ SCIP_RETCODE solveSubNLP(
    assert(heur != NULL);
    assert(result != NULL);
 
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
    /* if NLP timelimit is set to 0.0, then return immediately
     * Previously, we were still running scip presolve, assuming the caller wanted to see if the instance is still feasible after presolve.
     * But now we want to set a timelimit also for the scip presolve, and it is easiest to use timelimit for this.
     */
    if( timelimit == 0.0 )
       goto CLEANUP;
-
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
 
    if( tighttolerances )
    {
