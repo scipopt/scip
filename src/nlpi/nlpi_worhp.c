@@ -1204,13 +1204,20 @@ SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveWorhp )
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
+   /* We pass the objective gradient in dense form to WORHP, so if the sparsity of that gradient changes, we do not need
+    * to reset WORHP (firstrun=TRUE).  However, if the sparsity of the Hessian matrix of the objective changes, then the
+    * sparsity pattern of the Hessian of the Lagrangian may change.  Thus, reset Worhp if the objective was and/or
+    * becomes nonlinear, but leave firstrun untouched if it was and stays linear.
+    */
+   if( nquadelems > 0 || exprtree != NULL || SCIPnlpiOracleGetConstraintDegree(problem->oracle, -1) > 1 )
+      problem->firstrun = TRUE;
+
    SCIP_CALL( SCIPnlpiOracleSetObjective(problem->oracle,
          constant, nlins, lininds, linvals,
          nquadelems, quadelems,
          exprvaridxs, exprtree) );
 
    invalidateSolution(problem);
-   problem->firstrun = TRUE;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
