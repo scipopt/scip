@@ -970,6 +970,13 @@ SCIP_RETCODE solveSubNLP(
    assert(heur != NULL);
    assert(result != NULL);
 
+   /* if NLP timelimit is set to 0.0, then return immediately
+    * Previously, we were still running scip presolve, assuming the caller wanted to see if the instance is still feasible after presolve.
+    * But now we want to set a timelimit also for the scip presolve, and it is easiest to use timelimit for this.
+    */
+   if( timelimit == 0.0 )
+      goto CLEANUP;
+
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
@@ -994,9 +1001,11 @@ SCIP_RETCODE solveSubNLP(
    SCIP_CALL( SCIPtransformProb(heurdata->subscip) );
 
    /* presolve sub-SCIP
+    *  set scip timelimit in case presolve is unexpectedly expensive
     *  set node limit to 1 so that presolve can go
     *  reset maxpresolverounds, in case user changed
     */
+   SCIP_CALL( SCIPsetRealParam(heurdata->subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetLongintParam(heurdata->subscip, "limits/nodes", 1LL) );
    if( !SCIPisParamFixed(heurdata->subscip, "presolving/maxrounds") )
    {
@@ -1187,10 +1196,6 @@ SCIP_RETCODE solveSubNLP(
       SCIPerrorMessage("unexpected status of sub-SCIP: <%d>\n", SCIPgetStatus(heurdata->subscip));
       return SCIP_ERROR;
    } /*lint !e788*/
-
-   /* if NLP timelimit is set to 0.0, then caller just wanted to see if the instance is still feasible after presolve */
-   if( timelimit == 0.0 )
-      goto CLEANUP;
 
    /* add non-combinatorial linear constraints from subscip into subNLP (shall be replaced by catching row events in NLP) */
    SCIP_CALL( addLinearConstraintsToNlp(heurdata->subscip, FALSE, TRUE) );
