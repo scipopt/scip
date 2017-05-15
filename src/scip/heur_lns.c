@@ -67,6 +67,7 @@
 #define DEFAULT_GAINMEASURE      'e'/**< measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean,
                                       *  'e'ffort based? */
 #define GAINMEASURES "bwe"
+#define DEFAULT_EPS        0.33   /**< probability for exploration in epsilon-greedy bandit algorithm */
 
 /*
  * parameters to control variable fixing
@@ -285,18 +286,6 @@ struct data_dins
 {
    int                   npoolsols;          /**< number of pool solutions where binary solution values must agree */
 };
-/** current, unnormalized reward for item i */
-#define DECL_EPSREWARD(x) SCIP_Real x ( \
-   SCIP*                 scip,             \
-   EPSGREEDY*            epsgreedy,        \
-   int                   i                 \
-   )
-
-/** callback for the number of choices */
-#define DECL_EPSNCHOICES(x) int x (        \
-   SCIP*                 scip,             \
-   EPSGREEDY*            epsgreedy         \
-   )
 
 /** structure that represents the adversarial bandit algorithm exp3 */
 struct expThree
@@ -314,10 +303,9 @@ struct expThree
 struct EpsGreedy
 {
    SCIP_Real             eps;                /**< epsilon parameter (between 0 and 1) to control epsilon greedy */
+   SCIP_Real*            weights;            /**< weights for every action */
    SCIP_RANDNUMGEN*      rng;                /**< random number generator for randomized selection of routines  */
-   DECL_EPSREWARD        ((*epsreward));     /**< reward callback for unnormalized reward of the i'th item */
-   DECL_EPSNCHOICES      ((*epsnchoices));   /**< callback for the number of choices */
-   void*                 userptr;            /**< user pointer for callback functions */
+   int                   nactions;           /**< the number of actions to select from */
 };
 
 /** primal heuristic data */
@@ -339,6 +327,7 @@ struct SCIP_HeurData
    SCIP_Real             lplimfac;           /**< limit fraction of LPs per node to interrupt sub-SCIP */
    SCIP_Real             gamma;              /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3 */
    SCIP_Real             beta;               /**< gain offset between 0 and 1 at every observation for exp3 */
+   SCIP_Real             eps;                /**< probability for exploration in epsilon-greedy bandit algorithm */
    int                   nneighborhoods;     /**< number of neighborhoods */
    int                   nactiveneighborhoods; /**< number of active neighborhoods */
    int                   ninitneighborhoods; /**< neighborhoods that were used at least one time */
@@ -718,31 +707,51 @@ SCIP_RETCODE neighborhoodExit(
    return SCIP_OKAY;
 }
 
+/** reset an epsilon greedy selector */
+static
+void epsGreedyReset(
+   EPSGREEDY*            epsgreedy           /**< epsilon greedy bandit algorithm */
+   )
+{
+   int w;
+   SCIP_Real* weights;
+
+   weights = epsgreedy->weights;
+   assert(weights != NULL);
+
+   /* reset weights to 1.0 */
+   for( w = 0; w < epsgreedy->nactions; ++w )
+      weights[w] = 1.0;
+}
+
 /** create an epsilon greedy selector with the necessary callbacks */
 static
 SCIP_RETCODE epsGreedyCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   EPSGREEDY**           epsgreedy,          /**< pointer to store the epsilon greedy selector */
-   unsigned int          initseed,           /**< initial seed for random number generation */
-   void*                 userptr,            /**< user pointer that may be used inside the callbacks, or NULL, if not needed */
-   DECL_EPSNCHOICES      ((*epsnchoices)),   /**< callback for the number of choices */
-   DECL_EPSREWARD        ((*epsreward))      /**< reward callback for this epsilon greedy selector */
+   EPSGREEDY**           epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
+   SCIP_Real             eps,                /**< probability for exploration between all actions */
+   int                   nactions,           /**< the number of possible actions */
+   unsigned int          initseed            /**< initial seed for random number generation */
    )
 {
    assert(scip != NULL);
    assert(epsgreedy != NULL);
-   assert(epsnchoices != NULL);
-   assert(epsreward != NULL);
+   assert(eps <= 1.0);
+   assert(eps >= 0.0);
+   assert(nactions > 0);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, epsgreedy) );
 
    /* create random number generator for the selector */
    SCIP_CALL( SCIPrandomCreate(&(*epsgreedy)->rng, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, (int)initseed)) );
 
-   (*epsgreedy)->epsnchoices = epsnchoices;
-   (*epsgreedy)->epsreward = epsreward;
-   (*epsgreedy)->userptr = userptr;
-   (*epsgreedy)->eps = 0.33;
+
+   (*epsgreedy)->nactions = nactions;
+   (*epsgreedy)->eps = eps;
+
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*epsgreedy)->weights, nactions) );
+
+   epsGreedyReset(*epsgreedy);
 
    return SCIP_OKAY;
 }
@@ -760,55 +769,52 @@ void epsGreedyFree(
 
    SCIPrandomFree(&(*epsgreedy)->rng);
 
+   SCIPfreeBlockMemoryArray(scip, &(*epsgreedy)->weights, (*epsgreedy)->nactions);
+
    SCIPfreeBlockMemory(scip, epsgreedy);
    *epsgreedy = NULL;
 }
 
-/** reset an epsilon greedy selector */
-static
-SCIP_RETCODE epsGreedyReset(
-   SCIP*                scip                /**< SCIP data structure */
-   )
-{
-   return SCIP_OKAY;
-}
 
 /** let the epsilon greedy selector choose its next move */
 static
-SCIP_RETCODE epsGreedySelect(
-   SCIP*                scip,               /**< SCIP data structure */
-   EPSGREEDY*           epsgreedy,          /**< epsilon greedy selector */
-   int*                 i                   /**< pointer to store the selection (will be set to -1 if no choice is available) */
+void epsGreedySelect(
+   EPSGREEDY*            epsgreedy,          /**< epsilon greedy selector */
+   int*                  i                   /**< pointer to store the selection (will be set to -1 if no choice is available) */
    )
 {
-   int nchoices;
+   int nactions;
    SCIP_Real randnr;
 
    assert(i != NULL);
-   assert(scip != NULL);
    assert(epsgreedy != NULL);
 
-   nchoices = epsgreedy->epsnchoices(scip, epsgreedy);
+   nactions = epsgreedy->nactions;
 
-   if( nchoices == 0 )
+   if( nactions == 0 )
    {
       *i = -1;
-      return SCIP_OKAY;
+      return;
    }
    /** roll the dice to check if the best element should be picked, or an element at random */
    randnr = SCIPrandomGetReal(epsgreedy->rng, 0.0, 1.0);
 
    /* todo make epsilon decrease over time */
-   if( randnr <= epsgreedy->eps )
+   if( randnr >= epsgreedy->eps )
    {
-      /** pick the element with the largest reward */
+      SCIP_Real* weights = epsgreedy->weights;
       int j;
-      SCIP_Real maxreward = epsgreedy->epsreward(scip, epsgreedy, 0);
+      SCIP_Real maxreward;
+
+      assert(weights != NULL);
+
+      /** pick the element with the largest reward */
+      maxreward = weights[0];
       *i = 0;
       /* determine reward for every element */
-      for( j = 1; j < nchoices; ++j )
+      for( j = 1; j < nactions; ++j )
       {
-         SCIP_Real reward = epsgreedy->epsreward(scip, epsgreedy, j);
+         SCIP_Real reward = weights[j];
 
          if( maxreward < reward )
          {
@@ -820,33 +826,25 @@ SCIP_RETCODE epsGreedySelect(
    else
    {
       /* play one of the other arms at random */
-      *i = SCIPrandomGetInt(epsgreedy->rng, 0, nchoices - 1);
+      *i = SCIPrandomGetInt(epsgreedy->rng, 0, nactions - 1);
    }
-
-   return SCIP_OKAY;
 }
 
+/** update epsilon-greedy weights for the actions after a new observation was made */
 static
-DECL_EPSNCHOICES(epsNChoicesLns)
+void epsGreedyUpdate(
+   EPSGREEDY*            epsgreedy,          /**< epsilon greedy selector */
+   SCIP_Real             gain,               /**< gain observed after selecting action 'i' */
+   int                   i                   /**< the selected action */
+   )
 {
-   SCIP_HEURDATA* heurdata = (SCIP_HEURDATA*)(epsgreedy->userptr);
-   return heurdata->nactiveneighborhoods;
+   assert(epsgreedy != NULL);
+   assert(i >= 0);
+   assert(i < epsgreedy->nactions);
+
+   epsgreedy->weights[i] *= 0.9;
+   epsgreedy->weights[i] += 0.1 * gain;
 }
-
-static
-DECL_EPSREWARD(epsRewardLns)
-{
-   SCIP_Real numerator;
-   int denominator;
-   SCIP_HEURDATA* heurdata = (SCIP_HEURDATA*)(epsgreedy->userptr);
-   NH* neighborhood = heurdata->neighborhoods[i];
-   assert(i < heurdata->nactiveneighborhoods);
-
-   numerator = neighborhood->stats.nrunsbestsol;
-   denominator = MAX(1, neighborhood->stats.nruns * DEFAULT_BESTSOLWEIGHT);
-   return numerator / (SCIP_Real)denominator;
-}
-
 
 /** reset an exp3 bandit algorithm */
 static
@@ -1740,7 +1738,7 @@ SCIP_RETCODE selectNeighborhood(
 
    switch (heurdata->banditalgo) {
       case 'g':
-         SCIP_CALL( epsGreedySelect(scip, heurdata->epsgreedynh, neighborhoodidx) );
+         epsGreedySelect(heurdata->epsgreedynh, neighborhoodidx);
          break;
       case 'e':
          SCIP_CALL( expThreeSelectAction(scip, heurdata->exp3, neighborhoodidx) );
@@ -1817,6 +1815,8 @@ SCIP_RETCODE updateBanditAlgorithms(
 
    switch (heurdata->banditalgo) {
       case 'g':
+         epsGreedyUpdate(heurdata->epsgreedynh, gain, neighborhoodidx);
+         break;
       case 'u':
          break;
       case 'e':
@@ -3085,7 +3085,7 @@ SCIP_DECL_HEURINIT(heurInitLns)
    }
 
    /* create epsilon greedy bandit algorithm */
-   SCIP_CALL( epsGreedyCreate(scip, &heurdata->epsgreedynh, (unsigned int)(heurdata->seed + SCIPgetNVars(scip)), (void*)heurdata, epsNChoicesLns, epsRewardLns) );
+   SCIP_CALL( epsGreedyCreate(scip, &heurdata->epsgreedynh, heurdata->eps, heurdata->nactiveneighborhoods, (unsigned int)(heurdata->seed + SCIPgetNVars(scip))) );
 
    /* create an exp3 bandit algorithm */
    if( heurdata->exp3 == NULL )
@@ -3117,8 +3117,8 @@ void printNeighborhoodStatistics(
    int j;
    HISTINDEX statusses[] = {HIDX_OPT, HIDX_INFEAS, HIDX_NODELIM, HIDX_STALLNODE, HIDX_SOLLIM, HIDX_USR, HIDX_OTHER};
 
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Neighborhoods      :%11s %11s %11s %11s %11s %11s %11s %11s %4s %4s %4s %4s %4s %4s %4s\n",
-            "Calls", "SetupTime", "SubmipTime", "SubmipNodes", "Sols", "Best", "Exp3", "TgtFixRate",
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Neighborhoods      :%11s %11s %11s %11s %11s %11s %11s %11s %11s %4s %4s %4s %4s %4s %4s %4s\n",
+            "Calls", "SetupTime", "SubmipTime", "SubmipNodes", "Sols", "Best", "Exp3", "EpsGreedy", "TgtFixRate",
             "Opt", "Inf", "Node", "Stal", "Sol", "Usr", "Othr");
 
    /* todo loop over neighborhoods and fill in statistics */
@@ -3140,6 +3140,7 @@ void printNeighborhoodStatistics(
       else
          proba = 0.0;
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %11.5f", proba);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %11.5f", heurdata->epsgreedynh->weights[i]);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, " %11.3f", neighborhood->fixingrate.targetfixingrate);
 
       /* loop over status histogram */
@@ -3327,6 +3328,10 @@ SCIP_RETCODE SCIPincludeHeurLns(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/adjustminimprove",
          "should the factor by which the minimum improvement is bound be dynamically updated?",
          &heurdata->adjustminimprove, TRUE, DEFAULT_ADJUSTMINIMPROVE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/eps",
+            "probability for exploration in epsilon-greedy bandit algorithm",
+            &heurdata->eps, TRUE, DEFAULT_EPS, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }
