@@ -721,7 +721,7 @@ void epsGreedyReset(
 
    /* reset weights to 1.0 */
    for( w = 0; w < epsgreedy->nactions; ++w )
-      weights[w] = 1.0;
+      weights[w] = 0.2;
 }
 
 /** create an epsilon greedy selector with the necessary callbacks */
@@ -1797,13 +1797,13 @@ SCIP_RETCODE updateBanditAlgorithms(
             assert(runstats->usednodes >= 0);
 
             /* just add one node to avoid division by zero */
-            effort = (SCIP_Real)runstats->usednodes + 1.0;
+            effort = runstats->usednodes / (SCIP_Real)(heurdata->minnodes + 1.0);
 
             /* assume that every fixed variable linearly reduces the subproblem complexity */
             effort = (1.0 - (runstats->totalnfixings / (SCIP_Real)SCIPgetNVars(scip))) * effort;
 
             /* gain can be larger than 1.0 if a best solution was found within 0 nodes  */
-            gain = 1.0 / effort;
+            gain = 1.0 / (effort + 1.0);
             gain = MIN(1.0, gain);
          }
          break;
