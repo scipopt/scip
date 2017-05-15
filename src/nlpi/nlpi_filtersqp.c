@@ -62,6 +62,11 @@ struct SCIP_NlpiProblem
    SCIP_Bool                   firstrun;     /**< whether the next NLP solve will be the first one (with the current problem structure) */
    SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known */
 
+   SCIP_Real*                  primalvalues; /**< primal values of variables in solution */
+   SCIP_Real*                  consdualvalues;  /**< dual values of constraints in solution */
+   SCIP_Real*                  varlbdualvalues; /**< dual values of variable lower bounds in solution */
+   SCIP_Real*                  varubdualvalues; /**< dual values of variable upper bounds in solution */
+
    fint*                       hessiannz;    /**< nonzero information about Hessian */
    real*                       x;            /**< primal variable values communicated with FilterSQP */
    real*                       lam;          /**< dual values communicated with FilterSQP */
@@ -568,15 +573,13 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
    assert(data != NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(data->blkmem, problem) );
+   BMSclearMemory(*problem);
 
    SCIP_CALL( SCIPnlpiOracleCreate(data->blkmem, &(*problem)->oracle) );
    SCIP_CALL( SCIPnlpiOracleSetInfinity((*problem)->oracle, data->infinity) );
    SCIP_CALL( SCIPnlpiOracleSetProblemName((*problem)->oracle, name) );
 
    (*problem)->firstrun = TRUE;
-   (*problem)->initguess = NULL;
-   (*problem)->x = NULL;
-   (*problem)->lam = NULL;
    (*problem)->ifail = -1;
 
    return SCIP_OKAY;  /*lint !e527*/
@@ -606,6 +609,11 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemFilterSQP)
    }
 
    BMSfreeMemoryArrayNull(&(*problem)->initguess);
+   BMSfreeMemoryArrayNull(&(*problem)->primalvalues);
+   BMSfreeMemoryArrayNull(&(*problem)->consdualvalues);
+   BMSfreeMemoryArrayNull(&(*problem)->varlbdualvalues);
+   BMSfreeMemoryArrayNull(&(*problem)->varubdualvalues);
+
    BMSfreeMemoryArrayNull(&(*problem)->x);
    BMSfreeMemoryArrayNull(&(*problem)->lam);
 
@@ -1267,13 +1275,55 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionFilterSQP )
       *primalvalues = problem->x;
 
    if( consdualvalues != NULL )
-      *consdualvalues = problem->lam + SCIPnlpiOracleGetNVars(problem->oracle);  /* TODO needs to be negated? */
+   {
+      int i;
+      int nvars;
+      int ncons;
 
-   if( varlbdualvalues != NULL )
-      *varlbdualvalues = problem->lam; /* TODO */
+      nvars = SCIPnlpiOracleGetNVars(problem->oracle);
+      ncons = SCIPnlpiOracleGetNConstraints(problem->oracle);
 
-   if( varubdualvalues != NULL )
-      *varubdualvalues = problem->lam; /* TODO */
+      if( problem->consdualvalues == NULL )
+      {
+         SCIP_ALLOC( BMSallocMemoryArray(&problem->consdualvalues, ncons) );
+      }
+
+      /* duals from FilterSQP are negated */
+      for( i = 0; i < ncons; ++i )
+         problem->consdualvalues[i] = -problem->lam[nvars + i];
+
+      *consdualvalues = problem->consdualvalues;
+   }
+
+   if( varlbdualvalues != NULL || varubdualvalues != NULL )
+   {
+      int i;
+      int nvars;
+
+      nvars = SCIPnlpiOracleGetNVars(problem->oracle);
+
+      if( problem->varlbdualvalues == NULL )
+      {
+         SCIP_ALLOC( BMSallocMemoryArray(&problem->varlbdualvalues, nvars) );
+         SCIP_ALLOC( BMSallocMemoryArray(&problem->varubdualvalues, nvars) );
+      }
+      else
+      {
+         assert(problem->varubdualvalues != NULL);
+      }
+
+      /* if dual from FilterSQP is positive, then it belongs to the lower bound, otherwise to the upper bound */
+      for( i = 0; i < nvars; ++i )
+      {
+         problem->varlbdualvalues[i] = MAX(0.0,  problem->lam[i]);
+         problem->varubdualvalues[i] = MAX(0.0, -problem->lam[i]);
+      }
+
+      if( varlbdualvalues != NULL )
+         *varlbdualvalues = problem->varlbdualvalues;
+      if( varubdualvalues != NULL )
+         *varubdualvalues = problem->varubdualvalues;
+   }
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
