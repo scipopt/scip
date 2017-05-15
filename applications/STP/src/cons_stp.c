@@ -56,8 +56,6 @@
 #define RESTRICT restrict
 #endif
 
-#define RESTRICT2
-
 /**@name Constraint handler properties
  *
  * @{

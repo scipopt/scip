@@ -64,6 +64,19 @@ SCIP_RETCODE extendSteinerTreePcMw(
    int*                  adds                /**< pointer to store number of added vertices */
 );
 
+/** greedy Extension local heuristic for (R)PC and MW */
+extern
+SCIP_RETCODE greedyExtensionPcMw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real*      cost,               /**< edge cost array*/
+   PATH*                 path,               /**< shortest data structure array */
+   int*                  stedge,             /**< initialized array to indicate whether an edge is part of the Steiner tree */
+   int*                  pred,               /**< node array for internal computations */
+   STP_Bool*             stvertex,           /**< uninitialized array to indicate whether an edge is part of the Steiner tree */
+   SCIP_Bool*            extensions          /**< pointer to store whether extensions have been made */
+);
+
 #ifdef __cplusplus
 }
 #endif

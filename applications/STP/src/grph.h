@@ -67,7 +67,7 @@ typedef struct
    int                   orgsource;          /**< root of unreduced graph                             */
    int*                  locals;             /**< Array [0..layers-1] of count of terminals           */
                                              /**< in network [i]                                      */
-   int*                  source;             /**< Array [0..layers-1] of knot number of the           */
+   int* RESTRICT         source;             /**< Array [0..layers-1] of knot number of the           */
                                              /**< root of network [i], -1 if unknown                  */
    int* RESTRICT         term;               /**< Array [0..nodes-1] of networknumber for             */
                                              /**< knot [i], -1 if [i] is never a terminal             */
@@ -231,7 +231,6 @@ extern void   graph_path_st_rmw(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real
 extern void   graph_path_st_pcmw(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, const STP_Bool*, STP_Bool*);
 extern void   graph_path_st_pcmw_extend(SCIP*, const GRAPH*, const SCIP_Real*, PATH*, STP_Bool*, SCIP_Bool*);
 extern void   graph_path_st_rpc(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
-extern SCIP_RETCODE   greedyExtensionPcMw(SCIP*, const GRAPH*, const SCIP_Real*, PATH*, int*, STP_Bool*, SCIP_Bool*);
 extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, STP_Bool*, int*, PATH*);
 extern void   get2next(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*, int*);
 extern void   get3next(SCIP*, const GRAPH*, const SCIP_Real*, const SCIP_Real*, PATH*, int*, int*, int*);

@@ -1212,19 +1212,21 @@ void graph_path_st_pcmw_extend(
 
          state[k]     = count;
          path[k].dist = 0.0;
-         path[k].edge = UNKNOWN;
+         assert(path[k].edge != UNKNOWN || k == g->source[0]);
       }
       else
       {
          state[k]     = UNKNOWN;
          path[k].dist = FARAWAY;
-         path[k].edge = UNKNOWN;
 
          if( Is_pterm(g->term[k]) && SCIPisGT(scip, g->prize[k], maxprize) && g->mark[k] )
          {
             maxprize = g->prize[k];
          }
       }
+
+      if( !connected[k] )
+         path[k].edge = UNKNOWN;
    }
 
    /* nothing to extend? */

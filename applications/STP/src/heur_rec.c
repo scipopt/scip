@@ -1390,6 +1390,154 @@ SCIP_DECL_HEUREXEC(heurExecRec)
  * primal heuristic specific interface methods
  */
 
+
+
+
+#if 1
+/** heuristic to exclude vertices or edges from a given solution (and inserting other edges) to improve objective */
+SCIP_RETCODE SCIPheurExclusion(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph structure */
+   SCIP_Real*            cost,               /**< edge costs */
+   SCIP_Real*            costrev,            /**< reversed edge costs */
+   int*                  result,             /**< edge solution array (UNKNOWN/CONNECT) */
+   int*                  dnodemap,           /**< node array for internal use*/
+   STP_Bool*             stvertex,           /**< node array for internally marking solution vertices */
+   SCIP_Bool*            success             /**< solution improved? */
+   )
+{
+   SCIP_HEURDATA* tmheurdata;
+   GRAPH* newgraph;
+   int    j;
+   int    nedges;
+   int    nnodes;
+   int    nsolterms;
+   int    nsoledges;
+   int    nsolnodes;
+   int    best_start;
+
+   SCIP_Bool pcmw;
+
+   assert(scip != NULL);
+   assert(cost != NULL);
+   assert(costrev != NULL);
+   assert(graph != NULL);
+   assert(result != NULL);
+   assert(stvertex != NULL);
+   assert(success != NULL);
+   assert(dnodemap != NULL);
+   assert(graph->stp_type != STP_DHCSTP);
+
+   pcmw = (graph->stp_type == STP_PCSPG || graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP || graph->stp_type == STP_RPCSPG);
+   nedges = graph->edges;
+   nnodes = graph->knots;
+   *success = TRUE;
+
+   /*** 1. step: for solution S and original graph (V,E) initialize new graph (V[S], (V[S] X V[S]) \cup E) ***/
+
+   BMSclearMemoryArray(stvertex, nnodes);
+
+   nsoledges = 0;
+   stvertex[graph->source[0]] = TRUE;
+   for( int e = 0; e < nedges; e++ )
+   {
+      if( result[e] == CONNECT )
+      {
+         stvertex[graph->head[e]] = TRUE;
+         nsoledges++;
+      }
+   }
+
+   nsolnodes = nsoledges + 1;
+
+   if( pcmw )
+      SCIP_CALL( graph_init(scip, &newgraph, nsolnodes + graph->terms, 2 * nsoledges + 4 * graph->terms, 1, 0) );
+   else
+      SCIP_CALL( graph_init(scip, &newgraph, nsolnodes, 2 * nsoledges, 1, 0) );
+
+   if( graph->stp_type == STP_RSMT || graph->stp_type == STP_OARSMT || graph->stp_type == STP_GSTP )
+      newgraph->stp_type = STP_SPG;
+   else
+      newgraph->stp_type = graph->stp_type;
+
+   if( pcmw )
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(newgraph->prize), nsolnodes) );
+   }
+
+   j = 0;
+   for( int i = 0; i < nnodes; i++ )
+   {
+      if( stvertex[i] )
+      {
+         if( pcmw )
+         {
+            if( (!Is_term(graph->term[i])) )
+               newgraph->prize[j] = graph->prize[i];
+            else
+               newgraph->prize[j] = 0.0;
+         }
+
+         graph_knot_add(newgraph, graph->term[i]);
+         dnodemap[i] = j++;
+      }
+   }
+
+   if( pcmw )
+      newgraph->norgmodelknots = newgraph->knots - newgraph->terms;
+
+   /* set root */
+   newgraph->source[0] = dnodemap[graph->source[0]];
+   if( newgraph->stp_type == STP_RPCSPG )
+      newgraph->prize[newgraph->source[0]] = FARAWAY;
+
+   assert(newgraph->source[0] >= 0);
+
+
+   /* add edges */
+   for( int i = 0; i < nedges; i += 2 )
+   {
+      if( stvertex[graph->tail[i]] && stvertex[graph->head[i]] )
+      {
+         graph_edge_add(scip, newgraph, dnodemap[graph->tail[i]], dnodemap[graph->head[i]], graph->cost[i], graph->cost[i + 1]);
+      }
+   }
+
+   if( pcmw )
+   {
+      for( int e = graph->outbeg[graph->source[0]]; e != EAT_LAST; e = graph->oeat[e] )
+      {
+
+      }
+   }
+
+   /*** step 2: presolve ***/
+
+
+   /*** step 3: compute solution on new graph ***/
+
+   /* get TM heuristic data */
+   assert(SCIPfindHeur(scip, "TM") != NULL);
+   tmheurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
+
+   /* compute Steiner tree to obtain upper bound */
+   best_start = graph->source[0];
+   SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, graph, NULL, &best_start, result, 50, graph->source[0], cost, costrev, &j, NULL, 0.0, &success) );
+
+   /*** step 4: retransform solution to original graph ***/
+
+
+
+   return SCIP_OKAY;
+}
+
+#endif
+
+
+
+
+
+
 /** creates the rec primal heuristic and includes it in SCIP */
 SCIP_RETCODE SCIPincludeHeurRec(
    SCIP*                 scip                /**< SCIP data structure */

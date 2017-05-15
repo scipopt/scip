@@ -56,7 +56,8 @@
 #define DEFAULT_MINNBESTSOLS  2
 
 #define GREEDY_MAXRESTARTS  3  /**< Max number of restarts for greedy PC/MW heuristic if improving solution has been found. */
-#define GREEDY_EXTENSIONS 15 /**< Number of extensions for greedy PC/MW heuristic. */
+#define GREEDY_EXTENSIONS_MW 50   /**< Number of extensions for greedy MW heuristic. MUST BE HIGHER THAN GREEDY_EXTENSIONS */
+#define GREEDY_EXTENSIONS    5  /**< Number of extensions for greedy PC heuristic. */
 
 
 /*
@@ -1805,27 +1806,29 @@ SCIP_RETCODE extendSteinerTreePcMw(
 }
 
 
-/** Greedy Extension local heuristic for (R)PC and MW todo: currently only works for MW */
+/** Greedy Extension local heuristic for (R)PC and MW */
 SCIP_RETCODE greedyExtensionPcMw(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const SCIP_Real*      cost,               /**< edge cost array*/
    PATH*                 path,               /**< shortest data structure array */
    int*                  stedge,             /**< initialized array to indicate whether an edge is part of the Steiner tree */
+   int*                  pred,               /**< node array for internal computations */
    STP_Bool*             stvertex,           /**< uninitialized array to indicate whether an edge is part of the Steiner tree */
    SCIP_Bool*            extensions          /**< pointer to store whether extensions have been made */
    )
 {
-   GNODE candidates[GREEDY_EXTENSIONS];
-   int candidatesup[GREEDY_EXTENSIONS];
+   GNODE candidates[GREEDY_EXTENSIONS_MW];
+   int candidatesup[GREEDY_EXTENSIONS_MW];
 
    SCIP_PQUEUE* pqueue;
    SCIP_Real bestsolval;
-   int* pred;
    int i;
+   int root;
    int nedges;
    int nnodes;
    int nextensions;
+   int greedyextensions;
    STP_Bool* stvertextmp;
 
    assert(scip != NULL);
@@ -1833,23 +1836,28 @@ SCIP_RETCODE greedyExtensionPcMw(
    assert(graph != NULL);
    assert(stedge != NULL);
    assert(cost != NULL);
+   assert(pred != NULL);
    assert(stvertex != NULL);
 
+   root = graph->source[0];
    nnodes = graph->knots;
    nedges = graph->edges;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &pred, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &stvertextmp, nnodes) );
 
    /* initialize solution vertex array with FALSE */
    BMSclearMemoryArray(stvertex, nnodes);
 
    stvertex[graph->source[0]] = TRUE;
+   path[graph->source[0]].edge = UNKNOWN;
 
    for( int e = 0; e < nedges; e++ )
       if( stedge[e] == CONNECT )
-         stvertex[graph->head[e]] = TRUE;
-
+      {
+         i = graph->head[e];
+         path[i].edge = e;
+         stvertex[i] = TRUE;
+      }
 
 
    SCIP_Real t = 0.0;
@@ -1859,26 +1867,53 @@ SCIP_RETCODE greedyExtensionPcMw(
 
 printf("init real cost %f \n\n", t);
 
-
    graph_path_st_pcmw_extend(scip, graph, cost, path, stvertex, extensions);
 
-   /*** compute solution value and save GREEDY_EXTENSIONS many best unconnected nodes  ***/
 
-   SCIP_CALL( SCIPpqueueCreate(&pqueue, GREEDY_EXTENSIONS, 2.0, GNODECmpByDist) );
+   if( graph->stp_type == STP_MWCSP )
+      greedyextensions = GREEDY_EXTENSIONS_MW;
+   else
+      greedyextensions = GREEDY_EXTENSIONS;
+
+   /*** compute solution value and save greedyextensions many best unconnected nodes  ***/
+
+   SCIP_CALL( SCIPpqueueCreate(&pqueue, greedyextensions, 2.0, GNODECmpByDist) );
 
    bestsolval = 0.0;
    nextensions = 0;
    for( i = 0; i < nnodes; i++ )
    {
+      if( graph->grad[i] == 0 )
+         continue;
+
       pred[i] = path[i].edge;
-      if( stvertex[i] )
+
+      if( Is_term(graph->term[i]) )
       {
-        if( !Is_term(graph->term[i]) )
-           bestsolval += graph->prize[i];
+         if( i != root )
+         {
+            int e;
+            SCIP_Bool connect = FALSE;
+            SCIP_Real ecost = -1.0;
+            for( e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
+            {
+               if( root == graph->tail[e] )
+                  ecost = graph->cost[e];
+               else if( stvertex[graph->tail[e]] )
+                  connect = TRUE;
+            }
+
+            if( !connect )
+               bestsolval += ecost;
+         }
       }
-      else if( Is_pterm(graph->term[i]) && pred[i] != UNKNOWN )
+      else if( stvertex[i] )
       {
-         if( nextensions < GREEDY_EXTENSIONS )
+         bestsolval += graph->cost[pred[i]];
+      }
+      else if( pred[i] != UNKNOWN && Is_pterm(graph->term[i]) )
+      {
+         if( nextensions < greedyextensions )
          {
             candidates[nextensions].dist = graph->prize[i] - path[i].dist;
             candidates[nextensions].number = i;
@@ -1901,9 +1936,9 @@ printf("init real cost %f \n\n", t);
    }
 
    printf("n possible extensions %d \n", nextensions);
-   printf("solval %f \n", bestsolval);
+   printf("bestsolval %f \n \n", bestsolval);
 
-   for( int restartcount = 0; restartcount < GREEDY_MAXRESTARTS; restartcount++ )
+   for( int restartcount = 0; restartcount < GREEDY_MAXRESTARTS;  restartcount++ )
    {
       int l = 0;
       SCIP_Bool extensionstmp = FALSE;
@@ -1936,12 +1971,6 @@ printf("init real cost %f \n\n", t);
             while( !stvertextmp[k] )
             {
                stvertextmp[k] = TRUE;
-               // todo
-               if( pred[k] == UNKNOWN)
-               {
-                  printf("unknwon %d %d\n", k, graph->term[k]);
-                  return SCIP_ERROR;
-               }
                assert(pred[k] != UNKNOWN);
                k = graph->tail[pred[k]];
             }
@@ -1949,15 +1978,41 @@ printf("init real cost %f \n\n", t);
             graph_path_st_pcmw_extend(scip, graph, cost, path, stvertextmp, &extensionstmp);
 
             for( int j = 0; j < nnodes; j++ )
-               if( stvertextmp[j] && !Is_term(graph->term[j]) )
-                  newsolval += graph->prize[j];
+            {
+               if( graph->grad[j] == 0 )
+                  continue;
+
+               if( Is_term(graph->term[j]) )
+               {
+                  if( j != root )
+                  {
+                     int e;
+                     SCIP_Bool connect = FALSE;
+                     SCIP_Real ecost = -1.0;
+                     for( e = graph->inpbeg[j]; e != EAT_LAST; e = graph->ieat[e] )
+                     {
+                        if( root == graph->tail[e] )
+                           ecost = graph->cost[e];
+                        else if( stvertextmp[graph->tail[e]] )
+                           connect = TRUE;
+                     }
+
+                     if( !connect )
+                        newsolval += ecost;
+                  }
+               }
+               else if( stvertextmp[j] )
+               {
+                  newsolval += graph->cost[path[j].edge];
+               }
+            }
 
             printf("newsolval %f \n", newsolval);
 
             /* new solution value better than old one? */
-            if( SCIPisGT(scip, newsolval, bestsolval) )
+            if( SCIPisLT(scip, newsolval, bestsolval) )
             {
-               assert(*extensionstmp);
+               assert(extensionstmp);
                *extensions = TRUE;
 
                bestsolval = newsolval;
@@ -1966,7 +2021,7 @@ printf("init real cost %f \n\n", t);
                //todo
                printf("got better \n\n");
 
-               /* save GREEDY_EXTENSIONS many best unconnected nodes  */
+               /* save greedyextensions many best unconnected nodes  */
                nextensions = 0;
 
                for( int j = 0; j < nnodes; j++ )
@@ -1974,7 +2029,7 @@ printf("init real cost %f \n\n", t);
                   pred[j] = path[j].edge;
                   if( !stvertex[j] && Is_pterm(graph->term[j]) && pred[j] != UNKNOWN )
                   {
-                     if( nextensions < GREEDY_EXTENSIONS )
+                     if( nextensions < greedyextensions )
                      {
                         candidates[nextensions].dist = graph->prize[j] - path[j].dist;
                         candidates[nextensions].number = j;
@@ -2017,7 +2072,6 @@ printf("init real cost %f \n\n", t);
 
    SCIPpqueueFree(&pqueue);
    SCIPfreeBufferArray(scip, &stvertextmp);
-   SCIPfreeBufferArray(scip, &pred);
 
 
 // todo
