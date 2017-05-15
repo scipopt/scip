@@ -82,6 +82,7 @@ struct SCIP_NlpiProblem
    real                        opttol;       /**< user-given optimality tolerance */
    real                        fmin;         /**< lower bound on objective value */
    fint                        maxiter;      /**< iteration limit */
+   fint                        iprint;       /**< print verbosity level */
 };
 
 
@@ -798,6 +799,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
    (*problem)->opttol = DEFAULT_FEASOPTTOL;
    (*problem)->fmin = DEFAULT_LOBJLIM;
    (*problem)->maxiter = INT_MAX;
+   (*problem)->iprint = 0;
 
    invalidateSolution(*problem);
 
@@ -1284,7 +1286,6 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    fint mlp;
    fint mxwk;
    fint mxiwk;
-   fint iprint;
    fint nout;
    fint ifail;
    real rho;
@@ -1324,8 +1325,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    /* Bonmin:           mxiwk = 13*n + 4*m + mlp + lh1 + kmax + 113 + mxiwk0, with mxiwk0 = 500000 (parameter) */
    mxiwk = 13*n + 4*m + mlp + 100 + kmax + 113;   /* TODO add lh1? */
 
-   iprint = 1;  /* print level */
-   nout = 6;   /* output to screen (for now?) */
+   nout = 6;   /* output to screen (TODO for now?) */
    ifail = 0;  /* set to -1 for warmstart */
    rho = 10.0; /* initial trust-region radius */
 
@@ -1375,7 +1375,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    F77_FUNC(filtersqp,FILTERSQP)(
       &n, &m, &kmax, &maxa,
       &maxf, &mlp, &mxwk, &mxiwk,
-      &iprint, &nout, &ifail, &rho,
+      &problem->iprint, &nout, &ifail, &rho,
       x, c, &f, &problem->fmin, bl,
       bu, s, a, la, ws,
       lws, lam, cstype, user,
@@ -1591,8 +1591,7 @@ SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParFilterSQP )
 
    case SCIP_NLPPAR_VERBLEVEL:
    {
-      /* TODO */
-      *ival = 1;
+      *ival = problem->iprint;
       break;
    }
 
@@ -1693,7 +1692,7 @@ SCIP_DECL_NLPISETINTPAR( nlpiSetIntParFilterSQP )
    {
       if( ival >= 0 )
       {
-         /* TODO */
+         problem->iprint = ival;
       }
       else
       {
