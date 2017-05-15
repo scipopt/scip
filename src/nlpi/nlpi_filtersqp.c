@@ -20,7 +20,6 @@
  *
  * @todo warm starts
  * @todo scaling
- * @todo reset problem->solstat/termstat when problem changes, problem->firstrun ?
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -62,7 +61,6 @@ struct SCIP_NlpiProblem
    int                         varssize;     /**< length of variables-related arrays, if allocated */
    int                         conssize;     /**< length of constraints-related arrays, if allocated */
 
-   SCIP_Bool                   firstrun;     /**< whether the next NLP solve will be the first one (with the current problem structure) */
    SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known */
 
    SCIP_Real*                  primalvalues; /**< primal values of variables in solution */
@@ -477,6 +475,19 @@ SCIP_RETCODE setupHessian(
    return SCIP_OKAY;
 }
 
+/** sets the solstat and termstat to unknown and other, resp. */
+static
+void invalidateSolution(
+   SCIP_NLPIPROBLEM*     problem             /**< data structure of problem */
+   )
+{
+   assert(problem != NULL);
+
+   problem->solstat  = SCIP_NLPSOLSTAT_UNKNOWN;
+   problem->termstat = SCIP_NLPTERMSTAT_OTHER;
+}
+
+
 /** processes results from FilterSQP call */
 static
 SCIP_RETCODE processSolveOutcome(
@@ -710,9 +721,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
    SCIP_CALL( SCIPnlpiOracleSetInfinity((*problem)->oracle, data->infinity) );
    SCIP_CALL( SCIPnlpiOracleSetProblemName((*problem)->oracle, name) );
 
-   (*problem)->firstrun = TRUE;
-   (*problem)->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
-   (*problem)->termstat = SCIP_NLPTERMSTAT_OTHER;
+   invalidateSolution(*problem);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -789,8 +798,8 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
 
    SCIP_CALL( SCIPnlpiOracleAddVars(problem->oracle, nvars, lbs, ubs, varnames) );
 
-   problem->firstrun = TRUE;
    BMSfreeMemoryArrayNull(&problem->initguess);
+   invalidateSolution(problem);
 
    /* increase variables-related arrays in problem, if necessary */
    if( problem->varssize < SCIPnlpiOracleGetNVars(problem->oracle) )
@@ -868,7 +877,7 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsFilterSQP )
          nquadelems, quadelems,
          exprvaridxs, exprtrees, names) );
 
-   problem->firstrun = TRUE;
+   invalidateSolution(problem);
 
    /* increase constraints-related arrays in problem, if necessary */
    if( SCIPnlpiOracleGetNConstraints(problem->oracle) > problem->conssize )
@@ -923,7 +932,7 @@ SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveFilterSQP )
          nquadelems, quadelems,
          exprvaridxs, exprtree) );
 
-   problem->firstrun = TRUE;
+   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -947,6 +956,8 @@ SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsFilterSQP )
 
    SCIP_CALL( SCIPnlpiOracleChgVarBounds(problem->oracle, nvars, indices, lbs, ubs) );
 
+   invalidateSolution(problem);
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -968,6 +979,8 @@ SCIP_DECL_NLPICHGCONSSIDES( nlpiChgConsSidesFilterSQP )
    assert(problem->oracle != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgConsSides(problem->oracle, nconss, indices, lhss, rhss) );
+
+   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -991,8 +1004,8 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetFilterSQP )
 
    SCIP_CALL( SCIPnlpiOracleDelVarSet(problem->oracle, dstats) );
 
-   problem->firstrun = TRUE;
    BMSfreeMemoryArrayNull(&problem->initguess); /* @TODO keep initguess for remaining variables */
+   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1016,7 +1029,7 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetFilterSQP )
 
    SCIP_CALL( SCIPnlpiOracleDelConsSet(problem->oracle, dstats) );
 
-   problem->firstrun = TRUE;
+   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1039,6 +1052,8 @@ SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsFilterSQP )
    assert(problem->oracle != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgLinearCoefs(problem->oracle, idx, nvals, varidxs, vals) );
+
+   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1063,6 +1078,8 @@ SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsFilterSQP )
 
    SCIP_CALL( SCIPnlpiOracleChgQuadCoefs(problem->oracle, idx, nquadelems, quadelems) );
 
+   invalidateSolution(problem);
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -1083,6 +1100,8 @@ SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeFilterSQP )
    assert(problem->oracle != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgExprtree(problem->oracle, idxcons, exprvaridxs, exprtree) );
+
+   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1107,6 +1126,8 @@ SCIP_DECL_NLPICHGNONLINCOEF( nlpiChgNonlinCoefFilterSQP )
 
    SCIP_CALL( SCIPnlpiOracleChgExprParam(problem->oracle, idxcons, idxparam, value) );
 
+   invalidateSolution(problem);
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -1125,6 +1146,8 @@ SCIP_DECL_NLPICHGOBJCONSTANT( nlpiChgObjConstantFilterSQP )
    assert(problem->oracle != NULL);
 
    SCIP_CALL( SCIPnlpiOracleChgObjConstant(problem->oracle, objconstant) );
+
+   invalidateSolution(problem);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
