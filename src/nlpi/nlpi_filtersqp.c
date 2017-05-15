@@ -77,6 +77,7 @@ struct SCIP_NlpiProblem
    fint                        istat[14];    /**< integer solution statistics from last FilterSQP call */
    real                        rstat[7];     /**< real solution statistics from last FilterSQP call */
    real                        fmin;         /**< lower bound on objective value */
+   fint                        maxiter;      /**< iteration limit */
 };
 
 
@@ -728,6 +729,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
    SCIP_CALL( SCIPnlpiOracleSetProblemName((*problem)->oracle, name) );
 
    (*problem)->fmin = DEFAULT_LOBJLIM;
+   (*problem)->maxiter = INT_MAX;
 
    invalidateSolution(*problem);
 
@@ -1232,7 +1234,6 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    char* cstype;
    real* user;
    fint* iuser;
-   fint maxiter;
    ftnlen cstype_len = 1;
    int i;
 
@@ -1262,7 +1263,6 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 
    user = (real*)nlpi;
    iuser = (fint*)problem;
-   maxiter = 1000;  /* iteration limit */
    memset(problem->istat, 0, sizeof(problem->istat));
    memset(problem->rstat, 0, sizeof(problem->rstat));
 
@@ -1338,7 +1338,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       x, c, &f, &problem->fmin, bl,
       bu, s, a, la, ws,
       lws, lam, cstype, user,
-      iuser, &maxiter, problem->istat,
+      iuser, &problem->maxiter, problem->istat,
       problem->rstat, cstype_len);
 
    SCIP_CALL( processSolveOutcome(problem, ifail, x, lam) );
@@ -1581,8 +1581,7 @@ SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParFilterSQP )
 
    case SCIP_NLPPAR_ITLIM:
    {
-      /* TODO */
-      *ival = 1000;
+      *ival = problem->maxiter;
       break;
    }
 
@@ -1692,7 +1691,7 @@ SCIP_DECL_NLPISETINTPAR( nlpiSetIntParFilterSQP )
    {
       if( ival >= 0 )
       {
-         /* TODO */
+         problem->maxiter = ival;
       }
       else
       {
