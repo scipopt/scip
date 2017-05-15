@@ -1336,17 +1336,38 @@ static
 SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionFilterSQP )
 {
    assert(problem != NULL);
-   assert(problem->ifail >= 0);
-   assert(problem->x != NULL);
+   assert(problem->ifail >= 0); /* FilterSQP should have been running */
+
+   /* TODO fill in the primal and dual values arrays once after solve, so repeated getsolution would be quick? */
 
    if( primalvalues != NULL )
-      *primalvalues = problem->x;
+   {
+      int i;
+      int nvars;
+
+      assert(problem->x != NULL);
+
+      nvars = SCIPnlpiOracleGetNVars(problem->oracle);
+
+      if( problem->primalvalues == NULL )
+      {
+         assert(problem->varssize >= nvars); /* ensured in nlpiAddVariables */
+         SCIP_ALLOC( BMSallocMemoryArray(&problem->primalvalues, problem->varssize) );
+      }
+
+      for( i = 0; i < nvars; ++i )
+         problem->primalvalues[i] = problem->x[i];
+
+      *primalvalues = problem->primalvalues;
+   }
 
    if( consdualvalues != NULL )
    {
       int i;
       int nvars;
       int ncons;
+
+      assert(problem->lam != NULL);
 
       nvars = SCIPnlpiOracleGetNVars(problem->oracle);
       ncons = SCIPnlpiOracleGetNConstraints(problem->oracle);
@@ -1370,6 +1391,8 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionFilterSQP )
       int nvars;
 
       nvars = SCIPnlpiOracleGetNVars(problem->oracle);
+
+      assert(problem->lam != NULL);
 
       if( problem->varlbdualvalues == NULL )
       {
