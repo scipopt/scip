@@ -39,6 +39,7 @@
 #define RANDSEED               26051979      /**< initial random seed */
 #define MAXPERTURB             0.01          /**< maximal perturbation of bounds in starting point heuristic */
 #define DEFAULT_LOBJLIM        (real)(-1e100) /**< default lower objective limit (should mean "unlimited") */
+#define DEFAULT_FEASOPTTOL     1e-6          /**< default feasibility and optimality tolerance */
 
 /*
  * Data structures
@@ -76,6 +77,8 @@ struct SCIP_NlpiProblem
    fint*                       hessiannz;    /**< nonzero information about Hessian (only non-NULL during solve) */
    fint                        istat[14];    /**< integer solution statistics from last FilterSQP call */
    real                        rstat[7];     /**< real solution statistics from last FilterSQP call */
+   real                        feastol;      /**< user-given feasibility tolerance */
+   real                        opttol;       /**< user-given optimality tolerance */
    real                        fmin;         /**< lower bound on objective value */
    fint                        maxiter;      /**< iteration limit */
 };
@@ -728,6 +731,8 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
    SCIP_CALL( SCIPnlpiOracleSetInfinity((*problem)->oracle, data->infinity) );
    SCIP_CALL( SCIPnlpiOracleSetProblemName((*problem)->oracle, name) );
 
+   (*problem)->feastol = DEFAULT_FEASOPTTOL;
+   (*problem)->opttol = DEFAULT_FEASOPTTOL;
    (*problem)->fmin = DEFAULT_LOBJLIM;
    (*problem)->maxiter = INT_MAX;
 
@@ -1325,7 +1330,8 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    /* TODO from here on we are not thread-safe: maybe add some mutex here if PARASCIP=true? */
 
    /* initialize global variables from filtersqp */
-   F77_FUNC_(nlp_eps_inf,NLP_EPS_INF).eps = 1e-8;
+   /* FilterSQP eps is tolerance for both feasibility and optimality, and also for trust-region radius, etc. */
+   F77_FUNC_(nlp_eps_inf,NLP_EPS_INF).eps = MIN(problem->feastol, problem->opttol);
    F77_FUNC_(nlp_eps_inf,NLP_EPS_INF).infty = SCIPnlpiOracleGetInfinity(problem->oracle);
    F77_FUNC(ubdc,UBDC).ubd = 100.0;
    F77_FUNC(ubdc,UBDC).tt = 1.25;
@@ -1456,7 +1462,6 @@ static
 SCIP_DECL_NLPIGETSTATISTICS( nlpiGetStatisticsFilterSQP )
 {
    assert(problem != NULL);
-   /* TODO assert that FilterSQP must have been called to report statistics */
 
    SCIPnlpStatisticsSetNIterations(statistics, problem->istat[1]);
    SCIPnlpStatisticsSetTotalTime(statistics, 1.0); /* TODO */
@@ -1771,15 +1776,13 @@ SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParFilterSQP )
 
    case SCIP_NLPPAR_FEASTOL:
    {
-      /* TODO */
-      *dval = 1e-6;
+      *dval = problem->feastol;
       break;
    }
 
    case SCIP_NLPPAR_RELOBJTOL:
    {
-      /* TODO */
-      *dval = 1e-6;
+      *dval = problem->opttol;
       break;
    }
 
@@ -1871,7 +1874,7 @@ SCIP_DECL_NLPISETREALPAR( nlpiSetRealParFilterSQP )
    {
       if( dval >= 0 )
       {
-         /* TODO */
+         problem->feastol = dval;
       }
       else
       {
@@ -1885,7 +1888,7 @@ SCIP_DECL_NLPISETREALPAR( nlpiSetRealParFilterSQP )
    {
       if( dval >= 0 )
       {
-         /* TODO */
+         problem->opttol = dval;
       }
       else
       {
