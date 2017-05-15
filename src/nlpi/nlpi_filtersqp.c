@@ -20,7 +20,7 @@
  *
  * @todo warm starts
  * @todo scaling
- * @todo reset problem->ifail when problem changes, problem->firstrun ?
+ * @todo reset problem->solstat/termstat when problem changes, problem->firstrun ?
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -70,10 +70,12 @@ struct SCIP_NlpiProblem
    SCIP_Real*                  varlbdualvalues; /**< dual values of variable lower bounds in solution */
    SCIP_Real*                  varubdualvalues; /**< dual values of variable upper bounds in solution */
 
+   SCIP_NLPSOLSTAT             solstat;      /**< solution status from last NLP solve */
+   SCIP_NLPTERMSTAT            termstat;     /**< termination status from last NLP solve */
+
    fint*                       hessiannz;    /**< nonzero information about Hessian (only non-NULL during solve) */
    real*                       x;            /**< primal variable values communicated with FilterSQP */
    real*                       lam;          /**< dual values communicated with FilterSQP */
-   fint                        ifail;        /**< return status from last FilterSQP call, or -1 if not called */
    fint                        istat[14];    /**< integer solution statistics from last FilterSQP call */
    real                        rstat[7];     /**< real solution statistics from last FilterSQP call */
 };
@@ -477,6 +479,119 @@ SCIP_RETCODE setupHessian(
    return SCIP_OKAY;
 }
 
+/** processes results from FilterSQP call */
+static
+SCIP_RETCODE processSolveOutcome(
+   SCIP_NLPIPROBLEM*     problem,            /**< NLPI problem */
+   fint                  ifail               /**< fail flag from FilterSQP call */
+)
+{
+   int i;
+   int nvars;
+   int ncons;
+
+   assert(problem != NULL);
+
+   nvars = SCIPnlpiOracleGetNVars(problem->oracle);
+   ncons = SCIPnlpiOracleGetNConstraints(problem->oracle);
+
+   if( ifail <= 7 )
+   {
+      /* FilterSQP terminated somewhat normally -> store away solution */
+      assert(problem->x != NULL);
+      assert(problem->lam != NULL);
+
+      /* make sure we have memory for solution */
+      if( problem->primalvalues == NULL )
+      {
+         assert(problem->varssize >= nvars); /* ensured in nlpiAddVariables */
+         assert(problem->conssize >= ncons); /* ensured in nlpiAddConstraints */
+         assert(problem->consdualvalues == NULL);  /* if primalvalues == NULL, then also consdualvalues should be NULL */
+         assert(problem->varlbdualvalues == NULL); /* if primalvalues == NULL, then also varlbdualvalues should be NULL */
+         assert(problem->varubdualvalues == NULL); /* if primalvalues == NULL, then also varubdualvalues should be NULL */
+
+         SCIP_ALLOC( BMSallocMemoryArray(&problem->primalvalues, problem->varssize) );
+         SCIP_ALLOC( BMSallocMemoryArray(&problem->consdualvalues, problem->conssize) );
+         SCIP_ALLOC( BMSallocMemoryArray(&problem->varlbdualvalues, problem->varssize) );
+         SCIP_ALLOC( BMSallocMemoryArray(&problem->varubdualvalues, problem->varssize) );
+      }
+      else
+      {
+         assert(problem->consdualvalues != NULL);
+         assert(problem->varlbdualvalues != NULL);
+         assert(problem->varubdualvalues != NULL);
+      }
+
+      for( i = 0; i < nvars; ++i )
+      {
+         problem->primalvalues[i] = problem->x[i];
+
+         /* if dual from FilterSQP is positive, then it belongs to the lower bound, otherwise to the upper bound */
+         problem->varlbdualvalues[i] = MAX(0.0,  problem->lam[i]);
+         problem->varubdualvalues[i] = MAX(0.0, -problem->lam[i]);
+      }
+
+      /* duals from FilterSQP are negated */
+      for( i = 0; i < ncons; ++i )
+         problem->consdualvalues[i] = -problem->lam[nvars + i];
+   }
+
+   switch( ifail )
+   {
+      case 0: /* successful run, solution found */
+         problem->solstat = SCIP_NLPSOLSTAT_LOCOPT;
+         problem->termstat = SCIP_NLPTERMSTAT_OKAY;
+         break;
+      case 1: /* unbounded, feasible point with f(x) <= fmin */
+         problem->solstat = SCIP_NLPSOLSTAT_UNBOUNDED;
+         problem->termstat = SCIP_NLPTERMSTAT_LOBJLIM;  /* TODO should be OKAY if no limit was set */
+         break;
+      case 2: /* linear constraints are inconsistent */
+         problem->solstat = SCIP_NLPSOLSTAT_GLOBINFEASIBLE;
+         problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
+         break;
+      case 3: /* (locally) nonlinear infeasible, minimal-infeasible solution found */
+         problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+         problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
+        break;
+      case 4: /* terminate at point with h(x) <= eps (constraint violation below epsilon) but QP infeasible */
+         problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
+         problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
+         break;
+      case 5: /* termination with rho < eps (trust region radius below epsilon) */
+         problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+         problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
+         break;
+      case 6: /* termination with iter > max_iter */
+         problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;  /* TODO check if feasible */
+         problem->termstat =  SCIP_NLPTERMSTAT_ITLIM;
+         break;
+      case 7: /* crash in user routine (IEEE error) could not be resolved */
+         problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;  /* TODO check if feasible */
+         problem->termstat =  SCIP_NLPTERMSTAT_EVALERR;
+         break;
+      case 8: /* unexpect ifail from QP solver */
+         problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;  /* TODO check if feasible */
+         problem->termstat =  SCIP_NLPTERMSTAT_OTHER;
+         break;
+      case 9: /* not enough REAL workspace */
+         problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
+         problem->termstat =  SCIP_NLPTERMSTAT_MEMERR;
+         break;
+      case 10: /* not enough INTEGER workspace */
+         problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
+         problem->termstat =  SCIP_NLPTERMSTAT_MEMERR;
+         break;
+      default:
+         problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
+         problem->termstat =  SCIP_NLPTERMSTAT_OTHER;
+         break;
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** calculate memory size for dynamically allocated arrays (copied from scip/set.c) */
 static
 int calcGrowSize(
@@ -596,7 +711,8 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
    SCIP_CALL( SCIPnlpiOracleSetProblemName((*problem)->oracle, name) );
 
    (*problem)->firstrun = TRUE;
-   (*problem)->ifail = -1;
+   (*problem)->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
+   (*problem)->termstat = SCIP_NLPTERMSTAT_OTHER;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
@@ -1086,6 +1202,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    fint mxiwk;
    fint iprint;
    fint nout;
+   fint ifail;
    real rho;
    real* c;
    real f;
@@ -1125,7 +1242,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 
    iprint = 1;  /* print level */
    nout = 6;   /* output to screen (for now?) */
-   problem->ifail = 0;  /* set to -1 for warmstart */
+   ifail = 0;  /* set to -1 for warmstart */
    rho = 10.0; /* initial trust-region radius */
    fmin = -1e100; /* lower bound on objective */
 
@@ -1178,7 +1295,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       SCIP_Real lb;
       SCIP_Real ub;
 
-      SCIPdebugMessage("FilterSQP started without intial primal values; make up something by projecting 0 onto variable bounds and perturb\n");
+      SCIPdebugMessage("FilterSQP started without initial primal values; make up something by projecting 0 onto variable bounds and perturb\n");
 
       if( data->randnumgen == NULL )
       {
@@ -1210,12 +1327,14 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    F77_FUNC(filtersqp,FILTERSQP)(
       &n, &m, &kmax, &maxa,
       &maxf, &mlp, &mxwk, &mxiwk,
-      &iprint, &nout, &problem->ifail, &rho,
+      &iprint, &nout, &ifail, &rho,
       problem->x, c, &f, &fmin, bl,
       bu, s, a, la, ws,
       lws, problem->lam, cstype, user,
       iuser, &maxiter, problem->istat,
       problem->rstat, cstype_len);
+
+   SCIP_CALL( processSolveOutcome(problem, ifail) );
 
    BMSfreeMemoryArray(&a);
    BMSfreeMemoryArray(&la);
@@ -1242,33 +1361,9 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 static
 SCIP_DECL_NLPIGETSOLSTAT( nlpiGetSolstatFilterSQP )
 {
-   switch( problem->ifail )
-   {
-      case 0: /* successful run, solution found */
-         return SCIP_NLPSOLSTAT_LOCOPT;
-      case 1: /* unbounded, feasible point with f(x) <= fmin */
-         return SCIP_NLPSOLSTAT_UNBOUNDED;
-      case 2: /* linear constraints are inconsistent */
-         return SCIP_NLPSOLSTAT_GLOBINFEASIBLE;
-      case 3: /* (locally) nonlinear infeasible, minimal-infeasible solution found */
-         return SCIP_NLPSOLSTAT_LOCINFEASIBLE;
-      case 4: /* terminate at point with h(x) <= eps (constraint violation below epsilon) but QP infeasible */
-         return SCIP_NLPSOLSTAT_FEASIBLE;
-      case 5: /* termination with rho < eps (trust region radius below epsilon) */
-         return SCIP_NLPSOLSTAT_LOCINFEASIBLE;
-      case 6: /* termination with iter > max_iter */
-         return SCIP_NLPSOLSTAT_LOCINFEASIBLE;  /* TODO check if feasible */
-      case 7: /* crash in user routine (IEEE error) could not be resolved */
-         return SCIP_NLPSOLSTAT_LOCINFEASIBLE;  /* TODO check if feasible */
-      case 8: /* unexpect ifail from QP solver */
-         return SCIP_NLPSOLSTAT_LOCINFEASIBLE;  /* TODO check if feasible */
-      case 9: /* not enough REAL workspace */
-         return SCIP_NLPSOLSTAT_UNKNOWN;
-      case 10: /* not enough INTEGER workspace */
-         return SCIP_NLPSOLSTAT_UNKNOWN;
-   }
+   assert(problem != NULL);
 
-   return SCIP_NLPSOLSTAT_UNKNOWN;
+   return problem->solstat;
 }  /*lint !e715*/
 
 /** gives termination reason
@@ -1282,33 +1377,9 @@ SCIP_DECL_NLPIGETSOLSTAT( nlpiGetSolstatFilterSQP )
 static
 SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatFilterSQP )
 {
-   switch( problem->ifail )
-   {
-      case 0: /* successful run, solution found */
-         return SCIP_NLPTERMSTAT_OKAY;
-      case 1: /* unbounded, feasible point with f(x) <= fmin */
-         return SCIP_NLPTERMSTAT_LOBJLIM;  /* TODO should be OKAY if no limit was set */
-      case 2: /* linear constraints are inconsistent */
-         return SCIP_NLPTERMSTAT_OKAY;
-      case 3: /* (locally) nonlinear infeasible, minimal-infeasible solution found */
-         return SCIP_NLPTERMSTAT_OKAY;
-      case 4: /* terminate at point with h(x) <= eps (constraint violation below epsilon) but QP infeasible */
-         return SCIP_NLPTERMSTAT_OKAY;
-      case 5: /* termination with rho < eps (trust region radius below epsilon) */
-         return SCIP_NLPTERMSTAT_OKAY;
-      case 6: /* termination with iter > max_iter */
-         return SCIP_NLPTERMSTAT_ITLIM;
-      case 7: /* crash in user routine (IEEE error) could not be resolved */
-         return SCIP_NLPTERMSTAT_EVALERR;
-      case 8: /* unexpect ifail from QP solver */
-         return SCIP_NLPTERMSTAT_OTHER;
-      case 9: /* not enough REAL workspace */
-         return SCIP_NLPTERMSTAT_MEMERR;
-      case 10: /* not enough INTEGER workspace */
-         return SCIP_NLPTERMSTAT_MEMERR;
-   }
+   assert(problem != NULL);
 
-   return SCIP_NLPTERMSTAT_OTHER;
+   return problem->termstat;
 }  /*lint !e715*/
 
 /** gives primal and dual solution values
@@ -1330,86 +1401,33 @@ static
 SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionFilterSQP )
 {
    assert(problem != NULL);
-   assert(problem->ifail >= 0); /* FilterSQP should have been running */
-
-   /* TODO fill in the primal and dual values arrays once after solve, so repeated getsolution would be quick? */
 
    if( primalvalues != NULL )
    {
-      int i;
-      int nvars;
-
-      assert(problem->x != NULL);
-
-      nvars = SCIPnlpiOracleGetNVars(problem->oracle);
-
-      if( problem->primalvalues == NULL )
-      {
-         assert(problem->varssize >= nvars); /* ensured in nlpiAddVariables */
-         SCIP_ALLOC( BMSallocMemoryArray(&problem->primalvalues, problem->varssize) );
-      }
-
-      for( i = 0; i < nvars; ++i )
-         problem->primalvalues[i] = problem->x[i];
+      assert(problem->primalvalues != NULL);
 
       *primalvalues = problem->primalvalues;
    }
 
    if( consdualvalues != NULL )
    {
-      int i;
-      int nvars;
-      int ncons;
-
-      assert(problem->lam != NULL);
-
-      nvars = SCIPnlpiOracleGetNVars(problem->oracle);
-      ncons = SCIPnlpiOracleGetNConstraints(problem->oracle);
-
-      if( problem->consdualvalues == NULL )
-      {
-         assert(problem->conssize >= ncons); /* ensured in nlpiAddConstraints */
-         SCIP_ALLOC( BMSallocMemoryArray(&problem->consdualvalues, problem->conssize) );
-      }
-
-      /* duals from FilterSQP are negated */
-      for( i = 0; i < ncons; ++i )
-         problem->consdualvalues[i] = -problem->lam[nvars + i];
+      assert(problem->consdualvalues != NULL);
 
       *consdualvalues = problem->consdualvalues;
    }
 
-   if( varlbdualvalues != NULL || varubdualvalues != NULL )
+   if( varlbdualvalues != NULL )
    {
-      int i;
-      int nvars;
+      assert(problem->varlbdualvalues != NULL);
 
-      nvars = SCIPnlpiOracleGetNVars(problem->oracle);
+      *varlbdualvalues = problem->varlbdualvalues;
+   }
 
-      assert(problem->lam != NULL);
+   if( varubdualvalues != NULL )
+   {
+      assert(problem->varubdualvalues != NULL);
 
-      if( problem->varlbdualvalues == NULL )
-      {
-         assert(problem->varssize >= nvars); /* ensured in nlpiAddVariables */
-         SCIP_ALLOC( BMSallocMemoryArray(&problem->varlbdualvalues, problem->varssize) );
-         SCIP_ALLOC( BMSallocMemoryArray(&problem->varubdualvalues, problem->varssize) );
-      }
-      else
-      {
-         assert(problem->varubdualvalues != NULL);
-      }
-
-      /* if dual from FilterSQP is positive, then it belongs to the lower bound, otherwise to the upper bound */
-      for( i = 0; i < nvars; ++i )
-      {
-         problem->varlbdualvalues[i] = MAX(0.0,  problem->lam[i]);
-         problem->varubdualvalues[i] = MAX(0.0, -problem->lam[i]);
-      }
-
-      if( varlbdualvalues != NULL )
-         *varlbdualvalues = problem->varlbdualvalues;
-      if( varubdualvalues != NULL )
-         *varubdualvalues = problem->varubdualvalues;
+      *varubdualvalues = problem->varubdualvalues;
    }
 
    return SCIP_OKAY;  /*lint !e527*/
@@ -1429,7 +1447,7 @@ static
 SCIP_DECL_NLPIGETSTATISTICS( nlpiGetStatisticsFilterSQP )
 {
    assert(problem != NULL);
-   assert(problem->ifail >= 0);  /* FilterSQP must have been called to report statistics */
+   /* TODO assert that FilterSQP must have been called to report statistics */
 
    SCIPnlpStatisticsSetNIterations(statistics, problem->istat[1]);
    SCIPnlpStatisticsSetTotalTime(statistics, 1.0); /* TODO */
