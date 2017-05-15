@@ -5,6 +5,7 @@ features
 - added parsing functionality to cardinality constraint handler for CIP format
 
 fixed bugs:
+- fixed bug in genvbounds propagator when applying a restart after the root node
 - fixed unintended behavior of interrupt signal handler inside SCIP copies
 - fixed uninitialized values in SCIP's digraph data structure after calling SCIPdigraphResize()
 - fixed memory leak in OSiL reader when using SOS constraints
