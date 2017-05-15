@@ -482,6 +482,59 @@ SCIP_RETCODE setupHessian(
    return SCIP_OKAY;
 }
 
+/** setup starting point for FilterSQP */
+static
+SCIP_RETCODE setupStart(
+   SCIP_NLPIDATA*        data,               /**< NLPI data */
+   SCIP_NLPIPROBLEM*     problem,            /**< NLPI problem */
+   real*                 x                   /**< array to store initial values */
+)
+{
+   int i;
+   int n;
+
+   assert(data != NULL);
+   assert(problem != NULL);
+   assert(x != NULL);
+
+   n = SCIPnlpiOracleGetNVars(problem->oracle);
+
+   /* setup starting point */
+   if( problem->initguess != NULL )
+   {
+      for( i = 0; i < n; ++i )
+         x[i] = problem->initguess[i];
+   }
+   else
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+
+      SCIPdebugMessage("FilterSQP started without initial primal values; make up something by projecting 0 onto variable bounds and perturb\n");
+
+      if( data->randnumgen == NULL )
+      {
+         SCIP_CALL( SCIPrandomCreate(&data->randnumgen, data->blkmem, RANDSEED) );
+      }
+
+      for( i = 0; i < n; ++i )
+      {
+         lb = SCIPnlpiOracleGetVarLbs(problem->oracle)[i];
+         ub = SCIPnlpiOracleGetVarUbs(problem->oracle)[i];
+         if( lb > 0.0 )
+            x[i] = SCIPrandomGetReal(data->randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
+         else if( ub < 0.0 )
+            x[i] = SCIPrandomGetReal(data->randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
+         else
+            x[i] = SCIPrandomGetReal(data->randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
 /** sets the solstat and termstat to unknown and other, resp. */
 static
 void invalidateSolution(
@@ -1306,35 +1359,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       cstype[i] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, i) <= 1 ? 'L' : 'N';
    }
 
-   /* setup starting point */
-   if( problem->initguess != NULL )
-   {
-      BMScopyMemoryArray(x, problem->initguess, n);
-   }
-   else
-   {
-      SCIP_Real lb;
-      SCIP_Real ub;
-
-      SCIPdebugMessage("FilterSQP started without initial primal values; make up something by projecting 0 onto variable bounds and perturb\n");
-
-      if( data->randnumgen == NULL )
-      {
-         SCIP_CALL( SCIPrandomCreate(&data->randnumgen, data->blkmem, RANDSEED) );
-      }
-
-      for( i = 0; i < n; ++i )
-      {
-         lb = SCIPnlpiOracleGetVarLbs(problem->oracle)[i];
-         ub = SCIPnlpiOracleGetVarUbs(problem->oracle)[i];
-         if( lb > 0.0 )
-            x[i] = SCIPrandomGetReal(data->randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
-         else if( ub < 0.0 )
-            x[i] = SCIPrandomGetReal(data->randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
-         else
-            x[i] = SCIPrandomGetReal(data->randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
-      }
-   }
+   SCIP_CALL( setupStart(data, problem, x) );
 
    /* TODO from here on we are not thread-safe: maybe add some mutex here if PARASCIP=true? */
 
