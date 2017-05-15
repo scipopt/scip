@@ -74,8 +74,6 @@ struct SCIP_NlpiProblem
    SCIP_NLPTERMSTAT            termstat;     /**< termination status from last NLP solve */
 
    fint*                       hessiannz;    /**< nonzero information about Hessian (only non-NULL during solve) */
-   real*                       x;            /**< primal variable values communicated with FilterSQP */
-   real*                       lam;          /**< dual values communicated with FilterSQP */
    fint                        istat[14];    /**< integer solution statistics from last FilterSQP call */
    real                        rstat[7];     /**< real solution statistics from last FilterSQP call */
 };
@@ -483,7 +481,9 @@ SCIP_RETCODE setupHessian(
 static
 SCIP_RETCODE processSolveOutcome(
    SCIP_NLPIPROBLEM*     problem,            /**< NLPI problem */
-   fint                  ifail               /**< fail flag from FilterSQP call */
+   fint                  ifail,              /**< fail flag from FilterSQP call */
+   real*                 x,                  /**< primal solution values from FilterSQP call */
+   real*                 lam                 /**< dual solution values from FilterSQP call */
 )
 {
    int i;
@@ -498,8 +498,8 @@ SCIP_RETCODE processSolveOutcome(
    if( ifail <= 7 )
    {
       /* FilterSQP terminated somewhat normally -> store away solution */
-      assert(problem->x != NULL);
-      assert(problem->lam != NULL);
+      assert(x != NULL);
+      assert(lam != NULL);
 
       /* make sure we have memory for solution */
       if( problem->primalvalues == NULL )
@@ -524,16 +524,16 @@ SCIP_RETCODE processSolveOutcome(
 
       for( i = 0; i < nvars; ++i )
       {
-         problem->primalvalues[i] = problem->x[i];
+         problem->primalvalues[i] = x[i];
 
          /* if dual from FilterSQP is positive, then it belongs to the lower bound, otherwise to the upper bound */
-         problem->varlbdualvalues[i] = MAX(0.0,  problem->lam[i]);
-         problem->varubdualvalues[i] = MAX(0.0, -problem->lam[i]);
+         problem->varlbdualvalues[i] = MAX(0.0,  lam[i]);
+         problem->varubdualvalues[i] = MAX(0.0, -lam[i]);
       }
 
       /* duals from FilterSQP are negated */
       for( i = 0; i < ncons; ++i )
-         problem->consdualvalues[i] = -problem->lam[nvars + i];
+         problem->consdualvalues[i] = -lam[nvars + i];
    }
 
    switch( ifail )
@@ -745,8 +745,6 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemFilterSQP)
    BMSfreeMemoryArrayNull(&(*problem)->consdualvalues);
    BMSfreeMemoryArrayNull(&(*problem)->varlbdualvalues);
    BMSfreeMemoryArrayNull(&(*problem)->varubdualvalues);
-   BMSfreeMemoryArrayNull(&(*problem)->x);
-   BMSfreeMemoryArrayNull(&(*problem)->lam);
 
    assert((*problem)->hessiannz == NULL);
 
@@ -812,16 +810,6 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
       if( problem->varubdualvalues != NULL )
       {
          SCIP_ALLOC( BMSreallocMemoryArray(&problem->varubdualvalues, problem->varssize) );
-      }
-
-      if( problem->x != NULL )
-      {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->x, problem->varssize) );
-      }
-
-      if( problem->lam != NULL )
-      {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->lam, problem->varssize + problem->conssize) );
       }
    }
 
@@ -890,11 +878,6 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsFilterSQP )
       if( problem->consdualvalues != NULL )
       {
          SCIP_ALLOC( BMSreallocMemoryArray(&problem->consdualvalues, problem->conssize) );
-      }
-
-      if( problem->lam != NULL )
-      {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->lam, problem->varssize + problem->conssize) );
       }
    }
 
@@ -1204,7 +1187,9 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    fint nout;
    fint ifail;
    real rho;
+   real* x;
    real* c;
+   real* lam;
    real f;
    real fmin;
    real* bl;
@@ -1252,16 +1237,9 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    memset(problem->istat, 0, sizeof(problem->istat));
    memset(problem->rstat, 0, sizeof(problem->rstat));
 
-   if( problem->x == NULL )
-   {
-      SCIP_ALLOC( BMSallocMemoryArray(&problem->x, problem->varssize) );
-   }
-   if( problem->lam == NULL )
-   {
-      SCIP_ALLOC( BMSallocClearMemoryArray(&problem->lam, problem->varssize + problem->conssize) );
-   }
-
+   SCIP_ALLOC( BMSallocMemoryArray(&x, n) );
    SCIP_ALLOC( BMSallocMemoryArray(&c, m) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&lam, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&bl, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&bu, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&s, n+m) );
@@ -1288,7 +1266,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    /* setup starting point */
    if( problem->initguess != NULL )
    {
-      BMScopyMemoryArray(problem->x, problem->initguess, n);
+      BMScopyMemoryArray(x, problem->initguess, n);
    }
    else
    {
@@ -1307,11 +1285,11 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
          lb = SCIPnlpiOracleGetVarLbs(problem->oracle)[i];
          ub = SCIPnlpiOracleGetVarUbs(problem->oracle)[i];
          if( lb > 0.0 )
-            problem->x[i] = SCIPrandomGetReal(data->randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
+            x[i] = SCIPrandomGetReal(data->randnumgen, lb, lb + MAXPERTURB*MIN(1.0, ub-lb));
          else if( ub < 0.0 )
-            problem->x[i] = SCIPrandomGetReal(data->randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
+            x[i] = SCIPrandomGetReal(data->randnumgen, ub - MAXPERTURB*MIN(1.0, ub-lb), ub);
          else
-            problem->x[i] = SCIPrandomGetReal(data->randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
+            x[i] = SCIPrandomGetReal(data->randnumgen, MAX(lb, -MAXPERTURB*MIN(1.0, ub-lb)), MIN(ub, MAXPERTURB*MIN(1.0, ub-lb)));
       }
    }
 
@@ -1328,13 +1306,13 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       &n, &m, &kmax, &maxa,
       &maxf, &mlp, &mxwk, &mxiwk,
       &iprint, &nout, &ifail, &rho,
-      problem->x, c, &f, &fmin, bl,
+      x, c, &f, &fmin, bl,
       bu, s, a, la, ws,
-      lws, problem->lam, cstype, user,
+      lws, lam, cstype, user,
       iuser, &maxiter, problem->istat,
       problem->rstat, cstype_len);
 
-   SCIP_CALL( processSolveOutcome(problem, ifail) );
+   SCIP_CALL( processSolveOutcome(problem, ifail, x, lam) );
 
    BMSfreeMemoryArray(&a);
    BMSfreeMemoryArray(&la);
@@ -1344,7 +1322,9 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    BMSfreeMemoryArray(&s);
    BMSfreeMemoryArray(&bu);
    BMSfreeMemoryArray(&bl);
+   BMSfreeMemoryArray(&x);
    BMSfreeMemoryArray(&c);
+   BMSfreeMemoryArray(&lam);
    BMSfreeMemoryArray(&problem->hessiannz);
 
    return SCIP_OKAY;  /*lint !e527*/
