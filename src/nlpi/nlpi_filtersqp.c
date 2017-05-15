@@ -21,6 +21,7 @@
  * @todo warm starts
  * @todo scaling
  * @todo increase workspace when ifail=9 or 10
+ * @todo cache filtersqp setup (hessian, jacobian sparsity, etc.) from solve to solve
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1316,12 +1317,12 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    /* FilterSQP manual: mxwk = 21*n + 8*m + mlp + 8*maxf + kmax*(kmax+9)/2 + 20*n */
    /* Bonmin:           mxwk = 21*n + 8*m + mlp + 8*maxf + lh1 + kmax*(kmax+9)/2 + mxwk0,
     *                      with lh1 = nnz_h+8+2*n+m and mxwk0 = 2000000 (parameter) */
-   mxwk = 21*n + 8*m + mlp + 8*maxf + kmax*(kmax+9)/2 + 20*n;
+   mxwk = 21*n + 8*m + mlp + 8*maxf + kmax*(kmax+9)/2 + 20*n;  /* TODO add lh1? */
 
    /* initial guess of integer workspace size */
    /* FilterSQP manual: mxiwk = 13*n + 4*m + mlp + 100 + kmax */
    /* Bonmin:           mxiwk = 13*n + 4*m + mlp + lh1 + kmax + 113 + mxiwk0, with mxiwk0 = 500000 (parameter) */
-   mxiwk = 13*n + 4*m + mlp + 100 + kmax + 113;
+   mxiwk = 13*n + 4*m + mlp + 100 + kmax + 113;   /* TODO add lh1? */
 
    iprint = 1;  /* print level */
    nout = 6;   /* output to screen (for now?) */
@@ -1583,6 +1584,7 @@ SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParFilterSQP )
    {
    case SCIP_NLPPAR_FROMSCRATCH:
    {
+      /* TODO */
       *ival = 1;
       break;
    }
@@ -1638,7 +1640,6 @@ SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParFilterSQP )
 
    case SCIP_NLPPAR_FASTFAIL:
    {
-      /* TODO? */
       *ival = 0;
       break;
    }
