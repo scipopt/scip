@@ -157,10 +157,6 @@ void F77_FUNC(hessian,HESSIAN)(real *x, fint *N, fint *M, fint *phase, real *lam
     real *ws, fint *lws, real *user, fint *iuser,
     fint *l_hess, fint *li_hess, fint *errflag);
 
-/* pointer to the NLPI and the NLPI problem that is currently solved by filterSQP */
-static SCIP_NLPI* nlpiSolved = NULL;
-static SCIP_NLPIPROBLEM* nlpiProblemSolved = NULL;
-
 /** @group access to filter common bloc
  * @{
  */
@@ -1203,8 +1199,6 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    }
 
    /* TODO from here on we are not thread-safe: maybe add some mutex here if PARASCIP=true? */
-   nlpiSolved = nlpi;
-   nlpiProblemSolved = problem;
 
    /* initialize global variables from filtersqp */
    F77_FUNC_(nlp_eps_inf,NLP_EPS_INF).eps = 1e-8;
