@@ -580,19 +580,28 @@ SCIP_RETCODE processSolveOutcome(
          problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
          break;
       case 5: /* termination with rho < eps (trust region radius below epsilon) */
-         problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+         if( problem->rstat[4] < problem->feastol )
+            problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
+         else
+            problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
          problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
          break;
       case 6: /* termination with iter > max_iter */
-         problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;  /* TODO check if feasible */
+         if( problem->rstat[4] < problem->feastol )
+            problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
+         else
+            problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
          problem->termstat =  SCIP_NLPTERMSTAT_ITLIM;
          break;
       case 7: /* crash in user routine (IEEE error) could not be resolved */
-         problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;  /* TODO check if feasible */
+         problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
          problem->termstat =  SCIP_NLPTERMSTAT_EVALERR;
          break;
       case 8: /* unexpect ifail from QP solver */
-         problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;  /* TODO check if feasible */
+         if( problem->rstat[4] < problem->feastol )
+            problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
+         else
+            problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
          problem->termstat =  SCIP_NLPTERMSTAT_OTHER;
          break;
       case 9: /* not enough REAL workspace */
