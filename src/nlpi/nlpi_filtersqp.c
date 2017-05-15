@@ -20,6 +20,7 @@
  *
  * @todo warm starts
  * @todo scaling
+ * @todo increase workspace when ifail=9 or 10
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -37,6 +38,7 @@
 
 #define RANDSEED               26051979      /**< initial random seed */
 #define MAXPERTURB             0.01          /**< maximal perturbation of bounds in starting point heuristic */
+#define DEFAULT_LOBJLIM        (real)(-1e100) /**< default lower objective limit (should mean "unlimited") */
 
 /*
  * Data structures
@@ -74,6 +76,7 @@ struct SCIP_NlpiProblem
    fint*                       hessiannz;    /**< nonzero information about Hessian (only non-NULL during solve) */
    fint                        istat[14];    /**< integer solution statistics from last FilterSQP call */
    real                        rstat[7];     /**< real solution statistics from last FilterSQP call */
+   real                        fmin;         /**< lower bound on objective value */
 };
 
 
@@ -555,7 +558,10 @@ SCIP_RETCODE processSolveOutcome(
          break;
       case 1: /* unbounded, feasible point with f(x) <= fmin */
          problem->solstat = SCIP_NLPSOLSTAT_UNBOUNDED;
-         problem->termstat = SCIP_NLPTERMSTAT_LOBJLIM;  /* TODO should be OKAY if no limit was set */
+         if( problem->fmin == DEFAULT_LOBJLIM )
+            problem->termstat = SCIP_NLPTERMSTAT_OKAY;  /* fmin was not set */
+         else
+            problem->termstat = SCIP_NLPTERMSTAT_LOBJLIM;
          break;
       case 2: /* linear constraints are inconsistent */
          problem->solstat = SCIP_NLPSOLSTAT_GLOBINFEASIBLE;
@@ -720,6 +726,8 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
    SCIP_CALL( SCIPnlpiOracleCreate(data->blkmem, &(*problem)->oracle) );
    SCIP_CALL( SCIPnlpiOracleSetInfinity((*problem)->oracle, data->infinity) );
    SCIP_CALL( SCIPnlpiOracleSetProblemName((*problem)->oracle, name) );
+
+   (*problem)->fmin = DEFAULT_LOBJLIM;
 
    invalidateSolution(*problem);
 
@@ -1214,7 +1222,6 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    real* c;
    real* lam;
    real f;
-   real fmin;
    real* bl;
    real* bu;
    real* s;
@@ -1252,7 +1259,6 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    nout = 6;   /* output to screen (for now?) */
    ifail = 0;  /* set to -1 for warmstart */
    rho = 10.0; /* initial trust-region radius */
-   fmin = -1e100; /* lower bound on objective */
 
    user = (real*)nlpi;
    iuser = (fint*)problem;
@@ -1329,7 +1335,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       &n, &m, &kmax, &maxa,
       &maxf, &mlp, &mxwk, &mxiwk,
       &iprint, &nout, &ifail, &rho,
-      x, c, &f, &fmin, bl,
+      x, c, &f, &problem->fmin, bl,
       bu, s, a, la, ws,
       lws, lam, cstype, user,
       iuser, &maxiter, problem->istat,
@@ -1780,7 +1786,7 @@ SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParFilterSQP )
 
    case SCIP_NLPPAR_LOBJLIM:
    {
-      *dval = -SCIPnlpiOracleGetInfinity(problem->oracle);
+      *dval = problem->fmin;
       break;
    }
 
@@ -1892,12 +1898,7 @@ SCIP_DECL_NLPISETREALPAR( nlpiSetRealParFilterSQP )
 
    case SCIP_NLPPAR_LOBJLIM:
    {
-      SCIP_NLPIDATA* data;
-
-      data = SCIPnlpiGetData(nlpi);
-      assert(data != NULL);
-
-      SCIPmessagePrintWarning(data->messagehdlr, "Parameter lower objective limit not supported by FilterSQP interface yet. Ignored.\n");
+      problem->fmin = dval;
       break;
    }
 
