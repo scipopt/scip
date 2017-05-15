@@ -12829,10 +12829,11 @@ SCIP_RETCODE detectRedundantConstraints(
          scale = consdatastay->vals[0] / consdatadel->vals[0];
          assert(scale != 0.0);
 
+         assert(consdatastay->nvars < 2 || SCIPisEQ(scip, consdatastay->vals[1], scale * consdatadel->vals[1]));
+
          if( scale > 0.0 )
          {
             /* the coefficients of both constraints are parallel with a positive scale */
-            assert(consdata0->nvars < 2 || SCIPisEQ(scip, consdata0->vals[1], consdata1->vals[1]));
             SCIPdebugMsg(scip, "aggregate linear constraints <%s> and <%s> with equal coefficients into single ranged row\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1));
             SCIPdebugPrintCons(scip, cons0, NULL);
@@ -12844,8 +12845,6 @@ SCIP_RETCODE detectRedundantConstraints(
          else
          {
             /* the coefficients of both rows are negations */
-            assert(SCIPisEQ(scip, consdata0->vals[0], -(consdata1->vals[0])));
-            assert(consdata0->nvars < 2 || SCIPisEQ(scip, consdata0->vals[1], -(consdata1->vals[1])));
             SCIPdebugMsg(scip, "aggregate linear constraints <%s> and <%s> with negated coefficients into single ranged row\n",
                SCIPconsGetName(cons0), SCIPconsGetName(cons1));
             SCIPdebugPrintCons(scip, cons0, NULL);
