@@ -20,7 +20,7 @@
  *
  * @todo warm starts
  * @todo scaling
- * @todo reset problem->x, problem->lam, and problem->ifail when problem size changes (see initguess handling)
+ * @todo reset problem->ifail when problem changes, problem->firstrun ?
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -59,6 +59,9 @@ struct SCIP_NlpiProblem
 {
    SCIP_NLPIORACLE*            oracle;       /**< Oracle-helper to store and evaluate NLP */
 
+   int                         varssize;     /**< length of variables-related arrays, if allocated */
+   int                         conssize;     /**< length of constraints-related arrays, if allocated */
+
    SCIP_Bool                   firstrun;     /**< whether the next NLP solve will be the first one (with the current problem structure) */
    SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known */
 
@@ -67,7 +70,7 @@ struct SCIP_NlpiProblem
    SCIP_Real*                  varlbdualvalues; /**< dual values of variable lower bounds in solution */
    SCIP_Real*                  varubdualvalues; /**< dual values of variable upper bounds in solution */
 
-   fint*                       hessiannz;    /**< nonzero information about Hessian */
+   fint*                       hessiannz;    /**< nonzero information about Hessian (only non-NULL during solve) */
    real*                       x;            /**< primal variable values communicated with FilterSQP */
    real*                       lam;          /**< dual values communicated with FilterSQP */
    fint                        ifail;        /**< return status from last FilterSQP call, or -1 if not called */
@@ -286,6 +289,79 @@ F77_FUNC(gradient,GRADIENT)(
    SCIPnlpiOracleEvalJacobian(problem->oracle, x, TRUE, NULL, a+*n);
 }
 
+/* Objective gradient evaluation */
+/*
+void F77_FUNC(objgrad,OBJGRAD)(
+   fint*,
+   fint*,
+   fint*,
+   real*,
+   real*,
+   fint*,
+   fint*,
+   real*,
+   fint*,
+   fint*
+   )
+*/
+void F77_FUNC(objgrad,OBJGRAD)(void)
+{
+   SCIPerrorMessage("Objgrad not implemented. Should not be called.\n");
+}
+
+/** Hessian of the Lagrangian evaluation
+ *
+ * phase = 1 : Hessian of the Lagrangian without objective Hessian
+ * phase = 2 : Hessian of the Lagrangian (including objective Hessian)
+ *
+ * \note If an arithmetic exception occurred, then the Hessian must not be modified.
+ */
+void
+F77_FUNC(hessian,HESSIAN)(
+   real*                 x,                  /**< value of current variables (array of length n) */
+   fint*                 n,                  /**< number of variables */
+   fint*                 m,                  /**< number of constraints */
+   fint*                 phase,              /**< indicates what kind of Hessian matrix is required */
+   real*                 lam,                /**< Lagrangian multipliers (array of length n+m) */
+   real*                 ws,                 /**< real workspace for Hessian, passed to Wdotd */
+   fint*                 lws,                /**< integer workspace for Hessian, passed to Wdotd */
+   real*                 user,               /**< user real workspace */
+   fint*                 iuser,              /**< user integer workspace */
+   fint*                 l_hess,             /**< space of Hessian real storage ws. On entry: maximal space allowed, on exit: actual amount used */
+   fint*                 li_hess,            /**< space of Hessian integer storage lws. On entry: maximal space allowed, on exit: actual amount used */
+   fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
+   )
+{
+   SCIP_NLPIPROBLEM* problem;
+   SCIP_Real* lambda;
+   int nnz;
+   int i;
+
+   problem = (SCIP_NLPIPROBLEM*)iuser;
+   assert(problem != NULL);
+
+   *errflag = 0;
+
+   /* copy the complete problem->hessiannz into lws */
+   nnz = problem->hessiannz[0]-1;
+   for( i = 0; i < nnz + *n + 2; ++i )
+      lws[i] = problem->hessiannz[i];
+   *li_hess = nnz + *n + 2;
+
+   /* initialize lambda to -lam */
+   BMSallocMemoryArray(&lambda, *m);
+   for( i = 0; i < *m; ++i )
+      lambda[i] = -lam[*n+i];
+
+   /* TODO handle arithmetic exception, in which case we must not modify ws */
+   SCIPnlpiOracleEvalHessianLag(problem->oracle, x, TRUE, (*phase == 1) ? 0.0 : 1.0, lambda, ws);
+   *l_hess = nnz;
+
+   BMSfreeMemoryArray(&lambda);
+}
+
+
+
 static
 SCIP_RETCODE setupGradients(
    SCIP_NLPIORACLE*      oracle,
@@ -405,77 +481,21 @@ SCIP_RETCODE setupHessian(
    return SCIP_OKAY;
 }
 
-/* Objective gradient evaluation */
-/*
-void F77_FUNC(objgrad,OBJGRAD)(
-   fint*,
-   fint*,
-   fint*,
-   real*,
-   real*,
-   fint*,
-   fint*,
-   real*,
-   fint*,
-   fint*
-   )
-*/
-void F77_FUNC(objgrad,OBJGRAD)(void)
-{
-   SCIPerrorMessage("Objgrad not implemented. Should not be called.\n");
-}
-
-/** Hessian of the Lagrangian evaluation
- *
- * phase = 1 : Hessian of the Lagrangian without objective Hessian
- * phase = 2 : Hessian of the Lagrangian (including objective Hessian)
- *
- * \note If an arithmetic exception occurred, then the Hessian must not be modified.
- */
-void
-F77_FUNC(hessian,HESSIAN)(
-   real*                 x,                  /**< value of current variables (array of length n) */
-   fint*                 n,                  /**< number of variables */
-   fint*                 m,                  /**< number of constraints */
-   fint*                 phase,              /**< indicates what kind of Hessian matrix is required */
-   real*                 lam,                /**< Lagrangian multipliers (array of length n+m) */
-   real*                 ws,                 /**< real workspace for Hessian, passed to Wdotd */
-   fint*                 lws,                /**< integer workspace for Hessian, passed to Wdotd */
-   real*                 user,               /**< user real workspace */
-   fint*                 iuser,              /**< user integer workspace */
-   fint*                 l_hess,             /**< space of Hessian real storage ws. On entry: maximal space allowed, on exit: actual amount used */
-   fint*                 li_hess,            /**< space of Hessian integer storage lws. On entry: maximal space allowed, on exit: actual amount used */
-   fint*                 errflag             /**< set to 1 if arithmetic exception occurs, otherwise 0 */
+/** calculate memory size for dynamically allocated arrays (copied from scip/set.c) */
+static
+int calcGrowSize(
+   int                   num                 /**< minimum number of entries to store */
    )
 {
-   SCIP_NLPIPROBLEM* problem;
-   SCIP_Real* lambda;
-   int nnz;
-   int i;
+   int size;
 
-   problem = (SCIP_NLPIPROBLEM*)iuser;
-   assert(problem != NULL);
+   /* calculate the size with this loop, such that the resulting numbers are always the same (-> block memory) */
+   size = 4;
+   while( size < num )
+      size = (int)(1.2 * size + 4);
 
-   *errflag = 0;
-
-   /* copy the complete problem->hessiannz into lws */
-   nnz = problem->hessiannz[0]-1;
-   for( i = 0; i < nnz + *n + 2; ++i )
-      lws[i] = problem->hessiannz[i];
-   *li_hess = nnz + *n + 2;
-
-   /* initialize lambda to -lam */
-   BMSallocMemoryArray(&lambda, *m);
-   for( i = 0; i < *m; ++i )
-      lambda[i] = -lam[*n+i];
-
-   /* TODO handle arithmetic exception, in which case we must not modify ws */
-   SCIPnlpiOracleEvalHessianLag(problem->oracle, x, TRUE, (*phase == 1) ? 0.0 : 1.0, lambda, ws);
-   *l_hess = nnz;
-
-   BMSfreeMemoryArray(&lambda);
+   return size;
 }
-
 
 
 /*
@@ -613,9 +633,10 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemFilterSQP)
    BMSfreeMemoryArrayNull(&(*problem)->consdualvalues);
    BMSfreeMemoryArrayNull(&(*problem)->varlbdualvalues);
    BMSfreeMemoryArrayNull(&(*problem)->varubdualvalues);
-
    BMSfreeMemoryArrayNull(&(*problem)->x);
    BMSfreeMemoryArrayNull(&(*problem)->lam);
+
+   assert((*problem)->hessiannz == NULL);
 
    BMSfreeBlockMemory(data->blkmem, problem);
    assert(*problem == NULL);
@@ -660,6 +681,37 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
 
    problem->firstrun = TRUE;
    BMSfreeMemoryArrayNull(&problem->initguess);
+
+   /* increase variables-related arrays in problem, if necessary */
+   if( problem->varssize < SCIPnlpiOracleGetNVars(problem->oracle) )
+   {
+      problem->varssize = calcGrowSize(SCIPnlpiOracleGetNVars(problem->oracle));
+
+      if( problem->primalvalues != NULL )
+      {
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->primalvalues, problem->varssize) );
+      }
+
+      if( problem->varlbdualvalues != NULL )
+      {
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->varlbdualvalues, problem->varssize) );
+      }
+
+      if( problem->varubdualvalues != NULL )
+      {
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->varubdualvalues, problem->varssize) );
+      }
+
+      if( problem->x != NULL )
+      {
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->x, problem->varssize) );
+      }
+
+      if( problem->lam != NULL )
+      {
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->lam, problem->varssize + problem->conssize) );
+      }
+   }
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -717,6 +769,22 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsFilterSQP )
          exprvaridxs, exprtrees, names) );
 
    problem->firstrun = TRUE;
+
+   /* increase constraints-related arrays in problem, if necessary */
+   if( SCIPnlpiOracleGetNConstraints(problem->oracle) > problem->conssize )
+   {
+      problem->conssize = calcGrowSize(SCIPnlpiOracleGetNConstraints(problem->oracle));
+
+      if( problem->consdualvalues != NULL )
+      {
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->consdualvalues, problem->conssize) );
+      }
+
+      if( problem->lam != NULL )
+      {
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->lam, problem->varssize + problem->conssize) );
+      }
+   }
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1073,11 +1141,11 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 
    if( problem->x == NULL )
    {
-      SCIP_ALLOC( BMSallocMemoryArray(&problem->x, n) );
+      SCIP_ALLOC( BMSallocMemoryArray(&problem->x, problem->varssize) );
    }
    if( problem->lam == NULL )
    {
-      SCIP_ALLOC( BMSallocClearMemoryArray(&problem->lam, n+m) );
+      SCIP_ALLOC( BMSallocClearMemoryArray(&problem->lam, problem->varssize + problem->conssize) );
    }
 
    SCIP_ALLOC( BMSallocMemoryArray(&c, m) );
@@ -1285,7 +1353,8 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionFilterSQP )
 
       if( problem->consdualvalues == NULL )
       {
-         SCIP_ALLOC( BMSallocMemoryArray(&problem->consdualvalues, ncons) );
+         assert(problem->conssize >= ncons); /* ensured in nlpiAddConstraints */
+         SCIP_ALLOC( BMSallocMemoryArray(&problem->consdualvalues, problem->conssize) );
       }
 
       /* duals from FilterSQP are negated */
@@ -1304,8 +1373,9 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionFilterSQP )
 
       if( problem->varlbdualvalues == NULL )
       {
-         SCIP_ALLOC( BMSallocMemoryArray(&problem->varlbdualvalues, nvars) );
-         SCIP_ALLOC( BMSallocMemoryArray(&problem->varubdualvalues, nvars) );
+         assert(problem->varssize >= nvars); /* ensured in nlpiAddVariables */
+         SCIP_ALLOC( BMSallocMemoryArray(&problem->varlbdualvalues, problem->varssize) );
+         SCIP_ALLOC( BMSallocMemoryArray(&problem->varubdualvalues, problem->varssize) );
       }
       else
       {
