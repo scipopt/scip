@@ -15218,8 +15218,9 @@ SCIP_RETCODE freeTransform(
    assert(scip->set->stage == SCIP_STAGE_TRANSFORMED || scip->set->stage == SCIP_STAGE_PRESOLVING ||
          (scip->set->stage == SCIP_STAGE_PRESOLVED && scip->set->reopt_enable));
 
-   /* if SCIPfreeReoptSolve() was have already called the exit-callbacks of the plugins.
-    * this can happen of a new objective function was installed but the solve was not started.
+   /* If the following evaluates to true, SCIPfreeReoptSolve() has already called the exit-callbacks of the plugins.
+    * We can skip calling some of the following methods. This can happen if a new objective function was
+    * installed but the solve was not started.
     */
    reducedfree = (scip->set->stage == SCIP_STAGE_PRESOLVED && scip->set->reopt_enable);
 
