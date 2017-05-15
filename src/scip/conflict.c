@@ -329,6 +329,55 @@ void confgraphMarkConflictset(
 
 #endif
 
+/*
+ * hash functions for non-zero cancellation
+ */
+
+struct RowVarPair
+{
+   int rowindex;
+   int varindex1;
+   int varindex2;
+   SCIP_Real varcoef1;
+   SCIP_Real varcoef2;
+};
+
+typedef struct RowVarPair ROWVARPAIR;
+
+static
+SCIP_DECL_HASHKEYEQ(varPairsEqual)
+{
+   ROWVARPAIR* varpair1;
+   ROWVARPAIR* varpair2;
+   SCIP_Real scale;
+
+   varpair1 = (ROWVARPAIR*) key1;
+   varpair2 = (ROWVARPAIR*) key2;
+
+   if( varpair1->varindex1 != varpair2->varindex1 )
+      return FALSE;
+
+   if( varpair1->varindex2 != varpair2->varindex2 )
+      return FALSE;
+
+   scale = varpair1->varcoef1 / varpair2->varcoef1;
+
+   if( !EPSEQ(varpair1->varcoef2, scale * varpair2->varcoef2, SCIP_DEFAULT_EPSILON) )
+      return FALSE;
+
+   return TRUE;
+}
+
+static
+SCIP_DECL_HASHKEYVAL(varPairHashval)
+{
+   ROWVARPAIR* varpair;
+
+   varpair = (ROWVARPAIR*) key;
+
+   return SCIPhashTwo(SCIPcombineTwoInt(varpair->varindex1, varpair->varindex2),
+                      SCIPrealHashCode(varpair->varcoef2 / varpair->varcoef1));
+}
 
 
 /*
@@ -2419,6 +2468,41 @@ SCIP_Real getMinActivity(
    return minact;
 }
 
+#if 0
+/** calculates the minimal activity of a given set of bounds and coefficients */
+static
+SCIP_Real getMaxActivity(
+   SCIP_PROB*            transprob,          /** transformed problem data */
+   SCIP_Real*            vals,               /**< array of values */
+   int*                  varinds,            /**< sparse data of variable indices */
+   int                   nvarinds,           /**< number of variable indices*/
+   SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables (or NULL for global bounds) */
+   SCIP_Real*            curvarubs           /**< current upper bounds of active problem variables (or NULL for global bounds) */
+   )
+{
+   SCIP_VAR** vars;
+   SCIP_Real minact = 0.0;
+   int i;
+
+   vars = SCIPprobGetVars(transprob);
+   assert(vars != NULL);
+
+   for( i = 0; i < nvarinds; i++ )
+   {
+      int v = varinds[i];
+      assert(SCIPvarGetProbindex(vars[v]) == v);
+
+      /* calculate the minimal activity */
+      if( vals[i] < 0.0 )
+         minact += vals[i] * (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+      else
+         minact += vals[i] * (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+   }
+
+   return minact;
+}
+#endif
+
 /** creates a proof constraint and tries to add it to the storage */
 static
 SCIP_RETCODE createAndAddProofcons(
@@ -2481,10 +2565,6 @@ SCIP_RETCODE createAndAddProofcons(
       goto UPDATESTATISTICS;
    }
 
-   /* don't store global dualrays that are to long / have to much non-zeros */
-   if( set->conf_minmaxvars < nnz && nnz > set->conf_maxvarsfac * transprob->nvars )
-      return SCIP_OKAY;
-
    fillin = SCIPconflictstoreGetNDualrays(conflictstore) * SCIPconflictstoreGetAvgNnzDualray(conflictstore);
    fillin += nnz;
    fillin /= 100;
@@ -2495,7 +2575,8 @@ SCIP_RETCODE createAndAddProofcons(
          nnz, (1.0 + (100.0 - SCIPconflictstoreGetNDualrays(conflictstore))/100.0) * stat->avgnnz,
          SCIPtreeGetFocusDepth(tree), SCIPtreeGetCurrentDepth(tree));
 
-   if( toolong )
+   /* don't store global dualrays that are to long / have to much non-zeros */
+   if( toolong && set->conf_minmaxvars < nnz && nnz > set->conf_maxvarsfac * transprob->nvars )
       return SCIP_OKAY;
 
    if( proofset->conflicttype == SCIP_CONFTYPE_INFEASLP )
@@ -2503,7 +2584,8 @@ SCIP_RETCODE createAndAddProofcons(
    else
       return SCIP_INVALIDCALL;
 
-   local = FALSE; //(!cover && SCIPtreeGetFocusDepth(tree) < SCIPtreeGetCurrentDepth(tree) && SCIPtreeGetFocusDepth(tree) > SCIPtreeGetEffectiveRootDepth(tree) );
+   local = (!cover && SCIPtreeGetFocusDepth(tree) < SCIPtreeGetCurrentDepth(tree)
+         && SCIPtreeGetFocusDepth(tree) > SCIPtreeGetEffectiveRootDepth(tree));
 
    SCIP_CALL( SCIPcreateConsLinear(set->scip, &cons, name, 0, NULL, NULL, -SCIPsetInfinity(set), rhs,
          FALSE, FALSE, FALSE, FALSE, TRUE, local, FALSE, TRUE, TRUE, FALSE) );
@@ -2524,11 +2606,11 @@ SCIP_RETCODE createAndAddProofcons(
          SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
          cons = upgdcons;
       }
-      else if( cover )
-      {
-         SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
-         return SCIP_OKAY;
-      }
+//      else if( cover )
+//      {
+//         SCIP_CALL( SCIPreleaseCons(set->scip, &cons) );
+//         return SCIP_OKAY;
+//      }
    }
 
    /* mark constraint to be a conflict */
@@ -6261,6 +6343,25 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
+/** calculates a Farkas proof from the current dual LP solution */
+static
+SCIP_RETCODE getDualProof(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< transformed problem */
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_LPI*             lpi,                /**< LPI data */
+   SCIP_AGGRROW*         farkasrow,
+   SCIP_Real*            farkasact,          /**< maximal activity of the proof constraint */
+   SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
+   SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
+   SCIP_Bool*            valid               /**< pointer store whether the proof constraint is valid */
+   )
+{
+
+
+   return SCIP_OKAY;
+}
+
 /** gets the key of the given element */
 static
 SCIP_DECL_HASHGETKEY(hashGetKeyConflict)
@@ -6380,82 +6481,6 @@ SCIP_DECL_HASHKEYVAL(hashKeyValConflict)
                        SCIPcombineTwoInt(maxidx, SCIPrealHashCode(vals[nnz - 1] * scale)));
 }
 
-#if 0
-static
-SCIP_RETCODE proofsetApplyMIR(
-   SCIP_PROOFSET*        proofset,           /**< proof set */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            transprob,          /**< transformed problem */
-   SCIP_Bool*            success             /**< pointer to store whether apply MIR was successful */
-   )
-{
-   SCIP_Real* vals;
-   SCIP_Bool* varused;
-   int* varinds;
-   SCIP_Real rhs;
-   SCIP_Real minact;
-   SCIP_Bool islocal;
-   int nvarinds;
-   int i;
-
-   assert(proofset != NULL);
-   assert(transprob != NULL);
-   assert(success != NULL);
-
-   /* return if the proof set is empty */
-   if( proofset->nvars == 0 )
-      return SCIP_OKAY;
-
-   *success = FALSE;
-   islocal = FALSE;
-
-   /* create local copies */
-   SCIP_CALL( SCIPsetDuplicateBufferArray(set, &vals, proofset->coefs, proofset->nvars) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &varinds, proofset->nvars) );
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &varused, proofset->nvars) );
-   rhs = proofset->rhs;
-   nvarinds = 0;
-
-   /* fill varinds and varused arrays */
-   for( i = 0; i < proofset->nvars; i++ )
-   {
-      /* all coefficients with a coefficient close to zero should have been set to "0.0" */
-      assert(proofset->coefs[i] == 0.0 || !SCIPsetIsZero(set, proofset->coefs[i]));
-
-      if( proofset->coefs[i] != 0.0 )
-      {
-         varinds[nvarinds] = i;
-         nvarinds++;
-
-         varused[i] = TRUE;
-      }
-      else
-         varused[i] = FALSE;
-   }
-
-   SCIP_CALL( SCIPcutsApplyMIR(set->scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL, MINFRAC, 1.0,
-         SCALE, NULL, NULL, vals, &rhs, varinds, &nvarinds, &minact, varused, success, &islocal) );
-   assert(!islocal);
-
-   /* check whether the constraint is still globally valid */
-   if( *success && SCIPsetIsFeasLE(set, minact, rhs) )
-   {
-      *success = TRUE;
-
-      /* the new constraint is tighter and we keep it */
-      BMScopyMemoryArray(proofset->coefs, vals, proofset->nvars);
-      proofset->rhs = rhs;
-   }
-
-   /* free local copies */
-   SCIPsetFreeBufferArray(set, &varused);
-   SCIPsetFreeBufferArray(set, &varinds);
-   SCIPsetFreeBufferArray(set, &vals);
-
-   return SCIP_OKAY;
-}
-#endif
-
 #ifdef SCIP_DEBUG
 static
 void debugPrintViolationInfo(
@@ -6489,6 +6514,7 @@ SCIP_RETCODE tightenDualray(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_TREE*            tree,               /**< tree data */
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_AGGRROW*         farkasrow,          /**< aggregated row representing the proof */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
@@ -6500,17 +6526,18 @@ SCIP_RETCODE tightenDualray(
    SCIP_Real* vals;
    int* inds;
    SCIP_Real rhs;
+   int nvars;
    int nnz;
    int nbinvars;
    int ncontvars;
    int nintvars;
    int i;
-   SCIP_HASHTABLE* hashtable;
    SCIP_RETCODE retcode;
 
    assert(conflict->proofset != NULL);
 
    vars = SCIPprobGetVars(transprob);
+   nvars = SCIPprobGetNVars(transprob);
    nbinvars = 0;
    nintvars = 0;
    ncontvars = 0;
@@ -6539,19 +6566,12 @@ SCIP_RETCODE tightenDualray(
    debugPrintViolationInfo(set, getMinActivity(transprob, vals, inds, nnz, curvarlbs, curvarubs), rhs, NULL);
 
    /* return if all variables are continuous */
-   if( ncontvars == nnz )
+   if( ncontvars == nnz && set->conf_removecont != 'd')
       return SCIP_OKAY;
 
    /* start with a proofset containing all variables with a non-zero coefficient in the Farkas proof */
    SCIP_CALL( proofsetAddAggrrow(conflict->proofset, set, farkasrow) );
    conflict->proofset->conflicttype = SCIP_CONFTYPE_INFEASLP;
-
-   //SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, 3, hashGetKeyConflict, hashKeyEqConflict, hashKeyValConflict,
-   //      (void*)set->scip) );
-
-   /* sort and add to hashtable */
-   //SCIPaggrRowSort(conflict->proofset->aggrrow);
-   //retcode = SCIPhashtableSafeInsert(hashtable, (void*) conflict->proofset);
 
    /* get sorted data */
    vals = SCIPaggrRowGetVals(farkasrow);
@@ -6559,13 +6579,14 @@ SCIP_RETCODE tightenDualray(
    rhs = SCIPaggrRowGetRhs(farkasrow);
    nnz = SCIPaggrRowGetNNz(farkasrow);
 
-   /* don't remove continuous variable but separate valid inequalities */
-   if( set->conf_removecont == 'd' && set->conf_sepacuts )
+   /* try to find an alternative proof of local infeasibility that is stronger */
+   if( set->conf_sepacuts )
    {
-      SCIP_SOL* rootsol;
+      SCIP_SOL* refsol;
       SCIP_Real* cutcoefs;
       SCIP_Real cutefficacy;
       SCIP_Real cutrhs;
+      SCIP_Real proofefficiacy;
       int* cutinds;
       int cutnnz;
       SCIP_Bool islocal;
@@ -6573,97 +6594,159 @@ SCIP_RETCODE tightenDualray(
       SCIP_Bool success;
       int j;
 
-      for( j = 0; j < 3; j++ )
-      {
-         /* create reference solution */
-         SCIP_CALL( SCIPcreateSol(set->scip, &rootsol, NULL) );
+      proofefficiacy = getMinActivity(transprob, vals, inds, nnz, curvarlbs, curvarubs) - rhs;
+      proofefficiacy /= MAX(1e-6, SCIPgetVectorEfficacyNorm(set->scip, vals, nnz));
 
-         if( j == 0 )
+      /* create reference solution */
+      SCIP_CALL( SCIPcreateSol(set->scip, &refsol, NULL) );
+
+      /* initialize with average solution */
+      for( i = 0; i < nvars; i++ )
+      {
+         SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[i], SCIPvarGetAvgSol(vars[i])) );
+      }
+
+      /* set all variables that are part of the proof to its active local bound */
+      for( i = 0; i < nnz; i++ )
+      {
+         if( vals[i] > 0.0 )
          {
-            for( i = 0; i < nnz; i++ )
-            {
-               if( vals[i] < 0.0 )
-               {
-                  SCIP_CALL( SCIPsolSetVal(rootsol, set, stat, tree, vars[inds[i]], SCIPvarGetUbLocal(vars[inds[i]])) );
-               }
-               else
-               {
-                  SCIP_CALL( SCIPsolSetVal(rootsol, set, stat, tree, vars[inds[i]], SCIPvarGetLbLocal(vars[inds[i]])) );
-               }
-            }
-         }
-         else if( j == 1 )
-         {
-            for( i = 0; i < SCIPprobGetNVars(transprob); i++ )
-            {
-               SCIP_CALL( SCIPsolSetVal(rootsol, set, stat, tree, vars[i], SCIPvarGetRootSol(vars[i])) );
-            }
+            SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[inds[i]], curvarubs[inds[i]]) );
          }
          else
          {
-            for( i = 0; i < SCIPprobGetNVars(transprob); i++ )
+            SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[inds[i]], curvarlbs[inds[i]]) );
+         }
+      }
+
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &cutcoefs, SCIPprobGetNVars(transprob)) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &cutinds, SCIPprobGetNVars(transprob)) );
+
+      cutnnz = 0;
+      cutefficacy = -SCIPsetInfinity(set);
+
+      SCIP_CALL( SCIPcalcFlowCover(set->scip, refsol, BOUNDSWITCH, ALLOWLOCAL, conflict->proofset->aggrrow,
+            cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, NULL, &islocal, &cutsuccess) );
+
+      success = cutsuccess;
+
+      SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, refsol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, NULL, NULL,
+            MINFRAC, MAXFRAC, conflict->proofset->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, NULL,
+            &islocal, &cutsuccess) );
+
+      success |= cutsuccess;
+
+      /* replace the current proof */
+      if( success && !islocal && SCIPsetIsPositive(set, cutefficacy) && cutefficacy / cutnnz > proofefficiacy / nnz )
+      {
+         proofsetClear(conflict->proofset, set);
+         conflict->proofset->conflicttype = SCIP_CONFTYPE_INFEASLP;
+
+         SCIP_CALL( proofsetAddSparseData(conflict->proofset, set, cutcoefs, cutinds, cutnnz, cutrhs) );
+      }
+
+      SCIPsetFreeBufferArray(set, &cutinds);
+      SCIPsetFreeBufferArray(set, &cutcoefs);
+
+      SCIP_CALL( SCIPfreeSol(set->scip, &refsol) );
+   }
+   else if( ncontvars > 0 && (set->conf_removecont == 'g' || set->conf_removecont == 'n') )
+   {
+      SCIP_HASHTABLE* hashtable;
+      SCIP_ROW** rows;
+      int nrows;
+
+      rows = SCIPlpGetRows(lp);
+      nrows = SCIPlpGetNRows(lp);
+
+      SCIP_CALL( SCIPhashtableCreate(&hashtable, blkmem, ncontvars*(ncontvars-1.0)/2.0, SCIPhashGetKeyStandard, varPairsEqual,
+            varPairHashval, (void*)set->scip) );
+
+      /* iterate over all rows */
+      for( i = 0; i < nrows; i++ )
+      {
+         SCIP_COL** rowcols;
+         SCIP_Real* rowvals;
+         int nrowcols;
+         int c1;
+         int c2;
+
+         rowcols = SCIProwGetCols(rows[i]);
+         rowvals = SCIProwGetVals(rows[i]);
+         nrowcols = SCIProwGetNNonz(rows[i]);
+
+         /* iterate over all columns
+          *
+          * TODO: do we want to check all rows? alternatively we could check rows with (non-)zero Farkas coefficient only.
+          */
+         for( c1 = 0; c1 < nrowcols; c1++ )
+         {
+            SCIP_VAR* var1;
+
+            /* skip integral columns */
+            if( SCIPvarGetType(SCIPcolGetVar(rowcols[c1])) != SCIP_VARTYPE_CONTINUOUS )
+               continue;
+
+            var1 = SCIPcolGetVar(rowcols[c1]);
+
+            for( c2 = c1+1; c2 < nrowcols; c2++ )
             {
-               SCIP_CALL( SCIPsolSetVal(rootsol, set, stat, tree, vars[i], SCIPvarGetAvgSol(vars[i])) );
+               ROWVARPAIR* rowvarpair;
+               ROWVARPAIR* tmprowvarpair;
+               SCIP_VAR* var2;
+
+               var2 = SCIPcolGetVar(rowcols[c2]);
+
+               /* skip integral columns */
+               if( SCIPvarGetType(SCIPcolGetVar(rowcols[c2])) != SCIP_VARTYPE_CONTINUOUS )
+                  continue;
+
+               if( SCIPvarGetProbindex(var1) < SCIPvarGetProbindex(var2) )
+               {
+                  rowvarpair->rowindex = SCIProwGetLPPos(rows[i]);
+                  rowvarpair->varcoef1 = rowvals[c1];
+                  rowvarpair->varcoef2 = rowvals[c2];
+                  rowvarpair->varindex1 = SCIPvarGetProbindex(var1);
+                  rowvarpair->varindex2 = SCIPvarGetProbindex(var2);
+               }
+               else
+               {
+                  rowvarpair->rowindex = SCIProwGetLPPos(rows[i]);
+                  rowvarpair->varcoef1 = rowvals[c2];
+                  rowvarpair->varcoef2 = rowvals[c1];
+                  rowvarpair->varindex1 = SCIPvarGetProbindex(var2);
+                  rowvarpair->varindex2 = SCIPvarGetProbindex(var1);
+               }
+
+               /* check if we have already seen a similar row */
+               tmprowvarpair = (ROWVARPAIR*)SCIPhashtableRetrieve(hashtable, (void*)rowvarpair);
+
+               if( tmprowvarpair != NULL )
+               {
+                  /* we prefer the row with less non-zeros
+                   *
+                   * TODO: is this really a good choice?
+                   */
+                  if( SCIProwGetNNonz(rows[rowvarpair->rowindex]) > SCIProwGetNNonz(rows[tmprowvarpair->rowindex]) )
+                     continue;
+               }
+
+               printf("add: %g<%s> and %g<%s>\n", rowvarpair->varcoef1, SCIPvarGetName(vars[rowvarpair->varindex1]), rowvarpair->varcoef2, SCIPvarGetName(vars[rowvarpair->varindex2]));
+               SCIP_CALL( SCIPhashtableInsert(hashtable, (void*)rowvarpair) );
             }
          }
-
-         SCIP_CALL( SCIPsetAllocBufferArray(set, &cutcoefs, SCIPprobGetNVars(transprob)) );
-         SCIP_CALL( SCIPsetAllocBufferArray(set, &cutinds, SCIPprobGetNVars(transprob)) );
-
-         cutnnz = 0;
-         cutefficacy = -SCIPsetInfinity(set);
-
-         SCIP_CALL( SCIPcalcFlowCover(set->scip, rootsol, BOUNDSWITCH, ALLOWLOCAL, conflict->proofset->aggrrow,
-               cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, NULL, &islocal, &cutsuccess) );
-
-         success = cutsuccess;
-
-         SCIP_CALL( SCIPcutGenerationHeuristicCMIR(set->scip, rootsol, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, NULL, NULL,
-               MINFRAC, MAXFRAC, conflict->proofset->aggrrow, cutcoefs, &cutrhs, cutinds, &cutnnz, &cutefficacy, NULL,
-               &islocal, &cutsuccess) );
-
-         success |= cutsuccess;
-
-         if( success && !islocal && SCIPsetIsPositive(set, cutefficacy)
-            && (proofsetGetNVars(conflict->proofset) != cutnnz
-                  || !SCIPsetIsEQ(set, proofsetGetRhs(conflict->proofset), cutrhs)) )
-         {
-            SCIP_PROOFSET* proofset;
-
-            SCIP_CALL( proofsetCreate(&proofset, blkmem) );
-            proofset->conflicttype = SCIP_CONFTYPE_INFEASLP;
-
-            SCIP_CALL( proofsetAddSparseData(proofset, set, cutcoefs, cutinds, cutnnz, cutrhs) );
-
-            //SCIPaggrRowSort(proofset->aggrrow);
-
-            //if( !SCIPhashtableExists(hashtable, (void*)proofset) )
-            //{
-            //   SCIP_CALL( SCIPhashtableInsert(hashtable, (void*)proofset) );
-               SCIP_CALL( conflictInsertProofset(conflict, set, blkmem, proofset) );
-            //}
-            //else
-            //{
-            //   proofsetFree(&proofset, set, blkmem);
-            //}
-         }
-
-         SCIPsetFreeBufferArray(set, &cutinds);
-         SCIPsetFreeBufferArray(set, &cutcoefs);
-
-         SCIP_CALL( SCIPfreeSol(set->scip, &rootsol) );
       }
-   }
-   else if( set->conf_removecont == 'g' || set->conf_removecont == 'n' )
-   {
-      // TODO: implement cancellation
+
+      printf("ncontvars: %d\n", ncontvars);
+      printf("hashtable has %d entries.\n", SCIPhashtableGetNEntries(hashtable));
+
+      SCIPaggrRowPrint(set->scip, conflict->proofset->aggrrow, NULL);
+
+      /* iterate over all variables in the proof and hash all ordered pairs of continuous variables */
+
+      SCIPhashtableFree(&hashtable);
    }
 
-   //SCIPhashtableFree(&hashtable);
-
-   /*
-    * TODO: implement removing cont. vars and separating valid inequalities
-    */
 
 #ifdef SCIP_DEBUG
    /* get updated data */
@@ -6761,7 +6844,7 @@ SCIP_RETCODE conflictAnalyzeDualray(
    assert(nnz >= 1);
 
    /* try to enforce the constraint based on a dual ray */
-   SCIP_CALL( tightenDualray(conflict, set, stat, blkmem, transprob, tree, farkasrow, curvarlbs, curvarubs, diving,
+   SCIP_CALL( tightenDualray(conflict, set, stat, blkmem, transprob, tree, lp, farkasrow, curvarlbs, curvarubs, diving,
          globalinfeasible) );
 
    if( *globalinfeasible )
