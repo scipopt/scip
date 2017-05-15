@@ -2735,20 +2735,23 @@ SCIP_Bool isUseOldBranching(
    SCIP_VAR*             branchvar
    )
 {
-   int varindex = SCIPvarGetProbindex(branchvar);
+   /*int varindex = SCIPvarGetProbindex(branchvar);*/
 
-   SCIP_Longint currentnodeid = SCIPgetNNodes(scip);
+   return SCIPgetVarStrongbranchNode(scip, branchvar) == SCIPgetNNodes(scip)
+      && SCIPgetVarStrongbranchLPAge(scip, branchvar) < config->reevalage;
+
+   /*SCIP_Longint currentnodeid = SCIPgetNNodes(scip);
    SCIP_Longint lastbranchingnodeid = persistent->lastbranchid[varindex];
 
    int reevalage = config->reevalage;
    SCIP_Longint currentnnodelps = SCIPgetNNodeLPs(scip);
    SCIP_Longint lastbranchingnnodelps = persistent->lastbranchnlps[varindex];
 
-   return (currentnodeid == lastbranchingnodeid) && (currentnnodelps - lastbranchingnnodelps < reevalage);
+   return (currentnodeid == lastbranchingnodeid) && (currentnnodelps - lastbranchingnnodelps < reevalage);*/
 }
 
 static
-void getOldBranching(
+SCIP_RETCODE getOldBranching(
    SCIP*                 scip,
    PERSISTENTDATA*       persistent,
    SCIP_VAR*             branchvar,
@@ -2762,12 +2765,30 @@ void getOldBranching(
    /* TODO: removed this part and replace by SCIPgetVarStronbranchData of possible */
    branchingResultDataCopy(persistent->lastbranchdownres[varindex], downbranchingresult);
    branchingResultDataCopy(persistent->lastbranchupres[varindex], upbranchingresult);
-   *oldlpobjval = persistent->lastbranchlpobjval[varindex];
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "lookahead branching on variable <%s> already performed (lpage=%" SCIP_LONGINT_FORMAT ", down=%g (%+g), up=%g (%+g))\n",
-         SCIPvarGetName(branchvar), SCIPgetNNodeLPs(scip) - persistent->lastbranchnlps[varindex],
-         downbranchingresult->objval, downbranchingresult->objval-*oldlpobjval, upbranchingresult->objval,
-         upbranchingresult->objval-*oldlpobjval);
+   SCIP_CALL( SCIPgetVarStrongbranchLast(scip, branchvar, &downbranchingresult->dualbound, &upbranchingresult->dualbound,
+      NULL, NULL, NULL, oldlpobjval) );
+
+   downbranchingresult->dualboundvalid = FALSE;
+   upbranchingresult->dualboundvalid = FALSE;
+   downbranchingresult->cutoff = FALSE;
+   upbranchingresult->cutoff = FALSE;
+
+#ifdef SCIP_DEBUG
+   {
+      SCIP_Real downgain;
+      SCIP_Real upgain;
+
+      downgain = MAX(downbranchingresult->dualbound - *oldlpobjval, 0);
+      upgain = MAX(upbranchingresult->dualbound - *oldlpobjval, 0);
+
+      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Lookahead branching on variable <%s> already performed (lpage=%" SCIP_LONGINT_FORMAT ", down=%g (%+g), up=%g (%+g))\n",
+            SCIPvarGetName(branchvar), SCIPgetVarStrongbranchLPAge(scip, branchvar), downbranchingresult->dualbound,
+            downgain, upbranchingresult->dualbound, upgain);
+   }
+#endif
+
+   return SCIP_OKAY;
 }
 
 static
@@ -2794,7 +2815,6 @@ SCIP_RETCODE updateOldBranching(
 
    persistent->lastbranchid[varindex] = SCIPgetNNodes(scip);
    persistent->lastbranchnlps[varindex] = SCIPgetNNodeLPs(scip);
-   persistent->lastbranchlpobjval[varindex] = lpobjval;
 
    return SCIP_OKAY;
 }
@@ -2984,31 +3004,20 @@ SCIP_Real calculcateScoreFromResult(
    SCIP_VAR*             branchvar,
    BRANCHINGRESULTDATA*  downbranchingresult,
    BRANCHINGRESULTDATA*  upbranchingresult,
-   SCIP_Real             lpobjval,           /**< the objective value of the lp solved in the base (non-probing) node. */
-   SCIP_Bool             useoldbranching,
-   SCIP_Real             oldlpobjval
+   SCIP_Real             lpobjval            /**< the objective value of the lp solved in the base (non-probing) node. */
    )
 {
    SCIP_Real score;
    SCIP_Real downgain = 0;
    SCIP_Real upgain = 0;
 
-   if( useoldbranching )
-   {
-      lpobjval = oldlpobjval;
-   }
-
    if( downbranchingresult != NULL )
    {
-      SCIP_Real downdualbound = downbranchingresult->dualboundvalid ? downbranchingresult->dualbound :
-         downbranchingresult->objval;
-      downgain = MAX(0, downdualbound - lpobjval);
+      downgain = MAX(0, downbranchingresult->dualbound - lpobjval);
    }
    if( upbranchingresult != NULL )
    {
-      SCIP_Real updualbound = upbranchingresult->dualboundvalid ? upbranchingresult->dualbound :
-         upbranchingresult->objval;
-      upgain = MAX(0, updualbound - lpobjval);
+      upgain = MAX(0, upbranchingresult->dualbound - lpobjval);
    }
 
    score = calculateScoreFromGain(scip, branchvar, downgain, upgain);
@@ -3869,14 +3878,9 @@ SCIP_RETCODE selectVarRecursive(
 
             if( persistent != NULL && isUseOldBranching(scip, config, persistent, branchvar) )
             {
-               getOldBranching(scip, persistent, branchvar, downbranchingresult, upbranchingresult, &oldlpobjval);
-               downbranchingresult->dualboundvalid = FALSE;
-               upbranchingresult->dualboundvalid = FALSE;
+               SCIP_CALL( getOldBranching(scip, persistent, branchvar, downbranchingresult, upbranchingresult, &oldlpobjval) );
                useoldbranching = TRUE;
                SCIPstatistic( statistics->noldbranchused[probingdepth]++; )
-
-               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Used old branching results for the up and down branches of <%s>.\n",
-                  SCIPvarGetName(branchvar));
             }
             else
             {
@@ -3938,9 +3942,9 @@ SCIP_RETCODE selectVarRecursive(
                }
 
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "-> down=%.9g (gain=%.9g, valid=%u, inf=%u), up=%.9g (gain=%.9g, valid=%u, inf=%u)\n",
-                              downbranchingresult->objval, downbranchingresult->objval - lpobjval,
-                              downbranchingresult->dualboundvalid, downbranchingresult->cutoff, upbranchingresult->objval,
-                              upbranchingresult->objval - lpobjval, upbranchingresult->dualboundvalid,
+                              downbranchingresult->dualbound, downbranchingresult->dualbound - lpobjval,
+                              downbranchingresult->dualboundvalid, downbranchingresult->cutoff, upbranchingresult->dualbound,
+                              upbranchingresult->dualbound - lpobjval, upbranchingresult->dualboundvalid,
                               upbranchingresult->cutoff);
 
                if( niterations != NULL )
@@ -3965,10 +3969,11 @@ SCIP_RETCODE selectVarRecursive(
             {
                /* TODO: move this block to an own method when finished */
                SCIP_Real score = -SCIPinfinity(scip);
+               SCIP_Real scoringlpobjval = useoldbranching ? oldlpobjval : lpobjval;
 
                if( upbranchingresult->cutoff && downbranchingresult->cutoff )
                {
-                  score = calculcateScoreFromResult(scip, branchvar, NULL, NULL, lpobjval, useoldbranching, oldlpobjval);
+                  score = calculcateScoreFromResult(scip, branchvar, NULL, NULL, scoringlpobjval);
 
                   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " -> variable <%s> is infeasible in both directions\n",
                      SCIPvarGetName(branchvar));
@@ -3982,8 +3987,7 @@ SCIP_RETCODE selectVarRecursive(
                }
                else if( upbranchingresult->cutoff )
                {
-                  score = calculcateScoreFromResult(scip, branchvar, downbranchingresult, NULL, lpobjval, useoldbranching,
-                     oldlpobjval);
+                  score = calculcateScoreFromResult(scip, branchvar, downbranchingresult, NULL, scoringlpobjval);
 
                   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " -> variable <%s> is infeasible in upward branch\n",
                      SCIPvarGetName(branchvar));
@@ -4005,7 +4009,7 @@ SCIP_RETCODE selectVarRecursive(
                }
                else if( downbranchingresult->cutoff )
                {
-                  score = calculcateScoreFromResult(scip, branchvar, NULL, upbranchingresult, lpobjval, useoldbranching, oldlpobjval);
+                  score = calculcateScoreFromResult(scip, branchvar, NULL, upbranchingresult, scoringlpobjval);
 
                   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " -> variable <%s> is infeasible in downward branch\n",
                      SCIPvarGetName(branchvar));
@@ -4026,26 +4030,21 @@ SCIP_RETCODE selectVarRecursive(
                }
                else
                {
-                  SCIP_Real downdualbound = downbranchingresult->dualboundvalid ? downbranchingresult->dualbound :
-                     downbranchingresult->objval;
-                  SCIP_Real updualbound = upbranchingresult->dualboundvalid ? upbranchingresult->dualbound :
-                     upbranchingresult->objval;
-
                   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Neither branch is cutoff and no limit reached.\n");
 
-                  score = calculcateScoreFromResult(scip, branchvar, downbranchingresult, upbranchingresult, lpobjval, useoldbranching, oldlpobjval);
+                  score = calculcateScoreFromResult(scip, branchvar, downbranchingresult, upbranchingresult, scoringlpobjval);
 
                   if( upbranchingresult->dualboundvalid && downbranchingresult->dualboundvalid )
                   {
-                     decision->proveddb = MAX(decision->proveddb, MIN(updualbound, downdualbound));
+                     decision->proveddb = MAX(decision->proveddb, MIN(upbranchingresult->dualbound, downbranchingresult->dualbound));
                   }
                   else if( upbranchingresult->dualboundvalid )
                   {
-                     decision->proveddb = MAX(decision->proveddb, updualbound);
+                     decision->proveddb = MAX(decision->proveddb, upbranchingresult->dualbound);
                   }
                   else if( downbranchingresult->dualboundvalid )
                   {
-                     decision->proveddb = MAX(decision->proveddb, downdualbound);
+                     decision->proveddb = MAX(decision->proveddb, downbranchingresult->dualbound);
                   }
                }
 
@@ -4070,14 +4069,17 @@ SCIP_RETCODE selectVarRecursive(
                      SCIPvarGetName(decision->var), bestscorelowerbound, bestscoreupperbound, bestscore);
                }
 
+#ifdef SCIP_DEBUG
                if( !upbranchingresult->cutoff && !downbranchingresult->cutoff )
                {
+                  SCIP_Real downgain = MAX(downbranchingresult->objval - scoringlpobjval, 0);
+                  SCIP_Real upgain = MAX(upbranchingresult->objval - scoringlpobjval, 0);
+
                   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " -> cand %d/%d var <%s> (solval=%g, downgain=%g, upgain=%g, score=%g) -- best: <%s> (%g)\n",
                            c, nlpcands, SCIPvarGetName(branchvar), branchval,
-                           downbranchingresult->objval - (useoldbranching ? oldlpobjval : lpobjval),
-                           upbranchingresult->objval - (useoldbranching ? oldlpobjval : lpobjval),
-                           score, SCIPvarGetName(decision->var), bestscore);
+                           downgain, upgain, score, SCIPvarGetName(decision->var), bestscore);
                }
+#endif
 
                if( scorecontainer != NULL && SCIPisGE(scip, score, 0) )
                {
@@ -4903,7 +4905,7 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "Should binary constraints found in the root node be added as cliques?",
          &branchruledata->config->addclique, TRUE, DEFAULT_ADDCLIQUE, NULL, NULL) );
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_FULLq, "Leaving SCIPincludeBranchruleLookahead\n");
+   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Leaving SCIPincludeBranchruleLookahead\n");
 
    return SCIP_OKAY;
 }
