@@ -7,8 +7,12 @@
 
 sleep 5
 
-DATABASE="/nfs/OPTI/bzfserra/jenkins/known_bugs.txt"
-TMPDATABASE="/nfs/OPTI/bzfserra/jenkins/known_bugs.txt.tmp"
+DATABASE="/nfs/OPTI/adm_timo/databases/${PWD##*/}.txt"
+TMPDATABASE="/nfs/OPTI/adm_timo/databases/${PWD##*/}.txt.tmp"
+
+# the first time, the file might not exists so touch it.
+touch $DATABASE
+touch $TMPDATABASE
 
 EMAILFROM="adm_timo <timo-admin@zib.de>"
 EMAILTO="adm_timo <timo-admin@zib.de>"
