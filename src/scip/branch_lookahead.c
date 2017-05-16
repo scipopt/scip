@@ -2720,9 +2720,7 @@ SCIP_Bool isBranchFurtherLoopDecrement(
    SCIP_Bool branchfurther = isBranchFurther(status, config);
    if( !branchfurther )
    {
-      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Prior: %d", *loopcounter);
       (*loopcounter)--;
-      LABdebugMessageCont(scip, SCIP_VERBLEVEL_HIGH, "After: %d\n", *loopcounter);
    }
    return branchfurther;
 }
@@ -3829,10 +3827,10 @@ SCIP_RETCODE selectVarRecursive(
 
          SCIP_CALL( SCIPgetLPI(scip, &lpi) );
 
-         SCIPdebug(
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Started selectVarRecursive with <%i> candidates: ", nlpcands);
-            printCandidates(scip, SCIP_VERBLEVEL_HIGH, candidates);
-         )
+#ifdef SCIP_DEBUG
+         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Started selectVarRecursive with <%i> candidates: ", nlpcands);
+         printCandidates(scip, SCIP_VERBLEVEL_HIGH, candidates);
+#endif
 
          LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Starting loop from index %d\n", start);
 
@@ -3887,7 +3885,7 @@ SCIP_RETCODE selectVarRecursive(
                DOMAINREDUCTIONS* downdomainreductions;
                DOMAINREDUCTIONS* updomainreductions;
 
-               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Started branching on var <%s> with val <%g> and bounds [<%g>..<%g>]\n",
+               LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, "Started branching on var <%s> with val <%g> and bounds [<%g>..<%g>]\n",
                   SCIPvarGetName(branchvar), branchval, SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar));
 
                if( config->usedomainreduction )
@@ -3917,6 +3915,25 @@ SCIP_RETCODE selectVarRecursive(
                      localbaselpsolval, probingdepth, recursiondepth, updomainreductions, binconsdata,
                      upbranchingresult, scorecontainer, uplpimemory, &addeddomainreduction) );
 #endif
+
+                  /* check whether a new solutions rendered the previous child infeasible */
+                  /* Check, if all existing columns are in LP.
+                   * If this is not the case, we may still return that the up and down dual bounds are valid, because the
+                   * branching rule should not apply them otherwise.
+                   * However, we must not set the downinf or upinf pointers to TRUE based on the dual bound, because we
+                   * cannot guarantee that this node can be cut off.
+                   */
+                  /* TODO: maybe re-add !upbranchingresult->cutoff in some way to reduce the number of executions of this
+                   * if clause */
+                  if( SCIPallColsInLP(scip) )
+                  {
+                     if( SCIPisGE(scip, downbranchingresult->dualbound, SCIPgetCutoffbound(scip)) )
+                     {
+                        downbranchingresult->cutoff = TRUE;
+                        LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH,
+                           "The up branching changed the cutoffbound and rendered the down branching result infeasible.\n");
+                     }
+                  }
                }
                else
                {
@@ -3939,9 +3956,28 @@ SCIP_RETCODE selectVarRecursive(
                      localbaselpsolval, probingdepth, recursiondepth, downdomainreductions, binconsdata,
                      downbranchingresult, scorecontainer, downlpimemory, &addeddomainreduction) );
 #endif
+
+                  /* check whether a new solutions rendered the previous child infeasible */
+                  /* Check, if all existing columns are in LP.
+                   * If this is not the case, we may still return that the up and down dual bounds are valid, because the
+                   * branching rule should not apply them otherwise.
+                   * However, we must not set the downinf or upinf pointers to TRUE based on the dual bound, because we
+                   * cannot guarantee that this node can be cut off.
+                   */
+                  /* TODO: maybe re-add !downbranchingresult->cutoff in some way to reduce the number of executions of this
+                   * if clause */
+                  if( SCIPallColsInLP(scip) )
+                  {
+                     if( SCIPisGE(scip, upbranchingresult->dualbound, SCIPgetCutoffbound(scip)) )
+                     {
+                        upbranchingresult->cutoff = TRUE;
+                        LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH,
+                           "The down branching changed the cutoffbound and rendered the up branching result infeasible.\n");
+                     }
+                  }
                }
 
-               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "-> down=%.9g (gain=%.9g, valid=%u, inf=%u), up=%.9g (gain=%.9g, valid=%u, inf=%u)\n",
+               LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, "-> down=%.9g (gain=%.9g, valid=%u, inf=%u), up=%.9g (gain=%.9g, valid=%u, inf=%u)\n",
                               downbranchingresult->dualbound, downbranchingresult->dualbound - lpobjval,
                               downbranchingresult->dualboundvalid, downbranchingresult->cutoff, upbranchingresult->dualbound,
                               upbranchingresult->dualbound - lpobjval, upbranchingresult->dualboundvalid,
@@ -3975,7 +4011,7 @@ SCIP_RETCODE selectVarRecursive(
                {
                   score = calculcateScoreFromResult(scip, branchvar, NULL, NULL, scoringlpobjval);
 
-                  LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " -> variable <%s> is infeasible in both directions\n",
+                  LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> variable <%s> is infeasible in both directions\n",
                      SCIPvarGetName(branchvar));
 
                   /* in a higher level this cutoff may be transferred as a domain reduction/valid bound */
@@ -3989,7 +4025,7 @@ SCIP_RETCODE selectVarRecursive(
                {
                   score = calculcateScoreFromResult(scip, branchvar, downbranchingresult, NULL, scoringlpobjval);
 
-                  LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " -> variable <%s> is infeasible in upward branch\n",
+                  LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> variable <%s> is infeasible in upward branch\n",
                      SCIPvarGetName(branchvar));
 
                   if( config->usedomainreduction && !useoldbranching )
@@ -4011,7 +4047,7 @@ SCIP_RETCODE selectVarRecursive(
                {
                   score = calculcateScoreFromResult(scip, branchvar, NULL, upbranchingresult, scoringlpobjval);
 
-                  LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " -> variable <%s> is infeasible in downward branch\n",
+                  LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> variable <%s> is infeasible in downward branch\n",
                      SCIPvarGetName(branchvar));
 
                   SCIPstatistic(
@@ -4075,7 +4111,7 @@ SCIP_RETCODE selectVarRecursive(
                   SCIP_Real downgain = MAX(downbranchingresult->objval - scoringlpobjval, 0);
                   SCIP_Real upgain = MAX(upbranchingresult->objval - scoringlpobjval, 0);
 
-                  LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " -> cand %d/%d var <%s> (solval=%g, downgain=%g, upgain=%g, score=%g) -- best: <%s> (%g)\n",
+                  LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> cand %d/%d var <%s> (solval=%g, downgain=%g, upgain=%g, score=%g) -- best: <%s> (%g)\n",
                            c, nlpcands, SCIPvarGetName(branchvar), branchval,
                            downgain, upgain, score, SCIPvarGetName(decision->var), bestscore);
                }
@@ -4401,7 +4437,7 @@ SCIP_RETCODE usePreviousResult(
    SCIP_Bool*            result              /**< the pointer to the branching result */
    )
 {
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Branching based on previous solution.\n");
+   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Branching based on previous solution.\n");
 
    /* execute the actual branching */
    SCIP_CALL( branchOnVar(scip, decision) );
@@ -4468,7 +4504,7 @@ SCIP_RETCODE initBranchruleData(
 static
 SCIP_DECL_BRANCHCOPY(branchCopyLookahead)
 {  /*lint --e{715}*/
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Entering branchCopyLookahead\n");
+   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Entering branchCopyLookahead\n");
 
    assert(scip != NULL);
    assert(branchrule != NULL);
@@ -4476,7 +4512,7 @@ SCIP_DECL_BRANCHCOPY(branchCopyLookahead)
 
    SCIP_CALL( SCIPincludeBranchruleLookahead(scip) );
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Leaving branchCopyLookahead\n");
+   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Leaving branchCopyLookahead\n");
 
    return SCIP_OKAY;
 }
@@ -4615,7 +4651,7 @@ SCIP_DECL_BRANCHEXITSOL(branchExitSolLookahead)
 
       branchruledata->isinitialized = FALSE;
 
-      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Freed branchruledata\n");
+      LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Freed branchruledata\n");
    }
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Leaving branchExitSolLookahead\n");
@@ -4637,7 +4673,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    assert(scip != NULL);
    assert(result != NULL);
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Entering branchExeclpLookahead.\n");
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Entering branchExeclpLookahead.\n");
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
@@ -4655,7 +4691,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    {
       /* create a copy of the current lp solution to compare it with a previously  */
       SCIP_CALL( copyCurrentSolution(scip, &baselpsol) );
-      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Created an unlinked copy of the base lp solution.\n");
+      LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Created an unlinked copy of the base lp solution.\n");
    }
 
    if( branchruledata->config->storeunviolatedsol && (branchruledata->config->usebincons || branchruledata->config->usedomainreduction)
@@ -4719,7 +4755,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          *result = SCIP_DIDNOTFIND;
       }
 
-      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result before branching is %s\n", getStatusString(*result));
+      LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Result before branching is %s\n", getStatusString(*result));
 
       if( *result != SCIP_CUTOFF /* a variable could not be branched in any direction or any of the calculated domain
                                   * reductions was infeasible */
@@ -4731,7 +4767,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          /*&& (0 <= bestcand && bestcand < nlpcands)*/ /* no valid candidate index could be found */
          )
       {
-         LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, " -> %d candidates, selected variable <%s> (solval=%g, down=%g, up=%g)\n",
+         LABdebugMessage(scip, SCIP_VERBLEVEL_NORMAL, " -> %d candidates, selected variable <%s> (solval=%g, down=%g, up=%g)\n",
             allcandidates->ncandidates, SCIPvarGetName(decision->var), decision->val, decision->downdb, decision->updb);
 
          /* execute the branching as a result of the branching logic */
@@ -4740,7 +4776,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          *result = SCIP_BRANCHED;
       }
 
-      LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Result after branching is %s\n", getStatusString(*result));
+      LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Result after branching is %s\n", getStatusString(*result));
 
       SCIPstatistic(
          if( *result == SCIP_BRANCHED )
@@ -4798,7 +4834,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 
    branchruledata->config->usebincons = userusebincons;
 
-   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Exiting branchExeclpLookahead.\n");
+   LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Exiting branchExeclpLookahead.\n");
 
    return SCIP_OKAY;
 }
