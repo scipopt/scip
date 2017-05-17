@@ -8812,8 +8812,12 @@ SCIP_Real SCIPrandomGetReal(
 void SCIPrandomPermuteIntArray(
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    int*                  array,              /**< array to be shuffled */
-   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end                 /**< last index that should be subject to shuffling (array size for whole array) */
+   int                   begin,              /**< first included index that should be subject to shuffling
+                                              *   (0 for first array entry)
+                                              */
+   int                   end                 /**< first excluded index that should not be subject to shuffling
+                                              *   (array size for last array entry)
+                                              */
    )
 {
    int tmp;
@@ -8838,8 +8842,12 @@ void SCIPrandomPermuteIntArray(
 void SCIPrandomPermuteArray(
    SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
    void**                array,              /**< array to be shuffled */
-   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end                 /**< last index that should be subject to shuffling (array size for whole array) */
+   int                   begin,              /**< first included index that should be subject to shuffling
+                                              *   (0 for first array entry)
+                                              */
+   int                   end                 /**< first excluded index that should not be subject to shuffling
+                                              *   (array size for last array entry)
+                                              */
    )
 {
    void* tmp;
@@ -9051,10 +9059,12 @@ void SCIPswapPointers(
  */
 void SCIPpermuteIntArray(
    int*                  array,              /**< array to be shuffled */
-   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end,                /**< last index that should be subject to shuffling (array size for whole
-                                               *   array)
-                                               */
+   int                   begin,              /**< first included index that should be subject to shuffling
+                                              *   (0 for first array entry)
+                                              */
+   int                   end,                /**< first excluded index that should not be subject to shuffling
+                                              *   (array size for last array entry)
+                                              */
    unsigned int*         randseed            /**< seed value for the random generator */
    )
 {
@@ -9083,9 +9093,11 @@ void SCIPpermuteIntArray(
  */
 void SCIPpermuteArray(
    void**                array,              /**< array to be shuffled */
-   int                   begin,              /**< first index that should be subject to shuffling (0 for whole array) */
-   int                   end,                /**< last index that should be subject to shuffling (array size for whole
-                                              *   array)
+   int                   begin,              /**< first included index that should be subject to shuffling
+                                              *   (0 for first array entry)
+                                              */
+   int                   end,                /**< first excluded index that should not be subject to shuffling
+                                              *   (array size for last array entry)
                                               */
    unsigned int*         randseed            /**< seed value for the random generator */
    )

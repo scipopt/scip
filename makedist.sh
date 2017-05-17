@@ -28,7 +28,7 @@ tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
 $NAME/doc/scip* $NAME/doc/xternal.c $NAME/doc/builddoc.sh \
 $NAME/doc/inc/codestyle/* $NAME/doc/inc/shelltutorial $NAME/doc/inc/debugexamples \
-$NAME/doc/inc/faq/faqtext.txt $NAME/doc/inc/faq/*.py $NAME/doc/inc/faq/localfac.php \
+$NAME/doc/inc/faq/faqtext.txt $NAME/doc/inc/faq/*.py $NAME/doc/inc/faq/localfaq.php \
 $NAME/doc/inc/makeexamples/* $NAME/doc/inc/shelltutorial/commands $NAME/doc/inc/shelltutorial/insertsnippetstutorial.py \
 $NAME/doc/inc/debugexamples/example*.txt \
 $NAME/doc/pictures/miniscippy.png $NAME/doc/pictures/scippy.png \
@@ -73,26 +73,24 @@ $NAME/applications/MinIISC/doc/* \
 $NAME/applications/MinIISC/src/* \
 $NAME/applications/MinIISC/data/* \
 $NAME/applications/MinIISC/check/configuration_tmpfile_setup_miniisc.sh $NAME/applications/MinIISC/check/run.sh \
-$NAME/applications/MinIISC/check/run.sh $NAME/applications/MinIISC/check/testset/short.* \
+$NAME/applications/MinIISC/check/testset/short.* \
 $NAME/applications/PolySCIP/doc/* \
 $NAME/applications/PolySCIP/src/*.cpp $NAME/applications/PolySCIP/src/*.h \
-$NAME/applications/PolySCIP/src/tclap/* $NAME/applications/PolySCIP/src/CMakeLists.txt \
+$NAME/applications/PolySCIP/src/tclap/* \
 $NAME/applications/PolySCIP/data/*.mop \
 $NAME/applications/PolySCIP/data/AP_p-3_n-5.dat \
 $NAME/applications/PolySCIP/Makefile \
 $NAME/applications/PolySCIP/mult_zimpl/AP_p-3_n-5.zpl \
 $NAME/applications/PolySCIP/mult_zimpl/README \
 $NAME/applications/PolySCIP/mult_zimpl/tenfelde_podehl.zpl \
-$NAME/applications/PolySCIP/cmake/* $NAME/applications/PolySCIP/mult_zimpl/*.py \
+$NAME/applications/PolySCIP/mult_zimpl/*.py \
 $NAME/applications/PolySCIP/INSTALL $NAME/applications/PolySCIP/LICENCE \
 $NAME/applications/PolySCIP/README $NAME/applications/PolySCIP/scipmip.set \
-$NAME/applications/PolySCIP/CMakeLists.txt \
 $NAME/applications/STP/doc/* \
 $NAME/applications/STP/src/depend.* \
 $NAME/applications/STP/src/*.c $NAME/applications/STP/src/*.h \
 $NAME/applications/STP/check/testset/*.test $NAME/applications/STP/check/testset/*.solu \
-$NAME/applications/STP/data/D/* \
-$NAME/applications/STP/scip-jack.sh \
+$NAME/applications/STP/data/short/* \
 $NAME/applications/STP/Makefile $NAME/applications/STP/INSTALL \
 $NAME/examples/xternal_examples.c \
 $NAME/examples/Binpacking/Makefile $NAME/examples/Binpacking/INSTALL \
@@ -117,7 +115,7 @@ $NAME/examples/GMI/check/testset/short.* \
 $NAME/examples/GMI/settings/gmi* $NAME/examples/GMI/src/depend.* \
 $NAME/examples/GMI/src/*.c $NAME/examples/GMI/src/*.h \
 $NAME/examples/LOP/* $NAME/examples/LOP/doc/* $NAME/examples/LOP/data/* \
-$NAME/examples/LOP/check/check.sh $NAME/examples/LOP/check/testset/short.* \
+$NAME/examples/LOP/check/testset/short.* \
 $NAME/examples/LOP/src/depend.* $NAME/examples/LOP/src/Makefile \
 $NAME/examples/LOP/settings/default.set \
 $NAME/examples/LOP/src/*.c $NAME/examples/LOP/src/*.h \
@@ -130,6 +128,7 @@ $NAME/examples/Queens/src/depend.* \
 $NAME/examples/Queens/src/*.cpp $NAME/examples/Queens/src/*.hpp \
 $NAME/examples/Relaxator/INSTALL \
 $NAME/examples/Relaxator/Makefile \
+$NAME/examples/Relaxator/check/testset/short.test \
 $NAME/examples/Relaxator/doc/xternal_relaxator.c \
 $NAME/examples/Relaxator/makedepend.sh \
 $NAME/examples/Relaxator/src/* \

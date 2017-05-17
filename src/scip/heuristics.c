@@ -591,7 +591,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                   case SCIP_BRANCHDIR_UPWARDS:
                      /* test if bound change is possible, otherwise propagation might have deduced the same
                       * bound already or numerical troubles might have occurred */
-                     if( SCIPisFeasLE(scip, bdchgvalue, lblocal) )
+                     if( SCIPisFeasLE(scip, bdchgvalue, lblocal) || SCIPisFeasGT(scip, bdchgvalue, ublocal) )
                         infeasbdchange = TRUE;
                      else
                      {
@@ -602,7 +602,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                   case SCIP_BRANCHDIR_DOWNWARDS:
                      /* test if bound change is possible, otherwise propagation might have deduced the same
                       * bound already or numerical troubles might have occurred */
-                     if( SCIPisFeasGE(scip, bdchgvalue, ublocal) )
+                     if( SCIPisFeasGE(scip, bdchgvalue, ublocal) || SCIPisFeasLT(scip, bdchgvalue, lblocal) )
                         infeasbdchange = TRUE;
                      else
                      {
@@ -641,13 +641,12 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                if( infeasbdchange )
                {
                   SCIPdebugMsg(scip, "\nSelected variable <%s> domain already [%g,%g] as least as tight as desired bound change, diving aborted \n",
-                     SCIPvarGetName(bdchgvar), lblocal, ublocal);
+                     SCIPvarGetName(bdchgvar), SCIPvarGetLbLocal(bdchgvar), SCIPvarGetUbLocal(bdchgvar));
                   cutoff = TRUE;
                   break;
                }
 
-               SCIPdebugMsg(scip, "newbounds=[%g,%g]\n",
-                     lblocal, ublocal);
+               SCIPdebugMsg(scip, "newbounds=[%g,%g]\n", SCIPvarGetLbLocal(bdchgvar), SCIPvarGetUbLocal(bdchgvar));
             }
             /* break loop immediately if we detected a cutoff */
             if( cutoff )
