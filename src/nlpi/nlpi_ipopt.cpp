@@ -450,6 +450,8 @@ void setFeastol(
    SCIP_Real         feastol
    )
 {
+   assert(nlpiproblem != NULL);
+
    nlpiproblem->ipopt->Options()->SetNumericValue("tol", FEASTOLFACTOR * feastol);
    nlpiproblem->ipopt->Options()->SetNumericValue("constr_viol_tol", FEASTOLFACTOR * feastol);
 
@@ -462,6 +464,27 @@ void setFeastol(
     * Thus, we turn off the bound_relax_factor completely if it would be below its default value of 1e-8.
     */
    nlpiproblem->ipopt->Options()->SetNumericValue("bound_relax_factor", feastol < 1e-8/FEASTOLFACTOR ? 0.0 : FEASTOLFACTOR * feastol);
+}
+
+/** sets optimality tolerance parameters in Ipopt
+ *
+ * Sets dual_inf_tol and compl_inf_tol to opttol.
+ * We leave acceptable_dual_inf_tol and acceptable_compl_inf_tol untouched, which means that if Ipopt has convergence problems, then
+ * it can stop with a solution that is still feasible (see setFeastol), but essentially without a proof of local optimality.
+ * Note, that we report the solution as feasible only if Ipopt stopped on an "acceptable point" (see ScipNLP::finalize_solution).
+ *
+ * Note, that parameters tol and acceptable_tol (set in setFeastol) also apply.
+ */
+static
+void setOpttol(
+   SCIP_NLPIPROBLEM* nlpiproblem,
+   SCIP_Real         opttol
+   )
+{
+   assert(nlpiproblem != NULL);
+
+   nlpiproblem->ipopt->Options()->SetNumericValue("dual_inf_tol", opttol);
+   nlpiproblem->ipopt->Options()->SetNumericValue("compl_inf_tol", opttol);
 }
 
 /** copy method of NLP interface (called when SCIP copies plugins)
@@ -602,6 +625,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (*problem)->ipopt->Options()->SetStringValue("derivative_test", "second-order");
 #endif
    setFeastol(*problem, SCIP_DEFAULT_FEASTOL);
+   setOpttol(*problem, SCIP_DEFAULT_FEASTOL);
 
    /* apply user's given modifications to Ipopt's default settings */
    if( data->defoptions.length() > 0 )
@@ -778,12 +802,18 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
+   /* We pass the objective gradient in dense form to Ipopt, so if the sparsity of that gradient changes, we do not need to reset Ipopt (firstrun=TRUE).
+    * However, if the sparsity of the Hessian matrix of the objective changes, then the sparsity pattern of the Hessian of the Lagrangian may change.
+    * Thus, reset Ipopt if the objective was and/or becomes nonlinear, but leave firstrun untouched if it was and stays linear.
+    */
+   if( nquadelems > 0 || exprtree != NULL || SCIPnlpiOracleGetConstraintDegree(problem->oracle, -1) > 1 )
+      problem->firstrun = TRUE;
+
    SCIP_CALL( SCIPnlpiOracleSetObjective(problem->oracle,
          constant, nlins, lininds, linvals,
          nquadelems, quadelems,
          exprvaridxs, exprtree) );
 
-   problem->firstrun = TRUE;
    invalidateSolution(problem);
 
    return SCIP_OKAY;
@@ -802,9 +832,19 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
 static
 SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsIpopt)
 {
+   int i;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+
+   /* If some variable is fixed or unfixed, then better don't reoptimize the NLP in the next solve.
+    * Calling Optimize instead of ReOptimize should remove fixed variables from the problem that is solved by Ipopt.
+    * This way, the variable fixing is satisfied exactly in a solution, see also #1254.
+    */
+   for( i = 0; i < nvars && !problem->firstrun; ++i )
+      if( (SCIPnlpiOracleGetVarLbs(problem->oracle)[indices[i]] == SCIPnlpiOracleGetVarUbs(problem->oracle)[indices[i]]) != (lbs[i] == ubs[i]) )
+         problem->firstrun = TRUE;
 
    SCIP_CALL( SCIPnlpiOracleChgVarBounds(problem->oracle, nvars, indices, lbs, ubs) );
 
@@ -1671,7 +1711,7 @@ SCIP_DECL_NLPISETREALPAR(nlpiSetRealParIpopt)
    {
       if( dval >= 0 )
       {
-         problem->ipopt->Options()->SetNumericValue("dual_inf_tol", dval);
+         setOpttol(problem, dval);
       }
       else
       {

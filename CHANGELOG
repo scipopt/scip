@@ -4,6 +4,7 @@ SCIP version NEXT
 features:
 - added macros to do computations with a higher precision by using double double arithmetic
 - new compiler flag DEBUGSOL={true,false} to enable an internal debugging mechanism to check against a user given debug solution
+- added interface to the NLP solver WORHP; set WORHP=true in order to link to WORHP
 
 parameters:
 - new parameter misc/debugsol to specify a debug solution that should be checked during the solve
@@ -16,6 +17,7 @@ interface:
 
 performance improvements:
 - add and use RESTRICT macro for some pointers
+- improved the implementation of SCIPvarGetActiveRepresentatives
 
 SCIP version 4.0.1
 ==================
@@ -27,12 +29,22 @@ interface:
 parameters:
 - new paramter "constraints/indicator/maxsepanonviolated" to stop separation after separation of non violated cuts
 
+features
+- added parsing functionality to cardinality constraint handler for CIP format
+
+
 fixed bugs:
+- fixed bug in genvbounds propagator when applying a restart after the root node
+- fixed unintended behavior of interrupt signal handler inside SCIP copies
+- fixed uninitialized values in SCIP's digraph data structure after calling SCIPdigraphResize()
 - fixed memory leak in OSiL reader when using SOS constraints
 - fixed issue related to SCIPcreateFiniteSolCopy not being able to remove all infinite fixings
 - fixed issue in SCIPcopyLimits() w.r.t. soft time limit
 - improved handling of infinite values in a primal solution in quadratic and nonlinear constraints
 - fixed bug in dynamic resizing of hashtables and hashmaps
+- fixed bug in computing violation and cut for certain nonlinear constraints when LP solution is slightly out of bounds
+- fixed bug in binpacking example that might have led to doing the same branching several times
+- fixed memory issue in binpacking example
 
 performance improvements:
 - stop separation in cons_indicator after maxsepanonviolated many non violated separated cuts
