@@ -721,7 +721,7 @@ void epsGreedyReset(
    weights = epsgreedy->weights;
    assert(weights != NULL);
 
-   /* reset weights to 1.0 */
+   /* reset weights */
    for( w = 0; w < epsgreedy->nactions; ++w )
       weights[w] = 0.2;
 }
@@ -3086,18 +3086,24 @@ SCIP_DECL_HEURINIT(heurInitLns)
       }
    }
 
-   /* create epsilon greedy bandit algorithm */
-   SCIP_CALL( epsGreedyCreate(scip, &heurdata->epsgreedynh, heurdata->eps, heurdata->nactiveneighborhoods, (unsigned int)(heurdata->seed + SCIPgetNVars(scip))) );
 
    /* create an exp3 bandit algorithm */
    if( heurdata->exp3 == NULL )
    {
+      assert(heurdata->epsgreedynh == NULL);
       SCIP_CALL( expThreeCreate(scip, &heurdata->exp3, (unsigned int)(heurdata->seed + SCIPgetNVars(scip)), heurdata->nactiveneighborhoods, heurdata->gamma, heurdata->beta) );
+
+      /* create epsilon greedy bandit algorithm */
+      SCIP_CALL( epsGreedyCreate(scip, &heurdata->epsgreedynh, heurdata->eps, heurdata->nactiveneighborhoods, (unsigned int)(heurdata->seed + SCIPgetNVars(scip))) );
    }
-   else
+   else if( heurdata->resetweights )
    {
+      assert(heurdata->epsgreedynh != NULL);
+
       /* todo active neighborhoods might change between init calls, reset functionality must take this into account */
       SCIP_CALL( expThreeReset(scip, heurdata->exp3, (unsigned int)(heurdata->seed + SCIPgetNVars(scip))) );
+
+      epsGreedyReset(heurdata->epsgreedynh);
    }
 
    heurdata->usednodes = 0;
