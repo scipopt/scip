@@ -3348,7 +3348,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSanityCheck)
          SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, promptbuffer, &(refstrs[i]), &endoffile) );
 
          /* treat no input as SCIP_UNKNOWN */
-         if( endoffile || refstrs[i] == "\0" )
+         if( endoffile || strncmp(refstrs[i], "\0", 1) == 0 )
          {
             refvals[i] = SCIP_UNKNOWN;
          }
