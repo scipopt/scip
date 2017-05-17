@@ -67,7 +67,8 @@
 #define DEFAULT_GAINMEASURE      'e'/**< measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean,
                                       *  'e'ffort based? */
 #define GAINMEASURES "bwe"
-#define DEFAULT_EPS        0.33   /**< probability for exploration in epsilon-greedy bandit algorithm */
+#define DEFAULT_EPS        0.33      /**< probability for exploration in epsilon-greedy bandit algorithm */
+#define DEFAULT_RESETWEIGHTS TRUE    /**< should the bandit algorithms be reset when a new problem is read? */
 
 /*
  * parameters to control variable fixing
@@ -342,6 +343,7 @@ struct SCIP_HeurData
    SCIP_Bool             adjustfixingrate;   /**< should the heuristic adjust the target fixing rate based on the success? */
    SCIP_Bool             usesubscipheurs;    /**< should the heuristic activate other sub-SCIP heuristics during its search?  */
    SCIP_Bool             adjustminimprove;   /**< should the factor by which the minimum improvement is bound be dynamically updated? */
+   SCIP_Bool             resetweights;       /**< should the bandit algorithms be reset when a new problem is read? */
    char                  gainmeasure;        /**< measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean,
                                                *  'e'ffort based? */
 };
@@ -3164,11 +3166,9 @@ SCIP_DECL_HEUREXIT(heurExitLns)
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   assert(heurdata->epsgreedynh != NULL);
 
    printNeighborhoodStatistics(scip, heurdata);
 
-   epsGreedyFree(scip, &heurdata->epsgreedynh);
 
    /* free neighborhood specific data */
    for( i = 0; i < heurdata->nneighborhoods; ++i )
@@ -3197,6 +3197,9 @@ SCIP_DECL_HEURFREE(heurFreeLns)
    /* an exp3 is only initialized when a problem is read */
    if( heurdata->exp3 != NULL )
       expThreeFree(scip, &heurdata->exp3);
+
+   if( heurdata->epsgreedynh != NULL )
+      epsGreedyFree(scip, &heurdata->epsgreedynh);
 
    /* free neighborhoods */
    for( i = 0; i < heurdata->nneighborhoods; ++i )
@@ -3332,6 +3335,10 @@ SCIP_RETCODE SCIPincludeHeurLns(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/eps",
             "probability for exploration in epsilon-greedy bandit algorithm",
             &heurdata->eps, TRUE, DEFAULT_EPS, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/resetweights",
+            "should the bandit algorithms be reset when a new problem is read?",
+            &heurdata->resetweights, TRUE, DEFAULT_RESETWEIGHTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
