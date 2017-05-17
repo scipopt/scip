@@ -2052,8 +2052,8 @@ SCIP_RETCODE addAltLPColumn(
                matind[cnt] = ind;
             else
             {
-               /* add variable in map and array and remember to add a new row */
-               SCIP_CALL( SCIPhashmapInsert(conshdlrdata->slackhash, var, (void*) (size_t) conshdlrdata->nrows) );
+               /* correct number of variable already in map/array and remember to add a new row */
+               SCIP_CALL( SCIPhashmapSetImage(conshdlrdata->slackhash, var, (void*) (size_t) conshdlrdata->nrows) );
                assert( conshdlrdata->nrows == (int) (size_t) SCIPhashmapGetImage(conshdlrdata->slackhash, var) );
                SCIPdebugMsg(scip, "Inserted slack variable <%s> into hashmap (row: %d).\n", SCIPvarGetName(var), conshdlrdata->nrows);
                matind[cnt] = (conshdlrdata->nrows)++;
