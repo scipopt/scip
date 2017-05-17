@@ -16,6 +16,7 @@ fixed bugs:
 - fixed bug in computing violation and cut for certain nonlinear constraints when LP solution is slightly out of bounds
 - fixed bug in binpacking example that might have led to doing the same branching several times
 - fixed memory issue in binpacking example
+- renamed parameter heuristics/completesol/maxunkownrate to heuristics/completesol/maxunknownrate
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint
