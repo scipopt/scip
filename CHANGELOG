@@ -19,6 +19,7 @@ fixed bugs:
 - fixed bug in binpacking example that might have led to doing the same branching several times
 - fixed memory issue in binpacking example
 - renamed parameter heuristics/completesol/maxunkownrate to heuristics/completesol/maxunknownrate
+- in GAMS writer, forbid also various parenthesis characters in gams symbol names
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint
