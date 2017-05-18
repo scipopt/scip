@@ -1791,10 +1791,10 @@ SCIP_RETCODE cutsRoundMIR(
          SCIP_Real QUAD(fj);
 
          aj = varsign[i] * cutcoefs[i]; /* a'_j */
-         downaj = SCIPfloor(scip, aj);
+         downaj = SCIPfeasFloor(scip, aj);
          SCIPquadprecSumDD(fj, aj, -downaj);
 
-         if( SCIPisSumLE(scip, QUAD_ROUND(fj), f0) )
+         if( SCIPisFeasLE(scip, QUAD_ROUND(fj), f0) )
          {
             QUAD_ASSIGN(cutaj, varsign[i] * downaj);
          }
@@ -2385,117 +2385,55 @@ SCIP_RETCODE SCIPcalcMIR(
    return SCIP_OKAY;
 }
 
-/** test one value of delta for the given mixed knapsack set obtained from the given aggregation row;
- *  if an efficacious cut better than the current one was found then it will be stored in the given arrays
- *  and the success flag will be set to TRUE
- */
 static
-SCIP_RETCODE tryDelta(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
-   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row that was used to produce the give mixed knapsack set */
-   SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
-   SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
-   SCIP_Bool             mksetislocal,       /**< is the given mixed knapsack set only valid locally */
-   SCIP_Real*            mksetcoefs,         /**< array of coefficients of mixed knapsack set */
-   SCIP_Real             mksetrhs,           /**< right hand side of mixed knapsack set */
-   int*                  mksetinds,          /**< array of variable problem indices for coefficients in the mixed knapsack set */
-   int                   mksetnnz,           /**< number of non-zeros in the mixed knapsack set */
-   int*                  boundtype,          /**< stores the bound used for transformed variable:
-                                              *   vlb/vub_idx, or -1 for global lb/ub, or -2 for local lb/ub */
-   int*                  varsign,            /**< stores the sign of the transformed variable in summation */
-   SCIP_Real*            bestcutcoefs,       /**< array of coefficients for currently best cut */
-   SCIP_Real*            bestcutrhs,         /**< right hand side of currently best cut */
-   int*                  bestcutinds,        /**< indices of currently best cut */
-   int*                  bestcutnnz,         /**< number of non-zeros for currently best cut */
-   SCIP_Real*            bestcutefficacy,    /**< efficacy of currently best cut */
-   SCIP_Real*            bestcutdelta,       /**< delta used for currently best cut */
-   SCIP_Real             minefficacy,        /**< minimal efficacy for storing cut in arrays */
-   int*                  tmpboundtype,       /**< temporary working array for testing the given delta */
-   int*                  tmpvarsign,         /**< temporary working array for testing the given delta */
-   SCIP_Real*            tmpcutcoefs,        /**< temporary working array for testing the given delta */
-   int*                  tmpcutinds,         /**< temporary working array for testing the given delta */
-   SCIP_Real             delta,              /**< delta to try */
-   SCIP_Bool*            success             /**< pointer to store whether a cut was stored in the given arrays */
+SCIP_Real computeMIRViolation(
+   SCIP*                 scip,
+   SCIP_Real*            coefs,
+   SCIP_Real*            solvals,
+   SCIP_Real             rhs,
+   SCIP_Real             contactivity,
+   SCIP_Real             delta,
+   int                   nvars
    )
 {
-   int k;
-   int tmpcutnnz;
-   SCIP_Real cutefficacy;
-   SCIP_Real scale;
-   SCIP_Real tmpcutrhs;
-   SCIP_Real downrhs;
+   int i;
    SCIP_Real f0;
+   SCIP_Real onedivoneminusf0;
+   SCIP_Real scale;
 
-   /* setup tmpcut with scaled cut */
    scale = 1.0 / delta;
-   tmpcutrhs = mksetrhs * scale;
 
-   downrhs = EPSFLOOR(tmpcutrhs, SCIPsumepsilon(scip));
-   f0 = tmpcutrhs - downrhs;
-   if( f0 < minfrac || f0 > maxfrac )
-      return SCIP_OKAY;
+   rhs *= scale;
 
-   /* We multiply the coefficients of the base inequality roughly by scale/(1-f0).
-    * If this gives a scalar that is very big, we better do not generate this cut.
-    */
-   if( REALABS(scale)/(1.0 - f0) > MAXCMIRSCALE )
-      return SCIP_OKAY;
+   if( SCIPisFeasIntegral(scip, rhs) )
+      return 0.0;
 
-   for( k = 0; k < mksetnnz; ++k )
-      tmpcutcoefs[k] = mksetcoefs[k] * scale;
-   tmpcutnnz = mksetnnz;
-   tmpcutrhs = downrhs;
-   BMScopyMemoryArray(tmpcutinds, mksetinds, mksetnnz);
-   BMScopyMemoryArray(tmpboundtype, boundtype, mksetnnz);
-   BMScopyMemoryArray(tmpvarsign, varsign, mksetnnz);
+   f0 = rhs - SCIPfeasFloor(scip, rhs);
+   rhs = SCIPfeasFloor(scip, rhs);
 
-   SCIP_CALL( cutsRoundMIR(scip, tmpcutcoefs, &tmpcutrhs, tmpcutinds, &tmpcutnnz, tmpvarsign, tmpboundtype, f0) );
-   SCIPdebug(printCut(scip, sol, tmpcutcoefs, tmpcutrhs, tmpcutinds, tmpcutnnz, FALSE, FALSE));
+   assert(!SCIPisFeasZero(scip, f0));
+   assert(!SCIPisFeasZero(scip, 1.0 - f0));
 
-   /* substitute aggregated slack variables:
-      *
-      * The coefficient of the slack variable s_r is equal to the row's weight times the slack's sign, because the slack
-      * variable only appears in its own row:
-      *    a'_r = scale * weight[r] * slacksign[r].
-      *
-      * Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
-      *   integers :  a^_r = a~_r = down(a'_r)                      , if f_r <= f0
-      *               a^_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
-      *   continuous: a^_r = a~_r = 0                               , if a'_r >= 0
-      *               a^_r = a~_r = a'_r/(1 - f0)                   , if a'_r <  0
-      *
-      * Substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
-      */
-   SCIP_CALL( cutsSubstituteMIR(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
-                                aggrrow->nrows, scale, tmpcutcoefs, &tmpcutrhs, tmpcutinds, &tmpcutnnz, f0) );
-   SCIPdebug(printCut(scip, sol, tmpcutcoefs, tmpcutrhs, tmpcutinds, tmpcutnnz, FALSE, FALSE));
+   onedivoneminusf0 = 1.0 / (1.0 - f0);
 
-   /* remove again all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
-      * prevent numerical rounding errors
-      */
-   cleanupCut(scip, mksetislocal, tmpcutinds, tmpcutcoefs, &tmpcutnnz, &tmpcutrhs);
-   SCIPdebug(printCut(scip, sol, tmpcutcoefs, tmpcutrhs, tmpcutinds, tmpcutnnz, FALSE, FALSE));
-
-   cutefficacy = calcEfficacy(scip, sol, tmpcutcoefs, tmpcutrhs, tmpcutinds, tmpcutnnz);
-
-   if( cutefficacy > *bestcutefficacy )
+   for( i = 0; i < nvars; ++i )
    {
-      *bestcutefficacy = cutefficacy;
-      *bestcutdelta = delta;
+      SCIP_Real floorai = SCIPfeasFloor(scip, (scale * coefs[i]));
+      SCIP_Real fi = (scale * coefs[i]) - floorai;
 
-      /* only copy cut if it is efficacious */
-      if( cutefficacy > minefficacy )
+      if( fi > f0 )
       {
-         BMScopyMemoryArray(bestcutinds, tmpcutinds, tmpcutnnz);
-         BMScopyMemoryArray(bestcutcoefs, tmpcutcoefs, tmpcutnnz);
-         *bestcutnnz = tmpcutnnz;
-         *bestcutrhs = tmpcutrhs;
-         *success = TRUE;
+         rhs -= solvals[i] * (floorai + (fi - f0) * onedivoneminusf0);
+      }
+      else
+      {
+         rhs -= solvals[i] * floorai;
       }
    }
 
-   return SCIP_OKAY;
+   rhs -= scale * contactivity * onedivoneminusf0;
+
+   return - rhs;
 }
 
 /** calculates an MIR cut out of the weighted sum of LP rows; The weights of modifiable rows are set to 0.0, because
@@ -2537,6 +2475,8 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    int i;
    int firstcontvar;
    int nvars;
+   int intstart;
+   int ntmpcoefs;
    int* varsign;
    int* boundtype;
    int* mksetinds;
@@ -2546,18 +2486,18 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIP_Real* bounddist;
    int* bounddistpos;
    int nbounddist;
-   int* tmpvarsign;
-   int* tmpboundtype;
-   int* tmpcutinds;
-   SCIP_Real* tmpcutcoefs;
+   SCIP_Real* tmpcoefs;
+   SCIP_Real* tmpvalues;
    SCIP_Real* deltacands;
    int ndeltacands;
    SCIP_Real bestdelta;
+   SCIP_Real bestviol;
    SCIP_Real maxabsmksetcoef;
    SCIP_VAR** vars;
    SCIP_Bool freevariable;
    SCIP_Bool localbdsused;
-   SCIP_Real bestmirefficacy;
+
+   SCIP_Real contactivity;
 
    assert(aggrrow != NULL);
    assert(aggrrow->nrows >= 1);
@@ -2572,12 +2512,10 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &varsign, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &boundtype, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &tmpvarsign, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &tmpboundtype, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &mksetcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &mksetinds, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &tmpcutcoefs, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &tmpcutinds, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpcoefs, nvars + aggrrow->nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpvalues, nvars + aggrrow->nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &deltacands, nvars) );
    /* each variable is either integral or a variable bound with an integral variable is used
     * so the max number of integral variables that are strictly between it's bounds is
@@ -2660,6 +2598,8 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
          deltacands[ndeltacands++] = absmksetcoef;
    }
 
+   intstart = i + 1;
+
    if( maxabsmksetcoef != -1.0 )
    {
       int k;
@@ -2714,15 +2654,167 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
     *   a^_{zu_j} := a^_{zu_j} + a~_j * bu_j == a^_{zu_j} - a^_j * bu_j
     */
 
-   bestdelta = SCIP_INVALID;
-   bestmirefficacy = -SCIPinfinity(scip);
+   ntmpcoefs = 0;
+   for( i = intstart; i < mksetnnz; ++i )
+   {
+      SCIP_VAR* var;
+      SCIP_Real solval;
 
-   /* try all candidates for delta  */
+      var = vars[mksetinds[i]];
+
+      /* get the soltion value of the continuous variable */
+      solval = SCIPgetSolVal(scip, sol, var);
+
+      /* now compute the solution value in the transform space considering complementation */
+      if( boundtype[i] == -1 )
+      {
+         /* variable was complemented with global (simple) bound */
+         if( varsign[i] == -1 )
+            solval = SCIPvarGetUbGlobal(var) - solval;
+         else
+            solval = solval - SCIPvarGetLbGlobal(var);
+      }
+      else
+      {
+         assert(boundtype[i] == -2);
+
+         /* variable was complemented with local (simple) bound */
+         if( varsign[i] == -1 )
+            solval = SCIPvarGetUbLocal(var) - solval;
+         else
+            solval = solval - SCIPvarGetLbLocal(var);
+      }
+
+      tmpvalues[ntmpcoefs] = solval;
+      tmpcoefs[ntmpcoefs] = varsign[i] * mksetcoefs[i];
+      ++ntmpcoefs;
+   }
+
+   assert(ntmpcoefs == mksetnnz - intstart);
+
+   contactivity = 0.0;
+   for( i = 0; i < intstart; ++i )
+   {
+      SCIP_Real solval;
+
+      if( varsign[i] * mksetcoefs[i] >= 0.0 )
+         continue;
+
+      /* get the soltion value of the continuous variable */
+      solval = SCIPgetSolVal(scip, sol, vars[mksetinds[i]]);
+
+      /* now compute the solution value in the transform space considering complementation */
+      switch( boundtype[i] )
+      {
+         case -1:
+            /* variable was complemented with global (simple) bound */
+            if( varsign[i] == -1 )
+               solval = SCIPvarGetUbGlobal(vars[mksetinds[i]]) - solval;
+            else
+               solval = solval - SCIPvarGetLbGlobal(vars[mksetinds[i]]);
+            break;
+         case -2:
+            /* variable was complemented with local (simple) bound */
+            if( varsign[i] == -1 )
+               solval = SCIPvarGetUbLocal(vars[mksetinds[i]]) - solval;
+            else
+               solval = solval - SCIPvarGetLbLocal(vars[mksetinds[i]]);
+            break;
+         default:
+            /* variable was complemented with a variable bound */
+            if( varsign[i] == -1 )
+            {
+               SCIP_Real coef;
+               SCIP_Real constant;
+               SCIP_Real vbdsolval;
+
+               coef = SCIPvarGetVubCoefs(vars[mksetinds[i]])[boundtype[i]];
+               constant = SCIPvarGetVubConstants(vars[mksetinds[i]])[boundtype[i]];
+               vbdsolval = SCIPgetSolVal(scip, sol, SCIPvarGetVubVars(vars[mksetinds[i]])[boundtype[i]]);
+
+               solval = (coef * vbdsolval + constant) - solval;
+            }
+            else
+            {
+               SCIP_Real coef;
+               SCIP_Real constant;
+               SCIP_Real vbdsolval;
+
+               coef = SCIPvarGetVlbCoefs(vars[mksetinds[i]])[boundtype[i]];
+               constant = SCIPvarGetVlbConstants(vars[mksetinds[i]])[boundtype[i]];
+               vbdsolval = SCIPgetSolVal(scip, sol, SCIPvarGetVlbVars(vars[mksetinds[i]])[boundtype[i]]);
+
+               solval = solval - (coef * vbdsolval + constant);
+            }
+      }
+
+      contactivity += solval * (mksetcoefs[i] * varsign[i]);
+   }
+
+   {
+      SCIP_ROW** rows;
+
+      rows = SCIPgetLPRows(scip);
+
+      for( i = 0; i < aggrrow->nrows; ++i )
+      {
+         SCIP_ROW* row;
+         SCIP_Real slackval;
+
+         row = rows[aggrrow->rowsinds[i]];
+
+         if( (aggrrow->rowweights[i] * aggrrow->slacksign[i]) >= 0.0 && !row->integral )
+            continue;
+
+         /* compute solution value of slack variable */
+         slackval = SCIPgetRowSolActivity(scip, row, sol);
+
+         if( aggrrow->slacksign[i] == +1 )
+         {
+            /* right hand side */
+            assert(!SCIPisInfinity(scip, row->rhs));
+
+            slackval = row->rhs - slackval;
+         }
+         else
+         {
+            /* left hand side */
+            assert(aggrrow->slacksign[i] == -1);
+            assert(!SCIPisInfinity(scip, -row->lhs));
+
+            slackval = slackval - row->lhs;
+         }
+
+         if( row->integral )
+         {
+            /* if row is integral add variable to tmp arrays */
+            tmpvalues[ntmpcoefs] = slackval;
+            tmpcoefs[ntmpcoefs] = aggrrow->rowweights[i] * aggrrow->slacksign[i];
+            ++ntmpcoefs;
+         }
+         else
+         {
+            /* otherwise add it to continuous activity */
+            contactivity += slackval * (aggrrow->rowweights[i] * aggrrow->slacksign[i]);
+         }
+      }
+   }
+
+   /* try all candidates for delta and remember best */
+   bestdelta = SCIP_INVALID;
+   bestviol = -SCIPinfinity(scip);
+
    for( i = 0; i < ndeltacands; ++i )
    {
-      SCIP_CALL( tryDelta(scip, sol, aggrrow, minfrac, maxfrac, *cutislocal, mksetcoefs, mksetrhs, mksetinds, mksetnnz,
-         boundtype, varsign, cutcoefs, cutrhs, cutinds, cutnnz, &bestmirefficacy, &bestdelta, *cutefficacy,
-         tmpboundtype, tmpvarsign, tmpcutcoefs, tmpcutinds, deltacands[i], success) );
+      SCIP_Real viol;
+
+      viol = computeMIRViolation(scip, tmpcoefs, tmpvalues, mksetrhs, contactivity, deltacands[i], ntmpcoefs);
+
+      if( viol > bestviol )
+      {
+         bestviol = viol;
+         bestdelta = deltacands[i];
+      }
    }
 
    /* no delta was found that yielded any cut */
@@ -2732,9 +2824,18 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    /* try bestdelta divided by 2, 4 and 8 */
    for( i = 2; i <= 8 ; i *= 2 )
    {
-      SCIP_CALL( tryDelta(scip, sol, aggrrow, minfrac, maxfrac, *cutislocal, mksetcoefs, mksetrhs, mksetinds, mksetnnz,
-         boundtype, varsign, cutcoefs, cutrhs, cutinds, cutnnz, &bestmirefficacy, &bestdelta, *cutefficacy,
-         tmpboundtype, tmpvarsign, tmpcutcoefs, tmpcutinds, bestdelta / i, success) );
+      SCIP_Real viol;
+      SCIP_Real delta;
+
+      delta = bestdelta / i;
+
+      viol = computeMIRViolation(scip, tmpcoefs, tmpvalues, mksetrhs, contactivity, delta, ntmpcoefs);
+
+      if( viol >= bestviol )
+      {
+         bestviol = viol;
+         bestdelta = delta;
+      }
    }
 
    /* try to improve efficacy by switching complementation of integral variables that are not at their bounds
@@ -2744,71 +2845,139 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    for( i = 0; i < nbounddist; ++i )
    {
       int k;
-      SCIP_Real oldbestefficacy;
-      SCIP_Real oldmksetrhs;
-      int oldboundtype;
-      int oldvarsign;
+      SCIP_Real newviol;
+      SCIP_Real newrhs;
       SCIP_Real bestlb;
       SCIP_Real bestub;
+      SCIP_Real oldsolval;
       int bestlbtype;
       int bestubtype;
-      SCIP_Bool oldlocalbdsused;
 
       k = bounddistpos[i];
 
       findBestLb(scip, vars[mksetinds[k]], sol, FALSE, allowlocal, &bestlb, &bestlbtype);
       findBestUb(scip, vars[mksetinds[k]], sol, FALSE, allowlocal, &bestub, &bestubtype);
 
-      /* store information to restore the changed complementation */
-      oldvarsign = varsign[k];
-      oldmksetrhs = mksetrhs;
-      oldboundtype = boundtype[k];
-      oldlocalbdsused = localbdsused;
-
-      /* since we only look at the integral vars, no variable bounds should have been used */
-      assert(oldboundtype < 0);
-
       /* switch the complementation of this variable */
-      mksetrhs += oldvarsign * mksetcoefs[k] * (bestlb - bestub);
-      if( varsign[k] == +1 )
+      assert(SCIPisEQ(scip, tmpcoefs[k - intstart], varsign[k] * mksetcoefs[k]));
+      newrhs = mksetrhs + tmpcoefs[k - intstart] * (bestlb - bestub);
+      tmpcoefs[k - intstart] = -tmpcoefs[k - intstart];
+
+      oldsolval = tmpvalues[k - intstart];
+      tmpvalues[k - intstart] = varsign[k] == +1 ? bestub - SCIPgetSolVal(scip, sol, vars[mksetinds[k]]) : SCIPgetSolVal(scip, sol, vars[mksetinds[k]]) - bestlb;
+
+      /* compute new violation */
+      newviol = computeMIRViolation(scip, tmpcoefs, tmpvalues, newrhs, contactivity, bestdelta, ntmpcoefs);
+
+      /* check if violaton was increased */
+      if( newviol > bestviol )
       {
-         /* switch to upper bound */
-         assert(bestubtype < 0); /* cannot switch to a variable bound (would lead to further coef updates) */
-         boundtype[k] = bestubtype;
-         varsign[k] = -1;
+         /* keep change of complementation */
+         bestviol = newviol;
+         mksetrhs = newrhs;
+
+         if( varsign[k] == +1 )
+         {
+            /* switch to upper bound */
+            assert(bestubtype < 0); /* cannot switch to a variable bound (would lead to further coef updates) */
+            boundtype[k] = bestubtype;
+            varsign[k] = -1;
+         }
+         else
+         {
+            /* switch to lower bound */
+            assert(bestlbtype < 0); /* cannot switch to a variable bound (would lead to further coef updates) */
+            boundtype[k] = bestlbtype;
+            varsign[k] = +1;
+         }
+
+         localbdsused = localbdsused || (boundtype[k] == -2);
       }
       else
       {
-         /* switch to lower bound */
-         assert(bestlbtype < 0); /* cannot switch to a variable bound (would lead to further coef updates) */
-         boundtype[k] = bestlbtype;
-         varsign[k] = +1;
-      }
-      localbdsused = localbdsused || (boundtype[k] == -2);
-
-      oldbestefficacy = bestmirefficacy;
-
-      SCIP_CALL( tryDelta(scip, sol, aggrrow, minfrac, maxfrac, *cutislocal, mksetcoefs, mksetrhs, mksetinds, mksetnnz,
-         boundtype, varsign, cutcoefs, cutrhs, cutinds, cutnnz, &bestmirefficacy, &bestdelta, *cutefficacy,
-         tmpboundtype, tmpvarsign, tmpcutcoefs, tmpcutinds, bestdelta, success) );
-
-      /* undo the change in complementation if efficacy was not increased */
-      if( oldbestefficacy == bestmirefficacy )
-      {
-         boundtype[k] = oldboundtype;
-         varsign[k] = oldvarsign;
-         mksetrhs = oldmksetrhs;
-         localbdsused = oldlocalbdsused;
+         /* undo the change of the complementation */
+         tmpcoefs[k - intstart] = -tmpcoefs[k - intstart];
+         tmpvalues[k - intstart] = oldsolval;
       }
    }
 
-   if( *success )
+   if( bestviol > 0.0 )
    {
-      *cutefficacy = bestmirefficacy;
-      *cutislocal = *cutislocal || localbdsused;
+      SCIP_Real mirefficacy;
+      SCIP_Real downrhs;
+      SCIP_Real f0;
+      SCIP_Real scale;
 
-      if( cutrank != NULL )
+      scale = 1.0 / bestdelta;
+      mksetrhs *= scale;
+
+      downrhs = SCIPfeasFloor(scip, mksetrhs);
+      f0 = mksetrhs - downrhs;
+      if( f0 < minfrac || f0 > maxfrac )
+         goto TERMINATE;
+
+      /* We multiply the coefficients of the base inequality roughly by scale/(1-f0).
+       * If this gives a scalar that is very big, we better do not generate this cut.
+       */
+      if( scale/(1.0 - f0) > MAXCMIRSCALE )
+         goto TERMINATE;
+
+      for( i = 0; i < mksetnnz; ++i )
+         mksetcoefs[i] *= scale;
+
+      mksetrhs = downrhs;
+      SCIP_CALL( cutsRoundMIR(scip, mksetcoefs, &mksetrhs, mksetinds, &mksetnnz, varsign, boundtype, f0) );
+      SCIPdebug(printCut(scip, sol, cutcoefs, *cutrhs, cutinds, *cutnnz, FALSE, FALSE));
+
+      /* substitute aggregated slack variables:
+       *
+       * The coefficient of the slack variable s_r is equal to the row's weight times the slack's sign, because the slack
+       * variable only appears in its own row:
+       *    a'_r = scale * weight[r] * slacksign[r].
+       *
+       * Depending on the slacks type (integral or continuous), its coefficient in the cut calculates as follows:
+       *   integers :  a^_r = a~_r = down(a'_r)                      , if f_r <= f0
+       *               a^_r = a~_r = down(a'_r) + (f_r - f0)/(1 - f0), if f_r >  f0
+       *   continuous: a^_r = a~_r = 0                               , if a'_r >= 0
+       *               a^_r = a~_r = a'_r/(1 - f0)                   , if a'_r <  0
+       *
+       * Substitute a^_r * s_r by adding a^_r times the slack's definition to the cut.
+       */
+      SCIP_CALL( cutsSubstituteMIR(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
+                                   aggrrow->nrows, scale, mksetcoefs, &mksetrhs, mksetinds, &mksetnnz, f0) );
+      SCIPdebug(printCut(scip, sol, cutcoefs, *cutrhs, cutinds, *cutnnz, FALSE, FALSE));
+
+#ifndef NDEBUG
+      {
+         SCIP_Real viol = -mksetrhs;
+         for( i = 0; i < mksetnnz; ++i )
+         {
+            viol += mksetcoefs[i] * SCIPgetSolVal(scip, sol, vars[mksetinds[i]]);
+         }
+         assert(SCIPisEQ(scip, viol, bestviol));
+      }
+#endif
+
+      /* remove again all nearly-zero coefficients from MIR row and relax the right hand side correspondingly in order to
+       * prevent numerical rounding errors
+       */
+      *cutislocal = *cutislocal || localbdsused;
+      cleanupCut(scip, *cutislocal, mksetinds, mksetcoefs, &mksetnnz, &mksetrhs);
+      SCIPdebug(printCut(scip, sol, cutcoefs, *cutrhs, cutinds, *cutnnz, FALSE, FALSE));
+
+      mirefficacy = calcEfficacy(scip, sol, mksetcoefs, mksetrhs, mksetinds, mksetnnz);
+
+      if( SCIPisEfficacious(scip, mirefficacy) && mirefficacy > *cutefficacy )
+      {
+         BMScopyMemoryArray(cutcoefs, mksetcoefs, mksetnnz);
+         BMScopyMemoryArray(cutinds, mksetinds, mksetnnz);
+         *cutrhs = mksetrhs;
+         *cutnnz = mksetnnz;
+         *cutefficacy = mirefficacy;
+         *success = TRUE;
          *cutrank = aggrrow->rank + 1;
+         *cutislocal = *cutislocal || localbdsused;
+      }
    }
 
   TERMINATE:
@@ -2816,16 +2985,12 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    SCIPfreeBufferArray(scip, &bounddistpos);
    SCIPfreeBufferArray(scip, &bounddist);
    SCIPfreeBufferArray(scip, &deltacands);
-   SCIPfreeBufferArray(scip, &tmpcutinds);
-   SCIPfreeBufferArray(scip, &tmpcutcoefs);
+   SCIPfreeBufferArray(scip, &tmpvalues);
+   SCIPfreeBufferArray(scip, &tmpcoefs);
    SCIPfreeBufferArray(scip, &mksetinds);
    SCIPfreeBufferArray(scip, &mksetcoefs);
-   SCIPfreeBufferArray(scip, &tmpboundtype);
-   SCIPfreeBufferArray(scip, &tmpvarsign);
    SCIPfreeBufferArray(scip, &boundtype);
    SCIPfreeBufferArray(scip, &varsign);
-
-   /**@todo pass the sparsity pattern to the calling method in order to speed up the calling method's loops */
 
    return SCIP_OKAY;
 }
