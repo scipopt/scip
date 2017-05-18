@@ -534,7 +534,8 @@ endif
 # define flags for FilterSQP
 ifeq ($(FILTERSQP),true)
 FILTERSQPLIBS       =       $(LINKCC_l)filtersqp.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)bqpd.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
-LDFLAGS		+=	$(FILTERSQPLIBS) -lgfortran   #FIXME: fortran library flags are compiler-specific
+LDFLAGS		+=	$(FILTERSQPLIBS) $(FORTRANLIBS)
+CFLAGS			+=	-DFNAME_$(FORTRAN_NAMING_CONVENTION)
 NLPILIBSHORTNAMEFILTERSQP = .filtersqp
 endif
 

@@ -90,11 +90,17 @@ struct SCIP_NlpiProblem
  * Local methods
  */
 
-/* TODO this depends on compiler+platform */
-#if 0
-# define F77_FUNC(name,NAME) NAME
-#else
+#ifdef FNAME_LCASE_DECOR
 # define F77_FUNC(name,NAME) name ## _
+#endif
+#ifdef FNAME_UCASE_DECOR
+# define F77_FUNC(name,NAME) NAME ## _
+#endif
+#ifdef FNAME_LCASE_NODECOR
+# define F77_FUNC(name,NAME) name
+#endif
+#ifdef FNAME_UCASE_NODECOR
+# define F77_FUNC(name,NAME) NAME
 #endif
 
 /** FilterSQP main routine.
