@@ -99,7 +99,6 @@ SCIP_RETCODE SCIPinitConssLP(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             root,               /**< is this the initial root LP? */
    SCIP_Bool             firstsubtreeinit,   /**< is this the first call in the current subtree after jumping through the tree? */
-   SCIP_Bool             rememberinitconss,
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
 
@@ -122,7 +121,6 @@ SCIP_RETCODE SCIPconstructCurrentLP(
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             newinitconss,       /**< do we have to add new initial constraints? */
-   SCIP_Bool             rememberinitconss,
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
 
