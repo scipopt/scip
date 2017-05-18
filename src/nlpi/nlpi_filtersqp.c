@@ -93,10 +93,8 @@ struct SCIP_NlpiProblem
 /* TODO this depends on compiler+platform */
 #if 0
 # define F77_FUNC(name,NAME) NAME
-# define F77_FUNC_(name,NAME) NAME
 #else
 # define F77_FUNC(name,NAME) name ## _
-# define F77_FUNC_(name,NAME) name ## _
 #endif
 
 /** FilterSQP main routine.
@@ -194,14 +192,14 @@ extern struct
 {
    real infty, eps;
 }
-F77_FUNC_(nlp_eps_inf,NLP_EPS_INF);
+F77_FUNC(nlp_eps_inf,NLP_EPS_INF);
 
 /** common block for printing from QP solver */
 extern struct
 {
    fint n_bqpd_calls, n_bqpd_prfint;
 }
-F77_FUNC_(bqpd_count,BQPD_COUNT);
+F77_FUNC(bqpd_count,BQPD_COUNT);
 
 /** common for scaling: scale_mode = 0 (none), 1 (variables), 2 (vars+cons) */
 extern struct
@@ -1366,8 +1364,8 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 
    /* initialize global variables from filtersqp */
    /* FilterSQP eps is tolerance for both feasibility and optimality, and also for trust-region radius, etc. */
-   F77_FUNC_(nlp_eps_inf,NLP_EPS_INF).eps = MIN(problem->feastol, problem->opttol);
-   F77_FUNC_(nlp_eps_inf,NLP_EPS_INF).infty = SCIPnlpiOracleGetInfinity(problem->oracle);
+   F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps = MIN(problem->feastol, problem->opttol);
+   F77_FUNC(nlp_eps_inf,NLP_EPS_INF).infty = SCIPnlpiOracleGetInfinity(problem->oracle);
    F77_FUNC(ubdc,UBDC).ubd = 100.0;
    F77_FUNC(ubdc,UBDC).tt = 1.25;
    F77_FUNC(scalec,SCALEC).scale_mode = 0;
