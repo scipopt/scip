@@ -2393,7 +2393,9 @@ SCIP_Real computeMIRViolation(
    SCIP_Real             rhs,
    SCIP_Real             contactivity,
    SCIP_Real             delta,
-   int                   nvars
+   int                   nvars,
+   SCIP_Real             minfrac,
+   SCIP_Real             maxfrac
    )
 {
    int i;
@@ -2409,12 +2411,23 @@ SCIP_Real computeMIRViolation(
       return 0.0;
 
    f0 = rhs - SCIPfeasFloor(scip, rhs);
+
+   if( f0 < minfrac || f0 > maxfrac )
+      return 0.0;
+
+   onedivoneminusf0 = 1.0 / (1.0 - f0);
+
+   /* We multiply the coefficients of the base inequality roughly by scale/(1-f0).
+    * If this gives a scalar that is very big, we better do not generate this cut.
+    */
+   if( scale * onedivoneminusf0 > MAXCMIRSCALE )
+      return 0.0;
+
    rhs = SCIPfeasFloor(scip, rhs);
 
    assert(!SCIPisFeasZero(scip, f0));
    assert(!SCIPisFeasZero(scip, 1.0 - f0));
 
-   onedivoneminusf0 = 1.0 / (1.0 - f0);
 
    for( i = 0; i < nvars; ++i )
    {
@@ -2808,7 +2821,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
    {
       SCIP_Real viol;
 
-      viol = computeMIRViolation(scip, tmpcoefs, tmpvalues, mksetrhs, contactivity, deltacands[i], ntmpcoefs);
+      viol = computeMIRViolation(scip, tmpcoefs, tmpvalues, mksetrhs, contactivity, deltacands[i], ntmpcoefs, minfrac, maxfrac);
 
       if( viol > bestviol )
       {
@@ -2829,7 +2842,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
       delta = bestdelta / i;
 
-      viol = computeMIRViolation(scip, tmpcoefs, tmpvalues, mksetrhs, contactivity, delta, ntmpcoefs);
+      viol = computeMIRViolation(scip, tmpcoefs, tmpvalues, mksetrhs, contactivity, delta, ntmpcoefs, minfrac, maxfrac);
 
       if( viol >= bestviol )
       {
@@ -2867,7 +2880,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
       tmpvalues[k - intstart] = varsign[k] == +1 ? bestub - SCIPgetSolVal(scip, sol, vars[mksetinds[k]]) : SCIPgetSolVal(scip, sol, vars[mksetinds[k]]) - bestlb;
 
       /* compute new violation */
-      newviol = computeMIRViolation(scip, tmpcoefs, tmpvalues, newrhs, contactivity, bestdelta, ntmpcoefs);
+      newviol = computeMIRViolation(scip, tmpcoefs, tmpvalues, newrhs, contactivity, bestdelta, ntmpcoefs, minfrac, maxfrac);
 
       /* check if violaton was increased */
       if( newviol > bestviol )
@@ -2913,14 +2926,6 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
       downrhs = SCIPfeasFloor(scip, mksetrhs);
       f0 = mksetrhs - downrhs;
-      if( f0 < minfrac || f0 > maxfrac )
-         goto TERMINATE;
-
-      /* We multiply the coefficients of the base inequality roughly by scale/(1-f0).
-       * If this gives a scalar that is very big, we better do not generate this cut.
-       */
-      if( scale/(1.0 - f0) > MAXCMIRSCALE )
-         goto TERMINATE;
 
       for( i = 0; i < mksetnnz; ++i )
          mksetcoefs[i] *= scale;

@@ -61,7 +61,7 @@
 #define DEFAULT_MAXTESTDELTA         -1 /**< maximal number of different deltas to try (-1: unlimited) */
 #define DEFAULT_MAXCONTS             10 /**< maximal number of active continuous variables in aggregated row */
 #define DEFAULT_MAXCONTSROOT         10 /**< maximal number of active continuous variables in aggregated row in the root */
-#define DEFAULT_AGGRTOL             0.1 /**< aggregation heuristic: tolerance for bound distances used to select real 
+#define DEFAULT_AGGRTOL             0.1 /**< aggregation heuristic: tolerance for bound distances used to select real
                                          *   variable in current aggregated constraint to be eliminated */
 #define DEFAULT_TRYNEGSCALING      TRUE /**< should negative values also be tested in scaling? */
 #define DEFAULT_FIXINTEGRALRHS     TRUE /**< should an additional variable be complemented if f0 = 0? */
@@ -214,7 +214,7 @@ SCIP_RETCODE addCut(
       SCIP_CALL( SCIPreleaseRow(scip, &cut) );
    }
 
-   return SCIP_OKAY;   
+   return SCIP_OKAY;
 }
 
 #if 0
