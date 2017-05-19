@@ -286,6 +286,7 @@ set(nlpiheaders
     nlpi/intervalarithext.h
     nlpi/nlpi.h
     nlpi/nlpi_ipopt.h
+    nlpi/nlpi_worhp.h
     nlpi/nlpioracle.h
     nlpi/pub_expr.h
     nlpi/struct_expr.h
