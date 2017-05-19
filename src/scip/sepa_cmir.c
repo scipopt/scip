@@ -217,11 +217,9 @@ SCIP_RETCODE addCut(
    return SCIP_OKAY;
 }
 
-#if 0
 /** decreases the score of a row in order to not aggregate it again too soon */
 static
 void decreaseRowScore(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            rowlhsscores,       /**< aggregation scores for left hand sides of row */
    SCIP_Real*            rowrhsscores,       /**< aggregation scores for right hand sides of row */
    int                   rowidx              /**< index of row to decrease score for */
@@ -232,10 +230,11 @@ void decreaseRowScore(
    assert(rowlhsscores[rowidx] >= 0.0);
    assert(rowrhsscores[rowidx] >= 0.0);
 
-   rowlhsscores[rowidx] *= 0.9;
-   rowrhsscores[rowidx] *= 0.9;
+   rowlhsscores[rowidx] *= 0.99;
+   rowrhsscores[rowidx] *= 0.99;
 }
 
+#if 0
 /** returns whether the variable should be tried to be aggregated out */
 static
 SCIP_Bool varIsContinuous(
@@ -671,6 +670,7 @@ SCIP_RETCODE aggregateNextRow(
       ++(*naggrs);
       SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
       SCIPaggrRowRemoveZeros(aggrrow, SCIPepsilon(scip));
+      decreaseRowScore(rowlhsscores, rowrhsscores, SCIProwGetLPPos(bestrow));
       goto TERMINATE;
    }
 
@@ -764,6 +764,7 @@ SCIP_RETCODE aggregateNextRow(
       *success = TRUE;
       ++(*naggrs);
       SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
+      decreaseRowScore(rowlhsscores, rowrhsscores, SCIProwGetLPPos(bestrow));
       SCIPaggrRowRemoveZeros(aggrrow, SCIPepsilon(scip));
    }
 
@@ -849,6 +850,8 @@ SCIP_RETCODE aggregation(
       startweight = 1.0;
 
    SCIP_CALL( SCIPaggrRowAddRow(scip, aggrdata->aggrrow, rows[startrow], negate ? -startweight : startweight, 0) );
+
+   decreaseRowScore(rowlhsscores, rowrhsscores, startrow);
 
    /* try to generate cut from the current aggregated row 
     * add cut if found, otherwise add another row to aggregated row 
