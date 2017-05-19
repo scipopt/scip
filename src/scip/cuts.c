@@ -3062,6 +3062,7 @@ SCIP_RETCODE getClosestVlb(
    )
 {
    int nvlbs;
+   int nbinvars;
 
    assert(scip != NULL);
    assert(var != NULL);
@@ -3074,6 +3075,7 @@ SCIP_RETCODE getClosestVlb(
    assert(closestvlbidx != NULL);
 
    nvlbs = SCIPvarGetNVlbs(var);
+   nbinvars = SCIPgetNBinVars(scip);
 
    *closestvlbidx = -1;
    *closestvlb = -SCIPinfinity(scip);
@@ -3094,12 +3096,21 @@ SCIP_RETCODE getClosestVlb(
          SCIP_Real val1;
          SCIP_Real val2;
          SCIP_Real vlbsol;
-         SCIP_Bool meetscriteria;
+         SCIP_Real rowcoefsign;
          int probidxbinvar;
          int aggrrowidxbinvar;
 
          /* use only variable lower bounds l~_i * x_i + d_i with x_i binary which are active */
-         if( !SCIPvarIsBinary(vlbvars[i])  || !SCIPvarIsActive(vlbvars[i]) || SCIPvarGetProbindex(vlbvars[i]) >= SCIPgetNBinVars(scip) )
+         if( SCIPvarGetProbindex(vlbvars[i]) >= nbinvars )
+            continue;
+
+         if( SCIPisFeasGT(scip, bestsub, vlbconsts[i]) )
+            continue;
+
+         /* for numerical reasons, ignore variable bounds with large absolute coefficient and
+          * those which lead to an infinite variable bound coefficient (val2) in snf relaxation
+          */
+         if( REALABS(vlbcoefs[i]) > MAXABSVBCOEF  )
             continue;
 
          /* check if current variable lower bound l~_i * x_i + d_i imposed on y_j meets the following criteria:
@@ -3125,33 +3136,18 @@ SCIP_RETCODE getClosestVlb(
 
          /* get the row coefficient */
          rowcoefbinvar = aggrrowidxbinvar == 0 ? 0.0 : rowcoefs[aggrrowidxbinvar - 1];
+         rowcoefsign = COPYSIGN(1.0, rowcoef);
 
-         val1 = ( rowcoef * ( bestsub - vlbconsts[i] ) ) + rowcoefbinvar;
-         val2 = ( rowcoef * vlbcoefs[i] ) + rowcoefbinvar;
-
-         meetscriteria = FALSE;
-         if( SCIPisPositive(scip, rowcoef) )
-         {
-            if( SCIPisFeasLE(scip, bestsub, vlbconsts[i])
-               && SCIPisFeasLE(scip, val1, 0.0) && SCIPisFeasLE(scip, val2, 0.0) )
-               meetscriteria = TRUE;
-         }
-         else
-         {
-            assert(SCIPisNegative(scip, rowcoef));
-            if( SCIPisFeasLE(scip, bestsub, vlbconsts[i])
-               && SCIPisFeasGE(scip, val1, 0.0) && SCIPisFeasGE(scip, val2, 0.0) )
-               meetscriteria = TRUE;
-         }
+         val2 = rowcoefsign * ((rowcoef * vlbcoefs[i]) + rowcoefbinvar);
 
          /* variable lower bound does not meet criteria */
-         if( !meetscriteria )
+         if( SCIPisFeasGT(scip, val2, 0.0) || SCIPisInfinity(scip, -val2) )
             continue;
 
-         /* for numerical reasons, ignore variable bounds with large absolute coefficient and
-          * those which lead to an infinite variable bound coefficient (val2) in snf relaxation
-          */
-         if( REALABS(vlbcoefs[i]) > MAXABSVBCOEF || SCIPisInfinity(scip, REALABS(val2)) )
+         val1 = rowcoefsign * ((rowcoef * (bestsub - vlbconsts[i])) + rowcoefbinvar);
+
+         /* variable lower bound does not meet criteria */
+         if( SCIPisFeasGT(scip, val1, 0.0) )
             continue;
 
          vlbsol = vlbcoefs[i] * SCIPgetSolVal(scip, sol, vlbvars[i]) + vlbconsts[i];
@@ -3187,6 +3183,7 @@ SCIP_RETCODE getClosestVub(
    )
 {
    int nvubs;
+   int nbinvars;
 
    assert(scip != NULL);
    assert(var != NULL);
@@ -3199,6 +3196,7 @@ SCIP_RETCODE getClosestVub(
    assert(closestvubidx != NULL);
 
    nvubs = SCIPvarGetNVubs(var);
+   nbinvars = SCIPgetNBinVars(scip);
 
    *closestvubidx = -1;
    *closestvub = SCIPinfinity(scip);
@@ -3219,12 +3217,21 @@ SCIP_RETCODE getClosestVub(
          SCIP_Real val1;
          SCIP_Real val2;
          SCIP_Real vubsol;
-         SCIP_Bool meetscriteria;
+         SCIP_Real rowcoefsign;
          int probidxbinvar;
          int aggrrowidxbinvar;
 
          /* use only variable upper bound u~_i * x_i + d_i with x_i binary and which are active */
-         if( !SCIPvarIsBinary(vubvars[i]) || !SCIPvarIsActive(vubvars[i]) || SCIPvarGetProbindex(vubvars[i]) >= SCIPgetNBinVars(scip) )
+         if( SCIPvarGetProbindex(vubvars[i]) >= nbinvars )
+            continue;
+
+         if( SCIPisFeasLT(scip, bestslb, vubconsts[i]) )
+            continue;
+
+         /* for numerical reasons, ignore variable bounds with large absolute coefficient and
+          * those which lead to an infinite variable bound coefficient (val2) in snf relaxation
+          */
+         if( REALABS(vubcoefs[i]) > MAXABSVBCOEF  )
             continue;
 
          /* checks if current variable upper bound u~_i * x_i + d_i meets the following criteria
@@ -3250,33 +3257,18 @@ SCIP_RETCODE getClosestVub(
 
          /* get the row coefficient */
          rowcoefbinvar = aggrrowidxbinvar == 0 ? 0.0 : rowcoefs[aggrrowidxbinvar - 1];
+         rowcoefsign = COPYSIGN(1.0, rowcoef);
 
-         val1 = ( rowcoef * ( bestslb - vubconsts[i] ) ) + rowcoefbinvar;
-         val2 = ( rowcoef * vubcoefs[i] ) + rowcoefbinvar;
-
-         meetscriteria = FALSE;
-         if( SCIPisPositive(scip, rowcoef) )
-         {
-            if( SCIPisFeasGE(scip, bestslb, vubconsts[i])
-               && SCIPisFeasGE(scip, val1, 0.0) && SCIPisFeasGE(scip, val2, 0.0) )
-               meetscriteria = TRUE;
-         }
-         else
-         {
-            assert(SCIPisNegative(scip, rowcoef));
-            if( SCIPisFeasGE(scip, bestslb, vubconsts[i])
-               && SCIPisFeasLE(scip, val1, 0.0) && SCIPisFeasLE(scip, val2, 0.0) )
-               meetscriteria = TRUE;
-         }
+         val2 = rowcoefsign * ((rowcoef * vubcoefs[i]) + rowcoefbinvar);
 
          /* variable upper bound does not meet criteria */
-         if( !meetscriteria )
+         if( SCIPisFeasLT(scip, val2, 0.0) || SCIPisInfinity(scip, val2) )
             continue;
 
-         /* for numerical reasons, ignore variable bounds with large absolute coefficient and
-          * those which lead to an infinite variable bound coefficient (val2) in snf relaxation
-          */
-         if( REALABS(vubcoefs[i]) > MAXABSVBCOEF || SCIPisInfinity(scip, REALABS(val2)) )
+         val1 = rowcoefsign * ((rowcoef * (bestslb - vubconsts[i])) + rowcoefbinvar);
+
+         /* variable upper bound does not meet criteria */
+         if( SCIPisFeasLT(scip, val1, 0.0) )
             continue;
 
          vubsol = vubcoefs[i] * SCIPgetSolVal(scip, sol, vubvars[i]) + vubconsts[i];
