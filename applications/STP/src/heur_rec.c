@@ -66,6 +66,9 @@
 #define RUNS_RESTRICTED     3
 #define RUNS_NORMAL         10
 
+#ifndef DEBUG
+#define DEBUG
+#endif
 
 #ifdef WITH_UG
 extern
@@ -1398,17 +1401,23 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 SCIP_RETCODE SCIPheurExclusion(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< graph structure */
-   SCIP_Real*            cost,               /**< edge costs */
-   SCIP_Real*            costrev,            /**< reversed edge costs */
-   int*                  result,             /**< edge solution array (UNKNOWN/CONNECT) */
-   int*                  dnodemap,           /**< node array for internal use*/
+   const SCIP_Real*      cost,               /**< edge costs */
+   const SCIP_Real*      costrev,            /**< reversed edge costs */
+   const int*            result,             /**< edge solution array (UNKNOWN/CONNECT) */
+   int*                  newresult,          /**< new edge solution array (UNKNOWN/CONNECT) */
+   int*                  dnodemap,           /**< node array for internal use */
+   int*                  nodearrint,         /**< node array for internal use */
    STP_Bool*             stvertex,           /**< node array for internally marking solution vertices */
    SCIP_Bool*            success             /**< solution improved? */
    )
 {
    SCIP_HEURDATA* tmheurdata;
    GRAPH* newgraph;
+   SCIP_Real dummy;
+   int*   newstvertex;
+   int*   unodemap;
    int    j;
+   int    root;
    int    nedges;
    int    nnodes;
    int    nsolterms;
@@ -1433,27 +1442,64 @@ SCIP_RETCODE SCIPheurExclusion(
    nnodes = graph->knots;
    *success = TRUE;
 
+   //todo prune solution?
+
    /*** 1. step: for solution S and original graph (V,E) initialize new graph (V[S], (V[S] X V[S]) \cup E) ***/
 
    BMSclearMemoryArray(stvertex, nnodes);
 
-   nsoledges = 0;
-   stvertex[graph->source[0]] = TRUE;
+   root = graph->source[0];
+   nsolnodes = 1;
+   nsolterms = 0;
+   stvertex[root] = TRUE;
+
+   /* mark nodes in solution */
    for( int e = 0; e < nedges; e++ )
    {
       if( result[e] == CONNECT )
       {
-         stvertex[graph->head[e]] = TRUE;
-         nsoledges++;
+         int tail = graph->tail[e];
+         int head = graph->head[e];
+
+         if( tail == root )
+         {
+            /* there might be only one node */
+            if( Is_pterm(graph->term[head]) )
+            {
+               stvertex[head] = TRUE;
+               nsolterms++;
+               nsolnodes++;
+            }
+
+            continue;
+         }
+
+         stvertex[tail] = TRUE;
+         stvertex[head] = TRUE;
+
+         if( Is_pterm(graph->term[head]) )
+            nsolterms++;
+         nsolnodes++;
       }
    }
 
-   nsolnodes = nsoledges + 1;
+   assert(nsolterms > 0);
+
+   nsolnodes += nsolterms;
+
+   nsoledges = 0;
+
+   /* add edges */
+   for( int i = 0; i < nedges; i += 2 )
+      if( stvertex[graph->tail[i]] && stvertex[graph->head[i]] )
+         nsoledges++;
 
    if( pcmw )
-      SCIP_CALL( graph_init(scip, &newgraph, nsolnodes + graph->terms, 2 * nsoledges + 4 * graph->terms, 1, 0) );
+      SCIP_CALL( graph_init(scip, &newgraph, nsolnodes, 2 * nsoledges + 6 * nsolterms, 1, 0) );
    else
       SCIP_CALL( graph_init(scip, &newgraph, nsolnodes, 2 * nsoledges, 1, 0) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &unodemap, nsolnodes) );
 
    if( graph->stp_type == STP_RSMT || graph->stp_type == STP_OARSMT || graph->stp_type == STP_GSTP )
       newgraph->stp_type = STP_SPG;
@@ -1479,39 +1525,54 @@ SCIP_RETCODE SCIPheurExclusion(
          }
 
          graph_knot_add(newgraph, graph->term[i]);
+         unodemap[j] = i;
          dnodemap[i] = j++;
       }
+      else
+      {
+         dnodemap[i] = -1;
+      }
    }
+
+   assert(j == nsolnodes);
 
    if( pcmw )
       newgraph->norgmodelknots = newgraph->knots - newgraph->terms;
 
    /* set root */
-   newgraph->source[0] = dnodemap[graph->source[0]];
+   newgraph->source[0] = dnodemap[root];
    if( newgraph->stp_type == STP_RPCSPG )
       newgraph->prize[newgraph->source[0]] = FARAWAY;
 
    assert(newgraph->source[0] >= 0);
 
-
    /* add edges */
    for( int i = 0; i < nedges; i += 2 )
-   {
       if( stvertex[graph->tail[i]] && stvertex[graph->head[i]] )
-      {
          graph_edge_add(scip, newgraph, dnodemap[graph->tail[i]], dnodemap[graph->head[i]], graph->cost[i], graph->cost[i + 1]);
-      }
-   }
 
-   if( pcmw )
+#ifdef DEBUG
+   for( int k = 0; k < newgraph->knots; k++ )
    {
-      for( int e = graph->outbeg[graph->source[0]]; e != EAT_LAST; e = graph->oeat[e] )
+      if( Is_pterm(newgraph->term[k]) )
       {
-
+         for( int e = newgraph->outbeg[k]; e != EAT_LAST; e = newgraph->oeat[e] )
+         {
+            int head = newgraph->head[e];
+            if( newgraph->source[0] != head && Is_term(newgraph->term[head]) )
+               break;
+            if( e == EAT_LAST )
+            {
+               printf("graph construction fail in heur_rec \n");
+               return SCIP_ERROR;
+            }
+         }
       }
    }
+#endif
 
    /*** step 2: presolve ***/
+
 
 
    /*** step 3: compute solution on new graph ***/
@@ -1521,12 +1582,49 @@ SCIP_RETCODE SCIPheurExclusion(
    tmheurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
 
    /* compute Steiner tree to obtain upper bound */
-   best_start = graph->source[0];
-   SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, graph, NULL, &best_start, result, 50, graph->source[0], cost, costrev, &j, NULL, 0.0, &success) );
+   best_start = newgraph->source[0];
+   SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, newgraph, NULL, &best_start, newresult, 50, newgraph->source[0], newgraph->cost, newgraph->cost, &dummy, NULL, 0.0, success) );
+
+   assert(*success);
 
    /*** step 4: retransform solution to original graph ***/
+   if( nodearrint == NULL )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &newstvertex, newgraph->knots) );
+   }
+   else
+   {
+      newstvertex = nodearrint;
+   }
 
+   BMSclearMemoryArray(stvertex, nnodes);
 
+   for( int e = 0; e < newgraph->edges; e++ )
+      if( newresult[e] == CONNECT )
+         stvertex[unodemap[newgraph->head[e]]] = TRUE;
+
+   stvertex[root] = TRUE;
+
+   SCIPfreeBufferArrayNull(scip, &newstvertex);
+
+   for( int e = 0; e < nedges; e++ )
+      newresult[e] = UNKNOWN;
+
+   if( pcmw )
+      SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, graph->cost, newresult, stvertex) );
+   else
+      SCIP_CALL( SCIPheurPruneSteinerTree(scip, graph, graph->cost, 0, newresult, stvertex) );
+
+   /* solution better than original one?  */
+
+   if( SCIPisLT(scip, graph_computeSolVal(newgraph->cost, newresult, 0.0, newgraph->edges),
+         graph_computeSolVal(graph->cost, result, 0.0, nedges)) )
+      *success = TRUE;
+   else
+      *success = FALSE;
+
+   SCIPfreeBufferArray(scip, &unodemap);
+   graph_free(scip, newgraph, TRUE);
 
    return SCIP_OKAY;
 }
