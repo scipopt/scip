@@ -257,6 +257,7 @@ set(nlpisources
     nlpi/expr.c
     nlpi/intervalarithext.cpp
     blockmemshell/memory.c
+    scip/rbtree.c
     scip/misc.c
     scip/intervalarith.c
     scip/interrupt.c
@@ -265,7 +266,7 @@ set(nlpisources
     ${exprinterpret}
 )
 
-set(lpisources ${lpi} scip/bitencode.c blockmemshell/memory.c scip/message.c)
+set(lpisources ${lpi} scip/bitencode.c blockmemshell/memory.c scip/rbtree.c scip/message.c)
 
 set(blockmemshellheader
     blockmemshell/memory.h
@@ -520,6 +521,7 @@ set(scipheaders
     scip/pub_sol.h
     scip/pub_tree.h
     scip/pub_var.h
+    scip/rbtree.h
     scip/reader_bnd.h
     scip/reader_ccg.h
     scip/reader_cip.h
@@ -701,7 +703,7 @@ add_library(nlpi STATIC ${nlpisources})
 add_library(lpi STATIC ${lpisources})
 add_library(tpi STATIC ${tpisources})
 target_link_libraries(lpi ${GMP_LIBRARIES} ${LPS_LIBRARIES})
-target_link_libraries(nlpi ${IPOPT_LIBRARIES})
+target_link_libraries(nlpi ${NLPI_LIBRARIES})
 
 if(SHARED)
     #in the shared case the scipopt needs to compile the sources relocatable again
