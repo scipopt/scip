@@ -24,8 +24,11 @@ SCIP version 4.0.1
 
 features
 - added parsing functionality to cardinality constraint handler for CIP format
+- added command line option '-o' and command 'sanitycheck' in interactive shell
+  to check solving process sanity against an external primal and dual reference value.
 
 fixed bugs:
+- fixed bug in genvbounds propagator when applying a restart after the root node
 - fixed unintended behavior of interrupt signal handler inside SCIP copies
 - fixed uninitialized values in SCIP's digraph data structure after calling SCIPdigraphResize()
 - fixed memory leak in OSiL reader when using SOS constraints
@@ -36,10 +39,16 @@ fixed bugs:
 - fixed bug in computing violation and cut for certain nonlinear constraints when LP solution is slightly out of bounds
 - fixed bug in binpacking example that might have led to doing the same branching several times
 - fixed memory issue in binpacking example
+- renamed parameter heuristics/completesol/maxunkownrate to heuristics/completesol/maxunknownrate
+- in GAMS writer, forbid also various parenthesis characters in gams symbol names
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint
 - sorting of parents and children for some expression types is now independent of memory layout
+
+interface:
+- new function SCIPsanityCheck() to compare solving result with an external primal and dual reference
+  value
 
 SCIP version 4.0.0
 ==================

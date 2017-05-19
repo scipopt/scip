@@ -22387,6 +22387,44 @@ int SCIPgetPtrarrayMaxIdx(
    );
 
 /**@} */
+
+/**@defgroup PublicVerificationMethods Verification
+ * @ingroup PUBLICCOREAPI
+ * @brief  methods for verifying the correctness of the run
+ *
+ * @{
+ */
+
+/** perform a sanity check of the solve
+ *
+ *  the sanity check includes
+ *
+ *  - checking the feasibility of the incumbent solution in the original problem (using SCIPcheckSolOrig())
+ *
+ *  - checking if the objective bounds computed by SCIP agree with external primal and dual reference bounds.
+ *
+ *  All external reference bounds the original problem space and the original objective sense.
+ *
+ *  For infeasible problems, +/-SCIPinfinity() should be passed as reference bounds depending on the objective sense
+ *  of the original problem.
+ */
+EXTERN
+SCIP_RETCODE SCIPsanityCheck(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             primalreference,    /**< external primal reference value for the problem, or SCIP_UNKNOWN */
+   SCIP_Real             dualreference,      /**< external dual reference value for the problem, or SCIP_UNKNOWN */
+   SCIP_Real             reftol,             /**< relative tolerance for acceptable violation of reference values */
+   SCIP_Bool             quiet,              /**< TRUE if no status line should be printed */
+   SCIP_Bool*            feasible,           /**< pointer to store if the best solution is feasible in the original problem,
+                                               *  or NULL */
+   SCIP_Bool*            primalboundcheck,   /**< pointer to store if the primal bound respects the given dual reference
+                                               *  value, or NULL */
+   SCIP_Bool*            dualboundcheck      /**< pointer to store if the dual bound respects the given primal reference
+                                               *  value, or NULL */
+   );
+
+/* @} */
+
 #ifdef __cplusplus
 }
 #endif
