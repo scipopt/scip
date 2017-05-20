@@ -576,7 +576,7 @@ SCIP_RETCODE aggregateNextRow(
       if( bounddist == 0.0 )
          continue;
 
-      badvarinds[nbadvars] = i;
+      badvarinds[nbadvars] = inds[i];
       badvarbddist[nbadvars] = bounddist;
       ++nbadvars;
    }
@@ -597,7 +597,6 @@ SCIP_RETCODE aggregateNextRow(
    for( i = nbadvars - 1; i >= 0; --i )
    {
       int probvaridx;
-      int aggrrowvaridx;
       SCIP_ROW** candrows;
       SCIP_Real* candrowcoefs;
       int nrows;
@@ -616,8 +615,7 @@ SCIP_RETCODE aggregateNextRow(
       if( -badvarbddist[i] < minbddist )
          break;
 
-      aggrrowvaridx = badvarinds[i];
-      probvaridx = inds[aggrrowvaridx];
+      probvaridx = badvarinds[i];
 
       if( !getRowAggregationCandidates(aggrdata, probvaridx, &candrows, &candrowcoefs, &nrows, &ngoodrows) )
       {
@@ -639,7 +637,7 @@ SCIP_RETCODE aggregateNextRow(
 
          /* if factor is too extreme skip this row */
          SCIPaggrRowGetAbsWeightRange(aggrrow, &minweight, &maxweight);
-         rowaggrfac = -vals[aggrrowvaridx] / candrowcoefs[k];
+         rowaggrfac = -vals[probvaridx] / candrowcoefs[k];
 
          if( SCIPisZero(scip, rowaggrfac) ||
              REALABS(rowaggrfac) > sepadata->maxrowfac * minweight ||
@@ -677,7 +675,6 @@ SCIP_RETCODE aggregateNextRow(
    for( i = 0; i < nbadvars; ++i )
    {
       int probvaridx;
-      int aggrrowvaridx;
       SCIP_ROW** candrows;
       SCIP_Real* candrowcoefs;
       int nrows;
@@ -696,8 +693,7 @@ SCIP_RETCODE aggregateNextRow(
       if( badvarbddist[i] < minbddist )
          break;
 
-      aggrrowvaridx = badvarinds[i];
-      probvaridx = inds[aggrrowvaridx];
+      probvaridx = badvarinds[i];
 
       if( !getRowAggregationCandidates(aggrdata, probvaridx, &candrows, &candrowcoefs, &nrows, &ngoodrows) )
       {
@@ -720,7 +716,7 @@ SCIP_RETCODE aggregateNextRow(
 
          /* if factor is too extreme skip this row */
          SCIPaggrRowGetAbsWeightRange(aggrrow, &minweight, &maxweight);
-         rowaggrfac = -vals[aggrrowvaridx] / candrowcoefs[k];
+         rowaggrfac = -vals[probvaridx] / candrowcoefs[k];
          lppos = SCIProwGetLPPos(candrows[k]);
 
          if( SCIPisZero(scip, rowaggrfac) ||

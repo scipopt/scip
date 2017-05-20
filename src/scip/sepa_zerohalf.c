@@ -769,8 +769,8 @@ SCIP_RETCODE mod2matrixPreprocessRows(
 
       if( (row->nnonzcols == 0 && row->rhs == 0) || SCIPisGE(scip, row->slack, 1.0) )
       {
-         mod2matrixRemoveRow(scip, mod2matrix, row);
          sepadata->nreductions += row->nnonzcols;
+         mod2matrixRemoveRow(scip, mod2matrix, row);
       }
       else if( row->nnonzcols > 0 )
       {
@@ -861,7 +861,7 @@ SCIP_RETCODE mod2rowAddRow(
    /* remember entries that are in the row to add */
    for( i = 0; i < rowtoadd->nrowinds; ++i )
    {
-      contained[rowtoadd->rowinds[i] + nlprows] = TRUE;
+      contained[rowtoadd->rowinds[i] + nlprows] = 1;
    }
 
    /* remove the entries that are in both rows from the row (1 + 1 = 0 (mod 2)) */
@@ -871,7 +871,7 @@ SCIP_RETCODE mod2rowAddRow(
       if( contained[row->rowinds[i] + nlprows] )
       {
          --nnewentries;
-         contained[row->rowinds[i] + nlprows] = FALSE;
+         contained[row->rowinds[i] + nlprows] = 0;
          --row->nrowinds;
          row->rowinds[i] = row->rowinds[row->nrowinds];
       }
@@ -888,7 +888,7 @@ SCIP_RETCODE mod2rowAddRow(
    {
       if( contained[rowtoadd->rowinds[i] + nlprows] )
       {
-         contained[rowtoadd->rowinds[i] + nlprows] = FALSE;
+         contained[rowtoadd->rowinds[i] + nlprows] = 0;
          row->rowinds[row->nrowinds++] = rowtoadd->rowinds[i];
       }
    }

@@ -5769,10 +5769,10 @@ SCIP_Real getMinActivity(
       assert(SCIPvarGetProbindex(vars[v]) == v);
 
       /* calculate the minimal activity */
-      if( vals[i] > 0.0 )
-         minact += vals[i] * (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+      if( vals[v] > 0.0 )
+         minact += vals[v] * (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
       else
-         minact += vals[i] * (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+         minact += vals[v] * (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
    }
 
    return minact;
@@ -5909,7 +5909,7 @@ SCIP_RETCODE tightenDualray(
 
       assert(SCIPvarGetProbindex(vars[idx]) == idx);
       assert(SCIPvarIsActive(vars[idx]));
-      assert(!SCIPsetIsZero(set, vals[i]));
+      assert(!SCIPsetIsZero(set, vals[idx]));
 
       /* skip integral variables */
       if( SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_CONTINUOUS && SCIPvarGetType(vars[idx]) != SCIP_VARTYPE_IMPLINT )
@@ -5923,8 +5923,8 @@ SCIP_RETCODE tightenDualray(
          SCIP_Real locbd;
 
          /* get appropriate global and local bounds */
-         glbbd = (vals[i] < 0.0 ? SCIPvarGetUbGlobal(vars[idx]) : SCIPvarGetLbGlobal(vars[idx]));
-         locbd = (vals[i] < 0.0 ? curvarubs[idx] : curvarlbs[idx]);
+         glbbd = (vals[idx] < 0.0 ? SCIPvarGetUbGlobal(vars[idx]) : SCIPvarGetLbGlobal(vars[idx]));
+         locbd = (vals[idx] < 0.0 ? curvarubs[idx] : curvarlbs[idx]);
 
          if( !SCIPsetIsEQ(set, glbbd, locbd) )
          {
@@ -5934,10 +5934,10 @@ SCIP_RETCODE tightenDualray(
 
          SCIPsetDebugMsg(set, "-> remove continuous variable <%s>: glb=[%g,%g], loc=[%g,%g], val=%g\n", SCIPvarGetName(vars[idx]),
                SCIPvarGetLbGlobal(vars[idx]), SCIPvarGetUbGlobal(vars[idx]), SCIPvarGetLbLocal(vars[idx]),
-               SCIPvarGetUbLocal(vars[idx]), vals[i]);
+               SCIPvarGetUbLocal(vars[idx]), vals[idx]);
 
          /* update rhs */
-         SCIPaggrRowAddRhs(farkasrow, -(glbbd * vals[i]));
+         SCIPaggrRowAddRhs(farkasrow, -(glbbd * vals[idx]));
 
 #ifndef NDEBUG
          oldind = inds[nnz - 1];
@@ -5968,7 +5968,7 @@ SCIP_RETCODE tightenDualray(
    SCIPsetDebugMsg(set, "-> final constraint after tightenDualray():\n");
    for( i = 0; i < nnz; i++ )
    {
-      SCIPsetDebugMsg(set, "   %g<%s> glb=[%g,%g] loc=[%g,%g] type=%d\n", vals[i], SCIPvarGetName(vars[inds[i]]),
+      SCIPsetDebugMsg(set, "   %g<%s> glb=[%g,%g] loc=[%g,%g] type=%d\n", vals[inds[i]], SCIPvarGetName(vars[inds[i]]),
             SCIPvarGetLbGlobal(vars[inds[i]]), SCIPvarGetUbGlobal(vars[inds[i]]),
             SCIPvarGetLbLocal(vars[inds[i]]), SCIPvarGetUbLocal(vars[inds[i]]),
             SCIPvarGetType(vars[inds[i]]));
@@ -6067,7 +6067,7 @@ SCIP_RETCODE createAndAddDualray(
    for( i = 0; i < nnz; i++ )
    {
       assert(SCIPvarGetProbindex(vars[inds[i]]) == inds[i]);
-      SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, vars[inds[i]], vals[i]) );
+      SCIP_CALL( SCIPaddCoefLinear(set->scip, cons, vars[inds[i]], vals[inds[i]]) );
    }
 
    /* do not upgrade linear constraints of size 1 */
@@ -6290,7 +6290,7 @@ SCIP_RETCODE performDualRayAnalysis(
       assert(SCIPvarGetProbindex(transprob->vars[inds[0]]) == inds[0]);
 
       SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
-            branchcand, eventqueue, cliquetable, transprob->vars[inds[0]], vals[0], rhs, success) );
+            branchcand, eventqueue, cliquetable, transprob->vars[inds[0]], vals[inds[0]], rhs, success) );
    }
    else
    {
@@ -6303,7 +6303,7 @@ SCIP_RETCODE performDualRayAnalysis(
          assert(SCIPvarGetProbindex(transprob->vars[inds[0]]) == inds[0]);
 
          SCIP_CALL( tightenSingleVar(conflict, set, stat, tree, blkmem, origprob, transprob, reopt, lp,
-               branchcand, eventqueue, cliquetable, transprob->vars[inds[0]], vals[0], rhs, success) );
+               branchcand, eventqueue, cliquetable, transprob->vars[inds[0]], vals[inds[0]], rhs, success) );
       }
       else
       {
