@@ -39,6 +39,7 @@
 #include "misc_stp.h"
 #include "prop_stp.h"
 #include "probdata_stp.h"
+#include "heur_rec.h"
 #include "heur_slackprune.h"
 
 #define DEFAULT_HEURRUNS 100                 /**< number of runs of constructive heuristic */
@@ -1500,6 +1501,7 @@ SCIP_RETCODE da_reducePcMw(
    SCIP_CALL( SCIPallocBufferArray(scip, &transresult, nedges + 2 * (graph->terms - 1)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &marked, nedges + 2 * (graph->terms - 1)) );
 
+
    /* 1. step: compute upper bound */
 
 
@@ -1723,6 +1725,8 @@ SCIP_RETCODE da_reducePcMw(
       {
          apsol = FALSE;
       }
+
+      SCIP_CALL( SCIPheurExclusion(scip, graph, result, transresult, pathedge, nodearrchar, &success) );
 
       /* the required reduced path cost to be surpassed */
       minpathcost = upperbound - lpobjval;

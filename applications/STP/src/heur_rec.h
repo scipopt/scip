@@ -44,13 +44,10 @@ SCIP_RETCODE SCIPincludeHeurRec(
 extern
 SCIP_RETCODE SCIPheurExclusion(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                graph,              /**< graph structure */
-   const SCIP_Real*      cost,               /**< edge costs */
-   const SCIP_Real*      costrev,            /**< reversed edge costs */
+   const GRAPH*          graph,              /**< graph structure */
    const int*            result,             /**< edge solution array (UNKNOWN/CONNECT) */
    int*                  newresult,          /**< new edge solution array (UNKNOWN/CONNECT) */
    int*                  dnodemap,           /**< node array for internal use */
-   int*                  nodearrint,         /**< node array for internal use */
    STP_Bool*             stvertex,           /**< node array for internally marking solution vertices */
    SCIP_Bool*            success             /**< solution improved? */
    );

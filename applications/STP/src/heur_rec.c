@@ -1395,18 +1395,13 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
 
 
-
-#if 1
 /** heuristic to exclude vertices or edges from a given solution (and inserting other edges) to improve objective */
 SCIP_RETCODE SCIPheurExclusion(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                graph,              /**< graph structure */
-   const SCIP_Real*      cost,               /**< edge costs */
-   const SCIP_Real*      costrev,            /**< reversed edge costs */
+   const GRAPH*          graph,              /**< graph structure */
    const int*            result,             /**< edge solution array (UNKNOWN/CONNECT) */
    int*                  newresult,          /**< new edge solution array (UNKNOWN/CONNECT) */
    int*                  dnodemap,           /**< node array for internal use */
-   int*                  nodearrint,         /**< node array for internal use */
    STP_Bool*             stvertex,           /**< node array for internally marking solution vertices */
    SCIP_Bool*            success             /**< solution improved? */
    )
@@ -1414,7 +1409,6 @@ SCIP_RETCODE SCIPheurExclusion(
    SCIP_HEURDATA* tmheurdata;
    GRAPH* newgraph;
    SCIP_Real dummy;
-   int*   newstvertex;
    int*   unodemap;
    int    j;
    int    root;
@@ -1428,8 +1422,6 @@ SCIP_RETCODE SCIPheurExclusion(
    SCIP_Bool pcmw;
 
    assert(scip != NULL);
-   assert(cost != NULL);
-   assert(costrev != NULL);
    assert(graph != NULL);
    assert(result != NULL);
    assert(stvertex != NULL);
@@ -1494,10 +1486,7 @@ SCIP_RETCODE SCIPheurExclusion(
       if( stvertex[graph->tail[i]] && stvertex[graph->head[i]] )
          nsoledges++;
 
-   if( pcmw )
-      SCIP_CALL( graph_init(scip, &newgraph, nsolnodes, 2 * nsoledges + 6 * nsolterms, 1, 0) );
-   else
-      SCIP_CALL( graph_init(scip, &newgraph, nsolnodes, 2 * nsoledges, 1, 0) );
+   SCIP_CALL( graph_init(scip, &newgraph, nsolnodes, 2 * nsoledges, 1, 0) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &unodemap, nsolnodes) );
 
@@ -1588,14 +1577,6 @@ SCIP_RETCODE SCIPheurExclusion(
    assert(*success);
 
    /*** step 4: retransform solution to original graph ***/
-   if( nodearrint == NULL )
-   {
-      SCIP_CALL( SCIPallocBufferArray(scip, &newstvertex, newgraph->knots) );
-   }
-   else
-   {
-      newstvertex = nodearrint;
-   }
 
    BMSclearMemoryArray(stvertex, nnodes);
 
@@ -1604,8 +1585,6 @@ SCIP_RETCODE SCIPheurExclusion(
          stvertex[unodemap[newgraph->head[e]]] = TRUE;
 
    stvertex[root] = TRUE;
-
-   SCIPfreeBufferArrayNull(scip, &newstvertex);
 
    for( int e = 0; e < nedges; e++ )
       newresult[e] = UNKNOWN;
@@ -1617,20 +1596,30 @@ SCIP_RETCODE SCIPheurExclusion(
 
    /* solution better than original one?  */
 
-   if( SCIPisLT(scip, graph_computeSolVal(newgraph->cost, newresult, 0.0, newgraph->edges),
+   if( SCIPisLT(scip, graph_computeSolVal(graph->cost, newresult, 0.0, nedges),
          graph_computeSolVal(graph->cost, result, 0.0, nedges)) )
       *success = TRUE;
    else
       *success = FALSE;
 
+   if( !graph_sol_valid(scip, graph, newresult) )
+      *success = FALSE;
+
    SCIPfreeBufferArray(scip, &unodemap);
    graph_free(scip, newgraph, TRUE);
 
-   return SCIP_OKAY;
-}
+#ifdef DEBUG
+   printf("new solval %f old solval %f \n", graph_computeSolVal(graph->cost, newresult, 0.0, nedges),  graph_computeSolVal(graph->cost, result, 0.0, nedges));
 
+   if( !graph_sol_valid(scip, graph, newresult) )
+   {
+      printf("invalid sol in REC \n");
+      return SCIP_ERROR;
+   }
 #endif
 
+   return SCIP_OKAY;
+}
 
 
 
