@@ -797,6 +797,26 @@ void SCIPaggrRowCleanup(
    cleanupCut(scip, aggrrow->local, aggrrow->inds, aggrrow->vals, &aggrrow->nnz, &aggrrow->rhs);
 }
 
+/** gets number of rows that have been added to the aggregation row */
+int SCIPaggrRowGetNRows(
+   SCIP_AGGRROW*         aggrrow            /**< the aggregation row */
+   )
+{
+   assert(aggrrow != NULL);
+
+   return aggrrow->nrows;
+}
+
+/** gets array with lp positions of rows that have been added to the aggregation row */
+int* SCIPaggrRowGetRowInds(
+   SCIP_AGGRROW*         aggrrow            /**< the aggregation row */
+   )
+{
+   assert(aggrrow != NULL);
+
+   return aggrrow->rowsinds;
+}
+
 /** checks whether a given row has been added to the aggregation row */
 SCIP_Bool SCIPaggrRowHasRowBeenAdded(
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */

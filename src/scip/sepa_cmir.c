@@ -668,7 +668,6 @@ SCIP_RETCODE aggregateNextRow(
       ++(*naggrs);
       SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
       SCIPaggrRowRemoveZeros(aggrrow, SCIPepsilon(scip));
-      decreaseRowScore(rowlhsscores, rowrhsscores, SCIProwGetLPPos(bestrow));
       goto TERMINATE;
    }
 
@@ -760,7 +759,6 @@ SCIP_RETCODE aggregateNextRow(
       *success = TRUE;
       ++(*naggrs);
       SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
-      decreaseRowScore(rowlhsscores, rowrhsscores, SCIProwGetLPPos(bestrow));
       SCIPaggrRowRemoveZeros(aggrrow, SCIPepsilon(scip));
    }
 
@@ -847,8 +845,6 @@ SCIP_RETCODE aggregation(
 
    SCIP_CALL( SCIPaggrRowAddRow(scip, aggrdata->aggrrow, rows[startrow], negate ? -startweight : startweight, 0) );
 
-   decreaseRowScore(rowlhsscores, rowrhsscores, startrow);
-
    /* try to generate cut from the current aggregated row 
     * add cut if found, otherwise add another row to aggregated row 
     * in order to get rid of a continuous variable
@@ -893,6 +889,17 @@ SCIP_RETCODE aggregation(
       /* if the cut was successfully added, abort the aggregation of further rows */
       if( *ncuts > oldncuts )
       {
+         int i;
+         int nrows;
+         int* rowinds;
+
+         rowinds = SCIPaggrRowGetRowInds(aggrdata->aggrrow);
+         nrows = SCIPaggrRowGetNRows(aggrdata->aggrrow);
+
+         /* decrease row score of used rows slightly */
+         for( i = 0; i < nrows; ++i )
+            decreaseRowScore(rowlhsscores, rowrhsscores, rowinds[i]);
+
          SCIPdebugMsg(scip, " -> abort aggregation: cut found\n");
          break;
       }
