@@ -4893,7 +4893,9 @@ void destroyLiftingData(
    SCIPfreeBufferArray(scip, &liftingdata->m);
 }
 
-/** @bzfgottwa write comment */
+/** store the simple lifted flowcover cut defined by the given data in the given arrays
+ *  the array for storing the cut coefficients must be all zeros
+ */
 static
 SCIP_RETCODE generateLiftedFlowCoverCut(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5078,7 +5080,12 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
       for( i = 0; i < aggrrow->nrows; ++i )
       {
          SCIP_ROW* row;
-         SCIP_Real slackcoef = aggrrow->rowweights[i] * aggrrow->slacksign[i];
+         SCIP_Real rowlhs;
+         SCIP_Real rowrhs;
+         SCIP_Real slackub;
+         SCIP_Real slackcoef;
+
+         slackcoef = aggrrow->rowweights[i] * aggrrow->slacksign[i];
          assert(slackcoef != 0.0);
 
          /* positive slack was implicitly handled in flow cover separation */
@@ -5090,36 +5097,45 @@ SCIP_RETCODE generateLiftedFlowCoverCut(
          /* add the slack's definition multiplied with its coefficient to the cut */
          SCIP_CALL( varVecAddScaledRowCoefs(cutinds, cutcoefs, nnz, row, -aggrrow->rowweights[i]) );
 
-         /* move slack's constant to the right hand side */
+         /* retrieve sides of row */
+         rowlhs = row->lhs - row->constant;
+         rowrhs = row->rhs - row->constant;
+
+         if( row->integral )
+         {
+            rowrhs = SCIPfeasFloor(scip, rowrhs);
+            rowlhs = SCIPfeasCeil(scip, rowlhs);
+         }
+
+         slackub = rowrhs - rowlhs;
+
+         /* move slack's constant to the right hand side, and add lambda to the right hand side if the
+          * upper bound of the slack is larger than lambda, since then an artifical binary variable
+          * for the slack would get coefficient -lambda
+          */
          if( aggrrow->slacksign[i] == +1 )
          {
-            SCIP_Real QUAD(rowrhs);
-
             /* a*x + c + s == rhs  =>  s == - a*x - c + rhs: move a^_r * (rhs - c) to the right hand side */
             assert(!SCIPisInfinity(scip, row->rhs));
-            SCIPquadprecSumDD(rowrhs, row->rhs, - row->constant);
-            if( row->integral )
-            {
-               /* the right hand side was implicitly rounded down in row aggregation */
-               QUAD_ASSIGN(rowrhs, SCIPfeasFloor(scip, QUAD_ROUND(rowrhs)));
-            }
-            SCIPquadprecProdQD(rowrhs, rowrhs, -aggrrow->rowweights[i]);
-            SCIPquadprecSumQQ(rhs, rhs, rowrhs);
+
+            slackub = -aggrrow->rowweights[i] * MIN(rowrhs - SCIPgetRowMinActivity(scip, row), slackub);
+
+            if( SCIPisGE(scip, slackub, lambda) )
+               SCIPquadprecSumQD(rhs, rhs, lambda);
+
+            SCIPquadprecSumQD(rhs, rhs, -aggrrow->rowweights[i] * rowrhs);
          }
          else
          {
-            SCIP_Real QUAD(rowlhs);
-
             /* a*x + c - s == lhs  =>  s == a*x + c - lhs: move a^_r * (c - lhs) to the right hand side */
             assert(!SCIPisInfinity(scip, -row->lhs));
-            SCIPquadprecSumDD(rowlhs, row->lhs, - row->constant);
-            if( row->integral )
-            {
-               /* the left hand side was implicitly rounded up in row aggregation */
-               QUAD_ASSIGN(rowlhs, SCIPfeasCeil(scip, QUAD_ROUND(rowlhs)));
-            }
-            SCIPquadprecProdQD(rowlhs, rowlhs, -aggrrow->rowweights[i]);
-            SCIPquadprecSumQQ(rhs, rhs, rowlhs);
+
+            slackub = aggrrow->rowweights[i] * MIN(SCIPgetRowMaxActivity(scip, row) - rowlhs, slackub);
+
+            if( SCIPisGE(scip, slackub, lambda) )
+               SCIPquadprecSumQD(rhs, rhs, lambda);
+
+            SCIPquadprecSumQD(rhs, rhs, -aggrrow->rowweights[i] * rowlhs);
          }
       }
    }
