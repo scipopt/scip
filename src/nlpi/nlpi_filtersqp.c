@@ -41,6 +41,7 @@
 #define MAXPERTURB             0.01          /**< maximal perturbation of bounds in starting point heuristic */
 #define DEFAULT_LOBJLIM        (real)(-1e100) /**< default lower objective limit (should mean "unlimited") */
 #define DEFAULT_FEASOPTTOL     1e-6          /**< default feasibility and optimality tolerance */
+#define DEFAULT_MAXITER        3000          /**< default iteration limit */
 
 /*
  * Data structures
@@ -803,7 +804,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
    (*problem)->feastol = DEFAULT_FEASOPTTOL;
    (*problem)->opttol = DEFAULT_FEASOPTTOL;
    (*problem)->fmin = DEFAULT_LOBJLIM;
-   (*problem)->maxiter = INT_MAX;
+   (*problem)->maxiter = DEFAULT_MAXITER;
    (*problem)->iprint = 0;
 
    invalidateSolution(*problem);
