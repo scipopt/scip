@@ -6046,7 +6046,7 @@ SCIP_RETCODE SCIPcalcStrongCG(
 
    *success = TRUE;
 
-   /* store cut in given array in sparse representation and clean buffer array for */
+   /* store cut in given array in sparse representation and clean buffer array */
    for( i = 0; i < *cutnnz; ++i )
    {
       int j = cutinds[i];
