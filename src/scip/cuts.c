@@ -56,19 +56,19 @@ void printCut(
    activity = 0.0;
    for( i = 0; i < cutnnz; ++i )
    {
-      SCIPdebugPrintf(" %+g<%s>", cutcoefs[i], SCIPvarGetName(vars[cutinds[i]]));
+      SCIPdebugPrintf(" %+g<%s>", cutcoefs[cutinds[i]], SCIPvarGetName(vars[cutinds[i]]));
 
       if( !ignorsol )
-         activity += cutcoefs[i] * (sol == NULL ? SCIPvarGetLPSol(vars[cutinds[i]]) : SCIPgetSolVal(scip, sol, vars[cutinds[i]]));
+         activity += cutcoefs[cutinds[i]] * (sol == NULL ? SCIPvarGetLPSol(vars[cutinds[i]]) : SCIPgetSolVal(scip, sol, vars[cutinds[i]]));
       else
       {
          if( cutcoefs[i] > 0.0 )
          {
-            activity += cutcoefs[i] * (islocal ? SCIPvarGetLbLocal(vars[cutinds[i]]) : SCIPvarGetLbGlobal(vars[cutinds[i]]));
+            activity += cutcoefs[cutinds[i]] * (islocal ? SCIPvarGetLbLocal(vars[cutinds[i]]) : SCIPvarGetLbGlobal(vars[cutinds[i]]));
          }
          else
          {
-            activity += cutcoefs[i] * (islocal ? SCIPvarGetUbLocal(vars[cutinds[i]]) : SCIPvarGetUbGlobal(vars[cutinds[i]]));
+            activity += cutcoefs[cutinds[i]] * (islocal ? SCIPvarGetUbLocal(vars[cutinds[i]]) : SCIPvarGetUbGlobal(vars[cutinds[i]]));
          }
       }
    }
@@ -76,7 +76,18 @@ void printCut(
 }
 #endif
 
-/** @bzfgottwa write comment */
+/* macro to make sure a value is not equal to zero, i.e. NONZERO(x) != 0.0
+ * will be TRUE for every x including 0.0
+ *
+ * To avoid branches it will add 1e-100 with the same sign as x to x which will
+ * be rounded away for any sane non-zero value but will make sure the value is
+ * never exactly 0.0
+ */
+#define NONZERO(x)   (COPYSIGN(1e-100, (x)) + (x))
+
+/** add a scaled row to a dense vector indexed over the problem variables and keep the
+ *  index of non-zeros up-to-date
+ */
 static
 SCIP_RETCODE varVecAddScaledRowCoefs(
    int*RESTRICT          inds,               /**< pointer to array with variable problem indices of non-zeros in variable vector */
@@ -106,7 +117,9 @@ SCIP_RETCODE varVecAddScaledRowCoefs(
       val += row->vals[i] * scale;
 
       /* the value must not be exactly zero due to sparsity pattern */
-      vals[probindex] = val == 0.0 ? 1e-100 : val;
+      vals[probindex] = NONZERO(val);
+
+      assert(vals[probindex] != 0.0);
    }
 
    return SCIP_OKAY;
@@ -250,7 +263,6 @@ void SCIPaggrRowFree(
    SCIP_AGGRROW**        aggrrow             /**< pointer to aggregation row that should be freed */
    )
 {
-   int i;
    int nvars;
    assert(scip != NULL);
    assert(aggrrow != NULL);
@@ -1045,11 +1057,11 @@ SCIP_RETCODE findBestUb(
    return SCIP_OKAY;
 }
 
-/* @bzfgottwa write comment */
+/** determine the best bounds wit respect to the given solution for complementing the given variable */
 static
 SCIP_RETCODE determineBestBounds(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_VAR*             var,
+   SCIP_VAR*             var,                /**< variable to determine best bound for */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
@@ -1061,12 +1073,12 @@ SCIP_RETCODE determineBestBounds(
                                               *   NULL for using closest bound for all variables */
    SCIP_BOUNDTYPE*       boundtypesfortrans, /**< type of bounds that should be used for transformed variables;
                                               *   NULL for using closest bound for all variables */
-   SCIP_Real*            bestlb,
-   SCIP_Real*            bestub,
-   int*                  bestlbtype,
-   int*                  bestubtype,
-   SCIP_BOUNDTYPE*       selectedbound,
-   SCIP_Bool*            freevariable
+   SCIP_Real*            bestlb,             /**< pointer to store best lower bound of variable */
+   SCIP_Real*            bestub,             /**< pointer to store best upper bound of variable */
+   int*                  bestlbtype,         /**< pointer to store type of best lower bound of variable */
+   int*                  bestubtype,         /**< pointer to store type of best upper bound of variable */
+   SCIP_BOUNDTYPE*       selectedbound,      /**< pointer to store whether the lower bound or the upper bound should be preferred */
+   SCIP_Bool*            freevariable        /**< pointer to store if this is a free variable */
    )
 {
    int v;
@@ -1391,7 +1403,8 @@ SCIP_RETCODE cutsTransformMIR(
                cutinds[(*nnz)++] = zidx;
 
             zcoef += cutcoefs[v] * vlbcoefs[bestlbtypes[i]];
-            cutcoefs[zidx] = zcoef == 0.0 ? 1e-100 : zcoef;
+            cutcoefs[zidx] = NONZERO(zcoef);
+            assert(cutcoefs[zidx] != 0.0);
          }
       }
       else
@@ -1438,7 +1451,8 @@ SCIP_RETCODE cutsTransformMIR(
                cutinds[(*nnz)++] = zidx;
 
             zcoef += cutcoefs[v] * vubcoefs[bestubtypes[i]];
-            cutcoefs[zidx] = zcoef == 0.0 ? 1e-100 : zcoef;
+            cutcoefs[zidx] = NONZERO(zcoef);
+            assert(cutcoefs[zidx] != 0.0);
          }
       }
    }
@@ -1709,7 +1723,6 @@ SCIP_RETCODE cutsRoundMIR(
    int firstcontvar;
    SCIP_VAR** vars;
    int ndelcontvars;
-   int aggrrowlastcontvar;
 
    assert(cutrhs != NULL);
    assert(cutcoefs != NULL);
@@ -1832,7 +1845,6 @@ SCIP_RETCODE cutsRoundMIR(
 
    /* now process the continuous variables; postpone deletetion of zeros till all continuous variables have been processed */
    ndelcontvars = 0;
-   aggrrowlastcontvar = i;
    while( i >= ndelcontvars )
    {
       SCIP_VAR* var;
@@ -1959,7 +1971,8 @@ SCIP_RETCODE cutsRoundMIR(
 
          SCIPquadprecSumQD(tmp, -tmp, zcoef);
          zcoef = QUAD_ROUND(tmp);
-         cutcoefs[zidx] = zcoef == 0.0 ? 1e-100 : zcoef;
+         cutcoefs[zidx] = NONZERO(zcoef);
+         assert(cutcoefs[zidx] != 0.0);
       }
 
       /* advance to next variable */
@@ -2902,7 +2915,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 
       mksetrhs = downrhs;
       SCIP_CALL( cutsRoundMIR(scip, mksetcoefs, &mksetrhs, mksetinds, &mksetnnz, varsign, boundtype, f0) );
-      SCIPdebug(printCut(scip, sol, cutcoefs, *cutrhs, cutinds, *cutnnz, FALSE, FALSE));
+      SCIPdebug(printCut(scip, sol, mksetcoefs, mksetrhs, mksetinds, mksetnnz, FALSE, FALSE));
 
       /* substitute aggregated slack variables:
        *
@@ -2920,7 +2933,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
        */
       SCIP_CALL( cutsSubstituteMIR(scip, aggrrow->rowweights, aggrrow->slacksign, aggrrow->rowsinds,
                                    aggrrow->nrows, scale, mksetcoefs, &mksetrhs, mksetinds, &mksetnnz, f0) );
-      SCIPdebug(printCut(scip, sol, cutcoefs, *cutrhs, cutinds, *cutnnz, FALSE, FALSE));
+      SCIPdebug(printCut(scip, sol, mksetcoefs, mksetrhs, mksetinds, mksetnnz, FALSE, FALSE));
 
 #ifndef NDEBUG
       {
@@ -2995,20 +3008,27 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCMIR(
 #define MAXABSVBCOEF               1e+5 /**< maximal absolute coefficient in variable bounds used for snf relaxation */
 #define MAXBOUND                  1e+10 /**< maximal value of normal bounds used for snf relaxation */
 
+/** structure that contains all data required to perform the sequence independent lifting
+ */
 typedef
 struct LiftingData
 {
-   SCIP_Real*            M;                  /**< @bzfgottwa write comments */
-   SCIP_Real*            m;
-   int                   r;
-   int                   t;
-   SCIP_Real             d1;
-   SCIP_Real             d2;
-   SCIP_Real             lambda;
-   SCIP_Real             mp;
-   SCIP_Real             ml;
+   SCIP_Real*            M;                  /**< M_0 := 0.0 and M_i := M_i-1 + m_i */
+   SCIP_Real*            m;                  /**< non-increasing array of variable upper bound coefficients for all variables in C++ and L-,
+                                              *   where C = C+ \cup C- is the flowcover and
+                                              *   C++ := \{ j \in C+ \mid u_j > \lambda \}
+                                              *   L- := \{ j \in (N- \setminus C-) \mid u_j > \lambda \}
+                                              */
+   int                   r;                  /**< size of array m */
+   int                   t;                  /**< index of smallest value in m that comes from a variable in C++ */
+   SCIP_Real             d1;                 /**< right hand side of single-node-flow set plus the sum of all u_j for j \in C- */
+   SCIP_Real             d2;                 /**< right hand side of single-node-flow set plus the sum of all u_j for j \in N- */
+   SCIP_Real             lambda;             /**< excess of the flowcover */
+   SCIP_Real             mp;                 /**< smallest variable bound coefficient of variable in C++ (min_{j \in C++} u_j) */
+   SCIP_Real             ml;                 /**< ml := min(\lambda, \sum_{j \in C+ \setminus C++} u_j) */
 } LIFTINGDATA;
 
+/** structure that contains all the data that defines the single-node-flow relaxation of an aggregation row */
 typedef
 struct SNF_Relaxation
 {
@@ -3027,7 +3047,7 @@ struct SNF_Relaxation
    SCIP_Real*            aggrconstants;      /**< aggregation constant used to define the continuous variable in the relaxed set */
 } SNF_RELAXATION;
 
-/** get LP solution value and index of variable lower bound (with binary variable) which is closest to the current LP
+/** get solution value and index of variable lower bound (with binary variable) which is closest to the current LP
  *  solution value of a given variable; candidates have to meet certain criteria in order to ensure the nonnegativity
  *  of the variable upper bound imposed on the real variable in the 0-1 single node flow relaxation associated with the
  *  given variable
@@ -3036,9 +3056,11 @@ static
 SCIP_RETCODE getClosestVlb(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< given active problem variable */
-   SCIP_SOL*             sol,
-   SCIP_Real*            rowcoefs,           /**< coefficients of row */
-   int8_t*               binvarused,
+   SCIP_SOL*             sol,                /**< solution to use for variable bound; NULL for LP solution */
+   SCIP_Real*            rowcoefs,           /**< (dense) array of coefficients of row */
+   int8_t*               binvarused,         /**< array that stores if a binary variable was already used (+1)
+                                              *   was not used (0) or was not used but is contained in the row (-1)
+                                              */
    SCIP_Real             bestsub,            /**< closest simple upper bound of given variable */
    SCIP_Real             rowcoef,            /**< coefficient of given variable in current row */
    SCIP_Real*            closestvlb,         /**< pointer to store the LP sol value of the closest variable lower bound */
@@ -3155,9 +3177,11 @@ static
 SCIP_RETCODE getClosestVub(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< given active problem variable */
-   SCIP_SOL*             sol,
-   SCIP_Real*            rowcoefs,           /**< aggrrow to transform */
-   int8_t*               binvarused,
+   SCIP_SOL*             sol,                /**< solution to use for variable bound; NULL for LP solution */
+   SCIP_Real*            rowcoefs,           /**< (dense) array of coefficients of row */
+   int8_t*               binvarused,         /**< array that stores if a binary variable was already used (+1)
+                                              *   was not used (0) or was not used but is contained in the row (-1)
+                                              */
    SCIP_Real             bestslb,            /**< closest simple lower bound of given variable */
    SCIP_Real             rowcoef,            /**< coefficient of given variable in current row */
    SCIP_Real*            closestvub,         /**< pointer to store the LP sol value of the closest variable upper bound */
@@ -3264,28 +3288,32 @@ SCIP_RETCODE getClosestVub(
    return SCIP_OKAY;
 }
 
-/** @bzfgottwa write comments */
+/** determines the bounds to use for constructing the single-node-flow relaxation of a variable in
+ *  the given row.
+ */
 static
 SCIP_RETCODE determineBoundForSNF(
-   SCIP*                 scip,
-   SCIP_SOL*             sol,
-   SCIP_VAR**            vars,
-   SCIP_Real*            rowcoefs,           /**< aggrrow to transform */
-   int*                  rowinds,            /**< aggrrow to transform */
-   int                   varposinrow,
-   int8_t*               binvarused,
-   SCIP_Bool             allowlocal,
-   SCIP_Real             boundswitch,
-   SCIP_Real*            bestlb,
-   SCIP_Real*            bestub,
-   SCIP_Real*            bestslb,
-   SCIP_Real*            bestsub,
-   int*                  bestlbtype,
-   int*                  bestubtype,
-   int*                  bestslbtype,
-   int*                  bestsubtype,
-   SCIP_BOUNDTYPE*       selectedbounds,
-   SCIP_Bool*            freevariable
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< solution to use for variable bound; NULL for LP solution */
+   SCIP_VAR**            vars,               /**< array of problem variables */
+   SCIP_Real*            rowcoefs,           /**< (dense) array of variable coefficients in the row */
+   int*                  rowinds,            /**< array with positions of non-zero values in the rowcoefs array */
+   int                   varposinrow,        /**< position of variable in the rowinds array for which the bounds should be determined */
+   int8_t*               binvarused,         /**< array that stores if a binary variable was already used (+1)
+                                              *   was not used (0) or was not used but is contained in the row (-1)
+                                              */
+   SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
+   SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
+   SCIP_Real*            bestlb,             /**< pointer to store best lower bound for transformation */
+   SCIP_Real*            bestub,             /**< pointer to store best upper bound for transformation */
+   SCIP_Real*            bestslb,            /**< pointer to store best simple lower bound for transformation */
+   SCIP_Real*            bestsub,            /**< pointer to store best simple upper bound for transformation */
+   int*                  bestlbtype,         /**< pointer to store type of best lower bound */
+   int*                  bestubtype,         /**< pointer to store type of best upper bound */
+   int*                  bestslbtype,        /**< pointer to store type of best simple lower bound */
+   int*                  bestsubtype,        /**< pointer to store type of best simple upper bound */
+   SCIP_BOUNDTYPE*       selectedbounds,     /**< pointer to store the preferred bound for the transformation */
+   SCIP_Bool*            freevariable        /**< pointer to store if variable is a free variable */
    )
 {
    SCIP_VAR* var;
@@ -3549,6 +3577,8 @@ SCIP_RETCODE constructSNFRelaxation(
       rowcoef = rowcoefs[probidx];
       solval = SCIPgetSolVal(scip, sol, var);
 
+      assert(probidx >= nbinvars);
+
       if( selectedbounds[i] == SCIP_BOUNDTYPE_LOWER )
       {
          /* use bestlb to define y'_j */
@@ -3643,10 +3673,10 @@ SCIP_RETCODE constructSNFRelaxation(
              * and update the right hand side of the constraint in the relaxation
              *   rhs = rhs - a_j d_j
              */
-            assert(SCIPvarIsBinary(vlbvars[bestlbtype[i]]));
 
             vlbvarprobidx = SCIPvarGetProbindex(vlbvars[bestlbtype[i]]);
             assert(binvarused[vlbvarprobidx] == 1);
+            assert(vlbvarprobidx < nbinvars);
 
             rowcoefbinary = rowcoefs[vlbvarprobidx];
             varsolvalbinary = SCIPgetSolVal(scip, sol, vlbvars[bestlbtype[i]]);
@@ -3797,10 +3827,10 @@ SCIP_RETCODE constructSNFRelaxation(
              * and update the right hand side of the constraint in the relaxation
              *   rhs = rhs - a_j d_j
              */
-            assert(SCIPvarIsBinary(vubvars[bestubtype[i]]));
 
             vubvarprobidx = SCIPvarGetProbindex(vubvars[bestubtype[i]]);
             assert(binvarused[vubvarprobidx] == 1);
+            assert(vubvarprobidx < nbinvars);
 
             rowcoefbinary = rowcoefs[vubvarprobidx];
             varsolvalbinary = SCIPgetSolVal(scip, sol, vubvars[bestubtype[i]]);
@@ -3975,7 +4005,7 @@ SCIP_RETCODE constructSNFRelaxation(
    return SCIP_OKAY;
 }
 
-/** @bzfgottwa write comments */
+/** allocate buffer arrays for storing the single-node-flow relaxation */
 static
 SCIP_RETCODE allocSNFRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3996,7 +4026,7 @@ SCIP_RETCODE allocSNFRelaxation(
    return SCIP_OKAY;
 }
 
-/** @bzfgottwa write comments */
+/** free buffer arrays for storing the single-node-flow relaxation */
 static
 void destroySNFRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4619,12 +4649,14 @@ SCIP_RETCODE getFlowCover(
    return SCIP_OKAY;
 }
 
-/** @bzfgottwa write comments */
+/** evaluate the super-additive lifting function for the lifted simple generalized flowcover inequalities
+ *  for a given value x \in \{ u_j \mid j \in C- \}.
+ */
 static
 SCIP_Real evaluateLiftingFunction(
-   SCIP*                 scip,
-   LIFTINGDATA*          liftingdata,
-   SCIP_Real             x
+   SCIP*                 scip,               /**< SCIP data structure */
+   LIFTINGDATA*          liftingdata,        /**< lifting data to use */
+   SCIP_Real             x                   /**< value where to evaluate lifting function */
    )
 {
    SCIP_Real QUAD(tmp);
@@ -4693,7 +4725,9 @@ SCIP_Real evaluateLiftingFunction(
    return QUAD_ROUND(tmp);
 }
 
-/** @bzfgottwa write comment */
+/** compute (\alpha_j, \beta_j) := (0, 0)               if M_i \leq u_j \leq M_{i+1} - lambda
+ *                                 (1, M_i - i \lambda) if M_i − \lambda < u_j < M_i
+ */
 static
 void getAlphaAndBeta(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4730,7 +4764,7 @@ void getAlphaAndBeta(
    }
 }
 
-/** @bzfgottwa write comment */
+/** compute relevant data for performing the sequence independent lifting */
 static
 SCIP_RETCODE computeLiftingData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -4848,7 +4882,7 @@ SCIP_RETCODE computeLiftingData(
    return SCIP_OKAY;
 }
 
-/** @bzfgottwa write comment */
+/** destroy data used for the sequence independent lifting */
 static
 void destroyLiftingData(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -5167,7 +5201,8 @@ SCIP_RETCODE SCIPcalcFlowCover(
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &tmpcoefs, nvars) );
 
    SCIP_CALL( generateLiftedFlowCoverCut(scip, &snf, aggrrow, transvarflowcoverstatus, lambda, tmpcoefs, cutrhs, cutinds, cutnnz, success) );
-
+   SCIPdebugMsg(scip, "computed flowcover_%lli_%i:\n", SCIPgetNLPs(scip), SCIPgetNCuts(scip));
+   SCIPdebug( printCut(scip, sol, tmpcoefs, *cutrhs, cutinds, *cutnnz, FALSE, *cutislocal) );
    /* if success is FALSE generateLiftedFlowCoverCut wont have touched the tmpcoefs array so we dont need to clean it then */
    if( *success )
    {
@@ -5176,7 +5211,7 @@ SCIP_RETCODE SCIPcalcFlowCover(
       for( i = 0; i < *cutnnz; ++i )
       {
          int j = cutinds[i];
-	 assert(tmpcoefs[j] != 0.0);
+         assert(tmpcoefs[j] != 0.0);
          cutcoefs[i] = tmpcoefs[j];
          tmpcoefs[j] = 0.0;
       }
@@ -5362,7 +5397,8 @@ SCIP_RETCODE cutsTransformStrongCG(
             cutinds[(*nnz)++] = zidx;
 
          zcoef += cutcoefs[v] * vbdcoefs[boundtype[i]];
-         cutcoefs[zidx] = zcoef == 0.0 ? 1e-100 : zcoef;
+         cutcoefs[zidx] = NONZERO(zcoef);
+         assert(cutcoefs[zidx] != 0.0);
       }
    }
 
@@ -5425,7 +5461,7 @@ SCIP_RETCODE cutsTransformStrongCG(
       ++i;
    }
 
-  TERMINATE:
+TERMINATE:
    /*free temporary memory */
    SCIPfreeBufferArray(scip, &bestbds);
 
