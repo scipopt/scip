@@ -1289,6 +1289,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    fint maxa;
    fint maxf;
    fint mlp;
+   fint lh1;
    fint mxwk;
    fint mxiwk;
    fint nout;
@@ -1319,16 +1320,6 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    kmax = n;    /* maximal nullspace dimension */
    maxf = 100;  /* maximal filter length */
    mlp = 100;   /* maximum level of degeneracy */
-   /* initial guess of real workspace size */
-   /* FilterSQP manual: mxwk = 21*n + 8*m + mlp + 8*maxf + kmax*(kmax+9)/2 + 20*n */
-   /* Bonmin:           mxwk = 21*n + 8*m + mlp + 8*maxf + lh1 + kmax*(kmax+9)/2 + mxwk0,
-    *                      with lh1 = nnz_h+8+2*n+m and mxwk0 = 2000000 (parameter) */
-   mxwk = 21*n + 8*m + mlp + 8*maxf + kmax*(kmax+9)/2 + 20*n;  /* TODO add lh1? */
-
-   /* initial guess of integer workspace size */
-   /* FilterSQP manual: mxiwk = 13*n + 4*m + mlp + 100 + kmax */
-   /* Bonmin:           mxiwk = 13*n + 4*m + mlp + lh1 + kmax + 113 + mxiwk0, with mxiwk0 = 500000 (parameter) */
-   mxiwk = 13*n + 4*m + mlp + 100 + kmax + 113;   /* TODO add lh1? */
 
    nout = 6;   /* output to screen (TODO for now?) */
    ifail = 0;  /* set to -1 for warmstart */
@@ -1345,8 +1336,6 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    SCIP_ALLOC( BMSallocMemoryArray(&bl, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&bu, n+m) );
    SCIP_ALLOC( BMSallocMemoryArray(&s, n+m) );
-   SCIP_ALLOC( BMSallocMemoryArray(&ws, mxwk) );
-   SCIP_ALLOC( BMSallocMemoryArray(&lws, mxiwk) );
    SCIP_ALLOC( BMSallocMemoryArray(&cstype, m) );
 
    /* allocate la, a and initialize la and maxa for Objective Gradient and Jacobian */
@@ -1365,7 +1354,23 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       cstype[i] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, i) <= 1 ? 'L' : 'N';
    }
 
+   /* setup starting point */
    SCIP_CALL( setupStart(data, problem, x) );
+
+   /* setup workspace */
+   /* initial guess of real workspace size */
+   /* FilterSQP manual: mxwk = 21*n + 8*m + mlp + 8*maxf + kmax*(kmax+9)/2 + nprof, with nprof = 20*n as a good guess */
+   /* Bonmin:           mxwk = 21*n + 8*m + mlp + 8*maxf + lh1 + kmax*(kmax+9)/2 + mxwk0,
+    *                      with lh1 = nnz_h+8+2*n+m and mxwk0 = 2000000 (parameter) */
+   lh1 = problem->hessiannz[0]-1 + 8 + 2*n + m;
+   mxwk = 21*n + 8*m + mlp + 8*maxf + lh1 + kmax*(kmax+9)/2 + MAX(20*n,2000);
+   SCIP_ALLOC( BMSallocMemoryArray(&ws, mxwk) );
+
+   /* initial guess of integer workspace size */
+   /* FilterSQP manual: mxiwk = 13*n + 4*m + mlp + 100 + kmax */
+   /* Bonmin:           mxiwk = 13*n + 4*m + mlp + lh1 + kmax + 113 + mxiwk0, with mxiwk0 = 500000 (parameter) */
+   mxiwk = 13*n + 4*m + mlp + lh1 + 100 + kmax + 113 + MAX(5*n,5000);
+   SCIP_ALLOC( BMSallocMemoryArray(&lws, mxiwk) );
 
    /* TODO from here on we are not thread-safe: maybe add some mutex here if PARASCIP=true? */
 
