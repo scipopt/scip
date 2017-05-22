@@ -18,10 +18,10 @@
  * @brief   filterSQP NLP interface
  * @author  Stefan Vigerske
  *
- * @todo warm starts
+ * @todo cache filtersqp setup (hessian, jacobian sparsity, etc.) from solve to solve
+ * @todo warm starts: possible if n, m, lwa, and istat(1) are unchanged
  * @todo scaling
  * @todo increase workspace when ifail=9 or 10
- * @todo cache filtersqp setup (hessian, jacobian sparsity, etc.) from solve to solve
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -73,6 +73,7 @@ struct SCIP_NlpiProblem
    int                         conssize;     /**< length of constraints-related arrays, if allocated */
 
    SCIP_Real*                  initguess;    /**< initial values for primal variables, or NULL if not known */
+   SCIP_Bool                   warmstart;    /**< whether we could warmstart the next solve */
 
    SCIP_Real*                  primalvalues; /**< primal values of variables in solution */
    SCIP_Real*                  consdualvalues;  /**< dual values of constraints in solution */
@@ -935,6 +936,7 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
 
    BMSfreeMemoryArrayNull(&problem->initguess);
    invalidateSolution(problem);
+   problem->warmstart = FALSE;
 
    /* increase variables-related arrays in problem, if necessary */
    if( problem->varssize < SCIPnlpiOracleGetNVars(problem->oracle) )
@@ -1013,6 +1015,7 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsFilterSQP )
          exprvaridxs, exprtrees, names) );
 
    invalidateSolution(problem);
+   problem->warmstart = FALSE;
 
    /* increase constraints-related arrays in problem, if necessary */
    if( SCIPnlpiOracleGetNConstraints(problem->oracle) > problem->conssize )
@@ -1141,6 +1144,7 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetFilterSQP )
 
    BMSfreeMemoryArrayNull(&problem->initguess); /* @TODO keep initguess for remaining variables */
    invalidateSolution(problem);
+   problem->warmstart = FALSE;
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1165,6 +1169,7 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetFilterSQP )
    SCIP_CALL( SCIPnlpiOracleDelConsSet(problem->oracle, dstats) );
 
    invalidateSolution(problem);
+   problem->warmstart = FALSE;
 
    return SCIP_OKAY;
 }  /*lint !e715*/
