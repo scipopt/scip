@@ -27,6 +27,11 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <string.h>
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <sys/time.h>
+#endif
 
 #include "scip/pub_misc.h"
 #include "nlpi/nlpi_filtersqp.h"
@@ -57,6 +62,7 @@ struct SCIP_NlpiData
    SCIP_MESSAGEHDLR*           messagehdlr;  /**< message handler */
    SCIP_Real                   infinity;     /**< initial value for infinity */
    SCIP_RANDNUMGEN*            randnumgen;   /**< random number generator, if we have to make up a starting point */
+   time_t                      starttime;    /**< time (in seconds) at start of solve */
 };
 
 struct SCIP_NlpiProblem
@@ -82,6 +88,7 @@ struct SCIP_NlpiProblem
    real                        feastol;      /**< user-given feasibility tolerance */
    real                        opttol;       /**< user-given optimality tolerance */
    real                        fmin;         /**< lower bound on objective value */
+   SCIP_Real                   maxtime;      /**< time limit */
    fint                        maxiter;      /**< iteration limit */
    fint                        iprint;       /**< print verbosity level */
 };
@@ -216,6 +223,33 @@ extern struct
 F77_FUNC(scalec,SCALEC);
 /** @} */
 
+static
+time_t gettime(void)
+{
+#if defined(_WIN32)
+   return time(NULL);
+
+#else
+   struct timeval tp; /*lint !e86*/
+
+   gettimeofday(&tp, NULL);
+
+   return tp.tv_sec;
+#endif
+}
+
+static
+SCIP_Bool timelimitreached(
+   SCIP_NLPIDATA*        nlpidata,           /**< NLPI data */
+   SCIP_NLPIPROBLEM*     nlpiproblem         /**< NLPI problem */
+   )
+{
+   if( nlpiproblem->maxtime == DBL_MAX )
+      return FALSE;
+
+   return gettime() - nlpidata->starttime >= nlpiproblem->maxtime;
+}
+
 /** Objective function evaluation */
 void F77_FUNC(objfun,OBJFUN)(
    real*                 x,                  /**< value of current variables (array of length n) */
@@ -230,6 +264,12 @@ void F77_FUNC(objfun,OBJFUN)(
 
    problem = (SCIP_NLPIPROBLEM*)iuser;
    assert(problem != NULL);
+
+   if( timelimitreached((SCIP_NLPIDATA*)user, problem) )
+   {
+      *errflag = 1;
+      return;
+   }
 
    *errflag = 1;
    if( SCIPnlpiOracleEvalObjectiveValue(problem->oracle, x, f) == SCIP_OKAY )
@@ -558,6 +598,7 @@ void invalidateSolution(
 /** processes results from FilterSQP call */
 static
 SCIP_RETCODE processSolveOutcome(
+   SCIP_NLPIDATA*        nlpidata,           /**< NLPI data */
    SCIP_NLPIPROBLEM*     problem,            /**< NLPI problem */
    fint                  ifail,              /**< fail flag from FilterSQP call */
    real*                 x,                  /**< primal solution values from FilterSQP call */
@@ -654,9 +695,12 @@ SCIP_RETCODE processSolveOutcome(
             problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
          problem->termstat =  SCIP_NLPTERMSTAT_ITLIM;
          break;
-      case 7: /* crash in user routine (IEEE error) could not be resolved */
+      case 7: /* crash in user routine (IEEE error) could not be resolved, or timelimit reached */
          problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
-         problem->termstat =  SCIP_NLPTERMSTAT_EVALERR;
+         if( timelimitreached(nlpidata, problem) )
+            problem->termstat =  SCIP_NLPTERMSTAT_TILIM;
+         else
+            problem->termstat =  SCIP_NLPTERMSTAT_EVALERR;
          break;
       case 8: /* unexpect ifail from QP solver */
          if( problem->rstat[4] < problem->feastol )
@@ -804,6 +848,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemFilterSQP)
    (*problem)->feastol = DEFAULT_FEASOPTTOL;
    (*problem)->opttol = DEFAULT_FEASOPTTOL;
    (*problem)->fmin = DEFAULT_LOBJLIM;
+   (*problem)->maxtime = DBL_MAX;
    (*problem)->maxiter = DEFAULT_MAXITER;
    (*problem)->iprint = 0;
 
@@ -1316,6 +1361,9 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    data = SCIPnlpiGetData(nlpi);
    assert(data != NULL);
 
+   /* start measuring time */
+   data->starttime = gettime();
+
    n = SCIPnlpiOracleGetNVars(problem->oracle);
    m = SCIPnlpiOracleGetNConstraints(problem->oracle);
    kmax = n;    /* maximal nullspace dimension */
@@ -1326,7 +1374,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    ifail = 0;  /* set to -1 for warmstart */
    rho = 10.0; /* initial trust-region radius */
 
-   user = (real*)nlpi;
+   user = (real*)data;
    iuser = (fint*)problem;
    memset(problem->istat, 0, sizeof(problem->istat));
    memset(problem->rstat, 0, sizeof(problem->rstat));
@@ -1393,7 +1441,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       iuser, &problem->maxiter, problem->istat,
       problem->rstat, cstype_len);
 
-   SCIP_CALL( processSolveOutcome(problem, ifail, x, lam) );
+   SCIP_CALL( processSolveOutcome(data, problem, ifail, x, lam) );
 
    BMSfreeMemoryArray(&a);
    BMSfreeMemoryArray(&la);
@@ -1860,8 +1908,7 @@ SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParFilterSQP )
 
    case SCIP_NLPPAR_TILIM:
    {
-      /* TODO */
-      *dval = 1000.0;
+      *dval = problem->maxtime;
       break;
    }
 
@@ -1976,7 +2023,7 @@ SCIP_DECL_NLPISETREALPAR( nlpiSetRealParFilterSQP )
    {
       if( dval >= 0 )
       {
-         /* TODO */
+         problem->maxtime = dval;
       }
       else
       {
