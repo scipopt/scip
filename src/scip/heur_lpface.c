@@ -1083,6 +1083,8 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
 
          /* copy all variables */
          SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE) );
+
+         SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
       }
       else
       {

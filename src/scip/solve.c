@@ -97,7 +97,12 @@ SCIP_Bool SCIPsolveIsStopped(
    {
       stat->status = SCIP_STATUS_USERINTERRUPT;
       stat->userinterrupt = FALSE;
-      SCIPresetInterrupted();
+
+      /* only reset the interrupted counter if this is the main SCIP catching CTRL-C */
+      if( set->misc_catchctrlc )
+      {
+         SCIPresetInterrupted();
+      }
    }
    /* only measure the clock if a time limit is set */
    else if( set->istimelimitfinite )

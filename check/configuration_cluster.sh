@@ -80,6 +80,10 @@ elif test $CLUSTERQUEUE = "M620-low"
 then
     NICE="--nice=10000"
     CLUSTERQUEUE="M620"
+elif test $CLUSTERQUEUE = "M620v3-low"
+then
+    NICE="--nice=10000"
+    CLUSTERQUEUE="M620v3"
 elif test $CLUSTERQUEUE = "M620x"
 then
     CLUSTERQUEUE="M620,M620v2,M620v3"
