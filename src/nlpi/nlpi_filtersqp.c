@@ -81,6 +81,7 @@ struct SCIP_NlpiProblem
 
    SCIP_NLPSOLSTAT             solstat;      /**< solution status from last NLP solve */
    SCIP_NLPTERMSTAT            termstat;     /**< termination status from last NLP solve */
+   SCIP_Real                   solvetime;    /**< time spend for last NLP solve */
 
    SCIP_Bool                   fromscratch;  /**< value of fromscratch parameter */
    fint*                       hessiannz;    /**< nonzero information about Hessian (only non-NULL during solve) */
@@ -613,6 +614,8 @@ SCIP_RETCODE processSolveOutcome(
    assert(problem != NULL);
    assert(ifail >= 0);
 
+   problem->solvetime = gettime() - nlpidata->starttime;
+
    nvars = SCIPnlpiOracleGetNVars(problem->oracle);
    ncons = SCIPnlpiOracleGetNConstraints(problem->oracle);
 
@@ -698,7 +701,7 @@ SCIP_RETCODE processSolveOutcome(
          break;
       case 7: /* crash in user routine (IEEE error) could not be resolved, or timelimit reached */
          problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
-         if( timelimitreached(nlpidata, problem) )
+         if( problem->solvetime >= problem->maxtime )
             problem->termstat =  SCIP_NLPTERMSTAT_TILIM;
          else
             problem->termstat =  SCIP_NLPTERMSTAT_EVALERR;
@@ -1559,7 +1562,7 @@ SCIP_DECL_NLPIGETSTATISTICS( nlpiGetStatisticsFilterSQP )
    assert(problem != NULL);
 
    SCIPnlpStatisticsSetNIterations(statistics, problem->istat[1]);
-   SCIPnlpStatisticsSetTotalTime(statistics, 1.0); /* TODO */
+   SCIPnlpStatisticsSetTotalTime(statistics, problem->solvetime);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
