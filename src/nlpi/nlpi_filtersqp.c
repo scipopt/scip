@@ -568,11 +568,12 @@ SCIP_RETCODE processSolveOutcome(
    int ncons;
 
    assert(problem != NULL);
+   assert(ifail >= 0);
 
    nvars = SCIPnlpiOracleGetNVars(problem->oracle);
    ncons = SCIPnlpiOracleGetNConstraints(problem->oracle);
 
-   if( ifail <= 7 )
+   if( ifail <= 8 )
    {
       /* FilterSQP terminated somewhat normally -> store away solution */
       assert(x != NULL);
