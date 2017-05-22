@@ -3321,15 +3321,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteGenTransproblem)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for sanity verification */
+/** dialog execution method for solution validation */
 static
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecSanityCheck)
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecValidateSolve)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
    {
-      SCIPdialogMessage(scip, NULL, "\nNo problem available for sanity check\n");
+      SCIPdialogMessage(scip, NULL, "\nNo problem available for validation\n");
    }
    else
    {
@@ -3344,7 +3344,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSanityCheck)
       {
          char * endptr;
          SCIP_Bool endoffile;
-         sprintf(promptbuffer, "Please enter %s sanity check reference bound (or use +/-infinity) :", primaldual[i]);
+         sprintf(promptbuffer, "Please enter %s validation reference bound (or use +/-infinity) :", primaldual[i]);
          SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, promptbuffer, &(refstrs[i]), &endoffile) );
 
          /* treat no input as SCIP_UNKNOWN */
@@ -3361,10 +3361,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSanityCheck)
          }
       }
 
-      /* check if the loop finished by checking the value of 'i'. Do not perform sanity check if user input is missing */
+      /* check if the loop finished by checking the value of 'i'. Do not validate if user input is missing */
       if( i == 2 )
       {
-         SCIP_CALL( SCIPsanityCheck(scip, refvals[0], refvals[1], SCIPfeastol(scip), FALSE, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPvalidateSolve(scip, refvals[0], refvals[1], SCIPfeastol(scip), FALSE, NULL, NULL, NULL) );
       }
    }
 
@@ -4081,12 +4081,12 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
-   /* perform sanity check */
-   if( !SCIPdialogHasEntry(root, "sanitycheck") )
+   /* validate solve */
+   if( !SCIPdialogHasEntry(root, "validatesolve") )
    {
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecSanityCheck, NULL, NULL,
-               "sanitycheck",
-               "perform sanity check of solving process against external objective reference interval",
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog, NULL, SCIPdialogExecValidateSolve, NULL, NULL,
+               "validatesolve",
+               "validate the solution against external objective reference interval",
                FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
