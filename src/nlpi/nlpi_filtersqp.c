@@ -82,6 +82,7 @@ struct SCIP_NlpiProblem
    SCIP_NLPSOLSTAT             solstat;      /**< solution status from last NLP solve */
    SCIP_NLPTERMSTAT            termstat;     /**< termination status from last NLP solve */
 
+   SCIP_Bool                   fromscratch;  /**< value of fromscratch parameter */
    fint*                       hessiannz;    /**< nonzero information about Hessian (only non-NULL during solve) */
    fint                        istat[14];    /**< integer solution statistics from last FilterSQP call */
    real                        rstat[7];     /**< real solution statistics from last FilterSQP call */
@@ -1643,8 +1644,7 @@ SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParFilterSQP )
    {
    case SCIP_NLPPAR_FROMSCRATCH:
    {
-      /* TODO */
-      *ival = 1;
+      *ival = problem->fromscratch ? 1 : 0;
       break;
    }
 
@@ -1732,12 +1732,7 @@ SCIP_DECL_NLPISETINTPAR( nlpiSetIntParFilterSQP )
    {
       if( ival == 0 || ival == 1 )
       {
-         SCIP_NLPIDATA* data;
-
-         data = SCIPnlpiGetData(nlpi);
-         assert(data != NULL);
-
-         SCIPmessagePrintWarning(data->messagehdlr, "from scratch parameter not supported by FilterSQP interface yet. Ignored.\n");
+         problem->fromscratch = ival;
       }
       else
       {
