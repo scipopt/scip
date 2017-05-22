@@ -18,6 +18,5 @@ endif
 CXXFLAGS	=	-std=c++0x
 CFLAGS		=	-std=c99 -D_XOPEN_SOURCE=600
 
-# to be checked
 FORTRANLIBS	=	-lgfortran
 FORTRAN_NAMING_CONVENTION = LCASE_DECOR
