@@ -35541,7 +35541,7 @@ SCIP_Bool SCIPisObjChangedProbing(
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPisObjChangedProbing", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
-   return scip->tree != NULL && SCIPtreeProbingObjChanged(scip->tree);
+   return scip->tree != NULL && SCIPinProbing(scip) && SCIPtreeProbingObjChanged(scip->tree);
 }
 
 /** applies domain propagation on the probing sub problem, that was changed after SCIPstartProbing() was called;
