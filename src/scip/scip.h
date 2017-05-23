@@ -15894,6 +15894,9 @@ SCIP_RETCODE SCIPchgVarObjProbing(
  *
  *  @return \ref TRUE if objective has changed, \ref FALSE otherwise
  *
+ *  @note this function should not be used during probing mode when some objective coefficients have been changed via
+ *        SCIPchgVarObjProbing()
+ *
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_INITPRESOLVE
