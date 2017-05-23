@@ -6565,7 +6565,8 @@ SCIP_RETCODE SCIPdigraphCopy(
       (*targetdigraph)->nodedata[i] = sourcedigraph->nodedata[i];
    }
 
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->successorssize, sourcedigraph->successorssize, nnodes) );
+   /* use nsuccessors as size to save memory */
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->successorssize, sourcedigraph->nsuccessors, nnodes) );
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(targetblkmem, &(*targetdigraph)->nsuccessors, sourcedigraph->nsuccessors, nnodes) );
 
    /* copy component data */
