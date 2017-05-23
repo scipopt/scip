@@ -118,7 +118,7 @@ SCIP_RETCODE heurdataInit(
    else
    {
       /* copy precedence graph */
-      SCIP_CALL( SCIPdigraphCopy(&heurdata->precedencegraph, precedencegraph) );
+      SCIP_CALL( SCIPdigraphCopy(&heurdata->precedencegraph, precedencegraph, SCIPblkmem(scip)) );
 
       /* topological sort the precedence graph */
       SCIP_CALL( SCIPdigraphComputeUndirectedComponents(heurdata->precedencegraph, -1, NULL, NULL) );
