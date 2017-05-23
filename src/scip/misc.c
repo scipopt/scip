@@ -2010,11 +2010,6 @@ void SCIPmultihashPrintStatistics(
    SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
-/** computes a hashcode for double precision floating point values containing
- *  15 significant bits, the sign and the exponent
- */
-extern INLINE uint32_t SCIPrealHashCode(double x);
-
 /** creates a hash table */
 SCIP_RETCODE SCIPhashtableCreate(
    SCIP_HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
