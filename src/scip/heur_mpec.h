@@ -19,7 +19,53 @@
  * @author Felipe Serrano
  * @author Benjamin Mueller
  *
- * @todo ADD DESCRIPTION
+ * This heuristic is based on the paper:
+ * "Computing Feasible Points for MINLPs with MPECs"
+ * Schewe, Lars and Schmidt, Martin.
+ * An MPEC is a mathematical program with equilibrium constraints.
+ * An equilibrium constraint usually refers to a complementarity constraint.
+ * For example, modelling the constraint \f$x \in \{0, 1\}\f$ as \f$x (1-x) =
+ * 0\f$ is an equilibrium constraint associated with the complementarity
+ * constraint \f$x = 0\f$ or \f$x = 1\f$.
+ *
+ * This heuristic applies only to mixed binary nonlinear problems.
+ * The idea is to rewrite the MBNLP as an MPEC and solve the MPEC instead (to a
+ * a local optimum) by replacing each integrality constraint by the product
+ * \f$x (1-x) = 0\f$.
+ * Normally solving the MPEC directly will not succeed. One issue is that
+ * equilibrium constraints will not, in general, satisfy constraint
+ * qualifications (for instance, Slater's conditions, which requires the
+ * existence of a relative interior point, will not be satisfied).
+ * In order to increase the chances of solving the MPEC, the heuristic applies
+ * a regularization (proposed by Scholtes): it relaxes \f$x(1-x) = 0\f$ to
+ * \f$x(1-x) \leq \theta\f$.
+ *
+ * So the heuristic proceeds as follows.
+ * - Builds the regularized MPEC (rMPEC) with a starting \f$\theta \in (0, \tfrac{1}{4}\f$
+ * - Gives the current LP solution as starting point to the NLP solver
+ * - Solves rMPEC and let \f$x^*\f$ be the best point found (if there is no point, abort).
+ *   - If feasible, then reduces \f$\theta\f$ by a factor \f$\sigma\f$ and use
+ *   its solution as the starting point for the next iteration
+ *
+ *   - If the NLP is found infeasible, but the regularazation constraints are feasible, abort.
+ *
+ *   - If some variable violates the regularization constraint, i.e.,
+ *   \f$x^*_i(1-x^*_i) > \tau\f$ then solve the NLP again using the its starting solution
+ *   modified by \f$x_i = 0\f$ if \f$x^*_i > 0.5\f$ and \f$x_i = 1\f$ if \f$x^*_i < 0.5\f$.
+ *   One possible explanation for this choice is that, assuming \f$x^*_i > 0.5\f$,
+ *   if really \f$x_i = 1\f$ is a solution, then the NLP solver should not have troubles
+ *   pushing \f$x_i\f$ towards 1 so that at least the regularized constraint is feasible.
+ *   Instead, it might be that there is a solution with \f$x_i = 0\f$, but since \f$x^*_i > 0.5\f$
+ *   then the NLP solver is having more problems pushing it to 0.
+ *
+ *   - If the modification of the starting point, did not help finding a feasible solution,
+ *   solve the problem again, but now fixing the problematic variables using the same criteria.
+ *
+ *   - If still we do not get a feasible solution, abort (note that the paper suggests to backtrack,
+ *   but this might be just too expensive)
+ *
+ * - If the maximum binary infeasibility is small enough, calls sub-NLP heuristic
+ *   with binaries fixed to the value suggested by \f$x^*\f$
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
