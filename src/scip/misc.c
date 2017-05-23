@@ -6628,7 +6628,7 @@ void SCIPdigraphFree(
 
 #define STARTSUCCESSORSSIZE 5
 
-/* ensures that successors array of one node in a directed graph is big enough */
+/** ensures that successors array of one node in a directed graph is big enough */
 static
 SCIP_RETCODE ensureSuccessorsSize(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
