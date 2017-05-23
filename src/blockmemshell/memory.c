@@ -864,33 +864,27 @@ void checkChkmem(
    const BMS_CHKMEM*     chkmem              /**< chunk block */
    )
 {
-   CHUNK* chunk;
    FREELIST* lazy;
    int nchunks;
    int storesize;
    int lazyfreesize;
    int eagerfreesize;
-   int i;
 
    assert(chkmem != NULL);
-   assert(chkmem->chunks != NULL || chkmem->chunkssize == 0);
-   assert(chkmem->nchunks <= chkmem->chunkssize);
 
-   nchunks = 0;    
-   storesize = 0;    
-   lazyfreesize = 0; 
+   nchunks = 0;
+   storesize = 0;
+   lazyfreesize = 0;
    eagerfreesize = 0;
 
-   for( i = 0; i < chkmem->nchunks; ++i )
+   FOR_EACH_NODE(CHUNK*, chunk, chkmem->rootchunk,
    {
-      chunk = chkmem->chunks[i];
-      assert(chunk != NULL);
-
       checkChunk(chunk);
       nchunks++;
       storesize += chunk->storesize;
       eagerfreesize += chunk->eagerfreesize;
-   }
+   })
+
    assert(chkmem->nchunks == nchunks);
    assert(chkmem->storesize == storesize);
    assert(chkmem->eagerfreesize == eagerfreesize);
@@ -903,7 +897,7 @@ void checkChkmem(
    lazy = chkmem->lazyfree;
    while( lazy != NULL )
    {
-      chunk = findChunk(chkmem, lazy);
+      CHUNK* chunk = findChunk(chkmem, lazy);
       assert(chunk != NULL);
       assert(chunk->chkmem == chkmem);
       lazyfreesize++;
@@ -1667,8 +1661,7 @@ void checkBlkmem(
       while( chkmem != NULL )
       {
          checkChkmem(chkmem);
-         tmpmemalloc += ((chkmem->elemsize * chkmem->storesize) + chkmem->nchunks * sizeof(CHUNK) + sizeof(BMS_CHKMEM)
-            + chkmem->chunkssize * sizeof(CHUNK*));
+         tmpmemalloc += ((chkmem->elemsize * chkmem->storesize) + chkmem->nchunks * sizeof(CHUNK) + sizeof(BMS_CHKMEM));
          tmpmemused += (chkmem->elemsize * (chkmem->storesize - chkmem->eagerfreesize - chkmem->lazyfreesize));
          chkmem = chkmem->nextchkmem;
       }
