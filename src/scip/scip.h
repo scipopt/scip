@@ -22469,16 +22469,16 @@ int SCIPgetPtrarrayMaxIdx(
 
 /**@} */
 
-/**@defgroup PublicVerificationMethods Verification
+/**@defgroup PublicValidationMethods Validation
  * @ingroup PUBLICCOREAPI
- * @brief  methods for verifying the correctness of the run
+ * @brief  methods for validating the correctness of a solving process
  *
  * @{
  */
 
-/** perform a sanity check of the solve
+/** validate the result of the solve
  *
- *  the sanity check includes
+ *  the validation includes
  *
  *  - checking the feasibility of the incumbent solution in the original problem (using SCIPcheckSolOrig())
  *
@@ -22490,7 +22490,7 @@ int SCIPgetPtrarrayMaxIdx(
  *  of the original problem.
  */
 EXTERN
-SCIP_RETCODE SCIPsanityCheck(
+SCIP_RETCODE SCIPvalidateSolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             primalreference,    /**< external primal reference value for the problem, or SCIP_UNKNOWN */
    SCIP_Real             dualreference,      /**< external dual reference value for the problem, or SCIP_UNKNOWN */

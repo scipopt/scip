@@ -47341,9 +47341,9 @@ int SCIPgetPtrarrayMaxIdx(
    return SCIPptrarrayGetMaxIdx(ptrarray);
 }
 
-/** perform a sanity check of the solve
+/** validate the result of the solve
  *
- *  the sanity check includes
+ *  the validation includes
  *
  *  - checking the feasibility of the incumbent solution in the original problem (using SCIPcheckSolOrig())
  *
@@ -47354,7 +47354,7 @@ int SCIPgetPtrarrayMaxIdx(
  *  For infeasible problems, +/-SCIPinfinity() should be passed as reference bounds depending on the objective sense
  *  of the original problem.
  */
-SCIP_RETCODE SCIPsanityCheck(
+SCIP_RETCODE SCIPvalidateSolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             primalreference,    /**< external primal reference value for the problem, or SCIP_UNKNOWN */
    SCIP_Real             dualreference,      /**< external dual reference value for the problem, or SCIP_UNKNOWN */
@@ -47379,7 +47379,7 @@ SCIP_RETCODE SCIPsanityCheck(
    localprimalboundcheck = TRUE;
    localdualboundcheck = TRUE;
 
-   /* author bzfhende: check the best solution for feasibility in the original problem */
+   /* check the best solution for feasibility in the original problem */
    if( SCIPgetNSols(scip) > 0 )
    {
       SCIP_SOL* bestsol = SCIPgetBestSol(scip);
@@ -47432,17 +47432,19 @@ SCIP_RETCODE SCIPsanityCheck(
 
    if( !quiet )
    {
-      SCIPinfoMessage(scip, NULL, "SANITY CHECK       : ");
+      SCIPinfoMessage(scip, NULL, "Validation         : ");
       if( ! localfeasible )
-         SCIPinfoMessage(scip, NULL, "FAIL (infeasible)");
+         SCIPinfoMessage(scip, NULL, "Fail (infeasible)");
       else if( ! localprimalboundcheck )
-         SCIPinfoMessage(scip, NULL, "FAIL (primal bound)");
+         SCIPinfoMessage(scip, NULL, "Fail (primal bound)");
       else if( ! localdualboundcheck )
-         SCIPinfoMessage(scip, NULL, "FAIL (dual bound)");
+         SCIPinfoMessage(scip, NULL, "Fail (dual bound)");
       else
-         SCIPinfoMessage(scip, NULL, "SUCCESS");
-
-      SCIPinfoMessage(scip, NULL, " %4u %11.8g %11.8g\n", localfeasible, primviol, dualviol);
+         SCIPinfoMessage(scip, NULL, "Success");
+      SCIPinfoMessage(scip, NULL, "\n");
+      SCIPinfoMessage(scip, NULL, "  %-17s: %10u\n", "cons violation", !localfeasible);
+      SCIPinfoMessage(scip, NULL, "  %-17s: %10.8g (reference: %16.9e)\n", "primal violation", primviol, dualreference);
+      SCIPinfoMessage(scip, NULL, "  %-17s: %10.8g (reference: %16.9e)\n", "dual violation", dualviol, primalreference);
    }
 
    if( feasible != NULL )

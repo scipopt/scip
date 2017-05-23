@@ -24,8 +24,8 @@ SCIP version 4.0.1
 
 features
 - added parsing functionality to cardinality constraint handler for CIP format
-- added command line option '-o' and command 'sanitycheck' in interactive shell
-  to check solving process sanity against an external primal and dual reference value.
+- added command line option '-o' and command 'validatesolve' in interactive shell
+  to validate the solution against an external primal and dual reference value.
 
 fixed bugs:
 - fixed bug in genvbounds propagator when applying a restart after the root node
@@ -47,7 +47,7 @@ performance improvements:
 - sorting of parents and children for some expression types is now independent of memory layout
 
 interface:
-- new function SCIPsanityCheck() to compare solving result with an external primal and dual reference
+- new function SCIPvalidateSolve() to compare solving result with an external primal and dual reference
   value
 
 SCIP version 4.0.0

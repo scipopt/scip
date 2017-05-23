@@ -120,7 +120,7 @@ macro(add_instancetests instances prefix)
         list(GET instance 1 optval)
         get_filename_component(basename ${path} NAME)
         add_test(NAME ${prefix}-${basename} COMMAND $<TARGET_FILE:scip-bin> -f ${PROJECT_SOURCE_DIR}/check/${path} -o ${optval} ${optval})
-        set_tests_properties(${prefix}-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "SANITY CHECK       : SUCCESS")
+        set_tests_properties(${prefix}-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
     endforeach(instance)
 endmacro(add_instancetests)
 
