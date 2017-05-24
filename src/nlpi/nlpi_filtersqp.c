@@ -85,7 +85,6 @@ struct SCIP_NlpiProblem
    SCIP_Real                   solvetime;    /**< time spend for last NLP solve */
 
    SCIP_Bool                   fromscratch;  /**< value of fromscratch parameter */
-   fint*                       hessiannz;    /**< nonzero information about Hessian (only non-NULL during solve) */
    fint                        istat[14];    /**< integer solution statistics from last FilterSQP call */
    real                        rstat[7];     /**< real solution statistics from last FilterSQP call */
    real                        feastol;      /**< user-given feasibility tolerance */
@@ -94,8 +93,17 @@ struct SCIP_NlpiProblem
    SCIP_Real                   maxtime;      /**< time limit */
    fint                        maxiter;      /**< iteration limit */
    fint                        iprint;       /**< print verbosity level */
-};
 
+   /* cached FilterSQP data */
+   fint*                       hessiannz;    /**< nonzero information about Hessian */
+   real*                       x;            /**< size nvars */
+   real*                       c;            /**< size nconss */
+   real*                       lam;          /**< size nvars + nconss */
+   real*                       bl;           /**< size nvars + nconss */
+   real*                       bu;           /**< size nvars + nconss */
+   real*                       s;            /**< size nvars + nconss */
+   char*                       cstype;       /**< size nconss */
+};
 
 /*
  * Local methods
@@ -890,6 +898,13 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemFilterSQP)
    BMSfreeMemoryArrayNull(&(*problem)->consdualvalues);
    BMSfreeMemoryArrayNull(&(*problem)->varlbdualvalues);
    BMSfreeMemoryArrayNull(&(*problem)->varubdualvalues);
+   BMSfreeMemoryArrayNull(&(*problem)->cstype);
+   BMSfreeMemoryArrayNull(&(*problem)->s);
+   BMSfreeMemoryArrayNull(&(*problem)->bu);
+   BMSfreeMemoryArrayNull(&(*problem)->bl);
+   BMSfreeMemoryArrayNull(&(*problem)->x);
+   BMSfreeMemoryArrayNull(&(*problem)->c);
+   BMSfreeMemoryArrayNull(&(*problem)->lam);
 
    assert((*problem)->hessiannz == NULL);
 
@@ -956,6 +971,28 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
       if( problem->varubdualvalues != NULL )
       {
          SCIP_ALLOC( BMSreallocMemoryArray(&problem->varubdualvalues, problem->varssize) );
+      }
+
+      if( problem->x != NULL )
+      {
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->x, problem->varssize) );
+      }
+
+      if( problem->lam != NULL )
+      {
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->lam, problem->varssize + problem->conssize) );
+      }
+
+      if( problem->bl != NULL )
+      {
+         assert(problem->bu != NULL);
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->bl, problem->varssize + problem->conssize) );
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->bu, problem->varssize + problem->conssize) );
+      }
+
+      if( problem->s != NULL )
+      {
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->s, problem->varssize + problem->conssize) );
       }
    }
 
@@ -1025,6 +1062,33 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsFilterSQP )
       if( problem->consdualvalues != NULL )
       {
          SCIP_ALLOC( BMSreallocMemoryArray(&problem->consdualvalues, problem->conssize) );
+      }
+
+      if( problem->c != NULL )
+      {
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->c, problem->conssize) );
+      }
+
+      if( problem->lam != NULL )
+      {
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->c, problem->conssize) );
+      }
+
+      if( problem->bl != NULL )
+      {
+         assert(problem->bu != NULL);
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->bl, problem->varssize + problem->conssize) );
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->bu, problem->varssize + problem->conssize) );
+      }
+
+      if( problem->s != NULL )
+      {
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->s, problem->varssize + problem->conssize) );
+      }
+
+      if( problem->cstype != NULL )
+      {
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->cstype, problem->conssize) );
       }
    }
 
@@ -1350,20 +1414,13 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    fint nout;
    fint ifail;
    real rho;
-   real* x;
-   real* c;
-   real* lam;
    real f;
-   real* bl;
-   real* bu;
-   real* s;
-   real* a;
-   fint* la;
-   real* ws;
-   fint* lws;
-   char* cstype;
    real* user;
    fint* iuser;
+   real*                       a;
+   fint*                       la;
+   real*                       ws;
+   fint*                       lws;
    ftnlen cstype_len = 1;
    int i;
 
@@ -1388,13 +1445,32 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    memset(problem->istat, 0, sizeof(problem->istat));
    memset(problem->rstat, 0, sizeof(problem->rstat));
 
-   SCIP_ALLOC( BMSallocMemoryArray(&x, n) );
-   SCIP_ALLOC( BMSallocMemoryArray(&c, m) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&lam, n+m) );
-   SCIP_ALLOC( BMSallocMemoryArray(&bl, n+m) );
-   SCIP_ALLOC( BMSallocMemoryArray(&bu, n+m) );
-   SCIP_ALLOC( BMSallocMemoryArray(&s, n+m) );
-   SCIP_ALLOC( BMSallocMemoryArray(&cstype, m) );
+   if( problem->x == NULL )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&problem->x, problem->varssize) );
+   }
+   if( problem->c == NULL )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&problem->c, problem->conssize) );
+   }
+   if( problem->lam == NULL )
+   {
+      SCIP_ALLOC( BMSallocClearMemoryArray(&problem->lam, problem->varssize + problem->conssize) );
+   }
+   if( problem->bl == NULL )
+   {
+      assert(problem->bu == NULL);
+      SCIP_ALLOC( BMSallocMemoryArray(&problem->bl, problem->varssize + problem->conssize) );
+      SCIP_ALLOC( BMSallocMemoryArray(&problem->bu, problem->varssize + problem->conssize) );
+   }
+   if( problem->s == NULL )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&problem->s, problem->varssize + problem->conssize) );
+   }
+   if( problem->cstype == NULL )
+   {
+      SCIP_ALLOC( BMSallocMemoryArray(&problem->cstype, problem->conssize) );
+   }
 
    /* allocate la, a and initialize la and maxa for Objective Gradient and Jacobian */
    SCIP_CALL( setupGradients(problem->oracle, &la, &a, &maxa) );
@@ -1403,17 +1479,17 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    SCIP_CALL( setupHessian(problem->oracle, &problem->hessiannz) );
 
    /* setup variable bounds, constraint sides, and constraint types */
-   BMScopyMemoryArray(bl, SCIPnlpiOracleGetVarLbs(problem->oracle), n);
-   BMScopyMemoryArray(bu, SCIPnlpiOracleGetVarUbs(problem->oracle), n);
+   BMScopyMemoryArray(problem->bl, SCIPnlpiOracleGetVarLbs(problem->oracle), n);
+   BMScopyMemoryArray(problem->bu, SCIPnlpiOracleGetVarUbs(problem->oracle), n);
    for( i = 0; i < m; ++i )
    {
-      bl[n+i] = SCIPnlpiOracleGetConstraintLhs(problem->oracle, i);
-      bu[n+i] = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
-      cstype[i] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, i) <= 1 ? 'L' : 'N';
+      problem->bl[n+i] = SCIPnlpiOracleGetConstraintLhs(problem->oracle, i);
+      problem->bu[n+i] = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
+      problem->cstype[i] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, i) <= 1 ? 'L' : 'N';
    }
 
    /* setup starting point */
-   SCIP_CALL( setupStart(data, problem, x) );
+   SCIP_CALL( setupStart(data, problem, problem->x) );
 
    /* setup workspace */
    /* initial guess of real workspace size */
@@ -1444,25 +1520,18 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       &n, &m, &kmax, &maxa,
       &maxf, &mlp, &mxwk, &mxiwk,
       &problem->iprint, &nout, &ifail, &rho,
-      x, c, &f, &problem->fmin, bl,
-      bu, s, a, la, ws,
-      lws, lam, cstype, user,
+      problem->x, problem->c, &f, &problem->fmin, problem->bl,
+      problem->bu, problem->s, a, la, ws,
+      lws, problem->lam, problem->cstype, user,
       iuser, &problem->maxiter, problem->istat,
       problem->rstat, cstype_len);
 
-   SCIP_CALL( processSolveOutcome(data, problem, ifail, x, lam) );
+   SCIP_CALL( processSolveOutcome(data, problem, ifail, problem->x, problem->lam) );
 
    BMSfreeMemoryArray(&a);
    BMSfreeMemoryArray(&la);
-   BMSfreeMemoryArray(&cstype);
    BMSfreeMemoryArray(&lws);
    BMSfreeMemoryArray(&ws);
-   BMSfreeMemoryArray(&s);
-   BMSfreeMemoryArray(&bu);
-   BMSfreeMemoryArray(&bl);
-   BMSfreeMemoryArray(&x);
-   BMSfreeMemoryArray(&c);
-   BMSfreeMemoryArray(&lam);
    BMSfreeMemoryArray(&problem->hessiannz);
 
    return SCIP_OKAY;  /*lint !e527*/
