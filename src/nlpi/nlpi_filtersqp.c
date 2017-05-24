@@ -18,7 +18,6 @@
  * @brief   filterSQP NLP interface
  * @author  Stefan Vigerske
  *
- * @todo cache filtersqp setup (hessian, jacobian sparsity, etc.) from solve to solve
  * @todo warm starts: possible if n, m, lwa, and istat(1) are unchanged
  * @todo scaling
  * @todo increase workspace when ifail=9 or 10
@@ -105,6 +104,10 @@ struct SCIP_NlpiProblem
    real*                       a;            /**< gradients values */
    fint*                       la;           /**< gradients indices */
    fint*                       hessiannz;    /**< nonzero information about Hessian */
+   real*                       ws;           /**< real workspace */
+   fint*                       lws;          /**< integer workspace */
+   fint                        mxwk;         /**< size of real workspace */
+   fint                        mxiwk;        /**< size of integer workspace */
 };
 
 /*
@@ -911,6 +914,8 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemFilterSQP)
    BMSfreeMemoryArrayNull(&(*problem)->la);
    BMSfreeMemoryArrayNull(&(*problem)->a);
    BMSfreeMemoryArrayNull(&(*problem)->hessiannz);
+   BMSfreeMemoryArrayNull(&(*problem)->lws);
+   BMSfreeMemoryArrayNull(&(*problem)->ws);
 
    BMSfreeBlockMemory(data->blkmem, problem);
    assert(*problem == NULL);
@@ -1568,17 +1573,15 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    fint maxf;
    fint mlp;
    fint lh1;
-   fint mxwk;
-   fint mxiwk;
    fint nout;
    fint ifail;
    real rho;
    real f;
    real* user;
    fint* iuser;
-   real*                       ws;
-   fint*                       lws;
    ftnlen cstype_len = 1;
+   fint minmxwk;
+   fint minmxiwk;
    int i;
 
    data = SCIPnlpiGetData(nlpi);
@@ -1662,14 +1665,32 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    /* Bonmin:           mxwk = 21*n + 8*m + mlp + 8*maxf + lh1 + kmax*(kmax+9)/2 + mxwk0,
     *                      with lh1 = nnz_h+8+2*n+m and mxwk0 = 2000000 (parameter) */
    lh1 = problem->hessiannz[0]-1 + 8 + 2*n + m;
-   mxwk = 21*n + 8*m + mlp + 8*maxf + lh1 + kmax*(kmax+9)/2 + MAX(20*n,2000);
-   SCIP_ALLOC( BMSallocMemoryArray(&ws, mxwk) );
+   minmxwk = 21*n + 8*m + mlp + 8*maxf + lh1 + kmax*(kmax+9)/2 + MAX(20*n,2000);
+   if( problem->ws == NULL )
+   {
+      problem->mxwk = minmxwk;
+      SCIP_ALLOC( BMSallocMemoryArray(&problem->ws, problem->mxwk) );
+   }
+   else if( problem->mxwk < minmxwk )
+   {
+      problem->mxwk = calcGrowSize(minmxwk);
+      SCIP_ALLOC( BMSreallocMemoryArray(&problem->ws, problem->mxwk) );
+   }
 
    /* initial guess of integer workspace size */
    /* FilterSQP manual: mxiwk = 13*n + 4*m + mlp + 100 + kmax */
    /* Bonmin:           mxiwk = 13*n + 4*m + mlp + lh1 + kmax + 113 + mxiwk0, with mxiwk0 = 500000 (parameter) */
-   mxiwk = 13*n + 4*m + mlp + lh1 + 100 + kmax + 113 + MAX(5*n,5000);
-   SCIP_ALLOC( BMSallocMemoryArray(&lws, mxiwk) );
+   minmxiwk = 13*n + 4*m + mlp + lh1 + 100 + kmax + 113 + MAX(5*n,5000);
+   if( problem->lws == NULL )
+   {
+      problem->mxiwk = minmxiwk;
+      SCIP_ALLOC( BMSallocMemoryArray(&problem->lws, problem->mxiwk) );
+   }
+   else if( problem->mxiwk < minmxiwk )
+   {
+      problem->mxiwk = calcGrowSize(minmxiwk);
+      SCIP_ALLOC( BMSreallocMemoryArray(&problem->lws, problem->mxiwk) );
+   }
 
    /* TODO from here on we are not thread-safe: maybe add some mutex here if PARASCIP=true? */
 
@@ -1683,18 +1704,15 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 
    F77_FUNC(filtersqp,FILTERSQP)(
       &n, &m, &kmax, &maxa,
-      &maxf, &mlp, &mxwk, &mxiwk,
+      &maxf, &mlp, &problem->mxwk, &problem->mxiwk,
       &problem->iprint, &nout, &ifail, &rho,
       problem->x, problem->c, &f, &problem->fmin, problem->bl,
-      problem->bu, problem->s, problem->a, problem->la, ws,
-      lws, problem->lam, problem->cstype, user,
+      problem->bu, problem->s, problem->a, problem->la, problem->ws,
+      problem->lws, problem->lam, problem->cstype, user,
       iuser, &problem->maxiter, problem->istat,
       problem->rstat, cstype_len);
 
    SCIP_CALL( processSolveOutcome(data, problem, ifail, problem->x, problem->lam) );
-
-   BMSfreeMemoryArray(&lws);
-   BMSfreeMemoryArray(&ws);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
