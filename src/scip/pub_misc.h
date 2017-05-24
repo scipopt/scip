@@ -481,11 +481,10 @@ void** SCIPpqueueElems(
 
 #define SCIPcombineFourInt(a, b, c, d)      (((uint64_t) (a) << 48) + ((uint64_t) (b) << 32) + ((uint64_t) (c) << 16) + ((uint64_t) (d)) )
 
-
 /** computes a hashcode for double precision floating point values containing
  *  15 significant bits, the sign and the exponent
  */
-INLINE
+INLINE static
 uint32_t SCIPrealHashCode(double x)
 {
    int exp;
