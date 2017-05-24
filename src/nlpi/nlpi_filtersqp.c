@@ -18,7 +18,6 @@
  * @brief   filterSQP NLP interface
  * @author  Stefan Vigerske
  *
- * @todo warm starts: possible if n, m, lwa, and istat(1) are unchanged
  * @todo scaling
  * @todo increase workspace when ifail=9 or 10
  */
@@ -675,11 +674,14 @@ SCIP_RETCODE processSolveOutcome(
          problem->consdualvalues[i] = -lam[nvars + i];
    }
 
+   /* translate ifail to solution and termination status and decide whether we could warmstart next */
+   problem->warmstart = FALSE;
    switch( ifail )
    {
       case 0: /* successful run, solution found */
          problem->solstat = SCIP_NLPSOLSTAT_LOCOPT;
          problem->termstat = SCIP_NLPTERMSTAT_OKAY;
+         problem->warmstart = TRUE;
          break;
       case 1: /* unbounded, feasible point with f(x) <= fmin */
          problem->solstat = SCIP_NLPSOLSTAT_UNBOUNDED;
@@ -695,10 +697,12 @@ SCIP_RETCODE processSolveOutcome(
       case 3: /* (locally) nonlinear infeasible, minimal-infeasible solution found */
          problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
          problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
+         problem->warmstart = TRUE;
         break;
       case 4: /* terminate at point with h(x) <= eps (constraint violation below epsilon) but QP infeasible */
          problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
+         problem->warmstart = TRUE;
          break;
       case 5: /* termination with rho < eps (trust region radius below epsilon) */
          if( problem->rstat[4] < problem->feastol )
@@ -706,6 +710,7 @@ SCIP_RETCODE processSolveOutcome(
          else
             problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
          problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
+         problem->warmstart = TRUE;
          break;
       case 6: /* termination with iter > max_iter */
          if( problem->rstat[4] < problem->feastol )
@@ -713,11 +718,15 @@ SCIP_RETCODE processSolveOutcome(
          else
             problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
          problem->termstat =  SCIP_NLPTERMSTAT_ITLIM;
+         problem->warmstart = TRUE;
          break;
       case 7: /* crash in user routine (IEEE error) could not be resolved, or timelimit reached */
          problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
          if( problem->solvetime >= problem->maxtime )
+         {
             problem->termstat =  SCIP_NLPTERMSTAT_TILIM;
+            problem->warmstart = TRUE;
+         }
          else
             problem->termstat =  SCIP_NLPTERMSTAT_EVALERR;
          break;
@@ -1590,6 +1599,10 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    /* start measuring time */
    data->starttime = gettime();
 
+   /* if fromscratch parameter is set, then we will not warmstart */
+   if( problem->fromscratch )
+      problem->warmstart = FALSE;
+
    n = SCIPnlpiOracleGetNVars(problem->oracle);
    m = SCIPnlpiOracleGetNConstraints(problem->oracle);
    kmax = n;    /* maximal nullspace dimension */
@@ -1597,12 +1610,15 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    mlp = 100;   /* maximum level of degeneracy */
 
    nout = 6;   /* output to screen (TODO for now?) */
-   ifail = 0;  /* set to -1 for warmstart */
+   ifail = problem->warmstart ? -1 : 0;  /* -1 for warmstart, otherwise 0 */
    rho = 10.0; /* initial trust-region radius */
 
    user = (real*)data;
    iuser = (fint*)problem;
-   memset(problem->istat, 0, sizeof(problem->istat));
+   if( problem->warmstart )  /* if warmstart, then need to keep istat[0] */
+      memset(problem->istat+1, 0, sizeof(problem->istat)-sizeof(*problem->istat));
+   else
+      memset(problem->istat, 0, sizeof(problem->istat));
    memset(problem->rstat, 0, sizeof(problem->rstat));
 
    if( problem->x == NULL )
@@ -1616,6 +1632,10 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    if( problem->lam == NULL )
    {
       SCIP_ALLOC( BMSallocClearMemoryArray(&problem->lam, problem->varssize + problem->conssize) );
+   }
+   else
+   {
+      BMSclearMemoryArray(problem->lam, problem->varssize + problem->conssize);
    }
    if( problem->s == NULL )
    {
@@ -1683,10 +1703,12 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    minmxiwk = 13*n + 4*m + mlp + lh1 + 100 + kmax + 113 + MAX(5*n,5000);
    if( problem->lws == NULL )
    {
+      assert(!problem->warmstart);
+
       problem->mxiwk = minmxiwk;
       SCIP_ALLOC( BMSallocMemoryArray(&problem->lws, problem->mxiwk) );
    }
-   else if( problem->mxiwk < minmxiwk )
+   else if( problem->mxiwk < minmxiwk && !problem->warmstart ) /* if warmstart, then lws should remain untouched (n and m didn't change anyway) */
    {
       problem->mxiwk = calcGrowSize(minmxiwk);
       SCIP_ALLOC( BMSreallocMemoryArray(&problem->lws, problem->mxiwk) );
