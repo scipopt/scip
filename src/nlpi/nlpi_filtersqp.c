@@ -95,7 +95,6 @@ struct SCIP_NlpiProblem
    fint                        iprint;       /**< print verbosity level */
 
    /* cached FilterSQP data */
-   fint*                       hessiannz;    /**< nonzero information about Hessian */
    real*                       x;            /**< variable values, size nvars */
    real*                       c;            /**< constraint value, size nconss */
    real*                       lam;          /**< duals, size nvars + nconss */
@@ -105,6 +104,7 @@ struct SCIP_NlpiProblem
    char*                       cstype;       /**< constraint linearity, size nconss */
    real*                       a;            /**< gradients values */
    fint*                       la;           /**< gradients indices */
+   fint*                       hessiannz;    /**< nonzero information about Hessian */
 };
 
 /*
@@ -910,8 +910,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemFilterSQP)
    BMSfreeMemoryArrayNull(&(*problem)->lam);
    BMSfreeMemoryArrayNull(&(*problem)->la);
    BMSfreeMemoryArrayNull(&(*problem)->a);
-
-   assert((*problem)->hessiannz == NULL);
+   BMSfreeMemoryArrayNull(&(*problem)->hessiannz);
 
    BMSfreeBlockMemory(data->blkmem, problem);
    assert(*problem == NULL);
@@ -1034,6 +1033,9 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
    BMSfreeMemoryArrayNull(&problem->la);
    BMSfreeMemoryArrayNull(&problem->a);
 
+   /* Hessian information is out of date now (no new entries in Hessian, but also empty cols shows up in sparsity info) */
+   BMSfreeMemoryArrayNull(&problem->hessiannz);
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -1151,6 +1153,9 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsFilterSQP )
    BMSfreeMemoryArrayNull(&problem->la);
    BMSfreeMemoryArrayNull(&problem->a);
 
+   /* Hessian information is out of date now */
+   BMSfreeMemoryArrayNull(&problem->hessiannz);
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -1196,6 +1201,9 @@ SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveFilterSQP )
    invalidateSolution(problem);
 
    /* gradients info (la,a) should still be ok, as objective gradient is stored in dense form */
+
+   /* Hessian information is out of date now */
+   BMSfreeMemoryArrayNull(&problem->hessiannz);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1308,6 +1316,9 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetFilterSQP )
    BMSfreeMemoryArrayNull(&problem->la);
    BMSfreeMemoryArrayNull(&problem->a);
 
+   /* Hessian information is out of date now */
+   BMSfreeMemoryArrayNull(&problem->hessiannz);
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -1339,6 +1350,8 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetFilterSQP )
    /* gradients information is out of date now */
    BMSfreeMemoryArrayNull(&problem->la);
    BMSfreeMemoryArrayNull(&problem->a);
+   /* Hessian information is out of date now */
+   BMSfreeMemoryArrayNull(&problem->hessiannz);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1370,6 +1383,8 @@ SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsFilterSQP )
     */
    BMSfreeMemoryArrayNull(&problem->la);
    BMSfreeMemoryArrayNull(&problem->a);
+
+   /* Hessian information should still be ok */
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1407,6 +1422,11 @@ SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsFilterSQP )
    BMSfreeMemoryArrayNull(&problem->la);
    BMSfreeMemoryArrayNull(&problem->a);
 
+   /* Hessian sparsity may have changed if elements were added or removed
+    * TODO free only if coefficients were added or removed (SCIPnlpiOracleChgLinearCoefs() could give feedback)
+    */
+   BMSfreeMemoryArrayNull(&problem->hessiannz);
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -1437,6 +1457,8 @@ SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeFilterSQP )
    /* gradients information (la,a) may have changed */
    BMSfreeMemoryArrayNull(&problem->la);
    BMSfreeMemoryArrayNull(&problem->a);
+   /* Hessian information may have changed */
+   BMSfreeMemoryArrayNull(&problem->hessiannz);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1466,6 +1488,8 @@ SCIP_DECL_NLPICHGNONLINCOEF( nlpiChgNonlinCoefFilterSQP )
    /* gradients information (la,a) may have changed (?) */
    BMSfreeMemoryArrayNull(&problem->la);
    BMSfreeMemoryArrayNull(&problem->a);
+   /* Hessian information may have changed (?) */
+   BMSfreeMemoryArrayNull(&problem->hessiannz);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1603,8 +1627,11 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    /* maximal number entries in a = nvars+nnz */
    maxa = problem->la[0]-1;
 
-   /* allocate and initialize problem->hessiannz for Hessian */
-   SCIP_CALL( setupHessian(problem->oracle, &problem->hessiannz) );
+   if( problem->hessiannz == NULL )
+   {
+      /* allocate and initialize problem->hessiannz for Hessian */
+      SCIP_CALL( setupHessian(problem->oracle, &problem->hessiannz) );
+   }
 
    /* setup variable bounds, constraint sides, and constraint types */
    if( problem->bl == NULL )
@@ -1668,7 +1695,6 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 
    BMSfreeMemoryArray(&lws);
    BMSfreeMemoryArray(&ws);
-   BMSfreeMemoryArray(&problem->hessiannz);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
