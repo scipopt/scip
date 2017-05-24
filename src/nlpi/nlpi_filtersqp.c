@@ -2089,7 +2089,7 @@ SCIP_DECL_NLPISETINTPAR( nlpiSetIntParFilterSQP )
    {
       if( ival == 0 || ival == 1 )
       {
-         SCIPmessagePrintWarning(SCIPnlpiGetData(nlpi)->messagehdlr, "from scratch parameter not supported by FilterSQP interface yet. Ignored.\n");
+         SCIPdebugMessage("fast fail parameter not supported by FilterSQP interface yet. Ignored.\n");
       }
       else
       {
