@@ -2180,6 +2180,9 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    int primalfeasible;
    int dualfeasible;
    int solntype;
+#if CPX_VERSION == 12070100
+   int presolving;
+#endif
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -2204,9 +2207,27 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
+#if CPX_VERSION == 12070100
+   /* due to a bug in CPLEX 12.7.1.0, we need to enable presolving on trivial problems (see comment below) */
+   if( CPXgetnumrows(lpi->cpxenv, lpi->cpxlp) == 0 )
+   {
+      CHECK_ZERO( lpi->messagehdlr, CPXgetintparam(lpi->cpxenv, CPX_PARAM_PREIND, &presolving) );
+      CPXsetintparam(lpi->cpxenv, CPX_PARAM_PREIND, CPX_ON);
+   }
+#endif
+
    SCIPdebugMessage("calling CPXprimopt()\n");
    retval = CPXprimopt(lpi->cpxenv, lpi->cpxlp);
    lpi->iterations = CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
+
+#if CPX_VERSION == 12070100
+   /* restore previous value for presolving */
+   if( CPXgetnumrows(lpi->cpxenv, lpi->cpxlp) == 0 )
+   {
+      CPXsetintparam(lpi->cpxenv, CPX_PARAM_PREIND, presolving);
+   }
+#endif
+
    switch( retval  )
    {
    case 0:
@@ -2222,6 +2243,20 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
    SCIPdebugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
       lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
+
+#if CPX_VERSION == 12070100
+   /* CPLEX 12.7.1.0 primal simplex without presolve (called next in certain situations) does not return on a problem like
+    *   min x + sum_{i=1}^n 0*y_i when all variables are free and n >= 59
+    * With this workaround, we claim that LPs without rows, which are returned as infeasible-or-unbounded by CPLEX with presolve,
+    * are in fact unbounded. This assumes that CPLEX with presolve checked that no variable has an empty domain before.
+    */
+   if( lpi->solstat == CPX_STAT_INForUNBD && CPXgetnumrows(lpi->cpxenv, lpi->cpxlp) == 0 )
+   {
+      lpi->solstat = CPX_STAT_UNBOUNDED;
+      primalfeasible = 1;
+      dualfeasible = 0;
+   }
+#endif
 
    if( lpi->solstat == CPX_STAT_INForUNBD
       || (lpi->solstat == CPX_STAT_INFEASIBLE && !dualfeasible)

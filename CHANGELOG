@@ -16,6 +16,7 @@ fixed bugs:
 - improved handling of infinite values in a primal solution in quadratic and nonlinear constraints
 - fixed bug in dynamic resizing of hashtables and hashmaps
 - fixed bug in computing violation and cut for certain nonlinear constraints when LP solution is slightly out of bounds
+- added workaround for bug in primal simplex of cplex 12.7.1.0 occuring when attempting to solve LPs without rows without presolving
 - fixed bug in binpacking example that might have led to doing the same branching several times
 - fixed memory issue in binpacking example
 - renamed parameter heuristics/completesol/maxunkownrate to heuristics/completesol/maxunknownrate
