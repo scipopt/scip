@@ -95,7 +95,7 @@ do
 	    if (! make OPT=$OPT LPS=$LPS $MAKEARGS )
 	    then
 		echo "Making "$EXAMPLE" failed." >> ../exampletestsummary.log
-		exit $STATUS
+		exit 1
 	    else
 		echo "Making "$EXAMPLE" successful." >> ../exampletestsummary.log
 	    fi
@@ -107,7 +107,7 @@ do
 		then
 		    echo "Testing "$EXAMPLE" failed."
 		    echo "Testing "$EXAMPLE" failed." >> ../exampletestsummary.log
-		    exit $STATUS
+		    exit 1
 		fi
 	    else
 		echo make OPT=$OPT LPS=$LPS $MAKEARGS test
@@ -115,7 +115,7 @@ do
 		then
 		    echo "Testing "$EXAMPLE" failed."
 		    echo "Testing "$EXAMPLE" failed." >> ../exampletestsummary.log
-		    exit $STATUS
+		    exit 1
 		fi
 	    fi
 	    echo "Testing "$EXAMPLE" successful."
