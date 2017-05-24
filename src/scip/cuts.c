@@ -427,12 +427,12 @@ void SCIPaggrRowAddRhs(
    aggrrow->rhs += value;
 }
 
-/** add scaled row to aggregation row */
+/** add weighted row to aggregation row */
 SCIP_RETCODE SCIPaggrRowAddRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< aggregation row */
    SCIP_ROW*             row,                /**< row to add to aggregation row */
-   SCIP_Real             scale,              /**< scale for adding given row to aggregation row */
+   SCIP_Real             weight,             /**< scale for adding given row to aggregation row */
    int                   sidetype            /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
    )
 {
@@ -461,7 +461,7 @@ SCIP_RETCODE SCIPaggrRowAddRow(
          aggrrow->rowssize = newsize;
       }
       aggrrow->rowsinds[i] = SCIProwGetLPPos(row);
-      aggrrow->rowweights[i] = scale;
+      aggrrow->rowweights[i] = weight;
 
       if ( sidetype == -1 )
       {
@@ -478,7 +478,7 @@ SCIP_RETCODE SCIPaggrRowAddRow(
          /* Automatically decide, whether we want to use the left or the right hand side of the row in the summation.
           * If possible, use the side that leads to a positive slack value in the summation.
           */
-         if( SCIPisInfinity(scip, row->rhs) || (!SCIPisInfinity(scip, -row->lhs) && scale < 0.0) )
+         if( SCIPisInfinity(scip, row->rhs) || (!SCIPisInfinity(scip, -row->lhs) && weight < 0.0) )
             uselhs = TRUE;
          else
             uselhs = FALSE;
@@ -498,11 +498,11 @@ SCIP_RETCODE SCIPaggrRowAddRow(
          if( row->integral )
             sideval = SCIPfeasFloor(scip, sideval); /* row is integral: round right hand side up */
       }
-      aggrrow->rhs += scale * sideval;
+      aggrrow->rhs += weight * sideval;
    }
 
    /* add up coefficients */
-   SCIP_CALL( varVecAddScaledRowCoefs(aggrrow->inds, aggrrow->vals, &aggrrow->nnz, row, scale) );
+   SCIP_CALL( varVecAddScaledRowCoefs(aggrrow->inds, aggrrow->vals, &aggrrow->nnz, row, weight) );
 
    return SCIP_OKAY;
 }
@@ -649,13 +649,14 @@ SCIP_RETCODE addOneRow(
    return SCIP_OKAY;
 }
 
-/** aggregate rows using the given weights; the current content of the aggregation row gets overwritten */
+/** aggregate rows using the given weights; the current content of the aggregation
+ *  row, @aggrow, gets overwritten
+ */
 SCIP_RETCODE SCIPaggrRowSumRows(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_Real*            weights,            /**< row weights in row summation */
-   int*                  rowinds,            /**< array to store indices of non-zero entries of the weights array, or
-                                              *   NULL */
+   int*                  rowinds,            /**< array to store indices of non-zero entries of the weights array, or NULL */
    int                   nrowinds,           /**< number of non-zero entries in weights array, -1 if rowinds is NULL */
    SCIP_Real             maxweightrange,     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    SCIP_Real             minallowedweight,   /**< minimum magnitude of weight for rows that are used in the summation */
@@ -715,7 +716,7 @@ SCIP_RETCODE SCIPaggrRowSumRows(
    return SCIP_OKAY;
 }
 
-/** removes all zero entries in the aggregation row */
+/** removes all (close enough to) zero entries in the aggregation row */
 void SCIPaggrRowRemoveZeros(
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
    SCIP_Real             epsilon             /**< value to consider zero */
@@ -797,7 +798,10 @@ void cleanupCut(
    }
 }
 
-/** removes all zero entries in the aggregation row */
+/** removes all entries in the aggregation row that are smaller than epsilon.
+ *  For values that are between epsilon and sum epsilon, replace the variable by its
+ *  worst bound depending on the variable's coefficient.
+ */
 void SCIPaggrRowCleanup(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
@@ -809,9 +813,9 @@ void SCIPaggrRowCleanup(
    cleanupCut(scip, aggrrow->local, aggrrow->inds, aggrrow->vals, &aggrrow->nnz, &aggrrow->rhs);
 }
 
-/** gets number of rows that have been added to the aggregation row */
+/** get number of aggregated rows */
 int SCIPaggrRowGetNRows(
-   SCIP_AGGRROW*         aggrrow            /**< the aggregation row */
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    )
 {
    assert(aggrrow != NULL);
@@ -819,9 +823,9 @@ int SCIPaggrRowGetNRows(
    return aggrrow->nrows;
 }
 
-/** gets array with lp positions of rows that have been added to the aggregation row */
+/** get array with lp positions of aggregated rows */
 int* SCIPaggrRowGetRowInds(
-   SCIP_AGGRROW*         aggrrow            /**< the aggregation row */
+   SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
    )
 {
    assert(aggrrow != NULL);
@@ -850,13 +854,13 @@ SCIP_Bool SCIPaggrRowHasRowBeenAdded(
    return FALSE;
 }
 
-/** gets the range of the absolute values of weights that have been used to aggregate a row into this aggregation row */
+/** gets the min and max absolute value of the weights used to aggregate the rows;
+ *  must not be called for empty aggregation rows
+ */
 void SCIPaggrRowGetAbsWeightRange(
    SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
-   SCIP_Real*            minabsrowweight,    /**< pointer to store smallest absolute value of weights used for rows
-                                              *   aggregated into the given aggregation row */
-   SCIP_Real*            maxabsrowweight     /**< pointer to store largest absolute value of weights used for rows
-                                              *   aggregated into the given aggregation row */
+   SCIP_Real*            minabsrowweight,    /**< pointer to store smallest absolute value of weights used for aggregating rows */
+   SCIP_Real*            maxabsrowweight     /**< pointer to store largest absolute value of weights used for aggregating rows */
    )
 {
    int i;

@@ -290,8 +290,8 @@ SCIP_RETCODE mod2MatrixAddRow(
    {
       MOD2_COL* col;
 
-      col = (MOD2_COL*)SCIPhashmapGetImage(origcol2col, (void*)rowcols[i]);
-      if( col != NULL && mod2(scip, rowvals[i]) == 1 )
+      if( mod2(scip, rowvals[i]) == 1 && /* only do the hash map lookup if the mod2 coef is non-zero */
+          (col = (MOD2_COL*)SCIPhashmapGetImage(origcol2col, (void*)rowcols[i])) != NULL )
       {
          int k;
 
@@ -366,7 +366,7 @@ SCIP_RETCODE buildMod2Matrix(
       }
    }
 
-   /* all all integral rows using the created columns */
+   /* add all integral rows using the created columns */
    for( i = 0; i < nrows; ++i )
    {
       if( SCIProwIsIntegral(rows[i]) )
@@ -399,16 +399,11 @@ SCIP_RETCODE buildMod2Matrix(
          {
             if( lhsmod2 == rhsmod2 )
             {
-               if( lhsslack < rhsslack )
-               {
-                  /* use lhs */
-                  SCIP_CALL( mod2MatrixAddRow(scip, mod2matrix, origcol2col, rows[i], lhsslack, -1, lhsmod2) );
-               }
-               else
-               {
-                  /* use rhs */
-                  SCIP_CALL( mod2MatrixAddRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, 1, rhsmod2) );
-               }
+               /* MAXSLACK < 1 implies rhs - lhs = rhsslack + lhsslack < 2. Therefore lhs = rhs (mod2) can only hold if they are equal */
+               assert(SCIPisEQ(scip, SCIProwGetLhs(rows[i]), SCIProwGetRhs(rows[i])));
+
+               /* use rhs */
+               SCIP_CALL( mod2MatrixAddRow(scip, mod2matrix, origcol2col, rows[i], rhsslack, 1, rhsmod2) );
             }
             else
             {
@@ -1104,10 +1099,6 @@ TERMINATE:
 
    return SCIP_OKAY;
 }
-
-/* --------------------------------------------------------------------------------------------------------------------
- * separator specific interface methods 
- * -------------------------------------------------------------------------------------------------------------------- */
 
 /** creates the zerohalf separator and includes it in SCIP */
 SCIP_RETCODE SCIPincludeSepaZerohalf(
