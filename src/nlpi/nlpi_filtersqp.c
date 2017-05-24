@@ -103,6 +103,8 @@ struct SCIP_NlpiProblem
    real*                       bu;           /**< variable upper bounds and constraint rhs, size nvars + nconss */
    real*                       s;            /**< scaling factors, size nvars + nconss */
    char*                       cstype;       /**< constraint linearity, size nconss */
+   real*                       a;            /**< gradients values */
+   fint*                       la;           /**< gradients indices */
 };
 
 /*
@@ -425,8 +427,7 @@ static
 SCIP_RETCODE setupGradients(
    SCIP_NLPIORACLE*      oracle,
    fint**                la,
-   real**                a,
-   fint*                 maxa
+   real**                a
 )
 {
    const int* offset;
@@ -436,6 +437,11 @@ SCIP_RETCODE setupGradients(
    int ncons;
    int i;
    int c;
+
+   assert(la != NULL);
+   assert(a != NULL);
+   assert(*la == NULL);
+   assert(*a == NULL);
 
    nvars = SCIPnlpiOracleGetNVars(oracle);
    ncons = SCIPnlpiOracleGetNConstraints(oracle);
@@ -472,10 +478,7 @@ SCIP_RETCODE setupGradients(
    for( c = 0; c <= ncons; ++c )
       (*la)[(*la)[0]+1+c] = offset[c] + nvars + 1;  /* shift by nvars for objective, shift by 1 for Fortran */
 
-   /* maximal number entries in a: need space for objective gradient (dense) and Jacobian nonzeros */
-   *maxa = nvars + nnz;
-
-   SCIP_ALLOC( BMSallocMemoryArray(a, *maxa) );
+   SCIP_ALLOC( BMSallocMemoryArray(a, nvars + nnz) );
 
 #if 0  /* enable for debugging Jacobian */
    for( i = 0; i < 1 + (nvars+nnz) + 1+ncons + 1; ++i )
@@ -905,6 +908,8 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemFilterSQP)
    BMSfreeMemoryArrayNull(&(*problem)->x);
    BMSfreeMemoryArrayNull(&(*problem)->c);
    BMSfreeMemoryArrayNull(&(*problem)->lam);
+   BMSfreeMemoryArrayNull(&(*problem)->la);
+   BMSfreeMemoryArrayNull(&(*problem)->a);
 
    assert((*problem)->hessiannz == NULL);
 
@@ -1025,6 +1030,10 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
       }
    }
 
+   /* gradients information is out of date now (objective gradient is stored in dense form) */
+   BMSfreeMemoryArrayNull(&problem->la);
+   BMSfreeMemoryArrayNull(&problem->a);
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -1138,6 +1147,10 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsFilterSQP )
       }
    }
 
+   /* gradients information is out of date now */
+   BMSfreeMemoryArrayNull(&problem->la);
+   BMSfreeMemoryArrayNull(&problem->a);
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -1181,6 +1194,8 @@ SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveFilterSQP )
          exprvaridxs, exprtree) );
 
    invalidateSolution(problem);
+
+   /* gradients info (la,a) should still be ok, as objective gradient is stored in dense form */
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1289,6 +1304,10 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetFilterSQP )
    BMSfreeMemoryArrayNull(&problem->bu);
    BMSfreeMemoryArrayNull(&problem->cstype);  /* because we assume that cstype is allocated iff bl is allocated */
 
+   /* gradients information is out of date now (objective gradient is stored in dense form) */
+   BMSfreeMemoryArrayNull(&problem->la);
+   BMSfreeMemoryArrayNull(&problem->a);
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -1317,6 +1336,9 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetFilterSQP )
    BMSfreeMemoryArrayNull(&problem->bl);
    BMSfreeMemoryArrayNull(&problem->bu);
    BMSfreeMemoryArrayNull(&problem->cstype);
+   /* gradients information is out of date now */
+   BMSfreeMemoryArrayNull(&problem->la);
+   BMSfreeMemoryArrayNull(&problem->a);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1341,6 +1363,13 @@ SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsFilterSQP )
    SCIP_CALL( SCIPnlpiOracleChgLinearCoefs(problem->oracle, idx, nvals, varidxs, vals) );
 
    invalidateSolution(problem);
+
+   /* gradients information (la,a) may have changed if elements were added or removed
+    * (we only care that sparsity doesn't change, not about actual values in a)
+    * TODO free only if coefficients were added or removed (SCIPnlpiOracleChgLinearCoefs() could give feedback)
+    */
+   BMSfreeMemoryArrayNull(&problem->la);
+   BMSfreeMemoryArrayNull(&problem->a);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1371,6 +1400,13 @@ SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsFilterSQP )
    if( problem->cstype != NULL && idx >= 0 )
       problem->cstype[idx] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, idx);
 
+   /* gradients information (la,a) may have changed if elements were added or removed
+    * (we only care that sparsity doesn't change, not about actual values in a)
+    * TODO free only if coefficients were added or removed (SCIPnlpiOracleChgLinearCoefs() could give feedback)
+    */
+   BMSfreeMemoryArrayNull(&problem->la);
+   BMSfreeMemoryArrayNull(&problem->a);
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -1398,6 +1434,10 @@ SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeFilterSQP )
    if( problem->cstype != NULL && idxcons >= 0 )
       problem->cstype[idxcons] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, idxcons);
 
+   /* gradients information (la,a) may have changed */
+   BMSfreeMemoryArrayNull(&problem->la);
+   BMSfreeMemoryArrayNull(&problem->a);
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -1422,6 +1462,10 @@ SCIP_DECL_NLPICHGNONLINCOEF( nlpiChgNonlinCoefFilterSQP )
    SCIP_CALL( SCIPnlpiOracleChgExprParam(problem->oracle, idxcons, idxparam, value) );
 
    invalidateSolution(problem);
+
+   /* gradients information (la,a) may have changed (?) */
+   BMSfreeMemoryArrayNull(&problem->la);
+   BMSfreeMemoryArrayNull(&problem->a);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1508,8 +1552,6 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    real f;
    real* user;
    fint* iuser;
-   real*                       a;
-   fint*                       la;
    real*                       ws;
    fint*                       lws;
    ftnlen cstype_len = 1;
@@ -1553,8 +1595,13 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       SCIP_ALLOC( BMSallocMemoryArray(&problem->s, problem->varssize + problem->conssize) );
    }
 
-   /* allocate la, a and initialize la and maxa for Objective Gradient and Jacobian */
-   SCIP_CALL( setupGradients(problem->oracle, &la, &a, &maxa) );
+   if( problem->la == NULL )
+   {
+      /* allocate la, a and initialize la for Objective Gradient and Jacobian */
+      SCIP_CALL( setupGradients(problem->oracle, &problem->la, &problem->a) );
+   }
+   /* maximal number entries in a = nvars+nnz */
+   maxa = problem->la[0]-1;
 
    /* allocate and initialize problem->hessiannz for Hessian */
    SCIP_CALL( setupHessian(problem->oracle, &problem->hessiannz) );
@@ -1612,15 +1659,13 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       &maxf, &mlp, &mxwk, &mxiwk,
       &problem->iprint, &nout, &ifail, &rho,
       problem->x, problem->c, &f, &problem->fmin, problem->bl,
-      problem->bu, problem->s, a, la, ws,
+      problem->bu, problem->s, problem->a, problem->la, ws,
       lws, problem->lam, problem->cstype, user,
       iuser, &problem->maxiter, problem->istat,
       problem->rstat, cstype_len);
 
    SCIP_CALL( processSolveOutcome(data, problem, ifail, problem->x, problem->lam) );
 
-   BMSfreeMemoryArray(&a);
-   BMSfreeMemoryArray(&la);
    BMSfreeMemoryArray(&lws);
    BMSfreeMemoryArray(&ws);
    BMSfreeMemoryArray(&problem->hessiannz);
