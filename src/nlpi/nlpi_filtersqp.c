@@ -96,13 +96,13 @@ struct SCIP_NlpiProblem
 
    /* cached FilterSQP data */
    fint*                       hessiannz;    /**< nonzero information about Hessian */
-   real*                       x;            /**< size nvars */
-   real*                       c;            /**< size nconss */
-   real*                       lam;          /**< size nvars + nconss */
-   real*                       bl;           /**< size nvars + nconss */
-   real*                       bu;           /**< size nvars + nconss */
-   real*                       s;            /**< size nvars + nconss */
-   char*                       cstype;       /**< size nconss */
+   real*                       x;            /**< variable values, size nvars */
+   real*                       c;            /**< constraint value, size nconss */
+   real*                       lam;          /**< duals, size nvars + nconss */
+   real*                       bl;           /**< variable lower bounds and constraint lhs, size nvars + nconss */
+   real*                       bu;           /**< variable upper bounds and constraint rhs, size nvars + nconss */
+   real*                       s;            /**< scaling factors, size nvars + nconss */
+   char*                       cstype;       /**< constraint linearity, size nconss */
 };
 
 /*
@@ -943,9 +943,13 @@ SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerFilterSQP)
 static 
 SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
 {
+   int oldnvars;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+
+   oldnvars = SCIPnlpiOracleGetNVars(problem->oracle);
 
    SCIP_CALL( SCIPnlpiOracleAddVars(problem->oracle, nvars, lbs, ubs, varnames) );
 
@@ -996,6 +1000,31 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
       }
    }
 
+   /* update variable bounds in FilterSQP data */
+   if( problem->bl != NULL )
+   {
+      int i;
+      int nconss;
+
+      nconss = SCIPnlpiOracleGetNConstraints(problem->oracle);
+
+      /* bl and bu have first variable bounds and then constraint sides
+       * copy the constraint sides to their new position before putting in the new variable bounds
+       */
+      for( i = nconss-1; i >= 0; --i )
+      {
+         problem->bl[oldnvars+nvars+i] = problem->bl[oldnvars+i];
+         problem->bu[oldnvars+nvars+i] = problem->bu[oldnvars+i];
+      }
+
+      /* set bounds of new variable */
+      for( i = 0; i < nvars; ++i )
+      {
+         problem->bl[oldnvars+i] = lbs[i];
+         problem->bu[oldnvars+i] = ubs[i];
+      }
+   }
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -1041,9 +1070,13 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsFilterSQP )
 static
 SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsFilterSQP )
 {
+   int oldnconss;
+
    assert(nlpi != NULL);
    assert(problem != NULL);
    assert(problem->oracle != NULL);
+
+   oldnconss = SCIPnlpiOracleGetNConstraints(problem->oracle);
 
    SCIP_CALL( SCIPnlpiOracleAddConstraints(problem->oracle,
          ncons, lhss, rhss,
@@ -1077,18 +1110,31 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsFilterSQP )
       if( problem->bl != NULL )
       {
          assert(problem->bu != NULL);
+         assert(problem->cstype != NULL);
          SCIP_ALLOC( BMSreallocMemoryArray(&problem->bl, problem->varssize + problem->conssize) );
          SCIP_ALLOC( BMSreallocMemoryArray(&problem->bu, problem->varssize + problem->conssize) );
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->cstype, problem->conssize) );
       }
 
       if( problem->s != NULL )
       {
          SCIP_ALLOC( BMSreallocMemoryArray(&problem->s, problem->varssize + problem->conssize) );
       }
+   }
 
-      if( problem->cstype != NULL )
+   /* update constraint sides and type in FilterSQP data */
+   if( problem->bl != NULL )
+   {
+      int i;
+      int nvars;
+
+      nvars = SCIPnlpiOracleGetNVars(problem->oracle);
+
+      for( i = 0; i < ncons; ++i )
       {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->cstype, problem->conssize) );
+         problem->bl[nvars+oldnconss+i] = lhss[i];
+         problem->bu[nvars+oldnconss+i] = rhss[i];
+         problem->cstype[oldnconss+i] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, oldnconss+i) <= 1 ? 'L' : 'N';
       }
    }
 
@@ -1160,6 +1206,18 @@ SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsFilterSQP )
 
    invalidateSolution(problem);
 
+   /* update bounds in FilterSQP data */
+   if( problem->bl != NULL )
+   {
+      int i;
+
+      for( i = 0; i < nvars; ++i )
+      {
+         problem->bl[indices[i]] = lbs[i];
+         problem->bu[indices[i]] = ubs[i];
+      }
+   }
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -1184,6 +1242,21 @@ SCIP_DECL_NLPICHGCONSSIDES( nlpiChgConsSidesFilterSQP )
 
    invalidateSolution(problem);
 
+   /* update constraint sense in FilterSQP data */
+   if( problem->bl != NULL )
+   {
+      int i;
+      int nvars;
+
+      nvars = SCIPnlpiOracleGetNVars(problem->oracle);
+
+      for( i = 0; i < nconss; ++i )
+      {
+         problem->bl[nvars+indices[i]] = lhss[i];
+         problem->bu[nvars+indices[i]] = rhss[i];
+      }
+   }
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -1206,9 +1279,15 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetFilterSQP )
 
    SCIP_CALL( SCIPnlpiOracleDelVarSet(problem->oracle, dstats) );
 
-   BMSfreeMemoryArrayNull(&problem->initguess); /* @TODO keep initguess for remaining variables */
+   /* @TODO keep initguess and bl, bu for remaining variables? */
+
+   BMSfreeMemoryArrayNull(&problem->initguess);
    invalidateSolution(problem);
    problem->warmstart = FALSE;
+
+   BMSfreeMemoryArrayNull(&problem->bl);
+   BMSfreeMemoryArrayNull(&problem->bu);
+   BMSfreeMemoryArrayNull(&problem->cstype);  /* because we assume that cstype is allocated iff bl is allocated */
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1234,6 +1313,10 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetFilterSQP )
 
    invalidateSolution(problem);
    problem->warmstart = FALSE;
+
+   BMSfreeMemoryArrayNull(&problem->bl);
+   BMSfreeMemoryArrayNull(&problem->bu);
+   BMSfreeMemoryArrayNull(&problem->cstype);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1284,6 +1367,10 @@ SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsFilterSQP )
 
    invalidateSolution(problem);
 
+   /* update constraint linearity in FilterSQP data, as we might have changed from linear to nonlinear now */
+   if( problem->cstype != NULL && idx >= 0 )
+      problem->cstype[idx] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, idx);
+
    return SCIP_OKAY;
 }  /*lint !e715*/
 
@@ -1306,6 +1393,10 @@ SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeFilterSQP )
    SCIP_CALL( SCIPnlpiOracleChgExprtree(problem->oracle, idxcons, exprvaridxs, exprtree) );
 
    invalidateSolution(problem);
+
+   /* update constraint linearity in FilterSQP data, as we might have changed from linear to nonlinear now */
+   if( problem->cstype != NULL && idxcons >= 0 )
+      problem->cstype[idxcons] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, idxcons);
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1457,19 +1548,9 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    {
       SCIP_ALLOC( BMSallocClearMemoryArray(&problem->lam, problem->varssize + problem->conssize) );
    }
-   if( problem->bl == NULL )
-   {
-      assert(problem->bu == NULL);
-      SCIP_ALLOC( BMSallocMemoryArray(&problem->bl, problem->varssize + problem->conssize) );
-      SCIP_ALLOC( BMSallocMemoryArray(&problem->bu, problem->varssize + problem->conssize) );
-   }
    if( problem->s == NULL )
    {
       SCIP_ALLOC( BMSallocMemoryArray(&problem->s, problem->varssize + problem->conssize) );
-   }
-   if( problem->cstype == NULL )
-   {
-      SCIP_ALLOC( BMSallocMemoryArray(&problem->cstype, problem->conssize) );
    }
 
    /* allocate la, a and initialize la and maxa for Objective Gradient and Jacobian */
@@ -1479,13 +1560,23 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    SCIP_CALL( setupHessian(problem->oracle, &problem->hessiannz) );
 
    /* setup variable bounds, constraint sides, and constraint types */
-   BMScopyMemoryArray(problem->bl, SCIPnlpiOracleGetVarLbs(problem->oracle), n);
-   BMScopyMemoryArray(problem->bu, SCIPnlpiOracleGetVarUbs(problem->oracle), n);
-   for( i = 0; i < m; ++i )
+   if( problem->bl == NULL )
    {
-      problem->bl[n+i] = SCIPnlpiOracleGetConstraintLhs(problem->oracle, i);
-      problem->bu[n+i] = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
-      problem->cstype[i] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, i) <= 1 ? 'L' : 'N';
+      assert(problem->bu == NULL);
+      assert(problem->cstype == NULL);
+
+      SCIP_ALLOC( BMSallocMemoryArray(&problem->bl, problem->varssize + problem->conssize) );
+      SCIP_ALLOC( BMSallocMemoryArray(&problem->bu, problem->varssize + problem->conssize) );
+      SCIP_ALLOC( BMSallocMemoryArray(&problem->cstype, problem->conssize) );
+
+      BMScopyMemoryArray(problem->bl, SCIPnlpiOracleGetVarLbs(problem->oracle), n);
+      BMScopyMemoryArray(problem->bu, SCIPnlpiOracleGetVarUbs(problem->oracle), n);
+      for( i = 0; i < m; ++i )
+      {
+         problem->bl[n+i] = SCIPnlpiOracleGetConstraintLhs(problem->oracle, i);
+         problem->bu[n+i] = SCIPnlpiOracleGetConstraintRhs(problem->oracle, i);
+         problem->cstype[i] = SCIPnlpiOracleGetConstraintDegree(problem->oracle, i) <= 1 ? 'L' : 'N';
+      }
    }
 
    /* setup starting point */
