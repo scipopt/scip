@@ -157,7 +157,7 @@ typedef struct SCIP_Regression SCIP_REGRESSION;
 #define SCIP_DECL_HASHKEYEQ(x) SCIP_Bool x (void* userptr, void* key1, void* key2)
 
 /** returns the hash value of the key */
-#define SCIP_DECL_HASHKEYVAL(x) unsigned int x (void* userptr, void* key)
+#define SCIP_DECL_HASHKEYVAL(x) uint64_t x (void* userptr, void* key)
 
 
 #ifdef __cplusplus

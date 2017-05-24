@@ -1626,6 +1626,7 @@ SCIP_RETCODE copyProb(
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
    assert(!original || global);
+   assert(original || SCIPisTransformed(sourcescip));
 
    /* free old problem */
    SCIP_CALL( SCIPfreeProb(targetscip) );
@@ -1653,10 +1654,10 @@ SCIP_RETCODE copyProb(
    /* switch stage to PROBLEM */
    targetscip->set->stage = SCIP_STAGE_PROBLEM;
 
-   if( !original && SCIPisTransformed(sourcescip) )
-      sourceprob = sourcescip->transprob;
-   else
+   if( original )
       sourceprob = sourcescip->origprob;
+   else
+      sourceprob = sourcescip->transprob;
 
    /* create the statistics data structure */
    SCIP_CALL( SCIPstatCreate(&targetscip->stat, targetscip->mem->probmem, targetscip->set, targetscip->transprob, targetscip->origprob, targetscip->messagehdlr) );
@@ -3588,6 +3589,12 @@ SCIP_RETCODE doCopy(
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
    assert(suffix != NULL);
+
+   /* copy the original problem if we are in SCIP_STAGE_PROBLEM stage */
+   if( SCIPgetStage(sourcescip) == SCIP_STAGE_PROBLEM )
+      original = TRUE;
+
+   /* global must be TRUE for the original problem */
    assert(global || !original);
 
    /* get time before start of copy procedure */
@@ -3721,6 +3728,9 @@ SCIP_RETCODE doCopy(
  *  4) copy all active variables
  *  5) copy all constraints
  *
+ *  The source problem depends on the stage of the \p sourcescip - In SCIP_STAGE_PROBLEM, the original problem is copied,
+ *  otherwise, the transformed problem is copied. For an explicit copy of the original problem, use SCIPcopyOrig().
+ *
  *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
  *
  *  @note In a multi thread case, you need to lock the copying procedure from outside with a mutex.
@@ -3804,8 +3814,11 @@ SCIP_RETCODE SCIPcopy(
  *     b) enable constraint compression
  *  5) copy all constraints
  *
+ * The source problem depends on the stage of the \p sourcescip - In SCIP_STAGE_PROBLEM, the original problem is copied,
+ * otherwise, the transformed problem is copied. For an explicit copy of the original problem, use SCIPcopyOrigConsCompression().
+ *
  *  @note: in case that a combination of local bounds and explicit fixing values should be used,
- *         the fixing value of a variable is prefered if local bounds and fixing value disagree.
+ *         the fixing value of a variable is preferred if local bounds and fixing value disagree.
  *
  *  @note all variables and constraints which are created in the target-SCIP are not (user) captured
  *
@@ -10801,7 +10814,6 @@ SCIP_RETCODE SCIPchgReoptObjective(
    )
 {
    SCIP_VAR** origvars;
-   SCIP_Real objscalar;
    int norigvars;
    int i;
 
@@ -10828,29 +10840,28 @@ SCIP_RETCODE SCIPchgReoptObjective(
     */
    for( i = 0; i < norigvars; i++ )
    {
-      SCIP_CALL( SCIPchgVarObj(scip, origvars[i], 0.0) );
+      SCIP_CALL( SCIPaddVarObj(scip, origvars[i], -SCIPvarGetObj(origvars[i])) );
    }
 
-   /* since we are not allowed to change the objective sense in SCIP_STAGE_PPRESOLVED, we multiply all coefficients
-    * with -1.0 if the objective sense needs to be changed
-    */
-   if( scip->origprob->objsense != objsense )
-      objscalar = -1.0;
-   else
-      objscalar = 1.0;
-
-   /* reset objective data */
+   /* reset objective data of original problem */
    scip->origprob->objscale = 1.0;
+   scip->origprob->objsense = objsense;
    scip->origprob->objoffset = 0.0;
    scip->origprob->objisintegral = FALSE;
 
-#ifndef NDEBUG
-   if( scip->set->stage == SCIP_STAGE_PRESOLVED )
+   if( scip->set->stage >= SCIP_STAGE_TRANSFORMED )
    {
+      /* reset objective data of transformed problem */
+      scip->transprob->objscale = 1.0;
+      scip->transprob->objsense = objsense;
+      scip->transprob->objoffset = 0.0;
+      scip->transprob->objisintegral = FALSE;
+
+#ifndef NDEBUG
       for( i = 0; i < scip->transprob->nvars; i++ )
          assert(SCIPvarGetObj(scip->transprob->vars[i]) == 0.0);
-   }
 #endif
+   }
 
    /* set new objective values */
    for( i = 0; i < nvars; ++i )
@@ -10862,7 +10873,7 @@ SCIP_RETCODE SCIPchgReoptObjective(
          return SCIP_INVALIDDATA;
       }
 
-      SCIP_CALL( SCIPaddVarObj(scip, vars[i], objscalar * coefs[i]) );
+      SCIP_CALL( SCIPaddVarObj(scip, vars[i], coefs[i]) );
    }
 
 #ifdef SCIP_MORE_DEBUG
@@ -12565,6 +12576,7 @@ SCIP_CONS* SCIPfindOrigCons(
    {
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
@@ -13907,6 +13919,11 @@ SCIP_RETCODE initPresolve(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+#ifndef NDEBUG
+   size_t nusedbuffers;
+   size_t nusedcleanbuffers;
+#endif
+
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->set != NULL);
@@ -13936,10 +13953,19 @@ SCIP_RETCODE initPresolve(
          scip->stat, scip->transprob, scip->origprob, scip->primal, scip->lp, scip->branchcand, scip->conflict,
          scip->conflictstore, scip->eventfilter, scip->eventqueue, scip->cliquetable) );
 
+   /* GCG wants to perform presolving during the reading process of a file reader;
+    * hence the number of used buffers does not need to be zero, however, it should not
+    * change by calling SCIPsetInitprePlugins()
+    */
+#ifndef NDEBUG
+   nusedbuffers = BMSgetNUsedBufferMemory(SCIPbuffer(scip));
+   nusedcleanbuffers = BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip));
+#endif
+
    /* inform plugins that the presolving is abound to begin */
    SCIP_CALL( SCIPsetInitprePlugins(scip->set, scip->mem->probmem, scip->stat) );
-   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
    /* delete the variables from the problems that were marked to be deleted */
    SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->cliquetable, scip->lp, scip->branchcand) );
@@ -14135,6 +14161,10 @@ SCIP_RETCODE presolveRound(
    int i;
    int j;
    int k;
+#ifndef NDEBUG
+   size_t nusedbuffers;
+   size_t nusedcleanbuffers;
+#endif
 
    assert(scip != NULL);
    assert(scip->set != NULL);
@@ -14152,6 +14182,16 @@ SCIP_RETCODE presolveRound(
    aborted = FALSE;
 
    assert( scip->set->propspresolsorted );
+
+   /* GCG wants to perform presolving during the reading process of a file reader;
+    * hence the number of used buffers does not need to be zero, however, it should not
+    * change by calling the presolving callbacks
+    */
+#ifndef NDEBUG
+   nusedbuffers = BMSgetNUsedBufferMemory(SCIPbuffer(scip));
+   nusedcleanbuffers = BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip));
+#endif
+
 
    if( *timing == SCIP_PRESOLTIMING_EXHAUSTIVE )
    {
@@ -14220,8 +14260,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
                &scip->stat->npresolchgsides, &result) );
-         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
          lastranpresol = FALSE;
          ++j;
@@ -14239,8 +14279,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
                &scip->stat->npresolchgsides, &result) );
-         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
          lastranpresol = TRUE;
          ++i;
@@ -14307,8 +14347,8 @@ SCIP_RETCODE presolveRound(
             &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
             &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
             &scip->stat->npresolchgsides, &result) );
-      assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-      assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+      assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+      assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
       ++k;
 
@@ -14370,8 +14410,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
                &scip->stat->npresolchgsides, &result) );
-         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
          lastranpresol = FALSE;
          ++j;
@@ -14386,8 +14426,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs,
                &scip->stat->npresolchgsides, &result) );
-         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
          lastranpresol = TRUE;
          ++i;
@@ -14559,6 +14599,10 @@ SCIP_RETCODE presolve(
    int presolstart = 0;
    int propstart = 0;
    int consstart = 0;
+#ifndef NDEBUG
+   size_t nusedbuffers;
+   size_t nusedcleanbuffers;
+#endif
 
    assert(scip != NULL);
    assert(scip->mem != NULL);
@@ -14571,6 +14615,16 @@ SCIP_RETCODE presolve(
    assert(infeasible != NULL);
 
    *unbounded = FALSE;
+
+   /* GCG wants to perform presolving during the reading process of a file reader;
+    * hence the number of used buffers does not need to be zero, however, it should
+    * be the same again after presolve is finished
+    */
+#ifndef NDEBUG
+   nusedbuffers = BMSgetNUsedBufferMemory(SCIPbuffer(scip));
+   nusedcleanbuffers = BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip));
+#endif
+
 
    /* switch status to unknown */
    scip->stat->status = SCIP_STATUS_UNKNOWN;
@@ -14755,8 +14809,8 @@ SCIP_RETCODE presolve(
          approxchecknonzeros ? "more than " : "", nchecknonzeros, nchecknonzeros/maxnonzeros * 100);
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
    }
-   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
-   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
+   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
    /* stop presolving time */
    SCIPclockStop(scip->stat->presolvingtime, scip->set);
@@ -15196,13 +15250,25 @@ SCIP_RETCODE freeTransform(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_Bool reducedfree;
+
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->stat != NULL);
-   assert(scip->set->stage == SCIP_STAGE_TRANSFORMED || scip->set->stage == SCIP_STAGE_PRESOLVING);
+   assert(scip->set->stage == SCIP_STAGE_TRANSFORMED || scip->set->stage == SCIP_STAGE_PRESOLVING ||
+         (scip->set->stage == SCIP_STAGE_PRESOLVED && scip->set->reopt_enable));
 
-   /* call exit methods of plugins */
-   SCIP_CALL( SCIPsetExitPlugins(scip->set, scip->mem->probmem, scip->stat) );
+   /* If the following evaluates to true, SCIPfreeReoptSolve() has already called the exit-callbacks of the plugins.
+    * We can skip calling some of the following methods. This can happen if a new objective function was
+    * installed but the solve was not started.
+    */
+   reducedfree = (scip->set->stage == SCIP_STAGE_PRESOLVED && scip->set->reopt_enable);
+
+   if( !reducedfree )
+   {
+      /* call exit methods of plugins */
+      SCIP_CALL( SCIPsetExitPlugins(scip->set, scip->mem->probmem, scip->stat) );
+   }
 
    /* copy best primal solutions to original solution candidate list */
    if( !scip->set->reopt_enable && scip->set->limit_maxorigsol > 0 && scip->set->misc_transsolsorig )
@@ -15305,18 +15371,26 @@ SCIP_RETCODE freeTransform(
       }
    }
 
-   /* clean the conflict store
-    *
-    * since the conflict store can contain transformed constraints we need to remove them. the store will be finally
-    * freed in SCIPfreeProb().
-    */
-   SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
+   if( !reducedfree )
+   {
+      /* clean the conflict store
+       *
+       * since the conflict store can contain transformed constraints we need to remove them. the store will be finally
+       * freed in SCIPfreeProb().
+       */
+      SCIP_CALL( SCIPconflictstoreClean(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->reopt) );
+
+   }
 
    /* free transformed problem data structures */
    SCIP_CALL( SCIPprobFree(&scip->transprob, scip->messagehdlr, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
    SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->mem->probmem) );
-   SCIP_CALL( SCIPrelaxationFree(&scip->relaxation, scip->mem->probmem, scip->primal) );
+
+   if( !reducedfree )
+   {
+      SCIP_CALL( SCIPrelaxationFree(&scip->relaxation, scip->mem->probmem, scip->primal) );
+   }
    SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
 
    /* free the debug solution which might live in transformed primal data structure */
@@ -15328,7 +15402,7 @@ SCIP_RETCODE freeTransform(
    SCIP_CALL( SCIPeventfilterFree(&scip->eventfilter, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPeventqueueFree(&scip->eventqueue) );
 
-   if( scip->set->misc_resetstat )
+   if( scip->set->misc_resetstat && !reducedfree )
    {
       /* reset statistics to the point before the problem was transformed */
       SCIPstatReset(scip->stat, scip->set, scip->transprob, scip->origprob);
@@ -16919,10 +16993,13 @@ SCIP_RETCODE SCIPfreeTransform(
    case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
-      /* free solution process data */
-      SCIP_CALL( SCIPfreeSolve(scip, FALSE) );
-      assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
-
+      /* the solve was already freed, we directly go to freeTransform() */
+      if( !scip->set->reopt_enable || scip->set->stage != SCIP_STAGE_PRESOLVED )
+      {
+         /* free solution process data */
+         SCIP_CALL( SCIPfreeSolve(scip, FALSE) );
+         assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
+      }
       /*lint -fallthrough*/
 
    case SCIP_STAGE_TRANSFORMED:
@@ -47262,4 +47339,118 @@ int SCIPgetPtrarrayMaxIdx(
    assert(scip != NULL);
 
    return SCIPptrarrayGetMaxIdx(ptrarray);
+}
+
+/** perform a sanity check of the solve
+ *
+ *  the sanity check includes
+ *
+ *  - checking the feasibility of the incumbent solution in the original problem (using SCIPcheckSolOrig())
+ *
+ *  - checking if the objective bounds computed by SCIP agree with external primal and dual reference bounds.
+ *
+ *  All external reference bounds the original problem space and the original objective sense.
+ *
+ *  For infeasible problems, +/-SCIPinfinity() should be passed as reference bounds depending on the objective sense
+ *  of the original problem.
+ */
+SCIP_RETCODE SCIPsanityCheck(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             primalreference,    /**< external primal reference value for the problem, or SCIP_UNKNOWN */
+   SCIP_Real             dualreference,      /**< external dual reference value for the problem, or SCIP_UNKNOWN */
+   SCIP_Real             reftol,             /**< relative tolerance for acceptable violation of reference values */
+   SCIP_Bool             quiet,              /**< TRUE if no status line should be printed */
+   SCIP_Bool*            feasible,           /**< pointer to store if the best solution is feasible in the original problem,
+                                               *  or NULL */
+   SCIP_Bool*            primalboundcheck,   /**< pointer to store if the primal bound respects the given dual reference
+                                               *  value, or NULL */
+   SCIP_Bool*            dualboundcheck      /**< pointer to store if the dual bound respects the given primal reference
+                                               *  value, or NULL */
+   )
+{
+   SCIP_Bool localfeasible;
+   SCIP_Bool localprimalboundcheck;
+   SCIP_Bool localdualboundcheck;
+   SCIP_Real primviol;
+   SCIP_Real dualviol;
+   assert(scip != NULL);
+
+   localfeasible = TRUE;
+   localprimalboundcheck = TRUE;
+   localdualboundcheck = TRUE;
+
+   /* author bzfhende: check the best solution for feasibility in the original problem */
+   if( SCIPgetNSols(scip) > 0 )
+   {
+      SCIP_SOL* bestsol = SCIPgetBestSol(scip);
+      assert(bestsol != NULL);
+
+      SCIP_CALL( SCIPcheckSolOrig(scip, bestsol, &localfeasible, !quiet, TRUE) );
+   }
+   else
+   {
+      localfeasible = TRUE;
+   }
+
+   primviol = 0.0;
+   dualviol = 0.0;
+   /** check the primal and dual bounds computed by SCIP against the external reference values within reference tolerance */
+   /* solution for an infeasible problem */
+   if( SCIPgetNSols(scip) > 0 && ((SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE && SCIPisInfinity(scip, dualreference))
+            || (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE && SCIPisInfinity(scip, -dualreference))) )
+      localprimalboundcheck = FALSE;
+   else
+   {
+      /* check if reference primal bound is not better than the proven dual bound and, if SCIP claims to be optimal,
+       * if the
+       */
+      SCIP_Real pb = SCIPgetPrimalbound(scip);
+      SCIP_Real db = SCIPgetDualbound(scip);
+
+      /* compute the relative violation between the primal bound and dual reference value, and vice versa */
+      if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE )
+      {
+         if( dualreference != SCIP_UNKNOWN )
+            primviol = SCIPrelDiff(dualreference, pb);
+         if( primalreference != SCIP_UNKNOWN )
+            dualviol = SCIPrelDiff(db, primalreference);
+      }
+      else
+      {
+         if( dualreference != SCIP_UNKNOWN )
+            primviol = SCIPrelDiff(pb, dualreference);
+
+         if( primalreference != SCIP_UNKNOWN )
+            dualviol = SCIPrelDiff(primalreference, db);
+      }
+      primviol = MAX(primviol, 0.0);
+      dualviol = MAX(dualviol, 0.0);
+
+      localprimalboundcheck = EPSP(reftol, primviol);
+      localdualboundcheck = EPSP(reftol, dualviol);
+   }
+
+   if( !quiet )
+   {
+      SCIPinfoMessage(scip, NULL, "SANITY CHECK       : ");
+      if( ! localfeasible )
+         SCIPinfoMessage(scip, NULL, "FAIL (infeasible)");
+      else if( ! localprimalboundcheck )
+         SCIPinfoMessage(scip, NULL, "FAIL (primal bound)");
+      else if( ! localdualboundcheck )
+         SCIPinfoMessage(scip, NULL, "FAIL (dual bound)");
+      else
+         SCIPinfoMessage(scip, NULL, "SUCCESS");
+
+      SCIPinfoMessage(scip, NULL, " %4u %11.8g %11.8g\n", localfeasible, primviol, dualviol);
+   }
+
+   if( feasible != NULL )
+      *feasible = localfeasible;
+   if( primalboundcheck != NULL )
+      *primalboundcheck = localprimalboundcheck;
+   if( dualboundcheck != NULL )
+      *dualboundcheck = localdualboundcheck;
+
+   return SCIP_OKAY;
 }
