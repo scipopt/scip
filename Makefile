@@ -479,6 +479,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/event_solvingphase.o \
 			scip/prop_sync.o \
 			scip/event_globalbnd.o \
+			scip/event_treesizeprediction.o\
 			scip/heur_sync.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_bound.o \
