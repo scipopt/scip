@@ -408,6 +408,141 @@ SCIP_Real BDconsGetDualsol(
 
 
 
+/** returns the row of an arbitrary SCIP constraint */
+extern
+SCIP_ROW* BDconsGetRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint to get left hand side for */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   const char * conshdlrname;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   conshdlrname = SCIPconshdlrGetName(conshdlr);
+
+   if( strcmp(conshdlrname, "linear") == 0 )
+   {
+      return SCIPgetRowLinear(scip, cons);
+   }
+   else if( strcmp(conshdlrname, "setppc") == 0 )
+   {
+      return SCIPgetRowSetppc(scip, cons);
+   }
+   else if( strcmp(conshdlrname, "logicor") == 0 )
+   {
+      return SCIPgetRowLogicor(scip, cons);
+   }
+   else if( strcmp(conshdlrname, "knapsack") == 0 )
+   {
+      return SCIPgetRowKnapsack(scip, cons);
+   }
+   else if( strcmp(conshdlrname, "varbound") == 0 )
+   {
+      return SCIPgetRowVarbound(scip, cons);
+   }
+   else if( strcmp(conshdlrname, "SOS1") == 0 )
+   {
+      SCIPdebugMessage("WARNING: SOS1 NOT IMPLEMENTED\n");
+      return NULL;
+   }
+   else if( strcmp(conshdlrname, "SOS2") == 0 )
+   {
+      SCIPdebugMessage("WARNING: SOS2 NOT IMPLEMENTED\n");
+      return NULL;
+   }
+   else if( strcmp(conshdlrname, "origbranch") == 0 )
+   {
+      SCIPdebugMessage("origbranch: return Dualsol 0\n");
+      return NULL;
+   }
+   else if( strcmp(conshdlrname, "masterbranch") == 0 )
+   {
+      SCIPdebugMessage("masterbranch: return dualsol 0\n");
+      return NULL;
+   }
+   else
+   {
+      SCIPdebugMessage("WARNING: NOT IMPLEMENTED");
+      return NULL;
+   }
+   return NULL;
+}
+
+
+
+/** adds a coefficient to an arbitrary SCIP constraint */
+extern
+SCIP_RETCODE BDconsAddCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< variable of constraint entry */
+   SCIP_Real             val                 /**< coefficient of constraint entry */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   const char * conshdlrname;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   conshdlrname = SCIPconshdlrGetName(conshdlr);
+   assert(var != NULL);
+
+   if( strcmp(conshdlrname, "linear") == 0 )
+   {
+      SCIP_CALL( SCIPaddCoefLinear(scip, cons, var, val) );
+   }
+   else if( strcmp(conshdlrname, "setppc") == 0 )
+   {
+      SCIP_CALL( SCIPaddCoefSetppc(scip, cons, var) );
+   }
+   else if( strcmp(conshdlrname, "logicor") == 0 )
+   {
+      SCIP_CALL( SCIPaddCoefLogicor(scip, cons, var) );
+   }
+   else if( strcmp(conshdlrname, "knapsack") == 0 )
+   {
+      SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, var, val) );
+   }
+   else if( strcmp(conshdlrname, "varbound") == 0 )
+   {
+      SCIPdebugMessage("WARNING: varbound NOT IMPLEMENTED\n");
+      return SCIP_OKAY;
+   }
+   else if( strcmp(conshdlrname, "SOS1") == 0 )
+   {
+      SCIPdebugMessage("WARNING: SOS1 NOT IMPLEMENTED\n");
+      return SCIP_OKAY;
+   }
+   else if( strcmp(conshdlrname, "SOS2") == 0 )
+   {
+      SCIPdebugMessage("WARNING: SOS2 NOT IMPLEMENTED\n");
+      return SCIP_OKAY;
+   }
+   else if( strcmp(conshdlrname, "origbranch") == 0 )
+   {
+      SCIPdebugMessage("origbranch: return Dualsol 0\n");
+      return SCIP_OKAY;
+   }
+   else if( strcmp(conshdlrname, "masterbranch") == 0 )
+   {
+      SCIPdebugMessage("masterbranch: return dualsol 0\n");
+      return SCIP_OKAY;
+   }
+   else
+   {
+      SCIPdebugMessage("WARNING: NOT IMPLEMENTED");
+   }
+   return SCIP_OKAY;
+}
+
+
+
 /** returns the number of variables in an arbitrary SCIP constraint */
 int BDconsGetNVars(
    SCIP*                 scip,               /**< SCIP data structure */

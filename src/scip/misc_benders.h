@@ -90,6 +90,22 @@ SCIP_Real BDconsGetDualsol(
    SCIP_CONS*            cons                /**< constraint to get left hand side for */
    );
 
+/** returns the row of an arbitrary SCIP constraint */
+extern
+SCIP_ROW* BDconsGetRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint to get left hand side for */
+   );
+
+/** adds a coefficient to an arbitrary SCIP constraint */
+extern
+SCIP_RETCODE BDconsAddCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< variable of constraint entry */
+   SCIP_Real             val                 /**< coefficient of constraint entry */
+   );
+
 /** returns the number of variables in an arbitrary SCIP constraint */
 extern
 int BDconsGetNVars(

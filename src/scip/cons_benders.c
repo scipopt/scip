@@ -409,8 +409,10 @@ SCIP_DECL_CONSENFOPS(consEnfopsBenders)
 }
 
 
-/* The define is kept as a comment so I know what is being passed to this function */
 /** feasibility check method of constraint handler for integral solutions */
+/*  This function checks the feasibility of the Benders' decomposition master problem. In the case that the problem is
+ *  feasible, then the auxiliary variables must be updated with the subproblem objective function values. The update
+ *  occurs in the solve subproblems function. */
 static
 SCIP_DECL_CONSCHECK(consCheckBenders)
 {  /*lint --e{715}*/
@@ -432,10 +434,7 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
 
    for( i = 0; i < nbenders; i++ )
    {
-      if( SCIPbendersCutLP(benders[i]) )
-      {
-         SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, TRUE) );
-      }
+      SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, TRUE) );
 
       /* if the result is infeasible, it is not necessary to check any more subproblems. */
       if( (*result) == SCIP_INFEASIBLE )

@@ -21,6 +21,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/benderscut_opt.h"
 #include "scip/pub_benders.h"
@@ -35,6 +36,8 @@
 #define BENDERSCUT_PRIORITY         0
 
 
+#define SCIP_DEFAULT_SOLTOL               1e-2  /** The tolerance used to determine optimality of the solution */
+
 /*
  * Data structures
  */
@@ -42,11 +45,10 @@
 /* TODO: fill in the necessary compression data */
 
 /** Benders' decomposition cuts data */
-#if 0
 struct SCIP_BenderscutData
 {
+   SCIP_Real             soltol;             /**< the tolerance for the check between the auxiliary var and subprob */
 };
-#endif
 
 
 /*
@@ -59,6 +61,7 @@ SCIP_RETCODE computeStandardOptimalityCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP*                 subproblem,         /**< the SCIP instance of the subproblem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_CONS*            cut                 /**< the cut that is generated from the pricing problem */
    )
 {
@@ -145,12 +148,7 @@ SCIP_RETCODE computeStandardOptimalityCut(
       {
          SCIP_Real coef;
 
-         //coef = -1.0*(SCIPvarGetObj(var) + redcost);
-         coef = 1.0*(SCIPvarGetObj(var) + redcost);
-
-#ifndef NDEBUG
-         verifyobj -= SCIPvarGetObj(var)*SCIPvarGetSol(var, TRUE);
-#endif
+         coef = -1.0*(SCIPvarGetObj(var) + redcost);
 
          SCIP_CALL( SCIPaddCoefLinear(masterprob, cut, mastervar, coef) );
       }
@@ -178,14 +176,12 @@ SCIP_RETCODE computeStandardOptimalityCut(
 
 #ifndef NDEBUG
    lhs = SCIPgetLhsLinear(masterprob, cut);
-   verifyobj += lhs;
+   verifyobj = lhs;
 
-   /* need to generate a solution to verify the cut. Not sure how to do this yet. */
-   //SCIP_CALL( GCGcreateSolFromGcgCol(subproblem, &sol, probnr, gcgcol) );
-   //verifyobj -= SCIPgetActivityLinear(masterprob, cut, sol);
+   verifyobj -= SCIPgetActivityLinear(masterprob, cut, sol);
 #endif
 
-   //assert(SCIPisFeasEQ(origprob, SCIPgetLPObjval(origprob), verifyobj ));
+   assert(SCIPisFeasEQ(masterprob, checkobj, verifyobj ));
 
    assert(cut != NULL);
 
@@ -199,32 +195,37 @@ static
 SCIP_RETCODE addAuxiliaryVariableToCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
+   SCIP_BENDERSCUT*      benderscut,         /**< the benders' decomposition cut method */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_CONS*            cut,                /**< the cut that is generated from the pricing problem */
    int                   probnumber,         /**< the number of the pricing problem */
    SCIP_Bool*            optimal             /**< flag to indicate whether the current subproblem is optimal for the master */
    )
 {
+   SCIP_BENDERSCUTDATA* benderscutdata;
    SCIP_VAR* auxiliaryvar;
-   SCIP_SOL* bestsol;               /* the current solution to the master problem */
    SCIP_Real auxiliaryvarval;
 
    assert(masterprob != NULL);
    assert(benders != NULL);
+   assert(benderscut != NULL);
    assert(cut != NULL);
+
+   benderscutdata = SCIPbenderscutGetData(benderscut);
 
    (*optimal) = FALSE;
 
    auxiliaryvar = SCIPbendersGetAuxiliaryVar(benders, probnumber);
 
-   /* retrieving the best solution to check the value of the auxiliary variable against the subproblem solution */
-   bestsol = SCIPgetBestSol(masterprob);
+   auxiliaryvarval = SCIPgetSolVal(masterprob, sol, auxiliaryvar);
 
-   auxiliaryvarval = SCIPgetSolVal(masterprob, bestsol, auxiliaryvar);
+   printf("Auxiliary Variable: %g Subproblem Objective: %g\n", auxiliaryvarval, SCIPbendersGetSubprobObjval(benders, probnumber));
 
    /* if the value of the auxiliary variable in the master problem is greater or equal to the subproblem objective,
     * then a cut is not added by the subproblem.
     * TODO: Need to use a epsilon tolerance for this check. */
-   if( SCIPisGE(masterprob, auxiliaryvarval, SCIPbendersGetSubprobObjval(benders, probnumber)) )
+   if( SCIPisGE(masterprob, auxiliaryvarval + benderscutdata->soltol,
+         SCIPbendersGetSubprobObjval(benders, probnumber)) )
       (*optimal) = TRUE;
    else
    {
@@ -243,6 +244,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    SCIP*                 subproblem,         /**< the SCIP instance of the pricing problem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition */
    SCIP_BENDERSCUT*      benderscut,         /**< the benders' decomposition cut method */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    int                   probnumber,         /**< the number of the pricing problem */
    SCIP_RESULT*          result              /**< the result from solving the subproblems */
    )
@@ -254,6 +256,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    assert(masterprob != NULL);
    assert(subproblem != NULL);
    assert(benders != NULL);
+   assert(benderscut != NULL);
    assert(result != NULL);
    assert(SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL);
 
@@ -264,12 +267,11 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    /* creating the constraint for the cut */
    SCIP_CALL( SCIPcreateConsBasicLinear(masterprob, &cut, cutname, 0, NULL, NULL, 0.0, SCIPinfinity(masterprob)) );
 
-
    /* computing the coefficients of the optimality cut */
-   SCIP_CALL( computeStandardOptimalityCut(masterprob, subproblem, benders, cut) );
+   SCIP_CALL( computeStandardOptimalityCut(masterprob, subproblem, benders, sol, cut) );
 
    /* adding the auxiliary variable to the optimality cut */
-   SCIP_CALL( addAuxiliaryVariableToCut(masterprob, benders, cut, probnumber, &optimal) );
+   SCIP_CALL( addAuxiliaryVariableToCut(masterprob, benders, benderscut, sol, cut, probnumber, &optimal) );
 
    /* if the current subproblem is optimal for the master, then we do not add a constraint. */
    if( optimal )
@@ -279,8 +281,8 @@ SCIP_RETCODE generateAndApplyBendersCuts(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPprintCons(masterprob, cut, NULL) );
-   SCIPinfoMessage(masterprob, NULL, "\n");
+   //SCIP_CALL( SCIPprintCons(masterprob, cut, NULL) );
+   //SCIPinfoMessage(masterprob, NULL, "\n");
 
    /* adding the constraint to the master problem */
    SCIP_CALL( SCIPaddCons(masterprob, cut) );
@@ -292,6 +294,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
 
    return SCIP_OKAY;
 }
+
 /*
  * Callback methods of Benders' decomposition cuts
  */
@@ -313,18 +316,24 @@ SCIP_DECL_BENDERSCUTCOPY(benderscutCopyOpt)
 #endif
 
 /** destructor of Benders' decomposition cuts to free user data (called when SCIP is exiting) */
-#if 0
 static
 SCIP_DECL_BENDERSCUTFREE(benderscutFreeOpt)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of opt Benders' decomposition cuts not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_BENDERSCUTDATA* benderscutdata;
+
+   assert( benderscut != NULL );
+   assert( strcmp(SCIPbenderscutGetName(benderscut), BENDERSCUT_NAME) == 0 );
+
+   /* free Benders' cut data */
+   benderscutdata = SCIPbenderscutGetData(benderscut);
+   assert( benderscutdata != NULL );
+
+   SCIPfreeBlockMemory(scip, &benderscutdata);
+
+   SCIPbenderscutSetData(benderscut, NULL);
 
    return SCIP_OKAY;
 }
-#else
-#define benderscutFreeOpt NULL
-#endif
 
 
 /** initialization method of Benders' decomposition cuts (called after problem was transformed) */
@@ -402,7 +411,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
    {
       /* generating a cut for a given subproblem */
       SCIP_CALL( generateAndApplyBendersCuts(scip, SCIPbendersSubproblem(benders, probnumber), benders, benderscut,
-            probnumber, result) );
+            sol, probnumber, result) );
    }
 
    return SCIP_OKAY;
@@ -425,7 +434,8 @@ SCIP_RETCODE SCIPincludeBenderscutOpt(
    assert(benders != NULL);
 
    /* create opt Benders' decomposition cuts data */
-   benderscutdata = NULL;
+   SCIP_CALL( SCIPallocBlockMemory(scip, &benderscutdata) );
+   benderscutdata->soltol = 1e-04;
 
    benderscut = NULL;
 
@@ -456,7 +466,10 @@ SCIP_RETCODE SCIPincludeBenderscutOpt(
 #endif
 
    /* add opt Benders' decomposition cuts parameters */
-   /* TODO: (optional) add Benders' decomposition cuts specific parameters with SCIPaddTypeParam() here */
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "benderscut/" BENDERSCUT_NAME "/solutiontol",
+         "the tolerance used for the comparison between the auxiliary variable and the subproblem objective.",
+         &benderscutdata->soltol, FALSE, SCIP_DEFAULT_SOLTOL, 0.0, 1.0, NULL, NULL) );
 
    return SCIP_OKAY;
 }

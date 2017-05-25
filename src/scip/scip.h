@@ -2916,6 +2916,22 @@ int SCIPgetBendersNSubproblems(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
+/** registers the Benders' decomposition subproblem with the Benders' decomposition struct.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPaddBendersSubproblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP*                 subproblem          /**< Benders' decomposition subproblem */
+   );
+
 /** creates a Benders' cut algorithms and includes it in the associated Benders' decomposition
  *  This should be called from the SCIPincludeBendersXyz for the associated Benders' decomposition. It is only possible
  *  to include a Benders' cut algorithm if a Benders' decomposition has already been included

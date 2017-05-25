@@ -6156,6 +6156,31 @@ int SCIPgetBendersNSubproblems(
    return SCIPbendersGetNSubproblems(benders);
 }
 
+/** registers the Benders' decomposition subproblem with the Benders' decomposition struct.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ */
+SCIP_RETCODE SCIPaddBendersSubproblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP*                 subproblem          /**< Benders' decomposition subproblem */
+   )
+{
+   assert(scip != NULL);
+   assert(benders != NULL);
+   assert(subproblem != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPaddBendersSubproblem", FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPbendersAddSubproblem(benders, subproblem) );
+
+   return SCIP_OKAY;
+}
+
 /** creates a Benders' cut algorithms and includes it in the associated Benders' decomposition
  *  This should be called from the SCIPincludeBendersXyz for the associated Benders' decomposition. It is only possible
  *  to include a Benders' cut algorithm if a Benders' decomposition has already been included
@@ -30552,7 +30577,7 @@ SCIP_Real SCIPgetColFarkasCoef(
    SCIP_COL*             col                 /**< LP column */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetColFarkasCoef", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   //SCIP_CALL_ABORT( checkStage(scip, "SCIPgetColFarkasCoef", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
    {

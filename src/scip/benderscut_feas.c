@@ -60,6 +60,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP*                 subproblem,        /**< the SCIP instance of the pricing problem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_CONS*            cut                 /**< the cut that is generated from the pricing problem */
    )
 {
@@ -76,14 +77,12 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 
    SCIP_VAR** consvars;
    SCIP_Real* consvals;
-   //SCIP_SOL* pricingsol;
+   SCIP_Real activity;
    SCIP_Real* farkascoefs;    // the coefficients of the farkas proof
    SCIP_Real farkasact = 0;   // the activities of the farkas proof
    SCIP_Real farkaslhs = 0;   // the lhs of the farkas proof
    int nconsvars;
    int j;
-
-   //pricingsol = SCIPgetBestSol(subproblem)
 
    assert(masterprob != NULL);
    assert(subproblem != NULL);
@@ -134,11 +133,15 @@ SCIP_RETCODE computeStandardFeasibilityCut(
       /* loop over all variables with non-zero coefficient */
       for( j = 0; j < nconsvars; j++ )
       {
+         SCIP_VAR* mastervar;
          SCIP_VAR* consvar;
          SCIP_Real consval;
 
          consvar = consvars[j];
          consval = consvals[j];
+
+         /* retreiving the master problem variable for the given subproblem variable. */
+         mastervar = SCIPgetBendersMasterVar(masterprob, benders, consvars[j]);
 
          /* TODO: Do we need the problem variable? */
          consvar = SCIPvarGetProbvar(consvars[j]);
@@ -147,6 +150,12 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 
          /* update the coefficient in the farkas activity */
          farkascoefs[SCIPvarGetProbindex(consvar)] += dualsol * consval;
+
+         /* if the variable is a master variable, then it will be on the rhs of the constraint.
+          * In computing the contribution of the fixed variables, we don't need to solution value because this is
+          * given by the upper bound of the variable. */
+         if( mastervar != NULL )
+            farkaslhs -= dualsol * consval * SCIPvarGetUbLocal(consvar);
       }
 
       SCIPfreeBufferArray(subproblem, &consvars);
@@ -169,9 +178,10 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 
       var = SCIPvarGetProbvar(var);
 
-      dualsol = farkascoefs[SCIPvarGetProbindex(var)];
+      //dualsol = farkascoefs[SCIPvarGetProbindex(var)];
+      dualsol = SCIPgetVarFarkasCoef(subproblem, var);
 
-      if( SCIPisZero(masterprob, dualsol) )
+      if( SCIPisZero(subproblem, dualsol) )
          continue;
 
       /* checking whether the original variable is a linking variable.
@@ -183,38 +193,35 @@ SCIP_RETCODE computeStandardFeasibilityCut(
       }
       else
       {
-          addval = 0;
+         assert(SCIPisNegative(subproblem, dualsol));
 
-          /* get current lhs of the subproblem cut */
-          lhs = SCIPgetLhsLinear(masterprob, cut);
+         addval = 0;
 
-          if( SCIPisPositive(subproblem, dualsol) )
-             addval = dualsol*SCIPvarGetUbLocal(var);
-          else if( SCIPisNegative(subproblem, dualsol) )
-             addval = dualsol*SCIPvarGetLbLocal(var);
+         /* get current lhs of the subproblem cut */
+         lhs = SCIPgetLhsLinear(masterprob, cut);
 
-          lhs -= addval;
+         if( SCIPisPositive(subproblem, dualsol) )
+            addval = dualsol*SCIPvarGetUbLocal(var);
+         else if( SCIPisNegative(subproblem, dualsol) )
+            addval = dualsol*SCIPvarGetLbLocal(var);
 
-          /* Update lhs */
-          SCIP_CALL( SCIPchgLhsLinear(masterprob, cut, lhs) );
+         lhs += addval;
+
+
+#ifndef NDEBUG
+         farkasact += addval;
+#endif
+
+         /* Update lhs */
+         SCIP_CALL( SCIPchgLhsLinear(masterprob, cut, lhs) );
       }
    }
 
 #ifndef NDEBUG
-   for( i = 0; i < nvars; ++i )
-   {
-       SCIP_VAR* var;
-
-       var = vars[i];
-       var = SCIPvarGetProbvar(var);
-
-       assert(SCIPvarIsTransformed(var));
-
-       if( farkascoefs[SCIPvarGetProbindex(var)] > 0.0 )
-          farkasact += farkascoefs[SCIPvarGetProbindex(var)]*SCIPvarGetUbLocal(var);
-       else
-          farkasact += farkascoefs[SCIPvarGetProbindex(var)]*SCIPvarGetLbLocal(var);
-   }
+   lhs = SCIPgetLhsLinear(masterprob, cut);
+   activity = SCIPgetActivityLinear(masterprob, cut, sol);
+   printf("LHS: %g Activity: %g\n", lhs, activity);
+   assert(activity < lhs);
 #endif
 
 
@@ -224,6 +231,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 #ifndef NDEBUG
    /* TODO: Not sure about how to generate the solution for the first assert. Need to check */
    //assert(SCIPgetActivityLinear(masterprob, cut, pricingsol) < SCIPgetLhsLinear(masterprob, cut));
+   printf("FARKAS - act: %g lhs: %g\n", farkasact, farkaslhs);
    assert(farkasact < farkaslhs);
    SCIPfreeBufferArray(subproblem, &farkascoefs);
 #endif
@@ -240,6 +248,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    SCIP*                 subproblem,         /**< the SCIP instance of the pricing problem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition */
    SCIP_BENDERSCUT*      benderscut,         /**< the benders' decomposition cut method */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    int                   probnumber,         /**< the number of the pricing problem */
    SCIP_RESULT*          result              /**< the result from solving the subproblems */
    )
@@ -264,10 +273,10 @@ SCIP_RETCODE generateAndApplyBendersCuts(
       SCIPinfoMessage(masterprob, NULL, "No iterations in pricing problem %d\n", probnumber);
 
    /* computing the coefficients of the feasibility cut */
-   SCIP_CALL( computeStandardFeasibilityCut(masterprob, subproblem, benders, cut) );
+   SCIP_CALL( computeStandardFeasibilityCut(masterprob, subproblem, benders, sol, cut) );
 
-   SCIP_CALL( SCIPprintCons(masterprob, cut, NULL) );
-   SCIPinfoMessage(masterprob, NULL, "\n");
+   //SCIP_CALL( SCIPprintCons(masterprob, cut, NULL) );
+   //SCIPinfoMessage(masterprob, NULL, "\n");
 
    /* adding the constraint to the master problem */
    SCIP_CALL( SCIPaddCons(masterprob, cut) );
@@ -390,7 +399,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecFeas)
    {
       /* generating a cut for a given subproblem */
       SCIP_CALL( generateAndApplyBendersCuts(scip, SCIPbendersSubproblem(benders, probnumber), benders, benderscut,
-            probnumber, result) );
+            sol, probnumber, result) );
    }
 
    return SCIP_OKAY;

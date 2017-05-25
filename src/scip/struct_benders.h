@@ -34,6 +34,16 @@
 extern "C" {
 #endif
 
+/** Event handler data */
+/*  NOTE: Only one eventhdlrdata is created. This is passed to all subproblems. */
+struct SCIP_EventhdlrData
+{
+   SCIP*                 masterprob;         /**< the master problem SCIP instance */
+   SCIP_BENDERS*         benders;            /**< the Benders' decomposition structure */
+   SCIP_SOL*             relintsol;          /**< the relative interior point used for the Magnanti-Wong technique. */
+   SCIP_SOL*             currentsol;         /**< the current solution used to fix variables in the subproblem. */
+};
+
 /** variable benderss data */
 struct SCIP_Benders
 {
@@ -63,6 +73,13 @@ struct SCIP_Benders
    SCIP_Bool             cutlp;              /**< should Benders' cuts be generated for LP solutions? */
    SCIP_Bool             cutpseudo;          /**< should Benders' cuts be generated for pseudo solutions? */
    SCIP_Bool             cutrelax;           /**< should Benders' cuts be generated for relaxation solutions? */
+
+   /* data for the Magnanti-Wong cut strengthening */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata;      /**< Event handler data for the LP solved events */
+   SCIP_Bool             usemagnantiwong;    /**< Should the Magnanti-Wong cut strengthening technique be used? */
+   SCIP_Bool             computerelint;      /**< Should the relative interior point be computed? */
+   int                   maxlpiterfactor;    /**< the factor for the maximum number of lp iterations. */
+   SCIP_VAR**            mwauxiliaryvars;    /**< the auxiliary variables added to the subproble for the MW technique */
 
    /* the subproblem information */
    SCIP**                subproblems;        /**< the Benders' decomposition subproblems */

@@ -300,6 +300,7 @@ SCIP_RETCODE SCIPbenderscutExec(
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
    int                   probnumber,         /**< the number of the subproblem for which the cut is generated */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
@@ -316,7 +317,7 @@ SCIP_RETCODE SCIPbenderscutExec(
    SCIPclockStart(benderscut->benderscutclock, set);
 
    /* call external method */
-   SCIP_CALL( benderscut->benderscutexec(set->scip, benders, benderscut, probnumber, result) );
+   SCIP_CALL( benderscut->benderscutexec(set->scip, benders, benderscut, sol, probnumber, result) );
 
    /* stop timing */
    SCIPclockStop(benderscut->benderscutclock, set);

@@ -262,6 +262,20 @@ extern
 void SCIPbendersSortBenderscutsName(
    SCIP_BENDERS*         benders             /**< benders */
    );
+
+/** Adds a subproblem to the Benders' decomposition data */
+extern
+SCIP_RETCODE SCIPbendersAddSubproblem(
+   SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP*                 subproblem          /**< subproblem to be added to the data storage */
+   );
+
+/** Adds the event handler data to the Benders' decomposition data */
+extern
+void SCIPbendersAddEventhdlrdata(
+   SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< the event handler data for the LP solved event */
+   );
 #ifdef __cplusplus
 }
 #endif

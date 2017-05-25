@@ -145,13 +145,6 @@ SCIP_Bool SCIPbendersCutRelaxation(
    SCIP_BENDERS*         benders             /**< variable benders */
    );
 
-/** Adds a subproblem to the Benders' decomposition data */
-EXTERN
-void SCIPbendersAddSubproblem(
-   SCIP_BENDERS*         benders,            /**< variable benders */
-   SCIP*                 subproblem          /**< subproblem to be added to the data storage */
-   );
-
 /** returns the auxiliary variable for the given subproblem */
 EXTERN
 SCIP_VAR* SCIPbendersGetAuxiliaryVar(
