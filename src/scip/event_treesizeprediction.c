@@ -69,13 +69,20 @@ SCIP_DECL_EVENTCOPY(eventCopyTreeSizePrediction)
 #endif
 
 /** destructor of event handler to free user data (called when SCIP is exiting) */
-#if 0
+#if 1
 static
 SCIP_DECL_EVENTFREE(eventFreeTreeSizePrediction)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of tree-size prediction event handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   /* SCIPdebugMsg(scip, "eventfree method of eventhdlr "EVENTHDLR_NAME"\n"); */
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+   assert(scip != NULL);
 
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   SCIPfreeMemory(scip, &eventhdlrdata);
    return SCIP_OKAY;
 }
 #else
@@ -126,10 +133,11 @@ SCIP_DECL_EVENTINITSOL(eventInitsolTreeSizePrediction)
 
    eventhdlrdata->nodesfound = 0;
 
-   if( SCIPgetSubscipDepth(scip) == 0 )   
-   {
-      SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, NULL, NULL) );
-   }
+   /* We catch node solved */
+   SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, NULL, NULL) );
+
+   /* We catch updates to the primal bound */
+   SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -159,20 +167,10 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
 #endif
 
 /** frees specific event data */
-#if 1
+#if 0
 static
 SCIP_DECL_EVENTDELETE(eventDeleteTreeSizePrediction)
 {  /*lint --e{715}*/
-   SCIP_EVENTHDLRDATA* eventhdlrdata;
-   /* SCIPdebugMsg(scip, "delete method of eventhdlr "EVENTHDLR_NAME"\n"); */
-   assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
-   assert(scip != NULL);
-
-   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-   assert(eventhdlrdata != NULL);
-
-   SCIP_CALL( SCIPfreeMemory(scip, eventhdlrdata) );
 }
 #else
 #define eventDeleteTreeSizePrediction NULL
@@ -183,6 +181,8 @@ static
 SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_NODE* foundnode; /* The node found by the event (if any) */
+   SCIP_Real  newlowerbound; /* The new lower bound found by the event (if any) */
    /* SCIPdebugMsg(scip, "exec method of eventhdlr "EVENTHDLR_NAME"\n"); */
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
@@ -192,7 +192,26 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   eventhdlrdata->nodesfound += 1;   
+   switch(SCIPeventGetType(event)) {
+      case SCIP_EVENTTYPE_NODEINFEASIBLE:
+      case SCIP_EVENTTYPE_NODEBRANCHED:
+      case SCIP_EVENTTYPE_NODEFEASIBLE:
+         eventhdlrdata->nodesfound += 1;
+         foundnode = SCIPeventGetNode(event);
+         assert(foundnode != NULL);
+         break;
+      case SCIP_EVENTTYPE_BESTSOLFOUND:
+      {
+         newlowerbound = SCIPgetLowerbound(scip);
+         SCIPdebugMsg(scip, "New best solution found\n");
+         foundnode = NULL;
+         break;
+      }
+      default:
+         SCIPerrorMessage("Missing case in this switch.\n");
+         SCIPABORT();
+   }
+
    return SCIP_OKAY;
 }
 
