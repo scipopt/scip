@@ -74,6 +74,7 @@
 #include "scip/disp_default.h"
 #include "scip/event_solvingphase.h"
 #include "scip/event_softtimelimit.h"
+#include "scip/event_treesizeprediction.h"
 #include "scip/heur_actconsdiving.h"
 #include "scip/heur_bound.h"
 #include "scip/heur_clique.h"
