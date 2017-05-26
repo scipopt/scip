@@ -28,8 +28,6 @@ then
     sleep 60
 fi
 
-exit 1
-
 # check if tmp-path exists
 if test ! -d $CLIENTTMPDIR/${USER}-tmpdir
 then
