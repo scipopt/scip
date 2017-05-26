@@ -21,7 +21,7 @@ INTTOL=1e-04
 
 # we need to ensure that all libraries we load through the network are available.
 # therefore, we wait for one additional minute if the node runs for 1 minute or less.
-CHECKTIME=' ' read -r -a runtime <<< `top -b -n 1 | head -n 1`
+read -r -a runtime <<< `top -b -n 1 | head -n 1`
 
 if [ ${runtime[5]} == "min," ] && [ ${runtime[4]} -lt 2 ] ;
 then
