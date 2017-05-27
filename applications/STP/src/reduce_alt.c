@@ -4575,13 +4575,12 @@ SCIP_RETCODE npvReduction(
    )
 {
    GRAPH* auxg;
-   PATH* mst;
+   PATH mst[5];
    SCIP_Real prize;
    SCIP_Real sdist0;
    SCIP_Real sdist1;
    SCIP_Real sdist2;
-   int* adjverts;
-   int i;
+   int adjverts[5];
    int k;
    int k2;
    int s;
@@ -4600,13 +4599,11 @@ SCIP_RETCODE npvReduction(
    assert(memlblhead != NULL);
    assert(nelims != NULL);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &adjverts, 5) );
-
    *nelims = 0;
    nnodes = g->knots;
 
    /* initialize arrays */
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
       statetail[i]     = UNKNOWN;
       pathtail[i].dist = FARAWAY;
@@ -4620,7 +4617,7 @@ SCIP_RETCODE npvReduction(
    /* --- NPV3 test --- */
 
    /* try to eliminate non-positive vertices of degree 3 */
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
       assert(g->grad[i] >= 0);
       /* only non-positive vertices of degree 3 */
@@ -4629,11 +4626,18 @@ SCIP_RETCODE npvReduction(
 
       k = 0;
       for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         assert(g->head[e] != g->source[0]);
          adjverts[k++] = g->head[e];
+      }
+
+      if( k != 3 )
+         return SCIP_ERROR;
 
       assert(k == 3);
 
       g->mark[i] = FALSE;
+
       prize = g->prize[i];
       SCIP_CALL( getSD(scip, g, pathtail, pathhead, &sdist0, -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[0], adjverts[1], limit, FALSE, TRUE) );
       SCIP_CALL( getSD(scip, g, pathtail, pathhead, &sdist1, -prize, heap, statetail, statehead, memlbltail, memlblhead, adjverts[1], adjverts[2], limit, FALSE, TRUE) );
@@ -4656,11 +4660,9 @@ SCIP_RETCODE npvReduction(
       }
    }
 
-
    /* --- NPV4 test --- */
 
    /* initialize mst struct and new graph for further tests */
-   SCIP_CALL( SCIPallocBufferArray(scip, &mst, 5) );
    SCIP_CALL( graph_init(scip, &auxg, 5, 40, 1, 0) );
 
    for( k = 0; k < 4; k++ )
@@ -4672,7 +4674,7 @@ SCIP_RETCODE npvReduction(
    SCIP_CALL( graph_path_init(scip, auxg) );
 
    /* try to eliminate non-positive vertices of degree 4 */
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
       /* only non-positive vertices of degree 4 */
       if( !g->mark[i] || g->grad[i] != 4 || Is_term(g->term[i]) )
@@ -4771,7 +4773,7 @@ SCIP_RETCODE npvReduction(
    SCIP_CALL( graph_path_init(scip, auxg) );
 
    /* try to eliminate non-positive vertices of degree 5 */
-   for( i = 0; i < nnodes; i++ )
+   for( int i = 0; i < nnodes; i++ )
    {
       /* only non-positive vertices of degree 5 */
       if( !g->mark[i] || g->grad[i] != 5 || Is_term(g->term[i]) )
@@ -4890,8 +4892,6 @@ SCIP_RETCODE npvReduction(
    /* free memory*/
    graph_path_exit(scip, auxg);
    graph_free(scip, auxg, TRUE);
-   SCIPfreeBufferArray(scip, &mst);
-   SCIPfreeBufferArray(scip, &adjverts);
 
    return SCIP_OKAY;
 }

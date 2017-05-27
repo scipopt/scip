@@ -736,7 +736,12 @@ SCIP_RETCODE SCIPheurPrune(
 
          if( pcmw )
          {
+#if 1
+            SCIP_Bool dummy;
+            SCIP_CALL( greedyExtensionPcMw(scip, prunegraph, prunegraph->cost, path, edgearrint, nodearrint, nodearrchar, &dummy) );
+#else
             SCIP_CALL( extendSteinerTreePcMw(scip, prunegraph, vnoi, costrev, vbase, edgearrint, nodearrchar, &k) );
+#endif
 
             for( k = 0; k < nnodes; k++ )
                nodearrchar[k] = FALSE;
@@ -814,7 +819,12 @@ SCIP_RETCODE SCIPheurPrune(
 
          if( pcmw )
          {
+#if 1
+            SCIP_Bool dummy;
+            SCIP_CALL( greedyExtensionPcMw(scip, prunegraph, prunegraph->cost, path, soledge, nodearrint, nodearrchar, &dummy) );
+#else
             SCIP_CALL( extendSteinerTreePcMw(scip, prunegraph, vnoi, costrev, vbase, soledge, nodearrchar, &k) );
+#endif
          }
 
          setSolArray(prunegraph, &uborg, solnode, soledge);
@@ -838,8 +848,7 @@ SCIP_RETCODE SCIPheurPrune(
       for( e = 0; e < nedges; e++ )
          edgearrint[e] = soledge[e];
    }
-
-#if 0
+#if 1
    if( mw )
    {
       graph_getNVET(prunegraph, &annodes, &anedges, &anterms);
@@ -957,7 +966,12 @@ SCIP_RETCODE SCIPheurPrune(
 
             if( pcmw )
             {
+#if 1
+               SCIP_Bool dummy;
+               SCIP_CALL( greedyExtensionPcMw(scip, prunegraph, prunegraph->cost, path, edgearrint, nodearrint, nodearrchar, &dummy) );
+#else
                SCIP_CALL( extendSteinerTreePcMw(scip, prunegraph, vnoi, costrev, vbase, edgearrint, nodearrchar, &k) );
+#endif
             }
 
             objnew = graph_computeSolVal(prunegraph->cost, edgearrint, 0.0, nedges);
@@ -994,10 +1008,6 @@ SCIP_RETCODE SCIPheurPrune(
                   if( e >= 0 )
                      edgearrint[e] = CONNECT;
                }
-            }
-            if( !graph_sol_valid(scip, prunegraph, edgearrint) )
-            {
-
             }
 
             assert(graph_sol_valid(scip, prunegraph, edgearrint));

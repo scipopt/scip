@@ -499,7 +499,7 @@ SCIP_RETCODE reduceMw(
 
    /* reduction loop */
    SCIP_CALL( redLoopMw(scip, g, vnoi, path, gnodearr, nodearrreal, edgearrreal, edgearrreal2, state,
-         vbase, nodearrint, edgearrint, nodearrint2, nodearrint3, NULL, nodearrchar, fixed, advanced, bred, TRUE, redbound) );
+         vbase, nodearrint, edgearrint, nodearrint2, nodearrint3, NULL, nodearrchar, fixed, advanced, bred, advanced, redbound) );
 
    /* free memory */
    SCIPfreeBufferArrayNull(scip, &edgearrreal2);
@@ -1006,17 +1006,15 @@ SCIP_RETCODE redLoopMw(
          SCIPdebugMessage("ans advanced deleted: %d \n", ansadelims);
       }
 
-#if 1
       if( npv || extensive )
-       {
-          SCIP_CALL( npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400) );
+      {
+         SCIP_CALL( npvReduction(scip, g, vnoi, path, state, vbase, nodearrint, nodearrint2, nodearrint3, &npvelims, 400) );
 
-          if( npvelims <= redbound )
-             npv = FALSE;
+         if( npvelims <= redbound )
+            npv = FALSE;
 
-          SCIPdebugMessage("npv delete: %d \n", npvelims);
-       }
-#endif
+         SCIPdebugMessage("npv delete: %d \n", npvelims);
+      }
 
       if( (da || (advanced && extensive)) )
       {
@@ -1032,7 +1030,7 @@ SCIP_RETCODE redLoopMw(
             SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
          }
 
-         SCIPdebugMessage("da elims: %d \n", daelims);
+         SCIPdebugMessage("Dual-Ascent Elims: %d \n", daelims);
       }
 
       if( ans || ansad || extensive )
@@ -1089,7 +1087,8 @@ SCIP_RETCODE redLoopMw(
             SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
          }
 
-         SCIPdebugMessage("ans advanced 2 deleted: %d \n", degelims);
+         SCIPdebugMessage("ans advanced 2 deleted: %d (da? %d ) \n", degelims, da);
+int tuneme;
       }
 
       if( bred )
@@ -1966,7 +1965,7 @@ SCIP_RETCODE reduce(
       graph_path_exit(scip, (*graph));
       return SCIP_OKAY;
    }
-#if 1
+#if 0
    if( level == 0 )
    {
       int n = 0;
@@ -1982,8 +1981,6 @@ SCIP_RETCODE reduce(
          SCIP_CALL( degree_test_pc(scip, *graph, offset, &n, NULL, FALSE) );
          SCIP_CALL( pcgraphtrans(scip, *graph) );
       }
-
-      level0(scip, (*graph));
    }
 #endif
 

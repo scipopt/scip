@@ -57,7 +57,7 @@ int reducePcMw(
    SCIP_Real*            cost,               /**< dual ascent costs */
    SCIP_Real*            pathdist,           /**< distance array from shortest path calculations */
    SCIP_Real             minpathcost,        /**< the required reduced path cost to be surpassed */
-   int*                  result,             /**< int array */
+   const int*            result,             /**< sol int array */
    STP_Bool*             marked,             /**< edge array to mark which (directed) edge can be removed */
    STP_Bool*             nodearrchar,        /**< node array storing solution vertices */
    SCIP_Bool             solgiven            /**< is sol given? */
@@ -173,6 +173,93 @@ int reducePcMw(
    }
 
    return nfixed;
+}
+
+/** compute primal solution during dual-ascent routine */
+static
+SCIP_RETCODE computeDaSolPcMw(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   PATH*                 vnoi,               /**< Voronoi data structure */
+   SCIP_Real*            cost,               /**< dual ascent costs */
+   SCIP_Real*            pathdist,           /**< distance array from shortest path calculations */
+   SCIP_Real*            upperbound,         /**< upperbound pointer */
+   int*                  result1,            /**< sol int array */
+   int*                  result2,            /**< sol int array */
+   int*                  vbase,              /**< int array */
+   int*                  pathedge,           /**< int array */
+   int                   root,               /**< da root */
+   STP_Bool*             nodearrchar,        /**< node array storing solution vertices */
+   SCIP_Bool*            apsol               /**< ascend-prune sol? */
+)
+{
+   SCIP_Real ub;
+   const int nedges = graph->edges;
+   SCIP_Bool success;
+   SCIP_Bool tmp;
+
+   SCIP_CALL( SCIPheurAscendAndPrunePcMw(scip, NULL, graph, cost, result2, vbase, root, nodearrchar, &success, TRUE, FALSE) );
+
+   SCIP_CALL( greedyExtensionPcMw(scip, graph, graph->cost, vnoi, result2, pathedge, nodearrchar, &tmp) );
+
+   assert(graph_sol_valid(scip, graph, result2));
+
+   /* compute objective value */
+   ub = graph_computeSolVal(graph->cost, result2, 0.0, nedges);
+
+   printf("reducebnd ub new %f ub old %f\n \n", ub, *upperbound);
+
+   if( SCIPisLE(scip, ub, *upperbound) )
+   {
+      *apsol = TRUE;
+      *upperbound = ub;
+
+      SCIP_CALL( SCIPheurExclusion(scip, graph, result2, result1, result1, pathedge, nodearrchar, &success) );
+
+      ub = graph_computeSolVal(graph->cost, result1, 0.0, nedges);
+
+      printf("after1Exclusion %f %d \n", ub, success);
+
+      if( success && SCIPisLE(scip, ub, *upperbound) )
+      {
+         *upperbound = ub;
+      }
+      else
+      {
+         BMScopyMemoryArray(result1, result2, nedges);
+      }
+   }
+   else
+   {
+      *apsol = FALSE;
+
+      SCIP_CALL( SCIPheurExclusion(scip, graph, result1, result2, result2, pathedge, nodearrchar, &success));
+
+      ub = graph_computeSolVal(graph->cost, result2, 0.0, nedges);
+
+      printf("after2Exclusion %f \n", ub);
+
+      if( success && SCIPisLE(scip, ub, *upperbound) )
+      {
+         *upperbound = ub;
+         BMScopyMemoryArray(result1, result2, nedges);
+      }
+   }
+
+    SCIP_CALL( SCIPheurExclusion(scip, graph, result1, NULL, result2, pathedge, nodearrchar, &success) );
+
+    if( success )
+    {
+       printf("BETTER SOL BY EXCL %d \n", 0);
+       BMScopyMemoryArray(result1, result2, nedges);
+       *upperbound = graph_computeSolVal(graph->cost, result1, 0.0, nedges);
+    }
+
+    printf("reducebnd FINAL new %f ub old %f\n \n", ub, *upperbound);
+
+      // return SCIP_ERROR;
+
+    return SCIP_OKAY;
 }
 
 /** dual ascent based reductions */
@@ -841,14 +928,6 @@ SCIP_RETCODE da_reduce(
                   }
                }
             }
-            /* todo */
-            if( grad[k] == 4 )
-            {
-               if( SCIPisGT(scip,pathdist[k] + vnoi[k].dist + vnoi[k + nnodes].dist + vnoi[k + 2 * nnodes].dist, minpathcost) )
-               {
-                  SCIPdebugMessage("DA could eliminate 4-Vertex: %d %f min: %f \n", k, pathdist[k] + vnoi[k].dist + vnoi[k + nnodes].dist,  minpathcost);
-               }
-            }
          }
       }
 
@@ -912,8 +991,8 @@ SCIP_RETCODE da_reduceSlackPrune(
    int*                  pathedge,           /**< array for predecessor edge on a path */
    int*                  state,              /**< int 4 * nnodes array for internal computations */
    int*                  solnode,            /**< array of nodes of current solution that is not to be destroyed */
-   STP_Bool*                 nodearrchar,        /**< STP_Bool node array for internal computations  */
-   STP_Bool*                 edgearrchar,        /**< STP_Bool edge array for internal computations  */
+   STP_Bool*             nodearrchar,        /**< STP_Bool node array for internal computations  */
+   STP_Bool*             edgearrchar,        /**< STP_Bool edge array for internal computations  */
    int*                  nelims,             /**< pointer to store number of reduced edges */
    int                   minelims,           /**< minimum number of edges to eliminate */
    SCIP_Bool             solgiven            /**< solution provided? */
@@ -1443,16 +1522,15 @@ SCIP_RETCODE da_reducePcMw(
    GRAPH* transgraph;
    SCIP_Real ub;
    SCIP_Real offset;
-   SCIP_Bool success;
    SCIP_Real lpobjval;
    SCIP_Real hopfactor;
    SCIP_Real upperbound;
    SCIP_Real minpathcost;
-   SCIP_Bool apsol;
-   SCIP_Bool tmp;
    int* roots;
    int* result;
+   int* result2;
    int* transresult;
+   STP_Bool* marked;
    int i;
    int k;
    int e;
@@ -1469,7 +1547,9 @@ SCIP_RETCODE da_reducePcMw(
    int nusedroots;
    int transnnodes;
    int transnedges;
-   STP_Bool* marked;
+   SCIP_Bool tmp;
+   SCIP_Bool apsol;
+   SCIP_Bool success;
 
    assert(scip != NULL);
    assert(graph != NULL);
@@ -1500,6 +1580,8 @@ SCIP_RETCODE da_reducePcMw(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &transresult, nedges + 2 * (graph->terms - 1)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &marked, nedges + 2 * (graph->terms - 1)) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &result2, nedges) );
 
 
    /* 1. step: compute upper bound */
@@ -1576,23 +1658,9 @@ SCIP_RETCODE da_reducePcMw(
 
    SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, state, root, 1, marked, nodearrchar) );
 
-   SCIP_CALL( SCIPheurAscendAndPrunePcMw(scip, NULL, graph, cost, transresult, vbase, root, nodearrchar, &success, TRUE, FALSE) );
+   BMScopyMemoryArray(result2, result, nedges);
 
-   SCIP_CALL( greedyExtensionPcMw(scip, graph, graph->cost, vnoi, transresult, pathedge, nodearrchar, &tmp) );
-
-   assert(graph_sol_valid(scip, graph, transresult));
-
-   /* compute objective value */
-   ub = graph_computeSolVal(graph->cost, transresult, 0.0, nedges);
-
-   /* new solution better? */
-   if( SCIPisLE(scip, ub, upperbound) )
-   {
-      apsol = TRUE;
-      upperbound = ub;
-      for( e = 0; e < nedges; e++ )
-         result[e] = transresult[e];
-   }
+   SCIP_CALL( computeDaSolPcMw(scip, graph, vnoi, cost, pathdist, &upperbound, result, transresult, vbase, pathedge, root, nodearrchar, &apsol) );
 
    lpobjval += offset;
 
@@ -1647,6 +1715,8 @@ SCIP_RETCODE da_reducePcMw(
    /* try to reduce the graph */
    nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, TRUE);
 
+   printf("1. NFIXED %d \n", nfixed);
+
    assert(root == transgraph->source[0]);
 
    SCIPdebugMessage("fixed by da: %d \n", nfixed );
@@ -1667,17 +1737,38 @@ SCIP_RETCODE da_reducePcMw(
 
          SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, graph, NULL, &best_start, result, runs, root, cost, costrev, &hopfactor, NULL, 0.0, &success) );
 
-         SCIP_CALL( greedyExtensionPcMw(scip, graph, graph->cost, vnoi, transresult, pathedge, nodearrchar, &tmp) );
+         SCIP_CALL( greedyExtensionPcMw(scip, graph, graph->cost, vnoi, result, pathedge, nodearrchar, &tmp) );
 
          assert(graph_valid(transgraph));
       }
 
-      for( e = nedges; e < transgraph->edges; e++ )
-         transresult[e] = UNKNOWN;
-
       for( e = 0; e < nedges; e++ )
-         transresult[e] = result[e];
+      {
+         costrev[e] = transgraph->cost[e];
 
+         // todo random
+         if( result[e] == CONNECT )
+            transgraph->cost[e] *= 1.0 - 0.05;
+         else if( SCIPisLT(scip, transgraph->cost[e], FARAWAY) )
+            transgraph->cost[e] *= 1.0 + 0.05;
+      }
+
+      SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, state, root, 1, marked, nodearrchar) );
+
+      for( e = 0; e < transgraph->edges; e++ )
+         transgraph->cost[e] = costrev[e];
+      printf("trhough %d \n", 0);
+
+      BMScopyMemoryArray(result, result2, nedges);
+
+      SCIP_CALL( computeDaSolPcMw(scip, graph, vnoi, cost, pathdist, &upperbound, result, result2, vbase, pathedge, root, nodearrchar, &apsol) );
+
+      BMScopyMemoryArray(transresult, result, nedges);
+
+      for( e = nedges; e < transgraph->edges; e++ )
+          transresult[e] = UNKNOWN;
+
+      /* non-trivial solution */
       for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
          if( Is_term(graph->term[graph->head[e]]) && result[e] != CONNECT )
             break;
@@ -1701,35 +1792,16 @@ SCIP_RETCODE da_reducePcMw(
          }
       }
 
-      SCIP_CALL( SCIPdualAscentStpSol(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, result, state, root, 1, marked, nodearrchar) );
+      SCIP_CALL( SCIPdualAscentStpSol(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, NULL, state, root, 1, marked, nodearrchar) );
 
       lpobjval += offset;
 
-      SCIP_CALL( SCIPheurAscendAndPrunePcMw(scip, NULL, graph, cost, transresult, vbase, root, nodearrchar, &success, TRUE, FALSE) );
-
-      SCIP_CALL( greedyExtensionPcMw(scip, graph, graph->cost, vnoi, transresult, pathedge, nodearrchar, &tmp) );
-
-      assert(graph_sol_valid(scip, graph, transresult));
-
-      /* compute objective value */
-      ub = graph_computeSolVal(graph->cost, transresult, 0.0, nedges);
-
-      if( SCIPisLE(scip, ub, upperbound) )
-      {
-         apsol = TRUE;
-         upperbound = ub;
-         for( e = 0; e < nedges; e++ )
-            result[e] = transresult[e];
-      }
-      else
-      {
-         apsol = FALSE;
-      }
-
-      SCIP_CALL( SCIPheurExclusion(scip, graph, result, transresult, pathedge, nodearrchar, &success) );
+      SCIP_CALL( computeDaSolPcMw(scip, graph, vnoi, cost, pathdist, &upperbound, result, transresult, vbase, pathedge, root, nodearrchar, &apsol) );
 
       /* the required reduced path cost to be surpassed */
       minpathcost = upperbound - lpobjval;
+
+      printf("new minpathcost %f \n \n", minpathcost);
 
       for( e = 0; e < transnedges; e++ )
       {
@@ -1759,15 +1831,13 @@ SCIP_RETCODE da_reducePcMw(
 
       /* try to reduce the graph */
       nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, result, marked, nodearrchar, apsol);
+
+      printf("RERUN NFIXED %d \n", nfixed);
    }
 
    /* change roots? */
    if( varyroot || markroots )
    {
-      /* get possible roots */
-      int l;
-      int e2;
-      int e3;
 
       if( varyroot )
       {
@@ -1778,16 +1848,17 @@ SCIP_RETCODE da_reducePcMw(
          roots = NULL;
       }
 
+      /* get possible roots */
       for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
       {
          k = graph->head[e];
 
          if( Is_pterm(graph->term[k]) )
          {
-            l = -1;
-            e3 = -1;
+            int l = -1;
+            int e3 = -1;
 
-            for( e2 = transgraph->inpbeg[k]; e2 != EAT_LAST; e2 = transgraph->ieat[e2] )
+            for( int e2 = transgraph->inpbeg[k]; e2 != EAT_LAST; e2 = transgraph->ieat[e2] )
             {
                if( SCIPisZero(scip, transgraph->cost[e2]) )
                   l = transgraph->tail[e2];
@@ -1826,16 +1897,19 @@ SCIP_RETCODE da_reducePcMw(
    graph_free(scip, transgraph, TRUE);
 
    if( varyroot )
+   {
       nusedroots = MIN(DEFAULT_NMAXROOTS, nroots);
+   }
    else
+   {
       nusedroots = 0;
+   }
 
    for( run = 0; run < nusedroots; run++  )
    {
       assert(nroots > 0);
       assert(roots != NULL);
 
-      /* todo use randnum generator */
       tmproot = roots[(nterms + 2 * run) % nroots];
 
       assert(Is_term(graph->term[tmproot]));
@@ -1869,10 +1943,12 @@ SCIP_RETCODE da_reducePcMw(
 
          assert(graph_sol_valid(scip, transgraph, transresult) );
 
+         BMScopyMemoryArray(result2, transresult, nedges);
          SCIP_CALL( SCIPdualAscentStpSol(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, result, state, tmproot, 1, marked, nodearrchar) );
       }
       else
       {
+         BMScopyMemoryArray(result2, result, nedges);
          SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, state, tmproot, 1, marked, nodearrchar) );
       }
 
@@ -1883,9 +1959,23 @@ SCIP_RETCODE da_reducePcMw(
          transgraph->stp_type = STP_RPCSPG;
 
          SCIP_CALL( SCIPheurAscendAndPrune(scip, NULL, transgraph, cost, transresult, vbase, tmproot, nodearrchar, &success, TRUE, FALSE) );
+
+         /* compute objective value */
+         ub = graph_computeSolVal(graph->cost, transresult, 0.0, graph->edges);
+
+         if( SCIPisLE(scip, ub, upperbound) )
+         {
+            upperbound = ub;
+            apsol = TRUE;
+         }
+         else
+         {
+            apsol = FALSE;
+         }
       }
       else
       {
+         SCIP_Real tmpub;
          for( e = graph->outbeg[tmproot]; e != EAT_LAST; e = graph->oeat[e] )
          {
             k = graph->head[e];
@@ -1898,30 +1988,43 @@ SCIP_RETCODE da_reducePcMw(
             }
          }
 
-         SCIP_CALL( SCIPheurAscendAndPrunePcMw(scip, NULL, graph, cost, transresult, vbase, root, nodearrchar, &success, TRUE, FALSE) );
+         tmpub = upperbound;
+         SCIP_CALL( computeDaSolPcMw(scip, graph, vnoi, cost, pathdist, &tmpub, transresult, result2, vbase, pathedge, root, nodearrchar, &apsol) );
+
+         if( SCIPisLE(scip, tmpub, upperbound) )
+         {
+            upperbound = tmpub;
+            apsol = TRUE;
+         }
+         else
+         {
+            apsol = FALSE;
+         }
+#if 0
+         for( e = 0; e < transnedges; e++ )
+         {
+            // todo random
+            if( transresult[e] == CONNECT )
+               transgraph->cost[e] *= 1.0 - 0.05;
+            else
+               transgraph->cost[e] *= 1.0  + 0.05;
+         }
+
+          SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, state, tmproot, 1, marked, nodearrchar) );
+
+          SCIP_CALL( computeDaSolPcMw(scip, graph, vnoi, cost, pathdist, &upperbound, transresult, result2, vbase, pathedge, root, nodearrchar, &apsol) );
+#endif
       }
+
       for( k = 0; k < transnnodes; k++ )
          transgraph->mark[k] = (transgraph->grad[k] > 0);
 
-#if 0
-      SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, transresult, nodearrchar, &e) );
-#endif
-
-      /* compute objective value */
-      ub = graph_computeSolVal(graph->cost, transresult, 0.0, graph->edges);
-
-      if( SCIPisLE(scip, ub, upperbound) )
-      {
-         upperbound = ub;
-         apsol = TRUE;
-      }
-      else
-      {
-         apsol = FALSE;
-      }
+      printf("XXXXXOLDminpathcost %f \n \n", upperbound - lpobjval);
 
       /* the required reduced path cost to be surpassed */
       minpathcost = upperbound - lpobjval;
+
+      printf("XXXXXXnew minpathcost %f \n \n", minpathcost);
 
       for( e = 0; e < transnedges; e++ )
       {
@@ -1950,6 +2053,9 @@ SCIP_RETCODE da_reducePcMw(
       /* try to eliminate vertices and edges */
       nfixed += reducePcMw(scip, graph, transgraph, vnoi, cost, pathdist, minpathcost, transresult, marked, nodearrchar, apsol);
 
+      // todo
+      printf("NFIXED ROOTED %d \n", nfixed);
+
       graph->mark[tmproot] = e;
 
       transgraph->stp_type = STP_RPCSPG;
@@ -1960,6 +2066,7 @@ SCIP_RETCODE da_reducePcMw(
    *nelims = nfixed;
 
    /* free memory */
+   SCIPfreeBufferArrayNull(scip, &result2);
    SCIPfreeBufferArrayNull(scip, &roots);
 
    SCIPfreeBufferArray(scip, &marked);

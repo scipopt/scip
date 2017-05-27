@@ -302,7 +302,7 @@ SCIP_RETCODE SCIPheurAscendAndPrune(
    int*                  edgearrint,         /**< int edges array to store solution */
    int*                  nodearrint,         /**< int vertices array for internal computations */
    int                   root,               /**< the root (used for dual ascent) */
-   STP_Bool*                 nodearrchar,        /**< STP_Bool vertices array for internal computations */
+   STP_Bool*             nodearrchar,        /**< STP_Bool vertices array for internal computations */
    SCIP_Bool*            solfound,           /**< has a solution been found? */
    SCIP_Bool             dualascredcosts,    /**< reduced costs from dual ascent? */
    SCIP_Bool             addsol              /**< should the solution be added to SCIP by this method? */
@@ -1136,6 +1136,15 @@ SCIP_RETCODE SCIPheurAscendAndPrunePcMw(
    /* get solution on new graph by PRUNE heuristic */
    SCIP_CALL( SCIPheurPrune(scip, NULL, newgraph, newedges, &success, FALSE, TRUE) );
 
+   PATH* path;
+   SCIP_Bool dummy;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &path, newgraph->knots) );
+
+   SCIP_CALL( greedyExtensionPcMw(scip, newgraph, newgraph->cost, path, newedges, nodechild, nodearrchar, &dummy) );
+
+   SCIPfreeBufferArray(scip, &path);
+
    assert(graph_sol_valid(scip, newgraph, newedges));
 
    graph_path_exit(scip, newgraph);
@@ -1146,7 +1155,9 @@ SCIP_RETCODE SCIPheurAscendAndPrunePcMw(
       goto TERMINATE;
    }
 
-   /* re-transform solution found by prune heuristic */
+   /* re-transform solution found by prune heuristic
+    *
+    * NOTE: actually not necessary */
 
    ancestors = newgraph->ancestors;
 
@@ -1159,6 +1170,7 @@ SCIP_RETCODE SCIPheurAscendAndPrunePcMw(
       {
          /* iterate through list of ancestors */
          curr = ancestors[e];
+
          while( curr != NULL )
          {
             i = edgeancestor[curr->index];

@@ -45,7 +45,8 @@ extern
 SCIP_RETCODE SCIPheurExclusion(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph structure */
-   const int*            result,             /**< edge solution array (UNKNOWN/CONNECT) */
+   int*                  result,             /**< edge solution array (UNKNOWN/CONNECT) */
+   int*                  result2,            /**< second edge solution array or NULL */
    int*                  newresult,          /**< new edge solution array (UNKNOWN/CONNECT) */
    int*                  dnodemap,           /**< node array for internal use */
    STP_Bool*             stvertex,           /**< node array for internally marking solution vertices */

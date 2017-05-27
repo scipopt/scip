@@ -1794,7 +1794,7 @@ SCIP_RETCODE extendSteinerTreePcMw(
    }
 
    /* have vertices been added? */
-   if( *adds > 0  )
+   if( *adds > 0 )
    {
       SCIPdebugMessage("\n vertices added! \n");
       for( e = 0; e < nedges; e++ )
@@ -1831,6 +1831,8 @@ SCIP_RETCODE greedyExtensionPcMw(
    int greedyextensions;
    STP_Bool* stvertextmp;
 
+   int tune_me;
+
    assert(scip != NULL);
    assert(path != NULL);
    assert(graph != NULL);
@@ -1865,10 +1867,7 @@ SCIP_RETCODE greedyExtensionPcMw(
            if( stedge[e] == CONNECT )
               t += graph->cost[e];
 
-printf("init real cost %f \n\n", t);
-
    graph_path_st_pcmw_extend(scip, graph, cost, path, stvertex, extensions);
-
 
    if( graph->stp_type == STP_MWCSP )
       greedyextensions = GREEDY_EXTENSIONS_MW;
@@ -1935,15 +1934,10 @@ printf("init real cost %f \n\n", t);
       }
    }
 
-   printf("n possible extensions %d \n", nextensions);
-   printf("bestsolval %f \n \n", bestsolval);
-
    for( int restartcount = 0; restartcount < GREEDY_MAXRESTARTS;  restartcount++ )
    {
       int l = 0;
       SCIP_Bool extensionstmp = FALSE;
-
-      printf("runnumber %d \n", restartcount);
 
       i = nextensions;
 
@@ -2007,8 +2001,6 @@ printf("init real cost %f \n\n", t);
                }
             }
 
-            printf("newsolval %f \n", newsolval);
-
             /* new solution value better than old one? */
             if( SCIPisLT(scip, newsolval, bestsolval) )
             {
@@ -2017,9 +2009,6 @@ printf("init real cost %f \n\n", t);
 
                bestsolval = newsolval;
                BMScopyMemoryArray(stvertex, stvertextmp, nnodes);
-
-               //todo
-               printf("got better \n\n");
 
                /* save greedyextensions many best unconnected nodes  */
                nextensions = 0;
@@ -2060,7 +2049,6 @@ printf("init real cost %f \n\n", t);
          break;
    } /* main loop */
 
-
    /* have vertices been added? */
    if( *extensions )
    {
@@ -2073,17 +2061,14 @@ printf("init real cost %f \n\n", t);
    SCIPpqueueFree(&pqueue);
    SCIPfreeBufferArray(scip, &stvertextmp);
 
-
-// todo
+#if DEBUG
    t = 0.0;
       for( int e = 0; e < nedges; e++ )
               if( stedge[e] == CONNECT )
                  t += graph->cost[e];
 
    printf("exit real cost %f \n\n", t);
-
-
-
+#endif
 
    return SCIP_OKAY;
 }

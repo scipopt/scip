@@ -932,7 +932,6 @@ SCIP_RETCODE rptReduction(
    return SCIP_OKAY;
 }
 
-#if 1
 /** basic reduction tests for the MWCS problem */
 SCIP_RETCODE degree_test_mw(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1188,7 +1187,6 @@ SCIP_RETCODE degree_test_mw(
             if( !Is_term(g->term[g->head[e]]) )
             {
                SCIP_CALL( trydg1edgepc(scip, g, fixed, NULL, count, i, e, &rerun) );
-
                continue;
             }
          }
@@ -1232,169 +1230,7 @@ SCIP_RETCODE degree_test_mw(
 
    return SCIP_OKAY;
 }
-#else
 
-/** basic reduction tests for the MWCS problem */
-SCIP_RETCODE degree_test_mw(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                g,                  /**< graph data structure */
-   int*                  solnode,
-   SCIP_Real*            fixed,              /**< pointer to offfset value */
-   int*                  count               /**< pointer to number of reductions */
-   )
-{
-   int i;
-   int e;
-   int i1;
-   int i2;
-   int e1;
-   int e2;
-   int nnodes;
-   int nedges;
-   SCIP_Bool rerun = TRUE;
-
-   assert(g      != NULL);
-   assert(fixed  != NULL);
-   assert(count != NULL);
-   assert(g->stp_type == STP_MWCSP);
-
-   nnodes = g->knots;
-   nedges = g->edges;
-
-   SCIPdebugMessage("MW degree test: \n");
-
-   /* main loop */
-   while( rerun )
-   {
-      rerun = FALSE;
-
-      /* contract adjacent positive vertices */
-      for( e = 0; e < nedges; e += 2 )
-      {
-         if( g->ieat[e] == EAT_FREE )
-            continue;
-
-         i1 = g->tail[e];
-         i2 = g->head[e];
-
-         if( g->mark[i1] && g->mark[i2] && Is_term(g->term[i1]) && Is_term(g->term[i2]) )
-         {
-            SCIPdebugMessage("contract tt %d->%d\n ", i1, i2);
-            (*count)++;
-            SCIP_CALL(graph_knot_contractpc(scip, g, NULL, i1, i2, i1));
-         }
-      }
-
-      /* main loop for remaining tests */
-      for( i = 0; i < nnodes; i++ )
-      {
-         assert(g->grad[i] >= 0);
-         if( !g->mark[i] || g->grad[i] == 0 )
-            continue;
-
-         /* non-positive vertex? */
-         if( !Is_term(g->term[i]) )
-         {
-            if( g->grad[i] == 1 )
-            {
-               e1 = g->inpbeg[i];
-               i1 = g->tail[e1];
-               assert(e1 >= 0);
-               assert(e1 == Edge_anti(g->outbeg[i]));
-               assert(g->ieat[e1] == EAT_LAST);
-               assert(g->oeat[g->outbeg[i]] == EAT_LAST);
-               assert(SCIPisLE(scip, g->prize[i], 0.0));
-
-               graph_edge_del(scip, g, e1, TRUE);
-               SCIPdebugMessage("delete negative vertex of degree 1 (%d)\n ",  i);
-               assert(g->grad[i] == 0);
-
-               if( (i1 < i) && (g->grad[i1] < 3 || (g->grad[i1] == 3 && Is_term(g->term[i1]))) )
-                  rerun = TRUE;
-
-               (*count)++;
-               continue;
-            }
-
-            /* contract non-positive chains */
-            if( g->grad[i] == 2 )
-            {
-               int f1 = -1;
-               int f2 = -1;
-               int length = 0;
-
-               e1 = g->outbeg[i];
-               e2 = g->oeat[e1];
-               i1 = g->head[e1];
-               i2 = g->head[e2];
-
-               assert(e1 >= 0);
-               assert(e2 >= 0);
-               assert(i1 != i2);
-               assert(g->mark[i1]);
-               assert(g->mark[i2]);
-
-               SCIP_CALL( traverseChain(scip, g, &length, &f1, i, i1, i2, e1) );
-               SCIP_CALL( traverseChain(scip, g, &length, &f2, i, i2, i1, e2) );
-
-               if( f1 == f2 )
-               {
-                  while( g->outbeg[i] != EAT_LAST )
-                     graph_edge_del(scip, g, g->outbeg[i], TRUE);
-               }
-               else if( length > 0 )
-               {
-                  assert(g->grad[i] <= 2);
-
-                  for( e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
-                     g->cost[e] = -g->prize[i];
-
-                  e1 = g->outbeg[i];
-                  e2 = g->oeat[e1];
-
-                  (*count) += length;
-               }
-            }
-            continue;
-         }
-
-         /* node i is of positive weight (terminal): */
-
-         /* terminal of (real) degree 0? */
-         if( g->grad[i] == 2 )
-         {
-            /* if terminal node i is not the one with the highest prize, delete */
-            if( !maxprize(scip, g, i) )
-            {
-               SCIPdebugMessage("delete degree 0 term %d prize: %f count:%d\n ", i, g->prize[i], *count);
-               (*fixed) += g->prize[i];
-               (*count) += deleteterm(scip, g, i);
-            }
-         }
-         /* terminal of (real) degree 1? */
-         else if( g->grad[i] == 3 )
-         {
-            for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-               if( g->mark[g->head[e]] )
-                  break;
-
-            assert(e != EAT_LAST);
-            assert(g->head[e] != g->source[0]);
-
-            if( !Is_term(g->term[g->head[e]]) )
-            {
-               SCIP_CALL( trydg1edgepc(scip, g, fixed, NULL, count, i, e, &rerun) );
-               continue;
-            }
-         }
-      }
-   }
-
-   SCIPdebugMessage("MW basic reduction package has deleted %d edges\n", *count);
-
-   return SCIP_OKAY;
-}
-#endif
 /** basic reduction tests for the HCDSTP */
 SCIP_RETCODE degree_test_hc(
    SCIP*                 scip,               /**< SCIP data structure */

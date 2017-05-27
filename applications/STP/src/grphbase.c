@@ -1278,10 +1278,14 @@ SCIP_RETCODE graph_PcRSapCopy(
    SCIP_CALL( SCIPallocMemoryArray(scip, &((*newgraph)->prize), nnodes) );
 
    for( k = 0; k < nnodes; k++)
-      if( k >= graph->norgmodelknots )
-         p->prize[k] = 0.0;
-      else
+   {
+      if( k < graph->norgmodelknots )
+      {
          p->prize[k] = graph->prize[k];
+      }
+      else
+         p->prize[k] = 0.0;
+   }
 
    if( nrootcands > 0 )
    {
@@ -1604,6 +1608,9 @@ SCIP_RETCODE graph_MwToRmw(
          graph_edge_del(scip, graph, graph->outbeg[root], TRUE);
 
       graph->stp_type = STP_RMWCSP;
+
+      // todo
+      printf("new problem type: STP_RMWCSP \n \n \n");
    }
 
    return SCIP_OKAY;
