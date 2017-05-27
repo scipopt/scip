@@ -35,6 +35,8 @@
 #define BD3_BOUND     400          /**< visited edges bound for BD3 test  */
 #define EXTENSIVE FALSE
 
+#define SCIP_DEBUG
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
