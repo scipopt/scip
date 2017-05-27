@@ -1520,6 +1520,7 @@ SCIP_RETCODE da_reducePcMw(
 {
    SCIP_HEURDATA* tmheurdata;
    GRAPH* transgraph;
+   SCIP_Real* transcost;
    SCIP_Real ub;
    SCIP_Real offset;
    SCIP_Real lpobjval;
@@ -1742,21 +1743,66 @@ SCIP_RETCODE da_reducePcMw(
          assert(graph_valid(transgraph));
       }
 
-      for( e = 0; e < nedges; e++ )
-      {
-         costrev[e] = transgraph->cost[e];
+      BMSclearMemoryArray(nodearrchar, nnodes);
 
-         // todo random
-         if( result[e] == CONNECT )
-            transgraph->cost[e] *= 1.0 - 0.05;
-         else if( SCIPisLT(scip, transgraph->cost[e], FARAWAY) )
-            transgraph->cost[e] *= 1.0 + 0.05;
+      SCIP_CALL( SCIPallocMemoryArray(scip, &transcost, transgraph->edges) );
+
+      BMScopyMemoryArray(transcost, transgraph->cost, transgraph->edges);
+
+      /* mark all vertices visited in regular graph */
+      for( e = 0; e < nedges; e++ )
+         if( result[e] == CONNECT && graph->tail[e] != root )
+            nodearrchar[graph->head[e]] = TRUE;
+
+      for( k = 0; k < nnodes; k++ )
+      {
+         assert(Is_gterm(graph->term[k]) == Is_gterm(transgraph->term[k]));
+
+         if( !Is_gterm(graph->term[k]) )
+         {
+            if( nodearrchar[k] )
+            {
+               for( e = transgraph->inpbeg[k]; e != EAT_LAST; e = transgraph->ieat[e] )
+                  transgraph->cost[e] *= 1.0 - 0.05;
+            }
+            else
+            {
+               for( e = transgraph->inpbeg[k]; e != EAT_LAST; e = transgraph->ieat[e] )
+                  transgraph->cost[e] *= 1.0 + 0.05;
+            }
+         }
+         else if( Is_term(transgraph->term[k]) && k != root )
+         {
+            assert(transgraph->grad[k] == 2);
+
+            if( nodearrchar[k] )
+            {
+               for( e = transgraph->inpbeg[k]; e != EAT_LAST; e = transgraph->ieat[e] )
+                  if( SCIPisPositive(scip, transgraph->cost[e]) )
+                  {
+                     assert(!Is_pterm(transgraph->term[transgraph->tail[e]]));
+
+                     transgraph->cost[e] *= 1.0 + 0.05;
+                  }
+            }
+            else
+            {
+               for( e = transgraph->inpbeg[k]; e != EAT_LAST; e = transgraph->ieat[e] )
+                  if( SCIPisPositive(scip, transgraph->cost[e]) )
+                  {
+                     assert(!Is_pterm(transgraph->term[transgraph->tail[e]]));
+                     transgraph->cost[e] *= 1.0 - 0.05;
+                  }
+            }
+         }
       }
 
       SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, state, root, 1, marked, nodearrchar) );
 
-      for( e = 0; e < nedges; e++ )
-         transgraph->cost[e] = costrev[e];
+      BMScopyMemoryArray(transgraph->cost, transcost, transgraph->edges);
+
+      SCIPfreeMemoryArray(scip, &transcost);
+
       printf("trhough %d \n", 0);
 
       BMScopyMemoryArray(result, result2, nedges);
