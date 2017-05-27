@@ -1755,7 +1755,7 @@ SCIP_RETCODE da_reducePcMw(
 
       SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, state, root, 1, marked, nodearrchar) );
 
-      for( e = 0; e < transgraph->edges; e++ )
+      for( e = 0; e < nedges; e++ )
          transgraph->cost[e] = costrev[e];
       printf("trhough %d \n", 0);
 
