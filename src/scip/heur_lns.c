@@ -1618,7 +1618,7 @@ SCIP_RETCODE neighborhoodFixVariables(
 
    *nfixings = 0;
 
-   *result = SCIP_SUCCESS;
+   *result = SCIP_DIDNOTRUN;
 
    if( neighborhood->varfixings != NULL )
    {
@@ -1628,20 +1628,23 @@ SCIP_RETCODE neighborhoodFixVariables(
          return SCIP_OKAY;
    }
 
-   /** if too few fixings, use a strategy to select more variable fixings: randomized, LP graph, ReducedCost/Ps-Cost based, mix */
-   ntargetfixings = (int)(neighborhood->fixingrate.targetfixingrate * (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)));
+   assert(neighborhood->varfixings == NULL || *result != SCIP_DIDNOTRUN);
 
+   ntargetfixings = (int)(neighborhood->fixingrate.targetfixingrate * (SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip)));
    SCIPdebugMsg(scip, "Neighborhood Fixings/Target: %d / %d\n",*nfixings, ntargetfixings);
 
-   if( *result == SCIP_SUCCESS && (*nfixings < ntargetfixings) )
+   /** if too few fixings, use a strategy to select more variable fixings: randomized, LP graph, ReducedCost/Ps-Cost based, mix */
+   if( (*result == SCIP_SUCCESS || *result == SCIP_DIDNOTRUN) && (*nfixings < ntargetfixings) )
    {
       SCIP_Bool success;
       SCIP_CALL( lnsFixMoreVariables(scip, heurdata, varbuf, valbuf, nfixings, ntargetfixings, &success) );
 
       if( success )
          *result = SCIP_SUCCESS;
-      else
+      else if( *result == SCIP_SUCCESS )
          *result = SCIP_DIDNOTFIND;
+      else
+         *result = SCIP_DIDNOTRUN;
 
       SCIPdebugMsg(scip, "After additional fixings: %d / %d\n",*nfixings, ntargetfixings);
    }
