@@ -1516,7 +1516,7 @@ SCIP_RETCODE SCIPheurExclusion(
          return SCIP_ERROR;
       }
 
-   if( cc != graph_computeSolVal(graph->cost, result, 0.0, nedges) )
+   if( !SCIPisEQ(scip, cc, graph_computeSolVal(graph->cost, result, 0.0, nedges)) )
    {
       printf("fail2 %f %f \n", cc, graph_computeSolVal(graph->cost, result, 0.0, nedges));
       return SCIP_ERROR;
@@ -1946,8 +1946,6 @@ SCIP_RETCODE SCIPheurExclusion(
    graph_free(scip, newgraph, TRUE);
 
 #ifdef DEBUG
-   printf("IN REC: new solval %f old solval %f \n", graph_computeSolVal(graph->cost, newresult, 0.0, nedges),  graph_computeSolVal(graph->cost, result, 0.0, nedges));
-
    if( !graph_sol_valid(scip, graph, newresult) )
    {
       printf("invalid sol in REC \n");

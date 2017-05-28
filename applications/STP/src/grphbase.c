@@ -827,7 +827,7 @@ SCIP_RETCODE graph_prize_transform(
 SCIP_RETCODE graph_RerootSol(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
-   int*                  result,            /**< solution array (CONNECT/UNKNOWN) */
+   int*                  result,             /**< solution array (CONNECT/UNKNOWN) */
    int                   newroot             /**< the new root */
    )
 {

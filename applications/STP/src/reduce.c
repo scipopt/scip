@@ -35,7 +35,7 @@
 #define BD3_BOUND     400          /**< visited edges bound for BD3 test  */
 #define EXTENSIVE FALSE
 
-#define SCIP_DEBUG
+//#define SCIP_DEBUG
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -895,7 +895,7 @@ SCIP_RETCODE redLoopMw(
    int*                  nodearrint2,
    int*                  nodearrint3,
    int*                  solnode,            /**< array to indicate whether a node is part of the current solution (==CONNECT) */
-   STP_Bool*              nodearrchar,
+   STP_Bool*             nodearrchar,
    SCIP_Real*            fixed,              /**< pointer to store the offset value */
    STP_Bool              advanced,
    STP_Bool              bred,
@@ -947,32 +947,6 @@ SCIP_RETCODE redLoopMw(
 
    SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
 
-   // todo delete
-#if 0
-   if( advanced )
-   {
-      int k;
-      int l = 0;
-      int l4 = 0;
-      int l5 = 0;
-
-      for (k = 0; k < g->knots; ++k)
-      {
-         if( g->grad[k] <= 3 )
-            l++;
-         if( g->grad[k] == 4 )
-            l4++;
-         if( g->grad[k] >= 5 )
-            l5++;
-
-      }
-      printf("l <= 3 %d \n", l);
-      printf("l == 4 %d \n", l4);
-      printf("l >= 5 %d \n", l5);
-      printf("terms %d \n", g->terms);
-   }
-#endif
-
    while( rerun && !SCIPisStopped(scip) )
    {
       daelims = 0;
@@ -1020,6 +994,8 @@ SCIP_RETCODE redLoopMw(
 
       if( (da || (advanced && extensive)) )
       {
+
+         //printf("OFFSET %f \n \n", *fixed);
 
          SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, FALSE, FALSE, FALSE) );
 
@@ -1086,10 +1062,10 @@ SCIP_RETCODE redLoopMw(
          }
          else
          {
-            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &degelims) );
+            SCIP_CALL( degree_test_mw(scip, g, solnode, fixed, &ansad2elims) );
          }
 
-         SCIPdebugMessage("ans advanced 2 deleted: %d (da? %d ) \n", degelims, da);
+         SCIPdebugMessage("ans advanced 2 deleted: %d (da? %d ) \n", ansad2elims, da);
 int tuneme;
       }
 
