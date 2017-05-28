@@ -366,6 +366,7 @@ struct SCIP_EventData
    SCIP_HEUR*            heur;               /**< lns heuristic structure */
    SCIP_Longint          nodelimit;
    SCIP_Real             lplimfac;           /**< limit fraction of LPs per node to interrupt sub-SCIP */
+   NH_STATS*             runstats;           /**< run statistics for the current neighborhood */
 };
 
 /** represents limits for the sub-SCIP solving process */
@@ -1110,6 +1111,8 @@ SCIP_RETCODE transferSolution(
    SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
    SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
    SCIP_Bool  success;
+   NH_STATS*  runstats;
+   SCIP_SOL*  oldbestsol;
 
    assert(subscip != NULL);
 
@@ -1119,10 +1122,12 @@ SCIP_RETCODE transferSolution(
    sourcescip = eventdata->sourcescip;
    subvars = eventdata->subvars;
    heur = eventdata->heur;
+   runstats = eventdata->runstats;
    assert(sourcescip != NULL);
    assert(sourcescip != subscip);
    assert(heur != NULL);
    assert(subvars != NULL);
+   assert(runstats != NULL);
 
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(sourcescip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -1140,8 +1145,16 @@ SCIP_RETCODE transferSolution(
    SCIP_CALL( SCIPcreateSol(sourcescip, &newsol, heur) );
    SCIP_CALL( SCIPsetSolVals(sourcescip, newsol, nvars, vars, subsolvals) );
 
+   oldbestsol = SCIPgetBestSol(sourcescip);
    /* try to add new solution to scip and free it immediately */
    SCIP_CALL( SCIPtrySolFree(sourcescip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
+
+   if( success )
+   {
+      runstats->nsolsfound++;
+      if( SCIPgetBestSol(sourcescip) != oldbestsol )
+         runstats->nbestsolsfound++;
+   }
 
    SCIPfreeBufferArray(sourcescip, &subsolvals);
 
@@ -1194,8 +1207,8 @@ void initRunStats(
    NH_STATS*             stats               /**< run statistics */
    )
 {
-   stats->nbestsolsfound = -SCIPgetNBestSolsFound(scip);
-   stats->nsolsfound = -SCIPgetNSolsFound(scip);
+   stats->nbestsolsfound = 0;
+   stats->nsolsfound = 0;
    stats->lpiterations = 0L;
    stats->usednodes = 0L;
    stats->totalnfixings = 0;
@@ -1213,8 +1226,6 @@ void updateRunStats(
    if( subscip != NULL && !SCIPisTransformed(subscip) )
       subscip = NULL;
 
-   stats->nbestsolsfound += SCIPgetNBestSolsFound(scip);
-   stats->nsolsfound += SCIPgetNSolsFound(scip);
    stats->lpiterations = subscip != NULL ? SCIPgetNLPIterations(subscip) : 0L;
    stats->usednodes = subscip != NULL ? SCIPgetNNodes(subscip) : 0L;
 }
@@ -2195,6 +2206,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       eventdata.heur = heur;
       eventdata.sourcescip = scip;
       eventdata.subvars = subvars;
+      eventdata.runstats = &runstats;
 
       /* include an event handler to transfer solutions into the main SCIP */
       SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecLns, NULL) );
