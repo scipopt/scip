@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define SCIP_DEBUG
 /**@file   heur_lns.c
  * @brief  "Large neighborhood search heuristic that orchestrates the popular neighborhoods Local Branching, RINS, RENS, DINS etc."
  * @author Gregor Hendel
@@ -89,38 +89,47 @@
 #define DEFAULT_MINFIXINGRATE_RENS 0.3
 #define DEFAULT_MAXFIXINGRATE_RENS 0.7
 #define DEFAULT_ACTIVE_RENS TRUE
+#define DEFAULT_PRIORITY_RENS 1.0
 
 #define DEFAULT_MINFIXINGRATE_RINS 0.2
 #define DEFAULT_MAXFIXINGRATE_RINS 0.6
 #define DEFAULT_ACTIVE_RINS TRUE
+#define DEFAULT_PRIORITY_RINS 1.0
 
 #define DEFAULT_MINFIXINGRATE_MUTATION 0.4
 #define DEFAULT_MAXFIXINGRATE_MUTATION 0.9
 #define DEFAULT_ACTIVE_MUTATION TRUE
+#define DEFAULT_PRIORITY_MUTATION 1.0
 
 #define DEFAULT_MINFIXINGRATE_GINS 0.3
 #define DEFAULT_MAXFIXINGRATE_GINS 0.5
 #define DEFAULT_ACTIVE_GINS TRUE
+#define DEFAULT_PRIORITY_GINS 1.0
 
 #define DEFAULT_MINFIXINGRATE_LOCALBRANCHING 0.0
 #define DEFAULT_MAXFIXINGRATE_LOCALBRANCHING 0.9
 #define DEFAULT_ACTIVE_LOCALBRANCHING TRUE
+#define DEFAULT_PRIORITY_LOCALBRANCHING 1.0
 
 #define DEFAULT_MINFIXINGRATE_PROXIMITY 0.0
 #define DEFAULT_MAXFIXINGRATE_PROXIMITY 0.9
 #define DEFAULT_ACTIVE_PROXIMITY TRUE
+#define DEFAULT_PRIORITY_PROXIMITY 1.0
 
 #define DEFAULT_MINFIXINGRATE_CROSSOVER 0.4
 #define DEFAULT_MAXFIXINGRATE_CROSSOVER 0.9
 #define DEFAULT_ACTIVE_CROSSOVER TRUE
+#define DEFAULT_PRIORITY_CROSSOVER 1.0
 
 #define DEFAULT_MINFIXINGRATE_ZEROOBJECTIVE 0.0
 #define DEFAULT_MAXFIXINGRATE_ZEROOBJECTIVE 0.9
 #define DEFAULT_ACTIVE_ZEROOBJECTIVE TRUE
+#define DEFAULT_PRIORITY_ZEROOBJECTIVE 1.0
 
 #define DEFAULT_MINFIXINGRATE_DINS 0.1
 #define DEFAULT_MAXFIXINGRATE_DINS 0.5
 #define DEFAULT_ACTIVE_DINS TRUE
+#define DEFAULT_PRIORITY_DINS 1.0
 
 #define DEFAULT_NSOLS_CROSSOVER 2 /**< parameter for the number of solutions that crossover should combine */
 #define DEFAULT_NPOOLSOLS_DINS 5 /**< number of pool solutions where binary solution values must agree */
@@ -263,6 +272,7 @@ struct Nh
    DECL_NHEXIT           ((*nhexit));        /**< deinitialization callback when exiting a problem */
    DECL_NHFREE           ((*nhfree));        /**< deinitialization callback before SCIP is freed */
    SCIP_Bool             active;             /**< is this neighborhood active or not? */
+   SCIP_Real             priority;           /**< positive call priority to initialize bandit algorithms */
    union
    {
       DATA_MUTATION*     mutation;           /**< mutation data */
@@ -596,6 +606,7 @@ SCIP_RETCODE lnsIncludeNeighborhood(
    SCIP_Real             minfixingrate,      /**< default value for minfixingrate parameter of this neighborhood */
    SCIP_Real             maxfixingrate,      /**< default value for maxfixingrate parameter of this neighborhood */
    SCIP_Bool             active,             /**< default value for active parameter of this neighborhood */
+   SCIP_Real             priority,           /**< positive call priority to initialize bandit algorithms */
    DECL_VARFIXINGS       ((*varfixings)),    /**< variable fixing callback for this neighborhood, or NULL */
    DECL_CHANGESUBSCIP    ((*changesubscip)), /**< subscip changes callback for this neighborhood, or NULL */
    DECL_SETUPSUBSCIP     ((*setupsubscip)),  /**< setup callback for this neighborhood, or NULL */
@@ -636,6 +647,9 @@ SCIP_RETCODE lnsIncludeNeighborhood(
    sprintf(paramname, "heuristics/lns/%s/active", name);
    SCIP_CALL( SCIPaddBoolParam(scip, paramname, "is this neighborhood active?",
          &(*neighborhood)->active, TRUE, active, NULL, NULL) );
+   sprintf(paramname, "heuristics/lns/%s/priority", name);
+   SCIP_CALL( SCIPaddRealParam(scip, paramname, "positive call priority to initialize bandit algorithms",
+         &(*neighborhood)->priority, TRUE, priority, 1e-2, 1.0, NULL, NULL) );
 
    heurdata->neighborhoods[heurdata->nneighborhoods++] = (*neighborhood);
 
@@ -712,18 +726,31 @@ SCIP_RETCODE neighborhoodExit(
 /** reset an epsilon greedy selector */
 static
 void epsGreedyReset(
-   EPSGREEDY*            epsgreedy           /**< epsilon greedy bandit algorithm */
+   EPSGREEDY*            epsgreedy,          /**< epsilon greedy bandit algorithm */
+   SCIP_Real*            priorities          /**< positive call priorities for every action */
    )
 {
    int w;
    SCIP_Real* weights;
+   SCIP_Real priosum;
+   SCIP_Real normalization;
 
    weights = epsgreedy->weights;
    assert(weights != NULL);
+   assert(priorities != NULL);
+   assert(epsgreedy->nactions > 0);
+
+   priosum = priorities[0];
+   /* compute priority sum for normalization */
+   for( w = 1; w < epsgreedy->nactions; ++w )
+      priosum += priorities[w];
+
+   /* use 0.2 as the standard epsilon greedy weight for uninitialized neighborhoods */
+   normalization = 0.2 * epsgreedy->nactions / priosum;
 
    /* reset weights */
    for( w = 0; w < epsgreedy->nactions; ++w )
-      weights[w] = 0.2;
+      weights[w] = priorities[w] * normalization;
 }
 
 /** create an epsilon greedy selector with the necessary callbacks */
@@ -731,6 +758,7 @@ static
 SCIP_RETCODE epsGreedyCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    EPSGREEDY**           epsgreedy,          /**< pointer to store the epsilon greedy bandit algorithm */
+   SCIP_Real*            priorities,         /**< positive call priorities for every action */
    SCIP_Real             eps,                /**< probability for exploration between all actions */
    int                   nactions,           /**< the number of possible actions */
    unsigned int          initseed            /**< initial seed for random number generation */
@@ -753,7 +781,7 @@ SCIP_RETCODE epsGreedyCreate(
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*epsgreedy)->weights, nactions) );
 
-   epsGreedyReset(*epsgreedy);
+   epsGreedyReset(*epsgreedy, priorities);
 
    return SCIP_OKAY;
 }
@@ -848,26 +876,37 @@ void epsGreedyUpdate(
    epsgreedy->weights[i] += 0.1 * gain;
 }
 
-/** reset an exp3 bandit algorithm */
+/** reset exp3 bandit algorithm */
 static
 SCIP_RETCODE expThreeReset(
    SCIP*                 scip,               /**< SCIP data structure */
    EXPTHREE*             exp3,               /**< the exp3 algorithm */
+   SCIP_Real*            priorities,         /**< positive call priorities for every action */
    unsigned int          randseed            /**< initial random seed */
    )
 {
    int i;
+   SCIP_Real priosum;
+   SCIP_Real normalization;
    assert(exp3->nactions > 0);
+   assert(priorities != NULL);
 
    exp3->ndraws = 0;
+
+   priosum = 0.0;
+   /* compute sum of priorities */
+   for( i = 0; i < exp3->nactions; ++i )
+      priosum += priorities[i];
+
+   exp3->weightsum = (SCIP_Real)exp3->nactions;
+   normalization = exp3->weightsum / priosum;
 
    /* initialize weights */
    for( i = 0; i < exp3->nactions; ++i )
    {
-      exp3->weights[i] = 1.0;
+      exp3->weights[i] = priorities[i] * normalization;
       exp3->cumulativegain[i] = 0.0;
    }
-   exp3->weightsum = (SCIP_Real)exp3->nactions;
 
 
    /* author bzfhende: TODO reset random number generator */
@@ -881,11 +920,12 @@ SCIP_RETCODE expThreeReset(
    return SCIP_OKAY;
 }
 
-/** create an exp3 bandit algorithm */
+/** create exp3 bandit algorithm */
 static
 SCIP_RETCODE expThreeCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    EXPTHREE**            exp3,               /**< pointer to store the exp3 algorithm */
+   SCIP_Real*            priorities,         /**< positive call priorities for every action */
    unsigned int          initseed,           /**< initial seed for the exp3 algorithm */
    int                   nactions,           /**< the number of actions */
    SCIP_Real             gammaparam,         /**< weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution */
@@ -906,7 +946,7 @@ SCIP_RETCODE expThreeCreate(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*exp3)->weights, nactions) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*exp3)->cumulativegain, nactions) );
 
-   SCIP_CALL( expThreeReset(scip, *exp3, initseed) );
+   SCIP_CALL( expThreeReset(scip, *exp3, priorities, initseed) );
 
    return SCIP_OKAY;
 }
@@ -2996,27 +3036,28 @@ SCIP_RETCODE includeNeighborhoods(
 
    /* include the RENS neighborhood */
    SCIP_CALL( lnsIncludeNeighborhood(scip, heurdata, &rens, "rens",
-         DEFAULT_MINFIXINGRATE_RENS, DEFAULT_MAXFIXINGRATE_RENS, DEFAULT_ACTIVE_RENS,
+         DEFAULT_MINFIXINGRATE_RENS, DEFAULT_MAXFIXINGRATE_RENS, DEFAULT_ACTIVE_RENS, DEFAULT_PRIORITY_RENS,
          varFixingsRens, changeSubscipRens, NULL, NULL, NULL, NULL) );
 
    /* include the RINS neighborhood */
    SCIP_CALL( lnsIncludeNeighborhood(scip, heurdata, &rins, "rins",
-         DEFAULT_MINFIXINGRATE_RINS, DEFAULT_MAXFIXINGRATE_RINS, DEFAULT_ACTIVE_RINS,
+         DEFAULT_MINFIXINGRATE_RINS, DEFAULT_MAXFIXINGRATE_RINS, DEFAULT_ACTIVE_RINS, DEFAULT_PRIORITY_RINS,
          varFixingsRins, NULL, NULL, NULL, NULL, NULL) );
 
    /* include the mutation neighborhood */
    SCIP_CALL( lnsIncludeNeighborhood(scip, heurdata, &mutation, "mutation",
-         DEFAULT_MINFIXINGRATE_MUTATION, DEFAULT_MAXFIXINGRATE_MUTATION, DEFAULT_ACTIVE_MUTATION,
+         DEFAULT_MINFIXINGRATE_MUTATION, DEFAULT_MAXFIXINGRATE_MUTATION, DEFAULT_ACTIVE_MUTATION, DEFAULT_PRIORITY_MUTATION,
          varFixingsMutation, NULL, NULL, nhInitMutation, nhExitMutation, NULL) );
 
    /* include the local branching neighborhood */
    SCIP_CALL( lnsIncludeNeighborhood(scip, heurdata, &localbranching, "localbranching",
-         DEFAULT_MINFIXINGRATE_LOCALBRANCHING, DEFAULT_MAXFIXINGRATE_LOCALBRANCHING, DEFAULT_ACTIVE_LOCALBRANCHING,
+         DEFAULT_MINFIXINGRATE_LOCALBRANCHING, DEFAULT_MAXFIXINGRATE_LOCALBRANCHING, DEFAULT_ACTIVE_LOCALBRANCHING, DEFAULT_PRIORITY_LOCALBRANCHING,
          NULL, changeSubscipLocalbranching, NULL, NULL, NULL, NULL) );
 
    /* include the crossover neighborhood */
    SCIP_CALL( lnsIncludeNeighborhood(scip, heurdata, &crossover, "crossover",
-         DEFAULT_MINFIXINGRATE_CROSSOVER, DEFAULT_MAXFIXINGRATE_CROSSOVER, DEFAULT_ACTIVE_CROSSOVER, varFixingsCrossover, NULL, NULL,
+         DEFAULT_MINFIXINGRATE_CROSSOVER, DEFAULT_MAXFIXINGRATE_CROSSOVER, DEFAULT_ACTIVE_CROSSOVER, DEFAULT_PRIORITY_CROSSOVER,
+         varFixingsCrossover, NULL, NULL,
          nhInitCrossover, nhExitCrossover, nhFreeCrossover) );
    SCIP_CALL( SCIPallocBlockMemory(scip, &crossover->data.crossover) );
    crossover->data.crossover->rng = NULL;
@@ -3026,16 +3067,18 @@ SCIP_RETCODE includeNeighborhoods(
 
    /* include the Proximity neighborhood */
    SCIP_CALL( lnsIncludeNeighborhood(scip, heurdata, &proximity, "proximity",
-         DEFAULT_MINFIXINGRATE_PROXIMITY, DEFAULT_MAXFIXINGRATE_PROXIMITY, DEFAULT_ACTIVE_PROXIMITY, NULL, changeSubscipProximity, NULL, NULL, NULL, NULL) );
+         DEFAULT_MINFIXINGRATE_PROXIMITY, DEFAULT_MAXFIXINGRATE_PROXIMITY, DEFAULT_ACTIVE_PROXIMITY, DEFAULT_PRIORITY_PROXIMITY,
+         NULL, changeSubscipProximity, NULL, NULL, NULL, NULL) );
 
    /* include the Zeroobjective neighborhood */
    SCIP_CALL( lnsIncludeNeighborhood(scip, heurdata, &zeroobjective, "zeroobjective",
-         DEFAULT_MINFIXINGRATE_ZEROOBJECTIVE, DEFAULT_MAXFIXINGRATE_ZEROOBJECTIVE, DEFAULT_ACTIVE_ZEROOBJECTIVE, NULL, changeSubscipZeroobjective,
+         DEFAULT_MINFIXINGRATE_ZEROOBJECTIVE, DEFAULT_MAXFIXINGRATE_ZEROOBJECTIVE, DEFAULT_ACTIVE_ZEROOBJECTIVE, DEFAULT_PRIORITY_ZEROOBJECTIVE,
+         NULL, changeSubscipZeroobjective,
          NULL, NULL, NULL, NULL) );
 
    /* include the DINS neighborhood */
    SCIP_CALL( lnsIncludeNeighborhood(scip, heurdata, &dins, "dins",
-         DEFAULT_MINFIXINGRATE_DINS, DEFAULT_MAXFIXINGRATE_DINS, DEFAULT_ACTIVE_DINS,
+         DEFAULT_MINFIXINGRATE_DINS, DEFAULT_MAXFIXINGRATE_DINS, DEFAULT_ACTIVE_DINS, DEFAULT_PRIORITY_DINS,
          varFixingsDins, changeSubscipDins, NULL, NULL, NULL, nhFreeDins) );
    SCIP_CALL( SCIPallocBlockMemory(scip, &dins->data.dins) );
 
@@ -3055,6 +3098,7 @@ SCIP_DECL_HEURINIT(heurInitLns)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    int i;
+   SCIP_Real* priorities;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -3063,6 +3107,8 @@ SCIP_DECL_HEURINIT(heurInitLns)
    assert(heurdata != NULL);
    assert(heurdata->epsgreedynh == NULL);
    heurdata->nactiveneighborhoods = heurdata->nneighborhoods;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &priorities, heurdata->nactiveneighborhoods) );
 
    /* init neighborhoods for new problem by resetting their statistics and fixing rate */
    for( i = heurdata->nneighborhoods - 1; i >= 0; --i )
@@ -3086,30 +3132,36 @@ SCIP_DECL_HEURINIT(heurInitLns)
       }
    }
 
+   /* collect neighborhood priorities */
+   for( i = 0; i < heurdata->nactiveneighborhoods; ++i )
+      priorities[i] = heurdata->neighborhoods[i]->priority;
+
 
    /* create an exp3 bandit algorithm */
    if( heurdata->exp3 == NULL )
    {
       assert(heurdata->epsgreedynh == NULL);
-      SCIP_CALL( expThreeCreate(scip, &heurdata->exp3, (unsigned int)(heurdata->seed + SCIPgetNVars(scip)), heurdata->nactiveneighborhoods, heurdata->gamma, heurdata->beta) );
+      SCIP_CALL( expThreeCreate(scip, &heurdata->exp3, priorities, (unsigned int)(heurdata->seed + SCIPgetNVars(scip)), heurdata->nactiveneighborhoods, heurdata->gamma, heurdata->beta) );
 
       /* create epsilon greedy bandit algorithm */
-      SCIP_CALL( epsGreedyCreate(scip, &heurdata->epsgreedynh, heurdata->eps, heurdata->nactiveneighborhoods, (unsigned int)(heurdata->seed + SCIPgetNVars(scip))) );
+      SCIP_CALL( epsGreedyCreate(scip, &heurdata->epsgreedynh, priorities, heurdata->eps, heurdata->nactiveneighborhoods, (unsigned int)(heurdata->seed + SCIPgetNVars(scip))) );
    }
    else if( heurdata->resetweights )
    {
       assert(heurdata->epsgreedynh != NULL);
 
       /* todo active neighborhoods might change between init calls, reset functionality must take this into account */
-      SCIP_CALL( expThreeReset(scip, heurdata->exp3, (unsigned int)(heurdata->seed + SCIPgetNVars(scip))) );
+      SCIP_CALL( expThreeReset(scip, heurdata->exp3, priorities, (unsigned int)(heurdata->seed + SCIPgetNVars(scip))) );
 
-      epsGreedyReset(heurdata->epsgreedynh);
+      epsGreedyReset(heurdata->epsgreedynh, priorities);
    }
 
    heurdata->usednodes = 0;
    heurdata->ninitneighborhoods = heurdata->nactiveneighborhoods;
    resetMinimumImprovement(heurdata);
    resetCurrentNeighborhood(heurdata);
+
+   SCIPfreeBufferArray(scip, &priorities);
 
    return SCIP_OKAY;
 }
