@@ -714,11 +714,13 @@ SCIP_RETCODE processSolveOutcome(
    switch( ifail )
    {
       case 0: /* successful run, solution found */
+         assert(problem->rstat[4] <= problem->feastol); /* should be feasible */
          problem->solstat = (problem->rstat[0] <= problem->opttol ? SCIP_NLPSOLSTAT_LOCOPT : SCIP_NLPSOLSTAT_FEASIBLE);
          problem->termstat = SCIP_NLPTERMSTAT_OKAY;
          problem->warmstart = TRUE;
          break;
       case 1: /* unbounded, feasible point with f(x) <= fmin */
+         assert(problem->rstat[4] <= problem->feastol); /* should be feasible */
          problem->solstat = SCIP_NLPSOLSTAT_UNBOUNDED;
          if( problem->fmin == DEFAULT_LOBJLIM )
             problem->termstat = SCIP_NLPTERMSTAT_OKAY;  /* fmin was not set */
@@ -735,12 +737,13 @@ SCIP_RETCODE processSolveOutcome(
          problem->warmstart = TRUE;
         break;
       case 4: /* terminate at point with h(x) <= eps (constraint violation below epsilon) but QP infeasible */
+         assert(problem->rstat[4] <= problem->feastol); /* should be feasible */
          problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
          problem->warmstart = TRUE;
          break;
       case 5: /* termination with rho < eps (trust region radius below epsilon) */
-         if( problem->rstat[4] < problem->feastol )
+         if( problem->rstat[4] <= problem->feastol )
             problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
             problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
@@ -748,7 +751,7 @@ SCIP_RETCODE processSolveOutcome(
          problem->warmstart = TRUE;
          break;
       case 6: /* termination with iter > max_iter */
-         if( problem->rstat[4] < problem->feastol )
+         if( problem->rstat[4] <= problem->feastol )
             problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
             problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
@@ -766,7 +769,7 @@ SCIP_RETCODE processSolveOutcome(
             problem->termstat =  SCIP_NLPTERMSTAT_EVALERR;
          break;
       case 8: /* unexpect ifail from QP solver */
-         if( problem->rstat[4] < problem->feastol )
+         if( problem->rstat[4] <= problem->feastol )
             problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
             problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
