@@ -787,7 +787,6 @@ static
 SCIP_DECL_NLPICOPY( nlpiCopyFilterSQP )
 {
    SCIP_NLPIDATA* sourcedata;
-   SCIP_NLPIDATA* targetdata;
 
    assert(sourcenlpi != NULL);
    assert(targetnlpi != NULL);
@@ -800,9 +799,6 @@ SCIP_DECL_NLPICOPY( nlpiCopyFilterSQP )
 
    SCIP_CALL( SCIPnlpiSetRealPar(*targetnlpi, NULL, SCIP_NLPPAR_INFINITY, sourcedata->infinity) );
    SCIP_CALL( SCIPnlpiSetMessageHdlr(*targetnlpi, sourcedata->messagehdlr) );
-
-   targetdata = SCIPnlpiGetData(*targetnlpi);
-   assert(targetdata != NULL);
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/
