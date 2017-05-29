@@ -56,13 +56,19 @@ typedef int fint;
 typedef double real;
 typedef long ftnlen;
 
+typedef struct
+{
+   time_t                      sec;   /**< seconds part of time since epoch */
+   int                         usec;  /**< micro-seconds part of time */
+} SCIP_TIME;
+
 struct SCIP_NlpiData
 {
    BMS_BLKMEM*                 blkmem;       /**< block memory */
    SCIP_MESSAGEHDLR*           messagehdlr;  /**< message handler */
    SCIP_Real                   infinity;     /**< initial value for infinity */
    SCIP_RANDNUMGEN*            randnumgen;   /**< random number generator, if we have to make up a starting point */
-   time_t                      starttime;    /**< time (in seconds) at start of solve */
+   SCIP_TIME                   starttime;    /**< time at start of solve */
 };
 
 struct SCIP_NlpiProblem
@@ -241,18 +247,43 @@ F77_FUNC(scalec,SCALEC);
 /** @} */
 
 static
-time_t gettime(void)
+SCIP_TIME gettime(void)
 {
-#if defined(_WIN32)
-   return time(NULL);
+   SCIP_TIME t;
+#ifndef _WIN32
+   struct timeval tp; /*lint !e86*/
+#endif
+
+#ifdef _WIN32
+   t.sec = time(NULL);
+   t.usec = 0;
 
 #else
-   struct timeval tp; /*lint !e86*/
-
    gettimeofday(&tp, NULL);
-
-   return tp.tv_sec;
+   t.sec = tp.tv_sec;
+   t.usec = tp.tv_usec;
 #endif
+
+   return t;
+}
+
+/* gives time since starttime (in problem) */
+static
+SCIP_Real timeelapsed(
+   SCIP_NLPIDATA*        nlpidata            /**< NLPI data */
+   )
+{
+   SCIP_TIME now;
+
+   assert(nlpidata != NULL);
+
+   now = gettime();
+
+   /* now should be after startime */
+   assert(now.sec >= nlpidata->starttime.sec);
+   assert(now.sec > nlpidata->starttime.sec || now.usec >= nlpidata->starttime.usec);
+
+   return (SCIP_Real)(now.sec - nlpidata->starttime.sec) + 1e-6 * (SCIP_Real)(now.usec - nlpidata->starttime.usec);
 }
 
 static
@@ -264,7 +295,7 @@ SCIP_Bool timelimitreached(
    if( nlpiproblem->maxtime == DBL_MAX )
       return FALSE;
 
-   return gettime() - nlpidata->starttime >= nlpiproblem->maxtime;
+   return timeelapsed(nlpidata) >= nlpiproblem->maxtime;
 }
 
 /** Objective function evaluation */
@@ -630,7 +661,7 @@ SCIP_RETCODE processSolveOutcome(
    assert(problem != NULL);
    assert(ifail >= 0);
 
-   problem->solvetime = gettime() - nlpidata->starttime;
+   problem->solvetime = timeelapsed(nlpidata);
 
    nvars = SCIPnlpiOracleGetNVars(problem->oracle);
    ncons = SCIPnlpiOracleGetNConstraints(problem->oracle);
