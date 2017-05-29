@@ -22,6 +22,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <strings.h>
 #include "scip/heur_lns.h"
 #include "scipdefplugins.h"
 
@@ -81,6 +82,7 @@
 #define FIXINGRATE_DECAY 0.75  /**< geometric decay for fixing rate adjustments */
 #define FIXINGRATE_STARTINC 0.2 /**< initial increment value for fixing rate */
 #define DEFAULT_USESUBSCIPHEURS  FALSE   /**< should the heuristic activate other sub-SCIP heuristics during its search?  */
+#define DEFAULT_GAINFILENAME "-" /**< file name to store all gains and the selection of the bandit */
 
 /* individual neighborhood parameters */
 #define MUTATIONSEED 121
@@ -324,7 +326,9 @@ struct SCIP_HeurData
 {
    NH**                  neighborhoods;      /**< array of neighborhoods with the best one at the first position */
    char                  banditalgo;         /**< the bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
+   char*                 gainfilename;       /**< file name to store all gains and the selection of the bandit */
    EPSGREEDY*            epsgreedynh;        /**< epsilon greedy selector for a neighborhood */
+   FILE*                 gainfile;           /**< gain file pointer, or NULL */
    EXPTHREE*             exp3;               /**< exp3 bandit algorithm */
    SCIP_Longint          nodesoffset;        /**< offset added to the nodes budget */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes in a single sub-SCIP */
@@ -367,6 +371,7 @@ struct SCIP_EventData
    SCIP_Longint          nodelimit;
    SCIP_Real             lplimfac;           /**< limit fraction of LPs per node to interrupt sub-SCIP */
    NH_STATS*             runstats;           /**< run statistics for the current neighborhood */
+   SCIP_Bool             allgainsmode;       /**< true if solutions should only be checked for gain comparisons */
 };
 
 /** represents limits for the sub-SCIP solving process */
@@ -1147,13 +1152,30 @@ SCIP_RETCODE transferSolution(
 
    oldbestsol = SCIPgetBestSol(sourcescip);
    /* try to add new solution to scip and free it immediately */
-   SCIP_CALL( SCIPtrySolFree(sourcescip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
 
-   if( success )
+   if( eventdata->allgainsmode )
    {
-      runstats->nsolsfound++;
-      if( SCIPgetBestSol(sourcescip) != oldbestsol )
-         runstats->nbestsolsfound++;
+      SCIP_CALL( SCIPcheckSol(sourcescip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
+
+      if( success )
+      {
+         runstats->nsolsfound++;
+         if( SCIPgetSolTransObj(sourcescip, newsol) < SCIPgetCutoffbound(sourcescip) )
+            runstats->nbestsolsfound++;
+      }
+
+      SCIP_CALL( SCIPfreeSol(sourcescip, &newsol) );
+   }
+   else
+   {
+      SCIP_CALL( SCIPtrySolFree(sourcescip, &newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
+
+      if( success )
+      {
+         runstats->nsolsfound++;
+         if( SCIPgetBestSol(sourcescip) != oldbestsol )
+            runstats->nbestsolsfound++;
+      }
    }
 
    SCIPfreeBufferArray(sourcescip, &subsolvals);
@@ -1813,61 +1835,72 @@ SCIP_RETCODE selectNeighborhood(
    return SCIP_OKAY;
 }
 
+/** Calculate gain based on the selected gain measure */
+static
+SCIP_RETCODE getGain(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data of the LNS neighborhood */
+   NH_STATS*             runstats,           /**< run statistics */
+   SCIP_Real*            gainptr             /**< pointer to store the computed gain */
+   )
+{
+   SCIP_Real gain = 0.0;
+   assert(gainptr != NULL);
+   /* compute the gain for this run based on the runstats */
+   switch( heurdata->gainmeasure )
+   {
+   case 'b':
+      if( runstats->nbestsolsfound > 0 )
+         gain = 1.0;
+      break;
+   case 'w':
+      if( runstats->nbestsolsfound > 0 )
+         gain = 1.0;
+      else if( runstats->nsolsfound > 0 )
+         gain = 1.0 / DEFAULT_BESTSOLWEIGHT;
+      break;
+   case 'e':
+
+      if( runstats->nbestsolsfound > 0 )
+      {
+         SCIP_Real effort;
+         assert(runstats->totalnfixings >= 0);
+         assert(runstats->usednodes >= 0);
+
+         /* just add one node to avoid division by zero */
+         effort = runstats->usednodes / (SCIP_Real)(heurdata->minnodes + 1.0);
+
+         /* assume that every fixed variable linearly reduces the subproblem complexity */
+         effort = (1.0 - (runstats->totalnfixings / (SCIP_Real)SCIPgetNVars(scip))) * effort;
+
+         /* gain can be larger than 1.0 if a best solution was found within 0 nodes  */
+         gain = 1.0 / (effort + 1.0);
+         gain = MIN(1.0, gain);
+      }
+      break;
+   default:
+      SCIPerrorMessage("Error, passed unknown character '%c' (only know \"%s\") for measuring gains\n", heurdata->gainmeasure, GAINMEASURES);
+      SCIP_CALL( SCIP_INVALIDDATA );
+      break;
+   }
+
+   *gainptr = gain;
+   return SCIP_OKAY;
+}
+
 /** update internal bandit algorithm statistics for future draws */
 static
 SCIP_RETCODE updateBanditAlgorithms(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data of the LNS neighborhood */
-   NH_STATS*             runstats,           /**< run statistics */
+   SCIP_Real             gain,               /**< measured gain */
    int                   neighborhoodidx     /**< the neighborhood that was chosen */
    )
 {
-   SCIP_Real gain;
-
    assert(scip != NULL);
    assert(heurdata != NULL);
-   assert(runstats != NULL);
    assert(neighborhoodidx >= 0);
    assert(neighborhoodidx < heurdata->nactiveneighborhoods);
-
-   gain = 0.0;
-   /* compute the gain for this run based on the runstats */
-   switch( heurdata->gainmeasure )
-   {
-      case 'b':
-         if( runstats->nbestsolsfound > 0 )
-            gain = 1.0;
-         break;
-      case 'w':
-         if( runstats->nbestsolsfound > 0 )
-            gain = 1.0;
-         else if( runstats->nsolsfound > 0 )
-            gain = 1.0 / DEFAULT_BESTSOLWEIGHT;
-         break;
-      case 'e':
-
-         if( runstats->nbestsolsfound > 0 )
-         {
-            SCIP_Real effort;
-            assert(runstats->totalnfixings >= 0);
-            assert(runstats->usednodes >= 0);
-
-            /* just add one node to avoid division by zero */
-            effort = runstats->usednodes / (SCIP_Real)(heurdata->minnodes + 1.0);
-
-            /* assume that every fixed variable linearly reduces the subproblem complexity */
-            effort = (1.0 - (runstats->totalnfixings / (SCIP_Real)SCIPgetNVars(scip))) * effort;
-
-            /* gain can be larger than 1.0 if a best solution was found within 0 nodes  */
-            gain = 1.0 / (effort + 1.0);
-            gain = MIN(1.0, gain);
-         }
-         break;
-      default:
-         SCIPerrorMessage("Error, passed unknown character '%c' (only know \"%s\") for measuring gains\n", heurdata->gainmeasure, GAINMEASURES);
-         SCIP_CALL( SCIP_INVALIDDATA );
-         break;
-   }
 
    switch (heurdata->banditalgo) {
       case 'g':
@@ -2037,7 +2070,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
    SCIP_Real* valbuf;
    SCIP_VAR** vars;
    SCIP_VAR** subvars;
-   NH_STATS runstats;
+   NH_STATS runstats[NNEIGHBORHOODS];
    SCIP_STATUS subscipstatus;
    SCIP* subscip = NULL;
 
@@ -2050,6 +2083,10 @@ SCIP_DECL_HEUREXEC(heurExecLns)
    SOLVELIMITS solvelimits;
    SCIP_Bool success;
    SCIP_Bool run;
+   SCIP_Bool allgainsmode;
+   SCIP_Real gains[NNEIGHBORHOODS];
+   int banditidx;
+   int i;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -2064,29 +2101,31 @@ SCIP_DECL_HEUREXEC(heurExecLns)
    if( !run )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   allgainsmode = heurdata->gainfile != NULL;
 
    /** use the neighborhood that requested a delay or select the next neighborhood to run based on the selected bandit algorithm */
    if( heurdata->currneighborhood >= 0 )
    {
-      neighborhoodidx = heurdata->currneighborhood;
-      SCIPdebugMsg(scip, "Select delayed neighborhood %d (was delayed %d times)\n", neighborhoodidx, heurdata->ndelayedcalls);
+      assert(!allgainsmode);
+      banditidx = heurdata->currneighborhood;
+      SCIPdebugMsg(scip, "Select delayed neighborhood %d (was delayed %d times)\n", banditidx, heurdata->ndelayedcalls);
    }
    else
    {
-      SCIP_CALL( selectNeighborhood(scip, heurdata, &neighborhoodidx) );
-      SCIPdebugMsg(scip, "Selected neighborhood %d with bandit algorithm\n", neighborhoodidx);
+      SCIP_CALL( selectNeighborhood(scip, heurdata, &banditidx) );
+      SCIPdebugMsg(scip, "Selected neighborhood %d with bandit algorithm\n", banditidx);
    }
+   neighborhoodidx = banditidx;
    assert(neighborhoodidx >= 0);
    assert(heurdata->nactiveneighborhoods > neighborhoodidx);
 
    /* allocate memory for variable fixings buffer */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPallocBufferArray(scip, &varbuf, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &valbuf, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
    /* initialize neighborhood statistics for a run */
-   initRunStats(scip, &runstats);
    ntries = 0;
    do
    {
@@ -2101,6 +2140,9 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       tryagain = FALSE;
       neighborhood = heurdata->neighborhoods[neighborhoodidx];
       SCIPdebugMsg(scip, "Selected '%s' neighborhood %d\n", neighborhood->name, neighborhoodidx);
+
+      initRunStats(scip, &runstats[neighborhoodidx]);
+      gains[neighborhoodidx] = 0.0;
 
       subscipstatus = SCIP_STATUS_UNKNOWN;
       SCIP_CALL( SCIPstartClock(scip, neighborhood->stats.setupclock) );
@@ -2119,6 +2161,20 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       if( fixresult != SCIP_SUCCESS )
       {
          SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.setupclock) );
+
+         /* to determine all gains, we cannot delay neighborhoods */
+         if( allgainsmode )
+         {
+            if( ntries == heurdata->nactiveneighborhoods )
+               break;
+
+            neighborhoodidx = (neighborhoodidx + 1) % heurdata->nactiveneighborhoods;
+            ntries++;
+            tryagain = TRUE;
+
+            continue;
+         }
+
 
          /* delay the heuristic along with the selected neighborhood
           *
@@ -2144,10 +2200,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
             }
          }
 
-         if( fixresult == SCIP_DIDNOTFIND )
-            updateRunStats(scip, &runstats, subscip);
-
-         else if( fixresult == SCIP_DIDNOTRUN )
+         if( fixresult == SCIP_DIDNOTRUN )
          {
             if( ntries < heurdata->nactiveneighborhoods )
             {
@@ -2163,6 +2216,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
                break;
          }
 
+         assert(fixresult == SCIP_DIDNOTFIND);
          *result = fixresult;
          break;
       }
@@ -2170,7 +2224,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       *result = SCIP_DIDNOTFIND;
 
       neighborhood->stats.totalnfixings += nfixings;
-      runstats.totalnfixings = nfixings;
+      runstats[neighborhoodidx].totalnfixings = nfixings;
 
       SCIP_CALL( SCIPcreate(&subscip) );
       SCIP_CALL( SCIPhashmapCreate(&varmapf, SCIPblkmem(scip), nvars) );
@@ -2193,8 +2247,17 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       if( ! success )
       {
          SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.setupclock) );
-         updateRunStats(scip, &runstats, subscip);
-         break;
+
+         if( !allgainsmode || ntries == heurdata->nactiveneighborhoods )
+            break;
+
+         neighborhoodidx = (neighborhoodidx + 1) % heurdata->nactiveneighborhoods;
+         ntries++;
+         tryagain = TRUE;
+
+         SCIP_CALL( SCIPfree(&subscip) );
+
+         continue;
       }
 
       /* set up sub-SCIP parameters */
@@ -2206,7 +2269,8 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       eventdata.heur = heur;
       eventdata.sourcescip = scip;
       eventdata.subvars = subvars;
-      eventdata.runstats = &runstats;
+      eventdata.runstats = &runstats[neighborhoodidx];
+      eventdata.allgainsmode = allgainsmode;
 
       /* include an event handler to transfer solutions into the main SCIP */
       SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecLns, NULL) );
@@ -2226,12 +2290,24 @@ SCIP_DECL_HEUREXEC(heurExecLns)
 
       SCIP_CALL( SCIPstopClock(scip, neighborhood->stats.submipclock) );
 
-      /* update statistics based on the sub-SCIP run */
-      updateRunStats(scip, &runstats, subscip);
+      /* update statistics based on the sub-SCIP run results */
+      updateRunStats(scip, &runstats[neighborhoodidx], subscip);
       subscipstatus = SCIPgetStatus(subscip);
-      heurdata->usednodes += SCIPgetNNodes(subscip);
+
+      SCIP_CALL( getGain(scip, heurdata, &runstats[neighborhoodidx], &gains[neighborhoodidx]) );
+
+      if( allgainsmode && ntries < heurdata->nactiveneighborhoods )
+      {
+         neighborhoodidx = (neighborhoodidx + 1) % heurdata->nactiveneighborhoods;
+         ntries++;
+         tryagain = TRUE;
+
+         SCIP_CALL( SCIPfree(&subscip) );
+
+         continue;
+      }
    }
-   while( tryagain );
+   while( tryagain && !SCIPisStopped(scip) );
 
    if( subscip != NULL )
    {
@@ -2242,32 +2318,47 @@ SCIP_DECL_HEUREXEC(heurExecLns)
    SCIPfreeBufferArray(scip, &valbuf);
    SCIPfreeBufferArray(scip, &varbuf);
 
+   /* update bandit index that may have changed unless we are in all gains mode */
+   if( !allgainsmode )
+      banditidx = neighborhoodidx;
+
    if( *result != SCIP_DELAYED )
    {
       /* decrease the number of neighborhoods that have not been initialized */
       if( neighborhood->stats.nruns == 0 )
          --heurdata->ninitneighborhoods;
 
+      heurdata->usednodes += runstats[banditidx].usednodes;
+
       /** determine the success of this neighborhood, and update the target fixing rate for the next time */
-      updateNeighborhoodStats(scip, &runstats, neighborhood, subscipstatus);
+      updateNeighborhoodStats(scip, &runstats[banditidx], heurdata->neighborhoods[banditidx], subscipstatus);
 
       /* adjust the fixing rate for this neighborhood */
       if( heurdata->adjustfixingrate )
-         updateFixingRate(scip, neighborhood, subscipstatus, &runstats);
+         updateFixingRate(scip, heurdata->neighborhoods[banditidx], subscipstatus, &runstats[banditidx]);
 
       /* similarly, update the minimum improvement for the LNS heuristic */
       if( heurdata->adjustminimprove )
       {
          SCIPdebugMsg(scip, "Update Minimum Improvement: %.4f", heurdata->minimprove);
-         updateMinimumImprovement(heurdata, subscipstatus, &runstats);
+         updateMinimumImprovement(heurdata, subscipstatus, &runstats[banditidx]);
          SCIPdebugMsg(scip, "--> %.4f\n", heurdata->minimprove);
-
       }
 
       /* update the bandit algorithms by the measured gain */
-      SCIP_CALL( updateBanditAlgorithms(scip, heurdata, &runstats, neighborhoodidx) );
+      SCIP_CALL( updateBanditAlgorithms(scip, heurdata, gains[banditidx], banditidx) );
 
       resetCurrentNeighborhood(heurdata);
+   }
+
+   /* write single, measured gains and the bandit index to the gain file */
+   if( allgainsmode )
+   {
+      for( i = 0; i < heurdata->nactiveneighborhoods; ++i )
+      {
+         fprintf(heurdata->gainfile, "%.4f,", gains[i]);
+      }
+      fprintf(heurdata->gainfile, "%d\n", banditidx);
    }
 
    return SCIP_OKAY;
@@ -2378,8 +2469,6 @@ SCIP_RETCODE fixMatchingSolutionValues(
    )
 {
    int v;
-   int nbinvars;
-   int nintvars;
    int nbinintvars;
    SCIP_SOL* firstsol;
 
@@ -2393,6 +2482,8 @@ SCIP_RETCODE fixMatchingSolutionValues(
 
    if( nvars == -1 || vars == NULL )
    {
+      int nbinvars;
+      int nintvars;
       SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
       nbinintvars = nbinvars + nintvars;
       nvars = nbinintvars;
@@ -2409,7 +2500,7 @@ SCIP_RETCODE fixMatchingSolutionValues(
       int s;
 
       var = vars[v];
-      assert((v < nbinvars && SCIPvarIsBinary(var)) || (v >= nbinvars && SCIPvarIsIntegral(var)));
+      assert((v < SCIPgetNBinVars(scip) && SCIPvarIsBinary(var)) || (v >= SCIPgetNBinVars(scip) && SCIPvarIsIntegral(var)));
       solval = SCIPgetSolVal(scip, firstsol, var);
 
       /* determine if solution values match in all given solutions */
@@ -3178,6 +3269,22 @@ SCIP_DECL_HEURINIT(heurInitLns)
 
    SCIPfreeBufferArray(scip, &priorities);
 
+   /* open gain file for reading */
+   if( strncasecmp(heurdata->gainfilename, DEFAULT_GAINFILENAME, strlen(DEFAULT_GAINFILENAME) != 0 ) )
+   {
+      heurdata->gainfile = fopen(heurdata->gainfilename, "w");
+
+      if( heurdata->gainfile == NULL )
+      {
+         SCIPerrorMessage("Error: Could not open gain file <%s>\n", heurdata->gainfilename);
+         return SCIP_FILECREATEERROR;
+      }
+
+      SCIPdebugMsg(scip, "Writing gain information to <%s>\n", heurdata->gainfilename);
+   }
+   else
+      heurdata->gainfile = NULL;
+
    return SCIP_OKAY;
 }
 
@@ -3251,6 +3358,12 @@ SCIP_DECL_HEUREXIT(heurExitLns)
       SCIP_CALL( neighborhoodExit(scip, neighborhood) );
    }
 
+   if( heurdata->gainfile != NULL )
+   {
+      fclose(heurdata->gainfile);
+      heurdata->gainfile = NULL;
+   }
+
    return SCIP_OKAY;
 }
 
@@ -3306,6 +3419,7 @@ SCIP_RETCODE SCIPincludeHeurLns(
    heurdata->lplimfac = LPLIMFAC;
    heurdata->epsgreedynh = NULL;
    heurdata->exp3 = NULL;
+   heurdata->gainfilename = NULL;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &heurdata->neighborhoods, NNEIGHBORHOODS) );
 
@@ -3412,6 +3526,9 @@ SCIP_RETCODE SCIPincludeHeurLns(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/resetweights",
             "should the bandit algorithms be reset when a new problem is read?",
             &heurdata->resetweights, TRUE, DEFAULT_RESETWEIGHTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/" HEUR_NAME "/gainfilename", "file name to store all gains and the selection of the bandit",
+         &heurdata->gainfilename, TRUE, DEFAULT_GAINFILENAME, NULL, NULL) );
 
    return SCIP_OKAY;
 }
