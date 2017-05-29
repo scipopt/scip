@@ -19,7 +19,6 @@
  * @author  Stefan Vigerske
  *
  * @todo scaling
- * @todo increase workspace when ifail=9 or 10
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -42,6 +41,8 @@
 
 #define RANDSEED               26051979      /**< initial random seed */
 #define MAXPERTURB             0.01          /**< maximal perturbation of bounds in starting point heuristic */
+#define MAXWORKSPACEINCREASE   2             /**< number of times per NLP solve we increase the workspace if FilterSQP terminated with ifail >= 8 */
+#define WORKSPACEGROWTHFACTOR  2             /**< factor by which to increase worksapce */
 #define DEFAULT_LOBJLIM        (real)(-1e100) /**< default lower objective limit (should mean "unlimited") */
 #define DEFAULT_FEASOPTTOL     1e-6          /**< default feasibility and optimality tolerance */
 #define DEFAULT_MAXITER        3000          /**< default iteration limit */
@@ -1589,6 +1590,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    ftnlen cstype_len = 1;
    fint minmxwk;
    fint minmxiwk;
+   int nruns;
    int i;
 
    data = SCIPnlpiGetData(nlpi);
@@ -1722,15 +1724,57 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    F77_FUNC(ubdc,UBDC).tt = 1.25;
    F77_FUNC(scalec,SCALEC).scale_mode = 0;
 
-   F77_FUNC(filtersqp,FILTERSQP)(
-      &n, &m, &kmax, &maxa,
-      &maxf, &mlp, &problem->mxwk, &problem->mxiwk,
-      &problem->iprint, &nout, &ifail, &rho,
-      problem->x, problem->c, &f, &problem->fmin, problem->bl,
-      problem->bu, problem->s, problem->a, problem->la, problem->ws,
-      problem->lws, problem->lam, problem->cstype, user,
-      iuser, &problem->maxiter, problem->istat,
-      problem->rstat, cstype_len);
+   for( nruns = 1; ; ++nruns )
+   {
+      F77_FUNC(filtersqp,FILTERSQP)(
+         &n, &m, &kmax, &maxa,
+         &maxf, &mlp, &problem->mxwk, &problem->mxiwk,
+         &problem->iprint, &nout, &ifail, &rho,
+         problem->x, problem->c, &f, &problem->fmin, problem->bl,
+         problem->bu, problem->s, problem->a, problem->la, problem->ws,
+         problem->lws, problem->lam, problem->cstype, user,
+         iuser, &problem->maxiter, problem->istat,
+         problem->rstat, cstype_len);
+
+      assert(ifail <= 10);
+      if( ifail < 8 )
+         break;
+
+      /* if maximal number of runs reached, then stop */
+      if( nruns > MAXWORKSPACEINCREASE )
+      {
+         if( problem->iprint > 0 )
+         {
+            SCIPmessagePrintInfo(data->messagehdlr, "FilterSQP terminated with status %d in run %d, giving up\n", ifail, nruns);
+         }
+         break;
+      }
+
+      if( problem->iprint > 0 )
+      {
+         SCIPmessagePrintInfo(data->messagehdlr, "FilterSQP terminated with status %d in run %d, retry with larger workarrays\n", ifail, nruns);
+      }
+
+      /* increase real workspace, if ifail = 9 (real workspace too small) or ifail = 8 (unexpected ifail from QP solver, often also when workspace too small) */
+      if( ifail == 8 || ifail == 9 )
+      {
+         problem->mxwk = calcGrowSize(WORKSPACEGROWTHFACTOR*problem->mxwk);
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->ws, problem->mxwk) );
+      }
+
+      /* increase integer workspace, if ifail = 10 (integer workspace too small) or ifail = 8 (unexpected ifail from QP solver, often also when workspace too small) */
+      if( ifail == 8 || ifail == 10 )
+      {
+         problem->mxiwk = calcGrowSize(WORKSPACEGROWTHFACTOR*problem->mxiwk);
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->lws, problem->mxiwk) );
+
+         /* better don't try warmstart for the next trial; warmstart requires that lws is untouched, does extending count as touching? */
+         ifail = 0;
+      }
+
+      /* reset starting point, in case it was overwritten by failed solve */
+      SCIP_CALL( setupStart(data, problem, problem->x) );
+   }
 
    SCIP_CALL( processSolveOutcome(data, problem, ifail, problem->x, problem->lam) );
 
