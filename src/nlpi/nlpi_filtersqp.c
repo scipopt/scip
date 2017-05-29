@@ -19,6 +19,7 @@
  * @author  Stefan Vigerske
  *
  * @todo scaling
+ * @todo if filtersqp solution violates absolute optimality tolerance, try again with tighter eps
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -680,8 +681,7 @@ SCIP_RETCODE processSolveOutcome(
    switch( ifail )
    {
       case 0: /* successful run, solution found */
-         assert(problem->rstat[0] <= problem->feastol);
-         problem->solstat = SCIP_NLPSOLSTAT_LOCOPT;
+         problem->solstat = (problem->rstat[0] <= problem->opttol ? SCIP_NLPSOLSTAT_LOCOPT : SCIP_NLPSOLSTAT_FEASIBLE);
          problem->termstat = SCIP_NLPTERMSTAT_OKAY;
          problem->warmstart = TRUE;
          break;
@@ -697,8 +697,7 @@ SCIP_RETCODE processSolveOutcome(
          problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
          break;
       case 3: /* (locally) nonlinear infeasible, minimal-infeasible solution found */
-         assert(problem->rstat[0] <= problem->feastol);
-         problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+         problem->solstat = (problem->rstat[0] <= problem->opttol ? SCIP_NLPSOLSTAT_LOCINFEASIBLE : SCIP_NLPSOLSTAT_UNKNOWN);
          problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
          problem->warmstart = TRUE;
         break;
@@ -711,7 +710,7 @@ SCIP_RETCODE processSolveOutcome(
          if( problem->rstat[4] < problem->feastol )
             problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
-            problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+            problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
          problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
          problem->warmstart = TRUE;
          break;
@@ -719,7 +718,7 @@ SCIP_RETCODE processSolveOutcome(
          if( problem->rstat[4] < problem->feastol )
             problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
-            problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+            problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
          problem->termstat =  SCIP_NLPTERMSTAT_ITLIM;
          problem->warmstart = TRUE;
          break;
@@ -737,7 +736,7 @@ SCIP_RETCODE processSolveOutcome(
          if( problem->rstat[4] < problem->feastol )
             problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
-            problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+            problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
          problem->termstat =  SCIP_NLPTERMSTAT_OTHER;
          break;
       case 9: /* not enough REAL workspace */
@@ -1718,7 +1717,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 
    /* initialize global variables from filtersqp */
    /* FilterSQP eps is tolerance for both feasibility and optimality, and also for trust-region radius, etc. */
-   F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps = MIN(problem->feastol, problem->opttol);
+   F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps = MIN(problem->feastol, problem->opttol)/10.0;  /* divide by 10.0 to accomodate absolute optimality tolerance check in processSolution, see also todo at top */
    F77_FUNC(nlp_eps_inf,NLP_EPS_INF).infty = SCIPnlpiOracleGetInfinity(problem->oracle);
    F77_FUNC(ubdc,UBDC).ubd = 100.0;
    F77_FUNC(ubdc,UBDC).tt = 1.25;
