@@ -1138,6 +1138,34 @@ SCIP_Bool origsolOfInterest(
    return FALSE;
 }
 
+/** updates the insert point if the objective function value has changed */
+static
+SCIP_RETCODE updateInsertPos(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             prevobj,            /**< the objective value of the sol before the cons check */
+   int*                  insertpos,          /**< pointer to store the insert position of that solution */
+   SCIP_Bool*            feasible            /**< stores whether solution is feasible */
+   )
+{
+   SCIP_Real obj;
+
+   obj = SCIPsolGetObj(sol, set, transprob, origprob);
+
+   if( (*feasible) && !SCIPsetIsEQ(set, prevobj, obj) )
+   {
+      (*insertpos) = primalSearchSolPos(primal, set, transprob, origprob, sol);
+
+      if( (*insertpos) >= set->limit_maxsol )
+         (*feasible) = FALSE;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** adds primal solution to solution storage by copying it */
 SCIP_RETCODE SCIPprimalAddSol(
    SCIP_PRIMAL*          primal,             /**< primal data */
@@ -1472,9 +1500,15 @@ SCIP_RETCODE SCIPprimalTrySol(
 
    if( solOfInterest(primal, set, stat, origprob, transprob, sol, &insertpos, &replace) )
    {
+      SCIP_Real obj;
+
+      obj = SCIPsolGetObj(sol, set, transprob, origprob);
+
       /* check solution for feasibility */
       SCIP_CALL( SCIPsolCheck(sol, set, messagehdlr, blkmem, stat, transprob, printreason, completely, checkbounds,
             checkintegrality, checklprows, &feasible) );
+
+      SCIP_CALL( updateInsertPos(primal, set, origprob, transprob, sol, obj, &insertpos, &feasible) );
    }
    else
       feasible = FALSE;
@@ -1544,9 +1578,15 @@ SCIP_RETCODE SCIPprimalTrySolFree(
 
    if( solOfInterest(primal, set, stat, origprob, transprob, *sol, &insertpos, &replace) )
    {
+      SCIP_Real obj;
+
+      obj = SCIPsolGetObj(*sol, set, transprob, origprob);
+
       /* check solution for feasibility */
       SCIP_CALL( SCIPsolCheck(*sol, set, messagehdlr, blkmem, stat, transprob, printreason, completely, checkbounds,
             checkintegrality, checklprows, &feasible) );
+
+      SCIP_CALL( updateInsertPos(primal, set, origprob, transprob, *sol, obj, &insertpos, &feasible) );
    }
    else
       feasible = FALSE;
