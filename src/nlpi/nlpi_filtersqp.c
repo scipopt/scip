@@ -19,7 +19,6 @@
  * @author  Stefan Vigerske
  *
  * @todo scaling
- * @todo if filtersqp solution violates absolute optimality tolerance, try again with tighter eps
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -42,8 +41,10 @@
 
 #define RANDSEED               26051979      /**< initial random seed */
 #define MAXPERTURB             0.01          /**< maximal perturbation of bounds in starting point heuristic */
-#define MAXWORKSPACEINCREASE   2             /**< number of times per NLP solve we increase the workspace if FilterSQP terminated with ifail >= 8 */
+#define MAXNRUNS               2             /**< maximal number of FilterSQP calls per NLP solve (several calls if increasing workspace or decreasing eps) */
 #define WORKSPACEGROWTHFACTOR  2             /**< factor by which to increase worksapce */
+#define MINEPS                 1e-14         /**< minimal FilterSQP epsilon */
+#define OPTTOLFACTOR           0.5           /**< factor to apply to optimality tolerance, because FilterSQP do scaling */
 #define DEFAULT_LOBJLIM        (real)(-1e100) /**< default lower objective limit (should mean "unlimited") */
 #define DEFAULT_FEASOPTTOL     1e-6          /**< default feasibility and optimality tolerance */
 #define DEFAULT_MAXITER        3000          /**< default iteration limit */
@@ -1750,7 +1751,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 
    /* initialize global variables from filtersqp */
    /* FilterSQP eps is tolerance for both feasibility and optimality, and also for trust-region radius, etc. */
-   F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps = MIN(problem->feastol, problem->opttol)/10.0;  /* divide by 10.0 to accomodate absolute optimality tolerance check in processSolution, see also todo at top */
+   F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps = MIN(problem->feastol, problem->opttol * OPTTOLFACTOR);
    F77_FUNC(nlp_eps_inf,NLP_EPS_INF).infty = SCIPnlpiOracleGetInfinity(problem->oracle);
    F77_FUNC(ubdc,UBDC).ubd = 100.0;
    F77_FUNC(ubdc,UBDC).tt = 1.25;
@@ -1774,22 +1775,62 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       problem->niterations += problem->istat[1];
 
       assert(ifail <= 10);
-      if( ifail < 8 || problem->niterations >= problem->maxiter )
+      /* if ifail >= 8 (probably the workspace was too small), then retry with larger workspace
+       * if ifail == 0 or 3 (local optimal or local infeasible), but absolute violation of KKT too large, then retry with small eps
+       */
+      if( ifail < 8 && ((ifail != 0 && ifail != 3) || problem->rstat[0] <= problem->opttol) )
          break;
 
-      /* if maximal number of runs reached, then stop */
-      if( nruns > MAXWORKSPACEINCREASE )
+      if( problem->iprint > 0 )
+      {
+         SCIPmessagePrintInfo(data->messagehdlr, "FilterSQP terminated with status %d in run %d, absolute KKT violation is %g\n", ifail, nruns, problem->rstat[0]);
+      }
+
+      /* if iteration or time limit exceeded, then don't retry */
+      if( problem->niterations >= problem->maxiter || timelimitreached(data, problem) )
       {
          if( problem->iprint > 0 )
          {
-            SCIPmessagePrintInfo(data->messagehdlr, "FilterSQP terminated with status %d in run %d, giving up\n", ifail, nruns);
+            SCIPmessagePrintInfo(data->messagehdlr, "Time or iteration limit reached, not retrying\n");
          }
          break;
       }
 
-      if( problem->iprint > 0 )
+      /* if maximal number of runs reached, then stop */
+      if( nruns > MAXNRUNS )
       {
-         SCIPmessagePrintInfo(data->messagehdlr, "FilterSQP terminated with status %d in run %d, retry with larger workarrays\n", ifail, nruns);
+         if( problem->iprint > 0 )
+         {
+            SCIPmessagePrintInfo(data->messagehdlr, "Run limit reached, not retrying\n");
+         }
+         break;
+      }
+
+      if( ifail == 0 || ifail == 3 )
+      {
+         SCIP_Real epsfactor;
+
+         if( F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps <= MINEPS )
+         {
+            if( problem->iprint > 0 )
+            {
+               SCIPmessagePrintInfo(data->messagehdlr, "Already reached minimal epsilon, not retrying\n");
+            }
+            break;
+         }
+
+         epsfactor = problem->opttol / problem->rstat[0];
+         assert(epsfactor < 1.0); /* because of the if's above */
+         epsfactor *= OPTTOLFACTOR;
+
+         F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps = MAX(MINEPS, F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps * epsfactor);
+         if( problem->iprint > 0 )
+         {
+            SCIPmessagePrintInfo(data->messagehdlr, "Continue with eps = %g\n", F77_FUNC(nlp_eps_inf,NLP_EPS_INF).eps);
+         }
+         ifail = -1;  /* do warmstart */
+
+         continue;
       }
 
       /* increase real workspace, if ifail = 9 (real workspace too small) or ifail = 8 (unexpected ifail from QP solver, often also when workspace too small) */
