@@ -89,6 +89,7 @@ struct SCIP_NlpiProblem
    SCIP_NLPSOLSTAT             solstat;      /**< solution status from last NLP solve */
    SCIP_NLPTERMSTAT            termstat;     /**< termination status from last NLP solve */
    SCIP_Real                   solvetime;    /**< time spend for last NLP solve */
+   int                         niterations;  /**< number of iterations for last NLP solve */
 
    SCIP_Bool                   fromscratch;  /**< value of fromscratch parameter */
    fint                        istat[14];    /**< integer solution statistics from last FilterSQP call */
@@ -1613,6 +1614,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    fint lh1;
    fint nout;
    fint ifail;
+   fint maxiter;
    real rho;
    real f;
    real* user;
@@ -1754,8 +1756,11 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    F77_FUNC(ubdc,UBDC).tt = 1.25;
    F77_FUNC(scalec,SCALEC).scale_mode = 0;
 
+   problem->niterations = 0;
    for( nruns = 1; ; ++nruns )
    {
+      maxiter = problem->maxiter - problem->niterations;
+
       F77_FUNC(filtersqp,FILTERSQP)(
          &n, &m, &kmax, &maxa,
          &maxf, &mlp, &problem->mxwk, &problem->mxiwk,
@@ -1763,11 +1768,13 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
          problem->x, problem->c, &f, &problem->fmin, problem->bl,
          problem->bu, problem->s, problem->a, problem->la, problem->ws,
          problem->lws, problem->lam, problem->cstype, user,
-         iuser, &problem->maxiter, problem->istat,
+         iuser, &maxiter, problem->istat,
          problem->rstat, cstype_len);
 
+      problem->niterations += problem->istat[1];
+
       assert(ifail <= 10);
-      if( ifail < 8 )
+      if( ifail < 8 || problem->niterations >= problem->maxiter )
          break;
 
       /* if maximal number of runs reached, then stop */
@@ -1909,7 +1916,7 @@ SCIP_DECL_NLPIGETSTATISTICS( nlpiGetStatisticsFilterSQP )
 {
    assert(problem != NULL);
 
-   SCIPnlpStatisticsSetNIterations(statistics, problem->istat[1]);
+   SCIPnlpStatisticsSetNIterations(statistics, problem->niterations);
    SCIPnlpStatisticsSetTotalTime(statistics, problem->solvetime);
 
    return SCIP_OKAY;  /*lint !e527*/
