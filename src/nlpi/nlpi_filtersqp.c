@@ -679,6 +679,7 @@ SCIP_RETCODE processSolveOutcome(
    switch( ifail )
    {
       case 0: /* successful run, solution found */
+         assert(problem->rstat[0] <= problem->feastol);
          problem->solstat = SCIP_NLPSOLSTAT_LOCOPT;
          problem->termstat = SCIP_NLPTERMSTAT_OKAY;
          problem->warmstart = TRUE;
@@ -695,6 +696,7 @@ SCIP_RETCODE processSolveOutcome(
          problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
          break;
       case 3: /* (locally) nonlinear infeasible, minimal-infeasible solution found */
+         assert(problem->rstat[0] <= problem->feastol);
          problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
          problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
          problem->warmstart = TRUE;
