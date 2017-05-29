@@ -54,8 +54,6 @@ SCIP_RETCODE vardataCreate(
 {
    int i;
 
-   assert(prob == SUBPROB || nvars == 1);
-
    SCIP_CALL( SCIPallocBlockMemory(scip, vardata) );
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*vardata)->vars, nvars) );

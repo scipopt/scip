@@ -27,6 +27,7 @@
 #include "scip/scipshell.h"
 #include "scip/scipdefplugins.h"
 #include "scip/cons_benders.h"
+#include "scip/cons_benderslp.h"
 
 #include "benders_cflp.h"
 #include "reader_cflp.h"
@@ -57,7 +58,7 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPincludeReaderCflp(scip) );
 
    /* include the Benders' decomposition constraint handler */
-   SCIP_CALL( SCIPincludeConshdlrBenders(scip) );
+   SCIP_CALL( SCIPincludeConshdlrBenders(scip, FALSE) );
 
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );

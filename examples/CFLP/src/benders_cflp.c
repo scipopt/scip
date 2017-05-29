@@ -21,6 +21,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/scipdefplugins.h"
 #include "scip/pub_benders.h"
@@ -36,10 +37,61 @@
 #define BENDERS_NAME            "cflp"
 #define BENDERS_DESC            "Benders' decomposition template"
 #define BENDERS_PRIORITY        0
-#define BENDERS_CUTLP        TRUE   /**< should Benders' cut be generated for LP solutions */
-#define BENDERS_CUTPSEUDO    TRUE   /**< should Benders' cut be generated for pseudo solutions */
-#define BENDERS_CUTRELAX     TRUE   /**< should Benders' cut be generated for relaxation solutions */
+#define BENDERS_CUTLP         TRUE   /**< should Benders' cut be generated for LP solutions */
+#define BENDERS_CUTPSEUDO     TRUE   /**< should Benders' cut be generated for pseudo solutions */
+#define BENDERS_CUTRELAX      TRUE   /**< should Benders' cut be generated for relaxation solutions */
 
+
+/* event handler properties */
+#define EVENTHDLR_NAME         "benders_cflp"
+#define EVENTHDLR_DESC         "node focus event handler for Benders' decomposition"
+
+/* ---------------- Callback methods of event handler ---------------- */
+
+/** exec the event handler */
+static
+SCIP_DECL_EVENTEXEC(eventExecCflp)
+{  /*lint --e{715}*/
+
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   /* sending an interrupt solve signal to return the control back to the Benders' decomposition plugin.
+    * This will ensure the SCIP stage is SCIP_STAGE_SOLVING, allowing the use of probing mode. */
+   SCIP_CALL( SCIPinterruptSolve(scip) );
+
+   SCIP_CALL(SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, -1));
+
+   return SCIP_OKAY;
+}
+
+/** solving process initialization method of event handler (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_EVENTINITSOL(eventInitsolCflp)
+{
+   assert(scip != NULL);
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL(SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, NULL));
+
+   return SCIP_OKAY;
+}
+
+/** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
+static
+SCIP_DECL_EVENTEXITSOL(eventExitsolCflp)
+{
+   assert(scip != NULL);
+
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+   SCIP_CALL(SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, -1));
+
+   return SCIP_OKAY;
+}
 
 
 
@@ -70,15 +122,13 @@ SCIP_RETCODE createSubproblem(
    int                   probnumber          /**< the subproblem number that is being created */
    )
 {
-   SCIP_CONS** demandconss;
+   SCIP_CONS* demandcons;
    SCIP_CONS** capconss;
    SCIP_CONS* cons;
    SCIP_VAR** facilityvars;
    SCIP_Real** costs;
    SCIP_Real* demands;
    SCIP_Real capacity;
-   SCIP_Real fixedcost;
-   int ncustomers;
    int nfacilities;
    SCIP_VAR* var;
    SCIP_VARDATA* vardata;
@@ -92,11 +142,8 @@ SCIP_RETCODE createSubproblem(
    costs = SCIPprobdataGetCosts(probdata);
    demands = SCIPprobdataGetDemands(probdata);
    capacity = SCIPprobdataGetCapacity(probdata);
-   fixedcost = SCIPprobdataGetFixedCost(probdata);
-   ncustomers = SCIPprobdataGetNCustomers(probdata);
    nfacilities = SCIPprobdataGetNFacilities(probdata);
 
-   SCIP_CALL( SCIPallocBufferArray(subproblem, &demandconss, ncustomers) );
    SCIP_CALL( SCIPallocBufferArray(subproblem, &capconss, nfacilities) );
 
    /* include default SCIP plugins */
@@ -113,21 +160,21 @@ SCIP_RETCODE createSubproblem(
       capconss[i] = cons;
    }
 
+
    /* adds the demand constraints to the subproblem */
-   for( i = 0; i < ncustomers; i++ )
-   {
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "demand_%d", i);
-      SCIP_CALL( SCIPcreateConsBasicLinear(subproblem, &cons, name, 0, NULL, NULL, demands[i], SCIPinfinity(subproblem)) );
+   (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "demand_%d", probnumber);
+   SCIP_CALL( SCIPcreateConsBasicLinear(subproblem, &cons, name, 0, NULL, NULL, demands[probnumber],
+         SCIPinfinity(subproblem)) );
 
-      SCIP_CALL( SCIPaddCons(subproblem, cons) );
+   SCIP_CALL( SCIPaddCons(subproblem, cons) );
 
-      demandconss[i] = cons;
-   }
+   demandcons = cons;
+
 
    for( i = 0; i < nfacilities; i++ )
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "subprob_%d_facility_%d", probnumber, i);
-      SCIP_CALL( SCIPcreateVarCFLP(subproblem, &var, name, 0, 1, fixedcost, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPcreateVarCFLP(subproblem, &var, name, 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
 
       SCIP_CALL( SCIPaddVar(subproblem, var) );
 
@@ -154,35 +201,34 @@ SCIP_RETCODE createSubproblem(
    }
 
    /* adding the customer variables to the subproblem */
-   for( i = 0; i < ncustomers; i++ )
+   for( j = 0; j < nfacilities; j++ )
    {
-      for( j = 0; j < nfacilities; j++ )
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "subprob_%d_customer(%d,%d)", probnumber, probnumber, j);
+      SCIP_CALL( SCIPcreateVarCFLP(subproblem, &var, name, 0, SCIPinfinity(subproblem), costs[j][probnumber],
+            SCIP_VARTYPE_CONTINUOUS) );
+
+      SCIP_CALL( SCIPaddVar(subproblem, var) );
+
+      /* creates the variable data */
+      SCIP_CALL( SCIPvardataCreateCFLP(subproblem, &vardata, SUBPROB, 1) );
+
+      /* add the variable data to the variable */
+      SCIPvarSetData(var, vardata);
+
+      if( costs[j][probnumber] > 0 )
       {
-         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "subprob_%d_customer(%d,%d)", probnumber, i, j);
-         SCIP_CALL( SCIPcreateVarCFLP(subproblem, &var, name, 0, SCIPinfinity(subproblem), costs[j][i],
-               SCIP_VARTYPE_CONTINUOUS) );
-
-         SCIP_CALL( SCIPaddVar(subproblem, var) );
-
-         /* creates the variable data */
-         SCIP_CALL( SCIPvardataCreateCFLP(subproblem, &vardata, SUBPROB, 1) );
-
-         /* add the variable data to the variable */
-         SCIPvarSetData(var, vardata);
-
          /* adding the variable to the capacity constriants */
          SCIP_CALL( SCIPaddCoefLinear(subproblem, capconss[j], var, 1.0) );
 
          /* adding the variable to the demand constraints */
-         SCIP_CALL( SCIPaddCoefLinear(subproblem, demandconss[i], var, 1.0) );
-
-         /* releases the variable */
-         SCIP_CALL( SCIPreleaseVar(subproblem, &var) );
+         SCIP_CALL( SCIPaddCoefLinear(subproblem, demandcons, var, 1.0) );
       }
+
+      /* releases the variable */
+      SCIP_CALL( SCIPreleaseVar(subproblem, &var) );
    }
 
    SCIPfreeBufferArray(subproblem, &capconss);
-   SCIPfreeBufferArray(subproblem, &demandconss);
 
    return SCIP_OKAY;
 }
@@ -213,6 +259,12 @@ SCIP_RETCODE setupSubproblem(
 
    subproblem = SCIPbendersSubproblem(benders, probnumber);
 
+   /* ending probing mode to reset the current node */
+   SCIP_CALL( SCIPendProbing(subproblem) );
+
+   /* starting probing mode to fix variables for the subproblem */
+   SCIP_CALL( SCIPstartProbing(subproblem) );
+
    probdata = SCIPgetProbData(masterprob);
    nfacilities = SCIPprobdataGetNFacilities(probdata);
    facilityvars = SCIPprobdataGetFacilityVars(probdata);
@@ -232,6 +284,85 @@ SCIP_RETCODE setupSubproblem(
 
    return SCIP_OKAY;
 }
+
+
+/* solving the lp of the subproblems to generated Benders' cuts */
+static
+SCIP_RETCODE solveSubproblemLP(
+   SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
+   SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
+   SCIP_Real*            objval,             /**< the sum of the objective function values over all subproblems */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool*            infeasible          /**< a flag to indicate whether all subproblems are feasible */
+   )
+{
+   SCIP* subproblem;
+   SCIP_Bool lperror;
+   SCIP_Bool cutoff;
+
+   /* previous parameter settings */
+   int prevCutoffParam;
+   char prevInitAlgParam;
+   char prevResolveAlgParam;
+   SCIP_Bool prevDualParam;
+
+   assert(masterprob != NULL);
+   assert(benders != NULL);
+   assert(objval != NULL);
+   assert(infeasible != NULL);
+
+   (*objval) = 0;
+   (*infeasible) = FALSE;
+
+
+   /* TODO: This should be solved just as an LP, so as a MIP. There is too much overhead with the MIP.
+    * Need to change status check for checking the LP. */
+   subproblem = SCIPbendersSubproblem(benders, probnumber);
+
+   assert(SCIPisLPConstructed(subproblem));
+   /* modifying all of the parameters */
+
+   SCIP_CALL( SCIPgetIntParam(subproblem, "lp/disablecutoff", &prevCutoffParam) );
+   SCIPsetIntParam(subproblem, "lp/disablecutoff", 1);
+
+   SCIP_CALL( SCIPgetCharParam(subproblem, "lp/initalgorithm", &prevInitAlgParam) );
+   SCIPsetCharParam(subproblem, "lp/initalgorithm", 'd');
+   SCIP_CALL( SCIPgetCharParam(subproblem, "lp/resolvealgorithm", &prevResolveAlgParam) );
+   SCIPsetCharParam(subproblem, "lp/resolvealgorithm", 'd');
+
+   SCIP_CALL( SCIPgetBoolParam(subproblem, "misc/alwaysgetduals", &prevDualParam) );
+   SCIPsetBoolParam(subproblem, "misc/alwaysgetduals", TRUE);
+
+   SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
+
+   SCIP_CALL( SCIPsolveProbingLP(subproblem, -1, &lperror, &cutoff) );
+
+   assert(!lperror);
+
+   if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      (*objval) += SCIPgetLPObjval(subproblem);
+   }
+   else if( SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE )
+   {
+      (*infeasible) = TRUE;
+      (*objval) = SCIPinfinity(masterprob);
+   }
+   else
+      assert(FALSE);
+
+   //SCIP_CALL( SCIPprintStatistics(subprob, NULL) );
+
+   SCIPsetIntParam(subproblem, "lp/disablecutoff", prevCutoffParam);
+   SCIPsetCharParam(subproblem, "lp/initalgorithm", prevInitAlgParam);
+   SCIPsetCharParam(subproblem, "lp/resolvealgorithm", prevResolveAlgParam);
+   SCIPsetBoolParam(subproblem, "misc/alwaysgetduals", prevDualParam);
+
+   return SCIP_OKAY;
+}
+
+
+
 
 
 /* solving the subproblems to generated Benders' cuts */
@@ -293,7 +424,7 @@ SCIP_RETCODE solveSubproblem(
    SCIPsetBoolParam(subproblem, "misc/alwaysgetduals", TRUE);
 
    //SCIPinfoMessage(subproblem, NULL, "Pricing problem %d\n", probnumber);
-   //SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NORMAL) );
+   SCIP_CALL( SCIPsetIntParam(subproblem, "display/verblevel", (int)SCIP_VERBLEVEL_NONE) );
    //SCIP_CALL( SCIPsetBoolParam(subproblem, "display/lpinfo", TRUE) );
 
    SCIP_CALL( SCIPgetIntParam(subproblem, "propagating/maxrounds", &prevPropMaxroundsParam) );
@@ -304,8 +435,6 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPsetIntParam(subproblem, "constraints/linear/propfreq", -1) );
 
    SCIP_CALL( SCIPsolve(subproblem) );
-
-   SCIP_CALL( SCIPwriteTransProblem(subproblem, "subprob.lp", NULL, FALSE) );
 
    bestsol = SCIPgetBestSol(subproblem);
 
@@ -318,7 +447,7 @@ SCIP_RETCODE solveSubproblem(
       (*infeasible) = TRUE;
       (*objval) = SCIPinfinity(masterprob);
    }
-   else
+   else if( SCIPgetStatus(subproblem) != SCIP_STATUS_USERINTERRUPT )
       assert(FALSE);
 
    //SCIP_CALL( SCIPprintStatistics(subprob, NULL) );
@@ -377,7 +506,10 @@ SCIP_DECL_BENDERSFREE(bendersFreeCflp)
    nsubproblems = SCIPbendersGetNSubproblems(benders);
 
    for( i = 0; i < nsubproblems; i++ )
+   {
+      SCIP_CALL( SCIPendProbing(scip) );
       SCIP_CALL( SCIPfree(&bendersdata->subproblems[i]) );
+   }
 
    SCIPfreeBlockMemoryArray(scip, &bendersdata->subproblems, SCIPbendersGetNSubproblems(benders));
 
@@ -391,8 +523,10 @@ SCIP_DECL_BENDERSINIT(bendersInitCflp)
 {  /*lint --e{715}*/
    SCIP_BENDERSDATA* bendersdata;
    SCIP_PROBDATA* probdata;
+   SCIP_Real objval;
    int nsubproblems;
    char name[SCIP_MAXSTRLEN];
+   SCIP_Bool infeasible;
    int i;
 
    assert(scip != NULL);
@@ -405,6 +539,9 @@ SCIP_DECL_BENDERSINIT(bendersInitCflp)
    /* creating the subproblems */
    for( i = 0; i < nsubproblems; i++ )
    {
+      SCIP_EVENTHDLR* eventhdlr;
+      SCIP_Bool cutoff;
+
       SCIP_CALL( SCIPcreate(&bendersdata->subproblems[i]) );
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_sub_%d", SCIPgetProbName(scip), i);
@@ -412,10 +549,26 @@ SCIP_DECL_BENDERSINIT(bendersInitCflp)
       /* create problem in SCIP and add non-NULL callbacks via setter functions */
       SCIP_CALL( SCIPcreateProbBasic(bendersdata->subproblems[i], name) );
 
+      /* include event handler into SCIP */
+      SCIP_CALL( SCIPincludeEventhdlrBasic(bendersdata->subproblems[i], &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
+            eventExecCflp, NULL) );
+      SCIP_CALL( SCIPsetEventhdlrInitsol(bendersdata->subproblems[i], eventhdlr, eventInitsolCflp) );
+      SCIP_CALL( SCIPsetEventhdlrExitsol(bendersdata->subproblems[i], eventhdlr, eventExitsolCflp) );
+      assert(eventhdlr != NULL);
+
       SCIP_CALL( createSubproblem(bendersdata->subproblems[i], probdata, i) );
 
       /* adding the subproblem to the Benders' decomposition structure */
-      SCIPbendersAddSubproblem(benders, bendersdata->subproblems[i]);
+      SCIP_CALL( SCIPaddBendersSubproblem(scip, benders, bendersdata->subproblems[i]) );
+
+      /* Getting the problem into the right SCIP stage for solving */
+      SCIP_CALL( solveSubproblem(scip, benders, &objval, i, &infeasible) );
+
+      /* Constructing the LP that can be solved in later iterations */
+      SCIP_CALL( SCIPconstructLP(bendersdata->subproblems[i], &cutoff) );
+
+      /* starting probing mode */
+      SCIP_CALL( SCIPstartProbing(bendersdata->subproblems[i]) );
    }
 
 
@@ -542,7 +695,7 @@ SCIP_DECL_BENDERSSOLVESUB(bendersSolvesubCflp)
    SCIP_CALL( setupSubproblem(scip, benders, sol, probnumber) );
 
    /* solves the subproblem */
-   SCIP_CALL( solveSubproblem(scip, benders, &objval, probnumber, infeasible) );
+   SCIP_CALL( solveSubproblemLP(scip, benders, &objval, probnumber, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -568,7 +721,7 @@ SCIP_DECL_BENDERSFREESUB(bendersFreesubCflp)
 {  /*lint --e{715}*/
 
    /* freeing the transform of the subproblems so that it can be updated in the next iteration. */
-   SCIP_CALL( SCIPfreeTransform(SCIPbendersSubproblem(benders, probnumber)) );
+   //SCIP_CALL( SCIPfreeTransform(SCIPbendersSubproblem(benders, probnumber)) );
 
    return SCIP_OKAY;
 }

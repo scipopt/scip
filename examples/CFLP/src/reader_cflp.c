@@ -96,7 +96,47 @@
 #define READER_DESC             "file reader for cflp data format"
 #define READER_EXTENSION        "txt"
 
+
+#define DEFAULT_USEBENDERS       TRUE
+
+struct SCIP_ReaderData
+{
+   SCIP_Bool             usebenders;         /**< should Benders' decomposition be used to solve the problem */
+};
+
 /**@} */
+
+/** creates the reader data */
+static
+SCIP_RETCODE readerdataCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READERDATA**     readerdata          /**< pointer to store the reader data */
+   )
+{
+   assert(scip != NULL);
+   assert(readerdata != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, readerdata) );
+   (*readerdata)->usebenders = TRUE;
+
+   return SCIP_OKAY;
+}
+
+/** frees the reader data */
+static
+SCIP_RETCODE readerdataFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_READERDATA**     readerdata          /**< pointer to store the reader data */
+   )
+{
+   assert(scip != NULL);
+   assert(readerdata != NULL);
+   assert(*readerdata != NULL);
+
+   SCIPfreeBlockMemory(scip, readerdata);
+
+   return SCIP_OKAY;
+}
 
 
 /**@name Callback methods
@@ -104,10 +144,29 @@
  * @{
  */
 
+/** destructor of reader to free user data (called when SCIP is exiting)*/
+static
+SCIP_DECL_READERFREE(readerFreeCflp)
+{
+   SCIP_READERDATA* readerdata;
+
+   assert(scip != NULL);
+   assert(reader != NULL);
+
+   readerdata = SCIPreaderGetData(reader);
+
+   SCIP_CALL( readerdataFree(scip, &readerdata) );
+
+   return SCIP_OKAY;
+}
+
+
 /** problem reading method of reader */
 static
 SCIP_DECL_READERREAD(readerReadCflp)
 {  /*lint --e{715}*/
+   SCIP_READERDATA* readerdata;
+
    SCIP_FILE* file;
    SCIP_Bool error;
 
@@ -131,6 +190,8 @@ SCIP_DECL_READERREAD(readerReadCflp)
    int lineno;
    int i;
    int j;
+
+   readerdata = SCIPreaderGetData(reader);
 
    *result = SCIP_DIDNOTRUN;
 
@@ -209,7 +270,7 @@ SCIP_DECL_READERREAD(readerReadCflp)
       SCIP_CALL( SCIPallocBufferArray(scip, &costs[i], ncustomers) );
 
       for( j = 0; j < ncustomers; j++ )
-         costs[i][j] = -1.0;
+         costs[i][j] = 0.0;
 
       demands[i] = 0.0;
    }
@@ -243,11 +304,15 @@ SCIP_DECL_READERREAD(readerReadCflp)
 
    if( !error )
    {
-      /* creating the Benders' decomposition structure */
-      SCIP_CALL( SCIPincludeBendersCflp(scip, 1) );
+      if( readerdata->usebenders )
+      {
+         /* creating the Benders' decomposition structure */
+         SCIP_CALL( SCIPincludeBendersCflp(scip, ncustomers) );
+      }
 
       /* create a new problem in SCIP */
-      SCIP_CALL( SCIPprobdataCreate(scip, name, costs, demands, capacity, fixedcost, ncustomers, nfacilities, 1) );
+      SCIP_CALL( SCIPprobdataCreate(scip, name, costs, demands, capacity, fixedcost, ncustomers, nfacilities,
+              ncustomers, readerdata->usebenders) );
    }
 
    (void)SCIPfclose(file);
@@ -285,11 +350,18 @@ SCIP_RETCODE SCIPincludeReaderCflp(
    /* create cflp reader data */
    readerdata = NULL;
 
+   SCIP_CALL( readerdataCreate(scip, &readerdata) );
+
    /* include cflp reader */
    SCIP_CALL( SCIPincludeReaderBasic(scip, &reader, READER_NAME, READER_DESC, READER_EXTENSION, readerdata) );
    assert(reader != NULL);
 
+   SCIP_CALL( SCIPsetReaderFree(scip, reader, readerFreeCflp) );
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadCflp) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "readers/" READER_NAME "/usebenders", "Should Benders' decomposition be used to solve the problem?",
+         &readerdata->usebenders, FALSE, DEFAULT_USEBENDERS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

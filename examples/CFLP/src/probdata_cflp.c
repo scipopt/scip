@@ -97,6 +97,126 @@ struct SCIP_ProbData
  * @{
  */
 
+/** creates the original problem */
+static
+SCIP_RETCODE createOriginalproblem(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR**            facilityvars,       /**< all variables representing facilities */
+   SCIP_VAR***           customervars,       /**< all variables representing the satisfaction of demand */
+   SCIP_CONS**           capconss,           /**< capacity constraints per facility */
+   SCIP_CONS**           demandconss,        /**< demand constraints per customer */
+   SCIP_Real**           costs,              /**< the transportation costs from a facility to a customer */
+   SCIP_Real*            demands,            /**< the customer demands */
+   SCIP_Real             capacity,           /**< the capacity of each facility */
+   SCIP_Real             fixedcost,          /**< the fixed cost of openning a facility */
+   int                   ncustomers,         /**< the number of customers */
+   int                   nfacilities,        /**< the number of facilities */
+   int                   nsubproblems,       /**< the number of subproblems */
+   int*                  nfacilityvars,      /**< the number of facility variables added to the problem */
+   int**                 ncustomervars,      /**< the number of customer variables */
+   int*                  ncapconss,          /**< the number of capacity constraints */
+   int*                  ndemandconss        /**< the number of demand constraints */
+   )
+{
+   SCIP_CONS* cons;
+   SCIP_VAR* var;
+   SCIP_VARDATA* vardata;
+   int i;
+   int j;
+   char name[SCIP_MAXSTRLEN];
+   assert(scip != NULL);
+
+   (*nfacilityvars) = 0;
+
+   /* adds the capacity constraints to the subproblem */
+   for( i = 0; i < nfacilities; i++ )
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "capacity_%d", i);
+      SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name, 0, NULL, NULL, -SCIPinfinity(scip), 0.0) );
+
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+
+      capconss[i] = cons;
+
+      (*ncapconss)++;
+   }
+
+   /* adds the demand constraints to the subproblem */
+   for( i = 0; i < ncustomers; i++ )
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "demand_%d", i);
+      SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, name, 0, NULL, NULL, demands[i], SCIPinfinity(scip)) );
+
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+
+      demandconss[i] = cons;
+
+      (*ndemandconss)++;
+   }
+
+   for( i = 0; i < nfacilities; i++ )
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "facility_%d", i);
+      SCIP_CALL( SCIPcreateVarCFLP(scip, &var, name, 0, 1, fixedcost, SCIP_VARTYPE_BINARY) );
+
+      SCIP_CALL( SCIPaddVar(scip, var) );
+
+      /* storing the variable in the facility variable list */
+      facilityvars[i] = var;
+
+      /* creates the variable data */
+      SCIP_CALL( SCIPvardataCreateCFLP(scip, &vardata, MASTER, nsubproblems) );
+
+      /* add the variable data to the variable */
+      SCIPvarSetData(var, vardata);
+
+      /* adding the variable to the capacity constriants */
+      SCIP_CALL( SCIPaddCoefLinear(scip, capconss[i], var, -capacity) );
+
+      /* releases the variable */
+      SCIP_CALL( SCIPreleaseVar(scip, &var) );
+
+      (*nfacilityvars)++;
+   }
+
+   /* adding the customer variables to the subproblem */
+   for( i = 0; i < ncustomers; i++ )
+   {
+      for( j = 0; j < nfacilities; j++ )
+      {
+         (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "customer(%d,%d)", i, j);
+         SCIP_CALL( SCIPcreateVarCFLP(scip, &var, name, 0, SCIPinfinity(scip), costs[j][i], SCIP_VARTYPE_CONTINUOUS) );
+
+         SCIP_CALL( SCIPaddVar(scip, var) );
+
+         /* storing the customer variable in the list */
+         customervars[i][j] = var;
+
+         /* creates the variable data */
+         SCIP_CALL( SCIPvardataCreateCFLP(scip, &vardata, SUBPROB, 1) );
+
+         /* add the variable data to the variable */
+         SCIPvarSetData(var, vardata);
+
+         if( costs[j][i] > 0 )
+         {
+            /* adding the variable to the capacity constriants */
+            SCIP_CALL( SCIPaddCoefLinear(scip, capconss[j], var, 1.0) );
+
+            /* adding the variable to the demand constraints */
+            SCIP_CALL( SCIPaddCoefLinear(scip, demandconss[i], var, 1.0) );
+         }
+
+         /* releases the variable */
+         SCIP_CALL( SCIPreleaseVar(scip, &var) );
+
+         (*ncustomervars)[i]++;
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates the Benders' decomposition master problem */
 static
 SCIP_RETCODE createMasterproblem(
@@ -329,7 +449,8 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_Real             fixedcost,          /**< the fixed cost of openning a facility */
    int                   ncustomers,         /**< the number of customers */
    int                   nfacilities,        /**< the number of facilities */
-   int                   nsubproblems        /**< the number of Benders' decomposition subproblems */
+   int                   nsubproblems,       /**< the number of Benders' decomposition subproblems */
+   SCIP_Bool             usebenders          /**< will Benders' decomposition be used to solve the problem */
    )
 {
    SCIP_PROBDATA* probdata;
@@ -371,8 +492,18 @@ SCIP_RETCODE SCIPprobdataCreate(
    for( i = 0; i < ncustomers; i++ )
       ncustomervars[i] = 0;
 
-   /* creating the master problem */
-   SCIP_CALL( createMasterproblem(scip, facilityvars, fixedcost, nfacilities, nsubproblems, &nfacilityvars) );
+   if( usebenders )
+   {
+      /* creating the master problem */
+      SCIP_CALL( createMasterproblem(scip, facilityvars, fixedcost, nfacilities, nsubproblems, &nfacilityvars) );
+   }
+   else
+   {
+      /* creating the original problem */
+      SCIP_CALL( createOriginalproblem(scip, facilityvars, customervars, capconss, demandconss, costs, demands,
+            capacity, fixedcost, ncustomers, nfacilities, nsubproblems, &nfacilityvars, &ncustomervars, &ncapconss,
+            &ndemandconss) );
+   }
 
    /* create problem data */
    SCIP_CALL( probdataCreate(scip, &probdata, facilityvars, customervars, capconss, demandconss, costs, demands,

@@ -39,7 +39,8 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_Real             fixedcost,          /**< the fixed cost of openning a facility */
    int                   ncustomers,         /**< the number of customers */
    int                   nfacilities,        /**< the number of facilities */
-   int                   nsubproblems        /**< the number of subproblems */
+   int                   nsubproblems,       /**< the number of Benders' decomposition subproblems */
+   SCIP_Bool             usebenders          /**< will Benders' decomposition be used to solve the problem */
    );
 
 /** returns the number of facilities */
