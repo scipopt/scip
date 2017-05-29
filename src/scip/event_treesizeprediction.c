@@ -34,8 +34,6 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary event handler data */
-
 /** event handler data */
 struct SCIP_EventhdlrData
 {
@@ -133,7 +131,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolTreeSizePrediction)
 
    eventhdlrdata->nodesfound = 0;
 
-   /* We catch node solved */
+   /* We catch node solved events */
    SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, NULL, NULL) );
 
    /* We catch updates to the primal bound */
@@ -182,7 +180,8 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_NODE* foundnode; /* The node found by the event (if any) */
-   SCIP_Real  newlowerbound; /* The new lower bound found by the event (if any) */
+   SCIP_Real newlowerbound; /* The new lower bound found by the event (if any) */
+
    /* SCIPdebugMsg(scip, "exec method of eventhdlr "EVENTHDLR_NAME"\n"); */
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
@@ -193,15 +192,25 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
    assert(eventhdlrdata != NULL);
 
    switch(SCIPeventGetType(event)) {
-      case SCIP_EVENTTYPE_NODEINFEASIBLE:
-      case SCIP_EVENTTYPE_NODEBRANCHED:
       case SCIP_EVENTTYPE_NODEFEASIBLE:
+      case SCIP_EVENTTYPE_NODEINFEASIBLE:
+         /* When an (in)feasible node is found, this corresponds to a new sample
+          * (in Knuth's algorithm). This may change the tree-size estimate. */
+      case SCIP_EVENTTYPE_NODEBRANCHED:
+         /* When a node is branched on, we need to add the corresponding nodes
+          * to our own data structure */
          eventhdlrdata->nodesfound += 1;
          foundnode = SCIPeventGetNode(event);
          assert(foundnode != NULL);
          break;
       case SCIP_EVENTTYPE_BESTSOLFOUND:
       {
+         /* When a new primal bound is found, then some of the leaves that were
+          * previously infeasible could have an ancester that would have been
+          * pruned by this new primal bound. We are going to trim our
+          * representation of the tree so that previous branched nodes may
+          * become leaves in our d
+          */
          newlowerbound = SCIPgetLowerbound(scip);
          SCIPdebugMsg(scip, "New best solution found\n");
          foundnode = NULL;
