@@ -448,6 +448,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/concsolver_scip.o \
 			scip/cons_and.o \
 			scip/cons_benders.o \
+			scip/cons_benderslp.o \
 			scip/cons_bivariate.o \
 			scip/cons_bounddisjunction.o \
 			scip/cons_cardinality.o \

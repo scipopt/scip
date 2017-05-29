@@ -260,7 +260,8 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    assert(subproblem != NULL);
    assert(benders != NULL);
    assert(result != NULL);
-   assert(SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE);
+   assert(SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE
+      || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE);
 
    /* setting the name of the generated cut */
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "feasibilitycut_%d_%d", probnumber,
@@ -395,7 +396,8 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecFeas)
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
    /* only generate feasibility cuts if the subproblem is infeasible */
-   if( SCIPgetStatus(SCIPbendersSubproblem(benders, probnumber)) == SCIP_STATUS_INFEASIBLE )
+   if( SCIPgetStatus(SCIPbendersSubproblem(benders, probnumber)) == SCIP_STATUS_INFEASIBLE ||
+      SCIPgetLPSolstat(SCIPbendersSubproblem(benders, probnumber)) == SCIP_LPSOLSTAT_INFEASIBLE )
    {
       /* generating a cut for a given subproblem */
       SCIP_CALL( generateAndApplyBendersCuts(scip, SCIPbendersSubproblem(benders, probnumber), benders, benderscut,

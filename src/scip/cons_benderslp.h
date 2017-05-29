@@ -13,16 +13,16 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_benders.h
+/**@file   cons_benderslp.h
  * @ingroup CONSHDLRS
- * @brief  constraint handler for benders decomposition
+ * @brief  constraint handler for benderslp decomposition
  * @author Stephen J. Maher
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_BENDERS_H__
-#define __SCIP_CONS_BENDERS_H__
+#ifndef __SCIP_CONS_BENDERSLP_H__
+#define __SCIP_CONS_BENDERSLP_H__
 
 
 #include "scip/scip.h"
@@ -32,39 +32,30 @@
 extern "C" {
 #endif
 
-enum Benders_EnfoType
-{
-    LP      = 1,
-    RELAX   = 2,
-    PSEUDO  = 3
-};
-typedef enum Benders_EnfoType BENDERS_ENFOTYPE;
-
-/** creates the handler for benders constraints and includes it in SCIP
+/** creates the handler for benderslp constraints and includes it in SCIP
  *
  * @ingroup ConshdlrIncludes
  * */
 EXTERN
-SCIP_RETCODE SCIPincludeConshdlrBenders(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             twophase            /**< should the two phase method be used? */
+SCIP_RETCODE SCIPincludeConshdlrBenderslp(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /**@addtogroup CONSHDLRS
  *
  * @{
  *
- * @name Benders Constraints
+ * @name Benderslp Constraints
  *
  * @{
  */
 
-/** creates and captures a benders constraint
+/** creates and captures a benderslp constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 EXTERN
-SCIP_RETCODE SCIPcreateConsBenders(
+SCIP_RETCODE SCIPcreateConsBenderslp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
@@ -98,13 +89,13 @@ SCIP_RETCODE SCIPcreateConsBenders(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    );
 
-/** creates and captures a benders constraint with all its constraint flags set to their
+/** creates and captures a benderslp constraint with all its constraint flags set to their
  *  default values
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
 EXTERN
-SCIP_RETCODE SCIPcreateConsBasicBenders(
+SCIP_RETCODE SCIPcreateConsBasicBenderslp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
@@ -114,16 +105,6 @@ SCIP_RETCODE SCIPcreateConsBasicBenders(
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs                 /**< right hand side of constraint */
    );
-
-
-/** the methods for the enforcement of solutions */
-EXTERN
-SCIP_RETCODE SCIPconsBendersEnforceSolutions(
-    SCIP*                scip,               /**< the SCIP instance */
-    SCIP_CONSHDLR*       conshdlr,           /**< the constraint handler */
-    SCIP_RESULT*         result,             /**< the result of the enforcement */
-    BENDERS_ENFOTYPE     type                /**< the type of solution being enforced */
-    );
 
 /* @} */
 

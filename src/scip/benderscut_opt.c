@@ -156,20 +156,20 @@ SCIP_RETCODE computeStandardOptimalityCut(
       {
          if( !SCIPisZero(subproblem, redcost) )
          {
-             addval = 0;
+            addval = 0;
 
-             /* get current lhs of the subproblem cut */
-             lhs = SCIPgetLhsLinear(masterprob, cut);
+            /* get current lhs of the subproblem cut */
+            lhs = SCIPgetLhsLinear(masterprob, cut);
 
-             if( SCIPisPositive(subproblem, redcost) )
-                addval = redcost*SCIPvarGetLbLocal(var);
-             else if( SCIPisNegative(subproblem, redcost) )
-                addval = redcost*SCIPvarGetUbLocal(var);
+            if( SCIPisPositive(subproblem, redcost) )
+               addval = redcost*SCIPvarGetLbLocal(var);
+            else if( SCIPisNegative(subproblem, redcost) )
+               addval = redcost*SCIPvarGetUbLocal(var);
 
-             lhs += addval;
+            lhs += addval;
 
-             /* Update lhs */
-             SCIP_CALL( SCIPchgLhsLinear(masterprob, cut, lhs) );
+            /* Update lhs */
+            SCIP_CALL( SCIPchgLhsLinear(masterprob, cut, lhs) );
          }
       }
    }
@@ -181,7 +181,7 @@ SCIP_RETCODE computeStandardOptimalityCut(
    verifyobj -= SCIPgetActivityLinear(masterprob, cut, sol);
 #endif
 
-   assert(SCIPisFeasEQ(masterprob, checkobj, verifyobj ));
+   assert(SCIPisFeasEQ(masterprob, checkobj, verifyobj) || SCIPbendersGetUseMagnantiWong(benders));
 
    assert(cut != NULL);
 
@@ -219,7 +219,7 @@ SCIP_RETCODE addAuxiliaryVariableToCut(
 
    auxiliaryvarval = SCIPgetSolVal(masterprob, sol, auxiliaryvar);
 
-   printf("Auxiliary Variable: %g Subproblem Objective: %g\n", auxiliaryvarval, SCIPbendersGetSubprobObjval(benders, probnumber));
+   SCIPdebugMsg(masterprob, "Auxiliary Variable: %g Subproblem Objective: %g\n", auxiliaryvarval, SCIPbendersGetSubprobObjval(benders, probnumber));
 
    /* if the value of the auxiliary variable in the master problem is greater or equal to the subproblem objective,
     * then a cut is not added by the subproblem.
@@ -258,7 +258,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    assert(benders != NULL);
    assert(benderscut != NULL);
    assert(result != NULL);
-   assert(SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL);
+   assert(SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL);
 
    /* setting the name of the generated cut */
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "optimalitycut_%d_%d", probnumber,
@@ -276,7 +276,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    /* if the current subproblem is optimal for the master, then we do not add a constraint. */
    if( optimal )
    {
-      SCIPinfoMessage(masterprob, NULL, "No cut added for subproblem %d\n", probnumber);
+      SCIPdebugMsg(masterprob, "No cut added for subproblem %d\n", probnumber);
       SCIP_CALL( SCIPreleaseCons(masterprob, &cut) );
       return SCIP_OKAY;
    }
@@ -407,7 +407,8 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
    assert(probnumber >= 0 && probnumber < SCIPbendersGetNSubproblems(benders));
 
    /* only generate optimality cuts if the subproblem is optimal */
-   if( SCIPgetStatus(SCIPbendersSubproblem(benders, probnumber)) == SCIP_STATUS_OPTIMAL )
+   if( SCIPgetStatus(SCIPbendersSubproblem(benders, probnumber)) == SCIP_STATUS_OPTIMAL ||
+    SCIPgetLPSolstat(SCIPbendersSubproblem(benders, probnumber)) == SCIP_LPSOLSTAT_OPTIMAL )
    {
       /* generating a cut for a given subproblem */
       SCIP_CALL( generateAndApplyBendersCuts(scip, SCIPbendersSubproblem(benders, probnumber), benders, benderscut,

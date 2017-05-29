@@ -155,6 +155,7 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    int                   probnum,            /**< the subproblem number */
+   SCIP_Bool             enhancement,        /**< is the solve performed as part of and enhancement? */
    SCIP_Bool*            infeasible          /**< returns whether the current subproblem is infeasible */
    );
 
@@ -268,13 +269,6 @@ extern
 SCIP_RETCODE SCIPbendersAddSubproblem(
    SCIP_BENDERS*         benders,            /**< variable benders */
    SCIP*                 subproblem          /**< subproblem to be added to the data storage */
-   );
-
-/** Adds the event handler data to the Benders' decomposition data */
-extern
-void SCIPbendersAddEventhdlrdata(
-   SCIP_BENDERS*         benders,            /**< variable benders */
-   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< the event handler data for the LP solved event */
    );
 #ifdef __cplusplus
 }

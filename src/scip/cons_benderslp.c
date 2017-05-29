@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_benders.c
- * @brief  constraint handler for benders decomposition
+/**@file   cons_benderslp.c
+ * @brief  constraint handler for benderslp decomposition
  * @author Stephen J. Maher
  */
 
@@ -23,15 +23,15 @@
 #include <assert.h>
 #include "scip/scip.h"
 
-#include "scip/cons_benders.h"
 #include "scip/cons_benderslp.h"
+#include "scip/cons_benders.h"
 
 
 /* fundamental constraint handler properties */
-#define CONSHDLR_NAME          "benders"
-#define CONSHDLR_DESC          "constraint handler to execute Benders' Decomposition"
-#define CONSHDLR_ENFOPRIORITY        -1 /**< priority of the constraint handler for constraint enforcing */
-#define CONSHDLR_CHECKPRIORITY       -1 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_NAME          "benderslp"
+#define CONSHDLR_DESC          "constraint handler for Benders' Decomposition to separate root node LP solutions"
+#define CONSHDLR_ENFOPRIORITY     10000 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_CHECKPRIORITY    10000 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
@@ -56,7 +56,7 @@
 
 /* TODO: fill in the necessary constraint data */
 
-/** constraint data for benders constraints */
+/** constraint data for benderslp constraints */
 //struct SCIP_ConsData
 //{
 //};
@@ -67,59 +67,6 @@ struct SCIP_ConshdlrData
    int                   ncalls;             /**< the number of calls to the constraint handler. */
 };
 
-/** the methods for the enforcement of solutions */
-SCIP_RETCODE SCIPconsBendersEnforceSolutions(
-    SCIP*                scip,               /**< the SCIP instance */
-    SCIP_CONSHDLR*       conshdlr,           /**< the constraint handler */
-    SCIP_RESULT*         result,             /**< the result of the enforcement */
-    BENDERS_ENFOTYPE     type                /**< the type of solution being enforced */
-    )
-{
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_BENDERS** benders;
-   int nbenders;
-   int i;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(result != NULL);
-
-   (*result) = SCIP_FEASIBLE;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-
-   benders = SCIPgetBenders(scip);
-   nbenders = SCIPgetNBenders(scip);
-
-   for( i = 0; i < nbenders; i++ )
-   {
-      switch( type )
-      {
-         case LP:
-            if( SCIPbendersCutLP(benders[i]) )
-            {
-               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, FALSE) );
-            }
-            break;
-         case RELAX:
-            if( SCIPbendersCutRelaxation(benders[i]) )
-            {
-               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, FALSE) );
-            }
-            break;
-         case PSEUDO:
-            if( SCIPbendersCutPseudo(benders[i]) )
-            {
-               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, FALSE) );
-            }
-            break;
-      }
-   }
-
-   conshdlrdata->ncalls++;
-
-   return SCIP_OKAY;
-}
 
 /*
  * Local methods
@@ -129,7 +76,7 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
 /* applies the generated cut to the master problem*/
 static
 SCIP_RETCODE applyCut(
-   //SCIP_BENDERS_CUTTYPE  cuttype
+   //SCIP_BENDERSLP_CUTTYPE  cuttype
    )
 {
    return SCIP_OKAY;
@@ -154,20 +101,20 @@ SCIP_RETCODE applyMagnantiWongDualStrengthening(
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
 #if 0
 static
-SCIP_DECL_CONSHDLRCOPY(conshdlrCopyBenders)
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define conshdlrCopyBenders NULL
+#define conshdlrCopyBenderslp NULL
 #endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
-SCIP_DECL_CONSFREE(consFreeBenders)
+SCIP_DECL_CONSFREE(consFreeBenderslp)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
 
@@ -189,9 +136,9 @@ SCIP_DECL_CONSFREE(consFreeBenders)
 /** initialization method of constraint handler (called after problem was transformed) */
 #if 0
 static
-SCIP_DECL_CONSINIT(consInitBenders)
+SCIP_DECL_CONSINIT(consInitBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    /* A possible implementation from gcg_pricer.cpp */
@@ -207,166 +154,169 @@ SCIP_DECL_CONSINIT(consInitBenders)
    return SCIP_OKAY;
 }
 #else
-#define consInitBenders NULL
+#define consInitBenderslp NULL
 #endif
 
 
 /** deinitialization method of constraint handler (called before transformed problem is freed) */
 #if 0
 static
-SCIP_DECL_CONSEXIT(consExitBenders)
+SCIP_DECL_CONSEXIT(consExitBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consExitBenders NULL
+#define consExitBenderslp NULL
 #endif
 
 
 /** presolving initialization method of constraint handler (called when presolving is about to begin) */
 #if 0
 static
-SCIP_DECL_CONSINITPRE(consInitpreBenders)
+SCIP_DECL_CONSINITPRE(consInitpreBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consInitpreBenders NULL
+#define consInitpreBenderslp NULL
 #endif
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
 #if 0
 static
-SCIP_DECL_CONSEXITPRE(consExitpreBenders)
+SCIP_DECL_CONSEXITPRE(consExitpreBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consExitpreBenders NULL
+#define consExitpreBenderslp NULL
 #endif
 
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
 #if 0
 static
-SCIP_DECL_CONSINITSOL(consInitsolBenders)
+SCIP_DECL_CONSINITSOL(consInitsolBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consInitsolBenders NULL
+#define consInitsolBenderslp NULL
 #endif
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
 #if 0
 static
-SCIP_DECL_CONSEXITSOL(consExitsolBenders)
+SCIP_DECL_CONSEXITSOL(consExitsolBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consExitsolBenders NULL
+#define consExitsolBenderslp NULL
 #endif
 
 
 /** frees specific constraint data */
 #if 0
 static
-SCIP_DECL_CONSDELETE(consDeleteBenders)
+SCIP_DECL_CONSDELETE(consDeleteBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consDeleteBenders NULL
+#define consDeleteBenderslp NULL
 #endif
 
 
 /** transforms constraint data into data belonging to the transformed problem */
 #if 0
 static
-SCIP_DECL_CONSTRANS(consTransBenders)
+SCIP_DECL_CONSTRANS(consTransBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consTransBenders NULL
+#define consTransBenderslp NULL
 #endif
 
 
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
 #if 0
 static
-SCIP_DECL_CONSINITLP(consInitlpBenders)
+SCIP_DECL_CONSINITLP(consInitlpBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consInitlpBenders NULL
+#define consInitlpBenderslp NULL
 #endif
 
 
 /** separation method of constraint handler for LP solutions */
 #if 0
 static
-SCIP_DECL_CONSSEPALP(consSepalpBenders)
+SCIP_DECL_CONSSEPALP(consSepalpBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consSepalpBenders NULL
+#define consSepalpBenderslp NULL
 #endif
 
 
 /** separation method of constraint handler for arbitrary primal solutions */
 #if 0
 static
-SCIP_DECL_CONSSEPASOL(consSepasolBenders)
+SCIP_DECL_CONSSEPASOL(consSepasolBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consSepasolBenders NULL
+#define consSepasolBenderslp NULL
 #endif
 
 
 /** constraint enforcing method of constraint handler for LP solutions */
 static
-SCIP_DECL_CONSENFOLP(consEnfolpBenders)
+SCIP_DECL_CONSENFOLP(consEnfolpBenderslp)
 {  /*lint --e{715}*/
 
-   SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, conshdlr, result, LP) );
+   if( SCIPgetDepth(scip) > 1 )
+      (*result) = SCIP_FEASIBLE;
+   else
+      SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, conshdlr, result, LP) );
 
    return SCIP_OKAY;
 }
@@ -374,10 +324,13 @@ SCIP_DECL_CONSENFOLP(consEnfolpBenders)
 
 /** constraint enforcing method of constraint handler for relaxation solutions */
 static
-SCIP_DECL_CONSENFORELAX(consEnforelaxBenders)
+SCIP_DECL_CONSENFORELAX(consEnforelaxBenderslp)
 {  /*lint --e{715}*/
 
-   SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, conshdlr, result, RELAX) );
+   if( SCIPgetDepth(scip) > 1 )
+      (*result) = SCIP_FEASIBLE;
+   else
+      SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, conshdlr, result, RELAX) );
 
    return SCIP_OKAY;
 }
@@ -385,48 +338,26 @@ SCIP_DECL_CONSENFORELAX(consEnforelaxBenders)
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
 static
-SCIP_DECL_CONSENFOPS(consEnfopsBenders)
+SCIP_DECL_CONSENFOPS(consEnfopsBenderslp)
 {  /*lint --e{715}*/
 
-   SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, conshdlr, result, PSEUDO) );
+   if( SCIPgetDepth(scip) > 1 )
+      (*result) = SCIP_FEASIBLE;
+   else
+      SCIP_CALL( SCIPconsBendersEnforceSolutions(scip, conshdlr, result, PSEUDO) );
 
    return SCIP_OKAY;
 }
 
 
 /** feasibility check method of constraint handler for integral solutions */
-/*  This function checks the feasibility of the Benders' decomposition master problem. In the case that the problem is
+/*  This function checks the feasibility of the Benderslp' decomposition master problem. In the case that the problem is
  *  feasible, then the auxiliary variables must be updated with the subproblem objective function values. The update
  *  occurs in the solve subproblems function. */
 static
-SCIP_DECL_CONSCHECK(consCheckBenders)
+SCIP_DECL_CONSCHECK(consCheckBenderslp)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_BENDERS** benders;
-   int nbenders;
-   int i;
-
-   assert(scip != NULL);
-   assert(conshdlr != NULL);
-   assert(result != NULL);
-
    (*result) = SCIP_FEASIBLE;
-
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-
-   benders = SCIPgetBenders(scip);
-   nbenders = SCIPgetNBenders(scip);
-
-   for( i = 0; i < nbenders; i++ )
-   {
-      SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, TRUE) );
-
-      /* if the result is infeasible, it is not necessary to check any more subproblems. */
-      if( (*result) == SCIP_INFEASIBLE )
-         break;
-   }
-
-   conshdlrdata->ncalls++;
 
    return SCIP_OKAY;
 }
@@ -435,53 +366,53 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
 /** domain propagation method of constraint handler */
 #if 0
 static
-SCIP_DECL_CONSPROP(consPropBenders)
+SCIP_DECL_CONSPROP(consPropBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consPropBenders NULL
+#define consPropBenderslp NULL
 #endif
 
 
 /** presolving method of constraint handler */
 #if 0
 static
-SCIP_DECL_CONSPRESOL(consPresolBenders)
+SCIP_DECL_CONSPRESOL(consPresolBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consPresolBenders NULL
+#define consPresolBenderslp NULL
 #endif
 
 
 /** propagation conflict resolving method of constraint handler */
 #if 0
 static
-SCIP_DECL_CONSRESPROP(consRespropBenders)
+SCIP_DECL_CONSRESPROP(consRespropBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consRespropBenders NULL
+#define consRespropBenderslp NULL
 #endif
 
 
 /** variable rounding lock method of constraint handler */
 static
-SCIP_DECL_CONSLOCK(consLockBenders)
+SCIP_DECL_CONSLOCK(consLockBenderslp)
 {  /*lint --e{715}*/
-   //SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   //SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    //SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -491,162 +422,162 @@ SCIP_DECL_CONSLOCK(consLockBenders)
 /** constraint activation notification method of constraint handler */
 #if 0
 static
-SCIP_DECL_CONSACTIVE(consActiveBenders)
+SCIP_DECL_CONSACTIVE(consActiveBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consActiveBenders NULL
+#define consActiveBenderslp NULL
 #endif
 
 
 /** constraint deactivation notification method of constraint handler */
 #if 0
 static
-SCIP_DECL_CONSDEACTIVE(consDeactiveBenders)
+SCIP_DECL_CONSDEACTIVE(consDeactiveBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consDeactiveBenders NULL
+#define consDeactiveBenderslp NULL
 #endif
 
 
 /** constraint enabling notification method of constraint handler */
 #if 0
 static
-SCIP_DECL_CONSENABLE(consEnableBenders)
+SCIP_DECL_CONSENABLE(consEnableBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consEnableBenders NULL
+#define consEnableBenderslp NULL
 #endif
 
 
 /** constraint disabling notification method of constraint handler */
 #if 0
 static
-SCIP_DECL_CONSDISABLE(consDisableBenders)
+SCIP_DECL_CONSDISABLE(consDisableBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consDisableBenders NULL
+#define consDisableBenderslp NULL
 #endif
 
 /** variable deletion of constraint handler */
 #if 0
 static
-SCIP_DECL_CONSDELVARS(consDelvarsBenders)
+SCIP_DECL_CONSDELVARS(consDelvarsBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consDelvarsBenders NULL
+#define consDelvarsBenderslp NULL
 #endif
 
 
 /** constraint display method of constraint handler */
 #if 0
 static
-SCIP_DECL_CONSPRINT(consPrintBenders)
+SCIP_DECL_CONSPRINT(consPrintBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consPrintBenders NULL
+#define consPrintBenderslp NULL
 #endif
 
 
 /** constraint copying method of constraint handler */
 #if 0
 static
-SCIP_DECL_CONSCOPY(consCopyBenders)
+SCIP_DECL_CONSCOPY(consCopyBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consCopyBenders NULL
+#define consCopyBenderslp NULL
 #endif
 
 
 /** constraint parsing method of constraint handler */
 #if 0
 static
-SCIP_DECL_CONSPARSE(consParseBenders)
+SCIP_DECL_CONSPARSE(consParseBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consParseBenders NULL
+#define consParseBenderslp NULL
 #endif
 
 
 /** constraint method of constraint handler which returns the variables (if possible) */
 #if 0
 static
-SCIP_DECL_CONSGETVARS(consGetVarsBenders)
+SCIP_DECL_CONSGETVARS(consGetVarsBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consGetVarsBenders NULL
+#define consGetVarsBenderslp NULL
 #endif
 
 /** constraint method of constraint handler which returns the number of variables (if possible) */
 #if 0
 static
-SCIP_DECL_CONSGETNVARS(consGetNVarsBenders)
+SCIP_DECL_CONSGETNVARS(consGetNVarsBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consGetNVarsBenders NULL
+#define consGetNVarsBenderslp NULL
 #endif
 
 /** constraint handler method to suggest dive bound changes during the generic diving algorithm */
 #if 0
 static
-SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsBenders)
+SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
-#define consGetDiveBdChgsBenders NULL
+#define consGetDiveBdChgsBenderslp NULL
 #endif
 
 
@@ -654,16 +585,15 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsBenders)
  * constraint specific interface methods
  */
 
-/** creates the handler for benders constraints and includes it in SCIP */
-SCIP_RETCODE SCIPincludeConshdlrBenders(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             twophase            /**< should the two phase method be used? */
+/** creates the handler for benderslp constraints and includes it in SCIP */
+SCIP_RETCODE SCIPincludeConshdlrBenderslp(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata = NULL;
    SCIP_CONSHDLR* conshdlr;
 
-   /* create benders constraint handler data */
+   /* create benderslp constraint handler data */
    conshdlrdata = NULL;
 
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
@@ -681,68 +611,66 @@ SCIP_RETCODE SCIPincludeConshdlrBenders(
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
          CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_NEEDSCONS,
          CONSHDLR_PROP_TIMING, CONSHDLR_PRESOLTIMING,
-         conshdlrCopyBenders,
-         consFreeBenders, consInitBenders, consExitBenders,
-         consInitpreBenders, consExitpreBenders, consInitsolBenders, consExitsolBenders,
-         consDeleteBenders, consTransBenders, consInitlpBenders,
-         consSepalpBenders, consSepasolBenders, consEnfolpBenders, consEnforelaxBenders, consEnfopsBenders, consCheckBenders,
-         consPropBenders, consPresolBenders, consRespropBenders, consLockBenders,
-         consActiveBenders, consDeactiveBenders,
-         consEnableBenders, consDisableBenders, consDelvarsBenders,
-         consPrintBenders, consCopyBenders, consParseBenders,
-         consGetVarsBenders, consGetNVarsBenders, consGetDiveBdChgsBenders, conshdlrdata) );
+         conshdlrCopyBenderslp,
+         consFreeBenderslp, consInitBenderslp, consExitBenderslp,
+         consInitpreBenderslp, consExitpreBenderslp, consInitsolBenderslp, consExitsolBenderslp,
+         consDeleteBenderslp, consTransBenderslp, consInitlpBenderslp,
+         consSepalpBenderslp, consSepasolBenderslp, consEnfolpBenderslp, consEnforelaxBenderslp, consEnfopsBenderslp, consCheckBenderslp,
+         consPropBenderslp, consPresolBenderslp, consRespropBenderslp, consLockBenderslp,
+         consActiveBenderslp, consDeactiveBenderslp,
+         consEnableBenderslp, consDisableBenderslp, consDelvarsBenderslp,
+         consPrintBenderslp, consCopyBenderslp, consParseBenderslp,
+         consGetVarsBenderslp, consGetNVarsBenderslp, consGetDiveBdChgsBenderslp, conshdlrdata) );
 #else
    /* use SCIPincludeConshdlrBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
     */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
-         consEnfolpBenders, consEnfopsBenders, consCheckBenders, consLockBenders,
+         consEnfolpBenderslp, consEnfopsBenderslp, consCheckBenderslp, consLockBenderslp,
          conshdlrdata) );
    assert(conshdlr != NULL);
 
    /* set non-fundamental callbacks via specific setter functions */
-   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveBenders) );
-   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyBenders, consCopyBenders) );
-   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveBenders) );
-   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteBenders) );
-   SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsBenders) );
-   SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableBenders) );
-   SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableBenders) );
-   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitBenders) );
-   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreBenders) );
-   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolBenders) );
-   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBenders) );
-   SCIP_CALL( SCIPsetConshdlrGetDiveBdChgs(scip, conshdlr, consGetDiveBdChgsBenders) );
-   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsBenders) );
-   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsBenders) );
-   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitBenders) );
-   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreBenders) );
-   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolBenders) );
-   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpBenders) );
-   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseBenders) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolBenders, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
-   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintBenders) );
-   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropBenders, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
+   SCIP_CALL( SCIPsetConshdlrActive(scip, conshdlr, consActiveBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyBenderslp, consCopyBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrDeactive(scip, conshdlr, consDeactiveBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrDelvars(scip, conshdlr, consDelvarsBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrGetDiveBdChgs(scip, conshdlr, consGetDiveBdChgsBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolBenderslp, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
+   SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropBenderslp, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );
-   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropBenders) );
-   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpBenders, consSepasolBenders, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
-   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransBenders) );
-   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxBenders) );
+   SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpBenderslp, consSepasolBenderslp, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
+   SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransBenderslp) );
+   SCIP_CALL( SCIPsetConshdlrEnforelax(scip, conshdlr, consEnforelaxBenderslp) );
 
 #endif
 
-   if( twophase )
-      SCIP_CALL( SCIPincludeConshdlrBenderslp(scip) );
 
    return SCIP_OKAY;
 }
 
-/** creates and captures a benders constraint
+/** creates and captures a benderslp constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-SCIP_RETCODE SCIPcreateConsBenders(
+SCIP_RETCODE SCIPcreateConsBenderslp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
@@ -776,19 +704,19 @@ SCIP_RETCODE SCIPcreateConsBenders(
                                               *   Usually set to FALSE. Set to TRUE to for constraints that represent node data. */
    )
 {
-   /* TODO: (optional) modify the definition of the SCIPcreateConsBenders() call, if you don't need all the information */
+   /* TODO: (optional) modify the definition of the SCIPcreateConsBenderslp() call, if you don't need all the information */
 
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
 
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527} --e{715}*/
 
-   /* find the benders constraint handler */
+   /* find the benderslp constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      SCIPerrorMessage("benders constraint handler not found\n");
+      SCIPerrorMessage("benderslp constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -803,12 +731,12 @@ SCIP_RETCODE SCIPcreateConsBenders(
    return SCIP_OKAY;
 }
 
-/** creates and captures a benders constraint with all its constraint flags set to their
+/** creates and captures a benderslp constraint with all its constraint flags set to their
  *  default values
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-SCIP_RETCODE SCIPcreateConsBasicBenders(
+SCIP_RETCODE SCIPcreateConsBasicBenderslp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
@@ -819,7 +747,7 @@ SCIP_RETCODE SCIPcreateConsBasicBenders(
    SCIP_Real             rhs                 /**< right hand side of constraint */
    )
 {
-   SCIP_CALL( SCIPcreateConsBenders(scip, cons, name, nvars, vars, coefs, lhs, rhs,
+   SCIP_CALL( SCIPcreateConsBenderslp(scip, cons, name, nvars, vars, coefs, lhs, rhs,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;

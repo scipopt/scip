@@ -543,6 +543,78 @@ SCIP_RETCODE BDconsAddCoef(
 
 
 
+/** adds a coefficient to an arbitrary SCIP constraint */
+extern
+SCIP_RETCODE BDconsChgCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< variable of constraint entry */
+   SCIP_Real             val                 /**< coefficient of constraint entry */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   const char * conshdlrname;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   conshdlrname = SCIPconshdlrGetName(conshdlr);
+   assert(var != NULL);
+
+   if( strcmp(conshdlrname, "linear") == 0 )
+   {
+      SCIP_CALL( SCIPchgCoefLinear(scip, cons, var, val) );
+   }
+   else if( strcmp(conshdlrname, "setppc") == 0 )
+   {
+      SCIPdebugMessage("WARNING: setppc NOT IMPLEMENTED\n");
+      return SCIP_OKAY;
+   }
+   else if( strcmp(conshdlrname, "logicor") == 0 )
+   {
+      SCIPdebugMessage("WARNING: logicor NOT IMPLEMENTED\n");
+      return SCIP_OKAY;
+   }
+   else if( strcmp(conshdlrname, "knapsack") == 0 )
+   {
+      SCIPdebugMessage("WARNING: knapsack NOT IMPLEMENTED\n");
+      return SCIP_OKAY;
+   }
+   else if( strcmp(conshdlrname, "varbound") == 0 )
+   {
+      SCIPdebugMessage("WARNING: varbound NOT IMPLEMENTED\n");
+      return SCIP_OKAY;
+   }
+   else if( strcmp(conshdlrname, "SOS1") == 0 )
+   {
+      SCIPdebugMessage("WARNING: SOS1 NOT IMPLEMENTED\n");
+      return SCIP_OKAY;
+   }
+   else if( strcmp(conshdlrname, "SOS2") == 0 )
+   {
+      SCIPdebugMessage("WARNING: SOS2 NOT IMPLEMENTED\n");
+      return SCIP_OKAY;
+   }
+   else if( strcmp(conshdlrname, "origbranch") == 0 )
+   {
+      SCIPdebugMessage("origbranch: return Dualsol 0\n");
+      return SCIP_OKAY;
+   }
+   else if( strcmp(conshdlrname, "masterbranch") == 0 )
+   {
+      SCIPdebugMessage("masterbranch: return dualsol 0\n");
+      return SCIP_OKAY;
+   }
+   else
+   {
+      SCIPdebugMessage("WARNING: NOT IMPLEMENTED");
+   }
+   return SCIP_OKAY;
+}
+
+
+
 /** returns the number of variables in an arbitrary SCIP constraint */
 int BDconsGetNVars(
    SCIP*                 scip,               /**< SCIP data structure */

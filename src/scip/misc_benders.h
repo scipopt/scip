@@ -106,6 +106,15 @@ SCIP_RETCODE BDconsAddCoef(
    SCIP_Real             val                 /**< coefficient of constraint entry */
    );
 
+/** adds a coefficient to an arbitrary SCIP constraint */
+extern
+SCIP_RETCODE BDconsChgCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< variable of constraint entry */
+   SCIP_Real             val                 /**< coefficient of constraint entry */
+   );
+
 /** returns the number of variables in an arbitrary SCIP constraint */
 extern
 int BDconsGetNVars(

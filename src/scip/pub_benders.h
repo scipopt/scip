@@ -206,6 +206,12 @@ SCIP_RETCODE SCIPbendersSetBenderscutPriority(
    int                   priority            /**< new priority of the Benders' decomposition */
    );
 
+/** returns whether the Magnanti-Wong method has been applied */
+EXTERN
+SCIP_Bool SCIPbendersGetUseMagnantiWong(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
 /* @} */
 
 #ifdef __cplusplus
