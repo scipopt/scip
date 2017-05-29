@@ -41,7 +41,7 @@
 
 #define RANDSEED               26051979      /**< initial random seed */
 #define MAXPERTURB             0.01          /**< maximal perturbation of bounds in starting point heuristic */
-#define MAXNRUNS               2             /**< maximal number of FilterSQP calls per NLP solve (several calls if increasing workspace or decreasing eps) */
+#define MAXNRUNS               3             /**< maximal number of FilterSQP calls per NLP solve (several calls if increasing workspace or decreasing eps) */
 #define WORKSPACEGROWTHFACTOR  2             /**< factor by which to increase worksapce */
 #define MINEPS                 1e-14         /**< minimal FilterSQP epsilon */
 #define OPTTOLFACTOR           0.5           /**< factor to apply to optimality tolerance, because FilterSQP do scaling */
@@ -1800,7 +1800,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       }
 
       /* if maximal number of runs reached, then stop */
-      if( nruns > MAXNRUNS )
+      if( nruns >= MAXNRUNS )
       {
          if( problem->iprint > 0 )
          {
