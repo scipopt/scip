@@ -4530,6 +4530,17 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       }
    }
 
+   /* set estimate */
+   if( !SCIPdialogHasEntry(setmenu, "estimates") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
+            NULL, SCIPdialogExecMenu, NULL, NULL,
+            "estimates", "change parameters for tree-size and running time estimates", TRUE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
+   }
+
+
    /* set heuristics */
    if( !SCIPdialogHasEntry(setmenu, "heuristics") )
    {
