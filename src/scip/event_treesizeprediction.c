@@ -24,99 +24,130 @@
 #define SCIP_DEBUG 1
 
 #include "scip/event_treesizeprediction.h"
+#include "scip/misc.h"
 
 #include "string.h"
 #define EVENTHDLR_NAME         "treesizeprediction"
 #define EVENTHDLR_DESC         "event handler for tree-size prediction related events"
 
+#define DEFAULT_HASHMAP_SIZE   100000
 
 /*
  * Data structures
  */
 
+/*
+ * Indicates for a given node if/how the size of its subtree is computed.
+ * UNKNOWN: the node has children, both with UNKNOWN sizes. No tree-size estimate at this node, it is UNKNOWN.
+ * ESTIMATED: the node has children, exactly one of them has UNKNOWN size. The tree-size at this node is ESTIMATED.
+ * KNOWN: the node is a leaf or both its children have KNOWN size. The tree-size at this node is thus KNOWN.
+ */
+
+typedef enum {UNKNOWN, ESTIMATED, KNOWN} SizeStatus;
+
+typedef struct TreeSizeEstimateTree TSEtree;
+struct TreeSizeEstimateTree
+{
+/*   struct TreeSizeEstimateTree *parent;
+   struct TreeSizeEstimateTree *leftchild;
+   struct TreeSizeEstimateTree *rightchild;*/
+   TSEtree *parent;
+   TSEtree *leftchild;
+   TSEtree *rightchild;
+
+   /*SCIP_Longint number;*/ /* The number (id) of the node, as assigned by SCIP */
+   SCIP_Real lowerbound; /* The lower bound at that node. TODO update this if a node gets an update */
+   SizeStatus status; /* See enum SizeStatus documentation */
+   /*SCIP_Longint treesize;*/ /* The computed tree-size */
+};
+
+/**
+ * Estimates the tree-size of a tree, using the given upperbound to determine
+ * if a node is counted as a leaf (independent of whether it has children).
+ */
+static
+SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Longint* size, SCIP_Real upperbound)
+{
+   assert(node != NULL);
+   assert(size != NULL);
+   /* base case: determine if the current node is a leaf */
+   if( SCIPisGE(scip, node->lowerbound, upperbound) )
+   {
+      *size = 1;
+      return KNOWN;
+   } 
+   else if(node->leftchild == NULL) /* The node is not a leaf but still needs to be solved (and possibly branched on) */
+   {
+      assert(node->rightchild == NULL);
+      *size = -1; /* TODO remove once code is finished & debugged */
+      return UNKNOWN;
+   }
+   else /* The node has children */
+   {
+      SCIP_Longint leftsize;
+      SCIP_Longint rightsize;
+      SizeStatus leftstatus;
+      SizeStatus rightstatus;
+
+      assert(node->leftchild != NULL && node->rightchild != NULL);
+
+      leftstatus = estimateTreeSize(scip, node->leftchild, &leftsize, upperbound);
+      rightstatus = estimateTreeSize(scip, node->rightchild, &rightsize, upperbound);
+
+      assert(leftsize > 0 || leftstatus == UNKNOWN);
+      assert(rightsize > 0 || rightstatus == UNKNOWN);
+
+      if(leftstatus == UNKNOWN && rightstatus == UNKNOWN) /* Neither child has information on tree-size*/
+      {
+         *size = -1; /* TODO remove once code is finished & debugged */
+         return UNKNOWN;
+      }
+      else if ( leftstatus == KNOWN && rightstatus == KNOWN  ) /* If both left and right subtrees are known */
+      {
+         *size = 1 + leftsize + rightsize;
+         return KNOWN;
+      }
+      else /* Exactly one subtree is UNKNOWN */
+      {
+         assert((leftstatus == UNKNOWN) ^ (rightstatus == UNKNOWN));
+         if( leftstatus == UNKNOWN )
+            *size = 1 + 2*rightsize;
+         else
+            *size = 1 + 2*leftsize;
+         return ESTIMATED;
+      }
+   }
+}
+
+/**
+ * Recursively frees memory in the tree.
+ */
+static
+void freeTreeMemory(SCIP *scip, TSEtree *tree)
+{
+   assert(tree != NULL);
+   /* postfix traversal */
+   if(tree->leftchild !=NULL)
+      freeTreeMemory(scip, tree->leftchild);
+   if(tree->rightchild !=NULL)
+      freeTreeMemory(scip, tree->rightchild);
+   SCIPfreeMemory(scip, tree);
+}
+
 /** event handler data */
 struct SCIP_EventhdlrData
 {
+   /* Parameters */
+   int hashmapsize;
+
+   /* Internal variables */
+   SCIP_Bool initialized;
    unsigned int nodesfound;
+   TSEtree *tree; /* The representation of the B&B tree */
+   SCIP_HASHMAP *opennodes; /* The open nodes (that have yet to be branched on). The key is the (scip) id/number of the SCIP_Node */
 };
 
-/*
- * Local methods
- */
-
-/* put your local methods here, and declare them static */
-
-
-
-/*
- * Callback methods of event handler
- */
-
-/** copy method for event handler plugins (called when SCIP copies plugins) */
-#if 0
-static
-SCIP_DECL_EVENTCOPY(eventCopyTreeSizePrediction)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of tree-size prediction dialog not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define eventCopyTreeSizePrediction NULL
-#endif
-
-/** destructor of event handler to free user data (called when SCIP is exiting) */
-#if 1
-static
-SCIP_DECL_EVENTFREE(eventFreeTreeSizePrediction)
-{  /*lint --e{715}*/
-   SCIP_EVENTHDLRDATA* eventhdlrdata;
-   /* SCIPdebugMsg(scip, "eventfree method of eventhdlr "EVENTHDLR_NAME"\n"); */
-   assert(eventhdlr != NULL);
-   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
-   assert(scip != NULL);
-
-   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-   assert(eventhdlrdata != NULL);
-
-   SCIPfreeMemory(scip, &eventhdlrdata);
-   return SCIP_OKAY;
-}
-#else
-#define eventFreeTreeSizePrediction NULL
-#endif
-
-/** initialization method of event handler (called after problem was transformed) */
-#if 0
-static
-SCIP_DECL_EVENTINIT(eventInitTreeSizePrediction)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of tree-size prediction event handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define eventInitTreeSizePrediction NULL
-#endif
-
-/** deinitialization method of event handler (called before transformed problem is freed) */
-#if 0
-static
-SCIP_DECL_EVENTEXIT(eventExitTreeSizePrediction)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of tree-size prediction event handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define eventExitTreeSizePrediction NULL
-#endif
-
 /** solving process initialization method of event handler (called when branch and bound process is about to begin) */
-#if 1
 static
 SCIP_DECL_EVENTINITSOL(eventInitsolTreeSizePrediction)
 {
@@ -129,7 +160,10 @@ SCIP_DECL_EVENTINITSOL(eventInitsolTreeSizePrediction)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
+   eventhdlrdata->initialized = TRUE;
    eventhdlrdata->nodesfound = 0;
+   eventhdlrdata->tree = NULL;
+   SCIP_CALL( SCIPhashmapCreate(&(eventhdlrdata->opennodes), SCIPblkmem(scip), eventhdlrdata->hashmapsize) );
 
    /* We catch node solved events */
    SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, NULL, NULL) );
@@ -139,15 +173,11 @@ SCIP_DECL_EVENTINITSOL(eventInitsolTreeSizePrediction)
 
    return SCIP_OKAY;
 }
-#else
-#define eventInitsolTreeSizePrediction NULL
-#endif
 
 /** solving process deinitialization method of event handler (called before branch and bound process data is freed) */
-#if 1
 static
 SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
-{  /*lint --e{715}*/
+{
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    /* SCIPdebugMsg(scip, "exitsol method of eventhdlr "EVENTHDLR_NAME"\n"); */
    assert(eventhdlr != NULL);
@@ -158,21 +188,20 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
    assert(eventhdlrdata != NULL);
 
    SCIPdebugMessage("Found %u nodes in the B&B tree\n", eventhdlrdata->nodesfound);
+
+
+   if( eventhdlrdata->initialized == TRUE )
+   {
+      SCIPhashmapFree(&(eventhdlrdata->opennodes));
+      if( eventhdlrdata->nodesfound > 0 )
+      {
+         assert(eventhdlrdata->tree != NULL);
+         freeTreeMemory(scip, eventhdlrdata->tree);
+      }
+   }
+
    return SCIP_OKAY;
 }
-#else
-#define eventExitsolTreeSizePrediction NULL
-#endif
-
-/** frees specific event data */
-#if 0
-static
-SCIP_DECL_EVENTDELETE(eventDeleteTreeSizePrediction)
-{  /*lint --e{715}*/
-}
-#else
-#define eventDeleteTreeSizePrediction NULL
-#endif
 
 /** execution method of event handler */
 static
@@ -224,6 +253,23 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
    return SCIP_OKAY;
 }
 
+/** destructor of event handler to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_EVENTFREE(eventFreeTreeSizePrediction)
+{
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   /* SCIPdebugMsg(scip, "eventfree method of eventhdlr "EVENTHDLR_NAME"\n"); */
+   assert(eventhdlr != NULL);
+   assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+   assert(scip != NULL);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   SCIPfreeMemory(scip, &eventhdlrdata);
+   return SCIP_OKAY;
+}
+
 /** creates event handler for tree-size prediction event */
 SCIP_RETCODE SCIPincludeEventHdlrTreeSizePrediction(
    SCIP*                 scip                /**< SCIP data structure */
@@ -239,35 +285,24 @@ SCIP_RETCODE SCIPincludeEventHdlrTreeSizePrediction(
    eventhdlr = NULL;
 
    /* include event handler into SCIP */
-#if 0
-   /* use SCIPincludeEventhdlr() if you want to set all callbacks explicitly and realize (by getting compiler errors) when
-    * new callbacks are added in future SCIP versions
-    */
-   SCIP_CALL( SCIPincludeEventhdlr(scip, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         eventCopyTreeSizePrediction,
-         eventFreeTreeSizePrediction, eventInitTreeSizePrediction, eventExitTreeSizePrediction, 
-         eventInitsolTreeSizePrediction, eventExitsolTreeSizePrediction, eventDeleteTreeSizePrediction, eventExecTreeSizePrediction,
-         eventhdlrdata) );
-#else
-   /* use SCIPincludeEventhdlrBasic() plus setter functions if you want to set callbacks one-by-one and your code should
-    * compile independent of new callbacks being added in future SCIP versions
-    */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
          eventExecTreeSizePrediction, eventhdlrdata) );
    assert(eventhdlr != NULL);
 
    /* set non fundamental callbacks via setter functions */
-   SCIP_CALL( SCIPsetEventhdlrCopy(scip, eventhdlr, eventCopyTreeSizePrediction) );
+   SCIP_CALL( SCIPsetEventhdlrCopy(scip, eventhdlr, NULL) );
    SCIP_CALL( SCIPsetEventhdlrFree(scip, eventhdlr, eventFreeTreeSizePrediction) );
-   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitTreeSizePrediction) );
-   SCIP_CALL( SCIPsetEventhdlrExit(scip, eventhdlr, eventExitTreeSizePrediction) );
+   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, NULL) );
+   SCIP_CALL( SCIPsetEventhdlrExit(scip, eventhdlr, NULL) );
    SCIP_CALL( SCIPsetEventhdlrInitsol(scip, eventhdlr, eventInitsolTreeSizePrediction) );
    SCIP_CALL( SCIPsetEventhdlrExitsol(scip, eventhdlr, eventExitsolTreeSizePrediction) );
-   SCIP_CALL( SCIPsetEventhdlrDelete(scip, eventhdlr, eventDeleteTreeSizePrediction) );
-#endif
+   SCIP_CALL( SCIPsetEventhdlrDelete(scip, eventhdlr, NULL) );
 
    /* add tree-size prediction event handler parameters */
-   /* TODO: (optional) add event handler specific parameters with SCIPaddTypeParam() here */
+   SCIP_CALL( SCIPaddIntParam(scip, "estimates/hashmapsize", "Default hashmap size to store the open nodes of the B&B tree", &(eventhdlrdata->hashmapsize), TRUE, DEFAULT_HASHMAP_SIZE, 0, INT_MAX, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }
+
+
