@@ -21,6 +21,7 @@ fixed bugs:
 - fixed memory issue in binpacking example
 - renamed parameter heuristics/completesol/maxunkownrate to heuristics/completesol/maxunknownrate
 - in GAMS writer, forbid also various parenthesis characters in gams symbol names
+- fixed debug solution check that appeared in probing mode when the objective function has changed
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint
@@ -29,6 +30,7 @@ performance improvements:
 interface:
 - new function SCIPvalidateSolve() to compare solving result with an external primal and dual reference
   value
+- new function SCIPisObjChangedProbing() to check whether the objective function has changed during probing mode
 
 SCIP version 4.0.0
 ==================

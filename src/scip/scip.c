@@ -35518,6 +35518,32 @@ SCIP_RETCODE SCIPchgVarObjProbing(
    return SCIP_OKAY;
 }
 
+/** returns whether the objective function has changed during probing mode
+ *
+ *  @return \ref TRUE if objective has changed, \ref FALSE otherwise
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_Bool SCIPisObjChangedProbing(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisObjChangedProbing", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->tree != NULL && SCIPinProbing(scip) && SCIPtreeProbingObjChanged(scip->tree);
+}
+
 /** applies domain propagation on the probing sub problem, that was changed after SCIPstartProbing() was called;
  *  the propagated domains of the variables can be accessed with the usual bound accessing calls SCIPvarGetLbLocal()
  *  and SCIPvarGetUbLocal(); the propagation is only valid locally, i.e. the local bounds as well as the changed
@@ -38131,6 +38157,9 @@ SCIP_RETCODE SCIPgetSolVals(
  *
  *  @return objective value of primal CIP solution w.r.t. original problem, or current LP/pseudo objective value
  *
+ *  @note this function should not be used during probing mode when some objective coefficients have been changed via
+ *        SCIPchgVarObjProbing()
+ *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
@@ -38150,6 +38179,8 @@ SCIP_Real SCIPgetSolOrigObj(
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    )
 {
+   assert(!SCIPisObjChangedProbing(scip));
+
    /* for original solutions, an original objective value is already available in SCIP_STAGE_PROBLEM
     * for all other solutions, we should be at least in SCIP_STAGE_TRANSFORMING
     */
