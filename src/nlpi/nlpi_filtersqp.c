@@ -117,6 +117,8 @@ struct SCIP_NlpiProblem
    fint*                       lws;          /**< integer workspace */
    fint                        mxwk;         /**< size of real workspace */
    fint                        mxiwk;        /**< size of integer workspace */
+   real*                       evalbuffer;   /**< buffer to cache evaluation results before passing it to FilterSQP */
+   int                         evalbufsize;  /**< size of evaluation buffer */
 };
 
 /*
@@ -311,6 +313,7 @@ void F77_FUNC(objfun,OBJFUN)(
    )
 {
    SCIP_NLPIPROBLEM* problem;
+   real val;
 
    problem = (SCIP_NLPIPROBLEM*)iuser;
    assert(problem != NULL);
@@ -322,8 +325,11 @@ void F77_FUNC(objfun,OBJFUN)(
    }
 
    *errflag = 1;
-   if( SCIPnlpiOracleEvalObjectiveValue(problem->oracle, x, f) == SCIP_OKAY )
-      *errflag = !SCIPisFinite(*f);
+   if( SCIPnlpiOracleEvalObjectiveValue(problem->oracle, x, &val) == SCIP_OKAY && SCIPisFinite(val) )
+   {
+      *errflag = 0;
+      *f = val;
+   }
 }
 
 /** Constraint functions evaluation */
@@ -340,6 +346,7 @@ void F77_FUNC(confun,CONFUN)(
    )
 {
    SCIP_NLPIPROBLEM* problem;
+   real val;
    int j;
 
    problem = (SCIP_NLPIPROBLEM*)iuser;
@@ -348,11 +355,12 @@ void F77_FUNC(confun,CONFUN)(
    *errflag = 0;
    for( j = 0; j < *m; ++j )
    {
-      if( SCIPnlpiOracleEvalConstraintValue(problem->oracle, j, x, c+j) != SCIP_OKAY || !SCIPisFinite(c[j]) )
+      if( SCIPnlpiOracleEvalConstraintValue(problem->oracle, j, x, &val) != SCIP_OKAY || !SCIPisFinite(val) )
       {
          *errflag = 1;
          break;
       }
+      c[j] = val;
    }
 }
 
@@ -379,12 +387,19 @@ F77_FUNC(gradient,GRADIENT)(
 
    problem = (SCIP_NLPIPROBLEM*)iuser;
    assert(problem != NULL);
+   assert(problem->evalbuffer != NULL);
+   assert(problem->evalbufsize >= *maxa);
 
-   *errflag = 0;
+   *errflag = 1;
 
-   /* TODO handle arithmetic exception, in which case we must not modify a */
-   SCIPnlpiOracleEvalObjectiveGradient(problem->oracle, x, TRUE, &dummy, a);
-   SCIPnlpiOracleEvalJacobian(problem->oracle, x, TRUE, NULL, a+*n);
+   if( SCIPnlpiOracleEvalObjectiveGradient(problem->oracle, x, TRUE, &dummy, problem->evalbuffer) == SCIP_OKAY )
+   {
+      if( SCIPnlpiOracleEvalJacobian(problem->oracle, x, TRUE, NULL, problem->evalbuffer+*n) == SCIP_OKAY )
+      {
+         BMScopyMemoryArray(a, problem->evalbuffer, *maxa);
+         *errflag = 0;
+      }
+   }
 }
 
 /* Objective gradient evaluation */
@@ -437,23 +452,31 @@ F77_FUNC(hessian,HESSIAN)(
 
    problem = (SCIP_NLPIPROBLEM*)iuser;
    assert(problem != NULL);
+   assert(problem->evalbuffer != NULL);
 
-   *errflag = 0;
-
-   /* copy the complete problem->hessiannz into lws */
    nnz = problem->hessiannz[0]-1;
-   for( i = 0; i < nnz + *n + 2; ++i )
-      lws[i] = problem->hessiannz[i];
-   *li_hess = nnz + *n + 2;
+   assert(problem->evalbufsize >= nnz);
+
+   *errflag = 1;
 
    /* initialize lambda to -lam */
    BMSallocMemoryArray(&lambda, *m);
    for( i = 0; i < *m; ++i )
       lambda[i] = -lam[*n+i];
 
-   /* TODO handle arithmetic exception, in which case we must not modify ws */
-   SCIPnlpiOracleEvalHessianLag(problem->oracle, x, TRUE, (*phase == 1) ? 0.0 : 1.0, lambda, ws);
-   *l_hess = nnz;
+   if( SCIPnlpiOracleEvalHessianLag(problem->oracle, x, TRUE, (*phase == 1) ? 0.0 : 1.0, lambda, problem->evalbuffer) == SCIP_OKAY )
+   {
+      *l_hess = nnz;
+
+      BMScopyMemoryArray(ws, problem->evalbuffer, nnz);
+
+      *errflag = 0;
+
+      /* copy the complete problem->hessiannz into lws */
+      for( i = 0; i < nnz + *n + 2; ++i )
+         lws[i] = problem->hessiannz[i];
+      *li_hess = nnz + *n + 2;
+   }
 
    BMSfreeMemoryArray(&lambda);
 }
@@ -1748,6 +1771,13 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    {
       problem->mxiwk = calcGrowSize(minmxiwk);
       SCIP_ALLOC( BMSreallocMemoryArray(&problem->lws, problem->mxiwk) );
+   }
+
+   /* buffer for evaluation results */
+   if( problem->evalbufsize < MAX3(n, problem->hessiannz[0], maxa) )
+   {
+      problem->evalbufsize = calcGrowSize(MAX3(n, problem->hessiannz[0], maxa));
+      SCIP_ALLOC( BMSreallocMemoryArray(&problem->evalbuffer, problem->evalbufsize) );
    }
 
    /* TODO from here on we are not thread-safe: maybe add some mutex here if PARASCIP=true? */
