@@ -13,16 +13,16 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   event_treesizeprediction
- * @ingroup EVENTS 
- * @brief  eventhdlr for tree-size prediction related events
- * @author Pierre Le Bodic
+/**@file   disp_estimates.h
+ * @ingroup DISPLAYS
+ * @brief  estimates display column
+ * @author Kati Wolter
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_EVENT_TREESIZEPREDICTION_H__
-#define __SCIP_EVENT_TREESIZEPREDICTION_H__
+#ifndef __SCIP_DISP_XYZ_H__
+#define __SCIP_DISP_XYZ_H__
 
 
 #include "scip/scip.h"
@@ -31,17 +31,23 @@
 extern "C" {
 #endif
 
-/** Returns an estimate of the tree size, -1 if no estimate is available */
+/** creates the estimates display column and includes it in SCIP
+ *
+ *  @ingroup DisplayIncludes
+ */
 EXTERN
-SCIP_Longint SCIPtreeSizeGetEstimate(
+SCIP_RETCODE SCIPincludeDispEstimates(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** creates event handler for tree-size prediction event */
-EXTERN
-SCIP_RETCODE SCIPincludeEventHdlrTreeSizePrediction(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
+/**@addtogroup DISPLAYS
+ *
+ * @{
+ */
+
+/** TODO add further methods to this group for documentation purposes */
+
+/* @} */
 
 #ifdef __cplusplus
 }

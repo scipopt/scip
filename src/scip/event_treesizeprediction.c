@@ -88,17 +88,23 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Longint* size, SCIP_
       *size = -1; /* TODO remove once code is finished & debugged */
       return UNKNOWN;
    }
-   else /* The node has children */
+   else /* The node has two children (but perhaps only the left one has been created at the moment) */
    {
       SCIP_Longint leftsize;
       SCIP_Longint rightsize;
       SizeStatus leftstatus;
       SizeStatus rightstatus;
 
-      assert(node->leftchild != NULL && node->rightchild != NULL);
+      assert(node->leftchild != NULL);
 
       leftstatus = estimateTreeSize(scip, node->leftchild, &leftsize, upperbound);
-      rightstatus = estimateTreeSize(scip, node->rightchild, &rightsize, upperbound);
+      if( node->rightchild == NULL )
+      {
+         rightstatus = UNKNOWN;
+         rightsize = -1;
+      }
+      else
+         rightstatus = estimateTreeSize(scip, node->rightchild, &rightsize, upperbound);
 
       assert(leftsize > 0 || leftstatus == UNKNOWN);
       assert(rightsize > 0 || rightstatus == UNKNOWN);
@@ -108,7 +114,7 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Longint* size, SCIP_
          *size = -1; /* TODO remove once code is finished & debugged */
          return UNKNOWN;
       }
-      else if ( leftstatus == KNOWN && rightstatus == KNOWN  ) /* If both left and right subtrees are known */
+      else if ( leftstatus != UNKNOWN && rightstatus != UNKNOWN  ) /* If both left and right subtrees are known or estimated */
       {
          *size = 1 + leftsize + rightsize;
          return KNOWN;
@@ -154,6 +160,34 @@ struct SCIP_EventhdlrData
    TSEtree *tree; /* The representation of the B&B tree */
    SCIP_HASHMAP *opennodes; /* The open nodes (that have yet to be branched on). The key is the (scip) id/number of the SCIP_Node */
 };
+
+SCIP_Longint SCIPtreeSizeGetEstimate(SCIP* scip)
+{
+   SizeStatus status;
+   SCIP_Longint estimate;
+
+   SCIP_EVENTHDLR* eventhdlr;
+   SCIP_EVENTHDLRDATA* eventhdlrdata;
+   assert(scip != NULL);
+   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
+   assert(eventhdlr != NULL);
+
+   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   assert(eventhdlrdata != NULL);
+
+   if(eventhdlrdata->tree == NULL)
+      return -1;
+
+   status = estimateTreeSize(scip, eventhdlrdata->tree, &estimate, SCIPgetUpperbound(scip));
+   if( status == UNKNOWN )
+      return -1;
+   else
+   {
+      assert(estimate >= 0);
+      return estimate;
+   }
+}
+
 
 /** solving process initialization method of event handler (called when branch and bound process is about to begin) */
 static
