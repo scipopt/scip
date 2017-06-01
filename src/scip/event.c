@@ -1189,7 +1189,7 @@ SCIP_NODE* SCIPeventGetNode(
 {
    assert(event != NULL);
 
-   if( (event->eventtype & (SCIP_EVENTTYPE_NODEEVENT | SCIP_EVENTTYPE_LPEVENT)) == 0 )
+   if( (event->eventtype & (SCIP_EVENTTYPE_NODEEVENT | SCIP_EVENTTYPE_PQNODEINFEASIBLE | SCIP_EVENTTYPE_LPEVENT)) == 0 )
    {
       SCIPerrorMessage("event is neither node nor LP event\n");
       SCIPABORT();
@@ -1207,7 +1207,7 @@ SCIP_RETCODE SCIPeventChgNode(
 {
    assert(event != NULL);
 
-   if( (event->eventtype & (SCIP_EVENTTYPE_NODEEVENT | SCIP_EVENTTYPE_LPEVENT)) == 0 )
+   if( (event->eventtype & (SCIP_EVENTTYPE_NODEEVENT |  SCIP_EVENTTYPE_PQNODEINFEASIBLE | SCIP_EVENTTYPE_LPEVENT)) == 0 )
    {
       SCIPerrorMessage("event is neither node nor LP event\n");
       SCIPABORT();
@@ -1487,6 +1487,7 @@ SCIP_RETCODE SCIPeventProcess(
    case SCIP_EVENTTYPE_NODEFEASIBLE:
    case SCIP_EVENTTYPE_NODEINFEASIBLE:
    case SCIP_EVENTTYPE_NODEBRANCHED:
+   case SCIP_EVENTTYPE_PQNODEINFEASIBLE:
    case SCIP_EVENTTYPE_FIRSTLPSOLVED:
    case SCIP_EVENTTYPE_LPSOLVED:
    case SCIP_EVENTTYPE_POORSOLFOUND:
@@ -2142,6 +2143,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
       /* delay processing of event by appending it to the event queue */
       SCIPsetDebugMsg(set, "adding event %p of type 0x%" SCIP_EVENTTYPE_FORMAT " to event queue %p\n", (void*)*event, (*event)->eventtype, (void*)eventqueue);
 
+
       switch( (*event)->eventtype )
       {
       case SCIP_EVENTTYPE_DISABLED:
@@ -2160,6 +2162,7 @@ SCIP_RETCODE SCIPeventqueueAdd(
       case SCIP_EVENTTYPE_NODEFEASIBLE:
       case SCIP_EVENTTYPE_NODEINFEASIBLE:
       case SCIP_EVENTTYPE_NODEBRANCHED:
+      case SCIP_EVENTTYPE_PQNODEINFEASIBLE:
       case SCIP_EVENTTYPE_FIRSTLPSOLVED:
       case SCIP_EVENTTYPE_LPSOLVED:
       case SCIP_EVENTTYPE_POORSOLFOUND:
