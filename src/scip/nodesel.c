@@ -27,6 +27,7 @@
 #include "scip/def.h"
 #include "scip/set.h"
 #include "scip/clock.h"
+#include "scip/event.h"
 #include "scip/stat.h"
 #include "scip/visual.h"
 #include "scip/paramset.h"
@@ -621,6 +622,7 @@ SCIP_RETCODE SCIPnodepqBound(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -673,6 +675,16 @@ SCIP_RETCODE SCIPnodepqBound(
             SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp,
                   SCIPlpGetSolstat(lp), SCIPnodeGetDepth(node) == 0, SCIPtreeGetFocusNode(tree) == node,
                   SCIPnodeGetLowerbound(node), SCIPtreeGetEffectiveRootDepth(tree)));
+         }
+
+         /* Send event to indicate that the node has been taken out of the priority queue */
+         {
+            SCIP_EVENT event;
+            SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_PQNODEINFEASIBLE) );
+            SCIP_CALL( SCIPeventChgNode(&event, node) );
+            /* We use an ugly hack below: we need eventfilter, and if we want it we have to add it as a parameter to dozens of cuntions in SCIP and change the corresponding calls to these functions throughout the solver. */
+            SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, set->scip->eventfilter) );
+
          }
 
          /* free memory of the node */
