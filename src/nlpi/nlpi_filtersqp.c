@@ -1669,7 +1669,10 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    maxf = 100;  /* maximal filter length */
    mlp = 100;   /* maximum level of degeneracy */
 
-   nout = 6;   /* output to screen (TODO for now?) */
+   /* TODO eventually, the output should be redirected to the message handler,
+    * but even to just redirect to some other file, we would have to open the output-unit in Fortran
+    */
+   nout = 6;   /* output to stdout for now */
    ifail = problem->warmstart ? -1 : 0;  /* -1 for warmstart, otherwise 0 */
    rho = 10.0; /* initial trust-region radius */
 
