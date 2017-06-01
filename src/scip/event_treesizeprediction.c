@@ -166,6 +166,9 @@ SCIP_DECL_EVENTINITSOL(eventInitsolTreeSizePrediction)
    /* We catch node solved events */
    SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, NULL, NULL) );
 
+   /* We catch priority queue nodes being removed by bound */
+   SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_PQNODEINFEASIBLE, eventhdlr, NULL, NULL) );
+
    /* We catch updates to the primal bound */
    SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
 
@@ -239,6 +242,12 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
       //newlowerbound = SCIPgetLowerbound(scip);
       SCIPdebugMsg(scip, "New best solution found\n");
       scipnode = NULL;
+   }
+   else if( SCIPeventGetType(event) == SCIP_EVENTTYPE_PQNODEINFEASIBLE )
+   {
+      SCIPdebugMsg(scip, "New best solution found\n");
+      scipnode = SCIPeventGetNode(event);
+      assert(scipnode != NULL);
    }
    else
    {
