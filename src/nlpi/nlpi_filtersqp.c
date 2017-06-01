@@ -30,6 +30,10 @@
 #include <sys/time.h>
 #endif
 
+#ifndef NPARASCIP
+#include <pthread.h>
+#endif
+
 #include "scip/pub_misc.h"
 #include "nlpi/nlpi_filtersqp.h"
 #include "nlpi/nlpi.h"
@@ -249,6 +253,10 @@ extern struct
 }
 F77_FUNC(scalec,SCALEC);
 /** @} */
+
+#ifndef NPARASCIP
+static pthread_mutex_t filtersqpmutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 static
 SCIP_TIME gettime(void)
@@ -1784,7 +1792,12 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       SCIP_ALLOC( BMSreallocMemoryArray(&problem->evalbuffer, problem->evalbufsize) );
    }
 
-   /* TODO from here on we are not thread-safe: maybe add some mutex here if PARASCIP=true? */
+   /* from here on we are not thread-safe: if intended for multithread use, then protect filtersqp call with mutex
+    * NOTE: we need to make sure that we do not return from nlpiSolve before unlocking the mutex
+    */
+#ifndef NPARASCIP
+   pthread_mutex_lock(&filtersqpmutex);
+#endif
 
    /* initialize global variables from filtersqp */
    /* FilterSQP eps is tolerance for both feasibility and optimality, and also for trust-region radius, etc. */
@@ -1874,22 +1887,36 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       if( ifail == 8 || ifail == 9 )
       {
          problem->mxwk = calcGrowSize(WORKSPACEGROWTHFACTOR*problem->mxwk);
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->ws, problem->mxwk) );
+         if( BMSreallocMemoryArray(&problem->ws, problem->mxwk) == NULL )
+         {
+            /* realloc failed: give up NLP solve */
+            problem->mxwk = 0;
+            break;
+         }
       }
 
       /* increase integer workspace, if ifail = 10 (integer workspace too small) or ifail = 8 (unexpected ifail from QP solver, often also when workspace too small) */
       if( ifail == 8 || ifail == 10 )
       {
          problem->mxiwk = calcGrowSize(WORKSPACEGROWTHFACTOR*problem->mxiwk);
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->lws, problem->mxiwk) );
+         if( BMSreallocMemoryArray(&problem->lws, problem->mxiwk) == NULL )
+         {
+            /* realloc failed: give up NLP solve */
+            problem->mxiwk = 0;
+            break;
+         }
 
          /* better don't try warmstart for the next trial; warmstart requires that lws is untouched, does extending count as touching? */
          ifail = 0;
       }
 
-      /* reset starting point, in case it was overwritten by failed solve */
-      SCIP_CALL( setupStart(data, problem, problem->x) );
+      /* reset starting point, in case it was overwritten by failed solve (return can only be SCIP_OKAY, because randnumgen must exist already) */
+      (void) setupStart(data, problem, problem->x);
    }
+
+#ifndef NPARASCIP
+   pthread_mutex_unlock(&filtersqpmutex);
+#endif
 
    SCIP_CALL( processSolveOutcome(data, problem, ifail, problem->x, problem->lam) );
 
