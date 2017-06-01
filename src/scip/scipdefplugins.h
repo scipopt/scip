@@ -72,6 +72,7 @@
 #include "scip/cons_xor.h"
 #include "scip/cons_components.h"
 #include "scip/disp_default.h"
+#include "scip/disp_estimates.h"
 #include "scip/event_solvingphase.h"
 #include "scip/event_softtimelimit.h"
 #include "scip/event_treesizeprediction.h"

@@ -476,6 +476,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/dialog_default.o \
 			scip/event_softtimelimit.o \
 			scip/disp_default.o \
+			scip/disp_estimates.o \
 			scip/event_solvingphase.o \
 			scip/prop_sync.o \
 			scip/event_globalbnd.o \
