@@ -982,6 +982,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemFilterSQP)
    BMSfreeMemoryArrayNull(&(*problem)->hessiannz);
    BMSfreeMemoryArrayNull(&(*problem)->lws);
    BMSfreeMemoryArrayNull(&(*problem)->ws);
+   BMSfreeMemoryArrayNull(&(*problem)->evalbuffer);
 
    BMSfreeBlockMemory(data->blkmem, problem);
    assert(*problem == NULL);
