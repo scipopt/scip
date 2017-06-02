@@ -584,19 +584,6 @@ SCIP_DECL_BRANCHINIT(branchInitPscost)
    return SCIP_OKAY;
 }
 
-/** deinitialization method of branching rule */
-static
-SCIP_DECL_BRANCHEXIT(branchExitPscost)
-{  /*lint --e{715}*/
-   SCIP_BRANCHRULEDATA* branchruledata;
-
-   /* get branching rule data */
-   branchruledata = SCIPbranchruleGetData(branchrule);
-   assert(branchruledata != NULL);
-
-   return SCIP_OKAY;
-}
-
 /** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
@@ -763,7 +750,6 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyPscost) );
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreePscost) );
    SCIP_CALL( SCIPsetBranchruleInit(scip, branchrule, branchInitPscost) );
-   SCIP_CALL( SCIPsetBranchruleExit(scip, branchrule, branchExitPscost) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpPscost) );
    SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextPscost) );
 

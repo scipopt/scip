@@ -18,7 +18,7 @@
  * @author Robert Lion Gottwald
  */
 
-#include "scip/pub_misc.h"
+#include "scip/misc.h"
 #include "scip/scip.h"
 #include "scip/rbtree.h"
 
