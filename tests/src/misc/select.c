@@ -33,13 +33,13 @@ static
 void setup(void)
 {
    SCIPcreate(&scip);
-   SCIPrandomCreate(&randgen, SCIPblkmem(scip), randomseed);
+   SCIPcreateRandom(scip, &randgen, randomseed);
 }
 
 static
 void teardown(void)
 {
-   SCIPrandomFree(&randgen);
+   SCIPfreeRandom(scip, &randgen);
    SCIPfree(&scip);
 }
 

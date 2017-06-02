@@ -1059,7 +1059,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemWorhp)
       SCIP_CALL( SCIPnlpiOracleFree(&(*problem)->oracle) );
    }
 
-   SCIPrandomFree(&(*problem)->randnumgen);
+   SCIPrandomFree(&(*problem)->randnumgen, (*problem)->blkmem);
    BMSfreeMemoryArrayNull(&(*problem)->initguess);
    BMSfreeBlockMemory(data->blkmem, problem);
    *problem = NULL;

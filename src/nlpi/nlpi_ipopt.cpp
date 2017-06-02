@@ -36,6 +36,7 @@
 #include "nlpi/exprinterpret.h"
 #include "scip/interrupt.h"
 #include "scip/pub_misc.h"
+#include "scip/misc.h"
 
 #include <new>      /* for std::bad_alloc */
 #include <sstream>
@@ -165,6 +166,7 @@ class ScipNLP : public TNLP
 private:
    SCIP_NLPIPROBLEM*     nlpiproblem;        /**< NLPI problem data */
    SCIP_RANDNUMGEN*      randnumgen;         /**< random number generator */
+   BMS_BLKMEM*           blkmem;             /**< block memory */
 
    SCIP_Real             conv_prtarget[convcheck_nchecks]; /**< target primal infeasibility for each convergence check */
    SCIP_Real             conv_dutarget[convcheck_nchecks]; /**< target dual infeasibility for each convergence check */
@@ -178,9 +180,9 @@ public:
    /** constructor */
    ScipNLP(
       SCIP_NLPIPROBLEM*  nlpiproblem_ = NULL,/**< NLPI problem data */
-      BMS_BLKMEM*        blkmem = NULL       /**< block memory */
+      BMS_BLKMEM*        blkmem_ = NULL       /**< block memory */
       )
-      : nlpiproblem(nlpiproblem_), randnumgen(NULL), approxhessian(false)
+      : nlpiproblem(nlpiproblem_), randnumgen(NULL), blkmem(blkmem_), conv_lastrestoiter(-1), approxhessian(false)
    {
       assert(blkmem != NULL);
       SCIP_CALL_ABORT_QUIET( SCIPrandomCreate(&randnumgen, blkmem, DEFAULT_RANDSEED) );
@@ -190,7 +192,7 @@ public:
    ~ScipNLP()
    {
       assert(randnumgen != NULL);
-      SCIPrandomFree(&randnumgen);
+      SCIPrandomFree(&randnumgen, blkmem);
    }
 
    /** sets NLPI data structure */

@@ -10501,7 +10501,7 @@ SCIP_RETCODE SCIPpermuteProb(
    assert(nconshdlrs == 0 || conshdlrs != NULL);
 
    /* create a random number generator */
-   SCIP_CALL( SCIPrandomCreate(&randnumgen, scip->mem->probmem, randseed) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, randseed) );
 
    /* The constraint handler should not be permuted since they are called w.r.t. to certain properties; besides
     * that the "conshdlrs" array should stay in the order as it is since this array is used to copy the plugins for
@@ -10627,7 +10627,7 @@ SCIP_RETCODE SCIPpermuteProb(
    }
 
    /* free random number generator */
-   SCIPrandomFree(&randnumgen);
+   SCIPfreeRandom(scip, &randnumgen);
 
    return SCIP_OKAY;
 }
@@ -16278,7 +16278,7 @@ SCIP_RETCODE SCIPsolveParallel(
        */
       SCIPselectDownRealInt(prios, solvertypes, nthreads, ncandsolvertypes);
 
-      SCIP_CALL( SCIPrandomCreate(&rndgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, scip->set->concurrent_initseed)) );
+      SCIP_CALL( SCIPcreateRandom(scip, &rndgen, scip->set->concurrent_initseed) );
       for( i = 0; i < nthreads; ++i )
       {
          SCIP_CONCSOLVER* concsolver;
@@ -16287,7 +16287,7 @@ SCIP_RETCODE SCIPsolveParallel(
          if( scip->set->concurrent_changeseeds && SCIPgetNConcurrentSolvers(scip) > 1 )
             SCIP_CALL( SCIPconcsolverInitSeeds(concsolver, SCIPrandomGetInt(rndgen, 0, INT_MAX)) );
       }
-      SCIPrandomFree(&rndgen);
+      SCIPfreeRandom(scip, &rndgen);
       SCIPfreeBufferArray(scip, &prios);
       SCIPfreeBufferArray(scip, &weights);
       SCIPfreeBufferArray(scip, &solvertypes);
@@ -47486,4 +47486,56 @@ SCIP_RETCODE SCIPvalidateSolve(
       *dualboundcheck = localdualboundcheck;
 
    return SCIP_OKAY;
+}
+
+/** creates and initializes a random number generator
+ *
+ *  @note The initial seed is changed using SCIPinitializeRandomSeed()
+ */
+SCIP_RETCODE SCIPcreateRandom(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
+   unsigned int          initialseed         /**< initial random seed */
+   )
+{
+   unsigned int modifiedseed;
+   assert(scip != NULL);
+   assert(randnumgen != NULL);
+
+   modifiedseed = SCIPinitializeRandomSeed(scip, initialseed);
+
+   SCIP_CALL( SCIPrandomCreate(randnumgen, SCIPblkmem(scip), modifiedseed) );
+
+   return SCIP_OKAY;
+}
+
+/** frees a random number generator */
+void SCIPfreeRandom(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
+   )
+{
+   assert(scip != NULL);
+   assert(randnumgen != NULL);
+
+   SCIPrandomFree(randnumgen, SCIPblkmem(scip));
+}
+
+/** initializes a random number generator with a given start seed
+ *
+ *  @note The seed is changed using SCIPinitializeRandomSeed()
+ */
+void SCIPsetRandomSeed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   unsigned int          seed                /**< new random seed */
+   )
+{
+   unsigned int modifiedseed;
+   assert(scip != NULL);
+   assert(randnumgen != NULL);
+
+   modifiedseed = SCIPinitializeRandomSeed(scip, seed);
+
+   SCIPrandomSetSeed(randnumgen, modifiedseed);
 }

@@ -1696,21 +1696,6 @@ SCIP_Real SCIPrandomGetReal(
    SCIP_Real             maxrandval          /**< maximal value to return */
    );
 
-/** creates and initializes a random number generator */
-EXTERN
-SCIP_RETCODE SCIPrandomCreate(
-   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   unsigned int          initialseed         /**< initial random seed */
-   );
-
-
-/** frees a random number generator */
-EXTERN
-void SCIPrandomFree(
-   SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
-   );
-
 /** returns a random real between minrandval and maxrandval
  *
  *  @deprecated Please use SCIPrandomGetReal() to request a random real.
