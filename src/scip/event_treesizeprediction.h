@@ -31,9 +31,9 @@
 extern "C" {
 #endif
 
-/** Returns an estimate of the tree size, -1 if no estimate is available */
+/** Returns an estimate of the tree size that remains to explore, -1 if no estimate is available */
 EXTERN
-SCIP_Longint SCIPtreeSizeGetEstimate(
+SCIP_Longint SCIPtreeSizeGetEstimateRemaining(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
