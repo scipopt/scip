@@ -1084,31 +1084,11 @@ int SCIPprofileGetLatestFeasibleStart(
  * @{
  */
 
-/** creates directed graph structure */
-EXTERN
-SCIP_RETCODE SCIPdigraphCreate(
-   SCIP_DIGRAPH**        digraph,            /**< pointer to store the created directed graph */
-   BMS_BLKMEM*           blkmem,             /**< block memory to store the data */
-   int                   nnodes              /**< number of nodes */
-   );
-
 /** resize directed graph structure */
 EXTERN
 SCIP_RETCODE SCIPdigraphResize(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   nnodes              /**< new number of nodes */
-   );
-
-/** copies directed graph structure
- *
- *  @note The data in nodedata is copied verbatim. This possibly has to be adapted by the user.
- */
-EXTERN
-SCIP_RETCODE SCIPdigraphCopy(
-   SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
-   SCIP_DIGRAPH*         sourcedigraph,      /**< source directed graph */
-   BMS_BLKMEM*           targetblkmem        /**< block memory to store the target block memory, or NULL to use the same
-                                              *  the same block memory as used for the \p sourcedigraph */
    );
 
 /** sets the sizes of the successor lists for the nodes in a directed graph and allocates memory for the lists */
