@@ -63,69 +63,99 @@ struct TreeSizeEstimateTree
 /**
  * Estimates the tree-size of a tree, using the given upperbound to determine
  * if a node is counted as a leaf (independent of whether it has children).
+ * Note that totalzise is not equal to the final total size of the B&B tree, it
+ * should be equal to the final size of the B&B tree if we had known the optimal value at the start
+ * and pruned nodes according to this upper bound.
  */
 static
-SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Longint* size, SCIP_Real upperbound)
+SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCIP_Longint* totalsize, SCIP_Longint* remainingsize)
 {
    assert(node != NULL);
-   assert(size != NULL);
+   assert(totalsize != NULL);
+   assert(remainingsize != NULL);
    /* base cases: determine if the current node is a leaf */
    if( node->prunedinPQ == TRUE )
    {
       assert(node->leftchild == NULL);
       assert(node->rightchild == NULL);
-      *size = 1;
+      *totalsize = 1;
+      *remainingsize = 0;
       return KNOWN;
    }
    else if( SCIPisGE(scip, node->lowerbound, upperbound) )
    {
-      *size = 1;
+      *totalsize = 1;
+      *remainingsize = 0;
       return KNOWN;
    } 
    else if(node->leftchild == NULL) /* The node is not a leaf but still needs to be solved (and possibly branched on) */
    {
       assert(node->rightchild == NULL);
-      *size = -1; /* TODO remove once code is finished & debugged */
+      *totalsize = -1;
+      *remainingsize = -1;
       return UNKNOWN;
    }
    else /* The node has two children (but perhaps only the left one has been created at the moment) */
    {
-      SCIP_Longint leftsize;
-      SCIP_Longint rightsize;
+      SCIP_Longint lefttotalsize;
+      SCIP_Longint leftremainingsize;
+      SCIP_Longint righttotalsize;
+      SCIP_Longint rightremainingsize;
       SizeStatus leftstatus;
       SizeStatus rightstatus;
 
       assert(node->leftchild != NULL);
 
-      leftstatus = estimateTreeSize(scip, node->leftchild, &leftsize, upperbound);
+      leftstatus = estimateTreeSize(scip, node->leftchild, upperbound, &lefttotalsize, &leftremainingsize);
       if( node->rightchild == NULL )
       {
          rightstatus = UNKNOWN;
-         rightsize = -1;
+         righttotalsize = -1;
+         rightremainingsize = -1;
       }
       else
-         rightstatus = estimateTreeSize(scip, node->rightchild, &rightsize, upperbound);
+         rightstatus = estimateTreeSize(scip, node->rightchild, upperbound, &righttotalsize, &rightremainingsize);
 
-      assert(leftsize > 0 || leftstatus == UNKNOWN);
-      assert(rightsize > 0 || rightstatus == UNKNOWN);
+      assert(lefttotalsize > 0 || leftstatus == UNKNOWN);
+      assert(righttotalsize > 0 || rightstatus == UNKNOWN);
 
       if(leftstatus == UNKNOWN && rightstatus == UNKNOWN) /* Neither child has information on tree-size*/
       {
-         *size = -1; /* TODO remove once code is finished & debugged */
+         *totalsize = -1;
+         *remainingsize = -1;
          return UNKNOWN;
       }
       else if ( leftstatus != UNKNOWN && rightstatus != UNKNOWN  ) /* If both left and right subtrees are known or estimated */
       {
-         *size = 1 + leftsize + rightsize;
-         return KNOWN;
+         *totalsize = 1 + lefttotalsize + righttotalsize;
+         *remainingsize = leftremainingsize + rightremainingsize;
+         if( leftstatus == ESTIMATED || rightstatus == ESTIMATED)
+            return ESTIMATED;
+         else
+         {
+             assert(leftstatus == KNOWN && rightstatus == KNOWN);
+             return KNOWN;
+         }
       }
       else /* Exactly one subtree is UNKNOWN: we estimate */
       {
+         SCIP_Real fractionleft = .5;
+         SCIP_Real fractionright = .5;
+
          assert((leftstatus == UNKNOWN) ^ (rightstatus == UNKNOWN));
+
          if( leftstatus == UNKNOWN )
-            *size = 1 + 2*rightsize;
+         {
+            leftremainingsize = fractionleft / fractionright * righttotalsize;
+            lefttotalsize = leftremainingsize;
+         }
          else
-            *size = 1 + 2*leftsize;
+         {
+            rightremainingsize = fractionright / fractionleft * lefttotalsize;
+            righttotalsize = rightremainingsize;
+         }
+         *remainingsize = leftremainingsize + rightremainingsize;
+         *totalsize = 1 + lefttotalsize + righttotalsize;
          return ESTIMATED;
       }
    }
@@ -161,10 +191,11 @@ struct SCIP_EventhdlrData
    SCIP_HASHMAP *opennodes; /* The open nodes (that have yet to be branched on). The key is the (scip) id/number of the SCIP_Node */
 };
 
-SCIP_Longint SCIPtreeSizeGetEstimate(SCIP* scip)
+SCIP_Longint SCIPtreeSizeGetEstimateRemaining(SCIP* scip)
 {
    SizeStatus status;
-   SCIP_Longint estimate;
+   SCIP_Longint totalsize;
+   SCIP_Longint remainingsize;
 
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
@@ -178,13 +209,14 @@ SCIP_Longint SCIPtreeSizeGetEstimate(SCIP* scip)
    if(eventhdlrdata->tree == NULL)
       return -1;
 
-   status = estimateTreeSize(scip, eventhdlrdata->tree, &estimate, SCIPgetUpperbound(scip));
+   status = estimateTreeSize(scip, eventhdlrdata->tree, SCIPgetUpperbound(scip), &totalsize, &remainingsize);
    if( status == UNKNOWN )
       return -1;
    else
    {
-      assert(estimate >= 0);
-      return estimate;
+      assert(totalsize >= 0);
+      assert(remainingsize >= 0);
+      return remainingsize;
    }
 }
 
@@ -236,11 +268,11 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
 
    #ifdef SCIP_DEBUG
    {
-      SCIP_Longint estimate;
-      SizeStatus status = estimateTreeSize(scip, eventhdlrdata->tree, &estimate, SCIPgetUpperbound(scip));
+      SCIP_Longint remainingsize;
+      SCIP_Longint totalsize;
+      SizeStatus status = estimateTreeSize(scip, eventhdlrdata->tree, SCIPgetUpperbound(scip), &totalsize, &remainingsize);
       assert(status == KNOWN);/* TODO remove after debug */
-      assert(estimate > 0);
-      SCIPdebugMessage("Final estimate: %" SCIP_LONGINT_FORMAT " nodes in the B&B tree\n", estimate);
+      SCIPdebugMessage("Estimated remaining nodes: %" SCIP_LONGINT_FORMAT " nodes in the B&B tree\n", remainingsize);
    }
    #endif
 
@@ -290,76 +322,71 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
    else
    {
       SCIP_NODE *scipparent; /* The parent of the scipnode we found */
+      TSEtree *newnode;
+      TSEtree *parentnode;
+
       scipnode = SCIPeventGetNode(event);
       assert(scipnode != NULL);
       scipparent = SCIPnodeGetParent(scipnode);
- 
-//      if( SCIPeventGetType(event) == SCIP_EVENTTYPE_PQNODEINFEASIBLE )
-//      {
-//         SCIPdebugMessage("Node event for PQ node #%" SCIP_LONGINT_FORMAT "\n", SCIPnodeGetNumber(scipnode) );
-//      }
-//      else
+
+      eventhdlrdata->nodesfound += 1;
+
+      SCIP_CALL( SCIPallocMemory(scip, &newnode) );
+      newnode->lowerbound = SCIPnodeGetLowerbound(scipnode);
+      newnode->leftchild = NULL;
+      newnode->rightchild = NULL;
+      newnode->number = SCIPnodeGetNumber(scipnode);
+      /* SCIPdebugMessage("Node event for focus node #%" SCIP_LONGINT_FORMAT "\n", newnode->number); */
+      /* TODO handle parent, which should be in the open nodes  */
+      if( scipparent != NULL )
       {
-         /* We create a new node in our tree structure */
-         TSEtree *newnode;
-         TSEtree *parentnode;
-         eventhdlrdata->nodesfound += 1;
+         SCIP_Longint parentnumber = SCIPnodeGetNumber(scipparent);
+         parentnode = (TSEtree*) SCIPhashmapGetImage(eventhdlrdata->opennodes, (void *)parentnumber);
+         assert(parentnode != NULL);
+         assert(parentnode->number == parentnumber);
 
-         SCIP_CALL( SCIPallocMemory(scip, &newnode) );
-         newnode->lowerbound = SCIPnodeGetLowerbound(scipnode);
-         newnode->leftchild = NULL;
-         newnode->rightchild = NULL;
-         newnode->number = SCIPnodeGetNumber(scipnode);
-         /* SCIPdebugMessage("Node event for focus node #%" SCIP_LONGINT_FORMAT "\n", newnode->number); */
-         /* TODO handle parent, which should be in the open nodes  */
-         if( scipparent != NULL )
-         {
-            SCIP_Longint parentnumber = SCIPnodeGetNumber(scipparent);
-            parentnode = (TSEtree*) SCIPhashmapGetImage(eventhdlrdata->opennodes, (void *)parentnumber);
-            assert(parentnode != NULL);
-            assert(parentnode->number == parentnumber);
+         newnode->parent = parentnode;
 
-            newnode->parent = parentnode;
-
-            if(parentnode->leftchild == NULL)
-               parentnode->leftchild = newnode;
-            else
-            {
-               assert(parentnode->rightchild == NULL);
-               parentnode->rightchild = newnode;
-               /* We have seen all the children of this parent, thus we can remove it from open nodes */
-               SCIP_CALL( SCIPhashmapRemove(eventhdlrdata->opennodes, (void *)parentnumber) );
-            }
-         }
+         if(parentnode->leftchild == NULL)
+            parentnode->leftchild = newnode;
          else
          {
-            /* Then this should be the root node */
-            parentnode = NULL;
-            newnode->parent = parentnode;
-            assert(eventhdlrdata->tree == NULL);
-            eventhdlrdata->tree = newnode;
+            assert(parentnode->rightchild == NULL);
+            parentnode->rightchild = newnode;
+            /* We have seen all the children of this parent, thus we can remove it from open nodes */
+            SCIP_CALL( SCIPhashmapRemove(eventhdlrdata->opennodes, (void *)parentnumber) );
          }
-    
-         newnode->prunedinPQ = FALSE;
-         switch(SCIPeventGetType(event)) {
-            case SCIP_EVENTTYPE_PQNODEINFEASIBLE:
-               newnode->prunedinPQ = TRUE;
-            case SCIP_EVENTTYPE_NODEFEASIBLE:
-            case SCIP_EVENTTYPE_NODEINFEASIBLE:
-               /* When an (in)feasible node is found, this corresponds to a new sample
-                * (in Knuth's algorithm). This may change the tree-size estimate. */
-               newnode->status = KNOWN;
-               break;
-            case SCIP_EVENTTYPE_NODEBRANCHED:
-               /* When a node is branched on, we need to add the corresponding nodes
-                * to our own data structure */
-               newnode->status = UNKNOWN;
-               SCIP_CALL( SCIPhashmapInsert(eventhdlrdata->opennodes, (void *) (newnode->number), newnode) ); //TODO since the number is a unique indentifier, perhaps we could use an array?
-               break;
-            default:
-               SCIPerrorMessage("Missing case in this switch.\n");
-               SCIPABORT();
-         }
+      }
+      else
+      {
+         /* Then this should be the root node */
+         parentnode = NULL;
+         newnode->parent = parentnode;
+         assert(eventhdlrdata->tree == NULL);
+         eventhdlrdata->tree = newnode;
+      }
+ 
+      newnode->prunedinPQ = FALSE;
+      switch(SCIPeventGetType(event)) {
+         case SCIP_EVENTTYPE_PQNODEINFEASIBLE:
+            newnode->prunedinPQ = TRUE;
+            /* The node might be in the opennodes queue: in this case we would need to remove it */
+            //SCIP_CALL( SCIPhashmapRemove(eventhdlrdata->opennodes, (void *)(newnode->number)) );
+         case SCIP_EVENTTYPE_NODEFEASIBLE:
+         case SCIP_EVENTTYPE_NODEINFEASIBLE:
+            /* When an (in)feasible node is found, this corresponds to a new sample
+             * (in Knuth's algorithm). This may change the tree-size estimate. */
+            newnode->status = KNOWN;
+            break;
+         case SCIP_EVENTTYPE_NODEBRANCHED:
+            /* When a node is branched on, we need to add the corresponding nodes
+             * to our own data structure */
+            newnode->status = UNKNOWN;
+            SCIP_CALL( SCIPhashmapInsert(eventhdlrdata->opennodes, (void *) (newnode->number), newnode) ); //TODO since the number is a unique indentifier, perhaps we could use an array?
+            break;
+         default:
+            SCIPerrorMessage("Missing case in this switch.\n");
+            SCIPABORT();
       }
    }
    return SCIP_OKAY;

@@ -164,7 +164,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputEstimates)
 
    assert(scip != NULL);
    /* We call the estimation method */
-   estimate = SCIPtreeSizeGetEstimate(scip); 
+   estimate = SCIPtreeSizeGetEstimateRemaining(scip) + SCIPgetNNodes(scip);
    
    if( estimate != -1)
       SCIPdispLongint(SCIPgetMessagehdlr(scip), file, estimate, DISP_WIDTH);
