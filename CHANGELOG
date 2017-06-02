@@ -14,6 +14,9 @@ parameters:
 - new parameter: lp/refactorinterval to change the refactorization interval of the LP solver
 
 interface:
+- new interface methods SCIPcreateRandom, SCIPfreeRandom that replace SCIPrandomCreate and SCIPrandomFree
+  in the public SCIP API.
+- new interface method SCIPsetRandomSeed to (re)set a random number generator seed
 - added method SCIPsetProbingLPState() to install given LP state and/or norms at the current probing node
 
 performance improvements:

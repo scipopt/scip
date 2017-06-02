@@ -33,6 +33,7 @@
 #include "scip/heur.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
+#include "scip/misc.h"
 
 #include "scip/struct_heur.h"
 
@@ -88,6 +89,7 @@ SCIP_RETCODE SCIPdivesetReset(
    )
 {
    assert(diveset != NULL);
+   assert(diveset->randnumgen != NULL);
 
    diveset->nlpiterations = 0L;
    diveset->totaldepth = 0L;
@@ -104,11 +106,8 @@ SCIP_RETCODE SCIPdivesetReset(
    diveset->ncalls = 0;
    diveset->nsolcalls = 0;
 
-   /* create a new random number generator after freeing any previous random number generator */
-   if( diveset->randnumgen != NULL )
-      SCIPrandomFree(&diveset->randnumgen);
-
-   SCIP_CALL( SCIPrandomCreate(&diveset->randnumgen, diveset->blkmem, (unsigned int) SCIPsetInitializeRandomSeed(set, diveset->initialseed)) );
+   /* reset the random number generator */
+   SCIPrandomSetSeed(diveset->randnumgen, (unsigned int) SCIPsetInitializeRandomSeed(set, diveset->initialseed));
 
    return SCIP_OKAY;
 }
@@ -183,7 +182,7 @@ SCIP_RETCODE heurAddDiveset(
 
 /** create a set of diving heuristic settings */
 SCIP_RETCODE SCIPdivesetCreate(
-   SCIP_DIVESET**        diveset,            /**< pointer to the freshly created diveset */
+   SCIP_DIVESET**        divesetptr,         /**< pointer to the freshly created diveset */
    SCIP_HEUR*            heur,               /**< the heuristic to which this dive setting belongs */
    const char*           name,               /**< name for the diveset, or NULL if the name of the heuristic should be used */
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -211,106 +210,109 @@ SCIP_RETCODE SCIPdivesetCreate(
 {
    char paramname[SCIP_MAXSTRLEN];
    const char* divesetname;
+   SCIP_DIVESET* diveset;
 
-   assert(diveset != NULL);
+   assert(divesetptr != NULL);
    assert(set != NULL);
    assert(divesetgetscore != NULL);
    assert(heur != NULL);
    assert(blkmem != NULL);
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, diveset) );
-   (*diveset)->blkmem = blkmem;
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, divesetptr) );
+   diveset = *divesetptr;
 
-   /* do not allocate random number generator here; we do this in SCIPdivesetReset() */
-   (*diveset)->initialseed = initialseed;
-   (*diveset)->randnumgen = NULL;
+   /* allocate random number generator. Note that we must make explicit use of random seed initialization because
+    * we create the random number generator directly, not through the public SCIP API
+    */
+   diveset->initialseed = initialseed;
+   SCIP_CALL( SCIPrandomCreate(&diveset->randnumgen, blkmem, (unsigned int) SCIPsetInitializeRandomSeed(set, diveset->initialseed)) );
 
 
    /* for convenience, the name gets inferred from the heuristic to which the diveset is added if no name is provided */
    divesetname = (name == NULL ? SCIPheurGetName(heur) : name);
-   SCIP_ALLOC( BMSduplicateMemoryArray(&(*diveset)->name, divesetname, strlen(divesetname)+1) );
-   (*diveset)->heur = NULL;
+   SCIP_ALLOC( BMSduplicateMemoryArray(&diveset->name, divesetname, strlen(divesetname)+1) );
+   diveset->heur = NULL;
 
    /* copy callbacks */
-   (*diveset)->divesetgetscore = divesetgetscore;
+   diveset->divesetgetscore = divesetgetscore;
 
-   SCIP_CALL( heurAddDiveset(heur, *diveset) );
-   (*diveset)->sol = NULL;
-   (*diveset)->divetypemask = divetypemask;
+   SCIP_CALL( heurAddDiveset(heur, diveset) );
+   diveset->sol = NULL;
+   diveset->divetypemask = divetypemask;
 
    /* add collection of diving heuristic specific parameters */
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/minreldepth", (*diveset)->name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/minreldepth", diveset->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname, "minimal relative depth to start diving",
-         &(*diveset)->minreldepth, TRUE, minreldepth, 0.0, 1.0, NULL, NULL) );
+         &diveset->minreldepth, TRUE, minreldepth, 0.0, 1.0, NULL, NULL) );
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxreldepth", (*diveset)->name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxreldepth", diveset->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname,
          "maximal relative depth to start diving",
-         &(*diveset)->maxreldepth, TRUE, maxreldepth, 0.0, 1.0, NULL, NULL) );
+         &diveset->maxreldepth, TRUE, maxreldepth, 0.0, 1.0, NULL, NULL) );
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", (*diveset)->name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", diveset->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal fraction of diving LP iterations compared to node LP iterations",
-         &(*diveset)->maxlpiterquot, FALSE, maxlpiterquot, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &diveset->maxlpiterquot, FALSE, maxlpiterquot, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", (*diveset)->name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", diveset->name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem,
          paramname,
          "additional number of allowed LP iterations",
-         &(*diveset)->maxlpiterofs, FALSE, maxlpiterofs, 0, INT_MAX, NULL, NULL) );
+         &diveset->maxlpiterofs, FALSE, maxlpiterofs, 0, INT_MAX, NULL, NULL) );
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveubquot", (*diveset)->name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveubquot", diveset->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)",
-         &(*diveset)->maxdiveubquot, TRUE, maxdiveubquot, 0.0, 1.0, NULL, NULL) );
+         &diveset->maxdiveubquot, TRUE, maxdiveubquot, 0.0, 1.0, NULL, NULL) );
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveavgquot", (*diveset)->name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveavgquot", diveset->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)",
-         &(*diveset)->maxdiveavgquot, TRUE, maxdiveavgquot, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &diveset->maxdiveavgquot, TRUE, maxdiveavgquot, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveubquotnosol", (*diveset)->name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveubquotnosol", diveset->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal UBQUOT when no solution was found yet (0.0: no limit)",
-         &(*diveset)->maxdiveubquotnosol, TRUE, maxdiveubquotnosol, 0.0, 1.0, NULL, NULL) );
+         &diveset->maxdiveubquotnosol, TRUE, maxdiveubquotnosol, 0.0, 1.0, NULL, NULL) );
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveavgquotnosol", (*diveset)->name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveavgquotnosol", diveset->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal AVGQUOT when no solution was found yet (0.0: no limit)",
-         &(*diveset)->maxdiveavgquotnosol, TRUE, maxdiveavgquotnosol, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &diveset->maxdiveavgquotnosol, TRUE, maxdiveavgquotnosol, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/backtrack", (*diveset)->name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/backtrack", diveset->name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem,
          paramname,
          "use one level of backtracking if infeasibility is encountered?",
-         &(*diveset)->backtrack, FALSE, backtrack, NULL, NULL) );
+         &diveset->backtrack, FALSE, backtrack, NULL, NULL) );
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/lpresolvedomchgquot", (*diveset)->name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/lpresolvedomchgquot", diveset->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname,
          "percentage of immediate domain changes during probing to trigger LP resolve",
-         &(*diveset)->lpresolvedomchgquot, FALSE, lpresolvedomchgquot,  0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &diveset->lpresolvedomchgquot, FALSE, lpresolvedomchgquot,  0.0, SCIP_REAL_MAX, NULL, NULL) );
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/lpsolvefreq", (*diveset)->name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/lpsolvefreq", diveset->name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem,
          paramname,
          "LP solve frequency for diving heuristics (0: only after enough domain changes have been found)",
-         &(*diveset)->lpsolvefreq, FALSE, lpsolvefreq, 0, INT_MAX,
+         &diveset->lpsolvefreq, FALSE, lpsolvefreq, 0, INT_MAX,
          NULL, NULL) );
 
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/onlylpbranchcands", (*diveset)->name);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/onlylpbranchcands", diveset->name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem,
             paramname,
             "should only LP branching candidates be considered instead of the slower but "
             "more general constraint handler diving variable selection?",
-            &(*diveset)->onlylpbranchcands, FALSE, onlylpbranchcands, NULL, NULL) );
+            &diveset->onlylpbranchcands, FALSE, onlylpbranchcands, NULL, NULL) );
 
-   SCIP_CALL( SCIPdivesetReset(*diveset, set) );
+   SCIP_CALL( SCIPdivesetReset(diveset, set) );
 
    return SCIP_OKAY;
 }
@@ -613,18 +615,20 @@ void SCIPdivesetUpdateLPStats(
 /** frees memory of a diveset */
 static
 void divesetFree(
-   SCIP_DIVESET**        diveset             /**< general diving settings */
+   SCIP_DIVESET**        divesetptr,         /**< general diving settings */
+   BMS_BLKMEM*           blkmem              /**< block memory for parameter settings */
    )
 {
-   assert(*diveset != NULL);
-   assert((*diveset)->name != NULL);
-   assert((*diveset)->blkmem != NULL);
-   assert((*diveset)->randnumgen != NULL);
+   SCIP_DIVESET* diveset = *divesetptr;
 
-   SCIPrandomFree(&(*diveset)->randnumgen);
+   assert(diveset != NULL);
+   assert(diveset->name != NULL);
+   assert(diveset->randnumgen != NULL);
 
-   BMSfreeMemoryArray(&(*diveset)->name);
-   BMSfreeBlockMemory((*diveset)->blkmem, diveset);
+   SCIPrandomFree(&diveset->randnumgen, blkmem);
+
+   BMSfreeMemoryArray(&diveset->name);
+   BMSfreeBlockMemory(blkmem, divesetptr);
 }
 
 /** get the candidate score and preferred rounding direction for a candidate variable */
@@ -760,7 +764,8 @@ SCIP_RETCODE SCIPheurCreate(
 /** calls destructor and frees memory of primal heuristic */
 SCIP_RETCODE SCIPheurFree(
    SCIP_HEUR**           heur,               /**< pointer to primal heuristic data structure */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    int d;
@@ -779,7 +784,7 @@ SCIP_RETCODE SCIPheurFree(
    for( d = 0; d < (*heur)->ndivesets; ++d )
    {
       assert((*heur)->divesets[d] != NULL);
-      divesetFree(&((*heur)->divesets[d]));
+      divesetFree(&((*heur)->divesets[d]), blkmem);
    }
    BMSfreeMemoryArrayNull(&(*heur)->divesets);
    SCIPclockFree(&(*heur)->heurclock);

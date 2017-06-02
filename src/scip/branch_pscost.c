@@ -559,6 +559,9 @@ SCIP_DECL_BRANCHFREE(branchFreePscost)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
+   /* free random number generator */
+   SCIPfreeRandom(scip, &branchruledata->randnumgen);
+
    /* free branching rule data */
    SCIPfreeBlockMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
@@ -576,9 +579,7 @@ SCIP_DECL_BRANCHINIT(branchInitPscost)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   /* create a random number generator */
-   SCIP_CALL( SCIPrandomCreate(&branchruledata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, BRANCHRULE_RANDSEED_DEFAULT)) );
+   SCIPsetRandomSeed(scip, branchruledata->randnumgen, BRANCHRULE_RANDSEED_DEFAULT);
 
    return SCIP_OKAY;
 }
@@ -592,9 +593,6 @@ SCIP_DECL_BRANCHEXIT(branchExitPscost)
    /* get branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
-
-   /* free random number generator */
-   SCIPrandomFree(&branchruledata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -757,6 +755,9 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
 
    assert(branchrule != NULL);
+   /* create a random number generator */
+   SCIP_CALL( SCIPcreateRandom(scip, &branchruledata->randnumgen,
+         BRANCHRULE_RANDSEED_DEFAULT) );
 
    /* set non-fundamental callbacks via specific setter functions*/
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyPscost) );

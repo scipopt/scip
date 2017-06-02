@@ -54,7 +54,7 @@ void setup(void)
 static
 void teardown(void)
 {
-   SCIPrandomFree(&randgen);
+   SCIPrandomFree(&randgen, blkmem);
    BMSdestroyBlockMemory(&blkmem);
 }
 
