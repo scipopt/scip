@@ -337,6 +337,33 @@ SCIP_Real SCIPnegateReal(
    SCIP_Real             x                   /**< value to negate */
    );
 
+/** internal random number generator methods
+ *
+ * see \ref RandomNumbers for public random number generator methods
+ */
+
+/** creates and initializes a random number generator */
+extern
+SCIP_RETCODE SCIPrandomCreate(
+   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   unsigned int          initialseed         /**< initial random seed */
+   );
+
+/** frees a random number generator */
+extern
+void SCIPrandomFree(
+   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** initializes a random number generator with a given start seed */
+extern
+void SCIPrandomSetSeed(
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   unsigned int          initseed            /**< initial random seed */
+   );
+
 #ifdef __cplusplus
 }
 #endif

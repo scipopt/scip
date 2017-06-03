@@ -481,11 +481,10 @@ void** SCIPpqueueElems(
 
 #define SCIPcombineFourInt(a, b, c, d)      (((uint64_t) (a) << 48) + ((uint64_t) (b) << 32) + ((uint64_t) (c) << 16) + ((uint64_t) (d)) )
 
-
 /** computes a hashcode for double precision floating point values containing
  *  15 significant bits, the sign and the exponent
  */
-INLINE
+INLINE static
 uint32_t SCIPrealHashCode(double x)
 {
    int exp;
@@ -1695,21 +1694,6 @@ SCIP_Real SCIPrandomGetReal(
    SCIP_RANDNUMGEN*      randgen,            /**< random number generator data */
    SCIP_Real             minrandval,         /**< minimal value to return */
    SCIP_Real             maxrandval          /**< maximal value to return */
-   );
-
-/** creates and initializes a random number generator */
-EXTERN
-SCIP_RETCODE SCIPrandomCreate(
-   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   unsigned int          initialseed         /**< initial random seed */
-   );
-
-
-/** frees a random number generator */
-EXTERN
-void SCIPrandomFree(
-   SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
    );
 
 /** returns a random real between minrandval and maxrandval

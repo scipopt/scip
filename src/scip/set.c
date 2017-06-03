@@ -2532,7 +2532,7 @@ SCIP_RETCODE SCIPsetFree(
    /* free primal heuristics */
    for( i = 0; i < (*set)->nheurs; ++i )
    {
-      SCIP_CALL( SCIPheurFree(&(*set)->heurs[i], *set) );
+      SCIP_CALL( SCIPheurFree(&(*set)->heurs[i], *set, blkmem) );
    }
    BMSfreeMemoryArrayNull(&(*set)->heurs);
 
