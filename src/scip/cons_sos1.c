@@ -1812,7 +1812,7 @@ SCIP_RETCODE presolRoundConssSOS1(
 
    /* create digraph whose nodes represent variables and cliques in the conflict graph */
    csize = MAX(1, conshdlrdata->maxextensions) * nconss;
-   SCIP_CALL( SCIPdigraphCreate(&vertexcliquegraph, SCIPblkmem(scip), nsos1vars + csize) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &vertexcliquegraph, nsos1vars + csize) );
 
    /* allocate buffer arrays */
    SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nsos1vars) );
@@ -2858,7 +2858,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
       }
 
       /* create conflict graph of linear constraint */
-      SCIP_CALL( SCIPdigraphCreate(&conflictgraphlin, SCIPblkmem(scip), ntrafolinvars) );
+      SCIP_CALL( SCIPcreateDigraph(scip, &conflictgraphlin, ntrafolinvars) );
       SCIP_CALL( genConflictgraphLinearCons(conshdlrdata, conflictgraphlin, conflictgraph, trafolinvars, ntrafolinvars, varindincons) );
 
       /* mark all the variables as 'not covered by some clique cover' */
@@ -3399,7 +3399,7 @@ SCIP_RETCODE presolRoundVarsSOS1(
    }
 
    /* create implication graph */
-   SCIP_CALL( SCIPdigraphCreate(&implgraph, SCIPblkmem(scip), ntotalvars) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &implgraph, ntotalvars) );
 
    /* try to tighten the lower and upper bounds of the variables */
    updateconfl = FALSE;

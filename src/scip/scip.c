@@ -47488,6 +47488,43 @@ SCIP_RETCODE SCIPvalidateSolve(
    return SCIP_OKAY;
 }
 
+/** creates directed graph structure */
+SCIP_RETCODE SCIPcreateDigraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIGRAPH**        digraph,            /**< pointer to store the created directed graph */
+   int                   nnodes              /**< number of nodes */
+   )
+{
+   assert(scip != NULL);
+   assert(digraph != NULL);
+
+   SCIP_CALL( SCIPdigraphCreate(digraph, scip->mem->probmem, nnodes) );
+
+   return SCIP_OKAY;
+}
+
+/** copies directed graph structure
+ *
+ *  The copying procedure uses the memory of the passed SCIP instance. The user must ensure that the digraph lives
+ *  as most as long as the SCIP instance.
+ *
+ *  @note The data in nodedata is copied verbatim. This possibly has to be adapted by the user.
+ */
+SCIP_RETCODE SCIPcopyDigraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
+   SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
+   )
+{
+   assert(scip != NULL);
+   assert(sourcedigraph != NULL);
+   assert(targetdigraph != NULL);
+
+   SCIP_CALL( SCIPdigraphCopy(targetdigraph, sourcedigraph, scip->mem->probmem) );
+
+   return SCIP_OKAY;
+}
+
 /** creates and initializes a random number generator
  *
  *  @note The initial seed is changed using SCIPinitializeRandomSeed()
