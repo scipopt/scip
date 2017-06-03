@@ -1489,7 +1489,7 @@ SCIP_RETCODE sortGenVBounds(
    SCIPdebugMsg(scip, "(re-)sort genvbounds topologically\n");
 
    /* create digraph */
-   SCIP_CALL( SCIPdigraphCreate(&graph, SCIPblkmem(scip), propdata->ngenvbounds) );
+   SCIP_CALL( SCIPcreateDigraph(scip, &graph, propdata->ngenvbounds) );
 
    /* add outgoing arcs for each genvbound */
    for( i = 0; i < propdata->ngenvbounds; i++ )
