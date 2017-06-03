@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+
 /**@file   heur_lns.c
  * @brief  "Large neighborhood search heuristic that orchestrates the popular neighborhoods Local Branching, RINS, RENS, DINS etc."
  * @author Gregor Hendel
@@ -68,7 +68,7 @@
 #define DEFAULT_GAINMEASURE      'e'/**< measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean,
                                       *  'e'ffort based? */
 #define GAINMEASURES "bwe"
-#define DEFAULT_EPS        0.33      /**< probability for exploration in epsilon-greedy bandit algorithm */
+#define DEFAULT_EPS        0.5       /**< probability for exploration in epsilon-greedy bandit algorithm */
 #define DEFAULT_RESETWEIGHTS TRUE    /**< should the bandit algorithms be reset when a new problem is read? */
 
 /*
