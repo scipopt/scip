@@ -22507,7 +22507,7 @@ SCIP_RETCODE SCIPcreateDigraph(
 
 /** copies directed graph structure
  *
- *  the copying procedure uses the memory of the passed SCIP instance. The user must ensure that the digraph lives
+ *  The copying procedure uses the memory of the passed SCIP instance. The user must ensure that the digraph lives
  *  as most as long as the SCIP instance.
  *
  *  @note The data in nodedata is copied verbatim. This possibly has to be adapted by the user.
