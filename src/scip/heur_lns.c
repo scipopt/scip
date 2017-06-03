@@ -2058,6 +2058,9 @@ SCIP_RETCODE setupSubScip(
    /* set solve limits for sub-SCIP */
    SCIP_CALL( setLimits(subscip, solvelimits) );
 
+   SCIPdebugMsg(scip, "Solve Limits: %lld (%lld) nodes (stall nodes), %.1f sec., %d sols\n",
+         solvelimits->nodelimit, solvelimits->nodelimit / 2, solvelimits->timelimit, heurdata->nsolslim);
+
    return SCIP_OKAY;
 }
 
@@ -2071,7 +2074,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
    SCIP_VAR** vars;
    SCIP_VAR** subvars;
    NH_STATS runstats[NNEIGHBORHOODS];
-   SCIP_STATUS subscipstatus;
+   SCIP_STATUS subscipstatus[NNEIGHBORHOODS];
    SCIP* subscip = NULL;
 
    int nfixings;
@@ -2103,6 +2106,27 @@ SCIP_DECL_HEUREXEC(heurExecLns)
 
    allgainsmode = heurdata->gainfile != NULL;
 
+   /* apply some other rules for a fair all gains mode; in normal execution mode, neighborhoods are iterated through */
+   if( allgainsmode )
+   {
+      /* most neighborhoods require an incumbent solution */
+      if( SCIPgetNSols(scip) < 2 )
+      {
+         SCIPdebugMsg(scip, "Not enough solutions for all gains mode\n");
+         return SCIP_OKAY;
+      }
+
+      /* if the node is infeasible, or has no LP solution, which is required by some neighborhoods
+       * if we are not in all gains mode, the neighborhoods delay themselves individually
+       */
+      if( nodeinfeasible || ! SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+      {
+         SCIPdebugMsg(scip, "Delay LNS heuristic until a feasible node with optimally solved LP relaxation\n");
+         *result = SCIP_DELAYED;
+         return SCIP_OKAY;
+      }
+   }
+
    /** use the neighborhood that requested a delay or select the next neighborhood to run based on the selected bandit algorithm */
    if( heurdata->currneighborhood >= 0 )
    {
@@ -2115,7 +2139,13 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       SCIP_CALL( selectNeighborhood(scip, heurdata, &banditidx) );
       SCIPdebugMsg(scip, "Selected neighborhood %d with bandit algorithm\n", banditidx);
    }
-   neighborhoodidx = banditidx;
+
+   /* in all gains mode, we simply loop over all heuristics */
+   if( ! allgainsmode )
+      neighborhoodidx = banditidx;
+   else
+      neighborhoodidx = 0;
+
    assert(neighborhoodidx >= 0);
    assert(heurdata->nactiveneighborhoods > neighborhoodidx);
 
@@ -2126,7 +2156,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
    /* initialize neighborhood statistics for a run */
-   ntries = 0;
+   ntries = 1;
    do
    {
       SCIP_HASHMAP* varmapf;
@@ -2139,12 +2169,12 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       SCIP_RESULT fixresult;
       tryagain = FALSE;
       neighborhood = heurdata->neighborhoods[neighborhoodidx];
-      SCIPdebugMsg(scip, "Selected '%s' neighborhood %d\n", neighborhood->name, neighborhoodidx);
+      SCIPdebugMsg(scip, "Running '%s' neighborhood %d\n", neighborhood->name, neighborhoodidx);
 
       initRunStats(scip, &runstats[neighborhoodidx]);
       gains[neighborhoodidx] = 0.0;
 
-      subscipstatus = SCIP_STATUS_UNKNOWN;
+      subscipstatus[neighborhoodidx] = SCIP_STATUS_UNKNOWN;
       SCIP_CALL( SCIPstartClock(scip, neighborhood->stats.setupclock) );
 
       /** determine variable fixings and objective coefficients of this neighborhood */
@@ -2292,7 +2322,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
 
       /* update statistics based on the sub-SCIP run results */
       updateRunStats(scip, &runstats[neighborhoodidx], subscip);
-      subscipstatus = SCIPgetStatus(subscip);
+      subscipstatus[neighborhoodidx] = SCIPgetStatus(subscip);
 
       SCIP_CALL( getGain(scip, heurdata, &runstats[neighborhoodidx], &gains[neighborhoodidx]) );
 
@@ -2331,17 +2361,21 @@ SCIP_DECL_HEUREXEC(heurExecLns)
       heurdata->usednodes += runstats[banditidx].usednodes;
 
       /** determine the success of this neighborhood, and update the target fixing rate for the next time */
-      updateNeighborhoodStats(scip, &runstats[banditidx], heurdata->neighborhoods[banditidx], subscipstatus);
+      updateNeighborhoodStats(scip, &runstats[banditidx], heurdata->neighborhoods[banditidx], subscipstatus[banditidx]);
 
-      /* adjust the fixing rate for this neighborhood */
-      if( heurdata->adjustfixingrate )
-         updateFixingRate(scip, heurdata->neighborhoods[banditidx], subscipstatus, &runstats[banditidx]);
+      /* adjust the fixing rate for this neighborhood
+       * make no adjustments in all gains mode, because this only affects 1 of 8 heuristics
+       */
+      if( heurdata->adjustfixingrate && !allgainsmode )
+         updateFixingRate(scip, heurdata->neighborhoods[banditidx], subscipstatus[banditidx], &runstats[banditidx]);
 
-      /* similarly, update the minimum improvement for the LNS heuristic */
-      if( heurdata->adjustminimprove )
+      /* similarly, update the minimum improvement for the LNS heuristic
+       * make no adjustments in all gains mode
+       */
+      if( heurdata->adjustminimprove && !allgainsmode )
       {
          SCIPdebugMsg(scip, "Update Minimum Improvement: %.4f", heurdata->minimprove);
-         updateMinimumImprovement(heurdata, subscipstatus, &runstats[banditidx]);
+         updateMinimumImprovement(heurdata, subscipstatus[banditidx], &runstats[banditidx]);
          SCIPdebugMsg(scip, "--> %.4f\n", heurdata->minimprove);
       }
 
