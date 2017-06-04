@@ -64,7 +64,7 @@
 #define DEFAULT_BESTSOLWEIGHT 3
 #define DEFAULT_BANDITALGO 'e'    /**< the default bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
 #define DEFAULT_GAMMA 0.2         /**< default weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3 */
-#define DEFAULT_BETA 0.1          /**< default gain offset between 0 and 1 at every observation for exp3 */
+#define DEFAULT_BETA 0.0          /**< default gain offset between 0 and 1 at every observation for exp3 */
 #define DEFAULT_GAINMEASURE      'e'/**< measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean,
                                       *  'e'ffort based? */
 #define GAINMEASURES "bwe"
