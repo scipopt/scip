@@ -22,6 +22,7 @@ fixed bugs:
 - renamed parameter heuristics/completesol/maxunkownrate to heuristics/completesol/maxunknownrate
 - in GAMS writer, forbid also various parenthesis characters in gams symbol names
 - fixed debug solution check that appeared in probing mode when the objective function has changed
+- added missing definition of SCIP_UNUSED in memory.h if def.h is not included
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint
