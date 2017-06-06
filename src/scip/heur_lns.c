@@ -332,6 +332,7 @@ struct SCIP_HeurData
    EXPTHREE*             exp3;               /**< exp3 bandit algorithm */
    SCIP_Longint          nodesoffset;        /**< offset added to the nodes budget */
    SCIP_Longint          maxnodes;           /**< maximum number of nodes in a single sub-SCIP */
+   SCIP_Longint          targetnodes;        /**< targeted number of nodes to start a sub-SCIP */
    SCIP_Longint          minnodes;           /**< minimum number of nodes required to start a sub-SCIP */
    SCIP_Longint          usednodes;          /**< total number of nodes already spent in sub-SCIPs */
    SCIP_Real             nodesquot;          /**< fraction of nodes compared to the main SCIP for budget computation */
@@ -493,6 +494,62 @@ void updateFixingRate(
          break;
       case SCIP_STATUS_SOLLIMIT:
          decreaseFixingRate(fx);
+         break;
+      default:
+         break;
+   }
+}
+
+/** increase target node limit */
+static
+void increaseTargetNodeLimit(
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
+   )
+{
+   heurdata->targetnodes *= 2;
+   heurdata->targetnodes = MIN(heurdata->targetnodes, heurdata->maxnodes);
+}
+
+/** decrease target node limit */
+static
+void decreaseTargetNodeLimit(
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
+   )
+{
+   heurdata->targetnodes /= 2;
+   heurdata->targetnodes = MAX(heurdata->targetnodes, heurdata->minnodes);
+}
+
+/** reset target node limit */
+static
+void resetTargetNodeLimit(
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
+   )
+{
+   heurdata->targetnodes = heurdata->minnodes;
+}
+
+
+
+/** update target node limit based on the current run results */
+static
+void updateTargetNodeLimit(
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_STATUS           subscipstatus       /**< status of the sub-SCIP run */
+   )
+{
+   switch (subscipstatus) {
+      case SCIP_STATUS_OPTIMAL:
+      case SCIP_STATUS_INFEASIBLE:
+      case SCIP_STATUS_INFORUNBD:
+      case SCIP_STATUS_SOLLIMIT:
+         decreaseTargetNodeLimit(heurdata);
+         break;
+      case SCIP_STATUS_STALLNODELIMIT:
+      case SCIP_STATUS_NODELIMIT:
+         increaseTargetNodeLimit(heurdata);
+         break;
+      case SCIP_STATUS_USERINTERRUPT:
          break;
       default:
          break;
@@ -1782,7 +1839,7 @@ SCIP_RETCODE determineLimits(
    if( solvelimits->timelimit <= 0.0 || solvelimits->memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       *runagain = FALSE;
 
-   /* calculate the maximal number of search nodes until heuristic is aborted */
+   /* calculate the search node limit of the heuristic  */
    solvelimits->nodelimit = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
    solvelimits->nodelimit += heurdata->nodesoffset;
    solvelimits->nodelimit -= heurdata->usednodes;
@@ -1794,7 +1851,7 @@ SCIP_RETCODE determineLimits(
    solvelimits->nodelimit = (SCIP_Longint)(solvelimits->nodelimit * initfactor);
 
    /* check whether we have enough nodes left to call subproblem solving */
-   if( solvelimits->nodelimit < heurdata->minnodes )
+   if( solvelimits->nodelimit < heurdata->targetnodes )
       *runagain = FALSE;
 
    return SCIP_OKAY;
@@ -2378,6 +2435,9 @@ SCIP_DECL_HEUREXEC(heurExecLns)
          updateMinimumImprovement(heurdata, subscipstatus[banditidx], &runstats[banditidx]);
          SCIPdebugMsg(scip, "--> %.4f\n", heurdata->minimprove);
       }
+
+      /* update the target node limit based on the status of the selected algorithm */
+      updateTargetNodeLimit(heurdata, subscipstatus[banditidx]);
 
       /* update the bandit algorithms by the measured gain */
       SCIP_CALL( updateBanditAlgorithms(scip, heurdata, gains[banditidx], banditidx) );
@@ -3299,6 +3359,7 @@ SCIP_DECL_HEURINIT(heurInitLns)
    heurdata->usednodes = 0;
    heurdata->ninitneighborhoods = heurdata->nactiveneighborhoods;
    resetMinimumImprovement(heurdata);
+   resetTargetNodeLimit(heurdata);
    resetCurrentNeighborhood(heurdata);
 
    SCIPfreeBufferArray(scip, &priorities);
