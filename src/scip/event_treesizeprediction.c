@@ -270,22 +270,30 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
    {
       SCIP_Longint remainingsize;
       SCIP_Longint totalsize;
-      SizeStatus status = estimateTreeSize(scip, eventhdlrdata->tree, SCIPgetUpperbound(scip), &totalsize, &remainingsize);
-      assert(status == KNOWN);/* TODO remove after debug */
-      SCIPdebugMessage("Estimated remaining nodes: %" SCIP_LONGINT_FORMAT " nodes in the B&B tree\n", remainingsize);
+      SizeStatus status;
+      if( eventhdlrdata->tree != NULL ) /* SCIP may not have created any node */
+      {
+         status = estimateTreeSize(scip, eventhdlrdata->tree, SCIPgetUpperbound(scip), &totalsize, &remainingsize);
+         assert(status == KNOWN);/* TODO remove after debug */
+         SCIPdebugMessage("Estimated remaining nodes: %" SCIP_LONGINT_FORMAT " nodes in the B&B tree\n", remainingsize);
+      }
    }
    #endif
 
-//   if( eventhdlrdata->initialized == TRUE )
-//   {
-      assert(SCIPhashmapIsEmpty(eventhdlrdata->opennodes) == TRUE);
-      SCIPhashmapFree(&(eventhdlrdata->opennodes));
-      if( eventhdlrdata->nodesfound > 0 )
-      {
-         assert(eventhdlrdata->tree != NULL);
-         freeTreeMemory(scip, &(eventhdlrdata->tree));
-      }
-//   }
+   SCIPhashmapFree(&(eventhdlrdata->opennodes));
+   if( eventhdlrdata->tree != NULL )
+   {
+      freeTreeMemory(scip, &(eventhdlrdata->tree));
+   }
+
+   /* We drop node solved events */
+   SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, NULL, -1) );
+
+   /* We drop priority queue nodes being removed by bound */
+   SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_PQNODEINFEASIBLE, eventhdlr, NULL, -1) );
+
+   /* We drop updates to the primal bound */
+   SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, -1) );
 
    return SCIP_OKAY;
 }
@@ -354,15 +362,16 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
             assert(parentnode->rightchild == NULL);
             parentnode->rightchild = newnode;
             /* We have seen all the children of this parent, thus we can remove it from open nodes */
+            /* SCIPdebugMessage("Removing node %" SCIP_LONGINT_FORMAT " from opennode hashmap\n", parentnumber); */
             SCIP_CALL( SCIPhashmapRemove(eventhdlrdata->opennodes, (void *)parentnumber) );
          }
       }
       else
       {
-         /* Then this should be the root node */
+         /* Then this should be the root node, unless there has been a restart */
+         assert(SCIPgetNNodes(scip) == 1);
          parentnode = NULL;
          newnode->parent = parentnode;
-         assert(eventhdlrdata->tree == NULL);
          eventhdlrdata->tree = newnode;
       }
  
@@ -370,6 +379,7 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
       switch(SCIPeventGetType(event)) {
          case SCIP_EVENTTYPE_PQNODEINFEASIBLE:
             newnode->prunedinPQ = TRUE;
+            /* SCIPdebugMessage("Node %" SCIP_LONGINT_FORMAT " with parent %" SCIP_LONGINT_FORMAT " pruned directly from the priority queue\n", newnode->number, (parentnode == NULL?((SCIP_Longint) 0): parentnode->number)); */
             /* The node might be in the opennodes queue: in this case we would need to remove it */
             //SCIP_CALL( SCIPhashmapRemove(eventhdlrdata->opennodes, (void *)(newnode->number)) );
          case SCIP_EVENTTYPE_NODEFEASIBLE:
@@ -382,7 +392,8 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
             /* When a node is branched on, we need to add the corresponding nodes
              * to our own data structure */
             newnode->status = UNKNOWN;
-            SCIP_CALL( SCIPhashmapInsert(eventhdlrdata->opennodes, (void *) (newnode->number), newnode) ); //TODO since the number is a unique indentifier, perhaps we could use an array?
+            /* SCIPdebugMessage("Inserting node %" SCIP_LONGINT_FORMAT " with parent %" SCIP_LONGINT_FORMAT " into opennode hashmap\n", newnode->number, (parentnode == NULL?((SCIP_Longint) 0): parentnode->number)); */
+            SCIP_CALL( SCIPhashmapInsert(eventhdlrdata->opennodes, (void *) (newnode->number), newnode) );
             break;
          default:
             SCIPerrorMessage("Missing case in this switch.\n");
