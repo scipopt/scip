@@ -23,6 +23,7 @@ fixed bugs:
 - in GAMS writer, forbid also various parenthesis characters in gams symbol names
 - fixed debug solution check that appeared in probing mode when the objective function has changed
 - added missing definition of SCIP_UNUSED in memory.h if def.h is not included
+- relaxed a too strong assert concerning solutions close to the objective limit
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint
