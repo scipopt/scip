@@ -38707,7 +38707,7 @@ SCIP_RETCODE printDualSol(
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, 1) );
 
    /* print dual solution values of all constraints */
-   for( c = 0; c < scip->transprob->nconss; ++c )
+   for( c = 0; c < scip->origprob->nconss; ++c )
    {
       SCIP_CONS* cons;
       SCIP_Real solval;
@@ -38717,7 +38717,7 @@ SCIP_RETCODE printDualSol(
 #ifndef NDEBUG
       SCIP_CONSHDLR* conshdlr;
 #endif
-      cons = scip->transprob->conss[c];
+      cons = scip->origprob->conss[c];
       assert(cons != NULL);
 
 #ifndef NDEBUG
@@ -38729,7 +38729,9 @@ SCIP_RETCODE printDualSol(
       SCIP_CALL( SCIPconsGetNVars(cons, scip->set, &nvars, &success) );
 
       if( nvars > 1 )
-         solval = SCIPgetDualsolLinear(scip, cons);
+      {
+         solval = SCIPgetDualsolLinear(scip, SCIPconsGetTransformed(cons));
+      }
       /* the constraint is a bound constraint */
       else
       {
@@ -38749,6 +38751,9 @@ SCIP_RETCODE printDualSol(
 
       }
       assert(solval != SCIP_INVALID); /*lint !e777*/
+
+      if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE )
+         solval = -solval;
 
       if( printzeros || !SCIPisZero(scip, solval) )
       {
