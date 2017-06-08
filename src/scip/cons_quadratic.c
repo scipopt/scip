@@ -5339,7 +5339,7 @@ SCIP_RETCODE precutCreate(
 
 /** frees a SCIP_PRECUT datastructure */
 static
-SCIP_RETCODE precutFree(
+void precutFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRECUT**         precut              /**< pointer that stores pointer to precut */
 )
@@ -5351,8 +5351,6 @@ SCIP_RETCODE precutFree(
    SCIPfreeBlockMemoryArrayNull(scip, &(*precut)->vars, (*precut)->varssize);
    SCIPfreeBlockMemoryArrayNull(scip, &(*precut)->coefs, (*precut)->varssize);
    SCIPfreeBlockMemory(scip, precut);
-
-   return SCIP_OKAY;
 }
 
 /** adds a term coef*var to a precut */
@@ -5368,13 +5366,16 @@ SCIP_RETCODE precutAddCoef(
    assert(precut != NULL);
    assert(var != NULL);
 
+   if( coef == 0.0 )
+      return SCIP_OKAY;
+
    if( precut->varssize <= precut->nvars )
    {
       /* realloc vars and coefs array */
       int oldsize;
 
       oldsize = precut->varssize;
-      precut->varssize = SCIPcalcMemGrowSize(scip, precut->varssize + 1);
+      precut->varssize = SCIPcalcMemGrowSize(scip, precut->nvars + 1);
 
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &precut->vars,  oldsize, precut->varssize) );
       SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &precut->coefs, oldsize, precut->varssize) );
@@ -5383,6 +5384,43 @@ SCIP_RETCODE precutAddCoef(
    precut->vars[precut->nvars] = var;
    precut->coefs[precut->nvars] = coef;
    ++precut->nvars;
+
+   return SCIP_OKAY;
+}
+
+/** adds terms coef*var to a precut */
+static
+SCIP_RETCODE precutAddCoefs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRECUT*          precut,             /**< precut */
+   int                   nvars,              /**< number of terms to add */
+   SCIP_VAR**            vars,               /**< variables to add */
+   SCIP_Real*            coefs               /**< coefficients to add */
+   )
+{
+   assert(scip != NULL);
+   assert(precut != NULL);
+   assert(vars != NULL || nvars == 0);
+   assert(coefs != NULL || nvars == 0);
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   if( precut->varssize < precut->nvars + nvars )
+   {
+      /* realloc vars and coefs array */
+      int oldsize;
+
+      oldsize = precut->varssize;
+      precut->varssize = SCIPcalcMemGrowSize(scip, precut->nvars + nvars);
+
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &precut->vars,  oldsize, precut->varssize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &precut->coefs, oldsize, precut->varssize) );
+   }
+
+   BMScopyMemoryArray(precut->vars + precut->nvars, vars, nvars);
+   BMScopyMemoryArray(precut->coefs + precut->nvars, coefs, nvars);
+   precut->nvars += nvars;
 
    return SCIP_OKAY;
 }
@@ -5397,6 +5435,29 @@ void precutAddConstant(
    assert(precut != NULL);
 
    precut->constant += constant;
+}
+
+static
+SCIP_Real precutGetViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRECUT*          precut,             /**< precut to be turned into a row */
+   SCIP_SOL*             sol                 /**< solution or NULL for LP solution */
+   )
+{
+   SCIP_Real activity;
+   int i;
+
+   activity = precut->constant;
+   for( i = 0; i < precut->nvars; ++i )
+      activity += precut->coefs[i] * SCIPgetSolVal(scip, sol, precut->vars[i]);
+
+   activity -= precut->side;
+
+   if( precut->sidetype == SCIP_SIDETYPE_LEFT )  /* cut is activity <= 0.0 -> violation is activity, if positive */
+      return MAX(activity, 0.0);
+
+   /* cut is activity >= 0.0 -> violation is -activity, if positive */
+   return MAX(-activity, 0.0);
 }
 
 static
@@ -5435,7 +5496,7 @@ SCIP_RETCODE precutGetRow(
 
 /** tries to compute cut for multleft * <coefleft, x'> * multright <= rhs / (multright * <coefright, x'>) where x'=(x,1) */
 static
-void generateCutFactorableDo(
+SCIP_RETCODE generateCutFactorableDo(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Real*            ref,                /**< reference solution where to generate the cut */
@@ -5446,8 +5507,7 @@ void generateCutFactorableDo(
    SCIP_Real             rightminactivity,   /**< minimal activity of <coefright, x> */
    SCIP_Real             rightmaxactivity,   /**< maximal activity of <coefright, x> */
    SCIP_Real             rhs,                /**< denominator on rhs */
-   SCIP_Real*            cutcoef,            /**< array to store cut coefficients for quadratic variables */
-   SCIP_Real*            cutrhs,             /**< buffer to store cut rhs */
+   SCIP_PRECUT*          precut,             /**< precut to store cut coefs and constant */
    SCIP_Bool*            islocal,            /**< buffer to set to TRUE if local information was used */
    SCIP_Bool*            success,            /**< buffer to indicate whether a cut was successfully computed */
    char*                 name                /**< buffer to store name of cut */
@@ -5455,15 +5515,18 @@ void generateCutFactorableDo(
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real constant;
+   SCIP_Real coef;
    int i;
 
-   assert(cutcoef != NULL);
+   assert(precut != NULL);
    assert(rightminactivity * multright > 0.0);
    assert(rightmaxactivity * multright > 0.0);
    assert(multright == 1.0 || multright == -1.0);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+
+   precut->sidetype = SCIP_SIDETYPE_RIGHT;
 
    if( rhs > 0.0 )
    {
@@ -5482,7 +5545,7 @@ void generateCutFactorableDo(
       if( SCIPisInfinity(scip, rightmaxactivity * multright) )
       {
          *success = FALSE;
-         return;
+         return SCIP_OKAY;
       }
 
       assert(SCIPisFeasLE(scip, rightminactivity, rightmaxactivity));
@@ -5491,10 +5554,13 @@ void generateCutFactorableDo(
       constant -= rhs * multright * (1.0 / rightminactivity + 1.0 / rightmaxactivity);
       constant += rhs * multright * coefright[consdata->nquadvars] / (rightminactivity * rightmaxactivity);
 
+      precutAddConstant(precut, constant);
+
       for( i = 0; i < consdata->nquadvars; ++i )
       {
-         cutcoef[i] = multleft * multright * coefleft[i];
-         cutcoef[i] += rhs * multright / (rightminactivity * rightmaxactivity) * coefright[i];
+         coef = multleft * multright * coefleft[i];
+         coef += rhs * multright / (rightminactivity * rightmaxactivity) * coefright[i];
+         SCIP_CALL( precutAddCoef(scip, precut, consdata->quadvarterms[i].var, coef) );
       }
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_factorablesecant_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
@@ -5523,20 +5589,23 @@ void generateCutFactorableDo(
       constant -= 2.0 * rhs / (multright * refvalue);
       constant += rhs / (refvalue * refvalue) * multright * coefright[consdata->nquadvars];
 
+      precutAddConstant(precut, constant);
+
       for( i = 0; i < consdata->nquadvars; ++i )
       {
-         cutcoef[i] = multleft * multright * coefleft[i];
-         cutcoef[i] += rhs / (refvalue * refvalue) * multright * coefright[i];
+         coef = multleft * multright * coefleft[i];
+         coef += rhs / (refvalue * refvalue) * multright * coefright[i];
+         SCIP_CALL( precutAddCoef(scip, precut, consdata->quadvarterms[i].var, coef) );
       }
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_factorablelinearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
    }
 
-   *cutrhs = -constant;
-
    /* @todo does not always need to be local */
    *islocal = TRUE;
    *success = TRUE;
+
+   return SCIP_OKAY;
 }
 
 /** tries to generate a cut if constraint quadratic function is factorable and there are no linear variables
@@ -5548,9 +5617,7 @@ SCIP_RETCODE generateCutFactorable(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SIDETYPE         violside,           /**< for which side a cut should be generated */
    SCIP_Real*            ref,                /**< reference solution where to generate the cut */
-   SCIP_Real*            cutcoef,            /**< array to store cut coefficients for quadratic variables */
-   SCIP_Real*            cutlhs,             /**< buffer to store cut lhs */
-   SCIP_Real*            cutrhs,             /**< buffer to store cut rhs */
+   SCIP_PRECUT*          precut,             /**< data structure to store cut coefficients */
    SCIP_Bool*            islocal,            /**< buffer to set to TRUE if local information was used */
    SCIP_Bool*            success,            /**< buffer to indicate whether a cut was successfully computed */
    char*                 name                /**< buffer to store name of cut */
@@ -5569,9 +5636,7 @@ SCIP_RETCODE generateCutFactorable(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(ref  != NULL);
-   assert(cutcoef != NULL);
-   assert(cutlhs  != NULL);
-   assert(cutrhs  != NULL);
+   assert(precut != NULL);
    assert(islocal != NULL);
    assert(success != NULL);
    assert(name != NULL);
@@ -5583,7 +5648,6 @@ SCIP_RETCODE generateCutFactorable(
    assert(consdata->factorright != NULL);
 
    *success = FALSE;
-   *cutlhs = -SCIPinfinity(scip);
 
    leftminactivity = consdata->factorleft[consdata->nquadvars];
    leftmaxactivity = consdata->factorleft[consdata->nquadvars];
@@ -5700,7 +5764,7 @@ SCIP_RETCODE generateCutFactorable(
          multright =  1.0;
 
       /* generate cut for multleft * factorleft * multright <= rhs / (factorright * multright) */
-      generateCutFactorableDo(scip, cons, ref, multleft, consdata->factorleft, multright, consdata->factorright, rightminactivity, rightmaxactivity, rhs, cutcoef, cutrhs, islocal, success, name);
+      SCIP_CALL( generateCutFactorableDo(scip, cons, ref, multleft, consdata->factorleft, multright, consdata->factorright, rightminactivity, rightmaxactivity, rhs, precut, islocal, success, name) );
    }
    else if( !SCIPisFeasPositive(scip, rightminactivity) && !SCIPisFeasNegative(scip, rightmaxactivity) )
    {
@@ -5718,7 +5782,7 @@ SCIP_RETCODE generateCutFactorable(
          multright =  1.0;
 
       /* generate cut for multleft * factorright * multright <= rhs / (factorleft * multright) */
-      generateCutFactorableDo(scip, cons, ref, multleft, consdata->factorright, multright, consdata->factorleft, leftminactivity, leftmaxactivity, rhs, cutcoef, cutrhs, islocal, success, name);
+      SCIP_CALL( generateCutFactorableDo(scip, cons, ref, multleft, consdata->factorright, multright, consdata->factorleft, leftminactivity, leftmaxactivity, rhs, precut, islocal, success, name) );
    }
    else if( SCIPisInfinity(scip, -leftminactivity) || SCIPisInfinity(scip, leftmaxactivity) ||
       (!SCIPisInfinity(scip, -rightminactivity) && !SCIPisInfinity(scip, rightmaxactivity) && rightmaxactivity - rightminactivity < leftmaxactivity - leftminactivity) )
@@ -5734,7 +5798,7 @@ SCIP_RETCODE generateCutFactorable(
          multright =  1.0;
 
       /* generate cut for multleft * factorleft * multright <= rhs / (factorright * multright) */
-      generateCutFactorableDo(scip, cons, ref, multleft, consdata->factorleft, multright, consdata->factorright, rightminactivity, rightmaxactivity, rhs, cutcoef, cutrhs, islocal, success, name);
+      SCIP_CALL( generateCutFactorableDo(scip, cons, ref, multleft, consdata->factorleft, multright, consdata->factorright, rightminactivity, rightmaxactivity, rhs, precut, islocal, success, name) );
    }
    else
    {
@@ -5749,7 +5813,7 @@ SCIP_RETCODE generateCutFactorable(
          multright =  1.0;
 
       /* generate cut for multleft * factorright * multright <= rhs / (factorleft * multright) */
-      generateCutFactorableDo(scip, cons, ref, multleft, consdata->factorright, multright, consdata->factorleft, leftminactivity, leftmaxactivity, rhs, cutcoef, cutrhs, islocal, success, name);
+      SCIP_CALL( generateCutFactorableDo(scip, cons, ref, multleft, consdata->factorright, multright, consdata->factorleft, leftminactivity, leftmaxactivity, rhs, precut, islocal, success, name) );
    }
 
    return SCIP_OKAY;
@@ -6330,10 +6394,13 @@ SCIP_RETCODE generateCutLTI(
    SCIP_SIDETYPE         violside,           /**< for which side a cut should be generated */
    SCIP_Real*            ref,                /**< reference solution where to generate the cut */
    SCIP_SOL*             sol,                /**< solution that shall be cutoff, NULL for LP solution */
+   SCIP_PRECUT*          precut,             /**< precut to store cut data */
+#if 0
    SCIP_Real**           cutcoeflin,         /**< buffer to store pointer to array with coefficients for linear variables */
    SCIP_Real*            cutcoefquad,        /**< array to store cut coefficients for quadratic variables */
    SCIP_Real*            cutlhs,             /**< buffer to store cut lhs */
    SCIP_Real*            cutrhs,             /**< buffer to store cut rhs */
+#endif
    SCIP_Bool*            islocal,            /**< buffer to set to TRUE if local information was used */
    SCIP_Bool*            success,            /**< buffer to indicate whether a cut was successfully computed */
    char*                 name                /**< buffer to store name of cut */
@@ -6357,10 +6424,13 @@ SCIP_RETCODE generateCutLTI(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(ref  != NULL);
+   assert(precut != NULL);
+#if 0
    assert(cutcoeflin != NULL);
    assert(cutcoefquad != NULL);
    assert(cutlhs  != NULL);
    assert(cutrhs  != NULL);
+#endif
    assert(islocal != NULL);
    assert(success != NULL);
    assert(name != NULL);
@@ -6374,7 +6444,10 @@ SCIP_RETCODE generateCutLTI(
    assert(consdata->factorright != NULL);
 
    *success = FALSE;
+#if 0
    *cutlhs = -SCIPinfinity(scip); /* for compiler */
+#endif
+   precut->sidetype = SCIP_SIDETYPE_LEFT;
 
    /* write violated constraints as factorleft * factorright '==' rhs
     * where rhs are constraint sides - activity bound of linear part
@@ -6536,7 +6609,7 @@ SCIP_RETCODE generateCutLTI(
       leftminactivity, leftmaxactivity, leftrefactivity,
       rightminactivity, rightmaxactivity, rightrefactivity,
       rhsminactivity, rhsmaxactivity, rhsrefactivity,
-      &coefleft, &coefright, &coefrhs, cutlhs,
+      &coefleft, &coefright, &coefrhs, &precut->side,
       success);
 
    if( !*success )
@@ -6544,11 +6617,11 @@ SCIP_RETCODE generateCutLTI(
 
    SCIPdebugMsg(scip, "LTI for x[%g,%g] * y[%g,%g] = w[%g,%g]: %gx %+gy %+gw >= %g;  feas: %g\n",
       leftminactivity, leftmaxactivity, rightminactivity, rightmaxactivity, rhsminactivity, rhsmaxactivity,
-      coefleft, coefright, coefrhs, *cutlhs,
-      coefleft * leftrefactivity + coefright * rightrefactivity + coefrhs * rhsrefactivity - *cutlhs
+      coefleft, coefright, coefrhs, precut->side,
+      coefleft * leftrefactivity + coefright * rightrefactivity + coefrhs * rhsrefactivity - precut->side
       );
 
-   if( coefleft * leftrefactivity + coefright * rightrefactivity + coefrhs * rhsrefactivity >= *cutlhs )
+   if( coefleft * leftrefactivity + coefright * rightrefactivity + coefrhs * rhsrefactivity >= precut->side )
    {
       SCIPdebugMsg(scip, "does not cutoff point? :-(\n");
       *success = FALSE;
@@ -6559,27 +6632,28 @@ SCIP_RETCODE generateCutLTI(
     *   coefleft * leftfactor + coefright * rightfactor + coefrhs * w >= cutlhs, where conslhs - lincoefs <= w <= consrhs - lincoefs
     */
    for( i = 0; i < consdata->nquadvars; ++i )
-      cutcoefquad[i] = coefleft * consdata->factorleft[i] + coefright * consdata->factorright[i];
-   assert(i == consdata->nquadvars);
-   *cutlhs -= coefleft * consdata->factorleft[i] + coefright * consdata->factorright[i];
+   {
+      SCIP_CALL( precutAddCoef(scip, precut, consdata->quadvarterms[i].var, coefleft * consdata->factorleft[i] + coefright * consdata->factorright[i]) );
+   }
+   precutAddConstant(precut, coefleft * consdata->factorleft[i] + coefright * consdata->factorright[i]);
 
-   SCIP_CALL( SCIPallocBufferArray(scip, cutcoeflin, consdata->nlinvars) );
    for( i = 0; i < consdata->nlinvars; ++i )
-      (*cutcoeflin)[i] = -coefrhs * consdata->lincoefs[i];
+   {
+      SCIP_CALL( precutAddCoef(scip, precut, consdata->linvars[i], -coefrhs * consdata->lincoefs[i]) );
+   }
    if( coefrhs > 0.0 )
    {
       /* use coefrhs * w <= coefrhs * (consrhs - lincoefs) */
       assert(!SCIPisInfinity(scip, consdata->rhs));
-      *cutlhs -= coefrhs * consdata->rhs;
+      precutAddConstant(precut, coefrhs * consdata->rhs);
    }
    else
    {
       /* use coefrhs * w <= coeflhs * (conslhs - lincoefs) */
       assert(!SCIPisInfinity(scip, -consdata->lhs));
-      *cutlhs -= coefrhs * consdata->lhs;
+      precutAddConstant(precut, coefrhs * consdata->lhs);
    }
 
-   *cutrhs = SCIPinfinity(scip);
    *islocal = TRUE;
 
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_lti_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
@@ -6596,9 +6670,12 @@ SCIP_RETCODE generateCutConvex(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SIDETYPE         violside,           /**< side for which to generate cut */
    SCIP_Real*            ref,                /**< reference solution where to generate the cut */
+   SCIP_PRECUT*          precut,             /**< precut to store cut data */
+#if 0
    SCIP_Real*            coef,               /**< array to store cut coefficients w.r.t. quadratic variables */
    SCIP_Real*            lhs,                /**< buffer to store left-hand-side of cut */
    SCIP_Real*            rhs,                /**< buffer to store right-hand-side of cut */
+#endif
    SCIP_Bool*            islocal,            /**< buffer to set to TRUE if local bounds were used */
    SCIP_Bool*            success,            /**< buffer to indicate whether a cut was successfully computed */
    char*                 name                /**< buffer to store name for cut */
@@ -6607,6 +6684,8 @@ SCIP_RETCODE generateCutConvex(
    SCIP_CONSDATA* consdata;
    SCIP_BILINTERM* bilinterm;
    SCIP_Real constant;
+   SCIP_Real coef;
+   SCIP_Real coef2;
    SCIP_VAR* var;
    int var2pos;
    int j;
@@ -6615,29 +6694,38 @@ SCIP_RETCODE generateCutConvex(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(ref  != NULL);
+#if 0
    assert(coef != NULL);
    assert(lhs  != NULL);
    assert(rhs  != NULL);
+#endif
    assert(islocal != NULL);
    assert(success != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+#if 0
    constant = 0.0;
    BMSclearMemoryArray(coef, consdata->nquadvars);
+#endif
    *success = TRUE;
 
    /* do first-order Taylor for each term */
    for( j = 0; j < consdata->nquadvars && *success; ++j )
    {
+      var = consdata->quadvarterms[j].var;
+
       /* initialize coefficients to linear coefficients of quadratic variables */
-      coef[j] += consdata->quadvarterms[j].lincoef;
+      SCIP_CALL( precutAddCoef(scip, precut, var, consdata->quadvarterms[j].lincoef) );
 
       /* add linearization of square term */
-      var = consdata->quadvarterms[j].var;
+      coef = 0.0;
+      constant = 0.0;
       SCIPaddSquareLinearization(scip, consdata->quadvarterms[j].sqrcoef, ref[j],
-         consdata->quadvarterms[j].nadjbilin == 0 && SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, success);
+         consdata->quadvarterms[j].nadjbilin == 0 && SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef, &constant, success);
+      SCIP_CALL( precutAddCoef(scip, precut, var, coef) );
+      precutAddConstant(precut, constant);
 
       /* add linearization of bilinear terms that have var as first variable */
       for( k = 0; k < consdata->quadvarterms[j].nadjbilin && *success; ++k )
@@ -6653,7 +6741,13 @@ SCIP_RETCODE generateCutConvex(
          assert(var2pos < consdata->nquadvars);
          assert(consdata->quadvarterms[var2pos].var == bilinterm->var2);
 
-         SCIPaddBilinLinearization(scip, bilinterm->coef, ref[j], ref[var2pos], &coef[j], &coef[var2pos], &constant, success);
+         coef = 0.0;
+         coef2 = 0.0;
+         constant = 0.0;
+         SCIPaddBilinLinearization(scip, bilinterm->coef, ref[j], ref[var2pos], &coef, &coef2, &constant, success);
+         SCIP_CALL( precutAddCoef(scip, precut, var, coef) );
+         SCIP_CALL( precutAddCoef(scip, precut, bilinterm->var2, coef2) );
+         precutAddConstant(precut, constant);
       }
    }
 
@@ -6663,16 +6757,8 @@ SCIP_RETCODE generateCutConvex(
       return SCIP_OKAY;
    }
 
-   if( violside == SCIP_SIDETYPE_LEFT )
-   {
-      *lhs = consdata->lhs - constant;
-      *rhs = SCIPinfinity(scip);
-   }
-   else
-   {
-      *lhs = -SCIPinfinity(scip);
-      *rhs = consdata->rhs - constant;
-   }
+   precut->sidetype = violside;
+   precut->side = (violside == SCIP_SIDETYPE_LEFT ? consdata->lhs : consdata->rhs);
 
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_side%d_linearization_%d", SCIPconsGetName(cons), violside, SCIPgetNLPs(scip));
 
@@ -6686,9 +6772,12 @@ SCIP_RETCODE generateCutNonConvex(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SIDETYPE         violside,           /**< side for which to generate cut */
    SCIP_Real*            ref,                /**< reference solution where to generate the cut */
+   SCIP_PRECUT*          precut,             /**< precut to store cut data */
+#if 0
    SCIP_Real*            coef,               /**< array to store cut coefficients w.r.t. quadratic variables */
    SCIP_Real*            lhs,                /**< buffer to store left-hand-side of cut */
    SCIP_Real*            rhs,                /**< buffer to store right-hand-side of cut */
+#endif
    SCIP_Bool*            islocal,            /**< buffer to set to TRUE if local bounds were used */
    SCIP_Bool*            success,            /**< buffer to indicate whether a cut was successfully computed */
    char*                 name                /**< buffer to store name for cut */
@@ -6696,8 +6785,10 @@ SCIP_RETCODE generateCutNonConvex(
 {
    SCIP_CONSDATA* consdata;
    SCIP_BILINTERM* bilinterm;
-   SCIP_Real constant;
    SCIP_Real sqrcoef;
+   SCIP_Real coef;
+   SCIP_Real coef2;
+   SCIP_Real constant;
    SCIP_VAR* var;
    int var2pos;
    int j;
@@ -6706,9 +6797,11 @@ SCIP_RETCODE generateCutNonConvex(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(ref  != NULL);
+#if 0
    assert(coef != NULL);
    assert(lhs  != NULL);
    assert(rhs  != NULL);
+#endif
    assert(islocal != NULL);
    assert(success != NULL);
 
@@ -6716,33 +6809,38 @@ SCIP_RETCODE generateCutNonConvex(
    assert(consdata != NULL);
 
    *islocal = TRUE;
-   constant = 0.0;
+#if 0
    BMSclearMemoryArray(coef, consdata->nquadvars);
+#endif
    *success = TRUE;
 
    /* underestimate (secant, McCormick) or linearize each term separately */
    for( j = 0; j < consdata->nquadvars && *success; ++j )
    {
-      /* initialize coefficients to linear coefficients of quadratic variables */
-      coef[j] += consdata->quadvarterms[j].lincoef;
-
       var = consdata->quadvarterms[j].var;
+
+      /* initialize coefficients to linear coefficients of quadratic variables */
+      SCIP_CALL( precutAddCoef(scip, precut, var, consdata->quadvarterms[j].lincoef) );
 
       sqrcoef = consdata->quadvarterms[j].sqrcoef;
       if( sqrcoef != 0.0 )
       {
+         coef = 0.0;
+         constant = 0.0;
          if( (violside == SCIP_SIDETYPE_LEFT  && sqrcoef <= 0.0) || (violside == SCIP_SIDETYPE_RIGHT && sqrcoef > 0.0) )
          {
             /* convex -> linearize */
-            SCIPaddSquareLinearization(scip, sqrcoef, ref[j], SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j],
+            SCIPaddSquareLinearization(scip, sqrcoef, ref[j], SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef,
                &constant, success);
          }
          else
          {
             /* not convex -> secant approximation */
-            SCIPaddSquareSecant(scip, sqrcoef, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), ref[j], &coef[j],
+            SCIPaddSquareSecant(scip, sqrcoef, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), ref[j], &coef,
                &constant, success);
          }
+         SCIP_CALL( precutAddCoef(scip, precut, var, coef) );
+         precutAddConstant(precut, constant);
       }
 
       for( k = 0; k < consdata->quadvarterms[j].nadjbilin && *success; ++k )
@@ -6758,10 +6856,17 @@ SCIP_RETCODE generateCutNonConvex(
          assert(var2pos < consdata->nquadvars);
          assert(consdata->quadvarterms[var2pos].var == bilinterm->var2);
 
+         coef = 0.0;
+         coef2 = 0.0;
+         constant = 0.0;
          SCIPaddBilinMcCormick(scip, bilinterm->coef,
             SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), ref[j],
             SCIPvarGetLbLocal(bilinterm->var2), SCIPvarGetUbLocal(bilinterm->var2), ref[var2pos],
-            violside == SCIP_SIDETYPE_LEFT, &coef[j], &coef[var2pos], &constant, success);
+            violside == SCIP_SIDETYPE_LEFT, &coef, &coef2, &constant, success);
+
+         SCIP_CALL( precutAddCoef(scip, precut, var, coef) );
+         SCIP_CALL( precutAddCoef(scip, precut, bilinterm->var2, coef2) );
+         precutAddConstant(precut, constant);
       }
    }
 
@@ -6771,16 +6876,8 @@ SCIP_RETCODE generateCutNonConvex(
       return SCIP_OKAY;
    }
 
-   if( violside == SCIP_SIDETYPE_LEFT )
-   {
-      *lhs = consdata->lhs - constant;
-      *rhs = SCIPinfinity(scip);
-   }
-   else
-   {
-      *lhs = -SCIPinfinity(scip);
-      *rhs = consdata->rhs - constant;
-   }
+   precut->sidetype = violside;
+   precut->side = (violside == SCIP_SIDETYPE_LEFT ? consdata->lhs : consdata->rhs);
 
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_side%d_estimation_%d", SCIPconsGetName(cons), violside, SCIPgetNLPs(scip));
 
@@ -6804,21 +6901,28 @@ SCIP_RETCODE generateCut(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
+   SCIP_PRECUT*   precut;
    SCIP_Bool      islocal;
    char           cutname[SCIP_MAXSTRLEN];
+#if 0
    SCIP_Real*     lincoefs;
    SCIP_Real*     coef;
    SCIP_Real      lhs;
    SCIP_Real      rhs;
+#endif
    SCIP_Bool      success;
    SCIP_Real      mincoef;
    SCIP_Real      maxcoef;
+#if 0
    SCIP_Real      lincoefsmax;
    SCIP_Real      lincoefsmin;
+#endif
    SCIP_Real      viol;
    SCIP_Real      rowefficacy;
+#if 0
    SCIP_VAR*      var;
    int            j;
+#endif
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -6835,14 +6939,20 @@ SCIP_RETCODE generateCut(
    assert(violside != SCIP_SIDETYPE_RIGHT || !SCIPisInfinity(scip,  consdata->rhs));
 
    *row = NULL;
+
+   SCIP_CALL( precutCreate(scip, &precut, SCIP_SIDETYPE_RIGHT) );
+#if 0
    SCIP_CALL( SCIPallocBufferArray(scip, &coef, consdata->nquadvars) );
    lincoefs = consdata->lincoefs;
    lincoefsmax = consdata->lincoefsmax;
    lincoefsmin = consdata->lincoefsmin;
+#endif
    islocal = SCIPconsIsLocal(cons);
    success = FALSE;
+#if 0
    lhs = -SCIPinfinity(scip);
    rhs = SCIPinfinity(scip);
+#endif
    cutname[0] = '\0';
    rowefficacy = 0.0;
 
@@ -6851,15 +6961,16 @@ SCIP_RETCODE generateCut(
    {
       if( consdata->nlinvars == 0 )
       {
-         SCIP_CALL( generateCutFactorable(scip, cons, violside, ref, coef, &lhs, &rhs, &islocal, &success, cutname) );
+         SCIP_CALL( generateCutFactorable(scip, cons, violside, ref, precut, &islocal, &success, cutname) );
       }
       else if( sol != NULL || SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
       {
+#if 0
          int i;
-
+#endif
          /* generateCutLTI needs reference values also for the linear variables, which we only have if sol is given or LP has been solved */
-         SCIP_CALL( generateCutLTI(scip, cons, violside, ref, sol, &lincoefs, coef, &lhs, &rhs, &islocal, &success, cutname) );
-
+         SCIP_CALL( generateCutLTI(scip, cons, violside, ref, sol, precut, &islocal, &success, cutname) );
+#if 0
          /* in case of LTI cuts, we have to recompute the min and max of lincoefs, since they may have been modified */
          for( i = 0; i < consdata->nlinvars; ++i )
          {
@@ -6868,6 +6979,7 @@ SCIP_RETCODE generateCut(
             if( REALABS(lincoefs[i]) < lincoefsmin )
                lincoefsmin = REALABS(lincoefs[i]);
          }
+#endif
       }
    }
 
@@ -6878,17 +6990,22 @@ SCIP_RETCODE generateCut(
 
       if( (violside == SCIP_SIDETYPE_LEFT && consdata->isconcave) || (violside == SCIP_SIDETYPE_RIGHT && consdata->isconvex) )
       {
-         SCIP_CALL( generateCutConvex(scip, cons, violside, ref, coef, &lhs, &rhs, &islocal, &success, cutname) );
+         SCIP_CALL( generateCutConvex(scip, cons, violside, ref, precut, &islocal, &success, cutname) );
       }
       else
       {
-         SCIP_CALL( generateCutNonConvex(scip, cons, violside, ref, coef, &lhs, &rhs, &islocal, &success, cutname) );
+         SCIP_CALL( generateCutNonConvex(scip, cons, violside, ref, precut, &islocal, &success, cutname) );
       }
-   }
 
+      SCIP_CALL( precutAddCoefs(scip, precut, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
+   }
+#if 0
    /* cut should be one-sided, if any found */
    assert(!success || SCIPisInfinity(scip, -lhs) || SCIPisInfinity(scip, rhs));
+#endif
 
+
+#if 0  // TODO
    /* check if range of cut coefficients is ok
     * compute cut activity and violation in sol
     */
@@ -7095,6 +7212,14 @@ SCIP_RETCODE generateCut(
          return SCIP_INVALIDDATA;  /*lint !e527*/
       }
    }
+#else
+   if( success )
+   {
+      assert(conshdlrdata->scaling == 'o');
+      viol = precutGetViolation(scip, precut, sol);
+      rowefficacy = viol;
+   }
+#endif
 
    if( success && !SCIPisInfinity(scip, -minefficacy) && rowefficacy < minefficacy ) /*lint !e644*/
    {
@@ -7105,6 +7230,8 @@ SCIP_RETCODE generateCut(
    /* generate row */
    if( success )
    {
+      SCIP_CALL( precutGetRow(scip, row, precut, islocal && (SCIPgetDepth(scip) > 0), SCIPconsGetHdlr(cons), cutname) );
+#if 0
       SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, lhs, rhs, islocal && (SCIPgetDepth(scip) > 0), FALSE, TRUE) );
 
       /* add coefficients from linear part */
@@ -7113,9 +7240,9 @@ SCIP_RETCODE generateCut(
       /* add coefficients from quadratic part */
       assert(consdata->sepaquadvars != NULL || consdata->nquadvars == 0);
       SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nquadvars, consdata->sepaquadvars, coef) );
-
+#endif
       SCIPdebugMsg(scip, "found cut <%s>, lhs=%g, rhs=%g, mincoef=%g, maxcoef=%g, range=%g, nnz=%d, violation=%g, efficacy=%g\n",
-         SCIProwGetName(*row), lhs, rhs,
+         SCIProwGetName(*row), SCIProwGetLhs(*row), SCIProwGetRhs(*row),
          mincoef, maxcoef, maxcoef/mincoef,
          SCIProwGetNNonz(*row), viol, rowefficacy);  /*lint !e414 */
 
@@ -7137,7 +7264,7 @@ SCIP_RETCODE generateCut(
          */
       }
    }
-
+#if 0
    SCIPfreeBufferArray(scip, &coef);
 
    /* if coefficients for linear variables are different than those in constraint, then free array */
@@ -7145,6 +7272,9 @@ SCIP_RETCODE generateCut(
    {
       SCIPfreeBufferArray(scip, &lincoefs);
    }
+#endif
+
+   precutFree(scip, &precut);
 
    return SCIP_OKAY;
 }
