@@ -224,6 +224,18 @@ struct SCIP_ConshdlrData
    int                   nquadconsupgrades;  /**< number of quadratic constraint upgrade methods */
 };
 
+/** storage for row data representing a cut */
+typedef struct
+{
+   SCIP_VAR**            vars;               /**< variables */
+   SCIP_Real*            coefs;              /**< coefficients of variables */
+   int                   nvars;              /**< number of variables (= number of coefficients) */
+   int                   varssize;           /**< length of variables array (= lengths of coefficients array) */
+   SCIP_Real             constant;           /**< constant term */
+   SCIP_Real             side;               /**< side */
+   SCIP_SIDETYPE         sidetype;           /**< type of side */
+} SCIP_PRECUT;
+
 
 /*
  * local methods for managing quadratic constraint update methods
@@ -5298,6 +5310,124 @@ SCIP_RETCODE computeViolations(
          maxviol = viol;
          *maxviolcon = conss[c];
       }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** creates a SCIP_PRECUT datastructure
+ *
+ * Initial cut represents 0 <= 0.
+ */
+static
+SCIP_RETCODE precutCreate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRECUT**         precut,             /**< buffer to store pointer to precut */
+   SCIP_SIDETYPE         sidetype            /**< whether cut will be or lower-equal or larger-equal type */
+)
+{
+   assert(scip != NULL);
+   assert(precut != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, precut) );
+   BMSclearMemory(*precut);
+
+   (*precut)->sidetype = sidetype;
+
+   return SCIP_OKAY;
+}
+
+/** frees a SCIP_PRECUT datastructure */
+static
+SCIP_RETCODE precutFree(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRECUT**         precut              /**< pointer that stores pointer to precut */
+)
+{
+   assert(scip != NULL);
+   assert(precut != NULL);
+   assert(*precut != NULL);
+
+   SCIPfreeBlockMemoryArrayNull(scip, &(*precut)->vars, (*precut)->varssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*precut)->coefs, (*precut)->varssize);
+   SCIPfreeBlockMemory(scip, precut);
+
+   return SCIP_OKAY;
+}
+
+/** adds a term coef*var to a precut */
+static
+SCIP_RETCODE precutAddCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRECUT*          precut,             /**< precut */
+   SCIP_VAR*             var,                /**< variable to add */
+   SCIP_Real             coef                /**< coefficient to add */
+   )
+{
+   assert(scip != NULL);
+   assert(precut != NULL);
+   assert(var != NULL);
+
+   if( precut->varssize <= precut->nvars )
+   {
+      /* realloc vars and coefs array */
+      int oldsize;
+
+      oldsize = precut->varssize;
+      precut->varssize = SCIPcalcMemGrowSize(scip, precut->varssize + 1);
+
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &precut->vars,  oldsize, precut->varssize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &precut->coefs, oldsize, precut->varssize) );
+   }
+
+   precut->vars[precut->nvars] = var;
+   precut->coefs[precut->nvars] = coef;
+   ++precut->nvars;
+
+   return SCIP_OKAY;
+}
+
+/** adds constant to precut */
+static
+void precutAddConstant(
+   SCIP_PRECUT*          precut,             /**< precut */
+   SCIP_Real             constant            /**< constant value to be added */
+)
+{
+   assert(precut != NULL);
+
+   precut->constant += constant;
+}
+
+static
+SCIP_RETCODE precutGetRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< buffer to store pointer to new row */
+   SCIP_PRECUT*          precut,             /**< precut to be turned into a row */
+   SCIP_Bool             local,              /**< whether cut is local */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   char*                 name                /**< name for row */
+)
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(row != NULL);
+   assert(precut != NULL);
+
+   /* TODO here should come some cleanup of the precut */
+
+   precut->side -= precut->constant;
+   precut->constant = 0.0;
+
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, conshdlr, name,
+      precut->sidetype == SCIP_SIDETYPE_LEFT  ? precut->side : -SCIPinfinity(scip),
+      precut->sidetype == SCIP_SIDETYPE_RIGHT ? precut->side :  SCIPinfinity(scip),
+      local, FALSE, TRUE) );
+
+   for( i = 0 ; i < precut->nvars; ++i )
+   {
+      SCIP_CALL( SCIPaddVarsToRow(scip, *row, precut->nvars, precut->vars, precut->coefs) );
    }
 
    return SCIP_OKAY;
