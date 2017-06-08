@@ -38729,9 +38729,8 @@ SCIP_RETCODE printDualSol(
       SCIP_CALL( SCIPconsGetNVars(cons, scip->set, &nvars, &success) );
 
       if( nvars > 1 )
-      {
          solval = SCIPgetDualsolLinear(scip, SCIPconsGetTransformed(cons));
-      }
+
       /* the constraint is a bound constraint */
       else
       {
@@ -38752,6 +38751,7 @@ SCIP_RETCODE printDualSol(
       }
       assert(solval != SCIP_INVALID); /*lint !e777*/
 
+      /* dual values are coming from the LP solver that is always solving a minimization problem */
       if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE )
          solval = -solval;
 
