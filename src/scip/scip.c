@@ -44608,7 +44608,7 @@ SCIP_RETCODE SCIPprintStatistics(
    {
       printTimingStatistics(scip, file);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Original Problem   :\n");
-      SCIPprobPrintStatistics(scip->origprob, scip->messagehdlr, file);
+      SCIPprobPrintStatistics(scip->origprob, scip->set, scip->messagehdlr, file);
       return SCIP_OKAY;
    }
    case SCIP_STAGE_TRANSFORMED:
@@ -44616,9 +44616,9 @@ SCIP_RETCODE SCIPprintStatistics(
    {
       printTimingStatistics(scip, file);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Original Problem   :\n");
-      SCIPprobPrintStatistics(scip->origprob, scip->messagehdlr, file);
+      SCIPprobPrintStatistics(scip->origprob, scip->set, scip->messagehdlr, file);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolved Problem  :\n");
-      SCIPprobPrintStatistics(scip->transprob, scip->messagehdlr, file);
+      SCIPprobPrintStatistics(scip->transprob, scip->set, scip->messagehdlr, file);
       printPresolverStatistics(scip, file);
       printConstraintStatistics(scip, file);
       printConstraintTimingStatistics(scip, file);
@@ -44633,9 +44633,9 @@ SCIP_RETCODE SCIPprintStatistics(
    {
       printTimingStatistics(scip, file);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Original Problem   :\n");
-      SCIPprobPrintStatistics(scip->origprob, scip->messagehdlr, file);
+      SCIPprobPrintStatistics(scip->origprob, scip->set, scip->messagehdlr, file);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolved Problem  :\n");
-      SCIPprobPrintStatistics(scip->transprob, scip->messagehdlr, file);
+      SCIPprobPrintStatistics(scip->transprob, scip->set, scip->messagehdlr, file);
       printPresolverStatistics(scip, file);
       printConstraintStatistics(scip, file);
       printConstraintTimingStatistics(scip, file);
@@ -44652,9 +44652,9 @@ SCIP_RETCODE SCIPprintStatistics(
    {
       printTimingStatistics(scip, file);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Original Problem   :\n");
-      SCIPprobPrintStatistics(scip->origprob, scip->messagehdlr, file);
+      SCIPprobPrintStatistics(scip->origprob, scip->set, scip->messagehdlr, file);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolved Problem  :\n");
-      SCIPprobPrintStatistics(scip->transprob, scip->messagehdlr, file);
+      SCIPprobPrintStatistics(scip->transprob, scip->set, scip->messagehdlr, file);
       printPresolverStatistics(scip, file);
       printConstraintStatistics(scip, file);
       printConstraintTimingStatistics(scip, file);
