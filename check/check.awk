@@ -414,10 +414,10 @@ BEGIN {
 #
 # get objective sense
 #
-/^  Objective sense  :/ {
-   if ( $4 == "minimize" || $4 == "minimize\r")
+/^  Objective        :/ {
+   if ( $4 == "minimize," || $4 == "minimize,\r")
       objsense = 1;
-   if ( $4 == "maximize" || $4 == "maximize\r" )
+   if ( $4 == "maximize," || $4 == "maximize,\r" )
       objsense = -1;
 
    # objsense is 0 otherwise
