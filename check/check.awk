@@ -423,7 +423,7 @@ BEGIN {
    # objsense is 0 otherwise
 }
 
-# SCIP version >= 4.0.0.2.8
+# SCIP API version >= 9
 /^  Objective        :/ {
    if ( $3 == "minimize," || $3 == "minimize,\r")
       objsense = 1;
