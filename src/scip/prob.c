@@ -2113,6 +2113,7 @@ void SCIPprobPrintPseudoSol(
 /** outputs problem statistics */
 void SCIPprobPrintStatistics(
    SCIP_PROB*            prob,               /**< problem data */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
@@ -2123,8 +2124,10 @@ void SCIPprobPrintStatistics(
    SCIPmessageFPrintInfo(messagehdlr, file, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       prob->nvars, prob->nbinvars, prob->nintvars, prob->nimplvars, prob->ncontvars);
    SCIPmessageFPrintInfo(messagehdlr, file, "  Constraints      : %d initial, %d maximal\n", prob->startnconss, prob->maxnconss);
+   SCIPmessageFPrintInfo(messagehdlr, file, "  Objective        :\n");
    if( ! prob->transformed )
-      SCIPmessageFPrintInfo(messagehdlr, file, "  Objective sense  : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
+      SCIPmessageFPrintInfo(messagehdlr, file, "    Sense          : %s\n", prob->objsense == SCIP_OBJSENSE_MINIMIZE ? "minimize" : "maximize");
+   SCIPmessageFPrintInfo(messagehdlr, file, "    Values         : %d non-zeros\n", SCIPprobGetNObjVars(prob, set));
 }
 
 #ifndef NDEBUG
