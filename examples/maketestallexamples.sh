@@ -5,7 +5,8 @@
 #
 #
 
-EXAMPLES=(Binpacking CallableLibrary Eventhdlr GMI LOP MIPSolver Queens Relaxator TSP VRP)
+EXAMPLES=$(for f in *;do if [[ -d $f  ]]; then echo $f;fi; done)
+
 LPSOLVERS=(spx2)
 OPTS=(dbg)
 
@@ -79,7 +80,7 @@ do
 done
 
 # run tests
-for EXAMPLE in ${EXAMPLES[@]}
+for EXAMPLE in $EXAMPLES
 do
     echo
     echo
