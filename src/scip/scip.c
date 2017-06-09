@@ -38688,53 +38688,66 @@ SCIP_RETCODE SCIPprintMIPStart(
    return SCIP_OKAY;
 }
 
-/** outputs dual solution from LP solver to file stream */
-static
-SCIP_RETCODE printDualSol(
+/** returns dual solution value of a constraint */
+SCIP_RETCODE SCIPgetDualSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   SCIP_CONS*            cons,               /**< constraint for which the dual solution should be returned */
+   SCIP_Real*            dualsolval,         /**< pointer to store the dual solution value */
+   SCIP_Bool*            boundconstraint     /**< pointer to store whether the constraint is a bound constraint (or NULL) */
    )
 {
-   SCIP_VAR** vars;
-   int c;
+   SCIP_CONS* transcons;
+   int nvars;
+   SCIP_Bool success;
+#ifndef NDEBUG
+   SCIP_CONSHDLR* conshdlr;
+#endif
 
-   assert(scip->lp != NULL);
-   assert(scip->lp->solved);
-   assert(scip->lp->dualfeasible);
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(dualsolval != NULL);
 
-   /* allocate buffer memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, 1) );
+#ifndef NDEBUG
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear" ) == 0);
+#endif
 
-   /* print dual solution values of all constraints */
-   for( c = 0; c < scip->origprob->nconss; ++c )
+   SCIP_CALL( SCIPconsGetNVars(cons, scip->set, &nvars, &success) );
+
+   if( boundconstraint != NULL )
+      *boundconstraint = (nvars == 1);
+
+   if( SCIPconsIsTransformed(cons) )
+      transcons = cons;
+   else
+      transcons = SCIPconsGetTransformed(cons);
+
+   /* it can happen that a transformed constraints gets deleted due to redundancy. by complementary slackness the
+    * corresponding dual solution value would be zero. however, if the constraint contains exactly one variable we need
+    * to check the reduced costs of the variable.
+    */
+   if( nvars > 1 && transcons == NULL )
+      (*dualsolval) = 0.0;
+   else
    {
-      SCIP_CONS* cons;
-      SCIP_Real solval;
-      SCIP_Bool success;
-
-      int nvars;
-#ifndef NDEBUG
-      SCIP_CONSHDLR* conshdlr;
-#endif
-      cons = scip->origprob->conss[c];
-      assert(cons != NULL);
-
-#ifndef NDEBUG
-      conshdlr = SCIPconsGetHdlr(cons);
-      assert(conshdlr != NULL);
-      assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear" ) == 0);
-#endif
-
-      SCIP_CALL( SCIPconsGetNVars(cons, scip->set, &nvars, &success) );
+      if( !success )
+      {
+         SCIPABORT();
+         return SCIP_INVALIDCALL;
+      }
 
       if( nvars > 1 )
-         solval = SCIPgetDualsolLinear(scip, SCIPconsGetTransformed(cons));
+         (*dualsolval) = SCIPgetDualsolLinear(scip, transcons);
 
       /* the constraint is a bound constraint */
       else
       {
+         SCIP_VAR** vars;
          SCIP_Real varsolval;
+
+         /* allocate buffer memory */
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars, 1) );
 
          assert(vars != NULL);
          SCIP_CALL( SCIPconsGetVars(cons, scip->set, vars, 1, &success) );
@@ -38744,16 +38757,48 @@ SCIP_RETCODE printDualSol(
          /* return the reduced cost of the variable if the constraint would be tight */
          if( SCIPsetIsEQ(scip->set, varsolval, SCIPgetRhsLinear(scip, cons))
           || SCIPsetIsEQ(scip->set, varsolval, SCIPgetLhsLinear(scip, cons)) )
-            solval = SCIPgetVarRedcost(scip, vars[0]);
+            (*dualsolval) = SCIPgetVarRedcost(scip, vars[0]);
          else
-            solval = 0.0;
+            (*dualsolval) = 0.0;
 
+         /* free buffer memory */
+         SCIPfreeBufferArray(scip, &vars);
       }
-      assert(solval != SCIP_INVALID); /*lint !e777*/
+   }
+   assert(*dualsolval != SCIP_INVALID); /*lint !e777*/
 
-      /* dual values are coming from the LP solver that is always solving a minimization problem */
-      if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE )
-         solval = -solval;
+   /* dual values are coming from the LP solver that is always solving a minimization problem */
+   if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE )
+      (*dualsolval) *= -1.0;
+
+   return SCIP_OKAY;;
+}
+
+/** outputs dual solution from LP solver to file stream */
+static
+SCIP_RETCODE printDualSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   )
+{
+   SCIP_Bool boundconstraint;
+   int c;
+
+   assert(scip->lp != NULL);
+   assert(scip->lp->solved);
+   assert(scip->lp->dualfeasible);
+
+   /* print dual solution values of all constraints */
+   for( c = 0; c < scip->origprob->nconss; ++c )
+   {
+      SCIP_CONS* cons;
+      SCIP_Real solval;
+
+      cons = scip->origprob->conss[c];
+      assert(cons != NULL);
+
+      SCIP_CALL( SCIPgetDualSolVal(scip, cons, &solval, &boundconstraint) );
 
       if( printzeros || !SCIPisZero(scip, solval) )
       {
@@ -38767,17 +38812,14 @@ SCIP_RETCODE printDualSol(
             SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity\n");
          else
          {
-            if( nvars > 1 )
-               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g\n", solval);
-            else
+            if( boundconstraint )
                SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g*\n", solval);
+            else
+               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g\n", solval);
          }
       }
 
    }
-
-   /* free buffer memory */
-   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
