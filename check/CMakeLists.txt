@@ -47,7 +47,7 @@ set(settings_MIP
     "proporbit"
     "allfull"
     "cgmipviol"
-    "dynamic"
+#    "dynamic"
     "heurlprows"
     "intobj"
     "nologicor"
@@ -56,7 +56,7 @@ set(settings_MIP
     "setppclifting"
     "xorsepaparity"
     "cloud"
-    "feaspump20"
+#    "feaspump20"
     "indicatoralterlp"
     "leastinf"
     "presolfast"
@@ -73,7 +73,7 @@ set(settings_MINLP
     "nlpdiving2"
     "nlpdiving3"
     "nlpdiving1-relprop"
-    "nlpdivingsolvesubmip"
+#    "nlpdivingsolvesubmip"
     "nlpdiving4"
 )
 
@@ -135,7 +135,7 @@ set(instances_PseudoBoolean
 # Semicontinuous instances
 #
 set(instances_Semicontinuous
-    "instances/Semicontinuous/meanvarxsc.lp\;14.36918"
+#    "instances/Semicontinuous/meanvarxsc.lp\;14.36918"
     "instances/Semicontinuous/semicon1.mps\;1.1"
     )
 #
