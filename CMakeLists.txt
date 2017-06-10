@@ -42,6 +42,7 @@ option(LEGACY "build SCIP/SoPlex in legacy mode" OFF)
 option(NOBLKBUFMEM "should block and buffer memory be disabled" OFF)
 option(NOBLKMEM "should block and buffer memory be disabled" OFF)
 option(NOBUFMEM "should block and buffer memory be disabled" OFF)
+option(COVERAGE "enable coverage support" OFF)
 
 set(TPI none CACHE STRING "options for thread support library")  #create the variable
 set_property(CACHE TPI PROPERTY STRINGS none tny omp)  #define list of values GUI will offer for the variable
@@ -152,6 +153,19 @@ add_custom_target(update_buildflags
                                            -P ${CMAKE_BINARY_DIR}/update_buildflags.cmake)
 
 add_definitions(-DWITH_SCIPDEF)
+
+
+#
+# enable coverage support
+#
+if( COVERAGE )
+    include(CodeCoverage)
+    APPEND_COVERAGE_COMPILER_FLAGS()
+    set(COVERAGE_EXCLUDES '/usr*')
+    SETUP_TARGET_FOR_COVERAGE(NAME test_coverage
+                          EXECUTABLE ctest
+                          DEPENDENCIES scip-bin)
+endif()
 
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)
