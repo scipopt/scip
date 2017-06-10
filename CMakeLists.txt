@@ -43,6 +43,7 @@ option(NOBLKBUFMEM "should block and buffer memory be disabled" OFF)
 option(NOBLKMEM "should block and buffer memory be disabled" OFF)
 option(NOBUFMEM "should block and buffer memory be disabled" OFF)
 option(COVERAGE "enable coverage support" OFF)
+SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage")
 
 set(TPI none CACHE STRING "options for thread support library")  #create the variable
 set_property(CACHE TPI PROPERTY STRINGS none tny omp)  #define list of values GUI will offer for the variable
@@ -163,7 +164,7 @@ if( COVERAGE )
     APPEND_COVERAGE_COMPILER_FLAGS()
     set(COVERAGE_EXCLUDES '/usr*')
     SETUP_TARGET_FOR_COVERAGE(NAME test_coverage
-                          EXECUTABLE ctest
+                          EXECUTABLE bash -c "ctest ${COVERAGE_CTEST_ARGS}"
                           DEPENDENCIES scip-bin)
 endif()
 
