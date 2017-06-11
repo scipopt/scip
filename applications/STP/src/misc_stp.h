@@ -139,13 +139,15 @@ void SCIPlinkcuttreeCut(
    NODE*                 v                   /**< node to cut at */
    );
 
-/** finds minimal non-key-node value between node 'v' and the root of the tree **/
-NODE* SCIPlinkcuttreeFindMinMW(
+/** finds minimum weight chain between node 'start' and distinct root node **/
+SCIP_Real SCIPlinkcuttreeFindMinChain(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            nodeweight,         /**< node weight array */
-   int*                  tail,                  /**< arcs tails */
-   int*                  stdeg,              /**< degree in Steiner tree */
-   NODE*                 v                   /**< the node */
+   const SCIP_Real*      nodeweight,         /**< node weight array */
+   const int*            head,               /**< head of an arc */
+   const int*            stdeg,              /**< degree in Steiner tree */
+   const NODE*           start,              /**< the node to start at */
+   NODE**                first,              /**< first node of chain */
+   NODE**                last                /**< last node of chain */
    );
 
 /** finds the max value between node 'v' and the root of the tree **/

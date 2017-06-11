@@ -251,6 +251,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
       for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
          if( !Is_term(graph->term[graph->head[e]]) && best_result[e] )
             break;
+
       if( e == EAT_LAST )
       {
          SCIPdebugMessage("Local heuristic: return trivial \n");
@@ -258,13 +259,23 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
       }
    }
 
+   SCIP_Real objj = 0.0;
+   for( e = 0; e < nedges; e++ )
+      if( best_result[e] == CONNECT )
+         objj += graph->cost[e];
+   printf("obj bef %f \n", objj);
+
+
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodes, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &steinertree, nnodes) );
 
    if( mwpc )
-      SCIP_CALL( extendSteinerTreePcMw(scip, graph, vnoi, costrev, vbase, best_result, steinertree, &i) );
+   {
+      SCIP_Bool dummy;
+      SCIP_CALL( greedyExtensionPcMw(scip, graph, cost, vnoi, best_result, vbase, steinertree, &dummy) );
+   }
 
    for( i = 0; i < nnodes; i++ )
    {
@@ -292,15 +303,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
    /* VERTEX INSERTION */
    if( probtype == STP_SPG || probtype == STP_RSMT || probtype == STP_OARSMT || probtype == STP_GSTP || (mwpc) )
    {
-      NODE* v;
-      NODE* w;
-      NODE* max;
-      SCIP_Real diff;
-      int l;
-      int oedge;
       int newnode;
-      int counter;
-      int insertcount;
       int* insert;
       int* adds;
       int* cuts;
@@ -316,14 +319,14 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
          SCIP_CALL( SCIPallocBufferArray(scip, &cuts2, nnodes) );
          SCIP_CALL( SCIPallocBufferArray(scip, &stdeg, nnodes) );
 
-         for( i = 0; i < nnodes; i++ )
-         {
-            stdeg[i] = 0;
-            if( steinertree[i] )
-               for( e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
-                  if( best_result[e] == CONNECT || best_result[flipedge(e)] == CONNECT )
-                     stdeg[i]++;
-         }
+         BMSclearMemoryArray(stdeg, nnodes);
+
+         for( e = 0; e < nedges; e++ )
+            if( best_result[e] == CONNECT )
+            {
+               stdeg[graph->tail[e]]++;
+               stdeg[graph->head[e]]++;
+            }
       }
       else
       {
@@ -332,151 +335,172 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
       }
 
       i = 0;
-      l = 0;
-      w = NULL;
       newnode = 0;
 
       for( ;; )
       {
+         SCIP_Real diff;
+
          /* if vertex i is not in the current ST and has at least two adjacent nodes, it might be added */
          if( !steinertree[i] && graph->grad[i] > 1 && (!mwpc || !Is_term(graph->term[i])) )
          {
-            insertcount = 0;
+            NODE* v;
+            int counter;
+            int lastnodeidx;
+            int insertcount = 0;
 
             /* if an outgoing edge of vertex i points to the current ST, SCIPlinkcuttreeLink the edge to a list */
-            for (oedge = graph->outbeg[i]; oedge != EAT_LAST;
-                  oedge = graph->oeat[oedge])
-               if( steinertree[graph->head[oedge]]
-                     && (!mwpc || !Is_term(graph->term[graph->head[oedge]])) )
+            for( int oedge = graph->outbeg[i]; oedge != EAT_LAST; oedge = graph->oeat[oedge])
+               if( steinertree[graph->head[oedge]] && (!mwpc || !Is_term(graph->term[graph->head[oedge]])) )
                   insert[insertcount++] = oedge;
 
-            if( mw && insertcount > 0 && Is_pterm(graph->term[i]) )
-            {
-               if( Is_pterm(graph->term[i]) )
-               {
-                  SCIPdebugMessage("ADDED VERTEX \n");
-                  v = &nodes[i];
+            /* if there are less than two edges connecting node i and the current tree, continue */
+            if( insertcount <= 1 )
+               goto ENDOFLOOP;
 
-                  SCIPlinkcuttreeLink(v, &nodes[graph->head[insert[0]]],
-                        insert[0]);
-                  SCIPlinkcuttreeEvert(&nodes[root]);
-                  newnode = i;
-                  steinertree[i] = TRUE;
-                  newnverts++;
-               }
+            if( mw )
+               SCIPlinkcuttreeInit(&nodes[i]);
+
+            /* the node to insert */
+            v = &nodes[i];
+
+            SCIPlinkcuttreeLink(v, &nodes[graph->head[insert[0]]], insert[0]);
+
+            lastnodeidx = graph->head[insert[0]];
+
+            if( mw )
+            {
+               assert(!SCIPisPositive(scip, graph->prize[i]));
+
+               diff = -1.0;
+               assert(stdeg != NULL);
+               stdeg[lastnodeidx]++;
             }
+            else
+               diff = graph->cost[v->edge];
 
-            /* if there are at least two edges connecting node i and the current tree, start the insertion process */
-            if( insertcount > 1 && mw == FALSE )
+            counter = 0;
+
+            /* try to add edges between new vertex and tree */
+            for( k = 1; k < insertcount; k++ )
             {
-               /* the node to insert */
-               v = &nodes[i];
+               NODE* firstnode;
+               int firstnodidx;
+               SCIPlinkcuttreeEvert(v);
 
-               SCIPlinkcuttreeLink(v, &nodes[graph->head[insert[0]]],
-                     insert[0]);
+               /* next vertex in the current Steiner tree adjacent to vertex i resp. v (the one being scrutinized for possible insertion) */
+               firstnodidx = graph->head[insert[k]];
+               firstnode = &nodes[firstnodidx];
+
                if( mw )
-                  diff = -1.0;
-               else
-                  diff = graph->cost[v->edge];
-
-               counter = 0;
-               for (k = 1; k < insertcount; k++)
                {
-                  SCIPlinkcuttreeEvert(v);
+                  NODE* chainfirst;
+                  NODE* chainlast;
+                  SCIP_Real minweight;
 
-                  /* next vertex in the current Steiner tree adjacent to vertex i resp. v (the one being scrutinized for possible insertion) */
-                  w = &nodes[graph->head[insert[k]]];
+                  assert(stdeg != NULL);
 
-                  if( mw )
+                  minweight = SCIPlinkcuttreeFindMinChain(scip, graph->prize, graph->head, stdeg, firstnode, &chainfirst, &chainlast);
+#if 0
+                  if( SCIPisLT(scip, minweight, 0.0) )
+                     printf("candidate with %f (insertcound: %d, to beat %f) \n", minweight, insertcount, graph->prize[i]);
+#endif
+
+                  if( SCIPisLT(scip, minweight, graph->prize[i]) )
                   {
-                     assert(stdeg != NULL);
+                     // todo
+                     if( chainfirst == NULL || chainlast == NULL )
+                        return SCIP_ERROR;
+
+                     assert(chainfirst != NULL && chainlast != NULL);
+int xxx = 0;
+                     for( NODE* mynode = chainfirst; mynode != chainlast; mynode = mynode->parent )
+                     {
+                        int mynodeidx = graph->head[mynode->edge];
+                        steinertree[mynodeidx] = FALSE;
+                        stdeg[mynodeidx] = 0;
+                        xxx++;
+                     }
+
+                     SCIPlinkcuttreeCut(chainfirst);
+                     SCIPlinkcuttreeCut(chainlast);
+
+                     SCIPlinkcuttreeLink(v, firstnode, insert[k]);
                      stdeg[graph->head[insert[k]]]++;
-                     max = SCIPlinkcuttreeFindMinMW(scip, graph->prize,
-                           graph->tail, stdeg, w);
-                     l = graph->tail[max->edge];
 
-                     stdeg[graph->head[insert[k]]]--;
-
-                     if( SCIPisLT(scip, graph->prize[l], graph->prize[i]) )
-                     {
-                        SCIPlinkcuttreeLink(v, w, insert[k]);
-                        diff = 1.0;
-                        printf("(n: %d) minfound: %d of cost %f orgcost %f\n",
-                              insertcount, l, graph->prize[l], graph->prize[i]);
-                        break;
-                     }
-                  }
-                  else
-                  {
-                     /* if there is an edge with cost greater than that of the current edge... */
-                     max = SCIPlinkcuttreeFindMax(scip, graph->cost, w);
-                     if( SCIPisGT(scip, graph->cost[max->edge],
-                           graph->cost[insert[k]]) )
-                     {
-                        diff += graph->cost[insert[k]];
-                        diff -= graph->cost[max->edge];
-                        cuts[counter] = max->edge;
-                        SCIPlinkcuttreeCut(max);
-                        SCIPlinkcuttreeLink(v, w, insert[k]);
-                        assert(v->edge == insert[k]);
-                        adds[counter++] = v->edge;
-                     }
-                  }
-               }
-               if( pc && Is_pterm(graph->term[i]) )
-                  diff -= graph->prize[i];
-
-               /* if the new tree is more expensive than the old one, restore the latter */
-               if( mw )
-               {
-                  if( SCIPisLT(scip, diff, 0.0) )
-                  {
-                     SCIPlinkcuttreeEvert(v);
-                     SCIPlinkcuttreeCut(&nodes[graph->head[insert[0]]]);
-                  }
-                  else
-                  {
-                     steinertree[i] = TRUE;
-                     newnverts++;
-                     for (e = graph->outbeg[l]; e != EAT_LAST; e =
-                           graph->oeat[e])
-                        if( best_result[e] == CONNECT
-                              || best_result[flipedge(e)] == CONNECT )
-                           printf("%d connect to %d %d \n", l, graph->tail[l],
-                                 graph->head[l]);
-                     steinertree[l] = FALSE;
+                     diff = graph->prize[i] - minweight;
+                     printf("DELTED %d (n: %d of %d) diff: %f min %f to replace %d (of cost %f) \n", xxx, k, insertcount, diff, minweight, i, graph->prize[i]);
+                    // return SCIP_ERROR;
                      break;
                   }
                }
                else
                {
-                  if( !SCIPisNegative(scip, diff) )
+                  /* if there is an edge with cost greater than that of the current edge... */
+                  NODE* max = SCIPlinkcuttreeFindMax(scip, graph->cost, firstnode);
+                  if( SCIPisGT(scip, graph->cost[max->edge], graph->cost[insert[k]]) )
                   {
-                     SCIPlinkcuttreeEvert(v);
-                     for (k = counter - 1; k >= 0; k--)
-                     {
-                        SCIPlinkcuttreeCut(&nodes[graph->head[adds[k]]]);
-                        SCIPlinkcuttreeEvert(&nodes[graph->tail[cuts[k]]]);
-                        SCIPlinkcuttreeLink(&nodes[graph->tail[cuts[k]]],
-                              &nodes[graph->head[cuts[k]]], cuts[k]);
-                     }
-
-                     /* finally, cut the edge added first (if it had been cut during the insertion process, it would have been restored above) */
-                     SCIPlinkcuttreeEvert(v);
-                     SCIPlinkcuttreeCut(&nodes[graph->head[insert[0]]]);
-                  }
-                  else
-                  {
-                     SCIPlinkcuttreeEvert(&nodes[root]);
-                     adds[counter] = insert[0];
-                     newnode = i;
-                     steinertree[i] = TRUE;
-                     newnverts++;
-                     SCIPdebugMessage("ADDED VERTEX \n");
+                     diff += graph->cost[insert[k]];
+                     diff -= graph->cost[max->edge];
+                     cuts[counter] = max->edge;
+                     SCIPlinkcuttreeCut(max);
+                     SCIPlinkcuttreeLink(v, firstnode, insert[k]);
+                     assert(v->edge == insert[k]);
+                     adds[counter++] = v->edge;
                   }
                }
             }
+
+            if( pc && Is_pterm(graph->term[i]) )
+               diff -= graph->prize[i];
+
+            /* if the new tree is more expensive than the old one, restore the latter */
+            if( mw )
+            {
+               if( SCIPisLT(scip, diff, 0.0) )
+               {
+                  SCIPlinkcuttreeEvert(v);
+                  stdeg[lastnodeidx]--;
+                  SCIPlinkcuttreeCut(&nodes[graph->head[insert[0]]]);
+               }
+               else
+               {
+                  steinertree[i] = TRUE;
+                  newnverts++;
+                  //return SCIP_ERROR;
+                  //break;
+               }
+            }
+            else
+            {
+               if( !SCIPisNegative(scip, diff) )
+               {
+                  SCIPlinkcuttreeEvert(v);
+                  for (k = counter - 1; k >= 0; k--)
+                  {
+                     SCIPlinkcuttreeCut(&nodes[graph->head[adds[k]]]);
+                     SCIPlinkcuttreeEvert(&nodes[graph->tail[cuts[k]]]);
+                     SCIPlinkcuttreeLink(&nodes[graph->tail[cuts[k]]],
+                           &nodes[graph->head[cuts[k]]], cuts[k]);
+                  }
+
+                  /* finally, cut the edge added first (if it had been cut during the insertion process, it would have been restored above) */
+                  SCIPlinkcuttreeEvert(v);
+                  SCIPlinkcuttreeCut(&nodes[graph->head[insert[0]]]);
+               }
+               else
+               {
+                  SCIPlinkcuttreeEvert(&nodes[root]);
+                  adds[counter] = insert[0];
+                  newnode = i;
+                  steinertree[i] = TRUE;
+                  newnverts++;
+                  SCIPdebugMessage("ADDED VERTEX \n");
+               }
+            }
          }
+
+         ENDOFLOOP:
 
          if( i < nnodes - 1 )
             i++;
@@ -506,6 +530,12 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
             SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, graph->cost, best_result, steinertree) );
          else
             SCIP_CALL( SCIPheurPruneSteinerTree(scip, graph, graph->cost, 0, best_result, steinertree) );
+
+         objj = 0.0;
+            for( e = 0; e < nedges; e++ )
+               if( best_result[e] == CONNECT )
+                  objj += graph->cost[e];
+            printf("obj aft %f \n", objj);
 
          for( i = 0; i < nnodes; i++ )
             SCIPlinkcuttreeInit(&nodes[i]);
@@ -1814,12 +1844,12 @@ SCIP_RETCODE greedyExtensionPcMw(
    PATH*                 path,               /**< shortest data structure array */
    int*                  stedge,             /**< initialized array to indicate whether an edge is part of the Steiner tree */
    int*                  pred,               /**< node array for internal computations */
-   STP_Bool*             stvertex,           /**< uninitialized array to indicate whether an edge is part of the Steiner tree */
+   STP_Bool*             stvertex,           /**< uninitialized array to indicate whether a vertex is part of the Steiner tree */
    SCIP_Bool*            extensions          /**< pointer to store whether extensions have been made */
    )
 {
-   GNODE candidates[GREEDY_EXTENSIONS_MW];
-   int candidatesup[GREEDY_EXTENSIONS_MW];
+   GNODE candidates[MAX(GREEDY_EXTENSIONS, GREEDY_EXTENSIONS_MW)];
+   int candidatesup[MAX(GREEDY_EXTENSIONS, GREEDY_EXTENSIONS_MW)];
 
    SCIP_PQUEUE* pqueue;
    SCIP_Real bestsolval;
@@ -1830,8 +1860,6 @@ SCIP_RETCODE greedyExtensionPcMw(
    int nextensions;
    int greedyextensions;
    STP_Bool* stvertextmp;
-
-   int tune_me;
 
    assert(scip != NULL);
    assert(path != NULL);
@@ -1860,12 +1888,6 @@ SCIP_RETCODE greedyExtensionPcMw(
          path[i].edge = e;
          stvertex[i] = TRUE;
       }
-
-
-   SCIP_Real t = 0.0;
-   for( int e = 0; e < nedges; e++ )
-           if( stedge[e] == CONNECT )
-              t += graph->cost[e];
 
    graph_path_st_pcmw_extend(scip, graph, cost, path, stvertex, extensions);
 
@@ -2063,9 +2085,9 @@ SCIP_RETCODE greedyExtensionPcMw(
 
 #if DEBUG
    t = 0.0;
-      for( int e = 0; e < nedges; e++ )
-              if( stedge[e] == CONNECT )
-                 t += graph->cost[e];
+   for (int e = 0; e < nedges; e++)
+      if( stedge[e] == CONNECT )
+         t += graph->cost[e];
 
    printf("exit real cost %f \n\n", t);
 #endif

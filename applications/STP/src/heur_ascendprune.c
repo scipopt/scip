@@ -17,7 +17,7 @@
  * @brief  reduction-based primal heuristic for Steiner problems
  * @author Daniel Rehfeldt
  *
- * This file implements a reducion and dual-cost based heuristic for Steiner problems. See
+ * This file implements a reduction and dual-cost based heuristic for Steiner problems. See
  * "SCIP-Jack - A solver for STP and variants with parallelization extensions" (2016) by
  * Gamrath, Koch, Maher, Rehfeldt and Shinano
  *

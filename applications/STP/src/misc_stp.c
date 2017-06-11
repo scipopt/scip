@@ -207,7 +207,7 @@ void SCIPlinkcuttreeInit(
    v->edge = -1;
 }
 
-/** renders w a child of v; v has to be the root of its tree */
+/** renders v a child of w; v has to be the root of its tree */
 void SCIPlinkcuttreeLink(
    NODE*                 v,                  /**< pointer to node representing the tree */
    NODE*                 w,                  /**< pointer to the child */
@@ -229,39 +229,70 @@ void SCIPlinkcuttreeCut(
    v->parent = NULL;
 }
 
-/** finds minimal non-key-node value between node 'v' and the root of the tree **/
-NODE* SCIPlinkcuttreeFindMinMW(
+/** finds minimum weight chain between node 'start' and distinct root node **/
+SCIP_Real SCIPlinkcuttreeFindMinChain(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real*            nodeweight,         /**< node weight array */
-   int*                  tail,               /**< tail of an arc */
-   int*                  stdeg,              /**< degree in Steiner tree */
-   NODE*                 v                   /**< the node */
+   const SCIP_Real*      nodeweight,         /**< node weight array */
+   const int*            head,               /**< head of an arc */
+   const int*            stdeg,              /**< degree in Steiner tree */
+   const NODE*           start,              /**< the node to start at */
+   NODE**                first,              /**< first node of chain */
+   NODE**                last                /**< last node of chain */
    )
 {
-   NODE* p = v;
-   NODE* q = v;
+   NODE* curr;
+   NODE* tmpfirst;
+   SCIP_Real min;
+   SCIP_Real tmpmin;
+   SCIP_Bool stopped;
    int node;
-   SCIP_Real min = 0.0;
 
    assert(scip != NULL);
-   assert(tail != NULL);
+   assert(head != NULL);
    assert(nodeweight != NULL);
    assert(stdeg != NULL);
-   assert(v != NULL);
+   assert(start != NULL);
+   assert(first != NULL);
+   assert(last != NULL);
 
-   while( p->parent != NULL )
+   *last = NULL;
+   *first = NULL;
+
+   min = 0.0;
+   tmpmin = 0.0;
+   stopped = TRUE;
+
+   /* while p is not root */
+   for( curr = (NODE*) start; curr->parent != NULL; curr = curr->parent )
    {
-      assert(p->edge >= 0);
-      node = tail[p->edge];
+      assert(curr->edge >= 0);
 
-      if( SCIPisLT(scip, nodeweight[node], min) && stdeg[node] == 2 )
+      node = head[curr->edge];
+
+      if( stdeg[node] == 2 && !SCIPisPositive(scip, nodeweight[node]) && curr->parent->parent != NULL )
       {
-         min = nodeweight[node];
-         q = p;
+         if( stopped )
+         {
+            stopped = FALSE;
+            tmpmin = 0.0;
+            tmpfirst = curr;
+         }
+         tmpmin += nodeweight[node];
       }
-      p = p->parent;
+      else
+      {
+         /* better chain found? */
+         if( !stopped && SCIPisLT(scip, tmpmin, min) )
+         {
+            min = tmpmin;
+            *first = tmpfirst;
+            *last = curr;
+         }
+         stopped = TRUE;
+      }
    }
-   return q;
+
+   return min;
 }
 
 
@@ -277,6 +308,7 @@ NODE* SCIPlinkcuttreeFindMax(
    NODE* q = v;
    SCIP_Real max = -1;
 
+   /* while p is not the root */
    while( p->parent != NULL )
    {
       assert(p->edge >= 0);

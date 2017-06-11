@@ -155,6 +155,7 @@ SCIP_RETCODE computeDaSolPcMw(
    SCIP_CALL( SCIPheurAscendAndPrunePcMw(scip, NULL, graph, cost, result2, vbase, root, nodearrchar, &success, TRUE, FALSE) );
 
    SCIP_CALL( greedyExtensionPcMw(scip, graph, graph->cost, vnoi, result2, pathedge, nodearrchar, &tmp) );
+   //SCIP_CALL( SCIPheurImproveSteinerTree(scip, graph, graph->cost, graph->cost, result2) );
 
    assert(graph_sol_valid(scip, graph, result2));
 
@@ -206,7 +207,10 @@ SCIP_RETCODE computeDaSolPcMw(
     {
        BMScopyMemoryArray(result1, result2, nedges);
        *upperbound = graph_computeSolVal(graph->cost, result1, 0.0, nedges);
+
     }
+
+    //SCIP_CALL( SCIPheurImproveSteinerTree(scip, graph, graph->cost, graph->cost, result1) );
 
     return SCIP_OKAY;
 }
@@ -2087,6 +2091,9 @@ SCIP_RETCODE da_reducePcMw(
 
       printf("in with ub %f \n", upperbound);
 
+      BMScopyMemoryArray(costrev, cost, extnedges);
+
+
       if( run > 1 )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, &transcost, transgraph->edges) );
@@ -2095,7 +2102,8 @@ SCIP_RETCODE da_reducePcMw(
 
          pertubateEdgeCosts(scip, graph, transgraph, result, nodearrchar, run - 1);
 
-         SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, state, tmproot, 1, marked, nodearrchar) );
+
+         SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &dummyreal, FALSE, FALSE, gnodearr, transresult, state, tmproot, 1, marked, nodearrchar) );
 
          BMScopyMemoryArray(transgraph->cost, transcost, transgraph->edges);
 
@@ -2115,19 +2123,15 @@ SCIP_RETCODE da_reducePcMw(
 
          SCIP_CALL( computeDaSolPcMw(scip, graph, vnoi, cost, pathdist, &upperbound, result, result2, vbase, pathedge, root, nodearrchar, &apsol) );
 
-
-
-// TODO
          SCIP_CALL( graph_RerootSol(scip, transgraph, result, tmproot) );
 
          assert(graph_sol_valid(scip, transgraph, result) );
 
-
-         SCIP_CALL( SCIPdualAscentStpSol(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, result, transresult, state, tmproot, 1, marked, nodearrchar) );
+         SCIP_CALL( SCIPdualAscentStpSol(scip, transgraph, cost, pathdist, &dummyreal, FALSE, FALSE, gnodearr, result, transresult, state, tmproot, 1, marked, nodearrchar) );
       }
       else
       {
-         SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &lpobjval, FALSE, FALSE, gnodearr, transresult, state, tmproot, 1, marked, nodearrchar) );
+         SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, pathdist, &dummyreal, FALSE, FALSE, gnodearr, transresult, state, tmproot, 1, marked, nodearrchar) );
       }
 
       assert(graph_valid(transgraph));
@@ -2182,8 +2186,13 @@ SCIP_RETCODE da_reducePcMw(
             apsol = FALSE;
          }
       }
-      printf("new2 upperbound %f \n", upperbound);
 
+      printf("dummyreal %f %f \n", dummyreal, lpobjval);
+
+      if( dummyreal > lpobjval )
+         lpobjval = dummyreal;
+      else
+         BMScopyMemoryArray(cost, costrev, extnedges);
 
 
       for( k = 0; k < transnnodes; k++ )
