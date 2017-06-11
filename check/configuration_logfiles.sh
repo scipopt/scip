@@ -74,7 +74,7 @@ then
     if ! test -e $fname
     then
         echo @Permutation $p > $fname
-        echo @Seed $p >> $fname
+        echo @Seed $s >> $fname
         echo @TstName $TSTNAME >> $fname
         echo @BinName $BINNAME >> $fname
         echo @NodeLimit $NODELIMIT >> $fname
