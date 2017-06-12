@@ -785,7 +785,8 @@ SCIP_RETCODE processSolveOutcome(
          problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
          break;
       case 3: /* (locally) nonlinear infeasible, minimal-infeasible solution found */
-         problem->solstat = (problem->rstat[0] <= problem->opttol ? SCIP_NLPSOLSTAT_LOCINFEASIBLE : SCIP_NLPSOLSTAT_UNKNOWN);
+         /* problem->solstat = (problem->rstat[0] <= problem->opttol ? SCIP_NLPSOLSTAT_LOCINFEASIBLE : SCIP_NLPSOLSTAT_UNKNOWN); */
+         problem->solstat = SCIP_NLPSOLSTAT_LOCINFEASIBLE;  /* TODO FilterSQP does not set rstat[0] in this case, assuming local infeasibility is valid */
          problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
          problem->warmstart = TRUE;
         break;
@@ -1855,9 +1856,9 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 
       assert(ifail <= 10);
       /* if ifail >= 8 (probably the workspace was too small), then retry with larger workspace
-       * if ifail == 0 or 3 (local optimal or local infeasible), but absolute violation of KKT too large, then retry with small eps
+       * if ifail == 0 (local optimal), but absolute violation of KKT too large, then retry with small eps
        */
-      if( ifail < 8 && ((ifail != 0 && ifail != 3) || problem->rstat[0] <= problem->opttol) )
+      if( ifail < 8 && (ifail != 0 || problem->rstat[0] <= problem->opttol) )
          break;
 
       if( problem->iprint > 0 )
@@ -1885,7 +1886,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
          break;
       }
 
-      if( ifail == 0 || ifail == 3 )
+      if( ifail == 0 )
       {
          SCIP_Real epsfactor;
 
