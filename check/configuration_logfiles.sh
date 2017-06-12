@@ -75,6 +75,7 @@ then
     then
         echo @Permutation $p > $fname
         echo @Seed $s >> $fname
+        echo @Settings $SETNAME >> $fname
         echo @TstName $TSTNAME >> $fname
         echo @BinName $BINNAME >> $fname
         echo @NodeLimit $NODELIMIT >> $fname
