@@ -616,15 +616,18 @@ static
 SCIP_RETCODE setupStart(
    SCIP_NLPIDATA*        data,               /**< NLPI data */
    SCIP_NLPIPROBLEM*     problem,            /**< NLPI problem */
-   real*                 x                   /**< array to store initial values */
+   real*                 x,                  /**< array to store initial values */
+   SCIP_Bool*            success             /**< whether we could setup a point in which functions could be evaluated */
 )
 {
    int i;
    int n;
+   SCIP_Real val;
 
    assert(data != NULL);
    assert(problem != NULL);
    assert(x != NULL);
+   assert(success != NULL);
 
    n = SCIPnlpiOracleGetNVars(problem->oracle);
 
@@ -659,6 +662,26 @@ SCIP_RETCODE setupStart(
       }
    }
 
+   /* check whether objective and constraints can be evaluated in starting point
+    * NOTE: this does not check whether derivatives can be computed!
+    */
+   i = 0;
+   *success = SCIPnlpiOracleEvalObjectiveValue(problem->oracle, x, &val) == SCIP_OKAY && SCIPisFinite(val);
+   for( ; *success && i < SCIPnlpiOracleGetNConstraints(problem->oracle); ++i )
+      *success = SCIPnlpiOracleEvalConstraintValue(problem->oracle, i, x, &val) == SCIP_OKAY && SCIPisFinite(val);
+
+   if( !*success )
+   {
+      SCIPdebugMessage("could not evaluate constraint %d in %s starting point\n", i-1, problem->initguess != NULL ? "provided" : "made up");
+
+      if( problem->initguess != NULL )
+      {
+         /* forget given starting point and try to make up our own */
+         BMSfreeMemoryArray(&problem->initguess);
+         SCIP_CALL( setupStart(data, problem, x, success) );
+      }
+   }
+
    return SCIP_OKAY;
 }
 
@@ -683,8 +706,8 @@ SCIP_RETCODE processSolveOutcome(
    SCIP_NLPIDATA*        nlpidata,           /**< NLPI data */
    SCIP_NLPIPROBLEM*     problem,            /**< NLPI problem */
    fint                  ifail,              /**< fail flag from FilterSQP call */
-   real*                 x,                  /**< primal solution values from FilterSQP call */
-   real*                 lam                 /**< dual solution values from FilterSQP call */
+   real*                 x,                  /**< primal solution values from FilterSQP call, or NULL if stopped before filtersqp got called */
+   real*                 lam                 /**< dual solution values from FilterSQP call, or NULL if stopped before filtersqp got called */
 )
 {
    int i;
@@ -693,17 +716,16 @@ SCIP_RETCODE processSolveOutcome(
 
    assert(problem != NULL);
    assert(ifail >= 0);
+   assert((x != NULL) == (lam != NULL));
 
    problem->solvetime = timeelapsed(nlpidata);
 
    nvars = SCIPnlpiOracleGetNVars(problem->oracle);
    ncons = SCIPnlpiOracleGetNConstraints(problem->oracle);
 
-   if( ifail <= 8 )
+   if( ifail <= 8 && x != NULL )
    {
       /* FilterSQP terminated somewhat normally -> store away solution */
-      assert(x != NULL);
-      assert(lam != NULL);
 
       /* make sure we have memory for solution */
       if( problem->primalvalues == NULL )
@@ -1641,6 +1663,7 @@ static
 SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
 {
    SCIP_NLPIDATA* data;
+   SCIP_Bool success;
    fint n;
    fint m;
    fint kmax;
@@ -1691,6 +1714,7 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    else
       memset(problem->istat, 0, sizeof(problem->istat));
    memset(problem->rstat, 0, sizeof(problem->rstat));
+   problem->niterations = 0;
 
    if( problem->x == NULL )
    {
@@ -1748,7 +1772,13 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    }
 
    /* setup starting point */
-   SCIP_CALL( setupStart(data, problem, problem->x) );
+   SCIP_CALL( setupStart(data, problem, problem->x, &success) );
+   if( !success )
+   {
+      /* FilterSQP would crash if starting point cannot be evaluated, so give up */
+      SCIP_CALL( processSolveOutcome(data, problem, 7, NULL, NULL) );
+      return SCIP_OKAY;
+   }
 
    /* setup workspace */
    /* initial guess of real workspace size */
@@ -1807,7 +1837,6 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    F77_FUNC(ubdc,UBDC).tt = 1.25;
    F77_FUNC(scalec,SCALEC).scale_mode = 0;
 
-   problem->niterations = 0;
    for( nruns = 1; ; ++nruns )
    {
       maxiter = problem->maxiter - problem->niterations;
@@ -1910,8 +1939,12 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
          ifail = 0;
       }
 
-      /* reset starting point, in case it was overwritten by failed solve (return can only be SCIP_OKAY, because randnumgen must exist already) */
-      (void) setupStart(data, problem, problem->x);
+      /* reset starting point, in case it was overwritten by failed solve (return can only be SCIP_OKAY, because randnumgen must exist already)
+       * NOTE: If initguess is NULL (no user-given starting point), then this will result in a slightly different starting point as in the previous setupStart() call (random numbers)
+       *       However, as no point was given, it shouldn't matter which point we actually start from.
+       */
+      (void) setupStart(data, problem, problem->x, &success);
+      assert(success);
    }
 
 #ifndef NPARASCIP
