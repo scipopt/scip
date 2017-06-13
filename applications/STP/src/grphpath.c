@@ -1167,6 +1167,162 @@ void graph_path_st_pcmw(
    }
 }
 
+#if 0
+
+/** Reduce given solution
+ *  Note that this function overwrites g->mark.
+ *  */
+void graph_path_st_pcmw_reduce(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      cost,               /**< edge costs */
+   SCIP_Real*            tmpnodeweight,      /**< node weight array */
+   int*                  result,             /**< incoming arc array */
+   int                   start,              /**< start vertex */
+   STP_Bool*             connected           /**< array to mark whether a vertex is part of computed Steiner tree */
+   )
+{
+   int* const heap = g->path_heap;
+   int* const state = g->path_state;
+   int k;
+
+   const int nnodes = g->knots;
+
+   assert(tmpnodeweight != NULL);
+   assert(result   != NULL);
+   assert(g      != NULL);
+   assert(start  >= 0);
+   assert(start  <  g->knots);
+   assert(cost   != NULL);
+   assert(connected != NULL);
+
+   for( int e = g->outbeg[start]; e != EAT_LAST; e = g->oeat[e] )
+   {
+      if( result[e] == CONNECT )
+      {
+         const int head = g->head[e];
+
+         if( Is_term(g->term[head]) )
+            continue;
+
+         graph_path_st_pcmw_reduce(scip, g, cost, tmpnodeweight, result, head, connected);
+
+         assert(connected[head]);
+
+         if( SCIPisGT(scip, cost[e], tmpnodeweight[head]) )
+         {
+            connected[head] = FALSE;
+            result[e] = UNKNOWN;
+         }
+         else
+         {
+            tmpnodeweight[start] += tmpnodeweight[head] - cost[e];
+         }
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &tmpnodeweight);
+}
+#endif
+
+
+/** Find a tree rooted in node 'start' and connecting
+ *  all positive vertices.
+ *  Note that this function overwrites g->mark.
+ *  */
+void graph_path_st_pcmw_full(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   const SCIP_Real*      cost,               /**< edge costs */
+   SCIP_Real*            pathdist,           /**< distance array (on vertices) */
+   int*                  pathedge,           /**< predecessor edge array (on vertices) */
+   int                   start,              /**< start vertex */
+   STP_Bool*             connected           /**< array to mark whether a vertex is part of computed Steiner tree */
+   )
+{
+   int* const heap = g->path_heap;
+   int* const state = g->path_state;
+   int k;
+   const int nnodes = g->knots;
+
+   assert(pathdist   != NULL);
+   assert(pathedge   != NULL);
+   assert(g      != NULL);
+   assert(start  >= 0);
+   assert(start  <  g->knots);
+   assert(cost   != NULL);
+   assert(connected != NULL);
+
+   /* initialize */
+   for( k = nnodes - 1; k >= 0; --k )
+   {
+      g->mark[k] = ((g->grad[k] > 0) && !Is_term(g->term[k]));
+      state[k]     = UNKNOWN;
+      pathdist[k] = FARAWAY;
+      pathedge[k] = -1;
+      connected[k] = FALSE;
+   }
+
+   /* add start vertex to heap */
+   k            = start;
+   pathdist[k] = 0.0;
+   connected[k] = TRUE;
+
+   if( nnodes > 1 )
+   {
+      int count = 1;
+      int nterms = 0;
+
+      heap[count] = k;
+      state[k]    = count;
+
+      /* repeat until heap is empty */
+      while( count > 0 )
+      {
+         /* get closest node */
+         k = nearestX(heap, state, &count, pathdist);
+         state[k] = UNKNOWN;
+
+         /* if k is positive vertex, connect its path to current subtree */
+         if( !connected[k] && Is_pterm(g->term[k]) )
+         {
+            connected[k] = TRUE;
+            pathdist[k] = 0.0;
+
+            if( k != start )
+            {
+               int node = k;
+               assert(pathedge[k] != - 1);
+
+               while( !connected[node = g->tail[pathedge[node]]] )
+               {
+                  assert(pathedge[node] != - 1);
+                  connected[node] = TRUE;
+                  resetX(scip, pathdist, heap, state, &count, node);
+                  assert(state[node]);
+               }
+            }
+            /* have all terminals been reached? */
+            if( ++nterms == g->terms - 1 )
+               break;
+         }
+
+         /* update adjacent vertices */
+         for( int e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+         {
+            int m = g->head[e];
+
+            assert(state[m]);
+            /* is m not connected, allowed and closer (as close)? */
+
+            if( !connected[m] && g->mark[m] && SCIPisGT(scip, pathdist[m], (pathdist[k] + cost[e])) )
+               correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
+         }
+      }
+   }
+}
+
+
 /** greedy extension of a given tree for PC or MW problems */
 void graph_path_st_pcmw_extend(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2986,29 +3142,4 @@ void voronoi_repair_mult(
          }
       }
    }
-}
-
-/* ARGSUSED */
-void graph_path_length(
-   const GRAPH*          g,                  /**< graph data structure */
-   const PATH*           p                   /**< path data structure */
-   )
-{
-#ifndef NDEBUG
-   int    len  = 0;
-   SCIP_Real dist = 0.0;
-   int    e;
-   int    i;
-
-   for(i = 0; i < g->knots; i++)
-   {
-      if ((e = p[i].edge) < 0)
-         continue;
-
-      len++;
-      dist += g->cost[e];
-   }
-   (void)printf("Graph path length: %d  Distance=%g\n", len, dist);
-
-#endif /* NDEBUG */
 }

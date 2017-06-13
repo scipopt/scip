@@ -69,7 +69,8 @@ extern "C" {
       SCIP_Real*            hopfactor,          /**< edge cost multiplicator for HC problems */
       SCIP_Real*            nodepriority,       /**< vertex priorities for vertices to be starting points (NULL for no priorities) */
       SCIP_Real             maxcost,            /**< maximal edge cost (only for HC) */
-      SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
+      SCIP_Bool*            success,            /**< pointer to store whether a solution could be found */
+      SCIP_Bool             pcmwfull            /**< use full computation of tree (i.e. connect all terminals and prune), only for prize-collecting variants */
       );
 
    /** prune a Steiner tree in such a way that all leaves are terminals */

@@ -34,6 +34,7 @@
 #define SDSP_BOUND    400          /**< visited edges bound for SDSP test  */
 #define BD3_BOUND     400          /**< visited edges bound for BD3 test  */
 #define EXTENSIVE FALSE
+#define MW_TERM_BOUND 400
 
 //#define SCIP_DEBUG
 
@@ -1096,7 +1097,7 @@ int tuneme;
 #if 0
          SCIP_CALL( cnsAdvReduction(scip, g, nodearrint2, &cnsadvelims) );
 #endif
-         SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, TRUE, FALSE, FALSE) );
+         SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, (g->terms > MW_TERM_BOUND), FALSE, FALSE) );
 
          if( cnsadvelims + daelims >= redbound || (extensive && (cnsadvelims + daelims > 0))  )
          {

@@ -1140,7 +1140,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
             /* run TM heuristic */
             SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, solgraph, NULL, &best_start, results, heurdata->ntmruns,
-                  solgraph->source[0], cost, costrev, &hopfactor, nodepriority, maxcost, &success) );
+                  solgraph->source[0], cost, costrev, &hopfactor, nodepriority, maxcost, &success, FALSE) );
 
             if( !success )
             {
@@ -1458,16 +1458,15 @@ SCIP_RETCODE SCIPheurExclusion(
    // todo
    assert(graph->stp_type == STP_MWCSP);
 
+
+   /* killed solution edge? */
+   for( int e = 0; e < nedges; e++ )
+      if( result[e] == CONNECT && graph->oeat[e] == EAT_FREE )
+         return SCIP_OKAY;
+
    BMSclearMemoryArray(stvertex, nnodes);
 
    SCIP_Real cc = graph_computeSolVal(graph->cost, result, 0.0, nedges);
-
-   for( int e = 0; e < nedges; e++ )
-      if( result[e] == CONNECT && graph->oeat[e] == EAT_FREE )
-      {
-         printf("killed sol edge %d \n", e);
-         return SCIP_ERROR;
-      }
 
    int *x1;
    int *x2;
@@ -1891,7 +1890,7 @@ SCIP_RETCODE SCIPheurExclusion(
 
    /* compute Steiner tree to obtain upper bound */
    best_start = newgraph->source[0];
-   SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, newgraph, NULL, &best_start, newresult, MIN(50, nsolterms), newgraph->source[0], newgraph->cost, newgraph->cost, &dummy, NULL, 0.0, success) );
+   SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, newgraph, NULL, &best_start, newresult, MIN(50, nsolterms), newgraph->source[0], newgraph->cost, newgraph->cost, &dummy, NULL, 0.0, success, FALSE) );
 
    graph_path_exit(scip, newgraph);
 

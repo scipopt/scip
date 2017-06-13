@@ -801,21 +801,16 @@ static
 SCIP_RETCODE prune(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
-   SCIP_Real*            cost,               /**< edge costs */
-   SCIP_Real*            costrev,            /**< reversed edge costs */
+   const SCIP_Real*      cost,               /**< edge costs for DHCSTP */
    int*                  result,             /**< ST edges */
    STP_Bool*             connected           /**< ST nodes */
    )
 {
-   int e;
-   int nedges;
-   assert(g != NULL);
-   nedges = g->edges;
+   const int nedges = g->edges;
+
    if( g->stp_type != STP_DHCSTP )
-   {
-      for( e = 0; e < nedges; e++ )
+      for( int e = 0; e < nedges; e++ )
          result[e] = UNKNOWN;
-   }
 
    if( g->stp_type == STP_MWCSP || g->stp_type == STP_PCSPG || g->stp_type == STP_RPCSPG || g->stp_type == STP_RMWCSP )
       SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, g, g->cost, result, connected) );
@@ -944,7 +939,7 @@ SCIP_RETCODE computeSteinerTreeDijk(
 
    graph_path_st(scip, g, cost, dijkdist, dijkedge, start, randnumgen, connected);
 
-   SCIP_CALL(prune(scip, g, cost, costrev, result, connected));
+   SCIP_CALL(prune(scip, g, cost, result, connected));
 
    return SCIP_OKAY;
 }
@@ -970,10 +965,49 @@ SCIP_RETCODE computeSteinerTreeDijkPcMw(
    else
       graph_path_st_pcmw(scip, g, cost, dijkdist, dijkedge, start, NULL, connected);
 
-   SCIP_CALL(prune(scip, g, cost, costrev, result, connected));
+   SCIP_CALL(prune(scip, g, cost, result, connected));
 
    return SCIP_OKAY;
 }
+
+/** Dijkstra based shortest paths heuristic for PCSTP and MWCSP that computes tree spanning all positive
+ * vertex weights and subsequently prunes this tree */
+static
+SCIP_RETCODE computeSteinerTreeDijkPcMwFull(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   const SCIP_Real*      cost,               /**< edge costs */
+   SCIP_Real*            dijkdist,           /**< distance array */
+   int*                  result,             /**< solution array (on edges) */
+   int*                  dijkedge,           /**< predecessor edge array */
+   int                   start,              /**< start vertex */
+   STP_Bool*             connected           /**< array marking all solution vertices*/
+   )
+{
+   SCIP_Real* tmpnodeweight;
+
+   graph_path_st_pcmw_full(scip, g, cost, dijkdist, dijkedge, start, connected);
+
+#if 0
+   SCIP_CALL( SCIPallocBufferArray(scip, &tmpnodeweight, g->knots) );
+
+   SCIP_CALL(prune(scip, g, cost, result, connected));
+
+   BMScopyMemoryArray(tmpnodeweight, g->prize, g->knots);
+
+   graph_path_st_pcmw_reduce(scip, g, cost, tmpnodeweight, result, start, connected);
+
+   SCIPfreeBufferArray(scip, &tmpnodeweight);
+
+   for( int e = 0; e < g->edges; e++ )
+      result[e] = UNKNOWN;
+#endif
+
+   SCIP_CALL(prune(scip, g, cost, result, connected));
+
+   return SCIP_OKAY;
+}
+
 
 /** shortest paths based heuristic */
 static
@@ -1109,7 +1143,7 @@ SCIP_RETCODE computeSteinerTree(
    }
 
    /* prune the tree */
-   SCIP_CALL( prune(scip, g, cost, costrev, result, connected) );
+   SCIP_CALL( prune(scip, g, cost, result, connected) );
 
    return SCIP_OKAY;
 }
@@ -1687,7 +1721,7 @@ SCIP_RETCODE computeSteinerTreeVnoi(
    }
 
    /* prune the ST, so that all leaves are terminals */
-   SCIP_CALL( prune(scip, g, cost, costrev, result, connected) );
+   SCIP_CALL( prune(scip, g, cost, result, connected) );
 
    return SCIP_OKAY;
 }
@@ -1759,7 +1793,8 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
    SCIP_Real*            hopfactor,          /**< edge cost multiplicator for HC problems */
    SCIP_Real*            nodepriority,       /**< vertex priorities for vertices to be starting points (NULL for no priorities) */
    SCIP_Real             maxcost,            /**< maximal edge cost (only for HC) */
-   SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
+   SCIP_Bool*            success,            /**< pointer to store whether a solution could be found */
+   SCIP_Bool             pcmwfull            /**< use full computation of tree (i.e. connect all terminals and prune), only for prize-collecting variants */
    )
 {
    SCIP_PQUEUE* pqueue = NULL;
@@ -2139,7 +2174,14 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
       {
          k = terminalperm[r];
 
-         SCIP_CALL( computeSteinerTreeDijkPcMw(scip, graph, cost, costrev, dijkdist, result, dijkedge, k, connected) );
+         if( pcmwfull )
+         {
+            SCIP_CALL( computeSteinerTreeDijkPcMwFull(scip, graph, cost, dijkdist, result, dijkedge, k, connected) );
+         }
+         else
+         {
+            SCIP_CALL( computeSteinerTreeDijkPcMw(scip, graph, cost, costrev, dijkdist, result, dijkedge, k, connected) );
+         }
 
          if( SCIPisStopped(scip) )
             break;
@@ -2853,7 +2895,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
          /* can we connect the network */
          SCIP_CALL( SCIPheurComputeSteinerTree(scip, heurdata, graph, NULL, &best_start, results, runs, heurdata->beststartnode,
-               cost, costrev, &(heurdata->hopfactor), nodepriority, maxcost, &success) );
+               cost, costrev, &(heurdata->hopfactor), nodepriority, maxcost, &success, FALSE) );
 
    }
    if( success )
