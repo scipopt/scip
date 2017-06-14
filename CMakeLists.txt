@@ -66,6 +66,8 @@ if(NOBUFMEM)
    add_definitions(-DSCIP_NOBUFFERMEM)
 endif()
 
+#set the correct rpath for OS X
+set(CMAKE_MACOSX_RPATH ON)
 
 #set defines for win32
 if(WIN32)
