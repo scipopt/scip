@@ -17,6 +17,66 @@ set(instances_CP
     "instances/CP/stein27_super.cip\;1"
     )
 
+set(settings_default
+    "default"
+)
+#
+# settings to run a whole test. In order to run a sub-suite, use -R
+#
+set(settings_MIP
+    "separating_off"
+    "presolving_off"
+    "heuristics_off"
+    "separating_fast"
+    "presolving_fast"
+    "heuristics_fast"
+    "separating_aggressive"
+    "presolving_aggressive"
+    "heuristics_aggressive"
+    "allaggr"
+    "cgmip"
+    "cgmipstrong"
+    "convertinttobin"
+    "fullstrongbfs"
+    "indicatorlogicor"
+    "mostinf"
+    "oddcylcelift"
+    "oddcylce"
+    "oddcylceliftheur"
+    "indicatorsepa"
+    "proporbit"
+    "allfull"
+    "cgmipviol"
+#    "dynamic"
+    "heurlprows"
+    "intobj"
+#    "nologicor"
+    "presolaggr"
+    "pscost"
+    "setppclifting"
+    "xorsepaparity"
+#    "cloud"
+#    "feaspump20"
+    "indicatoralterlp"
+    "leastinf"
+    "presolfast"
+    "randomhybrid"
+    "uct_breadth_dualval"
+    "alldisp"
+)
+
+set(settings_MINLP
+    "undercover1"
+    "undercover2"
+    "rensnlp"
+    "bivariate"
+    "nlpdiving2"
+    "nlpdiving3"
+    "nlpdiving1-relprop"
+#    "nlpdivingsolvesubmip"
+    "nlpdiving4"
+)
+
 #
 # Indicator instances
 #
@@ -75,7 +135,7 @@ set(instances_PseudoBoolean
 # Semicontinuous instances
 #
 set(instances_Semicontinuous
-    "instances/Semicontinuous/meanvarxsc.lp\;14.36918"
+#    "instances/Semicontinuous/meanvarxsc.lp\;14.36918"
     "instances/Semicontinuous/semicon1.mps\;1.1"
     )
 #
@@ -104,7 +164,7 @@ set(instances_Orbitope
     "instances/Orbitope/partorb_1-FullIns_3.cip\;4"
     )
 
-macro(add_instancetests instances prefix)
+macro(add_instancetests instances settings prefix)
 #
 # loop over the instances
 #
@@ -112,24 +172,25 @@ macro(add_instancetests instances prefix)
         #
         # loop over all settings
         #
-
-        #
-        # treat the instance as a tuple (list) of two values
-        #
-        list(GET instance 0 path)
-        list(GET instance 1 optval)
-        get_filename_component(basename ${path} NAME)
-        add_test(NAME ${prefix}-${basename} COMMAND $<TARGET_FILE:scip-bin> -f ${PROJECT_SOURCE_DIR}/check/${path} -o ${optval} ${optval})
-        set_tests_properties(${prefix}-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+        foreach(setting ${${settings}})
+            #
+            # treat the instance as a tuple (list) of two values
+            #
+            list(GET instance 0 path)
+            list(GET instance 1 optval)
+            get_filename_component(basename ${path} NAME)
+            add_test(NAME ${prefix}-${setting}-${basename} COMMAND $<TARGET_FILE:scip-bin> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/coverage/settings/${setting}.set -o ${optval} ${optval})
+            set_tests_properties(${prefix}-${setting}-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+        endforeach(setting)
     endforeach(instance)
 endmacro(add_instancetests)
 
-add_instancetests(instances_CP "CP")
-add_instancetests(instances_Indicator "Indicator")
-add_instancetests(instances_MIP "MIP")
-add_instancetests(instances_MINLP "MINLP")
-add_instancetests(instances_PseudoBoolean "PseudoBoolean")
-add_instancetests(instances_Semicontinuous "Semicontinuous")
-add_instancetests(instances_SAT "SAT")
-add_instancetests(instances_SOS "SOS")
-add_instancetests(instances_Orbitope "Orbitope")
+add_instancetests(instances_CP settings_default "CP")
+add_instancetests(instances_Indicator settings_default "Indicator")
+add_instancetests(instances_MIP settings_MIP "MIP")
+add_instancetests(instances_MINLP settings_MINLP "MINLP")
+add_instancetests(instances_PseudoBoolean settings_default "PseudoBoolean")
+add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")
+add_instancetests(instances_SAT settings_default "SAT")
+add_instancetests(instances_SOS settings_default "SOS")
+add_instancetests(instances_Orbitope settings_default "Orbitope")
