@@ -5210,7 +5210,7 @@ SCIP_RETCODE SCIPsolveCIP(
       }
       else if( primal->nlimsolsfound == 0 )
       {
-         assert(primal->nsols == 0 || SCIPsetIsFeasGT(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
+         assert(primal->nsols == 0 || SCIPsetIsGT(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
                SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(transprob, set))));
 
          /* switch status to INFEASIBLE */
