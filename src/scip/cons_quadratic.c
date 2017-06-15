@@ -5470,8 +5470,6 @@ SCIP_RETCODE precutGetRow(
    char*                 name                /**< name for row */
 )
 {
-   int i;
-
    assert(scip != NULL);
    assert(row != NULL);
    assert(precut != NULL);
@@ -5486,13 +5484,36 @@ SCIP_RETCODE precutGetRow(
       precut->sidetype == SCIP_SIDETYPE_RIGHT ? precut->side :  SCIPinfinity(scip),
       local, FALSE, TRUE) );
 
-   for( i = 0 ; i < precut->nvars; ++i )
-   {
-      SCIP_CALL( SCIPaddVarsToRow(scip, *row, precut->nvars, precut->vars, precut->coefs) );
-   }
+   SCIP_CALL( SCIPaddVarsToRow(scip, *row, precut->nvars, precut->vars, precut->coefs) );
 
    return SCIP_OKAY;
 }
+
+static
+void precutPrint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRECUT*          precut,             /**< precut to be printed */
+   FILE*                 file                /**< file to print to, or NULL */
+)
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(precut != NULL);
+
+   for( i = 0; i < precut->nvars; ++i )
+   {
+      SCIPinfoMessage(scip, file, "%+g*<%s> ", precut->coefs[i], SCIPvarGetName(precut->vars[i]));
+   }
+
+   if( precut->constant != 0.0 )
+   {
+      SCIPinfoMessage(scip, file, "%+g ", precut->constant);
+   }
+
+   SCIPinfoMessage(scip, file, precut->sidetype == SCIP_SIDETYPE_LEFT ? ">= %g\n" : "<= %g\n", precut->side);
+}
+
 
 /** tries to compute cut for multleft * <coefleft, x'> * multright <= rhs / (multright * <coefright, x'>) where x'=(x,1) */
 static
