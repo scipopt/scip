@@ -5488,6 +5488,74 @@ SCIP_Real precutGetViolation(
    return MAX(-activity, 0.0);
 }
 
+/** cleans up precut
+ *
+ * Merges terms that use same variable.
+ * Moves constant into side.
+ */
+static
+void precutCleanup(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRECUT*          precut              /**< precut to be cleaned up */
+)
+{
+   int i;
+   int j;
+
+   assert(scip != NULL);
+   assert(precut != NULL);
+
+   precut->side -= precut->constant;
+   precut->constant = 0.0;
+
+   if( precut->nvars <= 1 )
+      return;
+
+   /* sort terms by variable index */
+   SCIPsortPtrReal((void**)precut->vars, precut->coefs, SCIPvarComp, precut->nvars);
+
+   /* merge terms with same variable, drop 0 coefficients */
+   i = 0;
+   j = 1;
+   while( j < precut->nvars )
+   {
+      if( precut->vars[i] == precut->vars[j] )
+      {
+         /* merge term j into term i */
+         /* TODO if sign of vars[i] is known, then can do safe rounding here */
+         precut->coefs[i] += precut->coefs[j];
+         ++j;
+         continue;
+      }
+
+      if( precut->coefs[i] == 0.0 )
+      {
+         /* move term j to position i */
+         precut->coefs[i] = precut->coefs[j];
+         precut->vars[i] = precut->vars[j];
+         ++j;
+         continue;
+      }
+
+      /* move term j to position i+1 and move on */
+      if( j != i+1 )
+      {
+         precut->vars[i+1] = precut->vars[j];
+         precut->coefs[i+1] = precut->coefs[j];
+      }
+      ++i;
+      ++j;
+   }
+
+   /* remaining term can have coef zero -> forget about it */
+   if( precut->coefs[i] == 0.0 )
+      --i;
+
+   /* i points to last term */
+   precut->nvars = i+1;
+}
+
+
 static
 SCIP_RETCODE precutGetRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -7231,6 +7299,8 @@ SCIP_RETCODE generateCut(
 #else
    if( success )
    {
+      precutCleanup(scip, precut);
+
       assert(conshdlrdata->scaling == 'o');
       viol = precutGetViolation(scip, precut, sol);
       rowefficacy = viol;
