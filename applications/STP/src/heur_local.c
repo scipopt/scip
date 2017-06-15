@@ -259,13 +259,6 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
       }
    }
 
-   SCIP_Real objj = 0.0;
-   for( e = 0; e < nedges; e++ )
-      if( best_result[e] == CONNECT )
-         objj += graph->cost[e];
-   printf("obj bef %f \n", objj);
-
-
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vbase, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodes, nnodes) );
@@ -413,13 +406,11 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                         return SCIP_ERROR;
 
                      assert(chainfirst != NULL && chainlast != NULL);
-int xxx = 0;
                      for( NODE* mynode = chainfirst; mynode != chainlast; mynode = mynode->parent )
                      {
                         int mynodeidx = graph->head[mynode->edge];
                         steinertree[mynodeidx] = FALSE;
                         stdeg[mynodeidx] = 0;
-                        xxx++;
                      }
 
                      SCIPlinkcuttreeCut(chainfirst);
@@ -429,8 +420,6 @@ int xxx = 0;
                      stdeg[graph->head[insert[k]]]++;
 
                      diff = graph->prize[i] - minweight;
-                     printf("DELTED %d (n: %d of %d) diff: %f min %f to replace %d (of cost %f) \n", xxx, k, insertcount, diff, minweight, i, graph->prize[i]);
-                    // return SCIP_ERROR;
                      break;
                   }
                }
@@ -530,12 +519,6 @@ int xxx = 0;
             SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, graph->cost, best_result, steinertree) );
          else
             SCIP_CALL( SCIPheurPruneSteinerTree(scip, graph, graph->cost, 0, best_result, steinertree) );
-
-         objj = 0.0;
-            for( e = 0; e < nedges; e++ )
-               if( best_result[e] == CONNECT )
-                  objj += graph->cost[e];
-            printf("obj aft %f \n", objj);
 
          for( i = 0; i < nnodes; i++ )
             SCIPlinkcuttreeInit(&nodes[i]);
