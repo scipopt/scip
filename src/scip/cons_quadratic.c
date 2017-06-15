@@ -5465,27 +5465,70 @@ void precutAddConstant(
    precut->constant += constant;
 }
 
+/* computes violation of cut in a given solution
+ *
+ * if scaling == 'g', assumes that terms in precut are sorted by abs value of coef, in decreasing order
+ */
 static
 SCIP_Real precutGetViolation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRECUT*          precut,             /**< precut to be turned into a row */
-   SCIP_SOL*             sol                 /**< solution or NULL for LP solution */
+   SCIP_SOL*             sol,                /**< solution or NULL for LP solution */
+   char                  scaling             /**< how to scale cut violation: o, g, or s */
    )
 {
    SCIP_Real activity;
+   SCIP_Real viol;
    int i;
 
    activity = precut->constant;
    for( i = 0; i < precut->nvars; ++i )
-      activity += precut->coefs[i] * SCIPgetSolVal(scip, sol, precut->vars[i]);
-
+   {
+      /* Loose variable have the best bound as LP solution value.
+       * HOWEVER, they become column variables when they are added to a row (via SCIPaddVarsToRow below).
+       * When this happens, their LP solution value changes to 0.0!
+       * So when calculating the row activity, we treat loose variable as if they were already column variables.
+       */
+      if( SCIPvarGetStatus(precut->vars[i]) != SCIP_VARSTATUS_LOOSE )
+         activity += precut->coefs[i] * SCIPgetSolVal(scip, sol, precut->vars[i]);
+   }
    activity -= precut->side;
 
-   if( precut->sidetype == SCIP_SIDETYPE_RIGHT )  /* cut is activity <= 0.0 -> violation is activity, if positive */
-      return MAX(activity, 0.0);
+   if( precut->sidetype == SCIP_SIDETYPE_RIGHT )
+      /* cut is activity <= 0.0 -> violation is activity, if positive */
+      viol = MAX(activity, 0.0);
+   else
+      /* cut is activity >= 0.0 -> violation is -activity, if positive */
+      viol = MAX(-activity, 0.0);
 
-   /* cut is activity >= 0.0 -> violation is -activity, if positive */
-   return MAX(-activity, 0.0);
+   switch( scaling )
+   {
+   case 'o' :
+      break;
+
+   case 'g' :
+      /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0 this avoid finding cuts
+       * efficient which are only very slightly violated
+       * CPLEX does not seem to scale row coefficients up too
+       * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium scaling)
+       */
+      if( precut->nvars > 0 )
+         viol /= MAX(1.0, REALABS(precut->coefs[0]));
+      break;
+
+   case 's' :
+   {
+      viol /= MAX(1.0, REALABS(precut->side - precut->constant));
+      break;
+   }
+
+   default:
+      SCIPerrorMessage("Unknown scaling method '%c'.", scaling);
+      SCIPABORT();
+      return SCIP_INVALID;
+   }
+
+   return viol;
 }
 
 /** cleans up precut
@@ -5555,12 +5598,19 @@ void precutCleanup(
    precut->nvars = i+1;
 }
 
+/* beautifies a precut
+ *
+ * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
+ * Drops small coefficients if coefrange is too large, if this can be done by relaxing the cut.
+ *
+ * After return, the terms in the precut will be sorted by absolute value of coefficient, in decreasing order.
+ */
 static
 SCIP_RETCODE precutBeautify(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRECUT*          precut,             /**< precut to be beautified */
-   SCIP_Real             cutmaxrange,        /**< maximal allowed cut range */
-   SCIP_Real*            cutrange            /**< buffer to store cutrange of beautified cut, or NULL if not of interest */
+   SCIP_Real             coefmaxrange,       /**< maximal allowed coefficients range */
+   SCIP_Real*            coefrange           /**< buffer to store coefrange of beautified cut, or NULL if not of interest */
 )
 {
    SCIP_Real coef;
@@ -5572,8 +5622,8 @@ SCIP_RETCODE precutBeautify(
    int i;
 
    /* initialize cutrange in case we terminate early, usually when all cut terms have been eliminated */
-   if( cutrange != NULL )
-      *cutrange = 1.0;
+   if( coefrange != NULL )
+      *coefrange = 1.0;
 
    if( precut->nvars == 0 )
       return SCIP_OKAY;
@@ -5633,7 +5683,7 @@ SCIP_RETCODE precutBeautify(
 
    maxcoef = precut->coefs[0];
    mincoef = precut->coefs[precut->nvars-1];
-   while( REALABS(maxcoef / mincoef) > cutmaxrange  )
+   while( REALABS(maxcoef / mincoef) > coefmaxrange  )
    {
       SCIPdebugMsg(scip, "cut coefficients have very large range: mincoef = %g maxcoef = %g\n", mincoef, maxcoef);
 
@@ -5671,8 +5721,8 @@ SCIP_RETCODE precutBeautify(
       mincoef = REALABS(precut->coefs[precut->nvars-1]);
    }
 
-   if( cutrange != NULL )
-      *cutrange = REALABS(maxcoef / mincoef);
+   if( coefrange != NULL )
+      *coefrange = REALABS(maxcoef / mincoef);
 
    return SCIP_OKAY;
 }
@@ -7209,245 +7259,36 @@ SCIP_RETCODE generateCut(
    assert(!success || SCIPisInfinity(scip, -lhs) || SCIPisInfinity(scip, rhs));
 #endif
 
-
-#if 0  // TODO
-   /* check if range of cut coefficients is ok
-    * compute cut activity and violation in sol
-    */
-   maxcoef = 0.0; /* only for compiler */
-   viol = 0.0;    /* only for compiler */
+   /* cleanup and beautify cut */
    if( success )
    {
-      SCIP_Real constant;
-      SCIP_Real abscoef;
-      SCIP_Real roundcoef;
-      int       mincoefidx;
-      SCIP_Real refactivity;
-      SCIP_Real refactivitylinpart;
-
-      /* compute activity of linear part in sol, if required
-       * it is required if we need to check or return cut efficacy, for some debug output below, and some assert
-       * round almost integral coefficients in integers, since this will happen when adding coefs to row (see comments below)
-       */
-      refactivitylinpart = 0.0;
-#if !defined(SCIP_DEBUG)
-      if( !SCIPisInfinity(scip, -minefficacy) || efficacy != NULL )
-#endif
-         for( j = 0; j < consdata->nlinvars; ++j )
-            /* Loose variable have the best bound as LP solution value.
-             * HOWEVER, they become column variables when they are added to a row (via SCIPaddVarsToRow below).
-             * When this happens, their LP solution value changes to 0.0!
-             * So when calculating the row activity, we treat loose variable as if they were already column variables.
-             */
-            if( SCIPvarGetStatus(consdata->linvars[j]) != SCIP_VARSTATUS_LOOSE )
-               refactivitylinpart += (SCIPisIntegral(scip, lincoefs[j]) ? SCIPround(scip, lincoefs[j]) : lincoefs[j]) * SCIPgetSolVal(scip, sol, consdata->linvars[j]);
-
-      assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
-
-      constant = 0.0;
-      do
-      {
-         refactivity = refactivitylinpart;
-         mincoefidx = -1;
-         mincoef = lincoefsmin;
-         maxcoef = lincoefsmax;
-
-         for( j = 0; j < consdata->nquadvars; ++j )
-         {
-            /* coefficients smaller than epsilon are rounded to 0.0 when added to row
-             * further, coefficients very close to integral values are rounded to integers when added to LP
-             * both cases can be problematic if variable value is very large (bad numerics)
-             * thus, we anticipate by rounding coef here, but also modify constant so that cut is still valid (if possible)
-             * i.e., estimate coef[i]*x by round(coef[i])*x + (coef[i]-round(coef[i])) * bound(x)
-             * if required bound of x is not finite, then do nothing
-             */
-            roundcoef = SCIPround(scip, coef[j]);
-            if( SCIPisEQ(scip, coef[j], roundcoef) && coef[j] != roundcoef ) /*lint !e777*/
-            {
-               SCIP_Real xbnd;
-
-               var = consdata->quadvarterms[j].var;
-               if( !SCIPisInfinity(scip, rhs) )
-                  if( islocal )
-                     xbnd = coef[j] > roundcoef ? SCIPvarGetLbLocal(var)  : SCIPvarGetUbLocal(var);
-                  else
-                     xbnd = coef[j] > roundcoef ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var);
-               else
-                  if( islocal )
-                     xbnd = coef[j] > roundcoef ? SCIPvarGetUbLocal(var)  : SCIPvarGetLbLocal(var);
-                  else
-                     xbnd = coef[j] > roundcoef ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var);
-
-               if( !SCIPisInfinity(scip, REALABS(xbnd)) )
-               {
-                  SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.20g, round coefficient to %g and add constant %g\n",
-                     SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef[j], roundcoef, (coef[j]-roundcoef) * xbnd);
-                  constant += (coef[j]-roundcoef) * xbnd;
-                  coef[j] = roundcoef;
-               }
-            }
-
-            if( coef[j] == 0.0 )
-               continue;
-
-            /* As above: When calculating the row activity, we treat loose variable as if they were already column variables. */
-            if( SCIPvarGetStatus(consdata->quadvarterms[j].var) != SCIP_VARSTATUS_LOOSE )
-               refactivity += coef[j] * SCIPgetSolVal(scip, sol, consdata->quadvarterms[j].var);
-
-            abscoef = REALABS(coef[j]);
-            if( abscoef < mincoef )
-            {
-               mincoef = abscoef;
-               mincoefidx = j;
-            }
-            if( abscoef > maxcoef )
-               maxcoef = abscoef;
-         }
-
-         if( maxcoef < mincoef )
-         {
-            /* if all coefficients are zero, then mincoef and maxcoef are still at their initial values
-             * thus, skip cut generation if its boring
-             */
-            assert(maxcoef == 0.0);  /*lint !e777 */
-            assert(mincoef == SCIPinfinity(scip));  /*lint !e777 */
-
-            if( !SCIPisFeasPositive(scip, lhs) && !SCIPisFeasNegative(scip, rhs) )
-            {
-               SCIPdebugMsg(scip, "skip cut for constraint <%s> since all coefficients are zero and it's always satisfied\n", SCIPconsGetName(cons));
-               success = FALSE;
-            }
-            else
-            {
-               /* cut will cutoff node */
-            }
-
-            break;
-         }
-
-         if( maxcoef / mincoef > conshdlrdata->cutmaxrange  )
-         {
-            SCIPdebugMsg(scip, "cut coefficients for constraint <%s> have very large range: mincoef = %g maxcoef = %g\n", SCIPconsGetName(cons), mincoef, maxcoef);
-            if( mincoefidx >= 0 )
-            {
-               var = consdata->quadvarterms[mincoefidx].var;
-               /* try to eliminate coefficient with minimal absolute value by weakening cut and try again
-                * since we use local bounds, we need to make the row local if they are different from their global counterpart
-                */
-               if( ((coef[mincoefidx] > 0.0 && !SCIPisInfinity(scip, rhs)) || (coef[mincoefidx] < 0.0 && !SCIPisInfinity(scip, -lhs))) &&
-                  !SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
-               {
-                  SCIPdebugMsg(scip, "eliminate coefficient %g for <%s> [%g, %g]\n", coef[mincoefidx], SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-                  constant += coef[mincoefidx] * SCIPvarGetLbLocal(var);
-                  coef[mincoefidx] = 0.0;
-                  islocal |= SCIPisGT(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var));
-                  continue;
-               }
-               else if( ((coef[mincoefidx] < 0.0 && !SCIPisInfinity(scip, rhs)) || (coef[mincoefidx] > 0.0 && !SCIPisInfinity(scip, -lhs))) &&
-                  !SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
-               {
-                  SCIPdebugMsg(scip, "eliminate coefficient %g for <%s> [%g, %g]\n", coef[mincoefidx], SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-                  constant += coef[mincoefidx] * SCIPvarGetUbLocal(var);
-                  coef[mincoefidx] = 0.0;
-                  islocal |= SCIPisLT(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var));
-                  continue;
-               }
-            }
-
-            SCIPdebugMsg(scip, "skip cut\n");
-            success = FALSE;
-         }
-         break;
-      }
-      while( TRUE );  /*lint !e506 */
-
-      if( !SCIPisInfinity(scip, -lhs) )
-      {
-         lhs -= constant;
-         viol = lhs - refactivity;
-      }
-      if( !SCIPisInfinity(scip,  rhs) )
-      {
-         rhs -= constant;
-         viol = refactivity - rhs;
-      }
-   }
-
-   if( success && SCIPisInfinity(scip, REALABS(lhs)) && SCIPisInfinity(scip, REALABS(rhs)) )
-   {
-      SCIPdebugMsg(scip, "skip cut for constraint <%s> because both sides are not finite: lhs = %g, rhs = %g\n", SCIPconsGetName(cons), lhs, rhs);
-      success = FALSE;
-   }
-
-   /* check if reference point violates cut sufficiently */
-   if( success )
-   {
-      rowefficacy = viol;
-      switch( conshdlrdata->scaling )
-      {
-      case 'o' :
-         break;
-
-      case 'g' :
-         /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0 this avoid finding cuts
-          * efficient which are only very slightly violated CPLEX does not seem to scale row coefficients up too also we
-          * use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium scaling) */
-         rowefficacy /= MAX(1.0, maxcoef);
-         break;
-
-      case 's' :
-      {
-         SCIP_Real abslhs = REALABS(lhs);
-
-         if( !SCIPisInfinity(scip, abslhs) )
-            rowefficacy /= MAX(1.0, abslhs);
-         else
-         {
-            SCIP_Real absrhs = REALABS(rhs);
-
-            rowefficacy /= MAX(1.0, absrhs);
-         }
-
-         break;
-      }
-
-      default:
-         SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
-         SCIPABORT();
-         return SCIP_INVALIDDATA;  /*lint !e527*/
-      }
-   }
-#else
-   if( success )
-   {
-      SCIP_Real cutrange;
+      SCIP_Real coefrange;
 
       /* merge terms */
       precutCleanup(scip, precut);
 
       /* improve coefficients */
-      SCIP_CALL( precutBeautify(scip, precut, conshdlrdata->cutmaxrange, &cutrange) );
-      success = cutrange <= conshdlrdata->cutmaxrange;
+      SCIP_CALL( precutBeautify(scip, precut, conshdlrdata->cutmaxrange, &coefrange) );
+      success = coefrange <= conshdlrdata->cutmaxrange;
    }
 
-   /* check whether side is infinite */
+   /* check that side is finite */
    success &= !SCIPisInfinity(scip, REALABS(precut->side));
 
    /* check whether maximal coef is finite, if any */
    success &= (precut->nvars == 0) || !SCIPisInfinity(scip, REALABS(precut->coefs[0]));
 
+   /* check if reference point violates cut sufficiently */
    if( success )
    {
-      assert(conshdlrdata->scaling == 'o');
-      viol = precutGetViolation(scip, precut, sol);
+      viol = precutGetViolation(scip, precut, sol, conshdlrdata->scaling);
       rowefficacy = viol;
-   }
-#endif
 
-   if( success && !SCIPisInfinity(scip, -minefficacy) && rowefficacy < minefficacy ) /*lint !e644*/
-   {
-      SCIPdebugMsg(scip, "skip cut for constraint <%s> because efficacy %g too low (< %g)\n", SCIPconsGetName(cons), rowefficacy, minefficacy);
-      success = FALSE;
+      if( !SCIPisInfinity(scip, -minefficacy) && rowefficacy < minefficacy ) /*lint !e644*/
+      {
+         SCIPdebugMsg(scip, "skip cut for constraint <%s> because efficacy %g too low (< %g)\n", SCIPconsGetName(cons), rowefficacy, minefficacy);
+         success = FALSE;
+      }
    }
 
    /* generate row */
