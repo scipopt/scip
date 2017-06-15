@@ -2115,6 +2115,19 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* update type for MWCSP (might be RMWCSP now) */
    mw = (graph->stp_type == STP_MWCSP);
 
+
+   printf("out1 %f \n", presolinfo.fixed);
+
+   printf("out2 %f \n", offset);
+
+   FILE *fptr;
+   fptr=fopen("bounds.txt","a");
+   fprintf(fptr, "presol %f \n", presolinfo.fixed);
+   fclose(fptr);
+
+
+
+   return SCIP_ERROR;
 #if 0 //heur info output (bad hack)
    SCIP_Real lb;
    FILE *fptr;

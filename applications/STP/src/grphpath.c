@@ -1167,7 +1167,7 @@ void graph_path_st_pcmw(
    }
 }
 
-#if 0
+#if 1
 
 /** Reduce given solution
  *  Note that this function overwrites g->mark.
@@ -1182,12 +1182,6 @@ void graph_path_st_pcmw_reduce(
    STP_Bool*             connected           /**< array to mark whether a vertex is part of computed Steiner tree */
    )
 {
-   int* const heap = g->path_heap;
-   int* const state = g->path_state;
-   int k;
-
-   const int nnodes = g->knots;
-
    assert(tmpnodeweight != NULL);
    assert(result   != NULL);
    assert(g      != NULL);
@@ -1209,7 +1203,7 @@ void graph_path_st_pcmw_reduce(
 
          assert(connected[head]);
 
-         if( SCIPisGT(scip, cost[e], tmpnodeweight[head]) )
+         if( SCIPisGE(scip, cost[e], tmpnodeweight[head]) )
          {
             connected[head] = FALSE;
             result[e] = UNKNOWN;

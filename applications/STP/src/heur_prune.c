@@ -52,7 +52,7 @@
 #define HEUR_USESSUBSCIP      FALSE            /**< does the heuristic use a secondary SCIP instance?                  */
 
 #define DEFAULT_PRUNE_MAXFRQ      FALSE       /**< executions of the heuristic at maximum frequency?                  */
-#define DEFAULT_PRUNE_TMRUNS     1000          /**< number of runs in TM heuristic when called by prune heuristic      */
+#define DEFAULT_PRUNE_TMRUNS     100          /**< number of runs in TM heuristic when called by prune heuristic      */
 #define PRUNE_MINREDELIMS        2            /**< maximum number of eliminations for reduction package when called by prune heuristic */
 #define PRUNE_MAXREDROUNDS       6            /**< maximum number of reduction rounds in prune heuristic */
 #define BREAKONERROR FALSE

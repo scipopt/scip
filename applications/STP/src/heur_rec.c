@@ -1458,7 +1458,6 @@ SCIP_RETCODE SCIPheurExclusion(
    // todo
    assert(graph->stp_type == STP_MWCSP);
 
-
    /* killed solution edge? */
    for( int e = 0; e < nedges; e++ )
       if( result[e] == CONNECT && graph->oeat[e] == EAT_FREE )

@@ -995,8 +995,10 @@ SCIP_RETCODE redLoopMw(
 
       if( (da || (advanced && extensive)) )
       {
-
-         //printf("OFFSET %f \n \n", *fixed);
+         FILE *fptr;
+              fptr=fopen("bounds.txt","a");
+              fprintf(fptr, "OFFSET %f \n", *fixed);
+              fclose(fptr);
 
          SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, FALSE, FALSE, FALSE) );
 
@@ -1097,6 +1099,11 @@ int tuneme;
 #if 0
          SCIP_CALL( cnsAdvReduction(scip, g, nodearrint2, &cnsadvelims) );
 #endif
+         FILE *fptr;
+               fptr=fopen("bounds.txt","a");
+               fprintf(fptr, "OFFSET %f \n", *fixed);
+               fclose(fptr);
+
          SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, (g->terms > MW_TERM_BOUND), FALSE, FALSE) );
 
          if( cnsadvelims + daelims >= redbound || (extensive && (cnsadvelims + daelims > 0))  )
@@ -1117,6 +1124,12 @@ int tuneme;
 
    if( tryrmw )
    {
+
+      FILE *fptr;
+            fptr=fopen("bounds.txt","a");
+            fprintf(fptr, "OFFSET %f \n", *fixed);
+            fclose(fptr);
+
       SCIP_CALL( da_reducePcMw(scip, g, vnoi, gnodearr, edgearrreal, edgearrreal2, nodearrreal, vbase, nodearrint, edgearrint, state, nodearrchar, &daelims, TRUE, FALSE, FALSE, TRUE) );
 
       npvelims = 0;

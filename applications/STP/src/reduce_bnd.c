@@ -43,9 +43,9 @@
 #include "heur_slackprune.h"
 
 #define DEFAULT_HEURRUNS 1000                 /**< number of runs of constructive heuristic */
-#define DEFAULT_DARUNS     5                 /**< number of runs for dual ascent heuristic */
-#define DEFAULT_NMAXROOTS  11                /**< max number of roots to use for new graph in dual ascent heuristic */
-#define PERTUBATION_RATIO   0.05           /**< pertubation ratio for dual-ascent primal bound computation */
+#define DEFAULT_DARUNS     5                  /**< number of runs for dual ascent heuristic */
+#define DEFAULT_NMAXROOTS  11                 /**< max number of roots to use for new graph in dual ascent heuristic */
+#define PERTUBATION_RATIO   0.05              /**< pertubation ratio for dual-ascent primal bound computation */
 
 /** pertubate edge costs for PCMW dual-ascent */
 static
@@ -76,6 +76,7 @@ void pertubateEdgeCosts(
    for( k = 0; k < nnodes; k++ )
    {
       assert(Is_gterm(graph->term[k]) == Is_gterm(transgraph->term[k]));
+
       if( randomize > 8 )
          pratio = ((SCIP_Real)(rand() % 10)) / (50.0) - 5.0 / 50.0;
       if( randomize > 6 )
@@ -86,6 +87,7 @@ void pertubateEdgeCosts(
          pratio = ((SCIP_Real)(rand() % 10)) / 100.0;
       else
          pratio = PERTUBATION_RATIO + ((SCIP_Real)(rand() % 10)) / 200.0;
+
 
       if( !Is_gterm(graph->term[k]) )
       {
@@ -210,6 +212,7 @@ SCIP_RETCODE computeDaSolPcMw(
 
     }
 
+#if 0
     int dummy;
     SCIP_HEURDATA* tmheurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
 
@@ -234,10 +237,8 @@ SCIP_RETCODE computeDaSolPcMw(
     }
 
     printf("afterXXXExclusion upperbound %f \n", *upperbound);
+#endif
 
-
-
-    //SCIP_CALL( SCIPheurImproveSteinerTree(scip, graph, graph->cost, graph->cost, result1) );
 
     return SCIP_OKAY;
 }
@@ -1884,9 +1885,6 @@ SCIP_RETCODE da_reducePcMw(
    else
       upperbound = FARAWAY;
 
-   printf("FIRST UB %f \n", upperbound);
-
-
    /* 2. step: compute lower bound and reduced costs */
 
 
@@ -1915,6 +1913,12 @@ SCIP_RETCODE da_reducePcMw(
    SCIP_CALL( computeDaSolPcMw(scip, graph, vnoi, cost, pathdist, &upperbound, result, transresult, vbase, pathedge, root, nodearrchar, &apsol) );
 
    lpobjval += offset;
+
+   FILE *fptr;
+         fptr=fopen("bounds.txt","a");
+         fprintf(fptr, "lb %f ub %f \n", lpobjval, upperbound);
+         fclose(fptr);
+
 
    /* the required reduced path cost to be surpassed */
    minpathcost = upperbound - lpobjval;
@@ -1975,15 +1979,17 @@ SCIP_RETCODE da_reducePcMw(
          assert(graph_valid(transgraph));
       }
 
-      printf("ub before %f \n", upperbound);
-      printf("minpathcost bef %f \n", upperbound - lpobjval);
-
       /* try to improve both dual and primal bound */
       SCIP_CALL( computePertubedSol(scip, graph, transgraph, vnoi, gnodearr, cost, costrev, pathdist, state, vbase, pathedge, result, result2,
             transresult, marked, nodearrchar, &upperbound, &lpobjval, &minpathcost, &apsol, offset, extnedges, 0) );
 
       printf("upperbound final %f \n", upperbound);
       printf("minpathcost final %f \n", upperbound - lpobjval);
+
+      fptr=fopen("bounds.txt","a");
+               fprintf(fptr, "lb %f ub %f \n", lpobjval, upperbound);
+               fclose(fptr);
+
 
       computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
 
@@ -2011,6 +2017,10 @@ SCIP_RETCODE da_reducePcMw(
 
          printf("FFFupperbound final %f \n", upperbound);
          printf("FFFminpathcost final %f \n", upperbound - lpobjval);
+
+         fptr=fopen("bounds.txt","a");
+                  fprintf(fptr, "lb %f ub %f \n", lpobjval, upperbound);
+                  fclose(fptr);
 
          computeTransVoronoi(scip, transgraph, vnoi, cost, costrev, pathdist, vbase, pathedge);
 
@@ -2118,8 +2128,6 @@ SCIP_RETCODE da_reducePcMw(
 
       transgraph->stp_type = STP_SAP;
 
-      printf("in with ub %f \n", upperbound);
-
       BMScopyMemoryArray(costrev, cost, extnedges);
 
 
@@ -2216,8 +2224,6 @@ SCIP_RETCODE da_reducePcMw(
          }
       }
 
-      printf("dummyreal %f %f \n", dummyreal, lpobjval);
-
       if( dummyreal > lpobjval )
          lpobjval = dummyreal;
       else
@@ -2227,12 +2233,8 @@ SCIP_RETCODE da_reducePcMw(
       for( k = 0; k < transnnodes; k++ )
          transgraph->mark[k] = (transgraph->grad[k] > 0);
 
-      printf("XXXXXOLDminpathcost %f \n \n", upperbound - lpobjval);
-
       /* the required reduced path cost to be surpassed */
       minpathcost = upperbound - lpobjval;
-
-      printf("XXXXXXnew minpathcost %f \n \n", minpathcost);
 
       for( e = 0; e < transnedges; e++ )
       {

@@ -984,11 +984,11 @@ SCIP_RETCODE computeSteinerTreeDijkPcMwFull(
    STP_Bool*             connected           /**< array marking all solution vertices*/
    )
 {
-   SCIP_Real* tmpnodeweight;
-
    graph_path_st_pcmw_full(scip, g, cost, dijkdist, dijkedge, start, connected);
 
 #if 0
+   SCIP_Real* tmpnodeweight;
+
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpnodeweight, g->knots) );
 
    SCIP_CALL(prune(scip, g, cost, result, connected));
@@ -998,9 +998,6 @@ SCIP_RETCODE computeSteinerTreeDijkPcMwFull(
    graph_path_st_pcmw_reduce(scip, g, cost, tmpnodeweight, result, start, connected);
 
    SCIPfreeBufferArray(scip, &tmpnodeweight);
-
-   for( int e = 0; e < g->edges; e++ )
-      result[e] = UNKNOWN;
 #endif
 
    SCIP_CALL(prune(scip, g, cost, result, connected));
@@ -2718,7 +2715,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                   for( e = 0; e < nnodes; e++)
                   {
                      if( Is_term(graph->term[e]) )
-                        nodepriority[e] = (double) graph->grad[e];
+                        nodepriority[e] = (SCIP_Real) graph->grad[e];
                      else
                         nodepriority[e] = SCIPrandomGetReal(heurdata->randnumgen, 0.0, 1.0);
                   }
@@ -2752,9 +2749,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
          {
             SCIP_Bool partrand = FALSE;
             SCIP_Bool totalrand = FALSE;
-            SCIP_CALL( SCIPallocBufferArray(scip, &nodepriority, nnodes) );
-             for( e = 0; e < nnodes; e++)
-                nodepriority[e] = 0.0;
+
             if( (heurdata->nlpiterations == SCIPgetNLPIterations(scip) && SCIPrandomGetInt(heurdata->randnumgen, 0, 3) != 1)
                || SCIPrandomGetInt(heurdata->randnumgen, 0, 10) == 5 )
                partrand = TRUE;
@@ -2771,10 +2766,19 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                partrand = FALSE;
             }
 
-            for( e = 0; e < nedges; e++)
+            SCIP_CALL( SCIPallocBufferArray(scip, &nodepriority, nnodes) );
+
+
+            if( graph->stp_type != STP_MWCSP && graph->stp_type != STP_RMWCSP )
             {
-               nodepriority[graph->head[e]] += xval[e];
-               nodepriority[graph->tail[e]] += xval[e];
+               for( e = 0; e < nnodes; e++)
+                  nodepriority[e] = 0.0;
+
+               for( e = 0; e < nedges; e++)
+               {
+                  nodepriority[graph->head[e]] += xval[e];
+                  nodepriority[graph->tail[e]] += xval[e];
+               }
             }
 
             if( graph->stp_type == STP_DHCSTP )
@@ -2812,46 +2816,75 @@ SCIP_DECL_HEUREXEC(heurExecTM)
             else
             {
                /* swap costs; set a high cost if the variable is fixed to 0 */
-               for( e = 0; e < nedges; e += 2)
+               if( graph->stp_type == STP_MWCSP || graph->stp_type == STP_RMWCSP )
                {
-                  randval = SCIPrandomGetReal(heurdata->randnumgen, randlower, randupper);
+                  for( e = 0; e < nnodes; e++)
+                     nodepriority[e] = 0.0;
+                  for( e = 0; e < nedges; e++)
+                      nodepriority[graph->head[e]] += xval[e];
 
-                  if( SCIPvarGetUbLocal(vars[e + 1]) < 0.5 )
+                  for( e = 0; e < nedges; e++ )
                   {
-                     costrev[e] = BLOCKED;
-                     cost[e + 1] = BLOCKED;
-                  }
-                  else
-                  {
-                     if( totalrand )
-                        costrev[e] = graph->cost[e + 1] * randval;
+                     if( SCIPisGE(scip, graph->cost[e], FARAWAY) )
+                        cost[e] = graph->cost[e];
+
+                     assert(SCIPisLE(scip, nodepriority[graph->head[e]], 1.0));
+
+                     if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
+                        cost[e] = BLOCKED;
                      else
-                        costrev[e] = ((1.0 - xval[e + 1]) * graph->cost[e + 1]);
-
-                     if( partrand )
-                        costrev[e] = costrev[e] * randval;
-
-                     cost[e + 1] = costrev[e];
+                        cost[e] = graph->cost[e] * (1.0 - nodepriority[graph->head[e]]);
                   }
 
-                  if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
+                  for( e = 0; e < nedges; e++ )
                   {
-                     costrev[e + 1] = BLOCKED;
-                     cost[e] = BLOCKED;
+                     nodepriority[graph->tail[e]] += xval[e];
+                     costrev[flipedge(e)] = cost[e];
                   }
-                  else
+               }
+               else
+               {
+                  for( e = 0; e < nedges; e += 2)
                   {
-                     if( totalrand )
-                        costrev[e + 1] = graph->cost[e] * randval;
+                     randval = SCIPrandomGetReal(heurdata->randnumgen, randlower, randupper);
+
+                     if( SCIPvarGetUbLocal(vars[e + 1]) < 0.5 )
+                     {
+                        costrev[e] = BLOCKED;
+                        cost[e + 1] = BLOCKED;
+                     }
                      else
-                        costrev[e + 1] = ((1.0 - xval[e]) * graph->cost[e]);
+                     {
+                        if( totalrand )
+                           costrev[e] = graph->cost[e + 1] * randval;
+                        else
+                           costrev[e] = ((1.0 - xval[e + 1]) * graph->cost[e + 1]);
 
-                     if( partrand )
-                        costrev[e + 1] = costrev[e + 1]  * randval;
-                     cost[e] = costrev[e + 1];
+                        if( partrand )
+                           costrev[e] = costrev[e] * randval;
+
+                        cost[e + 1] = costrev[e];
+                     }
+
+                     if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
+                     {
+                        costrev[e + 1] = BLOCKED;
+                        cost[e] = BLOCKED;
+                     }
+                     else
+                     {
+                        if( totalrand )
+                           costrev[e + 1] = graph->cost[e] * randval;
+                        else
+                           costrev[e + 1] = ((1.0 - xval[e]) * graph->cost[e]);
+
+                        if( partrand )
+                           costrev[e + 1] = costrev[e + 1]  * randval;
+                        cost[e] = costrev[e + 1];
+                     }
+                     assert(SCIPisGE(scip, cost[e], 0.0));
+                     assert(SCIPisGE(scip, costrev[e], 0.0));
                   }
-                  assert(SCIPisGE(scip, cost[e], 0.0));
-                  assert(SCIPisGE(scip, costrev[e], 0.0));
                }
 #if 0
                if( graph->stp_type == STP_SPG )

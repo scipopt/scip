@@ -230,6 +230,7 @@ extern void   graph_path_st(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, int*, i
 extern void   graph_path_st_rmw(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, const STP_Bool*, STP_Bool*);
 extern void   graph_path_st_pcmw(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, const STP_Bool*, STP_Bool*);
 extern void   graph_path_st_pcmw_full(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
+extern void   graph_path_st_pcmw_reduce(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
 extern void   graph_path_st_pcmw_extend(SCIP*, const GRAPH*, const SCIP_Real*, PATH*, STP_Bool*, SCIP_Bool*);
 extern void   graph_path_st_rpc(SCIP*, const GRAPH*, const SCIP_Real*, SCIP_Real*, int*, int, STP_Bool*);
 extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, STP_Bool*, int*, PATH*);
