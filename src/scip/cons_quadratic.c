@@ -5555,6 +5555,127 @@ void precutCleanup(
    precut->nvars = i+1;
 }
 
+static
+SCIP_RETCODE precutBeautify(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRECUT*          precut,             /**< precut to be beautified */
+   SCIP_Real             cutmaxrange,        /**< maximal allowed cut range */
+   SCIP_Real*            cutrange            /**< buffer to store cutrange of beautified cut, or NULL if not of interest */
+)
+{
+   SCIP_Real coef;
+   SCIP_Real roundcoef;
+   SCIP_Real mincoef;
+   SCIP_Real maxcoef;
+   SCIP_Real* abscoefs;
+   SCIP_VAR* var;
+   int i;
+
+   /* initialize cutrange in case we terminate early, usually when all cut terms have been eliminated */
+   if( cutrange != NULL )
+      *cutrange = 1.0;
+
+   if( precut->nvars == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &abscoefs, precut->nvars) );
+
+   for( i = 0; i < precut->nvars; ++i )
+   {
+      /* coefficients smaller than epsilon are rounded to 0.0 when added to row
+       * further, coefficients very close to integral values are rounded to integers when added to LP
+       * both cases can be problematic if variable value is very large (bad numerics)
+       * thus, we anticipate by rounding coef here, but also modify constant so that cut is still valid (if possible)
+       * i.e., estimate coef[i]*x by round(coef[i])*x + (coef[i]-round(coef[i])) * bound(x)
+       * if required bound of x is not finite, then do nothing
+       */
+      coef = precut->coefs[i];
+      roundcoef = SCIPround(scip, coef);
+      if( coef != roundcoef && SCIPisEQ(scip, coef, roundcoef) ) /*lint !e777*/
+      {
+         SCIP_Real xbnd;
+
+         var = precut->vars[i];
+         if( precut->sidetype == SCIP_SIDETYPE_RIGHT )
+            if( precut->local )
+               xbnd = coef > roundcoef ? SCIPvarGetLbLocal(var)  : SCIPvarGetUbLocal(var);
+            else
+               xbnd = coef > roundcoef ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var);
+         else
+            if( precut->local )
+               xbnd = coef > roundcoef ? SCIPvarGetUbLocal(var)  : SCIPvarGetLbLocal(var);
+            else
+               xbnd = coef > roundcoef ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var);
+
+         if( !SCIPisInfinity(scip, REALABS(xbnd)) )
+         {
+            SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.20g, round coefficient to %g and add constant %g\n",
+               SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef, roundcoef, (coef-roundcoef) * xbnd);
+            precutAddConstant(precut, (coef-roundcoef) * xbnd);  /* TODO do this in rounding-safe mode */
+            precut->coefs[i] = coef = roundcoef;
+         }
+      }
+
+      abscoefs[i] = REALABS(coef);
+   }
+
+   /* sort cut terms by absolute value of coefficients, from largest to smallest */
+   SCIPsortDownRealRealPtr(abscoefs, precut->coefs, (void**)precut->vars, precut->nvars);
+
+   SCIPfreeBufferArray(scip, &abscoefs);
+
+   /* if maximal coefficient is zero, then all coefficients are zero */
+   if( precut->coefs[0] == 0.0 )
+   {
+      precut->nvars = 0;
+      return SCIP_OKAY;
+   }
+
+   maxcoef = precut->coefs[0];
+   mincoef = precut->coefs[precut->nvars-1];
+   while( REALABS(maxcoef / mincoef) > cutmaxrange  )
+   {
+      SCIPdebugMsg(scip, "cut coefficients have very large range: mincoef = %g maxcoef = %g\n", mincoef, maxcoef);
+
+      /* try to eliminate coefficient with minimal absolute value by weakening cut and try again
+       * since we use local bounds, we need to make the row local if they are different from their global counterpart
+       */
+      var = precut->vars[precut->nvars-1];
+      if( ((mincoef > 0.0 && precut->sidetype == SCIP_SIDETYPE_RIGHT) || (mincoef < 0.0 && precut->sidetype == SCIP_SIDETYPE_LEFT)) &&
+         !SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+      {
+         SCIPdebugMsg(scip, "eliminate coefficient %g for <%s> [%g, %g]\n", mincoef, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         precutAddConstant(precut, mincoef * SCIPvarGetLbLocal(var));
+         --precut->nvars; /* forget last term */
+         precut->local |= SCIPisGT(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var));
+      }
+      else if( ((mincoef < 0.0 && precut->sidetype == SCIP_SIDETYPE_RIGHT) || (mincoef > 0.0 && precut->sidetype == SCIP_SIDETYPE_LEFT)) &&
+         !SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+      {
+         SCIPdebugMsg(scip, "eliminate coefficient %g for <%s> [%g, %g]\n", mincoef, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         precutAddConstant(precut, mincoef * SCIPvarGetUbLocal(var));
+         --precut->nvars; /* forget last term */
+         precut->local |= SCIPisLT(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var));
+      }
+      else
+      {
+         /* cannot eliminate coefficient */
+         break;
+      }
+
+      /* if no variables left, then stop */
+      if( precut->nvars == 0 )
+         return SCIP_OKAY;
+
+      /* update mincoef */
+      mincoef = REALABS(precut->coefs[precut->nvars-1]);
+   }
+
+   if( cutrange != NULL )
+      *cutrange = REALABS(maxcoef / mincoef);
+
+   return SCIP_OKAY;
+}
 
 static
 SCIP_RETCODE precutGetRow(
@@ -7299,8 +7420,24 @@ SCIP_RETCODE generateCut(
 #else
    if( success )
    {
+      SCIP_Real cutrange;
+
+      /* merge terms */
       precutCleanup(scip, precut);
 
+      /* improve coefficients */
+      SCIP_CALL( precutBeautify(scip, precut, conshdlrdata->cutmaxrange, &cutrange) );
+      success = cutrange <= conshdlrdata->cutmaxrange;
+   }
+
+   /* check whether side is infinite */
+   success &= !SCIPisInfinity(scip, REALABS(precut->side));
+
+   /* check whether maximal coef is finite, if any */
+   success &= (precut->nvars == 0) || !SCIPisInfinity(scip, REALABS(precut->coefs[0]));
+
+   if( success )
+   {
       assert(conshdlrdata->scaling == 'o');
       viol = precutGetViolation(scip, precut, sol);
       rowefficacy = viol;
