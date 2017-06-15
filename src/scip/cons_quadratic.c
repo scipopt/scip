@@ -5353,6 +5353,31 @@ void precutFree(
    SCIPfreeBlockMemory(scip, precut);
 }
 
+static
+void precutPrint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRECUT*          precut,             /**< precut to be printed */
+   FILE*                 file                /**< file to print to, or NULL */
+)
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(precut != NULL);
+
+   for( i = 0; i < precut->nvars; ++i )
+   {
+      SCIPinfoMessage(scip, file, "%+g*<%s> ", precut->coefs[i], SCIPvarGetName(precut->vars[i]));
+   }
+
+   if( precut->constant != 0.0 )
+   {
+      SCIPinfoMessage(scip, file, "%+g ", precut->constant);
+   }
+
+   SCIPinfoMessage(scip, file, precut->sidetype == SCIP_SIDETYPE_LEFT ? ">= %g\n" : "<= %g\n", precut->side);
+}
+
 /** adds a term coef*var to a precut */
 static
 SCIP_RETCODE precutAddCoef(
@@ -5453,7 +5478,7 @@ SCIP_Real precutGetViolation(
 
    activity -= precut->side;
 
-   if( precut->sidetype == SCIP_SIDETYPE_LEFT )  /* cut is activity <= 0.0 -> violation is activity, if positive */
+   if( precut->sidetype == SCIP_SIDETYPE_RIGHT )  /* cut is activity <= 0.0 -> violation is activity, if positive */
       return MAX(activity, 0.0);
 
    /* cut is activity >= 0.0 -> violation is -activity, if positive */
@@ -5488,32 +5513,6 @@ SCIP_RETCODE precutGetRow(
 
    return SCIP_OKAY;
 }
-
-static
-void precutPrint(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PRECUT*          precut,             /**< precut to be printed */
-   FILE*                 file                /**< file to print to, or NULL */
-)
-{
-   int i;
-
-   assert(scip != NULL);
-   assert(precut != NULL);
-
-   for( i = 0; i < precut->nvars; ++i )
-   {
-      SCIPinfoMessage(scip, file, "%+g*<%s> ", precut->coefs[i], SCIPvarGetName(precut->vars[i]));
-   }
-
-   if( precut->constant != 0.0 )
-   {
-      SCIPinfoMessage(scip, file, "%+g ", precut->constant);
-   }
-
-   SCIPinfoMessage(scip, file, precut->sidetype == SCIP_SIDETYPE_LEFT ? ">= %g\n" : "<= %g\n", precut->side);
-}
-
 
 /** tries to compute cut for multleft * <coefleft, x'> * multright <= rhs / (multright * <coefright, x'>) where x'=(x,1) */
 static
