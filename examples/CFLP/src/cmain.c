@@ -58,7 +58,7 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPincludeReaderCflp(scip) );
 
    /* include the Benders' decomposition constraint handler */
-   SCIP_CALL( SCIPincludeConshdlrBenders(scip, FALSE) );
+   SCIP_CALL( SCIPincludeConshdlrBenders(scip, TRUE) );
 
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
