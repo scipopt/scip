@@ -1,6 +1,6 @@
 ARFLAGS		=	crs
 ifeq ($(IPOPT),true)
-LDFLAGS		+=	-Wl,--no-as-needed
+LDFLAGS                +=      -Wl,--no-as-needed
 endif
 ZLIB_FLAGS	=
 ZLIB_LDFLAGS 	=	-lz

@@ -97,7 +97,12 @@ SCIP_Bool SCIPsolveIsStopped(
    {
       stat->status = SCIP_STATUS_USERINTERRUPT;
       stat->userinterrupt = FALSE;
-      SCIPresetInterrupted();
+
+      /* only reset the interrupted counter if this is the main SCIP catching CTRL-C */
+      if( set->misc_catchctrlc )
+      {
+         SCIPresetInterrupted();
+      }
    }
    /* only measure the clock if a time limit is set */
    else if( set->istimelimitfinite )
@@ -4361,8 +4366,8 @@ SCIP_RETCODE solveNode(
             {
                SCIP_VAR* var = stat->lastbranchvar;
 
-               if( var != NULL && !stat->branchedunbdvar && (SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var))
-                     || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var))) )
+               if( var != NULL && !stat->branchedunbdvar && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
+                     && (SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)) || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var))) )
                {
                   SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
                      "Starting spatial branch-and-bound on unbounded variable <%s> ([%g,%g]) - cannot guarantee finite termination.\n",
@@ -5205,7 +5210,7 @@ SCIP_RETCODE SCIPsolveCIP(
       }
       else if( primal->nlimsolsfound == 0 )
       {
-         assert(primal->nsols == 0 || SCIPsetIsFeasGT(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
+         assert(primal->nsols == 0 || SCIPsetIsGT(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
                SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(transprob, set))));
 
          /* switch status to INFEASIBLE */

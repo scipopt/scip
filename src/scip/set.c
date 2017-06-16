@@ -239,6 +239,7 @@
                                                  *   for LP resolve (-1.0: unlimited) */
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
 #define SCIP_DEFAULT_LP_SOLUTIONPOLISHING     0 /**< LP solution polishing method (0: disabled, 1: only root, 2: always) */
+#define SCIP_DEFAULT_LP_REFACTORINTERVAL      0 /**< LP refactorization interval (0: automatic) */
 
 /* NLP */
 
@@ -278,6 +279,7 @@
 #define SCIP_DEFAULT_MISC_ALLOWDUALREDS    TRUE /**< should dual reductions in propagation methods and presolver be allowed? */
 #define SCIP_DEFAULT_MISC_ALLOWOBJPROP     TRUE /**< should propagation to the current objective be allowed in propagation methods? */
 #define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
+#define SCIP_DEFAULT_MISC_DEBUGSOLUTION     "-" /**< path to a debug solution */
 #define SCIP_DEFAULT_MISC_ALWAYSGETDUALS  FALSE /**< should the dual solution always be collected */
 
 /* Randomization */
@@ -1113,6 +1115,9 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
    (*set)->sepa_primfeastol = SCIP_INVALID;
+#ifdef WITH_DEBUG_SOLUTION
+   (*set)->misc_debugsol = NULL;
+#endif
 
    /* the default time limit is infinite */
    (*set)->istimelimitfinite = FALSE;
@@ -1703,6 +1708,12 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->lp_solutionpolishing, TRUE, SCIP_DEFAULT_LP_SOLUTIONPOLISHING, 0, 2,
          NULL, NULL) );
 
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "lp/refactorinterval",
+         "LP refactorization interval (0: auto)",
+         &(*set)->lp_refactorinterval, TRUE, SCIP_DEFAULT_LP_REFACTORINTERVAL, 0, INT_MAX,
+         NULL, NULL) );
+
    /* NLP parameters */
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
          "nlp/solver",
@@ -1850,6 +1861,13 @@ SCIP_RETCODE SCIPsetCreate(
          "objective value for reference purposes",
          &(*set)->misc_referencevalue, FALSE, SCIP_DEFAULT_MISC_REFERENCEVALUE, SCIP_REAL_MIN, SCIP_REAL_MAX,
          NULL, NULL) );
+#ifdef WITH_DEBUG_SOLUTION
+   SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
+         "misc/debugsol",
+         "path to a debug solution",
+         &(*set)->misc_debugsol, FALSE, SCIP_DEFAULT_MISC_DEBUGSOLUTION,
+         NULL, NULL) );
+#endif
 
    /* randomization parameters */
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -2562,7 +2580,7 @@ SCIP_RETCODE SCIPsetFree(
    /* free primal heuristics */
    for( i = 0; i < (*set)->nheurs; ++i )
    {
-      SCIP_CALL( SCIPheurFree(&(*set)->heurs[i], *set) );
+      SCIP_CALL( SCIPheurFree(&(*set)->heurs[i], *set, blkmem) );
    }
    BMSfreeMemoryArrayNull(&(*set)->heurs);
 

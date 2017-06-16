@@ -19,6 +19,15 @@ LINTOL=1e-04
 # absolut tolerance for checking integrality constraints 
 INTTOL=1e-04
 
+# we need to ensure that all libraries we load through the network are available.
+# therefore, we wait for one additional minute if the node runs for 1 minute or less.
+read -r -a runtime <<< `top -b -n 1 | head -n 1`
+
+if [ ${runtime[5]} == "min," ] && [ ${runtime[4]} -lt 2 ] ;
+then
+    sleep 60
+fi
+
 # check if tmp-path exists
 if test ! -d $CLIENTTMPDIR/${USER}-tmpdir
 then
@@ -33,8 +42,14 @@ TMPFILE=$SOLVERPATH/results/$BASENAME.tmp
 
 uname -a                            > $OUTFILE
 uname -a                            > $ERRFILE
+echo                                >> $OUTFILE
+top -b -n 1 | head -n 15            >> $OUTFILE
+echo                                >> $OUTFILE
 echo "hard time limit: $HARDTIMELIMIT">>$OUTFILE
 echo "hard mem limit: $HARDMEMLIMIT" >>$OUTFILE
+echo                                >> $OUTFILE
+echo "SLURM jobID: $SLURM_JOB_ID"   >> $OUTFILE
+echo                                >> $OUTFILE
 echo @01 $FILENAME ===========      >> $OUTFILE
 echo @01 $FILENAME ===========      >> $ERRFILE
 echo -----------------------------  >> $OUTFILE
@@ -44,8 +59,9 @@ echo -----------------------------  >> $OUTFILE
 date +"@03 %s"                      >> $OUTFILE
 
 #if we use a debugger command, we need to replace the errfile place holder by the actual err-file for logging
-EXECNAME=${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}
-bash -c "$EXECNAME                < $TMPFILE 2>>$ERRFILE"  | tee -a $OUTFILE
+#and if we run on the cluster we want to use srun with CPU binding which is defined by the check_cluster script
+EXECNAME=$SRUN${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}
+eval $EXECNAME                < $TMPFILE 2>>$ERRFILE  | tee -a $OUTFILE
 retcode=${PIPESTATUS[0]}
 if test $retcode != 0
 then

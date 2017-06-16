@@ -3825,7 +3825,7 @@ SCIP_DECL_SEPAINIT(sepaInitCGMIP)
    assert(sepadata != NULL);
 
    /* create and initialize random number generator */
-   SCIP_CALL( SCIPrandomCreate(&sepadata->randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &sepadata->randnumgen, DEFAULT_RANDSEED) );
 
    return SCIP_OKAY;
 }
@@ -3839,7 +3839,7 @@ SCIP_DECL_SEPAEXIT(sepaExitCGMIP)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   SCIPrandomFree(&sepadata->randnumgen);
+   SCIPfreeRandom(scip, &sepadata->randnumgen);
 
    return SCIP_OKAY;
 }

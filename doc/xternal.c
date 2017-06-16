@@ -115,6 +115,7 @@
  * @subsection CHG Changes between different versions of SCIP
  * - \ref CHANGELOG    "Change log"
  * - \ref RELEASENOTES "Release notes"
+ * - \ref CHG9         "Interface changes between version 3.2 and 4.0"
  * - \ref CHG8         "Interface changes between version 3.1 and 3.2"
  * - \ref CHG7         "Interface changes between version 3.0 and 3.1"
  * - \ref CHG6         "Interface changes between version 2.1 and 3.0"
@@ -127,7 +128,7 @@
  * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  4.0.0
+ * @version  4.0.0.2
  *
  * \image html scippy.png
  *
@@ -387,6 +388,7 @@
  *    <td>
  *       <ul>
  *          <li>Compile with <code>IPOPT=true</code> for better performance.</li>
+ *          <li>Compile with <code>WORHP=true</code> for better performance.</li>
  *          <li>Compile with <code>GAMS=true</code> to read gms-files.</li>
  *          <li>See <a href="FAQ\FILEEXT#minlptypes"> Which kind of MINLPs are supported by \SCIP? </a> in the FAQ.</li>
  *          <li>There is an interface for the modelling language AMPL, see \ref INTERFACES.</li>
@@ -639,6 +641,8 @@
  * - <code>READLINE=\<true|false\></code> Turns support via the readline library on (default) or off, respectively.
  *
  * - <code>IPOPT=\<true|false\></code> Enable or disable (default) IPOPT interface (needs IPOPT >= 3.11).
+ *
+ * - <code>WORHP=\<true|false\></code> Enable or disable (default) WORHP interface (needs WORHP >= 2.0).
  *
  * - <code>EXPRINT=\<cppad|none\></code> Use CppAD as expressions interpreter (default) or no expressions interpreter.
  *
@@ -5305,7 +5309,7 @@
  *
  * The reoptimization feature of SCIP can be used to solve a sequence of optimization problems \f$(P_{i})_{i \in I}\f$ with
  * \f[
- *    (P_i) \quad \min \{ c_i^T x \;|\; A^ix \geq b^i,\; x_{j} \in \{0,1\}^{n}\;\forall j \in \mathcal{I} \}
+ *    (P_i) \quad \min \{ c_i^T x \;|\; A^ix \geq b^i,\; x_{j} \in \mathbb{Z}\;\forall j \in \mathcal{I} \}
  * \f]
  * such that between two problems \f$P_i\f$ and \f$P_{i+1}\f$ the space of solutions gets restricted and/or the objective
  * fuction changes. To use reoptimization the user has to change the parameter <code>reoptimization/enable</code> to
@@ -5352,14 +5356,13 @@
  *    \endcode
  *    or by calling SCIPreadDiff().
  * -# The objective function can be changed within the code. Therefore, the transformed problem needs to be freed by
- *    calling SCIPfreeTransform(). Afterwards, the objective coefficient of each variable can be changed by calling
- *    SCIPchgVarObj().
+ *    calling SCIPfreeReoptSolve(). Afterwards, the new objective function can be installed by calling
+ *    SCIPchgReoptObjective().
  *
  * After changing the objective function the modified problem can be solved as usal.
  *
- * \note Currently, the reoptimization feature only supports pure binary and mixed binary programs. In case the original
- * problem containts integer and implicit integer variables, reoptimization will be automatically disabled if there are
- * still (implicit) integer variables after presolving the problem.
+ * \note Currently, the compression heuristics used between two successive reoptimization runs only support pure binary
+ * and mixed binary programs.
  *
  * For more information on reoptimization we refer to@par
  * Jakob Witzig@n
@@ -5676,9 +5679,8 @@
  * The optimal solution can now be written to a file:
  * \include debugexamples/example2_1.txt
  *
- * If we afterwards use
- * <code>\#define SCIP_DEBUG_SOLUTION "check/p0033.sol"</code> in debug.h, recompile and run SCIP,
- * it will output:
+ * If we afterwards recompile SCIP with the additional compiler flag <code>DEBUGSOL=true</code>,
+ * set the parameter <code>misc/debugsol = check/p0033.sol</code>, and run SCIP again it will output:
  * \include debugexamples/example2_2.txt
  * Further debug output would only appear, if the solution was cut off in the solving process.
  * Of course, this is not the case! Hopefully...otherwise, please send a bug report ;-)

@@ -167,8 +167,8 @@ SCIP_DECL_HEURINIT(heurInitLocks) /*lint --e{715}*/
    heurdata->usednodes = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
    return SCIP_OKAY;
 }
@@ -186,7 +186,7 @@ SCIP_DECL_HEUREXIT(heurExitLocks) /*lint --e{715}*/
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -675,13 +675,12 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
          {
             SCIPwarningMessage(scip, "Error while solving LP in LOCKS heuristic; LP solve terminated with code <%d>\n",
                retstat);
+            goto TERMINATE;
          }
       }
 #else
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
 #endif
-      assert(nvars == nbinvars ? (SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL || cutoff) : TRUE);
-
       lpstatus = SCIPgetLPSolstat(scip);
 
       SCIPdebugMsg(scip, " -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));

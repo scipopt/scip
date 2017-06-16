@@ -5082,7 +5082,7 @@ SCIP_RETCODE SCIPreoptFree(
    assert(blkmem != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&(*reopt)->randnumgen);
+   SCIPrandomFree(&(*reopt)->randnumgen, blkmem);
 
    /* free reopttree */
    SCIP_CALL( freeReoptTree((*reopt)->reopttree, set, blkmem) );

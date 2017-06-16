@@ -29,6 +29,7 @@
 #include "scip/event.h"
 #include "scip/var.h"
 #include "scip/implics.h"
+#include "scip/misc.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/debug.h"
@@ -1348,7 +1349,7 @@ int cliquesSearchClique(
    return -1;
 }
 
-#ifndef NDEBUG
+#ifdef SCIP_MORE_DEBUG
 /** checks whether clique appears in all clique lists of the involved variables */
 static
 void cliqueCheck(
@@ -1702,7 +1703,7 @@ void SCIPcliquelistRemoveFromCliques(
             if( irrelevantvar )
                clique->equation = FALSE;
 
-#ifndef NDEBUG
+#ifdef SCIP_MORE_DEBUG
             /* during the cleanup step, we skip the consistency check because clique may be temporarily inconsistent */
             if( ! cliquetable->incleanup || clique->index > 0 )
             {
@@ -2596,6 +2597,9 @@ SCIP_RETCODE cliqueCleanup(
                (!clique->values[v] && SCIPvarGetLbGlobal(clique->vars[v]) > 0.5) ||
                SCIPvarIsMarkedDeleteGlobalStructures(clique->vars[v]) )
          {
+            if( clique->equation && SCIPvarIsMarkedDeleteGlobalStructures(clique->vars[v]) )
+               clique->equation = FALSE;
+
             /* the variable will be overwritten by subsequent active variables */
             continue;
          }
@@ -3043,6 +3047,7 @@ int getNodeIndexBinvar(
 SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR**            vars,               /**< array of problem variables, sorted by variable type */
    int                   nbinvars,           /**< number of binary variables */
    int                   nintvars,           /**< number of integer variables */
@@ -3117,7 +3122,7 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
     * For simplicity, we add all integer and implicit integer variables as nodes to the digraph, and subtract
     * the amount of nonbinary integer and implicit integer variables afterwards.
     */
-   SCIP_CALL( SCIPdigraphCreate(&digraph, ndiscvars) );
+   SCIP_CALL( SCIPdigraphCreate(&digraph, blkmem, ndiscvars) );
    SCIP_CALL( SCIPdigraphSetSizes(digraph, sizes) );
 
    cliques = cliquetable->cliques;

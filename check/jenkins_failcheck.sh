@@ -7,8 +7,18 @@
 
 sleep 5
 
-DATABASE="/nfs/OPTI/bzfserra/jenkins/known_bugs.txt"
-TMPDATABASE="/nfs/OPTI/bzfserra/jenkins/known_bugs.txt.tmp"
+# we use a name that is unique per test sent to the cluster (a jenkins job
+# can have several tests sent to the cluster, that is why the jenkins job
+# name (i.e, the directory name) is not enough)
+DATABASE="/nfs/OPTI/adm_timo/databases/${PWD##*/}_$TESTSET_$SETTING.txt"
+TMPDATABASE="$DATABASE.tmp"
+
+# the first time, the file might not exists so we create it
+# Even more, we have to write something to it, since otherwise
+# the awk scripts below won't work (NR and FNR will not be different)
+if ! [[ -s $DATABASE ]]; then  # check that file exists and has size larger that 0
+  echo "Instance Fail_reason Branch Testset Setting Opt_mode LPS" > $DATABASE
+fi
 
 EMAILFROM="adm_timo <timo-admin@zib.de>"
 EMAILTO="adm_timo <timo-admin@zib.de>"

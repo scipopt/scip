@@ -193,6 +193,7 @@ struct SCIP_Profile
 /** digraph structure to store and handle graphs */
 struct SCIP_Digraph
 {
+   BMS_BLKMEM*           blkmem;             /**< block memory pointer to store the data */
    int**                 successors;         /**< adjacency list: for each node (first dimension) list of all successors */
    void***               arcdata;            /**< arc data corresponding to the arcs to successors given by the successors array  */
    void**                nodedata;           /**< data for each node of graph */
@@ -242,7 +243,6 @@ struct SCIP_RandNumGen
    uint32_t              xor_seed;           /**< Xorshift seed */
    uint32_t              mwc_seed;           /**< Multiply-with-carry seed */
    uint32_t              cst_seed;           /**< constant seed */
-   BMS_BLKMEM*           blkmem;             /**< block memory */
 };
 
 #ifdef __cplusplus
