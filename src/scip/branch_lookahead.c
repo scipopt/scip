@@ -71,6 +71,7 @@
 #define DEFAULT_STOREUNVIOLATEDSOL           TRUE
 #define DEFAULT_ABBREVPSEUDO                 FALSE
 #define DEFAULT_ADDCLIQUE                    FALSE
+#define DEFAULT_PROPAGATE                    FALSE
 
 #ifdef SCIP_DEBUG
 #define LABdebugMessage(scip,lvl,...)        do                                                                            \
@@ -348,6 +349,7 @@ typedef struct
    SCIP_Bool             abbrevpseudo;       /**< If abbreviated == TRUE, should pseudocost values be used, to approximate
                                               *   the scoring? */
    SCIP_Bool             addclique;          /**< Should binary constraints found in the root node be added as cliques? */
+   SCIP_Bool             propagate;          /**< Should the problem be propagated before solving each inner node? */
 } CONFIGURATION;
 
 /** Allocates a configuration in the buffer and initiates it with the default values. */
@@ -2272,6 +2274,7 @@ SCIP_RETCODE getNIterationsLastLP(
 static
 SCIP_RETCODE executeBranching(
    SCIP*                 scip,               /**< SCIP data structure */
+   CONFIGURATION*        config,             /**< configuration to control the behavior */
    SCIP_Bool             downbranching,      /**< the branching direction */
    CANDIDATE*            candidate,          /**< the candidate to branch on */
    BRANCHINGRESULTDATA*  resultdata,         /**< pointer to the result data which gets filled with the status */
@@ -2331,81 +2334,101 @@ SCIP_RETCODE executeBranching(
    }
    else
    {
-      SCIP_CALL( SCIPnewProbingNode(scip) );
-
-      if( downbranching )
+      if( !resultdata->cutoff )
       {
-         /* down branching preparations */
-         if( SCIPisFeasLT(scip, newbound, oldupperbound) )
+         SCIP_CALL( SCIPnewProbingNode(scip) );
+
+         if( downbranching )
          {
-            /* if the new upper bound is lesser than the old upper bound and also
-             * greater than (or equal to) the old lower bound we set the new upper bound.
-             * oldLowerBound <= newUpperBound < oldUpperBound */
-            SCIP_CALL( SCIPchgVarUbProbing(scip, branchvar, newbound) );
+            /* down branching preparations */
+            if( SCIPisFeasLT(scip, newbound, oldupperbound) )
+            {
+               /* if the new upper bound is lesser than the old upper bound and also
+                * greater than (or equal to) the old lower bound we set the new upper bound.
+                * oldLowerBound <= newUpperBound < oldUpperBound */
+               SCIP_CALL( SCIPchgVarUbProbing(scip, branchvar, newbound) );
+            }
+
+            if( lpiMemoryIsReadable(candidate->downlpimemory) )
+            {
+               /* restore the stored LP data (e.g. the basis) from a previous run */
+               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Restoring lp information for down branch of variable <%s>\n",
+                  SCIPvarGetName(branchvar));
+               SCIP_CALL( restoreFromLPIMemory(scip, candidate->downlpimemory) );
+            }
+         }
+         else
+         {
+            /* up branching preparations */
+            if( SCIPisFeasGT(scip, newbound, oldlowerbound) )
+            {
+               /* if the new lower bound is greater than the old lower bound and also
+                * lesser than (or equal to) the old upper bound we set the new lower bound.
+                * oldLowerBound < newLowerBound <= oldUpperBound */
+               SCIP_CALL( SCIPchgVarLbProbing(scip, branchvar, newbound) );
+            }
+
+            if( lpiMemoryIsReadable(candidate->uplpimemory) )
+            {
+               /* restore the stored LP data (e.g. the basis) from a previous run */
+               SCIP_CALL( restoreFromLPIMemory(scip, candidate->uplpimemory) );
+            }
          }
 
-         if( lpiMemoryIsReadable(candidate->downlpimemory) )
+         if( config->propagate )
          {
-            /* restore the stored LP data (e.g. the basis) from a previous run */
-            LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Restoring lp information for down branch of variable <%s>\n",
-               SCIPvarGetName(branchvar));
-            SCIP_CALL( restoreFromLPIMemory(scip, candidate->downlpimemory) );
-         }
-      }
-      else
-      {
-         /* up branching preparations */
-         if( SCIPisFeasGT(scip, newbound, oldlowerbound) )
-         {
-            /* if the new lower bound is greater than the old lower bound and also
-             * lesser than (or equal to) the old upper bound we set the new lower bound.
-             * oldLowerBound < newLowerBound <= oldUpperBound */
-            SCIP_CALL( SCIPchgVarLbProbing(scip, branchvar, newbound) );
+            SCIP_Longint ndomredsfound = 0;
+
+            SCIP_CALL( SCIPpropagateProbing(scip, -1, &resultdata->cutoff, &ndomredsfound) );
+
+            if( ndomredsfound > 0 )
+            {
+               LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found %d domain reductions.\n", ndomredsfound);
+               /*status->domred = TRUE;*/
+            }
          }
 
-         if( lpiMemoryIsReadable(candidate->uplpimemory) )
+         if( !resultdata->cutoff )
          {
-            /* restore the stored LP data (e.g. the basis) from a previous run */
-            SCIP_CALL( restoreFromLPIMemory(scip, candidate->uplpimemory) );
+
+            /* solve the prepared probing LP */
+            SCIP_CALL( SCIPsolveProbingLP(scip, -1, &status->lperror, &resultdata->cutoff) );
+
+            /* store the number of iterations needed */
+            SCIP_CALL( getNIterationsLastLP(scip, &resultdata->niterations) );
+
+            solstat = SCIPgetLPSolstat(scip);
+            assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+
+            /* for us an error occurred, if an error during the solving occurred, or the lp could not be solved but was not
+             * cutoff, or if the iter or time limit was reached. */
+            status->lperror = status->lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && resultdata->cutoff == FALSE);
+
+            /* if we seem to have reached a {time, iteration}-limit or the user cancelled the execution we want to stop
+             * further calculations and instead return the current calculation state */
+            status->limitreached = solstat == SCIP_LPSOLSTAT_ITERLIMIT || solstat == SCIP_LPSOLSTAT_TIMELIMIT;
+
+            if( resultdata->cutoff )
+            {
+               resultdata->objval = SCIPinfinity(scip);
+               resultdata->dualbound = SCIPinfinity(scip);
+               resultdata->dualboundvalid = TRUE;
+            }
+            else if( !status->limitreached && !status->lperror )
+            {
+               SCIP_Bool foundsol = FALSE;
+
+               SCIP_CALL( SCIPtryStrongbranchLPSol(scip, &foundsol, &resultdata->cutoff) );
+
+               /* if we have no error, we save the new objective value and the cutoff decision in the resultdata */
+               resultdata->objval = SCIPgetLPObjval(scip);
+               resultdata->dualbound = SCIPgetLPObjval(scip);
+               resultdata->dualboundvalid = TRUE;
+               resultdata->cutoff = resultdata->cutoff || SCIPisGE(scip, resultdata->objval, SCIPgetCutoffbound(scip));
+
+               assert(solstat != SCIP_LPSOLSTAT_INFEASIBLE || resultdata->cutoff);
+            }
          }
-      }
-
-      /* solve the prepared probing LP */
-      SCIP_CALL( SCIPsolveProbingLP(scip, -1, &status->lperror, &resultdata->cutoff) );
-
-      /* store the number of iterations needed */
-      SCIP_CALL( getNIterationsLastLP(scip, &resultdata->niterations) );
-
-      solstat = SCIPgetLPSolstat(scip);
-      assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-
-      /* for us an error occurred, if an error during the solving occurred, or the lp could not be solved but was not
-       * cutoff, or if the iter or time limit was reached. */
-      status->lperror = status->lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && resultdata->cutoff == FALSE);
-
-      /* if we seem to have reached a {time, iteration}-limit or the user cancelled the execution we want to stop further
-       * calculations and instead return the current calculation state */
-      status->limitreached = solstat == SCIP_LPSOLSTAT_ITERLIMIT || solstat == SCIP_LPSOLSTAT_TIMELIMIT;
-
-      if( resultdata->cutoff )
-      {
-         resultdata->objval = SCIPinfinity(scip);
-         resultdata->dualbound = SCIPinfinity(scip);
-         resultdata->dualboundvalid = TRUE;
-      }
-      else if( !status->limitreached && !status->lperror )
-      {
-         SCIP_Bool foundsol = FALSE;
-
-         SCIP_CALL( SCIPtryStrongbranchLPSol(scip, &foundsol, &resultdata->cutoff) );
-
-         /* if we have no error, we save the new objective value and the cutoff decision in the resultdata */
-         resultdata->objval = SCIPgetLPObjval(scip);
-         resultdata->dualbound = SCIPgetLPObjval(scip);
-         resultdata->dualboundvalid = TRUE;
-         resultdata->cutoff = resultdata->cutoff || SCIPisGE(scip, resultdata->objval, SCIPgetCutoffbound(scip));
-
-         assert(solstat != SCIP_LPSOLSTAT_INFEASIBLE || resultdata->cutoff);
       }
    }
 
@@ -2416,12 +2439,13 @@ SCIP_RETCODE executeBranching(
 static
 SCIP_RETCODE executeDownBranching(
    SCIP*                 scip,               /**< SCIP data structure */
+   CONFIGURATION*        config,             /**< configuration to control the behavior */
    CANDIDATE*            candidate,          /**< the branching direction */
    BRANCHINGRESULTDATA*  resultdata,         /**< pointer to the result data which gets filled with the status */
    STATUS*               status              /**< status will contain updated lperror and limit fields */
    )
 {
-   SCIP_CALL( executeBranching(scip, TRUE, candidate, resultdata, status) );
+   SCIP_CALL( executeBranching(scip, config, TRUE, candidate, resultdata, status) );
    return SCIP_OKAY;
 }
 
@@ -2429,12 +2453,13 @@ SCIP_RETCODE executeDownBranching(
 static
 SCIP_RETCODE executeUpBranching(
    SCIP*                 scip,               /**< SCIP data structure */
+   CONFIGURATION*        config,             /**< configuration to control the behavior */
    CANDIDATE*            candidate,          /**< the branching direction */
    BRANCHINGRESULTDATA*  resultdata,         /**< pointer to the result data which gets filled with the status */
    STATUS*               status              /**< status will contain updated lperror and limit fields */
    )
 {
-   SCIP_CALL( executeBranching(scip, FALSE, candidate, resultdata, status) );
+   SCIP_CALL( executeBranching(scip, config, FALSE, candidate, resultdata, status) );
    return SCIP_OKAY;
 }
 
@@ -3397,7 +3422,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Started down branching on var <%s> with 'val < %g' and bounds [<%g>..<%g>]\n", SCIPvarGetName(branchvar), branchval,
       SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar));
 
-   SCIP_CALL( executeDownBranching(scip, candidate, downbranchingresult, status) );
+   SCIP_CALL( executeDownBranching(scip, config, candidate, downbranchingresult, status) );
 
 #ifdef SCIP_STATISTIC
    statistics->nlpssolved[probingdepth]++;
@@ -3593,7 +3618,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Started up branching on var <%s> with 'val > %g' and bounds [<%g>..<%g>]\n", SCIPvarGetName(branchvar), branchval,
       SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar));
 
-   SCIP_CALL( executeUpBranching(scip, candidate, upbranchingresult, status) );
+   SCIP_CALL( executeUpBranching(scip, config, candidate, upbranchingresult, status) );
 
 #ifdef SCIP_STATISTIC
       statistics->nlpssolved[probingdepth]++;
@@ -4940,6 +4965,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
          "branching/lookahead/addclique",
          "Should binary constraints found in the root node be added as cliques?",
          &branchruledata->config->addclique, TRUE, DEFAULT_ADDCLIQUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/lookahead/propagate",
+         "Should the problem be propagated before solving each inner node?",
+         &branchruledata->config->propagate, TRUE, DEFAULT_PROPAGATE, NULL, NULL) );
 
    LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Leaving SCIPincludeBranchruleLookahead\n");
 
