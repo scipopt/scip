@@ -2925,15 +2925,9 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                }
             }
          }
-         printf("run tmX %d \n", graph->stp_type == STP_MWCSP);
-
          /* can we connect the network */
          SCIP_CALL( SCIPheurComputeSteinerTree(scip, heurdata, graph, NULL, &best_start, results, runs, heurdata->beststartnode,
                cost, costrev, &(heurdata->hopfactor), nodepriority, maxcost, &success, FALSE) );
-
-         printf("run tm4 %d \n", graph->stp_type == STP_MWCSP);
-
-
    }
    if( success )
    {

@@ -42,7 +42,7 @@
 #include "heur_rec.h"
 #include "heur_slackprune.h"
 
-#define DEFAULT_HEURRUNS 1000                 /**< number of runs of constructive heuristic */
+#define DEFAULT_HEURRUNS 100                  /**< number of runs of constructive heuristic */
 #define DEFAULT_DARUNS     5                  /**< number of runs for dual ascent heuristic */
 #define DEFAULT_NMAXROOTS  11                 /**< max number of roots to use for new graph in dual ascent heuristic */
 #define PERTUBATION_RATIO   0.05              /**< pertubation ratio for dual-ascent primal bound computation */
@@ -2007,7 +2007,7 @@ SCIP_RETCODE da_reducePcMw(
       printf("FFFminpathcost INITIAL %f \n", upperbound - lpobjval);
 
       int todo; //&& graph->terms > 500
-      for( run = 0; run < DEFAULT_NMAXROOTS ; run++ )
+      for( run = 0; run < DEFAULT_NMAXROOTS; run++ )
       {
          SCIP_CALL( pcgraphtrans(scip, graph) );
 
