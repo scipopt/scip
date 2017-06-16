@@ -193,7 +193,7 @@ SCIP_RETCODE computeStandardFeasibilityCut(
       }
       else
       {
-         assert(SCIPisNegative(subproblem, dualsol));
+         //assert(SCIPisNegative(subproblem, dualsol));
 
          addval = 0;
 
@@ -220,7 +220,6 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 #ifndef NDEBUG
    lhs = SCIPgetLhsLinear(masterprob, cut);
    activity = SCIPgetActivityLinear(masterprob, cut, sol);
-   printf("LHS: %g Activity: %g\n", lhs, activity);
    assert(activity < lhs);
 #endif
 
@@ -231,7 +230,6 @@ SCIP_RETCODE computeStandardFeasibilityCut(
 #ifndef NDEBUG
    /* TODO: Not sure about how to generate the solution for the first assert. Need to check */
    //assert(SCIPgetActivityLinear(masterprob, cut, pricingsol) < SCIPgetLhsLinear(masterprob, cut));
-   printf("FARKAS - act: %g lhs: %g\n", farkasact, farkaslhs);
    assert(farkasact < farkaslhs);
    SCIPfreeBufferArray(subproblem, &farkascoefs);
 #endif

@@ -98,6 +98,8 @@ SCIP_RETCODE computeStandardOptimalityCut(
    /* looping over all constraints and setting the coefficients of the cut */
    for( i = 0; i < nconss; i++ )
    {
+      addval = 0;
+
       dualsol = BDconsGetDualsol(subproblem, conss[i]);
 
       assert( !SCIPisInfinity(subproblem, dualsol) && !SCIPisInfinity(subproblem, -dualsol) );
@@ -195,43 +197,20 @@ static
 SCIP_RETCODE addAuxiliaryVariableToCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
-   SCIP_BENDERSCUT*      benderscut,         /**< the benders' decomposition cut method */
-   SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_CONS*            cut,                /**< the cut that is generated from the pricing problem */
-   int                   probnumber,         /**< the number of the pricing problem */
-   SCIP_Bool*            optimal             /**< flag to indicate whether the current subproblem is optimal for the master */
+   int                   probnumber          /**< the number of the pricing problem */
    )
 {
-   SCIP_BENDERSCUTDATA* benderscutdata;
    SCIP_VAR* auxiliaryvar;
-   SCIP_Real auxiliaryvarval;
 
    assert(masterprob != NULL);
    assert(benders != NULL);
-   assert(benderscut != NULL);
    assert(cut != NULL);
-
-   benderscutdata = SCIPbenderscutGetData(benderscut);
-
-   (*optimal) = FALSE;
 
    auxiliaryvar = SCIPbendersGetAuxiliaryVar(benders, probnumber);
 
-   auxiliaryvarval = SCIPgetSolVal(masterprob, sol, auxiliaryvar);
-
-   SCIPdebugMsg(masterprob, "Auxiliary Variable: %g Subproblem Objective: %g\n", auxiliaryvarval, SCIPbendersGetSubprobObjval(benders, probnumber));
-
-   /* if the value of the auxiliary variable in the master problem is greater or equal to the subproblem objective,
-    * then a cut is not added by the subproblem.
-    * TODO: Need to use a epsilon tolerance for this check. */
-   if( SCIPisGE(masterprob, auxiliaryvarval + benderscutdata->soltol,
-         SCIPbendersGetSubprobObjval(benders, probnumber)) )
-      (*optimal) = TRUE;
-   else
-   {
-      /* adding the auxiliary variable to the generated cut */
-      SCIP_CALL( SCIPaddCoefLinear(masterprob, cut, auxiliaryvar, 1.0) );
-   }
+   /* adding the auxiliary variable to the generated cut */
+   SCIP_CALL( SCIPaddCoefLinear(masterprob, cut, auxiliaryvar, 1.0) );
 
    return SCIP_OKAY;
 }
@@ -260,6 +239,16 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    assert(result != NULL);
    assert(SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL);
 
+   /* checking the optimality of the original problem with a comparison between the auxiliary variable and the
+    * objective value of the subproblem */
+   SCIP_CALL( SCIPcheckBendersAuxiliaryVar(masterprob, benders, sol, probnumber, &optimal) );
+
+   if( optimal )
+   {
+      SCIPdebugMsg(masterprob, "No cut added for subproblem %d\n", probnumber);
+      return SCIP_OKAY;
+   }
+
    /* setting the name of the generated cut */
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "optimalitycut_%d_%d", probnumber,
       SCIPbenderscutGetNFound(benderscut, probnumber) );
@@ -271,18 +260,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    SCIP_CALL( computeStandardOptimalityCut(masterprob, subproblem, benders, sol, cut) );
 
    /* adding the auxiliary variable to the optimality cut */
-   SCIP_CALL( addAuxiliaryVariableToCut(masterprob, benders, benderscut, sol, cut, probnumber, &optimal) );
-
-   /* if the current subproblem is optimal for the master, then we do not add a constraint. */
-   if( optimal )
-   {
-      SCIPdebugMsg(masterprob, "No cut added for subproblem %d\n", probnumber);
-      SCIP_CALL( SCIPreleaseCons(masterprob, &cut) );
-      return SCIP_OKAY;
-   }
-
-   //SCIP_CALL( SCIPprintCons(masterprob, cut, NULL) );
-   //SCIPinfoMessage(masterprob, NULL, "\n");
+   SCIP_CALL( addAuxiliaryVariableToCut(masterprob, benders, cut, probnumber) );
 
    /* adding the constraint to the master problem */
    SCIP_CALL( SCIPaddCons(masterprob, cut) );

@@ -47,8 +47,9 @@ struct SCIP_Benders
    SCIP_DECL_BENDERSEXITPRE((*bendersexitpre));/**< presolving deinitialization method for Benders' decomposition */
    SCIP_DECL_BENDERSINITSOL((*bendersinitsol));/**< solving process initialization method of variable benders */
    SCIP_DECL_BENDERSEXITSOL((*bendersexitsol));/**< solving process deinitialization method of variable benders */
-   SCIP_DECL_BENDERSGETMASTERVAR((*bendersgetmastervar));/**< returns the master variable for the given subproblem variable*/
+   SCIP_DECL_BENDERSGETVAR((*bendersgetvar)); /**< returns the corresponding variable from the master or subproblem */
    SCIP_DECL_BENDERSEXEC ((*bendersexec));   /**< executes the solve method for Benders' decomposition */
+   SCIP_DECL_BENDERSCREATESUB((*benderscreatesub));/**< creates the Benders' decomposition subproblems */
    SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub));/**< the solving method for the Benders' decomposition subproblems */
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve));/**< called after the subproblems are solved. */
    SCIP_DECL_BENDERSFREESUB((*bendersfreesub));/**< the freeing method for the Benders' decomposition subproblems */
@@ -81,6 +82,7 @@ struct SCIP_Benders
    SCIP_Real*            bestsubprobobjval;  /**< the best objective value of the subproblem */
    int                   addedsubprobs;      /**< subproblems added to the Benders' decomposition data */
    int                   nsubproblems;       /**< number of subproblems */
+   SCIP_Bool*            subprobislp;        /**< is the subproblem formulated as an LP? */
 
    /* Bender's cut information */
    SCIP_BENDERSCUT**     benderscuts;        /**< the available Benders' cut algorithms */

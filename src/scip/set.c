@@ -323,6 +323,10 @@
 #define SCIP_DEFAULT_PRICE_DELVARSROOT    FALSE /**< should variables created at the root node be deleted when the root is solved
                                                  *   in case they are not present in the LP anymore? */
 
+/* Benders' decomposition */
+#define SCIP_DEFAULT_BENDERS_SOLTOL        1e-6 /**< the tolerance used to determine optimality in Benders' decomposition */
+#define SCIP_DEFAULT_BENDERS_CUTLPSOL      TRUE /**< should Benders' cuts be generated from the LP solution? */
+
 /* Reoptimization */
 
 #define SCIP_DEFAULT_REOPT_OBJSIMSOL       -1.0 /**< re-use stored solutions only if the similarity of the new and the old objective
@@ -2026,6 +2030,18 @@ SCIP_RETCODE SCIPsetCreate(
          "pricing/delvarsroot",
          "should variables created at the root node be deleted when the root is solved in case they are not present in the LP anymore?",
          &(*set)->price_delvarsroot, FALSE, SCIP_DEFAULT_PRICE_DELVARSROOT,
+         NULL, NULL) );
+
+   /* Benders' decomposition parameters */
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "benders/solutiontol",
+         "the tolerance used for checking optimality in Benders' decomposition. tol where optimality is given by LB + tol > UB.",
+         &(*set)->benders_soltol, FALSE, SCIP_DEFAULT_BENDERS_SOLTOL, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "benders/cutlpsol",
+         "should Benders' cuts be generated from the solution to the LP relaxation?",
+         &(*set)->benders_cutlpsol, FALSE, SCIP_DEFAULT_BENDERS_CUTLPSOL,
          NULL, NULL) );
 
    /* propagation parameters */

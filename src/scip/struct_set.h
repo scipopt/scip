@@ -418,6 +418,9 @@ struct SCIP_Set
                                               *   in case they are not present in the LP anymore? */
    SCIP_Bool             price_delvarsroot;  /**< should variables created at the root node be deleted when the root is solved
                                               *   in case they are not present in the LP anymore? */
+   /* Benders' decomposition settings */
+   SCIP_Real             benders_soltol;     /**< the tolerance for checking optimality in Benders' decomposition */
+   SCIP_Bool             benders_cutlpsol;   /**< should cuts be generated from the solution to the LP relaxation? */
 
    /* propagation settings */
    int                   prop_maxrounds;     /**< maximal number of propagation rounds per node (-1: unlimited) */

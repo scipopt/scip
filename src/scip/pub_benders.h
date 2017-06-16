@@ -152,6 +152,12 @@ SCIP_VAR* SCIPbendersGetAuxiliaryVar(
    int                   probnumber          /**< the subproblem number */
    );
 
+/** returns all auxiliary variables */
+EXTERN
+SCIP_VAR** SCIPbendersGetAuxiliaryVars(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
 /** stores the objective function value of the subproblem for use in cut generation */
 EXTERN
 void SCIPbendersSetSubprobObjval(
@@ -210,6 +216,29 @@ SCIP_RETCODE SCIPbendersSetBenderscutPriority(
 EXTERN
 SCIP_Bool SCIPbendersGetUseMagnantiWong(
    SCIP_BENDERS*         benders             /**< Benders' decomposition */
+   );
+
+/* returns whether the subproblem is an LP. This means that the dual solution can be trusted. */
+EXTERN
+SCIP_Bool SCIPbendersSubprobIsLP(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
+   int                   probnumber          /**< the subproblem number */
+   );
+
+/** solves the LP of the Benders' decomposition subproblem. This requires that the subproblem is in probing mode */
+EXTERN
+SCIP_RETCODE SCIPbendersSolveSubproblemLP(
+   SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool*            infeasible          /**< a flag to indicate whether all subproblems are feasible */
+   );
+
+/** solves the Benders' decomposition subproblem. */
+EXTERN
+SCIP_RETCODE SCIPbendersSolveSubproblem(
+   SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
+   int                   probnumber,         /**< the subproblem number */
+   SCIP_Bool*            infeasible          /**< a flag to indicate whether all subproblems are feasible */
    );
 
 /* @} */

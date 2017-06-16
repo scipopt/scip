@@ -123,6 +123,24 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined variabl
  */
 #define SCIP_DECL_BENDERSEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders)
 
+/** the method for creating the Benders' decomposition subproblem. This method is called during the initialisation stage
+ *  (after the master problem was transformed)
+ *
+ *  This method must create the SCIP instance for the subproblem and add the required variables and constraints. In
+ *  addition, the settings required for the solving the problem must be set here. However, some settings will be
+ *  overridden by the standard solving method included in the Benders' decomposition framework. If a special solving
+ *  method is desired, the user can implement the bendersSolvesubXyz callback.
+ *
+ *  When creating the subproblems, they must be registered with the Benders' decomposition structure. This is done by
+ *  calling SCIPaddBendersSubproblem.
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - benders         : the Benders' decomposition data structure
+ *  - probnumber      : the subproblem problem number
+ */
+#define SCIP_DECL_BENDERSCREATESUB(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, int probnumber)
+
 /** the solving method for a single Benders' decomposition subproblem. The solving methods are separated so that they
  *  can be called in parallel.
  *
@@ -177,9 +195,10 @@ typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined variabl
  *  input:
  *  - scip            : SCIP main data structure
  *  - benders         : the Benders' decomposition structure
- *  - var             : the variable of the pricing problem that is a copy of the master variable
+ *  - var             : the variable for which the corresponding variable in the master or subproblem is required
+ *  - probnumber      : the number of the subproblem that the desired variable belongs to, -1 for the master problem
  */
-#define SCIP_DECL_BENDERSGETMASTERVAR(x) SCIP_VAR* x (SCIP* scip, SCIP_BENDERS* benders, SCIP_VAR* var)
+#define SCIP_DECL_BENDERSGETVAR(x) SCIP_VAR* x (SCIP* scip, SCIP_BENDERS* benders, SCIP_VAR* var, int probnumber)
 
 #ifdef __cplusplus
 }

@@ -191,7 +191,7 @@ SCIP_DECL_BENDERSEXITSOL(bendersExitsolXyz)
 
 /** mapping method between the master problem variables and the subproblem variables of Benders' decomposition */
 static
-SCIP_DECL_BENDERSGETMASTERVAR(bendersGetmastervarXyz)
+SCIP_DECL_BENDERSGETVAR(bendersGetvarXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz Benders' decomposition not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
@@ -210,7 +210,27 @@ SCIP_DECL_BENDERSEXEC(bendersExecXyz)
 }
 
 
-/** the subproblem solving method for Benders' decomposition */
+/** the method for creating the Benders' decomposition subproblem. This method is called during the initialisation stage
+ *  (after the master problem was transformed)
+ *
+ *  This method must create the SCIP instance for the subproblem and add the required variables and constraints. In
+ *  addition, the settings required for the solving the problem must be set here. However, some settings will be
+ *  overridden by the standard solving method included in the Benders' decomposition framework. If a special solving
+ *  method is desired, the user can implement the bendersSolvesubXyz callback.
+ */
+static
+SCIP_DECL_BENDERSCREATESUB(bendersCreatesubXyz)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xyz Benders' decomposition not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+
+/** the subproblem solving method for Benders' decomposition. In this method the subproblem is setup with the given
+ *  solution and then solved.
+ *  NOTE: if the bendersSolvesubXyz callback is implemented then the bendersFreesubXyz callback must be implemented */
+#if 0
 static
 SCIP_DECL_BENDERSSOLVESUB(bendersSolvesubXyz)
 {  /*lint --e{715}*/
@@ -219,6 +239,9 @@ SCIP_DECL_BENDERSSOLVESUB(bendersSolvesubXyz)
 
    return SCIP_OKAY;
 }
+#else
+#define bendersSolvesubXyz NULL
+#endif
 
 #if 0
 /** the post-solve method for Benders' decomposition */
@@ -235,7 +258,11 @@ SCIP_DECL_BENDERSPOSTSOLVE(bendersPostsolveXyz)
 #endif
 
 
-/** the subproblem freeing method for Benders' decomposition */
+/** the subproblem freeing method for Benders' decomposition. This is called between subproblem solves to clear the
+ *  solving data. Generally this will only require a call to SCIPfreeTransform. However, depending on the problem it
+ *  could additional freeing methods.
+ *  NOTE: the bendersFreesubXyz callback must be implemented if the bendersSolvesubXyz is implemented */
+#if 0
 static
 SCIP_DECL_BENDERSFREESUB(bendersFreesubXyz)
 {  /*lint --e{715}*/
@@ -244,6 +271,9 @@ SCIP_DECL_BENDERSFREESUB(bendersFreesubXyz)
 
    return SCIP_OKAY;
 }
+#else
+#define bendersFreesubXyz NULL
+#endif
 
 
 
@@ -274,15 +304,15 @@ SCIP_RETCODE SCIPincludeBendersXyz(
     */
    SCIP_CALL( SCIPincludeBenders(scip, BENDERS_NAME, BENDERS_DESC, BENDERS_PRIORITY, nsubproblems,
          bendersCopyXyz, bendersFreeXyz, bendersInitXyz, bendersExitXyz, bendersInitpreXyz, bendersExitpreXyz,
-         bendersInitsolXyz, bendersExitsolXyz, bendersGetmastervarXyz, bendersExecXyz,
-         bendersPostsolveXyz, bendersFreesubXyz, bendersdata) );
+         bendersInitsolXyz, bendersExitsolXyz, bendersGetvarXyz, bendersExecXyz, bendersCreatesubXyz,
+         bendersSolvesubXyz, bendersPostsolveXyz, bendersFreesubXyz, bendersdata) );
 #else
    /* use SCIPincludeBendersBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
     */
    SCIP_CALL( SCIPincludeBendersBasic(scip, &benders, BENDERS_NAME, BENDERS_DESC, BENDERS_PRIORITY, nsubproblems,
-         BENDERS_CUTLP, BENDERS_CUTPSEUDO, BENDERS_CUTRELAX, bendersGetmastervarXyz, bendersExecXyz, bendersSolvesubXyz,
-         bendersFreesubXyz, bendersdata) );
+         BENDERS_CUTLP, BENDERS_CUTPSEUDO, BENDERS_CUTRELAX, bendersGetvarXyz, bendersExecXyz, bendersCreatesubXyz,
+         bendersdata) );
    assert(benders != NULL);
 
    /* set non fundamental callbacks via setter functions */
@@ -294,7 +324,9 @@ SCIP_RETCODE SCIPincludeBendersXyz(
    SCIP_CALL( SCIPsetBendersExitpre(scip, benders, bendersExitpreXyz) );
    SCIP_CALL( SCIPsetBendersInitsol(scip, benders, bendersInitsolXyz) );
    SCIP_CALL( SCIPsetBendersExitsol(scip, benders, bendersExitsolXyz) );
+   SCIP_CALL( SCIPsetBendersSolvesub(scip, benders, bendersSolvesubXyz) );
    SCIP_CALL( SCIPsetBendersPostsolve(scip, benders, bendersPostsolveXyz) );
+   SCIP_CALL( SCIPsetBendersFreesub(scip, benders, bendersFreesubXyz) );
 #endif
 
    /* OPTIONAL: including the default cuts for Benders' decomposition */

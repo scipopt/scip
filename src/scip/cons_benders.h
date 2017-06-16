@@ -120,6 +120,7 @@ SCIP_RETCODE SCIPcreateConsBasicBenders(
 EXTERN
 SCIP_RETCODE SCIPconsBendersEnforceSolutions(
     SCIP*                scip,               /**< the SCIP instance */
+   SCIP_SOL*             sol,                /**< the primal solution to enforce, or NULL for the current LP/pseudo sol */
     SCIP_CONSHDLR*       conshdlr,           /**< the constraint handler */
     SCIP_RESULT*         result,             /**< the result of the enforcement */
     BENDERS_ENFOTYPE     type                /**< the type of solution being enforced */

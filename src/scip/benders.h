@@ -72,8 +72,9 @@ SCIP_RETCODE SCIPbendersCreate(
    SCIP_DECL_BENDERSEXITPRE((*bendersexitpre)),/**< presolving deinitialization method for Benders' decomposition */
    SCIP_DECL_BENDERSINITSOL((*bendersinitsol)),/**< solving process initialization method of variable benders */
    SCIP_DECL_BENDERSEXITSOL((*bendersexitsol)),/**< solving process deinitialization method of variable benders */
-   SCIP_DECL_BENDERSGETMASTERVAR((*bendersgetmastervar)),/**< returns the master variable for a given subproblem variable */
+   SCIP_DECL_BENDERSGETVAR((*bendersgetvar)),/**< returns the master variable for a given subproblem variable */
    SCIP_DECL_BENDERSEXEC ((*bendersexec)),   /**< the execution method of the Benders' decomposition algorithm */
+   SCIP_DECL_BENDERSCREATESUB((*benderscreatesub)),/**< creates a Benders' decomposition subproblem */
    SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub)),/**< the solving method for the Benders' decomposition subproblems */
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve)),/**< called after the subproblems are solved. */
    SCIP_DECL_BENDERSFREESUB((*bendersfreesub)),/**< the freeing method for the Benders' decomposition subproblems */
@@ -148,9 +149,9 @@ SCIP_RETCODE SCIPbendersExec(
    SCIP_Bool             check               /**< is the execution method called as a check. i.e. no cuts are required */
    );
 
-/** solves the subproblems. */
+/** Executes the subproblem solving process. */
 extern
-SCIP_RETCODE SCIPbendersSolveSubproblem(
+SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    SCIP_BENDERS*         benders,            /**< variable benders */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
@@ -159,12 +160,31 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    SCIP_Bool*            infeasible          /**< returns whether the current subproblem is infeasible */
    );
 
+/** sets up the subproblem using the solution to the master problem  */
+extern
+SCIP_RETCODE SCIPbendersSetupSubproblem(
+   SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   int                   probnum             /**< the subproblem number */
+   );
+
 /** frees the subproblems. */
 extern
 SCIP_RETCODE SCIPbendersFreeSubproblem(
    SCIP_BENDERS*         benders,            /**< variable benders */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   probnum             /**< the subproblem number */
+   );
+
+/** checks the auxiliary variable value for optimality */
+extern
+SCIP_RETCODE SCIPbendersCheckAuxiliaryVar(
+   SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   int                   probnumber,         /**< the number of the pricing problem */
+   SCIP_Bool*            optimal             /**< flag to indicate whether the current subproblem is optimal for the master */
    );
 
 /** sets priority of variable benders */
@@ -229,6 +249,13 @@ void SCIPbendersSetExitsol(
    SCIP_DECL_BENDERSEXITSOL((*bendersexitsol))/**< solving process deinitialization callback of benders */
    );
 
+/** sets solve callback of benders */
+extern
+void SCIPbendersSetSolvesub(
+   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_DECL_BENDERSSOLVESUB((*benderssolvesub))/**< solving method for a Benders' decomposition subproblem */
+   );
+
 /** sets post-solve callback of benders */
 extern
 void SCIPbendersSetPostsolve(
@@ -236,13 +263,20 @@ void SCIPbendersSetPostsolve(
    SCIP_DECL_BENDERSPOSTSOLVE((*benderspostsolve))/**< solving process deinitialization callback of benders */
    );
 
-/** returns the variable for the given variable of the subproblem. This provides a call back for the mapping between the
- * master and subproblems */
-EXTERN
-SCIP_VAR* SCIPbendersGetMasterVar(
-   SCIP_BENDERS*         benders,            /**< variable benders */
+/** sets free subproblem callback of benders */
+extern
+void SCIPbendersSetFreesub(
+   SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_DECL_BENDERSFREESUB((*bendersfreesub))/**< the freeing callback for the subproblem */
+   );
+
+/** returns the corresponding master or subproblem variable for the given variable.
+ * This provides a call back for the variable mapping between the master and subproblems */
+SCIP_VAR* SCIPbendersGetVar(
+   SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_VAR*             var                 /**< the copy of the master variable in the subproblem */
+   SCIP_VAR*             var,                /**< the variable for which the corresponding variable is desired */
+   int                   probnumber          /**< the problem number for the desired variable, -1 for the master problem */
    );
 
 /** sets the Benders' cuts sorted flags in the Benders' decomposition */
@@ -270,6 +304,7 @@ SCIP_RETCODE SCIPbendersAddSubproblem(
    SCIP_BENDERS*         benders,            /**< variable benders */
    SCIP*                 subproblem          /**< subproblem to be added to the data storage */
    );
+
 #ifdef __cplusplus
 }
 #endif
