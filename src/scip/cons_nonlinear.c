@@ -5535,18 +5535,6 @@ SCIP_RETCODE generateCut(
       success &= (rowprep->nvars == 0) || !SCIPisInfinity(scip, REALABS(rowprep->coefs[0]));
    }
 
-   /* TODO this will move into SCIPbeautifyRowprep */
-   if( success && SCIPisZero(scip, rowprep->side) )
-   {
-      /* SCIP will replace a side close to 0 by 0.0, even if that makes the cut more restrictive
-       * thus, if necessary, relax side so that it is not within eps of 0 anymore
-       */
-      if( rowprep->side > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
-         rowprep->side =  1.1*SCIPepsilon(scip);
-      else if( rowprep->side < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT )
-         rowprep->side = -1.1*SCIPepsilon(scip);
-   }
-
    if( success )
    {
       SCIP_CALL( SCIPgetRowprepRow(scip, row, rowprep, SCIPconsGetHdlr(cons)) );

@@ -15098,6 +15098,17 @@ SCIP_RETCODE SCIPbeautifyRowprep(
    if( coefrange != NULL )
       *coefrange = REALABS(maxcoef / mincoef);
 
+   /* SCIP_ROW handling will replace a side close to 0 by 0.0, even if that makes the row more restrictive
+    * to avoid this, relax the side so that it is not moved to 0.0 anymore
+    */
+   if( SCIPisZero(scip, rowprep->side) )
+   {
+      if( rowprep->side > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
+         rowprep->side =  1.1*SCIPepsilon(scip);
+      else if( rowprep->side < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT )
+         rowprep->side = -1.1*SCIPepsilon(scip);
+   }
+
    return SCIP_OKAY;
 }
 
