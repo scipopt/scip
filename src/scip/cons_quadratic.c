@@ -7161,6 +7161,18 @@ SCIP_RETCODE generateCut(
       SCIP_CALL( precutAddCoefs(scip, precut, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
    }
 
+   /* check if reference point violates cut sufficiently */
+   if( success && !SCIPisInfinity(scip, -minefficacy) )
+   {
+      viol = precutGetViolation(scip, precut, sol, conshdlrdata->scaling);
+
+      if( viol < minefficacy ) /*lint !e644*/
+      {
+         SCIPdebugMsg(scip, "skip cut for constraint <%s> because efficacy %g too low (< %g)\n", SCIPconsGetName(cons), viol, minefficacy);
+         success = FALSE;
+      }
+   }
+
    /* cleanup and beautify cut */
    if( success )
    {
@@ -7180,8 +7192,8 @@ SCIP_RETCODE generateCut(
    /* check whether maximal coef is finite, if any */
    success &= (precut->nvars == 0) || !SCIPisInfinity(scip, REALABS(precut->coefs[0]));
 
-   /* check if reference point violates cut sufficiently */
-   if( success )
+   /* check if reference point violates cut sufficiently again (cut may have changed during cleanup and beautification) */
+   if( success && (!SCIPisInfinity(scip, -minefficacy) || efficacy != NULL) )
    {
       viol = precutGetViolation(scip, precut, sol, conshdlrdata->scaling);
 
