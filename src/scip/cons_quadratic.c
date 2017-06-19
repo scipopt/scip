@@ -15003,7 +15003,7 @@ SCIP_RETCODE SCIPbeautifyRowprep(
        * further, coefficients very close to integral values are rounded to integers when added to LP
        * both cases can be problematic if variable value is very large (bad numerics)
        * thus, we anticipate by rounding coef here, but also modify constant so that cut is still valid (if possible)
-       * i.e., estimate coef[i]*x by round(coef[i])*x + (coef[i]-round(coef[i])) * bound(x)
+       * i.e., bound coef[i]*x by round(coef[i])*x + (coef[i]-round(coef[i])) * bound(x)
        * if required bound of x is not finite, then do nothing
        */
       coef = rowprep->coefs[i];
@@ -15063,6 +15063,13 @@ SCIP_RETCODE SCIPbeautifyRowprep(
 
       /* try to eliminate coefficient with minimal absolute value by weakening cut and try again
        * since we use local bounds, we need to make the row local if they are different from their global counterpart
+       *
+       * TODO (suggested by @bzfserra, see !496):
+       * - one could also could try to remove largest coefficient if the variable is almost fixed
+       * - Also one could think of not completely removing the coefficient but do an aggregation that makes the coefficient look better. For instance:
+       *   say you have $`a x + 0.1 y \leq r`$ and $`y`$ has only an upper bound, $`y \leq b`$,
+       *   then you can't really remove $`y`$. However, you could aggregate it with $`0.9 \cdot (y \leq b)`$ to get
+       *   $`a x + y \leq r + 0.9 b`$, which has better numerics (and hopefully still cuts the point... actually, if for the point you want to separate, $`y^* = b`$, then the violation is the same)
        */
       var = rowprep->vars[rowprep->nvars-1];
       if( ((mincoef > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT) || (mincoef < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT)) &&
