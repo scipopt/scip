@@ -231,7 +231,6 @@ typedef struct
    SCIP_Real*            coefs;              /**< coefficients of variables */
    int                   nvars;              /**< number of variables (= number of coefficients) */
    int                   varssize;           /**< length of variables array (= lengths of coefficients array) */
-   SCIP_Real             constant;           /**< constant term */
    SCIP_Real             side;               /**< side */
    SCIP_SIDETYPE         sidetype;           /**< type of side */
    SCIP_Bool             local;              /**< whether the cut is only locally valid (i.e., for the current node) */
@@ -5378,11 +5377,6 @@ void precutPrint(
       SCIPinfoMessage(scip, file, "%+g*<%s> ", precut->coefs[i], SCIPvarGetName(precut->vars[i]));
    }
 
-   if( precut->constant != 0.0 )
-   {
-      SCIPinfoMessage(scip, file, "%+g ", precut->constant);
-   }
-
    SCIPinfoMessage(scip, file, precut->sidetype == SCIP_SIDETYPE_LEFT ? ">= %g\n" : "<= %g\n", precut->side);
 }
 
@@ -5458,7 +5452,22 @@ SCIP_RETCODE precutAddCoefs(
    return SCIP_OKAY;
 }
 
-/** adds constant to precut */
+/** adds constant value to side of precut */
+static
+void precutAddSide(
+   SCIP_PRECUT*          precut,             /**< precut */
+   SCIP_Real             side                /**< constant value to be added to side */
+)
+{
+   assert(precut != NULL);
+
+   precut->side += side;
+}
+
+/** adds constant term to precut
+ *
+ * Substracts constant from side.
+ */
 static
 void precutAddConstant(
    SCIP_PRECUT*          precut,             /**< precut */
@@ -5467,7 +5476,7 @@ void precutAddConstant(
 {
    assert(precut != NULL);
 
-   precut->constant += constant;
+   precutAddSide(precut, -constant);
 }
 
 /* computes violation of cut in a given solution
@@ -5486,7 +5495,7 @@ SCIP_Real precutGetViolation(
    SCIP_Real viol;
    int i;
 
-   activity = precut->constant;
+   activity = -precut->side;
    for( i = 0; i < precut->nvars; ++i )
    {
       /* Loose variable have the best bound as LP solution value.
@@ -5497,7 +5506,6 @@ SCIP_Real precutGetViolation(
       if( SCIPvarGetStatus(precut->vars[i]) != SCIP_VARSTATUS_LOOSE )
          activity += precut->coefs[i] * SCIPgetSolVal(scip, sol, precut->vars[i]);
    }
-   activity -= precut->side;
 
    if( precut->sidetype == SCIP_SIDETYPE_RIGHT )
       /* cut is activity <= 0.0 -> violation is activity, if positive */
@@ -5523,7 +5531,7 @@ SCIP_Real precutGetViolation(
 
    case 's' :
    {
-      viol /= MAX(1.0, REALABS(precut->side - precut->constant));
+      viol /= MAX(1.0, REALABS(precut->side));
       break;
    }
 
@@ -5539,7 +5547,6 @@ SCIP_Real precutGetViolation(
 /** cleans up precut without modifying coefs (other than rounding errors), etc
  *
  * Merges terms that use same variable.
- * Moves constant into side.
  */
 static
 void precutMergeTerms(
@@ -5552,9 +5559,6 @@ void precutMergeTerms(
 
    assert(scip != NULL);
    assert(precut != NULL);
-
-   precut->side -= precut->constant;
-   precut->constant = 0.0;
 
    if( precut->nvars <= 1 )
       return;
@@ -5751,9 +5755,6 @@ SCIP_RETCODE precutGetRow(
    assert(scip != NULL);
    assert(row != NULL);
    assert(precut != NULL);
-
-   precut->side -= precut->constant;
-   precut->constant = 0.0;
 
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, conshdlr, precut->name,
       precut->sidetype == SCIP_SIDETYPE_LEFT  ? precut->side : -SCIPinfinity(scip),
@@ -6676,6 +6677,7 @@ SCIP_RETCODE generateCutLTI(
    SCIP_Real coefleft;
    SCIP_Real coefright;
    SCIP_Real coefrhs;
+   SCIP_Real cutlhs;
    int i;
 
    assert(scip != NULL);
@@ -6855,7 +6857,7 @@ SCIP_RETCODE generateCutLTI(
       leftminactivity, leftmaxactivity, leftrefactivity,
       rightminactivity, rightmaxactivity, rightrefactivity,
       rhsminactivity, rhsmaxactivity, rhsrefactivity,
-      &coefleft, &coefright, &coefrhs, &precut->side,
+      &coefleft, &coefright, &coefrhs, &cutlhs,
       success);
 
    if( !*success )
@@ -6863,11 +6865,11 @@ SCIP_RETCODE generateCutLTI(
 
    SCIPdebugMsg(scip, "LTI for x[%g,%g] * y[%g,%g] = w[%g,%g]: %gx %+gy %+gw >= %g;  feas: %g\n",
       leftminactivity, leftmaxactivity, rightminactivity, rightmaxactivity, rhsminactivity, rhsmaxactivity,
-      coefleft, coefright, coefrhs, precut->side,
-      coefleft * leftrefactivity + coefright * rightrefactivity + coefrhs * rhsrefactivity - precut->side
+      coefleft, coefright, coefrhs, cutlhs,
+      coefleft * leftrefactivity + coefright * rightrefactivity + coefrhs * rhsrefactivity - cutlhs
       );
 
-   if( coefleft * leftrefactivity + coefright * rightrefactivity + coefrhs * rhsrefactivity >= precut->side )
+   if( coefleft * leftrefactivity + coefright * rightrefactivity + coefrhs * rhsrefactivity >= cutlhs )
    {
       SCIPdebugMsg(scip, "does not cutoff point? :-(\n");
       *success = FALSE;
@@ -6899,6 +6901,7 @@ SCIP_RETCODE generateCutLTI(
       assert(!SCIPisInfinity(scip, -consdata->lhs));
       precutAddConstant(precut, coefrhs * consdata->lhs);
    }
+   precutAddSide(precut, cutlhs);
 
    precut->local = TRUE;
 
@@ -6987,7 +6990,7 @@ SCIP_RETCODE generateCutConvex(
    }
 
    precut->sidetype = violside;
-   precut->side = (violside == SCIP_SIDETYPE_LEFT ? consdata->lhs : consdata->rhs);
+   precutAddSide(precut, violside == SCIP_SIDETYPE_LEFT ? consdata->lhs : consdata->rhs);
 
    (void) SCIPsnprintf(precut->name, SCIP_MAXSTRLEN, "%s_side%d_linearization_%d", SCIPconsGetName(cons), violside, SCIPgetNLPs(scip));
 
@@ -7090,7 +7093,7 @@ SCIP_RETCODE generateCutNonConvex(
    }
 
    precut->sidetype = violside;
-   precut->side = (violside == SCIP_SIDETYPE_LEFT ? consdata->lhs : consdata->rhs);
+   precutAddSide(precut, violside == SCIP_SIDETYPE_LEFT ? consdata->lhs : consdata->rhs);
 
    (void) SCIPsnprintf(precut->name, SCIP_MAXSTRLEN, "%s_side%d_estimation_%d", SCIPconsGetName(cons), violside, SCIPgetNLPs(scip));
 
@@ -7116,7 +7119,7 @@ SCIP_RETCODE generateCut(
    SCIP_CONSDATA* consdata;
    SCIP_PRECUT*   precut;
    SCIP_Bool      success;
-   SCIP_Real      viol;
+   SCIP_Real      viol = 0.0;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
