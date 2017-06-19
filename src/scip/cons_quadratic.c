@@ -5686,6 +5686,13 @@ SCIP_RETCODE precutBeautify(
       return SCIP_OKAY;
    }
 
+   /* forget about coefs that became zero by above loop */
+   while( precut->nvars > 0 && precut->coefs[precut->nvars-1] == 0.0 )
+      --precut->nvars;
+   /* if no coefs left, then return */
+   if( precut->nvars == 0 )
+      return SCIP_OKAY;
+
    maxcoef = precut->coefs[0];
    mincoef = precut->coefs[precut->nvars-1];
    while( REALABS(maxcoef / mincoef) > coefmaxrange  )
