@@ -224,19 +224,6 @@ struct SCIP_ConshdlrData
    int                   nquadconsupgrades;  /**< number of quadratic constraint upgrade methods */
 };
 
-/** storage for row data representing a cut */
-typedef struct
-{
-   SCIP_VAR**            vars;               /**< variables */
-   SCIP_Real*            coefs;              /**< coefficients of variables */
-   int                   nvars;              /**< number of variables (= number of coefficients) */
-   int                   varssize;           /**< length of variables array (= lengths of coefficients array) */
-   SCIP_Real             side;               /**< side */
-   SCIP_SIDETYPE         sidetype;           /**< type of side */
-   SCIP_Bool             local;              /**< whether the cut is only locally valid (i.e., for the current node) */
-   char                  name[SCIP_MAXSTRLEN]; /**< cut name */
-} SCIP_ROWPREP;
-
 
 /*
  * local methods for managing quadratic constraint update methods
@@ -5316,456 +5303,6 @@ SCIP_RETCODE computeViolations(
    return SCIP_OKAY;
 }
 
-/** creates a SCIP_ROWPREP datastructure
- *
- * Initial cut represents 0 <= 0.
- */
-static
-SCIP_RETCODE rowprepCreate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWPREP**        rowprep,            /**< buffer to store pointer to rowprep */
-   SCIP_SIDETYPE         sidetype,           /**< whether cut will be or lower-equal or larger-equal type */
-   SCIP_Bool             local               /**< whether cut will be valid only locally */
-)
-{
-   assert(scip != NULL);
-   assert(rowprep != NULL);
-
-   SCIP_CALL( SCIPallocBlockMemory(scip, rowprep) );
-   BMSclearMemory(*rowprep);
-
-   (*rowprep)->sidetype = sidetype;
-   (*rowprep)->local = local;
-
-   return SCIP_OKAY;
-}
-
-/** frees a SCIP_ROWPREP datastructure */
-static
-void rowprepFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWPREP**        rowprep             /**< pointer that stores pointer to rowprep */
-)
-{
-   assert(scip != NULL);
-   assert(rowprep != NULL);
-   assert(*rowprep != NULL);
-
-   SCIPfreeBlockMemoryArrayNull(scip, &(*rowprep)->vars, (*rowprep)->varssize);
-   SCIPfreeBlockMemoryArrayNull(scip, &(*rowprep)->coefs, (*rowprep)->varssize);
-   SCIPfreeBlockMemory(scip, rowprep);
-}
-
-/** prints rowprep */
-#ifndef _MSC_VER
-__attribute__ ((unused))
-#endif
-static
-void rowprepPrint(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWPREP*         rowprep,            /**< rowprep to be printed */
-   FILE*                 file                /**< file to print to, or NULL */
-)
-{
-   int i;
-
-   assert(scip != NULL);
-   assert(rowprep != NULL);
-
-   for( i = 0; i < rowprep->nvars; ++i )
-   {
-      SCIPinfoMessage(scip, file, "%+g*<%s> ", rowprep->coefs[i], SCIPvarGetName(rowprep->vars[i]));
-   }
-
-   SCIPinfoMessage(scip, file, rowprep->sidetype == SCIP_SIDETYPE_LEFT ? ">= %g\n" : "<= %g\n", rowprep->side);
-}
-
-/** adds a term coef*var to a rowprep */
-static
-SCIP_RETCODE rowprepAddCoef(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWPREP*         rowprep,            /**< rowprep */
-   SCIP_VAR*             var,                /**< variable to add */
-   SCIP_Real             coef                /**< coefficient to add */
-   )
-{
-   assert(scip != NULL);
-   assert(rowprep != NULL);
-   assert(var != NULL);
-
-   if( coef == 0.0 )
-      return SCIP_OKAY;
-
-   if( rowprep->varssize <= rowprep->nvars )
-   {
-      /* realloc vars and coefs array */
-      int oldsize;
-
-      oldsize = rowprep->varssize;
-      rowprep->varssize = SCIPcalcMemGrowSize(scip, rowprep->nvars + 1);
-
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->vars,  oldsize, rowprep->varssize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->coefs, oldsize, rowprep->varssize) );
-   }
-
-   rowprep->vars[rowprep->nvars] = var;
-   rowprep->coefs[rowprep->nvars] = coef;
-   ++rowprep->nvars;
-
-   return SCIP_OKAY;
-}
-
-/** adds terms coef*var to a rowprep */
-static
-SCIP_RETCODE rowprepAddCoefs(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWPREP*         rowprep,            /**< rowprep */
-   int                   nvars,              /**< number of terms to add */
-   SCIP_VAR**            vars,               /**< variables to add */
-   SCIP_Real*            coefs               /**< coefficients to add */
-   )
-{
-   assert(scip != NULL);
-   assert(rowprep != NULL);
-   assert(vars != NULL || nvars == 0);
-   assert(coefs != NULL || nvars == 0);
-
-   if( nvars == 0 )
-      return SCIP_OKAY;
-
-   if( rowprep->varssize < rowprep->nvars + nvars )
-   {
-      /* realloc vars and coefs array */
-      int oldsize;
-
-      oldsize = rowprep->varssize;
-      rowprep->varssize = SCIPcalcMemGrowSize(scip, rowprep->nvars + nvars);
-
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->vars,  oldsize, rowprep->varssize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->coefs, oldsize, rowprep->varssize) );
-   }
-
-   BMScopyMemoryArray(rowprep->vars + rowprep->nvars, vars, nvars);
-   BMScopyMemoryArray(rowprep->coefs + rowprep->nvars, coefs, nvars);
-   rowprep->nvars += nvars;
-
-   return SCIP_OKAY;
-}
-
-/** adds constant value to side of rowprep */
-static
-void rowprepAddSide(
-   SCIP_ROWPREP*         rowprep,            /**< rowprep */
-   SCIP_Real             side                /**< constant value to be added to side */
-)
-{
-   assert(rowprep != NULL);
-
-   rowprep->side += side;
-}
-
-/** adds constant term to rowprep
- *
- * Substracts constant from side.
- */
-static
-void rowprepAddConstant(
-   SCIP_ROWPREP*         rowprep,            /**< rowprep */
-   SCIP_Real             constant            /**< constant value to be added */
-)
-{
-   assert(rowprep != NULL);
-
-   rowprepAddSide(rowprep, -constant);
-}
-
-/* computes violation of cut in a given solution
- *
- * if scaling == 'g', assumes that terms in rowprep are sorted by abs value of coef, in decreasing order
- */
-static
-SCIP_Real rowprepGetViolation(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
-   SCIP_SOL*             sol,                /**< solution or NULL for LP solution */
-   char                  scaling             /**< how to scale cut violation: o, g, or s */
-   )
-{
-   SCIP_Real activity;
-   SCIP_Real viol;
-   int i;
-
-   activity = -rowprep->side;
-   for( i = 0; i < rowprep->nvars; ++i )
-   {
-      /* Loose variable have the best bound as LP solution value.
-       * HOWEVER, they become column variables when they are added to a row (via SCIPaddVarsToRow below).
-       * When this happens, their LP solution value changes to 0.0!
-       * So when calculating the row activity, we treat loose variable as if they were already column variables.
-       */
-      if( SCIPvarGetStatus(rowprep->vars[i]) != SCIP_VARSTATUS_LOOSE )
-         activity += rowprep->coefs[i] * SCIPgetSolVal(scip, sol, rowprep->vars[i]);
-   }
-
-   if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
-      /* cut is activity <= 0.0 -> violation is activity, if positive */
-      viol = MAX(activity, 0.0);
-   else
-      /* cut is activity >= 0.0 -> violation is -activity, if positive */
-      viol = MAX(-activity, 0.0);
-
-   switch( scaling )
-   {
-   case 'o' :
-      break;
-
-   case 'g' :
-      /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0 this avoid finding cuts
-       * efficient which are only very slightly violated
-       * CPLEX does not seem to scale row coefficients up too
-       * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium scaling)
-       */
-      if( rowprep->nvars > 0 )
-         viol /= MAX(1.0, REALABS(rowprep->coefs[0]));
-      break;
-
-   case 's' :
-   {
-      viol /= MAX(1.0, REALABS(rowprep->side));
-      break;
-   }
-
-   default:
-      SCIPerrorMessage("Unknown scaling method '%c'.", scaling);
-      SCIPABORT();
-      return SCIP_INVALID;
-   }
-
-   return viol;
-}
-
-/** cleans up rowprep without modifying coefs (other than rounding errors), etc
- *
- * Merges terms that use same variable.
- */
-static
-void rowprepMergeTerms(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWPREP*         rowprep             /**< rowprep to be cleaned up */
-)
-{
-   int i;
-   int j;
-
-   assert(scip != NULL);
-   assert(rowprep != NULL);
-
-   if( rowprep->nvars <= 1 )
-      return;
-
-   /* sort terms by variable index */
-   SCIPsortPtrReal((void**)rowprep->vars, rowprep->coefs, SCIPvarComp, rowprep->nvars);
-
-   /* merge terms with same variable, drop 0 coefficients */
-   i = 0;
-   j = 1;
-   while( j < rowprep->nvars )
-   {
-      if( rowprep->vars[i] == rowprep->vars[j] )
-      {
-         /* merge term j into term i */
-         /* TODO if sign of vars[i] is known, then can do safe rounding here */
-         rowprep->coefs[i] += rowprep->coefs[j];
-         ++j;
-         continue;
-      }
-
-      if( rowprep->coefs[i] == 0.0 )
-      {
-         /* move term j to position i */
-         rowprep->coefs[i] = rowprep->coefs[j];
-         rowprep->vars[i] = rowprep->vars[j];
-         ++j;
-         continue;
-      }
-
-      /* move term j to position i+1 and move on */
-      if( j != i+1 )
-      {
-         rowprep->vars[i+1] = rowprep->vars[j];
-         rowprep->coefs[i+1] = rowprep->coefs[j];
-      }
-      ++i;
-      ++j;
-   }
-
-   /* remaining term can have coef zero -> forget about it */
-   if( rowprep->coefs[i] == 0.0 )
-      --i;
-
-   /* i points to last term */
-   rowprep->nvars = i+1;
-}
-
-/* beautifies a rowprep
- *
- * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
- * Drops small coefficients if coefrange is too large, if this can be done by relaxing the cut.
- *
- * After return, the terms in the rowprep will be sorted by absolute value of coefficient, in decreasing order.
- */
-static
-SCIP_RETCODE rowprepBeautify(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWPREP*         rowprep,            /**< rowprep to be beautified */
-   SCIP_Real             coefmaxrange,       /**< maximal allowed coefficients range */
-   SCIP_Real*            coefrange           /**< buffer to store coefrange of beautified cut, or NULL if not of interest */
-)
-{
-   SCIP_Real coef;
-   SCIP_Real roundcoef;
-   SCIP_Real mincoef;
-   SCIP_Real maxcoef;
-   SCIP_Real* abscoefs;
-   SCIP_VAR* var;
-   int i;
-
-   /* initialize cutrange in case we terminate early, usually when all cut terms have been eliminated */
-   if( coefrange != NULL )
-      *coefrange = 1.0;
-
-   if( rowprep->nvars == 0 )
-      return SCIP_OKAY;
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &abscoefs, rowprep->nvars) );
-
-   for( i = 0; i < rowprep->nvars; ++i )
-   {
-      /* coefficients smaller than epsilon are rounded to 0.0 when added to row
-       * further, coefficients very close to integral values are rounded to integers when added to LP
-       * both cases can be problematic if variable value is very large (bad numerics)
-       * thus, we anticipate by rounding coef here, but also modify constant so that cut is still valid (if possible)
-       * i.e., estimate coef[i]*x by round(coef[i])*x + (coef[i]-round(coef[i])) * bound(x)
-       * if required bound of x is not finite, then do nothing
-       */
-      coef = rowprep->coefs[i];
-      roundcoef = SCIPround(scip, coef);
-      if( coef != roundcoef && SCIPisEQ(scip, coef, roundcoef) ) /*lint !e777*/
-      {
-         SCIP_Real xbnd;
-
-         var = rowprep->vars[i];
-         if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
-            if( rowprep->local )
-               xbnd = coef > roundcoef ? SCIPvarGetLbLocal(var)  : SCIPvarGetUbLocal(var);
-            else
-               xbnd = coef > roundcoef ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var);
-         else
-            if( rowprep->local )
-               xbnd = coef > roundcoef ? SCIPvarGetUbLocal(var)  : SCIPvarGetLbLocal(var);
-            else
-               xbnd = coef > roundcoef ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var);
-
-         if( !SCIPisInfinity(scip, REALABS(xbnd)) )
-         {
-            SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.20g, round coefficient to %g and add constant %g\n",
-               SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef, roundcoef, (coef-roundcoef) * xbnd);
-            rowprepAddConstant(rowprep, (coef-roundcoef) * xbnd);  /* TODO do this in rounding-safe mode */
-            rowprep->coefs[i] = coef = roundcoef;
-         }
-      }
-
-      abscoefs[i] = REALABS(coef);
-   }
-
-   /* sort cut terms by absolute value of coefficients, from largest to smallest */
-   SCIPsortDownRealRealPtr(abscoefs, rowprep->coefs, (void**)rowprep->vars, rowprep->nvars);
-
-   SCIPfreeBufferArray(scip, &abscoefs);
-
-   /* if maximal coefficient is zero, then all coefficients are zero */
-   if( rowprep->coefs[0] == 0.0 )
-   {
-      rowprep->nvars = 0;
-      return SCIP_OKAY;
-   }
-
-   /* forget about coefs that became zero by above loop */
-   while( rowprep->nvars > 0 && rowprep->coefs[rowprep->nvars-1] == 0.0 )
-      --rowprep->nvars;
-   /* if no coefs left, then return */
-   if( rowprep->nvars == 0 )
-      return SCIP_OKAY;
-
-   maxcoef = rowprep->coefs[0];
-   mincoef = rowprep->coefs[rowprep->nvars-1];
-   while( REALABS(maxcoef / mincoef) > coefmaxrange  )
-   {
-      SCIPdebugMsg(scip, "cut coefficients have very large range: mincoef = %g maxcoef = %g\n", mincoef, maxcoef);
-
-      /* try to eliminate coefficient with minimal absolute value by weakening cut and try again
-       * since we use local bounds, we need to make the row local if they are different from their global counterpart
-       */
-      var = rowprep->vars[rowprep->nvars-1];
-      if( ((mincoef > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT) || (mincoef < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT)) &&
-         !SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
-      {
-         SCIPdebugMsg(scip, "eliminate coefficient %g for <%s> [%g, %g]\n", mincoef, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-         rowprepAddConstant(rowprep, mincoef * SCIPvarGetLbLocal(var));
-         --rowprep->nvars; /* forget last term */
-         rowprep->local |= SCIPisGT(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var));
-      }
-      else if( ((mincoef < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT) || (mincoef > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT)) &&
-         !SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
-      {
-         SCIPdebugMsg(scip, "eliminate coefficient %g for <%s> [%g, %g]\n", mincoef, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-         rowprepAddConstant(rowprep, mincoef * SCIPvarGetUbLocal(var));
-         --rowprep->nvars; /* forget last term */
-         rowprep->local |= SCIPisLT(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var));
-      }
-      else
-      {
-         /* cannot eliminate coefficient */
-         break;
-      }
-
-      /* if no variables left, then stop */
-      if( rowprep->nvars == 0 )
-         return SCIP_OKAY;
-
-      /* update mincoef */
-      mincoef = REALABS(rowprep->coefs[rowprep->nvars-1]);
-   }
-
-   if( coefrange != NULL )
-      *coefrange = REALABS(maxcoef / mincoef);
-
-   return SCIP_OKAY;
-}
-
-/** generates a SCIP_ROW from a rowprep */
-static
-SCIP_RETCODE rowprepGetRow(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROW**            row,                /**< buffer to store pointer to new row */
-   SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-)
-{
-   assert(scip != NULL);
-   assert(row != NULL);
-   assert(rowprep != NULL);
-
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, conshdlr, rowprep->name,
-      rowprep->sidetype == SCIP_SIDETYPE_LEFT  ? rowprep->side : -SCIPinfinity(scip),
-      rowprep->sidetype == SCIP_SIDETYPE_RIGHT ? rowprep->side :  SCIPinfinity(scip),
-      rowprep->local && (SCIPgetDepth(scip) > 0), FALSE, TRUE) );
-
-   SCIP_CALL( SCIPaddVarsToRow(scip, *row, rowprep->nvars, rowprep->vars, rowprep->coefs) );
-
-   return SCIP_OKAY;
-}
-
 /** tries to compute cut for multleft * <coefleft, x'> * multright <= rhs / (multright * <coefright, x'>) where x'=(x,1) */
 static
 SCIP_RETCODE generateCutFactorableDo(
@@ -5824,13 +5361,13 @@ SCIP_RETCODE generateCutFactorableDo(
       constant -= rhs * multright * (1.0 / rightminactivity + 1.0 / rightmaxactivity);
       constant += rhs * multright * coefright[consdata->nquadvars] / (rightminactivity * rightmaxactivity);
 
-      rowprepAddConstant(rowprep, constant);
+      SCIPaddRowprepConstant(rowprep, constant);
 
       for( i = 0; i < consdata->nquadvars; ++i )
       {
          coef = multleft * multright * coefleft[i];
          coef += rhs * multright / (rightminactivity * rightmaxactivity) * coefright[i];
-         SCIP_CALL( rowprepAddCoef(scip, rowprep, consdata->quadvarterms[i].var, coef) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, consdata->quadvarterms[i].var, coef) );
       }
 
       (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_factorablesecant_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
@@ -5859,13 +5396,13 @@ SCIP_RETCODE generateCutFactorableDo(
       constant -= 2.0 * rhs / (multright * refvalue);
       constant += rhs / (refvalue * refvalue) * multright * coefright[consdata->nquadvars];
 
-      rowprepAddConstant(rowprep, constant);
+      SCIPaddRowprepConstant(rowprep, constant);
 
       for( i = 0; i < consdata->nquadvars; ++i )
       {
          coef = multleft * multright * coefleft[i];
          coef += rhs / (refvalue * refvalue) * multright * coefright[i];
-         SCIP_CALL( rowprepAddCoef(scip, rowprep, consdata->quadvarterms[i].var, coef) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, consdata->quadvarterms[i].var, coef) );
       }
 
       (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_factorablelinearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
@@ -6881,27 +6418,27 @@ SCIP_RETCODE generateCutLTI(
     */
    for( i = 0; i < consdata->nquadvars; ++i )
    {
-      SCIP_CALL( rowprepAddCoef(scip, rowprep, consdata->quadvarterms[i].var, coefleft * consdata->factorleft[i] + coefright * consdata->factorright[i]) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, consdata->quadvarterms[i].var, coefleft * consdata->factorleft[i] + coefright * consdata->factorright[i]) );
    }
-   rowprepAddConstant(rowprep, coefleft * consdata->factorleft[i] + coefright * consdata->factorright[i]);
+   SCIPaddRowprepConstant(rowprep, coefleft * consdata->factorleft[i] + coefright * consdata->factorright[i]);
 
    for( i = 0; i < consdata->nlinvars; ++i )
    {
-      SCIP_CALL( rowprepAddCoef(scip, rowprep, consdata->linvars[i], -coefrhs * consdata->lincoefs[i]) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, consdata->linvars[i], -coefrhs * consdata->lincoefs[i]) );
    }
    if( coefrhs > 0.0 )
    {
       /* use coefrhs * w <= coefrhs * (consrhs - lincoefs) */
       assert(!SCIPisInfinity(scip, consdata->rhs));
-      rowprepAddConstant(rowprep, coefrhs * consdata->rhs);
+      SCIPaddRowprepConstant(rowprep, coefrhs * consdata->rhs);
    }
    else
    {
       /* use coefrhs * w <= coeflhs * (conslhs - lincoefs) */
       assert(!SCIPisInfinity(scip, -consdata->lhs));
-      rowprepAddConstant(rowprep, coefrhs * consdata->lhs);
+      SCIPaddRowprepConstant(rowprep, coefrhs * consdata->lhs);
    }
-   rowprepAddSide(rowprep, cutlhs);
+   SCIPaddRowprepSide(rowprep, cutlhs);
 
    rowprep->local = TRUE;
 
@@ -6949,15 +6486,15 @@ SCIP_RETCODE generateCutConvex(
       var = consdata->quadvarterms[j].var;
 
       /* initialize coefficients to linear coefficients of quadratic variables */
-      SCIP_CALL( rowprepAddCoef(scip, rowprep, var, consdata->quadvarterms[j].lincoef) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, consdata->quadvarterms[j].lincoef) );
 
       /* add linearization of square term */
       coef = 0.0;
       constant = 0.0;
       SCIPaddSquareLinearization(scip, consdata->quadvarterms[j].sqrcoef, ref[j],
          consdata->quadvarterms[j].nadjbilin == 0 && SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef, &constant, success);
-      SCIP_CALL( rowprepAddCoef(scip, rowprep, var, coef) );
-      rowprepAddConstant(rowprep, constant);
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, coef) );
+      SCIPaddRowprepConstant(rowprep, constant);
 
       /* add linearization of bilinear terms that have var as first variable */
       for( k = 0; k < consdata->quadvarterms[j].nadjbilin && *success; ++k )
@@ -6977,9 +6514,9 @@ SCIP_RETCODE generateCutConvex(
          coef2 = 0.0;
          constant = 0.0;
          SCIPaddBilinLinearization(scip, bilinterm->coef, ref[j], ref[var2pos], &coef, &coef2, &constant, success);
-         SCIP_CALL( rowprepAddCoef(scip, rowprep, var, coef) );
-         SCIP_CALL( rowprepAddCoef(scip, rowprep, bilinterm->var2, coef2) );
-         rowprepAddConstant(rowprep, constant);
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, coef) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, bilinterm->var2, coef2) );
+         SCIPaddRowprepConstant(rowprep, constant);
       }
    }
 
@@ -6990,7 +6527,7 @@ SCIP_RETCODE generateCutConvex(
    }
 
    rowprep->sidetype = violside;
-   rowprepAddSide(rowprep, violside == SCIP_SIDETYPE_LEFT ? consdata->lhs : consdata->rhs);
+   SCIPaddRowprepSide(rowprep, violside == SCIP_SIDETYPE_LEFT ? consdata->lhs : consdata->rhs);
 
    (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_side%d_linearization_%d", SCIPconsGetName(cons), violside, SCIPgetNLPs(scip));
 
@@ -7036,7 +6573,7 @@ SCIP_RETCODE generateCutNonConvex(
       var = consdata->quadvarterms[j].var;
 
       /* initialize coefficients to linear coefficients of quadratic variables */
-      SCIP_CALL( rowprepAddCoef(scip, rowprep, var, consdata->quadvarterms[j].lincoef) );
+      SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, consdata->quadvarterms[j].lincoef) );
 
       sqrcoef = consdata->quadvarterms[j].sqrcoef;
       if( sqrcoef != 0.0 )
@@ -7055,8 +6592,8 @@ SCIP_RETCODE generateCutNonConvex(
             SCIPaddSquareSecant(scip, sqrcoef, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), ref[j], &coef,
                &constant, success);
          }
-         SCIP_CALL( rowprepAddCoef(scip, rowprep, var, coef) );
-         rowprepAddConstant(rowprep, constant);
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, coef) );
+         SCIPaddRowprepConstant(rowprep, constant);
       }
 
       for( k = 0; k < consdata->quadvarterms[j].nadjbilin && *success; ++k )
@@ -7080,9 +6617,9 @@ SCIP_RETCODE generateCutNonConvex(
             SCIPvarGetLbLocal(bilinterm->var2), SCIPvarGetUbLocal(bilinterm->var2), ref[var2pos],
             violside == SCIP_SIDETYPE_LEFT, &coef, &coef2, &constant, success);
 
-         SCIP_CALL( rowprepAddCoef(scip, rowprep, var, coef) );
-         SCIP_CALL( rowprepAddCoef(scip, rowprep, bilinterm->var2, coef2) );
-         rowprepAddConstant(rowprep, constant);
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, var, coef) );
+         SCIP_CALL( SCIPaddRowprepTerm(scip, rowprep, bilinterm->var2, coef2) );
+         SCIPaddRowprepConstant(rowprep, constant);
       }
    }
 
@@ -7093,7 +6630,7 @@ SCIP_RETCODE generateCutNonConvex(
    }
 
    rowprep->sidetype = violside;
-   rowprepAddSide(rowprep, violside == SCIP_SIDETYPE_LEFT ? consdata->lhs : consdata->rhs);
+   SCIPaddRowprepSide(rowprep, violside == SCIP_SIDETYPE_LEFT ? consdata->lhs : consdata->rhs);
 
    (void) SCIPsnprintf(rowprep->name, SCIP_MAXSTRLEN, "%s_side%d_estimation_%d", SCIPconsGetName(cons), violside, SCIPgetNLPs(scip));
 
@@ -7137,7 +6674,7 @@ SCIP_RETCODE generateCut(
 
    *row = NULL;
 
-   SCIP_CALL( rowprepCreate(scip, &rowprep, SCIP_SIDETYPE_RIGHT, SCIPconsIsLocal(cons)) );
+   SCIP_CALL( SCIPcreateRowprep(scip, &rowprep, SCIP_SIDETYPE_RIGHT, SCIPconsIsLocal(cons)) );
    success = FALSE;
 
    /* if constraint function is factorable, then try to use factorable form to generate cut */
@@ -7168,13 +6705,13 @@ SCIP_RETCODE generateCut(
          SCIP_CALL( generateCutNonConvex(scip, cons, violside, ref, rowprep, &success) );
       }
 
-      SCIP_CALL( rowprepAddCoefs(scip, rowprep, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
+      SCIP_CALL( SCIPaddRowprepTerms(scip, rowprep, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
    }
 
    /* check if reference point violates cut sufficiently */
    if( success && !SCIPisInfinity(scip, -minefficacy) )
    {
-      viol = rowprepGetViolation(scip, rowprep, sol, conshdlrdata->scaling);
+      viol = SCIPgetRowprepViolation(scip, rowprep, sol, conshdlrdata->scaling);
 
       if( viol < minefficacy ) /*lint !e644*/
       {
@@ -7189,10 +6726,10 @@ SCIP_RETCODE generateCut(
       SCIP_Real coefrange;
 
       /* merge terms */
-      rowprepMergeTerms(scip, rowprep);
+      SCIPmergeRowprepTerms(scip, rowprep);
 
       /* improve coefficients */
-      SCIP_CALL( rowprepBeautify(scip, rowprep, conshdlrdata->cutmaxrange, &coefrange) );
+      SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, conshdlrdata->cutmaxrange, &coefrange) );
       success = coefrange <= conshdlrdata->cutmaxrange;
    }
 
@@ -7205,7 +6742,7 @@ SCIP_RETCODE generateCut(
    /* check if reference point violates cut sufficiently again (cut may have changed during cleanup and beautification) */
    if( success && (!SCIPisInfinity(scip, -minefficacy) || efficacy != NULL) )
    {
-      viol = rowprepGetViolation(scip, rowprep, sol, conshdlrdata->scaling);
+      viol = SCIPgetRowprepViolation(scip, rowprep, sol, conshdlrdata->scaling);
 
       if( !SCIPisInfinity(scip, -minefficacy) && viol < minefficacy ) /*lint !e644*/
       {
@@ -7217,7 +6754,7 @@ SCIP_RETCODE generateCut(
    /* generate row */
    if( success )
    {
-      SCIP_CALL( rowprepGetRow(scip, row, rowprep, SCIPconsGetHdlr(cons)) );
+      SCIP_CALL( SCIPgetRowprepRow(scip, row, rowprep, SCIPconsGetHdlr(cons)) );
 
       SCIPdebugMsg(scip, "found cut <%s>, lhs=%g, rhs=%g, mincoef=%g, maxcoef=%g, range=%g, nnz=%d, efficacy=%g\n",
          SCIProwGetName(*row), SCIProwGetLhs(*row), SCIProwGetRhs(*row),
@@ -7228,7 +6765,7 @@ SCIP_RETCODE generateCut(
          *efficacy = viol;
    }
 
-   rowprepFree(scip, &rowprep);
+   SCIPfreeRowprep(scip, &rowprep);
 
    return SCIP_OKAY;
 }
@@ -8752,8 +8289,8 @@ SCIP_RETCODE processCut(
    return SCIP_OKAY;
 }
 /** tries to separate solution or LP solution by a linear cut
- * 
- *  assumes that constraint violations have been computed 
+ *
+ *  assumes that constraint violations have been computed
  */
 static
 SCIP_RETCODE separatePoint(
@@ -9731,7 +9268,7 @@ SCIP_RETCODE replaceByLinearConstraints(
 /** tightens a lower bound on a variable and checks the result */
 static
 SCIP_RETCODE propagateBoundsTightenVarLb(
-   SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint where we currently propagate */
    SCIP_Real             intervalinfty,      /**< infinity value used in interval operations */
    SCIP_VAR*             var,                /**< variable which domain we might reduce */
@@ -9792,7 +9329,7 @@ SCIP_RETCODE propagateBoundsTightenVarLb(
 /** tightens an upper bound on a variable and checks the result */
 static
 SCIP_RETCODE propagateBoundsTightenVarUb(
-   SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint where we currently propagate */
    SCIP_Real             intervalinfty,      /**< infinity value used in interval operations */
    SCIP_VAR*             var,                /**< variable which domain we might reduce */
@@ -9853,7 +9390,7 @@ SCIP_RETCODE propagateBoundsTightenVarUb(
 /** solves a quadratic equation \f$ a x^2 + b x \in rhs \f$ (with b an interval) and reduces bounds on x or deduces infeasibility if possible */
 static
 SCIP_RETCODE propagateBoundsQuadVar(
-   SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint where we currently propagate */
    SCIP_Real             intervalinfty,      /**< infinity value used in interval operations */
    SCIP_VAR*             var,                /**< variable which bounds with might tighten */
@@ -9885,7 +9422,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
       return SCIP_OKAY;
    }
    else if( SCIPvarGetLbLocal(var) >= 0.0 )
-   { 
+   {
       SCIP_INTERVAL a_;
 
       /* need only positive solutions */
@@ -13156,7 +12693,7 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
 
          /* we do not copy, if a variable is missing */
          if( !(*valid) )
-            goto TERMINATE;  
+            goto TERMINATE;
       }
    }
 
@@ -13202,7 +12739,7 @@ SCIP_DECL_CONSCOPY(consCopyQuadratic)
                assert(consdata->bilinterms[k].var2 == consdata->quadvarterms[i].var);
                bilinterms[k].var2 = quadvarterms[i].var;
             }
-            bilinterms[k].coef = consdata->bilinterms[k].coef; 
+            bilinterms[k].coef = consdata->bilinterms[k].coef;
          }
       }
    }
@@ -13800,7 +13337,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
       }
       else if( !SCIPisZero(scip, sqrcoef) )
       {
-         /* if it's there already, but we got a square coefficient, add it to the previous one */ 
+         /* if it's there already, but we got a square coefficient, add it to the previous one */
          var1pos = (int) (size_t) SCIPhashmapGetImage(quadvaridxs, quadvars1[i]);   /*lint !e613*/
          assert(consdata->quadvarterms[var1pos].var == quadvars1[i]);   /*lint !e613*/
          consdata->quadvarterms[var1pos].sqrcoef += sqrcoef;
@@ -13909,7 +13446,7 @@ SCIP_RETCODE SCIPcreateConsBasicQuadratic(
 }
 
 /** Creates and captures a quadratic constraint.
- * 
+ *
  * The constraint should be given in the form
  * \f[
  * \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m (a_j y_j^2 + b_j y_j) + \sum_{k=1}^p c_k v_k w_k \leq u.
@@ -13922,8 +13459,8 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    int                   nlinvars,           /**< number of linear terms (n) */
-   SCIP_VAR**            linvars,            /**< array with variables in linear part (x_i) */ 
-   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part (b_i) */ 
+   SCIP_VAR**            linvars,            /**< array with variables in linear part (x_i) */
+   SCIP_Real*            lincoefs,           /**< array with coefficients of variables in linear part (b_i) */
    int                   nquadvarterms,      /**< number of quadratic terms (m) */
    SCIP_QUADVARTERM*     quadvarterms,       /**< quadratic variable terms */
    int                   nbilinterms,        /**< number of bilinear terms (p) */
@@ -15146,6 +14683,442 @@ SCIP_RETCODE SCIPchgBilinCoefQuadratic(
 
    SCIPintervalSetEmpty(&consdata->quadactivitybounds);
    consdata->activity = SCIP_INVALID;
+
+   return SCIP_OKAY;
+}
+
+/** creates a SCIP_ROWPREP datastructure
+ *
+ * Initial cut represents 0 <= 0.
+ */
+SCIP_RETCODE SCIPcreateRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP**        rowprep,            /**< buffer to store pointer to rowprep */
+   SCIP_SIDETYPE         sidetype,           /**< whether cut will be or lower-equal or larger-equal type */
+   SCIP_Bool             local               /**< whether cut will be valid only locally */
+)
+{
+   assert(scip != NULL);
+   assert(rowprep != NULL);
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, rowprep) );
+   BMSclearMemory(*rowprep);
+
+   (*rowprep)->sidetype = sidetype;
+   (*rowprep)->local = local;
+
+   return SCIP_OKAY;
+}
+
+/** frees a SCIP_ROWPREP datastructure */
+void SCIPfreeRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP**        rowprep             /**< pointer that stores pointer to rowprep */
+)
+{
+   assert(scip != NULL);
+   assert(rowprep != NULL);
+   assert(*rowprep != NULL);
+
+   SCIPfreeBlockMemoryArrayNull(scip, &(*rowprep)->vars, (*rowprep)->varssize);
+   SCIPfreeBlockMemoryArrayNull(scip, &(*rowprep)->coefs, (*rowprep)->varssize);
+   SCIPfreeBlockMemory(scip, rowprep);
+}
+
+/** prints a rowprep */
+void SCIPprintRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be printed */
+   FILE*                 file                /**< file to print to, or NULL */
+)
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(rowprep != NULL);
+
+   for( i = 0; i < rowprep->nvars; ++i )
+   {
+      SCIPinfoMessage(scip, file, "%+g*<%s> ", rowprep->coefs[i], SCIPvarGetName(rowprep->vars[i]));
+   }
+
+   SCIPinfoMessage(scip, file, rowprep->sidetype == SCIP_SIDETYPE_LEFT ? ">= %g\n" : "<= %g\n", rowprep->side);
+}
+
+/** adds a term coef*var to a rowprep */
+SCIP_RETCODE SCIPaddRowprepTerm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_VAR*             var,                /**< variable to add */
+   SCIP_Real             coef                /**< coefficient to add */
+)
+{
+   assert(scip != NULL);
+   assert(rowprep != NULL);
+   assert(var != NULL);
+
+   if( coef == 0.0 )
+      return SCIP_OKAY;
+
+   if( rowprep->varssize <= rowprep->nvars )
+   {
+      /* realloc vars and coefs array */
+      int oldsize;
+
+      oldsize = rowprep->varssize;
+      rowprep->varssize = SCIPcalcMemGrowSize(scip, rowprep->nvars + 1);
+
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->vars,  oldsize, rowprep->varssize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->coefs, oldsize, rowprep->varssize) );
+   }
+
+   rowprep->vars[rowprep->nvars] = var;
+   rowprep->coefs[rowprep->nvars] = coef;
+   ++rowprep->nvars;
+
+   return SCIP_OKAY;
+}
+
+/** adds several terms coef*var to a rowprep */
+SCIP_RETCODE SCIPaddRowprepTerms(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   int                   nvars,              /**< number of terms to add */
+   SCIP_VAR**            vars,               /**< variables to add */
+   SCIP_Real*            coefs               /**< coefficients to add */
+)
+{
+   assert(scip != NULL);
+   assert(rowprep != NULL);
+   assert(vars != NULL || nvars == 0);
+   assert(coefs != NULL || nvars == 0);
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   if( rowprep->varssize < rowprep->nvars + nvars )
+   {
+      /* realloc vars and coefs array */
+      int oldsize;
+
+      oldsize = rowprep->varssize;
+      rowprep->varssize = SCIPcalcMemGrowSize(scip, rowprep->nvars + nvars);
+
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->vars,  oldsize, rowprep->varssize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->coefs, oldsize, rowprep->varssize) );
+   }
+
+   BMScopyMemoryArray(rowprep->vars + rowprep->nvars, vars, nvars);
+   BMScopyMemoryArray(rowprep->coefs + rowprep->nvars, coefs, nvars);
+   rowprep->nvars += nvars;
+
+   return SCIP_OKAY;
+}
+
+/** adds constant value to side of rowprep */
+void SCIPaddRowprepSide(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_Real             side                /**< constant value to be added to side */
+)
+{
+   assert(rowprep != NULL);
+
+   rowprep->side += side;
+}
+
+/** adds constant term to rowprep
+ *
+ * Substracts constant from side.
+ */
+void SCIPaddRowprepConstant(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_Real             constant            /**< constant value to be added */
+)
+{
+   assert(rowprep != NULL);
+
+   SCIPaddRowprepSide(rowprep, -constant);
+}
+
+/* computes violation of cut in a given solution
+ *
+ * if scaling == 'g', assumes that terms in rowprep are sorted by abs value of coef, in decreasing order
+ */
+SCIP_Real SCIPgetRowprepViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
+   SCIP_SOL*             sol,                /**< solution or NULL for LP solution */
+   char                  scaling             /**< how to scale cut violation: o, g, or s */
+)
+{
+   SCIP_Real activity;
+   SCIP_Real viol;
+   int i;
+
+   activity = -rowprep->side;
+   for( i = 0; i < rowprep->nvars; ++i )
+   {
+      /* Loose variable have the best bound as LP solution value.
+       * HOWEVER, they become column variables when they are added to a row (via SCIPaddVarsToRow below).
+       * When this happens, their LP solution value changes to 0.0!
+       * So when calculating the row activity, we treat loose variable as if they were already column variables.
+       */
+      if( SCIPvarGetStatus(rowprep->vars[i]) != SCIP_VARSTATUS_LOOSE )
+         activity += rowprep->coefs[i] * SCIPgetSolVal(scip, sol, rowprep->vars[i]);
+   }
+
+   if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
+      /* cut is activity <= 0.0 -> violation is activity, if positive */
+      viol = MAX(activity, 0.0);
+   else
+      /* cut is activity >= 0.0 -> violation is -activity, if positive */
+      viol = MAX(-activity, 0.0);
+
+   switch( scaling )
+   {
+   case 'o' :
+      break;
+
+   case 'g' :
+      /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0 this avoid finding cuts
+       * efficient which are only very slightly violated
+       * CPLEX does not seem to scale row coefficients up too
+       * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium scaling)
+       */
+      if( rowprep->nvars > 0 )
+         viol /= MAX(1.0, REALABS(rowprep->coefs[0]));
+      break;
+
+   case 's' :
+   {
+      viol /= MAX(1.0, REALABS(rowprep->side));
+      break;
+   }
+
+   default:
+      SCIPerrorMessage("Unknown scaling method '%c'.", scaling);
+      SCIPABORT();
+      return SCIP_INVALID;
+   }
+
+   return viol;
+}
+
+/** Merge terms that use same variable and eliminate zero coefficients.
+ *
+ * Terms are sorted by variable (@see SCIPvarComp) after return.
+ */
+void SCIPmergeRowprepTerms(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep             /**< rowprep to be cleaned up */
+)
+{
+   int i;
+   int j;
+
+   assert(scip != NULL);
+   assert(rowprep != NULL);
+
+   if( rowprep->nvars <= 1 )
+      return;
+
+   /* sort terms by variable index */
+   SCIPsortPtrReal((void**)rowprep->vars, rowprep->coefs, SCIPvarComp, rowprep->nvars);
+
+   /* merge terms with same variable, drop 0 coefficients */
+   i = 0;
+   j = 1;
+   while( j < rowprep->nvars )
+   {
+      if( rowprep->vars[i] == rowprep->vars[j] )
+      {
+         /* merge term j into term i */
+         /* TODO if sign of vars[i] is known, then can do safe rounding here */
+         rowprep->coefs[i] += rowprep->coefs[j];
+         ++j;
+         continue;
+      }
+
+      if( rowprep->coefs[i] == 0.0 )
+      {
+         /* move term j to position i */
+         rowprep->coefs[i] = rowprep->coefs[j];
+         rowprep->vars[i] = rowprep->vars[j];
+         ++j;
+         continue;
+      }
+
+      /* move term j to position i+1 and move on */
+      if( j != i+1 )
+      {
+         rowprep->vars[i+1] = rowprep->vars[j];
+         rowprep->coefs[i+1] = rowprep->coefs[j];
+      }
+      ++i;
+      ++j;
+   }
+
+   /* remaining term can have coef zero -> forget about it */
+   if( rowprep->coefs[i] == 0.0 )
+      --i;
+
+   /* i points to last term */
+   rowprep->nvars = i+1;
+}
+
+/* beautifies a rowprep
+ *
+ * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
+ * Drops small coefficients if coefrange is too large, if this can be done by relaxing the cut.
+ *
+ * After return, the terms in the rowprep will be sorted by absolute value of coefficient, in decreasing order.
+ */
+SCIP_RETCODE SCIPbeautifyRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be beautified */
+   SCIP_Real             coefmaxrange,       /**< maximal allowed coefficients range */
+   SCIP_Real*            coefrange           /**< buffer to store coefrange of beautified cut, or NULL if not of interest */
+)
+{
+   SCIP_Real coef;
+   SCIP_Real roundcoef;
+   SCIP_Real mincoef;
+   SCIP_Real maxcoef;
+   SCIP_Real* abscoefs;
+   SCIP_VAR* var;
+   int i;
+
+   /* initialize cutrange in case we terminate early, usually when all cut terms have been eliminated */
+   if( coefrange != NULL )
+      *coefrange = 1.0;
+
+   if( rowprep->nvars == 0 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &abscoefs, rowprep->nvars) );
+
+   for( i = 0; i < rowprep->nvars; ++i )
+   {
+      /* coefficients smaller than epsilon are rounded to 0.0 when added to row
+       * further, coefficients very close to integral values are rounded to integers when added to LP
+       * both cases can be problematic if variable value is very large (bad numerics)
+       * thus, we anticipate by rounding coef here, but also modify constant so that cut is still valid (if possible)
+       * i.e., estimate coef[i]*x by round(coef[i])*x + (coef[i]-round(coef[i])) * bound(x)
+       * if required bound of x is not finite, then do nothing
+       */
+      coef = rowprep->coefs[i];
+      roundcoef = SCIPround(scip, coef);
+      if( coef != roundcoef && SCIPisEQ(scip, coef, roundcoef) ) /*lint !e777*/
+      {
+         SCIP_Real xbnd;
+
+         var = rowprep->vars[i];
+         if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
+            if( rowprep->local )
+               xbnd = coef > roundcoef ? SCIPvarGetLbLocal(var)  : SCIPvarGetUbLocal(var);
+            else
+               xbnd = coef > roundcoef ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var);
+         else
+            if( rowprep->local )
+               xbnd = coef > roundcoef ? SCIPvarGetUbLocal(var)  : SCIPvarGetLbLocal(var);
+            else
+               xbnd = coef > roundcoef ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var);
+
+         if( !SCIPisInfinity(scip, REALABS(xbnd)) )
+         {
+            SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.20g, round coefficient to %g and add constant %g\n",
+               SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef, roundcoef, (coef-roundcoef) * xbnd);
+            SCIPaddRowprepConstant(rowprep, (coef-roundcoef) * xbnd);  /* TODO do this in rounding-safe mode */
+            rowprep->coefs[i] = coef = roundcoef;
+         }
+      }
+
+      abscoefs[i] = REALABS(coef);
+   }
+
+   /* sort cut terms by absolute value of coefficients, from largest to smallest */
+   SCIPsortDownRealRealPtr(abscoefs, rowprep->coefs, (void**)rowprep->vars, rowprep->nvars);
+
+   SCIPfreeBufferArray(scip, &abscoefs);
+
+   /* if maximal coefficient is zero, then all coefficients are zero */
+   if( rowprep->coefs[0] == 0.0 )
+   {
+      rowprep->nvars = 0;
+      return SCIP_OKAY;
+   }
+
+   /* forget about coefs that became zero by above loop */
+   while( rowprep->nvars > 0 && rowprep->coefs[rowprep->nvars-1] == 0.0 )
+      --rowprep->nvars;
+   /* if no coefs left, then return */
+   if( rowprep->nvars == 0 )
+      return SCIP_OKAY;
+
+   maxcoef = rowprep->coefs[0];
+   mincoef = rowprep->coefs[rowprep->nvars-1];
+   while( REALABS(maxcoef / mincoef) > coefmaxrange  )
+   {
+      SCIPdebugMsg(scip, "cut coefficients have very large range: mincoef = %g maxcoef = %g\n", mincoef, maxcoef);
+
+      /* try to eliminate coefficient with minimal absolute value by weakening cut and try again
+       * since we use local bounds, we need to make the row local if they are different from their global counterpart
+       */
+      var = rowprep->vars[rowprep->nvars-1];
+      if( ((mincoef > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT) || (mincoef < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT)) &&
+         !SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+      {
+         SCIPdebugMsg(scip, "eliminate coefficient %g for <%s> [%g, %g]\n", mincoef, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         SCIPaddRowprepConstant(rowprep, mincoef * SCIPvarGetLbLocal(var));
+         --rowprep->nvars; /* forget last term */
+         rowprep->local |= SCIPisGT(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var));
+      }
+      else if( ((mincoef < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT) || (mincoef > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT)) &&
+         !SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+      {
+         SCIPdebugMsg(scip, "eliminate coefficient %g for <%s> [%g, %g]\n", mincoef, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+         SCIPaddRowprepConstant(rowprep, mincoef * SCIPvarGetUbLocal(var));
+         --rowprep->nvars; /* forget last term */
+         rowprep->local |= SCIPisLT(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var));
+      }
+      else
+      {
+         /* cannot eliminate coefficient */
+         break;
+      }
+
+      /* if no variables left, then stop */
+      if( rowprep->nvars == 0 )
+         return SCIP_OKAY;
+
+      /* update mincoef */
+      mincoef = REALABS(rowprep->coefs[rowprep->nvars-1]);
+   }
+
+   if( coefrange != NULL )
+      *coefrange = REALABS(maxcoef / mincoef);
+
+   return SCIP_OKAY;
+}
+
+/** generates a SCIP_ROW from a rowprep */
+SCIP_RETCODE SCIPgetRowprepRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< buffer to store pointer to new row */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+)
+{
+   assert(scip != NULL);
+   assert(row != NULL);
+   assert(rowprep != NULL);
+
+   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, conshdlr, rowprep->name,
+      rowprep->sidetype == SCIP_SIDETYPE_LEFT  ? rowprep->side : -SCIPinfinity(scip),
+      rowprep->sidetype == SCIP_SIDETYPE_RIGHT ? rowprep->side :  SCIPinfinity(scip),
+      rowprep->local && (SCIPgetDepth(scip) > 0), FALSE, TRUE) );
+
+   SCIP_CALL( SCIPaddVarsToRow(scip, *row, rowprep->nvars, rowprep->vars, rowprep->coefs) );
 
    return SCIP_OKAY;
 }

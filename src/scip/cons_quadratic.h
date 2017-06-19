@@ -117,6 +117,23 @@ struct SCIP_BilinTerm
 };
 typedef struct SCIP_BilinTerm SCIP_BILINTERM;
 
+/** storage for a linear row in preparation
+ *
+ * Uses to assemble data that could eventually make a SCIP_ROW.
+ * @note Only one-sided rows are allowed here.
+ */
+struct SCIP_RowPrep
+{
+   SCIP_VAR**            vars;               /**< variables */
+   SCIP_Real*            coefs;              /**< coefficients of variables */
+   int                   nvars;              /**< number of variables (= number of coefficients) */
+   int                   varssize;           /**< length of variables array (= lengths of coefficients array) */
+   SCIP_Real             side;               /**< side */
+   SCIP_SIDETYPE         sidetype;           /**< type of side */
+   SCIP_Bool             local;              /**< whether the row is only locally valid (i.e., for the current node) */
+   char                  name[SCIP_MAXSTRLEN]; /**< row name */
+};
+typedef struct SCIP_RowPrep SCIP_ROWPREP;
 
 /** upgrading method for quadratic constraints into more specific constraints
  *
@@ -620,6 +637,112 @@ SCIP_RETCODE SCIPchgBilinCoefQuadratic(
    );
 
 /* @} */
+
+
+/** creates a SCIP_ROWPREP datastructure
+ *
+ * Initial row represents 0 <= 0.
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP**        rowprep,            /**< buffer to store pointer to rowprep */
+   SCIP_SIDETYPE         sidetype,           /**< whether cut will be or lower-equal or larger-equal type */
+   SCIP_Bool             local               /**< whether cut will be valid only locally */
+);
+
+/** frees a SCIP_ROWPREP datastructure */
+EXTERN
+void SCIPfreeRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP**        rowprep             /**< pointer that stores pointer to rowprep */
+);
+
+/** prints a rowprep */
+EXTERN
+void SCIPprintRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be printed */
+   FILE*                 file                /**< file to print to, or NULL */
+);
+
+/** adds a term coef*var to a rowprep */
+EXTERN
+SCIP_RETCODE SCIPaddRowprepTerm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_VAR*             var,                /**< variable to add */
+   SCIP_Real             coef                /**< coefficient to add */
+);
+
+/** adds several terms coef*var to a rowprep */
+EXTERN
+SCIP_RETCODE SCIPaddRowprepTerms(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   int                   nvars,              /**< number of terms to add */
+   SCIP_VAR**            vars,               /**< variables to add */
+   SCIP_Real*            coefs               /**< coefficients to add */
+);
+
+/** adds constant value to side of rowprep */
+EXTERN
+void SCIPaddRowprepSide(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_Real             side                /**< constant value to be added to side */
+);
+
+/** adds constant term to rowprep
+ *
+ * Substracts constant from side.
+ */
+EXTERN
+void SCIPaddRowprepConstant(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   SCIP_Real             constant            /**< constant value to be added */
+);
+
+EXTERN
+SCIP_Real SCIPgetRowprepViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
+   SCIP_SOL*             sol,                /**< solution or NULL for LP solution */
+   char                  scaling             /**< how to scale cut violation: o, g, or s */
+);
+
+/** Merge terms that use same variable and eliminate zero coefficients.
+ *
+ * Terms are sorted by variable (@see SCIPvarComp) after return.
+ */
+EXTERN
+void SCIPmergeRowprepTerms(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep             /**< rowprep to be cleaned up */
+);
+
+/* beautifies a rowprep
+ *
+ * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
+ * Drops small coefficients if coefrange is too large, if this can be done by relaxing the cut.
+ *
+ * After return, the terms in the rowprep will be sorted by absolute value of coefficient, in decreasing order.
+ */
+EXTERN
+SCIP_RETCODE SCIPbeautifyRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be beautified */
+   SCIP_Real             coefmaxrange,       /**< maximal allowed coefficients range */
+   SCIP_Real*            coefrange           /**< buffer to store coefrange of beautified cut, or NULL if not of interest */
+);
+
+/** generates a SCIP_ROW from a rowprep */
+EXTERN
+SCIP_RETCODE SCIPgetRowprepRow(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW**            row,                /**< buffer to store pointer to new row */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+);
 
 /* @} */
 
