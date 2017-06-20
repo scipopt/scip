@@ -350,6 +350,7 @@ typedef struct
                                               *   the scoring? */
    SCIP_Bool             addclique;          /**< Should binary constraints found in the root node be added as cliques? */
    SCIP_Bool             propagate;          /**< Should the problem be propagated before solving each inner node? */
+   /* add new entries to the 'configurationAllocate' method! */
 } CONFIGURATION;
 
 /** Allocates a configuration in the buffer and initiates it with the default values. */
@@ -382,6 +383,7 @@ SCIP_RETCODE configurationAllocate(
    (*config)->storeunviolatedsol = copysource->storeunviolatedsol;
    (*config)->abbrevpseudo = copysource->abbrevpseudo;
    (*config)->addclique = copysource->addclique;
+   (*config)->propagate = copysource->propagate;
 
    return SCIP_OKAY;
 }
@@ -1732,7 +1734,7 @@ void addLowerBoundProofNode(
          domainreductions->nviolatedvars++;
       }
    }
-   else
+   else if( domredadded != NULL )
    {
       /* the domain was already changed by the sb probing and/or conflict analysis */
       *domredadded = TRUE;
@@ -1855,7 +1857,7 @@ void addUpperBoundProofNode(
          domainreductions->nviolatedvars++;
       }
    }
-   else
+   else if( domredadded != NULL )
    {
       /* the domain was already changed by the sb probing and/or conflict analysis */
       *domredadded = TRUE;
@@ -1915,6 +1917,16 @@ void applyDeeperDomainReductions(
    assert(vars != NULL);
    assert(nvars > 0);
 
+   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Combining domain reductions from up and down child.\n");
+   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Previous number of changed variable domains: %d\n", targetdomreds->nchangedvars);
+   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Entry Status: ");
+#ifdef SCIP_DEBUG
+   statusPrint(scip, SCIP_VERBLEVEL_FULL, status);
+#endif
+
+   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Number of changed variable domains in up child: %d\n", updomreds->nchangedvars);
+   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Number of changed variable domains in down child: %d\n", downdomreds->nchangedvars);
+
    for( i = 0; i < nvars; i++ )
    {
       assert(vars[i] != NULL);
@@ -1959,6 +1971,12 @@ void applyDeeperDomainReductions(
 #endif
       }
    }
+
+   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Subsequent number of changed variable domains: %d\n", targetdomreds->nchangedvars);
+   LABdebugMessage(scip, SCIP_VERBLEVEL_FULL, "Exit Status: ");
+#ifdef SCIP_DEBUG
+   statusPrint(scip, SCIP_VERBLEVEL_FULL, status);
+#endif
 }
 
 /** Applies the domain reductions to the current node. */
@@ -2278,6 +2296,8 @@ SCIP_RETCODE executeBranching(
    SCIP_Bool             downbranching,      /**< the branching direction */
    CANDIDATE*            candidate,          /**< the candidate to branch on */
    BRANCHINGRESULTDATA*  resultdata,         /**< pointer to the result data which gets filled with the status */
+   SCIP_SOL*             baselpsol,          /**< the base lp solution */
+   DOMAINREDUCTIONS*     domreds,            /**< struct to store the domain reduction found during propagation */
    STATUS*               status              /**< status will contain updated lperror and limit fields */
    )
 {
@@ -2384,7 +2404,23 @@ SCIP_RETCODE executeBranching(
             if( ndomredsfound > 0 )
             {
                LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Found %d domain reductions.\n", ndomredsfound);
-               /*status->domred = TRUE;*/
+
+               if( config->usedomainreduction )
+               {
+                  int i;
+                  SCIP_VAR** problemvars = SCIPgetVars(scip);
+                  int nproblemvars = SCIPgetNVars(scip);
+
+                  for( i = 0; i < nproblemvars; i++ ){
+                     SCIP_VAR* var = problemvars[i];
+
+                     SCIP_Real lowerbound = SCIPvarGetLbLocal(var);
+                     SCIP_Real upperbound = SCIPvarGetUbLocal(var);
+
+                     addLowerBound(scip, var, lowerbound, baselpsol, domreds, NULL);
+                     addUpperBound(scip, var, upperbound, baselpsol, domreds, NULL);
+                  }
+               }
             }
          }
 
@@ -2442,10 +2478,12 @@ SCIP_RETCODE executeDownBranching(
    CONFIGURATION*        config,             /**< configuration to control the behavior */
    CANDIDATE*            candidate,          /**< the branching direction */
    BRANCHINGRESULTDATA*  resultdata,         /**< pointer to the result data which gets filled with the status */
+   SCIP_SOL*             baselpsol,          /**< the base lp solution */
+   DOMAINREDUCTIONS*     domreds,            /**< struct to store the domain reduction found during propagation */
    STATUS*               status              /**< status will contain updated lperror and limit fields */
    )
 {
-   SCIP_CALL( executeBranching(scip, config, TRUE, candidate, resultdata, status) );
+   SCIP_CALL( executeBranching(scip, config, TRUE, candidate, resultdata, baselpsol, domreds, status) );
    return SCIP_OKAY;
 }
 
@@ -2456,10 +2494,12 @@ SCIP_RETCODE executeUpBranching(
    CONFIGURATION*        config,             /**< configuration to control the behavior */
    CANDIDATE*            candidate,          /**< the branching direction */
    BRANCHINGRESULTDATA*  resultdata,         /**< pointer to the result data which gets filled with the status */
+   SCIP_SOL*             baselpsol,          /**< the base lp solution */
+   DOMAINREDUCTIONS*     domreds,            /**< struct to store the domain reduction found during propagation */
    STATUS*               status              /**< status will contain updated lperror and limit fields */
    )
 {
-   SCIP_CALL( executeBranching(scip, config, FALSE, candidate, resultdata, status) );
+   SCIP_CALL( executeBranching(scip, config, FALSE, candidate, resultdata, baselpsol, domreds, status) );
    return SCIP_OKAY;
 }
 
@@ -3422,7 +3462,7 @@ SCIP_RETCODE executeDownBranchingRecursive(
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Started down branching on var <%s> with 'val < %g' and bounds [<%g>..<%g>]\n", SCIPvarGetName(branchvar), branchval,
       SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar));
 
-   SCIP_CALL( executeDownBranching(scip, config, candidate, downbranchingresult, status) );
+   SCIP_CALL( executeDownBranching(scip, config, candidate, downbranchingresult, baselpsol, downdomainreductions, status) );
 
 #ifdef SCIP_STATISTIC
    statistics->nlpssolved[probingdepth]++;
@@ -3618,7 +3658,7 @@ SCIP_RETCODE executeUpBranchingRecursive(
    LABdebugMessage(scip, SCIP_VERBLEVEL_HIGH, "Started up branching on var <%s> with 'val > %g' and bounds [<%g>..<%g>]\n", SCIPvarGetName(branchvar), branchval,
       SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar));
 
-   SCIP_CALL( executeUpBranching(scip, config, candidate, upbranchingresult, status) );
+   SCIP_CALL( executeUpBranching(scip, config, candidate, upbranchingresult, baselpsol, updomainreductions, status) );
 
 #ifdef SCIP_STATISTIC
       statistics->nlpssolved[probingdepth]++;
