@@ -24,6 +24,7 @@ fixed bugs:
 - fixed debug solution check that appeared in probing mode when the objective function has changed
 - added missing definition of SCIP_UNUSED in memory.h if def.h is not included
 - relaxed a too strong assert concerning solutions close to the objective limit
+- fixed guard against using old Gurobi versions in lpi_grb.c: Gurobi 7.5 was not permitted
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint
