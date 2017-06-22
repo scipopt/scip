@@ -65,9 +65,9 @@
 #define DEFAULT_BANDITALGO 'e'    /**< the default bandit algorithm: (u)pper confidence bounds, (e)xp.3, epsilon (g)reedy */
 #define DEFAULT_GAMMA 0.2         /**< default weight between uniform (gamma ~ 1) and weight driven (gamma ~ 0) probability distribution for exp3 */
 #define DEFAULT_BETA 0.0          /**< default gain offset between 0 and 1 at every observation for exp3 */
-#define DEFAULT_GAINMEASURE      'e'/**< measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean,
-                                      *  'e'ffort based? */
-#define GAINMEASURES "bwe"
+#define DEFAULT_GAINMEASURE      'b'/**< measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean, 'g'ap based? */
+#define DEFAULT_NORMBYEFFORT     TRUE /**< should the gain be normalized by the effort? */
+#define GAINMEASURES "bwg"
 #define DEFAULT_EPS        0.5       /**< probability for exploration in epsilon-greedy bandit algorithm */
 #define DEFAULT_RESETWEIGHTS TRUE    /**< should the bandit algorithms be reset when a new problem is read? */
 #define DEFAULT_SUBSCIPRANDSEEDS FALSE /**< should random seeds of sub-SCIPs be altered to increase diversification? */
@@ -239,7 +239,7 @@ struct NH_Stats
    SCIP_CLOCK*           submipclock;
    SCIP_Longint          usednodes;
    SCIP_Longint          lpiterations;
-   SCIP_Real             totalgapclosed;
+   SCIP_Real             oldupperbound;
    int                   nruns;
    int                   nrunsbestsol;
    int                   statushist[NHISTENTRIES];
@@ -361,6 +361,7 @@ struct SCIP_HeurData
    SCIP_Bool             adjustminimprove;   /**< should the factor by which the minimum improvement is bound be dynamically updated? */
    SCIP_Bool             resetweights;       /**< should the bandit algorithms be reset when a new problem is read? */
    SCIP_Bool             subsciprandseeds;   /**< should random seeds of sub-SCIPs be altered to increase diversification? */
+   SCIP_Bool             normbyeffort;       /**< should the gain be normalized by the effort? */
    char                  gainmeasure;        /**< measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean,
                                                *  'e'ffort based? */
 };
@@ -646,7 +647,6 @@ SCIP_RETCODE neighborhoodStatsReset(
    stats->nrunsbestsol = 0;
    stats->nsolsfound = 0;
    stats->presolrounds = 0;
-   stats->totalgapclosed = 0;
    stats->totalnbinfixings = 0;
    stats->totalncontfixings = 0;
    stats->totalnimplintfixings = 0;
@@ -1113,6 +1113,8 @@ SCIP_RETCODE expThreeUpdate(
    assert(i < exp3->nactions);
    assert(exp3->ndraws > 0);
 
+   SCIPdebugMsg(scip, "Rewarding Exp.3 algorithm action %d with gain %.2f\n", i, gain);
+
    /* the learning rate eta */
    eta = 1.0 / (SCIP_Real)exp3->nactions;
 
@@ -1293,6 +1295,7 @@ void initRunStats(
    stats->lpiterations = 0L;
    stats->usednodes = 0L;
    stats->totalnfixings = 0;
+   stats->oldupperbound = SCIPgetUpperbound(scip);
 }
 
 /** update run stats after the sub SCIP was solved */
@@ -1918,29 +1921,40 @@ SCIP_RETCODE getGain(
       else if( runstats->nsolsfound > 0 )
          gain = 1.0 / DEFAULT_BESTSOLWEIGHT;
       break;
-   case 'e':
-
+   case 'g':
+      /* use the closed gap between the primal and dual bound as gain */
       if( runstats->nbestsolsfound > 0 )
       {
-         SCIP_Real effort;
-         assert(runstats->totalnfixings >= 0);
-         assert(runstats->usednodes >= 0);
-
-         /* just add one node to avoid division by zero */
-         effort = runstats->usednodes / (SCIP_Real)(heurdata->minnodes + 1.0);
-
-         /* assume that every fixed variable linearly reduces the subproblem complexity */
-         effort = (1.0 - (runstats->totalnfixings / (SCIP_Real)SCIPgetNVars(scip))) * effort;
-
-         /* gain can be larger than 1.0 if a best solution was found within 0 nodes  */
-         gain = 1.0 / (effort + 1.0);
-         gain = MIN(1.0, gain);
+         if( SCIPisEQ(scip, SCIPgetUpperbound(scip), SCIPgetLowerbound(scip)) )
+            gain = 1.0;
+         else if( SCIPisInfinity(scip, runstats->oldupperbound) )
+            gain = 1.0;
+         else
+         {
+            gain = 1.0 - sqrt((SCIPgetUpperbound(scip) - SCIPgetLowerbound(scip)) / (runstats->oldupperbound - SCIPgetLowerbound(scip)));
+         }
       }
       break;
    default:
       SCIPerrorMessage("Error, passed unknown character '%c' (only know \"%s\") for measuring gains\n", heurdata->gainmeasure, GAINMEASURES);
       SCIP_CALL( SCIP_INVALIDDATA );
       break;
+   }
+
+   if( heurdata->normbyeffort )
+   {
+      SCIP_Real effort;
+
+      assert(runstats->usednodes >= 0);
+      assert(runstats->totalnfixings >= 0);
+      /* just add one node to avoid division by zero */
+      effort = runstats->usednodes / (SCIP_Real)(heurdata->minnodes + 1.0);
+
+      /* assume that every fixed variable linearly reduces the subproblem complexity */
+      effort = (1.0 - (runstats->totalnfixings / (SCIP_Real)SCIPgetNVars(scip))) * effort;
+
+      /* gain can be larger than 1.0 if a best solution was found within 0 nodes  */
+      gain /= (effort + 1.0);
    }
 
    *gainptr = gain;
@@ -2439,7 +2453,7 @@ SCIP_DECL_HEUREXEC(heurExecLns)
        */
       if( heurdata->adjustminimprove && !allgainsmode )
       {
-         SCIPdebugMsg(scip, "Update Minimum Improvement: %.4f", heurdata->minimprove);
+         SCIPdebugMsg(scip, "Update Minimum Improvement: %.4f\n", heurdata->minimprove);
          updateMinimumImprovement(heurdata, subscipstatus[banditidx], &runstats[banditidx]);
          SCIPdebugMsg(scip, "--> %.4f\n", heurdata->minimprove);
       }
@@ -3611,8 +3625,8 @@ SCIP_RETCODE SCIPincludeHeurLns(
          &heurdata->usesubscipheurs, TRUE, DEFAULT_USESUBSCIPHEURS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/gainmeasure",
-         "measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean, 'e'ffort based?",
-         &heurdata->gainmeasure, TRUE, DEFAULT_GAINMEASURE, "bwe", NULL, NULL) );
+         "measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean, 'g'ap based?",
+         &heurdata->gainmeasure, TRUE, DEFAULT_GAINMEASURE, GAINMEASURES, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/seed",
          "initial random seed for bandit algorithms and random decisions by neighborhoods",
@@ -3636,6 +3650,10 @@ SCIP_RETCODE SCIPincludeHeurLns(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/subsciprandseeds",
             "should random seeds of sub-SCIPs be altered to increase diversification?",
             &heurdata->subsciprandseeds, TRUE, DEFAULT_SUBSCIPRANDSEEDS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/normbyeffort",
+            "should the gain be normalized by the effort?",
+            &heurdata->normbyeffort, TRUE, DEFAULT_NORMBYEFFORT, NULL, NULL) );
 
    return SCIP_OKAY;
 }
