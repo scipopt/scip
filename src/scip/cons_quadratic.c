@@ -6715,7 +6715,7 @@ SCIP_RETCODE generateCut(
    {
       viol = SCIPgetRowprepViolation(scip, rowprep, sol, conshdlrdata->scaling);
 
-      if( viol < minefficacy ) /*lint !e644*/
+      if( viol <= 0.0 ) /*lint !e644*/
       {
          SCIPdebugMsg(scip, "skip cut for constraint <%s> because efficacy %g too low (< %g)\n", SCIPconsGetName(cons), viol, minefficacy);
          success = FALSE;
@@ -6746,7 +6746,24 @@ SCIP_RETCODE generateCut(
    {
       viol = SCIPgetRowprepViolation(scip, rowprep, sol, conshdlrdata->scaling);
 
-      if( !SCIPisInfinity(scip, -minefficacy) && viol < minefficacy ) /*lint !e644*/
+      /* try to scale up if viol is within [0.1*,10.0]*minefficacy and >eps */
+      /* TODO whether to scale and 0.1/10.0 should be parameter */
+      if( !SCIPisInfinity(scip, -minefficacy) && viol > MAX(SCIPepsilon(scip), 0.1 * minefficacy) && viol < 10.0*minefficacy ) /*lint !e644*/
+      {
+         SCIP_Real scalefactor;
+
+         /* TODO should check that maximal coef doesn't get too huge (SCIPisHuge?) */
+         scalefactor = SCIPscaleRowprep(rowprep, 10.0 * minefficacy / viol);
+         viol *= scalefactor;
+
+         /* check again that side is finite */
+         success = !SCIPisInfinity(scip, REALABS(rowprep->side));
+
+         /* check again whether maximal coef is finite, if any */
+         success &= (rowprep->nvars == 0) || !SCIPisInfinity(scip, REALABS(rowprep->coefs[0]));
+      }
+
+      if( success && !SCIPisInfinity(scip, -minefficacy) && viol < minefficacy ) /*lint !e644*/
       {
          SCIPdebugMsg(scip, "skip cut for constraint <%s> because efficacy %g too low (< %g)\n", SCIPconsGetName(cons), viol, minefficacy);
          success = FALSE;
@@ -15235,6 +15252,33 @@ SCIP_RETCODE SCIPbeautifyRowprep(
    }
 
    return SCIP_OKAY;
+}
+
+/** scales a rowprep
+ *
+ * Assumes that coefs are sorted by absolute value in decreasing order (max coef is first).
+ *
+ * @return Actually applied scaling factor.
+ */
+SCIP_Real SCIPscaleRowprep(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be scaled */
+   SCIP_Real             factor              /**< suggested scale factor */
+)
+{
+   SCIP_Real actfactor;
+   int i;
+
+   assert(rowprep != NULL);
+   assert(factor > 1.0);  /* could extend this to factor > 0 */
+
+   actfactor = pow(2.0, ceil(log(factor)/log(2.0)));  /* TODO there are faster ways to do this */
+
+   for( i = 0; i < rowprep->nvars; ++i )
+      rowprep->coefs[i] *= actfactor;
+
+   rowprep->side *= actfactor;
+
+   return actfactor;
 }
 
 /** generates a SCIP_ROW from a rowprep */

@@ -746,6 +746,16 @@ SCIP_RETCODE SCIPbeautifyRowprep(
    SCIP_Real*            coefrange           /**< buffer to store coefrange of beautified cut, or NULL if not of interest */
 );
 
+/** scales a rowprep
+ *
+ * @return Actually applied scaling factor.
+ */
+EXTERN
+SCIP_Real SCIPscaleRowprep(
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be scaled */
+   SCIP_Real             factor              /**< suggested scale factor */
+);
+
 /** generates a SCIP_ROW from a rowprep */
 EXTERN
 SCIP_RETCODE SCIPgetRowprepRow(
