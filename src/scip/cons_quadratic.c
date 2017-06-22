@@ -36,6 +36,8 @@
 #include <ctype.h>  /* for isspace */
 #include <math.h>
 
+#define SCIP_PRIVATE_ROWPREP
+
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_linear.h"

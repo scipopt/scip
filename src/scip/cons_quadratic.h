@@ -639,6 +639,8 @@ SCIP_RETCODE SCIPchgBilinCoefQuadratic(
 /* @} */
 
 
+#ifdef SCIP_PRIVATE_ROWPREP
+
 /** creates a SCIP_ROWPREP datastructure
  *
  * Initial row represents 0 <= 0.
@@ -743,6 +745,8 @@ SCIP_RETCODE SCIPgetRowprepRow(
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
 );
+
+#endif
 
 /* @} */
 

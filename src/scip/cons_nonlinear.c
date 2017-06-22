@@ -27,6 +27,7 @@
 #include <ctype.h>
 
 #include "scip/cons_nonlinear.h"
+#define SCIP_PRIVATE_ROWPREP
 #include "scip/cons_quadratic.h"  /* for SCIP_ROWPREP */
 #include "scip/cons_linear.h"
 #include "scip/heur_trysol.h"

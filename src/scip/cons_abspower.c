@@ -24,6 +24,8 @@
 #include <string.h>
 #include <ctype.h>
 
+#define SCIP_PRIVATE_ROWPREP
+
 #include "scip/cons_abspower.h"
 #include "scip/cons_nonlinear.h"
 #include "scip/cons_indicator.h"
