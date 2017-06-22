@@ -14763,6 +14763,11 @@ void SCIPprintRowprep(
    assert(scip != NULL);
    assert(rowprep != NULL);
 
+   if( *rowprep->name != '\0' )
+   {
+      SCIPinfoMessage(scip, file, "[%s](%c) ", rowprep->name, rowprep->local ? 'l' : 'g');
+   }
+
    for( i = 0; i < rowprep->nvars; ++i )
    {
       SCIPinfoMessage(scip, file, "%+g*<%s> ", rowprep->coefs[i], SCIPvarGetName(rowprep->vars[i]));
