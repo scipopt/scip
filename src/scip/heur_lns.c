@@ -320,6 +320,7 @@ struct EpsGreedy
    SCIP_Real*            weights;            /**< weights for every action */
    SCIP_RANDNUMGEN*      rng;                /**< random number generator for randomized selection of routines  */
    int                   nactions;           /**< the number of actions to select from */
+   int                   nselections;        /**< counter for the number of selection calls */
 };
 
 /** primal heuristic data */
@@ -816,6 +817,8 @@ void epsGreedyReset(
    /* reset weights */
    for( w = 0; w < epsgreedy->nactions; ++w )
       weights[w] = priorities[w] * normalization;
+
+   epsgreedy->nselections = 0;
 }
 
 /** create an epsilon greedy selector with the necessary callbacks */
@@ -880,6 +883,7 @@ void epsGreedySelect(
 {
    int nactions;
    SCIP_Real randnr;
+   SCIP_Real curreps;
 
    assert(i != NULL);
    assert(epsgreedy != NULL);
@@ -894,8 +898,11 @@ void epsGreedySelect(
    /** roll the dice to check if the best element should be picked, or an element at random */
    randnr = SCIPrandomGetReal(epsgreedy->rng, 0.0, 1.0);
 
-   /* todo make epsilon decrease over time */
-   if( randnr >= epsgreedy->eps )
+   /* make epsilon decrease over time */
+   epsgreedy->nselections++;
+   curreps = epsgreedy->eps * sqrt((SCIP_Real)epsgreedy->nactions/(SCIP_Real)epsgreedy->nselections);
+
+   if( randnr >= curreps )
    {
       SCIP_Real* weights = epsgreedy->weights;
       int j;
@@ -1908,6 +1915,7 @@ SCIP_RETCODE getGain(
 {
    SCIP_Real gain = 0.0;
    assert(gainptr != NULL);
+
    /* compute the gain for this run based on the runstats */
    switch( heurdata->gainmeasure )
    {
