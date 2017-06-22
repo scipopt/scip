@@ -1192,7 +1192,7 @@ SCIP_DECL_CONSEXPR_EXPRFREEHDLR(freehdlrProduct)
    assert((*exprhdlrdata)->multilinearseparationlp == NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&(*exprhdlrdata)->randnumgen);
+   SCIPfreeRandom(scip, &(*exprhdlrdata)->randnumgen);
 
    SCIPfreeBlockMemory(scip, exprhdlrdata);
    assert(*exprhdlrdata == NULL);
@@ -1912,8 +1912,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    /* TODO FIXME: we need an INITSOL callback so that calls like SCIPsolve() SCIPfreeTransform() and then SCIPsolve()
     * again behave the same; right now, the initial seed is set when SCIP include the plugin, but this happens only once
     */
-   SCIP_CALL( SCIPrandomCreate(&exprhdlrdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &exprhdlrdata->randnumgen, DEFAULT_RANDSEED) );
 
    SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "prod", "product of children",
             PRODUCT_PRECEDENCE, evalProduct, exprhdlrdata) );
