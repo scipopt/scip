@@ -6731,7 +6731,7 @@ SCIP_RETCODE generateCut(
       SCIPmergeRowprepTerms(scip, rowprep);
 
       /* improve coefficients */
-      SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, conshdlrdata->cutmaxrange, &coefrange) );
+      SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, sol, conshdlrdata->cutmaxrange, &coefrange) );
       success = coefrange <= conshdlrdata->cutmaxrange;
    }
 
@@ -15007,6 +15007,7 @@ void SCIPmergeRowprepTerms(
 SCIP_RETCODE SCIPbeautifyRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be beautified */
+   SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */
    SCIP_Real             coefmaxrange,       /**< maximal allowed coefficients range */
    SCIP_Real*            coefrange           /**< buffer to store coefrange of beautified cut, or NULL if not of interest */
 )
@@ -15017,7 +15018,10 @@ SCIP_RETCODE SCIPbeautifyRowprep(
    SCIP_Real maxcoef;
    SCIP_Real* abscoefs;
    SCIP_VAR* var;
+   int maxcoefidx;
    int i;
+
+   assert(coefmaxrange > 1.0);   /* not much interesting otherwise */
 
    /* initialize cutrange in case we terminate early, usually when all cut terms have been eliminated */
    if( coefrange != NULL )
@@ -15086,55 +15090,138 @@ SCIP_RETCODE SCIPbeautifyRowprep(
    if( rowprep->nvars == 0 )
       return SCIP_OKAY;
 
+   maxcoefidx = 0;
    maxcoef = rowprep->coefs[0];
    mincoef = rowprep->coefs[rowprep->nvars-1];
    while( REALABS(maxcoef / mincoef) > coefmaxrange  )
    {
+      SCIP_Real loss[2];
+      SCIP_Real ref;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      int pos;
+
       SCIPdebugMsg(scip, "cut coefficients have very large range: mincoef = %g maxcoef = %g\n", mincoef, maxcoef);
 
-      /* try to eliminate coefficient with minimal absolute value by weakening cut and try again
-       * since we use local bounds, we need to make the row local if they are different from their global counterpart
+      /* max/min can only be > 1 if there is more than one var
+       * we need this below for updating the max/min coef after eliminating a term
+       */
+      assert(rowprep->nvars > 1);
+
+      /* try to reduce coef range by aggregating with variable bounds
+       * that is, eliminate a term like a*x from a*x + ... <= side by adding -a*x <= -a*lb(x)
+       * with ref(x) the reference point we try to eliminate, this would weaken the cut by a*(lb(x)-ref(x))
+       *
+       * we consider eliminating either the term with maximal or the one with minimal coefficient,
+       * taking the one that leads to the least weakening of the cut
        *
        * TODO (suggested by @bzfserra, see !496):
-       * - one could also could try to remove largest coefficient if the variable is almost fixed
        * - Also one could think of not completely removing the coefficient but do an aggregation that makes the coefficient look better. For instance:
        *   say you have $`a x + 0.1 y \leq r`$ and $`y`$ has only an upper bound, $`y \leq b`$,
        *   then you can't really remove $`y`$. However, you could aggregate it with $`0.9 \cdot (y \leq b)`$ to get
        *   $`a x + y \leq r + 0.9 b`$, which has better numerics (and hopefully still cuts the point... actually, if for the point you want to separate, $`y^* = b`$, then the violation is the same)
        */
-      var = rowprep->vars[rowprep->nvars-1];
-      if( ((mincoef > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT) || (mincoef < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT)) &&
-         !SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)) )
+
+      for( pos = 0; pos < 2; ++pos )
       {
-         SCIPdebugMsg(scip, "eliminate coefficient %g for <%s> [%g, %g]\n", mincoef, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-         SCIPaddRowprepConstant(rowprep, mincoef * SCIPvarGetLbLocal(var));
-         --rowprep->nvars; /* forget last term */
-         rowprep->local |= SCIPisGT(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var));
+         var = rowprep->vars[pos ? rowprep->nvars-1 : maxcoefidx];
+         coef = rowprep->coefs[pos ? rowprep->nvars-1 : maxcoefidx];
+         lb = SCIPvarGetLbLocal(var);
+         ub = SCIPvarGetUbLocal(var);
+         ref = SCIPgetSolVal(scip, sol, var);
+         assert(coef != 0.0);
+
+         /* if reference point not valid (e.g., during INITLP), then take middle point */
+         if( ref < lb || ref > ub )
+            ref = (lb+ub)/2.0;
+
+         /* check whether we can eliminate coef*var from rowprep and how much we would loose w.r.t. ref(x) */
+         if( ((coef > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT) || (coef < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT)) )
+         {
+            /* we would need to aggregate with -coef*var <= -coef*lb(x) */
+            if( SCIPisInfinity(scip, -lb) )
+               loss[pos] = SCIP_INVALID;
+            else
+               loss[pos] = REALABS(coef) * (ref - lb);
+         }
+         else
+         {
+            assert((coef < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT) || (coef > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT));
+            /* we would need to aggregate with -coef*var >= -coef*ub(x) */
+            if( SCIPisInfinity(scip, ub) )
+               loss[pos] = SCIP_INVALID;
+            else
+               loss[pos] = REALABS(coef) * (ub - ref);
+         }
+         assert(loss[pos] >= 0.0);  /* assuming SCIP_INVALID >= 0 */
+
+         SCIPdebugMsg(scip, "aggregating %g*<%s> %c= ... with <%s>[%g] %c= %g looses %g\n",
+            coef, SCIPvarGetName(var), rowprep->sidetype == SCIP_SIDETYPE_RIGHT ? '<' : '>',
+            SCIPvarGetName(var), ref,
+            ((coef > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT) || (coef < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT)) ? '>' : '<',
+            ((coef > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT) || (coef < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT)) ? lb : ub, loss[pos]);
       }
-      else if( ((mincoef < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT) || (mincoef > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT)) &&
-         !SCIPisInfinity(scip, SCIPvarGetUbLocal(var)) )
+
+      if( loss[0] == SCIP_INVALID && loss[1] == SCIP_INVALID )
+         break;  /* cannot eliminate coefficient */
+
+      /* select position with smaller loss */
+      pos = (loss[1] == SCIP_INVALID || loss[1] > loss[0]) ? 0 : 1;
+
+      /* now do the actual elimination */
+      var = rowprep->vars[pos ? rowprep->nvars-1 : maxcoefidx];
+      coef = rowprep->coefs[pos ? rowprep->nvars-1 : maxcoefidx];
+
+      /* check whether we can eliminate coef*var from rowprep and how much we would loose w.r.t. ref(x) */
+      if( ((coef > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT) || (coef < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT)) )
       {
-         SCIPdebugMsg(scip, "eliminate coefficient %g for <%s> [%g, %g]\n", mincoef, SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-         SCIPaddRowprepConstant(rowprep, mincoef * SCIPvarGetUbLocal(var));
-         --rowprep->nvars; /* forget last term */
-         rowprep->local |= SCIPisLT(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var));
+         /* we aggregate with -coef*var <= -coef*lb(x) */
+         assert(!SCIPisInfinity(scip, -SCIPvarGetLbLocal(var)));
+         SCIPaddRowprepConstant(rowprep, coef * SCIPvarGetLbLocal(var));
+         rowprep->local |= SCIPisGT(scip, SCIPvarGetLbLocal(var), SCIPvarGetLbGlobal(var));
       }
       else
       {
-         /* cannot eliminate coefficient */
-         break;
+         assert((coef < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT) || (coef > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT));
+         /* we aggregate with -coef*var >= -coef*ub(x) */
+         assert(!SCIPisInfinity(scip, SCIPvarGetUbLocal(var)));
+         SCIPaddRowprepConstant(rowprep, coef * SCIPvarGetUbLocal(var));
+         rowprep->local |= SCIPisLT(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var));
       }
 
-      /* if no variables left, then stop */
-      if( rowprep->nvars == 0 )
-         return SCIP_OKAY;
+      if( pos == 0 )
+      {
+         /* set first term to zero */
+         rowprep->coefs[maxcoefidx] = 0.0;
 
-      /* update mincoef */
-      mincoef = REALABS(rowprep->coefs[rowprep->nvars-1]);
+         /* update index */
+         ++maxcoefidx;
+
+         /* update maxcoef */
+         maxcoef = REALABS(rowprep->coefs[maxcoefidx]);
+      }
+      else
+      {
+         /* forget last term */
+         --rowprep->nvars;
+
+         /* update mincoef */
+         mincoef = REALABS(rowprep->coefs[rowprep->nvars-1]);
+      }
    }
 
    if( coefrange != NULL )
       *coefrange = REALABS(maxcoef / mincoef);
+
+   if( maxcoefidx > 0 )
+   {
+      for( i = maxcoefidx; i < rowprep->nvars; ++i )
+      {
+         rowprep->vars[i-maxcoefidx] = rowprep->vars[i];
+         rowprep->coefs[i-maxcoefidx] = rowprep->coefs[i];
+      }
+      rowprep->nvars -= maxcoefidx;
+   }
 
    /* SCIP_ROW handling will replace a side close to 0 by 0.0, even if that makes the row more restrictive
     * to avoid this, relax the side so that it is not moved to 0.0 anymore

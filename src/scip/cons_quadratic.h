@@ -741,6 +741,7 @@ EXTERN
 SCIP_RETCODE SCIPbeautifyRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be beautified */
+   SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */
    SCIP_Real             coefmaxrange,       /**< maximal allowed coefficients range */
    SCIP_Real*            coefrange           /**< buffer to store coefrange of beautified cut, or NULL if not of interest */
 );

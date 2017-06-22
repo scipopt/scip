@@ -5524,7 +5524,7 @@ SCIP_RETCODE generateCut(
       SCIPmergeRowprepTerms(scip, rowprep);
 
       /* beautify row */
-      SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, maxrange, &coefrange) );
+      SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, sol, maxrange, &coefrange) );
 
       /* check that coefficient range is ok */
       success = coefrange <= maxrange;

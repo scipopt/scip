@@ -3798,7 +3798,7 @@ SCIP_RETCODE generateCut(
 
       /* we should not need SCIPmergeRowprep() with only 2 vars in the row */
 
-      SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, conshdlrdata->cutmaxrange, &coefrange) );
+      SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, sol, conshdlrdata->cutmaxrange, &coefrange) );
 
       if( coefrange >= conshdlrdata->cutmaxrange )
       {
@@ -5745,7 +5745,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                      consdata->exponent, consdata->xoffset, consdata->power, 1.0, consdata->zcoef, consdata->rhs, consdata->x, consdata->z) );
                if( rowprep != NULL )
                {
-                  SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, conshdlrdata->cutmaxrange, &coefrange) );
+                  SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, &coefrange) );
                   if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                   {
                      SCIP_CALL( SCIPgetRowprepRow(scip, &row, rowprep, conshdlr) );
@@ -5769,7 +5769,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                      consdata->x, consdata->z, FALSE) );
                assert(rowprep != NULL);
 
-               SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, conshdlrdata->cutmaxrange, &coefrange) );
+               SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, &coefrange) );
                if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                {
                   SCIP_CALL( SCIPgetRowprepRow(scip, &row, rowprep, conshdlr) );
@@ -5796,7 +5796,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                      consdata->x, consdata->z, FALSE) );
                assert(rowprep != NULL);
 
-               SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, conshdlrdata->cutmaxrange, &coefrange) );
+               SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, &coefrange) );
                if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                {
                   SCIP_CALL( SCIPgetRowprepRow(scip, &row, rowprep, conshdlr) );
@@ -5826,7 +5826,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                      consdata->exponent, -consdata->xoffset, consdata->power, -1.0, -consdata->zcoef, -consdata->lhs, consdata->x, consdata->z) );
                if( rowprep != NULL )
                {
-                  SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, conshdlrdata->cutmaxrange, &coefrange) );
+                  SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, &coefrange) );
                   if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                   {
                      SCIP_CALL( SCIPgetRowprepRow(scip, &row, rowprep, conshdlr) );
@@ -5850,7 +5850,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                      consdata->x, consdata->z, FALSE) );
                assert(rowprep != NULL);
 
-               SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, conshdlrdata->cutmaxrange, &coefrange) );
+               SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, &coefrange) );
                if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                {
                   SCIP_CALL( SCIPgetRowprepRow(scip, &row, rowprep, conshdlr) );
@@ -5877,7 +5877,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                      consdata->x, consdata->z, FALSE) );
                assert(rowprep != NULL);
 
-               SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, conshdlrdata->cutmaxrange, &coefrange) );
+               SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, &coefrange) );
                if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                {
                   SCIP_CALL( SCIPgetRowprepRow(scip, &row, rowprep, conshdlr) );
