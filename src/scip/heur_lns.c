@@ -70,6 +70,7 @@
 #define GAINMEASURES "bwe"
 #define DEFAULT_EPS        0.5       /**< probability for exploration in epsilon-greedy bandit algorithm */
 #define DEFAULT_RESETWEIGHTS TRUE    /**< should the bandit algorithms be reset when a new problem is read? */
+#define DEFAULT_SUBSCIPRANDSEEDS FALSE /**< should random seeds of sub-SCIPs be altered to increase diversification? */
 
 /*
  * parameters to control variable fixing
@@ -359,6 +360,7 @@ struct SCIP_HeurData
    SCIP_Bool             usesubscipheurs;    /**< should the heuristic activate other sub-SCIP heuristics during its search?  */
    SCIP_Bool             adjustminimprove;   /**< should the factor by which the minimum improvement is bound be dynamically updated? */
    SCIP_Bool             resetweights;       /**< should the bandit algorithms be reset when a new problem is read? */
+   SCIP_Bool             subsciprandseeds;   /**< should random seeds of sub-SCIPs be altered to increase diversification? */
    char                  gainmeasure;        /**< measure for the gain of a neighborhood? 'b'oolean, 'w'eighted boolean,
                                                *  'e'ffort based? */
 };
@@ -2115,6 +2117,12 @@ SCIP_RETCODE setupSubScip(
    /* set solve limits for sub-SCIP */
    SCIP_CALL( setLimits(subscip, solvelimits) );
 
+   /* change random seed of sub-SCIP */
+   if( heurdata->subsciprandseeds )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "randomization/randomseedshift", (int)SCIPheurGetNCalls(heur)) );
+   }
+
    SCIPdebugMsg(scip, "Solve Limits: %lld (%lld) nodes (stall nodes), %.1f sec., %d sols\n",
          solvelimits->nodelimit, solvelimits->nodelimit / 2, solvelimits->timelimit, heurdata->nsolslim);
 
@@ -3624,6 +3632,10 @@ SCIP_RETCODE SCIPincludeHeurLns(
 
    SCIP_CALL( SCIPaddStringParam(scip, "heuristics/" HEUR_NAME "/gainfilename", "file name to store all gains and the selection of the bandit",
          &heurdata->gainfilename, TRUE, DEFAULT_GAINFILENAME, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/subsciprandseeds",
+            "should random seeds of sub-SCIPs be altered to increase diversification?",
+            &heurdata->subsciprandseeds, TRUE, DEFAULT_SUBSCIPRANDSEEDS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
