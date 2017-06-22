@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,7 +37,7 @@
 #include <string.h>
 #if defined(_WIN32) || defined(_WIN64)
 #else
-#include <strings.h>
+#include <strings.h> /*lint --e{766}*/
 #endif
 
 #include "scip/reader_bnd.h"
@@ -119,10 +119,11 @@ SCIP_RETCODE readBounds(
 
       /* parse the line */
       (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%ds %%%ds %%%ds\n", SCIP_MAXSTRLEN, SCIP_MAXSTRLEN, SCIP_MAXSTRLEN);
-      nread = sscanf(buffer, format, varname, lbstring, ubstring);
+      (void) sscanf(buffer, format, varname, lbstring, ubstring);
 
       SCIP_CALL( SCIPparseVarName(scip, buffer, &var, &endptr) );
 
+      /* cppcheck-suppress invalidscanf */
       nread = sscanf(endptr, "%s %s\n", lbstring, ubstring);
       if( nread < 1 )
       {
@@ -197,8 +198,8 @@ SCIP_RETCODE readBounds(
          }
 
          /* collect best variable bounds */
-         lb = MAX(lb, SCIPvarGetLbGlobal(var));
-         ub = MIN(ub, SCIPvarGetUbGlobal(var));
+         lb = MAX(lb, SCIPvarGetLbGlobal(var)); /*lint !e666*/
+         ub = MIN(ub, SCIPvarGetUbGlobal(var)); /*lint !e666*/
       }
 
       /* note that we don't need to check if lb > ub in SCIPchgVar{Lb,Ub} */
@@ -304,8 +305,7 @@ SCIP_RETCODE SCIPwriteBnd(
    FILE*                 file,               /**< file stream to print into, or NULL for stdout */
    SCIP_VAR**            vars,               /**< array with active variables ordered binary, integer, implicit, continuous */
    int                   nvars,              /**< number of active variables in the problem */
-   SCIP_RESULT*          result,             /**< pointer to store the result of the file writing call */
-   SCIP_READERDATA*      readerdata          /**< pointer to the data of the reader */
+   SCIP_RESULT*          result              /**< pointer to store the result of the file writing call */
    )
 {
    SCIP_MESSAGEHDLR* messagehdlr;
@@ -368,7 +368,7 @@ SCIP_DECL_READERWRITE(readerWriteBnd)
    assert(reader != NULL);
    assert(strcmp(SCIPreaderGetName(reader), READER_NAME) == 0);
 
-   SCIP_CALL( SCIPwriteBnd(scip, file, vars, nvars, result, SCIPreaderGetData(reader)) );
+   SCIP_CALL( SCIPwriteBnd(scip, file, vars, nvars, result) );
 
    return SCIP_OKAY;
 }

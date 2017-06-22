@@ -3,10 +3,10 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
+#*  SCIP is distributed under the terms of the ZIB Academic License.         *
 #*                                                                           *
 #*  You should have received a copy of the ZIB Academic License              *
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
@@ -17,6 +17,7 @@
 #@brief   Makefile for solving the Steiner tree problem using SCIP
 #@author  Gerald Gamrath
 #@author  Thorsten Koch
+#@author  Daniel Rehfeldt
 #@author  Michael Winkler
 
 #-----------------------------------------------------------------------------
@@ -43,8 +44,11 @@ CMAINOBJ	=	cmain.o \
 			grphmcut.o \
 			grphpath.o \
 			grphsave.o \
+			heur_ascendprune.o \
+			heur_slackprune.o \
 			heur_tm.o \
 			heur_local.o \
+			heur_prune.o \
 			heur_rec.o \
 			misc_stp.o \
 			probdata_stp.o \
@@ -105,7 +109,6 @@ scip:
 
 .PHONY: doc
 doc:
-		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scip.css);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);

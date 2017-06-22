@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3562,7 +3562,6 @@ SCIP_RETCODE preprocessColumns(
    nunprocessedcols = nconsideredcols;
    nzerocolsremoved = 0;
    ncolsingletonsremoved = 0;
-   nnonzentries = 0;
    rowofcolsingleton = -1;
    if( removecolsingletons )
       maxnnonzentries = 1;
@@ -4006,7 +4005,7 @@ SCIP_RETCODE decomposeProblem(
             {
                if( ISODD(scip, colvals[cidx]) )          
                   fliplhsrhs = XOR(fliplhsrhs,
-                     (lpdata->rcolsindexofcol[lppos] == LP_SOL_EQUALS_ODD_LB
+                     (SCIP_Bool) (lpdata->rcolsindexofcol[lppos] == LP_SOL_EQUALS_ODD_LB
                         || lpdata->rcolsindexofcol[lppos] == LP_SOL_EQUALS_ODD_UB));
 
                /**@todo analogue for continuous variables? */
@@ -4061,7 +4060,7 @@ SCIP_RETCODE decomposeProblem(
             }
             nprocessedcols++;
          }
-         rrowsinsubproboddrhs[nrrowsinsubprob-1] = XOR(ISODD(scip, problem->rrowsrhs[i]),fliplhsrhs);
+         rrowsinsubproboddrhs[nrrowsinsubprob-1] = XOR((SCIP_Bool) ISODD(scip, problem->rrowsrhs[i]),fliplhsrhs);
          nprocessedrows++;
       }
 
@@ -4514,7 +4513,7 @@ SCIP_RETCODE preprocessIdenticalColums(
       for( c2 = 0 ; c2 < mod2data->ncolsind && c1 < mod2data->ncolsind; ++c2)
       {
          if( c2 < mod2data->ncolsind )
-            while( removecol[c1] && c1 < mod2data->ncolsind )
+            while( c1 < mod2data->ncolsind && removecol[c1] )
                c1++;
          if( c2 < c1 && c1 < mod2data->ncolsind )
             mod2data->colsind[c2] = mod2data->colsind[c1];
@@ -5978,7 +5977,6 @@ SCIP_RETCODE dijkstra(
 
    /* initialize */
    nunprocessednodes = 0;
-   mindistance = 1.0;  
    for( v = 0; v < graph->nnodes ; ++v)
    { 
       graph->nodes[v]->distance              =  1.0;

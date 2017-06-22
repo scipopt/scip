@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -80,9 +80,16 @@ elif test $CLUSTERQUEUE = "M620-low"
 then
     NICE="--nice=10000"
     CLUSTERQUEUE="M620"
+elif test $CLUSTERQUEUE = "M620v3-low"
+then
+    NICE="--nice=10000"
+    CLUSTERQUEUE="M620v3"
 elif test $CLUSTERQUEUE = "M620x"
 then
     CLUSTERQUEUE="M620,M620v2,M620v3"
+elif test $CLUSTERQUEUE = "moskito"
+then
+    ACCOUNT="dopt"
 fi
 
 # check if the slurm blades should be used exclusively

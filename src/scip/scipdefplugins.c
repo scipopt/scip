@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -141,6 +141,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurNlpdiving(scip) );
    SCIP_CALL( SCIPincludeHeurMutation(scip) );
    SCIP_CALL( SCIPincludeHeurMultistart(scip) );
+   SCIP_CALL( SCIPincludeHeurMpec(scip) );
    SCIP_CALL( SCIPincludeHeurObjpscostdiving(scip) );
    SCIP_CALL( SCIPincludeHeurOctane(scip) );
    SCIP_CALL( SCIPincludeHeurOfins(scip) );
@@ -203,6 +204,17 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
       SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
       SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
    }
+
+   SCIP_CALL( SCIPcreateNlpSolverWorhp(SCIPblkmem(scip), &nlpi) );
+   if( nlpi != NULL )
+   {
+      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
+      SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameWorhp(), SCIPgetSolverDescWorhp()) );
+   }
+
+#ifdef TPI_TNYC
+   SCIP_CALL( SCIPincludeExternalCodeInformation(scip, "TinyCThread", "Small, portable implementation of the C11 threads API (tinycthread.github.io)") );
+#endif
 
    SCIP_CALL( SCIPdebugIncludeProp(scip) ); /*lint !e506 !e774*/
 

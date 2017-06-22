@@ -708,7 +708,9 @@ static
 SCIP_RETCODE readLIBSVM(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< name of file to read */
-   SCIP_Bool             boundsonclassifier  /**< Use unit bounds on classifier? */
+   SCIP_Bool             boundsonclassifier, /**< Use unit bounds on classifier? */
+   int*                  nclass1,            /**< pointer to store the number of points in class 1 */
+   int*                  nclass2             /**< pointer to store the number of points in class 2 */
    )
 {
    char name[SCIP_MAXSTRLEN];
@@ -720,9 +722,16 @@ SCIP_RETCODE readLIBSVM(
    SCIP_VAR* rhsvar;
    SCIP_CONS* cons;
    SCIP_Real delta = 1.0;
+   int class1 = INT_MAX;
+   int class2 = INT_MAX;
    int nmaxvars = 100;
    int nconss = 0;
    int j;
+
+   assert( nclass1 != NULL );
+   assert( nclass2 != NULL );
+   *nclass1 = 0;
+   *nclass2 = 0;
 
    /* open file */
    file = fopen(filename, "r");
@@ -733,8 +742,8 @@ SCIP_RETCODE readLIBSVM(
       return SCIP_NOFILE;
    }
 
-   /* int space for string */
-   SCIP_CALL( SCIPallocBufferArray(scip, &buffer, 2 * SCIP_MAXSTRLEN) );
+   /* reserve space for string */
+   SCIP_CALL( SCIPallocBufferArray(scip, &buffer, 100 * SCIP_MAXSTRLEN) );
 
    /* init variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nmaxvars) );
@@ -746,7 +755,7 @@ SCIP_RETCODE readLIBSVM(
    SCIP_CALL( SCIPallocBufferArray(scip, &consvals, nmaxvars + 1) );
 
    /* create rhs variable */
-   SCIP_CALL( SCIPcreateVar(scip, &rhsvar, NULL, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPcreateVar(scip, &rhsvar, "b", -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPaddVar(scip, rhsvar) );
 
    /* determine rhs */
@@ -765,16 +774,42 @@ SCIP_RETCODE readLIBSVM(
       SCIPdebugMsg(scip, "constraint: %d\n", nconss);
 
       /* read line */
-      if ( fgets(buffer, 2 * SCIP_MAXSTRLEN, file) == NULL )
+      if ( fgets(buffer, 100 * SCIP_MAXSTRLEN, file) == NULL )
          break;
       s = buffer;
 
-      /* parse class */
+      /* parse class - allow for arbitrary classes */
       class = getNextInt(&s);
-      if ( class != -1 && class != 1 )
+      if ( class1 == INT_MAX )
       {
-         SCIPerrorMessage("Invalid class value: %d.\n", class);
-         return SCIP_READERROR;
+         class1 = class;
+         class = 1;
+         ++(*nclass1);
+      }
+      else if ( class != class1 && class2 == INT_MAX )
+      {
+         class2 = class;
+         class = -1;
+         ++(*nclass2);
+      }
+      else
+      {
+         if ( class != class1 && class != class2 )
+         {
+            SCIPerrorMessage("Invalid class value: %d (valid: %d, %d).\n", class, class1, class2);
+            return SCIP_READERROR;
+         }
+         if ( class == class1 )
+         {
+            class = 1;
+            ++(*nclass1);
+         }
+         else
+         {
+            assert( class == class2 );
+            class = -1;
+            ++(*nclass2);
+         }
       }
 
       /* parse values */
@@ -879,6 +914,8 @@ SCIP_RETCODE solveClassification(
    SCIP_Real obj = 0.0;
    SCIP_Real lb = 0.0;
    SCIP_Real ub;
+   int nclass1;
+   int nclass2;
    int norigvars;
    int nrows = 0;
    int m = 0;
@@ -969,7 +1006,10 @@ SCIP_RETCODE solveClassification(
    SCIP_CALL( SCIPcreateProbBasic(origscip, "infeasible") );
 
    /* read data and create problem */
-   SCIP_CALL( readLIBSVM(origscip, filename, boundsonclassifier) );
+   SCIP_CALL( readLIBSVM(origscip, filename, boundsonclassifier, &nclass1, &nclass2) );
+
+   SCIPinfoMessage(masterscip, NULL, "Number of data point in class 1: %d.\n", nclass1);
+   SCIPinfoMessage(masterscip, NULL, "Number of data point in class 2: %d.\n\n", nclass2);
 
    if ( boundsonclassifier )
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "classify-bnd-%s.lp", probname);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -59,7 +59,7 @@ enum SCIP_LPParam
    SCIP_LPPAR_TIMING         = 17,      /**< type of timer (1 - cpu, 2 - wallclock, 0 - off) */
    SCIP_LPPAR_RANDOMSEED     = 18,      /**< inital random seed, e.g. for perturbations in the simplex (0: LP default) */
    SCIP_LPPAR_POLISHING      = 19,      /**< set solution polishing (0 - disable, 1 - enable) */
-   SCIP_LPPAR_PERSISTENTSCALING = 20    /**< use persistent LP scaling during branch and bound */
+   SCIP_LPPAR_REFACTOR       = 20       /**< set refactorization interval (0 - automatic) */
 };
 typedef enum SCIP_LPParam SCIP_LPPARAM;
 

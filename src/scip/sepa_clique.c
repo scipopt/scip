@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -299,7 +299,10 @@ SCIP_RETCODE tcliquegraphAddCliqueVars(
    return SCIP_OKAY;
 }
 
-/** constructs dense clique incidence matrix */
+/** constructs dense clique incidence matrix
+ *
+ * @todo add implicit and integer variables appearing in cliques also to the clique table
+ */
 static
 SCIP_RETCODE tcliquegraphConstructCliqueTable(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -365,18 +368,13 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
       vars = SCIPcliqueGetVars(cliques[i]);
       vals = SCIPcliqueGetValues(cliques[i]);
       nvars = SCIPcliqueGetNVars(cliques[i]);
-#if 0  /**@todo this assert is currently not valid since implicit binary variables in cliques are ignored,
-        * i.e., corresponding nodes and edges are not added to the tclique graph. Enable assert again if
-        * this feature it incorporated.
-        */
-      assert(nvars <= tcliquegraph->nnodes);
-#endif
 
       /* get the node numbers of the variables */
       for( u = 0; u < nvars && !SCIPisStopped(scip); ++u )
       {
          SCIP_VAR* var;
 
+         /* implicit integer and integer variables are currently not present in the constructed tclique graph */
          if( SCIPvarGetType(vars[u]) != SCIP_VARTYPE_BINARY )
             continue;
 
@@ -396,6 +394,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
          int colofs;
          unsigned int colmask;
 
+         /* implicit integer and integer variables are currently not present in the constructed tclique graph */
          if( SCIPvarGetType(vars[u]) != SCIP_VARTYPE_BINARY )
             continue;
 
@@ -408,6 +407,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
             int nv;
             unsigned int mask;
 
+            /* implicit integer and integer variables are currently not present in the constructed tclique graph */
             if( SCIPvarGetType(vars[v]) != SCIP_VARTYPE_BINARY )
                continue;
 

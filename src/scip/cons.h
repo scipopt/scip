@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for constraints and constraint handlers
  * @author Tobias Achterberg
  */
@@ -662,9 +663,9 @@ SCIP_RETCODE SCIPconsCreate(
 
 /** copies source constraint of source SCIP into the target constraint for the target SCIP, using the variable map for
  *  mapping the variables of the source SCIP to the variables of the target SCIP; if the copying process was successful
- *  a constraint is creates and captures;
+ *  a constraint is created and captured;
  *
- *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, a LP or pseudo solution
+ *  @warning If a constraint is marked to be checked for feasibility but not to be enforced, an LP or pseudo solution
  *  may be declared feasible even if it violates this particular constraint.
  *  This constellation should only be used, if no LP or pseudo solution can violate the constraint -- e.g. if a
  *  local constraint is redundant due to the variable's local bounds.
@@ -693,7 +694,7 @@ SCIP_RETCODE SCIPconsCopy(
    SCIP_Bool             stickingatnode,     /**< should the constraint always be kept at the node where it was added, even
                                               *   if it may be moved to a more global node? */
    SCIP_Bool             global,             /**< create a global or a local copy? */
-   SCIP_Bool*            success             /**< pointer to store whether the copying was successful or not */
+   SCIP_Bool*            valid               /**< pointer to store whether the copying was valid or not */
    );
 
 /** parses constraint information (in cip format) out of a string; if the parsing process was successful a constraint is
@@ -904,7 +905,7 @@ SCIP_RETCODE SCIPconsActive(
 extern
 SCIP_RETCODE SCIPconsDeactive(
    SCIP_CONS*            cons,               /**< constraint to notify */
-   SCIP_SET*             set                /**< global SCIP settings */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** method to collect the variables of a constraint

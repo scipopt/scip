@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -180,10 +180,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP_VAR** vars;                          /* original problem's variables                   */
    SCIP_VAR** subvars;                       /* subproblem's variables                         */
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */    
-   SCIP_HASHMAP* varmapbw;                   /* mapping of sub-SCIP variables to SCIP variables */
+   SCIP_HASHMAP* varmapbw = NULL;            /* mapping of sub-SCIP variables to SCIP variables */
 
-   SCIP_CONSHDLR** conshdlrs;                /* array of constraint handler's that might that might obtain conflicts */
-   int* oldnconss;                           /* number of constraints without rapid learning conflicts               */
+   SCIP_CONSHDLR** conshdlrs = NULL;         /* array of constraint handler's that might that might obtain conflicts */
+   int* oldnconss = NULL;                    /* number of constraints without rapid learning conflicts               */
 
    SCIP_Longint nodelimit;                   /* node limit for the subproblem                  */
 
@@ -207,7 +207,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
                                              * e.g., because a constraint could not be copied or a primal solution
                                              * could not be copied back 
                                              */
-
+   SCIP_Bool valid;
    int ndiscvars;
 
    soladded = FALSE;
@@ -269,10 +269,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) ); 
    SCIP_CALL( SCIPcreate(&subscip) );
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), nvars) );
-   success = FALSE;
+   valid = FALSE;
 
    /* copy the subproblem */
-   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapfw, NULL, "rapid", NULL, NULL, 0, FALSE, FALSE, TRUE, &success) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmapfw, NULL, "rapid", NULL, NULL, 0, FALSE, FALSE, TRUE, &valid) );
 
    if( sepadata->copycuts )
    {
@@ -292,6 +292,27 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
          SCIP_CALL( SCIPchgVarType(subscip, subvars[i], SCIP_VARTYPE_INTEGER, &infeasible) );
          assert(!infeasible);
       }
+
+      /* skip the heuristic when the sub-SCIP contains an integer variable with an infinite bound in direction of the
+       * objective function; this might lead to very bad branching decisions when enforcing a pseudo solution (#1439)
+       */
+      if( SCIPvarGetType(subvars[i]) <= SCIP_VARTYPE_INTEGER )
+      {
+         SCIP_Real lb = SCIPvarGetLbLocal(subvars[i]);
+         SCIP_Real ub = SCIPvarGetUbLocal(subvars[i]);
+         SCIP_Real obj = SCIPvarGetObj(subvars[i]);
+
+         if( (SCIPisNegative(subscip, obj) && SCIPisInfinity(subscip, ub))
+            || (SCIPisPositive(subscip, obj) && SCIPisInfinity(subscip, -lb)) )
+         {
+            /* free local hash map */
+            SCIPhashmapFree(&varmapfw);
+
+            SCIPdebugMsg(scip, "unbounded integer variable %s (in [%g,%g]) with objective %g -> skip heuristic\n",
+               SCIPvarGetName(subvars[i]), lb, ub, obj);
+            goto TERMINATE;
+         }
+      }
    }
 
    SCIPhashmapFree(&varmapfw);
@@ -302,7 +323,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
     * but no variables should be missing because we stop earlier anyway if pricers are present).
     * By disabling dual presolving, conflicts found in a relaxation are still valid for the original problem.
     */
-   if( !success )
+   if( ! valid )
    {
       for( i = 0; i < nvars; i++ )
       {     
@@ -310,7 +331,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       }
    }
 
-   SCIPdebugMsg(scip, "Copying SCIP was%s successful.\n", success ? "" : " not");
+   SCIPdebugMsg(scip, "Copying SCIP was%s valid.\n", valid ? "" : " not");
 
    /* mimic an FD solver: DFS, no LP solving, 1-FUIP instead of all-FUIP */
    if( SCIPisParamFixed(subscip, "lp/solvefreq") )
@@ -568,7 +589,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
                SCIP_CONS* conscopy;
 
                cons = conss[c];
-               assert(cons != NULL);        
+               assert(cons != NULL);
 
                success = FALSE;
 
@@ -614,7 +635,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
 
          SCIP_CALL( SCIPtightenVarLb(scip, vars[i], SCIPvarGetLbGlobal(subvars[i]), FALSE, &infeasible, &tightened) );
          if( tightened )
-            nbdchgs++;   
+            nbdchgs++;
       }
 
    n1startinfers = 0;
@@ -634,14 +655,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
          SCIP_Real upconflen;
 
          /* copy downwards branching statistics */
-         downvsids = SCIPgetVarVSIDS(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);            
+         downvsids = SCIPgetVarVSIDS(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);
          downconflen = SCIPgetVarAvgConflictlength(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);
-         downinfer = SCIPgetVarAvgInferences(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);            
+         downinfer = SCIPgetVarAvgInferences(subscip, subvars[i], SCIP_BRANCHDIR_DOWNWARDS);
 
          /* copy upwards branching statistics */
-         upvsids = SCIPgetVarVSIDS(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);                     
+         upvsids = SCIPgetVarVSIDS(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);
          upconflen = SCIPgetVarAvgConflictlength(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);
-         upinfer = SCIPgetVarAvgInferences(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);            
+         upinfer = SCIPgetVarAvgInferences(subscip, subvars[i], SCIP_BRANCHDIR_UPWARDS);
 
          /* memorize statistics */
          if( downinfer+downconflen+downvsids > 0.0 || upinfer+upconflen+upvsids != 0 )
@@ -667,10 +688,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       *result = SCIP_REDUCEDDOM;
 
    /* free local data */
+   assert(oldnconss != NULL);
+   assert(conshdlrs != NULL);
+   assert(varmapbw != NULL);
    SCIPfreeBufferArray(scip, &oldnconss);
    SCIPfreeBufferArray(scip, &conshdlrs);
-
    SCIPhashmapFree(&varmapbw);
+
+TERMINATE:
 
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);

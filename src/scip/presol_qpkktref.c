@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1134,7 +1134,6 @@ SCIP_RETCODE presolveAddKKTAggregatedVars(
       int nvars;
 
       var = agrvars[v];
-      nvars = 0;
 
       if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
       {
@@ -1774,6 +1773,7 @@ SCIP_DECL_PRESOLEXEC(presolExecQPKKTref)
 
    /* desired structure: matrix associated to quadratic constraint is indefinite;
     * otherwise, the problem usually can be solved faster by standard methods. */
+   SCIP_CALL( SCIPcheckCurvatureQuadratic(scip, cons) );
    if( ! presoldata->updatequadindef && ( SCIPisConvexQuadratic(scip, cons) || SCIPisConcaveQuadratic(scip, cons) ) )
    {
       SCIPdebugMsg(scip, "quadratic constraint update failed, since matrix associated to quadratic constraint <%s> is not \

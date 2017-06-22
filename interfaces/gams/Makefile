@@ -3,10 +3,10 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
-#*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
+#*  SCIP is distributed under the terms of the ZIB Academic License.         *
 #*                                                                           *
 #*  You should have received a copy of the ZIB Academic License              *
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
@@ -31,8 +31,12 @@ GAMSDIR		=	gams
 
 include $(SCIPDIR)/make/make.project
 
-ifneq ($(LINKRPATH),)
-LIBBUILDFLAGS	+=	$(LINKRPATH)$(SCIPREALPATH)/$(LIBDIR)
+ifneq ($(SHARED), true)
+$(error Please compile SCIP and this interface with SHARED=true)
+endif
+
+ifneq ($(READLINE), false)
+$(error Please compile SCIP and this interface with READLINE=false)
 endif
 
 GAMSIODIR	=	$(GAMSDIR)/apifiles/C/api
@@ -115,6 +119,10 @@ depend:		$(SCIPDIR)
 		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z\_]*\).cpp|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.cpp|g'\'' \
 		| sed '\''s|$(GAMSIODIR).*h||g'\'' \
 		>$(MAINDEP)'
+
+.PHONY: test
+test:
+		./test.sh $(MAINFILE)
 
 -include	$(MAINDEP)
 

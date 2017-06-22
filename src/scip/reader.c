@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -205,6 +205,7 @@ SCIP_RETCODE SCIPreaderRead(
 static
 void resetVarname(
    SCIP_VAR*             var,                /**< variable */
+   SCIP_SET*             set,                /**< global SCIP settings */
    const char*           name                /**< variable name */
    )
 {
@@ -215,7 +216,7 @@ void resetVarname(
 
    /* get pointer to temporary generic name and free the memory */
    oldname = SCIPvarGetName(var);
-   BMSfreeMemory(&oldname);
+   SCIPsetFreeBufferArray(set, &oldname);
 
    /* reset name */
    SCIPvarSetNamePointer(var, name);
@@ -237,6 +238,7 @@ SCIP_RETCODE SCIPreaderWrite(
 
    assert(reader != NULL);
    assert(set != NULL);
+   assert(set->buffer != NULL);
    assert(extension != NULL);
    assert(result != NULL);
 
@@ -293,7 +295,7 @@ SCIP_RETCODE SCIPreaderWrite(
          SCIPsetDebugMsg(set, "Writing %d constraints.\n", nconss);
 
 
-         SCIP_ALLOC( BMSallocMemoryArray(&conss, nconss) );
+         SCIP_CALL( SCIPsetAllocBufferArray(set, &conss, nconss) );
 
          /* copy the constraints */
          nconss = 0;
@@ -338,9 +340,9 @@ SCIP_RETCODE SCIPreaderWrite(
          /* save variable and constraint names and replace these names by generic names */
 
          /* allocate memory for saving the original variable and constraint names */
-         SCIP_ALLOC( BMSallocMemoryArray(&varnames, nvars) );
-         SCIP_ALLOC( BMSallocMemoryArray(&fixedvarnames, nfixedvars) );
-         SCIP_ALLOC( BMSallocMemoryArray(&consnames, nconss) );
+         SCIP_CALL( SCIPsetAllocBufferArray(set, &varnames, nvars) );
+         SCIP_CALL( SCIPsetAllocBufferArray(set, &fixedvarnames, nfixedvars) );
+         SCIP_CALL( SCIPsetAllocBufferArray(set, &consnames, nconss) );
 
          /* compute length of the generic variable names:
           * - nvars + 1 to avoid log of zero
@@ -354,7 +356,7 @@ SCIP_RETCODE SCIPreaderWrite(
             var = vars[i];
             varnames[i] = SCIPvarGetName(var);
 
-            SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
+            SCIP_CALL( SCIPsetAllocBufferArray(set, &name, size) );
             (void) SCIPsnprintf(name, size, "x%d", i + set->write_genoffset);
             SCIPvarSetNamePointer(var, name);
          }  
@@ -367,7 +369,7 @@ SCIP_RETCODE SCIPreaderWrite(
             var = fixedvars[i];
             fixedvarnames[i] = SCIPvarGetName(var);
 
-            SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
+            SCIP_CALL( SCIPsetAllocBufferArray(set, &name, size) );
             (void) SCIPsnprintf(name, size, "y%d", i);
             SCIPvarSetNamePointer(var, name);
          }
@@ -380,7 +382,7 @@ SCIP_RETCODE SCIPreaderWrite(
             cons = conss[i];
             consnames[i] = SCIPconsGetName(cons);
 
-            SCIP_ALLOC( BMSallocMemoryArray(&name, size) );
+            SCIP_CALL( SCIPsetAllocBufferArray(set, &name, size) );
             (void) SCIPsnprintf(name, size, "c%d", i);
             SCIPconsSetNamePointer(cons, name);
          }
@@ -399,35 +401,34 @@ SCIP_RETCODE SCIPreaderWrite(
          assert(varnames != NULL);
          assert(fixedvarnames != NULL);
          assert(consnames != NULL);
-
-         for( i = 0; i < nvars; ++i )
-            resetVarname(vars[i], varnames[i]);
-
-         for( i = 0; i < nfixedvars; ++i )
-            resetVarname(fixedvars[i], fixedvarnames[i]);
-
-         for( i = 0; i < nconss; ++i )
+         for( i = nconss - 1; i >= 0; --i )
          {
             cons = conss[i];
 
             /* get pointer to temporary generic name and free the memory */
             consname = SCIPconsGetName(cons);
-            BMSfreeMemory(&consname);
+            SCIPsetFreeBufferArray(set, &consname);
 
             /* reset name */
             SCIPconsSetNamePointer(cons, consnames[i]);
          }
 
+         for( i = nfixedvars - 1; i >= 0; --i )
+            resetVarname(fixedvars[i], set, fixedvarnames[i]);
+
+         for( i = nvars - 1; i >= 0; --i )
+            resetVarname(vars[i], set, varnames[i]);
+
          /* free memory */
-         BMSfreeMemoryArray(&varnames);
-         BMSfreeMemoryArray(&fixedvarnames);
-         BMSfreeMemoryArray(&consnames);
+         SCIPsetFreeBufferArray(set, &consnames);
+         SCIPsetFreeBufferArray(set, &fixedvarnames);
+         SCIPsetFreeBufferArray(set, &varnames);
       }
 
       if( prob->transformed )
       {
          /* free memory */
-         BMSfreeMemoryArray(&conss);
+         SCIPsetFreeBufferArray(set, &conss);
       }
    }
    else

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   sol.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for storing primal CIP solutions
  * @author Tobias Achterberg
  */
@@ -437,6 +438,7 @@ SCIP_RETCODE SCIPsolPrint(
    SCIP_PROB*            prob,               /**< problem data (original or transformed) */
    SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
    FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             mipstart,           /**< should only discrete variables be printed? */
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
 

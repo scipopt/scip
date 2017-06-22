@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_nodesel.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for node selectors
  * @author Tobias Achterberg
  */
@@ -31,6 +31,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup PublicNodeSelectorMethods
+ *
+ * @{
+ */
 
 /** gets name of node selector */
 EXTERN
@@ -86,6 +91,8 @@ EXTERN
 SCIP_Real SCIPnodeselGetTime(
    SCIP_NODESEL*         nodesel             /**< node selector */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

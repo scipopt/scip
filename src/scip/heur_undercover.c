@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2170,7 +2170,8 @@ SCIP_RETCODE solveSubproblem(
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), nvars) );
 
    /* copy original problem to subproblem; do not copy pricers */
-   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", fixedvars, fixedvals, nfixedvars, heurdata->globalbounds, FALSE, TRUE, validsolved) );
+   SCIP_CALL( SCIPcopyConsCompression(scip, subscip, varmap, NULL, "undercoversub", fixedvars, fixedvals, nfixedvars,
+         heurdata->globalbounds, FALSE, TRUE, validsolved) );
 
    if( heurdata->copycuts )
    {
@@ -3132,8 +3133,8 @@ SCIP_DECL_HEURINIT(heurInitUndercover)
    assert(heurdata != NULL);
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
    return SCIP_OKAY;
 }
@@ -3152,7 +3153,7 @@ SCIP_DECL_HEUREXIT(heurExitUndercover)
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    return SCIP_OKAY;
 }

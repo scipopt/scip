@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -233,7 +233,6 @@ static
 SCIP_DECL_HASHKEYVAL(hashKeyValCut)
 {  /*lint --e{715}*/
    SCIP_ROW* row;
-   unsigned int keyval;
    SCIP_Real maxval;
    SCIP_Real minval;
    SCIP_SET* set;
@@ -248,14 +247,9 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    assert(row->numminval > 0);
    assert(row->validminmaxidx);
 
-   keyval = SCIPhashFour(SCIPpositiveRealHashCode(maxval, 8),
-                         SCIPpositiveRealHashCode(minval, 12),
-                         SCIPcombineThreeInt(row->maxidx, row->len, row->minidx),
-                         SCIPcombineTwoInt(row->nummaxval, row->numminval));
-
-   return keyval;
+   return SCIPhashTwo(SCIPcombineTwoInt(SCIPrealHashCode(minval), SCIPrealHashCode(maxval)),
+                      SCIPcombineThreeInt(row->len, row->minidx, row->maxidx));
 }
-
 
 
 /*

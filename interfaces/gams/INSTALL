@@ -3,7 +3,7 @@
 *                  This file is part of the program and library             *
 *         SCIP --- Solving Constraint Integer Programs                      *
 *                                                                           *
-*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 *                            fuer Informationstechnik Berlin                *
 *                                                                           *
 *  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -25,7 +25,7 @@ To build and install your own GAMS/SCIP interface, you have to do the following:
  - Adjust GAMSDIR in Makefile or set a symbolic link 'gams' that points to
    the directory of your GAMS distribution.
  - If you use SoPlex, build SoPlex with the flag SHARED=true and make sure
-   that SCIPDIR/lib/libsoplex.*.so points to the created SoPlex shared library.
+   that SCIPDIR/lib/shared/libsoplex.*.so points to the created SoPlex shared library.
  - Build SCIP with the flags SHARED=true ZIMPL=false READLINE=false and your
    favorite other flags (e.g., IPOPT=true ...).
  - Build the GAMS/SCIP interface in this directory by executing make with
@@ -39,7 +39,7 @@ To build and install your own GAMS/SCIP interface, you have to do the following:
 Notes:
  - The interface requires GAMS >= 24.3.
  - You can also build SCIP and GAMS/SCIP with ZIMPL=true but that requires
-   to have build ZIMPL with SHARED=true and having SCIPDIR/lib/libzimpl.*.so
+   to have build ZIMPL with SHARED=true and having SCIPDIR/lib/shared/libzimpl.*.so
    to point to the ZIMPL shared library (analog to SoPlex).
  - READLINE=false can be necessary to avoid confusion about functions having
    the same name in the readline library and a GAMS library.

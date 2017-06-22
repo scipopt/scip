@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   scipdefplugins.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  default SCIP plugins
  * @author Tobias Achterberg
  */
@@ -98,6 +98,7 @@
 #include "scip/heur_lpface.h"
 #include "scip/heur_multistart.h"
 #include "scip/heur_mutation.h"
+#include "scip/heur_mpec.h"
 #include "scip/heur_nlpdiving.h"
 #include "scip/heur_objpscostdiving.h"
 #include "scip/heur_octane.h"
@@ -197,6 +198,7 @@
 #include "scip/concsolver_scip.h"
 
 #include "nlpi/nlpi_ipopt.h"
+#include "nlpi/nlpi_worhp.h"
 
 #ifdef __cplusplus
 extern "C" {

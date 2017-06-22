@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -595,8 +595,8 @@ SCIP_DECL_HEURINIT(heurInitIntshifting) /*lint --e{715}*/
    SCIPheurSetData(heur, heurdata);
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
    return SCIP_OKAY;
 }
@@ -615,7 +615,7 @@ SCIP_DECL_HEUREXIT(heurExitIntshifting) /*lint --e{715}*/
    SCIP_CALL( SCIPfreeSol(scip, &heurdata->sol) );
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    SCIPfreeBlockMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);

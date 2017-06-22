@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -79,6 +79,10 @@
 #ifndef SOPLEX_SUBVERSION
 #define SOPLEX_SUBVERSION 0
 #endif
+/* define API version for versions <= 3.0.0 */
+#ifndef SOPLEX_APIVERSION
+#define SOPLEX_APIVERSION 0
+#endif
 
 /* check version */
 #if (SOPLEX_VERSION < 133)
@@ -112,6 +116,13 @@
 #ifdef ___DEBUG
 #define SCIP_DEBUG
 #undef ___DEBUG
+#endif
+
+/* define snprintf when using a too old MSVC version */
+#if defined(_MSC_VER) && _MSC_VER < 1900
+#ifndef snprintf
+#define snprintf _snprintf
+#endif
 #endif
 
 #define SOPLEX_VERBLEVEL                5    /**< verbosity level for LPINFO */
@@ -217,7 +228,6 @@ class SPxSCIP : public SPxSolver
 #endif
    char*                 m_probname;         /**< problem name */
    bool                  m_fromscratch;      /**< use old basis indicator */
-   bool                  m_scaling;          /**< use lp scaling */
    bool                  m_presolving;       /**< use lp presolving */
    Real                  m_lpifeastol;       /**< feastol set by SCIPlpiSetRealpar() */
    Real                  m_lpiopttol;        /**< opttol set by SCIPlpiSetRealpar() */
@@ -228,6 +238,7 @@ class SPxSCIP : public SPxSolver
    bool                  m_autopricing;      /**< is automatic pricing selected? */
    int                   m_itlim;            /**< iteration limit (-1 for unbounded) */
    int                   m_itused;           /**< number of iterations spent in phase one of auto pricing */
+   int                   m_scaling;          /**< LP scaling (0: none, 1: normal, 2: aggressive) */
    DataArray<SPxSolver::VarStatus> m_rowstat; /**< basis status of rows before starting strong branching (if available, 0 otherwise) */
    DataArray<SPxSolver::VarStatus> m_colstat; /**< basis status of columns before starting strong branching (if available, 0 otherwise) */
    NameSet*              m_rownames;         /**< row names */
@@ -253,7 +264,6 @@ public:
       : SPxSolver(LEAVE, COLUMN),
         m_probname(0),
         m_fromscratch(false),
-        m_scaling(true),
         m_presolving(true),
         m_objLoLimit(-soplex::infinity),
         m_objUpLimit(soplex::infinity),
@@ -262,6 +272,7 @@ public:
         m_autopricing(true),
         m_itlim(-1),
         m_itused(0),
+        m_scaling(1),
         m_rowstat(0),
         m_colstat(0),
         m_rownames(0),
@@ -434,12 +445,12 @@ public:
       m_fromscratch = fs;
    }
 
-   bool getScaling() const
+   int getScaling() const
    {
       return m_scaling;
    }
 
-   void setScaling(bool s)
+   void setScaling(int s)
    {
       m_scaling = s;
    }
@@ -887,7 +898,7 @@ public:
       assert(!getFromScratch() || getBasisStatus() == SPxBasis::NO_PROBLEM);
 
       /* use scaler and simplifier if no basis is loaded, i.e., if solving for the first time or from scratch */
-      if( SPxSolver::getBasisStatus() == SPxBasis::NO_PROBLEM && getScaling() && nCols() > 0 && nRows() > 0 )
+      if( SPxSolver::getBasisStatus() == SPxBasis::NO_PROBLEM && (getScaling() > 0) && nCols() > 0 && nRows() > 0 )
       {
          spx_alloc(scaler, 1);
          scaler = new (scaler) SPxEquiliSC();
@@ -907,6 +918,8 @@ public:
       /* store original lp */
       if( scaler != NULL || simplifier != NULL )
          origlp = SPxLP(*this);
+
+      m_itused = 0;
 
    SOLVEAGAIN:
       /* perform scaling and presolving */
@@ -962,7 +975,6 @@ public:
       }
 
       /* solve */
-      m_itused = 0;
       if( result != SPxSimplifier::VANISHED )
       {
          /* we have to deactivate the objective limit, since we do not know the transformed value */
@@ -1610,9 +1622,9 @@ const char* SCIPlpiGetSolverName(
    SCIPdebugMessage("calling SCIPlpiGetSolverName()\n");
 
 #if (SOPLEX_SUBVERSION > 0)
-   sprintf(spxname, "SoPlex1 %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778*/
+   snprintf(spxname, 100, "SoPlex1 %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778*/
 #else
-   sprintf(spxname, "SoPlex1 %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778*/
+   snprintf(spxname, 100, "SoPlex1 %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778*/
 #endif
    return spxname;
 }
@@ -1623,12 +1635,17 @@ const char* SCIPlpiGetSolverDesc(
    )
 {
 #if (SOPLEX_VERSION >= 160)
-   sprintf(spxdesc, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de) [GitHash: %s]", getGitHash());
-#else
-   strcpy(spxdesc, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)");
-#endif
+   snprintf(spxdesc, 200, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de) [GitHash: %s]"
 #ifdef WITH_LPSCHECK
-   strcat(spxdesc, " - including CPLEX double check");
+     " - including CPLEX double check"
+#endif
+   , getGitHash());
+#else
+   snprintf(spxdesc, 200, "Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)"
+#ifdef WITH_LPSCHECK
+     " - including CPLEX double check"
+#endif
+   );
 #endif
    return spxdesc;
 }
@@ -1829,6 +1846,8 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert(nnonz == 0 || beg != NULL);
    assert(nnonz == 0 || ind != NULL);
    assert(nnonz == 0 || val != NULL);
+   assert(nnonz >= 0);
+   assert(ncols >= 0);
 
    invalidateSolution(lpi);
 
@@ -5136,7 +5155,7 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
    case SCIP_LPPAR_SCALING:
       assert(ival == TRUE || ival == FALSE);
-      lpi->spx->setScaling(bool(ival));
+      lpi->spx->setScaling(ival);
       break;
 #if SOPLEX_VERSION >= 201
    case SCIP_LPPAR_TIMING:

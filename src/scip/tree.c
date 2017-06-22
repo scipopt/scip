@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,6 +31,7 @@
 #include "scip/visual.h"
 #include "scip/event.h"
 #include "scip/lp.h"
+#include "scip/relax.h"
 #include "scip/var.h"
 #include "scip/implics.h"
 #include "scip/primal.h"
@@ -295,6 +296,7 @@ SCIP_RETCODE probingnodeCreate(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, probingnode) );
 
    (*probingnode)->lpistate = NULL;
+   (*probingnode)->lpinorms = NULL;
    (*probingnode)->ninitialcols = SCIPlpGetNCols(lp);
    (*probingnode)->ninitialrows = SCIPlpGetNRows(lp);
    (*probingnode)->ncols = (*probingnode)->ninitialcols;
@@ -317,6 +319,8 @@ SCIP_RETCODE probingnodeUpdate(
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
+   SCIP_Bool storenorms = FALSE;
+
    assert(probingnode != NULL);
    assert(SCIPtreeIsPathComplete(tree));
    assert(lp != NULL);
@@ -327,10 +331,24 @@ SCIP_RETCODE probingnodeUpdate(
       SCIP_CALL( SCIPlpFreeState(lp, blkmem, &probingnode->lpistate) );
    }
 
+   /* free old LP norms */
+   if( probingnode->lpinorms != NULL )
+   {
+      SCIP_CALL( SCIPlpFreeNorms(lp, blkmem, &probingnode->lpinorms) );
+      probingnode->lpinorms = NULL;
+      storenorms = TRUE;
+   }
+
    /* get current LP state */
    if( lp->flushed && lp->solved )
    {
       SCIP_CALL( SCIPlpGetState(lp, blkmem, &probingnode->lpistate) );
+
+      /* if LP norms were stored at this node before, store the new ones */
+      if( storenorms )
+      {
+         SCIP_CALL( SCIPlpGetNorms(lp, blkmem, &probingnode->lpinorms) );
+      }
       probingnode->lpwasprimfeas = lp->primalfeasible;
       probingnode->lpwasdualfeas = lp->dualfeasible;
    }
@@ -360,6 +378,11 @@ SCIP_RETCODE probingnodeFree(
    if( (*probingnode)->lpistate != NULL )
    {
       SCIP_CALL( SCIPlpFreeState(lp, blkmem, &(*probingnode)->lpistate) );
+   }
+   /* free the associated LP norms */
+   if( (*probingnode)->lpinorms != NULL )
+   {
+      SCIP_CALL( SCIPlpFreeNorms(lp, blkmem, &(*probingnode)->lpinorms) );
    }
 
    /* free objective information */
@@ -785,7 +808,7 @@ SCIP_RETCODE nodeAssignParent(
       node->lowerbound = parent->lowerbound;
       node->estimate = parent->estimate;
       node->depth = parent->depth+1; /*lint !e732*/
-      if( parent->depth >= SCIP_MAXTREEDEPTH-1 )
+      if( parent->depth >= SCIP_MAXTREEDEPTH )
       {
          SCIPerrorMessage("maximal depth level exceeded\n");
          return SCIP_MAXDEPTHLEVEL;
@@ -1121,11 +1144,15 @@ SCIP_RETCODE SCIPnodeCutoff(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_PROB*            origprob,           /**< original problem */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP */
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
+   SCIP_Real oldbound;
+
    assert(node != NULL);
    assert(set != NULL);
    assert(stat != NULL);
@@ -1139,14 +1166,31 @@ SCIP_RETCODE SCIPnodeCutoff(
             tree->root == node, tree->focusnode == node, node->lowerbound, tree->effectiverootdepth) );
    }
 
+   oldbound = node->lowerbound;
    node->cutoff = TRUE;
    node->lowerbound = SCIPsetInfinity(set);
    node->estimate = SCIPsetInfinity(set);
    if( node->active )
       tree->cutoffdepth = MIN(tree->cutoffdepth, (int)node->depth);
 
-   SCIPvisualCutoffNode(stat->visual, set, stat, node, TRUE);
+   /* update primal integral */
+   if( node->depth == 0 )
+   {
+      stat->rootlowerbound = SCIPsetInfinity(set);
+      if( set->misc_calcintegral )
+         SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), SCIPsetInfinity(set));
+   }
+   else if( set->misc_calcintegral && SCIPsetIsEQ(set, oldbound, stat->lastlowerbound) )
+   {
+      SCIP_Real lowerbound;
+      lowerbound = SCIPtreeGetLowerbound(tree, set);
 
+      /* updating the primal integral is only necessary if dual bound has increased since last evaluation */
+      if( lowerbound > stat->lastlowerbound )
+         SCIPstatUpdatePrimalDualIntegral(stat, set, transprob, origprob, SCIPsetInfinity(set), SCIPsetInfinity(set));
+   }
+
+   SCIPvisualCutoffNode(stat->visual, set, stat, node, TRUE);
 
    SCIPsetDebugMsg(set, "cutting off %s node #%" SCIP_LONGINT_FORMAT " at depth %d (cutoffdepth: %d)\n",
       node->active ? "active" : "inactive", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->cutoffdepth);
@@ -1366,7 +1410,7 @@ SCIP_RETCODE nodeRepropagate(
    /* mark the node to be cut off if a cutoff was detected */
    if( *cutoff )
    {
-      SCIP_CALL( SCIPnodeCutoff(node, set, stat, tree, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(node, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
    }
 
    return SCIP_OKAY;
@@ -1422,7 +1466,7 @@ SCIP_RETCODE nodeActivate(
       node->reprop = set->conf_enable && set->conf_useprop;
 
       /* mark the node to be cut off */
-      SCIP_CALL( SCIPnodeCutoff(node, set, stat, tree, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(node, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
    }
 
    /* propagate node again, if the reprop flag is set; in the new focus node, no repropagation is necessary, because
@@ -1476,7 +1520,6 @@ SCIP_RETCODE nodeDeactivate(
       stat->ndeactivatednodes++;
 
    /* free node if it is a dead-end node, i.e., has no children */
-   freeNode = FALSE;
    switch( SCIPnodeGetType(node) )   
    {
    case SCIP_NODETYPE_FOCUSNODE:
@@ -1854,7 +1897,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
                probingchange) );
 
          /* mark the node with the conflicting bound change to be cut off */
-         SCIP_CALL( SCIPnodeCutoff(tree->path[conflictingdepth], set, stat, tree, reopt, lp, blkmem) );
+         SCIP_CALL( SCIPnodeCutoff(tree->path[conflictingdepth], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
          return SCIP_OKAY;
       }
@@ -2186,7 +2229,7 @@ SCIP_RETCODE treeApplyPendingBdchgs(
        */
       if( conflictdepth == 0 )
       {
-         SCIP_CALL( SCIPnodeCutoff(tree->pendingbdchgs[i].node, set, stat, tree, reopt, lp, blkmem) );
+         SCIP_CALL( SCIPnodeCutoff(tree->pendingbdchgs[i].node, set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
 
          if( ((int) tree->pendingbdchgs[i].node->depth) <= tree->effectiverootdepth )
             return SCIP_OKAY;
@@ -2449,6 +2492,14 @@ SCIP_RETCODE SCIPnodePropagateImplics(
                   continue;
             }
 
+            /* @note the implication might affect a fixed variable (after resolving (multi-)aggregations);
+             *       normally, the implication should have been deleted in that case, but this is only possible
+             *       if the implied variable has the reverse implication stored as a variable bound;
+             *       due to numerics, the variable bound may not be present and so the implication is not deleted
+             */
+            if( SCIPvarGetStatus(SCIPvarGetProbvar(implvars[j])) == SCIP_VARSTATUS_FIXED )
+               continue;
+
             /* apply the implication */
             SCIP_CALL( SCIPnodeAddBoundinfer(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
                   eventqueue, cliquetable, implvars[j], implbounds[j], impltypes[j], NULL, NULL, 0, FALSE) );
@@ -2503,6 +2554,9 @@ SCIP_RETCODE SCIPnodePropagateImplics(
                   if( ub < 0.5 )
                      continue;
                }
+
+               if( SCIPvarGetStatus(SCIPvarGetProbvar(vars[k])) == SCIP_VARSTATUS_FIXED )
+                  continue;
 
                /* apply the clique implication */
                SCIP_CALL( SCIPnodeAddBoundinfer(node, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
@@ -2764,6 +2818,7 @@ void treeFindSwitchForks(
    lpfork = NULL;
    lpstatefork = NULL;
    subroot = NULL;
+   assert(fork != NULL);
 
    while( !fork->active )
    {
@@ -2797,9 +2852,11 @@ void treeFindSwitchForks(
    if( (int)fork->depth > tree->cutoffdepth )
    {
 #ifndef NDEBUG
-      while( fork != NULL && !fork->cutoff )
+      while( !fork->cutoff )
+      {
          fork = fork->parent;
-      assert(fork != NULL);
+         assert(fork != NULL);
+      }
       assert((int)fork->depth >= tree->cutoffdepth);
 #endif
       *cutoff = TRUE;
@@ -3052,7 +3109,7 @@ SCIP_RETCODE treeSwitchPath(
    {
       assert(tree->pathlen > 0);
       assert(tree->path[tree->pathlen-1]->active);
-      SCIP_CALL( SCIPnodeCutoff(tree->path[tree->pathlen-1], set, stat, tree, reopt, lp, blkmem) );
+      SCIP_CALL( SCIPnodeCutoff(tree->path[tree->pathlen-1], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
    }
 
    /* count the new LP sizes of the path */
@@ -4184,7 +4241,7 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_Bool             postponed,          /**< was the current focus node postponed? */
    SCIP_Bool             exitsolve           /**< are we in exitsolve stage, so we only need to loose the children */
    )
-{
+{  /*lint --e{715}*/
    SCIP_NODE* oldfocusnode;
    SCIP_NODE* fork;
    SCIP_NODE* lpfork;
@@ -4597,7 +4654,7 @@ SCIP_RETCODE SCIPnodeFocus(
 
             if( nodecutoff )
             {
-               SCIP_CALL( SCIPnodeCutoff(tree->path[d], set, stat, tree, reopt, lp, blkmem) );
+               SCIP_CALL( SCIPnodeCutoff(tree->path[d], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
                *cutoff = TRUE;
             }
          }
@@ -4608,7 +4665,7 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(*cutoff || SCIPtreeIsPathComplete(tree));
 
    return SCIP_OKAY;
-}   
+}
 
 
 
@@ -4824,9 +4881,9 @@ SCIP_RETCODE SCIPtreeCreateRoot(
 
 #ifndef NDEBUG
    /* check, if the sizes in the data structures match the maximal numbers defined here */
-   tree->root->depth = SCIP_MAXTREEDEPTH;
+   tree->root->depth = SCIP_MAXTREEDEPTH + 1;
    tree->root->repropsubtreemark = MAXREPROPMARK;
-   assert(tree->root->depth == SCIP_MAXTREEDEPTH);
+   assert(tree->root->depth - 1 == SCIP_MAXTREEDEPTH); /*lint !e650*/
    assert(tree->root->repropsubtreemark == MAXREPROPMARK);
    tree->root->depth++;             /* this should produce an overflow and reset the value to 0 */
    tree->root->repropsubtreemark++; /* this should produce an overflow and reset the value to 0 */
@@ -6333,6 +6390,62 @@ SCIP_RETCODE SCIPtreeCreateProbingNode(
    return SCIP_OKAY;
 }
 
+/** sets the LP state for the current probing node
+ *
+ *  @note state and norms are stored at the node and later released by SCIP; therefore, the pointers are set
+ *        to NULL by the method
+ *
+ *  @note the pointers to state and norms must not be NULL; however, they may point to a NULL pointer if the
+ *        respective information should not be set
+ */
+SCIP_RETCODE SCIPtreeSetProbingLPState(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_LPISTATE**       lpistate,           /**< pointer to LP state information (like basis information) */
+   SCIP_LPINORMS**       lpinorms,           /**< pointer to LP pricing norms information */
+   SCIP_Bool             primalfeas,         /**< primal feasibility when LP state information was stored */
+   SCIP_Bool             dualfeas            /**< dual feasibility when LP state information was stored */
+   )
+{
+   SCIP_NODE* node;
+
+   assert(tree != NULL);
+   assert(SCIPtreeProbing(tree));
+   assert(lpistate != NULL);
+   assert(lpinorms != NULL);
+
+   /* get the current probing node */
+   node = SCIPtreeGetCurrentNode(tree);
+   assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
+   assert(node->data.probingnode != NULL);
+
+   /* free already present LP state */
+   if( node->data.probingnode->lpistate != NULL )
+   {
+      SCIP_CALL( SCIPlpFreeState(lp, blkmem, &(node->data.probingnode->lpistate)) );
+   }
+
+   /* free already present LP pricing norms */
+   if( node->data.probingnode->lpinorms != NULL )
+   {
+      SCIP_CALL( SCIPlpFreeNorms(lp, blkmem, &(node->data.probingnode->lpinorms)) );
+   }
+
+   node->data.probingnode->lpistate = *lpistate;
+   node->data.probingnode->lpinorms = *lpinorms;
+   node->data.probingnode->lpwasprimfeas = primalfeas;
+   node->data.probingnode->lpwasdualfeas = dualfeas;
+
+   /* set the pointers to NULL to avoid that they are still used and modified by the caller */
+   *lpistate = NULL;
+   *lpinorms = NULL;
+
+   tree->probingloadlpistate = TRUE;
+
+   return SCIP_OKAY;
+}
+
 /** loads the LP state for the current probing node */
 SCIP_RETCODE SCIPtreeLoadProbingLPState(
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -6368,6 +6481,7 @@ SCIP_RETCODE SCIPtreeLoadProbingLPState(
          if( node->data.probingnode->lpistate != NULL )
          {
             lpistate = node->data.probingnode->lpistate;
+            lpinorms = node->data.probingnode->lpinorms;
             lpwasprimfeas = node->data.probingnode->lpwasprimfeas;
             lpwasdualfeas = node->data.probingnode->lpwasdualfeas;
             break;
@@ -6443,6 +6557,7 @@ SCIP_RETCODE treeBacktrackProbing(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
    SCIP_PRIMAL*          primal,             /**< primal data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -6504,6 +6619,11 @@ SCIP_RETCODE treeBacktrackProbing(
             for( i = node->data.probingnode->nchgdobjs - 1; i >= 0; --i )
             {
                assert(tree->probingobjchanged);
+
+               /* inform relaxation and update objective value of relaxation solution */
+               SCIPrelaxationUpdateVarObj(relaxation, set, node->data.probingnode->origobjvars[i],
+                     SCIPvarGetObj(node->data.probingnode->origobjvars[i]), node->data.probingnode->origobjvals[i]);
+
                SCIP_CALL( SCIPvarChgObj(node->data.probingnode->origobjvars[i], blkmem, set, transprob, primal, lp,
                      eventqueue, node->data.probingnode->origobjvals[i]) );
             }
@@ -6584,6 +6704,7 @@ SCIP_RETCODE SCIPtreeBacktrackProbing(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
    SCIP_PRIMAL*          primal,             /**< primal data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -6597,8 +6718,8 @@ SCIP_RETCODE SCIPtreeBacktrackProbing(
    assert(0 <= probingdepth && probingdepth <= SCIPtreeGetProbingDepth(tree));
 
    /* undo the domain and constraint set changes and free the temporary probing nodes below the given probing depth */
-   SCIP_CALL( treeBacktrackProbing(tree, reopt, blkmem, set, stat, transprob, origprob, lp, primal, branchcand, eventqueue,
-         eventfilter, cliquetable, probingdepth) );
+   SCIP_CALL( treeBacktrackProbing(tree, reopt, blkmem, set, stat, transprob, origprob, lp, relaxation, primal, branchcand,
+         eventqueue, eventfilter, cliquetable, probingdepth) );
 
    assert(SCIPtreeProbing(tree));
    assert(SCIPnodeGetType(SCIPtreeGetCurrentNode(tree)) == SCIP_NODETYPE_PROBINGNODE);
@@ -6619,6 +6740,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_RELAXATION*      relaxation,         /**< global relaxation data */
    SCIP_PRIMAL*          primal,             /**< Primal LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -6640,8 +6762,8 @@ SCIP_RETCODE SCIPtreeEndProbing(
    assert(set != NULL);
 
    /* undo the domain and constraint set changes of the temporary probing nodes and free the probing nodes */
-   SCIP_CALL( treeBacktrackProbing(tree, reopt, blkmem, set, stat, transprob, origprob, lp, primal, branchcand, eventqueue,
-         eventfilter, cliquetable, -1) );
+   SCIP_CALL( treeBacktrackProbing(tree, reopt, blkmem, set, stat, transprob, origprob, lp, relaxation, primal, branchcand,
+         eventqueue, eventfilter, cliquetable, -1) );
    assert(tree->probingsumchgdobjs == 0);
    assert(!tree->probingobjchanged);
    assert(!lp->divingobjchg);
@@ -7368,7 +7490,7 @@ void SCIPnodeGetDualBoundchgs(
             {
                vars[j] = boundchgs[i].var;
                bounds[j] = boundchgs[i].newbound;
-               boundtypes[j] = boundchgs[i].boundtype;
+               boundtypes[j] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
                j++;
             }
          }
@@ -7582,7 +7704,7 @@ void SCIPnodeGetConsProps(
       if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL)
        || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop != NULL) )
       {
-         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+         if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
             (*nconspropvars)++;
       }
       else if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons == NULL)
@@ -7599,7 +7721,7 @@ void SCIPnodeGetConsProps(
       {
          if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL )
          {
-            if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+            if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
             {
                vars[pos] = boundchgs[i].var;
                varboundtypes[pos] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;
@@ -7669,7 +7791,7 @@ void SCIPnodeGetBdChgsAfterDual(
       if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL)
        || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop != NULL) )
       {
-         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+         if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
             (*nbranchvars)++;
       }
    }
@@ -7683,7 +7805,7 @@ void SCIPnodeGetBdChgsAfterDual(
          if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER && boundchgs[i].data.inferencedata.reason.cons != NULL)
           || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER && boundchgs[i].data.inferencedata.reason.prop != NULL)  )
          {
-            if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+            if( boundchgs[i].var->vartype != SCIP_VARTYPE_CONTINUOUS )
             {
                vars[p] = boundchgs[i].var;
                varboundtypes[p] = (SCIP_BOUNDTYPE) boundchgs[i].boundtype;

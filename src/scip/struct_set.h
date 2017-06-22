@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_set.h
+ * @ingroup INTERNALAPI
  * @brief  datastructures for global SCIP settings
  * @author Tobias Achterberg
  */
@@ -199,7 +200,7 @@ struct SCIP_Set
    SCIP_Bool             conf_repropagate;   /**< should earlier nodes be repropagated in order to replace branching
                                               *   decisions by deductions? */
    SCIP_Bool             conf_keepreprop;    /**< should constraints be kept for repropagation even if they are too long? */
-   SCIP_Bool             conf_seperate;      /**< should the conflict constraints be separated? */
+   SCIP_Bool             conf_separate;      /**< should the conflict constraints be separated? */
    SCIP_Bool             conf_dynamic;       /**< should the conflict constraints be subject to aging? */
    SCIP_Bool             conf_removable;     /**< should the conflict's relaxations be subject to LP aging and cleanup? */
    SCIP_Real             conf_depthscorefac; /**< score factor for depth level in bound relaxation heuristic */
@@ -305,7 +306,7 @@ struct SCIP_Set
    SCIP_Bool             lp_checkprimfeas;   /**< should LP solutions be checked for primal feasibility, resolving LP when numerical troubles occur? */
    SCIP_Bool             lp_checkdualfeas;   /**< should LP solutions be checked for dual feasibility, resolving LP when numerical troubles occur? */
    int                   lp_fastmip;         /**< which FASTMIP setting of LP solver should be used? 0: off, 1: medium, 2: full */
-   SCIP_Bool             lp_scaling;         /**< should scaling of LP solver be used? */
+   int                   lp_scaling;         /**< LP scaling (0: none, 1: normal, 2: aggressive) */
    SCIP_Bool             lp_presolving;      /**< should presolving of LP solver be used? */
    SCIP_Bool             lp_lexdualalgo;     /**< should the lexicographic dual algorithm be used? */
    SCIP_Bool             lp_lexdualrootonly; /**< should the lexicographic dual algorithm be applied only at the root node */
@@ -320,7 +321,7 @@ struct SCIP_Set
                                               *   for LP resolve (-1: unlimited) */
    int                   lp_resolveitermin;  /**< minimum number of iterations that are allowed for LP resolve */
    int                   lp_solutionpolishing;/**< LP solution polishing method (0: disabled, 1: only root, 2: always) */
-   SCIP_Bool             lp_persistentscaling;/**< use persistent LP scaling during branch and bound */
+   int                   lp_refactorinterval;/**< LP refactorization interval (0: automatic) */
 
    /* NLP settings */
    SCIP_Bool             nlp_disable;        /**< should the NLP be disabled even if a constraint handler enabled it? */
@@ -357,10 +358,13 @@ struct SCIP_Set
    SCIP_Bool             misc_allowdualreds; /**< should dual reductions in propagation methods and presolver be allowed? */
    SCIP_Bool             misc_allowobjprop;  /**< should propagation to the current objective be allowed in propagation methods? */
    SCIP_Real             misc_referencevalue;/**< objective value for reference purposes */
+#ifdef WITH_DEBUG_SOLUTION
+   char*                 misc_debugsol;      /**< path to a debug solution */
+#endif
 
    /* randomization parameters */
    int                   random_randomseedshift;/**< global shift of all random seeds in the plugins, this will have no impact on the permutation and LP seeds */
-   int                   random_permutationseed;/**< seed value for permuting the problem after the problem was tranformed
+   int                   random_permutationseed;/**< seed value for permuting the problem after reading/transformation
                                                  *   (0: no permutation) */
    int                   random_randomseed;     /**< random seed for LP solver, e.g. for perturbations in the simplex (0: LP default) */
    SCIP_Bool             random_permuteconss;   /**< should order of constraints be permuted (depends on permutationseed)? */
@@ -492,10 +496,10 @@ struct SCIP_Set
    int                   sepa_poolfreq;      /**< separation frequency for the global cut pool */
 
    /* parallel settings */
-   int                   parallel_spimode;           /**< the mode for the parallel implementation. 0: opportunistic or
-                                                      *   1: deterministic */
-   int                   parallel_minnthreads;       /**< the minimum number of threads used for parallel code */
-   int                   parallel_maxnthreads;       /**< the maximum number of threads used for parallel code */
+   int                   parallel_mode;      /**< the mode for the parallel implementation. 0: opportunistic or
+                                              *   1: deterministic */
+   int                   parallel_minnthreads;/**< the minimum number of threads used for parallel code */
+   int                   parallel_maxnthreads;/**< the maximum number of threads used for parallel code */
 
    /* concurrent solver settings */
    SCIP_Bool             concurrent_changeseeds;    /**< change the seeds in the different solvers? */

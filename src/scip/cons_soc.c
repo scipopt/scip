@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -26,7 +26,7 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#define _USE_MATH_DEFINES   /* to get M_PI on Windows */
+#define _USE_MATH_DEFINES   /* to get M_PI on Windows */  /*lint !750 */
 
 #include <assert.h>
 #include <string.h>
@@ -3130,7 +3130,6 @@ SCIP_RETCODE enforceConstraint(
    int                   nconss,             /**< number of constraints */
    int                   nusefulconss,       /**< number of useful (non-obsolete) constraints to process */
    SCIP_SOL*             sol,                /**< solution to enforce (NULL for the LP solution) */
-   SCIP_Bool             solinfeasible,      /**< was the solution already declared infeasible by a constraint handler? */
    SCIP_RESULT*          result              /**< pointer to store the result of the enforcing call */
    )
 {
@@ -4104,7 +4103,7 @@ SCIP_DECL_CONSINIT(consInitSOC)
    /* mark constraints for propagation */
    for( c = 0; c < nconss; ++c )
    {
-      SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );
+      SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );  /*lint !e613*/
    }
 
    return SCIP_OKAY;
@@ -4529,7 +4528,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolSOC)
 static
 SCIP_DECL_CONSENFOLP(consEnfolpSOC)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, solinfeasible, result) );
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, NULL, result) );
 
    return SCIP_OKAY;
 }
@@ -4539,7 +4538,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOC)
 static
 SCIP_DECL_CONSENFORELAX(consEnforelaxSOC)
 {  /*lint --e{715}*/
-   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, solinfeasible, result) );
+   SCIP_CALL( enforceConstraint(scip, conshdlr, conss, nconss, nusefulconss, sol, result) );
 
    return SCIP_OKAY;
 }
@@ -4689,7 +4688,7 @@ SCIP_DECL_CONSPROP(consPropSOC)
    int         nchgbds;
 
    assert(scip     != NULL);
-   assert(conss    != NULL || nconss == 0);
+   assert(conss    != NULL || ((nconss == 0) && (nmarkedconss == 0)));
    assert(result   != NULL);
 
    *result = SCIP_DIDNOTFIND;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,13 +17,6 @@
  * @ingroup CONSHDLRS
  * @brief  constraint handler for bound disjunction constraints \f$(x_1 \{\leq,\geq\} b_1) \vee \ldots \vee (x_n \{\leq,\geq\} b_n)\f$
  * @author Tobias Achterberg
- *
- * This constraint handler handles bound disjunction constraints of the form
- * \f[
- *   (x_1 \{\leq,\geq\} b_1) \vee \ldots \vee (x_n \{\leq,\geq\} b_n)
- * \f]
- * with bounds \f$b_i \in Q\f$, decision variables \f$x_i\f$, which can be of any type,
- * and bound types \f$\leq\f$ or \f$\geq\f$.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -38,11 +31,30 @@
 extern "C" {
 #endif
 
-/** creates the handler for bound disjunction constraints and includes it in SCIP */
+/** creates the handler for bound disjunction constraints and includes it in SCIP
+ *
+ * @ingroup ConshdlrIncludes
+ * */
 EXTERN
 SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/**@addtogroup CONSHDLRS
+ *
+ * @{
+ *
+ * @name Bound Disjunction Constraints
+ *
+ * @{
+ *
+ * This constraint handler handles bound disjunction constraints of the form
+ * \f[
+ *   (x_1 \{\leq,\geq\} b_1) \vee \ldots \vee (x_n \{\leq,\geq\} b_n)
+ * \f]
+ * with bounds \f$b_i \in Q\f$, decision variables \f$x_i\f$, which can be of any type,
+ * and bound types \f$\leq\f$ or \f$\geq\f$.
+ */
 
 /** creates and captures a bound disjunction constraint
  *
@@ -128,6 +140,10 @@ SCIP_Real* SCIPgetBoundsBounddisjunction(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
+
+/* @} */
+
+/* @} */
 
 #ifdef __cplusplus
 }

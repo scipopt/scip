@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -34,6 +34,9 @@
 #include "scip/type_scip.h"
 
 #if !defined(_MSC_VER) || _MSC_VER > 1600
+#ifdef __cplusplus
+#define __STDC_FORMAT_MACROS
+#endif
 #include <inttypes.h>
 #else
 #define PRIx64 "llx"

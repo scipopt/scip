@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   struct_lp.h
- * @brief  datastructures for LP management
+ * @ingroup INTERNALAPI
+ * @brief  data structures for LP management
  * @author Tobias Achterberg
  *
  *  In SCIP, the LP is defined as follows:
@@ -323,6 +324,8 @@ struct SCIP_Lp
    int                   lpithreads;         /**< current THREADS setting in LPI */
    int                   lpitiming;          /**< current timing type in LPI */
    int                   lpirandomseed;      /**< current initial random seed in LPI */
+   int                   lpiscaling;         /**< current SCALING setting in LPI */
+   int                   lpirefactorinterval;/**< current refactorization interval */
    SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */
@@ -355,7 +358,6 @@ struct SCIP_Lp
    SCIP_Bool             resolvelperror;     /**< an error occured during resolving the LP after diving or probing */
    SCIP_Bool             adjustlpval;        /**< does an infinite LP objective value has been adjusted so far? */
    SCIP_Bool             lpifromscratch;     /**< current FROMSCRATCH setting in LPI */
-   SCIP_Bool             lpiscaling;         /**< current SCALING setting in LPI */
    SCIP_Bool             lpipresolving;      /**< current PRESOLVING setting in LPI */
    SCIP_Bool             lpilpinfo;          /**< current LPINFO setting in LPI */
    SCIP_Bool             lpihasfeastol;      /**< does the LPI support the FEASTOL parameter? */
@@ -366,9 +368,9 @@ struct SCIP_Lp
    SCIP_Bool             lpihaspresolving;   /**< does the LPI support the PRESOLVING parameter? */
    SCIP_Bool             lpihasrowrep;       /**< does the LPI support row representation of a simplex basis? */
    SCIP_Bool             lpihaspolishing;    /**< does the LPI support solution polishing? */
+   SCIP_Bool             lpihasrefactor;     /**< does the LPI support changing the refactorization interval? */
    SCIP_Real             lpirowrepswitch;    /**< simplex algorithm shall use row representation of the basis
                                               *   if number of rows divided by number of columns exceeds this value */
-   SCIP_Bool             lpipersistentscaling;/**< use persistent LP scaling during branch and bound */
    SCIP_Bool             divelpwasprimfeas;  /**< primal feasibility when diving started */
    SCIP_Bool             divelpwasdualfeas;  /**< dual feasibility when diving started */
 };

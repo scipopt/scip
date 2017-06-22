@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   nlpi.h
+ * @ingroup INTERNALAPI
  * @brief  internal methods for NLPI solver interfaces
  * @author Stefan Vigerske
  * @author Thorsten Gellermann
@@ -30,6 +31,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup NLPIS
+ *
+ * @{
+ */
 
 /** compares two NLPIs w.r.t. their priority */
 SCIP_DECL_SORTPTRCOMP(SCIPnlpiComp);
@@ -468,6 +474,10 @@ void SCIPnlpStatisticsSetTotalTime(
    SCIP_NLPSTATISTICS*   statistics,         /**< NLP statistics structure */
    SCIP_Real             totaltime           /**< solution time to store */
    );
+
+/** @} */
+
+/** @} */
 
 #ifdef __cplusplus
 }

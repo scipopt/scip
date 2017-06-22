@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -97,7 +97,12 @@ SCIP_Bool SCIPsolveIsStopped(
    {
       stat->status = SCIP_STATUS_USERINTERRUPT;
       stat->userinterrupt = FALSE;
-      SCIPresetInterrupted();
+
+      /* only reset the interrupted counter if this is the main SCIP catching CTRL-C */
+      if( set->misc_catchctrlc )
+      {
+         SCIPresetInterrupted();
+      }
    }
    /* only measure the clock if a time limit is set */
    else if( set->istimelimitfinite )
@@ -140,7 +145,7 @@ SCIP_Bool SCIPsolveIsStopped(
       else
          --stat->nclockskipsleft;
    }
-   if( SCIPgetConcurrentMemTotal(set->scip) >= set->limit_memory*1048576.0 - stat->externmemestim * (1 + SCIPgetNConcurrentSolvers(set->scip)) )
+   if( SCIPgetConcurrentMemTotal(set->scip) >= set->limit_memory*1048576.0 - stat->externmemestim * (1.0 + SCIPgetNConcurrentSolvers(set->scip)) )
       stat->status = SCIP_STATUS_MEMLIMIT;
    else if( SCIPgetNLimSolsFound(set->scip) > 0
       && (SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap)
@@ -1645,7 +1650,7 @@ SCIP_RETCODE separationRoundLP(
       SCIPsetDebugMsg(set, " -> executing separator <%s> with priority %d\n",
          SCIPsepaGetName(set->sepas[i]), SCIPsepaGetPriority(set->sepas[i]));
       SCIP_CALL( SCIPsepaExecLP(set->sepas[i], set, stat, sepastore, actdepth, bounddist, onlydelayed, &result) );
-      
+
       *cutoff = *cutoff || (result == SCIP_CUTOFF);
       consadded = consadded || (result == SCIP_CONSADDED);
       *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
@@ -1684,7 +1689,7 @@ SCIP_RETCODE separationRoundLP(
             SCIPconshdlrGetName(set->conshdlrs_sepa[i]), SCIPconshdlrGetSepaPriority(set->conshdlrs_sepa[i]));
          SCIP_CALL( SCIPconshdlrSeparateLP(set->conshdlrs_sepa[i], blkmem, set, stat, sepastore, actdepth, onlydelayed,
             &result) );
-         
+
          *cutoff = *cutoff || (result == SCIP_CUTOFF);
          consadded = consadded || (result == SCIP_CONSADDED);
          *enoughcuts = *enoughcuts || (SCIPsepastoreGetNCuts(sepastore) >= 2 * (SCIP_Longint)SCIPsetGetSepaMaxcuts(set, root)) || (result == SCIP_NEWROUND);
@@ -2010,7 +2015,8 @@ SCIP_RETCODE SCIPpriceLoop(
       SCIPsetSortPricers(set);
 
       /* call external pricer algorithms, that are active for the current problem */
-      enoughvars = (SCIPpricestoreGetNVars(pricestore) >= SCIPsetGetPriceMaxvars(set, pretendroot)/2 + 1);
+      enoughvars = (SCIPsetGetPriceMaxvars(set, pretendroot) == INT_MAX ?
+            FALSE : SCIPpricestoreGetNVars(pricestore) >= SCIPsetGetPriceMaxvars(set, pretendroot) + 1);
       stoppricing = FALSE;
       for( p = 0; p < set->nactivepricers && !enoughvars; ++p )
       {
@@ -2018,7 +2024,8 @@ SCIP_RETCODE SCIPpriceLoop(
          assert(result == SCIP_DIDNOTRUN || result == SCIP_SUCCESS);
          SCIPsetDebugMsg(set, "pricing: pricer %s returned result = %s, lowerbound = %f\n",
             SCIPpricerGetName(set->pricers[p]), (result == SCIP_DIDNOTRUN ? "didnotrun" : "success"), lb);
-         enoughvars = enoughvars || (SCIPpricestoreGetNVars(pricestore) >= (SCIPsetGetPriceMaxvars(set, pretendroot)+1)/2);
+         enoughvars = enoughvars || (SCIPsetGetPriceMaxvars(set, pretendroot) == INT_MAX ?
+               FALSE : SCIPpricestoreGetNVars(pricestore) >= SCIPsetGetPriceMaxvars(set, pretendroot) + 1);
          *aborted = ( (*aborted) || (result == SCIP_DIDNOTRUN) );
 
          /* set stoppricing to TRUE, of the first pricer wants to stop pricing */
@@ -3171,6 +3178,7 @@ static
 SCIP_RETCODE enforceConstraints(
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
@@ -3211,12 +3219,39 @@ SCIP_RETCODE enforceConstraints(
 
    *branched = FALSE;
    /**@todo avoid checking the same pseudosolution twice */
-   
-   
+
+
    /* enforce (best) relaxation solution if the LP has a worse objective value */
    enforcerelaxsol = (! SCIPsetIsInfinity(set, -1 * SCIPrelaxationGetBestRelaxSolObj(relaxation))) && (!SCIPtreeHasFocusNodeLP(tree)
          || SCIPsetIsGT(set, SCIPrelaxationGetBestRelaxSolObj(relaxation), SCIPlpGetObjval(lp, set, prob)));
-   
+
+   /* check if all constraint handlers implement the enforelax callback, otherwise enforce the LP solution */
+   for( h = 0; h < set->nconshdlrs && enforcerelaxsol; ++h )
+   {
+      if( set->conshdlrs_enfo[h]->consenforelax == NULL && ((! set->conshdlrs_enfo[h]->needscons) ||
+            (set->conshdlrs_enfo[h]->nconss > 0)) )
+      {
+         SCIP_VERBLEVEL verblevel;
+
+         enforcerelaxsol = FALSE;
+
+         verblevel = SCIP_VERBLEVEL_FULL;
+
+         if( !stat->disableenforelaxmsg && set->disp_verblevel == SCIP_VERBLEVEL_HIGH )
+         {
+            verblevel = SCIP_VERBLEVEL_HIGH;
+
+            /* remember that the disable relaxation enforcement message was posted and only post it again if the
+             * verblevel is SCIP_VERBLEVEL_FULL
+             */
+            stat->disableenforelaxmsg = TRUE;
+         }
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, verblevel, "Disable enforcement of relaxation solutions"
+               " since constraint handler %s does not implement enforelax-callback\n",
+               SCIPconshdlrGetName(set->conshdlrs_enfo[h]));
+      }
+   }
+
    /* enforce constraints by branching, applying additional cutting planes (if LP is being processed),
     * introducing new constraints, or tighten the domains
     */
@@ -3252,14 +3287,6 @@ SCIP_RETCODE enforceConstraints(
     * have to be enforced themselves
     */
    resolved = FALSE;
-
-   /* check if all constraint handlers implement the enforelax callback, otherwise enforce the LP solution */
-   for( h = 0; h < set->nconshdlrs && enforcerelaxsol; ++h )
-   {
-      if( set->conshdlrs_enfo[h]->consenforelax == NULL && ((! set->conshdlrs_enfo[h]->needscons) ||
-            (set->conshdlrs_enfo[h]->nconss > 0)) )
-         enforcerelaxsol = FALSE;
-   }
 
    for( h = 0; h < set->nconshdlrs && !resolved; ++h )
    {
@@ -3741,7 +3768,7 @@ SCIP_RETCODE propAndSolve(
    {
       /* initialize value for the best relaxation solution */
       SCIPrelaxationSetBestRelaxSolObj(relaxation, -SCIPsetInfinity(set));
-      
+
       /* clear the storage of external branching candidates */
       SCIPbranchcandClearExternCands(branchcand);
 
@@ -3850,7 +3877,7 @@ SCIP_RETCODE propAndSolve(
    /* reset solverelaxagain if no relaxations were solved up to this point (the LP-changes are already included in
     * relaxators called after the LP)
     */
-   *solverelaxagain = *solverelaxagain && relaxcalled;
+   *solverelaxagain = *solverelaxagain && *relaxcalled;
 
    /* solve external relaxations with negative priority */
    if( solverelax && !(*cutoff) )
@@ -4151,25 +4178,25 @@ SCIP_RETCODE solveNode(
 
       if( pricingaborted && !(*cutoff) && SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
       {
-         assert(SCIPsolveIsStopped(set, stat, FALSE));
 
          SCIPtreeSetFocusNodeLP(tree, FALSE);
 
-/* if the above assert holds, this is not really a numerical trouble but we just ran into the time limit;
- * however, if the assert proves to be wrong, we should activate the code below
- */
-#ifdef SCIP_DISABLED_CODE
-         if( forcedlpsolve )
+         /* if we just ran into the time limit this is not really a numerical trouble;
+          * however, if this is not the case, we print messages about numerical troubles in the current LP
+          */
+         if( !SCIPsolveIsStopped(set, stat, FALSE) )
          {
-            SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT " cannot be dealt with\n",
-               stat->nnodes, stat->nlps);
-            return SCIP_LPERROR;
+            if( forcedlpsolve )
+            {
+               SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT " cannot be dealt with\n",
+                  stat->nnodes, stat->nlps);
+               return SCIP_LPERROR;
+            }
+            nlperrors++;
+            SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+               "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- using pseudo solution instead (loop %d)\n",
+               stat->nnodes, stat->nlps, nlperrors);
          }
-         nlperrors++;
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- using pseudo solution instead (loop %d)\n",
-            stat->nnodes, stat->nlps, nlperrors);
-#endif
       }
 
       /* if an improved solution was found, propagate and solve the relaxations again */
@@ -4198,8 +4225,9 @@ SCIP_RETCODE solveNode(
          }
 
          /* call constraint enforcement */
-         SCIP_CALL( enforceConstraints(blkmem, set, stat, transprob, tree, lp, relaxation, sepastore, branchcand,
-               &branched, cutoff, infeasible, &propagateagain, &solvelpagain, &solverelaxagain, forcedenforcement) );
+         SCIP_CALL( enforceConstraints(blkmem, set, messagehdlr, stat, transprob, tree, lp, relaxation, sepastore,
+               branchcand, &branched, cutoff, infeasible, &propagateagain, &solvelpagain, &solverelaxagain,
+               forcedenforcement) );
          assert(branched == (tree->nchildren > 0));
          assert(!branched || (!(*cutoff) && *infeasible && !propagateagain && !solvelpagain));
          assert(!(*cutoff) || (!branched && *infeasible && !propagateagain && !solvelpagain));
@@ -4232,7 +4260,7 @@ SCIP_RETCODE solveNode(
          SCIP_Longint oldnbestsolsfound = primal->nbestsolsfound;
          SCIP_SOL* sol;
          SCIP_Bool stored;
-         
+
          /* in case the relaxation was enforced add this solution, otherwise decide between LP and pseudosol */
          if( (! SCIPsetIsInfinity(set, -1 * SCIPrelaxationGetBestRelaxSolObj(relaxation))) && (!SCIPtreeHasFocusNodeLP(tree)
                || SCIPsetIsGT(set, SCIPrelaxationGetBestRelaxSolObj(relaxation), SCIPlpGetObjval(lp, set, transprob))) )
@@ -4240,7 +4268,7 @@ SCIP_RETCODE solveNode(
             SCIP_CALL( SCIPprimalTrySol(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
                   eventqueue, eventfilter, SCIPrelaxationGetBestRelaxSol(relaxation), FALSE, FALSE, TRUE, TRUE, TRUE,
                   &stored) );
-            
+
             if( stored )
             {
                stat->nrelaxsolsfound++;
@@ -4257,7 +4285,7 @@ SCIP_RETCODE solveNode(
             SCIP_CALL( SCIPsolCreateCurrentSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
             SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt, lp,
                   eventqueue, eventfilter, &sol, FALSE, FALSE, TRUE, TRUE, TRUE, &stored) );
-            
+
             if( stored )
             {
                stat->nlpsolsfound++;
@@ -4331,6 +4359,21 @@ SCIP_RETCODE solveNode(
                SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
                      primal->cutoffbound, TRUE, &result) );
                assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
+            }
+
+            /* SCIP cannot guarantee convergence if it is necessary to branch on unbounded variables */
+            if( result == SCIP_BRANCHED )
+            {
+               SCIP_VAR* var = stat->lastbranchvar;
+
+               if( var != NULL && !stat->branchedunbdvar && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
+                     && (SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)) || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var))) )
+               {
+                  SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+                     "Starting spatial branch-and-bound on unbounded variable <%s> ([%g,%g]) - cannot guarantee finite termination.\n",
+                     SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+                  stat->branchedunbdvar = TRUE;
+               }
             }
          }
 
@@ -4522,7 +4565,7 @@ SCIP_RETCODE solveNode(
       *infeasible = TRUE;
       SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, focusnode) ); /*lint !e506 !e774*/
    }
-   else if( !(*unbounded) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+   else if( !(*unbounded) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL && lp->looseobjvalinf == 0 )
    {
       /* update the regression statistic nlpbranchcands and LP objective value  */
       int nlpbranchcands;
@@ -4571,7 +4614,7 @@ SCIP_RETCODE addCurrentSolution(
    {
       /* start clock for relaxation solutions */
       SCIPclockStart(stat->relaxsoltime, set);
-      
+
       if( checksol || set->misc_exactsolve )
       {
          /* if we want to solve exactly, we have to check the solution exactly again */
@@ -4595,10 +4638,10 @@ SCIP_RETCODE addCurrentSolution(
             SCIPstoreSolutionGap(set->scip);
          }
       }
-      
+
       /* stop clock for relaxation solutions */
       SCIPclockStop(stat->relaxsoltime, set);
-      
+
    }
    else if( SCIPtreeHasFocusNodeLP(tree) )
    {
@@ -4836,7 +4879,7 @@ SCIP_RETCODE SCIPsolveCIP(
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFOCUSED) );
       SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
       SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
-      
+
       /* solve focus node */
       SCIP_CALL( solveNode(blkmem, set, messagehdlr, stat, mem, origprob, transprob, primal, tree, reopt, lp, relaxation,
             pricestore, sepastore, branchcand, cutpool, delayedcutpool, conflict, conflictstore, eventfilter, eventqueue,
@@ -4871,7 +4914,7 @@ SCIP_RETCODE SCIPsolveCIP(
             if( unbounded )
             {
                SCIP_SOL* sol;
-               
+
                if( (! SCIPsetIsInfinity(set, -1 * SCIPrelaxationGetBestRelaxSolObj(relaxation))) && (!SCIPtreeHasFocusNodeLP(tree)
                      || SCIPsetIsGT(set, SCIPrelaxationGetBestRelaxSolObj(relaxation), SCIPlpGetObjval(lp, set, transprob))) )
                {
@@ -4897,10 +4940,10 @@ SCIP_RETCODE SCIPsolveCIP(
             {
                SCIP_CALL( addCurrentSolution(blkmem, set, messagehdlr, stat, origprob, transprob, primal, relaxation, tree, reopt,
                      lp, eventqueue, eventfilter, FALSE) );
-               
+
                /* update the cutoff pointer if the new solution made the cutoff bound equal to the lower bound */
                SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, reopt, lp, branchcand, eventqueue, conflict, cliquetable, &cutoff) );
-               
+
 
                /* increment number of feasible leaf nodes */
                stat->nfeasleaves++;
@@ -5167,7 +5210,7 @@ SCIP_RETCODE SCIPsolveCIP(
       }
       else if( primal->nlimsolsfound == 0 )
       {
-         assert(primal->nsols == 0 || SCIPsetIsFeasGT(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
+         assert(primal->nsols == 0 || SCIPsetIsGT(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
                SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(transprob, set))));
 
          /* switch status to INFEASIBLE */

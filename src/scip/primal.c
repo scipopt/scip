@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -629,7 +629,7 @@ SCIP_RETCODE primalAddSol(
    SCIPsetDebugMsg(set, "insert primal solution %p with obj %g at position %d (replace=%u):\n",
       (void*)sol, obj, insertpos, replace);
 
-   SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE) ) );
+   SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE, FALSE) ) );
 
 #if 0 /* this is not a valid debug check, but can be used to track down numerical troubles */
 #ifndef NDEBUG
@@ -648,7 +648,7 @@ SCIP_RETCODE primalAddSol(
       if( !feasible )
       {
          SCIPerrorMessage("infeasible solution accepted:\n");
-         SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, origprob, transprob, NULL, FALSE) );
+         SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, origprob, transprob, NULL, FALSE, FALSE) );
       }
       assert(feasible);
    }
@@ -836,7 +836,7 @@ SCIP_RETCODE primalAddOrigPartialSol(
    SCIP_PROB*            prob,               /**< original problem data */
    SCIP_SOL*             sol                 /**< primal CIP solution */
    )
-{
+{  /*lint --e{715}*/
    assert(primal != NULL);
    assert(set != NULL);
    assert(prob != NULL);

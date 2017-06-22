@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -324,6 +324,8 @@ SCIP_RETCODE recomputeNodeInformation(
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
+   assert(eventhdlrdata != NULL);
+
    /* reset depth information */
    for( d = 0; d < eventhdlrdata->maxdepth; ++d )
       eventhdlrdata->depthinfos[d]->nminnodes = 0;
@@ -331,8 +333,6 @@ SCIP_RETCODE recomputeNodeInformation(
    eventhdlrdata->nrank1nodes = 0;
    eventhdlrdata->nnodesbelowincumbent = 0;
    eventhdlrdata->nnodesleft = 0;
-
-   assert(eventhdlrdata != NULL);
 
    nleaves = nchildren = nsiblings = 0;
 
@@ -826,7 +826,6 @@ SCIP_RETCODE changeEmphasisParameters(
 {
    SCIP_PARAMEMPHASIS paramemphasis;
 
-   paramemphasis = SCIP_PARAMEMPHASIS_DEFAULT;
    /* choose the appropriate emphasis settings for the new solving phase */
    switch(eventhdlrdata->solvingphase)
    {
@@ -843,6 +842,7 @@ SCIP_RETCODE changeEmphasisParameters(
       default:
          SCIPdebugMsg(scip, "Unknown solving phase: %d -> ABORT!\n ", eventhdlrdata->solvingphase);
          SCIPABORT();
+         paramemphasis = SCIP_PARAMEMPHASIS_DEFAULT;
          break;
    }
 

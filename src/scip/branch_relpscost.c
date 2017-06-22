@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -545,7 +545,7 @@ SCIP_RETCODE execRelpscost(
    {
       /* only one candidate: nothing has to be done */
       bestcand = 0;
-      ninitcands = 0;
+      SCIPdebug(ninitcands = 0);
    }
    else
    {
@@ -1494,8 +1494,8 @@ SCIP_DECL_BRANCHINITSOL(branchInitsolRelpscost)
    assert(branchruledata->startrandseed >= 0);
 
    /* create a random number generator */
-   SCIP_CALL( SCIPrandomCreate(&branchruledata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, branchruledata->startrandseed)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &branchruledata->randnumgen,
+         branchruledata->startrandseed) );
 
    return SCIP_OKAY;
 }
@@ -1512,7 +1512,7 @@ SCIP_DECL_BRANCHEXITSOL(branchExitsolRelpscost)
    SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->nlcount, branchruledata->nlcountsize);
 
    /* free random number generator */
-   SCIPrandomFree(&branchruledata->randnumgen);
+   SCIPfreeRandom(scip, &branchruledata->randnumgen);
 
    return SCIP_OKAY;
 }

@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -188,7 +188,9 @@ do
 		    export HARDMEMLIMIT
 		    export CHECKERPATH=$SCIPPATH/solchecker
 		    export SETFILE
-		    sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null run.sh
+		    export TIMELIMIT
+		    export SRUN="srun --cpu_bind=cores "
+		    sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
 		else
 		    # -V to copy all environment variables
 		    qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \

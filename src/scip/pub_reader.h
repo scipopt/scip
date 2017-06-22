@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   pub_reader.h
- * @ingroup PUBLICMETHODS
+ * @ingroup PUBLICCOREAPI
  * @brief  public methods for input file readers
  * @author Tobias Achterberg
  */
@@ -31,6 +31,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/**@addtogroup PublicReaderMethods
+ *
+ * @{
+ */
 
 /** gets user data of reader */
 EXTERN
@@ -74,6 +79,8 @@ EXTERN
 SCIP_Bool SCIPreaderCanWrite(
    SCIP_READER*          reader              /**< reader */
    );
+
+/* @} */
 
 #ifdef __cplusplus
 }

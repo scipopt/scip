@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   debug.h
+ * @ingroup INTERNALAPI
  * @brief  methods for debugging
  * @author Tobias Achterberg
  */
@@ -22,9 +23,6 @@
 
 #ifndef __SCIP_DEBUG_H__
 #define __SCIP_DEBUG_H__
-
-/** uncomment this define to activate debugging on given solution */
-/* #define SCIP_DEBUG_SOLUTION "debug.sol" */
 
 /** uncomment this define to activate debugging the LP interface  */
 /* #define SCIP_DEBUG_LP_INTERFACE */
@@ -45,7 +43,7 @@ extern "C" {
 /** solution data for debugging purposes */
 typedef struct SCIP_DebugSolData SCIP_DEBUGSOLDATA;
 
-#ifdef SCIP_DEBUG_SOLUTION
+#ifdef WITH_DEBUG_SOLUTION
 
 /** creates debug solution data */
 SCIP_RETCODE SCIPdebugSolDataCreate(

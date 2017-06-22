@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -509,8 +509,14 @@ SCIP_RETCODE checkParameterValues(
 
    SCIP_CALL( getParameterValues(lpi, &par) );
    for( i = 0; i < NUMINTPARAM; ++i )
-      assert(lpi->curparam.intparval[i] == par.intparval[i]
-         || (lpi->curparam.intparval[i] == CPX_INT_MAX && par.intparval[i] >= CPX_INT_MAX));
+   {
+#if (CPX_VERSION == 12070000)
+      /* due to a bug in CPLEX 12.7.0, we need to disable scaling for this version */
+      if ( intparam[i] != CPX_PARAM_SCAIND )
+#endif
+         assert(lpi->curparam.intparval[i] == par.intparval[i]
+            || (lpi->curparam.intparval[i] == CPX_INT_MAX && par.intparval[i] >= CPX_INT_MAX));
+   }
    for( i = 0; i < NUMDBLPARAM; ++i )
       assert(MAX(lpi->curparam.dblparval[i], dblparammin[i]) == par.dblparval[i]); /*lint !e777*/
 #endif
@@ -540,7 +546,13 @@ SCIP_RETCODE setParameterValues(
          SCIPdebugMessage("setting CPLEX int parameter %d from %d to %d\n",
             intparam[i], lpi->curparam.intparval[i], cpxparam->intparval[i]);
          lpi->curparam.intparval[i] = cpxparam->intparval[i];
-         CHECK_ZERO( lpi->messagehdlr, CPXsetintparam(lpi->cpxenv, intparam[i], lpi->curparam.intparval[i]) );
+#if (CPX_VERSION == 12070000)
+         /* due to a bug in CPLEX 12.7.0, we need to disable scaling for this version */
+         if ( intparam[i] != CPX_PARAM_SCAIND )
+#endif
+         {
+            CHECK_ZERO( lpi->messagehdlr, CPXsetintparam(lpi->cpxenv, intparam[i], lpi->curparam.intparval[i]) );
+         }
       }
    }
    for( i = 0; i < NUMDBLPARAM; ++i )
@@ -1080,6 +1092,11 @@ SCIP_RETCODE SCIPlpiCreate(
    CHECK_ZERO( messagehdlr, CPXsetintparam((*lpi)->cpxenv, CPX_PARAM_PREIND, CPX_OFF) );
 #endif
 
+#if (CPX_VERSION == 12070000)
+   /* due to a bug in CPLEX 12.7.0, we need to disable scaling for this version */
+   CHECK_ZERO( messagehdlr, CPXsetintparam((*lpi)->cpxenv, CPX_PARAM_SCAIND, -1) );
+#endif
+
    /* get default parameter values */
    SCIP_CALL( getParameterValues((*lpi), &((*lpi)->defparam)) );
    copyParameterValues(&((*lpi)->curparam), &((*lpi)->defparam));
@@ -1251,6 +1268,14 @@ SCIP_RETCODE SCIPlpiAddCols(
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
    assert(lpi->cpxenv != NULL);
+   assert(obj != 0);
+   assert(lb != 0);
+   assert(ub != 0);
+   assert(nnonz == 0 || beg != 0);
+   assert(nnonz == 0 || ind != 0);
+   assert(nnonz == 0 || val != 0);
+   assert(nnonz >= 0);
+   assert(ncols >= 0);
 
    SCIPdebugMessage("adding %d columns with %d nonzeros to CPLEX\n", ncols, nnonz);
 
@@ -1372,7 +1397,7 @@ SCIP_RETCODE SCIPlpiAddRows(
 #if (CPX_VERSION <= 1100)
       if( lpi->rngfound == FALSE )
       {
-         SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_SCALING, FALSE) );
+         SCIP_CALL( SCIPlpiSetIntpar(lpi, SCIP_LPPAR_SCALING, 0) );
          lpi->rngfound = TRUE;
       }
 #endif
@@ -2155,6 +2180,9 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    int primalfeasible;
    int dualfeasible;
    int solntype;
+#if CPX_VERSION == 12070100
+   int presolving;
+#endif
 
    assert(lpi != NULL);
    assert(lpi->cpxlp != NULL);
@@ -2165,14 +2193,41 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
 
    invalidateSolution(lpi);
 
+#if (CPX_VERSION == 12070000)
+   {
+      int scaling;
+      /* due to a bug in CPLEX 12.7.0, we need to disable scaling for this version */
+      CHECK_ZERO( lpi->messagehdlr, CPXgetintparam(lpi->cpxenv, CPX_PARAM_SCAIND, &scaling) );
+      assert( scaling == -1 );
+   }
+#endif
+
    setIntParam(lpi, CPX_PARAM_ADVIND, lpi->fromscratch || lpi->clearstate ? CPX_OFF : CPX_ON);
    lpi->clearstate = FALSE;
 
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
 
+#if CPX_VERSION == 12070100
+   /* due to a bug in CPLEX 12.7.1.0, we need to enable presolving on trivial problems (see comment below) */
+   if( CPXgetnumrows(lpi->cpxenv, lpi->cpxlp) == 0 )
+   {
+      CHECK_ZERO( lpi->messagehdlr, CPXgetintparam(lpi->cpxenv, CPX_PARAM_PREIND, &presolving) );
+      CPXsetintparam(lpi->cpxenv, CPX_PARAM_PREIND, CPX_ON);
+   }
+#endif
+
    SCIPdebugMessage("calling CPXprimopt()\n");
    retval = CPXprimopt(lpi->cpxenv, lpi->cpxlp);
    lpi->iterations = CPXgetphase1cnt(lpi->cpxenv, lpi->cpxlp) + CPXgetitcnt(lpi->cpxenv, lpi->cpxlp);
+
+#if CPX_VERSION == 12070100
+   /* restore previous value for presolving */
+   if( CPXgetnumrows(lpi->cpxenv, lpi->cpxlp) == 0 )
+   {
+      CPXsetintparam(lpi->cpxenv, CPX_PARAM_PREIND, presolving);
+   }
+#endif
+
    switch( retval  )
    {
    case 0:
@@ -2188,6 +2243,20 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    CHECK_ZERO( lpi->messagehdlr, CPXsolninfo(lpi->cpxenv, lpi->cpxlp, NULL, NULL, &primalfeasible, &dualfeasible) );
    SCIPdebugMessage(" -> CPLEX returned solstat=%d, pfeas=%d, dfeas=%d (%d iterations)\n",
       lpi->solstat, primalfeasible, dualfeasible, lpi->iterations);
+
+#if CPX_VERSION == 12070100
+   /* CPLEX 12.7.1.0 primal simplex without presolve (called next in certain situations) does not return on a problem like
+    *   min x + sum_{i=1}^n 0*y_i when all variables are free and n >= 59
+    * With this workaround, we claim that LPs without rows, which are returned as infeasible-or-unbounded by CPLEX with presolve,
+    * are in fact unbounded. This assumes that CPLEX with presolve checked that no variable has an empty domain before.
+    */
+   if( lpi->solstat == CPX_STAT_INForUNBD && CPXgetnumrows(lpi->cpxenv, lpi->cpxlp) == 0 )
+   {
+      lpi->solstat = CPX_STAT_UNBOUNDED;
+      primalfeasible = 1;
+      dualfeasible = 0;
+   }
+#endif
 
    if( lpi->solstat == CPX_STAT_INForUNBD
       || (lpi->solstat == CPX_STAT_INFEASIBLE && !dualfeasible)
@@ -2274,6 +2343,15 @@ SCIP_RETCODE SCIPlpiSolveDual(
    lpi->clearstate = FALSE;
 
    SCIP_CALL( setParameterValues(lpi, &(lpi->cpxparam)) );
+
+#if (CPX_VERSION == 12070000)
+   {
+      int scaling;
+      /* due to a bug in CPLEX 12.7.0 we need to disable scaling */
+      CHECK_ZERO( lpi->messagehdlr, CPXgetintparam(lpi->cpxenv, CPX_PARAM_SCAIND, &scaling) );
+      assert( scaling == -1 );
+   }
+#endif
 
    SCIPdebugMessage("calling CPXdualopt()\n");
    retval = CPXdualopt(lpi->cpxenv, lpi->cpxlp);
@@ -4142,7 +4220,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       if( lpi->rngfound )
          return SCIP_PARAMETERUNKNOWN;
 #endif
-      *ival = (getIntParam(lpi, CPX_PARAM_SCAIND) == 0);
+      *ival = getIntParam(lpi, CPX_PARAM_SCAIND) + 1;
       break;
    case SCIP_LPPAR_PRESOLVING:
       *ival = (getIntParam(lpi, CPX_PARAM_PREIND) == CPX_ON);
@@ -4229,12 +4307,12 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       break;
 #endif
    case SCIP_LPPAR_SCALING:
-      assert(ival == TRUE || ival == FALSE);
+      assert(0 <= ival && ival <= 2);
 #if (CPX_VERSION <= 1100)
       if( lpi->rngfound )
          return SCIP_PARAMETERUNKNOWN;
 #endif
-      setIntParam(lpi, CPX_PARAM_SCAIND, ival == TRUE ? 0 : -1);
+      setIntParam(lpi, CPX_PARAM_SCAIND, ival - 1);
       break;
    case SCIP_LPPAR_PRESOLVING:
       assert(ival == TRUE || ival == FALSE);

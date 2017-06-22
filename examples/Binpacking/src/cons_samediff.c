@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -18,7 +18,7 @@
  * @author Timo Berthold
  * @author Stefan Heinz
  *
- * This constraint handler is used to store the branching decision of the \ref BRANCHING "Ryan/Foster branching rule"
+ * This constraint handler is used to store the branching decision of the \ref BINPACKING_BRANCHING "Ryan/Foster branching rule"
  * which is implemented in \ref branch_ryanfoster.c.
  */
 

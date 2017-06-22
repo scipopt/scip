@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -257,7 +257,12 @@ SCIP_RETCODE SCIPexprtreeRemoveFixedVars(
    SCIP_CALL( SCIPhashmapCreate(&varhash, tree->blkmem, tree->nvars) );
    for( i = 0; i < tree->nvars; ++i )
    {
+      /* it's not possible to add a variable twice to the varhash map */
+      if( SCIPhashmapExists(varhash, tree->vars[i]) )
+         continue;
+
       SCIP_CALL( SCIPhashmapInsert(varhash, tree->vars[i], (void*)(size_t)i) );
+
       if( !SCIPvarIsActive((SCIP_VAR*)tree->vars[i]) )
          havefixedvar = TRUE;
    }
@@ -4761,7 +4766,11 @@ SCIP_RETCODE nlpSolve(
          nlp->primalsolobjval = 0.0;
          for( i = 0; i < nlp->nvars; ++i )
          {
-            SCIP_Real solval = primalvals[nlp->varmap_nlp2nlpi[i]];
+            SCIP_Real solval = primalvals[nlp->varmap_nlp2nlpi[i]];  /*lint !e613 */
+
+            /* do a quick assert that variable bounds are satisfied, if feasibility is claimed */
+            assert(SCIPsetIsFeasGE(set, solval, SCIPvarGetLbLocal(nlp->vars[i])) || nlp->solstat > SCIP_NLPSOLSTAT_FEASIBLE);
+            assert(SCIPsetIsFeasLE(set, solval, SCIPvarGetUbLocal(nlp->vars[i])) || nlp->solstat > SCIP_NLPSOLSTAT_FEASIBLE);
 
             SCIP_CALL( SCIPvarSetNLPSol(nlp->vars[i], set, solval) );  /*lint !e613 */
             nlp->primalsolobjval += SCIPvarGetObj(nlp->vars[i]) * solval;  /*lint !e613 */
@@ -4996,8 +5005,8 @@ SCIP_DECL_EVENTEXEC(eventExecNlp)
    }
    else if( SCIP_EVENTTYPE_BOUNDCHANGED & etype )
    {
-      SCIPdebugMessage("-> handling bound changed event %"SCIP_EVENTTYPE_FORMAT", variable <%s>\n", etype, SCIPvarGetName(var) );
-      SCIP_CALL( nlpUpdateVarBounds(scip->nlp, scip->set, var, SCIP_EVENTTYPE_BOUNDTIGHTENED & etype) );
+      SCIPdebugMessage("-> handling bound changed event %" SCIP_EVENTTYPE_FORMAT ", variable <%s>\n", etype, SCIPvarGetName(var) );
+      SCIP_CALL( nlpUpdateVarBounds(scip->nlp, scip->set, var, (SCIP_Bool)(SCIP_EVENTTYPE_BOUNDTIGHTENED & etype)) );
    }
    else if( SCIP_EVENTTYPE_OBJCHANGED & etype )
    {

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -584,8 +584,14 @@ SCIP_RETCODE SCIPlpiAddCols(
 
    assert( lpi != NULL );
    assert( lpi->prob != NULL );
-   assert( ncols >= 0 );
-   assert( nnonz == 0 || (beg != NULL && ind != NULL && val != NULL) );
+   assert(obj != NULL);
+   assert(lb != NULL);
+   assert(ub != NULL);
+   assert(nnonz == 0 || beg != NULL);
+   assert(nnonz == 0 || ind != NULL);
+   assert(nnonz == 0 || val != NULL);
+   assert(nnonz >= 0);
+   assert(ncols >= 0);
 
    SCIPdebugMessage("adding %d columns with %d nonzeros to QSopt\n", ncols, nnonz);
 
@@ -3405,11 +3411,9 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    case SCIP_LPPAR_PRESOLVING:
       return SCIP_PARAMETERUNKNOWN;
    case SCIP_LPPAR_SCALING:
-      rval = QSget_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING,ival);
-      if( *ival )
-         *ival = TRUE;
-      else
-         *ival = FALSE;
+      rval = QSget_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, ival);
+      assert((*ival) == 0 || (*ival) == 1);
+
       break;
    case SCIP_LPPAR_PRICING:
       *ival = lpi->pricing;
@@ -3448,10 +3452,10 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    switch( type )
    {
    case SCIP_LPPAR_SCALING:
-      if( ival == TRUE )
-         rval = QSset_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, 1);
-      else
+      if( ival == 0 )
          rval = QSset_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, 0);
+      else
+         rval = QSset_param(lpi->prob, QS_PARAM_SIMPLEX_SCALING, 1);
       break;
    case SCIP_LPPAR_PRICING:
       lpi->pricing = ival;

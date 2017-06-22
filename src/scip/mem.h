@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,6 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   mem.h
+ * @ingroup INTERNALAPI
  * @brief  methods for block memory pools and memory buffers
  * @author Tobias Achterberg
  */
@@ -57,21 +58,21 @@ SCIP_Longint SCIPmemGetTotal(
    SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
    );
 
-/** returns the maximal number of bytes used in block memory */
+/** returns the maximal number of used bytes in block memory */
 extern
 SCIP_Longint SCIPmemGetUsedBlockmemoryMax(
    SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
    );
 
-/** returns the maximal number of bytes unused in block memory */
+/** returns the maximal number of allocated but not used bytes in block memory */
 extern
-SCIP_Longint SCIPmemGetLazyBlockmemoryMax(
+SCIP_Longint SCIPmemGetUnusedBlockmemoryMax(
    SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
    );
 
-/** returns the maximal number of bytes in block memory */
+/** returns the maximal number of allocated bytes in block memory */
 extern
-SCIP_Longint SCIPmemGetTotalBlockmemoryMax(
+SCIP_Longint SCIPmemGetAllocatedBlockmemoryMax(
    SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
    );
 

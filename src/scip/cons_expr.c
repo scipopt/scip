@@ -2091,8 +2091,7 @@ SCIP_RETCODE getVarExprs(
    getvarsdata.varexprs = varexprs;
 
    /* use a hash map to dicide whether we have stored a variable expression already */
-   SCIP_CALL( SCIPhashmapCreate(&getvarsdata.varexprsmap, SCIPblkmem(scip),
-         SCIPcalcHashtableSize(SCIPgetNTotalVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&getvarsdata.varexprsmap, SCIPblkmem(scip), SCIPgetNTotalVars(scip)) );
 
    /* collect all variable expressions */
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, getVarExprsLeaveExpr, (void*)&getvarsdata) );
@@ -2464,7 +2463,7 @@ SCIP_RETCODE replaceCommonSubexpressions(
    assert(nconss >= 0);
 
    /* create empty map to store all sub-expression hashes */
-   SCIP_CALL( SCIPhashmapCreate(&expr2key, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&expr2key, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
    /* compute all hashes for each sub-expression */
    for( i = 0; i < nconss; ++i )
@@ -6731,7 +6730,7 @@ SCIP_RETCODE SCIPgetConsExprExprHashkey(
 
    assert(expr != NULL);
 
-   SCIP_CALL( SCIPhashmapCreate(&expr2key, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&expr2key, SCIPblkmem(scip), SCIPgetNVars(scip)) );
 
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, hashExprLeaveExpr, (void*)expr2key) );
 
@@ -7356,7 +7355,7 @@ SCIP_RETCODE SCIPparseConsExprExpr(
    SCIP_RETCODE retcode;
    SCIP_HASHMAP* vartoexprvarmap;
 
-   SCIP_CALL( SCIPhashmapCreate(&vartoexprvarmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * SCIPgetNVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&vartoexprvarmap, SCIPblkmem(scip), 5 * SCIPgetNVars(scip)) );
 
    /* if parseExpr fails, we still want to free hashmap */
    retcode = parseExpr(scip, consexprhdlr, vartoexprvarmap, exprstr, &finalpos_, expr);

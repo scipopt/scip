@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -129,7 +129,6 @@ SCIP_RETCODE constructCompression(
    unsigned int* leaveids;
    int* nconss;
    int* nvars;
-   int depth;
    int nids;
    int nleaveids;
    int pos_repr_fix;
@@ -142,7 +141,6 @@ SCIP_RETCODE constructCompression(
 
    *result = SCIP_DIDNOTRUN;
 
-   depth = 0;
    size = 1;
    currentnode = SCIPgetStage(scip) <= SCIP_STAGE_PRESOLVED ? NULL : SCIPgetCurrentNode(scip);
 
@@ -152,12 +150,11 @@ SCIP_RETCODE constructCompression(
    {
       assert(currentnode != NULL);
       nleaveids = SCIPgetNReoptLeaves(scip, currentnode);
-      depth = SCIPnodeGetDepth(currentnode);
    }
 
    SCIPdebugMsg(scip, ">> start <%s> at node %llu (nleaves: %d, depth: %d)\n", COMPR_NAME,
-         SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVED ? 0 : SCIPnodeGetNumber(SCIPgetCurrentNode(scip)),
-         nleaveids, depth);
+      SCIPgetStage(scip) >= SCIP_STAGE_PRESOLVED ? 0 : SCIPnodeGetNumber(SCIPgetCurrentNode(scip)),
+      nleaveids, SCIPgetStage(scip) <= SCIP_STAGE_PRESOLVED ? 0 : SCIPnodeGetDepth(currentnode));
 
    if( SCIPcomprGetMinNodes(compr) > nleaveids )
    {

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -291,7 +291,7 @@ SCIP_DECL_EVENTEXEC(processNonlinearVarEvent)
    if( eventtype & SCIP_EVENTTYPE_BOUNDCHANGED )
    {
       SCIPdebugMsg(scip, "changed %s bound on expression graph variable <%s> from %g to %g\n",
-         eventtype & SCIP_EVENTTYPE_LBCHANGED ? "lower" : "upper",
+         (eventtype & SCIP_EVENTTYPE_LBCHANGED) ? "lower" : "upper",
          SCIPvarGetName(SCIPeventGetVar(event)), SCIPeventGetOldbound(event), SCIPeventGetNewbound(event));
 
       if( eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED )
@@ -774,6 +774,7 @@ SCIP_RETCODE computeViolation(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(consdata->z != NULL);
 
    if( SCIPexprtreeGetInterpreterData(consdata->f) == NULL )
    {
@@ -840,8 +841,7 @@ SCIP_RETCODE computeViolation(
        return SCIP_OKAY;
    }
 
-   if( consdata->z != NULL )
-      consdata->activity += consdata->zcoef * zval;
+   consdata->activity += consdata->zcoef * zval;
 
    /* compute violation of constraint sides */
    if( consdata->activity < consdata->lhs && !SCIPisInfinity(scip, -consdata->lhs) )
@@ -5374,7 +5374,7 @@ SCIP_RETCODE propagateBounds(
       {
          assert(conss[c] != NULL);  /*lint !e613*/
 
-         if( SCIPconsIsMarkedPropagate(conss[c]) )
+         if( SCIPconsIsMarkedPropagate(conss[c]) )  /*lint !e613*/
             break;
       }
       if( c == nconss )
@@ -5956,7 +5956,7 @@ SCIP_RETCODE createConsFromMonomial(
    }
 
    SCIPdebugMsg(scip, "upgrading monomial %g<%s>^%g<%s>^%g from constraint <%s> to bivariate constraint with convexity type %d\n",  /*lint !e585*/
-      coef, SCIPvarGetName(x), p, SCIPvarGetName(y), q, srccons != NULL ? SCIPconsGetName(srccons) : "??", convextype);  /*lint !e585*/
+      coef, SCIPvarGetName(x), p, SCIPvarGetName(y), q, srccons != NULL ? SCIPconsGetName(srccons) : "n/a", convextype);  /*lint !e585*/
 
    if( srccons != NULL )
    {
@@ -6257,7 +6257,7 @@ SCIP_DECL_CONSINITPRE(consInitpreBivariate)
       consdata->maydecreasez = FALSE;
 
       /* mark the constraint to be propagated */
-      SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );
+      SCIP_CALL( SCIPmarkConsPropagate(scip, conss[c]) );  /*lint !e613*/
    }
 
    return SCIP_OKAY;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -357,7 +357,7 @@ SCIP_DECL_HASHKEYVAL(presolveFindDuplicatesKeyVal)
    assert(consdata != NULL);
 
    return SCIPhashTwo(SCIPvarGetIndex(consdata->x),
-                      SCIPpositiveRealHashCode(consdata->exponent, 7));
+                      SCIPrealHashCode(consdata->exponent));
 }  /*lint !e715*/
 
 /** checks if two constraints have the same z variable and the same exponent */
@@ -391,7 +391,7 @@ SCIP_DECL_HASHKEYVAL(presolveFindDuplicatesKeyVal2)
    assert(consdata != NULL);
 
    return SCIPhashTwo(SCIPvarGetIndex(consdata->z),
-                      SCIPpositiveRealHashCode(consdata->exponent, 7));
+                      SCIPrealHashCode(consdata->exponent));
 }  /*lint !e715*/
 
 /** upgrades a signpower constraint to a linear constraint if a second signpower constraint with same nonlinear term is available */
@@ -615,7 +615,7 @@ SCIP_RETCODE presolveFindDuplicates(
 
    /* check all constraints in the given set for duplicates, dominance, or possible simplifications w.r.t. the x variable */
 
-   SCIP_CALL( SCIPmultihashCreate(&multihash, SCIPblkmem(scip), SCIPcalcHashtableSize(nconss),
+   SCIP_CALL( SCIPmultihashCreate(&multihash, SCIPblkmem(scip), SCIPcalcMultihashSize(nconss),
          presolveFindDuplicatesGetKey, presolveFindDuplicatesKeyEQ, presolveFindDuplicatesKeyVal, (void*)scip) );
 
    for( c = 0; c < nconss && !*infeas; ++c )
@@ -940,7 +940,7 @@ SCIP_RETCODE presolveFindDuplicates(
 
    /* check all constraints in the given set for duplicates, dominance, or possible simplifications w.r.t. the z variable */
 
-   SCIP_CALL( SCIPmultihashCreate(&multihash, SCIPblkmem(scip), SCIPcalcHashtableSize(nconss),
+   SCIP_CALL( SCIPmultihashCreate(&multihash, SCIPblkmem(scip), SCIPcalcMultihashSize(nconss),
          presolveFindDuplicatesGetKey, presolveFindDuplicatesKeyEQ2, presolveFindDuplicatesKeyVal2, (void*) scip) );
 
    for( c = 0; c < nconss && !*infeas; ++c )
@@ -2010,7 +2010,7 @@ SCIP_RETCODE computeViolation(
       ub = SCIPvarGetUbLocal(consdata->x);
 
       /* with non-initial columns, variables can shortly be a column variable before entering the LP and have value 0.0 in this case, which might be outside bounds */
-      if( !SCIPisFeasGE(scip, xval, lb) || !SCIPisFeasLE(scip, xval, ub) )
+      if( (!SCIPisInfinity(scip, -lb) && !SCIPisFeasGE(scip, xval, lb)) || (!SCIPisInfinity(scip, ub) && !SCIPisFeasLE(scip, xval, ub)) )
          *solviolbounds = TRUE;
       else
          xval = MAX(lb, MIN(ub, xval));  /* project x onto local box if just slightly outside (or even not outside) */
@@ -2306,9 +2306,9 @@ SCIP_RETCODE registerBranchingCandidates(
       }
       break;
    }
-   while( TRUE );
+   while( TRUE );  /*lint !e506 */
 
-   return SCIP_OKAY;
+   return SCIP_OKAY;  /*lint !e438*/
 }
 
 /** registers a variable from a violated constraint as branching candidate that has a large absolute value in the relaxation */
@@ -5218,6 +5218,10 @@ SCIP_RETCODE enforceConstraint(
        * see also issue #627
        */
       assert(solinfeasible);
+      /* however, if solinfeasible is actually not TRUE, then better cut off the node to avoid that SCIP
+       * stops because infeasible cannot be resolved */
+      if( !solinfeasible )
+         *result = SCIP_CUTOFF;
       return SCIP_OKAY;
    }
 

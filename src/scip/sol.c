@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1024,12 +1024,12 @@ SCIP_RETCODE SCIPsolSetVal(
    SCIP_Real oldval;
 
    assert(sol != NULL);
+   assert(stat != NULL);
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL
       || sol->solorigin == SCIP_SOLORIGIN_ZERO
       || sol->solorigin == SCIP_SOLORIGIN_PARTIAL
       || sol->solorigin == SCIP_SOLORIGIN_UNKNOWN
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
-   assert(stat != NULL);
    assert(var != NULL);
    assert(SCIPisFinite(val));
 
@@ -1219,10 +1219,10 @@ SCIP_RETCODE SCIPsolIncVal(
    SCIP_Real oldval;
 
    assert(sol != NULL);
+   assert(stat != NULL);
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL
       || sol->solorigin == SCIP_SOLORIGIN_ZERO
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
-   assert(stat != NULL);
    assert(var != NULL);
    assert(!SCIPsetIsInfinity(set, incval) && !SCIPsetIsInfinity(set, -incval));
 
@@ -1631,32 +1631,24 @@ SCIP_RETCODE SCIPsolCheck(
             lb = SCIPvarGetLbGlobal(var);
             ub = SCIPvarGetUbGlobal(var);
 
-            if( checkbounds )
+            /* if we have to check bound and one of the current bounds is violated */
+            if( checkbounds && ((!SCIPsetIsInfinity(set, -lb) && SCIPsetIsFeasLT(set, solval, lb))
+                     || (!SCIPsetIsInfinity(set, ub) && SCIPsetIsFeasGT(set, solval, ub))) )
             {
-               /* check finite lower bound */
-               if( !SCIPsetIsInfinity(set, -lb) )
-                  *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb);
+               *feasible = FALSE;
 
-               /* check finite upper bound */
-               if( !SCIPsetIsInfinity(set, ub) )
-                  *feasible = *feasible && SCIPsetIsFeasLE(set, solval, ub);
-
-               /* if one of current bounds is violated */
-               if( SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub) )
+               if( printreason )
                {
-                  if( printreason )
-                  {
-                     SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
+                  SCIPmessagePrintInfo(messagehdlr, "solution value %g violates bounds of <%s>[%g,%g] by %g\n", solval, SCIPvarGetName(var),
                         SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), MAX(lb - solval, 0.0) + MAX(solval - ub, 0.0));
-                  }
-#ifdef SCIP_DEBUG
-                  else
-                  {
-                     SCIPsetDebugMsgPrint(set, "  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
-                        SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
-                  }
-#endif
                }
+#ifdef SCIP_DEBUG
+               else
+               {
+                  SCIPsetDebugMsgPrint(set, "  -> solution value %g violates bounds of <%s>[%g,%g]\n", solval, SCIPvarGetName(var),
+                        SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var));
+               }
+#endif
             }
 
             /* check whether there are infinite variable values that lead to an objective value of +infinity */
@@ -1904,7 +1896,7 @@ SCIP_RETCODE SCIPsolRetransform(
    /* clear the solution and convert it into original space */
    SCIP_CALL( solClearArrays(sol) );
    sol->solorigin = SCIP_SOLORIGIN_ORIGINAL;
-   sol->obj = 0.0;
+   sol->obj = origprob->objoffset;
 
    /* reinsert the values of the original variables */
    for( v = 0; v < nvars; ++v )
@@ -2034,6 +2026,7 @@ SCIP_RETCODE SCIPsolPrint(
    SCIP_PROB*            prob,               /**< problem data (original or transformed) */
    SCIP_PROB*            transprob,          /**< transformed problem data or NULL (to display priced variables) */
    FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             mipstart,           /**< should only discrete variables be printed? */
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
@@ -2043,13 +2036,19 @@ SCIP_RETCODE SCIPsolPrint(
    assert(sol != NULL);
    assert(prob != NULL);
    assert(SCIPsolIsOriginal(sol) || prob->transformed || transprob != NULL);
+   assert(!mipstart || !SCIPsolIsPartial(sol));
 
    /* display variables of problem data */
    for( v = 0; v < prob->nfixedvars; ++v )
    {
       assert(prob->fixedvars[v] != NULL);
+
+      /* skip non-discrete variables in a mip start */
+      if( mipstart && !SCIPvarIsIntegral(prob->fixedvars[v]) )
+         continue;
+
       solval = SCIPsolGetVal(sol, set, stat, prob->fixedvars[v]);
-      if( printzeros
+      if( printzeros || mipstart
          || (sol->solorigin != SCIP_SOLORIGIN_PARTIAL && !SCIPsetIsZero(set, solval))
          || (sol->solorigin == SCIP_SOLORIGIN_PARTIAL && solval != SCIP_UNKNOWN) ) /*lint !e777*/
       {
@@ -2069,8 +2068,13 @@ SCIP_RETCODE SCIPsolPrint(
    for( v = 0; v < prob->nvars; ++v )
    {
       assert(prob->vars[v] != NULL);
+
+      /* skip non-discrete variables in a mip start */
+      if( mipstart && !SCIPvarIsIntegral(prob->vars[v]) )
+         continue;
+
       solval = SCIPsolGetVal(sol, set, stat, prob->vars[v]);
-      if( printzeros
+      if( printzeros || mipstart
          || (sol->solorigin != SCIP_SOLORIGIN_PARTIAL && !SCIPsetIsZero(set, solval))
          || (sol->solorigin == SCIP_SOLORIGIN_PARTIAL && solval != SCIP_UNKNOWN) ) /*lint !e777*/
       {
@@ -2097,8 +2101,12 @@ SCIP_RETCODE SCIPsolPrint(
          if( SCIPvarIsTransformedOrigvar(transprob->fixedvars[v]) )
             continue;
 
+         /* skip non-discrete variables in a mip start */
+         if( mipstart && !SCIPvarIsIntegral(transprob->fixedvars[v]) )
+            continue;
+
          solval = SCIPsolGetVal(sol, set, stat, transprob->fixedvars[v]);
-         if( printzeros || !SCIPsetIsZero(set, solval) )
+         if( printzeros || mipstart || !SCIPsetIsZero(set, solval) )
          {
             SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(transprob->fixedvars[v]));
             if( solval == SCIP_UNKNOWN ) /*lint !e777*/
@@ -2116,6 +2124,10 @@ SCIP_RETCODE SCIPsolPrint(
       {
          assert(transprob->vars[v] != NULL);
          if( SCIPvarIsTransformedOrigvar(transprob->vars[v]) )
+            continue;
+
+         /* skip non-discrete variables in a mip start */
+         if( mipstart && !SCIPvarIsIntegral(transprob->vars[v]) )
             continue;
 
          solval = SCIPsolGetVal(sol, set, stat, transprob->vars[v]);
