@@ -14727,6 +14727,30 @@ void SCIPfreeRowprep(
    SCIPfreeBlockMemory(scip, rowprep);
 }
 
+/** creates a copy of a SCIP_ROWPREP datastructure */
+SCIP_RETCODE SCIPcopyRowprep(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP**        target,             /**< buffer to store pointer of rowprep copy */
+   SCIP_ROWPREP*         source              /**< rowprep to copy */
+)
+{
+   assert(scip != NULL);
+   assert(target != NULL);
+   assert(source != NULL);
+
+   SCIP_CALL( SCIPduplicateBlockMemory(scip, target, source) );
+   if( source->coefs != NULL )
+   {
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*target)->coefs, source->coefs, source->varssize) );
+   }
+   if( source->vars != NULL )
+   {
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*target)->vars, source->vars, source->varssize) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** prints a rowprep */
 void SCIPprintRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
