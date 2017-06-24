@@ -15327,6 +15327,8 @@ SCIP_RETCODE SCIPcleanupRowprep(
                myviol -= 1.1*SCIPepsilon(scip) + rowprep->side;
                rowprep->side = -1.1*SCIPepsilon(scip);
             }
+            if( myviol < 0.0 )
+               myviol = 0.0;
          }
       }
    }
