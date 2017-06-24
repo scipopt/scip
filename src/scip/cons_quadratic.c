@@ -15289,7 +15289,8 @@ SCIP_RETCODE SCIPcleanupRowprep(
          SCIPprintRowprep(scip, rowprep, NULL); */
       }
    }
-   else if( maxcoef * SCIPfeastol(scip) > 1.0 )
+
+   if( maxcoef * SCIPfeastol(scip) > 1.0 )
    {
       /* if maxcoef > 1/feastol, then consider scaling down */
       SCIP_Real scalefactor;
@@ -15300,7 +15301,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
       /* scale by approx. scalefactor if minimal violation is still reached and minimal coef does not get too small
        * myviol < minviol or mincoef < feastol before scaling is possible, in which case we also don't scale down
        */
-      if( scalefactor * myviol > minviol && scalefactor * mincoef > SCIPfeastol(scip) )
+      if( scalefactor * myviol >= minviol && scalefactor * mincoef > SCIPfeastol(scip) )
       {
          /* SCIPinfoMessage(scip, NULL, "scale down by ~%g, viol=%g: ", scalefactor, myviol);
          SCIPprintRowprep(scip, rowprep, NULL); */
