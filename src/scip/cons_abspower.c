@@ -3667,7 +3667,8 @@ SCIP_RETCODE generateCut(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
    SCIP_ROW**            row,                /**< storage for cut */
-   SCIP_Bool             onlyinbounds        /**< whether linearization is allowed only in variable bounds */
+   SCIP_Bool             onlyinbounds,       /**< whether linearization is allowed only in variable bounds */
+   SCIP_Real             minviol             /**< a minimal violation in sol we hope to achieve */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -3798,7 +3799,7 @@ SCIP_RETCODE generateCut(
 
       /* we should not need SCIPmergeRowprep() with only 2 vars in the row */
 
-      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, conshdlrdata->cutmaxrange, minviol, &coefrange, NULL) );
 
       if( coefrange >= conshdlrdata->cutmaxrange )
       {
@@ -3876,7 +3877,7 @@ SCIP_RETCODE separatePoint(
       if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
          /* try to generate a cut */
-         SCIP_CALL( generateCut(scip, conss[c], sol, &row, onlyinbounds) );  /*lint !e613*/
+         SCIP_CALL( generateCut(scip, conss[c], sol, &row, onlyinbounds, minefficacy) );  /*lint !e613*/
          if( row == NULL ) /* failed to generate cut */
             continue;
 
@@ -4010,14 +4011,14 @@ SCIP_RETCODE addLinearizationCuts(
          /* constraint function is concave for x+offset <= 0.0, so can linearize w.r.t. lhs */
          consdata->lhsviol = 1.0;
          consdata->rhsviol = 0.0;
-         SCIP_CALL( generateCut(scip, conss[c], ref, &row, FALSE) );  /*lint !e613*/
+         SCIP_CALL( generateCut(scip, conss[c], ref, &row, FALSE, minefficacy) );  /*lint !e613*/
       }
       else if( !SCIPisLT(scip, SCIPvarGetLbGlobal(consdata->x), -consdata->xoffset) && !SCIPisInfinity(scip, -consdata->rhs) )
       {
          /* constraint function is convex for x+offset >= 0.0, so can linearize w.r.t. rhs */
          consdata->lhsviol = 0.0;
          consdata->rhsviol = 1.0;
-         SCIP_CALL( generateCut(scip, conss[c], ref, &row, FALSE) );  /*lint !e613*/
+         SCIP_CALL( generateCut(scip, conss[c], ref, &row, FALSE, minefficacy) );  /*lint !e613*/
       }
       else
       {
