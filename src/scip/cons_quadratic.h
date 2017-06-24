@@ -730,10 +730,11 @@ void SCIPmergeRowprepTerms(
    SCIP_ROWPREP*         rowprep             /**< rowprep to be cleaned up */
 );
 
-/* cleans up a rowprep
+/* Cleans up and attempts to improve rowprep
  *
  * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
- * Drops small coefficients if coefrange is too large, if this can be done by relaxing the cut.
+ * Drops small or large coefficients if coefrange is too large, if this can be done by relaxing the cut.
+ * Scales coefficients to reach minimal violation, if possible.
  *
  * After return, the terms in the rowprep will be sorted by absolute value of coefficient, in decreasing order.
  */
@@ -742,8 +743,10 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be beautified */
    SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */
-   SCIP_Real             coefmaxrange,       /**< maximal allowed coefficients range */
-   SCIP_Real*            coefrange           /**< buffer to store coefrange of beautified cut, or NULL if not of interest */
+   SCIP_Real             maxcoefrange,       /**< maximal allowed coefficients range */
+   SCIP_Real             minviol,            /**< minimal absolute violation the row should achieve (w.r.t. sol) */
+   SCIP_Real*            coefrange,          /**< buffer to store coefrange of cleaned up cut, or NULL if not of interest */
+   SCIP_Real*            viol                /**< buffer to store absolute violation of cleaned up cut in sol, or NULL if not of interest */
 );
 
 /** scales a rowprep
