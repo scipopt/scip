@@ -6731,7 +6731,7 @@ SCIP_RETCODE generateCut(
       SCIPmergeRowprepTerms(scip, rowprep);
 
       /* improve coefficients */
-      SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, sol, conshdlrdata->cutmaxrange, &coefrange) );
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, conshdlrdata->cutmaxrange, &coefrange) );
       success = coefrange <= conshdlrdata->cutmaxrange;
    }
 
@@ -15014,14 +15014,14 @@ void SCIPmergeRowprepTerms(
    rowprep->nvars = i+1;
 }
 
-/* beautifies a rowprep
+/* cleans up a rowprep
  *
  * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
  * Drops small coefficients if coefrange is too large, if this can be done by relaxing the cut.
  *
  * After return, the terms in the rowprep will be sorted by absolute value of coefficient, in decreasing order.
  */
-SCIP_RETCODE SCIPbeautifyRowprep(
+SCIP_RETCODE SCIPcleanupRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be beautified */
    SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */

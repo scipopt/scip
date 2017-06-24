@@ -730,7 +730,7 @@ void SCIPmergeRowprepTerms(
    SCIP_ROWPREP*         rowprep             /**< rowprep to be cleaned up */
 );
 
-/* beautifies a rowprep
+/* cleans up a rowprep
  *
  * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
  * Drops small coefficients if coefrange is too large, if this can be done by relaxing the cut.
@@ -738,7 +738,7 @@ void SCIPmergeRowprepTerms(
  * After return, the terms in the rowprep will be sorted by absolute value of coefficient, in decreasing order.
  */
 EXTERN
-SCIP_RETCODE SCIPbeautifyRowprep(
+SCIP_RETCODE SCIPcleanupRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be beautified */
    SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */

@@ -5523,8 +5523,8 @@ SCIP_RETCODE generateCut(
       /* merge terms in same variable */
       SCIPmergeRowprepTerms(scip, rowprep);
 
-      /* beautify row */
-      SCIP_CALL( SCIPbeautifyRowprep(scip, rowprep, sol, maxrange, &coefrange) );
+      /* cleanup row */
+      SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, maxrange, &coefrange) );
 
       /* check that coefficient range is ok */
       success = coefrange <= maxrange;
