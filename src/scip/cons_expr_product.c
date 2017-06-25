@@ -502,7 +502,6 @@ SCIP_RETCODE computeFacet(
    assert(scip != NULL);
    assert(randnumgen != NULL);
    assert(lp != NULL);
-   assert(sol != NULL);
    assert(vars != NULL);
    assert(nvars > 0);
    assert(auxvar != NULL);
