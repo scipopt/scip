@@ -215,7 +215,7 @@ SCIP_RETCODE SCIPbranchcandUpdateVar(
    SCIP_VAR*             var                 /**< variable that changed its bounds */
    );
 
-/** updates branching priority of the given variable and update the pseude candidate array if needed */
+/** updates branching priority of the given variable and update the pseudo candidate array if needed */
 extern
 SCIP_RETCODE SCIPbranchcandUpdateVarBranchPriority(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */

@@ -1135,7 +1135,7 @@ SCIP_RETCODE SCIPbranchcandUpdateVar(
    return SCIP_OKAY;
 }
 
-/** updates branching priority of the given variable and update the pseude candidate array if needed */
+/** updates branching priority of the given variable and update the pseudo candidate array if needed */
 SCIP_RETCODE SCIPbranchcandUpdateVarBranchPriority(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_SET*             set,                /**< global SCIP settings */
