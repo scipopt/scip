@@ -6531,8 +6531,8 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    int*                    ntightenings      /**< buffer to add the total number of tightenings */
    )
 {
-   SCIP_Real oldlb = SCIPintervalGetInf(expr->interval);
-   SCIP_Real oldub = SCIPintervalGetSup(expr->interval);
+   SCIP_Real oldlb;
+   SCIP_Real oldub;
    SCIP_Real newlb;
    SCIP_Real newub;
    SCIP_Bool tightenlb;
@@ -6544,6 +6544,8 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    assert(ntightenings != NULL);
    assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), expr->interval));
 
+   oldlb = SCIPintervalGetInf(expr->interval);
+   oldub = SCIPintervalGetSup(expr->interval);
    *cutoff = FALSE;
 
    /* check if the new bounds lead to an empty interval */
