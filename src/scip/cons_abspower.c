@@ -4031,8 +4031,6 @@ SCIP_RETCODE addLinearizationCuts(
 
       addedtolp = FALSE;
 
-      assert(!SCIProwIsLocal(row));
-
       /* if caller wants, then check if cut separates LP solution and add to sepastore if so */
       if( separatedlpsol != NULL )
       {
@@ -4085,7 +4083,7 @@ SCIP_RETCODE addLinearizationCuts(
          }
       }
 
-      if( !addedtolp )
+      if( !addedtolp && !SCIProwIsLocal(row) )
       {
          SCIP_CALL( SCIPaddPoolCut(scip, row) );
       }
