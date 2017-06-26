@@ -28,7 +28,14 @@
    fun:nlpiSolveFilterSQP
 }
 {
-   filtersqp-writestr1
+   filtersqp-main-uninitvalue
+   Memcheck:Cond
+   fun:filtersqp1_
+   fun:filtersqp_
+   fun:nlpiSolveFilterSQP
+}
+{
+   filtersqp-writestr1-uninitvalue
    Memcheck:Cond
    fun:__memcmp_sse4_1
    fun:_gfortran_compare_string
@@ -37,7 +44,7 @@
    fun:nlpiSolveFilterSQP
 }
 {
-   filtersqp-writestr2
+   filtersqp-writestr2-uninitvalue
    Memcheck:Cond
    fun:_gfortran_compare_string
    fun:filtersqp1_
