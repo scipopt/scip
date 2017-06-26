@@ -18,6 +18,8 @@ interface:
   in the public SCIP API.
 - new interface method SCIPsetRandomSeed to (re)set a random number generator seed
 - added method SCIPsetProbingLPState() to install given LP state and/or norms at the current probing node
+- added functions SCIPbranchcandGetLPMaxPrio() and SCIPbranchcandGetExternMaxPrio() get the maximal branching priority of given
+  branching candidates; also added SCIPbranchcandGetNPrioLPCands() to access the number of LP candidates with this priority.
 
 performance improvements:
 - add and use RESTRICT macro for some pointers

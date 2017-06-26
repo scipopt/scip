@@ -4317,32 +4317,34 @@ SCIP_RETCODE solveNode(
          && (!(*unbounded) || SCIPbranchcandGetNExternCands(branchcand) > 0 || SCIPbranchcandGetNPseudoCands(branchcand) > 0)
          && !solverelaxagain && !solvelpagain && !propagateagain && !branched )
       {
-         SCIP_RESULT result;
-         int nlpcands;
-
-         result = SCIP_DIDNOTRUN;
+         SCIP_RESULT result = SCIP_DIDNOTRUN;
+         int nlpcands = 0;
 
          if( SCIPtreeHasFocusNodeLP(tree) )
          {
             SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nlpcands, NULL, NULL) );
          }
-         else
-            nlpcands = 0;
 
-         if( nlpcands > 0 )
+         if ( nlpcands > 0 || SCIPbranchcandGetNExternCands(branchcand) > 0 )
          {
-            /* branch on LP solution */
-            SCIPsetDebugMsg(set, "infeasibility in depth %d was not resolved: branch on LP solution with %d fractionals\n",
-               SCIPnodeGetDepth(focusnode), nlpcands);
-            SCIP_CALL( SCIPbranchExecLP(blkmem, set, stat, transprob, origprob, tree, reopt, lp, sepastore, branchcand,
-                  eventqueue, primal->cutoffbound, FALSE, &result) );
-            assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
-            assert(result != SCIP_DIDNOTRUN && result != SCIP_DIDNOTFIND);
-         }
-         else
-         {
-            if( SCIPbranchcandGetNExternCands(branchcand) > 0 )
+            if ( SCIPbranchcandGetLPMaxPrio(branchcand) >= SCIPbranchcandGetExternMaxPrio(branchcand) )
             {
+               assert( SCIPbranchcandGetNPrioLPCands(branchcand) > 0 );
+               assert( nlpcands > 0 );
+
+               /* branch on LP solution */
+               SCIPsetDebugMsg(set, "infeasibility in depth %d was not resolved: branch on LP solution with %d fractionals\n",
+                  SCIPnodeGetDepth(focusnode), nlpcands);
+               SCIP_CALL( SCIPbranchExecLP(blkmem, set, stat, transprob, origprob, tree, reopt, lp, sepastore, branchcand,
+                     eventqueue, primal->cutoffbound, FALSE, &result) );
+               assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
+               assert(result != SCIP_DIDNOTRUN && result != SCIP_DIDNOTFIND);
+            }
+            else
+            {
+               assert( SCIPbranchcandGetNPrioExternCands(branchcand) > 0 );
+               assert( SCIPbranchcandGetNExternCands(branchcand) > 0 );
+
                /* branch on external candidates */
                SCIPsetDebugMsg(set, "infeasibility in depth %d was not resolved: branch on %d external branching candidates.\n",
                   SCIPnodeGetDepth(focusnode), SCIPbranchcandGetNExternCands(branchcand));
@@ -4350,30 +4352,30 @@ SCIP_RETCODE solveNode(
                      eventqueue, primal->cutoffbound, TRUE, &result) );
                assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
             }
+         }
 
-            if( result == SCIP_DIDNOTRUN || result == SCIP_DIDNOTFIND )
+         if( result == SCIP_DIDNOTRUN || result == SCIP_DIDNOTFIND )
+         {
+            /* branch on pseudo solution */
+            SCIPsetDebugMsg(set, "infeasibility in depth %d was not resolved: branch on pseudo solution with %d unfixed integers\n",
+               SCIPnodeGetDepth(focusnode), SCIPbranchcandGetNPseudoCands(branchcand));
+            SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
+                  primal->cutoffbound, TRUE, &result) );
+            assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
+         }
+
+         /* SCIP cannot guarantee convergence if it is necessary to branch on unbounded variables */
+         if( result == SCIP_BRANCHED )
+         {
+            SCIP_VAR* var = stat->lastbranchvar;
+
+            if( var != NULL && !stat->branchedunbdvar && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
+               && (SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)) || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var))) )
             {
-               /* branch on pseudo solution */
-               SCIPsetDebugMsg(set, "infeasibility in depth %d was not resolved: branch on pseudo solution with %d unfixed integers\n",
-                  SCIPnodeGetDepth(focusnode), SCIPbranchcandGetNPseudoCands(branchcand));
-               SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
-                     primal->cutoffbound, TRUE, &result) );
-               assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
-            }
-
-            /* SCIP cannot guarantee convergence if it is necessary to branch on unbounded variables */
-            if( result == SCIP_BRANCHED )
-            {
-               SCIP_VAR* var = stat->lastbranchvar;
-
-               if( var != NULL && !stat->branchedunbdvar && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
-                     && (SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)) || SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var))) )
-               {
-                  SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
-                     "Starting spatial branch-and-bound on unbounded variable <%s> ([%g,%g]) - cannot guarantee finite termination.\n",
-                     SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_NORMAL,
+                  "Starting spatial branch-and-bound on unbounded variable <%s> ([%g,%g]) - cannot guarantee finite termination.\n",
+                  SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
                   stat->branchedunbdvar = TRUE;
-               }
             }
          }
 
