@@ -472,6 +472,12 @@ SCIP_RETCODE setupAggregationData(
                lhs = SCIProwGetLhs(aggrdata->aggrrows[k]);
                rhs = SCIProwGetRhs(aggrdata->aggrrows[k]);
 
+#if 0
+               /* TODO somehow this is better */
+               if( !SCIPisEQ(scip, lhs, rhs) )
+                  continue;
+#endif
+
                int nextgoodrowpos = beg + ngoodrows;
                if( k > nextgoodrowpos )
                {
