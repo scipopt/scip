@@ -5756,8 +5756,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                      {
                         SCIP_CALL( SCIPaddRowIndicator(scip, conshdlrdata->conshdlrindicator, row) );
                      }
+                     SCIP_CALL( SCIPreleaseRow(scip, &row) );
                   }
-                  SCIP_CALL( SCIPreleaseRow(scip, &row) );
                   SCIPfreeRowprep(scip, &rowprep);
                }
             }
@@ -5780,8 +5780,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                   {
                      SCIP_CALL( SCIPaddRowIndicator(scip, conshdlrdata->conshdlrindicator, row) );
                   }
+                  SCIP_CALL( SCIPreleaseRow(scip, &row) );
                }
-               SCIP_CALL( SCIPreleaseRow(scip, &row) );
                SCIPfreeRowprep(scip, &rowprep);
             }
          }
@@ -5807,8 +5807,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                   {
                      SCIP_CALL( SCIPaddRowIndicator(scip, conshdlrdata->conshdlrindicator, row) );
                   }
+                  SCIP_CALL( SCIPreleaseRow(scip, &row) );
                }
-               SCIP_CALL( SCIPreleaseRow(scip, &row) );
                SCIPfreeRowprep(scip, &rowprep);
             }
          }
@@ -5837,8 +5837,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                      {
                         SCIP_CALL( SCIPaddRowIndicator(scip, conshdlrdata->conshdlrindicator, row) );
                      }
+                     SCIP_CALL( SCIPreleaseRow(scip, &row) );
                   }
-                  SCIP_CALL( SCIPreleaseRow(scip, &row) );
                   SCIPfreeRowprep(scip, &rowprep);
                }
             }
@@ -5861,8 +5861,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                   {
                      SCIP_CALL( SCIPaddRowIndicator(scip, conshdlrdata->conshdlrindicator, row) );
                   }
+                  SCIP_CALL( SCIPreleaseRow(scip, &row) );
                }
-               SCIP_CALL( SCIPreleaseRow(scip, &row) );
                SCIPfreeRowprep(scip, &rowprep);
             }
          }
@@ -5888,8 +5888,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                   {
                      SCIP_CALL( SCIPaddRowIndicator(scip, conshdlrdata->conshdlrindicator, row) );
                   }
+                  SCIP_CALL( SCIPreleaseRow(scip, &row) );
                }
-               SCIP_CALL( SCIPreleaseRow(scip, &row) );
                SCIPfreeRowprep(scip, &rowprep);
             }
          }
