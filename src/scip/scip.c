@@ -10501,7 +10501,7 @@ SCIP_RETCODE SCIPpermuteProb(
    assert(nconshdlrs == 0 || conshdlrs != NULL);
 
    /* create a random number generator */
-   SCIP_CALL( SCIPrandomCreate(&randnumgen, scip->mem->probmem, randseed) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, randseed) );
 
    /* The constraint handler should not be permuted since they are called w.r.t. to certain properties; besides
     * that the "conshdlrs" array should stay in the order as it is since this array is used to copy the plugins for
@@ -10627,7 +10627,7 @@ SCIP_RETCODE SCIPpermuteProb(
    }
 
    /* free random number generator */
-   SCIPrandomFree(&randnumgen);
+   SCIPfreeRandom(scip, &randnumgen);
 
    return SCIP_OKAY;
 }
@@ -16278,7 +16278,7 @@ SCIP_RETCODE SCIPsolveParallel(
        */
       SCIPselectDownRealInt(prios, solvertypes, nthreads, ncandsolvertypes);
 
-      SCIP_CALL( SCIPrandomCreate(&rndgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, scip->set->concurrent_initseed)) );
+      SCIP_CALL( SCIPcreateRandom(scip, &rndgen, scip->set->concurrent_initseed) );
       for( i = 0; i < nthreads; ++i )
       {
          SCIP_CONCSOLVER* concsolver;
@@ -16287,7 +16287,7 @@ SCIP_RETCODE SCIPsolveParallel(
          if( scip->set->concurrent_changeseeds && SCIPgetNConcurrentSolvers(scip) > 1 )
             SCIP_CALL( SCIPconcsolverInitSeeds(concsolver, SCIPrandomGetInt(rndgen, 0, INT_MAX)) );
       }
-      SCIPrandomFree(&rndgen);
+      SCIPfreeRandom(scip, &rndgen);
       SCIPfreeBufferArray(scip, &prios);
       SCIPfreeBufferArray(scip, &weights);
       SCIPfreeBufferArray(scip, &solvertypes);
@@ -35461,6 +35461,32 @@ SCIP_RETCODE SCIPchgVarObjProbing(
    return SCIP_OKAY;
 }
 
+/** returns whether the objective function has changed during probing mode
+ *
+ *  @return \ref TRUE if objective has changed, \ref FALSE otherwise
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_Bool SCIPisObjChangedProbing(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisObjChangedProbing", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->tree != NULL && SCIPinProbing(scip) && SCIPtreeProbingObjChanged(scip->tree);
+}
+
 /** applies domain propagation on the probing sub problem, that was changed after SCIPstartProbing() was called;
  *  the propagated domains of the variables can be accessed with the usual bound accessing calls SCIPvarGetLbLocal()
  *  and SCIPvarGetUbLocal(); the propagation is only valid locally, i.e. the local bounds as well as the changed
@@ -38110,6 +38136,9 @@ SCIP_RETCODE SCIPgetSolVals(
  *
  *  @return objective value of primal CIP solution w.r.t. original problem, or current LP/pseudo objective value
  *
+ *  @note this function should not be used during probing mode when some objective coefficients have been changed via
+ *        SCIPchgVarObjProbing()
+ *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
@@ -38129,6 +38158,8 @@ SCIP_Real SCIPgetSolOrigObj(
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    )
 {
+   assert(!SCIPisObjChangedProbing(scip));
+
    /* for original solutions, an original objective value is already available in SCIP_STAGE_PROBLEM
     * for all other solutions, we should be at least in SCIP_STAGE_TRANSFORMING
     */
@@ -38636,52 +38667,66 @@ SCIP_RETCODE SCIPprintMIPStart(
    return SCIP_OKAY;
 }
 
-/** outputs dual solution from LP solver to file stream */
-static
-SCIP_RETCODE printDualSol(
+/** returns dual solution value of a constraint */
+SCIP_RETCODE SCIPgetDualSolVal(
    SCIP*                 scip,               /**< SCIP data structure */
-   FILE*                 file,               /**< output file (or NULL for standard output) */
-   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   SCIP_CONS*            cons,               /**< constraint for which the dual solution should be returned */
+   SCIP_Real*            dualsolval,         /**< pointer to store the dual solution value */
+   SCIP_Bool*            boundconstraint     /**< pointer to store whether the constraint is a bound constraint (or NULL) */
    )
 {
-   SCIP_VAR** vars;
-   int c;
+   SCIP_CONS* transcons;
+   int nvars;
+   SCIP_Bool success;
+#ifndef NDEBUG
+   SCIP_CONSHDLR* conshdlr;
+#endif
 
-   assert(scip->lp != NULL);
-   assert(scip->lp->solved);
-   assert(scip->lp->dualfeasible);
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(dualsolval != NULL);
 
-   /* allocate buffer memory */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vars, 1) );
+#ifndef NDEBUG
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear" ) == 0);
+#endif
 
-   /* print dual solution values of all constraints */
-   for( c = 0; c < scip->transprob->nconss; ++c )
+   SCIP_CALL( SCIPconsGetNVars(cons, scip->set, &nvars, &success) );
+
+   if( boundconstraint != NULL )
+      *boundconstraint = (nvars == 1);
+
+   if( SCIPconsIsTransformed(cons) )
+      transcons = cons;
+   else
+      transcons = SCIPconsGetTransformed(cons);
+
+   /* it can happen that a transformed constraints gets deleted due to redundancy. by complementary slackness the
+    * corresponding dual solution value would be zero. however, if the constraint contains exactly one variable we need
+    * to check the reduced costs of the variable.
+    */
+   if( nvars > 1 && transcons == NULL )
+      (*dualsolval) = 0.0;
+   else
    {
-      SCIP_CONS* cons;
-      SCIP_Real solval;
-      SCIP_Bool success;
-
-      int nvars;
-#ifndef NDEBUG
-      SCIP_CONSHDLR* conshdlr;
-#endif
-      cons = scip->transprob->conss[c];
-      assert(cons != NULL);
-
-#ifndef NDEBUG
-      conshdlr = SCIPconsGetHdlr(cons);
-      assert(conshdlr != NULL);
-      assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear" ) == 0);
-#endif
-
-      SCIP_CALL( SCIPconsGetNVars(cons, scip->set, &nvars, &success) );
+      if( !success )
+      {
+         SCIPABORT();
+         return SCIP_INVALIDCALL;
+      }
 
       if( nvars > 1 )
-         solval = SCIPgetDualsolLinear(scip, cons);
+         (*dualsolval) = SCIPgetDualsolLinear(scip, transcons);
+
       /* the constraint is a bound constraint */
       else
       {
+         SCIP_VAR** vars;
          SCIP_Real varsolval;
+
+         /* allocate buffer memory */
+         SCIP_CALL( SCIPallocBufferArray(scip, &vars, 1) );
 
          assert(vars != NULL);
          SCIP_CALL( SCIPconsGetVars(cons, scip->set, vars, 1, &success) );
@@ -38691,12 +38736,48 @@ SCIP_RETCODE printDualSol(
          /* return the reduced cost of the variable if the constraint would be tight */
          if( SCIPsetIsEQ(scip->set, varsolval, SCIPgetRhsLinear(scip, cons))
           || SCIPsetIsEQ(scip->set, varsolval, SCIPgetLhsLinear(scip, cons)) )
-            solval = SCIPgetVarRedcost(scip, vars[0]);
+            (*dualsolval) = SCIPgetVarRedcost(scip, vars[0]);
          else
-            solval = 0.0;
+            (*dualsolval) = 0.0;
 
+         /* free buffer memory */
+         SCIPfreeBufferArray(scip, &vars);
       }
-      assert(solval != SCIP_INVALID); /*lint !e777*/
+   }
+   assert(*dualsolval != SCIP_INVALID); /*lint !e777*/
+
+   /* dual values are coming from the LP solver that is always solving a minimization problem */
+   if( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE )
+      (*dualsolval) *= -1.0;
+
+   return SCIP_OKAY;;
+}
+
+/** outputs dual solution from LP solver to file stream */
+static
+SCIP_RETCODE printDualSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   FILE*                 file,               /**< output file (or NULL for standard output) */
+   SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
+   )
+{
+   SCIP_Bool boundconstraint;
+   int c;
+
+   assert(scip->lp != NULL);
+   assert(scip->lp->solved);
+   assert(scip->lp->dualfeasible);
+
+   /* print dual solution values of all constraints */
+   for( c = 0; c < scip->origprob->nconss; ++c )
+   {
+      SCIP_CONS* cons;
+      SCIP_Real solval;
+
+      cons = scip->origprob->conss[c];
+      assert(cons != NULL);
+
+      SCIP_CALL( SCIPgetDualSolVal(scip, cons, &solval, &boundconstraint) );
 
       if( printzeros || !SCIPisZero(scip, solval) )
       {
@@ -38710,17 +38791,14 @@ SCIP_RETCODE printDualSol(
             SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity\n");
          else
          {
-            if( nvars > 1 )
-               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g\n", solval);
-            else
+            if( boundconstraint )
                SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g*\n", solval);
+            else
+               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g\n", solval);
          }
       }
 
    }
-
-   /* free buffer memory */
-   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
@@ -44480,7 +44558,7 @@ SCIP_RETCODE SCIPprintStatistics(
    {
       printTimingStatistics(scip, file);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Original Problem   :\n");
-      SCIPprobPrintStatistics(scip->origprob, scip->messagehdlr, file);
+      SCIPprobPrintStatistics(scip->origprob, scip->set, scip->messagehdlr, file);
       return SCIP_OKAY;
    }
    case SCIP_STAGE_TRANSFORMED:
@@ -44488,9 +44566,9 @@ SCIP_RETCODE SCIPprintStatistics(
    {
       printTimingStatistics(scip, file);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Original Problem   :\n");
-      SCIPprobPrintStatistics(scip->origprob, scip->messagehdlr, file);
+      SCIPprobPrintStatistics(scip->origprob, scip->set, scip->messagehdlr, file);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolved Problem  :\n");
-      SCIPprobPrintStatistics(scip->transprob, scip->messagehdlr, file);
+      SCIPprobPrintStatistics(scip->transprob, scip->set, scip->messagehdlr, file);
       printPresolverStatistics(scip, file);
       printConstraintStatistics(scip, file);
       printConstraintTimingStatistics(scip, file);
@@ -44505,9 +44583,9 @@ SCIP_RETCODE SCIPprintStatistics(
    {
       printTimingStatistics(scip, file);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Original Problem   :\n");
-      SCIPprobPrintStatistics(scip->origprob, scip->messagehdlr, file);
+      SCIPprobPrintStatistics(scip->origprob, scip->set, scip->messagehdlr, file);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolved Problem  :\n");
-      SCIPprobPrintStatistics(scip->transprob, scip->messagehdlr, file);
+      SCIPprobPrintStatistics(scip->transprob, scip->set, scip->messagehdlr, file);
       printPresolverStatistics(scip, file);
       printConstraintStatistics(scip, file);
       printConstraintTimingStatistics(scip, file);
@@ -44524,9 +44602,9 @@ SCIP_RETCODE SCIPprintStatistics(
    {
       printTimingStatistics(scip, file);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Original Problem   :\n");
-      SCIPprobPrintStatistics(scip->origprob, scip->messagehdlr, file);
+      SCIPprobPrintStatistics(scip->origprob, scip->set, scip->messagehdlr, file);
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "Presolved Problem  :\n");
-      SCIPprobPrintStatistics(scip->transprob, scip->messagehdlr, file);
+      SCIPprobPrintStatistics(scip->transprob, scip->set, scip->messagehdlr, file);
       printPresolverStatistics(scip, file);
       printConstraintStatistics(scip, file);
       printConstraintTimingStatistics(scip, file);
@@ -47244,9 +47322,9 @@ int SCIPgetPtrarrayMaxIdx(
    return SCIPptrarrayGetMaxIdx(ptrarray);
 }
 
-/** perform a sanity check of the solve
+/** validate the result of the solve
  *
- *  the sanity check includes
+ *  the validation includes
  *
  *  - checking the feasibility of the incumbent solution in the original problem (using SCIPcheckSolOrig())
  *
@@ -47257,7 +47335,7 @@ int SCIPgetPtrarrayMaxIdx(
  *  For infeasible problems, +/-SCIPinfinity() should be passed as reference bounds depending on the objective sense
  *  of the original problem.
  */
-SCIP_RETCODE SCIPsanityCheck(
+SCIP_RETCODE SCIPvalidateSolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             primalreference,    /**< external primal reference value for the problem, or SCIP_UNKNOWN */
    SCIP_Real             dualreference,      /**< external dual reference value for the problem, or SCIP_UNKNOWN */
@@ -47282,7 +47360,7 @@ SCIP_RETCODE SCIPsanityCheck(
    localprimalboundcheck = TRUE;
    localdualboundcheck = TRUE;
 
-   /* author bzfhende: check the best solution for feasibility in the original problem */
+   /* check the best solution for feasibility in the original problem */
    if( SCIPgetNSols(scip) > 0 )
    {
       SCIP_SOL* bestsol = SCIPgetBestSol(scip);
@@ -47335,17 +47413,19 @@ SCIP_RETCODE SCIPsanityCheck(
 
    if( !quiet )
    {
-      SCIPinfoMessage(scip, NULL, "SANITY CHECK       : ");
+      SCIPinfoMessage(scip, NULL, "Validation         : ");
       if( ! localfeasible )
-         SCIPinfoMessage(scip, NULL, "FAIL (infeasible)");
+         SCIPinfoMessage(scip, NULL, "Fail (infeasible)");
       else if( ! localprimalboundcheck )
-         SCIPinfoMessage(scip, NULL, "FAIL (primal bound)");
+         SCIPinfoMessage(scip, NULL, "Fail (primal bound)");
       else if( ! localdualboundcheck )
-         SCIPinfoMessage(scip, NULL, "FAIL (dual bound)");
+         SCIPinfoMessage(scip, NULL, "Fail (dual bound)");
       else
-         SCIPinfoMessage(scip, NULL, "SUCCESS");
-
-      SCIPinfoMessage(scip, NULL, " %4u %11.8g %11.8g\n", localfeasible, primviol, dualviol);
+         SCIPinfoMessage(scip, NULL, "Success");
+      SCIPinfoMessage(scip, NULL, "\n");
+      SCIPinfoMessage(scip, NULL, "  %-17s: %10u\n", "cons violation", !localfeasible);
+      SCIPinfoMessage(scip, NULL, "  %-17s: %10.8g (reference: %16.9e)\n", "primal violation", primviol, dualreference);
+      SCIPinfoMessage(scip, NULL, "  %-17s: %10.8g (reference: %16.9e)\n", "dual violation", dualviol, primalreference);
    }
 
    if( feasible != NULL )
@@ -47356,4 +47436,93 @@ SCIP_RETCODE SCIPsanityCheck(
       *dualboundcheck = localdualboundcheck;
 
    return SCIP_OKAY;
+}
+
+/** creates directed graph structure */
+SCIP_RETCODE SCIPcreateDigraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIGRAPH**        digraph,            /**< pointer to store the created directed graph */
+   int                   nnodes              /**< number of nodes */
+   )
+{
+   assert(scip != NULL);
+   assert(digraph != NULL);
+
+   SCIP_CALL( SCIPdigraphCreate(digraph, scip->mem->probmem, nnodes) );
+
+   return SCIP_OKAY;
+}
+
+/** copies directed graph structure
+ *
+ *  The copying procedure uses the memory of the passed SCIP instance. The user must ensure that the digraph lives
+ *  as most as long as the SCIP instance.
+ *
+ *  @note The data in nodedata is copied verbatim. This possibly has to be adapted by the user.
+ */
+SCIP_RETCODE SCIPcopyDigraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
+   SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
+   )
+{
+   assert(scip != NULL);
+   assert(sourcedigraph != NULL);
+   assert(targetdigraph != NULL);
+
+   SCIP_CALL( SCIPdigraphCopy(targetdigraph, sourcedigraph, scip->mem->probmem) );
+
+   return SCIP_OKAY;
+}
+
+/** creates and initializes a random number generator
+ *
+ *  @note The initial seed is changed using SCIPinitializeRandomSeed()
+ */
+SCIP_RETCODE SCIPcreateRandom(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
+   unsigned int          initialseed         /**< initial random seed */
+   )
+{
+   unsigned int modifiedseed;
+   assert(scip != NULL);
+   assert(randnumgen != NULL);
+
+   modifiedseed = SCIPinitializeRandomSeed(scip, initialseed);
+
+   SCIP_CALL( SCIPrandomCreate(randnumgen, SCIPblkmem(scip), modifiedseed) );
+
+   return SCIP_OKAY;
+}
+
+/** frees a random number generator */
+void SCIPfreeRandom(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
+   )
+{
+   assert(scip != NULL);
+   assert(randnumgen != NULL);
+
+   SCIPrandomFree(randnumgen, SCIPblkmem(scip));
+}
+
+/** initializes a random number generator with a given start seed
+ *
+ *  @note The seed is changed using SCIPinitializeRandomSeed()
+ */
+void SCIPsetRandomSeed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   unsigned int          seed                /**< new random seed */
+   )
+{
+   unsigned int modifiedseed;
+   assert(scip != NULL);
+   assert(randnumgen != NULL);
+
+   modifiedseed = SCIPinitializeRandomSeed(scip, seed);
+
+   SCIPrandomSetSeed(randnumgen, modifiedseed);
 }

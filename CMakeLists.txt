@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 2.6)
 
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}")
+
 project(SCIP)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR})
@@ -40,6 +43,8 @@ option(LEGACY "build SCIP/SoPlex in legacy mode" OFF)
 option(NOBLKBUFMEM "should block and buffer memory be disabled" OFF)
 option(NOBLKMEM "should block and buffer memory be disabled" OFF)
 option(NOBUFMEM "should block and buffer memory be disabled" OFF)
+option(COVERAGE "enable coverage support" OFF)
+SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage")
 
 set(TPI none CACHE STRING "options for thread support library")  #create the variable
 set_property(CACHE TPI PROPERTY STRINGS none tny omp)  #define list of values GUI will offer for the variable
@@ -64,6 +69,8 @@ if(NOBUFMEM)
    add_definitions(-DSCIP_NOBUFFERMEM)
 endif()
 
+#set the correct rpath for OS X
+set(CMAKE_MACOSX_RPATH ON)
 
 #set defines for win32
 if(WIN32)
@@ -150,6 +157,19 @@ add_custom_target(update_buildflags
                                            -P ${CMAKE_BINARY_DIR}/update_buildflags.cmake)
 
 add_definitions(-DWITH_SCIPDEF)
+
+
+#
+# enable coverage support
+#
+if( COVERAGE )
+    include(CodeCoverage)
+    APPEND_COVERAGE_COMPILER_FLAGS()
+    set(COVERAGE_EXCLUDES '/usr*')
+    SETUP_TARGET_FOR_COVERAGE(NAME coverage
+                          EXECUTABLE bash -c "ctest ${COVERAGE_CTEST_ARGS}"
+                          DEPENDENCIES scip-bin)
+endif()
 
 # use C++11 standard
 set(CMAKE_CXX_STANDARD 11)

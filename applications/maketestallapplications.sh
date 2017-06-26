@@ -5,7 +5,7 @@
 #
 #
 
-APPLICATIONS=(Coloring MinIISC Scheduler STP)
+APPLICATIONS=$(for f in *;do if [[ -d $f  ]]; then echo $f;fi; done)
 LPSOLVERS=(spx2)
 OPTS=(dbg)
 
@@ -78,8 +78,13 @@ do
 done
 
 # run tests
-for APPLICATION in ${APPLICATIONS[@]}
+for APPLICATION in $APPLICATIONS
 do
+    # See issues #1100 and #1169
+    if test $APPLICATION = "PolySCIP"
+    then
+        continue
+    fi
     echo
     echo
     echo ===== $APPLICATION =====
@@ -94,7 +99,7 @@ do
 	    if (! make OPT=$OPT LPS=$LPS $MAKEARGS )
 	    then
 		echo "Making "$APPLICATION" failed." >> ../applicationtestsummary.log
-		exit $STATUS
+		exit 1
 	    else
 		echo "Making "$APPLICATION" successful." >> ../applicationtestsummary.log
 	    fi
@@ -106,7 +111,7 @@ do
 		then
 		    echo "Testing "$APPLICATION" failed."
 		    echo "Testing "$APPLICATION" failed." >> ../applicationtestsummary.log
-		    exit $STATUS
+		    exit 1
 		fi
 	    else
 		echo make OPT=$OPT LPS=$LPS $MAKEARGS test
@@ -114,7 +119,7 @@ do
 		then
 		    echo "Testing "$APPLICATION" failed."
 		    echo "Testing "$APPLICATION" failed." >> ../applicationtestsummary.log
-		    exit $STATUS
+		    exit 1
 		fi
 	    fi
 	    echo "Testing "$APPLICATION" successful."

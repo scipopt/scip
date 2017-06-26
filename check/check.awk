@@ -422,6 +422,17 @@ BEGIN {
 
    # objsense is 0 otherwise
 }
+
+# SCIP API version >= 9
+/^  Objective        :/ {
+   if ( $3 == "minimize," || $3 == "minimize,\r")
+      objsense = 1;
+   if ( $3 == "maximize," || $3 == "maximize,\r" )
+      objsense = -1;
+
+   # objsense is 0 otherwise
+}
+
 #
 # conflict analysis
 #

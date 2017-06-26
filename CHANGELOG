@@ -4,6 +4,7 @@ SCIP version NEXT
 features:
 - added macros to do computations with a higher precision by using double double arithmetic
 - new compiler flag DEBUGSOL={true,false} to enable an internal debugging mechanism to check against a user given debug solution
+- add new heuristic MPEC that solves a MPEC reformulation of a mixed-binary nonlinear problem by regularized NLP reformulations
 - added interface to the NLP solver WORHP; set WORHP=true in order to link to WORHP
 
 parameters:
@@ -13,6 +14,9 @@ parameters:
 - new parameter: lp/refactorinterval to change the refactorization interval of the LP solver
 
 interface:
+- new interface methods SCIPcreateRandom, SCIPfreeRandom that replace SCIPrandomCreate and SCIPrandomFree
+  in the public SCIP API.
+- new interface method SCIPsetRandomSeed to (re)set a random number generator seed
 - added method SCIPsetProbingLPState() to install given LP state and/or norms at the current probing node
 
 performance improvements:
@@ -24,8 +28,8 @@ SCIP version 4.0.1
 
 features
 - added parsing functionality to cardinality constraint handler for CIP format
-- added command line option '-o' and command 'sanitycheck' in interactive shell
-  to check solving process sanity against an external primal and dual reference value.
+- added command line option '-o' and command 'validatesolve' in interactive shell
+  to validate the solution against an external primal and dual reference value.
 
 fixed bugs:
 - fixed bug in genvbounds propagator when applying a restart after the root node
@@ -37,18 +41,23 @@ fixed bugs:
 - improved handling of infinite values in a primal solution in quadratic and nonlinear constraints
 - fixed bug in dynamic resizing of hashtables and hashmaps
 - fixed bug in computing violation and cut for certain nonlinear constraints when LP solution is slightly out of bounds
+- added workaround for bug in primal simplex of cplex 12.7.1.0 occuring when attempting to solve LPs without rows without presolving
 - fixed bug in binpacking example that might have led to doing the same branching several times
 - fixed memory issue in binpacking example
 - renamed parameter heuristics/completesol/maxunkownrate to heuristics/completesol/maxunknownrate
 - in GAMS writer, forbid also various parenthesis characters in gams symbol names
+- fixed debug solution check that appeared in probing mode when the objective function has changed
+- added missing definition of SCIP_UNUSED in memory.h if def.h is not included
+- relaxed a too strong assert concerning solutions close to the objective limit
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint
 - sorting of parents and children for some expression types is now independent of memory layout
 
 interface:
-- new function SCIPsanityCheck() to compare solving result with an external primal and dual reference
+- new function SCIPvalidateSolve() to compare solving result with an external primal and dual reference
   value
+- new function SCIPisObjChangedProbing() to check whether the objective function has changed during probing mode
 
 SCIP version 4.0.0
 ==================

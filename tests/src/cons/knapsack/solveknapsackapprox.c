@@ -79,7 +79,7 @@ void setup(void)
    SCIP_CALL( SCIPallocMemoryArray(scip, &profits, MEMSIZE) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &solitems, MEMSIZE) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &nonsolitems, MEMSIZE) );
-   SCIP_CALL( SCIPrandomCreate(&randnumgen, SCIPblkmem(scip), INITIALSEED) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, INITIALSEED) );
    cr_assert_not_null(items);
    cr_assert_not_null(weights);
    cr_assert_not_null(profits);
@@ -149,7 +149,7 @@ void teardown(void)
    SCIPfreeMemoryArray(scip, &profits);
    SCIPfreeMemoryArray(scip, &solitems);
    SCIPfreeMemoryArray(scip, &nonsolitems);
-   SCIPrandomFree(&randnumgen);
+   SCIPfreeRandom(scip, &randnumgen);
 
    SCIPfree(&scip);
 

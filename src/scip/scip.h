@@ -15809,6 +15809,29 @@ SCIP_RETCODE SCIPchgVarObjProbing(
    SCIP_Real             newobj              /**< new objective function value */
    );
 
+/** returns whether the objective function has changed during probing mode
+ *
+ *  @return \ref TRUE if objective has changed, \ref FALSE otherwise
+ *
+ *  @note this function should not be used during probing mode when some objective coefficients have been changed via
+ *        SCIPchgVarObjProbing()
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+SCIP_Bool SCIPisObjChangedProbing(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** applies domain propagation on the probing sub problem, that was changed after SCIPstartProbing() was called;
  *  the propagated domains of the variables can be accessed with the usual bound accessing calls SCIPvarGetLbLocal()
  *  and SCIPvarGetUbLocal(); the propagation is only valid locally, i.e. the local bounds as well as the changed
@@ -17515,6 +17538,15 @@ SCIP_RETCODE SCIPprintMIPStart(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal solution */
    FILE*                 file                /**< output file (or NULL for standard output) */
+   );
+
+/** returns dual solution value of a constraint */
+EXTERN
+SCIP_RETCODE SCIPgetDualSolVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint for which the dual solution should be returned */
+   SCIP_Real*            dualsolval,         /**< pointer to store the dual solution value */
+   SCIP_Bool*            boundconstraint     /**< pointer to store whether the constraint is a bound constraint (or NULL) */
    );
 
 /** check whether the dual solution is available
@@ -22388,16 +22420,45 @@ int SCIPgetPtrarrayMaxIdx(
 
 /**@} */
 
-/**@defgroup PublicVerificationMethods Verification
- * @ingroup PUBLICCOREAPI
- * @brief  methods for verifying the correctness of the run
+/**@addtogroup DigraphMethods
  *
  * @{
  */
 
-/** perform a sanity check of the solve
+/** creates directed graph structure */
+EXTERN
+SCIP_RETCODE SCIPcreateDigraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIGRAPH**        digraph,            /**< pointer to store the created directed graph */
+   int                   nnodes              /**< number of nodes */
+   );
+
+/** copies directed graph structure
  *
- *  the sanity check includes
+ *  The copying procedure uses the memory of the passed SCIP instance. The user must ensure that the digraph lives
+ *  as most as long as the SCIP instance.
+ *
+ *  @note The data in nodedata is copied verbatim. This possibly has to be adapted by the user.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyDigraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
+   SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
+   );
+
+/**@} */
+
+/**@defgroup PublicValidationMethods Validation
+ * @ingroup PUBLICCOREAPI
+ * @brief  methods for validating the correctness of a solving process
+ *
+ * @{
+ */
+
+/** validate the result of the solve
+ *
+ *  the validation includes
  *
  *  - checking the feasibility of the incumbent solution in the original problem (using SCIPcheckSolOrig())
  *
@@ -22409,7 +22470,7 @@ int SCIPgetPtrarrayMaxIdx(
  *  of the original problem.
  */
 EXTERN
-SCIP_RETCODE SCIPsanityCheck(
+SCIP_RETCODE SCIPvalidateSolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             primalreference,    /**< external primal reference value for the problem, or SCIP_UNKNOWN */
    SCIP_Real             dualreference,      /**< external dual reference value for the problem, or SCIP_UNKNOWN */
@@ -22423,7 +22484,43 @@ SCIP_RETCODE SCIPsanityCheck(
                                                *  value, or NULL */
    );
 
-/* @} */
+/**@} */
+
+/**@addtogroup RandomNumbers
+ *
+ * @{
+ */
+
+/** creates and initializes a random number generator
+ *
+ *  @note The initial seed is changed using SCIPinitializeRandomSeed()
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateRandom(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
+   unsigned int          initialseed         /**< initial random seed */
+   );
+
+/** frees a random number generator */
+EXTERN
+void SCIPfreeRandom(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
+   );
+
+/** initializes a random number generator with a given seed
+ *
+ *  @note The seed is changed using SCIPinitializeRandomSeed()
+ */
+EXTERN
+void SCIPsetRandomSeed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   unsigned int          seed                /**< new random seed */
+   );
+
+/**@} */
 
 #ifdef __cplusplus
 }

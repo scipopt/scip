@@ -29,6 +29,7 @@
 #include "scip/event.h"
 #include "scip/var.h"
 #include "scip/implics.h"
+#include "scip/misc.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/debug.h"
