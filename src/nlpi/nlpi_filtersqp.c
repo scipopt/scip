@@ -1218,7 +1218,7 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsFilterSQP )
 
       if( problem->lam != NULL )
       {
-         SCIP_ALLOC( BMSreallocMemoryArray(&problem->c, problem->conssize) );
+         SCIP_ALLOC( BMSreallocMemoryArray(&problem->lam, problem->varssize + problem->conssize) );
       }
 
       if( problem->bl != NULL )
