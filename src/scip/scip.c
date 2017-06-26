@@ -35558,6 +35558,32 @@ SCIP_RETCODE SCIPchgVarObjProbing(
    return SCIP_OKAY;
 }
 
+/** returns whether the objective function has changed during probing mode
+ *
+ *  @return \ref TRUE if objective has changed, \ref FALSE otherwise
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_Bool SCIPisObjChangedProbing(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPisObjChangedProbing", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return scip->tree != NULL && SCIPinProbing(scip) && SCIPtreeProbingObjChanged(scip->tree);
+}
+
 /** applies domain propagation on the probing sub problem, that was changed after SCIPstartProbing() was called;
  *  the propagated domains of the variables can be accessed with the usual bound accessing calls SCIPvarGetLbLocal()
  *  and SCIPvarGetUbLocal(); the propagation is only valid locally, i.e. the local bounds as well as the changed
@@ -38207,6 +38233,9 @@ SCIP_RETCODE SCIPgetSolVals(
  *
  *  @return objective value of primal CIP solution w.r.t. original problem, or current LP/pseudo objective value
  *
+ *  @note this function should not be used during probing mode when some objective coefficients have been changed via
+ *        SCIPchgVarObjProbing()
+ *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  *       - \ref SCIP_STAGE_TRANSFORMING
@@ -38226,6 +38255,8 @@ SCIP_Real SCIPgetSolOrigObj(
    SCIP_SOL*             sol                 /**< primal solution, or NULL for current LP/pseudo objective value */
    )
 {
+   assert(!SCIPisObjChangedProbing(scip));
+
    /* for original solutions, an original objective value is already available in SCIP_STAGE_PROBLEM
     * for all other solutions, we should be at least in SCIP_STAGE_TRANSFORMING
     */
@@ -47341,9 +47372,9 @@ int SCIPgetPtrarrayMaxIdx(
    return SCIPptrarrayGetMaxIdx(ptrarray);
 }
 
-/** perform a sanity check of the solve
+/** validate the result of the solve
  *
- *  the sanity check includes
+ *  the validation includes
  *
  *  - checking the feasibility of the incumbent solution in the original problem (using SCIPcheckSolOrig())
  *
@@ -47354,7 +47385,7 @@ int SCIPgetPtrarrayMaxIdx(
  *  For infeasible problems, +/-SCIPinfinity() should be passed as reference bounds depending on the objective sense
  *  of the original problem.
  */
-SCIP_RETCODE SCIPsanityCheck(
+SCIP_RETCODE SCIPvalidateSolve(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             primalreference,    /**< external primal reference value for the problem, or SCIP_UNKNOWN */
    SCIP_Real             dualreference,      /**< external dual reference value for the problem, or SCIP_UNKNOWN */
@@ -47379,7 +47410,7 @@ SCIP_RETCODE SCIPsanityCheck(
    localprimalboundcheck = TRUE;
    localdualboundcheck = TRUE;
 
-   /* author bzfhende: check the best solution for feasibility in the original problem */
+   /* check the best solution for feasibility in the original problem */
    if( SCIPgetNSols(scip) > 0 )
    {
       SCIP_SOL* bestsol = SCIPgetBestSol(scip);
@@ -47432,17 +47463,19 @@ SCIP_RETCODE SCIPsanityCheck(
 
    if( !quiet )
    {
-      SCIPinfoMessage(scip, NULL, "SANITY CHECK       : ");
+      SCIPinfoMessage(scip, NULL, "Validation         : ");
       if( ! localfeasible )
-         SCIPinfoMessage(scip, NULL, "FAIL (infeasible)");
+         SCIPinfoMessage(scip, NULL, "Fail (infeasible)");
       else if( ! localprimalboundcheck )
-         SCIPinfoMessage(scip, NULL, "FAIL (primal bound)");
+         SCIPinfoMessage(scip, NULL, "Fail (primal bound)");
       else if( ! localdualboundcheck )
-         SCIPinfoMessage(scip, NULL, "FAIL (dual bound)");
+         SCIPinfoMessage(scip, NULL, "Fail (dual bound)");
       else
-         SCIPinfoMessage(scip, NULL, "SUCCESS");
-
-      SCIPinfoMessage(scip, NULL, " %4u %11.8g %11.8g\n", localfeasible, primviol, dualviol);
+         SCIPinfoMessage(scip, NULL, "Success");
+      SCIPinfoMessage(scip, NULL, "\n");
+      SCIPinfoMessage(scip, NULL, "  %-17s: %10u\n", "cons violation", !localfeasible);
+      SCIPinfoMessage(scip, NULL, "  %-17s: %10.8g (reference: %16.9e)\n", "primal violation", primviol, dualreference);
+      SCIPinfoMessage(scip, NULL, "  %-17s: %10.8g (reference: %16.9e)\n", "dual violation", dualviol, primalreference);
    }
 
    if( feasible != NULL )

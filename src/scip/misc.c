@@ -2010,11 +2010,6 @@ void SCIPmultihashPrintStatistics(
    SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
-/** computes a hashcode for double precision floating point values containing
- *  15 significant bits, the sign and the exponent
- */
-extern INLINE uint32_t SCIPrealHashCode(double x);
-
 /** creates a hash table */
 SCIP_RETCODE SCIPhashtableCreate(
    SCIP_HASHTABLE**      hashtable,          /**< pointer to store the created hash table */
@@ -6653,7 +6648,7 @@ void SCIPdigraphFree(
 
 #define STARTSUCCESSORSSIZE 5
 
-/* ensures that successors array of one node in a directed graph is big enough */
+/** ensures that successors array of one node in a directed graph is big enough */
 static
 SCIP_RETCODE ensureSuccessorsSize(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */

@@ -17904,6 +17904,7 @@ SCIP_Real SCIPgetDualsolLinear(
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
+   assert(!SCIPconsIsOriginal(cons)); /* original constraints would always return 0 */
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -17930,6 +17931,7 @@ SCIP_Real SCIPgetDualfarkasLinear(
    SCIP_CONSDATA* consdata;
 
    assert(cons != NULL);
+   assert(!SCIPconsIsOriginal(cons)); /* original constraints would always return 0 */
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {

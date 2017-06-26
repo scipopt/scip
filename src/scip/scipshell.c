@@ -159,8 +159,8 @@ SCIP_RETCODE SCIPprocessShellArguments(
    SCIP_Bool paramerror;
    SCIP_Bool interactive;
    SCIP_Bool onlyversion;
-   SCIP_Real primalreference;
-   SCIP_Real dualreference;
+   SCIP_Real primalreference = SCIP_UNKNOWN;
+   SCIP_Real dualreference = SCIP_UNKNOWN;
    const char* dualrefstring;
    const char* primalrefstring;
    int i;
@@ -347,24 +347,27 @@ SCIP_RETCODE SCIPprocessShellArguments(
 
       if( probname != NULL )
       {
+         SCIP_Bool validatesolve = FALSE;
+
          if( primalrefstring != NULL && dualrefstring != NULL )
          {
             char *endptr;
             if( ! SCIPparseReal(scip, primalrefstring, &primalreference, &endptr) ||
                      ! SCIPparseReal(scip, dualrefstring, &dualreference, &endptr) )
             {
-               printf("error parsing primal and dual reference values: %s %s\n", primalrefstring, dualrefstring);
+               printf("error parsing primal and dual reference values for validation: %s %s\n", primalrefstring, dualrefstring);
                return SCIP_ERROR;
             }
             else
-            {
-               printf("reference objective interval for sanity Check : %16.9g %16.9g\n", primalreference, dualreference);
-            }
+               validatesolve = TRUE;
          }
          SCIP_CALL( fromCommandLine(scip, probname) );
 
-         /* call the sanity check */
-         SCIP_CALL( SCIPsanityCheck(scip, primalreference, dualreference, SCIPfeastol(scip), FALSE, NULL, NULL, NULL) );
+         /* validate the solve */
+         if( validatesolve )
+         {
+            SCIP_CALL( SCIPvalidateSolve(scip, primalreference, dualreference, SCIPfeastol(scip), FALSE, NULL, NULL, NULL) );
+         }
       }
       else
       {
@@ -380,7 +383,7 @@ SCIP_RETCODE SCIPprocessShellArguments(
          "  -q            : suppress screen messages\n"
          "  -s <settings> : load parameter settings (.set) file\n"
          "  -f <problem>  : load and solve problem file\n"
-         "  -o <primref> <dualref> : pass primal and dual objective reference values for sanity check at the end of the solve"
+         "  -o <primref> <dualref> : pass primal and dual objective reference values for validation at the end of the solve"
          "  -b <batchfile>: load and execute dialog command batch file (can be used multiple times)\n"
          "  -c \"command\"  : execute single line of dialog commands (can be used multiple times)\n\n",
          argv[0]);
