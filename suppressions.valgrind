@@ -27,3 +27,20 @@
    fun:filtersqp_
    fun:nlpiSolveFilterSQP
 }
+{
+   filtersqp-writestr1
+   Memcheck:Cond
+   fun:__memcmp_sse4_1
+   fun:_gfortran_compare_string
+   fun:filtersqp1_
+   fun:filtersqp_
+   fun:nlpiSolveFilterSQP
+}
+{
+   filtersqp-writestr2
+   Memcheck:Cond
+   fun:_gfortran_compare_string
+   fun:filtersqp1_
+   fun:filtersqp_
+   fun:nlpiSolveFilterSQP
+}
