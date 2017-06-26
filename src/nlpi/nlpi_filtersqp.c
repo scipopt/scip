@@ -1815,6 +1815,8 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       problem->mxiwk = calcGrowSize(minmxiwk);
       SCIP_ALLOC( BMSreallocMemoryArray(&problem->lws, problem->mxiwk) );
    }
+   /* in case of some evalerrors, not clearing ws could lead to valgrind warnings about use of uninitialized memory */
+   memset(problem->ws, 0, problem->mxwk * sizeof(real));
 
    /* buffer for evaluation results */
    if( problem->evalbufsize < MAX3(n, problem->hessiannz[0], maxa) )
