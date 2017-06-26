@@ -15034,6 +15034,11 @@ SCIP_RETCODE SCIPcleanupRowprep(
    if( coefrange != NULL )
       *coefrange = 1.0;
 
+#ifdef SCIP_DEBUG
+   SCIPinfoMessage(scip, NULL, "start of cleanup: ");
+   SCIPprintRowprep(scip, rowprep, NULL);
+#endif
+
    /* TODO currently we don't consider scaling if all terms are eliminated */
 
    if( rowprep->nvars == 0 )
@@ -15266,6 +15271,11 @@ SCIP_RETCODE SCIPcleanupRowprep(
    myviol = SCIPgetRowprepViolation(scip, rowprep, sol, 'o');
    assert(myviol >= 0.0);
 
+#ifdef SCIP_DEBUG
+   SCIPinfoMessage(scip, NULL, "cleaned up coefs, viol %g: ", myviol);
+   SCIPprintRowprep(scip, rowprep, NULL);
+#endif
+
    if( myviol < minviol && !SCIPisZero(scip, myviol/10.0) )
    {
       /* if violation is sufficiently positive (>10*eps), but has not reached minviol,
@@ -15292,16 +15302,24 @@ SCIP_RETCODE SCIPcleanupRowprep(
 
    if( maxcoef * SCIPfeastol(scip) > 1.0 )
    {
-      /* if maxcoef > 1/feastol, then consider scaling down */
+      /* if maxcoef > 1/feastol, then consider scaling down so that maxcoef ~ 10 */
       SCIP_Real scalefactor;
 
-      scalefactor = SCIPfeastol(scip) / maxcoef;
-      assert(scalefactor <= 1.0);
+      scalefactor = 10.0 / maxcoef;
+      assert(scalefactor <= 1.0 || SCIPfeastol(scip) >= 0.01);
 
-      /* scale by approx. scalefactor if minimal violation is still reached and minimal coef does not get too small
-       * myviol < minviol or mincoef < feastol before scaling is possible, in which case we also don't scale down
+      /* if minimal violation would be lost by scaling down, then increase scalefactor such that minviol is still reached */
+      if( myviol > minviol && scalefactor * myviol < minviol )
+      {
+         assert(minviol > 0.0);  /* since myviol >= 0, the if-condition should ensure that minviol > 0 */
+         assert(myviol > 0.0);  /* since minviol > 0, the if-condition ensures myviol > 0 */
+         scalefactor = 2.0 * minviol / myviol;
+      }
+
+      /* scale by approx. scalefactor if scaling down and minimal coef does not get too small
+       * myviol < minviol (-> scalefactor > 1) or mincoef < feastol before scaling is possible, in which case we also don't scale down
        */
-      if( scalefactor * myviol >= minviol && scalefactor * mincoef > SCIPfeastol(scip) )
+      if( scalefactor < 1.0 && scalefactor * mincoef > SCIPfeastol(scip) )
       {
          /* SCIPinfoMessage(scip, NULL, "scale down by ~%g, viol=%g: ", scalefactor, myviol);
          SCIPprintRowprep(scip, rowprep, NULL); */
@@ -15332,6 +15350,11 @@ SCIP_RETCODE SCIPcleanupRowprep(
          }
       }
    }
+
+#ifdef SCIP_DEBUG
+   SCIPinfoMessage(scip, NULL, "applied scaling, viol %g: ", myviol);
+   SCIPprintRowprep(scip, rowprep, NULL);
+#endif
 
    /* TODO scaling might bring coefficients eps-close to integral values again, which we have only cleaned up before scaling */
 
