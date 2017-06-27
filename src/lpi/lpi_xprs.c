@@ -3484,7 +3484,7 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
    {
-      int ival = (int) dval;
+      int ival = (int) MIN(dval, INT_MAX);
       CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_MAXTIME, ival) );
       break;
    }
