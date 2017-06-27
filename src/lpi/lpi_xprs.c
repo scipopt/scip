@@ -3484,9 +3484,16 @@ SCIP_RETCODE SCIPlpiSetRealpar(
       break;
    case SCIP_LPPAR_LPTILIM:
    {
-      int ival = (int) MIN(dval, INT_MAX);
-      CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_MAXTIME, ival) );
-      break;
+     int ival;
+
+     /* if the double value is larger than INT_MAX, we set maxtime to 0 which implies no time limit */
+     if (dval >= INT_MAX)
+       ival = 0;
+     else
+       ival = (int) floor(dval);
+
+     CHECK_ZERO( lpi->messagehdlr, XPRSsetintcontrol(lpi->xprslp, XPRS_MAXTIME, ival) );
+     break;
    }
    case SCIP_LPPAR_MARKOWITZ:
       CHECK_ZERO( lpi->messagehdlr, XPRSsetdblcontrol(lpi->xprslp, XPRS_MARKOWITZTOL, dval) );
