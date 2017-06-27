@@ -4327,7 +4327,11 @@ SCIP_RETCODE solveNode(
 
          if ( nlpcands > 0 || SCIPbranchcandGetNExternCands(branchcand) > 0 )
          {
-            if ( SCIPbranchcandGetLPMaxPrio(branchcand) >= SCIPbranchcandGetExternMaxPrio(branchcand) )
+            /* If there are LP candidates and their maximal priority is at least the maximal priority of the external
+             * candidates, then branch on the LP candidates. Note that due to implicit integer variables,
+             * SCIPbranchcandGetLPMaxPrio(branchcand) might be finite and SCIPbranchcandGetNPrioLPCands(branchcand) > 0,
+             * but nlpcands == 0. */
+            if ( SCIPbranchcandGetLPMaxPrio(branchcand) >= SCIPbranchcandGetExternMaxPrio(branchcand) && nlpcands > 0 )
             {
                assert( SCIPbranchcandGetNPrioLPCands(branchcand) > 0 );
                assert( nlpcands > 0 );
