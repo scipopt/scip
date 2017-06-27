@@ -328,6 +328,7 @@ void F77_FUNC(objfun,OBJFUN)(
 
    if( timelimitreached((SCIP_NLPIDATA*)user, problem) )
    {
+      SCIPdebugMessage("timelimit reached, issuing arithmetic exception in objfun\n");
       *errflag = 1;
       return;
    }
@@ -337,6 +338,10 @@ void F77_FUNC(objfun,OBJFUN)(
    {
       *errflag = 0;
       *f = val;
+   }
+   else
+   {
+      SCIPdebugMessage("arithmetic exception in objfun\n");
    }
 }
 
@@ -366,6 +371,7 @@ void F77_FUNC(confun,CONFUN)(
       if( SCIPnlpiOracleEvalConstraintValue(problem->oracle, j, x, &val) != SCIP_OKAY || !SCIPisFinite(val) )
       {
          *errflag = 1;
+         SCIPdebugMessage("arithmetic exception in confun for constraint %d\n", j);
          break;
       }
       c[j] = val;
@@ -407,6 +413,14 @@ F77_FUNC(gradient,GRADIENT)(
          BMScopyMemoryArray(a, problem->evalbuffer, *maxa);
          *errflag = 0;
       }
+      else
+      {
+         SCIPdebugMessage("arithmetic exception in gradient for constraints\n");
+      }
+   }
+   else
+   {
+      SCIPdebugMessage("arithmetic exception in gradient for objective\n");
    }
 }
 
@@ -484,6 +498,10 @@ F77_FUNC(hessian,HESSIAN)(
       for( i = 0; i < nnz + *n + 2; ++i )
          lws[i] = problem->hessiannz[i];
       *li_hess = nnz + *n + 2;
+   }
+   else
+   {
+      SCIPdebugMessage("arithmetic exception in hessian\n");
    }
 
    BMSfreeMemoryArray(&lambda);
@@ -662,17 +680,19 @@ SCIP_RETCODE setupStart(
       }
    }
 
-   /* check whether objective and constraints can be evaluated in starting point
-    * NOTE: this does not check whether derivatives can be computed!
+   /* check whether objective and constraints can be evaluated and differentiated once in starting point
+    * NOTE: this does not check whether hessian can be computed!
     */
-   i = 0;
    *success = SCIPnlpiOracleEvalObjectiveValue(problem->oracle, x, &val) == SCIP_OKAY && SCIPisFinite(val);
+   *success &= SCIPnlpiOracleEvalObjectiveGradient(problem->oracle, x, FALSE, &val, problem->evalbuffer) == SCIP_OKAY;
+   i = 0;
    for( ; *success && i < SCIPnlpiOracleGetNConstraints(problem->oracle); ++i )
       *success = SCIPnlpiOracleEvalConstraintValue(problem->oracle, i, x, &val) == SCIP_OKAY && SCIPisFinite(val);
+   *success &= SCIPnlpiOracleEvalJacobian(problem->oracle, x, FALSE, NULL, problem->evalbuffer) == SCIP_OKAY;
 
    if( !*success )
    {
-      SCIPdebugMessage("could not evaluate constraint %d in %s starting point\n", i-1, problem->initguess != NULL ? "provided" : "made up");
+      SCIPdebugMessage("could not evaluate or constraint %d in %s starting point or Jacobian not available\n", i-1, problem->initguess != NULL ? "provided" : "made up");
 
       if( problem->initguess != NULL )
       {
@@ -1772,6 +1792,13 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
       }
    }
 
+   /* buffer for evaluation results (used in setupStart already) */
+   if( problem->evalbufsize < MAX3(n, problem->hessiannz[0], maxa) )
+   {
+      problem->evalbufsize = calcGrowSize(MAX3(n, problem->hessiannz[0], maxa));
+      SCIP_ALLOC( BMSreallocMemoryArray(&problem->evalbuffer, problem->evalbufsize) );
+   }
+
    /* setup starting point */
    SCIP_CALL( setupStart(data, problem, problem->x, &success) );
    if( !success )
@@ -1817,13 +1844,6 @@ SCIP_DECL_NLPISOLVE( nlpiSolveFilterSQP )
    }
    /* in case of some evalerrors, not clearing ws could lead to valgrind warnings about use of uninitialized memory */
    memset(problem->ws, 0, problem->mxwk * sizeof(real));
-
-   /* buffer for evaluation results */
-   if( problem->evalbufsize < MAX3(n, problem->hessiannz[0], maxa) )
-   {
-      problem->evalbufsize = calcGrowSize(MAX3(n, problem->hessiannz[0], maxa));
-      SCIP_ALLOC( BMSreallocMemoryArray(&problem->evalbuffer, problem->evalbufsize) );
-   }
 
    /* from here on we are not thread-safe: if intended for multithread use, then protect filtersqp call with mutex
     * NOTE: we need to make sure that we do not return from nlpiSolve before unlocking the mutex
