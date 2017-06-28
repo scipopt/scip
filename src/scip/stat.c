@@ -293,6 +293,7 @@ void SCIPstatReset(
    stat->memsavemode = FALSE;
    stat->nnodesbeforefirst = -1;
    stat->ninitconssadded = 0;
+   stat->nactiveconssadded = 0;
    stat->externmemestim = 0;
    stat->nrunsbeforefirst = -1;
    stat->firstprimalheur = NULL;
