@@ -15276,7 +15276,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
-   if( myviol < minviol && !SCIPisZero(scip, myviol/10.0) )
+   if( myviol < minviol && myviol >= 10.0*SCIPepsilon(scip) )
    {
       /* if violation is sufficiently positive (>10*eps), but has not reached minviol,
        * then consider scaling up to reach ~2*minviol
@@ -15285,8 +15285,8 @@ SCIP_RETCODE SCIPcleanupRowprep(
 
       scalefactor = 2.0 * minviol / myviol;
 
-      /* scale by approx. scalefactor, if maximal coef and rhs don't get huge by doing so */
-      if( !SCIPisHugeValue(scip, scalefactor * maxcoef) && !SCIPisHugeValue(scip, scalefactor * REALABS(rowprep->side)) )
+      /* scale by approx. scalefactor, if minimal coef don't get large and maximal coef and rhs don't get huge by doing so (or have been so before) */
+      if( mincoef * SCIPfeastol(scip) < 1.0 && !SCIPisHugeValue(scip, scalefactor * maxcoef) && !SCIPisHugeValue(scip, scalefactor * REALABS(rowprep->side)) )
       {
          /* SCIPinfoMessage(scip, NULL, "scale up by ~%g, viol=%g: ", scalefactor, myviol);
          SCIPprintRowprep(scip, rowprep, NULL); */
