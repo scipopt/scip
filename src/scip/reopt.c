@@ -75,6 +75,9 @@ SCIP_DECL_EVENTEXEC(eventExecReopt)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
    assert(SCIPvarGetType(SCIPeventGetVar(event)) != SCIP_VARTYPE_CONTINUOUS);
 
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
+
    eventnode = SCIPgetCurrentNode(scip);
    oldbound = SCIPeventGetOldbound(event);
    newbound = SCIPeventGetNewbound(event);
@@ -5175,9 +5178,20 @@ SCIP_RETCODE SCIPreoptFree(
       BMSfreeBlockMemoryArray(blkmem, &(*reopt)->addedconss, (*reopt)->addedconsssize);
    }
 
-   SCIPhashmapFree(&(*reopt)->glblb);
-   SCIPhashmapFree(&(*reopt)->glbub);
-   SCIPhashmapFree(&(*reopt)->activeconss);
+   if( (*reopt)->glblb != NULL )
+   {
+      SCIPhashmapFree(&(*reopt)->glblb);
+      SCIPhashmapFree(&(*reopt)->glbub);
+      SCIPhashmapFree(&(*reopt)->activeconss);
+      (*reopt)->glblb = NULL;
+      (*reopt)->glbub = NULL;
+      (*reopt)->activeconss = NULL;
+   }
+   else
+   {
+      assert((*reopt)->glbub == NULL);
+      assert((*reopt)->activeconss == NULL);
+   }
 
    BMSfreeBlockMemoryArray(blkmem, &(*reopt)->varhistory, (*reopt)->runsize);
    BMSfreeBlockMemoryArray(blkmem, &(*reopt)->prevbestsols, (*reopt)->runsize);
@@ -6707,7 +6721,7 @@ SCIP_RETCODE SCIPreoptApplyCompression(
 
 /** transforms a set of dual reductions into a linear constraint */
 static
-SCIP_RETCODE tranformDualredsToLinear(
+SCIP_RETCODE transformDualredsToLinear(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -6743,13 +6757,13 @@ SCIP_RETCODE tranformDualredsToLinear(
    {
       assert(consdata->vars[v] != NULL);
 
-      /* the bound is 0.0, the varibale has to appear with a coefient +1.0 in the constraint, sides do not change */
+      /* the bound is 0.0, the variable has to appear with a coefficient +1.0 in the constraint, sides do not change */
       if( SCIPsetIsEQ(set, dualreds->vals[v], 0.0) )
       {
          assert(dualreds->boundtypes[v] == SCIP_BOUNDTYPE_UPPER);
          consdata->vals[v] = 1.0;
       }
-      /* the bound is 1.0, the varibale has to appear with a coefient -1.0 in the constraint, we subtract -1.0 from lhs
+      /* the bound is 1.0, the variable has to appear with a coefficient -1.0 in the constraint, we subtract -1.0 from lhs
        *   logicor:       sum x_i + ~y_i    >= 1
        *           <==>   sum x_i + (1-y_i) >= 1
        *           <==>   sum x_i - y_i     >= 0
@@ -6983,7 +6997,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
       /* we create a linear constraint, since all variables are binary */
       if( nbinvars == nbndchgs )
       {
-         SCIP_CALL( tranformDualredsToLinear(reopt, set, blkmem, consdata, reoptnodes[0]->dualredscur) );
+         SCIP_CALL( transformDualredsToLinear(reopt, set, blkmem, consdata, reoptnodes[0]->dualredscur) );
       }
       /* we create a bounddisjunction constraint, since at least one variable is (implicit) integer or continuous */
       else
@@ -7137,7 +7151,7 @@ SCIP_RETCODE SCIPreoptResetDualBndchgs(
    id = SCIPnodeGetReoptID(node);
    assert(id < reopt->reopttree->reoptnodessize);
 
-   /* return if the node ist not part of the reoptimization tree */
+   /* return if the node is not part of the reoptimization tree */
    if( SCIPnodeGetDepth(node) > 0 && id == 0 )
       return SCIP_OKAY;
 

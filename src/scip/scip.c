@@ -10859,7 +10859,7 @@ SCIP_RETCODE SCIPchgReoptObjective(
 
 #ifndef NDEBUG
       for( i = 0; i < scip->transprob->nvars; i++ )
-         assert(SCIPvarGetObj(scip->transprob->vars[i]) == 0.0);
+         assert(SCIPisZero(scip, SCIPvarGetObj(scip->transprob->vars[i])));
 #endif
    }
 
@@ -15238,8 +15238,6 @@ SCIP_RETCODE freeReoptSolve(
    /* reset objective limit */
    SCIP_CALL( SCIPsetObjlimit(scip, SCIP_INVALID) );
 
-   scip->transprob->objscale = 1.0;
-   scip->transprob->objisintegral = FALSE;
 
    return SCIP_OKAY;
 }
@@ -16352,12 +16350,18 @@ SCIP_RETCODE SCIPenableReoptimization(
       /* initialize all reoptimization data structures */
       if( enable && scip->reopt == NULL )
       {
+         /* set enable flag */
+         scip->set->reopt_enable = enable;
+
          SCIP_CALL( SCIPreoptCreate(&scip->reopt, scip->set, scip->mem->probmem) );
          SCIP_CALL( SCIPsetSetReoptimizationParams(scip->set, scip->messagehdlr) );
       }
       /* disable all reoptimization plugins and free the structure if necessary */
       else if( (!enable && scip->reopt != NULL) || (!enable && scip->set->reopt_enable && scip->reopt == NULL) )
       {
+         /* set enable flag */
+         scip->set->reopt_enable = enable;
+
          if( scip->reopt != NULL )
          {
             SCIP_CALL( SCIPreoptFree(&(scip->reopt), scip->set, scip->origprimal, scip->mem->probmem) );
@@ -16366,9 +16370,11 @@ SCIP_RETCODE SCIPenableReoptimization(
          SCIP_CALL( SCIPsetSetReoptimizationParams(scip->set, scip->messagehdlr) );
       }
    }
-
-   /* set enable flag */
-   scip->set->reopt_enable = enable;
+   else
+   {
+      /* set enable flag */
+      scip->set->reopt_enable = enable;
+   }
 
    return SCIP_OKAY;
 }
@@ -16892,8 +16898,8 @@ SCIP_RETCODE SCIPfreeSolve(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *
- *  @post If this method is called in \SCIP stage \ref SCIP_STAGE_INIT or \ref SCIP_STAGE_PROBLEM, the stage of
- *        \SCIP is not changed; otherwise, the \SCIP stage is changed to \ref SCIP_STAGE_PRESOLVED.
+ *  @post If this method is called in \SCIP stage \ref SCIP_STAGE_INIT, \ref SCIP_STAGE_TRANSFORMED or \ref SCIP_STAGE_PROBLEM,
+ *        the stage of \SCIP is not changed; otherwise, the \SCIP stage is changed to \ref SCIP_STAGE_PRESOLVED.
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
@@ -16907,6 +16913,7 @@ SCIP_RETCODE SCIPfreeReoptSolve(
    {
    case SCIP_STAGE_INIT:
    case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_PROBLEM:
       return SCIP_OKAY;
 
@@ -16922,13 +16929,9 @@ SCIP_RETCODE SCIPfreeReoptSolve(
       /* exit presolving */
       SCIP_CALL( exitPresolve(scip, FALSE, &infeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
-   }
 
-   /*lint -fallthrough*/
-   case SCIP_STAGE_PRESOLVED:
-      /* switch stage to TRANSFORMED */
-      scip->set->stage = SCIP_STAGE_TRANSFORMED;
       return SCIP_OKAY;
+   }
 
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
@@ -39349,7 +39352,7 @@ SCIP_RETCODE SCIPretransformSol(
    }
    case SCIP_SOLORIGIN_PARTIAL:
    case SCIP_SOLORIGIN_UNKNOWN:
-      SCIPerrorMessage("unkown solution origin.\n");
+      SCIPerrorMessage("unknown solution origin.\n");
       return SCIP_INVALIDCALL;
 
    default:

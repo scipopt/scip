@@ -718,7 +718,7 @@ else()
     target_link_libraries(scipopt lpi nlpi tpi objscip)
 endif()
 
-target_link_libraries(scipopt ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES} ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${THREAD_LIBRARIES} ${IPOPT_LIBRARIES})
+target_link_libraries(scipopt ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES} ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
 
 add_executable(scip-bin main.c $<TARGET_OBJECTS:scip>)
 target_link_libraries(scip-bin objscip nlpi lpi tpi ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES} ${ZIMPL_LIBRARIES} ${THREAD_LIBRARIES})
