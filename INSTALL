@@ -404,7 +404,7 @@ make[1]: Leaving directory `/sw/scip'
          (e.g. "cd scip; ln -s /mosek/8/tools/platform/linux64x86/h lib/include/mskinc")
        - ln -s <file libmosek.so> <path to SCIP>/lib/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).so
          for each operation system and architecture to use
-         (e.g. "cd scip; ln -s /mosek/8/tools/platform/linux64x86/bin/libmosek64.so lib/shared/libmosek.linux.x86.gnu.so")
+         (e.g. "cd scip; ln -s /mosek/8/tools/platform/linux64x86/bin/libmosek64.so lib/shared/libmosek.linux.x86_64.gnu.so")
        - since MOSEK is a shared library, make sure your LD_LIBRARY_PATH contains <path to SCIP>/lib/shared
 
    (e) to use CLP
