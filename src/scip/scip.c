@@ -39273,7 +39273,7 @@ SCIP_RETCODE SCIPretransformSol(
    }
    case SCIP_SOLORIGIN_PARTIAL:
    case SCIP_SOLORIGIN_UNKNOWN:
-      SCIPerrorMessage("unkown solution origin.\n");
+      SCIPerrorMessage("unknown solution origin.\n");
       return SCIP_INVALIDCALL;
 
    default:
