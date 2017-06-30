@@ -52,7 +52,7 @@ set(EXPRINT cppad CACHE STRING "options for expression interpreter")  #create th
 set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values GUI will offer for the variable
 
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
-set_property(CACHE LPS PROPERTY STRINGS spx cpx grb )  #define list of values GUI will offer for the variable
+set_property(CACHE LPS PROPERTY STRINGS spx cpx grb glop )  #define list of values GUI will offer for the variable
 
 #set options for memory management
 if( NOBLKBUFMEM )
@@ -211,6 +211,8 @@ if(LPS STREQUAL "spx")
     find_package(SoPlex REQUIRED CONFIG)
 elseif(LPS STREQUAL "cpx")
     find_package(CPLEX REQUIRED)
+elseif(LPS STREQUAL "glop")
+    find_package(GLOP REQUIRED)
 elseif(LPS STREQUAL "grb")
     find_package(GUROBI REQUIRED)
 elseif(LPS STREQUAL "clp")
@@ -251,6 +253,13 @@ if(CPLEX_FOUND)
     include_directories(${CPLEX_INCLUDE_DIRS})
     set(lpi lpi/lpi_cpx.c)
     set(LPS_LIBRARIES ${CPLEX_LIBRARIES})
+    set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
+endif()
+
+if(GLOP_FOUND)
+    include_directories(${GLOP_INCLUDE_DIRS})
+    set(lpi lpi/lpi_glop.cpp)
+    set(LPS_LIBRARIES ${GLOP_LIBRARIES})
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
 endif()
 
