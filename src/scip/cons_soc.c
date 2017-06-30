@@ -1269,9 +1269,15 @@ SCIP_RETCODE separatePoint(
          if( rowprep == NULL )
             continue;
 
-         // TODO cleanup rowprep
+         /* NOTE: The way that rowprep was constructed, there should be no need to call SCIPmergeRowprep,
+          * since no variable gets added twice. However, if rowprep were replacing multiaggregated variables
+          * (as there can exist for soc cons), then SCIPmergeRowprep would be necessary.
+          */
+         /* cleanup rowprep (there is no limit on coefrange for cons_soc) */
+         SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIPinfinity(scip), minefficacy, NULL, &efficacy) );
 
-         efficacy = SCIPgetRowprepViolation(scip, rowprep, sol, conshdlrdata->scaling);
+         if( conshdlrdata->scaling != 'o' )
+            efficacy = SCIPgetRowprepViolation(scip, rowprep, sol, conshdlrdata->scaling);
          if( SCIPisLE(scip, efficacy, minefficacy) )
          {
             SCIPfreeRowprep(scip, &rowprep);
