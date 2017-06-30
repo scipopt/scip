@@ -215,6 +215,8 @@ elseif(LPS STREQUAL "grb")
     find_package(GUROBI REQUIRED)
 elseif(LPS STREQUAL "clp")
     find_package(CLP REQUIRED)
+elseif(LPS STREQUAL "xprs")
+    find_package(XPRESS REQUIRED)
 elseif(LPS STREQUAL "none")
     set(lpi lpi/lpi_none.c)
 else()
@@ -258,6 +260,14 @@ if(GUROBI_FOUND)
     set(LPS_LIBRARIES ${GUROBI_LIBRARIES})
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
 endif()
+
+if(XPRESS_FOUND)
+    include_directories(${XPRESS_INCLUDE_DIRS})
+    set(lpi lpi/lpi_xprs.c)
+    set(LPS_LIBRARIES ${XPRESS_LIBRARIES})
+    set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
+endif()
+
 
 # ZIMPL headers need to be copied to have the "zimpl/*.h" prefix
 if(ZIMPL)
