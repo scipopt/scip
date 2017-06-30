@@ -19,6 +19,9 @@ LINTOL=1e-04
 # absolut tolerance for checking integrality constraints 
 INTTOL=1e-04
 
+# try to access /optimi once
+ls /optimi/
+
 # check if /optimi is mounted
 MOUNTED=0
 while [ "$MOUNTED" -ne 1 ]
