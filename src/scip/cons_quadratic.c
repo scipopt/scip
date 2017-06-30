@@ -14753,6 +14753,35 @@ SCIP_RETCODE SCIPcopyRowprep(
    return SCIP_OKAY;
 }
 
+/** ensures that rowprep has space for at least given number of additional terms
+ *
+ * Useful when knowing in advance how many terms will be added.
+ */
+SCIP_RETCODE SCIPensureRowprepSize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   int                   size                /**< number of additional terms for which to alloc space in rowprep */
+)
+{
+   int oldsize;
+
+   assert(scip != NULL);
+   assert(rowprep != NULL);
+   assert(size >= 0);
+
+   if( rowprep->varssize >= rowprep->nvars + size )
+      return SCIP_OKAY;  /* already enough space left */
+
+   /* realloc vars and coefs array */
+   oldsize = rowprep->varssize;
+   rowprep->varssize = SCIPcalcMemGrowSize(scip, rowprep->nvars + size);
+
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->vars,  oldsize, rowprep->varssize) );
+   SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->coefs, oldsize, rowprep->varssize) );
+
+   return SCIP_OKAY;
+}
+
 /** prints a rowprep */
 void SCIPprintRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -14793,17 +14822,8 @@ SCIP_RETCODE SCIPaddRowprepTerm(
    if( coef == 0.0 )
       return SCIP_OKAY;
 
-   if( rowprep->varssize <= rowprep->nvars )
-   {
-      /* realloc vars and coefs array */
-      int oldsize;
-
-      oldsize = rowprep->varssize;
-      rowprep->varssize = SCIPcalcMemGrowSize(scip, rowprep->nvars + 1);
-
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->vars,  oldsize, rowprep->varssize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->coefs, oldsize, rowprep->varssize) );
-   }
+   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, 1) );
+   assert(rowprep->varssize > rowprep->nvars);
 
    rowprep->vars[rowprep->nvars] = var;
    rowprep->coefs[rowprep->nvars] = coef;
@@ -14829,17 +14849,8 @@ SCIP_RETCODE SCIPaddRowprepTerms(
    if( nvars == 0 )
       return SCIP_OKAY;
 
-   if( rowprep->varssize < rowprep->nvars + nvars )
-   {
-      /* realloc vars and coefs array */
-      int oldsize;
-
-      oldsize = rowprep->varssize;
-      rowprep->varssize = SCIPcalcMemGrowSize(scip, rowprep->nvars + nvars);
-
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->vars,  oldsize, rowprep->varssize) );
-      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &rowprep->coefs, oldsize, rowprep->varssize) );
-   }
+   SCIP_CALL( SCIPensureRowprepSize(scip, rowprep, nvars) );
+   assert(rowprep->varssize >= rowprep->nvars + nvars);
 
    BMScopyMemoryArray(rowprep->vars + rowprep->nvars, vars, nvars);
    BMScopyMemoryArray(rowprep->coefs + rowprep->nvars, coefs, nvars);

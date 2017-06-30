@@ -668,6 +668,17 @@ SCIP_RETCODE SCIPcopyRowprep(
    SCIP_ROWPREP*         source              /**< rowprep to copy */
 );
 
+/** ensures that rowprep has space for at least given number of additional terms
+ *
+ * Useful when knowing in advance how many terms will be added.
+ */
+EXTERN
+SCIP_RETCODE SCIPensureRowprepSize(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep */
+   int                   size                /**< number of additional terms for which to alloc space in rowprep */
+);
+
 /** prints a rowprep */
 EXTERN
 void SCIPprintRowprep(
