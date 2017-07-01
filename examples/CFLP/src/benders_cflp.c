@@ -217,7 +217,6 @@ SCIP_DECL_BENDERSFREE(bendersFreeCflp)
 
    for( i = 0; i < nsubproblems; i++ )
    {
-      SCIP_CALL( SCIPendProbing(scip) );
       SCIP_CALL( SCIPfree(&bendersdata->subproblems[i]) );
    }
 
@@ -488,11 +487,6 @@ SCIP_RETCODE SCIPincludeBendersCflp(
 
    /* including the default cuts for Benders' decomposition */
    SCIP_CALL( SCIPincludeBendersDefaultCuts(scip, benders) );
-
-   /* OPTIONAL: including the default cuts for Benders' decomposition */
-#if 0
-   SCIP_CALL( SCIPincludeBendersDefaultCuts(scip, benders) );
-#endif
 
    /* add cflp Benders' decomposition parameters */
    /* TODO: (optional) add Benders' decomposition specific parameters with SCIPaddTypeParam() here */
