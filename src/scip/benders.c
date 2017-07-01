@@ -607,6 +607,7 @@ SCIP_RETCODE SCIPbendersCopyInclude(
    SCIP_Bool*            valid               /**< was the copying process valid? */
    )
 {
+   SCIP_BENDERS* targetbenders;  /* the copy of the Benders' decomposition struct in the target set */
    int i;
 
    assert(benders != NULL);
@@ -620,11 +621,20 @@ SCIP_RETCODE SCIPbendersCopyInclude(
       SCIP_CALL( benders->benderscopy(set->scip, benders, valid) );
    }
 
-   /* calling the copy method for the Benders' cuts */
-   SCIPbendersSortBenderscuts(benders);
-   for( i = 0; i < benders->nbenderscuts; i++ )
+   /* if the copy was valid, then the Benders cuts are copied. */
+   if( valid )
    {
-      SCIP_CALL( SCIPbenderscutCopyInclude(benders->benderscuts[i], set) );
+      targetbenders = SCIPsetFindBenders(set, SCIPbendersGetName(benders));
+
+      /* the flag is set to indicate that the  */
+      targetbenders->iscopy = TRUE;
+
+      /* calling the copy method for the Benders' cuts */
+      SCIPbendersSortBenderscuts(benders);
+      for( i = 0; i < benders->nbenderscuts; i++ )
+      {
+         SCIP_CALL( SCIPbenderscutCopyInclude(benders->benderscuts[i], set) );
+      }
    }
 
    return SCIP_OKAY;
@@ -700,6 +710,7 @@ SCIP_RETCODE SCIPbendersCreate(
    (*benders)->noptcutsfound = 0;
    (*benders)->nfeascutsfound = 0;
    (*benders)->initialized = FALSE;
+   (*benders)->iscopy = FALSE;
    (*benders)->maxlpiterfactor = 1.0;
    (*benders)->updatefactor = SCIP_DEFAULT_UPDATEFACTOR;
    (*benders)->coreptupdated = FALSE;
