@@ -762,10 +762,10 @@ SCIP_RETCODE SCIPcleanupRowprep(
 
 /** scales a rowprep
  *
- * @return Actually applied scaling factor.
+ * @return Exponent of actually applied scaling factor, if written as 2^x.
  */
 EXTERN
-SCIP_Real SCIPscaleRowprep(
+int SCIPscaleRowprep(
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be scaled */
    SCIP_Real             factor              /**< suggested scale factor */
 );

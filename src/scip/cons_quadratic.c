@@ -14977,7 +14977,6 @@ void SCIPmergeRowprepTerms(
       if( rowprep->vars[i] == rowprep->vars[j] )
       {
          /* merge term j into term i */
-         /* TODO if sign of vars[i] is known, then can do safe rounding here */
          rowprep->coefs[i] += rowprep->coefs[j];
          ++j;
          continue;
@@ -15299,14 +15298,16 @@ SCIP_RETCODE SCIPcleanupRowprep(
       /* scale by approx. scalefactor, if minimal coef don't get large and maximal coef and rhs don't get huge by doing so (or have been so before) */
       if( mincoef * SCIPfeastol(scip) < 1.0 && !SCIPisHugeValue(scip, scalefactor * maxcoef) && !SCIPisHugeValue(scip, scalefactor * REALABS(rowprep->side)) )
       {
+         int scaleexp;
+
          /* SCIPinfoMessage(scip, NULL, "scale up by ~%g, viol=%g: ", scalefactor, myviol);
          SCIPprintRowprep(scip, rowprep, NULL); */
 
          /* SCIPscaleRowprep returns the actually applied scale factor */
-         scalefactor = SCIPscaleRowprep(rowprep, scalefactor);
-         myviol *= scalefactor;
+         scaleexp = SCIPscaleRowprep(rowprep, scalefactor);
+         myviol = ldexp(myviol, scaleexp);
 
-         /* SCIPinfoMessage(scip, NULL, "scaled up by %g, viol=%g: ", scalefactor, myviol);
+         /* SCIPinfoMessage(scip, NULL, "scaled up by %g, viol=%g: ", ldexp(1.0, scaleexp), myviol);
          SCIPprintRowprep(scip, rowprep, NULL); */
       }
    }
@@ -15332,13 +15333,15 @@ SCIP_RETCODE SCIPcleanupRowprep(
        */
       if( scalefactor < 1.0 && scalefactor * mincoef > SCIPfeastol(scip) )
       {
+         int scaleexp;
+
          /* SCIPinfoMessage(scip, NULL, "scale down by ~%g, viol=%g: ", scalefactor, myviol);
          SCIPprintRowprep(scip, rowprep, NULL); */
 
-         scalefactor = SCIPscaleRowprep(rowprep, scalefactor);
-         myviol *= scalefactor;
+         scaleexp = SCIPscaleRowprep(rowprep, scalefactor);
+         myviol = ldexp(myviol, scaleexp);
 
-         /* SCIPinfoMessage(scip, NULL, "scaled down by %g, viol=%g: ", scalefactor, myviol);
+         /* SCIPinfoMessage(scip, NULL, "scaled down by %g, viol=%g: ", ldexp(1.0, scaleexp), myviol);
          SCIPprintRowprep(scip, rowprep, NULL); */
 
          /* scaling down might bring side within eps
@@ -15377,29 +15380,34 @@ SCIP_RETCODE SCIPcleanupRowprep(
 
 /** scales a rowprep
  *
- * Assumes that coefs are sorted by absolute value in decreasing order (max coef is first).
- *
- * @return Actually applied scaling factor.
+ * @return Exponent of actually applied scaling factor, if written as 2^x.
  */
-SCIP_Real SCIPscaleRowprep(
+int SCIPscaleRowprep(
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be scaled */
    SCIP_Real             factor              /**< suggested scale factor */
 )
 {
-   SCIP_Real actfactor;
+   double v;
+   int exp;
    int i;
 
    assert(rowprep != NULL);
    assert(factor > 0.0);
 
-   actfactor = pow(2.0, ceil(log(factor)/log(2.0)));  /* TODO there are faster ways to do this */
+   /* write factor as v*2^exp with v in [0.5,1) */
+   v = frexp(factor, &exp);
+   /* adjust to v'*2^exp with v' in (0.5,1] by v'=v if v > 0.5, v'=1 if v=0.5 */
+   if( v == 0.5 )
+      --exp;
 
+   /* multiply each coefficient by 2^exp */
    for( i = 0; i < rowprep->nvars; ++i )
-      rowprep->coefs[i] *= actfactor;
+      rowprep->coefs[i] = ldexp(rowprep->coefs[i], exp);
 
-   rowprep->side *= actfactor;
+   /* multiply side by 2^exp */
+   rowprep->side = ldexp(rowprep->side, exp);
 
-   return actfactor;
+   return exp;
 }
 
 /** generates a SCIP_ROW from a rowprep */
