@@ -65,6 +65,10 @@ struct SCIP_Benders
    SCIP_Bool             cutpseudo;          /**< should Benders' cuts be generated for pseudo solutions? */
    SCIP_Bool             cutrelax;           /**< should Benders' cuts be generated for relaxation solutions? */
 
+   /* information for heuristics */
+   SCIP_Bool             iscopy;             /**< is the Benders' decomposition struct a copy */
+
+
    /* data for the Magnanti-Wong cut strengthening */
    SCIP_Bool             usemagnantiwong;    /**< Should the Magnanti-Wong cut strengthening technique be used? */
    SCIP_Bool             computerelint;      /**< Should the relative interior point be computed? */
