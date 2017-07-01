@@ -15341,10 +15341,13 @@ SCIP_RETCODE SCIPcleanupRowprep(
             SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.20g, round coefficient to %g and add constant %g\n",
                SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef, roundcoef, (coef-roundcoef) * xbnd);
             SCIPaddRowprepConstant(rowprep, (coef-roundcoef) * xbnd);
+            /*
             if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
                myviol += (roundcoef-coef)*(SCIPgetSolVal(scip, sol, var)-xbnd);
             else
                myviol -= (roundcoef-coef)*(SCIPgetSolVal(scip, sol, var)-xbnd);
+            */
+            myviol = SCIP_INVALID;
          }
          else
          {
@@ -15354,10 +15357,13 @@ SCIP_RETCODE SCIPcleanupRowprep(
              */
             SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.20g, round coefficient to %g without relaxing side (!)\n",
                SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef, roundcoef);
+            /*
             if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
                myviol += (roundcoef-coef)*SCIPgetSolVal(scip, sol, var);
             else
                myviol -= (roundcoef-coef)*SCIPgetSolVal(scip, sol, var);
+            */
+            myviol = SCIP_INVALID;
          }
          rowprep->coefs[i] = coef = roundcoef;
       }
@@ -15370,17 +15376,20 @@ SCIP_RETCODE SCIPcleanupRowprep(
    {
       if( rowprep->side > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
       {
-         myviol -= 1.1*SCIPepsilon(scip) - rowprep->side;
+         /* myviol -= 1.1*SCIPepsilon(scip) - rowprep->side; */
+         myviol = SCIP_INVALID;
          rowprep->side =  1.1*SCIPepsilon(scip);
       }
       else if( rowprep->side < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT )
       {
-         myviol -= 1.1*SCIPepsilon(scip) + rowprep->side;
+         /* myviol -= 1.1*SCIPepsilon(scip) + rowprep->side; */
+         myviol = SCIP_INVALID;
          rowprep->side = -1.1*SCIPepsilon(scip);
       }
       else
       {
-         myviol -= REALABS(rowprep->side);
+         /* myviol -= REALABS(rowprep->side); */
+         myviol = SCIP_INVALID;
          rowprep->side = 0.0;
       }
    }
@@ -15393,10 +15402,10 @@ SCIP_RETCODE SCIPcleanupRowprep(
 #endif
 
    /* if we updated myviol correctly, then it should coincide with freshly computed violation */
-   assert(SCIPisRelEQ(scip, myviol, SCIPgetRowprepViolation(scip, rowprep, sol, 'o')));
+   /* assert(SCIPisEQ(scip, myviol, SCIPgetRowprepViolation(scip, rowprep, sol, 'o'))); */
 
    if( viol != NULL )
-      *viol = myviol;
+      *viol = myviol == SCIP_INVALID ? SCIPgetRowprepViolation(scip, rowprep, sol, 'o') : myviol;
 
    return SCIP_OKAY;
 }
