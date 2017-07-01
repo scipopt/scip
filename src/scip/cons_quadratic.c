@@ -15012,9 +15012,9 @@ void SCIPmergeRowprepTerms(
 /* Cleans up and attempts to improve rowprep
  *
  * Drops small or large coefficients if coefrange is too large, if this can be done by relaxing the cut.
- * Scales coefficients up to reach minimal violation, if possible.
+ * Scales coefficients and side up to reach minimal violation, if possible.
  * Scaling is omitted if violation is < epsilon or maximal coefficient would become huge (SCIPisHuge()).
- * Scaled coefficients down if large and minimal violation is still reached.
+ * Scaled coefficients and side down if large and minimal violation is still reached.
  * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
  * Rounds side within epsilon of 0 to 0.0 or >epsilon.
  *
@@ -15042,104 +15042,36 @@ SCIP_RETCODE SCIPcleanupRowprep(
 
    assert(maxcoefrange > 1.0);   /* not much interesting otherwise */
 
-   /* initialize cutrange in case we terminate early, usually when all cut terms have been eliminated */
-   if( coefrange != NULL )
-      *coefrange = 1.0;
+   /* sort cut terms by absolute value of coefficients, from largest to smallest TODO special treatment for small cuts */
+   SCIP_CALL( SCIPallocBufferArray(scip, &abscoefs, rowprep->nvars) );
+   for( i = 0; i < rowprep->nvars; ++i )
+      abscoefs[i] = REALABS(rowprep->coefs[i]);
+   SCIPsortDownRealRealPtr(abscoefs, rowprep->coefs, (void**)rowprep->vars, rowprep->nvars);
+   SCIPfreeBufferArray(scip, &abscoefs);
+
+   /* forget about coefs that are exactly zero (unlikely to have some) */
+   while( rowprep->nvars > 0 && rowprep->coefs[rowprep->nvars-1] == 0.0 )
+      --rowprep->nvars;
+
+   maxcoefidx = 0;
+   if( rowprep->nvars > 0 )
+   {
+      maxcoef = REALABS(rowprep->coefs[0]);
+      mincoef = REALABS(rowprep->coefs[rowprep->nvars-1]);
+   }
+   else
+      mincoef = maxcoef = 1.0;
 
 #ifdef SCIP_DEBUG
-   SCIPinfoMessage(scip, NULL, "start of cleanup: ");
+   SCIPinfoMessage(scip, NULL, "starting cleanup, coefrange %g: ", maxcoef/mincoef);
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
-   /* TODO currently we don't consider scaling if all terms are eliminated */
-
-   if( rowprep->nvars == 0 )
-   {
-      if( viol != NULL )
-         *viol = SCIPgetRowprepViolation(scip, rowprep, sol, 'o');
-      return SCIP_OKAY;
-   }
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &abscoefs, rowprep->nvars) );
-
-   for( i = 0; i < rowprep->nvars; ++i )
-   {
-      /* coefficients smaller than epsilon are rounded to 0.0 when added to row
-       * further, coefficients very close to integral values are rounded to integers when added to LP
-       * both cases can be problematic if variable value is very large (bad numerics)
-       * thus, we anticipate by rounding coef here, but also modify constant so that cut is still valid (if possible)
-       * i.e., bound coef[i]*x by round(coef[i])*x + (coef[i]-round(coef[i])) * bound(x)
-       * if required bound of x is not finite, then do nothing
-       */
-      coef = rowprep->coefs[i];
-      roundcoef = SCIPround(scip, coef);
-      if( coef != roundcoef && SCIPisEQ(scip, coef, roundcoef) ) /*lint !e777*/
-      {
-         SCIP_Real xbnd;
-
-         var = rowprep->vars[i];
-         if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
-            if( rowprep->local )
-               xbnd = coef > roundcoef ? SCIPvarGetLbLocal(var)  : SCIPvarGetUbLocal(var);
-            else
-               xbnd = coef > roundcoef ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var);
-         else
-            if( rowprep->local )
-               xbnd = coef > roundcoef ? SCIPvarGetUbLocal(var)  : SCIPvarGetLbLocal(var);
-            else
-               xbnd = coef > roundcoef ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var);
-
-         if( !SCIPisInfinity(scip, REALABS(xbnd)) )
-         {
-            /* if there is a bound, then relax row side so rounding coef will not introduce an error */
-            SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.20g, round coefficient to %g and add constant %g\n",
-               SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef, roundcoef, (coef-roundcoef) * xbnd);
-            SCIPaddRowprepConstant(rowprep, (coef-roundcoef) * xbnd);
-         }
-         else
-         {
-            /* if there is no bound, then we make the coef integral, too, even though this will introduce an error
-             * however, SCIP_ROW would do this anyway, but doing this here might eliminate some epsilon coefs (so they don't determine mincoef below)
-             * and helps to get a more accurate row violation value
-             */
-            SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.20g, round coefficient to %g without relaxing side (!)\n",
-               SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef, roundcoef);
-         }
-         rowprep->coefs[i] = coef = roundcoef;
-      }
-
-      abscoefs[i] = REALABS(coef);
-   }
-
-   /* sort cut terms by absolute value of coefficients, from largest to smallest */
-   SCIPsortDownRealRealPtr(abscoefs, rowprep->coefs, (void**)rowprep->vars, rowprep->nvars);
-
-   SCIPfreeBufferArray(scip, &abscoefs);
-
-   /* if maximal coefficient is zero, then all coefficients are zero */
-   if( rowprep->coefs[0] == 0.0 )
-   {
-      rowprep->nvars = 0;
-      if( viol != NULL )
-         *viol = SCIPgetRowprepViolation(scip, rowprep, sol, 'o');
-      return SCIP_OKAY;
-   }
-
-   /* forget about coefs that became zero by above loop */
-   while( rowprep->nvars > 0 && rowprep->coefs[rowprep->nvars-1] == 0.0 )
-      --rowprep->nvars;
-   /* if no coefs left, then return */
-   if( rowprep->nvars == 0 )
-   {
-      if( viol != NULL )
-         *viol = SCIPgetRowprepViolation(scip, rowprep, sol, 'o');
-      return SCIP_OKAY;
-   }
-
-   maxcoefidx = 0;
-   maxcoef = rowprep->coefs[0];
-   mincoef = rowprep->coefs[rowprep->nvars-1];
-   while( REALABS(maxcoef / mincoef) > maxcoefrange  )
+   /* eliminate minimal or maximal coefs as long as coef range is too large
+    * this is likely going to eliminate coefs that are within eps of 0.0
+    * if not, then we do so after scaling (or should we enforce this here?)
+    */
+   while( maxcoef / mincoef > maxcoefrange  )
    {
       SCIP_Real loss[2];
       SCIP_Real ref;
@@ -15257,8 +15189,11 @@ SCIP_RETCODE SCIPcleanupRowprep(
    }
 
    if( coefrange != NULL )
-      *coefrange = REALABS(maxcoef / mincoef);
+      *coefrange = maxcoef / mincoef;
 
+   /* if maximal coefs were removed, then there are now 0's in the beginning of the coefs array
+    * -> move all remaining coefs and vars up front
+    */
    if( maxcoefidx > 0 )
    {
       for( i = maxcoefidx; i < rowprep->nvars; ++i )
@@ -15269,24 +15204,11 @@ SCIP_RETCODE SCIPcleanupRowprep(
       rowprep->nvars -= maxcoefidx;
    }
 
-   /* SCIP_ROW handling will replace a side close to 0 by 0.0, even if that makes the row more restrictive
-    * we thus relax the side here so that it will either be 0 now or will not be rounded to 0 later
-    */
-   if( SCIPisZero(scip, rowprep->side) )
-   {
-      if( rowprep->side > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
-         rowprep->side =  1.1*SCIPepsilon(scip);
-      else if( rowprep->side < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT )
-         rowprep->side = -1.1*SCIPepsilon(scip);
-      else
-         rowprep->side = 0.0;
-   }
-
    myviol = SCIPgetRowprepViolation(scip, rowprep, sol, 'o');
    assert(myviol >= 0.0);
 
 #ifdef SCIP_DEBUG
-   SCIPinfoMessage(scip, NULL, "cleaned up coefs, viol %g: ", myviol);
+   SCIPinfoMessage(scip, NULL, "improved coefrange to %g, viol %g: ", maxcoef / mincoef, myviol);
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
@@ -15347,30 +15269,6 @@ SCIP_RETCODE SCIPcleanupRowprep(
 
          /* SCIPinfoMessage(scip, NULL, "scaled down by %g, viol=%g: ", ldexp(1.0, scaleexp), myviol);
          SCIPprintRowprep(scip, rowprep, NULL); */
-
-         /* scaling down might bring side within eps
-          * relax it to 0 or above eps again, and update viol
-          */
-         if( SCIPisZero(scip, rowprep->side) )
-         {
-            if( rowprep->side > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
-            {
-               myviol -= 1.1*SCIPepsilon(scip) - rowprep->side;
-               rowprep->side =  1.1*SCIPepsilon(scip);
-            }
-            else if( rowprep->side < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT )
-            {
-               myviol -= 1.1*SCIPepsilon(scip) + rowprep->side;
-               rowprep->side = -1.1*SCIPepsilon(scip);
-            }
-            else
-            {
-               myviol -= REALABS(rowprep->side);
-               rowprep->side = 0.0;
-            }
-            if( myviol < 0.0 )
-               myviol = 0.0;
-         }
       }
    }
 
@@ -15379,7 +15277,95 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
-   /* TODO scaling might bring coefficients eps-close to integral values again, which we have only cleaned up before scaling */
+   /* Coefficients smaller than epsilon are rounded to 0.0 when added to row and
+    * coefficients very close to integral values are rounded to integers when added to LP.
+    * Both cases can be problematic if variable value is very large (bad numerics).
+    * Thus, we anticipate by rounding coef here, but also modify constant so that cut is still valid (if possible),
+    * i.e., bound coef[i]*x by round(coef[i])*x + (coef[i]-round(coef[i])) * bound(x).
+    * If the required bound of x is not finite, then only round coef (introduces an error).
+    *
+    * Changing coefs by up to eps could actually change the coefrange slighly.
+    * We ignore updating coefrange here.
+    */
+   for( i = 0; i < rowprep->nvars; ++i )
+   {
+      coef = rowprep->coefs[i];
+      roundcoef = SCIPround(scip, coef);
+      if( coef != roundcoef && SCIPisEQ(scip, coef, roundcoef) ) /*lint !e777*/
+      {
+         SCIP_Real xbnd;
+
+         var = rowprep->vars[i];
+         if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
+            if( rowprep->local )
+               xbnd = coef > roundcoef ? SCIPvarGetLbLocal(var)  : SCIPvarGetUbLocal(var);
+            else
+               xbnd = coef > roundcoef ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var);
+         else
+            if( rowprep->local )
+               xbnd = coef > roundcoef ? SCIPvarGetUbLocal(var)  : SCIPvarGetLbLocal(var);
+            else
+               xbnd = coef > roundcoef ? SCIPvarGetUbGlobal(var) : SCIPvarGetLbGlobal(var);
+
+         if( !SCIPisInfinity(scip, REALABS(xbnd)) )
+         {
+            /* if there is a bound, then relax row side so rounding coef will not introduce an error */
+            SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.20g, round coefficient to %g and add constant %g\n",
+               SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef, roundcoef, (coef-roundcoef) * xbnd);
+            SCIPaddRowprepConstant(rowprep, (coef-roundcoef) * xbnd);
+            if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
+               myviol += (roundcoef-coef)*(SCIPgetSolVal(scip, sol, var)-xbnd);
+            else
+               myviol -= (roundcoef-coef)*(SCIPgetSolVal(scip, sol, var)-xbnd);
+         }
+         else
+         {
+            /* if there is no bound, then we make the coef integral, too, even though this will introduce an error
+             * however, SCIP_ROW would do this anyway, but doing this here might eliminate some epsilon coefs (so they don't determine mincoef below)
+             * and helps to get a more accurate row violation value
+             */
+            SCIPdebugMsg(scip, "var <%s> [%g,%g] has almost integral coef %.20g, round coefficient to %g without relaxing side (!)\n",
+               SCIPvarGetName(var), SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), coef, roundcoef);
+            if( rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
+               myviol += (roundcoef-coef)*SCIPgetSolVal(scip, sol, var);
+            else
+               myviol -= (roundcoef-coef)*SCIPgetSolVal(scip, sol, var);
+         }
+         rowprep->coefs[i] = coef = roundcoef;
+      }
+   }
+
+   /* SCIP_ROW handling will replace a side close to 0 by 0.0, even if that makes the row more restrictive
+    * we thus relax the side here so that it will either be 0 now or will not be rounded to 0 later
+    */
+   if( SCIPisZero(scip, rowprep->side) )
+   {
+      if( rowprep->side > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT )
+      {
+         myviol -= 1.1*SCIPepsilon(scip) - rowprep->side;
+         rowprep->side =  1.1*SCIPepsilon(scip);
+      }
+      else if( rowprep->side < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT )
+      {
+         myviol -= 1.1*SCIPepsilon(scip) + rowprep->side;
+         rowprep->side = -1.1*SCIPepsilon(scip);
+      }
+      else
+      {
+         myviol -= REALABS(rowprep->side);
+         rowprep->side = 0.0;
+      }
+   }
+   if( myviol < 0.0 )
+      myviol = 0.0;
+
+#ifdef SCIP_DEBUG
+   SCIPinfoMessage(scip, NULL, "adjusted almost-integral coefs and sides, viol %g: ", myviol);
+   SCIPprintRowprep(scip, rowprep, NULL);
+#endif
+
+   /* if we updated myviol correctly, then it should coincide with freshly computed violation */
+   assert(SCIPisRelEQ(scip, myviol, SCIPgetRowprepViolation(scip, rowprep, sol, 'o')));
 
    if( viol != NULL )
       *viol = myviol;
