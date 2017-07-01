@@ -15011,10 +15011,12 @@ void SCIPmergeRowprepTerms(
 
 /* Cleans up and attempts to improve rowprep
  *
- * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
  * Drops small or large coefficients if coefrange is too large, if this can be done by relaxing the cut.
- * Scales coefficients to reach minimal violation, if possible.
+ * Scales coefficients up to reach minimal violation, if possible.
  * Scaling is omitted if violation is < epsilon or maximal coefficient would become huge (SCIPisHuge()).
+ * Scaled coefficients down if large and minimal violation is still reached.
+ * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
+ * Rounds side within epsilon of 0 to 0.0 or >epsilon.
  *
  * After return, the terms in the rowprep will be sorted by absolute value of coefficient, in decreasing order.
  */
@@ -15268,7 +15270,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
    }
 
    /* SCIP_ROW handling will replace a side close to 0 by 0.0, even if that makes the row more restrictive
-    * to avoid this, relax the side so that it is not moved to 0.0 anymore
+    * we thus relax the side here so that it will either be 0 now or will not be rounded to 0 later
     */
    if( SCIPisZero(scip, rowprep->side) )
    {
@@ -15276,6 +15278,8 @@ SCIP_RETCODE SCIPcleanupRowprep(
          rowprep->side =  1.1*SCIPepsilon(scip);
       else if( rowprep->side < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT )
          rowprep->side = -1.1*SCIPepsilon(scip);
+      else
+         rowprep->side = 0.0;
    }
 
    myviol = SCIPgetRowprepViolation(scip, rowprep, sol, 'o');
@@ -15345,7 +15349,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
          SCIPprintRowprep(scip, rowprep, NULL); */
 
          /* scaling down might bring side within eps
-          * relax it above eps again, and update viol
+          * relax it to 0 or above eps again, and update viol
           */
          if( SCIPisZero(scip, rowprep->side) )
          {
@@ -15358,6 +15362,11 @@ SCIP_RETCODE SCIPcleanupRowprep(
             {
                myviol -= 1.1*SCIPepsilon(scip) + rowprep->side;
                rowprep->side = -1.1*SCIPepsilon(scip);
+            }
+            else
+            {
+               myviol -= REALABS(rowprep->side);
+               rowprep->side = 0.0;
             }
             if( myviol < 0.0 )
                myviol = 0.0;

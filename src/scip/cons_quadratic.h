@@ -743,9 +743,12 @@ void SCIPmergeRowprepTerms(
 
 /* Cleans up and attempts to improve rowprep
  *
- * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
  * Drops small or large coefficients if coefrange is too large, if this can be done by relaxing the cut.
- * Scales coefficients to reach minimal violation, if possible.
+ * Scales coefficients up to reach minimal violation, if possible.
+ * Scaling is omitted if violation is < epsilon or maximal coefficient would become huge (SCIPisHuge()).
+ * Scaled coefficients down if large and minimal violation is still reached.
+ * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
+ * Rounds side within epsilon of 0 to 0.0 or >epsilon.
  *
  * After return, the terms in the rowprep will be sorted by absolute value of coefficient, in decreasing order.
  */
