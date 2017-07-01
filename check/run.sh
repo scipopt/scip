@@ -19,17 +19,14 @@ LINTOL=1e-04
 # absolut tolerance for checking integrality constraints 
 INTTOL=1e-04
 
-# check if /optimi is mounted
-MOUNTED=0
-while [ "$MOUNTED" -ne 1 ]
-do
-    if echo `mount | grep optimi` | grep -q "optimi";
-    then
-        MOUNTED=1
-    else
-        sleep 1
-    fi
-done
+# we need to ensure that all libraries we load through the network are available.
+# therefore, we wait for one additional minute if the node runs for 1 minute or less.
+read -r -a runtime <<< `top -b -n 1 | head -n 1`
+
+if [ ${runtime[5]} == "min," ] && [ ${runtime[4]} -lt 2 ] ;
+then
+    sleep 60
+fi
 
 # check if tmp-path exists
 if test ! -d $CLIENTTMPDIR/${USER}-tmpdir
