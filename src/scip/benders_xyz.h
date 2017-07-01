@@ -46,7 +46,7 @@ SCIP_RETCODE SCIPincludeBendersXyz(
  * @{
  */
 
-/** TODO: add public methods to this group for documentation purposes
+/** TODO: add public methods to this group for documentation purposes */
 
 /* @} */
 

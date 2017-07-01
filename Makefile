@@ -622,6 +622,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_rapidlearning.o \
 			scip/sepa_strongcg.o \
 			scip/sepa_zerohalf.o \
+			scip/benders_default.o \
 			scip/benderscut_opt.o \
 			scip/benderscut_feas.o \
 			scip/misc_benders.o

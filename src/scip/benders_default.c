@@ -97,14 +97,11 @@ SCIP_RETCODE createVariableMappings(
 {
    SCIP_BENDERSDATA* bendersdata;
    SCIP_VAR** vars;
-   SCIP_VAR** subvars;
    int nsubproblems;
    int nvars;
-   int nsubvars;
-   char* varname;
+   char varname[SCIP_MAXSTRLEN];
    int i;
    int j;
-   int k;
 
    assert(scip != NULL);
    assert(benders != NULL);
@@ -141,7 +138,7 @@ SCIP_RETCODE createVariableMappings(
       SCIP_CALL( SCIPvarGetOrigvarSum(&vars[i], &scalar, &constant) );
 
       /* retreiving the var name */
-      varname = SCIPvarGetName(vars[i]);
+      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s", SCIPvarGetName(vars[i]));
 
       /* retreiving the subproblem variable for the given master variable */
       for( j = 0; j < nsubproblems; j++ )
@@ -160,7 +157,7 @@ SCIP_RETCODE createVariableMappings(
       }
 
       /* storing the mapping of the master variable to the variable index */
-      SCIP_CALL( SCIPhashmapInsert(bendersdata->mastervartosubindex, vars[i], i) );
+      SCIP_CALL( SCIPhashmapInsert(bendersdata->mastervartosubindex, vars[i], (void*)(size_t) i) );
    }
 
    return SCIP_OKAY;
@@ -193,12 +190,12 @@ static
 SCIP_DECL_BENDERSFREE(bendersFreeDefault)
 {  /*lint --e{715}*/
    SCIP_BENDERSDATA* bendersdata;
+   int i;
 
    assert(scip != NULL);
    assert(benders != NULL);
-   assert(*benders != NULL);
 
-   bendersdata = SCIPbendersGetData(*benders);
+   bendersdata = SCIPbendersGetData(benders);
 
    assert(bendersdata != NULL);
 
@@ -321,6 +318,7 @@ SCIP_DECL_BENDERSGETVAR(bendersGetvarDefault)
    SCIP_VAR* origvar;
    SCIP_Real scalar;
    SCIP_Real constant;
+   SCIP_RETCODE retcode;
 
    assert(scip != NULL);
    assert(benders != NULL);
@@ -333,7 +331,8 @@ SCIP_DECL_BENDERSGETVAR(bendersGetvarDefault)
       origvar = var;
       /* The variable needs to be transformed back into an original variable. If the variable is already original, then
        * this function just returns the same variable */
-      SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+      retcode = SCIPvarGetOrigvarSum(&origvar, &scalar, &constant);
+      assert(retcode == SCIP_OKAY);
 
       /* using the original variable, the master variable can be retrieved from the hash map */
       mappedvar = (SCIP_VAR*) SCIPhashmapGetImage(bendersdata->subvartomastervar, origvar);
@@ -344,12 +343,13 @@ SCIP_DECL_BENDERSGETVAR(bendersGetvarDefault)
       origvar = var;
       /* The variable needs to be transformed back into an original variable. If the variable is already original, then
        * this function just returns the same variable */
-      SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+      retcode = SCIPvarGetOrigvarSum(&origvar, &scalar, &constant);
+      assert(retcode == SCIP_OKAY);
 
       /* we are requesting the subproblem variable for a master problem variable */
       /* The master problem variable is a transformed variable. The original variable is not required. */
       /* NOTE: Currently the original variable is being used. This may not be correct and should be the transformed variable. */
-      masterindex = (int) SCIPhashmapGetImage(bendersdata->mastervartosubindex, origvar);
+      masterindex = (int)(size_t) SCIPhashmapGetImage(bendersdata->mastervartosubindex, origvar);
       mappedvar = bendersdata->subproblemvars[probnumber][masterindex];
    }
 

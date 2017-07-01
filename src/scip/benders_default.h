@@ -38,6 +38,7 @@ extern "C" {
 EXTERN
 SCIP_RETCODE SCIPincludeBendersDefault(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP**                subproblems,        /**< the Benders' decomposition subproblems */
    int                   nsubproblems        /**< the number of subproblems in the Benders' decomposition */
    );
 
@@ -46,7 +47,7 @@ SCIP_RETCODE SCIPincludeBendersDefault(
  * @{
  */
 
-/** TODO: add public methods to this group for documentation purposes
+/** TODO: add public methods to this group for documentation purposes */
 
 /* @} */
 
