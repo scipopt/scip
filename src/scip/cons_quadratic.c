@@ -15042,12 +15042,40 @@ SCIP_RETCODE SCIPcleanupRowprep(
 
    assert(maxcoefrange > 1.0);   /* not much interesting otherwise */
 
-   /* sort cut terms by absolute value of coefficients, from largest to smallest TODO special treatment for small cuts */
-   SCIP_CALL( SCIPallocBufferArray(scip, &abscoefs, rowprep->nvars) );
-   for( i = 0; i < rowprep->nvars; ++i )
-      abscoefs[i] = REALABS(rowprep->coefs[i]);
-   SCIPsortDownRealRealPtr(abscoefs, rowprep->coefs, (void**)rowprep->vars, rowprep->nvars);
-   SCIPfreeBufferArray(scip, &abscoefs);
+   /* sort cut terms by absolute value of coefficients, from largest to smallest (special treatment for small cuts) */
+   switch( rowprep->nvars )
+   {
+      case 0:
+      case 1:
+         break;
+
+      case 2:
+      {
+         if( REALABS(rowprep->coefs[0]) < REALABS(rowprep->coefs[1]) )
+         {
+            SCIP_Real tmp1;
+            SCIP_VAR* tmp2;
+
+            tmp1 = rowprep->coefs[0];
+            rowprep->coefs[0] = rowprep->coefs[1];
+            rowprep->coefs[1] = tmp1;
+
+            tmp2 = rowprep->vars[0];
+            rowprep->vars[0] = rowprep->vars[1];
+            rowprep->vars[1] = tmp2;
+         }
+         break;
+      }
+
+      default :
+      {
+         SCIP_CALL( SCIPallocBufferArray(scip, &abscoefs, rowprep->nvars) );
+         for( i = 0; i < rowprep->nvars; ++i )
+            abscoefs[i] = REALABS(rowprep->coefs[i]);
+         SCIPsortDownRealRealPtr(abscoefs, rowprep->coefs, (void**)rowprep->vars, rowprep->nvars);
+         SCIPfreeBufferArray(scip, &abscoefs);
+      }
+   }
 
    /* forget about coefs that are exactly zero (unlikely to have some) */
    while( rowprep->nvars > 0 && rowprep->coefs[rowprep->nvars-1] == 0.0 )
