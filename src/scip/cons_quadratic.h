@@ -723,6 +723,11 @@ void SCIPaddRowprepConstant(
    SCIP_Real             constant            /**< constant value to be added */
 );
 
+#ifdef NDEBUG
+#define SCIPaddRowprepSide(rowprep, sideadd)  ((rowprep)->side += (sideadd))
+#define SCIPaddRowprepConstant(rowprep, constant)  SCIPaddRowprepSide(rowprep, -(constant))
+#endif
+
 EXTERN
 SCIP_Real SCIPgetRowprepViolation(
    SCIP*                 scip,               /**< SCIP data structure */

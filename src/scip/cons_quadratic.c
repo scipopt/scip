@@ -14859,6 +14859,11 @@ SCIP_RETCODE SCIPaddRowprepTerms(
    return SCIP_OKAY;
 }
 
+#ifdef NDEBUG
+#undef SCIPaddRowprepSide
+#undef SCIPaddRowprepConstant
+#endif
+
 /** adds constant value to side of rowprep */
 void SCIPaddRowprepSide(
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
