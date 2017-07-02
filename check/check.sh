@@ -171,6 +171,7 @@ do
 		export SOLNAME=$SOLCHECKFILE
                 export TIMELIMIT
 		export CLIENTTMPDIR
+		export MOUNTCHECK
 		export CHECKERPATH=$SCIPPATH/solchecker
 
 		echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT

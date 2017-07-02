@@ -19,20 +19,36 @@ LINTOL=1e-04
 # absolut tolerance for checking integrality constraints 
 INTTOL=1e-04
 
-# try to access /optimi once
-ls /optimi/
+# check whether /optimi is mounted if we submit jobs to the ZIB cluster
+if [ "$MOUNTCHECK" == "true" ]
+then
+  # access /optimi once to force a mount
+  ls /optimi/
 
-# check if /optimi is mounted
-MOUNTED=0
-while [ "$MOUNTED" -ne 1 ]
-do
-    if echo `mount | grep optimi` | grep -q "optimi";
-    then
-        MOUNTED=1
-    else
-        sleep 1
-    fi
-done
+  # check if /optimi is mounted
+  MOUNTED=0
+
+  # count number if fails ans abort to avoid an endles loop
+  FAILED=0
+
+  while [ "$MOUNTED" -ne 1 ]
+  do
+      # stop if the system does not mount /optimi for ~10 minutes
+      if [ "$FAILED" -eq 600 ]
+      then
+	exit 1
+      fi
+
+      if echo `mount | grep optimi` | grep -q "optimi";
+      then
+	  MOUNTED=1
+      else
+          ((FAILED++))
+          echo $FAILED
+	  sleep 1
+      fi
+  done
+fi
 
 # check if tmp-path exists
 if test ! -d $CLIENTTMPDIR/${USER}-tmpdir
