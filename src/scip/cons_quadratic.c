@@ -14910,9 +14910,9 @@ SCIP_Real SCIPgetRowprepViolation(
       /* Loose variable have the best bound as LP solution value.
        * HOWEVER, they become column variables when they are added to a row (via SCIPaddVarsToRow below).
        * When this happens, their LP solution value changes to 0.0!
-       * So when calculating the row activity, we treat loose variable as if they were already column variables.
+       * So when calculating the row activity for an LP solution, we treat loose variable as if they were already column variables.
        */
-      if( SCIPvarGetStatus(rowprep->vars[i]) != SCIP_VARSTATUS_LOOSE )
+      if( sol != NULL || SCIPvarGetStatus(rowprep->vars[i]) != SCIP_VARSTATUS_LOOSE )
          activity += rowprep->coefs[i] * SCIPgetSolVal(scip, sol, rowprep->vars[i]);
    }
 
