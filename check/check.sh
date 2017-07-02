@@ -37,9 +37,10 @@ MAXJOBS=${20}
 VISUALIZE=${21}
 PERMUTE=${22}
 SEEDS=${23}
+MOUNTCHECK=${24}
 
 # check if all variables defined (by checking the last one)
-if test -z $SEEDS
+if test -z $MOUNTCHECK
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -66,6 +67,7 @@ then
     echo "VISUALIZE     = $VISUALIZE"
     echo "PERMUTE       = $PERMUTE"
     echo "SEEDS         = $SEEDS"
+    echo "MOUNTCHECK    = $MOUNTCHECK"
     exit 1;
 fi
 

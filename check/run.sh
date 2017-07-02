@@ -23,7 +23,7 @@ INTTOL=1e-04
 if [ "$MOUNTCHECK" == "true" ]
 then
   # access /optimi once to force a mount
-  ls /optimi/
+  ls /optimi/ >/dev/null 2>&1
 
   # check if /optimi is mounted
   MOUNTED=0
