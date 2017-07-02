@@ -44,7 +44,6 @@ then
 	  MOUNTED=1
       else
           ((FAILED++))
-          echo $FAILED
 	  sleep 1
       fi
   done
