@@ -53,7 +53,7 @@ set(EXPRINT cppad CACHE STRING "options for expression interpreter")  #create th
 set_property(CACHE EXPRINT PROPERTY STRINGS none cppad )  #define list of values GUI will offer for the variable
 
 set(LPS spx CACHE STRING "options for LP solver")  #create the variable
-set_property(CACHE LPS PROPERTY STRINGS spx cpx grb )  #define list of values GUI will offer for the variable
+set_property(CACHE LPS PROPERTY STRINGS spx cpx grb glop )  #define list of values GUI will offer for the variable
 
 #set options for memory management
 if( NOBLKBUFMEM )
@@ -212,10 +212,14 @@ if(LPS STREQUAL "spx")
     find_package(SoPlex REQUIRED CONFIG)
 elseif(LPS STREQUAL "cpx")
     find_package(CPLEX REQUIRED)
+elseif(LPS STREQUAL "glop")
+    find_package(GLOP REQUIRED)
 elseif(LPS STREQUAL "grb")
     find_package(GUROBI REQUIRED)
 elseif(LPS STREQUAL "clp")
     find_package(CLP REQUIRED)
+elseif(LPS STREQUAL "xprs")
+    find_package(XPRESS REQUIRED)
 elseif(LPS STREQUAL "none")
     set(lpi lpi/lpi_none.c)
 else()
@@ -253,12 +257,27 @@ if(CPLEX_FOUND)
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
 endif()
 
+if(GLOP_FOUND)
+    include_directories(${GLOP_INCLUDE_DIRS})
+    set(lpi lpi/lpi_glop.cpp)
+    set(LPS_LIBRARIES ${GLOP_LIBRARIES})
+    set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
+endif()
+
 if(GUROBI_FOUND)
     include_directories(${GUROBI_INCLUDE_DIRS})
     set(lpi lpi/lpi_grb.c)
     set(LPS_LIBRARIES ${GUROBI_LIBRARIES})
     set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
 endif()
+
+if(XPRESS_FOUND)
+    include_directories(${XPRESS_INCLUDE_DIRS})
+    set(lpi lpi/lpi_xprs.c)
+    set(LPS_LIBRARIES ${XPRESS_LIBRARIES})
+    set(LPS_PIC_LIBRARIES ${LPS_LIBRARIES})
+endif()
+
 
 # ZIMPL headers need to be copied to have the "zimpl/*.h" prefix
 if(ZIMPL)
