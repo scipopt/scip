@@ -8581,7 +8581,7 @@ SCIP_RETCODE separatePoint(
 
    row = NULL;
    /* loop over both sides of each constraint */
-   for( c = 0; c < nconss; c = (violside == SCIP_SIDETYPE_LEFT ? c : c+1), violside = (violside == SCIP_SIDETYPE_LEFT ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT) )
+   for( c = 0, violside = SCIP_SIDETYPE_LEFT; c < nconss; c = (violside == SCIP_SIDETYPE_LEFT ? c : c+1), violside = (violside == SCIP_SIDETYPE_LEFT ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT) )
    {
       assert(conss != NULL);
       consdata = SCIPconsGetData(conss[c]);
