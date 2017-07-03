@@ -28,7 +28,7 @@ then
   # check if /optimi is mounted
   MOUNTED=0
 
-  # count number if fails ans abort to avoid an endles loop
+  # count number of fails and abort after 10 min to avoid an endless loop
   FAILED=0
 
   while [ "$MOUNTED" -ne 1 ]
@@ -36,15 +36,16 @@ then
       # stop if the system does not mount /optimi for ~10 minutes
       if [ "$FAILED" -eq 600 ]
       then
-	exit 1
+          exit 1
       fi
 
       if echo `mount | grep optimi` | grep -q "optimi";
       then
-	  MOUNTED=1
+          MOUNTED=1
       else
           ((FAILED++))
-	  sleep 1
+          echo "/optimi is not mounted yet, waiting 1 second"
+          sleep 1
       fi
   done
 fi
