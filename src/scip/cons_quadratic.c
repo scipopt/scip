@@ -15316,9 +15316,6 @@ SCIP_RETCODE SCIPcleanupRowprep(
     * Thus, we anticipate by rounding coef here, but also modify constant so that cut is still valid (if possible),
     * i.e., bound coef[i]*x by round(coef[i])*x + (coef[i]-round(coef[i])) * bound(x).
     * If the required bound of x is not finite, then only round coef (introduces an error).
-    *
-    * Changing coefs by up to eps could actually change the coefrange slighly.
-    * We ignore updating coefrange here.
     */
    for( i = 0; i < rowprep->nvars; ++i )
    {
@@ -15373,6 +15370,22 @@ SCIP_RETCODE SCIPcleanupRowprep(
          rowprep->coefs[i] = coef = roundcoef;
       }
    }
+
+   /* forget about coefs that became exactly zero by the above step */
+   while( rowprep->nvars > 0 && rowprep->coefs[rowprep->nvars-1] == 0.0 )
+      --rowprep->nvars;
+
+   /* Changing coefs by up to eps in the above for-loop could change the coefrange.
+    * We only consider a new mincoef here in case we set coefs to 0 (the rest are just eps-changes).
+    */
+   if( rowprep->nvars > 0 )
+   {
+      mincoef = REALABS(rowprep->coefs[rowprep->nvars-1]);
+      if( coefrange != NULL )
+         *coefrange = maxcoef / mincoef;
+   }
+   else if( coefrange != NULL )
+      *coefrange = 1.0;
 
    /* SCIP_ROW handling will replace a side close to 0 by 0.0, even if that makes the row more restrictive
     * we thus relax the side here so that it will either be 0 now or will not be rounded to 0 later
