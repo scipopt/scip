@@ -55,9 +55,10 @@ REOPT=${22}
 OPTCOMMAND=${23}
 SETCUTOFF=${24}
 VISUALIZE=${25}
+MOUNTCHECK=${26}
 
 # check if all variables defined (by checking the last one)
-if test -z $VISUALIZE
+if test -z $MOUNTCHECK
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -85,6 +86,7 @@ then
     echo "OPTCOMMAND    = $OPTCOMMAND"
     echo "SETCUTOFF     = $SETCUTOFF"
     echo "VISUALIZE     = $VISUALIZE"
+    echo "MOUNTCHECK    = $MOUNTCHECK"
     exit 1;
 fi
 
@@ -189,6 +191,7 @@ do
 		    export CHECKERPATH=$SCIPPATH/solchecker
 		    export SETFILE
 		    export TIMELIMIT
+		    export MOUNTCHECK
 		    export SRUN="srun --cpu_bind=cores "
 		    sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
 		else
