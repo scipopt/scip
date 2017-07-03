@@ -39,7 +39,7 @@ then
           exit 1
       fi
 
-      if echo `mount | grep optimi` | grep -q "optimi";
+      if mount | grep -q optimi ;
       then
           MOUNTED=1
       else
