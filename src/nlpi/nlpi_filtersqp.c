@@ -813,7 +813,7 @@ SCIP_RETCODE processSolveOutcome(
       case 4: /* terminate at point with h(x) <= eps (constraint violation below epsilon) but QP infeasible */
          assert(problem->rstat[4] <= problem->feastol); /* should be feasible */
          problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
-         problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
+         problem->termstat =  SCIP_NLPTERMSTAT_NUMERR;
          problem->warmstart = TRUE;
          break;
       case 5: /* termination with rho < eps (trust region radius below epsilon) */
@@ -821,7 +821,7 @@ SCIP_RETCODE processSolveOutcome(
             problem->solstat = SCIP_NLPSOLSTAT_FEASIBLE;
          else
             problem->solstat = SCIP_NLPSOLSTAT_UNKNOWN;
-         problem->termstat =  SCIP_NLPTERMSTAT_OKAY;
+         problem->termstat =  SCIP_NLPTERMSTAT_NUMERR;
          problem->warmstart = TRUE;
          break;
       case 6: /* termination with iter > max_iter */
