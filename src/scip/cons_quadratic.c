@@ -89,6 +89,14 @@
 /* scaling factor for gauge function */
 #define GAUGESCALE 0.99999
 
+#define ROWPREP_SCALEUP_VIOLNONZERO    (10.0*SCIPepsilon(scip))    /**< minimal violation for considering up-scaling of rowprep (we want to avoid upscaling very small violations) */
+#define ROWPREP_SCALEUP_MINVIOLFACTOR  2.0                         /**< scale up will target a violation of ~MINVIOLFACTOR*minviol, where minviol is given by caller */
+#define ROWPREP_SCALEUP_MAXMINCOEF     (1.0 / SCIPfeastol(scip))   /**< scale up only if min. coef is below this number (already before scaling) */
+#define ROWPREP_SCALEUP_MAXMAXCOEF     SCIPgetHugeValue(scip)      /**< scale up only if max. coef will not exceed this number by scaling */
+#define ROWPREP_SCALEUP_MAXSIDE        SCIPgetHugeValue(scip)      /**< scale up only if side will not exceed this number by scaling */
+#define ROWPREP_SCALEDOWN_MINMAXCOEF   (1.0 / SCIPfeastol(scip))   /**< scale down if max. coef is at least this number (before scaling) */
+#define ROWPREP_SCALEDOWN_MINCOEF      SCIPfeastol(scip)           /**< scale down only if min. coef does not drop below this number by scaling */
+
 /*
  * Data structures
  */
@@ -15245,17 +15253,17 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIPprintRowprep(scip, rowprep, NULL);
 #endif
 
-   if( myviol < minviol && myviol >= 10.0*SCIPepsilon(scip) )
+   if( myviol < minviol && myviol >= ROWPREP_SCALEUP_VIOLNONZERO )
    {
       /* if violation is sufficiently positive (>10*eps), but has not reached minviol,
        * then consider scaling up to reach ~2*minviol
        */
       SCIP_Real scalefactor;
 
-      scalefactor = 2.0 * minviol / myviol;
+      scalefactor = ROWPREP_SCALEUP_MINVIOLFACTOR * minviol / myviol;
 
-      /* scale by approx. scalefactor, if minimal coef don't get large and maximal coef and rhs don't get huge by doing so (or have been so before) */
-      if( mincoef * SCIPfeastol(scip) < 1.0 && !SCIPisHugeValue(scip, scalefactor * maxcoef) && !SCIPisHugeValue(scip, scalefactor * REALABS(rowprep->side)) )
+      /* scale by approx. scalefactor, if minimal coef is not so large yet and maximal coef and rhs don't get huge by doing so (or have been so before) */
+      if( mincoef < ROWPREP_SCALEUP_MAXMINCOEF && scalefactor * maxcoef < ROWPREP_SCALEUP_MAXMAXCOEF && scalefactor * REALABS(rowprep->side) < ROWPREP_SCALEUP_MAXSIDE )
       {
          int scaleexp;
 
@@ -15271,7 +15279,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
       }
    }
 
-   if( maxcoef * SCIPfeastol(scip) > 1.0 )
+   if( maxcoef > ROWPREP_SCALEDOWN_MINMAXCOEF )
    {
       /* if maxcoef > 1/feastol, then consider scaling down so that maxcoef ~ 10 */
       SCIP_Real scalefactor;
@@ -15284,13 +15292,13 @@ SCIP_RETCODE SCIPcleanupRowprep(
       {
          assert(minviol > 0.0);  /* since myviol >= 0, the if-condition should ensure that minviol > 0 */
          assert(myviol > 0.0);  /* since minviol > 0, the if-condition ensures myviol > 0 */
-         scalefactor = 2.0 * minviol / myviol;
+         scalefactor = ROWPREP_SCALEUP_MINVIOLFACTOR * minviol / myviol;
       }
 
       /* scale by approx. scalefactor if scaling down and minimal coef does not get too small
        * myviol < minviol (-> scalefactor > 1) or mincoef < feastol before scaling is possible, in which case we also don't scale down
        */
-      if( scalefactor < 1.0 && scalefactor * mincoef > SCIPfeastol(scip) )
+      if( scalefactor < 1.0 && scalefactor * mincoef > ROWPREP_SCALEDOWN_MINCOEF )
       {
          int scaleexp;
 
