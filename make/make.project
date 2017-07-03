@@ -71,7 +71,6 @@ OPTCOMMAND	=	optimize
 SETCUTOFF	=	0
 VISUALIZE       =       false
 MAXJOBS         =       1
-MOUNTCHECK      =       false
 
 # set SCIP version here for external projects
 # use underscore to make it compatible with def.h

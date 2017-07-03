@@ -19,8 +19,8 @@ LINTOL=1e-04
 # absolut tolerance for checking integrality constraints 
 INTTOL=1e-04
 
-# check whether /optimi is mounted if we submit jobs to the ZIB cluster
-if [ "$MOUNTCHECK" == "true" ]
+# check if the scripts runs a *.zib.de host
+if hostname -f | grep -q zib.de ;
 then
   # access /optimi once to force a mount
   ls /optimi/ >/dev/null 2>&1

@@ -37,10 +37,9 @@ MAXJOBS=${20}
 VISUALIZE=${21}
 PERMUTE=${22}
 SEEDS=${23}
-MOUNTCHECK=${24}
 
 # check if all variables defined (by checking the last one)
-if test -z $MOUNTCHECK
+if test -z $SEEDS
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -67,7 +66,6 @@ then
     echo "VISUALIZE     = $VISUALIZE"
     echo "PERMUTE       = $PERMUTE"
     echo "SEEDS         = $SEEDS"
-    echo "MOUNTCHECK    = $MOUNTCHECK"
     exit 1;
 fi
 
@@ -173,7 +171,6 @@ do
 		export SOLNAME=$SOLCHECKFILE
                 export TIMELIMIT
 		export CLIENTTMPDIR
-		export MOUNTCHECK
 		export CHECKERPATH=$SCIPPATH/solchecker
 
 		echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT
