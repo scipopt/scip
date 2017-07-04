@@ -605,6 +605,7 @@ SCIP_RETCODE computeFacet(
    {
       SCIP_CALL( SCIPlpiSolvePrimal(lp) );
    }
+   assert(SCIPlpiIsOptimal(lp));
    /* @todo: check solution status */
 
    /* get dual solution (facet of convex envelope); again, we have to be careful since the LP can have more rows and
@@ -689,6 +690,8 @@ SCIP_RETCODE computeFacet(
    /* adjust constant part of the facet by maxerror to make it a valid over/underestimator (not facet though) */
    if( maxfaceterror > 0 )
    {
+      SCIPdebugMsgPrint(scip, "maximum facet error %g, adjust constant to make cut valid!\n", maxfaceterror);
+
       /* there seem to be numerical problems if the error is too large; in this case we reject the facet */
       if( maxfaceterror > ADJUSTFACETFACTOR * SCIPlpfeastol(scip) )
       {

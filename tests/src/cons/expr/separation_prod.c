@@ -295,7 +295,7 @@ void testMultilinearLP(int lpsize)
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&randnumgen, SCIPblkmem(scip), 1) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1) );
 
    /* build separation LP */
    SCIP_CALL( buildMultilinearSeparationLP(scip, lpsize, &lp) );
@@ -312,9 +312,9 @@ void testMultilinearLP(int lpsize)
    SCIP_CALL( SCIPaddVar(scip, auxvar) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, 12.12) );
 
-   /* compute a cut for t = -0.7*x*y*w*z with x* = 0.2, y* = -4, w* = 1.1, z = 0.18, t = 12.12
+   /* compute a cut for t = -0.7*x*y*w*z with x* = 0.2, y* = -4, w* = 1.1, z* = 0.18, t* = 12.12
     * together with the bounds x,y,w,z \in [-0.2, 0.7], [-10, 8], [1, 1.3], [0.09, 2.1]
-    * w <= 63/5000 * (50x + y + 35w + 4550/9 z - 141/2)
+    * t <= 63/5000 * (50x + y + 35w + 4550/9 z - 141/2)
     */
    SCIP_CALL( computeFacet(scip, randnumgen, lp, sol, vars, 4, auxvar, -0.7, TRUE /* overestimate */,
             1.0, (SCIP_INTERVAL){1.0, 1.0}, &violation, facet) );
@@ -330,7 +330,7 @@ void testMultilinearLP(int lpsize)
    /* compute a cut for the same function as before, but now z is fixed to 1 and we underestimate
     * t = -0.7*x*y*w with x* = 0.2, y* = -4, w* = 1.1, t = -3.4
     * together with the bounds x,y,w \in [-0.2, 0.7], [-10, 8], [1, 1.3]
-    * w >= -49/100 * (-100/7 x + y + 8w + 2)
+    * t >= -49/100 * (-100/7 x + y + 8w + 2)
     */
    /* create sol to separate */
    SCIP_CALL( SCIPsetSolVal(scip, sol, auxvar, -3.4) );
@@ -339,7 +339,7 @@ void testMultilinearLP(int lpsize)
    SCIP_CALL( computeFacet(scip, randnumgen, lp, sol, vars, 3, auxvar, -0.7, FALSE /* underestimate */,
             1.0, (SCIP_INTERVAL){1.0, 1.0}, &violation, facet) );
 
-   SCIP_Real exact_facet2[] = {7.0, -133.0/250, -7.0/5, -98.0/25};
+   SCIP_Real exact_facet2[] = {7.0, -49.0/100, -98.0/25, -49.0/50};
    for( i = 0; i <= 3; ++i ) /* last index is the constant */
    {
       cr_expect_float_eq(facet[i], exact_facet2[i], SCIPfeastol(scip), "coef %d: received %g instead of %g\n", i, facet[i], exact_facet2[i]);
@@ -348,7 +348,7 @@ void testMultilinearLP(int lpsize)
    cr_expect_float_eq(violation, 1.468, SCIPfeastol(scip), "received a violation of %g instead of 1.468", violation);
 
    /* free all */
-   SCIPrandomFree(&randnumgen);
+   SCIPfreeRandom(scip, &randnumgen);
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
    SCIP_CALL( SCIPreleaseVar(scip, &auxvar) );
    SCIP_CALL( SCIPreleaseVar(scip, &vars[3]) );

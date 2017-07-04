@@ -54,7 +54,7 @@ void setup(void)
    SCIP_CALL( SCIPcreate(&scip) );
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&randnumgen, SCIPblkmem(scip), 1) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, 1) );
 
    /* include cons_expr: this adds the operator handlers */
    SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
@@ -93,7 +93,7 @@ static
 void teardown(void)
 {
    /* free random number generator */
-   SCIPrandomFree(&randnumgen);
+   SCIPfreeRandom(scip, &randnumgen);
 
    /* reset stage to PRESOLVED */
    scip->set->stage = SCIP_STAGE_PRESOLVED;

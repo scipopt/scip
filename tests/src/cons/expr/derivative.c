@@ -60,13 +60,13 @@ void setup(void)
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&rndgen, SCIPblkmem(scip), 1) );
+   SCIP_CALL( SCIPcreateRandom(scip, &rndgen, 1) );
 }
 
 static
 void teardown(void)
 {
-   SCIPrandomFree(&rndgen);
+   SCIPfreeRandom(scip, &rndgen);
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
