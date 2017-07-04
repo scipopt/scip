@@ -8186,8 +8186,10 @@ SCIP_RETCODE lpFlushChgCols(
             SCIP_CALL( SCIPlpiGetObj(lp->lpi, col->lpipos, col->lpipos, &lpiobj) );
             SCIP_CALL( SCIPlpiGetBounds(lp->lpi, col->lpipos, col->lpipos, &lpilb, &lpiub) );
             assert(SCIPsetIsFeasEQ(set, lpiobj, col->flushedobj));
-            assert(SCIPsetIsFeasEQ(set, lpilb, col->flushedlb));
-            assert(SCIPsetIsFeasEQ(set, lpiub, col->flushedub));
+            assert((SCIPsetIsInfinity(set, lpilb) && SCIPsetIsInfinity(set, col->flushedlb))
+                  || (!SCIPsetIsInfinity(set, lpilb) && !SCIPsetIsInfinity(set, col->flushedlb) && SCIPsetIsFeasEQ(set, lpilb, col->flushedlb)));
+            assert((SCIPsetIsInfinity(set, lpiub) && SCIPsetIsInfinity(set, col->flushedub))
+                  || (!SCIPsetIsInfinity(set, lpiub) && !SCIPsetIsInfinity(set, col->flushedub) && SCIPsetIsFeasEQ(set, lpiub, col->flushedub)));
          }
 #endif
 

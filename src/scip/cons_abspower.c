@@ -6769,7 +6769,7 @@ SCIP_DECL_CONSCHECK(consCheckAbspower)
       SCIP_CALL( proposeFeasibleSolution(scip, conshdlr, conss, nconss, sol) );
    }
 
-   if( *result == SCIP_INFEASIBLE && conshdlrdata->subnlpheur != NULL && sol != NULL )
+   if( *result == SCIP_INFEASIBLE && conshdlrdata->subnlpheur != NULL && sol != NULL && !SCIPisInfinity(scip, maxviol) )
    {
       SCIP_CALL( SCIPupdateStartpointHeurSubNlp(scip, conshdlrdata->subnlpheur, sol, maxviol) );
    }
