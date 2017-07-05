@@ -111,6 +111,92 @@ int SCIPsolGetIndex(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+/** reset violations of a solution */
+EXTERN
+void SCIPsolResetViolations(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** update integrality violation of a solution */
+EXTERN
+void SCIPsolUpdateIntegralityViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviolintegrality  /**< absolute violation of integrality */
+   );
+
+/** update bound violation of a solution */
+EXTERN
+void SCIPsolUpdateBoundViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviolbounds,      /**< absolute violation of bounds */
+   SCIP_Real             relviolbounds       /**< relative violation of bounds */
+   );
+
+/** update LP row violation of a solution */
+EXTERN
+void SCIPsolUpdateLPRowViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviollprows,      /**< absolute violation of LP rows */
+   SCIP_Real             relviollprows       /**< relative violation of LP rows */
+   );
+
+/** update constraint violation of a solution */
+EXTERN
+void SCIPsolUpdateConsViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviolcons,        /**< absolute violation of constraint */
+   SCIP_Real             relviolcons         /**< relative violation of constraint */
+   );
+
+/** update violation of a constraint that is represented in the LP */
+EXTERN
+void SCIPsolUpdateLPConsViolation(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_Real             absviol,            /**< absolute violation of constraint */
+   SCIP_Real             relviol             /**< relative violation of constraint */
+   );
+
+/** get maximum absolute bound violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetAbsBoundViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** get maximum relative bound violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetRelBoundViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** get maximum absolute integrality violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetAbsIntegralityViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** get maximum absolute LP row violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetAbsLPRowViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** get maximum relative LP row violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetRelLPRowViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** get maximum absolute constraint violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetAbsConsViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** get maximum relative constraint violation of solution */
+EXTERN
+SCIP_Real SCIPsolGetRelConsViolation(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
 
 #ifdef NDEBUG
 

@@ -2294,6 +2294,8 @@ SCIP_Bool checkCons(
    SCIP_Real solval;
    SCIP_Real sum;
    SCIP_Real sumbound;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
    int nvars;
    int v;
 
@@ -2312,13 +2314,25 @@ SCIP_Bool checkCons(
       sum += solval;
    }
 
+   absviol = sum - 1.0;
+   relviol = SCIPrelDiff(sum, 1.0);
    switch( consdata->setppctype )
    {
    case SCIP_SETPPCTYPE_PARTITIONING:
+      absviol = REALABS(absviol);
+      relviol = REALABS(relviol);
+      if( sol != NULL )
+         SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
       return SCIPisFeasEQ(scip, sum, 1.0);
    case SCIP_SETPPCTYPE_PACKING:
+      if( sol != NULL )
+         SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
       return SCIPisFeasLE(scip, sum, 1.0);
    case SCIP_SETPPCTYPE_COVERING:
+      absviol = -absviol;
+      relviol = -relviol;
+      if( sol != NULL )
+         SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
       return SCIPisFeasGE(scip, sum, 1.0);
    default:
       SCIPerrorMessage("unknown setppc type\n");
