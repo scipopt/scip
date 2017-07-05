@@ -21,7 +21,7 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#define SCIP_DEBUG 1
+//#define SCIP_DEBUG 1
 
 #include "scip/event_treesizeprediction.h"
 #include "scip/misc.h"
@@ -174,6 +174,7 @@ void freeTreeMemory(SCIP *scip, TSEtree **tree)
       freeTreeMemory(scip, &((*tree)->leftchild));
    if( (*tree)->rightchild != NULL )
       freeTreeMemory(scip, &((*tree)->rightchild));
+   SCIPdebugMessage("Freeing memory for node %"SCIP_LONGINT_FORMAT"\n", (*tree)->number);
    SCIPfreeMemory(scip, tree);
    *tree = NULL;
 }
@@ -185,10 +186,10 @@ struct SCIP_EventhdlrData
    int hashmapsize;
 
    /* Internal variables */
-//   SCIP_Bool initialized;
    unsigned int nodesfound;
    TSEtree *tree; /* The representation of the B&B tree */
-   SCIP_HASHMAP *opennodes; /* The open nodes (that have yet to be branched on). The key is the (scip) id/number of the SCIP_Node */
+   //SCIP_HASHMAP *opennodes; /* The open nodes (that have yet to be solved). The key is the (scip) id/number of the SCIP_Node */
+   SCIP_HASHMAP *allnodes;
 };
 
 SCIP_Longint SCIPtreeSizeGetEstimateRemaining(SCIP* scip)
@@ -237,7 +238,8 @@ SCIP_DECL_EVENTINITSOL(eventInitsolTreeSizePrediction)
 //   eventhdlrdata->initialized = TRUE;
    eventhdlrdata->nodesfound = 0;
    eventhdlrdata->tree = NULL;
-   SCIP_CALL( SCIPhashmapCreate(&(eventhdlrdata->opennodes), SCIPblkmem(scip), eventhdlrdata->hashmapsize) );
+   //SCIP_CALL( SCIPhashmapCreate(&(eventhdlrdata->opennodes), SCIPblkmem(scip), eventhdlrdata->hashmapsize) );
+   SCIP_CALL( SCIPhashmapCreate(&(eventhdlrdata->allnodes), SCIPblkmem(scip), eventhdlrdata->hashmapsize) );
 
    /* We catch node solved events */
    SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, NULL, NULL) );
@@ -246,7 +248,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolTreeSizePrediction)
    SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_PQNODEINFEASIBLE, eventhdlr, NULL, NULL) );
 
    /* We catch updates to the primal bound */
-   SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
+   /* SCIP_CALL( SCIPcatchEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) ); */
 
    return SCIP_OKAY;
 }
@@ -274,13 +276,15 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
       if( eventhdlrdata->tree != NULL ) /* SCIP may not have created any node */
       {
          status = estimateTreeSize(scip, eventhdlrdata->tree, SCIPgetUpperbound(scip), &totalsize, &remainingsize);
-         assert(status == KNOWN);/* TODO remove after debug */
+         assert(status == KNOWN); /* TODO remove after debug */
          SCIPdebugMessage("Estimated remaining nodes: %" SCIP_LONGINT_FORMAT " nodes in the B&B tree\n", remainingsize);
       }
    }
    #endif
 
-   SCIPhashmapFree(&(eventhdlrdata->opennodes));
+   //SCIPhashmapFree(&(eventhdlrdata->opennodes));
+   SCIPhashmapFree(&(eventhdlrdata->allnodes));
+
    if( eventhdlrdata->tree != NULL )
    {
       freeTreeMemory(scip, &(eventhdlrdata->tree));
@@ -293,7 +297,7 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
    SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_PQNODEINFEASIBLE, eventhdlr, NULL, -1) );
 
    /* We drop updates to the primal bound */
-   SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, -1) );
+   /* SCIP_CALL( SCIPdropEvent(scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, -1) ); */
 
    return SCIP_OKAY;
 }
@@ -304,7 +308,12 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_NODE* scipnode; /* The node found by the event (if any) */
+   SCIP_NODE *scipparent; /* The parent of the scipnode we found */
+   SCIP_Longint scipnodenumber;
+   TSEtree *eventnode;
+   TSEtree *parentnode;
 
+ 
    /* SCIPdebugMsg(scip, "exec method of eventhdlr "EVENTHDLR_NAME"\n"); */
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
@@ -313,92 +322,103 @@ SCIP_DECL_EVENTEXEC(eventExecTreeSizePrediction)
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
-   assert(eventhdlrdata->opennodes != NULL);
+   //assert(eventhdlrdata->opennodes != NULL);
+   assert(eventhdlrdata->allnodes != NULL);
 
-   if( SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND )
+   scipnode = SCIPeventGetNode(event);
+   assert(scipnode != NULL);
+   scipnodenumber = SCIPnodeGetNumber(scipnode);
+
+   #ifdef SCIP_DEBUG
    {
-      /* When a new primal bound is found, then some of the leaves that were
-       * previously infeasible could have an ancester that would have been
-       * pruned by this new primal bound. We are going to trim our
-       * representation of the tree so that previous branched nodes may
-       * become leaves in our data structure.
-       */
-      //newlowerbound = SCIPgetLowerbound(scip);
-      /* SCIPdebugMsg(scip, "New best solution found\n"); */
-      scipnode = NULL;
+   char eventstr[50];
+   switch(SCIPeventGetType(event)) {
+      case SCIP_EVENTTYPE_PQNODEINFEASIBLE:
+         strcpy(eventstr, "PQNODEINFEASIBLE");
+         break;
+      case SCIP_EVENTTYPE_NODEFEASIBLE:
+         strcpy(eventstr, "NODEFEASIBLE");
+         break;
+      case SCIP_EVENTTYPE_NODEINFEASIBLE:
+         strcpy(eventstr, "NODEINFEASIBLE");
+         break;
+      case SCIP_EVENTTYPE_NODEBRANCHED:
+         strcpy(eventstr, "NODEBRANCHED");
+         break;
+      default:
+         SCIPerrorMessage("Missing case in this switch.\n");
+         SCIPABORT();
    }
-   else
+   SCIPdebugMessage("Event %s for node %"SCIP_LONGINT_FORMAT"\n", eventstr, scipnodenumber);
+   }
+   #endif
+
+   /* This node may already be in the set of nodes. if this happens, it means that there was a first event PQNODEINFEASIBLE with this node, and now a NODESOLVED event with the same node. */
+   eventnode = SCIPhashmapGetImage(eventhdlrdata->allnodes, (void *)scipnodenumber);
+   if( eventnode == NULL )
    {
-      SCIP_NODE *scipparent; /* The parent of the scipnode we found */
-      TSEtree *newnode;
-      TSEtree *parentnode;
-
-      scipnode = SCIPeventGetNode(event);
-      assert(scipnode != NULL);
-      scipparent = SCIPnodeGetParent(scipnode);
-
       eventhdlrdata->nodesfound += 1;
 
-      SCIP_CALL( SCIPallocMemory(scip, &newnode) );
-      newnode->lowerbound = SCIPnodeGetLowerbound(scipnode);
-      newnode->leftchild = NULL;
-      newnode->rightchild = NULL;
-      newnode->number = SCIPnodeGetNumber(scipnode);
-      /* SCIPdebugMessage("Node event for focus node #%" SCIP_LONGINT_FORMAT "\n", newnode->number); */
-      /* TODO handle parent, which should be in the open nodes  */
-      if( scipparent != NULL )
+      /* We initialise data for this node */
+      SCIPdebugMessage("Allocating memory for node %"SCIP_LONGINT_FORMAT"\n", scipnodenumber);
+      SCIP_CALL( SCIPallocMemory(scip, &eventnode) );
+      eventnode->lowerbound = SCIPnodeGetLowerbound(scipnode);
+      eventnode->leftchild = NULL;
+      eventnode->rightchild = NULL;
+      eventnode->number = SCIPnodeGetNumber(scipnode);
+      SCIP_CALL( SCIPhashmapInsert(eventhdlrdata->allnodes, (void *) (eventnode->number), eventnode) );
+
+      /* We update the parent with this new child */
+      scipparent = SCIPnodeGetParent(scipnode);
+      if( scipparent == NULL )
       {
-         SCIP_Longint parentnumber = SCIPnodeGetNumber(scipparent);
-         parentnode = (TSEtree*) SCIPhashmapGetImage(eventhdlrdata->opennodes, (void *)parentnumber);
-         assert(parentnode != NULL);
-         assert(parentnode->number == parentnumber);
-
-         newnode->parent = parentnode;
-
-         if(parentnode->leftchild == NULL)
-            parentnode->leftchild = newnode;
-         else
-         {
-            assert(parentnode->rightchild == NULL);
-            parentnode->rightchild = newnode;
-            /* We have seen all the children of this parent, thus we can remove it from open nodes */
-            /* SCIPdebugMessage("Removing node %" SCIP_LONGINT_FORMAT " from opennode hashmap\n", parentnumber); */
-            SCIP_CALL( SCIPhashmapRemove(eventhdlrdata->opennodes, (void *)parentnumber) );
-         }
+         /* Then this should be the root node (maybe the root node of a restart) */
+         assert(SCIPgetNNodes(scip) <= 1);
+         parentnode = NULL;
+         eventnode->parent = parentnode;
+         eventhdlrdata->tree = eventnode;
       }
       else
       {
-         /* Then this should be the root node, unless there has been a restart */
-         assert(SCIPgetNNodes(scip) == 1);
-         parentnode = NULL;
-         newnode->parent = parentnode;
-         eventhdlrdata->tree = newnode;
+         SCIP_Longint parentnumber = SCIPnodeGetNumber(scipparent);
+         parentnode = (TSEtree*) SCIPhashmapGetImage(eventhdlrdata->allnodes, (void *)parentnumber);
+         assert(parentnode != NULL);
+         eventnode->parent = parentnode;
+         if(parentnode->leftchild == NULL)
+            parentnode->leftchild = eventnode;
+         else
+         {
+            assert(parentnode->rightchild == NULL);
+            parentnode->rightchild = eventnode;
+         }
       }
- 
-      newnode->prunedinPQ = FALSE;
-      switch(SCIPeventGetType(event)) {
-         case SCIP_EVENTTYPE_PQNODEINFEASIBLE:
-            newnode->prunedinPQ = TRUE;
-            /* SCIPdebugMessage("Node %" SCIP_LONGINT_FORMAT " with parent %" SCIP_LONGINT_FORMAT " pruned directly from the priority queue\n", newnode->number, (parentnode == NULL?((SCIP_Longint) 0): parentnode->number)); */
-            /* The node might be in the opennodes queue: in this case we would need to remove it */
-            //SCIP_CALL( SCIPhashmapRemove(eventhdlrdata->opennodes, (void *)(newnode->number)) );
-         case SCIP_EVENTTYPE_NODEFEASIBLE:
-         case SCIP_EVENTTYPE_NODEINFEASIBLE:
-            /* When an (in)feasible node is found, this corresponds to a new sample
-             * (in Knuth's algorithm). This may change the tree-size estimate. */
-            newnode->status = KNOWN;
-            break;
-         case SCIP_EVENTTYPE_NODEBRANCHED:
-            /* When a node is branched on, we need to add the corresponding nodes
-             * to our own data structure */
-            newnode->status = UNKNOWN;
-            /* SCIPdebugMessage("Inserting node %" SCIP_LONGINT_FORMAT " with parent %" SCIP_LONGINT_FORMAT " into opennode hashmap\n", newnode->number, (parentnode == NULL?((SCIP_Longint) 0): parentnode->number)); */
-            SCIP_CALL( SCIPhashmapInsert(eventhdlrdata->opennodes, (void *) (newnode->number), newnode) );
-            break;
-         default:
-            SCIPerrorMessage("Missing case in this switch.\n");
-            SCIPABORT();
-      }
+   }
+
+   /* SCIPdebugMessage("Node event for focus node #%" SCIP_LONGINT_FORMAT "\n", eventnode->number); */
+
+   eventnode->prunedinPQ = FALSE;
+   switch(SCIPeventGetType(event)) {
+      case SCIP_EVENTTYPE_PQNODEINFEASIBLE:
+         eventnode->prunedinPQ = TRUE;
+         SCIPdebugMessage("Node %" SCIP_LONGINT_FORMAT " with parent %" SCIP_LONGINT_FORMAT " pruned directly from the priority queue\n", eventnode->number, (parentnode == NULL?((SCIP_Longint) 0): parentnode->number));
+         /* The node might be in the opennodes queue: in this case we would need to remove it */
+         //SCIP_CALL( SCIPhashmapRemove(eventhdlrdata->opennodes, (void *)(eventnode->number)) );
+      case SCIP_EVENTTYPE_NODEFEASIBLE:
+      case SCIP_EVENTTYPE_NODEINFEASIBLE:
+         /* When an (in)feasible node is found, this corresponds to a new sample
+          * (in Knuth's algorithm). This may change the tree-size estimate. */
+         eventnode->status = KNOWN;
+         break;
+      case SCIP_EVENTTYPE_NODEBRANCHED:
+         /* When a node is branched on, we need to add the corresponding nodes
+          * to our own data structure */
+         eventnode->status = UNKNOWN;
+         //SCIPdebugMessage("Inserting node %" SCIP_LONGINT_FORMAT " with parent %" SCIP_LONGINT_FORMAT " into opennode hashmap\n", eventnode->number, (parentnode == NULL?((SCIP_Longint) 0): parentnode->number));
+         //SCIP_CALL( SCIPhashmapInsert(eventhdlrdata->opennodes, (void *) (eventnode->number), eventnode) );
+         break;
+      default:
+         SCIPerrorMessage("Missing case in this switch.\n");
+         SCIPABORT();
    }
    return SCIP_OKAY;
 }

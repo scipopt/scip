@@ -160,14 +160,18 @@ SCIP_DECL_DISPEXITSOL(dispExitsolEstimates)
 static
 SCIP_DECL_DISPOUTPUT(dispOutputEstimates)
 {  /*lint --e{715}*/
+   SCIP_Longint remainingestimate;
    SCIP_Longint estimate;
 
    assert(scip != NULL);
    /* We call the estimation method */
-   estimate = SCIPtreeSizeGetEstimateRemaining(scip) + SCIPgetNNodes(scip);
+   remainingestimate = SCIPtreeSizeGetEstimateRemaining(scip);
    
-   if( estimate != -1)
+   if( remainingestimate != -1)
+   { 
+      estimate = remainingestimate + SCIPgetNNodes(scip);
       SCIPdispLongint(SCIPgetMessagehdlr(scip), file, estimate, DISP_WIDTH);
+   }
    else
       SCIPinfoMessage(scip, file, "   -   ");
    
