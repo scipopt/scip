@@ -2430,7 +2430,7 @@ SCIP_RETCODE updateImplicationGraphSOS1(
             {
                if ( indcliq == w )
                {
-                  if ( ! SCIPisInfinity(scip, REALABS(bounds[w])) )
+                  if ( !SCIPisInfinity(scip, REALABS(bounds[w])) && !SCIPisInfinity(scip, REALABS(implbound + bounds[w])) )
                      implbound += bounds[w];
                   else
                      --newninftynonzero;
@@ -2438,7 +2438,7 @@ SCIP_RETCODE updateImplicationGraphSOS1(
                }
                else if ( implcoverw )
                {
-                  if ( SCIPisInfinity(scip, REALABS( bounds[indcliq] )) )
+                  if ( SCIPisInfinity(scip, REALABS(bounds[indcliq])) || SCIPisInfinity(scip, REALABS(implbound - bounds[indcliq])) )
                      implinfty = TRUE;
                   else
                      implbound -= bounds[indcliq];
@@ -2446,7 +2446,7 @@ SCIP_RETCODE updateImplicationGraphSOS1(
                }
                else
                {
-                  if ( SCIPisInfinity(scip, REALABS( bounds[indcliq] ) ) )
+                  if ( SCIPisInfinity(scip, REALABS(bounds[indcliq])) )
                      implinfty = TRUE;
                   break;
                }
@@ -2831,12 +2831,14 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
             ub = temp;
          }
 
-         if ( SCIPisInfinity(scip, REALABS(lb)) )
+         assert(!SCIPisInfinity(scip, REALABS(trafolinvals[v])));
+
+         if ( SCIPisInfinity(scip, REALABS(lb)) || SCIPisInfinity(scip, REALABS(lb * trafolinvals[v])) )
             trafolbs[v] = -SCIPinfinity(scip);
          else
             trafolbs[v] = lb * trafolinvals[v];
 
-         if ( SCIPisInfinity(scip, REALABS(ub)) )
+         if ( SCIPisInfinity(scip, REALABS(ub)) || SCIPisInfinity(scip, REALABS(ub * trafolinvals[v])) )
             trafoubs[v] = SCIPinfinity(scip);
          else
             trafoubs[v] = ub * trafolinvals[v];
@@ -2998,7 +3000,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
             /* determine maximum without index v (note that the array 'cliquecovers' is sorted by the values of trafoub in non-increasing order) */
             if ( v != indcliq )
             {
-               if ( SCIPisInfinity(scip, trafoubs[indcliq]) )
+               if ( SCIPisInfinity(scip, trafoubs[indcliq]) || SCIPisInfinity(scip, REALABS(newboundnores - trafoubs[indcliq])) )
                   inftynores = TRUE;
                else
                   newboundnores -= trafoubs[indcliq];
@@ -3006,7 +3008,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
             else if ( cliquecoversizes[i] > 1 )
             {
                assert( 0 <= cliquecovers[i][1] && cliquecovers[i][1] < ntrafolinvars );
-               if ( SCIPisInfinity(scip, trafoubs[cliquecovers[i][1]]) )
+               if ( SCIPisInfinity(scip, trafoubs[cliquecovers[i][1]]) || SCIPisInfinity(scip, REALABS(newboundnores - trafoubs[cliquecovers[i][1]])) )
                   inftynores = TRUE;
                else
                   newboundnores -= trafoubs[cliquecovers[i][1]];/*lint --e{679}*/
@@ -3026,7 +3028,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
                   /* if nodev or nodecliq are not a member of an SOS1 constraint or the variable corresponding to nodecliq is not implied to be zero if x_v != 0  */
                   if ( nodev < 0 || nodecliq < 0 || (! isConnectedSOS1(adjacencymatrix, NULL, nodev, nodecliq) && ! isImpliedZero(conflictgraph, implnodes, nodecliq) ) )
                   {
-                     if ( SCIPisInfinity(scip, trafoubs[indcliq]) )
+                     if ( SCIPisInfinity(scip, trafoubs[indcliq]) || SCIPisInfinity(scip, REALABS(newboundnonzero - trafoubs[indcliq])) )
                         ++ninftynonzero;
                      else
                         newboundnonzero -= trafoubs[indcliq];
@@ -3197,7 +3199,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
             if ( v != indcliq )
             {
                /* if bound would be infinity */
-               if ( SCIPisInfinity(scip, -trafolbs[indcliq]) )
+               if ( SCIPisInfinity(scip, -trafolbs[indcliq]) || SCIPisInfinity(scip, REALABS(newboundnores - trafolbs[indcliq])) )
                   inftynores = TRUE;
                else
                   newboundnores -= trafolbs[indcliq];
@@ -3205,7 +3207,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
             else if ( cliquecoversizes[i] > 1 )
             {
                assert( 0 <= cliquecovers[i][1] && cliquecovers[i][1] < ntrafolinvars );
-               if ( SCIPisInfinity(scip, -trafolbs[cliquecovers[i][1]]) )
+               if ( SCIPisInfinity(scip, -trafolbs[cliquecovers[i][1]]) || SCIPisInfinity(scip, REALABS(newboundnores - trafolbs[cliquecovers[i][1]])) )
                   inftynores = TRUE;
                else
                   newboundnores -= trafolbs[cliquecovers[i][1]]; /*lint --e{679}*/
@@ -3226,7 +3228,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
                   if ( nodev < 0 || nodecliq < 0 || (! isConnectedSOS1(adjacencymatrix, NULL, nodev, nodecliq) && ! isImpliedZero(conflictgraph, implnodes, nodecliq) ) )
                   {
                      /* if bound would be infinity */
-                     if ( SCIPisInfinity(scip, -trafolbs[indcliq]) )
+                     if ( SCIPisInfinity(scip, -trafolbs[indcliq]) || SCIPisInfinity(scip, REALABS(newboundnonzero - trafolbs[indcliq])) )
                         ++ninftynonzero;
                      else
                         newboundnonzero -= trafolbs[indcliq];
