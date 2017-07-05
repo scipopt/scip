@@ -518,6 +518,16 @@ SCIP_RETCODE SCIPnodepqRemove(
 
    (void)nodepqDelPos(nodepq, set, pos);
 
+   /* Send event to indicate that the node has been taken out of the priority queue */
+   {
+      SCIP_EVENT event;
+      SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_PQNODEINFEASIBLE) );
+      SCIP_CALL( SCIPeventChgNode(&event, node) );
+      /* We use an ugly hack below: we need eventfilter, and if we want it we have to add it as a parameter to dozens of cuntions in SCIP and change the corresponding calls to these functions throughout the solver. */
+      SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, set->scip->eventfilter) );
+
+   }
+
    return SCIP_OKAY;
 }
 
