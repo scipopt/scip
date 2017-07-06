@@ -94,7 +94,9 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolBendersNodefocus)
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
+#if 0 /* not sure whether this is actually needed */
    SCIP_CALL(SCIPdropEvent(scip, SCIP_EVENTTYPE_NODEFOCUSED, eventhdlr, NULL, -1));
+#endif
 
    return SCIP_OKAY;
 }
@@ -881,9 +883,6 @@ SCIP_RETCODE createSubproblems(
 
             /* Constructing the LP that can be solved in later iterations */
             SCIP_CALL( SCIPconstructLP(subproblem, &cutoff) );
-
-            /* starting probing mode */
-            SCIP_CALL( SCIPstartProbing(subproblem) );
          }
       }
    }
@@ -1277,6 +1276,10 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
    assert(benders != NULL);
    assert(probnum >= 0 && probnum < benders->nsubproblems);
 
+   /* if the Benders subproblem is an LP, then probing mode must be started */
+   if( SCIPbendersSubprobIsLP(benders, probnum) )
+      SCIP_CALL( SCIPstartProbing(SCIPbendersSubproblem(benders, probnum)) );
+
    /* if the subproblem solve callback is implemented, then that is used instead of the default setup */
    if( benders->benderssolvesub != NULL)
       SCIP_CALL( benders->benderssolvesub(set->scip, benders, sol, probnum, infeasible) );
@@ -1298,7 +1301,8 @@ SCIP_RETCODE SCIPbendersExecSubproblemSolve(
 
    if( !enhancement )
    {
-      if( SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL )
+      if( SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL
+         || (SCIPbendersSubprobIsLP(benders, probnum) && SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL) )
          SCIPbendersSetSubprobObjval(benders, SCIPgetSolTransObj(subproblem, bestsol), probnum);
       else if( SCIPgetStatus(subproblem) == SCIP_STATUS_INFEASIBLE
          || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_INFEASIBLE )
@@ -1525,11 +1529,8 @@ SCIP_RETCODE SCIPbendersFreeSubproblem(
 
       if( SCIPbendersSubprobIsLP(benders, probnum) )
       {
-         /* ending probing mode to reset the current node */
+         /* ending probing mode to reset the current node. The probing mode will be restarted at the next solve */
          SCIP_CALL( SCIPendProbing(subproblem) );
-
-         /* starting probing mode to fix variables for the subproblem */
-         SCIP_CALL( SCIPstartProbing(subproblem) );
       }
       else
          SCIP_CALL( SCIPfreeTransform(subproblem) );

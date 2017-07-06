@@ -122,10 +122,11 @@ SCIP_RETCODE createVariableMappings(
    SCIP_CALL( SCIPhashmapCreate(&bendersdata->subvartomastervar, SCIPblkmem(scip), nvars*nsubproblems) );
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &bendersdata->subproblemvars, nsubproblems) );
    for( i = 0; i < nsubproblems; i++ )
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &bendersdata->subproblemvars, nvars) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &bendersdata->subproblemvars[i], nvars) );
 
    for( i = 0; i < nvars; i++ )
    {
+      SCIP_VAR* origvar;
       SCIP_VAR* subvar;
       SCIP_Real scalar;
       SCIP_Real constant;
@@ -135,10 +136,11 @@ SCIP_RETCODE createVariableMappings(
       /* NOTE: This retreived the original variable. It may be a bug in regards to other parts of the code.
        * The process maps the subproblem variable to the original master variable. It was original supposed to be a
        * mapping between the subproblem variables and the transformed master variable. */
-      SCIP_CALL( SCIPvarGetOrigvarSum(&vars[i], &scalar, &constant) );
+      origvar = vars[i];
+      SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
 
       /* retreiving the var name */
-      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "%s", SCIPvarGetName(vars[i]));
+      (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "<%s>", SCIPvarGetName(origvar));
 
       /* retreiving the subproblem variable for the given master variable */
       for( j = 0; j < nsubproblems; j++ )
@@ -216,18 +218,17 @@ SCIP_DECL_BENDERSFREE(bendersFreeDefault)
 
 
 /** initialization method of Benders' decomposition (called after problem was transformed) */
-#if 0
 static
 SCIP_DECL_BENDERSINIT(bendersInitDefault)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of default Benders' decomposition not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(scip != NULL);
+   assert(benders != NULL);
+
+   /* creating the variable mappings */
+   SCIP_CALL( createVariableMappings(scip, benders) );
 
    return SCIP_OKAY;
 }
-#else
-#define bendersInitDefault NULL
-#endif
 
 
 /** deinitialization method of Benders' decomposition (called before transformed problem is freed) */
@@ -332,7 +333,8 @@ SCIP_DECL_BENDERSGETVAR(bendersGetvarDefault)
       /* The variable needs to be transformed back into an original variable. If the variable is already original, then
        * this function just returns the same variable */
       retcode = SCIPvarGetOrigvarSum(&origvar, &scalar, &constant);
-      assert(retcode == SCIP_OKAY);
+      if( retcode != SCIP_OKAY )
+         assert(FALSE);
 
       /* using the original variable, the master variable can be retrieved from the hash map */
       mappedvar = (SCIP_VAR*) SCIPhashmapGetImage(bendersdata->subvartomastervar, origvar);
@@ -386,9 +388,6 @@ SCIP_DECL_BENDERSCREATESUB(bendersCreatesubDefault)
 
    /* adding the subproblem to the Benders' decomposition structure */
    SCIP_CALL( SCIPaddBendersSubproblem(scip, benders, bendersdata->subproblems[probnumber]) );
-
-   /* creating the variable mappings */
-   SCIP_CALL( createVariableMappings(scip, benders) );
 
    return SCIP_OKAY;
 }
@@ -497,9 +496,7 @@ SCIP_RETCODE SCIPincludeBendersDefault(
 #endif
 
    /* OPTIONAL: including the default cuts for Benders' decomposition */
-#if 0
    SCIP_CALL( SCIPincludeBendersDefaultCuts(scip, benders) );
-#endif
 
    /* add default Benders' decomposition parameters */
    /* TODO: (optional) add Benders' decomposition specific parameters with SCIPaddTypeParam() here */
