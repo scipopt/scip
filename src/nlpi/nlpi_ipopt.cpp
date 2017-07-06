@@ -627,7 +627,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    (*problem)->ipopt->Options()->SetStringValue("derivative_test", "second-order");
 #endif
    setFeastol(*problem, SCIP_DEFAULT_FEASTOL);
-   setOpttol(*problem, SCIP_DEFAULT_FEASTOL);
+   setOpttol(*problem, SCIP_DEFAULT_DUALFEASTOL);
 
    /* apply user's given modifications to Ipopt's default settings */
    if( data->defoptions.length() > 0 )
