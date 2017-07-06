@@ -7430,6 +7430,10 @@ SCIP_RETCODE computeInteriorPoint(
          return SCIP_INVALIDDATA;
    }
 
+   /* set NLP tolerances; we don't really need an optimal solution to this NLP */
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, prob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip)) );
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, prob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );
+
    /* solve NLP problem */
    SCIP_CALL( SCIPnlpiSolve(nlpi, prob) );
 

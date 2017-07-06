@@ -532,8 +532,6 @@ SCIP_RETCODE applyNlobbt(
    /* set parameters of NLP solver */
    SCIP_CALL( SCIPnlpiSetRealPar(propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL,
          SCIPfeastol(scip) * propdata->feastolfac) );
-   SCIP_CALL( SCIPnlpiSetRealPar(propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL,
-         SCIPfeastol(scip) * propdata->feastolfac) );
    SCIP_CALL( SCIPnlpiSetRealPar(propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_RELOBJTOL,
          SCIPfeastol(scip) * propdata->relobjtolfac) );
    SCIP_CALL( SCIPnlpiSetIntPar(propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, propdata->nlpverblevel) );
