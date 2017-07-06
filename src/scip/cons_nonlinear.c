@@ -5814,7 +5814,7 @@ SCIP_RETCODE separatePoint(
    if( bestefficacy != NULL )
       *bestefficacy = 0.0;
 
-   for( c = 0; c < nconss; ++c )
+   for( c = 0, violside = SCIP_SIDETYPE_LEFT; c < nconss; c = (violside == SCIP_SIDETYPE_RIGHT ? c+1 : c), violside = (violside == SCIP_SIDETYPE_LEFT ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT) )
    {
       assert(conss != NULL);
 
@@ -5826,29 +5826,29 @@ SCIP_RETCODE separatePoint(
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+      /* if side violside of cons c not violated, then continue to next side or next cons */
+      if( !SCIPisGT(scip, violside == SCIP_SIDETYPE_LEFT ? consdata->lhsviol : consdata->rhsviol, SCIPfeastol(scip)) )
+         continue;
+
+      /* we are not feasible anymore */
+      if( *result == SCIP_FEASIBLE )
+         *result = SCIP_DIDNOTFIND;
+
+      /* generate cut
+       * if function is defined at sol (activity<infinity) and constraint is violated, then expression interpreter should have evaluated at sol to get gradient before
+       */
+      SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], NULL, sol, newsol || SCIPisInfinity(scip, consdata->activity), violside, &row, conshdlrdata->cutmaxrange, conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );
+
+      if( row == NULL ) /* failed to generate cut */
+         continue;
+
+      if( sol == NULL )
+         feasibility = SCIPgetRowLPFeasibility(scip, row);
+      else
+         feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
+
+      switch( conshdlrdata->scaling )
       {
-         /* we are not feasible anymore */
-         if( *result == SCIP_FEASIBLE )
-            *result = SCIP_DIDNOTFIND;
-
-         violside = SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT;
-
-         /* generate cut
-          * if function is defined at sol (activity<infinity) and constraint is violated, then expression interpreter should have evaluated at sol to get gradient before
-          */
-         SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], NULL, sol, newsol || SCIPisInfinity(scip, consdata->activity), violside, &row, conshdlrdata->cutmaxrange, conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );
-
-         if( row == NULL ) /* failed to generate cut */
-            continue;
-
-         if( sol == NULL )
-            feasibility = SCIPgetRowLPFeasibility(scip, row);
-         else
-            feasibility = SCIPgetRowSolFeasibility(scip, row, sol);
-
-         switch( conshdlrdata->scaling )
-         {
          case 'o' :
             efficacy = -feasibility;
             break;
@@ -5876,45 +5876,44 @@ SCIP_RETCODE separatePoint(
             SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
             SCIPABORT();
             return SCIP_INVALIDDATA;  /*lint !e527*/
-         }
-
-         if( (SCIPisGT(scip, efficacy, minefficacy) ||
-              (inenforcement &&
-                ( (violside == SCIP_SIDETYPE_RIGHT && (consdata->curvature & SCIP_EXPRCURV_CONVEX )) ||
-                  (violside == SCIP_SIDETYPE_LEFT  && (consdata->curvature & SCIP_EXPRCURV_CONCAVE)) ) &&
-                SCIPisGT(scip, efficacy, SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip))
-              )
-             ) && SCIPisCutApplicable(scip, row)
-           )
-         {
-            SCIP_Bool infeasible;
-
-            /* cut cuts off solution */
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */, &infeasible) );
-            if ( infeasible )
-               *result = SCIP_CUTOFF;
-            else
-               *result = SCIP_SEPARATED;
-
-            SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-
-            SCIPdebugMsg(scip, "add cut with efficacy %g for constraint <%s> violated by %g\n", efficacy, SCIPconsGetName(conss[c]), MAX(consdata->lhsviol, consdata->rhsviol));
-            SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
-
-            if( bestefficacy != NULL && efficacy > *bestefficacy )
-               *bestefficacy = efficacy;
-
-            /* mark row as not removable from LP for current node, if in enforcement */
-            if( inenforcement && !conshdlrdata->enfocutsremovable )
-               SCIPmarkRowNotRemovableLocal(scip, row);
-         }
-         else
-         {
-            SCIPdebugMsg(scip, "drop cut since efficacy %g is too small (< %g)\n", efficacy, minefficacy);
-         }
-
-         SCIP_CALL( SCIPreleaseRow (scip, &row) );
       }
+
+      if( (SCIPisGT(scip, efficacy, minefficacy) ||
+         (inenforcement &&
+            ( (violside == SCIP_SIDETYPE_RIGHT && (consdata->curvature & SCIP_EXPRCURV_CONVEX )) ||
+               (violside == SCIP_SIDETYPE_LEFT  && (consdata->curvature & SCIP_EXPRCURV_CONCAVE)) ) &&
+               SCIPisGT(scip, efficacy, SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip))
+         )
+      ) && SCIPisCutApplicable(scip, row)
+      )
+      {
+         SCIP_Bool infeasible;
+
+         /* cut cuts off solution */
+         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE /* forcecut */, &infeasible) );
+         if ( infeasible )
+            *result = SCIP_CUTOFF;
+         else
+            *result = SCIP_SEPARATED;
+
+         SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
+
+         SCIPdebugMsg(scip, "add cut with efficacy %g for constraint <%s> violated by %g\n", efficacy, SCIPconsGetName(conss[c]), MAX(consdata->lhsviol, consdata->rhsviol));
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+
+         if( bestefficacy != NULL && efficacy > *bestefficacy )
+            *bestefficacy = efficacy;
+
+         /* mark row as not removable from LP for current node, if in enforcement */
+         if( inenforcement && !conshdlrdata->enfocutsremovable )
+            SCIPmarkRowNotRemovableLocal(scip, row);
+      }
+      else
+      {
+         SCIPdebugMsg(scip, "drop cut since efficacy %g is too small (< %g)\n", efficacy, minefficacy);
+      }
+
+      SCIP_CALL( SCIPreleaseRow (scip, &row) );
 
       if ( *result == SCIP_CUTOFF )
          break;
