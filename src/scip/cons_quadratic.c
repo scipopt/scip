@@ -91,7 +91,7 @@
 
 #define ROWPREP_SCALEUP_VIOLNONZERO    (10.0*SCIPepsilon(scip))    /**< minimal violation for considering up-scaling of rowprep (we want to avoid upscaling very small violations) */
 #define ROWPREP_SCALEUP_MINVIOLFACTOR  2.0                         /**< scale up will target a violation of ~MINVIOLFACTOR*minviol, where minviol is given by caller */
-#define ROWPREP_SCALEUP_MAXMINCOEF     (1.0 / SCIPfeastol(scip))   /**< scale up only if min. coef is below this number (already before scaling) */
+#define ROWPREP_SCALEUP_MAXMINCOEF     (1.0 / SCIPfeastol(scip))   /**< scale up only if min. coef is below this number (before scaling) */
 #define ROWPREP_SCALEUP_MAXMAXCOEF     SCIPgetHugeValue(scip)      /**< scale up only if max. coef will not exceed this number by scaling */
 #define ROWPREP_SCALEUP_MAXSIDE        SCIPgetHugeValue(scip)      /**< scale up only if side will not exceed this number by scaling */
 #define ROWPREP_SCALEDOWN_MINMAXCOEF   (1.0 / SCIPfeastol(scip))   /**< scale down if max. coef is at least this number (before scaling) */
@@ -14794,7 +14794,7 @@ SCIP_RETCODE SCIPensureRowprepSize(
 void SCIPprintRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be printed */
-   FILE*                 file                /**< file to print to, or NULL */
+   FILE*                 file                /**< file to print to, or NULL for stdout */
 )
 {
    int i;
@@ -14899,7 +14899,9 @@ void SCIPaddRowprepConstant(
 
 /* computes violation of cut in a given solution
  *
- * if scaling == 'g', assumes that terms in rowprep are sorted by abs value of coef, in decreasing order
+ * If scaling == 'g', assumes that terms in rowprep are sorted by abs value of coef, in decreasing order.
+ *
+ * @param scaling 'o' for no scaling, 'g' for scaling by the absolute value of the maximal coefficient, or 's' for scaling by side
  */
 SCIP_Real SCIPgetRowprepViolation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -15026,16 +15028,17 @@ void SCIPmergeRowprepTerms(
  *
  * Drops small or large coefficients if coefrange is too large, if this can be done by relaxing the cut.
  * Scales coefficients and side up to reach minimal violation, if possible.
- * Scaling is omitted if violation is < epsilon or maximal coefficient would become huge (SCIPisHuge()).
- * Scaled coefficients and side down if large and minimal violation is still reached.
+ * Scaling is omitted if violation is very small (ROWPREP_SCALEUP_VIOLNONZERO) or
+ * maximal coefficient would become huge (ROWPREP_SCALEUP_MAXMAXCOEF).
+ * Scales coefficients and side down if they are large and if the minimal violation is still reached.
  * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
- * Rounds side within epsilon of 0 to 0.0 or >epsilon.
+ * Rounds side within epsilon of 0 to 0.0 or +/-1.1*epsilon, whichever relaxes the cut least.
  *
  * After return, the terms in the rowprep will be sorted by absolute value of coefficient, in decreasing order.
  */
 SCIP_RETCODE SCIPcleanupRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWPREP*         rowprep,            /**< rowprep to be beautified */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be cleaned */
    SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */
    SCIP_Real             maxcoefrange,       /**< maximal allowed coefficients range */
    SCIP_Real             minviol,            /**< minimal absolute violation the row should achieve (w.r.t. sol) */
@@ -15055,7 +15058,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
 
    assert(maxcoefrange > 1.0);   /* not much interesting otherwise */
 
-   /* sort cut terms by absolute value of coefficients, from largest to smallest (special treatment for small cuts) */
+   /* sort cut terms by absolute value of coefficients, from largest to smallest (special treatment for cuts with few variables) */
    switch( rowprep->nvars )
    {
       case 0:

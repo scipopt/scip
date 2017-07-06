@@ -684,7 +684,7 @@ EXTERN
 void SCIPprintRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be printed */
-   FILE*                 file                /**< file to print to, or NULL */
+   FILE*                 file                /**< file to print to, or NULL for stdout */
 );
 
 /** adds a term coef*var to a rowprep */
@@ -728,6 +728,12 @@ void SCIPaddRowprepConstant(
 #define SCIPaddRowprepConstant(rowprep, constant)  SCIPaddRowprepSide(rowprep, -(constant))
 #endif
 
+/* computes violation of cut in a given solution
+ *
+ * If scaling == 'g', assumes that terms in rowprep are sorted by abs value of coef, in decreasing order.
+ *
+ * @param scaling 'o' for no scaling, 'g' for scaling by the absolute value of the maximal coefficient, or 's' for scaling by side
+ */
 EXTERN
 SCIP_Real SCIPgetRowprepViolation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -750,17 +756,18 @@ void SCIPmergeRowprepTerms(
  *
  * Drops small or large coefficients if coefrange is too large, if this can be done by relaxing the cut.
  * Scales coefficients up to reach minimal violation, if possible.
- * Scaling is omitted if violation is < epsilon or maximal coefficient would become huge (SCIPisHuge()).
- * Scaled coefficients down if large and minimal violation is still reached.
+ * Scaling is omitted if violation is very small (ROWPREP_SCALEUP_VIOLNONZERO) or
+ * maximal coefficient would become huge (ROWPREP_SCALEUP_MAXMAXCOEF).
+ * Scales coefficients and side down if they are large and if the minimal violation is still reached.
  * Rounds coefficients close to integral values to integrals, if this can be done by relaxing the cut.
- * Rounds side within epsilon of 0 to 0.0 or >epsilon.
+ * Rounds side within epsilon of 0 to 0.0 or +/-1.1*epsilon, whichever relaxes the cut least.
  *
  * After return, the terms in the rowprep will be sorted by absolute value of coefficient, in decreasing order.
  */
 EXTERN
 SCIP_RETCODE SCIPcleanupRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_ROWPREP*         rowprep,            /**< rowprep to be beautified */
+   SCIP_ROWPREP*         rowprep,            /**< rowprep to be cleaned */
    SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */
    SCIP_Real             maxcoefrange,       /**< maximal allowed coefficients range */
    SCIP_Real             minviol,            /**< minimal absolute violation the row should achieve (w.r.t. sol) */
