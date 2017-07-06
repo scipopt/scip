@@ -360,7 +360,7 @@ SCIP_RETCODE SCIPincludeReaderCflp(
    SCIP_CALL( SCIPsetReaderRead(scip, reader, readerReadCflp) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "readers/" READER_NAME "/usebenders", "Should Benders' decomposition be used to solve the problem?",
+         "reading/" READER_NAME "/usebenders", "Should Benders' decomposition be used to solve the problem?",
          &readerdata->usebenders, FALSE, DEFAULT_USEBENDERS, NULL, NULL) );
 
    return SCIP_OKAY;
