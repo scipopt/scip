@@ -15153,9 +15153,10 @@ SCIP_RETCODE SCIPcleanupRowprep(
          ref = SCIPgetSolVal(scip, sol, var);
          assert(coef != 0.0);
 
-         /* if reference point not valid (e.g., during INITLP), then take middle point */
-         if( ref < lb || ref > ub )
-            ref = (lb+ub)/2.0;
+         /* make sure reference point is something reasonable within the bounds, preferable the value from the solution */
+         if( SCIPisInfinity(scip, REALABS(ref)) )
+            ref = 0.0;
+         ref = MAX(lb, MIN(ub, ref));
 
          /* check whether we can eliminate coef*var from rowprep and how much we would loose w.r.t. ref(x) */
          if( ((coef > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT) || (coef < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT)) )
