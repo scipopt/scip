@@ -72,6 +72,7 @@ struct TreeSizeEstimateTree
 static
 SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCIP_Longint* totalsize, SCIP_Longint* remainingsize, EstimationMethod method)
 {
+   SizeStatus parentstatus;
    assert(node != NULL);
    assert(totalsize != NULL);
    assert(remainingsize != NULL);
@@ -82,20 +83,20 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
       assert(node->rightchild == NULL);
       *totalsize = 1;
       *remainingsize = 0;
-      return KNOWN;
+      parentstatus = KNOWN;
    }
    else if( SCIPisGE(scip, node->lowerbound, upperbound) )
    {
       *totalsize = 1;
       *remainingsize = 0;
-      return KNOWN;
+      parentstatus = KNOWN;
    } 
    else if(node->leftchild == NULL) /* The node is not a leaf but still needs to be solved (and possibly branched on) */
    {
       assert(node->rightchild == NULL);
       *totalsize = -1;
       *remainingsize = -1;
-      return UNKNOWN;
+      parentstatus = UNKNOWN;
    }
    else /* The node has two children (but perhaps only the left one has been created at the moment) */
    {
@@ -125,18 +126,18 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
       {
          *totalsize = -1;
          *remainingsize = -1;
-         return UNKNOWN;
+         parentstatus = UNKNOWN;
       }
       else if ( leftstatus != UNKNOWN && rightstatus != UNKNOWN  ) /* If both left and right subtrees are known or estimated */
       {
          *totalsize = 1 + lefttotalsize + righttotalsize;
          *remainingsize = leftremainingsize + rightremainingsize;
          if( leftstatus == ESTIMATED || rightstatus == ESTIMATED)
-            return ESTIMATED;
+            parentstatus = ESTIMATED;
          else
          {
              assert(leftstatus == KNOWN && rightstatus == KNOWN);
-             return KNOWN;
+             parentstatus = KNOWN;
          }
       }
       else /* Exactly one subtree is UNKNOWN: we estimate */
@@ -167,18 +168,37 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
          if( leftstatus == UNKNOWN )
          {
             leftremainingsize = fractionleft / fractionright * righttotalsize;
+            if( leftremainingsize < 0 )
+              leftremainingsize = SCIP_LONGINT_MAX;
             lefttotalsize = leftremainingsize;
+            
          }
          else
          {
             rightremainingsize = fractionright / fractionleft * lefttotalsize;
-            righttotalsize = rightremainingsize;
+            if( rightremainingsize < 0 )
+               rightremainingsize = SCIP_LONGINT_MAX;
+           righttotalsize = rightremainingsize;
          }
          *remainingsize = leftremainingsize + rightremainingsize;
          *totalsize = 1 + lefttotalsize + righttotalsize;
-         return ESTIMATED;
+         parentstatus = ESTIMATED;
+      }
+
+      /* We check that we do not exceed SCIP_Longint capacity */
+      if( *remainingsize < leftremainingsize || *remainingsize < rightremainingsize ||
+          *totalsize < lefttotalsize || *totalsize < righttotalsize )
+      {
+         *remainingsize = SCIP_LONGINT_MAX;
+         *totalsize = SCIP_LONGINT_MAX; 
       }
    }
+
+   assert(*remainingsize >= -1);
+   assert(*totalsize >= -1);
+   assert(*totalsize >= *remainingsize);
+
+   return parentstatus;
 }
 
 /**
