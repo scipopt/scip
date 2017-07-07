@@ -15195,7 +15195,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
       var = rowprep->vars[pos ? rowprep->nvars-1 : maxcoefidx];
       coef = rowprep->coefs[pos ? rowprep->nvars-1 : maxcoefidx];
 
-      /* check whether we can eliminate coef*var from rowprep and how much we would loose w.r.t. ref(x) */
+      /* eliminate coef*var from rowprep: increase side */
       if( ((coef > 0.0 && rowprep->sidetype == SCIP_SIDETYPE_RIGHT) || (coef < 0.0 && rowprep->sidetype == SCIP_SIDETYPE_LEFT)) )
       {
          /* we aggregate with -coef*var <= -coef*lb(x) */
@@ -15212,6 +15212,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
          rowprep->local |= SCIPisLT(scip, SCIPvarGetUbLocal(var), SCIPvarGetUbGlobal(var));
       }
 
+      /* eliminate coef*var from rowprep: remove coef */
       if( pos == 0 )
       {
          /* set first term to zero */
