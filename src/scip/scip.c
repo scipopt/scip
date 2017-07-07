@@ -11125,17 +11125,30 @@ SCIP_RETCODE SCIPsetObjlimit(
    case SCIP_STAGE_PROBLEM:
       SCIPprobSetObjlim(scip->origprob, objlimit);
       break;
+   case SCIP_STAGE_PRESOLVED:
+      oldobjlimit = SCIPprobGetObjlim(scip->origprob, scip->set);
+      assert(oldobjlimit == SCIPprobGetObjlim(scip->transprob, scip->set)); /*lint !e777*/
+      if( SCIPtransformObj(scip, objlimit) > SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, oldobjlimit) && ! scip->set->reopt_enable)
+      {
+         SCIPerrorMessage("cannot relax objective limit from %.15g to %.15g in presolved stage.\n", oldobjlimit, objlimit);
+         return SCIP_INVALIDDATA;
+      }
+      SCIPprobSetObjlim(scip->origprob, objlimit);
+      SCIPprobSetObjlim(scip->transprob, objlimit);
+      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
+      break;
+
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
-   case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       oldobjlimit = SCIPprobGetObjlim(scip->origprob, scip->set);
       assert(oldobjlimit == SCIPprobGetObjlim(scip->transprob, scip->set)); /*lint !e777*/
       if( SCIPtransformObj(scip, objlimit) > SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, oldobjlimit) )
       {
-         SCIPerrorMessage("cannot relax objective limit from %.15g to %.15g after problem was transformed\n", oldobjlimit, objlimit);
+         SCIPerrorMessage("cannot relax objective limit from %.15g to %.15g after problem was transformed.\n", oldobjlimit, objlimit);
          return SCIP_INVALIDDATA;
       }
       SCIPprobSetObjlim(scip->origprob, objlimit);
@@ -15200,7 +15213,6 @@ SCIP_RETCODE freeReoptSolve(
 
    /* reset objective limit */
    SCIP_CALL( SCIPsetObjlimit(scip, SCIP_INVALID) );
-
 
    return SCIP_OKAY;
 }
