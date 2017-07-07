@@ -379,7 +379,7 @@ SCIP_DECL_READERREAD(readerReadCap)
       if( lineno == ncostlines )
       {
          lineno = 0;
-         facility = 1;
+         facility = 0;
          customer++;
       }
       else

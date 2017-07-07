@@ -183,6 +183,9 @@ SCIP_RETCODE createOriginalproblem(
       /* storing the variable in the facility variable list */
       facilityvars[i] = var;
 
+      /* capturing the variable since it is stored in the probdata */
+      SCIP_CALL( SCIPcaptureVar(scip, var) );
+
       /* creates the variable data */
       SCIP_CALL( SCIPvardataCreateCAP(scip, &vardata, MASTER, nscenarios) );
 
@@ -215,6 +218,9 @@ SCIP_RETCODE createOriginalproblem(
 
             /* storing the customer variable in the list */
             customervars[i][j][k] = var;
+
+            /* capturing the variable since it is stored in the probdata */
+            SCIP_CALL( SCIPcaptureVar(scip, var) );
 
             /* creates the variable data */
             SCIP_CALL( SCIPvardataCreateCAP(scip, &vardata, SUBPROB, 1) );
@@ -290,6 +296,9 @@ SCIP_RETCODE createMasterproblem(
 
       /* storing the variable in the facility variable list */
       facilityvars[i] = var;
+
+      /* capturing the variable since it is stored in the probdata */
+      SCIP_CALL( SCIPcaptureVar(scip, var) );
 
       /* creates the variable data */
       SCIP_CALL( SCIPvardataCreateCAP(scip, &vardata, MASTER, nscenarios) );
@@ -376,6 +385,9 @@ SCIP_RETCODE createSubproblems(
          /* storing the variable in the facility variable list */
          subfacilityvars[i][j] = var;
 
+         /* capturing the variable since it is stored in the probdata */
+         SCIP_CALL( SCIPcaptureVar(scip, var) );
+
          /* creates the variable data */
          SCIP_CALL( SCIPvardataCreateCAP(subproblems[j], &vardata, SUBPROB, 1) );
 
@@ -414,6 +426,9 @@ SCIP_RETCODE createSubproblems(
 
             /* storing the customer variable in the list */
             customervars[i][j][k] = var;
+
+            /* capturing the variable since it is stored in the probdata */
+            SCIP_CALL( SCIPcaptureVar(scip, var) );
 
             /* creates the variable data */
             SCIP_CALL( SCIPvardataCreateCAP(subproblems[k], &vardata, SUBPROB, 1) );
@@ -536,6 +551,7 @@ SCIP_RETCODE probdataFree(
    assert(scip != NULL);
    assert(probdata != NULL);
 
+#if 1
    /* release all variables */
    for( i = 0; i < (*probdata)->nfacilities; i++ )
       SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->facilityvars[i]) );
@@ -551,7 +567,7 @@ SCIP_RETCODE probdataFree(
       for( j = 0; j < (*probdata)->nfacilities; j++ )
       {
          for( k = 0; k < (*probdata)->ncustomers; k++ )
-           SCIP_CALL( SCIPreleaseVar(varscip, &(*probdata)->customervars[k][j][i]) );
+            SCIP_CALL( SCIPreleaseVar(varscip, &(*probdata)->customervars[k][j][i]) );
       }
    }
 
@@ -581,18 +597,19 @@ SCIP_RETCODE probdataFree(
    }
 
    SCIP_CALL( SCIPreleaseCons(scip, &(*probdata)->sufficientcap) );
+#endif
 
    /* free memory of arrays */
    SCIPfreeBlockMemoryArray(scip, &(*probdata)->fixedcost, (*probdata)->nfacilities);
    SCIPfreeBlockMemoryArray(scip, &(*probdata)->capacity, (*probdata)->nfacilities);
 
-   for( i = (*probdata)->nfacilities - 1; i >= 0; i-- )
-      SCIPfreeBlockMemoryArray(scip, &(*probdata)->costs[i], (*probdata)->ncustomers);
-   SCIPfreeBlockMemoryArray(scip, &(*probdata)->costs, (*probdata)->nfacilities);
+   for( i = (*probdata)->ncustomers - 1; i >= 0; i-- )
+      SCIPfreeBlockMemoryArray(scip, &(*probdata)->costs[i], (*probdata)->nfacilities);
+   SCIPfreeBlockMemoryArray(scip, &(*probdata)->costs, (*probdata)->ncustomers);
 
 
    for( i = (*probdata)->ncustomers - 1; i >= 0; i-- )
-      SCIPfreeBlockMemoryArray(scip, &(*probdata)->demands[i], (*probdata)->nfacilities);
+      SCIPfreeBlockMemoryArray(scip, &(*probdata)->demands[i], (*probdata)->nscenarios);
    SCIPfreeBlockMemoryArray(scip, &(*probdata)->demands, (*probdata)->ncustomers);
 
    /* freeing the constraint memory arrays */
@@ -619,12 +636,14 @@ SCIP_RETCODE probdataFree(
    /* freeing the subproblem information */
    if( (*probdata)->usebenders )
    {
+#if 0
       /* freeing the sub facility variables */
       for( i = 0; i < (*probdata)->nscenarios; i++ )
       {
          for( j = 0; j < (*probdata)->nfacilities; j++ )
             SCIP_CALL( SCIPreleaseVar((*probdata)->subproblems[i], &(*probdata)->subfacilityvars[j][i]) );
       }
+#endif
 
       for( i = (*probdata)->nfacilities - 1; i >= 0; i-- )
          SCIPfreeBlockMemoryArray(scip, &(*probdata)->subfacilityvars[i], (*probdata)->nscenarios);
@@ -654,7 +673,64 @@ SCIP_RETCODE probdataFree(
 static
 SCIP_DECL_PROBDELORIG(probdelorigCap)
 {
+   int i;
+   int j;
+   int k;
+
+   assert(scip != NULL);
+   assert(probdata != NULL);
+
    SCIPdebugMsg(scip, "free original problem data\n");
+#if 0
+   /* release all variables */
+   for( i = 0; i < (*probdata)->nfacilities; i++ )
+      SCIP_CALL( SCIPreleaseVar(scip, &(*probdata)->facilityvars[i]) );
+
+   for( i = 0; i < (*probdata)->nscenarios; i++ )
+   {
+      SCIP* varscip;
+      if( (*probdata)->usebenders )
+         varscip = (*probdata)->subproblems[i];
+      else
+         varscip = scip;
+
+      for( j = 0; j < (*probdata)->nfacilities; j++ )
+      {
+         for( k = 0; k < (*probdata)->ncustomers; k++ )
+         {
+            assert(!SCIPvarIsTransformed((*probdata)->customervars[k][j][i]));
+            SCIP_CALL( SCIPreleaseVar(varscip, &(*probdata)->customervars[k][j][i]) );
+         }
+      }
+   }
+
+   /* release all constraints */
+   for( i = 0; i < (*probdata)->nscenarios; ++i )
+   {
+      SCIP* consscip;
+      if( (*probdata)->usebenders )
+         consscip = (*probdata)->subproblems[i];
+      else
+         consscip = scip;
+
+      for( j = 0; j < (*probdata)->ncustomers; j++ )
+         SCIP_CALL( SCIPreleaseCons(consscip, &(*probdata)->demandconss[j][i]) );
+   }
+
+   for( i = 0; i < (*probdata)->nscenarios; ++i )
+   {
+      SCIP* consscip;
+      if( (*probdata)->usebenders )
+         consscip = (*probdata)->subproblems[i];
+      else
+         consscip = scip;
+
+      for( j = 0; j < (*probdata)->nfacilities; ++j )
+         SCIP_CALL( SCIPreleaseCons(consscip, &(*probdata)->capconss[j][i]) );
+   }
+
+   SCIP_CALL( SCIPreleaseCons(scip, &(*probdata)->sufficientcap) );
+#endif
 
    SCIP_CALL( probdataFree(scip, probdata) );
 
@@ -666,7 +742,10 @@ SCIP_DECL_PROBDELORIG(probdelorigCap)
 static
 SCIP_DECL_PROBTRANS(probtransCap)
 {
-   /* int i; */
+#if 1
+   int i;
+   int j;
+   int k;
 
    /* create transform probdata */
    SCIP_CALL( probdataCreate(scip, targetdata, sourcedata->subproblems, sourcedata->facilityvars,
@@ -675,22 +754,63 @@ SCIP_DECL_PROBTRANS(probtransCap)
          sourcedata->fixedcost, sourcedata->ncustomers, sourcedata->nfacilities, sourcedata->nscenarios,
          sourcedata->usebenders) );
 
-#if 0
-   /* transform all constraints */
-   SCIP_CALL( SCIPtransformConss(scip, (*targetdata)->ndemandconss, (*targetdata)->demandconss,
-         (*targetdata)->demandconss) );
-   SCIP_CALL( SCIPtransformConss(scip, (*targetdata)->ncapconss, (*targetdata)->capconss,
-         (*targetdata)->capconss) );
+#if 1
+   for( i = 0; i < (*targetdata)->nfacilities; i++ )
+      SCIP_CALL( SCIPgetTransformedVar(scip, sourcedata->facilityvars[i], &(*targetdata)->facilityvars[i]) );
 
-   /* transform all variables */
-   SCIP_CALL( SCIPtransformVars(scip, (*targetdata)->nfacilities, (*targetdata)->facilityvars,
-         (*targetdata)->facilityvars) );
+   for( i = 0; i < (*targetdata)->nscenarios; i++ )
+   {
+      SCIP* varscip;
+      if( (*targetdata)->usebenders )
+         varscip = (*targetdata)->subproblems[i];
+      else
+         varscip = scip;
 
-   for( i = 0; i < (*targetdata)->ncustomers; i++ )
-      SCIP_CALL( SCIPtransformVars(scip, (*targetdata)->ncustomervars[i], (*targetdata)->customervars[i],
-            (*targetdata)->customervars[i]) );
+      for( j = 0; j < (*targetdata)->nfacilities; j++ )
+      {
+         for( k = 0; k < (*targetdata)->ncustomers; k++ )
+            SCIP_CALL( SCIPgetTransformedVar(varscip, sourcedata->customervars[k][j][i], &(*targetdata)->customervars[k][j][i]) );
+      }
+   }
+
+   if( (*targetdata)->usebenders )
+   {
+      /* transforming the sub facility variables */
+      for( i = 0; i < (*targetdata)->nscenarios; i++ )
+      {
+         for( j = 0; j < (*targetdata)->nfacilities; j++ )
+            SCIP_CALL( SCIPgetTransformedVar((*targetdata)->subproblems[i], sourcedata->subfacilityvars[j][i], &(*targetdata)->subfacilityvars[j][i]) );
+      }
+   }
+
+   /* transforming all constraints */
+   for( i = 0; i < (*targetdata)->nscenarios; ++i )
+   {
+      SCIP* consscip;
+      if( (*targetdata)->usebenders )
+         consscip = (*targetdata)->subproblems[i];
+      else
+         consscip = scip;
+
+      for( j = 0; j < (*targetdata)->ncustomers; j++ )
+         SCIP_CALL( SCIPgetTransformedCons(consscip, sourcedata->demandconss[j][i], &(*targetdata)->demandconss[j][i]) );
+   }
+
+   for( i = 0; i < (*targetdata)->nscenarios; ++i )
+   {
+      SCIP* consscip;
+      if( (*targetdata)->usebenders )
+         consscip = (*targetdata)->subproblems[i];
+      else
+         consscip = scip;
+
+      for( j = 0; j < (*targetdata)->nfacilities; ++j )
+         SCIP_CALL( SCIPgetTransformedCons(consscip, sourcedata->capconss[j][i], &(*targetdata)->capconss[j][i]) );
+   }
+
+   SCIP_CALL( SCIPgetTransformedCons(scip, sourcedata->sufficientcap, &(*targetdata)->sufficientcap) );
 #endif
-
+#endif
    return SCIP_OKAY;
 }
 
