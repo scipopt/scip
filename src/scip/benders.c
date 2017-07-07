@@ -807,7 +807,8 @@ SCIP_RETCODE SCIPbendersFree(
    }
    BMSfreeMemoryArrayNull(&(*benders)->benderscuts);
 
-   SCIP_CALL( SCIPfreeSol(set->scip, &(*benders)->relintsol) );
+   if( (*benders)->relintsol != NULL )
+      SCIP_CALL( SCIPfreeSol(set->scip, &(*benders)->relintsol) );
 
    BMSfreeMemoryArray(&(*benders)->subprobislp);
    BMSfreeMemoryArray(&(*benders)->bestsubprobobjval);
