@@ -10838,12 +10838,19 @@ SCIP_RETCODE SCIPchgReoptObjective(
    SCIPdebugMsg(scip, "\n");
 #endif
 
-   /* set all coefficients to 0, this is necessary because variables that are not given are assumed to have a
-    * zero objective coefficient
-    */
+   /* Set all coefficients of original variables to 0, since we will add the new objective coefficients later. */
    for( i = 0; i < norigvars; i++ )
    {
-      SCIP_CALL( SCIPaddVarObj(scip, origvars[i], -SCIPvarGetObj(origvars[i])) );
+      SCIP_CALL( SCIPchgVarObj(scip, origvars[i], 0.0) );
+   }
+
+   if( scip->set->stage >= SCIP_STAGE_TRANSFORMED )
+   {
+      /* In order to avoid numerical troubles, also explicitly set all transformed objective coefficients to 0. */
+      for( i = 0; i < scip->transprob->nvars; i++ )
+      {
+         SCIP_CALL( SCIPchgVarObj(scip, scip->transprob->vars[i], 0.0) );
+      }
    }
 
    /* reset objective data of original problem */
@@ -10859,11 +10866,6 @@ SCIP_RETCODE SCIPchgReoptObjective(
       scip->transprob->objsense = objsense;
       scip->transprob->objoffset = 0.0;
       scip->transprob->objisintegral = FALSE;
-
-#ifndef NDEBUG
-      for( i = 0; i < scip->transprob->nvars; i++ )
-         assert(SCIPisZero(scip, SCIPvarGetObj(scip->transprob->vars[i])));
-#endif
    }
 
    /* set new objective values */
@@ -10876,6 +10878,7 @@ SCIP_RETCODE SCIPchgReoptObjective(
          return SCIP_INVALIDDATA;
       }
 
+      /* Add coefficients because this gets transferred to the transformed problem (the coefficients were set to 0 above). */
       SCIP_CALL( SCIPaddVarObj(scip, vars[i], coefs[i]) );
    }
 
