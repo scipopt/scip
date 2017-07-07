@@ -32,6 +32,7 @@
 #define EVENTHDLR_DESC         "event handler for tree-size prediction related events"
 
 #define DEFAULT_HASHMAP_SIZE   100000
+#define DEFAULT_ESTIMATION_METHOD 'u'
 
 /*
  * Data structures
@@ -45,6 +46,7 @@
  */
 
 typedef enum {UNKNOWN, ESTIMATED, KNOWN} SizeStatus;
+typedef enum {RATIO, UNIFORM} EstimationMethod;
 
 typedef struct TreeSizeEstimateTree TSEtree;
 struct TreeSizeEstimateTree
@@ -68,7 +70,7 @@ struct TreeSizeEstimateTree
  * and pruned nodes according to this upper bound.
  */
 static
-SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCIP_Longint* totalsize, SCIP_Longint* remainingsize)
+SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCIP_Longint* totalsize, SCIP_Longint* remainingsize, EstimationMethod method)
 {
    assert(node != NULL);
    assert(totalsize != NULL);
@@ -106,7 +108,7 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
 
       assert(node->leftchild != NULL);
 
-      leftstatus = estimateTreeSize(scip, node->leftchild, upperbound, &lefttotalsize, &leftremainingsize);
+      leftstatus = estimateTreeSize(scip, node->leftchild, upperbound, &lefttotalsize, &leftremainingsize, method);
       if( node->rightchild == NULL )
       {
          rightstatus = UNKNOWN;
@@ -114,7 +116,7 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
          rightremainingsize = -1;
       }
       else
-         rightstatus = estimateTreeSize(scip, node->rightchild, upperbound, &righttotalsize, &rightremainingsize);
+         rightstatus = estimateTreeSize(scip, node->rightchild, upperbound, &righttotalsize, &rightremainingsize, method);
 
       assert(lefttotalsize > 0 || leftstatus == UNKNOWN);
       assert(righttotalsize > 0 || rightstatus == UNKNOWN);
@@ -139,8 +141,26 @@ SizeStatus estimateTreeSize(SCIP* scip, TSEtree *node, SCIP_Real upperbound, SCI
       }
       else /* Exactly one subtree is UNKNOWN: we estimate */
       {
-         SCIP_Real fractionleft = .5;
-         SCIP_Real fractionright = .5;
+         SCIP_Real fractionleft;
+         SCIP_Real fractionright;
+
+         /* We check which estimation method to use */
+         switch(method)
+         {
+            case RATIO:
+               //TODO
+               SCIPABORT();
+               break;
+            case UNIFORM:
+               fractionleft = .5;
+               fractionright = .5;
+               break;
+            default:
+               SCIPerrorMessage("Missing case in this switch.\n");
+               SCIPABORT();
+         }
+
+         assert(SCIPisEQ(scip, 1.0, fractionleft + fractionright));
 
          assert((leftstatus == UNKNOWN) ^ (rightstatus == UNKNOWN));
 
@@ -184,9 +204,15 @@ struct SCIP_EventhdlrData
 {
    /* Parameters */
    int hashmapsize;
+   char estimatemethod;
 
    /* Internal variables */
    unsigned int nodesfound;
+
+   /* Enums */
+   EstimationMethod estimationmethod;
+
+   /* Complex Data structures */
    TSEtree *tree; /* The representation of the B&B tree */
    //SCIP_HASHMAP *opennodes; /* The open nodes (that have yet to be solved). The key is the (scip) id/number of the SCIP_Node */
    SCIP_HASHMAP *allnodes;
@@ -210,7 +236,7 @@ SCIP_Longint SCIPtreeSizeGetEstimateRemaining(SCIP* scip)
    if(eventhdlrdata->tree == NULL)
       return -1;
 
-   status = estimateTreeSize(scip, eventhdlrdata->tree, SCIPgetUpperbound(scip), &totalsize, &remainingsize);
+   status = estimateTreeSize(scip, eventhdlrdata->tree, SCIPgetUpperbound(scip), &totalsize, &remainingsize, eventhdlrdata->estimationmethod);
    if( status == UNKNOWN )
       return -1;
    else
@@ -234,6 +260,21 @@ SCIP_DECL_EVENTINITSOL(eventInitsolTreeSizePrediction)
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
+
+
+   switch(eventhdlrdata->estimatemethod)
+   {
+      case 'r':
+         eventhdlrdata->estimationmethod = RATIO;
+         break;
+      case 'u':
+         eventhdlrdata->estimationmethod = UNIFORM;
+         break;
+      default:
+         SCIPerrorMessage("Missing case in this switch.\n");
+         SCIPABORT();
+   }
+
 
 //   eventhdlrdata->initialized = TRUE;
    eventhdlrdata->nodesfound = 0;
@@ -275,8 +316,8 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolTreeSizePrediction)
       SizeStatus status;
       if( eventhdlrdata->tree != NULL ) /* SCIP may not have created any node */
       {
-         status = estimateTreeSize(scip, eventhdlrdata->tree, SCIPgetUpperbound(scip), &totalsize, &remainingsize);
-         assert(status == KNOWN); /* TODO remove after debug */
+         status = estimateTreeSize(scip, eventhdlrdata->tree, SCIPgetUpperbound(scip), &totalsize, &remainingsize, eventhdlrdata->estimationmethod);
+         assert(status == KNOWN);
          SCIPdebugMessage("Estimated remaining nodes: %" SCIP_LONGINT_FORMAT " nodes in the B&B tree\n", remainingsize);
       }
    }
@@ -450,7 +491,6 @@ SCIP_RETCODE SCIPincludeEventHdlrTreeSizePrediction(
 
    /* create tree-size prediction event handler data */
    SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
-   /* TODO: (optional) create event handler specific data here */
 
    eventhdlr = NULL;
 
@@ -471,6 +511,7 @@ SCIP_RETCODE SCIPincludeEventHdlrTreeSizePrediction(
    /* add tree-size prediction event handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "estimates/hashmapsize", "Default hashmap size to store the open nodes of the B&B tree", &(eventhdlrdata->hashmapsize), TRUE, DEFAULT_HASHMAP_SIZE, 0, INT_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddCharParam(scip, "estimates/estimatemethod", "Method to estimate the sizes of unkown subtrees based on their siblings ('r'atio, 'u'niform)", &(eventhdlrdata->estimatemethod), TRUE, DEFAULT_ESTIMATION_METHOD, "ru", NULL, NULL) );
 
    return SCIP_OKAY;
 }
