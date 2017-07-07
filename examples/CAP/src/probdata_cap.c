@@ -386,7 +386,7 @@ SCIP_RETCODE createSubproblems(
          subfacilityvars[i][j] = var;
 
          /* capturing the variable since it is stored in the probdata */
-         SCIP_CALL( SCIPcaptureVar(scip, var) );
+         SCIP_CALL( SCIPcaptureVar(subproblems[j], var) );
 
          /* creates the variable data */
          SCIP_CALL( SCIPvardataCreateCAP(subproblems[j], &vardata, SUBPROB, 1) );
@@ -428,7 +428,7 @@ SCIP_RETCODE createSubproblems(
             customervars[i][j][k] = var;
 
             /* capturing the variable since it is stored in the probdata */
-            SCIP_CALL( SCIPcaptureVar(scip, var) );
+            SCIP_CALL( SCIPcaptureVar(subproblems[k], var) );
 
             /* creates the variable data */
             SCIP_CALL( SCIPvardataCreateCAP(subproblems[k], &vardata, SUBPROB, 1) );
@@ -636,14 +636,12 @@ SCIP_RETCODE probdataFree(
    /* freeing the subproblem information */
    if( (*probdata)->usebenders )
    {
-#if 0
       /* freeing the sub facility variables */
       for( i = 0; i < (*probdata)->nscenarios; i++ )
       {
          for( j = 0; j < (*probdata)->nfacilities; j++ )
             SCIP_CALL( SCIPreleaseVar((*probdata)->subproblems[i], &(*probdata)->subfacilityvars[j][i]) );
       }
-#endif
 
       for( i = (*probdata)->nfacilities - 1; i >= 0; i-- )
          SCIPfreeBlockMemoryArray(scip, &(*probdata)->subfacilityvars[i], (*probdata)->nscenarios);
@@ -742,7 +740,7 @@ SCIP_DECL_PROBDELORIG(probdelorigCap)
 static
 SCIP_DECL_PROBTRANS(probtransCap)
 {
-#if 1
+#if 0
    int i;
    int j;
    int k;
@@ -820,7 +818,9 @@ SCIP_DECL_PROBDELTRANS(probdeltransCap)
 {
    SCIPdebugMsg(scip, "free transformed problem data\n");
 
+#if 0
    SCIP_CALL( probdataFree(scip, probdata) );
+#endif
 
    return SCIP_OKAY;
 }
