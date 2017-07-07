@@ -171,6 +171,9 @@ SCIP_DECL_DISPOUTPUT(dispOutputEstimates)
    if( remainingestimate != -1 && SCIPgetNNodes(scip) > 1)
    { 
       estimate = remainingestimate + SCIPgetNNodes(scip);
+      /* We check if SCIP_Longint is large enough to encode the number it should encode */
+      if( estimate < remainingestimate || estimate < SCIPgetNNodes(scip) )
+         estimate = SCIP_LONGINT_MAX;
       SCIPdispLongint(SCIPgetMessagehdlr(scip), file, estimate, DISP_WIDTH);
    }
    else
