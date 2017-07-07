@@ -167,7 +167,8 @@ SCIP_DECL_DISPOUTPUT(dispOutputEstimates)
    /* We call the estimation method */
    remainingestimate = SCIPtreeSizeGetEstimateRemaining(scip);
    
-   if( remainingestimate != -1)
+   /* If there is no estimate of remaining nodes (-1) or if we have not branched yet, then make a prediction */
+   if( remainingestimate != -1 && SCIPgetNNodes(scip) > 1)
    { 
       estimate = remainingestimate + SCIPgetNNodes(scip);
       SCIPdispLongint(SCIPgetMessagehdlr(scip), file, estimate, DISP_WIDTH);
