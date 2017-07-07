@@ -4692,7 +4692,7 @@ SCIP_RETCODE reoptSaveNewObj(
 
       /* update flag to remember if the objective function has changed */
       if( !reopt->objhaschanged && reopt->run >= 2
-          && SCIPsetIsEQ(set, reopt->objs[reopt->run-2][probidx], reopt->objs[reopt->run-1][probidx]) )
+          && ! SCIPsetIsEQ(set, reopt->objs[reopt->run-2][probidx], reopt->objs[reopt->run-1][probidx]) )
          reopt->objhaschanged = TRUE;
 
       /* mark this objective as the first non empty */
