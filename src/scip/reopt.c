@@ -619,7 +619,7 @@ SCIP_RETCODE reoptnodeReset(
          BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualredscur->boundtypes, reoptnode->dualredscur->varssize);
       }
       BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualredscur->vals, reoptnode->dualredscur->varssize);
-      BMSfreeBlockMemoryArray(blkmem ,&reoptnode->dualredscur->vars, reoptnode->dualredscur->varssize);
+      BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualredscur->vars, reoptnode->dualredscur->varssize);
       BMSfreeBlockMemory(blkmem, &reoptnode->dualredscur);
       reoptnode->dualredscur = NULL;
    }
@@ -6804,7 +6804,7 @@ SCIP_RETCODE transformDualredsToBounddisjunction(
 
    /* we have to transform the set of bound changes into a linear constraint */
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &consdata->vars, dualreds->vars, dualreds->nvars) );
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &consdata->vals, dualreds->vars, dualreds->nvars) );
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &consdata->vals, dualreds->vals, dualreds->nvars) );
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &consdata->boundtypes, dualreds->boundtypes, dualreds->nvars) );
 
    consdata->varssize = dualreds->nvars;
