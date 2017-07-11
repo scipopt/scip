@@ -3814,7 +3814,7 @@ SCIP_RETCODE generateCut(
       }
       else
       {
-         SCIP_CALL( SCIPgetRowprepRow(scip, row, rowprep, SCIPconsGetHdlr(cons)) );
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, row, rowprep, SCIPconsGetHdlr(cons)) );
       }
 
       SCIPfreeRowprep(scip, &rowprep);
@@ -5747,7 +5747,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
                   if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                   {
-                     SCIP_CALL( SCIPgetRowprepRow(scip, &row, rowprep, conshdlr) );
+                     SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
                      assert(!(*infeasible));
                      SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
@@ -5771,7 +5771,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
                if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                {
-                  SCIP_CALL( SCIPgetRowprepRow(scip, &row, rowprep, conshdlr) );
+                  SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
                   assert(!(*infeasible));
                   SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
@@ -5798,7 +5798,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
                if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                {
-                  SCIP_CALL( SCIPgetRowprepRow(scip, &row, rowprep, conshdlr) );
+                  SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
                   assert(!(*infeasible));
                   SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
@@ -5828,7 +5828,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                   SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
                   if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                   {
-                     SCIP_CALL( SCIPgetRowprepRow(scip, &row, rowprep, conshdlr) );
+                     SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
                      assert(!(*infeasible));
                      SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
@@ -5852,7 +5852,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
                if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                {
-                  SCIP_CALL( SCIPgetRowprepRow(scip, &row, rowprep, conshdlr) );
+                  SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
                   assert(!(*infeasible));
                   SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
@@ -5879,7 +5879,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, NULL, conshdlrdata->cutmaxrange, -SCIPinfinity(scip), &coefrange, NULL) );
                if( coefrange < conshdlrdata->cutmaxrange && !SCIPisInfinity(scip, REALABS(rowprep->side)) )
                {
-                  SCIP_CALL( SCIPgetRowprepRow(scip, &row, rowprep, conshdlr) );
+                  SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
 
                   assert(!(*infeasible));
                   SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );

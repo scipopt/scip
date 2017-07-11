@@ -5539,7 +5539,7 @@ SCIP_RETCODE generateCut(
 
    if( success )
    {
-      SCIP_CALL( SCIPgetRowprepRow(scip, row, rowprep, SCIPconsGetHdlr(cons)) );
+      SCIP_CALL( SCIPgetRowprepRowCons(scip, row, rowprep, SCIPconsGetHdlr(cons)) );
    }
    else
       *row = NULL;
