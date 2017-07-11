@@ -7005,6 +7005,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
          assert(nintvars > 0 || ncontvars > 0);
          SCIP_CALL( transformDualredsToBounddisjunction(reopt, set, blkmem, consdata, reoptnodes[0]->dualredscur) );
       }
+      ++reoptnodes[id]->nconss;
 
       /* add id as a child of the root node */
       SCIP_CALL( reoptAddChild(reopttree, set, blkmem, 0, id) );
