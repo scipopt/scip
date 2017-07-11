@@ -1273,7 +1273,7 @@ SCIP_RETCODE separatePoint(
           * since no variable gets added twice. However, if rowprep were replacing multiaggregated variables
           * (as there can exist for soc cons), then SCIPmergeRowprep would be necessary.
           */
-         /* cleanup rowprep (there is no limit on coefrange for cons_soc) */
+         /* cleanup rowprep (there is no limit on coefrange for cons_soc) TODO add a coefrange limit? */
          SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIPinfinity(scip), minefficacy, NULL, &efficacy) );
 
          if( conshdlrdata->scaling != 'o' )
