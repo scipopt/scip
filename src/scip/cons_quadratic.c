@@ -15361,7 +15361,11 @@ void rowprepCleanupIntegralCoefs(
     * Both cases can be problematic if variable value is very large (bad numerics).
     * Thus, we anticipate by rounding coef here, but also modify constant so that cut is still valid (if possible),
     * i.e., bound coef[i]*x by round(coef[i])*x + (coef[i]-round(coef[i])) * bound(x).
+    * Or in other words, we aggregate with the variable bound.
+    *
     * If the required bound of x is not finite, then only round coef (introduces an error).
+    * @TODO If only the opposite bound is available, then one could move the coefficient
+    *   away from the closest integer so that the SCIP_ROW won't try to round it.
     */
    for( i = 0; i < rowprep->nvars; ++i )
    {
