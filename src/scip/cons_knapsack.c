@@ -973,7 +973,7 @@ SCIP_RETCODE checkCons(
          }
       }
 
-      /* calculate absolute and relative violation */
+      /* calculate constraint violation and update it in solution */
       absviol = ishuge ? sum : (SCIP_Real)integralsum;
       absviol -= consdata->capacity;
       relviol = SCIPrelDiff(absviol + consdata->capacity, consdata->capacity);

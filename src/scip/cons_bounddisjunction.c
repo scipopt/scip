@@ -1327,7 +1327,7 @@ SCIP_RETCODE checkCons(
          break;
       }
    }
-   /* Update constraint violation in solution */
+   /* update constraint violation in solution */
    relviol = SCIPrelDiff(SCIPgetSolVal(scip, sol, vars[violv]), bounds[violv]);
    if( sol != NULL )
       SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
