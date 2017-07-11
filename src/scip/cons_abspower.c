@@ -3797,6 +3797,7 @@ SCIP_RETCODE generateCut(
       SCIPdebug( SCIPprintRowprep(scip, rowprep, NULL) );
 
       /* we should not need SCIPmergeRowprep() with only 2 vars in the row */
+      assert(rowprep->nvars <= 2);
 
       SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, conshdlrdata->cutmaxrange, minviol, &coefrange, NULL) );
 
