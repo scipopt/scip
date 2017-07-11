@@ -2251,6 +2251,9 @@ SCIP_RETCODE checkCumulativeCondition(
    int endindex;           /* index of endsolvalues with: endsolvalues[endindex] > curtime */
    int j;
 
+   SCIP_Real absviol;
+   SCIP_Real relviol;
+
    assert(scip != NULL);
    assert(violated != NULL);
 
@@ -2297,6 +2300,8 @@ SCIP_RETCODE checkCumulativeCondition(
 
    endindex = 0;
    freecapacity = capacity;
+   absviol = 0.0;
+   relviol = 0.0;
 
    /* check each start point of a job whether the capacity is kept or not */
    for( j = 0; j < nvars; ++j )
@@ -2322,6 +2327,14 @@ SCIP_RETCODE checkCumulativeCondition(
          ++endindex;
       }
       assert(freecapacity <= capacity);
+
+      /* update absolute and relative violation */
+      assert(capacity >= 0);
+      if( SCIPisLT(scip, absviol, -freecapacity) )
+      {
+         absviol = -freecapacity;
+         relviol = SCIPrelDiff(capacity - freecapacity, capacity);
+      }
 
       /* check freecapacity to be smaller than zero */
       if( freecapacity < 0 && curtime >= hmin )
@@ -2354,6 +2367,10 @@ SCIP_RETCODE checkCumulativeCondition(
          break;
       }
    } /*lint --e{850}*/
+
+   /* Update constraint violation in solution */
+   if( sol != NULL )
+      SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
 
    /* free all buffer arrays */
    SCIPfreeBufferArray(scip, &endindices);
