@@ -4571,7 +4571,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
       SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->trysolheur, polishedsol) );
       SCIP_CALL( SCIPfreeSol(scip, &polishedsol) );
    }
-   else if( conshdlrdata->subnlpheur != NULL && sol != NULL && *result == SCIP_INFEASIBLE )
+   else if( conshdlrdata->subnlpheur != NULL && sol != NULL && *result == SCIP_INFEASIBLE && !SCIPisInfinity(scip, maxviol) )
    {
       SCIP_CALL( SCIPupdateStartpointHeurSubNlp(scip, conshdlrdata->subnlpheur, sol, maxviol) );
    }

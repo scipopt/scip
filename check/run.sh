@@ -19,13 +19,35 @@ LINTOL=1e-04
 # absolut tolerance for checking integrality constraints 
 INTTOL=1e-04
 
-# we need to ensure that all libraries we load through the network are available.
-# therefore, we wait for one additional minute if the node runs for 1 minute or less.
-read -r -a runtime <<< `top -b -n 1 | head -n 1`
-
-if [ ${runtime[5]} == "min," ] && [ ${runtime[4]} -lt 2 ] ;
+# check if the scripts runs a *.zib.de host
+if hostname -f | grep -q zib.de ;
 then
-    sleep 60
+  # access /optimi once to force a mount
+  ls /optimi/ >/dev/null 2>&1
+
+  # check if /optimi is mounted
+  MOUNTED=0
+
+  # count number of fails and abort after 10 min to avoid an endless loop
+  FAILED=0
+
+  while [ "$MOUNTED" -ne 1 ]
+  do
+      # stop if the system does not mount /optimi for ~10 minutes
+      if [ "$FAILED" -eq 600 ]
+      then
+          exit 1
+      fi
+
+      if mount | grep -q optimi ;
+      then
+          MOUNTED=1
+      else
+          ((FAILED++))
+          echo "/optimi is not mounted yet, waiting 1 second"
+          sleep 1
+      fi
+  done
 fi
 
 # check if tmp-path exists
@@ -57,6 +79,7 @@ date                                >> $OUTFILE
 date                                >> $ERRFILE
 echo -----------------------------  >> $OUTFILE
 date +"@03 %s"                      >> $OUTFILE
+echo @05 $TIMELIMIT                 >> $OUTFILE
 
 #if we use a debugger command, we need to replace the errfile place holder by the actual err-file for logging
 #and if we run on the cluster we want to use srun with CPU binding which is defined by the check_cluster script

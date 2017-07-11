@@ -5,7 +5,7 @@
 #
 #
 
-APPLICATIONS=(Coloring MinIISC Scheduler STP)
+APPLICATIONS=$(for f in *;do if [[ -d $f  ]]; then echo $f;fi; done)
 LPSOLVERS=(spx2)
 OPTS=(dbg)
 
@@ -78,8 +78,13 @@ do
 done
 
 # run tests
-for APPLICATION in ${APPLICATIONS[@]}
+for APPLICATION in $APPLICATIONS
 do
+    # See issues #1100 and #1169
+    if test $APPLICATION = "PolySCIP"
+    then
+        continue
+    fi
     echo
     echo
     echo ===== $APPLICATION =====
