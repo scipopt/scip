@@ -401,7 +401,7 @@ SCIP_RETCODE createSubproblems(
          vardata = SCIPvarGetData(facilityvars[i]);
 
          /* adds the subproblem variable to the variable mapping */
-         SCIPvardataAddVarMapping(vardata, var, i);
+         SCIPvardataAddVarMapping(vardata, var, j);
 
          /* adding the variable to the capacity constriants */
          SCIP_CALL( SCIPaddCoefLinear(subproblems[j], capconss[i][j], subfacilityvars[i][j], -capacity[i]) );

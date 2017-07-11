@@ -371,7 +371,7 @@ SCIP_DECL_READERREAD(readerReadCap)
          for( i = 0; i < nread; i++ )
          {
             SCIPdebugMsg(scip, "(%d, %d) found cost <%e>\n", customer, facility, tmpcosts[i]);
-            costs[customer][facility] = tmpcosts[i];
+            costs[customer][facility] = tmpcosts[i]/demand;
             facility++;
          }
       }
