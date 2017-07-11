@@ -5436,7 +5436,7 @@ SCIP_RETCODE generateCutFactorable(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SIDETYPE         violside,           /**< for which side a cut should be generated */
    SCIP_Real*            ref,                /**< reference solution where to generate the cut */
-   SCIP_ROWPREP*         rowprep,             /**< data structure to store cut coefficients */
+   SCIP_ROWPREP*         rowprep,            /**< data structure to store cut coefficients */
    SCIP_Bool*            success             /**< buffer to indicate whether a cut was successfully computed */
    )
 {
@@ -14710,7 +14710,7 @@ SCIP_RETCODE SCIPcreateRowprep(
    SCIP_ROWPREP**        rowprep,            /**< buffer to store pointer to rowprep */
    SCIP_SIDETYPE         sidetype,           /**< whether cut will be or lower-equal or larger-equal type */
    SCIP_Bool             local               /**< whether cut will be valid only locally */
-)
+   )
 {
    assert(scip != NULL);
    assert(rowprep != NULL);
@@ -14728,7 +14728,7 @@ SCIP_RETCODE SCIPcreateRowprep(
 void SCIPfreeRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP**        rowprep             /**< pointer that stores pointer to rowprep */
-)
+   )
 {
    assert(scip != NULL);
    assert(rowprep != NULL);
@@ -14744,7 +14744,7 @@ SCIP_RETCODE SCIPcopyRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP**        target,             /**< buffer to store pointer of rowprep copy */
    SCIP_ROWPREP*         source              /**< rowprep to copy */
-)
+   )
 {
    assert(scip != NULL);
    assert(target != NULL);
@@ -14771,7 +14771,7 @@ SCIP_RETCODE SCIPensureRowprepSize(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
    int                   size                /**< number of additional terms for which to alloc space in rowprep */
-)
+   )
 {
    int oldsize;
 
@@ -14797,7 +14797,7 @@ void SCIPprintRowprep(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be printed */
    FILE*                 file                /**< file to print to, or NULL for stdout */
-)
+   )
 {
    int i;
 
@@ -14823,7 +14823,7 @@ SCIP_RETCODE SCIPaddRowprepTerm(
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
    SCIP_VAR*             var,                /**< variable to add */
    SCIP_Real             coef                /**< coefficient to add */
-)
+   )
 {
    assert(scip != NULL);
    assert(rowprep != NULL);
@@ -14849,7 +14849,7 @@ SCIP_RETCODE SCIPaddRowprepTerms(
    int                   nvars,              /**< number of terms to add */
    SCIP_VAR**            vars,               /**< variables to add */
    SCIP_Real*            coefs               /**< coefficients to add */
-)
+   )
 {
    assert(scip != NULL);
    assert(rowprep != NULL);
@@ -14878,7 +14878,7 @@ SCIP_RETCODE SCIPaddRowprepTerms(
 void SCIPaddRowprepSide(
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
    SCIP_Real             side                /**< constant value to be added to side */
-)
+   )
 {
    assert(rowprep != NULL);
 
@@ -14892,7 +14892,7 @@ void SCIPaddRowprepSide(
 void SCIPaddRowprepConstant(
    SCIP_ROWPREP*         rowprep,            /**< rowprep */
    SCIP_Real             constant            /**< constant value to be added */
-)
+   )
 {
    assert(rowprep != NULL);
 
@@ -14910,7 +14910,7 @@ SCIP_Real SCIPgetRowprepViolation(
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
    SCIP_SOL*             sol,                /**< solution or NULL for LP solution */
    char                  scaling             /**< how to scale cut violation: o, g, or s */
-)
+   )
 {
    SCIP_Real activity;
    SCIP_Real viol;
@@ -14972,7 +14972,7 @@ SCIP_Real SCIPgetRowprepViolation(
 void SCIPmergeRowprepTerms(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep             /**< rowprep to be cleaned up */
-)
+   )
 {
    int i;
    int j;
@@ -15031,7 +15031,7 @@ static
 SCIP_RETCODE rowprepCleanupSortTerms(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep             /**< rowprep to be sorted */
-)
+   )
 {
    int i;
 
@@ -15092,7 +15092,7 @@ void rowprepCleanupImproveCoefrange(
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be improve */
    SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */
    SCIP_Real             maxcoefrange        /**< maximal allowed coefficients range */
-)
+   )
 {
    SCIP_VAR* var;
    SCIP_Real lb;
@@ -15255,7 +15255,7 @@ void rowprepCleanupScaleup(
    SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */
    SCIP_Real*            viol,               /**< violation of cut in sol (input and output) */
    SCIP_Real             minviol             /**< minimal violation we try to achieve */
-)
+   )
 {
    SCIP_Real scalefactor;
    SCIP_Real mincoef;
@@ -15305,7 +15305,7 @@ void rowprepCleanupScaledown(
    SCIP_SOL*             sol,                /**< solution that we try to cut off, or NULL for LP solution */
    SCIP_Real*            viol,               /**< violation of cut in sol (input and output) */
    SCIP_Real             minviol             /**< minimal violation we try to keep */
-)
+   )
 {
    SCIP_Real scalefactor;
 
@@ -15348,7 +15348,7 @@ void rowprepCleanupIntegralCoefs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be improve */
    SCIP_Real*            viol                /**< violation of cut in sol (input), set to SCIP_INVALID if some coef changed */
-)
+   )
 {
    SCIP_Real coef;
    SCIP_Real roundcoef;
@@ -15422,7 +15422,7 @@ void rowprepCleanupSide(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be improve */
    SCIP_Real*            viol                /**< violation of cut in sol (input), set to SCIP_INVALID if some coef changed */
-)
+   )
 {
    /* SCIP_ROW handling will replace a side close to 0 by 0.0, even if that makes the row more restrictive
     * we thus relax the side here so that it will either be 0 now or will not be rounded to 0 later
@@ -15460,7 +15460,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
    SCIP_Real             minviol,            /**< minimal absolute violation the row should achieve (w.r.t. sol) */
    SCIP_Real*            coefrange,          /**< buffer to store coefrange of cleaned up cut, or NULL if not of interest */
    SCIP_Real*            viol                /**< buffer to store absolute violation of cleaned up cut in sol, or NULL if not of interest */
-)
+   )
 {
    SCIP_Real myviol;
 #ifdef SCIP_DEBUG
@@ -15552,7 +15552,7 @@ SCIP_RETCODE SCIPcleanupRowprep(
 int SCIPscaleRowprep(
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be scaled */
    SCIP_Real             factor              /**< suggested scale factor */
-)
+   )
 {
    double v;
    int exp;
@@ -15583,7 +15583,7 @@ SCIP_RETCODE SCIPgetRowprepRowCons(
    SCIP_ROW**            row,                /**< buffer to store pointer to new row */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-)
+   )
 {
    assert(scip != NULL);
    assert(row != NULL);
@@ -15605,7 +15605,7 @@ SCIP_RETCODE SCIPgetRowprepRowSepa(
    SCIP_ROW**            row,                /**< buffer to store pointer to new row */
    SCIP_ROWPREP*         rowprep,            /**< rowprep to be turned into a row */
    SCIP_SEPA*            sepa                /**< separator */
-)
+   )
 {
    assert(scip != NULL);
    assert(row != NULL);
