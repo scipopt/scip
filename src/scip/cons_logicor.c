@@ -1516,6 +1516,8 @@ SCIP_RETCODE checkCons(
    SCIP_VAR** vars;
    SCIP_Real solval;
    SCIP_Real sum;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
    int nvars;
    int v;
 
@@ -1541,6 +1543,12 @@ SCIP_RETCODE checkCons(
    }
 
    *violated = SCIPisFeasLT(scip, sum, 1.0);
+
+   /* calculate absolute and relative violation */
+   absviol = 1.0 - sum;
+   relviol = SCIPrelDiff(1.0, sum);
+   if( sol != NULL )
+      SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
 
    return SCIP_OKAY;
 }
