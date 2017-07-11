@@ -10835,12 +10835,19 @@ SCIP_RETCODE SCIPchgReoptObjective(
    SCIPdebugMsg(scip, "\n");
 #endif
 
-   /* set all coefficients to 0, this is necessary because variables that are not given are assumed to have a
-    * zero objective coefficient
-    */
+   /* Set all coefficients of original variables to 0, since we will add the new objective coefficients later. */
    for( i = 0; i < norigvars; i++ )
    {
-      SCIP_CALL( SCIPaddVarObj(scip, origvars[i], -SCIPvarGetObj(origvars[i])) );
+      SCIP_CALL( SCIPchgVarObj(scip, origvars[i], 0.0) );
+   }
+
+   if( scip->set->stage >= SCIP_STAGE_TRANSFORMED )
+   {
+      /* In order to avoid numerical troubles, also explicitly set all transformed objective coefficients to 0. */
+      for( i = 0; i < scip->transprob->nvars; i++ )
+      {
+         SCIP_CALL( SCIPchgVarObj(scip, scip->transprob->vars[i], 0.0) );
+      }
    }
 
    /* reset objective data of original problem */
@@ -10856,11 +10863,6 @@ SCIP_RETCODE SCIPchgReoptObjective(
       scip->transprob->objsense = objsense;
       scip->transprob->objoffset = 0.0;
       scip->transprob->objisintegral = FALSE;
-
-#ifndef NDEBUG
-      for( i = 0; i < scip->transprob->nvars; i++ )
-         assert(SCIPisZero(scip, SCIPvarGetObj(scip->transprob->vars[i])));
-#endif
    }
 
    /* set new objective values */
@@ -10873,6 +10875,7 @@ SCIP_RETCODE SCIPchgReoptObjective(
          return SCIP_INVALIDDATA;
       }
 
+      /* Add coefficients because this gets transferred to the transformed problem (the coefficients were set to 0 above). */
       SCIP_CALL( SCIPaddVarObj(scip, vars[i], coefs[i]) );
    }
 
@@ -11119,17 +11122,30 @@ SCIP_RETCODE SCIPsetObjlimit(
    case SCIP_STAGE_PROBLEM:
       SCIPprobSetObjlim(scip->origprob, objlimit);
       break;
+   case SCIP_STAGE_PRESOLVED:
+      oldobjlimit = SCIPprobGetObjlim(scip->origprob, scip->set);
+      assert(oldobjlimit == SCIPprobGetObjlim(scip->transprob, scip->set)); /*lint !e777*/
+      if( SCIPtransformObj(scip, objlimit) > SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, oldobjlimit) && ! scip->set->reopt_enable)
+      {
+         SCIPerrorMessage("cannot relax objective limit from %.15g to %.15g in presolved stage.\n", oldobjlimit, objlimit);
+         return SCIP_INVALIDDATA;
+      }
+      SCIPprobSetObjlim(scip->origprob, objlimit);
+      SCIPprobSetObjlim(scip->transprob, objlimit);
+      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
+      break;
+
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
-   case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       oldobjlimit = SCIPprobGetObjlim(scip->origprob, scip->set);
       assert(oldobjlimit == SCIPprobGetObjlim(scip->transprob, scip->set)); /*lint !e777*/
       if( SCIPtransformObj(scip, objlimit) > SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, oldobjlimit) )
       {
-         SCIPerrorMessage("cannot relax objective limit from %.15g to %.15g after problem was transformed\n", oldobjlimit, objlimit);
+         SCIPerrorMessage("cannot relax objective limit from %.15g to %.15g after problem was transformed.\n", oldobjlimit, objlimit);
          return SCIP_INVALIDDATA;
       }
       SCIPprobSetObjlim(scip->origprob, objlimit);
@@ -15237,7 +15253,6 @@ SCIP_RETCODE freeReoptSolve(
 
    /* reset objective limit */
    SCIP_CALL( SCIPsetObjlimit(scip, SCIP_INVALID) );
-
 
    return SCIP_OKAY;
 }
@@ -29670,10 +29685,10 @@ SCIP_RETCODE SCIPwriteLP(
    const char*           filename            /**< file name */
    )
 {
-
    SCIP_Bool cutoff;
 
    SCIP_CALL( checkStage(scip, "SCIPwriteLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
    if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
    {
       SCIP_CALL( SCIPconstructCurrentLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,

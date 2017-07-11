@@ -619,7 +619,7 @@ SCIP_RETCODE reoptnodeReset(
          BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualredscur->boundtypes, reoptnode->dualredscur->varssize);
       }
       BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualredscur->vals, reoptnode->dualredscur->varssize);
-      BMSfreeBlockMemoryArray(blkmem ,&reoptnode->dualredscur->vars, reoptnode->dualredscur->varssize);
+      BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualredscur->vars, reoptnode->dualredscur->varssize);
       BMSfreeBlockMemory(blkmem, &reoptnode->dualredscur);
       reoptnode->dualredscur = NULL;
    }
@@ -4692,7 +4692,7 @@ SCIP_RETCODE reoptSaveNewObj(
 
       /* update flag to remember if the objective function has changed */
       if( !reopt->objhaschanged && reopt->run >= 2
-          && SCIPsetIsEQ(set, reopt->objs[reopt->run-2][probidx], reopt->objs[reopt->run-1][probidx]) )
+          && ! SCIPsetIsEQ(set, reopt->objs[reopt->run-2][probidx], reopt->objs[reopt->run-1][probidx]) )
          reopt->objhaschanged = TRUE;
 
       /* mark this objective as the first non empty */
@@ -6804,7 +6804,7 @@ SCIP_RETCODE transformDualredsToBounddisjunction(
 
    /* we have to transform the set of bound changes into a linear constraint */
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &consdata->vars, dualreds->vars, dualreds->nvars) );
-   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &consdata->vals, dualreds->vars, dualreds->nvars) );
+   SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &consdata->vals, dualreds->vals, dualreds->nvars) );
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &consdata->boundtypes, dualreds->boundtypes, dualreds->nvars) );
 
    consdata->varssize = dualreds->nvars;
@@ -7005,6 +7005,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
          assert(nintvars > 0 || ncontvars > 0);
          SCIP_CALL( transformDualredsToBounddisjunction(reopt, set, blkmem, consdata, reoptnodes[0]->dualredscur) );
       }
+      ++reoptnodes[id]->nconss;
 
       /* add id as a child of the root node */
       SCIP_CALL( reoptAddChild(reopttree, set, blkmem, 0, id) );

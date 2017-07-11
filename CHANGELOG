@@ -32,6 +32,7 @@ features
 - added parsing functionality to cardinality constraint handler for CIP format
 - added command line option '-o' and command 'validatesolve' in interactive shell
   to validate the solution against an external primal and dual reference value.
+- allow to relax objective limit in reoptimization in presolved stage
 
 fixed bugs:
 - fixed bug in genvbounds propagator when applying a restart after the root node
@@ -52,6 +53,7 @@ fixed bugs:
 - added missing definition of SCIP_UNUSED in memory.h if def.h is not included
 - relaxed a too strong assert concerning solutions close to the objective limit
 - fixed guard against using old Gurobi versions in lpi_grb.c: Gurobi 7.5 was not permitted
+- treat reopt bugs: Avoid numerical problems with changing objective; fix check for changed objective
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint
