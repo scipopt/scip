@@ -32,7 +32,7 @@
 #define CONSHDLR_NAME          "benders"
 #define CONSHDLR_DESC          "constraint handler to execute Benders' Decomposition"
 #define CONSHDLR_ENFOPRIORITY        -1 /**< priority of the constraint handler for constraint enforcing */
-#define CONSHDLR_CHECKPRIORITY       -1 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_CHECKPRIORITY -5000000 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
@@ -79,11 +79,12 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
    SCIP_SOL*             sol,                /**< the primal solution to enforce, or NULL for the current LP/pseudo sol */
    SCIP_CONSHDLR*        conshdlr,           /**< the constraint handler */
    SCIP_RESULT*          result,             /**< the result of the enforcement */
-   BENDERS_ENFOTYPE      type                /**< the type of solution being enforced */
+   SCIP_BENDERSENFOTYPE  type                /**< the type of solution being enforced */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_BENDERS** benders;
+   SCIP_Bool infeasible;
    int nbenders;
    int i;
 
@@ -92,6 +93,7 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
    assert(result != NULL);
 
    (*result) = SCIP_FEASIBLE;
+   infeasible = FALSE;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
@@ -105,20 +107,24 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
          case LP:
             if( SCIPbendersCutLP(benders[i]) )
             {
-               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, FALSE) );
+               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, &infeasible, type) );
             }
             break;
          case RELAX:
             if( SCIPbendersCutRelaxation(benders[i]) )
             {
-               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, FALSE) );
+               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, type) );
             }
             break;
          case PSEUDO:
             if( SCIPbendersCutPseudo(benders[i]) )
             {
-               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, FALSE) );
+               SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], NULL, result, &infeasible, type) );
             }
+            break;
+         case CHECK:
+            SCIPwarningMessage(scip, "The conscheck callback is not supported\n");
+         default:
             break;
       }
    }
@@ -208,7 +214,7 @@ SCIP_RETCODE constructValidSolution(
    SCIP_CALL( SCIPcheckSol(scip, newsol, FALSE, FALSE, TRUE, TRUE, TRUE, &success) );
    if ( success )
    {
-      SCIP_CALL( SCIPheurPassSolAddSol(scip, heurtrysol, sol) );
+      SCIP_CALL( SCIPheurPassSolAddSol(scip, heurtrysol, newsol) );
       SCIPdebugMsg(scip, "Creating solution was successful.\n");
    }
 #ifdef SCIP_DEBUG
@@ -231,12 +237,13 @@ SCIP_RETCODE constructValidSolution(
 /* TODO: Implement all necessary constraint handler methods. The methods with #if 0 ... #else #define ... are optional */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
-#if 0
+#if 1
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyBenders)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benders constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPincludeConshdlrBenders(scip, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -482,6 +489,7 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
    int solindex;
    int i;
    SCIP_Bool performcheck;
+   SCIP_Bool infeasible;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -489,6 +497,7 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
 
    (*result) = SCIP_FEASIBLE;
    performcheck = TRUE;
+   infeasible = FALSE;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
@@ -515,7 +524,7 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
    {
       for( i = 0; i < nbenders; i++ )
       {
-         SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, TRUE) );
+         SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, CHECK) );
 
          /* if the result is infeasible, it is not necessary to check any more subproblems. */
          if( (*result) == SCIP_INFEASIBLE )
@@ -524,9 +533,10 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
 
       /* in the case that the problem is feasible, this means that all subproblems are feasible. The auxiliary variables
        * still need to be updated. This is done by constructing a valid solution. */
-      if( (*result) == SCIP_FEASIBLE )
+      if( (*result) == SCIP_FEASIBLE && infeasible )
       {
-         SCIP_CALL( constructValidSolution(scip, conshdlr, sol) );
+         if( !SCIPsolIsOriginal(sol) )
+            SCIP_CALL( constructValidSolution(scip, conshdlr, sol) );
          (*result) = SCIP_INFEASIBLE;
       }
    }

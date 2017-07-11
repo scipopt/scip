@@ -2939,7 +2939,8 @@ SCIP_RETCODE SCIPsolveBendersSubproblems(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL */
    SCIP_RESULT*          result,             /**< result of the pricing process */
-   SCIP_Bool             check               /**< is the execution method called as a check. i.e. no cuts are required */
+   SCIP_Bool*            infeasible,         /**< is the master problem infeasible with respect to the Benders' cuts? */
+   SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    );
 
 /** returns the master problem variable for the given subproblem variable.

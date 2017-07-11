@@ -32,6 +32,15 @@
 extern "C" {
 #endif
 
+enum SCIP_BendersEnfoType
+{
+    LP      = 1,
+    RELAX   = 2,
+    PSEUDO  = 3,
+    CHECK   = 4
+};
+typedef enum SCIP_BendersEnfoType SCIP_BENDERSENFOTYPE;
+
 typedef struct SCIP_Benders SCIP_BENDERS;           /**< variable benders data */
 typedef struct SCIP_BendersData SCIP_BENDERSDATA;   /**< locally defined variable benders data */
 

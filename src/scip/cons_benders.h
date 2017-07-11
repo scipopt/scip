@@ -32,14 +32,6 @@
 extern "C" {
 #endif
 
-enum Benders_EnfoType
-{
-    LP      = 1,
-    RELAX   = 2,
-    PSEUDO  = 3
-};
-typedef enum Benders_EnfoType BENDERS_ENFOTYPE;
-
 /** creates the handler for benders constraints and includes it in SCIP
  *
  * @ingroup ConshdlrIncludes
@@ -123,7 +115,7 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
    SCIP_SOL*             sol,                /**< the primal solution to enforce, or NULL for the current LP/pseudo sol */
     SCIP_CONSHDLR*       conshdlr,           /**< the constraint handler */
     SCIP_RESULT*         result,             /**< the result of the enforcement */
-    BENDERS_ENFOTYPE     type                /**< the type of solution being enforced */
+    SCIP_BENDERSENFOTYPE  type                /**< the type of solution being enforced */
     );
 
 /* @} */

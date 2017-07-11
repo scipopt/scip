@@ -146,7 +146,8 @@ SCIP_RETCODE SCIPbendersExec(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    SCIP_RESULT*          result,             /**< result of the pricing process */
-   SCIP_Bool             check               /**< is the execution method called as a check. i.e. no cuts are required */
+   SCIP_Bool*            infeasible,         /**< is the master problem infeasible with respect to the Benders' cuts? */
+   SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    );
 
 /** Executes the subproblem solving process. */
@@ -303,6 +304,11 @@ extern
 SCIP_RETCODE SCIPbendersAddSubproblem(
    SCIP_BENDERS*         benders,            /**< variable benders */
    SCIP*                 subproblem          /**< subproblem to be added to the data storage */
+   );
+
+/** Removes the subproblems from the Benders' decomposition data */
+SCIP_RETCODE SCIPbendersRemoveSubproblems(
+   SCIP_BENDERS*         benders             /**< Benders' decomposition */
    );
 
 #ifdef __cplusplus

@@ -99,12 +99,13 @@ SCIP_RETCODE applyMagnantiWongDualStrengthening(
 /* TODO: Implement all necessary constraint handler methods. The methods with #if 0 ... #else #define ... are optional */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
-#if 0
+#if 1
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyBenderslp)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of benderslp constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(scip != NULL);
+
+   SCIP_CALL( SCIPincludeConshdlrBenderslp(scip) );
 
    return SCIP_OKAY;
 }

@@ -87,6 +87,8 @@ struct SCIP_Benders
    int                   addedsubprobs;      /**< subproblems added to the Benders' decomposition data */
    int                   nsubproblems;       /**< number of subproblems */
    SCIP_Bool*            subprobislp;        /**< is the subproblem formulated as an LP? */
+   SCIP_Bool             subprobscreated;    /**< have the subproblems been created for this Benders' decomposition.
+                                                  This flag is used when retransforming the problem.*/
 
    /* Bender's cut information */
    SCIP_BENDERSCUT**     benderscuts;        /**< the available Benders' cut algorithms */

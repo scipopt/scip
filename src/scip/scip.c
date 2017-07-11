@@ -6199,14 +6199,15 @@ SCIP_RETCODE SCIPsolveBendersSubproblems(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SOL*             sol,                /**< primal CIP solution, can be NULL */
    SCIP_RESULT*          result,             /**< result of the pricing process */
-   SCIP_Bool             check               /**< is the execution method called as a check. i.e. no cuts are required */
+   SCIP_Bool*            infeasible,         /**< is the master problem infeasible with respect to the Benders' cuts? */
+   SCIP_BENDERSENFOTYPE  type                /**< the enforcement type calling this function */
    )
 {
    assert(scip != NULL);
    assert(scip->set != NULL);
    assert(benders != NULL);
 
-   SCIP_CALL( SCIPbendersExec(benders, scip->set, sol, result, check) );
+   SCIP_CALL( SCIPbendersExec(benders, scip->set, sol, result, infeasible, type) );
 
    return SCIP_OKAY;
 }
@@ -14606,7 +14607,7 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
          scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
 
-   if( !scip->set->reopt_enable )
+   if( !scip->set->reopt_enable && scip->set->nbenders == 0 )
    {
       oldnsolsfound = scip->primal->nsolsfound;
       for( s = scip->origprimal->nsols - 1; s >= 0; --s )
@@ -15511,7 +15512,7 @@ SCIP_RETCODE presolve(
    *unbounded = (*unbounded) || (SCIPgetNSols(scip) > 0 && SCIPisInfinity(scip, -SCIPgetSolOrigObj(scip, SCIPgetBestSol(scip))));
 
    finished = (scip->set->presol_maxrounds != -1 && scip->stat->npresolrounds >= scip->set->presol_maxrounds)
-         || (*unbounded) || (scip->set->reopt_enable && scip->stat->nreoptruns >= 1);
+         || (*unbounded) || (scip->set->reopt_enable && scip->stat->nreoptruns >= 1) || scip->set->nbenders > 0;
    stopped = SCIPsolveIsStopped(scip->set, scip->stat, TRUE);
 
    /* perform presolving rounds */
@@ -16105,7 +16106,7 @@ SCIP_RETCODE freeTransform(
    }
 
    /* copy best primal solutions to original solution candidate list */
-   if( !scip->set->reopt_enable && scip->set->limit_maxorigsol > 0 && scip->set->misc_transsolsorig )
+   if( !scip->set->reopt_enable && scip->set->limit_maxorigsol > 0 && scip->set->misc_transsolsorig && scip->set->nbenders == 0 )
    {
       SCIP_Bool stored;
       SCIP_Bool hasinfval;

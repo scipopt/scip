@@ -152,7 +152,8 @@ SCIP_RETCODE createVariableMappings(
 
          /* adding the subvariable to master variable mapping into the hash map */
          if( subvar != NULL )
-            SCIP_CALL( SCIPhashmapInsert(bendersdata->subvartomastervar, subvar, vars[i]) );
+            //SCIP_CALL( SCIPhashmapInsert(bendersdata->subvartomastervar, subvar, vars[i]) );
+            SCIP_CALL( SCIPhashmapInsert(bendersdata->subvartomastervar, subvar, origvar) );
 
          /* storing the subproblem variable */
          bendersdata->subproblemvars[j][i] = subvar;
@@ -174,12 +175,21 @@ SCIP_RETCODE createVariableMappings(
 /* TODO: Implement all necessary Benders' decomposition methods. The methods with an #if 0 ... #else #define ... are optional */
 
 /** copy method for benders plugins (called when SCIP copies plugins) */
-#if 0
+#if 1
 static
 SCIP_DECL_BENDERSCOPY(bendersCopyDefault)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of default Benders' decompostion not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_BENDERSDATA* bendersdata;   /* the source benders data */
+
+   assert(scip != NULL);
+   assert(benders != NULL);
+
+   bendersdata = SCIPbendersGetData(benders);
+
+   /* including the Benders' decomposition in the target SCIP.
+    * NOTE: this method uses the same subproblems as the main SCIP. In a parallel setting, this will not be thread safe.
+    * It would be cleaner to copy the subproblems also. */
+   SCIP_CALL( SCIPincludeBendersDefault(scip, bendersdata->subproblems, bendersdata->nsubproblems) );
 
    return SCIP_OKAY;
 }
@@ -338,6 +348,9 @@ SCIP_DECL_BENDERSGETVAR(bendersGetvarDefault)
 
       /* using the original variable, the master variable can be retrieved from the hash map */
       mappedvar = (SCIP_VAR*) SCIPhashmapGetImage(bendersdata->subvartomastervar, origvar);
+
+      if( mappedvar == NULL )
+         mappedvar = (SCIP_VAR*) SCIPhashmapGetImage(bendersdata->subvartomastervar, var);
    }
    else
    {
