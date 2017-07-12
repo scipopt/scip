@@ -2330,10 +2330,10 @@ SCIP_RETCODE checkCumulativeCondition(
 
       /* update absolute and relative violation */
       assert(capacity >= 0);
-      if( SCIPisLT(scip, absviol, -freecapacity) )
+      if( absviol < (SCIP_Real)-freecapacity )
       {
          absviol = -freecapacity;
-         relviol = SCIPrelDiff(capacity - freecapacity, capacity);
+         relviol = SCIPrelDiff((SCIP_Real)(capacity - freecapacity), (SCIP_Real)capacity);
       }
 
       /* check freecapacity to be smaller than zero */

@@ -956,7 +956,7 @@ SCIP_RETCODE checkCons(
       if( sol != NULL )
          SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
 
-      if( SCIPisFeasPositive(absviol) )
+      if( SCIPisFeasPositive(scip, absviol) )
       {
          *violated = TRUE;
 
