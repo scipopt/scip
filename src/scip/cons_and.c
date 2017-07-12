@@ -1029,6 +1029,9 @@ SCIP_RETCODE checkCons(
    if( mustcheck )
    {
       SCIP_Real solval;
+      SCIP_Real viol;
+      SCIP_Real absviol;
+      SCIP_Real relviol;
       int i;
 
       /* increase age of constraint; age is reset to zero, if a violation was found only in case we are in
@@ -1039,10 +1042,19 @@ SCIP_RETCODE checkCons(
          SCIP_CALL( SCIPincConsAge(scip, cons) );
       }
 
+      absviol = SCIP_REAL_MAX;
+
       /* check, if all operator variables are TRUE */
       for( i = 0; i < consdata->nvars; ++i )
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
+
+         viol = REALABS(1 - solval);
+         if( absviol < viol )
+         {
+            absviol = viol;
+            relviol = SCIPrelDiff(solval, 1);
+         }
 
         /* @todo If "upgraded resultants to varstatus implicit" is fully allowed, than the following assert does not hold
          *       anymore, therefor we need to stop the check and return with the status not violated, because the
@@ -1067,6 +1079,8 @@ SCIP_RETCODE checkCons(
       if( !SCIPisFeasIntegral(scip, solval) || (i == consdata->nvars) != (solval > 0.5) )
       {
          *violated = TRUE;
+         absviol = 1.0;
+         relviol = 1.0;
 
          /* only reset constraint age if we are in enforcement */
          if( sol == NULL )
@@ -1096,6 +1110,8 @@ SCIP_RETCODE checkCons(
             }
          }
       }
+      if( sol != NULL )
+         SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
    }
 
    return SCIP_OKAY;
