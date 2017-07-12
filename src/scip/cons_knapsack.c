@@ -949,7 +949,14 @@ SCIP_RETCODE checkCons(
          }
       }
 
-      if( (!ishuge && integralsum > consdata->capacity) || (ishuge && SCIPisFeasGT(scip, sum, (SCIP_Real)consdata->capacity)) )
+      /* calculate constraint violation and update it in solution */
+      absviol = ishuge ? sum : (SCIP_Real)integralsum;
+      absviol -= consdata->capacity;
+      relviol = SCIPrelDiff(absviol + consdata->capacity, (SCIP_Real)consdata->capacity);
+      if( sol != NULL )
+         SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
+
+      if( SCIPisFeasPositive(absviol) )
       {
          *violated = TRUE;
 
@@ -961,24 +968,13 @@ SCIP_RETCODE checkCons(
 
          if( printreason )
          {
-            SCIP_Real viol = ishuge ? sum : (SCIP_Real)integralsum;
-
-            viol -= consdata->capacity;
-            assert(viol > 0);
-
             SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
 
             SCIPinfoMessage(scip, NULL, ";\n");
-            SCIPinfoMessage(scip, NULL, "violation: the capacity is violated by %.15g\n", viol);
+            SCIPinfoMessage(scip, NULL, "violation: the capacity is violated by %.15g\n", absviol);
          }
       }
 
-      /* calculate constraint violation and update it in solution */
-      absviol = ishuge ? sum : (SCIP_Real)integralsum;
-      absviol -= consdata->capacity;
-      relviol = SCIPrelDiff(absviol + consdata->capacity, consdata->capacity);
-      if( sol != NULL )
-         SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
    }
 
    return SCIP_OKAY;
