@@ -17621,6 +17621,15 @@ SCIP_RETCODE SCIPprintMIPStart(
    FILE*                 file                /**< output file (or NULL for standard output) */
    );
 
+/** returns dual solution value of a constraint */
+EXTERN
+SCIP_RETCODE SCIPgetDualSolVal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint for which the dual solution should be returned */
+   SCIP_Real*            dualsolval,         /**< pointer to store the dual solution value */
+   SCIP_Bool*            boundconstraint     /**< pointer to store whether the constraint is a bound constraint (or NULL) */
+   );
+
 /** check whether the dual solution is available
  *
  * @note This is used when calling \ref SCIPprintDualSol()
@@ -22492,6 +22501,35 @@ int SCIPgetPtrarrayMaxIdx(
 
 /**@} */
 
+/**@addtogroup DigraphMethods
+ *
+ * @{
+ */
+
+/** creates directed graph structure */
+EXTERN
+SCIP_RETCODE SCIPcreateDigraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIGRAPH**        digraph,            /**< pointer to store the created directed graph */
+   int                   nnodes              /**< number of nodes */
+   );
+
+/** copies directed graph structure
+ *
+ *  The copying procedure uses the memory of the passed SCIP instance. The user must ensure that the digraph lives
+ *  as most as long as the SCIP instance.
+ *
+ *  @note The data in nodedata is copied verbatim. This possibly has to be adapted by the user.
+ */
+EXTERN
+SCIP_RETCODE SCIPcopyDigraph(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
+   SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
+   );
+
+/**@} */
+
 /**@defgroup PublicValidationMethods Validation
  * @ingroup PUBLICCOREAPI
  * @brief  methods for validating the correctness of a solving process
@@ -22527,7 +22565,43 @@ SCIP_RETCODE SCIPvalidateSolve(
                                                *  value, or NULL */
    );
 
-/* @} */
+/**@} */
+
+/**@addtogroup RandomNumbers
+ *
+ * @{
+ */
+
+/** creates and initializes a random number generator
+ *
+ *  @note The initial seed is changed using SCIPinitializeRandomSeed()
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateRandom(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RANDNUMGEN**     randnumgen,         /**< random number generator */
+   unsigned int          initialseed         /**< initial random seed */
+   );
+
+/** frees a random number generator */
+EXTERN
+void SCIPfreeRandom(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RANDNUMGEN**     randnumgen          /**< random number generator */
+   );
+
+/** initializes a random number generator with a given seed
+ *
+ *  @note The seed is changed using SCIPinitializeRandomSeed()
+ */
+EXTERN
+void SCIPsetRandomSeed(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RANDNUMGEN*      randnumgen,         /**< random number generator */
+   unsigned int          seed                /**< new random seed */
+   );
+
+/**@} */
 
 #ifdef __cplusplus
 }

@@ -1093,10 +1093,11 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
       if( unknownrate > heurdata->maxunknownrate )
          continue;
 
-      /* all variables have a finite/known solution value and the all integer variables have an integral solution value,
-       * create a new solution without solving a sub-SCIP
+      /* all variables have a finite/known solution value all integer variables have an integral solution value,
+       * and there are no continuous variables
+       * in the sub-SCIP, all variables would be fixed, so create a new solution without solving a sub-SCIP
        */
-      if( nunknown == 0 && nfracints == 0 && !heurdata->ignorecont )
+      if( nunknown == 0 && nfracints == 0 && SCIPgetNContVars(scip) == 0 && SCIPgetNImplVars(scip) == 0 )
       {
          SCIP_VAR** origvars;
          SCIP_SOL* newsol;

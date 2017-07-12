@@ -417,7 +417,7 @@ SCIP_RETCODE getPrecedence(
    /* create precedence graph if does not exist yet */
    if( rcpspdata->precedencegraph == NULL )
    {
-      SCIP_CALL( SCIPdigraphCreate(&rcpspdata->precedencegraph, rcpspdata->njobs) );
+      SCIP_CALL( SCIPdigraphCreate(&rcpspdata->precedencegraph, SCIPblkmem(scip), rcpspdata->njobs) );
    }
 
    /* parse predecessor */

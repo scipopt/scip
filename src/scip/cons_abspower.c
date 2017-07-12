@@ -3666,6 +3666,7 @@ static
 SCIP_RETCODE generateCut(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SIDETYPE         violside,           /**< side to separate */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL if LP solution should be used */
    SCIP_ROW**            row,                /**< storage for cut */
    SCIP_Bool             onlyinbounds        /**< whether linearization is allowed only in variable bounds */
@@ -3673,7 +3674,6 @@ SCIP_RETCODE generateCut(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_SIDETYPE  violside;
    SCIP_Real      c;
    SCIP_Real      xlb;
    SCIP_Real      xglb;
@@ -3694,9 +3694,8 @@ SCIP_RETCODE generateCut(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   assert(SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)));
+   assert(SCIPisGT(scip, violside == SCIP_SIDETYPE_LEFT ? consdata->lhsviol : consdata->rhsviol, SCIPfeastol(scip)));
 
-   violside = SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT;
    *row = NULL;
 
    SCIPdebugMsg(scip, "generate cut for constraint <%s> with violated side %d\n", SCIPconsGetName(cons), violside);
@@ -3839,6 +3838,7 @@ SCIP_RETCODE separatePoint(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
+   SCIP_SIDETYPE      side;
    SCIP_Real          efficacy;
    SCIP_Real          feasibility;
    SCIP_Real          norm;
@@ -3861,22 +3861,22 @@ SCIP_RETCODE separatePoint(
    if( bestefficacy != NULL )
       *bestefficacy = 0.0;
 
-   for( c = 0; c < nconss && ! (*cutoff); ++c )
+   for( c = 0, side = SCIP_SIDETYPE_LEFT; c < nconss && ! (*cutoff); c = (side == SCIP_SIDETYPE_RIGHT ? c+1 : c), side = (side == SCIP_SIDETYPE_LEFT ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT) )
    {
       assert(conss[c] != NULL);  /*lint !e613*/
 
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
 
-      if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+      if( SCIPisGT(scip, side == SCIP_SIDETYPE_LEFT ? consdata->lhsviol : consdata->rhsviol, SCIPfeastol(scip)) )
       {
          /* try to generate a cut */
-         SCIP_CALL( generateCut(scip, conss[c], sol, &row, onlyinbounds) );  /*lint !e613*/
+         SCIP_CALL( generateCut(scip, conss[c], side, sol, &row, onlyinbounds) );  /*lint !e613*/
          if( row == NULL ) /* failed to generate cut */
             continue;
 
          /* check if we separate in convex area */
-         if( SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+         if( side == SCIP_SIDETYPE_RIGHT )
          {
             convex = !SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->x))
                && (!SCIPisNegative(scip, SCIPvarGetLbLocal(consdata->x)+consdata->xoffset)
@@ -4005,14 +4005,14 @@ SCIP_RETCODE addLinearizationCuts(
          /* constraint function is concave for x+offset <= 0.0, so can linearize w.r.t. lhs */
          consdata->lhsviol = 1.0;
          consdata->rhsviol = 0.0;
-         SCIP_CALL( generateCut(scip, conss[c], ref, &row, FALSE) );  /*lint !e613*/
+         SCIP_CALL( generateCut(scip, conss[c], SCIP_SIDETYPE_LEFT, ref, &row, FALSE) );  /*lint !e613*/
       }
       else if( !SCIPisLT(scip, SCIPvarGetLbGlobal(consdata->x), -consdata->xoffset) && !SCIPisInfinity(scip, -consdata->rhs) )
       {
          /* constraint function is convex for x+offset >= 0.0, so can linearize w.r.t. rhs */
          consdata->lhsviol = 0.0;
          consdata->rhsviol = 1.0;
-         SCIP_CALL( generateCut(scip, conss[c], ref, &row, FALSE) );  /*lint !e613*/
+         SCIP_CALL( generateCut(scip, conss[c], SCIP_SIDETYPE_RIGHT, ref, &row, FALSE) );  /*lint !e613*/
       }
       else
       {
@@ -6769,7 +6769,7 @@ SCIP_DECL_CONSCHECK(consCheckAbspower)
       SCIP_CALL( proposeFeasibleSolution(scip, conshdlr, conss, nconss, sol) );
    }
 
-   if( *result == SCIP_INFEASIBLE && conshdlrdata->subnlpheur != NULL && sol != NULL )
+   if( *result == SCIP_INFEASIBLE && conshdlrdata->subnlpheur != NULL && sol != NULL && !SCIPisInfinity(scip, maxviol) )
    {
       SCIP_CALL( SCIPupdateStartpointHeurSubNlp(scip, conshdlrdata->subnlpheur, sol, maxviol) );
    }

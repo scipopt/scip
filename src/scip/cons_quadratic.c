@@ -2844,6 +2844,7 @@ SCIP_RETCODE removeFixedVariables(
 {
    SCIP_CONSDATA* consdata;
    SCIP_BILINTERM* bilinterm;
+   SCIP_Real bilincoef;
    SCIP_Real coef;
    SCIP_Real offset;
    SCIP_VAR* var;
@@ -3092,6 +3093,7 @@ SCIP_RETCODE removeFixedVariables(
          for( k = 0; k < consdata->quadvarterms[i].nadjbilin; ++k )
          {
             bilinterm = &consdata->bilinterms[consdata->quadvarterms[i].adjbilin[k]];
+            bilincoef = bilinterm->coef;   /* copy coef, as bilinterm pointer may become invalid by realloc in addBilinearTerm() below */
             var2 = (bilinterm->var1 == consdata->quadvarterms[i].var) ? bilinterm->var2 : bilinterm->var1;
             assert(var2 != consdata->quadvarterms[i].var);
 
@@ -3107,15 +3109,15 @@ SCIP_RETCODE removeFixedVariables(
             {
                if( aggrvars[j] == var2 )
                { /* x_i == y, so we have a square term here */
-                  consdata->quadvarterms[var2pos].sqrcoef += bilinterm->coef * coef * aggrscalars[j];
+                  consdata->quadvarterms[var2pos].sqrcoef += bilincoef * coef * aggrscalars[j];
                }
                else
                { /* x_i != y, so we need to add a bilinear term here */
-                  SCIP_CALL( addBilinearTerm(scip, cons, nquadtermsold + j, var2pos, bilinterm->coef * coef * aggrscalars[j]) );
+                  SCIP_CALL( addBilinearTerm(scip, cons, nquadtermsold + j, var2pos, bilincoef * coef * aggrscalars[j]) );
                }
             }
 
-            consdata->quadvarterms[var2pos].lincoef += bilinterm->coef * (aggrconstant * coef + offset);
+            consdata->quadvarterms[var2pos].lincoef += bilincoef * (aggrconstant * coef + offset);
          }
 
          /* remove bilinear terms */
@@ -7428,6 +7430,10 @@ SCIP_RETCODE computeInteriorPoint(
          return SCIP_INVALIDDATA;
    }
 
+   /* set NLP tolerances; we don't really need an optimal solution to this NLP */
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, prob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip)) );
+   SCIP_CALL( SCIPnlpiSetRealPar(nlpi, prob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );
+
    /* solve NLP problem */
    SCIP_CALL( SCIPnlpiSolve(nlpi, prob) );
 
@@ -8578,51 +8584,52 @@ SCIP_RETCODE separatePoint(
       *bestefficacy = 0.0;
 
    row = NULL;
-   for( c = 0; c < nconss; ++c )
+   /* loop over both sides of each constraint */
+   for( c = 0, violside = SCIP_SIDETYPE_LEFT; c < nconss; c = (violside == SCIP_SIDETYPE_LEFT ? c : c+1), violside = (violside == SCIP_SIDETYPE_LEFT ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT) )
    {
       assert(conss != NULL);
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
+      /* if side not violated, then go on */
+      if( !SCIPisGT(scip, violside == SCIP_SIDETYPE_LEFT ? consdata->lhsviol : consdata->rhsviol, SCIPfeastol(scip)) )
+         continue;
+
+      /* we are not feasible anymore */
+      if( *result == SCIP_FEASIBLE )
+         *result = SCIP_DIDNOTFIND;
+
+      /* actual minimal efficacy */
+      actminefficacy = inenforcement && ((violside == SCIP_SIDETYPE_RIGHT && consdata->isconvex ) || (violside == SCIP_SIDETYPE_LEFT && consdata->isconcave))
+               ? (SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip))
+                  : minefficacy;
+
+      /* generate cut */
+      if( sol == NULL && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
       {
-         /* we are not feasible anymore */
-         if( *result == SCIP_FEASIBLE )
-            *result = SCIP_DIDNOTFIND;
+         /* if the LP is unbounded, then we need a cut that cuts into the direction of a hopefully existing primal ray
+          * that is, assume a ray r is given such that p + t*r is feasible for the LP for all t >= t_0 and some p
+          * given a cut lhs <= <c,x> <= rhs, we check whether it imposes an upper bound on t and thus bounds the ray
+          * this is given if rhs < infinity and <c,r> > 0, since we then enforce <c,p+t*r> = <c,p> + t<c,r> <= rhs, i.e., t <= (rhs - <c,p>)/<c,r>
+          * similar, lhs > -infinity and <c,r> < 0 is good
+          */
+         SCIP_Real rayprod;
+         SCIP_Real norm;
 
-         violside = SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) ? SCIP_SIDETYPE_LEFT : SCIP_SIDETYPE_RIGHT;
+         rayprod = 0.0; /* for compiler */
+         SCIP_CALL( generateCutUnboundedLP(scip, conshdlr, conss[c], violside, &row, &rayprod, conshdlrdata->checkcurvature) );
 
-         /* actual minimal efficacy */
-         actminefficacy = inenforcement && ((violside == SCIP_SIDETYPE_RIGHT && consdata->isconvex ) || (violside == SCIP_SIDETYPE_LEFT && consdata->isconcave))
-            ? (SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip))
-            : minefficacy;
-
-         /* generate cut */
-         if( sol == NULL && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
+         if( row != NULL )
          {
-            /* if the LP is unbounded, then we need a cut that cuts into the direction of a hopefully existing primal ray
-             * that is, assume a ray r is given such that p + t*r is feasible for the LP for all t >= t_0 and some p
-             * given a cut lhs <= <c,x> <= rhs, we check whether it imposes an upper bound on t and thus bounds the ray
-             * this is given if rhs < infinity and <c,r> > 0, since we then enforce <c,p+t*r> = <c,p> + t<c,r> <= rhs, i.e., t <= (rhs - <c,p>)/<c,r>
-             * similar, lhs > -infinity and <c,r> < 0 is good
-             */
-            SCIP_Real rayprod;
-            SCIP_Real norm;
+            if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPisPositive(scip, rayprod) )
+               efficacy =  rayprod;
+            else if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisNegative(scip, rayprod) )
+               efficacy = -rayprod;
+            else
+               efficacy = 0.0;
 
-            rayprod = 0.0; /* for compiler */
-            SCIP_CALL( generateCutUnboundedLP(scip, conshdlr, conss[c], violside, &row, &rayprod, conshdlrdata->checkcurvature) );
-
-            if( row != NULL )
+            switch( conshdlrdata->scaling )
             {
-               if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPisPositive(scip, rayprod) )
-                  efficacy =  rayprod;
-               else if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) && SCIPisNegative(scip, rayprod) )
-                  efficacy = -rayprod;
-               else
-                  efficacy = 0.0;
-
-               switch( conshdlrdata->scaling )
-               {
                case 'o' :
                   break;
 
@@ -8649,19 +8656,18 @@ SCIP_RETCODE separatePoint(
                   SCIPerrorMessage("Unknown scaling method '%c'.", conshdlrdata->scaling);
                   SCIPABORT();
                   return SCIP_INVALIDDATA;  /*lint !e527*/
-               }
-
-               SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], sol, efficacy, actminefficacy, inenforcement, bestefficacy, result) );
             }
-            continue;
-         }
-         else
-         {
-            SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], sol, NULL, violside, &row, &efficacy,
-                     conshdlrdata->checkcurvature, actminefficacy, 'd') );
-            /* @todo If generation failed not because of low efficacy, then probably because of numerical issues */
+
             SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], sol, efficacy, actminefficacy, inenforcement, bestefficacy, result) );
          }
+         continue;
+      }
+      else
+      {
+         SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], sol, NULL, violside, &row, &efficacy,
+            conshdlrdata->checkcurvature, actminefficacy, 'd') );
+         /* @todo If generation failed not because of low efficacy, then probably because of numerical issues */
+         SCIP_CALL( processCut(scip, &row, conshdlr, conss[c], sol, efficacy, actminefficacy, inenforcement, bestefficacy, result) );
       }
 
       if( *result == SCIP_CUTOFF )
@@ -10814,7 +10820,7 @@ SCIP_RETCODE proposeFeasibleSolution(
                delta = SCIPceil(scip, delta);
 
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
-            SCIPdebugMsg(scip, "increase <%s> by %g to %g\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var));
+            SCIPdebugMsg(scip, "increase <%s> by %g to %g to remedy lhs-violation %g of cons <%s>\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var), viol, SCIPconsGetName(conss[c]));
 
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->lincoefs[consdata->linvar_mayincrease] * delta;
@@ -10844,7 +10850,7 @@ SCIP_RETCODE proposeFeasibleSolution(
             if( SCIPvarIsIntegral(var) )
                delta = SCIPfloor(scip, delta);
             SCIP_CALL( SCIPincSolVal(scip, newsol, var, delta) );
-            SCIPdebugMsg(scip, "increase <%s> by %g to %g\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var));
+            SCIPdebugMsg(scip, "increase <%s> by %g to %g to remedy rhs-violation %g of cons <%s>\n", SCIPvarGetName(var), delta, SCIPgetSolVal(scip, newsol, var), viol, SCIPconsGetName(conss[c]));
 
             /* adjust constraint violation, if satisfied go on to next constraint */
             viol -= consdata->lincoefs[consdata->linvar_maydecrease] * delta;
@@ -12894,7 +12900,7 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
          return SCIP_OKAY;
    }
 
-   if( *result == SCIP_INFEASIBLE && conshdlrdata->subnlpheur != NULL && sol != NULL )
+   if( *result == SCIP_INFEASIBLE && conshdlrdata->subnlpheur != NULL && sol != NULL && !SCIPisInfinity(scip, maxviol) )
    {
       SCIP_CALL( SCIPupdateStartpointHeurSubNlp(scip, conshdlrdata->subnlpheur, sol, maxviol) );
    }
