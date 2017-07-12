@@ -1286,8 +1286,7 @@ SCIP_RETCODE checkCons(
    SCIP_Real solval;
    SCIP_Real viol;
    SCIP_Real absviol;
-   SCIP_Real relviol;
-   int violv;
+   int violpos;
    int nvars;
    int v;
 
@@ -1307,6 +1306,7 @@ SCIP_RETCODE checkCons(
 
    /* check the given solution */
    absviol = SCIP_REAL_MAX;
+   violpos = -1;
    *violated = TRUE;
    for( v = 0; v < nvars; ++v )
    {
@@ -1314,10 +1314,10 @@ SCIP_RETCODE checkCons(
 
       /* update absolute violation if needed */
       viol = (boundtypes[v] == SCIP_BOUNDTYPE_LOWER) ? bounds[v] - solval : solval - bounds[v];
-      if( SCIPisLE(scip, viol, absviol) )
+      if( viol < absviol )
       {
          absviol = viol;
-         violv = v;
+         violpos = v;
       }
 
       if( (boundtypes[v] == SCIP_BOUNDTYPE_LOWER && isFeasGE(scip, vars[v], solval, bounds[v]))
@@ -1328,9 +1328,19 @@ SCIP_RETCODE checkCons(
       }
    }
    /* update constraint violation in solution */
-   relviol = SCIPrelDiff(SCIPgetSolVal(scip, sol, vars[violv]), bounds[violv]);
    if( sol != NULL )
+   {
+      SCIP_Real relviol;
+
+      assert(0 == nvars || -1 != violpos);
+
+      if( 0 == nvars )
+         relviol = SCIP_REAL_MAX;
+      else
+         relviol = SCIPrelDiff(SCIPgetSolVal(scip, sol, vars[violpos]), bounds[violpos]);
+
       SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
+   }
    return SCIP_OKAY;
 }
 
