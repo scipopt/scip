@@ -19,11 +19,30 @@ LINTOL=1e-04
 # absolut tolerance for checking integrality constraints 
 INTTOL=1e-04
 
+# check if tmp-path exists
+if test ! -d $CLIENTTMPDIR/${USER}-tmpdir
+then
+    mkdir $CLIENTTMPDIR/${USER}-tmpdir
+    echo Creating directory $CLIENTTMPDIR/${USER}-tmpdir for temporary outfile
+fi
+
+OUTFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.out
+ERRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.err
+SOLFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.sol
+TMPFILE=$SOLVERPATH/results/$BASENAME.tmp
+
+uname -a                            > $OUTFILE
+uname -a                            > $ERRFILE
+
+echo "start checking mount"         >> $OUTFILE
+date                                >> $OUTFILE
+echo                                >> $OUTFILE
+
 # check if the scripts runs a *.zib.de host
 if hostname -f | grep -q zib.de ;
 then
   # access /optimi once to force a mount
-  ls /optimi/ >/dev/null 2>&1
+  ls /nfs/optimi/kombadon/IP >/dev/null 2>&1
 
   # check if /optimi is mounted
   MOUNTED=0
@@ -50,20 +69,10 @@ then
   done
 fi
 
-# check if tmp-path exists
-if test ! -d $CLIENTTMPDIR/${USER}-tmpdir
-then
-    mkdir $CLIENTTMPDIR/${USER}-tmpdir
-    echo Creating directory $CLIENTTMPDIR/${USER}-tmpdir for temporary outfile
-fi
+echo "start printing some stats"    >> $OUTFILE
+date                                >> $OUTFILE
+echo                                >> $OUTFILE
 
-OUTFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.out
-ERRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.err
-SOLFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.sol
-TMPFILE=$SOLVERPATH/results/$BASENAME.tmp
-
-uname -a                            > $OUTFILE
-uname -a                            > $ERRFILE
 echo                                >> $OUTFILE
 top -b -n 1 | head -n 15            >> $OUTFILE
 echo                                >> $OUTFILE
@@ -81,6 +90,11 @@ echo -----------------------------  >> $OUTFILE
 date +"@03 %s"                      >> $OUTFILE
 echo @05 $TIMELIMIT                 >> $OUTFILE
 
+echo                                >> $OUTFILE
+echo "execute binary"               >> $OUTFILE
+date                                >> $OUTFILE
+echo                                >> $OUTFILE
+
 #if we use a debugger command, we need to replace the errfile place holder by the actual err-file for logging
 #and if we run on the cluster we want to use srun with CPU binding which is defined by the check_cluster script
 EXECNAME=$SRUN${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}
@@ -90,6 +104,11 @@ if test $retcode != 0
 then
   echo "$EXECNAME returned with error code $retcode." >>$ERRFILE
 fi
+
+echo                                >> $OUTFILE
+echo "call solution checker"        >> $OUTFILE
+date                                >> $OUTFILE
+echo                                >> $OUTFILE
 
 if test -e $SOLFILE
 then
@@ -121,6 +140,11 @@ date                                >> $ERRFILE
 echo                                >> $OUTFILE
 echo =ready=                        >> $OUTFILE
 
+echo                                >> $OUTFILE
+echo "start moving files"           >> $OUTFILE
+date                                >> $OUTFILE
+echo                                >> $OUTFILE
+
 mv $OUTFILE $SOLVERPATH/results/$BASENAME.out
 mv $ERRFILE $SOLVERPATH/results/$BASENAME.err
 
@@ -129,3 +153,8 @@ rm -f $SOLFILE
 #chmod g+r $ERRFILE
 #chmod g+r $SCIPPATH/results/$BASENAME.out
 #chmod g+r $SCIPPATH/results/$BASENAME.set
+
+echo                                >> $OUTFILE
+echo "--- FINISH ---"               >> $OUTFILE
+date                                >> $OUTFILE
+echo                                >> $OUTFILE
