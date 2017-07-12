@@ -34,7 +34,7 @@
 #include <pthread.h>
 #endif
 
-#include "scip/pub_misc.h"
+#include "scip/misc.h"
 #include "nlpi/nlpi_filtersqp.h"
 #include "nlpi/nlpi.h"
 #include "nlpi/nlpioracle.h"
@@ -932,7 +932,7 @@ SCIP_DECL_NLPIFREE( nlpiFreeFilterSQP )
 
    if( data->randnumgen != NULL )
    {
-      SCIPrandomFree(&data->randnumgen);
+      SCIPrandomFree(&data->randnumgen, data->blkmem);
    }
 
    BMSfreeBlockMemory(data->blkmem, &data);
