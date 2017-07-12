@@ -2033,11 +2033,8 @@ SCIP_RETCODE computeViolation(
 
    if( val > consdata->rhs && !SCIPisInfinity(scip,  consdata->rhs) )
    {
-      SCIP_Real rhsrelviol;
-
       consdata->rhsviol = *viol = val - consdata->rhs;
-      rhsrelviol = SCIPrelDiff(val, consdata->rhs);
-      relviol = MAX(relviol, rhsrelviol);
+      relviol = SCIPrelDiff(val, consdata->rhs);
    }
    else
       consdata->rhsviol = 0.0;
