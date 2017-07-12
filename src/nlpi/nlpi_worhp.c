@@ -30,7 +30,7 @@
 #include "nlpi/nlpioracle.h"
 #include "nlpi/exprinterpret.h"
 #include "scip/interrupt.h"
-#include "scip/pub_misc.h"
+#include "scip/misc.h"
 
 #include <stdio.h>
 #include <stdlib.h>
