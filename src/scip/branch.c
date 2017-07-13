@@ -802,6 +802,8 @@ SCIP_RETCODE SCIPbranchcandGetPseudoCands(
          }
       }
       assert(branchcand->npseudocands == npcs);
+      for (v = 0; v < branchcand->npriopseudocands; ++v)
+         assert( branchcand->pseudocands[v]->branchpriority == branchcand->pseudomaxpriority );
    }
 #endif
 
@@ -989,6 +991,12 @@ void branchcandSortPseudoCands(
    assert(0 <= branchcand->npriopseudocands && branchcand->npriopseudocands <= branchcand->npseudocands);
    assert(0 <= branchcand->npriopseudobins && branchcand->npriopseudobins <= branchcand->npriopseudocands);
    assert(0 <= branchcand->npriopseudoints && branchcand->npriopseudoints <= branchcand->npriopseudocands);
+#ifndef NDEBUG
+   {
+      for (i = 0; i < branchcand->npriopseudocands; ++i)
+         assert( branchcand->pseudocands[i]->branchpriority == branchcand->pseudomaxpriority );
+   }
+#endif
 }
 
 /** removes pseudo candidate from pseudocands array
