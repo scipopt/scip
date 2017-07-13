@@ -201,10 +201,10 @@ void F77_FUNC(objgrad,OBJGRAD)(fint *, fint *, fint *, real *, real *, fint *, f
 */
 void F77_FUNC(objgrad,OBJGRAD)(void);
 
-void F77_FUNC(gradient,GRADIENT)(fint *N, fint *M, fint *mxa, real *x, real *a, fint *la,
+void F77_FUNC(gradient,GRADIENT)(fint *n, fint *m, fint *mxa, real *x, real *a, fint *la,
     fint *maxa, real *user, fint *iuser, fint *errflag);
 
-void F77_FUNC(hessian,HESSIAN)(real *x, fint *N, fint *M, fint *phase, real *lam,
+void F77_FUNC(hessian,HESSIAN)(real *x, fint *n, fint *m, fint *phase, real *lam,
     real *ws, fint *lws, real *user, fint *iuser,
     fint *l_hess, fint *li_hess, fint *errflag);
 
