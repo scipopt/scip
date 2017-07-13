@@ -42,7 +42,7 @@ echo                                >> $OUTFILE
 if hostname -f | grep -q zib.de ;
 then
   # access /optimi once to force a mount
-  ls /nfs/optimi/kombadon/IP >/dev/null 2>&1
+  ls /nfs/optimi/QUOTAS >/dev/null 2>&1
 
   # check if /optimi is mounted
   MOUNTED=0
@@ -58,7 +58,7 @@ then
           exit 1
       fi
 
-      if mount | grep -q optimi ;
+      if [ -f /nfs/optimi/QUOTAS ] ;
       then
           MOUNTED=1
       else
