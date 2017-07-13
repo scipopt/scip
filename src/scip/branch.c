@@ -1008,6 +1008,9 @@ void branchcandRemovePseudoCand(
    assert(branchcand->pseudocands[var->pseudocandindex] == var);
    assert(branchcand->pseudocands[branchcand->npseudocands-1] != NULL);
 
+   /* Note that the branching priority of the variable to be removed is not necessarily equal to pseudomaxpriority, since
+    * the status of the variable might have changed, leading to a change in the branching priority. Moreover, if the
+    * variable was part of an aggregation, even other variables might at this point have different priorities. */
    branchpriority = SCIPvarGetBranchPriority(var);
 
    SCIPdebugMessage("removing pseudo candidate <%s> of type %d and priority %d at %d from candidate set (maxprio: %d)\n",
@@ -1024,7 +1027,6 @@ void branchcandRemovePseudoCand(
    {
       /* a binary candidate of maximal priority was removed */
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-      assert(branchpriority == branchcand->pseudomaxpriority);
       if( freepos != branchcand->npriopseudobins - 1 )
       {
          branchcand->pseudocands[freepos] = branchcand->pseudocands[branchcand->npriopseudobins - 1];
@@ -1034,11 +1036,11 @@ void branchcandRemovePseudoCand(
       branchcand->npriopseudobins--;
       branchcand->npriopseudoints++;
    }
+
    if( freepos < branchcand->npriopseudobins + branchcand->npriopseudoints )
    {
       /* a binary or integer candidate of maximal priority was removed */
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
-      assert(branchpriority == branchcand->pseudomaxpriority);
       if( freepos != branchcand->npriopseudobins + branchcand->npriopseudoints - 1 )
       {
          branchcand->pseudocands[freepos] =
@@ -1048,10 +1050,10 @@ void branchcandRemovePseudoCand(
       }
       branchcand->npriopseudoints--;
    }
+
    if( freepos < branchcand->npriopseudocands )
    {
       /* a candidate of maximal priority was removed */
-      assert(branchpriority == branchcand->pseudomaxpriority);
       if( freepos != branchcand->npriopseudocands - 1 )
       {
          branchcand->pseudocands[freepos] = branchcand->pseudocands[branchcand->npriopseudocands - 1];
