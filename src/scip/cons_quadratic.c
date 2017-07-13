@@ -15468,8 +15468,8 @@ SCIP_RETCODE SCIPcleanupRowprep(
 {
    SCIP_Real myviol;
 #ifdef SCIP_DEBUG
-   SCIP_Real mincoef;
-   SCIP_Real maxcoef;
+   SCIP_Real mincoef = 1.0;
+   SCIP_Real maxcoef = 1.0;
 #endif
 
    assert(maxcoefrange > 1.0);   /* not much interesting otherwise */
