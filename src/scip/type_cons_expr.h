@@ -31,36 +31,6 @@
 extern "C" {
 #endif
 
-/** expression simplify callback
- *
- * the method receives the expression to be simplified and a pointer to store the simplified expression
- *
- * input:
- *  - scip           : SCIP main data structure
- *  - expr           : expression to simplify
- * output:
- *  - simplifiedexpr : the simplified expression
- */
-#define SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(x) SCIP_RETCODE x (\
-   SCIP*                 scip,               \
-   SCIP_CONSEXPR_EXPR*   expr,               \
-   SCIP_CONSEXPR_EXPR**  simplifiedexpr)
-
-/** expression compare callback
- *
- * the method receives two expressions, expr1 and expr2. Must return
- * -1 if expr1 < expr2
- * 0  if expr1 = expr2
- * 1  if expr1 > expr2
- *
- * input:
- *  - expr1 : first expression to compare
- *  - expr2 : second expression to compare
- */
-#define SCIP_DECL_CONSEXPR_EXPRCMP(x) int x (\
-   SCIP_CONSEXPR_EXPR* expr1, \
-   SCIP_CONSEXPR_EXPR* expr2)
-
 /** expression handler copy callback
  *
  * the method includes the expression handler into a expression constraint handler
@@ -96,6 +66,36 @@ extern "C" {
    SCIP_CONSHDLR* consexprhdlr, \
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr, \
    SCIP_CONSEXPR_EXPRHDLRDATA** exprhdlrdata)
+
+/** expression simplify callback
+ *
+ * the method receives the expression to be simplified and a pointer to store the simplified expression
+ *
+ * input:
+ *  - scip           : SCIP main data structure
+ *  - expr           : expression to simplify
+ * output:
+ *  - simplifiedexpr : the simplified expression
+ */
+#define SCIP_DECL_CONSEXPR_EXPRSIMPLIFY(x) SCIP_RETCODE x (\
+   SCIP*                 scip,               \
+   SCIP_CONSEXPR_EXPR*   expr,               \
+   SCIP_CONSEXPR_EXPR**  simplifiedexpr)
+
+/** expression compare callback
+ *
+ * the method receives two expressions, expr1 and expr2. Must return
+ * -1 if expr1 < expr2
+ * 0  if expr1 = expr2
+ * 1  if expr1 > expr2
+ *
+ * input:
+ *  - expr1 : first expression to compare
+ *  - expr2 : second expression to compare
+ */
+#define SCIP_DECL_CONSEXPR_EXPRCMP(x) int x (\
+   SCIP_CONSEXPR_EXPR* expr1, \
+   SCIP_CONSEXPR_EXPR* expr2)
 
 /** variable mapping callback for expression data callback
  *
