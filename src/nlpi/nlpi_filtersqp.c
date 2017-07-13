@@ -61,11 +61,12 @@ typedef int fint;
 typedef double real;
 typedef long ftnlen;
 
-typedef struct
+struct SCIP_Time
 {
-   time_t                      sec;   /**< seconds part of time since epoch */
-   int                         usec;  /**< micro-seconds part of time */
-} SCIP_TIME;
+   time_t                     sec;           /**< seconds part of time since epoch */
+   int                        usec;          /**< micro-seconds part of time */
+};
+typedef struct SCIP_Time SCIP_TIME;
 
 struct SCIP_NlpiData
 {
@@ -514,7 +515,7 @@ SCIP_RETCODE setupGradients(
    SCIP_NLPIORACLE*      oracle,
    fint**                la,
    real**                a
-)
+   )
 {
    const int* offset;
    const int* col;
@@ -578,7 +579,7 @@ static
 SCIP_RETCODE setupHessian(
    SCIP_NLPIORACLE*      oracle,
    fint**                la
-)
+   )
 {
    const int* offset;
    const int* col;
@@ -636,7 +637,7 @@ SCIP_RETCODE setupStart(
    SCIP_NLPIPROBLEM*     problem,            /**< NLPI problem */
    real*                 x,                  /**< array to store initial values */
    SCIP_Bool*            success             /**< whether we could setup a point in which functions could be evaluated */
-)
+   )
 {
    int i;
    int n;
@@ -728,7 +729,7 @@ SCIP_RETCODE processSolveOutcome(
    fint                  ifail,              /**< fail flag from FilterSQP call */
    real*                 x,                  /**< primal solution values from FilterSQP call, or NULL if stopped before filtersqp got called */
    real*                 lam                 /**< dual solution values from FilterSQP call, or NULL if stopped before filtersqp got called */
-)
+   )
 {
    int i;
    int nvars;
@@ -2807,19 +2808,25 @@ SCIP_RETCODE SCIPcreateNlpSolverFilterSQP(
 }
 
 /** gets string that identifies filterSQP (version number) */
-const char* SCIPgetSolverNameFilterSQP(void)
+const char* SCIPgetSolverNameFilterSQP(
+   void
+   )
 {
    return "filterSQP";  /* TODO version number? */
 }
 
 /** gets string that describes filterSQP */
-const char* SCIPgetSolverDescFilterSQP(void)
+const char* SCIPgetSolverDescFilterSQP(
+   void
+   )
 {
    return NLPI_DESC;
 }
 
 /** returns whether filterSQP is available, i.e., whether it has been linked in */
-SCIP_Bool SCIPisFilterSQPAvailableFilterSQP(void)
+SCIP_Bool SCIPisFilterSQPAvailableFilterSQP(
+   void
+   )
 {
    return TRUE;
 }
