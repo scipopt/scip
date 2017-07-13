@@ -2043,7 +2043,7 @@ const char* SCIPgetSolverNameIpopt(void)
    return "Ipopt " IPOPT_VERSION;
 }
 
-/** gets string that describes Ipopt (version number) */
+/** gets string that describes Ipopt */
 const char* SCIPgetSolverDescIpopt(void)
 {
    return "Interior Point Optimizer developed by A. Waechter et.al. (www.coin-or.org/Ipopt)";
@@ -2730,7 +2730,7 @@ void ScipNLP::finalize_solution(
 
    case DIVERGING_ITERATES:
       nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNBOUNDED;
-      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_UOBJLIM;
+      nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_OKAY;
       break;
 
    case INVALID_NUMBER_DETECTED:

@@ -6,6 +6,7 @@ features:
 - new compiler flag DEBUGSOL={true,false} to enable an internal debugging mechanism to check against a user given debug solution
 - add new heuristic MPEC that solves a MPEC reformulation of a mixed-binary nonlinear problem by regularized NLP reformulations
 - added interface to the NLP solver WORHP; set WORHP=true in order to link to WORHP
+- added interface to the NLP solver FilterSQP; set FILTERSQP=true in order to link to FilterSQP
 
 parameters:
 - new parameter misc/debugsol to specify a debug solution that should be checked during the solve
