@@ -272,8 +272,7 @@ SCIP_RETCODE SCIPcreateConsExprExprXyz(
    assert(consexprhdlr != NULL);
    assert(expr != NULL);
 
-   /* TODO: add function SCIPgetConsExprExprHdlrXyz to cons_expr.{h,c} */
-   /* exprhdlr = SCIPgetConsExprExprHdlrXyz(consexprhdlr); */
+    exprhdlr = SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME);
 
    /* create expression data */
    exprdata = NULL;
