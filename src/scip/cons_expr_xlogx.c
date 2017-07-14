@@ -286,16 +286,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropXlogx)
 
    *nreductions = 0;
 
-   /* because x*log(x) is univariate and convex, we know that only the supremum of the expression interval is implying
-    * bounds on the interval of the child
-    */
-
-   /* f = log(c0) -> c0 = exp(f) */
-   SCIPintervalExp(SCIPinfinity(scip), &childbound, SCIPgetConsExprExprInterval(expr));
-
-   /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbound, force,
-         infeasible, nreductions) );
+   /* TODO */
 
    return SCIP_OKAY;
 }
