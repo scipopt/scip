@@ -134,6 +134,7 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_EXPRHDLR*  exprvalhdlr;     /**< value expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprsumhdlr;     /**< summation expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprprodhdlr;    /**< product expression handler */
+   SCIP_CONSEXPR_EXPRHDLR*  exprxlogxhdlr;   /**< x*log(x) expression handler */
 
    int                      auxvarid;        /**< unique id for the next auxiliary variable */
 
@@ -317,6 +318,7 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
    conshdlrdata->exprvalhdlr = SCIPfindConsExprExprHdlr(conshdlr, "val");
    conshdlrdata->exprsumhdlr = SCIPfindConsExprExprHdlr(conshdlr, "sum");
    conshdlrdata->exprprodhdlr = SCIPfindConsExprExprHdlr(conshdlr, "prod");
+   conshdlrdata->exprxlogxhdlr = SCIPfindConsExprExprHdlr(conshdlr, "xlogx");
 
    return SCIP_OKAY;
 }
@@ -5631,6 +5633,15 @@ SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrProduct(
    return SCIPconshdlrGetData(conshdlr)->exprprodhdlr;
 }
 
+/** returns expression handler for x*log(x) expressions */
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrXlogx(
+   SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+   )
+{
+   assert(conshdlr != NULL);
+
+   return SCIPconshdlrGetData(conshdlr)->exprxlogxhdlr;
+}
 
 /** gives the name of an expression handler */
 const char* SCIPgetConsExprExprHdlrName(
