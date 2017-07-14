@@ -50,7 +50,15 @@ SCIP_RETCODE separatePointXlogx(
    SCIP_ROW**            cut                 /**< pointer to store the row */
    )
 {
+   SCIP_CONSEXPR_EXPR* child;
    SCIP_VAR* auxvar;
+   SCIP_VAR* childvar;
+   SCIP_Real refpoint;
+   SCIP_Real activity;
+   SCIP_Real violation;
+   SCIP_Real coef;
+   SCIP_Real constant;
+   SCIP_Bool overestimate;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -59,10 +67,72 @@ SCIP_RETCODE separatePointXlogx(
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), EXPRHDLR_NAME) == 0);
    assert(cut != NULL);
 
+   *cut = NULL;
+
+   /* get linearization variable */
    auxvar = SCIPgetConsExprExprLinearizationVar(expr);
    assert(auxvar != NULL);
 
-   /* TODO */
+   /* get expression data */
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   assert(child != NULL);
+   childvar = SCIPgetConsExprExprLinearizationVar(child);
+   assert(childvar != NULL);
+
+   refpoint = SCIPgetSolVal(scip, sol, childvar);
+
+   /* reference point is outside the domain of f(x) = x*log(x) */
+   if( refpoint < 0.0 )
+      return SCIP_OKAY;
+
+   activity = (refpoint == 0.0) ? 0.0 : refpoint * log(refpoint);
+   violation = activity - SCIPgetSolVal(scip, sol, auxvar);
+   overestimate = SCIPisLT(scip, violation, 0.0);
+
+   /* use secant for overestimate (locally valid) */
+   if( overestimate )
+   {
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Real vallb;
+      SCIP_Real valub;
+
+      lb = SCIPvarGetLbLocal(childvar);
+      ub = SCIPvarGetUbLocal(childvar);
+
+      if( lb < 0.0 || SCIPisInfinity(scip, ub) || SCIPisEQ(scip, lb, ub) )
+         return SCIP_OKAY;
+
+      assert(lb >= 0.0 && ub >= 0.0);
+      assert(ub - lb != 0.0);
+
+      vallb = (lb == 0.0) ? 0.0 : lb * log(lb);
+      valub = (ub == 0.0) ? 0.0 : ub * log(ub);
+
+      coef = (valub - vallb) / (ub - lb);
+      constant = valub - coef * ub;
+      assert(SCIPisEQ(scip, constant, vallb - coef * lb));
+   }
+   /* use gradient cut for underestimate (globally valid) */
+   else
+   {
+      /* no gradient cut possible if reference point is too close at 0 */
+      if( SCIPisZero(scip, refpoint) )
+         return SCIP_OKAY;
+
+      /* x*(1+log(x*)) - x* <= x*log(x) */
+      coef = (1.0 + log(refpoint));
+      constant = -refpoint;
+   }
+
+   /* create cut */
+   SCIP_CALL( SCIPcreateRowCons(scip, cut, conshdlr, "xlogx_cut", 0, NULL, NULL,
+         overestimate ? -constant : -SCIPinfinity(scip),
+         overestimate ? SCIPinfinity(scip) : -constant,
+         overestimate, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
+   SCIP_CALL( SCIPaddVarToRow(scip, *cut, childvar, coef) );
 
    return SCIP_OKAY;
 }
@@ -266,9 +336,36 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalXlogx)
 static
 SCIP_DECL_CONSEXPR_EXPRSEPA(sepaXlogx)
 {  /*lint --e{715}*/
-   assert(expr != NULL);
+   SCIP_ROW* cut;
+   SCIP_Bool infeasible;
 
-   /* TODO */
+   cut = NULL;
+   *ncuts = 0;
+   *result = SCIP_DIDNOTFIND;
+
+   SCIP_CALL( separatePointXlogx(scip, conshdlr, expr, sol, &cut) );
+
+   /* failed to compute a cut */
+   if( cut == NULL )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPmassageConsExprExprCut(scip, &cut, sol, minviolation) );
+
+   /* cut violation or numerics were too bad */
+   if( cut == NULL )
+      return SCIP_OKAY;
+
+   /* add cut */
+   SCIP_CALL( SCIPaddCut(scip, NULL, cut, FALSE, &infeasible) );
+   *result = infeasible ? SCIP_CUTOFF : SCIP_SEPARATED;
+   *ncuts += 1;
+
+#ifdef SCIP_DEBUG
+   SCIPdebugMsg(scip, "add cut with violation %e\n", violation);
+   SCIP_CALL( SCIPprintRow(scip, cut, NULL) );
+#endif
+
+   SCIP_CALL( SCIPreleaseRow(scip, &cut) );
 
    return SCIP_OKAY;
 }
