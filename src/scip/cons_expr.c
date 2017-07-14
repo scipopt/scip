@@ -36,6 +36,7 @@
 #include "scip/cons_expr_log.h"
 #include "scip/cons_expr_abs.h"
 #include "scip/cons_expr_pow.h"
+#include "scip/cons_expr_xlogx.h"
 #include "scip/debug.h"
 
 /* fundamental constraint handler properties */
@@ -134,7 +135,6 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_EXPRHDLR*  exprvalhdlr;     /**< value expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprsumhdlr;     /**< summation expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprprodhdlr;    /**< product expression handler */
-   SCIP_CONSEXPR_EXPRHDLR*  exprxlogxhdlr;   /**< x*log(x) expression handler */
 
    int                      auxvarid;        /**< unique id for the next auxiliary variable */
 
@@ -318,7 +318,6 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
    conshdlrdata->exprvalhdlr = SCIPfindConsExprExprHdlr(conshdlr, "val");
    conshdlrdata->exprsumhdlr = SCIPfindConsExprExprHdlr(conshdlr, "sum");
    conshdlrdata->exprprodhdlr = SCIPfindConsExprExprHdlr(conshdlr, "prod");
-   conshdlrdata->exprxlogxhdlr = SCIPfindConsExprExprHdlr(conshdlr, "xlogx");
 
    return SCIP_OKAY;
 }
@@ -5633,16 +5632,6 @@ SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrProduct(
    return SCIPconshdlrGetData(conshdlr)->exprprodhdlr;
 }
 
-/** returns expression handler for x*log(x) expressions */
-SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrXlogx(
-   SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
-   )
-{
-   assert(conshdlr != NULL);
-
-   return SCIPconshdlrGetData(conshdlr)->exprxlogxhdlr;
-}
-
 /** gives the name of an expression handler */
 const char* SCIPgetConsExprExprHdlrName(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
@@ -7224,6 +7213,10 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include handler for power expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrPow(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "pow") == 0);
+
+   /* include handler for xlogx expression */
+   SCIP_CALL( SCIPincludeConsExprExprHdlrXlogx(scip, conshdlr) );
+   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "xlogx") == 0);
 
    return SCIP_OKAY;
 }

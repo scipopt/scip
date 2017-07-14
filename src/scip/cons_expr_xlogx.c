@@ -582,7 +582,7 @@ SCIP_RETCODE SCIPcreateConsExprExprXlogx(
    assert(expr != NULL);
    assert(child != NULL);
 
-   exprhdlr = SCIPgetConsExprExprHdlrXlogx(consexprhdlr);
+   exprhdlr = SCIPfindConsExprExprHdlr(consexprhdlr, EXPRHDLR_NAME);
    assert(exprhdlr != NULL);
 
    /* create expression data */
