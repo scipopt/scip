@@ -45,7 +45,7 @@ static
 SCIP_RETCODE separatePointXlogx(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< xlogx expression */
    SCIP_SOL*             sol,                /**< solution to be separated (NULL for the LP solution) */
    SCIP_ROW**            cut                 /**< pointer to store the row */
    )
@@ -133,6 +133,122 @@ SCIP_RETCODE separatePointXlogx(
 
    SCIP_CALL( SCIPaddVarToRow(scip, *cut, auxvar, -1.0) );
    SCIP_CALL( SCIPaddVarToRow(scip, *cut, childvar, coef) );
+
+   return SCIP_OKAY;
+}
+
+/** helper function for reverseProp() which returns an x* in [xmin,xmax] s.t. the distance x*log(x) and a given target
+ *  value is minimized; the function assumes that x*log(x) is monotone on [xmin,xmax];
+ */
+static
+SCIP_Real reversePropBinarySearch(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             xmin,               /**< smallest possible x */
+   SCIP_Real             xmax,               /**< largest possible x */
+   SCIP_Bool             increasing,         /**< x*log(x) is increasing or decreasing on [xmin,xmax] */
+   SCIP_Real             targetval           /**< target value */
+   )
+{
+   SCIP_Real xminval = (xmin == 0.0) ? 0.0 : xmin * log(xmin);
+   SCIP_Real xmaxval = (xmax == 0.0) ? 0.0 : xmax * log(xmax);
+   int i;
+
+   assert(increasing ? xminval <= xmaxval : xminval >= xmaxval);
+
+   /* function can not achieve x*log(x) -> return xmin or xmax */
+   if( SCIPisGE(scip, xminval, targetval) && SCIPisGE(scip, xmaxval, targetval) )
+      return increasing ? xmin : xmax;
+   else if( SCIPisLE(scip, xminval, targetval) && SCIPisLE(scip, xmaxval, targetval) )
+      return increasing ? xmax : xmin;
+
+   /* binary search */
+   for( i = 0; i < 1000; ++i )
+   {
+      SCIP_Real x = (xmin + xmax) / 2.0;
+      SCIP_Real xval = (x == 0.0) ? 0.0 : x * log(x);
+
+      /* found the corresponding point -> skip */
+      if( SCIPisEQ(scip, xval, targetval) )
+         return x;
+      else if( SCIPisLT(scip, xval, targetval) )
+      {
+         if( increasing )
+            xmin = x;
+         else
+            xmax = x;
+      }
+      else
+      {
+         if( increasing )
+            xmax = x;
+         else
+            xmin = x;
+      }
+   }
+
+   return SCIP_INVALID;
+}
+
+/** helper function for reverse propagation; needed for proper unittest */
+static
+SCIP_RETCODE reverseProp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_INTERVAL         exprinterval,       /**< bounds on the expression */
+   SCIP_INTERVAL         childinterval,      /**< bounds on the interval of the child */
+   SCIP_INTERVAL*        interval            /**< resulting interval */
+   )
+{
+   SCIP_Real childsup;
+   SCIP_Real childinf;
+   SCIP_Real exprsup;
+   SCIP_Real exprinf;
+   SCIP_Real bound;
+
+   assert(scip != NULL);
+   assert(interval != NULL);
+
+   /* check whether domain is empty, i.e., bounds on x*log(x) < -1/e */
+   if( SCIPisLT(scip, SCIPintervalGetSup(exprinterval), -exp(-1.0))
+      || SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval) )
+   {
+      SCIPintervalSetEmpty(interval);
+      return SCIP_OKAY;
+   }
+
+   childsup = SCIPintervalGetSup(childinterval);
+   childinf = SCIPintervalGetInf(childinterval);
+   exprsup = SCIPintervalGetSup(exprinterval);
+   exprinf = SCIPintervalGetInf(exprinterval);
+
+   /*
+    * consider bounds implied by upper bound on the expression
+    */
+
+   bound = reversePropBinarySearch(scip, exp(-1.0), childsup, TRUE, exprsup);
+   assert(bound <= childsup);
+   childsup = MIN(bound, childsup);
+
+   if( SCIPisLT(scip, exprsup, 0.0) )
+   {
+      bound = reversePropBinarySearch(scip, childinf, exp(-1.0), FALSE, exprsup);
+      assert(bound >= childinf);
+      childinf = MAX(childinf, bound);
+   }
+
+   /*
+    * consider bounds implied by lower bound on the expression
+    */
+
+   /* lower bound on expression can only imply a better lower bound on the child's interval */
+   if( SCIPisGT(scip, exprinf, 0.0) && childinf >= exp(-1.0) )
+   {
+      bound = reversePropBinarySearch(scip, exp(-1.0), childsup, TRUE, exprinf);
+      assert(bound >= childinf);
+      childinf = MAX(childinf, bound);
+   }
+
+   /* set the resulting bounds */
+   SCIPintervalSetBounds(interval, childinf, childsup);
 
    return SCIP_OKAY;
 }
@@ -276,7 +392,7 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalXlogx)
    else if( childvalue == 0.0 || childvalue == 1.0 )
    {
       /* x*log(x) = 0 iff x in {0,1} */
-      return 0.0;
+      *val = 0.0;
    }
    else
    {
@@ -296,7 +412,7 @@ SCIP_DECL_CONSEXPR_EXPRBWDIFF(bwdiffXlogx)
    assert(expr != NULL);
    assert(idx == 0);
    assert(SCIPgetConsExprExprNChildren(expr) == 1);
-   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID);
+   assert(SCIPgetConsExprExprValue(expr) != SCIP_INVALID); /*lint !e777*/
 
    child = SCIPgetConsExprExprChildren(expr)[idx];
    assert(child != NULL);
@@ -374,7 +490,11 @@ SCIP_DECL_CONSEXPR_EXPRSEPA(sepaXlogx)
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropXlogx)
 {  /*lint --e{715}*/
-   SCIP_INTERVAL childbound;
+   SCIP_INTERVAL newinterval;
+   SCIP_INTERVAL exprinterval;
+   SCIP_INTERVAL childinterval;
+
+   SCIP_CONSEXPR_EXPR* child;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -383,7 +503,15 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropXlogx)
 
    *nreductions = 0;
 
-   /* TODO */
+   child = SCIPgetConsExprExprChildren(expr)[0];
+   childinterval = SCIPgetConsExprExprInterval(child);
+   exprinterval = SCIPgetConsExprExprInterval(expr);
+
+   /* compute resulting intervals */
+   SCIP_CALL( reverseProp(scip, exprinterval, childinterval, &newinterval) );
+
+   /* try to tighten the bounds of the child node */
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, child, newinterval, force, infeasible, nreductions) );
 
    return SCIP_OKAY;
 }
@@ -447,7 +575,7 @@ SCIP_RETCODE SCIPcreateConsExprExprXlogx(
    SCIP_CONSEXPR_EXPR*   child               /**< child expression */
    )
 {
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr = NULL;
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
    SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(consexprhdlr != NULL);
