@@ -4717,6 +4717,10 @@ SCIP_RETCODE nlpSolve(
       SCIPsetFreeBufferArray(set, &initialguess_solver);
    }
 
+   /* set NLP tolerances to current SCIP primal and dual feasibility tolerance */
+   SCIP_CALL( SCIPnlpiSetRealPar(nlp->solver, nlp->problem, SCIP_NLPPAR_FEASTOL, SCIPsetFeastol(set)) );
+   SCIP_CALL( SCIPnlpiSetRealPar(nlp->solver, nlp->problem, SCIP_NLPPAR_RELOBJTOL, SCIPsetDualfeastol(set)) );
+
    /* let NLP solver do his work */
    SCIPclockStart(stat->nlpsoltime, set);
 

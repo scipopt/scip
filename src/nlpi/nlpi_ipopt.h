@@ -49,7 +49,7 @@ SCIP_RETCODE SCIPcreateNlpSolverIpopt(
 extern
 const char* SCIPgetSolverNameIpopt(void);
 
-/** gets string that describes Ipopt (version number) */
+/** gets string that describes Ipopt */
 extern
 const char* SCIPgetSolverDescIpopt(void);
 
