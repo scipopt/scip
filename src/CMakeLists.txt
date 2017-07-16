@@ -718,7 +718,7 @@ add_dependencies(scipopt update_githash update_buildflags)
 add_executable(scip-bin main.c $<TARGET_OBJECTS:scip> $<TARGET_OBJECTS:lpi> $<TARGET_OBJECTS:nlpi>
    $<TARGET_OBJECTS:tpi> $<TARGET_OBJECTS:objscip>)
 target_link_libraries(scip-bin ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
-   ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
+   ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
 
 # we cannot have the same name for library and binary, so we redefine it here
 set_target_properties(scip-bin PROPERTIES OUTPUT_NAME scip)
