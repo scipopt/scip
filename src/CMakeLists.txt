@@ -1,6 +1,9 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 set(scipsources
+    blockmemshell/memory.c
+    scip/message.c
+    scip/bitencode.c
     scip/branch_allfullstrong.c
     scip/branch_cloud.c
     scip/branch_distribution.c
@@ -256,16 +259,13 @@ set(nlpisources
     nlpi/nlpioracle.c
     nlpi/expr.c
     nlpi/intervalarithext.cpp
-    blockmemshell/memory.c
-    scip/misc.c
-    scip/intervalarith.c
-    scip/interrupt.c
-    scip/message.c
     ${nlpi}
     ${exprinterpret}
 )
 
-set(lpisources ${lpi} scip/bitencode.c blockmemshell/memory.c scip/message.c)
+set(lpisources
+   ${lpi}
+)
 
 set(blockmemshellheader
     blockmemshell/memory.h
@@ -696,27 +696,29 @@ set(xmlheaders
 
 add_library(scip OBJECT ${scipsources})
 add_dependencies(scip update_githash update_buildflags)
-add_library(objscip STATIC ${objscipsources})
-add_library(nlpi STATIC ${nlpisources})
-add_library(lpi STATIC ${lpisources})
-add_library(tpi STATIC ${tpisources})
-target_link_libraries(lpi ${GMP_LIBRARIES} ${LPS_LIBRARIES})
-target_link_libraries(nlpi ${IPOPT_LIBRARIES})
+add_library(objscip OBJECT ${objscipsources})
+add_library(nlpi OBJECT ${nlpisources})
+add_library(lpi OBJECT ${lpisources})
+add_library(tpi OBJECT ${tpisources})
 
 if(SHARED)
     #in the shared case the scipopt needs to compile the sources relocatable again
     add_library(scipopt ${scipsources} ${objscipsources} ${nlpisources} ${lpisources} ${tpisources})
-    add_dependencies(scipopt update_githash update_buildflags)
+    target_link_libraries(scipopt PRIVATE ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
+        ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
 else()
     #in the static case scipopt can reuse the non relocatable objects
-    add_library(scipopt $<TARGET_OBJECTS:scip>)
-    target_link_libraries(scipopt lpi nlpi tpi objscip)
+    add_library(scipopt $<TARGET_OBJECTS:scip> $<TARGET_OBJECTS:lpi> $<TARGET_OBJECTS:nlpi> $<TARGET_OBJECTS:tpi> $<TARGET_OBJECTS:objscip>)
+    target_link_libraries(scipopt PRIVATE ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
+        ${ZIMPL_LIBRARIES} ${LPS_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
 endif()
 
-target_link_libraries(scipopt ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES} ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
+add_dependencies(scipopt update_githash update_buildflags)
 
-add_executable(scip-bin main.c $<TARGET_OBJECTS:scip>)
-target_link_libraries(scip-bin objscip nlpi lpi tpi ${ZLIB_LIBRARIES} ${LPS_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES} ${ZIMPL_LIBRARIES} ${THREAD_LIBRARIES})
+add_executable(scip-bin main.c $<TARGET_OBJECTS:scip> $<TARGET_OBJECTS:lpi> $<TARGET_OBJECTS:nlpi>
+   $<TARGET_OBJECTS:tpi> $<TARGET_OBJECTS:objscip>)
+target_link_libraries(scip-bin ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
+   ${ZIMPL_PIC_LIBRARIES} ${LPS_PIC_LIBRARIES} ${THREAD_LIBRARIES} ${NLPI_LIBRARIES})
 
 # we cannot have the same name for library and binary, so we redefine it here
 set_target_properties(scip-bin PROPERTIES OUTPUT_NAME scip)

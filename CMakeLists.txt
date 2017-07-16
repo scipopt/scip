@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.0)
 
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELEASE}")
@@ -302,8 +302,8 @@ if(IPOPT_FOUND)
     #on debian IPOPT package needs this definition to work
     add_definitions( -DHAVE_CSTDDEF )
     set(nlpi nlpi/nlpi_ipopt.cpp)
+    set(NLPI_LIBRARIES ${NLPI_LIBRARIES} ${IPOPT_LIBRARIES})
 else()
-    set(IPOPT_LIBRARIES "")
     set(nlpi nlpi/nlpi_ipopt_dummy.c)
 endif()
 
