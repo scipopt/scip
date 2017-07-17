@@ -65,6 +65,7 @@ set(settings_MIP
     "alldisp"
     "vbcvisualization"
     "bakvisualization"
+    "solvingphases"
 )
 
 set(settings_MINLP
