@@ -101,10 +101,15 @@ max
 change objsense
 min
 presolve
-disp mem
 write cliquegraph temp/tmp.gml
+read ${PROJECT_SOURCE_DIR}/check/instances/MIP/vpm2.fzn
+read ${PROJECT_SOURCE_DIR}/check/instances/MIP/vpm2.fix
+read ${PROJECT_SOURCE_DIR}/check/instances/MIP/vpm2.sol
+optimize
+checksol
+disp mem
 disp problem
 disp stat
 change freetrans
 change minuc
-q
+quit
