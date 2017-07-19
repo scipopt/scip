@@ -7222,6 +7222,7 @@ SCIP_RETCODE computeInteriorPoint(
 
       case SCIP_NLPSOLSTAT_LOCINFEASIBLE:
       case SCIP_NLPSOLSTAT_GLOBINFEASIBLE:
+      case SCIP_NLPSOLSTAT_UNKNOWN:
          /* fallthrough */
          /* TODO: we could still use the point, and let evaluateGauge decide whether the point is interior or not */
          SCIPdebugMsg(scip, "cons <%s>: failed to find an interior point.  solution status: %d, termination status: %d\n",
@@ -7229,7 +7230,6 @@ SCIP_RETCODE computeInteriorPoint(
          goto TERMINATE;
 
       case SCIP_NLPSOLSTAT_UNBOUNDED:
-      case SCIP_NLPSOLSTAT_UNKNOWN:
       default:
          /* fallthrough */
          SCIPerrorMessage("cons <%s>: undefined behaviour of NLP Solver.  solution status: %d, termination status: %d\n",
