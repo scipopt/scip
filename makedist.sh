@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="4.0.0"
+VERSION="4.0.1"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -153,7 +153,7 @@ $NAME/interfaces/ampl/check/instances/MINLP/*.row $NAME/interfaces/ampl/check/in
 $NAME/interfaces/ampl/check/instances/SOS/*.col $NAME/interfaces/ampl/check/instances/SOS/*.row \
 $NAME/interfaces/ampl/check/instances/SOS/*.nl $NAME/interfaces/ampl/check/testset/short.solu \
 $NAME/interfaces/gams/Makefile $NAME/interfaces/gams/INSTALL $NAME/interfaces/gams/gamsinst.sh \
-$NAME/interfaces/gams/src/* \
+$NAME/interfaces/gams/test.sh $NAME/interfaces/gams/src/* \
 $NAME/check/instances/CP/*.cip \
 $NAME/check/instances/Indicator/*.lp \
 $NAME/check/instances/MIP/*.fzn \

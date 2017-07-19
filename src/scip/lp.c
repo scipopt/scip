@@ -8162,8 +8162,10 @@ SCIP_RETCODE lpFlushChgCols(
             SCIP_CALL( SCIPlpiGetObj(lp->lpi, col->lpipos, col->lpipos, &lpiobj) );
             SCIP_CALL( SCIPlpiGetBounds(lp->lpi, col->lpipos, col->lpipos, &lpilb, &lpiub) );
             assert(SCIPsetIsFeasEQ(set, lpiobj, col->flushedobj));
-            assert(SCIPsetIsFeasEQ(set, lpilb, col->flushedlb));
-            assert(SCIPsetIsFeasEQ(set, lpiub, col->flushedub));
+            assert((SCIPsetIsInfinity(set, lpilb) && SCIPsetIsInfinity(set, col->flushedlb))
+                  || (!SCIPsetIsInfinity(set, lpilb) && !SCIPsetIsInfinity(set, col->flushedlb) && SCIPsetIsFeasEQ(set, lpilb, col->flushedlb)));
+            assert((SCIPsetIsInfinity(set, lpiub) && SCIPsetIsInfinity(set, col->flushedub))
+                  || (!SCIPsetIsInfinity(set, lpiub) && !SCIPsetIsInfinity(set, col->flushedub) && SCIPsetIsFeasEQ(set, lpiub, col->flushedub)));
          }
 #endif
 
@@ -9943,13 +9945,13 @@ SCIP_RETCODE lpPrimalSimplex(
 
    *lperror = FALSE;
 
-#if 0 /* for debugging: write all node LP's */
+#if 0 /* for debugging: write all root node LP's */
    if( stat->nnodes == 1 && !lp->diving && !lp->probing )
    {
       char fname[SCIP_MAXSTRLEN];
       (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%" SCIP_LONGINT_FORMAT "_%" SCIP_LONGINT_FORMAT ".lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPmessagePrintInfo("wrote LP to file <%s> (primal simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+      SCIPsetDebugMsg("wrote LP to file <%s> (primal simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n",
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol,
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
@@ -10084,13 +10086,13 @@ SCIP_RETCODE lpDualSimplex(
 
    *lperror = FALSE;
 
-#if 0 /* for debugging: write all node LP's */
+#if 0 /* for debugging: write all root node LP's */
    if( stat->nnodes == 1 && !lp->diving && !lp->probing )
    {
       char fname[SCIP_MAXSTRLEN];
       (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%" SCIP_LONGINT_FORMAT "_%" SCIP_LONGINT_FORMAT ".lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPmessagePrintInfo("wrote LP to file <%s> (dual simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+      SCIPsetDebugMsg("wrote LP to file <%s> (dual simplex, uobjlim=%.15g, feastol=%.15g/%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n",
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, 
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
@@ -10857,13 +10859,13 @@ SCIP_RETCODE lpBarrier(
 
    *lperror = FALSE;
 
-#if 0 /* for debugging: write all node LP's */
+#if 0 /* for debugging: write all root node LP's */
    if( stat->nnodes == 1 && !lp->diving && !lp->probing )
    {
       char fname[SCIP_MAXSTRLEN];
       (void) SCIPsnprintf(fname, SCIP_MAXSTRLEN, "lp%" SCIP_LONGINT_FORMAT "_%" SCIP_LONGINT_FORMAT ".lp", stat->nnodes, stat->lpcount);
       SCIP_CALL( SCIPlpWrite(lp, fname) );
-      SCIPmessagePrintInfo("wrote LP to file <%s> (barrier, uobjlim=%.15g, feastol=%.15g/%.15g, convtol=%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n", 
+      SCIPsetDebugMsg("wrote LP to file <%s> (barrier, uobjlim=%.15g, feastol=%.15g/%.15g, convtol=%.15g, fromscratch=%d, fastmip=%d, scaling=%d, presolving=%d)\n",
          fname, lp->lpiuobjlim, lp->lpifeastol, lp->lpidualfeastol, lp->lpibarrierconvtol,
          lp->lpifromscratch, lp->lpifastmip, lp->lpiscaling, lp->lpipresolving);
    }
@@ -14129,7 +14131,7 @@ SCIP_RETCODE SCIPlpGetUnboundedSol(
       else
       {
          SCIP_Real primsolval = primsol[c] + rayscale * ray[c];
-         lpicols[c]->primsol = SCIPsetIsInfinity(set, primsolval) ? SCIPsetInfinity(set) : primsolval;
+         lpicols[c]->primsol = MAX(-SCIPsetInfinity(set), MIN(SCIPsetInfinity(set), primsolval));
       }
       lpicols[c]->redcost = SCIP_INVALID;
       lpicols[c]->validredcostlp = -1;

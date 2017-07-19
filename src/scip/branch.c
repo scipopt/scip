@@ -448,7 +448,6 @@ SCIP_RETCODE SCIPbranchcandGetExternCands(
                                               *   or NULL */
    )
 {
-
    assert(branchcand != NULL);
 
    /* assign return values */
@@ -802,6 +801,8 @@ SCIP_RETCODE SCIPbranchcandGetPseudoCands(
          }
       }
       assert(branchcand->npseudocands == npcs);
+      for (v = 0; v < branchcand->npriopseudocands; ++v)
+         assert( branchcand->pseudocands[v]->branchpriority == branchcand->pseudomaxpriority );
    }
 #endif
 
@@ -989,6 +990,12 @@ void branchcandSortPseudoCands(
    assert(0 <= branchcand->npriopseudocands && branchcand->npriopseudocands <= branchcand->npseudocands);
    assert(0 <= branchcand->npriopseudobins && branchcand->npriopseudobins <= branchcand->npriopseudocands);
    assert(0 <= branchcand->npriopseudoints && branchcand->npriopseudoints <= branchcand->npriopseudocands);
+#ifndef NDEBUG
+   {
+      for (i = 0; i < branchcand->npriopseudocands; ++i)
+         assert( branchcand->pseudocands[i]->branchpriority == branchcand->pseudomaxpriority );
+   }
+#endif
 }
 
 /** removes pseudo candidate from pseudocands array
@@ -1008,6 +1015,9 @@ void branchcandRemovePseudoCand(
    assert(branchcand->pseudocands[var->pseudocandindex] == var);
    assert(branchcand->pseudocands[branchcand->npseudocands-1] != NULL);
 
+   /* Note that the branching priority of the variable to be removed is not necessarily equal to pseudomaxpriority, since
+    * the status of the variable might have changed, leading to a change in the branching priority. Moreover, if the
+    * variable was part of an aggregation, even other variables might at this point have different priorities. */
    branchpriority = SCIPvarGetBranchPriority(var);
 
    SCIPdebugMessage("removing pseudo candidate <%s> of type %d and priority %d at %d from candidate set (maxprio: %d)\n",
@@ -1024,7 +1034,6 @@ void branchcandRemovePseudoCand(
    {
       /* a binary candidate of maximal priority was removed */
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-      assert(branchpriority == branchcand->pseudomaxpriority);
       if( freepos != branchcand->npriopseudobins - 1 )
       {
          branchcand->pseudocands[freepos] = branchcand->pseudocands[branchcand->npriopseudobins - 1];
@@ -1034,11 +1043,11 @@ void branchcandRemovePseudoCand(
       branchcand->npriopseudobins--;
       branchcand->npriopseudoints++;
    }
+
    if( freepos < branchcand->npriopseudobins + branchcand->npriopseudoints )
    {
       /* a binary or integer candidate of maximal priority was removed */
       assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY || SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER);
-      assert(branchpriority == branchcand->pseudomaxpriority);
       if( freepos != branchcand->npriopseudobins + branchcand->npriopseudoints - 1 )
       {
          branchcand->pseudocands[freepos] =
@@ -1048,10 +1057,10 @@ void branchcandRemovePseudoCand(
       }
       branchcand->npriopseudoints--;
    }
+
    if( freepos < branchcand->npriopseudocands )
    {
       /* a candidate of maximal priority was removed */
-      assert(branchpriority == branchcand->pseudomaxpriority);
       if( freepos != branchcand->npriopseudocands - 1 )
       {
          branchcand->pseudocands[freepos] = branchcand->pseudocands[branchcand->npriopseudocands - 1];
@@ -1155,9 +1164,8 @@ SCIP_RETCODE SCIPbranchcandUpdateVarBranchPriority(
 
    pseudomaxpriority = branchcand->pseudomaxpriority;
 
-   /* if the variable currently belongs to priority set or the new branching priority is larger than the current one,
-    * renmove it from the pseudo branch candidate array temporary
-    */
+   /* if the variable currently belongs to the priority set or the new branching priority is larger than the current one,
+    * remove it from the pseudo branch candidate array */
    if( oldbranchpriority == pseudomaxpriority || branchpriority > pseudomaxpriority )
    {
       SCIP_CALL( SCIPbranchcandRemoveVar(branchcand, var) );
@@ -1167,9 +1175,8 @@ SCIP_RETCODE SCIPbranchcandUpdateVarBranchPriority(
    /* change the branching priority of the variable */
    SCIP_CALL( SCIPvarChgBranchPriority(var, branchpriority) );
 
-   /* of the variable is not part of the pseudo branching candidate array; check if it is a pseudo branching candidate
-    * and add it if so
-    */
+   /* if the variable is not part of the pseudo branching candidate array, check if it is a pseudo branching candidate
+    * and add it if so */
    SCIP_CALL( SCIPbranchcandUpdateVar(branchcand, set, var) );
 
    return SCIP_OKAY;

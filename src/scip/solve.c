@@ -97,7 +97,12 @@ SCIP_Bool SCIPsolveIsStopped(
    {
       stat->status = SCIP_STATUS_USERINTERRUPT;
       stat->userinterrupt = FALSE;
-      SCIPresetInterrupted();
+
+      /* only reset the interrupted counter if this is the main SCIP catching CTRL-C */
+      if( set->misc_catchctrlc )
+      {
+         SCIPresetInterrupted();
+      }
    }
    /* only measure the clock if a time limit is set */
    else if( set->istimelimitfinite )
@@ -3833,7 +3838,7 @@ SCIP_RETCODE propAndSolve(
 
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, actdepth == 0 ? SCIP_VERBLEVEL_HIGH : SCIP_VERBLEVEL_FULL,
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "(node %" SCIP_LONGINT_FORMAT ") LP relaxation is unbounded (LP %" SCIP_LONGINT_FORMAT ")\n", stat->nnodes, stat->nlps);
       }
 
@@ -5205,7 +5210,7 @@ SCIP_RETCODE SCIPsolveCIP(
       }
       else if( primal->nlimsolsfound == 0 )
       {
-         assert(primal->nsols == 0 || SCIPsetIsFeasGT(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
+         assert(primal->nsols == 0 || SCIPsetIsGT(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
                SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(transprob, set))));
 
          /* switch status to INFEASIBLE */

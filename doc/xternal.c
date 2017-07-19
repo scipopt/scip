@@ -115,6 +115,7 @@
  * @subsection CHG Changes between different versions of SCIP
  * - \ref CHANGELOG    "Change log"
  * - \ref RELEASENOTES "Release notes"
+ * - \ref CHG9         "Interface changes between version 3.2 and 4.0"
  * - \ref CHG8         "Interface changes between version 3.1 and 3.2"
  * - \ref CHG7         "Interface changes between version 3.0 and 3.1"
  * - \ref CHG6         "Interface changes between version 2.1 and 3.0"
@@ -127,7 +128,7 @@
  * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  4.0.0
+ * @version  4.0.1
  *
  * \image html scippy.png
  *
@@ -5305,7 +5306,7 @@
  *
  * The reoptimization feature of SCIP can be used to solve a sequence of optimization problems \f$(P_{i})_{i \in I}\f$ with
  * \f[
- *    (P_i) \quad \min \{ c_i^T x \;|\; A^ix \geq b^i,\; x_{j} \in \{0,1\}^{n}\;\forall j \in \mathcal{I} \}
+ *    (P_i) \quad \min \{ c_i^T x \;|\; A^ix \geq b^i,\; x_{j} \in \mathbb{Z}\;\forall j \in \mathcal{I} \}
  * \f]
  * such that between two problems \f$P_i\f$ and \f$P_{i+1}\f$ the space of solutions gets restricted and/or the objective
  * fuction changes. To use reoptimization the user has to change the parameter <code>reoptimization/enable</code> to
@@ -5352,14 +5353,13 @@
  *    \endcode
  *    or by calling SCIPreadDiff().
  * -# The objective function can be changed within the code. Therefore, the transformed problem needs to be freed by
- *    calling SCIPfreeTransform(). Afterwards, the objective coefficient of each variable can be changed by calling
- *    SCIPchgVarObj().
+ *    calling SCIPfreeReoptSolve(). Afterwards, the new objective function can be installed by calling
+ *    SCIPchgReoptObjective().
  *
  * After changing the objective function the modified problem can be solved as usal.
  *
- * \note Currently, the reoptimization feature only supports pure binary and mixed binary programs. In case the original
- * problem containts integer and implicit integer variables, reoptimization will be automatically disabled if there are
- * still (implicit) integer variables after presolving the problem.
+ * \note Currently, the compression heuristics used between two successive reoptimization runs only support pure binary
+ * and mixed binary programs.
  *
  * For more information on reoptimization we refer to@par
  * Jakob Witzig@n
@@ -7015,11 +7015,12 @@
 
 /**@page RELEASENOTES Release notes
  *
+ * A release report with an in-depth description of many of the new features is available on <a href="http://www.optimization-online.org">Optimization Online</a>.
  * \verbinclude SCIP-release-notes-4.0
  *
- * \verbinclude SCIP-release-notes-3.2.1
+ * Please consult the <a href="http://nbn-resolving.de/urn:nbn:de:0297-zib-57675">release report</a> that explains many of the new features in detail.
  *
- * Please consult the <a href="nbn-resolving.de/urn:nbn:de:0297-zib-57675">release report</a> that explains many of the new features in detail.
+ * \verbinclude SCIP-release-notes-3.2.1
  *
  * \verbinclude SCIP-release-notes-3.2
  *
