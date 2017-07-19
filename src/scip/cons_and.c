@@ -1042,7 +1042,8 @@ SCIP_RETCODE checkCons(
          SCIP_CALL( SCIPincConsAge(scip, cons) );
       }
 
-      absviol = SCIP_REAL_MAX;
+      absviol = 0.0;
+      relviol = 0.0;
 
       /* check, if all operator variables are TRUE */
       for( i = 0; i < consdata->nvars; ++i )
@@ -1053,7 +1054,7 @@ SCIP_RETCODE checkCons(
          if( absviol < viol )
          {
             absviol = viol;
-            relviol = SCIPrelDiff(solval, 1);
+            relviol = SCIPrelDiff(solval, 1.0);
          }
 
         /* @todo If "upgraded resultants to varstatus implicit" is fully allowed, than the following assert does not hold
