@@ -656,7 +656,7 @@ SCIP_RETCODE SCIPnlpiGetRealPar(
    )
 {
    assert(nlpi    != NULL);
-   assert(problem != NULL);
+   assert(problem != NULL || type == SCIP_NLPPAR_INFINITY);
    assert(dval    != NULL);
 
    SCIP_CALL( (*nlpi->nlpigetrealpar)(nlpi, problem, type, dval) );
