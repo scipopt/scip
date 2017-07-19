@@ -1181,35 +1181,40 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
    int v;
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
-   SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
 
-   SCIPdialogMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPprintBestSol(scip, NULL, printzeros) );
-   SCIPdialogMessage(scip, NULL, "\n");
-
-   /* check if there are infinite fixings and print a reference to 'display finitesolution', if needed */
-   fixedvars = SCIPgetFixedVars(scip);
-   nfixedvars = SCIPgetNFixedVars(scip);
-   assert(fixedvars != NULL || nfixedvars == 0);
-
-   /* check whether there are variables fixed to an infinite value */
-   for( v = 0; v < nfixedvars; ++v )
+   if( SCIPgetStage(scip) < SCIP_STAGE_PROBLEM )
+      SCIPdialogMessage(scip, NULL, "No problem exists. Read (and solve) problem first.\n");
+   else
    {
-      var = fixedvars[v]; /*lint !e613*/
+      SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
 
-      /* skip (multi-)aggregated variables */
-      if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
-         continue;
+      SCIPdialogMessage(scip, NULL, "\n");
+      SCIP_CALL( SCIPprintBestSol(scip, NULL, printzeros) );
+      SCIPdialogMessage(scip, NULL, "\n");
 
-      if( (SCIPisInfinity(scip, SCIPvarGetLbGlobal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var))) )
+      /* check if there are infinite fixings and print a reference to 'display finitesolution', if needed */
+      fixedvars = SCIPgetFixedVars(scip);
+      nfixedvars = SCIPgetNFixedVars(scip);
+      assert(fixedvars != NULL || nfixedvars == 0);
+
+      /* check whether there are variables fixed to an infinite value */
+      for( v = 0; v < nfixedvars; ++v )
       {
-         SCIPdialogMessage(scip, NULL, "The primal solution contains variables fixed to infinite values.\n\
+         var = fixedvars[v]; /*lint !e613*/
+
+         /* skip (multi-)aggregated variables */
+         if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
+            continue;
+
+         if( (SCIPisInfinity(scip, SCIPvarGetLbGlobal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var))) )
+         {
+            SCIPdialogMessage(scip, NULL, "The primal solution contains variables fixed to infinite values.\n\
 If you want SCIP to display an optimal solution without infinite values, use 'display finitesolution'.\n");
-         SCIPdialogMessage(scip, NULL, "\n");
-         break;
+            SCIPdialogMessage(scip, NULL, "\n");
+            break;
+         }
       }
    }
-
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
    return SCIP_OKAY;

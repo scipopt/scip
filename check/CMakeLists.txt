@@ -63,6 +63,9 @@ set(settings_MIP
     "randomhybrid"
     "uct_breadth_dualval"
     "alldisp"
+    "vbcvisualization"
+    "bakvisualization"
+    "solvingphases"
 )
 
 set(settings_MINLP
@@ -84,6 +87,7 @@ set(instances_Indicator
     "instances/Indicator/mcf128-4-1.lp\;14"
     "instances/Indicator/mcf64-4-1.lp\;10"
 )
+
 
 #
 # MIP instances
@@ -107,6 +111,26 @@ set(instances_MIP
     "instances/MIP/vpm2.fzn\;13.75"
     )
 
+#
+# add additional ZIMPL instances if the configuration uses ZIMPL
+#
+if(ZIMPL AND ZIMPL_FOUND)
+
+list(APPEND
+    instances_Indicator
+    "/instances/Indicator/indicatortest.zpl\;-2"
+    "../check/instances/Indicator/mcf64-4-1.zpl\;10"
+    )
+#
+# this instance was part of the original coverage tests. However, it causes
+# a significant overhead without providing relevant benefit.
+#
+#list(APPEND
+#    instances_MIP
+#    "instances/MIP/rocII_2_11.zpl\;+4.61527698552400e+00"
+#    )
+
+endif()
 #
 # MINLP instances
 #
@@ -164,11 +188,40 @@ set(instances_Orbitope
     "instances/Orbitope/partorb_1-FullIns_3.cip\;4"
     )
 
+#
+# available reader file extensions for SCIP readers
+#
+set(scip_reader_extensions
+    "cip"
+    "gms"
+    "ppm"
+    "pbm"
+    "ccg"
+#    "opb"
+    "pip"
+    "rlp"
+#    "mps"
+    "lp"
+    )
+
+#
+# macro to split an instance into its relevant information
+# - path
+# - optval
+# - basename
+#
+macro(split_instance instance)
+    list(GET instance 0 path)
+    list(GET instance 1 optval)
+    get_filename_component(basename ${path} NAME)
+endmacro(split_instance)
+
 macro(add_instancetests instances settings prefix)
 #
 # loop over the instances
 #
     foreach(instance ${${instances}})
+        split_instance(instance)
         #
         # loop over all settings
         #
@@ -176,9 +229,6 @@ macro(add_instancetests instances settings prefix)
             #
             # treat the instance as a tuple (list) of two values
             #
-            list(GET instance 0 path)
-            list(GET instance 1 optval)
-            get_filename_component(basename ${path} NAME)
             add_test(NAME ${prefix}-${setting}-${basename} COMMAND $<TARGET_FILE:scip-bin> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/coverage/settings/${setting}.set -o ${optval} ${optval})
             set_tests_properties(${prefix}-${setting}-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
         endforeach(setting)
@@ -194,3 +244,50 @@ add_instancetests(instances_Semicontinuous settings_default "Semicontinuous")
 add_instancetests(instances_SAT settings_default "SAT")
 add_instancetests(instances_SOS settings_default "SOS")
 add_instancetests(instances_Orbitope settings_default "Orbitope")
+
+
+#
+# test writing and reading solutions
+#
+foreach(instance ${instances_MINLP})
+    split_instance(instance)
+    #
+    # configure the batch file for this test by substituting placeholders in the in.file
+    #
+    configure_file(interactiveshell/solutiontest.bat.in interactiveshell/solutiontest-${basename}.bat)
+        add_test(NAME MINLP-solutiontest-${basename}
+            COMMAND $<TARGET_FILE:scip-bin> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/solutiontest-${basename}.bat
+            )
+        set_tests_properties(MINLP-solutiontest-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+endforeach(instance)
+
+
+#
+# test writing and reading from and to different file extensions for MIP
+#
+foreach(instance ${instances_MIP})
+    split_instance(instance)
+    foreach(extension ${scip_reader_extensions})
+        #
+        # configure the batch file for this test by substituting placeholders in the in.file
+        #
+        configure_file(interactiveshell/readertest.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
+        add_test(NAME MIP-readertest-${extension}-${basename}
+            COMMAND $<TARGET_FILE:scip-bin> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
+            )
+        set_tests_properties(MIP-readertest-${extension}-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+    endforeach(extension)
+endforeach(instance)
+
+#
+# interactive shell test.
+# We substitute first path placeholders in the .in file, which creates a new file under the binary directory
+# Then run SCIP to execute the list of commands defined there.
+#
+set(shell_tmp_dir ${PROJECT_BINARY_DIR}/check/temp)
+file(MAKE_DIRECTORY ${shell_tmp_dir})
+
+configure_file(interactiveshell/interactiveshell.bat.in interactiveshell/interactiveshell.bat)
+
+add_test(NAME interactiveshell COMMAND $<TARGET_FILE:scip-bin> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/interactiveshell.bat)
+set_tests_properties(interactiveshell PROPERTIES PASS_REGULAR_EXPRESSION "increased branching priority of new binary variables")
