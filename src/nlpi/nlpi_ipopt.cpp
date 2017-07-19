@@ -1176,6 +1176,12 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
          problem->lastniter = stats->IterationCount();
          problem->lasttime  = stats->TotalCPUTime();
       }
+      else
+      {
+         /* Ipopt does not provide access to the statistics when all variables have been fixed */
+         problem->lastniter = 0;
+         problem->lasttime  = 0.0;
+      }
    }
    catch( IpoptException& except )
    {
@@ -2714,13 +2720,13 @@ void ScipNLP::finalize_solution(
 
    case MAXITER_EXCEEDED:
       check_feasibility = true;
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_ITLIM;
       break;
 
    case CPUTIME_EXCEEDED:
       check_feasibility = true;
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_TILIM;
       break;
 
@@ -2728,7 +2734,7 @@ void ScipNLP::finalize_solution(
    case RESTORATION_FAILURE:
    case ERROR_IN_STEP_COMPUTATION:
       check_feasibility = true;
-      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+      nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       nlpiproblem->lasttermstat = SCIP_NLPTERMSTAT_NUMERR;
       break;
 
@@ -2789,7 +2795,7 @@ void ScipNLP::finalize_solution(
       if( nlpiproblem->lastsolinfeas <= constrvioltol )
          nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
       else
-         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+         nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
 
       SCIPdebugMessage("drop Ipopt's final point and report intermediate locally %sfeasible solution with infeas %g instead (acceptable: %g)\n",
          nlpiproblem->lastsolstat == SCIP_NLPSOLSTAT_LOCINFEASIBLE ? "in" : "", nlpiproblem->lastsolinfeas, constrvioltol);
@@ -2836,7 +2842,7 @@ void ScipNLP::finalize_solution(
          if( constrviol <= constrvioltol )
             nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_FEASIBLE;
          else
-            nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_LOCINFEASIBLE;
+            nlpiproblem->lastsolstat  = SCIP_NLPSOLSTAT_UNKNOWN;
       }
    }
 }
