@@ -191,7 +191,7 @@ do
 		    export TIMELIMIT
 		    # the space at the end is necessary
 		    export SRUN="srun --cpu_bind=cores -v -v "
-		    sbatch --job-name=${JOBNAME} -p $CLUSTERQUEUE -A $ACCOUNT $NICE --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
+		    sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} --cpu-freq=highm1 ${EXCLUSIVE} --output=/dev/null run.sh
 		else
 		    # -V to copy all environment variables
 		    qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \
