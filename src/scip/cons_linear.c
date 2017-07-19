@@ -7062,6 +7062,10 @@ SCIP_RETCODE checkCons(
 {
    SCIP_CONSDATA* consdata;
    SCIP_Real activity;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
+   SCIP_Real lhsviol;
+   SCIP_Real rhsviol;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -7092,6 +7096,21 @@ SCIP_RETCODE checkCons(
       consdata->row == NULL ? 0 : SCIProwIsInLP(consdata->row), (void*)sol,
       consdata->row == NULL ? FALSE : SCIPhasCurrentNodeLP(scip));
 
+   /* calculate absolute and relative bound violations */
+   lhsviol = consdata->lhs - activity;
+   rhsviol = activity - consdata->rhs;
+
+   if(lhsviol > rhsviol)
+   {
+      absviol = lhsviol;
+      relviol = SCIPrelDiff(consdata->lhs, activity);
+   }
+   else
+   {
+      absviol = rhsviol;
+      relviol = SCIPrelDiff(activity, consdata->rhs);
+   }
+
    /* the activity of pseudo solutions may be invalid if it comprises positive and negative infinity contributions; we
     * return infeasible for safety
     */
@@ -7099,6 +7118,10 @@ SCIP_RETCODE checkCons(
    {
       assert(sol == NULL);
       *violated = TRUE;
+
+      /* set violation of invalid pseudo solutions */
+      absviol = SCIP_INVALID;
+      relviol = SCIP_INVALID;
 
       /* reset constraint age since we are in enforcement */
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -7261,6 +7284,10 @@ SCIP_RETCODE checkCons(
          SCIP_CALL( SCIPincConsAge(scip, cons) );
       }
    }
+
+   /* update absolute and relative violation of the solution */
+   if( sol != NULL )
+      SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
 
    return SCIP_OKAY;
 }
