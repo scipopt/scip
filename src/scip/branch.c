@@ -1513,7 +1513,7 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
          oldndomchgs = stat->nboundchgs + stat->nholechgs;
          oldnprobdomchgs = stat->nprobboundchgs + stat->nprobholechgs;
          oldncuts = SCIPsepastoreGetNCuts(sepastore);
-         oldnactiveconss = stat->nactiveconss;
+         oldnactiveconss = stat->nactiveconssadded;
 
          /* start timing */
          SCIPclockStart(branchrule->branchclock, set);
@@ -1559,7 +1559,7 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
             branchrule->ndomredsfound -= (stat->nprobboundchgs + stat->nprobholechgs - oldnprobdomchgs);
 
             branchrule->ncutsfound += SCIPsepastoreGetNCuts(sepastore) - oldncuts; /*lint !e776*/
-            branchrule->nconssfound += stat->nactiveconss - oldnactiveconss; /*lint !e776*/
+            branchrule->nconssfound += stat->nactiveconssadded - oldnactiveconss; /*lint !e776*/
          }
          else
             branchrule->nchildren += tree->nchildren;
