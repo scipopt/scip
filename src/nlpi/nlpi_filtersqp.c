@@ -41,7 +41,7 @@
 
 #define NLPI_NAME              "filtersqp"                 /* short concise name of solver */
 #define NLPI_DESC              "Sequential Quadratic Programming trust region solver by R. Fletcher and S. Leyffer" /* description of solver */
-#define NLPI_PRIORITY          -10000                     /* priority of NLP solver */
+#define NLPI_PRIORITY          -1000                       /* priority of NLP solver */
 
 #define RANDSEED               26051979      /**< initial random seed */
 #define MAXPERTURB             0.01          /**< maximal perturbation of bounds in starting point heuristic */

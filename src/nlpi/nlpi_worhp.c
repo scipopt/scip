@@ -43,7 +43,7 @@
 
 #define NLPI_DESC              "Worhp interface"            /**< description of solver */
 #define NLPI_PRIORITY_IP       0                            /**< priority of NLP solver (Interior Point) */
-#define NLPI_PRIORITY_SQP      0                            /**< priority of NLP solver (SQP) */
+#define NLPI_PRIORITY_SQP      -2000                        /**< priority of NLP solver (SQP) */
 
 #define DEFAULT_VERBLEVEL      0                            /**< default verbosity level (0: normal 1: full 2: debug >2: more debug) */
 #define DEFAULT_SCALEDKKT      TRUE                         /**< default whether KKT conditions are allowed to be scaled in the solver */

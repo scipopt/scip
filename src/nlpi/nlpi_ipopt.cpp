@@ -61,7 +61,7 @@ using namespace Ipopt;
 
 #define NLPI_NAME          "ipopt"           /**< short concise name of solver */
 #define NLPI_DESC          "Ipopt interface" /**< description of solver */
-#define NLPI_PRIORITY      0                 /**< priority */
+#define NLPI_PRIORITY      1000              /**< priority */
 
 #ifdef SCIP_DEBUG
 #define DEFAULT_PRINTLEVEL J_WARNING         /**< default print level of Ipopt */

@@ -30,7 +30,7 @@
 
 #define NLPI_NAME              "all"                       /* short concise name of solver */
 #define NLPI_DESC              "NLP interface that uses all available NLP interfaces" /* description of solver */
-#define NLPI_PRIORITY          10                          /* priority of NLP solver */
+#define NLPI_PRIORITY          -3000                       /* priority of NLP solver */
 
 /*
  * Data structures
