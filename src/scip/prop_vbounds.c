@@ -88,9 +88,9 @@
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 
-#define PROP_PRESOL_PRIORITY    -90000 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
+#define PROP_PRESOL_PRIORITY     -90000 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
 #define PROP_PRESOLTIMING       SCIP_PRESOLTIMING_MEDIUM | SCIP_PRESOLTIMING_EXHAUSTIVE
-#define PROP_PRESOL_MAXROUNDS       -1 /**< maximal number of presolving rounds the presolver participates in (-1: no
+#define PROP_PRESOL_MAXROUNDS         0 /**< maximal number of presolving rounds the presolver participates in (-1: no
                                          *   limit) */
 /**@} */
 
