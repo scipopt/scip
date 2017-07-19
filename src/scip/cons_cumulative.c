@@ -2370,7 +2370,7 @@ SCIP_RETCODE checkCumulativeCondition(
 
    /* Update constraint violation in solution */
    if( sol != NULL )
-      SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
+      SCIPsolUpdateConsViolation(sol, absviol, relviol);
 
    /* free all buffer arrays */
    SCIPfreeBufferArray(scip, &endindices);
