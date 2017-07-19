@@ -344,6 +344,20 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    SCIP_CONS**           upgdcons            /**< pointer to store upgraded constraint, or NULL if not successful */
    );
 
+/** performs linear constraint type classification as used for MIPLIB
+ *
+ *  iterates through all linear constraints and stores relevant statistics in the linear constraint statistics \p linconsstats.
+ *
+ *  @note only constraints are iterated that belong to the linear constraint handler. If the problem has been presolved already,
+ *  constraints that were upgraded to more special types such as, e.g., varbound constraints, will not be shown correctly anymore.
+ *  Similarly, if specialized constraints were created through the API, these are currently not present.
+ */
+EXTERN
+SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint type classification */
+   );
+
 
 /* @} */
 

@@ -764,6 +764,35 @@ int SCIPconsGetNUpgradeLocks(
    SCIP_CONS*            cons                /**< constraint */
    );
 
+/** resets linear constraint statistics */
+EXTERN
+void SCIPlinConsStatsReset(
+   SCIP_LINCONSSTATS*   linconsstats         /**< linear constraint classification statistics */
+   );
+
+/** returns the number of occurrences of a specific type of linear constraint */
+EXTERN
+int SCIPlinConsStatsGetTypeCount(
+   SCIP_LINCONSSTATS*   linconsstats,        /**< linear constraint classification statistics */
+   SCIP_LINCONSTYPE     linconstype          /**< linear constraint type */
+   );
+
+/** increases the number of occurrences of a specific type of linear constraint */
+EXTERN
+void SCIPlinConsStatsIncTypeCount(
+   SCIP_LINCONSSTATS*   linconsstats,        /**< linear constraint classification statistics */
+   SCIP_LINCONSTYPE     linconstype,         /**< linear constraint type */
+   int                  increment            /**< positive increment */
+   );
+
+/** print linear constraint classification statistics */
+EXTERN
+void SCIPprintLinConsStats(
+   SCIP*                scip,                /**< scip data structure */
+   FILE*                file,                /**< file handle or NULL to print to standard out */
+   SCIP_LINCONSSTATS*   linconsstats         /**< linear constraint classification statistics */
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and

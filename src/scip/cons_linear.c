@@ -140,30 +140,6 @@
 #define QUADCONSUPGD_PRIORITY     1000000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 #define NONLINCONSUPGD_PRIORITY   1000000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
 
-#ifdef WITH_PRINTORIGCONSTYPES
-/** constraint type */
-enum SCIP_Constype
-{
-   SCIP_CONSTYPE_EMPTY         =  0,         /**<  */
-   SCIP_CONSTYPE_FREE          =  1,         /**<  */
-   SCIP_CONSTYPE_SINGLETON     =  2,         /**<  */
-   SCIP_CONSTYPE_AGGREGATION   =  3,         /**<  */
-   SCIP_CONSTYPE_VARBOUND      =  4,         /**<  */
-   SCIP_CONSTYPE_SETPARTITION  =  5,         /**<  */
-   SCIP_CONSTYPE_SETPACKING    =  6,         /**<  */
-   SCIP_CONSTYPE_SETCOVERING   =  7,         /**<  */
-   SCIP_CONSTYPE_CARDINALITY   =  8,         /**<  */
-   SCIP_CONSTYPE_INVKNAPSACK   =  9,         /**<  */
-   SCIP_CONSTYPE_EQKNAPSACK    = 10,         /**<  */
-   SCIP_CONSTYPE_BINPACKING    = 11,         /**<  */
-   SCIP_CONSTYPE_KNAPSACK      = 12,         /**<  */
-   SCIP_CONSTYPE_INTKNAPSACK   = 13,         /**<  */
-   SCIP_CONSTYPE_MIXEDBINARY   = 14,         /**<  */
-   SCIP_CONSTYPE_GENERAL       = 15          /**<  */
-};
-typedef enum SCIP_Constype SCIP_CONSTYPE;
-#endif
-
 /* @todo add multi-aggregation of variables that are in exactly two equations (, if not numerically an issue),
  *       maybe in fullDualPresolve(), see convertLongEquality()
  */
@@ -14728,21 +14704,18 @@ SCIP_DECL_CONSEXIT(consExitLinear)
 
 }
 
-#ifdef WITH_PRINTORIGCONSTYPES
-
 /** is constraint ranged row, i.e., -inf < lhs < rhs < inf? */
 static
 SCIP_Bool isRangedRow(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint */
+   SCIP_Real             lhs,                /**< left hand side */
+   SCIP_Real             rhs                 /**< right hand side */
    )
 {
    assert(scip != NULL);
-   assert(cons != NULL);
-   assert(SCIPconsGetData(cons) != NULL);
 
-   return !(SCIPisEQ(scip, SCIPconsGetData(cons)->lhs, SCIPconsGetData(cons)->rhs)
-      || SCIPisInfinity(scip, -SCIPconsGetData(cons)->lhs) || SCIPisInfinity(scip, SCIPconsGetData(cons)->rhs) );
+   return !(SCIPisEQ(scip, lhs, rhs)
+      || SCIPisInfinity(scip, -lhs) || SCIPisInfinity(scip, rhs) );
 }
 
 /** is constraint ranged row, i.e., -inf < lhs < rhs < inf? */
@@ -14757,32 +14730,66 @@ SCIP_Bool isFiniteNonnegativeIntegral(
    return (!SCIPisInfinity(scip, x) && !SCIPisNegative(scip, x) && SCIPisIntegral(scip, x));
 }
 
-/** presolving initialization method of constraint handler (called when presolving is about to begin) */
-static
-SCIP_DECL_CONSINITPRE(consInitpreLinear)
-{  /*lint --e{715}*/
-   int counter[(int)SCIP_CONSTYPE_GENERAL + 1];
+/** performs linear constraint type classification as used for MIPLIB
+ *
+ *  iterates through all linear constraints and stores relevant statistics in the linear constraint statistics \p linconsstats.
+ *
+ *  @note only constraints are iterated that belong to the linear constraint handler. If the problem has been presolved already,
+ *  constraints that were upgraded to more special types such as, e.g., varbound constraints, will not be shown correctly anymore.
+ *  Similarly, if specialized constraints were created through the API, these are currently not present.
+ */
+SCIP_RETCODE SCIPclassifyConstraintTypesLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_LINCONSSTATS*    linconsstats        /**< linear constraint type classification */
+   )
+{
    int c;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS** conss;
+   int nconss;
 
    assert(scip != NULL);
+   assert(linconsstats != NULL);
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
 
-   /* initialize counter for constraint types to zero */
-   BMSclearMemoryArray(counter, (int)SCIP_CONSTYPE_GENERAL + 1);
+   if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
+   {
+      conss = SCIPgetConss(scip);
+      nconss = SCIPgetNConss(scip);
+   }
+   else
+   {
+      conss = SCIPconshdlrGetConss(conshdlr);
+      nconss = SCIPconshdlrGetNConss(conshdlr);
+   }
+
+
+   /* reset linear constraint type classification */
+   SCIPlinConsStatsReset(linconsstats);
 
    /* loop through all constraints */
    for( c = 0; c < nconss; c++ )
    {
       SCIP_CONS* cons;
       SCIP_CONSDATA* consdata;
+      SCIP_Real lhs;
+      SCIP_Real rhs;
       int i;
 
       /* get constraint */
       cons = conss[c];
       assert(cons != NULL);
 
+      /* skip constraints that are not handled by the constraint handler */
+      if( SCIPconsGetHdlr(cons) != conshdlr )
+         continue;
+
       /* get constraint data */
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
+      rhs = consdata->rhs;
+      lhs = consdata->lhs;
 
       /* merge multiples and delete variables with zero coefficient */
       SCIP_CALL( mergeMultiples(scip, cons) );
@@ -14796,16 +14803,18 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       {
          SCIPdebugMsg(scip, "classified as EMPTY: ");
          SCIPdebugPrintCons(scip, cons, NULL);
-         counter[SCIP_CONSTYPE_EMPTY]++;
+         SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_EMPTY, 1);
+
          continue;
       }
 
       /* is constraint of type SCIP_CONSTYPE_FREE? */
-      if( SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, -consdata->lhs) )
+      if( SCIPisInfinity(scip, rhs) && SCIPisInfinity(scip, -lhs) )
       {
          SCIPdebugMsg(scip, "classified as FREE: ");
          SCIPdebugPrintCons(scip, cons, NULL);
-         counter[SCIP_CONSTYPE_FREE]++;
+         SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_FREE, 1);
+
          continue;
       }
 
@@ -14814,16 +14823,18 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       {
          SCIPdebugMsg(scip, "classified as SINGLETON: ");
          SCIPdebugPrintCons(scip, cons, NULL);
-         counter[SCIP_CONSTYPE_SINGLETON] += isRangedRow(scip, cons) ? 2 : 1;
+         SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_SINGLETON, isRangedRow(scip, lhs, rhs) ? 2 : 1);
+
          continue;
       }
 
       /* is constraint of type SCIP_CONSTYPE_AGGREGATION? */
-      if( consdata->nvars == 2 && SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+      if( consdata->nvars == 2 && SCIPisEQ(scip, lhs, rhs) )
       {
          SCIPdebugMsg(scip, "classified as AGGREGATION: ");
          SCIPdebugPrintCons(scip, cons, NULL);
-         counter[SCIP_CONSTYPE_AGGREGATION]++;
+         SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_AGGREGATION, 1);
+
          continue;
       }
 
@@ -14832,7 +14843,9 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       {
          SCIPdebugMsg(scip, "classified as VARBOUND: ");
          SCIPdebugPrintCons(scip, cons, NULL);
-         counter[SCIP_CONSTYPE_VARBOUND] += isRangedRow(scip, cons) ? 2 : 1;
+
+         SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_VARBOUND, isRangedRow(scip, lhs, rhs) ? 2 : 1);
+
          continue;
       }
 
@@ -14847,6 +14860,8 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
          nnegbinvars = 0;
 
          scale = REALABS(consdata->vals[0]);
+
+         /* scan through variables and detect if all variables are binary and have a coefficient +/-1 */
          for( i = 0; i < consdata->nvars && !unmatched; i++ )
          {
             unmatched = unmatched || SCIPvarGetType(consdata->vars[i]) == SCIP_VARTYPE_CONTINUOUS;
@@ -14860,51 +14875,70 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
 
          if( !unmatched )
          {
-            if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+            if( SCIPisEQ(scip, lhs, rhs) )
             {
-               b = consdata->rhs/scale + nnegbinvars;
+               b = rhs/scale + nnegbinvars;
                if( SCIPisEQ(scip, 1.0, b) )
                {
                   SCIPdebugMsg(scip, "classified as SETPARTITION: ");
                   SCIPdebugPrintCons(scip, cons, NULL);
-                  counter[SCIP_CONSTYPE_SETPARTITION]++;
+                  SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_SETPARTITION, 1);
+
                   continue;
                }
                else if( SCIPisIntegral(scip, b) && !SCIPisNegative(scip, b) )
                {
                   SCIPdebugMsg(scip, "classified as CARDINALITY: ");
                   SCIPdebugPrintCons(scip, cons, NULL);
-                  counter[SCIP_CONSTYPE_CARDINALITY]++;
+                  SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_CARDINALITY, 1);
+
                   continue;
                }
             }
 
-            b = consdata->rhs/scale + nnegbinvars;
+            /* compute right hand side divided by scale */
+            if( !SCIPisInfinity(scip, rhs) )
+               b = rhs/scale + nnegbinvars;
+            else
+               b = SCIPinfinity(scip);
+
             if( SCIPisEQ(scip, 1.0, b) )
             {
                SCIPdebugMsg(scip, "classified as SETPACKING: ");
                SCIPdebugPrintCons(scip, cons, NULL);
-               counter[SCIP_CONSTYPE_SETPACKING]++;
-               consdata->rhs = SCIPinfinity(scip);
+               SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_SETPACKING, 1);
+
+               /* relax right hand side to prevent further classifications */
+               rhs = SCIPinfinity(scip);
             }
-            else if( SCIPisIntegral(scip, b) && !SCIPisNegative(scip, b) )
+            else if( !SCIPisInfinity(scip, b) && SCIPisIntegral(scip, b) && !SCIPisNegative(scip, b) )
             {
                SCIPdebugMsg(scip, "classified as INVKNAPSACK: ");
                SCIPdebugPrintCons(scip, cons, NULL);
-               counter[SCIP_CONSTYPE_INVKNAPSACK]++;
-               consdata->rhs = SCIPinfinity(scip);
+
+               SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_INVKNAPSACK, 1);;
+
+               /* relax right hand side to prevent further classifications */
+               rhs = SCIPinfinity(scip);
             }
 
-            b = consdata->lhs/scale + nnegbinvars;
+            if( !SCIPisInfinity(scip, lhs) )
+               b = lhs/scale + nnegbinvars;
+            else
+               b = SCIPinfinity(scip);
+
             if( SCIPisEQ(scip, 1.0, b) )
             {
                SCIPdebugMsg(scip, "classified as SETCOVERING: ");
                SCIPdebugPrintCons(scip, cons, NULL);
-               counter[SCIP_CONSTYPE_SETCOVERING]++;
-               consdata->lhs = -SCIPinfinity(scip);
+               SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_SETCOVERING, 1);
+
+               /* relax left hand side to prevent further classifications */
+               lhs = -SCIPinfinity(scip);
             }
 
-            if( SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )
+            /* if both sides are infinite at this point, no further classification is necessary for this constraint */
+            if( SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs) )
                continue;
          }
       }
@@ -14917,7 +14951,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
          SCIP_Real b;
          SCIP_Bool unmatched;
 
-         b = consdata->rhs;
+         b = rhs;
          unmatched = FALSE;
          for( i = 0; i < consdata->nvars && !unmatched; i++ )
          {
@@ -14933,11 +14967,13 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
 
          if( !unmatched )
          {
-            if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+            if( SCIPisEQ(scip, lhs, rhs) )
             {
                SCIPdebugMsg(scip, "classified as EQKNAPSACK: ");
                SCIPdebugPrintCons(scip, cons, NULL);
-               counter[SCIP_CONSTYPE_EQKNAPSACK]++;
+
+               SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_EQKNAPSACK, 1);
+
                continue;
             }
             else
@@ -14952,13 +14988,14 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
 
                SCIPdebugMsg(scip, "classified as %s: ", matched ? "BINPACKING" : "KNAPSACK");
                SCIPdebugPrintCons(scip, cons, NULL);
-               counter[matched ? SCIP_CONSTYPE_BINPACKING : SCIP_CONSTYPE_KNAPSACK]++;
+               SCIPlinConsStatsIncTypeCount(linconsstats, matched ? SCIP_LINCONSTYPE_BINPACKING : SCIP_LINCONSTYPE_KNAPSACK, 1);
             }
 
-            if( SCIPisInfinity(scip, -consdata->lhs) )
+            /* check if finite left hand side allows for a second classification, relax already used right hand side */
+            if( SCIPisInfinity(scip, -lhs) )
                continue;
             else
-               consdata->rhs = SCIPinfinity(scip);
+               rhs = SCIPinfinity(scip);
          }
       }
 
@@ -14969,7 +15006,7 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
 
          unmatched = FALSE;
 
-         b = consdata->rhs;
+         b = rhs;
          unmatched = unmatched || !isFiniteNonnegativeIntegral(scip, b);
 
          for( i = 0; i < consdata->nvars && !unmatched; i++ )
@@ -14984,12 +15021,13 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
          {
             SCIPdebugMsg(scip, "classified as INTKNAPSACK: ");
             SCIPdebugPrintCons(scip, cons, NULL);
-            counter[SCIP_CONSTYPE_INTKNAPSACK]++;
+            SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_INTKNAPSACK, 1);
 
-            if( SCIPisInfinity(scip, -consdata->lhs) )
+            /* check if finite left hand side allows for a second classification, relax already used right hand side */
+            if( SCIPisInfinity(scip, -lhs) )
                continue;
             else
-               consdata->rhs = SCIPinfinity(scip);
+               rhs = SCIPinfinity(scip);
          }
       }
 
@@ -15008,9 +15046,10 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
 
          if( !unmatched )
          {
-            SCIPdebugMsg(scip, "classified as MIXEDBINARY (%d): ", isRangedRow(scip, cons) ? 2 : 1);
+            SCIPdebugMsg(scip, "classified as MIXEDBINARY (%d): ", isRangedRow(scip, lhs, rhs) ? 2 : 1);
             SCIPdebugPrintCons(scip, cons, NULL);
-            counter[SCIP_CONSTYPE_MIXEDBINARY] += isRangedRow(scip, cons) ? 2 : 1;
+            SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_MIXEDBINARY, isRangedRow(scip, lhs, rhs) ? 2 : 1);
+
             continue;
          }
       }
@@ -15018,58 +15057,11 @@ SCIP_DECL_CONSINITPRE(consInitpreLinear)
       /* no special structure detected */
       SCIPdebugMsg(scip, "classified as GENERAL: ");
       SCIPdebugPrintCons(scip, cons, NULL);
-      counter[SCIP_CONSTYPE_GENERAL] += isRangedRow(scip, cons) ? 2 : 1;
+      SCIPlinConsStatsIncTypeCount(linconsstats, SCIP_LINCONSTYPE_GENERAL, isRangedRow(scip, lhs, rhs) ? 2 : 1);
    }
-
-   /* print statistics */
-   SCIPinfoMessage(scip, NULL, "\n");
-   SCIPinfoMessage(scip, NULL, "Number of constraints according to type:\n");
-   SCIPinfoMessage(scip, NULL, "----------------------------------------\n");
-   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_EMPTY        %6d\n",  0, counter[ 0]);
-   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_FREE         %6d\n",  1, counter[ 1]);
-   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_SINGLETON    %6d\n",  2, counter[ 2]);
-   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_AGGREGATION  %6d\n",  3, counter[ 3]);
-   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_VARBOUND     %6d\n",  4, counter[ 4]);
-   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_SETPARTITION %6d\n",  5, counter[ 5]);
-   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_SETPACKING   %6d\n",  6, counter[ 6]);
-   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_SETCOVERING  %6d\n",  7, counter[ 7]);
-   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_CARDINALITY  %6d\n",  8, counter[ 8]);
-   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_INVKNAPSACK  %6d\n",  9, counter[ 9]);
-   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_EQKNAPSACK   %6d\n", 10, counter[10]);
-   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_BINPACKING   %6d\n", 11, counter[11]);
-   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_KNAPSACK     %6d\n", 12, counter[12]);
-   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_INTKNAPSACK  %6d\n", 13, counter[13]);
-   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_MIXEDBINARY  %6d\n", 14, counter[14]);
-   SCIPinfoMessage(scip, NULL, "%2d SCIP_CONSTYPE_GENERAL      %6d\n", 15, counter[15]);
-   SCIPinfoMessage(scip, NULL, "----------------------------------------\n\n");
-
-   SCIPinfoMessage(scip, NULL, "    EMPTY");
-   SCIPinfoMessage(scip, NULL, "     FREE");
-   SCIPinfoMessage(scip, NULL, "     SING");
-   SCIPinfoMessage(scip, NULL, "     AGGR");
-   SCIPinfoMessage(scip, NULL, "    VARBD");
-   SCIPinfoMessage(scip, NULL, "  SETPART");
-   SCIPinfoMessage(scip, NULL, "  SETPACK");
-   SCIPinfoMessage(scip, NULL, "   SETCOV");
-   SCIPinfoMessage(scip, NULL, "     CARD");
-   SCIPinfoMessage(scip, NULL, "  INVKNAP");
-   SCIPinfoMessage(scip, NULL, "   EQKNAP");
-   SCIPinfoMessage(scip, NULL, "  BINPACK");
-   SCIPinfoMessage(scip, NULL, "     KNAP");
-   SCIPinfoMessage(scip, NULL, "  INTKNAP");
-   SCIPinfoMessage(scip, NULL, "   MIXBIN");
-   SCIPinfoMessage(scip, NULL, "      GEN\n");
-   for( c = 0; c <= (int)SCIP_CONSTYPE_GENERAL; c++ )
-   {
-      SCIPinfoMessage(scip, NULL, "%9d", counter[c]);
-   }
-
-   SCIPinfoMessage(scip, NULL, "\n\n");
-   SCIPinfoMessage(scip, NULL, "----------------------------------------\n\n");
 
    return SCIP_OKAY;
 }
-#endif
 
 
 /** presolving deinitialization method of constraint handler (called after presolving has been finished) */
@@ -16902,9 +16894,6 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsLinear) );
    SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitLinear) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpLinear) );
-#ifdef WITH_PRINTORIGCONSTYPES
-   SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreLinear) );
-#endif
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseLinear) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolLinear, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintLinear) );

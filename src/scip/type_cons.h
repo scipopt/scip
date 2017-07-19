@@ -49,6 +49,31 @@ typedef struct SCIP_Cons SCIP_CONS;               /**< constraint data structure
 typedef struct SCIP_ConshdlrData SCIP_CONSHDLRDATA; /**< constraint handler data */
 typedef struct SCIP_ConsData SCIP_CONSDATA;       /**< locally defined constraint type specific data */
 typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and removals of the set of active constraints */
+typedef struct SCIP_LinConsStats SCIP_LINCONSSTATS; /**< linear constraint classification statistics used for MIPLIB */
+
+/** linear constraint types recognizable */
+enum SCIP_LinConstype
+{
+   SCIP_LINCONSTYPE_EMPTY         =  0,         /**< linear constraints with no variables */
+   SCIP_LINCONSTYPE_FREE          =  1,         /**< linear constraints with no finite side */
+   SCIP_LINCONSTYPE_SINGLETON     =  2,         /**< linear constraints with a single variable */
+   SCIP_LINCONSTYPE_AGGREGATION   =  3,         /**< linear constraints of the type \f$ ax + by = c\f$ */
+   SCIP_LINCONSTYPE_VARBOUND      =  4,         /**< linear constraints of the form \f$ ax + by \leq c \, x \in \{0,1\} \$*/
+   SCIP_LINCONSTYPE_SETPARTITION  =  5,         /**< linear constraints of the form \f$ \sum x_i = 1\, x_i \in \{0,1\} \forall i \f$ */
+   SCIP_LINCONSTYPE_SETPACKING    =  6,         /**< linear constraints of the form \f$ \sum x_i \leq 1\, x_i \in \{0,1\} \forall i \f$ */
+   SCIP_LINCONSTYPE_SETCOVERING   =  7,         /**< linear constraints of the form \f$ \sum x_i \geq 1\, x_i \in \{0,1\} \forall i \f$ */
+   SCIP_LINCONSTYPE_CARDINALITY   =  8,         /**< linear constraints of the form \f$ \sum x_i = k\, x_i \in \{0,1\} \forall i, \, k\geq 2 \f$ */
+   SCIP_LINCONSTYPE_INVKNAPSACK   =  9,         /**< linear constraints of the form \f$ \sum x_i \leq b\, x_i \in \{0,1\} \forall i, \, b\in \mathbb{n} \geq 2 \f$ */
+   SCIP_LINCONSTYPE_EQKNAPSACK    = 10,         /**< linear constraints of the form \f$ \sum a_i x_i = b\, x_i \in \{0,1\} \forall i, \, b\in \mathbb{n} \geq 2 \f$ */
+   SCIP_LINCONSTYPE_BINPACKING    = 11,         /**< linear constraints of the form \f$ \sum a_i x_i + a x \leq a\, x, x_i \in \{0,1\} \forall i, \, a\in \mathbb{n} \geq 2 \f$ */
+   SCIP_LINCONSTYPE_KNAPSACK      = 12,         /**< linear constraints of the form \f$ \sum a_k x_k \leq b\, x_i \in \{0,1\} \forall i, \, b\in \mathbb{n} \geq 2 \f$ */
+   SCIP_LINCONSTYPE_INTKNAPSACK   = 13,         /**< linear constraints of the form \f$ \sum a_k x_k \leq b\, x_i \in \mathbb{Z} \forall i, \, b\in \mathbb{n} \f$ */
+   SCIP_LINCONSTYPE_MIXEDBINARY   = 14,         /**< linear constraints of the form \f$ \sum a_k x_k + \sum p_j s_j \leq/= b\, x_i \in \{0,1\} \forall i, s_j \in \text{ cont. } \forall j\f$ */
+   SCIP_LINCONSTYPE_GENERAL       = 15          /**< general linear constraints with no special structure */
+};
+typedef enum SCIP_LinConstype SCIP_LINCONSTYPE;
+
+#define SCIP_NLINCONSTYPES ((int)SCIP_LINCONSTYPE_GENERAL+1)
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins)
  *
