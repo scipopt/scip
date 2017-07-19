@@ -1135,7 +1135,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    /* calculate minimal cut orthogonality */
    mincutorthogonality = (root ? set->sepa_minorthoroot : set->sepa_minortho);
    mincutorthogonality = MAX(mincutorthogonality, set->num_epsilon);
-   mincutorthogonality = mincutorthogonality + (1.0 - mincutorthogonality) * stat->nseparounds * 0.1;
+   mincutorthogonality = stat->nseparounds > 20 ? 1.0 : mincutorthogonality;
 
    /* Compute scores for all non-forced cuts and initialize orthogonalities - make sure all cuts are initialized again for the current LP solution */
    for( pos = sepastore->nforcedcuts; pos < sepastore->ncuts; pos++ )
@@ -1176,6 +1176,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    {
       SCIP_ROW* cut;
       int bestpos;
+      SCIP_Real efficacy;
 
       /* get best non-forced cut */
       bestpos = sepastoreGetBestCut(sepastore);
@@ -1193,6 +1194,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
 
       /* capture cut such that it is not destroyed in sepastoreDelCut() */
       SCIProwCapture(cut);
+      efficacy = sepastore->efficacies[bestpos];
 
       /* release the row and delete the cut (also issuing ROWDELETEDSEPA event) */
       SCIP_CALL( sepastoreDelCut(sepastore, blkmem, set, eventqueue, eventfilter, lp, bestpos) );
@@ -1201,7 +1203,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
        * Note: do not take SCIPsetIsEfficacious(), because constraint handlers often add cuts w.r.t. SCIPsetIsFeasPositive().
        * Note2: if separating/feastolfac != -1, constraint handlers may even add cuts w.r.t. SCIPsetIsPositive(); those are currently rejected here
        */
-      if( SCIPsetIsFeasPositive(set, sepastore->efficacies[bestpos]) )
+      if( SCIPsetIsFeasPositive(set, efficacy) )
       {
          /* add cut to the LP and update orthogonalities */
          SCIP_CALL( sepastoreApplyCut(sepastore, blkmem, set, stat, eventqueue, eventfilter, lp, cut, mincutorthogonality, depth, efficiacychoice, &ncutsapplied) );

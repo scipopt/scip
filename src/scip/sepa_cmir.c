@@ -116,11 +116,24 @@ struct SCIP_SepaData
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
 };
 
+typedef
+struct AggregationData {
+   SCIP_Real*            bounddist;          /**< bound distance of continuous variables */
+   int*                  bounddistinds;      /**< problem indices of the continUous variables corresponding to the bounddistance value */
+   int                   nbounddistvars;     /**< number of continuous variables that are not at their bounds */
+   SCIP_ROW**            aggrrows;           /**< array of rows suitable for substitution of continuous variable */
+   SCIP_Real*            aggrrowscoef;       /**< coefficient of continous variable in row that is suitable for substitution of that variable */
+   int                   aggrrowssize;       /**< size of aggrrows array */
+   int                   naggrrows;          /**< occupied positions in aggrrows array */
+   int*                  aggrrowsstart;      /**< array with start positions of suitable rows for substitution for each continous variable with non-zero bound distance */
+   int*                  ngoodaggrrows;      /**< array with number of rows suitable for substitution that only contain one continuous variable that is not at it's bound */
+   int*                  nbadvarsinrow;      /**< number of continuous variables that are not at their bounds for each row */
+   SCIP_AGGRROW*         aggrrow;            /**< store aggregation row here so that it can be reused */
+} AGGREGATIONDATA;
 
 /*
  * Local methods
  */
-
 
 /** adds given cut to LP if violated */
 static
@@ -294,20 +307,7 @@ SCIP_Real getBounddist(
 
 #endif
 
-typedef
-struct AggregationData {
-   SCIP_Real*            bounddist;          /**< bound distance of continuous variables */
-   int*                  bounddistinds;      /**< problem indices of the continUous variables corresponding to the bounddistance value */
-   int                   nbounddistvars;     /**< number of continuous variables that are not at their bounds */
-   SCIP_ROW**            aggrrows;           /**< array of rows suitable for substitution of continuous variable */
-   SCIP_Real*            aggrrowscoef;       /**< coefficient of continous variable in row that is suitable for substitution of that variable */
-   int                   aggrrowssize;       /**< size of aggrrows array */
-   int                   naggrrows;          /**< occupied positions in aggrrows array */
-   int*                  aggrrowsstart;      /**< array with start positions of suitable rows for substitution for each continous variable with non-zero bound distance */
-   int*                  ngoodaggrrows;      /**< array with number of rows suitable for substitution that only contain one continuous variable that is not at it's bound */
-   int*                  nbadvarsinrow;      /**< number of continuous variables that are not at their bounds for each row */
-   SCIP_AGGRROW*         aggrrow;            /**< store aggregation row here so that it can be reused */
-} AGGREGATIONDATA;
+
 
 /** setup data for aggregating rows */
 static
@@ -319,18 +319,22 @@ SCIP_RETCODE setupAggregationData(
 {
    SCIP_VAR** vars;
    int nvars;
+   int nbinvars;
+   int nintvars;
    int ncontvars;
+   int firstcontvar;
+   int nimplvars;
    SCIP_ROW** rows;
    int nrows;
    int i;
 
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, &ncontvars) );
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, &nimplvars, &ncontvars) );
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->bounddist, ncontvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->bounddistinds, ncontvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->ngoodaggrrows, ncontvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->aggrrowsstart, ncontvars + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->bounddist, ncontvars + nimplvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->bounddistinds, ncontvars + nimplvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->ngoodaggrrows, ncontvars + nimplvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->aggrrowsstart, ncontvars + nimplvars + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->nbadvarsinrow, nrows) );
    SCIP_CALL( SCIPaggrRowCreate(scip, &aggrdata->aggrrow) );
    BMSclearMemoryArray(aggrdata->nbadvarsinrow, nrows);
@@ -341,8 +345,9 @@ SCIP_RETCODE setupAggregationData(
    aggrdata->aggrrowssize = 0;
    aggrdata->naggrrows = 0;
 
-   /* TODO: shall we loop over the implicit integers as well? */
-   for( i = nvars - ncontvars; i < nvars; ++i )
+   firstcontvar = nvars - ncontvars;
+
+   for( i = nbinvars + nintvars; i < nvars; ++i )
    {
       SCIP_Real bounddist;
 
@@ -378,6 +383,10 @@ SCIP_RETCODE setupAggregationData(
 
          bounddist = MIN(distlb, distub);
          bounddist = MAX(bounddist, 0.0);
+
+         /* prefer continuous variables over implicit integers to be aggregated out */
+         if( i < firstcontvar )
+            bounddist *= 0.1;
       }
 
       /* when variable is not at its bound, we want to project it out, so add it to the aggregation data */
@@ -557,12 +566,14 @@ SCIP_RETCODE aggregateNextRow(
    *success = FALSE;
 
    {
-      int nvars;
+      int nbinvars;
+      int nintvars;
       int ncontvars;
 
-      nvars = SCIPgetNVars(scip);
-      ncontvars = SCIPgetNContVars(scip);
-      firstcontvar =  nvars - ncontvars;
+      nbinvars = SCIPgetNBinVars(scip);
+      nintvars = SCIPgetNIntVars(scip);
+      firstcontvar =  nbinvars + nintvars;
+      ncontvars = SCIPgetNVars(scip) - firstcontvar;
 
       SCIP_CALL( SCIPallocBufferArray(scip, &badvarinds, MIN(ncontvars, nnz)) );
       SCIP_CALL( SCIPallocBufferArray(scip, &badvarbddist, MIN(ncontvars, nnz)) );
@@ -1270,7 +1281,7 @@ SCIP_RETCODE separateCuts(
       SCIP_CALL( aggregation(scip, &aggrdata, sepa, sepadata, sol, varsolvals, rowlhsscores, rowrhsscores,
                              roworder[r], maxaggrs, maxconts, &wastried, &cutoff, cutinds, cutcoefs, FALSE, &ncuts) );
 
-      if( sepadata->trynegscaling && wastried && oldncuts == ncuts && !cutoff )
+      if( sepadata->trynegscaling && !cutoff )
       {
          SCIP_CALL( aggregation(scip, &aggrdata, sepa, sepadata, sol, varsolvals, rowlhsscores, rowrhsscores,
                              roworder[r], maxaggrs, maxconts, &wastried, &cutoff, cutinds, cutcoefs, TRUE, &ncuts) );
