@@ -455,7 +455,7 @@ SCIP_RETCODE separateCuts(
           */
 
          /* get solution: build SCIP_SOL out of nlpi sol */
-         SCIP_CALL( SCIPnlpiGetSolution(sepadata->nlpi, sepadata->nlpiprob, &nlpisol, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPnlpiGetSolution(sepadata->nlpi, sepadata->nlpiprob, &nlpisol, NULL, NULL, NULL, NULL) );
          assert(nlpisol != NULL);
 
          SCIP_CALL( SCIPcreateSol(scip, &projection, NULL) );

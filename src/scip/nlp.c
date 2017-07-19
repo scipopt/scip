@@ -4749,7 +4749,7 @@ SCIP_RETCODE nlpSolve(
       varubdualvals = NULL;
 
       /* get NLP solution */
-      SCIP_CALL( SCIPnlpiGetSolution(nlp->solver, nlp->problem, &primalvals, &nlrowdualvals, &varlbdualvals, &varubdualvals) );
+      SCIP_CALL( SCIPnlpiGetSolution(nlp->solver, nlp->problem, &primalvals, &nlrowdualvals, &varlbdualvals, &varubdualvals, NULL) );
       assert(primalvals != NULL || nlp->nvars == 0);
       assert((varlbdualvals != NULL) == (varubdualvals != NULL)); /* if there are duals for one bound, then there should also be duals for the other bound */
 

@@ -316,7 +316,8 @@ SCIP_RETCODE SCIPnlpiGetSolution(
    SCIP_Real**           primalvalues,       /**< buffer to store pointer to array to primal values, or NULL if not needed */
    SCIP_Real**           consdualvalues,     /**< buffer to store pointer to array to dual values of constraints, or NULL if not needed */
    SCIP_Real**           varlbdualvalues,    /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
-   SCIP_Real**           varubdualvalues     /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
+   SCIP_Real**           varubdualvalues,    /**< buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed */
+   SCIP_Real*            objval              /**< buffer to store the objective value, or NULL if not needed */
    );
 
 /** gives solve statistics */

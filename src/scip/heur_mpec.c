@@ -409,7 +409,7 @@ SCIP_RETCODE heurExec(
       nlpcostleft -= SCIPnlpStatisticsGetNIterations(nlpstatistics) * nlpcostperiter * nbinvars;
       SCIPdebugMsg(scip, "nlpcostleft = %e\n", nlpcostleft);
 
-      SCIP_CALL( SCIPnlpiGetSolution(heurdata->nlpi, heurdata->nlpiprob, &primal, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPnlpiGetSolution(heurdata->nlpi, heurdata->nlpiprob, &primal, NULL, NULL, NULL, NULL) );
       assert(primal != NULL);
 
       /* check for binary feasibility */

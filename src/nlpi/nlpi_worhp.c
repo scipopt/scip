@@ -1794,6 +1794,7 @@ SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatWorhp )
  *  - consdualvalues buffer to store pointer to array to dual values of constraints, or NULL if not needed
  *  - varlbdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
  *  - varubdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
+ *  - objval buffer store the objective value, or NULL if not needed
  */
 static
 SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionWorhp )
@@ -1811,6 +1812,16 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionWorhp )
 
    if( varubdualvalues != NULL )
       *varubdualvalues = problem->lastdualub;
+
+   if( objval != NULL )
+   {
+      if( problem->lastprimal != NULL )
+      {
+         SCIP_CALL( SCIPnlpiOracleEvalObjectiveValue(problem->oracle, problem->lastprimal, objval) );
+      }
+      else
+         *objval = SCIP_INVALID;
+   }
 
    return SCIP_OKAY;
 }  /*lint !e715*/

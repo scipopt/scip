@@ -372,9 +372,10 @@ typedef enum SCIP_NlpTermStat SCIP_NLPTERMSTAT;  /** NLP solver termination stat
  *  - consdualvalues buffer to store pointer to array to dual values of constraints, or NULL if not needed
  *  - varlbdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
  *  - varubdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
+ *  - objval pointer store the objective value, or NULL if not needed
  */
 #define SCIP_DECL_NLPIGETSOLUTION(x) SCIP_RETCODE x (SCIP_NLPI* nlpi, SCIP_NLPIPROBLEM* problem, SCIP_Real** primalvalues, \
-      SCIP_Real** consdualvalues, SCIP_Real** varlbdualvalues, SCIP_Real** varubdualvalues)
+      SCIP_Real** consdualvalues, SCIP_Real** varlbdualvalues, SCIP_Real** varubdualvalues, SCIP_Real* objval)
 
 /** gives solve statistics
  * 
