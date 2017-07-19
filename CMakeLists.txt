@@ -323,6 +323,9 @@ endif()
 # FilterSQP (with CMake, nlpi_filtersqp doesn't build anyway)
 set(nlpi ${nlpi} nlpi/nlpi_filtersqp_dummy.c)
 
+# add nlpi_all.c
+set(nlpi ${nlpi} nlpi/nlpi_all.c)
+
 # run checks to figure out how the rounding mode can be set
 include(CheckSymbolExists)
 check_symbol_exists(FE_DOWNWARD "fenv.h" LINUX_ROUNDING)
