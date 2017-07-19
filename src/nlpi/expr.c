@@ -33,6 +33,7 @@
 
 #include "scip/intervalarith.h"
 #include "scip/pub_misc.h"
+#include "scip/misc.h"
 #include "scip/pub_message.h"
 
 
@@ -8898,7 +8899,7 @@ SCIP_RETCODE SCIPexprtreeSimplify(
       testx[i] = SCIPrandomGetReal(randnumgen, -100.0, 100.0);  /*lint !e644*/
    SCIP_CALL( SCIPexprtreeEval(tree, testx, &testval_before) );
 
-   SCIPrandomFree(&randnumgen);
+   SCIPrandomFree(&randnumgen, tree->blkmem);
 #endif
 
    /* we should be careful about declaring numbers close to zero as zero, so take eps^2 as tolerance */
@@ -15939,7 +15940,7 @@ SCIP_RETCODE SCIPexprgraphSimplify(
          }
       }
 
-   SCIPrandomFree(&randnumgen);
+   SCIPrandomFree(&randnumgen, exprgraph->blkmem);
 #endif
 
 #ifdef SCIP_OUTPUT

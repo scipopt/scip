@@ -140,6 +140,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurNlpdiving(scip) );
    SCIP_CALL( SCIPincludeHeurMutation(scip) );
    SCIP_CALL( SCIPincludeHeurMultistart(scip) );
+   SCIP_CALL( SCIPincludeHeurMpec(scip) );
    SCIP_CALL( SCIPincludeHeurObjpscostdiving(scip) );
    SCIP_CALL( SCIPincludeHeurOctane(scip) );
    SCIP_CALL( SCIPincludeHeurOfins(scip) );
@@ -201,6 +202,12 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    {
       SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
       SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameIpopt(), SCIPgetSolverDescIpopt()) );
+   }
+   SCIP_CALL( SCIPcreateNlpSolverFilterSQP(SCIPblkmem(scip), &nlpi) );
+   if( nlpi != NULL )
+   {
+      SCIP_CALL( SCIPincludeNlpi(scip, nlpi) );
+      SCIP_CALL( SCIPincludeExternalCodeInformation(scip, SCIPgetSolverNameFilterSQP(), SCIPgetSolverDescFilterSQP()) );
    }
 
    SCIP_CALL( SCIPcreateNlpSolverWorhp(SCIPblkmem(scip), &nlpi) );

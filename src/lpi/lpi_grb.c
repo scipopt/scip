@@ -37,7 +37,11 @@
 #include "scip/pub_message.h"
 #include "scip/pub_misc_sort.h"
 
-#if ( GRB_VERSION_MAJOR < 6 || ( GRB_VERSION_MAJOR == 7 && GRB_VERSION_TECHNICAL < 2 ) )
+#ifdef _WIN32
+#define snprintf _snprintf
+#endif
+
+#if ( GRB_VERSION_MAJOR < 6 || ( GRB_VERSION_MAJOR == 7 && GRB_VERSION_MINOR == 0 && GRB_VERSION_TECHNICAL < 2 ) )
 #error "The Gurobi intreface only works for Gurobi versions at least 7.0.2"
 #endif
 

@@ -773,7 +773,7 @@ SCIP_DECL_HEUREXIT(heurExitRec)
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    SCIPheurSetData(heur, heurdata);
 
@@ -843,8 +843,8 @@ SCIP_DECL_HEURINIT(heurInitRec)
 #endif
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, heurdata->randseed)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         heurdata->randseed) );
 
    return SCIP_OKAY;
 }

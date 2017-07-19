@@ -133,7 +133,7 @@ fi
 # check if the test run should be processed in a debug tool environment
 if test "$DEBUGTOOL" = "valgrind"
 then
-    DEBUGTOOLCMD="valgrind --log-fd=1 --leak-check=full "
+    DEBUGTOOLCMD="valgrind --log-fd=1 --leak-check=full --suppressions=${SCIPPATH}/../suppressions.valgrind "
 elif test "$DEBUGTOOL" = "gdb"
 then
     #  set a gdb command, but leave a place holder for the error file we want to log to, which gets replaced in 'run.sh'

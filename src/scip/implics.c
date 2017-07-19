@@ -29,6 +29,7 @@
 #include "scip/event.h"
 #include "scip/var.h"
 #include "scip/implics.h"
+#include "scip/misc.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 #include "scip/debug.h"
@@ -2596,6 +2597,9 @@ SCIP_RETCODE cliqueCleanup(
                (!clique->values[v] && SCIPvarGetLbGlobal(clique->vars[v]) > 0.5) ||
                SCIPvarIsMarkedDeleteGlobalStructures(clique->vars[v]) )
          {
+            if( clique->equation && SCIPvarIsMarkedDeleteGlobalStructures(clique->vars[v]) )
+               clique->equation = FALSE;
+
             /* the variable will be overwritten by subsequent active variables */
             continue;
          }

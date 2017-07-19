@@ -30,15 +30,15 @@
 #include "nlpi/nlpioracle.h"
 #include "nlpi/exprinterpret.h"
 #include "scip/interrupt.h"
-#include "scip/pub_misc.h"
+#include "scip/misc.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "worhp/worhp.h"
 
-#if WORHP_MAJOR < 2
-#error "Require at least Worhp 2.x"
+#if WORHP_MAJOR < 2 && WORHP_MINOR < 10
+#error "Require at least Worhp 1.10"
 #endif
 
 #define NLPI_NAME              "worhp"                      /**< short concise name of solver */
@@ -1059,7 +1059,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemWorhp)
       SCIP_CALL( SCIPnlpiOracleFree(&(*problem)->oracle) );
    }
 
-   SCIPrandomFree(&(*problem)->randnumgen);
+   SCIPrandomFree(&(*problem)->randnumgen, (*problem)->blkmem);
    BMSfreeMemoryArrayNull(&(*problem)->initguess);
    BMSfreeBlockMemory(data->blkmem, problem);
    *problem = NULL;
@@ -1204,13 +1204,20 @@ SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveWorhp )
    assert(problem != NULL);
    assert(problem->oracle != NULL);
 
+   /* We pass the objective gradient in dense form to WORHP, so if the sparsity of that gradient changes, we do not need
+    * to reset WORHP (firstrun=TRUE).  However, if the sparsity of the Hessian matrix of the objective changes, then the
+    * sparsity pattern of the Hessian of the Lagrangian may change.  Thus, reset Worhp if the objective was and/or
+    * becomes nonlinear, but leave firstrun untouched if it was and stays linear.
+    */
+   if( nquadelems > 0 || exprtree != NULL || SCIPnlpiOracleGetConstraintDegree(problem->oracle, -1) > 1 )
+      problem->firstrun = TRUE;
+
    SCIP_CALL( SCIPnlpiOracleSetObjective(problem->oracle,
          constant, nlins, lininds, linvals,
          nquadelems, quadelems,
          exprvaridxs, exprtree) );
 
    invalidateSolution(problem);
-   problem->firstrun = TRUE;
 
    return SCIP_OKAY;  /*lint !e527*/
 }  /*lint !e715*/

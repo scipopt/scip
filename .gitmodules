@@ -1,0 +1,3 @@
+[submodule "cmake"]
+	path = cmake
+	url = git@git.zib.de:optimization/cmake.git

@@ -75,7 +75,6 @@ enum SCIP_NlpTermStat
    SCIP_NLPTERMSTAT_TILIM         = 1,    /**< time limit exceeded */
    SCIP_NLPTERMSTAT_ITLIM         = 2,    /**< iteration limit exceeded */
    SCIP_NLPTERMSTAT_LOBJLIM       = 3,    /**< lower objective limit reached */
-   SCIP_NLPTERMSTAT_UOBJLIM       = 4,    /**< upper objective limit (= infinity) reached */
    SCIP_NLPTERMSTAT_NUMERR        = 5,    /**< stopped on numerical error */
    SCIP_NLPTERMSTAT_EVALERR       = 6,    /**< stopped on function evaluation error */
    SCIP_NLPTERMSTAT_MEMERR        = 7,    /**< memory exceeded */

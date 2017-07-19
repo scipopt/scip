@@ -735,7 +735,7 @@ SCIP_RETCODE primalAddSol(
    SCIPvisualFoundSolution(stat->visual, set, stat, SCIPtreeGetCurrentNode(tree), insertpos == 0 ? TRUE : FALSE, sol);
 
    /* check, if the global upper bound has to be updated */
-   if( obj < primal->upperbound )
+   if( obj < primal->cutoffbound && insertpos == 0 )
    {
       /* update the upper bound */
       SCIP_CALL( SCIPprimalSetUpperbound(primal, blkmem, set, stat, eventqueue, transprob, tree, reopt, lp, obj) );
