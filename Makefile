@@ -315,6 +315,7 @@ ALLSRC		+=	$(TPILIBSRC)
 #-----------------------------------------------------------------------------
 
 NLPILIBCOBJ	= 	nlpi/nlpi.o \
+			nlpi/nlpi_all.o \
 			nlpi/nlpioracle.o \
 			nlpi/expr.o
 
@@ -325,8 +326,7 @@ NLPILIBSCIPOBJ	= 	blockmemshell/memory.o \
 			scip/intervalarith.o \
 			scip/interrupt.o \
 			scip/message.o \
-			scip/rbtree.o \
-			nlpi/nlpi_all.o
+			scip/rbtree.o
 
 ifeq ($(EXPRINT),none)
 NLPILIBCOBJ 	+=	nlpi/exprinterpret_none.o

@@ -2065,6 +2065,7 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionFilterSQP )
    {
       if( problem->primalvalues != NULL )
       {
+         /* TODO store last solution value instead of reevaluating the objective function */
          SCIP_CALL( SCIPnlpiOracleEvalObjectiveValue(problem->oracle, problem->primalvalues, objval) );
       }
       else
