@@ -210,8 +210,9 @@ EXTERN
 SCIP_RETCODE SCIPnlpiDelVarSet(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int*                  dstats              /**< deletion status of vars; 1 if var should be deleted, 0 if not; afterwards -1
+   int*                  dstats,             /**< deletion status of vars; 1 if var should be deleted, 0 if not; afterwards -1
                                               * if var was deleted */
+   int                   dstatssize          /**< size of the dstats array */
    );
 
 /** delete a set of constraints */
@@ -219,8 +220,9 @@ EXTERN
 SCIP_RETCODE SCIPnlpiDelConsSet(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int*                  dstats              /**< deletion status of rows; 1 if row should be deleted, 0 if not; afterwards -1
+   int*                  dstats,             /**< deletion status of rows; 1 if row should be deleted, 0 if not; afterwards -1
                                               * if row was deleted */
+   int                   dstatssize          /**< size of the dstats array */
    );
 
 /** changes or adds linear coefficients in a constraint or objective */

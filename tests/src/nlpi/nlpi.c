@@ -21,6 +21,7 @@
 
 #include "nlpi/nlpi_ipopt.h"
 #include "nlpi/nlpi_worhp.h"
+#include "nlpi/nlpi_all.h"
 #include "nlpi/nlpioracle.h"
 #include "nlpi/nlpi.h"
 

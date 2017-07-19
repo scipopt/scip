@@ -325,7 +325,8 @@ NLPILIBSCIPOBJ	= 	blockmemshell/memory.o \
 			scip/intervalarith.o \
 			scip/interrupt.o \
 			scip/message.o \
-			scip/rbtree.o
+			scip/rbtree.o \
+			nlpi/nlpi_all.o
 
 ifeq ($(EXPRINT),none)
 NLPILIBCOBJ 	+=	nlpi/exprinterpret_none.o

@@ -4221,7 +4221,7 @@ SCIP_RETCODE nlpFlushNlRowDeletions(
    assert(c == nlp->nunflushednlrowdel);
 
    /* remove rows from NLPI problem */
-   SCIP_CALL( SCIPnlpiDelConsSet(nlp->solver, nlp->problem, rowset) );
+   SCIP_CALL( SCIPnlpiDelConsSet(nlp->solver, nlp->problem, rowset, nlp->nnlrows_solver) );
 
    /* update NLPI row indices */
    for( j = 0; j < nlp->nnlrows_solver; ++j )
@@ -4314,7 +4314,7 @@ SCIP_RETCODE nlpFlushVarDeletions(
    assert(c == nlp->nunflushedvardel);
 
    /* delete variables from NLPI problem */
-   SCIP_CALL( SCIPnlpiDelVarSet(nlp->solver, nlp->problem, colset) );
+   SCIP_CALL( SCIPnlpiDelVarSet(nlp->solver, nlp->problem, colset, nlp->nvars_solver) );
 
    /* update NLPI variable indices */
    for( i = 0; i < nlp->nvars_solver; ++i )

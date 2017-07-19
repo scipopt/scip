@@ -361,14 +361,15 @@ SCIP_RETCODE SCIPnlpiChgConsSides(
 SCIP_RETCODE SCIPnlpiDelVarSet(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int*                  dstats              /**< deletion status of vars; 1 if var should be deleted, 0 if not; afterwards -1
+   int*                  dstats,             /**< deletion status of vars; 1 if var should be deleted, 0 if not; afterwards -1
                                               * if var was deleted */
+   int                   dstatssize          /**< size of the dstats array */
    )
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpidelvarset)(nlpi, problem, dstats) );
+   SCIP_CALL( (*nlpi->nlpidelvarset)(nlpi, problem, dstats, dstatssize) );
 
    return SCIP_OKAY;
 }
@@ -377,14 +378,15 @@ SCIP_RETCODE SCIPnlpiDelVarSet(
 SCIP_RETCODE SCIPnlpiDelConsSet(
    SCIP_NLPI*            nlpi,               /**< pointer to NLPI datastructure */
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
-   int*                  dstats              /**< deletion status of rows; 1 if row should be deleted, 0 if not; afterwards -1
+   int*                  dstats,             /**< deletion status of rows; 1 if row should be deleted, 0 if not; afterwards -1
                                               * if row was deleted */
+   int                   dstatssize          /**< size of the dstats array */
    )
 {
    assert(nlpi    != NULL);
    assert(problem != NULL);
 
-   SCIP_CALL( (*nlpi->nlpidelconsset)(nlpi, problem, dstats) );
+   SCIP_CALL( (*nlpi->nlpidelconsset)(nlpi, problem, dstats, dstatssize) );
 
    return SCIP_OKAY;
 }
