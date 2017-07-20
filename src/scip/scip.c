@@ -20617,6 +20617,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    SCIP_Bool downvalidlocal;
    SCIP_Bool upvalidlocal;
    SCIP_Bool allcolsinlp;
+   SCIP_Bool enabledconflict;
    int oldnconflicts;
    int nvars;
 
@@ -20761,6 +20762,10 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    firstchild = TRUE;
    cutoff = FALSE;
 
+   /* switch conflict analysis according to usesb parameter */
+   enabledconflict = scip->set->conf_enable;
+   scip->set->conf_enable = scip->set->conf_usesb;
+
    /* @todo: decide the branch to look at first based on the cutoffs in previous calls? */
    switch( scip->set->branch_firstsbchild )
    {
@@ -20779,6 +20784,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
       default:
          SCIPerrorMessage("Error: Unknown parameter value <%c> for branching/firstsbchild parameter:\n",scip->set->branch_firstsbchild);
          SCIPABORT();
+         scip->set->conf_enable = enabledconflict;
          return SCIP_PARAMETERWRONGVAL; /*lint !e527*/
    }
 
@@ -20881,6 +20887,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
       *downvalid = downvalidlocal;
    if( upvalid != NULL )
       *upvalid = upvalidlocal;
+
+   scip->set->conf_enable = enabledconflict;
 
    return SCIP_OKAY;
 }
