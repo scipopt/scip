@@ -35,7 +35,12 @@
 
 #include <sys/types.h>
 #ifdef WITH_ZLIB
+#if defined(_WIN32) || defined(_WIN64)
+#define R_OK _A_RDONLY
+#include <io.h>
+#else
 #include <unistd.h>
+#endif
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -1085,14 +1090,14 @@ XML_NODE* xmlProcess(
    BMScopyMemoryArray(myfilename, filename, filenamelen + 1);
 
 #ifdef WITH_ZLIB
-   if ( access(filename, R_OK) != 0 )
+   if ( _access(filename, R_OK) != 0 )
    {
       strcat(myfilename, ".gz");
 
       /* If .gz also does not work, revert to the old name
        * to get a better error message.
        */
-      if ( access(myfilename, R_OK) != 0 )
+      if ( _access(myfilename, R_OK) != 0 )
          strcpy(myfilename, filename);
    }
 #endif
