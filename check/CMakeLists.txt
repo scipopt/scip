@@ -229,7 +229,7 @@ macro(add_instancetests instances settings prefix)
             #
             # treat the instance as a tuple (list) of two values
             #
-            add_test(NAME ${prefix}-${setting}-${basename} COMMAND $<TARGET_FILE:scip-bin> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/coverage/settings/${setting}.set -o ${optval} ${optval})
+            add_test(NAME ${prefix}-${setting}-${basename} COMMAND $<TARGET_FILE:scip> -f ${PROJECT_SOURCE_DIR}/check/${path} -s ${PROJECT_SOURCE_DIR}/coverage/settings/${setting}.set -o ${optval} ${optval})
             set_tests_properties(${prefix}-${setting}-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
         endforeach(setting)
     endforeach(instance)
@@ -256,7 +256,7 @@ foreach(instance ${instances_MINLP})
     #
     configure_file(interactiveshell/solutiontest.bat.in interactiveshell/solutiontest-${basename}.bat)
         add_test(NAME MINLP-solutiontest-${basename}
-            COMMAND $<TARGET_FILE:scip-bin> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/solutiontest-${basename}.bat
+            COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/solutiontest-${basename}.bat
             )
         set_tests_properties(MINLP-solutiontest-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
 endforeach(instance)
@@ -273,7 +273,7 @@ foreach(instance ${instances_MIP})
         #
         configure_file(interactiveshell/readertest.bat.in interactiveshell/readertest-${extension}-${basename}.bat)
         add_test(NAME MIP-readertest-${extension}-${basename}
-            COMMAND $<TARGET_FILE:scip-bin> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
+            COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/readertest-${extension}-${basename}.bat
             )
         set_tests_properties(MIP-readertest-${extension}-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
     endforeach(extension)
@@ -289,5 +289,5 @@ file(MAKE_DIRECTORY ${shell_tmp_dir})
 
 configure_file(interactiveshell/interactiveshell.bat.in interactiveshell/interactiveshell.bat)
 
-add_test(NAME interactiveshell COMMAND $<TARGET_FILE:scip-bin> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/interactiveshell.bat)
+add_test(NAME interactiveshell COMMAND $<TARGET_FILE:scip> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/interactiveshell.bat)
 set_tests_properties(interactiveshell PROPERTIES PASS_REGULAR_EXPRESSION "increased branching priority of new binary variables")

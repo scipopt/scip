@@ -84,10 +84,15 @@ endif()
 #set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)
 
-#set defines for win32
+#set defines for Windows
 if(WIN32)
     add_definitions(-DNO_SIGACTION)
     add_definitions(-DNO_STRTOK_R)
+endif()
+if(MSVC)
+    add_definitions(/W4)
+    add_definitions(/wd4100)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
 #set expression interpreter file that should be used
