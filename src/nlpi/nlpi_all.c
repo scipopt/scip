@@ -51,7 +51,7 @@ struct SCIP_NlpiProblem
 };
 
 #ifdef SCIP_STATISTIC
-   int _nnlps = 0;                            /**< unique index for each NLP that have been solved */
+static int _nnlps = 0;                       /**< number of NLPs that have been solved */
 #endif
 
 /*
