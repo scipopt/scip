@@ -200,7 +200,6 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemAll)
 
    BMSfreeMemoryArrayNull(&(*problem)->nlpiproblems);
    BMSfreeMemory(problem);
-   *problem = NULL;
 
    return SCIP_OKAY;
 }  /*lint !e715*/
