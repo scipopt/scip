@@ -11050,7 +11050,17 @@ SCIP_RETCODE lpAlgorithm(
    return SCIP_OKAY;
 }
 
-/** prints message about numerical trouble */
+/** maximal number of verblevel-high messages about numerical trouble in LP that will be printed
+ * when this number is reached and display/verblevel is not full, then further messages are suppressed in this run
+ */
+#define MAXNUMTROUBLELPMSGS 10
+
+/** prints message about numerical trouble
+ *
+ * If message has verblevel at most high and display/verblevel is not full,
+ * then the message is not printed if already MAXNUMTROUBLELPMSGS messages
+ * were printed before in the current run.
+ */
 static
 void lpNumericalTroubleMessage(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -11063,18 +11073,45 @@ void lpNumericalTroubleMessage(
 {
    va_list ap;
 
+   assert(verblevel > SCIP_VERBLEVEL_NONE);
+   assert(verblevel <= SCIP_VERBLEVEL_FULL);
+   assert(set->disp_verblevel <= SCIP_VERBLEVEL_FULL);
+
+   if( set->disp_verblevel < SCIP_VERBLEVEL_FULL )
+   {
+      if( verblevel <= SCIP_VERBLEVEL_HIGH )
+      {
+         /* if already max number of messages about numerical trouble in LP on verblevel at most high, then skip message */
+         if( stat->nnumtroublelpmsgs > MAXNUMTROUBLELPMSGS )
+            return;
+
+         /* increase count on messages with verblevel high */
+         ++stat->nnumtroublelpmsgs ;
+      }
+
+      /* if messages wouldn't be printed, then return already */
+      if( verblevel > set->disp_verblevel )
+         return;
+   }
+
    /* print common begin of message */
-   SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, verblevel,
+   SCIPmessagePrintInfo(messagehdlr,
       "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ",
       stat->nnodes, stat->nlps);
 
    /* print individual part of message */
    va_start(ap, formatstr); /*lint !e838*/
-   SCIPmessageVFPrintVerbInfo(messagehdlr, set->disp_verblevel, verblevel, NULL, formatstr, ap);
+   SCIPmessageVFPrintInfo(messagehdlr, NULL, formatstr, ap);
    va_end(ap);
 
-   /* print final new-line */
-   SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, verblevel, "\n");
+   /* warn that further messages will be suppressed */
+   if( set->disp_verblevel < SCIP_VERBLEVEL_FULL && verblevel <= SCIP_VERBLEVEL_HIGH && stat->nnumtroublelpmsgs > MAXNUMTROUBLELPMSGS )
+   {
+      SCIPmessagePrintInfo(messagehdlr, " -- further messages will be suppressed (use display/verblevel=5 to see all)");
+   }
+
+   /* print closing new-line */
+   SCIPmessagePrintInfo(messagehdlr, "\n");
 }
 
 #define FEASTOLTIGHTFAC 0.001

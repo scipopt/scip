@@ -282,6 +282,7 @@ void SCIPstatReset(
    stat->ninitlps = 0;
    stat->ndivinglps = 0;
    stat->nsbdivinglps = 0;
+   stat->nnumtroublelpmsgs = 0;
    stat->nstrongbranchs = 0;
    stat->nrootstrongbranchs = 0;
    stat->nconflictlps = 0;
@@ -519,6 +520,7 @@ void SCIPstatResetCurrentRun(
    stat->ninfeasleaves = 0;
    stat->nfeasleaves = 0;
    stat->branchedunbdvar = FALSE;
+   stat->nnumtroublelpmsgs = 0;
 
    stat->nearlybacktracks = 0;
    stat->nnodesaboverefbound = 0;
