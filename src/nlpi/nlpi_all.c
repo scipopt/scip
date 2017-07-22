@@ -469,8 +469,9 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetAll )
       }
       else
       {
-         /* this is a work-around and only works when all dstats array are the same after calling the nlpidelvarset
-          * callback
+         /* NOTE this works only when all dstats array are the same after calling the nlpidelvarset callback
+          * As long as all solvers use the SCIP NLPI oracle to store the NLP problem data, this is the case.
+          * @TODO Assert that the returned dstats are all the same?
           */
          SCIP_CALL( (*nlpidata->nlpis[i]->nlpidelvarset)(nlpidata->nlpis[i], problem->nlpiproblems[i], dstats,
                dstatssize) );
@@ -521,8 +522,9 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetAll )
       }
       else
       {
-         /* this is a work-around and only works when all dstats array are the same after calling the nlpidelvarset
-          * callback
+         /* NOTE this works only when all dstats array are the same after calling the nlpidelconsset callback
+          * As long as all solvers use the SCIP NLPI oracle to store the NLP problem data, this is the case.
+          * @TODO Assert that the returned dstats are all the same?
           */
          SCIP_CALL( (*nlpidata->nlpis[i]->nlpidelconsset)(nlpidata->nlpis[i], problem->nlpiproblems[i], dstats,
                dstatssize) );
