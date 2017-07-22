@@ -11050,6 +11050,33 @@ SCIP_RETCODE lpAlgorithm(
    return SCIP_OKAY;
 }
 
+/** prints message about numerical trouble */
+static
+void lpNumericalTroubleMessage(
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_VERBLEVEL        verblevel,          /**< verbosity level of message */
+   const char*           formatstr,          /**< message format string */
+   ...                                       /**< arguments to format string */
+   )
+{
+   va_list ap;
+
+   /* print common begin of message */
+   SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, verblevel,
+      "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ",
+      stat->nnodes, stat->nlps);
+
+   /* print individual part of message */
+   va_start(ap, formatstr); /*lint !e838*/
+   SCIPmessageVFPrintVerbInfo(messagehdlr, set->disp_verblevel, verblevel, NULL, formatstr, ap);
+   va_end(ap);
+
+   /* print final new-line */
+   SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, verblevel, "\n");
+}
+
 #define FEASTOLTIGHTFAC 0.001
 /** solves the LP with the given LP algorithm, and tries to resolve numerical problems */
 static
@@ -11155,9 +11182,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-            stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
          return SCIP_OKAY;
       }
    }
@@ -11174,9 +11199,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetFastmip(lp, 0, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again with %s without FASTMIP\n",
-            stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s without FASTMIP", lpalgoName(lpalgo));
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
          /* check for stability */
@@ -11187,9 +11210,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
          }
@@ -11205,9 +11226,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetScaling(lp, (set->lp_scaling > 0) ? 0 : 1, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again with %s %s scaling\n",
-            stat->nnodes, stat->nlps, lpalgoName(lpalgo), (set->lp_scaling == 0) ? "with" : "without");
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s %s scaling", lpalgoName(lpalgo), (set->lp_scaling == 0) ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
          /* check for stability */
@@ -11218,9 +11237,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
          }
@@ -11240,9 +11257,8 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetPresolving(lp, !set->lp_presolving, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again with %s %s presolving\n",
-            stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s %s presolving",
+            lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
          /* check for stability */
@@ -11253,9 +11269,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
          }
@@ -11292,9 +11306,7 @@ SCIP_RETCODE lpSolveStable(
 
       if( success || success2 || success3 )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again with %s with tighter primal and dual feasibility tolerance\n",
-            stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again with %s with tighter primal and dual feasibility tolerance", lpalgoName(lpalgo));
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
          /* check for stability */
@@ -11305,9 +11317,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
          }
@@ -11338,9 +11348,7 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetFromscratch(lp, TRUE, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again from scratch with %s\n",
-            stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s", lpalgoName(lpalgo));
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
          /* check for stability */
@@ -11351,9 +11359,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
          }
@@ -11364,9 +11370,7 @@ SCIP_RETCODE lpSolveStable(
    if( simplex )
    {
       lpalgo = (lpalgo == SCIP_LPALGO_PRIMALSIMPLEX ? SCIP_LPALGO_DUALSIMPLEX : SCIP_LPALGO_PRIMALSIMPLEX);
-      SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again from scratch with %s\n",
-         stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+      lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s", lpalgoName(lpalgo));
       SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
       /* check for stability */
@@ -11377,9 +11381,7 @@ SCIP_RETCODE lpSolveStable(
          SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
          if( success )
          {
-            SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-               stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+            lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
             return SCIP_OKAY;
          }
       }
@@ -11388,9 +11390,8 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetScaling(lp, (set->lp_scaling > 0) ? 0 : 1, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again from scratch with %s %s scaling\n",
-            stat->nnodes, stat->nlps, lpalgoName(lpalgo), (set->lp_scaling == 0) ? "with" : "without");
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s %s scaling",
+            lpalgoName(lpalgo), (set->lp_scaling == 0) ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
          /* check for stability */
@@ -11401,9 +11402,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
          }
@@ -11417,9 +11416,8 @@ SCIP_RETCODE lpSolveStable(
       SCIP_CALL( lpSetPresolving(lp, !set->lp_presolving, &success) );
       if( success )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again from scratch with %s %s presolving\n",
-            stat->nnodes, stat->nlps, lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s %s presolving",
+            lpalgoName(lpalgo), !set->lp_presolving ? "with" : "without");
          SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
          /* check for stability */
@@ -11430,9 +11428,7 @@ SCIP_RETCODE lpSolveStable(
             SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
             if( success )
             {
-               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-                  stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                return SCIP_OKAY;
             }
          }
@@ -11459,9 +11455,7 @@ SCIP_RETCODE lpSolveStable(
 
          if( success || success2 )
          {
-            SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- solve again from scratch with %s with tighter feasibility tolerance\n",
-               stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+            lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "solve again from scratch with %s with tighter feasibility tolerance", lpalgoName(lpalgo));
             SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
 
             /* check for stability */
@@ -11472,9 +11466,7 @@ SCIP_RETCODE lpSolveStable(
                SCIP_CALL( SCIPlpiIgnoreInstability(lp->lpi, &success) );
                if( success )
                {
-                  SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                     "(node %" SCIP_LONGINT_FORMAT ") numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- ignoring instability of %s\n",
-                     stat->nnodes, stat->nlps, lpalgoName(lpalgo));
+                  lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "ignoring instability of %s", lpalgoName(lpalgo));
                   return SCIP_OKAY;
                }
             }
@@ -11493,8 +11485,7 @@ SCIP_RETCODE lpSolveStable(
    }
 
    /* nothing worked -- exit with an LPERROR */
-   SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH, "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT "\n",
-      stat->nnodes, stat->nlps);
+   lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_HIGH, "unresolved");
    *lperror = TRUE;
 
    return SCIP_OKAY;
@@ -12083,8 +12074,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
             }
             else
             {
-               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "unresolved");
                lp->solved = FALSE;
                lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                *lperror = TRUE;
@@ -12176,8 +12166,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                /* unbounded solution is infeasible (this can happen due to numerical problems) and nothing helped:
                 * forget about the LP at this node and mark it to be unsolved
                 */
-               SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                  "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in unbounded LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
+               lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "unresolved, LP unbounded");
                lp->solved = FALSE;
                lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                *lperror = TRUE;
@@ -12334,8 +12323,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                      || (solstat == SCIP_LPSOLSTAT_OBJLIMIT &&
                         !SCIPsetIsGE(set, objval, lp->cutoffbound - getFiniteLooseObjval(lp, set, prob))) )
                   {
-                     SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-                        "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
+                     lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_HIGH, "unresolved");
                      lp->solved = FALSE;
                      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                      *lperror = TRUE;
@@ -12381,8 +12369,7 @@ SCIP_RETCODE SCIPlpSolveAndEval(
                       * @todo: like in the default LP solving evaluation, solve without fastmip,
                       * with tighter feasibility tolerance and from scratch
                       */
-                     SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-                        "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in unbounded LP %" SCIP_LONGINT_FORMAT "\n", stat->nnodes, stat->nlps);
+                     lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "unresolved, unbounded LP");
                      lp->solved = FALSE;
                      lp->lpsolstat = SCIP_LPSOLSTAT_NOTSOLVED;
                      *lperror = TRUE;
@@ -15250,8 +15237,7 @@ SCIP_RETCODE SCIPlpEndDive(
       SCIP_CALL( SCIPlpSolveAndEval(lp, set, messagehdlr,  blkmem, stat, eventqueue, eventfilter, prob, -1LL, FALSE, FALSE, FALSE, &lperror) );
       if( lperror )
       {
-         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles while resolving LP %" SCIP_LONGINT_FORMAT " after diving\n", stat->nnodes, stat->nlps);
+         lpNumericalTroubleMessage(messagehdlr, set, stat, SCIP_VERBLEVEL_FULL, "unresolved when resolving LP after diving");
          lp->resolvelperror = TRUE;
       }
       else if( SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL
