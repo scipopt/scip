@@ -23,7 +23,6 @@
 
 #include "nlpi/nlpi_all.h"
 #include "nlpi/nlpi.h"
-#include "nlpi/struct_nlpi.h"
 #include "scip/pub_misc.h"
 
 #include <string.h>
@@ -83,6 +82,7 @@ SCIP_DECL_NLPICOPY( nlpiCopyAll )
    assert(sourcedata->nnlpis > 1);
    assert(sourcedata->nlpis[0] != NULL);
 
+   /* create target nlpis */
    SCIP_CALL( SCIPcreateNlpSolverAll(blkmem, targetnlpi, sourcedata->nlpis, sourcedata->nnlpis) );
    assert(*targetnlpi != NULL);
 
@@ -162,10 +162,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemAll)
    for( i = 0; i < data->nnlpis; ++i )
    {
       assert(data->nlpis[i] != NULL);
-      assert(data->nlpis[i]->nlpicreateproblem != NULL);
-
-      SCIP_CALL( (*data->nlpis[i]->nlpicreateproblem)(data->nlpis[i], &((*problem)->nlpiproblems[i]), name) );
-      assert((*problem)->nlpiproblems[i] != NULL);
+      SCIPnlpiCreateProblem(data->nlpis[i], &((*problem)->nlpiproblems[i]), name);
    }
 
    return SCIP_OKAY;
@@ -193,9 +190,7 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemAll)
    for( i = 0; i < data->nnlpis; ++i )
    {
       assert(data->nlpis[i] != NULL);
-      assert(data->nlpis[i]->nlpifreeproblem != NULL);
-
-      SCIP_CALL( (*data->nlpis[i]->nlpifreeproblem)(data->nlpis[i], &(*problem)->nlpiproblems[i]) );
+      SCIP_CALL( SCIPnlpiFreeProblem(data->nlpis[i], &(*problem)->nlpiproblems[i]) );
    }
 
    BMSfreeMemoryArrayNull(&(*problem)->nlpiproblems);
@@ -245,11 +240,9 @@ SCIP_DECL_NLPIADDVARS( nlpiAddVarsAll )
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
       assert(nlpidata->nlpis[i] != NULL);
-      assert(nlpidata->nlpis[i]->nlpiaddvars != NULL);
       assert(problem->nlpiproblems[i] != NULL);
 
-      SCIP_CALL( (*nlpidata->nlpis[i]->nlpiaddvars)(nlpidata->nlpis[i], problem->nlpiproblems[i], nvars, lbs, ubs,
-            varnames) );
+      SCIP_CALL( SCIPnlpiAddVars(nlpidata->nlpis[i], problem->nlpiproblems[i], nvars, lbs, ubs, varnames) );
    }
 
    return SCIP_OKAY;
@@ -306,11 +299,10 @@ SCIP_DECL_NLPIADDCONSTRAINTS( nlpiAddConstraintsAll )
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
       assert(nlpidata->nlpis[i] != NULL);
-      assert(nlpidata->nlpis[i]->nlpiaddconstraints != NULL);
       assert(problem->nlpiproblems[i] != NULL);
 
-      SCIP_CALL( (*nlpidata->nlpis[i]->nlpiaddconstraints)(nlpidata->nlpis[i], problem->nlpiproblems[i], ncons, lhss, rhss,
-            nlininds, lininds, linvals, nquadelems, quadelems, exprvaridxs, exprtrees, names) );
+      SCIP_CALL( SCIPnlpiAddConstraints(nlpidata->nlpis[i], problem->nlpiproblems[i], ncons, lhss, rhss, nlininds,
+            lininds, linvals, nquadelems, quadelems, exprvaridxs, exprtrees, names) );
    }
 
    return SCIP_OKAY;
@@ -355,11 +347,10 @@ SCIP_DECL_NLPISETOBJECTIVE( nlpiSetObjectiveAll )
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
       assert(nlpidata->nlpis[i] != NULL);
-      assert(nlpidata->nlpis[i]->nlpisetobjective != NULL);
       assert(problem->nlpiproblems[i] != NULL);
 
-      SCIP_CALL( (*nlpidata->nlpis[i]->nlpisetobjective)(nlpidata->nlpis[i], problem->nlpiproblems[i], nlins, lininds,
-            linvals, nquadelems, quadelems, exprvaridxs, exprtree, constant) );
+      SCIP_CALL( SCIPnlpiSetObjective(nlpidata->nlpis[i], problem->nlpiproblems[i], nlins, lininds, linvals, nquadelems,
+            quadelems, exprvaridxs, exprtree, constant) );
    }
 
    return SCIP_OKAY;
@@ -387,11 +378,9 @@ SCIP_DECL_NLPICHGVARBOUNDS( nlpiChgVarBoundsAll )
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
       assert(nlpidata->nlpis[i] != NULL);
-      assert(nlpidata->nlpis[i]->nlpichgvarbounds != NULL);
       assert(problem->nlpiproblems[i] != NULL);
 
-      SCIP_CALL( (*nlpidata->nlpis[i]->nlpichgvarbounds)(nlpidata->nlpis[i], problem->nlpiproblems[i], nvars, indices,
-            lbs, ubs) );
+      SCIP_CALL( SCIPnlpiChgVarBounds(nlpidata->nlpis[i], problem->nlpiproblems[i], nvars, indices, lbs, ubs) );
    }
 
    return SCIP_OKAY;
@@ -419,11 +408,9 @@ SCIP_DECL_NLPICHGCONSSIDES( nlpiChgConsSidesAll )
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
       assert(nlpidata->nlpis[i] != NULL);
-      assert(nlpidata->nlpis[i]->nlpichgconssides != NULL);
       assert(problem->nlpiproblems[i] != NULL);
 
-      SCIP_CALL( (*nlpidata->nlpis[i]->nlpichgconssides)(nlpidata->nlpis[i], problem->nlpiproblems[i], nconss, indices,
-            lhss, rhss) );
+      SCIP_CALL( SCIPnlpiChgConsSides(nlpidata->nlpis[i], problem->nlpiproblems[i], nconss, indices, lhss, rhss) );
    }
 
    return SCIP_OKAY;
@@ -455,7 +442,6 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetAll )
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
       assert(nlpidata->nlpis[i] != NULL);
-      assert(nlpidata->nlpis[i]->nlpidelvarset != NULL);
       assert(problem->nlpiproblems[i] != NULL);
 
       if( i < nlpidata->nnlpis -1 )
@@ -463,8 +449,7 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetAll )
          /* restore dstats entries */
          BMScopyMemoryArray(tmpdstats, dstats, dstatssize);
 
-         SCIP_CALL( (*nlpidata->nlpis[i]->nlpidelvarset)(nlpidata->nlpis[i], problem->nlpiproblems[i], tmpdstats,
-               dstatssize) );
+         SCIP_CALL( SCIPnlpiDelVarSet(nlpidata->nlpis[i], problem->nlpiproblems[i], tmpdstats, dstatssize) );
       }
       else
       {
@@ -472,8 +457,7 @@ SCIP_DECL_NLPIDELVARSET( nlpiDelVarSetAll )
           * As long as all solvers use the SCIP NLPI oracle to store the NLP problem data, this is the case.
           * @TODO Assert that the returned dstats are all the same?
           */
-         SCIP_CALL( (*nlpidata->nlpis[i]->nlpidelvarset)(nlpidata->nlpis[i], problem->nlpiproblems[i], dstats,
-               dstatssize) );
+         SCIP_CALL( SCIPnlpiDelVarSet(nlpidata->nlpis[i], problem->nlpiproblems[i], dstats, dstatssize) );
       }
    }
 
@@ -508,7 +492,6 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetAll )
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
       assert(nlpidata->nlpis[i] != NULL);
-      assert(nlpidata->nlpis[i]->nlpidelconsset != NULL);
       assert(problem->nlpiproblems[i] != NULL);
 
       if( i < nlpidata->nnlpis - 1 )
@@ -516,8 +499,7 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetAll )
          /* restore dstats entries */
          BMScopyMemoryArray(tmpdstats, dstats, dstatssize);
 
-         SCIP_CALL( (*nlpidata->nlpis[i]->nlpidelconsset)(nlpidata->nlpis[i], problem->nlpiproblems[i], tmpdstats,
-            dstatssize) );
+         SCIP_CALL( SCIPnlpiDelConsSet(nlpidata->nlpis[i], problem->nlpiproblems[i], tmpdstats, dstatssize) );
       }
       else
       {
@@ -525,8 +507,7 @@ SCIP_DECL_NLPIDELCONSSET( nlpiDelConstraintSetAll )
           * As long as all solvers use the SCIP NLPI oracle to store the NLP problem data, this is the case.
           * @TODO Assert that the returned dstats are all the same?
           */
-         SCIP_CALL( (*nlpidata->nlpis[i]->nlpidelconsset)(nlpidata->nlpis[i], problem->nlpiproblems[i], dstats,
-               dstatssize) );
+         SCIP_CALL( SCIPnlpiDelConsSet(nlpidata->nlpis[i], problem->nlpiproblems[i], dstats, dstatssize) );
       }
 
    }
@@ -558,11 +539,9 @@ SCIP_DECL_NLPICHGLINEARCOEFS( nlpiChgLinearCoefsAll )
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
       assert(nlpidata->nlpis[i] != NULL);
-      assert(nlpidata->nlpis[i]->nlpichglinearcoefs != NULL);
       assert(problem->nlpiproblems[i] != NULL);
 
-      SCIP_CALL( (*nlpidata->nlpis[i]->nlpichglinearcoefs)(nlpidata->nlpis[i], problem->nlpiproblems[i], idx, nvals,
-            varidxs, vals) );
+      SCIP_CALL( SCIPnlpiChgLinearCoefs(nlpidata->nlpis[i], problem->nlpiproblems[i], idx, nvals, varidxs, vals) );
    }
 
    return SCIP_OKAY;
@@ -591,11 +570,9 @@ SCIP_DECL_NLPICHGQUADCOEFS( nlpiChgQuadraticCoefsAll )
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
       assert(nlpidata->nlpis[i] != NULL);
-      assert(nlpidata->nlpis[i]->nlpichgquadcoefs != NULL);
       assert(problem->nlpiproblems[i] != NULL);
 
-      SCIP_CALL( (*nlpidata->nlpis[i]->nlpichgquadcoefs)(nlpidata->nlpis[i], problem->nlpiproblems[i], idx,
-            nquadelems, quadelems) );
+      SCIP_CALL( SCIPnlpiChgQuadCoefs(nlpidata->nlpis[i], problem->nlpiproblems[i], idx, nquadelems, quadelems) );
    }
 
    return SCIP_OKAY;
@@ -622,11 +599,9 @@ SCIP_DECL_NLPICHGEXPRTREE( nlpiChgExprtreeAll )
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
       assert(nlpidata->nlpis[i] != NULL);
-      assert(nlpidata->nlpis[i]->nlpichgexprtree != NULL);
       assert(problem->nlpiproblems[i] != NULL);
 
-      SCIP_CALL( (*nlpidata->nlpis[i]->nlpichgexprtree)(nlpidata->nlpis[i], problem->nlpiproblems[i], idxcons, exprvaridxs,
-            exprtree) );
+      SCIP_CALL( SCIPnlpiChgExprtree(nlpidata->nlpis[i], problem->nlpiproblems[i], idxcons, exprvaridxs, exprtree) );
    }
 
    return SCIP_OKAY;
@@ -655,11 +630,9 @@ SCIP_DECL_NLPICHGNONLINCOEF( nlpiChgNonlinCoefAll )
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
       assert(nlpidata->nlpis[i] != NULL);
-      assert(nlpidata->nlpis[i]->nlpichgnonlincoef != NULL);
       assert(problem->nlpiproblems[i] != NULL);
 
-      SCIP_CALL( (*nlpidata->nlpis[i]->nlpichgnonlincoef)(nlpidata->nlpis[i], problem->nlpiproblems[i], idxcons, idxparam,
-            value) );
+      SCIP_CALL( SCIPnlpiChgNonlinCoef(nlpidata->nlpis[i], problem->nlpiproblems[i], idxcons, idxparam, value) );
    }
 
    return SCIP_OKAY;
@@ -684,10 +657,9 @@ SCIP_DECL_NLPICHGOBJCONSTANT( nlpiChgObjConstantAll )
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
       assert(nlpidata->nlpis[i] != NULL);
-      assert(nlpidata->nlpis[i]->nlpichgobjconstant != NULL);
       assert(problem->nlpiproblems[i] != NULL);
 
-      SCIP_CALL( (*nlpidata->nlpis[i]->nlpichgobjconstant)(nlpidata->nlpis[i], problem->nlpiproblems[i], objconstant) );
+      SCIP_CALL( SCIPnlpiChgObjConstant(nlpidata->nlpis[i], problem->nlpiproblems[i], objconstant) );
    }
 
    return SCIP_OKAY;
@@ -715,11 +687,10 @@ SCIP_DECL_NLPISETINITIALGUESS( nlpiSetInitialGuessAll )
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
       assert(nlpidata->nlpis[i] != NULL);
-      assert(nlpidata->nlpis[i]->nlpisetinitialguess != NULL);
       assert(problem->nlpiproblems[i] != NULL);
 
-      SCIP_CALL( (*nlpidata->nlpis[i]->nlpisetinitialguess)(nlpidata->nlpis[i], problem->nlpiproblems[i], primalvalues,
-            consdualvalues, varlbdualvalues, varubdualvalues) );
+      SCIP_CALL( SCIPnlpiSetInitialGuess(nlpidata->nlpis[i], problem->nlpiproblems[i], primalvalues, consdualvalues,
+            varlbdualvalues, varubdualvalues) );
    }
 
    return SCIP_OKAY;
@@ -761,11 +732,10 @@ SCIP_DECL_NLPISOLVE( nlpiSolveAll )
       SCIP_Bool update;
 
       assert(nlpidata->nlpis[i] != NULL);
-      assert(nlpidata->nlpis[i]->nlpisolve != NULL);
       assert(problem->nlpiproblems[i] != NULL);
 
       /* solve NLP */
-      SCIP_CALL( (*nlpidata->nlpis[i]->nlpisolve)(nlpidata->nlpis[i], problem->nlpiproblems[i]) );
+      SCIP_CALL( SCIPnlpiSolve(nlpidata->nlpis[i], problem->nlpiproblems[i]) );
 
       termstat = SCIPnlpiGetTermstat(nlpidata->nlpis[i], problem->nlpiproblems[i]);
       solstat = SCIPnlpiGetSolstat(nlpidata->nlpis[i], problem->nlpiproblems[i]);
@@ -842,8 +812,7 @@ SCIP_DECL_NLPIGETSOLSTAT( nlpiGetSolstatAll )
    assert(problem->nlpiproblems[problem->bestidx] != NULL);
 
    /* return the solution status of the first nlpi */
-   return (*nlpidata->nlpis[problem->bestidx]->nlpigetsolstat)(nlpidata->nlpis[problem->bestidx],
-      problem->nlpiproblems[problem->bestidx]);
+   return SCIPnlpiGetSolstat(nlpidata->nlpis[problem->bestidx], problem->nlpiproblems[problem->bestidx]);
 }
 
 /** gives termination reason
@@ -867,8 +836,7 @@ SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatAll )
    assert(problem->nlpiproblems[problem->bestidx] != NULL);
 
    /* return the solution status of the first nlpi */
-   return (*nlpidata->nlpis[problem->bestidx]->nlpigettermstat)(nlpidata->nlpis[problem->bestidx],
-      problem->nlpiproblems[problem->bestidx]);
+   return SCIPnlpiGetTermstat(nlpidata->nlpis[problem->bestidx], problem->nlpiproblems[problem->bestidx]);
 }
 
 /** gives primal and dual solution values
@@ -900,8 +868,8 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionAll )
    assert(problem->nlpiproblems[problem->bestidx] != NULL);
 
    /* return the solution status of the first nlpi */
-   SCIP_CALL( (*nlpidata->nlpis[problem->bestidx]->nlpigetsolution)(nlpidata->nlpis[problem->bestidx], problem->nlpiproblems[problem->bestidx], primalvalues,
-         consdualvalues, varlbdualvalues, varubdualvalues, objval) );
+   SCIP_CALL( SCIPnlpiGetSolution(nlpidata->nlpis[problem->bestidx], problem->nlpiproblems[problem->bestidx],
+         primalvalues, consdualvalues, varlbdualvalues, varubdualvalues, objval) );
 
    return SCIP_OKAY;
 }
@@ -929,7 +897,8 @@ SCIP_DECL_NLPIGETSTATISTICS( nlpiGetStatisticsAll )
    assert(problem->nlpiproblems[problem->bestidx] != NULL);
 
    /* collect statistics of the first solver */
-   SCIP_CALL( (*nlpidata->nlpis[problem->bestidx]->nlpigetstatistics)(nlpidata->nlpis[problem->bestidx], problem->nlpiproblems[problem->bestidx], statistics) );
+   SCIP_CALL( SCIPnlpiGetStatistics(nlpidata->nlpis[problem->bestidx], problem->nlpiproblems[problem->bestidx],
+         statistics) );
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1006,10 +975,9 @@ SCIP_DECL_NLPIGETINTPAR( nlpiGetIntParAll )
    assert(nlpidata != NULL);
    assert(nlpidata->nlpis != NULL);
    assert(nlpidata->nlpis[0] != NULL);
-   assert(nlpidata->nlpis[0]->nlpigetintpar != NULL);
 
    /* take the first nlpi */
-   SCIP_CALL( (*nlpidata->nlpis[0]->nlpigetintpar)(nlpidata->nlpis[0], problem->nlpiproblems[0], type, ival) );
+   SCIP_CALL( SCIPnlpiGetIntPar(nlpidata->nlpis[0], problem->nlpiproblems[0], type, ival) );
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1034,10 +1002,9 @@ SCIP_DECL_NLPISETINTPAR( nlpiSetIntParAll )
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
       assert(nlpidata->nlpis[i] != NULL);
-      assert(nlpidata->nlpis[i]->nlpisetintpar != NULL);
       assert(problem->nlpiproblems[i] != NULL);
 
-      SCIP_CALL( (*nlpidata->nlpis[i]->nlpisetintpar)(nlpidata->nlpis[i], problem->nlpiproblems[i], type, ival) );
+      SCIP_CALL( SCIPnlpiSetIntPar(nlpidata->nlpis[i], problem->nlpiproblems[i], type, ival) );
    }
 
    return SCIP_OKAY;
@@ -1063,10 +1030,9 @@ SCIP_DECL_NLPIGETREALPAR( nlpiGetRealParAll )
    assert(nlpidata != NULL);
    assert(nlpidata->nlpis != NULL);
    assert(nlpidata->nlpis[0] != NULL);
-   assert(nlpidata->nlpis[0]->nlpigetrealpar != NULL);
 
    /* take the first nlpi */
-   SCIP_CALL( (*nlpidata->nlpis[0]->nlpigetrealpar)(nlpidata->nlpis[0], problem->nlpiproblems[0], type, dval) );
+   SCIP_CALL( SCIPnlpiGetRealPar(nlpidata->nlpis[0], problem->nlpiproblems[0], type, dval) );
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1091,17 +1057,17 @@ SCIP_DECL_NLPISETREALPAR( nlpiSetRealParAll )
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
       assert(nlpidata->nlpis[i] != NULL);
-      assert(nlpidata->nlpis[i]->nlpisetrealpar != NULL);
 
       if( type == SCIP_NLPPAR_INFINITY )
       {
-         SCIP_CALL( (*nlpidata->nlpis[i]->nlpisetrealpar)(nlpidata->nlpis[i], NULL, type, dval) );
+         SCIP_CALL( SCIPnlpiSetRealPar(nlpidata->nlpis[i], NULL, type, dval) );
       }
       else
       {
          assert(problem->nlpiproblems != NULL);
          assert(problem->nlpiproblems[i] != NULL);
-         SCIP_CALL( (*nlpidata->nlpis[i]->nlpisetrealpar)(nlpidata->nlpis[i], problem->nlpiproblems[i], type, dval) );
+
+         SCIP_CALL( SCIPnlpiSetRealPar(nlpidata->nlpis[i], problem->nlpiproblems[i], type, dval) );
       }
    }
 
@@ -1128,10 +1094,9 @@ SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParAll )
    assert(nlpidata != NULL);
    assert(nlpidata->nlpis != NULL);
    assert(nlpidata->nlpis[0] != NULL);
-   assert(nlpidata->nlpis[0]->nlpigetstringpar != NULL);
 
    /* take the first nlpi */
-   SCIP_CALL( (*nlpidata->nlpis[0]->nlpigetstringpar)(nlpidata->nlpis[0], problem->nlpiproblems[0], type, sval) );
+   SCIP_CALL( SCIPnlpiGetStringPar(nlpidata->nlpis[0], problem->nlpiproblems[0], type, sval) );
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -1156,10 +1121,9 @@ SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParAll )
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
       assert(nlpidata->nlpis[i] != NULL);
-      assert(nlpidata->nlpis[i]->nlpisetstringpar != NULL);
       assert(problem->nlpiproblems[i] != NULL);
 
-      SCIP_CALL( (*nlpidata->nlpis[i]->nlpisetstringpar)(nlpidata->nlpis[i], problem->nlpiproblems[i], type, sval) );
+      SCIP_CALL( SCIPnlpiSetStringPar(nlpidata->nlpis[i], problem->nlpiproblems[i], type, sval) );
    }
 
    return SCIP_OKAY;
@@ -1187,9 +1151,8 @@ SCIP_DECL_NLPISETMESSAGEHDLR( nlpiSetMessageHdlrAll )
    for( i = 0; i < nlpidata->nnlpis; ++i )
    {
       assert(nlpidata->nlpis[i] != NULL);
-      assert(nlpidata->nlpis[i]->nlpisetmessagehdlr != NULL);
 
-      SCIP_CALL( (*nlpidata->nlpis[i]->nlpisetmessagehdlr)(nlpidata->nlpis[i], messagehdlr) );
+      SCIP_CALL( SCIPnlpiSetMessageHdlr(nlpidata->nlpis[i], messagehdlr) );
    }
 
    return SCIP_OKAY;  /*lint !e527*/
