@@ -7222,6 +7222,7 @@ SCIP_RETCODE computeInteriorPoint(
 
       case SCIP_NLPSOLSTAT_LOCINFEASIBLE:
       case SCIP_NLPSOLSTAT_GLOBINFEASIBLE:
+      case SCIP_NLPSOLSTAT_UNKNOWN:
          /* fallthrough */
          /* TODO: we could still use the point, and let evaluateGauge decide whether the point is interior or not */
          SCIPdebugMsg(scip, "cons <%s>: failed to find an interior point.  solution status: %d, termination status: %d\n",
@@ -7229,7 +7230,6 @@ SCIP_RETCODE computeInteriorPoint(
          goto TERMINATE;
 
       case SCIP_NLPSOLSTAT_UNBOUNDED:
-      case SCIP_NLPSOLSTAT_UNKNOWN:
       default:
          /* fallthrough */
          SCIPerrorMessage("cons <%s>: undefined behaviour of NLP Solver.  solution status: %d, termination status: %d\n",
@@ -7242,7 +7242,7 @@ SCIP_RETCODE computeInteriorPoint(
     * note: nlpiGetSolution (at least for IPOPT) makes interiorpoint point to the internal solution stored in the
     * nlpi problem data structure; we need to copy it here because it will be destroyed once the problem is free'd
     */
-   SCIP_CALL( SCIPnlpiGetSolution(nlpi, prob, &interiorpoint, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPnlpiGetSolution(nlpi, prob, &interiorpoint, NULL, NULL, NULL, NULL) );
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->interiorpoint), nquadvars) );
 
