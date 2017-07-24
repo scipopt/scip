@@ -44,6 +44,7 @@ option(NOBLKMEM "should block and buffer memory be disabled" OFF)
 option(NOBUFMEM "should block and buffer memory be disabled" OFF)
 option(COVERAGE "enable coverage support" OFF)
 SET(COVERAGE_CTEST_ARGS "" CACHE STRING "additional ctest arguments for coverage")
+option(MT "use static runtime libraries for Visual Studio compiler" OFF)
 
 set(TPI none CACHE STRING "options for thread support library")  #create the variable
 set_property(CACHE TPI PROPERTY STRINGS none tny omp)  #define list of values GUI will offer for the variable
@@ -75,6 +76,14 @@ set(CMAKE_MACOSX_RPATH ON)
 if(WIN32)
     add_definitions(-DNO_SIGACTION)
     add_definitions(-DNO_STRTOK_R)
+endif()
+
+# Visual Studio compiler with static runtime libraries
+if(MSVC AND MT)
+    set(CMAKE_CXX_FLAGS_RELEASE "/MT")
+    set(CMAKE_CXX_FLAGS_DEBUG "/MTd")
+    set(CMAKE_C_FLAGS_RELEASE "/MT")
+    set(CMAKE_C_FLAGS_DEBUG "/MTd")
 endif()
 
 #set expression interpreter file that should be used
