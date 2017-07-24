@@ -6933,14 +6933,14 @@ SCIP_RETCODE conflictAnalyzeLP(
       }
       else
       {
-         /* don't analyze bound exceeding LPs (we may end here if strong branching LPs should analyzed) */
+         /* don't analyze bound exceeding LPs (we may end here if strong branching LPs should be analyzed) */
          if( set->conf_useboundlp )
             return SCIP_OKAY;
 
          SCIPdebugMessage(" -> LP exceeds the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiuobjlim);
       }
    }
-   /* don't analyze infeasible LPs (we may end here if strong branching LPs should analyzed) */
+   /* don't analyze infeasible LPs (we may end here if strong branching LPs should be analyzed) */
    else if( !set->conf_useinflp )
       return SCIP_OKAY;
 
