@@ -6119,6 +6119,8 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
    SCIP_CONSEXPR_EXPR**  expr                /**< pointer to expression to be released */
    )
 {
+   int i;
+
    assert(expr != NULL);
    assert(*expr != NULL);
 
@@ -6133,6 +6135,25 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
          SCIP_CALL( SCIPreleaseVar(scip, &(*expr)->auxvar) );
       }
       assert((*expr)->auxvar == NULL);
+
+      /* free data stored by nonlinear handlers */
+      for( i = 0; i < (*expr)->nnlhdlrs; ++i )
+      {
+         SCIP_CONSEXPR_NLHDLR* nlhdlr;
+
+         /* nothing to free */
+         if( (*expr)->nlhdlrsexprdata[i] == NULL )
+            continue;
+
+         nlhdlr = (*expr)->nlhdlrs[i];
+         assert(nlhdlr != NULL);
+
+         if( nlhdlr->freeexprdata != NULL )
+         {
+            SCIP_CALL( (*nlhdlr->freeexprdata)(scip, nlhdlr, (*expr)->nlhdlrsexprdata + i) );
+            assert((*expr)->nlhdlrsexprdata[i] == NULL);
+         }
+      }
 
       /* handle the root expr separately: free its data here */
       if( (*expr)->exprdata != NULL && (*expr)->exprhdlr->freedata != NULL )
