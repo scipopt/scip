@@ -3748,7 +3748,9 @@ SCIP_RETCODE writeOpbFixedVars(
    FILE*const            file,               /**< output file, or NULL if standard output should be used */
    SCIP_VAR**            vars,               /**< array with active (binary) variables */
    int                   nvars,              /**< number of active variables in the problem */
-   SCIP_HASHTABLE*const  printedfixing       /**< hashmap to store if a fixed variable was already printed */
+   SCIP_HASHTABLE*const  printedfixing,      /**< hashmap to store if a fixed variable was already printed */
+   char const*const      multisymbol,        /**< the multiplication symbol to use between coefficient and variable */
+   SCIP_Bool const       transformed         /**< TRUE iff problem is the transformed problem */
    )
 {
    char linebuffer[OPB_MAX_LINELEN];
@@ -3760,6 +3762,7 @@ SCIP_RETCODE writeOpbFixedVars(
    assert(file != NULL);
    assert(vars != NULL || nvars == 0);
    assert(printedfixing != NULL);
+   assert(multisymbol != NULL);
 
    clearBuffer(linebuffer, &linecnt);
 
@@ -3767,21 +3770,39 @@ SCIP_RETCODE writeOpbFixedVars(
    for( v = 0; v < nvars; ++v )
    {
       SCIP_VAR* var;
-      SCIP_Bool neg;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Bool neg = FALSE;
 
       assert( vars != NULL );
       var = vars[v];
 
-      /* print fixed and-resultants */
-      if( SCIPvarGetLbLocal(var) > 0.5 || SCIPvarGetUbLocal(var) < 0.5 )
+      if( transformed )
       {
-         SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &var, &neg) );
+         /* in case the transformed is written only local bounds are posted which are valid in the current node */
+         lb = SCIPvarGetLbLocal(var);
+         ub = SCIPvarGetUbLocal(var);
+      }
+      else
+      {
+         lb = SCIPvarGetLbOriginal(var);
+         ub = SCIPvarGetUbOriginal(var);
+      }
+      assert(lb > -0.5 && ub < 1.5);
+      assert(SCIPisFeasIntegral(scip, lb));
+      assert(SCIPisFeasIntegral(scip, ub));
+
+      /* print fixed and-resultants */
+      if( lb > 0.5 || ub < 0.5 )
+      {
+         if( transformed ) {
+            SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &var, &neg) );
+         }
 
          if( SCIPhashtableExists(printedfixing, (void*)var) )
             continue;
 
-         assert(SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)));
-         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s = %g;\n", neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), SCIPvarGetLbLocal(var));
+         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "+1%s%s%s = %g ;\n", multisymbol, neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), lb);
          appendBuffer(scip, file, linebuffer, &linecnt, buffer);
 
          /* add variable to the hashmap */
@@ -3830,17 +3851,31 @@ SCIP_RETCODE writeOpbRelevantAnds(
    {
       SCIP_VAR* var;
       SCIP_Bool neg;
+      SCIP_Real lb;
+      SCIP_Real ub;
 
       assert( resvars != NULL );
       resvar = resvars[r];
 
+      if( transformed )
+      {
+         /* in case the transformed is written only local bounds are posted which are valid in the current node */
+         lb = SCIPvarGetLbLocal(resvar);
+         ub = SCIPvarGetUbLocal(resvar);
+      }
+      else
+      {
+         lb = SCIPvarGetLbOriginal(resvar);
+         ub = SCIPvarGetUbOriginal(resvar);
+      }
+
       /* print fixed and-resultants */
-      if( SCIPvarGetLbLocal(resvar) > 0.5 || SCIPvarGetUbLocal(resvar) < 0.5 )
+      if( lb > 0.5 || ub < 0.5 )
       {
          SCIP_CALL( SCIPgetBinvarRepresentative(scip, resvar, &var, &neg) );
 
-         assert(SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)));
-         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s = %g;\n", neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), SCIPvarGetLbLocal(var));
+         assert(SCIPisFeasIntegral(scip, lb));
+         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "+1%s%s%s = %g ;\n", multisymbol, neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), lb);
          appendBuffer(scip, file, linebuffer, &linecnt, buffer);
 
          /* add variable to the hashmap */
@@ -3856,12 +3891,24 @@ SCIP_RETCODE writeOpbRelevantAnds(
          assert( andvars[r] != NULL );
 	 assert( andvars[r][v] != NULL );
 
-         SCIP_CALL( SCIPgetBinvarRepresentative(scip, andvars[r][v], &var, &neg) ); /*lint !e613 */
-
-         if( SCIPvarGetLbLocal(var) > 0.5 || SCIPvarGetUbLocal(var) < 0.5 )
+         if( transformed )
          {
-            assert(SCIPisFeasIntegral(scip, SCIPvarGetLbLocal(var)));
-            (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s%s = %g;\n", neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), SCIPvarGetLbLocal(var));
+            /* in case the transformed is written only local bounds are posted which are valid in the current node */
+            lb = SCIPvarGetLbLocal(andvars[r][v]);
+            ub = SCIPvarGetUbLocal(andvars[r][v]);
+         }
+         else
+         {
+            lb = SCIPvarGetLbOriginal(andvars[r][v]);
+            ub = SCIPvarGetUbOriginal(andvars[r][v]);
+         }
+
+         if( lb > 0.5 || ub < 0.5 )
+         {
+            SCIP_CALL( SCIPgetBinvarRepresentative(scip, andvars[r][v], &var, &neg) ); /*lint !e613 */
+
+            assert(SCIPisFeasIntegral(scip, lb));
+            (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "+1%s%s%s = %g ;\n", multisymbol, neg ? "~" : "", strstr(SCIPvarGetName(neg ? SCIPvarGetNegationVar(var) : var), "x"), lb);
             appendBuffer(scip, file, linebuffer, &linecnt, buffer);
 
             /* add variable to the hashmap */
@@ -3948,7 +3995,6 @@ SCIP_RETCODE writeOpbRelevantAnds(
 
          firstprinted = FALSE;
 
-         /* cppcheck-suppress nullPointerRedundantCheck */
          assert( andvars != NULL && nandvars != NULL );
          assert( andvars[r] != NULL || nandvars[r] == 0 );
 
@@ -4100,7 +4146,7 @@ SCIP_RETCODE writeOpb(
    }
 
    /* write fixed variables */
-   SCIP_CALL( writeOpbFixedVars(scip, file, vars, nvars, printedfixing) );
+   SCIP_CALL( writeOpbFixedVars(scip, file, vars, nvars, printedfixing, multisymbol, transformed) );
 
    SCIPhashtableFree(&printedfixing);
 

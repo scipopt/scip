@@ -167,8 +167,8 @@ SCIP_DECL_HEURINIT(heurInitLocks) /*lint --e{715}*/
    heurdata->usednodes = 0;
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         DEFAULT_RANDSEED) );
 
    return SCIP_OKAY;
 }
@@ -186,7 +186,7 @@ SCIP_DECL_HEUREXIT(heurExitLocks) /*lint --e{715}*/
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -500,11 +500,17 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
             SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
             if( lastfixval < 0.5 )
             {
-               SCIP_CALL( SCIPfixVarProbing(scip, var, 1.0) );
+               if( SCIPvarGetUbLocal(var) > 0.5 )
+               {
+                  SCIP_CALL( SCIPfixVarProbing(scip, var, 1.0) );
+               }
             }
             else
             {
-               SCIP_CALL( SCIPfixVarProbing(scip, var, 0.0) );
+               if( SCIPvarGetLbLocal(var) < 0.5 )
+               {
+                  SCIP_CALL( SCIPfixVarProbing(scip, var, 0.0) );
+               }
             }
 
             SCIPdebugMsg(scip, "last fixing led to infeasibility trying other bound\n");
@@ -675,8 +681,6 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
 #else
       SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &cutoff) );
 #endif
-      assert(nvars == nbinvars ? (SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL || cutoff) : TRUE);
-
       lpstatus = SCIPgetLPSolstat(scip);
 
       SCIPdebugMsg(scip, " -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
@@ -814,7 +818,7 @@ SCIP_DECL_HEUREXEC(heurExecLocks)
       }
 
       /* speed up sub-SCIP by not checking dual LP feasibility */
-      SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
 
       /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
        * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the

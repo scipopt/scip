@@ -243,7 +243,6 @@ struct SCIP_RandNumGen
    uint32_t              xor_seed;           /**< Xorshift seed */
    uint32_t              mwc_seed;           /**< Multiply-with-carry seed */
    uint32_t              cst_seed;           /**< constant seed */
-   BMS_BLKMEM*           blkmem;             /**< block memory */
 };
 
 /** union find data structure for querying and updating connectedness in a graph with integer vertices 0,...,n - 1 */

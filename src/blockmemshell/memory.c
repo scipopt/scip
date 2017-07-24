@@ -40,6 +40,7 @@
 #endif
 
 #include "blockmemshell/memory.h"
+#include "scip/rbtree.h"
 
 /* uncomment the following for debugging:
  * - CHECKMEM:      run a thorough test on every memory function call, very slow
@@ -691,6 +692,7 @@ struct Freelist
 /** chunk of memory elements */
 struct Chunk
 {
+   SCIP_RBTREE_HOOKS;                        /**< organize chunks in a red black tree */
    void*                 store;              /**< data storage */
    void*                 storeend;           /**< points to the first byte in memory not belonging to the chunk */
    FREELIST*             eagerfree;          /**< eager free list */
@@ -700,18 +702,16 @@ struct Chunk
    int                   elemsize;           /**< size of each element in the chunk */
    int                   storesize;          /**< number of elements in this chunk */
    int                   eagerfreesize;      /**< number of elements in the eager free list */
-   int                   arraypos;           /**< position of chunk in the chunk header's chunkarray */
 }; /* the chunk data structure must be aligned, because the storage is allocated directly behind the chunk header! */
 
 /** collection of memory chunks of the same element size */
 struct BMS_ChkMem
 {
+   CHUNK*                rootchunk;          /**< array with the chunks of the chunk header */
    FREELIST*             lazyfree;           /**< lazy free list of unused memory elements of all chunks of this chunk block */
-   CHUNK**               chunks;             /**< array with the chunks of the chunk header */
    CHUNK*                firsteager;         /**< first chunk with a non-empty eager free list */ 
    BMS_CHKMEM*           nextchkmem;         /**< next chunk block in the block memory's hash list */
    int                   elemsize;           /**< size of each memory element in the chunk memory */
-   int                   chunkssize;         /**< size of the chunks array */
    int                   nchunks;            /**< number of chunks in this chunk block (used slots of the chunk array) */
    int                   lastchunksize;      /**< number of elements in the last allocated chunk */
    int                   storesize;          /**< total number of elements in this chunk block */
@@ -727,6 +727,13 @@ struct BMS_ChkMem
    int                   ngarbagefrees;      /**< number of chunks, the garbage collector freed */
 #endif
 };
+
+/* define a find function to find a chunk in a red black tree of chunks */
+#define CHUNK_LT(ptr,chunk)  ptr < chunk->store
+#define CHUNK_GT(ptr,chunk)  ptr >= chunk->storeend
+
+static
+SCIP_DEF_RBTREE_FIND(rbTreeFindChunk, const void*, CHUNK, CHUNK_LT, CHUNK_GT)
 
 
 /** aligns the given byte size corresponding to the minimal alignment */
@@ -785,29 +792,12 @@ CHUNK* findChunk(
    )
 {
    CHUNK* chunk;
-   int left;
-   int right;
-   int middle;
 
    assert(chkmem != NULL);
    assert(ptr != NULL);
 
-   /* binary search for the chunk containing the ptr */
-   left = 0;
-   right = chkmem->nchunks-1;
-   while( left <= right )
-   {
-      middle = (left+right)/2;
-      assert(0 <= middle && middle < chkmem->nchunks);
-      chunk = chkmem->chunks[middle];
-      assert(chunk != NULL);
-      if( ptr < chunk->store )
-         right = middle-1;
-      else if( ptr >= chunk->storeend )
-         left = middle+1;
-      else
-         return chunk;
-   }
+   if( rbTreeFindChunk(chkmem->rootchunk, ptr, &chunk) == 0 )
+      return chunk;
 
    /* ptr was not found in chunk */
    return NULL;
@@ -874,33 +864,27 @@ void checkChkmem(
    const BMS_CHKMEM*     chkmem              /**< chunk block */
    )
 {
-   CHUNK* chunk;
    FREELIST* lazy;
    int nchunks;
    int storesize;
    int lazyfreesize;
    int eagerfreesize;
-   int i;
 
    assert(chkmem != NULL);
-   assert(chkmem->chunks != NULL || chkmem->chunkssize == 0);
-   assert(chkmem->nchunks <= chkmem->chunkssize);
 
-   nchunks = 0;    
-   storesize = 0;    
-   lazyfreesize = 0; 
+   nchunks = 0;
+   storesize = 0;
+   lazyfreesize = 0;
    eagerfreesize = 0;
 
-   for( i = 0; i < chkmem->nchunks; ++i )
+   FOR_EACH_NODE(CHUNK*, chunk, chkmem->rootchunk,
    {
-      chunk = chkmem->chunks[i];
-      assert(chunk != NULL);
-
       checkChunk(chunk);
       nchunks++;
       storesize += chunk->storesize;
       eagerfreesize += chunk->eagerfreesize;
-   }
+   })
+
    assert(chkmem->nchunks == nchunks);
    assert(chkmem->storesize == storesize);
    assert(chkmem->eagerfreesize == eagerfreesize);
@@ -913,7 +897,7 @@ void checkChkmem(
    lazy = chkmem->lazyfree;
    while( lazy != NULL )
    {
-      chunk = findChunk(chkmem, lazy);
+      CHUNK* chunk = findChunk(chkmem, lazy);
       assert(chunk != NULL);
       assert(chunk->chkmem == chkmem);
       lazyfreesize++;
@@ -933,73 +917,24 @@ void checkChkmem(
 static
 int linkChunk(
    BMS_CHKMEM*           chkmem,             /**< chunk block */
-   CHUNK*                chunk,              /**< memory chunk */
-   long long*            memsize             /**< pointer to total size of allocated memory (or NULL) */
+   CHUNK*                chunk               /**< memory chunk */
    )
 {
-   CHUNK* curchunk;
-   int left;
-   int right;
-   int middle;
-   int i;
+   CHUNK* parent;
+   int pos;
 
    assert(chkmem != NULL);
-   assert(chkmem->nchunks <= chkmem->chunkssize);
    assert(chunk != NULL);
    assert(chunk->store != NULL);
 
    debugMessage("linking chunk %p to chunk block %p [elemsize:%d, %d chunks]\n", 
       (void*)chunk, (void*)chkmem, chkmem->elemsize, chkmem->nchunks);
 
-   /* binary search for the position to insert the chunk */
-   left = -1;
-   right = chkmem->nchunks;
-   while( left < right-1 )
-   {
-      middle = (left+right)/2;
-      assert(0 <= middle && middle < chkmem->nchunks);
-      assert(left < middle && middle < right);
-      curchunk = chkmem->chunks[middle];
-      assert(curchunk != NULL);
-      if( chunk->store < curchunk->store )
-         right = middle;
-      else
-      {
-         assert(chunk->store >= curchunk->storeend);
-         left = middle;
-      }
-   }
-   assert(-1 <= left && left < chkmem->nchunks);
-   assert(0 <= right && right <= chkmem->nchunks);
-   assert(left+1 == right);
-   assert(left == -1 || chkmem->chunks[left]->storeend <= chunk->store);
-   assert(right == chkmem->nchunks || chunk->storeend <= chkmem->chunks[right]->store);
+   pos = rbTreeFindChunk(chkmem->rootchunk, chunk->store, &parent);
+   assert(pos != 0);
 
-   /* ensure, that chunk array can store the additional chunk */
-   if( chkmem->nchunks == chkmem->chunkssize )
-   {
-      chkmem->chunkssize = 2*(chkmem->nchunks+1);
-      BMSreallocMemoryArray(&chkmem->chunks, chkmem->chunkssize);
-      if( chkmem->chunks == NULL )
-         return FALSE;
+   SCIPrbtreeInsert(&chkmem->rootchunk, parent, pos, chunk);
 
-      if( memsize != NULL )
-         (*memsize) += (long long)((chkmem->chunkssize - chkmem->nchunks) * sizeof(CHUNK*)); /*lint !e776*/
-
-   }
-   assert(chkmem->nchunks < chkmem->chunkssize);
-   assert(chkmem->chunks != NULL);
-
-   /* move all chunks from 'right' to end one position to the right */
-   for( i = chkmem->nchunks; i > right; --i )
-   {
-      chkmem->chunks[i] = chkmem->chunks[i-1];
-      chkmem->chunks[i]->arraypos = i;
-   }
-
-   /* insert chunk at position 'right' */
-   chunk->arraypos = right;
-   chkmem->chunks[right] = chunk;
    chkmem->nchunks++;
    chkmem->storesize += chunk->storesize;
 
@@ -1013,7 +948,6 @@ void unlinkChunk(
    )
 {
    BMS_CHKMEM* chkmem;
-   int i;
 
    assert(chunk != NULL);
    assert(chunk->eagerfree == NULL);
@@ -1023,18 +957,13 @@ void unlinkChunk(
    chkmem = chunk->chkmem;
    assert(chkmem != NULL);
    assert(chkmem->elemsize == chunk->elemsize);
-   assert(0 <= chunk->arraypos && chunk->arraypos < chkmem->nchunks);
-   assert(chkmem->chunks[chunk->arraypos] == chunk);
 
    debugMessage("unlinking chunk %p from chunk block %p [elemsize:%d, %d chunks]\n", 
       (void*)chunk, (void*)chkmem, chkmem->elemsize, chkmem->nchunks);
 
    /* remove the chunk from the chunks of the chunk block */
-   for( i = chunk->arraypos; i < chkmem->nchunks-1; ++i )
-   {
-      chkmem->chunks[i] = chkmem->chunks[i+1];
-      chkmem->chunks[i]->arraypos = i;
-   }
+   SCIPrbtreeDelete(&chkmem->rootchunk, chunk);
+
    chkmem->nchunks--;
    chkmem->storesize -= chunk->storesize;
 }
@@ -1132,7 +1061,6 @@ int createChunk(
    newchunk->elemsize = chkmem->elemsize;
    newchunk->storesize = storesize;
    newchunk->eagerfreesize = 0;
-   newchunk->arraypos = -1;
 
    if( memsize != NULL )
       (*memsize) += ((long long)(sizeof(CHUNK) + (long long)storesize * chkmem->elemsize));
@@ -1154,7 +1082,7 @@ int createChunk(
    chkmem->lazyfreesize += newchunk->storesize;
 
    /* link chunk into chunk block */
-   retval = linkChunk(chkmem, newchunk, memsize);
+   retval = linkChunk(chkmem, newchunk);
 
    checkChkmem(chkmem);
 
@@ -1190,7 +1118,7 @@ void freeChunk(
    assert(chunk->store != NULL);
    assert(chunk->eagerfree != NULL);
    assert(chunk->chkmem != NULL);
-   assert(chunk->chkmem->chunks != NULL);
+   assert(chunk->chkmem->rootchunk != NULL);
    assert(chunk->chkmem->firsteager != NULL);
    assert(chunk->eagerfreesize == chunk->storesize);
 
@@ -1296,11 +1224,10 @@ BMS_CHKMEM* createChkmem(
       return NULL;
 
    chkmem->lazyfree = NULL;
-   chkmem->chunks = NULL;
+   chkmem->rootchunk = NULL;
    chkmem->firsteager = NULL;
    chkmem->nextchkmem = NULL;
    chkmem->elemsize = size;
-   chkmem->chunkssize = 0;
    chkmem->nchunks = 0;
    chkmem->lastchunksize = 0;
    chkmem->storesize = 0;
@@ -1328,13 +1255,14 @@ void clearChkmem(
    long long*            memsize             /**< pointer to total size of allocated memory (or NULL) */
    )
 {
-   int i;
-
    assert(chkmem != NULL);
 
    /* destroy all chunks of the chunk block */
-   for( i = 0; i < chkmem->nchunks; ++i )
-      destroyChunk(chkmem->chunks[i], memsize);
+   FOR_EACH_NODE(CHUNK*, chunk, chkmem->rootchunk,
+   {
+      SCIPrbtreeDelete(&chkmem->rootchunk, chunk);
+      destroyChunk(chunk, memsize);
+   })
 
    chkmem->lazyfree = NULL;
    chkmem->firsteager = NULL;
@@ -1356,14 +1284,13 @@ void destroyChkmem(
    assert(*chkmem != NULL);
 
    clearChkmem(*chkmem, memsize);
-   BMSfreeMemoryArrayNull(&(*chkmem)->chunks);
 
 #ifndef NDEBUG
    BMSfreeMemoryArrayNull(&(*chkmem)->filename);
 #endif
 
    if( memsize != NULL )
-      (*memsize) -= (long long)((sizeof(BMS_CHKMEM) + (*chkmem)->chunkssize * sizeof(CHUNK*)));
+      (*memsize) -= (long long)(sizeof(BMS_CHKMEM));
 
    BMSfreeMemory(chkmem);
 }
@@ -1734,8 +1661,7 @@ void checkBlkmem(
       while( chkmem != NULL )
       {
          checkChkmem(chkmem);
-         tmpmemalloc += ((chkmem->elemsize * chkmem->storesize) + chkmem->nchunks * sizeof(CHUNK) + sizeof(BMS_CHKMEM)
-            + chkmem->chunkssize * sizeof(CHUNK*));
+         tmpmemalloc += ((chkmem->elemsize * chkmem->storesize) + chkmem->nchunks * sizeof(CHUNK) + sizeof(BMS_CHKMEM));
          tmpmemused += (chkmem->elemsize * (chkmem->storesize - chkmem->eagerfreesize - chkmem->lazyfreesize));
          chkmem = chkmem->nextchkmem;
       }
@@ -2346,7 +2272,6 @@ void BMSdisplayBlockMemory_call(
    long long allocedmem = 0;
    long long freemem = 0;
    int i;
-   int c;
 
 #ifndef NDEBUG
    printInfo(" ElSize #Chunk #Eag  #Elems  #EagFr  #LazFr  #GCl #GFr  Free  MBytes First Allocator\n");
@@ -2361,15 +2286,13 @@ void BMSdisplayBlockMemory_call(
       chkmem = blkmem->chkmemhash[i];
       while( chkmem != NULL )
       {
-         const CHUNK* chunk;
          int nchunks = 0;
          int nelems = 0;
          int neagerchunks = 0;
          int neagerelems = 0;
 
-         for( c = 0; c < chkmem->nchunks; ++c )
+         FOR_EACH_NODE(CHUNK*, chunk, chkmem->rootchunk,
          {
-            chunk = chkmem->chunks[c];
             assert(chunk != NULL);
             assert(chunk->elemsize == chkmem->elemsize);
             assert(chunk->chkmem == chkmem);
@@ -2380,7 +2303,7 @@ void BMSdisplayBlockMemory_call(
                neagerchunks++;
                neagerelems += chunk->eagerfreesize;
             }
-         }
+         })
 
          assert(nchunks == chkmem->nchunks);
          assert(nelems == chkmem->storesize);
@@ -2462,7 +2385,6 @@ long long BMScheckEmptyBlockMemory_call(
    long long allocedmem = 0;
    long long freemem = 0;
    int i;
-   int c;
 
    assert(blkmem != NULL);
 
@@ -2471,14 +2393,12 @@ long long BMScheckEmptyBlockMemory_call(
       chkmem = blkmem->chkmemhash[i];
       while( chkmem != NULL )
       {
-         const CHUNK* chunk;
          int nchunks = 0;
          int nelems = 0;
          int neagerelems = 0;
 
-         for( c = 0; c < chkmem->nchunks; ++c )
+         FOR_EACH_NODE(CHUNK*, chunk, chkmem->rootchunk,
          {
-            chunk = chkmem->chunks[c];
             assert(chunk != NULL);
             assert(chunk->elemsize == chkmem->elemsize);
             assert(chunk->chkmem == chkmem);
@@ -2486,7 +2406,7 @@ long long BMScheckEmptyBlockMemory_call(
             nelems += chunk->storesize;
             if( chunk->eagerfree != NULL )
                neagerelems += chunk->eagerfreesize;
-	 }
+         })
 
          assert(nchunks == chkmem->nchunks);
          assert(nelems == chkmem->storesize);

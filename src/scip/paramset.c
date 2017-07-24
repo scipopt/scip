@@ -2877,7 +2877,7 @@ SCIP_RETCODE paramsetSetHeuristicsFast(
 {
    int i;
 
-#define NEXPENSIVEHEURFREQS 15
+#define NEXPENSIVEHEURFREQS 16
    static const char* const expensiveheurfreqs[NEXPENSIVEHEURFREQS] = {
       "heuristics/coefdiving/freq",
       "heuristics/crossover/freq",
@@ -2886,6 +2886,7 @@ SCIP_RETCODE paramsetSetHeuristicsFast(
       "heuristics/fracdiving/freq",
       "heuristics/guideddiving/freq",
       "heuristics/linesearchdiving/freq",
+      "heuristics/mpec/freq",
       "heuristics/nlpdiving/freq",
       "heuristics/subnlp/freq",
       "heuristics/objpscostdiving/freq",

@@ -433,6 +433,7 @@ SCIP_RETCODE separateCuts(
    iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX;
    SCIP_CALL( SCIPnlpiSetIntPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
    SCIP_CALL( SCIPnlpiSetRealPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip)) );
+   SCIP_CALL( SCIPnlpiSetRealPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );  /* TODO maybe this tolerance could be relaxed */
    SCIP_CALL( SCIPnlpiSetIntPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERBOSITY) );
 
    /* compute the projection onto the convex NLP relaxation */
@@ -780,6 +781,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       return SCIP_OKAY;
    }
 
+   /* the separator needs an NLP solver */
+   if( SCIPgetNNlpis(scip) == 0 )
+      return SCIP_OKAY;
+
    /* only call separator up to a maximum depth */
    if( sepadata->maxdepth >= 0 && SCIPgetDepth(scip) > sepadata->maxdepth )
       return SCIP_OKAY;
@@ -828,13 +833,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
       SCIP_CALL( SCIPhashmapCreate(&sepadata->var2nlpiidx, SCIPblkmem(scip), sepadata->nlpinvars) );
       SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &sepadata->nlpivars, SCIPgetVars(scip), sepadata->nlpinvars) );
 
-      SCIP_CALL( SCIPcreateConvexNlp(scip, sepadata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
-            sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, SCIPgetCutoffbound(scip), FALSE) );
+      SCIP_CALL( SCIPcreateNlpiProb(scip, sepadata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
+            sepadata->nlpiprob, sepadata->var2nlpiidx, NULL, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
       /* add rows of the LP */
       if( SCIPgetDepth(scip) == 0 )
       {
-         SCIP_CALL( SCIPaddConvexNlpRows(scip, sepadata->nlpi, sepadata->nlpiprob, sepadata->var2nlpiidx,
+         SCIP_CALL( SCIPaddNlpiProbRows(scip, sepadata->nlpi, sepadata->nlpiprob, sepadata->var2nlpiidx,
                   SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
       }
 
@@ -843,7 +848,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpConvexproj)
    }
    else
    {
-      SCIP_CALL( SCIPupdateConvexNlp(scip, sepadata->nlpi, sepadata->nlpiprob, sepadata->var2nlpiidx,
+      SCIP_CALL( SCIPupdateNlpiProb(scip, sepadata->nlpi, sepadata->nlpiprob, sepadata->var2nlpiidx,
             sepadata->nlpivars, sepadata->nlpinvars, SCIPgetCutoffbound(scip)) );
    }
 

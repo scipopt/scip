@@ -484,8 +484,8 @@ SCIP_DECL_HEURINIT(heurInitClique)
    assert(heurdata != NULL);
 
    /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&heurdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, heurdata->initseed)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &heurdata->randnumgen,
+         heurdata->initseed) );
 
    heurdata->usednodes = 0;
 
@@ -508,7 +508,7 @@ SCIP_DECL_HEUREXIT(heurExitClique)
    assert(heurdata != NULL);
 
    /* free random number generator */
-   SCIPrandomFree(&heurdata->randnumgen);
+   SCIPfreeRandom(scip, &heurdata->randnumgen);
 
    return SCIP_OKAY;
 }
@@ -893,7 +893,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", heurdata->maxnodes) );
 
       /* speed up sub-SCIP by not checking dual LP feasibility */
-      SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
 
       /* forbid call of heuristics and separators solving sub-CIPs */
       SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );

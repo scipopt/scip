@@ -760,7 +760,7 @@ $(LIBOBJDIR)/scip/cons_cumulative.o: src/scip/cons_cumulative.c src/tclique/tcli
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h
 $(LIBOBJDIR)/scip/cons_disjunction.o: src/scip/cons_disjunction.c \
  src/scip/cons_disjunction.h src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
@@ -1780,7 +1780,7 @@ $(LIBOBJDIR)/scip/heur_completesol.o: src/scip/heur_completesol.c \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h
 $(LIBOBJDIR)/scip/heur_crossover.o: src/scip/heur_crossover.c src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
  src/scip/type_message.h src/blockmemshell/memory.h \
@@ -1882,7 +1882,7 @@ $(LIBOBJDIR)/scip/heur_crossover.o: src/scip/heur_crossover.c src/scip/scip.h \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h
 $(LIBOBJDIR)/scip/heur_dins.o: src/scip/heur_dins.c src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
  src/blockmemshell/memory.h src/scip/type_result.h src/scip/type_clock.h \
@@ -2072,7 +2072,7 @@ $(LIBOBJDIR)/scip/heur_feaspump.o: src/scip/heur_feaspump.c src/scip/heur_feaspu
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h
 $(LIBOBJDIR)/scip/heur_fixandinfer.o: src/scip/heur_fixandinfer.c \
  src/scip/heur_fixandinfer.h src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
@@ -2231,7 +2231,7 @@ $(LIBOBJDIR)/scip/heur_gins.o: src/scip/heur_gins.c src/scip/scip.h src/scip/def
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h
 $(LIBOBJDIR)/scip/heur_guideddiving.o: src/scip/heur_guideddiving.c \
  src/scip/heur_guideddiving.h src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
@@ -2479,7 +2479,7 @@ $(LIBOBJDIR)/scip/heur_localbranching.o: src/scip/heur_localbranching.c src/scip
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h
 $(LIBOBJDIR)/scip/heur_lpface.o: src/scip/heur_lpface.c src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
  src/blockmemshell/memory.h src/scip/type_result.h src/scip/type_clock.h \
@@ -2580,7 +2580,7 @@ $(LIBOBJDIR)/scip/heur_lpface.o: src/scip/heur_lpface.c src/scip/scip.h src/scip
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h
 $(LIBOBJDIR)/scip/heur_locks.o: src/scip/heur_locks.c src/scip/heur_locks.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
  src/scip/type_message.h src/blockmemshell/memory.h \
@@ -2710,7 +2710,7 @@ $(LIBOBJDIR)/scip/heur_mutation.o: src/scip/heur_mutation.c src/scip/scip.h src/
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h
 $(LIBOBJDIR)/scip/heur_multistart.o: src/scip/heur_multistart.c src/scip/heur_multistart.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h \
@@ -2929,7 +2929,7 @@ $(LIBOBJDIR)/scip/heur_ofins.o: src/scip/heur_ofins.c src/scip/heur_ofins.h src/
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h
 $(LIBOBJDIR)/scip/heur_oneopt.o: src/scip/heur_oneopt.c src/scip/heur_oneopt.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h \
@@ -3149,7 +3149,7 @@ $(LIBOBJDIR)/scip/heur_repair.o: src/scip/heur_repair.c src/scip/heur_repair.h \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h
 $(LIBOBJDIR)/scip/heur_randrounding.o: src/scip/heur_randrounding.c \
  src/scip/heur_randrounding.h src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
@@ -3279,7 +3279,7 @@ $(LIBOBJDIR)/scip/heur_rens.o: src/scip/heur_rens.c src/scip/scip.h src/scip/def
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h
 $(LIBOBJDIR)/scip/heur_rins.o: src/scip/heur_rins.c src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
  src/blockmemshell/memory.h src/scip/type_result.h src/scip/type_clock.h \
@@ -3380,7 +3380,7 @@ $(LIBOBJDIR)/scip/heur_rins.o: src/scip/heur_rins.c src/scip/scip.h src/scip/def
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h
 $(LIBOBJDIR)/scip/heur_rootsoldiving.o: src/scip/heur_rootsoldiving.c \
  src/scip/heur_rootsoldiving.h src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
@@ -3777,7 +3777,7 @@ $(LIBOBJDIR)/scip/heur_undercover.o: src/scip/heur_undercover.c src/scip/scip.h 
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h \
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h \
  src/nlpi/exprinterpret.h
 $(LIBOBJDIR)/scip/heur_vbounds.o: src/scip/heur_vbounds.c src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
@@ -3879,7 +3879,7 @@ $(LIBOBJDIR)/scip/heur_vbounds.o: src/scip/heur_vbounds.c src/scip/scip.h src/sc
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h
 $(LIBOBJDIR)/scip/heur_veclendiving.o: src/scip/heur_veclendiving.c \
  src/scip/heur_veclendiving.h src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
@@ -5583,7 +5583,7 @@ $(LIBOBJDIR)/scip/sepa_cgmip.o: src/scip/sepa_cgmip.c src/scip/sepa_cgmip.h src/
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h
 $(LIBOBJDIR)/scip/sepa_clique.o: src/scip/sepa_clique.c src/scip/sepa_clique.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h \
@@ -5831,8 +5831,8 @@ $(LIBOBJDIR)/scip/sepa_eccuts.o: src/scip/sepa_eccuts.c src/scip/scipdefplugins.
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/scip/nlp.h \
- src/scip/type_primal.h src/tclique/tclique.h
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h \
+ src/scip/nlp.h src/scip/type_primal.h src/tclique/tclique.h
 $(LIBOBJDIR)/scip/sepa_flowcover.o: src/scip/sepa_flowcover.c src/scip/sepa_flowcover.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h \
@@ -6138,7 +6138,7 @@ $(LIBOBJDIR)/scip/sepa_rapidlearning.o: src/scip/sepa_rapidlearning.c \
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_strongcg.h \
  src/scip/sepa_zerohalf.h src/scip/scipshell.h src/scip/concsolver_scip.h \
- src/nlpi/nlpi_ipopt.h
+ src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h
 $(LIBOBJDIR)/scip/sepa_strongcg.o: src/scip/sepa_strongcg.c src/scip/sepa_strongcg.h \
  src/scip/scip.h src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h \
@@ -6269,7 +6269,7 @@ $(LIBOBJDIR)/scip/sepa_zerohalf.o: src/scip/sepa_zerohalf.c src/scip/sepa_zeroha
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/scipshell.h src/scip/concsolver_scip.h \
- src/nlpi/nlpi_ipopt.h
+ src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h
 $(LIBOBJDIR)/scip/boundstore.o: src/scip/boundstore.c src/scip/boundstore.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
  src/scip/type_syncstore.h src/scip/type_scip.h src/scip/type_lp.h \
@@ -6386,7 +6386,7 @@ $(LIBOBJDIR)/scip/concsolver.o: src/scip/concsolver.c src/scip/concsolver.h src/
  src/scip/type_visual.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_mem.h src/scip/type_primal.h src/scip/type_pricestore.h \
  src/scip/type_sepastore.h src/scip/type_conflictstore.h \
- src/scip/syncstore.h src/scip/clock.h
+ src/scip/syncstore.h src/scip/boundstore.h src/scip/clock.h
 $(LIBOBJDIR)/scip/concurrent.o: src/scip/concurrent.c src/scip/concurrent.h \
  src/scip/type_concurrent.h src/scip/type_scip.h \
  src/scip/type_concsolver.h src/scip/def.h src/scip/type_retcode.h \
@@ -6856,7 +6856,8 @@ $(LIBOBJDIR)/scip/heuristics.o: src/scip/heuristics.c src/scip/heuristics.h src/
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/scip/pub_heur.h
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h \
+ src/scip/pub_heur.h
 $(LIBOBJDIR)/scip/compr.o: src/scip/compr.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/set.h \
  src/blockmemshell/memory.h src/scip/type_set.h src/scip/type_stat.h \
@@ -7568,7 +7569,8 @@ $(LIBOBJDIR)/scip/scipdefplugins.o: src/scip/scipdefplugins.c src/scip/scipdefpl
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/scip/debug.h
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h \
+ src/scip/debug.h
 $(LIBOBJDIR)/scip/scipgithash.o: src/scip/scipgithash.c src/scip/scipgithash.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
  src/scip/type_message.h src/scip/githash.c
@@ -7672,7 +7674,7 @@ $(LIBOBJDIR)/scip/scipshell.o: src/scip/scipshell.c src/scip/scip.h src/scip/def
  src/scip/sepa_impliedbounds.h src/scip/sepa_intobj.h src/scip/sepa_mcf.h \
  src/scip/sepa_oddcycle.h src/scip/sepa_rapidlearning.h \
  src/scip/sepa_strongcg.h src/scip/sepa_zerohalf.h src/scip/scipshell.h \
- src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h \
+ src/scip/concsolver_scip.h src/nlpi/nlpi_ipopt.h src/nlpi/nlpi_worhp.h \
  src/scip/message_default.h
 $(LIBOBJDIR)/scip/sepa.o: src/scip/sepa.c src/scip/def.h src/scip/type_retcode.h \
  src/scip/pub_message.h src/scip/type_message.h src/scip/set.h \

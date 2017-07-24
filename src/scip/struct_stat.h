@@ -110,6 +110,7 @@ struct SCIP_Stat
    SCIP_Longint          nsbtimesiterlimhit; /**< total number of times that the strong branching iteration limit was hit */
    SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */
    SCIP_Longint          ninitconssadded;    /**< total number of initial constraints added during the solve */
+   SCIP_Longint          nactiveconssadded;  /**< total number of active constraints added */
    SCIP_Longint          externmemestim;     /**< estimation of external memory usage, e.g., by LP solver */
    SCIP_Real             avgnnz;             /**< average number of nonzeros per constraint in presolved problem */
    SCIP_Real             firstlpdualbound;   /**< dual bound of root node computed by first LP solve (without cuts) */
@@ -255,6 +256,7 @@ struct SCIP_Stat
    SCIP_Bool             collectvarhistory;  /**< should variable history statistics be collected */
    SCIP_Bool             performpresol;      /**< indicates whether presolving is enabled */
    SCIP_Bool             branchedunbdvar;    /**< indicates whether branching on an unbounded variable has been performed */
+   SCIP_Bool             disableenforelaxmsg;/**< was disable enforelax message printed? */
 };
 
 #ifdef __cplusplus

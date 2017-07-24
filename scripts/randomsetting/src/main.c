@@ -474,7 +474,7 @@ SCIP_RETCODE createSettingsFile(
    }
 
    /* generate random number generator */
-   SCIP_CALL( SCIPrandomCreate(&randgen, SCIPblkmem(scip), seed) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randgen, seed) );
 
    /* generate random setting and write it to file */
    SCIP_CALL( generateRandomSettings(scip, randgen, MAX_CHANGE, CHANGE_ADVANCED) );
@@ -482,7 +482,7 @@ SCIP_RETCODE createSettingsFile(
    SCIPinfoMessage(scip, NULL, "-> saved random settings to file <%s>\n", filename);
 
    /* close SCIP */
-   SCIPrandomFree(&randgen);
+   SCIPfreeRandom(scip, &randgen);
    SCIP_CALL( SCIPfree(&scip) );
    BMScheckEmptyMemory();
 

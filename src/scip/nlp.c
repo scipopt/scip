@@ -4717,6 +4717,10 @@ SCIP_RETCODE nlpSolve(
       SCIPsetFreeBufferArray(set, &initialguess_solver);
    }
 
+   /* set NLP tolerances to current SCIP primal and dual feasibility tolerance */
+   SCIP_CALL( SCIPnlpiSetRealPar(nlp->solver, nlp->problem, SCIP_NLPPAR_FEASTOL, SCIPsetFeastol(set)) );
+   SCIP_CALL( SCIPnlpiSetRealPar(nlp->solver, nlp->problem, SCIP_NLPPAR_RELOBJTOL, SCIPsetDualfeastol(set)) );
+
    /* let NLP solver do his work */
    SCIPclockStart(stat->nlpsoltime, set);
 
@@ -4767,6 +4771,10 @@ SCIP_RETCODE nlpSolve(
          for( i = 0; i < nlp->nvars; ++i )
          {
             SCIP_Real solval = primalvals[nlp->varmap_nlp2nlpi[i]];  /*lint !e613 */
+
+            /* do a quick assert that variable bounds are satisfied, if feasibility is claimed */
+            assert(SCIPsetIsFeasGE(set, solval, SCIPvarGetLbLocal(nlp->vars[i])) || nlp->solstat > SCIP_NLPSOLSTAT_FEASIBLE);
+            assert(SCIPsetIsFeasLE(set, solval, SCIPvarGetUbLocal(nlp->vars[i])) || nlp->solstat > SCIP_NLPSOLSTAT_FEASIBLE);
 
             SCIP_CALL( SCIPvarSetNLPSol(nlp->vars[i], set, solval) );  /*lint !e613 */
             nlp->primalsolobjval += SCIPvarGetObj(nlp->vars[i]) * solval;  /*lint !e613 */

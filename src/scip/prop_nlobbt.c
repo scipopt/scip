@@ -494,8 +494,8 @@ SCIP_RETCODE applyNlobbt(
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->nlscore, propdata->nlpinvars) );
       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &propdata->status, propdata->nlpinvars) );
 
-      SCIP_CALL( SCIPcreateConvexNlp(scip, propdata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
-            propdata->nlpiprob, propdata->var2nlpiidx, propdata->nlscore, SCIPgetCutoffbound(scip), FALSE) );
+      SCIP_CALL( SCIPcreateNlpiProb(scip, propdata->nlpi, SCIPgetNLPNlRows(scip), SCIPgetNNLPNlRows(scip),
+            propdata->nlpiprob, propdata->var2nlpiidx, propdata->nlscore, SCIPgetCutoffbound(scip), FALSE, TRUE) );
 
       /* initialize bound status; perturb nlscores by a factor which ensures that zero scores remain zero */
       assert(propdata->randnumgen != NULL);
@@ -508,13 +508,13 @@ SCIP_RETCODE applyNlobbt(
       /* add rows of the LP */
       if( SCIPgetDepth(scip) == 0 )
       {
-         SCIP_CALL( SCIPaddConvexNlpRows(scip, propdata->nlpi, propdata->nlpiprob, propdata->var2nlpiidx,
+         SCIP_CALL( SCIPaddNlpiProbRows(scip, propdata->nlpi, propdata->nlpiprob, propdata->var2nlpiidx,
                SCIPgetLPRows(scip), SCIPgetNLPRows(scip)) );
       }
    }
    else
    {
-      SCIP_CALL( SCIPupdateConvexNlp(scip, propdata->nlpi, propdata->nlpiprob, propdata->var2nlpiidx,
+      SCIP_CALL( SCIPupdateNlpiProb(scip, propdata->nlpi, propdata->nlpiprob, propdata->var2nlpiidx,
             propdata->nlpivars, propdata->nlpinvars, SCIPgetCutoffbound(scip)) );
    }
 
@@ -530,8 +530,6 @@ SCIP_RETCODE applyNlobbt(
    }
 
    /* set parameters of NLP solver */
-   SCIP_CALL( SCIPnlpiSetRealPar(propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL,
-         SCIPfeastol(scip) * propdata->feastolfac) );
    SCIP_CALL( SCIPnlpiSetRealPar(propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_FEASTOL,
          SCIPfeastol(scip) * propdata->feastolfac) );
    SCIP_CALL( SCIPnlpiSetRealPar(propdata->nlpi, propdata->nlpiprob, SCIP_NLPPAR_RELOBJTOL,
@@ -623,8 +621,8 @@ SCIP_DECL_PROPINITSOL(propInitsolNlobbt)
    /* if genvbounds propagator is not available, we cannot create genvbounds */
    propdata->genvboundprop = SCIPfindProp(scip, "genvbounds");
 
-   SCIP_CALL( SCIPrandomCreate(&propdata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+   SCIP_CALL( SCIPcreateRandom(scip, &propdata->randnumgen,
+         DEFAULT_RANDSEED) );
    SCIP_CALL( SCIPnlpStatisticsCreate(&propdata->nlpstatistics) );
    propdata->lastnode = -1;
 
@@ -641,7 +639,7 @@ SCIP_DECL_PROPEXITSOL(propExitsolNlobbt)
    assert(propdata != NULL);
 
    SCIPnlpStatisticsFree(&propdata->nlpstatistics);
-   SCIPrandomFree(&propdata->randnumgen);
+   SCIPfreeRandom(scip, &propdata->randnumgen);
 
    SCIP_CALL( propdataClear(scip, propdata) );
 

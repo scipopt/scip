@@ -610,19 +610,56 @@ SCIP_RETCODE applyVbounds(
    /* try to repair probing */
    if( infeasible )
    {
+      SCIP_Real newbound;
+
       assert(lastfixedvar != NULL);
+      assert(SCIPvarGetType(lastfixedvar) != SCIP_VARTYPE_CONTINUOUS);
 
       SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
 
-      /* fix the last variable, which was fixed the reverse bound */
-      SCIP_CALL( SCIPfixVarProbing(scip, lastfixedvar,
-            lastfixedlower ? SCIPvarGetUbLocal(lastfixedvar) : SCIPvarGetLbLocal(lastfixedvar)) );
+      if( lastfixedlower )
+      {
+         newbound = SCIPvarGetUbLocal(lastfixedvar);
+
+         if( SCIPisInfinity(scip, newbound) )
+         {
+            newbound = SCIPvarGetLbLocal(lastfixedvar) + 1.0;
+
+            /* increase lower bound */
+            SCIP_CALL( SCIPchgVarLbProbing(scip, lastfixedvar, newbound) );
+         }
+         else
+         {
+            /* fix the last variable, which was fixed to the opposite bound */
+            SCIP_CALL( SCIPfixVarProbing(scip, lastfixedvar, newbound) );
+         }
+      }
+      else
+      {
+         newbound = SCIPvarGetLbLocal(lastfixedvar);
+
+         if( SCIPisInfinity(scip, -newbound) )
+         {
+            newbound = SCIPvarGetUbLocal(lastfixedvar) - 1.0;
+
+            /* decrease lower bound */
+            SCIP_CALL( SCIPchgVarUbProbing(scip, lastfixedvar, newbound) );
+         }
+         else
+         {
+            /* fix the last variable, which was fixed to the opposite bound */
+            SCIP_CALL( SCIPfixVarProbing(scip, lastfixedvar, newbound) );
+         }
+      }
 
       /* propagate fixings */
       SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, &infeasible, NULL) );
 
       SCIPdebugMsg(scip, "backtracking ended with %sfeasible problem\n", (infeasible ? "in" : ""));
    }
+
+   if( infeasible )
+      goto TERMINATE;
 
    /* check that we had enough fixings */
    npscands = SCIPgetNPseudoBranchCands(scip);
@@ -796,7 +833,7 @@ SCIP_RETCODE applyVbounds(
       }
 
       /* speed up sub-SCIP by not checking dual LP feasibility */
-      SCIP_CALL( SCIPsetBoolParam(scip, "lp/checkdualfeas", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(subscip, "lp/checkdualfeas", FALSE) );
 
       /* employ a limit on the number of enforcement rounds in the quadratic constraint handlers; this fixes the issue that
        * sometimes the quadratic constraint handler needs hundreds or thousands of enforcement rounds to determine the

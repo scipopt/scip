@@ -14,6 +14,11 @@ else
     DOXYFILE=scip.dxy
 fi
 
+if [ "$HTML_FILE_EXTENSION" = "" ]
+then
+    HTML_FILE_EXTENSION=shtml
+fi
+
 ### START SHELL TUTORIAL
 
 # change into SCIP root directory so that we can run bin/scip instead of ../bin/scip
@@ -39,7 +44,8 @@ python inc/shelltutorial/insertsnippetstutorial.py
 ### START FAQ GENERATION
 
 cd inc/faq
-python parser.py ./ localdoxysubstitutions && php localfaq.php > faq.inc
+
+python parser.py --linkext $HTML_FILE_EXTENSION  && php localfaq.php > faq.inc
 cd ../../
 
 ### FINISHED FAQ GENERATION
