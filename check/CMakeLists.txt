@@ -245,7 +245,6 @@ add_instancetests(instances_SAT settings_default "SAT")
 add_instancetests(instances_SOS settings_default "SOS")
 add_instancetests(instances_Orbitope settings_default "Orbitope")
 
-
 #
 # test writing and reading solutions
 #
@@ -278,6 +277,23 @@ foreach(instance ${instances_MIP})
         set_tests_properties(MIP-readertest-${extension}-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
     endforeach(extension)
 endforeach(instance)
+
+#
+# add tests for the tpi
+#
+if(NOT ${TPI} STREQUAL "none")
+    foreach(instance ${instances_MIP})
+    split_instance(instance)
+        #
+        # configure the batch file for this test by substituting placeholders in the in.file
+        #
+        configure_file(interactiveshell/concurrentsolve.bat.in interactiveshell/concurrentsolve-${basename}.bat)
+        add_test(NAME MIP-concurrentsolve-${basename}
+            COMMAND $<TARGET_FILE:scip-bin> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-${basename}.bat
+            )
+        set_tests_properties(MIP-concurrentsolve-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+    endforeach(instance)
+endif()
 
 #
 # interactive shell test.
