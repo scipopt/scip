@@ -102,11 +102,17 @@ static
 SCIP_DECL_NLPIFREE( nlpiFreeAll )
 {
    SCIP_NLPIDATA* data;
+   int i;
 
    assert(nlpi != NULL);
 
    data = SCIPnlpiGetData(nlpi);
    assert(data != NULL);
+
+   for( i = data->nnlpis - 1; i >= 0; --i )
+   {
+      SCIP_CALL( SCIPnlpiFree(&data->nlpis[i]) );
+   }
 
    BMSfreeMemoryArrayNull(&data->nlpis);
    BMSfreeMemory(&data);
@@ -1191,9 +1197,10 @@ SCIP_RETCODE SCIPcreateNlpSolverAll(
 
    BMSallocMemoryArray(&nlpidata->nlpis, nnlpis);
 
+   /* copy nlpis */
    for( i = 0; i < nnlpis; ++i )
    {
-      nlpidata->nlpis[i] = nlpis[i];
+      SCIP_CALL( SCIPnlpiCopy(blkmem, nlpis[i], &nlpidata->nlpis[i]) );
    }
    nlpidata->nnlpis = nnlpis;
 
