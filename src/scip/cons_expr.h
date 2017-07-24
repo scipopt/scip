@@ -848,6 +848,43 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
    );
 
 
+/** creates the nonlinearity handler and includes it into the expression constraint handler */
+EXTERN
+SCIP_RETCODE SCIPincludeConsExprNlHdlrBasic(
+   SCIP*                       scip,         /**< SCIP data structure */
+   SCIP_CONSHDLR*              conshdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR**      nlhdlr,       /**< buffer where to store nonlinear handler */
+   const char*                 name,         /**< name of nonlinear handler (must not be NULL) */
+   const char*                 desc,         /**< description of nonlinear handler (can be NULL) */
+   unsigned int                precedence,   /**< precedence of nonlinear handler */
+   SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
+   );
+
+/** set the nonlinear handler callback to free the nonlinear handler data */
+EXTERN
+void SCIPsetConsExprNlHdlrFreeHdlrData(
+   SCIP*                      scip,              /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,            /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA((*freehdlrdata)) /**< handler free callback (can be NULL) */
+);
+
+/** set the expression handler callback to free expression specific data of nonlinear handler */
+EXTERN
+void SCIPsetConsExprNlHdlrFreeExprData(
+   SCIP*                      scip,              /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,            /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA((*freeexprdata)) /**< nonlinear handler expression data free callback (can be NULL if data does not need to be freed) */
+);
+
+/** set the initialization and deinitialization callback of an nonlinear handler */
+EXTERN
+void SCIPsetConsExprNlHdlrInitExit(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRINIT((*init)),   /**< initialization callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLREXIT((*exit))    /**< deinitialization callback (can be NULL) */
+);
+
 #ifdef __cplusplus
 }
 #endif

@@ -65,6 +65,10 @@ struct SCIP_ConsExpr_Expr
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;      /**< expression type (as pointer to its handler) */
    SCIP_CONSEXPR_EXPRDATA* exprdata;      /**< expression data */
 
+   SCIP_CONSEXPR_NLHDLR**  nlhdlrs;       /**< nonlinear handlers at expression */
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrsexprdata;  /**< data of nonlinear handler at expression */
+   int                     nnlhdlrs;      /**< number of nonlinear handlers at expression */
+
    int                     nchildren;     /**< number of children */
    int                     childrensize;  /**< length of children array */
    SCIP_CONSEXPR_EXPR**    children;      /**< children expressions */
@@ -107,7 +111,18 @@ struct SCIP_ConsExpr_Expr
    SCIP_CONSEXPREXPRWALK_IO walkio;       /**< space for walker callback to store some (temporary) data, e.g., to simulate input or output values of a recursive call */
 };
 
+struct SCIP_ConsExpr_NlHdlr
+{
+   char*                         name;       /**< nonlinearity handler name */
+   char*                         desc;       /**< nonlinearity handler description (can be NULL) */
+   SCIP_CONSEXPR_NLHDLRDATA*     data;       /**< data of handler */
+   unsigned int                  precedence; /**< precedence of nonlinearity handler */
 
+   SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA((*freehdlrdata));  /**< callback to free data of handler (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA((*freeexprdata));  /**< callback to free expression specific data (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLRINIT((*init));      /**< initialization callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLREXIT((*exit));      /**< deinitialization callback (can be NULL) */
+};
 
 
 #ifdef __cplusplus

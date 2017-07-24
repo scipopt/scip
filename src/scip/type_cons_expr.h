@@ -420,6 +420,50 @@ typedef struct SCIP_ConsExpr_Expr         SCIP_CONSEXPR_EXPR;         /**< expre
 
 typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< printing a dot file data */
 
+/** callback to free data of handler
+ *
+ * - scip SCIP data structure
+ * - nlhdlr nonlinear handler
+ * - nlhdlrdata nonlinear handler data to be freed
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+	SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_NLHDLRDATA** nlhdlrdata)
+
+/** callback to free expression specific data
+ *
+ * - scip SCIP data structure
+ * - nlhdlr nonlinear handler
+ * - nlhdlrexprdata nonlinear handler expression data to be freed
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr, \
+   SCIP_CONSEXPR_NLHDLREXPRDATA** nlhdlrexprdata)
+
+/** callback to called in initialization
+ *
+ * - scip SCIP data structure
+ * - nlhdlr nonlinear handler
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRINIT(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr)
+
+/** callback to called in deinitialization
+ *
+ * - scip SCIP data structure
+ * - nlhdlr nonlinear handler
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLREXIT(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_NLHDLR* nlhdlr)
+
+typedef struct SCIP_ConsExpr_NlHdlr      SCIP_CONSEXPR_NLHDLR;        /**< nonlinear handler */
+typedef struct SCIP_ConsExpr_NlHdlrData  SCIP_CONSEXPR_NLHDLRDATA;    /**< nonlinear handler data */
+typedef struct SCIP_ConsExpr_NlHdlrExprData SCIP_CONSEXPR_NLHDLREXPRDATA;  /**< nonlinear handler data for a specific expression */
+
 #ifdef __cplusplus
 }
 #endif

@@ -135,6 +135,10 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_EXPRHDLR*  exprsumhdlr;     /**< summation expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprprodhdlr;    /**< product expression handler */
 
+   SCIP_CONSEXPR_NLHDLR**   nlhdlrs;         /**< nonlinear handlers */
+   int                      nnlhdlrs;        /**< number of nonlinear handlers */
+   int                      nlhdlrssize;     /**< size of nlhdlrs array */
+
    int                      auxvarid;        /**< unique id for the next auxiliary variable */
 
    unsigned int             lastsoltag;      /**< last solution tag used to evaluate current solution */
@@ -311,6 +315,8 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
          *valid = FALSE;
       }
    }
+
+   /* TODO copy nonlinear handlers */
 
    /* set pointer to important expression handlers in conshdlr of target SCIP */
    conshdlrdata->exprvarhdlr = SCIPfindConsExprExprHdlr(conshdlr, "var");
@@ -4274,6 +4280,7 @@ SCIP_DECL_CONSFREE(consFreeExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+   SCIP_CONSEXPR_NLHDLR* nlhdlr;
    int i;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -4293,6 +4300,24 @@ SCIP_DECL_CONSFREE(consFreeExpr)
       SCIPfreeMemoryNull(scip, &exprhdlr->desc);
 
       SCIPfreeMemory(scip, &exprhdlr);
+   }
+
+   SCIPfreeBlockMemoryArray(scip, &conshdlrdata->exprhdlrs, conshdlrdata->exprhdlrssize);
+
+   for( i = 0; i < conshdlrdata->nnlhdlrs; ++i )
+   {
+      nlhdlr = conshdlrdata->nlhdlrs[i];
+      assert(nlhdlr != NULL);
+
+      if( nlhdlr->freehdlrdata != NULL )
+      {
+         SCIP_CALL( (*nlhdlr->freehdlrdata)(scip, nlhdlr, &nlhdlr->data) );
+      }
+
+      SCIPfreeMemory(scip, &nlhdlr->name);
+      SCIPfreeMemoryNull(scip, &nlhdlr->desc);
+
+      SCIPfreeMemory(scip, &nlhdlr);
    }
 
    SCIPfreeBlockMemoryArray(scip, &conshdlrdata->exprhdlrs, conshdlrdata->exprhdlrssize);
@@ -7655,4 +7680,83 @@ SCIP_RETCODE SCIPmassageConsExprExprCut(
    /* TODO we could scale up the cut (issue #7) if violation is >0 and <minviolation */
 
    return SCIP_OKAY;
+}
+
+/** creates the nonlinearity handler and includes it into the expression constraint handler */
+SCIP_RETCODE SCIPincludeConsExprNlHdlrBasic(
+   SCIP*                       scip,         /**< SCIP data structure */
+   SCIP_CONSHDLR*              conshdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_NLHDLR**      nlhdlr,       /**< buffer where to store nonlinear handler */
+   const char*                 name,         /**< name of nonlinear handler (must not be NULL) */
+   const char*                 desc,         /**< description of nonlinear handler (can be NULL) */
+   unsigned int                precedence,   /**< precedence of nonlinear handler */
+   SCIP_CONSEXPR_NLHDLRDATA*   data          /**< data of nonlinear handler (can be NULL) */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(name != NULL);
+   assert(nlhdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIP_CALL( SCIPallocClearMemory(scip, nlhdlr) );
+
+   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*nlhdlr)->name, name, strlen(name)+1) );
+   if( desc != NULL )
+   {
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*nlhdlr)->desc, desc, strlen(desc)+1) );
+   }
+
+   (*nlhdlr)->precedence = precedence;
+   (*nlhdlr)->data = data;
+
+   ENSUREBLOCKMEMORYARRAYSIZE(scip, conshdlrdata->nlhdlrs, conshdlrdata->nlhdlrssize, conshdlrdata->nnlhdlrs+1);
+
+   conshdlrdata->nlhdlrs[conshdlrdata->nnlhdlrs] = *nlhdlr;
+   ++conshdlrdata->nnlhdlrs;
+
+   return SCIP_OKAY;
+}
+
+/** set the nonlinear handler callback to free the nonlinear handler data */
+void SCIPsetConsExprNlHdlrFreeHdlrData(
+   SCIP*                      scip,              /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,            /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRFREEHDLRDATA((*freehdlrdata)) /**< handler free callback (can be NULL) */
+)
+{
+   assert(nlhdlr != NULL);
+
+   nlhdlr->freehdlrdata = freehdlrdata;
+}
+
+/** set the expression handler callback to free expression specific data of nonlinear handler */
+void SCIPsetConsExprNlHdlrFreeExprData(
+   SCIP*                      scip,              /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,            /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRFREEEXPRDATA((*freeexprdata)) /**< nonlinear handler expression data free callback (can be NULL if data does not need to be freed) */
+)
+{
+   assert(nlhdlr != NULL);
+
+   nlhdlr->freeexprdata = freeexprdata;
+}
+
+/** set the initialization and deinitialization callback of an nonlinear handler */
+void SCIPsetConsExprNlHdlrInitExit(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRINIT((*init)),   /**< initialization callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_NLHDLREXIT((*exit))    /**< deinitialization callback (can be NULL) */
+)
+{
+   assert(nlhdlr != NULL);
+
+   nlhdlr->init = init;
+   nlhdlr->exit = exit;
 }
