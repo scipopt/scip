@@ -56,9 +56,9 @@ SCIPPATH=`pwd`
 
 # check if binary exists. The second condition checks whether there is a binary of that name directly available
 # independent of whether it is a symlink, file in the working directory, or application in the path
-if test ! -e $SCIPPATH/../$BINNAME && ! type $BINNAME >/dev/null 2>&1
+if test ! -e $SCIPPATH/../bin/$BINNAME && ! type $BINNAME >/dev/null 2>&1
 then
-   echo "ERROR: \"$BINNAME\" not found."
+   echo "ERROR: \"$SCIPPATH/../bin/$BINNAME\" not found."
    echo "       This is needed by ${0} to work. Check your"
    echo "       \$PATH variable or install the tool \"$BINNAME\"."
    echo Skipping test since the binary $BINNAME does not exist.
