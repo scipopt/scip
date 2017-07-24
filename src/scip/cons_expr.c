@@ -316,7 +316,17 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
       }
    }
 
-   /* TODO copy nonlinear handlers */
+   /* copy nonlinear handlers */
+   for( i = 0; i < sourceconshdlrdata->nnlhdlrs; ++i )
+   {
+      SCIP_CONSEXPR_NLHDLR* sourcenlhdlr;
+
+      sourcenlhdlr = sourceconshdlrdata->nlhdlrs[i];
+      if( sourcenlhdlr->copyhdlr != NULL)
+      {
+         SCIP_CALL( sourcenlhdlr->copyhdlr(scip, conshdlr, sourceconshdlr, sourcenlhdlr) );
+      }
+   }
 
    /* set pointer to important expression handlers in conshdlr of target SCIP */
    conshdlrdata->exprvarhdlr = SCIPfindConsExprExprHdlr(conshdlr, "var");
@@ -7745,6 +7755,18 @@ void SCIPsetConsExprNlHdlrFreeExprData(
    assert(nlhdlr != NULL);
 
    nlhdlr->freeexprdata = freeexprdata;
+}
+
+/** set the copy handler callback of an nonlinear handler */
+void SCIPsetConsExprNlHdlrCopyHdlr(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSEXPR_NLHDLR*      nlhdlr,        /**< nonlinear handler */
+   SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR((*copy)) /**< copy callback (can be NULL) */
+)
+{
+   assert(nlhdlr != NULL);
+
+   nlhdlr->copyhdlr = copy;
 }
 
 /** set the initialization and deinitialization callback of an nonlinear handler */

@@ -40,9 +40,9 @@ extern "C" {
  *  input:
  *  - scip              : target SCIP main data structure
  *  - consexprhdlr      : target expression constraint handler
- *  - sourcescip        : source SCIP main data structure
  *  - sourceconsexprhdlr : expression constraint handler in source SCIP
  *  - sourceexprhdlr    : expression handler in source SCIP
+ *  - valid             : to store indication whether the expression handler was copied
  */
 #define SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(x) SCIP_RETCODE x (\
    SCIP* scip, \
@@ -419,6 +419,24 @@ typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_CONSEXPR_EXPRHDLRDATA; /**< expre
 typedef struct SCIP_ConsExpr_Expr         SCIP_CONSEXPR_EXPR;         /**< expression */
 
 typedef struct SCIP_ConsExpr_PrintDotData SCIP_CONSEXPR_PRINTDOTDATA; /**< printing a dot file data */
+
+/** nonlinear handler copy callback
+ *
+ * the method includes the nonlinear handler into a expression constraint handler
+ *
+ * This method is usually called when doing a copy of an expression constraint handler.
+ *
+ *  input:
+ *  - targetscip          : target SCIP main data structure
+ *  - targetconsexprhdlr  : target expression constraint handler
+ *  - sourceconsexprhdlr  : expression constraint handler in source SCIP
+ *  - sourcenlhdlr        : nonlinear handler in source SCIP
+ */
+#define SCIP_DECL_CONSEXPR_NLHDLRCOPYHDLR(x) SCIP_RETCODE x (\
+   SCIP* targetscip, \
+   SCIP_CONSHDLR* targetconsexprhdlr, \
+   SCIP_CONSHDLR* sourceconsexprhdlr, \
+   SCIP_CONSEXPR_NLHDLR* sourcenlhdlr)
 
 /** callback to free data of handler
  *
