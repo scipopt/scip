@@ -432,7 +432,7 @@ SCIP_RETCODE SCIPnlpiChgExprtree(
    SCIP_NLPIPROBLEM*     problem,            /**< pointer to problem data structure */
    int                   idxcons,            /**< index of constraint or -1 for objective */
    const int*            exprvaridxs,        /**< indices of variables in expression tree, maps variable indices in expression tree to indices in nlp, or NULL */
-   SCIP_EXPRTREE*        exprtree            /**< new expression tree, or NULL for no tree */
+   const SCIP_EXPRTREE*  exprtree            /**< new expression tree, or NULL for no tree */
    )
 {
    assert(nlpi    != NULL);
