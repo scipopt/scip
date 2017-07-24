@@ -24,6 +24,7 @@ set(settings_default
 # settings to run a whole test. In order to run a sub-suite, use -R
 #
 set(settings_MIP
+    "default"
     "separating_off"
     "presolving_off"
     "heuristics_off"
@@ -69,6 +70,7 @@ set(settings_MIP
 )
 
 set(settings_MINLP
+    "default"
     "undercover1"
     "undercover2"
     "rensnlp"
@@ -245,7 +247,6 @@ add_instancetests(instances_SAT settings_default "SAT")
 add_instancetests(instances_SOS settings_default "SOS")
 add_instancetests(instances_Orbitope settings_default "Orbitope")
 
-
 #
 # test writing and reading solutions
 #
@@ -280,6 +281,23 @@ foreach(instance ${instances_MIP})
 endforeach(instance)
 
 #
+# add tests for the tpi
+#
+if(NOT ${TPI} STREQUAL "none")
+    foreach(instance ${instances_MIP})
+    split_instance(instance)
+        #
+        # configure the batch file for this test by substituting placeholders in the in.file
+        #
+        configure_file(interactiveshell/concurrentsolve.bat.in interactiveshell/concurrentsolve-${basename}.bat)
+        add_test(NAME MIP-concurrentsolve-${basename}
+            COMMAND $<TARGET_FILE:scip-bin> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/concurrentsolve-${basename}.bat
+            )
+        set_tests_properties(MIP-concurrentsolve-${basename} PROPERTIES PASS_REGULAR_EXPRESSION "Validation         : Success")
+    endforeach(instance)
+endif()
+
+#
 # interactive shell test.
 # We substitute first path placeholders in the .in file, which creates a new file under the binary directory
 # Then run SCIP to execute the list of commands defined there.
@@ -291,3 +309,5 @@ configure_file(interactiveshell/interactiveshell.bat.in interactiveshell/interac
 
 add_test(NAME interactiveshell COMMAND $<TARGET_FILE:scip-bin> -b ${PROJECT_BINARY_DIR}/check/interactiveshell/interactiveshell.bat)
 set_tests_properties(interactiveshell PROPERTIES PASS_REGULAR_EXPRESSION "increased branching priority of new binary variables")
+
+add_custom_target(check COMMAND ctest -R default --schedule-random)
