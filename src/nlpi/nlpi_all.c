@@ -168,7 +168,7 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemAll)
    for( i = 0; i < data->nnlpis; ++i )
    {
       assert(data->nlpis[i] != NULL);
-      SCIPnlpiCreateProblem(data->nlpis[i], &((*problem)->nlpiproblems[i]), name);
+      SCIP_CALL( SCIPnlpiCreateProblem(data->nlpis[i], &((*problem)->nlpiproblems[i]), name) );
    }
 
    return SCIP_OKAY;
