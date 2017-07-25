@@ -3434,6 +3434,11 @@ SCIP_RETCODE checkOrigPbCons(
    SCIP_Real activity;
    int c;
 
+   SCIP_Real lhsviol;
+   SCIP_Real rhsviol;
+   SCIP_Real absviol;
+   SCIP_Real relviol;
+
    assert(scip != NULL);
    assert(cons != NULL);
    assert(SCIPconsIsOriginal(cons));
@@ -3584,6 +3589,25 @@ SCIP_RETCODE checkOrigPbCons(
       activity += andvalue * andcoefs[c];
    }
    SCIPdebugMsg(scip, "lhs = %g, overall activity = %g, rhs = %g\n", lhs, activity, rhs);
+
+   /* calculate absolute and relative violation */
+   lhsviol = lhs - activity;
+   rhsviol = activity - rhs;
+
+   if(lhsviol > rhsviol)
+   {
+      absviol = lhsviol;
+      relviol = SCIPrelDiff(lhs, activity);
+   }
+   else
+   {
+      absviol = rhsviol;
+      relviol = SCIPrelDiff(activity, rhs);
+   }
+
+   /* update absolute and relative violation of the solution */
+   if( sol != NULL )
+      SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
 
    /* check left hand side for violation */
    if( SCIPisFeasLT(scip, activity, lhs) )
