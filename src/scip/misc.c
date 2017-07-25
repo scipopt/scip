@@ -1419,7 +1419,7 @@ SCIP_MULTIHASHLIST* multihashlistFind(
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
    SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
    void*                 userptr,            /**< user pointer */
-   unsigned int          keyval,             /**< hash value of key */
+   uint64_t              keyval,             /**< hash value of key */
    void*                 key                 /**< key to retrieve */
    )
 {
@@ -1450,7 +1450,7 @@ void* multihashlistRetrieve(
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
    SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
    void*                 userptr,            /**< user pointer */
-   unsigned int          keyval,             /**< hash value of key */
+   uint64_t              keyval,             /**< hash value of key */
    void*                 key                 /**< key to retrieve */
    )
 {
@@ -1501,7 +1501,7 @@ void* multihashlistRetrieveNext(
    SCIP_DECL_HASHKEYEQ ((*hashkeyeq)),       /**< returns TRUE iff both keys are equal */
    SCIP_DECL_HASHKEYVAL((*hashkeyval)),      /**< returns the hash value of the key */
    void*                 userptr,            /**< user pointer */
-   unsigned int          keyval,             /**< hash value of key */
+   uint64_t              keyval,             /**< hash value of key */
    void*                 key                 /**< key to retrieve */
    )
 {
@@ -1587,7 +1587,7 @@ SCIP_RETCODE multihashResize(
    {
       SCIP_Bool onlyone;
       void* key;
-      unsigned int keyval;
+      uint64_t keyval;
       unsigned int hashval;
 
       SCIP_ALLOC( BMSallocClearBlockMemoryArray(multihash->blkmem, &newlists, nnewlists) );
@@ -1746,7 +1746,7 @@ SCIP_RETCODE SCIPmultihashInsert(
    )
 {
    void* key;
-   unsigned int keyval;
+   uint64_t keyval;
    unsigned int hashval;
 
    assert(multihash != NULL);
@@ -1805,7 +1805,7 @@ void* SCIPmultihashRetrieve(
    void*                 key                 /**< key to retrieve */
    )
 {
-   unsigned int keyval;
+   uint64_t keyval;
    unsigned int hashval;
 
    assert(multihash != NULL);
@@ -1837,7 +1837,7 @@ void* SCIPmultihashRetrieveNext(
    void*                 key                 /**< key to retrieve */
    )
 {
-   unsigned int keyval;
+   uint64_t keyval;
 
    assert(multihash != NULL);
    assert(multihash->lists != NULL);
@@ -1871,7 +1871,7 @@ SCIP_Bool SCIPmultihashExists(
    )
 {
    void* key;
-   unsigned int keyval;
+   uint64_t keyval;
    unsigned int hashval;
 
    assert(multihash != NULL);
@@ -1898,7 +1898,7 @@ SCIP_RETCODE SCIPmultihashRemove(
    )
 {
    void* key;
-   unsigned int keyval;
+   uint64_t keyval;
    unsigned int hashval;
 
    assert(multihash != NULL);
@@ -2009,7 +2009,6 @@ void SCIPmultihashPrintStatistics(
          (SCIP_Real)(multihash->nelements)/(SCIP_Real)usedslots, maxslotsize);
    SCIPmessagePrintInfo(messagehdlr, "\n");
 }
-
 
 /** creates a hash table */
 SCIP_RETCODE SCIPhashtableCreate(
@@ -2206,7 +2205,7 @@ SCIP_RETCODE hashtableCheckLoad(
    assert(hashtable->shift < 32);
 
    /* use integer arithmetic to approximately check if load factor is above 90% */
-   if( ((hashtable->nelements<<10)>>(32-hashtable->shift) > 921) )
+   if( ((((uint64_t)hashtable->nelements)<<10)>>(32-hashtable->shift) > 921) )
    {
       void** slots;
       uint32_t* hashes;
@@ -2257,7 +2256,7 @@ SCIP_RETCODE SCIPhashtableInsert(
    )
 {
    void* key;
-   unsigned int keyval;
+   uint64_t keyval;
    uint32_t hashval;
 
    assert(hashtable != NULL);
@@ -2274,7 +2273,7 @@ SCIP_RETCODE SCIPhashtableInsert(
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(hashtable->userptr, element);
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = hashvalue((uint64_t) keyval);
+   hashval = hashvalue(keyval);
 
    return hashtableInsert(hashtable, element, key, hashval, TRUE);
 }
@@ -2289,7 +2288,7 @@ SCIP_RETCODE SCIPhashtableSafeInsert(
    )
 {
    void* key;
-   unsigned int keyval;
+   uint64_t keyval;
    uint32_t hashval;
 
    assert(hashtable != NULL);
@@ -2306,7 +2305,7 @@ SCIP_RETCODE SCIPhashtableSafeInsert(
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(hashtable->userptr, element);
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = hashvalue((uint64_t) keyval);
+   hashval = hashvalue(keyval);
 
    return hashtableInsert(hashtable, element, key, hashval, FALSE);
 }
@@ -2317,7 +2316,7 @@ void* SCIPhashtableRetrieve(
    void*                 key                 /**< key to retrieve */
    )
 {
-   unsigned int keyval;
+   uint64_t keyval;
    uint32_t hashval;
    uint32_t pos;
    uint32_t elemdistance;
@@ -2333,7 +2332,7 @@ void* SCIPhashtableRetrieve(
 
    /* get the hash value of the key */
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = hashvalue((uint64_t) keyval);
+   hashval = hashvalue(keyval);
 
    pos = hashval>>(hashtable->shift);
    elemdistance = 0;
@@ -2387,7 +2386,7 @@ SCIP_RETCODE SCIPhashtableRemove(
    )
 {
    void* key;
-   unsigned int keyval;
+   uint64_t keyval;
    uint32_t hashval;
    uint32_t elemdistance;
    uint32_t distance;
@@ -2405,7 +2404,7 @@ SCIP_RETCODE SCIPhashtableRemove(
    /* get the hash key and its hash value */
    key = hashtable->hashgetkey(hashtable->userptr, element);
    keyval = hashtable->hashkeyval(hashtable->userptr, key);
-   hashval = hashvalue((uint64_t) keyval);
+   hashval = hashvalue(keyval);
 
    elemdistance = 0;
    pos = hashval>>(hashtable->shift);
@@ -2541,7 +2540,7 @@ SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqString)
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValString)
 {  /*lint --e{715}*/
    const char* str;
-   unsigned int hash;
+   uint64_t hash;
 
    str = (const char*)key;
    hash = 37;
@@ -2573,7 +2572,7 @@ SCIP_DECL_HASHKEYEQ(SCIPhashKeyEqPtr)
 SCIP_DECL_HASHKEYVAL(SCIPhashKeyValPtr)
 {  /*lint --e{715}*/
    /* the key is used as the keyvalue too */
-   return (unsigned int) ((0xd37e9a1ce2148403ULL * (size_t) key)>>32);
+   return (uint64_t) key;
 }
 
 
@@ -2719,7 +2718,7 @@ SCIP_RETCODE hashmapCheckLoad(
    assert(hashmap->shift < 32);
 
    /* use integer arithmetic to approximately check if load factor is above 90% */
-   if( ((hashmap->nelements<<10)>>(32-hashmap->shift) > 921) )
+   if( ((((uint64_t)hashmap->nelements)<<10)>>(32-hashmap->shift) > 921) )
    {
       SCIP_HASHMAPENTRY* slots;
       uint32_t* hashes;
@@ -6491,6 +6490,8 @@ SCIP_RETCODE SCIPdigraphResize(
    for( n = digraph->nnodes; n < nnodes; ++n )
    {
       digraph->nodedata[n] = NULL;
+      digraph->arcdata[n] = NULL;
+      digraph->successors[n] = NULL;
       digraph->successorssize[n] = 0;
       digraph->nsuccessors[n] = 0;
    }
@@ -6622,7 +6623,7 @@ void SCIPdigraphFree(
 
 #define STARTSUCCESSORSSIZE 5
 
-/* ensures that successors array of one node in a directed graph is big enough */
+/** ensures that successors array of one node in a directed graph is big enough */
 static
 SCIP_RETCODE ensureSuccessorsSize(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */

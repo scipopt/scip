@@ -184,9 +184,6 @@ SCIP_DECL_SEPAFREE(sepaFreeGomory)
    sepadata = SCIPsepaGetData(sepa);
    assert(sepadata != NULL);
 
-   /* free random number generator */
-   SCIPrandomFree(&sepadata->randnumgen);
-
    SCIPfreeBlockMemory(scip, &sepadata);
 
    SCIPsepaSetData(sepa, NULL);
@@ -194,6 +191,35 @@ SCIP_DECL_SEPAFREE(sepaFreeGomory)
    return SCIP_OKAY;
 }
 /**! [SnippetSepaFreeGomory] */
+
+/** initialization method of separator (called after problem was transformed) */
+static
+SCIP_DECL_SEPAINIT(sepaInitGomory)
+{
+   SCIP_SEPADATA* sepadata;
+
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   /* create and initialize random number generator */
+   SCIP_CALL( SCIPrandomCreate(&sepadata->randnumgen, SCIPblkmem(scip), SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of separator (called before transformed problem is freed) */
+static
+SCIP_DECL_SEPAEXIT(sepaExitGomory)
+{  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
+
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   SCIPrandomFree(&sepadata->randnumgen);
+
+   return SCIP_OKAY;
+}
 
 
 /** LP solution separation method of separator */
@@ -614,10 +640,6 @@ SCIP_RETCODE SCIPincludeSepaGomory(
    SCIP_CALL( SCIPallocBlockMemory(scip, &sepadata) );
    sepadata->lastncutsfound = 0;
 
-   /* create random number generator */
-   SCIP_CALL( SCIPrandomCreate(&sepadata->randnumgen, SCIPblkmem(scip),
-         SCIPinitializeRandomSeed(scip, DEFAULT_RANDSEED)) );
-
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
@@ -629,6 +651,8 @@ SCIP_RETCODE SCIPincludeSepaGomory(
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyGomory) );
    SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeGomory) );
+   SCIP_CALL( SCIPsetSepaInit(scip, sepa, sepaInitGomory) );
+   SCIP_CALL( SCIPsetSepaExit(scip, sepa, sepaExitGomory) );
 
    /* add separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,

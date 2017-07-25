@@ -57,6 +57,10 @@ extern "C" {
 
 #endif
 
+/* define if not already existing to make file independent from def.h */
+#ifndef SCIP_UNUSED
+#define SCIP_UNUSED(x) ((void) (x))
+#endif
 
 
 /*************************************************************************************

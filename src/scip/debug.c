@@ -500,6 +500,10 @@ SCIP_Bool debugSolIsAchieved(
       if( SCIPsetGetStage(set) == SCIP_STAGE_PROBLEM )
          return TRUE;
 
+      /* we can't get the original objective function value during probing mode when the objective has changed */
+      if( SCIPisObjChangedProbing(scip) )
+         return TRUE;
+
       solvalue = SCIPgetSolOrigObj(scip, bestsol);
 
       /* make sure a debug solution has been read, so we do not compare against the initial debugsolval == 0 */
