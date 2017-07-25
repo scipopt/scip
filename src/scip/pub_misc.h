@@ -1518,6 +1518,12 @@ int SCIPunionfindGetComponentCount(
    SCIP_UF*              uf                  /**< union find data structure */
    );
 
+/** returns the size (number of nodes) of this union find data structure */
+EXTERN
+int SCIPunionfindGetSize(
+   SCIP_UF*              uf                  /**< union find data structure */
+   );
+
 /* @} */
 
 /*

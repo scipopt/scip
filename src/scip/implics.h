@@ -392,6 +392,13 @@ SCIP_RETCODE SCIPcliquetableComputeCliqueComponents(
    int                   nimplvars           /**< number of implicit integer variables */
    );
 
+/** returns the index of the connected component of the clique graph that the variable belongs to, or -1  */
+extern
+int SCIPcliquetableGetVarComponentIdx(
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** returns the number of cliques stored in the clique list */
 extern
 int SCIPcliquelistGetNCliques(
