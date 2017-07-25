@@ -149,6 +149,7 @@ find_program(GIT git)
 if(GIT)
    execute_process(
       COMMAND \${GIT} describe --always --dirty
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       OUTPUT_VARIABLE GITHASH OUTPUT_STRIP_TRAILING_WHITESPACE)
    if(GITHASH STREQUAL \"\")
       set(GITHASH \"000000\")
