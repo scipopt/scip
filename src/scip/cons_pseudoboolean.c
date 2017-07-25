@@ -3607,7 +3607,7 @@ SCIP_RETCODE checkOrigPbCons(
 
    /* update absolute and relative violation of the solution */
    if( sol != NULL )
-      SCIPsolUpdateLPConsViolation(sol, absviol, relviol);
+      SCIPsolUpdateConsViolation(sol, absviol, relviol);
 
    /* check left hand side for violation */
    if( SCIPisFeasLT(scip, activity, lhs) )
