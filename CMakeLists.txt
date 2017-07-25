@@ -5,9 +5,22 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_R
 
 project(SCIP)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR})
+set(SCIP_VERSION_MAJOR 4)
+set(SCIP_VERSION_MINOR 0)
+set(SCIP_VERSION_PATCH 1)
+set(SCIP_VERSION_SUB 0)
+set(SCIP_VERSION_API 0)
+
+set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/COPYING")
+set(CPACK_PACKAGE_VERSION_MAJOR "${SCIP_VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${SCIP_VERSION_MINOR}")
+set(CPACK_PACKAGE_VERSION_PATCH "${SCIP_VERSION_PATCH}")
+set(CPACK_PACKAGE_VENDOR "Zuse Institute Berlin")
+include(CPack)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR}/bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR}/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR}/lib)
 
 # update the cmake submodule
 if(EXISTS ${PROJECT_SOURCE_DIR}/.git AND NOT EXISTS ${PROJECT_SOURCE_DIR}/cmake/.git)
@@ -72,10 +85,15 @@ endif()
 #set the correct rpath for OS X
 set(CMAKE_MACOSX_RPATH ON)
 
-#set defines for win32
+#set defines for Windows
 if(WIN32)
     add_definitions(-DNO_SIGACTION)
     add_definitions(-DNO_STRTOK_R)
+endif()
+if(MSVC)
+    add_definitions(/W4)
+    add_definitions(/wd4100)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
 
 # Visual Studio compiler with static runtime libraries
