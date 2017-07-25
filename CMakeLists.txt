@@ -226,7 +226,7 @@ endif()
 
 #search the selected LP solver library
 if(LPS STREQUAL "spx")
-    find_package(SoPlex REQUIRED CONFIG)
+    find_package(SOPLEX REQUIRED CONFIG)
 elseif(LPS STREQUAL "cpx")
     find_package(CPLEX REQUIRED)
 elseif(LPS STREQUAL "glop")
@@ -298,7 +298,7 @@ endif()
 
 # ZIMPL headers need to be copied to have the "zimpl/*.h" prefix
 if(ZIMPL)
-	find_package(ZIMPL CONFIG)
+    find_package(ZIMPL CONFIG)
 endif()
 if(ZIMPL_FOUND)
     add_definitions(-DWITH_ZIMPL)
