@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2017 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,42 +13,41 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file    nlpi_worhp_dummy.c
- * @ingroup NLPIS
- * @brief   dummy WORHP NLP interface
+/**@file    nlpi_all.h
+ * @brief   ALL NLP interface
+ * @brief   NLP interface that uses all available NLP interfaces
  * @author  Benjamin Mueller
  */
 
-#include "nlpi/nlpi_worhp.h"
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/** create solver interface for Worhp solver */
-SCIP_RETCODE SCIPcreateNlpSolverWorhp(
+#ifndef __SCIP_NLPI_ALL_H__
+#define __SCIP_NLPI_ALL_H__
+
+#include "nlpi/type_nlpi.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**@addtogroup NLPIS
+ *
+ * @{
+ */
+
+/** create solver interface for All solver */
+extern
+SCIP_RETCODE SCIPcreateNlpSolverAll(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
    SCIP_NLPI**           nlpi,               /**< pointer to buffer for nlpi address */
-   SCIP_Bool             useip               /**< TRUE for using Interior Point, FALSE for SQP */
-   )
-{
-   *nlpi = NULL;
+   SCIP_NLPI**           nlpis,              /**< array containing existing nlpis */
+   int                   nnlpis              /**< total number of nlpis */
+   );
 
-   return SCIP_OKAY;
-}
+/* @} */
 
-/** gets string that identifies Worhp (version number) */
-const char* SCIPgetSolverNameWorhp(void)
-{
-   return "WORHP";
+#ifdef __cplusplus
 }
+#endif
 
-/** gets string that describes Worhp (version number) */
-extern
-const char* SCIPgetSolverDescWorhp(void)
-{
-   return "this is WORHP";
-}
-
-/** returns whether Worhp is available, i.e., whether it has been linked in */
-extern
-SCIP_Bool SCIPisWorhpAvailableWorhp(void)
-{
-   return FALSE;
-}
+#endif /* __SCIP_NLPI_ALL_H__ */

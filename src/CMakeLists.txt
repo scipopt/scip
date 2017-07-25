@@ -1,5 +1,8 @@
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_C_STANDARD_REQUIRED on)
+
 set(scipsources
     blockmemshell/memory.c
     scip/message.c
@@ -258,6 +261,7 @@ set(objscipsources
 
 set(nlpisources
     nlpi/nlpi.c
+    nlpi/nlpi_all.c
     nlpi/nlpioracle.c
     nlpi/expr.c
     nlpi/intervalarithext.cpp

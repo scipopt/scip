@@ -7606,6 +7606,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
    oldub = col->ub;
 
    resolve = FALSE;
+   dualraysuccess = FALSE;
 
    /* is down branch infeasible? */
    if( col->sbdownvalid && SCIPsetIsGE(set, col->sbdown, lp->cutoffbound) )

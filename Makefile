@@ -315,6 +315,7 @@ ALLSRC		+=	$(TPILIBSRC)
 #-----------------------------------------------------------------------------
 
 NLPILIBCOBJ	= 	nlpi/nlpi.o \
+			nlpi/nlpi_all.o \
 			nlpi/nlpioracle.o \
 			nlpi/expr.o
 

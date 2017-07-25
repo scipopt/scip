@@ -432,7 +432,7 @@ SCIP_RETCODE separateCuts(
 
    iterlimit = sepadata->nlpiterlimit > 0 ? sepadata->nlpiterlimit : INT_MAX;
    SCIP_CALL( SCIPnlpiSetIntPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_ITLIM, iterlimit) );
-   SCIP_CALL( SCIPnlpiSetRealPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip)) );
+   SCIP_CALL( SCIPnlpiSetRealPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_FEASTOL, SCIPfeastol(scip) / 10.0) ); /* use tighter tolerances for the NLP solver */
    SCIP_CALL( SCIPnlpiSetRealPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_RELOBJTOL, MAX(SCIPfeastol(scip), SCIPdualfeastol(scip))) );  /* TODO maybe this tolerance could be relaxed */
    SCIP_CALL( SCIPnlpiSetIntPar(sepadata->nlpi, sepadata->nlpiprob, SCIP_NLPPAR_VERBLEVEL, NLPVERBOSITY) );
 
@@ -455,7 +455,7 @@ SCIP_RETCODE separateCuts(
           */
 
          /* get solution: build SCIP_SOL out of nlpi sol */
-         SCIP_CALL( SCIPnlpiGetSolution(sepadata->nlpi, sepadata->nlpiprob, &nlpisol, NULL, NULL, NULL) );
+         SCIP_CALL( SCIPnlpiGetSolution(sepadata->nlpi, sepadata->nlpiprob, &nlpisol, NULL, NULL, NULL, NULL) );
          assert(nlpisol != NULL);
 
          SCIP_CALL( SCIPcreateSol(scip, &projection, NULL) );

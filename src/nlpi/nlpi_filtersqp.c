@@ -41,7 +41,7 @@
 
 #define NLPI_NAME              "filtersqp"                 /* short concise name of solver */
 #define NLPI_DESC              "Sequential Quadratic Programming trust region solver by R. Fletcher and S. Leyffer" /* description of solver */
-#define NLPI_PRIORITY          -10000                     /* priority of NLP solver */
+#define NLPI_PRIORITY          -1000                       /* priority of NLP solver */
 
 #define RANDSEED               26051979      /**< initial random seed */
 #define MAXPERTURB             0.01          /**< maximal perturbation of bounds in starting point heuristic */
@@ -2026,6 +2026,7 @@ SCIP_DECL_NLPIGETTERMSTAT( nlpiGetTermstatFilterSQP )
  *  - consdualvalues buffer to store pointer to array to dual values of constraints, or NULL if not needed
  *  - varlbdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
  *  - varubdualvalues buffer to store pointer to array to dual values of variable lower bounds, or NULL if not needed
+ *  - objval buffer store the objective value, or NULL if not needed
  */
 static
 SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionFilterSQP )
@@ -2058,6 +2059,17 @@ SCIP_DECL_NLPIGETSOLUTION( nlpiGetSolutionFilterSQP )
       assert(problem->varubdualvalues != NULL);
 
       *varubdualvalues = problem->varubdualvalues;
+   }
+
+   if( objval != NULL )
+   {
+      if( problem->primalvalues != NULL )
+      {
+         /* TODO store last solution value instead of reevaluating the objective function */
+         SCIP_CALL( SCIPnlpiOracleEvalObjectiveValue(problem->oracle, problem->primalvalues, objval) );
+      }
+      else
+         *objval = SCIP_INVALID;
    }
 
    return SCIP_OKAY;  /*lint !e527*/

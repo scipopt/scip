@@ -29,7 +29,12 @@ fi
 OUTFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.out
 ERRFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.err
 SOLFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.sol
-TMPFILE=$SOLVERPATH/results/$BASENAME.tmp
+SETFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.prm
+SCIPSETFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.set
+TMPFILE=$CLIENTTMPDIR/${USER}-tmpdir/$BASENAME.tmp
+
+SETTINGS=${SOLVERPATH}/../../ug/settings/$SETNAME.prm
+SCIPSETTINGS=${SOLVERPATH}/../../ug/settings/$SETNAME.set
 
 uname -a                            > $OUTFILE
 uname -a                            > $ERRFILE
@@ -37,6 +42,14 @@ uname -a                            > $ERRFILE
 echo "start checking mount"         >> $OUTFILE
 date                                >> $OUTFILE
 echo                                >> $OUTFILE
+
+echo $SETTINGS is used as UG parameters  >> $OUTFILE
+echo $SCIPSETTINGS is used as SCIP parameters  >> $OUTFILE
+# gnerate UG parameter file
+cp $SETTINGS $SETFILE
+echo TimeLimit = $TIMELIMIT               >> $SETFILE
+# gnerate SCIP parameter file
+cp $SCIPSETTINGS $SCIPSETFILE
 
 # check if the scripts runs a *.zib.de host
 if hostname -f | grep -q zib.de ;
@@ -98,7 +111,9 @@ echo                                >> $OUTFILE
 #if we use a debugger command, we need to replace the errfile place holder by the actual err-file for logging
 #and if we run on the cluster we want to use srun with CPU binding which is defined by the check_cluster script
 EXECNAME=$SRUN${EXECNAME/ERRFILE_PLACEHOLDER/${ERRFILE}}
-eval $EXECNAME                < $TMPFILE 2>>$ERRFILE  | tee -a $OUTFILE
+# eval $EXECNAME                < $TMPFILE 2>>$ERRFILE  | tee -a $OUTFILE
+echo $EXECNAME  $SETFILE $FILENAME -sth $THREADS -fsol $SOLFILE -sr $SCIPSETFILE -s $SCIPSETFILE 
+eval $EXECNAME  $SETFILE $FILENAME -sth $THREADS -fsol $SOLFILE -sr $SCIPSETFILE -s $SCIPSETFILE 2>>$ERRFILE  | tee -a $OUTFILE
 retcode=${PIPESTATUS[0]}
 if test $retcode != 0
 then
@@ -119,8 +134,9 @@ then
     # computed by the solver. A variable name of =infeas= can be used to
     # indicate that an instance is infeasible.
     sed ' /solution status:/d;
-            s/objective value:/=obj=/g;
-            s/no solution available//g' $SOLFILE > $TMPFILE
+          /\[ Final Solution \]/d;
+         s/objective value:/=obj=/g;
+         s/No Solution//g' $SOLFILE > $TMPFILE
     mv $TMPFILE $SOLFILE
     
     # check if the link to the solution checker exists
@@ -152,8 +168,10 @@ echo                                >> $OUTFILE
 mv $OUTFILE $SOLVERPATH/results/$BASENAME.out
 mv $ERRFILE $SOLVERPATH/results/$BASENAME.err
 
-rm -f $TMPFILE
 rm -f $SOLFILE
+rm -f $SETFILE
+rm -f $SCIPSETFILE
+
 #chmod g+r $ERRFILE
 #chmod g+r $SCIPPATH/results/$BASENAME.out
 #chmod g+r $SCIPPATH/results/$BASENAME.set
