@@ -144,7 +144,7 @@ endif()
 message(STATUS "LEGACY mode for old compilers: ${LEGACY}")
 
 # create a target for updating the current git hash
-file(WRITE ${CMAKE_BINARY_DIR}/update_githash.cmake "
+file(WRITE ${CMAKE_BINARY_DIR}/scip_update_githash.cmake "
 find_program(GIT git)
 if(GIT)
    execute_process(
@@ -160,18 +160,18 @@ endif()
 file(WRITE \${DST} \"#define SCIP_GITHASH \\\"\${GITHASH}\\\"\")
 message(STATUS \"Git hash: \" \${GITHASH})
 ")
-add_custom_target(update_githash
+add_custom_target(scip_update_githash
                   COMMAND ${CMAKE_COMMAND} -DDST=${PROJECT_SOURCE_DIR}/src/scip/githash.c
-                                           -P ${CMAKE_BINARY_DIR}/update_githash.cmake)
+                                           -P ${CMAKE_BINARY_DIR}/scip_update_githash.cmake)
 
 # create a target for updating the current build configuration
 set(NEWLINE "\\\\n")
-file(WRITE ${CMAKE_BINARY_DIR}/update_buildflags.cmake "
+file(WRITE ${CMAKE_BINARY_DIR}/scip_update_buildflags.cmake "
 file(WRITE \${DST} \"#define SCIP_BUILDFLAGS \\\" ARCH=\${CMAKE_SYSTEM}${NEWLINE} COMP=\${CMAKE_SYSTEM_PROCESSOR}${NEWLINE} BUILD=\${CMAKE_BUILD_TYPE}\\\"\")
 ")
-add_custom_target(update_buildflags
+add_custom_target(scip_update_buildflags
                   COMMAND ${CMAKE_COMMAND} -DDST=${PROJECT_SOURCE_DIR}/src/scip/buildflags.c
-                                           -P ${CMAKE_BINARY_DIR}/update_buildflags.cmake)
+                                           -P ${CMAKE_BINARY_DIR}/scip_update_buildflags.cmake)
 
 add_definitions(-DWITH_SCIPDEF)
 
