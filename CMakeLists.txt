@@ -22,15 +22,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${SCIP_BINARY_DIR}/lib)
 
-# update the cmake submodule
-if(EXISTS ${PROJECT_SOURCE_DIR}/.git AND NOT EXISTS ${PROJECT_SOURCE_DIR}/cmake/.git)
-   find_program(GIT git)
-   if(GIT)
-      execute_process(
-         COMMAND ${GIT} submodule update --init ${PROJECT_SOURCE_DIR}/cmake)
-   endif()
-endif()
-
 # path to e.g. findGMP module
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/Modules)
 
