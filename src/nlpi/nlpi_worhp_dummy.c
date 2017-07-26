@@ -24,7 +24,8 @@
 /** create solver interface for Worhp solver */
 SCIP_RETCODE SCIPcreateNlpSolverWorhp(
    BMS_BLKMEM*           blkmem,             /**< block memory data structure */
-   SCIP_NLPI**           nlpi                /**< pointer to buffer for nlpi address */
+   SCIP_NLPI**           nlpi,               /**< pointer to buffer for nlpi address */
+   SCIP_Bool             useip               /**< TRUE for using Interior Point, FALSE for SQP */
    )
 {
    *nlpi = NULL;

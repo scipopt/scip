@@ -4,6 +4,13 @@ OPTHOST	   	 := $(shell uname -n | sed 's/\(.zib.de\)//g' | tr -cd '[:alpha:]')
 
 -include $(SCIPDIR)/make/local/make.$(OPTHOST)
 
+.PHONY: testfscip
+testfscip: check/configuration_set_fscip.sh check/configuration_logfiles_fscip.sh check/evalcheck_cluster.sh check/check.awk
+		cd check; \
+		$(SHELL) ./check_fscip.sh $(TEST) $(FSCIP) $(SETTINGS) $(notdir $(FSCIP)).$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
+		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(DEBUGTOOL) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE) $(PERMUTE) \
+		$(SEEDS);
+
 .PHONY: testcplex
 testcplex:
 		cd check; \
@@ -69,6 +76,15 @@ testnodes:
                 $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
                 $(QUEUETYPE) $(QUEUE) $(NODES) $(PPN) $(CLIENTTMPDIR) \
                 $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
+
+.PHONY: testclusterfscip
+testclusterfscip: check/check_cluster_fscip.sh check/configuration_cluster.sh check/configuration_set_fscip.sh check/configuration_logfiles_fscip.sh check/evalcheck_cluster.sh check/check.awk
+		cd check; \
+		$(SHELL) ./check_cluster_fscip.sh $(TEST) $(FSCIP) $(SETTINGS) \
+		$(notdir $(FSCIP)) $(TIME) $(NODES) $(MEM) \
+		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
+		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(SEEDS) $(DEBUGTOOL) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
 
 .PHONY: testclustercpx
 testclustercpx:

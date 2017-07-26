@@ -33,6 +33,8 @@
 #include <math.h>
 #include <ctype.h>
 
+#define SCIP_PRIVATE_ROWPREP
+
 #include "scip/cons_soc.h"
 #include "scip/cons_quadratic.h"
 #include "scip/cons_linear.h"
@@ -897,19 +899,16 @@ SCIP_RETCODE generateCutSol(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL for LP solution */
-   SCIP_ROW**            row                 /**< place to store cut */
+   SCIP_ROWPREP**        rowprep             /**< place to store cut */
    )
 {
    SCIP_CONSDATA* consdata;
-   char           cutname[SCIP_MAXSTRLEN];
-   SCIP_Real*     rowcoeff;
-   SCIP_Real      rhs = 0.0;
    SCIP_Real      val;
    int            i;
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(row  != NULL);
+   assert(rowprep != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -917,28 +916,24 @@ SCIP_RETCODE generateCutSol(
    assert(SCIPisPositive(scip, consdata->lhsval)); /* do not like to linearize in 0 */
    assert(!SCIPisInfinity(scip, consdata->lhsval));
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &rowcoeff, consdata->nvars) );
+   SCIP_CALL( SCIPcreateRowprep(scip, rowprep, SCIP_SIDETYPE_RIGHT, SCIPconsIsLocal(cons)) );
+   SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, consdata->nvars+1) );
+   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
    for( i = 0; i < consdata->nvars; ++i )
    {
       val  = SCIPgetSolVal(scip, sol, consdata->vars[i]) + consdata->offsets[i];
       val *= consdata->coefs[i] * consdata->coefs[i];
 
-      rowcoeff[i] = val / consdata->lhsval;
+      SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, consdata->vars[i], val / consdata->lhsval) );
 
       val *= SCIPgetSolVal(scip, sol, consdata->vars[i]);
-      rhs += val;
+      SCIPaddRowprepSide(*rowprep, val);
    }
-   rhs /= consdata->lhsval;
-   rhs -= consdata->lhsval - consdata->rhscoeff * consdata->rhsoffset;
+   (*rowprep)->side /= consdata->lhsval;
+   (*rowprep)->side -= consdata->lhsval - consdata->rhscoeff * consdata->rhsoffset;
 
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), FALSE, TRUE) );
-   SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nvars, consdata->vars, rowcoeff) );
-   SCIP_CALL( SCIPaddVarToRow(scip, *row, consdata->rhsvar, -consdata->rhscoeff) );
-
-   SCIPfreeBufferArray(scip, &rowcoeff);
+   SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, consdata->rhsvar, -consdata->rhscoeff) );
 
    return SCIP_OKAY;
 }
@@ -949,20 +944,17 @@ SCIP_RETCODE generateCutPoint(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_Real*            x,                  /**< point (lhs-vars) where to generate cut */
-   SCIP_ROW**            row                 /**< place to store cut */
+   SCIP_ROWPREP**        rowprep             /**< place to store cut */
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Real*     rowcoeff;
-   SCIP_Real      rhs = 0.0;
    SCIP_Real      lhsval;
    SCIP_Real      val;
    int            i;
-   char           cutname[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(row  != NULL);
+   assert(rowprep != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -982,33 +974,27 @@ SCIP_RETCODE generateCutPoint(
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &rowcoeff, consdata->nvars) );
+   SCIP_CALL( SCIPcreateRowprep(scip, rowprep, SCIP_SIDETYPE_RIGHT, SCIPconsIsLocal(cons)) );
+   SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, consdata->nvars+1) );
+   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
    for( i = 0; i < consdata->nvars; ++i )
    {
       val  = x[i] + consdata->offsets[i];
       if( SCIPisZero(scip, val) )
-      {
-         rowcoeff[i] = 0.0;
          continue;
-      }
+
       val *= consdata->coefs[i] * consdata->coefs[i];
 
-      rowcoeff[i] = val / lhsval;
+      SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, consdata->vars[i], val / lhsval) );
 
       val *= x[i];
-      rhs += val;
+      SCIPaddRowprepSide(*rowprep, val);
    }
-   rhs /= lhsval;
-   rhs -= lhsval - consdata->rhscoeff * consdata->rhsoffset;
+   (*rowprep)->side /= lhsval;
+   (*rowprep)->side -= lhsval - consdata->rhscoeff * consdata->rhsoffset;
 
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), FALSE, TRUE) );
-   SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nvars, consdata->vars, rowcoeff) );
-   SCIP_CALL( SCIPaddVarToRow(scip, *row, consdata->rhsvar, -consdata->rhscoeff) );
-
-   SCIPfreeBufferArray(scip, &rowcoeff);
+   SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, consdata->rhsvar, -consdata->rhscoeff) );
 
    return SCIP_OKAY;
 }
@@ -1045,20 +1031,17 @@ SCIP_RETCODE generateCutProjectedPoint(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL for LP solution */
-   SCIP_ROW**            row                 /**< place to store cut */
+   SCIP_ROWPREP**        rowprep             /**< place to store cut */
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Real*     rowcoeff;
-   SCIP_Real      rhs = 0.0;
    SCIP_Real      val;
    SCIP_Real      A, lambda;
    int            i;
-   char           cutname[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
    assert(cons != NULL);
-   assert(row  != NULL);
+   assert(rowprep != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1068,7 +1051,7 @@ SCIP_RETCODE generateCutProjectedPoint(
 
    if( !SCIPisZero(scip, consdata->constant) )
    {  /* have not thought about this case yet */
-      SCIP_CALL( generateCutSol(scip, cons, sol, row) );
+      SCIP_CALL( generateCutSol(scip, cons, sol, rowprep) );
       return SCIP_OKAY;
    }
 
@@ -1083,34 +1066,30 @@ SCIP_RETCODE generateCutProjectedPoint(
 
    if( SCIPisFeasEQ(scip, lambda, 1.0) )
    {  /* avoid numerical difficulties when dividing by (1-lambda) below */ 
-      SCIP_CALL( generateCutSol(scip, cons, sol, row) );
+      SCIP_CALL( generateCutSol(scip, cons, sol, rowprep) );
       return SCIP_OKAY;
    }
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &rowcoeff, consdata->nvars) );
+   SCIP_CALL( SCIPcreateRowprep(scip, rowprep, SCIP_SIDETYPE_RIGHT, SCIPconsIsLocal(cons)) );
+   SCIP_CALL( SCIPensureRowprepSize(scip, *rowprep, consdata->nvars+1) );
+   (void) SCIPsnprintf((*rowprep)->name, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
 
    for( i = 0; i < consdata->nvars; ++i )
    {
       val  = SCIPgetSolVal(scip, sol, consdata->vars[i]) + consdata->offsets[i];
       val *= consdata->coefs[i] * consdata->coefs[i];
 
-      rowcoeff[i] = val / consdata->lhsval;
+      SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, consdata->vars[i], val / consdata->lhsval) );
 
       val *= SCIPgetSolVal(scip, sol, consdata->vars[i]) + lambda * consdata->offsets[i];
-      rhs += val;
+      SCIPaddRowprepSide(*rowprep, val);
    }
-   rhs /= consdata->lhsval;
-   rhs -= consdata->lhsval;
-   rhs /= 1.0 - lambda;
-   rhs -= consdata->rhscoeff * consdata->rhsoffset;
+   (*rowprep)->side /= consdata->lhsval;
+   (*rowprep)->side-= consdata->lhsval;
+   (*rowprep)->side /= 1.0 - lambda;
+   (*rowprep)->side -= consdata->rhscoeff * consdata->rhsoffset;
 
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s_linearization_%d", SCIPconsGetName(cons), SCIPgetNLPs(scip));
-
-   SCIP_CALL( SCIPcreateEmptyRowCons(scip, row, SCIPconsGetHdlr(cons), cutname, -SCIPinfinity(scip), rhs, SCIPconsIsLocal(cons), FALSE, TRUE) );
-   SCIP_CALL( SCIPaddVarsToRow(scip, *row, consdata->nvars, consdata->vars, rowcoeff) );
-   SCIP_CALL( SCIPaddVarToRow(scip, *row, consdata->rhsvar, -consdata->rhscoeff) );
-
-   SCIPfreeBufferArray(scip, &rowcoeff);
+   SCIP_CALL( SCIPaddRowprepTerm(scip, *rowprep, consdata->rhsvar, -consdata->rhscoeff) );
 
    return SCIP_OKAY;
 }
@@ -1122,7 +1101,7 @@ SCIP_RETCODE generateSparseCut(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             sol,                /**< solution to separate, or NULL for LP solution */
-   SCIP_ROW**            row,                /**< place to store cut */
+   SCIP_ROWPREP**        rowprep,            /**< place to store cut */
    SCIP_Real             minefficacy         /**< minimal efficacy for a cut to be accepted */
    )
 {
@@ -1139,7 +1118,7 @@ SCIP_RETCODE generateSparseCut(
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(cons != NULL);
-   assert(row  != NULL);
+   assert(rowprep != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -1152,7 +1131,7 @@ SCIP_RETCODE generateSparseCut(
 
    if( consdata->nvars <= 3 )
    {
-      SCIP_CALL( generateCutSol(scip, cons, sol, row) );
+      SCIP_CALL( generateCutSol(scip, cons, sol, rowprep) );
       return SCIP_OKAY;
    }
 
@@ -1184,40 +1163,11 @@ SCIP_RETCODE generateSparseCut(
       /* @todo speed up a bit by computing efficacy of new cut from efficacy of old cut
        * generate row only if efficient enough
        */
-      SCIP_CALL( generateCutPoint(scip, cons, x, row) );
+      SCIP_CALL( generateCutPoint(scip, cons, x, rowprep) );
 
-      if( *row != NULL )
+      if( *rowprep != NULL )
       {
-         efficacy = -SCIPgetRowSolFeasibility(scip, *row, sol) ;
-         switch( conshdlrdata->scaling )
-         {
-         case 'o' :
-            break;
-
-         case 'g' :
-         {
-            SCIP_Real norm;
-
-            norm = SCIPgetRowMaxCoef(scip, *row);
-            efficacy /= MAX(1.0, norm);
-            break;
-         }
-
-         case 's' :
-         {
-            SCIP_Real abslhs = REALABS(SCIProwGetLhs(*row));
-            SCIP_Real absrhs = REALABS(SCIProwGetRhs(*row));
-            SCIP_Real minval = MIN(abslhs, absrhs);
-
-            efficacy /= MAX(1.0, minval);
-            break;
-         }
-
-         default:
-            SCIPerrorMessage("Wrong type of scaling: %c.\n", conshdlrdata->scaling);
-            SCIPABORT();
-            return SCIP_INVALIDDATA;  /*lint !e527*/
-         }
+         efficacy = SCIPgetRowprepViolation(scip, *rowprep, sol, conshdlrdata->scaling);
 
          if( SCIPisGT(scip, efficacy, goodefficacy) ||
             (maxnz >= consdata->nvars && SCIPisGT(scip, efficacy, minefficacy)) )
@@ -1226,7 +1176,8 @@ SCIP_RETCODE generateSparseCut(
             SCIPdebugMsg(scip, "accepted cut with %d of %d nonzeros, efficacy = %g\n", maxnz, consdata->nvars, efficacy);
             break;
          }
-         SCIP_CALL( SCIPreleaseRow(scip, row) );
+
+         SCIPfreeRowprep(scip, rowprep);
       }
 
       /* cut also not efficient enough if generated in original refpoint (that's bad) */
@@ -1273,6 +1224,7 @@ SCIP_RETCODE separatePoint(
    SCIP_Real          minefficacy;
    int                c;
    SCIP_ROW*          row;
+   SCIP_ROWPREP*      rowprep;
 
    assert(scip    != NULL);
    assert(conss   != NULL || nconss == 0);
@@ -1298,83 +1250,58 @@ SCIP_RETCODE separatePoint(
       {
          SCIP_Real efficacy;
 
-         row = NULL;
+         rowprep = NULL;
 
          /* generate cut */
          if( conshdlrdata->sparsify )
          {
-            SCIP_CALL( generateSparseCut(scip, conshdlr, conss[c], sol, &row, minefficacy) );  /*lint !e613*/
-
-            if( row == NULL )
-               continue;
+            SCIP_CALL( generateSparseCut(scip, conshdlr, conss[c], sol, &rowprep, minefficacy) );  /*lint !e613*/
+         }
+         else if( conshdlrdata->projectpoint )
+         {
+            SCIP_CALL( generateCutProjectedPoint(scip, conss[c], sol, &rowprep) );  /*lint !e613*/
          }
          else
          {
-            if( conshdlrdata->projectpoint )
-            {
-               SCIP_CALL( generateCutProjectedPoint(scip, conss[c], sol, &row) );  /*lint !e613*/
-            }
-            else
-            {
-               SCIP_CALL( generateCutSol(scip, conss[c], sol, &row) );  /*lint !e613*/
-            }
-
-            efficacy = -SCIPgetRowSolFeasibility(scip, row, sol);
-            switch( conshdlrdata->scaling )
-            {
-            case 'o' :
-               break;
-
-            case 'g' :
-            {
-               SCIP_Real norm;
-
-               /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0 this avoid finding
-                * cuts efficient which are only very slightly violated CPLEX does not seem to scale row coefficients up
-                * too also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers
-                * (equilibrium scaling) */
-               norm = SCIPgetRowMaxCoef(scip, row);
-               efficacy /= MAX(1.0, norm);
-               break;
-            }
-
-            case 's' :
-            {
-               SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
-               SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
-               SCIP_Real minval = MIN(abslhs, absrhs);
-
-               efficacy /= MAX(1.0, minval);
-               break;
-            }
-
-            default:
-               SCIPerrorMessage("Wrong type of scaling: %c.\n", conshdlrdata->scaling);
-               SCIPABORT();
-               return SCIP_INVALIDDATA;  /*lint !e527*/
-            }
-
-            if( SCIPisLE(scip, efficacy, minefficacy) || !SCIPisCutApplicable(scip, row) )
-            {
-               SCIP_CALL( SCIPreleaseRow(scip, &row) );
-               continue;
-            }
+            SCIP_CALL( generateCutSol(scip, conss[c], sol, &rowprep) );  /*lint !e613*/
          }
-         assert(row != NULL);
+
+         if( rowprep == NULL )
+            continue;
+
+         /* NOTE: The way that rowprep was constructed, there should be no need to call SCIPmergeRowprep,
+          * since no variable gets added twice. However, if rowprep were replacing multiaggregated variables
+          * (as there can exist for soc cons), then SCIPmergeRowprep would be necessary.
+          */
+         /* cleanup rowprep (there is no limit on coefrange for cons_soc) TODO add a coefrange limit? */
+         SCIP_CALL( SCIPcleanupRowprep(scip, rowprep, sol, SCIPinfinity(scip), minefficacy, NULL, &efficacy) );
+
+         if( conshdlrdata->scaling != 'o' )
+            efficacy = SCIPgetRowprepViolation(scip, rowprep, sol, conshdlrdata->scaling);
+         if( SCIPisLE(scip, efficacy, minefficacy) )
+         {
+            SCIPfreeRowprep(scip, &rowprep);
+            continue;
+         }
 
          /* cut cuts off solution and efficient enough */
-         SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
-         SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );  /*lint !e613*/
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+         if( SCIPisCutApplicable(scip, row) )
+         {
+            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+            SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );  /*lint !e613*/
 
-         *success = TRUE;
+            *success = TRUE;
 
-         SCIPdebugMsg(scip, "added cut with efficacy %g\n", SCIPgetCutEfficacy(scip, sol, row));
+            SCIPdebugMsg(scip, "added cut with efficacy %g\n", SCIPgetCutEfficacy(scip, sol, row));
 
-         /* mark row as not removable from LP for current node, if in enforcement */
-         if( inenforcement && !conshdlrdata->enfocutsremovable )
-            SCIPmarkRowNotRemovableLocal(scip, row);
+            /* mark row as not removable from LP for current node, if in enforcement */
+            if( inenforcement && !conshdlrdata->enfocutsremovable )
+               SCIPmarkRowNotRemovableLocal(scip, row);
+         }
 
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
+         SCIPfreeRowprep(scip, &rowprep);
       }
 
       if( *cutoff )
@@ -1409,7 +1336,7 @@ SCIP_RETCODE addLinearizationCuts(
 {
    SCIP_CONSDATA* consdata;
    SCIP_Bool addedtolp;
-   SCIP_ROW* row;
+   SCIP_ROWPREP* rowprep;
    int c;
 
    assert(scip != NULL);
@@ -1438,70 +1365,44 @@ SCIP_RETCODE addLinearizationCuts(
          continue;
       }
 
-      SCIP_CALL( generateCutSol(scip, conss[c], ref, &row) );  /*lint !e613 */
+      SCIP_CALL( generateCutSol(scip, conss[c], ref, &rowprep) );  /*lint !e613 */
 
-      if( row == NULL )
+      if( rowprep == NULL )
          continue;
 
       addedtolp = FALSE;
-
-      assert(!SCIProwIsLocal(row));
 
       /* if caller wants, then check if cut separates LP solution and add to sepastore if so */
       if( separatedlpsol != NULL )
       {
          SCIP_CONSHDLRDATA* conshdlrdata;
-         SCIP_Real efficacy;
-         SCIP_Real norm;
 
          conshdlrdata = SCIPconshdlrGetData(conshdlr);
          assert(conshdlrdata != NULL);
 
-         efficacy = -SCIPgetRowLPFeasibility(scip, row);
-         switch( conshdlrdata->scaling )
+         if( SCIPgetRowprepViolation(scip, rowprep, NULL, conshdlrdata->scaling) >= minefficacy )
          {
-         case 'o' :
-            break;
+            SCIP_ROW* row;
 
-         case 'g' :
-            /* in difference to SCIPgetCutEfficacy, we scale by norm only if the norm is > 1.0 this avoid finding cuts
-             * efficient which are only very slightly violated CPLEX does not seem to scale row coefficients up too
-             * also we use infinity norm, since that seem to be the usual scaling strategy in LP solvers (equilibrium
-             * scaling) */
-            norm = SCIPgetRowMaxCoef(scip, row);
-            efficacy /= MAX(1.0, norm);
-            break;
+            SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE, cutoff) );
+            SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
-         case 's' :
-         {
-            SCIP_Real abslhs = REALABS(SCIProwGetLhs(row));
-            SCIP_Real absrhs = REALABS(SCIProwGetRhs(row));
-            SCIP_Real minval = MIN(abslhs, absrhs);
-
-            efficacy /= MAX(1.0, minval);
-            break;
-         }
-
-         default:
-            SCIPerrorMessage("Wrong type of scaling: %c.\n", conshdlrdata->scaling);
-            SCIPABORT();
-            return SCIP_INVALIDDATA;  /*lint !e527*/
-         }
-
-         if( efficacy >= minefficacy )
-         {
             *separatedlpsol = TRUE;
             addedtolp = TRUE;
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, TRUE, cutoff) );
          }
       }
 
-      if( !addedtolp )
+      if( !addedtolp && !rowprep->local )
       {
+         SCIP_ROW* row;
+
+         SCIP_CALL( SCIPgetRowprepRowCons(scip, &row, rowprep, conshdlr) );
          SCIP_CALL( SCIPaddPoolCut(scip, row) );
+         SCIP_CALL( SCIPreleaseRow(scip, &row) );
       }
 
-      SCIP_CALL( SCIPreleaseRow(scip, &row) );
+      SCIPfreeRowprep(scip, &rowprep);
    }
 
    return SCIP_OKAY;
@@ -4670,7 +4571,7 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
       SCIP_CALL( SCIPheurPassSolTrySol(scip, conshdlrdata->trysolheur, polishedsol) );
       SCIP_CALL( SCIPfreeSol(scip, &polishedsol) );
    }
-   else if( conshdlrdata->subnlpheur != NULL && sol != NULL && *result == SCIP_INFEASIBLE )
+   else if( conshdlrdata->subnlpheur != NULL && sol != NULL && *result == SCIP_INFEASIBLE && !SCIPisInfinity(scip, maxviol) )
    {
       SCIP_CALL( SCIPupdateStartpointHeurSubNlp(scip, conshdlrdata->subnlpheur, sol, maxviol) );
    }
