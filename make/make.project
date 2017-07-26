@@ -161,6 +161,7 @@ SPLINTFLAGS	=	-UNDEBUG -UWITH_READLINE -UROUNDING_FE -UWITH_GMP -UWITH_ZLIB -whi
 			-redef +export-header +export-local +decl-undef +relaxtypes
 
 # third party testing parameters
+FSCIP		=	fscip
 CPLEX		=	cplex
 CBC		=	cbc
 CBCPARALLEL	=	cbc-parallel

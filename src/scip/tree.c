@@ -1569,6 +1569,10 @@ SCIP_RETCODE SCIPnodeAddCons(
    assert(node->conssetchg->addedconss != NULL);
    assert(!node->active || SCIPconsIsActive(cons));
 
+   /* if the constraint is added to an active node which is not a probing node, increment the corresponding counter */
+   if( node->active && SCIPnodeGetType(node) != SCIP_NODETYPE_PROBINGNODE )
+      stat->nactiveconssadded++;
+
    return SCIP_OKAY;
 }
 

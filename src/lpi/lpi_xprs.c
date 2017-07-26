@@ -2283,14 +2283,30 @@ SCIP_Bool SCIPlpiIsPrimalFeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   int nInfeasible;
+
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(lpi->solstat >= 0);
 
    SCIPdebugMessage("checking for primal feasibility\n");
 
-   /* problem is optimal or unbounded found by primal */
-   return lpi->solstat == XPRS_LP_OPTIMAL || lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS || (lpi->solstat == XPRS_LP_UNBOUNDED && lpi->solmethod == 'p');
+   /* check if problem is solved to optimality */
+   if (lpi->solstat == XPRS_LP_OPTIMAL || lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS)
+     return TRUE;
+
+   /* check if problem is unbounded (found by primal) */
+   if (lpi->solstat == XPRS_LP_UNBOUNDED && lpi->solmethod == 'p')
+     return TRUE;
+
+   /* get number of primal infeasibilities */
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_PRIMALINFEAS, &nInfeasible) );
+
+   /* check if the number of primal infeasibilities is zero */
+   if (nInfeasible == 0)
+     return TRUE;
+
+   return FALSE;
 }
 
 /** returns TRUE iff LP is proven to have a dual unbounded ray (but not necessary a dual feasible point);
@@ -2358,14 +2374,30 @@ SCIP_Bool SCIPlpiIsDualFeasible(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
 {
+   int nInfeasible;
+
    assert(lpi != NULL);
    assert(lpi->xprslp != NULL);
    assert(lpi->solstat >= 0);
 
    SCIPdebugMessage("checking for dual feasibility\n");
 
-   /* problem is optimal or infeasible found by dual */
-   return lpi->solstat == XPRS_LP_OPTIMAL || lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS || (lpi->solstat == XPRS_LP_INFEAS && lpi->solmethod == 'd');
+   /* check if problem solved to optimality */
+   if (lpi->solstat == XPRS_LP_OPTIMAL || lpi->solstat == XPRS_LP_OPTIMAL_SCALEDINFEAS)
+     return TRUE;
+
+   /* check if problem infeasible detected by dual */
+   if (lpi->solstat == XPRS_LP_INFEAS && lpi->solmethod == 'd')
+     return TRUE;
+
+   /* get number of primal infeasibilities */
+   CHECK_ZERO( lpi->messagehdlr, XPRSgetintattrib(lpi->xprslp, XPRS_DUALINFEAS, &nInfeasible) );
+
+   /* check if the number of dual infeasibilities is zero */
+   if (nInfeasible == 0)
+     return TRUE;
+
+   return FALSE;
 }
 
 /** returns TRUE iff LP was solved to optimality */

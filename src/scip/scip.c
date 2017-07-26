@@ -10838,12 +10838,19 @@ SCIP_RETCODE SCIPchgReoptObjective(
    SCIPdebugMsg(scip, "\n");
 #endif
 
-   /* set all coefficients to 0, this is necessary because variables that are not given are assumed to have a
-    * zero objective coefficient
-    */
+   /* Set all coefficients of original variables to 0, since we will add the new objective coefficients later. */
    for( i = 0; i < norigvars; i++ )
    {
-      SCIP_CALL( SCIPaddVarObj(scip, origvars[i], -SCIPvarGetObj(origvars[i])) );
+      SCIP_CALL( SCIPchgVarObj(scip, origvars[i], 0.0) );
+   }
+
+   if( scip->set->stage >= SCIP_STAGE_TRANSFORMED )
+   {
+      /* In order to avoid numerical troubles, also explicitly set all transformed objective coefficients to 0. */
+      for( i = 0; i < scip->transprob->nvars; i++ )
+      {
+         SCIP_CALL( SCIPchgVarObj(scip, scip->transprob->vars[i], 0.0) );
+      }
    }
 
    /* reset objective data of original problem */
@@ -10859,11 +10866,6 @@ SCIP_RETCODE SCIPchgReoptObjective(
       scip->transprob->objsense = objsense;
       scip->transprob->objoffset = 0.0;
       scip->transprob->objisintegral = FALSE;
-
-#ifndef NDEBUG
-      for( i = 0; i < scip->transprob->nvars; i++ )
-         assert(SCIPvarGetObj(scip->transprob->vars[i]) == 0.0);
-#endif
    }
 
    /* set new objective values */
@@ -10876,6 +10878,7 @@ SCIP_RETCODE SCIPchgReoptObjective(
          return SCIP_INVALIDDATA;
       }
 
+      /* Add coefficients because this gets transferred to the transformed problem (the coefficients were set to 0 above). */
       SCIP_CALL( SCIPaddVarObj(scip, vars[i], coefs[i]) );
    }
 
@@ -11122,17 +11125,30 @@ SCIP_RETCODE SCIPsetObjlimit(
    case SCIP_STAGE_PROBLEM:
       SCIPprobSetObjlim(scip->origprob, objlimit);
       break;
+   case SCIP_STAGE_PRESOLVED:
+      oldobjlimit = SCIPprobGetObjlim(scip->origprob, scip->set);
+      assert(oldobjlimit == SCIPprobGetObjlim(scip->transprob, scip->set)); /*lint !e777*/
+      if( SCIPtransformObj(scip, objlimit) > SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, oldobjlimit) && ! scip->set->reopt_enable)
+      {
+         SCIPerrorMessage("cannot relax objective limit from %.15g to %.15g in presolved stage.\n", oldobjlimit, objlimit);
+         return SCIP_INVALIDDATA;
+      }
+      SCIPprobSetObjlim(scip->origprob, objlimit);
+      SCIPprobSetObjlim(scip->transprob, objlimit);
+      SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+            scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
+      break;
+
    case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
-   case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_SOLVING:
       oldobjlimit = SCIPprobGetObjlim(scip->origprob, scip->set);
       assert(oldobjlimit == SCIPprobGetObjlim(scip->transprob, scip->set)); /*lint !e777*/
       if( SCIPtransformObj(scip, objlimit) > SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, oldobjlimit) )
       {
-         SCIPerrorMessage("cannot relax objective limit from %.15g to %.15g after problem was transformed\n", oldobjlimit, objlimit);
+         SCIPerrorMessage("cannot relax objective limit from %.15g to %.15g after problem was transformed.\n", oldobjlimit, objlimit);
          return SCIP_INVALIDDATA;
       }
       SCIPprobSetObjlim(scip->origprob, objlimit);
@@ -15198,9 +15214,6 @@ SCIP_RETCODE freeReoptSolve(
    /* reset objective limit */
    SCIP_CALL( SCIPsetObjlimit(scip, SCIP_INVALID) );
 
-   scip->transprob->objscale = 1.0;
-   scip->transprob->objisintegral = FALSE;
-
    return SCIP_OKAY;
 }
 
@@ -16312,12 +16325,18 @@ SCIP_RETCODE SCIPenableReoptimization(
       /* initialize all reoptimization data structures */
       if( enable && scip->reopt == NULL )
       {
+         /* set enable flag */
+         scip->set->reopt_enable = enable;
+
          SCIP_CALL( SCIPreoptCreate(&scip->reopt, scip->set, scip->mem->probmem) );
          SCIP_CALL( SCIPsetSetReoptimizationParams(scip->set, scip->messagehdlr) );
       }
       /* disable all reoptimization plugins and free the structure if necessary */
       else if( (!enable && scip->reopt != NULL) || (!enable && scip->set->reopt_enable && scip->reopt == NULL) )
       {
+         /* set enable flag */
+         scip->set->reopt_enable = enable;
+
          if( scip->reopt != NULL )
          {
             SCIP_CALL( SCIPreoptFree(&(scip->reopt), scip->set, scip->origprimal, scip->mem->probmem) );
@@ -16326,9 +16345,11 @@ SCIP_RETCODE SCIPenableReoptimization(
          SCIP_CALL( SCIPsetSetReoptimizationParams(scip->set, scip->messagehdlr) );
       }
    }
-
-   /* set enable flag */
-   scip->set->reopt_enable = enable;
+   else
+   {
+      /* set enable flag */
+      scip->set->reopt_enable = enable;
+   }
 
    return SCIP_OKAY;
 }
@@ -16852,8 +16873,8 @@ SCIP_RETCODE SCIPfreeSolve(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *
- *  @post If this method is called in \SCIP stage \ref SCIP_STAGE_INIT or \ref SCIP_STAGE_PROBLEM, the stage of
- *        \SCIP is not changed; otherwise, the \SCIP stage is changed to \ref SCIP_STAGE_PRESOLVED.
+ *  @post If this method is called in \SCIP stage \ref SCIP_STAGE_INIT, \ref SCIP_STAGE_TRANSFORMED or \ref SCIP_STAGE_PROBLEM,
+ *        the stage of \SCIP is not changed; otherwise, the \SCIP stage is changed to \ref SCIP_STAGE_PRESOLVED.
  *
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
@@ -16867,6 +16888,7 @@ SCIP_RETCODE SCIPfreeReoptSolve(
    {
    case SCIP_STAGE_INIT:
    case SCIP_STAGE_TRANSFORMED:
+   case SCIP_STAGE_PRESOLVED:
    case SCIP_STAGE_PROBLEM:
       return SCIP_OKAY;
 
@@ -16882,13 +16904,9 @@ SCIP_RETCODE SCIPfreeReoptSolve(
       /* exit presolving */
       SCIP_CALL( exitPresolve(scip, FALSE, &infeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
-   }
 
-   /*lint -fallthrough*/
-   case SCIP_STAGE_PRESOLVED:
-      /* switch stage to TRANSFORMED */
-      scip->set->stage = SCIP_STAGE_TRANSFORMED;
       return SCIP_OKAY;
+   }
 
    case SCIP_STAGE_SOLVING:
    case SCIP_STAGE_SOLVED:
@@ -20559,6 +20577,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    SCIP_Bool downvalidlocal;
    SCIP_Bool upvalidlocal;
    SCIP_Bool allcolsinlp;
+   SCIP_Bool enabledconflict;
    int oldnconflicts;
    int nvars;
 
@@ -20703,6 +20722,10 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    firstchild = TRUE;
    cutoff = FALSE;
 
+   /* switch conflict analysis according to usesb parameter */
+   enabledconflict = scip->set->conf_enable;
+   scip->set->conf_enable = scip->set->conf_usesb;
+
    /* @todo: decide the branch to look at first based on the cutoffs in previous calls? */
    switch( scip->set->branch_firstsbchild )
    {
@@ -20721,6 +20744,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
       default:
          SCIPerrorMessage("Error: Unknown parameter value <%c> for branching/firstsbchild parameter:\n",scip->set->branch_firstsbchild);
          SCIPABORT();
+         scip->set->conf_enable = enabledconflict;
          return SCIP_PARAMETERWRONGVAL; /*lint !e527*/
    }
 
@@ -20823,6 +20847,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
       *downvalid = downvalidlocal;
    if( upvalid != NULL )
       *upvalid = upvalidlocal;
+
+   scip->set->conf_enable = enabledconflict;
 
    return SCIP_OKAY;
 }
@@ -29627,10 +29653,10 @@ SCIP_RETCODE SCIPwriteLP(
    const char*           filename            /**< file name */
    )
 {
-
    SCIP_Bool cutoff;
 
    SCIP_CALL( checkStage(scip, "SCIPwriteLP", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
    if( !SCIPtreeIsFocusNodeLPConstructed(scip->tree) )
    {
       SCIP_CALL( SCIPconstructCurrentLP(scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
@@ -39273,7 +39299,7 @@ SCIP_RETCODE SCIPretransformSol(
    }
    case SCIP_SOLORIGIN_PARTIAL:
    case SCIP_SOLORIGIN_UNKNOWN:
-      SCIPerrorMessage("unkown solution origin.\n");
+      SCIPerrorMessage("unknown solution origin.\n");
       return SCIP_INVALIDCALL;
 
    default:

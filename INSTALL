@@ -58,12 +58,22 @@ You will need either the .a or the .so files and can skip the others by
 just pressing return.
 
 The most common compiling issue is that some libraries are missing on
-your system or that they are outdated. SCIP per default requires zlib,
-gmp and readline.  Try compiling with:
-make ZLIB=false READLINE=false GMP=false
-or, better, install them. Note that under Linux-based systems, you
-need to install the developer-versions of gmp/zlib/readline, in order
-to also have the header-files available.
+your system or that they are outdated. SCIP per default requires the
+following packages (with usual names for Linux systems in
+parentheses):
+
+- zlib     (libz-dev)
+- gmp      (libgmp-dev),
+- readline (libreadline-dev), and
+- ncurses  (libncurses-dev)
+
+Note that under Linux-based systems, you need to install the
+developer-versions of gmp/zlib/readline, in order to also have the
+header-files available.
+
+If you are not able or do not want to install these packages, try compiling with:
+make ZLIB=false READLINE=false GMP=false.
+
 
 II Detailed installation description
 ************************************
@@ -401,10 +411,10 @@ make[1]: Leaving directory `/sw/scip'
 
    (d) to use MOSEK
        - ln -s <path to directory of mosek.h> <path to SCIP>/lib/include/mskinc
-         (e.g. "cd scip; ln -s /mosek/4/tools/platform/linux32x86/h lib/include/mskinc")
+         (e.g. "cd scip; ln -s /mosek/8/tools/platform/linux64x86/h lib/include/mskinc")
        - ln -s <file libmosek.so> <path to SCIP>/lib/shared/libmosek.$(OSTYPE).$(ARCH).$(COMP).so
          for each operation system and architecture to use
-         (e.g. "cd scip; ln -s /mosek/4/tools/platform/linux32x86/bin/libmosek.so lib/shared/libmosek.linux.x86.gnu.so")
+         (e.g. "cd scip; ln -s /mosek/8/tools/platform/linux64x86/bin/libmosek64.so lib/shared/libmosek.linux.x86_64.gnu.so")
        - since MOSEK is a shared library, make sure your LD_LIBRARY_PATH contains <path to SCIP>/lib/shared
 
    (e) to use CLP
