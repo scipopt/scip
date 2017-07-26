@@ -45,61 +45,6 @@ struct SCIP_HeurData
    SCIP_Bool            local;
 };
 
-static
-int phi(
-   int                   k,
-   int                   ncluster
-)
-{
-   assert(k < ncluster && k >= 0);
-   assert(ncluster > 0);
-   return (k+1) % ncluster;
-}
-
-static
-int phiinv(
-   int                   k,
-   int                   ncluster
-)
-{
-   assert(k < ncluster && k >= 0);
-   assert(ncluster > 0);
-   if( k - 1 < 0)
-      return ncluster - 1;
-   else
-      return
-         k - 1;
-}
-
-#ifndef NDEBUG
-/** checks if the assignment is finished, i.e. all columns have exactly one 1 and rest 0 values */
-static
-SCIP_Bool isPartition(
-   SCIP_Real**                 clusterassignment,  /**< The matrix containing the clustering */
-   int                   nbins,              /**< The number of bins */
-   int                   ncluster            /**< The number of clusters */
-)
-{
-   int colsum;
-   int i;
-   int c;
-   SCIP_Bool validassignment = TRUE;
-   for( i = 0; i < nbins; ++i )
-   {
-      colsum = 0;
-      for( c = 0; c < ncluster; ++c )
-      {
-         if( clusterassignment[i][c] == -1 )
-            validassignment = FALSE;
-         colsum += clusterassignment[i][c];
-      }
-      if( colsum != 1 )
-         validassignment = FALSE;
-   }
-   return validassignment;
-}
-#endif
-
 /**  calculate the current epsI-value for a q-matrix */
 static
 SCIP_Real getObjective(
@@ -197,127 +142,7 @@ void updateIrrevMat(
    }
 }
 
-/**
- * assign the variables in scip according to the found clusterassignment
- */
-static
-SCIP_RETCODE assignVars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol,                /**< The SCIP solution */
-   SCIP_Real**           clustering,         /**< The matrix with the clusterassignment */
-   int                   nbins,              /**< The number of bins */
-   int                   ncluster,           /**< The number of cluster */
-   SCIP_Real**           qmatrix,            /**< The irreversibility matrix */
-   SCIP_Real**           cmatrix
-)
-{
-   int i,j;
-   int c;
-   int c2;
-   SCIP_VAR* var;
-   SCIP_CONS** conss;
-   int ncons;
-   SCIP_VAR*** binvars;
-   SCIP_VAR****  edgevars;
 
-   assert(nbins > 0 && ncluster > 0);
-
-   binvars = SCIPspaGetBinvars(scip);
-   edgevars = SCIPspaGetEdgevars(scip);
-
-   for ( c = 0; c < ncluster; ++c )
-   {
-      for( c2 = 0; c2 < ncluster; ++c2 )
-      {
-         qmatrix[c][c2] = 0;
-      }
-      /* set values of binary variables */
-      for ( i = 0; i < nbins; ++i )
-      {
-         if( NULL != binvars[i][c] )
-         {
-            if( SCIPvarIsTransformed(binvars[i][c]) )
-               var = binvars[i][c];
-            else
-               var = SCIPvarGetTransVar(binvars[i][c] );
-            /* check if the clusterassignment ist feasible for the variable bounds. If not do not assign the variable */
-            if( var != NULL && SCIPisLE(scip, SCIPvarGetLbGlobal(var), clustering[i][c]) && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
-               SCIP_CALL( SCIPsetSolVal( scip, sol, var, clustering[i][c]) );
-            assert( SCIPisIntegral(scip, clustering[i][c]) );
-         }
-      }
-
-      /* set the value for the edgevariables */
-      for( i = 0; i < nbins; ++i )
-      {
-         for( j = 0; j < i; ++j )
-         {
-            if( NULL == edgevars[i][j] )
-               continue;
-            if( SCIPvarIsTransformed(edgevars[i][j][0]) )
-               var = edgevars[i][j][0];
-            else
-               var = SCIPvarGetTransVar(edgevars[i][j][0]);
-            if( var != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[j][c] * clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
-            {
-               if( SCIPisEQ(scip, 1.0, clustering[j][c] * clustering[i][c]) )
-                  SCIP_CALL( SCIPsetSolVal( scip, sol, var, clustering[j][c] * clustering[i][c]  ) );
-            }
-            for( c2 = 0; c2 < ncluster; ++c2 )
-            {
-               if( NULL == edgevars[i][j] || c == c2 )
-                  continue;
-               if( c2 == c + 1 || ( c2 == 0 && c == ncluster -1) )
-               {
-                  if( SCIPvarIsTransformed(edgevars[i][j][1]) )
-                     var = edgevars[i][j][1];
-                  else
-                     var = SCIPvarGetTransVar(edgevars[i][j][1]);
-               }
-               else if( c2 == c - 1 || ( c == 0 && c2 == ncluster -1) )
-               {
-                  if( SCIPvarIsTransformed(edgevars[j][i][1]) )
-                     var = edgevars[j][i][1];
-                  else
-                     var = SCIPvarGetTransVar(edgevars[j][i][1]);
-               }
-               else
-               {
-                  if( SCIPvarIsTransformed(edgevars[i][j][2]) )
-                     var = edgevars[i][j][2];
-                  else
-                     var = SCIPvarGetTransVar(edgevars[i][j][2]);
-               }
-               if( var != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[j][c2] * clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
-               {
-                  if( SCIPisEQ(scip, 1.0, clustering[j][c2] * clustering[i][c]) )
-                     SCIP_CALL( SCIPsetSolVal( scip, sol, var, 1.0 ) );
-                  qmatrix[c][c2] += cmatrix[i][j] * clustering[i][c] * clustering[j][c2];
-                  qmatrix[c2][c] += cmatrix[j][i] * clustering[i][c] * clustering[j][c2];
-               }
-            }
-         }
-      }
-   }
-   conss = SCIPgetConss(scip);
-   ncons = SCIPgetNConss(scip);
-   for( i = 0; i < ncons; ++i )
-   {
-      if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(conss[i])),"and") == 0 )
-      {
-         SCIP_Real resval = 1.0;
-         var = SCIPgetResultantAnd(scip, conss[i]);
-         for( c = 0; c < SCIPgetNVarsAnd(scip, conss[i]); ++c )
-         {
-            if( SCIPisZero(scip, SCIPgetSolVal(scip, sol, SCIPgetVarsAnd(scip, conss[i])[c])))
-               resval = 0.0;
-         }
-         SCIP_CALL( SCIPsetSolVal(scip, sol, var, resval) );
-      }
-   }
-
-   return SCIP_OKAY;
-}
 
 /** Get the temporary objective value bound after newbin would be added to newcluster but dont not change anything with the clustering */
 static
@@ -683,7 +508,7 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
          SCIP_CALL( assignNextBin(scip, heurdata->local, clustering, cmatrix, qmatrix, isassigned, nbins, ncluster, &amountassigned, binsincluster, &epsI ) );
       }
       /* assert that the assignment is valid in the sense that it is a partition of the bins. Feasibility is not checked in this method */
-      assert(isPartition(clustering, nbins, ncluster));
+      assert(isPartition(scip,clustering, nbins, ncluster));
       /* update the qmatrix */
       computeIrrevMat(clustering, qmatrix, cmatrix, nbins, ncluster);
 
@@ -693,7 +518,7 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
 
       /* set the variables the problem to the found clustering and test feasibility */
       SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
-      SCIP_CALL( assignVars( scip, sol, clustering, nbins, ncluster, qmatrix, cmatrix) );
+      SCIP_CALL( assignVars( scip, sol, clustering, nbins, ncluster) );
       SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, TRUE, TRUE, TRUE, TRUE, &feasible) );
       SCIPinfoMessage(scip, NULL, "\n" );
    }

@@ -123,6 +123,8 @@ SCIP_RETCODE branchOnBin(
          branched[k] = TRUE;
 
          *result = SCIP_BRANCHED;
+         if( ncands > 2 )
+            break;
       }
    }
 

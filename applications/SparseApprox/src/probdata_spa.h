@@ -102,4 +102,33 @@ void SCIPspaCheckSolution(
    SCIP_SOL* sol
 );
 
+extern
+int phi(
+   int k,
+   int ncluster
+   );
+
+extern
+int phiinv(
+   int k,
+   int cluster
+   );
+
+extern
+SCIP_RETCODE assignVars(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< The SCIP solution */
+   SCIP_Real**           clustering,         /**< The matrix with the clusterassignment */
+   int                   nbins,              /**< The number of bins */
+   int                   ncluster            /**< The number of cluster */
+);
+
+extern
+SCIP_Bool isPartition(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real**           solclustering,      /**< Matrix with the clustering */
+   int                   nbins,              /**< The number of bins */
+   int                   ncluster            /**< The number of clusters */
+);
+
 #endif /* APPLICATIONS_SPARSEAPPROX_SRC_PROBDATA_SPA_H_ */

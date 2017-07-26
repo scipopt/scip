@@ -1085,7 +1085,7 @@ END {
             if( printgap && hitlimit[s,pidx] && gap[s,pidx] != "--" && gap[s,pidx] != "Large" )
               line = sprintf("%s %s%10d %7.2f%%", line, feasmark, nodes[s,pidx], gap[s,pidx]);
 	    else if( printgap )
-	      line = sprintf("%s %s%10d %8s", line, feasmark, nodes[s,pidx], gap[s,pidx]);
+	      line = sprintf("%s %s%10d %8s", line, feasmark, nodes[s,pidx], time[s,pidx]);
             else
               line = sprintf("%s %s%10d %s%7.1f", line, feasmark, nodes[s,pidx], marker, time[s,pidx]);
             if( printsoltimes && o == 0 )

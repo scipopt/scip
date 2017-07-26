@@ -30,6 +30,7 @@
 #include "probdata_spa.h"
 #include <string.h>
 #include <unistd.h>
+#include "scip/debug.h"
 #define COL_MAX_LINELEN 1024
 
 /** Read the parameters from the command Line */
@@ -128,8 +129,8 @@ SCIP_RETCODE fromCommandLine(
    SCIPinfoMessage(scip, NULL, "\nprimal solution (transformed space):\n");
    SCIPinfoMessage(scip, NULL, "====================================\n\n");
 
-   SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
-   SCIP_CALL( SCIPspaPrintSolutionValues(scip, SCIPgetBestSol(scip) ) );
+   /*SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
+   SCIP_CALL( SCIPspaPrintSolutionValues(scip, SCIPgetBestSol(scip) ) );*/
    /**************
     * Statistics *
     **************/
@@ -365,6 +366,7 @@ SCIP_RETCODE SCIPrunSpa(
 
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
+
 
    /* add the problem-specifix parameters to scip */
 
