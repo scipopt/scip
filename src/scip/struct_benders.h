@@ -60,18 +60,26 @@ struct SCIP_Benders
    int                   ncalls;             /**< number of times, this benders was called */
    int                   noptcutsfound;      /**< number of optimality cuts found by the Benders' decomposition */
    int                   nfeascutsfound;     /**< number of feasibility cuts found by the Benders' decomposition */
+   int                   ntransferred;       /**< number of cuts transferred from sub SCIP to the master SCIP */
+   SCIP_Bool             active;             /**< is the Benders' decomposition active? */
    SCIP_Bool             initialized;        /**< is Benders' decomposition initialized? */
    SCIP_Bool             cutlp;              /**< should Benders' cuts be generated for LP solutions? */
    SCIP_Bool             cutpseudo;          /**< should Benders' cuts be generated for pseudo solutions? */
    SCIP_Bool             cutrelax;           /**< should Benders' cuts be generated for relaxation solutions? */
 
+   /* additional Benders' decomposition parameters */
+   SCIP_Bool             usemagnantiwong;    /**< Should the Magnanti-Wong cut strengthening technique be used? */
+   SCIP_Bool             computerelint;      /**< Should the relative interior point be computed? */
+   SCIP_Bool             transfercuts;       /**< Should Benders' cuts generated in LNS heuristics be transferred to the main SCIP instance? */
+   SCIP_Bool             cutsascons;         /**< Should the transferred cuts be added as constraints? */
+
    /* information for heuristics */
+   SCIP*                 sourcescip;         /**< the source scip from when the Benders' was copied */
    SCIP_Bool             iscopy;             /**< is the Benders' decomposition struct a copy */
+   SCIP_HASHMAP*         mastervarsmap;      /**< hash map for the master variables from the subscip to the master */
 
 
    /* data for the Magnanti-Wong cut strengthening */
-   SCIP_Bool             usemagnantiwong;    /**< Should the Magnanti-Wong cut strengthening technique be used? */
-   SCIP_Bool             computerelint;      /**< Should the relative interior point be computed? */
    int                   maxlpiterfactor;    /**< the factor for the maximum number of lp iterations. */
    SCIP_SOL*             relintsol;          /**< the relative interior point used for the Magnanti-Wong technique. */
    SCIP_SOL*             currentsol;         /**< the current solution used to fix variables in the subproblem. */

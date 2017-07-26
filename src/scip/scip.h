@@ -2670,7 +2670,6 @@ SCIP_RETCODE SCIPincludeBenders(
    const char*           name,               /**< name of Benders' decomposition */
    const char*           desc,               /**< description of Benders' decomposition */
    int                   priority,           /**< priority of the Benders' decomposition */
-   int                   nsubproblems,       /**< the number subproblems used in this decomposition */
    SCIP_Bool             cutlp,              /**< should Benders' cuts be generated for LP solutions */
    SCIP_Bool             cutpseudo,          /**< should Benders' cuts be generated for pseudo solutions */
    SCIP_Bool             cutrelax,           /**< should Benders' cuts be generated for relaxation solutions */
@@ -2715,7 +2714,6 @@ SCIP_RETCODE SCIPincludeBendersBasic(
    const char*           name,               /**< name of Benders' decomposition */
    const char*           desc,               /**< description of Benders' decomposition */
    int                   priority,           /**< priority of the Benders' decomposition */
-   int                   nsubproblems,       /**< the number subproblems used in this decomposition */
    SCIP_Bool             cutlp,              /**< should Benders' cuts be generated for LP solutions */
    SCIP_Bool             cutpseudo,          /**< should Benders' cuts be generated for pseudo solutions */
    SCIP_Bool             cutrelax,           /**< should Benders' cuts be generated for relaxation solutions */
@@ -2922,6 +2920,42 @@ SCIP_BENDERS** SCIPgetBenders(
 EXTERN
 int SCIPgetNBenders(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the number of currently active Benders' decomposition */
+int SCIPgetNActiveBenders(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** activates the Benders' decomposition to be used for the current problem
+ *  This method should be called during the problem creation stage for all pricers that are necessary to solve
+ *  the problem model.
+ *  The Benders' decompositions are automatically deactivated when the problem is freed.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+SCIP_RETCODE SCIPactivateBenders(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders,            /**< the Benders' decomposition structure */
+   int                   nsubproblems        /**< the number of subproblems in the Benders' decomposition */
+   );
+
+/** deactivates the Benders' decomposition
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+SCIP_RETCODE SCIPdeactivateBenders(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BENDERS*         benders             /**< the Benders' decomposition structure */
    );
 
 /** sets the priority of a Benders' decomposition */
@@ -3167,6 +3201,22 @@ SCIP_RETCODE SCIPsetBenderscutPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_BENDERSCUT*      benderscut,         /**< benderscut */
    int                   priority            /**< new priority of the Benders' decomposition */
+   );
+
+/** adds the generated constraint to the Benders cut storage */
+EXTERN
+SCIP_RETCODE SCIPstoreBenderscutCons(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_CONS*            cons                /**< the constraint to be added to the Benders' cut storage */
+   );
+
+/** adds the generated cuts to the Benders' cut storage */
+EXTERN
+SCIP_RETCODE SCIPstoreBenderscutCut(
+   SCIP*                 scip,               /**< the SCIP data structure */
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_ROW*             cut                 /**< the cut to be added to the Benders' cut storage */
    );
 
 /* @} */

@@ -85,7 +85,7 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_BENDERS** benders;
    SCIP_Bool infeasible;
-   int nbenders;
+   int nactivebenders;
    int i;
 
    assert(scip != NULL);
@@ -98,9 +98,9 @@ SCIP_RETCODE SCIPconsBendersEnforceSolutions(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
    benders = SCIPgetBenders(scip);
-   nbenders = SCIPgetNBenders(scip);
+   nactivebenders = SCIPgetNActiveBenders(scip);
 
-   for( i = 0; i < nbenders; i++ )
+   for( i = 0; i < nactivebenders; i++ )
    {
       switch( type )
       {
@@ -151,7 +151,7 @@ SCIP_RETCODE constructValidSolution(
    SCIP_HEUR* heurtrysol;
    SCIP_BENDERS** benders;
    SCIP_VAR** auxiliaryvars;
-   int nbenders;
+   int nactivebenders;
    int nsubproblems;
    int i;
    int j;
@@ -166,7 +166,7 @@ SCIP_RETCODE constructValidSolution(
    assert(conshdlrdata != NULL);
 
    benders = SCIPgetBenders(scip);
-   nbenders = SCIPgetNBenders(scip);
+   nactivebenders = SCIPgetNActiveBenders(scip);
 
    /* if the solution is NULL, then we create the solution from the LP sol. */
    if( sol != NULL )
@@ -196,7 +196,7 @@ SCIP_RETCODE constructValidSolution(
    conshdlrdata->ncheckedsols++;
 
    /* looping through all Benders' decompositions to construct the new solution */
-   for( i = 0; i < nbenders; i++ )
+   for( i = 0; i < nactivebenders; i++ )
    {
       /* getting the auxiliary variables and the number of subproblems from the Benders' decomposition structure */
       auxiliaryvars = SCIPbendersGetAuxiliaryVars(benders[i]);
@@ -485,7 +485,7 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_BENDERS** benders;
-   int nbenders;
+   int nactivebenders;
    int solindex;
    int i;
    SCIP_Bool performcheck;
@@ -502,7 +502,7 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
    benders = SCIPgetBenders(scip);
-   nbenders = SCIPgetNBenders(scip);
+   nactivebenders = SCIPgetNActiveBenders(scip);
 
    /* checking if the solution was constructed by this constraint handler */
    solindex = SCIPsolGetIndex(sol);
@@ -522,7 +522,7 @@ SCIP_DECL_CONSCHECK(consCheckBenders)
    /* if the solution has not been checked before, then we must perform the check */
    if( performcheck )
    {
-      for( i = 0; i < nbenders; i++ )
+      for( i = 0; i < nactivebenders; i++ )
       {
          SCIP_CALL( SCIPsolveBendersSubproblems(scip, benders[i], sol, result, &infeasible, CHECK) );
 

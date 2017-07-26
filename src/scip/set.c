@@ -970,7 +970,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       for( p = sourceset->nbenders - 1; p >= 0; --p )
       {
          valid = FALSE;
-         SCIP_CALL( SCIPbendersCopyInclude(sourceset->benders[p], targetset, &valid) );
+         SCIP_CALL( SCIPbendersCopyInclude(sourceset->benders[p], sourceset, targetset, &valid) );
          *allvalid = *allvalid && valid;
       }
    }
@@ -1037,6 +1037,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->conflicthdlrsnamesorted = FALSE;
    (*set)->benders = NULL;
    (*set)->nbenders = 0;
+   (*set)->nactivebenders = 0;
    (*set)->benderssize = 0;
    (*set)->benderssorted = FALSE;
    (*set)->bendersnamesorted = FALSE;
@@ -4760,7 +4761,7 @@ SCIP_RETCODE SCIPsetInitPlugins(
 
    /* Benders' decomposition algorithm */
    SCIPsetSortBenders(set);
-   for( i = 0; i < set->nbenders; ++i )
+   for( i = 0; i < set->nactivebenders; ++i )
    {
       SCIP_CALL( SCIPbendersInit(set->benders[i], set) );
    }
@@ -4861,7 +4862,7 @@ SCIP_RETCODE SCIPsetExitPlugins(
 
    /* Benders' decomposition */
    SCIPsetSortBenders(set);
-   for( i = 0; i < set->nbenders; ++i )
+   for( i = 0; i < set->nactivebenders; ++i )
    {
       SCIP_CALL( SCIPbendersExit(set->benders[i], set) );
    }
@@ -4971,7 +4972,7 @@ SCIP_RETCODE SCIPsetInitprePlugins(
    }
 
    /* inform Benders' decomposition that the presolving is about to begin */
-   for( i = 0; i < set->nbenders; ++i )
+   for( i = 0; i < set->nactivebenders; ++i )
    {
       SCIP_CALL( SCIPbendersInitpre(set->benders[i], set, stat) );
    }
@@ -5009,7 +5010,7 @@ SCIP_RETCODE SCIPsetExitprePlugins(
    }
 
    /* inform Benders' decomposition that the presolving is about to end */
-   for( i = 0; i < set->nbenders; ++i )
+   for( i = 0; i < set->nactivebenders; ++i )
    {
       SCIP_CALL( SCIPbendersExitpre(set->benders[i], set, stat) );
    }
@@ -5037,7 +5038,7 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
 
    /* Benders' decomposition */
    SCIPsetSortBenders(set);
-   for( i = 0; i < set->nbenders; ++i )
+   for( i = 0; i < set->nactivebenders; ++i )
    {
       SCIP_CALL( SCIPbendersInitsol(set->benders[i], set) );
    }
@@ -5129,7 +5130,7 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
 
    /* Benders' decomposition */
    SCIPsetSortBenders(set);
-   for( i = 0; i < set->nbenders; ++i )
+   for( i = 0; i < set->nactivebenders; ++i )
    {
       SCIP_CALL( SCIPbendersExitsol(set->benders[i], set) );
    }

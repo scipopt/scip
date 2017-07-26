@@ -50,6 +50,7 @@ struct SCIP_BendersData
    SCIP_VAR***           subproblemvars;     /**< the subproblem variables corresponding to master problem variables */
    int                   nmastervars;        /**< the number of variables in the master problem */
    int                   nsubproblems;       /**< the number of subproblems */
+   SCIP_Bool             created;            /**< flag to indicate that the Benders Data was created */
 };
 
 
@@ -73,8 +74,6 @@ SCIP_RETCODE createBendersData(
    assert(scip != NULL);
    assert(subproblems != NULL);
 
-   SCIP_CALL( SCIPallocBlockMemory(scip, bendersdata) );
-
    (*bendersdata)->nsubproblems = nsubproblems;
 
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*bendersdata)->subproblems, nsubproblems) );
@@ -83,6 +82,7 @@ SCIP_RETCODE createBendersData(
    for( i = 0; i < nsubproblems; i++ )
       (*bendersdata)->subproblems[i] = subproblems[i];
 
+   (*bendersdata)->created = TRUE;
 
    return SCIP_OKAY;
 }
@@ -189,7 +189,11 @@ SCIP_DECL_BENDERSCOPY(bendersCopyDefault)
    /* including the Benders' decomposition in the target SCIP.
     * NOTE: this method uses the same subproblems as the main SCIP. In a parallel setting, this will not be thread safe.
     * It would be cleaner to copy the subproblems also. */
-   SCIP_CALL( SCIPincludeBendersDefault(scip, bendersdata->subproblems, bendersdata->nsubproblems) );
+   SCIP_CALL( SCIPincludeBendersDefault(scip) );
+
+   /* if the Benders' decomposition is active, then it must be created in the copy */
+   if( SCIPbendersIsActive(benders) )
+      SCIP_CALL( SCIPcreateBendersDefault(scip, bendersdata->subproblems, bendersdata->nsubproblems) );
 
    return SCIP_OKAY;
 }
@@ -211,15 +215,18 @@ SCIP_DECL_BENDERSFREE(bendersFreeDefault)
 
    assert(bendersdata != NULL);
 
-   for( i = bendersdata->nsubproblems - 1; i >= 0; i-- )
-      SCIPfreeBlockMemoryArray(scip, &bendersdata->subproblemvars[i], bendersdata->nmastervars);
-   SCIPfreeBlockMemoryArray(scip, &bendersdata->subproblemvars, bendersdata->nsubproblems);
+   if( bendersdata->created )
+   {
+      for( i = bendersdata->nsubproblems - 1; i >= 0; i-- )
+         SCIPfreeBlockMemoryArray(scip, &bendersdata->subproblemvars[i], bendersdata->nmastervars);
+      SCIPfreeBlockMemoryArray(scip, &bendersdata->subproblemvars, bendersdata->nsubproblems);
 
-   /* free hash map */
-   SCIPhashmapFree(&bendersdata->subvartomastervar);
-   SCIPhashmapFree(&bendersdata->mastervartosubindex);
+      /* free hash map */
+      SCIPhashmapFree(&bendersdata->subvartomastervar);
+      SCIPhashmapFree(&bendersdata->mastervartosubindex);
 
-   SCIPfreeBlockMemoryArray(scip, &bendersdata->subproblems, bendersdata->nsubproblems);
+      SCIPfreeBlockMemoryArray(scip, &bendersdata->subproblems, bendersdata->nsubproblems);
+   }
 
    SCIPfreeBlockMemory(scip, &bendersdata);
 
@@ -460,11 +467,33 @@ SCIP_DECL_BENDERSFREESUB(bendersFreesubDefault)
  * Benders' decomposition specific interface methods
  */
 
-/** creates the default Benders' decomposition and includes it in SCIP */
-SCIP_RETCODE SCIPincludeBendersDefault(
+/** Creates a default Benders' decomposition algorithm and activates it in SCIP */
+SCIP_RETCODE SCIPcreateBendersDefault(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP**                subproblems,        /**< the Benders' decomposition subproblems */
    int                   nsubproblems        /**< the number of subproblems in the Benders' decomposition */
+   )
+{
+   SCIP_BENDERS* benders;
+   SCIP_BENDERSDATA* bendersdata;
+
+   assert(scip != NULL);
+   assert(subproblems != NULL);
+   assert(nsubproblems > 0);
+
+   benders = SCIPfindBenders(scip, BENDERS_NAME);
+   bendersdata = SCIPbendersGetData(benders);
+
+   SCIP_CALL( createBendersData(scip, subproblems, &bendersdata, nsubproblems) );
+
+   SCIP_CALL( SCIPactivateBenders(scip, benders, nsubproblems) );
+
+   return SCIP_OKAY;
+}
+
+/** creates the default Benders' decomposition and includes it in SCIP */
+SCIP_RETCODE SCIPincludeBendersDefault(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_BENDERSDATA* bendersdata;
@@ -472,7 +501,9 @@ SCIP_RETCODE SCIPincludeBendersDefault(
 
    /* create default Benders' decomposition data */
    bendersdata = NULL;
-   SCIP_CALL( createBendersData(scip, subproblems, &bendersdata, nsubproblems) );
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, &bendersdata) );
+   bendersdata->created = FALSE;
 
    benders = NULL;
 
@@ -489,8 +520,8 @@ SCIP_RETCODE SCIPincludeBendersDefault(
    /* use SCIPincludeBendersBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
     */
-   SCIP_CALL( SCIPincludeBendersBasic(scip, &benders, BENDERS_NAME, BENDERS_DESC, BENDERS_PRIORITY, nsubproblems,
-         BENDERS_CUTLP, BENDERS_CUTPSEUDO, BENDERS_CUTRELAX, bendersGetvarDefault, bendersExecDefault, bendersCreatesubDefault,
+   SCIP_CALL( SCIPincludeBendersBasic(scip, &benders, BENDERS_NAME, BENDERS_DESC, BENDERS_PRIORITY, BENDERS_CUTLP,
+         BENDERS_CUTPSEUDO, BENDERS_CUTRELAX, bendersGetvarDefault, bendersExecDefault, bendersCreatesubDefault,
          bendersdata) );
    assert(benders != NULL);
 

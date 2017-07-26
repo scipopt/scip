@@ -263,7 +263,7 @@ SCIP_RETCODE generateAndApplyBendersCuts(
 
    /* setting the name of the generated cut */
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "feasibilitycut_%d_%d", probnumber,
-      SCIPbenderscutGetNFound(benderscut, probnumber) );
+      SCIPbenderscutGetNFound(benderscut) );
 
    /* creating the constraint for the cut */
    SCIP_CALL( SCIPcreateConsBasicLinear(masterprob, &cut, cutname, 0, NULL, NULL, 0.0, SCIPinfinity(masterprob)) );

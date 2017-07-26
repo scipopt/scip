@@ -86,8 +86,7 @@ SCIP_Longint SCIPbenderscutGetNCalls(
 /** gets the number of Benders' decomposition cuts found for a given subproblem */
 EXTERN
 SCIP_Longint SCIPbenderscutGetNFound(
-   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
-   int                   probnumber          /**< the subproblem number */
+   SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
    );
 
 /** is Benders' decomposition cuts initialized? */
@@ -106,6 +105,22 @@ SCIP_Real SCIPbenderscutGetSetupTime(
 EXTERN
 SCIP_Real SCIPbenderscutGetTime(
    SCIP_BENDERSCUT*      benderscut          /**< Benders' decomposition cuts */
+   );
+
+/** returns the constraints that have been added by the Benders' cut plugin */
+EXTERN
+SCIP_RETCODE SCIPbenderscutGetCons(
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   SCIP_CONS***          addedcons,          /**< pointer to store the constraint array */
+   int*                  naddedcons          /**< pointer to store the number of added constraints */
+   );
+
+/** returns the cuts that have been added by the Benders' cut plugin */
+EXTERN
+SCIP_RETCODE SCIPbenderscutGetCuts(
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cut */
+   SCIP_ROW***           addedcuts,          /**< pointer to store the cuts array */
+   int*                  naddedcuts          /**< pointer to store the number of added cut */
    );
 
 /* @} */

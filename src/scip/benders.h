@@ -46,6 +46,7 @@ extern "C" {
 extern
 SCIP_RETCODE SCIPbendersCopyInclude(
    SCIP_BENDERS*         benders,            /**< benders */
+   SCIP_SET*             sourceset,          /**< SCIP_SET of SCIP to copy from */
    SCIP_SET*             set,                /**< SCIP_SET of SCIP to copy to */
    SCIP_Bool*            valid               /**< was the copying process valid? */
    );
@@ -60,7 +61,6 @@ SCIP_RETCODE SCIPbendersCreate(
    const char*           name,               /**< name of variable benders */
    const char*           desc,               /**< description of variable benders */
    int                   priority,           /**< priority of the variable benders */
-   int                   nsubproblems,       /**< the number subproblems used in this decomposition */
    SCIP_Bool             cutlp,              /**< should Benders' cuts be generated for LP solutions */
    SCIP_Bool             cutpseudo,          /**< should Benders' cuts be generated for pseudo solutions */
    SCIP_Bool             cutrelax,           /**< should Benders' cuts be generated for relaxation solutions */
@@ -129,6 +129,19 @@ SCIP_RETCODE SCIPbendersInitsol(
 extern
 SCIP_RETCODE SCIPbendersExitsol(
    SCIP_BENDERS*         benders,            /**< variable benders */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** activates benders such that it is called in LP solving loop */
+SCIP_RETCODE SCIPbendersActivate(
+   SCIP_BENDERS*         benders,            /**< the Benders' decomposition structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   nsubproblems        /**< the number subproblems used in this decomposition */
+   );
+
+/** deactivates benders such that it is no longer called in LP solving loop */
+SCIP_RETCODE SCIPbendersDeactivate(
+   SCIP_BENDERS*         benders,            /**< the Benders' decomposition structure */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 

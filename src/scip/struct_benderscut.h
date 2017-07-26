@@ -37,7 +37,7 @@ extern "C" {
 struct SCIP_Benderscut
 {
    SCIP_Longint          ncalls;             /**< number of times, this Benders' cut was called */
-   SCIP_Longint*         nfound;             /**< number of cuts found so far by this method */
+   SCIP_Longint          nfound;             /**< number of cuts found so far by this method */
    char*                 name;               /**< name of Benders' decomposition cuts */
    char*                 desc;               /**< description of Benders' decomposition cuts */
    SCIP_DECL_BENDERSCUTCOPY((*benderscutcopy));/**< copy method of Benders' decomposition cuts or NULL if you don't want to copy your plugin into sub-SCIPs */
@@ -53,7 +53,12 @@ struct SCIP_Benderscut
    int                   priority;           /**< priority of the Benders' decomposition cuts */
    SCIP_Bool             initialized;        /**< is Benders' decomposition cuts initialized? */
 
-   int                   nsubproblems;       /**< the number of subproblems in the Benders' decomposition */
+   SCIP_CONS**           addedcons;          /**< an array to store the added constraints */
+   SCIP_ROW**            addedcuts;          /**< an array to store the added cuts */
+   int                   addedconssize;      /**< the size of the added constraint array */
+   int                   addedcutssize;      /**< the size of the added cuts array */
+   int                   naddedcons;         /**< the number of the added constraint */
+   int                   naddedcuts;         /**< the number of the added cuts */
 };
 
 #ifdef __cplusplus

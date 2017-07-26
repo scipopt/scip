@@ -127,6 +127,11 @@ SCIP_Bool SCIPbendersIsInitialized(
    SCIP_BENDERS*         benders             /**< variable benders */
    );
 
+/** returns whether the given Benders decomposition is in use in the current problem */
+SCIP_Bool SCIPbendersIsActive(
+   SCIP_BENDERS*         benders             /**< the Benders' decomposition structure */
+   );
+
 /** are Benders' cuts generated from the LP solutions? */
 EXTERN
 SCIP_Bool SCIPbendersCutLP(
@@ -239,6 +244,12 @@ SCIP_RETCODE SCIPbendersSolveSubproblem(
    SCIP_BENDERS*         benders,            /**< the Benders' decomposition data structure */
    int                   probnumber,         /**< the subproblem number */
    SCIP_Bool*            infeasible          /**< a flag to indicate whether all subproblems are feasible */
+   );
+
+/** returns the number of cuts that have been transferred from sub SCIPs to the master SCIP */
+EXTERN
+int SCIPbendersGetNTransferredCuts(
+   SCIP_BENDERS*         benders             /**< the Benders' decomposition data structure */
    );
 
 /* @} */

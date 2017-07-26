@@ -110,7 +110,7 @@ typedef struct SCIP_BenderscutData SCIP_BENDERSCUTDATA;      /**< locally define
  *  - SCIP_FEASIBLE   : all constraints of the handler are feasible
  */
 #define SCIP_DECL_BENDERSCUTEXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_BENDERS* benders, SCIP_BENDERSCUT* benderscut,\
-   SCIP_SOL* sol, int probnumber, SCIP_RESULT* result)
+   SCIP_SOL* sol, int probnumber, SCIP_BENDERSENFOTYPE type, SCIP_RESULT* result)
 
 #ifdef __cplusplus
 }

@@ -127,7 +127,8 @@ struct SCIP_Set
    int                   concsolvertypessize;/**< size of concurrent solver types array */
    int                   nconcsolvers;       /**< number of concurrent solvers used for solving */
    int                   concsolverssize;    /**< size of concurrent solvers array */
-   int                   nbenders;           /**< number of Benders' decomposition algorithms are used */
+   int                   nbenders;           /**< number of Benders' decomposition algorithms */
+   int                   nactivebenders;     /**< number of Benders' decomposition algorithms that are used */
    int                   benderssize;        /**< size of Benders' decomposition algorithms array */
    int                   nextcodes;          /**< number of external codes */
    int                   extcodessize;       /**< size of external code arrays */

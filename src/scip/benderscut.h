@@ -54,7 +54,6 @@ SCIP_RETCODE SCIPbenderscutCreate(
    const char*           name,               /**< name of Benders' decomposition cuts */
    const char*           desc,               /**< description of Benders' decomposition cuts */
    int                   priority,           /**< priority of the Benders' decomposition cuts */
-   int                   nsubproblems,       /**< the number of subproblems for the Benders' decomposition */
    SCIP_DECL_BENDERSCUTCOPY((*benderscutcopy)),/**< copy method of Benders' decomposition cuts or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_BENDERSCUTFREE((*benderscutfree)),/**< destructor of Benders' decomposition cuts */
    SCIP_DECL_BENDERSCUTINIT((*benderscutinit)),/**< initialize Benders' decomposition cuts */
@@ -108,6 +107,7 @@ SCIP_RETCODE SCIPbenderscutExec(
    SCIP_BENDERS*         benders,            /**< Benders' decomposition */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    int                   probnumber,         /**< the number of the subproblem for which the cut is generated */
+   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -158,6 +158,22 @@ extern
 void SCIPbenderscutSetExitsol(
    SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
    SCIP_DECL_BENDERSCUTEXITSOL((*benderscutexitsol))/**< solving process deinitialization callback of Benders' decomposition cuts */
+   );
+
+/** adds the generated constraint to the Benders cut storage */
+extern
+SCIP_RETCODE SCIPbenderscutStoreCons(
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_CONS*            cons                /**< the constraint to be added to the Benders' cut storage */
+   );
+
+/** adds the generated cuts to the Benders' cut storage */
+extern
+SCIP_RETCODE SCIPbenderscutStoreCut(
+   SCIP_BENDERSCUT*      benderscut,         /**< Benders' decomposition cuts */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_ROW*             cut                 /**< the cut to be added to the Benders' cut storage */
    );
 
 #ifdef __cplusplus
