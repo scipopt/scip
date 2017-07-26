@@ -69,14 +69,29 @@ SCIP_RETCODE SCIPconflictstoreClean(
    SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
-/** adds a constraint to the pool of dual rays
+/** adds a constraint to the pool of proof constraints based on dual rays
  *
  *  @note this methods captures the constraint
  */
 extern
 SCIP_RETCODE SCIPconflictstoreAddDualraycons(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
-   SCIP_CONS*            dualraycons,        /**< constraint based on a dual ray */
+   SCIP_CONS*            dualproof,          /**< constraint based on a dual ray */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
+   );
+
+/** adds a constraint to the pool of proof constraints based on dual solutions
+ *
+ *  @note this methods captures the constraint
+ */
+extern
+SCIP_RETCODE SCIPconflictstoreAddDualsolcons(
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
+   SCIP_CONS*            dualproof,          /**< constraint based on a dual solution */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */

@@ -102,6 +102,15 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    int                   sidetype            /**< specify row side type (-1 = lhs, 0 = automatic, 1 = rhs) */
    );
 
+/** add the objective function with right-hand side @p rhs and scaled by @p scale to the aggregation row */
+extern
+SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Real             rhs,                /**< right-hand side of the artificial row */
+   SCIP_Real             scale               /**< scalar */
+   );
+
 /** deletes variable at position @pos and updates mapping between variable indices and sparsity pattern */
 extern
 void SCIPaggrRowDelCoef(
@@ -210,6 +219,12 @@ SCIP_Bool SCIPaggrRowIsLocal(
 extern
 SCIP_Real SCIPaggrRowGetRhs(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
+   );
+
+/** gets the number of row aggregations */
+extern
+int SCIPaggrRowGetNRows(
+    SCIP_AGGRROW*          aggrrow              /**< aggregation row */
    );
 
 /** calculates an MIR cut out of the weighted sum of LP rows given by an aggregation row; the

@@ -571,6 +571,94 @@ SCIP_RETCODE SCIPaggrRowAddRow(
    return SCIP_OKAY;
 }
 
+/** add the objective function with right-hand side @p rhs and scaled by @p scale to the aggregation row */
+SCIP_RETCODE SCIPaggrRowAddObjectiveFunction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_AGGRROW*         aggrrow,            /**< the aggregation row */
+   SCIP_Real             rhs,                /**< right-hand side of the artificial row */
+   SCIP_Real             scale               /**< scalar */
+   )
+{
+   SCIP_VAR** vars;
+   int nvars;
+
+   assert(scip != NULL);
+   assert(aggrrow != NULL);
+
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+
+   /* add all variables straight forward if the aggregation row is empty */
+   if( aggrrow->nnz == 0 )
+   {
+      int newsize = SCIPcalcMemGrowSize(scip, SCIPgetNObjVars(scip));
+      int i;
+
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->vals, aggrrow->rowssize, newsize) );
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &aggrrow->inds, aggrrow->rowssize, newsize) );
+      aggrrow->valssize = newsize;
+
+      for( i = 0; i < nvars; i++ )
+      {
+         /* skip all variables with zero objective coefficient */
+         if( SCIPvarGetObj(vars[i]) == 0.0 )
+            continue;
+
+         aggrrow->vals[aggrrow->nnz] = (scale * SCIPvarGetObj(vars[i]));
+         aggrrow->inds[aggrrow->nnz] = SCIPvarGetProbindex(vars[i]);
+         ++aggrrow->nnz;
+      }
+
+      /* add right-hand side */
+      aggrrow->rhs = (scale * rhs);
+   }
+   else
+   {
+      int* varpos;
+      int i;
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &varpos, nvars) );
+      BMSclearMemoryArray(varpos, nvars);
+
+      /* remember the positions of all variables in the aggregation row shifted by +1 */
+      for( i = 0; i < aggrrow->nnz; i++ )
+         varpos[aggrrow->inds[i]] = i+1;
+
+      /* add the objective coefficients */
+      for( i = 0; i < nvars; i++ )
+      {
+         int probidx = SCIPvarGetProbindex(vars[i]);
+
+         /* skip all variables with zero objective coefficient */
+         if( SCIPvarGetObj(vars[i]) == 0.0 )
+            continue;
+
+         /* the variable is not already part of the aggregation row */
+         if( varpos[probidx] == 0 )
+         {
+            aggrrow->vals[aggrrow->nnz] = (scale * SCIPvarGetObj(vars[i]));
+            aggrrow->inds[aggrrow->nnz] = probidx;
+            ++aggrrow->nnz;
+         }
+         /* look up the position of the variable in the aggregation row */
+         else
+         {
+            assert(varpos[probidx] <= aggrrow->nnz);
+            assert(aggrrow->inds[varpos[probidx]-1] == probidx);
+
+            aggrrow->vals[varpos[probidx]-1] += (scale * SCIPvarGetObj(vars[i]));
+         }
+      }
+
+      SCIPfreeBufferArray(scip, &varpos);
+
+      /* add right-hand side */
+      aggrrow->rhs += (scale * rhs);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** clear all entries int the aggregation row but don't free memory */
 void SCIPaggrRowClear(
    SCIP_AGGRROW*         aggrrow             /**< the aggregation row */
@@ -1042,6 +1130,16 @@ SCIP_Real SCIPaggrRowGetRhs(
    assert(aggrrow != NULL);
 
    return aggrrow->rhs;
+}
+
+/** gets the number of row aggregations */
+int SCIPaggrRowGetNRows(
+    SCIP_AGGRROW*          aggrrow              /**< aggregation row */
+   )
+{
+   assert(aggrrow != NULL);
+
+   return aggrrow->nrows;
 }
 
 /* =========================================== c-MIR =========================================== */
@@ -2381,7 +2479,7 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Bool localbdsused;
 
    assert(aggrrow != NULL);
-//   assert(aggrrow->nrows >= 1);
+   assert(aggrrow->nrows >= 1);
    assert(SCIPisPositive(scip, scale));
    assert(success != NULL);
 

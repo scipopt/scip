@@ -43666,10 +43666,10 @@ void printConflictStatistics(
       / (SCIP_Real)SCIPconflictGetNInfeasibleLPReconvergenceConss(scip->conflict) : 0,
       SCIPconflictGetNDualrayInfSuccess(scip->conflict),
       SCIPconflictGetNDualrayInfSuccess(scip->conflict) > 0
-      ? (SCIP_Real)SCIPconflictGetNDualrayInfeasibleNonzeros(scip->conflict)
+      ? (SCIP_Real)SCIPconflictGetNDualrayInfNonzeros(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNDualrayInfSuccess(scip->conflict) : 0,
       SCIPconflictGetNInfeasibleLPIterations(scip->conflict));
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  bound exceed. LP : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "          - %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT " %10.1f          -          - %10" SCIP_LONGINT_FORMAT "\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  bound exceed. LP : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "          - %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT "\n",
       SCIPconflictGetBoundexceedingLPTime(scip->conflict),
       SCIPconflictGetNBoundexceedingLPCalls(scip->conflict),
       SCIPconflictGetNBoundexceedingLPSuccess(scip->conflict),
@@ -43681,6 +43681,10 @@ void printConflictStatistics(
       SCIPconflictGetNBoundexceedingLPReconvergenceConss(scip->conflict) > 0
       ? (SCIP_Real)SCIPconflictGetNBoundexceedingLPReconvergenceLiterals(scip->conflict)
       / (SCIP_Real)SCIPconflictGetNBoundexceedingLPReconvergenceConss(scip->conflict) : 0,
+      SCIPconflictGetNDualrayBndSuccess(scip->conflict),
+      SCIPconflictGetNDualrayBndSuccess(scip->conflict) > 0
+      ? (SCIP_Real)SCIPconflictGetNDualrayBndNonzeros(scip->conflict)
+      / (SCIP_Real)SCIPconflictGetNDualrayBndSuccess(scip->conflict) : 0,
       SCIPconflictGetNBoundexceedingLPIterations(scip->conflict));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  strong branching : %10.2f %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "          - %10" SCIP_LONGINT_FORMAT " %10.1f %10" SCIP_LONGINT_FORMAT " %10.1f          -          - %10" SCIP_LONGINT_FORMAT "\n",
       SCIPconflictGetStrongbranchTime(scip->conflict),
