@@ -345,9 +345,21 @@ else()
     endif()
 endif()
 
+find_package(Criterion)
+
 # go to src/ and compile the code
 add_subdirectory(src)
+
+#
+# add SCIP tests
+#
 add_subdirectory(check)
+
+#
+# add unit tests as a single target. Including tests will add the unit tests as single executables
+#
+add_custom_target(unittests ${CMAKE_CTEST_COMMAND} -R unittest EXCLUDE_FROM_ALL)
+add_subdirectory(tests EXCLUDE_FROM_ALL)
 
 enable_testing()
 
