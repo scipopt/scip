@@ -326,7 +326,10 @@ SCIP_RETCODE SCIPnlpiOracleEvalConstraintValues(
    SCIP_Real*            convals             /**< pointer to store constraint values */  
    );
 
-/** computes the objective gradient in a given point */
+/** computes the objective gradient in a given point
+ *
+ * @return SCIP_INVALIDDATA, if the function or its gradient could not be evaluated (domain error, etc.)
+ */
 extern
 SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -336,7 +339,10 @@ SCIP_RETCODE SCIPnlpiOracleEvalObjectiveGradient(
    SCIP_Real*            objgrad             /**< pointer to buffer (dense) objective gradient */  
    );
 
-/** computes a constraints gradient in a given point */
+/** computes a constraints gradient in a given point
+ *
+ * @return SCIP_INVALIDDATA, if the function or its gradient could not be evaluated (domain error, etc.)
+ */
 extern
 SCIP_RETCODE SCIPnlpiOracleEvalConstraintGradient(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
@@ -363,7 +369,9 @@ SCIP_RETCODE SCIPnlpiOracleGetJacobianSparsity(
 /** evaluates the Jacobi matrix in a given point
  * 
  *  The values in the Jacobi matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetJacobianSparsity.
- *  The user need to call SCIPnlpiOracleGetJacobianSparsity at least ones before using this function. 
+ *  The user need to call SCIPnlpiOracleGetJacobianSparsity at least ones before using this function.
+ *
+ *  @return SCIP_INVALIDDATA, if the Jacobian could not be evaluated (domain error, etc.)
  */
 extern
 SCIP_RETCODE SCIPnlpiOracleEvalJacobian(
@@ -393,6 +401,8 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
  *  The values in the Hessian matrix are returned in the same order as specified by the offset and col arrays obtained by SCIPnlpiOracleGetHessianLagSparsity.
  *  The user must call SCIPnlpiOracleGetHessianLagSparsity at least ones before using this function. 
  *  Only elements of the lower left triangle and the diagonal are computed.
+ *
+ * @return SCIP_INVALIDDATA, if the Hessian could not be evaluated (domain error, etc.)
  */
 extern
 SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(

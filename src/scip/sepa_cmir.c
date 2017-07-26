@@ -48,8 +48,8 @@
                                          *   (-1: unlimited) */
 #define DEFAULT_MAXAGGRS              3 /**< maximal number of aggregations for each row per separation round */
 #define DEFAULT_MAXAGGRSROOT          6 /**< maximal number of aggregations for each row per round in the root node */
-#define DEFAULT_MAXSEPACUTS         100 /**< maximal number of cmir cuts separated per separation round */
-#define DEFAULT_MAXSEPACUTSROOT     500 /**< maximal number of cmir cuts separated per separation round in root node */
+#define DEFAULT_MAXSEPACUTS         200 /**< maximal number of cmir cuts separated per separation round */
+#define DEFAULT_MAXSEPACUTSROOT    1000 /**< maximal number of cmir cuts separated per separation round in root node */
 #define DEFAULT_MAXSLACK            0.0 /**< maximal slack of rows to be used in aggregation */
 #define DEFAULT_MAXSLACKROOT        0.1 /**< maximal slack of rows to be used in aggregation in the root node */
 #define DEFAULT_DENSITYSCORE       1e-4 /**< weight of row density in the aggregation scoring of the rows */
@@ -61,7 +61,7 @@
 #define DEFAULT_MAXTESTDELTA         -1 /**< maximal number of different deltas to try (-1: unlimited) */
 #define DEFAULT_MAXCONTS             10 /**< maximal number of active continuous variables in aggregated row */
 #define DEFAULT_MAXCONTSROOT         10 /**< maximal number of active continuous variables in aggregated row in the root */
-#define DEFAULT_AGGRTOL             0.1 /**< aggregation heuristic: tolerance for bound distances used to select real 
+#define DEFAULT_AGGRTOL             0.1 /**< aggregation heuristic: tolerance for bound distances used to select real
                                          *   variable in current aggregated constraint to be eliminated */
 #define DEFAULT_TRYNEGSCALING      TRUE /**< should negative values also be tested in scaling? */
 #define DEFAULT_FIXINTEGRALRHS     TRUE /**< should an additional variable be complemented if f0 = 0? */
@@ -116,11 +116,39 @@ struct SCIP_SepaData
    SCIP_Bool             dynamiccuts;        /**< should generated cuts be removed from the LP if they are no longer tight? */
 };
 
+/** type of variable that is not at its bound */
+typedef enum {
+   BAD                = 0,
+   GOOD_WITH_POS_SIGN = 1,
+   GOOD_WITH_NEG_SIGN = 2,
+   GOOD_WITH_ALL_SIGN = 3,
+} BOUNDDIST_VARTYPE;
+
+/** for each continuous variable, stores good candidates for generating an aggregation that projects out that variable;
+ * it also stores the distance to the bounds of the continuous variables (at the current solution). */
+typedef
+struct AggregationData {
+   SCIP_Real*            bounddist;          /**< bound distance of continuous variables */
+   uint8_t*              bounddistvartype;   /**< array to store types of variabe that are not at their bound */
+   int*                  bounddistinds;      /**< problem indices of the continuous variables corresponding to the bounddistance value */
+   int                   nbounddistvars;     /**< number of continuous variables that are not at their bounds */
+   SCIP_ROW**            aggrrows;           /**< array of rows suitable for substitution of continuous variable */
+   SCIP_Real*            aggrrowscoef;       /**< coefficient of the continous variable in aggrrows */
+   int                   aggrrowssize;       /**< size of aggrrows array */
+   int                   naggrrows;          /**< occupied positions in aggrrows array */
+   int*                  aggrrowsstart;      /**< array with start positions of suitable rows for substitution for each continous variable
+                                              *   with non-zero bound distance */
+   int*                  ngoodaggrrows;      /**< array with number of rows suitable for substitution that only contain one continuous
+                                              *   variable that is not at it's bound */
+   int*                  nbadvarsinrow;      /**< number of continuous variables that are not at their bounds for each row */
+   SCIP_AGGRROW*         aggrrow;            /**< store aggregation row here so that it can be reused */
+   int*                  aggrrowdatainds;    /**< buffer to store the indicies of bad variables of the current aggregation row
+                                              *   within the other arrays in this struct */
+} AGGREGATIONDATA;
 
 /*
  * Local methods
  */
-
 
 /** adds given cut to LP if violated */
 static
@@ -129,10 +157,10 @@ SCIP_RETCODE addCut(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_Real*            cutcoefs,           /**< coefficients of active variables in cut */
-   int*                  cutinds,
-   int                   cutnnz,
+   int*                  cutinds,            /**< problem indices of variables in cut */
+   int                   cutnnz,             /**< number of non-zeros in cut */
    SCIP_Real             cutrhs,             /**< right hand side of cut */
-   SCIP_Real             cutefficacy,
+   SCIP_Real             cutefficacy,        /**< efficacy of cut */
    SCIP_Bool             cutislocal,         /**< is the cut only locally valid? */
    SCIP_Bool             cutremovable,       /**< should the cut be removed from the LP due to aging or cleanup? */
    int                   cutrank,            /**< rank of the cut */
@@ -151,7 +179,6 @@ SCIP_RETCODE addCut(
    if( cutnnz > 0 && SCIPisEfficacious(scip, cutefficacy) )
    {
       SCIP_VAR** vars;
-      SCIP_VAR** cutvars;
       int i;
       SCIP_ROW* cut;
       char cutname[SCIP_MAXSTRLEN];
@@ -160,19 +187,17 @@ SCIP_RETCODE addCut(
       /* get active problem variables */
       vars = SCIPgetVars(scip);
 
-      /* setup array with cut variables */
-      SCIP_CALL( SCIPallocBufferArray(scip, &cutvars, cutnnz) );
-
-      for( i = 0; i < cutnnz; ++i )
-         cutvars[i] = vars[cutinds[i]];
-
       /* create the cut */
       (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s%d_%d", cutclassname, SCIPgetNLPs(scip), *ncuts);
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs,
                                         cutislocal, FALSE, cutremovable) );
-      SCIP_CALL( SCIPaddVarsToRow(scip, cut, cutnnz, cutvars, cutcoefs) );
 
-      SCIPfreeBufferArray(scip, &cutvars);
+      SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
+
+      for( i = 0; i < cutnnz; ++i )
+      {
+         SCIP_CALL( SCIPaddVarToRow(scip, cut, vars[cutinds[i]], cutcoefs[i]) );
+      }
 
       /* set cut rank */
       SCIProwChgRank(cut, cutrank);
@@ -184,6 +209,7 @@ SCIP_RETCODE addCut(
       /* try to scale the cut to integral values, but only if the scaling is small; otherwise keep the fractional cut */
       SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
                                      (SCIP_Longint) 30, 100.0, MAKECONTINTEGRAL, &success) );
+
       if( success && !SCIPisCutEfficacious(scip, sol, cut) )
       {
          SCIPdebugMsg(scip, " -> %s cut <%s> no longer efficacious: rhs=%f, eff=%f\n",
@@ -195,13 +221,16 @@ SCIP_RETCODE addCut(
          success = TRUE; /* also use cut if scaling failed */
 
       /* if scaling was successful, add the cut */
-      if( success ) /*lint !e774*/ /* Boolean within 'if' always evaluates to True */
+      if( success )
       {
          SCIPdebugMsg(scip, " -> found %s cut <%s>: rhs=%f, eff=%f, rank=%d, min=%f, max=%f (range=%g)\n",
                       cutclassname, cutname, cutrhs, cutefficacy, SCIProwGetRank(cut),
                       SCIPgetRowMinCoef(scip, cut), SCIPgetRowMaxCoef(scip, cut),
                       SCIPgetRowMaxCoef(scip, cut)/SCIPgetRowMinCoef(scip, cut));
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
+
+         SCIP_CALL( SCIPflushRowExtensions(scip, cut) );
+
          SCIP_CALL( SCIPaddCut(scip, sol, cut, FALSE, cutoff) );
          if( !(*cutoff) && !cutislocal )
          {
@@ -214,14 +243,12 @@ SCIP_RETCODE addCut(
       SCIP_CALL( SCIPreleaseRow(scip, &cut) );
    }
 
-   return SCIP_OKAY;   
+   return SCIP_OKAY;
 }
 
-#if 0
 /** decreases the score of a row in order to not aggregate it again too soon */
 static
 void decreaseRowScore(
-   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real*            rowlhsscores,       /**< aggregation scores for left hand sides of row */
    SCIP_Real*            rowrhsscores,       /**< aggregation scores for right hand sides of row */
    int                   rowidx              /**< index of row to decrease score for */
@@ -232,10 +259,11 @@ void decreaseRowScore(
    assert(rowlhsscores[rowidx] >= 0.0);
    assert(rowrhsscores[rowidx] >= 0.0);
 
-   rowlhsscores[rowidx] *= 0.9;
-   rowrhsscores[rowidx] *= 0.9;
+   rowlhsscores[rowidx] *= 0.99;
+   rowrhsscores[rowidx] *= 0.99;
 }
 
+#if 0
 /** returns whether the variable should be tried to be aggregated out */
 static
 SCIP_Bool varIsContinuous(
@@ -256,7 +284,7 @@ SCIP_Bool varIsContinuous(
 /** returns the minimal distance of the solution of a continuous variable to its bounds */
 static
 SCIP_Real getBounddist(
-   SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP*                 scip,               /**< SCIP data structure */
    int                   nintvars,           /**< number of integer variables in the problem */
    SCIP_Real*            varsolvals,         /**< LP solution value of all variables in LP */
    SCIP_Real*            bestcontlbs,        /**< best lower (variable or standard) bounds of continuous variables */
@@ -294,26 +322,13 @@ SCIP_Real getBounddist(
 
 #endif
 
-typedef
-struct AggregationData {
-   SCIP_Real*            bounddist;          /**< bound distance of continuous variables */
-   int*                  bounddistinds;      /**< problem indices of the continUous variables corresponding to the bounddistance value */
-   int                   nbounddistvars;     /**< number of continuous variables that are not at their bounds */
-   SCIP_ROW**            aggrrows;           /**< array of rows suitable for substitution of continuous variable */
-   SCIP_Real*            aggrrowscoef;       /**< coefficient of continous variable in row that is suitable for substitution of that variable */
-   int                   aggrrowssize;       /**< size of aggrrows array */
-   int                   naggrrows;          /**< occupied positions in aggrrows array */
-   int*                  aggrrowsstart;      /**< array with start positions of suitable rows for substitution for each continous variable with non-zero bound distance */
-   int*                  ngoodaggrrows;      /**< array with number of rows suitable for substitution that only contain one continuous variable that is not at it's bound */
-   int*                  nbadvarsinrow;      /**< number of continuous variables that are not at their bounds for each row */
-   SCIP_AGGRROW*         aggrrow;            /**< store aggregation row here so that it can be reused */
-} AGGREGATIONDATA;
 
+/** setup data for aggregating rows */
 static
 SCIP_RETCODE setupAggregationData(
-   SCIP*                 scip,
-   SCIP_SOL*             sol,
-   AGGREGATIONDATA*      aggrdata
+   SCIP*                 scip,               /**< SCIP datastructure */
+   SCIP_SOL*             sol,                /**< solution to separate, NULL for LP solution */
+   AGGREGATIONDATA*      aggrdata            /**< pointer to aggregation data to setup */
    )
 {
    SCIP_VAR** vars;
@@ -328,10 +343,12 @@ SCIP_RETCODE setupAggregationData(
 
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->bounddist, ncontvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->bounddistinds, ncontvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->bounddistvartype, ncontvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->ngoodaggrrows, ncontvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->aggrrowsstart, ncontvars + 1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->nbadvarsinrow, nrows) );
    SCIP_CALL( SCIPaggrRowCreate(scip, &aggrdata->aggrrow) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &aggrdata->aggrrowdatainds, nvars) );
    BMSclearMemoryArray(aggrdata->nbadvarsinrow, nrows);
 
    aggrdata->nbounddistvars = 0;
@@ -340,6 +357,7 @@ SCIP_RETCODE setupAggregationData(
    aggrdata->aggrrowssize = 0;
    aggrdata->naggrrows = 0;
 
+   /* TODO: shall we loop over the implicit integers as well? */
    for( i = nvars - ncontvars; i < nvars; ++i )
    {
       SCIP_Real bounddist;
@@ -378,6 +396,7 @@ SCIP_RETCODE setupAggregationData(
          bounddist = MAX(bounddist, 0.0);
       }
 
+      /* when variable is not at its bound, we want to project it out, so add it to the aggregation data */
       if( !SCIPisZero(scip, bounddist) )
       {
          int k = aggrdata->nbounddistvars++;
@@ -385,6 +404,8 @@ SCIP_RETCODE setupAggregationData(
          aggrdata->bounddistinds[k] = i;
          aggrdata->aggrrowsstart[k] = aggrdata->naggrrows;
 
+         /* the current variable is a bad variable (continuous, not at its bound): increase the number of bad variable count
+          * on each row this variables appears in; also each of these rows can be used to project the variable out so store them */
          if( SCIPvarIsInLP(vars[i]) )
          {
             SCIP_COL* col = SCIPvarGetCol(vars[i]);
@@ -417,13 +438,14 @@ SCIP_RETCODE setupAggregationData(
    /* add sentinel entry at the end */
    aggrdata->aggrrowsstart[aggrdata->nbounddistvars] = aggrdata->naggrrows;
 
-   /* for each continous variable that is not at it's bounds check if there is a
-    * row where it is the only such variable. In the array with the rows that are
-    * suitable for substituting this variable move this "good" rows to the beginning
-    * and store the number of "good" rows for each of the variables. Also make
-    * the value of the bounddistance for this variable negative, to mark it as
-    * a continous variable that is not at it's bounds which can be substituted
-    * without introducing other such variables by using a "good" row.
+   /* for each continous variable that is not at its bounds check if there is a
+    * row where it is the only such variable ("good" rows). In the array with the rows that are
+    * suitable for substituting this variable move the good rows to the beginning
+    * and store the number of good rows for each of the variables.
+    * If a variable has at least one good row, then it is a "better" variable and we make
+    * the value of the bounddistance for this variable negative, to mark it.
+    * Note that better variables are continous variables that are not at their bounds
+    * and can be projected out without introducing bad variables (by using a good row).
     */
    {
       int beg;
@@ -434,28 +456,61 @@ SCIP_RETCODE setupAggregationData(
       {
          int k;
          int ngoodrows;
+         uint8_t bounddistvartype = BAD;
 
          end = aggrdata->aggrrowsstart[i + 1];
          ngoodrows = 0;
-         for( k = beg; k < end; ++k )
+
+         for( k = beg; k != end; ++k )
          {
             int lppos = SCIProwGetLPPos(aggrdata->aggrrows[k]);
-            if( aggrdata->nbadvarsinrow[lppos] == 1 && SCIPisEQ(scip, SCIProwGetLhs(aggrdata->aggrrows[k]), SCIProwGetRhs(aggrdata->aggrrows[k])) )
+            if( aggrdata->nbadvarsinrow[lppos] == 1  && SCIProwGetNLPNonz(aggrdata->aggrrows[k]) > 2 && SCIProwGetRank(aggrdata->aggrrows[k]) == 0 )
             {
+               SCIP_Real lhs;
+               SCIP_Real rhs;
                int nextgoodrowpos = beg + ngoodrows;
+
+               lhs = SCIProwGetLhs(aggrdata->aggrrows[k]);
+               rhs = SCIProwGetRhs(aggrdata->aggrrows[k]);
+
+#if 0
+               /* TODO somehow this is better */
+               if( !SCIPisEQ(scip, lhs, rhs) )
+                  continue;
+#endif
+
                if( k > nextgoodrowpos )
                {
                   SCIPswapPointers((void**) (&aggrdata->aggrrows[k]), (void**) (&aggrdata->aggrrows[nextgoodrowpos]));
                   SCIPswapReals(&aggrdata->aggrrowscoef[k], &aggrdata->aggrrowscoef[nextgoodrowpos]);
                }
                ++ngoodrows;
+
+               if( !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs) )
+               {
+                  bounddistvartype = GOOD_WITH_ALL_SIGN;
+               }
+               else if( SCIPisInfinity(scip, -lhs) )
+               {
+                  assert(!SCIPisInfinity(scip, rhs));
+
+                  if( aggrdata->aggrrowscoef[k] > 0 )
+                     bounddistvartype |= GOOD_WITH_NEG_SIGN;
+                  else
+                     bounddistvartype |= GOOD_WITH_POS_SIGN;
+               }
+               else
+               {
+                  if( aggrdata->aggrrowscoef[k] < 0 )
+                     bounddistvartype |= GOOD_WITH_NEG_SIGN;
+                  else
+                     bounddistvartype |= GOOD_WITH_POS_SIGN;
+               }
             }
          }
-         if( ngoodrows > 0 )
-         {
-            aggrdata->bounddist[i] = -aggrdata->bounddist[i];
-         }
+
          aggrdata->ngoodaggrrows[i] = ngoodrows;
+         aggrdata->bounddistvartype[i] = bounddistvartype;
          beg = end;
       }
    }
@@ -469,14 +524,31 @@ void destroyAggregationData(
    AGGREGATIONDATA*      aggrdata
    )
 {
+   SCIPfreeBufferArray(scip, &aggrdata->aggrrowdatainds);
    SCIPaggrRowFree(scip, &aggrdata->aggrrow);
    SCIPfreeBufferArrayNull(scip, &aggrdata->aggrrowscoef);
    SCIPfreeBufferArrayNull(scip, &aggrdata->aggrrows);
    SCIPfreeBufferArray(scip, &aggrdata->nbadvarsinrow);
    SCIPfreeBufferArray(scip, &aggrdata->aggrrowsstart);
    SCIPfreeBufferArray(scip, &aggrdata->ngoodaggrrows);
+   SCIPfreeBufferArray(scip, &aggrdata->bounddistvartype);
    SCIPfreeBufferArray(scip, &aggrdata->bounddistinds);
    SCIPfreeBufferArray(scip, &aggrdata->bounddist);
+}
+
+
+static
+int findAggrDataIndex(
+   AGGREGATIONDATA*      aggrdata,
+   int                   probvaridx
+   )
+{
+   int aggrdataidx;
+
+   if( !SCIPsortedvecFindInt(aggrdata->bounddistinds, probvaridx, aggrdata->nbounddistvars, &aggrdataidx) )
+      return -1;
+
+   return aggrdataidx;
 }
 
 /* retrieves the candidate rows for cancelling out the given variable,
@@ -484,26 +556,19 @@ void destroyAggregationData(
  * A row is good if the given variable is the only continuous variable in the row
  * that is not at it's bounds. */
 static
-SCIP_Bool getRowAggregationCandidates(
+void getRowAggregationCandidates(
    AGGREGATIONDATA*      aggrdata,
-   int                   probvaridx,
+   int                   aggrdataidx,
    SCIP_ROW***           rows,
    SCIP_Real**           rowvarcoefs,
    int*                  nrows,
    int*                  ngoodrows
    )
 {
-   int aggrdataidx;
-
-   if( !SCIPsortedvecFindInt(aggrdata->bounddistinds, probvaridx, aggrdata->nbounddistvars, &aggrdataidx) )
-      return FALSE;
-
    *rows = aggrdata->aggrrows + aggrdata->aggrrowsstart[aggrdataidx];
    *nrows = aggrdata->aggrrowsstart[aggrdataidx + 1] - aggrdata->aggrrowsstart[aggrdataidx];
    *rowvarcoefs = aggrdata->aggrrowscoef + aggrdata->aggrrowsstart[aggrdataidx];
    *ngoodrows = aggrdata->ngoodaggrrows[aggrdataidx];
-
-   return TRUE;
 }
 
 static
@@ -521,6 +586,38 @@ SCIP_Real aggrdataGetBoundDist(
 }
 
 static
+SCIP_DECL_SORTINDCOMP(compareBadVars)
+{
+   int aggrind1;
+   int aggrind2;
+   SCIP_Bool var1isgood;
+   SCIP_Bool var2isgood;
+   BOUNDDIST_VARTYPE desiredvar1type;
+   BOUNDDIST_VARTYPE desiredvar2type;
+   SCIP_Real* rowcoefs;
+   AGGREGATIONDATA* aggrdata = (AGGREGATIONDATA*) dataptr;
+
+   aggrind1 = aggrdata->aggrrowdatainds[ind1];
+   aggrind2 = aggrdata->aggrrowdatainds[ind2];
+
+   rowcoefs = SCIPaggrRowGetVals(aggrdata->aggrrow);
+
+   desiredvar1type = (rowcoefs[ind1] > 0 ? GOOD_WITH_POS_SIGN : GOOD_WITH_NEG_SIGN);
+   desiredvar2type = (rowcoefs[ind2] > 0 ? GOOD_WITH_POS_SIGN : GOOD_WITH_NEG_SIGN);
+
+   var1isgood = (aggrdata->bounddistvartype[aggrind1] & desiredvar1type) != BAD;
+   var2isgood = (aggrdata->bounddistvartype[aggrind2] & desiredvar2type) != BAD;
+
+   if( var1isgood == var2isgood )
+   {
+      return aggrdata->bounddist[aggrind1] > aggrdata->bounddist[aggrind2] ? -1 : 1;
+   }
+
+   return var1isgood ? -1 : 1;
+}
+
+
+static
 SCIP_RETCODE aggregateNextRow(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
@@ -535,9 +632,10 @@ SCIP_RETCODE aggregateNextRow(
 {
    int i;
    int firstcontvar;
-   int* badvarinds;
-   SCIP_Real* badvarbddist;
+   int* badvarrowinds;
    int nbadvars;
+   SCIP_Bool bestrowisgood;
+
    SCIP_Real minbddist;
    SCIP_ROW* bestrow;
    SCIP_Real bestrowscore;
@@ -558,204 +656,174 @@ SCIP_RETCODE aggregateNextRow(
       ncontvars = SCIPgetNContVars(scip);
       firstcontvar =  nvars - ncontvars;
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &badvarinds, MIN(ncontvars, nnz)) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &badvarbddist, MIN(ncontvars, nnz)) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &badvarrowinds, MIN(ncontvars, nnz)) );
    }
 
    nbadvars = 0;
-
    for( i = 0; i < nnz; ++i )
    {
-      SCIP_Real bounddist;
+      int badvarind;
 
       /* only consider continuous variables */
       if( inds[i] < firstcontvar )
          continue;
 
-      bounddist = aggrdataGetBoundDist(aggrdata, inds[i]);
+      badvarind = findAggrDataIndex(aggrdata, inds[i]);
 
-      if( bounddist == 0.0 )
+      if( badvarind == -1 )
          continue;
 
-      badvarinds[nbadvars] = i;
-      badvarbddist[nbadvars] = bounddist;
-      ++nbadvars;
+      aggrdata->aggrrowdatainds[i] = badvarind;
+      badvarrowinds[nbadvars++] = i;
    }
 
    if( nbadvars == 0 )
       goto TERMINATE;
 
-   SCIPsortDownRealInt(badvarbddist, badvarinds, nbadvars);
+   SCIPsortInd(badvarrowinds, compareBadVars, aggrdata, nbadvars);
 
    aggrfac = 0.0;
+   bestrowscore = 0.0;
+   bestrowisgood = FALSE;
+   minbddist = 0.0;
+   bestrow = NULL;
 
    /* because the "good" bad variables have a negative bound distance,
     * they are at the end
     */
-   for( i = nbadvars - 1; i >= 0; --i )
+   for( i = 0; i < nbadvars; ++i )
    {
       int probvaridx;
-      int aggrrowvaridx;
-      SCIP_ROW** candrows;
-      SCIP_Real* candrowcoefs;
       int nrows;
       int ngoodrows;
       int k;
+      int varposinrow;
+      int aggrdataindex;
+      BOUNDDIST_VARTYPE desiredvartype;
+      SCIP_Bool isgood;
+      SCIP_ROW** candrows;
+      SCIP_Real* candrowcoefs;
+      SCIP_Real bounddist;
 
-      /* if the bound distance is not negative, there are no more good variables so stop */
-      if( badvarbddist[i] > 0.0 )
+      varposinrow = badvarrowinds[i];
+      aggrdataindex = aggrdata->aggrrowdatainds[varposinrow];
+      probvaridx = inds[varposinrow];
+      desiredvartype = (vals[varposinrow] > 0 ? GOOD_WITH_POS_SIGN : GOOD_WITH_NEG_SIGN);
+      isgood = desiredvartype & aggrdata->bounddistvartype[aggrdataindex];
+
+      if( bestrowisgood && !isgood )
          break;
+
+      bounddist = aggrdata->bounddist[aggrdataindex];
 
       /* if no best row was found yet, this variable has the currently best bound distance */
       if( aggrfac == 0.0 )
-         minbddist = -badvarbddist[i] - sepadata->aggrtol;
-
+         minbddist = bounddist - sepadata->aggrtol;
       /* if the bound distance of the current variable is smaller than the minimum bound distance stop looping */
-      if( -badvarbddist[i] < minbddist )
+      else if( bounddist < minbddist )
          break;
 
-      aggrrowvaridx = badvarinds[i];
-      probvaridx = inds[aggrrowvaridx];
+      getRowAggregationCandidates(aggrdata, aggrdataindex, &candrows, &candrowcoefs, &nrows, &ngoodrows);
 
-      if( !getRowAggregationCandidates(aggrdata, probvaridx, &candrows, &candrowcoefs, &nrows, &ngoodrows) )
-      {
-         SCIPABORT();
-      }
       /* bounddistance was negative for this variable, so it should have good rows */
-      assert(ngoodrows > 0);
+      assert(!isgood || ngoodrows > 0);
 
-      for( k = 0; k < ngoodrows; ++k )
+      if( isgood )
       {
-         SCIP_Real minweight;
-         SCIP_Real maxweight;
-         SCIP_Real rowaggrfac;
-         int lppos;
-
-         /* dont't add rows twice */
-         if( SCIPaggrRowHasRowBeenAdded(aggrrow, candrows[k]) )
-            continue;
-
-         /* if factor is too extreme skip this row */
-         SCIPaggrRowGetAbsWeightRange(aggrrow, &minweight, &maxweight);
-         rowaggrfac = -vals[aggrrowvaridx] / candrowcoefs[k];
-
-         if( SCIPisZero(scip, rowaggrfac) ||
-             REALABS(rowaggrfac) > sepadata->maxrowfac * minweight ||
-             REALABS(rowaggrfac) * sepadata->maxrowfac < maxweight )
-            continue;
-
-         lppos = SCIProwGetLPPos(candrows[k]);
-         /* row could be used and good rows are equalities, so ignore sidetype */
+         for( k = 0; k < ngoodrows; ++k )
          {
-            SCIP_Real rowscore = MAX(rowlhsscores[lppos], rowrhsscores[lppos]);
+            SCIP_Real rowaggrfac;
+            SCIP_Real lhs;
+            SCIP_Real rhs;
+            SCIP_Real rowscore;
+            int lppos;
 
-            /* if this rows score is better than the currently best score, remember it */
+            lppos = SCIProwGetLPPos(candrows[k]);
+            lhs = SCIProwGetLhs(candrows[k]);
+            rhs = SCIProwGetRhs(candrows[k]);
+            rowaggrfac = -vals[probvaridx] / candrowcoefs[k];
+
+            if( rowaggrfac < 0 )
+            {
+               if( SCIPisInfinity(scip, -lhs) )
+                  continue;
+
+               rowscore = rowlhsscores[lppos];
+            }
+            else
+            {
+               if( SCIPisInfinity(scip, rhs) )
+                  continue;
+
+               rowscore = rowrhsscores[lppos];
+            }
+
+            /* if this rows score is better than the currently best score, remember the row it */
             if( aggrfac == 0.0 || rowscore > bestrowscore )
             {
                bestrow = candrows[k];
                aggrfac = rowaggrfac;
                bestrowscore = rowscore;
+               bestrowisgood = TRUE;
                bestrowside = 0;
             }
          }
       }
-   }
-
-   /* found a row among the good rows, so aggregate it and stop */
-   if( aggrfac != 0.0 )
-   {
-      *success = TRUE;
-      ++(*naggrs);
-      SCIP_CALL( SCIPaggrRowAddRow(scip, aggrrow, bestrow, aggrfac, bestrowside) );
-      SCIPaggrRowRemoveZeros(aggrrow, SCIPepsilon(scip));
-      goto TERMINATE;
-   }
-
-   for( i = 0; i < nbadvars; ++i )
-   {
-      int probvaridx;
-      int aggrrowvaridx;
-      SCIP_ROW** candrows;
-      SCIP_Real* candrowcoefs;
-      int nrows;
-      int ngoodrows;
-      int k;
-
-      /* if the bound distance is negative, there are no more variables to be tested, so stop */
-      if( badvarbddist[i] < 0.0 )
-         break;
-
-      /* if no best row was found yet, this variable has the currently best bound distance */
-      if( aggrfac == 0.0 )
-         minbddist = badvarbddist[i] - sepadata->aggrtol;
-
-      /* if the bound distance of the current variable is smaller than the minimum bound distance stop looping */
-      if( badvarbddist[i] < minbddist )
-         break;
-
-      aggrrowvaridx = badvarinds[i];
-      probvaridx = inds[aggrrowvaridx];
-
-      if( !getRowAggregationCandidates(aggrdata, probvaridx, &candrows, &candrowcoefs, &nrows, &ngoodrows) )
+      else
       {
-         SCIPABORT();
-      }
-
-      /* bounddistance was positive for this variable, so it should not have good rows */
-      assert(ngoodrows == 0);
-
-      for( k = 0; k < nrows; ++k )
-      {
-         SCIP_Real minweight;
-         SCIP_Real maxweight;
-         SCIP_Real rowaggrfac;
-         int lppos;
-
-         /* dont't add rows twice */
-         if( SCIPaggrRowHasRowBeenAdded(aggrrow, candrows[k]) )
-            continue;
-
-         /* if factor is too extreme skip this row */
-         SCIPaggrRowGetAbsWeightRange(aggrrow, &minweight, &maxweight);
-         rowaggrfac = -vals[aggrrowvaridx] / candrowcoefs[k];
-         lppos = SCIProwGetLPPos(candrows[k]);
-
-         if( SCIPisZero(scip, rowaggrfac) ||
-             REALABS(rowaggrfac) > sepadata->maxrowfac * minweight ||
-             REALABS(rowaggrfac) * sepadata->maxrowfac < maxweight )
-            continue;
-
-         /* row could be used, decide which side */
+         for( k = 0; k < nrows; ++k )
          {
-            SCIP_Real rowscore;
-            int rowside;
+            SCIP_Real minweight;
+            SCIP_Real maxweight;
+            SCIP_Real rowaggrfac;
+            int lppos;
 
-            /* either both or none of the rowscores are 0.0 so use the one which gives a positive slack */
-            if( (rowaggrfac < 0.0 && !SCIPisInfinity(scip, -SCIProwGetLhs(candrows[k]))) ||
-                  SCIPisInfinity(scip, SCIProwGetRhs(candrows[k])) )
-            {
-               rowscore = rowlhsscores[lppos];
-               rowside = -1;
-            }
-            else
-            {
-               rowscore = rowrhsscores[lppos];
-               rowside = 1;
-            }
+            /* dont't add rows twice */
+            if( SCIPaggrRowHasRowBeenAdded(aggrrow, candrows[k]) )
+               continue;
 
-            /* if this rows score is better than the currently best score, remember it */
-            if( aggrfac == 0.0 || rowscore > bestrowscore )
+            /* if factor is too extreme skip this row */
+            SCIPaggrRowGetAbsWeightRange(aggrrow, &minweight, &maxweight);
+            rowaggrfac = -vals[probvaridx] / candrowcoefs[k];
+            lppos = SCIProwGetLPPos(candrows[k]);
+
+            if( SCIPisZero(scip, rowaggrfac) ||
+                REALABS(rowaggrfac) > sepadata->maxrowfac * minweight ||
+                REALABS(rowaggrfac) * sepadata->maxrowfac < maxweight )
+               continue;
+
+            /* row could be used, decide which side */
             {
-               bestrow = candrows[k];
-               aggrfac = rowaggrfac;
-               bestrowscore = rowscore;
-               bestrowside = rowside;
+               SCIP_Real rowscore;
+               int rowside;
+
+               /* either both or none of the rowscores are 0.0 so use the one which gives a positive slack */
+               if( (rowaggrfac < 0.0 && !SCIPisInfinity(scip, -SCIProwGetLhs(candrows[k]))) ||
+                     SCIPisInfinity(scip, SCIProwGetRhs(candrows[k])) )
+               {
+                  rowscore = rowlhsscores[lppos];
+                  rowside = -1;
+               }
+               else
+               {
+                  rowscore = rowrhsscores[lppos];
+                  rowside = 1;
+               }
+
+               /* if this rows score is better than the currently best score, remember it */
+               if( aggrfac == 0.0 || rowscore > bestrowscore )
+               {
+                  bestrow = candrows[k];
+                  aggrfac = rowaggrfac;
+                  bestrowscore = rowscore;
+                  bestrowside = rowside;
+               }
             }
          }
       }
    }
 
-    /* found a row so aggregate it */
+   /* found a row so aggregate it */
    if( aggrfac != 0.0 )
    {
       *success = TRUE;
@@ -765,8 +833,7 @@ SCIP_RETCODE aggregateNextRow(
    }
 
 TERMINATE:
-   SCIPfreeBufferArray(scip, &badvarbddist);
-   SCIPfreeBufferArray(scip, &badvarinds);
+   SCIPfreeBufferArray(scip, &badvarrowinds);
 
    return SCIP_OKAY;
 }
@@ -774,7 +841,7 @@ TERMINATE:
 /** aggregates different single mixed integer constraints by taking linear combinations of the rows of the LP  */
 static
 SCIP_RETCODE aggregation(
-   SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP*                 scip,               /**< SCIP data structure */
    AGGREGATIONDATA*      aggrdata,
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_SEPADATA*        sepadata,           /**< separator data */
@@ -782,7 +849,7 @@ SCIP_RETCODE aggregation(
    SCIP_Real*            varsolvals,         /**< LP solution value of all variables in LP */
    SCIP_Real*            rowlhsscores,       /**< aggregation scores for left hand sides of row */
    SCIP_Real*            rowrhsscores,       /**< aggregation scores for right hand sides of row */
-   int                   startrow,           /**< index of row to start aggregation */ 
+   int                   startrow,           /**< index of row to start aggregation */
    int                   maxaggrs,           /**< maximal number of aggregations */
    int                   maxconts,           /**< maximal number of active continuous variables in aggregated row */
    SCIP_Bool*            wastried,           /**< pointer to store whether the given startrow was actually tried */
@@ -805,8 +872,6 @@ SCIP_RETCODE aggregation(
    int naggrs;
    int nactiveconts;
    int nvars;
-   int nintvars;
-   int ncontvars;
    int ncols;
    int nrows;
 
@@ -827,12 +892,8 @@ SCIP_RETCODE aggregation(
    *cutoff = FALSE;
    *wastried = FALSE;
 
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, &ncontvars) );
-#ifdef IMPLINTSARECONT
-   ncontvars += SCIPgetNImplVars(scip); /* also aggregate out implicit integers */
-#endif
-   nintvars = nvars - ncontvars;
-   assert((nvars == 0 && nintvars == 0 && ncontvars == 0) || vars != NULL);
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
    SCIP_CALL( SCIPgetLPColsData(scip, &cols, &ncols) );
    assert(ncols == 0 || cols != NULL);
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
@@ -845,21 +906,16 @@ SCIP_RETCODE aggregation(
    maxaggrnonzs = (int)(sepadata->maxaggdensity * ncols) + sepadata->densityoffset;
 
    startrowact = SCIPgetRowSolActivity(scip, rows[startrow], sol);
-   {
 
-      if( startrowact <= 0.5 * SCIProwGetLhs(rows[startrow]) + 0.5 * SCIProwGetRhs(rows[startrow]) )
-         startweight = -1.0;
-      else
-         startweight = 1.0;
+   if( startrowact <= 0.5 * SCIProwGetLhs(rows[startrow]) + 0.5 * SCIProwGetRhs(rows[startrow]) )
+      startweight = -1.0;
+   else
+      startweight = 1.0;
 
-      SCIP_CALL( SCIPaggrRowAddRow(scip, aggrdata->aggrrow, rows[startrow], negate ? -startweight : startweight, 0) );
-   }
+   SCIP_CALL( SCIPaggrRowAddRow(scip, aggrdata->aggrrow, rows[startrow], negate ? -startweight : startweight, 0) );
 
-   /* decrease score of startrow in order to not aggregate it again too soon */
-//    decreaseRowScore(scip, rowlhsscores, rowrhsscores, startrow);
-
-   /* try to generate cut from the current aggregated row 
-    * add cut if found, otherwise add another row to aggregated row 
+   /* try to generate cut from the current aggregated row
+    * add cut if found, otherwise add another row to aggregated row
     * in order to get rid of a continuous variable
     */
    naggrs = 0;
@@ -875,8 +931,8 @@ SCIP_RETCODE aggregation(
 
       *wastried = TRUE;
 
-      /* Step 1: 
-       * try to generate a MIR cut out of the current aggregation 
+      /* Step 1:
+       * try to generate a MIR cut out of the current aggregation
        */
 
       flowcoverefficacy =  -SCIPinfinity(scip);
@@ -902,11 +958,22 @@ SCIP_RETCODE aggregation(
       /* if the cut was successfully added, abort the aggregation of further rows */
       if( *ncuts > oldncuts )
       {
+         int i;
+         int nrows;
+         int* rowinds;
+
+         rowinds = SCIPaggrRowGetRowInds(aggrdata->aggrrow);
+         nrows = SCIPaggrRowGetNRows(aggrdata->aggrrow);
+
+         /* decrease row score of used rows slightly */
+         for( i = 0; i < nrows; ++i )
+            decreaseRowScore(rowlhsscores, rowrhsscores, rowinds[i]);
+
          SCIPdebugMsg(scip, " -> abort aggregation: cut found\n");
          break;
       }
 
-      /* Step 2: 
+      /* Step 2:
        * aggregate an additional row in order to remove a continuous variable
        */
 
@@ -965,7 +1032,7 @@ SCIP_Real getRowFracActivity(
 /** searches and adds c-MIR cuts that separate the given primal solution */
 static
 SCIP_RETCODE separateCuts(
-   SCIP*                 scip,               /**< SCIP data structure */ 
+   SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SEPA*            sepa,               /**< the c-MIR separator */
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    SCIP_RESULT*          result              /**< pointer to store the result */
@@ -1023,7 +1090,7 @@ SCIP_RETCODE separateCuts(
       return SCIP_OKAY;
 
    /* get all rows and number of columns */
-   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) ); 
+   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
    assert(nrows == 0 || rows != NULL);
 
    /* nothing to do, if LP is empty */
@@ -1496,11 +1563,11 @@ SCIP_RETCODE SCIPincludeSepaCmir(
          &sepadata->maxtestdelta, TRUE, DEFAULT_MAXTESTDELTA, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxconts",
-         "maximal number of active continuous variables in aggregated row", 
+         "maximal number of active continuous variables in aggregated row",
          &sepadata->maxconts, TRUE, DEFAULT_MAXCONTS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/cmir/maxcontsroot",
-         "maximal number of active continuous variables in aggregated row in the root node", 
+         "maximal number of active continuous variables in aggregated row in the root node",
          &sepadata->maxcontsroot, TRUE, DEFAULT_MAXCONTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/cmir/aggrtol",

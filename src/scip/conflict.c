@@ -110,7 +110,7 @@
  *     3. call SCIPanalyzeConflictCons() or SCIPanalyzeConflict() to analyze the conflict
  *        and add an appropriate conflict constraint.
  */
-//#define SCIP_DEBUG
+#define SCIP_DEBUG
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -2412,7 +2412,7 @@ SCIP_RETCODE tightenSingleVar(
    if( (boundtype == SCIP_BOUNDTYPE_LOWER && SCIPsetIsGT(set, newbound, SCIPvarGetUbGlobal(var)))
       || (boundtype == SCIP_BOUNDTYPE_UPPER && SCIPsetIsLT(set, newbound, SCIPvarGetLbGlobal(var))) )
    {
-      SCIPdebugMessage("detect global infeasibility at var <%s>: locdom=[%g,%g] glbdom=[%g,%g] new %s bound=%g\n",
+      SCIPsetDebugMsg(set, "detect global infeasibility at var <%s>: locdom=[%g,%g] glbdom=[%g,%g] new %s bound=%g\n",
             SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), SCIPvarGetLbGlobal(var),
             SCIPvarGetUbGlobal(var), (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"), newbound);
 
@@ -2420,7 +2420,7 @@ SCIP_RETCODE tightenSingleVar(
    }
    else
    {
-      SCIPdebugMessage("change %s bound of <%s>: %g -> %g\n", (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"),
+      SCIPsetDebugMsg(set, "change %s bound of <%s>: %g -> %g\n", (boundtype == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper"),
             SCIPvarGetName(var), (boundtype == SCIP_BOUNDTYPE_LOWER ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var)),
             newbound);
 
@@ -2475,10 +2475,10 @@ SCIP_Real getMinActivity(
       assert(SCIPvarGetProbindex(vars[v]) == v);
 
       /* calculate the minimal activity */
-      if( vals[i] > 0.0 )
-         minact += vals[i] * (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
+      if( vals[v] > 0.0 )
+         minact += vals[v] * (curvarlbs == NULL ? SCIPvarGetLbGlobal(vars[v]) : curvarlbs[v]);
       else
-         minact += vals[i] * (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
+         minact += vals[v] * (curvarubs == NULL ? SCIPvarGetUbGlobal(vars[v]) : curvarubs[v]);
    }
 
    return minact;
@@ -6128,7 +6128,7 @@ SCIP_RETCODE getFarkasProof(
    SCIP_PROB*            prob,               /**< transformed problem */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPI*             lpi,                /**< LPI data */
-   SCIP_AGGRROW*         farkasrow,
+   SCIP_AGGRROW*         farkasrow,          /**< aggregated row representing the proof */
    SCIP_Real*            farkasact,          /**< maximal activity of the proof constraint */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
@@ -6225,7 +6225,7 @@ SCIP_RETCODE getFarkasProof(
 
             SCIP_CALL( SCIPaggrRowAddRow(set->scip, farkasrow, row, -dualfarkas[r], +1) );
          }
-         SCIPdebugMessage(" -> farkasrhs: %g<%s>[%g,%g] -> %g\n", dualfarkas[r], SCIProwGetName(row),
+         SCIPsetDebugMsg(set, " -> farkasrhs: %g<%s>[%g,%g] -> %g\n", dualfarkas[r], SCIProwGetName(row),
             row->lhs - row->constant, row->rhs - row->constant, SCIPaggrRowGetRhs(farkasrow));
 
          /* due to numerical reasons we want to stop */
@@ -6252,7 +6252,7 @@ SCIP_RETCODE getFarkasProof(
    *farkasact = getMinActivity(prob, SCIPaggrRowGetVals(farkasrow), SCIPaggrRowGetInds(farkasrow),
          SCIPaggrRowGetNNz(farkasrow), curvarlbs, curvarubs);
 
-   SCIPdebugMessage(" -> farkasact=%g farkasrhs=%g, \n", (*farkasact), SCIPaggrRowGetRhs(farkasrow));
+   SCIPsetDebugMsg(set, " -> farkasact=%g farkasrhs=%g, \n", (*farkasact), SCIPaggrRowGetRhs(farkasrow));
 
    /* the constructed proof is not valid, this can happen due to numerical reasons,
     * e.g., we only consider rows r with !SCIPsetIsZero(set, dualfarkas[r])
@@ -6276,7 +6276,7 @@ SCIP_RETCODE getDualProof(
    SCIP_PROB*            prob,               /**< transformed problem */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPI*             lpi,                /**< LPI data */
-   SCIP_AGGRROW*         farkasrow,
+   SCIP_AGGRROW*         farkasrow,          /**< aggregated row representing the proof */
    SCIP_Real*            farkasact,          /**< maximal activity of the proof constraint */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
@@ -6691,7 +6691,7 @@ SCIP_RETCODE tightenDualray(
       /* set all variables that are part of the proof to its active local bound */
       for( i = 0; i < nnz; i++ )
       {
-         if( vals[i] > 0.0 )
+         if( vals[inds[i]] > 0.0 )
          {
             SCIP_CALL( SCIPsolSetVal(refsol, set, stat, tree, vars[inds[i]], curvarubs[inds[i]]) );
          }
@@ -6847,7 +6847,7 @@ SCIP_RETCODE tightenDualray(
    SCIPsetDebugMsg(set, "-> final constraint after tightenDualray():\n");
    for( i = 0; i < nnz; i++ )
    {
-      SCIPsetDebugMsg(set, "   %g<%s> glb=[%g,%g] loc=[%g,%g] type=%d\n", vals[i], SCIPvarGetName(vars[inds[i]]),
+      SCIPsetDebugMsg(set, "   %+.15g<%s> glb=[%+.15g,%+.15g] loc=[%+.15g,%+.15g] type=%d\n", vals[inds[i]], SCIPvarGetName(vars[inds[i]]),
             SCIPvarGetLbGlobal(vars[inds[i]]), SCIPvarGetUbGlobal(vars[inds[i]]),
             SCIPvarGetLbLocal(vars[inds[i]]), SCIPvarGetUbLocal(vars[inds[i]]),
             SCIPvarGetType(vars[inds[i]]));
@@ -6878,7 +6878,7 @@ SCIP_RETCODE conflictAnalyzeDualProof(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table */
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict store */
-   SCIP_AGGRROW*         farkasrow,
+   SCIP_AGGRROW*         farkasrow,          /**< aggregated row representing the proof */
    SCIP_Real*            curvarlbs,          /**< current lower bounds of active problem variables */
    SCIP_Real*            curvarubs,          /**< current upper bounds of active problem variables */
    int*                  lbchginfoposs,      /**< positions of currently active lower bound change information in variables' arrays */
@@ -6938,7 +6938,7 @@ SCIP_RETCODE conflictAnalyzeDualProof(
 
    if( *globalinfeasible )
    {
-      SCIPdebugMessage("detect global: cutoff root node\n");
+      SCIPsetDebugMsg(set, "detect global: cutoff root node\n");
       SCIP_CALL( SCIPnodeCutoff(tree->path[0], set, stat, tree, transprob, origprob, reopt, lp, blkmem) );
       *success = TRUE;
 
@@ -7109,13 +7109,13 @@ SCIP_RETCODE runBoundHeuristic(
          nloops++;
          resolve = FALSE;
 
-         SCIPdebugMessage("infeasible LP conflict analysis loop %d (changed col bounds: %d)\n", nloops, relaxedlpbdchgs->nbdchgs);
+         SCIPsetDebugMsg(set, "infeasible LP conflict analysis loop %d (changed col bounds: %d)\n", nloops, relaxedlpbdchgs->nbdchgs);
 
          /* apply bound changes to the LP solver */
          assert(relaxedlpbdchgs->nbdchgs >= 0);
          if( relaxedlpbdchgs->nbdchgs > 0 )
          {
-            SCIPdebugMessage(" -> applying %d bound changes to the LP solver\n", relaxedlpbdchgs->nbdchgs);
+            SCIPsetDebugMsg(set, " -> applying %d bound changes to the LP solver\n", relaxedlpbdchgs->nbdchgs);
             SCIP_CALL( SCIPlpiChgBounds(lpi, relaxedlpbdchgs->nbdchgs,
                   relaxedlpbdchgs->bdchginds, relaxedlpbdchgs->bdchglbs, relaxedlpbdchgs->bdchgubs) );
 
@@ -7145,7 +7145,7 @@ SCIP_RETCODE runBoundHeuristic(
          (*iterations) += iter;
          stat->nconflictlps++;
          stat->nconflictlpiterations += iter;
-         SCIPdebugMessage(" -> resolved LP in %d iterations (total: %" SCIP_LONGINT_FORMAT ") (infeasible:%u)\n",
+         SCIPsetDebugMsg(set, " -> resolved LP in %d iterations (total: %" SCIP_LONGINT_FORMAT ") (infeasible:%u)\n",
             iter, stat->nconflictlpiterations, SCIPlpiIsPrimalInfeasible(lpi));
 
          /* evaluate result */
@@ -7292,11 +7292,11 @@ SCIP_RETCODE runBoundHeuristic(
          }
          assert(!resolve || (*valid));
          assert(!resolve || relaxedlpbdchgs->nbdchgs > 0);
-         SCIPdebugMessage(" -> finished infeasible LP conflict analysis loop %d (iter: %d, nbdchgs: %d)\n",
+         SCIPsetDebugMsg(set, " -> finished infeasible LP conflict analysis loop %d (iter: %d, nbdchgs: %d)\n",
             nloops, iter, relaxedlpbdchgs->nbdchgs);
       }
 
-      SCIPdebugMessage("finished undoing bound changes after %d loops (valid=%u, nbdchgs: %d)\n",
+      SCIPsetDebugMsg(set, "finished undoing bound changes after %d loops (valid=%u, nbdchgs: %d)\n",
          nloops, (*valid), oldlpbdchgs->nbdchgs);
 
       /* reset variables to local bounds */
@@ -7461,7 +7461,7 @@ SCIP_RETCODE conflictAnalyzeLP(
             (*iterations) += iter;
             stat->nconflictlps++;
             stat->nconflictlpiterations += iter;
-            SCIPdebugMessage(" -> resolved objlim exceeding LP in %d iterations (total: %" SCIP_LONGINT_FORMAT ") (infeasible:%u, objlim: %u, optimal:%u)\n",
+            SCIPsetDebugMsg(set, " -> resolved objlim exceeding LP in %d iterations (total: %" SCIP_LONGINT_FORMAT ") (infeasible:%u, objlim: %u, optimal:%u)\n",
                iter, stat->nconflictlpiterations, SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi), SCIPlpiIsOptimal(lpi));
             valid = (SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsDualFeasible(lpi));
          }
@@ -7486,12 +7486,12 @@ SCIP_RETCODE conflictAnalyzeLP(
       SCIP_CALL( SCIPlpiGetObjval(lpi, &objval) );
       if( objval < lp->lpiuobjlim )
       {
-         SCIPdebugMessage(" -> LP does not exceed the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiuobjlim);
+         SCIPsetDebugMsg(set, " -> LP does not exceed the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiuobjlim);
          return SCIP_OKAY;
       }
       else
       {
-         SCIPdebugMessage(" -> LP exceeds the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiuobjlim);
+         SCIPsetDebugMsg(set, " -> LP exceeds the cutoff bound: obj=%g, cutoff=%g\n", objval, lp->lpiuobjlim);
       }
    }
 
@@ -7596,11 +7596,11 @@ SCIP_RETCODE conflictAnalyzeLP(
 #ifdef SCIP_DEBUG
       {
          SCIP_Real uobjlim;
-         SCIPdebugMessage("analyzing conflict on infeasible LP (infeasible: %u, objlimexc: %u, optimal:%u) in depth %d (diving: %u)\n",
+         SCIPsetDebugMsg(set, "analyzing conflict on infeasible LP (infeasible: %u, objlimexc: %u, optimal:%u) in depth %d (diving: %u)\n",
                SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi), SCIPlpiIsOptimal(lpi), SCIPtreeGetCurrentDepth(tree), diving);
 
          SCIP_CALL( SCIPlpiGetRealpar(lpi, SCIP_LPPAR_UOBJLIM, &uobjlim) );
-         SCIPdebugMessage(" -> objective limit in LP solver: %g (in LP: %g)\n", uobjlim, lp->lpiuobjlim);
+         SCIPsetDebugMsg(set, " -> objective limit in LP solver: %g (in LP: %g)\n", uobjlim, lp->lpiuobjlim);
       }
 #endif
 

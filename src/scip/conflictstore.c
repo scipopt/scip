@@ -641,6 +641,7 @@ SCIP_RETCODE SCIPconflictstoreCreate(
 
    (*conflictstore)->conflicts = NULL;
    (*conflictstore)->confprimalbnds = NULL;
+   (*conflictstore)->dualprimalbnds = NULL;
    (*conflictstore)->dualrayconfs = NULL;
    (*conflictstore)->dualsolconfs = NULL;
    (*conflictstore)->origconfs = NULL;

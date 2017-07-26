@@ -32,7 +32,6 @@ struct SCIP_AggrRow
    SCIP_Real*            vals;               /**< non-zero coefficients of the cut row */
    int*                  inds;               /**< problem indices of variables with a non-zero coefficient in the cut row */
    int                   nnz;                /**< number of non-zeros in the cut row */
-   int                   valssize;           /**< size of the value and index array */
    SCIP_Real             rhs;                /**< right hand side of the cut row */
    int*                  rowsinds;           /**< lpposition of rows that have been added to the cutrow */
    int*                  slacksign;          /**< slacksign of rows that have been added to the cutrow */

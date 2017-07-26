@@ -97,6 +97,7 @@
 #include "scip/heur_lpface.h"
 #include "scip/heur_multistart.h"
 #include "scip/heur_mutation.h"
+#include "scip/heur_mpec.h"
 #include "scip/heur_nlpdiving.h"
 #include "scip/heur_objpscostdiving.h"
 #include "scip/heur_octane.h"
@@ -196,6 +197,7 @@
 #include "scip/concsolver_scip.h"
 
 #include "nlpi/nlpi_ipopt.h"
+#include "nlpi/nlpi_filtersqp.h"
 #include "nlpi/nlpi_worhp.h"
 
 #ifdef __cplusplus

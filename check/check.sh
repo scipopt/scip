@@ -169,6 +169,7 @@ do
 		export BASENAME=$FILENAME
 		export FILENAME=$INSTANCE
 		export SOLNAME=$SOLCHECKFILE
+                export TIMELIMIT
 		export CLIENTTMPDIR
 		export CHECKERPATH=$SCIPPATH/solchecker
 

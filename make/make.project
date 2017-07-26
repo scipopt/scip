@@ -118,8 +118,9 @@ OPENSOURCE   	=	true
 READLINE	=	true
 ZLIB		=	true
 GMP		=	true
-ZIMPL		=	auto
+ZIMPL		=	false
 IPOPT		=	false
+FILTERSQP	=	false
 WORHP		=	false
 EXPRINT 	=	cppad
 LPSOPT		=	opt
@@ -530,6 +531,14 @@ endif
 NLPILIBSHORTNAMEIPOPT = .ipopt
 endif
 
+# define flags for FilterSQP
+ifeq ($(FILTERSQP),true)
+FILTERSQPLIBS       =       $(LINKCC_l)filtersqp.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)bqpd.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX)
+LDFLAGS		+=	$(FILTERSQPLIBS) $(FORTRANLIBS)
+CFLAGS			+=	-DFNAME_$(FORTRAN_NAMING_CONVENTION)
+NLPILIBSHORTNAMEFILTERSQP = .filtersqp
+endif
+
 # define flags for WORHP
 ifeq ($(WORHP),true)
 FLAGS		+=	-I$(LIBDIR)/$(LIBTYPE)/worhp.$(OSTYPE).$(ARCH).$(COMP).$(WORHPOPT)/include
@@ -608,7 +617,7 @@ OBJSCIPLIBSHORTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(OBJSCIPLIBNAME).$(LIBEX
 # NLP interfaces and expression interpreter library
 #-----------------------------------------------------------------------------
 
-NLPILIBNAME	=	nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)
+NLPILIBNAME	=	nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)$(NLPILIBSHORTNAMEFILTERSQP)
 NLPILIB		=	$(NLPILIBNAME).$(BASE)
 NLPILIBFILE	=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(NLPILIB).$(LIBEXT)
 NLPILIBSHORTLINK=	$(SCIPREALPATH)/lib/$(LIBTYPE)/lib$(NLPILIBNAME).$(LIBEXT)

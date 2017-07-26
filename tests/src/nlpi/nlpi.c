@@ -276,7 +276,7 @@ SCIP_RETCODE solveQP(
    *nlpsolstat = SCIP_NLPSOLSTAT_UNKNOWN;
    *nlptermstat = SCIP_NLPTERMSTAT_OTHER;
 
-   SCIP_CALL( SCIPrandomCreate(&randnumgen, SCIPblkmem(scip), rndseed) );
+   SCIP_CALL( SCIPcreateRandom(scip, &randnumgen, rndseed) );
 
    SCIP_CALL( SCIPallocBufferArray(scip, &lbs, n+1) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ubs, n+1) );
@@ -358,7 +358,7 @@ SCIP_RETCODE solveQP(
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &ubs);
    SCIPfreeBufferArray(scip, &lbs);
-   SCIPrandomFree(&randnumgen);
+   SCIPfreeRandom(scip, &randnumgen);
 
    return SCIP_OKAY;
 }
