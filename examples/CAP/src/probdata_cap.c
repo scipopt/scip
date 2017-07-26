@@ -920,7 +920,7 @@ SCIP_RETCODE SCIPprobdataCreate(
             demandconss, costs, demands, capacity, fixedcost, ncustomers, nfacilities, nscenarios) );
 
       /* including the Benders' decomposition plugin */
-      SCIP_CALL( SCIPincludeBendersDefault(scip, subproblems, nscenarios) );
+      SCIP_CALL( SCIPcreateBendersDefault(scip, subproblems, nscenarios) );
    }
    else
    {

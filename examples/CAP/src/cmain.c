@@ -28,6 +28,7 @@
 #include "scip/scipdefplugins.h"
 #include "scip/cons_benders.h"
 #include "scip/cons_benderslp.h"
+#include "scip/benders_default.h"
 
 #include "benders_cap.h"
 #include "reader_cap.h"
@@ -51,14 +52,12 @@ SCIP_RETCODE runShell(
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
 
-   /* we explicitly enable the use of a debug solution for this main SCIP instance */
-   SCIPenableDebugSol(scip);
-
    /* include CAP reader */
    SCIP_CALL( SCIPincludeReaderCap(scip) );
 
    /* include the Benders' decomposition constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBenders(scip, TRUE) );
+   SCIP_CALL( SCIPincludeBendersDefault(scip) );
 
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
