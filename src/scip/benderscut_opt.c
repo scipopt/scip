@@ -29,6 +29,7 @@
 #include "scip/misc_benders.h"
 
 #include "scip/cons_linear.h"
+#include "scip/pub_lp.h"
 
 
 #define BENDERSCUT_NAME             "optimality"
@@ -36,7 +37,9 @@
 #define BENDERSCUT_PRIORITY         0
 
 
+
 #define SCIP_DEFAULT_SOLTOL               1e-2  /** The tolerance used to determine optimality of the solution */
+#define SCIP_DEFAULT_ADDCUTS             FALSE  /** Should cuts be generated, instead of constraints */
 
 /*
  * Data structures
@@ -48,6 +51,7 @@
 struct SCIP_BenderscutData
 {
    SCIP_Real             soltol;             /**< the tolerance for the check between the auxiliary var and subprob */
+   SCIP_Bool             addcuts;            /**< should cuts be generated instead of constraints */
 };
 
 
@@ -62,7 +66,9 @@ SCIP_RETCODE computeStandardOptimalityCut(
    SCIP*                 subproblem,         /**< the SCIP instance of the subproblem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_CONS*            cut                 /**< the cut that is generated from the pricing problem */
+   SCIP_CONS*            cons,               /**< the constraint for the generated cut, can be NULL */
+   SCIP_ROW*             row,                /**< the row for the generated cut, can be NULL */
+   SCIP_Bool             addcut              /**< indicates whether a cut is created instead of a constraint */
    )
 {
    SCIP_VAR** vars;
@@ -84,7 +90,8 @@ SCIP_RETCODE computeStandardOptimalityCut(
    assert(masterprob != NULL);
    assert(subproblem != NULL);
    assert(benders != NULL);
-   assert(cut != NULL);
+   assert(cons != NULL || addcut);
+   assert(row != NULL || !addcut);
 
    nvars = SCIPgetNVars(subproblem);
    vars = SCIPgetVars(subproblem);
@@ -107,7 +114,10 @@ SCIP_RETCODE computeStandardOptimalityCut(
       if( SCIPisZero(subproblem, dualsol) )
          continue;
 
-      lhs = SCIPgetLhsLinear(masterprob, cut);
+      if( addcut )
+         lhs = SCIProwGetLhs(row);
+      else
+         lhs = SCIPgetLhsLinear(masterprob, cons);
 
 
       if( SCIPisPositive(subproblem, dualsol) )
@@ -118,7 +128,10 @@ SCIP_RETCODE computeStandardOptimalityCut(
       lhs += addval;
 
       /* Update the lhs of the cut */
-      SCIP_CALL( SCIPchgLhsLinear(masterprob, cut, lhs) );
+      if( addcut )
+         SCIP_CALL( SCIPchgRowLhs(masterprob, row, lhs) );
+      else
+         SCIP_CALL( SCIPchgLhsLinear(masterprob, cons, lhs) );
    }
 
    /* looping over all variables to update the coefficients in the computed cut. */
@@ -152,7 +165,10 @@ SCIP_RETCODE computeStandardOptimalityCut(
 
          coef = -1.0*(SCIPvarGetObj(var) + redcost);
 
-         SCIP_CALL( SCIPaddCoefLinear(masterprob, cut, mastervar, coef) );
+         if( addcut )
+            SCIP_CALL( SCIPaddVarToRow(masterprob, row, mastervar, coef) );
+         else
+            SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, mastervar, coef) );
       }
       else
       {
@@ -161,7 +177,10 @@ SCIP_RETCODE computeStandardOptimalityCut(
             addval = 0;
 
             /* get current lhs of the subproblem cut */
-            lhs = SCIPgetLhsLinear(masterprob, cut);
+            if( addcut )
+               lhs = SCIProwGetLhs(row);
+            else
+               lhs = SCIPgetLhsLinear(masterprob, cons);
 
             if( SCIPisPositive(subproblem, redcost) )
                addval = redcost*SCIPvarGetLbLocal(var);
@@ -171,21 +190,30 @@ SCIP_RETCODE computeStandardOptimalityCut(
             lhs += addval;
 
             /* Update lhs */
-            SCIP_CALL( SCIPchgLhsLinear(masterprob, cut, lhs) );
+            if( addcut )
+               SCIP_CALL( SCIPchgRowLhs(masterprob, row, lhs) );
+            else
+               SCIP_CALL( SCIPchgLhsLinear(masterprob, cons, lhs) );
          }
       }
    }
 
 #ifndef NDEBUG
-   lhs = SCIPgetLhsLinear(masterprob, cut);
+   if( addcut )
+      lhs = SCIProwGetLhs(row);
+   else
+      lhs = SCIPgetLhsLinear(masterprob, cons);
    verifyobj = lhs;
 
-   verifyobj -= SCIPgetActivityLinear(masterprob, cut, sol);
+   if( addcut )
+      verifyobj -= SCIPgetRowSolActivity(masterprob, row, sol);
+   else
+      verifyobj -= SCIPgetActivityLinear(masterprob, cons, sol);
 #endif
 
    assert(SCIPisFeasEQ(masterprob, checkobj, verifyobj) || SCIPbendersGetUseMagnantiWong(benders));
 
-   assert(cut != NULL);
+   assert(cons != NULL);
 
    return SCIP_OKAY;
 }
@@ -197,20 +225,26 @@ static
 SCIP_RETCODE addAuxiliaryVariableToCut(
    SCIP*                 masterprob,         /**< the SCIP instance of the master problem */
    SCIP_BENDERS*         benders,            /**< the benders' decomposition structure */
-   SCIP_CONS*            cut,                /**< the cut that is generated from the pricing problem */
-   int                   probnumber          /**< the number of the pricing problem */
+   SCIP_CONS*            cons,               /**< the constraint for the generated cut, can be NULL */
+   SCIP_ROW*             row,                /**< the row for the generated cut, can be NULL */
+   int                   probnumber,         /**< the number of the pricing problem */
+   SCIP_Bool             addcut              /**< indicates whether a cut is created instead of a constraint */
    )
 {
    SCIP_VAR* auxiliaryvar;
 
    assert(masterprob != NULL);
    assert(benders != NULL);
-   assert(cut != NULL);
+   assert(cons != NULL || addcut);
+   assert(row != NULL || !addcut);
 
    auxiliaryvar = SCIPbendersGetAuxiliaryVar(benders, probnumber);
 
    /* adding the auxiliary variable to the generated cut */
-   SCIP_CALL( SCIPaddCoefLinear(masterprob, cut, auxiliaryvar, 1.0) );
+   if( addcut )
+      SCIP_CALL( SCIPaddVarToRow(masterprob, row, auxiliaryvar, 1.0) );
+   else
+      SCIP_CALL( SCIPaddCoefLinear(masterprob, cons, auxiliaryvar, 1.0) );
 
    return SCIP_OKAY;
 }
@@ -225,12 +259,17 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    SCIP_BENDERSCUT*      benderscut,         /**< the benders' decomposition cut method */
    SCIP_SOL*             sol,                /**< primal CIP solution */
    int                   probnumber,         /**< the number of the pricing problem */
+   SCIP_BENDERSENFOTYPE  type,               /**< the enforcement type calling this function */
    SCIP_RESULT*          result              /**< the result from solving the subproblems */
    )
 {
-   SCIP_CONS* cut;                  /* the cut that will be generated from the solution to the pricing problem */
+   SCIP_BENDERSCUTDATA* benderscutdata;
+   SCIP_CONSHDLR* consbenders;      /* the Benders' decomposition constraint handler */
+   SCIP_CONS* cons;                 /* the cut that will be generated from the solution to the pricing problem */
+   SCIP_ROW* row;                   /* the that is generated for the Benders' cut */
    char cutname[SCIP_MAXSTRLEN];    /* the name of the generated cut */
    SCIP_Bool optimal;               /* flag to indicate whether the current subproblem is optimal for the master */
+   SCIP_Bool addcut;
 
    assert(masterprob != NULL);
    assert(subproblem != NULL);
@@ -238,6 +277,22 @@ SCIP_RETCODE generateAndApplyBendersCuts(
    assert(benderscut != NULL);
    assert(result != NULL);
    assert(SCIPgetStatus(subproblem) == SCIP_STATUS_OPTIMAL || SCIPgetLPSolstat(subproblem) == SCIP_LPSOLSTAT_OPTIMAL);
+
+   row = NULL;
+   cons = NULL;
+
+   /* retreiving the Benders' cut data */
+   benderscutdata = SCIPbenderscutGetData(benderscut);
+
+   /* if the cuts are generated prior to the solving stage, then rows can not be generated. So constraints must be added
+    * to the master problem. */
+   if( SCIPgetStage(masterprob) < SCIP_STAGE_INITSOLVE )
+      addcut = FALSE;
+   else
+      addcut = benderscutdata->addcuts;
+
+   /* retrieving the Benders' decomposition constraint handler */
+   consbenders = SCIPfindConshdlr(masterprob, "benders");
 
    /* checking the optimality of the original problem with a comparison between the auxiliary variable and the
     * objective value of the subproblem */
@@ -251,23 +306,58 @@ SCIP_RETCODE generateAndApplyBendersCuts(
 
    /* setting the name of the generated cut */
    (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "optimalitycut_%d_%d", probnumber,
-      SCIPbenderscutGetNFound(benderscut, probnumber) );
+      SCIPbenderscutGetNFound(benderscut) );
 
-   /* creating the constraint for the cut */
-   SCIP_CALL( SCIPcreateConsBasicLinear(masterprob, &cut, cutname, 0, NULL, NULL, 0.0, SCIPinfinity(masterprob)) );
+   /* creating an empty row or constraint for the Benders' cut */
+   if( addcut )
+   {
+      SCIP_CALL( SCIPcreateEmptyRowCons(masterprob, &row, consbenders, cutname, 0.0, SCIPinfinity(masterprob), FALSE,
+            FALSE, TRUE) );
+   }
+   else
+      SCIP_CALL( SCIPcreateConsBasicLinear(masterprob, &cons, cutname, 0, NULL, NULL, 0.0, SCIPinfinity(masterprob)) );
 
    /* computing the coefficients of the optimality cut */
-   SCIP_CALL( computeStandardOptimalityCut(masterprob, subproblem, benders, sol, cut) );
+   SCIP_CALL( computeStandardOptimalityCut(masterprob, subproblem, benders, sol, cons, row, addcut) );
 
    /* adding the auxiliary variable to the optimality cut */
-   SCIP_CALL( addAuxiliaryVariableToCut(masterprob, benders, cut, probnumber) );
+   SCIP_CALL( addAuxiliaryVariableToCut(masterprob, benders, cons, row, probnumber, addcut) );
 
    /* adding the constraint to the master problem */
-   SCIP_CALL( SCIPaddCons(masterprob, cut) );
+   if( addcut )
+   {
+      SCIP_Bool infeasible;
 
-   SCIP_CALL( SCIPreleaseCons(masterprob, &cut) );
+      if( type == LP || type == RELAX )
+      {
+         SCIP_CALL( SCIPaddCut(masterprob, sol, row, FALSE, &infeasible) );
+         assert(!infeasible);
+      }
+      else
+      {
+         assert(type == CHECK || type == PSEUDO);
+         SCIP_CALL( SCIPaddPoolCut(masterprob, row) );
+      }
 
-   (*result) = SCIP_CONSADDED;
+      /* storing the generated cut */
+      SCIP_CALL( SCIPstoreBenderscutCut(masterprob, benderscut, row) );
+
+      /* release the row */
+      SCIP_CALL( SCIPreleaseRow(masterprob, &row) );
+
+      (*result) = SCIP_SEPARATED;
+   }
+   else
+   {
+      SCIP_CALL( SCIPaddCons(masterprob, cons) );
+
+      /* storing the generated cut */
+      SCIP_CALL( SCIPstoreBenderscutCons(masterprob, benderscut, cons) );
+
+      SCIP_CALL( SCIPreleaseCons(masterprob, &cons) );
+
+      (*result) = SCIP_CONSADDED;
+   }
 
 
    return SCIP_OKAY;
@@ -390,7 +480,7 @@ SCIP_DECL_BENDERSCUTEXEC(benderscutExecOpt)
    {
       /* generating a cut for a given subproblem */
       SCIP_CALL( generateAndApplyBendersCuts(scip, SCIPbendersSubproblem(benders, probnumber), benders, benderscut,
-            sol, probnumber, result) );
+            sol, probnumber, type, result) );
    }
 
    return SCIP_OKAY;
@@ -449,6 +539,11 @@ SCIP_RETCODE SCIPincludeBenderscutOpt(
          "benderscut/" BENDERSCUT_NAME "/solutiontol",
          "the tolerance used for the comparison between the auxiliary variable and the subproblem objective.",
          &benderscutdata->soltol, FALSE, SCIP_DEFAULT_SOLTOL, 0.0, 1.0, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "benderscut/" BENDERSCUT_NAME "/addcuts",
+         "should cuts be generated and added to the cutpool instead of global constraints directly added to the problem.",
+         &benderscutdata->addcuts, FALSE, SCIP_DEFAULT_ADDCUTS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
