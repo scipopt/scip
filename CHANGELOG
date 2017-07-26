@@ -29,6 +29,8 @@ fixed bugs:
 - relaxed a too strong assert concerning solutions close to the objective limit
 - fixed guard against using old Gurobi versions in lpi_grb.c: Gurobi 7.5 was not permitted
 - treat reopt bugs: Avoid numerical problems with changing objective; fix check for changed objective
+- fixed reading issue in mps reader: integer variables fixed to 0 or 1 are treated as binaries now,
+  allowing to use them as indicator variables
 
 performance improvements:
 - widened a bottleneck in simplifying long signomial sums in a nonlinear constraint
